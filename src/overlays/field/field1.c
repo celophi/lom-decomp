@@ -1,122 +1,110 @@
 #include "common.h"
 
+/** @brief Byte view of a field text flags word. */
 typedef struct
 {
-    u8 _pad15[0x15];
-    u8 unk15;
-    u8 _pad16[0x52 - 0x16];
-    u16 unk52;
-    u8 _pad54[0x5A - 0x54];
-    u16 unk5A;
-    u16 unk5C;
-    u16 unk5E;
-    u16 unk60;
-    u16 unk62;
-} Struct_8006429C;
+    u8 low;                 // 0x10 state/style byte
+    u8 byte1;               // 0x11
+    u8 byte2;               // 0x12 transition/text option byte
+    u8 byte3;               // 0x13 copied config byte
+} FieldTextFlagBytes;
 
-/** @brief Bytes 2 and 3 of the 32-bit flags word at 0x10. */
-typedef struct
-{
-    u8  unk10;              // 0x10
-    u8  unk11;              // 0x11
-    u8  unk12;              // 0x12
-    u8  unk13;              // 0x13
-} FlagBytes;
-
-/** @brief The flags word at 0x10, addressed either whole or by byte. */
-typedef union
-{
-    u32 flags;              // 0x10
-    FlagBytes b;
-} FlagWord;
-
-typedef struct {
-    u8* unk0;               // 0x00
-    u32 unk4;               // 0x04
-    u32 unk8;               // 0x08
-    u32 unkC;               // 0x0C
-    FlagWord unk10;         // 0x10
-    u8  unk14;              // 0x14
-    u8  unk15;              // 0x15
-    u8  unk16;              // 0x16
-    u8  unk17;              // 0x17
-    u8  unk18;              // 0x18
-    u8  unk19;              // 0x19
-    u8  unk1A;              // 0x1A
-    u8  unk1B;              // 0x1B
-    u8  unk1C;              // 0x1C
-    u8  unk1D;              // 0x1D
-    u8  unk1E;              // 0x1E
-    u8  unk1F;              // 0x1F
-    u8  _pad20[0x49 - 0x20];// 0x20
-    u8  unk49;              // 0x49
-    u16 unk4A;              // 0x4A
-    u16 _pad4C;             // 0x4C
-    u16 unk4E;              // 0x4E
-    u16 unk50;              // 0x50
-    u16 unk52;              // 0x52
-    u16 unk54;              // 0x54
-    u16 unk56;              // 0x56
-    u16 unk58;              // 0x58
-    u16 unk5A;              // 0x5A
-    u16 unk5C;              // 0x5C
-    u16 unk5E;              // 0x5E
-    u16 unk60;              // 0x60
-    u16 unk62;              // 0x62
-    u16 unk64;              // 0x64
-    u16 unk66;              // 0x66
-    u16 unk68;              // 0x68
-    u16 unk6A;              // 0x6A
-    u16 unk6C;              // 0x6C
-    u16 unk6E;              // 0x6E
-    u16 unk70[14];          // 0x70
-    s32 unk8C;              // 0x8C
-    u32 unk90;              // 0x90
-    s32 unk94;              // 0x94
-} Struct_801ED0CC;
-
-typedef struct
-{
-    u16 lo;                 // 0x0C
-    u16 hi;                 // 0x0E
-} CfgHalves;
-
-/** @brief The config word at 0x801ED414, addressed either whole or by halves. */
 typedef union
 {
     u32 word;
-    CfgHalves h;
-} CfgWord;
+    FieldTextFlagBytes b;
+} FieldTextFlags;
+
+/** @brief Runtime state for one field dialogue/text window. */
+typedef struct
+{
+    u8* text_cursor;        // 0x00 script cursor
+    u8* macro_cursor;       // 0x04 macro-expansion cursor
+    u8* glyph_cursor;       // 0x08 nested glyph-run cursor
+    u8* portrait;           // 0x0C portrait image, or NULL
+    FieldTextFlags flags;   // 0x10
+    u8 flow_code;           // 0x14 pending page/prompt action
+    u8 line_count;          // 0x15 emitted text-line count
+    u8 choice_start_line;   // 0x16 first line of a choice list
+    u8 choice_index;        // 0x17 selected choice
+    u8 choice_count;        // 0x18 number of choices / choice nesting depth
+    u8 pending_spaces;      // 0x19 spaces still to emit
+    u8 char_delay;          // 0x1A typewriter delay
+    u8 text_color;          // 0x1B text palette/style index
+    u8 scroll_timer;        // 0x1C scroll countdown after filling the window
+    u8 needs_init;          // 0x1D one-time window/portrait initialization
+    u8 prompt_frame;        // 0x1E prompt animation frame
+    u8 prompt_timer;        // 0x1F prompt animation timer
+    u8 inline_text[0x49 - 0x20]; // 0x20 inline expansion buffer
+    u8 last_was_break;      // 0x49 last glyph was a word-break opportunity
+    u16 transition_frame;   // 0x4A open/close animation step
+    s16 macro_remaining;    // 0x4C active macro character budget; -1 = unlimited
+    u16 x;                  // 0x4E window x
+    u16 y;                  // 0x50 window y
+    u16 width;              // 0x52 text/window width
+    u16 height;             // 0x54 text/window height
+    u16 line_advance;       // 0x56 staging-buffer advance to the next text row
+    u16 line_height;        // 0x58 staging-buffer row height
+    u16 remaining_width;    // 0x5A remaining width on the current line
+    u16 cursor_u;           // 0x5C staging-buffer text cursor u
+    u16 cursor_v;           // 0x5E staging-buffer text cursor v
+    u16 region_start_u;     // 0x60 live text-region start u
+    u16 region_start_v;     // 0x62 live text-region start v
+    u16 region_end_u;       // 0x64 live text-region end u
+    u16 region_end_v;       // 0x66 live text-region end v
+    u16 dirty_start_u;      // 0x68 dirty upload start u
+    u16 dirty_start_v;      // 0x6A dirty upload start v
+    u16 dirty_end_u;        // 0x6C dirty upload end u
+    u16 dirty_end_v;        // 0x6E dirty upload end v
+    u16 row_carry[14];      // 0x70 wrapped glyph-row carry data
+    s32 transition_anchor_x;// 0x8C opening-animation anchor x
+    u32 reserved90;         // 0x90
+    s32 transition_anchor_y;// 0x94 opening-animation y measured from screen bottom
+} FieldTextState;
 
 typedef struct
 {
-    u32 unk0;               // 0x00
-    u16 unk4;               // 0x04
-    u16 unk6;               // 0x06
-    u16 unk8;               // 0x08
-    u16 unkA;               // 0x0A
-    CfgWord unkC;           // 0x0C
-    FlagWord unk10;         // 0x10
-    u32 unk14;              // 0x14
-} Struct_801ED408;
+    u16 x;
+    u16 y;
+} FieldTextAnchor;
 
+typedef union
+{
+    u32 word;
+    FieldTextAnchor pos;
+} FieldTextAnchorWord;
+
+/** @brief Pending configuration copied into a field text-window state. */
+typedef struct
+{
+    u8* portrait;               // 0x00
+    u16 x;                      // 0x04
+    u16 y;                      // 0x06
+    u16 width;                  // 0x08
+    u16 height;                 // 0x0A
+    FieldTextAnchorWord anchor; // 0x0C
+    FieldTextFlags flags;       // 0x10
+    u8* text;                   // 0x14 deferred text pointer
+} FieldTextConfig;
+
+/** @brief Field text renderer globals and four runtime window slots. */
 typedef struct
 {
     u8 _pad00[4];
-    Struct_801ED408* unk4;  // 0x04 same object D_801ED004 points at
+    FieldTextConfig* configs;   // 0x04
     u8 _pad08[0x14 - 8];
-    u32 unk14;
-    u32 unk18;
-    u16 unk1C;
-    u16 unk1E;
-    u16 unk20;
-    u16 unk22;
-    u16 unk24;
-    u16 unk26;
-    u16 unk28;
+    u32 draw_mode0;             // 0x14
+    u32 draw_mode1;             // 0x18
+    u16 text_clut;              // 0x1C
+    u16 text_alt_clut;          // 0x1E
+    u16 window_clut;            // 0x20
+    u16 prompt_clut;            // 0x22
+    u16 portrait_clut0;         // 0x24
+    u16 portrait_clut1;         // 0x26
+    u16 portrait_slots;         // 0x28 bitmask of occupied portrait VRAM slots
     u16 _pad2A[(0x34 - 0x2A) / 2];
-    Struct_801ED0CC unk34[4];
-} Struct_801ED000;
+    FieldTextState windows[4];  // 0x34
+} FieldTextSystem;
 
 typedef struct
 {
@@ -225,11 +213,12 @@ typedef struct
 } PrimIcon;
 
 /** @brief Ordering-table slot a built packet chain is spliced into. */
+/** @brief Pair of ordering-table tags; field text chains into the second tag. */
 typedef struct
 {
-    u32 unk0;               // 0x00
-    u32 unk4;               // 0x04
-} OtSlot;
+    u32 tag0;               // 0x00
+    u32 tag1;               // 0x04
+} FieldOrderingTags;
 
 /** @brief One scratchpad mesh vertex. */
 typedef struct
@@ -255,55 +244,69 @@ typedef struct
 
 typedef struct
 {
-    u8  unk0;               // 0x00
-    u8  unk1;               // 0x01
-    u8  _pad2[2];           // 0x02
-    u16 unk4;               // 0x04
-    u16 unk6;               // 0x06
-    u8  _pad8[4];           // 0x08
-    u32 unkC;               // 0x0C
-} Struct_801ED600;
+    u8 mode;                 // 0x00 input-repeat mode
+    u8 repeat_dir;           // 0x01 repeated direction
+    u8 _pad2[2];             // 0x02
+    u16 pressed;             // 0x04 newly pressed buttons
+    u16 repeat;              // 0x06 repeat/held buttons
+    u8 _pad8[4];             // 0x08
+    u32 repeat_active;       // 0x0C
+} FieldInputState;
 
-void func_800640B4(Struct_8006429C* arg0);
+void field_text_clear_cache_region(FieldTextState* state);
+void field_text_typeset_step(FieldTextState* state, s32 budget);
+s32 field_text_advance_line(FieldTextState* state);
 void field_queue_vram_upload(FieldImageReq* req);
 
-extern Struct_801ED408* D_801ED004;
+void field_text_apply_config(FieldTextState* state);
+void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
+void field_text_close_window(FieldTextState* state, s32 animate);
+void field_text_queue_portrait_upload(u8* image, u8** cursor, s32 slot, s32 mirror);
+void field_text_queue_uploads(FieldTextState* state, u16** cursor);
+void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
+void field_text_save_config(u16 slot);
+void field_text_scroll_cache(FieldTextState* state);
+void field_text_set_string(u16 slot, u8* text, u8 options);
 
-extern u8* D_801ED008;
-extern s16 D_801ED028;
-extern s32 D_801ED044;
+extern FieldTextConfig* g_field_text_configs;
+
+extern u8* g_field_timed_text;
+extern s16 g_field_text_portrait_slots;
+extern s32 g_field_text_window0_flags;
 
 /**
- * @brief Copy unk60/unk62 into unk5C/unk5E, zero unk15, store unk52 into unk5A,
- *        then call func_800640B4 with the same struct pointer.
- * @param arg0 Pointer to the target struct.
- * @see decomp.me (100%) TODO
+ * @brief Reset a text window staging cursor to the start of its live region.
+ * @param state Text-window state.
+ * @see decomp.me (100%)
  */
-void func_8006429C(Struct_8006429C* arg0)
-{
-    u16 temp_v0 = (u16)arg0->unk60;
-    u16 temp_v1 = (u16)arg0->unk62;
-    u16 temp_a1 = arg0->unk52;
 
-    arg0->unk15 = 0;
-    arg0->unk5C = temp_v0;
-    arg0->unk5E = temp_v1;
-    arg0->unk5A = temp_a1;
-    func_800640B4(arg0);
+void field_text_reset_cursor(FieldTextState* state)
+{
+    u16 start_u = (u16)state->region_start_u;
+    u16 start_v = (u16)state->region_start_v;
+    u16 width = state->width;
+
+    state->line_count = 0;
+    state->cursor_u = start_u;
+    state->cursor_v = start_v;
+    state->remaining_width = width;
+    field_text_clear_cache_region(state);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/OcIvj
+ * @brief Initialize field text textures, CLUT state, and window slots.
+ * @see decomp.me (100%)
  */
-void func_800642D4(void)
+
+void field_text_init_renderer(void)
 {
     RECT rect;
-    s32 var_a0;
-    s32* var_v1;
-    u32 hw_val;
+    s32 slot;
+    s32* flags_ptr;
+    u32 draw_mode;
     s32 mask;
     s32 limit;
-    Struct_801ED000* hw_regs = (Struct_801ED000*)0x801ED000;
+    FieldTextSystem* text_sys = (FieldTextSystem*)0x801ED000;
 
     cdrom_stream(0xB1, 0x801DE000);
 
@@ -319,111 +322,119 @@ void func_800642D4(void)
     rect.h = 0x20;
     LoadImage(&rect, (u32*)0x801DE080);
 
-    hw_val = 0xE100041F;
-    var_a0 = 3;
+    draw_mode = 0xE100041F;
+    slot = 3;
     mask = -8;
     limit = -1;
-    var_v1 = (s32*)0x801ED044;
+    flags_ptr = (s32*)0x801ED044;
 
-    hw_regs->unk14 = hw_val;
-    hw_regs->unk18 = hw_val;
-    hw_regs->unk1C = 0x7F13;
-    hw_regs->unk1E = 0x7FD3;
-    hw_regs->unk20 = 0x7F53;
-    hw_regs->unk22 = 0x7F93;
-    hw_regs->unk24 = 0x7E93;
-    hw_regs->unk26 = 0x7ED3;
-    hw_regs->unk28 = 0;
+    text_sys->draw_mode0 = draw_mode;
+    text_sys->draw_mode1 = draw_mode;
+    text_sys->text_clut = 0x7F13;
+    text_sys->text_alt_clut = 0x7FD3;
+    text_sys->window_clut = 0x7F53;
+    text_sys->prompt_clut = 0x7F93;
+    text_sys->portrait_clut0 = 0x7E93;
+    text_sys->portrait_clut1 = 0x7ED3;
+    text_sys->portrait_slots = 0;
 
-    while (var_a0 != limit)
+    while (slot != limit)
     {
-        *var_v1 &= mask;
-        var_a0 -= 1;
-        var_v1 = (s32*)((u8*)var_v1 + 0x98);
+        *flags_ptr &= mask;
+        slot -= 1;
+        flags_ptr = (s32*)((u8*)flags_ptr + 0x98);
     }
 
     DrawSync(0);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/FQwgy
+ * @brief Deactivate all field text windows and release portrait slots.
+ * @see decomp.me (100%)
  */
-void func_800643E0(void)
+
+void field_text_reset_windows(void)
 {
-    s32 var_a0;
-    s32* var_v1;
+    s32 slot;
+    s32* flags_ptr;
     s32 mask;
     s32 limit;
-    u32 temp;
+    u32 flags;
 
-    D_801ED028 = 0;
-    var_a0 = 3;
+    g_field_text_portrait_slots = 0;
+    slot = 3;
     mask = -8;
     limit = -1;
-    var_v1 = (s32*)0x801ED044;
+    flags_ptr = (s32*)0x801ED044;
 
     do
     {
-        temp = *var_v1;
-        var_a0 -= 1;
-        temp &= mask;
-        *var_v1 = temp;
-        var_v1 = (s32*)((u8*)var_v1 + 0x98);
-    } while (var_a0 != limit);
+        flags = *flags_ptr;
+        slot -= 1;
+        flags &= mask;
+        *flags_ptr = flags;
+        flags_ptr = (s32*)((u8*)flags_ptr + 0x98);
+    } while (slot != limit);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/ej2U3
+ * @brief Reset the scratch state used for immediate string rendering.
+ * @see decomp.me (100%)
  */
-void func_8006441C(void)
+
+void field_text_reset_scratch(void)
 {
-    if ((D_801ED044 & 7) == 4)
+    if ((g_field_text_window0_flags & 7) == 4)
     {
-        func_8006700C((void*)0x801ED034, 0);
+        field_text_close_window((void*)0x801ED034, 0);
     }
     do
     {
 
-        Struct_801ED0CC* hw_regs = (Struct_801ED0CC*)0x801ED0CC;
-        u32 unk10_val;
+        FieldTextState* st = (FieldTextState*)0x801ED0CC;
+        st->dirty_end_u = 0x100;
+        st->region_end_u = 0x100;
+        st->dirty_end_v = 0x60;
+        st->region_end_v = 0x60;
+        st->line_advance = 0xFF0;
+        st->width = 0xFF0;
+        st->remaining_width = 0xFF0;
+        st->line_height = 0xC;
+        st->dirty_start_u = 0;
+        st->cursor_u = 0;
+        st->region_start_u = 0;
+        st->dirty_start_v = 0;
+        st->cursor_v = 0;
+        st->region_start_v = 0;
+        st->line_count = 0;
+        st->portrait = 0;
+        st->text_cursor = 0;
+        st->macro_cursor = 0;
+        st->glyph_cursor = 0;
+        st->flow_code = 0;
+        st->pending_spaces = 0;
+        st->choice_count = 0;
+        st->text_color = 0;
+        st->scroll_timer = 0;
+        st->needs_init = 0;
 
-        hw_regs->unk6C = 0x100;
-        hw_regs->unk64 = 0x100;
-        hw_regs->unk6E = 0x60;
-        hw_regs->unk66 = 0x60;
-        hw_regs->unk56 = 0xFF0;
-        hw_regs->unk52 = 0xFF0;
-        hw_regs->unk5A = 0xFF0;
-        hw_regs->unk58 = 0xC;
-        hw_regs->unk68 = 0;
-        hw_regs->unk5C = 0;
-        hw_regs->unk60 = 0;
-        hw_regs->unk6A = 0;
-        hw_regs->unk5E = 0;
-        hw_regs->unk62 = 0;
-        hw_regs->unk15 = 0;
-        hw_regs->unkC = 0;
-        hw_regs->unk0 = 0;
-        hw_regs->unk4 = 0;
-        hw_regs->unk8 = 0;
-        hw_regs->unk14 = 0;
-        hw_regs->unk19 = 0;
-        hw_regs->unk18 = 0;
-        hw_regs->unk1B = 0;
-        hw_regs->unk1C = 0;
-        hw_regs->unk1D = 0;
-
-        hw_regs->unk10.flags = ((((hw_regs->unk10.flags & ~7) | 6) & ~0xC0) | 0x800) & ~0x1000;
+        st->flags.word = ((((st->flags.word & ~7) | 6) & ~0xC0) | 0x800) & ~0x1000;
     } while (0);
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Typeset a string and describe its cached spans as sprite primitives.
+ * @param prim Output sprite array.
+ * @param text Text to typeset.
+ * @param style Text palette/style selector.
+ * @return Number of sprite spans written.
+ * @see decomp.me (100%)
  */
-s32 func_800644FC(SPRT* prim, u8* str, u16 mode)
+
+s32 field_text_build_sprites(SPRT* prim, u8* text, u16 style)
 {
     s32 count = 0;
-    Struct_801ED0CC* st = (Struct_801ED0CC*)0x801ED0CC;
+    FieldTextState* st = (FieldTextState*)0x801ED0CC;
     u16* carry;
     s32 remaining;
     s32 start_x;
@@ -433,25 +444,25 @@ s32 func_800644FC(SPRT* prim, u8* str, u16 mode)
     s32 col;
     s32 cols;
 
-    st->unk49 = 1;
-    st->unk1B = mode & 7;
+    st->last_was_break = 1;
+    st->text_color = style & 7;
     carry = (u16*)0x801ED13C;
-    st->unk4 = 0;
-    st->unk8 = 0;
-    st->unk19 = 0;
-    st->unk14 = 0;
-    remaining = st->unk58;
-    start_x = st->unk52 - st->unk5A;
-    st->unk0 = str;
+    st->macro_cursor = 0;
+    st->glyph_cursor = 0;
+    st->pending_spaces = 0;
+    st->flow_code = 0;
+    remaining = st->line_height;
+    start_x = st->width - st->remaining_width;
+    st->text_cursor = text;
     while (--remaining != -1)
     {
         *carry = 0;
         carry += 1;
     }
-    func_800632E0(st, 0);
+    field_text_typeset_step(st, 0);
     tex_u = start_x;
-    st->unk5A = st->unk5A & 0xFFFC;
-    end_x = st->unk52 - st->unk5A;
+    st->remaining_width = st->remaining_width & 0xFFFC;
+    end_x = st->width - st->remaining_width;
     tex_v = 0;
     while (tex_u >= 0x100)
     {
@@ -480,7 +491,7 @@ s32 func_800644FC(SPRT* prim, u8* str, u16 mode)
             }
             prim->w = cols * 4;
             prim->h = 0xC;
-            if (mode >= 8)
+            if (style >= 8)
             {
                 prim->clut = 0x7F13;
             }
@@ -496,81 +507,84 @@ s32 func_800644FC(SPRT* prim, u8* str, u16 mode)
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Open a text window after the cache region used by earlier active slots.
+ * @param slot Window slot index.
+ * @see decomp.me (100%)
  */
-void func_80064678(u16 index)
+
+void field_text_open_packed_window(u16 slot)
 {
-    Struct_801ED000* base = (Struct_801ED000*)0x801ED000;
-    Struct_801ED0CC* st;
-    Struct_801ED0CC* e;
+    FieldTextSystem* system = (FieldTextSystem*)0x801ED000;
+    FieldTextState* st;
+    FieldTextState* prev;
     u32 flags;
     s32 n;
     s32 w;
     s32 x;
     s32 y;
-    u16 rem;
+    u16 wrap;
 
-    if ((D_801ED044 & 7) == 4)
+    if ((g_field_text_window0_flags & 7) == 4)
     {
-        func_8006700C((void*)0x801ED034, 0);
+        field_text_close_window((void*)0x801ED034, 0);
     }
-    st = &base->unk34[index];
-    if ((st->unk10.flags & 7) == 2)
+    st = &system->windows[slot];
+    if ((st->flags.word & 7) == 2)
     {
-        func_8006700C(st, 0);
+        field_text_close_window(st, 0);
     }
-    flags = st->unk10.flags;
+    flags = st->flags.word;
     if ((flags & 7) != 0)
     {
-        st->unk10.flags = (flags & ~0x6000) | 0x2000;
-        func_80066FBC(index);
+        st->flags.word = (flags & ~0x6000) | 0x2000;
+        field_text_save_config(slot);
         return;
     }
-    func_80064A3C(st);
-    if (st->unkC != 0)
+    field_text_apply_config(st);
+    if (st->portrait != 0)
     {
-        if ((base->unk28 & 1) == 0)
+        if ((system->portrait_slots & 1) == 0)
         {
-            st->unk10.flags &= ~8;
-            base->unk28 |= 1;
+            st->flags.word &= ~8;
+            system->portrait_slots |= 1;
         }
         else
         {
-            st->unk10.flags |= 8;
-            base->unk28 |= 2;
+            st->flags.word |= 8;
+            system->portrait_slots |= 2;
         }
     }
     x = 0;
     y = 0;
-    n = index;
-    e = &base->unk34[0];
+    n = slot;
+    prev = &system->windows[0];
     while (--n != -1)
     {
-        if ((e->unk10.flags & 7) != 0)
+        if ((prev->flags.word & 7) != 0)
         {
-            x = e->unk64;
-            y = e->unk66;
+            x = prev->region_end_u;
+            y = prev->region_end_v;
         }
-        e += 1;
+        prev += 1;
     }
-    n = st->unk54;
-    st->unk68 = x;
-    st->unk5C = x;
-    st->unk60 = x;
-    st->unk6A = y;
-    st->unk5E = y;
-    st->unk62 = y;
+    n = st->height;
+    st->dirty_start_u = x;
+    st->cursor_u = x;
+    st->region_start_u = x;
+    st->dirty_start_v = y;
+    st->cursor_v = y;
+    st->region_start_v = y;
     while (n > 0)
     {
-        w = st->unk56;
+        w = st->line_advance;
         while (w > 0)
         {
-            rem = 0x100 - x;
-            if (w >= rem)
+            wrap = 0x100 - x;
+            if (w >= wrap)
             {
-                w -= rem;
+                w -= wrap;
                 x = 0;
-                y += st->unk58;
+                y += st->line_height;
             }
             else
             {
@@ -580,57 +594,60 @@ void func_80064678(u16 index)
         }
         n -= 0x10;
     }
-    st->unk6C = x;
-    st->unk64 = x;
-    st->unk6E = y;
-    st->unk66 = y;
+    st->dirty_end_u = x;
+    st->region_end_u = x;
+    st->dirty_end_v = y;
+    st->region_end_v = y;
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Open a text window in its fixed cache region.
+ * @param slot Window slot index.
+ * @see decomp.me (100%)
  */
-void func_80064878(u16 index)
+
+void field_text_open_fixed_window(u16 slot)
 {
-    Struct_801ED000* base = (Struct_801ED000*)0x801ED000;
-    Struct_801ED0CC* st;
+    FieldTextSystem* system = (FieldTextSystem*)0x801ED000;
+    FieldTextState* st;
     u32 flags;
     s32 h;
     s32 w;
     s32 x;
     s32 y;
-    u16 rem;
+    u16 wrap;
 
-    if ((D_801ED044 & 7) == 4)
+    if ((g_field_text_window0_flags & 7) == 4)
     {
-        func_8006700C((void*)0x801ED034, 0);
+        field_text_close_window((void*)0x801ED034, 0);
     }
-    st = &base->unk34[index];
-    if ((st->unk10.flags & 7) == 2)
+    st = &system->windows[slot];
+    if ((st->flags.word & 7) == 2)
     {
-        func_8006700C(st, 0);
+        field_text_close_window(st, 0);
     }
-    flags = st->unk10.flags;
+    flags = st->flags.word;
     if ((flags & 7) != 0)
     {
-        st->unk10.flags = (flags & ~0x6000) | 0x4000;
-        func_80066FBC(index);
+        st->flags.word = (flags & ~0x6000) | 0x4000;
+        field_text_save_config(slot);
         return;
     }
-    func_80064A3C(st);
-    if (st->unkC != 0)
+    field_text_apply_config(st);
+    if (st->portrait != 0)
     {
-        if (index == 0)
+        if (slot == 0)
         {
-            st->unk10.flags &= ~8;
-            base->unk28 |= 1;
+            st->flags.word &= ~8;
+            system->portrait_slots |= 1;
         }
         else
         {
-            st->unk10.flags |= 8;
-            base->unk28 |= 2;
+            st->flags.word |= 8;
+            system->portrait_slots |= 2;
         }
     }
-    if (index == 0)
+    if (slot == 0)
     {
         x = 0;
         y = 0;
@@ -640,24 +657,24 @@ void func_80064878(u16 index)
         x = 0;
         y = 0x30;
     }
-    h = st->unk54;
-    st->unk68 = x;
-    st->unk5C = x;
-    st->unk60 = x;
-    st->unk6A = y;
-    st->unk5E = y;
-    st->unk62 = y;
+    h = st->height;
+    st->dirty_start_u = x;
+    st->cursor_u = x;
+    st->region_start_u = x;
+    st->dirty_start_v = y;
+    st->cursor_v = y;
+    st->region_start_v = y;
     while (h > 0)
     {
-        w = st->unk56;
+        w = st->line_advance;
         while (w > 0)
         {
-            rem = 0x100 - x;
-            if (w >= rem)
+            wrap = 0x100 - x;
+            if (w >= wrap)
             {
-                w -= rem;
+                w -= wrap;
                 x = 0;
-                y += st->unk58;
+                y += st->line_height;
             }
             else
             {
@@ -667,108 +684,109 @@ void func_80064878(u16 index)
         }
         h -= 0x10;
     }
-    st->unk6C = x;
-    st->unk64 = x;
-    st->unk6E = y;
-    st->unk66 = y;
+    st->dirty_end_u = x;
+    st->region_end_u = x;
+    st->dirty_end_v = y;
+    st->region_end_v = y;
 }
 
 /**
- * @see decomp.me (100%) TODO
- */
-void func_80064A3C(Struct_801ED0CC* st)
-{
-    Struct_801ED408* cfg = (Struct_801ED408*)0x801ED408;
-    u32 temp_v1;
-    u32 temp_a0;
-    u32 temp_a2;
-    s32 temp_a0_2;
-
-    st->unkC = cfg->unk0;
-    st->unk4E = cfg->unk4;
-    st->unk50 = cfg->unk6;
-    st->unk8C = cfg->unkC.h.lo;
-    st->unk90 = 0;
-    st->unk94 = cfg->unkC.h.hi;
-    st->unk10.b.unk13 = (u8)cfg->unk10.flags;
-    temp_v1 = (st->unk10.flags & ~0xC0) | ((cfg->unk10.flags >> 2) & 0xC0);
-    st->unk10.flags = temp_v1;
-    temp_a0 = temp_v1 & ~0x700;
-    temp_a0 |= (cfg->unk10.flags >> 4) & 0x700;
-    st->unk10.flags = temp_a0;
-    temp_a2 = cfg->unk10.flags;
-    if ((temp_a2 & 0xC00) == 0xC00)
-    {
-        st->unk10.flags = temp_a0 & ~0x30;
-    }
-    else
-    {
-        st->unk10.flags = (temp_a0 & ~0x30) | ((temp_a2 >> 6) & 0x30);
-    }
-    temp_a2 = cfg->unkA;
-    temp_a0_2 = cfg->unk8;
-    if ((st->unkC != 0) && ((st->unk10.flags & 0x30) != 0x20) && ((s32)temp_a2 < 0x30))
-    {
-        temp_a2 = 0x30;
-    }
-    st->unk5A = temp_a0_2;
-    st->unk52 = temp_a0_2;
-    st->unk54 = temp_a2;
-    if ((st->unk10.flags & 0xC0) == 0x40)
-    {
-        st->unk56 = temp_a0_2 + 4;
-        st->unk58 = 0xD;
-        st->unk10.flags = (st->unk10.flags & ~7) | 2;
-    }
-    else
-    {
-        st->unk58 = 0xC;
-        st->unk56 = temp_a0_2;
-        st->unk10.flags = (st->unk10.flags & ~7) | 1;
-    }
-    st->unk0 = 0;
-    st->unk4 = 0;
-    st->unk8 = 0;
-    st->unk49 = 1;
-    if ((cfg->unkC.word == 0) && ((cfg->unk10.flags & 0x70FF) == 0))
-    {
-        st->unk10.b.unk12 = 0;
-    }
-    else
-    {
-        st->unk10.b.unk12 = 1;
-    }
-    st->unk1D = 1;
-    st->unk1F = 1;
-    st->unk15 = 0;
-    st->unk1A = 0;
-    st->unk1B = 0;
-    st->unk1C = 0;
-    st->unk19 = 0;
-    st->unk14 = 0;
-    st->unk1E = 0;
-    st->unk4A = 0;
-    st->unk18 = 0;
-    st->unk10.flags &= ~0x800;
-    st->unk10.flags &= ~0x1000;
-    st->unk10.flags &= ~0x6000;
-}
-
-/**
- * @note Required to match: the empty `union { struct { } e; } crossjump` block
- *       after case 2's `st->unk14 = 0` must stay. The target keeps case 2 its
- *       own copy of the `st->unk14 = 0` tail while case 1 / case 3 / the
- *       `(flags & 0x1000) == 0` path share theirs; without the dummy aggregate
- *       gcc's jump.c cross-jumps case 2 onto a shared copy, sending branches
- *       0x45C / 0x4B8 / 0x4C8 to the wrong block (99.97%, -3 rows). The empty
- *       union perturbs the insn-UID walk that picks the surviving copy.
+ * @brief Apply the pending text configuration to a runtime window state.
+ * @param state Window state to initialize.
  * @see decomp.me (100%)
  */
-void func_80064C28(s32 arg0, s32 arg1, s32 arg2)
+
+void field_text_apply_config(FieldTextState* state)
 {
-    Struct_801ED600* pad = (Struct_801ED600*)0x801ED600;
-    Struct_801ED0CC* st = (Struct_801ED0CC*)0x801ED034;
-    Struct_801ED408* rec;
+    FieldTextConfig* cfg = (FieldTextConfig*)0x801ED408;
+    u32 flags;
+    u32 state_flags;
+    u32 config_flags;
+    s32 width;
+
+    state->portrait = cfg->portrait;
+    state->x = cfg->x;
+    state->y = cfg->y;
+    state->transition_anchor_x = cfg->anchor.pos.x;
+    state->reserved90 = 0;
+    state->transition_anchor_y = cfg->anchor.pos.y;
+    state->flags.b.byte3 = (u8)cfg->flags.word;
+    flags = (state->flags.word & ~0xC0) | ((cfg->flags.word >> 2) & 0xC0);
+    state->flags.word = flags;
+    state_flags = flags & ~0x700;
+    state_flags |= (cfg->flags.word >> 4) & 0x700;
+    state->flags.word = state_flags;
+    config_flags = cfg->flags.word;
+    if ((config_flags & 0xC00) == 0xC00)
+    {
+        state->flags.word = state_flags & ~0x30;
+    }
+    else
+    {
+        state->flags.word = (state_flags & ~0x30) | ((config_flags >> 6) & 0x30);
+    }
+    config_flags = cfg->height;
+    width = cfg->width;
+    if ((state->portrait != 0) && ((state->flags.word & 0x30) != 0x20) && ((s32)config_flags < 0x30))
+    {
+        config_flags = 0x30;
+    }
+    state->remaining_width = width;
+    state->width = width;
+    state->height = config_flags;
+    if ((state->flags.word & 0xC0) == 0x40)
+    {
+        state->line_advance = width + 4;
+        state->line_height = 0xD;
+        state->flags.word = (state->flags.word & ~7) | 2;
+    }
+    else
+    {
+        state->line_height = 0xC;
+        state->line_advance = width;
+        state->flags.word = (state->flags.word & ~7) | 1;
+    }
+    state->text_cursor = 0;
+    state->macro_cursor = 0;
+    state->glyph_cursor = 0;
+    state->last_was_break = 1;
+    if ((cfg->anchor.word == 0) && ((cfg->flags.word & 0x70FF) == 0))
+    {
+        state->flags.b.byte2 = 0;
+    }
+    else
+    {
+        state->flags.b.byte2 = 1;
+    }
+    state->needs_init = 1;
+    state->prompt_timer = 1;
+    state->line_count = 0;
+    state->char_delay = 0;
+    state->text_color = 0;
+    state->scroll_timer = 0;
+    state->pending_spaces = 0;
+    state->flow_code = 0;
+    state->prompt_frame = 0;
+    state->transition_frame = 0;
+    state->choice_count = 0;
+    state->flags.word &= ~0x800;
+    state->flags.word &= ~0x1000;
+    state->flags.word &= ~0x6000;
+}
+
+/**
+ * @brief Update, upload, and render all field text windows for one frame.
+ * @param packet_cursor Address of the render-packet cursor.
+ * @param ot Ordering-table base address.
+ * @param draw_count Current field draw count; 1 selects the render-only path.
+ * @see decomp.me (100%)
+ */
+
+void field_text_update_windows(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
+{
+    FieldInputState* input = (FieldInputState*)0x801ED600;
+    FieldTextState* st = (FieldTextState*)0x801ED034;
+    FieldTextConfig* rec;
     u8* src;
     u8* dst;
     s32 i;
@@ -781,49 +799,49 @@ void func_80064C28(s32 arg0, s32 arg1, s32 arg2)
     i = 3;
     do
     {
-        switch ((u8)st->unk10.flags & 7)
+        switch ((u8)st->flags.word & 7)
         {
         case 1:
         case 2:
         case 3:
-            if (st->unk1D == 1)
+            if (st->needs_init == 1)
             {
-                if (st->unkC != 0)
+                if (st->portrait != 0)
                 {
-                    func_800671D8(st->unkC, arg0, (st->unk10.flags >> 3) & 1, (st->unk10.flags & 0x30) != 0x10);
+                    field_text_queue_portrait_upload(st->portrait, packet_cursor, (st->flags.word >> 3) & 1, (st->flags.word & 0x30) != 0x10);
                 }
-                func_8006429C(st);
-                func_80066CC0(st, arg0);
-                st->unk1D = 0;
+                field_text_reset_cursor(st);
+                field_text_queue_uploads(st, (u16**)packet_cursor);
+                st->needs_init = 0;
             }
-            else if (arg2 == 1)
+            else if (draw_count == 1)
             {
-                func_80067098(st, arg0, arg1);
+                field_text_render_window(st, packet_cursor, ot);
                 break;
             }
             else
             {
-                if (st->unk14 != 0)
+                if (st->flow_code != 0)
                 {
-                    if (pad->unk0 < 3)
+                    if (input->mode < 3)
                     {
-                        if (st->unk14 == 0x10)
+                        if (st->flow_code == 0x10)
                         {
-                            switch (pad->unk0)
+                            switch (input->mode)
                             {
                             case 1:
                             case 2:
-                                if (pad->unkC != 0)
+                                if (input->repeat_active != 0)
                                 {
-                                    keys = pad->unk1;
+                                    keys = input->repeat_dir;
                                 }
                                 else
                                 {
-                                    keys = pad->unk6;
+                                    keys = input->repeat;
                                 }
                                 break;
                             case 0:
-                                keys = pad->unk6;
+                                keys = input->repeat;
                                 break;
                             default:
                                 keys = 0;
@@ -831,171 +849,172 @@ void func_80064C28(s32 arg0, s32 arg1, s32 arg2)
                             }
                             if ((keys & 0x10) != 0)
                             {
-                                tmp = st->unk17;
+                                tmp = st->choice_index;
                                 if (tmp == 0)
                                 {
-                                    tmp = st->unk18;
+                                    tmp = st->choice_count;
                                 }
-                                st->unk17 = tmp - 1;
+                                st->choice_index = tmp - 1;
                                 akao_play_sfx(0x7D, 0, 0x80, 0x7F);
                             }
                             if ((keys & 0x40) != 0)
                             {
-                                if (st->unk17 < (st->unk18 - 1))
+                                if (st->choice_index < (st->choice_count - 1))
                                 {
-                                    st->unk17 = st->unk17 + 1;
+                                    st->choice_index = st->choice_index + 1;
                                 }
                                 else
                                 {
-                                    st->unk17 = 0;
+                                    st->choice_index = 0;
                                 }
                                 akao_play_sfx(0x7D, 0, 0x80, 0x7F);
                             }
-                            if ((pad->unk4 & 0x4002) != 0)
+                            if ((input->pressed & 0x4002) != 0)
                             {
-                                st->unk14 = 0;
-                                st->unk18 = 0;
-                                st->unk0 = 0;
-                                if ((st->unk10.flags & 0x1000) != 0)
+                                st->flow_code = 0;
+                                st->choice_count = 0;
+                                st->text_cursor = 0;
+                                if ((st->flags.word & 0x1000) != 0)
                                 {
-                                    if (st->unkC != 0)
+                                    if (st->portrait != 0)
                                     {
-                                        if ((st->unk10.flags & 8) == 0)
+                                        if ((st->flags.word & 8) == 0)
                                         {
-                                            D_801ED028 &= 0xFFFE;
+                                            g_field_text_portrait_slots &= 0xFFFE;
                                         }
                                         else
                                         {
-                                            D_801ED028 &= 0xFFFD;
+                                            g_field_text_portrait_slots &= 0xFFFD;
                                         }
                                     }
-                                    if ((st->unk10.flags & 0xC0) == 0x40)
+                                    if ((st->flags.word & 0xC0) == 0x40)
                                     {
-                                        st->unk10.flags = st->unk10.flags & ~7;
+                                        st->flags.word = st->flags.word & ~7;
                                     }
                                     else
                                     {
-                                        st->unk10.flags = (st->unk10.flags & ~7) | 3;
-                                        st->unk4A = 0;
+                                        st->flags.word = (st->flags.word & ~7) | 3;
+                                        st->transition_frame = 0;
                                     }
                                 }
                                 akao_play_sfx(0x7E, 0, 0x80, 0x7F);
                             }
                         }
-                        else if (((pad->unk4 & 0x4002) != 0) && (st->unk1E != 2))
+                        else if (((input->pressed & 0x4002) != 0) && (st->prompt_frame != 2))
                         {
-                            st->unk1E = 2;
-                            st->unk1F = 3;
+                            st->prompt_frame = 2;
+                            st->prompt_timer = 3;
                         }
                     }
                 }
-                else if ((st->unk10.flags & 7) == 2)
+                else if ((st->flags.word & 7) == 2)
                 {
-                    if (st->unk1A != 0)
+                    if (st->char_delay != 0)
                     {
-                        st->unk1A = st->unk1A - 1;
+                        st->char_delay = st->char_delay - 1;
                     }
-                    else if (st->unk1C != 0)
+                    else if (st->scroll_timer != 0)
                     {
-                        st->unk1C = st->unk1C - 4;
-                        if (st->unk1C == 0)
+                        st->scroll_timer = st->scroll_timer - 4;
+                        if (st->scroll_timer == 0)
                         {
-                            func_80066A2C(st);
-                            func_80066CC0(st, arg0);
+                            field_text_scroll_cache(st);
+                            field_text_queue_uploads(st, (u16**)packet_cursor);
                         }
                     }
-                    else if (st->unk0 != 0)
+                    else if (st->text_cursor != 0)
                     {
-                        func_800632E0(st, 4);
-                        func_80066CC0(st, arg0);
+                        field_text_typeset_step(st, 4);
+                        field_text_queue_uploads(st, (u16**)packet_cursor);
                     }
                 }
             }
-            func_80067098(st, arg0, arg1);
-            if (st->unk14 != 0)
+            field_text_render_window(st, packet_cursor, ot);
+            if (st->flow_code != 0)
             {
-                if (st->unk14 == 0x10)
+                if (st->flow_code == 0x10)
                 {
-                    st->unk1F = st->unk1F - 1;
-                    if (st->unk1F == 0)
+                    st->prompt_timer = st->prompt_timer - 1;
+                    if (st->prompt_timer == 0)
                     {
-                        st->unk1E = st->unk1E + 1;
-                        if (st->unk1E == 4)
+                        st->prompt_frame = st->prompt_frame + 1;
+                        if (st->prompt_frame == 4)
                         {
-                            st->unk1E = 0;
+                            st->prompt_frame = 0;
                         }
-                        st->unk1F = 4;
+                        st->prompt_timer = 4;
                     }
                 }
                 else
                 {
-                    st->unk1F = st->unk1F - 1;
-                    if (st->unk1F == 0)
+                    st->prompt_timer = st->prompt_timer - 1;
+                    if (st->prompt_timer == 0)
                     {
-                        if (st->unk1E == 2)
+                        if (st->prompt_frame == 2)
                         {
-                            switch (st->unk14)
+                            switch (st->flow_code)
                             {
                             case 1:
-                                st->unk0 = 0;
-                                if ((st->unk10.flags & 0x1000) != 0)
+                                st->text_cursor = 0;
+                                if ((st->flags.word & 0x1000) != 0)
                                 {
-                                    if (st->unkC != 0)
+                                    if (st->portrait != 0)
                                     {
-                                        if ((st->unk10.flags & 8) == 0)
+                                        if ((st->flags.word & 8) == 0)
                                         {
-                                            D_801ED028 &= 0xFFFE;
+                                            g_field_text_portrait_slots &= 0xFFFE;
                                         }
                                         else
                                         {
-                                            D_801ED028 &= 0xFFFD;
+                                            g_field_text_portrait_slots &= 0xFFFD;
                                         }
                                     }
-                                    if ((st->unk10.flags & 0xC0) == 0x40)
+                                    if ((st->flags.word & 0xC0) == 0x40)
                                     {
-                                        st->unk10.flags = st->unk10.flags & ~7;
+                                        st->flags.word = st->flags.word & ~7;
                                     }
                                     else
                                     {
-                                        st->unk10.flags = (st->unk10.flags & ~7) | 3;
-                                        st->unk4A = 0;
+                                        st->flags.word = (st->flags.word & ~7) | 3;
+                                        st->transition_frame = 0;
                                     }
                                 }
-                                st->unk14 = 0;
+                                st->flow_code = 0;
                                 break;
                             case 2:
-                                func_8006429C(st);
-                                func_80066CC0(st, arg0);
-                                st->unk14 = 0;
+                                field_text_reset_cursor(st);
+                                field_text_queue_uploads(st, (u16**)packet_cursor);
+                                st->flow_code = 0;
                                 {
+                                    /* Matching: prevents GCC 2.8.0 cross-jumping this tail. */
                                     union { struct { } e; } crossjump = {};
                                     (void)crossjump;
                                 }
                                 break;
                             case 3:
-                                func_80064210(st);
-                                st->unk14 = 0;
+                                field_text_advance_line(st);
+                                st->flow_code = 0;
                                 break;
                             default:
-                                st->unk14 = 0;
+                                st->flow_code = 0;
                                 break;
                             }
                         }
                         else
                         {
-                            st->unk1E = 1 - st->unk1E;
-                            st->unk1F = 8;
+                            st->prompt_frame = 1 - st->prompt_frame;
+                            st->prompt_timer = 8;
                         }
                     }
                 }
             }
-            if (((st->unk10.flags & 7) == 0) && ((st->unk10.flags & 0x6000) != 0))
+            if (((st->flags.word & 7) == 0) && ((st->flags.word & 0x6000) != 0))
             {
                 idx = 3 - i;
-                mode = (st->unk10.flags >> 13) & 3;
+                mode = (st->flags.word >> 13) & 3;
                 dst = (u8*)0x801ED408;
                 n = 0x17;
-                rec = &D_801ED004[idx];
+                rec = &g_field_text_configs[idx];
                 src = (u8*)rec;
                 do
                 {
@@ -1006,52 +1025,52 @@ void func_80064C28(s32 arg0, s32 arg1, s32 arg2)
                 } while (n != -1);
                 if (mode == 1)
                 {
-                    func_80064678(idx);
+                    field_text_open_packed_window(idx);
                 }
                 else
                 {
-                    func_80064878(idx);
+                    field_text_open_fixed_window(idx);
                 }
-                if (rec->unk14 != 0)
+                if (rec->text != 0)
                 {
-                    func_80066F28(idx, rec->unk14, rec->unk10.b.unk12);
+                    field_text_set_string(idx, rec->text, rec->flags.b.byte2);
                 }
             }
             break;
         case 4:
-            if (st->unk1D == 1)
+            if (st->needs_init == 1)
             {
-                st->unk4A = 0x32;
-                st->unk1D = 0;
+                st->transition_frame = 0x32;
+                st->needs_init = 0;
             }
-            if (st->unk0 != 0)
+            if (st->text_cursor != 0)
             {
-                func_8006429C(st);
-                func_800632E0(st, 0);
-                st->unk0 = 0;
-                st->unk14 = 0;
-                st->unk68 = st->unk60;
-                st->unk6A = st->unk62;
-                st->unk6C = st->unk64;
-                st->unk6E = st->unk66;
-                func_80066CC0(st, arg0);
+                field_text_reset_cursor(st);
+                field_text_typeset_step(st, 0);
+                st->text_cursor = 0;
+                st->flow_code = 0;
+                st->dirty_start_u = st->region_start_u;
+                st->dirty_start_v = st->region_start_v;
+                st->dirty_end_u = st->region_end_u;
+                st->dirty_end_v = st->region_end_v;
+                field_text_queue_uploads(st, (u16**)packet_cursor);
             }
-            func_800654E0(st, arg0, arg1);
-            st->unk4A = st->unk4A - 1;
-            if (st->unk4A == 0)
+            field_text_build_window_packets(st, packet_cursor, ot);
+            st->transition_frame = st->transition_frame - 1;
+            if (st->transition_frame == 0)
             {
-                if (st->unkC != 0)
+                if (st->portrait != 0)
                 {
-                    if ((st->unk10.flags & 8) == 0)
+                    if ((st->flags.word & 8) == 0)
                     {
-                        D_801ED028 &= 0xFFFE;
+                        g_field_text_portrait_slots &= 0xFFFE;
                     }
                     else
                     {
-                        D_801ED028 &= 0xFFFD;
+                        g_field_text_portrait_slots &= 0xFFFD;
                     }
                 }
-                st->unk10.flags = st->unk10.flags & ~7;
+                st->flags.word = st->flags.word & ~7;
             }
             break;
         case 5:
@@ -1060,14 +1079,19 @@ void func_80064C28(s32 arg0, s32 arg1, s32 arg2)
         default:
             break;
         }
-        st = (Struct_801ED0CC*)((u8*)st + 0x98);
+        st = (FieldTextState*)((u8*)st + 0x98);
     } while (--i != -1);
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Build the opening/closing transition quad for a text window.
+ * @param state Text-window state.
+ * @param out Output screen-space quad.
+ * @param frame Transition frame in the range 0..4.
+ * @see decomp.me (100%)
  */
-void func_80065320(Struct_801ED0CC* st, Quad* out, s32 step)
+
+void field_text_build_transition_quad(FieldTextState* state, Quad* out, s32 frame)
 {
     s32 half_w;
     s32 half_h;
@@ -1086,21 +1110,21 @@ void func_80065320(Struct_801ED0CC* st, Quad* out, s32 step)
     s32 rem;
     s32 neg_h;
 
-    if ((st->unkC != 0) && (((st->unk10.flags >> 4) & 3) < 2))
+    if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
     {
-        half_w = st->unk52 + 0x38;
+        half_w = state->width + 0x38;
     }
     else
     {
-        half_w = st->unk52;
+        half_w = state->width;
     }
     half_w = half_w / 2 + 8;
-    half_h = (u32)st->unk54 / 2;
+    half_h = (u32)state->height / 2;
     pad_h = half_h + 8;
     neg_h = -pad_h;
     x2 = -half_w;
     x3 = half_w;
-    n = step + 3;
+    n = frame + 3;
     if (n > 4)
     {
         n = 4;
@@ -1110,17 +1134,17 @@ void func_80065320(Struct_801ED0CC* st, Quad* out, s32 step)
     x2 = (x2 * n) / 4;
     y1 = (x3 * n) / 4;
     x3 = y1;
-    y0 = ((neg_h + 2) * step) / 4 - 2;
-    y1 = ((neg_h + 2) * step) / 4 - 2;
-    y2 = ((half_h + 6) * step) / 4 + 2;
-    y3 = ((half_h + 6) * step) / 4 + 2;
-    cx = st->unk4E + half_w;
-    cy = st->unk50 + pad_h;
-    if (st->unk10.b.unk12 != 0)
+    y0 = ((neg_h + 2) * frame) / 4 - 2;
+    y1 = ((neg_h + 2) * frame) / 4 - 2;
+    y2 = ((half_h + 6) * frame) / 4 + 2;
+    y3 = ((half_h + 6) * frame) / 4 + 2;
+    cx = state->x + half_w;
+    cy = state->y + pad_h;
+    if (state->flags.b.byte2 != 0)
     {
-        rem = 4 - step;
-        cx = (cx * step + st->unk8C * rem) / 4;
-        cy = (cy * step + (0xE0 - st->unk94) * rem) / 4;
+        rem = 4 - frame;
+        cx = (cx * frame + state->transition_anchor_x * rem) / 4;
+        cy = (cy * frame + (0xE0 - state->transition_anchor_y) * rem) / 4;
     }
     out->x0 = cx + x0;
     out->x1 = cx + x1;
@@ -1133,17 +1157,16 @@ void func_80065320(Struct_801ED0CC* st, Quad* out, s32 step)
 }
 
 /**
- * @brief Build the field text-window GPU packet chain and splice it into the OT.
- * @param st     Text-window state block.
- * @param cursor In/out cursor into the packet scratch buffer.
- * @param ot     Ordering-table slot the finished chain is linked into.
- * @note WIP - not yet byte-matching. See working/func_800654E0/STATUS.md for the
- *       open levers (prologue-materialised constants, 8-byte frame overshoot).
- * @see decomp.me (77.41%) TODO
+ * @brief Build a flat field text-window packet chain and splice it into the OT.
+ * @param state Text-window state.
+ * @param cursor In/out render-packet cursor.
+ * @param ot Ordering-table slot.
+ * @see decomp.me (77.41%)
  */
-void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
+
+void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrderingTags* ot)
 {
-    Struct_801ED000* hw = (Struct_801ED000*)0x801ED000;
+    FieldTextSystem* hw = (FieldTextSystem*)0x801ED000;
     PrimMode* mode;
     PrimSprt* sp;
     PrimGlyph* gl;
@@ -1176,21 +1199,21 @@ void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
     cur = first + 8;
     mode = (PrimMode*)first;
     mode->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
-    mode->code = hw->unk14;
+    mode->code = hw->draw_mode0;
     u_org = 0;
-    if ((st->unk10.flags & 0xC0) == 0)
+    if ((st->flags.word & 0xC0) == 0)
     {
-        y = st->unk50;
+        y = st->y;
         row = 1;
         do
         {
             if (row != 0)
             {
-                uv = (hw->unk20 << 16) | 0xF000;
+                uv = (hw->window_clut << 16) | 0xF000;
             }
             else
             {
-                uv = (hw->unk20 << 16) | 0xF800;
+                uv = (hw->window_clut << 16) | 0xF800;
             }
             uv = uv | u_org;
             sp = (PrimSprt*)cur;
@@ -1200,16 +1223,16 @@ void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
             sp->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
             sp->rgbc = rgbc;
             sp->wh = 0x80008;
-            xy = st->unk4E | (y << 16);
+            xy = st->x | (y << 16);
             sp->xy = xy;
             xy += 8;
-            if ((st->unkC != 0) && (((st->unk10.flags >> 4) & 3) < 2))
+            if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
             {
-                w = st->unk52 + 0x38;
+                w = st->width + 0x38;
             }
             else
             {
-                w = st->unk52;
+                w = st->width;
             }
             if (w > 0)
             {
@@ -1244,16 +1267,16 @@ void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
             last->xy = xy;
             last->uv = uv;
             last->wh = 0x80008;
-            y = y + 8 + st->unk54;
+            y = y + 8 + st->height;
         } while (row != -1);
-        rows = st->unk54;
-        y = st->unk50 + 8;
+        rows = st->height;
+        y = st->y + 8;
         if (rows > 0)
         {
             do
             {
-                uv = (hw->unk20 << 16) | 0xE000 | (u_org + 0xE0);
-                xy = st->unk4E | (y << 16);
+                uv = (hw->window_clut << 16) | 0xE000 | (u_org + 0xE0);
+                xy = st->x | (y << 16);
                 size = 0x200000;
                 if (rows < 0x21)
                 {
@@ -1268,13 +1291,13 @@ void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
                 sp->uv = uv;
                 sp->wh = size | 8;
                 uv -= 0x40;
-                if ((st->unkC != 0) && (((st->unk10.flags >> 4) & 3) < 2))
+                if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
                 {
-                    w = st->unk52 + 0x38;
+                    w = st->width + 0x38;
                 }
                 else
                 {
-                    w = st->unk52;
+                    w = st->width;
                 }
                 if (w > 0)
                 {
@@ -1314,25 +1337,25 @@ void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
         }
         u_org = 0;
     }
-    glyph_h = st->unk58;
-    col = st->unk60;
-    row_v = st->unk62;
-    skip = st->unk1C;
-    y = st->unk50 + 8;
-    rows = (st->unk54 >> 4) - 1;
+    glyph_h = st->line_height;
+    col = st->region_start_u;
+    row_v = st->region_start_v;
+    skip = st->scroll_timer;
+    y = st->y + 8;
+    rows = (st->height >> 4) - 1;
     if (rows != -1)
     {
         do
         {
-            if ((st->unkC != 0) && ((st->unk10.flags & 0x30) == 0))
+            if ((st->portrait != 0) && ((st->flags.word & 0x30) == 0))
             {
-                x = st->unk4E + 0x40;
+                x = st->x + 0x40;
             }
             else
             {
-                x = st->unk4E + 8;
+                x = st->x + 8;
             }
-            w = st->unk56;
+            w = st->line_advance;
             xy = (x & 0xFFFF) | (y << 16);
             if (w > 0)
             {
@@ -1363,7 +1386,7 @@ void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
                         gl->rgbc = rgbc;
                         gl->xy = xy;
                         gl->u0 = u_org + col;
-                        gl->clut = hw->unk1C;
+                        gl->clut = hw->text_clut;
                         if (skip != 0)
                         {
                             gl->v0 = (0x80 + row_v + 0x10) - skip;
@@ -1405,69 +1428,69 @@ void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
             rows -= 1;
         } while (rows != -1);
     }
-    if (st->unkC != 0)
+    if (st->portrait != 0)
     {
         mode = (PrimMode*)cur;
         cur += 8;
         mode->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
-        mode->code = hw->unk18;
-        if ((st->unk10.flags & 0x30) == 0)
+        mode->code = hw->draw_mode1;
+        if ((st->flags.word & 0x30) == 0)
         {
-            x = (st->unk4E + 8) & 0xFFFF;
+            x = (st->x + 8) & 0xFFFF;
         }
         else
         {
-            x = (st->unk4E + (st->unk52 + 0x10)) & 0xFFFF;
+            x = (st->x + (st->width + 0x10)) & 0xFFFF;
         }
         sp = (PrimSprt*)cur;
         cur += 0x14;
         sp->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
         sp->rgbc = 0x66000000;
-        xy = x | ((st->unk50 + (((s32)(st->unk54 - 0x30) >> 1) + 8)) << 16);
+        xy = x | ((st->y + (((s32)(st->height - 0x30) >> 1) + 8)) << 16);
         sp->xy = xy + 0x20002;
         sp->wh = 0x300030;
-        uv = ((((((st->unk10.flags >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        sp->uv = (hw->unk1C << 16) | uv;
+        uv = ((((((st->flags.word >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        sp->uv = (hw->text_clut << 16) | uv;
         last = (PrimSprt*)cur;
         cur += 0x14;
         last->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
         last->rgbc = rgbc;
         last->xy = xy;
         last->wh = 0x300030;
-        last->uv = ((&hw->unk24)[(st->unk10.flags >> 3) & 1] << 16) | uv;
+        last->uv = ((&hw->portrait_clut0)[(st->flags.word >> 3) & 1] << 16) | uv;
     }
-    if (st->unk14 != 0)
+    if (st->flow_code != 0)
     {
-        if (((st->unk10.flags & 0xC0) == 0) ||
-            (((st->unk10.flags & 0xC0) == 0x40) && (st->unk14 == 0x10)))
+        if (((st->flags.word & 0xC0) == 0) ||
+            (((st->flags.word & 0xC0) == 0x40) && (st->flow_code == 0x10)))
         {
             mode = (PrimMode*)cur;
             cur += 8;
             mode->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
-            mode->code = hw->unk14;
-            if (st->unk14 == 0x10)
+            mode->code = hw->draw_mode0;
+            if (st->flow_code == 0x10)
             {
                 s16p = (PrimSprt16*)cur;
                 cur += 0x10;
                 s16p->tag = ((u32)cur & 0xFFFFFF) | 0x03000000;
                 s16p->rgbc = 0x7D808080;
-                if ((st->unkC != 0) && ((st->unk10.flags & 0x30) == 0))
+                if ((st->portrait != 0) && ((st->flags.word & 0x30) == 0))
                 {
-                    s16p->x0 = st->unk4E + 0x38;
+                    s16p->x0 = st->x + 0x38;
                 }
                 else
                 {
-                    s16p->x0 = st->unk4E + 0xE;
+                    s16p->x0 = st->x + 0xE;
                 }
-                s16p->y0 = st->unk50 + ((st->unk16 + st->unk17) * 0x10);
-                icon_v = st->unk1E * 0x10;
-                if (st->unk1E == 3)
+                s16p->y0 = st->y + ((st->choice_start_line + st->choice_index) * 0x10);
+                icon_v = st->prompt_frame * 0x10;
+                if (st->prompt_frame == 3)
                 {
                     icon_v = 0x10;
                 }
                 s16p->u0 = icon_v + 0x60;
                 s16p->v0 = 0xE0;
-                s16p->clut = hw->unk22;
+                s16p->clut = hw->prompt_clut;
                 last = (PrimSprt*)s16p;
             }
             else
@@ -1476,42 +1499,40 @@ void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
                 cur += 0x14;
                 icon->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
                 icon->rgbc = rgbc;
-                if ((st->unkC != 0) && (((st->unk10.flags >> 4) & 3) < 2))
+                if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
                 {
-                    icon->x0 = st->unk4E + ((st->unk52 + 0x38) >> 1);
+                    icon->x0 = st->x + ((st->width + 0x38) >> 1);
                 }
                 else
                 {
-                    icon->x0 = st->unk4E + (st->unk52 >> 1);
+                    icon->x0 = st->x + (st->width >> 1);
                 }
-                icon->y0 = st->unk50 + st->unk54 + 6;
+                icon->y0 = st->y + st->height + 6;
                 icon->u0 = 0xF0;
-                icon->clut = hw->unk22;
+                icon->clut = hw->prompt_clut;
                 icon->wh = 0x80010;
-                icon->v0 = (st->unk1E * 8) - 0x20;
+                icon->v0 = (st->prompt_frame * 8) - 0x20;
                 last = (PrimSprt*)icon;
             }
         }
     }
-    last->tag = (last->tag & 0xFF000000) | (ot->unk4 & 0xFFFFFF);
-    ot->unk4 = (ot->unk4 & 0xFF000000) | ((u32)first & 0xFFFFFF);
+    last->tag = (last->tag & 0xFF000000) | (ot->tag1 & 0xFFFFFF);
+    ot->tag1 = (ot->tag1 & 0xFF000000) | ((u32)first & 0xFFFFFF);
     *cursor = cur;
 }
 
 /**
- * @brief Build the warped (perspective) field text-window packet chain.
- * @param st     Text-window state block.
- * @param quad   Four screen corners the flat mesh is warped into.
- * @param cursor In/out cursor into the packet scratch buffer.
- * @param ot     Ordering-table slot the finished chain is linked into.
- * @note WIP - not yet byte-matching. Insn count and frame already match; the
- *       residue is emit order and register allocation. See
- *       working/func_80065D38/STATUS.md.
- * @see decomp.me (80.26%) TODO
+ * @brief Build a warped text-window packet chain for an opening/closing quad.
+ * @param state Text-window state.
+ * @param quad Transition quad.
+ * @param cursor In/out render-packet cursor.
+ * @param ot Ordering-table slot.
+ * @see decomp.me (80.26%)
  */
-void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
+
+void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cursor, FieldOrderingTags* ot)
 {
-    Struct_801ED000* hw = (Struct_801ED000*)0x801ED000;
+    FieldTextSystem* hw = (FieldTextSystem*)0x801ED000;
     Vec2s* p;
     Vec2s* mesh;
     u32* vp;
@@ -1554,13 +1575,13 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
     base_y = 0;
     dx = 0;
     dy = 0;
-    if ((st->unkC != 0) && (((st->unk10.flags >> 4) & 3) < 2))
+    if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
     {
-        w = st->unk52 + 0x38;
+        w = st->width + 0x38;
     }
     else
     {
-        w = st->unk52;
+        w = st->width;
     }
 
     /* Build the unwarped mesh in scratchpad RAM. */
@@ -1595,7 +1616,7 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
     p[1].y = 0;
     p += 2;
 
-    rows = st->unk54 - 1;
+    rows = st->height - 1;
     y = 8;
     if (rows != -1)
     {
@@ -1681,19 +1702,19 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
     } while (n != -1);
 
     y = 8;
-    u = st->unk60;
-    rows = (st->unk54 >> 4) - 1;
+    u = st->region_start_u;
+    rows = (st->height >> 4) - 1;
     count = 0;
     if (rows != -1)
     {
         do
         {
             v = 8;
-            if ((st->unkC != 0) && ((st->unk10.flags & 0x30) == 0))
+            if ((st->portrait != 0) && ((st->flags.word & 0x30) == 0))
             {
                 v = 0x40;
             }
-            span = st->unk56;
+            span = st->line_advance;
             if (span > 0)
             {
                 do
@@ -1702,7 +1723,7 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
                     p->y = y;
                     p[1].x = v;
                     avail = 0x100 - u;
-                    p[1].y = st->unk58 + y;
+                    p[1].y = st->line_height + y;
                     p += 2;
                     count += 2;
                     if (span >= avail)
@@ -1723,7 +1744,7 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
             p->y = y;
             p[1].x = v;
             rows -= 1;
-            p[1].y = st->unk58 + y;
+            p[1].y = st->line_height + y;
             p += 2;
             count += 2;
             y += 0x10;
@@ -1731,16 +1752,16 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
     }
 
     n = 1;
-    y = ((s32)(st->unk54 - 0x30) >> 1) + 0xA;
+    y = ((s32)(st->height - 0x30) >> 1) + 0xA;
     do
     {
-        if ((st->unk10.flags & 0x30) == 0)
+        if ((st->flags.word & 0x30) == 0)
         {
             v = 0xA;
         }
         else
         {
-            v = st->unk52 + 0x12;
+            v = st->width + 0x12;
         }
         m = 1;
         do
@@ -1756,16 +1777,16 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
     } while (n != -1);
 
     n = 1;
-    y = ((s32)(st->unk54 - 0x30) >> 1) + 8;
+    y = ((s32)(st->height - 0x30) >> 1) + 8;
     do
     {
-        if ((st->unk10.flags & 0x30) == 0)
+        if ((st->flags.word & 0x30) == 0)
         {
             v = 8;
         }
         else
         {
-            v = st->unk52 + 0x10;
+            v = st->width + 0x10;
         }
         m = 1;
         do
@@ -1784,8 +1805,8 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
     mesh = (Vec2s*)0x1F800000;
     prev = -1;
     den_x = w + 0x10;
-    m = ((((st->unk54 + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3)) + count + 7;
-    den_y = st->unk54 + 0x10;
+    m = ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3)) + count + 7;
+    den_y = st->height + 0x10;
     if (m != -1)
     {
         p = mesh;
@@ -1818,7 +1839,7 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
     stride = ((w + 0x3F) >> 6) + 3;
     first = *cursor;
     cur = first;
-    clut = hw->unk20 << 16;
+    clut = hw->window_clut << 16;
     do
     {
         if (n == 0)
@@ -1888,12 +1909,12 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
         last->xy2 = vp[stride];
         last->xy3 = vp[stride + 1];
         n -= 1;
-        vp = (u32*)0x1F800000 + ((((st->unk54 + 0x1F) >> 5) + 1) * stride);
+        vp = (u32*)0x1F800000 + ((((st->height + 0x1F) >> 5) + 1) * stride);
         y = 7;
     } while (n != -1);
 
     vp = (u32*)0x1F80000C + ((w + 0x3F) >> 6);
-    rows = st->unk54;
+    rows = st->height;
     if (rows > 0)
     {
         do
@@ -1966,15 +1987,15 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
         } while (rows > 0);
     }
 
-    col = st->unk60;
-    row_v = st->unk62;
-    rows = (st->unk54 >> 4) - 1;
-    vp = (u32*)0x1F800008 + ((((st->unk54 + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3));
+    col = st->region_start_u;
+    row_v = st->region_start_v;
+    rows = (st->height >> 4) - 1;
+    vp = (u32*)0x1F800008 + ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3));
     if (rows != -1)
     {
         do
         {
-            span = st->unk56;
+            span = st->line_advance;
             v = row_v + 0x80;
             if (span > 0)
             {
@@ -1986,9 +2007,9 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
                     last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
                     last->rgbc = 0x2D808080;
                     last->uv1 = 0x1F0000 | uv;
-                    last->uv0 = (hw->unk1C << 16) | uv;
-                    last->uv2 = uv + (st->unk58 << 8);
-                    last->uv3 = uv + (st->unk58 << 8);
+                    last->uv0 = (hw->text_clut << 16) | uv;
+                    last->uv2 = uv + (st->line_height << 8);
+                    last->uv3 = uv + (st->line_height << 8);
                     last->xy0 = vp[0];
                     avail = 0x100 - col;
                     last->xy1 = vp[1];
@@ -2002,7 +2023,7 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
                         last->uv3 = m;
                         last->uv1 = m;
                         col = 0;
-                        row_v += st->unk58;
+                        row_v += st->line_height;
                     }
                     else
                     {
@@ -2019,52 +2040,50 @@ void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
         } while (rows != -1);
     }
 
-    if (st->unkC != 0)
+    if (st->portrait != 0)
     {
         poly = (PrimQuad*)cur;
         cur += 0x28;
         poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
         poly->rgbc = 0x2E000000;
-        uv = ((((((st->unk10.flags >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        poly->uv0 = (hw->unk1C << 16) | uv;
+        uv = ((((((st->flags.word >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        poly->uv0 = (hw->text_clut << 16) | uv;
         poly->uv2 = uv + 0x3000;
         poly->uv1 = (uv + 0x2F) | 0x1F0000;
         poly->uv3 = uv + 0x302F;
         vp = (u32*)0x1F800000 + count
-             + ((((st->unk54 + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3));
+             + ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3));
         poly->xy0 = vp[0];
         poly->xy1 = vp[1];
         poly->xy2 = vp[2];
         poly->xy3 = vp[3];
         last = (PrimQuad*)cur;
         cur += 0x28;
-        sel = (st->unk10.flags >> 3) & 1;
+        sel = (st->flags.word >> 3) & 1;
         uv = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
         last->uv2 = uv + 0x3000;
         last->uv1 = (uv + 0x2F) | 0x1F0000;
         last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
         last->rgbc = 0x2D808080;
         last->uv3 = uv + 0x302F;
-        last->uv0 = ((&hw->unk24)[sel] << 16) | uv;
+        last->uv0 = ((&hw->portrait_clut0)[sel] << 16) | uv;
         last->xy0 = vp[0];
         last->xy1 = vp[1];
         last->xy2 = vp[2];
         last->xy3 = vp[3];
     }
-    last->tag = (last->tag & 0xFF000000) | (ot->unk4 & 0xFFFFFF);
-    ot->unk4 = (ot->unk4 & 0xFF000000) | ((u32)first & 0xFFFFFF);
+    last->tag = (last->tag & 0xFF000000) | (ot->tag1 & 0xFFFFFF);
+    ot->tag1 = (ot->tag1 & 0xFF000000) | ((u32)first & 0xFFFFFF);
     *cursor = cur;
 }
 
 /**
- * @brief Scroll the glyph cache up by one text row, clearing the vacated row.
- * @param st Text-window state block.
- * @note WIP - not yet byte-matching. Frame and control flow already match; the
- *       residue is two rematerialised -1 loop sentinels and the register
- *       cascade from them. See working/func_80066A2C/STATUS.md.
- * @see decomp.me (91.52%) TODO
+ * @brief Scroll the text cache up one row and clear the vacated row.
+ * @param state Text-window state.
+ * @see decomp.me (91.52%)
  */
-void func_80066A2C(Struct_801ED0CC* st)
+
+void field_text_scroll_cache(FieldTextState* st)
 {
     u16* dst;
     u16* src;
@@ -2085,15 +2104,15 @@ void func_80066A2C(Struct_801ED0CC* st)
     s32 count;
     u16 pix;
 
-    u = st->unk60;
-    v = st->unk62;
-    rows = st->unk54 - 0x10;
+    u = st->region_start_u;
+    v = st->region_start_v;
+    rows = st->height - 0x10;
     if (rows > 0)
     {
         do
         {
             du = u;
-            left = st->unk56;
+            left = st->line_advance;
             dv = v;
             if (left > 0)
             {
@@ -2105,7 +2124,7 @@ void func_80066A2C(Struct_801ED0CC* st)
                     {
                         left -= avail;
                         u = 0;
-                        v += st->unk58;
+                        v += st->line_height;
                     }
                     else
                     {
@@ -2115,7 +2134,7 @@ void func_80066A2C(Struct_801ED0CC* st)
                 } while (left > 0);
             }
             su = u;
-            left = st->unk56;
+            left = st->line_advance;
             sv = v;
             if (left > 0)
             {
@@ -2140,7 +2159,7 @@ void func_80066A2C(Struct_801ED0CC* st)
                         do
                         {
                             du -= 0x100;
-                            dv += st->unk58;
+                            dv += st->line_height;
                         } while (du >= 0x100);
                     }
                     su += span;
@@ -2149,10 +2168,10 @@ void func_80066A2C(Struct_801ED0CC* st)
                         do
                         {
                             su -= 0x100;
-                            sv += st->unk58;
+                            sv += st->line_height;
                         } while (su >= 0x100);
                     }
-                    lines = st->unk58 - 1;
+                    lines = st->line_height - 1;
                     if (lines != -1)
                     {
                         do
@@ -2182,7 +2201,7 @@ void func_80066A2C(Struct_801ED0CC* st)
             rows -= 0x10;
         } while (rows > 0);
     }
-    left = st->unk56;
+    left = st->line_advance;
     if (left > 0)
     {
         span = u >> 2;
@@ -2201,10 +2220,10 @@ void func_80066A2C(Struct_801ED0CC* st)
                 do
                 {
                     u -= 0x100;
-                    v += st->unk58;
+                    v += st->line_height;
                 } while (u >= 0x100);
             }
-            lines = st->unk58 - 1;
+            lines = st->line_height - 1;
             if (lines != -1)
             {
                 do
@@ -2228,26 +2247,21 @@ void func_80066A2C(Struct_801ED0CC* st)
             span = u >> 2;
         } while (left > 0);
     }
-    st->unk68 = st->unk60;
-    st->unk6A = st->unk62;
-    st->unk6C = st->unk64;
-    st->unk6E = st->unk66;
-    st->unk5A = st->unk52;
+    st->dirty_start_u = st->region_start_u;
+    st->dirty_start_v = st->region_start_v;
+    st->dirty_end_u = st->region_end_u;
+    st->dirty_end_v = st->region_end_v;
+    st->remaining_width = st->width;
 }
 
 /**
- * @brief Queue the dirty text-cache rows for VRAM upload, staging wrapped runs
- *        into the packet arena.
- * @param st     Text-window state block.
- * @param cursor In/out cursor into the packet arena.
- * @param arg2   Initial row count (overwritten before use in the staged path).
- * @note WIP - not yet byte-matching. Frame matches; 4 insns short, all from
- *       loop.c hoisting inner-loop invariants into the OUTER preheader here and
- *       the inner one in the target. Same blocker as func_80066A2C. See
- *       working/func_80066CC0/STATUS.md.
- * @see decomp.me (84.01%) TODO
+ * @brief Queue dirty text-cache rows for VRAM upload.
+ * @param state Text-window state.
+ * @param cursor In/out packet cursor used for upload requests and staging data.
+ * @see decomp.me (84.01%)
  */
-void func_80066CC0(Struct_801ED0CC* st, u16** cursor, s32 arg2)
+
+void field_text_queue_uploads(FieldTextState* state, u16** cursor)
 {
     FieldImageReq* req;
     u16* cur;
@@ -2263,15 +2277,14 @@ void func_80066CC0(Struct_801ED0CC* st, u16** cursor, s32 arg2)
     s32 h;
     s32 bottom;
 
-    rows = arg2;
     cur = *cursor;
     req = (FieldImageReq*)cur;
-    y = st->unk6A;
-    x = st->unk68;
+    y = state->dirty_start_v;
+    x = state->dirty_start_u;
     cur += 8;
-    if (y == st->unk6E)
+    if (y == state->dirty_end_v)
     {
-        span = st->unk6C - x;
+        span = state->dirty_end_u - x;
     }
     else
     {
@@ -2280,7 +2293,7 @@ void func_80066CC0(Struct_801ED0CC* st, u16** cursor, s32 arg2)
     span = span >> 1;
     dst = (u16*)0x801DE000;
     src = (u16*)((y << 7) + 0x801DE000) + (x >> 2);
-    h = st->unk58;
+    h = state->line_height;
     req->rect.x = (x >> 2) + 0x3C0;
     w = span >> 1;
     req->rect.y = y + 0x180;
@@ -2319,36 +2332,36 @@ void func_80066CC0(Struct_801ED0CC* st, u16** cursor, s32 arg2)
     }
     field_queue_vram_upload(req);
     bottom = y + h;
-    if (y != st->unk6E)
+    if (y != state->dirty_end_v)
     {
         req = (FieldImageReq*)cur;
-        if (bottom != st->unk6E)
+        if (bottom != state->dirty_end_v)
         {
             cur += 8;
             req->rect.x = 0x3C0;
             req->rect.y = bottom + 0x180;
             req->rect.w = 0x40;
             req->data = (u_long*)((bottom << 7) + 0x801DE000);
-            req->rect.h = st->unk6E - bottom;
+            req->rect.h = state->dirty_end_v - bottom;
             field_queue_vram_upload(req);
         }
         req = (FieldImageReq*)cur;
-        if (st->unk6C != 0)
+        if (state->dirty_end_u != 0)
         {
             req->rect.x = 0x3C0;
-            req->rect.y = st->unk6E + 0x180;
+            req->rect.y = state->dirty_end_v + 0x180;
             req->rect.h = h;
-            req->rect.w = st->unk6C >> 2;
+            req->rect.w = state->dirty_end_u >> 2;
             dst = cur + 8;
             rows = h - 1;
             req->data = (u_long*)dst;
-            src = (u16*)((st->unk6E << 7) + 0x801DE000);
-            cur = dst + ((((st->unk6C >> 2) * h) + 1) & ~1);
+            src = (u16*)((state->dirty_end_v << 7) + 0x801DE000);
+            cur = dst + ((((state->dirty_end_u >> 2) * h) + 1) & ~1);
             if (h != 0)
             {
                 do
                 {
-                    count = (st->unk6C >> 2) - 1;
+                    count = (state->dirty_end_u >> 2) - 1;
                     s = src;
                     if (count != -1)
                     {
@@ -2371,44 +2384,52 @@ void func_80066CC0(Struct_801ED0CC* st, u16** cursor, s32 arg2)
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Attach a text string to a window, or defer it while the slot reopens.
+ * @param slot Window slot index.
+ * @param text Text pointer.
+ * @param options Text options; bit 0 enables automatic close.
+ * @see decomp.me (100%)
  */
-void func_80066F28(u16 index, u32 value, u8 flags)
-{
-    Struct_801ED000* hw = (Struct_801ED000*)0x801ED000;
-    Struct_801ED0CC* st = &hw->unk34[index];
-    Struct_801ED408* rec;
 
-    if ((st->unk10.flags & 0x6000) != 0)
+void field_text_set_string(u16 slot, u8* text, u8 options)
+{
+    FieldTextSystem* hw = (FieldTextSystem*)0x801ED000;
+    FieldTextState* st = &hw->windows[slot];
+    FieldTextConfig* rec;
+
+    if ((st->flags.word & 0x6000) != 0)
     {
-        rec = &hw->unk4[index];
-        rec->unk14 = value;
-        rec->unk10.b.unk12 = flags;
+        rec = &hw->configs[slot];
+        rec->text = text;
+        rec->flags.b.byte2 = options;
         return;
     }
-    st->unk49 = 1;
-    st->unk0 = (u8*)value;
-    st->unk4 = 0;
-    st->unk8 = 0;
-    st->unk19 = 0;
-    st->unk14 = 0;
-    st->unk10.flags = (st->unk10.flags & ~0x1000) | ((flags & 1) << 12);
+    st->last_was_break = 1;
+    st->text_cursor = (u8*)text;
+    st->macro_cursor = 0;
+    st->glyph_cursor = 0;
+    st->pending_spaces = 0;
+    st->flow_code = 0;
+    st->flags.word = (st->flags.word & ~0x1000) | ((options & 1) << 12);
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Save the pending text configuration for a window slot.
+ * @param slot Window slot index.
+ * @see decomp.me (100%)
  */
-void func_80066FBC(u16 index)
+
+void field_text_save_config(u16 slot)
 {
     u8* src;
     u8* dst;
     s32 n;
-    Struct_801ED408* rec;
+    FieldTextConfig* rec;
 
     src = (u8*)0x801ED408;
     n = 0x17;
-    rec = &D_801ED004[index];
-    rec->unk14 = 0;
+    rec = &g_field_text_configs[slot];
+    rec->text = 0;
     dst = (u8*)rec;
     do
     {
@@ -2420,60 +2441,69 @@ void func_80066FBC(u16 index)
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Close a text window and release its portrait slot.
+ * @param state Text-window state.
+ * @param animate Non-zero starts the closing animation when supported.
+ * @see decomp.me (100%)
  */
-void func_8006700C(Struct_801ED0CC* st, s32 arg1)
+
+void field_text_close_window(FieldTextState* state, s32 animate)
 {
-    if (st->unkC != 0)
+    if (state->portrait != 0)
     {
-        if ((st->unk10.flags & 8) == 0)
+        if ((state->flags.word & 8) == 0)
         {
-            ((Struct_801ED000*)0x801ED000)->unk28 &= 0xFFFE;
+            ((FieldTextSystem*)0x801ED000)->portrait_slots &= 0xFFFE;
         }
         else
         {
-            ((Struct_801ED000*)0x801ED000)->unk28 &= 0xFFFD;
+            ((FieldTextSystem*)0x801ED000)->portrait_slots &= 0xFFFD;
         }
     }
-    if ((arg1 == 0) || ((st->unk10.flags & 0xC0) == 0x40))
+    if ((animate == 0) || ((state->flags.word & 0xC0) == 0x40))
     {
-        st->unk10.flags = st->unk10.flags & ~7;
+        state->flags.word = state->flags.word & ~7;
     }
     else
     {
-        st->unk10.flags = (st->unk10.flags & ~7) | 3;
-        st->unk4A = 0;
+        state->flags.word = (state->flags.word & ~7) | 3;
+        state->transition_frame = 0;
     }
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Render a text window according to its opening, active, or closing state.
+ * @param state Text-window state.
+ * @param cursor In/out render-packet cursor.
+ * @param ot Ordering-table slot.
+ * @see decomp.me (100%)
  */
-void func_80067098(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
+
+void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
     Quad quad;
 
-    switch (st->unk10.b.unk10 & 7)
+    switch (state->flags.b.low & 7)
     {
     case 1:
-        func_80065320(st, &quad, st->unk4A);
-        func_80065D38(st, &quad, cursor, ot);
-        st->unk4A = st->unk4A + 1;
-        if (st->unk4A == 4)
+        field_text_build_transition_quad(state, &quad, state->transition_frame);
+        field_text_build_transition_packets(state, &quad, cursor, ot);
+        state->transition_frame = state->transition_frame + 1;
+        if (state->transition_frame == 4)
         {
-            st->unk10.flags = (st->unk10.flags & ~7) | 2;
+            state->flags.word = (state->flags.word & ~7) | 2;
         }
         break;
     case 2:
-        func_800654E0(st, cursor, ot);
+        field_text_build_window_packets(state, cursor, ot);
         break;
     case 3:
-        st->unk4A = st->unk4A + 1;
-        func_80065320(st, &quad, 4 - st->unk4A);
-        func_80065D38(st, &quad, cursor, ot);
-        if (st->unk4A == 4)
+        state->transition_frame = state->transition_frame + 1;
+        field_text_build_transition_quad(state, &quad, 4 - state->transition_frame);
+        field_text_build_transition_packets(state, &quad, cursor, ot);
+        if (state->transition_frame == 4)
         {
-            st->unk10.flags = st->unk10.flags & ~7;
+            state->flags.word = state->flags.word & ~7;
         }
         break;
     default:
@@ -2482,9 +2512,15 @@ void func_80067098(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Queue palette and image uploads for a field dialogue portrait.
+ * @param image Portrait data.
+ * @param cursor In/out packet cursor.
+ * @param slot Portrait VRAM slot.
+ * @param mirror Non-zero mirrors the portrait horizontally before upload.
+ * @see decomp.me (100%)
  */
-void func_800671D8(u8* image, u8** cursor, s32 index, s32 mirror)
+
+void field_text_queue_portrait_upload(u8* image, u8** cursor, s32 slot, s32 mirror)
 {
     FieldImageReq* req;
     u8* cur;
@@ -2499,14 +2535,14 @@ void func_800671D8(u8* image, u8** cursor, s32 index, s32 mirror)
     req = (FieldImageReq*)cur;
     cur += 0x20;
     req->rect.x = 0x130;
-    req->rect.y = index + 0x1FA;
+    req->rect.y = slot + 0x1FA;
     req->rect.w = 0x10;
     req->rect.h = 1;
     req->data = (u_long*)image;
     field_queue_vram_upload(req);
     req += 1;
     req->rect.x = 0x3F4;
-    req->rect.y = (index * 48) + 0x110;
+    req->rect.y = (slot * 48) + 0x110;
     req->rect.w = 0xC;
     req->rect.h = 0x30;
     if (mirror != 0)
@@ -2542,39 +2578,39 @@ void func_800671D8(u8* image, u8** cursor, s32 index, s32 mirror)
 }
 
 /**
- * @brief Reset the text window for a new string and pre-walk its glyph wrap.
- * @param text Source text buffer.
- * @note WIP - not yet byte-matching. Insn count and frame match; 2 rows of
- *       sched1 residue only. See working/func_8006730C/STATUS.md.
- * @see decomp.me (92.20%) TODO
+ * @brief Start timed text-window mode and precompute its cache extent.
+ * @param text Text to display.
+ * @see decomp.me (100%)
  */
-void func_8006730C(u8* text)
+
+void field_text_start_timed_window(u8* text)
 {
-    Struct_801ED0CC* st = (Struct_801ED0CC*)0x801ED034;
+    FieldTextState* st = (FieldTextState*)0x801ED034;
     s32 u;
     s32 v;
     s32 rows;
     s32 span;
     u16 avail;
 
-    func_80064A3C((Struct_801ED0CC*)0x801ED034);
+    field_text_apply_config((FieldTextState*)0x801ED034);
     u = 0;
-    rows = st->unk54;
+    rows = st->height;
     v = u;
-    st->unk0 = text;
-    D_801ED008 = text;
-    st->unk68 = 0;
-    st->unk5C = 0;
-    st->unk60 = 0;
-    st->unk6A = 0;
-    st->unk5E = 0;
-    st->unk62 = 0;
-    st->unk10.flags = ((st->unk10.flags & ~7) | 0x804) & ~0x1000;
+    /* Alias-qualified stores preserve the original GCC memory scheduling. */
+    *(u8**)&st->text_cursor = text;
+    g_field_timed_text = text;
+    st->dirty_start_u = 0;
+    st->cursor_u = 0;
+    st->region_start_u = 0;
+    st->dirty_start_v = 0;
+    st->cursor_v = 0;
+    st->region_start_v = 0;
+    st->flags.word = ((*(u32*)&st->flags.word & ~7) | 0x804) & ~0x1000;
     if (rows > 0)
     {
         do
         {
-            span = st->unk56;
+            span = st->line_advance;
             if (span > 0)
             {
                 do
@@ -2585,7 +2621,7 @@ void func_8006730C(u8* text)
                         u += span;
                         span -= avail;
                         u = 0;
-                        v += st->unk58;
+                        v += st->line_height;
                     }
                     else
                     {
@@ -2597,25 +2633,29 @@ void func_8006730C(u8* text)
             rows -= 0x10;
         } while (rows > 0);
     }
-    st->unk6C = u;
-    st->unk64 = u;
-    st->unk6E = v;
-    st->unk66 = v;
+    st->dirty_end_u = u;
+    st->region_end_u = u;
+    st->dirty_end_v = v;
+    st->region_end_v = v;
 }
 
 /**
- * @see decomp.me (100%) TODO
+ * @brief Restore a saved window configuration and reopen the slot.
+ * @param slot Window slot index.
+ * @param placement_mode 1 uses packed placement; other values use fixed placement.
+ * @see decomp.me (100%)
  */
-void func_800673F8(u16 index, s32 mode)
+
+void field_text_restore_window(u16 slot, s32 placement_mode)
 {
     u8* dst;
     u8* src;
     s32 n;
-    Struct_801ED408* rec;
+    FieldTextConfig* rec;
 
     dst = (u8*)0x801ED408;
     n = 0x17;
-    rec = &D_801ED004[index];
+    rec = &g_field_text_configs[slot];
     src = (u8*)rec;
     do
     {
@@ -2624,16 +2664,16 @@ void func_800673F8(u16 index, s32 mode)
         n -= 1;
         dst += 1;
     } while (n != -1);
-    if (mode == 1)
+    if (placement_mode == 1)
     {
-        func_80064678(index);
+        field_text_open_packed_window(slot);
     }
     else
     {
-        func_80064878(index);
+        field_text_open_fixed_window(slot);
     }
-    if (rec->unk14 != 0)
+    if (rec->text != 0)
     {
-        func_80066F28(index, rec->unk14, rec->unk10.b.unk12);
+        field_text_set_string(slot, rec->text, rec->flags.b.byte2);
     }
 }
