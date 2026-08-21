@@ -73,9 +73,12 @@ extern u16 D_80145E9E;
 extern u16 D_80145EA0;
 extern u16 D_80145EA2;
 extern u16 D_80145EA4;
+extern u16 D_80145EA8;
+extern u16 D_80145EAA;
 extern u16 D_80145EAC;
 extern u16 D_80145EAE;
 extern u16 D_80145EB0;
+extern u16 D_80145EC8;
 extern u16 D_80145ECA;
 extern u16 D_80145ED0;
 extern u16 D_80145ED6;
@@ -248,9 +251,9 @@ s32 func_80140448(s32 arg0)
 }
 
 s32 func_80140DA4(s32 *, s32, s32, s32);
-void func_80141474();
-void func_801414D0();
-void func_80141544();
+s32 func_80141474(s32 *, s32, s32, s32);
+s32 func_801414D0(s32 *, s32, s32, s32);
+s32 func_80141544(s32 *, s32, s32, s32);
 void func_801415B8();
 void func_80141CD0();
 Packet *func_80141D04();
@@ -811,4 +814,100 @@ s32 func_80140DA4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         break;
     }
     return prim;
+}
+
+/**
+ * @brief Advance a pointer past a run of hex-digit characters ('0'-'9',
+ *        'a'-'f', 'A'-'F').
+ * @param arg0 Pointer to the first character to test.
+ * @return Pointer to the first character that is not a hex digit.
+ * @note WIP. Semantics, control flow, and the target bytes are fully
+ *       understood (three independent range checks, each looping back to
+ *       the function's own entry on a match). The residual is that GCC's
+ *       jump2 cross-jump pass (jump.c, cross_jump=1) merges all three
+ *       "advance and loop back" arms into one shared tail here, while the
+ *       target keeps them independent - each of its three branches carries
+ *       its own delay-slot increment plus a compensating decrement on the
+ *       fallthrough (reorg target-steal-with-compensation). No source
+ *       rephrasing tried so far (if/else-if, sequential if-continue,
+ *       self-tail-recursion, do-while, for-loop-continue, precomputed
+ *       conditions) avoids the merge; see the crossjump_oracle OVER-MERGED
+ *       finding and idiom candidates JUMP-16/JUMP-19 in idioms.md, neither
+ *       of which closed it. A 300k-iteration permuter run found no valid
+ *       (semantics-preserving) improvement past this score.
+ * @see decomp.me (65.63%) TODO
+ */
+u8 *func_80141428(void *arg0)
+{
+    u8 *p;
+    u8 c;
+
+    p = (u8 *)arg0;
+    while (1)
+    {
+        c = *p;
+        if ((u32)(c - '0') < 10)
+        {
+            p++;
+            continue;
+        }
+        if ((u32)(c - 'a') < 6)
+        {
+            p++;
+            continue;
+        }
+        if ((u32)(c - 'A') < 6)
+        {
+            p++;
+            continue;
+        }
+        break;
+    }
+    return p;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80141474(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+
+    return func_800A88A0(prim, ot, GLYPH_SYM(D_80145EC8, 0x2C), 1, -arg2 + 0x50, -arg3, 2);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_801414D0(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    s32 a3;
+    void *glyph;
+    RECT pos;
+
+    a3 = 1;
+    glyph = GLYPH_SYM(D_80145EA8, 0xC);
+    if (D_8014A920 != 0)
+    {
+        a3 = 3;
+    }
+    return func_800A88A0(prim, ot, glyph, a3, -arg2 + 0x40, -arg3, 2);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80141544(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    s32 a3;
+    void *glyph;
+    RECT pos;
+
+    a3 = 1;
+    glyph = GLYPH_SYM(D_80145EAA, 0xE);
+    if (D_8014A920 == 0)
+    {
+        a3 = 3;
+    }
+    return func_800A88A0(prim, ot, glyph, a3, -arg2 + 0x40, -arg3, 2);
 }
