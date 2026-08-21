@@ -8155,25 +8155,23 @@ s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
  * @param view_origin Viewport anchor; label origins are (0x30 - x, N - y).
  * @param active      Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor (unchanged on the early-return paths).
- * @note Six shapes are required to match. @c rect must be an ARRAY: as four scalars
- *       only the first store survives dead-store elimination. The three slot-clear
- *       loops must each use their OWN locals -- sharing one pair puts them all in
- *       a1/a2 instead of v0/v1. The @ref func_800A8F8C address must stay grouped as
+ * @note Several shapes are required to match. @c rect must be an aggregate
+ *       (MenuSlotRect): written as four scalars only the first store survives
+ *       dead-store elimination. The three slot-clear loops must each use their
+ *       OWN locals -- sharing one pair puts them all in a1/a2 instead of v0/v1.
+ *       The @ref func_800A8F8C address must stay grouped as
  *       (base + (slot + 0x5F0)) + ((subtype << 6) + 0x90), or fold-const merges
  *       0x5F0 + 0x90 into a single addiu. The label bases use MENU_STATE_BASE /
  *       MENU_TAIL so the base is CSE'd into a2 rather than spilled to a fresh t0.
- *       And @c buf must alias @c prim_buf: the original emits the entry copy of
- *       @c state (a1 -> s0) before that of @c prim_buf (a2 -> s1), and aliasing the
- *       modified parameter defers its copy to first use. Finally the @c do{}while(0)
- *       wrappers around @c state->unk0 = 3 (cancel branch) and the func_800A8F8C /
- *       clear pair (case 2) are required: removing them regresses to 99.11%
- *       (-36 rows, +1 nop) by shifting GCC 2.7.2's jump-opt block boundaries.
+ *       Both @c list = @c state and @c buf = @c prim_buf must alias their
+ *       parameters: the original emits the entry copy of @c state (a1 -> s0)
+ *       before that of @c prim_buf (a2 -> s1), and aliasing the modified
+ *       parameters defers their copies to first use.
  * @see decomp.me (100%)
  */
 s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     MenuSlotRect rect;
-    MenuSlot* slot;
     s32 packed;
     s32 hi;
     s32 handle;
@@ -8188,39 +8186,41 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     u8 flag;
     MenuContentItem* item;
     MenuContentItem* items;
+    ScrollListState* list;
     s32 buf;
 
+    list = state;
     buf = prim_buf;
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
         menu_play_se(0x7F, 0x80);
-        do { do { do { do { do { do { do { do { do { state->unk0 = 3; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+        list->unk0 = 3;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
         menu_play_se(0x7D, 0x80);
-        switch (state->sel_idx)
+        switch (list->sel_idx)
         {
         case 0:
-            state->unk2 = 0;
-            state->unk0 = 0;
+            list->unk2 = 0;
+            list->unk0 = 0;
             rect.x = 0x40;
             rect.y = 0x60;
             rect.w = 0xF0;
             rect.h = 0x60;
-            slot = menu_slot_alloc(3, &rect);
-            slot->content_cb = (s32 * (*)()) & menu_special_technique_list_callback;
+            list = (ScrollListState*)menu_slot_alloc(3, &rect);
+            ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_special_technique_list_callback;
             packed = menu_build_special_technique_nav_entries();
             hi = packed >> 0x10;
-            slot->lerp_target_b = hi * 0x10;
-            slot->lerp_cur_b = hi * 0x10;
-            slot->anim_frame = 5;
-            slot->active = 2;
-            slot->has_title = 1;
+            ((MenuSlot*)list)->lerp_target_b = hi * 0x10;
+            ((MenuSlot*)list)->lerp_cur_b = hi * 0x10;
+            ((MenuSlot*)list)->anim_frame = 5;
+            ((MenuSlot*)list)->active = 2;
+            ((MenuSlot*)list)->has_title = 1;
             g_menu_draw_early_out = 1;
-            slot->flags = (slot->flags & 0xFE00FFFF) | ((packed & 0x1FF) << 0x10);
-            *(u16*)&slot->flags = (u16)hi;
+            ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | ((packed & 0x1FF) << 0x10);
+            *(u16*)&((MenuSlot*)list)->flags = (u16)hi;
             return buf;
 
         case 1:
@@ -8259,11 +8259,10 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                 handle = func_800A9060(g_menu_active_subtype);
                 if (handle != 0)
                 {
-                    do
-                    {
-                        func_800A8F8C(handle, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) + 0x90)));
-                        *((u8*)g_pad_ctx + (off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250)) + 0x640) = 0;
-                    } while (0);
+                    func_800A8F8C(handle, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) + 0x90)));
+                    off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250);
+                    flag_ptr = (u8*)g_pad_ctx + off;
+                    flag_ptr[0x640] = 0;
                     func_800A8FB4(off);
                 }
                 else
@@ -8284,7 +8283,7 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             }
             flag_ptr = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype;
             *(flag_ptr + 0x609) = 0xFF;
-            state->unk0 = 3;
+            list->unk0 = 3;
             break;
         }
 
@@ -8319,7 +8318,7 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
         }
     }
 
-    buf = scroll_list_draw(buf, ot, state, g_menu_item_nav_entries, view_origin, active);
+    buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
     buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x7A), 1, 0x30 - view_origin->x, -view_origin->y, 2);
     buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x7C), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
