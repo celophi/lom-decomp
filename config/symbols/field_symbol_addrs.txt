@@ -39,6 +39,27 @@ field_start_animation                 = 0x8005959C;
 field_control_animation               = 0x800597B4;
 field_update_scene_fade               = 0x80059C44;
 field_begin_scene_fade_in             = 0x80059F18;
+
+// Field dialogue/text renderer.
+field_text_open_packed_window         = 0x80064678;
+field_text_open_fixed_window          = 0x80064878;
+field_text_apply_config               = 0x80064A3C;
+field_text_build_transition_quad      = 0x80065320;
+field_text_build_window_packets       = 0x800654E0;
+field_text_build_transition_packets   = 0x80065D38;
+field_text_scroll_cache               = 0x80066A2C;
+field_text_queue_uploads              = 0x80066CC0;
+field_text_set_string                 = 0x80066F28;
+field_text_save_config                = 0x80066FBC;
+field_text_render_window              = 0x80067098;
+field_text_queue_portrait_upload      = 0x800671D8;
+field_text_start_timed_window         = 0x8006730C;
+field_text_restore_window             = 0x800673F8;
+
+g_field_timed_text                    = 0x801ED008;
+g_field_text_portrait_slots           = 0x801ED028;
+g_field_text_window0_flags            = 0x801ED044;
+
 field_build_frame_commands             = 0x800676B4;
 field_initialize_subsystems            = 0x800678D4;
 field_reset_fade_state                 = 0x80067B8C;
