@@ -441,46 +441,30 @@ void func_80074D7C(FieldRenderContext *ctx)
  * @param base Ordering-table / primitive base array.
  * @param item Animation data blob for this frame.
  * @return Updated cursor pointer.
- * @note WIP - not yet byte-matching (72.24%, 166/501 exact rows). The whole
- *       prologue/register-save shape disagrees with the target from the
- *       first instruction: the target keeps a0/a1/a2/a3 live in s-registers
- *       through the gte_SetRotMatrix call and defers most callee-save stores,
- *       while this draft copies straight into t1/s3/t2/fp and stores saves
- *       up front. Residue is spread almost uniformly across the whole body
- *       (EXPAND-SHAPE, +9 insns overall) rather than isolated to one region,
- *       which points at a source-level register-role/variable-boundary
- *       mismatch rather than a local statement-order fix. Needs a fresh
- *       match_context pull (m2c-regvars view) before further iteration.
- * @see decomp.me (72.24%)
+ * @see decomp.me (100%)
  */
 s32 *func_800754B4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item)
 {
     Vec2s *sxy = (Vec2s *) 0x1F800040;
     s16 *scratch = (s16 *) 0x1F800064;
-    s32 sp4C;
+    s32 sp4C = 0x1F800000;
     s32 sp48;
     s32 *sp44;
     s32 *sp40;
-    s32 sp38;
-    s32 sp34;
     s32 sp30;
+    s32 sp34;
+    s32 sp38;
     s32 sp28;
-    Struct_D800FDF58 *var_t1;
-    s32 *var_s3;
-    s32 *var_t2;
     FieldActorState *slot;
     FieldActorPartDef *part;
-    u8 *var_fp;
-    u8 *var_s2;
-    u8 *var_s1;
+    FieldActorState *actor_base;
     s32 count;
-    s32 mode;
+    s32 mask;
     s16 tmp;
-    s8 var_s4;
-    s8 var_s0;
-    s8 var_v1_3;
-    s8 var_t0;
-    s32 var_t0_2;
+    s32 var_s4;
+    s32 var_s0;
+    s32 var_v1_3;
+    s32 var_t0;
     s32 v0;
     s32 v1;
     s32 a0;
@@ -489,256 +473,221 @@ s32 *func_800754B4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item)
     s32 x1;
     u16 *tbl;
 
-    var_t1 = rec;
-    var_s3 = cursor;
-    var_t2 = base;
     sp34 = 0;
     sp38 = 2;
-    slot = &g_field_actor_slots[rec->unk22];
-    part = &slot->unk0[rec->unk23];
+    actor_base = g_field_actor_slots;
+    part = &actor_base[rec->unk22].unk0[rec->unk23];
+    slot = &actor_base[rec->unk22];
     if (slot->unk228 < 2)
     {
         sp38 = slot->unk228;
     }
-    sp40 = (s32 *) var_t1;
-    sp44 = var_t2;
+    sp40 = (s32 *) rec;
+    sp44 = base;
     sp48 = (s32) slot;
-    func_8007D078(var_t1, part, 0x1F800000, slot);
+    func_8007D078(rec, part, 0x1F800000, slot);
     gte_SetRotMatrix((void *) 0x1F800000);
 
-    v0 = D_800F22A0;
-    if (v0 < 0)
-    {
-        v0 += 0xFF;
-    }
-    v1 = var_t1->unk0;
-    if (v1 < 0)
-    {
-        v1 += 0xFF;
-    }
-    a0 = D_800F22A4;
-    sxy->x = (v0 >> 8) + ((v1 >> 8) + 0xA0);
-    if (a0 < 0)
-    {
-        a0 += 0xFF;
-    }
-    v0 = var_t1->unk4;
-    if (v0 < 0)
-    {
-        v0 += 0xFF;
-    }
-    a1 = var_t1->unk8;
-    if (a1 < 0)
-    {
-        a1 += 0x1FF;
-    }
-    v1 = D_800F22A8;
-    if (v1 < 0)
-    {
-        v1 += 0x1FF;
-    }
-    sxy->y = (((a0 >> 8) + ((v0 >> 8) + 0x70)) - (a1 >> 9)) - (v1 >> 9);
+    sxy->x = 0xA0 + D_800F22A0 / 256 + rec->unk0 / 256;
+    sxy->y = 0x70 + D_800F22A4 / 256 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512;
 
-    var_fp = item + 1;
-    sp40 = (s32 *) var_t1;
-    sp44 = var_t2;
+    sp40 = (s32 *) rec;
+    sp44 = base;
     sp48 = (s32) slot;
-    sp30 = *item;
-    func_8007D8D8(slot, var_t1, part, &sp28);
+    sp30 = *item++;
+    func_8007D8D8(slot, rec, part, &sp28);
 
     if (sp30 != 0)
     {
         tbl = D_80105758;
-        var_s2 = var_fp + 8;
-        var_s1 = (u8 *) (var_s3 + 4);
         do
         {
-            u8 flags = var_s2[-1];
+            u8 flags = item[7];
             if (!(flags & 0x20))
             {
-                var_s1[-1] = 9;
-                *(s32 *) var_s1 = sp28;
-                var_s1[3] = 0x2C;
-                if (var_t1->unk1C & 0x800000)
+                mask = 0xFFFFFF;
+                v1 = sp28;
+                ((u8 *) cursor)[3] = 9;
+                *(s32 *) ((u8 *) cursor + 4) = v1;
+                ((u8 *) cursor)[7] = 0x2C;
+                if (rec->unk1C & 0x800000)
+                    ((u8 *) cursor)[7] = ((u8 *) cursor)[7] | 2;
+                else
+                    ((u8 *) cursor)[7] = ((u8 *) cursor)[7] & ~2;
+                var_s0 = item[4];
+                var_s4 = item[5] - 1;
+                rec->unk3C = var_s4;
                 {
-                    var_s1[3] = 0x2E;
+                    s8 frame_x = item[1];
+                    var_t0 = frame_x;
+                }
+                if (!(rec->unk21 & 0x80))
+                {
+                    var_v1_3 = *(s8 *) item;
                 }
                 else
                 {
-                    var_s1[3] = 0x2C;
-                }
-                var_s0 = var_s2[-4];
-                var_s4 = var_s2[-3] - 1;
-                var_t1->unk3C = var_s4;
-                var_t0 = var_s2[-7];
-                if (!(var_t1->unk21 & 0x80))
-                {
-                    var_v1_3 = *item;
-                }
-                else
-                {
-                    var_v1_3 = -*item - var_s0;
+                    var_v1_3 = -*(s8 *) item - var_s0;
                 }
                 var_s0 -= 1;
                 if (((Vec2s *) part)->y & 1)
                 {
                     var_t0 -= 0x70;
                 }
-                sp40 = (s32 *) var_t1;
-                sp44 = var_t2;
+                sp40 = (s32 *) rec;
+                sp44 = base;
                 sp48 = (s32) slot;
-                func_8007DB98(var_t1, sxy, var_s3, var_s0, var_s4, var_v1_3, var_t0, item, 0x1F800000);
+                func_8007DB98(rec, sxy, cursor, var_s0, var_s4, var_v1_3, var_t0, item, sp4C);
 
-                if ((var_s2[-1] ^ (var_t1->unk21 >> 1)) & 0x40)
+                if ((item[7] ^ (rec->unk21 >> 1)) & 0x40)
                 {
-                    v0 = var_s2[-6];
-                    var_s1[0x20] = v0;
-                    var_s1[0x10] = v0;
-                    v0 += var_s0;
-                    var_s1[0x18] = v0;
-                    var_s1[8] = v0;
+                    v0 = item[2];
+                    ((u8 *) cursor)[36] = v0;
+                    ((u8 *) cursor)[20] = v0;
+                    do { v0 += var_s0; } while (0);
+                    ((u8 *) cursor)[28] = v0;
+                    ((u8 *) cursor)[12] = v0;
                 }
                 else
                 {
-                    v0 = var_s2[-6];
-                    var_s1[0x18] = v0;
-                    var_s1[8] = v0;
-                    v0 += var_s0;
-                    var_s1[0x20] = v0;
-                    var_s1[0x10] = v0;
+                    v0 = item[2];
+                    ((u8 *) cursor)[28] = v0;
+                    ((u8 *) cursor)[12] = v0;
+                    do { v0 += var_s0; } while (0);
+                    ((u8 *) cursor)[36] = v0;
+                    ((u8 *) cursor)[20] = v0;
                 }
-                if (var_s2[-1] & 0x80)
+                if (item[7] & 0x80)
                 {
-                    v0 = var_s2[-5];
-                    var_s1[0x21] = v0;
-                    var_s1[0x19] = v0;
-                    v0 += var_s4;
-                    var_s1[0x11] = v0;
-                    var_s1[9] = v0;
+                    v0 = item[3];
+                    ((u8 *) cursor)[37] = v0;
+                    ((u8 *) cursor)[29] = v0;
+                    do { v0 += var_s4; } while (0);
+                    ((u8 *) cursor)[21] = v0;
+                    ((u8 *) cursor)[13] = v0;
                 }
                 else
                 {
-                    v0 = var_s2[-5];
-                    var_s1[0x11] = v0;
-                    var_s1[9] = v0;
+                    v0 = item[3];
+                    ((u8 *) cursor)[21] = v0;
+                    ((u8 *) cursor)[13] = v0;
                     v0 += var_s4;
-                    var_s1[0x21] = v0;
-                    var_s1[0x19] = v0;
+                    ((u8 *) cursor)[37] = v0;
+                    ((u8 *) cursor)[29] = v0;
                 }
-                mode = var_s2[-1] & 3;
-                if (mode == 2)
+                var_s0 = item[7] & 3;
+                if (var_s0 == 2)
                 {
-                    var_t0_2 = 0x1F2;
+                    var_t0 = 0x1F2;
                     if (slot->unk228 < 2)
                     {
-                        tmp = ((tbl[sp38] & 3) << 7) | (((u32) part->unk4 >> 0x11) & 0x60) | 0x10 | ((((slot->unk228 << 6) + 0x340) & 0x3FF) >> 6);
-                        *(s16 *) (var_s1 + 0x12) = tmp;
-                        var_t0_2 = (slot->unk228 * 2) + 0x1EE;
+                        *(s16 *) ((u8 *) cursor + 0x16) = ((tbl[sp38] & 3) << 7) | (((u32) part->unk4 >> 0x11) & 0x60) | 0x10 | ((((slot->unk228 << 6) + 0x340) & 0x3FF) >> 6);
+                        var_t0 = (slot->unk228 * 2) + 0x1EE;
+                        goto mode_done;
                     }
-                    else
-                    {
-                        tmp = ((tbl[sp38] & 3) << 7) | (((u32) part->unk4 >> 0x11) & 0x60) | 5;
-                        *(s16 *) (var_s1 + 0x12) = tmp;
-                    }
+                    v0 = sp38;
+                    v0 <<= 1;
+                    v0 += (s32) tbl;
+                    v1 = ((*(u16 *) v0 & 3) << 7) | (((u32) part->unk4 >> 0x11) & 0x60);
+                    v1 |= 5;
                 }
                 else
                 {
-                    var_t0_2 = (mode * 2) + 0x1EA;
-                    tmp = (((u32) part->unk4 >> 0x11) & 0x60) | ((((mode << 6) + 0x180) & 0x3FF) >> 6);
-                    *(s16 *) (var_s1 + 0x12) = tmp;
+                    var_t0 = (var_s0 * 2) + 0x1EA;
+                    v0 = (((var_s0 << 6) + 0x180) & 0x3FF) >> 6;
+                    v1 = ((u32) part->unk4 >> 0x11) & 0x60;
+                    v1 |= v0;
                 }
+                *(s16 *) ((u8 *) cursor + 0x16) = v1;
+mode_done:
 
                 if (((u32) part->unk0 >> 0x15) & 1)
                 {
-                    *(s16 *) (var_s1 + 0xA) = (var_t0_2 + 1) << 6;
+                    *(s16 *) ((u8 *) cursor + 0xE) = (var_t0 + 1) << 6;
                 }
                 else
                 {
-                    switch (((u32) part->unk28 >> 0xC) & 3)
+                    v0 = part->unk28 >> 0xC;
+                    switch (v0 & 3)
                     {
                     case 1:
-                        v0 = part->unk2D;
-                        if (v0 >= 0x10)
+                    {
+                        u8 uv = part->unk2D;
+                        x0 = uv & 0xF;
+                        if (uv >= 0x10)
                         {
-                            x0 = (var_t0_2 + 1) << 6;
+                            v0 = (var_t0 + 1) << 6;
                         }
                         else
                         {
-                            x0 = var_t0_2 << 6;
+                            v0 = var_t0 << 6;
                         }
-                        *(s16 *) (var_s1 + 0xA) = x0 | (v0 & 0xF);
+                        v0 |= x0;
+                        *(s16 *) ((u8 *) cursor + 0xE) = v0;
                         break;
+                    }
                     case 2:
-                        x1 = var_t0_2 << 6;
+                        x1 = var_t0 << 6;
                         if (slot->unk228 >= 3)
                         {
                             v0 = part->unk2D & 0x3F;
                         }
                         else
                         {
-                            x1 = var_t0_2 << 6;
-                            v0 = var_s2[-2] & 0x3F;
-                        }
-                        *(s16 *) (var_s1 + 0xA) = x1 | v0;
-                        break;
                     case 0:
-                        x1 = var_t0_2 << 6;
-                        v0 = var_s2[-2] & 0x3F;
-                        *(s16 *) (var_s1 + 0xA) = x1 | v0;
+                            x1 = var_t0 << 6;
+                            v0 = item[6] & 0x3F;
+                        }
+                        x1 |= v0;
+                        *(s16 *) ((u8 *) cursor + 0xE) = x1;
                         break;
                     }
                 }
 
-                if ((var_t1->unk1C & 0x1000) || ((v1 = var_t1->unk8 >> 7), v1 < 0))
                 {
-                    var_s1 += 0x28;
-                    *var_s3 = (*var_s3 & 0xFF000000) | (var_t2[0] & 0xFFFFFF);
-                    v1 = (s32) var_s3 & 0xFFFFFF;
-                    var_s3 += 0x28;
-                    var_t2[0] = (var_t2[0] & 0xFF000000) | v1;
-                }
-                else if (v1 >= 0x1000)
-                {
-                    var_s1 += 0x28;
-                    *var_s3 = (*var_s3 & 0xFF000000) | (var_t2[0xFFF] & 0xFFFFFF);
-                    v1 = (s32) var_s3 & 0xFFFFFF;
-                    var_s3 += 0x28;
-                    var_t2[0xFFF] = (var_t2[0xFFF] & 0xFF000000) | v1;
-                }
-                else
-                {
-                    var_s1 += 0x28;
-                    *var_s3 = (*var_s3 & 0xFF000000) | (var_t2[v1] & 0xFFFFFF);
-                    a0 = (s32) var_s3 & 0xFFFFFF;
+                    typedef struct { unsigned addr:24; unsigned len:8; } LocalTag;
+                    if ((rec->unk1C & 0x1000) || ((v1 = rec->unk8 >> 7), v1 < 0))
                     {
-                        s32 *p = &var_t2[var_t1->unk8 >> 7];
-                        var_s3 += 0x28;
-                        *p = (*p & 0xFF000000) | a0;
+                        ((LocalTag *) cursor)->addr = ((LocalTag *) &base[0])->addr;
+                        ((LocalTag *) &base[0])->addr = (u32) cursor;
+                        cursor = (s32 *) ((u8 *) cursor + 0x28);
+                    }
+                    else if (v1 >= 0x1000)
+                    {
+                        ((LocalTag *) cursor)->addr = ((LocalTag *) &base[0xFFF])->addr;
+                        ((LocalTag *) &base[0xFFF])->addr = (u32) cursor;
+                        cursor = (s32 *) ((u8 *) cursor + 0x28);
+                    }
+                    else
+                    {
+                        ((LocalTag *) cursor)->addr = ((LocalTag *) &base[v1])->addr;
+                        ((LocalTag *) &base[rec->unk8 >> 7])->addr = (u32) cursor;
+                        cursor = (s32 *) ((u8 *) cursor + 0x28);
                     }
                 }
             }
             else if (((flags & 0xF) == 2) && (part->unk24 & 0x100000))
             {
-                scratch[0] = (*item * part->unk2E) >> 6;
-                scratch[1] = ((s8) var_s2[-7] * part->unk33) >> 6;
-                scratch[2] = ((s8) var_s2[-6] * part->unk2E) >> 6;
-                scratch[3] = ((s8) var_s2[-5] * part->unk33) >> 6;
-                scratch[4] = ((s8) var_s2[-4] * part->unk2E) >> 6;
-                scratch[5] = ((s8) var_s2[-3] * part->unk33) >> 6;
-                scratch[6] = ((s8) var_s2[-2] * part->unk2E) >> 6;
+                scratch[0] = (*(s8 *) item * part->unk2E) >> 6;
+                scratch[1] = ((s8) item[1] * part->unk33) >> 6;
+                scratch[2] = ((s8) item[2] * part->unk2E) >> 6;
+                scratch[3] = ((s8) item[3] * part->unk33) >> 6;
+                scratch[4] = ((s8) item[4] * part->unk2E) >> 6;
+                scratch[5] = ((s8) item[5] * part->unk33) >> 6;
+                scratch[6] = ((s8) item[6] * part->unk2E) >> 6;
                 sp34 += 1;
-                scratch[7] = ((s8) var_s2[0] * part->unk33) >> 6;
+                scratch[7] = ((s8) item[8] * part->unk33) >> 6;
             }
-            var_s2 += 9;
-            var_fp += 9;
+            item += 9;
             sp30 -= 1;
-            *(s32 *) var_s1 = *(s32 *) (var_s1 - 0x28);
+            v0 = *(s32 *) ((u8 *) cursor - 0x24);
+            *(s32 *) ((u8 *) cursor + 4) = v0;
         } while (sp30 != 0);
     }
 
     if (sp34 != 0)
     {
-        var_s3 = func_800871A0(var_t1, var_s3, var_t2, 0x1F800064);
+        do { do { do { do { do { cursor = func_800871A0(rec, cursor, base, scratch); } while (0); } while (0); } while (0); } while (0); } while (0);
     }
-    return var_s3;
+    return cursor;
 }
