@@ -755,15 +755,14 @@ void func_80064A3C(Struct_801ED0CC* st)
 }
 
 /**
- * @note Not yet matching. The instruction stream is byte-identical to the
- *       target, but three branches (0x45C, 0x4B8, 0x4C8) land on the wrong one
- *       of two byte-identical `st->unk14 = 0` tail blocks: the target shares
- *       case 1 / case 3 / the `(flags & 0x1000) == 0` path and leaves case 2 its
- *       own copy, while gcc merges case 2 here instead. The surviving copy is
- *       picked by jump.c's `jump_chain` walk from insn UIDs, so no source shape
- *       reaches it -- see working/func_80064C28/STATUS.md for the retired
- *       classes before probing this again.
- * @see decomp.me (99.97%) TODO
+ * @note Required to match: the empty `union { struct { } e; } crossjump` block
+ *       after case 2's `st->unk14 = 0` must stay. The target keeps case 2 its
+ *       own copy of the `st->unk14 = 0` tail while case 1 / case 3 / the
+ *       `(flags & 0x1000) == 0` path share theirs; without the dummy aggregate
+ *       gcc's jump.c cross-jumps case 2 onto a shared copy, sending branches
+ *       0x45C / 0x4B8 / 0x4C8 to the wrong block (99.97%, -3 rows). The empty
+ *       union perturbs the insn-UID walk that picks the surviving copy.
+ * @see decomp.me (100%)
  */
 void func_80064C28(s32 arg0, s32 arg1, s32 arg2)
 {
@@ -968,6 +967,10 @@ void func_80064C28(s32 arg0, s32 arg1, s32 arg2)
                                 func_8006429C(st);
                                 func_80066CC0(st, arg0);
                                 st->unk14 = 0;
+                                {
+                                    union { struct { } e; } crossjump = {};
+                                    (void)crossjump;
+                                }
                                 break;
                             case 3:
                                 func_80064210(st);
