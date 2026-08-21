@@ -31,7 +31,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | ADDHERO.BIN   | 💤 | Not started   |
 | CARDA.BIN     | 💤 | Not started   |
 | CHECKPS.BIN   | 🔒 | Fully linked  |
-| CLOAD.BIN     | 💤 | Not started   |
+| CLOAD.BIN     | 🌱 | In progress   |
 | FIELD.BIN     | 🌱 | In progress   |
 | GNAME.BIN     | 🔒 | Fully linked  |
 | GOLEM.BIN     | 💤 | Not started   |
