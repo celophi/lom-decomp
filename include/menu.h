@@ -16,10 +16,11 @@ extern void menu_init_prim_rects(void);
 extern void menu_upload_graphics(void);
 extern void menu_state_init(void);
 extern void menu_reset_slots(void);
-extern void func_801423D8(void);
+extern void menu_node_tree_init(void);
 
 extern s32 g_menu_frame;
-extern s32 g_menu_unk_e8;
+/** Non-zero while the equipment comparison window is open. */
+extern s32 g_menu_compare_window_active;
 extern s32 g_active_slot;
 extern s32 g_script_cursor;
 extern s32 g_pad_input_latched;
@@ -28,7 +29,8 @@ extern u8 g_menu_tim[];
 extern u32 g_menu_initial_clut_pair;
 extern u16 g_menu_glyph_src[];
 extern u8* g_menu_state_ptr;
-extern u8 D_80151EBC;
+/** Base of the menu state/string data blob referenced through g_menu_state_ptr. */
+extern u8 g_menu_state_data;
 
 /** Unsigned screen rectangle used to initialize a menu window slot. */
 typedef struct
@@ -39,11 +41,7 @@ typedef struct
     u16 h;
 } MenuSlotRect;
 
-/**
- * @brief HUD/menu entry slot allocated from the @c g_menu_slots pool.
- *
- * @note Stride is 0x24 bytes; @c active == 0 marks a free slot.
- */
+/** @brief One 0x24-byte menu window slot. */
 typedef struct MenuSlot_s
 {
     u8 active;     /* 0x00 - non-zero when in use (1=opening, 2=open, 3=closing) */
@@ -61,14 +59,7 @@ typedef struct MenuSlot_s
     u16 lerp_target_b; /* 0x16 - target value B for interpolation */
     u8 lerp_steps;     /* 0x18 - remaining interpolation steps (countdown divisor); 0 = snap to target */
     u8 _pad[3];
-    /**
-     * @brief Content callback - draws the window's interior primitives.
-     *
-     * Invoked from @c menu_draw_window; receives the slot's OT-link slot,
-     * the slot itself, the current primitive write cursor, a forwarded arg,
-     * and an active-highlight flag. Returns the new primitive cursor.
-     * Empty parameter list (K&R) is intentional to preserve callsite codegen.
-     */
+    /* K&R callback signature is required by the original call sites. */
     s32* (*content_cb)();                            /* 0x1C */
     void (*tick_cb)(struct MenuSlot_s* /* self */);  /* 0x20 - per-frame callback while slot is active */
 } MenuSlot;
@@ -77,14 +68,7 @@ MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect);
 
 extern MenuSlot g_menu_slots[];
 
-/**
- * @brief One row of @c g_script_table - a canned sequence of pad-input masks.
- *
- * The script subsystem (see @ref menu_tick) replays scripted controller input:
- * @c g_active_script selects a row, @c g_script_cursor walks @c inputs, and
- * each value is fed into @c g_pad_input for that frame. A value of @c 0xFFFF
- * terminates the row. Row stride is 0x30 bytes (24 halfwords).
- */
+/** @brief One 24-entry scripted controller-input sequence. */
 typedef struct
 {
     u16 inputs[24]; /* 0x00 - pad-input masks; MENU_SCRIPT_END terminates */
@@ -95,17 +79,8 @@ extern MenuScript g_script_table[];
 /** @brief Terminator value in a @ref MenuScript @c inputs row. */
 #define MENU_SCRIPT_END 0xFFFF
 
-/**
- * @name Menu pad-input priority masks
- * @brief Button-group masks used by @ref menu_tick's three-step input filter.
- *
- * Applied in order: if any confirm/cancel bit is set this frame, all other
- * bits are dropped; otherwise if any other face button is set, drop the rest;
- * otherwise if any shoulder is set, drop the rest. The first mask is a subset
- * of the second by design - it gives Triangle/Cross priority over Circle/Square
- * when several face buttons fire on the same frame.
- * @{
- */
+/** @name Menu pad-input priority masks
+ * @{ */
 #define MENU_PAD_CONFIRM_CANCEL (PADLup | PADLdown)                  /* 0x5000: Triangle | Cross */
 #define MENU_PAD_FACE_BUTTONS   (PADLup | PADLright | PADLdown | PADLleft) /* 0xF000: all four face buttons */
 #define MENU_PAD_SHOULDERS      (PADL1  | PADL2    | PADR1  | PADR2)      /* 0x000F: L1 | L2 | R1 | R2 */
