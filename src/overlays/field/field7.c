@@ -253,11 +253,16 @@ extern s32 D_80105770;
 extern u8* D_801058D4;
 extern s32 g_field_track_index;
 
+#include "psyq/gte_dmpsx_compat.h"
+
 /*
  * Psy-Q inline GTE (COP2) macros. The original build used the vendor
  * inline_c.h forms, which are __asm__ volatile blocks rather than calls, so the
  * COP2 opcodes appear inline in the ROM. The two leading nops in GTE_RTV0 and
  * GTE_SQR0 are part of the vendor macro (GTE load latency), not padding.
+ * GTE_RTV0/GTE_SQR0 delegate to gte_fixes.h's corrected gte_rtv0()/gte_sqr0()
+ * rather than hardcoding the opcode word here, so this file doesn't fall out
+ * of sync with field8/11/12/13.c's copies of the same fix.
  */
 #define GTE_SET_ROT_MATRIX(m)                                                                      \
     __asm__ volatile("lw $12, 0(%0);lw $13, 4(%0);ctc2 $12, $0;ctc2 $13, $1;lw $12, 8(%0);"        \
@@ -267,9 +272,9 @@ extern s32 g_field_track_index;
                      : "$12", "$13", "$14")
 
 #define GTE_LDV0(v) __asm__ volatile("lwc2 $0, 0(%0);lwc2 $1, 4(%0)" : : "r"(v))
-#define GTE_RTV0() __asm__ volatile("nop;nop;cop2 0x0486012")
+#define GTE_RTV0() gte_rtv0()
 #define GTE_LDLVL(v) __asm__ volatile("lwc2 $9, 0(%0);lwc2 $10, 4(%0);lwc2 $11, 8(%0)" : : "r"(v))
-#define GTE_SQR0() __asm__ volatile("nop;nop;cop2 0x0a00428")
+#define GTE_SQR0() gte_sqr0()
 #define GTE_STLVNL(v) __asm__ volatile("swc2 $25, 0(%0);swc2 $26, 4(%0);swc2 $27, 8(%0)" : : "r"(v))
 
 /**
