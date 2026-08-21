@@ -214,20 +214,7 @@ extern u16 D_80105758[];
  *        on its unk25 kind selector.
  * @param ctx Render context; unk40 is the vertex-buffer cursor base, unk40B8
  *            is the current cursor offset threaded through each call.
- * @note WIP - not yet byte-matching (90.36%, 374/465 exact rows). Residual
- *       is a global register-allocation priority puzzle among the three
- *       loop-invariant globals D_800FDF58/D_80105AE0/g_field_resource_entries
- *       referenced once per "track resolve" case (2, 3, 0xFD): the target
- *       hoists D_800FDF58 and D_80105AE0 to persistent saved registers and
- *       recomputes g_field_resource_entries per use, but every statement
- *       reorder tried here flips which two of the three win persistent
- *       status without landing on that exact pair. sched_oracle confirms
- *       only one genuine LUID violation in the loop-invariant preamble
- *       (addiu D_800FDF58 wanting to precede addiu D_80105AE0), separate
- *       from the case-body reorders already tried. See idioms.md
- *       [EXPAND-35] for the switch case-body-order fix that got this from
- *       10% to 87% in one edit.
- * @see decomp.me (90.36%)
+ * @see decomp.me (100%)
  */
 void func_80074D7C(FieldRenderContext *ctx)
 {
@@ -235,19 +222,23 @@ void func_80074D7C(FieldRenderContext *ctx)
     Struct_D80105AE0 *slot;
     FieldActorPartDef *part;
     u32 *base;
-    u8 *resource_ptr;
+    FieldResourceEntry *resources;
     s32 cursor;
     s32 item;
     s32 track;
+    s32 fd_actor_track;
+    s32 actor3;
+    FieldActorState *actor2;
+    s32 c2off;
     s32 flags;
 
-    rec = &D_80104A58;
+    rec = D_800FF658;
+    resources = g_field_resource_entries;
     base = &ctx->unk40;
     cursor = ctx->unk40B8;
 
-    if (D_800FF658 != rec)
+    if (rec != &D_800FF658[256])
     {
-        rec = D_800FF658;
         do
         {
             g_field_track_index = rec->unk29;
@@ -285,23 +276,39 @@ void func_80074D7C(FieldRenderContext *ctx)
                     break;
 
                 case 0xFD:
-                    part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
+                    fd_actor_track = (s32) &g_field_actor_slots[rec->unk22];
+                    part = &((FieldActorState *) fd_actor_track)->unk0[rec->unk23];
                     flags = ((u32) part->unk28 >> 0x12) & 0x3F;
                     if (((u32) (flags - 0xA) < 0xA) || flags == 0x28)
                     {
-                        track = g_field_actor_slots[rec->unk22].unk229[rec->unk29];
+                        fd_actor_track = ((FieldActorState *) fd_actor_track)->unk229[rec->unk29];
+                        flags = fd_actor_track << 2;
+                        flags += fd_actor_track;
+                        flags <<= 2;
+                        flags += fd_actor_track;
+                        flags <<= 2;
+                        flags += (s32) D_800FDF58;
+                        slot = &D_80105AE0[fd_actor_track];
+                        flags = *(u8 *) (flags + 0x3B);
+                        item = (s32) resources[flags].start;
                     }
                     else
                     {
-                        track = g_field_actor_slots[rec->unk22].unk228;
+                        fd_actor_track = ((FieldActorState *) fd_actor_track)->unk228;
+                        flags = fd_actor_track << 2;
+                        flags += fd_actor_track;
+                        flags <<= 2;
+                        flags += fd_actor_track;
+                        flags <<= 2;
+                        flags += (s32) D_800FDF58;
+                        slot = &D_80105AE0[fd_actor_track];
+                        flags = *(u8 *) (flags + 0x3B);
+                        item = (s32) resources[flags].start;
                     }
-                    flags = D_800FDF58[track].unk3B;
-                    slot = &D_80105AE0[track];
-                    resource_ptr = g_field_resource_entries[flags].start;
-                    slot->unk16D = -(s8) (rec - D_800FF658);
-                    if (resource_ptr != 0)
+                    slot->unk16D = (s8) (rec - D_800FF658);
+                    if (item != 0)
                     {
-                        item = func_8006C854(rec, resource_ptr);
+                        item = func_8006C854(rec, (u8 *) item);
                         if (item != 0)
                         {
                             if (item >= 0)
@@ -325,10 +332,10 @@ void func_80074D7C(FieldRenderContext *ctx)
                     break;
 
                 case 1:
-                    resource_ptr = g_field_actor_slots[rec->unk22].unk14;
-                    if (resource_ptr != 0)
+                    item = (s32) g_field_actor_slots[rec->unk22].unk14;
+                    if (item != 0)
                     {
-                        item = func_8006C854(rec, resource_ptr);
+                        item = func_8006C854(rec, (u8 *) item);
                         if (item != 0)
                         {
                             cursor = func_800754B4(rec, cursor, base, item);
@@ -337,15 +344,25 @@ void func_80074D7C(FieldRenderContext *ctx)
                     break;
 
                 case 2:
-                    part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
-                    track = g_field_actor_slots[rec->unk22].unk228;
+                    actor2 = &g_field_actor_slots[rec->unk22];
+                    fd_actor_track = rec->unk23;
+                    c2off = fd_actor_track * sizeof(FieldActorPartDef);
+                    fd_actor_track = (s32) actor2->unk0;
+                    track = actor2->unk228;
+                    part = (FieldActorPartDef *) (fd_actor_track + c2off);
+                    flags = track << 2;
+                    flags += track;
+                    flags <<= 2;
+                    flags += track;
+                    flags <<= 2;
+                    flags += (s32) D_800FDF58;
                     slot = &D_80105AE0[track];
-                    flags = D_800FDF58[track].unk3B;
-                    resource_ptr = g_field_resource_entries[flags].start;
-                    slot->unk16D = -(s8) (rec - D_800FF658);
-                    if (resource_ptr != 0)
+                    flags = *(u8 *) (flags + 0x3B);
+                    item = (s32) resources[flags].start;
+                    slot->unk16D = (s8) (rec - D_800FF658);
+                    if (item != 0)
                     {
-                        item = func_8006C854(rec, resource_ptr);
+                        item = func_8006C854(rec, (u8 *) item);
                         if (item != 0)
                         {
                             if (item >= 0)
@@ -361,15 +378,25 @@ void func_80074D7C(FieldRenderContext *ctx)
                     break;
 
                 case 3:
-                    part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
-                    track = g_field_actor_slots[rec->unk22].unk229[rec->unk29];
+                    flags = rec->unk22;
+                    actor3 = (s32) &g_field_actor_slots[flags];
+                    flags = rec->unk23;
+                    part = &((FieldActorState *) actor3)->unk0[flags];
+                    flags = rec->unk29;
+                    track = ((FieldActorState *) actor3)->unk229[flags];
+                    flags = track << 2;
+                    flags += track;
+                    flags <<= 2;
+                    flags += track;
+                    flags <<= 2;
+                    flags += (s32) D_800FDF58;
                     slot = &D_80105AE0[track];
-                    flags = D_800FDF58[track].unk3B;
-                    resource_ptr = g_field_resource_entries[flags].start;
-                    slot->unk16D = -(s8) (rec - D_800FF658);
-                    if (resource_ptr != 0)
+                    flags = *(u8 *) (flags + 0x3B);
+                    item = (s32) resources[flags].start;
+                    slot->unk16D = (s8) (rec - D_800FF658);
+                    if (item != 0)
                     {
-                        item = func_8006C854(rec, resource_ptr);
+                        item = func_8006C854(rec, (u8 *) item);
                         if (item != 0)
                         {
                             if (item >= 0)

@@ -2863,9 +2863,13 @@ void akao_seq_op_set_adsr_release_mode(AkaoChannelState* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/rLRQL
+ * @brief Extended opcode FE 10: reserve SPU voices below the operand base.
+ *        Installs the operand byte as g_akao_seq_channel0->voice_alloc_base, the
+ *        first freely-allocatable voice index; voices below it become reserved.
+ * @param arg0 Channel stream cursor; advanced past the one base byte.
+ * @see decomp.me (100%) https://decomp.me/scratch/rLRQL
  */
-void func_8002C984(u8** arg0)
+void akao_seq_op_allocate_reserved_voices(u8** arg0)
 {
     u8* temp_v0;
 
@@ -2875,9 +2879,10 @@ void func_8002C984(u8** arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/9FX05
+ * @brief Extended opcode FE 11: release the reserved-voice window (base = 0).
+ * @see decomp.me (100%) https://decomp.me/scratch/9FX05
  */
-void func_8002C9A4(void)
+void akao_seq_op_free_reserved_voices(void)
 {
     g_akao_seq_channel0->voice_alloc_base = 0;
 }
@@ -3030,9 +3035,13 @@ void akao_seq_op_adjust_note_duration(AkaoChannelState* arg0)
 
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/CB7Yy
+ * @brief Extended opcode FE 04: enable drum mode (per-note articulation table).
+ *        Sets channel flag 0x8 when the song note table is present, so each note
+ *        resolves its own articulation/key/pan via akao_channel_start_note.
+ * @param arg0 Channel to switch into drum mode.
+ * @see decomp.me (100%) https://decomp.me/scratch/CB7Yy
  */
-void func_8002CC44(AkaoChannelState* arg0)
+void akao_seq_op_enable_drum_mode(AkaoChannelState* arg0)
 {
     /* Song role: 0x34 is the note-table pointer, tested for presence. */
     if (g_akao_seq_channel0->flags != 0)
@@ -3042,18 +3051,23 @@ void func_8002CC44(AkaoChannelState* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/FnMZ3
+ * @brief Extended opcode FE 05: disable drum mode (clear flag 0x8, reset volume scale).
+ * @param arg0 Channel to switch out of drum mode.
+ * @see decomp.me (100%) https://decomp.me/scratch/FnMZ3
  */
-void func_8002CC7C(AkaoChannelState* arg0)
+void akao_seq_op_disable_drum_mode(AkaoChannelState* arg0)
 {
     arg0->spu_volume_scale = 0;
     arg0->flags = (s32)(arg0->flags & ~8);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/wuYt5
+ * @brief Extended opcode FE 15: set the time signature (ticks-per-beat and
+ *        beats-per-measure) and reset the beat/tick counters.
+ * @param arg0 Channel stream cursor; advanced past the two operand bytes.
+ * @see decomp.me (100%) https://decomp.me/scratch/wuYt5
  */
-void func_8002CC94(u8** arg0)
+void akao_seq_op_set_time_signature(u8** arg0)
 {
     AkaoChannelState* ch = g_akao_seq_channel0;
 
@@ -3066,9 +3080,11 @@ void func_8002CC94(u8** arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/FcDgE
+ * @brief Extended opcode FE 16: set the current song measure from a 16-bit operand.
+ * @param arg0 Channel stream cursor; advanced past the two operand bytes.
+ * @see decomp.me (100%) https://decomp.me/scratch/FcDgE
  */
-void func_8002CCCC(u8** arg0)
+void akao_seq_op_set_measure(u8** arg0)
 {
     AkaoChannelState* channel = g_akao_seq_channel0;
 
@@ -3077,18 +3093,27 @@ void func_8002CCCC(u8** arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/XqM1L
+ * @brief Opcode 0xB0: set ADSR decay rate and sustain level together.
+ *        Delegates to akao_seq_op_set_adsr_decay then akao_seq_op_set_adsr_sustain_level.
+ * @param arg0 Channel being programmed.
+ * @param arg1 Second argument forwarded to both sub-handlers.
+ * @see decomp.me (100%) https://decomp.me/scratch/XqM1L
  */
-void func_8002CD08(AkaoChannelState* arg0, AkaoChannelState* arg1)
+void akao_seq_op_set_adsr_decay_sustain_level(AkaoChannelState* arg0, AkaoChannelState* arg1)
 {
     akao_seq_op_set_adsr_decay(arg0, arg1);
     akao_seq_op_set_adsr_sustain_level(arg0, arg1);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/cAsju
+ * @brief Opcode 0xCE: enable reverb now and schedule an auto-toggle after N ticks.
+ *        Sets reverb_toggle_ticks (operand+1, or 0x101 when zero) then enables
+ *        reverb; the countdown XOR-toggles the reverb bit when it reaches zero.
+ * @param arg0 Channel stream cursor / channel state.
+ * @param arg1 Channel bit-mask forwarded to akao_seq_op_enable_reverb.
+ * @see decomp.me (100%) https://decomp.me/scratch/cAsju
  */
-void func_8002CD44(AkaoChannelState* arg0, s32 arg1)
+void akao_seq_op_enable_reverb_then_toggle(AkaoChannelState* arg0, s32 arg1)
 {
     u8* temp_v0;
     s32 temp_v1;
@@ -3113,9 +3138,12 @@ void func_8002CD44(AkaoChannelState* arg0, s32 arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/Basyw
+ * @brief Opcode 0xCF: schedule a reverb toggle after N ticks without enabling now.
+ *        Sets reverb_toggle_ticks (operand+1, or 0x101 when zero).
+ * @param arg0 Channel stream cursor / channel state.
+ * @see decomp.me (100%) https://decomp.me/scratch/Basyw
  */
-void func_8002CD88(AkaoChannelState* arg0)
+void akao_seq_op_schedule_reverb_toggle(AkaoChannelState* arg0)
 {
     u8* temp_v0;
     s32 temp_v1;
@@ -3136,9 +3164,14 @@ void func_8002CD88(AkaoChannelState* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/j1qFh
+ * @brief Opcode 0xD2: enable pitch modulation now and schedule an auto-toggle.
+ *        Sets pitch_mod_toggle_ticks (operand+1, or 0x101 when zero) then enables
+ *        pitch modulation; the countdown XOR-toggles the bit when it reaches zero.
+ * @param arg0 Channel stream cursor / channel state.
+ * @param arg1 Channel bit-mask forwarded to akao_seq_op_enable_pitch_modulation.
+ * @see decomp.me (100%) https://decomp.me/scratch/j1qFh
  */
-void func_8002CDB8(void* arg0, s32 arg1)
+void akao_seq_op_enable_pitch_mod_then_toggle(void* arg0, s32 arg1)
 {
     u8* temp_v0;
     s32 temp_v1;
@@ -3163,9 +3196,12 @@ void func_8002CDB8(void* arg0, s32 arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/3922q
+ * @brief Opcode 0xD3: schedule a pitch-modulation toggle after N ticks.
+ *        Sets pitch_mod_toggle_ticks (operand+1, or 0x101 when zero).
+ * @param arg0 Channel stream cursor / channel state.
+ * @see decomp.me (100%) https://decomp.me/scratch/3922q
  */
-void func_8002CDFC(void* arg0)
+void akao_seq_op_schedule_pitch_mod_toggle(void* arg0)
 {
     u8* temp_v0;
     s32 temp_v1;
@@ -3186,9 +3222,14 @@ void func_8002CDFC(void* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/LEJvC
+ * @brief Opcode 0xCB: reset channel effects. Clears the LFO and side-chain flags
+ *        (0x37 = pitch/vol/pan LFO + pitch/pitch-volume side-chain), disables
+ *        reverb, pitch modulation and noise, and clears the note-tie bits.
+ * @param arg0 Channel to reset.
+ * @param arg1 Channel bit-mask forwarded to the disable-* sub-handlers.
+ * @see decomp.me (100%) https://decomp.me/scratch/LEJvC
  */
-void func_8002CE2C(AkaoChannelState* arg0, s32 arg1)
+void akao_seq_op_reset_effects(AkaoChannelState* arg0, s32 arg1)
 {
     arg0->flags = (u8*)((u32)arg0->flags & ~0x37);
 
@@ -3200,33 +3241,45 @@ void func_8002CE2C(AkaoChannelState* arg0, s32 arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/8l07k
+ * @brief Opcode 0xD4: enable pitch side-chaining (channel flag 0x10). While set,
+ *        the voice tick recomputes this channel's SPU pitch every tick from the
+ *        previous channel's spu_pitch (see akao_voice.c).
+ * @param arg0 Channel to enable.
+ * @see decomp.me (100%) https://decomp.me/scratch/8l07k
  */
-void func_8002CE94(AkaoChannelState* arg0)
+void akao_seq_op_enable_pitch_sidechain(AkaoChannelState* arg0)
 {
     arg0->flags = (u8*)((u32)arg0->flags | 0x10);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/YSIzI
+ * @brief Opcode 0xD5: disable pitch side-chaining (clear channel flag 0x10).
+ * @param arg0 Channel to disable.
+ * @see decomp.me (100%) https://decomp.me/scratch/YSIzI
  */
-void func_8002CEA8(AkaoChannelState* arg0)
+void akao_seq_op_disable_pitch_sidechain(AkaoChannelState* arg0)
 {
     arg0->flags = (u8*)((u32)arg0->flags & ~0x10);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/iCXHA
+ * @brief Opcode 0xD6: enable pitch->volume side-chaining (channel flag 0x20).
+ *        While set, the voice tick folds the previous channel's pitch into this
+ *        channel's volume each tick (see akao_voice.c).
+ * @param arg0 Channel to enable.
+ * @see decomp.me (100%) https://decomp.me/scratch/iCXHA
  */
-void func_8002CEBC(AkaoChannelState* arg0)
+void akao_seq_op_enable_pitch_volume_sidechain(AkaoChannelState* arg0)
 {
     arg0->flags = (u8*)((u32)arg0->flags | 0x20);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/p5dcS
+ * @brief Opcode 0xD7: disable pitch->volume side-chaining (clear channel flag 0x20).
+ * @param arg0 Channel to disable.
+ * @see decomp.me (100%) https://decomp.me/scratch/p5dcS
  */
-void func_8002CED0(AkaoChannelState* arg0)
+void akao_seq_op_disable_pitch_volume_sidechain(AkaoChannelState* arg0)
 {
     arg0->flags = (u8*)((u32)arg0->flags & ~0x20);
 }
@@ -3240,12 +3293,16 @@ typedef struct
 } Struct_D_8004D3A0;
 
 extern Struct_D_8004D3A0 D_8004D3A0;
-void func_80026C14(Struct_D_8004D3A0* arg0, void* arg1, void* arg2, s32 arg3);
+void akao_sfx_play(Struct_D_8004D3A0* arg0, void* arg1, void* arg2, s32 arg3);
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/nwIop
+ * @brief Extended opcode FE 0B: play a sound effect from the sequence stream.
+ *        Reads two relative pointers, fills the SFX parameter block D_8004D3A0
+ *        (pan, expression) and launches it via akao_sfx_play.
+ * @param arg0 Channel stream cursor; advanced past the two 16-bit operands.
+ * @see decomp.me (100%) https://decomp.me/scratch/nwIop
  */
-void func_8002CEE4(AkaoChannelState* arg0)
+void akao_seq_op_play_sfx(AkaoChannelState* arg0)
 {
     u8* temp_a0;
     s32 temp_v0;
@@ -3282,15 +3339,22 @@ void func_8002CEE4(AkaoChannelState* arg0)
     D_8004D3A0.unk8 = *(u16*)((u8*)arg0 + 0x90) >> 8;
     D_8004D3A0.unkC = (s32)arg0->unk48 >> 23;
 
-    func_80026C14(&D_8004D3A0, var_a1, var_a2, 0);
+    akao_sfx_play(&D_8004D3A0, var_a1, var_a2, 0);
 
     *(u8**)arg0 = *(u8**)arg0 + 4;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/B5HO1
+ * @brief Extended opcode FE 17: set the channel pan bias immediately.
+ *        Stores operand<<8 into pan_bias, sets flag 0x800, and (side effect)
+ *        enables this channel in the noise mask via akao_seq_op_enable_noise.
+ * @param arg0 Channel stream cursor / channel state.
+ * @param arg1 Channel bit-mask forwarded to akao_seq_op_enable_noise.
+ * @note The noise-mask enable is an intentional side effect of this LoM opcode;
+ *       its purpose alongside the pan bias is not yet understood.
+ * @see decomp.me (100%) https://decomp.me/scratch/B5HO1
  */
-void func_8002CF9C(AkaoChannelState* arg0, s32 arg1)
+void akao_seq_op_set_pan_bias(AkaoChannelState* arg0, s32 arg1)
 {
     s32 temp_byte;
     s32 temp_a2;
@@ -3308,9 +3372,15 @@ void func_8002CF9C(AkaoChannelState* arg0, s32 arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/fM3EA
+ * @brief Extended opcode FE 18: slide the channel pan bias to a target over N ticks.
+ *        Sets pan_bias_step / pan_bias_fade_ticks, sets flag 0x800, and (side
+ *        effect) enables this channel in the noise mask.
+ * @param arg0 Channel stream cursor / channel state.
+ * @param arg1 Channel bit-mask forwarded to akao_seq_op_enable_noise.
+ * @note See akao_seq_op_set_pan_bias regarding the noise-mask side effect.
+ * @see decomp.me (100%) https://decomp.me/scratch/fM3EA
  */
-void func_8002CFE0(AkaoChannelState* arg0, s32 arg1)
+void akao_seq_op_slide_pan_bias(AkaoChannelState* arg0, s32 arg1)
 {
     u8* temp_a1;
     u16 temp_a0;
@@ -3339,9 +3409,13 @@ void func_8002CFE0(AkaoChannelState* arg0, s32 arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/ws5Yw
+ * @brief Opcode 0xE0: enable deferred stop (channel flag 0x100000). When a stop
+ *        is later requested, the channel sets 0x200000 and plays on instead of
+ *        releasing immediately; the loop opcodes then end rather than repeat.
+ * @param arg0 Channel to mark.
+ * @see decomp.me (100%) https://decomp.me/scratch/ws5Yw
  */
-void func_8002D094(AkaoChannelState* arg0)
+void akao_seq_op_enable_deferred_stop(AkaoChannelState* arg0)
 {
     arg0->flags = (s32)(arg0->flags | 0x100000);
 }
@@ -3371,7 +3445,7 @@ void akao_seq_op_skip_operand_byte(AkaoChannelState* arg0)
  * @c (song->w04.song.voice_alloc_low_mask & channel_mask) to the voice
  * allocator akao_find_free_voice. A set bit makes the free-voice search start at
  * voice 0 instead of at @c song->unk38, the reserved base installed by extended
- * opcode FE 10 and cleared by FE 11. func_8002D0DC (FE 1E) clears the same bit,
+ * opcode FE 10 and cleared by FE 11. akao_seq_op_obey_voice_reserve (FE 1E) clears the same bit,
  * and akao_release_channels clears it for every released channel.
  *
  * @param channel Channel state; unused, but required to match because the
