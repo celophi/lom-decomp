@@ -1,5 +1,5 @@
-#ifndef _PSYQ_GTE_FIXES_H
-#define _PSYQ_GTE_FIXES_H
+#ifndef _PSYQ_GTE_DMPSX_COMPAT_H
+#define _PSYQ_GTE_DMPSX_COMPAT_H
 
 /**
  * @file gte_dmpsx_compat.h
