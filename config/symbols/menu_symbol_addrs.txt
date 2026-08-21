@@ -162,3 +162,6 @@ g_menu_active_subtype  = 0x80169118;
 g_menu_char_slot       = 0x80169550;
 g_menu_page_count      = 0x801690FC;
 g_menu_companion_node  = 0x80169324;
+
+// Field dialogue/text renderer exports used by this overlay.
+field_text_build_sprites             = 0x800644FC;

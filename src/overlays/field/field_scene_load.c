@@ -251,7 +251,7 @@ void field_init_with_fmv(void* unused, void* arg1)
     *(s32*)((char*)arg1 + 0x40B8) = D_801ED00C;
     *(s32*)((char*)arg1 + 0xBD7C) = D_801ED010;
 
-    func_800643E0();
+    field_text_reset_windows();
 }
 
 /**
@@ -286,7 +286,7 @@ void field_init_with_fmv_alloc(void)
     render_bytes += 0x8000;
     *(s32*)(render_bytes + 0x3D7C) = D_801ED010;
 
-    func_800643E0();
+    field_text_reset_windows();
 }
 
 /**

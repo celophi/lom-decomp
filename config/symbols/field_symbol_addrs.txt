@@ -41,6 +41,9 @@ field_update_scene_fade               = 0x80059C44;
 field_begin_scene_fade_in             = 0x80059F18;
 
 // Field dialogue/text renderer.
+field_text_reset_windows             = 0x800643E0;
+field_text_reset_scratch             = 0x8006441C;
+field_text_build_sprites             = 0x800644FC;
 field_text_open_packed_window         = 0x80064678;
 field_text_open_fixed_window          = 0x80064878;
 field_text_apply_config               = 0x80064A3C;

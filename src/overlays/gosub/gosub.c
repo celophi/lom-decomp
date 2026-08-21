@@ -276,7 +276,7 @@ s32 gosub_update_frame(s32 render_ctx)
 {
     s32* frame_parity;
     s32 finished;
-    func_8006441C();
+    field_text_reset_scratch();
     gosub_update_screen(render_ctx);
     func_80063194();
     frame_parity = &g_gosub_frame_parity;

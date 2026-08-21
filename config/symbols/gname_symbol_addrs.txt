@@ -95,3 +95,7 @@ g_char_cursor        = 0x8014F8D0;
 pad_8014F8B1         = 0x8014F8B1;
 pad_8014F8B9         = 0x8014F8B9;
 D_8014F8D4           = 0x8014F8D4;
+
+// Field dialogue/text renderer exports used by this overlay.
+field_text_reset_scratch             = 0x8006441C;
+field_text_build_sprites             = 0x800644FC;
