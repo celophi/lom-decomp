@@ -1226,17 +1226,18 @@ StructS0 *func_801433EC();
  * @param arg0 Owning screen state; unk40B8 is the packet cursor, read on entry
  *             and written back on exit.
  *
- * @note NOT MATCHED. Residue is (a) a pure s0<->s1 allocation swap - the target
- *       puts var_s0 in s0 and temp_s1 in s1, and alloc_report shows temp_s1
- *       winning the priority race 10666 to 10294 - and (b) the case-1 tail
- *       emit order, where sched_oracle reports emit[li 8] < emit[andi 15]
- *       violated. `volatile u32 *var_s3` is required: the target emits 12 loads
- *       of the element word and gcc CSEs 3 away without it. gosub's
- *       func_80143C58 is the matched 100% twin of this function and is the
- *       source model to work from. See working/func_80141D78/STATUS.md for the
- *       measured required-to-match shapes and the ten retired hypothesis
- *       classes.
- * @see decomp.me (95.27%) TODO
+ * @note NOT MATCHED (328/365 exact rows). Residue is the case 1/3/4 tails,
+ *       where the target stores the updated state word before testing it and
+ *       materializes the comparison constant 8 early; sched_oracle reports
+ *       emit[li 8] < emit[andi 15] violated. Two shapes are required to match:
+ *       `volatile u32 *var_s3` (the target emits 12 loads of the element word
+ *       and gcc CSEs 3 away without it), and the `do { ... } while (0)` around
+ *       the var_s0 advance, which is an [ALLOC-23] loop-note ref bump worth 28
+ *       exact rows - it wins s0 for var_s0 against temp_s1. A second such
+ *       wrapper around the case-1 state-word update is worth 2 more. gosub's
+ *       func_80143C58 is the matched 100% twin and the source model to work
+ *       from. See working/func_80141D78/STATUS.md.
+ * @see decomp.me (96.49%) TODO
  */
 void func_80141D78(Arg0Struct *arg0)
 {
@@ -1307,7 +1308,10 @@ void func_80141D78(Arg0Struct *arg0)
             temp_a0_2 = *var_s3;
             temp_v1_2 = temp_a0_2 & 7;
 
-            var_s0 = (StructS0 *)((u8 *)var_s0 + 0x40);
+            do
+            {
+                var_s0 = (StructS0 *)((u8 *)var_s0 + 0x40);
+            } while (0);
 
             switch (temp_v1_2)
             {
@@ -1345,9 +1349,12 @@ void func_80141D78(Arg0Struct *arg0)
                                            (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
                                            temp_s1, temp_s2, arg0->unk40B2, (*(u32 *)((u8 *)var_s3 + 4) >> 9) & 1);
                 }
-                temp_a0_4 = *var_s3;
-                temp_a0_4 = (temp_a0_4 & ~0x78) | (((((temp_a0_4 >> 3) & 0xF) + 1) & 0xF) * 8);
-                *var_s3 = temp_a0_4;
+                do
+                {
+                    temp_a0_4 = *var_s3;
+                    temp_a0_4 = (temp_a0_4 & ~0x78) | (((((temp_a0_4 >> 3) & 0xF) + 1) & 0xF) * 8);
+                    *var_s3 = temp_a0_4;
+                } while (0);
                 if (((temp_a0_4 >> 3) & 0xF) == 8)
                 {
                     func_800AA02C();
@@ -1511,4 +1518,127 @@ void func_801423FC(u8 *dest, u8 *src)
         dest[i] = src[i];
     }
     dest[i] = 0;
+}
+
+StructS0 *func_8014269C();
+
+/**
+ * @note The `do { ... } while (0)` around the three func_8014269C calls is
+ *       required to match; plain braces do not substitute.
+ * @see decomp.me (100%) TODO
+ */
+StructS0 *func_80142480(StructS0 *prim, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 arg7)
+{
+    StructS0 *var_s0;
+    StructS0 *var_a0;
+    StructS0 *buf;
+    StructS0 *result;
+    s32 sp20[24];
+    s32 temp_a2;
+
+    buf = prim;
+    if (flag != 0)
+    {
+        temp_a2 = y + 0xF2;
+        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 3);
+    }
+    else
+    {
+        temp_a2 = y + 0xA;
+        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 3);
+    }
+    func_8001A5D4((s32)buf, sp20);
+
+    buf->unk0 = (buf->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)buf & 0xFFFFFF);
+
+    result = (StructS0 *)((u8 *)buf + 0x40);
+    if (arg7 != 0)
+    {
+        do
+        {
+            var_s0 = func_8014269C(result, ot, x, y, w, h, 0xFFFFFF);
+            var_s0 = func_8014269C(var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
+            var_s0 = func_8014269C(var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
+        } while (0);
+
+        result = var_s0;
+        result->unk4 = 0x808080;
+        ((u8 *)result)[3] = 3;
+        ((u8 *)result)[7] = 0x62;
+        result->unk8 = x;
+        result->unkA = y;
+        result->unkC = w;
+        result->unkE = h;
+        result->unk0 = (result->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+        *ot = (*ot & 0xFF000000) | ((s32)result & 0xFFFFFF);
+
+        var_a0 = (StructS0 *)((u8 *)result + 0x10);
+        ((u8 *)var_a0)[3] = 1;
+        var_a0->unk4 = 0xE1000045;
+        var_a0->unk0 = (var_a0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+        *ot = (*ot & 0xFF000000) | ((s32)var_a0 & 0xFFFFFF);
+        result = (StructS0 *)((u8 *)var_a0 + 8);
+    }
+    return result;
+}
+
+/**
+ * @note `tmp` is deliberately reused for the packet-1 OT-link mask and then for
+ *       the bottom edge's y coordinate. Both the mask binding and the reuse are
+ *       required to match: with one basic block this function is allocated by
+ *       local-alloc, and the reassignment truncates the constant's live range
+ *       so it wins the lower temporary register ([ALLOC-23] style ref bumps do
+ *       nothing here). Separate variables score 98.74%.
+ * @see decomp.me (100%) TODO
+ */
+StructS0 *func_8014269C(StructS0 *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 color)
+{
+    s32 tmp;
+
+    p->unk4 = color;
+    ((u8 *)p)[3] = 3;
+    ((u8 *)p)[7] = 0x40;
+    p->unk8 = x;
+    p->unkA = y;
+    p->unkC = x + w;
+    p->unkE = y;
+    tmp = 0xFF000000;
+    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & tmp) | ((s32)p & 0xFFFFFF);
+    p++;
+
+    p->unk4 = color;
+    ((u8 *)p)[3] = 3;
+    ((u8 *)p)[7] = 0x40;
+    p->unk8 = x + w;
+    p->unkA = y;
+    p->unkC = x + w;
+    p->unkE = y + h;
+    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
+    p++;
+
+    p->unk4 = color;
+    ((u8 *)p)[3] = 3;
+    ((u8 *)p)[7] = 0x40;
+    p->unk8 = x + w;
+    tmp = y + h;
+    p->unkA = tmp;
+    p->unkC = x;
+    p->unkE = y + h;
+    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
+    p++;
+
+    p->unk4 = color;
+    ((u8 *)p)[3] = 3;
+    ((u8 *)p)[7] = 0x40;
+    p->unk8 = x;
+    p->unkA = y;
+    p->unkC = x;
+    p->unkE = y + h;
+    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
+    return p + 1;
 }
