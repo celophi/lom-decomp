@@ -2080,7 +2080,7 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
 /**
  * @brief Scroll the text cache up one row and clear the vacated row.
  * @param state Text-window state.
- * @see decomp.me (91.52%)
+ * @see decomp.me (100%)
  */
 
 void field_text_scroll_cache(FieldTextState* st)
@@ -2116,13 +2116,13 @@ void field_text_scroll_cache(FieldTextState* st)
             dv = v;
             if (left > 0)
             {
-                avail = 0x100 - u;
+                span = 0x100 - u;
                 do
                 {
                     u += left;
-                    if (left >= avail)
+                    if (left >= span)
                     {
-                        left -= avail;
+                        left -= span;
                         u = 0;
                         v += st->line_height;
                     }
@@ -2130,7 +2130,7 @@ void field_text_scroll_cache(FieldTextState* st)
                     {
                         left = 0;
                     }
-                    avail = 0x100 - u;
+                    span = 0x100 - u;
                 } while (left > 0);
             }
             su = u;
@@ -2140,8 +2140,8 @@ void field_text_scroll_cache(FieldTextState* st)
             {
                 do
                 {
-                    dst = (u16*)((dv << 7) + 0x801DE000) + (du >> 2);
-                    src = (u16*)((sv << 7) + 0x801DE000) + (su >> 2);
+                    dst = ((u16*)0x801DE000 + (du >> 2)) + (dv << 6);
+                    src = ((u16*)0x801DE000 + (su >> 2)) + (sv << 6);
                     span = 0x100 - su;
                     cap = 0x100 - du;
                     if (cap < span)
@@ -2171,25 +2171,27 @@ void field_text_scroll_cache(FieldTextState* st)
                             sv += st->line_height;
                         } while (su >= 0x100);
                     }
-                    lines = st->line_height - 1;
+                    lines = st->line_height;
+                    lines -= 1;
                     if (lines != -1)
                     {
                         do
                         {
                             d = dst;
                             cap = span >> 2;
-                            count = cap - 1;
+                            cap -= 1;
                             s = src;
-                            if (count != -1)
+                            if (cap != -1)
                             {
+                                s32 end = -1;
                                 do
                                 {
                                     pix = *s;
                                     s += 1;
-                                    count -= 1;
+                                    cap -= 1;
                                     *d = pix;
                                     d += 1;
-                                } while (count != -1);
+                                } while (cap != end);
                             }
                             dst += 0x40;
                             lines -= 1;
@@ -2204,10 +2206,9 @@ void field_text_scroll_cache(FieldTextState* st)
     left = st->line_advance;
     if (left > 0)
     {
-        span = u >> 2;
         do
         {
-            dst = (u16*)((v << 7) + 0x801DE000) + span;
+            dst = ((u16*)0x801DE000 + (u >> 2)) + (v << 6);
             span = 0x100 - u;
             if (left < span)
             {
@@ -2223,28 +2224,29 @@ void field_text_scroll_cache(FieldTextState* st)
                     v += st->line_height;
                 } while (u >= 0x100);
             }
-            lines = st->line_height - 1;
+            lines = st->line_height;
+            lines -= 1;
             if (lines != -1)
             {
                 do
                 {
                     cap = span >> 2;
-                    count = cap - 1;
+                    cap -= 1;
                     d = dst;
-                    if (count != -1)
+                    if (cap != -1)
                     {
+                        s32 end = -1;
                         do
                         {
                             *d = 0;
-                            count -= 1;
+                            cap -= 1;
                             d += 1;
-                        } while (count != -1);
+                        } while (cap != end);
                     }
                     lines -= 1;
                     dst += 0x40;
                 } while (lines != -1);
             }
-            span = u >> 2;
         } while (left > 0);
     }
     st->dirty_start_u = st->region_start_u;
@@ -2253,6 +2255,7 @@ void field_text_scroll_cache(FieldTextState* st)
     st->dirty_end_v = st->region_end_v;
     st->remaining_width = st->width;
 }
+
 
 /**
  * @brief Queue dirty text-cache rows for VRAM upload.
