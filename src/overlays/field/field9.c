@@ -148,22 +148,19 @@ void func_80073F60(s32 arg0, s32 arg1, s32 arg2)
     D_800473F8 = (arg0 << 0x10) | (arg1 << 8) | arg2;
 }
 
+extern void *jtbl_80050144[];
+
 /**
  * @brief Resolve a record's world-position source into arg2, dispatching on
  *        the record's unk1B mode selector.
  * @param arg0 Record whose unk1B selects the position source.
  * @param arg1 View/camera parameter block (rotation/flags read in modes 5/6/9).
  * @param arg2 Output position triple (unk0/unk4/unk8).
- * @note WIP - not yet byte-matching. Residual is register coloring: most
- *       remaining mismatches are pure a0/a1-style register swaps between
- *       the g_field_actor_slots and D_800FDF58 base addresses within a case
- *       (crossjump_oracle confirms cluster membership/structure already
- *       matches the target in these spots, "reason: register" not
- *       "reason: opcode"), plus two case14/case15 cross-jump tail-merge
- *       points into block_45 the target reaches via two-way jumps that this
- *       source does not yet reproduce. The control-flow shape, CSE re-read
- *       structure, and field types are established; see the working notes.
- * @see decomp.me (93.54%)
+ * @note The unk1B mode switch is emitted as a computed goto through the rodata
+ *       jump table jtbl_80050144 (indexed by unk1B - 1); the static keep[] array
+ *       holds the case-label addresses so gcc keeps them address-taken and
+ *       reproduces the original dispatch exactly.
+ * @see decomp.me (100%)
  */
 void func_80073F7C(Struct_D800FDF58 *arg0, FieldViewParams *arg1, FieldPosOut *arg2)
 {
@@ -172,61 +169,86 @@ void func_80073F7C(Struct_D800FDF58 *arg0, FieldViewParams *arg1, FieldPosOut *a
     Struct_D800FDF58 *var_a2;
     Struct_D800FDF58 *var_v0;
     Struct_D800FDF58 *var_v0_5;
-    Struct_D800FDF58 *var_v0_9;
-    Struct_D800FDF58 *src;
+    Struct_D800FDF58 *base12;
+    Struct_D800FDF58 *var_c1;
+    Struct_D800FDF58 *var_c2;
+    Struct_D800FDF58 *var_c8;
     Struct_D80105AE0 *pe;
-    u8 *ent;
+    FieldActorState *slots;
+    FieldActorState *slots2;
     s32 var_v1;
+    u16 tail_idx;
+    s32 idx6;
+    s32 idx2;
     s32 val;
     s32 v;
+    s32 pos;
     s32 boff;
-    Struct_D800FDF58 *var_v1_4;
+    s32 subv;
+    s32 dispatch;
+    static void *const keep[] = {
+        &&case1, &&case2, &&case3, &&case4, &&case5,
+        &&case6, &&case7, &&case8, &&case9, &&case10,
+        &&case11, &&case12, &&case14, &&case15
+    };
 
-    switch (arg0->unk1B)
+    switch (0)
     {
-    case 1:
-        arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0;
-        arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk4;
-        var_v1 = g_field_actor_slots[arg0->unk22].unk229[g_field_track_index];
-        var_v0 = &D_800FDF58[var_v1];
-        goto block_42;
-    case 2:
-        arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk0;
+    case 0:
+        dispatch = arg0->unk1B - 1;
+        if ((u32) dispatch >= 0xFU)
+        {
+            break;
+        }
+        goto *jtbl_80050144[dispatch];
+
+    case1:
+        slots = g_field_actor_slots;
+        arg2->unk0 = D_800FDF58[slots[arg0->unk22].unk229[g_field_track_index]].unk0;
+        arg2->unk4 = D_800FDF58[slots[arg0->unk22].unk229[g_field_track_index]].unk4;
+        var_v1 = slots[arg0->unk22].unk229[g_field_track_index];
+        do { var_c1 = &D_800FDF58[var_v1]; } while (0);
+        arg2->unk8 = var_c1->unk8;
+        return;
+    case2:
+        slots2 = g_field_actor_slots;
+        arg2->unk0 = D_800FDF58[slots2[arg0->unk22].unk228].unk0;
         arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk4;
-        var_v0 = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk228];
-        goto block_42;
-    case 3:
+        idx2 = slots2[arg0->unk22].unk228;
+        do { var_c2 = &D_800FDF58[idx2]; } while (0);
+        arg2->unk8 = var_c2->unk8;
+        return;
+    case3:
         arg2->unk0 = arg0->unk44 - D_800F22A0;
         arg2->unk4 = arg0->unk48 - D_800F22A4;
         arg2->unk8 = arg0->unk4C - D_800F22A8;
         return;
-    case 4:
-        var_a1 = D_800FF658;
+    case4:
         if (D_800FF658[arg0->unk30].unk25 != 0xFF)
         {
             arg2->unk0 = D_800FF658[arg0->unk30].unk0;
             arg2->unk4 = D_800FF658[arg0->unk30].unk4;
-            var_v1 = arg0->unk30;
-            goto block_41;
+            arg2->unk8 = D_800FF658[arg0->unk30].unk8;
+            return;
         }
         arg2->unk0 = arg0->unk0;
         arg2->unk4 = arg0->unk4;
         arg2->unk8 = arg0->unk8;
         return;
-    case 5:
-        src = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk228];
-        ent = (u8 *)&D_80105AE0[g_field_actor_slots[arg0->unk22].unk228];
-        arg2->unk0 = src->unk0 + (*(s16 *)(ent + (((u32)arg1->unk24 >> 0x13) & 0xC) + 0x130) << 8);
-        arg2->unk4 = src->unk4 + (*(s16 *)(ent + (((u32)arg1->unk24 >> 0x13) & 0xC) + 0x132) << 8);
-        arg2->unk8 = src->unk8;
+    case5:
+        var_a2 = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk228];
+        pe = &D_80105AE0[g_field_actor_slots[arg0->unk22].unk228];
+        arg2->unk0 = var_a2->unk0 + (*(s16 *)((u8 *)pe + (((u32)arg1->unk24 >> 0x13) & 0xC) + 0x130) << 8);
+        arg2->unk4 = var_a2->unk4 + (*(s16 *)((u8 *)pe + (((u32)arg1->unk24 >> 0x13) & 0xC) + 0x132) << 8);
+        arg2->unk8 = var_a2->unk8;
         return;
-    case 6:
+    case6:
         val = ((u32)arg1->unk28 >> 0x12) & 0x3F;
         if (val >= 0xA)
         {
             if (val < 0x26)
             {
-                var_v1 = g_field_actor_slots[arg0->unk22].unk229[g_field_track_index];
+                idx6 = g_field_actor_slots[arg0->unk22].unk229[g_field_track_index];
             }
             else
             {
@@ -236,27 +258,29 @@ void func_80073F7C(Struct_D800FDF58 *arg0, FieldViewParams *arg1, FieldPosOut *a
         else
         {
 owner6:
-            var_v1 = g_field_actor_slots[arg0->unk22].unk228;
+            idx6 = g_field_actor_slots[arg0->unk22].unk228;
         }
-        var_a2 = &D_800FDF58[var_v1];
+        var_a2 = &D_800FDF58[idx6];
         if (var_a2->unk21 & 0x80)
         {
             goto block_32;
         }
         boff = arg0->unk44;
-        v = var_a2->unk0 - boff;
+        pos = -boff;
+        pos += var_a2->unk0;
         goto block_33;
-    case 7:
+    case7:
         arg2->unk0 = D_80105AE0[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk6C << 8;
-        arg2->unk4 = 0;
         arg2->unk8 = D_80105AE0[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk6E << 8;
+        arg2->unk4 = 0;
         return;
-    case 8:
+    case8:
         arg2->unk0 = D_800FF658[arg0->unk20].unk0;
         arg2->unk4 = D_800FF658[arg0->unk20].unk4;
-        var_v0 = &D_800FF658[arg0->unk20];
-        goto block_42;
-    case 9:
+        var_c8 = &D_800FF658[arg0->unk20];
+        arg2->unk8 = var_c8->unk8;
+        return;
+    case9:
         val = ((u32)arg1->unk28 >> 0x12) & 0x3F;
         if (val < 0xA)
         {
@@ -268,21 +292,23 @@ owner6:
             if (val < 0x26)
             {
                 var_v1 = g_field_actor_slots[arg0->unk22].unk229[g_field_track_index];
+                var_a2 = &D_800FDF58[var_v1];
             }
             else
             {
                 var_v1 = g_field_actor_slots[arg0->unk22].unk228;
+                var_a2 = &D_800FDF58[var_v1];
             }
-            var_a2 = &D_800FDF58[var_v1];
             var_v0_5 = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk228];
         }
-        if (var_v0_5->unk0 < var_a2->unk0)
+        if (var_a2->unk0 > var_v0_5->unk0)
         {
             if (((arg1->unk28 >> 0xA) & 1) || (arg1->unk34 & 0x08000000))
             {
                 arg0->unk21 = arg0->unk21 & 0x7F;
             }
-            v = var_a2->unk0 - arg0->unk44;
+            subv = arg0->unk44;
+            pos = var_a2->unk0 - subv;
         }
         else
         {
@@ -291,30 +317,28 @@ owner6:
                 arg0->unk21 = arg0->unk21 | 0x80;
             }
 block_32:
-            v = arg0->unk44 + var_a2->unk0;
+            pos = arg0->unk44;
+            boff = var_a2->unk0;
+            pos = pos + boff;
         }
 block_33:
-        arg2->unk0 = v;
+        arg2->unk0 = pos;
         arg2->unk4 = arg0->unk48 + var_a2->unk4;
         arg2->unk8 = arg0->unk4C + var_a2->unk8;
         return;
-    case 10:
-        var_a1 = D_800FDF58;
+    case10:
         pe = &D_80105AE0[g_field_actor_slots[arg0->unk22].unk228];
-        arg2->unk4 = ((pe->unk146 + pe->unk142) << 7) + D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk4;
         arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk0 + ((pe->unk144 + pe->unk140) << 7);
-        var_v0_7 = &g_field_actor_slots[arg0->unk22];
-        goto block_40;
-    case 11:
-        var_a1 = D_800FDF58;
+        arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk4 + ((pe->unk146 + pe->unk142) << 7);
+        arg2->unk8 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk8;
+        return;
+    case11:
         pe = &D_80105AE0[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]];
         arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 + ((pe->unk144 + pe->unk140) << 7);
         arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk4 + ((pe->unk146 + pe->unk142) << 7);
-        var_v1 = g_field_actor_slots[arg0->unk22].unk229[g_field_track_index];
-        goto block_41;
-    case 12:
-    case 13:
-        var_a1 = D_800FDF58;
+        arg2->unk8 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk8;
+        return;
+    case12:
         v = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 - D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk0;
         if (arg0->unk1B == 0xC)
         {
@@ -325,29 +349,17 @@ block_33:
             arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 + v;
         }
         arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk4;
-        var_v0_7 = &g_field_actor_slots[arg0->unk22];
-block_40:
-        var_v1 = var_v0_7->unk228;
-block_41:
-        var_v0 = &var_a1[var_v1];
-block_42:
-        arg2->unk8 = var_v0->unk8;
+        arg2->unk8 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk8;
         return;
-    case 14:
+    case14:
         arg2->unk0 = (D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 * 2) - D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk0;
         arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk4;
-        var_v1_4 = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]];
-        var_v0_9 = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk228];
-block_45:
-        arg2->unk8 = (var_v1_4->unk8 * 2) - var_v0_9->unk8;
-    default:
+        arg2->unk8 = (D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk8 * 2) - D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk8;
         return;
-    case 15:
+    case15:
         arg2->unk0 = (D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 * 2) - D_800FF658[arg0->unk20].unk0;
         arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk4;
-        var_v1 = g_field_actor_slots[arg0->unk22].unk229[g_field_track_index];
-        var_v1_4 = &D_800FDF58[var_v1];
-        var_v0_9 = &D_800FF658[arg0->unk20];
-        goto block_45;
+        arg2->unk8 = (D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk8 * 2) - D_800FF658[arg0->unk20].unk8;
+        return;
     }
 }

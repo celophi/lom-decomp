@@ -277,15 +277,14 @@ extern FieldResourceEntry g_field_resource_entries[];
  * @param flag Selects which of the actor's two audio channels to update.
  * @param part Part definition supplying flags and placement selectors.
  * @return Updated cursor pointer.
- * @note WIP - 96.43% (1463/1668 exact rows, gcc272_cdk). Frame now matches
+ * @note WIP - 97.36% (1557/1668 exact rows, gcc272_cdk). Frame now matches
  *       (-0xa8 both sides). Sibling of field11.c's func_80075C88 (called for the
  *       item < 0 case there, this one for item >= 0); same struct types, GTE
  *       pan-vector macros, and dual int-pointer/byte-pointer cursor idiom, but a
  *       simpler placement-opcode dispatch (no 0x7F0000-flags branch tree) and a
  *       wider 11-byte (0xB) per-frame record with 16-bit byte-pair deltas
  *       instead of func_80075C88's 8-bit signed deltas. Residue: spill-slot
- *       traffic at sp+0x068/0x078/0x0B4/0x0BC plus one 4-row run at tgt 0x0EC8
- *       (addiu v1, zero, -0x1801 ; and v0, v0, v1).
+ *       traffic at sp+0x068/0x078/0x0BC.
  * @note The @c gte_dmpsx_compat.h include is required for the tree build: it
  *       redefines the Psy-Q inline_c.h GTE macros to emit the real COP2 words
  *       GNU as accepts, matching the sibling field files. To diff, the target
@@ -319,7 +318,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     s32 var_s0;
     s32 *var_a2;
     s32 temp_a0_3;
-    u32 temp_a1_2;
+    s32 temp_a1_2;
     s32 temp_s6;
     s32 temp_t0_call;
     s32 temp_t2;
@@ -352,6 +351,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     s32 var_v1_2;
     s32 var_v1_3;
     s32 var_v1_4;
+    int new_var;
     s32 var_v1_5;
     u16 temp_a1;
     u16 temp_v0_7;
@@ -491,7 +491,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
                 {
                     do
                     {
-                        ((u8 *) &poly->tag)[3] = 9;
+                        ((u8 *) &poly->tag)[new_var = 3] = 9;
                         poly->code = 0x2CU;
                         var_v0_4 = rec->unk1C;
                         if (!(var_v0_4 & 0x800000))
@@ -506,9 +506,8 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
                     } while (0);
                 } while (0);
                 temp_s4 = var_s1[-0xD];
-                temp_t0_call = var_s1[-0x7] << 8;
                 temp_s6 = var_s1[-0xC] - 1;
-                temp_t0_call = (s32) (s16) (var_s1[-0x10] + temp_t0_call);
+                temp_t0_call = (s32) (s16) (var_s1[-0x10] + (var_s1[-0x7] << 8));
                 var_s0 = (s16) (*item + (var_s1[-0x8] << 8));
                 if (rec->unk21 & 0x80)
                 {
@@ -572,21 +571,21 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
                     poly->v3 = var_a0_6;
                     poly->v2 = var_a0_6;
                 }
-                temp_a1_2 = rec->unkC;
-                temp_a0_3 = temp_a1_2 << 7;
-                if (temp_a1_2 >= 2)
+                var_a1 = rec->unkC;
+                temp_a0_3 = var_a1 << 7;
+                if (var_a1 >= 2)
                 {
-                    temp_a0_3 = temp_a1_2 << 6;
-                    if (temp_a1_2 >= 9)
+                    temp_a0_3 = var_a1 << 6;
+                    if (var_a1 >= 9)
                     {
                         {
                             s32 v0;
                             s32 v1;
                             s32 a0;
-                            v0 = temp_a1_2 - 9;
+                            v0 = var_a1 - 9;
                             v0 <<= 6;
                             v1 = var_s1[-0xA];
-                            v1 &= 3;
+                            v1 &= new_var;
                             v1 <<= 6;
                             v1 += 0x3C0;
                             v1 -= v0;
@@ -602,7 +601,9 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
                     }
                     else
                     {
-                        var_v1_3 = (var_s1[-0xA] & 3) << 6;
+                        var_v1_3 = var_s1[-0xA];
+                        var_v1_3 &= new_var;
+                        var_v1_3 <<= 6;
                         var_v1_3 += 0x340;
                         var_v1_3 -= temp_a0_3;
                         var_v1_3 = (var_v1_3 & 0x3FF) >> 6;
@@ -614,7 +615,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
                 {
                     temp_a0_3 = 0x380 - temp_a0_3;
                     var_v1_3 = ((u32) part->unk4 >> 0x11) & 0x60;
-                    if (var_s1[-0xA] & 3)
+                    if (var_s1[-0xA] & new_var)
                     {
                         var_v0_6 = (temp_a0_3 + 0x40) & 0x3FF;
                     }
@@ -631,15 +632,15 @@ block_48:
                     temp_v1_9 = part->unk2D;
                     if (temp_v1_9 >= 0x40U)
                     {
-                        var_t0 = 0x1F2;
+                        temp_t0_call = 0x1F2;
                         if ((u8) actor->unk228 < 2U)
                         {
-                            var_t0 = (actor->unk228 * 2) + 0x1EE;
+                            temp_t0_call = (actor->unk228 * 2) + 0x1EE;
                         }
                     }
                     else
                     {
-                        var_t0 = (temp_v1_9 >> 4) + 0x1EA;
+                        temp_t0_call = (temp_v1_9 >> 4) + 0x1EA;
                     }
                     temp_v1_10 = ((u32) part->unk28 >> 0xC) & 3;
                     if (temp_v1_10 != 1)
@@ -656,7 +657,7 @@ block_48:
                     else
                     {
 block_57:
-                        temp_v1_10 = var_t0 << 6;
+                        temp_v1_10 = temp_t0_call << 6;
                         temp_v0_5 = part->unk2D & 0xF;
                         temp_v1_10 |= temp_v0_5;
                         poly->clut = (s16) temp_v1_10;
@@ -669,7 +670,12 @@ block_58:
                     {
                         poly->code = (u8) (poly->code | 2);
                     }
-                    poly->clut = (s16) (((rec->unk3B + 0x1F4) << 6) | (var_s1[-0xB] & 0x3F));
+                    temp_v0_5 = rec->unk3B;
+                    temp_v1_10 = var_s1[-0xB];
+                    temp_v0_5 += 0x1F4;
+                    temp_v0_5 <<= 6;
+                    temp_v1_10 &= 0x3F;
+                    poly->clut = (s16) (temp_v0_5 | temp_v1_10);
                 }
                 temp_v1_11 = (s32) rec->unk8 >> 7;
                 if (temp_v1_11 < 0)
@@ -787,7 +793,7 @@ block_58:
                             gte_stlvnl(gte_out);
                             sp64[3].x = (s16) (sxy->x + gte_out->vx);
                             sp64[3].y = (s16) (sxy->y + gte_out->vy);
-                            if (!(slot->unk174 & 0x1800) && (((temp_v1_17 = slot->unk3C, (temp_v1_17 != 0xFFFF)) && (temp_v1_17 != 0)) || (actor->unkC->unk14 == 3)))
+                            if (!(slot->unk174 & 0x1800) && (((temp_v1_17 = slot->unk3C, (temp_v1_17 != 0xFFFF)) && (temp_v1_17 != 0)) || (actor->unkC->unk14 == new_var)))
                             {
                                 var_s0 = func_80097150(sp64, rec, &sp28);
                                 if (var_s0 == 1)
@@ -803,7 +809,7 @@ block_58:
                                     {
                                         ((u8 *) &slot->unk178)[3] = (u8) (temp_v1_18 + 1);
                                     }
-                                    if (actor->unkC->unk14 == 3)
+                                    if (actor->unkC->unk14 == new_var)
                                     {
                                         actor->unk23A = (u8) (actor->unk23A | (var_s0 << actor->unk232));
                                         actor->unk229[actor->unk232] = (u8) sp28.index;
@@ -811,7 +817,6 @@ block_58:
                                             s32 a0;
                                             s32 a1;
                                             s32 v0;
-                                            s32 v1;
                                             Struct_D800FDF58 *entry;
 
                                             a0 = D_800F22A0;
@@ -819,14 +824,14 @@ block_58:
                                             {
                                                 a0 += 0xFF;
                                             }
-                                            v1 = D_800FDF58[sp28.index].unk0;
+                                            var_v1_3 = D_800FDF58[sp28.index].unk0;
                                             a1 = a0 >> 8;
-                                            if (v1 < 0)
+                                            if (var_v1_3 < 0)
                                             {
-                                                v1 += 0xFF;
+                                                var_v1_3 += 0xFF;
                                             }
                                             a0 = D_800F22A4;
-                                            v0 = v1 >> 8;
+                                            v0 = var_v1_3 >> 8;
                                             v0 += 0xA0;
                                             sp68->x = (u16) (a1 + v0);
                                             if (a0 < 0)
@@ -848,14 +853,14 @@ block_58:
                                             {
                                                 a0 += 0x1FF;
                                             }
-                                            v1 = D_800F22A8;
+                                            var_v1_3 = D_800F22A8;
                                             v0 = a0 >> 9;
                                             a0 = a1 - v0;
-                                            if (v1 < 0)
+                                            if (var_v1_3 < 0)
                                             {
-                                                v1 += 0x1FF;
+                                                var_v1_3 += 0x1FF;
                                             }
-                                            v0 = v1 >> 9;
+                                            v0 = var_v1_3 >> 9;
                                             sp68->y = (u16) (a0 - v0);
                                         }
                                         if (D_800FDF58[sp28.index].unk21 & 0x80)
@@ -883,8 +888,9 @@ block_58:
                                                 slot->unk138 = temp_v0_7;
                                                 slot->unk134 = temp_v0_7;
                                                 slot->unk130 = temp_v0_7;
+                                                temp_v0_8 = sxy->y;
+                                                temp_v0_8 = sp28.y - temp_v0_8;
                                                 slot->unk174 = (s32) ((slot->unk174 & ~0x1800) | 0x1000);
-                                                temp_v0_8 = sp28.y - sxy->y;
                                                 slot->unk13E = temp_v0_8;
                                                 slot->unk13A = temp_v0_8;
                                                 slot->unk136 = temp_v0_8;
@@ -962,7 +968,7 @@ block_182:
                                         slot->unk3C = 0xFFFF;
                                         goto block_183;
                                     }
-                                    if (var_s0 == 3)
+                                    if (var_s0 == new_var)
                                     {
                                         slot->unk3C = 0xFFFF;
 block_183:
@@ -1071,7 +1077,7 @@ block_183:
                             }
                             else
                             {
-                                func_800A39A8(resources[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A, rec), rec->unk3B - 3, rec->unk3A);
+                                func_800A39A8(resources[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A, rec), rec->unk3B - new_var, rec->unk3A);
                             }
                         }
                         break;
@@ -1186,21 +1192,25 @@ block_183:
     }
     if (sp74 != 0)
     {
+        Struct_D80105768 *scale;
+        s32 width_tmp;
         var_a1_3 = sp60;
         temp_v0_13 = var_a1_3 + 8;
         if (var_a1_3 != temp_v0_13)
         {
+            scale = &D_80105768;
             var_a3_loop = temp_v0_13;
             var_a0_11 = var_a1_3 + 1;
             do
             {
-                *var_a1_3 = (s16) ((s32) (((s32) (*var_a1_3 * part->unk2E) >> 6) * D_80105768.unk0) >> 0xC);
+                *var_a1_3 = (s16) ((s32) (((s32) (*var_a1_3 * part->unk2E) >> 6) * scale->unk0) >> 0xC);
                 var_a1_3 += 2;
-                *var_a0_11 = (s16) ((s32) (((s32) (*var_a0_11 * part->unk33) >> 6) * D_80105768.unk4) >> 0xC);
+                *var_a0_11 = (s16) ((s32) (((s32) (*var_a0_11 * part->unk33) >> 6) * scale->unk4) >> 0xC);
                 var_a0_11 += 2;
             } while (var_a1_3 != var_a3_loop);
         }
-        var_v0_9 = sp60[2] - sp60[0];
+        width_tmp = sp60[0];
+        var_v0_9 = sp60[2] - width_tmp;
         if (var_v0_9 < 0)
         {
             var_v0_9 = -var_v0_9;

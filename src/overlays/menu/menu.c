@@ -1629,7 +1629,7 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
 /**
  * @brief Initialize the full menu node tree and global menu state.
- * @see decomp.me (93.01%) https://decomp.me/scratch/XJkmb
+ * @see decomp.me (99.27%) https://decomp.me/scratch/XJkmb
  */
 void menu_node_tree_init(void)
 {
@@ -1679,7 +1679,7 @@ void menu_node_tree_init(void)
     u16 temp1;
     u16 temp2;
     u16 loop_unk2;
-    volatile u32 new_var9;
+    u32 new_var9;
     var_t0 = 0;
     var_a0 = g_menu_nodes;
     g_menu_prev_node = MENU_NONE;
@@ -1743,8 +1743,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[1].icon_id = 5;
     g_menu_nodes[2].label_id = 2;
     g_menu_nodes[2].idx_nav.s.self_idx = 2;
-    g_menu_nodes[2].icon_id = 4;
     g_menu_nodes[1].label_id = 3;
+    g_menu_nodes[2].icon_id = 4;
     g_menu_nodes[3].label_id = 4;
     g_menu_nodes[3].idx_nav.s.self_idx = 3;
     g_menu_nodes[1].u2.unk2 = (u16)((g_menu_nodes[1].u2.unk2 & 0xFF0F) | 0x40);
@@ -1758,10 +1758,10 @@ void menu_node_tree_init(void)
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3E);
     g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[4].idx_nav.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
-        /* Preserve the basic-block boundary required by GCC 2.7.2 scheduling. */
+        /* Empty conditional forces a basic-block boundary the compiler needs
+           to reproduce the target's scheduling here; required to match. */
         if (1)
         {
         }
@@ -1782,20 +1782,21 @@ void menu_node_tree_init(void)
     g_menu_nodes[3].uA.s.child0 = 4;
     g_menu_nodes[3].child1 = 5;
     g_menu_nodes[4].label_id = 6;
+    g_menu_nodes[4].idx_nav.s.self_idx = 4;
     g_menu_nodes[4].icon_id = 5;
-    g_menu_nodes[5].idx_nav.s.self_idx = 5;
     g_menu_nodes[5].label_id = 5;
-    g_menu_nodes[6].label_id = 7;
+    g_menu_nodes[5].idx_nav.s.self_idx = 5;
     g_menu_nodes[5].icon_id = 4;
+    g_menu_nodes[6].label_id = 7;
     g_menu_nodes[6].idx_nav.s.self_idx = 6;
-    g_menu_nodes[6].uA.s.child0 = 7;
     g_menu_nodes[6].icon_id = 3;
-    g_menu_nodes[7].idx_nav.s.self_idx = 7;
+    g_menu_nodes[6].uA.s.child0 = 7;
     g_menu_nodes[6].child1 = 8;
     g_menu_nodes[7].label_id = 9;
+    g_menu_nodes[7].idx_nav.s.self_idx = 7;
+    g_menu_nodes[7].icon_id = 5;
     new_var7 = 0xFF3E;
     g_menu_nodes[8].label_id = 8;
-    g_menu_nodes[7].icon_id = 5;
     g_menu_nodes[4].u2.s.parent_idx = 3;
     g_menu_nodes[5].u2.s.parent_idx = 3;
     g_menu_nodes[6].u2.s.parent_idx = MENU_NONE;
@@ -1809,9 +1810,9 @@ void menu_node_tree_init(void)
     temp_v0_7 = temp_v0_6 | temp_v0_7;
     *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = (u16)(temp_v0_7 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = (u16)(temp_v0_7 & 0xFF3E);
+    g_menu_nodes[0xA].u2.unk2 = (u16)((g_menu_nodes[0xA].u2.unk2 & 0xFF6F) | 0x60);
     temp_v0_8 = (g_menu_nodes[0xC].u2.unk2 & 0xFFCD) | 0x20;
     *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = temp_v0_8;
-    g_menu_nodes[0xA].u2.unk2 = (u16)((g_menu_nodes[0xA].u2.unk2 & 0xFF6F) | 0x60);
     *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = (u16)((temp_v0_8 | 0x20) & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = (u16)((temp_v0_8 | 0x20) & 0xFF3E);
     g_menu_nodes[8].u2.s.parent_idx = 6;
@@ -1822,8 +1823,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[9].uA.s.child0 = 0xA;
     g_menu_nodes[0xA].label_id = 0xB;
     g_menu_nodes[0xA].idx_nav.s.self_idx = 0xA;
-    g_menu_nodes[0xC].label_id = 0xA;
     g_menu_nodes[0xA].icon_id = 7;
+    g_menu_nodes[0xC].label_id = 0xA;
     g_menu_nodes[0xC].idx_nav.s.self_idx = 0xC;
     g_menu_nodes[0xC].icon_id = 6;
     g_menu_nodes[0xC].uA.s.child0 = 0xD;
@@ -1833,20 +1834,18 @@ void menu_node_tree_init(void)
     g_menu_nodes[9].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0xA].u2.s.parent_idx = 9;
     g_menu_nodes[0xC].u2.s.parent_idx = MENU_NONE;
-    temp_v0_10 = (g_menu_nodes[0xF].u2.unk2 & 0xFFCD) | 0x20;
-    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_10;
     g_menu_nodes[0xD].u2.unk2 = (u16)((g_menu_nodes[0xD].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0xD].u2.s.parent_idx = 0xC;
+    temp_v0_10 = (g_menu_nodes[0xF].u2.unk2 & 0xFFCD) | 0x20;
+    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_10;
     temp_v0_11 = (temp_v0_10 & 0xFF6D) | 0x60;
     *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_11;
     *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = (u16)(temp_v0_11 & 0xFFFE);
     g_menu_nodes[0xF].icon_id = 8;
     g_menu_nodes[0x10].icon_id = 7;
-    g_menu_nodes[0x12].icon_id = 0xA;
-    g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0x12].child3 = 0x1C;
     g_menu_nodes[0xF].label_id = 0xD;
     g_menu_nodes[0xF].idx_nav.s.self_idx = 0xF;
+    g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0xF].uA.s.child0 = 0x10;
     g_menu_nodes[0xF].child1 = 0x11;
     g_menu_nodes[0x10].label_id = 0xC;
@@ -1856,10 +1855,12 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x11].icon_id = 9;
     g_menu_nodes[0x12].label_id = 0x10;
     g_menu_nodes[0x12].idx_nav.s.self_idx = 0x12;
+    g_menu_nodes[0x12].icon_id = 0xA;
     g_menu_nodes[0x12].content_id = 4;
-    g_menu_nodes[0x12].child1 = 0x16;
     g_menu_nodes[0x12].uA.s.child0 = 0x13;
+    g_menu_nodes[0x12].child1 = 0x16;
     g_menu_nodes[0x12].child2 = 0x19;
+    g_menu_nodes[0x12].child3 = 0x1C;
     g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
     g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
@@ -1875,19 +1876,19 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x16].content_id = 1;
     g_menu_nodes[0x14].icon_id = 0xF;
     g_menu_nodes[0x13].icon_id = 0xB;
-    g_menu_nodes[0x13].content_id = 0;
     g_menu_nodes[0x13].idx_nav.s.self_idx = 0x13;
+    g_menu_nodes[0x13].content_id = 0;
     g_menu_nodes[0x13].uA.s.child0 = 0x14;
-    g_menu_nodes[0x14].label_id = 0x12;
     g_menu_nodes[0x13].child1 = 0x15;
+    g_menu_nodes[0x14].label_id = 0x12;
     g_menu_nodes[0x14].idx_nav.s.self_idx = 0x14;
-    g_menu_nodes[0x15].idx_nav.s.self_idx = 0x15;
     g_menu_nodes[0x15].label_id = 0x13;
+    g_menu_nodes[0x15].idx_nav.s.self_idx = 0x15;
+    g_menu_nodes[0x15].icon_id = 0x12;
     g_menu_nodes[0x16].label_id = 0x14;
     g_menu_nodes[0x16].idx_nav.s.self_idx = 0x16;
-    g_menu_nodes[0x15].icon_id = 0x12;
-    g_menu_nodes[0x16].uA.s.child0 = 0x17;
     g_menu_nodes[0x16].icon_id = 0xC;
+    g_menu_nodes[0x16].uA.s.child0 = 0x17;
     g_menu_nodes[0x16].child1 = 0x18;
     g_menu_nodes[0x17].label_id = 0x15;
     g_menu_nodes[0x17].idx_nav.s.self_idx = 0x17;
@@ -1912,8 +1913,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].uA.s.child0 = 0x1A;
     g_menu_nodes[0x19].child1 = 0x1B;
     g_menu_nodes[0x1A].label_id = 0x17;
-    g_menu_nodes[0x1A].idx_nav.s.self_idx = 0x1A;
     g_menu_nodes[0x1A].icon_id = 0x11;
+    g_menu_nodes[0x1A].idx_nav.s.self_idx = 0x1A;
     g_menu_nodes[0x1B].label_id = 0x13;
     g_menu_nodes[0x1B].idx_nav.s.self_idx = 0x1B;
     g_menu_nodes[0x1B].icon_id = 0x12;
@@ -1925,20 +1926,20 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].u2.s.parent_idx = 0x12;
     g_menu_nodes[0x1B].u2.unk2 = (u16)((g_menu_nodes[0x1B].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x1B].u2.s.parent_idx = 0x19;
+    g_menu_nodes[0x1A].u2.unk2 = (u16)((g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x1C].u2.unk2 = (u16)((g_menu_nodes[0x1C].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x1C].u2.s.parent_idx = 0x12;
-    g_menu_nodes[0x1A].u2.unk2 = (u16)((g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
     g_menu_nodes[0x1C].icon_id = 0xE;
-    g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
-    g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
-    g_menu_nodes[0x1F].idx_nav.s.self_idx = 0x1F;
     g_menu_nodes[0x1C].content_id = 5;
     g_menu_nodes[0x1D].label_id = 0x1C;
     g_menu_nodes[0x1D].content_id = 3;
     g_menu_nodes[0x1D].icon_id = 0x18;
+    g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
     g_menu_nodes[0x1E].label_id = 0x19;
     g_menu_nodes[0x1E].idx_nav.s.self_idx = 0x1E;
+    g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
+    g_menu_nodes[0x1F].idx_nav.s.self_idx = 0x1F;
     (g_menu_nodes + 0x1E)->icon_id = 0x13;
     g_menu_nodes[0x1F].label_id = 0x1A;
     g_menu_nodes[0x1F].icon_id = 0x14;
@@ -1965,12 +1966,16 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x2B].icon_id = 0x15;
     g_menu_nodes[0x20].label_id = 0x1B;
     g_menu_nodes[0x20].idx_nav.s.self_idx = 0x20;
-    temp_v0 = g_menu_nodes[0x20].u2.unk2;
-    temp_v0_14 = temp_v0 & 0xFF3D;
-    *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(temp_v0 & 0xFFFD);
-    *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = temp_v0_14;
-    g_menu_nodes[0x20].icon_id = 0x16;
-    *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(temp_v0_14 | 1);
+    {
+        u16 block_v0;
+        u16 block_v14;
+        block_v0 = g_menu_nodes[0x20].u2.unk2;
+        block_v14 = block_v0 & 0xFF3D;
+        *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(block_v0 & 0xFFFD);
+        *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)block_v14;
+        g_menu_nodes[0x20].icon_id = 0x16;
+        *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(block_v14 | 1);
+    }
     g_menu_nodes[0x20].u2.s.parent_idx = MENU_NONE;
     if (D_800FD818.unk268 & 1)
     {
@@ -6737,20 +6742,69 @@ void menu_swap_item_records(s32, s32);
  * @param view_origin Viewport anchor in list-local coordinates.
  * @param active Non-zero when this window owns input this frame.
  * @return The advanced primitive write cursor.
- * @see decomp.me (71.75%)
+ * @see decomp.me (100%)
  */
+#define MENU_CLEAR_SLOTS() \
+{ \
+    s32 _i; \
+    for (_i = 3; _i >= 0; _i--) \
+    { \
+        g_menu_slots[_i].active = 0; \
+    } \
+}
+
+#define MENU_RELINK() \
+{ \
+    s32 _j; \
+    s32 _prev; \
+    s32 _next; \
+    s32 _more; \
+    s32 _link; \
+    s32 _word_prev; \
+    _j = 0; \
+    do \
+    { \
+        s32 _cur = g_menu_item_nav_entries[_j]; \
+        s32 _word_self; \
+        _prev = 1; \
+        _link = _cur & ~0x3FFF; \
+        _link = _link | ((_j * 0x10) & 0x3FFF); \
+        _word_self = _link; \
+        g_menu_item_nav_entries[_j] = _word_self; \
+        if ((_j - 1) >= 0) \
+        { \
+            _prev = _j - 1; \
+        } \
+        _word_prev = _word_self & 0xFF803FFF; \
+        _word_prev = _word_prev | ((_prev & 0x1FF) << 14); \
+        g_menu_item_nav_entries[_j] = _word_prev; \
+        _next = _j + 1; \
+        _more = _next < 2; \
+        _link = 0; \
+        if (_more != 0) \
+        { \
+            _link = _next; \
+        } \
+        g_menu_item_nav_entries[_j] = (_word_prev & 0x7FFFFF) | (_link << 23); \
+        _j = _next; \
+    } while (_more != 0); \
+}
+
 void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_origin, s32 active)
 {
+    ScrollListState* list;
     void* buf;
-    void* hit_slot;
     s32 scroll_y;
+    void* hit_slot;
     s32 idx;
     s32 y;
-    s32 off;
     u8* item;
     u8 ch;
     MenuSlotRect rect;
     u8 sp30[0x40];
+
+    list = st;
+    buf = (void*)prim_buf;
 
     if ((g_pad_input & 0x10) && (active != 0))
     {
@@ -6759,49 +6813,53 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
         {
         case 0:
         {
-            u8 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
+            s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
             if (v < 0x24)
             {
                 if (v < 0x21)
                 {
                     if (v == 0x13)
-                    {
-                        g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x21;
-                    }
+                        goto cat0_reset;
+                    goto cat0_common;
                 }
-                else
-                {
-                    g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
-                }
+                goto cat0_increment;
             }
-            else if (v == 0x24)
-            {
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x21;
-            }
+            if (v == 0x24)
+                goto cat0_reset;
+            goto cat0_common;
+cat0_increment:
+            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
+            goto cat0_after_write;
+cat0_reset:
+            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x21;
+cat0_after_write:
+cat0_common:
             g_menu_nodes[g_menu_scene_type].label_id = D_8016869F[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
             break;
         }
         case 1:
         {
-            u8 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
+            s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
             if (v < 0x27)
             {
                 if (v < 0x25)
                 {
                     if (v == 0x16)
-                    {
-                        g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x25;
-                    }
+                        goto cat1_reset;
+                    goto cat1_common;
                 }
-                else
-                {
-                    g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
-                }
+                goto cat1_increment;
             }
-            else if (v == 0x27)
-            {
-                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x25;
-            }
+            if (v == 0x27)
+                goto cat1_reset;
+            goto cat1_common;
+cat1_increment:
+            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
+            goto cat1_after_write;
+cat1_reset:
+            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x25;
+cat1_after_write:
+cat1_common:
             g_menu_nodes[g_menu_scene_type].label_id = D_8016869F[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
             break;
         }
@@ -6824,29 +6882,29 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
         }
     }
 
-    buf = scroll_list_draw(prim_buf, ot, st, g_menu_scroll_nav_entries, view_origin, active);
+    buf = scroll_list_draw((s32)buf, ot, list, g_menu_scroll_nav_entries, view_origin, active);
 
     if (g_menu_scene_type < 0x13 && (g_pad_input & 0x8000))
     {
         g_pad_input &= ~0x40;
     }
 
-    idx = 0;
     if ((g_pad_input & 0x40) && (active != 0))
     {
         menu_play_se(0x7F, 0x80);
         if (g_menu_scene_type < 0x13)
         {
+            s32 cat;
             g_menu_content_ready = 0;
-            if (g_menu_active_item_category == 2)
+            cat = g_menu_active_item_category;
+            if (cat == 2)
             {
-                s32 n = (g_menu_char_slot * 3) + 2;
-                g_menu_nodes[n].content_id = (s8)g_menu_active_item_category;
-                g_menu_nodes[n].label_id = (u8)n;
+                g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = (s8)cat;
+                g_menu_nodes[(g_menu_char_slot * 3) + 2].label_id = (u8)((g_menu_char_slot * 3) + 2);
                 MENU_CLEAR_SLOTS();
                 return buf;
             }
-            g_menu_nodes[(g_menu_char_slot * 3) + 1].content_id = 1;
+            g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 1;
             g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = (u8)((g_menu_char_slot * 3) + 3);
             MENU_CLEAR_SLOTS();
             return buf;
@@ -6857,223 +6915,237 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
         }
         else
         {
-            g_menu_nodes[0x13].content_id = 0x11;
-            g_menu_nodes[0x16].content_id = 0x14;
-            g_menu_nodes[0x19].content_id = 0x16;
+            g_menu_nodes[0x13].label_id = 0x11;
+            g_menu_nodes[0x16].label_id = 0x14;
+            g_menu_nodes[0x19].label_id = 0x16;
             g_menu_content_ready = 0;
             menu_play_se(0x7F, 0x80);
             menu_reset_content_view();
             g_pad_input = 0;
         }
-        return buf;
     }
 
-    y = 0;
+    idx = 0;
+    y = idx;
+    scroll_y = list->scroll_y;
     g_menu_item_ptr = 0;
     g_menu_category0_item = 0;
     g_menu_category1_item = 0;
-    scroll_y = st->scroll_y;
     g_menu_category2_item = 0;
-    off = 0xCE0;
     item = (u8*)g_pad_ctx + 0xCE0;
 
-    while (*item != 0)
+    do
     {
-        u32 word = PAD_ITEM_W14(item);
-        s32 cat = (word >> 8) & 3;
-        s32 icon = 0x45;
+        u32 word;
+        s32 cat;
+        s32 icon;
+
+        if (*item == 0)
+        {
+            break;
+        }
+        word = PAD_ITEM_W14(item);
+        cat = (word >> 8) & 3;
+        icon = 0x45;
 
         if (cat == g_menu_active_item_category)
         {
             switch (cat)
             {
-            case 1:
-                icon = ((word >> 0xA) & 0x3F) + 0x50;
-                break;
             case 0:
                 icon = ((word >> 0xA) & 0x3F) + 0x45;
+                break;
+            case 1:
+                icon = ((word >> 0xA) & 0x3F) + 0x50;
                 break;
             case 2:
                 icon = ((word >> 0xA) & 0x3F) + 0x5C;
                 break;
             }
 
-            if ((y - scroll_y) >= -0xF && (y - scroll_y) < (st->viewport_h - 0x10))
+            if ((y - scroll_y) >= -0xF && (y - scroll_y) < (list->viewport_h - 0x10))
             {
-                DR_TPAGE* tp = (DR_TPAGE*)menu_emit_icon_sprite(buf, ot, icon, 0x10 - view_origin->x, (y - scroll_y) - view_origin->y, 0, 0, 0, 0);
                 u32 w2;
                 u8* tbl;
                 s32 pal;
 
-                tp->code[0] = 0xE1000005;
-                setlen(tp, 1);
-                addPrim(ot, tp);
+                buf = (void*)menu_emit_icon_sprite(buf, ot, icon, 0x10 - view_origin->x, (y - scroll_y) - view_origin->y, 0, 0, 0, 0);
+                setlen((DR_TPAGE*)buf, 1);
+                ((DR_TPAGE*)buf)->code[0] = 0xE1000005;
+                addPrim(ot, (DR_TPAGE*)buf);
+                buf = (DR_TPAGE*)buf + 1;
 
                 w2 = PAD_ITEM_W14(item);
                 if (w2 & 0x300)
                 {
-                    tbl = D_800F0BEC;
+                    tbl = &D_800F0BEC[(w2 >> 0xA) & 0x3F];
                 }
                 else
                 {
-                    tbl = D_800F0BE0;
+                    tbl = &D_800F0BE0[(w2 >> 0xA) & 0x3F];
                 }
                 pal = 1;
-                if (tbl[(w2 >> 0xA) & 0x3F] & g_menu_ability_mask)
-                {
-                    pal = 3;
-                }
-                buf = func_800A88A0((u8*)tp + 8, ot, item, pal, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y, 0);
+                { u32 entry=*(volatile u8*)tbl; u32 mask; do { mask=(u8)g_menu_ability_mask; } while(0); mask=entry & mask; if(mask){pal=3;} }
+                buf = (void*)func_800A88A0(buf, ot, item, pal, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y, 0);
 
+                if (g_menu_pending_item_row != 0xFF)
+                {
+                    if ((y >> 4) == g_menu_pending_item_row)
+                    {
+                        s32 view_x = view_origin->x;
+                        s32 view_y = view_origin->y;
+                        SET_BGR0_PACKED((SPRT*)buf, 0x505050);
+                        setlen((SPRT*)buf, 4);
+                        setcode((SPRT*)buf, 0x64);
+                        SET_SPRT_UV0_PACKED((SPRT*)buf, 0x80);
+                        SET_SPRT_CLUT((SPRT*)buf, 0x7C86);
+                        SET_SPRT_WH_PACKED((SPRT*)buf, 0x10, 0x10);
+                        SET_YX0((SPRT*)buf, (y - scroll_y) - view_y, -2 - view_x);
+                        addPrim(ot, (SPRT*)buf);
+                        buf = (SPRT*)buf + 1;
+                        setlen((DR_TPAGE*)buf, 1);
+                        ((DR_TPAGE*)buf)->code[0] = 0xE1000005;
+                        addPrim(ot, (DR_TPAGE*)buf);
+                        buf = (DR_TPAGE*)buf + 1;
+                    }
+                    goto pending_hit_check;
+                }
+            }
+            else
+            {
+pending_hit_check:
                 if (g_menu_pending_item_row != 0xFF && (y >> 4) == g_menu_pending_item_row)
                 {
-                    SPRT* p = (SPRT*)buf;
-                    DR_TPAGE* tp2;
-
-                    SET_BGR0_PACKED(p, 0x505050);
-                    setlen(p, 4);
-                    setcode(p, 0x64);
-                    SET_SPRT_UV0_PACKED(p, 0x80);
-                    SET_SPRT_CLUT(p, 0x7C86);
-                    SET_SPRT_WH_PACKED(p, 0x10, 0x10);
-                    SET_YX0(p, (y - scroll_y) - view_origin->y, -2 - view_origin->x);
-                    addPrim(ot, p);
-                    tp2 = (DR_TPAGE*)(p + 1);
-                    setlen(tp2, 1);
-                    tp2->code[0] = 0xE1000005;
-                    addPrim(ot, tp2);
-                    buf = tp2 + 1;
+                    hit_slot = (u8*)g_pad_ctx + ((idx << 6) + 0xCE0);
                 }
             }
-            else if (g_menu_pending_item_row != 0xFF && (y >> 4) == g_menu_pending_item_row)
-            {
-                hit_slot = (u8*)g_pad_ctx + off;
-            }
 
-            if ((y >> 4) == st->sel_idx)
+            if ((y >> 4) == list->sel_idx)
             {
+                { u8* shadow_pad = (u8*)g_pad_ctx; }
                 g_menu_inventory_index = idx;
-                g_menu_item_ptr = (s32)((u8*)g_pad_ctx + off);
-                if (g_menu_active_item_category == 1)
+                g_menu_item_ptr = (s32)((u8*)g_pad_ctx + ((idx << 6) + 0xCE0));
+                switch (g_menu_active_item_category)
                 {
-                    g_menu_category1_item = g_menu_item_ptr;
-                }
-                else if (g_menu_active_item_category == 0)
-                {
+                case 0:
                     g_menu_category0_item = g_menu_item_ptr;
-                }
-                else if (g_menu_active_item_category == 2)
-                {
+                    break;
+                case 1:
+                    g_menu_category1_item = g_menu_item_ptr;
+                    break;
+                case 2:
                     g_menu_category2_item = g_menu_item_ptr;
+                    break;
                 }
             }
             y += 0x10;
         }
 
-        off += 0x40;
         idx += 1;
         item += 0x40;
-        if (idx >= 0x64)
-        {
-            break;
-        }
-    }
+    } while (idx < 0x64);
 
-    if ((y - scroll_y) <= 0 && st->lerp_steps == 0)
+    if ((y - scroll_y) <= 0 && list->lerp_steps == 0)
     {
-        u16 cur = st->scroll_y;
+        u16 cur = list->scroll_y;
         if (cur != 0)
         {
-            st->target_y = cur - 0x10;
-            st->lerp_steps = 4;
+            list->target_y = cur - 0x10;
+            list->lerp_steps = 4;
         }
     }
 
-    LIST_WORD(st) = (LIST_WORD(st) & 0xFE00FFFF) | ((menu_build_inventory_nav_entries(g_menu_active_item_category) & 0x1FF) << 0x10);
-    g_menu_page_count = (LIST_WORD(st) >> 0x10) & 0x1FF;
-    g_script_repeat_last = LIST_WORD(st);
+    LIST_WORD(list) = (LIST_WORD(list) & 0xFE00FFFF) | ((menu_build_inventory_nav_entries(g_menu_active_item_category) & 0x1FF) << 0x10);
+    g_menu_page_count = (LIST_WORD(list) >> 0x10) & 0x1FF;
+    g_script_repeat_last = list->sel_idx;
 
-    if (LIST_WORD(st) & 0x01FF0000)
+    if (LIST_WORD(list) & 0x01FF0000)
     {
-        if ((u32)st->sel_idx >= (u32)((LIST_WORD(st) >> 0x10) & 0x1FF))
+        if ((u32)((LIST_WORD(list) >> 0x10) & 0x1FF) <= (u32)list->sel_idx)
         {
             menu_step_item_selection(-1);
-            st->sel_idx = (u16)((st->item_count & 0x1FF) - 1);
-            if (((st->sel_idx * 0x10) - scroll_y) < (st->viewport_h - 0x10))
+            list->sel_idx = (u16)((list->item_count & 0x1FF) - 1);
+            if (((list->sel_idx * 0x10) - scroll_y) < (list->viewport_h - 0x10))
             {
-                u16 cur = st->scroll_y;
+                u16 cur = list->scroll_y;
                 if (cur != 0)
                 {
-                    st->target_y = cur - 0x10;
-                    st->lerp_steps = 4;
+                    list->target_y = cur - 0x10;
+                    list->lerp_steps = 4;
                 }
             }
         }
-        g_menu_page_count = st->item_count & 0x1FF;
-        g_script_repeat_last = LIST_WORD(st);
+        g_menu_page_count = list->item_count & 0x1FF;
+        g_script_repeat_last = list->sel_idx;
 
         if (g_menu_item_ptr != 0)
         {
             if (active != 0)
             {
-                u8* d = sp30;
-                u8* s;
-
                 if (menu_item_is_nondefault(g_menu_item_ptr) != 0)
                 {
-                    u8* b30 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x30);
-                    u8* b04 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x04);
-                    u8* s2;
+                    u8* state = g_menu_state_ptr;
+                    u16 item16 = PAD_ITEM_W16(g_menu_item_ptr);
+                    s32 name_idx = (item16 & 0x3F) * 2;
+                    s32 o30 = *(s32*)(state + 0x30);
+                    s32 o04 = *(s32*)(state + 0x04);
+                    u8* state30 = state + o30;
+                    u8* name = state30 + *(u16*)(u8*)((s32)name_idx + (s32)state30);
+                    u8* state04 = state + o04;
+                    u8* suffix = state04 + *(u16*)(state04 + 0xDA);
+                    u8* out = sp30;
+                    { u8 ch; MENU_TEXT_COPY(out, name); }
+                    { u8 ch; MENU_TEXT_COPY(out, suffix); }
+                    *out = 0;
+                } else { sp30[0] = 0; }
 
-                    s = b30 + *(u16*)(b30 + ((PAD_ITEM_W16(g_menu_item_ptr) & 0x3F) * 2));
-                    s2 = b04 + *(u16*)(b04 + 0xDA);
-                    MENU_TEXT_COPY(d, s);
-                    MENU_TEXT_COPY(d, s2);
-                    *d = 0;
-                }
-                else
                 {
-                    sp30[0] = 0;
-                }
-
-                {
-                    u32 w = PAD_ITEM_W14(g_menu_item_ptr);
-                    s32 cat = (w >> 8) & 3;
-                    u8* a1 = g_menu_item_description_buffer;
-                    u8* b68;
-                    u8* src;
-
-                    if (cat != 0)
+                    u32 item_word = PAD_ITEM_W14(g_menu_item_ptr);
+                    u32 kind = (item_word >> 8) & 3;
+                    switch (kind)
                     {
-                        if (cat != 1)
-                        {
-                            a1 = g_menu_item_description_buffer;
-                            b68 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x68);
-                            d = sp30;
-                            src = b68 + *(u16*)(b68 + (((u32)PAD_ITEM_W14(g_menu_item_ptr) >> 9) & 0x7E) + 0x2E);
-                            MENU_TEXT_COPY(a1, d);
-                            MENU_TEXT_COPY(a1, src);
-                        }
-                        else
-                        {
-                            a1 = g_menu_item_description_buffer;
-                            b68 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x68);
-                            d = sp30;
-                            src = b68 + *(u16*)(b68 + ((w >> 9) & 0x7E) + 0x16);
-                            MENU_TEXT_COPY(a1, d);
-                            MENU_TEXT_COPY(a1, src);
-                        }
-                    }
-                    else
+                    case 0:
                     {
-                        a1 = g_menu_item_description_buffer;
-                        b68 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x68);
-                        d = sp30;
-                        src = b68 + *(u16*)(b68 + ((w >> 9) & 0x7E));
-                        MENU_TEXT_COPY(a1, d);
-                        MENU_TEXT_COPY(a1, src);
+                        u32 str_idx = (item_word >> 9) & 0x7E;
+                        u8* state68 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x68);
+                        u8* str2 = state68 + *(u16*)((u8*)((s32)str_idx + (s32)state68) + 0);
+                        u8 ch;
+                        u8* out = g_menu_item_description_buffer;
+                        u8* first = sp30;
+                        MENU_TEXT_COPY(out, first);
+                        MENU_TEXT_COPY(out, str2);
+                        *out = 0;
+                        break;
                     }
-                    *a1 = 0;
+                    case 1:
+                    {
+                        u32 str_idx = (item_word >> 9) & 0x7E;
+                        u8* state68 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x68);
+                        u8* str2 = state68 + *(u16*)((u8*)((s32)str_idx + (s32)state68) + 0x16);
+                        u8 ch;
+                        u8* out = g_menu_item_description_buffer;
+                        u8* first = sp30;
+                        MENU_TEXT_COPY(out, first);
+                        MENU_TEXT_COPY(out, str2);
+                        *out = 0;
+                        break;
+                    }
+                    default:
+                    {
+                        s32* state68_off = (s32*)(g_menu_state_ptr + 0x68);
+                        u32 item_word2 = PAD_ITEM_W14(g_menu_item_ptr);
+                        u32 str_idx = (item_word2 >> 9) & 0x7E;
+                        u8* state68 = g_menu_state_ptr + *state68_off;
+                        u8* str2 = state68 + *(u16*)((u8*)((s32)str_idx + (s32)state68) + 0x2E);
+                        u8 ch;
+                        u8* out = g_menu_item_description_buffer;
+                        u8* first = sp30;
+                        MENU_TEXT_COPY(out, first);
+                        MENU_TEXT_COPY(out, str2);
+                        *out = 0;
+                        break;
+                    }
+                    }
                     g_menu_help_text = (s32)g_menu_item_description_buffer;
                 }
             }
@@ -7089,15 +7161,17 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
 
                     if (sub == 2)
                     {
-                        s32 n;
-
                         menu_swap_item_records(g_menu_item_ptr, g_menu_active_equipped_item);
                         func_800A8FB4();
-                        ((u8*)g_pad_ctx)[(g_menu_char_slot * 0x250) + g_menu_active_subtype + 0x609] = (s8)((u8)g_menu_active_subtype + 0x7D);
+                        {
+                            s32 char_slot = g_menu_char_slot;
+                            u8* ctx = (u8*)g_pad_ctx + (char_slot * 0x250);
+                            ctx += g_menu_active_subtype;
+                            ctx[0x609] = (s8)((u8)g_menu_active_subtype + 0x7D);
+                        }
                         menu_play_se(0x7E, 0x80);
-                        n = (g_menu_char_slot * 3) + 2;
-                        g_menu_nodes[n].content_id = (s8)sub;
-                        g_menu_nodes[n].label_id = (u8)n;
+                        g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = (s8)sub;
+                        g_menu_nodes[(g_menu_char_slot * 3) + 2].label_id = (u8)((g_menu_char_slot * 3) + 2);
                         MENU_CLEAR_SLOTS();
                         g_menu_content_ready = 0;
                     }
@@ -7105,20 +7179,26 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                     {
                         u32 w = PAD_ITEM_W14(g_menu_item_ptr);
                         u8* tbl;
-                        MenuSlot* ns;
-
                         if (w & 0x300)
                         {
+                            w >>= 0xA;
+                            w &= 0x3F;
                             tbl = D_800F0BEC;
                         }
                         else
                         {
+                            w >>= 0xA;
+                            w &= 0x3F;
                             tbl = D_800F0BE0;
                         }
-                        if (tbl[(w >> 0xA) & 0x3F] & g_menu_ability_mask)
+                        w += (u32)tbl;
                         {
-                            menu_play_se(0x78, 0x80);
-                            return buf;
+                            u8 entry;
+                            u32 mask;
+                            do { entry = *(volatile u8*)w; } while (0);
+                            mask = (u8)g_menu_ability_mask;
+                            mask = entry & mask;
+                            if (mask) { menu_play_se(0x78, 0x80); return buf; }
                         }
                         menu_play_se(0x7E, 0x80);
                         MENU_CLEAR_SLOTS();
@@ -7126,26 +7206,27 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                         {
                             menu_swap_item_records(g_menu_item_ptr, g_menu_active_equipped_item);
                             g_item_slot_data_by_subtype[g_menu_active_subtype] = g_menu_item_ptr;
+                            g_item_slot_flags_by_subtype[g_menu_active_subtype] = 1;
                         }
                         else
                         {
                             func_800A8F8C(g_menu_active_equipped_item, g_menu_item_ptr);
                             *(u8*)g_menu_item_ptr = 0;
                             g_item_slot_data_by_subtype[g_menu_active_subtype] = 0;
+                            g_item_slot_flags_by_subtype[g_menu_active_subtype] = 1;
                         }
-                        g_item_slot_flags_by_subtype[g_menu_active_subtype] = 1;
                         MENU_CLEAR_SLOTS();
                         rect.x = 0xB0;
                         rect.y = 0x40;
                         rect.w = 0x70;
                         rect.h = 0x30;
-                        ns = menu_slot_alloc(0, &rect);
-                        ns->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
+                        list = (ScrollListState*)menu_slot_alloc(0, &rect);
+                        ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
                         g_menu_compare_window_active = 1;
-                        ns->flags = (ns->flags & 0xFE00FFFF) | 0x20000;
+                        ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
                         MENU_RELINK();
                         g_menu_content_ready = 0;
-                        g_menu_nodes[(g_menu_char_slot * 3) + 1].content_id = 1;
+                        g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 1;
                         g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = (u8)((g_menu_char_slot * 3) + 3);
                         return buf;
                     }
@@ -7154,11 +7235,11 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                 {
                     u16 sel;
 
-                    g_menu_nodes[0x13].content_id = 0x11;
-                    g_menu_nodes[0x16].content_id = 0x14;
-                    g_menu_nodes[0x19].content_id = 0x16;
+                    g_menu_nodes[0x13].label_id = 0x11;
+                    g_menu_nodes[0x16].label_id = 0x14;
+                    g_menu_nodes[0x19].label_id = 0x16;
                     menu_play_se(0x7D, 0x80);
-                    sel = st->sel_idx;
+                    sel = list->sel_idx;
                     if (sel != g_menu_pending_item_row)
                     {
                         if (g_menu_pending_item_row != 0xFF)
@@ -7173,15 +7254,13 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                     }
                     else
                     {
-                        MenuSlot* ns;
-
                         rect.x = 0xB0;
                         rect.y = 0x60;
                         rect.w = 0x70;
                         rect.h = 0x30;
-                        ns = menu_slot_alloc(0, &rect);
-                        ns->content_cb = (s32 * (*)()) & menu_item_followup_callback;
-                        ns->flags = (ns->flags & 0xFE00FFFF) | 0x20000;
+                        list = (ScrollListState*)menu_slot_alloc(0, &rect);
+                        ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_item_followup_callback;
+                        ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
                         MENU_RELINK();
                     }
                 }
