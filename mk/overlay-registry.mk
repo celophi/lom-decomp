@@ -64,6 +64,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field12.c \
 	src/overlays/field/field13.c \
 	src/overlays/field/field14.c \
+	src/overlays/field/field15.c \
 	src/overlays/field/unk2.c \
 	src/overlays/field/unk2_b.c
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
@@ -87,6 +88,7 @@ overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/gname.c
 
 OVERLAYS += golem
 overlay_golem_gcc_280_g0_srcs := src/overlays/golem/unk1.c
+overlay_golem_gcc_272_cdk_g0_srcs := src/overlays/golem/golem.c
 
 OVERLAYS += gosub
 overlay_gosub_gcc_272_cdk_g0_srcs := src/overlays/gosub/gosub.c
