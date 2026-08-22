@@ -2150,3 +2150,145 @@ s32 func_801430C8(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s32 icon, s32 
 
     return prim + 0x28;
 }
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8014330C(void)
+{
+    D_801468B8.unk0 = D_801468B8.unk0 & ~7;
+}
+
+/**
+ * @brief Load the CD icon-set resource into the 0x80180000 scratch buffer and
+ *        register its three icon glyphs (codes 0x200/0x240/0x280) with ids
+ *        0x1F4/0x1F5/0x1F6 via func_80086374, also pointing D_8015A314 (the
+ *        icon UV table used by func_801430C8) at the resource's first offset
+ *        field.
+ * @note WIP 99.50% (45/50 exact, correct frame/insn count, no structural
+ *       rows). The resource header at 0x80180000 stores four s32 offset
+ *       fields at +4/+8/+0xC/+0x10; the target reads them via a SINGLE
+ *       `lui $s0,%hi(D_80180008)` reused (as a raw 0x80180000 constant) for
+ *       all four %lo(D_80180004/8/C/10) loads AND the "+ base" pointer
+ *       conversions, with zero extra instructions. Every measured source
+ *       shape that gives the four fields their own extern symbol (plain
+ *       scalars: 72.76%, 4 separate luis; one struct/array anchored at the
+ *       base: 82.68%, gcc instead MATERIALIZES a full address via an extra
+ *       `addiu` + saved register since the fields are read across 3
+ *       intervening calls; `&sym +/- k` anchor tricks: 75.82-88.64%, same
+ *       materialization cost) costs extra insns and regresses the match.
+ *       Raw pointer arithmetic on the literal `(u8*)0x80180000` (this file)
+ *       reproduces the target's exact instruction count and frame with the
+ *       four loads showing as plain register+offset instead of named
+ *       relocations - that is the whole gap. Permuter (v2, ~29.5k
+ *       iterations) converged on this same state and found nothing further.
+ *       Same residual class as func_800A3728 in field_audio.c (98.97%, also
+ *       left unmatched after 22 measured-inert variants) - gcc sharing one
+ *       %hi() across several extern data symbols in a page is not reachable
+ *       from any C shape tried so far. working/func_80143324 kept for a
+ *       future pass.
+ * @see decomp.me (99.50%) TODO
+ */
+void func_80143324(void)
+{
+    u8 *base;
+    s16 buf[4];
+
+    func_800141EC(0x5E4, (void *)0x80180000);
+    func_80013F2C();
+
+    base = (u8 *)0x80180000;
+
+    D_8015A314 = *(s32 *)(base + 4) + (s32)base;
+
+    buf[0] = 0x200;
+    buf[1] = 0;
+    buf[2] = 0;
+    buf[3] = 0x1F4;
+    func_80086374(buf, *(s32 *)(base + 8) + (s32)base, 1);
+
+    buf[0] = 0x240;
+    buf[1] = 0;
+    buf[2] = 0;
+    buf[3] = 0x1F5;
+    func_80086374(buf, *(s32 *)(base + 0xC) + (s32)base, 1);
+
+    buf[0] = 0x280;
+    buf[1] = 0;
+    buf[2] = 0;
+    buf[3] = 0x1F6;
+    func_80086374(buf, *(s32 *)(base + 0x10) + (s32)base, 1);
+}
+
+/**
+ * @brief Build three OT-linked icon-highlight primitives (one 20-byte
+ *        SPRT-shaped color record plus one 8-byte DR_MODE-style texture-page
+ *        record per icon), stepping the color/row coordinates and
+ *        texture-page code for each of the 3 slots.
+ * @param p primitive buffer to write the 3 record pairs into.
+ * @param ot ordering-table head threaded through each record's OT link.
+ * @return the advanced primitive cursor after all 3 pairs (p + 0x54).
+ * @note WIP 91.23% (63/73 exact, correct frame/insn count, no structural or
+ *       scheduling rows left). Residual is a single swapped register pair:
+ *       the OtTag bitfield's 0xFF000000 len-mask constant and the `code`
+ *       (unk8) loop accumulator land in t3/t6 opposite of the target (mask
+ *       should be t6, code should be t3). alloc_report confirms this is a
+ *       genuine allocator priority tie broken the wrong way: mask
+ *       pri=2142 (9 refs/126 live) vs code pri=2028 (7 refs/69 live), and
+ *       explain_conflict confirms the two pseudos DO conflict, so it is not
+ *       hand-swappable - gcc's own priority formula decides it. Measured
+ *       inert: every declaration/init/increment-clause reordering of
+ *       code/col/row (byte-identical output), an explicit s16 cast on the
+ *       unk8 store, inlining vs naming `tpage`, and merging row/col into one
+ *       accumulator via their constant 0x7B00 offset (both merge directions
+ *       cost 12 exact rows - they are genuinely separate variables).
+ *       Permuter (v2, 100k+ iterations across 3 re-seeds) never beat the
+ *       seeded state. Shapes that ARE measured required: `col += 0x40,
+ *       row += 0x40, code += 0x80, i++` in that exact order as the for-loop's
+ *       increment clause (i last); `tpage` computed AFTER the first OtTag
+ *       link and p-advance, not before. working/func_801433EC kept for a
+ *       future pass.
+ * @see decomp.me (91.23%) TODO
+ */
+StructS0 *func_801433EC(StructS0 *p, RenderCtx *ot)
+{
+    s32 i;
+    s32 code;
+    s32 col;
+    s32 row;
+    s32 tpage;
+
+    code = 8;
+    col = 0x200;
+    row = 0x7D00;
+    for (i = 0; i < 3; col += 0x40, row += 0x40, code += 0x80, i++)
+    {
+        p->unk4 = 0x808080;
+        ((u8 *)p)[3] = 4;
+        ((u8 *)p)[7] = 0x64;
+        p->unk8 = code;
+        p->unkA = 0;
+        ((u8 *)p)[0xC] = 0;
+        ((u8 *)p)[0xD] = 0;
+        if (i == 2)
+        {
+            *(s16 *)((u8 *)p + 0x10) = 0x30;
+        }
+        else
+        {
+            *(s16 *)((u8 *)p + 0x10) = 0x80;
+        }
+        *(s16 *)((u8 *)p + 0x12) = 0xE0;
+        p->unkE = row;
+        ((OtTag *)p)->addr = ((OtTag *)ot)->addr;
+        ((OtTag *)ot)->addr = (u32)p;
+        p = (StructS0 *)((u8 *)p + 0x14);
+        ((u8 *)p)[3] = 1;
+        tpage = ((col & 0x3FF) >> 6) | 0xE1000080;
+        p->unk4 = tpage;
+        ((OtTag *)p)->addr = ((OtTag *)ot)->addr;
+        ((OtTag *)ot)->addr = (u32)p;
+        p = (StructS0 *)((u8 *)p + 8);
+    }
+    return p;
+}
