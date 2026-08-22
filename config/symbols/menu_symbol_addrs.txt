@@ -96,8 +96,9 @@ memory_card_create_save_file              = 0x8014F9EC;
 memory_card_fill_test_data                = 0x8014FBCC;
 
 // Data
-jtbl_8014049C.104 = 0x8014049C; // type:jtbl
-jtbl_801404DC.105 = 0x801404DC; // type:jtbl
+D_80140000 = 0x80140000;
+jtbl_8014049C = 0x8014049C; // type:jtbl visibility:local
+jtbl_801404DC = 0x801404DC; // type:jtbl visibility:local
 g_menu_frame           = 0x801690AC;
 g_party_sort_marker    = 0x801690B0;
 g_menu_item_nav_entries = 0x801690B8;
