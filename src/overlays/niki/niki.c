@@ -72,6 +72,7 @@ extern s32 D_8003EC9C;
 
 
 void func_80140D2C(void);
+void func_80141F18(void);
 s32 func_80140774(void);
 s32 func_80140868(void);
 void func_80140D4C(); 
@@ -479,4 +480,9 @@ void func_80140CC8(void)
         D_80164AEC = pos;
         D_80164B88 = 4;
     }
+}
+
+void func_80140D2C(void)
+{
+    func_80141F18();
 }
