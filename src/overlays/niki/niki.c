@@ -18,8 +18,26 @@ extern s32 D_80164B78;
 extern s32 D_80164B84;
 extern s32 D_80164B8C;
 extern s32 D_80164B90;
-extern s32 D_8012271C, D_80164ADC, D_80164AE0, D_80164AEC;
-extern s32 D_80164B7C, D_80164B80, D_80164B88;
+extern s32 D_8012271C, D_80164ADC;
+extern s32 D_80164B7C, D_80164B80;
+
+
+extern s32 D_80164B1C;
+extern s32 D_80122988;
+extern s32 D_80164B88;
+extern s32 D_80164AE0;
+extern s32 D_80164AEC;
+
+void func_80140D2C(void);
+void func_80140774(void);
+void func_80140868(void);
+void func_80140D4C(); 
+void func_801413FC();
+ void func_801414A8();
+void func_80141584(); 
+void func_80141660(); 
+void func_801433BC();
+void func_80141E84();
 
 void func_8014011C(s32 arg0, s32 arg1)
 {
@@ -66,11 +84,6 @@ s32 func_801401F0(s32 arg0)
     D_80164B8C ^= 1;
     return 0;
 }
-
-
-void func_80140D4C(); void func_801413FC(); void func_801414A8();
-void func_80141584(); void func_80141660(); void func_801433BC();
-void func_80141E84();
 
 typedef struct
 {
@@ -187,4 +200,32 @@ void func_8014027C(void)
     p->y = 0x34;
     SET_ELEM_CODE(p, 4);
     D_80164B10.attr.f.state = 0;
+}
+
+void func_8014068C(void)
+{
+    s32 delta;
+
+    func_80140D2C();
+    D_80164AD0 += 2;
+    if ((D_80164B1C & 0x7F) == 2)
+    {
+        func_80140774();
+    }
+    if ((u16)D_80122988 == 0xFFFF)
+    {
+        D_80122988 = 0;
+    }
+    func_80140868();
+    if (D_80164B88 != 0)
+    {
+        s32 base = D_80164AE0;
+        delta = (D_80164AEC - D_80164AE0) / D_80164B88;
+        D_80164B88 -= 1;
+        D_80164AE0 += delta;
+    }
+    else
+    {
+        D_80164AE0 = D_80164AEC;
+    }
 }
