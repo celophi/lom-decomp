@@ -1985,7 +1985,7 @@ void func_8006AA7C(s32 arg0)
  *
  * @param arg0 Resource slot index minus one; the entry acted on is arg0 + 1.
  *
- * @see decomp.me (100%) TODO
+ * @see decomp.me (100%)
  */
 
 void func_8006AB38(s32 arg0)
@@ -2007,35 +2007,32 @@ void func_8006AB38(s32 arg0)
     {
         entry = &g_field_resource_entries[idx];
 
-        do
+        while (D_800FD818[idx].u0.b.unk0 & 1)
         {
             basep = D_800FDF58;
             slot = &basep[idx];
-        } while (0);
+            break;
+        }
 
         src = entry->end;
+        size = src - entry->start;
         dst = entry->start;
         slot->unk25 = 0xFF;
 
         D_800FD818[idx].unk256 = 0xFF;
 
-        do
-        {
-            D_800FD818[idx].u0.h &= 0xFFFE;
-            size = src - dst;
+        D_800FD818[idx].u0.h &= 0xFFFE;
 
-            while (src != g_field_resource_cursor)
-            {
-                *dst = *src;
-                src++;
-                dst++;
-            }
-        } while (0);
+        while (src != g_field_resource_cursor)
+        {
+            *dst = *src;
+            src++;
+            dst++;
+        }
 
         for (i = 0; i < 8; i++)
         {
-            if (g_field_resource_entries[i].start >
-                g_field_resource_entries[idx].start)
+            if (g_field_resource_entries[i].start > g_field_resource_entries[idx].start)
             {
                 g_field_resource_entries[i].start -= size;
                 g_field_resource_entries[i].end -= size;
@@ -2049,8 +2046,7 @@ void func_8006AB38(s32 arg0)
             if ((p->unk25 != 0xFF) && (p->unk3B != 8))
             {
                 if ((p->unk40 | 0x80000000) >
-                    (((u32)g_field_resource_entries[idx].start) |
-                     0x80000000))
+                    (((u32)g_field_resource_entries[idx].start) | 0x80000000))
                 {
                     p->unk40 -= size;
                 }
@@ -2060,9 +2056,7 @@ void func_8006AB38(s32 arg0)
             p++;
         } while (i < 0xD);
 
-        g_field_resource_cursor =
-            ((u8*)g_field_resource_cursor) - size;
-
+        g_field_resource_cursor = ((u8*)g_field_resource_cursor) - size;
         g_field_resource_entries[idx].flags &= ~2;
     }
 }
