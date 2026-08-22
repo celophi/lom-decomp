@@ -102,6 +102,7 @@ overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
 
 OVERLAYS += niki
 overlay_niki_gcc_280_g0_srcs := src/overlays/niki/unk1.c
+overlay_niki_gcc_272_cdk_g0_srcs := src/overlays/niki/niki.c
 
 OVERLAYS += shop
 overlay_shop_gcc_280_g0_srcs := src/overlays/shop/unk1.c
