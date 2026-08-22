@@ -1629,7 +1629,7 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
 /**
  * @brief Initialize the full menu node tree and global menu state.
- * @see decomp.me (93.01%) https://decomp.me/scratch/XJkmb
+ * @see decomp.me (99.27%) https://decomp.me/scratch/XJkmb
  */
 void menu_node_tree_init(void)
 {
@@ -1679,7 +1679,7 @@ void menu_node_tree_init(void)
     u16 temp1;
     u16 temp2;
     u16 loop_unk2;
-    volatile u32 new_var9;
+    u32 new_var9;
     var_t0 = 0;
     var_a0 = g_menu_nodes;
     g_menu_prev_node = MENU_NONE;
@@ -1743,8 +1743,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[1].icon_id = 5;
     g_menu_nodes[2].label_id = 2;
     g_menu_nodes[2].idx_nav.s.self_idx = 2;
-    g_menu_nodes[2].icon_id = 4;
     g_menu_nodes[1].label_id = 3;
+    g_menu_nodes[2].icon_id = 4;
     g_menu_nodes[3].label_id = 4;
     g_menu_nodes[3].idx_nav.s.self_idx = 3;
     g_menu_nodes[1].u2.unk2 = (u16)((g_menu_nodes[1].u2.unk2 & 0xFF0F) | 0x40);
@@ -1758,10 +1758,10 @@ void menu_node_tree_init(void)
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3E);
     g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[4].idx_nav.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
-        /* Preserve the basic-block boundary required by GCC 2.7.2 scheduling. */
+        /* Empty conditional forces a basic-block boundary the compiler needs
+           to reproduce the target's scheduling here; required to match. */
         if (1)
         {
         }
@@ -1782,20 +1782,21 @@ void menu_node_tree_init(void)
     g_menu_nodes[3].uA.s.child0 = 4;
     g_menu_nodes[3].child1 = 5;
     g_menu_nodes[4].label_id = 6;
+    g_menu_nodes[4].idx_nav.s.self_idx = 4;
     g_menu_nodes[4].icon_id = 5;
-    g_menu_nodes[5].idx_nav.s.self_idx = 5;
     g_menu_nodes[5].label_id = 5;
-    g_menu_nodes[6].label_id = 7;
+    g_menu_nodes[5].idx_nav.s.self_idx = 5;
     g_menu_nodes[5].icon_id = 4;
+    g_menu_nodes[6].label_id = 7;
     g_menu_nodes[6].idx_nav.s.self_idx = 6;
-    g_menu_nodes[6].uA.s.child0 = 7;
     g_menu_nodes[6].icon_id = 3;
-    g_menu_nodes[7].idx_nav.s.self_idx = 7;
+    g_menu_nodes[6].uA.s.child0 = 7;
     g_menu_nodes[6].child1 = 8;
     g_menu_nodes[7].label_id = 9;
+    g_menu_nodes[7].idx_nav.s.self_idx = 7;
+    g_menu_nodes[7].icon_id = 5;
     new_var7 = 0xFF3E;
     g_menu_nodes[8].label_id = 8;
-    g_menu_nodes[7].icon_id = 5;
     g_menu_nodes[4].u2.s.parent_idx = 3;
     g_menu_nodes[5].u2.s.parent_idx = 3;
     g_menu_nodes[6].u2.s.parent_idx = MENU_NONE;
@@ -1809,9 +1810,9 @@ void menu_node_tree_init(void)
     temp_v0_7 = temp_v0_6 | temp_v0_7;
     *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = (u16)(temp_v0_7 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = (u16)(temp_v0_7 & 0xFF3E);
+    g_menu_nodes[0xA].u2.unk2 = (u16)((g_menu_nodes[0xA].u2.unk2 & 0xFF6F) | 0x60);
     temp_v0_8 = (g_menu_nodes[0xC].u2.unk2 & 0xFFCD) | 0x20;
     *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = temp_v0_8;
-    g_menu_nodes[0xA].u2.unk2 = (u16)((g_menu_nodes[0xA].u2.unk2 & 0xFF6F) | 0x60);
     *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = (u16)((temp_v0_8 | 0x20) & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = (u16)((temp_v0_8 | 0x20) & 0xFF3E);
     g_menu_nodes[8].u2.s.parent_idx = 6;
@@ -1822,8 +1823,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[9].uA.s.child0 = 0xA;
     g_menu_nodes[0xA].label_id = 0xB;
     g_menu_nodes[0xA].idx_nav.s.self_idx = 0xA;
-    g_menu_nodes[0xC].label_id = 0xA;
     g_menu_nodes[0xA].icon_id = 7;
+    g_menu_nodes[0xC].label_id = 0xA;
     g_menu_nodes[0xC].idx_nav.s.self_idx = 0xC;
     g_menu_nodes[0xC].icon_id = 6;
     g_menu_nodes[0xC].uA.s.child0 = 0xD;
@@ -1833,20 +1834,18 @@ void menu_node_tree_init(void)
     g_menu_nodes[9].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0xA].u2.s.parent_idx = 9;
     g_menu_nodes[0xC].u2.s.parent_idx = MENU_NONE;
-    temp_v0_10 = (g_menu_nodes[0xF].u2.unk2 & 0xFFCD) | 0x20;
-    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_10;
     g_menu_nodes[0xD].u2.unk2 = (u16)((g_menu_nodes[0xD].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0xD].u2.s.parent_idx = 0xC;
+    temp_v0_10 = (g_menu_nodes[0xF].u2.unk2 & 0xFFCD) | 0x20;
+    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_10;
     temp_v0_11 = (temp_v0_10 & 0xFF6D) | 0x60;
     *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_11;
     *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = (u16)(temp_v0_11 & 0xFFFE);
     g_menu_nodes[0xF].icon_id = 8;
     g_menu_nodes[0x10].icon_id = 7;
-    g_menu_nodes[0x12].icon_id = 0xA;
-    g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0x12].child3 = 0x1C;
     g_menu_nodes[0xF].label_id = 0xD;
     g_menu_nodes[0xF].idx_nav.s.self_idx = 0xF;
+    g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0xF].uA.s.child0 = 0x10;
     g_menu_nodes[0xF].child1 = 0x11;
     g_menu_nodes[0x10].label_id = 0xC;
@@ -1856,10 +1855,12 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x11].icon_id = 9;
     g_menu_nodes[0x12].label_id = 0x10;
     g_menu_nodes[0x12].idx_nav.s.self_idx = 0x12;
+    g_menu_nodes[0x12].icon_id = 0xA;
     g_menu_nodes[0x12].content_id = 4;
-    g_menu_nodes[0x12].child1 = 0x16;
     g_menu_nodes[0x12].uA.s.child0 = 0x13;
+    g_menu_nodes[0x12].child1 = 0x16;
     g_menu_nodes[0x12].child2 = 0x19;
+    g_menu_nodes[0x12].child3 = 0x1C;
     g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
     g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
@@ -1875,19 +1876,19 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x16].content_id = 1;
     g_menu_nodes[0x14].icon_id = 0xF;
     g_menu_nodes[0x13].icon_id = 0xB;
-    g_menu_nodes[0x13].content_id = 0;
     g_menu_nodes[0x13].idx_nav.s.self_idx = 0x13;
+    g_menu_nodes[0x13].content_id = 0;
     g_menu_nodes[0x13].uA.s.child0 = 0x14;
-    g_menu_nodes[0x14].label_id = 0x12;
     g_menu_nodes[0x13].child1 = 0x15;
+    g_menu_nodes[0x14].label_id = 0x12;
     g_menu_nodes[0x14].idx_nav.s.self_idx = 0x14;
-    g_menu_nodes[0x15].idx_nav.s.self_idx = 0x15;
     g_menu_nodes[0x15].label_id = 0x13;
+    g_menu_nodes[0x15].idx_nav.s.self_idx = 0x15;
+    g_menu_nodes[0x15].icon_id = 0x12;
     g_menu_nodes[0x16].label_id = 0x14;
     g_menu_nodes[0x16].idx_nav.s.self_idx = 0x16;
-    g_menu_nodes[0x15].icon_id = 0x12;
-    g_menu_nodes[0x16].uA.s.child0 = 0x17;
     g_menu_nodes[0x16].icon_id = 0xC;
+    g_menu_nodes[0x16].uA.s.child0 = 0x17;
     g_menu_nodes[0x16].child1 = 0x18;
     g_menu_nodes[0x17].label_id = 0x15;
     g_menu_nodes[0x17].idx_nav.s.self_idx = 0x17;
@@ -1912,8 +1913,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].uA.s.child0 = 0x1A;
     g_menu_nodes[0x19].child1 = 0x1B;
     g_menu_nodes[0x1A].label_id = 0x17;
-    g_menu_nodes[0x1A].idx_nav.s.self_idx = 0x1A;
     g_menu_nodes[0x1A].icon_id = 0x11;
+    g_menu_nodes[0x1A].idx_nav.s.self_idx = 0x1A;
     g_menu_nodes[0x1B].label_id = 0x13;
     g_menu_nodes[0x1B].idx_nav.s.self_idx = 0x1B;
     g_menu_nodes[0x1B].icon_id = 0x12;
@@ -1925,20 +1926,20 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].u2.s.parent_idx = 0x12;
     g_menu_nodes[0x1B].u2.unk2 = (u16)((g_menu_nodes[0x1B].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x1B].u2.s.parent_idx = 0x19;
+    g_menu_nodes[0x1A].u2.unk2 = (u16)((g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x1C].u2.unk2 = (u16)((g_menu_nodes[0x1C].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x1C].u2.s.parent_idx = 0x12;
-    g_menu_nodes[0x1A].u2.unk2 = (u16)((g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
     g_menu_nodes[0x1C].icon_id = 0xE;
-    g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
-    g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
-    g_menu_nodes[0x1F].idx_nav.s.self_idx = 0x1F;
     g_menu_nodes[0x1C].content_id = 5;
     g_menu_nodes[0x1D].label_id = 0x1C;
     g_menu_nodes[0x1D].content_id = 3;
     g_menu_nodes[0x1D].icon_id = 0x18;
+    g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
     g_menu_nodes[0x1E].label_id = 0x19;
     g_menu_nodes[0x1E].idx_nav.s.self_idx = 0x1E;
+    g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
+    g_menu_nodes[0x1F].idx_nav.s.self_idx = 0x1F;
     (g_menu_nodes + 0x1E)->icon_id = 0x13;
     g_menu_nodes[0x1F].label_id = 0x1A;
     g_menu_nodes[0x1F].icon_id = 0x14;
@@ -1965,12 +1966,16 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x2B].icon_id = 0x15;
     g_menu_nodes[0x20].label_id = 0x1B;
     g_menu_nodes[0x20].idx_nav.s.self_idx = 0x20;
-    temp_v0 = g_menu_nodes[0x20].u2.unk2;
-    temp_v0_14 = temp_v0 & 0xFF3D;
-    *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(temp_v0 & 0xFFFD);
-    *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = temp_v0_14;
-    g_menu_nodes[0x20].icon_id = 0x16;
-    *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(temp_v0_14 | 1);
+    {
+        u16 block_v0;
+        u16 block_v14;
+        block_v0 = g_menu_nodes[0x20].u2.unk2;
+        block_v14 = block_v0 & 0xFF3D;
+        *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(block_v0 & 0xFFFD);
+        *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)block_v14;
+        g_menu_nodes[0x20].icon_id = 0x16;
+        *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(block_v14 | 1);
+    }
     g_menu_nodes[0x20].u2.s.parent_idx = MENU_NONE;
     if (D_800FD818.unk268 & 1)
     {
