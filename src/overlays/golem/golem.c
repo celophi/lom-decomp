@@ -35,6 +35,22 @@ typedef struct {
     s16 h;
 } RECT;
 
+typedef struct {
+    u16 x;
+    u16 y;
+    u16 clut_x;
+    u16 clut_y;
+} GolemImageClutPos;
+
+typedef struct {
+    s16 x;
+    s16 y;
+    s16 w;
+    s16 h;
+} GolemRect;
+
+s32 func_80019A34();
+
 extern u8 D_8014287C[];
 void func_80140438(RECT *, u8 *);
 
@@ -174,4 +190,35 @@ void func_801403F8(void)
     rect.w = 0;
     rect.h = 0x1F2;
     func_80140438(&rect, D_8014287C);
+}
+
+void func_80140438(GolemImageClutPos* pos, u8* archive)
+{
+    GolemRect rect;
+    s32 flags;
+    s32 off8;
+    u16* dims;
+
+    flags = *(s32*)(archive + 4);
+    off8 = *(s32*)(archive + 8);
+
+    if (flags & 8)
+    {
+        rect.x = pos->clut_x;
+        rect.y = pos->clut_y;
+        rect.w = 0x100;
+        rect.h = 1;
+        func_80019A34(&rect, archive + 0x14);
+        dims = (u16*)(off8 - (-(s32)archive) + 0x10);
+    }
+    else
+    {
+        dims = (u16*)(archive + 0x10);
+    }
+
+    rect.x = pos->x;
+    rect.y = pos->y;
+    rect.w = dims[0];
+    rect.h = dims[1];
+    func_80019A34(&rect, off8 - (-(s32)archive) + 0x14);
 }
