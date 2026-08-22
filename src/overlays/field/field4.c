@@ -1990,82 +1990,80 @@ void func_8006AA7C(s32 arg0)
 
 void func_8006AB38(s32 arg0)
 {
-    s32 idx = arg0 + 1;
+    s32 idx;
     s32 i;
     u8* src;
     u8* dst;
     s32 size;
-    u32 lhs;
-    u32 rhs;
     Struct_D800FDF58* p;
     Struct_D800FDF58* basep;
     Struct_D800FDF58* slot;
     FieldResourceEntry* entry;
 
+    idx = arg0;
+    idx += 1;
+
     if (D_800FD818[idx].u0.b.unk0 & 1)
     {
         entry = &g_field_resource_entries[idx];
+
         do
         {
             basep = D_800FDF58;
-        } while (0);
-        do
-        {
             slot = &basep[idx];
         } while (0);
-        do
-        {
-            src = entry->end;
-        } while (0);
+
+        src = entry->end;
         dst = entry->start;
         slot->unk25 = 0xFF;
+
+        D_800FD818[idx].unk256 = 0xFF;
+
         do
         {
-            do
-            {
-                D_800FD818[idx].unk256 = 0xFF;
-                D_800FD818[idx].u0.h &= 0xFFFE;
-                size = src - dst;
+            D_800FD818[idx].u0.h &= 0xFFFE;
+            size = src - dst;
 
-                while (src != g_field_resource_cursor)
-                {
-                    *dst = *src;
-                    src++;
-                    dst++;
-                }
-            } while (0);
-
-            for (i = 0; i < 8; i++)
+            while (src != g_field_resource_cursor)
             {
-                if (g_field_resource_entries[i].start > g_field_resource_entries[idx].start)
-                {
-                    g_field_resource_entries[i].start -= size;
-                    g_field_resource_entries[i].end -= size;
-                }
+                *dst = *src;
+                src++;
+                dst++;
             }
-
-            p = D_800FDF58;
-            for (i = 0; i < 0xD; i++)
-            {
-                if ((p->unk25 != 0xFF) && (p->unk3B != 8))
-                {
-                    lhs = p->unk40 | 0x80000000;
-                    rhs = (u32)g_field_resource_entries[idx].start;
-                    do
-                    {
-                        rhs |= 0x80000000;
-                    } while (0);
-                    if (lhs > rhs)
-                    {
-                        p->unk40 -= size;
-                    }
-                }
-                p++;
-            }
-
-            g_field_resource_cursor = ((u8*)g_field_resource_cursor) - size;
-            g_field_resource_entries[idx].flags &= ~2;
         } while (0);
+
+        for (i = 0; i < 8; i++)
+        {
+            if (g_field_resource_entries[i].start >
+                g_field_resource_entries[idx].start)
+            {
+                g_field_resource_entries[i].start -= size;
+                g_field_resource_entries[i].end -= size;
+            }
+        }
+
+        i = 0;
+        p = D_800FDF58;
+        do
+        {
+            if ((p->unk25 != 0xFF) && (p->unk3B != 8))
+            {
+                if ((p->unk40 | 0x80000000) >
+                    (((u32)g_field_resource_entries[idx].start) |
+                     0x80000000))
+                {
+                    p->unk40 -= size;
+                }
+            }
+
+            i++;
+            p++;
+        } while (i < 0xD);
+
+        g_field_resource_cursor =
+            ((u8*)g_field_resource_cursor) - size;
+
+        g_field_resource_entries[idx].flags &= ~2;
     }
 }
 
