@@ -457,3 +457,26 @@ void func_80140BF0(void) {
     D_80164B70 ^= 1;
     func_80144BC0();
 }
+
+void func_80140C60(void)
+{
+    s32 temp_v1;
+    s32 var_a1;
+    s32 *var_a0;
+    s32 temp;
+
+    func_80067F28();
+    var_a0 = &D_80164B10;
+    var_a1 = 0;
+    do
+    {
+        temp_v1 = *var_a0;
+        if (temp_v1 & 7)
+        {
+            temp = (temp_v1 & ~7) | 3;
+            *var_a0 = (temp & ~0x78) | 0x40;
+        }
+        var_a1 += 1;
+        var_a0 += 3;
+    } while (var_a1 < 8);
+}
