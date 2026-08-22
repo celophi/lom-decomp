@@ -480,3 +480,27 @@ void func_80140C60(void)
         var_a0 += 3;
     } while (var_a1 < 8);
 }
+
+void func_80140CC8(void)
+{
+    s32 index;
+    s32 temp;
+    s32 base;
+    s32 pos;
+    s32 diff;
+
+    index = D_80164B7C;
+    temp = (index << 3) - index;
+    base = D_80164AE0;
+    pos = temp << 1;
+    diff = pos - base;
+
+    if (diff >= 0x4B) {
+        D_80164AEC = pos - 0x46;
+        D_80164B88 = 4;
+    }
+    if (diff < 0) {
+        D_80164AEC = pos;
+        D_80164B88 = 4;
+    }
+}
