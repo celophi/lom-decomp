@@ -5949,43 +5949,33 @@ void* menu_draw_content_cursor(void* arg0, s32* arg1, s32 arg2)
             else
             {
                 item_sub = menu_read_u8(content_base[g_menu_hit_item_idx].pad);
+                switch (item_sub)
                 {
-                    static void * const jtbl_8014049C[16] = {
-                        &&jt1_f0, &&jt1_f1, &&jt1_f2, &&jt1_f3,
-                        &&jt1_f4, &&jt1_f5, &&jt1_f6, &&jt1_f7,
-                        &&jt1_f8, &&jt1_f9, &&jt1_fa, &&jt1_fb,
-                        &&jt1_fb, &&jt1_fb, &&jt1_fb, 0
-                    };
-                    s32 jt1_idx = item_sub - 0xF0;
-                    if ((u32)jt1_idx >= 15U)
-                        goto jt1_end;
-                    goto *jtbl_8014049C[jt1_idx];
-
-jt1_f0:
+                case 0xF0:
                     MENU_EMIT_STATE(0x48, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_f1:
+                    break;
+                case 0xF1:
                     MENU_EMIT_STATE(0x14, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_f2:
+                    break;
+                case 0xF2:
                     MENU_EMIT_STATE(0x34, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_f3:
+                    break;
+                case 0xF3:
                     MENU_EMIT_STATE(0x24, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_f4:
+                    break;
+                case 0xF4:
                     MENU_EMIT_STATE(0x40, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_f5:
+                    break;
+                case 0xF5:
                     MENU_EMIT_STATE(0x58, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_f6:
+                    break;
+                case 0xF6:
                     MENU_EMIT_STATE(0x50, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_f7:
+                    break;
+                case 0xF7:
                     MENU_EMIT_STATE(0x60, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_f8:
+                    break;
+                case 0xF8:
                     if (D_80168C6C != 0xFF)
                     {
                         if (D_80168C6C & 0x80)
@@ -5997,40 +5987,29 @@ jt1_f8:
                             MENU_EMIT_STATE(0x1C, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                         }
                     }
-                    goto jt1_end;
-jt1_f9:
+                    break;
+                case 0xF9:
                     MENU_EMIT_STATE(0x1C, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_fa:
+                    break;
+                case 0xFA:
                     MENU_EMIT_STATE(0x3C, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-                    goto jt1_end;
-jt1_fb:
+                    break;
+                case 0xFB:
+                case 0xFC:
+                case 0xFD:
+                case 0xFE:
                     MENU_EMIT_STATE(0x2C, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
-jt1_end:
-                    ;
+
                 }
             }
         }
         else if (upper == 0x5000)
         {
             item_sub = menu_read_u8(content_base[g_menu_hit_item_idx].pad);
+            switch (item_sub)
             {
-                static void * const jtbl_801404DC[25] = {
-                    &&jt2_c1, &&jt2_c1,
-                    &&jt2_c3, &&jt2_c3, &&jt2_c3, &&jt2_c3,
-                    &&jt2_c7, &&jt2_c7, &&jt2_c7, &&jt2_c7,
-                    &&jt2_c11, &&jt2_c11, &&jt2_c11,
-                    &&jt2_c14,
-                    &&jt2_c15,
-                    &&jt2_c16, &&jt2_c16, &&jt2_c16,
-                    &&jt2_c19, &&jt2_c19, &&jt2_c19,
-                    &&jt2_c22, &&jt2_c23, &&jt2_c24, &&jt2_c25
-                };
-                s32 jt2_idx = item_sub - 1;
-                if ((u32)jt2_idx >= 25U)
-                    goto jt2_end;
-                goto *jtbl_801404DC[jt2_idx];
-jt2_c1:
+            case 1:
+            case 2:
             {
                 u8** pp = (u8**)&g_menu_state_ptr;
                 u8* pb = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
@@ -6038,9 +6017,12 @@ jt2_c1:
                 u8* b = menu_load_ptr(pp);
                 b += *(s32*)(b + 0x3C);
                 MENU_EMIT_EXPR(b + *(u16*)(b + (s32)idx * 2));
-                goto jt2_end;
+                break;
             }
-jt2_c3:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
             {
                 u8* pad_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
                 u8* flag_addr = pad_base + item_sub;
@@ -6065,9 +6047,12 @@ jt2_c3:
                                                         ((slot654 >> 0xA) & 0x3F) * 0x30));
                     }
                 }
-                goto jt2_end;
+                break;
             }
-jt2_c7:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
                 if (g_menu_char_slot < 2)
                 {
                     u8** checkpp = (u8**)&g_pad_ctx;
@@ -6147,8 +6132,10 @@ jt2_c7:
                         MENU_EMIT_EXPR(sp20);
                     }
                 }
-                goto jt2_end;
-jt2_c11:
+                break;
+            case 11:
+            case 12:
+            case 13:
             {
                 u8* char_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
                 if (*(char_base + 0x640) != 0)
@@ -6156,9 +6143,9 @@ jt2_c11:
                     var_v0 = (s32) * (char_base + item_sub + 0x65D) * 2;
                     MENU_EMIT_STATE(0x60, var_v0);
                 }
-                goto jt2_end;
+                break;
             }
-jt2_c14:
+            case 14:
             {
                 u8** pp = (u8**)&g_menu_state_ptr;
                 u8* pb = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
@@ -6166,37 +6153,41 @@ jt2_c14:
                 u8* b = menu_load_ptr(pp);
                 b += *(s32*)(b + 0x48);
                 MENU_EMIT_EXPR(b + *(u16*)(b + (s32)idx * 2));
-                goto jt2_end;
+                break;
             }
-jt2_c15:
+            case 15:
                 if ((u8*)g_menu_item_ptr != NULL)
                 {
                     MENU_EMIT_EXPR((u8*)g_menu_item_ptr);
                 }
-                goto jt2_end;
-jt2_c16:
+                break;
+            case 16:
+            case 17:
+            case 18:
                 if (g_menu_item_ptr != 0)
                 {
                     var_v0 = (s32) * ((u8*)g_menu_item_ptr + item_sub + 0x10) * 2;
                     MENU_EMIT_STATE(0x58, var_v0);
                 }
-                goto jt2_end;
-jt2_c19:
+                break;
+            case 19:
+            case 20:
+            case 21:
                 if (g_menu_item_ptr != 0)
                 {
                     var_v0 = (s32) * ((u8*)g_menu_item_ptr + item_sub + 0x15) * 2;
                     MENU_EMIT_STATE(0x60, var_v0);
                 }
-                goto jt2_end;
-jt2_c22:
+                break;
+            case 22:
                 if (g_menu_item_ptr != 0)
                 {
                     u8 cat = *((u8*)g_menu_category2_item + 0x24);
                     u8 entry = *((u8*)g_menu_category2_item + 0x25);
                     MENU_EMIT_EXPR((u8*)MENU_STATE_BASE(0x40) + *(u16*)((u8*)MENU_STATE_BASE(0x40) + menu_zext_u8(cat) * 0x1C + menu_zext_u8(entry) * 2));
                 }
-                goto jt2_end;
-jt2_c23:
+                break;
+            case 23:
                 if (g_menu_item_ptr != 0)
                 {
                     u8** pp = (u8**)&g_menu_state_ptr;
@@ -6207,8 +6198,8 @@ jt2_c23:
                     b += *(s32*)(b + 0x24);
                     MENU_EMIT_EXPR(b + *(u16*)(b + (s32)idx * 2));
                 }
-                goto jt2_end;
-jt2_c24:
+                break;
+            case 24:
                 if (g_menu_item_ptr != 0)
                 {
                     u8** pp = (u8**)&g_menu_state_ptr;
@@ -6219,8 +6210,8 @@ jt2_c24:
                     b += *(s32*)(b + 0x34);
                     MENU_EMIT_EXPR(b + *(u16*)(b + (s32)idx * 2));
                 }
-                goto jt2_end;
-jt2_c25:
+                break;
+            case 25:
             {
                 u8** pp = (u8**)&g_menu_state_ptr;
                 u8* pb = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
@@ -6228,10 +6219,9 @@ jt2_c25:
                 u8* b = menu_load_ptr(pp);
                 b += *(s32*)(b + 0x78);
                 MENU_EMIT_EXPR(b + *(u16*)(b + (s32)idx * 2));
-                goto jt2_end;
+                break;
             }
-jt2_end:
-                ;
+
             }
         }
     }
