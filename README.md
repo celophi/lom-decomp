@@ -39,15 +39,15 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | ADDHERO.BIN | 💤 | Not started |
 | CARDA.BIN | 💤 | Not started |
 | CHECKPS.BIN | 🔒 | Fully linked |
-| CLOAD.BIN | 🌱 | In progress |
+| CLOAD.BIN | 🪲 | Non-matching |
 | FIELD.BIN | 🌱 | In progress |
 | GNAME.BIN | 🔒 | Fully linked |
-| GOLEM.BIN | 💤 | Not started |
+| GOLEM.BIN | 🌱 | In progress |
 | GOSUB.BIN | ☑️ | Matching |
 | GOVER.BIN | 🔒 | Fully linked |
 | MENU.BIN | 🪲 | Non-matching |
 | MOVIE.BIN | 🔒 | Fully linked |
-| NIKI.BIN | 💤 | Not started |
+| NIKI.BIN | 🌱 | In progress |
 | SHOP.BIN | 💤 | Not started |
 | TITLE.BIN | 🔒 | Fully linked |
 | WMAP.BIN | 💤 | Not started |
