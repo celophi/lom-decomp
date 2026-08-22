@@ -28,6 +28,16 @@ extern s32 D_8014C280;
 extern s32 D_8014C284;
 extern s32 D_8014C288;
 
+typedef struct {
+    s16 x;
+    s16 y;
+    s16 w;
+    s16 h;
+} RECT;
+
+extern u8 D_8014287C[];
+void func_80140438(RECT *, u8 *);
+
 void func_80140024(u8 *arg0, s32 arg1)
 {
     u8 *draw_buffer;
@@ -153,4 +163,15 @@ u8 *func_80140280(u8 *arg0, s32 arg1)
     D_8014C278 = 0;
     D_8014C274 = 0;
     return arg0;
+}
+
+void func_801403F8(void)
+{
+    RECT rect;
+
+    rect.x = 0x140;
+    rect.y = 0;
+    rect.w = 0;
+    rect.h = 0x1F2;
+    func_80140438(&rect, D_8014287C);
 }
