@@ -54,6 +54,11 @@ s32 func_80019A34();
 extern u8 D_8014287C[];
 void func_80140438(RECT *, u8 *);
 
+extern s32 D_800F22AC;
+
+void func_801405A0(void);
+void func_80141228(void);
+
 void func_80140024(u8 *arg0, s32 arg1)
 {
     u8 *draw_buffer;
@@ -221,4 +226,19 @@ void func_80140438(GolemImageClutPos* pos, u8* archive)
     rect.w = dims[0];
     rect.h = dims[1];
     func_80019A34(&rect, off8 - (-(s32)archive) + 0x14);
+}
+
+
+void func_801404F0(void)
+{
+    func_80141228();
+    D_800F22AC += 1;
+    func_801405A0();
+    if (D_8014C274 != 0)
+    {
+        D_8014C278 += (D_8014C280 - D_8014C278) / D_8014C274;
+        D_8014C274 -= 1;
+        return;
+    }
+    D_8014C278 = D_8014C280;
 }
