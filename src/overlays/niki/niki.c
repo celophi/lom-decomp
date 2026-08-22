@@ -46,3 +46,21 @@ void func_8014011C(s32 arg0, s32 arg1)
     func_8014027C();
     D_80164AE4 = arg0;
 }
+
+s32 func_801401F0(s32 arg0)
+{
+    if (D_80164B74 != 0)
+    {
+        func_80145C0C();
+        field_text_reset_windows();
+        func_80019788(0);
+        return 1;
+    }
+    field_text_reset_scratch();
+    func_80146EB8();
+    func_8014068C(arg0);
+    func_80146EF4();
+    func_80063194();
+    D_80164B8C ^= 1;
+    return 0;
+}
