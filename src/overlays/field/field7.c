@@ -253,29 +253,15 @@ extern s32 D_80105770;
 extern u8* D_801058D4;
 extern s32 g_field_track_index;
 
+#include "psyq/inline_c.h"
 #include "psyq/gte_dmpsx_compat.h"
 
-/*
- * Psy-Q inline GTE (COP2) macros. The original build used the vendor
- * inline_c.h forms, which are __asm__ volatile blocks rather than calls, so the
- * COP2 opcodes appear inline in the ROM. The two leading nops in GTE_RTV0 and
- * GTE_SQR0 are part of the vendor macro (GTE load latency), not padding.
- * GTE_RTV0/GTE_SQR0 delegate to gte_fixes.h's corrected gte_rtv0()/gte_sqr0()
- * rather than hardcoding the opcode word here, so this file doesn't fall out
- * of sync with field8/11/12/13.c's copies of the same fix.
- */
-#define GTE_SET_ROT_MATRIX(m)                                                                      \
-    __asm__ volatile("lw $12, 0(%0);lw $13, 4(%0);ctc2 $12, $0;ctc2 $13, $1;lw $12, 8(%0);"        \
-                     "lw $13, 12(%0);lw $14, 16(%0);ctc2 $12, $2;ctc2 $13, $3;ctc2 $14, $4"        \
-                     :                                                                             \
-                     : "r"(m)                                                                      \
-                     : "$12", "$13", "$14")
-
-#define GTE_LDV0(v) __asm__ volatile("lwc2 $0, 0(%0);lwc2 $1, 4(%0)" : : "r"(v))
+#define GTE_SET_ROT_MATRIX(m) gte_SetRotMatrix(m)
+#define GTE_LDV0(v) gte_ldv0(v)
 #define GTE_RTV0() gte_rtv0()
-#define GTE_LDLVL(v) __asm__ volatile("lwc2 $9, 0(%0);lwc2 $10, 4(%0);lwc2 $11, 8(%0)" : : "r"(v))
+#define GTE_LDLVL(v) gte_ldlvl(v)
 #define GTE_SQR0() gte_sqr0()
-#define GTE_STLVNL(v) __asm__ volatile("swc2 $25, 0(%0);swc2 $26, 4(%0);swc2 $27, 8(%0)" : : "r"(v))
+#define GTE_STLVNL(v) gte_stlvnl(v)
 
 /**
  * @brief Spawn one field effect record for a part of an actor.
@@ -294,10 +280,13 @@ extern s32 g_field_track_index;
  * @return Index of the slot that was filled, or -1 if no slot was free or the
  *         placement opcode rejected the spawn.
  *
- * @note WIP - 83.88% at time of writing. Structure, case order, shared-label
- *       placement and struct access widths are settled; the residue is two
- *       cross-jumped scan-loop tails plus a saved-register shortfall. Full
- *       handoff in working/func_8006D79C/STATUS.md.
+ * @note WIP - 95.37% (2939/3399 exact, gcc272_cdk). Structure, case order,
+ *       shared-label placement and struct access widths are settled; the residue
+ *       is register-coloring (argdiff rows) plus a small +17-insn/saved-register
+ *       shortfall and one 5-insn run near tgt 0x24C8. Diff needs the TOOL-11
+ *       target (GTE ops + jtbl_8004FEF4/FFF4): working/func_8006D79C/target_test.s
+ *       with extra_as_flags "-I /lom/include". Full handoff in
+ *       working/func_8006D79C/STATUS.md.
  */
 s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
 {
@@ -313,14 +302,25 @@ s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
     Struct_D800FDF58* scanA;
     Struct_D800FDF58* scanB;
     Struct_D80105AE0* slot;
+    Struct_D80105AE0* slots_base_init;
     Struct_D80105AE0* slot27;
     Struct_D80105AE0* slot28;
+    Struct_D80105AE0* slot_place_check;
+    Struct_D80105AE0* slot_place_attach;
+    Struct_D80105AE0* slot_place_base;
+    Struct_D80105AE0* slot_owner_late;
+    Struct_D80105AE0* slot_owner_valid;
+    Struct_D800FDF58* src2_owner;
+    Struct_D800FDF58* src3_track;
+    Struct_D80105AE0* slot2_owner;
+    Struct_D80105AE0* slot3_track;
     FieldSVector* scanA_rot;
     FieldSVector* scanB_rot;
     FieldActorPartDef* part;
-    s32 base_x;
+    volatile s32 base_x;
     s32 speed;
     s32 count;
+    s32 place_y;
     s32 i;
     s32 n;
     s32 j;
@@ -336,11 +336,14 @@ s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
     s32 pos37;
     u8 track_obj;
     u8* res;
+    u8* drop_count_ptr;
 
     i = 0;
-    scan = D_800FF658;
+    val = 0xFF;
+    src = D_800FF658;
+    scan = src;
 find_slot:
-    if (scan->unk25 != 0xFF)
+    if (scan->unk25 != val)
     {
         i++;
         scan++;
@@ -355,11 +358,11 @@ find_slot:
         return -1;
     }
 
+    rec = &src[i];
     part = &actor->unk0[part_index];
-    rec = &D_800FF658[i];
     if ((s32)part->unk24 < 0)
     {
-        rec->unk3D = 0xFF;
+        rec->unk3D = val;
     }
 
     if ((u32)(((part->unk28 >> 18) & 0x3F) - 0x2A) < 8U &&
@@ -380,7 +383,7 @@ find_slot:
 
     if (part->unk14 & 0xF0)
     {
-        rec->unk1B = ((u16*)&part->unk24)[1] & 0xF;
+        rec->unk1B = (*(volatile u16*)((u8*)part + 0x26)) & 0xF;
     }
     else
     {
@@ -393,47 +396,51 @@ find_slot:
     rec->unk2E = part->unk18;
     rec->unk29 = g_field_track_index;
     rec->unk1C = ((rec->unk1C & 0x9FFFFFFF) | ((*(u8*)&part->unk14 & 3) << 29)) & ~0x1000;
-    rec->unk1C =
-        (((rec->unk1C & 0xF7FFFFFF) | (((part->unk34 >> 18) & 1) << 27)) & ~0x6000) & 0xFFFBFFFF & 0xFF87FFFF;
+    rec->unk1C = (rec->unk1C & 0xF7FFFFFF) | (((part->unk34 >> 18) & 1) << 27);
+    rec->unk1C &= ~0x6000;
+    rec->unk1C &= 0xFFFBFFFF;
+    rec->unk1C &= 0xFF87FFFF;
     if (part->unk24 & 0x800000)
     {
-        rec->unk1C =
-            (rec->unk1C & 0xFF7FFFFF) |
-            ((field_evaluate_parameter_track_at_time(actor, (part->unk24 >> 25) & 0xF, 0) != 0) << 23);
+        s32 eval = field_evaluate_parameter_track_at_time(actor, (part->unk24 >> 25) & 0xF, 0) != 0;
+        rec->unk1C = (rec->unk1C & 0xFF7FFFFF) | (eval << 23);
+        goto bit23_done;
+    scan_slot_found:
+        rec->unk20 = n;
+        goto scan_slots_done;
     }
     else
     {
         rec->unk1C = (rec->unk1C & 0xFF7FFFFF) | (((part->unk4 >> 1) & 1) << 23);
     }
+bit23_done:
     rec->unk1C = rec->unk1C & 0xFFFCFFFF;
     if (rec->unk1B == 8)
     {
+        s32 scan_ff;
         n = 0;
-        count = 0;
-        scan = D_800FF658;
+        count = n;
+        scan_ff = 0xFF;
         j = actor->unk3B[g_field_track_index][part_index];
+        scan = D_800FF658;
     scan_slots:
-        if (scan->unk25 != 0xFF && scan->unk23 == part->unk46 && scan->unk22 == actor->unk233)
+        if (scan->unk25 != scan_ff && scan->unk23 == part->unk46 && scan->unk22 == actor->unk233)
         {
             count = 1;
-            if (j != 0)
+            if (j == 0)
             {
-                rec->unk20 = n;
-                j--;
-                goto next_slot;
+                goto scan_slot_found;
             }
             rec->unk20 = n;
+            j--;
         }
-        else
+        n++;
+        scan++;
+        if (n < 0x100)
         {
-        next_slot:
-            n++;
-            scan++;
-            if (n < 0x100)
-            {
-                goto scan_slots;
-            }
+            goto scan_slots;
         }
+    scan_slots_done:
         if (count == 0)
         {
             rec->unk25 = 0xFF;
@@ -455,9 +462,10 @@ find_slot:
             n = 0;
             if (val != 0)
             {
+                slots_base_init = D_80105AE0;
                 do
                 {
-                    slot = &D_80105AE0[actor->owner_object_index];
+                    slot = &slots_base_init[actor->owner_object_index];
                     if ((&slot->unk60)[n] == 0)
                     {
                         n++;
@@ -486,7 +494,8 @@ find_slot:
         rec->unk21 = part->unk1A;
     }
 
-    switch ((part->unk28 >> 26) & 3)
+    val = (part->unk28 >> 26) & 3;
+    switch (val)
     {
     case 0:
         rec->unk32 = part->unk21;
@@ -498,7 +507,8 @@ find_slot:
         rec->unk32 = field_evaluate_parameter_track_at_time(actor, part->unk21 & 0xF, 0);
         break;
     }
-    switch ((part->unk28 >> 28) & 3)
+    val = (part->unk28 >> 28) & 3;
+    switch (val)
     {
     case 0:
         rec->unk33 = part->unk22;
@@ -530,7 +540,7 @@ find_slot:
         }
         else
         {
-            rec->unk1A = rec->unk19 = rec->unk18 =
+            rec->unk18 = rec->unk19 = rec->unk1A =
                 field_evaluate_parameter_track(actor, (part->unk4 >> 16) & 0xF);
         }
     }
@@ -585,22 +595,22 @@ find_slot:
     }
     if (rec->unk25 == 2)
     {
-        slot = &D_80105AE0[actor->owner_object_index];
-        if (*(u8*)&slot->unk178 & 1)
+        slot2_owner = &D_80105AE0[actor->owner_object_index];
+        if (*(u8*)&slot2_owner->unk178 & 1)
         {
-            if (((u8*)&slot->unk178)[2] != actor->unk233)
+            if (((u8*)&slot2_owner->unk178)[2] != actor->unk233)
             {
                 goto kill_rec;
             }
         }
-        src = &D_800FDF58[actor->owner_object_index];
+        src2_owner = &D_800FDF58[*(volatile u8*)&actor->owner_object_index];
         if (!((part->unk4 >> 11) & 1) && !((part->unk28 >> 25) & 1) && (part->unk2C >> 5) == 0 &&
             (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->unk10 == 0x80)
         {
             rec->unk1C |= 0x10008000;
-            rec->unk18 = D_800FE3A0[src->unk3A].unkE;
-            rec->unk19 = D_800FE3A0[src->unk3A].unkF;
-            rec->unk1A = D_800FE3A0[src->unk3A].unk10;
+            rec->unk18 = D_800FE3A0[src2_owner->unk3A].unkE;
+            rec->unk19 = D_800FE3A0[src2_owner->unk3A].unkF;
+            rec->unk1A = D_800FE3A0[src2_owner->unk3A].unk10;
         }
         rec->unk3A = D_800FDF58[actor->owner_object_index].unk3A;
         rec->unk3B = D_800FDF58[actor->owner_object_index].unk3B;
@@ -610,7 +620,12 @@ find_slot:
                      ((((u16*)&D_800FDF58[actor->owner_object_index].unk1C)[1] & 3) << 16);
         rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FDF58[actor->owner_object_index].unk1C & 0x780000);
         src = &D_800FDF58[actor->owner_object_index];
-        goto attach_res;
+        res = g_field_resource_entries[src->unk3B].start;
+        if (res != 0)
+        {
+            func_8006C3FC(rec, res);
+        }
+        goto after_source;
     }
     if (rec->unk25 == 3)
     {
@@ -619,7 +634,8 @@ find_slot:
         {
             rec->unk25 = track_obj;
             actor->unk3B[g_field_track_index][part_index]--;
-            goto drop_slot;
+            actor->unkCC[g_field_track_index][part_index]--;
+            return -1;
         }
         if (!((D_80105AE0[actor->unk229[g_field_track_index]].unk178 >> 6) & 1))
         {
@@ -648,24 +664,24 @@ find_slot:
                 }
             }
         }
-        slot = &D_80105AE0[actor->unk229[g_field_track_index]];
-        if (*(u8*)&slot->unk178 & 1)
+        slot3_track = &D_80105AE0[actor->unk229[g_field_track_index]];
+        if (*(u8*)&slot3_track->unk178 & 1)
         {
-            if (((u8*)&slot->unk178)[2] != actor->unk233)
+            if (((u8*)&slot3_track->unk178)[2] != actor->unk233)
             {
             kill_rec:
                 rec->unk25 = 0xFF;
                 goto after_source;
             }
         }
-        src = &D_800FDF58[actor->unk229[g_field_track_index]];
+        src3_track = &D_800FDF58[actor->unk229[g_field_track_index]];
         if (!((part->unk4 >> 11) & 1) && !((part->unk28 >> 25) & 1) && (part->unk2C >> 5) == 0 &&
             (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->unk10 == 0x80)
         {
             rec->unk1C |= 0x10008000;
-            rec->unk18 = D_800FE3A0[src->unk3A].unkE;
-            rec->unk19 = D_800FE3A0[src->unk3A].unkF;
-            rec->unk1A = D_800FE3A0[src->unk3A].unk10;
+            rec->unk18 = D_800FE3A0[src3_track->unk3A].unkE;
+            rec->unk19 = D_800FE3A0[src3_track->unk3A].unkF;
+            rec->unk1A = D_800FE3A0[src3_track->unk3A].unk10;
         }
         rec->unk3A = D_800FDF58[actor->unk229[g_field_track_index]].unk3A;
         rec->unk3B = D_800FDF58[actor->unk229[g_field_track_index]].unk3B;
@@ -676,7 +692,6 @@ find_slot:
         rec->unk1C =
             (rec->unk1C & 0xFF87FFFF) | (D_800FDF58[actor->unk229[g_field_track_index]].unk1C & 0x780000);
         src = &D_800FDF58[actor->unk229[g_field_track_index]];
-    attach_res:
         res = g_field_resource_entries[src->unk3B].start;
         if (res != 0)
         {
@@ -708,7 +723,7 @@ after_source:
         rec->unk8 = 0;
     }
 
-    kind = (part->unk28 >> 18) & 0x3F;
+    do { do { do { do { do { do { do { do { do { do { kind = (part->unk28 >> 18) & 0x3F; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
     switch (kind)
     {
     case 0x0:
@@ -738,22 +753,23 @@ after_source:
             {
                 rec->unk25 = track_obj;
                 actor->unk3B[g_field_track_index][part_index]--;
-                goto drop_slot;
+                actor->unkCC[g_field_track_index][part_index]--;
+            return -1;
             }
             n = actor->unk229[g_field_track_index];
             kind -= 0xA;
         }
         else
         {
-            slot = &D_80105AE0[actor->owner_object_index];
-            if ((*(u8*)&slot->unk178 & 1) && actor->unk233 >= 0x40U &&
-                !((slot->unk178 >> 5) & 1) && ((u8*)&slot->unk178)[2] != actor->unk233)
+            slot_place_check = &D_80105AE0[actor->owner_object_index];
+            if ((*(u8*)&slot_place_check->unk178 & 1) && actor->unk233 >= 0x40U &&
+                !(((u32)slot_place_check->unk178 >> 5) & 1) && ((u8*)&slot_place_check->unk178)[2] != actor->unk233)
             {
                 goto fail_slot;
             }
             n = actor->owner_object_index;
         }
-        src = &D_800FDF58[n];
+        do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { src = &D_800FDF58[n]; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
         slot = &D_80105AE0[n];
         if ((part->unk28 >> 9) & 1)
         {
@@ -764,7 +780,7 @@ after_source:
             }
             part->unk2E = val * 2;
         }
-        j = 0;
+        nA = 0;
         if ((part->unk28 >> 1) & 1)
         {
             val = slot->unk146 - slot->unk142;
@@ -774,59 +790,59 @@ after_source:
             }
             part->unk33 = val * 2;
         }
-        count = 0;
+        count = nA;
         switch (kind)
         {
         case 1:
             count = (slot->unk144 + slot->unk140) >> 1;
-            j = (slot->unk146 + slot->unk142) >> 1;
-        default:
-        shift_count:
-            n = count << 8;
+            nA = (slot->unk146 + slot->unk142) >> 1;
             break;
         case 2:
-            j = 0;
-        mid_x:
             count = (slot->unk144 + slot->unk140) >> 1;
-            goto shift_count;
+            nA = 0;
+            break;
         case 3:
-            j = slot->unk142;
-            goto mid_x;
+            count = (slot->unk144 + slot->unk140) >> 1;
+            nA = slot->unk142;
+            break;
         case 4:
             count = slot->unk140;
-            val = slot->unk146 + slot->unk142;
-        mid_y:
-            j = val >> 1;
-            goto shift_count;
+            nA = (slot->unk146 + slot->unk142) >> 1;
+            break;
         case 5:
             count = slot->unk144;
-            val = slot->unk146 + slot->unk142;
-            goto mid_y;
+            nA = (slot->unk146 + slot->unk142) >> 1;
+            break;
         case 6:
-            j = slot->unk142;
-            n = slot->unk140 << 8;
+            count = slot->unk140;
+            nA = slot->unk142;
             break;
         case 7:
-            j = slot->unk142;
-            n = slot->unk144 << 8;
+            count = slot->unk144;
+            nA = slot->unk142;
             break;
         case 8:
             count = slot->unk140;
-        bot_y:
-            j = slot->unk146;
-            goto shift_count;
+            nA = slot->unk146;
+            break;
         case 9:
             count = slot->unk144;
-            goto bot_y;
+            nA = slot->unk146;
+            break;
+        default:
+            break;
         }
+        n = count << 8;
+        nA <<= 8;
         rec->unk0 += src->unk0 + n;
-        rec->unk4 += src->unk4 + (j << 8);
+        rec->unk4 += src->unk4 + nA;
         rec->unk8 += src->unk8;
         if (rec->unk25 == 0xFD)
         {
+            slot_place_base = D_80105AE0;
             rec->unk3A = src->unk3A;
-            slot = &D_80105AE0[src->unk3A];
-            if (!(*(u8*)&slot->unk178 & 1) || ((u8*)&slot->unk178)[2] == actor->unk233)
+            slot_place_attach = &slot_place_base[src->unk3A];
+            if (!(*(u8*)&slot_place_attach->unk178 & 1) || ((u8*)&slot_place_attach->unk178)[2] == actor->unk233)
             {
                 rec->unkC = src->unkC;
                 rec->unk3B = src->unk3B;
@@ -858,7 +874,10 @@ after_source:
                 {
                     rec->unk21 |= src->unk21 & 0x80;
                     res = g_field_resource_entries[src->unk3B].start;
-                    goto maybe_attach;
+                    if (res != 0)
+                    {
+                        func_8006C3FC(rec, res);
+                    }
                 }
             }
             else
@@ -883,78 +902,78 @@ after_source:
     case 0x2F:
     case 0x30:
     case 0x31:
-        if (kind < 0x2A)
+        if (kind >= 0x2A)
         {
-            subA = kind - 0x14;
+            goto scanA_high;
         }
-        else
-        {
-            subA = kind - 0x22;
-        }
+        subA = kind - 0x14;
+        goto scanA_init;
+
+    scanA_copy:
+        rec->unk21 = D_800FF658[nA].unk21;
+        rec->unk27 = D_800FF658[nA].unk27;
+        rec->unk34 = D_800FF658[nA].unk34;
+        rec->unk35 = D_800FF658[nA].unk35;
+        rec->unk29 = D_800FF658[nA].unk29;
+        rec->unk36 = D_800FF658[nA].unk36;
+        rec->unk37 = D_800FF658[nA].unk37;
+        rec->unk38 = D_800FF658[nA].unk38;
+        goto scanA_done;
+
+    scanA_high:
+        subA = kind - 0x22;
+    scanA_init:
         nA = start;
         if (nA < 0x100)
         {
-            scanA = &D_800FF658[nA];
-            scanA_rot = (FieldSVector*)&D_800FF658[nA].unk10;
             do
             {
-                if (scanA->unk25 != 0xFF && scanA->unk23 == subA && scanA->unk22 == actor->unk233 &&
-                    ((actor->unk0[subA].unk14 & 4) || scanA->unk29 == g_field_track_index))
+                if (D_800FF658[nA].unk25 != 0xFF && D_800FF658[nA].unk23 == subA && D_800FF658[nA].unk22 == actor->unk233 &&
+                    ((actor->unk0[subA].unk14 & 4) || D_800FF658[nA].unk29 == g_field_track_index))
                 {
-                    rec->unk0 += scanA->unk0;
-                    rec->unk4 += scanA->unk4;
-                    rec->unk8 += scanA->unk8;
-                    rec->unk1C = (rec->unk1C & ~0x1000) | (scanA->unk1C & 0x1000);
+                    rec->unk0 += D_800FF658[nA].unk0;
+                    rec->unk4 += D_800FF658[nA].unk4;
+                    rec->unk8 += D_800FF658[nA].unk8;
+                    rec->unk1C = (rec->unk1C & ~0x1000) | (D_800FF658[nA].unk1C & 0x1000);
                     if (part->unk1C & 0x08000000)
                     {
-                        rec->unk10 = scanA_rot->unk0;
-                        rec->unk12 = scanA_rot->unk2;
-                        rec->unk14 = scanA_rot->unk4;
+                        rec->unk10 = ((FieldSVector*)&D_800FF658[nA].unk10)->unk0;
+                        rec->unk12 = ((FieldSVector*)&D_800FF658[nA].unk10)->unk2;
+                        rec->unk14 = ((FieldSVector*)&D_800FF658[nA].unk10)->unk4;
                     }
                     rec->unk30 = nA;
                     if (rec->unk25 == 0xFD)
                     {
-                        rec->unk3B = scanA->unk3B;
-                        rec->unkC = scanA->unkC;
-                        rec->unk25 = scanA->unk25;
-                        rec->unk3A = scanA->unk3A;
-                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (scanA->unk1C & 0x780000);
-                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&scanA->unk1C)[1] & 3) << 16);
-                        if (rec->unk21 != 0xFF)
+                        rec->unk3B = D_800FF658[nA].unk3B;
+                        rec->unkC = D_800FF658[nA].unkC;
+                        rec->unk25 = D_800FF658[nA].unk25;
+                        rec->unk3A = D_800FF658[nA].unk3A;
+                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FF658[nA].unk1C & 0x780000);
+                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&D_800FF658[nA].unk1C)[1] & 3) << 16);
+                        if (rec->unk21 == 0xFF)
                         {
-                            rec->unk3A = scanA->unk3A;
-                            rec->unk25 = scanA->unk25;
-                            rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (scanA->unk1C & 0x780000);
-                            rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&scanA->unk1C)[1] & 3) << 16);
-                            rec->unk27 = scanA->unk27;
-                            rec->unk21 = scanA->unk21;
-                            res = g_field_resource_entries
-                                      [D_800FDF58[g_field_actor_slots[rec->unk22].owner_object_index].unk3B]
-                                          .start;
-                            if (res != 0)
-                            {
-                                func_8006C460(rec, res);
-                            }
+                            goto scanA_copy;
                         }
-                        else
+                        rec->unk3A = D_800FF658[nA].unk3A;
+                        rec->unk25 = D_800FF658[nA].unk25;
+                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FF658[nA].unk1C & 0x780000);
+                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&D_800FF658[nA].unk1C)[1] & 3) << 16);
+                        rec->unk27 = D_800FF658[nA].unk27;
+                        rec->unk21 = D_800FF658[nA].unk21;
+                        res = g_field_resource_entries
+                                  [D_800FDF58[g_field_actor_slots[rec->unk22].owner_object_index].unk3B]
+                                      .start;
+                        if (res != 0)
                         {
-                            rec->unk21 = scanA->unk21;
-                            rec->unk27 = scanA->unk27;
-                            rec->unk34 = scanA->unk34;
-                            rec->unk35 = scanA->unk35;
-                            rec->unk29 = scanA->unk29;
-                            rec->unk36 = scanA->unk36;
-                            rec->unk37 = scanA->unk37;
-                            rec->unk38 = scanA->unk38;
+                            func_8006C460(rec, res);
                         }
                     }
                     break;
                 }
-                scanA_rot = (FieldSVector*)((u8*)scanA_rot + 0x54);
                 nA++;
-                scanA++;
             } while (nA < 0x100);
         }
+    scanA_done:
         if (nA == 0x100)
         {
             goto fail_slot;
@@ -969,18 +988,22 @@ after_source:
         goto check_dead;
 
     case 0x1C:
-        rec->unk4 -= D_800F22A4;
         rec->unk0 -= D_800F22A0;
-        goto sub_z;
+        rec->unk4 -= D_800F22A4;
+        rec->unk8 -= D_800F22A8;
+        rec->unk1C |= 0x1000;
+        break;
 
     case 0x1D:
-        val = rec->unk4 - 0x7000;
-        goto set_y;
+        rec->unk4 -= 0x7000;
+        rec->unk8 -= D_800F22A8;
+        rec->unk0 -= D_800F22A0;
+        rec->unk1C |= 0x1000;
+        rec->unk4 -= D_800F22A4;
+        break;
 
     case 0x1E:
-        val = rec->unk4 + 0x7000;
-    set_y:
-        rec->unk4 = val;
+        rec->unk4 += 0x7000;
         rec->unk8 -= D_800F22A8;
         rec->unk0 -= D_800F22A0;
         rec->unk1C |= 0x1000;
@@ -988,42 +1011,51 @@ after_source:
         break;
 
     case 0x1F:
-        j = 0xFFFF6000;
-        goto add_x;
-
-    case 0x20:
-        j = 0xA000;
-    add_x:
-        rec->unk0 = rec->unk0 + j;
+        rec->unk0 += 0xFFFF6000;
         rec->unk0 -= D_800F22A0;
         rec->unk4 -= D_800F22A4;
-    sub_z:
+        rec->unk8 -= D_800F22A8;
+        rec->unk1C |= 0x1000;
+        break;
+
+    case 0x20:
+        rec->unk0 += 0xA000;
+        rec->unk0 -= D_800F22A0;
+        rec->unk4 -= D_800F22A4;
         rec->unk8 -= D_800F22A8;
         rec->unk1C |= 0x1000;
         break;
 
     case 0x21:
-        val = rec->unk0 + 0xFFFF6000;
-        n = rec->unk4 - 0x7000;
-        goto set_xy;
+        rec->unk0 += 0xFFFF6000;
+        rec->unk4 -= 0x7000;
+        rec->unk1C |= 0x1000;
+        rec->unk8 -= D_800F22A8;
+        rec->unk0 -= D_800F22A0;
+        rec->unk4 -= D_800F22A4;
+        break;
 
     case 0x22:
-        val = rec->unk0 + 0xA000;
-        n = rec->unk4 - 0x7000;
-        goto set_xy;
+        rec->unk0 += 0xA000;
+        rec->unk4 -= 0x7000;
+        rec->unk1C |= 0x1000;
+        rec->unk8 -= D_800F22A8;
+        rec->unk0 -= D_800F22A0;
+        rec->unk4 -= D_800F22A4;
+        break;
 
     case 0x23:
-        j = 0xFFFF6000;
-        goto add_xy;
+        rec->unk0 += 0xFFFF6000;
+        rec->unk4 += 0x7000;
+        rec->unk1C |= 0x1000;
+        rec->unk8 -= D_800F22A8;
+        rec->unk0 -= D_800F22A0;
+        rec->unk4 -= D_800F22A4;
+        break;
 
     case 0x24:
-        j = 0xA000;
-    add_xy:
-        val = rec->unk0 + j;
-        n = rec->unk4 + 0x7000;
-    set_xy:
-        rec->unk4 = n;
-        rec->unk0 = val;
+        rec->unk0 += 0xA000;
+        rec->unk4 += 0x7000;
         rec->unk1C |= 0x1000;
         rec->unk8 -= D_800F22A8;
         rec->unk0 -= D_800F22A0;
@@ -1033,20 +1065,19 @@ after_source:
     case 0x27:
         slot27 = &D_80105AE0[actor->owner_object_index];
         if ((*(u8*)&slot27->unk178 & 1) && ((u8*)&slot27->unk178)[2] != actor->unk233 &&
-            actor->unk233 >= 0x40U && !((slot27->unk178 >> 5) & 1))
+            actor->unk233 >= 0x40U && !(((u32)slot27->unk178 >> 5) & 1))
         {
             goto fail_slot;
         }
         src27 = &D_800FDF58[actor->owner_object_index];
         if (((part->unk28 >> 10) & 1) && !(src27->unk21 & 0x80))
         {
-            pos27 = src27->unk0 - (part->unk38 << 8);
+            rec->unk0 += src27->unk0 - (part->unk38 << 8);
         }
         else
         {
-            pos27 = src27->unk0 + (part->unk38 << 8);
+            rec->unk0 += src27->unk0 + (part->unk38 << 8);
         }
-        rec->unk0 += pos27;
         rec->unk4 += src27->unk4 + (part->unk3A << 8);
         rec->unk8 += src27->unk8 + (part->unk3C << 8);
         if (rec->unk25 == 0xFD && rec->unk21 == 0xFF)
@@ -1067,7 +1098,11 @@ after_source:
             rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (src27->unk1C & 0x780000);
             rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&src27->unk1C)[1] & 3) << 16);
             res = g_field_resource_entries[src27->unk3B].start;
-            goto maybe_attach;
+            if (res != 0)
+            {
+                func_8006C3FC(rec, res);
+            }
+            break;
         }
         break;
 
@@ -1076,23 +1111,22 @@ after_source:
         if (track_obj == 0xFF)
         {
             rec->unk25 = track_obj;
-            actor->unk3B[g_field_track_index][part_index]--;
+            (*(volatile u8*)&actor->unk3B[g_field_track_index][part_index])--;
             goto drop_slot;
         }
         src28 = &D_800FDF58[actor->unk229[g_field_track_index]];
         if ((part->unk34 & 0x08000000) && !(D_800FDF58[actor->owner_object_index].unk21 & 0x80))
         {
-            pos28 = src28->unk0 - (part->unk38 << 8);
+            rec->unk0 += src28->unk0 - (part->unk38 << 8);
         }
         else if (((part->unk28 >> 10) & 1) && !(src28->unk21 & 0x80))
         {
-            pos28 = src28->unk0 - (part->unk38 << 8);
+            rec->unk0 += src28->unk0 - (part->unk38 << 8);
         }
         else
         {
-            pos28 = src28->unk0 + (part->unk38 << 8);
+            rec->unk0 += src28->unk0 + (part->unk38 << 8);
         }
-        rec->unk0 += pos28;
         rec->unk4 += src28->unk4 + (part->unk3A << 8);
         rec->unk8 += src28->unk8 + (part->unk3C << 8);
         if (rec->unk25 == 0xFD && rec->unk21 == 0xFF)
@@ -1113,30 +1147,34 @@ after_source:
             rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (src28->unk1C & 0x780000);
             rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&src28->unk1C)[1] & 3) << 16);
             res = g_field_resource_entries[src28->unk3B].start;
-            goto maybe_attach;
+            if (res != 0)
+            {
+                func_8006C3FC(rec, res);
+            }
+            break;
         }
         break;
 
     case 0x29:
-        slot = &D_80105AE0[actor->owner_object_index];
+        slot_owner_late = &D_80105AE0[actor->owner_object_index];
         src = &D_800FDF58[actor->owner_object_index];
-        rec->unk0 += src->unk0 + (slot->unk130[(part->unk24 >> 21) & 3].x << 8);
-        rec->unk4 += src->unk4 + (slot->unk130[(part->unk24 >> 21) & 3].y << 8);
+        rec->unk0 += src->unk0 + (slot_owner_late->unk130[(part->unk24 >> 21) & 3].x << 8);
+        rec->unk4 += src->unk4 + (slot_owner_late->unk130[(part->unk24 >> 21) & 3].y << 8);
         rec->unk8 += src->unk8;
         if (rec->unk25 == 0xFD)
         {
             rec->unk3A = src->unk3A;
             rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (src->unk1C & 0x780000);
             rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&src->unk1C)[1] & 3) << 16);
-            slot = &D_80105AE0[src->unk3A];
+            slot_owner_valid = &D_80105AE0[src->unk3A];
             goto check_owner;
         }
         break;
 
     case 0x32:
-        slot = &D_80105AE0[actor->owner_object_index];
+        slot_owner_late = &D_80105AE0[actor->owner_object_index];
         src = &D_800FDF58[actor->owner_object_index];
-        rec->unk0 += src->unk0 + (slot->unk130[(part->unk24 >> 21) & 3].x << 8);
+        rec->unk0 += src->unk0 + (slot_owner_late->unk130[(part->unk24 >> 21) & 3].x << 8);
         rec->unk4 += src->unk4;
         rec->unk8 += src->unk8 + (part->unk3C << 8);
         if (((part->unk28 >> 10) & 1) && !(src->unk21 & 0x80))
@@ -1153,9 +1191,9 @@ after_source:
             rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (src->unk1C & 0x780000);
             rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&src->unk1C)[1] & 3) << 16);
             rec->unk3A = src->unk3A;
-            slot = &D_80105AE0[src->unk3A];
+            slot_owner_valid = &D_80105AE0[src->unk3A];
         check_owner:
-            if (!(*(u8*)&slot->unk178 & 1) || ((u8*)&slot->unk178)[2] == actor->unk233)
+            if (!(*(u8*)&slot_owner_valid->unk178 & 1) || ((u8*)&slot_owner_valid->unk178)[2] == actor->unk233)
             {
                 rec->unk25 = 2;
                 if (rec->unk21 == 0xFF)
@@ -1182,8 +1220,8 @@ after_source:
         slot = &D_80105AE0[actor->owner_object_index];
         rec->unk0 += src->unk0 + (slot->unk190[D_80105760].x << 8);
         rec->unk4 += src->unk4;
-        rec->unk1C = (rec->unk1C & ~0x6000) | ((D_80105760 & 3) << 13);
         rec->unk8 += src->unk8 + (slot->unk190[D_80105760].y << 8);
+        rec->unk1C = (rec->unk1C & ~0x6000) | (((*(u16*)&D_80105760) & 3) << 13);
         break;
 
     case 0x34:
@@ -1192,18 +1230,18 @@ after_source:
         {
             rec->unk25 = track_obj;
             actor->unk3B[g_field_track_index][part_index]--;
-            goto drop_slot;
+            actor->unkCC[g_field_track_index][part_index]--;
+            return -1;
         }
         src = &D_800FDF58[actor->unk229[g_field_track_index]];
         if (!(src->unk21 & 0x80))
         {
-            val = src->unk0 + (actor->unk1FE[g_field_track_index].x << 8);
+            rec->unk0 += src->unk0 + (actor->unk1FE[g_field_track_index].x << 8);
         }
         else
         {
-            val = src->unk0 - (actor->unk1FE[g_field_track_index].x << 8);
+            rec->unk0 += src->unk0 - (actor->unk1FE[g_field_track_index].x << 8);
         }
-        rec->unk0 += val;
         rec->unk4 += src->unk4 + (actor->unk1FE[g_field_track_index].y << 8);
         val = rec->unk8 + src->unk8;
         goto set_z;
@@ -1228,6 +1266,17 @@ after_source:
         }
         break;
 
+    scanB_copy:
+        rec->unk21 = D_800FF658[nB].unk21;
+        rec->unk27 = D_800FF658[nB].unk27;
+        rec->unk34 = D_800FF658[nB].unk34;
+        rec->unk35 = D_800FF658[nB].unk35;
+        rec->unk29 = D_800FF658[nB].unk29;
+        rec->unk36 = D_800FF658[nB].unk36;
+        rec->unk37 = D_800FF658[nB].unk37;
+        rec->unk38 = D_800FF658[nB].unk38;
+        goto scanB_done;
+
     case 0x37:
     case 0x38:
     case 0x39:
@@ -1240,95 +1289,81 @@ after_source:
         subB = kind - 0x37;
         if (nB < 0x100)
         {
-            scanB = &D_800FF658[nB];
-            scanB_rot = (FieldSVector*)&D_800FF658[nB].unk10;
             do
             {
-                if (scanB->unk25 != 0xFF && scanB->unk23 == subB && scanB->unk22 == actor->unk233 &&
-                    ((actor->unk0[subB].unk14 & 4) || scanB->unk29 == g_field_track_index))
+                if (D_800FF658[nB].unk25 != 0xFF && D_800FF658[nB].unk23 == subB && D_800FF658[nB].unk22 == actor->unk233 &&
+                    ((actor->unk0[subB].unk14 & 4) || D_800FF658[nB].unk29 == g_field_track_index))
                 {
-                    rec->unk0 += scanB->unk0;
-                    rec->unk4 += scanB->unk4;
-                    rec->unk8 += scanB->unk8;
+                    rec->unk0 += D_800FF658[nB].unk0;
+                    rec->unk4 += D_800FF658[nB].unk4;
+                    rec->unk8 += D_800FF658[nB].unk8;
                     if ((part->unk34 & 0x08000000) && !(D_800FDF58[actor->owner_object_index].unk21 & 0x80))
                     {
-                        pos37 = rec->unk0 - (part->unk38 << 8);
+                        rec->unk0 -= part->unk38 << 8;
                     }
-                    else if (((part->unk28 >> 10) & 1) && !(scanB->unk21 & 0x80))
+                    else if (((part->unk28 >> 10) & 1) && !(D_800FF658[nB].unk21 & 0x80))
                     {
-                        pos37 = rec->unk0 - (part->unk38 << 8);
+                        rec->unk0 -= part->unk38 << 8;
                     }
                     else
                     {
-                        pos37 = rec->unk0 + (part->unk38 << 8);
+                        rec->unk0 += part->unk38 << 8;
                     }
-                    rec->unk0 = pos37;
                     rec->unk4 += part->unk3A << 8;
                     rec->unk8 += part->unk3C << 8;
-                    rec->unk1C = (rec->unk1C & ~0x1000) | (scanB->unk1C & 0x1000);
+                    rec->unk1C = (rec->unk1C & ~0x1000) | (D_800FF658[nB].unk1C & 0x1000);
                     if (part->unk1C & 0x08000000)
                     {
-                        rec->unk10 = scanB_rot->unk0;
-                        rec->unk12 = scanB_rot->unk2;
-                        rec->unk14 = scanB_rot->unk4;
+                        rec->unk10 = ((FieldSVector*)&D_800FF658[nB].unk10)->unk0;
+                        rec->unk12 = ((FieldSVector*)&D_800FF658[nB].unk10)->unk2;
+                        rec->unk14 = ((FieldSVector*)&D_800FF658[nB].unk10)->unk4;
                     }
                     rec->unk30 = nB;
                     if (rec->unk25 == 0xFD)
                     {
-                        rec->unk3B = scanB->unk3B;
-                        rec->unkC = scanB->unkC;
-                        rec->unk25 = scanB->unk25;
-                        rec->unk3A = scanB->unk3A;
-                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (scanB->unk1C & 0x780000);
-                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&scanB->unk1C)[1] & 3) << 16);
-                        if (rec->unk21 != 0xFF)
+                        rec->unk3B = D_800FF658[nB].unk3B;
+                        rec->unkC = D_800FF658[nB].unkC;
+                        rec->unk25 = D_800FF658[nB].unk25;
+                        rec->unk3A = D_800FF658[nB].unk3A;
+                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FF658[nB].unk1C & 0x780000);
+                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&D_800FF658[nB].unk1C)[1] & 3) << 16);
+                        if (rec->unk21 == 0xFF)
                         {
-                            rec->unk3A = scanB->unk3A;
-                            rec->unk25 = scanB->unk25;
-                            rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (scanB->unk1C & 0x780000);
-                            rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&scanB->unk1C)[1] & 3) << 16);
-                            rec->unk27 = scanB->unk27;
-                            rec->unk21 = scanB->unk21;
-                            res = g_field_resource_entries
-                                      [D_800FDF58[g_field_actor_slots[rec->unk22].owner_object_index].unk3B]
-                                          .start;
-                            if (res != 0)
-                            {
-                                func_8006C460(rec, res);
-                            }
+                            goto scanB_copy;
                         }
-                        else
+                        rec->unk3A = D_800FF658[nB].unk3A;
+                        rec->unk25 = D_800FF658[nB].unk25;
+                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FF658[nB].unk1C & 0x780000);
+                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&D_800FF658[nB].unk1C)[1] & 3) << 16);
+                        rec->unk27 = D_800FF658[nB].unk27;
+                        rec->unk21 = D_800FF658[nB].unk21;
+                        res = g_field_resource_entries
+                                  [D_800FDF58[g_field_actor_slots[rec->unk22].owner_object_index].unk3B]
+                                      .start;
+                        if (res != 0)
                         {
-                            rec->unk21 = scanB->unk21;
-                            rec->unk27 = scanB->unk27;
-                            rec->unk34 = scanB->unk34;
-                            rec->unk35 = scanB->unk35;
-                            rec->unk29 = scanB->unk29;
-                            rec->unk36 = scanB->unk36;
-                            rec->unk37 = scanB->unk37;
-                            rec->unk38 = scanB->unk38;
+                            func_8006C460(rec, res);
                         }
                     }
                     break;
                 }
-                scanB_rot = (FieldSVector*)((u8*)scanB_rot + 0x54);
                 nB++;
-                scanB++;
             } while (nB < 0x100);
         }
-        if (nB == 0x100)
+    scanB_done:
+        if (nB != 0x100)
         {
-            goto fail_slot;
+            goto scanB_recurse;
         }
-        func_8006D79C(actor, part_index, nB + 1);
-        break;
-
     fail_slot:
         rec->unk25 = 0xFF;
         actor->unk3B[g_field_track_index][part_index]--;
     drop_slot:
         actor->unkCC[g_field_track_index][part_index]--;
         return -1;
+    scanB_recurse:
+        func_8006D79C(actor, part_index, nB + 1);
+        break;
     }
 
         switch ((part->unk24 >> 29) & 3)
