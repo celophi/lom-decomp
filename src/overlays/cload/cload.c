@@ -177,6 +177,15 @@ extern s32 D_80162E30;
 extern s32 D_80162E34;
 extern s32 D_80162E38;
 extern s32 D_80162E3C;
+extern s32 D_80162E40;
+extern s32 D_80162E44;
+extern s32 D_80162E48;
+extern u8 *D_80162E4C;
+extern u8 D_80162E50[];
+extern u8 D_801466E0[];
+extern u8 D_80146544[];
+extern s32 D_8016B250;
+extern s32 D_8016B254;
 extern u16 D_8014687C[];
 extern u16 D_80146894[];
 
@@ -3946,4 +3955,439 @@ void func_801456E0(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
     buf[1] = D_80146894[arg2 % 16];
     buf[2] = 0;
     func_80145764(arg0, arg1, buf, arg3, arg4, 0, arg5);
+}
+
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80145764(s32 prim, s32 *ot, u8 *str, s32 x, s32 y, s32 a5, s32 a6)
+{
+    u8 *cursor;
+    s32 count;
+    u16 code;
+    u8 *scan;
+
+    cursor = str;
+    count = 0;
+    if (*cursor >= 0x20)
+    {
+        scan = cursor;
+        do
+        {
+            code = *scan;
+            if (code >= 0x80)
+            {
+                scan++;
+            }
+            scan++;
+            count++;
+        } while (*scan >= 0x20);
+    }
+
+    switch (a6)
+    {
+    case 1:
+        x -= count * 0x10;
+        break;
+    case 2:
+        x -= count * 8;
+        break;
+    case 0:
+    default:
+        break;
+    }
+    D_80162E40 = x;
+    D_8016B250 = x;
+    D_8016B254 = y;
+
+    while (1)
+    {
+        u32 lead = *cursor;
+
+        if ((u8)lead == 0x20)
+        {
+            cursor++;
+            D_8016B250 += 0x10;
+            continue;
+        }
+        if ((u8)lead >= 0x80)
+        {
+            code = cursor[0];
+            code = (code << 8) | cursor[1];
+            cursor += 2;
+        }
+        else
+        {
+            if ((u8)lead < 0x20)
+            {
+                break;
+            }
+            if ((u32)(lead - 0x30) < 0x50)
+            {
+                code = *cursor - 0x7DE1;
+                cursor++;
+            }
+            else
+            {
+                code = *cursor - 0x7AE1;
+                cursor++;
+            }
+        }
+        prim = func_80145934(prim, ot, code, a5);
+    }
+
+    ((u8 *)prim)[3] = 1;
+    ((StructS0 *)prim)->unk4 = 0xE1000005;
+    ((OtTag *)prim)->addr = ((OtTag *)ot)->addr;
+    ((OtTag *)ot)->addr = (u32)prim;
+    return prim + 8;
+}
+
+
+/**
+ * @brief One 4-byte glyph-cache slot: the cached character code plus per-frame
+ *        usage flags, also read as a single word when scanning for a free slot.
+ */
+typedef union
+{
+    /* 0x0 */ u32 raw;
+    struct
+    {
+        /* 0x0 */ u16 code;
+        /* 0x2 */ u16 flags;
+    } data;
+} GlyphCacheEntry;
+
+extern GlyphCacheEntry D_8016AE50[];
+
+/**
+ * @brief 0x14-byte packet-buffer slot holding one 16x16 textured sprite;
+ *        mirrors SPRT_16 in include/psyq/libgpu.h plus the trailing word that
+ *        keeps consecutive glyph packets 20 bytes apart.
+ */
+typedef struct
+{
+    /* 0x00 */ u32 tag;
+    /* 0x04 */ u8 r0;
+    /* 0x05 */ u8 g0;
+    /* 0x06 */ u8 b0;
+    /* 0x07 */ u8 code;
+    /* 0x08 */ s16 x0;
+    /* 0x0A */ s16 y0;
+    /* 0x0C */ u8 u0;
+    /* 0x0D */ u8 v0;
+    /* 0x0E */ u16 clut;
+    /* 0x10 */ u32 padding;
+} GlyphSprite;
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80145934(s32 prim, s32 *ot, s32 character_code, s32 palette)
+{
+    GlyphCacheEntry *entry;
+    u8 *font_data;
+    s32 font_address;
+    u32 requested_code;
+    s32 slot;
+    s32 high_pixel_set;
+    s32 code;
+    RECT rect;
+
+    u8 *raster;
+    s32 color_index;
+    s32 high_nibble_color;
+    s32 row;
+    s32 source_byte;
+
+    u16 mask;
+    volatile u8 *raster_byte;
+    u8 packed_pixels;
+
+    code = character_code;
+    slot = 0;
+    requested_code = code & 0xFFFF;
+    entry = D_8016AE50;
+
+    while (slot < 0x100)
+    {
+        if (requested_code == entry->data.code)
+        {
+            return func_80145B54(prim, ot, slot, palette);
+        }
+        slot++;
+        entry++;
+    }
+
+    font_address = func_8001687C(code & 0xFFFF);
+    font_data = (u8 *)font_address;
+    if (font_address == -1)
+    {
+        return prim;
+    }
+
+    raster = D_80162E4C;
+    row = 0;
+    color_index = (palette + 1) * 2;
+    high_nibble_color = color_index * 16;
+    for (; row < 15; row++)
+    {
+        for (source_byte = 0; source_byte < 2; source_byte++)
+        {
+            mask = 0x80;
+
+            for (slot = 0; slot < 4; slot++)
+            {
+                *raster = ((*font_data) & mask) ? color_index : 0;
+
+                mask >>= 1;
+                high_pixel_set = (*font_data) & mask;
+
+                raster_byte = raster;
+                packed_pixels = *raster_byte;
+                if (high_pixel_set)
+                {
+                    packed_pixels += high_nibble_color;
+                }
+
+                *raster_byte = packed_pixels;
+
+                mask >>= 1;
+                raster++;
+            }
+
+            font_data++;
+        }
+    }
+
+    slot = 0;
+    while ((slot < 0x100) && (D_8016AE50[slot].raw != 0))
+    {
+        slot++;
+    }
+
+    if (slot == 0x100)
+    {
+        return prim;
+    }
+    D_8016AE50[slot].raw = code & 0xFFFF;
+    prim = func_80145B54(prim, ot, slot, palette);
+
+    D_80162E44 = (slot % 16) * 4;
+    D_80162E48 = slot & 0xF0;
+
+    rect.w = 4;
+    rect.h = 15;
+    rect.x = D_80162E44 + 0x140;
+    rect.y = D_80162E48;
+
+    func_80019A34(&rect, D_80162E4C);
+    func_80019788(0);
+
+    D_80162E4C += 0x80;
+    return prim;
+}
+
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80145B54(GlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette)
+{
+    u32 ot_tag_high_byte;
+    s32 normalized_slot;
+    u32 packet_address;
+    s32 old_x;
+    s32 new_x;
+    s32 fits_line;
+
+    D_8016AE50[cache_slot].raw |= 0x10000;
+
+    ((u8 *)sprite)[3] = 3;
+    sprite->code = 0x7C;
+    sprite->g0 = 0x80;
+    sprite->b0 = 0x80;
+    sprite->r0 = 0x80;
+    normalized_slot = cache_slot;
+    sprite->x0 = D_8016B250;
+    sprite->y0 = D_8016B254;
+
+    if (cache_slot < 0)
+    {
+        normalized_slot = cache_slot + 15;
+    }
+
+    sprite->u0 = (cache_slot - ((normalized_slot >> 4) * 16)) * 16;
+    sprite->v0 = cache_slot & 0xF0;
+    sprite->clut = 0x7FD3;
+    sprite->tag = (sprite->tag & 0xFF000000) | (*ot & 0xFFFFFF);
+
+    packet_address = ((u32)sprite) & 0xFFFFFF;
+    ot_tag_high_byte = *ot & 0xFF000000;
+
+    sprite++;
+    old_x = D_8016B250;
+    new_x = old_x + 16;
+    fits_line = (old_x + 32) < 0x280;
+    D_8016B250 = new_x;
+
+    *ot = ot_tag_high_byte | packet_address;
+
+    if (!fits_line)
+    {
+        D_8016B250 = D_80162E40;
+        D_8016B254 += 16;
+    }
+
+    return (s32)sprite;
+}
+
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80145C5C(void)
+{
+    s32 cache_slot;
+    GlyphCacheEntry *cache_entry;
+
+    D_80162E4C = D_80162E50;
+
+    cache_slot = 0;
+    cache_entry = D_8016AE50;
+
+    while (cache_slot < 0x100)
+    {
+        cache_entry->raw &= 0xFFFF;
+        cache_entry++;
+        cache_slot++;
+    }
+}
+
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80145C98(void)
+{
+    s32 used_flag;
+    s32 cache_slot;
+    GlyphCacheEntry *cache_entry;
+
+    cache_slot = 0;
+    used_flag = 0x10000;
+    cache_entry = D_8016AE50;
+
+    while (cache_slot < 0x100)
+    {
+        if (!(cache_entry->raw & used_flag))
+        {
+            cache_entry->raw = 0;
+        }
+
+        cache_slot++;
+        cache_entry++;
+    }
+}
+
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80145CD8(void)
+{
+    s32 cache_slot;
+    GlyphCacheEntry *cache_entry;
+
+    cache_slot = 0x100 - 1;
+    cache_entry = &D_8016AE50[cache_slot];
+    while (cache_slot >= 0)
+    {
+        cache_entry->raw = 0;
+        cache_entry--;
+        cache_slot--;
+    }
+
+    for (cache_slot = 0; cache_slot <= 0x7FFF; cache_slot++)
+    {
+        D_80162E50[cache_slot] = 0;
+    }
+}
+
+
+/**
+ * @brief Expand a mixed ASCII / two-byte input string into Shift-JIS glyph
+ *        pairs, writing two bytes per source character and a NUL terminator.
+ * @param out Destination buffer for the expanded 2-byte glyph codes.
+ * @param in Source string, terminated by a 0 byte.
+ * @note WIP 73.58% (45/93 exact, correct insn count, no structural runs).
+ *       Lead bytes 0x19..0x1F select a [16][33] block of D_801466E0 indexed by
+ *       the next byte's nibbles; 0x21 and above index D_80146544 by
+ *       (c - 0x20); everything else emits D_80146544's first entry (the blank
+ *       glyph) and consumes one byte. Both tables are arrays of 33-byte rows
+ *       (16 two-byte glyphs plus a 0x0A row terminator).
+ * @note Measured-required shapes, each re-verified by reverting it:
+ *       (1) `for (;;)` with `goto done` past the loop, NOT `while (*in != 0)`.
+ *       A `while` puts a conditional jump to the loop's end_label at the top,
+ *       which gcc 2.7.2's expand_end_loop rotates to the bottom (guard + copied
+ *       test, +4 insns); jumping to a label BEYOND the loop is not an exit jump
+ *       to end_label, so no rotation happens, and the loop notes still let LICM
+ *       hoist the four table base pointers. A bare `goto` loop with no
+ *       for/while at all defeats LICM instead and loses the hoists.
+ *       (2) arm 2's index must read `(index / 16) * 33` BEFORE `(index & 0xF)
+ *       * 2` (+17 exact; the other order was the single biggest gap).
+ *       (3) arm 1's index must read `in[0] * 528 + (in[1] >> 4) * 33 +
+ *       (in[1] & 0xF) * 2` in that order (every other permutation is -3 to -10).
+ *       (4) `u32 c` holding the raw byte with `(u8)c` at the two comparisons -
+ *       the `lbu` + `andi 0xff` pair the target shows, idiom [EXPAND-37].
+ * @note Residue (10 target-only / 10 yours-only / 35 argdiff rows), two causes:
+ *       (a) the target re-loads `in[0]` inside each of arm 1's two index
+ *       expressions while this compile reuses the loop-head byte via CSE; no
+ *       source spelling found that blocks that fold (using `c` there instead is
+ *       -7, goto-separated arms are -7, pointer-vs-array and every term
+ *       reordering are inert or worse). That also drags the `in` parameter into
+ *       an extra `addu a3, a1, zero` entry copy and rotates several registers.
+ *       (b) two rows show `%hi(D_801466E0-0x3390)` against the target's
+ *       `%hi(func_80143324+0x2c)`; both resolve to 0x80143350, so those are a
+ *       splat symbol-display artifact, not a real difference.
+ *       Permuter v2 ran ~80k iterations over two seeds; it found (2) and
+ *       nothing beyond it.
+ * @see decomp.me (73.58%) TODO
+ */
+void func_80145D28(u8 *out, u8 *in)
+{
+    u32 c;
+    s32 index;
+
+    for (;;)
+    {
+        c = *in;
+        if ((u8)c == 0)
+        {
+            goto done;
+        }
+        if ((u32)(c - 0x19) < 7)
+        {
+            *out++ = D_801466E0[in[0] * 528 + (in[1] >> 4) * 33 + (in[1] & 0xF) * 2];
+            *out++ = D_801466E0[in[0] * 528 + (in[1] >> 4) * 33 + (in[1] & 0xF) * 2 + 1];
+            in += 2;
+        }
+        else if ((u8)c >= 0x21)
+        {
+            index = *in - 0x20;
+            *out++ = D_80146544[(index / 16) * 33 + (index & 0xF) * 2];
+            index = *in - 0x20;
+            *out++ = D_80146544[(index / 16) * 33 + (index & 0xF) * 2 + 1];
+            in += 1;
+        }
+        else
+        {
+            *out++ = D_80146544[0];
+            *out++ = D_80146544[1];
+            in += 1;
+        }
+    }
+done:
+    *out = 0;
 }
