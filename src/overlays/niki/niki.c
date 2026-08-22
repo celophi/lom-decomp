@@ -19,7 +19,7 @@ extern s32 D_80164B84;
 extern s32 D_80164B8C;
 extern s32 D_80164B90;
 extern s32 D_8012271C, D_80164ADC;
-extern s32 D_80164B7C, D_80164B80;
+extern s32 D_80164B7C;
 
 
 extern s32 D_80164B1C;
@@ -28,8 +28,14 @@ extern s32 D_80164B88;
 extern s32 D_80164AE0;
 extern s32 D_80164AEC;
 
+extern s32 D_80164B80;
+extern void *D_80164E18;
+extern s32 D_801606C8;
+extern s32 D_801606D4;
+extern s32 D_801606DC;
+
 void func_80140D2C(void);
-void func_80140774(void);
+s32 func_80140774(void);
 void func_80140868(void);
 void func_80140D4C(); 
 void func_801413FC();
@@ -38,6 +44,7 @@ void func_80141584();
 void func_80141660(); 
 void func_801433BC();
 void func_80141E84();
+s32 func_80144DF8(void);
 
 void func_8014011C(s32 arg0, s32 arg1)
 {
@@ -227,5 +234,47 @@ void func_8014068C(void)
     else
     {
         D_80164AE0 = D_80164AEC;
+    }
+}
+
+s32 func_80140774(void)
+{
+    s32 result;
+
+    if (D_80164B78 >= 0x10)
+    {
+        if (D_80164E18 == NULL)
+        {
+            D_80164E18 = &D_801606C8;
+        }
+    }
+
+    do
+    {
+        result = func_80144DF8();
+    } while (result == 3);
+
+    if ((D_80164B80 != 0) && (D_80122988 & 0x220))
+    {
+        D_80164B78 = 0xF8;
+        D_80164E18 = &D_801606DC;
+    }
+    else
+    {
+        switch (result)
+        {
+        case 0:
+            break;
+        case 4:
+            D_80164E18 = &D_801606D4;
+            D_80164B80 = 0;
+            break;
+        case 5:
+            D_80164B78 = 0xF8;
+            /* fallthrough */
+        case 2:
+            D_80164E18 = &D_801606DC;
+            break;
+        }
     }
 }
