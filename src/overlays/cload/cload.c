@@ -37,6 +37,48 @@ typedef struct
     /* 0xC */ s16 w, h;
 } TILE;
 
+/** @brief One 0x28-byte record in the D_801623D0 table (0x320-byte pages). */
+typedef struct
+{
+    /* 0x00 */ u8 unk0[0x18];
+    /* 0x18 */ s32 unk18;
+    /* 0x1C */ u8 unk1C[0x28 - 0x1C];
+} Entry;
+
+/** @brief Scratch draw/header record built on the stack before an emit. */
+typedef struct
+{
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s16 unk4;
+    /* 0x06 */ s16 unk6;
+    /* 0x08 */ u8 unk8[0x18];
+} DrawState;
+
+/** @brief 0x68-byte top-of-frame scratch buffer used by func_8014401C. */
+typedef struct
+{
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s16 unk4;
+    /* 0x06 */ u8 pad[0x62];
+} TopBuf;
+
+/** @brief 0x100-byte CD file/header record template (D_80140038). */
+typedef struct
+{
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s16 unk4;
+    /* 0x06 */ u8 pad[0x100 - 6];
+} CdFile;
+
+/** @brief Header record with a byte flag at 0x6 (D_801400BC). */
+typedef struct
+{
+    /* 0x0 */ s32 unk0;
+    /* 0x4 */ s16 unk4;
+    /* 0x6 */ s8 unk6;
+    /* 0x7 */ u8 pad[9];
+} Header;
+
 extern s32 D_80122988;
 extern s32 D_80146918;
 extern CdStreamCtrl D_801468B8;
@@ -111,6 +153,33 @@ extern s32 D_80162D78[];
 extern u8 D_800EC3F6[2];
 extern u16 D_80146338[];
 
+/* Globals introduced with the unk1 (0x3520-0x56E0) function block. */
+extern u8 D_800EC3FA[];
+extern u8 D_800ECF9C;
+extern u8 D_800ECFB0;
+extern u8 D_80146528;
+extern u8 D_80146538[];
+extern u8 D_80162C90[];
+extern CdFile D_80140038;
+extern Header D_801400BC;
+extern s32 D_80162CD0[];
+extern s32 D_80162378;
+extern s32 D_80162D70;
+extern s32 D_80162D74;
+extern s32 D_80162DCC;
+extern s32 D_80162DD4;
+extern s32 D_80162E18;
+extern s32 D_80162E1C;
+extern s32 D_80162E24;
+extern s32 D_80162E28;
+extern s32 D_80162E2C;
+extern s32 D_80162E30;
+extern s32 D_80162E34;
+extern s32 D_80162E38;
+extern s32 D_80162E3C;
+extern u16 D_8014687C[];
+extern u16 D_80146894[];
+
 extern int strncmp(char *, char *, int);
 s32 func_801428DC();
 s32 func_80142AD0(s32 ot, s32 prim, s32 arg2, s32 arg3);
@@ -121,6 +190,28 @@ u8 *func_80141428(void *);
 void func_80141C6C(void *arg0);
 s32 func_801430C8(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s32 icon, s32 index, s32 row);
 s32 func_80145764(s32 prim, s32 *ot, u8 *str, s32 x, s32 y, s32 a5, s32 a6);
+
+/* Callees used by the unk1 (0x3520-0x56E0) function block. */
+s32 func_8001714C(void *, void *, s32);
+s32 func_8001680C(void *, s32);
+s32 func_8001681C(s32, void *, s32);
+s32 func_8001683C(s32);
+void func_8001686C(void *);
+s32 func_8001724C(s32);
+s32 func_8001725C(s32);
+s32 func_8001729C(s32);
+s32 func_800172AC(s32);
+s32 func_80032174(s32, void *, s32 *);
+s32 func_800342CC(s32);
+void func_800167EC(void);
+void func_800167BC(s32);
+void func_800167FC(void);
+s32 func_800167AC(u32, s32, s32, s32);
+void func_800167DC(s32);
+s32 func_800167CC(s32);
+s32 func_80016BCC(void *, void *, s8, void *);
+s32 func_8001684C(void *);
+s32 func_800170BC(void *, void *, u8);
 
 /**
  * @see decomp.me (100%) TODO
@@ -2291,4 +2382,1568 @@ StructS0 *func_801433EC(StructS0 *p, RenderCtx *ot)
         p = (StructS0 *)((u8 *)p + 8);
     }
     return p;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80143510(void)
+{
+    D_8014A924 = 1;
+    return 1;
+}
+
+/**
+ * @brief Emit two glyph prims from the shared text table (base 0x800EC3C4),
+ *        toggling the copy/render mode (4 vs 5) on the D_8014A924 flag.
+ * @param prim Current prim pointer; chained through both func_800A88A0 calls and returned.
+ * @param ot   Ordering table pointer.
+ * @param arg2 Base X used as (arg2 - 0x10) for the first glyph and (arg2 + 8) for the second.
+ * @param arg3 Y coordinate passed through to both glyphs.
+ * @return Prim pointer after both emits.
+ * @note WIP 97.15% (gcc272_cdk). Instruction-exact (74/74), frame -0x40, all sp
+ *       slots match. Sole residue: a sched2 floater transposition -- the
+ *       `mode = 4` (`addiu a3, 4`) is hoisted one slot above p's `addiu v1`.
+ *       sched_oracle reports every emit-order constraint satisfied; whatif shows
+ *       the floater order is fixed in the sched1 model, so the diff is a pure
+ *       post-sched1 (sched2) reorder, not reachable by source-level emit control.
+ */
+s32 func_80143520(s32 prim, s32 *ot, s32 arg2, s32 arg3)
+{
+    u8 *p;
+    u8 *base;
+    u8 *glyph;
+    s32 mode;
+
+    p = D_800EC3FA;
+    base = p - 0x36;
+    glyph = (u8 *)(p[0] + ((p[1] << 8) + (s32)base));
+    mode = 4;
+    if (D_8014A924 != 0)
+    {
+        mode = 5;
+    }
+    prim = func_800A88A0(prim, ot, glyph, mode, arg2 - 0x10, arg3, 1);
+
+    glyph = (u8 *)(base[0x38] + ((base[0x39] << 8) + (s32)base));
+    mode = 4;
+    if (D_8014A924 == 0)
+    {
+        mode = 5;
+    }
+    prim = func_800A88A0(prim, ot, glyph, mode, arg2 + 8, arg3, 0);
+
+    if (D_80122988 & 0xA000)
+    {
+        D_8014A924 ^= 1;
+        func_800A3938(0x7D, 0x80);
+        D_80122988 = 0;
+    }
+    return prim;
+}
+
+
+/**
+ * @brief Validate a loaded 0x33E0-byte blob against its trailing checksum/magic.
+ * @param base Pointer to the blob; func_8014369C sums bytes 0..0x33DF.
+ * @return 1 if the stored checksum at 0x33E0 matches and the magic at 0x33E4
+ *         equals 0x414E41, otherwise 0.
+ * @note The single shared `return 0` join (reached by both failure paths) keeps
+ *       gcc's jump.c from folding the magic compare into a store-flag; the
+ *       nested if with literal returns keeps the result in v0 (idiom JUMP-23).
+ */
+s32 func_80143648(u8 *base)
+{
+    if (*(s32 *)(base + 0x33E0) == func_8014369C(base))
+    {
+        if (*(s32 *)(base + 0x33E4) == 0x414E41)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+/**
+ * @brief Compute the additive checksum used to validate a loaded 0x33E0-byte blob.
+ * @param data Pointer to the blob; bytes 0..0x33DF are summed.
+ * @return (sum * 2) + 0x0414E410, the value compared against the stored trailer.
+ */
+s32 func_8014369C(u8 *data)
+{
+    s32 sum;
+    u32 i;
+    u8 *p;
+
+    p = data;
+    sum = 0;
+    i = 0;
+    do
+    {
+        i += 1;
+        sum += *p;
+        p += 1;
+    } while (i < 0x33E0U);
+    return (sum * 2) + 0x0414E410;
+}
+
+
+/**
+ * @brief Render the hex nibbles of @p arg1 to ASCII, suppressing leading zeros.
+ * @param arg0 Destination buffer; receives the ASCII digits and a terminating 0.
+ * @param arg1 Value whose nibbles (most-significant first) are emitted.
+ * @param arg2 Maximum number of characters to emit.
+ * @note Each nibble is converted by func_8014379C; a leading run of zero nibbles
+ *       is skipped until the first non-zero digit is seen.
+ */
+void func_801436D4(s8 *arg0, s32 arg1, s32 arg2)
+{
+    s32 temp_s0;
+    s32 var_s1;
+    s32 var_s2;
+    s32 var_s5;
+    s32 var_v1;
+    s8 *var_s3;
+    s32 var_s6;
+
+    var_s3 = arg0;
+    var_s5 = arg1;
+    var_s2 = arg2;
+    var_s1 = 7;
+    var_v1 = 0;
+    if (var_s2 != 0)
+    {
+        var_s6 = -1;
+loop_2:
+        temp_s0 = (var_s5 >> (var_s1 * 4)) & 0xF;
+        if ((temp_s0 != 0) || (var_v1 != 0))
+        {
+            func_8014379C(var_s3, temp_s0);
+            var_s3 += 1;
+            var_s2 -= 1;
+            var_v1 = 1;
+            var_s5 -= temp_s0 << (var_s1 * 4);
+        }
+        var_s1 -= 1;
+        if (var_s1 != var_s6)
+        {
+            if (var_s1 == 0)
+            {
+                var_v1 = 1;
+            }
+            if (var_s2 != 0)
+            {
+                goto loop_2;
+            }
+        }
+    }
+    *var_s3 = 0;
+}
+
+
+/**
+ * @brief Convert a 4-bit value to its ASCII hex digit and store it.
+ *
+ * Writes '0'-'9' for @p nibble 0-9, 'A'-'F' for 10-15, and '_' (0x5F) for any
+ * value >= 16, storing the single character byte at @p out.
+ *
+ * @param out Destination byte written with the ASCII character.
+ * @param nibble Value to convert; expected range 0-15.
+ * @see decomp.me (100%) local match, working/func_8014379C/code.c
+ */
+void func_8014379C(s8 *out, s32 nibble)
+{
+    if (nibble < 0xA)
+    {
+        *out = nibble + 0x30;
+        return;
+    }
+    if (nibble < 0x10)
+    {
+        *out = nibble + 0x37;
+        return;
+    }
+    *out = 0x5F;
+}
+
+
+/**
+ * @brief Parse an ASCII hex string into a 32-bit value.
+ * @param s Pointer to the hex text (0-9, A-F, a-f).
+ * @param len Maximum number of characters to consume.
+ * @return The accumulated big-endian value of the hex digits read.
+ */
+u32 func_801437C0(u8 *s, s32 len)
+{
+    u32 result;
+    u32 tmp0;
+    u32 tmp1;
+    u32 tmp2;
+
+    result = 0;
+    while (((u8)(*s - '0') < 10) || ((u8)(*s - 'a') < 6) || ((u8)(*s - 'A') < 6))
+    {
+        if (len == 0)
+        {
+            break;
+        }
+        result <<= 4;
+        if ((u8)(*s - '0') < 10)
+        {
+            tmp0 = result - 0x30;
+            result = tmp0 + *s;
+        }
+        else if ((u8)(*s - 'A') < 6)
+        {
+            tmp1 = result - 0x37;
+            result = tmp1 + *s;
+        }
+        else if ((u8)(*s - 'a') < 6)
+        {
+            tmp2 = result - 0x57;
+            result = tmp2 + *s;
+        }
+        s++;
+        len--;
+    }
+    return result;
+}
+
+
+/**
+ * @brief Skip a leading run of hex characters, then parse up to two hex digits
+ *        into an integer value.
+ * @param p Pointer to the ASCII text to scan.
+ * @return The value of the (at most two) hex digits found after the skipped run.
+ * @note The leading skip loop is the same shape as func_80141428; gcc's jump.c
+ *       cross-jumps its three continue arms into one back-edge here, so the
+ *       per-arm p++/p-- form the target keeps is not reproducible without the
+ *       permuter (func_80141428 itself is committed nonmatching for the same
+ *       reason). The accumulation uses an explicit temp so K is folded with the
+ *       running value (result - K) rather than with the freshly read digit.
+ */
+s32 func_8014386C(u8 *p, s32 unused1, s32 unused2)
+{
+    u8 c;
+    s32 count;
+    s32 result;
+    s32 tmp;
+
+    while (1)
+    {
+        c = *p;
+        if ((u32)(c - '0') < 10)
+        {
+            p++;
+            continue;
+        }
+        if ((u32)(c - 'a') < 6)
+        {
+            p++;
+            continue;
+        }
+        if ((u32)(c - 'A') < 6)
+        {
+            p++;
+            continue;
+        }
+        break;
+    }
+    p++;
+    count = 2;
+    c = *p;
+    result = 0;
+    while ((u32)(c - '0') < 10 || (u32)(c - 'a') < 6 || (u32)(c - 'A') < 6)
+    {
+        if (count == 0)
+        {
+            break;
+        }
+        c = *p;
+        result <<= 4;
+        if ((u32)(c - '0') < 10)
+        {
+            tmp = result - 0x30;
+            result = *p + tmp;
+        }
+        else if ((u32)(c - 'A') < 6)
+        {
+            tmp = result - 0x37;
+            result = *p + tmp;
+        }
+        else if ((u32)(c - 'a') < 6)
+        {
+            tmp = result - 0x57;
+            result = *p + tmp;
+        }
+        p++;
+        c = *p;
+        count--;
+    }
+    return result;
+}
+
+
+/**
+ * @brief Parse the hex-string field of each table entry and record the results.
+ *
+ * Iterates over the D_80162350 active entries. For each entry the 0x28-byte
+ * record is validated with @ref func_8001714C against pattern D_800ECF7C. On a
+ * match (return 0) the ASCII hex string at record offset 0xC is scanned for up
+ * to five hex digits (0-9, A-F, a-f), accumulated big-endian into a value that
+ * is written to the D_80162CD0 result array; @ref func_8014386C is then invoked
+ * with the field, the parsed value, and the remaining digit budget, its result
+ * stored in the D_80162D78 array and folded into a running maximum. A failed
+ * validation stores -1 / 0 into the two arrays instead.
+ *
+ * @return The largest value returned by any @ref func_8014386C call (0 if none).
+ * @note WIP match, 87.74%; residue is a saved-register priority rotation
+ *       (max/D_8014A920hi/i and entry/off4) plus parse-loop temp coloring.
+ */
+s32 func_80143964(void)
+{
+    s32 i;
+    s32 max;
+    u8 *entry;
+    u8 *fld;
+    u8 *field;
+    s32 *out;
+    s32 off28;
+    s32 off4;
+    u8 *p;
+    s32 count;
+    s32 acc;
+    u8 c;
+    u8 cls;
+    s32 t;
+    s32 r;
+
+    max = 0;
+    i = 0;
+    if (D_80162350 > 0)
+    {
+        entry = &D_801623D0;
+        fld = (u8 *)&D_801623D0 + 0xC;
+        out = &D_80162D78;
+        off28 = max;
+        off4 = off28;
+        do
+        {
+            if (func_8001714C(&D_800ECF7C, entry + D_8014A920 * 0x320, 0xC) == 0)
+            {
+                count = 5;
+                p = fld + (D_8014A920 * 0x320 + off28);
+                c = *p;
+                acc = 0;
+                while (((u32)(c - 0x30) < 0xA) || ((u32)(c - 0x61) < 6) || ((u32)(c - 0x41) < 6))
+                {
+                    if (count == 0)
+                    {
+                        break;
+                    }
+                    cls = *p;
+                    acc *= 0x10;
+                    if ((u32)(cls - 0x30) < 0xA)
+                    {
+                        t = acc - 0x30;
+                        goto add_char;
+                    }
+                    if ((u32)(cls - 0x41) < 6)
+                    {
+                        acc = acc - 0x37 + *p;
+                    }
+                    else
+                    {
+                        t = acc - 0x57;
+                        if ((u32)(cls - 0x61) < 6)
+                        {
+                        add_char:
+                            acc = t + *p;
+                        }
+                    }
+                    p++;
+                    c = *p;
+                    count--;
+                }
+                field = entry + D_8014A920 * 0x320 + 0xC;
+                *(s32 *)(D_8014A920 * 0x50 + off4 + (s32)&D_80162CD0) = acc;
+                r = func_8014386C(field, acc, count);
+                *out = r;
+                if (max < r)
+                {
+                    max = r;
+                }
+            }
+            else
+            {
+                *(s32 *)(D_8014A920 * 0x50 + off4 + (s32)&D_80162CD0) = -1;
+                *out = 0;
+            }
+            out++;
+            entry += 0x28;
+            off28 += 0x28;
+            i++;
+            off4 += 4;
+        } while (i < D_80162350);
+    }
+    return max;
+}
+
+
+/**
+ * @brief Rank the current page's entries and select the highest-scoring slot.
+ * @param arg0 Unused; present only to match the caller's 3-argument ABI.
+ * @param arg1 Unused; present only to match the caller's 3-argument ABI.
+ * @param arg2 Unused; present only to match the caller's 3-argument ABI.
+ * @return Index of the entry holding the maximum value.
+ * @note WIP 92.06% (gcc272_cdk); residual is a row-base regalloc/sched cascade
+ *       (CSE-FOLD on D_80162CD0).
+ */
+s32 func_80143BA8(s32 arg0, s32 arg1, s32 arg2)
+{
+    s32 *row;
+    s32 *elem;
+    s32 *rank_ptr;
+    s32 *cmp_ptr;
+    s32 *inc_ptr;
+    s32 *base_rank;
+    s32 *ecopy;
+    s32 *max_ptr;
+    s32 *out_ptr;
+    char *ent_ptr;
+    s32 t0v;
+    s32 i;
+    s32 s3v;
+    s32 count;
+    s32 handle;
+    s32 less_count;
+    s32 j;
+
+    func_80143964();
+    s3v = -1;
+    func_80145090();
+    i = 0;
+    handle = func_80143964();
+    func_80143DE4();
+    t0v = 1;
+    if (D_80162350 > 0)
+    {
+        count = D_80162350;
+        base_rank = &D_80162380[0];
+        rank_ptr = base_rank;
+        row = (s32 *)((D_8014A920 * 0x50) + (s32)D_80162CD0);
+        elem = row;
+        do
+        {
+            if (*elem >= 0)
+            {
+                j = 0;
+                if (*elem >= s3v)
+                {
+                    *rank_ptr = t0v;
+                    s3v = *elem;
+                    t0v += 1;
+                }
+                else
+                {
+                    less_count = 0;
+                    if (i > 0)
+                    {
+                        ecopy = elem;
+                        inc_ptr = base_rank;
+                        cmp_ptr = row;
+                        do
+                        {
+                            if (*ecopy < *cmp_ptr)
+                            {
+                                less_count += 1;
+                                *inc_ptr += 1;
+                            }
+                            inc_ptr += 1;
+                            j += 1;
+                            cmp_ptr += 1;
+                        } while (j < i);
+                    }
+                    *rank_ptr = t0v - less_count;
+                    t0v += 1;
+                }
+            }
+            rank_ptr += 1;
+            i += 1;
+            elem += 1;
+        } while (i < count);
+    }
+    D_8016237C = t0v;
+    t0v = -1;
+    i = 0;
+    s3v = 0;
+    if (D_80162350 > 0)
+    {
+        max_ptr = (s32 *)((D_8014A920 * 0x50) + (s32)D_80162CD0);
+        do
+        {
+            if (t0v < *max_ptr)
+            {
+                t0v = *max_ptr;
+                s3v = i;
+            }
+            i += 1;
+            max_ptr += 1;
+        } while (i < D_80162350);
+        i = 0;
+    }
+    D_80162D74 = t0v + 1;
+    if (D_80162350 > 0)
+    {
+        out_ptr = &D_80162D78[0];
+        ent_ptr = &D_801623D0[0];
+    loop_20:
+        if (func_8001714C(&D_800ECFC4[0], (void *)((D_8014A920 * 0x320) + (s32)ent_ptr), 8) == 0)
+        {
+            *out_ptr = handle + 1;
+        }
+        else
+        {
+            out_ptr += 1;
+            ent_ptr += 0x28;
+            i += 1;
+            if (i < D_80162350)
+            {
+                goto loop_20;
+            }
+        }
+    }
+    return s3v;
+}
+
+
+/**
+ * @brief Reset the cload menu state: set the row-count/pitch field to 0x28 and
+ *        clear all 15 slot entries of D_80162380 to -1 (empty).
+ */
+void func_80143DE4(void)
+{
+    s32 i;
+    s32 val;
+
+    D_8016237C = 0x28;
+    val = -1;
+    for (i = 14; i >= 0; i--)
+    {
+        D_80162380[i] = val;
+    }
+}
+
+
+/**
+ * @brief Scan up to D_80162350 entries of the D_801623D0 table (row selected by
+ *        D_8014A920, stride 0x28) and return 1 as soon as an entry fails to
+ *        match either of the two patterns D_800ECF7C / D_800ECF8C; 0 if all pass.
+ * @return 1 on the first non-matching entry, 0 if every entry matches both patterns.
+ * @note WIP 95.77% (gcc272_cdk). Instruction-exact (52/52), frame -0x20, all sp
+ *       slots match. Sole residue: a preheader emit-order rotation -- the
+ *       `lui s2, %hi(D_8014A920)` sits after entry's `lui/addiu(D_801623D0)`
+ *       instead of before it. Same registers (s0=entry, s2=A920 hi), so it is
+ *       pure emit order. The only C constructs that reorder it (aliasing
+ *       D_8014A920 through a pointer, ALLOC-06 style) force a full-pointer
+ *       lui+addiu with 0x0(s2) addressing instead of the target's hi-only
+ *       %lo(D_8014A920)(s2) form, adding a spurious insn -- a worse match.
+ */
+s32 func_80143E1C(void)
+{
+    s32 i;
+    u8 *entry;
+
+    i = 0;
+    if (D_80162350 > 0)
+    {
+        entry = &D_801623D0;
+        do
+        {
+            if (func_8001714C(&D_800ECF7C, (void *)(D_8014A920 * 0x320 + (s32)entry), 0xC) == 0 ||
+                func_8001714C(&D_800ECF8C, (void *)(D_8014A920 * 0x320 + (s32)entry), 0xC) == 0)
+            {
+                return 1;
+            }
+            entry += 0x28;
+            i++;
+        } while (i < D_80162350);
+    }
+    return 0;
+}
+
+
+/**
+ * @brief Sum the (unk18 >> 13) fixed-point field over D_80162350 records of the
+ *        current D_801623D0 page and report whether the total reaches 14.
+ * @return 1 if the accumulated total is >= 14, otherwise 0.
+ * @note Records are walked with a running byte offset that starts at the page
+ *       base (D_8014A920 * 0x320) and steps by 0x28; each unk18 is divided by
+ *       8192 (signed, round toward zero).
+ * @note Residual vs target is a 4-row loop-body a0/a1 permutation of the
+ *       counter and accumulator (ALLOC-ORDER): the counter's extra loop-compare
+ *       ref out-prioritizes the accumulator by a hair and no source rewrite
+ *       flips it (permuter territory).
+ */
+s32 func_80143EEC(void)
+{
+    s32 i;
+    s32 sum;
+    s32 offset;
+
+    sum = 0;
+    i = 0;
+    if (D_80162350 > 0)
+    {
+        offset = D_8014A920 * 0x320;
+        do
+        {
+            sum += ((Entry *)((u8 *)D_801623D0 + offset))->unk18 / 8192;
+            i++;
+            offset += 0x28;
+        } while (i < D_80162350);
+    }
+    return sum >= 0xE;
+}
+
+
+/**
+ * @brief Render the two fixed prompt strings (D_800ECF9C, D_800ECFB0).
+ * @note Each draw copies a 6-byte header from D_80140038, biases byte 2 by the
+ *       current page index (D_8014A920), then emits via func_80016F9C /
+ *       func_8001686C.
+ */
+void func_80143F68(void)
+{
+    DrawState buf;
+
+    memcpy(&buf, &D_80140038, 6);
+    ((u8 *)&buf)[2] += *(u8 *)&D_8014A920;
+    func_80016F9C(&buf, &D_800ECF9C);
+    func_8001686C(&buf);
+
+    memcpy(&buf, &D_80140038, 6);
+    ((u8 *)&buf)[2] += *(u8 *)&D_8014A920;
+    func_80016F9C(&buf, &D_800ECFB0);
+    func_8001686C(&buf);
+}
+
+
+/**
+ * @brief Advance the cload overlay load/decompress state machine one step.
+ * @return The next phase code (1-5) for the caller to act on.
+ * @note Dispatches on *D_80162374 (the current step opcode); each case drives
+ *       CD reads, buffer setup, decode, and teardown, updating D_80162374 and
+ *       the D_80162350 / D_80162364 status fields.
+ */
+s32 func_8014401C(void)
+{
+    TopBuf buf;
+    DrawState buf2;
+    s32 sp98;
+    s32 sp9C;
+    s32 var_s4;
+    s32 var_s0;
+    s32 temp;
+    s32 var_a0;
+    s32 i;
+
+    var_s4 = 1;
+    memcpy(&buf, &D_80140038, 6);
+    ((u8 *)&buf)[2] += *(u8 *)&D_8014A920;
+
+    if (D_80162374 != NULL)
+    {
+        switch (*D_80162374)
+        {
+        case 1:
+            var_s4 = 3;
+            func_8001729C(D_8014A920);
+            func_8001724C(D_8014A920 * 0x10);
+            D_80162374 = D_80162374 + 1;
+            goto block_81;
+
+        case 2:
+            temp = func_80144F68();
+            if (temp >= 3)
+            {
+                goto c2_ge3;
+            }
+            if (temp > 0)
+            {
+                goto c2_pos;
+            }
+            if (temp == 0)
+            {
+                D_80162374 = D_80162374 + 1;
+                goto block_81;
+            }
+            goto block_81;
+        c2_ge3:
+            if (temp == 3)
+            {
+                goto c2_eq3;
+            }
+            goto block_81;
+        c2_pos:
+            var_s4 = 4;
+            D_80162364 = 0;
+            D_80162350 = 0xFD;
+            D_80162374 = D_80162374 + 1;
+            func_8014330C();
+            goto block_81;
+        c2_eq3:
+            D_8016237C = 0x28;
+            for (i = 14; i >= 0; i--)
+            {
+                D_80162380[i] = -1;
+            }
+            goto block_58;
+
+        case 3:
+            func_80144EB8();
+            D_80162374 = D_80162374 + 1;
+            goto block_81;
+
+        case 4:
+            do
+            {
+                temp = func_80144FFC();
+            } while (temp == -1);
+            if (temp == 0)
+            {
+                D_80162374 = D_80162374 + 1;
+                goto block_81;
+            }
+            if (temp < 0)
+            {
+                goto block_81;
+            }
+            if (temp >= 4)
+            {
+                goto block_81;
+            }
+            var_s4 = 4;
+            goto block_42;
+
+        case 5:
+            func_80144F10();
+            D_80162374 = D_80162374 + 1;
+            goto block_81;
+
+        case 6:
+            memcpy(&buf2, &D_80140038, 6);
+            ((u8 *)&buf2)[2] += *(u8 *)&D_8014A920;
+            func_80016F9C(&buf2, &D_800ECF9C);
+            func_8001686C(&buf2);
+            memcpy(&buf2, &D_80140038, 6);
+            ((u8 *)&buf2)[2] += *(u8 *)&D_8014A920;
+            func_80016F9C(&buf2, &D_800ECFB0);
+            func_8001686C(&buf2);
+            D_80162E20 = 1;
+            var_s0 = 0;
+            if (func_80144AE8(D_8014A920) == 0)
+            {
+                var_s4 = 2;
+                D_80162350 = 0xF8;
+                D_80162374 = NULL;
+                D_80162E20 = 0;
+                goto block_81;
+            }
+            D_80162374 = D_80162374 + 1;
+            do
+            {
+                if (func_80144BA4(D_8014A920) == 0)
+                {
+                    D_80162E20 = 0;
+                    if (D_80162350 == 0xF8)
+                    {
+                        goto block_81;
+                    }
+                    if (D_80162350 == 0xFA)
+                    {
+                        goto block_81;
+                    }
+                    func_80144D18();
+                    goto block_81;
+                }
+                var_s0 = var_s0 + 1;
+            } while (var_s0 < 0x14);
+            goto block_81;
+
+        case 8:
+            var_s4 = 3;
+            func_8001729C(D_8014A920);
+            func_800172AC(D_8014A920 * 0x10);
+            D_80162374 = D_80162374 + 1;
+            goto block_81;
+
+        case 9:
+            var_s4 = 3;
+            func_8001729C(D_8014A920);
+            func_8001725C(D_8014A920 * 0x10);
+            D_80162D70 = 0x10;
+            D_80162DD4 = 0x10;
+            D_80162374 = D_80162374 + 1;
+            goto block_81;
+
+        case 0:
+            var_s4 = 2;
+            D_80162370 = 0;
+            goto block_81;
+
+        case 15:
+            temp = func_80144F68();
+            if (temp >= 3)
+            {
+                goto c15_ge3;
+            }
+            if (temp > 0)
+            {
+                goto c15_pos;
+            }
+            if (temp == 0)
+            {
+                D_80162374 = D_80162374 + 1;
+                goto block_81;
+            }
+            goto block_81;
+        c15_ge3:
+            if (temp == 3)
+            {
+                goto c15_eq3;
+            }
+            goto block_81;
+        c15_pos:
+            D_80162DD4 = D_80162DD4 - 1;
+            if (D_80162DD4 != 0)
+            {
+                goto block_44;
+            }
+            var_s4 = 4;
+        block_42:
+            D_80162364 = 0;
+            D_80162350 = 0xFD;
+            goto block_81;
+        c15_eq3:
+            D_80162D70 = D_80162D70 - 1;
+            if (D_80162D70 == 0)
+            {
+                goto c15_d70zero;
+            }
+        block_44:
+            func_8001729C(D_8014A920);
+            func_800172AC(D_8014A920 * 0x10);
+            func_8001729C(D_8014A920);
+            func_8001725C(D_8014A920 * 0x10);
+            goto block_81;
+        c15_d70zero:
+            var_s4 = 5;
+            D_80162350 = 0xFC;
+            D_80162374 = &D_80146528;
+            goto block_81;
+
+        case 16:
+            do
+            {
+                temp = func_80144FFC();
+            } while (temp == -1);
+            D_80162374 = D_80162374 + 1;
+            goto block_81;
+
+        case 17:
+            D_8015A310 = 1;
+            D_80162364 = 0;
+            func_8001729C(D_8014A920);
+            D_80162E3C = func_8001680C(&D_80162C90, 0x8001);
+            if (D_80162E3C == -1)
+            {
+                goto block_81;
+            }
+            func_80144EB8();
+            func_8001729C(D_8014A920);
+            var_a0 = 0x80;
+            if (D_80162DCC != 0)
+            {
+                var_a0 = 0x280;
+            }
+            if (func_8001681C(D_80162E3C, &D_80162A10, var_a0) != -1)
+            {
+                D_80162374 = D_80162374 + 1;
+                goto block_81;
+            }
+            func_8001683C(D_80162E3C);
+            goto block_81;
+
+        case 18:
+            temp = func_80144F68();
+            if (temp == 0)
+            {
+                D_8015A310 = 0;
+                D_80162364 = 1;
+                goto block_65;
+            }
+            if (temp == -1)
+            {
+                goto block_81;
+            }
+            D_8015A310 = 0;
+            func_8001683C(D_80162E3C);
+        block_58:
+            D_80162350 = 0xFF;
+            D_80162374 = D_8014651C;
+            goto block_81;
+
+        case 30:
+            D_80162378 = 5;
+            D_80162374 = D_80162374 + 1;
+            goto block_81;
+
+        case 19:
+            D_8015A320 = 1;
+            D_80162DC8 = 1;
+            D_80162DD0 = func_8002054C(-1);
+            func_8001729C(D_8014A920);
+            D_80162E3C = func_8001680C(&D_80162C90, 0x8001);
+            func_80144EB8();
+            func_8001729C(D_8014A920);
+            if (func_8001681C(D_80162E3C, &D_80146920, 0x4000) != -1)
+            {
+                D_80162374 = D_80162374 + 1;
+                goto block_81;
+            }
+            func_8001683C(D_80162E3C);
+            D_80162378 = D_80162378 - 1;
+            if (D_80162378 == 0)
+            {
+                var_a0 = 1;
+                goto block_80;
+            }
+            goto block_81;
+
+        case 20:
+            temp = func_80144F68();
+            if (temp == 0)
+            {
+                D_8015A320 = 0;
+            block_65:
+                D_80162374 = D_80162374 + 1;
+                func_8001683C(D_80162E3C);
+                goto block_81;
+            }
+            if (temp < 0)
+            {
+                goto block_81;
+            }
+            if (temp >= 4)
+            {
+                goto block_81;
+            }
+            D_80162378 = D_80162378 - 1;
+            if (D_80162378 == 0)
+            {
+                goto c20_378zero;
+            }
+            func_8001683C(D_80162E3C);
+            D_80162374 = D_80162374 - 1;
+            goto block_81;
+        c20_378zero:
+            func_8001683C(D_80162E3C);
+            var_a0 = 1;
+            D_80162DC8 = 0;
+            goto block_80;
+
+        case 24:
+            var_s0 = 0;
+            do
+            {
+                if (func_800342CC(D_8014A920 * 0x10) == 1)
+                {
+                    break;
+                }
+                func_8002054C(0);
+                var_s0 = var_s0 + 1;
+            } while (var_s0 < 0x14);
+            if (var_s0 != 0x14)
+            {
+                func_80032174(0, &sp98, &sp9C);
+                var_a0 = 3;
+                if (sp9C == 0)
+                {
+                    D_80162374 = D_80162374 + 1;
+                    goto block_81;
+                }
+                goto block_80;
+            }
+            var_a0 = 3;
+            goto block_80;
+        }
+    }
+    goto block_81;
+
+block_80:
+    func_80142D68(var_a0);
+
+block_81:
+    return var_s4;
+}
+
+
+/**
+ * @brief Reset the cached resource handles and arm the first load step.
+ * @note Releases the handles (func_80144EB8), rewinds the CD channel, and points
+ *       D_80162374 at the D_80146528 step table.
+ */
+void func_801447B4(void)
+{
+    func_80144EB8();
+    func_8001729C(D_8014A920);
+    func_8001724C(D_8014A920 * 0x10);
+    D_80162374 = &D_80146528;
+}
+
+
+/**
+ * @brief Poll the four cached handles; on completion, rewind the CD channel.
+ * @return The busy-slot index from func_80144F68 (-1 when none are busy).
+ */
+s32 func_80144804(void)
+{
+    s32 temp_v0;
+
+    temp_v0 = func_80144F68();
+    if (temp_v0 != -1)
+    {
+        func_8001729C(D_8014A920);
+        func_8001724C(D_8014A920 * 0x10);
+    }
+    return temp_v0;
+}
+
+
+/**
+ * @brief Allocate and register the eight streaming buffers for this overlay.
+ * @note Brackets the eight func_800167AC allocations (handles stored in
+ *       D_80162E18..D_80162E38) with func_800167EC / func_800167FC and resets the
+ *       stream bookkeeping (D_80162E20, D_80162DD0, D_80162DC8).
+ */
+void func_8014485C(void)
+{
+    func_800158E0();
+    func_800167EC();
+    D_80162E18 = func_800167AC(0xF4000001, 4, 0x2000, 0);
+    D_80162E1C = func_800167AC(0xF4000001, 0x8000, 0x2000, 0);
+    D_80162E24 = func_800167AC(0xF4000001, 0x100, 0x2000, 0);
+    D_80162E28 = func_800167AC(0xF4000001, 0x2000, 0x2000, 0);
+    D_80162E2C = func_800167AC(0xF0000011, 4, 0x2000, 0);
+    D_80162E30 = func_800167AC(0xF0000011, 0x8000, 0x2000, 0);
+    D_80162E34 = func_800167AC(0xF0000011, 0x100, 0x2000, 0);
+    D_80162E38 = func_800167AC(0xF0000011, 0x2000, 0x2000, 0);
+    func_800167DC(D_80162E18);
+    func_800167DC(D_80162E1C);
+    func_800167DC(D_80162E24);
+    func_800167DC(D_80162E28);
+    func_800167DC(D_80162E2C);
+    func_800167DC(D_80162E30);
+    func_800167DC(D_80162E34);
+    func_800167DC(D_80162E38);
+    func_800167FC();
+    D_80162E20 = 0;
+    D_80162DD0 = func_8002054C(-1);
+    D_80162DC8 = 0;
+}
+
+
+/**
+ * @brief Tear down / release the eight D_80162E18..D_80162E38 handles.
+ * @note Wrapped by func_800158E0 and func_800167EC/func_800167FC bracket calls;
+ *       each handle is passed to func_800167BC in turn (D_80162E20 is skipped).
+ */
+void func_80144A38(void)
+{
+    func_800158E0();
+    func_800167EC();
+    func_800167BC(D_80162E18);
+    func_800167BC(D_80162E1C);
+    func_800167BC(D_80162E24);
+    func_800167BC(D_80162E28);
+    func_800167BC(D_80162E2C);
+    func_800167BC(D_80162E30);
+    func_800167BC(D_80162E34);
+    func_800167BC(D_80162E38);
+    func_800167FC();
+}
+
+
+/**
+ * @brief Begin streaming the arg0 page's first D_801623D0 record.
+ * @param arg0 Page index (each page is 0x320 bytes in D_801623D0).
+ * @return 1 if func_80016BCC accepted the record (count bumped), else 0.
+ * @note WIP 94.47% (gcc272_cdk); residual is a 2-insn memcpy base / CSE-share
+ *       coupling.
+ */
+s32 func_80144AE8(s32 arg0)
+{
+    Header buf;
+    Header *p = &D_801400BC;
+
+    memcpy(&buf, p, 7);
+    D_8016235C = 0;
+    D_8015A324 = 0;
+    D_8015A318 = 0;
+    D_80162354 = 0;
+    D_80162350 = 0;
+    ((u8 *)&buf)[2] += arg0;
+    if (func_80016BCC(&buf, D_801623D0 + arg0 * 0x320, p->unk6, p) != 0)
+    {
+        D_80162350 += 1;
+        return 1;
+    }
+    return 0;
+}
+
+
+/**
+ * @brief Try to append the arg0 page's next D_801623D0 record; if it cannot,
+ *        recompute the page's fixed-point total and update the selection state.
+ * @param arg0 Page index (each page is 0x320 bytes / 20 records in D_801623D0).
+ * @return 1 if func_8001684C accepted the new record (count bumped), else 0.
+ * @note When the record is rejected, the (unk18 >> 13) total over the page's
+ *       records decides whether the count is clamped (0xFA) or the selection
+ *       (D_80162354) is set from func_80143BA8's result; the >= 14 test is
+ *       materialized as a boolean, matching the inlined func_80143EEC pattern.
+ */
+s32 func_80144BA4(s32 arg0)
+{
+    s32 i;
+    s32 sum;
+    s32 offset;
+    s32 s0_val;
+    s32 term1;
+    s32 term2;
+    s32 count;
+    s32 cond;
+
+    term1 = arg0 * 0x320;
+    term2 = D_80162350 * 0x28 + (s32)D_801623D0;
+    if (func_8001684C((void *)(term1 + term2)) != 0)
+    {
+        D_80162350 += 1;
+        return 1;
+    }
+    func_800AA02C();
+    if (func_80143E1C() == 0)
+    {
+        D_80162350 = 0xF8;
+    }
+    else
+    {
+        i = 0;
+        sum = 0;
+        count = D_80162350;
+        if (count > 0)
+        {
+            offset = D_8014A920 * 0x320;
+            do
+            {
+                sum += ((Entry *)((u8 *)D_801623D0 + offset))->unk18 / 8192;
+                i++;
+                offset += 0x28;
+            } while (i < count);
+        }
+        cond = sum >= 0xE;
+        if (cond != 0)
+        {
+            s0_val = func_80143BA8(sum, i, count);
+            if (func_80143E1C() == 0)
+            {
+                D_80162350 = 0xFA;
+                D_80162D74 = 0;
+            }
+            else
+            {
+                D_80162354 = s0_val;
+                func_80140D20();
+            }
+        }
+        else
+        {
+            s0_val = func_80143BA8(sum, i, count);
+            if (func_80143E1C() == 0)
+            {
+                D_80162354 = 0;
+                func_80140D20();
+                D_80162D74 = 0;
+            }
+            else
+            {
+                D_80162354 = s0_val;
+                func_80140D20();
+            }
+        }
+    }
+    return 0;
+}
+
+
+/**
+ * @brief Commit the selected D_801623D0 record and arm the next step.
+ * @note Validates the record against the D_800ECFC4 / D_800ECF7C patterns, copies
+ *       its header into a local CdFile, biases byte 2 by the page index, and
+ *       registers it via func_800170BC; sets the D_80162364 / D_80162DCC status.
+ */
+void func_80144D18(void)
+{
+    CdFile local;
+    CdFile *src;
+    u8 *p;
+    s32 term1;
+    s32 term2;
+
+    if (D_80162350 == 0)
+    {
+        D_80162364 = 3;
+        return;
+    }
+    term1 = D_8014A920 * 0x320;
+    term2 = (D_80162354 * 0x28) + (s32)D_801623D0;
+    term2 += term1;
+    if (func_8001714C(&D_800ECFC4[0], (void *)(term2 + term1), 8) == 0)
+    {
+        D_80162364 = 2;
+        return;
+    }
+    p = (u8 *)&local;
+    src = &D_80140038;
+    *(s32 *)p = src->unk0;
+    *(s16 *)(p + 4) = src->unk4;
+    term1 = D_8014A920 * 0x320;
+    term2 = (D_80162354 * 0x28) + (s32)D_801623D0;
+    term2 += term1;
+    func_80016F9C(p, (void *)(term2 + term1), src);
+    D_80162364 = 0;
+    *((u8 *)&local + 2) += (u8)D_8014A920;
+    func_800170BC(&D_80162C90[0], p, (u8)D_8014A920);
+    D_80162374 = &D_80146538[0];
+    term1 = D_8014A920 * 0x320;
+    term2 = (D_80162354 * 0x28) + (s32)D_801623D0;
+    term2 += term1;
+    if (func_8001714C(&D_800ECF7C[0], (void *)(term2 + term1), 0xC) == 0)
+    {
+        D_80162DCC = 1;
+        return;
+    }
+    D_80162DCC = 0;
+}
+
+
+/**
+ * @brief Release the four cached resource handles for this overlay.
+ *
+ * Passes the values held in D_80162E18, D_80162E1C, D_80162E24, and D_80162E28
+ * (in that order) to @ref func_800167CC.
+ */
+void func_80144EB8(void)
+{
+    func_800167CC(D_80162E18);
+    func_800167CC(D_80162E1C);
+    func_800167CC(D_80162E24);
+    func_800167CC(D_80162E28);
+}
+
+
+/**
+ * @brief Release the next four cached resource handles for this overlay.
+ *
+ * Passes the values held in D_80162E2C, D_80162E30, D_80162E34, and D_80162E38
+ * (in that order) to @ref func_800167CC.
+ */
+void func_80144F10(void)
+{
+    func_800167CC(D_80162E2C);
+    func_800167CC(D_80162E30);
+    func_800167CC(D_80162E34);
+    func_800167CC(D_80162E38);
+}
+
+
+/**
+ * @brief Release four cached handles, returning the index of the first busy one.
+ *
+ * Passes each of D_80162E18, D_80162E1C, D_80162E24, D_80162E28 to
+ * @ref func_800167CC in order; the first call that returns 1 stops the sequence
+ * and yields that slot's index (0-3). Returns -1 if none report busy.
+ *
+ * @return Index 0-3 of the first handle whose release returned 1, else -1.
+ */
+s32 func_80144F68(void)
+{
+    if (func_800167CC(D_80162E18) == 1)
+    {
+        return 0;
+    }
+    if (func_800167CC(D_80162E1C) == 1)
+    {
+        return 1;
+    }
+    if (func_800167CC(D_80162E24) == 1)
+    {
+        return 2;
+    }
+    if (func_800167CC(D_80162E28) == 1)
+    {
+        return 3;
+    }
+    return -1;
+}
+
+
+/**
+ * @brief Release four cached handles, returning the index of the first busy one.
+ *
+ * Passes each of D_80162E2C, D_80162E30, D_80162E34, D_80162E38 to
+ * @ref func_800167CC in order; the first call that returns 1 stops the sequence
+ * and yields that slot's index (0-3). Returns -1 if none report busy.
+ *
+ * @return Index 0-3 of the first handle whose release returned 1, else -1.
+ */
+s32 func_80144FFC(void)
+{
+    if (func_800167CC(D_80162E2C) == 1)
+    {
+        return 0;
+    }
+    if (func_800167CC(D_80162E30) == 1)
+    {
+        return 1;
+    }
+    if (func_800167CC(D_80162E34) == 1)
+    {
+        return 2;
+    }
+    if (func_800167CC(D_80162E38) == 1)
+    {
+        return 3;
+    }
+    return -1;
+}
+
+
+/**
+ * @brief Collate the D_801623D0 page records, ordering them by pattern class.
+ * @note Five passes bucket records matching D_800ECF7C, then D_800ECF8C, then
+ *       D_800ECFC4, then the remainder, copying each 0x28-byte record with
+ *       func_80016E7C before writing the ordered set back to the page.
+ */
+void func_80145090(void)
+{
+    u8 buf[0x320];
+    s32 out;
+    s32 grp;
+    s32 i1;
+    u8 *entry1;
+    s32 *gptr1;
+    s32 off1;
+    s32 grp2;
+    s32 i2;
+    u8 *entry2;
+    s32 *gptr2;
+    s32 off2;
+    s32 i3;
+    u8 *entry3;
+    s32 off3;
+    s32 i4;
+    u8 *entry4;
+    s32 off4;
+    s32 i5;
+    u8 *rec5;
+    u8 *bp5;
+
+    grp = 0;
+    out = 0;
+    do
+    {
+        i1 = 0;
+        if (D_80162350 > 0)
+        {
+            entry1 = &D_801623D0;
+            gptr1 = &D_80162D78;
+            off1 = out * 0x28;
+            do
+            {
+                if (*gptr1 == grp && func_8001714C(&D_800ECF7C, entry1 + D_8014A920 * 0x320, 0xC) == 0)
+                {
+                    func_80016E7C(entry1 + D_8014A920 * 0x320, &buf[off1], 0x28);
+                    off1 += 0x28;
+                    out += 1;
+                }
+                entry1 += 0x28;
+                i1 += 1;
+                gptr1 += 1;
+            } while (i1 < D_80162350);
+        }
+        grp += 1;
+    } while (grp < 8);
+
+    grp2 = 0;
+    do
+    {
+        i2 = 0;
+        if (D_80162350 > 0)
+        {
+            entry2 = &D_801623D0;
+            gptr2 = &D_80162D78;
+            off2 = out * 0x28;
+            do
+            {
+                if (*gptr2 == grp2 && func_8001714C(&D_800ECF8C, entry2 + D_8014A920 * 0x320, 0xC) == 0)
+                {
+                    func_80016E7C(entry2 + D_8014A920 * 0x320, &buf[off2], 0x28);
+                    off2 += 0x28;
+                    out += 1;
+                }
+                entry2 += 0x28;
+                i2 += 1;
+                gptr2 += 1;
+            } while (i2 < D_80162350);
+        }
+        grp2 += 1;
+    } while (grp2 < 8);
+
+    i3 = 0;
+    if (D_80162350 > 0)
+    {
+        entry3 = &D_801623D0;
+        off3 = out * 0x28;
+        do
+        {
+            if (func_8001714C(&D_800ECFC4, entry3 + D_8014A920 * 0x320, 8) == 0)
+            {
+                func_80016E7C(entry3 + D_8014A920 * 0x320, &buf[off3], 0x28);
+                off3 += 0x28;
+                out += 1;
+            }
+            i3 += 1;
+            entry3 += 0x28;
+        } while (i3 < D_80162350);
+    }
+
+    i4 = 0;
+    if (D_80162350 > 0)
+    {
+        entry4 = &D_801623D0;
+        off4 = out * 0x28;
+        do
+        {
+            if (func_8001714C(&D_800ECF7C, entry4 + D_8014A920 * 0x320, 0xC) != 0 &&
+                func_8001714C(&D_800ECF8C, entry4 + D_8014A920 * 0x320, 0xC) != 0 &&
+                func_8001714C(&D_800ECFC4, entry4 + D_8014A920 * 0x320, 8) != 0)
+            {
+                func_80016E7C(entry4 + D_8014A920 * 0x320, &buf[off4], 0x28);
+                off4 += 0x28;
+            }
+            i4 += 1;
+            entry4 += 0x28;
+        } while (i4 < D_80162350);
+    }
+
+    i5 = 0;
+    if (D_80162350 > 0)
+    {
+        rec5 = &D_801623D0;
+        bp5 = &buf[0];
+        do
+        {
+            func_80016E7C(bp5, rec5 + D_8014A920 * 0x320, 0x28);
+            bp5 += 0x28;
+            i5 += 1;
+            rec5 += 0x28;
+        } while (i5 < D_80162350);
+    }
+}
+
+
+/**
+ * @brief Format arg2 as a 5-digit glyph string (leading zeros suppressed, sign
+ *        prepended) and hand it to func_80145764 for rendering.
+ * @param arg0 Passed through to func_80145764 (prim/handle).
+ * @param arg1 Passed through to func_80145764 (ordering table).
+ * @param arg2 Signed value to format.
+ * @param arg3 Passed through to func_80145764 (x).
+ * @param arg4 Passed through to func_80145764 (y).
+ * @param arg5 Passed through to func_80145764.
+ * @param arg6 Passed through to func_80145764.
+ * @note Each decimal digit indexes the D_8014687C glyph table; 0x4F82 is the
+ *       '0' glyph (skipped while leading) and 0x5B81 the minus glyph.
+ * @note WIP ~70%: the seven magic-number divisions are emitted correctly but
+ *       gcc's sched2 interleaving of the imuldiv ops and the resulting
+ *       register-allocation cascade (the target's callee-saved s0 vs a temp,
+ *       and the arg2 register) are not reproducible from source shape alone
+ *       (confirmed by sched_oracle) - permuter territory.
+ */
+void func_801454C0(s32 arg0, s32 *arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
+{
+    u16 buf[7];
+    s32 count;
+    s32 n;
+    s32 neg;
+    s32 minus;
+    u16 *p;
+
+    n = arg2;
+    if (n < 0)
+    {
+        n = -n;
+        neg = 1;
+    }
+    else
+    {
+        neg = 0;
+    }
+    buf[1] = D_8014687C[n / 10000];
+    count = 1;
+    buf[2] = D_8014687C[(n % 10000) / 1000];
+    buf[3] = D_8014687C[(n % 1000) / 100];
+    buf[4] = D_8014687C[(n % 100) / 10];
+    p = &buf[1];
+    buf[6] = 0;
+    buf[5] = D_8014687C[n % 10];
+loop:
+    if (*p == 0x4F82)
+    {
+        count++;
+        p++;
+        if (count < 5)
+        {
+            goto loop;
+        }
+    }
+    if (neg != 0)
+    {
+        minus = 0x5B81;
+        count--;
+        buf[count] = minus;
+    }
+    func_80145764(arg0, arg1, &buf[count], arg3, arg4, arg5, arg6);
+}
+
+
+/**
+ * @brief Render @p arg2 as a two-digit hex glyph string via func_80145764.
+ * @param arg0 Passed through to func_80145764 (prim/handle).
+ * @param arg1 Passed through to func_80145764 (ordering table).
+ * @param arg2 Byte value; its high and low nibbles index the D_80146894 glyph table.
+ * @param arg3 X coordinate passed through.
+ * @param arg4 Y coordinate passed through.
+ * @param arg5 Passed through to func_80145764.
+ */
+void func_801456E0(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+{
+    u16 buf[3];
+
+    buf[0] = D_80146894[arg2 / 16];
+    buf[1] = D_80146894[arg2 % 16];
+    buf[2] = 0;
+    func_80145764(arg0, arg1, buf, arg3, arg4, 0, arg5);
 }
