@@ -1985,18 +1985,9 @@ void func_8006AA7C(s32 arg0)
  *
  * @param arg0 Resource slot index minus one; the entry acted on is arg0 + 1.
  *
- * @note NOT MATCHED. Required to match, each measured by reverting it:
- *       - both comparisons put the loop-varying term first (+8 exact rows);
- *       - loop 3 walks a pointer rather than indexing D_800FDF58, which is what
- *         biases its induction variable to +0x40 and supplies the 115th insn;
- *       - `dst` is loaded after the three flag stores, not beside `src` (+26);
- *       - the two nested do/while(0) wrappers are ALLOC-23 ref-count devices
- *         (+7 and +10); a bare braced block measures exactly 0 at both sites.
- *       Residue is 11 rows of compiler-temp colouring; see
- *       working/func_8006AB38/STATUS.md for the evidence, the retired probe
- *       classes, and why a source-model reset is the recommended next step.
- * @see decomp.me (97.74%) TODO
+ * @see decomp.me (100%) TODO
  */
+
 void func_8006AB38(s32 arg0)
 {
     s32 idx = arg0 + 1;
@@ -2004,19 +1995,36 @@ void func_8006AB38(s32 arg0)
     u8* src;
     u8* dst;
     s32 size;
+    u32 lhs;
+    u32 rhs;
     Struct_D800FDF58* p;
+    Struct_D800FDF58* basep;
+    Struct_D800FDF58* slot;
+    FieldResourceEntry* entry;
 
     if (D_800FD818[idx].u0.b.unk0 & 1)
     {
-        src = g_field_resource_entries[idx].end;
-        D_800FDF58[idx].unk25 = 0xFF;
+        entry = &g_field_resource_entries[idx];
+        do
+        {
+            basep = D_800FDF58;
+        } while (0);
+        do
+        {
+            slot = &basep[idx];
+        } while (0);
+        do
+        {
+            src = entry->end;
+        } while (0);
+        dst = entry->start;
+        slot->unk25 = 0xFF;
         do
         {
             do
             {
                 D_800FD818[idx].unk256 = 0xFF;
                 D_800FD818[idx].u0.h &= 0xFFFE;
-                dst = g_field_resource_entries[idx].start;
                 size = src - dst;
 
                 while (src != g_field_resource_cursor)
@@ -2041,7 +2049,13 @@ void func_8006AB38(s32 arg0)
             {
                 if ((p->unk25 != 0xFF) && (p->unk3B != 8))
                 {
-                    if ((p->unk40 | 0x80000000) > (((u32)g_field_resource_entries[idx].start) | 0x80000000))
+                    lhs = p->unk40 | 0x80000000;
+                    rhs = (u32)g_field_resource_entries[idx].start;
+                    do
+                    {
+                        rhs |= 0x80000000;
+                    } while (0);
+                    if (lhs > rhs)
                     {
                         p->unk40 -= size;
                     }
@@ -2054,6 +2068,7 @@ void func_8006AB38(s32 arg0)
         } while (0);
     }
 }
+
 
 typedef struct
 {
