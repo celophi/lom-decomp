@@ -27,6 +27,27 @@ extern s32 D_8014C27C;
 extern s32 D_8014C280;
 extern s32 D_8014C284;
 extern s32 D_8014C288;
+extern s32 D_80122988;
+
+/** @brief Cell-grid view of D_80042FD8: 64 u32 cells at offset 0x29DC. */
+typedef struct { u8 pad[0x29DC]; u32 cells[64]; } D80042FD8Type;
+/** @brief 4-byte entry view of D_8014C198: a u16 flag/value word. */
+typedef struct { u16 value; u16 pad; } C198Entry;
+/** @brief UI panel bitfield block holding three animated corner words. */
+typedef struct { u32 unk00; u8 pad04[0x10]; u32 unk14; u8 pad18[0x24]; u32 unk3C; } B560;
+extern B560 D_8014B560;
+
+void func_800A3938();
+void func_800CB918();
+s32 func_800CBA9C();
+s32 func_800CBC0C();
+void func_800CBE64();
+void func_80140CBC();
+
+/** @brief Access grid cell @p i (u32) within D_80042FD8. */
+#define CELL(i) (((D80042FD8Type *)&D_80042FD8)->cells[(i)])
+/** @brief Clear the panel-animation bits [10:7] and set the "active" pair [8:7]. */
+#define SET_UI_BITS(x) (((x) & ~0x780) | 0x180)
 
 typedef struct {
     s16 x;
@@ -241,4 +262,135 @@ void func_801404F0(void)
         return;
     }
     D_8014C278 = D_8014C280;
+}
+
+/**
+ * @brief Per-frame update for the golem grid cursor: scrolls the view, handles
+ *        placement/rotation/confirm input, and animates the selection.
+ * @note WIP - 99.88% (446/455 exact, gcc272_cdk). Residue is a v0/v1 register
+ *       swap between D_8014C284 and D_8014C184 in the backward-search loop.
+ * @see decomp.me (99.88%)
+ */
+void func_801405A0(void)
+{
+    s32 old_x, old_y, i, index, count, input, value;
+    if ((D_80122988 & 0x800) && (D_8014C238 == 0)) goto cancel;
+    count = D_8014C180;
+    if (count != 0) {
+        D_8014C180 = count - 1;
+        D_8014C18C += (D_8014C23C - D_8014C18C) / count;
+        if (D_8014C180 != 0) return;
+        D_8014C284 = D_8014C18C / 40;
+    } else {
+        D_8014C18C = D_8014C23C;
+        D_8014C284 = D_8014C23C / 40;
+    }
+    if (D_8014C180 != 0) return;
+    if (D_8014C238 != 0) {
+        input = D_80122988;
+        if (input & 0xF000) {
+            old_x = D_8014C248;
+            old_y = D_8014C24C;
+            if (input & 0x1000) D_8014C24C = old_y - 1;
+            else if (input & 0x4000) D_8014C24C = old_y + 1;
+            else if (input & 0x8000) D_8014C248 = old_x - 1;
+            else if (input & 0x2000) D_8014C248 = old_x + 1;
+            if (func_800CBC0C(D_8014C284, D_8014C27C, D_8014C248, D_8014C24C) == 0) {
+                D_8014C248 = old_x; D_8014C24C = old_y; func_800A3938(0x78, 0x80);
+            } else func_800A3938(0x7D, 0x80);
+            return;
+        }
+        if (input & 0x90) {
+            if (input & 0x10) { if (D_8014C27C >= 3) D_8014C27C = 0; else D_8014C27C++; }
+            else { if (D_8014C27C == 0) D_8014C27C = 3; else D_8014C27C--; }
+            if (func_800CBC0C(D_8014C284, D_8014C27C, D_8014C248, D_8014C24C) == 0) func_80140CBC();
+            func_800A3938(0x7D, 0x80);
+            D_8014B560.unk3C = SET_UI_BITS(D_8014B560.unk3C);
+            return;
+        }
+        if (input & 0xA20) {
+            if (func_800CBA9C(D_8014C284, D_8014C27C, D_8014C248, D_8014C24C) != 0) {
+                D_8014C238 = 0; func_80140FF8(); func_800A3938(0x120, 0x80); func_800CB918(D_8014C284, D_8014C27C, D_8014C248, D_8014C24C);
+            } else func_800A3938(0x78, 0x80);
+            return;
+        }
+        if (input & 0x40) { D_8014C238 = 0; func_80140FF8(); func_800A3938(0x78, 0x80); CELL(D_8014C284) |= 3; }
+        return;
+    }
+    if (D_8014C184 != 0) {
+        i = 1; input = D_80122988;
+        if (input & 4) { D_80122988 = 0x1000; i = 3; }
+        else if (input & 8) { D_80122988 = 0x4000; i = 3; }
+        input = D_80122988;
+        if (input & 0x5000) {
+            func_800A3938(0x7D, 0x80);
+            while (i != 0) {
+                if (D_80122988 & 0x1000) {
+                    if (D_8014C23C != 0) { D_8014C180 = 4; D_8014C23C -= 40; D_8014B560.unk14 = SET_UI_BITS(D_8014B560.unk14); }
+                } else if ((D_80122988 & 0x4000) && ((D_8014C23C / 40) != (D_8014C184 - 1))) {
+                    D_8014C180 = 4; D_8014C23C += 40; D_8014B560.unk00 = SET_UI_BITS(D_8014B560.unk00);
+                }
+                i--;
+            }
+            return;
+        }
+        if (input & 2) {
+            s32 limit, match_type; D80042FD8Type *base;
+            index = D_8014C284; i = 0;
+            if (D_8014C184 > 0) {
+                limit = D_8014C184;
+                base = (D80042FD8Type *)&D_80042FD8;
+                match_type = D_8014C260;
+                index++;
+forward_loop:
+                if (index == limit) index = 0;
+                i++;
+                if ((base->cells[index] & 3) == match_type) goto forward_done;
+                index++;
+                if (i < limit) goto forward_loop;
+                index--;
+            }
+forward_done:
+            D_8014C23C = index * 40; D_8014C180 = 4; D_8014B560.unk00 = SET_UI_BITS(D_8014B560.unk00); func_800A3938(0x7D, 0x80); return;
+        }
+        if (input & 1) {
+            s32 limit, match_type; D80042FD8Type *base;
+            index = D_8014C284; i = 0;
+            if (D_8014C184 > 0) {
+                limit = D_8014C184;
+                base = (D80042FD8Type *)&D_80042FD8;
+                match_type = D_8014C260;
+                index--;
+backward_loop:
+                if (index < 0) index = limit - 1;
+                if ((base->cells[index] & 3) == match_type) goto backward_done;
+                input = D_8014C184;
+                i++;
+                index--;
+                if (i < input) goto backward_loop;
+                index++;
+            }
+backward_done:
+            D_8014C23C = index * 40; D_8014C180 = 4; D_8014B560.unk14 = SET_UI_BITS(D_8014B560.unk14); func_800A3938(0x7D, 0x80); return;
+        }
+        if (input & 0x220) {
+            if (((C198Entry *)D_8014C198)[D_8014C284].value == 0) {
+                D_8014C238 = 1;
+                if ((CELL(D_8014C284) & 3) == D_8014C260) {
+                    D_8014C248 = (s32)(CELL(D_8014C284) << 8) >> 27;
+                    D_8014C24C = (s32)(CELL(D_8014C284) << 3) >> 27;
+                    D_8014C27C = (CELL(D_8014C284) >> 17) & 3;
+                } else { func_80140CBC(); D_8014C27C = 0; }
+                func_800CBE64(D_8014C284); func_800A3938(0x7E, 0x80);
+            }
+            return;
+        }
+        value = input & 0x40;
+    } else {
+        value = D_80122988 & 0x40;
+    }
+    if (value != 0) {
+cancel:
+        func_800A3938(0x7D, 0x80); D_8014C16C = 1; if (D_8014C288 != 0) D_80122C00 = D_8014C270;
+    }
 }
