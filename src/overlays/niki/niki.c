@@ -142,30 +142,6 @@ s32 func_801401F0(s32 arg0)
     return 0;
 }
 
-typedef struct
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 state : 3;
-            u32 unk0_3 : 4;
-            u32 x : 9;
-            u32 unk0_16 : 8;
-        } f;
-    } attr;
-    u32 unk4_0 : 1;
-    u32 y : 8;
-    u32 unk4_9 : 23;
-    void* draw_handler;
-} NikiElement;
-
-extern NikiElement D_80164B10;
-
-NikiElement *func_80141EC4();
-#define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
-
 void func_8014027C(void)
 {
     NikiElement *p;
@@ -174,7 +150,7 @@ void func_8014027C(void)
     D_80164AE0 = 0;
     D_80164B7C = 0;
     D_80164B84 = 0;
-    D_80164ADC = D_8012271C + 0xCE0;
+    D_80164ADC = (s32)D_8012271C + 0xCE0;
     if (0) func_80141E84(0,0,0,0,0);
     func_80141E84();
     D_80164B80 = 0;
