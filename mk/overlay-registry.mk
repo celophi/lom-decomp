@@ -45,8 +45,7 @@ overlay_checkps_target_as_extra_flags_cdrom := -L
 
 OVERLAYS += cload
 overlay_cload_gcc_272_cdk_g0_srcs := \
-	src/overlays/cload/cload.c \
-	src/overlays/cload/unk1.c
+	src/overlays/cload/cload.c 
 
 OVERLAYS += field
 overlay_field_gcc_272_cdk_g0_srcs := \
