@@ -75,7 +75,7 @@ void func_80140D2C(void);
 void func_80141F18(void);
 s32 func_80140774(void);
 s32 func_80140868(void);
-void func_80140D4C(); 
+s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 void func_801413FC();
  void func_801414A8();
 void func_80141584(); 
@@ -485,4 +485,181 @@ void func_80140CC8(void)
 void func_80140D2C(void)
 {
     func_80141F18();
+}
+
+/* ----- Decls for func_80140D4C (niki row/status list renderer) ----- */
+typedef struct
+{
+    s16 x;
+    s16 y;
+} Vec2s;
+
+typedef struct
+{
+    u32 tag;
+    u8 r0, g0, b0, code;
+    s16 x0, y0;
+    s16 w, h;
+} TILE;
+
+s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
+s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, Vec2s *pos, s32 mode);
+u8 *func_801442C4(void *arg0);
+
+extern char D_800ECF8C[];
+extern char D_800ECFC4[];
+extern u16 D_801470F8;
+extern u16 D_801470FA;
+extern u16 D_801470FC;
+extern u16 D_801470FE;
+extern u16 D_80147100;
+extern u16 D_80147108;
+extern u16 D_8014710A;
+extern u16 D_8014710C;
+extern u16 D_80147126;
+extern u16 D_8014712C;
+extern u16 D_80147132;
+extern u16 D_801471A8;
+extern s32 D_80164E20[];
+extern s32 D_80164EB0;
+extern s32 D_80164EB8[];
+
+#define GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
+#define GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
+
+/**
+ * @brief Render the niki row/status list: per-entry glyphs, markers and the
+ *        highlight tile, dispatched by the D_80164B78 list-state selector.
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from every x).
+ * @param arg3 Vertical scroll offset (subtracted from every row y).
+ * @return Advanced primitive-buffer write cursor.
+ * @note WIP - 99.03% (425/428 exact, gcc272_cdk).
+ * @see decomp.me (99.01%)
+ */
+s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    s32 state = D_80164B78;
+
+    switch (state)
+    {
+    case 0xF8:
+        do { prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -arg2 + 0x84, -arg3, 2); } while (0);
+        break;
+    case 0xF9:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xFA:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_801470FA, 2), 4, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xFD:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_801470FC, 4), 4, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xFB:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147108, 0x10), 4, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xFC:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014710A, 0x12), 4, -arg2 + 0x84, -arg3, 2);
+        break;
+    default:
+        {
+            s32 row_y;
+
+        if (D_80164F18 != 0)
+        {
+            s32 x;
+            u8 *base;
+        case 0xFF:
+            x = -arg2 + 0x84;
+            base = (u8 *)&D_801470F8;
+            prim = func_800A88A0(prim, ot, base + D_801470F8, 4, x, -arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
+            break;
+        }
+        if (state > 0)
+        {
+            s32 i;
+            s32 base_x;
+            s32 *flag_ptr;
+            u16 misc_glyph;
+            char *entry;
+            Vec2s pos;
+            s32 row;
+            u8 *base;
+
+            i = 0;
+            entry = (char *)D_80165018;
+            base = (u8 *)&D_801470F8;
+            base_x = -arg2;
+            do
+            {
+                row = ((i * 14) - arg3) - D_80164AE0;
+                row_y = row + 1;
+                if ((u32)(row + 0xE) < 0x65U)
+                {
+                    do { flag_ptr = (s32 *)((u8 *)D_80164E20 + (i * 4)); } while (0);
+                    if (*flag_ptr >= 0)
+                    {
+                        pos.x = base_x + 0x86;
+                        pos.y = row_y;
+                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)D_80164EB8 + (i * 4)), 4, &pos, 0), ot, (void *)((s32)D_80147126 + (s32)base), 4, base_x + 0x70, row_y, 0);
+                        if ((D_80164EB0 - 1) == *flag_ptr)
+                        {
+                            misc_glyph = *(u16 *)(base + 0x36);
+                            prim = func_800A88A0(prim, ot, (void *)((s32)misc_glyph + (s32)base), 4, base_x + 0xC0, row_y, 0);
+                        }
+                        else if (*flag_ptr < 2)
+                        {
+                            misc_glyph = *(u16 *)(base + 0x38);
+                            prim = func_800A88A0(prim, ot, (void *)((s32)misc_glyph + (s32)base), 4, base_x + 0xC0, row_y, 0);
+                        }
+                        if (*func_801442C4((void *)((D_80164B70 * 0x320) + (s32)entry + 0xC)) == 0x2B)
+                        {
+                            prim = func_800A88A0(prim, ot, (void *)((s32)D_801471A8 + (s32)base), 4, 0xF2 - arg2, row_y, 1);
+                        }
+                    }
+                    if (func_8001714C(D_800ECF7C, (char *)((D_80164B70 * 0x320) + (s32)entry), 0xC) == 0)
+                    {
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_801470FE + (s32)base), 4, 1 - arg2, row_y, 0);
+                    }
+                    else if (func_8001714C(D_800ECF8C, (char *)((D_80164B70 * 0x320) + (s32)entry), 0xC) == 0)
+                    {
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80147132 + (s32)base), 4, 1 - arg2, row_y, 0);
+                    }
+                    else if (func_8001714C(D_800ECFC4, (char *)((D_80164B70 * 0x320) + (s32)entry), 8) == 0)
+                    {
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_8014710C + (s32)base), 4, 1 - arg2, row_y, 0);
+                    }
+                    else
+                    {
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80147100 + (s32)base), 4, 1 - arg2, row_y, 0);
+                    }
+                }
+                entry += 0x28;
+                i++;
+            } while (i < D_80164B78);
+        }
+            row_y = ((D_80164B7C * 14) - arg3) - D_80164AE0;
+
+            if (D_80164F18 == 0)
+            {
+                TILE *tile = (TILE *)prim;
+
+                *(u32 *)&tile->r0 = 0xF080F0;
+                *((u8 *)tile + 3) = 3;
+                tile->code = 0x62;
+                tile->w = 0x108;
+                tile->x0 = 0;
+                tile->y0 = row_y;
+                tile->h = 0xE;
+                tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
+                *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+                prim += sizeof(TILE);
+            }
+        }
+        break;
+    }
+    return prim;
 }
