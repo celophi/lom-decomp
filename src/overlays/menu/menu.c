@@ -6521,14 +6521,13 @@ void scroll_list_update_target(ScrollListState*, u32*);
  * @param view_origin Viewport anchor in list-local coordinates.
  * @param active Non-zero to process input this frame; zero draws cursor only.
  * @return The advanced primitive write cursor (the value menu_emit_cursor returns).
- * @see decomp.me (99.52%) https://decomp.me/scratch/tfyt3
+ * @see decomp.me (100%) https://decomp.me/scratch/tfyt3
  */
 s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
 {
     int count;
     s32 cursor_x;
     s32 cursor_y;
-    s32 buf;
     if (active)
     {
         if (g_pad_input & PADR1)
@@ -6579,11 +6578,11 @@ s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries
             g_pad_input |= PAD_BTN_CIRCLE;
         }
     }
-    buf =
+    prim_buf =
         menu_emit_cursor(prim_buf, ot, (4 - view_origin->x) - state->scroll_x, ((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y, active);
     g_menu_default_view_pos.x = (state->base_x + ((4 - (view_origin->x & 0xFFFFFFFF)) - state->scroll_x)) + 8;
     g_menu_default_view_pos.y = (state->base_y + (((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y)) + 8;
-    return buf;
+    return prim_buf;
 }
 
 /**
