@@ -39,15 +39,27 @@ typedef struct
 } NikiEntry28;
 
 /**
- * @brief 0xC-stride view of the D_80164B10 element array used by the reset loop.
- * @note Aliases NikiElement at a 0xC stride (the array's real element spacing);
- *       func_80141E84 clears the low 3 state bits of each entry's first word.
+ * @brief 0xC-stride element of the D_80164B10 array (attr word + handler).
+ * @note Same layout as NikiElement minus its trailing unkC, so a NikiPacket*
+ *       walks the array at its real 0xC stride while still exposing attr.f.
  */
 typedef struct
 {
-    s32 unk0;
-    s32 unk4;
-    void (*unk8)();
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 state : 3;
+            u32 unk0_3 : 4;
+            u32 x : 9;
+            u32 unk0_16 : 8;
+        } f;
+    } attr;
+    u32 unk4_0 : 1;
+    u32 y : 8;
+    u32 unk4_9 : 23;
+    void (*draw_handler)();
 } NikiPacket;
 
 /**
@@ -79,6 +91,24 @@ typedef struct
 
 /** @brief Element draw callback: returns the advanced GPU-packet cursor. */
 typedef NikiGpuPacket *(*NikiElemDrawFunc)();
+
+/** @brief Field layout of the POLY_G4 timer-bar packet built by func_80142A1C. */
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s16 unk8;
+    s16 unkA;
+    s32 unkC;
+    s16 unk10;
+    s16 unk12;
+    s32 unk14;
+    s16 unk18;
+    s16 unk1A;
+    s32 unk1C;
+    s16 unk20;
+    s16 unk22;
+} NikiPolyG4Words;
 
 /**
  * @brief Fallback name/second-line text carried alongside the save-slot record.
@@ -139,6 +169,20 @@ extern u16 D_801475C4[];
 extern u8 D_800EC3F6[2];
 extern u8 D_800EC3D0[];
 extern s32 D_8012298C;
+extern u16 D_80147128;
+extern s32 D_80164A7C;
+extern s32 D_801606E4;
+extern u16 D_8014712A;
+extern u8 D_80160A78[];
+extern u8 D_8011F3D8[];
+extern u8 D_80164E70[];
+extern s32 D_8011F428;
+extern s32 D_801227CC;
+extern s32 D_801227F4;
+extern s32 D_8011F418;
+extern u8 D_80122A08[];
+extern s32 D_80164F08;
+extern s32 D_80164F10;
 
 
 void func_80140D2C(void);
@@ -167,7 +211,8 @@ s32 func_8001714C();
 NikiElement *func_80141EC4();
 void func_80143284();
 void func_80145994();
-void func_8014262C();
+s32 func_80142820(s32 *ot, s32 prim, s32 arg2, s32 arg3);
+s32 func_8014262C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 
 #define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 
@@ -1135,7 +1180,7 @@ void func_80141E84(void)
     p = (NikiPacket *)&D_80164B10;
     for (i = 0; i < 8; i++)
     {
-        p->unk0 &= ~7;
+        p->attr.word &= ~7;
         p++;
     }
 }
@@ -1157,9 +1202,9 @@ NikiElement *func_80141EC4(void)
     p = (NikiPacket *)&D_80164B10;
     for (i = 0; i < 8; i++, p++)
     {
-        if ((p->unk0 & 7) == 0)
+        if ((p->attr.word & 7) == 0)
         {
-            p->unk0 = (p->unk0 & ~7) | 1;
+            p->attr.word = (p->attr.word & ~7) | 1;
             return (NikiElement *)p;
         }
     }
@@ -1399,7 +1444,7 @@ void func_80141F18(NikiDrawState *arg0)
  */
 void func_801424C0(void)
 {
-    ((NikiPacket *)&D_80164B10)->unk0 &= ~7;
+    ((NikiPacket *)&D_80164B10)->attr.word &= ~7;
 }
 
 /**
@@ -1425,4 +1470,287 @@ void func_801424D8(u8 *arg0, u8 *arg1)
         arg0[temp_s0 + i] = arg1[i];
     }
     arg0[temp_s0 + i] = 0;
+}
+
+/**
+ * @brief Measure a niki string's length, counting bytes 0x19-0x1F as 2 units.
+ *
+ * Walks @p arg0 to its terminating zero. Lead bytes in the range 0x19..0x1F are
+ * two-byte sequences and advance the length by 2; all others by 1.
+ *
+ * @param arg0 String to measure.
+ * @return Logical length in layout units.
+ * @see decomp.me (100%)
+ */
+s32 func_8014255C(u8 *arg0)
+{
+    u8 *p;
+    u8 c;
+    s32 len;
+
+    p = arg0;
+    c = *p;
+    len = 0;
+    while (c != 0)
+    {
+        if ((u32)(c - 0x19) < 7)
+        {
+            p += 2;
+            len += 2;
+        }
+        else
+        {
+            p += 1;
+            len += 1;
+        }
+        c = *p;
+    }
+    return len;
+}
+
+/**
+ * @brief Copy niki string @p arg1 into @p arg0, terminating it (strcpy).
+ *
+ * First measures arg1's length (bytes 0x19..0x1F count as 2 units, via a
+ * volatile read of the lead byte), then copies that many bytes and appends a
+ * terminating zero.
+ *
+ * @param arg0 Destination buffer.
+ * @param arg1 Source string to copy.
+ * @see decomp.me (100%)
+ */
+void func_801425A8(u8 *arg0, u8 *arg1)
+{
+    u8 *p;
+    u8 c;
+    s32 len;
+    s32 i;
+
+    p = arg1;
+    len = 0;
+
+    while (*p != 0)
+    {
+        c = *(volatile u8 *)p;
+
+        if ((u32)(c - 0x19) < 7)
+        {
+            p += 2;
+            len += 2;
+        }
+        else
+        {
+            p++;
+            len++;
+        }
+    }
+
+    for (i = 0; i < len; i++)
+    {
+        arg0[i] = arg1[i];
+    }
+
+    arg0[i] = 0;
+}
+
+/**
+ * @brief Draw and advance the niki confirmation element.
+ *
+ * Emits the confirmation caption glyph, then reads input: L1/R1-class cancels
+ * (func_801459E8 result 1 or 2) and the cancel button tear down the element and
+ * restore the prior menu; the confirm button spawns the confirmation element at
+ * a fixed position with its draw handler set to func_80142820.
+ *
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from the caption x).
+ * @param arg3 Vertical scroll offset (subtracted from the caption y).
+ * @return Advanced primitive-buffer write cursor.
+ * @see decomp.me (100%)
+ */
+s32 func_8014262C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+    s32 result;
+    s32 x;
+    s32 status;
+    NikiElement *p;
+
+    x = -arg2 + 0x90;
+    result = func_80143294(
+        func_800A88A0(prim, ot,
+                      (u8 *)&D_80147128 + D_80147128 - 0x30,
+                      4, x, -arg3, 2),
+        ot, x, 0xE - arg3);
+
+    if ((u32)(func_801459E8() - 1) < 2U)
+    {
+        D_80164B10.attr.f.state = 0;
+        func_800AA02C();
+        func_800A3938(0x78, 0x80);
+        D_80164B78 = 0xFF;
+        func_80144BC0();
+        D_80164E18 = 0;
+    }
+    else
+    {
+        status = D_80122988;
+        if (status & 0x40)
+        {
+            D_80164B10.attr.f.state = 0;
+            func_800AA02C();
+            func_800A3938(0x78, 0x80);
+            D_80164E18 = &D_801606DC;
+        }
+        else if (status & 0x220)
+        {
+            if (D_80164A7C != 0)
+            {
+                D_80164B10.attr.f.state = 0;
+                func_800AA02C();
+                func_800A3938(0x78, 0x80);
+                D_80164E18 = &D_801606DC;
+            }
+            else
+            {
+                func_800A3938(0x7E, 0x80);
+                D_80164AD4 = 1;
+                D_80164E18 = &D_801606E4;
+                p = &D_80164B10;
+                p->draw_handler = func_80142820;
+                p->attr.f.unk0_3 = 1;
+                p->attr.f.state = 1;
+                p->attr.f.x = 0x10;
+                p->attr.f.unk0_16 = 0x61;
+                p->unk4_0 = 1;
+                p->y = 0x2C;
+                SET_ELEM_CODE(p, 0x20);
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * @brief Draw the niki save-confirm dialog and, on accept, commit the save.
+ *
+ * Emits the three caption glyphs and the sub-panel (func_80142A1C). When the
+ * confirm latch D_80164AD4 is clear, reads the selected save resource: if the
+ * slot is empty (func_80144310 == 0) it just re-arms the chooser, otherwise it
+ * copies the save payload out, kicks the write, and flips every active element
+ * to its closing animation state.
+ *
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from every caption x).
+ * @param arg3 Vertical scroll offset (subtracted from every caption y).
+ * @return Advanced primitive-buffer write cursor.
+ * @see decomp.me (100%)
+ */
+s32 func_80142820(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+    u8 *base;
+    u8 *resource;
+    NikiPacket *p;
+    NikiPacket *cursor;
+    s32 result;
+    s32 x;
+    s32 i;
+
+    x = -arg2 + 0x90;
+    result = func_800A88A0(prim, ot, (void *)((s32)&D_8014712A - 0x32 + D_8014712A), 4, x, -arg3, 2);
+    base = (u8 *)&D_8014712A - 0x32;
+    result = func_800A88A0(result, ot, base + *(u16 *)(base + 0x1E), 4, x, 0xE - arg3, 2);
+    result = func_800A88A0(result, ot, base + *(u16 *)(base + 0xB2), 4, x, 0x1C - arg3, 2);
+    result = func_80142A1C(result, ot);
+
+    if (D_80164AD4 == 0)
+    {
+        resource = D_80160A78;
+        p = (NikiPacket *)&D_80164B10;
+        p->attr.f.state = 0;
+        if (func_80144310(resource) == 0)
+        {
+            func_80142B2C(4);
+            return result;
+        }
+
+        func_800A3938(0x7B, 0x80);
+        D_8011F428 = 1;
+        D_801227CC = *(u16 *)&resource[0x254];
+        D_801227F4 = *(u16 *)&resource[0x256];
+        D_8011F418 = D_80164B70;
+        func_800170BC(D_8011F3D8, D_80164E70);
+        func_80016E7C(&resource[0x32E0], D_80122A08, 0x100);
+        func_80067F28();
+
+        cursor = p;
+        for (i = 0; i < 8; i++, cursor++)
+        {
+            if (cursor->attr.f.state != 0)
+            {
+                cursor->attr.f.state = 3;
+                cursor->attr.f.unk0_3 = 8;
+            }
+        }
+        func_80067F5C(8);
+    }
+
+    return result;
+}
+
+/**
+ * @brief Build the niki save-progress timer bar (a POLY_G4) when active.
+ *
+ * While the timer is running (D_80164F08 set), fills a POLY_G4 packet at @p arg0
+ * with a yellow-to-red gradient whose horizontal extent tracks the elapsed time
+ * (clamped to 0x100 ticks), links it into the ordering table, and advances the
+ * packet cursor by 0x24.
+ *
+ * @param arg0 GPU packet cursor (POLY_G4 written here when the timer is active).
+ * @param arg1 Ordering-table entry the packet is linked into.
+ * @return Advanced packet cursor (unchanged when the timer is inactive).
+ * @see decomp.me (100%)
+ */
+s32 func_80142A1C(s32 arg0, s32 *arg1)
+{
+    NikiPolyG4Words *g;
+    s32 elapsed;
+    s32 extent;
+    s32 color;
+
+    g = (NikiPolyG4Words *)arg0;
+    if (D_80164F08 != 0)
+    {
+        elapsed = func_8002054C(-1) - D_80164F10;
+        if (elapsed >= 0x101)
+        {
+            elapsed = 0x100;
+        }
+        color = 0xFFFF00;
+        extent = elapsed * 0x120;
+        g->unk4 = 0xFF;
+        g->unkC = 0xFFFF;
+        g->unk1C = 0xFF0000;
+        ((u8 *)g)[3] = 8;
+        g->unk14 = color;
+        ((u8 *)g)[7] = 0x38;
+        g->unk18 = 0;
+        g->unk8 = 0;
+        if (extent < 0)
+        {
+            extent += 0xFF;
+        }
+        g->unk20 = extent >> 8;
+        g->unk10 = extent >> 8;
+        g->unk12 = 0;
+        g->unkA = 0;
+        g->unk22 = 0x2C;
+        g->unk1A = 0x2C;
+        g->unk0 = (g->unk0 & 0xFF000000) | (*arg1 & 0xFFFFFF);
+        *arg1 = (*arg1 & 0xFF000000) | (arg0 & 0xFFFFFF);
+        arg0 += 0x24;
+    }
+    return arg0;
 }
