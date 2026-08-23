@@ -1,12 +1,6 @@
 #include "common.h"
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} RECT;
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
 
 /** @brief One 0xC-byte animated CLOAD UI element. */
 typedef struct CloadElement CloadElement;
@@ -24,20 +18,6 @@ typedef struct
     /* 0x4 */ u8 first_payload[8];
     /* 0xC */ s32 second_state;
 } CloadElementPoolHead;
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
-
-typedef struct
-{
-    /* 0x0 */ u32 tag;
-    /* 0x4 */ u8 r0, g0, b0, code;
-    /* 0x8 */ s16 x0, y0;
-    /* 0xC */ s16 w, h;
-} TILE;
 
 /** @brief Memory-card directory entry; layout matches Psy-Q struct DIRENTRY. */
 typedef struct
@@ -83,6 +63,130 @@ typedef struct
     /* 0x6 */ s8 unk6;
     /* 0x7 */ u8 pad[9];
 } CloadEntryHeader;
+
+/* CLOAD layout/state constants. */
+#define CLOAD_ELEMENT_COUNT 8
+#define CLOAD_ELEMENT_WORD_STRIDE 3
+#define CLOAD_ELEMENT_STATE_MASK 7
+#define CLOAD_ELEMENT_PHASE_MASK 0x78
+#define CLOAD_ENTRY_GROUP_COUNT 8
+#define CLOAD_CARD_DIRECTORY_BYTES 0x320
+#define CLOAD_DIRECTORY_ENTRY_BYTES 0x28
+#define CLOAD_ENTRY_ROW_HEIGHT 14
+#define CLOAD_NO_ICON 0x7F
+#define CLOAD_GLYPH_CACHE_SLOTS 0x100
+#define CLOAD_GLYPH_CACHE_COLUMNS 16
+#define CLOAD_GLYPH_CACHE_ROW_MASK 0xF0
+#define CLOAD_GLYPH_RASTER_BYTES 0x80
+#define CLOAD_GPU_ADDR_MASK 0xFFFFFF
+#define CLOAD_COLOR_WHITE 0xFFFFFF
+#define CLOAD_GPU_TAG_HIGH_MASK 0xFF000000
+
+#define CLOAD_GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
+#define CLOAD_GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
+
+/** @brief Generic GPU packet prefix used while advancing the primitive buffer. */
+typedef struct
+{
+    /* 0x0 */ s32 tag;
+    /* 0x4 */ s32 word4;
+    /* 0x8 */ s16 x0;
+    /* 0xA */ s16 y0;
+    /* 0xC */ s16 unkC;
+    /* 0xE */ u16 unkE;
+} CloadGpuPacket;
+
+/** @brief Draw context at arg0 + 0x40; head_tag is the ordering-table head. */
+typedef struct
+{
+    /* 0x0 */ s32 head_tag;
+} CloadOrderingTable;
+
+/** @brief Owning screen state passed to the element tick/draw pass. */
+typedef struct
+{
+    u8 pad0[0x40B2];
+    /* 0x40B2 */ s16 frame_flag;
+    u8 pad40B4[4];
+    /* 0x40B8 */ CloadGpuPacket *prim_cursor;
+} CloadFrameState;
+
+/** @brief Per-element draw callback stored at element + 8. */
+typedef CloadGpuPacket *(*CloadElementDrawFunc)();
+
+/**
+ * @brief Same word/half raw-store granularity as POLY_G4 in
+ *        include/psyq/libgpu.h; the r/g/b/code quad and each x/y pair are
+ *        written as single word/half stores (matching the target's
+ *        codegen), not per-channel byte assignments.
+ */
+typedef struct
+{
+    /* 0x00 */ s32 tag;
+    /* 0x04 */ s32 color0;
+    /* 0x08 */ s16 x0;
+    /* 0x0A */ s16 y0;
+    /* 0x0C */ s32 color1;
+    /* 0x10 */ s16 x1;
+    /* 0x12 */ s16 y1;
+    /* 0x14 */ s32 color2;
+    /* 0x18 */ s16 x2;
+    /* 0x1A */ s16 y2;
+    /* 0x1C */ s32 color3;
+    /* 0x20 */ s16 x3;
+    /* 0x22 */ s16 y3;
+} CloadPolyG4Packet;
+
+typedef struct
+{
+    /* 0x00 */ s32 tag;
+    /* 0x04 */ s32 color0;
+    /* 0x08 */ s16 x0;
+    /* 0x0A */ s16 y0;
+    /* 0x0C */ u8 u0;
+    /* 0x0D */ u8 v0;
+    /* 0x0E */ s16 clut;
+    /* 0x10 */ s16 x1;
+    /* 0x12 */ s16 y1;
+    /* 0x14 */ u8 u1;
+    /* 0x15 */ u8 v1;
+    /* 0x16 */ s16 tpage;
+    /* 0x18 */ s16 x2;
+    /* 0x1A */ s16 y2;
+    /* 0x1C */ u8 u2;
+    /* 0x1D */ u8 v2;
+    /* 0x1E */ s16 pad1;
+    /* 0x20 */ s16 x3;
+    /* 0x22 */ s16 y3;
+    /* 0x24 */ u8 u3;
+    /* 0x25 */ u8 v3;
+} CloadPolyFT4Packet;
+
+/**
+ * @brief One 4-byte glyph-cache slot: the cached character code plus per-frame
+ *        usage flags, also read as a single word when scanning for a free slot.
+ */
+typedef union
+{
+    /* 0x0 */ u32 raw;
+    struct
+    {
+        /* 0x0 */ u16 code;
+        /* 0x2 */ u16 flags;
+    } data;
+} CloadGlyphCacheEntry;
+
+extern CloadGlyphCacheEntry g_cload_glyph_cache[];
+
+/**
+ * @brief 0x14-byte glyph packet: a Psy-Q SPRT_16 plus the trailing word that
+ *        keeps consecutive cached-glyph packets 20 bytes apart.
+ */
+typedef struct
+{
+    /* 0x00 */ SPRT_16 packet;
+    /* 0x10 */ u32 padding;
+} CloadGlyphSprite;
 
 extern s32 g_pad_input;
 extern s32 g_cload_exit_requested;
@@ -199,7 +303,7 @@ s32 cload_draw_load_prompt();
 s32 cload_draw_load_progress(s32 ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 cload_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
-s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, Vec2s *pos, s32 mode);
+s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, DVECTOR *pos, s32 mode);
 u8 *cload_skip_hex_digits(void *);
 void cload_terminate_multibyte_text(void *text);
 s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s32 icon, s32 index, s32 row);
@@ -337,12 +441,8 @@ void cload_init_display(void)
     u8 *base;
     s16 *bank2;
 
-    /* Reserve the outgoing-argument area: a wider (7-arg) call was compiled
-       out here, so the frame keeps its space. */
-    if (0)
-    {
-        func_8002054C(0, 0, 0, 0, 0, 0, 0);
-    }
+    /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
+    s32 frame_scratch[2];
     func_8001D5AC(0x5DC);
     func_8001D58C(0xA0, 0x78);
     D_8014EA38 = 0;
@@ -401,150 +501,148 @@ CloadElement *cload_alloc_element();
 
 /**
  * @brief Build the fixed 5-entry GPU primitive/callback chain for the loader.
- * @note WIP. Structure, control flow, and the FRAME-04 dead-call frame padding
+ * @note WIP. Structure, control flow, and the FRAME-04 stack-frame padding
  *       are correct; the residual is a register-allocation permutation - the
- *       value temp lands in v1 (target v0) and the five hoisted mask constants
+ *       reused value temporary lands in v1 (target v0) and the five hoisted mask constants
  *       occupy a permuted set of saved registers.
  * @see decomp.me (83.09%)
  */
 void cload_build_ui_elements(void)
 {
-    CloadElement *p;
-    s32 v;
-    s32 v1;
+    CloadElement *element;
+    s32 value;
+    s32 state_value;
+    /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
+    s32 frame_scratch[2];
 
     g_cload_scroll_frames = 0;
     g_cload_scroll_target_y = 0;
     g_cload_scroll_y = 0;
     g_cload_selected_row = 0;
     g_cload_selection_status = 0;
-    if (0)
-    {
-        cload_clear_elements(0, 0, 0, 0, 0);
-    }
     cload_clear_elements();
-    v = g_cload_element_pool.first_state;
-    v = v & ~7;
-    v = v | 1;
-    g_cload_element_pool.first_state = v;
+    value = g_cload_element_pool.first_state;
+    value = value & ~CLOAD_ELEMENT_STATE_MASK;
+    value = value | 1;
+    g_cload_element_pool.first_state = value;
 
-    p = cload_alloc_element();
-    p->draw = cload_draw_entry_list;
-    v = p->state;
-    v = v & ~0x78;
-    v = v | 8;
-    v = v & 0xFFFF007F;
-    v = v | 0xE00;
-    p->state = v;
-    *((u8 *)p + 2) = 0x4A;
-    v = p->size_flags;
-    v = v & ~0x200;
-    p->size_flags = v;
-    v1 = p->state;
-    v1 = v1 & 0xFFFFFF;
-    v1 = v1 | 0x08000000;
-    p->state = v1;
-    v = v | 1;
-    v = v & ~0x1FE;
-    v = v | 0x92;
-    p->size_flags = v;
+    element = cload_alloc_element();
+    element->draw = cload_draw_entry_list;
+    value = element->state;
+    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
+    value = value | 8;
+    value = value & 0xFFFF007F;
+    value = value | 0xE00;
+    element->state = value;
+    *((u8 *)element + 2) = 0x4A;
+    value = element->size_flags;
+    value = value & ~0x200;
+    element->size_flags = value;
+    state_value = element->state;
+    state_value = state_value & 0xFFFFFF;
+    state_value = state_value | 0x08000000;
+    element->state = state_value;
+    value = value | 1;
+    value = value & ~0x1FE;
+    value = value | 0x92;
+    element->size_flags = value;
 
-    p = cload_alloc_element();
-    p->draw = cload_draw_header_label;
-    v = p->state;
-    v = v & ~7;
-    v = v | 2;
-    v = v & ~0x78;
-    v = v | 8;
-    v = v & 0xFFFF007F;
-    v = v | 0x2800;
-    p->state = v;
-    *((u8 *)p + 2) = 0xC;
-    v = p->size_flags;
-    v = v & ~0x200;
-    p->size_flags = v;
-    v1 = p->state;
-    v1 = v1 & 0xFFFFFF;
-    v1 = v1 | 0xA0000000;
-    p->state = v1;
-    v = p->size_flags;
-    v = v & ~1;
-    v = v & ~0x1FE;
-    v = v | 0x1E;
-    p->size_flags = v;
+    element = cload_alloc_element();
+    element->draw = cload_draw_header_label;
+    value = element->state;
+    value = value & ~CLOAD_ELEMENT_STATE_MASK;
+    value = value | 2;
+    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
+    value = value | 8;
+    value = value & 0xFFFF007F;
+    value = value | 0x2800;
+    element->state = value;
+    *((u8 *)element + 2) = 0xC;
+    value = element->size_flags;
+    value = value & ~0x200;
+    element->size_flags = value;
+    state_value = element->state;
+    state_value = state_value & 0xFFFFFF;
+    state_value = state_value | 0xA0000000;
+    element->state = state_value;
+    value = element->size_flags;
+    value = value & ~1;
+    value = value & ~0x1FE;
+    value = value | 0x1E;
+    element->size_flags = value;
 
-    p = cload_alloc_element();
-    v = p->state;
-    v = v & ~7;
-    v = v | 2;
-    v = v & ~0x78;
-    v = v | 8;
-    v = v & 0xFFFF007F;
-    v = v | 0xC00;
-    p->state = v;
-    p->draw = cload_draw_card_slot0_label;
-    *((u8 *)p + 2) = 0x2C;
-    v = p->size_flags;
-    v = v & ~0x200;
-    p->size_flags = v;
-    v1 = p->state;
-    v1 = v1 & 0xFFFFFF;
-    v1 = v1 | 0x80000000;
-    p->state = v1;
-    v = v & ~1;
-    v = v & ~0x1FE;
-    v = v | 0x1E;
-    p->size_flags = v;
+    element = cload_alloc_element();
+    value = element->state;
+    value = value & ~CLOAD_ELEMENT_STATE_MASK;
+    value = value | 2;
+    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
+    value = value | 8;
+    value = value & 0xFFFF007F;
+    value = value | 0xC00;
+    element->state = value;
+    element->draw = cload_draw_card_slot0_label;
+    *((u8 *)element + 2) = 0x2C;
+    value = element->size_flags;
+    value = value & ~0x200;
+    element->size_flags = value;
+    state_value = element->state;
+    state_value = state_value & 0xFFFFFF;
+    state_value = state_value | 0x80000000;
+    element->state = state_value;
+    value = value & ~1;
+    value = value & ~0x1FE;
+    value = value | 0x1E;
+    element->size_flags = value;
 
-    p = cload_alloc_element();
-    v = p->state;
-    v = v & ~7;
-    v = v | 2;
-    v = v & ~0x78;
-    v = v | 8;
-    v = v & 0xFFFF007F;
-    v = v | 0x5400;
-    p->state = v;
-    p->draw = cload_draw_card_slot1_label;
-    *((u8 *)p + 2) = 0x2C;
-    v = p->size_flags;
-    v = v & ~0x200;
-    p->size_flags = v;
-    v1 = p->state;
-    v1 = v1 & 0xFFFFFF;
-    v1 = v1 | 0x80000000;
-    p->state = v1;
-    v = v & ~1;
-    v = v & ~0x1FE;
-    v = v | 0x1E;
-    p->size_flags = v;
+    element = cload_alloc_element();
+    value = element->state;
+    value = value & ~CLOAD_ELEMENT_STATE_MASK;
+    value = value | 2;
+    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
+    value = value | 8;
+    value = value & 0xFFFF007F;
+    value = value | 0x5400;
+    element->state = value;
+    element->draw = cload_draw_card_slot1_label;
+    *((u8 *)element + 2) = 0x2C;
+    value = element->size_flags;
+    value = value & ~0x200;
+    element->size_flags = value;
+    state_value = element->state;
+    state_value = state_value & 0xFFFFFF;
+    state_value = state_value | 0x80000000;
+    element->state = state_value;
+    value = value & ~1;
+    value = value & ~0x1FE;
+    value = value | 0x1E;
+    element->size_flags = value;
 
-    p = cload_alloc_element();
-    p->draw = cload_draw_selected_entry_details;
-    v = p->state;
-    v = v & ~7;
-    v = v | 2;
-    v = v & ~0x78;
-    v = v | 8;
-    v = v & 0xFFFF007F;
-    v = v | 0xF00;
-    p->state = v;
-    *((u8 *)p + 2) = 0xA0;
-    v = p->size_flags;
-    v = v & ~0x200;
-    p->size_flags = v;
-    v1 = p->state;
-    v1 = v1 & 0xFFFFFF;
-    v1 = v1 | 0x04000000;
-    p->state = v1;
-    v = v | 1;
-    v = v & ~0x1FE;
-    v = v | 0x66;
-    p->size_flags = v;
+    element = cload_alloc_element();
+    element->draw = cload_draw_selected_entry_details;
+    value = element->state;
+    value = value & ~CLOAD_ELEMENT_STATE_MASK;
+    value = value | 2;
+    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
+    value = value | 8;
+    value = value & 0xFFFF007F;
+    value = value | 0xF00;
+    element->state = value;
+    *((u8 *)element + 2) = 0xA0;
+    value = element->size_flags;
+    value = value & ~0x200;
+    element->size_flags = value;
+    state_value = element->state;
+    state_value = state_value & 0xFFFFFF;
+    state_value = state_value | 0x04000000;
+    element->state = state_value;
+    value = value | 1;
+    value = value & ~0x1FE;
+    value = value | 0x66;
+    element->size_flags = value;
 
-    v = g_cload_element_pool.first_state;
-    v = v & ~7;
-    g_cload_element_pool.first_state = v;
+    value = g_cload_element_pool.first_state;
+    value = value & ~CLOAD_ELEMENT_STATE_MASK;
+    g_cload_element_pool.first_state = value;
 }
 
 /**
@@ -616,7 +714,7 @@ void cload_update_load_sequence(s32 phase)
  * @brief Handle CLOAD menu navigation, confirm, and cancel input.
  * @return Input-handler status used by the caller.
  * @note WIP. Structurally and semantically correct (verified via probe:
- *       the packet unk0/unk4 register roles and the loop-preheader a1/a2
+ *       the packet tag/word4 register roles and the loop-preheader a1/a2
  *       roles are a coupled register-coloring pair - fixing one region's
  *       roles regresses the other by the same amount). Every attempt to
  *       force the target's exact roles, including a permuter candidate
@@ -635,7 +733,7 @@ s32 cload_handle_input(void)
     s32 arg0;
     CloadElement *p;
 
-    if ((g_cload_element_pool.second_state & 7) == 0)
+    if ((g_cload_element_pool.second_state & CLOAD_ELEMENT_STATE_MASK) == 0)
     {
         g_cload_exit_requested = 1;
         return;
@@ -644,11 +742,11 @@ s32 cload_handle_input(void)
     {
         return;
     }
-    if ((g_cload_element_pool.second_state & 7) >= 3)
+    if ((g_cload_element_pool.second_state & CLOAD_ELEMENT_STATE_MASK) >= 3)
     {
         return;
     }
-    if ((g_cload_element_pool.first_state & 7) != 0)
+    if ((g_cload_element_pool.first_state & CLOAD_ELEMENT_STATE_MASK) != 0)
     {
         return;
     }
@@ -738,8 +836,8 @@ s32 cload_handle_input(void)
     }
     if (g_pad_input & 0x220)
     {
-        s32 term1 = g_cload_card_slot * 0x320;
-        s32 term2 = (g_cload_selected_row * 0x28) + (s32)g_cload_entries;
+        s32 term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
+        s32 term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
 
         if (strncmp(D_800ECF7C, (char *)(term1 + term2), 0xC) != 0)
         {
@@ -751,7 +849,7 @@ s32 cload_handle_input(void)
             {
                 p = cload_alloc_element(D_80162C5F);
                 p->draw = cload_draw_load_prompt;
-                p->state = (p->state & ~0x78) | 8;
+                p->state = (p->state & ~CLOAD_ELEMENT_PHASE_MASK) | 8;
                 p->state = (p->state & 0xFFFF007F) | 0x800;
                 *((u8 *)p + 2) = 0x5B;
                 p->size_flags = (p->size_flags | 1) & ~0x1FE;
@@ -776,24 +874,24 @@ s32 cload_handle_input(void)
  */
 void cload_close_all_elements(void)
 {
-    s32 temp_v1;
-    s32 var_a1;
-    s32 *var_a0;
-    s32 temp;
+    s32 state_word;
+    s32 element_index;
+    s32 *element_word;
+    s32 closing_state;
 
-    var_a0 = (s32 *)&g_cload_element_pool;
-    var_a1 = 0;
+    element_word = (s32 *)&g_cload_element_pool;
+    element_index = 0;
     do
     {
-        temp_v1 = *var_a0;
-        if (temp_v1 & 7)
+        state_word = *element_word;
+        if (state_word & CLOAD_ELEMENT_STATE_MASK)
         {
-            temp = (temp_v1 & ~7) | 3;
-            *var_a0 = (temp & ~0x78) | 0x40;
+            closing_state = (state_word & ~CLOAD_ELEMENT_STATE_MASK) | 3;
+            *element_word = (closing_state & ~CLOAD_ELEMENT_PHASE_MASK) | 0x40;
         }
-        var_a1 += 1;
-        var_a0 += 3;
-    } while (var_a1 < 8);
+        element_index += 1;
+        element_word += CLOAD_ELEMENT_WORD_STRIDE;
+    } while (element_index < CLOAD_ELEMENT_COUNT);
 }
 
 /**
@@ -805,7 +903,7 @@ void cload_scroll_to_selection(void)
     s32 base;
     s32 delta;
 
-    base = g_cload_selected_row * 14;
+    base = g_cload_selected_row * CLOAD_ENTRY_ROW_HEIGHT;
     delta = base - g_cload_scroll_y;
     if (delta >= 0x3C)
     {
@@ -814,7 +912,7 @@ void cload_scroll_to_selection(void)
     }
     if (delta < 0)
     {
-        g_cload_scroll_target_y = g_cload_selected_row * 14;
+        g_cload_scroll_target_y = g_cload_selected_row * CLOAD_ENTRY_ROW_HEIGHT;
         g_cload_scroll_frames = 4;
     }
 }
@@ -827,9 +925,6 @@ void cload_update_elements(void)
 {
     cload_update_and_draw_elements();
 }
-
-#define GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
-#define GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
 
 /**
  * @brief Draw the visible save-entry list and selection cursor.
@@ -855,22 +950,22 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case 0xF8:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145ED0, 0x34), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED0, 0x34), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145ED0, 0x34), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED0, 0x34), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFA:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145E9E, 2), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145E9E, 2), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFD:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EA0, 4), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EA0, 4), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EAC, 0x10), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EAC, 0x10), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EAE, 0x12), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EAE, 0x12), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     default:
         if (g_cload_entry_scan_active != 0)
@@ -881,8 +976,8 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             x = -x_offset + 0x84;
             base = (u8 *)&D_80145E9C;
             prim = func_800A88A0(prim, ot, base + D_80145E9C, 1, x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 1, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 1, x, 0x1C - y_offset, 2);
+            prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x1E), 1, x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0xB2), 1, x, 0x1C - y_offset, 2);
             break;
         }
         if (state > 0)
@@ -894,48 +989,48 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             void *str_glyph;
             void *misc_glyph;
             char *entry;
-            Vec2s pos;
+            DVECTOR pos;
             s32 row_y;
             u8 *base;
 
             base_x = -x_offset;
             entry = g_cload_entries;
             base = (u8 *)&D_80145E9C;
-            for (i = 0, off = 0; i < g_cload_entry_state; entry += 0x28, i++, off += 4)
+            for (i = 0, off = 0; i < g_cload_entry_state; entry += CLOAD_DIRECTORY_ENTRY_BYTES, i++, off += 4)
             {
-                row_y = ((i * 14) - y_offset) - g_cload_scroll_y;
+                row_y = ((i * CLOAD_ENTRY_ROW_HEIGHT) - y_offset) - g_cload_scroll_y;
                 if ((u32)(row_y + 0xD) < 0x56U)
                 {
                     flag_ptr = (s32 *)((u8 *)g_cload_entry_ranks + off);
                     if (*flag_ptr >= 0)
                     {
-                        pos.x = base_x + 0x86;
-                        pos.y = row_y;
+                        pos.vx = base_x + 0x86;
+                        pos.vy = row_y;
                         prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)g_cload_entry_suffix_values + off), 1, &pos, 0), ot, base + D_80145ECA, 1, base_x + 0x70, row_y, 0);
                         if ((g_cload_rank_count - 1) == *flag_ptr)
                         {
-                            misc_glyph = GLYPH_OFF(base, 0x36);
+                            misc_glyph = CLOAD_GLYPH_OFF(base, 0x36);
                             prim = func_800A88A0(prim, ot, misc_glyph, 1, base_x + 0xC2, row_y, 0);
                         }
                         else if (*flag_ptr < 2)
                         {
-                            misc_glyph = GLYPH_OFF(base, 0x38);
+                            misc_glyph = CLOAD_GLYPH_OFF(base, 0x38);
                             prim = func_800A88A0(prim, ot, misc_glyph, 1, base_x + 0xC2, row_y, 0);
                         }
-                        if (*cload_skip_hex_digits((void *)((g_cload_card_slot * 0x320) + (s32)entry + 0xC)) == 0x2B)
+                        if (*cload_skip_hex_digits((void *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry + 0xC)) == 0x2B)
                         {
                             prim = func_800A88A0(prim, ot, base + D_80145F4C, 1, 0xF8 - x_offset, row_y, 1);
                         }
                     }
-                    if (strncmp(D_800ECF7C, (char *)((g_cload_card_slot * 0x320) + (s32)entry), 0xC) == 0)
+                    if (strncmp(D_800ECF7C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
                         str_glyph = base + D_80145EA2;
                     }
-                    else if (strncmp(D_800ECF8C, (char *)((g_cload_card_slot * 0x320) + (s32)entry), 0xC) == 0)
+                    else if (strncmp(D_800ECF8C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
                         str_glyph = base + D_80145ED6;
                     }
-                    else if (strncmp(D_800ECFC4, (char *)((g_cload_card_slot * 0x320) + (s32)entry), 8) == 0)
+                    else if (strncmp(D_800ECFC4, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
                     {
                         str_glyph = base + D_80145EB0;
                     }
@@ -948,7 +1043,7 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             }
         }
         {
-            s32 y0 = ((g_cload_selected_row * 14) - y_offset) - g_cload_scroll_y;
+            s32 y0 = ((g_cload_selected_row * CLOAD_ENTRY_ROW_HEIGHT) - y_offset) - g_cload_scroll_y;
 
             if (g_cload_entry_scan_active == 0)
             {
@@ -956,13 +1051,12 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 
                 *(u32 *)&tile->r0 = 0xF080F0;
                 *((u8 *)tile + 3) = 3;
-                tile->code = 0x62;
+                setcode(tile, 0x62);
                 tile->y0 = (s16)(y0 - 1);
                 tile->w = 0x108;
                 tile->x0 = 0;
                 tile->h = 0xE;
-                tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-                *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+                addPrim(ot, tile);
                 prim += 0x10;
             }
         }
@@ -1034,7 +1128,7 @@ s32 cload_draw_header_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
 
-    return func_800A88A0(prim, ot, GLYPH_SYM(D_80145EC8, 0x2C), 1, -x_offset + 0x50, -y_offset, 2);
+    return func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EC8, 0x2C), 1, -x_offset + 0x50, -y_offset, 2);
 }
 
 /**
@@ -1053,7 +1147,7 @@ s32 cload_draw_card_slot0_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     RECT pos;
 
     a3 = 1;
-    glyph = GLYPH_SYM(D_80145EA8, 0xC);
+    glyph = CLOAD_GLYPH_SYM(D_80145EA8, 0xC);
     if (g_cload_card_slot != 0)
     {
         a3 = 3;
@@ -1077,7 +1171,7 @@ s32 cload_draw_card_slot1_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     RECT pos;
 
     a3 = 1;
-    glyph = GLYPH_SYM(D_80145EAA, 0xE);
+    glyph = CLOAD_GLYPH_SYM(D_80145EAA, 0xE);
     if (g_cload_card_slot == 0)
     {
         a3 = 3;
@@ -1111,7 +1205,7 @@ s32 cload_draw_card_slot1_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     s32 result;
-    Vec2s pos;
+    DVECTOR pos;
     u8 name[0x21];
     char unused_pad[228];
     s32 slot[3];
@@ -1132,14 +1226,14 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
             s32 x = -x_offset;
             u8 *base;
 
-            result = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EC4, 0x28), 1, x, -y_offset, 0);
+            result = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EC4, 0x28), 1, x, -y_offset, 0);
             base = (u8 *)&D_80145EC4 - 0x28;
-            return func_800A88A0(result, ot, GLYPH_OFF(base, 0x2A), 1, x, 0x10 - y_offset, 0);
+            return func_800A88A0(result, ot, CLOAD_GLYPH_OFF(base, 0x2A), 1, x, 0x10 - y_offset, 0);
         }
         else
         {
-            s32 term1 = g_cload_card_slot * 0x320;
-            s32 term2 = (g_cload_selected_row * 0x28) + (s32)g_cload_entries;
+            s32 term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
+            s32 term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
 
             if (strncmp(D_800ECF7C, (char *)(term1 + term2), 0xC) == 0)
             {
@@ -1222,30 +1316,30 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
                     }
 
                     {
-                        s32 unk30 = *(s32 *)(base90 + 0x30);
+                        s32 elapsed_ticks = *(s32 *)(base90 + 0x30);
                         s32 x = -x_offset;
                         s32 y = -y_offset;
 
-                        sign_adj = unk30 >> 0x1F;
-                        pos.x = (s16)(x + 0x70);
-                        pos.y = (s16)y;
-                        hours = unk30 / 216000;
+                        sign_adj = elapsed_ticks >> 0x1F;
+                        pos.vx = (s16)(x + 0x70);
+                        pos.vy = (s16)y;
+                        hours = elapsed_ticks / 216000;
                         result = func_800A88A0(func_800A8A78(ot, result, hours, 1, &pos, 1), ot, D_800EC3F6[0] + (D_800EC3F6[1] << 8) + ((s32)&D_800EC3F6 - 0x32), 1, x + 0x6F, y, 0);
-                        minutes = ((unk30 / 3600) - sign_adj) - (hours * 0x3C);
+                        minutes = ((elapsed_ticks / 3600) - sign_adj) - (hours * 0x3C);
                         if (minutes < 0xA)
                         {
-                            pos.x = (s16)(x + 0x7D);
-                            pos.y = (s16)y;
+                            pos.vx = (s16)(x + 0x7D);
+                            pos.vy = (s16)y;
                             result = func_800A8A78(ot, result, 0, 1, &pos, 1);
                         }
-                        pos.x = (s16)(x + 0x85);
-                        pos.y = (s16)y;
-                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, minutes, 1, &pos, 1), ot, base90, 1, x + 0x54, y + 0x10, 0), ot, GLYPH_OFF((u8 *)D_80146338, (*(s32 *)(base90 + 0x20) & 0x3FFFF) * 2), 1, x + 0x54, y + 0x20, 0);
+                        pos.vx = (s16)(x + 0x85);
+                        pos.vy = (s16)y;
+                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, minutes, 1, &pos, 1), ot, base90, 1, x + 0x54, y + 0x10, 0), ot, CLOAD_GLYPH_OFF((u8 *)D_80146338, (*(s32 *)(base90 + 0x20) & 0x3FFFF) * 2), 1, x + 0x54, y + 0x20, 0);
                     }
                 }
                 else
                 {
-                    result = func_800A88A0(result, ot, GLYPH_SYM(D_80145EF0, 0x54), 1, -x_offset, -y_offset, 0);
+                    result = func_800A88A0(result, ot, CLOAD_GLYPH_SYM(D_80145EF0, 0x54), 1, -x_offset, -y_offset, 0);
                 }
             }
             else
@@ -1326,9 +1420,9 @@ void cload_clear_elements(void)
     s32 i;
 
     p = (CloadElement *)&g_cload_element_pool;
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < CLOAD_ELEMENT_COUNT; i++)
     {
-        p->state &= ~7;
+        p->state &= ~CLOAD_ELEMENT_STATE_MASK;
         p++;
     }
 }
@@ -1344,46 +1438,17 @@ CloadElement *cload_alloc_element(void)
     s32 i;
 
     p = (CloadElement *)&g_cload_element_pool;
-    for (i = 0; i < 8; i++, p++)
+    for (i = 0; i < CLOAD_ELEMENT_COUNT; i++, p++)
     {
-        if ((p->state & 7) == 0)
+        if ((p->state & CLOAD_ELEMENT_STATE_MASK) == 0)
         {
             p->size_flags |= 0x200;
-            p->state = (p->state & ~7) | 1;
+            p->state = (p->state & ~CLOAD_ELEMENT_STATE_MASK) | 1;
             return p;
         }
     }
     return (CloadElement *)&g_cload_element_pool;
 }
-
-/** @brief GPU packet emitted into the ordering table; unk0 is the OT link word. */
-typedef struct
-{
-    /* 0x0 */ s32 unk0;
-    /* 0x4 */ s32 unk4;
-    /* 0x8 */ s16 unk8;
-    /* 0xA */ s16 unkA;
-    /* 0xC */ s16 unkC;
-    /* 0xE */ u16 unkE;
-} CloadGpuPacket;
-
-/** @brief Draw context at arg0 + 0x40; unk0 is the head of the ordering table. */
-typedef struct
-{
-    /* 0x0 */ s32 unk0;
-} CloadOrderingTable;
-
-/** @brief Owning screen state passed to the element tick/draw pass. */
-typedef struct
-{
-    u8 pad0[0x40B2];
-    /* 0x40B2 */ s16 unk40B2;
-    u8 pad40B4[4];
-    /* 0x40B8 */ CloadGpuPacket *unk40B8;
-} CloadFrameState;
-
-/** @brief Per-element draw callback stored at element + 8. */
-typedef CloadGpuPacket *(*CloadElementDrawFunc)();
 
 CloadGpuPacket *cload_emit_scroll_arrow();
 CloadGpuPacket *cload_emit_window_frame();
@@ -1396,17 +1461,16 @@ CloadGpuPacket *cload_emit_icon_highlight_strip();
  * packets into the ordering table, and dispatches on the low 3 bits of its
  * state word: 1 grows, 2 holds, 3 shrinks, 4 counts down to idle.
  *
- * @param frame Owning screen state; unk40B8 is the packet cursor, read on entry
- *             and written back on exit.
+ * @param frame Owning screen state; prim_cursor is read on entry and written back on exit.
  *
  * @note NOT MATCHED (328/365 exact rows). Residue is the case 1/3/4 tails,
  *       where the target stores the updated state word before testing it and
  *       materializes the comparison constant 8 early; sched_oracle reports
  *       emit[li 8] < emit[andi 15] violated. Two shapes are required to match:
- *       `volatile u32 *var_s3` (the target emits 12 loads of the element word
+ *       `volatile u32 *element_state` (the target emits 12 loads of the element word
  *       and gcc CSEs 3 away without it), and the `do { ... } while (0)` around
- *       the var_s0 advance, which is an [ALLOC-23] loop-note ref bump worth 28
- *       exact rows - it wins s0 for var_s0 against temp_s1. A second such
+ *       the primitive-cursor advance, which is an [ALLOC-23] loop-note ref bump worth 28
+ *       exact rows - it wins s0 for the primitive cursor against the scaled width. A second such
  *       wrapper around the case-1 state-word update is worth 2 more. gosub's
  *       func_80143C58 is the matched 100% twin and the source model to work
  *       from. See working/cload_update_and_draw_elements/STATUS.md.
@@ -1414,205 +1478,206 @@ CloadGpuPacket *cload_emit_icon_highlight_strip();
  */
 void cload_update_and_draw_elements(CloadFrameState *frame)
 {
-    CloadGpuPacket *var_s0;
-    CloadOrderingTable *var_s5;
-    volatile u32 *var_s3;
-    s32 temp_s1;
-    s32 temp_s2;
-    s32 sp80;
-    s32 sp20[24];
-    u32 temp_a3;
-    u32 temp_a0_2;
-    s32 temp_v1_2;
-    u32 temp_a1;
-    u32 temp_a2;
-    s32 temp_a0_3;
-    s32 var_v1;
-    s32 temp_a3_2;
-    s32 var_v0;
-    s32 temp_a3_3;
-    u32 temp_v0_3;
-    u32 temp_a0_4;
-    s32 temp_a0_5;
-    s32 var_v1_2;
-    s32 temp_a3_5;
-    s32 var_v0_2;
-    s32 temp_a3_6;
-    u32 temp_v0_5;
-    u32 temp_v1_3;
+    CloadGpuPacket *prim;
+    CloadOrderingTable *ot;
+    volatile u32 *element_state;
+    s32 scaled_width;
+    s32 scaled_height;
+    s32 element_index;
+    s32 draw_area[24];
+    u32 state_word;
+    u32 dispatch_word;
+    s32 state;
+    u32 size_flags;
+    u32 full_width;
+    s32 phase;
+    s32 width_product;
+    s32 full_height;
+    s32 height_product;
+    s32 height_delta;
+    u32 opening_word;
+    u32 updated_state;
+    s32 closing_phase;
+    s32 closing_width_product;
+    s32 closing_height;
+    s32 closing_height_product;
+    s32 closing_height_delta;
+    u32 closing_word;
+    u32 hold_word;
 
-    var_s0 = frame->unk40B8;
-    var_s5 = (CloadOrderingTable *)((u8 *)frame + 0x40);
+    prim = frame->prim_cursor;
+    ot = (CloadOrderingTable *)((u8 *)frame + 0x40);
 
-    if ((g_cload_entry_state < 0x10) && ((g_cload_element1_state & 7) == 2))
+    if ((g_cload_entry_state < 0x10) && ((g_cload_element1_state & CLOAD_ELEMENT_STATE_MASK) == 2))
     {
-        if ((g_cload_entry_state * 0xE) > (g_cload_scroll_y + 0x49))
+        if ((g_cload_entry_state * CLOAD_ENTRY_ROW_HEIGHT) > (g_cload_scroll_y + 0x49))
         {
-            var_s0 = cload_emit_scroll_arrow(var_s0, var_s5, 0x114, 0x87, 0);
+            prim = cload_emit_scroll_arrow(prim, ot, 0x114, 0x87, 0);
         }
         if (g_cload_scroll_y != 0)
         {
-            var_s0 = cload_emit_scroll_arrow(var_s0, var_s5, 0x114, 0x4A, 1);
+            prim = cload_emit_scroll_arrow(prim, ot, 0x114, 0x4A, 1);
         }
     }
 
-    if (frame->unk40B2 != 0)
+    if (frame->frame_flag != 0)
     {
-        func_8001C56C(sp20, 0, 0xF0, 0x140, 0xE0);
+        func_8001C56C(draw_area, 0, 0xF0, 0x140, 0xE0);
     }
     else
     {
-        func_8001C56C(sp20, 0, 8, 0x140, 0xE0);
+        func_8001C56C(draw_area, 0, 8, 0x140, 0xE0);
     }
 
-    var_s3 = (volatile u32 *)&g_cload_element_pool;
-    sp80 = 0;
+    element_state = (volatile u32 *)&g_cload_element_pool;
+    element_index = 0;
 
-    for (; sp80 < 8; sp80++, var_s3 += 3)
+    for (; element_index < CLOAD_ELEMENT_COUNT; element_index++, element_state += CLOAD_ELEMENT_WORD_STRIDE)
     {
-        temp_a3 = *var_s3;
-        if (temp_a3 & 7)
+        state_word = *element_state;
+        if (state_word & CLOAD_ELEMENT_STATE_MASK)
         {
-            func_8001A5D4((s32)var_s0, sp20);
+            func_8001A5D4((s32)prim, draw_area);
 
-            var_s0->unk0 = (var_s0->unk0 & 0xFF000000) | (var_s5->unk0 & 0x00FFFFFF);
-            var_s5->unk0 = (s32)((var_s5->unk0 & 0xFF000000) | ((s32)var_s0 & 0x00FFFFFF));
+            addPrim(&ot->head_tag, prim);
 
-            temp_a0_2 = *var_s3;
-            temp_v1_2 = temp_a0_2 & 7;
+            dispatch_word = *element_state;
+            state = dispatch_word & CLOAD_ELEMENT_STATE_MASK;
 
+            /* GCC 2.7.2 allocation boundary; removing this wrapper changes s-register assignment. */
             do
             {
-                var_s0 = (CloadGpuPacket *)((u8 *)var_s0 + 0x40);
+                prim = (CloadGpuPacket *)((u8 *)prim + 0x40);
             } while (0);
 
-            switch (temp_v1_2)
+            switch (state)
             {
             case 1:
-                temp_v0_3 = *var_s3;
-                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
-                temp_a2 = (temp_v0_3 >> 24) | ((temp_a1 & 1) << 8);
-                temp_a0_3 = (temp_v0_3 >> 3) & 0xF;
-                var_v1 = temp_a2 * temp_a0_3;
+                opening_word = *element_state;
+                size_flags = *(u32 *)((u8 *)element_state + 4);
+                full_width = (opening_word >> 24) | ((size_flags & 1) << 8);
+                phase = (opening_word >> 3) & 0xF;
+                width_product = full_width * phase;
                 g_pad_input = 0;
-                if (var_v1 < 0)
+                if (width_product < 0)
                 {
-                    var_v1 += 7;
+                    width_product += 7;
                 }
-                temp_a3_2 = (temp_a1 >> 1) & 0xFF;
-                var_v0 = temp_a3_2 * temp_a0_3;
-                temp_s1 = var_v1 >> 3;
-                if (var_v0 < 0)
+                full_height = (size_flags >> 1) & 0xFF;
+                height_product = full_height * phase;
+                scaled_width = width_product >> 3;
+                if (height_product < 0)
                 {
-                    var_v0 += 7;
+                    height_product += 7;
                 }
-                temp_s2 = var_v0 >> 3;
-                temp_a3_3 = (s32)(temp_a3_2 - temp_s2);
+                scaled_height = height_product >> 3;
+                height_delta = (s32)(full_height - scaled_height);
 
-                var_s0 = (*(CloadElementDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_3 / 2);
+                prim = (*(CloadElementDrawFunc *)((u8 *)element_state + 8))(ot, prim, (s32)(full_width - scaled_width) / 2, height_delta / 2);
                 {
                     u32 post_word;
                     u32 field;
                     u32 high;
-                    post_word = *var_s3;
+                    post_word = *element_state;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    var_s0 = cload_emit_window_frame(var_s0, var_s5,
-                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
-                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
-                                           temp_s1, temp_s2, frame->unk40B2, (*(u32 *)((u8 *)var_s3 + 4) >> 9) & 1);
+                    prim = cload_emit_window_frame(prim, ot,
+                                           field + (s32)((((*(u32 *)((u8 *)element_state + 4) & 1) << 8) | high) - scaled_width) / 2,
+                                           (*((u8 *)element_state + 2)) + ((s32)((*(u32 *)((u8 *)element_state + 4) >> 1) & 0xFF) - scaled_height) / 2,
+                                           scaled_width, scaled_height, frame->frame_flag, (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
                 }
+                /* GCC 2.7.2 allocation boundary; this single-pass wrapper is codegen-significant. */
                 do
                 {
-                    temp_a0_4 = *var_s3;
-                    temp_a0_4 = (temp_a0_4 & ~0x78) | (((((temp_a0_4 >> 3) & 0xF) + 1) & 0xF) * 8);
-                    *var_s3 = temp_a0_4;
+                    updated_state = *element_state;
+                    updated_state = (updated_state & ~CLOAD_ELEMENT_PHASE_MASK) | (((((updated_state >> 3) & 0xF) + 1) & 0xF) * 8);
+                    *element_state = updated_state;
                 } while (0);
-                if (((temp_a0_4 >> 3) & 0xF) == 8)
+                if (((updated_state >> 3) & 0xF) == 8)
                 {
                     func_800AA02C();
-                    *var_s3 = (*var_s3 & ~7) | 2;
+                    *element_state = (*element_state & ~CLOAD_ELEMENT_STATE_MASK) | 2;
                 }
                 break;
 
             case 2:
-                var_s0 = (*(CloadElementDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, 0, 0);
+                prim = (*(CloadElementDrawFunc *)((u8 *)element_state + 8))(ot, prim, 0, 0);
                 {
                     u32 case_word;
                     u32 high;
-                    case_word = *var_s3;
+                    case_word = *element_state;
                     high = case_word >> 24;
-                    var_s0 = cload_emit_window_frame(var_s0, var_s5, (case_word >> 7) & 0x1FF, (*((u8 *)var_s3 + 2)),
-                                           ((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high,
-                                           (*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF, frame->unk40B2,
-                                           (*(u32 *)((u8 *)var_s3 + 4) >> 9) & 1);
+                    prim = cload_emit_window_frame(prim, ot, (case_word >> 7) & 0x1FF, (*((u8 *)element_state + 2)),
+                                           ((*(u32 *)((u8 *)element_state + 4) & 1) << 8) | high,
+                                           (*(u32 *)((u8 *)element_state + 4) >> 1) & 0xFF, frame->frame_flag,
+                                           (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
                 }
-                temp_v1_3 = *var_s3;
-                if (((temp_v1_3 >> 3) & 0xF) != 0)
+                hold_word = *element_state;
+                if (((hold_word >> 3) & 0xF) != 0)
                 {
-                    *var_s3 = (temp_v1_3 & ~0x78) | (((((temp_v1_3 >> 3) & 0xF) - 1) & 0xF) * 8);
+                    *element_state = (hold_word & ~CLOAD_ELEMENT_PHASE_MASK) | (((((hold_word >> 3) & 0xF) - 1) & 0xF) * 8);
                 }
                 break;
 
             case 3:
-                temp_v0_5 = *var_s3;
-                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
-                temp_a2 = (temp_v0_5 >> 24) | ((temp_a1 & 1) << 8);
-                temp_a0_5 = temp_v0_5 >> 3;
-                temp_a0_5 = temp_a0_5 & 0xF;
-                var_v1_2 = temp_a2 * temp_a0_5;
+                closing_word = *element_state;
+                size_flags = *(u32 *)((u8 *)element_state + 4);
+                full_width = (closing_word >> 24) | ((size_flags & 1) << 8);
+                closing_phase = closing_word >> 3;
+                closing_phase = closing_phase & 0xF;
+                closing_width_product = full_width * closing_phase;
                 g_pad_input = 0;
-                if (var_v1_2 < 0)
+                if (closing_width_product < 0)
                 {
-                    var_v1_2 += 7;
+                    closing_width_product += 7;
                 }
-                temp_a3_5 = (temp_a1 >> 1) & 0xFF;
-                var_v0_2 = temp_a3_5 * temp_a0_5;
-                temp_s1 = var_v1_2 >> 3;
-                if (var_v0_2 < 0)
+                closing_height = (size_flags >> 1) & 0xFF;
+                closing_height_product = closing_height * closing_phase;
+                scaled_width = closing_width_product >> 3;
+                if (closing_height_product < 0)
                 {
-                    var_v0_2 += 7;
+                    closing_height_product += 7;
                 }
-                temp_s2 = var_v0_2 >> 3;
-                temp_a3_6 = (s32)(temp_a3_5 - temp_s2);
+                scaled_height = closing_height_product >> 3;
+                closing_height_delta = (s32)(closing_height - scaled_height);
 
-                var_s0 = (*(CloadElementDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_6 / 2);
+                prim = (*(CloadElementDrawFunc *)((u8 *)element_state + 8))(ot, prim, (s32)(full_width - scaled_width) / 2, closing_height_delta / 2);
                 {
                     u32 post_word;
                     u32 field;
                     u32 high;
-                    post_word = *var_s3;
+                    post_word = *element_state;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    var_s0 = cload_emit_window_frame(var_s0, var_s5,
-                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
-                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
-                                           temp_s1, temp_s2, frame->unk40B2, (*(u32 *)((u8 *)var_s3 + 4) >> 9) & 1);
+                    prim = cload_emit_window_frame(prim, ot,
+                                           field + (s32)((((*(u32 *)((u8 *)element_state + 4) & 1) << 8) | high) - scaled_width) / 2,
+                                           (*((u8 *)element_state + 2)) + ((s32)((*(u32 *)((u8 *)element_state + 4) >> 1) & 0xFF) - scaled_height) / 2,
+                                           scaled_width, scaled_height, frame->frame_flag, (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
                 }
-                temp_a0_4 = *var_s3;
-                temp_a0_4 = (temp_a0_4 & ~0x78) | (((((temp_a0_4 >> 3) & 0xF) - 1) & 0xF) * 8);
-                *var_s3 = temp_a0_4;
-                if (!((temp_a0_4 >> 3) & 0xF))
+                updated_state = *element_state;
+                updated_state = (updated_state & ~CLOAD_ELEMENT_PHASE_MASK) | (((((updated_state >> 3) & 0xF) - 1) & 0xF) * 8);
+                *element_state = updated_state;
+                if (!((updated_state >> 3) & 0xF))
                 {
-                    *var_s3 = (((temp_a0_4 & ~0x78) | 0x18) & ~7) | 4;
+                    *element_state = (((updated_state & ~CLOAD_ELEMENT_PHASE_MASK) | 0x18) & ~CLOAD_ELEMENT_STATE_MASK) | 4;
                 }
                 break;
 
             case 4:
-                temp_v0_5 = *var_s3;
+                closing_word = *element_state;
                 g_pad_input = 0;
-                temp_v1_3 = (temp_v0_5 & ~0x78) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
-                *var_s3 = temp_v1_3;
-                if (!((temp_v1_3 >> 3) & 0xF))
+                hold_word = (closing_word & ~CLOAD_ELEMENT_PHASE_MASK) | (((((closing_word >> 3) & 0xF) - 1) & 0xF) * 8);
+                *element_state = hold_word;
+                if (!((hold_word >> 3) & 0xF))
                 {
-                    *var_s3 = temp_v1_3 & ~7;
+                    *element_state = hold_word & ~CLOAD_ELEMENT_STATE_MASK;
                 }
                 break;
             }
         }
     }
 
-    frame->unk40B8 = cload_emit_icon_highlight_strip(var_s0, var_s5);
+    frame->prim_cursor = cload_emit_icon_highlight_strip(prim, ot);
 }
 
 /**
@@ -1721,58 +1786,56 @@ CloadGpuPacket *cload_emit_rect_outline();
  */
 CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill)
 {
-    CloadGpuPacket *var_s0;
-    CloadGpuPacket *var_a0;
-    CloadGpuPacket *buf;
-    CloadGpuPacket *result;
-    s32 sp20[24];
-    s32 temp_a2;
+    CloadGpuPacket *outline_prim;
+    CloadGpuPacket *draw_mode_prim;
+    CloadGpuPacket *frame_prim;
+    CloadGpuPacket *next_prim;
+    s32 draw_area[24];
+    s32 draw_y;
 
-    buf = prim;
+    frame_prim = prim;
     if (flag != 0)
     {
-        temp_a2 = y + 0xF2;
-        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 3);
+        draw_y = y + 0xF2;
+        func_8001C56C(draw_area, x + 2, draw_y, w - 4, h - 3);
     }
     else
     {
-        temp_a2 = y + 0xA;
-        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 3);
+        draw_y = y + 0xA;
+        func_8001C56C(draw_area, x + 2, draw_y, w - 4, h - 3);
     }
-    func_8001A5D4((s32)buf, sp20);
+    func_8001A5D4((s32)frame_prim, draw_area);
 
-    buf->unk0 = (buf->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)buf & 0xFFFFFF);
+    addPrim(ot, frame_prim);
 
-    result = (CloadGpuPacket *)((u8 *)buf + 0x40);
+    next_prim = (CloadGpuPacket *)((u8 *)frame_prim + 0x40);
     if (draw_fill != 0)
     {
+        /* GCC 2.7.2 allocation boundary; plain braces change the matched schedule. */
         do
         {
-            var_s0 = cload_emit_rect_outline(result, ot, x, y, w, h, 0xFFFFFF);
-            var_s0 = cload_emit_rect_outline(var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
-            var_s0 = cload_emit_rect_outline(var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
+            outline_prim = cload_emit_rect_outline(next_prim, ot, x, y, w, h, CLOAD_COLOR_WHITE);
+            outline_prim = cload_emit_rect_outline(outline_prim, ot, x + 1, y + 1, w - 2, h - 2, 0);
+            outline_prim = cload_emit_rect_outline(outline_prim, ot, x - 1, y - 1, w + 2, h + 2, 0);
         } while (0);
 
-        result = var_s0;
-        result->unk4 = 0x808080;
-        ((u8 *)result)[3] = 3;
-        ((u8 *)result)[7] = 0x62;
-        result->unk8 = x;
-        result->unkA = y;
-        result->unkC = w;
-        result->unkE = h;
-        result->unk0 = (result->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((s32)result & 0xFFFFFF);
+        next_prim = outline_prim;
+        next_prim->word4 = 0x808080;
+        setlen(next_prim, 3);
+        setcode(next_prim, 0x62);
+        next_prim->x0 = x;
+        next_prim->y0 = y;
+        next_prim->unkC = w;
+        next_prim->unkE = h;
+        addPrim(ot, next_prim);
 
-        var_a0 = (CloadGpuPacket *)((u8 *)result + 0x10);
-        ((u8 *)var_a0)[3] = 1;
-        var_a0->unk4 = 0xE1000045;
-        var_a0->unk0 = (var_a0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((s32)var_a0 & 0xFFFFFF);
-        result = (CloadGpuPacket *)((u8 *)var_a0 + 8);
+        draw_mode_prim = (CloadGpuPacket *)((u8 *)next_prim + 0x10);
+        setlen(draw_mode_prim, 1);
+        draw_mode_prim->word4 = 0xE1000045;
+        addPrim(ot, draw_mode_prim);
+        next_prim = (CloadGpuPacket *)((u8 *)draw_mode_prim + 8);
     }
-    return result;
+    return next_prim;
 }
 
 /**
@@ -1797,66 +1860,49 @@ CloadGpuPacket *cload_emit_rect_outline(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
 {
     s32 tmp;
 
-    p->unk4 = color;
-    ((u8 *)p)[3] = 3;
-    ((u8 *)p)[7] = 0x40;
-    p->unk8 = x;
-    p->unkA = y;
+    p->word4 = color;
+    setlen(p, 3);
+    setcode(p, 0x40);
+    p->x0 = x;
+    p->y0 = y;
     p->unkC = x + w;
     p->unkE = y;
-    tmp = 0xFF000000;
-    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & tmp) | ((s32)p & 0xFFFFFF);
+    tmp = CLOAD_GPU_TAG_HIGH_MASK;
+    p->tag = (p->tag & CLOAD_GPU_TAG_HIGH_MASK) | (*ot & CLOAD_GPU_ADDR_MASK);
+    *ot = (*ot & tmp) | ((s32)p & CLOAD_GPU_ADDR_MASK);
     p++;
 
-    p->unk4 = color;
-    ((u8 *)p)[3] = 3;
-    ((u8 *)p)[7] = 0x40;
-    p->unk8 = x + w;
-    p->unkA = y;
+    p->word4 = color;
+    setlen(p, 3);
+    setcode(p, 0x40);
+    p->x0 = x + w;
+    p->y0 = y;
     p->unkC = x + w;
     p->unkE = y + h;
-    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
+    addPrim(ot, p);
     p++;
 
-    p->unk4 = color;
-    ((u8 *)p)[3] = 3;
-    ((u8 *)p)[7] = 0x40;
-    p->unk8 = x + w;
+    p->word4 = color;
+    setlen(p, 3);
+    setcode(p, 0x40);
+    p->x0 = x + w;
     tmp = y + h;
-    p->unkA = tmp;
+    p->y0 = tmp;
     p->unkC = x;
     p->unkE = y + h;
-    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
+    addPrim(ot, p);
     p++;
 
-    p->unk4 = color;
-    ((u8 *)p)[3] = 3;
-    ((u8 *)p)[7] = 0x40;
-    p->unk8 = x;
-    p->unkA = y;
+    p->word4 = color;
+    setlen(p, 3);
+    setcode(p, 0x40);
+    p->x0 = x;
+    p->y0 = y;
     p->unkC = x;
     p->unkE = y + h;
-    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
+    addPrim(ot, p);
     return p + 1;
 }
-
-/**
- * @brief Ordering-table link word at the head of a GPU packet; mirrors the
- *        P_TAG layout in include/psyq/libgpu.h.
- * @note Writing the link through the 24-bit @c addr bitfield (setaddr) makes gcc
- *       build the two mask constants in the order the original used; the
- *       hand-written @c (x & 0xFF000000) | (y & 0xFFFFFF) form colours them the
- *       other way round.
- */
-typedef struct
-{
-    /* 0x0 */ u32 addr : 24; /* next-primitive address (24-bit) */
-    /* 0x3 */ u32 len : 8;   /* packet word count */
-} CloadOtTag;
 
 /**
  * @brief Emit a textured scroll-arrow sprite and draw-mode packet.
@@ -1870,13 +1916,14 @@ typedef struct
  */
 CloadGpuPacket *cload_emit_scroll_arrow(CloadGpuPacket *p, s32 *ot, s32 x, s32 y, s32 flag)
 {
-    p->unk4 = 0x808080;
+    p->word4 = 0x808080;
+    /* GCC 2.7.2 scheduling boundary; removing this wrapper changes packet-store order. */
     do
     {
-        ((u8 *)p)[3] = 4;
-        ((u8 *)p)[7] = 0x64;
-        p->unk8 = x;
-        p->unkA = y;
+        setlen(p, 4);
+        setcode(p, 0x64);
+        p->x0 = x;
+        p->y0 = y;
     } while (0);
     if (flag != 0)
     {
@@ -1890,14 +1937,12 @@ CloadGpuPacket *cload_emit_scroll_arrow(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
     *(s16 *)((u8 *)p + 0x10) = 0x10;
     *(s16 *)((u8 *)p + 0x12) = 0x10;
     p->unkE = 0x7D80;
-    ((CloadOtTag *)p)->addr = ((CloadOtTag *)ot)->addr;
-    ((CloadOtTag *)ot)->addr = (u32)p;
+    addPrim(ot, p);
 
     p = (CloadGpuPacket *)((u8 *)p + 0x14);
-    ((u8 *)p)[3] = 1;
-    p->unk4 = 0xE100008A;
-    ((CloadOtTag *)p)->addr = ((CloadOtTag *)ot)->addr;
-    ((CloadOtTag *)ot)->addr = (u32)p;
+    setlen(p, 1);
+    p->word4 = 0xE100008A;
+    addPrim(ot, p);
     return (CloadGpuPacket *)((u8 *)p + 8);
 }
 
@@ -1910,12 +1955,12 @@ CloadGpuPacket *cload_emit_scroll_arrow(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
  * @param y_offset row delta applied to the draw extents.
  * @return the CloadGpuPacket* chain pointer returned by cload_draw_choice_prompt.
  * @note WIP 96.72% (121/125 exact). Required-to-match shapes in place:
- *       FRAME-04 dead 9-arg call for the -0x38 outgoing-arg frame; ONE-EXIT
+ *       FRAME-04 two-word frame scratch for the -0x38 stack frame; ONE-EXIT
  *       `goto ret` single return so the `v0 = result` copy is shared; block-C
  *       laid out before block-B (target reaches C by branch, falls into B);
- *       g_cload_element_pool accessed dually (CloadElementPoolHead `.unk0` direct via %hi/%lo +
+ *       g_cload_element_pool accessed dually (CloadElementPoolHead `.first_state` direct via %hi/%lo +
  *       CloadElement* base for unk4/unk8/byte2); `tmp = 0xFFFF007F` bound before
- *       `p->unk8` (born before the base pointer, wins its register); the unk4
+ *       `p->x0` (born before the base pointer, wins its register); the word4
  *       update split as `tmp = (unk4 | 1) & ~0x1FE; unk4 = tmp | 0x56`.
  *       Residual (4 rows): the split unk4 accumulator lands in a0 where the
  *       target keeps it in v1, plus a 1-slot schedule shift on the
@@ -1927,17 +1972,15 @@ s32 cload_draw_load_prompt(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
     s32 result;
     s32 y;
 
-    if (0)
-    {
-        cload_draw_choice_prompt(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
+    /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
+    s32 frame_scratch[2];
     y = -x_offset + 0x90;
     result = cload_draw_choice_prompt(
         func_800A88A0(prim, (s32 *)ot, (void *)((s32)&D_80145ECC - 0x30 + D_80145ECC), 4, y, -y_offset, 2),
         ot, y, 0xE - y_offset);
     if ((u32)(cload_poll_and_rewind_primary_handles() - 1) < 2)
     {
-        g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~7;
+        g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
         func_800AA02C();
         func_800A3938(0x78, 0x80);
         g_cload_entry_state = 0xFF;
@@ -1958,7 +2001,7 @@ s32 cload_draw_load_prompt(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
         goto block_b;
     }
 block_c:
-    g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~7;
+    g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
     func_800AA02C();
     func_800A3938(0x78, 0x80);
     g_cload_load_step = D_80146534;
@@ -1973,7 +2016,7 @@ block_b:
         g_cload_load_step = D_8014653C;
         tmp = 0xFFFF007F;
         p->draw = cload_draw_load_progress;
-        g_cload_element_pool.first_state = (((((g_cload_element_pool.first_state & ~0x78) | 8) & ~7) | 1) & tmp) | 0x800;
+        g_cload_element_pool.first_state = (((((g_cload_element_pool.first_state & ~CLOAD_ELEMENT_PHASE_MASK) | 8) & ~CLOAD_ELEMENT_STATE_MASK) | 1) & tmp) | 0x800;
         ((u8 *)p)[2] = 0x5B;
         tmp = (p->size_flags | 1) & ~0x1FE;
         p->size_flags = tmp | 0x56;
@@ -2000,16 +2043,14 @@ s32 cload_draw_load_progress(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
     u8 *p;
     s32 vol;
 
-    if (0)
-    {
-        cload_draw_progress_bar(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
+    /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
+    s32 frame_scratch[2];
 
     y = -x_offset + 0x90;
     result = func_800A88A0(prim, (s32 *)ot, (void *)((s32)&D_80145ECE - 0x32 + D_80145ECE), 4, y, -y_offset, 2);
     base = (u8 *)&D_80145ECE - 0x32;
-    result = func_800A88A0(result, (s32 *)ot, GLYPH_OFF(base, 0x1E), 4, y, 0xE - y_offset, 2);
-    result = func_800A88A0(result, (s32 *)ot, GLYPH_OFF(base, 0xB2), 4, y, 0x1C - y_offset, 2);
+    result = func_800A88A0(result, (s32 *)ot, CLOAD_GLYPH_OFF(base, 0x1E), 4, y, 0xE - y_offset, 2);
+    result = func_800A88A0(result, (s32 *)ot, CLOAD_GLYPH_OFF(base, 0xB2), 4, y, 0x1C - y_offset, 2);
     result = cload_draw_progress_bar(result, ot);
 
     if (g_cload_progress_active != 0)
@@ -2027,7 +2068,7 @@ s32 cload_draw_load_progress(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
     }
 
     func_800A3938(0x7B, vol);
-    g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~7;
+    g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
     func_80016E7C(base + 0x180, D_80042FD8, 0x3268);
     D_8003EC9C = D_80042FD8[0xCF];
     D_80042FB4 = func_8002054C(-1);
@@ -2035,29 +2076,6 @@ s32 cload_draw_load_progress(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
 ret:
     return result;
 }
-
-/**
- * @brief Same word/half raw-store granularity as POLY_G4 in
- *        include/psyq/libgpu.h; the r/g/b/code quad and each x/y pair are
- *        written as single word/half stores (matching the target's
- *        codegen), not per-channel byte assignments.
- */
-typedef struct
-{
-    /* 0x0 */ s32 unk0;
-    /* 0x4 */ s32 unk4;
-    /* 0x8 */ s16 unk8;
-    /* 0xA */ s16 unkA;
-    /* 0xC */ s32 unkC;
-    /* 0x10 */ s16 unk10;
-    /* 0x12 */ s16 unk12;
-    /* 0x14 */ s32 unk14;
-    /* 0x18 */ s16 unk18;
-    /* 0x1A */ s16 unk1A;
-    /* 0x1C */ s32 unk1C;
-    /* 0x20 */ s16 unk20;
-    /* 0x22 */ s16 unk22;
-} CloadPolyG4Words;
 
 /**
  * @brief Build the CD-load progress-bar gouraud quad (a POLY_G4-shaped
@@ -2071,13 +2089,13 @@ typedef struct
  *       quad's right-edge x extent (elapsed * 0x120, rounded via +0xFF for
  *       negative values, then >>8) - a time-based progress bar. Required-to-
  *       match shape: the two `>>8` stores are written inline
- *       (`g->unk20 = extent >> 8; g->unk10 = extent >> 8;`), NOT through a
+ *       (`g->x3 = extent >> 8; g->x1 = extent >> 8;`), NOT through a
  *       reassigned `extent = extent >> 8;` local - the reassignment costs
  *       -7 exact rows (this single change was the jump from 82.28% to
  *       94.26%, and incidentally fixed a second, separate-looking mismatch
  *       around the OT-link mask too).
  *       Residual (8 rows, SCHED-LUID): the target fills the elapsed-clamp
- *       branch's delay slot with the start of the `g->unk14 = 0xFFFF00`
+ *       branch's delay slot with the start of the `g->color2 = 0xFFFF00`
  *       constant build (`lui`); this compile fills it by speculatively
  *       re-running the `x * 9` shift with the pre-clamp value and redoing it
  *       after the join (+1 insn). Named-local hoists of the 0xFFFF00/0xFFFFFF
@@ -2089,11 +2107,11 @@ typedef struct
  */
 CloadGpuPacket *cload_draw_progress_bar(CloadGpuPacket *p, s32 *ot)
 {
-    CloadPolyG4Words *g;
+    CloadPolyG4Packet *g;
     s32 elapsed;
     s32 extent;
 
-    g = (CloadPolyG4Words *)p;
+    g = (CloadPolyG4Packet *)p;
     if (g_cload_progress_bar_active != 0)
     {
         elapsed = func_8002054C(-1) - g_cload_progress_start_tick;
@@ -2102,26 +2120,25 @@ CloadGpuPacket *cload_draw_progress_bar(CloadGpuPacket *p, s32 *ot)
             elapsed = 0x100;
         }
         extent = elapsed * 0x120;
-        g->unk4 = 0xFF;
-        g->unkC = 0xFFFF;
-        g->unk1C = 0xFF0000;
-        ((u8 *)g)[3] = 8;
-        g->unk14 = 0xFFFF00;
-        ((u8 *)g)[7] = 0x38;
-        g->unk18 = 0;
-        g->unk8 = 0;
+        g->color0 = 0xFF;
+        g->color1 = 0xFFFF;
+        g->color3 = 0xFF0000;
+        setlen(g, 8);
+        g->color2 = 0xFFFF00;
+        setcode(g, 0x38);
+        g->x2 = 0;
+        g->x0 = 0;
         if (extent < 0)
         {
             extent += 0xFF;
         }
-        g->unk20 = extent >> 8;
-        g->unk10 = extent >> 8;
-        g->unk12 = 0;
-        g->unkA = 0;
-        g->unk22 = 0x35;
-        g->unk1A = 0x35;
-        p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
+        g->x3 = extent >> 8;
+        g->x1 = extent >> 8;
+        g->y1 = 0;
+        g->y0 = 0;
+        g->y3 = 0x35;
+        g->y2 = 0x35;
+        addPrim(ot, p);
         p = (CloadGpuPacket *)((u8 *)p + 0x24);
     }
     return p;
@@ -2138,7 +2155,7 @@ void cload_open_status_dialog(s32 dialog_state)
     s32 state;
 
     func_800A3938(0x78, 0x80);
-    g_cload_element_pool.first_state = ((((g_cload_element_pool.first_state & ~0x78) | 8) & ~7 | 1) & 0xFFFF007F | 0x1000) & 0xFFFFFF;
+    g_cload_element_pool.first_state = ((((g_cload_element_pool.first_state & ~CLOAD_ELEMENT_PHASE_MASK) | 8) & ~CLOAD_ELEMENT_STATE_MASK | 1) & 0xFFFF007F | 0x1000) & 0xFFFFFF;
     p = (CloadElement *)&g_cload_element_pool;
     p->size_flags |= 1;
     if (dialog_state < 2 || dialog_state == 4)
@@ -2178,69 +2195,42 @@ s32 cload_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     s32 state = g_cload_dialog_state;
     u8 *base;
 
-    if (0)
-    {
-        cload_draw_choice_prompt(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    }
+    /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
+    s32 frame_scratch[2];
 
     switch (state)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145ED8, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED8, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
         base = (u8 *)&D_80145ED8 - 0x3C;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 1:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         base = (u8 *)&D_80145EDA - 0x3E;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 2:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EDC, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDC, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EDE, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDE, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 4:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         base = (u8 *)&D_80145EDA - 0x3E;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x5C), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x5C), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     }
 
     if (g_pad_input & 0x220)
     {
-        g_cload_element_pool.first_state &= ~7;
+        g_cload_element_pool.first_state &= ~CLOAD_ELEMENT_STATE_MASK;
         func_800AA02C();
     }
 
     return prim;
 }
-
-typedef struct
-{
-    /* 0x00 */ s32 unk0;
-    /* 0x04 */ s32 unk4;
-    /* 0x08 */ s16 unk8;
-    /* 0x0A */ s16 unkA;
-    /* 0x0C */ u8 unkC;
-    /* 0x0D */ u8 unkD;
-    /* 0x0E */ s16 unkE;
-    /* 0x10 */ s16 unk10;
-    /* 0x12 */ s16 unk12;
-    /* 0x14 */ u8 unk14;
-    /* 0x15 */ u8 unk15;
-    /* 0x16 */ s16 unk16;
-    /* 0x18 */ s16 unk18;
-    /* 0x1A */ s16 unk1A;
-    /* 0x1C */ u8 unk1C;
-    /* 0x1D */ u8 unk1D;
-    /* 0x1E */ s16 unk1E;
-    /* 0x20 */ s16 unk20;
-    /* 0x22 */ s16 unk22;
-    /* 0x24 */ u8 unk24;
-    /* 0x25 */ u8 unk25;
-} StructFT4;
 
 /**
  * @brief Draw one icon-highlight row: set the text scissor window and build a
@@ -2257,13 +2247,13 @@ typedef struct
  * @param index slot index; drives the scissor x and the quad UV base (index*3).
  * @param row when 1 and icon<2 uses the func_800A5638 scissor path.
  * @return the advanced primitive cursor (prim + 0x28), or prim unchanged when
- *         icon == 0x7F.
+ *         icon == CLOAD_NO_ICON.
  * @note WIP 85.14% (122/145 exact). Structure, control flow, the -0x40 frame,
  *       prim in s2 (via `base = index * 3` kept as a single post-branch LOCAL so
  *       local-alloc gives it s0 and the long-lived global prim keeps s2), and
- *       the CloadOtTag setaddr link are all in place. Residue is packet-block
+ *       the libgpu setaddr/getaddr link are all in place. Residue is packet-block
  *       scheduling in the final basic block: the target hoists the `highlight`
- *       (sp+0x50) load and the `prim->unk0` OT-read early to hide latency, which
+ *       (sp+0x50) load and the `prim->tag` OT-read early to hide latency, which
  *       pushes the `uv = base * 0x10` shift later, whereas this compile emits the
  *       uv block right after the code bytes. sched_oracle reports the block as
  *       NON_LUID / regalloc-decided (not a clean sched1 emit-order fix), and the
@@ -2284,7 +2274,7 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
     s32 v;
     s32 *ctx;
 
-    if (icon == 0x7F)
+    if (icon == CLOAD_NO_ICON)
     {
         return prim;
     }
@@ -2324,33 +2314,32 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
     rect.y = 0xD0;
     func_80019A34(&rect, g_cload_icon_resource + *(s32 *)(g_cload_icon_resource + icon * 4 + 4) + 0x20);
 
-    ((StructFT4 *)prim)->unk4 = 0x808080;
-    ((u8 *)prim)[3] = 9;
-    ((u8 *)prim)[7] = 0x2C;
-    ((StructFT4 *)prim)->unk18 = x;
-    ((StructFT4 *)prim)->unk8 = x;
-    ((StructFT4 *)prim)->unk12 = y;
-    ((StructFT4 *)prim)->unkA = y;
+    ((CloadPolyFT4Packet *)prim)->color0 = 0x808080;
+    setlen(prim, 9);
+    setcode(prim, 0x2C);
+    ((CloadPolyFT4Packet *)prim)->x2 = x;
+    ((CloadPolyFT4Packet *)prim)->x0 = x;
+    ((CloadPolyFT4Packet *)prim)->y1 = y;
+    ((CloadPolyFT4Packet *)prim)->y0 = y;
     uv = base * 0x10;
-    ((StructFT4 *)prim)->unk1C = uv;
-    ((StructFT4 *)prim)->unkC = uv;
+    ((CloadPolyFT4Packet *)prim)->u2 = uv;
+    ((CloadPolyFT4Packet *)prim)->u0 = uv;
     uv2 = uv + 0x2F;
-    ((StructFT4 *)prim)->unk24 = uv2;
-    ((StructFT4 *)prim)->unk14 = uv2;
-    ((StructFT4 *)prim)->unk15 = 0xD0;
-    ((StructFT4 *)prim)->unkD = 0xD0;
+    ((CloadPolyFT4Packet *)prim)->u3 = uv2;
+    ((CloadPolyFT4Packet *)prim)->u1 = uv2;
+    ((CloadPolyFT4Packet *)prim)->v1 = 0xD0;
+    ((CloadPolyFT4Packet *)prim)->v0 = 0xD0;
     tmp = x + highlight;
-    ((StructFT4 *)prim)->unk20 = tmp;
-    ((StructFT4 *)prim)->unk10 = tmp;
+    ((CloadPolyFT4Packet *)prim)->x3 = tmp;
+    ((CloadPolyFT4Packet *)prim)->x1 = tmp;
     tmp = y + 0x2F;
-    ((StructFT4 *)prim)->unk22 = tmp;
-    ((StructFT4 *)prim)->unk1A = tmp;
-    ((StructFT4 *)prim)->unk25 = 0xFF;
-    ((StructFT4 *)prim)->unk1D = 0xFF;
-    ((StructFT4 *)prim)->unkE = (index & 0x3F) | 0x7C80;
-    ((StructFT4 *)prim)->unk16 = 5;
-    ((CloadOtTag *)prim)->addr = ((CloadOtTag *)ot)->addr;
-    ((CloadOtTag *)ot)->addr = (u32)prim;
+    ((CloadPolyFT4Packet *)prim)->y3 = tmp;
+    ((CloadPolyFT4Packet *)prim)->y2 = tmp;
+    ((CloadPolyFT4Packet *)prim)->v3 = 0xFF;
+    ((CloadPolyFT4Packet *)prim)->v2 = 0xFF;
+    ((CloadPolyFT4Packet *)prim)->clut = (index & 0x3F) | 0x7C80;
+    ((CloadPolyFT4Packet *)prim)->tpage = 5;
+    addPrim(ot, prim);
 
     return prim + 0x28;
 }
@@ -2361,7 +2350,7 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
  */
 void cload_deactivate_primary_element(void)
 {
-    g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~7;
+    g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
 }
 
 /**
@@ -2435,7 +2424,7 @@ void cload_load_icon_resources(void)
  * @return the advanced primitive cursor after all 3 pairs (p + 0x54).
  * @note WIP 91.23% (63/73 exact, correct frame/insn count, no structural or
  *       scheduling rows left). Residual is a single swapped register pair:
- *       the CloadOtTag bitfield's 0xFF000000 len-mask constant and the `code`
+ *       the libgpu P_TAG bitfield's 0xFF000000 len-mask constant and the `code`
  *       (unk8) loop accumulator land in t3/t6 opposite of the target (mask
  *       should be t6, code should be t3). alloc_report confirms this is a
  *       genuine allocator priority tie broken the wrong way: mask
@@ -2450,7 +2439,7 @@ void cload_load_icon_resources(void)
  *       Permuter (v2, 100k+ iterations across 3 re-seeds) never beat the
  *       seeded state. Shapes that ARE measured required: `col += 0x40,
  *       row += 0x40, code += 0x80, i++` in that exact order as the for-loop's
- *       increment clause (i last); `tpage` computed AFTER the first CloadOtTag
+ *       increment clause (i last); `tpage` computed AFTER the first P_TAG
  *       link and p-advance, not before. working/cload_emit_icon_highlight_strip kept for a
  *       future pass.
  * @see decomp.me (91.23%)
@@ -2468,11 +2457,11 @@ CloadGpuPacket *cload_emit_icon_highlight_strip(CloadGpuPacket *p, CloadOrdering
     row = 0x7D00;
     for (i = 0; i < 3; col += 0x40, row += 0x40, code += 0x80, i++)
     {
-        p->unk4 = 0x808080;
-        ((u8 *)p)[3] = 4;
-        ((u8 *)p)[7] = 0x64;
-        p->unk8 = code;
-        p->unkA = 0;
+        p->word4 = 0x808080;
+        setlen(p, 4);
+        setcode(p, 0x64);
+        p->x0 = code;
+        p->y0 = 0;
         ((u8 *)p)[0xC] = 0;
         ((u8 *)p)[0xD] = 0;
         if (i == 2)
@@ -2485,14 +2474,12 @@ CloadGpuPacket *cload_emit_icon_highlight_strip(CloadGpuPacket *p, CloadOrdering
         }
         *(s16 *)((u8 *)p + 0x12) = 0xE0;
         p->unkE = row;
-        ((CloadOtTag *)p)->addr = ((CloadOtTag *)ot)->addr;
-        ((CloadOtTag *)ot)->addr = (u32)p;
+        addPrim(ot, p);
         p = (CloadGpuPacket *)((u8 *)p + 0x14);
-        ((u8 *)p)[3] = 1;
+        setlen(p, 1);
         tpage = ((col & 0x3FF) >> 6) | 0xE1000080;
-        p->unk4 = tpage;
-        ((CloadOtTag *)p)->addr = ((CloadOtTag *)ot)->addr;
-        ((CloadOtTag *)ot)->addr = (u32)p;
+        p->word4 = tpage;
+        addPrim(ot, p);
         p = (CloadGpuPacket *)((u8 *)p + 8);
     }
     return p;
@@ -2619,46 +2606,46 @@ s32 cload_compute_save_checksum(u8 *data)
  */
 void cload_format_hex(s8 *out, s32 value, s32 max_chars)
 {
-    s32 temp_s0;
-    s32 var_s1;
-    s32 var_s2;
-    s32 var_s5;
-    s32 var_v1;
-    s8 *var_s3;
-    s32 var_s6;
+    s32 nibble;
+    s32 shift_index;
+    s32 remaining_chars;
+    s32 remaining_value;
+    s32 started;
+    s8 *cursor;
+    s32 end_index;
 
-    var_s3 = out;
-    var_s5 = value;
-    var_s2 = max_chars;
-    var_s1 = 7;
-    var_v1 = 0;
-    if (var_s2 != 0)
+    cursor = out;
+    remaining_value = value;
+    remaining_chars = max_chars;
+    shift_index = 7;
+    started = 0;
+    if (remaining_chars != 0)
     {
-        var_s6 = -1;
+        end_index = -1;
 loop_2:
-        temp_s0 = (var_s5 >> (var_s1 * 4)) & 0xF;
-        if ((temp_s0 != 0) || (var_v1 != 0))
+        nibble = (remaining_value >> (shift_index * 4)) & 0xF;
+        if ((nibble != 0) || (started != 0))
         {
-            cload_hex_nibble_to_ascii(var_s3, temp_s0);
-            var_s3 += 1;
-            var_s2 -= 1;
-            var_v1 = 1;
-            var_s5 -= temp_s0 << (var_s1 * 4);
+            cload_hex_nibble_to_ascii(cursor, nibble);
+            cursor += 1;
+            remaining_chars -= 1;
+            started = 1;
+            remaining_value -= nibble << (shift_index * 4);
         }
-        var_s1 -= 1;
-        if (var_s1 != var_s6)
+        shift_index -= 1;
+        if (shift_index != end_index)
         {
-            if (var_s1 == 0)
+            if (shift_index == 0)
             {
-                var_v1 = 1;
+                started = 1;
             }
-            if (var_s2 != 0)
+            if (remaining_chars != 0)
             {
                 goto loop_2;
             }
         }
     }
-    *var_s3 = 0;
+    *cursor = 0;
 }
 
 
@@ -2855,10 +2842,10 @@ s32 cload_parse_entry_fields(void)
         off4 = off28;
         do
         {
-            if (func_8001714C(&D_800ECF7C, entry + g_cload_card_slot * 0x320, 0xC) == 0)
+            if (func_8001714C(&D_800ECF7C, entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) == 0)
             {
                 count = 5;
-                p = fld + (g_cload_card_slot * 0x320 + off28);
+                p = fld + (g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + off28);
                 c = *p;
                 acc = 0;
                 while (((u32)(c - 0x30) < 0xA) || ((u32)(c - 0x61) < 6) || ((u32)(c - 0x41) < 6))
@@ -2891,7 +2878,7 @@ s32 cload_parse_entry_fields(void)
                     c = *p;
                     count--;
                 }
-                field = entry + g_cload_card_slot * 0x320 + 0xC;
+                field = entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + 0xC;
                 *(s32 *)(g_cload_card_slot * 0x50 + off4 + (s32)&g_cload_entry_fields) = acc;
                 r = cload_parse_hex_suffix_byte(field, acc, count);
                 *out = r;
@@ -2906,8 +2893,8 @@ s32 cload_parse_entry_fields(void)
                 *out = 0;
             }
             out++;
-            entry += 0x28;
-            off28 += 0x28;
+            entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+            off28 += CLOAD_DIRECTORY_ENTRY_BYTES;
             i++;
             off4 += 4;
         } while (i < g_cload_entry_state);
@@ -3025,14 +3012,14 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         out_ptr = &g_cload_entry_suffix_values[0];
         ent_ptr = &g_cload_entries[0];
     loop_20:
-        if (func_8001714C(&D_800ECFC4[0], (void *)((g_cload_card_slot * 0x320) + (s32)ent_ptr), 8) == 0)
+        if (func_8001714C(&D_800ECFC4[0], (void *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)ent_ptr), 8) == 0)
         {
             *out_ptr = handle + 1;
         }
         else
         {
             out_ptr += 1;
-            ent_ptr += 0x28;
+            ent_ptr += CLOAD_DIRECTORY_ENTRY_BYTES;
             i += 1;
             if (i < g_cload_entry_state)
             {
@@ -3089,12 +3076,12 @@ s32 cload_has_known_entry_type(void)
         entry = &g_cload_entries;
         do
         {
-            if (func_8001714C(&D_800ECF7C, (void *)(g_cload_card_slot * 0x320 + (s32)entry), 0xC) == 0 ||
-                func_8001714C(&D_800ECF8C, (void *)(g_cload_card_slot * 0x320 + (s32)entry), 0xC) == 0)
+            if (func_8001714C(&D_800ECF7C, (void *)(g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0 ||
+                func_8001714C(&D_800ECF8C, (void *)(g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0)
             {
                 return 1;
             }
-            entry += 0x28;
+            entry += CLOAD_DIRECTORY_ENTRY_BYTES;
             i++;
         } while (i < g_cload_entry_state);
     }
@@ -3125,12 +3112,12 @@ s32 cload_entry_blocks_reach_limit(void)
     i = 0;
     if (g_cload_entry_state > 0)
     {
-        offset = g_cload_card_slot * 0x320;
+        offset = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
         do
         {
             sum += ((CloadDirEntry *)((u8 *)g_cload_entries + offset))->size / 8192;
             i++;
-            offset += 0x28;
+            offset += CLOAD_DIRECTORY_ENTRY_BYTES;
         } while (i < g_cload_entry_state);
     }
     return sum >= 0xE;
@@ -3172,15 +3159,15 @@ s32 cload_advance_load_sequence(void)
 {
     CloadLoadScratch buf;
     CloadFileHeaderScratch buf2;
-    s32 sp98;
-    s32 sp9C;
-    s32 var_s4;
-    s32 var_s0;
-    s32 temp;
-    s32 var_a0;
-    s32 i;
+    s32 status0;
+    s32 status1;
+    s32 phase_result;
+    s32 attempts;
+    s32 poll_result;
+    s32 dialog_state;
+    s32 rank_index;
 
-    var_s4 = 1;
+    phase_result = 1;
     memcpy(&buf, &g_cload_file_template, 6);
     ((u8 *)&buf)[2] += *(u8 *)&g_cload_card_slot;
 
@@ -3189,36 +3176,36 @@ s32 cload_advance_load_sequence(void)
         switch (*g_cload_load_step)
         {
         case 1:
-            var_s4 = 3;
+            phase_result = 3;
             func_8001729C(g_cload_card_slot);
             func_8001724C(g_cload_card_slot * 0x10);
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
         case 2:
-            temp = cload_poll_primary_handle_group();
-            if (temp >= 3)
+            poll_result = cload_poll_primary_handle_group();
+            if (poll_result >= 3)
             {
                 goto c2_ge3;
             }
-            if (temp > 0)
+            if (poll_result > 0)
             {
                 goto c2_pos;
             }
-            if (temp == 0)
+            if (poll_result == 0)
             {
                 g_cload_load_step = g_cload_load_step + 1;
                 goto block_81;
             }
             goto block_81;
         c2_ge3:
-            if (temp == 3)
+            if (poll_result == 3)
             {
                 goto c2_eq3;
             }
             goto block_81;
         c2_pos:
-            var_s4 = 4;
+            phase_result = 4;
             g_cload_selection_status = 0;
             g_cload_entry_state = 0xFD;
             g_cload_load_step = g_cload_load_step + 1;
@@ -3226,9 +3213,9 @@ s32 cload_advance_load_sequence(void)
             goto block_81;
         c2_eq3:
             g_cload_rank_count = 0x28;
-            for (i = 14; i >= 0; i--)
+            for (rank_index = 14; rank_index >= 0; rank_index--)
             {
-                g_cload_entry_ranks[i] = -1;
+                g_cload_entry_ranks[rank_index] = -1;
             }
             goto block_58;
 
@@ -3240,22 +3227,22 @@ s32 cload_advance_load_sequence(void)
         case 4:
             do
             {
-                temp = cload_poll_secondary_handle_group();
-            } while (temp == -1);
-            if (temp == 0)
+                poll_result = cload_poll_secondary_handle_group();
+            } while (poll_result == -1);
+            if (poll_result == 0)
             {
                 g_cload_load_step = g_cload_load_step + 1;
                 goto block_81;
             }
-            if (temp < 0)
+            if (poll_result < 0)
             {
                 goto block_81;
             }
-            if (temp >= 4)
+            if (poll_result >= 4)
             {
                 goto block_81;
             }
-            var_s4 = 4;
+            phase_result = 4;
             goto block_42;
 
         case 5:
@@ -3273,10 +3260,10 @@ s32 cload_advance_load_sequence(void)
             func_80016F9C(&buf2, &D_800ECFB0);
             func_8001686C(&buf2);
             g_cload_entry_scan_active = 1;
-            var_s0 = 0;
+            attempts = 0;
             if (cload_begin_entry_scan(g_cload_card_slot) == 0)
             {
-                var_s4 = 2;
+                phase_result = 2;
                 g_cload_entry_state = 0xF8;
                 g_cload_load_step = NULL;
                 g_cload_entry_scan_active = 0;
@@ -3299,19 +3286,19 @@ s32 cload_advance_load_sequence(void)
                     cload_commit_selected_entry();
                     goto block_81;
                 }
-                var_s0 = var_s0 + 1;
-            } while (var_s0 < 0x14);
+                attempts = attempts + 1;
+            } while (attempts < 0x14);
             goto block_81;
 
         case 8:
-            var_s4 = 3;
+            phase_result = 3;
             func_8001729C(g_cload_card_slot);
             func_800172AC(g_cload_card_slot * 0x10);
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
         case 9:
-            var_s4 = 3;
+            phase_result = 3;
             func_8001729C(g_cload_card_slot);
             func_8001725C(g_cload_card_slot * 0x10);
             g_cload_primary_poll_countdown = 0x10;
@@ -3320,28 +3307,28 @@ s32 cload_advance_load_sequence(void)
             goto block_81;
 
         case 0:
-            var_s4 = 2;
+            phase_result = 2;
             D_80162370 = 0;
             goto block_81;
 
         case 15:
-            temp = cload_poll_primary_handle_group();
-            if (temp >= 3)
+            poll_result = cload_poll_primary_handle_group();
+            if (poll_result >= 3)
             {
                 goto c15_ge3;
             }
-            if (temp > 0)
+            if (poll_result > 0)
             {
                 goto c15_pos;
             }
-            if (temp == 0)
+            if (poll_result == 0)
             {
                 g_cload_load_step = g_cload_load_step + 1;
                 goto block_81;
             }
             goto block_81;
         c15_ge3:
-            if (temp == 3)
+            if (poll_result == 3)
             {
                 goto c15_eq3;
             }
@@ -3352,7 +3339,7 @@ s32 cload_advance_load_sequence(void)
             {
                 goto block_44;
             }
-            var_s4 = 4;
+            phase_result = 4;
         block_42:
             g_cload_selection_status = 0;
             g_cload_entry_state = 0xFD;
@@ -3370,7 +3357,7 @@ s32 cload_advance_load_sequence(void)
             func_8001725C(g_cload_card_slot * 0x10);
             goto block_81;
         c15_d70zero:
-            var_s4 = 5;
+            phase_result = 5;
             g_cload_entry_state = 0xFC;
             g_cload_load_step = &D_80146528;
             goto block_81;
@@ -3378,8 +3365,8 @@ s32 cload_advance_load_sequence(void)
         case 16:
             do
             {
-                temp = cload_poll_secondary_handle_group();
-            } while (temp == -1);
+                poll_result = cload_poll_secondary_handle_group();
+            } while (poll_result == -1);
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
@@ -3394,12 +3381,12 @@ s32 cload_advance_load_sequence(void)
             }
             cload_release_primary_handles();
             func_8001729C(g_cload_card_slot);
-            var_a0 = 0x80;
+            dialog_state = 0x80;
             if (g_cload_selected_entry_extended != 0)
             {
-                var_a0 = 0x280;
+                dialog_state = 0x280;
             }
-            if (func_8001681C(g_cload_file_handle, &D_80162A10, var_a0) != -1)
+            if (func_8001681C(g_cload_file_handle, &D_80162A10, dialog_state) != -1)
             {
                 g_cload_load_step = g_cload_load_step + 1;
                 goto block_81;
@@ -3408,14 +3395,14 @@ s32 cload_advance_load_sequence(void)
             goto block_81;
 
         case 18:
-            temp = cload_poll_primary_handle_group();
-            if (temp == 0)
+            poll_result = cload_poll_primary_handle_group();
+            if (poll_result == 0)
             {
                 g_cload_io_busy = 0;
                 g_cload_selection_status = 1;
                 goto block_65;
             }
-            if (temp == -1)
+            if (poll_result == -1)
             {
                 goto block_81;
             }
@@ -3448,14 +3435,14 @@ s32 cload_advance_load_sequence(void)
             g_cload_retry_count = g_cload_retry_count - 1;
             if (g_cload_retry_count == 0)
             {
-                var_a0 = 1;
+                dialog_state = 1;
                 goto block_80;
             }
             goto block_81;
 
         case 20:
-            temp = cload_poll_primary_handle_group();
-            if (temp == 0)
+            poll_result = cload_poll_primary_handle_group();
+            if (poll_result == 0)
             {
                 g_cload_progress_active = 0;
             block_65:
@@ -3463,11 +3450,11 @@ s32 cload_advance_load_sequence(void)
                 func_8001683C(g_cload_file_handle);
                 goto block_81;
             }
-            if (temp < 0)
+            if (poll_result < 0)
             {
                 goto block_81;
             }
-            if (temp >= 4)
+            if (poll_result >= 4)
             {
                 goto block_81;
             }
@@ -3481,12 +3468,12 @@ s32 cload_advance_load_sequence(void)
             goto block_81;
         c20_378zero:
             func_8001683C(g_cload_file_handle);
-            var_a0 = 1;
+            dialog_state = 1;
             g_cload_progress_bar_active = 0;
             goto block_80;
 
         case 24:
-            var_s0 = 0;
+            attempts = 0;
             do
             {
                 if (func_800342CC(g_cload_card_slot * 0x10) == 1)
@@ -3494,30 +3481,30 @@ s32 cload_advance_load_sequence(void)
                     break;
                 }
                 func_8002054C(0);
-                var_s0 = var_s0 + 1;
-            } while (var_s0 < 0x14);
-            if (var_s0 != 0x14)
+                attempts = attempts + 1;
+            } while (attempts < 0x14);
+            if (attempts != 0x14)
             {
-                func_80032174(0, &sp98, &sp9C);
-                var_a0 = 3;
-                if (sp9C == 0)
+                func_80032174(0, &status0, &status1);
+                dialog_state = 3;
+                if (status1 == 0)
                 {
                     g_cload_load_step = g_cload_load_step + 1;
                     goto block_81;
                 }
                 goto block_80;
             }
-            var_a0 = 3;
+            dialog_state = 3;
             goto block_80;
         }
     }
     goto block_81;
 
 block_80:
-    cload_open_status_dialog(var_a0);
+    cload_open_status_dialog(dialog_state);
 
 block_81:
-    return var_s4;
+    return phase_result;
 }
 
 
@@ -3543,15 +3530,15 @@ void cload_restart_load_sequence(void)
  */
 s32 cload_poll_and_rewind_primary_handles(void)
 {
-    s32 temp_v0;
+    s32 busy_slot;
 
-    temp_v0 = cload_poll_primary_handle_group();
-    if (temp_v0 != -1)
+    busy_slot = cload_poll_primary_handle_group();
+    if (busy_slot != -1)
     {
         func_8001729C(g_cload_card_slot);
         func_8001724C(g_cload_card_slot * 0x10);
     }
-    return temp_v0;
+    return busy_slot;
 }
 
 
@@ -3631,7 +3618,7 @@ s32 cload_begin_entry_scan(s32 page)
     g_cload_selected_row = 0;
     g_cload_entry_state = 0;
     ((u8 *)&buf)[2] += page;
-    if (func_80016BCC(&buf, g_cload_entries + page * 0x320, p->unk6, p) != 0)
+    if (func_80016BCC(&buf, g_cload_entries + page * CLOAD_CARD_DIRECTORY_BYTES, p->unk6, p) != 0)
     {
         g_cload_entry_state += 1;
         return 1;
@@ -3662,8 +3649,8 @@ s32 cload_scan_next_entry(s32 page)
     s32 count;
     s32 cond;
 
-    term1 = page * 0x320;
-    term2 = g_cload_entry_state * 0x28 + (s32)g_cload_entries;
+    term1 = page * CLOAD_CARD_DIRECTORY_BYTES;
+    term2 = g_cload_entry_state * CLOAD_DIRECTORY_ENTRY_BYTES + (s32)g_cload_entries;
     if (func_8001684C((void *)(term1 + term2)) != 0)
     {
         g_cload_entry_state += 1;
@@ -3681,12 +3668,12 @@ s32 cload_scan_next_entry(s32 page)
         count = g_cload_entry_state;
         if (count > 0)
         {
-            offset = g_cload_card_slot * 0x320;
+            offset = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
             do
             {
                 sum += ((CloadDirEntry *)((u8 *)g_cload_entries + offset))->size / 8192;
                 i++;
-                offset += 0x28;
+                offset += CLOAD_DIRECTORY_ENTRY_BYTES;
             } while (i < count);
         }
         cond = sum >= 0xE;
@@ -3744,8 +3731,8 @@ void cload_commit_selected_entry(void)
         g_cload_selection_status = 3;
         return;
     }
-    term1 = g_cload_card_slot * 0x320;
-    term2 = (g_cload_selected_row * 0x28) + (s32)g_cload_entries;
+    term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
+    term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
     term2 += term1;
     if (func_8001714C(&D_800ECFC4[0], (void *)(term2 + term1), 8) == 0)
     {
@@ -3756,16 +3743,16 @@ void cload_commit_selected_entry(void)
     src = &g_cload_file_template;
     *(s32 *)p = src->unk0;
     *(s16 *)(p + 4) = src->unk4;
-    term1 = g_cload_card_slot * 0x320;
-    term2 = (g_cload_selected_row * 0x28) + (s32)g_cload_entries;
+    term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
+    term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
     term2 += term1;
     func_80016F9C(p, (void *)(term2 + term1), src);
     g_cload_selection_status = 0;
     *((u8 *)&local + 2) += (u8)g_cload_card_slot;
     func_800170BC(&D_80162C90[0], p, (u8)g_cload_card_slot);
     g_cload_load_step = &D_80146538[0];
-    term1 = g_cload_card_slot * 0x320;
-    term2 = (g_cload_selected_row * 0x28) + (s32)g_cload_entries;
+    term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
+    term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
     term2 += term1;
     if (func_8001714C(&D_800ECF7C[0], (void *)(term2 + term1), 0xC) == 0)
     {
@@ -3881,128 +3868,128 @@ s32 cload_poll_secondary_handle_group(void)
  */
 void cload_sort_entries_by_type(void)
 {
-    u8 buf[0x320];
-    s32 out;
-    s32 grp;
-    s32 i1;
-    u8 *entry1;
-    s32 *gptr1;
-    s32 off1;
-    s32 grp2;
-    s32 i2;
-    u8 *entry2;
-    s32 *gptr2;
-    s32 off2;
-    s32 i3;
-    u8 *entry3;
-    s32 off3;
-    s32 i4;
-    u8 *entry4;
-    s32 off4;
-    s32 i5;
-    u8 *rec5;
-    u8 *bp5;
+    u8 sorted_entries[CLOAD_CARD_DIRECTORY_BYTES];
+    s32 output_count;
+    s32 first_group;
+    s32 first_index;
+    u8 *first_entry;
+    s32 *first_suffix;
+    s32 first_output_offset;
+    s32 second_group;
+    s32 second_index;
+    u8 *second_entry;
+    s32 *second_suffix;
+    s32 second_output_offset;
+    s32 third_index;
+    u8 *third_entry;
+    s32 third_output_offset;
+    s32 other_index;
+    u8 *other_entry;
+    s32 other_output_offset;
+    s32 write_index;
+    u8 *page_entry;
+    u8 *sorted_entry;
 
-    grp = 0;
-    out = 0;
+    first_group = 0;
+    output_count = 0;
     do
     {
-        i1 = 0;
+        first_index = 0;
         if (g_cload_entry_state > 0)
         {
-            entry1 = &g_cload_entries;
-            gptr1 = &g_cload_entry_suffix_values;
-            off1 = out * 0x28;
+            first_entry = &g_cload_entries;
+            first_suffix = &g_cload_entry_suffix_values;
+            first_output_offset = output_count * CLOAD_DIRECTORY_ENTRY_BYTES;
             do
             {
-                if (*gptr1 == grp && func_8001714C(&D_800ECF7C, entry1 + g_cload_card_slot * 0x320, 0xC) == 0)
+                if (*first_suffix == first_group && func_8001714C(&D_800ECF7C, first_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) == 0)
                 {
-                    func_80016E7C(entry1 + g_cload_card_slot * 0x320, &buf[off1], 0x28);
-                    off1 += 0x28;
-                    out += 1;
+                    func_80016E7C(first_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, &sorted_entries[first_output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                    first_output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
+                    output_count += 1;
                 }
-                entry1 += 0x28;
-                i1 += 1;
-                gptr1 += 1;
-            } while (i1 < g_cload_entry_state);
+                first_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+                first_index += 1;
+                first_suffix += 1;
+            } while (first_index < g_cload_entry_state);
         }
-        grp += 1;
-    } while (grp < 8);
+        first_group += 1;
+    } while (first_group < CLOAD_ENTRY_GROUP_COUNT);
 
-    grp2 = 0;
+    second_group = 0;
     do
     {
-        i2 = 0;
+        second_index = 0;
         if (g_cload_entry_state > 0)
         {
-            entry2 = &g_cload_entries;
-            gptr2 = &g_cload_entry_suffix_values;
-            off2 = out * 0x28;
+            second_entry = &g_cload_entries;
+            second_suffix = &g_cload_entry_suffix_values;
+            second_output_offset = output_count * CLOAD_DIRECTORY_ENTRY_BYTES;
             do
             {
-                if (*gptr2 == grp2 && func_8001714C(&D_800ECF8C, entry2 + g_cload_card_slot * 0x320, 0xC) == 0)
+                if (*second_suffix == second_group && func_8001714C(&D_800ECF8C, second_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) == 0)
                 {
-                    func_80016E7C(entry2 + g_cload_card_slot * 0x320, &buf[off2], 0x28);
-                    off2 += 0x28;
-                    out += 1;
+                    func_80016E7C(second_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, &sorted_entries[second_output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                    second_output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
+                    output_count += 1;
                 }
-                entry2 += 0x28;
-                i2 += 1;
-                gptr2 += 1;
-            } while (i2 < g_cload_entry_state);
+                second_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+                second_index += 1;
+                second_suffix += 1;
+            } while (second_index < g_cload_entry_state);
         }
-        grp2 += 1;
-    } while (grp2 < 8);
+        second_group += 1;
+    } while (second_group < CLOAD_ENTRY_GROUP_COUNT);
 
-    i3 = 0;
+    third_index = 0;
     if (g_cload_entry_state > 0)
     {
-        entry3 = &g_cload_entries;
-        off3 = out * 0x28;
+        third_entry = &g_cload_entries;
+        third_output_offset = output_count * CLOAD_DIRECTORY_ENTRY_BYTES;
         do
         {
-            if (func_8001714C(&D_800ECFC4, entry3 + g_cload_card_slot * 0x320, 8) == 0)
+            if (func_8001714C(&D_800ECFC4, third_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 8) == 0)
             {
-                func_80016E7C(entry3 + g_cload_card_slot * 0x320, &buf[off3], 0x28);
-                off3 += 0x28;
-                out += 1;
+                func_80016E7C(third_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, &sorted_entries[third_output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                third_output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
+                output_count += 1;
             }
-            i3 += 1;
-            entry3 += 0x28;
-        } while (i3 < g_cload_entry_state);
+            third_index += 1;
+            third_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+        } while (third_index < g_cload_entry_state);
     }
 
-    i4 = 0;
+    other_index = 0;
     if (g_cload_entry_state > 0)
     {
-        entry4 = &g_cload_entries;
-        off4 = out * 0x28;
+        other_entry = &g_cload_entries;
+        other_output_offset = output_count * CLOAD_DIRECTORY_ENTRY_BYTES;
         do
         {
-            if (func_8001714C(&D_800ECF7C, entry4 + g_cload_card_slot * 0x320, 0xC) != 0 &&
-                func_8001714C(&D_800ECF8C, entry4 + g_cload_card_slot * 0x320, 0xC) != 0 &&
-                func_8001714C(&D_800ECFC4, entry4 + g_cload_card_slot * 0x320, 8) != 0)
+            if (func_8001714C(&D_800ECF7C, other_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) != 0 &&
+                func_8001714C(&D_800ECF8C, other_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) != 0 &&
+                func_8001714C(&D_800ECFC4, other_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 8) != 0)
             {
-                func_80016E7C(entry4 + g_cload_card_slot * 0x320, &buf[off4], 0x28);
-                off4 += 0x28;
+                func_80016E7C(other_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, &sorted_entries[other_output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                other_output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
             }
-            i4 += 1;
-            entry4 += 0x28;
-        } while (i4 < g_cload_entry_state);
+            other_index += 1;
+            other_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+        } while (other_index < g_cload_entry_state);
     }
 
-    i5 = 0;
+    write_index = 0;
     if (g_cload_entry_state > 0)
     {
-        rec5 = &g_cload_entries;
-        bp5 = &buf[0];
+        page_entry = &g_cload_entries;
+        sorted_entry = &sorted_entries[0];
         do
         {
-            func_80016E7C(bp5, rec5 + g_cload_card_slot * 0x320, 0x28);
-            bp5 += 0x28;
-            i5 += 1;
-            rec5 += 0x28;
-        } while (i5 < g_cload_entry_state);
+            func_80016E7C(sorted_entry, page_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, CLOAD_DIRECTORY_ENTRY_BYTES);
+            sorted_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+            write_index += 1;
+            page_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+        } while (write_index < g_cload_entry_state);
     }
 }
 
@@ -4182,49 +4169,12 @@ s32 cload_draw_cached_text(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palett
         prim = cload_render_cached_glyph(prim, ot, code, palette);
     }
 
-    ((u8 *)prim)[3] = 1;
-    ((CloadGpuPacket *)prim)->unk4 = 0xE1000005;
-    ((CloadOtTag *)prim)->addr = ((CloadOtTag *)ot)->addr;
-    ((CloadOtTag *)ot)->addr = (u32)prim;
+    setlen(prim, 1);
+    ((CloadGpuPacket *)prim)->word4 = 0xE1000005;
+    addPrim(ot, prim);
     return prim + 8;
 }
 
-
-/**
- * @brief One 4-byte glyph-cache slot: the cached character code plus per-frame
- *        usage flags, also read as a single word when scanning for a free slot.
- */
-typedef union
-{
-    /* 0x0 */ u32 raw;
-    struct
-    {
-        /* 0x0 */ u16 code;
-        /* 0x2 */ u16 flags;
-    } data;
-} CloadGlyphCacheEntry;
-
-extern CloadGlyphCacheEntry g_cload_glyph_cache[];
-
-/**
- * @brief 0x14-byte packet-buffer slot holding one 16x16 textured sprite;
- *        mirrors SPRT_16 in include/psyq/libgpu.h plus the trailing word that
- *        keeps consecutive glyph packets 20 bytes apart.
- */
-typedef struct
-{
-    /* 0x00 */ u32 tag;
-    /* 0x04 */ u8 r0;
-    /* 0x05 */ u8 g0;
-    /* 0x06 */ u8 b0;
-    /* 0x07 */ u8 code;
-    /* 0x08 */ s16 x0;
-    /* 0x0A */ s16 y0;
-    /* 0x0C */ u8 u0;
-    /* 0x0D */ u8 v0;
-    /* 0x0E */ u16 clut;
-    /* 0x10 */ u32 padding;
-} CloadGlyphSprite;
 
 /**
  * @brief Render one glyph, populating the cache on a miss.
@@ -4261,7 +4211,7 @@ s32 cload_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette
     requested_code = code & 0xFFFF;
     entry = g_cload_glyph_cache;
 
-    while (slot < 0x100)
+    while (slot < CLOAD_GLYPH_CACHE_SLOTS)
     {
         if (requested_code == entry->data.code)
         {
@@ -4313,20 +4263,20 @@ s32 cload_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette
     }
 
     slot = 0;
-    while ((slot < 0x100) && (g_cload_glyph_cache[slot].raw != 0))
+    while ((slot < CLOAD_GLYPH_CACHE_SLOTS) && (g_cload_glyph_cache[slot].raw != 0))
     {
         slot++;
     }
 
-    if (slot == 0x100)
+    if (slot == CLOAD_GLYPH_CACHE_SLOTS)
     {
         return prim;
     }
     g_cload_glyph_cache[slot].raw = code & 0xFFFF;
     prim = cload_emit_glyph_sprite(prim, ot, slot, palette);
 
-    g_cload_glyph_upload_x = (slot % 16) * 4;
-    g_cload_glyph_upload_y = slot & 0xF0;
+    g_cload_glyph_upload_x = (slot % CLOAD_GLYPH_CACHE_COLUMNS) * 4;
+    g_cload_glyph_upload_y = slot & CLOAD_GLYPH_CACHE_ROW_MASK;
 
     rect.w = 4;
     rect.h = 15;
@@ -4336,7 +4286,7 @@ s32 cload_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette
     func_80019A34(&rect, g_cload_glyph_raster_cursor);
     func_80019788(0);
 
-    g_cload_glyph_raster_cursor += 0x80;
+    g_cload_glyph_raster_cursor += CLOAD_GLYPH_RASTER_BYTES;
     return prim;
 }
 
@@ -4361,27 +4311,27 @@ s32 cload_emit_glyph_sprite(CloadGlyphSprite *sprite, s32 *ot, s32 cache_slot, s
 
     g_cload_glyph_cache[cache_slot].raw |= 0x10000;
 
-    ((u8 *)sprite)[3] = 3;
-    sprite->code = 0x7C;
-    sprite->g0 = 0x80;
-    sprite->b0 = 0x80;
-    sprite->r0 = 0x80;
+    setlen(sprite, 3);
+    setcode(sprite, 0x7C);
+    sprite->packet.g0 = 0x80;
+    sprite->packet.b0 = 0x80;
+    sprite->packet.r0 = 0x80;
     normalized_slot = cache_slot;
-    sprite->x0 = g_cload_glyph_cursor_x;
-    sprite->y0 = g_cload_glyph_cursor_y;
+    sprite->packet.x0 = g_cload_glyph_cursor_x;
+    sprite->packet.y0 = g_cload_glyph_cursor_y;
 
     if (cache_slot < 0)
     {
         normalized_slot = cache_slot + 15;
     }
 
-    sprite->u0 = (cache_slot - ((normalized_slot >> 4) * 16)) * 16;
-    sprite->v0 = cache_slot & 0xF0;
-    sprite->clut = 0x7FD3;
-    sprite->tag = (sprite->tag & 0xFF000000) | (*ot & 0xFFFFFF);
+    sprite->packet.u0 = (cache_slot - ((normalized_slot >> 4) * 16)) * 16;
+    sprite->packet.v0 = cache_slot & CLOAD_GLYPH_CACHE_ROW_MASK;
+    sprite->packet.clut = 0x7FD3;
+    sprite->packet.tag = (sprite->packet.tag & CLOAD_GPU_TAG_HIGH_MASK) | (*ot & CLOAD_GPU_ADDR_MASK);
 
-    packet_address = ((u32)sprite) & 0xFFFFFF;
-    ot_tag_high_byte = *ot & 0xFF000000;
+    packet_address = ((u32)sprite) & CLOAD_GPU_ADDR_MASK;
+    ot_tag_high_byte = *ot & CLOAD_GPU_TAG_HIGH_MASK;
 
     sprite++;
     old_x = g_cload_glyph_cursor_x;
@@ -4415,7 +4365,7 @@ void cload_begin_glyph_cache_frame(void)
     cache_slot = 0;
     cache_entry = g_cload_glyph_cache;
 
-    while (cache_slot < 0x100)
+    while (cache_slot < CLOAD_GLYPH_CACHE_SLOTS)
     {
         cache_entry->raw &= 0xFFFF;
         cache_entry++;
@@ -4438,7 +4388,7 @@ void cload_evict_unused_glyphs(void)
     used_flag = 0x10000;
     cache_entry = g_cload_glyph_cache;
 
-    while (cache_slot < 0x100)
+    while (cache_slot < CLOAD_GLYPH_CACHE_SLOTS)
     {
         if (!(cache_entry->raw & used_flag))
         {
