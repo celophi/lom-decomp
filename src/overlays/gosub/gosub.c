@@ -2900,8 +2900,7 @@ typedef struct
  */
 void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
 {
-    s32 color;
-    s16 tmp_x;
+    s32 temp;
     s32 tmp_y;
     u32 i;
     u32 addr_mask;
@@ -2913,38 +2912,36 @@ void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
     prim->mask = 0x55555555;
     if (D_800F22AC & 0x10)
     {
-        color = D_800F22AC & 0xF;
+        temp = D_800F22AC & 0xF;
     }
     else
     {
-        color = (~D_800F22AC) & 0xF;
+        temp = (~D_800F22AC) & 0xF;
     }
-    tmp_y = color * 4;
-    color = tmp_y + 0x70;
-    prim->b = color;
-    prim->g = color;
-    prim->r = color;
+    tmp_y = temp * 4;
+    temp = tmp_y + 0x70;
+    prim->b = temp;
+    prim->g = temp;
+    prim->r = temp;
     if (flag != 0)
     {
-        do {
-            prim->y3 = y - 8;
-            prim->y0 = y - 8;
-        } while (0);
-        tmp_x = x - 6;
+        temp = y - 8;
+        prim->y3 = temp;
+        prim->y0 = temp;
+        temp = x - 6;
         tmp_y = y + 4;
     }
     else
     {
-        do {
-            prim->y3 = y + 8;
-            prim->y0 = y + 8;
-        } while (0);
-        tmp_x = x - 6;
+        temp = y + 8;
+        prim->y3 = temp;
+        prim->y0 = temp;
+        temp = x - 6;
         tmp_y = y - 4;
     }
     do
     {
-        prim->x1 = tmp_x;
+        prim->x1 = temp;
         prim->x3 = x;
         prim->x0 = x;
         prim->y1 = tmp_y;
