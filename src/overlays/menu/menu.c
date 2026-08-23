@@ -3886,12 +3886,34 @@ extern u8* D_80168C30;
 extern u32 D_801694CC[];
 extern u32 D_801694DC[];
 
+/* ----- Access helpers used by menu_draw_scene_content ----- */
+static inline s32 menu_probe_slot_off(s32 slot)
+{
+    return slot * 0x250;
+}
+
+static inline s32 menu_probe_node_off(s32 idx)
+{
+    return idx * 0x14C;
+}
+
+static inline u8 menu_reload_plain_u8(const u8* p)
+{
+    return *p;
+}
+
+static inline s32 menu_mask_test_pref(s32 value, s32 shift, u32 mask)
+{
+    (void)value;
+    return (mask >> shift) & 1;
+}
+
 /**
  * @brief Draw the active scene's content entries.
  * @param var_s1 GPU packet cursor advanced as primitives are emitted.
  * @param arg1 Ordering-table entry passed to render helpers.
  * @return Updated GPU packet cursor after drawing.
- * @note WIP - not yet byte-matching. Currently 91.05%.
+ * @note WIP - not yet byte-matching. Currently 93.50%.
  * @see decomp.me (89.27%) https://decomp.me/scratch/D6Nba
  */
 void* menu_draw_scene_content(void* var_s1, s32* arg1)
@@ -3924,12 +3946,12 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
     u32 temp_a1_2u, temp_hi;
     s8 temp_v1_13, temp_v1_14, temp_v1_15, temp_v1_16;
     u8 temp_v1_19, temp_v1_21;
-    s16 var_v0_12;
     u16 temp_s0_17;
     u32 temp_s0_16, temp_s2;
     s32 temp_t3;
     s32 i, k;
     u32 tmpa0;
+    u32 shared_s0;
 
     if (g_menu_scene_type == -1)
     {
@@ -3952,9 +3974,11 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
         else
         {
             s32 off = g_menu_char_slot * 0x250;
-            u8* temp_a2 = (u8*)g_pad_ctx + off;
+            u8* temp_a2;
             u8* temp_a1;
-            temp_a2 += 0x5F0;
+            pad_base = (u8*)&g_pad_ctx;
+            off += 0x5F0;
+            temp_a2 = *(u8**)pad_base + off;
             temp_a1 = temp_a2 + 0x50;
             g_menu_equipment_base = (u32)temp_a1;
             D_80168C30 = temp_a1;
@@ -3972,14 +3996,13 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
             {
                 var_s4 = (u8*)var_s3 + 2;
                 pos_p = &pos;
-                pad_base = (u8*)&g_pad_ctx;
             loop_top:
             {
                 pos.x = (s16)(*var_s3 & 0x1FF);
                 do { do { do { do { do { do { do { do { do { pos.y = (s16)(*var_s4 - 8); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
                 {
                     s32 t0 = 0xFF;
-                u16 item_word = *var_s3;
+                    u16 item_word = *var_s3;
                 switch (item_word >> 12)
                 {
                 case 1:
@@ -4002,14 +4025,12 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     }
                     if ((u32)(*(u8*)(var_s4 + 1) - 2) < 8)
                     {
-                        u32 a2_3 = 0;
-                        do { 
+                        s32 a2_3 = 0;
                         if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
                         {
                             a2_3 = *(u8*)(g_menu_category1_item + 0x2C);
                         }
-                         } while (0);
-                        if (((a2_3 >> (*(u8*)(var_s4 + 1) - 2)) & 1) != 0)
+                        if (menu_mask_test_pref(*(u8*)(var_s4 + 1), *(u8*)(var_s4 + 1) - 2, a2_3) != 0)
                         {
                             t0 = *(u8*)(var_s4 + 1) + 0x3B;
                         }
@@ -4018,49 +4039,47 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             t0 = 0x21;
                         }
                     }
-                    else if ((u32)(*(u8*)(var_s4 + 1) - 0xA) < 8)
+                    else
                     {
-                        u8 a2_4 = 0;
-                        if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
+                        u32 a2_4;
+                        s32 a2_4_shift;
+                        if ((u32)(*(u8*)(var_s4 + 1) - 0xA) < 8)
                         {
-                            a2_4 = *(u8*)(g_menu_category1_item + 0x2D);
-                        }
-                        if (((a2_4 >> (*(u8*)(var_s4 + 1) - 0xA)) & 1) != 0)
-                        {
-                            t0 = *(u8*)(var_s4 + 1) + 0x2B;
-                        }
-                        else
-                        {
+                            a2_4 = 0;
+                            if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
+                            {
+                                a2_4 = *(u8*)(g_menu_category1_item + 0x2D);
+                            }
                             t0 = 0x21;
+                            a2_4_shift = *(u8*)(var_s4 + 1) - 0xA;
+                            goto case2_a2_4_test;
                         }
-                    }
-                    else if ((u32)(*(u8*)(var_s4 + 1) - 0x12) < 8)
-                    {
-                        u8 a2_4 = 0;
-                        if (*(u8*)(D_80168C20 + 0x40) != 0)
+                        if ((u32)(*(u8*)(var_s4 + 1) - 0x12) < 8)
                         {
-                            a2_4 = *(u8*)(D_80168C20 + 0x6C);
-                        }
-                        if (*(u8*)(D_80168C20 + 0x80) != 0)
-                        {
-                            a2_4 |= *(u8*)(D_80168C20 + 0xAC);
-                        }
-                        if (*(u8*)(D_80168C20 + 0xC0) != 0)
-                        {
-                            a2_4 |= *(u8*)(D_80168C20 + 0xEC);
-                        }
-                        if (((a2_4 >> (*(u8*)(var_s4 + 1) - 0x12)) & 1) != 0)
-                        {
-                            t0 = *(u8*)(var_s4 + 1) + 0x2B;
-                        }
-                        else
-                        {
+                            a2_4 = 0;
+                            if (*(u8*)(D_80168C20 + 0x40) != 0)
+                            {
+                                a2_4 = *(u8*)(D_80168C20 + 0x6C);
+                            }
+                            if (*(u8*)(D_80168C20 + 0x80) != 0)
+                            {
+                                a2_4 |= *(u8*)(D_80168C20 + 0xAC);
+                            }
+                            if (*(u8*)(D_80168C20 + 0xC0) != 0)
+                            {
+                                a2_4 |= *(u8*)(D_80168C20 + 0xEC);
+                            }
                             t0 = 0x21;
+                            a2_4_shift = *(u8*)(var_s4 + 1) - 0x12;
+                        case2_a2_4_test:
+                            if (menu_mask_test_pref(*(u8*)(var_s4 + 1), a2_4_shift, a2_4) != 0)
+                            {
+                                t0 = *(u8*)(var_s4 + 1) + 0x2B;
+                            }
                         }
-                    }
                     else if ((u32)(*(u8*)(var_s4 + 1) - 0x1A) < 8)
                     {
-                        u8 a2_5 = 0;
+                        s32 a2_5 = 0;
                         if (*(u8*)(D_80168C20 + 0x40) != 0)
                         {
                             a2_5 = *(u8*)(D_80168C20 + 0x6D);
@@ -4073,13 +4092,16 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         {
                             a2_5 |= *(u8*)(D_80168C20 + 0xED);
                         }
-                        if (((a2_5 >> (*(u8*)(var_s4 + 1) - 0x1A)) & 1) != 0)
                         {
-                            t0 = D_80168696[*(u8*)(var_s4 + 1)];
-                        }
-                        else
-                        {
-                            t0 = 0x21;
+                            s32 item = *(volatile u8*)(var_s4 + 1);
+                            if (((a2_5 >> (item - 0x1A)) & 1) != 0)
+                            {
+                                t0 = D_80168696[item];
+                            }
+                            else
+                            {
+                                t0 = 0x21;
+                            }
                         }
                     }
                     else if ((u32)(*(u8*)(var_s4 + 1) - 0x22) < 8)
@@ -4087,9 +4109,10 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         t0 = 0x21;
                         if (g_menu_category0_item != 0)
                         {
-                            if (((*(u8*)(g_menu_category0_item + 0x2C) >> (*(u8*)(var_s4 + 1) - 0x22)) & 1) != 0)
+                            s32 item = *(volatile u8*)(var_s4 + 1);
+                            if (((*(u8*)(g_menu_category0_item + 0x2C) >> (item - 0x22)) & 1) != 0)
                             {
-                                t0 = *(u8*)(var_s4 + 1) + 0x13;
+                                t0 = item + 0x13;
                             }
                         }
                     }
@@ -4098,9 +4121,10 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         s32 idx = 0;
                         void* base2 = *(void**)(pad_base + 0x271C);
                         u8* ptr = (u8*)base2 + g_menu_char_slot * 0x250;
+                        s32 needle = *(volatile u8*)(var_s4 + 1) - 0x2A;
                         while (idx < 8)
                         {
-                            if (*(u8*)(ptr + idx + 0x638) == *(u8*)(var_s4 + 1) - 0x2A)
+                            if (*(u8*)(ptr + idx + 0x638) == needle)
                             {
                                 break;
                             }
@@ -4213,9 +4237,13 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     {
                         t0 = 0xFF;
                     }
-                    if (t0 != 0xFF)
+                    }
                     {
-                        var_s1 = menu_emit_draw_mode_primitive(menu_emit_icon_sprite(var_s1, arg1, t0, *var_s3 & 0x1FF, *var_s4 - 8, 0, 0, 0, 0), arg1);
+                        s32 icon_arg = t0;
+                        if (t0 != 0xFF)
+                        {
+                            var_s1 = menu_emit_draw_mode_primitive(menu_emit_icon_sprite(var_s1, arg1, icon_arg, *var_s3 & 0x1FF, *var_s4 - 8, 0, 0, 0, 0), arg1);
+                        }
                     }
                 }
                 break;
@@ -4238,8 +4266,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         {
                             u32 v;
                             u32 v1;
-                            void* base2;
-                            void* a2_6;
+
                             if (menu_item_is_nondefault((u8*)g_menu_item_ptr) != 0)
                             {
                                 void* a3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x30));
@@ -4253,22 +4280,27 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             }
                             v = *(u32*)(g_menu_item_ptr + 0x14);
                             v1 = (v >> 8) & 3;
-                            if (v1 == 0)
+                            switch (v1)
                             {
-                                base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
-                                a2_6 = (void*)((u8*)base2 + *(u16*)((u8*)base2 + ((v >> 9) & 0x7E)));
-                            }
-                            else if (v1 == 1)
+                            case 0:
                             {
-                                base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
-                                a2_6 = (void*)((u8*)base2 + *(u16*)((u8*)base2 + ((v >> 9) & 0x7E) + 0x16));
+                                void* base0 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
+                                menu_concat_encoded_text(&sp28, &sp68, (void*)((u8*)base0 + *(u16*)((s32)((v >> 9) & 0x7E) + (s32)base0)));
+                                break;
                             }
-                            else
+                            case 1:
                             {
-                                base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
-                                a2_6 = (void*)((u8*)base2 + *(u16*)((u8*)base2 + ((*(u32*)(g_menu_item_ptr + 0x14) >> 9) & 0x7E) + 0x2E));
+                                void* base1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
+                                menu_concat_encoded_text(&sp28, &sp68, (void*)((u8*)base1 + *(u16*)((s32)((v >> 9) & 0x7E) + (s32)base1 + 0x16)));
+                                break;
                             }
-                            menu_concat_encoded_text(&sp28, &sp68, a2_6);
+                            default:
+                            {
+                                void* base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
+                                menu_concat_encoded_text(&sp28, &sp68, (void*)((u8*)base2 + *(u16*)((s32)((*(u32*)(g_menu_item_ptr + 0x14) >> 9) & 0x7E) + (s32)base2 + 0x2E)));
+                                break;
+                            }
+                            }
                             var_s1 = func_800A88A0(var_s1, arg1, &sp28, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                         }
                         break;
@@ -4407,18 +4439,15 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     case 0x18:
                     case 0x19:
                     case 0x1A:
-                    case 0x1B:
-                    case 0x1C:
-                    case 0x1D:
-                    case 0x1E:
                     {
                         s32 delta = 0;
                         if (D_80168C05[tmp] != 0)
                         {
-                            u8* base2 = (u8*)D_80168C30 + (tmp << 6);
+                            u8* base2 = (u8*)((tmp << 6) + (s32)D_80168C30);
                             void* v1;
-                            if (*(u8*)(base2 - 0x5C0) != 0)
-                                delta = *(u16*)(base2 - 0x5C0 + 0x24);
+                            base2 -= 0x5C0;
+                            if (*(u8*)base2 != 0)
+                                delta = *(u16*)(base2 + 0x24);
                             v1 = (void*)D_801694DC[tmp];
                             if (v1 != 0 && *(u8*)v1 != 0)
                                 delta -= *(u16*)((u8*)v1 + 0x24);
@@ -4426,46 +4455,50 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                 delta -= D_800F0C1C;
                             if (delta < 0)
                                 delta = -delta;
-                            var_s1 = func_800A8A78(arg1, var_s1, delta, 1, pos_p, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_800A8A78(arg1, var_s1, (u16)delta, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
-                        if (tmp >= 0x1B)
+                    }
+                    /* fallthrough */
+                    case 0x1B:
+                    case 0x1C:
+                    case 0x1D:
+                    case 0x1E:
+                    {
+                        s32 delta2 = 0;
+                        if (D_80168C01[tmp] != 0)
                         {
-                            s32 delta2 = 0;
-                            if (D_80168C01[tmp] != 0)
+                            u8* base2 = (u8*)((tmp << 6) + (s32)D_80168C30);
+                            void* v1;
+                            u8* source;
+                            u8* label_buf;
+                            base2 -= 0x6C0;
+                            if (*(u8*)base2 != 0)
+                                delta2 = *(u16*)(base2 + 0x24);
+                            v1 = (void*)D_801694CC[tmp];
+                            if (v1 != 0 && *(u8*)v1 != 0)
+                                delta2 -= *(u16*)((u8*)v1 + 0x24);
+                            else
+                                delta2 -= D_800F0C1C;
+                            label_buf = spB0;
+                            if (delta2 >= 0)
                             {
-                                u8* base2 = (u8*)D_80168C30 + (tmp << 6);
-                                void* v1;
-                                u8 v0_6;
-                                u8 a1_2;
-                                u8* v1_4;
-                                void* tmp2;
-                                u8* label_buf;
-                                if (*(u8*)(base2 - 0x6C0) != 0)
-                                    delta2 = *(u16*)(base2 - 0x6C0 + 0x24);
-                                v1 = (void*)D_801694CC[tmp];
-                                if (v1 != 0 && *(u8*)v1 != 0)
-                                    delta2 -= *(u16*)((u8*)v1 + 0x24);
-                                else
-                                    delta2 -= D_800F0C1C;
-                                label_buf = spB0;
-                                if (delta2 >= 0)
-                                {
-                                    v0_6 = g_menu_label_key_a.page;
-                                    a1_2 = g_menu_label_key_a.entry;
-                                    v1_4 = (u8*)((u8*)&g_menu_label_key_a - 0x16);
-                                }
-                                else
-                                {
-                                    v0_6 = g_menu_label_key_b.page;
-                                    a1_2 = g_menu_label_key_b.entry;
-                                    v1_4 = (u8*)((u8*)&g_menu_label_key_b - 0x20);
-                                }
-                                tmp2 = (void*)(a1_2 + ((v0_6 << 8) + (s32)v1_4));
-                                func_800A8E28(label_buf, tmp2, delta2);
-                                label_buf += func_800A8DDC(tmp2);
-                                *label_buf = 0;
-                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
+                                s32 string_page_base =
+                                    (g_menu_label_key_a.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                func_800A8E28(label_buf, source, delta2);
                             }
+                            else
+                            {
+                                s32 string_page_base =
+                                    (g_menu_label_key_b.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                func_800A8E28(label_buf, source, delta2);
+                            }
+                            label_buf += func_800A8DDC(source);
+                            *label_buf = 0;
+                            var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                         }
                     }
                     break;
@@ -4480,26 +4513,26 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         if (g_menu_item_ptr != 0)
                         {
                             s32 res = menu_lookup_item_nibble(g_menu_item_ptr, tmp - 0x1F);
-                            u8 v0_7, a1_3;
-                            u8* v1_5;
-                            void* tmp2;
+                            u8* source;
                             u8* label_buf;
                             label_buf = spB0;
                             if (res >= 0)
                             {
-                                v0_7 = g_menu_label_key_a.page;
-                                a1_3 = g_menu_label_key_a.entry;
-                                v1_5 = (u8*)((u8*)&g_menu_label_key_a - 0x16);
+                                s32 string_page_base =
+                                    (g_menu_label_key_a.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                func_800A8E28(label_buf, source);
                             }
                             else
                             {
-                                v0_7 = g_menu_label_key_b.page;
-                                a1_3 = g_menu_label_key_b.entry;
-                                v1_5 = (u8*)((u8*)&g_menu_label_key_b - 0x20);
+                                s32 string_page_base =
+                                    (g_menu_label_key_b.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                func_800A8E28(label_buf, source);
                             }
-                            tmp2 = (void*)(a1_3 + ((v0_7 << 8) + (s32)v1_5));
-                            func_800A8E28(label_buf, tmp2);
-                            label_buf += func_800A8DDC(tmp2);
+                            label_buf += func_800A8DDC(source);
                             *label_buf = 0;
                             var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                         }
@@ -4535,26 +4568,26 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
                             s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
                             s32 diff = v1 - v2;
-                            u8 v0_8, a1_4;
-                            u8* v1_6;
-                            void* tmp2;
+                            u8* source;
                             u8* label_buf;
                             label_buf = spB0;
                             if (diff >= 0)
                             {
-                                v0_8 = g_menu_label_key_a.page;
-                                a1_4 = g_menu_label_key_a.entry;
-                                v1_6 = (u8*)((u8*)&g_menu_label_key_a - 0x16);
+                                s32 string_page_base =
+                                    (g_menu_label_key_a.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                func_800A8E28(label_buf, source);
                             }
                             else
                             {
-                                v0_8 = g_menu_label_key_b.page;
-                                a1_4 = g_menu_label_key_b.entry;
-                                v1_6 = (u8*)((u8*)&g_menu_label_key_b - 0x20);
+                                s32 string_page_base =
+                                    (g_menu_label_key_b.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                func_800A8E28(label_buf, source);
                             }
-                            tmp2 = (void*)(a1_4 + ((v0_8 << 8) + (s32)v1_6));
-                            func_800A8E28(label_buf, tmp2);
-                            label_buf += func_800A8DDC(tmp2);
+                            label_buf += func_800A8DDC(source);
                             *label_buf = 0;
                             var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                         }
@@ -4599,25 +4632,25 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         s32 total = 0;
                         u32* lvar_t0_2;
                         u8* lvar_v1_7;
-                        void* tmp2;
-                        u8 v0_9, a1_5;
-                        u8* v1_8;
+                        u8* source;
                         u8* label_buf;
-                        k = 1;
+                        s32 item_off = tmp * 2;
                         lvar_t0_2 = &g_item_slot_data.slot1;
-                        lvar_v1_7 = D_80168C20 + 0x40;
+                        k = 1;
+                        lvar_v1_7 = D_80168C20;
+                        lvar_v1_7 += 0x40;
                         do
                         {
                             if (((u8*)&g_item_slot_flags)[k] != 0)
                             {
                                 if (*lvar_v1_7 != 0)
                                 {
-                                    total += *(u16*)(lvar_v1_7 + (tmp * 2) - 0x62);
+                                    total += *(u16*)(lvar_v1_7 + item_off - 0x62);
                                 }
                                 tmpa0 = *lvar_t0_2;
                                 if (tmpa0 != 0 && *(u8*)tmpa0 != 0)
                                 {
-                                    total -= *(u16*)(tmpa0 + (tmp * 2) - 0x62);
+                                    total -= *(u16*)(tmpa0 + item_off - 0x62);
                                 }
                                 has = 1;
                             }
@@ -4630,19 +4663,21 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             label_buf = spB0;
                             if (total >= 0)
                             {
-                                v0_9 = g_menu_label_key_a.page;
-                                a1_5 = g_menu_label_key_a.entry;
-                                v1_8 = (u8*)((u8*)&g_menu_label_key_a - 0x16);
+                                s32 string_page_base =
+                                    (g_menu_label_key_a.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                func_800A8E28(label_buf, source, total, k);
                             }
                             else
                             {
-                                v0_9 = g_menu_label_key_b.page;
-                                a1_5 = g_menu_label_key_b.entry;
-                                v1_8 = (u8*)((u8*)&g_menu_label_key_b - 0x20);
+                                s32 string_page_base =
+                                    (g_menu_label_key_b.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                func_800A8E28(label_buf, source, total, k);
                             }
-                            tmp2 = (void*)(a1_5 + ((v0_9 << 8) + (s32)v1_8));
-                            func_800A8E28(label_buf, tmp2, total, k);
-                            label_buf += func_800A8DDC(tmp2);
+                            label_buf += func_800A8DDC(source);
                             *label_buf = 0;
                             var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                         }
@@ -4657,21 +4692,23 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         s32 total = 0;
                         u32* lvar_t0_3;
                         u8* lvar_v1_9;
-                        k = 1;
+                        s32 item_off = tmp * 2;
                         lvar_t0_3 = &g_item_slot_data.slot1;
-                        lvar_v1_9 = D_80168C20 + 0x40;
+                        k = 1;
+                        lvar_v1_9 = D_80168C20;
+                        lvar_v1_9 += 0x40;
                         do
                         {
                             if (((u8*)&g_item_slot_flags)[k] != 0)
                             {
                                 if (*lvar_v1_9 != 0)
                                 {
-                                    total += *(u16*)(lvar_v1_9 + (tmp * 2) - 0x6A);
+                                    total += *(u16*)(lvar_v1_9 + item_off - 0x6A);
                                 }
                                 tmpa0 = *lvar_t0_3;
                                 if (tmpa0 != 0 && *(u8*)tmpa0 != 0)
                                 {
-                                    total -= *(u16*)(tmpa0 + (tmp * 2) - 0x6A);
+                                    total -= *(u16*)(tmpa0 + item_off - 0x6A);
                                 }
                                 has = 1;
                             }
@@ -4683,7 +4720,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         {
                             if (total < 0)
                                 total = -total;
-                            var_s1 = func_800A8A78(arg1, var_s1, (u16)total, 1, pos_p, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_800A8A78(arg1, var_s1, total, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                     }
                     break;
@@ -4695,8 +4732,8 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
 
                 case 4:
                 {
-                    u8 tmp = *(u8*)(var_s4 + 1);
-                    switch (tmp)
+                    shared_s0 = *(u8*)(var_s4 + 1);
+                    switch (shared_s0)
                     {
                     case 0x1:
                     {
@@ -4758,7 +4795,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     case 0x3:
                     {
                         void* base = *(void**)(pad_base + 0x271C);
-                        u8 v = *(u8*)((u8*)base + g_menu_char_slot * 0x250 + 0x610);
+                        u8 v = *(u8*)((u8*)base + menu_probe_slot_off(g_menu_char_slot) + 0x610);
                         var_s1 = menu_draw_clamped_number(arg1, var_s1, v, 1, pos_p, ((*var_s3 >> 9) & 7));
                     }
                     break;
@@ -4772,15 +4809,15 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     case 0x5:
                     {
                         void* base = *(void**)(pad_base + 0x271C);
-                        u16 v = *(u16*)((u8*)base + g_menu_char_slot * 0x250 + 0x614);
+                        u16 v = *(u16*)((u8*)base + menu_probe_slot_off(g_menu_char_slot) + 0x614);
                         var_s1 = func_800A8A78(arg1, var_s1, v, 1, pos_p, ((*var_s3 >> 9) & 7));
                     }
                     break;
                     case 0x6:
                     {
                         void* base = *(void**)(pad_base + 0x271C);
-                        u32 v = *(u32*)((u8*)base + g_menu_char_slot * 0x250 + 0x610);
-                        var_s1 = func_800A8A78(arg1, var_s1, (u16)(v >> 8), 1, pos_p, ((*var_s3 >> 9) & 7));
+                        u32 v = *(u32*)((u8*)base + menu_probe_slot_off(g_menu_char_slot) + 0x610);
+                        var_s1 = func_800A8A78(arg1, var_s1, (v >> 8), 1, pos_p, ((*var_s3 >> 9) & 7));
                     }
                     break;
                     case 0x7:
@@ -4793,8 +4830,8 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     case 0xE:
                     {
                         void* base = *(void**)(pad_base + 0x271C);
-                        u16 v = *(u16*)((u8*)base + ((tmp - 7) * 2) + g_menu_char_slot * 0x250 + 0x620);
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, v >> 9, 1, pos_p, ((*var_s3 >> 9) & 7));
+                        s32 idx = shared_s0 - 7;
+                        var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)((u8*)base + (idx << 1) + g_menu_char_slot * 0x250 + 0x620) >> 9, 1, pos_p, ((*var_s3 >> 9) & 7));
                     }
                     break;
                     case 0xF:
@@ -4817,7 +4854,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             var_a0 = var_s1;
                             base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
                             {
-                                void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*(u8*)(D_80168C30 + (tmp - 0x10 + 0x18)) * 2)));
+                                void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*(u8*)(D_80168C30 + (shared_s0 - 0x10 + 0x18)) * 2)));
                                 var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
@@ -4845,14 +4882,14 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     case 0x15:
                     case 0x16:
                     {
-                        u8* base = (u8*)g_menu_equipment_base + (tmp << 6);
+                        u8* base = (u8*)g_menu_equipment_base + (shared_s0 << 6);
                         if (*(u8*)(base - 0x4C0) != 0)
                         {
                             s32 a3 = 1;
                             void* a2_2;
-                            if (D_80168C09[tmp] != 0)
+                            if (D_80168C09[shared_s0] != 0)
                                 a3 = 2;
-                            a2_2 = (void*)(g_menu_equipment_base + (tmp << 6) - 0x4C0);
+                            a2_2 = (void*)(g_menu_equipment_base + (shared_s0 << 6) - 0x4C0);
                             var_s1 = func_800A88A0(var_s1, arg1, a2_2, a3, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                         }
                     }
@@ -4866,7 +4903,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         base_a2_6 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x10));
                         base = *(void**)(pad_base + 0x271C);
                         {
-                            u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + (tmp - 0x17) + 0x5F3;
+                            u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + shared_s0 + 0x5F3;
                             idx = *idxp;
                         }
                         {
@@ -4879,8 +4916,8 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     {
                         s32 v = func_800B607C(g_menu_char_slot);
                         void* base = *(void**)(pad_base + 0x271C);
-                        u32 shift = *(u32*)((u8*)base + g_menu_char_slot * 0x250 + 0x610) >> 8;
-                        var_s1 = func_800A8A78(arg1, var_s1, (u16)(v - shift), 1, pos_p, ((*var_s3 >> 9) & 7));
+                        u32 shift = *(u32*)((u8*)base + menu_probe_slot_off(g_menu_char_slot) + 0x610) >> 8;
+                        var_s1 = func_800A8A78(arg1, var_s1, v - shift, 1, pos_p, ((*var_s3 >> 9) & 7));
                     }
                     break;
                     case 0x1B:
@@ -4889,7 +4926,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     case 0x1E:
                     {
                         void* base = *(void**)(pad_base + 0x271C);
-                        u8* ptr = (u8*)base + g_menu_char_slot * 0x250 + tmp;
+                        u8* ptr = (u8*)base + g_menu_char_slot * 0x250 + shared_s0;
                         u8 val = *(ptr + 0x5F1);
                         if (val != 0xFF)
                         {
@@ -4906,8 +4943,12 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                 u32 tmpv;
                                 u8 idx;
                                 base_a2_7 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20));
-                                tmpv = ((*(u32*)(g_menu_equipment_base + 0x14) >> 10) & 0x3F) * 0x30;
-                                idx = *(volatile u8*)(ptr + 0x5F1) & 0x7F;
+                                tmpv = *(u32*)(g_menu_equipment_base + 0x14);
+                                tmpv >>= 10;
+                                tmpv &= 0x3F;
+                                tmpv *= 0x30;
+                                idx = menu_reload_plain_u8(ptr + 0x5F1);
+                                idx &= 0x7F;
                                 {
                                     void* a2_2 = (void*)((u8*)base_a2_7 + *(u16*)((u8*)base_a2_7 + (idx * 2) + tmpv));
                                     var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
@@ -5023,9 +5064,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         {
                             u16 a2_20 = 0;
                             s32 diff;
-                            u8 v0_10, a1_10;
-                            u8* v1_17;
-                            void* tmp2;
+                            u8* source;
                             u8* label_buf;
                             if (*(u8*)D_80168C20 != 0)
                                 a2_20 = *(u16*)(D_80168C30 + 0x24);
@@ -5036,19 +5075,21 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             label_buf = spB0;
                             if (diff >= 0)
                             {
-                                v0_10 = g_menu_label_key_a.page;
-                                a1_10 = g_menu_label_key_a.entry;
-                                v1_17 = (u8*)((u8*)&g_menu_label_key_a - 0x16);
+                                s32 string_page_base =
+                                    (g_menu_label_key_a.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                func_800A8E28(label_buf, source, diff);
                             }
                             else
                             {
-                                v0_10 = g_menu_label_key_b.page;
-                                a1_10 = g_menu_label_key_b.entry;
-                                v1_17 = (u8*)((u8*)&g_menu_label_key_b - 0x20);
+                                s32 string_page_base =
+                                    (g_menu_label_key_b.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                func_800A8E28(label_buf, source, diff);
                             }
-                            tmp2 = (void*)(a1_10 + ((v0_10 << 8) + (s32)v1_17));
-                            func_800A8E28(label_buf, tmp2, diff);
-                            label_buf += func_800A8DDC(tmp2);
+                            label_buf += func_800A8DDC(source);
                             *label_buf = 0;
                             var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                         }
@@ -5063,22 +5104,21 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         s32 total = 0;
                         u32* lvar_t0_4;
                         u8* lvar_v1_18;
-                        void* tmp2;
-                        u8 v0_11, a1_11;
-                        u8* v1_19;
+                        u8* source;
                         u8* label_buf;
-                        k = 1;
                         lvar_t0_4 = &g_item_slot_data.slot1;
-                        lvar_v1_18 = D_80168C20 + 0x40;
+                        k = 1;
+                        lvar_v1_18 = D_80168C20;
+                        lvar_v1_18 += 0x40;
                         do
                         {
                             if (((u8*)&g_item_slot_flags)[k] != 0)
                             {
                                 if (*lvar_v1_18 != 0)
-                                    total += *(u16*)(lvar_v1_18 + (tmp * 2) - 0x5C);
+                                    total += *(u16*)(lvar_v1_18 + (shared_s0 * 2) - 0x5C);
                                 tmpa0 = *lvar_t0_4;
                                 if (tmpa0 != 0 && *(u8*)tmpa0 != 0)
-                                    total -= *(u16*)(tmpa0 + (tmp * 2) - 0x5C);
+                                    total -= *(u16*)(tmpa0 + (shared_s0 * 2) - 0x5C);
                                 has = 1;
                             }
                             lvar_t0_4 += 1;
@@ -5090,19 +5130,21 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             label_buf = spB0;
                             if (total >= 0)
                             {
-                                v0_11 = g_menu_label_key_a.page;
-                                a1_11 = g_menu_label_key_a.entry;
-                                v1_19 = (u8*)((u8*)&g_menu_label_key_a - 0x16);
+                                s32 string_page_base =
+                                    (g_menu_label_key_a.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                func_800A8E28(label_buf, source, total, k);
                             }
                             else
                             {
-                                v0_11 = g_menu_label_key_b.page;
-                                a1_11 = g_menu_label_key_b.entry;
-                                v1_19 = (u8*)((u8*)&g_menu_label_key_b - 0x20);
+                                s32 string_page_base =
+                                    (g_menu_label_key_b.page << 8) +
+                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                func_800A8E28(label_buf, source, total, k);
                             }
-                            tmp2 = (void*)(a1_11 + ((v0_11 << 8) + (s32)v1_19));
-                            func_800A8E28(label_buf, tmp2, total, k);
-                            label_buf += func_800A8DDC(tmp2);
+                            label_buf += func_800A8DDC(source);
                             *label_buf = 0;
                             var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                         }
@@ -5122,7 +5164,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                 diff = a2_23 - D_800F0C1C;
                             if (diff < 0)
                                 diff = -diff;
-                            var_s1 = func_800A8A78(arg1, var_s1, (u16)diff, 1, pos_p, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_800A8A78(arg1, var_s1, diff, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                     }
                     break;
@@ -5135,18 +5177,21 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         s32 total = 0;
                         u32* lvar_t0_5;
                         u8* lvar_v1_20;
+                        s32 item_off;
                         k = 1;
+                        lvar_v1_20 = D_80168C20;
+                        lvar_v1_20 += 0x40;
+                        item_off = shared_s0 * 2;
                         lvar_t0_5 = &g_item_slot_data.slot1;
-                        lvar_v1_20 = D_80168C20 + 0x40;
                         do
                         {
                             if (((u8*)&g_item_slot_flags)[k] != 0)
                             {
                                 if (*lvar_v1_20 != 0)
-                                    total += *(u16*)(lvar_v1_20 + (tmp * 2) - 0x66);
+                                    total += *(u16*)(lvar_v1_20 + item_off - 0x66);
                                 tmpa0 = *lvar_t0_5;
                                 if (tmpa0 != 0 && *(u8*)tmpa0 != 0)
-                                    total -= *(u16*)(tmpa0 + (tmp * 2) - 0x66);
+                                    total -= *(u16*)(tmpa0 + item_off - 0x66);
                                 has = 1;
                             }
                             lvar_t0_5 += 1;
@@ -5184,7 +5229,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         if (v1 >= 0)
                         {
                             void* base = *(void**)(pad_base + 0x271C);
-                            u8 v = *(u8*)((u8*)base + v1 * 0x14C + 0x2B50) & 0xF;
+                            u8 v = *(u8*)((u8*)base + menu_probe_node_off(v1) + 0x2B50) & 0xF;
                             void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
                             var_s1 =
                                 func_800A88A0(var_s1, arg1, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
@@ -5197,7 +5242,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         if (v1 >= 0)
                         {
                             void* base = *(void**)(pad_base + 0x271C);
-                            u8 v = *(u8*)((u8*)base + v1 * 0x14C + 0x2B50) >> 4;
+                            u8 v = *(u8*)((u8*)base + menu_probe_node_off(v1) + 0x2B50) >> 4;
                             void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
                             var_s1 =
                                 func_800A88A0(var_s1, arg1, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
@@ -5210,7 +5255,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         if (v1 >= 0)
                         {
                             void* base = *(void**)(pad_base + 0x271C);
-                            u8 v = *(u8*)((u8*)base + v1 * 0x14C + 0x2B52);
+                            u8 v = *(u8*)((u8*)base + menu_probe_node_off(v1) + 0x2B52);
                             var_s1 = func_800A8A78(arg1, var_s1, v, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                     }
@@ -5225,7 +5270,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             var_a0 = var_s1;
                             base_a2_10 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
                             base = *(void**)(pad_base + 0x271C);
-                            idx = *(s32*)((u8*)base + v1 * 0x14C + 0x2B54);
+                            idx = *(s32*)((u8*)base + menu_probe_node_off(v1) + 0x2B54);
                             {
                                 void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
                                 var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
@@ -5244,31 +5289,31 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     {
                         u32 a2_26 = 0;
                         void** data_pp = (void**)(pad_base + 0x271C);
-                        switch (tmp)
+                        switch (shared_s0)
                         {
                         case 0x4E:
-                            a2_26 = *(u32*)((u8*)*data_pp + g_menu_char_slot * 0x250 + 0x658) & 0xF;
+                            a2_26 = *(u32*)((u8*)*(void**)(pad_base + 0x271C) + (g_menu_char_slot * 0x250) + 0x658) & 0xF;
                             break;
                         case 0x4F:
-                            a2_26 = (*(u8*)((u8*)*data_pp + g_menu_char_slot * 0x250 + 0x658) >> 4);
+                            a2_26 = (*(u8*)((u8*)*(void**)(pad_base + 0x271C) + (g_menu_char_slot * 0x250) + 0x658) >> 4);
                             break;
                         case 0x50:
-                            a2_26 = (*(u32*)((u8*)*data_pp + g_menu_char_slot * 0x250 + 0x658) >> 8) & 0xF;
+                            a2_26 = (*(u32*)((u8*)*(void**)(pad_base + 0x271C) + menu_probe_slot_off(g_menu_char_slot) + 0x658) >> 8) & 0xF;
                             break;
                         case 0x51:
-                            a2_26 = (*(u32*)((u8*)*data_pp + g_menu_char_slot * 0x250 + 0x658) >> 12) & 0xF;
+                            a2_26 = (*(u32*)((u8*)*(void**)(pad_base + 0x271C) + menu_probe_slot_off(g_menu_char_slot) + 0x658) >> 12) & 0xF;
                             break;
                         case 0x52:
-                            a2_26 = *(u16*)((u8*)*data_pp + g_menu_char_slot * 0x250 + 0x65A) & 0xF;
+                            a2_26 = *(u16*)((u8*)*data_pp + (g_menu_char_slot * 0x250) + 0x65A) & 0xF;
                             break;
                         case 0x53:
-                            a2_26 = (*(u32*)((u8*)*data_pp + g_menu_char_slot * 0x250 + 0x658) >> 20) & 0xF;
+                            a2_26 = (*(u32*)((u8*)*data_pp + menu_probe_slot_off(g_menu_char_slot) + 0x658) >> 20) & 0xF;
                             break;
                         case 0x54:
-                            a2_26 = *(u8*)((u8*)*data_pp + g_menu_char_slot * 0x250 + 0x65B) & 0xF;
+                            a2_26 = *(u8*)((u8*)*data_pp + (g_menu_char_slot * 0x250) + 0x65B) & 0xF;
                             break;
                         case 0x55:
-                            a2_26 = *(u32*)((u8*)*data_pp + g_menu_char_slot * 0x250 + 0x658) >> 28;
+                            a2_26 = *(u32*)((u8*)*data_pp + menu_probe_slot_off(g_menu_char_slot) + 0x658) >> 28;
                             break;
                         }
                         var_s1 = menu_draw_clamped_number(arg1, var_s1, a2_26, 1, pos_p, ((*var_s3 >> 9) & 7));
@@ -5282,8 +5327,8 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
 
                 case 6:
                 {
-                    u8 tmp = *(u8*)(var_s4 + 1);
-                    switch (tmp)
+                    shared_s0 = *(u8*)(var_s4 + 1);
+                    switch (shared_s0)
                     {
                     case 1:
                         if (*(u32*)(*(void**)(pad_base + 0x271C) + 0x2C) > 0x989680U)
@@ -5299,44 +5344,34 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     {
                         u32 ltemp_v0_6;
                         s32 v1;
-                        u32 diff;
                         s32 s2;
-                        u32 remainder;
                         s32 split_tmp;
                         ltemp_v0_6 = (*var_s3 >> 9) & 7;
-                        if (ltemp_v0_6 != 1)
+                        switch (ltemp_v0_6)
                         {
-                            if (ltemp_v0_6 != tmp)
-                            {
-                            }
-                            else
-                            {
-                                var_v0_12 = pos.x - 0x19;
-                                goto clock_pos_done;
-                            }
-                        }
-                        else
-                        {
-                            var_v0_12 = pos.x - 0x32;
-clock_pos_done:
-                            pos.x = var_v0_12;
+                        case 1:
+                            pos.x -= 0x32;
+                            break;
+                        case 2:
+                            pos.x -= 0x19;
+                            break;
                         }
                         v1 = *(s32*)(*(void**)(pad_base + 0x271C) + 0x30) + VSync(-1);
-                        diff = v1 - D_80042FB4;
+                        shared_s0 = v1 - D_80042FB4;
                         pos.x += 0x14;
-                        s2 = diff / 216000;
-                        var_s1 = (void*)func_800A8A78(arg1, var_s1, (u16)s2, 1, pos_p, 1);
+                        s2 = shared_s0 / 216000;
+                        var_s1 = (void*)func_800A8A78(arg1, var_s1, s2, 1, pos_p, 1);
                         if ((g_frame_counter / 15) & 1)
                         {
                             var_s1 = func_800A88A0(var_s1, arg1, ":", 1, pos.x, pos.y, 0);
                         }
                         pos.x += 7;
                         split_tmp = s2 * 0x3C;
-                        remainder = (diff / 3600) - split_tmp;
-                        if (remainder < 0xA)
+                        shared_s0 = (shared_s0 / 3600) - split_tmp;
+                        if (shared_s0 < 0xA)
                             var_s1 = (void*)func_800A8A78(arg1, var_s1, 0U, 1, pos_p, 0);
                         pos.x += 0x10;
-                        var_s1 = (void*)func_800A8A78(arg1, var_s1, remainder, 1, pos_p, 1);
+                        var_s1 = (void*)func_800A8A78(arg1, var_s1, shared_s0, 1, pos_p, 1);
                     }
                     break;
                     }
@@ -5345,13 +5380,14 @@ clock_pos_done:
 
                 case 7:
                 {
-                    u8 tmp = *(u8*)(var_s4 + 1);
-                    switch (tmp)
+                    s32 two = 2;
+                    shared_s0 = *(u8*)(var_s4 + 1);
+                    switch (shared_s0)
                     {
                     case 1:
                     {
                         void* base = *(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250;
-                        if ((*(u8*)((u8*)base + 0x608) & 0x7F) != 2 || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                        if ((*(u8*)((u8*)base + 0x608) & 0x7F) != two || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
                         {
                             var_a0 = var_s1;
                             base_a2_11 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));

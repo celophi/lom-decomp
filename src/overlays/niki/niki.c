@@ -38,6 +38,88 @@ typedef struct
     u8 data[0x28];
 } NikiEntry28;
 
+/**
+ * @brief 0xC-stride element of the D_80164B10 array (attr word + handler).
+ * @note Same layout as NikiElement minus its trailing unkC, so a NikiPacket*
+ *       walks the array at its real 0xC stride while still exposing attr.f.
+ */
+typedef struct
+{
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 state : 3;
+            u32 unk0_3 : 4;
+            u32 x : 9;
+            u32 unk0_16 : 8;
+        } f;
+    } attr;
+    u32 unk4_0 : 1;
+    u32 y : 8;
+    u32 unk4_9 : 23;
+    void (*draw_handler)();
+} NikiPacket;
+
+/**
+ * @brief One GPU primitive packet the element draw functions emit into.
+ */
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s16 unk8;
+    s16 unkA;
+    s16 unkC;
+    u16 unkE;
+} NikiGpuPacket;
+
+/**
+ * @brief Per-frame draw context passed to func_80141F18.
+ * @note unk40B8 is the running GPU-packet write cursor; unk40B2 selects the
+ *       clip/window variant.
+ */
+typedef struct
+{
+    s32 unk0;
+    u8 pad4[0x40AE];
+    s16 unk40B2;
+    u8 pad40B4[4];
+    NikiGpuPacket *unk40B8;
+} NikiDrawState;
+
+/** @brief Element draw callback: returns the advanced GPU-packet cursor. */
+typedef NikiGpuPacket *(*NikiElemDrawFunc)();
+
+/** @brief Field layout of the POLY_G4 timer-bar packet built by func_80142A1C. */
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s16 unk8;
+    s16 unkA;
+    s32 unkC;
+    s16 unk10;
+    s16 unk12;
+    s32 unk14;
+    s16 unk18;
+    s16 unk1A;
+    s32 unk1C;
+    s16 unk20;
+    s16 unk22;
+} NikiPolyG4Words;
+
+/**
+ * @brief Fallback name/second-line text carried alongside the save-slot record.
+ * @note Consumed only when the primary slot compare (func_8001714C) fails.
+ */
+typedef struct NikiFallbackText
+{
+    u8 pad[0x24];
+    u8 text[0x20];
+} NikiFallbackText;
+
 
 extern s32 D_80164A78;
 extern s32 D_80164AD0;
@@ -75,16 +157,47 @@ extern NikiRecord D_80164D18;
 extern NikiRecord *D_8012271C;
 extern s32 D_8003EC9C;
 
+extern s32 D_80164AD8;
+extern u8 D_80164DE7;
+extern u8 D_80164B98;
+extern u8 D_80164B9C;
+extern u16 D_80147120;
+extern u16 D_80147146;
+extern u16 D_80147148;
+extern u16 D_8014714C;
+extern u16 D_801475C4[];
+extern u8 D_800EC3F6[2];
+extern u8 D_800EC3D0[];
+extern s32 D_8012298C;
+extern u16 D_80147128;
+extern s32 D_80164A7C;
+extern s32 D_801606E4;
+extern u16 D_8014712A;
+extern u8 D_80160A78[];
+extern u8 D_8011F3D8[];
+extern u8 D_80164E70[];
+extern s32 D_8011F428;
+extern s32 D_801227CC;
+extern s32 D_801227F4;
+extern s32 D_8011F418;
+extern u8 D_80122A08[];
+extern s32 D_80164F08;
+extern s32 D_80164F10;
+
 
 void func_80140D2C(void);
-void func_80141F18(void);
+void func_80141F18();
 s32 func_80140774(void);
 s32 func_80140868(void);
 s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 s32 func_801413FC(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 s32 func_801414A8(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-void func_80141584(); 
-void func_80141660(); 
+s32 func_80141584(s32 *ot, s32 prim, s32 arg2, s32 arg3);
+s32 func_80141660(s32 *ot, s32 prim, s32 arg2, s32 arg3);
+s32 func_8014303C(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s32 slot, s32 i, s32 j);
+s32 func_801469C0(s32 result, s32 *ot, u8 *name, s32 x, s32 y, s32 a5, s32 a6);
+void func_80141DB8(void *arg0);
+s32 func_80141E1C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 void func_801433BC();
 void func_80141E84();
 s32 func_80144DF8(void);
@@ -98,7 +211,8 @@ s32 func_8001714C();
 NikiElement *func_80141EC4();
 void func_80143284();
 void func_80145994();
-void func_8014262C();
+s32 func_80142820(s32 *ot, s32 prim, s32 arg2, s32 arg3);
+s32 func_8014262C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 
 #define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 
@@ -732,4 +846,911 @@ s32 func_801414A8(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         prim += 0x10;
     }
     return func_800A88A0(prim, ot, GLYPH_SYM(D_80147104, 0xC), 4, -arg2 + 0x40, -arg3, 2);
+}
+
+/* ----- Decls for func_80141584 (niki first-page header banner) ----- */
+extern u16 D_80147106;
+
+/**
+ * @brief Draw the niki first-page header: an optional dark backdrop tile,
+ *        then the header caption glyph.
+ *
+ * Mirror of func_801414A8: identical 0x80 x 0x10 flat backdrop tile (code
+ * 0x62, color 0x101010), but emitted only when D_80164B70 selects page zero,
+ * and paired with a different caption glyph.
+ *
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from the caption x).
+ * @param arg3 Vertical scroll offset (subtracted from the caption y).
+ * @return Advanced primitive-buffer write cursor.
+ * @see decomp.me (100%)
+ */
+s32 func_80141584(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+    TILE *tile;
+
+    if (D_80164B70 == 0)
+    {
+        tile = (TILE *)prim;
+        *(u32 *)&tile->r0 = 0x101010;
+        *((u8 *)tile + 3) = 3;
+        tile->code = 0x62;
+        tile->x0 = 0;
+        tile->y0 = 0;
+        tile->w = 0x80;
+        tile->h = 0x10;
+        tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
+        *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+        prim += 0x10;
+    }
+
+    return func_800A88A0(prim, ot, GLYPH_SYM(D_80147106, 0xE), 4, -arg2 + 0x40, -arg3, 2);
+}
+
+/**
+ * @brief Draw the niki save-slot detail panel: element glyphs, the playtime
+ *        clock, the slot marker row, and a fallback name/second-line block.
+ *
+ * Runs only while the panel is active (D_80164B84 non-zero) and not suppressed
+ * (D_80164F18 zero). Depending on D_80164B84 it either emits a two-line caption
+ * (state 2), or renders the full slot detail: up to three party markers laid out
+ * by func_8014303C with an animated highlight (D_80164AD0), the playtime split
+ * into hours/minutes via func_800A8A78, and one of three status glyphs. If the
+ * slot compare fails it falls back to drawing the stored name and second line.
+ *
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from every x).
+ * @param arg3 Vertical scroll offset (subtracted from every row y).
+ * @return Advanced primitive-buffer write cursor.
+ * @see decomp.me (100%)
+ */
+s32 func_80141660(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    s32 result;
+    Vec2s pos;
+    u8 name[0x21];
+    char unused_pad[212];
+    s32 slot[3];
+
+    result = prim;
+    if (D_80164B84 == 0)
+    {
+        return result;
+    }
+    if (D_80164F18 != 0)
+    {
+        return result;
+    }
+    if (D_80164B84 != 3 && D_80164B78 < 0x10)
+    {
+        if (D_80164B84 == 2)
+        {
+            s32 x = -arg2;
+            u8 *base;
+
+            result = func_800A88A0(prim, ot, GLYPH_SYM(D_80147120, 0x28), 4, x, -arg3, 0);
+            base = (u8 *)&D_80147120 - 0x28;
+            return func_800A88A0(result, ot, GLYPH_OFF(base, 0x2A), 4, x, 0x10 - arg3, 0);
+        }
+        else
+        {
+            s32 term1 = D_80164B70 * 0x320;
+            s32 term2 = (D_80164B7C * 0x28) + (s32)D_80165018;
+
+            if (func_8001714C(D_800ECF7C, (char *)(term1 + term2), 0xC) == 0)
+            {
+                if (D_8003EC9C == 0xFF || D_80164DE7 == D_8003EC9C)
+                {
+                    s32 present_count;
+                    s32 i;
+                    s32 j;
+                    s32 step;
+                    s32 half_step;
+                    s32 base_x;
+                    s32 base_y;
+                    s32 total;
+                    s32 hours;
+                    s32 minutes;
+                    s32 time_val;
+
+                    {
+                        u8 *record = (u8 *)&D_80164D18;
+                        slot[0] = (u32)(*(s32 *)(record + 0x18)) >> 0x19;
+                        slot[1] = ((u32)(*(s32 *)(record + 0x20)) >> 0x12) & 0x7F;
+                        slot[2] = (u32)(*(s32 *)(record + 0x20)) >> 0x19;
+                        D_80164AD8 = (s32)record[0x1F];
+                    }
+
+                    total = 0;
+                    present_count = 0;
+                    for (i = 0; i < 3; i++)
+                    {
+                        if (slot[i] != 0x7F)
+                        {
+                            present_count += 1;
+                        }
+                    }
+
+                    switch (present_count)
+                    {
+                    case 2:
+                        step = 0x20;
+                        half_step = 0x10;
+                        time_val = D_80164AD0;
+                        if (D_80164AD0 < 0)
+                        {
+                            time_val = D_80164AD0 + 0x1F;
+                        }
+                        D_80164AD0 -= (time_val >> 5) << 5;
+                        break;
+                    case 3:
+                        step = 0x10;
+                        half_step = 0x20;
+                        D_80164AD0 %= 0x60;
+                        break;
+                    default:
+                        step = 0x10;
+                        half_step = 0x20;
+                        D_80164AD0 = 0x1F;
+                        break;
+                    }
+
+                    i = 0;
+                    j = i;
+                    for (; j < 3; j++)
+                    {
+                        base_y = i * half_step;
+                        base_x = base_y + half_step;
+                        if (slot[j] != 0x7F)
+                        {
+                            s32 adjust = step;
+                            s32 rem;
+                            s32 hi;
+                            s32 delta;
+
+                            if ((D_80164AD0 >= base_y && D_80164AD0 < base_x && (delta = D_80164AD0 - base_y, 1))
+                                || (rem = base_x % (half_step * present_count), D_80164AD0 >= rem && D_80164AD0 < (hi = rem + half_step) && (delta = hi - D_80164AD0, 1)))
+                            {
+                                adjust += delta;
+                            }
+                            result = func_8014303C(result, ot, total - arg2, -arg3, adjust, slot[j], i, j);
+                            i += 1;
+                            total += adjust;
+                        }
+                    }
+
+                    {
+                        u8 *base90 = (u8 *)&D_80164D18;
+                        s32 x = -arg2;
+                        s32 y = -arg3;
+
+                        base_y = *(s32 *)(base90 + 0x30);
+                        pos.x = (s16)(x + 0x70);
+                        pos.y = (s16)y;
+                        hours = base_y / 216000;
+                        result = func_800A8A78(ot, result, hours, 4, &pos, 1);
+                        result = func_800A88A0(result, ot,
+                            D_800EC3F6[0] + ((s32)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8), 4, x + 0x6F, y, 0);
+                        base_y = (base_y / 3600) - (hours * 0x3C);
+                        if (base_y < 0xA)
+                        {
+                            pos.x = (s16)(x + 0x7D);
+                            pos.y = (s16)y;
+                            result = func_800A8A78(ot, result, 0, 4, &pos, 1);
+                        }
+                        pos.x = (s16)(x + 0x85);
+                        pos.y = (s16)y;
+                        result = func_800A8A78(ot, result, base_y, 4, &pos, 1);
+                        result = func_800A88A0(result, ot, base90, 4, x + 0x54, y + 0x10, 0);
+
+                        if (*(u16 *)(base90 + 0xD4) == *(u16 *)((u8 *)D_8012271C + 0xD4))
+                        {
+                            result = func_800A88A0(result, ot, GLYPH_SYM(D_80147148, 0x50), 4, x + 0x54, y + 0x20, 0);
+                        }
+                        else if (base90[0x17] == 0)
+                        {
+                            result = func_800A88A0(result, ot, GLYPH_SYM(D_80147146, 0x4E), 4, x + 0x54, y + 0x20, 0);
+                        }
+                        else
+                        {
+                            result = func_800A88A0(result, ot, GLYPH_OFF((u8 *)D_801475C4, (*(s32 *)(base90 + 0x20) & 0x3FFFF) * 2), 4,
+                                x + 0x54, y + 0x20, 0);
+                        }
+                    }
+                }
+                else
+                {
+                    result = func_800A88A0(result, ot, GLYPH_SYM(D_8014714C, 0x54), 4, -arg2, -arg3, 0);
+                }
+            }
+            else
+            {
+                s32 j;
+                u8 *record;
+
+                func_80141DB8(&D_80164B9C);
+                record = &D_80164B9C;
+                record -= 4;
+                if ((u32)(record[0x24] - 1) >= 0x7FU)
+                {
+                    for (j = 0; j < 0x20; j++)
+                    {
+                        name[j] = record[4 + j];
+                    }
+                    name[j] = 0;
+                    result = func_801469C0(result, ot, name, -arg2, -arg3, 4, 0);
+
+                    for (j = 0; j < 0x20; j++)
+                    {
+                        name[j] = ((NikiFallbackText *)&D_80164B98)->text[j];
+                    }
+                    name[j] = 0;
+                    result = func_801469C0(result, ot, name, -arg2, -arg3 + 0x10, 4, 0);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * @brief Zero-fill the tail of a 0x40-byte record once a terminator is seen.
+ *
+ * Walks a variable-width byte stream up to logical index 0x40: a lead byte
+ * >= 0x80 consumes two positions, otherwise one. On the first zero byte the
+ * remaining bytes through index 0x40 are cleared.
+ *
+ * @param arg0 Pointer to the record buffer to scan and pad.
+ * @see decomp.me (100%)
+ */
+void func_80141DB8(void *arg0)
+{
+    u8 *p;
+    s32 i;
+
+    p = (u8 *)arg0;
+    i = 0;
+    for (;;)
+    {
+        if (i >= 0x40)
+        {
+            return;
+        }
+        if (*p == 0)
+        {
+            while (i < 0x40)
+            {
+                *p = 0;
+                i++;
+                p++;
+            }
+            return;
+        }
+        if (*p >= 0x80)
+        {
+            p += 2;
+            i += 2;
+        }
+        else
+        {
+            p += 1;
+            i += 1;
+        }
+    }
+}
+
+/**
+ * @brief Draw the niki footer glyph, anchored to the right edge of the panel.
+ *
+ * Resolves the glyph pointer from the D_800EC3D0 header (a 16-bit offset stored
+ * across bytes [0] and [1], added to the header base less 0xC), then submits it
+ * at x = 0x80 - arg2, y = -arg3.
+ *
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from the anchor x).
+ * @param arg3 Vertical scroll offset (subtracted from the anchor y).
+ * @return Advanced primitive-buffer write cursor.
+ * @see decomp.me (100%)
+ */
+s32 func_80141E1C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+
+    return func_800A88A0(prim, ot,
+        (void *)((u8 *)D_800EC3D0 - 0xC + D_800EC3D0[0] + (D_800EC3D0[1] << 8)),
+        5, 0x80 - arg2, -arg3, 2);
+}
+
+/**
+ * @brief Reset the niki element array: clear the low 3 state bits of each of
+ *        the eight D_80164B10 entries and reload the D_8012298C counter.
+ *
+ * @see decomp.me (100%)
+ */
+void func_80141E84(void)
+{
+    NikiPacket *p;
+    s32 i;
+
+    D_8012298C = 0x20;
+    p = (NikiPacket *)&D_80164B10;
+    for (i = 0; i < 8; i++)
+    {
+        p->attr.word &= ~7;
+        p++;
+    }
+}
+
+/**
+ * @brief Claim the first free niki element slot, marking its state bits to 1.
+ *
+ * Scans the eight D_80164B10 entries for one whose low 3 state bits are clear,
+ * sets them to 1, and returns it. Falls back to the first entry if none free.
+ *
+ * @return Pointer to the claimed (or fallback) element.
+ * @see decomp.me (100%)
+ */
+NikiElement *func_80141EC4(void)
+{
+    NikiPacket *p;
+    s32 i;
+
+    p = (NikiPacket *)&D_80164B10;
+    for (i = 0; i < 8; i++, p++)
+    {
+        if ((p->attr.word & 7) == 0)
+        {
+            p->attr.word = (p->attr.word & ~7) | 1;
+            return (NikiElement *)p;
+        }
+    }
+    return &D_80164B10;
+}
+
+/**
+ * @brief Advance and draw the eight niki element packets for one frame.
+ *
+ * Reinitialises the GPU primitive window (clip variant selected by
+ * arg0->unk40B2), then walks the eight D_80164B10 element slots. Active slots
+ * (low 3 state bits set) are stepped through their animation phase (switch on
+ * the state code) and rendered via each slot's draw callback plus func_800AD850,
+ * advancing the shared GPU-packet cursor which is written back to arg0->unk40B8.
+ *
+ * @param arg0 Per-frame draw state (see NikiDrawState).
+ * @see decomp.me (100%)
+ */
+void func_80141F18(NikiDrawState *arg0)
+{
+    NikiGpuPacket *var_s0;
+    NikiDrawState *var_s5;
+    volatile u32 *var_s3;
+    s32 temp_s1;
+    s32 temp_s2;
+    s32 var_s6;
+    s32 sp20[24];
+    u32 temp_a0_2;
+    s32 temp_v1_2;
+    u32 temp_a1;
+    u32 temp_a2;
+    s32 temp_a0_3;
+    s32 var_v1;
+    s32 temp_a3_2;
+    s32 var_v0;
+    s32 temp_a3_3;
+    u32 temp_v0_3;
+    u32 temp_a0_4;
+    s32 temp_a0_5;
+    s32 var_v1_2;
+    s32 temp_a3_5;
+    s32 var_v0_2;
+    s32 temp_a3_6;
+    u32 temp_v0_5;
+    u32 temp_v1_3;
+    s32 count;
+
+    var_s0 = arg0->unk40B8;
+    var_s5 = arg0;
+
+    if (arg0->unk40B2 != 0)
+    {
+        func_8001C56C(sp20, 0, 0xF0, 0x140, 0xE0);
+    }
+    else
+    {
+        func_8001C56C(sp20, 0, 8, 0x140, 0xE0);
+    }
+
+    var_s3 = (volatile u32 *)&D_80164B10;
+    var_s6 = 0;
+
+    for (; var_s6 < 8; var_s6++, var_s3 += 3)
+    {
+        if (*var_s3 & 7)
+        {
+            count = D_80164B78;
+            if ((count < 0x10) &&
+                (*(NikiElemDrawFunc *)((u8 *)var_s3 + 8) == (NikiElemDrawFunc)func_80140D4C) &&
+                ((D_80164B1C & 7) == 2))
+            {
+                count *= 0xE;
+                if ((D_80164AE0 + 0x58) < count)
+                {
+                    var_s0 = (NikiGpuPacket *)func_800AE76C(var_s0, var_s5, 0x114, 0x82, 0);
+                }
+                if (D_80164AE0 != 0)
+                {
+                    var_s0 = (NikiGpuPacket *)func_800AE76C(var_s0, var_s5, 0x114, 0x3A, 1);
+                }
+            }
+
+            func_8001A5D4((s32)var_s0, sp20);
+
+            var_s0->unk0 = (var_s0->unk0 & 0xFF000000) | (var_s5->unk0 & 0x00FFFFFF);
+            var_s5->unk0 = (s32)((var_s5->unk0 & 0xFF000000) | ((s32)var_s0 & 0x00FFFFFF));
+
+            temp_a0_2 = *var_s3;
+            temp_v1_2 = temp_a0_2 & 7;
+
+            var_s0 = (NikiGpuPacket *)((u8 *)var_s0 + 0x40);
+
+            switch (temp_v1_2)
+            {
+            case 1:
+                temp_v0_3 = *var_s3;
+                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
+                temp_a0_4 = temp_v0_3 >> 24;
+                temp_a2 = ((temp_a1 & 1) << 8) | temp_a0_4;
+                temp_a0_3 = (temp_v0_3 >> 3) & 0xF;
+                var_v1 = temp_a2 * temp_a0_3;
+                D_80122988 = 0;
+                if (var_v1 < 0)
+                {
+                    var_v1 += 7;
+                }
+                temp_a3_2 = (temp_a1 >> 1) & 0xFF;
+                var_v0 = temp_a3_2 * temp_a0_3;
+                temp_s1 = var_v1 >> 3;
+                if (var_v0 < 0)
+                {
+                    var_v0 += 7;
+                }
+                temp_s2 = var_v0 >> 3;
+                temp_a3_3 = (s32)(temp_a3_2 - temp_s2);
+
+                var_s0 = (*(NikiElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_3 / 2);
+                {
+                    u32 post_word;
+                    u32 field;
+                    u32 high;
+                    post_word = *var_s3;
+                    field = (post_word >> 7) & 0x1FF;
+                    high = post_word >> 24;
+                    var_s0 = (NikiGpuPacket *)func_800AD850(var_s0, var_s5,
+                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
+                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
+                                           temp_s1, temp_s2, arg0->unk40B2, var_s6 == 0);
+                }
+                {
+                    u32 old_word;
+                    u32 new_word;
+                    old_word = *var_s3;
+                    new_word = (old_word & ~0x78) | (((((old_word >> 3) & 0xF) + 1) & 0xF) * 8);
+                    *(u32 *)var_s3 = new_word;
+                    if (((new_word >> 3) & 0xF) == 8)
+                    {
+                        func_800AA02C();
+                        *(u32 *)var_s3 = (*var_s3 & ~7) | 2;
+                    }
+                }
+                break;
+
+            case 2:
+                var_s0 = (*(NikiElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, 0, 0);
+                {
+                    u32 case_word;
+                    u32 high;
+                    case_word = *var_s3;
+                    high = case_word >> 24;
+                    var_s0 = (NikiGpuPacket *)func_800AD850(var_s0, var_s5,
+                                           (case_word >> 7) & 0x1FF, *((u8 *)var_s3 + 2),
+                                           ((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high,
+                                           (*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF, arg0->unk40B2, var_s6 == 0);
+                }
+                temp_v1_3 = *var_s3;
+                if (((temp_v1_3 >> 3) & 0xF) != 0)
+                {
+                    *(u32 *)var_s3 = (temp_v1_3 & ~0x78) | (((((temp_v1_3 >> 3) & 0xF) - 1) & 0xF) * 8);
+                }
+                break;
+
+            case 3:
+                temp_a0_5 = *var_s3;
+                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
+                var_v1_2 = (u32)temp_a0_5 >> 24;
+                temp_a2 = ((temp_a1 & 1) << 8) | var_v1_2;
+                temp_a0_5 = (u32)temp_a0_5 >> 3;
+                temp_a0_5 &= 0xF;
+                var_v1_2 = temp_a2 * temp_a0_5;
+                D_80122988 = 0;
+                if (var_v1_2 < 0)
+                {
+                    var_v1_2 += 7;
+                }
+                temp_a3_5 = (temp_a1 >> 1) & 0xFF;
+                var_v0_2 = temp_a3_5 * temp_a0_5;
+                temp_s1 = var_v1_2 >> 3;
+                if (var_v0_2 < 0)
+                {
+                    var_v0_2 += 7;
+                }
+                temp_s2 = var_v0_2 >> 3;
+                temp_a3_6 = (s32)(temp_a3_5 - temp_s2);
+
+                var_s0 = (*(NikiElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_6 / 2);
+                {
+                    u32 post_word;
+                    u32 field;
+                    u32 high;
+                    post_word = *var_s3;
+                    field = (post_word >> 7) & 0x1FF;
+                    high = post_word >> 24;
+                    var_s0 = (NikiGpuPacket *)func_800AD850(var_s0, var_s5,
+                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
+                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
+                                           temp_s1, temp_s2, arg0->unk40B2, var_s6 == 0);
+                }
+                {
+                    u32 old_word;
+                    old_word = *var_s3;
+                    var_v1_2 = old_word & ~0x78;
+                    old_word >>= 3;
+                    old_word &= 0xF;
+                    old_word--;
+                    old_word &= 0xF;
+                    old_word <<= 3;
+                    var_v1_2 |= old_word;
+                    *(u32 *)var_s3 = var_v1_2;
+                    if (!(((u32)var_v1_2 >> 3) & 0xF))
+                    {
+                        *(u32 *)var_s3 = ((((u32)var_v1_2 & ~0x78) | 0x18) & ~7) | 4;
+                    }
+                }
+                break;
+
+            case 4:
+                temp_v0_5 = *(u32 *)var_s3;
+                D_80122988 = 0;
+                temp_v1_3 = (temp_v0_5 & ~0x78) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
+                *(u32 *)var_s3 = temp_v1_3;
+                if (!((temp_v1_3 >> 3) & 0xF))
+                {
+                    *(u32 *)var_s3 = temp_v1_3 & ~7;
+                }
+                break;
+            }
+        }
+    }
+
+    arg0->unk40B8 = var_s0;
+}
+
+/**
+ * @brief Clear the low 3 state bits of the first niki element slot.
+ * @see decomp.me (100%)
+ */
+void func_801424C0(void)
+{
+    ((NikiPacket *)&D_80164B10)->attr.word &= ~7;
+}
+
+/**
+ * @brief Append the string @p arg1 to the end of string @p arg0 (strcat).
+ *
+ * Uses func_8014255C to find each string's length, copies arg1's bytes onto the
+ * tail of arg0, and writes a terminating zero.
+ *
+ * @param arg0 Destination string, extended in place.
+ * @param arg1 Source string to append.
+ * @see decomp.me (100%)
+ */
+void func_801424D8(u8 *arg0, u8 *arg1)
+{
+    s32 temp_s0;
+    s32 temp_v0;
+    s32 i;
+
+    temp_s0 = func_8014255C(arg0);
+    temp_v0 = func_8014255C(arg1);
+    for (i = 0; i < temp_v0; i++)
+    {
+        arg0[temp_s0 + i] = arg1[i];
+    }
+    arg0[temp_s0 + i] = 0;
+}
+
+/**
+ * @brief Measure a niki string's length, counting bytes 0x19-0x1F as 2 units.
+ *
+ * Walks @p arg0 to its terminating zero. Lead bytes in the range 0x19..0x1F are
+ * two-byte sequences and advance the length by 2; all others by 1.
+ *
+ * @param arg0 String to measure.
+ * @return Logical length in layout units.
+ * @see decomp.me (100%)
+ */
+s32 func_8014255C(u8 *arg0)
+{
+    u8 *p;
+    u8 c;
+    s32 len;
+
+    p = arg0;
+    c = *p;
+    len = 0;
+    while (c != 0)
+    {
+        if ((u32)(c - 0x19) < 7)
+        {
+            p += 2;
+            len += 2;
+        }
+        else
+        {
+            p += 1;
+            len += 1;
+        }
+        c = *p;
+    }
+    return len;
+}
+
+/**
+ * @brief Copy niki string @p arg1 into @p arg0, terminating it (strcpy).
+ *
+ * First measures arg1's length (bytes 0x19..0x1F count as 2 units, via a
+ * volatile read of the lead byte), then copies that many bytes and appends a
+ * terminating zero.
+ *
+ * @param arg0 Destination buffer.
+ * @param arg1 Source string to copy.
+ * @see decomp.me (100%)
+ */
+void func_801425A8(u8 *arg0, u8 *arg1)
+{
+    u8 *p;
+    u8 c;
+    s32 len;
+    s32 i;
+
+    p = arg1;
+    len = 0;
+
+    while (*p != 0)
+    {
+        c = *(volatile u8 *)p;
+
+        if ((u32)(c - 0x19) < 7)
+        {
+            p += 2;
+            len += 2;
+        }
+        else
+        {
+            p++;
+            len++;
+        }
+    }
+
+    for (i = 0; i < len; i++)
+    {
+        arg0[i] = arg1[i];
+    }
+
+    arg0[i] = 0;
+}
+
+/**
+ * @brief Draw and advance the niki confirmation element.
+ *
+ * Emits the confirmation caption glyph, then reads input: L1/R1-class cancels
+ * (func_801459E8 result 1 or 2) and the cancel button tear down the element and
+ * restore the prior menu; the confirm button spawns the confirmation element at
+ * a fixed position with its draw handler set to func_80142820.
+ *
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from the caption x).
+ * @param arg3 Vertical scroll offset (subtracted from the caption y).
+ * @return Advanced primitive-buffer write cursor.
+ * @see decomp.me (100%)
+ */
+s32 func_8014262C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+    s32 result;
+    s32 x;
+    s32 status;
+    NikiElement *p;
+
+    x = -arg2 + 0x90;
+    result = func_80143294(
+        func_800A88A0(prim, ot,
+                      (u8 *)&D_80147128 + D_80147128 - 0x30,
+                      4, x, -arg3, 2),
+        ot, x, 0xE - arg3);
+
+    if ((u32)(func_801459E8() - 1) < 2U)
+    {
+        D_80164B10.attr.f.state = 0;
+        func_800AA02C();
+        func_800A3938(0x78, 0x80);
+        D_80164B78 = 0xFF;
+        func_80144BC0();
+        D_80164E18 = 0;
+    }
+    else
+    {
+        status = D_80122988;
+        if (status & 0x40)
+        {
+            D_80164B10.attr.f.state = 0;
+            func_800AA02C();
+            func_800A3938(0x78, 0x80);
+            D_80164E18 = &D_801606DC;
+        }
+        else if (status & 0x220)
+        {
+            if (D_80164A7C != 0)
+            {
+                D_80164B10.attr.f.state = 0;
+                func_800AA02C();
+                func_800A3938(0x78, 0x80);
+                D_80164E18 = &D_801606DC;
+            }
+            else
+            {
+                func_800A3938(0x7E, 0x80);
+                D_80164AD4 = 1;
+                D_80164E18 = &D_801606E4;
+                p = &D_80164B10;
+                p->draw_handler = func_80142820;
+                p->attr.f.unk0_3 = 1;
+                p->attr.f.state = 1;
+                p->attr.f.x = 0x10;
+                p->attr.f.unk0_16 = 0x61;
+                p->unk4_0 = 1;
+                p->y = 0x2C;
+                SET_ELEM_CODE(p, 0x20);
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * @brief Draw the niki save-confirm dialog and, on accept, commit the save.
+ *
+ * Emits the three caption glyphs and the sub-panel (func_80142A1C). When the
+ * confirm latch D_80164AD4 is clear, reads the selected save resource: if the
+ * slot is empty (func_80144310 == 0) it just re-arms the chooser, otherwise it
+ * copies the save payload out, kicks the write, and flips every active element
+ * to its closing animation state.
+ *
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from every caption x).
+ * @param arg3 Vertical scroll offset (subtracted from every caption y).
+ * @return Advanced primitive-buffer write cursor.
+ * @see decomp.me (100%)
+ */
+s32 func_80142820(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+    u8 *base;
+    u8 *resource;
+    NikiPacket *p;
+    NikiPacket *cursor;
+    s32 result;
+    s32 x;
+    s32 i;
+
+    x = -arg2 + 0x90;
+    result = func_800A88A0(prim, ot, (void *)((s32)&D_8014712A - 0x32 + D_8014712A), 4, x, -arg3, 2);
+    base = (u8 *)&D_8014712A - 0x32;
+    result = func_800A88A0(result, ot, base + *(u16 *)(base + 0x1E), 4, x, 0xE - arg3, 2);
+    result = func_800A88A0(result, ot, base + *(u16 *)(base + 0xB2), 4, x, 0x1C - arg3, 2);
+    result = func_80142A1C(result, ot);
+
+    if (D_80164AD4 == 0)
+    {
+        resource = D_80160A78;
+        p = (NikiPacket *)&D_80164B10;
+        p->attr.f.state = 0;
+        if (func_80144310(resource) == 0)
+        {
+            func_80142B2C(4);
+            return result;
+        }
+
+        func_800A3938(0x7B, 0x80);
+        D_8011F428 = 1;
+        D_801227CC = *(u16 *)&resource[0x254];
+        D_801227F4 = *(u16 *)&resource[0x256];
+        D_8011F418 = D_80164B70;
+        func_800170BC(D_8011F3D8, D_80164E70);
+        func_80016E7C(&resource[0x32E0], D_80122A08, 0x100);
+        func_80067F28();
+
+        cursor = p;
+        for (i = 0; i < 8; i++, cursor++)
+        {
+            if (cursor->attr.f.state != 0)
+            {
+                cursor->attr.f.state = 3;
+                cursor->attr.f.unk0_3 = 8;
+            }
+        }
+        func_80067F5C(8);
+    }
+
+    return result;
+}
+
+/**
+ * @brief Build the niki save-progress timer bar (a POLY_G4) when active.
+ *
+ * While the timer is running (D_80164F08 set), fills a POLY_G4 packet at @p arg0
+ * with a yellow-to-red gradient whose horizontal extent tracks the elapsed time
+ * (clamped to 0x100 ticks), links it into the ordering table, and advances the
+ * packet cursor by 0x24.
+ *
+ * @param arg0 GPU packet cursor (POLY_G4 written here when the timer is active).
+ * @param arg1 Ordering-table entry the packet is linked into.
+ * @return Advanced packet cursor (unchanged when the timer is inactive).
+ * @see decomp.me (100%)
+ */
+s32 func_80142A1C(s32 arg0, s32 *arg1)
+{
+    NikiPolyG4Words *g;
+    s32 elapsed;
+    s32 extent;
+    s32 color;
+
+    g = (NikiPolyG4Words *)arg0;
+    if (D_80164F08 != 0)
+    {
+        elapsed = func_8002054C(-1) - D_80164F10;
+        if (elapsed >= 0x101)
+        {
+            elapsed = 0x100;
+        }
+        color = 0xFFFF00;
+        extent = elapsed * 0x120;
+        g->unk4 = 0xFF;
+        g->unkC = 0xFFFF;
+        g->unk1C = 0xFF0000;
+        ((u8 *)g)[3] = 8;
+        g->unk14 = color;
+        ((u8 *)g)[7] = 0x38;
+        g->unk18 = 0;
+        g->unk8 = 0;
+        if (extent < 0)
+        {
+            extent += 0xFF;
+        }
+        g->unk20 = extent >> 8;
+        g->unk10 = extent >> 8;
+        g->unk12 = 0;
+        g->unkA = 0;
+        g->unk22 = 0x2C;
+        g->unk1A = 0x2C;
+        g->unk0 = (g->unk0 & 0xFF000000) | (*arg1 & 0xFFFFFF);
+        *arg1 = (*arg1 & 0xFF000000) | (arg0 & 0xFFFFFF);
+        arg0 += 0x24;
+    }
+    return arg0;
 }
