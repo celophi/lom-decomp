@@ -83,7 +83,7 @@ s32 func_80140868(void);
 s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 s32 func_801413FC(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 s32 func_801414A8(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-void func_80141584(); 
+s32 func_80141584(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 void func_80141660(); 
 void func_801433BC();
 void func_80141E84();
@@ -732,4 +732,45 @@ s32 func_801414A8(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         prim += 0x10;
     }
     return func_800A88A0(prim, ot, GLYPH_SYM(D_80147104, 0xC), 4, -arg2 + 0x40, -arg3, 2);
+}
+
+/* ----- Decls for func_80141584 (niki first-page header banner) ----- */
+extern u16 D_80147106;
+
+/**
+ * @brief Draw the niki first-page header: an optional dark backdrop tile,
+ *        then the header caption glyph.
+ *
+ * Mirror of func_801414A8: identical 0x80 x 0x10 flat backdrop tile (code
+ * 0x62, color 0x101010), but emitted only when D_80164B70 selects page zero,
+ * and paired with a different caption glyph.
+ *
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from the caption x).
+ * @param arg3 Vertical scroll offset (subtracted from the caption y).
+ * @return Advanced primitive-buffer write cursor.
+ * @see decomp.me (100%)
+ */
+s32 func_80141584(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+    TILE *tile;
+
+    if (D_80164B70 == 0)
+    {
+        tile = (TILE *)prim;
+        *(u32 *)&tile->r0 = 0x101010;
+        *((u8 *)tile + 3) = 3;
+        tile->code = 0x62;
+        tile->x0 = 0;
+        tile->y0 = 0;
+        tile->w = 0x80;
+        tile->h = 0x10;
+        tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
+        *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+        prim += 0x10;
+    }
+
+    return func_800A88A0(prim, ot, GLYPH_SYM(D_80147106, 0xE), 4, -arg2 + 0x40, -arg3, 2);
 }
