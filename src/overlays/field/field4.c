@@ -1819,22 +1819,22 @@ void field_initialize_actor_system(void)
  * state flags, and hands the previous buffer to func_8006C3FC.
  *
  * @param resource_index Index into g_field_resource_entries / D_800FDF58.
- * @see decomp.me (98.98%) https://decomp.me/scratch/iTv8i
+ * @note WIP - not yet byte-matching. Currently 99.52%; the only residue is the
+ *       a1/a2 load order in the first bcopy argument setup.
+ * @see decomp.me (99.52%) https://decomp.me/scratch/iTv8i
  */
 void field_relocate_resource_buffer(s32 resource_index)
 {
     u32 new_var4;
-    u32 new_var2;
     Struct_D800FDF58* new_var;
     u8* old_start;
 
-    new_var2 = (u32)0x80180000;
     g_field_resource_cursor += 0;
-    new_var4 = (u32)g_field_resource_buffer;
-    bcopy((void*)((new_var2 - new_var4) + ((u32)g_field_resource_entries[resource_index].start)), g_field_resource_cursor,
+    bcopy((void*)(((u32)0x80180000 - (u32)g_field_resource_buffer) + ((u32)g_field_resource_entries[resource_index].start)), g_field_resource_cursor,
           g_field_resource_entries[resource_index].end - g_field_resource_entries[resource_index].start);
-    new_var4 = g_field_resource_entries[resource_index].end - g_field_resource_entries[resource_index].start;
+    new_var4 = g_field_resource_entries[resource_index].end;
     old_start = g_field_resource_entries[resource_index].start;
+    new_var4 -= (u32)old_start;
     g_field_resource_entries[resource_index].start = (u8*)g_field_resource_cursor;
     g_field_resource_entries[resource_index].end = ((u8*)g_field_resource_cursor) + new_var4;
     g_field_resource_entries[resource_index].flags &= ~1;
