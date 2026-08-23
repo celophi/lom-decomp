@@ -81,7 +81,7 @@ void func_80141F18(void);
 s32 func_80140774(void);
 s32 func_80140868(void);
 s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-void func_801413FC();
+s32 func_801413FC(s32 *ot, s32 prim, s32 arg2, s32 arg3);
  void func_801414A8();
 void func_80141584(); 
 void func_80141660(); 
@@ -661,6 +661,35 @@ s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             }
         }
         break;
+    }
+    return prim;
+}
+
+/* ----- Decls for func_801413FC (niki mode banner) ----- */
+extern u16 D_8014713C;
+extern u16 D_8014713E;
+
+/**
+ * @brief Draw the niki header banner glyph, picking one of two captions
+ *        according to the D_80164AE8 mode selector.
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param arg2 Horizontal scroll offset (subtracted from the banner x).
+ * @param arg3 Vertical scroll offset (subtracted from the banner y).
+ * @return Advanced primitive-buffer write cursor.
+ * @see decomp.me (100%)
+ */
+s32 func_801413FC(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+
+    if (D_80164AE8 == 1)
+    {
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014713E, 0x46), 4, -arg2 + 0x78, -arg3, 2);
+    }
+    else
+    {
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014713C, 0x44), 4, -arg2 + 0x78, -arg3, 2);
     }
     return prim;
 }

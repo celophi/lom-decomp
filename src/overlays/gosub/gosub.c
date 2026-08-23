@@ -2930,6 +2930,12 @@ void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
         prim->y0 = temp;
         temp = x - 6;
         tmp_y = y + 4;
+        prim->x1 = temp;
+        prim->x3 = x;
+        prim->x0 = x;
+        prim->y1 = tmp_y;
+        prim->x2 = x + 6;
+        prim->y2 = tmp_y;
     }
     else
     {
@@ -2938,16 +2944,13 @@ void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
         prim->y0 = temp;
         temp = x - 6;
         tmp_y = y - 4;
-    }
-    do
-    {
         prim->x1 = temp;
         prim->x3 = x;
         prim->x0 = x;
         prim->y1 = tmp_y;
         prim->x2 = x + 6;
         prim->y2 = tmp_y;
-    } while (0);
+    }
 
     addr_mask = 0xFFFFFF;
     p = (u8 *)prim;
