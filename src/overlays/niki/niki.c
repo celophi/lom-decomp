@@ -1401,3 +1401,28 @@ void func_801424C0(void)
 {
     ((NikiPacket *)&D_80164B10)->unk0 &= ~7;
 }
+
+/**
+ * @brief Append the string @p arg1 to the end of string @p arg0 (strcat).
+ *
+ * Uses func_8014255C to find each string's length, copies arg1's bytes onto the
+ * tail of arg0, and writes a terminating zero.
+ *
+ * @param arg0 Destination string, extended in place.
+ * @param arg1 Source string to append.
+ * @see decomp.me (100%)
+ */
+void func_801424D8(u8 *arg0, u8 *arg1)
+{
+    s32 temp_s0;
+    s32 temp_v0;
+    s32 i;
+
+    temp_s0 = func_8014255C(arg0);
+    temp_v0 = func_8014255C(arg1);
+    for (i = 0; i < temp_v0; i++)
+    {
+        arg0[temp_s0 + i] = arg1[i];
+    }
+    arg0[temp_s0 + i] = 0;
+}
