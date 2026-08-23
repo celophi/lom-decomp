@@ -2261,7 +2261,7 @@ void field_text_scroll_cache(FieldTextState* st)
  * @brief Queue dirty text-cache rows for VRAM upload.
  * @param state Text-window state.
  * @param cursor In/out packet cursor used for upload requests and staging data.
- * @see decomp.me (84.01%)
+ * @see decomp.me (100%)
  */
 
 void field_text_queue_uploads(FieldTextState* state, u16** cursor)
@@ -2278,7 +2278,9 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
     s32 x;
     s32 y;
     s32 h;
-    s32 bottom;
+    s32 addr;
+    s32 xbytes;
+    s32 yaddr;
 
     cur = *cursor;
     req = (FieldImageReq*)cur;
@@ -2287,17 +2289,19 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
     cur += 8;
     if (y == state->dirty_end_v)
     {
-        span = state->dirty_end_u - x;
+        span = (state->dirty_end_u - x) >> 1;
     }
     else
     {
-        span = 0x100 - x;
+        span = (0x100 - x) >> 1;
     }
-    span = span >> 1;
     dst = (u16*)0x801DE000;
-    src = (u16*)((y << 7) + 0x801DE000) + (x >> 2);
+    addr = x >> 2;
+    xbytes = addr << 1;
+    yaddr = (y << 7) + 0x801DE000;
+    src = (u16*)(xbytes + yaddr);
     h = state->line_height;
-    req->rect.x = (x >> 2) + 0x3C0;
+    req->rect.x = addr + 0x3C0;
     w = span >> 1;
     req->rect.y = y + 0x180;
     req->rect.w = w;
@@ -2309,24 +2313,21 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
     else
     {
         dst = cur;
-        req->data = (u_long*)dst;
-        rows = h - 1;
         cur += ((w * h) + 1) & ~1;
+        req->data = (u_long*)dst;
+        rows = h;
+        rows -= 1;
         if (h != 0)
         {
             do
             {
-                count = (span >> 1) - 1;
-                s = src;
-                if (count != -1)
+                count = span >> 1;
+                do { do { s = src; } while (0); } while (0);
+                while (--count != -1)
                 {
-                    do
-                    {
-                        *dst = *s;
-                        s += 1;
-                        count -= 1;
-                        dst += 1;
-                    } while (count != -1);
+                    *dst = *s;
+                    s += 1;
+                    dst += 1;
                 }
                 rows -= 1;
                 src += 0x40;
@@ -2334,47 +2335,46 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
         }
     }
     field_queue_vram_upload(req);
-    bottom = y + h;
     if (y != state->dirty_end_v)
     {
+        y += h;
         req = (FieldImageReq*)cur;
-        if (bottom != state->dirty_end_v)
+        if (y != state->dirty_end_v)
         {
             cur += 8;
+            src = (u16*)((y << 7) + 0x801DE000);
             req->rect.x = 0x3C0;
-            req->rect.y = bottom + 0x180;
+            req->rect.y = y + 0x180;
             req->rect.w = 0x40;
-            req->data = (u_long*)((bottom << 7) + 0x801DE000);
-            req->rect.h = state->dirty_end_v - bottom;
+            req->rect.h = state->dirty_end_v - y;
+            req->data = (u_long*)src;
             field_queue_vram_upload(req);
         }
         req = (FieldImageReq*)cur;
         if (state->dirty_end_u != 0)
         {
+            cur += 8;
             req->rect.x = 0x3C0;
             req->rect.y = state->dirty_end_v + 0x180;
-            req->rect.h = h;
             req->rect.w = state->dirty_end_u >> 2;
-            dst = cur + 8;
-            rows = h - 1;
-            req->data = (u_long*)dst;
+            req->rect.h = h;
             src = (u16*)((state->dirty_end_v << 7) + 0x801DE000);
-            cur = dst + ((((state->dirty_end_u >> 2) * h) + 1) & ~1);
+            dst = cur;
+            cur += ((((state->dirty_end_u >> 2) * h) + 1) & ~1);
+            rows = h;
+            rows -= 1;
+            req->data = (u_long*)dst;
             if (h != 0)
             {
                 do
                 {
-                    count = (state->dirty_end_u >> 2) - 1;
-                    s = src;
-                    if (count != -1)
+                    count = state->dirty_end_u >> 2;
+                    do { s = src; } while (0);
+                    while (--count != -1)
                     {
-                        do
-                        {
-                            *dst = *s;
-                            s += 1;
-                            count -= 1;
-                            dst += 1;
-                        } while (count != -1);
+                        *dst = *s;
+                        s += 1;
+                        dst += 1;
                     }
                     rows -= 1;
                     src += 0x40;
@@ -2385,6 +2385,7 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
     }
     *cursor = cur;
 }
+
 
 /**
  * @brief Attach a text string to a window, or defer it while the slot reopens.
