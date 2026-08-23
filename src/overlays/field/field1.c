@@ -1161,70 +1161,594 @@ void field_text_build_transition_quad(FieldTextState* state, Quad* out, s32 fram
  * @param state Text-window state.
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
- * @see decomp.me (77.41%)
+ * @note WIP - not yet byte-matching. Currently 97.57%.
+ * @see decomp.me (97.57%)
  */
 
 void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrderingTags* ot)
 {
     FieldTextSystem* hw = (FieldTextSystem*)0x801ED000;
-    PrimMode* mode;
-    PrimSprt* sp;
-    PrimGlyph* gl;
-    PrimSprt16* s16p;
-    PrimIcon* icon;
-    PrimSprt* last;
+    PrimSprt* prim;
     u8* first;
     u8* cur;
     s32 row;
     s32 y;
     s32 uv;
+    s32 portrait_uv;
     s32 xy;
     s32 w;
     s32 rows;
     s32 size;
     s32 u_org;
+    s32 uv_base;
     s32 col;
     s32 row_v;
     s32 skip;
-    s32 glyph_h;
     s32 avail;
     s32 over;
     s32 x;
+    s32 glyph_x;
     s32 icon_v;
     u32 rgbc;
+    s32 uv_bottom;
+    u32 tag_mask;
+    u32 tag_len;
+    u32 wh8;
+    u32 wh40;
+    s32 clip;
 
     rgbc = 0x65808080;
-    first = *cursor;
-    last = (PrimSprt*)first;
-    cur = first + 8;
-    mode = (PrimMode*)first;
-    mode->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
-    mode->code = hw->draw_mode0;
+    cur = *cursor;
+    prim = (PrimSprt*)cur;
+    first = cur;
+    cur += 8;
+    prim->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
+    prim->rgbc = hw->draw_mode0;
     u_org = 0;
+    uv_base = 0xE0;
     if ((st->flags.word & 0xC0) == 0)
     {
         y = st->y;
-        row = 1;
+        do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+row = 1;
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+        clip = 0xF000;
+        uv_bottom = 0xF800;
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+tag_mask = 0xFFFFFF;
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+        do {
+tag_len = 0x04000000;
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+        do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+wh8 = 0x80008;
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+        wh40 = 0x80040;
+        over = 0x80000;
         do
         {
-            if (row != 0)
             {
-                uv = (hw->window_clut << 16) | 0xF000;
+                s32 uv_hi;
+                uv_hi = hw->window_clut << 16;
+                if (row != 0)
+                {
+                    uv_hi |= clip;
+                }
+                else
+                {
+                    uv_hi |= uv_bottom;
+                }
+                uv = uv_hi | u_org;
             }
-            else
-            {
-                uv = (hw->window_clut << 16) | 0xF800;
-            }
-            uv = uv | u_org;
-            sp = (PrimSprt*)cur;
+            prim = (PrimSprt*)cur;
             cur += 0x14;
-            sp->uv = uv;
+            prim->uv = uv;
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
+            do {
             uv += 8;
-            sp->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-            sp->rgbc = rgbc;
-            sp->wh = 0x80008;
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            } while (0);
+            prim->tag = ((u32)cur & tag_mask) | tag_len;
+            prim->rgbc = rgbc;
+            prim->wh = wh8;
             xy = st->x | (y << 16);
-            sp->xy = xy;
+            prim->xy = xy;
             xy += 8;
             if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
             {
@@ -1238,35 +1762,35 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
             {
                 do
                 {
-                    sp = (PrimSprt*)cur;
+                    prim = (PrimSprt*)cur;
                     cur += 0x14;
-                    sp->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                    sp->rgbc = rgbc;
-                    sp->xy = xy;
-                    sp->uv = uv;
+                    prim->tag = ((u32)cur & tag_mask) | tag_len;
+                    prim->rgbc = rgbc;
+                    prim->xy = xy;
+                    prim->uv = uv;
                     if (w >= 0x41)
                     {
-                        sp->wh = 0x80040;
+                        prim->wh = wh40;
                         xy += 0x40;
                         w -= 0x40;
                     }
                     else
                     {
-                        sp->wh = w | 0x80000;
+                        prim->wh = w | over;
                         xy += w;
                         w = 0;
                     }
                 } while (w > 0);
             }
             uv += 0x40;
-            last = (PrimSprt*)cur;
+            prim = (PrimSprt*)cur;
             cur += 0x14;
             row -= 1;
-            last->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-            last->rgbc = rgbc;
-            last->xy = xy;
-            last->uv = uv;
-            last->wh = 0x80008;
+            prim->tag = ((u32)cur & tag_mask) | tag_len;
+            prim->rgbc = rgbc;
+            prim->xy = xy;
+            prim->uv = uv;
+            prim->wh = wh8;
             y = y + 8 + st->height;
         } while (row != -1);
         rows = st->height;
@@ -1275,21 +1799,21 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
         {
             do
             {
-                uv = (hw->window_clut << 16) | 0xE000 | (u_org + 0xE0);
+                uv = (hw->window_clut << 16) | (uv_base << 8) | (u_org + 0xE0);
                 xy = st->x | (y << 16);
                 size = 0x200000;
                 if (rows < 0x21)
                 {
                     size = rows << 16;
                 }
-                sp = (PrimSprt*)cur;
+                prim = (PrimSprt*)cur;
                 cur += 0x14;
-                sp->xy = xy;
+                prim->xy = xy;
                 xy += 8;
-                sp->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                sp->rgbc = rgbc;
-                sp->uv = uv;
-                sp->wh = size | 8;
+                prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
+                prim->rgbc = rgbc;
+                prim->uv = uv;
+                prim->wh = size | 8;
                 uv -= 0x40;
                 if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
                 {
@@ -1303,70 +1827,88 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
                 {
                     do
                     {
-                        sp = (PrimSprt*)cur;
+                        prim = (PrimSprt*)cur;
                         cur += 0x14;
-                        sp->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                        sp->rgbc = rgbc;
-                        sp->xy = xy;
-                        sp->uv = uv;
+                        prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
+                        prim->rgbc = rgbc;
+                        prim->xy = xy;
+                        prim->uv = uv;
                         if (w >= 0x41)
                         {
-                            sp->wh = size | 0x40;
+                            prim->wh = size | 0x40;
                             xy += 0x40;
                             w -= 0x40;
                         }
                         else
                         {
-                            sp->wh = w | size;
+                            prim->wh = w | size;
                             xy += w;
                             w = 0;
                         }
                     } while (w > 0);
                 }
                 uv += 0x48;
-                last = (PrimSprt*)cur;
+                prim = (PrimSprt*)cur;
                 cur += 0x14;
                 y += 0x20;
                 rows -= 0x20;
-                last->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                last->rgbc = rgbc;
-                last->xy = xy;
-                last->uv = uv;
-                last->wh = size | 8;
+                prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
+                prim->rgbc = rgbc;
+                prim->xy = xy;
+                prim->uv = uv;
+                prim->wh = size | 8;
             } while (rows > 0);
         }
+        do {
+        do {
+        do {
+        do {
         u_org = 0;
+        } while (0);
+        } while (0);
+        } while (0);
+        } while (0);
     }
-    glyph_h = st->line_height;
+    uv_base = 0x80;
+    size = st->line_height;
     col = st->region_start_u;
     row_v = st->region_start_v;
     skip = st->scroll_timer;
     y = st->y + 8;
-    rows = (st->height >> 4) - 1;
+    rows = st->height >> 4;
+    rows -= 1;
     if (rows != -1)
     {
+        s32 neg16;
+        s32 one16;
+do {
+do {
+one16 = 0x10;
+} while (0);
+} while (0);
         do
         {
             if ((st->portrait != 0) && ((st->flags.word & 0x30) == 0))
             {
-                x = st->x + 0x40;
+                xy = ((st->x + 0x40) & 0xFFFF) | (y << 16);
             }
             else
             {
-                x = st->x + 8;
+                xy = ((st->x + 8) & 0xFFFF) | (y << 16);
             }
             w = st->line_advance;
-            xy = (x & 0xFFFF) | (y << 16);
             if (w > 0)
             {
-                over = (u32)(0x10 - skip) < (u32)glyph_h;
+                over = (u32)(one16 - skip) < (u32)size;
+                neg16 = 0xFFF0;
+                clip = size + (skip + neg16);
                 do
                 {
                     if ((skip != 0) && (over == 0))
                     {
                         avail = 0x100 - col;
                         col += w;
-                        if (w < avail)
+                        if ((u32)w < (u32)avail)
                         {
                             w = 0;
                         }
@@ -1374,45 +1916,80 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
                         {
                             xy += avail;
                             w -= avail;
-                            row_v += glyph_h;
+                            row_v += size;
                             col = 0;
                         }
                     }
                     else
                     {
-                        gl = (PrimGlyph*)cur;
+                        prim = (PrimSprt*)cur;
                         cur += 0x14;
-                        gl->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                        gl->rgbc = rgbc;
-                        gl->xy = xy;
-                        gl->u0 = u_org + col;
-                        gl->clut = hw->text_clut;
+                        ((PrimGlyph*)prim)->tag = (u32)cur;
+                        ((PrimGlyph*)prim)->tag |= 0x04000000;
+                        ((PrimGlyph*)prim)->tag &= 0x04FFFFFF;
+                        do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+do {
+((PrimGlyph*)prim)->rgbc = rgbc;
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+                        ((PrimGlyph*)prim)->xy = xy;
+                        ((PrimGlyph*)prim)->u0 = u_org + col;
+                        ((PrimGlyph*)prim)->clut = hw->text_clut;
                         if (skip != 0)
                         {
-                            gl->v0 = (0x80 + row_v + 0x10) - skip;
-                            gl->h = glyph_h + (skip - 0x10);
+                            ((PrimGlyph*)prim)->v0 = (uv_base + row_v + 0x10) - skip;
+                            do {
+do {
+do {
+do {
+do {
+do {
+((PrimGlyph*)prim)->h = clip;
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+} while (0);
                         }
                         else
                         {
-                            gl->v0 = 0x80 + row_v;
-                            gl->h = glyph_h;
+                            ((PrimGlyph*)prim)->v0 = uv_base + row_v;
+                            ((PrimGlyph*)prim)->h = size;
                         }
                         avail = 0x100 - col;
                         col += w;
-                        if (w >= avail)
+                        if ((u32)w >= (u32)avail)
                         {
-                            gl->w = avail;
+                            ((PrimGlyph*)prim)->w = avail;
                             xy += avail;
                             w -= avail;
-                            row_v += glyph_h;
+                            row_v += size;
                             col = 0;
                         }
                         else
                         {
-                            gl->w = w;
+                            ((PrimGlyph*)prim)->w = w;
                             w = 0;
                         }
-                        last = (PrimSprt*)gl;
                     }
                 } while (w > 0);
             }
@@ -1425,98 +2002,128 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
             {
                 y += 0x10;
             }
-            rows -= 1;
+            do {
+do {
+do {
+do {
+rows -= 1;
+} while (0);
+} while (0);
+} while (0);
+} while (0);
+
         } while (rows != -1);
     }
     if (st->portrait != 0)
     {
-        mode = (PrimMode*)cur;
+        prim = (PrimSprt*)cur;
         cur += 8;
-        mode->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
-        mode->code = hw->draw_mode1;
+        prim->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
+        prim->rgbc = hw->draw_mode1;
         if ((st->flags.word & 0x30) == 0)
         {
-            x = (st->x + 8) & 0xFFFF;
+            xy = (st->x + 8) & 0xFFFF;
         }
         else
         {
-            x = (st->x + (st->width + 0x10)) & 0xFFFF;
+            s32 px;
+            s32 pw;
+            px = st->x;
+            pw = st->width;
+            pw += 0x10;
+            px += pw;
+            xy = px & 0xFFFF;
         }
-        sp = (PrimSprt*)cur;
+        {
+            s32 py;
+            s32 ph;
+            u32 pflags;
+            prim = (PrimSprt*)cur;
+            cur += 0x14;
+            py = st->y;
+            ph = st->height;
+            pflags = st->flags.word;
+            prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
+            prim->rgbc = 0x66000000;
+            ph -= 0x30;
+            ph >>= 1;
+            ph += 8;
+            py += ph;
+            py <<= 16;
+            xy |= py;
+            prim->xy = xy + 0x20002;
+            portrait_uv = ((((((pflags >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        prim->uv = (hw->text_clut << 16) | portrait_uv;
+        prim->wh = 0x300030;
+        prim = (PrimSprt*)cur;
         cur += 0x14;
-        sp->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-        sp->rgbc = 0x66000000;
-        xy = x | ((st->y + (((s32)(st->height - 0x30) >> 1) + 8)) << 16);
-        sp->xy = xy + 0x20002;
-        sp->wh = 0x300030;
-        uv = ((((((st->flags.word >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        sp->uv = (hw->text_clut << 16) | uv;
-        last = (PrimSprt*)cur;
-        cur += 0x14;
-        last->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-        last->rgbc = rgbc;
-        last->xy = xy;
-        last->wh = 0x300030;
-        last->uv = ((&hw->portrait_clut0)[(st->flags.word >> 3) & 1] << 16) | uv;
+        prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
+        prim->rgbc = rgbc;
+        prim->xy = xy;
+        prim->uv = ((&hw->portrait_clut0)[(st->flags.word >> 3) & 1] << 16) | portrait_uv;
+        prim->wh = 0x300030;
+        }
     }
     if (st->flow_code != 0)
     {
         if (((st->flags.word & 0xC0) == 0) ||
             (((st->flags.word & 0xC0) == 0x40) && (st->flow_code == 0x10)))
         {
-            mode = (PrimMode*)cur;
+            prim = (PrimSprt*)cur;
             cur += 8;
-            mode->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
-            mode->code = hw->draw_mode0;
+            prim->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
+            prim->rgbc = hw->draw_mode0;
             if (st->flow_code == 0x10)
             {
-                s16p = (PrimSprt16*)cur;
+                prim = (PrimSprt*)cur;
                 cur += 0x10;
-                s16p->tag = ((u32)cur & 0xFFFFFF) | 0x03000000;
-                s16p->rgbc = 0x7D808080;
+                ((PrimSprt16*)prim)->tag = ((u32)cur & 0xFFFFFF) | 0x03000000;
+                ((PrimSprt16*)prim)->rgbc = 0x7D808080;
                 if ((st->portrait != 0) && ((st->flags.word & 0x30) == 0))
                 {
-                    s16p->x0 = st->x + 0x38;
+                    ((PrimSprt16*)prim)->x0 = st->x + 0x38;
                 }
                 else
                 {
-                    s16p->x0 = st->x + 0xE;
+                    ((PrimSprt16*)prim)->x0 = st->x + 0xE;
                 }
-                s16p->y0 = st->y + ((st->choice_start_line + st->choice_index) * 0x10);
-                icon_v = st->prompt_frame * 0x10;
-                if (st->prompt_frame == 3)
+                ((PrimSprt16*)prim)->y0 = st->y + ((st->choice_start_line + st->choice_index) * 0x10);
+                portrait_uv = st->prompt_frame;
+                if (portrait_uv == 3)
                 {
-                    icon_v = 0x10;
+                    portrait_uv = 1;
                 }
-                s16p->u0 = icon_v + 0x60;
-                s16p->v0 = 0xE0;
-                s16p->clut = hw->prompt_clut;
-                last = (PrimSprt*)s16p;
+                ((PrimSprt16*)prim)->u0 = (portrait_uv << 4) + 0x60;
+                ((PrimSprt16*)prim)->v0 = 0xE0;
+                ((PrimSprt16*)prim)->clut = hw->prompt_clut;
             }
             else
             {
-                icon = (PrimIcon*)cur;
+                prim = (PrimSprt*)cur;
                 cur += 0x14;
-                icon->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                icon->rgbc = rgbc;
+                ((PrimIcon*)prim)->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
+                ((PrimIcon*)prim)->rgbc = rgbc;
                 if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
                 {
-                    icon->x0 = st->x + ((st->width + 0x38) >> 1);
+                    ((PrimIcon*)prim)->x0 = st->x + ((st->width + 0x38) >> 1);
                 }
                 else
                 {
-                    icon->x0 = st->x + (st->width >> 1);
+                    ((PrimIcon*)prim)->x0 = st->x + (st->width >> 1);
                 }
-                icon->y0 = st->y + st->height + 6;
-                icon->u0 = 0xF0;
-                icon->clut = hw->prompt_clut;
-                icon->wh = 0x80010;
-                icon->v0 = (st->prompt_frame * 8) - 0x20;
-                last = (PrimSprt*)icon;
+                ((PrimIcon*)prim)->y0 = st->y + st->height + 6;
+                ((PrimIcon*)prim)->clut = hw->prompt_clut;
+                ((PrimIcon*)prim)->u0 = 0xF0;
+                {
+                    s32 frame;
+                    frame = st->prompt_frame;
+                    ((PrimIcon*)prim)->wh = 0x80010;
+                    ((PrimIcon*)prim)->v0 = (frame * 8) - 0x20;
+                }
             }
         }
     }
-    last->tag = (last->tag & 0xFF000000) | (ot->tag1 & 0xFFFFFF);
+    prim->tag = (prim->tag & 0xFF000000) | (ot->tag1 & 0xFFFFFF);
     ot->tag1 = (ot->tag1 & 0xFF000000) | ((u32)first & 0xFFFFFF);
     *cursor = cur;
 }
@@ -1527,26 +2134,35 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
  * @param quad Transition quad.
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
- * @see decomp.me (80.26%)
+ * @note WIP - not yet byte-matching. Currently 91.45%.
+ * @see decomp.me (91.45%)
  */
 
 void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cursor, FieldOrderingTags* ot)
 {
     FieldTextSystem* hw = (FieldTextSystem*)0x801ED000;
     Vec2s* p;
+    Vec2s* build;
     Vec2s* mesh;
     u32* vp;
+    u32* hvp2;
+    u32* hvp;
+    u32* vvp;
+    u32* gvp;
+    u32* pvp;
     PrimQuad* poly;
-    PrimQuad* last;
     u8* first;
-    u8* cur;
     s32 w;
     s32 span;
     s32 v;
     s32 y;
+    s32 text_y;
     s32 n;
-    s32 m;
-    s32 rows;
+    s32 inner;
+    s32 chunk;
+    s32 edge;
+    s32 prows;
+    s32 mesh_rows;
     s32 count;
     s32 u;
     s32 avail;
@@ -1564,12 +2180,22 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
     s32 x1;
     s32 y1;
     s32 uv;
+    s32 vvval;
     s32 clut;
-    s32 tile;
-    s32 shade;
     s32 col;
     s32 row_v;
     s32 sel;
+    s32 u_org;
+    u32 rgbc;
+    s32 hspan;
+    s32 vspan;
+    s32 hy;
+    s32 hn;
+    s32 vy;
+    s32 gspan;
+    s32 grows;
+    s32 vbase;
+    s32 tpage;
 
     base_x = 0;
     base_y = 0;
@@ -1585,19 +2211,20 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
     }
 
     /* Build the unwarped mesh in scratchpad RAM. */
-    p = (Vec2s*)0x1F800000;
-    p->x = 0;
-    p->y = 0;
-    p += 1;
+    build = (Vec2s*)0x1F800000;
+    y = 0;
+    build->x = 0;
+    build->y = y;
+    build += 1;
     v = 8;
     span = w;
     if (w > 0)
     {
         do
         {
-            p->x = v;
-            p->y = 0;
-            p += 1;
+            build->x = v;
+            build->y = y;
+            build += 1;
             if (span >= 0x41)
             {
                 v += 0x40;
@@ -1610,30 +2237,31 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
             }
         } while (span > 0);
     }
-    p->x = v;
-    p->y = 0;
-    p[1].x = v + 8;
-    p[1].y = 0;
-    p += 2;
+    build->x = v;
+    build->y = y;
+    build[1].x = v + 8;
+    build[1].y = y;
+    build += 2;
 
-    rows = st->height - 1;
-    y = 8;
-    if (rows != -1)
+    mesh_rows = st->height;
+    mesh_rows -= 1;
+    y += 8;
+    if (mesh_rows != -1)
     {
         do
         {
-            p->x = 0;
-            p->y = y;
-            p += 1;
+            build->x = 0;
+            build->y = y;
+            build += 1;
             v = 8;
             span = w;
             if (w > 0)
             {
                 do
                 {
-                    p->x = v;
-                    p->y = y;
-                    p += 1;
+                    build->x = v;
+                    build->y = y;
+                    build += 1;
                     if (span >= 0x41)
                     {
                         v += 0x40;
@@ -1646,40 +2274,40 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                     }
                 } while (span > 0);
             }
-            p->x = v;
-            p->y = y;
-            p[1].x = v + 8;
-            p[1].y = y;
-            p += 2;
-            if (rows >= 0x21)
+            build->x = v;
+            build->y = y;
+            build[1].x = v + 8;
+            build[1].y = y;
+            build += 2;
+            if (mesh_rows >= 0x21)
             {
                 y += 0x20;
-                rows -= 0x20;
+                mesh_rows -= 0x20;
             }
             else
             {
-                y += rows;
-                rows = 0;
+                y += mesh_rows;
+                mesh_rows = 0;
             }
-            rows -= 1;
-        } while (rows != -1);
+            mesh_rows -= 1;
+        } while (mesh_rows != -1);
     }
 
     n = 1;
     do
     {
-        p->x = 0;
-        p->y = y;
-        p += 1;
+        build->x = 0;
+        build->y = y;
+        build += 1;
         v = 8;
         span = w;
         if (w > 0)
         {
             do
             {
-                p->x = v;
-                p->y = y;
-                p += 1;
+                build->x = v;
+                build->y = y;
+                build += 1;
                 if (span >= 0x41)
                 {
                     v += 0x40;
@@ -1692,20 +2320,21 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                 }
             } while (span > 0);
         }
-        p->x = v;
-        p->y = y;
-        p[1].x = v + 8;
-        p[1].y = y;
-        p += 2;
+        build->x = v;
+        build->y = y;
+        build[1].x = v + 8;
+        build[1].y = y;
+        build += 2;
         n -= 1;
         y += 8;
     } while (n != -1);
 
-    y = 8;
+    text_y = 8;
     u = st->region_start_u;
-    rows = (st->height >> 4) - 1;
+    grows = st->height >> 4;
+    grows -= 1;
     count = 0;
-    if (rows != -1)
+    if (grows != -1)
     {
         do
         {
@@ -1719,12 +2348,12 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
             {
                 do
                 {
-                    p->x = v;
-                    p->y = y;
-                    p[1].x = v;
+                    build->x = v;
+                    build->y = text_y;
+                    build[1].x = v;
                     avail = 0x100 - u;
-                    p[1].y = st->line_height + y;
-                    p += 2;
+                    build[1].y = st->line_height + text_y;
+                    build += 2;
                     count += 2;
                     if (span >= avail)
                     {
@@ -1740,15 +2369,15 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                     }
                 } while (span > 0);
             }
-            p->x = v;
-            p->y = y;
-            p[1].x = v;
-            rows -= 1;
-            p[1].y = st->line_height + y;
-            p += 2;
+            build->x = v;
+            build->y = text_y;
+            build[1].x = v;
+            grows -= 1;
+            build[1].y = st->line_height + text_y;
+            build += 2;
             count += 2;
-            y += 0x10;
-        } while (rows != -1);
+            text_y += 0x10;
+        } while (grows != -1);
     }
 
     n = 1;
@@ -1763,15 +2392,15 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
         {
             v = st->width + 0x12;
         }
-        m = 1;
+        inner = 1;
         do
         {
-            p->x = v;
-            p->y = y;
-            p += 1;
-            m -= 1;
+            build->x = v;
+            build->y = y;
+            build += 1;
+            inner -= 1;
             v += 0x30;
-        } while (m != -1);
+        } while (inner != -1);
         n -= 1;
         y += 0x30;
     } while (n != -1);
@@ -1788,15 +2417,15 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
         {
             v = st->width + 0x10;
         }
-        m = 1;
+        inner = 1;
         do
         {
-            p->x = v;
-            p->y = y;
-            p += 1;
-            m -= 1;
+            build->x = v;
+            build->y = y;
+            build += 1;
+            inner -= 1;
             v += 0x30;
-        } while (m != -1);
+        } while (inner != -1);
         n -= 1;
         y += 0x30;
     } while (n != -1);
@@ -1805,9 +2434,9 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
     mesh = (Vec2s*)0x1F800000;
     prev = -1;
     den_x = w + 0x10;
-    m = ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3)) + count + 7;
+    grows = ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3)) + count + 7;
     den_y = st->height + 0x10;
-    if (m != -1)
+    if (grows != -1)
     {
         p = mesh;
         do
@@ -1815,266 +2444,293 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
             yv = p->y;
             if (prev != yv)
             {
-                x0 = quad->x0;
-                y0 = quad->y0;
-                x1 = quad->x1;
-                y1 = quad->y1;
-                prev = yv;
-                base_x = (((quad->x2 - x0) * yv) / den_y) + x0;
-                base_y = (((quad->y2 - y0) * yv) / den_y) + y0;
-                dx = ((((quad->x3 - x1) * yv) / den_y) + x1) - base_x;
-                dy = ((((quad->y3 - y1) * yv) / den_y) + y1) - base_y;
+                do
+                {
+                    do
+                    {
+                        prev = yv;
+                        base_x = (((quad->x2 - quad->x0) * yv) / den_y) + quad->x0;
+                        base_y = (((quad->y2 - quad->y0) * yv) / den_y) + quad->y0;
+                        dx = ((((quad->x3 - quad->x1) * yv) / den_y) + quad->x1) - base_x;
+                        dy = ((((quad->y3 - quad->y1) * yv) / den_y) + quad->y1) - base_y;
+                    } while (0);
+                } while (0);
             }
             p->y = ((dy * p->x) / den_x) + base_y;
-            m -= 1;
+            grows -= 1;
             p->x = ((dx * p->x) / den_x) + base_x;
             p += 1;
-        } while (m != -1);
+        } while (grows != -1);
     }
 
     /* Emit the packet chain. */
+    tpage = 0x1F0000;
+    u_org = 0;
+    vbase = 0xE0;
+    rgbc = 0x2D808080;
     vp = (u32*)0x1F800000;
-    y = 8;
-    n = 1;
+    hy = 8;
+    hn = 1;
     stride = ((w + 0x3F) >> 6) + 3;
     first = *cursor;
-    cur = first;
+    base_x = (s32)first;
+    dy = 0x09000000;
     clut = hw->window_clut << 16;
     do
     {
-        if (n == 0)
+        if (hn == 0)
         {
-            v = 0xF800;
+            uv = u_org | 0xF800;
         }
         else
         {
-            v = 0xF000;
+            uv = u_org | 0xF000;
         }
-        poly = (PrimQuad*)cur;
-        cur += 0x28;
-        poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
-        uv = v + 8;
-        poly->uv0 = clut | v;
-        tile = y << 8;
-        poly->uv1 = 0x1F0000 | uv;
-        poly->uv2 = v + tile;
-        poly->rgbc = 0x2D808080;
-        poly->uv3 = v + (tile | 8);
+        poly = (PrimQuad*)base_x;
+        base_x += 0x28;
+        poly->tag = ((u32)base_x & 0xFFFFFF) | dy;
+        poly->uv0 = clut | uv;
+        poly->uv1 = tpage | (uv + 8);
+        poly->uv2 = uv + (hy << 8);
+        poly->rgbc = rgbc;
+        poly->uv3 = uv + ((hy << 8) | 8);
         poly->xy0 = vp[0];
-        span = w;
+        hspan = w;
         poly->xy1 = vp[1];
-        poly->xy2 = vp[stride];
-        poly->xy3 = vp[stride + 1];
+        uv += 8;
+        hvp2 = vp + ((w + 0x3F) >> 6) + 4;
+        poly->xy2 = hvp2[-1];
+        poly->xy3 = hvp2[0];
         if (w > 0)
         {
             do
             {
-                poly = (PrimQuad*)cur;
-                cur += 0x28;
-                poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
-                poly->rgbc = 0x2D808080;
-                if (span >= 0x41)
+                poly = (PrimQuad*)base_x;
+                base_x += 0x28;
+                poly->tag = ((u32)base_x & 0xFFFFFF) | dy;
+                poly->rgbc = rgbc;
+                if (hspan >= 0x41)
                 {
-                    m = 0x3F;
-                    span -= 0x40;
+                    chunk = 0x3F;
+                    hspan -= 0x40;
                 }
                 else
                 {
-                    m = span - 1;
-                    span = 0;
+                    chunk = hspan - 1;
+                    hspan = 0;
                 }
-                poly->uv1 = 0x1F0000 | (uv + m);
+                poly->uv1 = tpage | (uv + chunk);
                 poly->uv0 = clut | uv;
-                poly->uv2 = uv + tile;
-                poly->uv3 = uv + (tile | m);
+                poly->uv2 = uv + (hy << 8);
+                poly->uv3 = uv + ((hy << 8) | chunk);
                 poly->xy0 = vp[0];
                 poly->xy1 = vp[1];
                 vp += 1;
-                poly->xy2 = vp[stride - 1];
-                poly->xy3 = vp[stride];
-            } while (span > 0);
+                poly->xy2 = hvp2[0];
+                poly->xy3 = hvp2[1];
+                hvp2 += 1;
+            } while (hspan > 0);
         }
         uv += 0x40;
-        last = (PrimQuad*)cur;
-        cur += 0x28;
-        last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
-        last->uv0 = clut | uv;
-        last->uv1 = 0x1F0000 | (uv + 7);
-        tile = y << 8;
-        last->rgbc = 0x2D808080;
-        last->uv2 = uv + tile;
-        last->uv3 = uv + (tile | 7);
-        last->xy0 = vp[0];
-        last->xy1 = vp[1];
-        last->xy2 = vp[stride];
-        last->xy3 = vp[stride + 1];
-        n -= 1;
+        poly = (PrimQuad*)base_x;
+        base_x += 0x28;
+        poly->tag = ((u32)base_x & 0xFFFFFF) | dy;
+        poly->uv0 = clut | uv;
+        poly->uv1 = tpage | (uv + 7);
+        poly->rgbc = rgbc;
+        poly->uv2 = uv + (hy << 8);
+        poly->uv3 = uv + ((hy << 8) | 7);
+        poly->xy0 = vp[0];
+        poly->xy1 = vp[1];
+        poly->xy2 = hvp2[0];
+        poly->xy3 = hvp2[1];
+        hn -= 1;
         vp = (u32*)0x1F800000 + ((((st->height + 0x1F) >> 5) + 1) * stride);
-        y = 7;
-    } while (n != -1);
+        hy = 7;
+    } while (hn != -1);
 
-    vp = (u32*)0x1F80000C + ((w + 0x3F) >> 6);
-    rows = st->height;
-    if (rows > 0)
     {
-        do
+        u32* vp2;
+
+        vp = (u32*)0x1F80000C + ((w + 0x3F) >> 6);
+        vp2 = vp + stride;
+        grows = st->height;
+        if (grows > 0)
         {
-            uv = (0xE0 << 8) | 0xE0;
-            shade = 0x1F00;
-            if (rows < 0x20)
+            do
             {
-                shade = rows << 8;
-            }
-            poly = (PrimQuad*)cur;
-            cur += 0x28;
-            poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
-            poly->uv0 = clut | uv;
-            poly->uv1 = 0x1F0000 | (uv + 8);
-            poly->uv2 = uv + shade;
-            poly->rgbc = 0x2D808080;
-            poly->uv3 = uv + (shade | 8);
-            v = uv - 0x40;
-            poly->xy0 = vp[0];
-            span = w;
-            poly->xy1 = vp[1];
-            poly->xy2 = vp[stride];
-            poly->xy3 = vp[stride + 1];
-            vp += 1;
-            if (w > 0)
-            {
-                do
+                uv = (vbase << 8) | (u_org + 0xE0);
+                vy = 0x1F00;
+                if (grows < 0x20)
                 {
-                    poly = (PrimQuad*)cur;
-                    cur += 0x28;
-                    poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
-                    poly->rgbc = 0x2D808080;
-                    if (span >= 0x41)
+                    vy = grows << 8;
+                }
+                poly = (PrimQuad*)base_x;
+                base_x += 0x28;
+                poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
+                poly->uv0 = clut | uv;
+                poly->uv1 = tpage | (uv + 8);
+                poly->uv2 = uv + vy;
+                poly->rgbc = rgbc;
+                poly->uv3 = uv + (vy | 8);
+                vvval = uv - 0x40;
+                poly->xy0 = vp[0];
+                vspan = w;
+                poly->xy1 = vp[1];
+                poly->xy2 = vp2[0];
+                poly->xy3 = vp2[1];
+                vp += 1;
+                vp2 += 1;
+                if (w > 0)
+                {
+                    do
                     {
-                        m = 0x40;
-                        span -= 0x40;
-                    }
-                    else
-                    {
-                        m = span;
-                        span = 0;
-                    }
-                    poly->uv1 = 0x1F0000 | (v + m);
-                    poly->uv0 = clut | v;
-                    poly->uv2 = v + shade;
-                    poly->uv3 = v + (shade | m);
-                    poly->xy0 = vp[0];
-                    poly->xy1 = vp[1];
-                    vp += 1;
-                    poly->xy2 = vp[stride - 1];
-                    poly->xy3 = vp[stride];
-                } while (span > 0);
-            }
-            v += 0x48;
-            last = (PrimQuad*)cur;
-            cur += 0x28;
-            last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
-            last->uv0 = clut | v;
-            last->uv1 = 0x1F0000 | (v + 8);
-            last->uv2 = v + shade;
-            last->rgbc = 0x2D808080;
-            last->uv3 = v + (shade | 8);
-            last->xy0 = vp[0];
-            rows -= 0x20;
-            last->xy1 = vp[1];
-            last->xy2 = vp[stride];
-            last->xy3 = vp[stride + 1];
-            vp += 2;
-        } while (rows > 0);
+                        poly = (PrimQuad*)base_x;
+                        base_x += 0x28;
+                        poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
+                        poly->rgbc = rgbc;
+                        if (vspan >= 0x41)
+                        {
+                            chunk = 0x40;
+                            vspan -= 0x40;
+                        }
+                        else
+                        {
+                            chunk = vspan;
+                            vspan = 0;
+                        }
+                        poly->uv1 = tpage | (vvval + chunk);
+                        poly->uv0 = clut | vvval;
+                        poly->uv2 = vvval + vy;
+                        poly->uv3 = vvval + (vy | chunk);
+                        poly->xy0 = vp[0];
+                        poly->xy1 = vp[1];
+                        poly->xy2 = vp2[0];
+                        poly->xy3 = vp2[1];
+                        vp += 1;
+                        vp2 += 1;
+                    } while (vspan > 0);
+                }
+                vvval += 0x48;
+                poly = (PrimQuad*)base_x;
+                base_x += 0x28;
+                poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
+                poly->uv0 = clut | vvval;
+                poly->uv1 = tpage | (vvval + 8);
+                poly->uv2 = vvval + vy;
+                poly->rgbc = rgbc;
+                poly->uv3 = vvval + (vy | 8);
+                poly->xy0 = vp[0];
+                grows -= 0x20;
+                poly->xy1 = vp[1];
+                poly->xy2 = vp2[0];
+                poly->xy3 = vp2[1];
+                vp += 2;
+                vp2 += 2;
+            } while (grows > 0);
+        }
     }
 
+    u_org = 0;
+    vbase = 0x80;
     col = st->region_start_u;
     row_v = st->region_start_v;
-    rows = (st->height >> 4) - 1;
+    grows = st->height >> 4;
+    grows -= 1;
     vp = (u32*)0x1F800008 + ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3));
-    if (rows != -1)
+    if (grows != -1)
     {
         do
         {
-            span = st->line_advance;
-            v = row_v + 0x80;
-            if (span > 0)
+            gspan = st->line_advance;
+            v = row_v + vbase;
+            if (gspan > 0)
             {
                 do
                 {
-                    uv = (v << 8) | col;
-                    last = (PrimQuad*)cur;
-                    cur += 0x28;
-                    last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
-                    last->rgbc = 0x2D808080;
-                    last->uv1 = 0x1F0000 | uv;
-                    last->uv0 = (hw->text_clut << 16) | uv;
-                    last->uv2 = uv + (st->line_height << 8);
-                    last->uv3 = uv + (st->line_height << 8);
-                    last->xy0 = vp[0];
+                    uv = (v << 8) | (u_org + col);
+                    poly = (PrimQuad*)base_x;
+                    base_x += 0x28;
+                    poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
+                    poly->rgbc = rgbc;
+                    poly->uv1 = tpage | uv;
+                    poly->uv0 = (hw->text_clut << 16) | uv;
+                    poly->uv2 = uv + (st->line_height << 8);
+                    poly->uv3 = uv + (st->line_height << 8);
+                    poly->xy0 = vp[0];
                     avail = 0x100 - col;
-                    last->xy1 = vp[1];
-                    last->xy2 = vp[2];
-                    last->xy3 = vp[3];
+                    poly->xy1 = vp[1];
+                    poly->xy2 = vp[2];
+                    poly->xy3 = vp[3];
                     vp += 2;
-                    if (span >= avail)
+                    if (gspan >= avail)
                     {
-                        span -= avail;
-                        m = (col + avail) - 1;
-                        last->uv3 = m;
-                        last->uv1 = m;
+                        gspan -= avail;
+                        edge = (col + avail) - 1;
+                        poly->uv3 = edge;
+                        poly->uv1 = edge;
                         col = 0;
                         row_v += st->line_height;
                     }
                     else
                     {
-                        col += span;
-                        m = col;
-                        span = 0;
-                        last->uv3 = m;
-                        last->uv1 = m;
+                        col += gspan;
+                        edge = col;
+                        gspan = 0;
+                        poly->uv3 = edge;
+                        poly->uv1 = edge;
                     }
-                    v = row_v + 0x80;
-                } while (span > 0);
+                    v = row_v + vbase;
+                } while (gspan > 0);
             }
-            rows -= 1;
-        } while (rows != -1);
+            grows -= 1;
+        } while (grows != -1);
     }
 
     if (st->portrait != 0)
     {
-        poly = (PrimQuad*)cur;
-        cur += 0x28;
-        poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+        poly = (PrimQuad*)base_x;
+        base_x += 0x28;
+        prows = st->height;
+        prows += 0x1F;
+        prows >>= 5;
+        prows += 3;
+        sel = st->flags.word;
+        clut = hw->text_clut;
+        poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
         poly->rgbc = 0x2E000000;
-        uv = ((((((st->flags.word >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        poly->uv0 = (hw->text_clut << 16) | uv;
+        sel >>= 3;
+        sel &= 1;
+        uv = (((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0);
+        poly->uv0 = (clut << 16) | uv;
         poly->uv2 = uv + 0x3000;
-        poly->uv1 = (uv + 0x2F) | 0x1F0000;
+        poly->uv1 = (uv + 0x2F) | tpage;
+        pvp = (u32*)0x1F800000 + count + (prows * (((w + 0x3F) >> 6) + 3));
         poly->uv3 = uv + 0x302F;
-        vp = (u32*)0x1F800000 + count
-             + ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3));
-        poly->xy0 = vp[0];
-        poly->xy1 = vp[1];
-        poly->xy2 = vp[2];
-        poly->xy3 = vp[3];
-        last = (PrimQuad*)cur;
-        cur += 0x28;
+        poly->xy0 = pvp[0];
+        poly->xy1 = pvp[1];
+        poly->xy2 = pvp[2];
+        poly->xy3 = pvp[3];
+        pvp += 4;
+        poly = (PrimQuad*)base_x;
+        base_x += 0x28;
         sel = (st->flags.word >> 3) & 1;
+        clut = (&hw->portrait_clut0)[sel];
         uv = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        last->uv2 = uv + 0x3000;
-        last->uv1 = (uv + 0x2F) | 0x1F0000;
-        last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
-        last->rgbc = 0x2D808080;
-        last->uv3 = uv + 0x302F;
-        last->uv0 = ((&hw->portrait_clut0)[sel] << 16) | uv;
-        last->xy0 = vp[0];
-        last->xy1 = vp[1];
-        last->xy2 = vp[2];
-        last->xy3 = vp[3];
+        poly->uv2 = uv + 0x3000;
+        poly->uv1 = (uv + 0x2F) | tpage;
+        poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
+        poly->rgbc = rgbc;
+        poly->uv3 = uv + 0x302F;
+        poly->uv0 = (clut << 16) | uv;
+        poly->xy0 = pvp[0];
+        poly->xy1 = pvp[1];
+        poly->xy2 = pvp[2];
+        poly->xy3 = pvp[3];
     }
-    last->tag = (last->tag & 0xFF000000) | (ot->tag1 & 0xFFFFFF);
+    poly->tag = (poly->tag & 0xFF000000) | (ot->tag1 & 0xFFFFFF);
     ot->tag1 = (ot->tag1 & 0xFF000000) | ((u32)first & 0xFFFFFF);
-    *cursor = cur;
+    *cursor = (u8*)base_x;
 }
 
 /**
