@@ -33,6 +33,11 @@ typedef struct NikiRecord {
     u16 unkD4;
 } NikiRecord;
 
+typedef struct
+{
+    u8 data[0x28];
+} NikiEntry28;
+
 
 extern s32 D_80164A78;
 extern s32 D_80164AD0;
@@ -65,7 +70,7 @@ extern u8 *D_80164E18;
 extern s32 D_80122994;
 extern s32 D_80164B70;
 extern char D_800ECF7C[];
-extern u8 D_80165018[];
+extern NikiEntry28 D_80165018[][20];
 extern NikiRecord D_80164D18;
 extern NikiRecord *D_8012271C;
 extern s32 D_8003EC9C;
@@ -535,8 +540,7 @@ extern s32 D_80164EB8[];
  * @param arg2 Horizontal scroll offset (subtracted from every x).
  * @param arg3 Vertical scroll offset (subtracted from every row y).
  * @return Advanced primitive-buffer write cursor.
- * @note WIP - 99.03% (425/428 exact, gcc272_cdk).
- * @see decomp.me (99.01%)
+ * @see decomp.me (100%)
  */
 s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
@@ -565,6 +569,7 @@ s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     default:
         {
             s32 row_y;
+            s32 i;
 
         if (D_80164F18 != 0)
         {
@@ -578,19 +583,16 @@ s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
             break;
         }
+        i = 0;
         if (state > 0)
         {
-            s32 i;
             s32 base_x;
             s32 *flag_ptr;
             u16 misc_glyph;
-            char *entry;
             Vec2s pos;
             s32 row;
             u8 *base;
 
-            i = 0;
-            entry = (char *)D_80165018;
             base = (u8 *)&D_801470F8;
             base_x = -arg2;
             do
@@ -615,20 +617,20 @@ s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                             misc_glyph = *(u16 *)(base + 0x38);
                             prim = func_800A88A0(prim, ot, (void *)((s32)misc_glyph + (s32)base), 4, base_x + 0xC0, row_y, 0);
                         }
-                        if (*func_801442C4((void *)((D_80164B70 * 0x320) + (s32)entry + 0xC)) == 0x2B)
+                        if (*func_801442C4((void *)((s32)&D_80165018[D_80164B70][i] + 0xC)) == 0x2B)
                         {
                             prim = func_800A88A0(prim, ot, (void *)((s32)D_801471A8 + (s32)base), 4, 0xF2 - arg2, row_y, 1);
                         }
                     }
-                    if (func_8001714C(D_800ECF7C, (char *)((D_80164B70 * 0x320) + (s32)entry), 0xC) == 0)
+                    if (func_8001714C(D_800ECF7C, (char *)((s32)&D_80165018[D_80164B70][i]), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)D_801470FE + (s32)base), 4, 1 - arg2, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECF8C, (char *)((D_80164B70 * 0x320) + (s32)entry), 0xC) == 0)
+                    else if (func_8001714C(D_800ECF8C, (char *)((s32)&D_80165018[D_80164B70][i]), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)D_80147132 + (s32)base), 4, 1 - arg2, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECFC4, (char *)((D_80164B70 * 0x320) + (s32)entry), 8) == 0)
+                    else if (func_8001714C(D_800ECFC4, (char *)((s32)&D_80165018[D_80164B70][i]), 8) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)D_8014710C + (s32)base), 4, 1 - arg2, row_y, 0);
                     }
@@ -637,7 +639,6 @@ s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                         prim = func_800A88A0(prim, ot, (void *)((s32)D_80147100 + (s32)base), 4, 1 - arg2, row_y, 0);
                     }
                 }
-                entry += 0x28;
                 i++;
             } while (i < D_80164B78);
         }
