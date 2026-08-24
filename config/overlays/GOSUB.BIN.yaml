@@ -21,6 +21,7 @@ options:
   undefined_syms_auto_path: linker/overlays/gosub/undefined_syms_auto.txt
 
   symbol_addrs_path:
+    - config/symbols/shared_symbol_addrs.txt
     - config/symbols/gosub_symbol_addrs.txt
 
   find_file_boundaries: False
@@ -39,8 +40,25 @@ segments:
     type: decompress_overlay
     start: 0x1
     vram: 0x80140000
+    align: 4
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, rodatabin, overlay_id]
+      - [0x5, .rodata, gosub]
+      - [0x69, rodatabin, group_first_indices]
+      - [0x75, rodatabin, group_counts]
       - [0x81, c, gosub]       # CDK (default)
-      - [0x7059, data, data]
+      - [0x7059, databin, image_archive]
+      - [0xF27D, databin, text_archive_offsets_0]
+      - [0xF281, databin, text_archive_offsets_1]
+      - [0xF289, databin, text_archive_offsets_2]
+      - [0xF295, databin, text_archive_offsets_3]
+      - [0xF29D, databin, message_archive_offset]
+      - [0xF2A5, databin, text_archive_offsets_5]
+      - [0xF2A9, databin, text_archive_offsets_6]
+      - [0xF2C5, databin, text_archive_0]
+      - [0x12DF5, databin, text_archive_1]
+      - [0x2B3DD, databin, font_texture]
+      - [0x2B5AD, databin, item_metadata]
+      - [0x2B635, databin, glyph_metrics]
+      - [0x2B8C9, .bss, gosub]
   - [0x34A5D]

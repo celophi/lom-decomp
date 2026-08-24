@@ -15,6 +15,8 @@ typedef signed char s8;
 typedef unsigned short u16;
 typedef signed short s16;
 
+typedef struct GosubTile GosubTile;
+
 /** @brief Number of entries in the gosub UI element pool. */
 #define GOSUB_ELEMENT_COUNT 16
 
@@ -70,45 +72,14 @@ s32 func_80145F80();                                    /* extern */
 s32 func_801460D0();                                    /* extern */
 void func_80146468();                                   /* extern */
 void func_80146538();                                   /* extern */
-extern s32 g_gosub_frame_parity;
-extern s32 g_gosub_finished;
-extern s32 g_gosub_scroll_frames_remaining;
-extern s32 g_gosub_scroll_target_y;
-extern s32 g_gosub_scroll_y;
-extern s32 g_gosub_cursor_row;
-extern s32 D_8017098C;
-extern u8 g_gosub_screen_sequence_index;
+GosubTile* func_801448EC();                             /* extern */
+s32 func_801452F0();                                    /* extern */
+s32 func_80145744();                                    /* extern */
+s32 func_80146418();                                    /* extern */
 extern s32 g_gosub_result_count;
-extern u8 D_80145744;
-extern s32 (*g_gosub_dialog_handler)(s32);
-extern s32 D_8016B948;
-extern u8 g_gosub_screen_sequence[20];
 extern u8* g_pad_ctx;
 extern s32 D_8014F29C;
-extern s32 g_gosub_row_count;
-extern s32 g_gosub_visible_row_count;
-extern s32 D_8016B8E4;
-extern s32 D_8016B8EC;
-extern s32 D_8016B8F4;
-extern s32 g_gosub_allow_duplicate_selection;
-extern s32 (*g_gosub_finish_handler)();
-extern u8 D_8016B8FC;
-extern u8 g_gosub_required_selection_count;
-extern s32 D_8016B900;
-extern s32 g_gosub_window_height;
-extern s32 (*g_gosub_select_handler)();
-extern s32 g_gosub_window_width;
-extern s32 D_8016B95C;
-extern u8 g_gosub_selected_rows[4];
-extern s32 g_gosub_result_rows[16];
 extern s32 g_gosub_result_values[];
-extern s32 D_8017097C;
-extern s32 g_gosub_row_height;
-extern u8 D_801448EC;
-extern u8 D_801452F0;
-extern u8 D_80146418;
-extern u8 g_gosub_selection_count;
-extern s32 g_gosub_dialog_choice;
 extern u8 D_800EC3DA[];
 extern u8 D_800EC3EE[];
 extern u8 D_800EC3F0[];
@@ -117,9 +88,7 @@ extern u32 D_8014F27C[];
 extern u32 D_8014F280[];
 extern u32 D_8014F294[];
 extern s32 D_8014F2A8;
-extern u8 g_gosub_text_buffers[];
 extern u8 D_8016B5AC[];
-extern u8* g_gosub_title_text;
 
 /**
  * @brief One entry in the gosub screen's element list, as handed out by
@@ -163,8 +132,6 @@ typedef struct
 #define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 
 /** @brief UI element pool; element 0 is reserved for the fixed dialog element. */
-extern GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
-
 GosubElement* func_80143C04();
 
 /**
@@ -213,7 +180,48 @@ typedef struct
     } flags;
 } GosubListEntry;
 
-extern GosubListEntry g_gosub_rows[];
+/* Overlay BSS layout is address-sensitive; do not reorder these definitions. */
+
+s32 g_gosub_frame_parity;
+s32 g_gosub_finished;
+s32 g_gosub_cursor_row;
+s32 g_gosub_row_count;
+s32 g_gosub_visible_row_count;
+u8 g_gosub_screen_sequence_index;
+u8 pad_8016B8DD[3];
+s32 g_gosub_scroll_frames_remaining;
+s32 D_8016B8E4;
+s32 g_gosub_dialog_choice;
+s32 D_8016B8EC;
+s32 g_gosub_allow_duplicate_selection;
+s32 D_8016B8F4;
+s32 (*g_gosub_finish_handler)();
+u8 D_8016B8FC;
+u8 g_gosub_required_selection_count;
+u8 pad_8016B8FE[2];
+s32 D_8016B900;
+s32 pad_8016B904;
+s32 g_gosub_result_rows[16];
+s32 D_8016B948;
+u8 g_gosub_selected_rows[4];
+s32 g_gosub_window_height;
+s32 (*g_gosub_select_handler)();
+s32 g_gosub_window_width;
+s32 D_8016B95C;
+u8 g_gosub_text_buffers[0x5000];
+u8 g_gosub_selection_count;
+u8 pad_80170961[7];
+u8 g_gosub_screen_sequence[20];
+s32 D_8017097C;
+s32 g_gosub_row_height;
+s32 pad_80170984;
+s32 g_gosub_scroll_y;
+s32 D_8017098C;
+s32 g_gosub_scroll_target_y;
+u8* g_gosub_title_text;
+GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
+GosubListEntry g_gosub_rows[512];
+s32 (*g_gosub_dialog_handler)(s32);
 
 /**
  * @brief Resolve one entry of a text archive block.
@@ -306,7 +314,7 @@ void gosub_load_screen_sequence(s32* screen_sequence)
     D_8017098C = 0;
     g_gosub_screen_sequence_index = 0;
     g_gosub_result_count = 0;
-    g_gosub_dialog_handler = (void*)&D_80145744;
+    g_gosub_dialog_handler = (void*)func_80145744;
     screen_count = 0;
     if (*screen_sequence != GOSUB_SCREEN_SEQUENCE_END)
     {
@@ -648,7 +656,7 @@ void gosub_build_screen_9_elements(void)
     GosubElement* p;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801448EC;
+    p->draw_handler = (void*)func_801448EC;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0xA0 - g_gosub_window_width / 2;
     p->attr.f.unk0_16 = 0x38;
@@ -689,7 +697,7 @@ void gosub_build_screen_10_elements(void)
     GosubElement* p;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801448EC;
+    p->draw_handler = (void*)func_801448EC;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0xA0 - g_gosub_window_width / 2;
     p->attr.f.unk0_16 = 0x48;
@@ -708,7 +716,7 @@ void gosub_build_screen_10_elements(void)
     SET_ELEM_CODE(p, 8);
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801452F0;
+    p->draw_handler = (void*)func_801452F0;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0x20;
@@ -752,7 +760,7 @@ void gosub_build_category_screen_elements(void)
     GosubElement* p;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801448EC;
+    p->draw_handler = (void*)func_801448EC;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0xA0 - g_gosub_window_width / 2;
     p->attr.f.unk0_16 = 0x28;
@@ -771,7 +779,7 @@ void gosub_build_category_screen_elements(void)
     SET_ELEM_CODE(p, 8);
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_80146418;
+    p->draw_handler = (void*)func_80146418;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0x10;
@@ -794,7 +802,7 @@ void gosub_build_list_screen_elements(s32 include_middle)
     GosubElement* p;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801448EC;
+    p->draw_handler = (void*)func_801448EC;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0xA0 - g_gosub_window_width / 2;
     p->attr.f.unk0_16 = 0x28;
@@ -816,7 +824,7 @@ void gosub_build_list_screen_elements(s32 include_middle)
     }
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_80146418;
+    p->draw_handler = (void*)func_80146418;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0x10;
@@ -836,7 +844,7 @@ void gosub_build_screen_11_elements(void)
     GosubElement* p;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801448EC;
+    p->draw_handler = (void*)func_801448EC;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0xA0 - g_gosub_window_width / 2;
     p->attr.f.unk0_16 = 0x28;
@@ -855,7 +863,7 @@ void gosub_build_screen_11_elements(void)
     SET_ELEM_CODE(p, 8);
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_80146418;
+    p->draw_handler = (void*)func_80146418;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0x10;
@@ -876,7 +884,7 @@ void gosub_build_compact_list_elements(void)
     GosubElement* p;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801448EC;
+    p->draw_handler = (void*)func_801448EC;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0xA0 - g_gosub_window_width / 2;
     p->attr.f.unk0_16 = 0x30;
@@ -886,7 +894,7 @@ void gosub_build_compact_list_elements(void)
     g_gosub_selection_count = 0;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_80146418;
+    p->draw_handler = (void*)func_80146418;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0x10;
@@ -1548,7 +1556,7 @@ typedef struct
  * volatile field there costs 1.80% and one extra instruction: the volatile
  * store cannot be scheduled among the neighbouring field stores.
  */
-typedef struct
+struct GosubTile
 {
     s32 unk0;
     s32 unk4;
@@ -1556,7 +1564,7 @@ typedef struct
     s16 unkA;
     s16 unkC;
     u16 unkE;
-} GosubTile;
+};
 
 typedef struct
 {
@@ -1616,8 +1624,8 @@ typedef struct
 #define SET_PRIM_ADDR_MASK(p, a) (((GosubTag*)(p))->addr = ((u_long)(a) & 0xFFFFFF))
 #define ADD_PRIM_MASKED(ot, p) (SET_PRIM_ADDR_MASK(p, GET_PRIM_ADDR(ot)), SET_PRIM_ADDR(ot, p))
 
-s32 func_8001A5D4(s32, void*);                /* extern */
-s32 func_8001C56C(void*, s32, s32, s32, s32); /* extern */
+s32 SetDrawEnv(s32, void*);                    /* extern */
+s32 SetDefDrawEnv(void*, s32, s32, s32, s32); /* extern */
 void* func_801443E4();                        /* extern */
 StructS0* func_80144544();                    /* extern */
 GosubLine* func_80144764();                   /* extern */
@@ -1719,9 +1727,6 @@ extern s32 D_8017097C;
 extern s32 g_gosub_row_height;
 extern s32 g_gosub_scroll_y;
 extern s32 g_gosub_scroll_target_y;
-extern s32 D_801709A4;
-
-extern s32 D_801228F0;
 extern GosubListEntry g_gosub_rows[];
 extern u8 g_gosub_selected_rows[];
 
@@ -2582,7 +2587,7 @@ GosubElement* func_80143C04(void)
     s32 var_a1;
     s32* var_a0;
 
-    var_a0 = &D_801709A4;
+    var_a0 = (s32*)&g_gosub_elements[1];
 
     for (var_a1 = 1; var_a1 < 0x10; var_a1++, var_a0 += 3)
     {
@@ -2648,11 +2653,11 @@ void func_80143C58(Arg0Struct* arg0)
 
     if (arg0->unk40B2 != 0)
     {
-        func_8001C56C(sp20, 0, 0xF0, 0x140, 0xE0);
+        SetDefDrawEnv(sp20, 0, 0xF0, 0x140, 0xE0);
     }
     else
     {
-        func_8001C56C(sp20, 0, 8, 0x140, 0xE0);
+        SetDefDrawEnv(sp20, 0, 8, 0x140, 0xE0);
     }
 
     var_s5 = &g_gosub_elements;
@@ -2694,7 +2699,7 @@ void func_80143C58(Arg0Struct* arg0)
                         var_s0 = func_801443E4(var_s0, var_s4, (field + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high)) - 0x10, (*((u8*)var_s5 + 2)), 1);
                     }
                 }
-                func_8001A5D4((s32)var_s0, sp20);
+                SetDrawEnv((s32)var_s0, sp20);
 
                 var_s0->unk0 = (var_s0->unk0 & var_s7) | (var_s4->unk0 & var_s6);
                 var_s4->unk0 = (s32)((var_s4->unk0 & var_s7) | ((s32)var_s0 & var_s6));
@@ -2738,7 +2743,7 @@ void func_80143C58(Arg0Struct* arg0)
                 }
                 var_a0 = var_s0;
             }
-            func_8001A5D4((s32)var_a0, sp20);
+            SetDrawEnv((s32)var_a0, sp20);
             var_s0->unk0 = (var_s0->unk0 & var_s7) | (var_s4->unk0 & var_s6);
             var_s4->unk0 = (s32)((var_s4->unk0 & var_s7) | ((s32)var_s0 & var_s6));
 
@@ -2853,7 +2858,7 @@ void func_80143C58(Arg0Struct* arg0)
 
 /** @brief TODO: as-yet-unnamed main-module global (frame/animation counter);
  *         its low bits drive the marker color. */
-extern s32 D_800F22AC;
+extern s32 g_frame_counter;
 
 /**
  * @brief Packed GPU packet built by func_801443E4: a Psy-Q LINE_F4 (0x1C bytes,
@@ -2884,7 +2889,7 @@ typedef struct
  * @brief Build a marker primitive (LINE_F4 quad outline + POLY_F3 fill) and
  *        link both into the ordering table @p ot.
  *
- * The LINE_F4 receives a color derived from the low bits of D_800F22AC; @p flag
+ * The LINE_F4 receives a color derived from the low bits of g_frame_counter; @p flag
  * selects one of two vertical vertex arrangements about center (@p x, @p y).
  * The POLY_F3 is seeded by copying the LINE_F4's first 0x14 bytes, then its
  * len/code/color are overwritten.
@@ -2910,13 +2915,13 @@ void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
     prim->len = 6;
     prim->code = 0x4C;
     prim->mask = 0x55555555;
-    if (D_800F22AC & 0x10)
+    if (g_frame_counter & 0x10)
     {
-        temp = D_800F22AC & 0xF;
+        temp = g_frame_counter & 0xF;
     }
     else
     {
-        temp = (~D_800F22AC) & 0xF;
+        temp = (~g_frame_counter) & 0xF;
     }
     tmp_y = temp * 4;
     temp = tmp_y + 0x70;
@@ -2981,7 +2986,7 @@ void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
  *
  * The draw environment is inset 2 pixels inside (@p x, @p y, @p w, @p h) and
  * biased to the bottom (0xF0) or top (8) half of the frame buffer according to
- * @p flag; it is written into @p prim by func_8001A5D4 and linked into @p ot.
+ * @p flag; it is written into @p prim by SetDrawEnv and linked into @p ot.
  * The packet cursor then advances 0x40 bytes past that environment and the
  * panel body is appended: func_80146E30 draws the background, then three
  * func_80144764 outlines (white on the panel rect, black inset by one pixel,
@@ -3015,14 +3020,14 @@ StructS0* func_80144544(StructS0* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32
     if (flag != 0)
     {
         temp_a2 = y + 0xF2;
-        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 4);
+        SetDefDrawEnv(sp20, x + 2, temp_a2, w - 4, h - 4);
     }
     else
     {
         temp_a2 = y + 0xA;
-        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 4);
+        SetDefDrawEnv(sp20, x + 2, temp_a2, w - 4, h - 4);
     }
-    func_8001A5D4((s32)buf, sp20);
+    SetDrawEnv((s32)buf, sp20);
 
     buf->unk0 = (buf->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | ((s32)buf & 0xFFFFFF);
@@ -3617,12 +3622,12 @@ s32 func_80145620(s32 dialog_result)
  * g_gosub_dialog_choice clear. Otherwise it releases one selection slot (only
  * when the selection is already full), steps the screen sequence back, runs
  * g_gosub_select_handler when one is installed, drops the nesting depth in
- * D_801228F0, and puts element 0 into its exit animation.
+ * g_gosub_result_count, and puts element 0 into its exit animation.
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return 1 when the confirm path is taken, otherwise 0.
  *
- * @note The D_801228F0 decrement is deliberately written out in BOTH arms of
+ * @note The g_gosub_result_count decrement is deliberately written out in BOTH arms of
  *       the g_gosub_select_handler test rather than once after it. Do not merge
  *       the two into a single statement - the duplicate is required to match.
  * @see decomp.me (100%)
@@ -3643,11 +3648,11 @@ s32 func_80145744(s32 dialog_result)
     if (g_gosub_select_handler != 0)
     {
         g_gosub_select_handler();
-        D_801228F0 -= 1;
+        g_gosub_result_count -= 1;
     }
     else
     {
-        D_801228F0 -= 1;
+        g_gosub_result_count -= 1;
     }
 
     g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_EXITING;
@@ -3879,7 +3884,7 @@ void func_80145CEC(s32 arg0)
     element->y = 0x14;
     SET_ELEM_CODE(element, 0);
     func_800AA02C();
-    D_801228F0 = 0;
+    g_gosub_result_count = 0;
 }
 
 /**
@@ -4278,8 +4283,8 @@ extern GosubGlyph D_8016B634[];
 /** @brief Texture archive holding the gosub font page (+0x00) and its CLUT (+0x2C). */
 extern u8 D_8016B3DC[];
 
-void func_80016E7C(); /* extern */
-void func_80019788(); /* extern */
+void bcopy();    /* extern */
+void DrawSync(); /* extern */
 
 inline void func_80146AA8(void* dst, void* src);
 inline void func_80146AD0(void* dst, void* src);
@@ -4480,8 +4485,8 @@ void func_80146AF8(s32 mode)
         order[j] = i;
     }
 
-    func_80016E7C(g_pad_ctx + 0x29DC, &order[0x100], 0xA0);
-    func_80016E7C(g_gosub_rows, &order[0x1A0], 0x500);
+    bcopy(g_pad_ctx + 0x29DC, &order[0x100], 0xA0);
+    bcopy(g_gosub_rows, &order[0x1A0], 0x500);
 
     i = 0;
     if (g_gosub_row_count > 0)
@@ -4559,7 +4564,7 @@ void func_80146DA8(void)
     rect.w = 0x10;
     rect.h = 0x10;
     LoadImage(&rect, D_8016B3DC + 0x2C);
-    func_80019788(0);
+    DrawSync(0);
 }
 
 /**
