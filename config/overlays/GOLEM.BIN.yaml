@@ -42,6 +42,6 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x25, c, golem]
-      - [0x1075, c, unk1]
+      - [0x1229, c, unk1]
       - [0x287D, data, data]
   - [0xC28D]

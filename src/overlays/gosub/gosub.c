@@ -75,6 +75,33 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_ROW_DESCRIPTION_X 0x84
 #define GOSUB_ROW_DESCRIPTION_Y 2
 
+/** @brief Position of caller-provided text within a message dialog. */
+#define GOSUB_MESSAGE_DIALOG_TEXT_X 0x80
+#define GOSUB_MESSAGE_DIALOG_TEXT_Y 2
+
+/** @brief Message offset and position of the equipment detail header. */
+#define GOSUB_DETAIL_HEADER_MESSAGE_OFFSET (-0x18)
+#define GOSUB_DETAIL_HEADER_X 0x84
+#define GOSUB_DETAIL_HEADER_Y 2
+
+/** @brief Message offsets and layout of the fixed two-line header. */
+#define GOSUB_TWO_LINE_HEADER_FIRST_MESSAGE_OFFSET (-0x1C)
+#define GOSUB_TWO_LINE_HEADER_SECOND_MESSAGE_OFFSET (-0x1A)
+#define GOSUB_TWO_LINE_HEADER_X 0x84
+#define GOSUB_TWO_LINE_HEADER_FIRST_Y 2
+#define GOSUB_TWO_LINE_HEADER_SECOND_Y 0x12
+
+/** @brief Message offsets and layout of the two-choice confirmation prompt. */
+#define GOSUB_CONFIRMATION_TITLE_MESSAGE_OFFSET (-0x14)
+#define GOSUB_CONFIRMATION_FIRST_CHOICE_MESSAGE_OFFSET (-0x20)
+#define GOSUB_CONFIRMATION_SECOND_CHOICE_MESSAGE_OFFSET (-0x1E)
+#define GOSUB_CONFIRMATION_CHOICE_MASK 1
+#define GOSUB_CONFIRMATION_TITLE_X 0x80
+#define GOSUB_CONFIRMATION_FIRST_CHOICE_X 0x78
+#define GOSUB_CONFIRMATION_SECOND_CHOICE_X 0x88
+#define GOSUB_CONFIRMATION_TITLE_Y 2
+#define GOSUB_CONFIRMATION_CHOICE_Y 0x12
+
 /** @brief Lifecycle states used by a gosub UI element. */
 typedef enum GosubElementState
 {
@@ -469,7 +496,8 @@ extern u8 D_800F1CD0[];
  * @param off Byte offset of the u16 entry within the message block.
  * @return Pointer to the message text.
  */
-#define GOSUB_MSG_ABS(base, off) ((base) + g_gosub_message_archive_offset + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset + (off)))
+#define GOSUB_MSG_ABS(base, off)                                                                                                                               \
+    ((void*)(g_gosub_message_archive_offset + ((base) + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset + (off)))))
 #define GOSUB_MSG_REL(base, off) ((base) + g_gosub_message_archive_offset + *(u16*)((base) + g_gosub_message_archive_offset + (off)))
 
 /** @brief Resolve message entries through a gosub_draw_item_list local archive base. */
@@ -525,11 +553,11 @@ void gosub_start_element_exit();
 void gosub_clear_elements(void);
 void gosub_render_elements();
 void gosub_update_and_render_elements();
-void gosub_open_message_dialog();
-s32 gosub_draw_message_dialog();
-s32 gosub_draw_detail_header();
-s32 gosub_draw_two_line_header();
-s32 gosub_draw_confirmation_prompt();
+void gosub_open_message_dialog(u8* message_text);
+s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
+s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
+s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
+s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
 s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
 void gosub_append_encoded_string();
 void gosub_copy_encoded_string();
@@ -575,7 +603,8 @@ s32 g_gosub_combination_variant;
 s32 g_gosub_dialog_choice;
 s32 g_gosub_combination_quantity;
 s32 g_gosub_allow_duplicate_selection;
-s32 g_gosub_dialog_text;
+/** @brief Encoded text currently displayed by the modal message dialog. */
+u8* g_gosub_dialog_text;
 s32 (*g_gosub_finish_handler)();
 u8 g_gosub_selection_mode;
 /** @brief Required selection count stored in a three-byte BSS slot. */
@@ -3711,7 +3740,7 @@ s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
  * @param message_text Pointer to the encoded dialog text.
  * @see decomp.me (100%)
  */
-void gosub_open_message_dialog(s32 message_text)
+void gosub_open_message_dialog(u8* message_text)
 {
     GosubElement* element;
 
@@ -3734,117 +3763,145 @@ void gosub_open_message_dialog(s32 message_text)
 
 /**
  * @brief Draw the text stored by gosub_open_message_dialog.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
- * @return Packet cursor after the text primitives.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after the dialog text.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_message_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32 stack_pad[14];
+    s32 stack_padding[14];
 
-    prim = func_800A88A0(prim, ot, (void*)g_gosub_dialog_text, 4, 0x80 - x_off, 2 - y_off, 2);
-    return prim;
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                  g_gosub_dialog_text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
+                                  GOSUB_MESSAGE_DIALOG_TEXT_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
+    return packet_cursor;
 }
 
 /**
  * @brief Draw a fixed header and the current equipment row's details.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
- * @return Packet cursor after the emitted text.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after the header and optional details.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_detail_header(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* glyph;
-    s32 stack_pad[14];
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* text;
+    s32 stack_padding[14];
 
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x18)));
-    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 2 - y_off, 2);
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_DETAIL_HEADER_MESSAGE_OFFSET);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_DETAIL_HEADER_X - x_offset,
+                                  GOSUB_DETAIL_HEADER_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
-        prim = gosub_draw_equipment_details(prim, ot, x_off, y_off);
+        packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table,
+                                                     x_offset, y_offset);
     }
-    return prim;
+    return packet_cursor;
 }
 
 /**
  * @brief Draw the two fixed header lines used by the grouped selection screen.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both lines.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_two_line_header(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* glyph;
-    s32 stack_pad[14];
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* text;
+    s32 stack_padding[14];
 
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x1C)));
-    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 2 - y_off, 2);
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_TWO_LINE_HEADER_FIRST_MESSAGE_OFFSET);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_TWO_LINE_HEADER_X - x_offset,
+                                  GOSUB_TWO_LINE_HEADER_FIRST_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x1A)));
-    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 0x12 - y_off, 2);
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_TWO_LINE_HEADER_SECOND_MESSAGE_OFFSET);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_TWO_LINE_HEADER_X - x_offset,
+                                  GOSUB_TWO_LINE_HEADER_SECOND_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    return prim;
+    return packet_cursor;
 }
 
 /**
- * @brief Draw a confirmation title and two highlighted choices.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
- * @return Packet cursor after the prompt.
+ * @brief Draw a confirmation title and two side-by-side choices.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after the title and both choices.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_confirmation_prompt(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* glyph;
-    s32 color;
-    s32 stack_pad[14];
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* text;
+    s32 text_color;
+    s32 stack_padding[14];
 
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x14)));
-    prim = func_800A88A0(prim, ot, glyph, 4, 0x80 - x_off, 2 - y_off, 2);
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_TITLE_MESSAGE_OFFSET);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_CONFIRMATION_TITLE_X - x_offset,
+                                  GOSUB_CONFIRMATION_TITLE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x20)));
-    color = 5;
-    if ((g_gosub_dialog_choice & 1) == 0)
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_FIRST_CHOICE_MESSAGE_OFFSET);
+    text_color = GOSUB_TEXT_COLOR_DISABLED;
+    if ((g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
-        color = 4;
+        text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x78 - x_off, 0x12 - y_off, 1);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color,
+                                  GOSUB_CONFIRMATION_FIRST_CHOICE_X - x_offset,
+                                  GOSUB_CONFIRMATION_CHOICE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_RIGHT);
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x1E)));
-    color = 4;
-    if ((g_gosub_dialog_choice & 1) == 0)
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_SECOND_CHOICE_MESSAGE_OFFSET);
+    text_color = GOSUB_TEXT_COLOR_NORMAL;
+    if ((g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
-        color = 5;
+        text_color = GOSUB_TEXT_COLOR_DISABLED;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x88 - x_off, 0x12 - y_off, 0);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color,
+                                  GOSUB_CONFIRMATION_SECOND_CHOICE_X - x_offset,
+                                  GOSUB_CONFIRMATION_CHOICE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_LEFT);
 
-    return prim;
+    return packet_cursor;
 }
 
 /**

@@ -530,3 +530,49 @@ s32 func_80141020(s32 prim, s32 ot)
     addPrim(ot, draw_mode);
     return prim + 8;
 }
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80141074(s32 prim, s32 arg1)
+{
+    SPRT *sprt = (SPRT *)prim;
+    DR_TPAGE *draw_mode;
+    s32 ot;
+    u16 x;
+    u16 y;
+    s32 dx;
+    s32 dy;
+
+    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+    setSprt(sprt);
+    x = D_8014C258;
+    y = D_8014C25C;
+    setWH(sprt, 0x10, 0x10);
+    setUV0(sprt, 0xB0, 0xF0);
+    sprt->clut = 0x7C87;
+    setXY0(sprt, x + 8, y);
+    addPrim(arg1 + 0x2C, sprt);
+
+    prim += 0x14;
+    ot = arg1 + 0x2C;
+
+    if (D_8014C254 != 0)
+    {
+        dx = (D_8014C264 - D_8014C258) / D_8014C254;
+        dy = (D_8014C268 - D_8014C25C) / D_8014C254;
+        D_8014C254--;
+        D_8014C258 += dx;
+        D_8014C25C += dy;
+    }
+    else
+    {
+        D_8014C258 = D_8014C264;
+        D_8014C25C = D_8014C268;
+    }
+
+    draw_mode = (DR_TPAGE *)prim;
+    setDrawTPage(draw_mode, 0, 0, getTPage(0, 1, 320, 0));
+    addPrim(ot, draw_mode);
+    return prim + 8;
+}
