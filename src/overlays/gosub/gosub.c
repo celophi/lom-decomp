@@ -52,6 +52,13 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_PANEL_CORNER_FAR_INSET 5
 #define GOSUB_PANEL_CORNER_TEXTURE_V 0xF0
 
+/** @brief Layout constants for a composite icon assembled from glyphs. */
+#define GOSUB_COMPOSITE_ICON_PART_CAPACITY 19
+#define GOSUB_COMPOSITE_ICON_BASE_GLYPH_OFFSET 0x13
+#define GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE 8
+#define GOSUB_COMPOSITE_ICON_PART_CELL_SIZE 16
+#define GOSUB_COMPOSITE_ICON_BASE_CLUT 9
+
 /** @brief Lifecycle states used by a gosub UI element. */
 typedef enum GosubElementState
 {
@@ -295,6 +302,36 @@ typedef struct
     u16 h;    /* 0x06 */
 } GosubGlyphMetric; /* 0x08 */
 
+/** @brief One positioned glyph in a composite icon layout. */
+typedef struct
+{
+    s8 x;        /* 0x00, in 16-pixel cells */
+    s8 y;        /* 0x01, in 16-pixel cells */
+    s16 glyph_id; /* 0x02 */
+} GosubCompositeIconPart; /* 0x04 */
+
+/** @brief One 88-byte composite icon layout in D_800F1CD0. */
+typedef struct
+{
+    u8 part_count; /* 0x00 */
+    u8 reserved_01;
+    u8 grid_width;  /* 0x02 */
+    u8 grid_height; /* 0x03 */
+    s16 origin_x;   /* 0x04, in 8-pixel cells */
+    s16 origin_y;   /* 0x06, in 8-pixel cells */
+    s8 base_x;      /* 0x08, in 8-pixel cells */
+    s8 base_y;      /* 0x09, in 8-pixel cells */
+    u8 reserved_0a[2];
+    GosubCompositeIconPart parts[GOSUB_COMPOSITE_ICON_PART_CAPACITY]; /* 0x0C */
+} GosubCompositeIconLayout; /* 0x58 */
+
+/** @brief Byte and structured views of a composite icon table cursor. */
+typedef union
+{
+    u8* bytes;
+    GosubCompositeIconLayout* layout;
+} GosubCompositeIconView;
+
 /* External data. */
 
 extern u8* g_pad_ctx;
@@ -459,7 +496,7 @@ GosubGpuPacket* gosub_emit_panel_corners(SPRT*, s32*, s32, s32, s32, s32);
 GosubTilePacket* gosub_draw_item_list();
 s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count);
 s32 gosub_draw_equipment_details(s32 prim, s32* ot, s32 x_off, s32 y_off);
-s32 gosub_draw_composite_icon(s32 prim, s32* ot, s32 x, s32 y, s32 table_idx, s32 row_idx);
+s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s32 y, s32 icon_id, s32 layout_index);
 s32 gosub_draw_combination_preview();
 s32 gosub_handle_backtrack_dialog();
 s32 gosub_handle_delete_dialog(s32 dialog_result);
@@ -4004,52 +4041,64 @@ void gosub_upload_image_archive(GosubImageVramLayout* pos, u8* archive)
 }
 
 /**
- * @brief Draw one composite icon row from D_800F1CD0 and close its glyph run.
- * @param initial_prim Initial prim cursor.
- * @param ot Ordering table, passed through unchanged to every call.
- * @param x First coordinate base (column offset added to it below).
- * @param y Second coordinate base (column offset added to it below).
- * @param table_idx Index into D_800F2180[]; also offsets the header call's
- *                   3rd arg (table_idx + 0x13) and supplies table_val, the
- *                   loop calls' constant last arg.
- * @param row_idx Row index into D_800F1CD0 (stride 88 bytes: count byte,
- *                 four header fields, then a repeating {s8, s8, s16} tuple
- *                 array of `count` entries).
- * @return Advanced prim cursor (gosub_finish_glyph_run's return).
+ * @brief Draw a composite icon from its base glyph and positioned parts.
+ * @param initial_packet Next free GPU packet.
+ * @param ordering_table Ordering table to receive the glyph packets.
+ * @param x Base screen x coordinate.
+ * @param y Base screen y coordinate.
+ * @param icon_id Icon identifier used for the base glyph and part CLUT.
+ * @param layout_index Composite layout index.
+ * @return Packet cursor after closing the glyph run.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_composite_icon(s32 initial_prim, s32* ot, s32 x, s32 y, s32 table_idx, s32 row_idx)
+s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s32 y, s32 icon_id, s32 layout_index)
 {
-    u8* entry;
+    GosubCompositeIconView layout_view;
     s32 clut;
-    s16 offset_x;
-    s16 offset_y;
-    s8 header_x;
-    s8 header_y;
-    s32 col_x;
-    s32 col_y;
-    u8* glyph_entry;
-    s32 i;
-    s32 prim;
-    u8* base;
-    clut = D_800F2180[table_idx];
-    base = D_800F1CD0;
-    entry = (u8*)(row_idx * 11 * 8 + (s32)base);
-    offset_x = *(s16*)(entry + 4);
-    offset_y = *(s16*)(entry + 6);
-    header_x = *(s8*)(entry + 8);
-    header_y = *(s8*)(entry + 9);
-    col_x = x + offset_x * 8;
-    col_y = y + offset_y * 8;
-    prim = gosub_emit_glyph(initial_prim, ot, table_idx + 0x13, header_x * 8 + col_x, header_y * 8 + col_y, 9);
-    offset_y = 0;
-    for (i = offset_y; i < entry[offset_y]; i++)
+    s16 layout_x;
+    s16 layout_y;
+    s8 base_glyph_x;
+    s8 base_glyph_y;
+    s32 icon_x;
+    s32 icon_y;
+    GosubCompositeIconView part_view;
+    s32 part_index;
+    s32 packet_cursor;
+    u8* table_bytes;
+
+    clut = D_800F2180[icon_id];
+    table_bytes = D_800F1CD0;
+    layout_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) +
+                              (s32)table_bytes);
+    layout_x = layout_view.layout->origin_x;
+    layout_y = layout_view.layout->origin_y;
+    base_glyph_x = layout_view.layout->base_x;
+    base_glyph_y = layout_view.layout->base_y;
+    icon_x = x + layout_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
+    icon_y = y + layout_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
+    packet_cursor = gosub_emit_glyph(initial_packet, ordering_table,
+                                     icon_id + GOSUB_COMPOSITE_ICON_BASE_GLYPH_OFFSET,
+                                     base_glyph_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_x,
+                                     base_glyph_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_y,
+                                     GOSUB_COMPOSITE_ICON_BASE_CLUT);
+
+    /* The part count is byte zero of the packed layout. */
+    layout_y = 0;
+    for (part_index = layout_y; part_index < layout_view.bytes[layout_y]; part_index++)
     {
-        u8* loop_base = &D_800F1CD0[offset_y];
-        glyph_entry = (u8*)(row_idx * 11 * 8 + i * 4 + (s32)loop_base);
-        prim = gosub_emit_glyph(prim, ot, *(s16*)(glyph_entry + 0xE), *(s8*)(glyph_entry + 0xC) * 16 + col_x, *(s8*)(glyph_entry + 0xD) * 16 + col_y, clut);
+        u8* loop_base = &D_800F1CD0[layout_y];
+
+        part_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) +
+                                part_index * (s32)sizeof(GosubCompositeIconPart) +
+                                (s32)loop_base);
+        /* The shifted layout view exposes the current tuple as parts[0]. */
+        packet_cursor = gosub_emit_glyph(packet_cursor, ordering_table,
+                                         part_view.layout->parts[0].glyph_id,
+                                         part_view.layout->parts[0].x * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_x,
+                                         part_view.layout->parts[0].y * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_y,
+                                         clut);
     }
-    return gosub_finish_glyph_run(prim, ot);
+    return gosub_finish_glyph_run(packet_cursor, ordering_table);
 }
 
 /**
