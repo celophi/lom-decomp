@@ -11,6 +11,8 @@ extern u8 D_800F1CD0[];
 extern s32 D_80122C00;
 extern s32 D_8014C180;
 extern s32 D_8014C184;
+extern s32 D_8014AAA4;
+extern u8 D_800EC3DA[];
 extern s32 D_8014C188;
 extern s32 D_8014C18C;
 extern u8 D_8014C198[];
@@ -43,6 +45,20 @@ typedef struct { u32 unk00; u8 pad04[0x10]; u32 unk14; u8 pad18[0x24]; u32 unk3C
 /** @brief 88-byte row of the D_800F1CD0 icon table; only bytes 2 and 3 are read here. */
 typedef struct { u8 pad0[2]; u8 unk2; u8 unk3; u8 pad4[84]; } D800F1CD0Entry;
 extern B560 D_8014B560;
+
+/**
+ * @brief One 0x14-byte record of the D_8014B560 panel table (0x9A entries).
+ * @note The @ref B560 typedef above is a three-entry view of the same storage
+ *       (its unk00/unk14/unk3C are entries 0, 1 and 3); do not merge them.
+ */
+typedef struct {
+    u8 pad0[0xA];
+    u16 unkA;
+    u16 unkC;
+    u16 unkE;
+    u16 unk10;
+    u16 pad12;
+} B560Entry;
 
 void func_800A3938();
 void func_800CB918();
@@ -78,7 +94,7 @@ void func_80140438(RECT *, u8 *);
 extern s32 D_800F22AC;
 
 void func_801405A0(void);
-void func_80141228(void);
+void func_80141228();
 
 void func_80140024(u8 *arg0, s32 arg1)
 {
@@ -575,4 +591,73 @@ s32 func_80141074(s32 prim, s32 arg1)
     setDrawTPage(draw_mode, 0, 0, getTPage(0, 1, 320, 0));
     addPrim(ot, draw_mode);
     return prim + 8;
+}
+
+/**
+ * @brief Emit the golem panel grid, the cursor, and the selected item's name
+ *        and detail text into the render context's packet buffer.
+ * @param arg0 Render context; packet cursor at +0x4040, panel OT at +0x3C,
+ *             text OT at +0x28.
+ * @note WIP, NOT byte-matched. Best local match 94.986% (122/148 exact rows).
+ *       Instruction count, frame (-0x250), sp slots and control flow are all
+ *       exact; the residue is a single coupled saved-register rotation.
+ *       @c archive wins gcc's allocation priority race (3076) against @c arg0
+ *       (1106) and takes s3, which pushes @c text_anchor out to s7 and rotates
+ *       four registers. Matching needs archive's priority to land between 862
+ *       and 1106. Nine probe classes and two permuter seeds are already
+ *       retired - read working/func_80141228/STATUS.md before touching this,
+ *       and do not re-derive them.
+ * @see working/func_80141228/STATUS.md
+ */
+void func_80141228(s32 arg0)
+{
+    s32 stack_pad[2];
+    u8 name_buf[0x100];
+    u8 number_buf[0x100];
+    B560Entry *entry;
+    u8 *archive;
+    u8 *offsets;
+    u8 *text_base;
+    s32 prim;
+    s32 panel;
+    s32 panel_ot;
+    s32 text_anchor;
+    s32 detail;
+
+    panel_ot = arg0 + 0x3C;
+    prim = *(s32 *)(arg0 + 0x4040);
+    panel = 0;
+    do
+    {
+        entry = (B560Entry *)&D_8014B560 + panel;
+        prim = func_80141AD0(prim, panel_ot, panel, entry->unkA, entry->unkC, entry->unkE, entry->unk10);
+        panel++;
+    } while (panel < 0x9A);
+
+    prim = func_80141478(prim, arg0);
+    prim = func_801416C8(prim, arg0);
+    prim = func_80141074(prim, arg0);
+    text_anchor = arg0 + 0x28;
+
+    if (D_8014C184 != 0)
+    {
+        archive = (u8 *)&D_8014AAA4;
+        archive -= 4;
+        func_801427F8(name_buf, D_8014AAA4 + (*(u16 *)(((u8)CELL(D_8014C284) >> 2) * 2 + D_8014AAA4 + archive) + archive));
+        if ((CELL(D_8014C284) >> 8) & 0xF)
+        {
+            offsets = D_800EC3DA;
+            text_base = offsets - 0x16;
+            func_80142728(name_buf, offsets[0] + ((offsets[1] << 8) + text_base));
+            func_800A8B90(number_buf, (CELL(D_8014C284) >> 8) & 0xF, 1);
+            func_80142728(name_buf, number_buf);
+        }
+        prim = func_800A88A0(prim, text_anchor, name_buf, 0, 0xA0, 0xA0, 2);
+        detail = *(s32 *)(archive + 8);
+        prim = func_800A88A0(prim, text_anchor,
+                             detail + (*(u16 *)(((u8)CELL(D_8014C284) >> 2) * 2 + detail + archive) + archive),
+                             0, 0xA0, 0xB0, 2);
+    }
+
+    *(s32 *)(arg0 + 0x4040) = func_80142434(prim, arg0 + 0x24);
 }
