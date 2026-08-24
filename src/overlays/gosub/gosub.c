@@ -70,7 +70,10 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_ARMOR_DEFENSE_X 0x60
 #define GOSUB_INSTRUMENT_POWER_X 0x38
 #define GOSUB_INSTRUMENT_EFFECT_X 0x60
-#define GOSUB_EQUIPMENT_DETAIL_COLOR 4
+
+/** @brief Position of the centered current-row description. */
+#define GOSUB_ROW_DESCRIPTION_X 0x84
+#define GOSUB_ROW_DESCRIPTION_Y 2
 
 /** @brief Lifecycle states used by a gosub UI element. */
 typedef enum GosubElementState
@@ -141,6 +144,21 @@ typedef enum
     GOSUB_EQUIPMENT_KIND_ARMOR = 1,
     GOSUB_EQUIPMENT_KIND_INSTRUMENT = 2
 } GosubEquipmentKind;
+
+/** @brief Text palette values used by the gosub UI. */
+typedef enum
+{
+    GOSUB_TEXT_COLOR_NORMAL = 4,
+    GOSUB_TEXT_COLOR_DISABLED = 5
+} GosubTextColor;
+
+/** @brief Horizontal alignment modes accepted by the text renderer. */
+typedef enum
+{
+    GOSUB_TEXT_ALIGN_LEFT = 0,
+    GOSUB_TEXT_ALIGN_RIGHT = 1,
+    GOSUB_TEXT_ALIGN_CENTER = 2
+} GosubTextAlignment;
 
 /** @brief Sort keys offered for the packed logic-block list. */
 typedef enum
@@ -512,7 +530,7 @@ s32 gosub_draw_message_dialog();
 s32 gosub_draw_detail_header();
 s32 gosub_draw_two_line_header();
 s32 gosub_draw_confirmation_prompt();
-s32 gosub_draw_row_description();
+s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
 void gosub_append_encoded_string();
 void gosub_copy_encoded_string();
 s32 gosub_encoded_string_length(const u8* text);
@@ -3830,24 +3848,30 @@ s32 gosub_draw_confirmation_prompt(s32* ot, s32 prim, s32 x_off, s32 y_off)
 }
 
 /**
- * @brief Draw the current row's description and optional equipment details.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
- * @return Packet cursor after the row description.
+ * @brief Draw the current row description and its optional equipment details.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after the description and optional details.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_row_description(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32 stack_pad[12];
+    s32 stack_padding[12];
 
-    prim = func_800A88A0(prim, ot, g_gosub_rows[g_gosub_cursor_row].desc, 4, 0x84 - x_off, 2 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                  g_gosub_rows[g_gosub_cursor_row].desc,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_ROW_DESCRIPTION_X - x_offset,
+                                  GOSUB_ROW_DESCRIPTION_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
-        prim = gosub_draw_equipment_details(prim, ot, x_off, y_off);
+        packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table,
+                                                     x_offset, y_offset);
     }
-    return prim;
+    return packet_cursor;
 }
 
 /**
@@ -3874,20 +3898,20 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
     case GOSUB_EQUIPMENT_KIND_WEAPON:
         packet_cursor = func_800A88A0(packet_cursor, ordering_table,
                                       (void*)((u8*)&D_800EC3EE - 0x2A + D_800EC3EE.low + (D_800EC3EE.high << 8)),
-                                      GOSUB_EQUIPMENT_DETAIL_COLOR,
+                                      GOSUB_TEXT_COLOR_NORMAL,
                                       GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
                                       GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
         packet_cursor = func_800A8A78(ordering_table, packet_cursor,
                                       g_gosub_rows[g_gosub_cursor_row].primary_value,
-                                      GOSUB_EQUIPMENT_DETAIL_COLOR, &number_position, 0);
+                                      GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
         break;
 
     case GOSUB_EQUIPMENT_KIND_ARMOR:
         packet_cursor = func_800A88A0(packet_cursor, ordering_table,
                                       (void*)((u8*)&D_800EC3F0 - 0x2C + D_800EC3F0.low + (D_800EC3F0.high << 8)),
-                                      GOSUB_EQUIPMENT_DETAIL_COLOR,
+                                      GOSUB_TEXT_COLOR_NORMAL,
                                       GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
                                       GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
@@ -3897,7 +3921,7 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
                                           g_gosub_rows[g_gosub_cursor_row].stats[1] +
                                           g_gosub_rows[g_gosub_cursor_row].stats[2] +
                                           g_gosub_rows[g_gosub_cursor_row].stats[3],
-                                      GOSUB_EQUIPMENT_DETAIL_COLOR, &number_position, 0);
+                                      GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
         break;
 
     /* Instruments and the reserved fourth kind use the same detail layout. */
@@ -3905,14 +3929,14 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
         archive_block = &g_gosub_text_archive_offsets_6;
         packet_cursor = func_800A88A0(packet_cursor, ordering_table,
                                       (void*)((u8*)&D_800EC3F2 - 0x2E + D_800EC3F2.low + (D_800EC3F2.high << 8)),
-                                      GOSUB_EQUIPMENT_DETAIL_COLOR,
+                                      GOSUB_TEXT_COLOR_NORMAL,
                                       GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
                                       GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
         packet_cursor = func_800A8A78(ordering_table, packet_cursor,
                                       g_gosub_rows[g_gosub_cursor_row].primary_value,
-                                      GOSUB_EQUIPMENT_DETAIL_COLOR, &number_position, 0);
+                                      GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
         archive_base = (u8*)archive_block;
         archive_base -= 0x2C;
         effect_text_offset = (s32)archive_base +
@@ -3920,9 +3944,10 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
                                      g_gosub_text_archive_offsets_6 + archive_base);
         packet_cursor = func_800A88A0(packet_cursor, ordering_table,
                                       (void*)(g_gosub_text_archive_offsets_6 + effect_text_offset),
-                                      GOSUB_EQUIPMENT_DETAIL_COLOR,
+                                      GOSUB_TEXT_COLOR_NORMAL,
                                       GOSUB_INSTRUMENT_EFFECT_X - x_offset,
-                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset,
+                                      GOSUB_TEXT_ALIGN_LEFT);
         break;
     }
     return packet_cursor;

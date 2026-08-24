@@ -518,3 +518,15 @@ void func_80140FF8(void)
     D_8014C268 = 0x50;
     D_8014C254 = 8;
 }
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80141020(s32 prim, s32 ot)
+{
+    DR_TPAGE *draw_mode = (DR_TPAGE *)prim;
+
+    setDrawTPage(draw_mode, 0, 0, getTPage(0, 1, 320, 0));
+    addPrim(ot, draw_mode);
+    return prim + 8;
+}
