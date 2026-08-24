@@ -1,9 +1,23 @@
 // GOSUB.BIN
 
-// Cross-module (main-resident PSYQ library functions and globals, outside this
-// overlay's own VRAM window, so no collision risk with the shared symbol table).
-LoadImage                                = 0x80019A34;
-g_pad_ctx                                = 0x8012271C;
+// Cross-module FIELD function not present in the shared symbol table.
+field_set_default_fade_target            = 0x80067F8C;
+
+// Overlay rodata and packed data
+D_80140000                               = 0x80140000;
+D_80147058                               = 0x80147058;
+D_8014F27C                               = 0x8014F27C;
+D_8014F280                               = 0x8014F280;
+D_8014F288                               = 0x8014F288;
+D_8014F294                               = 0x8014F294;
+D_8014F29C                               = 0x8014F29C;
+D_8014F2A4                               = 0x8014F2A4;
+D_8014F2A8                               = 0x8014F2A8;
+D_8014F2C4                               = 0x8014F2C4;
+D_80152DF4                               = 0x80152DF4;
+D_8016B3DC                               = 0x8016B3DC;
+D_8016B5AC                               = 0x8016B5AC;
+D_8016B634                               = 0x8016B634;
 
 // Overlay entry points
 gosub_open_screen_sequence               = 0x80140080;
@@ -59,23 +73,33 @@ g_gosub_row_count                        = 0x8016B8D4;
 g_gosub_visible_row_count                = 0x8016B8D8;
 g_gosub_screen_sequence_index            = 0x8016B8DC;
 g_gosub_scroll_frames_remaining          = 0x8016B8E0;
+D_8016B8E4                               = 0x8016B8E4;
 g_gosub_dialog_choice                    = 0x8016B8E8;
+D_8016B8EC                               = 0x8016B8EC;
 g_gosub_allow_duplicate_selection        = 0x8016B8F0;
+D_8016B8F4                               = 0x8016B8F4;
 g_gosub_finish_handler                   = 0x8016B8F8;
+D_8016B8FC                               = 0x8016B8FC;
 g_gosub_required_selection_count         = 0x8016B8FD;
+D_8016B900                               = 0x8016B900;
 g_gosub_result_rows                      = 0x8016B908;
+D_8016B948                               = 0x8016B948;
 g_gosub_selected_rows                    = 0x8016B94C;
 g_gosub_window_height                    = 0x8016B950;
 g_gosub_select_handler                   = 0x8016B954;
 g_gosub_window_width                     = 0x8016B958;
+D_8016B95C                               = 0x8016B95C;
 g_gosub_text_buffers                     = 0x8016B960;
 g_gosub_selection_count                  = 0x80170960;
 g_gosub_screen_sequence                  = 0x80170968;
+D_8017097C                               = 0x8017097C;
 g_gosub_row_height                       = 0x80170980;
 g_gosub_scroll_y                         = 0x80170988;
+D_8017098C                               = 0x8017098C;
 g_gosub_scroll_target_y                  = 0x80170990;
 g_gosub_title_text                       = 0x80170994;
 g_gosub_elements                         = 0x80170998;
+D_801709A4                               = 0x801709A4;
 g_gosub_rows                             = 0x80170A58;
 g_gosub_dialog_handler                   = 0x80174A58;
 
