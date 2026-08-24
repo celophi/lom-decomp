@@ -187,8 +187,9 @@ s32 g_gosub_finished;
 s32 g_gosub_cursor_row;
 s32 g_gosub_row_count;
 s32 g_gosub_visible_row_count;
+/** @brief Scalar byte whose target BSS symbol spans four bytes. */
 u8 g_gosub_screen_sequence_index;
-u8 pad_8016B8DD[3];
+u8 g_gosub_screen_sequence_index_storage[4] __asm__("g_gosub_screen_sequence_index");
 s32 g_gosub_scroll_frames_remaining;
 s32 D_8016B8E4;
 s32 g_gosub_dialog_choice;
@@ -197,10 +198,12 @@ s32 g_gosub_allow_duplicate_selection;
 s32 D_8016B8F4;
 s32 (*g_gosub_finish_handler)();
 u8 D_8016B8FC;
+/** @brief Scalar byte whose target BSS symbol spans three bytes. */
 u8 g_gosub_required_selection_count;
-u8 pad_8016B8FE[2];
+u8 g_gosub_required_selection_count_storage[3] __asm__("g_gosub_required_selection_count");
+/** @brief Scalar word whose target BSS symbol spans eight bytes. */
 s32 D_8016B900;
-s32 pad_8016B904;
+u8 D_8016B900_storage[8] __asm__("D_8016B900");
 s32 g_gosub_result_rows[16];
 s32 D_8016B948;
 u8 g_gosub_selected_rows[4];
@@ -209,17 +212,20 @@ s32 (*g_gosub_select_handler)();
 s32 g_gosub_window_width;
 s32 D_8016B95C;
 u8 g_gosub_text_buffers[0x5000];
+/** @brief Scalar byte whose target BSS symbol spans eight bytes. */
 u8 g_gosub_selection_count;
-u8 pad_80170961[7];
+u8 g_gosub_selection_count_storage[8] __asm__("g_gosub_selection_count");
 u8 g_gosub_screen_sequence[20];
 s32 D_8017097C;
+/** @brief Scalar word whose target BSS symbol spans eight bytes. */
 s32 g_gosub_row_height;
-s32 pad_80170984;
+u8 g_gosub_row_height_storage[8] __asm__("g_gosub_row_height");
 s32 g_gosub_scroll_y;
 s32 D_8017098C;
 s32 g_gosub_scroll_target_y;
 u8* g_gosub_title_text;
-GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
+GosubElement g_gosub_elements[1];
+GosubElement D_801709A4[GOSUB_ELEMENT_COUNT - 1];
 GosubListEntry g_gosub_rows[512];
 s32 (*g_gosub_dialog_handler)(s32);
 
@@ -1700,7 +1706,6 @@ typedef struct
     ((u8*)&D_8014F27C + D_8014F288[0] + *(u16*)((u8*)D_8014F288 + D_8014F288[0] + GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) + 0x22))
 
 /** @brief UI element pool; element 0 is reserved for the fixed dialog element. */
-extern GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
 extern u8* g_pad_ctx;
 extern s32 D_801227F0;
 extern s32 g_gosub_result_count;
@@ -1712,19 +1717,15 @@ extern s32 g_gosub_cursor_row;
 extern s32 g_gosub_finished;
 extern s32 g_gosub_row_count;
 extern s32 g_gosub_visible_row_count;
-extern u8 g_gosub_screen_sequence_index;
 extern s32 g_gosub_scroll_frames_remaining;
 extern s32 D_8016B8E4;
 extern s32 g_gosub_dialog_choice;
 extern s32 D_8016B8EC;
 extern s32 g_gosub_allow_duplicate_selection;
 extern u8 D_8016B8FC;
-extern u8 g_gosub_required_selection_count;
 extern s32 g_gosub_window_height;
 extern s32 g_gosub_window_width;
-extern u8 g_gosub_selection_count;
 extern s32 D_8017097C;
-extern s32 g_gosub_row_height;
 extern s32 g_gosub_scroll_y;
 extern s32 g_gosub_scroll_target_y;
 extern GosubListEntry g_gosub_rows[];
@@ -1741,7 +1742,6 @@ extern s32 (*g_gosub_dialog_handler)(s32);
 
 extern u8 D_800EC3E2[];
 extern u32 D_8014F288[];
-extern s32 D_8016B900;
 extern u8 g_gosub_text_buffers[];
 extern u8* g_gosub_title_text;
 
@@ -2587,7 +2587,7 @@ GosubElement* func_80143C04(void)
     s32 var_a1;
     s32* var_a0;
 
-    var_a0 = (s32*)&g_gosub_elements[1];
+    var_a0 = (s32*)D_801709A4;
 
     for (var_a1 = 1; var_a1 < 0x10; var_a1++, var_a0 += 3)
     {
