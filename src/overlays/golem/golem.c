@@ -1,4 +1,7 @@
 #include "common.h"
+#include "gpu_packet.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
 
 extern u8 *D_8014C168;
 extern s32 D_8014C16C;
@@ -51,13 +54,6 @@ void func_80140CBC();
 #define CELL(i) (((D80042FD8Type *)&D_80042FD8)->cells[(i)])
 /** @brief Clear the panel-animation bits [10:7] and set the "active" pair [8:7]. */
 #define SET_UI_BITS(x) (((x) & ~0x780) | 0x180)
-
-typedef struct {
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} RECT;
 
 typedef struct {
     u16 x;
@@ -493,4 +489,21 @@ void func_80140DEC(s32 arg0, s32 arg1)
     }
 
     func_80141020(acc, arg1);
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80140F68(s32 prim, s32 ot, s32 x, s32 y, s32 tile)
+{
+    SPRT *sprt = (SPRT *)prim;
+
+    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+    setSprt(sprt);
+    setWH(sprt, 8, 8);
+    setUV0(sprt, tile * 8 - 0x70, 0x58);
+    setXY0(sprt, x, y);
+    sprt->clut = 0x7C87;
+    addPrim(ot, sprt);
+    return prim + 0x14;
 }
