@@ -4,6 +4,7 @@ extern u8 *D_8014C168;
 extern s32 D_8014C16C;
 extern s32 D_8014C170;
 extern u8 D_80042FD8[];
+extern u8 D_800F1CD0[];
 extern s32 D_80122C00;
 extern s32 D_8014C180;
 extern s32 D_8014C184;
@@ -35,6 +36,8 @@ typedef struct { u8 pad[0x29DC]; u32 cells[64]; } D80042FD8Type;
 typedef struct { u16 value; u16 pad; } C198Entry;
 /** @brief UI panel bitfield block holding three animated corner words. */
 typedef struct { u32 unk00; u8 pad04[0x10]; u32 unk14; u8 pad18[0x24]; u32 unk3C; } B560;
+/** @brief 88-byte row of the D_800F1CD0 icon table; only bytes 2 and 3 are read here. */
+typedef struct { u8 pad0[2]; u8 unk2; u8 unk3; u8 pad4[84]; } D800F1CD0Entry;
 extern B560 D_8014B560;
 
 void func_800A3938();
@@ -392,5 +395,27 @@ backward_done:
     if (value != 0) {
 cancel:
         func_800A3938(0x7D, 0x80); D_8014C16C = 1; if (D_8014C288 != 0) D_80122C00 = D_8014C270;
+    }
+}
+/**
+ * @see decomp.me (100%)
+ */
+void func_80140CBC(void)
+{
+    if (D_8014C188 == 0)
+    {
+        D800F1CD0Entry *tbl;
+        D_8014C248 = (tbl = (D800F1CD0Entry *)D_800F1CD0)[(CELL(D_8014C284) >> 12) & 0xF].unk2 - 1;
+        D_8014C24C = tbl[(CELL(D_8014C284) >> 12) & 0xF].unk3 - 1;
+        return;
+    }
+    if (D_8014C188 >= 0)
+    {
+        if (D_8014C188 < 3)
+        {
+            D800F1CD0Entry *tbl = (D800F1CD0Entry *)D_800F1CD0;
+            D_8014C248 = tbl[(CELL(D_8014C284) >> 12) & 0xF].unk2;
+            D_8014C24C = tbl[(CELL(D_8014C284) >> 12) & 0xF].unk3;
+        }
     }
 }
