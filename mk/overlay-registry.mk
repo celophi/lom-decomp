@@ -88,7 +88,6 @@ OVERLAYS += gname
 overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/gname.c
 
 OVERLAYS += golem
-overlay_golem_gcc_280_g0_srcs := src/overlays/golem/unk1.c
 overlay_golem_gcc_272_cdk_g0_srcs := src/overlays/golem/golem.c
 
 OVERLAYS += gosub

@@ -2,8 +2,11 @@
 #include "gpu_packet.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
+#include "tim.h"
 
 typedef struct GosubTilePacket GosubTilePacket;
+
+/* Overlay constants. */
 
 /** @brief Number of entries in the gosub UI element pool. */
 #define GOSUB_ELEMENT_COUNT 16
@@ -11,6 +14,110 @@ typedef struct GosubTilePacket GosubTilePacket;
 /** @brief Control entries embedded in a gosub screen sequence. */
 #define GOSUB_SCREEN_SEQUENCE_END 0xFE
 #define GOSUB_SCREEN_SEQUENCE_DIALOG 0xFF
+
+/** @brief Fields in the encoded sort mode passed to gosub_sort_rows. */
+#define GOSUB_SORT_KEY_MASK 0x0F
+#define GOSUB_SORT_ASCENDING_MASK 0xF0
+#define GOSUB_SORT_ASCENDING_SHIFT 7
+#define GOSUB_SORT_ORDER_CAPACITY 0x100
+#define GOSUB_SORT_ROW_CAPACITY 0x28
+
+/** @brief Packed logic-block fields in g_pad_ctx. */
+#define GOSUB_LOGIC_BLOCK_COUNT_OFFSET 0x29D6
+#define GOSUB_LOGIC_BLOCK_RECORDS_OFFSET 0x29DC
+
+/** @brief Texture page containing the gosub font and panel-corner sprites. */
+#define GOSUB_FONT_TPAGE 5
+
+/** @brief VRAM row containing the selectable glyph palettes. */
+#define GOSUB_GLYPH_CLUT_Y 0x1F2
+/** @brief Convert a glyph CLUT slot to its VRAM x coordinate. */
+#define GOSUB_GLYPH_CLUT_X_SHIFT 4
+
+/** @brief VRAM location of the gosub font CLUT. */
+#define GOSUB_FONT_CLUT_X 0x150
+#define GOSUB_FONT_CLUT_Y 0xFF
+#define GOSUB_FONT_CLUT_WIDTH 0x10
+#define GOSUB_FONT_CLUT_HEIGHT 1
+
+/** @brief VRAM rectangle occupied by the gosub font texture strip. */
+#define GOSUB_FONT_TEXTURE_X 0x140
+#define GOSUB_FONT_TEXTURE_Y 0xF0
+#define GOSUB_FONT_TEXTURE_WIDTH 0x10
+#define GOSUB_FONT_TEXTURE_HEIGHT 0x10
+#define GOSUB_FONT_TEXTURE_DATA_OFFSET 0x2C
+
+/** @brief Dimensions and placement of one panel-corner sprite quadrant. */
+#define GOSUB_PANEL_CORNER_SIZE 8
+#define GOSUB_PANEL_CORNER_OUTSET 2
+#define GOSUB_PANEL_CORNER_FAR_INSET 5
+#define GOSUB_PANEL_CORNER_TEXTURE_V 0xF0
+
+/** @brief Layout constants for a composite icon assembled from glyphs. */
+#define GOSUB_COMPOSITE_ICON_PART_CAPACITY 19
+#define GOSUB_COMPOSITE_ICON_BASE_GLYPH_OFFSET 0x13
+#define GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE 8
+#define GOSUB_COMPOSITE_ICON_PART_CELL_SIZE 16
+#define GOSUB_COMPOSITE_ICON_BASE_CLUT 9
+
+/** @brief TIM flag indicating that a CLUT block precedes the pixel block. */
+#define GOSUB_TIM_HAS_CLUT 0x8
+
+/** @brief Positions and color used by the equipment detail line. */
+#define GOSUB_EQUIPMENT_DETAIL_LABEL_X 0x10
+#define GOSUB_EQUIPMENT_DETAIL_Y 0x12
+#define GOSUB_WEAPON_POWER_X 0x68
+#define GOSUB_ARMOR_DEFENSE_X 0x60
+#define GOSUB_INSTRUMENT_POWER_X 0x38
+#define GOSUB_INSTRUMENT_EFFECT_X 0x60
+
+/** @brief Position of the centered current-row description. */
+#define GOSUB_ROW_DESCRIPTION_X 0x84
+#define GOSUB_ROW_DESCRIPTION_Y 2
+
+/** @brief Position of caller-provided text within a message dialog. */
+#define GOSUB_MESSAGE_DIALOG_TEXT_X 0x80
+#define GOSUB_MESSAGE_DIALOG_TEXT_Y 2
+
+/** @brief Message offset and position of the equipment detail header. */
+#define GOSUB_DETAIL_HEADER_MESSAGE_OFFSET (-0x18)
+#define GOSUB_DETAIL_HEADER_X 0x84
+#define GOSUB_DETAIL_HEADER_Y 2
+
+/** @brief Message offsets and layout of the fixed two-line header. */
+#define GOSUB_TWO_LINE_HEADER_FIRST_MESSAGE_OFFSET (-0x1C)
+#define GOSUB_TWO_LINE_HEADER_SECOND_MESSAGE_OFFSET (-0x1A)
+#define GOSUB_TWO_LINE_HEADER_X 0x84
+#define GOSUB_TWO_LINE_HEADER_FIRST_Y 2
+#define GOSUB_TWO_LINE_HEADER_SECOND_Y 0x12
+
+/** @brief Message offsets and layout of the two-choice confirmation prompt. */
+#define GOSUB_CONFIRMATION_TITLE_MESSAGE_OFFSET (-0x14)
+#define GOSUB_CONFIRMATION_FIRST_CHOICE_MESSAGE_OFFSET (-0x20)
+#define GOSUB_CONFIRMATION_SECOND_CHOICE_MESSAGE_OFFSET (-0x1E)
+#define GOSUB_CONFIRMATION_CHOICE_MASK 1
+#define GOSUB_CONFIRMATION_TITLE_X 0x80
+#define GOSUB_CONFIRMATION_FIRST_CHOICE_X 0x78
+#define GOSUB_CONFIRMATION_SECOND_CHOICE_X 0x88
+#define GOSUB_CONFIRMATION_TITLE_Y 2
+#define GOSUB_CONFIRMATION_CHOICE_Y 0x12
+
+/** @brief Message offsets and layout of the sort-key dialog. */
+#define GOSUB_SORT_DIALOG_TYPE_MESSAGE_OFFSET (-0xE)
+#define GOSUB_SORT_DIALOG_POWER_MESSAGE_OFFSET (-0xC)
+#define GOSUB_SORT_DIALOG_SHAPE_MESSAGE_OFFSET (-0xA)
+#define GOSUB_SORT_DIALOG_X 0x40
+#define GOSUB_SORT_DIALOG_TYPE_Y 2
+#define GOSUB_SORT_DIALOG_POWER_Y 0x12
+#define GOSUB_SORT_DIALOG_SHAPE_Y 0x22
+
+/** @brief Message offsets and layout of the row-action dialog. */
+#define GOSUB_ROW_ACTION_SORT_MESSAGE_OFFSET (-0x12)
+#define GOSUB_ROW_ACTION_DELETE_MESSAGE_OFFSET (-0x10)
+#define GOSUB_ROW_ACTION_CHOICE_MASK 1
+#define GOSUB_ROW_ACTION_DIALOG_X 0x40
+#define GOSUB_ROW_ACTION_SORT_Y 2
+#define GOSUB_ROW_ACTION_DELETE_Y 0x12
 
 /** @brief Lifecycle states used by a gosub UI element. */
 typedef enum GosubElementState
@@ -20,63 +127,6 @@ typedef enum GosubElementState
     GOSUB_ELEMENT_STATE_ACTIVE = 2,
     GOSUB_ELEMENT_STATE_EXITING = 3
 } GosubElementState;
-
-void field_set_default_fade_target();                   /* extern */
-void func_800A8B90();                                   /* extern */
-void func_800AA02C();                                   /* extern */
-void gosub_load_screen_sequence(s32*);                  /* extern */
-void gosub_build_screen_9_elements();                   /* extern */
-void gosub_build_screen_10_elements();                  /* extern */
-void gosub_build_category_screen_elements();            /* extern */
-void gosub_build_list_screen_elements();                /* extern */
-void gosub_build_screen_11_elements();                  /* extern */
-void gosub_build_compact_list_elements();               /* extern */
-void gosub_build_screen_15_item_list();                 /* extern */
-void gosub_build_screen_19_item_list();                 /* extern */
-void gosub_build_screen_16_item_list();                 /* extern */
-void gosub_build_screen_1_item_list();                  /* extern */
-void gosub_build_screen_0_item_list();                  /* extern */
-void gosub_build_packed_record_list();                  /* extern */
-void gosub_build_roster_list();                         /* extern */
-s32 gosub_select_row_with_validation();                 /* extern */
-s32 gosub_select_row();                                 /* extern */
-s32 gosub_validate_pending_pair_selection();            /* extern */
-s32 gosub_commit_row_reorder();                         /* extern */
-s32 gosub_update_group_selection();                     /* extern */
-s32 gosub_publish_two_row_selection();                  /* extern */
-s32 gosub_handle_combination_dialog(s32 dialog_result); /* extern */
-s32 gosub_publish_group_selection(void);                /* extern */
-s32 gosub_publish_selection(void);                      /* extern */
-s32 gosub_is_row_unselected(s32 row);                   /* extern */
-void gosub_build_equipment_list(u32 item_kind);         /* extern */
-void gosub_build_grouped_option_list(s32 group);        /* extern */
-void gosub_update_screen(s32 render_ctx);               /* extern */
-void gosub_start_element_exit();                    /* extern */
-void gosub_open_message_dialog();                   /* extern */
-s32 gosub_draw_message_dialog();                    /* extern */
-s32 gosub_draw_detail_header();                     /* extern */
-s32 gosub_draw_two_line_header();                   /* extern */
-s32 gosub_draw_confirmation_prompt();               /* extern */
-s32 gosub_draw_row_description();                   /* extern */
-void gosub_append_encoded_string();                 /* extern */
-void gosub_copy_encoded_string();                   /* extern */
-GosubTilePacket* gosub_draw_item_list();            /* extern */
-s32 gosub_draw_combination_preview();               /* extern */
-s32 gosub_handle_backtrack_dialog();                /* extern */
-s32 gosub_draw_title();                             /* extern */
-extern s32 g_gosub_result_count;
-extern u8* g_pad_ctx;
-extern s32 g_gosub_message_archive_offset;
-extern s32 g_gosub_result_values[];
-extern u8 D_800EC3DA[];
-extern u8 D_800EC3EE[];
-extern u8 D_800EC3F0[];
-extern u8 D_800EC3F2[];
-extern u32 g_gosub_text_archive_offsets_0[];
-extern u32 g_gosub_text_archive_offsets_1[];
-extern u32 g_gosub_text_archive_offsets_3[];
-extern s32 g_gosub_text_archive_offsets_6;
-extern u8 g_gosub_item_metadata[];
 
 /**
  * @brief Animated panel or list element managed by the gosub renderer.
@@ -99,16 +149,6 @@ typedef struct
     u32 reserved_9 : 23;
     void* draw_handler;
 } GosubElement;
-
-/**
- * @brief Set the low eight bits of an element's width.
- * @param element Element to update.
- * @param width Low width byte.
- */
-#define SET_ELEMENT_WIDTH_LOW(element, width) ((element)->attr.word = ((element)->attr.word & 0x00FFFFFF) | ((u32)(width) << 24))
-
-/** @brief UI element pool; element 0 is reserved for the fixed dialog element. */
-GosubElement* gosub_allocate_element();
 
 /**
  * @brief Display and selection metadata for one gosub list row.
@@ -141,6 +181,29 @@ typedef struct
     } flags;
 } GosubListRow;
 
+/** @brief Equipment categories encoded in the row's equipment_kind field. */
+typedef enum
+{
+    GOSUB_EQUIPMENT_KIND_WEAPON = 0,
+    GOSUB_EQUIPMENT_KIND_ARMOR = 1,
+    GOSUB_EQUIPMENT_KIND_INSTRUMENT = 2
+} GosubEquipmentKind;
+
+/** @brief Text palette values used by the gosub UI. */
+typedef enum
+{
+    GOSUB_TEXT_COLOR_NORMAL = 4,
+    GOSUB_TEXT_COLOR_DISABLED = 5
+} GosubTextColor;
+
+/** @brief Horizontal alignment modes accepted by the text renderer. */
+typedef enum
+{
+    GOSUB_TEXT_ALIGN_LEFT = 0,
+    GOSUB_TEXT_ALIGN_RIGHT = 1,
+    GOSUB_TEXT_ALIGN_CENTER = 2
+} GosubTextAlignment;
+
 /** @brief Sort keys offered for the packed logic-block list. */
 typedef enum
 {
@@ -150,12 +213,397 @@ typedef enum
     GOSUB_SORT_KEY_COUNT = 3
 } GosubSortKey;
 
-/** @brief Fields in the encoded sort mode passed to gosub_sort_rows. */
-#define GOSUB_SORT_KEY_MASK 0x0F
-#define GOSUB_SORT_ASCENDING_MASK 0xF0
-#define GOSUB_SORT_ASCENDING_SHIFT 7
-#define GOSUB_SORT_ORDER_CAPACITY 0x100
-#define GOSUB_SORT_ROW_CAPACITY 0x28
+/** @brief Screen-space position pair passed by address to the glyph writer. */
+typedef struct
+{
+    s16 x;
+    s16 y;
+} GosubTextPosition;
+
+/** @brief GPU tile-shaped packet with a volatile height field. */
+typedef struct
+{
+    s32 tag;
+    s32 color;
+    s16 x;
+    s16 y;
+    s16 w;
+    volatile u16 h;
+} GosubGpuPacket;
+
+/** @brief GPU tile packet used for cursor and selection highlights. */
+struct GosubTilePacket
+{
+    s32 tag;
+    s32 color;
+    s16 x;
+    s16 y;
+    s16 w;
+    u16 h;
+};
+
+/** @brief Render context fields used by the gosub element renderer. */
+typedef struct
+{
+    s32 tag;
+    u8 reserved_0004[0x40AE];
+    s16 display_buffer_index;
+    u8 reserved_40b4[4];
+    GosubGpuPacket* packet_cursor;
+} GosubRenderContext;
+
+/** @brief Draw callback installed on a gosub element. */
+typedef GosubGpuPacket* (*GosubElementDrawHandler)();
+
+/** @brief Unconnected flat-line GPU packet. */
+typedef struct
+{
+    u_long tag;  /* 0x00 P_TAG */
+    u_char r0;   /* 0x04 */
+    u_char g0;   /* 0x05 */
+    u_char b0;   /* 0x06 */
+    u_char code; /* 0x07 */
+    s16 x0;      /* 0x08 */
+    s16 y0;      /* 0x0A */
+    s16 x1;      /* 0x0C */
+    s16 y1;      /* 0x0E */
+} GosubLinePacket; /* 0x10 */
+
+/** @brief Packed four-byte record stored in the combination table. */
+typedef struct
+{
+    u32 word;
+} GosubPackedRecord;
+
+/** @brief Stack workspace used to reorder logic-block records and their rows. */
+typedef struct
+{
+    u8 row_order[GOSUB_SORT_ORDER_CAPACITY];
+    GosubPackedRecord packed_records[GOSUB_SORT_ROW_CAPACITY];
+    GosubListRow rows[GOSUB_SORT_ROW_CAPACITY];
+} GosubSortWorkspace; /* 0x6A0 */
+
+/** @brief One 0x40-byte equipment record in the table at g_pad_ctx + 0xCE0. */
+typedef struct
+{
+    u8 name[0x14];
+    union
+    {
+        u32 word;
+        struct
+        {
+            u16 low;
+            u16 material;
+        } half;
+    } attributes;
+    u8 reserved_18[0xC];
+    union
+    {
+        u16 kind0_value;
+        u16 kind1_stats[4];
+        struct
+        {
+            u8 group;
+            u8 index;
+            u8 value;
+        } kind2;
+    } data;
+    u8 reserved_2c[0x14];
+} GosubEquipmentRecord;
+
+/** @brief Save-data prefix through the 100-record equipment table. */
+typedef struct
+{
+    u8 save_prefix[0xCE0];
+    GosubEquipmentRecord equipment[100];
+} GosubSaveData;
+
+/** @brief Per-row scratch text storage. */
+typedef struct
+{
+    u8 text[0x50];
+} GosubTextBuffer;
+
+/** @brief Header of the text archive rooted at g_gosub_text_archive_offsets_0. */
+typedef struct
+{
+    u32 block_offsets[13];
+} GosubTextArchive;
+
+/** @brief Three-entry lookup table indexed by gosub screen group. */
+typedef struct
+{
+    s32 values[3];
+} GosubGroupTable;
+
+/**
+ * @brief LINE_F4 packet used to draw an animated scroll marker.
+ */
+typedef struct
+{
+    u8 addr[3]; /* 0x00 P_TAG addr (24-bit, set via addPrim) */
+    u8 len;     /* 0x03 P_TAG len */
+    u8 r;       /* 0x04 */
+    u8 g;       /* 0x05 */
+    u8 b;       /* 0x06 */
+    u8 code;    /* 0x07 */
+    s16 x0;     /* 0x08 */
+    s16 y0;     /* 0x0A */
+    s16 x1;     /* 0x0C */
+    s16 y1;     /* 0x0E */
+    s16 x2;     /* 0x10 */
+    s16 y2;     /* 0x12 */
+    s16 x3;     /* 0x14 */
+    s16 y3;     /* 0x16 */
+    u32 mask;   /* 0x18 LINE_F4 pad word (0x55555555) */
+} GosubScrollMarkerPacket; /* 0x1C */
+
+/** @brief Offset tables at the head of the message archive. */
+typedef struct
+{
+    u16 header_offsets[0x22];
+    u16 text_offsets[16];
+} GosubMessageArchiveHeader;
+
+/** @brief VRAM upload position for an image and its CLUT. */
+typedef struct
+{
+    u16 pixel_x;
+    u16 pixel_y;
+    u16 clut_x;
+    u16 clut_y;
+} GosubImageVramLayout;
+
+/** @brief Little-endian text offset stored as two independently loaded bytes. */
+typedef struct
+{
+    u8 low;
+    u8 high;
+} GosubEncodedTextOffset;
+
+/** @brief Glyph cell descriptor in the 8-byte g_gosub_glyph_metrics table. */
+typedef struct
+{
+    u8 u0;    /* 0x00 texture u */
+    u8 reserved_1;
+    u8 v0;    /* 0x02 texture v */
+    u8 reserved_3;
+    u16 w;    /* 0x04 */
+    u16 h;    /* 0x06 */
+} GosubGlyphMetric; /* 0x08 */
+
+/** @brief One positioned glyph in a composite icon layout. */
+typedef struct
+{
+    s8 x;        /* 0x00, in 16-pixel cells */
+    s8 y;        /* 0x01, in 16-pixel cells */
+    s16 glyph_id; /* 0x02 */
+} GosubCompositeIconPart; /* 0x04 */
+
+/** @brief One 88-byte composite icon layout in D_800F1CD0. */
+typedef struct
+{
+    u8 part_count; /* 0x00 */
+    u8 reserved_01;
+    u8 grid_width;  /* 0x02 */
+    u8 grid_height; /* 0x03 */
+    s16 origin_x;   /* 0x04, in 8-pixel cells */
+    s16 origin_y;   /* 0x06, in 8-pixel cells */
+    s8 base_x;      /* 0x08, in 8-pixel cells */
+    s8 base_y;      /* 0x09, in 8-pixel cells */
+    u8 reserved_0a[2];
+    GosubCompositeIconPart parts[GOSUB_COMPOSITE_ICON_PART_CAPACITY]; /* 0x0C */
+} GosubCompositeIconLayout; /* 0x58 */
+
+/** @brief Byte and structured views of a composite icon table cursor. */
+typedef union
+{
+    u8* bytes;
+    GosubCompositeIconLayout* layout;
+} GosubCompositeIconView;
+
+/* External data. */
+
+extern u8* g_pad_ctx;
+extern s32 g_field_gosub_state;
+extern s32 g_pad_input;
+extern s32 g_frame_counter;
+extern s32 g_gosub_result_count;
+extern s32 g_gosub_result_values[];
+extern s32 g_gosub_message_archive_offset;
+extern s32 g_gosub_text_archive_0;
+extern u32 g_gosub_text_archive_offsets_0[];
+extern u32 g_gosub_text_archive_offsets_1[];
+extern u32 g_gosub_text_archive_offsets_2[];
+extern u32 g_gosub_text_archive_offsets_3[];
+extern s32 g_gosub_text_archive_offsets_5;
+extern s32 g_gosub_text_archive_offsets_6;
+extern u8 g_gosub_item_metadata[];
+extern GosubGroupTable g_gosub_group_first_indices;
+extern GosubGroupTable g_gosub_group_counts;
+extern s32 g_gosub_portrait_archive[];
+extern TimPrefix g_gosub_image_archive;
+extern GosubGlyphMetric g_gosub_glyph_metrics[];
+extern u8 g_gosub_font_texture[];
+extern u8 D_800EC3DA[];
+extern u8 D_800EC3E2[];
+extern GosubEncodedTextOffset D_800EC3EE;
+extern GosubEncodedTextOffset D_800EC3F0;
+extern GosubEncodedTextOffset D_800EC3F2;
+extern s32 D_800F2180[];
+extern u8 D_800F1CD0[];
+
+/* Typed access and helper macros. */
+
+/**
+ * @brief Set the low eight bits of an element's width.
+ * @param element Element to update.
+ * @param width Low width byte.
+ */
+#define SET_ELEMENT_WIDTH_LOW(element, width) ((element)->attr.word = ((element)->attr.word & 0x00FFFFFF) | ((u32)(width) << 24))
+
+/**
+ * @brief Resolve one entry of a text archive block.
+ * @param blk Block offset word, e.g. g_gosub_text_archive_offsets_1[0] or g_gosub_text_archive_offsets_0[12].
+ * @param idx Entry index within the block.
+ * @return Pointer to the entry.
+ */
+#define ARCHIVE_ENTRY(blk, idx) ((u8*)g_gosub_text_archive_offsets_0 + (blk) + *(u16*)((u8*)g_gosub_text_archive_offsets_0 + (blk) + (idx) * 2))
+
+/**
+ * @brief Resolve a message-archive entry at byte offset @p off.
+ * @param off Byte offset of the u16 entry index within the resolved block.
+ * @return Pointer to the entry.
+ */
+#define GOSUB_MSG_PTR(off) ((u8*)&g_gosub_message_archive_offset - 0x20 + g_gosub_message_archive_offset + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset + (off)))
+
+/**
+ * @brief Resolve the message-archive entry at @p off and open its dialog.
+ * @param off Byte offset of the u16 entry index within the resolved block.
+ */
+#define GOSUB_MSG(off) gosub_open_message_dialog(GOSUB_MSG_PTR(off))
+
+/** @brief Link a packet after explicitly constraining its address to 24 bits. */
+#define ADD_PRIM_MASKED(ot, p) (setaddr(p, getaddr(ot) & 0xFFFFFF), setaddr(ot, p))
+
+#define GOSUB_LOGIC_BLOCK_COUNT (g_pad_ctx[GOSUB_LOGIC_BLOCK_COUNT_OFFSET])
+#define GOSUB_LOGIC_BLOCK_RECORDS ((GosubPackedRecord*)(g_pad_ctx + GOSUB_LOGIC_BLOCK_RECORDS_OFFSET))
+
+#define GOSUB_EQUIPMENT_RECORD(ptr) (&((GosubSaveData*)(ptr))->equipment[0])
+#define GOSUB_EQUIPMENT_BASE_FROM_INDEX(index) (g_pad_ctx + (index) * 0x40)
+#define GOSUB_EQUIPMENT_FROM_INDEX(index) GOSUB_EQUIPMENT_RECORD((index) * 0x40 + (s32)g_pad_ctx)
+#define GOSUB_EQUIPMENT_SOURCE_FROM_INDEX(index) ((u8*)((index) * 0x40 + (s32)g_pad_ctx))
+#define GOSUB_EQUIPMENT_AT(index) ((GosubEquipmentRecord*)(g_pad_ctx + ((index) * 0x40 + 0xCE0)))
+#define GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(index) ((GosubEquipmentRecord*)(g_pad_ctx + ((index) << 6) + 0xCE0))
+#define GOSUB_TEXT_BUFFER(index) (((GosubTextBuffer*)g_gosub_text_buffers)[index].text)
+#define GOSUB_TEXT_ARCHIVE ((GosubTextArchive*)&g_gosub_text_archive_offsets_0)
+#define GOSUB_EQUIPMENT_KIND(attributes) (((attributes) >> 8) & 3)
+#define GOSUB_EQUIPMENT_CATEGORY(attributes) (((attributes) >> 10) & 0x3F)
+#define GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) (((attributes) >> 9) & 0x7E)
+#define GOSUB_KIND2_ARCHIVE_ENTRY(attributes)                                                                                                                  \
+    ((u8*)&g_gosub_text_archive_offsets_0 + g_gosub_text_archive_offsets_2[0] + *(u16*)((u8*)g_gosub_text_archive_offsets_2 + g_gosub_text_archive_offsets_2[0] + GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) + 0x22))
+
+/**
+ * @brief Resolve a message pointer against a caller-held archive base.
+ *
+ * Same lookup as GOSUB_MSG_PTR, using an archive base already held by the
+ * caller. ABS addresses the offset table symbol; REL addresses the base.
+ *
+ * @param base Archive base, i.e. (u8*)&g_gosub_message_archive_offset - 0x20.
+ * @param off Byte offset of the u16 entry within the message block.
+ * @return Pointer to the message text.
+ */
+#define GOSUB_MSG_ABS(base, off)                                                                                                                               \
+    ((void*)(g_gosub_message_archive_offset + ((base) + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset + (off)))))
+#define GOSUB_MSG_REL(base, off) ((base) + g_gosub_message_archive_offset + *(u16*)((base) + g_gosub_message_archive_offset + (off)))
+
+/** @brief Resolve message entries through a gosub_draw_item_list local archive base. */
+#define MSG_HDR ((GosubMessageArchiveHeader*)((u8*)&g_gosub_message_archive_offset - -g_gosub_message_archive_offset))
+#define MSG_HI(off) ((void*)(g_gosub_message_archive_offset + (MSG_HDR->header_offsets[(off) >> 1] + base)))
+#define MSG_LO(off) ((void*)(g_gosub_message_archive_offset + (*(u16*)(base + g_gosub_message_archive_offset + (off)) + base)))
+
+/** @brief Test whether a byte begins a two-byte encoded character. */
+#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
+
+/* External and forward function declarations. */
+
+void bcopy();
+void field_set_default_fade_target();
+void func_800A8B90();
+void func_800AA02C();
+s32 func_800A88A0(s32 prim, s32* ot, void* text, s32 color, s32 x, s32 y, s32 mode);
+s32 func_800A8A78(s32* ot, s32 prim, s32 value, s32 color, GosubTextPosition* position, s32 mode);
+void gosub_load_screen_sequence(s32*);
+void gosub_build_screen_9_elements();
+void gosub_build_screen_10_elements();
+void gosub_build_category_screen_elements();
+void gosub_build_list_screen_elements();
+void gosub_build_screen_11_elements();
+void gosub_build_compact_list_elements();
+void gosub_build_screen_15_item_list();
+void gosub_build_screen_19_item_list();
+void gosub_build_screen_16_item_list();
+void gosub_build_screen_1_item_list();
+void gosub_build_screen_0_item_list();
+void gosub_build_packed_record_list();
+void gosub_build_roster_list();
+s32 gosub_select_row_with_validation();
+s32 gosub_select_row();
+s32 gosub_validate_pending_pair_selection();
+s32 gosub_commit_row_reorder();
+s32 gosub_update_group_selection();
+s32 gosub_publish_two_row_selection();
+s32 gosub_handle_combination_dialog(s32 dialog_result);
+s32 gosub_publish_group_selection(void);
+s32 gosub_publish_selection(void);
+s32 gosub_is_row_unselected(s32 row);
+void gosub_build_equipment_list(u32 item_kind);
+void gosub_build_grouped_option_list(s32 group);
+void gosub_update_screen(s32 render_ctx);
+void gosub_enter_screen();
+s32 gosub_handle_input(s32 unused);
+void gosub_scroll_to_cursor(void);
+s32 gosub_toggle_cursor_selection(void);
+s32 gosub_advance_screen_sequence(void);
+s32 gosub_are_elements_idle(void);
+void gosub_start_element_exit();
+void gosub_clear_elements(void);
+void gosub_render_elements();
+void gosub_update_and_render_elements();
+void gosub_open_message_dialog(u8* message_text);
+s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
+s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
+s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
+s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
+s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
+void gosub_append_encoded_string();
+void gosub_copy_encoded_string();
+s32 gosub_encoded_string_length(const u8* text);
+GosubElement* gosub_allocate_element();
+void* gosub_emit_scroll_marker();
+GosubGpuPacket* gosub_emit_panel();
+GosubLinePacket* gosub_emit_panel_outline();
+GosubGpuPacket* gosub_emit_panel_corners(SPRT*, s32*, s32, s32, s32, s32);
+GosubTilePacket* gosub_draw_item_list();
+s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count);
+s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset);
+s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s32 y, s32 icon_id, s32 layout_index);
+s32 gosub_draw_combination_preview();
+s32 gosub_handle_backtrack_dialog();
+s32 gosub_handle_delete_dialog(s32 dialog_result);
+s32 gosub_draw_title();
+s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset);
+s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset);
+void gosub_open_row_action_dialog(void);
+void gosub_open_sort_dialog(void);
+void gosub_upload_ui_image(void);
+void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim);
+inline void gosub_copy_packed_record(void* dst, void* src);
+inline void gosub_copy_list_row(void* dst, void* src);
+void gosub_delete_packed_record(s32 record_index);
+void gosub_delete_list_row(s32 row);
+s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index);
+void gosub_upload_font_texture(void);
 
 /* Overlay BSS layout is address-sensitive; do not reorder these definitions. */
 
@@ -172,7 +620,8 @@ s32 g_gosub_combination_variant;
 s32 g_gosub_dialog_choice;
 s32 g_gosub_combination_quantity;
 s32 g_gosub_allow_duplicate_selection;
-s32 g_gosub_dialog_text;
+/** @brief Encoded text currently displayed by the modal message dialog. */
+u8* g_gosub_dialog_text;
 s32 (*g_gosub_finish_handler)();
 u8 g_gosub_selection_mode;
 /** @brief Required selection count stored in a three-byte BSS slot. */
@@ -206,28 +655,6 @@ GosubElement g_gosub_elements[1];
 GosubElement g_gosub_dynamic_elements[GOSUB_ELEMENT_COUNT - 1];
 GosubListRow g_gosub_rows[512];
 s32 (*g_gosub_dialog_handler)(s32);
-
-/**
- * @brief Resolve one entry of a text archive block.
- * @param blk Block offset word, e.g. g_gosub_text_archive_offsets_1[0] or g_gosub_text_archive_offsets_0[12].
- * @param idx Entry index within the block.
- * @return Pointer to the entry.
- */
-#define ARCHIVE_ENTRY(blk, idx) ((u8*)g_gosub_text_archive_offsets_0 + (blk) + *(u16*)((u8*)g_gosub_text_archive_offsets_0 + (blk) + (idx) * 2))
-
-/**
- * @brief Resolve a message-archive entry at byte offset @p off.
- * @param off Byte offset of the u16 entry index within the resolved block.
- * @return Pointer to the entry.
- */
-#define GOSUB_MSG_PTR(off) ((u8*)&g_gosub_message_archive_offset - 0x20 + g_gosub_message_archive_offset + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset + (off)))
-
-/**
- * @brief Resolve the message-archive entry at @p off and hand it to gosub_open_message_dialog.
- *
- * @param off Byte offset of the u16 entry index within the resolved block.
- */
-#define GOSUB_MSG(off) gosub_open_message_dialog(GOSUB_MSG_PTR(off))
 
 /**
  * @brief Open the gosub overlay for a sequence of screen ids.
@@ -1369,233 +1796,6 @@ s32 gosub_publish_two_row_selection(void)
     return 0;
 }
 
-void gosub_build_equipment_list(u32 item_kind); /* extern */
-s32 gosub_handle_input(s32 unused);             /* extern */
-void gosub_scroll_to_cursor(void);              /* extern */
-s32 gosub_toggle_cursor_selection(void);        /* extern */
-s32 gosub_advance_screen_sequence(void);        /* extern */
-s32 gosub_are_elements_idle(void);              /* extern */
-s32 gosub_draw_confirmation_prompt();         /* extern */
-void gosub_start_element_exit();              /* extern */
-void gosub_render_elements();                 /* extern */
-void gosub_update_and_render_elements();      /* extern */
-void gosub_open_message_dialog();             /* extern */
-void gosub_append_encoded_string();           /* extern */
-void gosub_copy_encoded_string();             /* extern */
-
-/** @brief Screen-space position pair passed by address to the glyph writer. */
-typedef struct
-{
-    s16 x;
-    s16 y;
-} GosubTextPosition;
-
-/** @brief GPU tile-shaped packet with a volatile height field. */
-typedef struct
-{
-    s32 tag;
-    s32 color;
-    s16 x;
-    s16 y;
-    s16 w;
-    volatile u16 h;
-} GosubGpuPacket;
-
-/** @brief GPU tile packet used for cursor and selection highlights. */
-struct GosubTilePacket
-{
-    s32 tag;
-    s32 color;
-    s16 x;
-    s16 y;
-    s16 w;
-    u16 h;
-};
-
-/** @brief Render context fields used by the gosub element renderer. */
-typedef struct
-{
-    s32 tag;
-    u8 reserved_0004[0x40AE];
-    s16 display_buffer_index;
-    u8 reserved_40b4[4];
-    GosubGpuPacket* packet_cursor;
-} GosubRenderContext;
-
-/** @brief Draw callback installed on a gosub element. */
-typedef GosubGpuPacket* (*GosubElementDrawHandler)();
-
-/** @brief Unconnected flat-line GPU packet. */
-typedef struct
-{
-    u_long tag;  /* 0x00 P_TAG */
-    u_char r0;   /* 0x04 */
-    u_char g0;   /* 0x05 */
-    u_char b0;   /* 0x06 */
-    u_char code; /* 0x07 */
-    s16 x0;      /* 0x08 */
-    s16 y0;      /* 0x0A */
-    s16 x1;      /* 0x0C */
-    s16 y1;      /* 0x0E */
-} GosubLinePacket;     /* 0x10 */
-
-/** @brief Link a packet after explicitly constraining its address to 24 bits. */
-#define ADD_PRIM_MASKED(ot, p) (setaddr(p, getaddr(ot) & 0xFFFFFF), setaddr(ot, p))
-
-void* gosub_emit_scroll_marker();                 /* extern */
-GosubGpuPacket* gosub_emit_panel();               /* extern */
-GosubLinePacket* gosub_emit_panel_outline();      /* extern */
-GosubGpuPacket* gosub_emit_panel_corners(SPRT*, s32*, s32, s32, s32, s32); /* extern */
-GosubTilePacket* gosub_draw_item_list();          /* extern */
-
-/** @brief Packed four-byte record stored in the combination table. */
-typedef struct
-{
-    u32 word;
-} GosubPackedRecord;
-
-/** @brief Stack workspace used to reorder logic-block records and their rows. */
-typedef struct
-{
-    u8 row_order[GOSUB_SORT_ORDER_CAPACITY];
-    GosubPackedRecord packed_records[GOSUB_SORT_ROW_CAPACITY];
-    GosubListRow rows[GOSUB_SORT_ROW_CAPACITY];
-} GosubSortWorkspace; /* 0x6A0 */
-
-/** @brief Offset of the packed logic-block record table in g_pad_ctx. */
-#define GOSUB_LOGIC_BLOCK_RECORDS_OFFSET 0x29DC
-#define GOSUB_LOGIC_BLOCK_RECORDS ((GosubPackedRecord*)(g_pad_ctx + GOSUB_LOGIC_BLOCK_RECORDS_OFFSET))
-
-/** @brief One 0x40-byte equipment record in the table at g_pad_ctx + 0xCE0. */
-typedef struct
-{
-    u8 name[0x14];
-    union
-    {
-        u32 word;
-        struct
-        {
-            u16 low;
-            u16 material;
-        } half;
-    } attributes;
-    u8 reserved_18[0xC];
-    union
-    {
-        u16 kind0_value;
-        u16 kind1_stats[4];
-        struct
-        {
-            u8 group;
-            u8 index;
-            u8 value;
-        } kind2;
-    } data;
-    u8 reserved_2c[0x14];
-} GosubEquipmentRecord;
-
-/** @brief Save-data prefix through the 100-record equipment table. */
-typedef struct
-{
-    u8 save_prefix[0xCE0];
-    GosubEquipmentRecord equipment[100];
-} GosubSaveData;
-
-/** @brief Per-row scratch text storage. */
-typedef struct
-{
-    u8 text[0x50];
-} GosubTextBuffer;
-
-/** @brief Header of the text archive rooted at g_gosub_text_archive_offsets_0. */
-typedef struct
-{
-    u32 block_offsets[13];
-} GosubTextArchive;
-
-#define GOSUB_EQUIPMENT_RECORD(ptr) (&((GosubSaveData*)(ptr))->equipment[0])
-#define GOSUB_EQUIPMENT_BASE_FROM_INDEX(index) (g_pad_ctx + (index) * 0x40)
-#define GOSUB_EQUIPMENT_FROM_INDEX(index) GOSUB_EQUIPMENT_RECORD((index) * 0x40 + (s32)g_pad_ctx)
-#define GOSUB_EQUIPMENT_SOURCE_FROM_INDEX(index) ((u8*)((index) * 0x40 + (s32)g_pad_ctx))
-#define GOSUB_EQUIPMENT_AT(index) ((GosubEquipmentRecord*)(g_pad_ctx + ((index) * 0x40 + 0xCE0)))
-#define GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(index) ((GosubEquipmentRecord*)(g_pad_ctx + ((index) << 6) + 0xCE0))
-#define GOSUB_TEXT_BUFFER(index) (((GosubTextBuffer*)g_gosub_text_buffers)[index].text)
-#define GOSUB_TEXT_ARCHIVE ((GosubTextArchive*)&g_gosub_text_archive_offsets_0)
-#define GOSUB_EQUIPMENT_KIND(attributes) (((attributes) >> 8) & 3)
-#define GOSUB_EQUIPMENT_CATEGORY(attributes) (((attributes) >> 10) & 0x3F)
-#define GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) (((attributes) >> 9) & 0x7E)
-#define GOSUB_KIND2_ARCHIVE_ENTRY(attributes)                                                                                                                  \
-    ((u8*)&g_gosub_text_archive_offsets_0 + g_gosub_text_archive_offsets_2[0] + *(u16*)((u8*)g_gosub_text_archive_offsets_2 + g_gosub_text_archive_offsets_2[0] + GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) + 0x22))
-
-/** @brief Active save-data and field-state buffer. */
-extern u8* g_pad_ctx;
-/** @brief Field-side state for launching and completing a gosub overlay. */
-extern s32 g_field_gosub_state;
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
-extern s32 g_gosub_message_archive_offset;
-extern s32 g_gosub_text_archive_offsets_5;
-extern s32 g_gosub_text_archive_0;
-extern s32 g_gosub_cursor_row;
-extern s32 g_gosub_finished;
-extern s32 g_gosub_row_count;
-extern s32 g_gosub_visible_row_count;
-extern s32 g_gosub_scroll_frames_remaining;
-extern s32 g_gosub_combination_variant;
-extern s32 g_gosub_dialog_choice;
-extern s32 g_gosub_combination_quantity;
-extern s32 g_gosub_allow_duplicate_selection;
-extern u8 g_gosub_selection_mode;
-extern s32 g_gosub_window_height;
-extern s32 g_gosub_window_width;
-extern s32 g_gosub_combination_result_id;
-extern s32 g_gosub_scroll_y;
-extern s32 g_gosub_scroll_target_y;
-extern GosubListRow g_gosub_rows[];
-extern u8 g_gosub_selected_rows[];
-
-extern s32 g_pad_input;
-extern s32 g_gosub_dialog_accepting_input;
-extern s32 g_gosub_suppress_dialog_sound;
-extern u8 g_gosub_screen_sequence[20];
-extern s32 g_gosub_result_rows[16];
-extern s32 (*g_gosub_select_handler)();
-extern s32 (*g_gosub_finish_handler)();
-extern s32 (*g_gosub_dialog_handler)(s32);
-
-extern u8 D_800EC3E2[];
-extern u32 g_gosub_text_archive_offsets_2[];
-extern u8 g_gosub_text_buffers[];
-extern u8* g_gosub_title_text;
-
-/** @brief Three-entry lookup table indexed by gosub screen group. */
-typedef struct
-{
-    s32 values[3];
-} GosubGroupTable;
-
-extern GosubGroupTable g_gosub_group_first_indices;
-extern GosubGroupTable g_gosub_group_counts;
-
-/**
- * @brief Resolve a message pointer against a caller-held archive base.
- *
- * Same lookup as GOSUB_MSG_PTR, using an archive base already held by the
- * caller. ABS addresses the offset table symbol; REL addresses the base.
- *
- * @param base Archive base, i.e. (u8*)&g_gosub_message_archive_offset - 0x20.
- * @param off  Byte offset of the u16 entry within the message block.
- * @return Pointer to the message text.
- */
-#define GOSUB_MSG_ABS(base, off) ((base) + g_gosub_message_archive_offset + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset + (off)))
-#define GOSUB_MSG_REL(base, off) ((base) + g_gosub_message_archive_offset + *(u16*)((base) + g_gosub_message_archive_offset + (off)))
-
-s32 func_800A88A0(s32 prim, s32* ot, void* text, s32 color, s32 x, s32 y, s32 mode);                  /* extern */
-s32 func_800A8A78(s32* ot, s32 prim, s32 value, s32 color, GosubTextPosition* position, s32 mode);    /* extern */
-s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count);                        /* extern */
-s32 gosub_draw_equipment_details(s32 prim, s32* ot, s32 x_off, s32 y_off);                            /* extern */
-s32 gosub_draw_composite_icon(s32 prim, s32* ot, s32 x, s32 y, s32 table_idx, s32 row_idx);          /* extern */
-
 /**
  * @brief Handle the confirmation dialog for creating a two-item combination.
  *
@@ -2676,31 +2876,6 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
     render_context->packet_cursor = packet_cursor;
 }
 
-/** @brief Shared frame counter used to pulse the scroll-marker color. */
-extern s32 g_frame_counter;
-
-/**
- * @brief LINE_F4 packet used to draw an animated scroll marker.
- */
-typedef struct
-{
-    u8 addr[3]; /* 0x00 P_TAG addr (24-bit, set via addPrim) */
-    u8 len;     /* 0x03 P_TAG len */
-    u8 r;       /* 0x04 */
-    u8 g;       /* 0x05 */
-    u8 b;       /* 0x06 */
-    u8 code;    /* 0x07 */
-    s16 x0;     /* 0x08 */
-    s16 y0;     /* 0x0A */
-    s16 x1;     /* 0x0C */
-    s16 y1;     /* 0x0E */
-    s16 x2;     /* 0x10 */
-    s16 y2;     /* 0x12 */
-    s16 x3;     /* 0x14 */
-    s16 y3;     /* 0x16 */
-    u32 mask;   /* 0x18 LINE_F4 pad word (0x55555555) */
-} GosubScrollMarkerPacket;    /* 0x1C */
-
 /**
  * @brief Emit an animated scroll arrow and its fill packet.
  * @param prim Destination packet buffer.
@@ -2899,18 +3074,6 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
     addPrim(ot, line);
     return line + 1;
 }
-
-/** @brief Offset tables at the head of the message archive. */
-typedef struct
-{
-    u16 header_offsets[0x22];
-    u16 text_offsets[16];
-} GosubMessageArchiveHeader;
-
-/** @brief Resolve message headers through the archive's relative base. */
-#define MSG_HDR ((GosubMessageArchiveHeader*)((u8*)&g_gosub_message_archive_offset - -g_gosub_message_archive_offset))
-#define MSG_HI(off) ((void*)(g_gosub_message_archive_offset + (MSG_HDR->header_offsets[(off) >> 1] + base)))
-#define MSG_LO(off) ((void*)(g_gosub_message_archive_offset + (*(u16*)(base + g_gosub_message_archive_offset + (off)) + base)))
 
 /**
  * @brief Draw the gosub item list: one packet run per row, then the cursor
@@ -3120,10 +3283,6 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
     return mark;
 }
 
-extern s32 g_gosub_frame_parity;
-/** @brief Portrait archive: s32 offset table at base, pixels at +0x1C, cluts at -4. */
-extern s32 g_gosub_portrait_archive[];
-
 /**
  * @brief Upload a row's portrait strip and CLUT, then emit its 48x48 sprite.
  *
@@ -3192,11 +3351,6 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     return gosub_finish_glyph_run(prim + 0x14, ot);
 }
 
-/** @brief Item-name archive: block offset table at base, entries at base - 0x18. */
-extern u32 g_gosub_text_archive_offsets_3[];
-/** @brief Separator glyph record; the string itself sits at D_800EC3DA - 0x16. */
-extern u8 D_800EC3DA[];
-
 /**
  * @brief Draw the combination preview for the cursor row.
  *
@@ -3258,8 +3412,6 @@ s32 gosub_draw_combination_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_o
     }
     return prim;
 }
-
-s32 gosub_handle_delete_dialog(s32); /* extern */
 
 /**
  * @brief Dialog handler for the selected row's action prompt.
@@ -3437,8 +3589,6 @@ s32 gosub_handle_sort_dialog(s32 dialog_result)
     return 0;
 }
 
-s32 gosub_draw_two_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off);
-
 /**
  * @brief Open the wide confirmation dialog and hand it to gosub_handle_row_action_dialog.
  *
@@ -3466,8 +3616,6 @@ void gosub_open_row_action_dialog(void)
     func_800AA02C();
 }
 
-s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off);
-
 /**
  * @brief Open the three-option row sorting dialog.
  * @see decomp.me (100%)
@@ -3491,115 +3639,114 @@ void gosub_open_sort_dialog(void)
 }
 
 /**
- * @brief Draw handler for element 0 of the wide confirmation dialog.
- *
- * Emits the two option labels through func_800A88A0, highlighting the one that
- * matches the current selection: the color toggles between 5 (highlighted) and
- * 4 (dim) with g_gosub_dialog_choice bit 0, inverted between the two rows. Both
- * labels sit at x 0x40 - x_off; the rows are at y 2 - y_off and 0x12 - y_off.
- * The labels come from message archive entries -0x12 and -0x10.
- *
- * @param ot    Ordering-table tag every packet links into.
- * @param prim  Packet cursor; threaded through both draws.
- * @param x_off Horizontal offset subtracted from the label column.
- * @param y_off Vertical offset subtracted from both row positions.
- * @return Packet cursor past the last emitted label.
- *
+ * @brief Draw the sort and delete row actions and highlight the selected one.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param initial_packet First free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after both actions.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_two_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* first_option;
-    void* second_option;
-    s32 color;
-    s32 first_color;
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* sort_text;
+    void* delete_text;
+    s32 delete_color;
+    s32 sort_color;
     s32 packet_cursor;
-    s32 stack_pad[14];
+    s32 stack_padding[14];
 
-    packet_cursor = prim;
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    packet_cursor = initial_packet;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    first_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x12)));
-    first_color = 5;
-    if ((g_gosub_dialog_choice & 1) == 0)
+    sort_text = GOSUB_MSG_ABS(archive_base, GOSUB_ROW_ACTION_SORT_MESSAGE_OFFSET);
+    sort_color = GOSUB_TEXT_COLOR_DISABLED;
+    if ((g_gosub_dialog_choice & GOSUB_ROW_ACTION_CHOICE_MASK) == 0)
     {
-        first_color = 4;
+        sort_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, first_option, first_color, 0x40 - x_off, 2 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, sort_text, sort_color,
+                                  GOSUB_ROW_ACTION_DIALOG_X - x_offset,
+                                  GOSUB_ROW_ACTION_SORT_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    second_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x10)));
-    color = 5;
-    if ((g_gosub_dialog_choice & 1) != 0)
+    delete_text = GOSUB_MSG_ABS(archive_base, GOSUB_ROW_ACTION_DELETE_MESSAGE_OFFSET);
+    delete_color = GOSUB_TEXT_COLOR_DISABLED;
+    if ((g_gosub_dialog_choice & GOSUB_ROW_ACTION_CHOICE_MASK) != 0)
     {
-        color = 4;
+        delete_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, second_option, color, 0x40 - x_off, 0x12 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, delete_text, delete_color,
+                                  GOSUB_ROW_ACTION_DIALOG_X - x_offset,
+                                  GOSUB_ROW_ACTION_DELETE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
 }
 
 /**
- * @brief Draw handler for element 0 of the three-option wide confirmation dialog.
- *
- * Emits the three option labels through func_800A88A0, dimming the one that
- * matches the current selection: the color is 5 (bright) unless the row index
- * equals g_gosub_dialog_choice % 3, in which case it is 4 (dim). All labels sit
- * at x 0x40 - x_off; the rows are at y 2 - y_off, 0x12 - y_off, and 0x22 - y_off.
- * The labels come from message archive entries -0xE, -0xC, and -0xA.
- *
- * @param ot    Ordering-table tag every packet links into.
- * @param prim  Packet cursor; threaded through all three draws.
- * @param x_off Horizontal offset subtracted from the label column.
- * @param y_off Vertical offset subtracted from every row position.
- * @return Packet cursor past the last emitted label.
- *
+ * @brief Draw the three sort-key choices and highlight the selected key.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param initial_packet First free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after all three choices.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* first_option;
-    void* second_option;
-    void* third_option;
-    s32 color;
-    s32 first_color;
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* type_text;
+    void* power_text;
+    void* shape_text;
+    s32 text_color;
+    s32 type_color;
     s32 packet_cursor;
-    s32 selected_option;
-    s32 stack_pad[14];
+    s32 selected_sort_key;
+    s32 stack_padding[14];
 
-    packet_cursor = prim;
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    packet_cursor = initial_packet;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    first_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0xE)));
-    selected_option = g_gosub_dialog_choice;
-    selected_option %= GOSUB_SORT_KEY_COUNT;
-    first_color = 5;
-    if (selected_option == 0)
+    type_text = GOSUB_MSG_ABS(archive_base, GOSUB_SORT_DIALOG_TYPE_MESSAGE_OFFSET);
+    selected_sort_key = g_gosub_dialog_choice;
+    selected_sort_key %= GOSUB_SORT_KEY_COUNT;
+    type_color = GOSUB_TEXT_COLOR_DISABLED;
+    if (selected_sort_key == GOSUB_SORT_BY_TYPE)
     {
-        first_color = 4;
+        type_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, first_option, first_color, 0x40 - x_off, 2 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, type_text, type_color,
+                                  GOSUB_SORT_DIALOG_X - x_offset,
+                                  GOSUB_SORT_DIALOG_TYPE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    second_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0xC)));
-    color = 5;
-    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == 1)
+    power_text = GOSUB_MSG_ABS(archive_base, GOSUB_SORT_DIALOG_POWER_MESSAGE_OFFSET);
+    text_color = GOSUB_TEXT_COLOR_DISABLED;
+    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == GOSUB_SORT_BY_POWER)
     {
-        color = 4;
+        text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, second_option, color, 0x40 - x_off, 0x12 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, power_text, text_color,
+                                  GOSUB_SORT_DIALOG_X - x_offset,
+                                  GOSUB_SORT_DIALOG_POWER_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    third_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0xA)));
-    color = 5;
-    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == 2)
+    shape_text = GOSUB_MSG_ABS(archive_base, GOSUB_SORT_DIALOG_SHAPE_MESSAGE_OFFSET);
+    text_color = GOSUB_TEXT_COLOR_DISABLED;
+    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == GOSUB_SORT_BY_SHAPE)
     {
-        color = 4;
+        text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, third_option, color, 0x40 - x_off, 0x22 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, shape_text, text_color,
+                                  GOSUB_SORT_DIALOG_X - x_offset,
+                                  GOSUB_SORT_DIALOG_SHAPE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
 }
@@ -3609,7 +3756,7 @@ s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
  * @param message_text Pointer to the encoded dialog text.
  * @see decomp.me (100%)
  */
-void gosub_open_message_dialog(s32 message_text)
+void gosub_open_message_dialog(u8* message_text)
 {
     GosubElement* element;
 
@@ -3632,191 +3779,251 @@ void gosub_open_message_dialog(s32 message_text)
 
 /**
  * @brief Draw the text stored by gosub_open_message_dialog.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
- * @return Packet cursor after the text primitives.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after the dialog text.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_message_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32 stack_pad[14];
+    s32 stack_padding[14];
 
-    prim = func_800A88A0(prim, ot, (void*)g_gosub_dialog_text, 4, 0x80 - x_off, 2 - y_off, 2);
-    return prim;
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                  g_gosub_dialog_text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
+                                  GOSUB_MESSAGE_DIALOG_TEXT_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
+    return packet_cursor;
 }
 
 /**
  * @brief Draw a fixed header and the current equipment row's details.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
- * @return Packet cursor after the emitted text.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after the header and optional details.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_detail_header(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* glyph;
-    s32 stack_pad[14];
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* text;
+    s32 stack_padding[14];
 
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x18)));
-    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 2 - y_off, 2);
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_DETAIL_HEADER_MESSAGE_OFFSET);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_DETAIL_HEADER_X - x_offset,
+                                  GOSUB_DETAIL_HEADER_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
-        prim = gosub_draw_equipment_details(prim, ot, x_off, y_off);
+        packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table,
+                                                     x_offset, y_offset);
     }
-    return prim;
+    return packet_cursor;
 }
 
 /**
  * @brief Draw the two fixed header lines used by the grouped selection screen.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both lines.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_two_line_header(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* glyph;
-    s32 stack_pad[14];
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* text;
+    s32 stack_padding[14];
 
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x1C)));
-    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 2 - y_off, 2);
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_TWO_LINE_HEADER_FIRST_MESSAGE_OFFSET);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_TWO_LINE_HEADER_X - x_offset,
+                                  GOSUB_TWO_LINE_HEADER_FIRST_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x1A)));
-    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 0x12 - y_off, 2);
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_TWO_LINE_HEADER_SECOND_MESSAGE_OFFSET);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_TWO_LINE_HEADER_X - x_offset,
+                                  GOSUB_TWO_LINE_HEADER_SECOND_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    return prim;
+    return packet_cursor;
 }
 
 /**
- * @brief Draw a confirmation title and two highlighted choices.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
- * @return Packet cursor after the prompt.
+ * @brief Draw a confirmation title and two side-by-side choices.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after the title and both choices.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_confirmation_prompt(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* glyph;
-    s32 color;
-    s32 stack_pad[14];
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* text;
+    s32 text_color;
+    s32 stack_padding[14];
 
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x14)));
-    prim = func_800A88A0(prim, ot, glyph, 4, 0x80 - x_off, 2 - y_off, 2);
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_TITLE_MESSAGE_OFFSET);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_CONFIRMATION_TITLE_X - x_offset,
+                                  GOSUB_CONFIRMATION_TITLE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x20)));
-    color = 5;
-    if ((g_gosub_dialog_choice & 1) == 0)
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_FIRST_CHOICE_MESSAGE_OFFSET);
+    text_color = GOSUB_TEXT_COLOR_DISABLED;
+    if ((g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
-        color = 4;
+        text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x78 - x_off, 0x12 - y_off, 1);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color,
+                                  GOSUB_CONFIRMATION_FIRST_CHOICE_X - x_offset,
+                                  GOSUB_CONFIRMATION_CHOICE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_RIGHT);
 
-    glyph = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x1E)));
-    color = 4;
-    if ((g_gosub_dialog_choice & 1) == 0)
+    text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_SECOND_CHOICE_MESSAGE_OFFSET);
+    text_color = GOSUB_TEXT_COLOR_NORMAL;
+    if ((g_gosub_dialog_choice & GOSUB_CONFIRMATION_CHOICE_MASK) == 0)
     {
-        color = 5;
+        text_color = GOSUB_TEXT_COLOR_DISABLED;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x88 - x_off, 0x12 - y_off, 0);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color,
+                                  GOSUB_CONFIRMATION_SECOND_CHOICE_X - x_offset,
+                                  GOSUB_CONFIRMATION_CHOICE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_LEFT);
 
-    return prim;
+    return packet_cursor;
 }
 
 /**
- * @brief Draw the current row's description and optional equipment details.
- * @param ot Ordering-table tag to link into.
- * @param prim Packet cursor.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
- * @return Packet cursor after the row description.
+ * @brief Draw the current row description and its optional equipment details.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param packet_cursor Next free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after the description and optional details.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_row_description(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
-    s32 stack_pad[12];
+    s32 stack_padding[12];
 
-    prim = func_800A88A0(prim, ot, g_gosub_rows[g_gosub_cursor_row].desc, 4, 0x84 - x_off, 2 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                  g_gosub_rows[g_gosub_cursor_row].desc,
+                                  GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_ROW_DESCRIPTION_X - x_offset,
+                                  GOSUB_ROW_DESCRIPTION_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
-        prim = gosub_draw_equipment_details(prim, ot, x_off, y_off);
+        packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table,
+                                                     x_offset, y_offset);
     }
-    return prim;
+    return packet_cursor;
 }
 
 /**
- * @brief Draw the current equipment row's type-specific detail values.
- * @param prim Packet cursor.
- * @param ot Ordering-table tag to link into.
- * @param x_off Horizontal dialog animation offset.
- * @param y_off Vertical dialog animation offset.
- * @return Packet cursor after the detail values.
+ * @brief Draw power, defense, or instrument details for the current equipment row.
+ * @param packet_cursor Next free GPU packet.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param x_offset Horizontal dialog animation offset.
+ * @param y_offset Vertical dialog animation offset.
+ * @return Packet cursor after the equipment detail line.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_equipment_details(s32 prim, s32* ot, s32 x_off, s32 y_off)
+s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset)
 {
-    s32 kind;
-    GosubTextPosition pos;
-    u8* base;
-    s32* table;
-    s32 text_offset;
+    s32 equipment_kind;
+    GosubTextPosition number_position;
+    u8* archive_base;
+    s32* archive_block;
+    s32 effect_text_offset;
 
-    kind = g_gosub_rows[g_gosub_cursor_row].equipment_kind;
+    equipment_kind = g_gosub_rows[g_gosub_cursor_row].equipment_kind;
 
-    switch (kind)
+    switch (equipment_kind)
     {
-    case 0:
-        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3EE - 0x2A + D_800EC3EE[0] + (D_800EC3EE[1] << 8)), 4, 0x10 - x_off, 0x12 - y_off, 0);
-        pos.x = 0x68 - x_off;
-        pos.y = (s16)(0x12 - y_off);
-        prim = func_800A8A78(ot, prim, g_gosub_rows[g_gosub_cursor_row].primary_value, 4, &pos, 0);
+    case GOSUB_EQUIPMENT_KIND_WEAPON:
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                      (void*)((u8*)&D_800EC3EE - 0x2A + D_800EC3EE.low + (D_800EC3EE.high << 8)),
+                                      GOSUB_TEXT_COLOR_NORMAL,
+                                      GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
+                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+        number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
+        number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
+        packet_cursor = func_800A8A78(ordering_table, packet_cursor,
+                                      g_gosub_rows[g_gosub_cursor_row].primary_value,
+                                      GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
         break;
 
-    case 1:
-        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F0 - 0x2C + D_800EC3F0[0] + (D_800EC3F0[1] << 8)), 4, 0x10 - x_off, 0x12 - y_off, 0);
-        pos.x = 0x60 - x_off;
-        pos.y = (s16)(0x12 - y_off);
-        prim = func_800A8A78(ot, prim,
-                             g_gosub_rows[g_gosub_cursor_row].stats[0] + g_gosub_rows[g_gosub_cursor_row].stats[1] + g_gosub_rows[g_gosub_cursor_row].stats[2] +
-                                 g_gosub_rows[g_gosub_cursor_row].stats[3],
-                             4, &pos, 0);
+    case GOSUB_EQUIPMENT_KIND_ARMOR:
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                      (void*)((u8*)&D_800EC3F0 - 0x2C + D_800EC3F0.low + (D_800EC3F0.high << 8)),
+                                      GOSUB_TEXT_COLOR_NORMAL,
+                                      GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
+                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+        number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
+        number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
+        packet_cursor = func_800A8A78(ordering_table, packet_cursor,
+                                      g_gosub_rows[g_gosub_cursor_row].stats[0] +
+                                          g_gosub_rows[g_gosub_cursor_row].stats[1] +
+                                          g_gosub_rows[g_gosub_cursor_row].stats[2] +
+                                          g_gosub_rows[g_gosub_cursor_row].stats[3],
+                                      GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
         break;
 
+    /* Instruments and the reserved fourth kind use the same detail layout. */
     default:
-        table = &g_gosub_text_archive_offsets_6;
-        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F2 - 0x2E + D_800EC3F2[0] + (D_800EC3F2[1] << 8)), 4, 0x10 - x_off, 0x12 - y_off, 0);
-        pos.x = 0x38 - x_off;
-        pos.y = (s16)(0x12 - y_off);
-        prim = func_800A8A78(ot, prim, g_gosub_rows[g_gosub_cursor_row].primary_value, 4, &pos, 0);
-        base = (u8*)table;
-        base -= 0x2C;
-        text_offset = base + *(u16*)(g_gosub_rows[g_gosub_cursor_row].stats[0] * 2 + g_gosub_text_archive_offsets_6 + base);
-        prim = func_800A88A0(prim, ot, (void*)(g_gosub_text_archive_offsets_6 + text_offset), 4, 0x60 - x_off, 0x12 - y_off, 0);
+        archive_block = &g_gosub_text_archive_offsets_6;
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                      (void*)((u8*)&D_800EC3F2 - 0x2E + D_800EC3F2.low + (D_800EC3F2.high << 8)),
+                                      GOSUB_TEXT_COLOR_NORMAL,
+                                      GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
+                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+        number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
+        number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
+        packet_cursor = func_800A8A78(ordering_table, packet_cursor,
+                                      g_gosub_rows[g_gosub_cursor_row].primary_value,
+                                      GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
+        archive_base = (u8*)archive_block;
+        archive_base -= 0x2C;
+        effect_text_offset = (s32)archive_base +
+                             *(u16*)(g_gosub_rows[g_gosub_cursor_row].stats[0] * 2 +
+                                     g_gosub_text_archive_offsets_6 + archive_base);
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                      (void*)(g_gosub_text_archive_offsets_6 + effect_text_offset),
+                                      GOSUB_TEXT_COLOR_NORMAL,
+                                      GOSUB_INSTRUMENT_EFFECT_X - x_offset,
+                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset,
+                                      GOSUB_TEXT_ALIGN_LEFT);
         break;
     }
-    return prim;
+    return packet_cursor;
 }
 
 /**
@@ -3835,8 +4042,6 @@ s32 gosub_draw_title(s32* ot, s32 prim, s32 x_off, s32 y_off)
     prim = func_800A88A0(prim, ot, g_gosub_title_text, 4, 0x84 - x_off, 2 - y_off, 2);
     return prim;
 }
-
-s32 gosub_encoded_string_length(const u8*); /* extern */
 
 /**
  * @brief Append one encoded string to another.
@@ -3860,8 +4065,6 @@ void gosub_append_encoded_string(u8* dst, u8* src)
 
     dst[len1 + i] = 0;
 }
-
-#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
 
 /**
  * @brief Count bytes in a null-terminated encoded string.
@@ -3931,238 +4134,177 @@ void gosub_copy_encoded_string(u8* dst, u8* src)
     dst[i] = 0;
 }
 
-/** @brief VRAM upload position for an image and its CLUT (see gosub_upload_image_archive). */
-typedef struct
-{
-    u16 x;
-    u16 y;
-    u16 clut_x;
-    u16 clut_y;
-} GosubImageVramLayout;
-
-extern u8 g_gosub_image_archive[];
-
-void gosub_upload_image_archive(GosubImageVramLayout* pos, u8* archive); /* extern */
-
 /**
  * @brief Upload the gosub interface image and CLUT to their fixed VRAM slots.
  * @see decomp.me (100%)
  */
 void gosub_upload_ui_image(void)
 {
-    GosubImageVramLayout pos;
+    GosubImageVramLayout destinations;
 
-    pos.x = 0x140;
-    pos.y = 0;
-    pos.clut_x = 0;
-    pos.clut_y = 0x1F2;
-    gosub_upload_image_archive(&pos, g_gosub_image_archive);
+    destinations.pixel_x = 0x140;
+    destinations.pixel_y = 0;
+    destinations.clut_x = 0;
+    destinations.clut_y = 0x1F2;
+    gosub_upload_image_archive(&destinations, &g_gosub_image_archive);
 }
 
 /**
- * @brief Upload an image (and, when the archive's flag bit 3 is set, its
- *        CLUT) into VRAM via LoadImage.
- * @param pos Destination VRAM position for the image and, if present, its
- *            CLUT (see GosubImageVramLayout).
- * @param archive Image archive: word flags at +0x4 (bit 3 = has CLUT), word
- *                data offset at +0x8, dimensions/pixel data at +0x10 (or
- *                +off8+0x10 when a CLUT precedes them), CLUT pixel data at
- *                +0x14, image pixel data at +off8+0x14.
+ * @brief Upload a TIM's optional CLUT and pixel data to selected VRAM positions.
+ * @param destinations VRAM destinations for the pixel and CLUT blocks.
+ * @param tim TIM resource to upload.
  * @see decomp.me (100%)
  */
-void gosub_upload_image_archive(GosubImageVramLayout* pos, u8* archive)
+void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim)
 {
-    RECT rect;
+    RECT upload_rect;
     s32 flags;
-    s32 off8;
-    u16* dims;
+    s32 clut_block_size;
+    TimDimensions* pixel_dimensions;
 
-    flags = *(s32*)(archive + 4);
-    off8 = *(s32*)(archive + 8);
+    flags = tim->flags;
+    clut_block_size = tim->clut_block.bnum;
 
-    if (flags & 8)
+    if (flags & GOSUB_TIM_HAS_CLUT)
     {
-        rect.x = pos->clut_x;
-        rect.y = pos->clut_y;
-        rect.w = 0x100;
-        rect.h = 1;
-        LoadImage(&rect, archive + 0x14);
-        dims = (u16*)(off8 - (-(s32)archive) + 0x10);
+        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y,
+                CLUT_ENTRY_COUNT, 1);
+        LoadImage(&upload_rect, (u_long*)tim->clut_data);
+        pixel_dimensions = &((TimBlock*)(clut_block_size + (s32)tim + TIM_HEADER_SIZE))->dimensions;
     }
     else
     {
-        dims = (u16*)(archive + 0x10);
+        pixel_dimensions = &tim->clut_block.dimensions;
     }
 
-    rect.x = pos->x;
-    rect.y = pos->y;
-    rect.w = dims[0];
-    rect.h = dims[1];
-    LoadImage(&rect, off8 - (-(s32)archive) + 0x14);
+    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y,
+            pixel_dimensions->width, pixel_dimensions->height);
+    LoadImage(&upload_rect,
+              (u_long*)(((TimBlock*)(clut_block_size + (s32)tim + TIM_HEADER_SIZE)) + 1));
 }
-
-extern s32 D_800F2180[];
-extern u8 D_800F1CD0[];
 
 /**
- * @brief Draw one composite icon row from D_800F1CD0 and close its glyph run.
- * @param initial_prim Initial prim cursor.
- * @param ot Ordering table, passed through unchanged to every call.
- * @param x First coordinate base (column offset added to it below).
- * @param y Second coordinate base (column offset added to it below).
- * @param table_idx Index into D_800F2180[]; also offsets the header call's
- *                   3rd arg (table_idx + 0x13) and supplies table_val, the
- *                   loop calls' constant last arg.
- * @param row_idx Row index into D_800F1CD0 (stride 88 bytes: count byte,
- *                 four header fields, then a repeating {s8, s8, s16} tuple
- *                 array of `count` entries).
- * @return Advanced prim cursor (gosub_finish_glyph_run's return).
+ * @brief Draw a composite icon from its base glyph and positioned parts.
+ * @param initial_packet Next free GPU packet.
+ * @param ordering_table Ordering table to receive the glyph packets.
+ * @param x Base screen x coordinate.
+ * @param y Base screen y coordinate.
+ * @param icon_id Icon identifier used for the base glyph and part CLUT.
+ * @param layout_index Composite layout index.
+ * @return Packet cursor after closing the glyph run.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_composite_icon(s32 initial_prim, s32* ot, s32 x, s32 y, s32 table_idx, s32 row_idx)
+s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s32 y, s32 icon_id, s32 layout_index)
 {
-    u8* entry;
+    GosubCompositeIconView layout_view;
     s32 clut;
-    s16 offset_x;
-    s16 offset_y;
-    s8 header_x;
-    s8 header_y;
-    s32 col_x;
-    s32 col_y;
-    u8* glyph_entry;
-    s32 i;
-    s32 prim;
-    u8* base;
-    clut = D_800F2180[table_idx];
-    base = D_800F1CD0;
-    entry = (u8*)(row_idx * 11 * 8 + (s32)base);
-    offset_x = *(s16*)(entry + 4);
-    offset_y = *(s16*)(entry + 6);
-    header_x = *(s8*)(entry + 8);
-    header_y = *(s8*)(entry + 9);
-    col_x = x + offset_x * 8;
-    col_y = y + offset_y * 8;
-    prim = gosub_emit_glyph(initial_prim, ot, table_idx + 0x13, header_x * 8 + col_x, header_y * 8 + col_y, 9);
-    offset_y = 0;
-    for (i = offset_y; i < entry[offset_y]; i++)
+    s16 layout_x;
+    s16 layout_y;
+    s8 base_glyph_x;
+    s8 base_glyph_y;
+    s32 icon_x;
+    s32 icon_y;
+    GosubCompositeIconView part_view;
+    s32 part_index;
+    s32 packet_cursor;
+    u8* table_bytes;
+
+    clut = D_800F2180[icon_id];
+    table_bytes = D_800F1CD0;
+    layout_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) +
+                              (s32)table_bytes);
+    layout_x = layout_view.layout->origin_x;
+    layout_y = layout_view.layout->origin_y;
+    base_glyph_x = layout_view.layout->base_x;
+    base_glyph_y = layout_view.layout->base_y;
+    icon_x = x + layout_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
+    icon_y = y + layout_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
+    packet_cursor = gosub_emit_glyph(initial_packet, ordering_table,
+                                     icon_id + GOSUB_COMPOSITE_ICON_BASE_GLYPH_OFFSET,
+                                     base_glyph_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_x,
+                                     base_glyph_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_y,
+                                     GOSUB_COMPOSITE_ICON_BASE_CLUT);
+
+    /* The part count is byte zero of the packed layout. */
+    layout_y = 0;
+    for (part_index = layout_y; part_index < layout_view.bytes[layout_y]; part_index++)
     {
-        u8* loop_base = &D_800F1CD0[offset_y];
-        glyph_entry = (u8*)(row_idx * 11 * 8 + i * 4 + (s32)loop_base);
-        prim = gosub_emit_glyph(prim, ot, *(s16*)(glyph_entry + 0xE), *(s8*)(glyph_entry + 0xC) * 16 + col_x, *(s8*)(glyph_entry + 0xD) * 16 + col_y, clut);
+        u8* loop_base = &D_800F1CD0[layout_y];
+
+        part_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) +
+                                part_index * (s32)sizeof(GosubCompositeIconPart) +
+                                (s32)loop_base);
+        /* The shifted layout view exposes the current tuple as parts[0]. */
+        packet_cursor = gosub_emit_glyph(packet_cursor, ordering_table,
+                                         part_view.layout->parts[0].glyph_id,
+                                         part_view.layout->parts[0].x * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_x,
+                                         part_view.layout->parts[0].y * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_y,
+                                         clut);
     }
-    return gosub_finish_glyph_run(prim, ot);
+    return gosub_finish_glyph_run(packet_cursor, ordering_table);
 }
-
-/** @brief Texture page containing the gosub font and panel-corner sprites. */
-#define GOSUB_FONT_TPAGE 5
-
-/** @brief VRAM location of the gosub font CLUT. */
-#define GOSUB_FONT_CLUT_X 0x150
-#define GOSUB_FONT_CLUT_Y 0xFF
-#define GOSUB_FONT_CLUT_WIDTH 0x10
-#define GOSUB_FONT_CLUT_HEIGHT 1
-
-/** @brief VRAM rectangle occupied by the gosub font texture strip. */
-#define GOSUB_FONT_TEXTURE_X 0x140
-#define GOSUB_FONT_TEXTURE_Y 0xF0
-#define GOSUB_FONT_TEXTURE_WIDTH 0x10
-#define GOSUB_FONT_TEXTURE_HEIGHT 0x10
-#define GOSUB_FONT_TEXTURE_DATA_OFFSET 0x2C
-
-/** @brief Dimensions and placement of one panel-corner sprite quadrant. */
-#define GOSUB_PANEL_CORNER_SIZE 8
-#define GOSUB_PANEL_CORNER_OUTSET 2
-#define GOSUB_PANEL_CORNER_FAR_INSET 5
-#define GOSUB_PANEL_CORNER_TEXTURE_V 0xF0
-
-/** @brief Glyph cell descriptor in the 8-byte table at g_gosub_glyph_metrics. */
-typedef struct
-{
-    u8 u0;    /* 0x00 texture u */
-    u8 reserved_1;
-    u8 v0;    /* 0x02 texture v */
-    u8 reserved_3;
-    u16 w;    /* 0x04 */
-    u16 h;    /* 0x06 */
-} GosubGlyphMetric; /* 0x08 */
-
-/** @brief Glyph cell table indexed by the glyph id passed to gosub_emit_glyph. */
-extern GosubGlyphMetric g_gosub_glyph_metrics[];
-/** @brief Packed upload source with CLUT words at +0x00 and texture words at +0x2C. */
-extern u8 g_gosub_font_texture[];
-
-void bcopy(); /* extern */
-
-inline void gosub_copy_packed_record(void* dst, void* src);
-inline void gosub_copy_list_row(void* dst, void* src);
-s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index);
 
 /**
  * @brief Append the texture-page packet that closes a glyph run.
  *
- * @param prim Packet cursor.
- * @param ot   Ordering-table tag to link the packet into.
+ * @param packet_cursor Packet cursor.
+ * @param ordering_table Ordering-table tag to link the packet into.
  * @return Packet cursor past the 8-byte draw-mode packet.
  * @see decomp.me (100%)
  */
-s32 gosub_finish_glyph_run(s32 prim, s32* ot)
+s32 gosub_finish_glyph_run(s32 packet_cursor, s32* ordering_table)
 {
     DR_TPAGE* draw_tpage;
 
-    draw_tpage = (DR_TPAGE*)prim;
+    draw_tpage = (DR_TPAGE*)packet_cursor;
     setDrawTPage(draw_tpage, 0, 0, GOSUB_FONT_TPAGE);
-    addPrim(ot, draw_tpage);
-    return prim + 8;
+    addPrim(ordering_table, draw_tpage);
+    return packet_cursor + sizeof(DR_TPAGE);
 }
 
 /**
  * @brief Emit one glyph sprite described by the g_gosub_glyph_metrics cell table.
  *
- * @param prim  Packet cursor.
- * @param ot    Ordering-table tag to link the sprite into.
- * @param glyph Index into g_gosub_glyph_metrics supplying the cell u/v and size.
- * @param x     Sprite left edge.
- * @param y     Sprite top edge.
- * @param clut  CLUT selector; the low 6 bits index the 0x7C80 palette row.
+ * @param packet_cursor Packet cursor.
+ * @param ordering_table Ordering-table tag to link the sprite into.
+ * @param glyph_id Index into g_gosub_glyph_metrics supplying the cell u/v and size.
+ * @param x Sprite left edge.
+ * @param y Sprite top edge.
+ * @param clut_index CLUT slot on the glyph palette row.
  * @return Packet cursor past the 0x14-byte sprite.
  * @see decomp.me (100%)
  */
-s32 gosub_emit_glyph(s32 prim, s32* ot, s32 glyph, s32 x, s32 y, s32 clut)
+s32 gosub_emit_glyph(s32 packet_cursor, s32* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut_index)
 {
-    SPRT* sprt;
+    SPRT* sprite;
 
-    sprt = (SPRT*)prim;
-    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-    setSprt(sprt);
-    sprt->x0 = x;
-    sprt->y0 = y;
-    sprt->w = g_gosub_glyph_metrics[glyph].w;
-    sprt->h = g_gosub_glyph_metrics[glyph].h;
-    sprt->u0 = g_gosub_glyph_metrics[glyph].u0;
-    sprt->v0 = g_gosub_glyph_metrics[glyph].v0;
-    sprt->clut = (clut & 0x3F) | 0x7C80;
-    addPrim(ot, sprt);
-    return prim + 0x14;
+    sprite = (SPRT*)packet_cursor;
+    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+    setSprt(sprite);
+    setXY0(sprite, x, y);
+    setWH(sprite, g_gosub_glyph_metrics[glyph_id].w, g_gosub_glyph_metrics[glyph_id].h);
+    setUV0(sprite, g_gosub_glyph_metrics[glyph_id].u0, g_gosub_glyph_metrics[glyph_id].v0);
+    setClut(sprite, clut_index << GOSUB_GLYPH_CLUT_X_SHIFT, GOSUB_GLYPH_CLUT_Y);
+    addPrim(ordering_table, sprite);
+    return packet_cursor + sizeof(SPRT);
 }
 
 /**
- * @brief Delete one 4-byte record from the table at g_pad_ctx[0x29DC].
+ * @brief Delete one packed logic-block record and close the gap.
  *
- * Every record above @p slot is shifted down one place and the record count at
- * g_pad_ctx[0x29D6] is decremented.
- *
- * @param slot Index of the record to remove.
+ * @param record_index Index of the record to remove.
  * @see decomp.me (100%)
  */
-void gosub_delete_packed_record(s32 slot)
+void gosub_delete_packed_record(s32 record_index)
 {
-    s32 i;
+    s32 shift_index;
 
-    for (i = slot; i < g_pad_ctx[0x29D6] - 1; i++)
+    for (shift_index = record_index; shift_index < GOSUB_LOGIC_BLOCK_COUNT - 1; shift_index++)
     {
-        gosub_copy_packed_record(g_pad_ctx + (i * 4 + 0x29DC), g_pad_ctx + (i * 4 + 0x29E0));
+        gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[shift_index],
+                                 &GOSUB_LOGIC_BLOCK_RECORDS[shift_index + 1]);
     }
-    g_pad_ctx[0x29D6]--;
+    GOSUB_LOGIC_BLOCK_COUNT--;
 }
 
 /**
@@ -4202,20 +4344,19 @@ void gosub_delete_list_row(s32 row)
  */
 inline void gosub_copy_packed_record(void* dst, void* src)
 {
-    u8* d;
-    u8* s;
-    u32 i;
+    u8* dst_bytes;
+    u8* src_bytes;
+    u32 byte_index;
 
-    d = (u8*)dst;
-    s = (u8*)src;
-    i = 0;
-    do
+    dst_bytes = (u8*)dst;
+    src_bytes = (u8*)src;
+    for (byte_index = 0; byte_index < sizeof(GosubPackedRecord);)
     {
-        i += 1;
-        *d = *s;
-        s += 1;
-        d += 1;
-    } while (i < 4U);
+        byte_index++;
+        *dst_bytes = *src_bytes;
+        src_bytes += 1;
+        dst_bytes += 1;
+    }
 }
 
 /**
@@ -4227,20 +4368,19 @@ inline void gosub_copy_packed_record(void* dst, void* src)
  */
 inline void gosub_copy_list_row(void* dst, void* src)
 {
-    u8* d;
-    u8* s;
-    u32 i;
+    u8* dst_bytes;
+    u8* src_bytes;
+    u32 byte_index;
 
-    d = (u8*)dst;
-    s = (u8*)src;
-    i = 0;
-    do
+    dst_bytes = (u8*)dst;
+    src_bytes = (u8*)src;
+    for (byte_index = 0; byte_index < sizeof(GosubListRow);)
     {
-        i += 1;
-        *d = *s;
-        s += 1;
-        d += 1;
-    } while (i < 0x20U);
+        byte_index++;
+        *dst_bytes = *src_bytes;
+        src_bytes += 1;
+        dst_bytes += 1;
+    }
 }
 
 /**
@@ -4283,16 +4423,11 @@ void gosub_sort_rows(s32 sort_mode)
     bcopy(GOSUB_LOGIC_BLOCK_RECORDS, workspace.packed_records, sizeof(workspace.packed_records));
     bcopy(g_gosub_rows, workspace.rows, sizeof(workspace.rows));
 
-    row_index = 0;
-    if (g_gosub_row_count > 0)
+    for (row_index = 0; row_index < g_gosub_row_count; row_index++)
     {
-        do
-        {
-            gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[row_index],
-                                     &workspace.packed_records[workspace.row_order[row_index]]);
-            gosub_copy_list_row(&g_gosub_rows[row_index], &workspace.rows[workspace.row_order[row_index]]);
-            row_index++;
-        } while (row_index < g_gosub_row_count);
+        gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[row_index],
+                                 &workspace.packed_records[workspace.row_order[row_index]]);
+        gosub_copy_list_row(&g_gosub_rows[row_index], &workspace.rows[workspace.row_order[row_index]]);
     }
 
     gosub_build_packed_record_list();
