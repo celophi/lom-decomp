@@ -1,4 +1,5 @@
 #include "common.h"
+#include "display.h"
 #include "gpu_packet.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
@@ -89,7 +90,7 @@ typedef struct {
 s32 func_80019A34();
 
 extern u8 D_8014287C[];
-void func_80140438(RECT *, u8 *);
+void func_80140438(GolemImageClutPos *, u8 *);
 
 extern s32 D_800F22AC;
 
@@ -854,4 +855,635 @@ block_call:
     func_8001A5D4(ret_acc, sp28);
     addPrim(tag, ret_acc);
     return ret_acc + 0x40;
+}
+
+/** @brief Bit-packed panel-cell view of one 0x14-byte D_8014B560 record.
+ *  @note Third view of the D_8014B560 storage next to @ref B560 and
+ *        @ref B560Entry; do not merge them. */
+typedef struct {
+    u32 w0;      /* 0x00 flags: abr[1:0], semi[2], state[6:3], anim[10:7], u0[18:11] */
+    u32 w1;      /* 0x04 v0[10:3], clut[16:11], cell_w[25:17], cell_h_lo[31:26] */
+    u32 w2;      /* 0x08 cell_h_hi[2:0] (overlaps the u16 x/y/w/h view) */
+    u8 pad[0x8];
+} PanelCell;
+
+/** @brief Access panel record @p i of D_8014B560 as a bit-packed cell. */
+#define PANEL(i) (((PanelCell *)&D_8014B560)[i])
+
+/**
+ * @brief Draw one UI panel record as a grid of textured sprites plus a
+ *        trailing draw-mode packet, gated by the record's state field.
+ * @param prim Running primitive pointer; advanced 0x14 per sprite, 8 for the tail.
+ * @param ot   Ordering-table tag the primitives are linked into.
+ * @param idx  Index of the record within D_8014B560.
+ * @param x    Screen x of the panel origin.
+ * @param y    Screen y of the panel origin.
+ * @param w    Total panel width in pixels.
+ * @param h    Total panel height in pixels.
+ * @return The advanced primitive pointer.
+ * @note WIP, NOT byte-matched. Best local match 96.69% (187/249 exact rows,
+ *       gcc272_cdk). Residue is a frame-shape mismatch: target frame -0x20
+ *       with saved regs at sp+0x10..0x1C, ours -0x10 with three extra local
+ *       spills. Best source preserved in working/func_80141AD0_golem/.
+ */
+s32 func_80141AD0(s32 prim, s32 ot, s32 idx, s32 x, s32 y, s32 w, s32 h)
+{
+    SPRT *sprt;
+    s32 anim;
+    s32 color;
+    s32 y_done;
+    s32 x_done;
+    s32 row_h;
+    s32 cell_h;
+    s32 seg_w;
+    s32 avail;
+    s32 remaining;
+    s32 code_val;
+
+    color = 0x808080;
+
+    switch ((PANEL(idx).w0 >> 3) & 0xF) {
+    case 0:
+    case 7:
+        break;
+    case 1:
+    case 2:
+    case 3:
+        if ((((PANEL(idx).w0 >> 3) & 0xF) - 1) != D_8014C188)
+        {
+            return prim;
+        }
+        break;
+    case 4:
+        if (D_8014C18C == 0)
+        {
+            return prim;
+        }
+        anim = (PANEL(idx).w0 >> 7) & 0xF;
+        if (anim != 0)
+        {
+            color = 0xC0;
+            PANEL(idx).w0 = (PANEL(idx).w0 & ~0x780) | (((anim - 1) & 0xF) << 7);
+        }
+        break;
+    case 5:
+        if (!((D_8014C18C / 40) < (D_8014C184 - 1)))
+        {
+            return prim;
+        }
+        anim = (PANEL(idx).w0 >> 7) & 0xF;
+        if (anim != 0)
+        {
+            color = 0xC0;
+            PANEL(idx).w0 = (PANEL(idx).w0 & ~0x780) | (((anim - 1) & 0xF) << 7);
+        }
+        break;
+    case 6:
+        anim = (PANEL(idx).w0 >> 7) & 0xF;
+        if (anim != 0)
+        {
+            color = 0xC0C0C0;
+            PANEL(idx).w0 = (PANEL(idx).w0 & ~0x780) | (((anim - 1) & 0xF) << 7);
+        }
+        break;
+    }
+
+    y_done = 0;
+    if (y_done < h)
+    {
+        code_val = 0x64;
+        remaining = h - y_done;
+        do
+        {
+            row_h = remaining;
+            cell_h = (PANEL(idx).w1 >> 26) | ((PANEL(idx).w2 & 7) << 6);
+            x_done = 0;
+            if (cell_h < row_h)
+            {
+                row_h = cell_h;
+            }
+            while (x_done < w)
+            {
+            sprt = (SPRT *)prim;
+            avail = w - x_done;
+            seg_w = (PANEL(idx).w1 >> 17) & 0x1FF;
+            if (seg_w >= avail)
+            {
+                seg_w = avail;
+            }
+            SET_BGR0_PACKED(sprt, color);
+            setlen(sprt, 4);
+            setcode(sprt, code_val);
+            if ((PANEL(idx).w0 >> 2) & 1)
+            {
+                setcode(sprt, 0x66);
+            }
+                sprt->x0 = x + (x_done + 8);
+                sprt->y0 = y + y_done;
+                sprt->w = seg_w;
+                sprt->h = row_h;
+                sprt->u0 = PANEL(idx).w0 >> 11;
+                sprt->v0 = PANEL(idx).w1 >> 3;
+                sprt->clut = ((PANEL(idx).w1 >> 11) & 0x3F) | 0x7C80;
+                addPrim(ot, sprt);
+                x_done += (PANEL(idx).w1 >> 17) & 0x1FF;
+                prim += 0x14;
+            }
+            y_done += (PANEL(idx).w1 >> 26) | ((PANEL(idx).w2 & 7) << 6);
+            remaining = h - y_done;
+        } while (y_done < h);
+    }
+
+    setlen(prim, 1);
+    ((u_long *)prim)[1] = ((PANEL(idx).w0 & 3) << 5) | 0xE1000005;
+    addPrim(ot, prim);
+    return prim + 8;
+}
+
+/** @brief Header view of an 88-byte D_800F1CD0 icon layout row. */
+typedef struct
+{
+    u8 part_count;  /* 0x00 */
+    u8 pad1[3];
+    s16 origin_x;   /* 0x04 */
+    s16 origin_y;   /* 0x06 */
+    s8 base_x;      /* 0x08 */
+    s8 base_y;      /* 0x09 */
+} GolemIconLayout;
+
+/** @brief One positioned part, viewed at layout + sub*0x14 + i*4. */
+typedef struct
+{
+    u8 pad[0xC];
+    s8 x;           /* 0x0C */
+    s8 y;           /* 0x0D */
+    s16 glyph_id;   /* 0x0E */
+} GolemIconPart;
+
+s32 func_801420CC();
+
+/**
+ * @brief Draw one grid cell's icon: the base glyph plus each positioned part
+ *        from its D_800F1CD0 layout row, then splice a draw-mode packet.
+ * @param packet     Running primitive pointer; advanced per emitted packet.
+ * @param ot         Ordering-table tag the primitives are linked into.
+ * @param cell_index Grid cell index; selects the layout row via CELL bits 12-15.
+ * @param sub_index  Layout sub-entry (rotation) index; 0x14-byte stride.
+ * @param x          Screen x of the cell.
+ * @param y          Screen y of the cell.
+ * @param clut       CLUT selector passed to the part glyphs.
+ * @param use_origin When 1, offset x/y by the layout row's origin fields.
+ * @param arg8       Flag word forwarded to func_801420CC for the part glyphs.
+ * @return The advanced primitive pointer (past the trailing 8-byte packet).
+ * @note WIP, NOT byte-matched. Best local match 94.33% (108/134 exact rows,
+ *       gcc272_cdk); frame and sp slots match, residue is 23 argdiff rows of
+ *       register-coloring noise plus one 3-row ordering run. Best source
+ *       preserved in working/func_80141EB4_golem/.
+ */
+s32 func_80141EB4(s32 packet, s32 *ot, s32 cell_index, s32 sub_index, s32 x, s32 y, s32 clut, s32 use_origin, s32 arg8)
+{
+    u32 cell;
+    s32 row;
+    s32 sub_off;
+    s32 row_off;
+    u8 *table;
+    u8 *layout;
+    s32 i;
+
+    cell = CELL(cell_index);
+    row = cell >> 0xC;
+    row = row & 0xF;
+    if (use_origin == 1)
+    {
+        u8 *base = D_800F1CD0;
+        GolemIconLayout *l = (GolemIconLayout *)(base + row * 0x58);
+        x += l->origin_x * 8;
+        y += l->origin_y * 8;
+    }
+    i = 0;
+    table = D_800F1CD0;
+    sub_off = sub_index * 0x14;
+    row_off = row * 0x58;
+    {
+        GolemIconLayout *entry = (GolemIconLayout *)(sub_off + row_off + table);
+        packet = func_801420CC(packet, ot, ((cell >> 2) & 0x3F) + 0x13,
+                               (entry->base_x * 8) + x, (entry->base_y * 8) + y, 9, 0);
+    }
+    layout = row_off + table;
+    if (*layout != 0)
+    {
+        u8 *tbl = table;
+        s32 roff = row_off;
+        u8 *lay = layout;
+        s32 iv = sub_off;
+        do
+        {
+            GolemIconPart *part = (GolemIconPart *)(iv + roff + tbl);
+            iv += 4;
+            i += 1;
+            packet = func_801420CC(packet, ot, part->glyph_id,
+                                   (part->x * 0x10) + x, (part->y * 0x10) + y, clut, arg8);
+        } while (i < *lay);
+    }
+    *(u8 *)(packet + 3) = 1;
+    *(u32 *)(packet + 4) = 0xE1000025;
+    *(u32 *)(packet + 0) = (*(u32 *)(packet + 0) & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | (packet & 0xFFFFFF);
+    return packet + 8;
+}
+
+/** @brief 8-byte texture entry: u/v bytes plus 16-bit width/height. */
+typedef struct
+{
+    u8 u0;
+    u8 pad1;
+    u8 v0;
+    u8 pad3;
+    u16 w;
+    u16 h;
+} GolemTexEntry;
+
+extern GolemTexEntry D_8014B2D0[];
+
+/**
+ * @brief Emit one glyph: an optional colored backing TILE (chosen by the low
+ *        flag bits) followed by a textured SPRT from the D_8014B2D0 table.
+ * @param prim  Running primitive pointer; advanced 0x10 for the TILE, 0x14 for the SPRT.
+ * @param ot    Ordering-table tag the primitives are linked into.
+ * @param index Entry index into the D_8014B2D0 UV/size table.
+ * @param x     Screen x of the glyph.
+ * @param y     Screen y of the glyph.
+ * @param arg5  CLUT selector; 0xF and 9 also gate the brightness overrides.
+ * @param flags Bit 7 dims the sprite; low bits 1-3 pick the backing tile color.
+ * @return The advanced primitive pointer.
+ */
+s32 func_801420CC(s32 prim, s32 ot, s32 index, s32 x, s32 y, s32 arg5, s32 flags)
+{
+    TILE *tile;
+    SPRT *sprt;
+    GolemTexEntry *entry;
+    GolemTexEntry *entry2;
+    u32 color;
+    GolemTexEntry *base;
+    GolemTexEntry *base2;
+
+    if ((flags & 0x7F) != 0)
+    {
+        tile = (TILE *)prim;
+        switch (flags & 0x7F)
+        {
+            case 1:
+                color = 0x80;
+                break;
+            case 2:
+                color = 0x800080;
+                break;
+            case 3:
+                color = 0x8000;
+                break;
+            default:
+                setlen(tile, 3);
+                goto skip_color;
+        }
+        SET_BGR0_PACKED(prim, color);
+        setlen(tile, 3);
+skip_color:
+        setcode(tile, 0x62);
+        base = D_8014B2D0;
+        entry = base + index;
+        setXY0(tile, x, y);
+        setWH(tile, entry->w, entry->h);
+        addPrim(ot, tile);
+        prim = (s32)tile + 0x10;
+    }
+
+    sprt = (SPRT *)prim;
+    SET_BGR0_PACKED(sprt, 0x606060);
+    setSprt(sprt);
+    if (flags & 0x80)
+    {
+        setRGB0(sprt, 0x38, 0x38, 0x38);
+        sprt->code |= 2;
+    }
+    if (arg5 == 0xF)
+    {
+        setRGB0(sprt, 0x40, 0x40, 0x40);
+        sprt->code |= 2;
+    }
+    if (arg5 != 9)
+    {
+        sprt->code |= 2;
+    }
+    base2 = D_8014B2D0;
+    entry2 = base2 + index;
+    setXY0(sprt, x, y);
+    setWH(sprt, entry2->w, entry2->h);
+    sprt->u0 = entry2->u0;
+    sprt->v0 = entry2->v0;
+    sprt->clut = (arg5 & 0x3F) | 0x7C80;
+    addPrim(ot, sprt);
+    return prim + 0x14;
+}
+
+#define GOLEM_GPU_ADDR_MASK 0xFFFFFF
+#define GOLEM_GPU_TAG_HIGH_MASK 0xFF000000
+
+/** @brief Generic GPU packet prefix used while advancing the primitive buffer. */
+typedef struct
+{
+    /* 0x0 */ s32 tag;
+    /* 0x4 */ s32 word4;
+    /* 0x8 */ s16 x0;
+    /* 0xA */ s16 y0;
+    /* 0xC */ s16 unkC;
+    /* 0xE */ u16 unkE;
+} GolemGpuPacket;
+
+/**
+ * @brief Emit a rectangle outline as four LINE_F2 packets (top, right,
+ *        bottom, left) linked into the ordering table.
+ * @param p     Running packet cursor; one 0x10-byte packet per edge.
+ * @param ot    Ordering-table tag the packets are linked into.
+ * @param x     Left edge x.
+ * @param y     Top edge y.
+ * @param w     Rectangle width.
+ * @param h     Rectangle height.
+ * @param color Packed BGR line color.
+ * @return The advanced packet cursor (@p p + 4 packets).
+ * @note The first packet's OT splice is spelled manually through @c tmp, and
+ *       @c tmp is reused for y + h below; both are required to match.
+ */
+GolemGpuPacket *func_801422BC(GolemGpuPacket *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 color)
+{
+    s32 tmp;
+
+    p->word4 = color;
+    setlen(p, 3);
+    setcode(p, 0x40);
+    p->x0 = x;
+    p->y0 = y;
+    p->unkC = x + w;
+    p->unkE = y;
+    tmp = GOLEM_GPU_TAG_HIGH_MASK;
+    p->tag = (p->tag & GOLEM_GPU_TAG_HIGH_MASK) | (*ot & GOLEM_GPU_ADDR_MASK);
+    *ot = (*ot & tmp) | ((s32)p & GOLEM_GPU_ADDR_MASK);
+    p++;
+
+    p->word4 = color;
+    setlen(p, 3);
+    setcode(p, 0x40);
+    p->x0 = x + w;
+    p->y0 = y;
+    p->unkC = x + w;
+    p->unkE = y + h;
+    addPrim(ot, p);
+    p++;
+
+    p->word4 = color;
+    setlen(p, 3);
+    setcode(p, 0x40);
+    p->x0 = x + w;
+    tmp = y + h;
+    p->y0 = tmp;
+    p->unkC = x;
+    p->unkE = y + h;
+    addPrim(ot, p);
+    p++;
+
+    p->word4 = color;
+    setlen(p, 3);
+    setcode(p, 0x40);
+    p->x0 = x;
+    p->y0 = y;
+    p->unkC = x;
+    p->unkE = y + h;
+    addPrim(ot, p);
+    return p + 1;
+}
+
+#define GOLEM_FADE_NEUTRAL 0x100
+#define GOLEM_FADE_ADDITIVE_THRESHOLD (GOLEM_FADE_NEUTRAL + 1)
+#define GOLEM_FADE_ADDITIVE_DRAW_MODE 0x25
+#define GOLEM_FADE_SUBTRACTIVE_DRAW_MODE 0x45
+
+/** @brief Packet view for a fade TILE or draw-mode command. */
+typedef union
+{
+    TILE tile;
+    DR_TPAGE draw_mode;
+} GolemFadePrimitive;
+
+/** Advance a fade packet cursor by the concrete packet just emitted. */
+#define GOLEM_NEXT_FADE_PRIMITIVE(primitive, type) \
+    ((GolemFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+
+/** @brief Fade colour triple plus its remaining step count. */
+typedef struct
+{
+    s16 r;                  // 0x00
+    s16 g;                  // 0x02
+    s16 b;                  // 0x04
+    s16 steps;              // 0x06
+} GolemFade;
+
+extern GolemFade D_8014C178;
+extern GolemFade D_8014C240;
+
+/**
+ * @brief Set the screen-fade target color and step count.
+ * @param arg0 Target red component (0x100 = neutral).
+ * @param arg1 Target green component.
+ * @param arg2 Target blue component.
+ * @param arg3 Number of frames to reach the target.
+ */
+void func_80142418(s16 arg0, s16 arg1, s16 arg2, s16 arg3)
+{
+    D_8014C178.r = arg0;
+    D_8014C178.g = arg1;
+    D_8014C178.b = arg2;
+    D_8014C178.steps = arg3;
+}
+
+/**
+ * @brief Step the current fade color toward the target, then emit a
+ *        full-screen semi-transparent TILE plus its draw-mode packet unless
+ *        the fade sits at neutral (0x100/0x100/0x100).
+ * @param primitive           Running fade packet cursor.
+ * @param ordering_table_tag  Ordering-table tag the packets are linked into.
+ * @return The advanced packet cursor.
+ */
+GolemFadePrimitive* func_80142434(GolemFadePrimitive* primitive, u_long* ordering_table_tag)
+{
+    s32 dr;
+    s32 dg;
+    s32 db;
+    s32 draw_mode;
+
+    if (D_8014C178.steps != 0)
+    {
+        dr = (D_8014C178.r - D_8014C240.r) / D_8014C178.steps;
+        dg = (D_8014C178.g - D_8014C240.g) / D_8014C178.steps;
+        db = (D_8014C178.b - D_8014C240.b) / D_8014C178.steps;
+        D_8014C178.steps = D_8014C178.steps - 1;
+        D_8014C240.r = D_8014C240.r + dr;
+        D_8014C240.g = D_8014C240.g + dg;
+        D_8014C240.b = D_8014C240.b + db;
+    }
+    else
+    {
+        D_8014C240.r = D_8014C178.r;
+        D_8014C240.g = D_8014C178.g;
+        D_8014C240.b = D_8014C178.b;
+    }
+    if ((D_8014C240.r != GOLEM_FADE_NEUTRAL) ||
+        (D_8014C240.g != D_8014C240.r) ||
+        (D_8014C240.b != D_8014C240.g))
+    {
+        if (D_8014C240.r >= GOLEM_FADE_ADDITIVE_THRESHOLD)
+        {
+            primitive->tile.r0 = D_8014C240.r - 1;
+            primitive->tile.g0 = D_8014C240.g - 1;
+            primitive->tile.b0 = D_8014C240.b - 1;
+        }
+        else
+        {
+            if (D_8014C240.r == GOLEM_FADE_NEUTRAL)
+            {
+                primitive->tile.r0 = 0;
+            }
+            else
+            {
+                primitive->tile.r0 = ~D_8014C240.r;
+            }
+            if (D_8014C240.g == GOLEM_FADE_NEUTRAL)
+            {
+                primitive->tile.g0 = 0;
+            }
+            else
+            {
+                primitive->tile.g0 = ~D_8014C240.g;
+            }
+            if (D_8014C240.b == GOLEM_FADE_NEUTRAL)
+            {
+                primitive->tile.b0 = 0;
+            }
+            else
+            {
+                primitive->tile.b0 = ~D_8014C240.b;
+            }
+        }
+
+        setTile(&primitive->tile);
+        setSemiTrans(&primitive->tile, 1);
+        primitive->tile.w = SCREEN_WIDTH;
+        draw_mode = GOLEM_FADE_ADDITIVE_DRAW_MODE;
+        SET_YX0(&primitive->tile, 0, 0);
+        primitive->tile.h = SCREEN_HEIGHT;
+        addPrim(ordering_table_tag, &primitive->tile);
+
+        primitive = GOLEM_NEXT_FADE_PRIMITIVE(primitive, TILE);
+        if (D_8014C240.r < GOLEM_FADE_ADDITIVE_THRESHOLD)
+        {
+            draw_mode = GOLEM_FADE_SUBTRACTIVE_DRAW_MODE;
+        }
+        setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
+        addPrim(ordering_table_tag, &primitive->draw_mode);
+
+        primitive = GOLEM_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
+    }
+    return primitive;
+}
+
+/**
+ * @brief Append the encoded string @p src to the end of @p dest.
+ * @param dest Destination encoded-text buffer (null-terminated).
+ * @param src  Source encoded-text buffer (null-terminated).
+ * @note func_801427AC is intentionally left without a prototype here; the
+ *       implicit declaration is required to match.
+ */
+void func_80142728(u8 *dest, u8 *src)
+{
+    s32 dst_len;
+    s32 src_len;
+    s32 i;
+
+    dst_len = func_801427AC(dest);
+    src_len = func_801427AC(src);
+    for (i = 0; i < src_len; i++)
+    {
+        dest[dst_len + i] = src[i];
+    }
+    dest[dst_len + i] = 0;
+}
+
+/**
+ * @brief Measure an encoded string's length in bytes: lead bytes 0x19..0x1F
+ *        start a two-byte character, everything else is one byte.
+ * @param text Null-terminated encoded-text buffer.
+ * @return Length in bytes, excluding the terminator.
+ */
+s32 func_801427AC(u8 *text)
+{
+    u8 *p;
+    u8 c;
+    s32 len;
+
+    p = text;
+    c = *p;
+    len = 0;
+    while (c != 0)
+    {
+        if ((u32)(c - 0x19) < 7)
+        {
+            p += 2;
+            len += 2;
+        }
+        else
+        {
+            p += 1;
+            len += 1;
+        }
+        c = *p;
+    }
+    return len;
+}
+
+/** A lead byte in the range 0x19..0x1F starts a two-byte encoded character. */
+#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
+
+/**
+ * @brief Copy the encoded string @p src to @p dst, honoring two-byte
+ *        characters, and null-terminate the destination.
+ * @param dst Destination buffer.
+ * @param src Source encoded-text buffer (null-terminated).
+ */
+void func_801427F8(u8* dst, u8* src)
+{
+    const u8* scan_cursor;
+    s32 byte_count;
+    s32 i;
+
+    scan_cursor = src;
+    byte_count = 0;
+
+    while (*scan_cursor)
+    {
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        {
+            scan_cursor += 2;
+            byte_count += 2;
+        }
+        else
+        {
+            scan_cursor += 1;
+            byte_count += 1;
+        }
+    }
+
+    for (i = 0; i < byte_count; i++)
+    {
+        dst[i] = src[i];
+    }
+
+    dst[i] = 0;
 }
