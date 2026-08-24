@@ -2,6 +2,7 @@
 #include "gpu_packet.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
+#include "tim.h"
 
 typedef struct GosubTilePacket GosubTilePacket;
 
@@ -58,6 +59,9 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE 8
 #define GOSUB_COMPOSITE_ICON_PART_CELL_SIZE 16
 #define GOSUB_COMPOSITE_ICON_BASE_CLUT 9
+
+/** @brief TIM flag indicating that a CLUT block precedes the pixel block. */
+#define GOSUB_TIM_HAS_CLUT 0x8
 
 /** @brief Lifecycle states used by a gosub UI element. */
 typedef enum GosubElementState
@@ -285,8 +289,8 @@ typedef struct
 /** @brief VRAM upload position for an image and its CLUT. */
 typedef struct
 {
-    u16 x;
-    u16 y;
+    u16 pixel_x;
+    u16 pixel_y;
     u16 clut_x;
     u16 clut_y;
 } GosubImageVramLayout;
@@ -352,7 +356,7 @@ extern u8 g_gosub_item_metadata[];
 extern GosubGroupTable g_gosub_group_first_indices;
 extern GosubGroupTable g_gosub_group_counts;
 extern s32 g_gosub_portrait_archive[];
-extern u8 g_gosub_image_archive[];
+extern TimPrefix g_gosub_image_archive;
 extern GosubGlyphMetric g_gosub_glyph_metrics[];
 extern u8 g_gosub_font_texture[];
 extern u8 D_800EC3DA[];
@@ -506,7 +510,7 @@ s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off);
 void gosub_open_row_action_dialog(void);
 void gosub_open_sort_dialog(void);
 void gosub_upload_ui_image(void);
-void gosub_upload_image_archive(GosubImageVramLayout* pos, u8* archive);
+void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim);
 inline void gosub_copy_packed_record(void* dst, void* src);
 inline void gosub_copy_list_row(void* dst, void* src);
 void gosub_delete_packed_record(s32 record_index);
@@ -3989,55 +3993,47 @@ void gosub_copy_encoded_string(u8* dst, u8* src)
  */
 void gosub_upload_ui_image(void)
 {
-    GosubImageVramLayout pos;
+    GosubImageVramLayout destinations;
 
-    pos.x = 0x140;
-    pos.y = 0;
-    pos.clut_x = 0;
-    pos.clut_y = 0x1F2;
-    gosub_upload_image_archive(&pos, g_gosub_image_archive);
+    destinations.pixel_x = 0x140;
+    destinations.pixel_y = 0;
+    destinations.clut_x = 0;
+    destinations.clut_y = 0x1F2;
+    gosub_upload_image_archive(&destinations, &g_gosub_image_archive);
 }
 
 /**
- * @brief Upload an image (and, when the archive's flag bit 3 is set, its
- *        CLUT) into VRAM via LoadImage.
- * @param pos Destination VRAM position for the image and, if present, its
- *            CLUT (see GosubImageVramLayout).
- * @param archive Image archive: word flags at +0x4 (bit 3 = has CLUT), word
- *                data offset at +0x8, dimensions/pixel data at +0x10 (or
- *                +off8+0x10 when a CLUT precedes them), CLUT pixel data at
- *                +0x14, image pixel data at +off8+0x14.
+ * @brief Upload a TIM's optional CLUT and pixel data to selected VRAM positions.
+ * @param destinations VRAM destinations for the pixel and CLUT blocks.
+ * @param tim TIM resource to upload.
  * @see decomp.me (100%)
  */
-void gosub_upload_image_archive(GosubImageVramLayout* pos, u8* archive)
+void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim)
 {
-    RECT rect;
+    RECT upload_rect;
     s32 flags;
-    s32 off8;
-    u16* dims;
+    s32 clut_block_size;
+    TimDimensions* pixel_dimensions;
 
-    flags = *(s32*)(archive + 4);
-    off8 = *(s32*)(archive + 8);
+    flags = tim->flags;
+    clut_block_size = tim->clut_block.bnum;
 
-    if (flags & 8)
+    if (flags & GOSUB_TIM_HAS_CLUT)
     {
-        rect.x = pos->clut_x;
-        rect.y = pos->clut_y;
-        rect.w = 0x100;
-        rect.h = 1;
-        LoadImage(&rect, archive + 0x14);
-        dims = (u16*)(off8 - (-(s32)archive) + 0x10);
+        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y,
+                CLUT_ENTRY_COUNT, 1);
+        LoadImage(&upload_rect, (u_long*)tim->clut_data);
+        pixel_dimensions = &((TimBlock*)(clut_block_size + (s32)tim + TIM_HEADER_SIZE))->dimensions;
     }
     else
     {
-        dims = (u16*)(archive + 0x10);
+        pixel_dimensions = &tim->clut_block.dimensions;
     }
 
-    rect.x = pos->x;
-    rect.y = pos->y;
-    rect.w = dims[0];
-    rect.h = dims[1];
-    LoadImage(&rect, off8 - (-(s32)archive) + 0x14);
+    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y,
+            pixel_dimensions->width, pixel_dimensions->height);
+    LoadImage(&upload_rect,
+              (u_long*)(((TimBlock*)(clut_block_size + (s32)tim + TIM_HEADER_SIZE)) + 1));
 }
 
 /**

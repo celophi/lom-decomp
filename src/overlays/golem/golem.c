@@ -419,3 +419,78 @@ void func_80140CBC(void)
         }
     }
 }
+
+/**
+ * @brief Read the 60-cell grid state and emit each occupied cell to the
+ *        renderer, threading an accumulator through the calls.
+ * @param arg0 Initial accumulator (render/prim cursor advanced by func_80140F68).
+ * @param arg1 Renderer context passed through unchanged.
+ * @note WIP, not byte-matched. Best local match 83.81% (45/97 exact rows);
+ *       frame and control flow match. Residual is a register-numbering shift:
+ *       gcc keeps @c acc in a0 (per-iteration caller-save) instead of s3, which
+ *       frees a saved reg to hoist the 0x50 constant. The explicit @c yy
+ *       snapshot is required to reproduce the giv+snapshot that spills the grid
+ *       base to sp+0x108 (frame 0x138). Target/toolchain confirmed gcc272_cdk
+ *       (gcc280_g0/g4 both score 80.28%). See working/func_80140DEC/.
+ */
+void func_80140DEC(s32 arg0, s32 arg1)
+{
+    s32 grid[60];
+    s32 idx;
+    s32 col;
+    s32 x;
+    s32 y;
+    s32 val;
+    s32 mode;
+    s32 acc;
+    s32 *base;
+    s32 yy;
+
+    func_800CBEC4(grid);
+
+    acc = arg0;
+    idx = 0;
+    base = grid;
+    y = 4;
+    for (arg0 = 0; arg0 < 6; arg0++)
+    {
+        yy = y;
+        x = 0xC;
+        for (col = 0; col < 5; col++)
+        {
+            val = base[idx];
+            if (val != 0)
+            {
+                if (val == 0x50)
+                {
+                    mode = 2;
+                }
+                else
+                {
+                    mode = 3;
+                }
+                acc = func_80140F68(acc, arg1, x, yy, mode);
+            }
+            x += 0x10;
+            idx++;
+        }
+        y += 0x10;
+    }
+
+    for (arg0 = 0; arg0 < 5; arg0++)
+    {
+        x = 4;
+        for (col = 0; col < 6; col++)
+        {
+            val = grid[idx];
+            if (val != 0)
+            {
+                acc = func_80140F68(acc, arg1, x, (arg0 << 4) + 0xC, val != 0x4E);
+            }
+            x += 0x10;
+            idx++;
+        }
+    }
+
+    func_80141020(acc, arg1);
+}
