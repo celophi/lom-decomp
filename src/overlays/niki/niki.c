@@ -134,7 +134,7 @@ extern s32 D_80164B8C;
 extern s32 D_80164B90;
 extern s32 D_80164ADC;
 extern s32 D_80164B7C;
-extern s32 D_80164B1C;
+extern NikiElement D_80164B1C;
 extern s32 D_80122988;
 extern s32 D_80164B88;
 extern s32 D_80164AE0;
@@ -158,6 +158,7 @@ extern NikiRecord *D_8012271C;
 extern s32 D_8003EC9C;
 
 extern s32 D_80164AD8;
+extern s32 D_80160A70;
 extern u8 D_80164DE7;
 extern u8 D_80164B98;
 extern u8 D_80164B9C;
@@ -203,6 +204,8 @@ void func_80141E84();
 s32 func_80144DF8(void);
 
 void func_800A3938();
+s32 func_80142D04(s32 *ot, s32 prim, s32 arg2, s32 arg3);
+s32 func_80142E88(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 void func_80140C60();
 void func_80140BF0();
 void func_80145F68();
@@ -361,7 +364,7 @@ void func_8014068C(void)
 
     func_80140D2C();
     D_80164AD0 += 2;
-    if ((D_80164B1C & 0x7F) == 2)
+    if ((D_80164B1C.attr.word & 0x7F) == 2)
     {
         func_80140774();
     }
@@ -621,9 +624,42 @@ typedef struct
     s16 w, h;
 } TILE;
 
+/**
+ * @brief 0x28-byte textured-quad primitive built by func_8014303C for a
+ *        save-slot glyph (a shadow tile plus the main tile).
+ */
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s16 unk8;
+    s16 unkA;
+    u8 unkC;
+    u8 unkD;
+    s16 unkE;
+    s16 unk10;
+    s16 unk12;
+    u8 unk14;
+    u8 unk15;
+    s16 unk16;
+    s16 unk18;
+    s16 unk1A;
+    u8 unk1C;
+    u8 unk1D;
+    u8 pad1E[2];
+    s16 unk20;
+    s16 unk22;
+    u8 unk24;
+    u8 unk25;
+    u8 pad26[2];
+} NikiGlyphPrim;
+
 s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, Vec2s *pos, s32 mode);
 u8 *func_801442C4(void *arg0);
+void func_80019A34(RECT *rect, void *str);
+void func_800A55E4(void *buf, s32 arg1);
+void func_800A5638(void *buf, s32 arg1);
 
 extern char D_800ECF8C[];
 extern char D_800ECFC4[];
@@ -638,10 +674,16 @@ extern u16 D_8014710C;
 extern u16 D_80147126;
 extern u16 D_8014712C;
 extern u16 D_80147132;
+extern u16 D_80147134;
+extern u16 D_80147136;
+extern u16 D_80147138;
+extern u16 D_8014713A;
 extern u16 D_801471A8;
 extern s32 D_80164E20[];
 extern s32 D_80164EB0;
 extern s32 D_80164EB8[];
+extern s32 D_801477AC[];
+extern u8 D_80164AF0[];
 
 #define GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
 #define GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
@@ -1274,7 +1316,7 @@ void func_80141F18(NikiDrawState *arg0)
             count = D_80164B78;
             if ((count < 0x10) &&
                 (*(NikiElemDrawFunc *)((u8 *)var_s3 + 8) == (NikiElemDrawFunc)func_80140D4C) &&
-                ((D_80164B1C & 7) == 2))
+                ((D_80164B1C.attr.word & 7) == 2))
             {
                 count *= 0xE;
                 if ((D_80164AE0 + 0x58) < count)
@@ -1753,4 +1795,193 @@ s32 func_80142A1C(s32 arg0, s32 *arg1)
         arg0 += 0x24;
     }
     return arg0;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80142B2C(s32 arg0)
+{
+    func_800A3938(0x78, 0x80);
+    D_80164B10.draw_handler = (void *)func_80142D04;
+    D_80164B10.attr.f.unk0_3 = 1;
+    D_80164B10.attr.f.state = 1;
+    D_80164B10.attr.f.x = 0x20;
+    D_80164B10.attr.f.unk0_16 = 0x70;
+    D_80164B10.unk4_0 = 1;
+    D_80164B10.y = 0x14;
+    SET_ELEM_CODE(&D_80164B10, 0);
+    func_800AA02C();
+    D_80164B90 = 0;
+    D_80164AD4 = 0;
+    D_80164B84 = 0;
+    D_80164A78 = 0;
+    D_80164B78 = 0xFF;
+    func_80144BC0();
+    D_80164E18 = 0;
+    D_80160A70 = arg0;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80142C18(s32 arg0)
+{
+    func_800A3938(0x78, 0x80);
+    D_80164B1C.draw_handler = (void *)func_80142E88;
+    D_80164B1C.attr.f.unk0_3 = 1;
+    D_80164B1C.attr.f.state = 1;
+    D_80164B1C.attr.f.x = 0x20;
+    D_80164B1C.attr.f.unk0_16 = 0x70;
+    D_80164B1C.unk4_0 = 1;
+    D_80164B1C.y = 0x14;
+    SET_ELEM_CODE(&D_80164B1C, 0);
+    func_800AA02C();
+    D_8011F428 = 2;
+    D_80164B90 = 0;
+    D_80164AD4 = 0;
+    D_80164B84 = 0;
+    D_80164A78 = 0;
+    func_80144BC0();
+    D_80164E18 = 0;
+    D_80160A70 = arg0;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80142D04(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+
+    switch (D_80160A70)
+    {
+    case 0:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147134, 0x3C), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    case 2:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147138, 0x40), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    case 3:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014713A, 0x42), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    case 1:
+    case 4:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147136, 0x3E), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    }
+    if (D_80122988 & 0x220)
+    {
+        D_80164B10.attr.f.state = 0;
+        func_800AA02C();
+    }
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80142E88(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+    NikiPacket *p;
+    s32 i;
+
+    switch (D_80160A70)
+    {
+    case 0:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147134, 0x3C), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    case 2:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147138, 0x40), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    case 3:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014713A, 0x42), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    case 1:
+    case 4:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147136, 0x3E), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    }
+    if (D_80122988 & 0x220)
+    {
+        D_8012298C = 0x20;
+        p = (NikiPacket *)&D_80164B10;
+        for (i = 0; i < 8; i++)
+        {
+            p->attr.word &= ~7;
+            p++;
+        }
+        func_80067F5C(8);
+        func_800AA02C();
+    }
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_8014303C(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s32 slot, s32 i, s32 j)
+{
+    RECT rect;
+    s32 temp;
+    s8 shade;
+
+    if (slot == 0x7F)
+    {
+        return result;
+    }
+    rect.x = i * 0x10;
+    rect.y = 0x1F2;
+    rect.w = 0x10;
+    rect.h = 1;
+    if ((j == 1) && (slot < 2))
+    {
+        func_800A5638(D_80164AF0, slot);
+        func_80019A34(&rect, D_80164AF0);
+        func_80019788(0);
+    }
+    else if (slot >= 0x4F)
+    {
+        func_800A55E4(D_80164AF0, D_80164AD8);
+        func_80019A34(&rect, D_80164AF0);
+        func_80019788(0);
+    }
+    else
+    {
+        func_80019A34(&rect, (void *)((u8 *)&D_801477AC - 4 + D_801477AC[slot]));
+    }
+
+    temp = i * 3;
+    rect.x = temp * 4 + 0x140;
+    rect.y = 0xD0;
+    rect.w = 0xC;
+    rect.h = 0x30;
+    func_80019A34(&rect, (void *)((u8 *)&D_801477AC + 0x1C + D_801477AC[slot]));
+    ((NikiGlyphPrim *)result)->unk4 = 0x808080;
+    ((u8 *)result)[3] = 9;
+    ((u8 *)result)[7] = 0x2C;
+    ((NikiGlyphPrim *)result)->unk18 = x;
+    ((NikiGlyphPrim *)result)->unk8 = x;
+    ((NikiGlyphPrim *)result)->unk12 = y;
+    ((NikiGlyphPrim *)result)->unkA = y;
+    ((NikiGlyphPrim *)result)->unk20 = x + adjust;
+    shade = temp * 0x10;
+    ((NikiGlyphPrim *)result)->unk1C = shade;
+    ((NikiGlyphPrim *)result)->unkC = shade;
+    shade += 0x2F;
+    ((NikiGlyphPrim *)result)->unk24 = shade;
+    ((NikiGlyphPrim *)result)->unk14 = shade;
+    ((NikiGlyphPrim *)result)->unk15 = 0xD0;
+    ((NikiGlyphPrim *)result)->unkD = 0xD0;
+    ((NikiGlyphPrim *)result)->unk10 = x + adjust;
+    ((NikiGlyphPrim *)result)->unk22 = y + 0x2F;
+    ((NikiGlyphPrim *)result)->unk1A = y + 0x2F;
+    ((NikiGlyphPrim *)result)->unk25 = 0xFF;
+    ((NikiGlyphPrim *)result)->unk1D = 0xFF;
+    ((NikiGlyphPrim *)result)->unkE = (i & 0x3F) | 0x7C80;
+    ((NikiGlyphPrim *)result)->unk16 = 5;
+    ((NikiGlyphPrim *)result)->unk0 = (((NikiGlyphPrim *)result)->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | (result & 0xFFFFFF);
+    return result + 0x28;
 }

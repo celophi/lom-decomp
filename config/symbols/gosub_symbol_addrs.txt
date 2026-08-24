@@ -2,22 +2,23 @@
 
 // Cross-module FIELD function not present in the shared symbol table.
 field_set_default_fade_target            = 0x80067F8C;
+g_field_gosub_state                      = 0x801227F0;
 
 // Overlay rodata and packed data
-D_80140000                               = 0x80140000;
-D_80147058                               = 0x80147058;
-D_8014F27C                               = 0x8014F27C;
-D_8014F280                               = 0x8014F280;
-D_8014F288                               = 0x8014F288;
-D_8014F294                               = 0x8014F294;
-D_8014F29C                               = 0x8014F29C;
-D_8014F2A4                               = 0x8014F2A4;
-D_8014F2A8                               = 0x8014F2A8;
-D_8014F2C4                               = 0x8014F2C4;
-D_80152DF4                               = 0x80152DF4;
-D_8016B3DC                               = 0x8016B3DC;
-D_8016B5AC                               = 0x8016B5AC;
-D_8016B634                               = 0x8016B634;
+g_gosub_overlay_id                               = 0x80140000;
+g_gosub_image_archive                               = 0x80147058;
+g_gosub_text_archive_offsets_0                               = 0x8014F27C;
+g_gosub_text_archive_offsets_1                               = 0x8014F280;
+g_gosub_text_archive_offsets_2                               = 0x8014F288;
+g_gosub_text_archive_offsets_3                               = 0x8014F294;
+g_gosub_message_archive_offset                               = 0x8014F29C;
+g_gosub_text_archive_offsets_5                               = 0x8014F2A4;
+g_gosub_text_archive_offsets_6                               = 0x8014F2A8;
+g_gosub_text_archive_0                               = 0x8014F2C4;
+g_gosub_portrait_archive                               = 0x80152DF4;
+g_gosub_font_texture                               = 0x8016B3DC;
+g_gosub_item_metadata                               = 0x8016B5AC;
+g_gosub_glyph_metrics                               = 0x8016B634;
 
 // Overlay entry points
 gosub_open_screen_sequence               = 0x80140080;
@@ -65,6 +66,55 @@ gosub_toggle_cursor_selection            = 0x8014397C;
 gosub_advance_screen_sequence            = 0x80143A28;
 gosub_are_elements_idle                  = 0x80143B10;
 
+// Element lifecycle and rendering
+gosub_start_element_exit                = 0x80143B64;
+gosub_render_elements                   = 0x80143BB0;
+gosub_clear_elements                    = 0x80143BD0;
+gosub_allocate_element                  = 0x80143C04;
+gosub_update_and_render_elements        = 0x80143C58;
+gosub_emit_scroll_marker                = 0x801443E4;
+gosub_emit_panel                        = 0x80144544;
+gosub_emit_panel_outline                = 0x80144764;
+gosub_draw_item_list                    = 0x801448EC;
+gosub_draw_portrait                     = 0x801450D8;
+gosub_draw_combination_preview          = 0x801452F0;
+
+// Dialogs and text rendering
+gosub_handle_row_action_dialog           = 0x801454C4;
+gosub_handle_delete_dialog               = 0x80145620;
+gosub_handle_backtrack_dialog            = 0x80145744;
+gosub_handle_sort_dialog                 = 0x80145800;
+gosub_open_row_action_dialog             = 0x801458A4;
+gosub_open_sort_dialog                   = 0x8014595C;
+gosub_draw_two_option_dialog             = 0x80145A14;
+gosub_draw_three_option_dialog           = 0x80145B28;
+gosub_open_message_dialog                = 0x80145CEC;
+gosub_draw_message_dialog                = 0x80145DA8;
+gosub_draw_detail_header                 = 0x80145DF8;
+gosub_draw_two_line_header               = 0x80145EA4;
+gosub_draw_confirmation_prompt           = 0x80145F80;
+gosub_draw_row_description               = 0x801460D0;
+gosub_draw_equipment_details             = 0x80146178;
+gosub_draw_title                         = 0x80146418;
+gosub_append_encoded_string              = 0x80146468;
+gosub_encoded_string_length              = 0x801464EC;
+gosub_copy_encoded_string                = 0x80146538;
+
+// Image, glyph, row, and packet helpers
+gosub_upload_ui_image                    = 0x801465BC;
+gosub_upload_image_archive               = 0x801465FC;
+gosub_draw_composite_icon                = 0x801466B4;
+gosub_finish_glyph_run                   = 0x8014680C;
+gosub_emit_glyph                         = 0x80146860;
+gosub_delete_packed_record               = 0x80146908;
+gosub_delete_list_row                    = 0x801469BC;
+gosub_copy_packed_record                 = 0x80146AA8;
+gosub_copy_list_row                      = 0x80146AD0;
+gosub_sort_rows                          = 0x80146AF8;
+gosub_compare_rows                       = 0x80146CC4;
+gosub_upload_font_texture                = 0x80146DA8;
+gosub_emit_panel_corners                 = 0x80146E30;
+
 // Overlay state
 g_gosub_frame_parity                     = 0x8016B8C8;
 g_gosub_finished                         = 0x8016B8CC;
@@ -73,33 +123,33 @@ g_gosub_row_count                        = 0x8016B8D4;
 g_gosub_visible_row_count                = 0x8016B8D8;
 g_gosub_screen_sequence_index            = 0x8016B8DC;
 g_gosub_scroll_frames_remaining          = 0x8016B8E0;
-D_8016B8E4                               = 0x8016B8E4;
+g_gosub_combination_variant                               = 0x8016B8E4;
 g_gosub_dialog_choice                    = 0x8016B8E8;
-D_8016B8EC                               = 0x8016B8EC;
+g_gosub_combination_quantity                               = 0x8016B8EC;
 g_gosub_allow_duplicate_selection        = 0x8016B8F0;
-D_8016B8F4                               = 0x8016B8F4;
+g_gosub_dialog_text                               = 0x8016B8F4;
 g_gosub_finish_handler                   = 0x8016B8F8;
-D_8016B8FC                               = 0x8016B8FC;
+g_gosub_selection_mode                               = 0x8016B8FC;
 g_gosub_required_selection_count         = 0x8016B8FD;
-D_8016B900                               = 0x8016B900;
+g_gosub_show_row_details                               = 0x8016B900;
 g_gosub_result_rows                      = 0x8016B908;
-D_8016B948                               = 0x8016B948;
+g_gosub_dialog_accepting_input                               = 0x8016B948;
 g_gosub_selected_rows                    = 0x8016B94C;
 g_gosub_window_height                    = 0x8016B950;
 g_gosub_select_handler                   = 0x8016B954;
 g_gosub_window_width                     = 0x8016B958;
-D_8016B95C                               = 0x8016B95C;
+g_gosub_suppress_dialog_sound                               = 0x8016B95C;
 g_gosub_text_buffers                     = 0x8016B960;
 g_gosub_selection_count                  = 0x80170960;
 g_gosub_screen_sequence                  = 0x80170968;
-D_8017097C                               = 0x8017097C;
+g_gosub_combination_result_id                               = 0x8017097C;
 g_gosub_row_height                       = 0x80170980;
 g_gosub_scroll_y                         = 0x80170988;
-D_8017098C                               = 0x8017098C;
+g_gosub_sort_ascending                                = 0x8017098C;
 g_gosub_scroll_target_y                  = 0x80170990;
 g_gosub_title_text                       = 0x80170994;
 g_gosub_elements                         = 0x80170998;
-D_801709A4                               = 0x801709A4;
+g_gosub_dynamic_elements                               = 0x801709A4;
 g_gosub_rows                             = 0x80170A58;
 g_gosub_dialog_handler                   = 0x80174A58;
 
