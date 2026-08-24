@@ -102,6 +102,23 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_CONFIRMATION_TITLE_Y 2
 #define GOSUB_CONFIRMATION_CHOICE_Y 0x12
 
+/** @brief Message offsets and layout of the sort-key dialog. */
+#define GOSUB_SORT_DIALOG_TYPE_MESSAGE_OFFSET (-0xE)
+#define GOSUB_SORT_DIALOG_POWER_MESSAGE_OFFSET (-0xC)
+#define GOSUB_SORT_DIALOG_SHAPE_MESSAGE_OFFSET (-0xA)
+#define GOSUB_SORT_DIALOG_X 0x40
+#define GOSUB_SORT_DIALOG_TYPE_Y 2
+#define GOSUB_SORT_DIALOG_POWER_Y 0x12
+#define GOSUB_SORT_DIALOG_SHAPE_Y 0x22
+
+/** @brief Message offsets and layout of the row-action dialog. */
+#define GOSUB_ROW_ACTION_SORT_MESSAGE_OFFSET (-0x12)
+#define GOSUB_ROW_ACTION_DELETE_MESSAGE_OFFSET (-0x10)
+#define GOSUB_ROW_ACTION_CHOICE_MASK 1
+#define GOSUB_ROW_ACTION_DIALOG_X 0x40
+#define GOSUB_ROW_ACTION_SORT_Y 2
+#define GOSUB_ROW_ACTION_DELETE_Y 0x12
+
 /** @brief Lifecycle states used by a gosub UI element. */
 typedef enum GosubElementState
 {
@@ -575,8 +592,8 @@ s32 gosub_draw_combination_preview();
 s32 gosub_handle_backtrack_dialog();
 s32 gosub_handle_delete_dialog(s32 dialog_result);
 s32 gosub_draw_title();
-s32 gosub_draw_two_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off);
-s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off);
+s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset);
+s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset);
 void gosub_open_row_action_dialog(void);
 void gosub_open_sort_dialog(void);
 void gosub_upload_ui_image(void);
@@ -3622,115 +3639,114 @@ void gosub_open_sort_dialog(void)
 }
 
 /**
- * @brief Draw handler for element 0 of the wide confirmation dialog.
- *
- * Emits the two option labels through func_800A88A0, highlighting the one that
- * matches the current selection: the color toggles between 5 (highlighted) and
- * 4 (dim) with g_gosub_dialog_choice bit 0, inverted between the two rows. Both
- * labels sit at x 0x40 - x_off; the rows are at y 2 - y_off and 0x12 - y_off.
- * The labels come from message archive entries -0x12 and -0x10.
- *
- * @param ot    Ordering-table tag every packet links into.
- * @param prim  Packet cursor; threaded through both draws.
- * @param x_off Horizontal offset subtracted from the label column.
- * @param y_off Vertical offset subtracted from both row positions.
- * @return Packet cursor past the last emitted label.
- *
+ * @brief Draw the sort and delete row actions and highlight the selected one.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param initial_packet First free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after both actions.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_two_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* first_option;
-    void* second_option;
-    s32 color;
-    s32 first_color;
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* sort_text;
+    void* delete_text;
+    s32 delete_color;
+    s32 sort_color;
     s32 packet_cursor;
-    s32 stack_pad[14];
+    s32 stack_padding[14];
 
-    packet_cursor = prim;
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    packet_cursor = initial_packet;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    first_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x12)));
-    first_color = 5;
-    if ((g_gosub_dialog_choice & 1) == 0)
+    sort_text = GOSUB_MSG_ABS(archive_base, GOSUB_ROW_ACTION_SORT_MESSAGE_OFFSET);
+    sort_color = GOSUB_TEXT_COLOR_DISABLED;
+    if ((g_gosub_dialog_choice & GOSUB_ROW_ACTION_CHOICE_MASK) == 0)
     {
-        first_color = 4;
+        sort_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, first_option, first_color, 0x40 - x_off, 2 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, sort_text, sort_color,
+                                  GOSUB_ROW_ACTION_DIALOG_X - x_offset,
+                                  GOSUB_ROW_ACTION_SORT_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    second_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0x10)));
-    color = 5;
-    if ((g_gosub_dialog_choice & 1) != 0)
+    delete_text = GOSUB_MSG_ABS(archive_base, GOSUB_ROW_ACTION_DELETE_MESSAGE_OFFSET);
+    delete_color = GOSUB_TEXT_COLOR_DISABLED;
+    if ((g_gosub_dialog_choice & GOSUB_ROW_ACTION_CHOICE_MASK) != 0)
     {
-        color = 4;
+        delete_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, second_option, color, 0x40 - x_off, 0x12 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, delete_text, delete_color,
+                                  GOSUB_ROW_ACTION_DIALOG_X - x_offset,
+                                  GOSUB_ROW_ACTION_DELETE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
 }
 
 /**
- * @brief Draw handler for element 0 of the three-option wide confirmation dialog.
- *
- * Emits the three option labels through func_800A88A0, dimming the one that
- * matches the current selection: the color is 5 (bright) unless the row index
- * equals g_gosub_dialog_choice % 3, in which case it is 4 (dim). All labels sit
- * at x 0x40 - x_off; the rows are at y 2 - y_off, 0x12 - y_off, and 0x22 - y_off.
- * The labels come from message archive entries -0xE, -0xC, and -0xA.
- *
- * @param ot    Ordering-table tag every packet links into.
- * @param prim  Packet cursor; threaded through all three draws.
- * @param x_off Horizontal offset subtracted from the label column.
- * @param y_off Vertical offset subtracted from every row position.
- * @return Packet cursor past the last emitted label.
- *
+ * @brief Draw the three sort-key choices and highlight the selected key.
+ * @param ordering_table Ordering table to receive the text packets.
+ * @param initial_packet First free GPU packet.
+ * @param x_offset Horizontal element animation offset.
+ * @param y_offset Vertical element animation offset.
+ * @return Packet cursor after all three choices.
  * @see decomp.me (100%)
  */
-s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
+s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
-    s32* table;
-    s32 base;
-    void* first_option;
-    void* second_option;
-    void* third_option;
-    s32 color;
-    s32 first_color;
+    s32* archive_offset_word;
+    s32 archive_base;
+    void* type_text;
+    void* power_text;
+    void* shape_text;
+    s32 text_color;
+    s32 type_color;
     s32 packet_cursor;
-    s32 selected_option;
-    s32 stack_pad[14];
+    s32 selected_sort_key;
+    s32 stack_padding[14];
 
-    packet_cursor = prim;
-    table = &g_gosub_message_archive_offset;
-    base = (s32)table - 0x20;
+    packet_cursor = initial_packet;
+    archive_offset_word = &g_gosub_message_archive_offset;
+    archive_base = (s32)archive_offset_word - 0x20;
 
-    first_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0xE)));
-    selected_option = g_gosub_dialog_choice;
-    selected_option %= GOSUB_SORT_KEY_COUNT;
-    first_color = 5;
-    if (selected_option == 0)
+    type_text = GOSUB_MSG_ABS(archive_base, GOSUB_SORT_DIALOG_TYPE_MESSAGE_OFFSET);
+    selected_sort_key = g_gosub_dialog_choice;
+    selected_sort_key %= GOSUB_SORT_KEY_COUNT;
+    type_color = GOSUB_TEXT_COLOR_DISABLED;
+    if (selected_sort_key == GOSUB_SORT_BY_TYPE)
     {
-        first_color = 4;
+        type_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, first_option, first_color, 0x40 - x_off, 2 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, type_text, type_color,
+                                  GOSUB_SORT_DIALOG_X - x_offset,
+                                  GOSUB_SORT_DIALOG_TYPE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    second_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0xC)));
-    color = 5;
-    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == 1)
+    power_text = GOSUB_MSG_ABS(archive_base, GOSUB_SORT_DIALOG_POWER_MESSAGE_OFFSET);
+    text_color = GOSUB_TEXT_COLOR_DISABLED;
+    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == GOSUB_SORT_BY_POWER)
     {
-        color = 4;
+        text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, second_option, color, 0x40 - x_off, 0x12 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, power_text, text_color,
+                                  GOSUB_SORT_DIALOG_X - x_offset,
+                                  GOSUB_SORT_DIALOG_POWER_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
-    third_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0xA)));
-    color = 5;
-    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == 2)
+    shape_text = GOSUB_MSG_ABS(archive_base, GOSUB_SORT_DIALOG_SHAPE_MESSAGE_OFFSET);
+    text_color = GOSUB_TEXT_COLOR_DISABLED;
+    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == GOSUB_SORT_BY_SHAPE)
     {
-        color = 4;
+        text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ot, third_option, color, 0x40 - x_off, 0x22 - y_off, 2);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, shape_text, text_color,
+                                  GOSUB_SORT_DIALOG_X - x_offset,
+                                  GOSUB_SORT_DIALOG_SHAPE_Y - y_offset,
+                                  GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
 }
