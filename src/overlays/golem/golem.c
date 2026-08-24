@@ -18,6 +18,7 @@ extern s32 D_8014C238;
 extern s32 D_8014C23C;
 extern s32 D_8014C248;
 extern s32 D_8014C24C;
+extern s32 D_8014C254;
 extern s32 D_8014C258;
 extern s32 D_8014C25C;
 extern s32 D_8014C260;
@@ -506,4 +507,14 @@ s32 func_80140F68(s32 prim, s32 ot, s32 x, s32 y, s32 tile)
     sprt->clut = 0x7C87;
     addPrim(ot, sprt);
     return prim + 0x14;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80140FF8(void)
+{
+    D_8014C264 = 0xB8;
+    D_8014C268 = 0x50;
+    D_8014C254 = 8;
 }
