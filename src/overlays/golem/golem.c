@@ -661,3 +661,76 @@ void func_80141228(s32 arg0)
 
     *(s32 *)(arg0 + 0x4040) = func_80142434(prim, arg0 + 0x24);
 }
+
+/**
+ * @brief Link a base primitive into the render context OT, emit a highlight
+ *        primitive for each on-screen panel cell, then link a final frame prim.
+ * @param prim Running primitive pointer; advanced by 0x40 per emitted prim.
+ * @param ctx  Render context base; panel OT tag at +0x38, mode flag at +0x404C.
+ * @return The advanced primitive pointer (@p prim + 0x40 past the last prim).
+ * @note WIP, NOT byte-matched. Best local match 98.28% (141/148 exact rows);
+ *       insn count, frame (-0xA8) and sp slots all match. Residue is three
+ *       ordering rows: the two entry param-copies (s6/s0 save order), the
+ *       preheader idx-init placement (0xAC vs 0xBC), and the walker++/idx+=
+ *       delay-slot pick at the loop bottom. Established shapes worth keeping:
+ *       the nested `if (temp_v1 >= -0x27) { if (temp_v1 < 0x78)` split defeats
+ *       the two-sided range fold into `sltiu` (+3 rows); the ternary is INLINED
+ *       into the call arg so it materializes late in v0, not hoisted (+15);
+ *       @c t18c splits `D_8014C18C - 0x28` to stop reassociation; `idx += 0x28`
+ *       before `i++` fills the D_8014C184 load-delay slot. Handoff in
+ *       working/func_80141478/code.c.
+ */
+s32 func_80141478(s32 prim, s32 ctx)
+{
+    u8 sp28[0x60];
+    s32 tag;
+    s32 next;
+    s32 temp_v1;
+    s32 idx;
+    s32 i;
+    s32 mode;
+    s32 t18c;
+
+    i = 0;
+    tag = ctx + 0x38;
+    func_8001A5D4(prim, D_8014C168 + (*(s32 *)(ctx + 0x404C) ^ 1) * 0x40C0 + 0x4064);
+    next = prim + 0x40;
+    addPrim(tag, prim);
+
+    if (D_8014C184 > 0)
+    {
+        idx = 0;
+        do
+        {
+            t18c = D_8014C18C - 0x28;
+            temp_v1 = idx - t18c;
+            if (temp_v1 >= -0x27)
+            {
+                if (temp_v1 < 0x78)
+                {
+                    if (D_8014C284 == i && ((C198Entry *)D_8014C198)[i].value == 0)
+                    {
+                        next = func_80141EB4(next, tag, i, 0, 6, temp_v1 + 4, ((C198Entry *)D_8014C198)[i].pad, 1, D_8014C238 ? 0x80 : 2);
+                    }
+                    else
+                    {
+                        next = func_80141EB4(next, tag, i, 0, 6, idx - D_8014C18C + 0x2C, ((C198Entry *)D_8014C198)[i].pad, 1, 0);
+                    }
+                }
+            }
+            idx += 0x28;
+            i++;
+        } while (i < D_8014C184);
+    }
+
+    prim = next;
+    mode = 0x1E;
+    if (*(s32 *)(ctx + 0x404C) != 0)
+    {
+        mode = 0x106;
+    }
+    func_8001C56C(sp28, 0xCA, mode, 0x4C, 0x74);
+    func_8001A5D4(prim, sp28);
+    addPrim(tag, prim);
+    return prim + 0x40;
+}
