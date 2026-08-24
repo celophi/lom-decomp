@@ -141,6 +141,22 @@ typedef struct
     } flags;
 } GosubListRow;
 
+/** @brief Sort keys offered for the packed logic-block list. */
+typedef enum
+{
+    GOSUB_SORT_BY_TYPE = 0,
+    GOSUB_SORT_BY_POWER = 1,
+    GOSUB_SORT_BY_SHAPE = 2,
+    GOSUB_SORT_KEY_COUNT = 3
+} GosubSortKey;
+
+/** @brief Fields in the encoded sort mode passed to gosub_sort_rows. */
+#define GOSUB_SORT_KEY_MASK 0x0F
+#define GOSUB_SORT_ASCENDING_MASK 0xF0
+#define GOSUB_SORT_ASCENDING_SHIFT 7
+#define GOSUB_SORT_ORDER_CAPACITY 0x100
+#define GOSUB_SORT_ROW_CAPACITY 0x28
+
 /* Overlay BSS layout is address-sensitive; do not reorder these definitions. */
 
 s32 g_gosub_frame_parity;
@@ -182,7 +198,8 @@ s32 g_gosub_combination_result_id;
 s32 g_gosub_row_height;
 u8 g_gosub_row_height_storage[8] __asm__("g_gosub_row_height");
 s32 g_gosub_scroll_y;
-s32 g_gosub_sort_descending;
+/** @brief Whether the next confirmed sort uses ascending order. */
+s32 g_gosub_sort_ascending;
 s32 g_gosub_scroll_target_y;
 u8* g_gosub_title_text;
 GosubElement g_gosub_elements[1];
@@ -267,7 +284,7 @@ void gosub_load_screen_sequence(s32* screen_sequence)
     g_gosub_scroll_y = 0;
     g_gosub_cursor_row = 0;
     gosub_clear_elements();
-    g_gosub_sort_descending = 0;
+    g_gosub_sort_ascending = 0;
     g_gosub_screen_sequence_index = 0;
     g_gosub_result_count = 0;
     g_gosub_dialog_handler = (void*)gosub_handle_backtrack_dialog;
@@ -1436,6 +1453,18 @@ typedef struct
 {
     u32 word;
 } GosubPackedRecord;
+
+/** @brief Stack workspace used to reorder logic-block records and their rows. */
+typedef struct
+{
+    u8 row_order[GOSUB_SORT_ORDER_CAPACITY];
+    GosubPackedRecord packed_records[GOSUB_SORT_ROW_CAPACITY];
+    GosubListRow rows[GOSUB_SORT_ROW_CAPACITY];
+} GosubSortWorkspace; /* 0x6A0 */
+
+/** @brief Offset of the packed logic-block record table in g_pad_ctx. */
+#define GOSUB_LOGIC_BLOCK_RECORDS_OFFSET 0x29DC
+#define GOSUB_LOGIC_BLOCK_RECORDS ((GosubPackedRecord*)(g_pad_ctx + GOSUB_LOGIC_BLOCK_RECORDS_OFFSET))
 
 /** @brief One 0x40-byte equipment record in the table at g_pad_ctx + 0xCE0. */
 typedef struct
@@ -3379,16 +3408,12 @@ s32 gosub_handle_backtrack_dialog(s32 dialog_result)
     return 0;
 }
 
-/** @brief Toggling flag paired with g_gosub_dialog_choice to pick a sound slot. */
-extern s32 g_gosub_sort_descending;
-
 /**
- * @brief Dialog handler that plays the choice's sound and flips its bank.
+ * @brief Apply the selected logic-block sort and toggle its direction.
  *
- * On confirm it hands gosub_sort_rows a slot built from g_gosub_sort_descending's bank bit and
- * the dialog choice reduced modulo 3, clears the selection count, then flips
- * bit 0 of g_gosub_sort_descending so the next confirm uses the other bank. Cancelling only
- * sets the selection count to 1. Either way element 0 is deactivated.
+ * A confirmed sort uses the selected type, power, or shape key and the current
+ * direction. The direction then flips for the next sort. Cancelling preserves
+ * the rows and restores one pending selection.
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return Always 0.
@@ -3398,9 +3423,10 @@ s32 gosub_handle_sort_dialog(s32 dialog_result)
 {
     if (dialog_result == 0)
     {
-        gosub_sort_rows((g_gosub_sort_descending << 7) + (g_gosub_dialog_choice % 3));
+        gosub_sort_rows((g_gosub_sort_ascending << GOSUB_SORT_ASCENDING_SHIFT) +
+                        (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT));
         g_gosub_selection_count = 0;
-        g_gosub_sort_descending ^= 1;
+        g_gosub_sort_ascending ^= 1;
     }
     else
     {
@@ -3551,7 +3577,7 @@ s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
 
     first_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0xE)));
     selected_option = g_gosub_dialog_choice;
-    selected_option %= 3;
+    selected_option %= GOSUB_SORT_KEY_COUNT;
     first_color = 5;
     if (selected_option == 0)
     {
@@ -3561,7 +3587,7 @@ s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
 
     second_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0xC)));
     color = 5;
-    if (g_gosub_dialog_choice % 3 == 1)
+    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == 1)
     {
         color = 4;
     }
@@ -3569,7 +3595,7 @@ s32 gosub_draw_three_option_dialog(s32* ot, s32 prim, s32 x_off, s32 y_off)
 
     third_option = (void*)(g_gosub_message_archive_offset + (base + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset - 0xA)));
     color = 5;
-    if (g_gosub_dialog_choice % 3 == 2)
+    if (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT == 2)
     {
         color = 4;
     }
@@ -4033,6 +4059,15 @@ s32 gosub_draw_composite_icon(s32 initial_prim, s32* ot, s32 x, s32 y, s32 table
 /** @brief VRAM location of the gosub font CLUT. */
 #define GOSUB_FONT_CLUT_X 0x150
 #define GOSUB_FONT_CLUT_Y 0xFF
+#define GOSUB_FONT_CLUT_WIDTH 0x10
+#define GOSUB_FONT_CLUT_HEIGHT 1
+
+/** @brief VRAM rectangle occupied by the gosub font texture strip. */
+#define GOSUB_FONT_TEXTURE_X 0x140
+#define GOSUB_FONT_TEXTURE_Y 0xF0
+#define GOSUB_FONT_TEXTURE_WIDTH 0x10
+#define GOSUB_FONT_TEXTURE_HEIGHT 0x10
+#define GOSUB_FONT_TEXTURE_DATA_OFFSET 0x2C
 
 /** @brief Dimensions and placement of one panel-corner sprite quadrant. */
 #define GOSUB_PANEL_CORNER_SIZE 8
@@ -4053,14 +4088,14 @@ typedef struct
 
 /** @brief Glyph cell table indexed by the glyph id passed to gosub_emit_glyph. */
 extern GosubGlyphMetric g_gosub_glyph_metrics[];
-/** @brief Texture archive holding the gosub font page (+0x00) and its CLUT (+0x2C). */
+/** @brief Packed upload source with CLUT words at +0x00 and texture words at +0x2C. */
 extern u8 g_gosub_font_texture[];
 
 void bcopy(); /* extern */
 
 inline void gosub_copy_packed_record(void* dst, void* src);
 inline void gosub_copy_list_row(void* dst, void* src);
-s32 gosub_compare_rows(s32 mode, s32 a, s32 b);
+s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index);
 
 /**
  * @brief Append the texture-page packet that closes a glyph run.
@@ -4211,97 +4246,93 @@ inline void gosub_copy_list_row(void* dst, void* src)
 /**
  * @brief Sort the gosub row list, carrying each row's backing record with it.
  *
- * An insertion sort driven by gosub_compare_rows builds a permutation in
- * @c order[0..0xFF] without moving anything. The live rows and their 4-byte
- * records are then snapshotted into the tail of that same scratch buffer
- * (records at +0x100, rows at +0x1A0) and written back through the
- * permutation. The packed record list is rebuilt afterwards so it agrees with
- * the new row order.
+ * An insertion sort first builds a row permutation. The packed records and
+ * display rows are then snapshotted and rewritten through that permutation.
+ * Rebuilding the list last refreshes its derived names and fields.
  *
- * @param mode Comparison selector handed to gosub_compare_rows: the low nibble picks
- *             the field and a non-zero high nibble reverses the order.
+ * @param sort_mode Encoded type, power, or shape key and sort direction.
  *
  * @see decomp.me (100%)
  */
-void gosub_sort_rows(s32 mode)
+void gosub_sort_rows(s32 sort_mode)
 {
-    u8 order[0x6A0];
-    s32 i;
-    s32 j;
-    s32 k;
+    GosubSortWorkspace workspace;
+    s32 row_index;
+    s32 insertion_index;
+    s32 shift_index;
 
-    for (i = 0; i < g_gosub_row_count; i++)
+    for (row_index = 0; row_index < g_gosub_row_count; row_index++)
     {
-        for (j = 0; j < i; j++)
+        for (insertion_index = 0; insertion_index < row_index; insertion_index++)
         {
-            if (gosub_compare_rows(mode, i, order[j]) == 0)
+            if (gosub_compare_rows(sort_mode, row_index, workspace.row_order[insertion_index]) == 0)
             {
                 break;
             }
         }
-        if (j != i)
+        if (insertion_index != row_index)
         {
-            for (k = i; k > j; k--)
+            for (shift_index = row_index; shift_index > insertion_index; shift_index--)
             {
-                order[k] = order[k - 1];
+                workspace.row_order[shift_index] = workspace.row_order[shift_index - 1];
             }
         }
-        order[j] = i;
+        workspace.row_order[insertion_index] = row_index;
     }
 
-    bcopy(g_pad_ctx + 0x29DC, &order[0x100], 0xA0);
-    bcopy(g_gosub_rows, &order[0x1A0], 0x500);
+    bcopy(GOSUB_LOGIC_BLOCK_RECORDS, workspace.packed_records, sizeof(workspace.packed_records));
+    bcopy(g_gosub_rows, workspace.rows, sizeof(workspace.rows));
 
-    i = 0;
+    row_index = 0;
     if (g_gosub_row_count > 0)
     {
         do
         {
-            gosub_copy_packed_record(g_pad_ctx + i * 4 + 0x29DC, order + order[i] * 4 + 0x100);
-            gosub_copy_list_row(&g_gosub_rows[i], order + order[i] * 0x20 + 0x1A0);
-            i++;
-        } while (i < g_gosub_row_count);
+            gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[row_index],
+                                     &workspace.packed_records[workspace.row_order[row_index]]);
+            gosub_copy_list_row(&g_gosub_rows[row_index], &workspace.rows[workspace.row_order[row_index]]);
+            row_index++;
+        } while (row_index < g_gosub_row_count);
     }
 
     gosub_build_packed_record_list();
 }
 
 /**
- * @brief Order two g_gosub_rows entries for gosub_sort_rows's insertion sort.
+ * @brief Compare two logic-block rows by type, power, or shape.
  *
- * @param mode Low nibble selects detail group, id, or variant; a nonzero high
- *             nibble reverses the order.
- * @param a    First row index.
- * @param b    Second row index.
- * @return 1 when @p a sorts before @p b, 0 otherwise (unknown modes included).
+ * @param mode Low nibble selects the key; a nonzero high nibble swaps the operands.
+ * @param left_row_index  First row index before the optional direction swap.
+ * @param right_row_index Second row index before the optional direction swap.
+ * @return 1 when the left operand sorts before the right, otherwise 0.
  * @see decomp.me (100%)
  */
-s32 gosub_compare_rows(s32 mode, s32 a, s32 b)
+s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index)
 {
-    s32 swapped_row;
+    s32 swapped_row_index;
 
-    if (mode & 0xF0)
+    if (mode & GOSUB_SORT_ASCENDING_MASK)
     {
-        swapped_row = a;
-        a = b;
-        b = swapped_row;
+        swapped_row_index = left_row_index;
+        left_row_index = right_row_index;
+        right_row_index = swapped_row_index;
     }
-    switch (mode & 0xF)
+    switch (mode & GOSUB_SORT_KEY_MASK)
     {
-    case 0:
-        if (g_gosub_rows[a].detail_group < g_gosub_rows[b].detail_group)
+    case GOSUB_SORT_BY_TYPE:
+        if (g_gosub_rows[left_row_index].detail_group < g_gosub_rows[right_row_index].detail_group)
         {
             return 1;
         }
         break;
-    case 1:
-        if (g_gosub_rows[a].detail_id < g_gosub_rows[b].detail_id)
+    case GOSUB_SORT_BY_POWER:
+        if (g_gosub_rows[left_row_index].detail_id < g_gosub_rows[right_row_index].detail_id)
         {
             return 1;
         }
         break;
-    case 2:
-        if (g_gosub_rows[a].detail_variant < g_gosub_rows[b].detail_variant)
+    case GOSUB_SORT_BY_SHAPE:
+        if (g_gosub_rows[left_row_index].detail_variant < g_gosub_rows[right_row_index].detail_variant)
         {
             return 1;
         }
@@ -4311,23 +4342,23 @@ s32 gosub_compare_rows(s32 mode, s32 a, s32 b)
 }
 
 /**
- * @brief Upload the gosub font page and its CLUT to VRAM.
+ * @brief Upload the gosub font CLUT and texture strip to their fixed VRAM slots.
+ *
+ * @note The 0x200-byte texture transfer continues through the first 0x5C bytes
+ *       of g_gosub_item_metadata; its live metadata begins at index 0x60.
  * @see decomp.me (100%)
  */
 void gosub_upload_font_texture(void)
 {
-    RECT rect;
+    RECT upload_rect;
 
-    rect.x = 0x150;
-    rect.y = 0xFF;
-    rect.w = 0x10;
-    rect.h = 1;
-    LoadImage(&rect, g_gosub_font_texture);
-    rect.x = 0x140;
-    rect.y = 0xF0;
-    rect.w = 0x10;
-    rect.h = 0x10;
-    LoadImage(&rect, g_gosub_font_texture + 0x2C);
+    setRECT(&upload_rect, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y,
+            GOSUB_FONT_CLUT_WIDTH, GOSUB_FONT_CLUT_HEIGHT);
+    LoadImage(&upload_rect, (u_long*)g_gosub_font_texture);
+
+    setRECT(&upload_rect, GOSUB_FONT_TEXTURE_X, GOSUB_FONT_TEXTURE_Y,
+            GOSUB_FONT_TEXTURE_WIDTH, GOSUB_FONT_TEXTURE_HEIGHT);
+    LoadImage(&upload_rect, (u_long*)(g_gosub_font_texture + GOSUB_FONT_TEXTURE_DATA_OFFSET));
     DrawSync(0);
 }
 
