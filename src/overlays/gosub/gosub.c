@@ -1,19 +1,7 @@
-typedef unsigned char u_char;
-typedef unsigned short u_short;
-typedef unsigned int u_int;
-typedef unsigned long u_long;
-
-typedef unsigned char undefined;
-typedef unsigned char undefined1;
-typedef unsigned short undefined2;
-typedef unsigned int undefined4;
-
-typedef int s32;
-typedef unsigned int u32;
-typedef unsigned char u8;
-typedef signed char s8;
-typedef unsigned short u16;
-typedef signed short s16;
+#include "common.h"
+#include "gpu_packet.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
 
 typedef struct GosubTilePacket GosubTilePacket;
 
@@ -1420,17 +1408,6 @@ typedef struct
 /** @brief Draw callback installed on a gosub element. */
 typedef GosubGpuPacket* (*GosubElementDrawHandler)();
 
-/** @brief Ordering-table tag and command header shared by GPU packets. */
-typedef struct
-{
-    u32 addr : 24; /* 0x00 next-primitive address (24-bit) */
-    u32 len : 8;   /* 0x03 packet word count */
-    u_char r0;     /* 0x04 */
-    u_char g0;     /* 0x05 */
-    u_char b0;     /* 0x06 */
-    u_char code;   /* 0x07 */
-} GosubPacketTag;
-
 /** @brief Unconnected flat-line GPU packet. */
 typedef struct
 {
@@ -1445,22 +1422,13 @@ typedef struct
     s16 y1;      /* 0x0E */
 } GosubLinePacket;     /* 0x10 */
 
-/** @brief libgpu setaddr(): write a packet's 24-bit ordering-table link. */
-#define SET_PRIM_ADDR(p, a) (((GosubPacketTag*)(p))->addr = (u_long)(a))
-/** @brief libgpu getaddr(): read a packet's 24-bit ordering-table link. */
-#define GET_PRIM_ADDR(p) ((u_long)((GosubPacketTag*)(p))->addr)
-/** @brief libgpu addPrim(): splice packet @p p in at ordering-table tag @p ot. */
-#define ADD_PRIM(ot, p) (SET_PRIM_ADDR(p, GET_PRIM_ADDR(ot)), SET_PRIM_ADDR(ot, p))
 /** @brief Link a packet after explicitly constraining its address to 24 bits. */
-#define SET_PRIM_ADDR_MASK(p, a) (((GosubPacketTag*)(p))->addr = ((u_long)(a) & 0xFFFFFF))
-#define ADD_PRIM_MASKED(ot, p) (SET_PRIM_ADDR_MASK(p, GET_PRIM_ADDR(ot)), SET_PRIM_ADDR(ot, p))
+#define ADD_PRIM_MASKED(ot, p) (setaddr(p, getaddr(ot) & 0xFFFFFF), setaddr(ot, p))
 
-s32 SetDrawEnv(s32, void*);                    /* extern */
-s32 SetDefDrawEnv(void*, s32, s32, s32, s32); /* extern */
 void* gosub_emit_scroll_marker();                 /* extern */
 GosubGpuPacket* gosub_emit_panel();               /* extern */
 GosubLinePacket* gosub_emit_panel_outline();      /* extern */
-GosubGpuPacket* gosub_emit_panel_corners();       /* extern */
+GosubGpuPacket* gosub_emit_panel_corners(SPRT*, s32*, s32, s32, s32, s32); /* extern */
 GosubTilePacket* gosub_draw_item_list();          /* extern */
 
 /** @brief Packed four-byte record stored in the combination table. */
@@ -2476,11 +2444,11 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
 
     if (render_context->display_buffer_index != 0)
     {
-        SetDefDrawEnv(draw_env, 0, 0xF0, 0x140, 0xE0);
+        SetDefDrawEnv((DRAWENV*)draw_env, 0, 0xF0, 0x140, 0xE0);
     }
     else
     {
-        SetDefDrawEnv(draw_env, 0, 8, 0x140, 0xE0);
+        SetDefDrawEnv((DRAWENV*)draw_env, 0, 8, 0x140, 0xE0);
     }
 
     element_words = &g_gosub_elements;
@@ -2522,7 +2490,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                         packet_cursor = gosub_emit_scroll_marker(packet_cursor, ordering_table, (field + (((*(u32*)((u8*)element_words + 4) & 1) << 8) | high)) - 0x10, (*((u8*)element_words + 2)), 1);
                     }
                 }
-                SetDrawEnv((s32)packet_cursor, draw_env);
+                SetDrawEnv((DR_ENV*)packet_cursor, (DRAWENV*)draw_env);
 
                 packet_cursor->tag = (packet_cursor->tag & tag_mask) | (ordering_table->tag & address_mask);
                 ordering_table->tag = (s32)((ordering_table->tag & tag_mask) | ((s32)packet_cursor & address_mask));
@@ -2566,7 +2534,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 }
                 draw_cursor = packet_cursor;
             }
-            SetDrawEnv((s32)draw_cursor, draw_env);
+            SetDrawEnv((DR_ENV*)draw_cursor, (DRAWENV*)draw_env);
             packet_cursor->tag = (packet_cursor->tag & tag_mask) | (ordering_table->tag & address_mask);
             ordering_table->tag = (s32)((ordering_table->tag & tag_mask) | ((s32)packet_cursor & address_mask));
 
@@ -2815,14 +2783,14 @@ GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s3
     if (flag != 0)
     {
         working_value = y + 0xF2;
-        SetDefDrawEnv(draw_env, x + 2, working_value, w - 4, h - 4);
+        SetDefDrawEnv((DRAWENV*)draw_env, x + 2, working_value, w - 4, h - 4);
     }
     else
     {
         working_value = y + 0xA;
-        SetDefDrawEnv(draw_env, x + 2, working_value, w - 4, h - 4);
+        SetDefDrawEnv((DRAWENV*)draw_env, x + 2, working_value, w - 4, h - 4);
     }
-    SetDrawEnv((s32)draw_env_packet, draw_env);
+    SetDrawEnv((DR_ENV*)draw_env_packet, (DRAWENV*)draw_env);
 
     draw_env_packet->tag = (draw_env_packet->tag & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | ((s32)draw_env_packet & 0xFFFFFF);
@@ -2867,43 +2835,39 @@ GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s3
 GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 color)
 {
     *(u32*)&line->r0 = color;
-    ((GosubPacketTag*)line)->len = 3;
-    line->code = 0x40;
+    setLineF2(line);
     line->x0 = x + 4;
     line->y0 = y;
     line->x1 = (x + w) - 4;
     line->y1 = y;
-    ADD_PRIM(ot, line);
+    addPrim(ot, line);
     line++;
 
     *(u32*)&line->r0 = color;
-    ((GosubPacketTag*)line)->len = 3;
-    line->code = 0x40;
+    setLineF2(line);
     line->x0 = x + w;
     line->y0 = y + 4;
     line->x1 = x + w;
     line->y1 = (y + h) - 4;
-    ADD_PRIM(ot, line);
+    addPrim(ot, line);
     line++;
 
     *(u32*)&line->r0 = color;
-    ((GosubPacketTag*)line)->len = 3;
-    line->code = 0x40;
+    setLineF2(line);
     line->x0 = (x + w) - 4;
     line->y0 = y + h;
     line->x1 = x + 4;
     line->y1 = y + h;
-    ADD_PRIM(ot, line);
+    addPrim(ot, line);
     line++;
 
     *(u32*)&line->r0 = color;
-    ((GosubPacketTag*)line)->len = 3;
-    line->code = 0x40;
+    setLineF2(line);
     line->x0 = x;
     line->y0 = y + 4;
     line->x1 = x;
     line->y1 = (y + h) - 4;
-    ADD_PRIM(ot, line);
+    addPrim(ot, line);
     return line + 1;
 }
 
@@ -3104,8 +3068,8 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
     tile->y = y - 2;
     tile->x = 1;
     tile->h = g_gosub_row_height - 1;
-    ((GosubPacketTag*)tile)->addr = (GET_PRIM_ADDR(ot) & addr_mask);
-    SET_PRIM_ADDR(ot, tile);
+    setaddr(tile, getaddr(ot) & addr_mask);
+    setaddr(ot, tile);
     while (row < g_gosub_selection_count)
     {
         {
@@ -3127,37 +3091,9 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
     return mark;
 }
 
-/** @brief Sprite primitive (0x14 bytes, code 0x64), SPRT layout. */
-typedef struct
-{
-    u_long tag; /* 0x00 P_TAG */
-    u8 r0;      /* 0x04 */
-    u8 g0;      /* 0x05 */
-    u8 b0;      /* 0x06 */
-    u8 code;    /* 0x07 */
-    s16 x0;     /* 0x08 */
-    s16 y0;     /* 0x0A */
-    u8 u0;      /* 0x0C */
-    u8 v0;      /* 0x0D */
-    u16 clut;   /* 0x0E */
-    s16 w;      /* 0x10 */
-    s16 h;      /* 0x12 */
-} GosubSpritePacket;    /* 0x14 */
-
-/** @brief libgpu RECT (s16 x, y, w, h). */
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} GosubVramRect;
-
 extern s32 g_gosub_frame_parity;
 /** @brief Portrait archive: s32 offset table at base, pixels at +0x1C, cluts at -4. */
 extern s32 g_gosub_portrait_archive[];
-
-s32 LoadImage(); /* extern */
 
 /**
  * @brief Upload a row's portrait strip and CLUT, then emit its 48x48 sprite.
@@ -3178,8 +3114,8 @@ s32 LoadImage(); /* extern */
  */
 s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
 {
-    GosubSpritePacket* sprt;
-    GosubVramRect rect;
+    SPRT* sprt;
+    RECT rect;
     s32 idx;
     s32 cell;
     s32 n;
@@ -3213,10 +3149,9 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     rect.x = n + g_gosub_frame_parity * 0x50;
     LoadImage(&rect, (u8*)g_gosub_portrait_archive + g_gosub_portrait_archive[idx] - 4);
 
-    sprt = (GosubSpritePacket*)prim;
-    *(u32*)&sprt->r0 = 0x808080;
-    ((GosubPacketTag*)sprt)->len = 4;
-    sprt->code = 0x64;
+    sprt = (SPRT*)prim;
+    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+    setSprt(sprt);
     sprt->u0 = cell * 0x10;
     sprt->x0 = x;
     sprt->v0 = g_gosub_frame_parity * 0x30;
@@ -3224,7 +3159,7 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     sprt->w = 0x30;
     sprt->h = 0x30;
     sprt->clut = (((n + g_gosub_frame_parity * 0x50) >> 4) & 0x3F) | 0x7C80;
-    ADD_PRIM(ot, sprt);
+    addPrim(ot, sprt);
     return gosub_finish_glyph_run(prim + 0x14, ot);
 }
 
@@ -4011,7 +3946,7 @@ void gosub_upload_ui_image(void)
  */
 void gosub_upload_image_archive(GosubImageVramLayout* pos, u8* archive)
 {
-    GosubVramRect rect;
+    RECT rect;
     s32 flags;
     s32 off8;
     u16* dims;
@@ -4092,12 +4027,18 @@ s32 gosub_draw_composite_icon(s32 initial_prim, s32* ot, s32 x, s32 y, s32 table
     return gosub_finish_glyph_run(prim, ot);
 }
 
-/** @brief Draw-mode packet (0x08 bytes, GPU code 0xE1). */
-typedef struct
-{
-    u_long tag;  /* 0x00 P_TAG */
-    u_long code; /* 0x04 GPU draw-mode word */
-} GosubDrawModePacket;    /* 0x08 */
+/** @brief Texture page containing the gosub font and panel-corner sprites. */
+#define GOSUB_FONT_TPAGE 5
+
+/** @brief VRAM location of the gosub font CLUT. */
+#define GOSUB_FONT_CLUT_X 0x150
+#define GOSUB_FONT_CLUT_Y 0xFF
+
+/** @brief Dimensions and placement of one panel-corner sprite quadrant. */
+#define GOSUB_PANEL_CORNER_SIZE 8
+#define GOSUB_PANEL_CORNER_OUTSET 2
+#define GOSUB_PANEL_CORNER_FAR_INSET 5
+#define GOSUB_PANEL_CORNER_TEXTURE_V 0xF0
 
 /** @brief Glyph cell descriptor in the 8-byte table at g_gosub_glyph_metrics. */
 typedef struct
@@ -4115,8 +4056,7 @@ extern GosubGlyphMetric g_gosub_glyph_metrics[];
 /** @brief Texture archive holding the gosub font page (+0x00) and its CLUT (+0x2C). */
 extern u8 g_gosub_font_texture[];
 
-void bcopy();    /* extern */
-void DrawSync(); /* extern */
+void bcopy(); /* extern */
 
 inline void gosub_copy_packed_record(void* dst, void* src);
 inline void gosub_copy_list_row(void* dst, void* src);
@@ -4132,12 +4072,11 @@ s32 gosub_compare_rows(s32 mode, s32 a, s32 b);
  */
 s32 gosub_finish_glyph_run(s32 prim, s32* ot)
 {
-    GosubDrawModePacket* tp;
+    DR_TPAGE* draw_tpage;
 
-    tp = (GosubDrawModePacket*)prim;
-    ((GosubPacketTag*)tp)->len = 1;
-    tp->code = 0xE1000005;
-    ADD_PRIM(ot, tp);
+    draw_tpage = (DR_TPAGE*)prim;
+    setDrawTPage(draw_tpage, 0, 0, GOSUB_FONT_TPAGE);
+    addPrim(ot, draw_tpage);
     return prim + 8;
 }
 
@@ -4155,12 +4094,11 @@ s32 gosub_finish_glyph_run(s32 prim, s32* ot)
  */
 s32 gosub_emit_glyph(s32 prim, s32* ot, s32 glyph, s32 x, s32 y, s32 clut)
 {
-    GosubSpritePacket* sprt;
+    SPRT* sprt;
 
-    sprt = (GosubSpritePacket*)prim;
-    *(u32*)&sprt->r0 = 0x808080;
-    ((GosubPacketTag*)sprt)->len = 4;
-    sprt->code = 0x64;
+    sprt = (SPRT*)prim;
+    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+    setSprt(sprt);
     sprt->x0 = x;
     sprt->y0 = y;
     sprt->w = g_gosub_glyph_metrics[glyph].w;
@@ -4168,7 +4106,7 @@ s32 gosub_emit_glyph(s32 prim, s32* ot, s32 glyph, s32 x, s32 y, s32 clut)
     sprt->u0 = g_gosub_glyph_metrics[glyph].u0;
     sprt->v0 = g_gosub_glyph_metrics[glyph].v0;
     sprt->clut = (clut & 0x3F) | 0x7C80;
-    ADD_PRIM(ot, sprt);
+    addPrim(ot, sprt);
     return prim + 0x14;
 }
 
@@ -4378,7 +4316,7 @@ s32 gosub_compare_rows(s32 mode, s32 a, s32 b)
  */
 void gosub_upload_font_texture(void)
 {
-    GosubVramRect rect;
+    RECT rect;
 
     rect.x = 0x150;
     rect.y = 0xFF;
@@ -4409,73 +4347,58 @@ void gosub_upload_font_texture(void)
  * @return Packet cursor past the draw-mode packet.
  * @see decomp.me (100%)
  */
-GosubGpuPacket* gosub_emit_panel_corners(GosubSpritePacket* prim, s32* ot, s32 x, s32 y, s32 w, s32 h)
+GosubGpuPacket* gosub_emit_panel_corners(SPRT* prim, s32* ot, s32 x, s32 y, s32 w, s32 h)
 {
+    DR_TPAGE* draw_tpage;
     s32 x0;
     s32 y0;
     s32 x1;
     s32 y1;
 
-    x0 = x - 2;
-    y0 = y - 2;
+    x0 = x - GOSUB_PANEL_CORNER_OUTSET;
+    y0 = y - GOSUB_PANEL_CORNER_OUTSET;
 
-    *(u32*)&prim->r0 = 0x808080;
-    ((GosubPacketTag*)prim)->len = 4;
-    prim->code = 0x64;
-    prim->x0 = x0;
-    prim->y0 = y0;
-    prim->u0 = 0;
-    prim->v0 = 0xF0;
-    prim->w = 8;
-    prim->h = 8;
-    prim->clut = 0x3FD5;
-    ADD_PRIM(ot, prim);
+    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
+    setSprt(prim);
+    setXY0(prim, x0, y0);
+    setUV0(prim, 0, GOSUB_PANEL_CORNER_TEXTURE_V);
+    setWH(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_SIZE);
+    setClut(prim, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y);
+    addPrim(ot, prim);
     prim += 1;
 
-    x1 = x + w - 5;
-    y1 = y + h - 5;
+    x1 = x + w - GOSUB_PANEL_CORNER_FAR_INSET;
+    y1 = y + h - GOSUB_PANEL_CORNER_FAR_INSET;
 
-    *(u32*)&prim->r0 = 0x808080;
-    ((GosubPacketTag*)prim)->len = 4;
-    prim->code = 0x64;
-    prim->x0 = x1;
-    prim->y0 = y0;
-    prim->u0 = 8;
-    prim->v0 = 0xF0;
-    prim->w = 8;
-    prim->h = 8;
-    prim->clut = 0x3FD5;
-    ADD_PRIM(ot, prim);
+    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
+    setSprt(prim);
+    setXY0(prim, x1, y0);
+    setUV0(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_TEXTURE_V);
+    setWH(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_SIZE);
+    setClut(prim, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y);
+    addPrim(ot, prim);
     prim += 1;
 
-    *(u32*)&prim->r0 = 0x808080;
-    ((GosubPacketTag*)prim)->len = 4;
-    prim->code = 0x64;
-    prim->x0 = x0;
-    prim->y0 = y1;
-    prim->u0 = 0;
-    prim->v0 = 0xF8;
-    prim->w = 8;
-    prim->h = 8;
-    prim->clut = 0x3FD5;
-    ADD_PRIM(ot, prim);
+    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
+    setSprt(prim);
+    setXY0(prim, x0, y1);
+    setUV0(prim, 0, GOSUB_PANEL_CORNER_TEXTURE_V + GOSUB_PANEL_CORNER_SIZE);
+    setWH(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_SIZE);
+    setClut(prim, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y);
+    addPrim(ot, prim);
     prim += 1;
 
-    *(u32*)&prim->r0 = 0x808080;
-    ((GosubPacketTag*)prim)->len = 4;
-    prim->code = 0x64;
-    prim->x0 = x1;
-    prim->y0 = y1;
-    prim->u0 = 8;
-    prim->v0 = 0xF8;
-    prim->w = 8;
-    prim->h = 8;
-    prim->clut = 0x3FD5;
-    ADD_PRIM(ot, prim);
+    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
+    setSprt(prim);
+    setXY0(prim, x1, y1);
+    setUV0(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_TEXTURE_V + GOSUB_PANEL_CORNER_SIZE);
+    setWH(prim, GOSUB_PANEL_CORNER_SIZE, GOSUB_PANEL_CORNER_SIZE);
+    setClut(prim, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y);
+    addPrim(ot, prim);
     prim += 1;
 
-    ((GosubPacketTag*)prim)->len = 1;
-    *(u32*)&prim->r0 = 0xE1000005;
-    ADD_PRIM(ot, prim);
-    return (GosubGpuPacket*)((u8*)prim + 8);
+    draw_tpage = (DR_TPAGE*)prim;
+    setDrawTPage(draw_tpage, 0, 0, GOSUB_FONT_TPAGE);
+    addPrim(ot, draw_tpage);
+    return (GosubGpuPacket*)(draw_tpage + 1);
 }
