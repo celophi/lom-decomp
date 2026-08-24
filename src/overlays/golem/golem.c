@@ -446,7 +446,7 @@ void func_80140CBC(void)
  *       base to sp+0x108 (frame 0x138). Target/toolchain confirmed gcc272_cdk
  *       (gcc280_g0/g4 both score 80.28%). See working/func_80140DEC/.
  */
-void func_80140DEC(s32 arg0, s32 arg1)
+s32 func_80140DEC(s32 arg0, s32 arg1)
 {
     s32 grid[60];
     s32 idx;
@@ -505,7 +505,7 @@ void func_80140DEC(s32 arg0, s32 arg1)
         }
     }
 
-    func_80141020(acc, arg1);
+    return func_80141020(acc, arg1);
 }
 
 /**
@@ -733,4 +733,125 @@ s32 func_80141478(s32 prim, s32 ctx)
     func_8001A5D4(prim, sp28);
     addPrim(tag, prim);
     return prim + 0x40;
+}
+
+/** @brief 0x14-byte icon sub-entry within a D_800F1CD0 row; only bytes 8 and 9
+ *         (signed x/y offsets) are read here. Distinct from @ref D800F1CD0Entry,
+ *         which is the enclosing 0x58-byte row. */
+typedef struct { u8 pad0[8]; s8 unk8; s8 unk9; u8 pad10[10]; } IconPos;
+
+/**
+ * @brief Link a base primitive into the render context OT, emit a highlight prim
+ *        for the selected cursor cell and for each active grid cell, then draw a
+ *        framing box sized by the current panel mode.
+ * @param prim Running primitive pointer; advanced by 0x40 per emitted prim.
+ * @param ctx  Render context base; OT tag at +0x34, mode flag at +0x404C.
+ * @return The advanced primitive pointer (@p ret_acc + 0x40 past the last prim).
+ * @note WIP, NOT byte-matched. Best local match 89.15% (209 exact rows); insn
+ *       count, frame (-0xA8), control flow and sp slots all match. Residue is
+ *       coloring/scheduling noise, not structure: the prologue param-copy order
+ *       (s0/s5), the icon-block scratch-register numbering and a hoisted
+ *       D_8014C248 load, and the switch-tail v0val (target holds it in v0 and
+ *       copies to a3 at the merged call). Established shapes worth keeping: the
+ *       mode ternary is INLINED as the last call arg so it materializes late
+ *       (+12%); @c ret_acc reuses the dead prim/i register for the tail so next
+ *       lives in a temp (t0) not a saved reg, keeping the saved-reg count at 6
+ *       (+33 exact); rowidx is INLINED into the icon expression so D_8014C27C*0x14
+ *       emits before the CELL read. The permuter's higher-scoring 89.69% basin
+ *       had FEWER exact rows (204). Handoff in working/func_801416C8/code.c.
+ */
+s32 func_801416C8(s32 prim, s32 ctx)
+{
+    u8 sp28[0x60];
+    s32 tag;
+    s32 next;
+    s32 i;
+    u32 cell;
+    IconPos *icon;
+    s32 pos_x;
+    s32 pos_y;
+    s32 a1val;
+    s32 a2val;
+    s32 v0val;
+    s32 ret_acc;
+    C198Entry *c198;
+    u8 *cell_ptr;
+
+    tag = ctx + 0x34;
+    func_8001A5D4(prim, D_8014C168 + (*(s32 *)(ctx + 0x404C) ^ 1) * 0x40C0 + 0x4064);
+    addPrim(tag, prim);
+    next = prim + 0x40;
+
+    if (D_8014C238 != 0)
+    {
+        next = func_80141EB4(next, tag, D_8014C284, D_8014C27C, D_8014C248 * 0x10, D_8014C24C * 0x10, ((C198Entry *)D_8014C198)[D_8014C284].pad, 0, 3);
+        icon = (IconPos *)(&D_800F1CD0[D_8014C27C * 0x14 + ((CELL(D_8014C284) >> 12) & 0xF) * 0x58]);
+        pos_x = icon->unk8 * 8 + D_8014C248 * 0x10 - D_8014C188 * 8 + 0x3C;
+        pos_y = icon->unk9 * 8 + D_8014C24C * 0x10 - D_8014C188 * 8 + 0x3C;
+        if ((pos_x != D_8014C258 || pos_y != D_8014C25C) && D_8014C254 == 0)
+        {
+            D_8014C264 = pos_x;
+            D_8014C268 = pos_y;
+            D_8014C254 = 4;
+        }
+    }
+
+    next = func_80140DEC(next, tag);
+
+    if (D_8014C184 > 0)
+    {
+        i = 0;
+        c198 = (C198Entry *)&D_8014C198;
+        cell_ptr = &D_80042FD8[0];
+        do
+        {
+            cell = *(u32 *)(cell_ptr + 0x29DC);
+            if ((cell & 3) == D_8014C260)
+            {
+                next = func_80141EB4(next, tag, i, (cell >> 0x11) & 3, ((s32)(cell << 8) >> 27) << 4, ((s32)(cell << 3) >> 27) << 4, c198->pad, 0, i == D_8014C284 ? (D_8014C238 ? 0x80 : 2) : 0);
+            }
+            c198++;
+            cell_ptr += 4;
+            i++;
+        } while (i < D_8014C184);
+    }
+
+    ret_acc = next;
+
+    switch (D_8014C188)
+    {
+    case 0:
+        a2val = 0x38;
+        if (*(s32 *)(ctx + 0x404C) != 0)
+        {
+            a2val = 0x120;
+        }
+        v0val = 0x40;
+        a1val = 0x50;
+        goto block_call;
+    case 1:
+        a2val = 0x30;
+        if (*(s32 *)(ctx + 0x404C) != 0)
+        {
+            a2val = 0x118;
+        }
+        v0val = 0x50;
+        a1val = 0x48;
+        goto block_call;
+    case 2:
+        a2val = 0x28;
+        if (*(s32 *)(ctx + 0x404C) != 0)
+        {
+            a2val = 0x110;
+        }
+        v0val = 0x60;
+        a1val = 0x40;
+block_call:
+        func_8001C56C(sp28, a1val, a2val, v0val, v0val);
+        break;
+    }
+
+    func_8001A5D4(ret_acc, sp28);
+    addPrim(tag, ret_acc);
+    return ret_acc + 0x40;
 }
