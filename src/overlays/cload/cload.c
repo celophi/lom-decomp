@@ -501,148 +501,74 @@ CloadElement *cload_alloc_element();
 
 /**
  * @brief Build the fixed 5-entry GPU primitive/callback chain for the loader.
- * @note WIP. Structure, control flow, and the FRAME-04 stack-frame padding
- *       are correct; the residual is a register-allocation permutation - the
- *       reused value temporary lands in v1 (target v0) and the five hoisted mask constants
- *       occupy a permuted set of saved registers.
- * @see decomp.me (83.09%)
+ * @note The unreachable cload_clear_elements(0, 0, 0, 0, 0) call preserves
+ *       GCC 2.7.2's original stack-frame allocation (FRAME-04) without emitting
+ *       a live dead call.
+ * @see decomp.me (100.00%)
  */
 void cload_build_ui_elements(void)
 {
     CloadElement *element;
-    s32 value;
-    s32 state_value;
-    /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
-    s32 frame_scratch[2];
 
     g_cload_scroll_frames = 0;
     g_cload_scroll_target_y = 0;
     g_cload_scroll_y = 0;
     g_cload_selected_row = 0;
     g_cload_selection_status = 0;
+    if (0)
+    {
+        cload_clear_elements(0, 0, 0, 0, 0);
+    }
     cload_clear_elements();
-    value = g_cload_element_pool.first_state;
-    value = value & ~CLOAD_ELEMENT_STATE_MASK;
-    value = value | 1;
-    g_cload_element_pool.first_state = value;
+    g_cload_element_pool.first_state = (g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK) | 1;
 
     element = cload_alloc_element();
     element->draw = cload_draw_entry_list;
-    value = element->state;
-    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
-    value = value | 8;
-    value = value & 0xFFFF007F;
-    value = value | 0xE00;
-    element->state = value;
+    element->state = (((element->state & ~CLOAD_ELEMENT_PHASE_MASK) | 8) & 0xFFFF007F) | 0xE00;
     *((u8 *)element + 2) = 0x4A;
-    value = element->size_flags;
-    value = value & ~0x200;
-    element->size_flags = value;
-    state_value = element->state;
-    state_value = state_value & 0xFFFFFF;
-    state_value = state_value | 0x08000000;
-    element->state = state_value;
-    value = value | 1;
-    value = value & ~0x1FE;
-    value = value | 0x92;
-    element->size_flags = value;
+    element->size_flags = element->size_flags & ~0x200;
+    element->state = (element->state & 0xFFFFFF) | 0x08000000;
+    element->size_flags = (((element->size_flags | 1) & ~0x1FE) | 0x92);
 
     element = cload_alloc_element();
     element->draw = cload_draw_header_label;
-    value = element->state;
-    value = value & ~CLOAD_ELEMENT_STATE_MASK;
-    value = value | 2;
-    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
-    value = value | 8;
-    value = value & 0xFFFF007F;
-    value = value | 0x2800;
-    element->state = value;
+    element->state = (((((element->state & ~CLOAD_ELEMENT_STATE_MASK) | 2) & ~CLOAD_ELEMENT_PHASE_MASK) | 8) & 0xFFFF007F) | 0x2800;
     *((u8 *)element + 2) = 0xC;
-    value = element->size_flags;
-    value = value & ~0x200;
-    element->size_flags = value;
-    state_value = element->state;
-    state_value = state_value & 0xFFFFFF;
-    state_value = state_value | 0xA0000000;
-    element->state = state_value;
-    value = element->size_flags;
-    value = value & ~1;
-    value = value & ~0x1FE;
-    value = value | 0x1E;
-    element->size_flags = value;
+    element->size_flags = element->size_flags & ~0x200;
+    element->state = (element->state & 0xFFFFFF) | 0xA0000000;
+    element->size_flags = element->size_flags & ~1;
+    element->size_flags = element->size_flags & ~0x1FE;
+    element->size_flags = element->size_flags | 0x1E;
 
     element = cload_alloc_element();
-    value = element->state;
-    value = value & ~CLOAD_ELEMENT_STATE_MASK;
-    value = value | 2;
-    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
-    value = value | 8;
-    value = value & 0xFFFF007F;
-    value = value | 0xC00;
-    element->state = value;
+    element->state = (((((element->state & ~CLOAD_ELEMENT_STATE_MASK) | 2) & ~CLOAD_ELEMENT_PHASE_MASK) | 8) & 0xFFFF007F) | 0xC00;
     element->draw = cload_draw_card_slot0_label;
     *((u8 *)element + 2) = 0x2C;
-    value = element->size_flags;
-    value = value & ~0x200;
-    element->size_flags = value;
-    state_value = element->state;
-    state_value = state_value & 0xFFFFFF;
-    state_value = state_value | 0x80000000;
-    element->state = state_value;
-    value = value & ~1;
-    value = value & ~0x1FE;
-    value = value | 0x1E;
-    element->size_flags = value;
+    element->size_flags = element->size_flags & ~0x200;
+    element->state = (element->state & 0xFFFFFF) | 0x80000000;
+    element->size_flags = element->size_flags & ~1;
+    element->size_flags = element->size_flags & ~0x1FE;
+    element->size_flags = element->size_flags | 0x1E;
 
     element = cload_alloc_element();
-    value = element->state;
-    value = value & ~CLOAD_ELEMENT_STATE_MASK;
-    value = value | 2;
-    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
-    value = value | 8;
-    value = value & 0xFFFF007F;
-    value = value | 0x5400;
-    element->state = value;
+    element->state = (((((element->state & ~CLOAD_ELEMENT_STATE_MASK) | 2) & ~CLOAD_ELEMENT_PHASE_MASK) | 8) & 0xFFFF007F) | 0x5400;
     element->draw = cload_draw_card_slot1_label;
     *((u8 *)element + 2) = 0x2C;
-    value = element->size_flags;
-    value = value & ~0x200;
-    element->size_flags = value;
-    state_value = element->state;
-    state_value = state_value & 0xFFFFFF;
-    state_value = state_value | 0x80000000;
-    element->state = state_value;
-    value = value & ~1;
-    value = value & ~0x1FE;
-    value = value | 0x1E;
-    element->size_flags = value;
+    element->size_flags = element->size_flags & ~0x200;
+    element->state = (element->state & 0xFFFFFF) | 0x80000000;
+    element->size_flags = element->size_flags & ~1;
+    element->size_flags = element->size_flags & ~0x1FE;
+    element->size_flags = element->size_flags | 0x1E;
 
     element = cload_alloc_element();
     element->draw = cload_draw_selected_entry_details;
-    value = element->state;
-    value = value & ~CLOAD_ELEMENT_STATE_MASK;
-    value = value | 2;
-    value = value & ~CLOAD_ELEMENT_PHASE_MASK;
-    value = value | 8;
-    value = value & 0xFFFF007F;
-    value = value | 0xF00;
-    element->state = value;
+    element->state = (((((element->state & ~CLOAD_ELEMENT_STATE_MASK) | 2) & ~CLOAD_ELEMENT_PHASE_MASK) | 8) & 0xFFFF007F) | 0xF00;
     *((u8 *)element + 2) = 0xA0;
-    value = element->size_flags;
-    value = value & ~0x200;
-    element->size_flags = value;
-    state_value = element->state;
-    state_value = state_value & 0xFFFFFF;
-    state_value = state_value | 0x04000000;
-    element->state = state_value;
-    value = value | 1;
-    value = value & ~0x1FE;
-    value = value | 0x66;
-    element->size_flags = value;
+    element->size_flags = element->size_flags & ~0x200;
+    element->state = (element->state & 0xFFFFFF) | 0x04000000;
+    element->size_flags = (((element->size_flags | 1) & ~0x1FE) | 0x66);
 
-    value = g_cload_element_pool.first_state;
-    value = value & ~CLOAD_ELEMENT_STATE_MASK;
-    g_cload_element_pool.first_state = value;
+    g_cload_element_pool.first_state &= ~CLOAD_ELEMENT_STATE_MASK;
 }
 
 /**
@@ -1179,6 +1105,13 @@ s32 cload_draw_card_slot1_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     return func_800A88A0(prim, ot, glyph, a3, -x_offset + 0x40, -y_offset, 2);
 }
 
+/** @brief Fallback save-name view: 0x24-byte header then a 0x20-byte text field. */
+typedef struct CloadFallbackTextMatch
+{
+    u8 pad[0x24];
+    u8 text[0x20];
+} CloadFallbackTextMatch;
+
 /**
  * @brief Draw metadata for the selected save entry.
  * @param ot Ordering-table head.
@@ -1186,28 +1119,21 @@ s32 cload_draw_card_slot1_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @note WIP. Save-slot HUD callback: draws either the elapsed-play-time
- *       display (hours:minutes plus a 3-memcard-icon highlight strip) when
- *       the slot name matches the empty-slot marker, or the slot's save-file
- *       name otherwise. Structurally and semantically matched (frame, control
- *       flow, and every field offset into the g_cload_entry_metadata status block agree
- *       with the target); the residue is a coupled register-allocation
- *       problem in the icon-highlight loop's cload_draw_icon_highlight call: the target
- *       tracks the "entries seen so far" count and the raw loop index as two
- *       separate spilled locals (sp+0x18/0x1c, extra sp+0x138/0x140 spills
- *       around the call), while reintroducing that second counter here
- *       consistently regresses the whole function's register allocation
- *       instead of only affecting this call. Permuter (gcc272_cdk, ~60k
- *       iterations across two seeds) found no valid improvement past this
- *       point.
- * @see decomp.me (89.53%)
+ * @note Save-slot HUD callback: draws either the elapsed-play-time display
+ *       (hours:minutes plus a 3-memcard-icon highlight strip) when the slot
+ *       name matches the empty-slot marker, or the slot's save-file name
+ *       otherwise. The icon-highlight loop keeps the "entries seen so far"
+ *       count (i) and the raw slot index (j) as two separate locals, and the
+ *       fallback-text branch wraps its two copy loops in the target's nested
+ *       do/while(0) cross-jump shells.
+ * @see decomp.me (100.00%)
  */
 s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     s32 result;
     DVECTOR pos;
     u8 name[0x21];
-    char unused_pad[228];
+    char unused_pad[212];
     s32 slot[3];
 
     result = prim;
@@ -1235,7 +1161,7 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
             s32 term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
             s32 term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
 
-            if (strncmp(D_800ECF7C, (char *)(term1 + term2), 0xC) == 0)
+            if (func_8001714C(D_800ECF7C, (void *)(term1 + term2), 0xC) == 0)
             {
                 u8 *base90 = g_cload_entry_metadata;
 
@@ -1243,16 +1169,16 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
                 {
                     s32 present_count;
                     s32 i;
+                    s32 j;
                     s32 step;
                     s32 half_step;
                     s32 base_x;
                     s32 base_y;
                     s32 total;
                     s32 hours;
-                    s32 minutes;
-                    s32 sign_adj;
                     s32 time_val;
 
+                    total = 0;
                     slot[0] = (u32)(*(s32 *)(base90 + 0x18)) >> 0x19;
                     slot[1] = ((u32)(*(s32 *)(base90 + 0x20)) >> 0x12) & 0x7F;
                     slot[2] = (u32)(*(s32 *)(base90 + 0x20)) >> 0x19;
@@ -1291,12 +1217,13 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
                         break;
                     }
 
-                    total = 0;
-                    base_x = half_step;
-                    base_y = 0;
-                    for (i = 0; i < 3; i++)
+                    i = 0;
+                    j = i;
+                    for (; j < 3; j++)
                     {
-                        if (slot[i] != 0x7F)
+                        base_y = i * half_step;
+                        base_x = base_y + half_step;
+                        if (slot[j] != 0x7F)
                         {
                             s32 adjust = step;
                             s32 rem;
@@ -1304,29 +1231,30 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
                             s32 delta;
 
                             if ((g_cload_icon_phase >= base_y && g_cload_icon_phase < base_x && (delta = g_cload_icon_phase - base_y, 1))
-                                || (rem = base_x % (step * present_count), g_cload_icon_phase >= rem && g_cload_icon_phase < (hi = rem + step) && (delta = hi - g_cload_icon_phase, 1)))
+                                || (rem = base_x % (half_step * present_count), g_cload_icon_phase >= rem && g_cload_icon_phase < (hi = rem + half_step) && (delta = hi - g_cload_icon_phase, 1)))
                             {
                                 adjust += delta;
                             }
+                            result = cload_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, slot[j], i, j);
                             total += adjust;
-                            result = cload_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, slot[i], i, i);
+                            i += 1;
                         }
-                        base_x += step;
-                        base_y += step;
                     }
 
                     {
-                        s32 elapsed_ticks = *(s32 *)(base90 + 0x30);
+                        u8 *base90_2 = g_cload_entry_metadata;
                         s32 x = -x_offset;
                         s32 y = -y_offset;
 
-                        sign_adj = elapsed_ticks >> 0x1F;
+                        base_y = *(s32 *)(base90_2 + 0x30);
+
                         pos.vx = (s16)(x + 0x70);
                         pos.vy = (s16)y;
-                        hours = elapsed_ticks / 216000;
-                        result = func_800A88A0(func_800A8A78(ot, result, hours, 1, &pos, 1), ot, D_800EC3F6[0] + (D_800EC3F6[1] << 8) + ((s32)&D_800EC3F6 - 0x32), 1, x + 0x6F, y, 0);
-                        minutes = ((elapsed_ticks / 3600) - sign_adj) - (hours * 0x3C);
-                        if (minutes < 0xA)
+                        hours = base_y / 216000;
+                        result = func_800A8A78(ot, result, hours, 1, &pos, 1);
+                        result = func_800A88A0(result, ot, D_800EC3F6[0] + ((s32)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8), 1, x + 0x6F, y, 0);
+                        base_y = (base_y / 3600) - (hours * 0x3C);
+                        if (base_y < 0xA)
                         {
                             pos.vx = (s16)(x + 0x7D);
                             pos.vy = (s16)y;
@@ -1334,7 +1262,7 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
                         }
                         pos.vx = (s16)(x + 0x85);
                         pos.vy = (s16)y;
-                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, minutes, 1, &pos, 1), ot, base90, 1, x + 0x54, y + 0x10, 0), ot, CLOAD_GLYPH_OFF((u8 *)D_80146338, (*(s32 *)(base90 + 0x20) & 0x3FFFF) * 2), 1, x + 0x54, y + 0x20, 0);
+                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, base_y, 1, &pos, 1), ot, base90_2, 1, x + 0x54, y + 0x10, 0), ot, CLOAD_GLYPH_OFF((u8 *)D_80146338, (*(s32 *)(base90_2 + 0x20) & 0x3FFFF) * 2), 1, x + 0x54, y + 0x20, 0);
                     }
                 }
                 else
@@ -1346,22 +1274,34 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
             {
                 s32 j;
 
-                cload_terminate_multibyte_text(&D_80162A14);
-                if ((u32)(*((u8 *)&D_80162A10 + 0x24) - 1) >= 0x7FU)
                 {
-                    for (j = 0; j < 0x20; j++)
+                    u8 *text_base;
+                    cload_terminate_multibyte_text(&D_80162A14);
+                    text_base = (u8 *)&D_80162A14;
+                    text_base -= 4;
+                    if ((u32)(text_base[0x24] - 1) >= 0x7FU)
                     {
-                        name[j] = *((u8 *)&D_80162A14 + j);
-                    }
+                        do {
+                        do {
+                        do {
+
+                        for (j = 0; j < 0x20; j++)
+                        {
+                            name[j] = text_base[j + 4];
+                        }
                     name[j] = 0;
                     result = cload_draw_cached_text(result, ot, name, -x_offset, -y_offset, 1, 0);
 
                     for (j = 0; j < 0x20; j++)
                     {
-                        name[j] = *((u8 *)&D_80162A10 + 0x24 + j);
+                        name[j] = ((CloadFallbackTextMatch *)&D_80162A10)->text[j];
                     }
                     name[j] = 0;
-                    result = cload_draw_cached_text(result, ot, name, -x_offset, 0x10 - y_offset, 1, 0);
+                        result = cload_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 1, 0);
+                        } while (0);
+                        } while (0);
+                        } while (0);
+                    }
                 }
             }
         }
@@ -1463,18 +1403,13 @@ CloadGpuPacket *cload_emit_icon_highlight_strip();
  *
  * @param frame Owning screen state; prim_cursor is read on entry and written back on exit.
  *
- * @note NOT MATCHED (328/365 exact rows). Residue is the case 1/3/4 tails,
- *       where the target stores the updated state word before testing it and
- *       materializes the comparison constant 8 early; sched_oracle reports
- *       emit[li 8] < emit[andi 15] violated. Two shapes are required to match:
- *       `volatile u32 *element_state` (the target emits 12 loads of the element word
- *       and gcc CSEs 3 away without it), and the `do { ... } while (0)` around
- *       the primitive-cursor advance, which is an [ALLOC-23] loop-note ref bump worth 28
- *       exact rows - it wins s0 for the primitive cursor against the scaled width. A second such
- *       wrapper around the case-1 state-word update is worth 2 more. gosub's
- *       func_80143C58 is the matched 100% twin and the source model to work
- *       from. See working/cload_update_and_draw_elements/STATUS.md.
- * @see decomp.me (96.49%)
+ * @note The `volatile u32 *element_state` view forces the target's repeated
+ *       loads of the element word (gcc CSEs some away without it), and the
+ *       `do { ... } while (0)` wrappers around the primitive-cursor advance and
+ *       the case-4 state-word load are [ALLOC-23] loop-note ref bumps that pin
+ *       the s-register assignment. The case 1/3 tails materialize the growth
+ *       and shrink arithmetic through the target's exact per-register temps.
+ * @see decomp.me (100.00%)
  */
 void cload_update_and_draw_elements(CloadFrameState *frame)
 {
@@ -1504,6 +1439,24 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
     s32 closing_height_delta;
     u32 closing_word;
     u32 hold_word;
+    u32 n_temp_a0_2;
+    s32 n_temp_v1_2;
+    u32 n_temp_a1;
+    u32 n_temp_a2;
+    s32 n_temp_a0_3;
+    s32 n_var_v1;
+    s32 n_temp_a3_2;
+    s32 n_var_v0;
+    s32 n_temp_a3_3;
+    u32 n_temp_v0_3;
+    u32 n_temp_a0_4;
+    s32 n_temp_a0_5;
+    s32 n_var_v1_2;
+    s32 n_temp_a3_5;
+    s32 n_var_v0_2;
+    s32 n_temp_a3_6;
+    u32 n_temp_v0_5;
+    u32 n_temp_v1_3;
 
     prim = frame->prim_cursor;
     ot = (CloadOrderingTable *)((u8 *)frame + 0x40);
@@ -1553,27 +1506,28 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
             switch (state)
             {
             case 1:
-                opening_word = *element_state;
-                size_flags = *(u32 *)((u8 *)element_state + 4);
-                full_width = (opening_word >> 24) | ((size_flags & 1) << 8);
-                phase = (opening_word >> 3) & 0xF;
-                width_product = full_width * phase;
+                n_temp_v0_3 = *element_state;
+                n_temp_a1 = *(u32 *)((u8 *)element_state + 4);
+                n_temp_a0_4 = n_temp_v0_3 >> 24;
+                n_temp_a2 = ((n_temp_a1 & 1) << 8) | n_temp_a0_4;
+                n_temp_a0_3 = (n_temp_v0_3 >> 3) & 0xF;
+                n_var_v1 = n_temp_a2 * n_temp_a0_3;
                 g_pad_input = 0;
-                if (width_product < 0)
+                if (n_var_v1 < 0)
                 {
-                    width_product += 7;
+                    n_var_v1 += 7;
                 }
-                full_height = (size_flags >> 1) & 0xFF;
-                height_product = full_height * phase;
-                scaled_width = width_product >> 3;
-                if (height_product < 0)
+                n_temp_a3_2 = (n_temp_a1 >> 1) & 0xFF;
+                n_var_v0 = n_temp_a3_2 * n_temp_a0_3;
+                scaled_width = n_var_v1 >> 3;
+                if (n_var_v0 < 0)
                 {
-                    height_product += 7;
+                    n_var_v0 += 7;
                 }
-                scaled_height = height_product >> 3;
-                height_delta = (s32)(full_height - scaled_height);
+                scaled_height = n_var_v0 >> 3;
+                n_temp_a3_3 = (s32)(n_temp_a3_2 - scaled_height);
 
-                prim = (*(CloadElementDrawFunc *)((u8 *)element_state + 8))(ot, prim, (s32)(full_width - scaled_width) / 2, height_delta / 2);
+                prim = (*(CloadElementDrawFunc *)((u8 *)element_state + 8))(ot, prim, (s32)(n_temp_a2 - scaled_width) / 2, n_temp_a3_3 / 2);
                 {
                     u32 post_word;
                     u32 field;
@@ -1586,17 +1540,17 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
                                            (*((u8 *)element_state + 2)) + ((s32)((*(u32 *)((u8 *)element_state + 4) >> 1) & 0xFF) - scaled_height) / 2,
                                            scaled_width, scaled_height, frame->frame_flag, (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
                 }
-                /* GCC 2.7.2 allocation boundary; this single-pass wrapper is codegen-significant. */
-                do
                 {
-                    updated_state = *element_state;
-                    updated_state = (updated_state & ~CLOAD_ELEMENT_PHASE_MASK) | (((((updated_state >> 3) & 0xF) + 1) & 0xF) * 8);
-                    *element_state = updated_state;
-                } while (0);
-                if (((updated_state >> 3) & 0xF) == 8)
-                {
-                    func_800AA02C();
-                    *element_state = (*element_state & ~CLOAD_ELEMENT_STATE_MASK) | 2;
+                    u32 old_word;
+                    u32 new_word;
+                    old_word = *element_state;
+                    new_word = (old_word & ~CLOAD_ELEMENT_PHASE_MASK) | (((((old_word >> 3) & 0xF) + 1) & 0xF) * 8);
+                    *element_state = new_word;
+                    if (((new_word >> 3) & 0xF) == 8)
+                    {
+                        func_800AA02C();
+                        *element_state = (*element_state & ~CLOAD_ELEMENT_STATE_MASK) | 2;
+                    }
                 }
                 break;
 
@@ -1615,33 +1569,34 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
                 hold_word = *element_state;
                 if (((hold_word >> 3) & 0xF) != 0)
                 {
-                    *element_state = (hold_word & ~CLOAD_ELEMENT_PHASE_MASK) | (((((hold_word >> 3) & 0xF) - 1) & 0xF) * 8);
+                    *(u32 *)element_state = (hold_word & ~CLOAD_ELEMENT_PHASE_MASK) | (((((hold_word >> 3) & 0xF) - 1) & 0xF) * 8);
                 }
                 break;
 
             case 3:
-                closing_word = *element_state;
-                size_flags = *(u32 *)((u8 *)element_state + 4);
-                full_width = (closing_word >> 24) | ((size_flags & 1) << 8);
-                closing_phase = closing_word >> 3;
-                closing_phase = closing_phase & 0xF;
-                closing_width_product = full_width * closing_phase;
+                n_temp_a0_5 = (s32)*element_state;
+                n_temp_a1 = *(u32 *)((u8 *)element_state + 4);
+                n_var_v1_2 = (u32)n_temp_a0_5 >> 24;
+                n_temp_a2 = ((n_temp_a1 & 1) << 8) | n_var_v1_2;
+                n_temp_a0_5 = (u32)n_temp_a0_5 >> 3;
+                n_temp_a0_5 &= 0xF;
+                n_var_v1_2 = n_temp_a2 * n_temp_a0_5;
                 g_pad_input = 0;
-                if (closing_width_product < 0)
+                if (n_var_v1_2 < 0)
                 {
-                    closing_width_product += 7;
+                    n_var_v1_2 += 7;
                 }
-                closing_height = (size_flags >> 1) & 0xFF;
-                closing_height_product = closing_height * closing_phase;
-                scaled_width = closing_width_product >> 3;
-                if (closing_height_product < 0)
+                n_temp_a3_5 = (n_temp_a1 >> 1) & 0xFF;
+                n_var_v0_2 = n_temp_a3_5 * n_temp_a0_5;
+                scaled_width = n_var_v1_2 >> 3;
+                if (n_var_v0_2 < 0)
                 {
-                    closing_height_product += 7;
+                    n_var_v0_2 += 7;
                 }
-                scaled_height = closing_height_product >> 3;
-                closing_height_delta = (s32)(closing_height - scaled_height);
+                scaled_height = n_var_v0_2 >> 3;
+                n_temp_a3_6 = (s32)(n_temp_a3_5 - scaled_height);
 
-                prim = (*(CloadElementDrawFunc *)((u8 *)element_state + 8))(ot, prim, (s32)(full_width - scaled_width) / 2, closing_height_delta / 2);
+                prim = (*(CloadElementDrawFunc *)((u8 *)element_state + 8))(ot, prim, (s32)(n_temp_a2 - scaled_width) / 2, n_temp_a3_6 / 2);
                 {
                     u32 post_word;
                     u32 field;
@@ -1654,20 +1609,31 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
                                            (*((u8 *)element_state + 2)) + ((s32)((*(u32 *)((u8 *)element_state + 4) >> 1) & 0xFF) - scaled_height) / 2,
                                            scaled_width, scaled_height, frame->frame_flag, (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
                 }
-                updated_state = *element_state;
-                updated_state = (updated_state & ~CLOAD_ELEMENT_PHASE_MASK) | (((((updated_state >> 3) & 0xF) - 1) & 0xF) * 8);
-                *element_state = updated_state;
-                if (!((updated_state >> 3) & 0xF))
                 {
-                    *element_state = (((updated_state & ~CLOAD_ELEMENT_PHASE_MASK) | 0x18) & ~CLOAD_ELEMENT_STATE_MASK) | 4;
+                    u32 exiting_word;
+                    exiting_word = *element_state;
+                    closing_width_product = exiting_word & ~CLOAD_ELEMENT_PHASE_MASK;
+                    closing_width_product |= (((((exiting_word >> 3) & 0xF) - 1) & 0xF) * 8);
+                    *(u32 *)element_state = (u32)closing_width_product;
+                    if (!(((u32)closing_width_product >> 3) & 0xF))
+                    {
+                        *element_state = ((((u32)closing_width_product & ~CLOAD_ELEMENT_PHASE_MASK) | 0x18) & ~CLOAD_ELEMENT_STATE_MASK) | 4;
+                    }
                 }
                 break;
 
             case 4:
-                closing_word = *element_state;
-                g_pad_input = 0;
+                {
+                    s32 *pad_ptr;
+                    pad_ptr = &g_pad_input;
+                    do
+                    {
+                        closing_word = *element_state;
+                    } while (0);
+                    *pad_ptr = 0;
+                }
                 hold_word = (closing_word & ~CLOAD_ELEMENT_PHASE_MASK) | (((((closing_word >> 3) & 0xF) - 1) & 0xF) * 8);
-                *element_state = hold_word;
+                *(u32 *)element_state = hold_word;
                 if (!((hold_word >> 3) & 0xF))
                 {
                     *element_state = hold_word & ~CLOAD_ELEMENT_STATE_MASK;
@@ -1947,82 +1913,101 @@ CloadGpuPacket *cload_emit_scroll_arrow(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
 }
 
 /**
- * @brief Draw the CD-load prompt glyph then set up the driver/GPU-packet state,
- *        branching on the CD status (cload_poll_and_rewind_primary_handles) and the g_pad_input flags.
- * @param ot ordering-table head threaded through the glyph/line draws.
- * @param prim primitive buffer for the glyph draw (func_800A88A0).
- * @param x_offset base for the row y-coordinate (-x_offset + 0x90).
- * @param y_offset row delta applied to the draw extents.
- * @return the CloadGpuPacket* chain pointer returned by cload_draw_choice_prompt.
- * @note WIP 96.72% (121/125 exact). Required-to-match shapes in place:
- *       FRAME-04 two-word frame scratch for the -0x38 stack frame; ONE-EXIT
- *       `goto ret` single return so the `v0 = result` copy is shared; block-C
- *       laid out before block-B (target reaches C by branch, falls into B);
- *       g_cload_element_pool accessed dually (CloadElementPoolHead `.first_state` direct via %hi/%lo +
- *       CloadElement* base for unk4/unk8/byte2); `tmp = 0xFFFF007F` bound before
- *       `p->x0` (born before the base pointer, wins its register); the word4
- *       update split as `tmp = (unk4 | 1) & ~0x1FE; unk4 = tmp | 0x56`.
- *       Residual (4 rows): the split unk4 accumulator lands in a0 where the
- *       target keeps it in v1, plus a 1-slot schedule shift on the
- *       -0x1FF/unk4-load pair. Coupled block-B coloring; permuter best 130.
- * @see decomp.me (96.72%)
+ * @brief Element-pool head viewed as the CD-load prompt element: the 0x0 state
+ *        word split into its state/phase/x/code bitfields, plus the 0x4
+ *        active/y sub-fields and the 0x8 draw callback.
  */
-s32 cload_draw_load_prompt(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
+typedef struct
 {
-    s32 result;
-    s32 y;
-
-    /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
-    s32 frame_scratch[2];
-    y = -x_offset + 0x90;
-    result = cload_draw_choice_prompt(
-        func_800A88A0(prim, (s32 *)ot, (void *)((s32)&D_80145ECC - 0x30 + D_80145ECC), 4, y, -y_offset, 2),
-        ot, y, 0xE - y_offset);
-    if ((u32)(cload_poll_and_rewind_primary_handles() - 1) < 2)
+    union
     {
-        g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
+        u32 word;
+        struct
+        {
+            u32 state : 3;
+            u32 phase : 4;
+            u32 x : 9;
+            u32 code : 8;
+        } f;
+    } attr;
+    u32 active : 1;
+    u32 y : 8;
+    u32 rest : 23;
+    void *draw;
+    s32 unused;
+} CloadPromptElement;
+
+/**
+ * @brief Draw the CD-load prompt glyph then set up the driver/GPU-packet state,
+ *        branching on the CD status (cload_poll_and_rewind_primary_handles) and
+ *        the g_pad_input flags.
+ * @param ot Ordering-table head threaded through the glyph/line draws.
+ * @param prim Primitive buffer for the glyph draw (func_800A88A0).
+ * @param x_offset Base for the row x-coordinate (-x_offset + 0x90).
+ * @param y_offset Row delta applied to the draw extents.
+ * @return The CloadGpuPacket* chain pointer returned by cload_draw_choice_prompt.
+ * @see decomp.me (100.00%)
+ */
+s32 cload_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
+{
+    RECT pos;
+    s32 result;
+    s32 x;
+    s32 status;
+    CloadPromptElement *p;
+
+    x = -x_offset + 0x90;
+    result = cload_draw_choice_prompt(
+        func_800A88A0(prim, ot,
+                      (u8 *)&D_80145ECC + D_80145ECC - 0x30,
+                      4, x, -y_offset, 2),
+        ot, x, 0xE - y_offset);
+
+    if ((u32)(cload_poll_and_rewind_primary_handles() - 1) < 2U)
+    {
+        ((CloadPromptElement *)&g_cload_element_pool)->attr.f.state = 0;
         func_800AA02C();
         func_800A3938(0x78, 0x80);
         g_cload_entry_state = 0xFF;
         cload_reset_entry_ranks();
-        g_cload_load_step = NULL;
-        goto ret;
+        g_cload_load_step = 0;
     }
-    if (g_pad_input & 0x40)
+    else
     {
-        goto block_c;
+        status = g_pad_input;
+        if (status & 0x40)
+        {
+            ((CloadPromptElement *)&g_cload_element_pool)->attr.f.state = 0;
+            func_800AA02C();
+            func_800A3938(0x78, 0x80);
+            g_cload_load_step = D_80146534;
+        }
+        else if (status & 0x220)
+        {
+            if (g_cload_choice_toggle != 0)
+            {
+                ((CloadPromptElement *)&g_cload_element_pool)->attr.f.state = 0;
+                func_800AA02C();
+                func_800A3938(0x78, 0x80);
+                g_cload_load_step = D_80146534;
+            }
+            else
+            {
+                func_800A3938(0x7E, 0x80);
+                g_cload_progress_active = 1;
+                g_cload_load_step = D_8014653C;
+                p = (CloadPromptElement *)&g_cload_element_pool;
+                p->draw = cload_draw_load_progress;
+                p->attr.f.phase = 1;
+                p->attr.f.state = 1;
+                p->attr.f.x = 0x10;
+                p->attr.f.code = 0x5B;
+                p->active = 1;
+                p->y = 0x2B;
+                p->attr.word = (p->attr.word & 0x00FFFFFF) | ((u32)0x20 << 24);
+            }
+        }
     }
-    if (!(g_pad_input & 0x220))
-    {
-        goto ret;
-    }
-    if (g_cload_choice_toggle == 0)
-    {
-        goto block_b;
-    }
-block_c:
-    g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
-    func_800AA02C();
-    func_800A3938(0x78, 0x80);
-    g_cload_load_step = D_80146534;
-    goto ret;
-block_b:
-    {
-        CloadElement *p = (CloadElement *)&g_cload_element_pool;
-        s32 tmp;
-
-        func_800A3938(0x7E, 0x80);
-        g_cload_progress_active = 1;
-        g_cload_load_step = D_8014653C;
-        tmp = 0xFFFF007F;
-        p->draw = cload_draw_load_progress;
-        g_cload_element_pool.first_state = (((((g_cload_element_pool.first_state & ~CLOAD_ELEMENT_PHASE_MASK) | 8) & ~CLOAD_ELEMENT_STATE_MASK) | 1) & tmp) | 0x800;
-        ((u8 *)p)[2] = 0x5B;
-        tmp = (p->size_flags | 1) & ~0x1FE;
-        p->size_flags = tmp | 0x56;
-        g_cload_element_pool.first_state = (g_cload_element_pool.first_state & 0xFFFFFF) | 0x20000000;
-    }
-ret:
     return result;
 }
 
