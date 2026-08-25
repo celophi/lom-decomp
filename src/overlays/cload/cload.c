@@ -996,45 +996,50 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
  *        'a'-'f', 'A'-'F').
  * @param text Pointer to the first character to test.
  * @return Pointer to the first character that is not a hex digit.
- * @note WIP. Semantics, control flow, and the target bytes are fully
- *       understood (three independent range checks, each looping back to
- *       the function's own entry on a match). The residual is that GCC's
- *       jump2 cross-jump pass (jump.c, cross_jump=1) merges all three
- *       "advance and loop back" arms into one shared tail here, while the
- *       target keeps them independent - each of its three branches carries
- *       its own delay-slot increment plus a compensating decrement on the
- *       fallthrough (reorg target-steal-with-compensation). No source
- *       rephrasing tried so far (if/else-if, sequential if-continue,
- *       self-tail-recursion, do-while, for-loop-continue, precomputed
- *       conditions) avoids the merge; see the crossjump_oracle OVER-MERGED
- *       finding and idiom candidates JUMP-16/JUMP-19 in idioms.md, neither
- *       of which closed it. A 300k-iteration permuter run found no valid
- *       (semantics-preserving) improvement past this score.
- * @see decomp.me (65.63%)
+ * @see decomp.me (100%)
  */
 u8 *cload_skip_hex_digits(void *text)
 {
-    u8 *p;
-    u8 c;
+    u8 *p = (u8 *)text;
+    u32 c;
 
-    p = (u8 *)text;
     while (1)
     {
         c = *p;
+        p++;
         if ((u32)(c - '0') < 10)
         {
-            p++;
             continue;
         }
+        p--;
+        if (p)
+        {
+            p++;
+            p--;
+        }
+
+        p++;
         if ((u32)(c - 'a') < 6)
         {
-            p++;
             continue;
         }
-        if ((u32)(c - 'A') < 6)
+        p--;
+        if (p)
         {
             p++;
+            p--;
+        }
+
+        p++;
+        if ((u32)(c - 'A') < 6)
+        {
             continue;
+        }
+        p--;
+        if (p)
+        {
+            p++;
+            p--;
         }
         break;
     }
