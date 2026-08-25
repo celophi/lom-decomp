@@ -2349,45 +2349,23 @@ void cload_load_icon_resources(void)
  * @param p primitive buffer to write the 3 record pairs into.
  * @param ot ordering-table head threaded through each record's OT link.
  * @return the advanced primitive cursor after all 3 pairs (p + 0x54).
- * @note WIP 91.23% (63/73 exact, correct frame/insn count, no structural or
- *       scheduling rows left). Residual is a single swapped register pair:
- *       the libgpu P_TAG bitfield's 0xFF000000 len-mask constant and the `code`
- *       (unk8) loop accumulator land in t3/t6 opposite of the target (mask
- *       should be t6, code should be t3). alloc_report confirms this is a
- *       genuine allocator priority tie broken the wrong way: mask
- *       pri=2142 (9 refs/126 live) vs code pri=2028 (7 refs/69 live), and
- *       explain_conflict confirms the two pseudos DO conflict, so it is not
- *       hand-swappable - gcc's own priority formula decides it. Measured
- *       inert: every declaration/init/increment-clause reordering of
- *       code/col/row (byte-identical output), an explicit s16 cast on the
- *       unk8 store, inlining vs naming `tpage`, and merging row/col into one
- *       accumulator via their constant 0x7B00 offset (both merge directions
- *       cost 12 exact rows - they are genuinely separate variables).
- *       Permuter (v2, 100k+ iterations across 3 re-seeds) never beat the
- *       seeded state. Shapes that ARE measured required: `col += 0x40,
- *       row += 0x40, code += 0x80, i++` in that exact order as the for-loop's
- *       increment clause (i last); `tpage` computed AFTER the first P_TAG
- *       link and p-advance, not before. working/cload_emit_icon_highlight_strip kept for a
- *       future pass.
- * @see decomp.me (91.23%)
+ * @note Every per-slot value is derived from the loop index (i * 0x80 + 8 for x,
+ *       i * 0x40 + 0x7D00 for the row code, i * 0x40 + 0x200 for the texture page)
+ *       rather than carried in separate accumulators; the accumulator form ties up
+ *       an extra register against the P_TAG len mask and costs the match.
+ * @see decomp.me (100.00%)
  */
 CloadGpuPacket *cload_emit_icon_highlight_strip(CloadGpuPacket *p, CloadOrderingTable *ot)
 {
     s32 i;
-    s32 code;
-    s32 col;
-    s32 row;
     s32 tpage;
 
-    code = 8;
-    col = 0x200;
-    row = 0x7D00;
-    for (i = 0; i < 3; col += 0x40, row += 0x40, code += 0x80, i++)
+    for (i = 0; i < 3; i++)
     {
         p->word4 = 0x808080;
         setlen(p, 4);
         setcode(p, 0x64);
-        p->x0 = code;
+        p->x0 = (i * 0x80) + 8;
         p->y0 = 0;
         ((u8 *)p)[0xC] = 0;
         ((u8 *)p)[0xD] = 0;
@@ -2400,11 +2378,11 @@ CloadGpuPacket *cload_emit_icon_highlight_strip(CloadGpuPacket *p, CloadOrdering
             *(s16 *)((u8 *)p + 0x10) = 0x80;
         }
         *(s16 *)((u8 *)p + 0x12) = 0xE0;
-        p->unkE = row;
+        p->unkE = (i * 0x40) + 0x7D00;
         addPrim(ot, p);
         p = (CloadGpuPacket *)((u8 *)p + 0x14);
         setlen(p, 1);
-        tpage = ((col & 0x3FF) >> 6) | 0xE1000080;
+        tpage = ((((i * 0x40) + 0x200) & 0x3FF) >> 6) | 0xE1000080;
         p->word4 = tpage;
         addPrim(ot, p);
         p = (CloadGpuPacket *)((u8 *)p + 8);
