@@ -99,6 +99,16 @@
     (*(u16*)((u8*)(p) + 0x0C) = (u16)(_uv))
 
 /*
+ * Store a pre-packed u0/v0/clut word (u0/v0 bytes at 0x0C/0x0D, clut id at
+ * 0x0E) with a single word write, matching `*(u32*)(p + 0x0C) = word;`. Use
+ * this when the original builds the whole texcoord+clut word in a register and
+ * emits one store, rather than the separate byte/halfword stores that
+ * @ref SET_SPRT_UV0_PACKED and @ref SET_SPRT_CLUT expand to.
+ */
+#define SET_SPRT_UV_CLUT_WORD(p, _word) \
+    (*(u32*)((u8*)(p) + 0x0C) = (u32)(_word))
+
+/*
  * Store a raw CLUT id into an SPRT (halfword at offset 0x0E). libgpu's
  * setClut takes VRAM coordinates and computes the id via getClut; this sets
  * a precomputed id directly.

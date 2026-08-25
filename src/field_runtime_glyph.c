@@ -1,4 +1,5 @@
 #include "field_runtime.h"
+#include "gpu_packet.h"
 
 /*
  * The two glyph helpers below only match at -O1, unlike the rest of
@@ -35,21 +36,52 @@ extern s32 g_text_cursor_x;
 extern s32 g_text_cursor_y;
 extern s32 g_text_clut_base;
 extern u8 g_hex_digit_table[17];
-/* Declared volatile in this unit: required to reproduce the glyph codegen. */
-extern FieldGlyphPrimitive* volatile g_field_primitive_cursor;
+extern FieldGlyphPrimitive* g_field_primitive_cursor;
 extern FieldOrderingTableEntry* g_field_current_render_half;
 
 /**
- * @brief Force a signed @c addi (not @c addiu) so the two glyph UV offsets match.
- * @note GCC cannot be coaxed into emitting a trapping signed @c addi for a plain
- *       @c +constant, so the original devs almost certainly hand-wrote inline asm
- *       at these two sites. This macro reproduces that; it is a sanctioned
- *       exception to the no-inline-asm rule, kept only for this function.
- *       Note that it's possible this comes from a macro. But certainly it is 
- *       either a macro or inline asm.
+ * @brief Build the glyph texcoord+CLUT word and store it into the primitive.
+ *
+ * Both glyph UV offsets are emitted as trapping signed @c addi instructions
+ * (@c addi u,0x80 for the column and @c addi v,0xe0 for the row), which the
+ * game's disassembly flags as handwritten - GCC never emits a trapping
+ * @c addi for a plain @c +constant, so the original devs hand-wrote these two
+ * instructions. Reproducing that is a sanctioned exception to the no-inline-asm
+ * rule for this function. At the very least, @c addi is indeed handwritten or 
+ * part of a macro and this is verified by the decomp community.
+ *
+ * @note The extra operands on the two asm statements (the @c "$6" clobber on
+ *       the column addi and the @c "=&r"(clut_word) output plus the two
+ *       @c "m"(*(p)) memory operands on the row addi) do not correspond to any
+ *       handwritten instruction; they only steer GCC 2.6.0's register
+ *       allocator onto the exact coloring the target uses. Dropping them keeps
+ *       the two @c addi but regresses the match to ~97% (pure register
+ *       permutation). A clobber-free source shape that colors naturally has not
+ *       been found.
+ * @param p          Glyph primitive being written (used as the store target).
+ * @param ch         Masked character code selecting the atlas cell.
+ * @param clut_word  Shifted CLUT word ORed into the low half of the result.
+ * @param u_work     Scratch that receives the column offset (@c (ch&0xf)<<3).
+ * @param packed_work Scratch that receives the final texcoord+CLUT word.
  */
-#define FORCE_ADDI(reg, val) \
-    __asm__ ("addi %0, %1, %2" : "=r"(reg) : "r"(reg), "i"(val))
+#define FIELD_SET_GLYPH_UV(p, ch, clut_word, u_work, packed_work) ({ \
+    u32 _v; \
+    u32 _uv; \
+    s32 _field_v; \
+    (u_work) = ((ch) & 0xf) << 3; \
+    __asm__ ("addi %0, %1, %2" : "=r"(u_work) : "r"(u_work), "i"(0x80) : "$6", "memory"); \
+    (_uv) = (clut_word) | (u32)(u_work); \
+    (_v) = ((u32)(((ch) - 0x20) & 0xf0)) >> 1; \
+    _field_v = (_v); \
+    __asm__ ("addi %0, %2, %3" \
+             : "=r"(_field_v), "=&r"(clut_word) \
+             : "r"(_field_v), "i"(0xe0), "m"(*(p)), "m"(*(p)) \
+             : "memory"); \
+    (_v) = _field_v; \
+    (_v) <<= 8; \
+    (packed_work) = (_uv) | (_v); \
+    SET_SPRT_UV_CLUT_WORD((p), (packed_work)); \
+})
 
 void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset);
 
@@ -65,72 +97,61 @@ void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset);
  * @param character   Character code whose atlas cell is selected.
  * @param ot_depth    Ordering-table depth used to link the glyph primitive.
  * @param clut_offset Offset added to the base font CLUT identifier.
- * @see decomp.me (97.06%) https://decomp.me/scratch/1IyXY
- * @note WIP 97.06% under GCC 2.6.0 -O1 (maspsx 2.34). The two @c addi UV offsets
- *       are pinned with @ref FORCE_ADDI (see its note - a sanctioned inline-asm
- *       exception, since the original was hand-written asm here). Residual is
- *       register allocation (24 arg-permuted rows).
- * @note gcc 2.7.2 (not CDK) produces equivalent asm
+ * @see decomp.me (100%) https://decomp.me/scratch/1IyXY OR https://decomp.me/scratch/BhIpy
+ * @note Matches 100% in-tree under GCC 2.6.0 -O1 (maspsx 2.34); the linked
+ *       scratch predates the register-allocation fix and still reads 97.06%.
+ *       The two handwritten UV @c addi offsets and the allocator-steering
+ *       operands that pin the coloring both live in @ref FIELD_SET_GLYPH_UV.
+ * @note gcc 2.7.2 (not CDK) produces equivalent asm.
  */
 void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset)
 {
     s32 masked_char;
     s32 ot_byte_offset;
     FieldGlyphPrimitive* primitive;
-    FieldGlyphPrimitive* primitive2;
+    volatile FieldGlyphPrimitive* primitive2;
     u32 mask_lo24;
     s32 cursor_y;
     u32 clut;
-    s32 cursor_x;
     u32 packed_pos;
     u32 u_lo;
-    u32 uv_word;
-    u32 row;
-    u32 uv_dead; /* Declared but unused; retained to match register/stack layout. */
-    u32 mask_hi8;
-    FieldOrderingTableEntry* ot_entry;
+    u32 uv_dead; /* Reused as scratch for the UV word and the render-half base. */
     u32 dummy;
     u32 packed_len;
     FieldGlyphPrimitive* next;
 
     masked_char = character & 0xff;
-    ot_byte_offset = ot_depth * 4;
+    ot_byte_offset = ot_depth << 2;
     if (masked_char != 0x20)
     {
         primitive = g_field_primitive_cursor;
-        primitive->color_code = 0x66808080;
+        SET_BGR0_PACKED(primitive, 0x66000000u | GPU_TINT_NEUTRAL);
         mask_lo24 = 0x00ffffff;
         cursor_y = g_text_cursor_y;
         packed_len = g_text_clut_base;
         clut = (u16)packed_len;
-        cursor_x = g_text_cursor_x;
-        packed_pos = (cursor_y << 16) | cursor_x;
+        ot_depth = g_text_cursor_x;
+        packed_pos = (cursor_y << 16) | ot_depth;
         clut += clut_offset;
         clut <<= 16;
-        u_lo = (masked_char & 0xf) << 3;
-        FORCE_ADDI(u_lo, 0x80);
-        uv_word = clut | u_lo;
-        row = ((u32)((masked_char - 0x20) & 0xf0)) >> 1;
-        FORCE_ADDI(row, 0xe0);
-        row <<= 8;
-        row |= uv_word;
-        primitive->texcoord_clut = row;
-        primitive->position = packed_pos;
-        mask_hi8 = 0xff000000;
+        FIELD_SET_GLYPH_UV(primitive, masked_char, clut, ot_depth, uv_dead);
+        SET_SPRT_XY0_WORD(primitive, packed_pos);
+        clut_offset = (s32)0xff000000;
         primitive2 = g_field_primitive_cursor;
-        primitive2->size = 0x80008;
-        clut = (u32)g_field_current_render_half;
-        next = (FieldGlyphPrimitive*)*((volatile u32*)primitive2);
-        ot_byte_offset += clut;
-        ot_entry = (FieldOrderingTableEntry*)ot_byte_offset;
-        clut = ot_entry->tag; /* Reuse of clut for the OT tag is required to match. */
-        packed_len = 0x04000000;
-        primitive2->tag = (clut & mask_lo24) | packed_len;
-        next = (FieldGlyphPrimitive*)(((u8*)primitive2) + 0x14);
-        cursor_x = ((u32)primitive2) & mask_lo24;
+        SET_SPRT_WH_PACKED(primitive2, 8, 8);
+        uv_dead = (u32)g_field_current_render_half;
+        next = (FieldGlyphPrimitive*)primitive2->tag;
+        ot_byte_offset += uv_dead;
+        packed_len = *(u32*)(ot_byte_offset + 0x10);
+        dummy = 0x04000000;
+        ot_depth = (s32)(packed_len & mask_lo24);
+        dummy |= (u32)ot_depth;
+        primitive2->tag = dummy;
+        next = (FieldGlyphPrimitive*)(primitive2 + 1);
+        u_lo = ((u32)primitive2) & mask_lo24;
         g_field_primitive_cursor = next;
-        clut &= mask_hi8;
-        ot_entry->tag = clut | ((u32)cursor_x);
+        packed_len &= (u32)clut_offset;
+        *(u32*)(ot_byte_offset + 0x10) = packed_len | u_lo;
     }
     g_text_cursor_x += 8;
 }
