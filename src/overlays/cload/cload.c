@@ -2068,32 +2068,18 @@ ret:
  * @param ot ordering-table head threaded through the OT-link update.
  * @return the advanced packet cursor (p + 0x24), or p unchanged if
  *         g_cload_progress_bar_active is 0.
- * @note WIP 94.26% (60/68 exact). g_cload_progress_bar_active gates the whole body; when set,
- *       `elapsed` (VSync(-1) - g_cload_progress_start_tick, clamped to 0x100) scales into the
- *       quad's right-edge x extent (elapsed * 0x120, rounded via +0xFF for
- *       negative values, then >>8) - a time-based progress bar. Required-to-
- *       match shape: the two `>>8` stores are written inline
- *       (`g->x3 = extent >> 8; g->x1 = extent >> 8;`), NOT through a
- *       reassigned `extent = extent >> 8;` local - the reassignment costs
- *       -7 exact rows (this single change was the jump from 82.28% to
- *       94.26%, and incidentally fixed a second, separate-looking mismatch
- *       around the OT-link mask too).
- *       Residual (8 rows, SCHED-LUID): the target fills the elapsed-clamp
- *       branch's delay slot with the start of the `g->color2 = 0xFFFF00`
- *       constant build (`lui`); this compile fills it by speculatively
- *       re-running the `x * 9` shift with the pre-clamp value and redoing it
- *       after the join (+1 insn). Named-local hoists of the 0xFFFF00/0xFFFFFF
- *       constants to various earlier points all measured neutral or worse;
- *       permuter (v2, ~16k iters) got to score 245 (from 575) via the same
- *       inline->8 fix already applied here and did not find the remaining
- *       delay-slot swap.
- * @see decomp.me (94.26%)
+ * @note g_cload_progress_bar_active gates the whole body; when set, `elapsed`
+ *       (VSync(-1) - g_cload_progress_start_tick, clamped to 0x100) scales into
+ *       the quad's right-edge x extent (elapsed * 0x120, rounded via +0xFF for
+ *       negative values, then >>8) - a time-based progress bar.
+ * @see decomp.me (100.00%)
  */
 CloadGpuPacket *cload_draw_progress_bar(CloadGpuPacket *p, s32 *ot)
 {
     CloadPolyG4Packet *g;
     s32 elapsed;
     s32 extent;
+    s32 color;
 
     g = (CloadPolyG4Packet *)p;
     if (g_cload_progress_bar_active != 0)
@@ -2103,12 +2089,13 @@ CloadGpuPacket *cload_draw_progress_bar(CloadGpuPacket *p, s32 *ot)
         {
             elapsed = 0x100;
         }
+        color = 0xFFFF00;
         extent = elapsed * 0x120;
         g->color0 = 0xFF;
         g->color1 = 0xFFFF;
         g->color3 = 0xFF0000;
         setlen(g, 8);
-        g->color2 = 0xFFFF00;
+        g->color2 = color;
         setcode(g, 0x38);
         g->x2 = 0;
         g->x0 = 0;
@@ -2902,9 +2889,7 @@ s32 cload_parse_entry_fields(void)
  * @param unused1 Unused; present only to match the caller's 3-argument ABI.
  * @param unused2 Unused; present only to match the caller's 3-argument ABI.
  * @return Index of the entry holding the maximum value.
- * @note WIP 92.06% (gcc272_cdk); residual is a row-base regalloc/sched cascade
- *       (CSE-FOLD on g_cload_entry_fields).
- * @see decomp.me (92.06%)
+ * @see decomp.me (100.00%)
  */
 s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
 {
@@ -2916,6 +2901,9 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     s32 *base_rank;
     s32 *ecopy;
     s32 *max_ptr;
+    s32 *field_base;
+    s32 *field1;
+    s32 slot;
     s32 *out_ptr;
     char *ent_ptr;
     s32 t0v;
@@ -2938,27 +2926,36 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         count = g_cload_entry_state;
         base_rank = &g_cload_entry_ranks[0];
         rank_ptr = base_rank;
-        row = (s32 *)((g_cload_card_slot * 0x50) + (s32)g_cload_entry_fields);
+        slot = g_cload_card_slot;
+        field1 = g_cload_entry_fields;
+        row = field1 + slot * 20;
         elem = row;
         do
         {
             if (*elem >= 0)
             {
                 j = 0;
+                if (i > 0)
+                {
+                    j += 1; j -= 1;
+                }
                 if (*elem >= s3v)
                 {
                     *rank_ptr = t0v;
                     s3v = *elem;
-                    t0v += 1;
+                    do { t0v += 1; } while (0);
                 }
                 else
                 {
-                    less_count = 0;
+                    less_count = j;
                     if (i > 0)
                     {
-                        ecopy = elem;
-                        inc_ptr = base_rank;
-                        cmp_ptr = row;
+                        do { ecopy = elem; } while (0);
+                        do
+                        {
+                            inc_ptr = base_rank;
+                        } while (0);
+                        do { cmp_ptr = row; } while (0);
                         do
                         {
                             if (*ecopy < *cmp_ptr)
@@ -2971,7 +2968,11 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
                             cmp_ptr += 1;
                         } while (j < i);
                     }
-                    *rank_ptr = t0v - less_count;
+                    {
+                        s32 rank_value;
+                        do { do { do { rank_value = t0v - less_count; } while (0); } while (0); } while (0);
+                        *rank_ptr = rank_value;
+                    }
                     t0v += 1;
                 }
             }
@@ -2980,13 +2981,19 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
             elem += 1;
         } while (i < count);
     }
+    cmp_ptr = base_rank;
+    inc_ptr = row;
     g_cload_rank_count = t0v;
     t0v = -1;
     i = 0;
     s3v = 0;
     if (g_cload_entry_state > 0)
     {
-        max_ptr = (s32 *)((g_cload_card_slot * 0x50) + (s32)g_cload_entry_fields);
+        s32 max_count;
+        max_count = g_cload_entry_state;
+        slot = g_cload_card_slot;
+        field_base = g_cload_entry_fields;
+        max_ptr = (s32 *)((slot * 0x50) + (s32)field_base);
         do
         {
             if (t0v < *max_ptr)
@@ -2996,7 +3003,7 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
             }
             i += 1;
             max_ptr += 1;
-        } while (i < g_cload_entry_state);
+        } while (i < max_count);
         i = 0;
     }
     g_cload_entry_value_limit = t0v + 1;
