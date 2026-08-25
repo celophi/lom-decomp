@@ -2219,31 +2219,13 @@ s32 cload_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param row when 1 and icon<2 uses the func_800A5638 scissor path.
  * @return the advanced primitive cursor (prim + 0x28), or prim unchanged when
  *         icon == CLOAD_NO_ICON.
- * @note WIP 85.14% (122/145 exact). Structure, control flow, the -0x40 frame,
- *       prim in s2 (via `base = index * 3` kept as a single post-branch LOCAL so
- *       local-alloc gives it s0 and the long-lived global prim keeps s2), and
- *       the libgpu setaddr/getaddr link are all in place. Residue is packet-block
- *       scheduling in the final basic block: the target hoists the `highlight`
- *       (sp+0x50) load and the `prim->tag` OT-read early to hide latency, which
- *       pushes the `uv = base * 0x10` shift later, whereas this compile emits the
- *       uv block right after the code bytes. sched_oracle reports the block as
- *       NON_LUID / regalloc-decided (not a clean sched1 emit-order fix), and the
- *       permuter (v2) only found scaffolding (a stray pointer split plus a junk
- *       `(double)` cast). Also 2 minor argdiff rows: the `row` compare temp
- *       lands a0 vs target v1, and the func_800A55E4 path loads g_cload_icon_palette after
- *       &g_cload_icon_context (target loads it first; a statement-precompute was inert via
- *       copy-propagation). working/cload_draw_icon_highlight kept for a future 100% pass.
- * @see decomp.me (85.14%)
+ * @see decomp.me (100.00%)
  */
 s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s32 icon, s32 index, s32 row)
 {
     RECT rect;
     s32 base;
-    u8 uv;
-    u8 uv2;
-    s16 tmp;
-    s32 v;
-    s32 *ctx;
+    s8 uv;
 
     if (icon == CLOAD_NO_ICON)
     {
@@ -2254,23 +2236,16 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
     rect.y = 0x1F2;
     rect.w = 0x10;
     rect.h = 1;
-    v = icon < 0x4F;
-    if (row == 1)
+    if ((row == 1) && (icon < 2))
     {
-        if (icon < 2)
-        {
-            ctx = &g_cload_icon_context;
-            func_800A5638(ctx, icon);
-            goto block_8;
-        }
-        v = icon < 0x4F;
+        func_800A5638(&g_cload_icon_context, icon);
+        func_80019A34(&rect, &g_cload_icon_context);
+        func_80019788(0);
     }
-    if (v == 0)
+    else if (icon >= 0x4F)
     {
-        ctx = &g_cload_icon_context;
-        func_800A55E4(ctx, g_cload_icon_palette);
-    block_8:
-        func_80019A34(&rect, ctx);
+        func_800A55E4(&g_cload_icon_context, g_cload_icon_palette);
+        func_80019A34(&rect, &g_cload_icon_context);
         func_80019788(0);
     }
     else
@@ -2279,10 +2254,10 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
     }
 
     base = index * 3;
-    rect.x = (base * 4) + 0x140;
+    rect.x = base * 4 + 0x140;
+    rect.y = 0xD0;
     rect.w = 0xC;
     rect.h = 0x30;
-    rect.y = 0xD0;
     func_80019A34(&rect, g_cload_icon_resource + *(s32 *)(g_cload_icon_resource + icon * 4 + 4) + 0x20);
 
     ((CloadPolyFT4Packet *)prim)->color0 = 0x808080;
@@ -2292,20 +2267,18 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
     ((CloadPolyFT4Packet *)prim)->x0 = x;
     ((CloadPolyFT4Packet *)prim)->y1 = y;
     ((CloadPolyFT4Packet *)prim)->y0 = y;
+    ((CloadPolyFT4Packet *)prim)->x3 = x + highlight;
     uv = base * 0x10;
     ((CloadPolyFT4Packet *)prim)->u2 = uv;
     ((CloadPolyFT4Packet *)prim)->u0 = uv;
-    uv2 = uv + 0x2F;
-    ((CloadPolyFT4Packet *)prim)->u3 = uv2;
-    ((CloadPolyFT4Packet *)prim)->u1 = uv2;
+    uv += 0x2F;
+    ((CloadPolyFT4Packet *)prim)->u3 = uv;
+    ((CloadPolyFT4Packet *)prim)->u1 = uv;
     ((CloadPolyFT4Packet *)prim)->v1 = 0xD0;
     ((CloadPolyFT4Packet *)prim)->v0 = 0xD0;
-    tmp = x + highlight;
-    ((CloadPolyFT4Packet *)prim)->x3 = tmp;
-    ((CloadPolyFT4Packet *)prim)->x1 = tmp;
-    tmp = y + 0x2F;
-    ((CloadPolyFT4Packet *)prim)->y3 = tmp;
-    ((CloadPolyFT4Packet *)prim)->y2 = tmp;
+    ((CloadPolyFT4Packet *)prim)->x1 = x + highlight;
+    ((CloadPolyFT4Packet *)prim)->y3 = y + 0x2F;
+    ((CloadPolyFT4Packet *)prim)->y2 = y + 0x2F;
     ((CloadPolyFT4Packet *)prim)->v3 = 0xFF;
     ((CloadPolyFT4Packet *)prim)->v2 = 0xFF;
     ((CloadPolyFT4Packet *)prim)->clut = (index & 0x3F) | 0x7C80;
@@ -2330,29 +2303,12 @@ void cload_deactivate_primary_element(void)
  *        0x1F4/0x1F5/0x1F6 via func_80086374, also pointing g_cload_icon_resource (the
  *        icon UV table used by cload_draw_icon_highlight) at the resource's first offset
  *        field.
- * @note WIP 99.50% (45/50 exact, correct frame/insn count, no structural
- *       rows). The resource header at 0x80180000 stores four s32 offset
- *       fields at +4/+8/+0xC/+0x10; the target reads them via a SINGLE
- *       `lui $s0,%hi(D_80180008)` reused (as a raw 0x80180000 constant) for
- *       all four %lo(D_80180004/8/C/10) loads AND the "+ base" pointer
- *       conversions, with zero extra instructions. Every measured source
- *       shape that gives the four fields their own extern symbol (plain
- *       scalars: 72.76%, 4 separate luis; one struct/array anchored at the
- *       base: 82.68%, gcc instead MATERIALIZES a full address via an extra
- *       `addiu` + saved register since the fields are read across 3
- *       intervening calls; `&sym +/- k` anchor tricks: 75.82-88.64%, same
- *       materialization cost) costs extra insns and regresses the match.
- *       Raw pointer arithmetic on the literal `(u8*)0x80180000` (this file)
- *       reproduces the target's exact instruction count and frame with the
- *       four loads showing as plain register+offset instead of named
- *       relocations - that is the whole gap. Permuter (v2, ~29.5k
- *       iterations) converged on this same state and found nothing further.
- *       Same residual class as func_800A3728 in field_audio.c (98.97%, also
- *       left unmatched after 22 measured-inert variants) - gcc sharing one
- *       %hi() across several extern data symbols in a page is not reachable
- *       from any C shape tried so far. working/cload_load_icon_resources kept for a
- *       future pass.
- * @see decomp.me (99.50%)
+ * @note The four header reads use raw offsets off (u8 *)0x80180000 so gcc shares a
+ *       single `lui 0x8018`. Do not give the fields extern symbols: every such shape
+ *       costs an extra addiu plus a saved register (72.76-88.64%). D_80180004/8/C/10
+ *       are marked `ignore:true` in config/overlays/cload_symbol_addrs.txt to stop
+ *       splat symbolizing them in the target asm.
+ * @see decomp.me (100.00%)
  */
 void cload_load_icon_resources(void)
 {
@@ -2475,38 +2431,35 @@ s32 cload_enable_choice_toggle(void)
  * @param x Base X used as (x - 0x10) for the first glyph and (x + 8) for the second.
  * @param y Y coordinate passed through to both glyphs.
  * @return Prim pointer after both emits.
- * @note WIP 97.15% (gcc272_cdk). Instruction-exact (74/74), frame -0x40, all sp
- *       slots match. Sole residue: a sched2 floater transposition -- the
- *       `mode = 4` (`addiu a3, 4`) is hoisted one slot above p's `addiu v1`.
- *       sched_oracle reports every emit-order constraint satisfied; whatif shows
- *       the floater order is fixed in the sched1 model, so the diff is a pure
- *       post-sched1 (sched2) reorder, not reachable by source-level emit control.
- * @see decomp.me (97.15%)
+ * @see decomp.me (100.00%)
  */
 s32 cload_draw_choice_prompt(s32 prim, s32 *ot, s32 x, s32 y)
 {
     u8 *p;
     u8 *base;
-    u8 *glyph;
+    s32 glyph0;
+    s32 glyph1;
+    s32 hi_byte;
     s32 mode;
 
-    p = D_800EC3FA;
+    p = (u8 *)&D_800EC3FA;
+    hi_byte = p[1] << 8;
     base = p - 0x36;
-    glyph = (u8 *)(p[0] + ((p[1] << 8) + (s32)base));
     mode = 4;
+    glyph0 = p[0] + (hi_byte + (s32)base);
     if (g_cload_choice_toggle != 0)
     {
         mode = 5;
     }
-    prim = func_800A88A0(prim, ot, glyph, mode, x - 0x10, y, 1);
+    prim = func_800A88A0(prim, ot, (void *)glyph0, mode, x - 0x10, y, 1);
 
-    glyph = (u8 *)(base[0x38] + ((base[0x39] << 8) + (s32)base));
     mode = 4;
+    glyph1 = base[0x38] + ((base[0x39] << 8) + (s32)base);
     if (g_cload_choice_toggle == 0)
     {
         mode = 5;
     }
-    prim = func_800A88A0(prim, ot, glyph, mode, x + 8, y, 0);
+    prim = func_800A88A0(prim, ot, (void *)glyph1, mode, x + 8, y, 0);
 
     if (g_pad_input & 0xA000)
     {
@@ -2703,73 +2656,92 @@ u32 cload_parse_hex(u8 *s, s32 len)
  * @brief Skip a leading run of hex characters, then parse up to two hex digits
  *        into an integer value.
  * @param text Pointer to the ASCII text to scan.
- * @return The value of the (at most two) hex digits found after the skipped run.
  * @param unused1 Unused ABI argument.
  * @param unused2 Unused ABI argument.
- * @note The leading skip loop is the same shape as cload_skip_hex_digits; gcc's jump.c
- *       cross-jumps its three continue arms into one back-edge here, so the
- *       per-arm text++/text-- form the target keeps is not reproducible without the
- *       permuter (cload_skip_hex_digits itself is committed nonmatching for the same
- *       reason). The accumulation uses an explicit temp so K is folded with the
- *       running value (result - K) rather than with the freshly read digit.
- * @see decomp.me (87.66%)
+ * @return The value of the (at most two) hex digits found after the skipped run.
+ * @note The `text--; if (text) { text++; text--; }` sequences in the skip loop are
+ *       required to match: without them gcc's jump.c cross-jumps the three continue
+ *       arms into a single back-edge and the function loses 6 instructions.
+ * @note The accumulation uses an explicit temp so K is folded with the running
+ *       value (result - K) rather than with the freshly read digit.
+ * @see decomp.me (100.00%)
  */
 s32 cload_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
 {
-    u8 c;
+    u32 c;
     s32 count;
-    s32 result;
-    s32 tmp;
+    u32 result;
+    u32 tmp0;
+    u32 tmp1;
+    u32 tmp2;
 
     while (1)
     {
         c = *text;
+        text++;
         if ((u32)(c - '0') < 10)
         {
-            text++;
             continue;
         }
+        text--;
+        if (text)
+        {
+            text++;
+            text--;
+        }
+
+        text++;
         if ((u32)(c - 'a') < 6)
         {
-            text++;
             continue;
         }
-        if ((u32)(c - 'A') < 6)
+        text--;
+        if (text)
         {
             text++;
+            text--;
+        }
+
+        text++;
+        if ((u32)(c - 'A') < 6)
+        {
             continue;
+        }
+        text--;
+        if (text)
+        {
+            text++;
+            text--;
         }
         break;
     }
+
     text++;
     count = 2;
-    c = *text;
     result = 0;
-    while ((u32)(c - '0') < 10 || (u32)(c - 'a') < 6 || (u32)(c - 'A') < 6)
+    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
     {
         if (count == 0)
         {
             break;
         }
-        c = *text;
         result <<= 4;
-        if ((u32)(c - '0') < 10)
+        if ((u8)(*text - '0') < 10)
         {
-            tmp = result - 0x30;
-            result = *text + tmp;
+            tmp0 = result - 0x30;
+            result = tmp0 + *text;
         }
-        else if ((u32)(c - 'A') < 6)
+        else if ((u8)(*text - 'A') < 6)
         {
-            tmp = result - 0x37;
-            result = *text + tmp;
+            tmp1 = result - 0x37;
+            result = tmp1 + *text;
         }
-        else if ((u32)(c - 'a') < 6)
+        else if ((u8)(*text - 'a') < 6)
         {
-            tmp = result - 0x57;
-            result = *text + tmp;
+            tmp2 = result - 0x57;
+            result = tmp2 + *text;
         }
         text++;
-        c = *text;
         count--;
     }
     return result;
@@ -3051,19 +3023,15 @@ void cload_reset_entry_ranks(void)
 
 
 /**
- * @brief Scan up to g_cload_entry_state entries of the g_cload_entries table (row selected by
- *        g_cload_card_slot, stride 0x28) and return 1 as soon as an entry fails to
- *        match either of the two patterns D_800ECF7C / D_800ECF8C; 0 if all pass.
- * @return 1 on the first non-matching entry, 0 if every entry matches both patterns.
- * @note WIP 95.77% (gcc272_cdk). Instruction-exact (52/52), frame -0x20, all sp
- *       slots match. Sole residue: a preheader emit-order rotation -- the
- *       `lui s2, %hi(g_cload_card_slot)` sits after entry's `lui/addiu(g_cload_entries)`
- *       instead of before it. Same registers (s0=entry, s2=A920 hi), so it is
- *       pure emit order. The only C constructs that reorder it (aliasing
- *       g_cload_card_slot through a pointer, ALLOC-06 style) force a full-pointer
- *       lui+addiu with 0x0(s2) addressing instead of the target's hi-only
- *       %lo(g_cload_card_slot)(s2) form, adding a spurious insn -- a worse match.
- * @see decomp.me (95.77%)
+ * @brief Scan up to g_cload_entry_state entries of the g_cload_entries table (row
+ *        selected by g_cload_card_slot, stride 0x28) and report whether any entry
+ *        matches one of the two known-type patterns D_800ECF7C / D_800ECF8C.
+ * @return 1 on the first entry that matches either pattern (func_8001714C returns 0
+ *         on a match), 0 if no entry matches.
+ * @note The entry address is recomputed from the index each iteration rather than
+ *       carried as an incremented pointer; that is what puts the g_cload_card_slot
+ *       %hi ahead of the g_cload_entries lui/addiu in the loop preheader.
+ * @see decomp.me (100.00%)
  */
 s32 cload_has_known_entry_type(void)
 {
@@ -3073,15 +3041,14 @@ s32 cload_has_known_entry_type(void)
     i = 0;
     if (g_cload_entry_state > 0)
     {
-        entry = &g_cload_entries;
         do
         {
+            entry = (u8 *)g_cload_entries + i * CLOAD_DIRECTORY_ENTRY_BYTES;
             if (func_8001714C(&D_800ECF7C, (void *)(g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0 ||
                 func_8001714C(&D_800ECF8C, (void *)(g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0)
             {
                 return 1;
             }
-            entry += CLOAD_DIRECTORY_ENTRY_BYTES;
             i++;
         } while (i < g_cload_entry_state);
     }
