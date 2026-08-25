@@ -5,6 +5,15 @@ field_text_reset_scratch             = 0x8006441C;
 // Shared main-executable input state used by CLOAD.
 g_pad_input                          = 0x80122988;
 
+// Icon-resource header fields inside the 0x80180000 scratch buffer. It is a raw
+// load target, not real data symbols, so keep splat from symbolizing the four
+// header reads in cload_load_icon_resources; the C reads them as plain offsets
+// off (u8 *)0x80180000. Same treatment as gover_symbol_addrs.txt.
+D_80180004 = 0x80180004; // ignore:true
+D_80180008 = 0x80180008; // ignore:true
+D_8018000C = 0x8018000C; // ignore:true
+D_80180010 = 0x80180010; // ignore:true
+
 // CLOAD code symbols.
 cload_main                               = 0x801400C4;
 cload_run_menu_loop                      = 0x8014019C;
