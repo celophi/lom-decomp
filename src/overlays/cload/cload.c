@@ -2739,97 +2739,32 @@ s32 cload_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
  * validation stores -1 / 0 into the two arrays instead.
  *
  * @return The largest value returned by any @ref cload_parse_hex_suffix_byte call (0 if none).
- * @note WIP match, 87.74%; residue is a saved-register priority rotation
- *       (max/D_8014A920hi/i and entry/off4) plus parse-loop temp coloring.
- * @see decomp.me (87.74%)
+ * @note WIP match, 98.37% (135/145 exact, gcc272_cdk; was 87.74%). Frame,
+ *       insn count, and all sp slots match. Residue is one coupled loop-giv
+ *       register permutation (target walks the entry pointer in s1 and the
+ *       i*4 field offset in s0; this allocates them swapped, s0/s1) plus one
+ *       scheduling row (the %lo(D_800ECF7C) addiu sits before the
+ *       g_cload_card_slot load instead of in its load-delay slot). Probed
+ *       inert: precomputing entry before the call, hoisting i*4 to a named
+ *       loop-top local, both combined, and swapping the field/store lines
+ *       (-24). See working/cload_parse_entry_fields/.
+ * @see decomp.me (98.37%)
  */
 s32 cload_parse_entry_fields(void)
 {
-    s32 i;
-    s32 max;
-    u8 *entry;
-    u8 *fld;
-    u8 *field;
-    s32 *out;
-    s32 off28;
-    s32 off4;
-    u8 *p;
-    s32 count;
-    s32 acc;
-    u8 c;
-    u8 cls;
-    s32 t;
-    s32 r;
-
-    max = 0;
-    i = 0;
-    if (g_cload_entry_state > 0)
-    {
-        entry = &g_cload_entries;
-        fld = (u8 *)&g_cload_entries + 0xC;
-        out = &g_cload_entry_suffix_values;
-        off28 = max;
-        off4 = off28;
-        do
-        {
-            if (func_8001714C(&D_800ECF7C, entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) == 0)
-            {
-                count = 5;
-                p = fld + (g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + off28);
-                c = *p;
-                acc = 0;
-                while (((u32)(c - 0x30) < 0xA) || ((u32)(c - 0x61) < 6) || ((u32)(c - 0x41) < 6))
-                {
-                    if (count == 0)
-                    {
-                        break;
-                    }
-                    cls = *p;
-                    acc *= 0x10;
-                    if ((u32)(cls - 0x30) < 0xA)
-                    {
-                        t = acc - 0x30;
-                        goto add_char;
-                    }
-                    if ((u32)(cls - 0x41) < 6)
-                    {
-                        acc = acc - 0x37 + *p;
-                    }
-                    else
-                    {
-                        t = acc - 0x57;
-                        if ((u32)(cls - 0x61) < 6)
-                        {
-                        add_char:
-                            acc = t + *p;
-                        }
-                    }
-                    p++;
-                    c = *p;
-                    count--;
-                }
-                field = entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + 0xC;
-                *(s32 *)(g_cload_card_slot * 0x50 + off4 + (s32)&g_cload_entry_fields) = acc;
-                r = cload_parse_hex_suffix_byte(field, acc, count);
-                *out = r;
-                if (max < r)
-                {
-                    max = r;
-                }
-            }
-            else
-            {
-                *(s32 *)(g_cload_card_slot * 0x50 + off4 + (s32)&g_cload_entry_fields) = -1;
-                *out = 0;
-            }
-            out++;
-            entry += CLOAD_DIRECTORY_ENTRY_BYTES;
-            off28 += CLOAD_DIRECTORY_ENTRY_BYTES;
-            i++;
-            off4 += 4;
-        } while (i < g_cload_entry_state);
-    }
-    return max;
+ s32 i; s32 max; u8 *entry; u8 *p; u8 *field; s32 count; s32 acc; u32 tmp0; u32 tmp1; u32 tmp2; s32 r;
+ i=0; max=i;
+ while (i < g_cload_entry_state) {
+    if (func_8001714C(&D_800ECF7C, (u8 *)(g_cload_card_slot*CLOAD_CARD_DIRECTORY_BYTES + (s32)(entry = (u8 *)g_cload_entries + ((i << 4) + (i << 4) + (i << 3)))), 0xC)==0) {
+     count=5; p=(u8 *)(g_cload_card_slot*CLOAD_CARD_DIRECTORY_BYTES + ((i << 4) + (i << 4) + (i << 3)) + (s32)g_cload_entries + 0xC); acc=0;
+     while (((u8)(*p-'0')<10)||((u8)(*p-'a')<6)||((u8)(*p-'A')<6)) { if(count==0)break; acc<<=4; if((u8)(*p-'0')<10){tmp0=acc-0x30;acc=tmp0+*p;} else if((u8)(*p-'A')<6){tmp1=acc-0x37;acc=tmp1+*p;} else if((u8)(*p-'a')<6){tmp2=acc-0x57;acc=tmp2+*p;} p++;count--; }
+     field=(u8 *)(g_cload_card_slot*CLOAD_CARD_DIRECTORY_BYTES + (s32)entry + 0xC);
+     { s32 addr; addr=g_cload_card_slot*0x50+(s32)g_cload_entry_fields; *(s32 *)(addr+i*4)=acc; }
+     r=cload_parse_hex_suffix_byte(field,acc,count); g_cload_entry_suffix_values[i]=r; if(max<r)max=r;
+    } else { { s32 addr; addr=g_cload_card_slot*0x50+(s32)g_cload_entry_fields; *(s32 *)(addr+i*4)=-1; } g_cload_entry_suffix_values[i]=0; }
+   i++;
+ }
+ return max;
 }
 
 
