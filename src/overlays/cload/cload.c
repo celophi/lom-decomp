@@ -19,6 +19,31 @@ typedef struct
     /* 0xC */ s32 second_state;
 } CloadElementPoolHead;
 
+/**
+ * @brief Element-pool head viewed as the CD-load prompt element: the 0x0 state
+ *        word split into its state/phase/x/code bitfields, plus the 0x4
+ *        active/y sub-fields and the 0x8 draw callback.
+ */
+typedef struct
+{
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 state : 3;
+            u32 phase : 4;
+            u32 x : 9;
+            u32 code : 8;
+        } f;
+    } attr;
+    u32 active : 1;
+    u32 y : 8;
+    u32 rest : 23;
+    void *draw;
+    s32 unused;
+} CloadPromptElement;
+
 /** @brief Memory-card directory entry; layout matches Psy-Q struct DIRENTRY. */
 typedef struct
 {
@@ -639,25 +664,19 @@ void cload_update_load_sequence(s32 phase)
 /**
  * @brief Handle CLOAD menu navigation, confirm, and cancel input.
  * @return Input-handler status used by the caller.
- * @note WIP. Structurally and semantically correct (verified via probe:
- *       the packet tag/word4 register roles and the loop-preheader a1/a2
- *       roles are a coupled register-coloring pair - fixing one region's
- *       roles regresses the other by the same amount). Every attempt to
- *       force the target's exact roles, including a permuter candidate
- *       that scored higher, was verified to silently drop the `| 0x56`
- *       term from the packet unk4 store and rejected.
- * @see decomp.me (94.25%)
+ * @note The load-prompt element is set up through the CloadPromptElement
+ *       bitfield view (phase/x/code plus the 0x4 active/y sub-fields), and the
+ *       up/down navigation reads g_pad_input directly inside the count loop, so
+ *       the selected-row arithmetic materializes in the target's registers.
+ * @see decomp.me (100.00%)
  */
 s32 cload_handle_input(void)
 {
     s32 pending;
     s32 status;
-    s32 flag_a3;
-    s32 flag_a2;
     s32 count;
-    s32 last;
     s32 arg0;
-    CloadElement *p;
+    CloadPromptElement *p;
 
     if ((g_cload_element_pool.second_state & CLOAD_ELEMENT_STATE_MASK) == 0)
     {
@@ -730,23 +749,20 @@ s32 cload_handle_input(void)
         g_pad_input = 0x1000;
         count = 1;
     }
-    last = pending - 1;
-    flag_a3 = g_pad_input & 0x1000;
-    flag_a2 = g_pad_input & 0x4000;
     while (count != 0)
     {
-        if (flag_a3 != 0)
+        if (g_pad_input & 0x1000)
         {
             g_cload_selected_row -= 1;
             if (g_cload_selected_row < 0)
             {
-                g_cload_selected_row = last;
+                g_cload_selected_row = g_cload_entry_state - 1;
             }
         }
-        if (flag_a2 != 0)
+        if (g_pad_input & 0x4000)
         {
             g_cload_selected_row += 1;
-            if (g_cload_selected_row >= pending)
+            if (g_cload_selected_row >= g_cload_entry_state)
             {
                 g_cload_selected_row = 0;
             }
@@ -765,7 +781,7 @@ s32 cload_handle_input(void)
         s32 term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
         s32 term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
 
-        if (strncmp(D_800ECF7C, (char *)(term1 + term2), 0xC) != 0)
+        if (func_8001714C(D_800ECF7C, (char *)(term1 + term2), 0xC) != 0)
         {
             arg0 = 0x78;
         }
@@ -773,14 +789,14 @@ s32 cload_handle_input(void)
         {
             if ((D_80162C5F == D_8003EC9C) || (D_80162C5F == 0xFF))
             {
-                p = cload_alloc_element(D_80162C5F);
+                p = (CloadPromptElement *)cload_alloc_element(D_80162C5F);
                 p->draw = cload_draw_load_prompt;
-                p->state = (p->state & ~CLOAD_ELEMENT_PHASE_MASK) | 8;
-                p->state = (p->state & 0xFFFF007F) | 0x800;
-                *((u8 *)p + 2) = 0x5B;
-                p->size_flags = (p->size_flags | 1) & ~0x1FE;
-                p->size_flags = p->size_flags | 0x56;
-                p->state = (p->state & 0xFFFFFF) | 0x20000000;
+                p->attr.f.phase = 1;
+                p->attr.f.x = 0x10;
+                p->attr.f.code = 0x5B;
+                p->active = 1;
+                p->y = 0x2B;
+                p->attr.word = (p->attr.word & 0x00FFFFFF) | 0x20000000;
                 cload_enable_choice_toggle();
                 cload_restart_load_sequence();
                 arg0 = 0x7E;
@@ -859,15 +875,13 @@ void cload_update_elements(void)
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @note WIP. Menu string/glyph-row drawing callback (state-dispatched TILE +
- *       text renderer). Structurally correct; residue is an `ot` parameter
- *       register-letter offset that recurs through most of the function body
- *       (content matches, register name differs - counted as argdiff, not a
- *       real mismatch) plus two small leftover items: a `g_cload_entry_state` reload
- *       at the loop's zero-trip guard that the target avoids by reusing the
- *       switch dispatch value, and one duplicated `D_80145EA4` address
- *       computation right before the final row's string-glyph call.
- * @see decomp.me (93.53%)
+ * @note Menu string/glyph-row drawing callback (state-dispatched TILE + text
+ *       renderer). The row loop is a `do { } while (i < g_cload_entry_state)`
+ *       guarded by `if (state > 0)` with `row_y`/`i` hoisted to the default
+ *       block, the rank-marker glyph offsets are materialized through a `u16
+ *       misc_glyph` intermediate, and entry comparisons use func_8001714C - the
+ *       shapes the target's register assignment requires.
+ * @see decomp.me (100.00%)
  */
 s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -876,7 +890,7 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case 0xF8:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED0, 0x34), 1, -x_offset + 0x84, -y_offset, 2);
+        do { prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED0, 0x34), 1, -x_offset + 0x84, -y_offset, 2); } while (0);
         break;
     case 0xF9:
         prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED0, 0x34), 1, -x_offset + 0x84, -y_offset, 2);
@@ -894,6 +908,10 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EAE, 0x12), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     default:
+        {
+            s32 row_y;
+            s32 i;
+
         if (g_cload_entry_scan_active != 0)
         {
             s32 x;
@@ -906,23 +924,23 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0xB2), 1, x, 0x1C - y_offset, 2);
             break;
         }
+        i = 0;
         if (state > 0)
         {
-            s32 i;
             s32 off;
             s32 base_x;
             s32 *flag_ptr;
-            void *str_glyph;
-            void *misc_glyph;
+            u16 misc_glyph;
             char *entry;
             DVECTOR pos;
-            s32 row_y;
             u8 *base;
 
+            off = i;
             base_x = -x_offset;
-            entry = g_cload_entries;
             base = (u8 *)&D_80145E9C;
-            for (i = 0, off = 0; i < g_cload_entry_state; entry += CLOAD_DIRECTORY_ENTRY_BYTES, i++, off += 4)
+            entry = g_cload_entries;
+            off = i;
+            do
             {
                 row_y = ((i * CLOAD_ENTRY_ROW_HEIGHT) - y_offset) - g_cload_scroll_y;
                 if ((u32)(row_y + 0xD) < 0x56U)
@@ -932,44 +950,45 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     {
                         pos.vx = base_x + 0x86;
                         pos.vy = row_y;
-                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)g_cload_entry_suffix_values + off), 1, &pos, 0), ot, base + D_80145ECA, 1, base_x + 0x70, row_y, 0);
+                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)g_cload_entry_suffix_values + off), 1, &pos, 0), ot, (void *)((s32)D_80145ECA + (s32)base), 1, base_x + 0x70, row_y, 0);
                         if ((g_cload_rank_count - 1) == *flag_ptr)
                         {
-                            misc_glyph = CLOAD_GLYPH_OFF(base, 0x36);
-                            prim = func_800A88A0(prim, ot, misc_glyph, 1, base_x + 0xC2, row_y, 0);
+                            misc_glyph = *(u16 *)(base + 0x36);
+                            prim = func_800A88A0(prim, ot, (void *)((s32)misc_glyph + (s32)base), 1, base_x + 0xC2, row_y, 0);
                         }
                         else if (*flag_ptr < 2)
                         {
-                            misc_glyph = CLOAD_GLYPH_OFF(base, 0x38);
-                            prim = func_800A88A0(prim, ot, misc_glyph, 1, base_x + 0xC2, row_y, 0);
+                            misc_glyph = *(u16 *)(base + 0x38);
+                            prim = func_800A88A0(prim, ot, (void *)((s32)misc_glyph + (s32)base), 1, base_x + 0xC2, row_y, 0);
                         }
                         if (*cload_skip_hex_digits((void *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry + 0xC)) == 0x2B)
                         {
-                            prim = func_800A88A0(prim, ot, base + D_80145F4C, 1, 0xF8 - x_offset, row_y, 1);
+                            prim = func_800A88A0(prim, ot, (void *)((s32)D_80145F4C + (s32)base), 1, 0xF8 - x_offset, row_y, 1);
                         }
                     }
-                    if (strncmp(D_800ECF7C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    if (func_8001714C(D_800ECF7C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
-                        str_glyph = base + D_80145EA2;
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80145EA2 + (s32)base), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(D_800ECF8C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    else if (func_8001714C(D_800ECF8C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
-                        str_glyph = base + D_80145ED6;
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80145ED6 + (s32)base), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(D_800ECFC4, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
+                    else if (func_8001714C(D_800ECFC4, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
                     {
-                        str_glyph = base + D_80145EB0;
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80145EB0 + (s32)base), 1, base_x, row_y, 0);
                     }
                     else
                     {
-                        str_glyph = base + D_80145EA4;
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80145EA4 + (s32)base), 1, base_x, row_y, 0);
                     }
-                    prim = func_800A88A0(prim, ot, str_glyph, 1, base_x, row_y, 0);
                 }
-            }
+                entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+                off += 4;
+                i++;
+            } while (i < g_cload_entry_state);
         }
-        {
-            s32 y0 = ((g_cload_selected_row * CLOAD_ENTRY_ROW_HEIGHT) - y_offset) - g_cload_scroll_y;
+            row_y = ((g_cload_selected_row * CLOAD_ENTRY_ROW_HEIGHT) - y_offset) - g_cload_scroll_y;
 
             if (g_cload_entry_scan_active == 0)
             {
@@ -978,7 +997,7 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                 *(u32 *)&tile->r0 = 0xF080F0;
                 *((u8 *)tile + 3) = 3;
                 setcode(tile, 0x62);
-                tile->y0 = (s16)(y0 - 1);
+                tile->y0 = (s16)(row_y - 1);
                 tile->w = 0x108;
                 tile->x0 = 0;
                 tile->h = 0xE;
@@ -1918,31 +1937,6 @@ CloadGpuPacket *cload_emit_scroll_arrow(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
 }
 
 /**
- * @brief Element-pool head viewed as the CD-load prompt element: the 0x0 state
- *        word split into its state/phase/x/code bitfields, plus the 0x4
- *        active/y sub-fields and the 0x8 draw callback.
- */
-typedef struct
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 state : 3;
-            u32 phase : 4;
-            u32 x : 9;
-            u32 code : 8;
-        } f;
-    } attr;
-    u32 active : 1;
-    u32 y : 8;
-    u32 rest : 23;
-    void *draw;
-    s32 unused;
-} CloadPromptElement;
-
-/**
  * @brief Draw the CD-load prompt glyph then set up the driver/GPU-packet state,
  *        branching on the CD status (cload_poll_and_rewind_primary_handles) and
  *        the g_pad_input flags.
@@ -2592,7 +2586,7 @@ s32 cload_compute_save_checksum(u8 *data)
  * @param max_chars Maximum number of characters to emit.
  * @note Each nibble is converted by cload_hex_nibble_to_ascii; a leading run of zero nibbles
  *       is skipped until the first non-zero digit is seen.
- * @see decomp.me (98.96%)
+ * @see decomp.me (100.00%)
  */
 void cload_format_hex(s8 *out, s32 value, s32 max_chars)
 {
@@ -2614,25 +2608,34 @@ void cload_format_hex(s8 *out, s32 value, s32 max_chars)
         end_index = -1;
 loop_2:
         nibble = (remaining_value >> (shift_index * 4)) & 0xF;
-        if ((nibble != 0) || (started != 0))
+        do
         {
-            cload_hex_nibble_to_ascii(cursor, nibble);
-            cursor += 1;
-            remaining_chars -= 1;
-            started = 1;
-            remaining_value -= nibble << (shift_index * 4);
-        }
-        shift_index -= 1;
+            if ((nibble != 0) || (started != 0))
+            {
+                cload_hex_nibble_to_ascii(cursor, nibble);
+                cursor += 1;
+                remaining_chars -= 1;
+                started = 1;
+                remaining_value -= nibble << (shift_index * 4);
+            }
+        } while (0);
+        do
+        {
+            shift_index -= 1;
+        } while (0);
         if (shift_index != end_index)
         {
             if (shift_index == 0)
             {
                 started = 1;
             }
-            if (remaining_chars != 0)
+            do
             {
-                goto loop_2;
-            }
+                if (remaining_chars != 0)
+                {
+                    goto loop_2;
+                }
+            } while (0);
         }
     }
     *cursor = 0;
@@ -3086,11 +3089,10 @@ s32 cload_has_known_entry_type(void)
  * @note Records are walked with a running byte offset that starts at the page
  *       base (g_cload_card_slot * 0x320) and steps by 0x28; each directory-entry size is divided by
  *       8192 (signed, round toward zero).
- * @note Residual vs target is a 4-row loop-body a0/a1 permutation of the
- *       counter and accumulator (ALLOC-ORDER): the counter's extra loop-compare
- *       ref out-prioritizes the accumulator by a hair and no source rewrite
- *       flips it (permuter territory).
- * @see decomp.me (99.03%)
+ * @note The `i`/`sum` init order and the do/while(0) wrapper around the
+ *       accumulate step reproduce the target's loop-body counter/accumulator
+ *       register assignment.
+ * @see decomp.me (100.00%)
  */
 s32 cload_entry_blocks_reach_limit(void)
 {
@@ -3098,14 +3100,16 @@ s32 cload_entry_blocks_reach_limit(void)
     s32 sum;
     s32 offset;
 
-    sum = 0;
     i = 0;
+    sum = 0;
     if (g_cload_entry_state > 0)
     {
         offset = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
         do
         {
-            sum += ((CloadDirEntry *)((u8 *)g_cload_entries + offset))->size / 8192;
+            do {
+                sum += ((CloadDirEntry *)((u8 *)g_cload_entries + offset))->size / 8192;
+            } while (0);
             i++;
             offset += CLOAD_DIRECTORY_ENTRY_BYTES;
         } while (i < g_cload_entry_state);
@@ -4421,44 +4425,31 @@ void cload_reset_glyph_cache(void)
  *        pairs, writing two bytes per source character and a NUL terminator.
  * @param out Destination buffer for the expanded 2-byte glyph codes.
  * @param in Source string, terminated by a 0 byte.
- * @note WIP 73.58% (45/93 exact, correct insn count, no structural runs).
- *       Lead bytes 0x19..0x1F select a [16][33] block of g_cload_double_byte_char_table indexed by
- *       the next byte's nibbles; 0x21 and above index g_cload_single_byte_char_table by
- *       (c - 0x20); everything else emits g_cload_single_byte_char_table's first entry (the blank
- *       glyph) and consumes one byte. Both tables are arrays of 33-byte rows
- *       (16 two-byte glyphs plus a 0x0A row terminator).
- * @note Measured-required shapes, each re-verified by reverting it:
- *       (1) `for (;;)` with `goto done` past the loop, NOT `while (*in != 0)`.
- *       A `while` puts a conditional jump to the loop's end_label at the top,
- *       which gcc 2.7.2's expand_end_loop rotates to the bottom (guard + copied
- *       test, +4 insns); jumping to a label BEYOND the loop is not an exit jump
- *       to end_label, so no rotation happens, and the loop notes still let LICM
- *       hoist the four table base pointers. A bare `goto` loop with no
- *       for/while at all defeats LICM instead and loses the hoists.
- *       (2) arm 2's index must read `(index / 16) * 33` BEFORE `(index & 0xF)
- *       * 2` (+17 exact; the other order was the single biggest gap).
- *       (3) arm 1's index must read `in[0] * 528 + (in[1] >> 4) * 33 +
- *       (in[1] & 0xF) * 2` in that order (every other permutation is -3 to -10).
- *       (4) `u32 c` holding the raw byte with `(u8)c` at the two comparisons -
- *       the `lbu` + `andi 0xff` pair the target shows, idiom [EXPAND-37].
- * @note Residue (10 target-only / 10 yours-only / 35 argdiff rows), two causes:
- *       (a) the target re-loads `in[0]` inside each of arm 1's two index
- *       expressions while this compile reuses the loop-head byte via CSE; no
- *       source spelling found that blocks that fold (using `c` there instead is
- *       -7, goto-separated arms are -7, pointer-vs-array and every term
- *       reordering are inert or worse). That also drags the `in` parameter into
- *       an extra `addu a3, a1, zero` entry copy and rotates several registers.
- *       (b) two rows show `%hi(g_cload_double_byte_char_table-0x3390)` against the target's
- *       `%hi(cload_load_icon_resources+0x2c)`; both resolve to 0x80143350, so those are a
- *       splat symbol-display artifact, not a real difference.
- *       Permuter v2 ran ~80k iterations over two seeds; it found (2) and
- *       nothing beyond it.
- * @see decomp.me (73.58%)
+ *       Lead bytes 0x19..0x1F select a [16][33] block of the double-byte glyph
+ *       table indexed by the next byte's nibbles; 0x21 and above index
+ *       g_cload_single_byte_char_table by (c - 0x20); everything else emits
+ *       g_cload_single_byte_char_table's first entry (the blank glyph) and
+ *       consumes one byte. Both tables are arrays of 33-byte rows (16 two-byte
+ *       glyphs plus a 0x0A row terminator).
+ * @note Measured-required shapes for the byte-exact match:
+ *       (1) `for (;;)` with `goto done` past the loop, NOT `while (*in != 0)`;
+ *       jumping to a label beyond the loop avoids gcc 2.7.2's expand_end_loop
+ *       test rotation while keeping the loop notes that let LICM hoist the
+ *       table base pointers.
+ *       (2) arm 1's double-byte table base is spelled
+ *       `(u8 *)cload_load_icon_resources + 0x2C` / `+ 0x2D` - the target's
+ *       relocation is against that text symbol (both resolve to 0x80143350),
+ *       and using g_cload_double_byte_char_table there mismatched the symbol.
+ *       (3) the per-arm `lead = *(volatile u8 *)in` reads force the target's
+ *       re-load of in[0] inside each index expression instead of a CSE reuse.
+ *       (4) arm 2's index reads `(index / 16) * 33` before `(index & 0xF) * 2`.
+ * @see decomp.me (100.00%)
  */
 void cload_expand_text_glyph_codes(u8 *out, u8 *in)
 {
     u32 c;
     s32 index;
+    s16 lead;
 
     for (;;)
     {
@@ -4469,22 +4460,49 @@ void cload_expand_text_glyph_codes(u8 *out, u8 *in)
         }
         if ((u32)(c - 0x19) < 7)
         {
-            *out++ = g_cload_double_byte_char_table[in[0] * 528 + (in[1] >> 4) * 33 + (in[1] & 0xF) * 2];
-            *out++ = g_cload_double_byte_char_table[in[0] * 528 + (in[1] >> 4) * 33 + (in[1] & 0xF) * 2 + 1];
+            u32 b1;
+            s32 off;
+            u8 *pa;
+            u8 *pb;
+
+            b1 = in[1];
+            off = b1 >> 4;
+            b1 &= 0xF;
+            pa = ((u8 *)cload_load_icon_resources + 0x2C) + b1 * 2;
+            pa += off * 33;
+            lead = *(volatile u8 *)in;
+            pa += lead * 528;
+            *out = *pa;
+            out++;
+            b1 = in[1];
+            off = b1 >> 4;
+            b1 &= 0xF;
+            pb = ((u8 *)cload_load_icon_resources + 0x2D) + b1 * 2;
+            pb += off * 33;
+            lead = *(volatile u8 *)in;
+            pb += lead * 528;
+            *out = *pb;
+            out++;
             in += 2;
         }
         else if ((u8)c >= 0x21)
         {
-            index = *in - 0x20;
-            *out++ = g_cload_single_byte_char_table[(index / 16) * 33 + (index & 0xF) * 2];
-            index = *in - 0x20;
-            *out++ = g_cload_single_byte_char_table[(index / 16) * 33 + (index & 0xF) * 2 + 1];
+            lead = *(volatile u8 *)in;
+            index = lead - 0x20;
+            *out = g_cload_single_byte_char_table[(index / 16) * 33 + (index & 0xF) * 2];
+            out++;
+            lead = *(volatile u8 *)in;
+            index = lead - 0x20;
+            *out = g_cload_single_byte_char_table[(index / 16) * 33 + (index & 0xF) * 2 + 1];
+            out++;
             in += 1;
         }
         else
         {
-            *out++ = g_cload_single_byte_char_table[0];
-            *out++ = g_cload_single_byte_char_table[1];
+            *out = g_cload_single_byte_char_table[0];
+            out++;
+            *out = g_cload_single_byte_char_table[1];
+            out++;
             in += 1;
         }
     }
