@@ -28,3 +28,18 @@ s32 func_800ADEEC(void)
     }
     return 0;
 }
+
+void func_800ADF34(void)
+{
+    RecADEEC *p;
+    s32 i;
+    u32 x;
+
+    p = D_80122828;
+    for (i = 0; i < 8; i++, p++) {
+        x = p->flags;
+        if (x & 7) {
+            p->flags = (((x & ~7) | 3) & ~0x78) | 0x40;
+        }
+    }
+}
