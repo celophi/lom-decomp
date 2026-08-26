@@ -88,7 +88,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_h.c \
 	src/overlays/field/unk2_h_b.c \
 	src/overlays/field/unk2_i.c \
-	src/overlays/field/unk2_i_b.c \
 	src/overlays/field/unk2_b.c \
 	src/overlays/field/field30.c \
 	src/overlays/field/field31.c \
@@ -210,7 +209,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field233.c \
 	src/overlays/field/field234.c \
 	src/overlays/field/unk2_split001.c \
-	src/overlays/field/unk2_i_b_split001.c \
 	src/overlays/field/unk2_i_b_split002.c \
 	src/overlays/field/unk2_i_b_split003.c \
 	src/overlays/field/unk2_i_b_split004.c \
@@ -321,7 +319,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split090.c \
 	src/overlays/field/unk2_b_split092.c \
 	src/overlays/field/unk2_b_split094.c \
-	src/overlays/field/unk2_b_split095.c \
 	src/overlays/field/unk2_b_split096.c \
 	src/overlays/field/unk2_b_split097.c \
 	src/overlays/field/unk2_b_split098.c \
@@ -330,7 +327,14 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split100.c \
 	src/overlays/field/unk2_b_split101.c \
 	src/overlays/field/unk2_b_split102.c \
-	src/overlays/field/unk2_b_split103.c
+	src/overlays/field/unk2_b_split103.c \
+	src/overlays/field/field241.c \
+	src/overlays/field/unk2_i_b_split020.c \
+	src/overlays/field/field242.c \
+	src/overlays/field/unk2_i_b_split021.c \
+	src/overlays/field/field244.c \
+	src/overlays/field/unk2_b_split104.c \
+	src/overlays/field/unk2_b_split105.c
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field3.c
 overlay_field_gcc_280_g0_srcs := \
@@ -423,7 +427,9 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field236.c \
 	src/overlays/field/field237.c \
 	src/overlays/field/field238.c \
-	src/overlays/field/field239.c
+	src/overlays/field/field239.c \
+	src/overlays/field/field240.c \
+	src/overlays/field/field243.c
 overlay_field_gcc_280_g4_srcs := src/overlays/field/func_80067bbc.c
 overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_scene_load.c \
