@@ -2820,3 +2820,96 @@ u32 func_8014459C(u8 *s, s32 len)
     }
     return result;
 }
+
+/**
+ * @brief Skip to the first non-hex-digit byte, then parse the following two
+ *        hex digits into an unsigned value.
+ * @param text Pointer to the scan start.
+ * @param unused1 Unused (present in the original signature).
+ * @param unused2 Unused (present in the original signature).
+ * @return The 2-digit hex value parsed after the skipped run.
+ * @note The `text--; if (text) { text++; text--; }` sequences are opaque
+ *       no-ops that block cross-jump tail-merging and are required to match;
+ *       do not remove them. See [[reference_crossjump_optical_noop_fix]].
+ * @see decomp.me (100.00%)
+ */
+s32 func_80144648(u8 *text, s32 unused1, s32 unused2)
+{
+    u32 c;
+    s32 count;
+    u32 result;
+    u32 tmp0;
+    u32 tmp1;
+    u32 tmp2;
+
+    while (1)
+    {
+        c = *text;
+        text++;
+        if ((u32)(c - '0') < 10)
+        {
+            continue;
+        }
+        text--;
+        if (text)
+        {
+            text++;
+            text--;
+        }
+
+        text++;
+        if ((u32)(c - 'a') < 6)
+        {
+            continue;
+        }
+        text--;
+        if (text)
+        {
+            text++;
+            text--;
+        }
+
+        text++;
+        if ((u32)(c - 'A') < 6)
+        {
+            continue;
+        }
+        text--;
+        if (text)
+        {
+            text++;
+            text--;
+        }
+        break;
+    }
+
+    text++;
+    count = 2;
+    result = 0;
+    while (((u8)(*text - '0') < 10) || ((u8)(*text - 'a') < 6) || ((u8)(*text - 'A') < 6))
+    {
+        if (count == 0)
+        {
+            break;
+        }
+        result <<= 4;
+        if ((u8)(*text - '0') < 10)
+        {
+            tmp0 = result - 0x30;
+            result = tmp0 + *text;
+        }
+        else if ((u8)(*text - 'A') < 6)
+        {
+            tmp1 = result - 0x37;
+            result = tmp1 + *text;
+        }
+        else if ((u8)(*text - 'a') < 6)
+        {
+            tmp2 = result - 0x57;
+            result = tmp2 + *text;
+        }
+        text++;
+        count--;
+    }
+    return result;
+}
