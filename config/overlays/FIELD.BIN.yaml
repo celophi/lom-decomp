@@ -92,13 +92,19 @@ segments:
       - [0x33F51, c, unk2_e]                    # gcc272_cdk, func_80083BC0 .. func_80084420
       - [0x347B5, c, field22]                   # gcc272_cdk, func_80084424
       - [0x348B5, c, field23]                   # gcc272_cdk, func_80084524
-      - [0x349C1, c, unk2_f]                    # gcc272_cdk, func_80084630 .. func_80085E80
+      - [0x349C1, c, unk2_f]                    # gcc272_cdk, func_80084630 .. func_80084700
+      - [0x35099, c, field27]                   # gcc272_cdk, func_80084D08 (WIP 94.46%)
+      - [0x360C1, c, unk2_f_b]                  # gcc272_cdk, func_80085D30 .. func_80085E80
       - [0x36215, c, field24]                   # gcc272_cdk, func_80085E84
       - [0x3633D, c, unk2_g]                    # gcc272_cdk, func_80085FAC .. func_80086180
       - [0x36515, c, field25]                   # gcc272_cdk, func_80086184
-      - [0x366A1, c, unk2_h]                    # gcc272_cdk, field_load_vram_resource .. func_80086F1C
+      - [0x366A1, c, unk2_h]                    # gcc272_cdk, field_load_vram_resource
+      - [0x36705, c, field28]                   # gcc272_cdk, func_80086374 (100%)
+      - [0x36825, c, unk2_h_b]                  # gcc272_cdk, func_80086494 .. func_80086F1C
       - [0x372B1, c, field26]                   # gcc272_cdk, func_80086F20
-      - [0x372D9, c, unk2_i]                    # gcc272_cdk, func_80086F48 .. func_800A3688
+      - [0x372D9, c, unk2_i]                    # gcc272_cdk, func_80086F48 .. func_80086FB8
+      - [0x37531, c, field29]                   # gcc272_cdk, func_800871A0 (WIP 90.73%)
+      - [0x378F5, c, unk2_i_b]                  # gcc272_cdk, func_80087564 .. func_800A3688
       - [0x53A1D, c, field_audio]               # gcc272_cdk, covers func_800A368C .. func_800A380C
       - [0x53BE9, c, unk2_b]                    # gcc272_cdk
       - [0x7C2D5, data, data]

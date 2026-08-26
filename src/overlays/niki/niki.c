@@ -2559,3 +2559,73 @@ niki_fe:
 
     return prim;
 }
+
+/**
+ * @brief Advance past a run of ASCII hexadecimal-digit characters.
+ * @param arg0 Pointer to the start of the scan.
+ * @return Pointer to the first byte that is not a hex digit
+ *         (@c '0'-'9', @c 'a'-'f' or @c 'A'-'F').
+ * @note The three unsigned range checks reproduce the original codegen; the
+ *       upper-hex test only covers @c 'A'-'F' (0x41..0x46), not the full
+ *       alphabet.
+ * @see decomp.me (100.00%)
+ */
+u8 *func_801442C4(void *arg0)
+{
+    u8 *p = arg0;
+
+    while ((u32)(*p - 0x30) < 10 || (u32)(*p - 0x61) < 6 || (u32)(*p - 0x41) < 6)
+    {
+        p++;
+    }
+
+    return p;
+}
+
+/**
+ * @brief Validate a resource blob by checksum and magic word.
+ * @param base Base of the resource blob.
+ * @return 1 when the stored checksum at @c base+0x33E0 matches
+ *         @c func_80144364(base) and the magic word at @c base+0x33E4 equals
+ *         0x414E41 ("ANA"); 0 otherwise.
+ * @see decomp.me (100.00%)
+ */
+s32 func_80144310(u8 *base)
+{
+    if (*(s32 *)(base + 0x33E0) == func_80144364(base))
+    {
+        if (*(s32 *)(base + 0x33E4) == 0x414E41)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief Compute the resource-blob checksum used by func_80144310.
+ * @param data Base of the resource blob.
+ * @return Twice the unsigned-byte sum over the first 0x33E0 bytes, biased by
+ *         the constant 0x0414E410.
+ * @note Defined after its callers so no prototype is visible to them: this
+ *       lets both func_80144310's one-argument call and the two-argument
+ *       caller elsewhere in this file compile under K&R implicit declaration.
+ * @see decomp.me (100.00%)
+ */
+s32 func_80144364(u8 *data)
+{
+    s32 sum;
+    u32 i;
+    u8 *p;
+
+    p = data;
+    sum = 0;
+    i = 0;
+    do
+    {
+        i += 1;
+        sum += *p;
+        p += 1;
+    } while (i < 0x33E0U);
+    return (sum * 2) + 0x0414E410;
+}
