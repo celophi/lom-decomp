@@ -2,7 +2,9 @@
 
 typedef struct
 {
-    u8 pad0[0x228];
+    u8 pad0[0x24];
+    u8 unk24;
+    u8 pad25[0x228 - 0x25];
     u8 unk228;
     u8 pad229[0x23A - 0x229];
     u8 unk23A;
@@ -30,4 +32,21 @@ s32 func_80083AB4(s32 arg0)
         i++;
     } while (i < 0x30);
     return 0;
+}
+
+s32 func_80083AFC(void)
+{
+    s32 count;
+    s32 i;
+
+    count = 0;
+    for (i = 0; i < 0x30; i++)
+    {
+        if (g_field_actor_slots[i].unk24 == 0)
+        {
+            count++;
+        }
+    }
+
+    return count;
 }
