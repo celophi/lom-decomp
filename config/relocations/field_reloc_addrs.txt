@@ -3,6 +3,18 @@ rom:0x269D reloc:MIPS_NONE symbol:g_field_scene
 rom:0x26A1 reloc:MIPS_NONE symbol:g_field_scene
 rom:0x26AD reloc:MIPS_NONE symbol:g_field_vram_byte_count
 
+// field_build_render_records: the original code addresses the 0x80180000 work
+// area through one literal page base (a single lui shared across fields at
+// +0x10/+0x14/+0x18/+0x1C), which gcc 2.8.0 can only emit from a raw address.
+// Splat symbolizes each field access individually; strip those false-positive
+// relocations so the target shows the literal base+offset the retail bytes hold.
+rom:0x29D1 reloc:MIPS_NONE symbol:g_field_scene
+rom:0x2A09 reloc:MIPS_NONE symbol:g_field_scene
+rom:0x2A35 reloc:MIPS_NONE symbol:g_field_node_angle_table
+rom:0x3AC1 reloc:MIPS_NONE symbol:g_field_dyn_count
+rom:0x3AC9 reloc:MIPS_NONE symbol:g_field_dyn_count
+rom:0x3ACD reloc:MIPS_NONE symbol:D_80180018
+
 rom:0x63D5 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x650D reloc:MIPS_NONE symbol:D_1F800008
 rom:0x6745 reloc:MIPS_NONE symbol:D_1F800008

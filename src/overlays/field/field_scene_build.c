@@ -434,26 +434,20 @@ extern u16 D_80180008;
  *             meaning not yet established.
  * @return Nothing.
  *
- * @note NOT YET MATCHED - 99.96% (1164/1174 exact rows, gcc280_g4_noexpanddiv).
- *       Instruction count and frame both match (1174 insns, -0xb0), all sp slots
- *       match, and no instruction is misplaced - the residue is 10 operand-only
- *       rows. SIX of those are a splat naming artifact, not a defect: the target
- *       shows %hi/%lo(g_field_scene / g_field_node_angle_table / g_field_dyn_count
- *       / D_80180018) where this emits `lui 0x8018` plus a raw offset, and the
- *       encodings are identical (target byte column: 1880033C = `lui $v1, 0x8018`,
- *       1400798C = `lw $t9, 0x14($v1)`). The remaining FOUR are real: a 3-store
- *       rotation at 0x58-0x60 (target does sp+0x3C, sp+0x24, sp+0x34; this does
- *       sp+0x34 first) and one register pick at 0xEE4 (target `sw s7`, this
- *       `sw v0`, both holding the same value).
+ * @note MATCHED - 100% (1174/1174 exact rows, gcc280_g4_noexpanddiv), verified
+ *       in-tree 2026-08-25. Six former operand-only rows were a splat
+ *       symbolization artifact: the retail bytes hold one literal 0x8018 page
+ *       base shared across loads at +0x10/+0x14/+0x18/+0x1C, which splat
+ *       reconstructed as %hi/%lo(g_field_scene / g_field_node_angle_table /
+ *       g_field_dyn_count / D_80180018). Those false-positive relocations are
+ *       now stripped per-address in config/relocations/field_reloc_addrs.txt
+ *       (rom 0x29D1/0x2A09/0x2A35/0x3AC1/0x3AC9/0x3ACD).
  * @note The `global_page = (u8*)0x80180000` base is required to match and must
  *       NOT be rewritten to reference g_field_scene / g_field_node_angle_table
  *       directly: the literal base is what makes gcc share one %hi across the
  *       loads, exactly as the target does. Measured: each named-symbol form costs
  *       +1 insn per symbol pair (1174 -> 1175 -> 1176), because gcc 2.8.0 will
- *       not CSE %hi across two different symbols. Closing those six rows needs a
- *       field-wide refactor onto one struct declared at 0x80180000; `ignore:true`
- *       is not an option here because g_field_scene is referenced by name from 41
- *       sites across five field asm files.
+ *       not CSE %hi across two different symbols.
  * @note The remaining `do { ... } while (0)` wrappers are REQUIRED to match - do
  *       not delete them. They supply gcc's loop notes: replacing one with a plain
  *       block, `if (1)`, `switch (0)` or a label costs 62 exact rows, while
@@ -461,14 +455,15 @@ extern u16 D_80180008;
  *       `var_s7++` site needs at least 6 levels). 37 other wrappers were pure
  *       noise and have been removed; these 17 stand in for real loop structure in
  *       the original source that has not been recovered yet.
- * @note THIS FUNCTION MAY NOT BE FUNCTIONALLY EQUIVALENT. BE CAUTIOUS TO MAKE
- *       ASSUMPTIONS. It still carries matching scaffolding rather than a
- *       recovered source shape: the `scratch` union aliases sp10[3] with two
- *       volatile slots to pin stack offsets, several member accesses are written
- *       as raw `*(T*)((u8*)p + 0xNN)` casts, and the loop-note wrappers above are
- *       stand-ins. All are to be replaced as the real structure is identified.
+ * @note The body is byte-exact but still carries matching scaffolding rather
+ *       than a recovered source shape: the `scratch` union aliases sp10[3] with
+ *       two volatile slots to pin stack offsets, several member accesses are
+ *       written as raw `*(T*)((u8*)p + 0xNN)` casts, and the loop-note wrappers
+ *       above are stand-ins. All are to be replaced as the real structure is
+ *       identified - with asm re-verification on every change.
  * @see decomp.me (95.60%) https://decomp.me/scratch/i4GmA - earlier scratch; the
- *      99.96% body below came from a local permuter run, not from that link.
+ *      100% body below came from local permuter runs plus the Wave 24/25
+ *      HOMING + BARRIER handoff, not from that link.
  * @see working/field_build_render_records/STATUS.md - measurements, the per-site
  *      wrapper costs, and the list of ruled-out source shapes.
  */
@@ -633,7 +628,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   var_t4 = 0;
   var_t8 = 0;
   global_page = (u8 *) 0x80180000;
-  do { sp80 = 0; } while (0);
+  sp80 = 0;
   sp34 = *((Records_Unk **) (global_page + 0x14));
   sp3C = 0;
   sp24 = 0;
@@ -1118,7 +1113,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                       temp_v0_7 = var_fp[1];
                       var_s5 = 1;
                       var_t3 = temp_v0_7 & 0xF;
-                      sp80 = (temp_v0_7 >> 4) & new_var22;
+                      do { sp80 = (temp_v0_7 >> 4) & new_var22; } while (0);
                     }
                     else
                       if ((var_s5 == 1) && (((temp_v1_9 = var_fp[1], var_t3 != (temp_v1_9 & 0xF))) || (sp80 != ((temp_v1_9 >> 4) & new_var22))))
@@ -1289,7 +1284,6 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               }
               goto block_175;
               quad_test:
-              var_s5 = 0xC;
 
               if (((s32) temp_v1_12) >= 6)
               {
@@ -1380,6 +1374,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               carriage_quad_cursor = (s32) sp24;
               var_s7_2 = (Records_Unk *) carriage_quad_cursor;
               var_s7 = (Records_Unk **) var_s7_2;
+              var_s5 = 0xC;
               var_s2->unk10 = var_s7_2;
               if (temp_v1_14 != 0)
               {

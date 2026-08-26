@@ -1,3 +1,62 @@
 // Field dialogue/text renderer exports used by this overlay.
 field_text_reset_windows             = 0x800643E0;
 field_text_reset_scratch             = 0x8006441C;
+
+// Shared data named for this overlay's use.
+g_golem_composite_icon_rows          = 0x800F1CD0;
+
+// Golem logic-grid editor functions.
+golem_run                            = 0x80140024;
+golem_initialize_state               = 0x80140280;
+golem_upload_ui_image                = 0x801403F8;
+golem_upload_image_archive           = 0x80140438;
+golem_update_frame                   = 0x801404F0;
+golem_handle_input                   = 0x801405A0;
+golem_reset_block_position           = 0x80140CBC;
+golem_draw_grid_markers              = 0x80140DEC;
+golem_emit_grid_marker               = 0x80140F68;
+golem_reset_cursor_motion            = 0x80140FF8;
+golem_finish_grid_marker_run         = 0x80141020;
+golem_draw_cursor                    = 0x80141074;
+golem_render                         = 0x80141228;
+golem_draw_block_list                = 0x80141478;
+golem_draw_logic_grid                = 0x801416C8;
+golem_draw_panel                     = 0x80141AD0;
+golem_draw_composite_icon            = 0x80141EB4;
+golem_emit_glyph                     = 0x801420CC;
+golem_emit_panel_outline             = 0x801422BC;
+golem_set_fade_target                = 0x80142418;
+golem_render_fade                    = 0x80142434;
+golem_append_encoded_string          = 0x80142728;
+golem_encoded_string_length          = 0x801427AC;
+golem_copy_encoded_string            = 0x801427F8;
+
+// Golem resources and editor state.
+g_golem_ui_image                     = 0x8014287C;
+g_golem_text_archive_offset          = 0x8014AAA4;
+g_golem_glyph_metrics                = 0x8014B2D0;
+g_golem_panel_records                = 0x8014B560;
+g_golem_render_buffers               = 0x8014C168;
+g_golem_exit_requested               = 0x8014C16C;
+g_golem_work_buffer                  = 0x8014C170;
+g_golem_fade_target                  = 0x8014C178;
+g_golem_scroll_steps                 = 0x8014C180;
+g_golem_logic_block_count            = 0x8014C184;
+g_golem_grid_size_class              = 0x8014C188;
+g_golem_scroll_y                     = 0x8014C18C;
+g_golem_block_status                 = 0x8014C198;
+g_golem_is_placing_block             = 0x8014C238;
+g_golem_scroll_target_y              = 0x8014C23C;
+g_golem_fade_current                 = 0x8014C240;
+g_golem_block_x                      = 0x8014C248;
+g_golem_block_y                      = 0x8014C24C;
+g_golem_cursor_steps                 = 0x8014C254;
+g_golem_cursor_x                     = 0x8014C258;
+g_golem_cursor_y                     = 0x8014C25C;
+g_golem_active_logic_type            = 0x8014C260;
+g_golem_cursor_target_x              = 0x8014C264;
+g_golem_cursor_target_y              = 0x8014C268;
+g_golem_saved_logic_type_slot        = 0x8014C270;
+g_golem_block_rotation               = 0x8014C27C;
+g_golem_selected_block               = 0x8014C284;
+g_golem_restore_slot_on_cancel       = 0x8014C288;
