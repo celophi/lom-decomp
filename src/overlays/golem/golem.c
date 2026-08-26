@@ -717,40 +717,45 @@ void golem_reset_block_position(void)
 
 /**
  * @brief Emit the logic-grid divider markers and their texture-page packet.
- * @param initial_packet Initial packet cursor, reused as the row counter.
+ * @param packet_cursor Packet cursor, threaded through the marker emitters.
  * @param ordering_table Ordering-table tag for the marker packets.
  * @return Packet cursor after the marker run.
- * @note The remaining mismatch is register allocation; stack layout and control
- *       flow match the target.
- * @see decomp.me (83.81%)
+ * @note WIP - 96.66%. Body kept close to m2c output (do{}while(0) wrappers and
+ *       the recomputed marker_ptr pointer arithmetic supply the match); residue
+ *       is register allocation. Stack layout and control flow match the target.
+ * @see decomp.me (96.66%)
  * @see working/func_80140DEC/
  */
-s32 golem_draw_grid_markers(s32 initial_packet, s32 ordering_table)
+s32 golem_draw_grid_markers(s32 packet_cursor, s32 ordering_table)
 {
     s32 markers[60];
     s32 marker_index;
+    s32 row;
     s32 column;
     s32 x;
     s32 y;
     s32 marker;
+    s32 marker2;
     s32 glyph;
-    s32 packet_cursor;
-    s32* marker_base;
+    s32 *marker_base;
+    s32 *marker_ptr;
     s32 row_y;
 
     func_800CBEC4(markers);
 
-    packet_cursor = initial_packet;
     marker_index = 0;
+    row = marker_index;
     marker_base = markers;
     y = 4;
-    for (initial_packet = 0; initial_packet < 6; initial_packet++)
+    for (; row < 6; row++)
     {
+        column = 0;
         row_y = y;
+        marker_ptr = (s32 *)((marker_index << 2) + (s32)marker_base);
         x = 0xC;
-        for (column = 0; column < 5; column++)
+        for (; column < 5; )
         {
-            marker = marker_base[marker_index];
+            marker = *marker_ptr;
             if (marker != 0)
             {
                 if (marker == 0x50)
@@ -761,25 +766,32 @@ s32 golem_draw_grid_markers(s32 initial_packet, s32 ordering_table)
                 {
                     glyph = 3;
                 }
-                packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, x, row_y, glyph);
+                do { packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, x, row_y, glyph); } while (0);
             }
             x += 0x10;
+            do { column++; } while (0);
+            marker_ptr++;
             marker_index++;
         }
-        y += 0x10;
+        do { y += 0x10; } while (0);
     }
 
-    for (initial_packet = 0; initial_packet < 5; initial_packet++)
+    for (row = 0; row < 5; row++)
     {
+        column = 0;
+        y = row << 4;
+        marker_ptr = (s32 *)((marker_index << 2) + (s32)markers);
         x = 4;
-        for (column = 0; column < 6; column++)
+        for (; column < 6; )
         {
-            marker = markers[marker_index];
-            if (marker != 0)
+            marker2 = *marker_ptr;
+            if (marker2 != 0)
             {
-                packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, x, (initial_packet << 4) + 0xC, marker != 0x4E);
+                do { packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, x, y + 0xC, marker2 != 0x4E); } while (0);
             }
             x += 0x10;
+            do { column++; } while (0);
+            marker_ptr++;
             marker_index++;
         }
     }
@@ -894,10 +906,7 @@ s32 golem_draw_cursor(s32 packet_cursor, s32 render_context)
  *        and detail text into the render context's packet buffer.
  * @param render_context Render context with the packet cursor and ordering table.
  * @return None.
- * @note The remaining mismatch is a coupled saved-register rotation; stack
- *       layout, instruction count, and control flow match the target.
- * @see decomp.me (94.99%)
- * @see working/func_80141228/STATUS.md
+ * @see decomp.me (100.00%)
  */
 void golem_render(s32 render_context)
 {
@@ -905,7 +914,8 @@ void golem_render(s32 render_context)
     u8 name_buf[0x100];
     u8 number_buf[0x100];
     GolemPanelRecord* panel_record;
-    u8* archive;
+    s32 archive;
+    s32 archive_base;
     u8* offsets;
     u8* text_base;
     s32 packet_cursor;
@@ -928,28 +938,27 @@ void golem_render(s32 render_context)
     packet_cursor = golem_draw_block_list(packet_cursor, render_context);
     packet_cursor = golem_draw_logic_grid(packet_cursor, render_context);
     packet_cursor = golem_draw_cursor(packet_cursor, render_context);
-    text_ordering_table = render_context + 0x28;
+    do { do { do { do { do { do { do { do { do { do { text_ordering_table = render_context + 0x28; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
 
     if (g_golem_logic_block_count != 0)
     {
-        archive = (u8*)&g_golem_text_archive_offset;
-        archive -= 4;
         golem_copy_encoded_string(name_buf,
                                   g_golem_text_archive_offset +
-                                      (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + g_golem_text_archive_offset + archive) + archive));
+                                      (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + g_golem_text_archive_offset +
+                                                (archive = (archive_base = (s32)&g_golem_text_archive_offset) - 4)) +
+                                       archive));
         if ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF)
         {
-            offsets = D_800EC3DA;
-            text_base = offsets - 0x16;
-            golem_append_encoded_string(name_buf, offsets[0] + ((offsets[1] << 8) + text_base));
+            golem_append_encoded_string(name_buf, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
             func_800A8B90(number_buf, (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF, 1);
             golem_append_encoded_string(name_buf, number_buf);
         }
         packet_cursor = func_800A88A0(packet_cursor, text_ordering_table, name_buf, 0, 0xA0, 0xA0, 2);
         detail_block = *(s32*)(archive + 8);
         packet_cursor = func_800A88A0(packet_cursor, text_ordering_table,
-                                      detail_block + (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + detail_block + archive) + archive), 0,
-                                      0xA0, 0xB0, 2);
+                                      detail_block +
+                                          (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + detail_block + archive) + archive),
+                                      0, 0xA0, 0xB0, 2);
     }
 
     *(s32*)(render_context + 0x4040) = golem_render_fade(packet_cursor, render_context + 0x24);
