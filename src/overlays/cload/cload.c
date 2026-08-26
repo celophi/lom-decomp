@@ -352,7 +352,7 @@ void func_800167FC(void);
 s32 func_800167AC(u32, s32, s32, s32);
 void func_800167DC(s32);
 s32 func_800167CC(s32);
-s32 func_80016BCC(void *, void *, s8, void *);
+s32 func_80016BCC(void *, void *);
 s32 func_8001684C(void *);
 s32 func_800170BC(void *, void *, u8);
 
@@ -3499,7 +3499,7 @@ s32 cload_begin_entry_scan(s32 page)
     g_cload_selected_row = 0;
     g_cload_entry_state = 0;
     ((u8 *)&buf)[2] += page;
-    if (func_80016BCC(&buf, g_cload_entries + page * CLOAD_CARD_DIRECTORY_BYTES, p->unk6, p) != 0)
+    if (func_80016BCC(&buf, g_cload_entries + page * CLOAD_CARD_DIRECTORY_BYTES) != 0)
     {
         g_cload_entry_state += 1;
         return 1;
@@ -3602,43 +3602,54 @@ s32 cload_scan_next_entry(s32 page)
 void cload_commit_selected_entry(void)
 {
     CloadFileHeader local;
-    CloadFileHeader *src;
     u8 *p;
-    s32 term1;
-    s32 term2;
 
     if (g_cload_entry_state == 0)
     {
         g_cload_selection_status = 3;
         return;
     }
-    term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
-    term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
-    term2 += term1;
-    if (func_8001714C(&D_800ECFC4[0], (void *)(term2 + term1), 8) == 0)
     {
-        g_cload_selection_status = 2;
-        return;
+        s32 term1;
+        s32 term2;
+        term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
+        term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
+        if (func_8001714C(&D_800ECFC4[0], (void *)(term1 + term2), 8) == 0)
+        {
+            g_cload_selection_status = 2;
+            return;
+        }
     }
+    memcpy(&local, &g_cload_file_template, 6);
     p = (u8 *)&local;
-    src = &g_cload_file_template;
-    *(s32 *)p = src->unk0;
-    *(s16 *)(p + 4) = src->unk4;
-    term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
-    term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
-    term2 += term1;
-    func_80016F9C(p, (void *)(term2 + term1), src);
-    g_cload_selection_status = 0;
-    *((u8 *)&local + 2) += (u8)g_cload_card_slot;
-    func_800170BC(&D_80162C90[0], p, (u8)g_cload_card_slot);
-    g_cload_load_step = &D_80146538[0];
-    term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
-    term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
-    term2 += term1;
-    if (func_8001714C(&D_800ECF7C[0], (void *)(term2 + term1), 0xC) == 0)
     {
-        g_cload_selected_entry_extended = 1;
-        return;
+        s32 term1;
+        s32 term2;
+        term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
+        term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
+        func_80016F9C(p, (void *)(term1 + term2));
+    }
+    {
+        s32 slot;
+        s32 value;
+        value = *((u8 *)&local + 2);
+        slot = (u8)g_cload_card_slot;
+        g_cload_selection_status = 0;
+        value += slot;
+        *((u8 *)&local + 2) = value;
+        func_800170BC(&D_80162C90[0], p, slot);
+    }
+    g_cload_load_step = &D_80146538[0];
+    {
+        s32 term1;
+        s32 term2;
+        term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
+        term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
+        if (func_8001714C(&D_800ECF7C[0], (void *)(term1 + term2), 0xC) == 0)
+        {
+            g_cload_selected_entry_extended = 1;
+            return;
+        }
     }
     g_cload_selected_entry_extended = 0;
 }
@@ -3954,8 +3965,10 @@ loop:
 void cload_draw_hex_byte(s32 prim, s32 ot, s32 value, s32 x, s32 y, s32 palette)
 {
     u16 buf[3];
+    u16 *high_glyph;
 
-    buf[0] = g_cload_hex_glyphs[value / 16];
+    high_glyph = &g_cload_hex_glyphs[value / 16];
+    buf[0] = *high_glyph;
     buf[1] = g_cload_hex_glyphs[value % 16];
     buf[2] = 0;
     cload_draw_cached_text(prim, ot, buf, x, y, 0, palette);
