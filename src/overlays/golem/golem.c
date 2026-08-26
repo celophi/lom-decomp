@@ -4,164 +4,272 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
-extern u8 *D_8014C168;
-extern s32 D_8014C16C;
-extern s32 D_8014C170;
-extern u8 D_80042FD8[];
-extern u8 D_800F1CD0[];
-extern s32 D_80122C00;
-extern s32 D_8014C180;
-extern s32 D_8014C184;
-extern s32 D_8014AAA4;
-extern u8 D_800EC3DA[];
-extern s32 D_8014C188;
-extern s32 D_8014C18C;
-extern u8 D_8014C198[];
-extern s32 D_8014C238;
-extern s32 D_8014C23C;
-extern s32 D_8014C248;
-extern s32 D_8014C24C;
-extern s32 D_8014C254;
-extern s32 D_8014C258;
-extern s32 D_8014C25C;
-extern s32 D_8014C260;
-extern s32 D_8014C264;
-extern s32 D_8014C268;
-extern s32 D_8014C26C;
-extern s32 D_8014C270;
-extern s32 D_8014C274;
-extern s32 D_8014C278;
-extern s32 D_8014C27C;
-extern s32 D_8014C280;
-extern s32 D_8014C284;
-extern s32 D_8014C288;
-extern s32 D_80122988;
-
-/** @brief Cell-grid view of D_80042FD8: 64 u32 cells at offset 0x29DC. */
-typedef struct { u8 pad[0x29DC]; u32 cells[64]; } D80042FD8Type;
-/** @brief 4-byte entry view of D_8014C198: a u16 flag/value word. */
-typedef struct { u16 value; u16 pad; } C198Entry;
-/** @brief UI panel bitfield block holding three animated corner words. */
-typedef struct { u32 unk00; u8 pad04[0x10]; u32 unk14; u8 pad18[0x24]; u32 unk3C; } B560;
-/** @brief 88-byte row of the D_800F1CD0 icon table; only bytes 2 and 3 are read here. */
-typedef struct { u8 pad0[2]; u8 unk2; u8 unk3; u8 pad4[84]; } D800F1CD0Entry;
-extern B560 D_8014B560;
-
 /**
- * @brief One 0x14-byte record of the D_8014B560 panel table (0x9A entries).
- * @note The @ref B560 typedef above is a three-entry view of the same storage
- *       (its unk00/unk14/unk3C are entries 0, 1 and 3); do not merge them.
+ * @brief Golem logic-block records within the shared menu-layout buffer.
  */
-typedef struct {
-    u8 pad0[0xA];
-    u16 unkA;
-    u16 unkC;
-    u16 unkE;
-    u16 unk10;
-    u16 pad12;
-} B560Entry;
+typedef struct
+{
+    u8 pad_0000[0x29D6];
+    u8 logic_block_count;
+    s8 selected_logic_type;
+    u8 logic_types[3];
+    u8 pad_29DB;
+    u32 logic_blocks[40];
+} GolemMenuData;
 
-void func_800A3938();
-void func_800CB918();
-s32 func_800CBA9C();
-s32 func_800CBC0C();
-void func_800CBE64();
-void func_80140CBC();
+/** @brief Availability and palette data for one logic block. */
+typedef struct
+{
+    u16 is_unavailable;
+    u16 clut;
+} GolemLogicBlockStatus;
 
-/** @brief Access grid cell @p i (u32) within D_80042FD8. */
-#define CELL(i) (((D80042FD8Type *)&D_80042FD8)->cells[(i)])
-/** @brief Clear the panel-animation bits [10:7] and set the "active" pair [8:7]. */
-#define SET_UI_BITS(x) (((x) & ~0x780) | 0x180)
+/** @brief Panel animation words for the down, up, and rotate controls. */
+typedef struct
+{
+    u32 scroll_down;
+    u8 pad_04[0x10];
+    u32 scroll_up;
+    u8 pad_18[0x24];
+    u32 rotate;
+} GolemPanelAnimations;
 
-typedef struct {
+/** @brief One 0x14-byte panel record. */
+typedef struct
+{
+    u8 pad_00[0xA];
+    u16 x;
+    u16 y;
+    u16 width;
+    u16 height;
+    u16 pad_12;
+} GolemPanelRecord;
+
+/** @brief VRAM destinations for a TIM image and its CLUT. */
+typedef struct
+{
     u16 x;
     u16 y;
     u16 clut_x;
     u16 clut_y;
 } GolemImageClutPos;
 
-typedef struct {
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} GolemRect;
-
-s32 func_80019A34();
-
-extern u8 D_8014287C[];
-void func_80140438(GolemImageClutPos *, u8 *);
-
-extern s32 D_800F22AC;
-
-void func_801405A0(void);
-void func_80141228();
-
-void func_80140024(u8 *arg0, s32 arg1)
+/** @brief Signed position fields in one rotated composite-icon view. */
+typedef struct
 {
-    u8 *draw_buffer;
-    u8 *next_buffer;
-    u8 *other_buffer;
-    u8 *draw_env_buffers;
+    u8 pad_00[8];
+    s8 base_x;
+    s8 base_y;
+    u8 pad_0A[10];
+} GolemIconVariantPosition;
 
-    D_8014C168 = arg0;
-    arg0 += 0x8180;
+/** @brief Bit-packed texture data for one 0x14-byte panel record. */
+typedef struct
+{
+    u32 attributes;
+    u32 texture;
+    u32 dimensions;
+    u8 pad_0C[8];
+} GolemPanelTexture;
 
-    *(s16 *)(D_8014C168 + 0x4044) = 0;
-    *(s16 *)(D_8014C168 + 0x4046) = 8;
-    *(s16 *)(D_8014C168 + 0x4048) = 0x140;
-    *(s16 *)(D_8014C168 + 0x404A) = 0xE0;
-    *(s16 *)(D_8014C168 + 0x8104) = 0;
-    *(s16 *)(D_8014C168 + 0x8106) = 0xF0;
-    *(s16 *)(D_8014C168 + 0x8108) = 0x140;
-    *(s16 *)(D_8014C168 + 0x810A) = 0xE0;
+/** @brief Header view of one 88-byte composite-icon row. */
+typedef struct
+{
+    u8 part_count;
+    u8 reserved_01;
+    u8 grid_width;
+    u8 grid_height;
+    s16 origin_x;
+    s16 origin_y;
+    s8 base_x;
+    s8 base_y;
+    u8 reserved_0A[78];
+} GolemCompositeIconRow;
 
-    func_8001C62C(D_8014C168 + 0x4050, 0, 0, 0x140, 0xF0);
-    func_8001C62C(D_8014C168 + 0x8110, 0, 0xE8, 0x140, 0xF0);
-    func_8001C56C(D_8014C168 + 0x4064, 0, 0xF0, 0x140, 0xE0);
-    func_8001C56C(D_8014C168 + 0x8124, 0, 8, 0x140, 0xE0);
+/** @brief Positioned glyph view at row + variant*0x14 + part*4. */
+typedef struct
+{
+    u8 pad_00[0xC];
+    s8 x;
+    s8 y;
+    s16 glyph_id;
+} GolemCompositeIconPartView;
 
-    draw_env_buffers = D_8014C168;
+/** @brief UV coordinates and dimensions for one glyph. */
+typedef struct
+{
+    u8 u0;
+    u8 reserved_01;
+    u8 v0;
+    u8 reserved_03;
+    u16 width;
+    u16 height;
+} GolemGlyphMetric;
+
+/** @brief LINE_F2-compatible packet used to emit a panel outline. */
+typedef struct
+{
+    s32 tag;
+    s32 color_and_code;
+    s16 x0;
+    s16 y0;
+    s16 x1;
+    u16 y1;
+} GolemLinePacket;
+
+/** @brief Packet view for a fade TILE or draw-mode command. */
+typedef union
+{
+    TILE tile;
+    DR_TPAGE draw_mode;
+} GolemFadePrimitive;
+
+/** @brief Fade color and its remaining interpolation step count. */
+typedef struct
+{
+    s16 red;
+    s16 green;
+    s16 blue;
+    s16 steps_remaining;
+} GolemFadeState;
+
+#define GOLEM_LOGIC_BLOCK(index) (((GolemMenuData*)g_menuLayoutBuffer)->logic_blocks[(index)])
+#define GOLEM_PANEL_TEXTURE(index) (((GolemPanelTexture*)&g_golem_panel_records)[(index)])
+#define GOLEM_ACTIVATE_PANEL(word) (((word) & ~0x780) | 0x180)
+#define GOLEM_GPU_ADDRESS_MASK 0xFFFFFF
+#define GOLEM_GPU_TAG_HIGH_MASK 0xFF000000
+#define GOLEM_FADE_NEUTRAL 0x100
+#define GOLEM_FADE_ADDITIVE_THRESHOLD (GOLEM_FADE_NEUTRAL + 1)
+#define GOLEM_FADE_ADDITIVE_DRAW_MODE 0x25
+#define GOLEM_FADE_SUBTRACTIVE_DRAW_MODE 0x45
+#define GOLEM_NEXT_FADE_PRIMITIVE(primitive, type) ((GolemFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
+
+extern u8 g_menuLayoutBuffer[];
+extern s32 g_pad_input;
+extern s32 g_frame_counter;
+extern s32 D_80122C00;
+extern u8 D_800EC3DA[];
+extern u8* g_golem_render_buffers;
+extern s32 g_golem_exit_requested;
+extern s32 g_golem_work_buffer;
+extern GolemFadeState g_golem_fade_target;
+extern s32 g_golem_scroll_steps;
+extern s32 g_golem_logic_block_count;
+extern s32 g_golem_grid_size_class;
+extern s32 g_golem_scroll_y;
+extern GolemLogicBlockStatus g_golem_block_status[];
+extern s32 g_golem_is_placing_block;
+extern s32 g_golem_scroll_target_y;
+extern GolemFadeState g_golem_fade_current;
+extern s32 g_golem_block_x;
+extern s32 g_golem_block_y;
+extern s32 g_golem_cursor_steps;
+extern s32 g_golem_cursor_x;
+extern s32 g_golem_cursor_y;
+extern s32 g_golem_active_logic_type;
+extern s32 g_golem_cursor_target_x;
+extern s32 g_golem_cursor_target_y;
+extern s32 D_8014C26C;
+extern s32 g_golem_saved_logic_type_slot;
+extern s32 D_8014C274;
+extern s32 D_8014C278;
+extern s32 g_golem_block_rotation;
+extern s32 D_8014C280;
+extern s32 g_golem_selected_block;
+extern s32 g_golem_restore_slot_on_cancel;
+extern u8 g_golem_ui_image[];
+extern s32 g_golem_text_archive_offset;
+extern GolemGlyphMetric g_golem_glyph_metrics[];
+extern GolemPanelAnimations g_golem_panel_records;
+extern GolemCompositeIconRow g_golem_composite_icon_rows[];
+
+void func_800A3938();
+void func_800CB918();
+s32 func_800CBA9C();
+s32 func_800CBC0C();
+void func_800CBE64();
+void golem_reset_block_position();
+void golem_handle_input(void);
+void golem_render();
+void golem_upload_image_archive(GolemImageClutPos*, u8*);
+s32 golem_emit_glyph();
+
+/**
+ * @brief Run the golem logic-grid editor until the user exits.
+ * @param render_buffers Storage for the two render contexts and packet heap.
+ * @param restore_slot_on_cancel Restore the prior logic-type slot on cancel.
+ * @return None.
+ * @see decomp.me (100%)
+ */
+void golem_run(u8* render_buffers, s32 restore_slot_on_cancel)
+{
+    u8* draw_buffer;
+    u8* next_buffer;
+    u8* other_buffer;
+    u8* draw_env_buffers;
+
+    g_golem_render_buffers = render_buffers;
+    render_buffers += 0x8180;
+
+    *(s16*)(g_golem_render_buffers + 0x4044) = 0;
+    *(s16*)(g_golem_render_buffers + 0x4046) = 8;
+    *(s16*)(g_golem_render_buffers + 0x4048) = 0x140;
+    *(s16*)(g_golem_render_buffers + 0x404A) = 0xE0;
+    *(s16*)(g_golem_render_buffers + 0x8104) = 0;
+    *(s16*)(g_golem_render_buffers + 0x8106) = 0xF0;
+    *(s16*)(g_golem_render_buffers + 0x8108) = 0x140;
+    *(s16*)(g_golem_render_buffers + 0x810A) = 0xE0;
+
+    SetDefDispEnv(g_golem_render_buffers + 0x4050, 0, 0, 0x140, 0xF0);
+    SetDefDispEnv(g_golem_render_buffers + 0x8110, 0, 0xE8, 0x140, 0xF0);
+    SetDefDrawEnv(g_golem_render_buffers + 0x4064, 0, 0xF0, 0x140, 0xE0);
+    SetDefDrawEnv(g_golem_render_buffers + 0x8124, 0, 8, 0x140, 0xE0);
+
+    draw_env_buffers = g_golem_render_buffers;
     draw_env_buffers[0x813A] = 0;
     draw_env_buffers[0x407A] = 0;
-    D_8014C16C = 0;
-    *(s32 *)(D_8014C168 + 0x404C) = 0;
-    *(s32 *)(D_8014C168 + 0x810C) = 1;
+    g_golem_exit_requested = 0;
+    *(s32*)(g_golem_render_buffers + 0x404C) = 0;
+    *(s32*)(g_golem_render_buffers + 0x810C) = 1;
 
-    D_8014C170 = (func_80140280(arg0, arg1) + 3) & ~3;
+    g_golem_work_buffer = (golem_initialize_state(render_buffers, restore_slot_on_cancel) + 3) & ~3;
 
-    next_buffer = D_8014C168;
-    func_80019C74(next_buffer, 0x10);
-    func_80019C74(D_8014C168 + 0x40C0, 0x10);
+    next_buffer = g_golem_render_buffers;
+    ClearOTagR(next_buffer, 0x10);
+    ClearOTagR(g_golem_render_buffers + 0x40C0, 0x10);
     func_8002054C(0);
     func_80019FB8(next_buffer + 0x4050);
     func_800157DC();
 
-    for (;;) {
+    for (;;)
+    {
         draw_buffer = next_buffer;
-        func_80019C74(draw_buffer, 0x10);
-        *(u8 **)(draw_buffer + 0x4040) = draw_buffer + 0x40;
+        ClearOTagR(draw_buffer, 0x10);
+        *(u8**)(draw_buffer + 0x4040) = draw_buffer + 0x40;
         field_text_reset_scratch();
         func_800A9E78();
-        func_801404F0(draw_buffer);
+        golem_update_frame(draw_buffer);
         func_80063194();
         func_80019788(0);
         func_800157B0(2);
         func_8002054C(2);
 
-        if (D_8014C16C != 0) {
+        if (g_golem_exit_requested != 0)
+        {
             break;
         }
 
-        func_8001990C(draw_buffer + 0x4044, 0, 0, 0);
-        other_buffer = D_8014C168;
-        if (draw_buffer == D_8014C168) {
+        ClearImage(draw_buffer + 0x4044, 0, 0, 0);
+        other_buffer = g_golem_render_buffers;
+        if (draw_buffer == g_golem_render_buffers)
+        {
             other_buffer = draw_buffer + 0x40C0;
         }
         next_buffer = other_buffer;
-        func_80019FB8(other_buffer + 0x4050);
-        func_80019DEC(next_buffer + 0x4064);
-        func_80019D7C(draw_buffer + 0x3C);
+        PutDispEnv(other_buffer + 0x4050);
+        PutDrawEnv(next_buffer + 0x4064);
+        DrawOTag(draw_buffer + 0x3C);
         draw_buffer = other_buffer;
         func_800157DC();
         func_800122C0();
@@ -171,107 +279,133 @@ void func_80140024(u8 *arg0, s32 arg1)
     field_text_reset_windows();
 }
 
-
-u8 *func_80140280(u8 *arg0, s32 arg1)
+/**
+ * @brief Initialize logic-grid state and upload the editor resources.
+ * @param work_buffer First byte after the double-buffered render contexts.
+ * @param restore_slot_on_cancel Restore the prior logic-type slot on cancel.
+ * @return The unchanged work-buffer pointer.
+ * @see decomp.me (100%)
+ */
+u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
 {
-    s32 i;
-    s32 temp;
-    s32 match;
-    u8 *base;
-    u8 *base2;
-    s32 stack_padding[2];
+    s32 slot_index;
+    s32 logic_type;
+    s32 selected_logic_type;
+    u8* menu_data;
+    u8* menu_data2;
+    s32 stack_pad[2];
 
-    D_8014C288 = arg1;
-    if (arg1 != 0) {
-        i = 0;
-        base = D_80042FD8;
-        match = *(s8 *)(base + 0x29D7);
-        D_8014C270 = D_80122C00;
+    g_golem_restore_slot_on_cancel = restore_slot_on_cancel;
+    if (restore_slot_on_cancel != 0)
+    {
+        slot_index = 0;
+        menu_data = g_menuLayoutBuffer;
+        selected_logic_type = *(s8*)(menu_data + 0x29D7);
+        g_golem_saved_logic_type_slot = D_80122C00;
         D_80122C00 = 0;
-        do {
-            if (base[i + 0x29D8] == match) {
-                D_80122C00 = i;
+        do
+        {
+            if (menu_data[slot_index + 0x29D8] == selected_logic_type)
+            {
+                D_80122C00 = slot_index;
             }
-            i++;
-        } while (i < 3);
+            slot_index++;
+        } while (slot_index < 3);
     }
 
-    D_8014C188 = func_800CB758() - 4;
-    base2 = D_80042FD8;
-    temp = base2[D_80122C00 + 0x29D8];
-    D_8014C27C = 0;
-    D_8014C24C = 0;
-    D_8014C248 = 0;
-    D_8014C238 = 0;
-    D_8014C264 = 0xB8;
-    D_8014C258 = 0xB8;
-    D_8014C268 = 0x50;
-    D_8014C25C = 0x50;
-    D_8014C260 = temp;
-    func_80140FF8(temp);
-    D_8014C184 = func_800CBD70(D_8014C198);
-    D_8014C180 = 0;
-    D_8014C18C = 0;
-    D_8014C23C = 0;
-    D_8014C284 = 0;
-    func_801403F8();
+    g_golem_grid_size_class = func_800CB758() - 4;
+    menu_data2 = g_menuLayoutBuffer;
+    logic_type = menu_data2[D_80122C00 + 0x29D8];
+    g_golem_block_rotation = 0;
+    g_golem_block_y = 0;
+    g_golem_block_x = 0;
+    g_golem_is_placing_block = 0;
+    g_golem_cursor_target_x = 0xB8;
+    g_golem_cursor_x = 0xB8;
+    g_golem_cursor_target_y = 0x50;
+    g_golem_cursor_y = 0x50;
+    g_golem_active_logic_type = logic_type;
+    golem_reset_cursor_motion(logic_type);
+    g_golem_logic_block_count = func_800CBD70(g_golem_block_status);
+    g_golem_scroll_steps = 0;
+    g_golem_scroll_y = 0;
+    g_golem_scroll_target_y = 0;
+    g_golem_selected_block = 0;
+    golem_upload_ui_image();
     func_800AA02C();
-    func_80142418(0x100, 0x100, 0x100, 6);
+    golem_set_fade_target(0x100, 0x100, 0x100, 6);
     D_8014C26C = 0;
     D_8014C280 = 0;
     D_8014C278 = 0;
     D_8014C274 = 0;
-    return arg0;
+    return work_buffer;
 }
 
-void func_801403F8(void)
+/**
+ * @brief Upload the golem editor image and CLUT to their VRAM locations.
+ * @return None.
+ * @see decomp.me (100%)
+ */
+void golem_upload_ui_image(void)
 {
-    RECT rect;
+    GolemImageClutPos destinations;
 
-    rect.x = 0x140;
-    rect.y = 0;
-    rect.w = 0;
-    rect.h = 0x1F2;
-    func_80140438(&rect, D_8014287C);
+    destinations.x = 0x140;
+    destinations.y = 0;
+    destinations.clut_x = 0;
+    destinations.clut_y = 0x1F2;
+    golem_upload_image_archive(&destinations, g_golem_ui_image);
 }
 
-void func_80140438(GolemImageClutPos* pos, u8* archive)
+/**
+ * @brief Upload a TIM image and its optional CLUT to VRAM.
+ * @param destinations VRAM destinations for the image and CLUT blocks.
+ * @param tim TIM resource to upload.
+ * @return None.
+ * @see decomp.me (100%)
+ */
+void golem_upload_image_archive(GolemImageClutPos* destinations, u8* tim)
 {
-    GolemRect rect;
+    RECT upload_rect;
     s32 flags;
-    s32 off8;
-    u16* dims;
+    s32 clut_block_size;
+    u16* pixel_dimensions;
 
-    flags = *(s32*)(archive + 4);
-    off8 = *(s32*)(archive + 8);
+    flags = *(s32*)(tim + 4);
+    clut_block_size = *(s32*)(tim + 8);
 
     if (flags & 8)
     {
-        rect.x = pos->clut_x;
-        rect.y = pos->clut_y;
-        rect.w = 0x100;
-        rect.h = 1;
-        func_80019A34(&rect, archive + 0x14);
-        dims = (u16*)(off8 - (-(s32)archive) + 0x10);
+        upload_rect.x = destinations->clut_x;
+        upload_rect.y = destinations->clut_y;
+        upload_rect.w = 0x100;
+        upload_rect.h = 1;
+        LoadImage(&upload_rect, tim + 0x14);
+        pixel_dimensions = (u16*)(clut_block_size - (-(s32)tim) + 0x10);
     }
     else
     {
-        dims = (u16*)(archive + 0x10);
+        pixel_dimensions = (u16*)(tim + 0x10);
     }
 
-    rect.x = pos->x;
-    rect.y = pos->y;
-    rect.w = dims[0];
-    rect.h = dims[1];
-    func_80019A34(&rect, off8 - (-(s32)archive) + 0x14);
+    upload_rect.x = destinations->x;
+    upload_rect.y = destinations->y;
+    upload_rect.w = pixel_dimensions[0];
+    upload_rect.h = pixel_dimensions[1];
+    LoadImage(&upload_rect, clut_block_size - (-(s32)tim) + 0x14);
 }
 
-
-void func_801404F0(void)
+/**
+ * @brief Render and update one editor frame.
+ * @note The incoming a0 render-context argument is forwarded to golem_render.
+ * @return None.
+ * @see decomp.me (100%)
+ */
+void golem_update_frame(void)
 {
-    func_80141228();
-    D_800F22AC += 1;
-    func_801405A0();
+    golem_render();
+    g_frame_counter += 1;
+    golem_handle_input();
     if (D_8014C274 != 0)
     {
         D_8014C278 += (D_8014C280 - D_8014C278) / D_8014C274;
@@ -282,1026 +416,1082 @@ void func_801404F0(void)
 }
 
 /**
- * @brief Per-frame update for the golem grid cursor: scrolls the view, handles
- *        placement/rotation/confirm input, and animates the selection.
+ * @brief Handle logic-block selection, placement, rotation, and cancellation.
  * @note WIP - 99.88% (446/455 exact, gcc272_cdk). Residue is a v0/v1 register
- *       swap between D_8014C284 and D_8014C184 in the backward-search loop.
+ *       swap between the selected index and block count in the backward search.
+ * @return None.
  * @see decomp.me (99.88%)
  */
-void func_801405A0(void)
+void golem_handle_input(void)
 {
-    s32 old_x, old_y, i, index, count, input, value;
-    if ((D_80122988 & 0x800) && (D_8014C238 == 0)) goto cancel;
-    count = D_8014C180;
-    if (count != 0) {
-        D_8014C180 = count - 1;
-        D_8014C18C += (D_8014C23C - D_8014C18C) / count;
-        if (D_8014C180 != 0) return;
-        D_8014C284 = D_8014C18C / 40;
-    } else {
-        D_8014C18C = D_8014C23C;
-        D_8014C284 = D_8014C23C / 40;
+    s32 saved_x, saved_y, repeat_count, block_index, scroll_steps, input, cancel_pressed;
+    if ((g_pad_input & 0x800) && (g_golem_is_placing_block == 0))
+    {
+        goto cancel;
     }
-    if (D_8014C180 != 0) return;
-    if (D_8014C238 != 0) {
-        input = D_80122988;
-        if (input & 0xF000) {
-            old_x = D_8014C248;
-            old_y = D_8014C24C;
-            if (input & 0x1000) D_8014C24C = old_y - 1;
-            else if (input & 0x4000) D_8014C24C = old_y + 1;
-            else if (input & 0x8000) D_8014C248 = old_x - 1;
-            else if (input & 0x2000) D_8014C248 = old_x + 1;
-            if (func_800CBC0C(D_8014C284, D_8014C27C, D_8014C248, D_8014C24C) == 0) {
-                D_8014C248 = old_x; D_8014C24C = old_y; func_800A3938(0x78, 0x80);
-            } else func_800A3938(0x7D, 0x80);
+    scroll_steps = g_golem_scroll_steps;
+    if (scroll_steps != 0)
+    {
+        g_golem_scroll_steps = scroll_steps - 1;
+        g_golem_scroll_y += (g_golem_scroll_target_y - g_golem_scroll_y) / scroll_steps;
+        if (g_golem_scroll_steps != 0)
+        {
             return;
         }
-        if (input & 0x90) {
-            if (input & 0x10) { if (D_8014C27C >= 3) D_8014C27C = 0; else D_8014C27C++; }
-            else { if (D_8014C27C == 0) D_8014C27C = 3; else D_8014C27C--; }
-            if (func_800CBC0C(D_8014C284, D_8014C27C, D_8014C248, D_8014C24C) == 0) func_80140CBC();
-            func_800A3938(0x7D, 0x80);
-            D_8014B560.unk3C = SET_UI_BITS(D_8014B560.unk3C);
-            return;
-        }
-        if (input & 0xA20) {
-            if (func_800CBA9C(D_8014C284, D_8014C27C, D_8014C248, D_8014C24C) != 0) {
-                D_8014C238 = 0; func_80140FF8(); func_800A3938(0x120, 0x80); func_800CB918(D_8014C284, D_8014C27C, D_8014C248, D_8014C24C);
-            } else func_800A3938(0x78, 0x80);
-            return;
-        }
-        if (input & 0x40) { D_8014C238 = 0; func_80140FF8(); func_800A3938(0x78, 0x80); CELL(D_8014C284) |= 3; }
+        g_golem_selected_block = g_golem_scroll_y / 40;
+    }
+    else
+    {
+        g_golem_scroll_y = g_golem_scroll_target_y;
+        g_golem_selected_block = g_golem_scroll_target_y / 40;
+    }
+    if (g_golem_scroll_steps != 0)
+    {
         return;
     }
-    if (D_8014C184 != 0) {
-        i = 1; input = D_80122988;
-        if (input & 4) { D_80122988 = 0x1000; i = 3; }
-        else if (input & 8) { D_80122988 = 0x4000; i = 3; }
-        input = D_80122988;
-        if (input & 0x5000) {
-            func_800A3938(0x7D, 0x80);
-            while (i != 0) {
-                if (D_80122988 & 0x1000) {
-                    if (D_8014C23C != 0) { D_8014C180 = 4; D_8014C23C -= 40; D_8014B560.unk14 = SET_UI_BITS(D_8014B560.unk14); }
-                } else if ((D_80122988 & 0x4000) && ((D_8014C23C / 40) != (D_8014C184 - 1))) {
-                    D_8014C180 = 4; D_8014C23C += 40; D_8014B560.unk00 = SET_UI_BITS(D_8014B560.unk00);
-                }
-                i--;
-            }
-            return;
-        }
-        if (input & 2) {
-            s32 limit, match_type; D80042FD8Type *base;
-            index = D_8014C284; i = 0;
-            if (D_8014C184 > 0) {
-                limit = D_8014C184;
-                base = (D80042FD8Type *)&D_80042FD8;
-                match_type = D_8014C260;
-                index++;
-forward_loop:
-                if (index == limit) index = 0;
-                i++;
-                if ((base->cells[index] & 3) == match_type) goto forward_done;
-                index++;
-                if (i < limit) goto forward_loop;
-                index--;
-            }
-forward_done:
-            D_8014C23C = index * 40; D_8014C180 = 4; D_8014B560.unk00 = SET_UI_BITS(D_8014B560.unk00); func_800A3938(0x7D, 0x80); return;
-        }
-        if (input & 1) {
-            s32 limit, match_type; D80042FD8Type *base;
-            index = D_8014C284; i = 0;
-            if (D_8014C184 > 0) {
-                limit = D_8014C184;
-                base = (D80042FD8Type *)&D_80042FD8;
-                match_type = D_8014C260;
-                index--;
-backward_loop:
-                if (index < 0) index = limit - 1;
-                if ((base->cells[index] & 3) == match_type) goto backward_done;
-                input = D_8014C184;
-                i++;
-                index--;
-                if (i < input) goto backward_loop;
-                index++;
-            }
-backward_done:
-            D_8014C23C = index * 40; D_8014C180 = 4; D_8014B560.unk14 = SET_UI_BITS(D_8014B560.unk14); func_800A3938(0x7D, 0x80); return;
-        }
-        if (input & 0x220) {
-            if (((C198Entry *)D_8014C198)[D_8014C284].value == 0) {
-                D_8014C238 = 1;
-                if ((CELL(D_8014C284) & 3) == D_8014C260) {
-                    D_8014C248 = (s32)(CELL(D_8014C284) << 8) >> 27;
-                    D_8014C24C = (s32)(CELL(D_8014C284) << 3) >> 27;
-                    D_8014C27C = (CELL(D_8014C284) >> 17) & 3;
-                } else { func_80140CBC(); D_8014C27C = 0; }
-                func_800CBE64(D_8014C284); func_800A3938(0x7E, 0x80);
-            }
-            return;
-        }
-        value = input & 0x40;
-    } else {
-        value = D_80122988 & 0x40;
-    }
-    if (value != 0) {
-cancel:
-        func_800A3938(0x7D, 0x80); D_8014C16C = 1; if (D_8014C288 != 0) D_80122C00 = D_8014C270;
-    }
-}
-/**
- * @see decomp.me (100%)
- */
-void func_80140CBC(void)
-{
-    if (D_8014C188 == 0)
+    if (g_golem_is_placing_block != 0)
     {
-        D800F1CD0Entry *tbl;
-        D_8014C248 = (tbl = (D800F1CD0Entry *)D_800F1CD0)[(CELL(D_8014C284) >> 12) & 0xF].unk2 - 1;
-        D_8014C24C = tbl[(CELL(D_8014C284) >> 12) & 0xF].unk3 - 1;
-        return;
-    }
-    if (D_8014C188 >= 0)
-    {
-        if (D_8014C188 < 3)
+        input = g_pad_input;
+        if (input & 0xF000)
         {
-            D800F1CD0Entry *tbl = (D800F1CD0Entry *)D_800F1CD0;
-            D_8014C248 = tbl[(CELL(D_8014C284) >> 12) & 0xF].unk2;
-            D_8014C24C = tbl[(CELL(D_8014C284) >> 12) & 0xF].unk3;
-        }
-    }
-}
-
-/**
- * @brief Read the 60-cell grid state and emit each occupied cell to the
- *        renderer, threading an accumulator through the calls.
- * @param arg0 Initial accumulator (render/prim cursor advanced by func_80140F68).
- * @param arg1 Renderer context passed through unchanged.
- * @note WIP, not byte-matched. Best local match 83.81% (45/97 exact rows);
- *       frame and control flow match. Residual is a register-numbering shift:
- *       gcc keeps @c acc in a0 (per-iteration caller-save) instead of s3, which
- *       frees a saved reg to hoist the 0x50 constant. The explicit @c yy
- *       snapshot is required to reproduce the giv+snapshot that spills the grid
- *       base to sp+0x108 (frame 0x138). Target/toolchain confirmed gcc272_cdk
- *       (gcc280_g0/g4 both score 80.28%). See working/func_80140DEC/.
- */
-s32 func_80140DEC(s32 arg0, s32 arg1)
-{
-    s32 grid[60];
-    s32 idx;
-    s32 col;
-    s32 x;
-    s32 y;
-    s32 val;
-    s32 mode;
-    s32 acc;
-    s32 *base;
-    s32 yy;
-
-    func_800CBEC4(grid);
-
-    acc = arg0;
-    idx = 0;
-    base = grid;
-    y = 4;
-    for (arg0 = 0; arg0 < 6; arg0++)
-    {
-        yy = y;
-        x = 0xC;
-        for (col = 0; col < 5; col++)
-        {
-            val = base[idx];
-            if (val != 0)
+            saved_x = g_golem_block_x;
+            saved_y = g_golem_block_y;
+            if (input & 0x1000)
             {
-                if (val == 0x50)
+                g_golem_block_y = saved_y - 1;
+            }
+            else if (input & 0x4000)
+            {
+                g_golem_block_y = saved_y + 1;
+            }
+            else if (input & 0x8000)
+            {
+                g_golem_block_x = saved_x - 1;
+            }
+            else if (input & 0x2000)
+            {
+                g_golem_block_x = saved_x + 1;
+            }
+            if (func_800CBC0C(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) == 0)
+            {
+                g_golem_block_x = saved_x;
+                g_golem_block_y = saved_y;
+                func_800A3938(0x78, 0x80);
+            }
+            else
+            {
+                func_800A3938(0x7D, 0x80);
+            }
+            return;
+        }
+        if (input & 0x90)
+        {
+            if (input & 0x10)
+            {
+                if (g_golem_block_rotation >= 3)
                 {
-                    mode = 2;
+                    g_golem_block_rotation = 0;
                 }
                 else
                 {
-                    mode = 3;
+                    g_golem_block_rotation++;
                 }
-                acc = func_80140F68(acc, arg1, x, yy, mode);
+            }
+            else
+            {
+                if (g_golem_block_rotation == 0)
+                {
+                    g_golem_block_rotation = 3;
+                }
+                else
+                {
+                    g_golem_block_rotation--;
+                }
+            }
+            if (func_800CBC0C(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) == 0)
+            {
+                golem_reset_block_position();
+            }
+            func_800A3938(0x7D, 0x80);
+            g_golem_panel_records.rotate = GOLEM_ACTIVATE_PANEL(g_golem_panel_records.rotate);
+            return;
+        }
+        if (input & 0xA20)
+        {
+            if (func_800CBA9C(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y) != 0)
+            {
+                g_golem_is_placing_block = 0;
+                golem_reset_cursor_motion();
+                func_800A3938(0x120, 0x80);
+                func_800CB918(g_golem_selected_block, g_golem_block_rotation, g_golem_block_x, g_golem_block_y);
+            }
+            else
+            {
+                func_800A3938(0x78, 0x80);
+            }
+            return;
+        }
+        if (input & 0x40)
+        {
+            g_golem_is_placing_block = 0;
+            golem_reset_cursor_motion();
+            func_800A3938(0x78, 0x80);
+            GOLEM_LOGIC_BLOCK(g_golem_selected_block) |= 3;
+        }
+        return;
+    }
+    if (g_golem_logic_block_count != 0)
+    {
+        repeat_count = 1;
+        input = g_pad_input;
+        if (input & 4)
+        {
+            g_pad_input = 0x1000;
+            repeat_count = 3;
+        }
+        else if (input & 8)
+        {
+            g_pad_input = 0x4000;
+            repeat_count = 3;
+        }
+        input = g_pad_input;
+        if (input & 0x5000)
+        {
+            func_800A3938(0x7D, 0x80);
+            while (repeat_count != 0)
+            {
+                if (g_pad_input & 0x1000)
+                {
+                    if (g_golem_scroll_target_y != 0)
+                    {
+                        g_golem_scroll_steps = 4;
+                        g_golem_scroll_target_y -= 40;
+                        g_golem_panel_records.scroll_up = GOLEM_ACTIVATE_PANEL(g_golem_panel_records.scroll_up);
+                    }
+                }
+                else if ((g_pad_input & 0x4000) && ((g_golem_scroll_target_y / 40) != (g_golem_logic_block_count - 1)))
+                {
+                    g_golem_scroll_steps = 4;
+                    g_golem_scroll_target_y += 40;
+                    g_golem_panel_records.scroll_down = GOLEM_ACTIVATE_PANEL(g_golem_panel_records.scroll_down);
+                }
+                repeat_count--;
+            }
+            return;
+        }
+        if (input & 2)
+        {
+            s32 limit, logic_type;
+            GolemMenuData* menu_data;
+            block_index = g_golem_selected_block;
+            repeat_count = 0;
+            if (g_golem_logic_block_count > 0)
+            {
+                limit = g_golem_logic_block_count;
+                menu_data = (GolemMenuData*)g_menuLayoutBuffer;
+                logic_type = g_golem_active_logic_type;
+                block_index++;
+            forward_loop:
+                if (block_index == limit)
+                {
+                    block_index = 0;
+                }
+                repeat_count++;
+                if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
+                {
+                    goto forward_done;
+                }
+                block_index++;
+                if (repeat_count < limit)
+                {
+                    goto forward_loop;
+                }
+                block_index--;
+            }
+        forward_done:
+            g_golem_scroll_target_y = block_index * 40;
+            g_golem_scroll_steps = 4;
+            g_golem_panel_records.scroll_down = GOLEM_ACTIVATE_PANEL(g_golem_panel_records.scroll_down);
+            func_800A3938(0x7D, 0x80);
+            return;
+        }
+        if (input & 1)
+        {
+            s32 limit, logic_type;
+            GolemMenuData* menu_data;
+            block_index = g_golem_selected_block;
+            repeat_count = 0;
+            if (g_golem_logic_block_count > 0)
+            {
+                limit = g_golem_logic_block_count;
+                menu_data = (GolemMenuData*)g_menuLayoutBuffer;
+                logic_type = g_golem_active_logic_type;
+                block_index--;
+            backward_loop:
+                if (block_index < 0)
+                {
+                    block_index = limit - 1;
+                }
+                if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
+                {
+                    goto backward_done;
+                }
+                input = g_golem_logic_block_count;
+                repeat_count++;
+                block_index--;
+                if (repeat_count < input)
+                {
+                    goto backward_loop;
+                }
+                block_index++;
+            }
+        backward_done:
+            g_golem_scroll_target_y = block_index * 40;
+            g_golem_scroll_steps = 4;
+            g_golem_panel_records.scroll_up = GOLEM_ACTIVATE_PANEL(g_golem_panel_records.scroll_up);
+            func_800A3938(0x7D, 0x80);
+            return;
+        }
+        if (input & 0x220)
+        {
+            if (g_golem_block_status[g_golem_selected_block].is_unavailable == 0)
+            {
+                g_golem_is_placing_block = 1;
+                if ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) & 3) == g_golem_active_logic_type)
+                {
+                    g_golem_block_x = (s32)(GOLEM_LOGIC_BLOCK(g_golem_selected_block) << 8) >> 27;
+                    g_golem_block_y = (s32)(GOLEM_LOGIC_BLOCK(g_golem_selected_block) << 3) >> 27;
+                    g_golem_block_rotation = (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 17) & 3;
+                }
+                else
+                {
+                    golem_reset_block_position();
+                    g_golem_block_rotation = 0;
+                }
+                func_800CBE64(g_golem_selected_block);
+                func_800A3938(0x7E, 0x80);
+            }
+            return;
+        }
+        cancel_pressed = input & 0x40;
+    }
+    else
+    {
+        cancel_pressed = g_pad_input & 0x40;
+    }
+    if (cancel_pressed != 0)
+    {
+    cancel:
+        func_800A3938(0x7D, 0x80);
+        g_golem_exit_requested = 1;
+        if (g_golem_restore_slot_on_cancel != 0)
+        {
+            D_80122C00 = g_golem_saved_logic_type_slot;
+        }
+    }
+}
+/**
+ * @brief Reset the active block to its layout-defined grid origin.
+ * @return None.
+ * @see decomp.me (100%)
+ */
+void golem_reset_block_position(void)
+{
+    if (g_golem_grid_size_class == 0)
+    {
+        GolemCompositeIconRow* rows;
+        g_golem_block_x = (rows = g_golem_composite_icon_rows)[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].grid_width - 1;
+        g_golem_block_y = rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].grid_height - 1;
+        return;
+    }
+    if (g_golem_grid_size_class >= 0)
+    {
+        if (g_golem_grid_size_class < 3)
+        {
+            GolemCompositeIconRow* rows = g_golem_composite_icon_rows;
+            g_golem_block_x = rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].grid_width;
+            g_golem_block_y = rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].grid_height;
+        }
+    }
+}
+
+/**
+ * @brief Emit the logic-grid divider markers and their texture-page packet.
+ * @param initial_packet Initial packet cursor, reused as the row counter.
+ * @param ordering_table Ordering-table tag for the marker packets.
+ * @return Packet cursor after the marker run.
+ * @note The remaining mismatch is register allocation; stack layout and control
+ *       flow match the target.
+ * @see decomp.me (83.81%)
+ * @see working/func_80140DEC/
+ */
+s32 golem_draw_grid_markers(s32 initial_packet, s32 ordering_table)
+{
+    s32 markers[60];
+    s32 marker_index;
+    s32 column;
+    s32 x;
+    s32 y;
+    s32 marker;
+    s32 glyph;
+    s32 packet_cursor;
+    s32* marker_base;
+    s32 row_y;
+
+    func_800CBEC4(markers);
+
+    packet_cursor = initial_packet;
+    marker_index = 0;
+    marker_base = markers;
+    y = 4;
+    for (initial_packet = 0; initial_packet < 6; initial_packet++)
+    {
+        row_y = y;
+        x = 0xC;
+        for (column = 0; column < 5; column++)
+        {
+            marker = marker_base[marker_index];
+            if (marker != 0)
+            {
+                if (marker == 0x50)
+                {
+                    glyph = 2;
+                }
+                else
+                {
+                    glyph = 3;
+                }
+                packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, x, row_y, glyph);
             }
             x += 0x10;
-            idx++;
+            marker_index++;
         }
         y += 0x10;
     }
 
-    for (arg0 = 0; arg0 < 5; arg0++)
+    for (initial_packet = 0; initial_packet < 5; initial_packet++)
     {
         x = 4;
-        for (col = 0; col < 6; col++)
+        for (column = 0; column < 6; column++)
         {
-            val = grid[idx];
-            if (val != 0)
+            marker = markers[marker_index];
+            if (marker != 0)
             {
-                acc = func_80140F68(acc, arg1, x, (arg0 << 4) + 0xC, val != 0x4E);
+                packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, x, (initial_packet << 4) + 0xC, marker != 0x4E);
             }
             x += 0x10;
-            idx++;
+            marker_index++;
         }
     }
 
-    return func_80141020(acc, arg1);
+    return golem_finish_grid_marker_run(packet_cursor, ordering_table);
 }
 
 /**
+ * @brief Emit one 8x8 logic-grid marker sprite.
+ * @param packet_cursor Next free GPU packet.
+ * @param ordering_table Ordering-table tag to receive the sprite.
+ * @param x Sprite x coordinate.
+ * @param y Sprite y coordinate.
+ * @param glyph Marker glyph index.
+ * @return Packet cursor past the sprite.
  * @see decomp.me (100%)
  */
-s32 func_80140F68(s32 prim, s32 ot, s32 x, s32 y, s32 tile)
+s32 golem_emit_grid_marker(s32 packet_cursor, s32 ordering_table, s32 x, s32 y, s32 glyph)
 {
-    SPRT *sprt = (SPRT *)prim;
+    SPRT* sprite = (SPRT*)packet_cursor;
 
-    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-    setSprt(sprt);
-    setWH(sprt, 8, 8);
-    setUV0(sprt, tile * 8 - 0x70, 0x58);
-    setXY0(sprt, x, y);
-    sprt->clut = 0x7C87;
-    addPrim(ot, sprt);
-    return prim + 0x14;
+    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+    setSprt(sprite);
+    setWH(sprite, 8, 8);
+    setUV0(sprite, glyph * 8 - 0x70, 0x58);
+    setXY0(sprite, x, y);
+    sprite->clut = 0x7C87;
+    addPrim(ordering_table, sprite);
+    return packet_cursor + 0x14;
 }
 
 /**
+ * @brief Return the animated cursor to its resting target.
+ * @return None.
  * @see decomp.me (100%)
  */
-void func_80140FF8(void)
+void golem_reset_cursor_motion(void)
 {
-    D_8014C264 = 0xB8;
-    D_8014C268 = 0x50;
-    D_8014C254 = 8;
+    g_golem_cursor_target_x = 0xB8;
+    g_golem_cursor_target_y = 0x50;
+    g_golem_cursor_steps = 8;
 }
 
 /**
+ * @brief Append the draw-mode packet that closes a grid-marker run.
+ * @param packet_cursor Next free GPU packet.
+ * @param ordering_table Ordering-table tag to receive the packet.
+ * @return Packet cursor past the draw-mode packet.
  * @see decomp.me (100%)
  */
-s32 func_80141020(s32 prim, s32 ot)
+s32 golem_finish_grid_marker_run(s32 packet_cursor, s32 ordering_table)
 {
-    DR_TPAGE *draw_mode = (DR_TPAGE *)prim;
+    DR_TPAGE* draw_mode = (DR_TPAGE*)packet_cursor;
 
     setDrawTPage(draw_mode, 0, 0, getTPage(0, 1, 320, 0));
-    addPrim(ot, draw_mode);
-    return prim + 8;
+    addPrim(ordering_table, draw_mode);
+    return packet_cursor + 8;
 }
 
 /**
+ * @brief Draw and advance the animated logic-grid cursor.
+ * @param packet_cursor Next free GPU packet.
+ * @param render_context Render context containing the cursor ordering-table tag.
+ * @return Packet cursor past the sprite and draw-mode packet.
  * @see decomp.me (100%)
  */
-s32 func_80141074(s32 prim, s32 arg1)
+s32 golem_draw_cursor(s32 packet_cursor, s32 render_context)
 {
-    SPRT *sprt = (SPRT *)prim;
-    DR_TPAGE *draw_mode;
-    s32 ot;
-    u16 x;
-    u16 y;
-    s32 dx;
-    s32 dy;
+    SPRT* sprite = (SPRT*)packet_cursor;
+    DR_TPAGE* draw_mode;
+    s32 ordering_table;
+    u16 cursor_x;
+    u16 cursor_y;
+    s32 x_step;
+    s32 y_step;
 
-    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-    setSprt(sprt);
-    x = D_8014C258;
-    y = D_8014C25C;
-    setWH(sprt, 0x10, 0x10);
-    setUV0(sprt, 0xB0, 0xF0);
-    sprt->clut = 0x7C87;
-    setXY0(sprt, x + 8, y);
-    addPrim(arg1 + 0x2C, sprt);
+    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+    setSprt(sprite);
+    cursor_x = g_golem_cursor_x;
+    cursor_y = g_golem_cursor_y;
+    setWH(sprite, 0x10, 0x10);
+    setUV0(sprite, 0xB0, 0xF0);
+    sprite->clut = 0x7C87;
+    setXY0(sprite, cursor_x + 8, cursor_y);
+    addPrim(render_context + 0x2C, sprite);
 
-    prim += 0x14;
-    ot = arg1 + 0x2C;
+    packet_cursor += 0x14;
+    ordering_table = render_context + 0x2C;
 
-    if (D_8014C254 != 0)
+    if (g_golem_cursor_steps != 0)
     {
-        dx = (D_8014C264 - D_8014C258) / D_8014C254;
-        dy = (D_8014C268 - D_8014C25C) / D_8014C254;
-        D_8014C254--;
-        D_8014C258 += dx;
-        D_8014C25C += dy;
+        x_step = (g_golem_cursor_target_x - g_golem_cursor_x) / g_golem_cursor_steps;
+        y_step = (g_golem_cursor_target_y - g_golem_cursor_y) / g_golem_cursor_steps;
+        g_golem_cursor_steps--;
+        g_golem_cursor_x += x_step;
+        g_golem_cursor_y += y_step;
     }
     else
     {
-        D_8014C258 = D_8014C264;
-        D_8014C25C = D_8014C268;
+        g_golem_cursor_x = g_golem_cursor_target_x;
+        g_golem_cursor_y = g_golem_cursor_target_y;
     }
 
-    draw_mode = (DR_TPAGE *)prim;
+    draw_mode = (DR_TPAGE*)packet_cursor;
     setDrawTPage(draw_mode, 0, 0, getTPage(0, 1, 320, 0));
-    addPrim(ot, draw_mode);
-    return prim + 8;
+    addPrim(ordering_table, draw_mode);
+    return packet_cursor + 8;
 }
 
 /**
  * @brief Emit the golem panel grid, the cursor, and the selected item's name
  *        and detail text into the render context's packet buffer.
- * @param arg0 Render context; packet cursor at +0x4040, panel OT at +0x3C,
- *             text OT at +0x28.
- * @note WIP, NOT byte-matched. Best local match 94.986% (122/148 exact rows).
- *       Instruction count, frame (-0x250), sp slots and control flow are all
- *       exact; the residue is a single coupled saved-register rotation.
- *       @c archive wins gcc's allocation priority race (3076) against @c arg0
- *       (1106) and takes s3, which pushes @c text_anchor out to s7 and rotates
- *       four registers. Matching needs archive's priority to land between 862
- *       and 1106. Nine probe classes and two permuter seeds are already
- *       retired - read working/func_80141228/STATUS.md before touching this,
- *       and do not re-derive them.
+ * @param render_context Render context with the packet cursor and ordering table.
+ * @return None.
+ * @note The remaining mismatch is a coupled saved-register rotation; stack
+ *       layout, instruction count, and control flow match the target.
+ * @see decomp.me (94.99%)
  * @see working/func_80141228/STATUS.md
  */
-void func_80141228(s32 arg0)
+void golem_render(s32 render_context)
 {
     s32 stack_pad[2];
     u8 name_buf[0x100];
     u8 number_buf[0x100];
-    B560Entry *entry;
-    u8 *archive;
-    u8 *offsets;
-    u8 *text_base;
-    s32 prim;
-    s32 panel;
-    s32 panel_ot;
-    s32 text_anchor;
-    s32 detail;
+    GolemPanelRecord* panel_record;
+    u8* archive;
+    u8* offsets;
+    u8* text_base;
+    s32 packet_cursor;
+    s32 panel_index;
+    s32 panel_ordering_table;
+    s32 text_ordering_table;
+    s32 detail_block;
 
-    panel_ot = arg0 + 0x3C;
-    prim = *(s32 *)(arg0 + 0x4040);
-    panel = 0;
+    panel_ordering_table = render_context + 0x3C;
+    packet_cursor = *(s32*)(render_context + 0x4040);
+    panel_index = 0;
     do
     {
-        entry = (B560Entry *)&D_8014B560 + panel;
-        prim = func_80141AD0(prim, panel_ot, panel, entry->unkA, entry->unkC, entry->unkE, entry->unk10);
-        panel++;
-    } while (panel < 0x9A);
+        panel_record = (GolemPanelRecord*)&g_golem_panel_records + panel_index;
+        packet_cursor =
+            golem_draw_panel(packet_cursor, panel_ordering_table, panel_index, panel_record->x, panel_record->y, panel_record->width, panel_record->height);
+        panel_index++;
+    } while (panel_index < 0x9A);
 
-    prim = func_80141478(prim, arg0);
-    prim = func_801416C8(prim, arg0);
-    prim = func_80141074(prim, arg0);
-    text_anchor = arg0 + 0x28;
+    packet_cursor = golem_draw_block_list(packet_cursor, render_context);
+    packet_cursor = golem_draw_logic_grid(packet_cursor, render_context);
+    packet_cursor = golem_draw_cursor(packet_cursor, render_context);
+    text_ordering_table = render_context + 0x28;
 
-    if (D_8014C184 != 0)
+    if (g_golem_logic_block_count != 0)
     {
-        archive = (u8 *)&D_8014AAA4;
+        archive = (u8*)&g_golem_text_archive_offset;
         archive -= 4;
-        func_801427F8(name_buf, D_8014AAA4 + (*(u16 *)(((u8)CELL(D_8014C284) >> 2) * 2 + D_8014AAA4 + archive) + archive));
-        if ((CELL(D_8014C284) >> 8) & 0xF)
+        golem_copy_encoded_string(name_buf,
+                                  g_golem_text_archive_offset +
+                                      (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + g_golem_text_archive_offset + archive) + archive));
+        if ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF)
         {
             offsets = D_800EC3DA;
             text_base = offsets - 0x16;
-            func_80142728(name_buf, offsets[0] + ((offsets[1] << 8) + text_base));
-            func_800A8B90(number_buf, (CELL(D_8014C284) >> 8) & 0xF, 1);
-            func_80142728(name_buf, number_buf);
+            golem_append_encoded_string(name_buf, offsets[0] + ((offsets[1] << 8) + text_base));
+            func_800A8B90(number_buf, (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF, 1);
+            golem_append_encoded_string(name_buf, number_buf);
         }
-        prim = func_800A88A0(prim, text_anchor, name_buf, 0, 0xA0, 0xA0, 2);
-        detail = *(s32 *)(archive + 8);
-        prim = func_800A88A0(prim, text_anchor,
-                             detail + (*(u16 *)(((u8)CELL(D_8014C284) >> 2) * 2 + detail + archive) + archive),
-                             0, 0xA0, 0xB0, 2);
+        packet_cursor = func_800A88A0(packet_cursor, text_ordering_table, name_buf, 0, 0xA0, 0xA0, 2);
+        detail_block = *(s32*)(archive + 8);
+        packet_cursor = func_800A88A0(packet_cursor, text_ordering_table,
+                                      detail_block + (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + detail_block + archive) + archive), 0,
+                                      0xA0, 0xB0, 2);
     }
 
-    *(s32 *)(arg0 + 0x4040) = func_80142434(prim, arg0 + 0x24);
+    *(s32*)(render_context + 0x4040) = golem_render_fade(packet_cursor, render_context + 0x24);
 }
 
 /**
  * @brief Link a base primitive into the render context OT, emit a highlight
  *        primitive for each on-screen panel cell, then link a final frame prim.
- * @param prim Running primitive pointer; advanced by 0x40 per emitted prim.
- * @param ctx  Render context base; panel OT tag at +0x38, mode flag at +0x404C.
- * @return The advanced primitive pointer (@p prim + 0x40 past the last prim).
- * @note WIP, NOT byte-matched. Best local match 98.28% (141/148 exact rows);
- *       insn count, frame (-0xA8) and sp slots all match. Residue is three
- *       ordering rows: the two entry param-copies (s6/s0 save order), the
- *       preheader idx-init placement (0xAC vs 0xBC), and the walker++/idx+=
- *       delay-slot pick at the loop bottom. Established shapes worth keeping:
- *       the nested `if (temp_v1 >= -0x27) { if (temp_v1 < 0x78)` split defeats
- *       the two-sided range fold into `sltiu` (+3 rows); the ternary is INLINED
- *       into the call arg so it materializes late in v0, not hoisted (+15);
- *       @c t18c splits `D_8014C18C - 0x28` to stop reassociation; `idx += 0x28`
- *       before `i++` fills the D_8014C184 load-delay slot. Handoff in
- *       working/func_80141478/code.c.
+ * @param packet_cursor Running primitive pointer, advanced for each primitive.
+ * @param render_context Render context containing the panel ordering table.
+ * @return Packet cursor after the final frame primitive.
+ * @note The remaining mismatch is instruction scheduling; frame and stack-slot
+ *       layout match the target.
+ * @see decomp.me (98.28%)
+ * @see working/func_80141478/code.c
  */
-s32 func_80141478(s32 prim, s32 ctx)
+s32 golem_draw_block_list(s32 packet_cursor, s32 render_context)
 {
-    u8 sp28[0x60];
-    s32 tag;
-    s32 next;
-    s32 temp_v1;
-    s32 idx;
-    s32 i;
-    s32 mode;
-    s32 t18c;
+    u8 draw_env[0x60];
+    s32 ordering_table;
+    s32 next_packet;
+    s32 block_y;
+    s32 list_y;
+    s32 block_index;
+    s32 draw_y;
+    s32 scroll_above;
 
-    i = 0;
-    tag = ctx + 0x38;
-    func_8001A5D4(prim, D_8014C168 + (*(s32 *)(ctx + 0x404C) ^ 1) * 0x40C0 + 0x4064);
-    next = prim + 0x40;
-    addPrim(tag, prim);
+    block_index = 0;
+    ordering_table = render_context + 0x38;
+    func_8001A5D4(packet_cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
+    next_packet = packet_cursor + 0x40;
+    addPrim(ordering_table, packet_cursor);
 
-    if (D_8014C184 > 0)
+    if (g_golem_logic_block_count > 0)
     {
-        idx = 0;
+        list_y = 0;
         do
         {
-            t18c = D_8014C18C - 0x28;
-            temp_v1 = idx - t18c;
-            if (temp_v1 >= -0x27)
+            scroll_above = g_golem_scroll_y - 0x28;
+            block_y = list_y - scroll_above;
+            if (block_y >= -0x27)
             {
-                if (temp_v1 < 0x78)
+                if (block_y < 0x78)
                 {
-                    if (D_8014C284 == i && ((C198Entry *)D_8014C198)[i].value == 0)
+                    if (g_golem_selected_block == block_index && g_golem_block_status[block_index].is_unavailable == 0)
                     {
-                        next = func_80141EB4(next, tag, i, 0, 6, temp_v1 + 4, ((C198Entry *)D_8014C198)[i].pad, 1, D_8014C238 ? 0x80 : 2);
+                        next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6, block_y + 4,
+                                                                g_golem_block_status[block_index].clut, 1, g_golem_is_placing_block ? 0x80 : 2);
                     }
                     else
                     {
-                        next = func_80141EB4(next, tag, i, 0, 6, idx - D_8014C18C + 0x2C, ((C198Entry *)D_8014C198)[i].pad, 1, 0);
+                        next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6, list_y - g_golem_scroll_y + 0x2C,
+                                                                g_golem_block_status[block_index].clut, 1, 0);
                     }
                 }
             }
-            idx += 0x28;
-            i++;
-        } while (i < D_8014C184);
+            list_y += 0x28;
+            block_index++;
+        } while (block_index < g_golem_logic_block_count);
     }
 
-    prim = next;
-    mode = 0x1E;
-    if (*(s32 *)(ctx + 0x404C) != 0)
+    packet_cursor = next_packet;
+    draw_y = 0x1E;
+    if (*(s32*)(render_context + 0x404C) != 0)
     {
-        mode = 0x106;
+        draw_y = 0x106;
     }
-    func_8001C56C(sp28, 0xCA, mode, 0x4C, 0x74);
-    func_8001A5D4(prim, sp28);
-    addPrim(tag, prim);
-    return prim + 0x40;
+    SetDefDrawEnv(draw_env, 0xCA, draw_y, 0x4C, 0x74);
+    SetDrawEnv(packet_cursor, draw_env);
+    addPrim(ordering_table, packet_cursor);
+    return packet_cursor + 0x40;
 }
-
-/** @brief 0x14-byte icon sub-entry within a D_800F1CD0 row; only bytes 8 and 9
- *         (signed x/y offsets) are read here. Distinct from @ref D800F1CD0Entry,
- *         which is the enclosing 0x58-byte row. */
-typedef struct { u8 pad0[8]; s8 unk8; s8 unk9; u8 pad10[10]; } IconPos;
 
 /**
  * @brief Link a base primitive into the render context OT, emit a highlight prim
  *        for the selected cursor cell and for each active grid cell, then draw a
  *        framing box sized by the current panel mode.
- * @param prim Running primitive pointer; advanced by 0x40 per emitted prim.
- * @param ctx  Render context base; OT tag at +0x34, mode flag at +0x404C.
- * @return The advanced primitive pointer (@p ret_acc + 0x40 past the last prim).
- * @note WIP, NOT byte-matched. Best local match 89.15% (209 exact rows); insn
- *       count, frame (-0xA8), control flow and sp slots all match. Residue is
- *       coloring/scheduling noise, not structure: the prologue param-copy order
- *       (s0/s5), the icon-block scratch-register numbering and a hoisted
- *       D_8014C248 load, and the switch-tail v0val (target holds it in v0 and
- *       copies to a3 at the merged call). Established shapes worth keeping: the
- *       mode ternary is INLINED as the last call arg so it materializes late
- *       (+12%); @c ret_acc reuses the dead prim/i register for the tail so next
- *       lives in a temp (t0) not a saved reg, keeping the saved-reg count at 6
- *       (+33 exact); rowidx is INLINED into the icon expression so D_8014C27C*0x14
- *       emits before the CELL read. The permuter's higher-scoring 89.69% basin
- *       had FEWER exact rows (204). Handoff in working/func_801416C8/code.c.
+ * @param packet_cursor Running primitive pointer, advanced for each primitive.
+ * @param render_context Render context containing the grid ordering table.
+ * @return Packet cursor after the final frame primitive.
+ * @note The remaining mismatch is register allocation and instruction
+ *       scheduling; frame, stack-slot layout, and control flow match the target.
+ * @see decomp.me (89.15%)
+ * @see working/func_801416C8/code.c
  */
-s32 func_801416C8(s32 prim, s32 ctx)
+s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
 {
-    u8 sp28[0x60];
-    s32 tag;
-    s32 next;
-    s32 i;
-    u32 cell;
-    IconPos *icon;
-    s32 pos_x;
-    s32 pos_y;
-    s32 a1val;
-    s32 a2val;
-    s32 v0val;
-    s32 ret_acc;
-    C198Entry *c198;
-    u8 *cell_ptr;
+    u8 draw_env[0x60];
+    s32 ordering_table;
+    s32 next_packet;
+    s32 block_index;
+    u32 logic_block;
+    GolemIconVariantPosition* variant_position;
+    s32 cursor_target_x;
+    s32 cursor_target_y;
+    s32 draw_x;
+    s32 draw_y;
+    s32 draw_size;
+    s32 final_packet;
+    GolemLogicBlockStatus* block_status;
+    u8* logic_block_ptr;
 
-    tag = ctx + 0x34;
-    func_8001A5D4(prim, D_8014C168 + (*(s32 *)(ctx + 0x404C) ^ 1) * 0x40C0 + 0x4064);
-    addPrim(tag, prim);
-    next = prim + 0x40;
+    ordering_table = render_context + 0x34;
+    func_8001A5D4(packet_cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
+    addPrim(ordering_table, packet_cursor);
+    next_packet = packet_cursor + 0x40;
 
-    if (D_8014C238 != 0)
+    if (g_golem_is_placing_block != 0)
     {
-        next = func_80141EB4(next, tag, D_8014C284, D_8014C27C, D_8014C248 * 0x10, D_8014C24C * 0x10, ((C198Entry *)D_8014C198)[D_8014C284].pad, 0, 3);
-        icon = (IconPos *)(&D_800F1CD0[D_8014C27C * 0x14 + ((CELL(D_8014C284) >> 12) & 0xF) * 0x58]);
-        pos_x = icon->unk8 * 8 + D_8014C248 * 0x10 - D_8014C188 * 8 + 0x3C;
-        pos_y = icon->unk9 * 8 + D_8014C24C * 0x10 - D_8014C188 * 8 + 0x3C;
-        if ((pos_x != D_8014C258 || pos_y != D_8014C25C) && D_8014C254 == 0)
+        next_packet = golem_draw_composite_icon(next_packet, ordering_table, g_golem_selected_block, g_golem_block_rotation, g_golem_block_x * 0x10,
+                                                g_golem_block_y * 0x10, g_golem_block_status[g_golem_selected_block].clut, 0, 3);
+        variant_position = (GolemIconVariantPosition*)(&(
+            (u8*)g_golem_composite_icon_rows)[g_golem_block_rotation * 0x14 + ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF) * 0x58]);
+        cursor_target_x = variant_position->base_x * 8 + g_golem_block_x * 0x10 - g_golem_grid_size_class * 8 + 0x3C;
+        cursor_target_y = variant_position->base_y * 8 + g_golem_block_y * 0x10 - g_golem_grid_size_class * 8 + 0x3C;
+        if ((cursor_target_x != g_golem_cursor_x || cursor_target_y != g_golem_cursor_y) && g_golem_cursor_steps == 0)
         {
-            D_8014C264 = pos_x;
-            D_8014C268 = pos_y;
-            D_8014C254 = 4;
+            g_golem_cursor_target_x = cursor_target_x;
+            g_golem_cursor_target_y = cursor_target_y;
+            g_golem_cursor_steps = 4;
         }
     }
 
-    next = func_80140DEC(next, tag);
+    next_packet = golem_draw_grid_markers(next_packet, ordering_table);
 
-    if (D_8014C184 > 0)
+    if (g_golem_logic_block_count > 0)
     {
-        i = 0;
-        c198 = (C198Entry *)&D_8014C198;
-        cell_ptr = &D_80042FD8[0];
+        block_index = 0;
+        block_status = g_golem_block_status;
+        logic_block_ptr = &g_menuLayoutBuffer[0];
         do
         {
-            cell = *(u32 *)(cell_ptr + 0x29DC);
-            if ((cell & 3) == D_8014C260)
+            logic_block = *(u32*)(logic_block_ptr + 0x29DC);
+            if ((logic_block & 3) == g_golem_active_logic_type)
             {
-                next = func_80141EB4(next, tag, i, (cell >> 0x11) & 3, ((s32)(cell << 8) >> 27) << 4, ((s32)(cell << 3) >> 27) << 4, c198->pad, 0, i == D_8014C284 ? (D_8014C238 ? 0x80 : 2) : 0);
+                next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, (logic_block >> 0x11) & 3,
+                                                        ((s32)(logic_block << 8) >> 27) << 4, ((s32)(logic_block << 3) >> 27) << 4, block_status->clut, 0,
+                                                        block_index == g_golem_selected_block ? (g_golem_is_placing_block ? 0x80 : 2) : 0);
             }
-            c198++;
-            cell_ptr += 4;
-            i++;
-        } while (i < D_8014C184);
+            block_status++;
+            logic_block_ptr += 4;
+            block_index++;
+        } while (block_index < g_golem_logic_block_count);
     }
 
-    ret_acc = next;
+    final_packet = next_packet;
 
-    switch (D_8014C188)
+    switch (g_golem_grid_size_class)
     {
     case 0:
-        a2val = 0x38;
-        if (*(s32 *)(ctx + 0x404C) != 0)
+        draw_y = 0x38;
+        if (*(s32*)(render_context + 0x404C) != 0)
         {
-            a2val = 0x120;
+            draw_y = 0x120;
         }
-        v0val = 0x40;
-        a1val = 0x50;
+        draw_size = 0x40;
+        draw_x = 0x50;
         goto block_call;
     case 1:
-        a2val = 0x30;
-        if (*(s32 *)(ctx + 0x404C) != 0)
+        draw_y = 0x30;
+        if (*(s32*)(render_context + 0x404C) != 0)
         {
-            a2val = 0x118;
+            draw_y = 0x118;
         }
-        v0val = 0x50;
-        a1val = 0x48;
+        draw_size = 0x50;
+        draw_x = 0x48;
         goto block_call;
     case 2:
-        a2val = 0x28;
-        if (*(s32 *)(ctx + 0x404C) != 0)
+        draw_y = 0x28;
+        if (*(s32*)(render_context + 0x404C) != 0)
         {
-            a2val = 0x110;
+            draw_y = 0x110;
         }
-        v0val = 0x60;
-        a1val = 0x40;
-block_call:
-        func_8001C56C(sp28, a1val, a2val, v0val, v0val);
+        draw_size = 0x60;
+        draw_x = 0x40;
+    block_call:
+        func_8001C56C(draw_env, draw_x, draw_y, draw_size, draw_size);
         break;
     }
 
-    func_8001A5D4(ret_acc, sp28);
-    addPrim(tag, ret_acc);
-    return ret_acc + 0x40;
+    func_8001A5D4(final_packet, draw_env);
+    addPrim(ordering_table, final_packet);
+    return final_packet + 0x40;
 }
-
-/** @brief Bit-packed panel-cell view of one 0x14-byte D_8014B560 record.
- *  @note Third view of the D_8014B560 storage next to @ref B560 and
- *        @ref B560Entry; do not merge them. */
-typedef struct {
-    u32 w0;      /* 0x00 flags: abr[1:0], semi[2], state[6:3], anim[10:7], u0[18:11] */
-    u32 w1;      /* 0x04 v0[10:3], clut[16:11], cell_w[25:17], cell_h_lo[31:26] */
-    u32 w2;      /* 0x08 cell_h_hi[2:0] (overlaps the u16 x/y/w/h view) */
-    u8 pad[0x8];
-} PanelCell;
-
-/** @brief Access panel record @p i of D_8014B560 as a bit-packed cell. */
-#define PANEL(i) (((PanelCell *)&D_8014B560)[i])
 
 /**
  * @brief Draw one UI panel record as a grid of textured sprites plus a
  *        trailing draw-mode packet, gated by the record's state field.
- * @param prim Running primitive pointer; advanced 0x14 per sprite, 8 for the tail.
- * @param ot   Ordering-table tag the primitives are linked into.
- * @param idx  Index of the record within D_8014B560.
+ * @param packet_cursor Running packet cursor.
+ * @param ordering_table Ordering-table tag for the panel packets.
+ * @param panel_index Index of the panel record.
  * @param x    Screen x of the panel origin.
  * @param y    Screen y of the panel origin.
- * @param w    Total panel width in pixels.
- * @param h    Total panel height in pixels.
- * @return The advanced primitive pointer.
- * @note WIP, NOT byte-matched. Best local match 96.69% (187/249 exact rows,
- *       gcc272_cdk). Residue is a frame-shape mismatch: target frame -0x20
- *       with saved regs at sp+0x10..0x1C, ours -0x10 with three extra local
- *       spills. Best source preserved in working/func_80141AD0_golem/.
+ * @param width Total panel width in pixels.
+ * @param height Total panel height in pixels.
+ * @return Packet cursor after the panel packets.
+ * @note The remaining mismatch is stack-frame allocation.
+ * @see decomp.me (96.69%)
+ * @see working/func_80141AD0_golem/
  */
-s32 func_80141AD0(s32 prim, s32 ot, s32 idx, s32 x, s32 y, s32 w, s32 h)
+s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32 x, s32 y, s32 width, s32 height)
 {
-    SPRT *sprt;
-    s32 anim;
+    SPRT* sprite;
+    s32 animation;
     s32 color;
-    s32 y_done;
-    s32 x_done;
-    s32 row_h;
-    s32 cell_h;
-    s32 seg_w;
-    s32 avail;
-    s32 remaining;
-    s32 code_val;
+    s32 y_offset;
+    s32 x_offset;
+    s32 row_height;
+    s32 cell_height;
+    s32 segment_width;
+    s32 available_width;
+    s32 remaining_height;
+    s32 packet_code;
 
     color = 0x808080;
 
-    switch ((PANEL(idx).w0 >> 3) & 0xF) {
+    switch ((GOLEM_PANEL_TEXTURE(panel_index).attributes >> 3) & 0xF)
+    {
     case 0:
     case 7:
         break;
     case 1:
     case 2:
     case 3:
-        if ((((PANEL(idx).w0 >> 3) & 0xF) - 1) != D_8014C188)
+        if ((((GOLEM_PANEL_TEXTURE(panel_index).attributes >> 3) & 0xF) - 1) != g_golem_grid_size_class)
         {
-            return prim;
+            return packet_cursor;
         }
         break;
     case 4:
-        if (D_8014C18C == 0)
+        if (g_golem_scroll_y == 0)
         {
-            return prim;
+            return packet_cursor;
         }
-        anim = (PANEL(idx).w0 >> 7) & 0xF;
-        if (anim != 0)
+        animation = (GOLEM_PANEL_TEXTURE(panel_index).attributes >> 7) & 0xF;
+        if (animation != 0)
         {
             color = 0xC0;
-            PANEL(idx).w0 = (PANEL(idx).w0 & ~0x780) | (((anim - 1) & 0xF) << 7);
+            GOLEM_PANEL_TEXTURE(panel_index).attributes = (GOLEM_PANEL_TEXTURE(panel_index).attributes & ~0x780) | (((animation - 1) & 0xF) << 7);
         }
         break;
     case 5:
-        if (!((D_8014C18C / 40) < (D_8014C184 - 1)))
+        if (!((g_golem_scroll_y / 40) < (g_golem_logic_block_count - 1)))
         {
-            return prim;
+            return packet_cursor;
         }
-        anim = (PANEL(idx).w0 >> 7) & 0xF;
-        if (anim != 0)
+        animation = (GOLEM_PANEL_TEXTURE(panel_index).attributes >> 7) & 0xF;
+        if (animation != 0)
         {
             color = 0xC0;
-            PANEL(idx).w0 = (PANEL(idx).w0 & ~0x780) | (((anim - 1) & 0xF) << 7);
+            GOLEM_PANEL_TEXTURE(panel_index).attributes = (GOLEM_PANEL_TEXTURE(panel_index).attributes & ~0x780) | (((animation - 1) & 0xF) << 7);
         }
         break;
     case 6:
-        anim = (PANEL(idx).w0 >> 7) & 0xF;
-        if (anim != 0)
+        animation = (GOLEM_PANEL_TEXTURE(panel_index).attributes >> 7) & 0xF;
+        if (animation != 0)
         {
             color = 0xC0C0C0;
-            PANEL(idx).w0 = (PANEL(idx).w0 & ~0x780) | (((anim - 1) & 0xF) << 7);
+            GOLEM_PANEL_TEXTURE(panel_index).attributes = (GOLEM_PANEL_TEXTURE(panel_index).attributes & ~0x780) | (((animation - 1) & 0xF) << 7);
         }
         break;
     }
 
-    y_done = 0;
-    if (y_done < h)
+    y_offset = 0;
+    if (y_offset < height)
     {
-        code_val = 0x64;
-        remaining = h - y_done;
+        packet_code = 0x64;
+        remaining_height = height - y_offset;
         do
         {
-            row_h = remaining;
-            cell_h = (PANEL(idx).w1 >> 26) | ((PANEL(idx).w2 & 7) << 6);
-            x_done = 0;
-            if (cell_h < row_h)
+            row_height = remaining_height;
+            cell_height = (GOLEM_PANEL_TEXTURE(panel_index).texture >> 26) | ((GOLEM_PANEL_TEXTURE(panel_index).dimensions & 7) << 6);
+            x_offset = 0;
+            if (cell_height < row_height)
             {
-                row_h = cell_h;
+                row_height = cell_height;
             }
-            while (x_done < w)
+            while (x_offset < width)
             {
-            sprt = (SPRT *)prim;
-            avail = w - x_done;
-            seg_w = (PANEL(idx).w1 >> 17) & 0x1FF;
-            if (seg_w >= avail)
-            {
-                seg_w = avail;
+                sprite = (SPRT*)packet_cursor;
+                available_width = width - x_offset;
+                segment_width = (GOLEM_PANEL_TEXTURE(panel_index).texture >> 17) & 0x1FF;
+                if (segment_width >= available_width)
+                {
+                    segment_width = available_width;
+                }
+                SET_BGR0_PACKED(sprite, color);
+                setlen(sprite, 4);
+                setcode(sprite, packet_code);
+                if ((GOLEM_PANEL_TEXTURE(panel_index).attributes >> 2) & 1)
+                {
+                    setcode(sprite, 0x66);
+                }
+                sprite->x0 = x + (x_offset + 8);
+                sprite->y0 = y + y_offset;
+                sprite->w = segment_width;
+                sprite->h = row_height;
+                sprite->u0 = GOLEM_PANEL_TEXTURE(panel_index).attributes >> 11;
+                sprite->v0 = GOLEM_PANEL_TEXTURE(panel_index).texture >> 3;
+                sprite->clut = ((GOLEM_PANEL_TEXTURE(panel_index).texture >> 11) & 0x3F) | 0x7C80;
+                addPrim(ordering_table, sprite);
+                x_offset += (GOLEM_PANEL_TEXTURE(panel_index).texture >> 17) & 0x1FF;
+                packet_cursor += 0x14;
             }
-            SET_BGR0_PACKED(sprt, color);
-            setlen(sprt, 4);
-            setcode(sprt, code_val);
-            if ((PANEL(idx).w0 >> 2) & 1)
-            {
-                setcode(sprt, 0x66);
-            }
-                sprt->x0 = x + (x_done + 8);
-                sprt->y0 = y + y_done;
-                sprt->w = seg_w;
-                sprt->h = row_h;
-                sprt->u0 = PANEL(idx).w0 >> 11;
-                sprt->v0 = PANEL(idx).w1 >> 3;
-                sprt->clut = ((PANEL(idx).w1 >> 11) & 0x3F) | 0x7C80;
-                addPrim(ot, sprt);
-                x_done += (PANEL(idx).w1 >> 17) & 0x1FF;
-                prim += 0x14;
-            }
-            y_done += (PANEL(idx).w1 >> 26) | ((PANEL(idx).w2 & 7) << 6);
-            remaining = h - y_done;
-        } while (y_done < h);
+            y_offset += (GOLEM_PANEL_TEXTURE(panel_index).texture >> 26) | ((GOLEM_PANEL_TEXTURE(panel_index).dimensions & 7) << 6);
+            remaining_height = height - y_offset;
+        } while (y_offset < height);
     }
 
-    setlen(prim, 1);
-    ((u_long *)prim)[1] = ((PANEL(idx).w0 & 3) << 5) | 0xE1000005;
-    addPrim(ot, prim);
-    return prim + 8;
+    setlen(packet_cursor, 1);
+    ((u_long*)packet_cursor)[1] = ((GOLEM_PANEL_TEXTURE(panel_index).attributes & 3) << 5) | 0xE1000005;
+    addPrim(ordering_table, packet_cursor);
+    return packet_cursor + 8;
 }
-
-/** @brief Header view of an 88-byte D_800F1CD0 icon layout row. */
-typedef struct
-{
-    u8 part_count;  /* 0x00 */
-    u8 pad1[3];
-    s16 origin_x;   /* 0x04 */
-    s16 origin_y;   /* 0x06 */
-    s8 base_x;      /* 0x08 */
-    s8 base_y;      /* 0x09 */
-} GolemIconLayout;
-
-/** @brief One positioned part, viewed at layout + sub*0x14 + i*4. */
-typedef struct
-{
-    u8 pad[0xC];
-    s8 x;           /* 0x0C */
-    s8 y;           /* 0x0D */
-    s16 glyph_id;   /* 0x0E */
-} GolemIconPart;
-
-s32 func_801420CC();
 
 /**
  * @brief Draw one grid cell's icon: the base glyph plus each positioned part
- *        from its D_800F1CD0 layout row, then splice a draw-mode packet.
- * @param packet     Running primitive pointer; advanced per emitted packet.
- * @param ot         Ordering-table tag the primitives are linked into.
- * @param cell_index Grid cell index; selects the layout row via CELL bits 12-15.
- * @param sub_index  Layout sub-entry (rotation) index; 0x14-byte stride.
+ *        from its layout row, then splice a draw-mode packet.
+ * @param packet_cursor Running packet cursor.
+ * @param ordering_table Ordering-table tag for the icon packets.
+ * @param block_index Logic-block index selecting the packed record.
+ * @param rotation Layout rotation index; each view has a 0x14-byte stride.
  * @param x          Screen x of the cell.
  * @param y          Screen y of the cell.
  * @param clut       CLUT selector passed to the part glyphs.
  * @param use_origin When 1, offset x/y by the layout row's origin fields.
- * @param arg8       Flag word forwarded to func_801420CC for the part glyphs.
- * @return The advanced primitive pointer (past the trailing 8-byte packet).
- * @note WIP, NOT byte-matched. Best local match 94.33% (108/134 exact rows,
- *       gcc272_cdk); frame and sp slots match, residue is 23 argdiff rows of
- *       register-coloring noise plus one 3-row ordering run. Best source
- *       preserved in working/func_80141EB4_golem/.
+ * @param style      Style flags forwarded to golem_emit_glyph for each part.
+ * @return Packet cursor past the trailing draw-mode packet.
+ * @note The remaining mismatch is register allocation; frame and stack-slot
+ *       layout match the target.
+ * @see decomp.me (94.33%)
+ * @see working/func_80141EB4_golem/
  */
-s32 func_80141EB4(s32 packet, s32 *ot, s32 cell_index, s32 sub_index, s32 x, s32 y, s32 clut, s32 use_origin, s32 arg8)
+s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_index, s32 rotation, s32 x, s32 y, s32 clut, s32 use_origin, s32 style)
 {
-    u32 cell;
-    s32 row;
-    s32 sub_off;
-    s32 row_off;
-    u8 *table;
-    u8 *layout;
-    s32 i;
+    u32 logic_block;
+    s32 layout_index;
+    s32 rotation_offset;
+    s32 layout_offset;
+    u8* table;
+    u8* layout;
+    s32 part_index;
 
-    cell = CELL(cell_index);
-    row = cell >> 0xC;
-    row = row & 0xF;
+    logic_block = GOLEM_LOGIC_BLOCK(block_index);
+    layout_index = logic_block >> 0xC;
+    layout_index = layout_index & 0xF;
     if (use_origin == 1)
     {
-        u8 *base = D_800F1CD0;
-        GolemIconLayout *l = (GolemIconLayout *)(base + row * 0x58);
-        x += l->origin_x * 8;
-        y += l->origin_y * 8;
+        u8* base = (u8*)g_golem_composite_icon_rows;
+        GolemCompositeIconRow* row = (GolemCompositeIconRow*)(base + layout_index * 0x58);
+        x += row->origin_x * 8;
+        y += row->origin_y * 8;
     }
-    i = 0;
-    table = D_800F1CD0;
-    sub_off = sub_index * 0x14;
-    row_off = row * 0x58;
+    part_index = 0;
+    table = (u8*)g_golem_composite_icon_rows;
+    rotation_offset = rotation * 0x14;
+    layout_offset = layout_index * 0x58;
     {
-        GolemIconLayout *entry = (GolemIconLayout *)(sub_off + row_off + table);
-        packet = func_801420CC(packet, ot, ((cell >> 2) & 0x3F) + 0x13,
-                               (entry->base_x * 8) + x, (entry->base_y * 8) + y, 9, 0);
+        GolemCompositeIconRow* variant = (GolemCompositeIconRow*)(rotation_offset + layout_offset + table);
+        packet_cursor =
+            golem_emit_glyph(packet_cursor, ordering_table, ((logic_block >> 2) & 0x3F) + 0x13, (variant->base_x * 8) + x, (variant->base_y * 8) + y, 9, 0);
     }
-    layout = row_off + table;
+    layout = layout_offset + table;
     if (*layout != 0)
     {
-        u8 *tbl = table;
-        s32 roff = row_off;
-        u8 *lay = layout;
-        s32 iv = sub_off;
+        u8* table_base = table;
+        s32 row_base = layout_offset;
+        u8* part_count = layout;
+        s32 part_offset = rotation_offset;
         do
         {
-            GolemIconPart *part = (GolemIconPart *)(iv + roff + tbl);
-            iv += 4;
-            i += 1;
-            packet = func_801420CC(packet, ot, part->glyph_id,
-                                   (part->x * 0x10) + x, (part->y * 0x10) + y, clut, arg8);
-        } while (i < *lay);
+            GolemCompositeIconPartView* part = (GolemCompositeIconPartView*)(part_offset + row_base + table_base);
+            part_offset += 4;
+            part_index += 1;
+            packet_cursor = golem_emit_glyph(packet_cursor, ordering_table, part->glyph_id, (part->x * 0x10) + x, (part->y * 0x10) + y, clut, style);
+        } while (part_index < *part_count);
     }
-    *(u8 *)(packet + 3) = 1;
-    *(u32 *)(packet + 4) = 0xE1000025;
-    *(u32 *)(packet + 0) = (*(u32 *)(packet + 0) & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | (packet & 0xFFFFFF);
-    return packet + 8;
+    *(u8*)(packet_cursor + 3) = 1;
+    *(u32*)(packet_cursor + 4) = 0xE1000025;
+    *(u32*)(packet_cursor + 0) = (*(u32*)(packet_cursor + 0) & 0xFF000000) | (*ordering_table & 0xFFFFFF);
+    *ordering_table = (*ordering_table & 0xFF000000) | (packet_cursor & 0xFFFFFF);
+    return packet_cursor + 8;
 }
-
-/** @brief 8-byte texture entry: u/v bytes plus 16-bit width/height. */
-typedef struct
-{
-    u8 u0;
-    u8 pad1;
-    u8 v0;
-    u8 pad3;
-    u16 w;
-    u16 h;
-} GolemTexEntry;
-
-extern GolemTexEntry D_8014B2D0[];
 
 /**
  * @brief Emit one glyph: an optional colored backing TILE (chosen by the low
- *        flag bits) followed by a textured SPRT from the D_8014B2D0 table.
- * @param prim  Running primitive pointer; advanced 0x10 for the TILE, 0x14 for the SPRT.
- * @param ot    Ordering-table tag the primitives are linked into.
- * @param index Entry index into the D_8014B2D0 UV/size table.
+ *        style bits) followed by a textured SPRT.
+ * @param packet_cursor Running packet cursor.
+ * @param ordering_table Ordering-table tag for the glyph packets.
+ * @param glyph_id Entry index into the glyph-metrics table.
  * @param x     Screen x of the glyph.
  * @param y     Screen y of the glyph.
- * @param arg5  CLUT selector; 0xF and 9 also gate the brightness overrides.
- * @param flags Bit 7 dims the sprite; low bits 1-3 pick the backing tile color.
- * @return The advanced primitive pointer.
+ * @param clut CLUT selector; 0xF and 9 also gate brightness overrides.
+ * @param style Bit 7 dims the sprite; low bits 1-3 select a backing color.
+ * @return Packet cursor past the glyph packets.
+ * @see decomp.me (100%)
  */
-s32 func_801420CC(s32 prim, s32 ot, s32 index, s32 x, s32 y, s32 arg5, s32 flags)
+s32 golem_emit_glyph(s32 packet_cursor, s32 ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut, s32 style)
 {
-    TILE *tile;
-    SPRT *sprt;
-    GolemTexEntry *entry;
-    GolemTexEntry *entry2;
+    TILE* tile;
+    SPRT* sprite;
+    GolemGlyphMetric* metric;
+    GolemGlyphMetric* metric2;
     u32 color;
-    GolemTexEntry *base;
-    GolemTexEntry *base2;
+    GolemGlyphMetric* metrics;
+    GolemGlyphMetric* metrics2;
 
-    if ((flags & 0x7F) != 0)
+    if ((style & 0x7F) != 0)
     {
-        tile = (TILE *)prim;
-        switch (flags & 0x7F)
+        tile = (TILE*)packet_cursor;
+        switch (style & 0x7F)
         {
-            case 1:
-                color = 0x80;
-                break;
-            case 2:
-                color = 0x800080;
-                break;
-            case 3:
-                color = 0x8000;
-                break;
-            default:
-                setlen(tile, 3);
-                goto skip_color;
+        case 1:
+            color = 0x80;
+            break;
+        case 2:
+            color = 0x800080;
+            break;
+        case 3:
+            color = 0x8000;
+            break;
+        default:
+            setlen(tile, 3);
+            goto skip_color;
         }
-        SET_BGR0_PACKED(prim, color);
+        SET_BGR0_PACKED(packet_cursor, color);
         setlen(tile, 3);
-skip_color:
+    skip_color:
         setcode(tile, 0x62);
-        base = D_8014B2D0;
-        entry = base + index;
+        metrics = g_golem_glyph_metrics;
+        metric = metrics + glyph_id;
         setXY0(tile, x, y);
-        setWH(tile, entry->w, entry->h);
-        addPrim(ot, tile);
-        prim = (s32)tile + 0x10;
+        setWH(tile, metric->width, metric->height);
+        addPrim(ordering_table, tile);
+        packet_cursor = (s32)tile + 0x10;
     }
 
-    sprt = (SPRT *)prim;
-    SET_BGR0_PACKED(sprt, 0x606060);
-    setSprt(sprt);
-    if (flags & 0x80)
+    sprite = (SPRT*)packet_cursor;
+    SET_BGR0_PACKED(sprite, 0x606060);
+    setSprt(sprite);
+    if (style & 0x80)
     {
-        setRGB0(sprt, 0x38, 0x38, 0x38);
-        sprt->code |= 2;
+        setRGB0(sprite, 0x38, 0x38, 0x38);
+        sprite->code |= 2;
     }
-    if (arg5 == 0xF)
+    if (clut == 0xF)
     {
-        setRGB0(sprt, 0x40, 0x40, 0x40);
-        sprt->code |= 2;
+        setRGB0(sprite, 0x40, 0x40, 0x40);
+        sprite->code |= 2;
     }
-    if (arg5 != 9)
+    if (clut != 9)
     {
-        sprt->code |= 2;
+        sprite->code |= 2;
     }
-    base2 = D_8014B2D0;
-    entry2 = base2 + index;
-    setXY0(sprt, x, y);
-    setWH(sprt, entry2->w, entry2->h);
-    sprt->u0 = entry2->u0;
-    sprt->v0 = entry2->v0;
-    sprt->clut = (arg5 & 0x3F) | 0x7C80;
-    addPrim(ot, sprt);
-    return prim + 0x14;
+    metrics2 = g_golem_glyph_metrics;
+    metric2 = metrics2 + glyph_id;
+    setXY0(sprite, x, y);
+    setWH(sprite, metric2->width, metric2->height);
+    sprite->u0 = metric2->u0;
+    sprite->v0 = metric2->v0;
+    sprite->clut = (clut & 0x3F) | 0x7C80;
+    addPrim(ordering_table, sprite);
+    return packet_cursor + 0x14;
 }
-
-#define GOLEM_GPU_ADDR_MASK 0xFFFFFF
-#define GOLEM_GPU_TAG_HIGH_MASK 0xFF000000
-
-/** @brief Generic GPU packet prefix used while advancing the primitive buffer. */
-typedef struct
-{
-    /* 0x0 */ s32 tag;
-    /* 0x4 */ s32 word4;
-    /* 0x8 */ s16 x0;
-    /* 0xA */ s16 y0;
-    /* 0xC */ s16 unkC;
-    /* 0xE */ u16 unkE;
-} GolemGpuPacket;
 
 /**
  * @brief Emit a rectangle outline as four LINE_F2 packets (top, right,
  *        bottom, left) linked into the ordering table.
- * @param p     Running packet cursor; one 0x10-byte packet per edge.
- * @param ot    Ordering-table tag the packets are linked into.
+ * @param packet Running packet cursor; one 0x10-byte packet per edge.
+ * @param ordering_table Ordering-table tag for the line packets.
  * @param x     Left edge x.
  * @param y     Top edge y.
- * @param w     Rectangle width.
- * @param h     Rectangle height.
+ * @param width Rectangle width.
+ * @param height Rectangle height.
  * @param color Packed BGR line color.
- * @return The advanced packet cursor (@p p + 4 packets).
- * @note The first packet's OT splice is spelled manually through @c tmp, and
- *       @c tmp is reused for y + h below; both are required to match.
+ * @return Packet cursor after four line packets.
+ * @note The first OT splice and reuse of @c temporary are required to match.
+ * @see decomp.me (100%)
  */
-GolemGpuPacket *func_801422BC(GolemGpuPacket *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 color)
+GolemLinePacket* golem_emit_panel_outline(GolemLinePacket* packet, s32* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color)
 {
-    s32 tmp;
+    s32 temporary;
 
-    p->word4 = color;
-    setlen(p, 3);
-    setcode(p, 0x40);
-    p->x0 = x;
-    p->y0 = y;
-    p->unkC = x + w;
-    p->unkE = y;
-    tmp = GOLEM_GPU_TAG_HIGH_MASK;
-    p->tag = (p->tag & GOLEM_GPU_TAG_HIGH_MASK) | (*ot & GOLEM_GPU_ADDR_MASK);
-    *ot = (*ot & tmp) | ((s32)p & GOLEM_GPU_ADDR_MASK);
-    p++;
+    packet->color_and_code = color;
+    setlen(packet, 3);
+    setcode(packet, 0x40);
+    packet->x0 = x;
+    packet->y0 = y;
+    packet->x1 = x + width;
+    packet->y1 = y;
+    temporary = GOLEM_GPU_TAG_HIGH_MASK;
+    packet->tag = (packet->tag & GOLEM_GPU_TAG_HIGH_MASK) | (*ordering_table & GOLEM_GPU_ADDRESS_MASK);
+    *ordering_table = (*ordering_table & temporary) | ((s32)packet & GOLEM_GPU_ADDRESS_MASK);
+    packet++;
 
-    p->word4 = color;
-    setlen(p, 3);
-    setcode(p, 0x40);
-    p->x0 = x + w;
-    p->y0 = y;
-    p->unkC = x + w;
-    p->unkE = y + h;
-    addPrim(ot, p);
-    p++;
+    packet->color_and_code = color;
+    setlen(packet, 3);
+    setcode(packet, 0x40);
+    packet->x0 = x + width;
+    packet->y0 = y;
+    packet->x1 = x + width;
+    packet->y1 = y + height;
+    addPrim(ordering_table, packet);
+    packet++;
 
-    p->word4 = color;
-    setlen(p, 3);
-    setcode(p, 0x40);
-    p->x0 = x + w;
-    tmp = y + h;
-    p->y0 = tmp;
-    p->unkC = x;
-    p->unkE = y + h;
-    addPrim(ot, p);
-    p++;
+    packet->color_and_code = color;
+    setlen(packet, 3);
+    setcode(packet, 0x40);
+    packet->x0 = x + width;
+    temporary = y + height;
+    packet->y0 = temporary;
+    packet->x1 = x;
+    packet->y1 = y + height;
+    addPrim(ordering_table, packet);
+    packet++;
 
-    p->word4 = color;
-    setlen(p, 3);
-    setcode(p, 0x40);
-    p->x0 = x;
-    p->y0 = y;
-    p->unkC = x;
-    p->unkE = y + h;
-    addPrim(ot, p);
-    return p + 1;
+    packet->color_and_code = color;
+    setlen(packet, 3);
+    setcode(packet, 0x40);
+    packet->x0 = x;
+    packet->y0 = y;
+    packet->x1 = x;
+    packet->y1 = y + height;
+    addPrim(ordering_table, packet);
+    return packet + 1;
 }
-
-#define GOLEM_FADE_NEUTRAL 0x100
-#define GOLEM_FADE_ADDITIVE_THRESHOLD (GOLEM_FADE_NEUTRAL + 1)
-#define GOLEM_FADE_ADDITIVE_DRAW_MODE 0x25
-#define GOLEM_FADE_SUBTRACTIVE_DRAW_MODE 0x45
-
-/** @brief Packet view for a fade TILE or draw-mode command. */
-typedef union
-{
-    TILE tile;
-    DR_TPAGE draw_mode;
-} GolemFadePrimitive;
-
-/** Advance a fade packet cursor by the concrete packet just emitted. */
-#define GOLEM_NEXT_FADE_PRIMITIVE(primitive, type) \
-    ((GolemFadePrimitive*)((u8*)(primitive) + sizeof(type)))
-
-/** @brief Fade colour triple plus its remaining step count. */
-typedef struct
-{
-    s16 r;                  // 0x00
-    s16 g;                  // 0x02
-    s16 b;                  // 0x04
-    s16 steps;              // 0x06
-} GolemFade;
-
-extern GolemFade D_8014C178;
-extern GolemFade D_8014C240;
 
 /**
  * @brief Set the screen-fade target color and step count.
- * @param arg0 Target red component (0x100 = neutral).
- * @param arg1 Target green component.
- * @param arg2 Target blue component.
- * @param arg3 Number of frames to reach the target.
+ * @param red Target red component (0x100 = neutral).
+ * @param green Target green component.
+ * @param blue Target blue component.
+ * @param steps Number of frames to reach the target.
+ * @return None.
+ * @see decomp.me (100%)
  */
-void func_80142418(s16 arg0, s16 arg1, s16 arg2, s16 arg3)
+void golem_set_fade_target(s16 red, s16 green, s16 blue, s16 steps)
 {
-    D_8014C178.r = arg0;
-    D_8014C178.g = arg1;
-    D_8014C178.b = arg2;
-    D_8014C178.steps = arg3;
+    g_golem_fade_target.red = red;
+    g_golem_fade_target.green = green;
+    g_golem_fade_target.blue = blue;
+    g_golem_fade_target.steps_remaining = steps;
 }
 
 /**
@@ -1311,65 +1501,65 @@ void func_80142418(s16 arg0, s16 arg1, s16 arg2, s16 arg3)
  * @param primitive           Running fade packet cursor.
  * @param ordering_table_tag  Ordering-table tag the packets are linked into.
  * @return The advanced packet cursor.
+ * @see decomp.me (100%)
  */
-GolemFadePrimitive* func_80142434(GolemFadePrimitive* primitive, u_long* ordering_table_tag)
+GolemFadePrimitive* golem_render_fade(GolemFadePrimitive* primitive, u_long* ordering_table_tag)
 {
-    s32 dr;
-    s32 dg;
-    s32 db;
+    s32 red_step;
+    s32 green_step;
+    s32 blue_step;
     s32 draw_mode;
 
-    if (D_8014C178.steps != 0)
+    if (g_golem_fade_target.steps_remaining != 0)
     {
-        dr = (D_8014C178.r - D_8014C240.r) / D_8014C178.steps;
-        dg = (D_8014C178.g - D_8014C240.g) / D_8014C178.steps;
-        db = (D_8014C178.b - D_8014C240.b) / D_8014C178.steps;
-        D_8014C178.steps = D_8014C178.steps - 1;
-        D_8014C240.r = D_8014C240.r + dr;
-        D_8014C240.g = D_8014C240.g + dg;
-        D_8014C240.b = D_8014C240.b + db;
+        red_step = (g_golem_fade_target.red - g_golem_fade_current.red) / g_golem_fade_target.steps_remaining;
+        green_step = (g_golem_fade_target.green - g_golem_fade_current.green) / g_golem_fade_target.steps_remaining;
+        blue_step = (g_golem_fade_target.blue - g_golem_fade_current.blue) / g_golem_fade_target.steps_remaining;
+        g_golem_fade_target.steps_remaining = g_golem_fade_target.steps_remaining - 1;
+        g_golem_fade_current.red = g_golem_fade_current.red + red_step;
+        g_golem_fade_current.green = g_golem_fade_current.green + green_step;
+        g_golem_fade_current.blue = g_golem_fade_current.blue + blue_step;
     }
     else
     {
-        D_8014C240.r = D_8014C178.r;
-        D_8014C240.g = D_8014C178.g;
-        D_8014C240.b = D_8014C178.b;
+        g_golem_fade_current.red = g_golem_fade_target.red;
+        g_golem_fade_current.green = g_golem_fade_target.green;
+        g_golem_fade_current.blue = g_golem_fade_target.blue;
     }
-    if ((D_8014C240.r != GOLEM_FADE_NEUTRAL) ||
-        (D_8014C240.g != D_8014C240.r) ||
-        (D_8014C240.b != D_8014C240.g))
+    if ((g_golem_fade_current.red != GOLEM_FADE_NEUTRAL) || (g_golem_fade_current.green != g_golem_fade_current.red) ||
+        (g_golem_fade_current.blue != g_golem_fade_current.green))
     {
-        if (D_8014C240.r >= GOLEM_FADE_ADDITIVE_THRESHOLD)
+        if (g_golem_fade_current.red >= GOLEM_FADE_ADDITIVE_THRESHOLD)
         {
-            primitive->tile.r0 = D_8014C240.r - 1;
-            primitive->tile.g0 = D_8014C240.g - 1;
-            primitive->tile.b0 = D_8014C240.b - 1;
+            primitive->tile.r0 = g_golem_fade_current.red - 1;
+            primitive->tile.g0 = g_golem_fade_current.green - 1;
+            primitive->tile.b0 = g_golem_fade_current.blue - 1;
         }
         else
         {
-            if (D_8014C240.r == GOLEM_FADE_NEUTRAL)
+            if (g_golem_fade_current.red == GOLEM_FADE_NEUTRAL)
             {
                 primitive->tile.r0 = 0;
             }
             else
             {
-                primitive->tile.r0 = ~D_8014C240.r;
+                primitive->tile.r0 = ~g_golem_fade_current.red;
             }
-            if (D_8014C240.g == GOLEM_FADE_NEUTRAL)
+            if (g_golem_fade_current.green == GOLEM_FADE_NEUTRAL)
             {
                 primitive->tile.g0 = 0;
             }
             else
             {
-                primitive->tile.g0 = ~D_8014C240.g;
+                primitive->tile.g0 = ~g_golem_fade_current.green;
             }
-            if (D_8014C240.b == GOLEM_FADE_NEUTRAL)
+            if (g_golem_fade_current.blue == GOLEM_FADE_NEUTRAL)
             {
                 primitive->tile.b0 = 0;
             }
             else
             {
-                primitive->tile.b0 = ~D_8014C240.b;
+                primitive->tile.b0 = ~g_golem_fade_current.blue;
             }
         }
 
@@ -1382,7 +1572,7 @@ GolemFadePrimitive* func_80142434(GolemFadePrimitive* primitive, u_long* orderin
         addPrim(ordering_table_tag, &primitive->tile);
 
         primitive = GOLEM_NEXT_FADE_PRIMITIVE(primitive, TILE);
-        if (D_8014C240.r < GOLEM_FADE_ADDITIVE_THRESHOLD)
+        if (g_golem_fade_current.red < GOLEM_FADE_ADDITIVE_THRESHOLD)
         {
             draw_mode = GOLEM_FADE_SUBTRACTIVE_DRAW_MODE;
         }
@@ -1398,17 +1588,19 @@ GolemFadePrimitive* func_80142434(GolemFadePrimitive* primitive, u_long* orderin
  * @brief Append the encoded string @p src to the end of @p dest.
  * @param dest Destination encoded-text buffer (null-terminated).
  * @param src  Source encoded-text buffer (null-terminated).
- * @note func_801427AC is intentionally left without a prototype here; the
+ * @return None.
+ * @note golem_encoded_string_length intentionally has no prototype here; the
  *       implicit declaration is required to match.
+ * @see decomp.me (100%)
  */
-void func_80142728(u8 *dest, u8 *src)
+void golem_append_encoded_string(u8* dest, u8* src)
 {
     s32 dst_len;
     s32 src_len;
     s32 i;
 
-    dst_len = func_801427AC(dest);
-    src_len = func_801427AC(src);
+    dst_len = golem_encoded_string_length(dest);
+    src_len = golem_encoded_string_length(src);
     for (i = 0; i < src_len; i++)
     {
         dest[dst_len + i] = src[i];
@@ -1421,43 +1613,43 @@ void func_80142728(u8 *dest, u8 *src)
  *        start a two-byte character, everything else is one byte.
  * @param text Null-terminated encoded-text buffer.
  * @return Length in bytes, excluding the terminator.
+ * @see decomp.me (100%)
  */
-s32 func_801427AC(u8 *text)
+s32 golem_encoded_string_length(u8* text)
 {
-    u8 *p;
-    u8 c;
-    s32 len;
+    u8* cursor;
+    u8 character;
+    s32 byte_count;
 
-    p = text;
-    c = *p;
-    len = 0;
-    while (c != 0)
+    cursor = text;
+    character = *cursor;
+    byte_count = 0;
+    while (character != 0)
     {
-        if ((u32)(c - 0x19) < 7)
+        if ((u32)(character - 0x19) < 7)
         {
-            p += 2;
-            len += 2;
+            cursor += 2;
+            byte_count += 2;
         }
         else
         {
-            p += 1;
-            len += 1;
+            cursor += 1;
+            byte_count += 1;
         }
-        c = *p;
+        character = *cursor;
     }
-    return len;
+    return byte_count;
 }
-
-/** A lead byte in the range 0x19..0x1F starts a two-byte encoded character. */
-#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
 
 /**
  * @brief Copy the encoded string @p src to @p dst, honoring two-byte
  *        characters, and null-terminate the destination.
  * @param dst Destination buffer.
  * @param src Source encoded-text buffer (null-terminated).
+ * @return None.
+ * @see decomp.me (100%)
  */
-void func_801427F8(u8* dst, u8* src)
+void golem_copy_encoded_string(u8* dst, u8* src)
 {
     const u8* scan_cursor;
     s32 byte_count;

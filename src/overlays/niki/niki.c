@@ -31,6 +31,7 @@ typedef struct NikiRecord {
     u8 unkCF;
     u8 padD0[4];
     u16 unkD4;
+    u16 unkD6;
 } NikiRecord;
 
 typedef struct
@@ -200,7 +201,7 @@ s32 func_8014303C(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s32 slot, s32 i
 s32 func_801469C0(s32 result, s32 *ot, u8 *name, s32 x, s32 y, s32 a5, s32 a6);
 void func_80141DB8(void *arg0);
 s32 func_80141E1C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-void func_801433BC();
+s32 func_801433BC(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 void func_80141E84();
 s32 func_80144DF8(void);
 
@@ -2030,5 +2031,531 @@ s32 func_80143294(s32 prim, s32 *ot, s32 x, s32 y)
         func_800A3938(0x7D, 0x80);
         D_80122988 = 0;
     }
+    return prim;
+}
+
+extern u16 D_80147114;
+extern u16 D_80147160;
+extern u16 D_80147162;
+extern u16 D_8014716A;
+extern u8 D_801606EC;
+extern u8 D_801606F5;
+extern void *jtbl_80140054[];
+
+/**
+ * @brief Draw/update dispatcher for the niki save-menu state machine.
+ *
+ * Dispatches on the state code in D_80164B78 (0xF3..0xFF) through the rodata
+ * jump table jtbl_80140054, emitting the glyph primitives for the active
+ * dialog page and advancing the state on pad input.
+ *
+ * @param ot Ordering-table entry the glyph primitives are linked into.
+ * @param prim GPU packet write cursor.
+ * @param arg2 X scroll offset subtracted from all glyph positions.
+ * @param arg3 Y scroll offset subtracted from all glyph positions.
+ * @return Advanced GPU packet cursor.
+ *
+ * @note The `switch (0)` wrapper, the static `keep[]` label-address array and
+ *       `goto *jtbl_80140054[dispatch]` reproduce the original rodata jump
+ *       table dispatch; same computed-goto pattern as the menu.c matches.
+ * @note Verified 100.000000% (962/962 exact, gcc272_cdk) in-tree 2026-08-25;
+ *       scratch history in working/func_801433BC/.
+ */
+s32 func_801433BC(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    RECT pos;
+    s32 dispatch;
+    static void *const keep[] = {
+        &&niki_f3, &&niki_f4, &&niki_f5, &&niki_f6, &&niki_f7, &&niki_f8, &&niki_f9,
+        &&niki_fa, &&niki_fb, &&niki_fc, &&niki_fd, &&niki_fe, &&niki_ff
+    };
+    switch (0)
+    {
+    case 0:
+        dispatch = D_80164B78 - 0xF3;
+        if ((u32)dispatch >= 0xD)
+        {
+            goto niki_default;
+        }
+        goto *jtbl_80140054[dispatch];
+    niki_f8:
+        do { prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -arg2 + 0x90, -arg3, 2); } while (0);
+        break;
+    niki_f9:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -arg2 + 0x90, -arg3, 2);
+        break;
+    niki_ff:
+        {
+            s32 x;
+            u8 *base;
+            x = -arg2 + 0x90;
+            base = (u8 *)&D_801470F8;
+            prim = func_800A88A0(prim, ot, base + D_801470F8, 4, x, -arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
+        }
+        break;
+    niki_fa:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -arg2 + 0x90, -arg3, 2);
+        break;
+    niki_fd:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_801470FC, 4), 4, -arg2 + 0x90, -arg3, 2);
+        break;
+    niki_fb:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147108, 0x10), 4, -arg2 + 0x90, -arg3, 2);
+        break;
+    niki_fc:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014710A, 0x12), 4, -arg2 + 0x90, -arg3, 2);
+        break;
+    niki_f7:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147160, 0x68), 4, -arg2 + 0x90, -arg3, 2);
+        break;
+    niki_f6:
+        {
+            s32 x;
+            u8 *base;
+            NikiPolyG4Words *g;
+            s32 next;
+            s32 elapsed;
+            s32 extent;
+            s32 color;
+            s32 finalmode;
+
+            x = -arg2 + 0x90;
+            prim = func_800A88A0(prim, ot, (void *)((s32)&D_8014712A - 0x32 + D_8014712A), 4, x, -arg3, 2);
+            base = (u8 *)&D_8014712A - 0x32;
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
+
+            next = prim;
+            g = (NikiPolyG4Words *)prim;
+            if (D_80164F08 != 0)
+            {
+                elapsed = func_8002054C(-1) - D_80164F10;
+                if (elapsed >= 0x101)
+                {
+                    elapsed = 0x100;
+                }
+                color = 0xFFFF00;
+                extent = elapsed * 0x120;
+                g->unk4 = 0xFF;
+                g->unkC = 0xFFFF;
+                g->unk1C = 0xFF0000;
+                ((u8 *)g)[3] = 8;
+                g->unk14 = color;
+                ((u8 *)g)[7] = 0x38;
+                g->unk18 = 0;
+                g->unk8 = 0;
+                if (extent < 0)
+                {
+                    extent += 0xFF;
+                }
+                g->unk20 = extent >> 8;
+                g->unk10 = extent >> 8;
+                g->unk12 = 0;
+                g->unkA = 0;
+                g->unk22 = 0x2C;
+                g->unk1A = 0x2C;
+                g->unk0 = (g->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+                *ot = (*ot & 0xFF000000) | (prim & 0xFFFFFF);
+                next = prim + 0x24;
+            }
+            prim = next;
+
+            if (D_80164AD4 == 0)
+            {
+                if (func_80144310(D_80160A78) == 0)
+                {
+                    func_800A3938(0x78, 0x80);
+                    D_80164B10.draw_handler = (void *)func_80142D04;
+                    D_80164B10.attr.f.unk0_3 = 1;
+                    D_80164B10.attr.f.state = 1;
+                    D_80164B10.attr.f.x = 0x20;
+                    D_80164B10.attr.f.unk0_16 = 0x70;
+                    D_80164B10.unk4_0 = 1;
+                    D_80164B10.y = 0x14;
+                    SET_ELEM_CODE(&D_80164B10, 0);
+                    func_800AA02C();
+                    D_80164B90 = 0;
+                    D_80164B84 = 0;
+                    D_80164A78 = 0;
+                    D_80164AD4 = 0;
+                    D_80164B78 = 0xFF;
+                    func_80144BC0();
+                    finalmode = 4;
+                    D_80164E18 = 0;
+                    D_80160A70 = finalmode;
+                    return prim;
+                }
+                func_800A3938(0x7B, 0x80);
+                D_80164B78 = 0xF4;
+                D_80164A7C = 1;
+                func_800AA02C();
+            }
+        }
+        break;
+    niki_f3:
+        {
+            s32 x;
+            s32 result;
+            s32 y;
+            u8 *p;
+            u8 *base;
+            s32 g1;
+            s32 g2;
+            s32 hi;
+            s32 a3;
+            NikiPacket *packet;
+            s32 i;
+
+            x = -arg2;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014716A, 0x72), 4, x + 0x90, -arg3, 2);
+            y = 0xE - arg3;
+            p = (u8 *)&D_800EC3FA;
+            hi = p[1] << 8;
+            base = p - 0x36;
+            a3 = 4;
+            g1 = p[0] + (hi + (s32)base);
+            if (D_80164A7C != 0)
+            {
+                a3 = 5;
+            }
+            result = func_800A88A0(prim, ot, (void *)g1, a3, x + 0x80, y, 1);
+            a3 = 4;
+            g2 = base[0x38] + ((base[0x39] << 8) + (s32)base);
+            if (D_80164A7C == 0)
+            {
+                a3 = 5;
+            }
+            result = func_800A88A0(result, ot, (void *)g2, a3, x + 0x98, y, 0);
+            if (D_80122988 & 0xA000)
+            {
+                D_80164A7C ^= 1;
+                func_800A3938(0x7D, 0x80);
+                D_80122988 = 0;
+            }
+
+            prim = result;
+
+            if (D_80122988 & 0x40)
+            {
+                func_800A3938(0x78, 0x80);
+                D_80164A7C = 1;
+                D_80164B78 = 0xF4;
+                func_800AA02C();
+            }
+            else if (D_80122988 & 0x220)
+            {
+                if (D_80164A7C != 0)
+                {
+                    func_800A3938(0x78, 0x80);
+                    D_80164A7C = 1;
+                    D_80164B78 = 0xF4;
+                    func_800AA02C();
+                }
+                else
+                {
+                    func_800A3938(0x7D, 0x80);
+                    packet = (NikiPacket *)&D_80164B10;
+                    D_8011F428 = 2;
+                    D_8012298C = 0x20;
+                    for (i = 0; i < 8; i++, packet++)
+                    {
+                        packet->attr.f.state = 0;
+                    }
+                    func_80067F5C(8);
+                    func_800AA02C();
+                }
+            }
+        }
+        break;
+    niki_f4:
+        {
+            s32 x;
+            s32 result;
+            s32 one;
+            s32 y;
+            u8 *glyphbase;
+            u8 *p;
+            u8 *base;
+            s32 g1;
+            s32 g2;
+            s32 hi;
+            s32 a3;
+            s32 count;
+            s32 i;
+            u8 *cursor;
+            u8 *resource;
+            s32 temp;
+
+            x = -arg2;
+            prim = func_800A88A0(prim, ot, (void *)((s32)&D_80147162 - 0x6A + D_80147162), 4, x + 0x90, -arg3, 2);
+            glyphbase = (u8 *)&D_80147162 - 0x6A;
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyphbase, 0x70), 4, x + 0x90, 0xE - arg3, 2);
+
+            y = 0x1C - arg3;
+            p = (u8 *)&D_800EC3FA;
+            hi = p[1] << 8;
+            base = p - 0x36;
+            a3 = 4;
+            g1 = p[0] + (hi + (s32)base);
+            if (D_80164A7C != 0)
+            {
+                a3 = 5;
+            }
+            one = 1;
+            result = func_800A88A0(prim, ot, (void *)g1, a3, x + 0x80, y, one);
+            a3 = 4;
+            g2 = base[0x38] + ((base[0x39] << 8) + (s32)base);
+            if (D_80164A7C == 0)
+            {
+                a3 = 5;
+            }
+            result = func_800A88A0(result, ot, (void *)g2, a3, x + 0x98, y, 0);
+            if (D_80122988 & 0xA000)
+            {
+                D_80164A7C ^= 1;
+                func_800A3938(0x7D, 0x80);
+                D_80122988 = 0;
+            }
+
+            prim = result;
+
+            if (D_80122988 & 0x40)
+            {
+                goto f4_accept;
+            }
+            if (D_80122988 & 0x220)
+            {
+                if (D_80164A7C != 0)
+                {
+                f4_accept:
+                    D_80164A7C = one;
+                    D_80164B78 = 0xF3;
+                    func_800A3938(0x78, 0x80);
+                    func_800AA02C();
+                }
+                else
+                {
+                    func_800A3938(0x7E, 0x80);
+                    cursor = D_80122A08;
+                    resource = D_80160A78;
+                    func_80016E7C(D_80122A08, resource + 0x32E0, 0x100);
+                    count = 0;
+                    for (i = 0; i < 4; i++)
+                    {
+                        if (cursor[i * 0x40] != 0)
+                        {
+                            count++;
+                        }
+                    }
+                    resource[0x197] = count;
+                    temp = func_80144364(resource, count);
+                    *(s32 *)(resource + 0x33E4) = 0x414E41;
+                    *(s32 *)(resource + 0x33E0) = temp;
+                    D_80164B90 = 1;
+                    D_80164E18 = &D_801606F5;
+                    D_80164B78 = 0xF5;
+                }
+            }
+        }
+        break;
+    niki_f5:
+        {
+            s32 x;
+            u8 *base;
+            NikiPolyG4Words *g;
+            s32 next;
+            s32 elapsed;
+            s32 extent;
+            s32 color;
+            NikiPacket *packet;
+            s32 i;
+
+            x = -arg2 + 0x90;
+            prim = func_800A88A0(prim, ot, (void *)((s32)&D_80147114 - 0x1C + D_80147114), 4, x, -arg3, 2);
+            base = (u8 *)&D_80147114 - 0x1C;
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
+
+            next = prim;
+            g = (NikiPolyG4Words *)prim;
+            if (D_80164F08 != 0)
+            {
+                elapsed = func_8002054C(-1) - D_80164F10;
+                if (elapsed >= 0x101)
+                {
+                    elapsed = 0x100;
+                }
+                color = 0xFFFF00;
+                extent = elapsed * 0x120;
+                g->unk4 = 0xFF;
+                g->unkC = 0xFFFF;
+                g->unk1C = 0xFF0000;
+                ((u8 *)g)[3] = 8;
+                g->unk14 = color;
+                ((u8 *)g)[7] = 0x38;
+                g->unk18 = 0;
+                g->unk8 = 0;
+                if (extent < 0)
+                {
+                    extent += 0xFF;
+                }
+                g->unk20 = extent >> 8;
+                g->unk10 = extent >> 8;
+                g->unk12 = 0;
+                g->unkA = 0;
+                g->unk22 = 0x2C;
+                g->unk1A = 0x2C;
+                g->unk0 = (g->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+                *ot = (*ot & 0xFF000000) | (prim & 0xFFFFFF);
+                next = prim + 0x24;
+            }
+            prim = next;
+
+            if (D_80164B90 == 0)
+            {
+                func_800A3938(0x7A, 0x80);
+                D_8012298C = 0x20;
+                packet = (NikiPacket *)&D_80164B10;
+                for (i = 0; i < 8; i++, packet++)
+                {
+                    packet->attr.f.state = 0;
+                }
+                func_80067F5C(8);
+                D_8011F428 = 0;
+            }
+        }
+        break;
+    niki_default:
+        {
+            s32 x;
+            u8 *base;
+            s32 pos;
+            s32 diff;
+
+            x = -arg2 + 0x90;
+            base = (u8 *)&D_801470F8;
+            prim = func_800A88A0(prim, ot, base + D_801470F8, 4, x, -arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
+
+            if (D_80164F18 == 0)
+            {
+                if (D_80164A78 != 0)
+                {
+                    return prim;
+                }
+                if ((u32)(*D_80164E18 - 6) < 2U)
+                {
+                    return prim;
+                }
+                if ((func_8001714C(D_800ECF7C, &D_80165018[D_80164B70][D_80164B7C], 0xC) != 0) ||
+                    (D_80164D18.unkD4 != D_801227CC) ||
+                    (D_80164D18.unkD6 != D_801227F4))
+                {
+                    D_80164B7C++;
+                    if (D_80164B7C >= D_80164B78)
+                    {
+                        if (D_80164B78 != 0)
+                        {
+                            D_80164B78 = 0xF7;
+                        }
+                        else
+                        {
+                            D_80164B78 = 0xF8;
+                        }
+                    }
+                    else
+                    {
+                        func_80145F68();
+                        pos = D_80164B7C * 0xE;
+                        diff = pos - D_80164AE0;
+                        if (diff >= 0x4B)
+                        {
+                            D_80164AEC = pos - 0x46;
+                            D_80164B88 = 4;
+                        }
+                        if (diff < 0)
+                        {
+                            D_80164AEC = pos;
+                            D_80164B88 = 4;
+                        }
+                    }
+                }
+                else
+                {
+                    D_80164F10 = func_8002054C(-1);
+                    D_80164AD4 = 1;
+                    D_80164E18 = &D_801606EC;
+                    D_80164B78 = 0xF6;
+                }
+            }
+        }
+        break;
+    }
+
+niki_fe:
+    if (D_80164A78 != 0)
+    {
+        return prim;
+    }
+    if (D_80164B78 == 0xF6)
+    {
+        return prim;
+    }
+    if (D_80164B78 == 0xF5)
+    {
+        return prim;
+    }
+    if (D_80164B78 == 0xF4)
+    {
+        return prim;
+    }
+    if (D_80164B78 == 0xF3)
+    {
+        return prim;
+    }
+
+    if (D_80122988 & 0x40)
+    {
+        s32 *p;
+        s32 i;
+        s32 word;
+        D_80122994 = 3;
+        func_800A3938(0x78, 0x80);
+        func_80067F28();
+        p = (s32 *)&D_80164B10;
+        i = 0;
+        do
+        {
+            word = *p;
+            if (word & 7)
+            {
+                *p = (((word & ~7) | 3) & ~0x78) | 0x40;
+            }
+            i++;
+            p += 3;
+        } while (i < 8);
+        return prim;
+    }
+
+    if ((D_80122988 & 0xA100) && (D_80164B78 != 0xFF))
+    {
+        func_800A3938(0x7D, 0x80);
+        D_80164B80 = 0;
+        D_80164E18 = 0;
+        D_80164B88 = 0;
+        D_80164AEC = 0;
+        D_80164AE0 = 0;
+        D_80164B7C = 0;
+        D_80164B78 = 0xFF;
+        D_80164B84 = 0;
+        D_80164B70 ^= 1;
+        func_80144BC0();
+        D_80164F08 = 0;
+        D_80164E18 = (u8 *)&D_801606C8;
+    }
+
     return prim;
 }

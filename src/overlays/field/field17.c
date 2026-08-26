@@ -1273,3 +1273,410 @@ s32 *func_80080274(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     }
     return cursor;
 }
+
+extern SVECTOR D_800FF668;
+extern SVECTOR *D_80105870;
+
+/**
+ * @brief Emit lit ordering-table primitives for one mesh of an actor part.
+ *
+ * Sibling of func_80080274 that additionally builds a 3-source light and
+ * color matrix pair from the part's light ids (searching D_800FF658 for the
+ * owning record of each light), then emits per-face prims in three variants:
+ * case 0 = textured tri with normal-driven shading (ncs), case 2 = gouraud
+ * tri with clamped per-vertex colors, case 1 = flat tri plus a DR_TPAGE
+ * chaser packet.
+ *
+ * @param rec Effect/actor position record driving the transform.
+ * @param part_index Mesh index within the part (also selects the face stream).
+ * @param cursor Current write position in the primitive buffer.
+ * @param arg3_base Base of the ordering-table link array.
+ * @return Advanced primitive-buffer cursor.
+ *
+ * @note NOT YET MATCHED - 95.87% (840/1155 exact, gcc272_cdk). Frame is
+ *       -0x108 vs the target's -0xF8 (two extra spill slots) and the
+ *       light-loop register allocation differs; the residue analysis and
+ *       retired shapes are in working/func_80081098/STATUS.md. The
+ *       `volatile s32 pad[2]` alias base and the do-while(0) wrappers are
+ *       required to match - the target provably addresses the same sp+0x18
+ *       block.
+ * @note THIS FUNCTION IS NOT BYTE-MATCHED YET; treat its source shape as
+ *       scaffolding, not recovered structure.
+ */
+s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3_base)
+{
+    volatile s32 pad[2];
+    MATRIX mtx;
+    MATRIX tmp;
+    MATRIX *mp;
+    u8 color[4];
+    MATRIX light_mtx;
+    MATRIX color_mtx;
+    SVECTOR dir;
+    SVECTOR out;
+    s32 opz;
+    FieldActorState *actor;
+    FieldActorPartDef *part;
+    u8 *part_iter;
+    Struct_D800FDF58 *scan;
+    s32 light_off;
+    s32 color_off;
+    s32 scan_index;
+    s32 scan_off;
+    s32 *sxy;
+    SVECTOR *normals;
+    s32 *depths;
+    s16 *screen;
+    u8 *face;
+    s32 mesh_off;
+    s32 count;
+    s32 kind;
+    s32 *base;
+    s32 sx, sy, rx, ry, rz, sz;
+
+    mp = &tmp;
+    base = arg3_base;
+    mp = &mtx;
+    { FieldActorState *actor_base = g_field_actor_slots; part = &actor_base[rec->unk22].unk0[rec->unk23]; actor = &actor_base[rec->unk22]; }
+    func_80082C90(actor, rec, part, mp, &tmp);
+    mtx.t[2] = 0;
+    mtx.t[1] = 0;
+    mtx.t[0] = 0;
+    func_8007D8D8(actor, rec, part, color);
+    screen = (s16 *)0x1F800000;
+    gte_SetRotMatrix(mp);
+    gte_SetTransMatrix(mp);
+    func_800822A4(actor, rec, part, part_index);
+    func_800829A0(actor, rec, part, part_index, &tmp);
+
+    color_off = 0;
+    light_off = 0;
+    part_iter = (u8 *)part;
+    do {
+        u8 light_id = part_iter[0x23];
+        scan_index = 0;
+        if (light_id < 8) {
+            scan = D_800FF658;
+            scan_off = 0;
+scan_loop:
+            if (light_id != scan->unk23 || rec->unk22 != scan->unk22) {
+                scan++;
+                scan_index++;
+                scan_off += 0x54;
+                if (scan_index < 0x100) goto scan_loop;
+            } else {
+                RotMatrix_gte((SVECTOR *)((u8 *)&D_800FF668 + scan_off), &tmp);
+                RotMatrixZ(rec->unk32 * 0x10, &tmp);
+                RotMatrixY(rec->unk33 * 0x10, &tmp);
+                dir.vz = 0;
+                dir.vx = 0;
+                dir.vy = -0x1000;
+                gte_SetRotMatrix(&tmp);
+                gte_ldv0(&dir);
+                gte_rtv0();
+                gte_stsv(&out);
+                {
+                    s16 *light_row = (s16 *)((u8 *)&light_mtx + light_off);
+                    light_row[0] = out.vx;
+                    light_row[1] = out.vy;
+                    light_row[2] = out.vz;
+                }
+                *(s16 *)((u8 *)pad + color_off + 0x70) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkE * 0x10;
+                *(s16 *)((u8 *)pad + color_off + 0x76) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
+                *(s16 *)((u8 *)pad + color_off + 0x7C) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
+            }
+        }
+        if (light_id >= 8 || scan_index == 0x100) {
+            *(s16 *)((u8 *)pad + color_off + 0x7C) = 0;
+            *(s16 *)((u8 *)pad + color_off + 0x76) = 0;
+            *(s16 *)((u8 *)pad + color_off + 0x70) = 0;
+            *(s16 *)((u8 *)&light_mtx + light_off) = 0;
+        }
+        color_off += 2;
+        light_off += 6;
+        part_iter++;
+    } while (part_iter < (u8 *)part + 3);
+
+    gte_SetLightMatrix(&light_mtx);
+    gte_SetColorMatrix(&color_mtx);
+    sxy = D_80105790;
+    normals = D_80105870;
+    depths = D_80105878;
+    sx = D_800F22A0;
+    mesh_off = part_index * 0x18;
+    { s32 fa = mesh_off; fa += (s32)actor->unk18; face = *(u8 **)(fa + 0x14); }
+    screen[0] = 0xA0 + D_800F22A0 / 256 + rec->unk0 / 256;
+    screen[1] = 0x70 + D_800F22A4 / 256 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512;
+    kind = (face[6] >> 1) & 0xF;
+
+    switch (kind) {
+    case 0:
+    {
+        u8 *p;
+        s32 lowmask;
+        s32 highmask;
+        s32 prim_code;
+        s32 d, off, idx;
+
+        gte_SetBackColor(color[0], color[1], color[2]);
+        if (actor->owner_object_index < 2) {
+            *(u16 *)((u8 *)cursor + 0xE) = ((actor->owner_object_index << 7) + 0x7B80) | (part->unk2D & 0x3F);
+            *(s16 *)((u8 *)cursor + 0x16) = ((part->unk34 >> 15) & 0x80) | ((part->unk4 >> 17) & 0x60) | 0x10 | ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
+        } else {
+            *(u16 *)((u8 *)cursor + 0xE) = (part->unk2D & 0x3F) | 0x7C80;
+            *(s16 *)((u8 *)cursor + 0x16) = ((part->unk34 >> 15) & 0x80) | ((part->unk4 >> 17) & 0x60) | 5;
+        }
+        if ((part->unk0 >> 21) & 1)
+            *(u16 *)((u8 *)cursor + 0xE) = (*(u16 *)((u8 *)cursor + 0xE) & 0xFFC0) + 0x40;
+
+        count = *(u16 *)(actor->unk18 + part_index * 0x18);
+        if (count != 0) {
+            prim_code = 0x24;
+            lowmask = 0xFFFFFF;
+            highmask = 0xFF000000;
+            p = (u8 *)cursor + 0x36;
+            do {
+                gte_ldsxy3(sxy[0], sxy[1], sxy[2]);
+                gte_nclip();
+                gte_stopz(&opz);
+                if (opz > 0) {
+                    gte_ldv0(normals);
+                    gte_ncs();
+                    gte_strgb(p - 0x32);
+                    *(s32 *)(p - 0x2E) = sxy[0];
+                    *(s32 *)(p - 0x26) = sxy[1];
+                    *(s32 *)(p - 0x1E) = sxy[2];
+                    *(u16 *)(p - 0x2E) += (u16)screen[0];
+                    *(u16 *)(p - 0x2C) += (u16)screen[1];
+                    *(u16 *)(p - 0x26) += (u16)screen[0];
+                    *(u16 *)(p - 0x24) += (u16)screen[1];
+                    *(u16 *)(p - 0x1E) += (u16)screen[0];
+                    *(u16 *)(p - 0x1C) += (u16)screen[1];
+                    p[-0x33] = 7;
+                    p[-0x2F] = prim_code;
+                    if (rec->unk1C & 0x800000) p[-0x2F] = 0x26;
+                    else p[-0x2F] = prim_code;
+                    *(u16 *)(p - 0x2A) = *(u16 *)face;
+                    *(u16 *)(p - 0x22) = *(u16 *)(face + 2);
+                    *(u16 *)(p - 0x1A) = *(u16 *)(face + 4);
+                    *(u16 *)(p - 8) = *(u16 *)(p - 0x28);
+                    *(u16 *)p = *(u16 *)(p - 0x20);
+
+                    off = *depths;
+                    d = rec->unk8 >> 7;
+                    idx = d + off;
+                    if (idx < 0) {
+                        p += 0x20;
+                        *cursor = (*cursor & highmask) | (base[0] & lowmask);
+                        base[0] = (base[0] & highmask) | ((s32)cursor & lowmask);
+                        cursor = (s32 *)((u8 *)cursor + 0x20);
+                    } else if (idx >= 0x1000) {
+                        p += 0x20;
+                        *cursor = (*cursor & highmask) | (base[0xFFF] & lowmask);
+                        base[0xFFF] = (base[0xFFF] & highmask) | ((s32)cursor & lowmask);
+                        cursor = (s32 *)((u8 *)cursor + 0x20);
+                    } else {
+                        s32 *entry;
+                        p += 0x20;
+                        *cursor = (*cursor & highmask) | (base[idx] & lowmask);
+                        entry = &base[(rec->unk8 >> 7) + *depths];
+                        *entry = (*entry & highmask) | ((s32)cursor & lowmask);
+                        cursor = (s32 *)((u8 *)cursor + 0x20);
+                    }
+                }
+                face += 0x10;
+                count--;
+                sxy += 3;
+                normals++;
+                depths++;
+            } while (count != 0);
+        }
+        return cursor;
+    }
+    case 2:
+    {
+        u8 *basecur;
+        s32 lowmask;
+        s32 highmask;
+        u8 code2;
+        { s32 ca = mesh_off; ca += (s32)actor->unk18; count = *(u16 *)ca; }
+        do { do { do { do { do { basecur=(u8*)cursor; } while (0); } while (0); } while (0); } while (0); } while (0);
+        if(count!=0){
+            do { do { do { lowmask=0xFFFFFF; } while (0); } while (0); } while (0);
+            highmask = 0xFF000000;
+            do {
+                s32 a=sxy[0],b=sxy[1],c=sxy[2];
+                gte_ldsxy3(a,b,c); gte_nclip(); gte_stopz(&opz);
+                if(opz>0){
+                    CLAMP_TO(basecur[4], face[7]+color[0]-0x80);
+                    CLAMP_TO(basecur[5], face[8]+color[1]-0x80);
+                    CLAMP_TO(basecur[6], face[9]+color[2]-0x80);
+                    CLAMP_TO(basecur[16], face[10]+color[0]-0x80);
+                    CLAMP_TO(basecur[17], face[11]+color[1]-0x80);
+                    CLAMP_TO(basecur[18], face[12]+color[2]-0x80);
+                    CLAMP_TO(basecur[28], face[13]+color[0]-0x80);
+                    CLAMP_TO(basecur[29], face[14]+color[1]-0x80);
+                    CLAMP_TO(basecur[30], face[15]+color[2]-0x80);
+                    basecur[3] = 9;
+                    code2 = 0x34;
+                    basecur[7]=code2;
+                    if (rec->unk1C & 0x800000) basecur[7]=0x36; else basecur[7]=code2;
+                    do { *(s32 *)(basecur+8)=sxy[0]; *(s32 *)(basecur+20)=sxy[1]; *(s32 *)(basecur+32)=sxy[2]; } while (0);
+                    *(u16 *)(basecur+8)+=(u16)screen[0]; *(u16 *)(basecur+10)+=(u16)screen[1];
+                    *(u16 *)(basecur+20)+=(u16)screen[0]; *(u16 *)(basecur+22)+=(u16)screen[1];
+                    *(u16 *)(basecur+32)+=(u16)screen[0]; *(u16 *)(basecur+34)+=(u16)screen[1];
+                    *(u16 *)(basecur+12)=*(u16*)face; *(u16 *)(basecur+24)=*(u16 *)(face+2); *(u16 *)(basecur+36)=*(u16 *)(face+4);
+                    if(actor->owner_object_index<2){
+                        { s32 av; s32 pv; av=actor->owner_object_index; pv=part->unk2D; *(u16*)(basecur+14)=((av<<7)+0x7B80)|(pv&0x3F); }
+                        *(s16*)(basecur+26)=((part->unk34>>15)&0x80)|((part->unk4>>17)&0x60)|0x10|((((actor->owner_object_index<<6)+0x340)&0x3FF)>>6);
+                    } else {
+                        *(u16*)(basecur+14)=(part->unk2D&0x3F)|0x7C80;
+                        *(s16*)(basecur+26)=((part->unk34>>15)&0x80)|((part->unk4>>17)&0x60)|5;
+                    }
+                    if((part->unk0>>21)&1) *(u16*)(basecur+14)=(*(u16*)(basecur+14)&0xFFC0)+0x40;
+                    {
+                        s32 off = *depths;
+                        s32 d = rec->unk8 >> 7;
+                        s32 idx = d + off;
+                        if (idx < 0) {
+                            s32 addr;
+                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (base[0] & lowmask);
+                            addr = (s32)basecur & lowmask;
+                            basecur += 0x28;
+                            base[0] = (base[0] & highmask) | addr;
+                        } else if (idx >= 0x1000) {
+                            s32 addr;
+                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (base[0xFFF] & lowmask);
+                            addr = (s32)basecur & lowmask;
+                            basecur += 0x28;
+                            base[0xFFF] = (base[0xFFF] & highmask) | addr;
+                        } else {
+                            s32 addr;
+                            s32 *entry;
+                            addr = (s32)basecur & lowmask;
+                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)base))) & lowmask);
+                            { s32 rd2; s32 roff2; rd2 = rec->unk8 >> 7; roff2 = *depths;
+                                entry = (s32 *)((roff2 << 2) + ((rd2 << 2) + (s32)base)); }
+                            basecur += 0x28;
+                            *entry = (*entry & highmask) | addr;
+                        }
+                    }
+                }
+                face += 0x10; count--; sxy += 3; depths++;
+            }while(count!=0);
+        }
+        cursor=(s32*)basecur;
+        break;
+    }
+    case 1:
+    {
+        s32 *p = cursor;
+        u8 *fc;
+        s32 d, off, idx;
+        s32 prim_code;
+        s32 lowmask;
+        s32 highmask;
+        { s32 mb = (s32)actor->unk18; count = *(u16 *)(mesh_off + mb); }
+        if (count != 0) {
+            prim_code = 0x20;
+            lowmask = 0xFFFFFF;
+            highmask = 0xFF000000;
+            do {
+                gte_ldsxy3(sxy[0], sxy[1], sxy[2]);
+                gte_nclip();
+                gte_stopz(&opz);
+                if (opz > 0) {
+                    fc = face + 2;
+                    gte_SetBackColor(face[0] + color[0] - 0x80,
+                                     fc[-1] + color[1] - 0x80,
+                                     fc[0] + color[2] - 0x80);
+                    gte_ldv0(normals);
+                    gte_ncs();
+                    gte_strgb((u8 *)p + 4);
+                    *(s32 *)((u8 *)p + 8) = sxy[0];
+                    *(s32 *)((u8 *)p + 12) = sxy[1];
+                    *(s32 *)((u8 *)p + 16) = sxy[2];
+                    *(u16 *)((u8 *)p + 8) += *(u16 *)screen;
+                    *(u16 *)((u8 *)p + 10) += *(u16 *)((u8 *)screen + 2);
+                    *(u16 *)((u8 *)p + 12) += *(u16 *)screen;
+                    *(u16 *)((u8 *)p + 14) += *(u16 *)((u8 *)screen + 2);
+                    *(u16 *)((u8 *)p + 16) += *(u16 *)screen;
+                    *(u16 *)((u8 *)p + 18) += *(u16 *)((u8 *)screen + 2);
+                    ((u8 *)p)[3] = 4;
+                    ((u8 *)p)[7] = prim_code;
+                    if (rec->unk1C & 0x800000) ((u8 *)p)[7] = 0x22;
+                    else ((u8 *)p)[7] = prim_code;
+
+                    off = *depths;
+                    d = rec->unk8 >> 7;
+                    idx = d + off;
+                    if (idx < 0) {
+                        *p = (*p & highmask) | (base[0] & lowmask);
+                        base[0] = (base[0] & highmask) | ((s32)p & lowmask);
+                        p = (s32 *)((u8 *)p + 0x14);
+                    } else if (idx >= 0x1000) {
+                        *p = (*p & highmask) | (base[0xFFF] & lowmask);
+                        base[0xFFF] = (base[0xFFF] & highmask) | ((s32)p & lowmask);
+                        p = (s32 *)((u8 *)p + 0x14);
+                    } else {
+                        *p = (*p & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)base))) & lowmask);
+                        {
+                            s32 rd = rec->unk8 >> 7;
+                            s32 roff = *depths;
+                            s32 *entry = (s32 *)((roff << 2) + ((rd << 2) + (s32)base));
+                            *entry = (*entry & highmask) | ((s32)p & lowmask);
+                        }
+                        p = (s32 *)((u8 *)p + 0x14);
+                    }
+
+                    ((u8 *)p)[3] = 1;
+                    {
+                        s32 mode0 = part->unk34 >> 15;
+                        s32 mode1 = part->unk4 >> 17;
+                        mode1 &= 0x60;
+                        mode0 &= 0x80;
+                        mode0 |= mode1;
+                        mode0 |= 0xE1000000;
+                        *(s32 *)((u8 *)p + 4) = mode0;
+                    }
+                    off = *depths;
+                    d = rec->unk8 >> 7;
+                    idx = d + off;
+                    {
+                        s32 *next;
+                        if (idx < 0) {
+                            next = (s32 *)((u8 *)p + 8);
+                            *p = (*p & highmask) | (base[0] & lowmask);
+                            base[0] = (base[0] & highmask) | ((s32)p & lowmask);
+                        } else if (idx >= 0x1000) {
+                            next = (s32 *)((u8 *)p + 8);
+                            *p = (*p & highmask) | (base[0xFFF] & lowmask);
+                            base[0xFFF] = (base[0xFFF] & highmask) | ((s32)p & lowmask);
+                        } else {
+                            next = (s32 *)((u8 *)p + 8);
+                            *p = (*p & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)base))) & lowmask);
+                            {
+                                s32 rd = rec->unk8 >> 7;
+                                s32 roff = *depths;
+                                s32 *entry = (s32 *)((roff << 2) + ((rd << 2) + (s32)base));
+                                *entry = (*entry & highmask) | ((s32)p & lowmask);
+                            }
+                        }
+                        p = next;
+                    }
+                }
+                face += 0x10;
+                count--;
+                sxy += 3;
+                normals++;
+                depths++;
+            } while (count != 0);
+        }
+        cursor = p;
+        break;
+    }
+    default:
+        return cursor;
+    }
+    return cursor;
+}
