@@ -2559,3 +2559,264 @@ niki_fe:
 
     return prim;
 }
+
+/**
+ * @brief Advance past a run of ASCII hexadecimal-digit characters.
+ * @param arg0 Pointer to the start of the scan.
+ * @return Pointer to the first byte that is not a hex digit
+ *         (@c '0'-'9', @c 'a'-'f' or @c 'A'-'F').
+ * @note The three unsigned range checks reproduce the original codegen; the
+ *       upper-hex test only covers @c 'A'-'F' (0x41..0x46), not the full
+ *       alphabet.
+ * @see decomp.me (100.00%)
+ */
+u8 *func_801442C4(void *arg0)
+{
+    u8 *p = arg0;
+
+    while ((u32)(*p - 0x30) < 10 || (u32)(*p - 0x61) < 6 || (u32)(*p - 0x41) < 6)
+    {
+        p++;
+    }
+
+    return p;
+}
+
+/**
+ * @brief Validate a resource blob by checksum and magic word.
+ * @param base Base of the resource blob.
+ * @return 1 when the stored checksum at @c base+0x33E0 matches
+ *         @c func_80144364(base) and the magic word at @c base+0x33E4 equals
+ *         0x414E41 ("ANA"); 0 otherwise.
+ * @see decomp.me (100.00%)
+ */
+s32 func_80144310(u8 *base)
+{
+    if (*(s32 *)(base + 0x33E0) == func_80144364(base))
+    {
+        if (*(s32 *)(base + 0x33E4) == 0x414E41)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/**
+ * @brief Compute the resource-blob checksum used by func_80144310.
+ * @param data Base of the resource blob.
+ * @return Twice the unsigned-byte sum over the first 0x33E0 bytes, biased by
+ *         the constant 0x0414E410.
+ * @note Defined after its callers so no prototype is visible to them: this
+ *       lets both func_80144310's one-argument call and the two-argument
+ *       caller elsewhere in this file compile under K&R implicit declaration.
+ * @see decomp.me (100.00%)
+ */
+s32 func_80144364(u8 *data)
+{
+    s32 sum;
+    u32 i;
+    u8 *p;
+
+    p = data;
+    sum = 0;
+    i = 0;
+    do
+    {
+        i += 1;
+        sum += *p;
+        p += 1;
+    } while (i < 0x33E0U);
+    return (sum * 2) + 0x0414E410;
+}
+
+/**
+ * @brief Format a value as a right-aligned 6-digit shift-JIS decimal string.
+ * @param out Destination byte cursor.
+ * @param value Value to format (expected to fit in 6 digits).
+ * @return On overflow (value >= 1000000) the cursor advanced by 6 after
+ *         copying the 7-byte fixed overflow glyph run from D_80140088;
+ *         otherwise the cursor left at the NUL terminator after the digits.
+ * @note Each decimal digit is emitted as its two-byte shift-JIS full-width
+ *       code via the @c 0x824F / @c 0x4F bias; leading zeros are suppressed
+ *       until the tens place. The @c struct @c Copy7 block copy reproduces the
+ *       original codegen.
+ * @see decomp.me (100.00%)
+ */
+s8 *func_8014439C(s8 *out, s32 value)
+{
+    struct Copy7 { s8 data[7]; };
+    extern s8 D_80140088[];
+    s32 digit;
+    s32 divisor;
+    s32 started;
+    s8 *p;
+
+    p = out;
+    divisor = 100000;
+    if (value < divisor * 10)
+    {
+        goto format;
+    }
+    *(struct Copy7 *)p = *(struct Copy7 *)D_80140088;
+    return p + 6;
+
+format:
+    started = 0;
+    do
+    {
+        digit = value / divisor;
+        if (digit != 0 || started != 0)
+        {
+            *p++ = (digit + 0x824F) >> 8;
+            *p++ = digit + 0x4F;
+            started = 1;
+        }
+        if (divisor == 1)
+        {
+            break;
+        }
+        if (divisor == 10)
+        {
+            started = 1;
+        }
+        value -= digit * divisor;
+        divisor /= 10;
+    } while (1);
+    *p = 0;
+    return p;
+}
+
+/**
+ * @brief Format a value as up to @p max_chars hexadecimal digits (leading
+ *        zeros suppressed) into @p out, NUL-terminated.
+ * @param out Destination byte cursor.
+ * @param value Value to format.
+ * @param max_chars Maximum number of digits to emit.
+ * @note The do{}while(0) wrappers and the goto loop reproduce the original
+ *       codegen and are required to match. Defined before func_80144578 (its
+ *       per-digit emitter), which stays K&R-implicit at the call site.
+ * @see decomp.me (100.00%)
+ */
+void func_801444B0(s8 *out, s32 value, s32 max_chars)
+{
+    s32 nibble;
+    s32 shift_index;
+    s32 remaining_chars;
+    s32 remaining_value;
+    s32 started;
+    s8 *cursor;
+    s32 end_index;
+
+    cursor = out;
+    remaining_value = value;
+    remaining_chars = max_chars;
+    shift_index = 7;
+    started = 0;
+    if (remaining_chars != 0)
+    {
+        end_index = -1;
+loop_2:
+        nibble = (remaining_value >> (shift_index * 4)) & 0xF;
+        do
+        {
+            if ((nibble != 0) || (started != 0))
+            {
+                func_80144578(cursor, nibble);
+                cursor += 1;
+                remaining_chars -= 1;
+                started = 1;
+                remaining_value -= nibble << (shift_index * 4);
+            }
+        } while (0);
+        do
+        {
+            shift_index -= 1;
+        } while (0);
+        if (shift_index != end_index)
+        {
+            if (shift_index == 0)
+            {
+                started = 1;
+            }
+            do
+            {
+                if (remaining_chars != 0)
+                {
+                    goto loop_2;
+                }
+            } while (0);
+        }
+    }
+    *cursor = 0;
+}
+
+/**
+ * @brief Convert a 0-15 value to its ASCII hexadecimal digit.
+ * @param out Destination byte.
+ * @param value Nibble value; 0-9 -> '0'-'9', 10-15 -> 'A'-'F', else '_'.
+ * @return None.
+ * @see decomp.me (100.00%)
+ */
+void func_80144578(s8 *out, s32 value)
+{
+    if (value < 10)
+    {
+        *out = value + 0x30;
+    }
+    else if (value < 16)
+    {
+        *out = value + 0x37;
+    }
+    else
+    {
+        *out = 0x5F;
+    }
+}
+
+/**
+ * @brief Parse up to @p len ASCII hexadecimal digits into an unsigned value.
+ * @param s Pointer to the digit run.
+ * @param len Maximum number of digits to consume.
+ * @return The accumulated value; parsing stops at @p len digits or the first
+ *         non-hex-digit byte ('0'-'9', 'a'-'f', 'A'-'F').
+ * @note The per-branch (result - bias + *s) accumulation reproduces the
+ *       original codegen; the bias is 0x30/0x37/0x57 for the three digit
+ *       classes.
+ * @see decomp.me (100.00%)
+ */
+u32 func_8014459C(u8 *s, s32 len)
+{
+    u32 result;
+    u32 tmp0;
+    u32 tmp1;
+    u32 tmp2;
+
+    result = 0;
+    while (((u8)(*s - '0') < 10) || ((u8)(*s - 'a') < 6) || ((u8)(*s - 'A') < 6))
+    {
+        if (len == 0)
+        {
+            break;
+        }
+        result <<= 4;
+        if ((u8)(*s - '0') < 10)
+        {
+            tmp0 = result - 0x30;
+            result = tmp0 + *s;
+        }
+        else if ((u8)(*s - 'A') < 6)
+        {
+            tmp1 = result - 0x37;
+            result = tmp1 + *s;
+        }
+        else if ((u8)(*s - 'a') < 6)
+        {
+            tmp2 = result - 0x57;
+            result = tmp2 + *s;
+        }
+        s++;
+        len--;
+    }
+    return result;
+}

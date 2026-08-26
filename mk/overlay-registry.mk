@@ -76,14 +76,20 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field24.c \
 	src/overlays/field/field25.c \
 	src/overlays/field/field26.c \
+	src/overlays/field/field27.c \
+	src/overlays/field/field28.c \
+	src/overlays/field/field29.c \
 	src/overlays/field/unk2.c \
 	src/overlays/field/unk2_c.c \
 	src/overlays/field/unk2_d.c \
 	src/overlays/field/unk2_e.c \
 	src/overlays/field/unk2_f.c \
+	src/overlays/field/unk2_f_b.c \
 	src/overlays/field/unk2_g.c \
 	src/overlays/field/unk2_h.c \
+	src/overlays/field/unk2_h_b.c \
 	src/overlays/field/unk2_i.c \
+	src/overlays/field/unk2_i_b.c \
 	src/overlays/field/unk2_b.c
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field3.c
