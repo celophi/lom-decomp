@@ -477,7 +477,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field270.c \
 	src/overlays/field/field271.c \
 	src/overlays/field/field272.c
-overlay_field_gcc_280_g4_srcs := src/overlays/field/func_80067bbc.c
+overlay_field_gcc_280_g4_srcs := src/overlays/field/field_fade.c
 overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_scene_load.c \
 	src/overlays/field/field_scene_build.c \
@@ -485,10 +485,8 @@ overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_animation.c \
 	src/overlays/field/field_scene_api.c \
 	src/overlays/field/field_collision.c \
-	src/overlays/field/field5.c \
 	src/overlays/field/func_800674a8.c \
 	src/overlays/field/func_80067598.c \
-	src/overlays/field/func_80067b8c.c \
 	src/overlays/field/field1.c
 
 OVERLAYS += gname

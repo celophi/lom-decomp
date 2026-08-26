@@ -64,9 +64,7 @@ segments:
       - [0x17A45, c, func_800675c8]             # gcc272_cdk
       - [0x17C65, c, field2]                    # gcc272_cdk, no-schedule-insns
       - [0x17E35, c, func_80067aa4]             # gcc272_cdk
-      - [0x17F1D, c, func_80067b8c]             # gcc280_g4, no expand-div
-      - [0x17F4D, c, func_80067bbc]             # gcc280_g4, expand-div
-      - [0x18245, c, field5]                    # gcc280_g4, no expand-div
+      - [0x17F1D, c, field_fade]                # gcc280_g4, expand-div (fade TU: reset + update/render + targets)
       - [0x18341, c, func_80067fb0]             # gcc272_cdk
       - [0x18551, c, func_800681c0]             # gcc272_cdk
       - [0x1861D, c, field4]                    # gcc272_cdk
