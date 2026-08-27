@@ -14,3 +14,8 @@ void func_800C61D8(void)
         D_80122C10 = 0;
     }
 }
+
+void func_800C6208(void)
+{
+    func_800AD0C8();
+}

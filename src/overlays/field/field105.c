@@ -29,3 +29,23 @@ void func_800BC91C(s32 arg0, s32 arg1)
     }
     func_800A3904(1, arg1, arg0);
 }
+
+/**
+ * @brief Thin stack-frame wrapper around func_800A3858.
+ */
+void func_800BC960(void)
+{
+    func_800A3858();
+}
+
+extern void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
+
+void func_800BC980(s32 arg0, s32 arg1)
+{
+    arg1 = (arg1 != 0) ? arg1 : 1;
+    if (arg0 >= 0x80)
+    {
+        arg0 = 0x7F;
+    }
+    func_800A3904(0, arg1, arg0);
+}
