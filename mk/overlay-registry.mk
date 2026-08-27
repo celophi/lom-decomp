@@ -166,7 +166,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field209.c \
 	src/overlays/field/field216.c \
 	src/overlays/field/field229.c \
-	src/overlays/field/unk2_split001.c \
 	src/overlays/field/unk2_i_b_split002.c \
 	src/overlays/field/unk2_i_b_split003.c \
 	src/overlays/field/unk2_i_b_split004.c \
