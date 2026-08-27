@@ -417,10 +417,8 @@ void golem_update_frame(void)
 
 /**
  * @brief Handle logic-block selection, placement, rotation, and cancellation.
- * @note WIP - 99.88% (446/455 exact, gcc272_cdk). Residue is a v0/v1 register
- *       swap between the selected index and block count in the backward search.
  * @return None.
- * @see decomp.me (99.88%)
+ * @see decomp.me (100%)
  */
 void golem_handle_input(void)
 {
@@ -619,11 +617,15 @@ void golem_handle_input(void)
         {
             s32 limit, logic_type;
             GolemMenuData* menu_data;
-            block_index = g_golem_selected_block;
+            s32 selected_tmp;
+            s32* countp;
+            do { selected_tmp = g_golem_selected_block; } while (0);
+            input = g_golem_logic_block_count;
+            block_index = selected_tmp;
             repeat_count = 0;
-            if (g_golem_logic_block_count > 0)
+            if (input > 0)
             {
-                limit = g_golem_logic_block_count;
+                limit = input;
                 menu_data = (GolemMenuData*)g_menuLayoutBuffer;
                 logic_type = g_golem_active_logic_type;
                 block_index--;
@@ -632,16 +634,20 @@ void golem_handle_input(void)
                 {
                     block_index = limit - 1;
                 }
+                countp = &g_golem_logic_block_count;
                 if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
                 {
                     goto backward_done;
                 }
-                input = g_golem_logic_block_count;
-                repeat_count++;
-                block_index--;
-                if (repeat_count < input)
                 {
-                    goto backward_loop;
+                    s32 loop_count;
+                    do { loop_count = *countp; } while (0);
+                    repeat_count++;
+                    block_index--;
+                    if (repeat_count < loop_count)
+                    {
+                        goto backward_loop;
+                    }
                 }
                 block_index++;
             }
@@ -1167,8 +1173,7 @@ s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
  * @param width Total panel width in pixels.
  * @param height Total panel height in pixels.
  * @return Packet cursor after the panel packets.
- * @note The remaining mismatch is stack-frame allocation.
- * @see decomp.me (96.69%)
+ * @see decomp.me (100.00%)
  * @see working/func_80141AD0_golem/
  */
 s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32 x, s32 y, s32 width, s32 height)
@@ -1184,6 +1189,8 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
     s32 available_width;
     s32 remaining_height;
     s32 packet_code;
+    s32 bottom_texture_height;
+    u8 stack_pad[0x10];
 
     color = 0x808080;
 
@@ -1234,15 +1241,18 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
         break;
     }
 
+    ordering_table += 1;
+    ordering_table -= 1;
     y_offset = 0;
     if (y_offset < height)
     {
-        packet_code = 0x64;
-        remaining_height = height - y_offset;
         do
         {
+            remaining_height = height - y_offset;
             row_height = remaining_height;
-            cell_height = (GOLEM_PANEL_TEXTURE(panel_index).texture >> 26) | ((GOLEM_PANEL_TEXTURE(panel_index).dimensions & 7) << 6);
+            segment_width = GOLEM_PANEL_TEXTURE(panel_index).texture >> 26;
+            cell_height = ((GOLEM_PANEL_TEXTURE(panel_index).dimensions & 7) << 6) | segment_width;
+            packet_code = 0x64;
             x_offset = 0;
             if (cell_height < row_height)
             {
@@ -1259,14 +1269,14 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
                 }
                 SET_BGR0_PACKED(sprite, color);
                 setlen(sprite, 4);
-                setcode(sprite, packet_code);
+                do { do { setcode(sprite, packet_code); } while (0); } while (0);
                 if ((GOLEM_PANEL_TEXTURE(panel_index).attributes >> 2) & 1)
                 {
                     setcode(sprite, 0x66);
                 }
-                sprite->x0 = x + (x_offset + 8);
+                sprite->x0 = (x + 8) + x_offset;
                 sprite->y0 = y + y_offset;
-                sprite->w = segment_width;
+                do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { sprite->w = segment_width; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
                 sprite->h = row_height;
                 sprite->u0 = GOLEM_PANEL_TEXTURE(panel_index).attributes >> 11;
                 sprite->v0 = GOLEM_PANEL_TEXTURE(panel_index).texture >> 3;
@@ -1275,7 +1285,9 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
                 x_offset += (GOLEM_PANEL_TEXTURE(panel_index).texture >> 17) & 0x1FF;
                 packet_cursor += 0x14;
             }
-            y_offset += (GOLEM_PANEL_TEXTURE(panel_index).texture >> 26) | ((GOLEM_PANEL_TEXTURE(panel_index).dimensions & 7) << 6);
+            bottom_texture_height = GOLEM_PANEL_TEXTURE(panel_index).texture >> 26;
+            cell_height = ((GOLEM_PANEL_TEXTURE(panel_index).dimensions & 7) << 6) | bottom_texture_height;
+            y_offset += cell_height;
             remaining_height = height - y_offset;
         } while (y_offset < height);
     }

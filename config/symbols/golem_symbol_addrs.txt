@@ -4,6 +4,8 @@ field_text_reset_scratch             = 0x8006441C;
 
 // Shared data named for this overlay's use.
 g_golem_composite_icon_rows          = 0x800F1CD0;
+g_menuLayoutBuffer                   = 0x80042FD8;
+g_pad_input                          = 0x80122988;
 
 // Golem logic-grid editor functions.
 golem_run                            = 0x80140024;

@@ -3029,41 +3029,86 @@ void cload_render_fixed_prompts(void)
 
 
 /**
+ * @brief Inlined twin of cload_render_fixed_prompts used inside case 6.
+ */
+extern void *jtbl_80140040[];
+
+static inline void cload_probe_render_two(void)
+{
+    CloadFileHeaderScratch p;
+
+    memcpy(&p, &g_cload_file_template, 6);
+    ((u8 *)&p)[2] += *(u8 *)&g_cload_card_slot;
+    func_80016F9C(&p, &D_800ECF9C);
+    func_8001686C(&p);
+
+    memcpy(&p, &g_cload_file_template, 6);
+    ((u8 *)&p)[2] += *(u8 *)&g_cload_card_slot;
+    func_80016F9C(&p, &D_800ECFB0);
+    func_8001686C(&p);
+}
+
+
+/**
  * @brief Advance the cload overlay load/decompress state machine one step.
  * @return The next phase code (1-5) for the caller to act on.
  * @note Dispatches on *g_cload_load_step (the current step opcode); each case drives
  *       CD reads, buffer setup, decode, and teardown, updating g_cload_load_step and
  *       the g_cload_entry_state / g_cload_selection_status status fields.
- * @see decomp.me (92.84%)
+ * @see decomp.me (100%)
  */
 s32 cload_advance_load_sequence(void)
 {
     CloadLoadScratch buf;
-    CloadFileHeaderScratch buf2;
     s32 status0;
     s32 status1;
     s32 phase_result;
-    s32 attempts;
+    s32 scan_attempts;
+    s32 wait_attempts;
     s32 poll_result;
+    s32 poll_result20;
     s32 dialog_state;
     s32 rank_index;
+    s32 rank_value;
+    s32 dispatch;
+    static void *const keep[] = {
+        &&cl_case_0, &&cl_case_1, &&cl_case_2, &&cl_case_3,
+        &&cl_case_4, &&cl_case_5, &&cl_case_6, &&block_81,
+        &&cl_case_8, &&cl_case_9, &&block_81, &&block_81,
+        &&block_81, &&block_81, &&block_81, &&cl_case_15,
+        &&cl_case_16, &&cl_case_17, &&cl_case_18, &&cl_case_19,
+        &&cl_case_20, &&block_81, &&block_81, &&block_81,
+        &&cl_case_24, &&block_81, &&block_81, &&block_81,
+        &&block_81, &&block_81, &&cl_case_30
+    };
 
-    phase_result = 1;
     memcpy(&buf, &g_cload_file_template, 6);
+    do
+    {
+        phase_result = 1;
+    } while (0);
     ((u8 *)&buf)[2] += *(u8 *)&g_cload_card_slot;
 
     if (g_cload_load_step != NULL)
     {
-        switch (*g_cload_load_step)
+        switch (0)
         {
-        case 1:
+        case 0:
+            dispatch = *g_cload_load_step;
+            if ((u32)dispatch >= 0x1F)
+            {
+                goto block_81;
+            }
+            goto *jtbl_80140040[dispatch];
+
+        cl_case_1:
             phase_result = 3;
             func_8001729C(g_cload_card_slot);
             func_8001724C(g_cload_card_slot * 0x10);
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
-        case 2:
+        cl_case_2:
             poll_result = cload_poll_primary_handle_group();
             if (poll_result >= 3)
             {
@@ -3075,8 +3120,7 @@ s32 cload_advance_load_sequence(void)
             }
             if (poll_result == 0)
             {
-                g_cload_load_step = g_cload_load_step + 1;
-                goto block_81;
+                goto block_increment;
             }
             goto block_81;
         c2_ge3:
@@ -3086,7 +3130,10 @@ s32 cload_advance_load_sequence(void)
             }
             goto block_81;
         c2_pos:
-            phase_result = 4;
+            do
+            {
+                phase_result = 4;
+            } while (0);
             g_cload_selection_status = 0;
             g_cload_entry_state = 0xFD;
             g_cload_load_step = g_cload_load_step + 1;
@@ -3094,18 +3141,19 @@ s32 cload_advance_load_sequence(void)
             goto block_81;
         c2_eq3:
             g_cload_rank_count = 0x28;
+            rank_value = -1;
             for (rank_index = 14; rank_index >= 0; rank_index--)
             {
-                g_cload_entry_ranks[rank_index] = -1;
+                g_cload_entry_ranks[rank_index] = rank_value;
             }
             goto block_58;
 
-        case 3:
+        cl_case_3:
             cload_release_primary_handles();
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
-        case 4:
+        cl_case_4:
             do
             {
                 poll_result = cload_poll_secondary_handle_group();
@@ -3123,25 +3171,20 @@ s32 cload_advance_load_sequence(void)
             {
                 goto block_81;
             }
-            phase_result = 4;
+            do
+            {
+                phase_result = 4;
+            } while (0);
             goto block_42;
 
-        case 5:
+        cl_case_5:
             cload_release_secondary_handles();
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
-        case 6:
-            memcpy(&buf2, &g_cload_file_template, 6);
-            ((u8 *)&buf2)[2] += *(u8 *)&g_cload_card_slot;
-            func_80016F9C(&buf2, &D_800ECF9C);
-            func_8001686C(&buf2);
-            memcpy(&buf2, &g_cload_file_template, 6);
-            ((u8 *)&buf2)[2] += *(u8 *)&g_cload_card_slot;
-            func_80016F9C(&buf2, &D_800ECFB0);
-            func_8001686C(&buf2);
+        cl_case_6:
+            cload_probe_render_two();
             g_cload_entry_scan_active = 1;
-            attempts = 0;
             if (cload_begin_entry_scan(g_cload_card_slot) == 0)
             {
                 phase_result = 2;
@@ -3150,6 +3193,7 @@ s32 cload_advance_load_sequence(void)
                 g_cload_entry_scan_active = 0;
                 goto block_81;
             }
+            scan_attempts = 0;
             g_cload_load_step = g_cload_load_step + 1;
             do
             {
@@ -3167,18 +3211,18 @@ s32 cload_advance_load_sequence(void)
                     cload_commit_selected_entry();
                     goto block_81;
                 }
-                attempts = attempts + 1;
-            } while (attempts < 0x14);
+                scan_attempts = scan_attempts + 1;
+            } while (scan_attempts < 0x14);
             goto block_81;
 
-        case 8:
+        cl_case_8:
             phase_result = 3;
             func_8001729C(g_cload_card_slot);
             func_800172AC(g_cload_card_slot * 0x10);
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
-        case 9:
+        cl_case_9:
             phase_result = 3;
             func_8001729C(g_cload_card_slot);
             func_8001725C(g_cload_card_slot * 0x10);
@@ -3187,12 +3231,12 @@ s32 cload_advance_load_sequence(void)
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
-        case 0:
+        cl_case_0:
             phase_result = 2;
             D_80162370 = 0;
             goto block_81;
 
-        case 15:
+        cl_case_15:
             poll_result = cload_poll_primary_handle_group();
             if (poll_result >= 3)
             {
@@ -3204,8 +3248,7 @@ s32 cload_advance_load_sequence(void)
             }
             if (poll_result == 0)
             {
-                g_cload_load_step = g_cload_load_step + 1;
-                goto block_81;
+                goto block_increment;
             }
             goto block_81;
         c15_ge3:
@@ -3243,7 +3286,7 @@ s32 cload_advance_load_sequence(void)
             g_cload_load_step = &D_80146528;
             goto block_81;
 
-        case 16:
+        cl_case_16:
             do
             {
                 poll_result = cload_poll_secondary_handle_group();
@@ -3251,7 +3294,7 @@ s32 cload_advance_load_sequence(void)
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
-        case 17:
+        cl_case_17:
             g_cload_io_busy = 1;
             g_cload_selection_status = 0;
             func_8001729C(g_cload_card_slot);
@@ -3262,12 +3305,8 @@ s32 cload_advance_load_sequence(void)
             }
             cload_release_primary_handles();
             func_8001729C(g_cload_card_slot);
-            dialog_state = 0x80;
-            if (g_cload_selected_entry_extended != 0)
-            {
-                dialog_state = 0x280;
-            }
-            if (func_8001681C(g_cload_file_handle, &D_80162A10, dialog_state) != -1)
+            if (func_8001681C(g_cload_file_handle, &D_80162A10,
+                               g_cload_selected_entry_extended != 0 ? 0x280 : 0x80) != -1)
             {
                 g_cload_load_step = g_cload_load_step + 1;
                 goto block_81;
@@ -3275,13 +3314,15 @@ s32 cload_advance_load_sequence(void)
             func_8001683C(g_cload_file_handle);
             goto block_81;
 
-        case 18:
+        cl_case_18:
             poll_result = cload_poll_primary_handle_group();
             if (poll_result == 0)
             {
                 g_cload_io_busy = 0;
                 g_cload_selection_status = 1;
-                goto block_65;
+                g_cload_load_step = g_cload_load_step + 1;
+                func_8001683C(g_cload_file_handle);
+                goto block_81;
             }
             if (poll_result == -1)
             {
@@ -3294,12 +3335,12 @@ s32 cload_advance_load_sequence(void)
             g_cload_load_step = D_8014651C;
             goto block_81;
 
-        case 30:
+        cl_case_30:
             g_cload_retry_count = 5;
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
-        case 19:
+        cl_case_19:
             g_cload_progress_active = 1;
             g_cload_progress_bar_active = 1;
             g_cload_progress_start_tick = func_8002054C(-1);
@@ -3321,21 +3362,20 @@ s32 cload_advance_load_sequence(void)
             }
             goto block_81;
 
-        case 20:
-            poll_result = cload_poll_primary_handle_group();
-            if (poll_result == 0)
+        cl_case_20:
+            poll_result20 = cload_poll_primary_handle_group();
+            if (poll_result20 == 0)
             {
                 g_cload_progress_active = 0;
-            block_65:
                 g_cload_load_step = g_cload_load_step + 1;
                 func_8001683C(g_cload_file_handle);
                 goto block_81;
             }
-            if (poll_result < 0)
+            if (poll_result20 < 0)
             {
                 goto block_81;
             }
-            if (poll_result >= 4)
+            if (poll_result20 >= 4)
             {
                 goto block_81;
             }
@@ -3353,8 +3393,8 @@ s32 cload_advance_load_sequence(void)
             g_cload_progress_bar_active = 0;
             goto block_80;
 
-        case 24:
-            attempts = 0;
+        cl_case_24:
+            wait_attempts = 0;
             do
             {
                 if (func_800342CC(g_cload_card_slot * 0x10) == 1)
@@ -3362,14 +3402,15 @@ s32 cload_advance_load_sequence(void)
                     break;
                 }
                 func_8002054C(0);
-                attempts = attempts + 1;
-            } while (attempts < 0x14);
-            if (attempts != 0x14)
+                wait_attempts = wait_attempts + 1;
+            } while (wait_attempts < 0x14);
+            if (wait_attempts != 0x14)
             {
                 func_80032174(0, &status0, &status1);
                 dialog_state = 3;
                 if (status1 == 0)
                 {
+                block_increment:
                     g_cload_load_step = g_cload_load_step + 1;
                     goto block_81;
                 }
@@ -3387,6 +3428,7 @@ block_80:
 block_81:
     return phase_result;
 }
+
 
 
 /**
@@ -3896,59 +3938,50 @@ void cload_sort_entries_by_type(void)
  * @param y Passed through to cload_draw_cached_text (y).
  * @param palette Passed through to cload_draw_cached_text.
  * @param alignment Passed through to cload_draw_cached_text.
+ * @return The prim/handle returned by cload_draw_cached_text.
  * @note Each decimal digit indexes the g_cload_decimal_glyphs glyph table; 0x4F82 is the
  *       '0' glyph (skipped while leading) and 0x5B81 the minus glyph.
- * @note WIP ~70%: the seven magic-number divisions are emitted correctly but
- *       gcc's sched2 interleaving of the imuldiv ops and the resulting
- *       register-allocation cascade (the target's callee-saved s0 vs a temp,
- *       and the value register) are not reproducible from source shape alone
- *       (confirmed by sched_oracle) - permuter territory.
- * @see decomp.me (70.35%)
+ * @see decomp.me (100.00%)
  */
-void cload_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
+s32 cload_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
 {
     u16 buf[7];
-    s32 count;
-    s32 n;
-    s32 neg;
-    s32 minus;
-    u16 *p;
+    s32 first_digit;
+    s32 magnitude;
+    s32 negative;
 
-    n = value;
-    if (n < 0)
+    magnitude = value;
+    if (magnitude < 0)
     {
-        n = -n;
-        neg = 1;
+        magnitude = -magnitude;
+        negative = 1;
     }
     else
     {
-        neg = 0;
+        negative = 0;
     }
-    buf[1] = g_cload_decimal_glyphs[n / 10000];
-    count = 1;
-    buf[2] = g_cload_decimal_glyphs[(n % 10000) / 1000];
-    buf[3] = g_cload_decimal_glyphs[(n % 1000) / 100];
-    buf[4] = g_cload_decimal_glyphs[(n % 100) / 10];
-    p = &buf[1];
+    buf[1] = g_cload_decimal_glyphs[magnitude / 10000];
+    buf[2] = g_cload_decimal_glyphs[(magnitude % 10000) / 1000];
+    buf[3] = g_cload_decimal_glyphs[(magnitude % 1000) / 100];
+    buf[4] = g_cload_decimal_glyphs[(magnitude % 100) / 10];
+    buf[5] = g_cload_decimal_glyphs[magnitude % 10];
+
+    first_digit = 1;
+
     buf[6] = 0;
-    buf[5] = g_cload_decimal_glyphs[n % 10];
-loop:
-    if (*p == 0x4F82)
+
+    while (first_digit < 5 && buf[first_digit] == 0x4F82)
     {
-        count++;
-        p++;
-        if (count < 5)
-        {
-            goto loop;
-        }
+        first_digit++;
     }
-    if (neg != 0)
+
+    if (negative != 0)
     {
-        minus = 0x5B81;
-        count--;
-        buf[count] = minus;
+        first_digit--;
+        buf[first_digit] = 0x5B81;
     }
-    cload_draw_cached_text(prim, ot, &buf[count], x, y, palette, alignment);
+    prim = cload_draw_cached_text(prim, ot, &buf[first_digit], x, y, palette, alignment);
+    return prim;
 }
 
 
