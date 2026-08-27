@@ -720,10 +720,11 @@ void golem_reset_block_position(void)
  * @param packet_cursor Packet cursor, threaded through the marker emitters.
  * @param ordering_table Ordering-table tag for the marker packets.
  * @return Packet cursor after the marker run.
- * @note WIP - 96.66%. Body kept close to m2c output (do{}while(0) wrappers and
- *       the recomputed marker_ptr pointer arithmetic supply the match); residue
- *       is register allocation. Stack layout and control flow match the target.
- * @see decomp.me (96.66%)
+ * @note The 0x50 compare is materialized into @c glyph first, @c call_x holds a
+ *       copy of @c x in both branches, and the do{}while(0) wrappers and the
+ *       recomputed marker_ptr pointer arithmetic are all required to match the
+ *       target's register allocation.
+ * @see decomp.me (100.00%)
  * @see working/func_80140DEC/
  */
 s32 golem_draw_grid_markers(s32 packet_cursor, s32 ordering_table)
@@ -740,6 +741,7 @@ s32 golem_draw_grid_markers(s32 packet_cursor, s32 ordering_table)
     s32 *marker_base;
     s32 *marker_ptr;
     s32 row_y;
+    s32 call_x;
 
     func_800CBEC4(markers);
 
@@ -758,15 +760,18 @@ s32 golem_draw_grid_markers(s32 packet_cursor, s32 ordering_table)
             marker = *marker_ptr;
             if (marker != 0)
             {
-                if (marker == 0x50)
+                glyph = 0x50;
+                if (marker == glyph)
                 {
+                    call_x = x;
                     glyph = 2;
                 }
                 else
                 {
+                    call_x = x;
                     glyph = 3;
                 }
-                do { packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, x, row_y, glyph); } while (0);
+                packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, call_x, row_y, glyph);
             }
             x += 0x10;
             do { column++; } while (0);
@@ -967,38 +972,40 @@ void golem_render(s32 render_context)
 /**
  * @brief Link a base primitive into the render context OT, emit a highlight
  *        primitive for each on-screen panel cell, then link a final frame prim.
- * @param packet_cursor Running primitive pointer, advanced for each primitive.
+ * @param packet_buffer Starting primitive pointer for this pass.
  * @param render_context Render context containing the panel ordering table.
  * @return Packet cursor after the final frame primitive.
- * @note The remaining mismatch is instruction scheduling; frame and stack-slot
- *       layout match the target.
- * @see decomp.me (98.28%)
+ * @note The parameter is copied into @c packet_cursor (a local); the target
+ *       keeps an addu copy of the incoming argument, so the copy is required
+ *       to match. The per-cell y offset is @c block_index * 0x28 rather than a
+ *       running accumulator for the same reason.
+ * @see decomp.me (100.00%)
  * @see working/func_80141478/code.c
  */
-s32 golem_draw_block_list(s32 packet_cursor, s32 render_context)
+s32 golem_draw_block_list(s32 packet_buffer, s32 render_context)
 {
     u8 draw_env[0x60];
     s32 ordering_table;
     s32 next_packet;
     s32 block_y;
-    s32 list_y;
     s32 block_index;
     s32 draw_y;
     s32 scroll_above;
+    s32 packet_cursor;
 
+    packet_cursor = packet_buffer;
     block_index = 0;
     ordering_table = render_context + 0x38;
-    func_8001A5D4(packet_cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
+    SetDrawEnv(packet_cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
     next_packet = packet_cursor + 0x40;
     addPrim(ordering_table, packet_cursor);
 
     if (g_golem_logic_block_count > 0)
     {
-        list_y = 0;
         do
         {
             scroll_above = g_golem_scroll_y - 0x28;
-            block_y = list_y - scroll_above;
+            block_y = block_index * 0x28 - scroll_above;
             if (block_y >= -0x27)
             {
                 if (block_y < 0x78)
@@ -1010,12 +1017,12 @@ s32 golem_draw_block_list(s32 packet_cursor, s32 render_context)
                     }
                     else
                     {
-                        next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6, list_y - g_golem_scroll_y + 0x2C,
+                        next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6,
+                                                                block_index * 0x28 - g_golem_scroll_y + 0x2C,
                                                                 g_golem_block_status[block_index].clut, 1, 0);
                     }
                 }
             }
-            list_y += 0x28;
             block_index++;
         } while (block_index < g_golem_logic_block_count);
     }
@@ -1039,14 +1046,19 @@ s32 golem_draw_block_list(s32 packet_cursor, s32 render_context)
  * @param packet_cursor Running primitive pointer, advanced for each primitive.
  * @param render_context Render context containing the grid ordering table.
  * @return Packet cursor after the final frame primitive.
- * @note The remaining mismatch is register allocation and instruction
- *       scheduling; frame, stack-slot layout, and control flow match the target.
- * @see decomp.me (89.15%)
+ * @note The incoming @c packet_cursor is copied into @c cursor (an addu copy
+ *       the target keeps and reuses for the final frame prim). The variant
+ *       address is split into @c icon_base / @c icon_offset, the block loop
+ *       re-reads GOLEM_LOGIC_BLOCK for the y coordinate, and each switch case
+ *       emits its own SetDefDrawEnv with immediate args; all are required to
+ *       match the target's register allocation.
+ * @see decomp.me (100.00%)
  * @see working/func_801416C8/code.c
  */
 s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
 {
     u8 draw_env[0x60];
+    s32 cursor;
     s32 ordering_table;
     s32 next_packet;
     s32 block_index;
@@ -1057,21 +1069,25 @@ s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
     s32 draw_x;
     s32 draw_y;
     s32 draw_size;
-    s32 final_packet;
     GolemLogicBlockStatus* block_status;
     u8* logic_block_ptr;
+    u8* icon_base;
+    s32 icon_offset;
 
+    cursor = packet_cursor;
     ordering_table = render_context + 0x34;
-    func_8001A5D4(packet_cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
-    addPrim(ordering_table, packet_cursor);
-    next_packet = packet_cursor + 0x40;
+    func_8001A5D4(cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
+    addPrim(ordering_table, cursor);
+    cursor += 0x40;
+    next_packet = cursor;
 
     if (g_golem_is_placing_block != 0)
     {
-        next_packet = golem_draw_composite_icon(next_packet, ordering_table, g_golem_selected_block, g_golem_block_rotation, g_golem_block_x * 0x10,
+        next_packet = golem_draw_composite_icon(cursor, ordering_table, g_golem_selected_block, g_golem_block_rotation, g_golem_block_x * 0x10,
                                                 g_golem_block_y * 0x10, g_golem_block_status[g_golem_selected_block].clut, 0, 3);
-        variant_position = (GolemIconVariantPosition*)(&(
-            (u8*)g_golem_composite_icon_rows)[g_golem_block_rotation * 0x14 + ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF) * 0x58]);
+        icon_base = (u8*)g_golem_composite_icon_rows;
+        icon_offset = g_golem_block_rotation * 0x14 + ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF) * 0x58;
+        variant_position = (GolemIconVariantPosition*)(icon_base + icon_offset);
         cursor_target_x = variant_position->base_x * 8 + g_golem_block_x * 0x10 - g_golem_grid_size_class * 8 + 0x3C;
         cursor_target_y = variant_position->base_y * 8 + g_golem_block_y * 0x10 - g_golem_grid_size_class * 8 + 0x3C;
         if ((cursor_target_x != g_golem_cursor_x || cursor_target_y != g_golem_cursor_y) && g_golem_cursor_steps == 0)
@@ -1084,18 +1100,19 @@ s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
 
     next_packet = golem_draw_grid_markers(next_packet, ordering_table);
 
+    block_index = 0;
     if (g_golem_logic_block_count > 0)
     {
-        block_index = 0;
         block_status = g_golem_block_status;
         logic_block_ptr = &g_menuLayoutBuffer[0];
         do
         {
-            logic_block = *(u32*)(logic_block_ptr + 0x29DC);
+            logic_block = GOLEM_LOGIC_BLOCK(block_index);
             if ((logic_block & 3) == g_golem_active_logic_type)
             {
                 next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, (logic_block >> 0x11) & 3,
-                                                        ((s32)(logic_block << 8) >> 27) << 4, ((s32)(logic_block << 3) >> 27) << 4, block_status->clut, 0,
+                                                        ((s32)(logic_block << 8) >> 27) << 4, ((s32)(GOLEM_LOGIC_BLOCK(block_index) << 3) >> 27) << 4,
+                                                        block_status->clut, 0,
                                                         block_index == g_golem_selected_block ? (g_golem_is_placing_block ? 0x80 : 2) : 0);
             }
             block_status++;
@@ -1104,7 +1121,7 @@ s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
         } while (block_index < g_golem_logic_block_count);
     }
 
-    final_packet = next_packet;
+    cursor = next_packet;
 
     switch (g_golem_grid_size_class)
     {
@@ -1114,34 +1131,29 @@ s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
         {
             draw_y = 0x120;
         }
-        draw_size = 0x40;
-        draw_x = 0x50;
-        goto block_call;
+        func_8001C56C(draw_env, 0x50, draw_y, 0x40, 0x40);
+        break;
     case 1:
         draw_y = 0x30;
         if (*(s32*)(render_context + 0x404C) != 0)
         {
             draw_y = 0x118;
         }
-        draw_size = 0x50;
-        draw_x = 0x48;
-        goto block_call;
+        func_8001C56C(draw_env, 0x48, draw_y, 0x50, 0x50);
+        break;
     case 2:
         draw_y = 0x28;
         if (*(s32*)(render_context + 0x404C) != 0)
         {
             draw_y = 0x110;
         }
-        draw_size = 0x60;
-        draw_x = 0x40;
-    block_call:
-        func_8001C56C(draw_env, draw_x, draw_y, draw_size, draw_size);
+        func_8001C56C(draw_env, 0x40, draw_y, 0x60, 0x60);
         break;
     }
 
-    func_8001A5D4(final_packet, draw_env);
-    addPrim(ordering_table, final_packet);
-    return final_packet + 0x40;
+    func_8001A5D4(cursor, draw_env);
+    addPrim(ordering_table, cursor);
+    return cursor + 0x40;
 }
 
 /**
@@ -1287,9 +1299,11 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
  * @param use_origin When 1, offset x/y by the layout row's origin fields.
  * @param style      Style flags forwarded to golem_emit_glyph for each part.
  * @return Packet cursor past the trailing draw-mode packet.
- * @note The remaining mismatch is register allocation; frame and stack-slot
- *       layout match the target.
- * @see decomp.me (94.33%)
+ * @note The part-loop advances @c part_offset / @c part_index after the
+ *       golem_emit_glyph call, and the trailing draw-mode packet is built from
+ *       named constant locals inside a @c do{}while(0); both shapes are required
+ *       to match the target's register allocation.
+ * @see decomp.me (100.00%)
  * @see working/func_80141EB4_golem/
  */
 s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_index, s32 rotation, s32 x, s32 y, s32 clut, s32 use_origin, s32 style)
@@ -1301,6 +1315,10 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
     u8* table;
     u8* layout;
     s32 part_index;
+    u32 low_mask;
+    u32 high_mask;
+    u32 draw_cmd;
+    u32 one;
 
     logic_block = GOLEM_LOGIC_BLOCK(block_index);
     layout_index = logic_block >> 0xC;
@@ -1312,7 +1330,6 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
         x += row->origin_x * 8;
         y += row->origin_y * 8;
     }
-    part_index = 0;
     table = (u8*)g_golem_composite_icon_rows;
     rotation_offset = rotation * 0x14;
     layout_offset = layout_index * 0x58;
@@ -1322,6 +1339,7 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
             golem_emit_glyph(packet_cursor, ordering_table, ((logic_block >> 2) & 0x3F) + 0x13, (variant->base_x * 8) + x, (variant->base_y * 8) + y, 9, 0);
     }
     layout = layout_offset + table;
+    part_index = 0;
     if (*layout != 0)
     {
         u8* table_base = table;
@@ -1330,16 +1348,23 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
         s32 part_offset = rotation_offset;
         do
         {
-            GolemCompositeIconPartView* part = (GolemCompositeIconPartView*)(part_offset + row_base + table_base);
+            GolemCompositeIconPartView* part = (GolemCompositeIconPartView*)(part_offset + row_base + (s32)table_base);
+            packet_cursor = golem_emit_glyph(packet_cursor, ordering_table, part->glyph_id, (part->x * 0x10) + x, (part->y * 0x10) + y, clut, style);
             part_offset += 4;
             part_index += 1;
-            packet_cursor = golem_emit_glyph(packet_cursor, ordering_table, part->glyph_id, (part->x * 0x10) + x, (part->y * 0x10) + y, clut, style);
         } while (part_index < *part_count);
     }
-    *(u8*)(packet_cursor + 3) = 1;
-    *(u32*)(packet_cursor + 4) = 0xE1000025;
-    *(u32*)(packet_cursor + 0) = (*(u32*)(packet_cursor + 0) & 0xFF000000) | (*ordering_table & 0xFFFFFF);
-    *ordering_table = (*ordering_table & 0xFF000000) | (packet_cursor & 0xFFFFFF);
+    draw_cmd = 0xE1000025;
+    low_mask = 0xFFFFFF;
+    one = 1;
+    high_mask = 0xFF000000;
+    do
+    {
+        *(u8*)(packet_cursor + 3) = one;
+        *(u32*)(packet_cursor + 4) = draw_cmd;
+    } while (0);
+    *(u32*)(packet_cursor + 0) = (*(u32*)(packet_cursor + 0) & high_mask) | (*ordering_table & low_mask);
+    *ordering_table = (*ordering_table & high_mask) | (packet_cursor & low_mask);
     return packet_cursor + 8;
 }
 
