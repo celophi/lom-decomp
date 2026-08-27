@@ -471,6 +471,9 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field271.c \
 	src/overlays/field/field272.c \
 	src/overlays/field/field274.c \
+	src/overlays/field/field276.c \
+	src/overlays/field/field277.c \
+	src/overlays/field/field278.c \
 	src/overlays/field/unk2_b_split126.c
 overlay_field_gcc_280_g4_srcs := src/overlays/field/field_fade.c
 overlay_field_gcc_280_g4_noexpand_srcs := \
