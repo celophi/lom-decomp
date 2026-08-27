@@ -482,9 +482,7 @@ overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_animation.c \
 	src/overlays/field/field_scene_api.c \
 	src/overlays/field/field_collision.c \
-	src/overlays/field/func_800674a8.c \
-	src/overlays/field/func_80067598.c \
-	src/overlays/field/field1.c
+	src/overlays/field/field_text.c
 
 OVERLAYS += gname
 overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/gname.c
