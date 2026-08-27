@@ -1,11 +1,3 @@
-/**
- * @file field29.c
- * @brief Field actor ground-shadow primitive emitter, carved from the head of
- *        the unk2_i fragment (the single-function slot between func_80086FB8
- *        and func_80087564). Called from the field animation processors
- *        (e.g. field11.c's func_80075C88 shadow path).
- */
-
 #include "common.h"
 
 typedef struct {
@@ -75,6 +67,43 @@ typedef struct {
     s16 unkE;
     u32 flags;
 } Res871A0;
+
+typedef struct
+{
+    u8 pad0[0x3A];
+    u8 unk3A;
+} Rec87564;
+
+typedef struct
+{
+    u8 pad0[0x14];
+    s32 unk14;
+    u8 pad18[0x23C - 0x18];
+} State87564;
+
+typedef struct
+{
+    u8 pad0[0x10];
+    s16 unk10;
+    u8 pad12[0x2A - 0x12];
+    s16 unk2A;
+} Rec875C4;
+
+/**
+ * @file field29.c
+ * @brief Field actor ground-shadow primitive emitter, carved from the head of
+ *        the unk2_i fragment (the single-function slot between func_80086FB8
+ *        and func_80087564). Called from the field animation processors
+ *        (e.g. field11.c's func_80075C88 shadow path).
+ */
+
+
+
+
+
+
+
+
 
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
@@ -317,4 +346,43 @@ Prim871A0 *func_800871A0(Rec871A0 *arg0, Prim871A0 *arg1, s32 *arg2, Off871A0 *a
         }
     }
     return var_t0;
+}
+
+extern State87564 D_80105AE0[];
+extern Rec87564 *D_8010A01C;
+
+void func_80087564(Rec87564 *arg0)
+{
+    D_8010A01C = arg0;
+    func_800B2198(D_80105AE0[arg0->unk3A].unk14, D_80105AE0);
+}
+
+extern s32 D_8010A030;
+
+/**
+ * @return Value of D_8010A030.
+ * @see decomp.me (100%) N/A -- trivial 4-instruction leaf function, no scratch needed.
+ */
+s32 func_800875B4(void)
+{
+    return D_8010A030;
+}
+
+s32 func_800875C4(void)
+{
+    Rec875C4 *rec = func_80087C9C();
+    s32 result;
+
+    if (rec == (Rec875C4 *)-1)
+    {
+        return -1;
+    }
+
+    result = 0;
+    if (rec->unk10 == 0)
+    {
+        result = rec->unk2A == 0;
+    }
+
+    return result;
 }
