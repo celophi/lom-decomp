@@ -417,10 +417,8 @@ void golem_update_frame(void)
 
 /**
  * @brief Handle logic-block selection, placement, rotation, and cancellation.
- * @note WIP - 99.88% (446/455 exact, gcc272_cdk). Residue is a v0/v1 register
- *       swap between the selected index and block count in the backward search.
  * @return None.
- * @see decomp.me (99.88%)
+ * @see decomp.me (100%)
  */
 void golem_handle_input(void)
 {
@@ -619,11 +617,15 @@ void golem_handle_input(void)
         {
             s32 limit, logic_type;
             GolemMenuData* menu_data;
-            block_index = g_golem_selected_block;
+            s32 selected_tmp;
+            s32* countp;
+            do { selected_tmp = g_golem_selected_block; } while (0);
+            input = g_golem_logic_block_count;
+            block_index = selected_tmp;
             repeat_count = 0;
-            if (g_golem_logic_block_count > 0)
+            if (input > 0)
             {
-                limit = g_golem_logic_block_count;
+                limit = input;
                 menu_data = (GolemMenuData*)g_menuLayoutBuffer;
                 logic_type = g_golem_active_logic_type;
                 block_index--;
@@ -632,16 +634,20 @@ void golem_handle_input(void)
                 {
                     block_index = limit - 1;
                 }
+                countp = &g_golem_logic_block_count;
                 if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
                 {
                     goto backward_done;
                 }
-                input = g_golem_logic_block_count;
-                repeat_count++;
-                block_index--;
-                if (repeat_count < input)
                 {
-                    goto backward_loop;
+                    s32 loop_count;
+                    do { loop_count = *countp; } while (0);
+                    repeat_count++;
+                    block_index--;
+                    if (repeat_count < loop_count)
+                    {
+                        goto backward_loop;
+                    }
                 }
                 block_index++;
             }
