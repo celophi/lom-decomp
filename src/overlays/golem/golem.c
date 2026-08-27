@@ -967,38 +967,40 @@ void golem_render(s32 render_context)
 /**
  * @brief Link a base primitive into the render context OT, emit a highlight
  *        primitive for each on-screen panel cell, then link a final frame prim.
- * @param packet_cursor Running primitive pointer, advanced for each primitive.
+ * @param packet_buffer Starting primitive pointer for this pass.
  * @param render_context Render context containing the panel ordering table.
  * @return Packet cursor after the final frame primitive.
- * @note The remaining mismatch is instruction scheduling; frame and stack-slot
- *       layout match the target.
- * @see decomp.me (98.28%)
+ * @note The parameter is copied into @c packet_cursor (a local); the target
+ *       keeps an addu copy of the incoming argument, so the copy is required
+ *       to match. The per-cell y offset is @c block_index * 0x28 rather than a
+ *       running accumulator for the same reason.
+ * @see decomp.me (100.00%)
  * @see working/func_80141478/code.c
  */
-s32 golem_draw_block_list(s32 packet_cursor, s32 render_context)
+s32 golem_draw_block_list(s32 packet_buffer, s32 render_context)
 {
     u8 draw_env[0x60];
     s32 ordering_table;
     s32 next_packet;
     s32 block_y;
-    s32 list_y;
     s32 block_index;
     s32 draw_y;
     s32 scroll_above;
+    s32 packet_cursor;
 
+    packet_cursor = packet_buffer;
     block_index = 0;
     ordering_table = render_context + 0x38;
-    func_8001A5D4(packet_cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
+    SetDrawEnv(packet_cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
     next_packet = packet_cursor + 0x40;
     addPrim(ordering_table, packet_cursor);
 
     if (g_golem_logic_block_count > 0)
     {
-        list_y = 0;
         do
         {
             scroll_above = g_golem_scroll_y - 0x28;
-            block_y = list_y - scroll_above;
+            block_y = block_index * 0x28 - scroll_above;
             if (block_y >= -0x27)
             {
                 if (block_y < 0x78)
@@ -1010,12 +1012,12 @@ s32 golem_draw_block_list(s32 packet_cursor, s32 render_context)
                     }
                     else
                     {
-                        next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6, list_y - g_golem_scroll_y + 0x2C,
+                        next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6,
+                                                                block_index * 0x28 - g_golem_scroll_y + 0x2C,
                                                                 g_golem_block_status[block_index].clut, 1, 0);
                     }
                 }
             }
-            list_y += 0x28;
             block_index++;
         } while (block_index < g_golem_logic_block_count);
     }
