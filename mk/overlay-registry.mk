@@ -76,7 +76,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field28.c \
 	src/overlays/field/field29.c \
 	src/overlays/field/unk2.c \
-	src/overlays/field/unk2_c.c \
 	src/overlays/field/unk2_e.c \
 	src/overlays/field/unk2_f.c \
 	src/overlays/field/unk2_f_b.c \
@@ -224,7 +223,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split021.c \
 	src/overlays/field/unk2_b_split022.c \
 	src/overlays/field/unk2_b_split023.c \
-	src/overlays/field/unk2_b_split024.c \
 	src/overlays/field/unk2_b_split025_tail2.c \
 	src/overlays/field/unk2_b_split025_tail.c \
 	src/overlays/field/unk2_b_split026.c \
@@ -238,7 +236,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split034.c \
 	src/overlays/field/unk2_b_split035.c \
 	src/overlays/field/unk2_b_split036.c \
-	src/overlays/field/unk2_b_split037.c \
 	src/overlays/field/unk2_b_split039.c \
 	src/overlays/field/unk2_b_split040.c \
 	src/overlays/field/unk2_b_split040_tail.c \
@@ -260,10 +257,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split056.c \
 	src/overlays/field/unk2_b_split057.c \
 	src/overlays/field/unk2_b_split058.c \
-	src/overlays/field/unk2_b_split059.c \
-	src/overlays/field/unk2_b_split059_tail.c \
-	src/overlays/field/unk2_b_split060.c \
-	src/overlays/field/unk2_b_split061.c \
 	src/overlays/field/unk2_b_split062.c \
 	src/overlays/field/unk2_b_split063.c \
 	src/overlays/field/unk2_b_split064.c \
@@ -298,7 +291,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split090_tail.c \
 	src/overlays/field/unk2_b_split090_tail2.c \
 	src/overlays/field/unk2_b_split094.c \
-	src/overlays/field/unk2_b_split096.c \
 	src/overlays/field/unk2_b_split097.c \
 	src/overlays/field/unk2_b_split098.c \
 	src/overlays/field/unk2_b_split098_tail.c \
@@ -478,6 +470,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field280.c \
 	src/overlays/field/field281.c \
 	src/overlays/field/field282.c \
+	src/overlays/field/field283.c \
 	src/overlays/field/unk2_b_split126.c
 overlay_field_gcc_280_g4_srcs := src/overlays/field/field_fade.c
 overlay_field_gcc_280_g4_noexpand_srcs := \
