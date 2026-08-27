@@ -2306,7 +2306,7 @@ void cload_deactivate_primary_element(void)
  * @note The four header reads use raw offsets off (u8 *)0x80180000 so gcc shares a
  *       single `lui 0x8018`. Do not give the fields extern symbols: every such shape
  *       costs an extra addiu plus a saved register (72.76-88.64%). D_80180004/8/C/10
- *       are marked `ignore:true` in config/overlays/cload_symbol_addrs.txt to stop
+ *       are marked `ignore:true` in config/symbols/cload_symbol_addrs.txt to stop
  *       splat symbolizing them in the target asm.
  * @see decomp.me (100.00%)
  */
