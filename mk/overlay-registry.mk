@@ -323,7 +323,9 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field269.c \
 	src/overlays/field/field273.c \
 	src/overlays/field/field275.c \
-	src/overlays/field/unk2_i_b_split024.c
+	src/overlays/field/unk2_i_b_split024.c \
+	src/overlays/field/unk2_b_split127.c 
+
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field3.c
 overlay_field_gcc_280_g0_srcs := \
@@ -405,7 +407,8 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field270.c \
 	src/overlays/field/field271.c \
 	src/overlays/field/field272.c \
-	src/overlays/field/field274.c
+	src/overlays/field/field274.c \
+	src/overlays/field/unk2_b_split126.c
 overlay_field_gcc_280_g4_srcs := src/overlays/field/field_fade.c
 overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_scene_load.c \
