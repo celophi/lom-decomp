@@ -356,6 +356,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field269.c \
 	src/overlays/field/field273.c \
 	src/overlays/field/field275.c \
+	src/overlays/field/field279.c \
 	src/overlays/field/field_set_scene_parameters.c \
 	src/overlays/field/unk2_i_b_split024_tail.c \
 	src/overlays/field/unk2_b_split127.c 
@@ -474,6 +475,9 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field276.c \
 	src/overlays/field/field277.c \
 	src/overlays/field/field278.c \
+	src/overlays/field/field280.c \
+	src/overlays/field/field281.c \
+	src/overlays/field/field282.c \
 	src/overlays/field/unk2_b_split126.c
 overlay_field_gcc_280_g4_srcs := src/overlays/field/field_fade.c
 overlay_field_gcc_280_g4_noexpand_srcs := \
