@@ -260,7 +260,6 @@ void field_queue_vram_upload(FieldImageReq* req);
 
 void field_text_apply_config(FieldTextState* state);
 void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
-void func_8006700C(FieldTextState* state, s32 animate);
 void field_text_queue_portrait_upload(u8* image, u8** cursor, s32 slot, s32 mirror);
 void field_text_queue_uploads(FieldTextState* state, u16** cursor);
 void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
@@ -280,6 +279,1081 @@ extern s32 g_field_text_window0_flags;
  * @see decomp.me (100%)
  */
 
+
+/* --- text-engine helpers folded in from the field_collision.c tail --- */
+/** @brief One entry of the macro table at D_80122B80. */
+typedef struct
+{
+    u8 unk0;        /* 0x00 character budget; -1 = unlimited */
+    u8 _pad1[3];
+    u8* unk4;       /* 0x04 replacement string */
+} FieldTextMacro;
+
+extern FieldTextMacro D_80122B80[];
+extern u8 D_801E26E0[];
+void func_8006429C(FieldTextState*);
+void func_80063B6C(FieldTextState*, s32, u16);
+
+/* ==== text-window TU: collision-tail glyph/staging helpers ==== */
+
+void func_80063194(void)
+{
+    RECT rect;
+    u16* buf;
+    u16* src;
+    u16* dst;
+    s32 count;
+    s32 adj;
+    s32 diff;
+    s32 i;
+    s32 j;
+
+    rect.x = 0x3C0;
+    rect.y = 0x180;
+    diff = ((FieldTextState*) 0x801ED0CC)->width - ((FieldTextState*) 0x801ED0CC)->remaining_width;
+    count = ((diff & 3) + diff + 5) >> 2;
+    buf = (u16*) 0x801DE000;
+    if (count >= 0x40)
+    {
+        rect.w = 0x40;
+        adj = count;
+        if (count < 0)
+        {
+            adj = count + 0x3F;
+        }
+        rect.h = (adj >> 6) * 12;
+        LoadImage(&rect, (u_long*) 0x801DE000);
+        buf += rect.w * rect.h;
+        count -= (adj >> 6) * 64;
+        rect.y = rect.y + rect.h;
+    }
+    if (count > 0)
+    {
+        dst = buf + count;
+        src = buf + 0x40;
+        j = 11;
+        while (--j != -1)
+        {
+            i = count;
+            while (--i != -1)
+            {
+                *dst++ = *src++;
+            }
+            src += 0x40 - count;
+        }
+        rect.w = count;
+        rect.h = 0xC;
+        LoadImage(&rect, (u_long*) buf);
+    }
+}
+
+/**
+ * @brief Typeset one step of the field text window.
+ *
+ * Walks the innermost active cursor interpreting control codes below 0x20 and
+ * emitting each glyph through func_80063B6C. Codes 0x20 and above are literal
+ * characters; 0x19 introduces a two-byte code. Control codes push and pop the
+ * cursor stack (14 pushes a macro from D_80122B80, 15 pushes the inline buffer
+ * at unk20, 0 and 6 pop), set pending delays, or end the step.
+ *
+ * Before emitting a character the routine word-wraps: if the character is a
+ * break opportunity it runs a LOOKAHEAD that re-walks the same control-code
+ * alphabet over a private copy of the cursor stack, accumulating the width of
+ * the next word, and asks func_80064210 for a new line when that word will not
+ * fit on the current one.
+ *
+ * @param st Text-window state; its cursor stack is advanced in place.
+ * @param arg1 Budget of characters to emit before returning.
+ *
+ * @see decomp.me (97.19%) TODO
+ */
+void func_800632E0(FieldTextState* st, s32 arg1)
+{
+    u8* cur;
+    u8* look;
+    u8* look_str;
+    u8* look_exp;
+    u8* look_run;
+    s32 remaining;
+    s32 advance;
+    s32 fresh;
+    s32 first;
+    s32 look_adv;
+    s32 emit_w;
+    u16 code;
+    u16 width;
+    u16 look_code;
+    u16 look_width;
+    u16 look_count;
+    u32 v1;
+    u16 y;
+    u32 x;
+    s16 tmp;
+    u8 c;
+    u8 look_c;
+    u8 flag;
+    s32 four;
+    FieldTextMacro* rec;
+    u16 nc;
+    u16 nc2;
+
+    remaining = arg1;
+    width = 0;
+    advance = 0;
+    first = 1;
+    y = st->cursor_v;
+    x = (st->cursor_u + st->width) - st->remaining_width;
+    while (x >= 0x100)
+    {
+        x -= 0x100;
+        y += st->line_height;
+    }
+    tmp = x & 0xFFFC;
+    st->dirty_end_u = tmp;
+    st->dirty_start_u = tmp;
+    st->dirty_end_v = y;
+    st->dirty_start_v = y;
+    if (st->width == st->remaining_width)
+    {
+        st->last_was_break = 0;
+        fresh = 1;
+    }
+    else
+    {
+        fresh = 0;
+    }
+    four = 4;
+
+    while (1)
+    {
+        cur = st->glyph_cursor;
+        if (cur == NULL)
+        {
+            cur = st->macro_cursor;
+            if (cur == NULL)
+            {
+                cur = st->text_cursor;
+            }
+        }
+        code = 0;
+
+        while (1)
+        {
+            if (st->pending_spaces != 0)
+            {
+                code = 0x20;
+                width = 5;
+                advance = 0;
+                st->pending_spaces = st->pending_spaces - 1;
+            }
+            else
+            {
+                c = *cur;
+                cur++;
+                if ((c < 0x20) && (c != 0x19))
+                {
+                    switch (c)
+                    {
+                    case 0:
+                        if (st->glyph_cursor != NULL)
+                        {
+                            goto pop_run;
+                        }
+                        if (st->macro_cursor != NULL)
+                        {
+                            goto pop_expand;
+                        }
+                        if (st->choice_count != 0)
+                        {
+                            goto set_wide;
+                        }
+                        st->flow_code = 1;
+                        goto set_break;
+                    case 6:
+                        if (st->glyph_cursor != NULL)
+                        {
+                        pop_run:
+                            cur = st->macro_cursor;
+                            st->glyph_cursor = NULL;
+                            if (cur == NULL)
+                            {
+                                cur = st->text_cursor;
+                                v1 = code;
+                                goto have_v1;
+                            }
+                            break;
+                        }
+                        if (st->macro_cursor != NULL)
+                        {
+                        pop_expand:
+                            cur = st->text_cursor;
+                            st->macro_cursor = NULL;
+                            break;
+                        }
+                        st->text_cursor = NULL;
+                        if (st->flags.word & 0x1000)
+                        {
+                            func_8006700C(st, 1, c);
+                        }
+                        return;
+                    case 1:
+                        if (func_80064210(st) == 1)
+                        {
+                            goto store_and_return;
+                        }
+                        fresh = 1;
+                        st->last_was_break = 0;
+                        break;
+                    case 2:
+                        st->flow_code = 3;
+                        goto set_break;
+                    case 3:
+                        st->flow_code = 2;
+                        goto set_break;
+                    case 4:
+                        if (first == 0)
+                        {
+                            return;
+                        }
+                        func_8006429C(st);
+                        goto store_and_return;
+                    case 5:
+                        st->flow_code = four;
+                        goto set_break;
+                    case 7:
+                        if (st->choice_count == 0)
+                        {
+                            st->choice_start_line = st->line_count;
+                        }
+                        st->choice_count = st->choice_count + 1;
+                        break;
+                    case 8:
+                        st->pending_spaces = 2;
+                        break;
+                    case 9:
+                        st->pending_spaces = 3;
+                        break;
+                    case 10:
+                        st->pending_spaces = four;
+                        break;
+                    case 11:
+                        st->pending_spaces = *cur;
+                        cur++;
+                        break;
+                    case 12:
+                        st->char_delay = four;
+                        goto store_and_return;
+                    case 13:
+                        st->char_delay = *cur;
+                        cur++;
+                        goto store_and_return;
+                    case 14:
+                        c = *cur;
+                        cur++;
+                        st->text_cursor = cur;
+                        rec = &D_80122B80[c];
+                        cur = rec->unk4;
+                        st->macro_cursor = cur;
+                        st->macro_remaining = rec->unk0;
+                        break;
+                    case 15:
+                        st->text_cursor = cur;
+                        st->macro_cursor = st->inline_text;
+                        cur = st->inline_text;
+                        st->macro_remaining = -1;
+                        break;
+                    case 16:
+                        st->text_color = *cur;
+                        cur++;
+                        break;
+                    case 17:
+                        st->text_color = 0;
+                        break;
+                    case 19:
+                        v1 = code;
+                        if (fresh != 0)
+                        {
+                            code = 0xFFFF;
+                            width = 0xC;
+                            advance = 1;
+                            break;
+                        }
+                        goto have_v1;
+                    case 18:
+                        c = *cur;
+                        cur++;
+                        if (c == 0)
+                        {
+                            code = 0x20;
+                            width = 5;
+                            advance = 2;
+                        }
+                        /* fallthrough */
+                    case 31:
+                        c = *cur + 0x1F;
+                        cur++;
+                        /* fallthrough */
+                    default:
+                        if (st->macro_cursor != NULL)
+                        {
+                            st->macro_cursor = cur;
+                        }
+                        else
+                        {
+                            st->text_cursor = cur;
+                        }
+                        st->glyph_cursor = (u8*) 0x801E2780 + ((u16*) 0x801E2758)[c];
+                        cur = st->glyph_cursor;
+                        break;
+                    }
+                }
+                else
+                {
+                    if (c >= 0x20)
+                    {
+                        code = c;
+                        advance = 1;
+                    }
+                    else
+                    {
+                        code = *cur | ((c + 0xFFE8) << 8);
+                        cur++;
+                        advance = 2;
+                    }
+
+                    v1 = code;
+                    if (v1 == 0x80)
+                    {
+                        width = 0xC;
+                    }
+                    else if (v1 >= 0x80)
+                    {
+                        width = 9;
+                    }
+                    else
+                    {
+                        width = D_801E26E0[v1];
+                    }
+                }
+            }
+
+            v1 = code;
+
+        have_v1:
+            if ((v1 == 0x20) || (v1 == 0x80))
+            {
+                if (st->remaining_width < width)
+                {
+                    st->last_was_break = 1;
+                    code = 0;
+                }
+            }
+            if (code == 0)
+            {
+                continue;
+            }
+            if (st->remaining_width < width)
+            {
+                if (func_80064210(st) == 1)
+                {
+                    return;
+                }
+                fresh = 1;
+                st->last_was_break = 0;
+            }
+            flag = st->last_was_break;
+            if ((code == 0x20) || (code == 0x80) || (code == 0xFFFF))
+            {
+                st->last_was_break = 1;
+                break;
+            }
+            look_width = width;
+            if (flag != 0)
+            {
+                look_adv = advance;
+                look = cur;
+                look_str = st->text_cursor;
+                look_exp = st->macro_cursor;
+                look_run = st->glyph_cursor;
+                look_count = st->macro_remaining;
+                do
+                {
+                    if (look_run != NULL)
+                    {
+                        look_run = look;
+                    }
+                    else if (look_exp != NULL)
+                    {
+                        nc = look_count - look_adv;
+                        if ((s16) look_count != -1)
+                        {
+                            look_count = nc;
+                            if ((nc << 16) <= 0)
+                            {
+                                look = NULL;
+                            }
+                        }
+                        look_exp = look;
+                    }
+                    else
+                    {
+                        look_str = look;
+                    }
+                    look = look_run;
+                    look_code = 0;
+                    if (look == NULL)
+                    {
+                        look = look_str;
+                        if (look_exp != NULL)
+                        {
+                            look = look_exp;
+                        }
+                    }
+                    while (1)
+                    {
+                        look_c = *look;
+                        look++;
+                        if ((look_c < 0x20) && (look_c != 0x19))
+                        {
+                            switch (look_c)
+                            {
+                            case 0:
+                            case 6:
+                                if (look_run != NULL)
+                                {
+                                    look_run = NULL;
+                                    look = look_str;
+                                    if (look_exp != NULL)
+                                    {
+                                        look = look_exp;
+                                    }
+                                }
+                                else if (look_exp != NULL)
+                                {
+                                    look_exp = NULL;
+                                    look = look_str;
+                                }
+                                else
+                                {
+                                    flag = 0;
+                                }
+                                break;
+                            case 14:
+                                look_str = look + 1;
+                                look_c = *look;
+                                rec = &D_80122B80[look_c];
+                                look = rec->unk4;
+                                look_count = rec->unk0;
+                                look_exp = look;
+                                break;
+                            case 15:
+                                look_str = look;
+                                look = st->inline_text;
+                                look_exp = look;
+                                look_count = -1;
+                                break;
+                            case 18:
+                                look_c = *look;
+                                look++;
+                                if (look_c == 0)
+                                {
+                                    flag = 0;
+                                }
+                                /* fallthrough */
+                            case 31:
+                                look_c = *look + 0x1F;
+                                look++;
+                                /* fallthrough */
+                            default:
+                                if (look_exp != NULL)
+                                {
+                                    look_exp = look;
+                                }
+                                else
+                                {
+                                    look_str = look;
+                                }
+                                look = (u8*) 0x801E2780 + ((u16*) 0x801E2758)[look_c];
+                                look_run = look;
+                                break;
+                            }
+                            if (look_code != 0)
+                            {
+                                break;
+                            }
+                            if (flag != 0)
+                            {
+                                continue;
+                            }
+                            break;
+                        }
+                        if (look_c >= 0x20)
+                        {
+                            look_code = look_c;
+                            look_adv = 1;
+                        }
+                        else
+                        {
+                            look_code = *look | ((look_c + 0xFFE8) << 8);
+                            look++;
+                            look_adv = 2;
+                        }
+                        if (look_code != 0)
+                        {
+                            if ((look_code == 0x20) || (look_code == 0x80) || (look_code == 0xFFFF))
+                            {
+                                flag = 0;
+                            }
+                            else if (look_code >= 0x80)
+                            {
+                                look_width += 9;
+                            }
+                            else
+                            {
+                                look_width += D_801E26E0[look_code];
+                            }
+                            if (look_code != 0)
+                            {
+                                break;
+                            }
+                        }
+                        if (flag == 0)
+                        {
+                            break;
+                        }
+                    }
+                } while (flag != 0);
+
+                if (st->remaining_width >= look_width)
+                {
+                    break;
+                }
+                if (func_80064210(st) != 1)
+                {
+                    fresh = 1;
+                    st->last_was_break = 0;
+                    break;
+                }
+                return;
+            }
+            break;
+        }
+
+        if (st->glyph_cursor != NULL)
+        {
+            st->glyph_cursor = cur;
+        }
+        else if (st->macro_cursor != NULL)
+        {
+            if ((s16) st->macro_remaining != -1)
+            {
+                nc2 = st->macro_remaining - advance;
+                st->macro_remaining = nc2;
+                if ((nc2 << 16) <= 0)
+                {
+                    cur = NULL;
+                }
+            }
+            st->macro_cursor = cur;
+        }
+        else
+        {
+            st->text_cursor = cur;
+        }
+        emit_w = width;
+        if (code == 0xFFFF)
+        {
+            code = 0x20;
+            width = 0xC;
+            if ((st->portrait == 0) || (st->flags.word & 0x30))
+            {
+                func_80063B6C(st, 0x20, 0xC);
+            }
+            emit_w = width;
+        }
+        if (emit_w != 0)
+        {
+            func_80063B6C(st, code, emit_w);
+        }
+        if ((remaining != 0) && !(st->flags.word & 0x800) && ((fresh == 0) || (code != 0x20)))
+        {
+            first = 0;
+            remaining--;
+            fresh = 0;
+            if (remaining == 0)
+            {
+                return;
+            }
+        }
+    }
+
+set_wide:
+    st->flow_code = 0x10;
+    st->prompt_frame = 0;
+    st->prompt_timer = 4;
+    st->choice_index = 0;
+    goto store_and_return;
+
+set_break:
+    st->prompt_frame = 0;
+    st->prompt_timer = 8;
+
+store_and_return:
+    if (st->glyph_cursor != NULL)
+    {
+        st->glyph_cursor = cur;
+        return;
+    }
+    if (st->macro_cursor != NULL)
+    {
+        st->macro_cursor = cur;
+        return;
+    }
+    st->text_cursor = cur;
+}
+
+/**
+ * @brief Blit one glyph into the text window's 4bpp staging buffer.
+ *
+ * Expands the 1bpp font bitmap for @p code (0x18 bytes per character at
+ * 0x801E1200, one halfword per row) into 4bpp pixels, applying a drop shadow,
+ * and merges the result into the 64-halfword-wide staging image at 0x801DE000
+ * that func_80063194 later uploads to VRAM.
+ *
+ * The expansion runs through a small staging area in the PSX scratchpad at
+ * 0x1F800000, laid out as one 10-byte (5 halfword) row per glyph row. Each row
+ * is primed from FieldTextState::unk70, the carry left over from the previous
+ * glyph, then filled nibble by nibble; @c st->width - @c st->remaining_width gives the
+ * sub-block pixel offset, so a glyph may straddle two 64-wide blocks. What
+ * runs past the right edge is written back to unk70 for the next call.
+ *
+ * Two colour indices are used per glyph: an even "fill" index and the odd
+ * index above it for the shadow, selected from @c st->text_color (or forced to 6/7
+ * when @c st->flags.word has the 0xC0 field equal to 0x40, which also widens the
+ * glyph by one nibble and takes a heavier two-tap shadow).
+ *
+ * @param st    text-window state block (live at 0x801ED0CC).
+ * @param code  character code to draw; the font table is indexed from 0x20.
+ * @param width advance width of this glyph, in quarter-pixel units.
+ *
+ * @see decomp.me (95.46%) scratch not yet published
+ */
+void func_80063B6C(FieldTextState* st, s32 code, u16 width)
+{
+    u16* scratch;
+    u16* carry;
+    u16* glyph;
+    u8* line;
+    u16* dst;
+    u16* row_src;
+    u16* row_dst;
+    u8* px;
+    s32 rows;
+    s32 y;
+    s32 shift;
+    s32 i;
+    s32 j;
+    s32 r;
+    s32 f;
+    s32 m;
+    s32 count;
+    s32 col;
+    s32 x;
+    s32 words;
+    s32 lo_fill;
+    s32 hi_fill;
+    s32 lo_shadow;
+    s32 hi_shadow;
+    u32 nibbles;
+    u32 left;
+    u32 mask;
+    u32 fill;
+    u32 shade;
+    u32 acc;
+    u32 cur;
+    u32 next;
+    u32 avail;
+    u32 span;
+    s32 nib;
+
+    scratch = (u16*) 0x1F800000;
+    carry = st->row_carry;
+    rows = st->line_height;
+    shift = st->width - st->remaining_width;
+    f = rows - 1;
+    for (m = f; m != -1; m--)
+    {
+        count = 4;
+        if (shift != 0)
+        {
+            *scratch++ = *carry++;
+        }
+        else
+        {
+            count = 5;
+        }
+        for (j = count - 1; j != -1; j--)
+        {
+            *scratch++ = 0;
+        }
+    }
+
+    lo_fill = 6;
+    if ((st->flags.word & 0xC0) == 0x40)
+    {
+        hi_fill = 0x60;
+        lo_shadow = 7;
+        hi_shadow = 0x70;
+        nibbles = (u16) width + 2;
+    }
+    else
+    {
+        switch (st->text_color)
+        {
+        case 0:
+            lo_fill = 2;
+            hi_fill = 0x20;
+            lo_shadow = 3;
+            hi_shadow = 0x30;
+            break;
+        case 1:
+            lo_fill = 4;
+            hi_fill = 0x40;
+            lo_shadow = 5;
+            hi_shadow = 0x50;
+            break;
+        case 2:
+            lo_fill = 6;
+            hi_fill = 0x60;
+            lo_shadow = 7;
+            hi_shadow = 0x70;
+            break;
+        case 3:
+            lo_fill = 8;
+            hi_fill = 0x80;
+            lo_shadow = 9;
+            hi_shadow = 0x90;
+            break;
+        case 4:
+            lo_fill = 0xA;
+            hi_fill = 0xA0;
+            lo_shadow = 0xB;
+            hi_shadow = 0xB0;
+            break;
+        case 5:
+            lo_fill = 0xC;
+            hi_fill = 0xC0;
+            lo_shadow = 0xD;
+            hi_shadow = 0xD0;
+            break;
+        default:
+            lo_fill = 0xE;
+            hi_fill = 0xE0;
+            lo_shadow = 0xF;
+            hi_shadow = 0xF0;
+            break;
+        }
+        nibbles = (u16) width + 1;
+    }
+
+    glyph = (u16*) (0x801E1200 + (((u16) code - 0x20) * 0x18));
+    px = (u8*) (0x1F800000 + (((u32) shift & 3) >> 1));
+    fill = 0;
+    shade = fill;
+    acc = fill;
+    for (i = rows - 1; i != -1; i--)
+    {
+        u8* p = px;
+
+        nib = shift & 1;
+        mask = 0x8000;
+        if ((st->flags.word & 0xC0) == 0x40)
+        {
+            cur = 0;
+            if (i != 0)
+            {
+                next = *glyph;
+                cur = (next & 0xFFFF) >> 1;
+                next |= (next & 0xFFFF) >> 2;
+                acc |= next;
+                next |= cur;
+                shade |= next;
+            }
+            else
+            {
+                next = cur;
+            }
+            for (j = nibbles - 1; j != -1; j--)
+            {
+                if (nib == 0)
+                {
+                    if ((shade & mask) != 0)
+                    {
+                        *p = lo_shadow | (*p & 0xF0);
+                    }
+                    nib = 1;
+                    if ((fill & mask) != 0)
+                    {
+                        *p = lo_fill | (*p & 0xF0);
+                    }
+                }
+                else
+                {
+                    if ((shade & mask) != 0)
+                    {
+                        *p = hi_shadow | (*p & 0xF);
+                    }
+                    nib = 0;
+                    if ((fill & mask) != 0)
+                    {
+                        *p = hi_fill | (*p & 0xF);
+                    }
+                    p++;
+                }
+                mask >>= 1;
+            }
+            shade = acc;
+            fill = cur;
+        }
+        else
+        {
+            cur = *glyph;
+            next = cur >> 1;
+            acc |= next;
+            next |= cur;
+            for (j = nibbles - 1; j != -1; j--)
+            {
+                if (nib == 0)
+                {
+                    if ((acc & mask) != 0)
+                    {
+                        *p = lo_shadow | (*p & 0xF0);
+                    }
+                    nib = 1;
+                    if ((cur & mask) != 0)
+                    {
+                        *p = lo_fill | (*p & 0xF0);
+                    }
+                }
+                else
+                {
+                    if ((acc & mask) != 0)
+                    {
+                        *p = hi_shadow | (*p & 0xF);
+                    }
+                    nib = 0;
+                    if ((cur & mask) != 0)
+                    {
+                        *p = hi_fill | (*p & 0xF);
+                    }
+                    p++;
+                }
+                mask >>= 1;
+            }
+        }
+        glyph++;
+        acc = next;
+        px += 10;
+    }
+
+    y = st->cursor_v;
+    x = st->cursor_u + shift;
+    while (x >= 0x100)
+    {
+        x -= 0x100;
+        y += rows;
+    }
+
+    if ((st->flags.word & 0xC0) == 0x40)
+    {
+        avail = st->remaining_width + 4;
+    }
+    else
+    {
+        avail = st->remaining_width;
+    }
+    if (avail < nibbles)
+    {
+        span = avail + (shift & 3);
+    }
+    else
+    {
+        span = nibbles + (shift & 3);
+    }
+    left = (span + 3) >> 2;
+
+    scratch = (u16*) 0x1F800000;
+    if (left != 0)
+    {
+        line = (u8*) 0x801DE000 - (-(y << 7));
+        do
+        {
+            col = x >> 2;
+            dst = (u16*) (line + col * 2);
+            if ((u32) (col + left) >= 0x41U)
+            {
+                words = 0x40 - col;
+                left -= words;
+                x = 0;
+                m = rows << 7;
+                line += m;
+                y += rows;
+            }
+            else
+            {
+                x += left * 4;
+                words = left;
+                left = 0;
+            }
+            row_src = scratch;
+            for (r = rows - 1; r != -1; r--)
+            {
+                u16* s = row_src;
+
+                row_dst = dst;
+                for (j = words - 1; j != -1; j--)
+                {
+                    *row_dst++ = *s++;
+                }
+                row_src += 5;
+                dst += 0x40;
+            }
+            scratch += words;
+        } while (left != 0);
+    }
+
+    st->dirty_end_u = x;
+    scratch = (u16*) 0x1F800000 + (((shift & 3) + (u16) width) >> 2);
+    carry = st->row_carry;
+    st->dirty_end_v = y;
+    for (f = rows - 1; f != -1; f--)
+    {
+        *carry++ = *scratch;
+        scratch += 5;
+    }
+    st->remaining_width = st->remaining_width - width;
+}
+
+/**
+ * @brief Erase the region the previous text step occupied in the staging buffer.
+ *
+ * The live text region is described by unk60/unk62 (left edge and top row) and
+ * unk64/unk66 (last-row width and bottom row); the staging image at 0x801DE000
+ * is 64 halfwords wide, so one row is 0x40 halfwords. Three passes clear it:
+ * the rows of the current block from the left edge across, then any whole rows
+ * between the block and the bottom, then the partial last row at the bottom.
+ * The current rectangle is then snapshotted into unk68..dirty_end_v.
+ *
+ * @param st text-window state block (live at 0x801ED0CC).
+ */
+void func_800640B4(FieldTextState* st)
+{
+    u16* row;
+    u16* p;
+    s32 span;
+    s32 half;
+    s32 x;
+    s32 y;
+    s32 rows;
+    s32 i;
+    s32 j;
+
+    y = st->region_start_v;
+    x = st->region_start_u;
+    if (y == st->region_end_v)
+    {
+        span = st->region_end_u - x;
+        half = span >> 1;
+    }
+    else
+    {
+        span = 0x100 - x;
+        half = span >> 1;
+    }
+    rows = st->line_height;
+    row = ((u16*) 0x801DE000 + (x >> 2)) + (y << 6);
+    for (i = rows - 1; i != -1; i--)
+    {
+        p = row;
+        j = half >> 1;
+        while (--j != -1)
+        {
+            *p++ = 0;
+        }
+        row += 0x40;
+    }
+
+    if (y != st->region_end_v)
+    {
+        y += rows;
+        if (y != st->region_end_v)
+        {
+            row = (u16*) 0x801DE000 + (y << 6);
+            i = (st->region_end_v - y) << 6;
+            while (--i != -1)
+            {
+                *row++ = 0;
+            }
+        }
+        if (st->region_end_u != 0)
+        {
+            row = (u16*) 0x801DE000 + (st->region_end_v << 6);
+            for (i = rows - 1; i != -1; i--)
+            {
+                p = row;
+                j = st->region_end_u >> 2;
+                while (--j != -1)
+                {
+                    *p++ = 0;
+                }
+                row += 0x40;
+            }
+        }
+    }
+    st->dirty_start_u = st->region_start_u;
+    st->dirty_start_v = st->region_start_v;
+    st->dirty_end_u = st->region_end_u;
+    st->dirty_end_v = st->region_end_v;
+}
+
+/**
+ * @brief Advance the text cursor to the next line, or report the window full.
+ *
+ * Adds the line advance (unk56) to the horizontal cursor (unk5C) and carries
+ * every whole 0x100 into the vertical cursor (unk5E), one text row (unk58) per
+ * carry. If the cursor lands exactly on the end of the live region
+ * (unk64/unk66) there is no room left: unk1C is set to 0x10 and the caller is
+ * told to stop. Otherwise the new cursor is committed, the remaining width on
+ * the line is reset from unk52, and the line counter unk15 is bumped.
+ *
+ * @param st text-window state block (live at 0x801ED0CC).
+ * @return 1 when the window is full and the step must end, 0 to keep going.
+ */
+s32 func_80064210(FieldTextState* st)
+{
+    u16 x;
+    u16 y;
+
+    y = st->cursor_v;
+    x = st->cursor_u + st->line_advance;
+    while (x >= 0x100)
+    {
+        x -= 0x100;
+        y += st->line_height;
+    }
+    if ((y == st->region_end_v) && (x == st->region_end_u))
+    {
+        st->scroll_timer = 0x10;
+        return 1;
+    }
+    st->cursor_u = x;
+    st->cursor_v = y;
+    st->remaining_width = st->width;
+    st->line_count = st->line_count + 1;
+    return 0;
+}
+
+/* ==== field1: window/config/render helpers ==== */
 void func_8006429C(FieldTextState* state)
 {
     u16 start_u = (u16)state->region_start_u;
@@ -3337,3 +4411,94 @@ void field_text_restore_window(u16 slot, s32 placement_mode)
         field_text_set_string(slot, rec->text, rec->flags.b.byte2);
     }
 }
+
+
+/* ==== folded from func_800674a8.c (text-window record accessors) ==== */
+
+/** @brief Bytes of the 32-bit flags word at 0x10. */
+typedef struct
+{
+    u8 unk10;               // 0x10
+    u8 unk11;               // 0x11
+    u8 unk12;               // 0x12
+    u8 unk13;               // 0x13
+} FlagBytes;
+
+/** @brief The flags word at 0x10, addressed either whole or by byte. */
+typedef union
+{
+    u32 flags;              // 0x10
+    FlagBytes b;
+} FlagWord;
+
+typedef struct {
+    u32 unk0;               // 0x00
+    u8 _pad4[0x10 - 4];     // 0x04
+    FlagWord unk10;         // 0x10
+    u8 unk14;               // 0x14
+    u8 _pad15[0x4E - 0x15]; // 0x15
+    s16 unk4E;              // 0x4E
+    s16 unk50;              // 0x50
+} ArrEntry;
+
+
+/**
+ * @brief Write two s16 values into the entry at index arg0 of the array at 0x801ED034
+ *        (element stride 0x98 bytes).
+ * @param arg0 Array index (low 16 bits used).
+ * @param arg1 Value written to entry->unk4E.
+ * @param arg2 Value written to entry->unk50.
+ * @see decomp.me (100%) TODO
+ */
+void func_800674A8(s32 arg0, s16 arg1, s16 arg2) {
+    ArrEntry *entry = (ArrEntry *)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED034);
+    entry->unk4E = arg1;
+    entry->unk50 = arg2;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_800674D8(s32 arg0)
+{
+    ArrEntry* entry = (ArrEntry*)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED034);
+    func_8006700C(entry, 1);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8006751C(s32 arg0)
+{
+    ArrEntry* entry = (ArrEntry*)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED034);
+
+    if (((entry->unk10.flags & 7) != 0) && ((entry->unk10.b.unk10 & 7) < 4))
+    {
+        if (entry->unk14 != 0)
+        {
+            return 2;
+        }
+        return entry->unk0 != 0;
+    }
+    return -1;
+}
+
+/* ==== folded from func_80067598.c ==== */
+
+typedef struct {
+    u8 _pad[0x4B];
+    u8 unk4B;
+} ArrEntry2;
+
+/**
+ * @brief Read byte at offset 0x4B of the array entry at index arg0 in the
+ *        array at 0x801ED000 (element stride 0x98 bytes).
+ * @param arg0 Array index (low 16 bits used).
+ * @return The u8 value at entry->unk4B.
+ * @see decomp.me (100%) TODO
+ */
+u8 func_80067598(s32 arg0) {
+    ArrEntry2 *entry = (ArrEntry2 *)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED000);
+    return entry->unk4B;
+}
+
