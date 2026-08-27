@@ -720,10 +720,11 @@ void golem_reset_block_position(void)
  * @param packet_cursor Packet cursor, threaded through the marker emitters.
  * @param ordering_table Ordering-table tag for the marker packets.
  * @return Packet cursor after the marker run.
- * @note WIP - 96.66%. Body kept close to m2c output (do{}while(0) wrappers and
- *       the recomputed marker_ptr pointer arithmetic supply the match); residue
- *       is register allocation. Stack layout and control flow match the target.
- * @see decomp.me (96.66%)
+ * @note The 0x50 compare is materialized into @c glyph first, @c call_x holds a
+ *       copy of @c x in both branches, and the do{}while(0) wrappers and the
+ *       recomputed marker_ptr pointer arithmetic are all required to match the
+ *       target's register allocation.
+ * @see decomp.me (100.00%)
  * @see working/func_80140DEC/
  */
 s32 golem_draw_grid_markers(s32 packet_cursor, s32 ordering_table)
@@ -740,6 +741,7 @@ s32 golem_draw_grid_markers(s32 packet_cursor, s32 ordering_table)
     s32 *marker_base;
     s32 *marker_ptr;
     s32 row_y;
+    s32 call_x;
 
     func_800CBEC4(markers);
 
@@ -758,15 +760,18 @@ s32 golem_draw_grid_markers(s32 packet_cursor, s32 ordering_table)
             marker = *marker_ptr;
             if (marker != 0)
             {
-                if (marker == 0x50)
+                glyph = 0x50;
+                if (marker == glyph)
                 {
+                    call_x = x;
                     glyph = 2;
                 }
                 else
                 {
+                    call_x = x;
                     glyph = 3;
                 }
-                do { packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, x, row_y, glyph); } while (0);
+                packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, call_x, row_y, glyph);
             }
             x += 0x10;
             do { column++; } while (0);

@@ -264,10 +264,12 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split064.c \
 	src/overlays/field/unk2_b_split065.c \
 	src/overlays/field/unk2_b_split066.c \
+	src/overlays/field/func_800C3688.c \
+	src/overlays/field/unk2_b_split066_tail.c \
 	src/overlays/field/unk2_b_split067.c \
 	src/overlays/field/unk2_b_split068.c \
 	src/overlays/field/unk2_b_split069.c \
-	src/overlays/field/unk2_b_split070.c \
+	src/overlays/field/unk2_b_split070_tail.c \
 	src/overlays/field/unk2_b_split071.c \
 	src/overlays/field/unk2_b_split072.c \
 	src/overlays/field/unk2_b_split073.c \
@@ -276,7 +278,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split077.c \
 	src/overlays/field/unk2_b_split078.c \
 	src/overlays/field/unk2_b_split079.c \
-	src/overlays/field/unk2_b_split080.c \
 	src/overlays/field/unk2_b_split081.c \
 	src/overlays/field/func_800C7CF8.c \
 	src/overlays/field/unk2_b_split081_tail.c \
@@ -288,7 +289,9 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split087.c \
 	src/overlays/field/unk2_b_split088.c \
 	src/overlays/field/unk2_b_split089.c \
-	src/overlays/field/unk2_b_split090.c \
+	src/overlays/field/func_800CA568.c \
+	src/overlays/field/unk2_b_split090_tail.c \
+	src/overlays/field/unk2_b_split090_tail2.c \
 	src/overlays/field/unk2_b_split092.c \
 	src/overlays/field/unk2_b_split094.c \
 	src/overlays/field/unk2_b_split096.c \
@@ -400,6 +403,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field167.c \
 	src/overlays/field/field169.c \
 	src/overlays/field/field170.c \
+	src/overlays/field/func_800C5B64.c \
 	src/overlays/field/field173.c \
 	src/overlays/field/field174.c \
 	src/overlays/field/field176.c \
@@ -409,6 +413,8 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field184.c \
 	src/overlays/field/field186.c \
 	src/overlays/field/field188.c \
+	src/overlays/field/func_800C7558.c \
+	src/overlays/field/func_800C75C0.c \
 	src/overlays/field/func_800C7D5C.c \
 	src/overlays/field/field190.c \
 	src/overlays/field/field191.c \
@@ -419,6 +425,8 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field201.c \
 	src/overlays/field/field208.c \
 	src/overlays/field/field210.c \
+	src/overlays/field/func_800CA6BC.c \
+	src/overlays/field/func_800CA7A0.c \
 	src/overlays/field/field212.c \
 	src/overlays/field/field217.c \
 	src/overlays/field/field221.c \
