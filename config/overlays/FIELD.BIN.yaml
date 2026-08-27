@@ -65,10 +65,7 @@ segments:
       - [0x17C65, c, field2]                    # gcc272_cdk, no-schedule-insns
       - [0x17E35, c, func_80067aa4]             # gcc272_cdk
       - [0x17F1D, c, field_fade]                # gcc280_g4, expand-div (fade TU: reset + update/render + targets)
-      - [0x18341, c, func_80067fb0]             # gcc272_cdk
-      - [0x18551, c, func_800681c0]             # gcc272_cdk
-      - [0x1861D, c, field4]                    # gcc272_cdk
-      - [0x1B531, c, field6]                    # gcc272_cdk
+      - [0x18341, c, field4]                    # gcc272_cdk (runtime/actor-resource TU; absorbs func_80067fb0/func_800681c0/field6)
       - [0x1DB2D, c, field7]                    # gcc272_cdk
       - [0x21049, c, field8]                    # gcc272_cdk
       - [0x2423D, c, field9]                    # gcc272_cdk
