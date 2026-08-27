@@ -3896,59 +3896,50 @@ void cload_sort_entries_by_type(void)
  * @param y Passed through to cload_draw_cached_text (y).
  * @param palette Passed through to cload_draw_cached_text.
  * @param alignment Passed through to cload_draw_cached_text.
+ * @return The prim/handle returned by cload_draw_cached_text.
  * @note Each decimal digit indexes the g_cload_decimal_glyphs glyph table; 0x4F82 is the
  *       '0' glyph (skipped while leading) and 0x5B81 the minus glyph.
- * @note WIP ~70%: the seven magic-number divisions are emitted correctly but
- *       gcc's sched2 interleaving of the imuldiv ops and the resulting
- *       register-allocation cascade (the target's callee-saved s0 vs a temp,
- *       and the value register) are not reproducible from source shape alone
- *       (confirmed by sched_oracle) - permuter territory.
- * @see decomp.me (70.35%)
+ * @see decomp.me (100.00%)
  */
-void cload_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
+s32 cload_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
 {
     u16 buf[7];
-    s32 count;
-    s32 n;
-    s32 neg;
-    s32 minus;
-    u16 *p;
+    s32 first_digit;
+    s32 magnitude;
+    s32 negative;
 
-    n = value;
-    if (n < 0)
+    magnitude = value;
+    if (magnitude < 0)
     {
-        n = -n;
-        neg = 1;
+        magnitude = -magnitude;
+        negative = 1;
     }
     else
     {
-        neg = 0;
+        negative = 0;
     }
-    buf[1] = g_cload_decimal_glyphs[n / 10000];
-    count = 1;
-    buf[2] = g_cload_decimal_glyphs[(n % 10000) / 1000];
-    buf[3] = g_cload_decimal_glyphs[(n % 1000) / 100];
-    buf[4] = g_cload_decimal_glyphs[(n % 100) / 10];
-    p = &buf[1];
+    buf[1] = g_cload_decimal_glyphs[magnitude / 10000];
+    buf[2] = g_cload_decimal_glyphs[(magnitude % 10000) / 1000];
+    buf[3] = g_cload_decimal_glyphs[(magnitude % 1000) / 100];
+    buf[4] = g_cload_decimal_glyphs[(magnitude % 100) / 10];
+    buf[5] = g_cload_decimal_glyphs[magnitude % 10];
+
+    first_digit = 1;
+
     buf[6] = 0;
-    buf[5] = g_cload_decimal_glyphs[n % 10];
-loop:
-    if (*p == 0x4F82)
+
+    while (first_digit < 5 && buf[first_digit] == 0x4F82)
     {
-        count++;
-        p++;
-        if (count < 5)
-        {
-            goto loop;
-        }
+        first_digit++;
     }
-    if (neg != 0)
+
+    if (negative != 0)
     {
-        minus = 0x5B81;
-        count--;
-        buf[count] = minus;
+        first_digit--;
+        buf[first_digit] = 0x5B81;
     }
-    cload_draw_cached_text(prim, ot, &buf[count], x, y, palette, alignment);
+    prim = cload_draw_cached_text(prim, ot, &buf[first_digit], x, y, palette, alignment);
+    return prim;
 }
 
 
