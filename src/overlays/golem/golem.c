@@ -1289,9 +1289,11 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
  * @param use_origin When 1, offset x/y by the layout row's origin fields.
  * @param style      Style flags forwarded to golem_emit_glyph for each part.
  * @return Packet cursor past the trailing draw-mode packet.
- * @note The remaining mismatch is register allocation; frame and stack-slot
- *       layout match the target.
- * @see decomp.me (94.33%)
+ * @note The part-loop advances @c part_offset / @c part_index after the
+ *       golem_emit_glyph call, and the trailing draw-mode packet is built from
+ *       named constant locals inside a @c do{}while(0); both shapes are required
+ *       to match the target's register allocation.
+ * @see decomp.me (100.00%)
  * @see working/func_80141EB4_golem/
  */
 s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_index, s32 rotation, s32 x, s32 y, s32 clut, s32 use_origin, s32 style)
@@ -1303,6 +1305,10 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
     u8* table;
     u8* layout;
     s32 part_index;
+    u32 low_mask;
+    u32 high_mask;
+    u32 draw_cmd;
+    u32 one;
 
     logic_block = GOLEM_LOGIC_BLOCK(block_index);
     layout_index = logic_block >> 0xC;
@@ -1314,7 +1320,6 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
         x += row->origin_x * 8;
         y += row->origin_y * 8;
     }
-    part_index = 0;
     table = (u8*)g_golem_composite_icon_rows;
     rotation_offset = rotation * 0x14;
     layout_offset = layout_index * 0x58;
@@ -1324,6 +1329,7 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
             golem_emit_glyph(packet_cursor, ordering_table, ((logic_block >> 2) & 0x3F) + 0x13, (variant->base_x * 8) + x, (variant->base_y * 8) + y, 9, 0);
     }
     layout = layout_offset + table;
+    part_index = 0;
     if (*layout != 0)
     {
         u8* table_base = table;
@@ -1332,16 +1338,23 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
         s32 part_offset = rotation_offset;
         do
         {
-            GolemCompositeIconPartView* part = (GolemCompositeIconPartView*)(part_offset + row_base + table_base);
+            GolemCompositeIconPartView* part = (GolemCompositeIconPartView*)(part_offset + row_base + (s32)table_base);
+            packet_cursor = golem_emit_glyph(packet_cursor, ordering_table, part->glyph_id, (part->x * 0x10) + x, (part->y * 0x10) + y, clut, style);
             part_offset += 4;
             part_index += 1;
-            packet_cursor = golem_emit_glyph(packet_cursor, ordering_table, part->glyph_id, (part->x * 0x10) + x, (part->y * 0x10) + y, clut, style);
         } while (part_index < *part_count);
     }
-    *(u8*)(packet_cursor + 3) = 1;
-    *(u32*)(packet_cursor + 4) = 0xE1000025;
-    *(u32*)(packet_cursor + 0) = (*(u32*)(packet_cursor + 0) & 0xFF000000) | (*ordering_table & 0xFFFFFF);
-    *ordering_table = (*ordering_table & 0xFF000000) | (packet_cursor & 0xFFFFFF);
+    draw_cmd = 0xE1000025;
+    low_mask = 0xFFFFFF;
+    one = 1;
+    high_mask = 0xFF000000;
+    do
+    {
+        *(u8*)(packet_cursor + 3) = one;
+        *(u32*)(packet_cursor + 4) = draw_cmd;
+    } while (0);
+    *(u32*)(packet_cursor + 0) = (*(u32*)(packet_cursor + 0) & high_mask) | (*ordering_table & low_mask);
+    *ordering_table = (*ordering_table & high_mask) | (packet_cursor & low_mask);
     return packet_cursor + 8;
 }
 
