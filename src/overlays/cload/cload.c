@@ -1,4 +1,5 @@
 #include "common.h"
+#include "gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
@@ -1777,7 +1778,7 @@ CloadGpuPacket *cload_emit_rect_outline();
 CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 flag, s32 draw_fill)
 {
     CloadGpuPacket *outline_prim;
-    CloadGpuPacket *draw_mode_prim;
+    DR_TPAGE *draw_mode_prim;
     CloadGpuPacket *frame_prim;
     CloadGpuPacket *next_prim;
     s32 draw_area[24];
@@ -1806,20 +1807,17 @@ CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, s32 *ot, s32 x, s3
         outline_prim = cload_emit_rect_outline(outline_prim, ot, x - 1, y - 1, w + 2, h + 2, 0);
 
         next_prim = outline_prim;
-        next_prim->word4 = 0x808080;
-        setlen(next_prim, 3);
-        setcode(next_prim, 0x62);
-        next_prim->x0 = x;
-        next_prim->y0 = y;
-        next_prim->unkC = w;
-        next_prim->unkE = h;
-        addPrim(ot, next_prim);
+        SET_BGR0_PACKED((TILE *)next_prim, GPU_TINT_NEUTRAL);
+        setTile((TILE *)next_prim);
+        setSemiTrans((TILE *)next_prim, 1);
+        setXY0((TILE *)next_prim, x, y);
+        setWH((TILE *)next_prim, w, h);
+        addPrim(ot, (TILE *)next_prim);
 
-        draw_mode_prim = (CloadGpuPacket *)((u8 *)next_prim + 0x10);
-        setlen(draw_mode_prim, 1);
-        draw_mode_prim->word4 = 0xE1000045;
+        draw_mode_prim = (DR_TPAGE *)((u8 *)next_prim + sizeof(TILE));
+        setDrawTPage(draw_mode_prim, 0, 0, 0x45);
         addPrim(ot, draw_mode_prim);
-        next_prim = (CloadGpuPacket *)((u8 *)draw_mode_prim + 8);
+        next_prim = (CloadGpuPacket *)((u8 *)draw_mode_prim + sizeof(DR_TPAGE));
     }
     return next_prim;
 }

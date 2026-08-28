@@ -183,6 +183,8 @@ segments:
       - [0x4CDE5, c, unk2_i_b_split016]            # gcc272_cdk, func_8009CA54
       - [0x4D2AD, c, func_8009CF1C]                # gcc272_cdk, 100%
       - [0x4D315, c, unk2_i_b_split016_tail]       # gcc272_cdk, func_8009CF84
+      - [0x4DCED, c, field347]                     # gcc272_cdk, func_8009D95C
+      - [0x4DD71, c, unk2_i_b_split016_tail_b]     # gcc272_cdk, func_8009D9E0 .. func_800A1344
       - [0x520D9, c, field242]                     # gcc272_cdk, func_800A1D48
       - [0x52129, c, unk2_i_b_split021]            # gcc272_cdk, func_800A1D98
       - [0x5246D, c, func_800A20DC]                # gcc272_cdk, 100%
@@ -321,6 +323,8 @@ segments:
       - [0x669AD, c, unk2_b_split106]              # gcc272_cdk, func_800B661C
       - [0x66A81, c, func_800B66F0]                 # gcc280_g0, 100%
       - [0x66AD5, c, unk2_b_split106_tail]          # gcc272_cdk, func_800B6744
+      - [0x66B99, c, field346]                      # gcc280_g0, func_800B6808
+      - [0x66C21, c, unk2_b_split106_tail_b]        # gcc272_cdk, func_800B6890 .. func_800B7020
       - [0x6747D, c, field93]                      # gcc272_cdk, func_800B70EC
       - [0x67485, c, func_800B70F4]                # gcc272_cdk, 93.93% WIP
       - [0x674F5, c, unk2_b_split028]              # gcc272_cdk, func_800B7164
@@ -498,7 +502,8 @@ segments:
       - [0x76E21, c, field270]                  # gcc280_g0, func_800C6A90
       - [0x76E81, c, unk2_b_split124]           # gcc272_cdk, func_800C6AF0
       - [0x77131, c, field181]                     # gcc280_g0, func_800C6DA0
-      - [0x771B9, c, unk2_b_split077]           # gcc272_cdk, func_800C6E28
+      - [0x771B9, c, field348]                  # gcc280_g0, func_800C6E28
+      - [0x7724D, c, unk2_b_split077]           # gcc272_cdk, func_800C6EBC
       - [0x772F1, c, field275]                  # gcc272_cdk, func_800C6F60
       - [0x7732D, c, field305]                  # gcc280_g0, func_800C6F9C, 100%
       - [0x773A5, c, field311]                  # gcc280_g0, func_800C7014
