@@ -12,32 +12,29 @@ extern u16 D_80122C16;
  * whose word at +0x44 has bit 30 set, increments the tally stored to
  * D_80122C16.
  *
- * WIP: 90.11%. Body structure matches; residuals are two coupled gcc loop
- * optimizations - the target hoists the comparison constant 1 into the loop
- * preheader (filling the entry branch delay slot) and keeps the induction
- * pointer based at the buffer (offsets 0x2EF4/0x2F38), whereas this build folds
- * the compare to a bit test and rebases the induction pointer to +0x2F38. The
- * permuter cannot reach these cleanly either.
+ * The target initializes the tally only on the nonzero-result path and keeps a
+ * separate comparison value of 1 live across the loop. Re-deriving each record
+ * from its index preserves the buffer base and produces the target offsets and
+ * register lifetimes exactly.
  */
 void func_800C7168(void)
 {
-    s32 count = 0;
+    s32 count;
     s32 i;
+    s32 one = 1;
     u8 *p;
 
     if (g_gosub_result_count != 0)
     {
-        p = g_menuLayoutBuffer;
+        count = 0;
         for (i = 0; i < 5; i++)
         {
-            if (p[0x2EF4] != 0)
+            p = &g_menuLayoutBuffer[i * 0x60];
+            if (p[0x2EF4] != 0 &&
+                (((*(u32 *)(p + 0x2F38) >> 30) & 1) == one))
             {
-                if (((*(u32 *)(p + 0x2F38) >> 30) & 1) == 1)
-                {
-                    count++;
-                }
+                count++;
             }
-            p += 0x60;
         }
     }
     D_80122C16 = count;

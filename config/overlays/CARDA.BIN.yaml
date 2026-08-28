@@ -48,7 +48,10 @@ segments:
       - [0x991D, c, unk1_mid2]
       - [0x9FED, c, carda_handles]             # gcc272_cdk, 4 funcs, 100%
       - [0xA1C5, c, unk1_tail]
+      - [0xA65D, c, carda_draw_signed_decimal] # gcc272_cdk, 1 func, 100%
+      - [0xA87D, c, unk1_tail_mid]
+      - [0xA901, c, carda_text_render]         # gcc272_cdk, 3 funcs, 100%
       - [0xADF9, c, carda_cache_table]          # gcc272_cdk, 3 funcs, 100%
-      - [0xAEC5, c, unk1_tail2]
+      - [0xAEC5, c, carda_expand_text_glyph_codes] # gcc272_cdk, 1 func, 100%
       - [0xB039, data, data]
   - [0x2F001]

@@ -23,29 +23,37 @@
 
 OVERLAYS += addhero
 overlay_addhero_gcc_272_cdk_g0_srcs := \
+	src/overlays/addhero/addhero_reset_entry_ranks.c \
 	src/overlays/addhero/addhero_stream_reset.c \
 	src/overlays/addhero/addhero_shutdown_handles.c \
 	src/overlays/addhero/addhero_handles.c \
-	src/overlays/addhero/addhero_cache_table.c
+	src/overlays/addhero/addhero_draw_signed_decimal.c \
+	src/overlays/addhero/addhero_text_render.c \
+	src/overlays/addhero/addhero_cache_table.c \
+	src/overlays/addhero/addhero_expand_text_glyph_codes.c
 overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1.c \
+	src/overlays/addhero/unk1_after_rank.c \
 	src/overlays/addhero/unk1_mid1.c \
 	src/overlays/addhero/unk1_mid2.c \
 	src/overlays/addhero/unk1_tail.c \
-	src/overlays/addhero/unk1_tail2.c
+	src/overlays/addhero/unk1_tail_mid.c
 
 OVERLAYS += carda
 overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_stream_reset.c \
 	src/overlays/carda/carda_shutdown_handles.c \
 	src/overlays/carda/carda_handles.c \
-	src/overlays/carda/carda_cache_table.c
+	src/overlays/carda/carda_draw_signed_decimal.c \
+	src/overlays/carda/carda_text_render.c \
+	src/overlays/carda/carda_cache_table.c \
+	src/overlays/carda/carda_expand_text_glyph_codes.c
 overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1.c \
 	src/overlays/carda/unk1_mid1.c \
 	src/overlays/carda/unk1_mid2.c \
 	src/overlays/carda/unk1_tail.c \
-	src/overlays/carda/unk1_tail2.c
+	src/overlays/carda/unk1_tail_mid.c
 
 OVERLAYS += checkps
 overlay_checkps_gcc_272_cdk_g0_srcs := \
@@ -295,7 +303,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split025_tail2.c \
 	src/overlays/field/unk2_b_split025_tail2b.c \
 	src/overlays/field/unk2_b_split025_tail2b_b.c \
-	src/overlays/field/func_800B3D84.c \
 	src/overlays/field/unk2_b_split025_tail.c \
 	src/overlays/field/unk2_b_split025_tail_b.c \
 	src/overlays/field/unk2_b_split026.c \
@@ -486,6 +493,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field319.c \
 	src/overlays/field/field87.c \
 	src/overlays/field/field89.c \
+	src/overlays/field/func_800B3D84.c \
 	src/overlays/field/func_800B4844.c \
 	src/overlays/field/func_800B4CE4.c \
 	src/overlays/field/func_800B4DF0.c \
@@ -658,16 +666,21 @@ overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
 OVERLAYS += niki
 overlay_niki_gcc_280_g0_srcs := \
 	src/overlays/niki/unk1.c \
+	src/overlays/niki/unk1_after_rank.c \
 	src/overlays/niki/unk1_mid1.c \
 	src/overlays/niki/unk1_mid2.c \
 	src/overlays/niki/unk1_tail.c \
-	src/overlays/niki/unk1_tail2.c
+	src/overlays/niki/unk1_tail_mid.c
 overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki.c \
+	src/overlays/niki/niki_reset_entry_ranks.c \
 	src/overlays/niki/niki_stream_reset.c \
 	src/overlays/niki/niki_shutdown_handles.c \
 	src/overlays/niki/niki_handles.c \
-	src/overlays/niki/niki_cache_table.c
+	src/overlays/niki/niki_draw_signed_decimal.c \
+	src/overlays/niki/niki_text_render.c \
+	src/overlays/niki/niki_cache_table.c \
+	src/overlays/niki/niki_expand_text_glyph_codes.c
 
 OVERLAYS += shop
 overlay_shop_gcc_280_g0_srcs := src/overlays/shop/unk1.c
