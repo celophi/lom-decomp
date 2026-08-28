@@ -933,7 +933,6 @@ void golem_render(s32 render_context)
     s32 packet_cursor;
     s32 panel_index;
     s32 panel_ordering_table;
-    s32 text_ordering_table;
     s32 detail_block;
 
     panel_ordering_table = render_context + 0x3C;
@@ -950,7 +949,7 @@ void golem_render(s32 render_context)
     packet_cursor = golem_draw_block_list(packet_cursor, render_context);
     packet_cursor = golem_draw_logic_grid(packet_cursor, render_context);
     packet_cursor = golem_draw_cursor(packet_cursor, render_context);
-    do { do { do { do { do { do { do { do { do { do { text_ordering_table = render_context + 0x28; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+    panel_ordering_table = render_context + 0x28;
 
     if (g_golem_logic_block_count != 0)
     {
@@ -965,9 +964,9 @@ void golem_render(s32 render_context)
             func_800A8B90(number_buf, (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF, 1);
             golem_append_encoded_string(name_buf, number_buf);
         }
-        packet_cursor = func_800A88A0(packet_cursor, text_ordering_table, name_buf, 0, 0xA0, 0xA0, 2);
+        packet_cursor = func_800A88A0(packet_cursor, panel_ordering_table, name_buf, 0, 0xA0, 0xA0, 2);
         detail_block = *(s32*)(archive + 8);
-        packet_cursor = func_800A88A0(packet_cursor, text_ordering_table,
+        packet_cursor = func_800A88A0(packet_cursor, panel_ordering_table,
                                       detail_block +
                                           (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + detail_block + archive) + archive),
                                       0, 0xA0, 0xB0, 2);
@@ -1277,7 +1276,7 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
                 }
                 sprite->x0 = (x + 8) + x_offset;
                 sprite->y0 = y + y_offset;
-                do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { sprite->w = segment_width; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+                sprite->w = segment_width;
                 sprite->h = row_height;
                 sprite->u0 = GOLEM_PANEL_TEXTURE(panel_index).attributes >> 11;
                 sprite->v0 = GOLEM_PANEL_TEXTURE(panel_index).texture >> 3;
