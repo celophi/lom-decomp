@@ -1801,13 +1801,9 @@ CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, s32 *ot, s32 x, s3
     next_prim = (CloadGpuPacket *)((u8 *)frame_prim + 0x40);
     if (draw_fill != 0)
     {
-        /* GCC 2.7.2 allocation boundary; plain braces change the matched schedule. */
-        do
-        {
-            outline_prim = cload_emit_rect_outline(next_prim, ot, x, y, w, h, CLOAD_COLOR_WHITE);
-            outline_prim = cload_emit_rect_outline(outline_prim, ot, x + 1, y + 1, w - 2, h - 2, 0);
-            outline_prim = cload_emit_rect_outline(outline_prim, ot, x - 1, y - 1, w + 2, h + 2, 0);
-        } while (0);
+        outline_prim = cload_emit_rect_outline(next_prim, ot, x, y, w, h, CLOAD_COLOR_WHITE);
+        outline_prim = cload_emit_rect_outline(outline_prim, ot, x + 1, y + 1, w - 2, h - 2, 0);
+        outline_prim = cload_emit_rect_outline(outline_prim, ot, x - 1, y - 1, w + 2, h + 2, 0);
 
         next_prim = outline_prim;
         next_prim->word4 = 0x808080;
@@ -2828,19 +2824,16 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
                 {
                     *rank_ptr = t0v;
                     s3v = *elem;
-                    do { t0v += 1; } while (0);
+                    t0v += 1;
                 }
                 else
                 {
                     less_count = j;
                     if (i > 0)
                     {
-                        do { ecopy = elem; } while (0);
-                        do
-                        {
-                            inc_ptr = base_rank;
-                        } while (0);
-                        do { cmp_ptr = row; } while (0);
+                        ecopy = elem;
+                        inc_ptr = base_rank;
+                        cmp_ptr = row;
                         do
                         {
                             if (*ecopy < *cmp_ptr)

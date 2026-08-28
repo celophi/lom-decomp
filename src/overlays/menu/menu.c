@@ -6438,25 +6438,22 @@ s32 menu_draw_node_recursive(s32 arg0, s32 arg1, s32* arg2)
         MenuNode* node2;
         MenuNode* base2 = g_menu_nodes;
         node2 = base2 + arg0;
-        do
+        if ((node2->u2.unk2 >> 1) & 1)
         {
-            if ((node2->u2.unk2 >> 1) & 1)
+            s32 j = 0;
+            s32 sentinel;
+            new_var4 = node2;
+            for (; j < 4; j++)
             {
-                s32 j = 0;
-                s32 sentinel;
-                new_var4 = node2;
-                for (; j < 4; j++)
+                sentinel = 0xFF;
+                if (*((u8*)new_var4 + j + 0xB) == (u8)sentinel)
                 {
-                    sentinel = 0xFF;
-                    if (*((u8*)new_var4 + j + 0xB) == (u8)sentinel)
-                    {
-                        break;
-                    }
-                    buf = menu_draw_node_recursive(*((u8*)new_var4 + j + 0xB), buf, arg2);
-                    sentinel = 0;
+                    break;
                 }
+                buf = menu_draw_node_recursive(*((u8*)new_var4 + j + 0xB), buf, arg2);
+                sentinel = 0;
             }
-        } while (0);
+        }
     }
 
     return buf;
