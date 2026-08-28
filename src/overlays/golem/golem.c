@@ -727,9 +727,10 @@ void golem_reset_block_position(void)
  * @param ordering_table Ordering-table tag for the marker packets.
  * @return Packet cursor after the marker run.
  * @note The 0x50 compare is materialized into @c glyph first, @c call_x holds a
- *       copy of @c x in both branches, and the do{}while(0) wrappers and the
- *       recomputed marker_ptr pointer arithmetic are all required to match the
- *       target's register allocation.
+ *       copy of @c x in both branches, and the remaining do{}while(0) wrappers
+ *       and the recomputed marker_ptr pointer arithmetic are required to match
+ *       the target's register allocation. The @c y increment does not need a
+ *       wrapper.
  * @see decomp.me (100.00%)
  * @see working/func_80140DEC/
  */
@@ -784,7 +785,7 @@ s32 golem_draw_grid_markers(s32 packet_cursor, s32 ordering_table)
             marker_ptr++;
             marker_index++;
         }
-        do { y += 0x10; } while (0);
+        y += 0x10;
     }
 
     for (row = 0; row < 5; row++)
