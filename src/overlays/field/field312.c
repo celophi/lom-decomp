@@ -21,14 +21,9 @@ extern u8 g_menuLayoutBuffer[];
  * +0x26F0 and the eight bytes at +0x26F8..+0x26FF, then forces the upper three
  * bytes of the +0x26F4 word to 0xFF.
  *
- * @note NOT YET MATCHED (93.19%). The single remaining defect is that the
- *       target reads @c D_80122C0D.unk0 via @c lbu %lo(...) before materializing
- *       @c &D_80122C0D with @c addiu (kept in @c v0), whereas this C emits the
- *       @c addiu first and into @c a0. It is a 1-row regalloc/schedule ordering
- *       (not a sched1 emit-order phenomenon; the permuter found no gain in 82k
- *       iterations). All other rows, insn count and frame are exact.
- *
- * @see decomp.me (93.19%) TODO
+ * @note Matched under GCC 2.7.2 CDK. Folding the -4 adjustment into @c va
+ *       before constructing the record address makes GCC load unk0 before
+ *       materializing the global base, matching the target schedule exactly.
  */
 void func_800C87B4(void)
 {
@@ -36,9 +31,9 @@ void func_800C87B4(void)
     u8 *buf;
     s32 va;
 
-    va = D_80122C0D.unk0;
+    va = D_80122C0D.unk0 - 4;
     buf = g_menuLayoutBuffer;
-    base = buf + ((va - 4) * 0x10 + D_80122C0D.unk12 * 0x8C);
+    base = buf + (va * 0x10 + D_80122C0D.unk12 * 0x8C);
     base[0x26F4] = 0xFF;
     *(s32 *)(base + 0x26F0) = 0;
     base[0x26F8] = 0;

@@ -1,10 +1,12 @@
 #include "common.h"
 
 /**
- * @note NOT YET MATCHED (98.02%). residue is a 2-insn scheduling difference: the preheader init order (i=0 vs base copy) and one loop-back branch-delay slot the target leaves as nop but gcc fills. Not reachable by source shape (permuter found no real gain).
- * @see decomp.me (98.02%) TODO
+ * @brief Finds an available SFX slot in the selected three-bit group.
+ *
+ * @note 100% match. The function intentionally has no explicit return: the
+ *       original codegen preserves the last status/call result in v0.
  */
-void func_800A3E10(s32 arg0, s32 arg1, s32 arg2)
+s32 func_800A3E10(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 base;
     s32 i;
@@ -12,8 +14,9 @@ void func_800A3E10(s32 arg0, s32 arg1, s32 arg2)
 
     if (arg2 * 3 < 0x18)
     {
+        i = 0;
         base = arg2 * 3;
-        for (i = 0; i < 3; i++)
+        for (; i < 3; i++)
         {
             mask = 1 << (base + i);
             if (!akao_is_sfx_playing(mask))

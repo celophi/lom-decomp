@@ -33,21 +33,21 @@ s32 func_80097FA0(Record94690 *, Vector94690 *, s32, s32);
  * @param record Record supplying the scale and result halfword.
  * @param x X displacement before scaling.
  * @param z Z displacement before scaling.
- * @note 99.629630% match with two allocator-only register differences.
+ * @note 100% match. Reusing one scaled-value local for both products
+ *       reproduces the target value web and register reuse.
  */
 void func_80094690(Record94690 *record, s32 x, s32 z)
 {
     Vector94690 *vector;
-    s32 scaled_x;
-    s32 scaled_z;
+    s32 scaled;
 
-    scaled_x = x * record->scale;
+    scaled = x * record->scale;
     vector = (Vector94690 *)0x1F800000;
     vector->y = 0;
-    vector->x = scaled_x;
-    scaled_z = z * record->scale;
-    vector->z = scaled_z;
-    if (func_80097FA0(record, vector, 0, scaled_z) == 0)
+    vector->x = scaled;
+    scaled = z * record->scale;
+    vector->z = scaled;
+    if (func_80097FA0(record, vector, 0, scaled) == 0)
     {
         record->value = 0;
     }

@@ -5,14 +5,25 @@ extern SeqRec *D_80123FB8;
 extern u8 *D_80122B78;
 
 /**
- * @note NOT YET MATCHED (96.67%). residue is a 13-row ALLOC-ORDER register permutation (the same 0xC-stride base/index shape as its siblings, plus the D_80122B78+0x24 arg adds pressure); not source-fixable.
- * @see decomp.me (96.67%) TODO
+ * @brief Dispatches the next two-byte sequence operand and advances its PC.
+ *
+ * @note gcc280_g0, 100% match. The pre-call and post-call record/index values
+ *       are separate source value webs, matching the target register lifetimes.
  */
 void func_800B87D4(void)
 {
     s32 i;
-    i = D_80123FB8->unk4;
-    func_800BD6F4(D_80123FB8[i].unk8[1], D_80122B78 + 0x24);
-    i = D_80123FB8->unk4;
-    D_80123FB8[i].unk8 += 2;
+    s32 j;
+    SeqRec *rec;
+    SeqRec *rec2;
+
+    rec = D_80123FB8;
+    i = rec->unk4;
+    rec += i;
+    func_800BD6F4(rec->unk8[1], D_80122B78 + 0x24);
+
+    rec2 = D_80123FB8;
+    j = rec2->unk4;
+    rec2 += j;
+    rec2->unk8 += 2;
 }

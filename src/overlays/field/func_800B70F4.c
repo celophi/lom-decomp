@@ -10,9 +10,9 @@ extern s32 func_800B2D34(u8 *arg0, s32 arg1);
  * multiplies by the field's 0x4A0 half-word, divides by 50, and stores the
  * quotient through @p out.
  *
- * WIP: 93.93%. Body matches; residuals are the mfhi destination register
- * (v1 vs a2) and the epilogue delay-slot fill - the same allocation/dbr
- * artifacts that resist source control across this overlay.
+ * 100% match with the FIELD GCC 2.8.0 G0 toolchain. The former 93.93%
+ * result was a compiler-routing mismatch; GCC 2.8.0 reproduces the target
+ * allocation and epilogue exactly.
  */
 void func_800B70F4(s32 arg0, s32 *out)
 {

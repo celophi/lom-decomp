@@ -21,10 +21,9 @@ void func_800B3160(RecordB3160 *record, u32 index);
  * nonzero timer and, when it reaches zero or below, clears that state via
  * func_800B3160.
  *
- * WIP: 94.29%. Body matches (27/28 rows); the sole residual is the epilogue
- * delay-slot fill - the target parks `addiu sp` in the `jr` delay slot while
- * this build emits it ahead of the `jr`, a dbr/maspsx artifact seen across this
- * overlay.
+ * 100% match with the FIELD GCC 2.8.0 G0 toolchain. The former 94.29%
+ * result was caused by routing this standalone unit through GCC 2.7.2 CDK,
+ * whose epilogue scheduling differs from the target.
  */
 void func_800B4DF0(RecordB3160 *record)
 {

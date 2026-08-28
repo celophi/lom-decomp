@@ -13,20 +13,23 @@ void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
  * is 5 or greater it re-arms akao_set_song_params, then forwards the scene
  * entry's 0x2F3C word (stride 0x60) to func_800BD520.
  *
- * WIP: 92.50%. Body matches; residuals are the epilogue delay-slot fill (the
- * target parks `addiu sp` in the `jr` delay slot) and a register-naming cascade
- * (v0/a1 vs v1/a2) - the same allocation/dbr artifacts that resist source
- * control elsewhere in this overlay.
+ * Matches under GCC 2.8.0. The pre-diagnostic scene index and the index
+ * reloaded afterward are distinct value webs; materializing the second
+ * index's 0x60-byte offset reproduces the target allocation exactly.
  */
 void func_800B3D84(void)
 {
-    s32 idx;
+    s32 idx1;
+    s32 idx2;
+    s32 off;
 
-    idx = *(s32 *)(D_80122B74 + 0x2EF0);
-    if ((u32)idx >= 5)
+    idx1 = *(s32 *)(D_80122B74 + 0x2EF0);
+    if ((u32)idx1 >= 5)
     {
-        akao_set_song_params(0x8001, 0x75, idx, 0);
+        akao_set_song_params(0x8001, 0x75, idx1, 0);
     }
-    idx = *(s32 *)(D_80122B74 + 0x2EF0);
-    func_800BD520(2, 0xF020, *(s32 *)(D_80122B74 + idx * 0x60 + 0x2F3C));
+
+    idx2 = *(s32 *)(D_80122B74 + 0x2EF0);
+    off = idx2 * 0x60;
+    func_800BD520(2, 0xF020, *(s32 *)(D_80122B74 + off + 0x2F3C));
 }

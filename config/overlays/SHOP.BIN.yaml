@@ -42,5 +42,9 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x5, c, unk1]
+      - [0xD4D, c, shop_element_utils]          # gcc272_cdk, 3 funcs, 100%
+      - [0xE01, c, unk1_mid]
+      - [0x2131, c, shop_string_utils]          # gcc272_cdk, 3 funcs, 100%
+      - [0x2285, c, unk1_tail]
       - [0x2D05, data, data]
   - [0x5CE5]

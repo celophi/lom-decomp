@@ -12,7 +12,8 @@ void akao_set_song_params(s32, s32, s32, s32);
  *
  * @param value Identifier to find.
  * @return Pointer to the matching record payload, or null when absent.
- * @note 99.444440% match with two allocator-only register differences.
+ * @note 100% match. Loading the base before initializing the offset
+ *       reproduces the target load/copy allocation.
  */
 u8 *func_800B2A9C(s32 value)
 {
@@ -22,8 +23,8 @@ u8 *func_800B2A9C(s32 value)
     u8 *base;
 
     index = 0;
-    offset = 0x28;
     base = D_80123FB0;
+    offset = 0x28;
     record = base;
     do
     {

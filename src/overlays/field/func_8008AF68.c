@@ -20,21 +20,19 @@ typedef struct
 
 extern Struct_D80105AE0 D_80105AE0[];
 extern Struct_D800FDF58 D_800FDF58[];
-void func_8008BF88(Struct_D800FDF58 *);
+void func_8008BF88();
 
 /**
  * @brief Finds the actor slot matching @p key and notifies its record.
  *
  * Scans the first 13 D_80105AE0 slots for one whose 0x14 field equals @p key;
- * on a hit, passes the parallel D_800FDF58 record to func_8008BF88 and returns
- * 0, otherwise returns -1.
+ * on a hit, forwards the parallel D_800FDF58 record and the remaining caller
+ * arguments to func_8008BF88 and returns 0, otherwise returns -1.
  *
- * WIP: 98.93%. Structure matches (twin of func_8008AD44); the only residual is
- * an ALLOC-ORDER register naming - the target parks the loop's key/slot temps
- * in t0/t1 while this build uses a1/a2. The permuter cannot improve it, so it is
- * a register-allocation-order artifact tied to the single-argument callee.
+ * @note gcc272_cdk, 100% match. Preserving arg1-arg3 through the scan is what
+ *       keeps the loop key/record temporaries in t0/t1 as in the target.
  */
-s32 func_8008AF68(s32 key)
+s32 func_8008AF68(s32 key, s32 arg1, s32 arg2, s32 arg3)
 {
     Struct_D800FDF58 *p = D_800FDF58;
     Struct_D80105AE0 *e = D_80105AE0;
@@ -57,6 +55,6 @@ found:
     {
         return -1;
     }
-    func_8008BF88(p);
+    func_8008BF88(p, arg1, arg2, arg3);
     return 0;
 }

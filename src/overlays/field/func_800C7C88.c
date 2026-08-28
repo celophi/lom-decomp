@@ -10,10 +10,9 @@ extern u8 D_80122C1F;
  * masks off bits 12-15 of its 0x26E4 word and writes 0xFF to the four status
  * bytes at 0x26EC.
  *
- * WIP: 97.68%. Body matches (the base/offset temp copies reproduce the target's
- * preserved-register split); the sole residual is the loop branch delay-slot
- * fill - the target parks the next iteration's index add in the `bnez` delay
- * slot, which the permuter confirms is not source-reachable (a dbr artifact).
+ * 100% match with the FIELD GCC 2.8.0 G0 toolchain. The former 97.68%
+ * result was a compiler-routing mismatch; GCC 2.8.0 reproduces the loop
+ * scheduling and register allocation exactly.
  */
 void func_800C7C88(void)
 {
