@@ -241,6 +241,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800A3B78.c \
 	src/overlays/field/unk2_b_split003.c \
 	src/overlays/field/unk2_b_split004.c \
+	src/overlays/field/unk2_b_split004_b.c \
 	src/overlays/field/func_800A55E4.c \
 	src/overlays/field/unk2_b_split005.c \
 	src/overlays/field/unk2_b_split006.c \
@@ -308,13 +309,13 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split057.c \
 	src/overlays/field/unk2_b_split058.c \
 	src/overlays/field/unk2_b_split062.c \
+	src/overlays/field/unk2_b_split062_b.c \
 	src/overlays/field/func_800C2848.c \
 	src/overlays/field/unk2_b_split063.c \
 	src/overlays/field/unk2_b_split064.c \
 	src/overlays/field/unk2_b_split064_tail.c \
 	src/overlays/field/func_800C2DC0.c \
 	src/overlays/field/unk2_b_split065_tail.c \
-	src/overlays/field/unk2_b_split066.c \
 	src/overlays/field/func_800C3688.c \
 	src/overlays/field/unk2_b_split066_tail.c \
 	src/overlays/field/unk2_b_split067.c \
@@ -340,7 +341,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split085.c \
 	src/overlays/field/unk2_b_split086.c \
 	src/overlays/field/unk2_b_split087_tail.c \
-	src/overlays/field/unk2_b_split087_tail_b.c \
 	src/overlays/field/unk2_b_split088.c \
 	src/overlays/field/unk2_b_split089.c \
 	src/overlays/field/func_800CA568.c \
@@ -412,6 +412,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split010_tail.c \
 	src/overlays/field/unk2_b_split029_tail.c \
 	src/overlays/field/unk2_i_b_split005_tail.c \
+	src/overlays/field/unk2_i_b_split005_tail_b.c \
 	src/overlays/field/unk2_i_b_split023_mid.c \
 	src/overlays/field/unk2_i_b_split023_mid_b.c \
 	src/overlays/field/unk2_b_split025_tail3.c \
@@ -445,11 +446,20 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field353.c \
 	src/overlays/field/field354.c \
 	src/overlays/field/field355.c \
+	src/overlays/field/field367.c \
 	src/overlays/field/field356.c \
 	src/overlays/field/field357.c \
 	src/overlays/field/field358.c \
 	src/overlays/field/field359.c \
 	src/overlays/field/field360.c \
+	src/overlays/field/field361.c \
+	src/overlays/field/field362.c \
+	src/overlays/field/field363.c \
+	src/overlays/field/field364.c \
+	src/overlays/field/field365.c \
+	src/overlays/field/field366.c \
+	src/overlays/field/field368.c \
+	src/overlays/field/field369.c \
 	src/overlays/field/field315.c \
 	src/overlays/field/field316.c \
 	src/overlays/field/field317.c \
