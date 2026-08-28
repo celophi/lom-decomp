@@ -2312,9 +2312,6 @@ unsigned int menu_handle_node_input(void)
         if (temp_v0 >= (g_menu_nav_count - 1))
         {
             g_menu_active_node = g_menu_nav_first;
-            do
-            {
-            } while (0);
         }
         else
         {
@@ -5543,11 +5540,13 @@ s32 menu_get_equipment_ability_mask(s32 arg0)
  */
 void* menu_emit_draw_mode_primitive(MenuPrimHead* prim, s32* ot)
 {
-    prim->_u._s.unk3 = 1;
-    prim->unk4 = 0xE1000005;
-    prim->_u.unk0 = (s32)((prim->_u.unk0 & 0xFF000000) | (*ot & 0xFFFFFF));
-    *ot = (*ot & 0xFF000000) | ((s32)prim & 0xFFFFFF);
-    return (void*)((u8*)prim + 8);
+    DR_TPAGE* draw_mode;
+
+    draw_mode = (DR_TPAGE*)prim;
+    setDrawTPage(draw_mode, 0, 0, 5);
+    addPrim(ot, draw_mode);
+    draw_mode++;
+    return draw_mode;
 }
 
 /**
@@ -5728,7 +5727,7 @@ s32 menu_find_nav_node_index(s32 node_id)
 
 /**
  * @brief Emit up to two scroll-arrow SPRT primitives and a trailing draw-mode reset primitive.
- * @param buf Destination primitive buffer; each arrow occupies 0x14 bytes, the DR_MODE tail 8 bytes.
+ * @param buf Destination primitive buffer; each arrow occupies 0x14 bytes, the DR_TPAGE tail 8 bytes.
  * @param ot Pointer to the ordering-table entry to prepend each emitted primitive to.
  * @param state Slot view whose scroll fields drive the arrows: x/w place the arrow column, y is the top edge, h the window height, _u._s.unk6 (low 9 bits) the row.
  * @return Pointer to the next free byte in @p buf after all emitted primitives.
@@ -5772,11 +5771,10 @@ void* menu_emit_slot_scroll_arrows(SPRT* buf, s32* ot, MenuSlotView* state)
     end = (u8*)buf;
     if (emitted != 0)
     {
-        DR_MODE* mode = (DR_MODE*)end;
-        setlen(mode, 1);
-        mode->code[0] = 0xE1000005;
+        DR_TPAGE* mode = (DR_TPAGE*)end;
+        setDrawTPage(mode, 0, 0, 5);
         addPrim(ot, mode);
-        end += 8;
+        end = (u8*)(mode + 1);
     }
 
     return end;
@@ -5820,11 +5818,10 @@ void* menu_emit_tree_scroll_arrows(SPRT* buf, s32* ot)
     end = (u8*)buf;
     if ((g_menu_content_height != 0) || (g_menu_layout_end >= 0xAC))
     {
-        DR_MODE* mode = (DR_MODE*)end;
-        setlen(mode, 1);
-        mode->code[0] = 0xE1000005;
+        DR_TPAGE* mode = (DR_TPAGE*)end;
+        setDrawTPage(mode, 0, 0, 5);
         addPrim(ot, mode);
-        end += 8;
+        end = (u8*)(mode + 1);
     }
 
     return end;
@@ -6438,25 +6435,22 @@ s32 menu_draw_node_recursive(s32 arg0, s32 arg1, s32* arg2)
         MenuNode* node2;
         MenuNode* base2 = g_menu_nodes;
         node2 = base2 + arg0;
-        do
+        if ((node2->u2.unk2 >> 1) & 1)
         {
-            if ((node2->u2.unk2 >> 1) & 1)
+            s32 j = 0;
+            s32 sentinel;
+            new_var4 = node2;
+            for (; j < 4; j++)
             {
-                s32 j = 0;
-                s32 sentinel;
-                new_var4 = node2;
-                for (; j < 4; j++)
+                sentinel = 0xFF;
+                if (*((u8*)new_var4 + j + 0xB) == (u8)sentinel)
                 {
-                    sentinel = 0xFF;
-                    if (*((u8*)new_var4 + j + 0xB) == (u8)sentinel)
-                    {
-                        break;
-                    }
-                    buf = menu_draw_node_recursive(*((u8*)new_var4 + j + 0xB), buf, arg2);
-                    sentinel = 0;
+                    break;
                 }
+                buf = menu_draw_node_recursive(*((u8*)new_var4 + j + 0xB), buf, arg2);
+                sentinel = 0;
             }
-        } while (0);
+        }
     }
 
     return buf;
@@ -6765,8 +6759,7 @@ s32 menu_emit_cursor(s32 prim, s32* ot, s32 x, s32 y, s32 active)
     }
 
     tp = (DR_TPAGE*)p;
-    setlen(tp, 1);
-    tp->code[0] = 0xE1000005;
+    setDrawTPage(tp, 0, 0, 5);
     addPrim(ot, tp);
     return (s32)(tp + 1);
 }
