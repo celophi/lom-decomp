@@ -1902,6 +1902,8 @@ CloadGpuPacket *cload_emit_rect_outline(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
  */
 CloadGpuPacket *cload_emit_scroll_arrow(CloadGpuPacket *p, s32 *ot, s32 x, s32 y, s32 flag)
 {
+    DR_TPAGE *draw_mode;
+
     p->word4 = 0x808080;
     /* GCC 2.7.2 scheduling boundary; removing this wrapper changes packet-store order. */
     do
@@ -1926,10 +1928,11 @@ CloadGpuPacket *cload_emit_scroll_arrow(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
     addPrim(ot, p);
 
     p = (CloadGpuPacket *)((u8 *)p + 0x14);
-    setlen(p, 1);
-    p->word4 = 0xE100008A;
-    addPrim(ot, p);
-    return (CloadGpuPacket *)((u8 *)p + 8);
+    draw_mode = (DR_TPAGE *)p;
+    setDrawTPage(draw_mode, 0, 0, 0x8A);
+    addPrim(ot, draw_mode);
+    draw_mode++;
+    return (CloadGpuPacket *)draw_mode;
 }
 
 /**

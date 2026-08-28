@@ -1190,6 +1190,7 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
     s32 remaining_height;
     s32 packet_code;
     s32 bottom_texture_height;
+    DR_TPAGE* draw_mode;
     u8 stack_pad[0x10];
 
     color = 0x808080;
@@ -1292,10 +1293,11 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
         } while (y_offset < height);
     }
 
-    setlen(packet_cursor, 1);
-    ((u_long*)packet_cursor)[1] = ((GOLEM_PANEL_TEXTURE(panel_index).attributes & 3) << 5) | 0xE1000005;
-    addPrim(ordering_table, packet_cursor);
-    return packet_cursor + 8;
+    draw_mode = (DR_TPAGE*)packet_cursor;
+    setDrawTPage(draw_mode, 0, 0, ((GOLEM_PANEL_TEXTURE(panel_index).attributes & 3) << 5) | 5);
+    addPrim(ordering_table, draw_mode);
+    packet_cursor += sizeof(DR_TPAGE);
+    return packet_cursor;
 }
 
 /**
@@ -1311,10 +1313,8 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
  * @param use_origin When 1, offset x/y by the layout row's origin fields.
  * @param style      Style flags forwarded to golem_emit_glyph for each part.
  * @return Packet cursor past the trailing draw-mode packet.
- * @note The part-loop advances @c part_offset / @c part_index after the
- *       golem_emit_glyph call, and the trailing draw-mode packet is built from
- *       named constant locals inside a @c do{}while(0); both shapes are required
- *       to match the target's register allocation.
+ * @note Each part view starts at the rotation-specific offset and advances
+ *       four bytes per layout entry.
  * @see decomp.me (100.00%)
  * @see working/func_80141EB4_golem/
  */
@@ -1326,11 +1326,8 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
     s32 layout_offset;
     u8* table;
     u8* layout;
+    DR_TPAGE* draw_mode;
     s32 part_index;
-    u32 low_mask;
-    u32 high_mask;
-    u32 draw_cmd;
-    u32 one;
 
     logic_block = GOLEM_LOGIC_BLOCK(block_index);
     layout_index = logic_block >> 0xC;
@@ -1366,18 +1363,11 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
             part_index += 1;
         } while (part_index < *part_count);
     }
-    draw_cmd = 0xE1000025;
-    low_mask = 0xFFFFFF;
-    one = 1;
-    high_mask = 0xFF000000;
-    do
-    {
-        *(u8*)(packet_cursor + 3) = one;
-        *(u32*)(packet_cursor + 4) = draw_cmd;
-    } while (0);
-    *(u32*)(packet_cursor + 0) = (*(u32*)(packet_cursor + 0) & high_mask) | (*ordering_table & low_mask);
-    *ordering_table = (*ordering_table & high_mask) | (packet_cursor & low_mask);
-    return packet_cursor + 8;
+    draw_mode = (DR_TPAGE*)packet_cursor;
+    setDrawTPage(draw_mode, 0, 0, 0x25);
+    addPrim(ordering_table, draw_mode);
+    packet_cursor += sizeof(DR_TPAGE);
+    return packet_cursor;
 }
 
 /**

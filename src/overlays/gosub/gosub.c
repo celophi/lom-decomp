@@ -2978,8 +2978,8 @@ void *gosub_emit_scroll_marker(GosubScrollMarkerPacket *prim, s32 *ot, s32 x, s3
 GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag)
 {
     GosubGpuPacket* packet_cursor;
-    GosubGpuPacket* draw_mode_packet;
     GosubGpuPacket* draw_env_packet;
+    DR_TPAGE* draw_mode_packet;
     s32 draw_env[24];
     s32 working_value;
 
@@ -3016,12 +3016,10 @@ GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s3
     ((GosubGpuPacket*)working_value)->tag = (((GosubGpuPacket*)working_value)->tag & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | (working_value & 0xFFFFFF);
 
-    draw_mode_packet = (GosubGpuPacket*)(working_value + 0x10);
-    ((u8*)draw_mode_packet)[3] = 1;
-    draw_mode_packet->color = 0xE1000045;
-    draw_mode_packet->tag = (draw_mode_packet->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)draw_mode_packet & 0xFFFFFF);
-    return (GosubGpuPacket*)((u8*)draw_mode_packet + 8);
+    draw_mode_packet = (DR_TPAGE*)(working_value + sizeof(TILE));
+    setDrawTPage(draw_mode_packet, 0, 0, 0x45);
+    addPrim(ot, draw_mode_packet);
+    return (GosubGpuPacket*)(working_value + sizeof(TILE) + sizeof(DR_TPAGE));
 }
 
 /**
