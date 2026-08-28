@@ -21,9 +21,9 @@ extern void func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
  * with the record's leading byte, and - if @p arg1 bit 1 is set - fires
  * func_80087D8C for @p arg0.
  *
- * WIP: 94.29%. Body matches (27/28 rows); the sole residual is the epilogue
- * delay-slot fill (target parks `addiu sp` in the `jr` delay slot). The permuter
- * confirms this is not source-reachable - a maspsx/dbr tooling artifact.
+ * 100% match with the FIELD GCC 2.8.0 G0 toolchain. The former 94.29%
+ * result was caused by GCC 2.7.2 CDK epilogue scheduling rather than the C
+ * source shape.
  */
 void func_800C2848(s32 arg0, s32 arg1)
 {
