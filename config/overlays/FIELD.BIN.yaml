@@ -115,6 +115,8 @@ segments:
       - [0x3847D, c, field35]                      # gcc272_cdk, func_800880EC
       - [0x384BD, c, func_8008812C]             # gcc272_cdk, 100.00000%, 27/27 instructions
       - [0x38529, c, unk2_i_b_split004_tail]    # gcc272_cdk, func_80088198
+      - [0x39DF9, c, field308]                  # gcc272_cdk, func_80089A68, 100%
+      - [0x39E75, c, unk2_i_b_split004_tail_b]  # gcc272_cdk, func_80089AE4
       - [0x3AE4D, c, func_8008AABC]             # gcc272_cdk, 100%
       - [0x3AEBD, c, unk2_i_b_split004_tail2]   # gcc272_cdk, func_8008AB2C
       - [0x3B0D5, c, func_8008AD44]             # gcc272_cdk, 100%

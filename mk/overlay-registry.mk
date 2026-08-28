@@ -110,6 +110,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field63.c \
 	src/overlays/field/field302.c \
 	src/overlays/field/field307.c \
+	src/overlays/field/field308.c \
 	src/overlays/field/func_800A4744.c \
 	src/overlays/field/field64.c \
 	src/overlays/field/field65.c \
