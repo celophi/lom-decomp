@@ -1,6 +1,6 @@
 #include "field_runtime.h"
-#include "psyq/strings.h"
-#include "psyq/memory.h"
+#include "psyq_compat/strings.h"
+#include "psyq_compat/memory.h"
 
 #define DIGIT_TO_ASCII(d) ((d) + 0x30)
 

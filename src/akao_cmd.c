@@ -1,7 +1,7 @@
 #include "akao_cmd.h"
 #include "akao.h"
 #include "akao_driver.h"
-#include "psyq/libcd.h"
+#include "psyq_compat/libcd.h"
 
 /**
  * AKAO command parameter buffer. Each command opcode reads its inputs from

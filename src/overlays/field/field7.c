@@ -253,8 +253,8 @@ extern s32 D_80105770;
 extern u8* D_801058D4;
 extern s32 g_field_track_index;
 
-#include "psyq/inline_c.h"
-#include "psyq/gte_dmpsx_compat.h"
+#include "psyq_compat/inline_c.h"
+#include "psyq_compat/gte_dmpsx_compat.h"
 
 #define GTE_SET_ROT_MATRIX(m) gte_SetRotMatrix(m)
 #define GTE_LDV0(v) gte_ldv0(v)

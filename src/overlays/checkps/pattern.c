@@ -1,8 +1,8 @@
 #include "checkps_internal.h"
 
 #include "display.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "psyq_compat/libgte.h"
+#include "psyq_compat/libgpu.h"
 
 #define CHECKPS_PATTERN_RING_COUNT 16
 #define CHECKPS_PATTERN_SIZE_COUNT (CHECKPS_PATTERN_RING_COUNT + 1)

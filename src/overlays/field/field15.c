@@ -1,6 +1,6 @@
 #include "common.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "psyq_compat/libgte.h"
+#include "psyq_compat/libgpu.h"
 
 typedef struct
 {
@@ -130,8 +130,8 @@ extern s32 D_800F22A4;
 extern s32 D_800F22A8;
 extern FieldActorState g_field_actor_slots[80];
 
-#include "psyq/inline_c.h"
-#include "psyq/gte_dmpsx_compat.h"
+#include "psyq_compat/inline_c.h"
+#include "psyq_compat/gte_dmpsx_compat.h"
 
 /**
  * @brief Field radial burst primitive builder: builds a fan of segments

@@ -18,7 +18,7 @@
  * g_akao_xa_tracker / AkaoXaTracker; akao.h supplies AkaoChannelState alone.
  */
 #include "common.h"
-#include "psyq/libspu.h"
+#include "psyq_compat/libspu.h"
 #include "akao.h" /* AkaoChannelState only; does NOT declare g_akao_xa_tracker */
 
 /* ---- shared, non-conflicting SFX/driver state (superset layouts) ---- */

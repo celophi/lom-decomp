@@ -6,8 +6,8 @@
  */
 
 #include "common.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "psyq_compat/libgte.h"
+#include "psyq_compat/libgpu.h"
 
 typedef struct
 {
@@ -138,8 +138,8 @@ typedef struct
     u8 pad4[0x244 - 4];
 } FieldActorState;
 
-#include "psyq/inline_c.h"
-#include "psyq/gte_dmpsx_compat.h"
+#include "psyq_compat/inline_c.h"
+#include "psyq_compat/gte_dmpsx_compat.h"
 
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;

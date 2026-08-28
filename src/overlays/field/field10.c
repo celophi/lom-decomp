@@ -431,7 +431,7 @@ void func_80074D7C(FieldRenderContext *ctx)
     ctx->unk40B8 = cursor;
 }
 
-#include "psyq/inline_c.h"
+#include "psyq_compat/inline_c.h"
 
 /**
  * @brief Render one field particle record's animation frames into the display

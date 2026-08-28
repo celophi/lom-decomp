@@ -1,6 +1,6 @@
 #include "controller.h"
-#include "psyq/libetc.h"
-#include "psyq/libpad.h"
+#include "psyq_compat/libetc.h"
+#include "psyq_compat/libpad.h"
 
 typedef void (*VSyncCallbackFn)(void);
 

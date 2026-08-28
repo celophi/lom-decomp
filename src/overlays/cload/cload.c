@@ -1,6 +1,6 @@
 #include "common.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "psyq_compat/libgte.h"
+#include "psyq_compat/libgpu.h"
 
 /** @brief One 0xC-byte animated CLOAD UI element. */
 typedef struct CloadElement CloadElement;

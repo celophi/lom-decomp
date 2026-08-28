@@ -1,8 +1,8 @@
 #include "screen_transition.h"
 #include "cdrom.h"
 #include "controller.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "psyq_compat/libgte.h"
+#include "psyq_compat/libgpu.h"
 
 typedef struct {
     u_long ot[4];

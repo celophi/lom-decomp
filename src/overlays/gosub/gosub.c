@@ -1,7 +1,7 @@
 #include "common.h"
 #include "gpu_packet.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "psyq_compat/libgte.h"
+#include "psyq_compat/libgpu.h"
 #include "tim.h"
 
 typedef struct GosubTilePacket GosubTilePacket;
