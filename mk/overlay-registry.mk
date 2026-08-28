@@ -29,6 +29,11 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_choice_prompt.c \
 	src/overlays/addhero/addhero_checksum.c \
 	src/overlays/addhero/addhero_hex_parse.c \
+	src/overlays/addhero/addhero_update_state.c \
+	src/overlays/addhero/addhero_panel_tiles.c \
+	src/overlays/addhero/addhero_claim_element.c \
+	src/overlays/addhero/addhero_known_entry_type.c \
+	src/overlays/addhero/addhero_fixed_prompts.c \
 	src/overlays/addhero/addhero_reset_entry_ranks.c \
 	src/overlays/addhero/addhero_stream_reset.c \
 	src/overlays/addhero/addhero_shutdown_handles.c \
@@ -39,13 +44,19 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_expand_text_glyph_codes.c
 overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1.c \
+	src/overlays/addhero/unk1_after_update_state.c \
 	src/overlays/addhero/unk1_core_tail.c \
+	src/overlays/addhero/addhero_mode_glyph.c \
+	src/overlays/addhero/unk1_after_panel_tiles.c \
+	src/overlays/addhero/addhero_scan_hex_digits.c \
 	src/overlays/addhero/unk1_text_gap.c \
+	src/overlays/addhero/unk1_after_claim_element.c \
 	src/overlays/addhero/unk1_before_choice.c \
 	src/overlays/addhero/unk1_choice_gap.c \
 	src/overlays/addhero/unk1_checksum_gap.c \
 	src/overlays/addhero/unk1_before_rank.c \
-	src/overlays/addhero/unk1_after_rank.c \
+	src/overlays/addhero/unk1_after_known_type.c \
+	src/overlays/addhero/unk1_after_fixed_prompts.c \
 	src/overlays/addhero/unk1_mid1.c \
 	src/overlays/addhero/unk1_mid2.c \
 	src/overlays/addhero/unk1_tail.c \
@@ -59,6 +70,8 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_checksum.c \
 	src/overlays/carda/carda_choice_prompt.c \
 	src/overlays/carda/carda_hex_parse.c \
+	src/overlays/carda/carda_panel_tiles.c \
+	src/overlays/carda/carda_claim_element.c \
 	src/overlays/carda/carda_stream_reset.c \
 	src/overlays/carda/carda_shutdown_handles.c \
 	src/overlays/carda/carda_handles.c \
@@ -69,8 +82,12 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1.c \
 	src/overlays/carda/unk1_core_tail.c \
+	src/overlays/carda/unk1_after_panel_tiles.c \
 	src/overlays/carda/unk1_after_terminate.c \
+	src/overlays/carda/unk1_after_claim_element.c \
 	src/overlays/carda/unk1_after_strings.c \
+	src/overlays/carda/carda_scan_hex_digits.c \
+	src/overlays/carda/unk1_after_hex_scan.c \
 	src/overlays/carda/unk1_after_checksum.c \
 	src/overlays/carda/unk1_after_choice.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
@@ -690,7 +707,8 @@ overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
 OVERLAYS += niki
 overlay_niki_gcc_280_g0_srcs := \
 	src/overlays/niki/unk1.c \
-	src/overlays/niki/unk1_after_rank.c \
+	src/overlays/niki/unk1_after_known_type.c \
+	src/overlays/niki/unk1_after_fixed_prompts.c \
 	src/overlays/niki/unk1_mid1.c \
 	src/overlays/niki/unk1_mid2.c \
 	src/overlays/niki/unk1_tail.c \
@@ -698,6 +716,8 @@ overlay_niki_gcc_280_g0_srcs := \
 overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki.c \
 	src/overlays/niki/niki_reset_entry_ranks.c \
+	src/overlays/niki/niki_known_entry_type.c \
+	src/overlays/niki/niki_fixed_prompts.c \
 	src/overlays/niki/niki_stream_reset.c \
 	src/overlays/niki/niki_shutdown_handles.c \
 	src/overlays/niki/niki_handles.c \
