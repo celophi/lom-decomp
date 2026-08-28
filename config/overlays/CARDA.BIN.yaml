@@ -42,5 +42,7 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x371, c, unk1]
+      - [0x9FED, c, carda_handles]             # gcc272_cdk, 4 funcs, 100%
+      - [0xA1C5, c, unk1_tail]
       - [0xB039, data, data]
   - [0x2F001]

@@ -43,5 +43,7 @@ segments:
       - [0x1, rodata, rodata]
       - [0x11D, c, niki]
       - [0x4741, c, unk1]
+      - [0x6115, c, niki_handles]              # gcc272_cdk, 4 funcs, 100%
+      - [0x62ED, c, unk1_tail]
       - [0x70F9, data, data]
   - [0x2DA81]
