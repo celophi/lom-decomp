@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_LIBPRESS_H
-#define LOM_PSYQ_COMPAT_LIBPRESS_H
+#ifndef SDK_LIBPRESS_H
+#define SDK_LIBPRESS_H
 
 /* VLC table and DCT environment layouts are ABI contracts used by LoM. */
 typedef u_short DECDCTTAB[34816];

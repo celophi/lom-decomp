@@ -1,8 +1,8 @@
 #include "common.h"
 #include "display.h"
 #include "gpu_packet.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 #define FIELD_FADE_OT_INDEX 0x10
 #define FIELD_FADE_NEUTRAL 0x100

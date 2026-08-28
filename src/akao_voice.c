@@ -1,5 +1,5 @@
 #include "akao_voice.h"
-#include "psyq_compat/libspu.h"
+#include "sdk/libspu.h"
 
 /** @brief LFO waveform sample or zero-pair relative-jump marker. */
 typedef struct

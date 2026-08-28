@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_LIBSPU_H
-#define LOM_PSYQ_COMPAT_LIBSPU_H
+#ifndef SDK_LIBSPU_H
+#define SDK_LIBSPU_H
 
 /* Only the SPU data contracts and entry points referenced by Legend of Mana. */
 typedef struct {

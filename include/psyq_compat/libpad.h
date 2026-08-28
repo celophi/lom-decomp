@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_LIBPAD_H
-#define LOM_PSYQ_COMPAT_LIBPAD_H
+#ifndef SDK_LIBPAD_H
+#define SDK_LIBPAD_H
 
 #define PadStateDiscon    0
 #define PadStateFindPad   1

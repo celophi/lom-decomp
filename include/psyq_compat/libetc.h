@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_LIBETC_H
-#define LOM_PSYQ_COMPAT_LIBETC_H
+#ifndef SDK_LIBETC_H
+#define SDK_LIBETC_H
 
 #define PADLup     (1 << 12)
 #define PADLdown   (1 << 14)

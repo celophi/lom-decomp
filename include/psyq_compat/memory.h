@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_MEMORY_H
-#define LOM_PSYQ_COMPAT_MEMORY_H
+#ifndef SDK_MEMORY_H
+#define SDK_MEMORY_H
 
 #ifndef _SIZE_T
 #define _SIZE_T

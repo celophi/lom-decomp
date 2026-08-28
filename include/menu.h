@@ -7,9 +7,9 @@
 #include "pad.h"
 #include "render_context.h"
 #include "tim.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
-#include "psyq_compat/strings.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
+#include "sdk/strings.h"
 
 extern void func_800AA02C(void);
 extern void menu_init_prim_rects(void);

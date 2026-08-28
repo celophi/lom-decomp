@@ -2,8 +2,8 @@
 #define _RENDER_CONTEXT_H
 
 #include "common.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 /**
  * @brief Per-frame render context handed to the in-game overlay modules

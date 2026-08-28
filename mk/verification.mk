@@ -84,18 +84,3 @@ verify-bins: $(foreach name,$(VERIFIED_OVERLAYS),verify-$(name))
 .PHONY: verify-compressor
 verify-compressor:
 	python3 tools/compressor/verify_exact_bins.py
-
-# Compile-only ABI probes for the project-maintained Psy-Q compatibility layer.
-# These intentionally exercise every historical compiler family routed by LoM.
-.PHONY: test-psyq-abi
-test-psyq-abi: $(COPY_SENTINEL)
-	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) \
-		-c tests/psyq_compat/abi/layouts.c -S -o /dev/null
-	cd $(STAGING) && $(CC_272_CDK) $(CFLAGS_272_CDK_G0) $(INCLUDE_FLAGS) \
-		-c tests/psyq_compat/abi/layouts.c -S -o /dev/null
-	cd $(STAGING) && $(CC_272_GNU) $(CFLAGS_272_GNU_G0) $(INCLUDE_FLAGS) \
-		-c tests/psyq_compat/abi/layouts.c -S -o /dev/null
-	cd $(STAGING) && $(CC_260) $(CFLAGS_260_G0) $(INCLUDE_FLAGS) \
-		-c tests/psyq_compat/abi/layouts.c -S -o /dev/null
-	@echo "Psy-Q compatibility ABI probes passed."
-

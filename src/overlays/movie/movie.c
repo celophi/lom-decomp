@@ -1,10 +1,10 @@
 #include "movie.h"
 #include "pad.h"
 #include "controller.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
-#include "psyq_compat/libpress.h"
-#include "psyq_compat/libcd.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
+#include "sdk/libpress.h"
+#include "sdk/libcd.h"
 
 /* The block at 0x801ED600 is the merged-controller SCDRegs (see pad.h).
  * Skip-cinematic checks read the merged controller type, held buttons, and

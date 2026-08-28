@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_STRINGS_H
-#define LOM_PSYQ_COMPAT_STRINGS_H
+#ifndef SDK_STRINGS_H
+#define SDK_STRINGS_H
 
 #ifndef NULL
 #define NULL 0

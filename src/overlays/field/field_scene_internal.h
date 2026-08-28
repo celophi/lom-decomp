@@ -2,8 +2,8 @@
 #define FIELD_SCENE_INTERNAL_H
 
 #include "common.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 /*
  * TODO: this file's .rodata does not byte-match yet. gcc emits `.rdata` plus

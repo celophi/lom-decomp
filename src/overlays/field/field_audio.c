@@ -11,7 +11,7 @@
 #include "cd_resources.h"
 #include "cdrom.h"
 #include "akao.h"
-#include "psyq_compat/memory.h"
+#include "sdk/memory.h"
 
 /* Scratch buffer the CD-ROM layer decompresses a SEQ resource into. The blob
  * begins with a self-referential offset table; see SEQ_BLOB_OFFSETS. */

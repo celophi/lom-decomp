@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_LIBCD_H
-#define LOM_PSYQ_COMPAT_LIBCD_H
+#ifndef SDK_LIBCD_H
+#define SDK_LIBCD_H
 
 #define CdlModeSpeed      0x80
 #define CdlModeRT         0x40

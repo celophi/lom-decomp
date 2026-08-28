@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_LIBAPI_H
-#define LOM_PSYQ_COMPAT_LIBAPI_H
+#ifndef SDK_LIBAPI_H
+#define SDK_LIBAPI_H
 
 #include "kernel.h"
 

@@ -7,10 +7,10 @@
 #include "gpu_packet.h"
 #include "pad.h"
 #include "tim.h"
-#include "psyq_compat/libapi.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
-#include "psyq_compat/memory.h"
+#include "sdk/libapi.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
+#include "sdk/memory.h"
 
 #define CHECKPS_ORDERING_TABLE_LENGTH 0x1000
 #define CHECKPS_PRIMITIVE_BUFFER_SIZE 0x4000

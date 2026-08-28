@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_LIBGTE_H
-#define LOM_PSYQ_COMPAT_LIBGTE_H
+#ifndef SDK_LIBGTE_H
+#define SDK_LIBGTE_H
 
 #define ONE 4096
 

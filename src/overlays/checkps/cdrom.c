@@ -1,9 +1,9 @@
 #include "checkps_internal.h"
 
 #include "display.h"
-#include "psyq_compat/libapi.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
+#include "sdk/libapi.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 #define CHECKPS_GPU_TWO_COMMAND_PACKET_TAG 0x02000000
 #define CHECKPS_GPU_MASK_BIT_COMMAND 0xE6000002

@@ -1,5 +1,5 @@
 #include "common.h"
-#include "psyq_compat/rand.h"
+#include "sdk/rand.h"
 
 /**
  * @brief Returns a random value bounded by an inclusive maximum.

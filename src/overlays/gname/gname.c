@@ -9,10 +9,10 @@
 #include "main.h"
 #include "pad.h"
 #include "tim.h"
-#include "psyq_compat/libetc.h"
-#include "psyq_compat/libgpu.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/memory.h"
+#include "sdk/libetc.h"
+#include "sdk/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/memory.h"
 
 /* Ordering-table slots, from frontmost overlay to background. */
 enum

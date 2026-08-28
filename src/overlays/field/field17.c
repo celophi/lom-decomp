@@ -1,6 +1,6 @@
 #include "common.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 typedef struct
 {
@@ -572,8 +572,8 @@ void func_8007F7A0(Struct_D800FDF58 *rec, u8 *data, s16 *out)
     }
 }
 
-#include "psyq_compat/inline_c.h"
-#include "psyq_compat/gte_dmpsx_compat.h"
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /**
  * @brief Apply the actor rotation to a bounding-box centre and accumulate it

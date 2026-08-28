@@ -1,5 +1,5 @@
-#ifndef LOM_PSYQ_COMPAT_LIBGPU_H
-#define LOM_PSYQ_COMPAT_LIBGPU_H
+#ifndef SDK_LIBGPU_H
+#define SDK_LIBGPU_H
 
 /*
  * Legend of Mana GPU ABI contracts.

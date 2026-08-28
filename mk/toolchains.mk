@@ -21,7 +21,7 @@ OBJCOPY        := $(CROSS_COMPILE)objcopy
 OBJDUMP        := $(CROSS_COMPILE)objdump
 
 # Shared header search paths for compilers, assemblers, and maspsx.
-INCLUDE_FLAGS := -Iinclude 
+INCLUDE_FLAGS := -Iinclude -Iinclude/sdk
 
 # GCC 2.8.0 is the default compiler. Sources are routed to G0 or G4 in the
 # source lists; G controls the maximum size of gp-relative data.

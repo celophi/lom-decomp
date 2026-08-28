@@ -1,7 +1,7 @@
 #include "akao_driver.h"
 #include "akao.h"
 #include "akao_voice.h"
-#include "psyq_compat/libspu.h"
+#include "sdk/libspu.h"
 
 /* Defined in akao_driver.c / akao_driver_init_state.c. */
 void akao_spu_write(s32 src_addr, s32 byte_count);

@@ -3,10 +3,10 @@
 
 #include "common.h"
 #include "game_state.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
-#include "psyq_compat/libapi.h"
-#include "psyq_compat/libetc.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
+#include "sdk/libapi.h"
+#include "sdk/libetc.h"
 extern u32 g_gameDataBasePtr;
 
 extern u32 g_field_scene_config;    /**< Packed field-entry configuration passed to field_set_scene_parameters. */

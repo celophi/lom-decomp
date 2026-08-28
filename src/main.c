@@ -9,10 +9,10 @@
 #include "controller.h"
 #include "overlay_memory.h"
 #include "field_runtime.h"
-#include "psyq_compat/libgte.h"
-#include "psyq_compat/libgpu.h"
-#include "psyq_compat/libapi.h"
-#include "psyq_compat/libetc.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
+#include "sdk/libapi.h"
+#include "sdk/libetc.h"
 
 extern u32 g_overlayLoadAddress;
 extern u8 g_music_track_table[];
