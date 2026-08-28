@@ -425,7 +425,13 @@ void golem_handle_input(void)
     s32 saved_x, saved_y, repeat_count, block_index, scroll_steps, input, cancel_pressed;
     if ((g_pad_input & 0x800) && (g_golem_is_placing_block == 0))
     {
-        goto cancel;
+        func_800A3938(0x7D, 0x80);
+        g_golem_exit_requested = 1;
+        if (g_golem_restore_slot_on_cancel != 0)
+        {
+            D_80122C00 = g_golem_saved_logic_type_slot;
+        }
+        return;
     }
     scroll_steps = g_golem_scroll_steps;
     if (scroll_steps != 0)
@@ -595,18 +601,16 @@ void golem_handle_input(void)
                     block_index = 0;
                 }
                 repeat_count++;
-                if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
+                if ((menu_data->logic_blocks[block_index] & 3) != logic_type)
                 {
-                    goto forward_done;
+                    block_index++;
+                    if (repeat_count < limit)
+                    {
+                        goto forward_loop;
+                    }
+                    block_index--;
                 }
-                block_index++;
-                if (repeat_count < limit)
-                {
-                    goto forward_loop;
-                }
-                block_index--;
             }
-        forward_done:
             g_golem_scroll_target_y = block_index * 40;
             g_golem_scroll_steps = 4;
             g_golem_panel_records.scroll_down = GOLEM_ACTIVATE_PANEL(g_golem_panel_records.scroll_down);
@@ -635,10 +639,7 @@ void golem_handle_input(void)
                     block_index = limit - 1;
                 }
                 countp = &g_golem_logic_block_count;
-                if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
-                {
-                    goto backward_done;
-                }
+                if ((menu_data->logic_blocks[block_index] & 3) != logic_type)
                 {
                     s32 loop_count;
                     do { loop_count = *countp; } while (0);
@@ -648,10 +649,9 @@ void golem_handle_input(void)
                     {
                         goto backward_loop;
                     }
+                    block_index++;
                 }
-                block_index++;
             }
-        backward_done:
             g_golem_scroll_target_y = block_index * 40;
             g_golem_scroll_steps = 4;
             g_golem_panel_records.scroll_up = GOLEM_ACTIVATE_PANEL(g_golem_panel_records.scroll_up);
@@ -687,7 +687,6 @@ void golem_handle_input(void)
     }
     if (cancel_pressed != 0)
     {
-    cancel:
         func_800A3938(0x7D, 0x80);
         g_golem_exit_requested = 1;
         if (g_golem_restore_slot_on_cancel != 0)

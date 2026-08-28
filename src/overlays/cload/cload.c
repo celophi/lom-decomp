@@ -3792,128 +3792,163 @@ s32 cload_poll_secondary_handle_group(void)
  * @note Five passes bucket records matching D_800ECF7C, then D_800ECF8C, then
  *       D_800ECFC4, then the remainder, copying each 0x28-byte record with
  *       func_80016E7C before writing the ordered set back to the page.
- * @see decomp.me (86.61%)
+ * @see decomp.me (95.29%)
  */
 void cload_sort_entries_by_type(void)
 {
     u8 sorted_entries[CLOAD_CARD_DIRECTORY_BYTES];
     s32 output_count;
-    s32 first_group;
+    s32 offset_tmp_0;
+    s32 offset_tmp_1;
+    s32 offset_tmp_2;
+    s32 offset_tmp_3;
+
+    s32 card_offset_0;
+    s32 card_offset_1;
+    s32 card_offset_2;
+    s32 card_offset_3;
+    s32 card_offset_4;
+    s32 card_offset_5;
+    s32 card_offset_6;
+    s32 card_offset_7;
+    s32 card_offset_8;
+    s32 card_offset_9;
+    s32 card_offset_10;
+
+    s32 group;
     s32 first_index;
+    s32 first_limit;
     u8 *first_entry;
     s32 *first_suffix;
-    s32 first_output_offset;
-    s32 second_group;
+    s32 *first_suffix_base;
+    s32 output_offset;
     s32 second_index;
+    s32 second_limit;
     u8 *second_entry;
     s32 *second_suffix;
-    s32 second_output_offset;
+    s32 *second_suffix_base;
     s32 third_index;
+    s32 third_limit;
     u8 *third_entry;
-    s32 third_output_offset;
     s32 other_index;
+    s32 other_limit;
     u8 *other_entry;
-    s32 other_output_offset;
+    s32 *third_card_base;
+    s32 *other_card_base;
+    s32 *write_card_base;
     s32 write_index;
     u8 *page_entry;
     u8 *sorted_entry;
 
-    first_group = 0;
     output_count = 0;
+    group = 0;
+    first_suffix_base = &g_cload_entry_suffix_values;
     do
     {
-        first_index = 0;
+        do { do { do { do { do { do { do { do { do { first_index = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
         if (g_cload_entry_state > 0)
         {
             first_entry = &g_cload_entries;
-            first_suffix = &g_cload_entry_suffix_values;
-            first_output_offset = output_count * CLOAD_DIRECTORY_ENTRY_BYTES;
+            first_suffix = first_suffix_base;
+            offset_tmp_0 = output_count * 5;
+            output_offset = offset_tmp_0 * 8;
             do
             {
-                if (*first_suffix == first_group && func_8001714C(&D_800ECF7C, first_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) == 0)
+                if (*first_suffix == group && func_8001714C(&D_800ECF7C, (card_offset_0 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_0 += (s32)first_entry, (void *)card_offset_0), 0xC) == 0)
                 {
-                    func_80016E7C(first_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, &sorted_entries[first_output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
-                    first_output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
+                    func_80016E7C((card_offset_1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_1 += (s32)first_entry, (void *)card_offset_1), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                    output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
                     output_count += 1;
                 }
-                first_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+                do { first_entry += CLOAD_DIRECTORY_ENTRY_BYTES; } while (0);
+                first_limit = g_cload_entry_state;
                 first_index += 1;
                 first_suffix += 1;
-            } while (first_index < g_cload_entry_state);
+            } while (first_index < first_limit);
         }
-        first_group += 1;
-    } while (first_group < CLOAD_ENTRY_GROUP_COUNT);
+        group += 1;
+    } while (group < CLOAD_ENTRY_GROUP_COUNT);
 
-    second_group = 0;
+    second_suffix_base = &g_cload_entry_suffix_values;
+    group = 0;
     do
     {
-        second_index = 0;
+        do { do { do { do { do { do { do { do { do { second_index = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
         if (g_cload_entry_state > 0)
         {
             second_entry = &g_cload_entries;
-            second_suffix = &g_cload_entry_suffix_values;
-            second_output_offset = output_count * CLOAD_DIRECTORY_ENTRY_BYTES;
+            second_suffix = second_suffix_base;
+            offset_tmp_1 = output_count * 5;
+            output_offset = offset_tmp_1 * 8;
             do
             {
-                if (*second_suffix == second_group && func_8001714C(&D_800ECF8C, second_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) == 0)
+                if (*second_suffix == group && func_8001714C(&D_800ECF8C, (card_offset_2 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_2 += (s32)second_entry, (void *)card_offset_2), 0xC) == 0)
                 {
-                    func_80016E7C(second_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, &sorted_entries[second_output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
-                    second_output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
+                    func_80016E7C((card_offset_3 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_3 += (s32)second_entry, (void *)card_offset_3), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                    output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
                     output_count += 1;
                 }
-                second_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
+                do { second_entry += CLOAD_DIRECTORY_ENTRY_BYTES; } while (0);
+                second_limit = g_cload_entry_state;
                 second_index += 1;
                 second_suffix += 1;
-            } while (second_index < g_cload_entry_state);
+            } while (second_index < second_limit);
         }
-        second_group += 1;
-    } while (second_group < CLOAD_ENTRY_GROUP_COUNT);
+        group += 1;
+    } while (group < CLOAD_ENTRY_GROUP_COUNT);
 
-    third_index = 0;
+    do { do { do { do { do { do { do { do { do { third_index = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
     if (g_cload_entry_state > 0)
     {
+        third_card_base = &g_cload_card_slot;
         third_entry = &g_cload_entries;
-        third_output_offset = output_count * CLOAD_DIRECTORY_ENTRY_BYTES;
+        offset_tmp_2 = output_count * 5;
+        output_offset = offset_tmp_2 * 8;
         do
         {
-            if (func_8001714C(&D_800ECFC4, third_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 8) == 0)
+            if (func_8001714C(&D_800ECFC4, (card_offset_4 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_4 += (s32)third_entry, (void *)card_offset_4), 8) == 0)
             {
-                func_80016E7C(third_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, &sorted_entries[third_output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
-                third_output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
+                func_80016E7C((card_offset_5 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_5 += (s32)third_entry, (void *)card_offset_5), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
                 output_count += 1;
             }
+            third_limit = g_cload_entry_state;
             third_index += 1;
-            third_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
-        } while (third_index < g_cload_entry_state);
+            do { third_entry += CLOAD_DIRECTORY_ENTRY_BYTES; } while (0);
+        } while (third_index < third_limit);
     }
 
-    other_index = 0;
+    do { do { do { do { do { do { do { do { do { other_index = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
     if (g_cload_entry_state > 0)
     {
+        other_card_base = &g_cload_card_slot;
         other_entry = &g_cload_entries;
-        other_output_offset = output_count * CLOAD_DIRECTORY_ENTRY_BYTES;
+        offset_tmp_3 = output_count * 5;
+        output_offset = offset_tmp_3 * 8;
         do
         {
-            if (func_8001714C(&D_800ECF7C, other_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) != 0 &&
-                func_8001714C(&D_800ECF8C, other_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 0xC) != 0 &&
-                func_8001714C(&D_800ECFC4, other_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, 8) != 0)
+            if (func_8001714C(&D_800ECF7C, (card_offset_6 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_6 += (s32)other_entry, (void *)card_offset_6), 0xC) != 0 &&
+                func_8001714C(&D_800ECF8C, (card_offset_7 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_7 += (s32)other_entry, (void *)card_offset_7), 0xC) != 0 &&
+                func_8001714C(&D_800ECFC4, (card_offset_8 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_8 += (s32)other_entry, (void *)card_offset_8), 8) != 0)
             {
-                func_80016E7C(other_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, &sorted_entries[other_output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
-                other_output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
+                func_80016E7C((card_offset_9 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_9 += (s32)other_entry, (void *)card_offset_9), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
             }
+            other_limit = g_cload_entry_state;
             other_index += 1;
-            other_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
-        } while (other_index < g_cload_entry_state);
+            do { other_entry += CLOAD_DIRECTORY_ENTRY_BYTES; } while (0);
+        } while (other_index < other_limit);
     }
 
     write_index = 0;
     if (g_cload_entry_state > 0)
     {
-        page_entry = &g_cload_entries;
+        do { page_entry = &g_cload_entries; } while (0);
+        write_card_base = &g_cload_card_slot;
         sorted_entry = &sorted_entries[0];
         do
         {
-            func_80016E7C(sorted_entry, page_entry + g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, CLOAD_DIRECTORY_ENTRY_BYTES);
+            func_80016E7C(sorted_entry, (card_offset_10 = (*write_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_10 += (s32)page_entry, (void *)card_offset_10), CLOAD_DIRECTORY_ENTRY_BYTES);
             sorted_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
             write_index += 1;
             page_entry += CLOAD_DIRECTORY_ENTRY_BYTES;

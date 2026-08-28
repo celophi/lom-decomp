@@ -2312,9 +2312,6 @@ unsigned int menu_handle_node_input(void)
         if (temp_v0 >= (g_menu_nav_count - 1))
         {
             g_menu_active_node = g_menu_nav_first;
-            do
-            {
-            } while (0);
         }
         else
         {
