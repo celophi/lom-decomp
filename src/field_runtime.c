@@ -2,8 +2,8 @@
 #include "cdrom.h"
 #include "controller.h"
 #include "overlay_memory.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 #include "scene_state.h"
 #include "display.h"
 

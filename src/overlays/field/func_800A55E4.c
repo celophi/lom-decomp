@@ -1,5 +1,5 @@
 #include "common.h"
-#include "psyq/memory.h"
+#include "sdk/memory.h"
 
 extern u8 D_800EE2D8;
 extern u8 D_800EE4D8;

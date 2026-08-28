@@ -1,9 +1,9 @@
 #include "cdrom.h"
-#include "psyq/libetc.h"
-#include "psyq/libcd.h"
-#include "psyq/libpress.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "sdk/libetc.h"
+#include "sdk/libcd.h"
+#include "sdk/libpress.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 #include "akao.h"
 
 #define CD_RESOURCE_INDEX_INVALID 0xFFFE

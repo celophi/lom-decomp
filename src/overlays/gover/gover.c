@@ -6,9 +6,9 @@
 #include "display.h"
 #include "pad.h"
 #include "tim.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
-#include "psyq/libetc.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
+#include "sdk/libetc.h"
 
 /** @brief VRAM destinations for a TIM's pixel and palette blocks. */
 typedef struct

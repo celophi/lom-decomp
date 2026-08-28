@@ -5,8 +5,8 @@
 #include "main.h"
 #include "akao.h"
 #include "pad.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 #include "scene_state.h"
 
 /**

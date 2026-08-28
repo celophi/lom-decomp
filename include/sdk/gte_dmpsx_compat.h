@@ -1,24 +1,5 @@
-#ifndef _PSYQ_GTE_DMPSX_COMPAT_H
-#define _PSYQ_GTE_DMPSX_COMPAT_H
-
-/**
- * @file gte_dmpsx_compat.h
- * @brief GNU-as-compatible replacements for Psy-Q DMPSX GTE macros.
- *
- * Psy-Q's inline_c.h "Type 2" GTE macros emit small `.word` values such as
- * 0x7f, 0xbf, and 0x13f. These are intentional dummy opcodes consumed by
- * Sony's DMPSX post-compiler, which replaces them with the actual GTE/COP2
- * instructions before assembly by ASPSX.
- *
- * This project builds C through GCC -> maspsx -> GNU as and does not run
- * DMPSX. Without that post-processing step, GNU as emits the dummy `.word`
- * values literally.
- *
- * These compatibility definitions therefore replace the DMPSX dummy values
- * with the final GTE instruction words directly. This is the same general
- * approach used by other PS1 decompilation projects when building Psy-Q-style
- * inline GTE macros with GNU tools.
- */
+#ifndef SDK_GTE_DMPSX_BRIDGE_H
+#define SDK_GTE_DMPSX_BRIDGE_H
 
 #define gte_rtps() __asm__ volatile("nop;nop;.word 0x4A180001")
 #define gte_rtpt() __asm__ volatile("nop;nop;.word 0x4A280030")
