@@ -2079,7 +2079,7 @@ s32 func_801433BC(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         }
         goto *jtbl_80140054[dispatch];
     niki_f8:
-        do { prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -arg2 + 0x90, -arg3, 2); } while (0);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -arg2 + 0x90, -arg3, 2);
         break;
     niki_f9:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -arg2 + 0x90, -arg3, 2);

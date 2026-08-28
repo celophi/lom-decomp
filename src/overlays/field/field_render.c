@@ -1071,9 +1071,7 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
     {
         pt->p.x = SHIFT_TOWARD_ZERO(steps->cos_term - dx, 16) + cx;
         pt->p.y = SHIFT_TOWARD_ZERO(steps->sin_term + dy, 16) + cy;
-        do {
-            steps++;
-        } while (0);
+        steps++;
         pt++;
     }
     flip = 0;

@@ -425,7 +425,13 @@ void golem_handle_input(void)
     s32 saved_x, saved_y, repeat_count, block_index, scroll_steps, input, cancel_pressed;
     if ((g_pad_input & 0x800) && (g_golem_is_placing_block == 0))
     {
-        goto cancel;
+        func_800A3938(0x7D, 0x80);
+        g_golem_exit_requested = 1;
+        if (g_golem_restore_slot_on_cancel != 0)
+        {
+            D_80122C00 = g_golem_saved_logic_type_slot;
+        }
+        return;
     }
     scroll_steps = g_golem_scroll_steps;
     if (scroll_steps != 0)
@@ -595,18 +601,16 @@ void golem_handle_input(void)
                     block_index = 0;
                 }
                 repeat_count++;
-                if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
+                if ((menu_data->logic_blocks[block_index] & 3) != logic_type)
                 {
-                    goto forward_done;
+                    block_index++;
+                    if (repeat_count < limit)
+                    {
+                        goto forward_loop;
+                    }
+                    block_index--;
                 }
-                block_index++;
-                if (repeat_count < limit)
-                {
-                    goto forward_loop;
-                }
-                block_index--;
             }
-        forward_done:
             g_golem_scroll_target_y = block_index * 40;
             g_golem_scroll_steps = 4;
             g_golem_panel_records.scroll_down = GOLEM_ACTIVATE_PANEL(g_golem_panel_records.scroll_down);
@@ -635,10 +639,7 @@ void golem_handle_input(void)
                     block_index = limit - 1;
                 }
                 countp = &g_golem_logic_block_count;
-                if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
-                {
-                    goto backward_done;
-                }
+                if ((menu_data->logic_blocks[block_index] & 3) != logic_type)
                 {
                     s32 loop_count;
                     do { loop_count = *countp; } while (0);
@@ -648,10 +649,9 @@ void golem_handle_input(void)
                     {
                         goto backward_loop;
                     }
+                    block_index++;
                 }
-                block_index++;
             }
-        backward_done:
             g_golem_scroll_target_y = block_index * 40;
             g_golem_scroll_steps = 4;
             g_golem_panel_records.scroll_up = GOLEM_ACTIVATE_PANEL(g_golem_panel_records.scroll_up);
@@ -687,7 +687,6 @@ void golem_handle_input(void)
     }
     if (cancel_pressed != 0)
     {
-    cancel:
         func_800A3938(0x7D, 0x80);
         g_golem_exit_requested = 1;
         if (g_golem_restore_slot_on_cancel != 0)
@@ -727,9 +726,10 @@ void golem_reset_block_position(void)
  * @param ordering_table Ordering-table tag for the marker packets.
  * @return Packet cursor after the marker run.
  * @note The 0x50 compare is materialized into @c glyph first, @c call_x holds a
- *       copy of @c x in both branches, and the do{}while(0) wrappers and the
- *       recomputed marker_ptr pointer arithmetic are all required to match the
- *       target's register allocation.
+ *       copy of @c x in both branches, and the remaining do{}while(0) wrappers
+ *       and the recomputed marker_ptr pointer arithmetic are required to match
+ *       the target's register allocation. The @c y increment does not need a
+ *       wrapper.
  * @see decomp.me (100.00%)
  * @see working/func_80140DEC/
  */
@@ -784,7 +784,7 @@ s32 golem_draw_grid_markers(s32 packet_cursor, s32 ordering_table)
             marker_ptr++;
             marker_index++;
         }
-        do { y += 0x10; } while (0);
+        y += 0x10;
     }
 
     for (row = 0; row < 5; row++)
@@ -932,7 +932,6 @@ void golem_render(s32 render_context)
     s32 packet_cursor;
     s32 panel_index;
     s32 panel_ordering_table;
-    s32 text_ordering_table;
     s32 detail_block;
 
     panel_ordering_table = render_context + 0x3C;
@@ -949,7 +948,7 @@ void golem_render(s32 render_context)
     packet_cursor = golem_draw_block_list(packet_cursor, render_context);
     packet_cursor = golem_draw_logic_grid(packet_cursor, render_context);
     packet_cursor = golem_draw_cursor(packet_cursor, render_context);
-    do { do { do { do { do { do { do { do { do { do { text_ordering_table = render_context + 0x28; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+    panel_ordering_table = render_context + 0x28;
 
     if (g_golem_logic_block_count != 0)
     {
@@ -964,9 +963,9 @@ void golem_render(s32 render_context)
             func_800A8B90(number_buf, (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF, 1);
             golem_append_encoded_string(name_buf, number_buf);
         }
-        packet_cursor = func_800A88A0(packet_cursor, text_ordering_table, name_buf, 0, 0xA0, 0xA0, 2);
+        packet_cursor = func_800A88A0(packet_cursor, panel_ordering_table, name_buf, 0, 0xA0, 0xA0, 2);
         detail_block = *(s32*)(archive + 8);
-        packet_cursor = func_800A88A0(packet_cursor, text_ordering_table,
+        packet_cursor = func_800A88A0(packet_cursor, panel_ordering_table,
                                       detail_block +
                                           (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + detail_block + archive) + archive),
                                       0, 0xA0, 0xB0, 2);
@@ -1190,6 +1189,7 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
     s32 remaining_height;
     s32 packet_code;
     s32 bottom_texture_height;
+    DR_TPAGE* draw_mode;
     u8 stack_pad[0x10];
 
     color = 0x808080;
@@ -1276,7 +1276,7 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
                 }
                 sprite->x0 = (x + 8) + x_offset;
                 sprite->y0 = y + y_offset;
-                do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { sprite->w = segment_width; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+                sprite->w = segment_width;
                 sprite->h = row_height;
                 sprite->u0 = GOLEM_PANEL_TEXTURE(panel_index).attributes >> 11;
                 sprite->v0 = GOLEM_PANEL_TEXTURE(panel_index).texture >> 3;
@@ -1292,10 +1292,11 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
         } while (y_offset < height);
     }
 
-    setlen(packet_cursor, 1);
-    ((u_long*)packet_cursor)[1] = ((GOLEM_PANEL_TEXTURE(panel_index).attributes & 3) << 5) | 0xE1000005;
-    addPrim(ordering_table, packet_cursor);
-    return packet_cursor + 8;
+    draw_mode = (DR_TPAGE*)packet_cursor;
+    setDrawTPage(draw_mode, 0, 0, ((GOLEM_PANEL_TEXTURE(panel_index).attributes & 3) << 5) | 5);
+    addPrim(ordering_table, draw_mode);
+    packet_cursor += sizeof(DR_TPAGE);
+    return packet_cursor;
 }
 
 /**
@@ -1311,10 +1312,8 @@ s32 golem_draw_panel(s32 packet_cursor, s32 ordering_table, s32 panel_index, s32
  * @param use_origin When 1, offset x/y by the layout row's origin fields.
  * @param style      Style flags forwarded to golem_emit_glyph for each part.
  * @return Packet cursor past the trailing draw-mode packet.
- * @note The part-loop advances @c part_offset / @c part_index after the
- *       golem_emit_glyph call, and the trailing draw-mode packet is built from
- *       named constant locals inside a @c do{}while(0); both shapes are required
- *       to match the target's register allocation.
+ * @note Each part view starts at the rotation-specific offset and advances
+ *       four bytes per layout entry.
  * @see decomp.me (100.00%)
  * @see working/func_80141EB4_golem/
  */
@@ -1326,11 +1325,8 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
     s32 layout_offset;
     u8* table;
     u8* layout;
+    DR_TPAGE* draw_mode;
     s32 part_index;
-    u32 low_mask;
-    u32 high_mask;
-    u32 draw_cmd;
-    u32 one;
 
     logic_block = GOLEM_LOGIC_BLOCK(block_index);
     layout_index = logic_block >> 0xC;
@@ -1366,18 +1362,11 @@ s32 golem_draw_composite_icon(s32 packet_cursor, s32* ordering_table, s32 block_
             part_index += 1;
         } while (part_index < *part_count);
     }
-    draw_cmd = 0xE1000025;
-    low_mask = 0xFFFFFF;
-    one = 1;
-    high_mask = 0xFF000000;
-    do
-    {
-        *(u8*)(packet_cursor + 3) = one;
-        *(u32*)(packet_cursor + 4) = draw_cmd;
-    } while (0);
-    *(u32*)(packet_cursor + 0) = (*(u32*)(packet_cursor + 0) & high_mask) | (*ordering_table & low_mask);
-    *ordering_table = (*ordering_table & high_mask) | (packet_cursor & low_mask);
-    return packet_cursor + 8;
+    draw_mode = (DR_TPAGE*)packet_cursor;
+    setDrawTPage(draw_mode, 0, 0, 0x25);
+    addPrim(ordering_table, draw_mode);
+    packet_cursor += sizeof(DR_TPAGE);
+    return packet_cursor;
 }
 
 /**

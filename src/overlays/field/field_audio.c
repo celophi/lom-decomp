@@ -32,6 +32,14 @@
 /** @brief AKAO sequence staging area shared with the TITLE overlay. */
 extern unsigned char D_8003ECA0;
 
+/**
+ * @brief Per-entry byte-offset table into the D_8003ECA0 staging area.
+ * @note Sits 4 bytes past D_8003ECA0 (0x8003ECA4). func_800A3858 forms a
+ *       pointer as @c (u8*)&D_8003ECA4 - 4 + D_8003ECA4[index], i.e.
+ *       &D_8003ECA0 + D_8003ECA4[index].
+ */
+extern s32 D_8003ECA4[];
+
 /** @brief Alternate AKAO sequence staging area inside the FIELD overlay. */
 extern unsigned char D_80117EF8;
 
@@ -47,7 +55,7 @@ extern u32 D_80180000;
 /**
  * @brief Stop-modifier passed to akao_stop_song by func_800A37BC.
  * @note Written by func_800A380C (below) with the value akao_play_song leaves
- *       in the return register, and again by func_800A3858 (still asm).
+ *       in the return register, and again by func_800A3858 (below).
  *       akao_stop_song's parameter is believed to be a fade-out duration or
  *       flag; its exact meaning is still unknown.
  */
@@ -204,5 +212,31 @@ void func_800A380C(void)
     D_8011F310 = play_result;
     akao_set_song_volume(play_result, D_8011588C);
     akao_cmd_d4(0);
+    akao_cmd_d0(0);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_800A3858(s32 arg0)
+{
+    s32 play_result;
+    s32 dummy;
+
+    play_result = akao_cmd_14((u8*)&D_8003ECA4 - 4 + D_8003ECA4[arg0], dummy, 0);
+    D_8011F310 = play_result;
+    if (play_result == -1)
+    {
+        D_8011F310 = 0;
+    }
+    else if (play_result == 0)
+    {
+        D_8011F310 = 0;
+    }
+    else
+    {
+        akao_set_song_volume(0, D_8011588C);
+        akao_cmd_d4(0);
+    }
     akao_cmd_d0(0);
 }

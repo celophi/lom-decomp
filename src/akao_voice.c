@@ -1922,8 +1922,6 @@ void akao_seq_start_song(u8* arg0, s32 arg1)
     }
     song_a->seq_cursor = (u8*)flag_word;
 
-    while (0) { }
-
     articulation_base = NULL;
     rel = *(s32*)(desc + 0x30);
     song_b = *(AkaoChannelState* volatile *)&g_akao_seq_channel0;

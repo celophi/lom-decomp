@@ -4052,7 +4052,7 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
             do
             {
                 count = span >> 1;
-                do { do { s = src; } while (0); } while (0);
+                s = src;
                 while (--count != -1)
                 {
                     *dst = *s;
@@ -4099,7 +4099,7 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
                 do
                 {
                     count = state->dirty_end_u >> 2;
-                    do { s = src; } while (0);
+                    s = src;
                     while (--count != -1)
                     {
                         *dst = *s;
