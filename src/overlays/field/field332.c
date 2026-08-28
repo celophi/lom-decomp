@@ -22,31 +22,48 @@ extern ResEntry g_field_resource_entries[];
 
 
 /**
- * @note NOT YET MATCHED (94.87%). residue is 2 branch-delay slots the target leaves as nop but gcc's dbr fills; not source-fixable.
- * @see decomp.me (94.87%) TODO
+ * @brief Updates the actor state when its resource query succeeds.
+ *
+ * @return The guard/query result, or 0x8E after a successful update.
+ * @note 100% match. The function returns the value already carried in v0;
+ *       that return lifetime naturally preserves the target delay-slot nops.
  */
-void func_80094EA4(ActorRec *arg0)
+s32 func_80094EA4(ActorRec *arg0)
 {
-    if ((D_80105AE0[arg0->unk3A].unk178 & 1) == 0)
+    s32 result;
+
+    result = D_80105AE0[arg0->unk3A].unk178 & 1;
+    if (result == 0)
     {
-        if (func_8009104C(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE) != 0)
+        result = func_8009104C(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE);
+        if (result != 0)
         {
-            arg0->unk2A = 0x8E;
+            result = 0x8E;
+            arg0->unk2A = result;
         }
     }
+    return result;
 }
 
 /**
- * @note NOT YET MATCHED (94.87%). twin of func_80094EA4 (success const 0x94 vs 0x8E); same dbr residue.
- * @see decomp.me (94.87%) TODO
+ * @brief Updates the actor state when its resource query succeeds.
+ *
+ * @return The guard/query result, or 0x94 after a successful update.
+ * @note 100% match. Twin of func_80094EA4 with a different success state.
  */
-void func_80094F40(ActorRec *arg0)
+s32 func_80094F40(ActorRec *arg0)
 {
-    if ((D_80105AE0[arg0->unk3A].unk178 & 1) == 0)
+    s32 result;
+
+    result = D_80105AE0[arg0->unk3A].unk178 & 1;
+    if (result == 0)
     {
-        if (func_8009104C(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE) != 0)
+        result = func_8009104C(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE);
+        if (result != 0)
         {
-            arg0->unk2A = 0x94;
+            result = 0x94;
+            arg0->unk2A = result;
         }
     }
+    return result;
 }

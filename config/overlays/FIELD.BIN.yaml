@@ -152,12 +152,12 @@ segments:
       - [0x4297D, c, unk2_i_b_split008_tail2_tail] # gcc272_cdk, func_800925EC
       - [0x42FB5, c, func_80092C24]                # gcc272_cdk, 100%
       - [0x43029, c, unk2_i_b_split008_tail2b]     # gcc272_cdk, func_80092C98
-      - [0x44A21, c, func_80094690]                # gcc272_cdk, 99.62963%, allocator-only residue
+      - [0x44A21, c, func_80094690]                # gcc272_cdk, 100%
       - [0x44A8D, c, unk2_i_b_split008_tail3]      # gcc272_cdk, func_800946FC
       - [0x44EED, c, func_80094B5C]                # gcc272_cdk, 100%
       - [0x44F55, c, field40]                      # gcc272_cdk, func_80094BC4
       - [0x44F91, c, unk2_i_b_split009]         # gcc272_cdk, func_80094C00
-      - [0x45235, c, field332]                  # gcc272_cdk, func_80094EA4 + func_80094F40 (94.87% WIP)
+      - [0x45235, c, field332]                  # gcc272_cdk, func_80094EA4 + func_80094F40, 100%
       - [0x4536D, c, unk2_i_b_split009_b]       # gcc272_cdk, func_80094FDC
       - [0x454F9, c, func_80095168]             # gcc272_cdk, 100%
       - [0x4555D, c, unk2_i_b_split009_tail]    # gcc272_cdk, func_800951CC
@@ -301,7 +301,7 @@ segments:
       - [0x62BD5, c, field86]                      # gcc272_cdk, func_800B2844
       - [0x62BFD, c, func_800B286C]                # gcc280_g0, 100.00000%, 29/29 instructions
       - [0x62C71, c, unk2_b_split023_tail]         # gcc272_cdk, func_800B28E0
-      - [0x62E2D, c, func_800B2A9C]                # gcc280_g0, 99.44444%, allocator-only residue
+      - [0x62E2D, c, func_800B2A9C]                # gcc280_g0, 100%
       - [0x62E99, c, field236]                     # gcc280_g0, func_800B2B08
       - [0x62EE5, c, unk2_b_split100]              # gcc272_cdk, func_800B2B54
       - [0x630C5, c, field274]                     # gcc280_g0, func_800B2D34
@@ -417,7 +417,7 @@ segments:
       - [0x6D839, c, func_800BD4A8]                 # gcc280_g0, 72.966670%
       - [0x6D8B1, c, field125]                     # gcc280_g0, func_800BD520
       - [0x6D8ED, c, unk2_b_split045]              # gcc272_cdk, func_800BD55C
-      - [0x6DA85, c, func_800BD6F4]                 # gcc280_g0, 99.783% (register allocation)
+      - [0x6DA85, c, func_800BD6F4]                 # gcc280_g0, 100%
       - [0x6DAE1, c, field126]                     # gcc280_g0, func_800BD750
       - [0x6DB09, c, unk2_b_split046]              # gcc272_cdk, func_800BD778
       - [0x6DCED, c, field127]                     # gcc280_g0, func_800BD95C

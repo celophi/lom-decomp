@@ -42,6 +42,18 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x11D, c, unk1]
+      - [0xC95, c, addhero_core_state]         # gcc272_cdk, 3 funcs, 100%
+      - [0xD81, c, unk1_core_tail]
+      - [0x1DF1, c, addhero_terminate_multibyte_text] # gcc272_cdk, 1 func, 100%
+      - [0x1E55, c, unk1_text_gap]
+      - [0x24AD, c, addhero_string_utils]       # gcc272_cdk, 4 funcs, 100%
+      - [0x2619, c, unk1_before_choice]
+      - [0x4009, c, addhero_choice_prompt]      # gcc272_cdk, 2 funcs, 100%
+      - [0x4141, c, unk1_choice_gap]
+      - [0x4195, c, addhero_checksum]           # gcc272_cdk, 1 func, 100%
+      - [0x41CD, c, unk1_checksum_gap]
+      - [0x43A9, c, addhero_hex_parse]          # gcc272_cdk, 2 funcs, 100%
+      - [0x4479, c, unk1_before_rank]
       - [0x49F1, c, addhero_reset_entry_ranks] # gcc272_cdk, 1 func, 100%
       - [0x4A29, c, unk1_after_rank]
       - [0x5825, c, addhero_stream_reset]      # gcc272_cdk, 2 funcs, 100%

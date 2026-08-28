@@ -23,6 +23,12 @@
 
 OVERLAYS += addhero
 overlay_addhero_gcc_272_cdk_g0_srcs := \
+	src/overlays/addhero/addhero_core_state.c \
+	src/overlays/addhero/addhero_terminate_multibyte_text.c \
+	src/overlays/addhero/addhero_string_utils.c \
+	src/overlays/addhero/addhero_choice_prompt.c \
+	src/overlays/addhero/addhero_checksum.c \
+	src/overlays/addhero/addhero_hex_parse.c \
 	src/overlays/addhero/addhero_reset_entry_ranks.c \
 	src/overlays/addhero/addhero_stream_reset.c \
 	src/overlays/addhero/addhero_shutdown_handles.c \
@@ -33,6 +39,12 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_expand_text_glyph_codes.c
 overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1.c \
+	src/overlays/addhero/unk1_core_tail.c \
+	src/overlays/addhero/unk1_text_gap.c \
+	src/overlays/addhero/unk1_before_choice.c \
+	src/overlays/addhero/unk1_choice_gap.c \
+	src/overlays/addhero/unk1_checksum_gap.c \
+	src/overlays/addhero/unk1_before_rank.c \
 	src/overlays/addhero/unk1_after_rank.c \
 	src/overlays/addhero/unk1_mid1.c \
 	src/overlays/addhero/unk1_mid2.c \
@@ -41,6 +53,12 @@ overlay_addhero_gcc_280_g0_srcs := \
 
 OVERLAYS += carda
 overlay_carda_gcc_272_cdk_g0_srcs := \
+	src/overlays/carda/carda_core_state.c \
+	src/overlays/carda/carda_terminate_multibyte_text.c \
+	src/overlays/carda/carda_string_utils.c \
+	src/overlays/carda/carda_checksum.c \
+	src/overlays/carda/carda_choice_prompt.c \
+	src/overlays/carda/carda_hex_parse.c \
 	src/overlays/carda/carda_stream_reset.c \
 	src/overlays/carda/carda_shutdown_handles.c \
 	src/overlays/carda/carda_handles.c \
@@ -50,6 +68,12 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_expand_text_glyph_codes.c
 overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1.c \
+	src/overlays/carda/unk1_core_tail.c \
+	src/overlays/carda/unk1_after_terminate.c \
+	src/overlays/carda/unk1_after_strings.c \
+	src/overlays/carda/unk1_after_checksum.c \
+	src/overlays/carda/unk1_after_choice.c \
+	src/overlays/carda/unk1_before_stream_reset.c \
 	src/overlays/carda/unk1_mid1.c \
 	src/overlays/carda/unk1_mid2.c \
 	src/overlays/carda/unk1_tail.c \
@@ -683,7 +707,13 @@ overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki_expand_text_glyph_codes.c
 
 OVERLAYS += shop
-overlay_shop_gcc_280_g0_srcs := src/overlays/shop/unk1.c
+overlay_shop_gcc_272_cdk_g0_srcs := \
+	src/overlays/shop/shop_element_utils.c \
+	src/overlays/shop/shop_string_utils.c
+overlay_shop_gcc_280_g0_srcs := \
+	src/overlays/shop/unk1.c \
+	src/overlays/shop/unk1_mid.c \
+	src/overlays/shop/unk1_tail.c
 
 OVERLAYS += title
 overlay_title_gcc_272_cdk_g0_srcs := src/overlays/title/title.c
