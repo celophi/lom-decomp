@@ -22,16 +22,30 @@
 # Splat databin assets referenced through .incbin do not use this setting.
 
 OVERLAYS += addhero
-overlay_addhero_gcc_272_cdk_g0_srcs := src/overlays/addhero/addhero_handles.c
+overlay_addhero_gcc_272_cdk_g0_srcs := \
+	src/overlays/addhero/addhero_stream_reset.c \
+	src/overlays/addhero/addhero_shutdown_handles.c \
+	src/overlays/addhero/addhero_handles.c \
+	src/overlays/addhero/addhero_cache_table.c
 overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1.c \
-	src/overlays/addhero/unk1_tail.c
+	src/overlays/addhero/unk1_mid1.c \
+	src/overlays/addhero/unk1_mid2.c \
+	src/overlays/addhero/unk1_tail.c \
+	src/overlays/addhero/unk1_tail2.c
 
 OVERLAYS += carda
-overlay_carda_gcc_272_cdk_g0_srcs := src/overlays/carda/carda_handles.c
+overlay_carda_gcc_272_cdk_g0_srcs := \
+	src/overlays/carda/carda_stream_reset.c \
+	src/overlays/carda/carda_shutdown_handles.c \
+	src/overlays/carda/carda_handles.c \
+	src/overlays/carda/carda_cache_table.c
 overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1.c \
-	src/overlays/carda/unk1_tail.c
+	src/overlays/carda/unk1_mid1.c \
+	src/overlays/carda/unk1_mid2.c \
+	src/overlays/carda/unk1_tail.c \
+	src/overlays/carda/unk1_tail2.c
 
 OVERLAYS += checkps
 overlay_checkps_gcc_272_cdk_g0_srcs := \
@@ -644,10 +658,16 @@ overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
 OVERLAYS += niki
 overlay_niki_gcc_280_g0_srcs := \
 	src/overlays/niki/unk1.c \
-	src/overlays/niki/unk1_tail.c
+	src/overlays/niki/unk1_mid1.c \
+	src/overlays/niki/unk1_mid2.c \
+	src/overlays/niki/unk1_tail.c \
+	src/overlays/niki/unk1_tail2.c
 overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki.c \
-	src/overlays/niki/niki_handles.c
+	src/overlays/niki/niki_stream_reset.c \
+	src/overlays/niki/niki_shutdown_handles.c \
+	src/overlays/niki/niki_handles.c \
+	src/overlays/niki/niki_cache_table.c
 
 OVERLAYS += shop
 overlay_shop_gcc_280_g0_srcs := src/overlays/shop/unk1.c

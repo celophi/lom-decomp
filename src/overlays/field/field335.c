@@ -9,15 +9,23 @@ typedef struct {
 extern SeqRec *D_80123FB8;
 
 /**
- * @note NOT YET MATCHED (97.97%). residue is a 6-row ALLOC-43 base/index register swap on the 0xC-stride record address; not source-fixable (mult stride, not a shift).
- * @see decomp.me (97.97%) TODO
+ * @brief Dispatches the next two-byte sequence operand and advances its PC.
+ *
+ * @note gcc280_g0, 100% match. Advancing a record pointer by the active index
+ *       reproduces the target's base-register destination for the 0xC stride.
  */
 void func_800BA154(void)
 {
     s32 i;
+    SeqRec *rec;
 
-    i = D_80123FB8->unk4;
-    func_800B4410(D_80123FB8[i].unk8[1]);
-    i = D_80123FB8->unk4;
-    D_80123FB8[i].unk8 += 2;
+    rec = D_80123FB8;
+    i = rec->unk4;
+    rec += i;
+    func_800B4410(rec->unk8[1]);
+
+    rec = D_80123FB8;
+    i = rec->unk4;
+    rec += i;
+    rec->unk8 += 2;
 }

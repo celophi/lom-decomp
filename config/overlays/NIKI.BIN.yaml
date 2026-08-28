@@ -43,7 +43,13 @@ segments:
       - [0x1, rodata, rodata]
       - [0x11D, c, niki]
       - [0x4741, c, unk1]
+      - [0x5995, c, niki_stream_reset]         # gcc272_cdk, 2 funcs, 100%
+      - [0x5A41, c, unk1_mid1]
+      - [0x5C0D, c, niki_shutdown_handles]     # gcc272_cdk, 1 func, 100%
+      - [0x5CBD, c, unk1_mid2]
       - [0x6115, c, niki_handles]              # gcc272_cdk, 4 funcs, 100%
       - [0x62ED, c, unk1_tail]
+      - [0x6EB9, c, niki_cache_table]          # gcc272_cdk, 3 funcs, 100%
+      - [0x6F85, c, unk1_tail2]
       - [0x70F9, data, data]
   - [0x2DA81]
