@@ -35,6 +35,3 @@ __pycache__/
 *.m2c
 # Standalone repo (github.com/celophi/custom-permuter); developed in-place
 tools/custom-permuter/
-
-# Historical Psy-Q SDK headers are local reference material only.
-/include/psyq/
