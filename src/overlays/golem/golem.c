@@ -1,8 +1,8 @@
 #include "common.h"
 #include "display.h"
 #include "gpu_packet.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 /**
  * @brief Golem logic-block records within the shared menu-layout buffer.

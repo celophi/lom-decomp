@@ -1,7 +1,7 @@
 #include "common.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
-#include "psyq/rand.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
+#include "sdk/rand.h"
 
 typedef struct
 {
@@ -168,8 +168,8 @@ s32 func_8007D078(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldMatrix *m
 void func_8007D8D8(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
 u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s32 *base);
 
-#include "psyq/inline_c.h"
-#include "psyq/gte_dmpsx_compat.h"
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /**
  * @brief Field ribbon/trail primitive builder: derives the orientation matrix

@@ -6,8 +6,8 @@
  */
 
 #include "common.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 /**
  * @brief Upload a two-part image resource (palette/CLUT block followed by the

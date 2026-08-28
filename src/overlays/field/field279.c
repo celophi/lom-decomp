@@ -1,6 +1,6 @@
 #include "common.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 extern u8 g_field_resource_buffer[];
 

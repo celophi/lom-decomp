@@ -1,6 +1,6 @@
 #include "common.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 typedef struct
 {

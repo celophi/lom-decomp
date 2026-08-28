@@ -1,6 +1,6 @@
 #include "common.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 typedef struct
 {
@@ -216,8 +216,8 @@ u8 *func_8007AE2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     return primbuf;
 }
 
-#include "psyq/inline_c.h"
-#include "psyq/gte_dmpsx_compat.h"
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 /**
  * @brief Field radial fan primitive builder: transforms a ring of

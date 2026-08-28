@@ -1,9 +1,9 @@
 #include "checkps_internal.h"
 
 #include "display.h"
-#include "psyq/libapi.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
+#include "sdk/libapi.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 #define CHECKPS_GLYPH_CACHE_ENTRY_COUNT 256
 #define CHECKPS_GLYPH_CACHE_USED_FLAG 0x10000

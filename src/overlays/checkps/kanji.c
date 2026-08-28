@@ -1,7 +1,7 @@
 #include "checkps_internal.h"
 
-#include "psyq/libapi.h"
-#include "psyq/strings.h"
+#include "sdk/libapi.h"
+#include "sdk/strings.h"
 
 #define CHECKPS_KANJI_LINE_HEIGHT 18
 #define CHECKPS_KANJI_ADVANCE 17
