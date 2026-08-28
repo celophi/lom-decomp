@@ -12,9 +12,9 @@ void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
  * handed to func_800C2E30, and the buffer's 0xAA9 byte is returned. Otherwise
  * akao_set_song_params is re-armed and 0xFF is returned.
  *
- * WIP: 94.29%. Body matches (27/28 rows); the sole residual is the epilogue
- * delay-slot fill (a maspsx/dbr tooling artifact that the permuter confirms is
- * not source-reachable).
+ * 100% match with the FIELD GCC 2.8.0 G0 toolchain. The former 94.29%
+ * result was caused by GCC 2.7.2 CDK epilogue scheduling rather than the C
+ * source shape.
  */
 s32 func_800C2DC0(void)
 {

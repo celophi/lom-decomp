@@ -19,11 +19,9 @@ void func_800B286C(s32, s32, s32);
  * byte. Selector 0 forwards to func_800B28E0 and selector 1 to func_800B286C,
  * each with the resolved value and the low bytes of @p p2 and @p p3.
  *
- * WIP: 95.56%. The function body is byte-identical (25/27 rows); the only
- * residual is the epilogue delay-slot fill - the target parks the `addiu sp`
- * stack restore in the `jr` delay slot (two leading nops) while this build
- * emits it ahead of the `jr`. The permuter cannot beat this either, so it is a
- * dbr/maspsx scheduling artifact rather than a source-reachable difference.
+ * 100% match with the FIELD GCC 2.8.0 G0 toolchain. The former 95.56%
+ * result was caused by GCC 2.7.2 CDK epilogue scheduling rather than the C
+ * source shape.
  */
 void func_800BCEFC(s32 p0, s32 p1, s32 p2, s32 p3)
 {
