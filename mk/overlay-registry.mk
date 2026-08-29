@@ -46,7 +46,10 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_validate_resource.c \
 	src/overlays/addhero/addhero_format_decimal.c \
 	src/overlays/addhero/addhero_nibble_pair.c \
-	src/overlays/addhero/addhero_parse_hex_suffix_byte.c
+	src/overlays/addhero/addhero_parse_hex_suffix_byte.c \
+	src/overlays/addhero/addhero_draw_load_prompt.c \
+	src/overlays/addhero/addhero_format_hex.c \
+	src/overlays/addhero/addhero_entry_blocks_reach_limit.c
 overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1.c \
 	src/overlays/addhero/unk1_after_update_state.c \
@@ -56,11 +59,9 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/addhero_scan_hex_digits.c \
 	src/overlays/addhero/unk1_text_gap.c \
 	src/overlays/addhero/unk1_after_claim_element.c \
-	src/overlays/addhero/unk1_before_choice.c \
+	src/overlays/addhero/unk1_before_choice_tail.c \
 	src/overlays/addhero/unk1_before_choice_mid.c \
-	src/overlays/addhero/unk1_checksum_gap.c \
 	src/overlays/addhero/unk1_before_rank.c \
-	src/overlays/addhero/unk1_after_known_type.c \
 	src/overlays/addhero/unk1_after_fixed_prompts.c \
 	src/overlays/addhero/unk1_mid1.c \
 	src/overlays/addhero/unk1_mid2.c \
@@ -90,7 +91,8 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_format_decimal.c \
 	src/overlays/carda/carda_nibble_pair.c \
 	src/overlays/carda/carda_parse_hex_suffix_byte.c \
-	src/overlays/carda/carda_reset_entry_ranks.c
+	src/overlays/carda/carda_reset_entry_ranks.c \
+	src/overlays/carda/carda_format_hex.c
 overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1.c \
 	src/overlays/carda/unk1_after_update_state.c \
@@ -102,7 +104,6 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_hex_scan.c \
 	src/overlays/carda/unk1_after_checksum.c \
 	src/overlays/carda/unk1_after_choice.c \
-	src/overlays/carda/unk1_after_choice_tail.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
 	src/overlays/carda/unk1_before_stream_reset_tail.c \
 	src/overlays/carda/unk1_mid1.c \
@@ -720,7 +721,6 @@ overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
 OVERLAYS += niki
 overlay_niki_gcc_280_g0_srcs := \
 	src/overlays/niki/unk1.c \
-	src/overlays/niki/unk1_after_known_type.c \
 	src/overlays/niki/unk1_after_fixed_prompts.c \
 	src/overlays/niki/unk1_mid1.c \
 	src/overlays/niki/unk1_mid2.c \
@@ -737,7 +737,8 @@ overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki_text_render.c \
 	src/overlays/niki/niki_cache_table.c \
 	src/overlays/niki/niki_expand_text_glyph_codes.c \
-	src/overlays/niki/niki_nibble_pair.c
+	src/overlays/niki/niki_nibble_pair.c \
+	src/overlays/niki/niki_entry_blocks_reach_limit.c
 
 OVERLAYS += shop
 overlay_shop_gcc_272_cdk_g0_srcs := \
