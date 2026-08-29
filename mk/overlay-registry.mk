@@ -754,4 +754,9 @@ overlay_wsel_gcc_280_g0_srcs := \
 	src/overlays/wsel/unk1_tail.c
 
 OVERLAYS += zukan
-overlay_zukan_gcc_280_g0_srcs := src/overlays/zukan/unk1.c
+overlay_zukan_gcc_280_g0_srcs := \
+	src/overlays/zukan/unk1.c \
+	src/overlays/zukan/zukan_gpu_modes.c \
+	src/overlays/zukan/unk1_mid.c \
+	src/overlays/zukan/zukan_outline_fade.c \
+	src/overlays/zukan/unk1_tail.c
