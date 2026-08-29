@@ -63,6 +63,8 @@ segments:
       - [0x4CD1, c, carda_glyph_builder]       # gcc272_cdk, func_80144CD0, 100%
       - [0x4F19, c, carda_choice_prompt]        # gcc272_cdk, 2 funcs, 100%
       - [0x5051, c, unk1_after_choice]
+      - [0x6AF1, c, carda_choice_cancel]        # gcc272_cdk, func_80146AF0, 100%
+      - [0x6CA5, c, unk1_after_choice_mid]
       - [0x6E81, c, carda_header_label]        # gcc272_cdk, func_80146E80, 100%
       - [0x6EDD, c, unk1_after_choice_tail]
       - [0x71E5, c, carda_format_decimal]     # gcc272_cdk, 1 func, 100%
