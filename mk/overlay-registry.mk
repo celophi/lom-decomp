@@ -748,7 +748,10 @@ OVERLAYS += title
 overlay_title_gcc_272_cdk_g0_srcs := src/overlays/title/title.c
 
 OVERLAYS += wsel
-overlay_wsel_gcc_280_g0_srcs := src/overlays/wsel/unk1.c
+overlay_wsel_gcc_272_cdk_g0_srcs := src/overlays/wsel/wsel_audio_fade.c
+overlay_wsel_gcc_280_g0_srcs := \
+	src/overlays/wsel/unk1.c \
+	src/overlays/wsel/unk1_tail.c
 
 OVERLAYS += zukan
 overlay_zukan_gcc_280_g0_srcs := src/overlays/zukan/unk1.c

@@ -42,5 +42,7 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0xB5, c, unk1]
+      - [0x34D, c, wsel_audio_fade]       # gcc272_cdk, 7 funcs, 100%
+      - [0x781, c, unk1_tail]
       - [0x2999, data, data]
   - [0x7AC75]
