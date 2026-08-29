@@ -58,7 +58,9 @@ segments:
       - [0x2619, c, addhero_draw_load_prompt] # gcc272_cdk, func_80142618, 100%
       - [0x280D, c, unk1_before_choice_tail]
       - [0x2A0D, c, addhero_timer_bar]        # gcc272_cdk, 1 func, 100%
-      - [0x2B1D, c, unk1_before_choice_mid]
+      - [0x2B1D, c, addhero_choice_init]       # gcc272_cdk, func_80142B1C, 100%
+      - [0x2C09, c, unk1_before_choice_mid]
+      - [0x3DC1, c, addhero_glyph_builder]     # gcc272_cdk, func_80143DC0, 100%
       - [0x4009, c, addhero_choice_prompt]      # gcc272_cdk, 2 funcs, 100%
       - [0x4141, c, addhero_validate_resource] # gcc272_cdk, 1 func, 100%
       - [0x4195, c, addhero_checksum]           # gcc272_cdk, 1 func, 100%
@@ -67,6 +69,7 @@ segments:
       - [0x43A9, c, addhero_hex_parse]          # gcc272_cdk, 2 funcs, 100%
       - [0x4479, c, addhero_parse_hex_suffix_byte] # gcc272_cdk, func_80144478, 100%
       - [0x4571, c, unk1_before_rank]
+      - [0x47B5, c, addhero_rank_entries]      # gcc272_cdk, func_801447B4, 100%
       - [0x49F1, c, addhero_reset_entry_ranks] # gcc272_cdk, 1 func, 100%
       - [0x4A29, c, addhero_known_entry_type] # gcc272_cdk, 1 func, 100%
       - [0x4AF9, c, addhero_entry_blocks_reach_limit] # gcc272_cdk, func_80144AF8, 100%
