@@ -45,7 +45,8 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_timer_bar.c \
 	src/overlays/addhero/addhero_validate_resource.c \
 	src/overlays/addhero/addhero_format_decimal.c \
-	src/overlays/addhero/addhero_nibble_pair.c
+	src/overlays/addhero/addhero_nibble_pair.c \
+	src/overlays/addhero/addhero_parse_hex_suffix_byte.c
 overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1.c \
 	src/overlays/addhero/unk1_after_update_state.c \
@@ -87,7 +88,9 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_packet_helpers.c \
 	src/overlays/carda/carda_validate_resource.c \
 	src/overlays/carda/carda_format_decimal.c \
-	src/overlays/carda/carda_nibble_pair.c
+	src/overlays/carda/carda_nibble_pair.c \
+	src/overlays/carda/carda_parse_hex_suffix_byte.c \
+	src/overlays/carda/carda_reset_entry_ranks.c
 overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1.c \
 	src/overlays/carda/unk1_after_update_state.c \
@@ -101,6 +104,7 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_choice.c \
 	src/overlays/carda/unk1_after_choice_tail.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
+	src/overlays/carda/unk1_before_stream_reset_tail.c \
 	src/overlays/carda/unk1_mid1.c \
 	src/overlays/carda/unk1_mid2.c \
 	src/overlays/carda/unk1_tail.c
@@ -363,7 +367,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split030.c \
 	src/overlays/field/func_800B8964.c \
 	src/overlays/field/unk2_b_split031.c \
-	src/overlays/field/unk2_b_split032.c \
 	src/overlays/field/unk2_b_split034.c \
 	src/overlays/field/func_800BCC74.c \
 	src/overlays/field/unk2_b_split040.c \
@@ -523,6 +526,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field357.c \
 	src/overlays/field/field358.c \
 	src/overlays/field/field359.c \
+	src/overlays/field/func_800BABD4.c \
 	src/overlays/field/field360.c \
 	src/overlays/field/field361.c \
 	src/overlays/field/field362.c \

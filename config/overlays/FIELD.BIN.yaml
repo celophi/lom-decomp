@@ -367,7 +367,7 @@ segments:
       - [0x6A801, c, unk2_b_split109]              # gcc272_cdk, func_800BA470
       - [0x6AE91, c, field359]                     # gcc280_g0, func_800BAB00
       - [0x6AF5D, c, field97]                      # gcc272_cdk, func_800BABCC
-      - [0x6AF65, c, unk2_b_split032]              # gcc272_cdk, func_800BABD4
+      - [0x6AF65, c, func_800BABD4]                # gcc280_g0, 100% exemplar of func_800BAB00 shape
       - [0x6B031, c, field249]                     # gcc280_g0, func_800BACA0
       - [0x6B081, c, unk2_b_split110]              # gcc272_cdk, func_800BACF0
       - [0x6B719, c, field250]                     # gcc280_g0, func_800BB388
