@@ -157,6 +157,12 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field15.c \
 	src/overlays/field/field16.c \
 	src/overlays/field/field17.c \
+	src/overlays/field/func_8009A204.c \
+	src/overlays/field/func_8009CC60.c \
+	src/overlays/field/func_8009CD30.c \
+	src/overlays/field/func_8009CF84.c \
+	src/overlays/field/func_8009D0D8.c \
+	src/overlays/field/func_800C2D08.c \
 	src/overlays/field/field18.c \
 	src/overlays/field/field19.c \
 	src/overlays/field/field20.c \
@@ -335,6 +341,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split001_tail.c \
 	src/overlays/field/func_800A3B78.c \
 	src/overlays/field/unk2_b_split003.c \
+	src/overlays/field/func_800A4798.c \
 	src/overlays/field/unk2_b_split004.c \
 	src/overlays/field/unk2_b_split004_b.c \
 	src/overlays/field/func_800A55E4.c \
@@ -434,6 +441,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split088.c \
 	src/overlays/field/unk2_b_split089.c \
 	src/overlays/field/func_800CA568.c \
+	src/overlays/field/func_800CB680.c \
 	src/overlays/field/unk2_b_split098.c \
 	src/overlays/field/unk2_b_split098_tail.c \
 	src/overlays/field/field235.c \
@@ -550,6 +558,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800BA76C.c \
 	src/overlays/field/field359.c \
 	src/overlays/field/func_800BABD4.c \
+	src/overlays/field/func_800BACF0.c \
 	src/overlays/field/func_800BB14C.c \
 	src/overlays/field/func_800BB264.c \
 	src/overlays/field/field360.c \
@@ -672,9 +681,12 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field238.c \
 	src/overlays/field/field239.c \
 	src/overlays/field/field240.c \
+	src/overlays/field/func_800B6890.c \
 	src/overlays/field/field243.c \
 	src/overlays/field/field245.c \
 	src/overlays/field/func_800B66F0.c \
+	src/overlays/field/func_800B8CFC.c \
+	src/overlays/field/func_800B9DD4.c \
 	src/overlays/field/field246.c \
 	src/overlays/field/func_800BA1D4.c \
 	src/overlays/field/field247.c \
@@ -767,12 +779,19 @@ overlay_niki_gcc_272_cdk_g0_srcs := \
 
 OVERLAYS += shop
 overlay_shop_gcc_272_cdk_g0_srcs := \
+	src/overlays/shop/shop_init.c \
+	src/overlays/shop/shop_update_interp.c \
 	src/overlays/shop/shop_element_utils.c \
-	src/overlays/shop/shop_string_utils.c
+	src/overlays/shop/shop_string_utils.c \
+	src/overlays/shop/shop_element_init_a.c \
+	src/overlays/shop/shop_element_init_b.c
 overlay_shop_gcc_280_g0_srcs := \
-	src/overlays/shop/unk1.c \
+	src/overlays/shop/unk1_after_init.c \
+	src/overlays/shop/unk1_after_interp.c \
 	src/overlays/shop/unk1_mid.c \
-	src/overlays/shop/unk1_tail.c
+	src/overlays/shop/unk1_tail.c \
+	src/overlays/shop/unk1_tail_mid.c \
+	src/overlays/shop/unk1_tail_end.c
 
 OVERLAYS += title
 overlay_title_gcc_272_cdk_g0_srcs := src/overlays/title/title.c

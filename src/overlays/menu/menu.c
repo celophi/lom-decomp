@@ -8651,16 +8651,11 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
 
             if (g_item_slot_flags.slot0 != 0)
             {
-                if (g_item_slot_data.slot0 != 0)
+                if (((g_item_slot_data.slot0 != 0) &&
+                     ((PAD_ITEM_W14(g_item_slot_data.slot0) & 0xFC00) != (PAD_ITEM_W14(g_menu_equipment_base) & 0xFC00))) ||
+                    ((g_item_slot_data.slot0 == 0) &&
+                     ((D_800F0C0C & 0xFC00) != (PAD_ITEM_W14(g_menu_equipment_base) & 0xFC00))))
                 {
-                    if ((PAD_ITEM_W14(g_item_slot_data.slot0) & 0xFC00) != (PAD_ITEM_W14(g_menu_equipment_base) & 0xFC00))
-                    {
-                        goto reload;
-                    }
-                }
-                else if ((D_800F0C0C & 0xFC00) != (PAD_ITEM_W14(g_menu_equipment_base) & 0xFC00))
-                {
-                reload:
                     if (menu_clear_pending_status() != 0)
                     {
                         s32 n = 3;

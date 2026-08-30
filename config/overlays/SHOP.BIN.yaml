@@ -41,10 +41,17 @@ segments:
     vram: 0x80140000
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x5, c, unk1]
+      - [0x5, c, shop_init]                   # gcc272_cdk, func_80140004 + func_801400D4, 100%
+      - [0x165, c, unk1_after_init]
+      - [0x799, c, shop_update_interp]          # gcc272_cdk, func_80140798, 100%
+      - [0x839, c, unk1_after_interp]
       - [0xD4D, c, shop_element_utils]          # gcc272_cdk, 3 funcs, 100%
       - [0xE01, c, unk1_mid]
       - [0x2131, c, shop_string_utils]          # gcc272_cdk, 3 funcs, 100%
       - [0x2285, c, unk1_tail]
+      - [0x234D, c, shop_element_init_a]       # gcc272_cdk, func_8014234C, 100%
+      - [0x2401, c, unk1_tail_mid]
+      - [0x28F1, c, shop_element_init_b]       # gcc272_cdk, func_801428F0, 100%
+      - [0x29A5, c, unk1_tail_end]
       - [0x2D05, data, data]
   - [0x5CE5]
