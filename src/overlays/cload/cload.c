@@ -334,6 +334,9 @@ u8 *cload_skip_hex_digits(void *);
 void cload_terminate_multibyte_text(void *text);
 s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s32 icon, s32 index, s32 row);
 s32 cload_draw_cached_text(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment);
+void cload_reset_glyph_cache(void);
+void cload_begin_glyph_cache_frame(void);
+void cload_evict_unused_glyphs(void);
 
 /* Callees used by the unk1 (0x3520-0x56E0) function block. */
 s32 func_8001714C(void *, void *, s32);
