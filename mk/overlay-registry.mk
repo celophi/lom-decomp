@@ -37,6 +37,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_fixed_prompts.c \
 	src/overlays/addhero/addhero_reset_entry_ranks.c \
 	src/overlays/addhero/addhero_stream_reset.c \
+	src/overlays/addhero/addhero_init_stream_handles.c \
 	src/overlays/addhero/addhero_shutdown_handles.c \
 	src/overlays/addhero/addhero_handles.c \
 	src/overlays/addhero/addhero_draw_signed_decimal.c \
@@ -68,7 +69,6 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1_before_choice_mid_tail.c \
 	src/overlays/addhero/unk1_before_rank.c \
 	src/overlays/addhero/unk1_after_fixed_prompts.c \
-	src/overlays/addhero/unk1_mid1.c \
 	src/overlays/addhero/unk1_mid2.c \
 	src/overlays/addhero/unk1_tail.c
 
@@ -84,6 +84,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_panel_tiles.c \
 	src/overlays/carda/carda_claim_element.c \
 	src/overlays/carda/carda_stream_reset.c \
+	src/overlays/carda/carda_init_stream_handles.c \
 	src/overlays/carda/carda_shutdown_handles.c \
 	src/overlays/carda/carda_handles.c \
 	src/overlays/carda/carda_draw_signed_decimal.c \
@@ -116,7 +117,6 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_choice_tail.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
 	src/overlays/carda/unk1_before_stream_reset_tail.c \
-	src/overlays/carda/unk1_mid1.c \
 	src/overlays/carda/unk1_mid2.c \
 	src/overlays/carda/unk1_tail.c
 
@@ -338,6 +338,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800A2990.c \
 	src/overlays/field/unk2_i_b_split018.c \
 	src/overlays/field/unk2_i_b_split019.c \
+	src/overlays/field/field_restore_entry_music.c \
 	src/overlays/field/unk2_b_split001.c \
 	src/overlays/field/unk2_b_split001_tail.c \
 	src/overlays/field/func_800A3B78.c \
@@ -763,7 +764,6 @@ OVERLAYS += niki
 overlay_niki_gcc_280_g0_srcs := \
 	src/overlays/niki/unk1.c \
 	src/overlays/niki/unk1_after_fixed_prompts.c \
-	src/overlays/niki/unk1_mid1.c \
 	src/overlays/niki/unk1_mid2.c \
 	src/overlays/niki/unk1_tail.c
 overlay_niki_gcc_272_cdk_g0_srcs := \
@@ -772,6 +772,7 @@ overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki_known_entry_type.c \
 	src/overlays/niki/niki_fixed_prompts.c \
 	src/overlays/niki/niki_stream_reset.c \
+	src/overlays/niki/niki_init_stream_handles.c \
 	src/overlays/niki/niki_shutdown_handles.c \
 	src/overlays/niki/niki_handles.c \
 	src/overlays/niki/niki_draw_signed_decimal.c \

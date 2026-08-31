@@ -212,6 +212,7 @@ segments:
       - [0x52D89, c, unk2_i_b_split018]            # gcc272_cdk, func_800A29F8
       - [0x53169, c, field53]                      # gcc272_cdk, func_800A2DD8
       - [0x531D1, c, unk2_i_b_split019]         # gcc272_cdk, func_800A2E40
+      - [0x538C5, c, field_restore_entry_music]    # gcc272_cdk, 1 func, 100%
       - [0x53985, c, field56]                   # gcc272_cdk, func_800A35F4
       - [0x53A1D, c, field_audio]               # gcc272_cdk, covers func_800A368C .. func_800A3858
       - [0x53C65, c, field57]                      # gcc272_cdk, func_800A38D4
