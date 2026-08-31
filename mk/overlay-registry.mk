@@ -37,7 +37,10 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_fixed_prompts.c \
 	src/overlays/addhero/addhero_reset_entry_ranks.c \
 	src/overlays/addhero/addhero_stream_reset.c \
+	src/overlays/addhero/addhero_init_stream_handles.c \
 	src/overlays/addhero/addhero_shutdown_handles.c \
+	src/overlays/addhero/addhero_begin_entry_scan.c \
+	src/overlays/addhero/addhero_commit_selected_entry.c \
 	src/overlays/addhero/addhero_handles.c \
 	src/overlays/addhero/addhero_draw_signed_decimal.c \
 	src/overlays/addhero/addhero_text_render.c \
@@ -64,12 +67,10 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1_text_gap.c \
 	src/overlays/addhero/unk1_after_claim_element.c \
 	src/overlays/addhero/unk1_before_choice_tail.c \
-	src/overlays/addhero/unk1_before_choice_mid.c \
 	src/overlays/addhero/unk1_before_choice_mid_tail.c \
 	src/overlays/addhero/unk1_before_rank.c \
 	src/overlays/addhero/unk1_after_fixed_prompts.c \
-	src/overlays/addhero/unk1_mid1.c \
-	src/overlays/addhero/unk1_mid2.c \
+	src/overlays/addhero/unk1_mid2_middle.c \
 	src/overlays/addhero/unk1_tail.c
 
 OVERLAYS += carda
@@ -84,6 +85,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_panel_tiles.c \
 	src/overlays/carda/carda_claim_element.c \
 	src/overlays/carda/carda_stream_reset.c \
+	src/overlays/carda/carda_init_stream_handles.c \
 	src/overlays/carda/carda_shutdown_handles.c \
 	src/overlays/carda/carda_handles.c \
 	src/overlays/carda/carda_draw_signed_decimal.c \
@@ -116,7 +118,6 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_choice_tail.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
 	src/overlays/carda/unk1_before_stream_reset_tail.c \
-	src/overlays/carda/unk1_mid1.c \
 	src/overlays/carda/unk1_mid2.c \
 	src/overlays/carda/unk1_tail.c
 
@@ -338,6 +339,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800A2990.c \
 	src/overlays/field/unk2_i_b_split018.c \
 	src/overlays/field/unk2_i_b_split019.c \
+	src/overlays/field/field_restore_entry_music.c \
 	src/overlays/field/unk2_b_split001.c \
 	src/overlays/field/unk2_b_split001_tail.c \
 	src/overlays/field/func_800A3B78.c \
@@ -386,7 +388,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split026_tail.c \
 	src/overlays/field/unk2_b_split027.c \
 	src/overlays/field/unk2_b_split028.c \
-	src/overlays/field/unk2_b_split029.c \
+	src/overlays/field/unk2_b_split029_mid.c \
+	src/overlays/field/func_800B7A74.c \
 	src/overlays/field/unk2_b_split030.c \
 	src/overlays/field/func_800B8964.c \
 	src/overlays/field/unk2_b_split031.c \
@@ -444,9 +447,9 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800CA568.c \
 	src/overlays/field/func_800CB680.c \
 	src/overlays/field/unk2_b_split098.c \
-	src/overlays/field/unk2_b_split098_tail.c \
+	src/overlays/field/func_800CBEC4.c \
 	src/overlays/field/field235.c \
-	src/overlays/field/unk2_b_split099.c \
+	src/overlays/field/func_800A8E28.c \
 	src/overlays/field/func_800A8EAC.c \
 	src/overlays/field/unk2_b_split100.c \
 	src/overlays/field/func_80087614.c \
@@ -588,6 +591,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800B4DF0.c \
 	src/overlays/field/func_800B607C.c \
 	src/overlays/field/func_800B70F4.c \
+	src/overlays/field/func_800B78C0.c \
 	src/overlays/field/func_800B88C4.c \
 	src/overlays/field/func_800BA368.c \
 	src/overlays/field/func_800BC474.c \
@@ -603,7 +607,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800C2848.c \
 	src/overlays/field/func_800C2DC0.c \
 	src/overlays/field/func_800C5760.c \
-	src/overlays/field/unk2_b_split079.c \
+	src/overlays/field/func_800C7494.c \
 	src/overlays/field/func_800BD3B0.c \
 	src/overlays/field/func_800CBE64.c \
 	src/overlays/field/field91.c \
@@ -761,8 +765,7 @@ OVERLAYS += niki
 overlay_niki_gcc_280_g0_srcs := \
 	src/overlays/niki/unk1.c \
 	src/overlays/niki/unk1_after_fixed_prompts.c \
-	src/overlays/niki/unk1_mid1.c \
-	src/overlays/niki/unk1_mid2.c \
+	src/overlays/niki/unk1_mid2_middle.c \
 	src/overlays/niki/unk1_tail.c
 overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki.c \
@@ -770,7 +773,10 @@ overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki_known_entry_type.c \
 	src/overlays/niki/niki_fixed_prompts.c \
 	src/overlays/niki/niki_stream_reset.c \
+	src/overlays/niki/niki_init_stream_handles.c \
 	src/overlays/niki/niki_shutdown_handles.c \
+	src/overlays/niki/niki_begin_entry_scan.c \
+	src/overlays/niki/niki_commit_selected_entry.c \
 	src/overlays/niki/niki_handles.c \
 	src/overlays/niki/niki_draw_signed_decimal.c \
 	src/overlays/niki/niki_text_render.c \
@@ -787,12 +793,18 @@ overlay_shop_gcc_272_cdk_g0_srcs := \
 	src/overlays/shop/shop_element_utils.c \
 	src/overlays/shop/shop_string_utils.c \
 	src/overlays/shop/shop_element_init_a.c \
-	src/overlays/shop/shop_element_init_b.c
+	src/overlays/shop/shop_element_init_b.c \
+	src/overlays/shop/shop_mode_element_init.c \
+	src/overlays/shop/shop_draw_indexed_glyph.c \
+	src/overlays/shop/shop_draw_mode_glyph.c \
+	src/overlays/shop/shop_draw_money_value.c
+overlay_shop_gcc_272_cdk_g0_nostrength_srcs := \
+	src/overlays/shop/shop_setup_custom_list.c
 overlay_shop_gcc_280_g0_srcs := \
 	src/overlays/shop/unk1_after_init.c \
 	src/overlays/shop/unk1_after_interp.c \
 	src/overlays/shop/unk1_mid.c \
-	src/overlays/shop/unk1_tail.c \
+	src/overlays/shop/unk1_mid_tail.c \
 	src/overlays/shop/unk1_tail_mid.c \
 	src/overlays/shop/unk1_tail_end.c
 
@@ -810,9 +822,18 @@ overlay_wsel_gcc_280_g0_srcs := \
 	src/overlays/wsel/unk1_tail_mid.c
 
 OVERLAYS += zukan
+overlay_zukan_gcc_272_cdk_g0_srcs := \
+	src/overlays/zukan/zukan_image_upload.c \
+	src/overlays/zukan/zukan_update_frame.c \
+	src/overlays/zukan/zukan_mode_setters.c \
+	src/overlays/zukan/zukan_resource_helpers.c
 overlay_zukan_gcc_280_g0_srcs := \
 	src/overlays/zukan/unk1.c \
+	src/overlays/zukan/unk1_after_update_frame.c \
+	src/overlays/zukan/zukan_scroll_window.c \
 	src/overlays/zukan/zukan_gpu_modes.c \
 	src/overlays/zukan/unk1_mid.c \
+	src/overlays/zukan/unk1_mid_tail.c \
 	src/overlays/zukan/zukan_outline_fade.c \
-	src/overlays/zukan/unk1_tail.c
+	src/overlays/zukan/unk1_tail.c \
+	src/overlays/zukan/unk1_tail_after_resource_helpers.c
