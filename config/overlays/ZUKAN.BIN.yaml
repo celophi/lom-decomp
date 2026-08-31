@@ -42,9 +42,14 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x1095, c, unk1]
+      - [0x1741, c, zukan_scroll_window] # gcc280_g0, func_80141740, 100%
       - [0x1795, c, zukan_gpu_modes]      # gcc280_g0, 3 funcs, 100%
       - [0x18A5, c, unk1_mid]
+      - [0x1B91, c, zukan_mode_setters] # gcc272_cdk, 2 funcs, 100%
+      - [0x1C09, c, unk1_mid_tail]
       - [0x2375, c, zukan_outline_fade]   # gcc280_g0, 3 funcs, 100%
       - [0x27E1, c, unk1_tail]
+      - [0x2885, c, zukan_resource_helpers] # gcc272_cdk, 2 funcs, 100%
+      - [0x28F1, c, unk1_tail_after_resource_helpers]
       - [0x471D, data, data]
   - [0x17D7D]
