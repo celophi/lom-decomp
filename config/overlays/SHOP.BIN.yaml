@@ -42,7 +42,7 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x5, c, shop_init]                   # gcc272_cdk, func_80140004 + func_801400D4, 100%
-      - [0x165, c, unk1_after_init]
+      - [0x165, c, shop_setup_default_list]   # gcc272_cdk, func_80140164, 100%
       - [0x4A9, c, shop_setup_custom_list]      # gcc272_cdk, -fno-strength-reduce, func_801404A8, 100%
       - [0x799, c, shop_update_interp]          # gcc272_cdk, func_80140798, 100%
       - [0x839, c, unk1_after_interp]
