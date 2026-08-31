@@ -46,6 +46,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_init_stream_handles.c \
 	src/overlays/addhero/addhero_shutdown_handles.c \
 	src/overlays/addhero/addhero_begin_entry_scan.c \
+	src/overlays/addhero/addhero_poll_entry_scan.c \
 	src/overlays/addhero/addhero_commit_selected_entry.c \
 	src/overlays/addhero/addhero_handles.c \
 	src/overlays/addhero/addhero_draw_signed_decimal.c \
@@ -75,7 +76,6 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1_before_choice_mid_tail.c \
 	src/overlays/addhero/unk1_before_rank.c \
 	src/overlays/addhero/unk1_after_fixed_prompts.c \
-	src/overlays/addhero/unk1_mid2_middle.c \
 	src/overlays/addhero/unk1_tail.c
 
 OVERLAYS += carda
