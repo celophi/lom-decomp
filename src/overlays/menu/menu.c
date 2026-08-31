@@ -6871,52 +6871,35 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
         case 0:
         {
             s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
-            if (v < 0x24)
+            switch (v)
             {
-                if (v < 0x21)
-                {
-                    if (v == 0x13)
-                        goto cat0_reset;
-                    goto cat0_common;
-                }
-                goto cat0_increment;
+            case 0x21:
+            case 0x22:
+            case 0x23:
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
+                break;
+            case 0x13:
+            case 0x24:
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x21;
+                break;
             }
-            if (v == 0x24)
-                goto cat0_reset;
-            goto cat0_common;
-cat0_increment:
-            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
-            goto cat0_after_write;
-cat0_reset:
-            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x21;
-cat0_after_write:
-cat0_common:
             g_menu_nodes[g_menu_scene_type].label_id = D_8016869F[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
             break;
         }
         case 1:
         {
             s32 v = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
-            if (v < 0x27)
+            switch (v)
             {
-                if (v < 0x25)
-                {
-                    if (v == 0x16)
-                        goto cat1_reset;
-                    goto cat1_common;
-                }
-                goto cat1_increment;
+            case 0x25:
+            case 0x26:
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
+                break;
+            case 0x16:
+            case 0x27:
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x25;
+                break;
             }
-            if (v == 0x27)
-                goto cat1_reset;
-            goto cat1_common;
-cat1_increment:
-            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = v + 1;
-            goto cat1_after_write;
-cat1_reset:
-            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx = 0x25;
-cat1_after_write:
-cat1_common:
             g_menu_nodes[g_menu_scene_type].label_id = D_8016869F[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
             break;
         }
@@ -7065,16 +7048,12 @@ cat1_common:
                         addPrim(ot, (DR_TPAGE*)buf);
                         buf = (DR_TPAGE*)buf + 1;
                     }
-                    goto pending_hit_check;
                 }
             }
-            else
+
+            if (g_menu_pending_item_row != 0xFF && (y >> 4) == g_menu_pending_item_row)
             {
-pending_hit_check:
-                if (g_menu_pending_item_row != 0xFF && (y >> 4) == g_menu_pending_item_row)
-                {
-                    hit_slot = (u8*)g_pad_ctx + ((idx << 6) + 0xCE0);
-                }
+                hit_slot = (u8*)g_pad_ctx + ((idx << 6) + 0xCE0);
             }
 
             if ((y >> 4) == list->sel_idx)
