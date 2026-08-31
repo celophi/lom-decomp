@@ -43,11 +43,14 @@ segments:
       - [0x1, rodata, rodata]
       - [0x5, c, shop_init]                   # gcc272_cdk, func_80140004 + func_801400D4, 100%
       - [0x165, c, unk1_after_init]
+      - [0x4A9, c, shop_setup_custom_list]      # gcc272_cdk, -fno-strength-reduce, func_801404A8, 100%
       - [0x799, c, shop_update_interp]          # gcc272_cdk, func_80140798, 100%
       - [0x839, c, unk1_after_interp]
       - [0xCA5, c, shop_mode_element_init]     # gcc272_cdk, func_80140CA4, 100%
       - [0xD4D, c, shop_element_utils]          # gcc272_cdk, 3 funcs, 100%
       - [0xE01, c, unk1_mid]
+      - [0x14F9, c, shop_draw_money_value]      # gcc272_cdk, func_801414F8, 100%
+      - [0x15F5, c, unk1_mid_tail]
       - [0x20B9, c, shop_draw_indexed_glyph]   # gcc272_cdk, func_801420B8, 100%
       - [0x2131, c, shop_string_utils]          # gcc272_cdk, 3 funcs, 100%
       - [0x2285, c, shop_draw_mode_glyph]      # gcc272_cdk, func_80142284, 100%
