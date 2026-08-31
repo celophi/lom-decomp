@@ -58,8 +58,7 @@ segments:
       - [0x2619, c, addhero_draw_load_prompt] # gcc272_cdk, func_80142618, 100%
       - [0x280D, c, unk1_before_choice_tail]
       - [0x2A0D, c, addhero_timer_bar]        # gcc272_cdk, 1 func, 100%
-      - [0x2B1D, c, addhero_choice_init]       # gcc272_cdk, func_80142B1C, 100%
-      - [0x2C09, c, unk1_before_choice_mid]
+      - [0x2B1D, c, addhero_choice_init]       # gcc272_cdk, func_80142B1C + func_80142C08, 100%
       - [0x2CE9, c, addhero_choice_state]       # gcc272_cdk, func_80142CE8, 100%
       - [0x2E6D, c, unk1_before_choice_mid_tail]
       - [0x3DC1, c, addhero_glyph_builder]     # gcc272_cdk, func_80143DC0, 100%

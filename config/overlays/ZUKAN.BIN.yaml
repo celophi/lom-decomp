@@ -42,6 +42,9 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x1095, c, unk1]
+      - [0x1145, c, zukan_image_upload] # gcc272_cdk, func_80141144 + func_801411C4, 100%
+      - [0x128D, c, zukan_update_frame] # gcc272_cdk, func_8014128C, 100%
+      - [0x1355, c, unk1_after_update_frame]
       - [0x1741, c, zukan_scroll_window] # gcc280_g0, func_80141740, 100%
       - [0x1795, c, zukan_gpu_modes]      # gcc280_g0, 3 funcs, 100%
       - [0x18A5, c, unk1_mid]

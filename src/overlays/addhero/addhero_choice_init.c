@@ -54,3 +54,31 @@ void func_80142B1C(s32 arg0)
     D_80165488 = 0;
     D_801609E8 = arg0;
 }
+
+extern AddheroElement D_8016094C;
+s32 func_80142E6C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
+
+/**
+ * @brief Initialize the secondary choice element and reset its transition state.
+ * @see decomp.me (100%)
+ */
+void func_80142C08(s32 arg0)
+{
+    func_800A3938(0x78, 0x80);
+    D_8016094C.draw_handler = (void *)func_80142E6C;
+    D_8016094C.attr.f.unk0_3 = 1;
+    D_8016094C.attr.f.state = 1;
+    D_8016094C.attr.f.x = 0x20;
+    D_8016094C.attr.f.unk0_16 = 0x70;
+    D_8016094C.unk4_0 = 1;
+    D_8016094C.y = 0x14;
+    SET_ELEM_CODE(&D_8016094C, 0);
+    func_800AA02C();
+    D_80165200 = 0;
+    D_80160934 = 0;
+    D_801609B8 = 0;
+    D_80164A40 = 0;
+    func_801449F0();
+    D_80165488 = 0;
+    D_801609E8 = arg0;
+}

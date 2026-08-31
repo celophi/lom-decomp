@@ -65,7 +65,6 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1_text_gap.c \
 	src/overlays/addhero/unk1_after_claim_element.c \
 	src/overlays/addhero/unk1_before_choice_tail.c \
-	src/overlays/addhero/unk1_before_choice_mid.c \
 	src/overlays/addhero/unk1_before_choice_mid_tail.c \
 	src/overlays/addhero/unk1_before_rank.c \
 	src/overlays/addhero/unk1_after_fixed_prompts.c \
@@ -820,10 +819,13 @@ overlay_wsel_gcc_280_g0_srcs := \
 
 OVERLAYS += zukan
 overlay_zukan_gcc_272_cdk_g0_srcs := \
+	src/overlays/zukan/zukan_image_upload.c \
+	src/overlays/zukan/zukan_update_frame.c \
 	src/overlays/zukan/zukan_mode_setters.c \
 	src/overlays/zukan/zukan_resource_helpers.c
 overlay_zukan_gcc_280_g0_srcs := \
 	src/overlays/zukan/unk1.c \
+	src/overlays/zukan/unk1_after_update_frame.c \
 	src/overlays/zukan/zukan_scroll_window.c \
 	src/overlays/zukan/zukan_gpu_modes.c \
 	src/overlays/zukan/unk1_mid.c \
