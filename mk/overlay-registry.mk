@@ -23,6 +23,12 @@
 
 OVERLAYS += addhero
 overlay_addhero_gcc_272_cdk_g0_srcs := \
+	src/overlays/addhero/addhero_init.c \
+	src/overlays/addhero/addhero_load_sequence.c \
+	src/overlays/addhero/addhero_reset_state.c \
+	src/overlays/addhero/addhero_choice_cleanup.c \
+	src/overlays/addhero/addhero_state_step.c \
+	src/overlays/addhero/addhero_reset_packets.c \
 	src/overlays/addhero/addhero_core_state.c \
 	src/overlays/addhero/addhero_row_status.c \
 	src/overlays/addhero/addhero_terminate_multibyte_text.c \
@@ -40,6 +46,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_init_stream_handles.c \
 	src/overlays/addhero/addhero_shutdown_handles.c \
 	src/overlays/addhero/addhero_begin_entry_scan.c \
+	src/overlays/addhero/addhero_poll_entry_scan.c \
 	src/overlays/addhero/addhero_commit_selected_entry.c \
 	src/overlays/addhero/addhero_handles.c \
 	src/overlays/addhero/addhero_draw_signed_decimal.c \
@@ -59,18 +66,16 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_glyph_builder.c \
 	src/overlays/addhero/addhero_rank_entries.c
 overlay_addhero_gcc_280_g0_srcs := \
-	src/overlays/addhero/unk1.c \
+	src/overlays/addhero/unk1_after_state_step.c \
 	src/overlays/addhero/unk1_after_update_state.c \
 	src/overlays/addhero/addhero_mode_glyph.c \
 	src/overlays/addhero/unk1_after_panel_tiles.c \
 	src/overlays/addhero/addhero_scan_hex_digits.c \
-	src/overlays/addhero/unk1_text_gap.c \
 	src/overlays/addhero/unk1_after_claim_element.c \
 	src/overlays/addhero/unk1_before_choice_tail.c \
 	src/overlays/addhero/unk1_before_choice_mid_tail.c \
 	src/overlays/addhero/unk1_before_rank.c \
 	src/overlays/addhero/unk1_after_fixed_prompts.c \
-	src/overlays/addhero/unk1_mid2_middle.c \
 	src/overlays/addhero/unk1_tail.c
 
 OVERLAYS += carda
@@ -79,14 +84,21 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_terminate_multibyte_text.c \
 	src/overlays/carda/carda_string_utils.c \
 	src/overlays/carda/carda_checksum.c \
+	src/overlays/carda/func_8014344C.c \
+	src/overlays/carda/func_8014366C.c \
+	src/overlays/carda/func_80143DF4.c \
+	src/overlays/carda/func_80143F90.c \
 	src/overlays/carda/carda_choice_prompt.c \
 	src/overlays/carda/carda_choice_cancel.c \
+	src/overlays/carda/carda_restore_record.c \
 	src/overlays/carda/carda_hex_parse.c \
 	src/overlays/carda/carda_panel_tiles.c \
 	src/overlays/carda/carda_claim_element.c \
 	src/overlays/carda/carda_stream_reset.c \
 	src/overlays/carda/carda_init_stream_handles.c \
 	src/overlays/carda/carda_shutdown_handles.c \
+	src/overlays/carda/carda_begin_entry_scan.c \
+	src/overlays/carda/carda_commit_selected_entry.c \
 	src/overlays/carda/carda_handles.c \
 	src/overlays/carda/carda_draw_signed_decimal.c \
 	src/overlays/carda/carda_text_render.c \
@@ -94,12 +106,16 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_expand_text_glyph_codes.c \
 	src/overlays/carda/carda_state_step.c \
 	src/overlays/carda/carda_update_state.c \
+	src/overlays/carda/carda_reset_menu_state.c \
 	src/overlays/carda/carda_packet_helpers.c \
+	src/overlays/carda/carda_check_slot_flag.c \
 	src/overlays/carda/carda_validate_resource.c \
 	src/overlays/carda/carda_format_decimal.c \
 	src/overlays/carda/carda_nibble_pair.c \
 	src/overlays/carda/carda_parse_hex_suffix_byte.c \
 	src/overlays/carda/carda_reset_entry_ranks.c \
+	src/overlays/carda/carda_known_entry_type.c \
+	src/overlays/carda/carda_fixed_prompts.c \
 	src/overlays/carda/carda_format_hex.c \
 	src/overlays/carda/carda_glyph_builder.c \
 	src/overlays/carda/carda_header_label.c
@@ -111,14 +127,16 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_claim_element.c \
 	src/overlays/carda/unk1_after_strings.c \
 	src/overlays/carda/carda_scan_hex_digits.c \
-	src/overlays/carda/unk1_after_hex_scan.c \
-	src/overlays/carda/unk1_after_checksum.c \
+	src/overlays/carda/unk1_after_checksum_mid.c \
+	src/overlays/carda/unk1_after_checksum_tail.c \
 	src/overlays/carda/unk1_after_choice.c \
+	src/overlays/carda/unk1_after_choice_after_restore.c \
 	src/overlays/carda/unk1_after_choice_mid.c \
 	src/overlays/carda/unk1_after_choice_tail.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
-	src/overlays/carda/unk1_before_stream_reset_tail.c \
-	src/overlays/carda/unk1_mid2.c \
+	src/overlays/carda/unk1_before_stream_reset_tail_mid.c \
+	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c \
+	src/overlays/carda/unk1_mid2_middle.c \
 	src/overlays/carda/unk1_tail.c
 
 OVERLAYS += checkps
