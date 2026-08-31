@@ -45,7 +45,9 @@ segments:
       - [0x1F9, c, addhero_state_step]       # gcc272_cdk, func_801401F8, 100%
       - [0x28D, c, unk1_after_state_step]
       - [0x6A9, c, addhero_update_state]       # gcc272_cdk, 1 func, 100%
-      - [0x791, c, unk1_after_update_state]
+      - [0x791, c, addhero_load_sequence]    # gcc272_cdk, func_80140790, 100%
+      - [0x8B1, c, unk1_after_update_state]
+      - [0xC19, c, addhero_reset_state]       # gcc272_cdk, func_80140C18, 100%
       - [0xC95, c, addhero_core_state]         # gcc272_cdk, 3 funcs, 100%
       - [0xD81, c, addhero_row_status]        # gcc272_cdk, func_80140D80, 100%
       - [0x1431, c, addhero_mode_glyph]        # gcc280, 1 func, 100%
@@ -62,7 +64,8 @@ segments:
       - [0x2A0D, c, addhero_timer_bar]        # gcc272_cdk, 1 func, 100%
       - [0x2B1D, c, addhero_choice_init]       # gcc272_cdk, func_80142B1C + func_80142C08, 100%
       - [0x2CE9, c, addhero_choice_state]       # gcc272_cdk, func_80142CE8, 100%
-      - [0x2E6D, c, unk1_before_choice_mid_tail]
+      - [0x2E6D, c, addhero_choice_cleanup]  # gcc272_cdk, func_80142E6C, 100%
+      - [0x3045, c, unk1_before_choice_mid_tail]
       - [0x3DC1, c, addhero_glyph_builder]     # gcc272_cdk, func_80143DC0, 100%
       - [0x4009, c, addhero_choice_prompt]      # gcc272_cdk, 2 funcs, 100%
       - [0x4141, c, addhero_validate_resource] # gcc272_cdk, 1 func, 100%

@@ -24,6 +24,9 @@
 OVERLAYS += addhero
 overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_init.c \
+	src/overlays/addhero/addhero_load_sequence.c \
+	src/overlays/addhero/addhero_reset_state.c \
+	src/overlays/addhero/addhero_choice_cleanup.c \
 	src/overlays/addhero/addhero_state_step.c \
 	src/overlays/addhero/addhero_reset_packets.c \
 	src/overlays/addhero/addhero_core_state.c \
