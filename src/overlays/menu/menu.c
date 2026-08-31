@@ -8088,7 +8088,6 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     u8* ctx;
     u8* ctx2;
     s32 slot_off;
-    s8* flag_ptr;
     u32 unk14;
     u32 lhs_shift;
     u32 cmp_shift;
@@ -8160,6 +8159,9 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             switch (g_menu_active_subtype)
             {
             case 7:
+            {
+                s8* ability_mask_ptr;
+
                 i = 3;
                 while (i >= 0)
                 {
@@ -8169,7 +8171,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 0x24;
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = D_8016869F[g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx];
 
-                flag_ptr = &g_menu_ability_mask;
+                ability_mask_ptr = &g_menu_ability_mask;
                 mask = 0;
                 entry = (u8*)g_menu_equipment_base;
                 idx = 0;
@@ -8191,14 +8193,19 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                     entry += 0x40;
                 } while (idx < 4);
 
-                arg = 0;
-                break;
+                *ability_mask_ptr = mask;
+                g_menu_content_ready = 1;
+                menu_open_content_page(0);
+                g_menu_draw_early_out = 1;
+                return buf;
+            }
 
             case 8:
             case 9:
             case 0xA:
             {
-                s32 idxb;
+                s8* ability_mask_ptr;
+
                 i1 = 3;
                 while (i1 >= 0)
                 {
@@ -8208,14 +8215,14 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 0x27;
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = D_8016869B[g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx];
 
-                flag_ptr = &g_menu_ability_mask;
+                ability_mask_ptr = &g_menu_ability_mask;
                 mask = 0;
-                idxb = 0;
+                idx = 0;
                 entry = (u8*)g_menu_equipment_base;
 
                 do
                 {
-                    if ((idxb != (g_menu_active_subtype - 7)) && (entry[0] != 0))
+                    if ((idx != (g_menu_active_subtype - 7)) && (entry[0] != 0))
                     {
                         unk14 = *(u32*)(entry + 0x14);
                         if (unk14 & 0x300)
@@ -8227,25 +8234,20 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                             mask |= D_800F0BE0[(unk14 >> 10) & 0x3F];
                         }
                     }
-                    idxb += 1;
+                    idx += 1;
                     entry += 0x40;
-                } while (idxb < 4);
+                } while (idx < 4);
 
-                arg = 1;
-                break;
+                *ability_mask_ptr = mask;
+                g_menu_content_ready = 1;
+                menu_open_content_page(1);
+                g_menu_draw_early_out = 1;
+                return buf;
             }
 
             default:
-                goto no_mask_update;
+                break;
             }
-
-            *flag_ptr = mask;
-            g_menu_content_ready = 1;
-            menu_open_content_page(arg);
-            g_menu_draw_early_out = 1;
-            return buf;
-
-        no_mask_update:
             break;
 
         outer_case_1:
