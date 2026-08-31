@@ -60,7 +60,12 @@ segments:
       - [0x3381, c, carda_check_slot_flag]     # gcc272_cdk, func_80143380, 100%
       - [0x33C1, c, carda_validate_resource]  # gcc272_cdk, 1 func, 100%
       - [0x3415, c, carda_checksum]             # gcc272_cdk, 1 func, 100%
-      - [0x344D, c, unk1_after_checksum]
+      - [0x344D, c, func_8014344C]              # gcc272_cdk, func_8014344C, 100%
+      - [0x366D, c, func_8014366C]              # gcc272_cdk, func_8014366C, 100%
+      - [0x385D, c, unk1_after_checksum_mid]
+      - [0x3DF5, c, func_80143DF4]              # gcc272_cdk, func_80143DF4, 100%
+      - [0x3F91, c, func_80143F90]              # gcc272_cdk, func_80143F90, 100%
+      - [0x4051, c, unk1_after_checksum_tail]
       - [0x4CD1, c, carda_glyph_builder]       # gcc272_cdk, func_80144CD0, 100%
       - [0x4F19, c, carda_choice_prompt]        # gcc272_cdk, 2 funcs, 100%
       - [0x5051, c, unk1_after_choice]
@@ -76,7 +81,8 @@ segments:
       - [0x7491, c, carda_parse_hex_suffix_byte] # gcc272_cdk, func_80147490, 100%
       - [0x7589, c, unk1_before_stream_reset]
       - [0x7C5D, c, carda_reset_entry_ranks]       # gcc272_cdk, func_80147C5C, 100%
-      - [0x7C95, c, unk1_before_stream_reset_tail]
+      - [0x7C95, c, carda_known_entry_type]     # gcc272_cdk, func_80147C94, 100%
+      - [0x7DCD, c, unk1_before_stream_reset_tail_mid]
       - [0x7E89, c, carda_fixed_prompts]       # gcc272_cdk, func_80147E88, 100%
       - [0x7F4D, c, unk1_before_stream_reset_tail_after_fixed_prompts]
       - [0x95E5, c, carda_stream_reset]        # gcc272_cdk, 2 funcs, 100%

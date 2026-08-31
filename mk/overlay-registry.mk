@@ -84,6 +84,10 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_terminate_multibyte_text.c \
 	src/overlays/carda/carda_string_utils.c \
 	src/overlays/carda/carda_checksum.c \
+	src/overlays/carda/func_8014344C.c \
+	src/overlays/carda/func_8014366C.c \
+	src/overlays/carda/func_80143DF4.c \
+	src/overlays/carda/func_80143F90.c \
 	src/overlays/carda/carda_choice_prompt.c \
 	src/overlays/carda/carda_choice_cancel.c \
 	src/overlays/carda/carda_restore_record.c \
@@ -110,6 +114,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_nibble_pair.c \
 	src/overlays/carda/carda_parse_hex_suffix_byte.c \
 	src/overlays/carda/carda_reset_entry_ranks.c \
+	src/overlays/carda/carda_known_entry_type.c \
 	src/overlays/carda/carda_fixed_prompts.c \
 	src/overlays/carda/carda_format_hex.c \
 	src/overlays/carda/carda_glyph_builder.c \
@@ -122,13 +127,14 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_claim_element.c \
 	src/overlays/carda/unk1_after_strings.c \
 	src/overlays/carda/carda_scan_hex_digits.c \
-	src/overlays/carda/unk1_after_checksum.c \
+	src/overlays/carda/unk1_after_checksum_mid.c \
+	src/overlays/carda/unk1_after_checksum_tail.c \
 	src/overlays/carda/unk1_after_choice.c \
 	src/overlays/carda/unk1_after_choice_after_restore.c \
 	src/overlays/carda/unk1_after_choice_mid.c \
 	src/overlays/carda/unk1_after_choice_tail.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
-	src/overlays/carda/unk1_before_stream_reset_tail.c \
+	src/overlays/carda/unk1_before_stream_reset_tail_mid.c \
 	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c \
 	src/overlays/carda/unk1_mid2_middle.c \
 	src/overlays/carda/unk1_tail.c
