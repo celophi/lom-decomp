@@ -789,12 +789,14 @@ overlay_shop_gcc_272_cdk_g0_srcs := \
 	src/overlays/shop/shop_element_utils.c \
 	src/overlays/shop/shop_string_utils.c \
 	src/overlays/shop/shop_element_init_a.c \
-	src/overlays/shop/shop_element_init_b.c
+	src/overlays/shop/shop_element_init_b.c \
+	src/overlays/shop/shop_mode_element_init.c \
+	src/overlays/shop/shop_draw_indexed_glyph.c \
+	src/overlays/shop/shop_draw_mode_glyph.c
 overlay_shop_gcc_280_g0_srcs := \
 	src/overlays/shop/unk1_after_init.c \
 	src/overlays/shop/unk1_after_interp.c \
 	src/overlays/shop/unk1_mid.c \
-	src/overlays/shop/unk1_tail.c \
 	src/overlays/shop/unk1_tail_mid.c \
 	src/overlays/shop/unk1_tail_end.c
 
