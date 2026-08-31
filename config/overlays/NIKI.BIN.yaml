@@ -52,7 +52,9 @@ segments:
       - [0x5995, c, niki_stream_reset]         # gcc272_cdk, 2 funcs, 100%
       - [0x5A41, c, niki_init_stream_handles]     # gcc272_cdk, 1 func, 100%
       - [0x5C0D, c, niki_shutdown_handles]     # gcc272_cdk, 1 func, 100%
-      - [0x5CBD, c, unk1_mid2]
+      - [0x5CBD, c, niki_begin_entry_scan]         # gcc272_cdk, func_80145CBC, 100%
+      - [0x5DA5, c, unk1_mid2_middle]
+      - [0x5F69, c, niki_commit_selected_entry]     # gcc272_cdk, func_80145F68, 100%
       - [0x6115, c, niki_handles]              # gcc272_cdk, 4 funcs, 100%
       - [0x62ED, c, unk1_tail]
       - [0x671D, c, niki_draw_signed_decimal]  # gcc272_cdk, 1 func, 100%

@@ -39,6 +39,8 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_stream_reset.c \
 	src/overlays/addhero/addhero_init_stream_handles.c \
 	src/overlays/addhero/addhero_shutdown_handles.c \
+	src/overlays/addhero/addhero_begin_entry_scan.c \
+	src/overlays/addhero/addhero_commit_selected_entry.c \
 	src/overlays/addhero/addhero_handles.c \
 	src/overlays/addhero/addhero_draw_signed_decimal.c \
 	src/overlays/addhero/addhero_text_render.c \
@@ -68,7 +70,7 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1_before_choice_mid_tail.c \
 	src/overlays/addhero/unk1_before_rank.c \
 	src/overlays/addhero/unk1_after_fixed_prompts.c \
-	src/overlays/addhero/unk1_mid2.c \
+	src/overlays/addhero/unk1_mid2_middle.c \
 	src/overlays/addhero/unk1_tail.c
 
 OVERLAYS += carda
@@ -763,7 +765,7 @@ OVERLAYS += niki
 overlay_niki_gcc_280_g0_srcs := \
 	src/overlays/niki/unk1.c \
 	src/overlays/niki/unk1_after_fixed_prompts.c \
-	src/overlays/niki/unk1_mid2.c \
+	src/overlays/niki/unk1_mid2_middle.c \
 	src/overlays/niki/unk1_tail.c
 overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki.c \
@@ -773,6 +775,8 @@ overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki_stream_reset.c \
 	src/overlays/niki/niki_init_stream_handles.c \
 	src/overlays/niki/niki_shutdown_handles.c \
+	src/overlays/niki/niki_begin_entry_scan.c \
+	src/overlays/niki/niki_commit_selected_entry.c \
 	src/overlays/niki/niki_handles.c \
 	src/overlays/niki/niki_draw_signed_decimal.c \
 	src/overlays/niki/niki_text_render.c \
