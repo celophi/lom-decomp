@@ -23,6 +23,9 @@
 
 OVERLAYS += addhero
 overlay_addhero_gcc_272_cdk_g0_srcs := \
+	src/overlays/addhero/addhero_init.c \
+	src/overlays/addhero/addhero_state_step.c \
+	src/overlays/addhero/addhero_reset_packets.c \
 	src/overlays/addhero/addhero_core_state.c \
 	src/overlays/addhero/addhero_row_status.c \
 	src/overlays/addhero/addhero_terminate_multibyte_text.c \
@@ -59,12 +62,11 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_glyph_builder.c \
 	src/overlays/addhero/addhero_rank_entries.c
 overlay_addhero_gcc_280_g0_srcs := \
-	src/overlays/addhero/unk1.c \
+	src/overlays/addhero/unk1_after_state_step.c \
 	src/overlays/addhero/unk1_after_update_state.c \
 	src/overlays/addhero/addhero_mode_glyph.c \
 	src/overlays/addhero/unk1_after_panel_tiles.c \
 	src/overlays/addhero/addhero_scan_hex_digits.c \
-	src/overlays/addhero/unk1_text_gap.c \
 	src/overlays/addhero/unk1_after_claim_element.c \
 	src/overlays/addhero/unk1_before_choice_tail.c \
 	src/overlays/addhero/unk1_before_choice_mid_tail.c \
