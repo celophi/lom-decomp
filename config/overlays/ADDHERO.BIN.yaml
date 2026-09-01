@@ -57,7 +57,7 @@ segments:
       - [0x1DF1, c, addhero_terminate_multibyte_text] # gcc272_cdk, 1 func, 100%
       - [0x1E55, c, addhero_reset_packets]    # gcc272_cdk, func_80141E54, 100%
       - [0x1EAD, c, addhero_claim_element]     # gcc272_cdk, 1 func, 100%
-      - [0x1F01, c, unk1_after_claim_element]
+      - [0x1F01, c, func_80141F00]          # gcc272_cdk, 1 func, 100%
       - [0x24AD, c, addhero_string_utils]       # gcc272_cdk, 4 funcs, 100%
       - [0x2619, c, addhero_draw_load_prompt] # gcc272_cdk, func_80142618, 100%
       - [0x280D, c, addhero_draw_load_commit] # gcc272_cdk, func_8014280C, 100%
