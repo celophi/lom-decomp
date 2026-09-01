@@ -384,6 +384,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800AD194.c \
 	src/overlays/field/func_800AD7DC.c \
 	src/overlays/field/unk2_b_split015_tail.c \
+	src/overlays/field/func_800ADF84.c \
 	src/overlays/field/unk2_b_split016.c \
 	src/overlays/field/unk2_b_split017.c \
 	src/overlays/field/func_800AE9E0.c \
