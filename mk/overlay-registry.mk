@@ -94,6 +94,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_hex_parse.c \
 	src/overlays/carda/carda_panel_tiles.c \
 	src/overlays/carda/carda_claim_element.c \
+	src/overlays/carda/carda_format_slot.c \
 	src/overlays/carda/carda_stream_reset.c \
 	src/overlays/carda/carda_init_stream_handles.c \
 	src/overlays/carda/carda_shutdown_handles.c \
