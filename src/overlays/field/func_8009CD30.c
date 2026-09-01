@@ -1,24 +1,8 @@
 #include "common.h"
+#include "field_types.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
-
-typedef struct
-{
-    s32 vx;
-    s32 vy;
-    s32 vz;
-    s32 pad;
-} FieldVector;
-
-typedef struct
-{
-    s32 vx;
-    s32 vy;
-    s32 vz;
-    u8 unk0C[0x19];
-    u8 unk25;
-} FieldEntity;
 
 /**
  * @brief Test whether entity @p b sits in the annulus around position @p a.

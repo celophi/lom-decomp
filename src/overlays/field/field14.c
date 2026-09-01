@@ -1,12 +1,7 @@
 #include "common.h"
+#include "field_types.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
-
-typedef struct
-{
-    s16 m[3][3];
-    s32 t[3];
-} FieldMatrix;
 
 typedef struct
 {
@@ -15,20 +10,6 @@ typedef struct
     s16 unk4;
     s16 unk6;
 } FieldSVector;
-
-typedef struct
-{
-    s32 vx;
-    s32 vy;
-    s32 vz;
-    s32 pad;
-} FieldVector;
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 typedef struct
 {

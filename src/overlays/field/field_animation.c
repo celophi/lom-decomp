@@ -2323,23 +2323,20 @@ void field_retarget_cel_list_cluts(FieldAnimDef* def, FieldTintSrc* src, s32 fra
  * @note @p range_start_out must stay @c volatile and the otherwise-dead read of byte 7 must
  *       be preserved; both are required for the original codegen (the reload of
  *       @c *range_start_out and the stray load).
- * @note The @c do/while(0) wrapper IS required - removing it costs 6 exact rows.
- *       It emits loop notes, which lift REG_N_REFS for everything inside and
- *       change the allocation order (see [ALLOC-23]). @c for(;;) and @c while(1)
- *       measure identically, so any loop wrapper will do; a plain @c if with a
- *       trailing @c return will not.
+ * @note The natural @c while (linear_index >= header_count) loop with a final
+ *       @c break measures identically to the former artificial @c do/while(0)
+ *       wrapper. A plain @c if still loses six exact rows because the loop notes
+ *       affect GCC 2.8.0 allocation priorities (see [ALLOC-23]).
  * @note The loop body's apparently redundant recompute of @c range_end is genuine.
  *       Folding it into the natural
  *       `while (linear_index >= (u8) (range_start + (raw_count & 0x7F)))`
  *       form costs 9 exact rows and
  *       one instruction.
- * @note Measured inert, do not retry: every spelling of the dead read (bare
- *       expression, @c (void) cast, assignment to @c raw_count / @c range_end /
- *       @c header_count / @c range_start, @c s8 / @c s32 / @c u32 destination,
- *       array-index form, a
- *       @c volatile @c u8 @c * probe pointer, the @c register keyword without
- *       @c asm), and every declaration-order permutation of @c unused. All land
- *       in v0.
+ * @note A fresh temporary for the dead byte-7 read allocates to v0. Reusing an
+ *       existing byte variable can inherit that variable's register, but every
+ *       tested natural spelling still leaves this function one row short; the
+ *       remaining target load uses v1. Register pinning would close the row but
+ *       is intentionally forbidden.
  * @see decomp.me (99.82%) TODO
  */
 u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_start_out)
@@ -2352,28 +2349,26 @@ u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_
 
     *range_start_out = 0;
     header_count = *table & 0x7F;
-    do
+    while (linear_index >= header_count)
     {
-        if (linear_index >= header_count)
+        *range_start_out = header_count;
+        unused = *(volatile u8*)(table + 7);
+        table += 0x18;
+        raw_count = *table;
+        range_start = *range_start_out;
+        range_end = range_start + (raw_count & 0x7F);
+        while (linear_index >= (u8)range_end)
         {
-            *range_start_out = header_count;
-            unused = *(volatile u8*)(table + 7);
-            table += 0x18;
-            raw_count = *table;
-            range_start = *range_start_out;
+            table += 4;
             range_end = range_start + (raw_count & 0x7F);
-            while (linear_index >= (u8)range_end)
-            {
-                table += 4;
-                range_end = range_start + (raw_count & 0x7F);
-                *range_start_out = range_end;
-                raw_count = *table;
-                range_start = range_end;
-                range_end = range_end + (raw_count & 0x7F);
-            }
+            *range_start_out = range_end;
+            raw_count = *table;
+            range_start = range_end;
+            range_end = range_end + (raw_count & 0x7F);
         }
-        return table;
-    } while (0);
+        break;
+    }
+    return table;
 }
 
 /**

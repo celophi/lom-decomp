@@ -46,18 +46,18 @@ segments:
       - [0x28D, c, unk1_after_state_step]
       - [0x6A9, c, addhero_update_state]       # gcc272_cdk, 1 func, 100%
       - [0x791, c, addhero_load_sequence]    # gcc272_cdk, func_80140790, 100%
-      - [0x8B1, c, unk1_after_update_state]
+      - [0x8B1, c, func_801408B0]           # gcc272_cdk, 1 func, 100%
       - [0xC19, c, addhero_reset_state]       # gcc272_cdk, func_80140C18, 100%
       - [0xC95, c, addhero_core_state]         # gcc272_cdk, 3 funcs, 100%
       - [0xD81, c, addhero_row_status]        # gcc272_cdk, func_80140D80, 100%
       - [0x1431, c, addhero_mode_glyph]        # gcc280, 1 func, 100%
       - [0x14DD, c, addhero_panel_tiles]       # gcc272_cdk, 2 funcs, 100%
-      - [0x1695, c, unk1_after_panel_tiles]
+      - [0x1695, c, func_80141694]          # gcc272_cdk, func_80141694, 100%
       - [0x1DA5, c, addhero_scan_hex_digits]   # gcc280, 1 func, 100%
       - [0x1DF1, c, addhero_terminate_multibyte_text] # gcc272_cdk, 1 func, 100%
       - [0x1E55, c, addhero_reset_packets]    # gcc272_cdk, func_80141E54, 100%
       - [0x1EAD, c, addhero_claim_element]     # gcc272_cdk, 1 func, 100%
-      - [0x1F01, c, unk1_after_claim_element]
+      - [0x1F01, c, func_80141F00]          # gcc272_cdk, 1 func, 100%
       - [0x24AD, c, addhero_string_utils]       # gcc272_cdk, 4 funcs, 100%
       - [0x2619, c, addhero_draw_load_prompt] # gcc272_cdk, func_80142618, 100%
       - [0x280D, c, addhero_draw_load_commit] # gcc272_cdk, func_8014280C, 100%
@@ -65,7 +65,7 @@ segments:
       - [0x2B1D, c, addhero_choice_init]       # gcc272_cdk, func_80142B1C + func_80142C08, 100%
       - [0x2CE9, c, addhero_choice_state]       # gcc272_cdk, func_80142CE8, 100%
       - [0x2E6D, c, addhero_choice_cleanup]  # gcc272_cdk, func_80142E6C, 100%
-      - [0x3045, c, unk1_before_choice_mid_tail]
+      - [0x3045, c, func_80143044]          # gcc272_cdk, 1 func, 100%
       - [0x3DC1, c, addhero_glyph_builder]     # gcc272_cdk, func_80143DC0, 100%
       - [0x4009, c, addhero_choice_prompt]      # gcc272_cdk, 2 funcs, 100%
       - [0x4141, c, addhero_validate_resource] # gcc272_cdk, 1 func, 100%
@@ -80,7 +80,7 @@ segments:
       - [0x4A29, c, addhero_known_entry_type] # gcc272_cdk, 1 func, 100%
       - [0x4AF9, c, addhero_entry_blocks_reach_limit] # gcc272_cdk, func_80144AF8, 100%
       - [0x4B75, c, addhero_fixed_prompts]    # gcc272_cdk, 1 func, 100%
-      - [0x4C29, c, unk1_after_fixed_prompts]
+      - [0x4C29, c, func_80144C28]          # gcc272_cdk, 1 func, 100%
       - [0x5825, c, addhero_stream_reset]      # gcc272_cdk, 2 funcs, 100%
       - [0x58D1, c, addhero_init_stream_handles] # gcc272_cdk, 1 func, 100%
       - [0x5A9D, c, addhero_shutdown_handles]  # gcc272_cdk, 1 func, 100%
@@ -88,7 +88,7 @@ segments:
       - [0x5C35, c, addhero_poll_entry_scan]  # gcc272_cdk, func_80145C34, 100%
       - [0x5E15, c, addhero_commit_selected_entry]   # gcc272_cdk, func_80145E14, 100%
       - [0x5FC1, c, addhero_handles]           # gcc272_cdk, 4 funcs, 100%
-      - [0x6199, c, unk1_tail]
+      - [0x6199, c, func_80146198]        # gcc272_cdk, 100%
       - [0x65C9, c, addhero_draw_signed_decimal] # gcc272_cdk, 1 func, 100%
       - [0x67E9, c, addhero_nibble_pair]     # gcc272_cdk, 1 func, 100%
       - [0x686D, c, addhero_text_render]       # gcc272_cdk, 3 funcs, 100%

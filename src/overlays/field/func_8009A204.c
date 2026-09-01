@@ -1,15 +1,8 @@
 #include "common.h"
+#include "field_types.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
-
-typedef struct
-{
-    s32 vx;
-    s32 vy;
-    s32 vz;
-    s32 pad;
-} FieldVector;
 
 /**
  * @brief Return the GTE-computed distance between positions @p a and @p b.
