@@ -457,7 +457,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split073_tail.c \
 	src/overlays/field/unk2_b_split075.c \
 	src/overlays/field/func_800C6A30.c \
-	src/overlays/field/unk2_b_split077.c \
+	src/overlays/field/func_800C6EBC.c \
 	src/overlays/field/unk2_b_split078.c \
 	src/overlays/field/unk2_b_split081.c \
 	src/overlays/field/func_800C7CF8.c \
