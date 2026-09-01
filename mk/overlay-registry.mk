@@ -314,7 +314,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field209.c \
 	src/overlays/field/field216.c \
 	src/overlays/field/field229.c \
-	src/overlays/field/unk2_i_b_split002.c \
+	src/overlays/field/func_80087CE0.c \
 	src/overlays/field/unk2_i_b_split002_tail.c \
 	src/overlays/field/func_80087D8C.c \
 	src/overlays/field/unk2_i_b_split003.c \
