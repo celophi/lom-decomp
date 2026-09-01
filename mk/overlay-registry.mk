@@ -86,6 +86,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_checksum.c \
 	src/overlays/carda/func_8014344C.c \
 	src/overlays/carda/func_8014366C.c \
+	src/overlays/carda/carda_load_prompts.c \
 	src/overlays/carda/func_80143DF4.c \
 	src/overlays/carda/func_80143F90.c \
 	src/overlays/carda/carda_choice_prompt.c \

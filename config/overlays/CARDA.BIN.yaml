@@ -63,6 +63,7 @@ segments:
       - [0x344D, c, func_8014344C]              # gcc272_cdk, func_8014344C, 100%
       - [0x366D, c, func_8014366C]              # gcc272_cdk, func_8014366C, 100%
       - [0x385D, c, unk1_after_checksum_mid]
+      - [0x39B5, c, carda_load_prompts]        # gcc272_cdk, 2 funcs, 100%
       - [0x3DF5, c, func_80143DF4]              # gcc272_cdk, func_80143DF4, 100%
       - [0x3F91, c, func_80143F90]              # gcc272_cdk, func_80143F90, 100%
       - [0x4051, c, unk1_after_checksum_tail]
