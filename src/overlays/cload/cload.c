@@ -2159,7 +2159,7 @@ void cload_open_status_dialog(s32 dialog_state)
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (99.93%)
+ * @see decomp.me (100.00%)
  */
 s32 cload_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -2169,30 +2169,36 @@ s32 cload_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
     s32 frame_scratch[2];
 
-    switch (state)
+    extern void *jtbl_80140024[];
+    static void *const keep[] = { &&status_case_0, &&status_case_1, &&status_case_2, &&status_case_3, &&status_case_4 };
+
+    if ((u32)state >= 5U)
     {
-    case 0:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED8, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
-        base = (u8 *)&D_80145ED8 - 0x3C;
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
-        break;
-    case 1:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
-        base = (u8 *)&D_80145EDA - 0x3E;
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
-        break;
-    case 2:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDC, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
-        break;
-    case 3:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDE, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
-        break;
-    case 4:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
-        base = (u8 *)&D_80145EDA - 0x3E;
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x5C), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
-        break;
+        goto status_after_switch;
     }
+    goto *jtbl_80140024[state];
+
+status_case_0:
+    prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED8, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
+    base = (u8 *)&D_80145ED8 - 0x3C;
+    prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+    goto status_after_switch;
+status_case_1:
+    prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+    base = (u8 *)&D_80145EDA - 0x3E;
+    prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+    goto status_after_switch;
+status_case_2:
+    prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDC, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
+    goto status_after_switch;
+status_case_3:
+    prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDE, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
+    goto status_after_switch;
+status_case_4:
+    prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+    base = (u8 *)&D_80145EDA - 0x3E;
+    prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x5C), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
+status_after_switch:
 
     if (g_pad_input & 0x220)
     {
