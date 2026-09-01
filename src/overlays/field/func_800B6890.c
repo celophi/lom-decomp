@@ -16,13 +16,6 @@ extern void func_800B78C0(void);
  * a byte, and feeds func_800B70F4/7164/729C/742C, then conditionally
  * func_800B2B54, and finally func_800B78C0.
  *
- * WIP 98.58% (gcc280_g0). Residue is pure ALLOC-ORDER: the saved-register
- * assignment for `packed` vs the &sp18/&sp1C address temps is permuted (target
- * packed->s1, ours ->s4). The only known 100% path adds a redundant value-copy
- * of `packed` (a split_tmp) to shift greg's numbering; that is scaffolding, so
- * it is not applied here. Struct-typed access, pointer intermediates, and
- * declaration reordering were all measured inert.
- *
  * @return func_800B742C's result.
  */
 s32 func_800B6890(void)
@@ -30,10 +23,12 @@ s32 func_800B6890(void)
     s32 sp18;
     s32 sp1C;
     u32 packed;
+    u32 packed_tail;
     s32 byte8;
     s32 ret;
 
     packed = *(u32 *)(*(u8 **)(D_80123FB0 + 0x1C) + 4);
+    packed_tail = packed;
     func_800B70F4(packed & 0xF, &sp18);
     func_800B7164((packed >> 4) & 0xF, &sp1C);
     byte8 = (packed >> 8) & 0xFF;
@@ -46,9 +41,9 @@ s32 func_800B6890(void)
             *(s32 *)(D_80123FB0 + 0x20),
             *(void **)(D_80123FB0 + 0x24),
             0,
-            (packed >> 0x14) & 0xF,
-            (((packed >> 0x10) & 0xF) + 1) * 0x10,
-            (packed >> 0x18) * 0x10);
+            (packed_tail >> 0x14) & 0xF,
+            (((packed_tail >> 0x10) & 0xF) + 1) * 0x10,
+            (packed_tail >> 0x18) * 0x10);
     }
     func_800B78C0();
     return ret;
