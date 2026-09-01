@@ -88,7 +88,7 @@ segments:
       - [0x5C35, c, addhero_poll_entry_scan]  # gcc272_cdk, func_80145C34, 100%
       - [0x5E15, c, addhero_commit_selected_entry]   # gcc272_cdk, func_80145E14, 100%
       - [0x5FC1, c, addhero_handles]           # gcc272_cdk, 4 funcs, 100%
-      - [0x6199, c, unk1_tail]
+      - [0x6199, c, func_80146198]        # gcc272_cdk, 100%
       - [0x65C9, c, addhero_draw_signed_decimal] # gcc272_cdk, 1 func, 100%
       - [0x67E9, c, addhero_nibble_pair]     # gcc272_cdk, 1 func, 100%
       - [0x686D, c, addhero_text_render]       # gcc272_cdk, 3 funcs, 100%
