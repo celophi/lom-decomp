@@ -2159,7 +2159,7 @@ void cload_open_status_dialog(s32 dialog_state)
  * @param x_offset Horizontal transition offset.
  * @param y_offset Vertical transition offset.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (99.93%)
+ * @see decomp.me (100%)
  */
 s32 cload_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
