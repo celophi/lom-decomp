@@ -65,6 +65,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_entry_blocks_reach_limit.c \
 	src/overlays/addhero/addhero_choice_init.c \
 	src/overlays/addhero/addhero_choice_state.c \
+	src/overlays/addhero/func_80143044.c \
 	src/overlays/addhero/addhero_glyph_builder.c \
 	src/overlays/addhero/addhero_rank_entries.c
 overlay_addhero_gcc_280_g0_srcs := \
@@ -73,7 +74,6 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/addhero_mode_glyph.c \
 	src/overlays/addhero/addhero_scan_hex_digits.c \
 	src/overlays/addhero/unk1_after_claim_element.c \
-	src/overlays/addhero/unk1_before_choice_mid_tail.c \
 	src/overlays/addhero/unk1_before_rank.c \
 	src/overlays/addhero/unk1_after_fixed_prompts.c \
 	src/overlays/addhero/unk1_tail.c
