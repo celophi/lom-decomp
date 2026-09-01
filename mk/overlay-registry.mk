@@ -37,10 +37,14 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_checksum.c \
 	src/overlays/addhero/addhero_hex_parse.c \
 	src/overlays/addhero/addhero_update_state.c \
+	src/overlays/addhero/func_801408B0.c \
 	src/overlays/addhero/addhero_panel_tiles.c \
+	src/overlays/addhero/func_80141694.c \
 	src/overlays/addhero/addhero_claim_element.c \
+	src/overlays/addhero/func_80141F00.c \
 	src/overlays/addhero/addhero_known_entry_type.c \
 	src/overlays/addhero/addhero_fixed_prompts.c \
+	src/overlays/addhero/func_80144C28.c \
 	src/overlays/addhero/addhero_reset_entry_ranks.c \
 	src/overlays/addhero/addhero_stream_reset.c \
 	src/overlays/addhero/addhero_init_stream_handles.c \
@@ -49,6 +53,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_poll_entry_scan.c \
 	src/overlays/addhero/addhero_commit_selected_entry.c \
 	src/overlays/addhero/addhero_handles.c \
+	src/overlays/addhero/func_80146198.c \
 	src/overlays/addhero/addhero_draw_signed_decimal.c \
 	src/overlays/addhero/addhero_text_render.c \
 	src/overlays/addhero/addhero_cache_table.c \
@@ -64,19 +69,14 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_entry_blocks_reach_limit.c \
 	src/overlays/addhero/addhero_choice_init.c \
 	src/overlays/addhero/addhero_choice_state.c \
+	src/overlays/addhero/func_80143044.c \
 	src/overlays/addhero/addhero_glyph_builder.c \
 	src/overlays/addhero/addhero_rank_entries.c
 overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1_after_state_step.c \
-	src/overlays/addhero/unk1_after_update_state.c \
 	src/overlays/addhero/addhero_mode_glyph.c \
-	src/overlays/addhero/unk1_after_panel_tiles.c \
 	src/overlays/addhero/addhero_scan_hex_digits.c \
-	src/overlays/addhero/unk1_after_claim_element.c \
-	src/overlays/addhero/unk1_before_choice_mid_tail.c \
 	src/overlays/addhero/unk1_before_rank.c \
-	src/overlays/addhero/unk1_after_fixed_prompts.c \
-	src/overlays/addhero/unk1_tail.c
 
 OVERLAYS += carda
 overlay_carda_gcc_272_cdk_g0_srcs := \
@@ -86,14 +86,21 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_checksum.c \
 	src/overlays/carda/func_8014344C.c \
 	src/overlays/carda/func_8014366C.c \
+	src/overlays/carda/carda_progress_bar.c \
+	src/overlays/carda/carda_load_prompts.c \
 	src/overlays/carda/func_80143DF4.c \
 	src/overlays/carda/func_80143F90.c \
 	src/overlays/carda/carda_choice_prompt.c \
 	src/overlays/carda/carda_choice_cancel.c \
 	src/overlays/carda/carda_restore_record.c \
+	src/overlays/carda/carda_choice_init.c \
 	src/overlays/carda/carda_hex_parse.c \
 	src/overlays/carda/carda_panel_tiles.c \
+	src/overlays/carda/carda_mode_glyph.c \
+	src/overlays/carda/carda_selected_entry_details.c \
 	src/overlays/carda/carda_claim_element.c \
+	src/overlays/carda/carda_update_and_draw_elements.c \
+	src/overlays/carda/carda_format_slot.c \
 	src/overlays/carda/carda_stream_reset.c \
 	src/overlays/carda/carda_init_stream_handles.c \
 	src/overlays/carda/carda_shutdown_handles.c \
@@ -123,11 +130,8 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1.c \
 	src/overlays/carda/unk1_after_update_state.c \
 	src/overlays/carda/unk1_core_tail.c \
-	src/overlays/carda/unk1_after_panel_tiles.c \
-	src/overlays/carda/unk1_after_claim_element.c \
 	src/overlays/carda/unk1_after_strings.c \
 	src/overlays/carda/carda_scan_hex_digits.c \
-	src/overlays/carda/unk1_after_checksum_mid.c \
 	src/overlays/carda/unk1_after_checksum_tail.c \
 	src/overlays/carda/unk1_after_choice.c \
 	src/overlays/carda/unk1_after_choice_after_restore.c \
@@ -310,7 +314,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field209.c \
 	src/overlays/field/field216.c \
 	src/overlays/field/field229.c \
-	src/overlays/field/unk2_i_b_split002.c \
+	src/overlays/field/func_80087CE0.c \
 	src/overlays/field/unk2_i_b_split002_tail.c \
 	src/overlays/field/func_80087D8C.c \
 	src/overlays/field/unk2_i_b_split003.c \
@@ -339,7 +343,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_i_b_split008_tail3.c \
 	src/overlays/field/func_80094B5C.c \
 	src/overlays/field/unk2_i_b_split009.c \
-	src/overlays/field/unk2_i_b_split009_b.c \
+	src/overlays/field/func_80094FDC.c \
+	src/overlays/field/unk2_i_b_split009_b_tail.c \
 	src/overlays/field/func_80095168.c \
 	src/overlays/field/unk2_i_b_split009_tail.c \
 	src/overlays/field/unk2_i_b_split010.c \
@@ -374,7 +379,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split008_b.c \
 	src/overlays/field/unk2_b_split009.c \
 	src/overlays/field/unk2_b_split010.c \
-	src/overlays/field/unk2_b_split013.c \
+	src/overlays/field/func_800A90F8.c \
+	src/overlays/field/unk2_b_split013_tail_a.c \
 	src/overlays/field/unk2_b_split013_b.c \
 	src/overlays/field/func_800AA02C.c \
 	src/overlays/field/unk2_b_split013_tail.c \
@@ -452,7 +458,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split073_tail.c \
 	src/overlays/field/unk2_b_split075.c \
 	src/overlays/field/func_800C6A30.c \
-	src/overlays/field/unk2_b_split077.c \
+	src/overlays/field/func_800C6EBC.c \
 	src/overlays/field/unk2_b_split078.c \
 	src/overlays/field/unk2_b_split081.c \
 	src/overlays/field/func_800C7CF8.c \
@@ -503,12 +509,13 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split119.c \
 	src/overlays/field/unk2_b_split120.c \
 	src/overlays/field/func_800BF9A0.c \
-	src/overlays/field/unk2_b_split122.c \
 	src/overlays/field/unk2_b_split124.c \
 	src/overlays/field/unk2_b_split125.c \
 	src/overlays/field/unk2_i_b_split022.c \
 	src/overlays/field/unk2_i_b_split022_tail.c \
 	src/overlays/field/func_8008AF68.c \
+	src/overlays/field/func_8008B398.c \
+	src/overlays/field/unk2_i_b_split022_tail_b.c \
 	src/overlays/field/unk2_i_b_split023.c \
 	src/overlays/field/func_80098FC4.c \
 	src/overlays/field/unk2_i_b_split023_tail.c \
@@ -541,6 +548,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_i_b_split005_tail.c \
 	src/overlays/field/unk2_i_b_split005_tail_b.c \
 	src/overlays/field/unk2_i_b_split023_mid.c \
+	src/overlays/field/func_800970B0.c \
+	src/overlays/field/unk2_i_b_split023_mid_tail.c \
 	src/overlays/field/unk2_i_b_split023_mid_b.c \
 	src/overlays/field/unk2_b_split025_tail3.c \
 	src/overlays/field/unk2_b_split127.c \
@@ -728,6 +737,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field261.c \
 	src/overlays/field/field263.c \
 	src/overlays/field/field266.c \
+	src/overlays/field/func_800C1D68.c \
 	src/overlays/field/field267.c \
 	src/overlays/field/field270.c \
 	src/overlays/field/field271.c \

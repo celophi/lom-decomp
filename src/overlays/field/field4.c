@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_types.h"
 #include "cd_resources.h"
 
 s32 cdrom_stream(s32 resourceIndex, u32 destination);
@@ -2490,11 +2491,6 @@ extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
 
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 /**
  * @brief Initialize resource entry arg2 for slot arg0, then notify every
