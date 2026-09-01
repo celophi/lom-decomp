@@ -52,7 +52,7 @@ segments:
       - [0xD81, c, addhero_row_status]        # gcc272_cdk, func_80140D80, 100%
       - [0x1431, c, addhero_mode_glyph]        # gcc280, 1 func, 100%
       - [0x14DD, c, addhero_panel_tiles]       # gcc272_cdk, 2 funcs, 100%
-      - [0x1695, c, unk1_after_panel_tiles]
+      - [0x1695, c, func_80141694]          # gcc272_cdk, func_80141694, 100%
       - [0x1DA5, c, addhero_scan_hex_digits]   # gcc280, 1 func, 100%
       - [0x1DF1, c, addhero_terminate_multibyte_text] # gcc272_cdk, 1 func, 100%
       - [0x1E55, c, addhero_reset_packets]    # gcc272_cdk, func_80141E54, 100%

@@ -38,6 +38,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_hex_parse.c \
 	src/overlays/addhero/addhero_update_state.c \
 	src/overlays/addhero/addhero_panel_tiles.c \
+	src/overlays/addhero/func_80141694.c \
 	src/overlays/addhero/addhero_claim_element.c \
 	src/overlays/addhero/addhero_known_entry_type.c \
 	src/overlays/addhero/addhero_fixed_prompts.c \
@@ -70,7 +71,6 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1_after_state_step.c \
 	src/overlays/addhero/unk1_after_update_state.c \
 	src/overlays/addhero/addhero_mode_glyph.c \
-	src/overlays/addhero/unk1_after_panel_tiles.c \
 	src/overlays/addhero/addhero_scan_hex_digits.c \
 	src/overlays/addhero/unk1_after_claim_element.c \
 	src/overlays/addhero/unk1_before_choice_mid_tail.c \
