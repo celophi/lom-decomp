@@ -94,6 +94,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_restore_record.c \
 	src/overlays/carda/carda_hex_parse.c \
 	src/overlays/carda/carda_panel_tiles.c \
+	src/overlays/carda/carda_selected_entry_details.c \
 	src/overlays/carda/carda_claim_element.c \
 	src/overlays/carda/carda_format_slot.c \
 	src/overlays/carda/carda_stream_reset.c \
@@ -125,7 +126,6 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1.c \
 	src/overlays/carda/unk1_after_update_state.c \
 	src/overlays/carda/unk1_core_tail.c \
-	src/overlays/carda/unk1_after_panel_tiles.c \
 	src/overlays/carda/unk1_after_claim_element.c \
 	src/overlays/carda/unk1_after_strings.c \
 	src/overlays/carda/carda_scan_hex_digits.c \

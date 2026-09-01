@@ -49,7 +49,7 @@ segments:
       - [0x1165, c, carda_core_state]           # gcc272_cdk, 3 funcs, 100%
       - [0x1251, c, unk1_core_tail]
       - [0x1C3D, c, carda_panel_tiles]         # gcc272_cdk, 2 funcs, 100%
-      - [0x1DF5, c, unk1_after_panel_tiles]
+      - [0x1DF5, c, carda_selected_entry_details] # gcc272_cdk, func_80141DF4, 100%
       - [0x2509, c, carda_terminate_multibyte_text] # gcc272_cdk, 1 func, 100%
       - [0x256D, c, carda_packet_helpers]    # gcc272_cdk, 2 funcs, 100%
       - [0x2615, c, carda_claim_element]       # gcc272_cdk, 1 func, 100%
