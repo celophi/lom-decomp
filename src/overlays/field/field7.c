@@ -213,20 +213,6 @@ typedef struct
 
 typedef struct
 {
-    s32 vx;
-    s32 vy;
-    s32 vz;
-    s32 pad;
-} FieldVector;
-
-typedef struct
-{
-    s16 m[3][3];
-    s32 t[3];
-} FieldMatrix;
-
-typedef struct
-{
     u8 unk0;
     u8 pad1[0xC - 1];
     u8 unkC;

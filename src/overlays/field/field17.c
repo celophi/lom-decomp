@@ -19,14 +19,6 @@ typedef struct
     s16 unk6;
 } FieldSVector;
 
-typedef struct
-{
-    s32 vx;
-    s32 vy;
-    s32 vz;
-    s32 pad;
-} FieldVector;
-
 /** @brief Effect/actor position record; array element stride 0x54. */
 typedef struct
 {
