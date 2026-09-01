@@ -59,6 +59,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_nibble_pair.c \
 	src/overlays/addhero/addhero_parse_hex_suffix_byte.c \
 	src/overlays/addhero/addhero_draw_load_prompt.c \
+	src/overlays/addhero/addhero_draw_load_commit.c \
 	src/overlays/addhero/addhero_format_hex.c \
 	src/overlays/addhero/addhero_entry_blocks_reach_limit.c \
 	src/overlays/addhero/addhero_choice_init.c \
@@ -72,7 +73,6 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1_after_panel_tiles.c \
 	src/overlays/addhero/addhero_scan_hex_digits.c \
 	src/overlays/addhero/unk1_after_claim_element.c \
-	src/overlays/addhero/unk1_before_choice_tail.c \
 	src/overlays/addhero/unk1_before_choice_mid_tail.c \
 	src/overlays/addhero/unk1_before_rank.c \
 	src/overlays/addhero/unk1_after_fixed_prompts.c \
@@ -443,6 +443,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split067.c \
 	src/overlays/field/unk2_b_split067_b.c \
 	src/overlays/field/unk2_b_split068.c \
+	src/overlays/field/func_800C3CB4.c \
+	src/overlays/field/unk2_b_split068_tail.c \
 	src/overlays/field/unk2_b_split069.c \
 	src/overlays/field/unk2_b_split070_tail.c \
 	src/overlays/field/unk2_b_split071.c \
