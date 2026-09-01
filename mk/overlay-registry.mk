@@ -42,6 +42,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_claim_element.c \
 	src/overlays/addhero/addhero_known_entry_type.c \
 	src/overlays/addhero/addhero_fixed_prompts.c \
+	src/overlays/addhero/func_80144C28.c \
 	src/overlays/addhero/addhero_reset_entry_ranks.c \
 	src/overlays/addhero/addhero_stream_reset.c \
 	src/overlays/addhero/addhero_init_stream_handles.c \
@@ -75,7 +76,6 @@ overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/addhero_scan_hex_digits.c \
 	src/overlays/addhero/unk1_after_claim_element.c \
 	src/overlays/addhero/unk1_before_rank.c \
-	src/overlays/addhero/unk1_after_fixed_prompts.c \
 	src/overlays/addhero/unk1_tail.c
 
 OVERLAYS += carda

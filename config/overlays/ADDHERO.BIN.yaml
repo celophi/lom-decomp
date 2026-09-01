@@ -80,7 +80,7 @@ segments:
       - [0x4A29, c, addhero_known_entry_type] # gcc272_cdk, 1 func, 100%
       - [0x4AF9, c, addhero_entry_blocks_reach_limit] # gcc272_cdk, func_80144AF8, 100%
       - [0x4B75, c, addhero_fixed_prompts]    # gcc272_cdk, 1 func, 100%
-      - [0x4C29, c, unk1_after_fixed_prompts]
+      - [0x4C29, c, func_80144C28]          # gcc272_cdk, 1 func, 100%
       - [0x5825, c, addhero_stream_reset]      # gcc272_cdk, 2 funcs, 100%
       - [0x58D1, c, addhero_init_stream_handles] # gcc272_cdk, 1 func, 100%
       - [0x5A9D, c, addhero_shutdown_handles]  # gcc272_cdk, 1 func, 100%
