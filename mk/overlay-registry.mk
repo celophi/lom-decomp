@@ -94,6 +94,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_restore_record.c \
 	src/overlays/carda/carda_hex_parse.c \
 	src/overlays/carda/carda_panel_tiles.c \
+	src/overlays/carda/carda_mode_glyph.c \
 	src/overlays/carda/carda_selected_entry_details.c \
 	src/overlays/carda/carda_claim_element.c \
 	src/overlays/carda/carda_update_and_draw_elements.c \
