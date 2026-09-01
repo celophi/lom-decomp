@@ -2752,13 +2752,14 @@ s32 cload_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
  */
 s32 cload_parse_entry_fields(void)
 {
+ typedef struct { u8 data[0x28]; } CloadEntry28;
  s32 i; s32 max; u8 *entry; u8 *p; u8 *field; s32 count; s32 acc; u32 tmp0; u32 tmp1; u32 tmp2; s32 r;
  i=0; max=i;
  while (i < g_cload_entry_state) {
-    if (func_8001714C(&D_800ECF7C, (u8 *)(g_cload_card_slot*CLOAD_CARD_DIRECTORY_BYTES + (s32)(entry = (u8 *)g_cload_entries + ((i << 4) + (i << 4) + (i << 3)))), 0xC)==0) {
+    if (func_8001714C(&D_800ECF7C, (u8 *)&((CloadEntry28 (*)[20])g_cload_entries)[g_cload_card_slot][i], 0xC)==0) {
      count=5; p=(u8 *)(g_cload_card_slot*CLOAD_CARD_DIRECTORY_BYTES + ((i << 4) + (i << 4) + (i << 3)) + (s32)g_cload_entries + 0xC); acc=0;
      while (((u8)(*p-'0')<10)||((u8)(*p-'a')<6)||((u8)(*p-'A')<6)) { if(count==0)break; acc<<=4; if((u8)(*p-'0')<10){tmp0=acc-0x30;acc=tmp0+*p;} else if((u8)(*p-'A')<6){tmp1=acc-0x37;acc=tmp1+*p;} else if((u8)(*p-'a')<6){tmp2=acc-0x57;acc=tmp2+*p;} p++;count--; }
-     field=(u8 *)(g_cload_card_slot*CLOAD_CARD_DIRECTORY_BYTES + (s32)entry + 0xC);
+     field=(u8 *)&((CloadEntry28 (*)[20])g_cload_entries)[g_cload_card_slot][i].data[0xC];
      { s32 addr; addr=g_cload_card_slot*0x50+(s32)g_cload_entry_fields; *(s32 *)(addr+i*4)=acc; }
      r=cload_parse_hex_suffix_byte(field,acc,count); g_cload_entry_suffix_values[i]=r; if(max<r)max=r;
     } else { { s32 addr; addr=g_cload_card_slot*0x50+(s32)g_cload_entry_fields; *(s32 *)(addr+i*4)=-1; } g_cload_entry_suffix_values[i]=0; }
