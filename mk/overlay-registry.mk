@@ -86,6 +86,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_checksum.c \
 	src/overlays/carda/func_8014344C.c \
 	src/overlays/carda/func_8014366C.c \
+	src/overlays/carda/carda_progress_bar.c \
 	src/overlays/carda/carda_load_prompts.c \
 	src/overlays/carda/func_80143DF4.c \
 	src/overlays/carda/func_80143F90.c \
@@ -131,7 +132,6 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_core_tail.c \
 	src/overlays/carda/unk1_after_strings.c \
 	src/overlays/carda/carda_scan_hex_digits.c \
-	src/overlays/carda/unk1_after_checksum_mid.c \
 	src/overlays/carda/unk1_after_checksum_tail.c \
 	src/overlays/carda/unk1_after_choice.c \
 	src/overlays/carda/unk1_after_choice_after_restore.c \
