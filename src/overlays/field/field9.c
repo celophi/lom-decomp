@@ -4,12 +4,8 @@
  */
 
 #include "common.h"
+#include "field_types.h"
 
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 typedef struct
 {

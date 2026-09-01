@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+#include "field_types.h"
 
 typedef struct
 {
@@ -55,11 +56,6 @@ typedef struct
     s16 unk46;
 } FieldActorPartDef;
 
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 typedef struct
 {

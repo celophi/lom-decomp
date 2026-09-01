@@ -14,6 +14,7 @@
  */
 
 #include "common.h"
+#include "field_types.h"
 
 typedef struct
 {
@@ -28,11 +29,6 @@ typedef struct
 
 extern FieldResourceEntry g_field_resource_entries[];
 
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 typedef struct
 {

@@ -1,12 +1,8 @@
 #include "common.h"
+#include "field_types.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 typedef struct
 {
