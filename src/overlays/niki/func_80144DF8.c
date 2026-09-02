@@ -162,10 +162,7 @@ s32 func_80144DF8(void)
         }
         goto block_return;
     c2_pos:
-        do
-        {
-            phase_result = 4;
-        } while (0);
+        phase_result = 4;
         D_80164B84 = 0;
         D_80164B78 = 0xFD;
         D_80164E18 = D_80164E18 + 1;
