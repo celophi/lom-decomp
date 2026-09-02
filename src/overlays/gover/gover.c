@@ -72,6 +72,12 @@ extern s32 g_pending_game_state;
 extern SfxTableBuffer g_sfx_table_buffer;
 extern void cdrom_queue_read(s32 resource_index, void* destination);
 
+/** Byte offset of vram_rect within a Game Over frame. */
+#define GOVER_FRAME_VRAM_RECT_OFFSET (sizeof(u_long[GOVER_OTAG_LENGTH]) + sizeof(DISPENV) + sizeof(DRAWENV))
+
+/** Accesses a complete frame through the target's frame-tail BSS symbol. */
+#define GOVER_FRAME_FROM_TAIL(tail, index) (((GoverFrameHalf*)((tail) - GOVER_FRAME_VRAM_RECT_OFFSET))[index])
+
 /** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
 #define GOVER_CLUT_Y 480
 
@@ -133,8 +139,13 @@ s32 g_fade_step;
 /** Unreferenced BSS word retained for the original overlay layout. */
 s32 D_8014070C;
 
-GoverFrameHalf g_gover_frames[GOVER_FRAME_COUNT];
+/* Target-visible storage for the contiguous pair of Game Over frames. */
+u8 g_gover_frame_header[GOVER_FRAME_VRAM_RECT_OFFSET];
+u8 g_gover_frame_tail[sizeof(GoverFrameHalf) * GOVER_FRAME_COUNT - GOVER_FRAME_VRAM_RECT_OFFSET];
 s32 g_fade_level;
+
+/** Typed view used for ordinary frame-array access. */
+#define g_gover_frames ((GoverFrameHalf*)g_gover_frame_header)
 
 
 static void gover_load_sfx_bank(s32 sfx_bank_index);
@@ -159,16 +170,18 @@ static void gover_run(void);
 void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 sfx_bank_index)
 {
     RECT vram_rect;
+    u8* frame_tail;
     RECT* back_vram_rect;
     GoverFrameHalf* frames;
 
     VSync(0);
     DrawSync(0);
-    // Place the display buffers in vertically adjacent VRAM regions.
-    setRECT(&g_gover_frames[0].vram_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    frame_tail = g_gover_frame_tail;
 
-    // The temporary preserves the original address calculation.
-    back_vram_rect = &g_gover_frames[1].vram_rect;
+    // Place the display buffers in vertically adjacent VRAM regions.
+    setRECT(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).vram_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    back_vram_rect = &GOVER_FRAME_FROM_TAIL(frame_tail, 1).vram_rect;
     setRECT(back_vram_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Clear the entire VRAM frame area before uploading the new image.
@@ -176,13 +189,13 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     ClearImage(&vram_rect, 0, 0, 0);
 
     // Configure alternating display and draw regions.
-    SetDefDispEnv(&g_gover_frames[0].display_environment, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv(&g_gover_frames[1].display_environment, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv(&g_gover_frames[0].draw_environment, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv(&g_gover_frames[1].draw_environment, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDispEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).display_environment, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 1).display_environment, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).draw_environment, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 1).draw_environment, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     // Disable dithering for both frame buffers.
-    frames = &g_gover_frames[0];
+    frames = &GOVER_FRAME_FROM_TAIL(frame_tail, 0);
     frames[1].draw_environment.dtd = 0;
     frames[0].draw_environment.dtd = 0;
 
