@@ -123,6 +123,8 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_reset_entry_ranks.c \
 	src/overlays/carda/carda_known_entry_type.c \
 	src/overlays/carda/carda_fixed_prompts.c \
+	src/overlays/carda/func_80147DCC.c \
+	src/overlays/carda/func_8014A1C4.c \
 	src/overlays/carda/carda_format_hex.c \
 	src/overlays/carda/carda_glyph_builder.c \
 	src/overlays/carda/carda_header_label.c
@@ -138,10 +140,8 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_choice_mid.c \
 	src/overlays/carda/unk1_after_choice_tail.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
-	src/overlays/carda/unk1_before_stream_reset_tail_mid.c \
 	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c \
-	src/overlays/carda/unk1_mid2_middle.c \
-	src/overlays/carda/unk1_tail.c
+	src/overlays/carda/unk1_mid2_middle.c
 
 OVERLAYS += checkps
 overlay_checkps_gcc_272_cdk_g0_srcs := \
