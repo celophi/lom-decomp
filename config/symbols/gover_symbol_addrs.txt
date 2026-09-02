@@ -7,8 +7,7 @@ gover_upload_image_to_vram = 0x80140588;
 gover_load_sfx_bank = 0x80140648;
 
 g_gover_overlay_id = 0x80140000;
-g_gover_frame_header = 0x80140710;
-g_gover_frame_tail = 0x801407A0;
+g_gover_frames = 0x80140710;
 g_fade_level = 0x80141048;
 g_fade_step = 0x80140708;
 D_8014070C = 0x8014070C;
