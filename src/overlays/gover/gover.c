@@ -109,17 +109,6 @@ extern s32 g_pending_game_state;
 extern SfxTableBuffer g_sfx_table_buffer;
 extern void cdrom_queue_read(s32 resource_index, void* destination);
 
-/**
- * @brief Byte offset of @c vram_rect within a Game Over frame.
- *
- * The linker exposes @c g_gover_frame_tail beginning at that member of frame
- * zero, so show-screen setup uses this offset to recover the complete frames.
- */
-#define GOVER_FRAME_VRAM_RECT_OFFSET (sizeof(u_long[GOVER_OTAG_LENGTH]) + sizeof(DISPENV) + sizeof(DRAWENV))
-
-/** Accesses a complete frame through the linker-exposed frame-tail symbol. */
-#define GOVER_FRAME_FROM_TAIL(tail, index) (((GoverFrameHalf*)((tail) - GOVER_FRAME_VRAM_RECT_OFFSET))[index])
-
 /** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
 #define GOVER_CLUT_Y 480
 
@@ -184,13 +173,9 @@ s32 g_fade_step;
 /** Unreferenced BSS word retained for the original overlay layout. */
 s32 D_8014070C;
 
-/* Linker-split storage for the Game Over screen's contiguous frame pair. */
-u8 g_gover_frame_header[GOVER_FRAME_VRAM_RECT_OFFSET];
-u8 g_gover_frame_tail[sizeof(GoverFrameHalf) * GOVER_FRAME_COUNT - GOVER_FRAME_VRAM_RECT_OFFSET];
+GoverFrameHalf g_gover_frames[GOVER_FRAME_COUNT];
 s32 g_fade_level;
 
-/** Typed view of the contiguous Game Over frame buffers. */
-#define GOVER_FRAMES ((GoverFrameHalf*)g_gover_frame_header)
 
 static void gover_load_sfx_bank(s32 sfx_bank_index);
 static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinations);
@@ -214,19 +199,16 @@ static void gover_run(void);
 void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 sfx_bank_index)
 {
     GoverVramTransfer vram_transfer;
-    u8* frame_tail;
     RECT* back_vram_rect;
     GoverFrameHalf* frames;
 
     VSync(0);
     DrawSync(0);
-    frame_tail = g_gover_frame_tail;
-
     // Place the display buffers in vertically adjacent VRAM regions.
-    setRECT(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).vram_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&g_gover_frames[0].vram_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // The temporary preserves the original address calculation.
-    back_vram_rect = &GOVER_FRAME_FROM_TAIL(frame_tail, 1).vram_rect;
+    back_vram_rect = &g_gover_frames[1].vram_rect;
     setRECT(back_vram_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Clear the entire VRAM frame area before uploading the new image.
@@ -234,13 +216,13 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     ClearImage(&vram_transfer.clear_rect, 0, 0, 0);
 
     // Configure alternating display and draw regions.
-    SetDefDispEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).display_environment, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 1).display_environment, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).draw_environment, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 1).draw_environment, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDispEnv(&g_gover_frames[0].display_environment, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&g_gover_frames[1].display_environment, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&g_gover_frames[0].draw_environment, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&g_gover_frames[1].draw_environment, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     // Disable dithering for both frame buffers.
-    frames = &GOVER_FRAME_FROM_TAIL(frame_tail, 0);
+    frames = &g_gover_frames[0];
     frames[1].draw_environment.dtd = 0;
     frames[0].draw_environment.dtd = 0;
 
@@ -293,7 +275,7 @@ static void gover_run(void)
 
     // Prime both ordering tables before enabling display output.
     func_800AA02C();
-    current_frame = GOVER_FRAMES;
+    current_frame = g_gover_frames;
     ClearOTagR(current_frame->ordering_table, GOVER_OTAG_LENGTH);
     ClearOTagR(current_frame[1].ordering_table, GOVER_OTAG_LENGTH);
     VSync(0);
@@ -327,8 +309,8 @@ static void gover_run(void)
         }
 
         // Present the newly selected buffer and draw the frame just built.
-        next_frame = GOVER_FRAMES;
-        if (current_frame == GOVER_FRAMES)
+        next_frame = g_gover_frames;
+        if (current_frame == g_gover_frames)
         {
             next_frame = current_frame + 1;
         }
