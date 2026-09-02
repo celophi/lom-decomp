@@ -28,6 +28,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_reset_state.c \
 	src/overlays/addhero/addhero_choice_cleanup.c \
 	src/overlays/addhero/addhero_state_step.c \
+	src/overlays/addhero/addhero_build_ui_elements.c \
 	src/overlays/addhero/addhero_reset_packets.c \
 	src/overlays/addhero/addhero_core_state.c \
 	src/overlays/addhero/addhero_row_status.c \
@@ -73,7 +74,6 @@ overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero_glyph_builder.c \
 	src/overlays/addhero/addhero_rank_entries.c
 overlay_addhero_gcc_280_g0_srcs := \
-	src/overlays/addhero/unk1_after_state_step.c \
 	src/overlays/addhero/addhero_mode_glyph.c \
 	src/overlays/addhero/addhero_scan_hex_digits.c \
 	src/overlays/addhero/unk1_before_rank.c \
@@ -123,6 +123,8 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_reset_entry_ranks.c \
 	src/overlays/carda/carda_known_entry_type.c \
 	src/overlays/carda/carda_fixed_prompts.c \
+	src/overlays/carda/func_80147DCC.c \
+	src/overlays/carda/func_8014A1C4.c \
 	src/overlays/carda/carda_format_hex.c \
 	src/overlays/carda/carda_glyph_builder.c \
 	src/overlays/carda/carda_header_label.c
@@ -138,10 +140,8 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_choice_mid.c \
 	src/overlays/carda/unk1_after_choice_tail.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
-	src/overlays/carda/unk1_before_stream_reset_tail_mid.c \
 	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c \
-	src/overlays/carda/unk1_mid2_middle.c \
-	src/overlays/carda/unk1_tail.c
+	src/overlays/carda/unk1_mid2_middle.c
 
 OVERLAYS += checkps
 overlay_checkps_gcc_272_cdk_g0_srcs := \
@@ -793,11 +793,7 @@ OVERLAYS += movie
 overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
 
 OVERLAYS += niki
-overlay_niki_gcc_280_g0_srcs := \
-	src/overlays/niki/unk1.c \
-	src/overlays/niki/unk1_after_fixed_prompts.c \
-	src/overlays/niki/unk1_mid2_middle.c \
-	src/overlays/niki/unk1_tail.c
+overlay_niki_gcc_280_g0_srcs := src/overlays/niki/unk1.c
 overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki.c \
 	src/overlays/niki/niki_reset_entry_ranks.c \
@@ -815,7 +811,10 @@ overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki_expand_text_glyph_codes.c \
 	src/overlays/niki/niki_nibble_pair.c \
 	src/overlays/niki/niki_entry_blocks_reach_limit.c \
-	src/overlays/niki/niki_rank_entries.c
+	src/overlays/niki/niki_rank_entries.c \
+	src/overlays/niki/func_80144DF8.c \
+	src/overlays/niki/func_80145DA4.c \
+	src/overlays/niki/func_801462EC.c
 
 OVERLAYS += shop
 overlay_shop_gcc_272_cdk_g0_srcs := \
