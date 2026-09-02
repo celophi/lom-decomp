@@ -18,8 +18,8 @@ void func_801462EC(void)
     s32 group = 0;
     s32 i;
     do {
-        do { do { do { do { do { do { do { do { do { i = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
-        if (D_80164B78 > 0) {
+        i = 0;
+        if (i < D_80164B78) {
             do {
                 if (D_80164EB8[i] == group &&
                     func_8001714C(D_800ECF7C, &D_80165018[D_80164B70][i], 0xC) == 0) {
@@ -34,8 +34,8 @@ void func_801462EC(void)
 
     group = 0;
     do {
-        do { do { do { do { do { do { do { do { do { i = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
-        if (D_80164B78 > 0) {
+        i = 0;
+        if (i < D_80164B78) {
             do {
                 if (D_80164EB8[i] == group &&
                     func_8001714C(D_800ECF8C, &D_80165018[D_80164B70][i], 0xC) == 0) {
@@ -48,7 +48,7 @@ void func_801462EC(void)
         group++;
     } while (group < 8);
 
-    do { do { do { do { do { do { do { do { do { i = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+    i = 0;
     if (D_80164B78 > 0) {
         do {
             if (func_8001714C(D_800ECFC4, &D_80165018[D_80164B70][i], 8) == 0) {
@@ -60,7 +60,7 @@ void func_801462EC(void)
     }
 
     if (*(volatile s32 *)&D_80164B78 > 0) {
-        do { do { do { do { do { do { do { do { do { i = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+        i = 0;
         do {
             if (func_8001714C(D_800ECF7C, &D_80165018[D_80164B70][i], 0xC) != 0 &&
                 func_8001714C(D_800ECF8C, &D_80165018[D_80164B70][i], 0xC) != 0 &&
@@ -72,7 +72,7 @@ void func_801462EC(void)
         } while (i < D_80164B78);
     }
 
-    do { do { do { do { do { do { do { do { do { i = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+    i = 0;
     if (D_80164B78 > 0) {
         do {
             func_80016E7C(&sorted[i], &D_80165018[D_80164B70][i], 0x28);
