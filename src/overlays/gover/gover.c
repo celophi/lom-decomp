@@ -19,13 +19,6 @@ typedef struct
     u16 clut_y;
 } TimUploadDestinations;
 
-/** @brief Stack storage reused for VRAM clearing and TIM upload destinations. */
-typedef union
-{
-    RECT clear_rect;
-    TimUploadDestinations upload_destinations;
-} GoverVramTransfer;
-
 /**
  * @brief Stores the active SFX offset table for the AKAO driver.
  *
@@ -39,30 +32,6 @@ typedef struct
     u32 reserved_1;
     u8 table_data[1];
 } SfxTableBuffer;
-
-/**
- * @brief Describes a self-relative table of resource offsets.
- *
- * The first word gives the number of entries; each following word is a byte
- * offset from the start of this table.
- */
-typedef union
-{
-    struct
-    {
-        u32 entry_count;
-        u32 entry_offsets[1];
-    } header;
-    u8 bytes[1];
-} ResourceOffsetTable;
-
-/**
- * @brief Returns the address stored in the offset table's final entry.
- *
- * @note The commuted pointer addition preserves the original instruction
- *       operand order.
- */
-#define RESOURCE_TABLE_END(table) ((table)->bytes + *(((table)->header.entry_count - 1) + (table)->header.entry_offsets))
 
 /** Number of entries in each Game Over ordering table. */
 #define GOVER_OTAG_LENGTH 8
@@ -85,17 +54,6 @@ typedef struct GoverFrameHalf
     void* allocation_cursor;
 } GoverFrameHalf;
 
-/** @brief Provides typed views over a position in the GPU packet stream. */
-typedef union
-{
-    SPRT sprite;
-    DR_TPAGE draw_tpage;
-    u8 bytes[1];
-} GoverPrimitive;
-
-/** @brief Advances a GPU packet cursor past a packet of @p type. */
-#define NEXT_GOVER_PRIMITIVE(primitive, type) ((GoverPrimitive*)((primitive)->bytes + sizeof(type)))
-
 /* Audio helpers used while presenting the Game Over screen. */
 /** @brief Loads and registers a music sequence. */
 extern void func_800A368C(s32 music_index, s32 destination_index);
@@ -114,15 +72,10 @@ extern s32 g_pending_game_state;
 extern SfxTableBuffer g_sfx_table_buffer;
 extern void cdrom_queue_read(s32 resource_index, void* destination);
 
-/**
- * @brief Byte offset of @c vram_rect within a Game Over frame.
- *
- * The linker exposes @c g_gover_frame_tail beginning at that member of frame
- * zero, so show-screen setup uses this offset to recover the complete frames.
- */
+/** Byte offset of vram_rect within a Game Over frame. */
 #define GOVER_FRAME_VRAM_RECT_OFFSET (sizeof(u_long[GOVER_OTAG_LENGTH]) + sizeof(DISPENV) + sizeof(DRAWENV))
 
-/** Accesses a complete frame through the linker-exposed frame-tail symbol. */
+/** Accesses a complete frame through the target's frame-tail BSS symbol. */
 #define GOVER_FRAME_FROM_TAIL(tail, index) (((GoverFrameHalf*)((tail) - GOVER_FRAME_VRAM_RECT_OFFSET))[index])
 
 /** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
@@ -176,9 +129,6 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
 /** Locates the first nested offset table within the staged resource. */
 #define GOVER_SFX_TABLE_OFFSET (*(u32*)0x80180004)
 
-/** The SFX table in the resource currently held by the staging buffer. */
-#define GOVER_LOADED_SFX_TABLE ((ResourceOffsetTable*)(GOVER_SFX_LOAD_BUFFER + GOVER_SFX_TABLE_OFFSET))
-
 const s32 g_gover_overlay_id = 10;
 
 /** Unreferenced BSS word retained for the original overlay layout. */
@@ -189,18 +139,19 @@ s32 g_fade_step;
 /** Unreferenced BSS word retained for the original overlay layout. */
 s32 D_8014070C;
 
-/* Linker-split storage for the Game Over screen's contiguous frame pair. */
+/* Target-visible storage for the contiguous pair of Game Over frames. */
 u8 g_gover_frame_header[GOVER_FRAME_VRAM_RECT_OFFSET];
 u8 g_gover_frame_tail[sizeof(GoverFrameHalf) * GOVER_FRAME_COUNT - GOVER_FRAME_VRAM_RECT_OFFSET];
 s32 g_fade_level;
 
-/** Typed view of the contiguous Game Over frame buffers. */
-#define GOVER_FRAMES ((GoverFrameHalf*)g_gover_frame_header)
+/** Typed view used for ordinary frame-array access. */
+#define g_gover_frames ((GoverFrameHalf*)g_gover_frame_header)
+
 
 static void gover_load_sfx_bank(s32 sfx_bank_index);
 static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinations);
 static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* destinations, Tim* image_buffer);
-static void gover_build_otag(GoverFrameHalf* frame);
+static void gover_build_otag(u8* frame_buffer);
 static void gover_run(void);
 
 /**
@@ -218,7 +169,7 @@ static void gover_run(void);
  */
 void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 sfx_bank_index)
 {
-    GoverVramTransfer vram_transfer;
+    RECT vram_rect;
     u8* frame_tail;
     RECT* back_vram_rect;
     GoverFrameHalf* frames;
@@ -230,13 +181,12 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     // Place the display buffers in vertically adjacent VRAM regions.
     setRECT(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).vram_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    // The temporary preserves the original address calculation.
     back_vram_rect = &GOVER_FRAME_FROM_TAIL(frame_tail, 1).vram_rect;
     setRECT(back_vram_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Clear the entire VRAM frame area before uploading the new image.
-    setRECT(&vram_transfer.clear_rect, 0, 0, VRAM_WIDTH, VRAM_HEIGHT);
-    ClearImage(&vram_transfer.clear_rect, 0, 0, 0);
+    setRECT(&vram_rect, 0, 0, VRAM_WIDTH, VRAM_HEIGHT);
+    ClearImage(&vram_rect, 0, 0, 0);
 
     // Configure alternating display and draw regions.
     SetDefDispEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).display_environment, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -250,12 +200,12 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     frames[0].draw_environment.dtd = 0;
 
     // Stage the texture beside the frame buffers and its palette below them.
-    vram_transfer.upload_destinations.pixel_x = SCREEN_WIDTH;
-    vram_transfer.upload_destinations.pixel_y = 0;
-    vram_transfer.upload_destinations.clut_x = 0;
-    vram_transfer.upload_destinations.clut_y = GOVER_CLUT_Y;
+    vram_rect.x = SCREEN_WIDTH;
+    vram_rect.y = 0;
+    vram_rect.w = 0;
+    vram_rect.h = GOVER_CLUT_Y;
 
-    gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE, &vram_transfer.upload_destinations, image_buffer);
+    gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE, (TimUploadDestinations*)&vram_rect, image_buffer);
 
     akao_cmd_f0();
     akao_cmd_f1();
@@ -298,7 +248,7 @@ static void gover_run(void)
 
     // Prime both ordering tables before enabling display output.
     func_800AA02C();
-    current_frame = GOVER_FRAMES;
+    current_frame = g_gover_frames;
     ClearOTagR(current_frame->ordering_table, GOVER_OTAG_LENGTH);
     ClearOTagR(current_frame[1].ordering_table, GOVER_OTAG_LENGTH);
     VSync(0);
@@ -313,7 +263,7 @@ static void gover_run(void)
         ClearOTagR(drawing_frame->ordering_table, GOVER_OTAG_LENGTH);
         drawing_frame->allocation_cursor = drawing_frame->primitive_buffer;
         func_800A9E78();
-        gover_build_otag(drawing_frame);
+        gover_build_otag((u8*)drawing_frame);
         DrawSync(0);
         set_controller_vsync_interval(2);
 
@@ -332,8 +282,8 @@ static void gover_run(void)
         }
 
         // Present the newly selected buffer and draw the frame just built.
-        next_frame = GOVER_FRAMES;
-        if (current_frame == GOVER_FRAMES)
+        next_frame = g_gover_frames;
+        if (current_frame == g_gover_frames)
         {
             next_frame = current_frame + 1;
         }
@@ -364,13 +314,14 @@ static void gover_run(void)
  * Splits the artwork across two texture pages and modulates both sprites with
  * the current fade level.
  *
- * @param frame Frame whose ordering table and packet workspace are populated.
+ * @param frame_buffer Frame buffer whose ordering table and packet workspace are populated.
  * @see https://decomp.me/scratch/q3LKi (100% match)
  */
-static void gover_build_otag(GoverFrameHalf* frame)
+static void gover_build_otag(u8* frame_buffer)
 {
-    GoverPrimitive* cursor;
-    GoverPrimitive* next_cursor;
+    GoverFrameHalf* frame;
+    u8* primitive_a;
+    u8* primitive_b;
     u8 left_fade_level;
     u8 right_fade_level;
 
@@ -384,52 +335,45 @@ static void gover_build_otag(GoverFrameHalf* frame)
         g_fade_step = 0;
     }
 
-    // Append primitives at the frame's current allocation cursor.
-    cursor = frame->allocation_cursor;
+    frame = (GoverFrameHalf*)frame_buffer;
+    primitive_a = frame->allocation_cursor;
 
-    // Draw the left image region from its texture page.
-    setSprt(&cursor->sprite);
+    setSprt(primitive_a);
+    left_fade_level = (u8)g_fade_level;
 
-    left_fade_level = g_fade_level;
+    setXY0((SPRT*)primitive_a, 0, 0);
+    setWH((SPRT*)primitive_a, GOVER_TEXTURE_PAGE_WIDTH, GOVER_IMAGE_HEIGHT);
+    setUV0((SPRT*)primitive_a, 0, 0);
+    setClut((SPRT*)primitive_a, 0, GOVER_CLUT_Y);
+    SET_BGR0((SPRT*)primitive_a, left_fade_level, left_fade_level, left_fade_level);
+    addPrim(frame_buffer, primitive_a);
 
-    setXY0(&cursor->sprite, 0, 0);
-    setWH(&cursor->sprite, GOVER_TEXTURE_PAGE_WIDTH, GOVER_IMAGE_HEIGHT);
-    setUV0(&cursor->sprite, 0, 0);
-    setClut(&cursor->sprite, 0, GOVER_CLUT_Y);
-    SET_BGR0(&cursor->sprite, left_fade_level, left_fade_level, left_fade_level);
-    addPrim(frame->ordering_table, cursor);
+    primitive_a += sizeof(SPRT);
 
-    cursor = NEXT_GOVER_PRIMITIVE(cursor, SPRT);
+    setDrawTPage((DR_TPAGE*)primitive_a, 0, 0, getTPage(1, 1, SCREEN_WIDTH, 0));
+    addPrim(frame_buffer, primitive_a);
 
-    setDrawTPage(&cursor->draw_tpage, 0, 0, getTPage(1, 1, SCREEN_WIDTH, 0));
-    addPrim(frame->ordering_table, cursor);
+    primitive_b = primitive_a + sizeof(DR_TPAGE);
+    primitive_a = primitive_b;
 
-    next_cursor = NEXT_GOVER_PRIMITIVE(cursor, DR_TPAGE);
-    cursor = next_cursor;
+    setSprt(primitive_b);
+    right_fade_level = (u8)g_fade_level;
 
-    // Draw the remaining image region from the adjacent texture page.
-    setSprt(&next_cursor->sprite);
+    SET_BGR0((SPRT*)primitive_b, right_fade_level, right_fade_level, right_fade_level);
+    setXY0((SPRT*)primitive_b, GOVER_TEXTURE_PAGE_WIDTH, 0);
+    setWH((SPRT*)primitive_b, SCREEN_WIDTH - GOVER_TEXTURE_PAGE_WIDTH, GOVER_IMAGE_HEIGHT);
+    setUV0((SPRT*)primitive_b, 0, 0);
+    setClut((SPRT*)primitive_b, 0, GOVER_CLUT_Y);
+    addPrim(frame_buffer, primitive_b);
 
-    right_fade_level = g_fade_level;
+    primitive_a += sizeof(SPRT);
 
-    SET_BGR0(&next_cursor->sprite, right_fade_level, right_fade_level, right_fade_level);
-    setXY0(&next_cursor->sprite, GOVER_TEXTURE_PAGE_WIDTH, 0);
-    setWH(&next_cursor->sprite, SCREEN_WIDTH - GOVER_TEXTURE_PAGE_WIDTH, GOVER_IMAGE_HEIGHT);
-    setUV0(&next_cursor->sprite, 0, 0);
-    setClut(&next_cursor->sprite, 0, GOVER_CLUT_Y);
+    setDrawTPage((DR_TPAGE*)primitive_a, 0, 0, getTPage(1, 1, GOVER_SECOND_TPAGE_X, 0));
+    primitive_b = primitive_a;
+    primitive_b += sizeof(DR_TPAGE);
 
-    addPrim(frame->ordering_table, next_cursor);
-
-    cursor = NEXT_GOVER_PRIMITIVE(cursor, SPRT);
-
-    setDrawTPage(&cursor->draw_tpage, 0, 0, getTPage(1, 1, GOVER_SECOND_TPAGE_X, 0));
-    // Separate assignments preserve the original register allocation.
-    next_cursor = cursor;
-    next_cursor = NEXT_GOVER_PRIMITIVE(next_cursor, DR_TPAGE);
-
-    addPrim(frame->ordering_table, cursor);
-
-    frame->allocation_cursor = next_cursor;
+    addPrim(frame_buffer, primitive_a);
+    frame->allocation_cursor = primitive_b;
 }
 
 /**
@@ -443,11 +387,8 @@ static void gover_build_otag(GoverFrameHalf* frame)
 static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* destinations, Tim* image_buffer)
 {
     // Required to preserve the original stack frame.
-    volatile u8 padding[8];
-    u16 resource_id;
-
-    resource_id = resource_index;
-    cdrom_queue_read(resource_id, image_buffer);
+    u8 padding[8];
+    cdrom_queue_read((u16)resource_index, image_buffer);
     cdrom_wait_queue_empty();
     gover_upload_image_to_vram(image_buffer, destinations);
 }
@@ -469,14 +410,14 @@ static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinati
 
     setRECT(&upload_rect, destinations->clut_x, destinations->clut_y,
             tim->clut_block.dimensions.width * tim->clut_block.dimensions.height, 1);
-    LoadImage(&upload_rect, tim->clut_data);
+    LoadImage(&upload_rect, (u_long*)tim->clut_data);
 
     // Locate the pixel block that follows the variable-length CLUT block.
     pixel_block = TIM_PIXEL_BLOCK(tim, clut_block_length);
 
     setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y,
             pixel_block->dimensions.width, pixel_block->dimensions.height);
-    LoadImage(&upload_rect, pixel_block + 1);
+    LoadImage(&upload_rect, (u_long*)(pixel_block + 1));
 
     return ALIGN64(pixel_block->dimensions.width);
 }
@@ -493,11 +434,10 @@ static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinati
  */
 static void gover_load_sfx_bank(s32 sfx_bank_index)
 {
-    ResourceOffsetTable* loaded_table;
+    AkaoBankHeader* akao_bank;
     u8* copy_destination;
     u8* copy_source;
-    void* akao_bank;
-    u16 resource_index;
+    s32* offsets;
 
     if (sfx_bank_index == GOVER_SFX_BANK_REUSE)
     {
@@ -514,18 +454,17 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
     }
 
     // Load the resource and locate its first SFX table.
-    resource_index = sfx_bank_index + GOVER_SFX_RESOURCE_BASE;
-    cdrom_queue_read(resource_index, GOVER_SFX_LOAD_BUFFER);
+    cdrom_queue_read((u16)(sfx_bank_index + GOVER_SFX_RESOURCE_BASE), GOVER_SFX_LOAD_BUFFER);
     cdrom_wait_queue_empty();
 
     g_sfx_table_buffer.active_table_offset = GOVER_SFX_TABLE_DATA_OFFSET;
-    loaded_table = GOVER_LOADED_SFX_TABLE;
-    copy_source = loaded_table->bytes;
-    akao_bank = RESOURCE_TABLE_END(loaded_table);
+    copy_source = GOVER_SFX_LOAD_BUFFER + GOVER_SFX_TABLE_OFFSET;
+    offsets = (s32*)copy_source;
+    akao_bank = (AkaoBankHeader*)(copy_source + (u32)offsets[*offsets]);
     copy_destination = g_sfx_table_buffer.table_data;
 
     // Preserve the SFX table that precedes the AKAO bank.
-    while (copy_source != akao_bank)
+    while (copy_source != (u8*)akao_bank)
     {
         *copy_destination++ = *copy_source++;
     }
