@@ -56,13 +56,8 @@ typedef union
     u8 bytes[1];
 } ResourceOffsetTable;
 
-/**
- * @brief Returns the address stored in the offset table's final entry.
- *
- * @note The commuted pointer addition preserves the original instruction
- *       operand order.
- */
-#define RESOURCE_TABLE_END(table) ((table)->bytes + *(((table)->header.entry_count - 1) + (table)->header.entry_offsets))
+/** @brief Returns the address stored in the offset table's final entry. */
+#define RESOURCE_TABLE_END(table) (*((table)->header.entry_offsets + ((table)->header.entry_count - 1)) + (table)->bytes)
 
 /** Number of entries in each Game Over ordering table. */
 #define GOVER_OTAG_LENGTH 8
@@ -443,11 +438,8 @@ static void gover_build_otag(GoverFrameHalf* frame)
 static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* destinations, Tim* image_buffer)
 {
     // Required to preserve the original stack frame.
-    volatile u8 padding[8];
-    u16 resource_id;
-
-    resource_id = resource_index;
-    cdrom_queue_read(resource_id, image_buffer);
+    u8 padding[8];
+    cdrom_queue_read((u16)resource_index, image_buffer);
     cdrom_wait_queue_empty();
     gover_upload_image_to_vram(image_buffer, destinations);
 }
@@ -469,14 +461,14 @@ static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinati
 
     setRECT(&upload_rect, destinations->clut_x, destinations->clut_y,
             tim->clut_block.dimensions.width * tim->clut_block.dimensions.height, 1);
-    LoadImage(&upload_rect, tim->clut_data);
+    LoadImage(&upload_rect, (u_long*)tim->clut_data);
 
     // Locate the pixel block that follows the variable-length CLUT block.
     pixel_block = TIM_PIXEL_BLOCK(tim, clut_block_length);
 
     setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y,
             pixel_block->dimensions.width, pixel_block->dimensions.height);
-    LoadImage(&upload_rect, pixel_block + 1);
+    LoadImage(&upload_rect, (u_long*)(pixel_block + 1));
 
     return ALIGN64(pixel_block->dimensions.width);
 }
@@ -496,8 +488,7 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
     ResourceOffsetTable* loaded_table;
     u8* copy_destination;
     u8* copy_source;
-    void* akao_bank;
-    u16 resource_index;
+    u8* akao_bank;
 
     if (sfx_bank_index == GOVER_SFX_BANK_REUSE)
     {
@@ -514,8 +505,7 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
     }
 
     // Load the resource and locate its first SFX table.
-    resource_index = sfx_bank_index + GOVER_SFX_RESOURCE_BASE;
-    cdrom_queue_read(resource_index, GOVER_SFX_LOAD_BUFFER);
+    cdrom_queue_read((u16)(sfx_bank_index + GOVER_SFX_RESOURCE_BASE), GOVER_SFX_LOAD_BUFFER);
     cdrom_wait_queue_empty();
 
     g_sfx_table_buffer.active_table_offset = GOVER_SFX_TABLE_DATA_OFFSET;
@@ -530,5 +520,5 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
         *copy_destination++ = *copy_source++;
     }
 
-    akao_upload_bank_blocking(akao_bank, 1);
+    akao_upload_bank_blocking((AkaoBankHeader*)akao_bank, 1);
 }
