@@ -793,11 +793,7 @@ OVERLAYS += movie
 overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
 
 OVERLAYS += niki
-overlay_niki_gcc_280_g0_srcs := \
-	src/overlays/niki/unk1.c \
-	src/overlays/niki/unk1_after_fixed_prompts.c \
-	src/overlays/niki/unk1_mid2_middle.c \
-	src/overlays/niki/unk1_tail.c
+overlay_niki_gcc_280_g0_srcs := src/overlays/niki/unk1.c
 overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki.c \
 	src/overlays/niki/niki_reset_entry_ranks.c \
@@ -815,7 +811,10 @@ overlay_niki_gcc_272_cdk_g0_srcs := \
 	src/overlays/niki/niki_expand_text_glyph_codes.c \
 	src/overlays/niki/niki_nibble_pair.c \
 	src/overlays/niki/niki_entry_blocks_reach_limit.c \
-	src/overlays/niki/niki_rank_entries.c
+	src/overlays/niki/niki_rank_entries.c \
+	src/overlays/niki/func_80144DF8.c \
+	src/overlays/niki/func_80145DA4.c \
+	src/overlays/niki/func_801462EC.c
 
 OVERLAYS += shop
 overlay_shop_gcc_272_cdk_g0_srcs := \
