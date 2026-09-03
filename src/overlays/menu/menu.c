@@ -5429,7 +5429,8 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
             }
 
             {
-                MenuNode* node = &g_menu_nodes[g_menu_scene_type];
+                MenuNode* node = g_menu_nodes;
+                node += g_menu_scene_type;
                 if (node->label_id == 0x13)
                 {
                     u8* a2_27 = (u8*)g_menu_item_ptr;
