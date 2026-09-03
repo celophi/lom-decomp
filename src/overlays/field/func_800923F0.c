@@ -57,3 +57,19 @@ void func_800923F0(FieldRecord *arg0)
         }
     }
 }
+
+/**
+ * @brief Initializes an inactive field record and clears two state flags.
+ *
+ * @param record Field record whose state entry is selected by byte 0x3A.
+ */
+void func_800924D8(FieldRecord *record)
+{
+    if (record->unk2E == 0)
+    {
+        record->unk2A = 0;
+        func_800952DC(record, 1);
+        D_80105AE0[record->unk3A].unk174 &= ~0x1800;
+        func_80096334(record);
+    }
+}
