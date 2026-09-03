@@ -42,7 +42,7 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x11D, c, niki]
-      - [0x4741, c, unk1]
+      - [0x4741, c, func_80144740]             # gcc272_cdk, func_80144740, WIP 99.82%
       - [0x4985, c, niki_rank_entries]         # gcc272_cdk, func_80144984, 100%
       - [0x4BC1, c, niki_reset_entry_ranks]    # gcc272_cdk, 1 func, 100%
       - [0x4BF9, c, niki_known_entry_type]    # gcc272_cdk, 1 func, 100%

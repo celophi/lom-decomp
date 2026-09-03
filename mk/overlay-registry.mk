@@ -23,10 +23,9 @@
 
 OVERLAYS += addhero
 overlay_addhero_gcc_272_cdk_g0_srcs := \
+	src/overlays/addhero/func_80144570.c \
 	src/overlays/addhero/addhero.c \
 	src/overlays/addhero/addhero2.c
-overlay_addhero_gcc_280_g0_srcs := \
-	src/overlays/addhero/unk1_before_rank.c \
 
 OVERLAYS += carda
 overlay_carda_gcc_272_cdk_g0_srcs := \
@@ -763,8 +762,8 @@ OVERLAYS += movie
 overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
 
 OVERLAYS += niki
-overlay_niki_gcc_280_g0_srcs := src/overlays/niki/unk1.c
 overlay_niki_gcc_272_cdk_g0_srcs := \
+	src/overlays/niki/func_80144740.c \
 	src/overlays/niki/niki.c \
 	src/overlays/niki/niki_reset_entry_ranks.c \
 	src/overlays/niki/niki_known_entry_type.c \
@@ -788,6 +787,7 @@ overlay_niki_gcc_272_cdk_g0_srcs := \
 
 OVERLAYS += shop
 overlay_shop_gcc_272_cdk_g0_srcs := \
+	src/overlays/shop/func_801429A4.c \
 	src/overlays/shop/shop_init.c \
 	src/overlays/shop/shop_update_interp.c \
 	src/overlays/shop/shop_element_utils.c \
@@ -805,8 +805,7 @@ overlay_shop_gcc_280_g0_srcs := \
 	src/overlays/shop/unk1_after_interp.c \
 	src/overlays/shop/unk1_mid.c \
 	src/overlays/shop/unk1_mid_tail.c \
-	src/overlays/shop/unk1_tail_mid.c \
-	src/overlays/shop/unk1_tail_end.c
+	src/overlays/shop/unk1_tail_mid.c
 
 OVERLAYS += title
 overlay_title_gcc_272_cdk_g0_srcs := src/overlays/title/title.c
