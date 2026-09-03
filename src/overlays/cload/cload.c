@@ -2739,16 +2739,8 @@ s32 cload_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
  * validation stores -1 / 0 into the two arrays instead.
  *
  * @return The largest value returned by any @ref cload_parse_hex_suffix_byte call (0 if none).
- * @note WIP match, 98.37% (135/145 exact, gcc272_cdk; was 87.74%). Frame,
- *       insn count, and all sp slots match. Residue is one coupled loop-giv
- *       register permutation (target walks the entry pointer in s1 and the
- *       i*4 field offset in s0; this allocates them swapped, s0/s1) plus one
- *       scheduling row (the %lo(D_800ECF7C) addiu sits before the
- *       g_cload_card_slot load instead of in its load-delay slot). Probed
- *       inert: precomputing entry before the call, hoisting i*4 to a named
- *       loop-top local, both combined, and swapping the field/store lines
- *       (-24). See working/cload_parse_entry_fields/.
- * @see decomp.me (98.37%)
+ * @note WIP match, 98.62% (gcc272_cdk).
+ * @see decomp.me (98.62%)
  */
 s32 cload_parse_entry_fields(void)
 {
@@ -3523,9 +3515,7 @@ void cload_shutdown_stream_handles(void)
  * @brief Begin streaming the page page's first g_cload_entries record.
  * @param page Page index (each page is 0x320 bytes in g_cload_entries).
  * @return 1 if func_80016BCC accepted the record (count bumped), else 0.
- * @note WIP 94.47% (gcc272_cdk); residual is a 2-insn memcpy base / CSE-share
- *       coupling.
- * @see decomp.me (94.47%)
+ * @see decomp.me (100%)
  */
 s32 cload_begin_entry_scan(s32 page)
 {
@@ -3637,7 +3627,7 @@ s32 cload_scan_next_entry(s32 page)
  * @note Validates the record against the D_800ECFC4 / D_800ECF7C patterns, copies
  *       its header into a local CloadFileHeader, biases byte 2 by the page index, and
  *       registers it via func_800170BC; sets the g_cload_selection_status / g_cload_selected_entry_extended status.
- * @see decomp.me (91.94%)
+ * @see decomp.me (100%)
  */
 void cload_commit_selected_entry(void)
 {
@@ -3796,7 +3786,7 @@ s32 cload_poll_secondary_handle_group(void)
  * @note Five passes bucket records matching D_800ECF7C, then D_800ECF8C, then
  *       D_800ECFC4, then the remainder, copying each 0x28-byte record with
  *       func_80016E7C before writing the ordered set back to the page.
- * @see decomp.me (95.29%)
+ * @see decomp.me (95.37%)
  */
 void cload_sort_entries_by_type(void)
 {
@@ -4026,7 +4016,7 @@ s32 cload_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 pa
  * @param x X coordinate passed through.
  * @param y Y coordinate passed through.
  * @param palette Passed through to cload_draw_cached_text.
- * @see decomp.me (91.21%)
+ * @see decomp.me (100%)
  */
 void cload_draw_hex_byte(s32 prim, s32 ot, s32 value, s32 x, s32 y, s32 palette)
 {
