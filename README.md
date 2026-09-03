@@ -36,8 +36,8 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | Module | | Status |
 |---|:---:|---|
 | SLUS_010.13 | 🪲 | Non-matching |
-| ADDHERO.BIN | 💤 | Not started |
-| CARDA.BIN | 🚧 | In progress |
+| ADDHERO.BIN | 🪲 | Non-matching |
+| CARDA.BIN | 🌱 | In progress |
 | CHECKPS.BIN | 🔒 | Fully linked |
 | CLOAD.BIN | 🪲 | Non-matching |
 | FIELD.BIN | 🌱 | In progress |
@@ -47,12 +47,12 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | GOVER.BIN | 🔒 | Fully linked |
 | MENU.BIN | 🪲 | Non-matching |
 | MOVIE.BIN | 🔒 | Fully linked |
-| NIKI.BIN | 🌱 | In progress |
-| SHOP.BIN | 💤 | Not started |
+| NIKI.BIN | 🪲 | Non-matching |
+| SHOP.BIN | 🌱 | In progress |
 | TITLE.BIN | 🔒 | Fully linked |
 | WMAP.BIN | 💤 | Not started |
-| WSEL.BIN | 💤 | Not started |
-| ZUKAN.BIN | 💤 | Not started |
+| WSEL.BIN | 🌱 | In progress |
+| ZUKAN.BIN | 🌱 | In progress |
 
 ## Supported game version
 
@@ -471,5 +471,3 @@ This repository is an independent reverse-engineering and preservation project. 
 No original game executable, overlay binaries, artwork, audio, or other copyrighted game data should be committed to this repository. You must supply required data from your own legally obtained copy of the game.
 
 *Legend of Mana* and related names and assets are the property of their respective owners.
-
-<img src="docs/lil-cactus.png" width="84" alt="Lil' Cactus"/>
