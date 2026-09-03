@@ -28,7 +28,7 @@ void func_80146E30(u8 *out, u8 *in)
             b1 &= 0xF;
             pa = D_8015D3B4 + b1 * 2;
             pa += off * 33;
-            lead = *(volatile u8 *)in;
+            lead = *in;
             pa += lead * 528;
             *out = *pa;
             out++;
@@ -37,7 +37,7 @@ void func_80146E30(u8 *out, u8 *in)
             b1 &= 0xF;
             pb = D_8015D3B4 + 1 + b1 * 2;
             pb += off * 33;
-            lead = *(volatile u8 *)in;
+            lead = *in;
             pb += lead * 528;
             *out = *pb;
             out++;
@@ -45,11 +45,11 @@ void func_80146E30(u8 *out, u8 *in)
         }
         else if ((u8)c >= 0x21)
         {
-            lead = *(volatile u8 *)in;
+            lead = *in;
             index = lead - 0x20;
             *out = D_801605A8[(index / 16) * 33 + (index & 0xF) * 2];
             out++;
-            lead = *(volatile u8 *)in;
+            lead = *in;
             index = lead - 0x20;
             *out = D_801605A8[(index / 16) * 33 + (index & 0xF) * 2 + 1];
             out++;

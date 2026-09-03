@@ -50,9 +50,7 @@ s32 func_80145C34(s32 page)
     func_800AA02C();
     if ((D_8016093C == 0) && (func_80144A28() == 0))
     {
-        do {
-            D_801609A4 = 0xF8;
-        } while (0);
+        D_801609A4 = 0xF8;
     }
     else
     {
