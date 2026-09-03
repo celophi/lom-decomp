@@ -56,39 +56,37 @@ typedef struct
     /* 0x24 */ char system[4];
 } CloadDirEntry;
 
-/** @brief Scratch draw/header record built on the stack before an emit. */
-typedef struct
+/**
+ * @brief 0x20-byte, word-aligned memory-card path scratch buffer.
+ * The first six bytes are initialized from the "bu00:" device prefix before a
+ * filename suffix is appended.
+ */
+typedef union
 {
-    /* 0x00 */ s32 unk0;
-    /* 0x04 */ s16 unk4;
-    /* 0x06 */ s16 unk6;
-    /* 0x08 */ u8 unk8[0x18];
-} CloadFileHeaderScratch;
+    u8 bytes[0x20];
+    u32 align;
+} CloadCardPathScratch;
 
-/** @brief 0x68-byte top-of-frame scratch buffer used by cload_advance_load_sequence. */
-typedef struct
+/** @brief 0x68-byte, word-aligned scratch buffer used by cload_advance_load_sequence. */
+typedef union
 {
-    /* 0x00 */ s32 unk0;
-    /* 0x04 */ s16 unk4;
-    /* 0x06 */ u8 pad[0x62];
+    u8 bytes[0x68];
+    u32 align;
 } CloadLoadScratch;
 
-/** @brief 0x100-byte CD file/header record template (g_cload_file_template). */
-typedef struct
+/** @brief 0x100-byte, word-aligned memory-card path buffer. */
+typedef union
 {
-    /* 0x00 */ s32 unk0;
-    /* 0x04 */ s16 unk4;
-    /* 0x06 */ u8 pad[0x100 - 6];
-} CloadFileHeader;
+    u8 bytes[0x100];
+    u32 align;
+} CloadCardPathBuffer;
 
-/** @brief CloadEntryHeader record with a byte flag at 0x6 (g_cload_entry_header_template). */
-typedef struct
+/** @brief 0x10-byte, word-aligned buffer initialized from the "bu00:*" search path. */
+typedef union
 {
-    /* 0x0 */ s32 unk0;
-    /* 0x4 */ s16 unk4;
-    /* 0x6 */ s8 unk6;
-    /* 0x7 */ u8 pad[9];
-} CloadEntryHeader;
+    u8 bytes[0x10];
+    u32 align;
+} CloadCardSearchPathBuffer;
 
 /* CLOAD layout/state constants. */
 #define CLOAD_ELEMENT_COUNT 8
@@ -288,15 +286,15 @@ extern s32 g_cload_entry_suffix_values[];
 extern u8 D_800EC3F6[2];
 extern u16 D_80146338[];
 
-/* Globals introduced with the unk1 (0x3520-0x56E0) function block. */
+/* Globals used by the memory-card I/O, load-state, and glyph-cache block. */
 extern u8 D_800EC3FA[];
 extern u8 D_800ECF9C;
 extern u8 D_800ECFB0;
 extern u8 D_80146528;
 extern u8 D_80146538[];
 extern u8 D_80162C90[];
-extern CloadFileHeader g_cload_file_template;
-extern CloadEntryHeader g_cload_entry_header_template;
+extern CloadCardPathBuffer g_cload_file_template;
+extern CloadCardSearchPathBuffer g_cload_entry_header_template;
 extern s32 g_cload_entry_fields[];
 extern s32 g_cload_retry_count;
 extern s32 g_cload_primary_poll_countdown;
@@ -338,7 +336,7 @@ void cload_reset_glyph_cache(void);
 void cload_begin_glyph_cache_frame(void);
 void cload_evict_unused_glyphs(void);
 
-/* Callees used by the unk1 (0x3520-0x56E0) function block. */
+/* External callees used by the memory-card I/O/load-state block. */
 s32 func_8001714C(void *, void *, s32);
 s32 func_8001680C(void *, s32);
 s32 func_8001681C(s32, void *, s32);
@@ -359,6 +357,85 @@ s32 func_800167CC(s32);
 s32 func_80016BCC(void *, void *);
 s32 func_8001684C(void *);
 s32 func_800170BC(void *, void *, u8);
+
+/*
+ * Shared executable names recovered from config/symbols/shared_symbol_addrs.txt.
+ * Keep these as source aliases so the compiler still emits the historical
+ * func_XXXXXXXX relocation names expected by the current target object.
+ */
+#define cdrom_process_state             func_800122C0
+#define cdrom_wait_queue_empty          func_80013F2C
+#define cdrom_queue_read                func_800141EC
+#define set_controller_vsync_interval   func_800157B0
+#define update_controllers              func_800157DC
+#define reset_controller_vsync_state    func_800158E0
+#define OpenEvent                       func_800167AC
+#define CloseEvent                      func_800167BC
+#define TestEvent                       func_800167CC
+#define EnableEvent                     func_800167DC
+#define EnterCriticalSection            func_800167EC
+#define ExitCriticalSection             func_800167FC
+#define open                            func_8001680C
+#define read                            func_8001681C
+#define close                           func_8001683C
+#define nextfile                        func_8001684C
+#define erase                           func_8001686C
+#define Krom2RawAdd                     func_8001687C
+#define firstfile                       func_80016BCC
+#define bcopy                           func_80016E7C
+#define strcat                          func_80016F9C
+#define strcpy                          func_800170BC
+#define strncmp                         func_8001714C
+#define _card_info                      func_8001724C
+#define _card_load                      func_8001725C
+#define _card_wait                      func_8001729C
+#define _card_clear                     func_800172AC
+#define SetDispMask                     func_800196F0
+#define DrawSync                        func_80019788
+#define ClearImage                      func_8001990C
+#define LoadImage                       func_80019A34
+#define ClearOTagR                      func_80019C74
+#define DrawOTag                        func_80019D7C
+#define PutDrawEnv                      func_80019DEC
+#define PutDispEnv                      func_80019FB8
+#define SetDrawEnv                      func_8001A5D4
+#define SetDefDrawEnv                   func_8001C56C
+#define SetDefDispEnv                   func_8001C62C
+#define SetGeomOffset                   func_8001D58C
+#define SetGeomScreen                   func_8001D5AC
+#define VSync                           func_8002054C
+#define McxCardType                     func_800342CC
+
+/* Main-executable globals already named in the shared symbol map. */
+#define g_save_slot_index               D_8003EC9C
+#define g_menuLayoutBuffer              D_80042FD8
+#define g_cload_card_path_prefix         g_cload_file_template
+#define g_cload_card_search_path         g_cload_entry_header_template
+
+/* CLOAD-local semantic alias; the target object still names this symbol as below. */
+#define cload_erase_fixed_card_files     cload_render_fixed_prompts
+
+/* CLOAD text-table entries decoded from asm/overlays/cload/data/data.data.s. */
+#define g_cload_text_check_memory_card  D_80145E9C
+#define g_cload_text_not_enough_blocks  D_80145E9E
+#define g_cload_text_no_memory_card     D_80145EA0
+#define g_cload_text_mana               D_80145EA2
+#define g_cload_text_other_game         D_80145EA4
+#define g_cload_text_card_slot_1        D_80145EA8
+#define g_cload_text_card_slot_2        D_80145EAA
+#define g_cload_text_card_access_failed D_80145EAC
+#define g_cload_text_no_save_data       D_80145EAE
+#define g_cload_text_new_save           D_80145EB0
+#define g_cload_text_new_save_prompt    D_80145EC4
+#define g_cload_text_load               D_80145EC8
+#define g_cload_text_number_prefix      D_80145ECA
+#define g_cload_text_load_prompt        D_80145ECC
+#define g_cload_text_loading            D_80145ECE
+#define g_cload_text_no_lom_save_data   D_80145ED0
+#define g_cload_text_save_failed        D_80145ED8
+#define g_cload_text_load_failed        D_80145EDA
+#define g_cload_text_card_insert_error  D_80145EDC
+#define g_cload_text_version_error      D_80145EF0
 
 /**
  * @brief Initialize and run the CLOAD save/continue menu.
@@ -381,7 +458,7 @@ s32 cload_main(void)
     rect.y = 0;
     rect.w = 0x40;
     rect.h = 0x100;
-    func_8001990C(&rect, 0, 0, 0);
+    ClearImage(&rect, 0, 0, 0);
     cload_reset_glyph_cache();
     D_80162370 = 0;
     g_cload_progress_active = 0;
@@ -402,63 +479,63 @@ s32 cload_main(void)
 void cload_run_menu_loop(void)
 {
     RECT rect;
-    u8 *p;
-    u8 *q;
-    s32 flag;
-    s32 temp;
+    u8 *frame;
+    u8 *ordering_table;
+    s32 buffer_index;
+    s32 dpad_input;
 
-    func_80019788(0);
-    func_8002054C(0);
+    DrawSync(0);
+    VSync(0);
     rect.x = 0;
     rect.y = 0;
     rect.w = 0x140;
     rect.h = 0x1D8;
-    func_8001990C(&rect, 0, 0, 0);
-    p = D_8014A988;
-    flag = 0;
-    func_80019C74(p + 0x40, 0x1000);
-    func_80019C74(p + 0x7D04, 0x1000);
-    func_80019FB8(p + 0x4040);
-    func_800157DC();
-    func_800196F0(1);
+    ClearImage(&rect, 0, 0, 0);
+    frame = D_8014A988;
+    buffer_index = 0;
+    ClearOTagR(frame + 0x40, 0x1000);
+    ClearOTagR(frame + 0x7D04, 0x1000);
+    PutDispEnv(frame + 0x4040);
+    update_controllers();
+    SetDispMask(1);
     do
     {
-        q = p + 0x40;
-        func_80019C74(q, 0x1000);
-        *(u8 **)(p + 0x40B8) = D_8015A350 + (flag << 14);
+        ordering_table = frame + 0x40;
+        ClearOTagR(ordering_table, 0x1000);
+        *(u8 **)(frame + 0x40B8) = D_8015A350 + (buffer_index << 14);
         func_800A9E78();
-        temp = g_pad_input & 0xF000;
-        if (temp != 0)
+        dpad_input = g_pad_input & 0xF000;
+        if (dpad_input != 0)
         {
-            g_pad_input = temp;
+            g_pad_input = dpad_input;
         }
-        func_80067BBC(p);
-        if (cload_update_frame(p) != 0)
+        func_80067BBC(frame);
+        if (cload_update_frame(frame) != 0)
         {
             break;
         }
-        func_80019788(0);
-        func_800157B0(2);
-        func_8002054C(2);
-        func_8001990C(p + 0x40B0, 0, 0, 0);
-        flag = 0;
-        if (p == D_8014A988)
+        DrawSync(0);
+        set_controller_vsync_interval(2);
+        VSync(2);
+        ClearImage(frame + 0x40B0, 0, 0, 0);
+        buffer_index = 0;
+        if (frame == D_8014A988)
         {
-            p += 0x7CC4;
-            flag = 1;
+            frame += 0x7CC4;
+            buffer_index = 1;
         }
         else
         {
-            p = D_8014A988;
+            frame = D_8014A988;
         }
-        func_80019FB8(p + 0x4040);
-        func_80019DEC(p + 0x4054);
-        func_80019D7C(q + 0x3FFC);
-        func_800157DC();
-        func_800122C0();
+        PutDispEnv(frame + 0x4040);
+        PutDrawEnv(frame + 0x4054);
+        DrawOTag(ordering_table + 0x3FFC);
+        update_controllers();
+        cdrom_process_state();
     } while (1);
-    func_800158E0();
-    func_8002054C(0);
+    reset_controller_vsync_state();
+    VSync(0);
 }
 
 /**
@@ -467,53 +544,53 @@ void cload_run_menu_loop(void)
  */
 void cload_init_display(void)
 {
-    u8 *base;
-    s16 *bank2;
+    u8 *display_rect;
+    s16 *second_display_rect;
 
     /* Preserve GCC 2.7.2's original stack-frame bucket without a dead call. */
-    s32 frame_scratch[2];
-    func_8001D5AC(0x5DC);
-    func_8001D58C(0xA0, 0x78);
+    s32 stack_frame_pad[2];
+    SetGeomScreen(0x5DC);
+    SetGeomOffset(0xA0, 0x78);
     D_8014EA38 = 0;
-    base = (u8 *)&D_8014EA38;
-    bank2 = (s16 *)(base + 0x7CC4);
-    *(s16 *)(base + 0x2) = 0;
-    *(s16 *)(base + 0x4) = 0x140;
-    *(s16 *)(base + 0x6) = 0xF0;
-    *(s16 *)(base + 0x7CC4) = 0;
-    bank2[1] = 0xE8;
-    bank2[2] = 0x140;
-    bank2[3] = 0xF0;
-    func_80019788(0);
-    func_8002054C(0);
-    func_8001C62C(base - 0x70, 0, 0, 0x140, 0xF0);
-    func_8001C62C(base + 0x7C54, 0, 0xE8, 0x140, 0xF0);
-    func_8001C56C(base - 0x5C, 0, 0xF0, 0x140, 0xE0);
-    func_8001C56C(base + 0x7C68, 0, 0x8, 0x140, 0xE0);
-    base[0x7C7E] = 0;
-    base[-0x46] = 0;
+    display_rect = (u8 *)&D_8014EA38;
+    second_display_rect = (s16 *)(display_rect + 0x7CC4);
+    *(s16 *)(display_rect + 0x2) = 0;
+    *(s16 *)(display_rect + 0x4) = 0x140;
+    *(s16 *)(display_rect + 0x6) = 0xF0;
+    *(s16 *)(display_rect + 0x7CC4) = 0;
+    second_display_rect[1] = 0xE8;
+    second_display_rect[2] = 0x140;
+    second_display_rect[3] = 0xF0;
+    DrawSync(0);
+    VSync(0);
+    SetDefDispEnv(display_rect - 0x70, 0, 0, 0x140, 0xF0);
+    SetDefDispEnv(display_rect + 0x7C54, 0, 0xE8, 0x140, 0xF0);
+    SetDefDrawEnv(display_rect - 0x5C, 0, 0xF0, 0x140, 0xE0);
+    SetDefDrawEnv(display_rect + 0x7C68, 0, 0x8, 0x140, 0xE0);
+    display_rect[0x7C7E] = 0;
+    display_rect[-0x46] = 0;
     func_80067B8C();
     func_80067EB4(0x100, 0x100, 0x100, 0x14);
 }
 
 /**
  * @brief Advance one CLOAD menu frame and report whether it should exit.
- * @param frame Function argument.
+ * @param frame_state Current double-buffered CLOAD frame state.
  * @return 1 when the overlay should exit, otherwise 0.
  * @see decomp.me (100.00%)
  */
-s32 cload_update_frame(s32 frame)
+s32 cload_update_frame(s32 frame_state)
 {
     if (g_cload_exit_requested != 0)
     {
         cload_shutdown_stream_handles();
         field_text_reset_windows();
-        func_80019788(0);
+        DrawSync(0);
         return 1;
     }
     field_text_reset_scratch();
     cload_begin_glyph_cache_frame();
-    cload_update_menu(frame);
+    cload_update_menu(frame_state);
     cload_evict_unused_glyphs();
     func_80063194();
     g_cload_frame_parity ^= 1;
@@ -679,8 +756,8 @@ s32 cload_handle_input(void)
     s32 pending;
     s32 status;
     s32 count;
-    s32 arg0;
-    CloadPromptElement *p;
+    s32 sfx_id;
+    CloadPromptElement *prompt;
 
     if ((g_cload_element_pool.second_state & CLOAD_ELEMENT_STATE_MASK) == 0)
     {
@@ -782,35 +859,33 @@ s32 cload_handle_input(void)
     }
     if (g_pad_input & 0x220)
     {
-        s32 term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
-        s32 term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
-
-        if (func_8001714C(D_800ECF7C, (char *)(term1 + term2), 0xC) != 0)
+        if (strncmp(D_800ECF7C,
+                &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][g_cload_selected_row], 0xC) != 0)
         {
-            arg0 = 0x78;
+            sfx_id = 0x78;
         }
         else
         {
-            if ((D_80162C5F == D_8003EC9C) || (D_80162C5F == 0xFF))
+            if ((D_80162C5F == g_save_slot_index) || (D_80162C5F == 0xFF))
             {
-                p = (CloadPromptElement *)cload_alloc_element(D_80162C5F);
-                p->draw = cload_draw_load_prompt;
-                p->attr.f.phase = 1;
-                p->attr.f.x = 0x10;
-                p->attr.f.code = 0x5B;
-                p->active = 1;
-                p->y = 0x2B;
-                p->attr.word = (p->attr.word & 0x00FFFFFF) | 0x20000000;
+                prompt = (CloadPromptElement *)cload_alloc_element(D_80162C5F);
+                prompt->draw = cload_draw_load_prompt;
+                prompt->attr.f.phase = 1;
+                prompt->attr.f.x = 0x10;
+                prompt->attr.f.code = 0x5B;
+                prompt->active = 1;
+                prompt->y = 0x2B;
+                prompt->attr.word = (prompt->attr.word & 0x00FFFFFF) | 0x20000000;
                 cload_enable_choice_toggle();
                 cload_restart_load_sequence();
-                arg0 = 0x7E;
+                sfx_id = 0x7E;
             }
             else
             {
-                arg0 = 0x78;
+                sfx_id = 0x78;
             }
         }
-        func_800A3938(arg0, 0x80);
+        func_800A3938(sfx_id, 0x80);
     }
 }
 
@@ -883,7 +958,7 @@ void cload_update_elements(void)
  *       renderer). The row loop is a `do { } while (i < g_cload_entry_state)`
  *       guarded by `if (state > 0)` with `row_y`/`i` hoisted to the default
  *       block, the rank-marker glyph offsets are materialized through a `u16
- *       misc_glyph` intermediate, and entry comparisons use func_8001714C - the
+ *       misc_glyph` intermediate, and entry comparisons use strncmp - the
  *       shapes the target's register assignment requires.
  * @see decomp.me (100.00%)
  */
@@ -894,22 +969,22 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case 0xF8:
-        do { prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED0, 0x34), 1, -x_offset + 0x84, -y_offset, 2); } while (0);
+        do { prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_no_lom_save_data, 0x34), 1, -x_offset + 0x84, -y_offset, 2); } while (0);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED0, 0x34), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_no_lom_save_data, 0x34), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFA:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145E9E, 2), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_not_enough_blocks, 2), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFD:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EA0, 4), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_no_memory_card, 4), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EAC, 0x10), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_card_access_failed, 0x10), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EAE, 0x12), 1, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_no_save_data, 0x12), 1, -x_offset + 0x84, -y_offset, 2);
         break;
     default:
         {
@@ -922,8 +997,8 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             u8 *base;
         case 0xFF:
             x = -x_offset + 0x84;
-            base = (u8 *)&D_80145E9C;
-            prim = func_800A88A0(prim, ot, base + D_80145E9C, 1, x, -y_offset, 2);
+            base = (u8 *)&g_cload_text_check_memory_card;
+            prim = func_800A88A0(prim, ot, base + g_cload_text_check_memory_card, 1, x, -y_offset, 2);
             prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x1E), 1, x, 0xE - y_offset, 2);
             prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0xB2), 1, x, 0x1C - y_offset, 2);
             break;
@@ -941,7 +1016,7 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 
             off = i;
             base_x = -x_offset;
-            base = (u8 *)&D_80145E9C;
+            base = (u8 *)&g_cload_text_check_memory_card;
             entry = g_cload_entries;
             off = i;
             do
@@ -954,7 +1029,7 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     {
                         pos.vx = base_x + 0x86;
                         pos.vy = row_y;
-                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)g_cload_entry_suffix_values + off), 1, &pos, 0), ot, (void *)((s32)D_80145ECA + (s32)base), 1, base_x + 0x70, row_y, 0);
+                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)g_cload_entry_suffix_values + off), 1, &pos, 0), ot, (void *)((s32)g_cload_text_number_prefix + (s32)base), 1, base_x + 0x70, row_y, 0);
                         if ((g_cload_rank_count - 1) == *flag_ptr)
                         {
                             misc_glyph = *(u16 *)(base + 0x36);
@@ -970,21 +1045,21 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                             prim = func_800A88A0(prim, ot, (void *)((s32)D_80145F4C + (s32)base), 1, 0xF8 - x_offset, row_y, 1);
                         }
                     }
-                    if (func_8001714C(D_800ECF7C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    if (strncmp(D_800ECF7C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80145EA2 + (s32)base), 1, base_x, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)g_cload_text_mana + (s32)base), 1, base_x, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECF8C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    else if (strncmp(D_800ECF8C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)D_80145ED6 + (s32)base), 1, base_x, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECFC4, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
+                    else if (strncmp(D_800ECFC4, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80145EB0 + (s32)base), 1, base_x, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)g_cload_text_new_save + (s32)base), 1, base_x, row_y, 0);
                     }
                     else
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80145EA4 + (s32)base), 1, base_x, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)g_cload_text_other_game + (s32)base), 1, base_x, row_y, 0);
                     }
                 }
                 entry += CLOAD_DIRECTORY_ENTRY_BYTES;
@@ -1082,7 +1157,7 @@ s32 cload_draw_header_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
 
-    return func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EC8, 0x2C), 1, -x_offset + 0x50, -y_offset, 2);
+    return func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_load, 0x2C), 1, -x_offset + 0x50, -y_offset, 2);
 }
 
 /**
@@ -1101,7 +1176,7 @@ s32 cload_draw_card_slot0_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     RECT pos;
 
     a3 = 1;
-    glyph = CLOAD_GLYPH_SYM(D_80145EA8, 0xC);
+    glyph = CLOAD_GLYPH_SYM(g_cload_text_card_slot_1, 0xC);
     if (g_cload_card_slot != 0)
     {
         a3 = 3;
@@ -1125,7 +1200,7 @@ s32 cload_draw_card_slot1_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     RECT pos;
 
     a3 = 1;
-    glyph = CLOAD_GLYPH_SYM(D_80145EAA, 0xE);
+    glyph = CLOAD_GLYPH_SYM(g_cload_text_card_slot_2, 0xE);
     if (g_cload_card_slot == 0)
     {
         a3 = 3;
@@ -1180,8 +1255,8 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
             s32 x = -x_offset;
             u8 *base;
 
-            result = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EC4, 0x28), 1, x, -y_offset, 0);
-            base = (u8 *)&D_80145EC4 - 0x28;
+            result = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_new_save_prompt, 0x28), 1, x, -y_offset, 0);
+            base = (u8 *)&g_cload_text_new_save_prompt - 0x28;
             return func_800A88A0(result, ot, CLOAD_GLYPH_OFF(base, 0x2A), 1, x, 0x10 - y_offset, 0);
         }
         else
@@ -1189,11 +1264,11 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
             s32 term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
             s32 term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
 
-            if (func_8001714C(D_800ECF7C, (void *)(term1 + term2), 0xC) == 0)
+            if (strncmp(D_800ECF7C, (void *)(term1 + term2), 0xC) == 0)
             {
                 u8 *base90 = g_cload_entry_metadata;
 
-                if (base90[0xCF] == 0xFF || base90[0xCF] == D_8003EC9C)
+                if (base90[0xCF] == 0xFF || base90[0xCF] == g_save_slot_index)
                 {
                     s32 present_count;
                     s32 i;
@@ -1295,7 +1370,7 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
                 }
                 else
                 {
-                    result = func_800A88A0(result, ot, CLOAD_GLYPH_SYM(D_80145EF0, 0x54), 1, -x_offset, -y_offset, 0);
+                    result = func_800A88A0(result, ot, CLOAD_GLYPH_SYM(g_cload_text_version_error, 0x54), 1, -x_offset, -y_offset, 0);
                 }
             }
             else
@@ -1503,11 +1578,11 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
 
     if (frame->frame_flag != 0)
     {
-        func_8001C56C(draw_area, 0, 0xF0, 0x140, 0xE0);
+        SetDefDrawEnv(draw_area, 0, 0xF0, 0x140, 0xE0);
     }
     else
     {
-        func_8001C56C(draw_area, 0, 8, 0x140, 0xE0);
+        SetDefDrawEnv(draw_area, 0, 8, 0x140, 0xE0);
     }
 
     element_state = (volatile u32 *)&g_cload_element_pool;
@@ -1518,7 +1593,7 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
         state_word = *element_state;
         if (state_word & CLOAD_ELEMENT_STATE_MASK)
         {
-            func_8001A5D4((s32)prim, draw_area);
+            SetDrawEnv((s32)prim, draw_area);
 
             addPrim(&ot->head_tag, prim);
 
@@ -1791,14 +1866,14 @@ CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, s32 *ot, s32 x, s3
     if (flag != 0)
     {
         draw_y = y + 0xF2;
-        func_8001C56C(draw_area, x + 2, draw_y, w - 4, h - 3);
+        SetDefDrawEnv(draw_area, x + 2, draw_y, w - 4, h - 3);
     }
     else
     {
         draw_y = y + 0xA;
-        func_8001C56C(draw_area, x + 2, draw_y, w - 4, h - 3);
+        SetDefDrawEnv(draw_area, x + 2, draw_y, w - 4, h - 3);
     }
-    func_8001A5D4((s32)frame_prim, draw_area);
+    SetDrawEnv((s32)frame_prim, draw_area);
 
     addPrim(ot, frame_prim);
 
@@ -1958,7 +2033,7 @@ s32 cload_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     x = -x_offset + 0x90;
     result = cload_draw_choice_prompt(
         func_800A88A0(prim, ot,
-                      (u8 *)&D_80145ECC + D_80145ECC - 0x30,
+                      (u8 *)&g_cload_text_load_prompt + g_cload_text_load_prompt - 0x30,
                       4, x, -y_offset, 2),
         ot, x, 0xE - y_offset);
 
@@ -2031,33 +2106,31 @@ s32 cload_draw_load_progress(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
     s32 frame_scratch[2];
 
     y = -x_offset + 0x90;
-    result = func_800A88A0(prim, (s32 *)ot, (void *)((s32)&D_80145ECE - 0x32 + D_80145ECE), 4, y, -y_offset, 2);
-    base = (u8 *)&D_80145ECE - 0x32;
+    result = func_800A88A0(prim, (s32 *)ot, (void *)((s32)&g_cload_text_loading - 0x32 + g_cload_text_loading), 4, y, -y_offset, 2);
+    base = (u8 *)&g_cload_text_loading - 0x32;
     result = func_800A88A0(result, (s32 *)ot, CLOAD_GLYPH_OFF(base, 0x1E), 4, y, 0xE - y_offset, 2);
     result = func_800A88A0(result, (s32 *)ot, CLOAD_GLYPH_OFF(base, 0xB2), 4, y, 0x1C - y_offset, 2);
     result = cload_draw_progress_bar(result, ot);
 
-    if (g_cload_progress_active != 0)
+    if (g_cload_progress_active == 0)
     {
-        goto ret;
+        p = g_cload_save_blob;
+        vol = 0x80;
+        base = p;
+        if (cload_validate_save_blob(base) == 0)
+        {
+            cload_open_status_dialog(4);
+        }
+        else
+        {
+            func_800A3938(0x7B, vol);
+            g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
+            bcopy(base + 0x180, g_menuLayoutBuffer, 0x3268);
+            g_save_slot_index = g_menuLayoutBuffer[0xCF];
+            D_80042FB4 = VSync(-1);
+            g_cload_exit_requested = 1;
+        }
     }
-
-    p = g_cload_save_blob;
-    vol = 0x80;
-    base = p;
-    if (cload_validate_save_blob(base) == 0)
-    {
-        cload_open_status_dialog(4);
-        goto ret;
-    }
-
-    func_800A3938(0x7B, vol);
-    g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
-    func_80016E7C(base + 0x180, D_80042FD8, 0x3268);
-    D_8003EC9C = D_80042FD8[0xCF];
-    D_80042FB4 = func_8002054C(-1);
-    g_cload_exit_requested = 1;
-ret:
     return result;
 }
 
@@ -2084,7 +2157,7 @@ CloadGpuPacket *cload_draw_progress_bar(CloadGpuPacket *p, s32 *ot)
     g = (CloadPolyG4Packet *)p;
     if (g_cload_progress_bar_active != 0)
     {
-        elapsed = func_8002054C(-1) - g_cload_progress_start_tick;
+        elapsed = VSync(-1) - g_cload_progress_start_tick;
         if (elapsed >= 0x101)
         {
             elapsed = 0x100;
@@ -2172,24 +2245,24 @@ s32 cload_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145ED8, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
-        base = (u8 *)&D_80145ED8 - 0x3C;
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_save_failed, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
+        base = (u8 *)&g_cload_text_save_failed - 0x3C;
         prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 1:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
-        base = (u8 *)&D_80145EDA - 0x3E;
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_load_failed, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+        base = (u8 *)&g_cload_text_load_failed - 0x3E;
         prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x56), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     case 2:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDC, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_card_insert_error, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
         prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDE, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 4:
-        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(D_80145EDA, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
-        base = (u8 *)&D_80145EDA - 0x3E;
+        prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_load_failed, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
+        base = (u8 *)&g_cload_text_load_failed - 0x3E;
         prim = func_800A88A0(prim, ot, CLOAD_GLYPH_OFF(base, 0x5C), 4, -x_offset + 0x80, -y_offset + 0x10, 2);
         break;
     }
@@ -2239,18 +2312,18 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
     if ((row == 1) && (icon < 2))
     {
         func_800A5638(&g_cload_icon_context, icon);
-        func_80019A34(&rect, &g_cload_icon_context);
-        func_80019788(0);
+        LoadImage(&rect, &g_cload_icon_context);
+        DrawSync(0);
     }
     else if (icon >= 0x4F)
     {
         func_800A55E4(&g_cload_icon_context, g_cload_icon_palette);
-        func_80019A34(&rect, &g_cload_icon_context);
-        func_80019788(0);
+        LoadImage(&rect, &g_cload_icon_context);
+        DrawSync(0);
     }
     else
     {
-        func_80019A34(&rect, g_cload_icon_resource + *(s32 *)(g_cload_icon_resource + icon * 4 + 4));
+        LoadImage(&rect, g_cload_icon_resource + *(s32 *)(g_cload_icon_resource + icon * 4 + 4));
     }
 
     base = index * 3;
@@ -2258,7 +2331,7 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
     rect.y = 0xD0;
     rect.w = 0xC;
     rect.h = 0x30;
-    func_80019A34(&rect, g_cload_icon_resource + *(s32 *)(g_cload_icon_resource + icon * 4 + 4) + 0x20);
+    LoadImage(&rect, g_cload_icon_resource + *(s32 *)(g_cload_icon_resource + icon * 4 + 4) + 0x20);
 
     ((CloadPolyFT4Packet *)prim)->color0 = 0x808080;
     setlen(prim, 9);
@@ -2315,8 +2388,8 @@ void cload_load_icon_resources(void)
     u8 *base;
     s16 buf[4];
 
-    func_800141EC(0x5E4, (void *)0x80180000);
-    func_80013F2C();
+    cdrom_queue_read(0x5E4, (void *)0x80180000);
+    cdrom_wait_queue_empty();
 
     base = (u8 *)0x80180000;
 
@@ -2730,7 +2803,7 @@ s32 cload_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
  * @brief Parse the hex-string field of each table entry and record the results.
  *
  * Iterates over the g_cload_entry_state active entries. For each entry the 0x28-byte
- * record is validated with @ref func_8001714C against pattern D_800ECF7C. On a
+ * record is validated with @ref strncmp against pattern D_800ECF7C. On a
  * match (return 0) the ASCII hex string at record offset 0xC is scanned for up
  * to five hex digits (0-9, A-F, a-f), accumulated big-endian into a value that
  * is written to the g_cload_entry_fields result array; @ref cload_parse_hex_suffix_byte is then invoked
@@ -2748,7 +2821,7 @@ s32 cload_parse_entry_fields(void)
  s32 i; s32 max; u8 *entry; u8 *p; u8 *field; s32 count; s32 acc; u32 tmp0; u32 tmp1; u32 tmp2; s32 r;
  i=0; max=i;
  while (i < g_cload_entry_state) {
-    if (func_8001714C(&D_800ECF7C, (u8 *)&((CloadEntry28 (*)[20])g_cload_entries)[g_cload_card_slot][i], 0xC)==0) {
+    if (strncmp(&D_800ECF7C, (u8 *)&((CloadEntry28 (*)[20])g_cload_entries)[g_cload_card_slot][i], 0xC)==0) {
      count=5; p=(u8 *)(g_cload_card_slot*CLOAD_CARD_DIRECTORY_BYTES + ((i << 4) + (i << 4) + (i << 3)) + (s32)g_cload_entries + 0xC); acc=0;
      while (((u8)(*p-'0')<10)||((u8)(*p-'a')<6)||((u8)(*p-'A')<6)) { if(count==0)break; acc<<=4; if((u8)(*p-'0')<10){tmp0=acc-0x30;acc=tmp0+*p;} else if((u8)(*p-'A')<6){tmp1=acc-0x37;acc=tmp1+*p;} else if((u8)(*p-'a')<6){tmp2=acc-0x57;acc=tmp2+*p;} p++;count--; }
      field=(u8 *)&((CloadEntry28 (*)[20])g_cload_entries)[g_cload_card_slot][i].data[0xC];
@@ -2887,7 +2960,7 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         out_ptr = &g_cload_entry_suffix_values[0];
         ent_ptr = &g_cload_entries[0];
     loop_20:
-        if (func_8001714C(&D_800ECFC4[0], (void *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)ent_ptr), 8) == 0)
+        if (strncmp(&D_800ECFC4[0], (void *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)ent_ptr), 8) == 0)
         {
             *out_ptr = handle + 1;
         }
@@ -2929,7 +3002,7 @@ void cload_reset_entry_ranks(void)
  * @brief Scan up to g_cload_entry_state entries of the g_cload_entries table (row
  *        selected by g_cload_card_slot, stride 0x28) and report whether any entry
  *        matches one of the two known-type patterns D_800ECF7C / D_800ECF8C.
- * @return 1 on the first entry that matches either pattern (func_8001714C returns 0
+ * @return 1 on the first entry that matches either pattern (strncmp returns 0
  *         on a match), 0 if no entry matches.
  * @note The entry address is recomputed from the index each iteration rather than
  *       carried as an incremented pointer; that is what puts the g_cload_card_slot
@@ -2939,16 +3012,14 @@ void cload_reset_entry_ranks(void)
 s32 cload_has_known_entry_type(void)
 {
     s32 i;
-    u8 *entry;
 
     i = 0;
     if (g_cload_entry_state > 0)
     {
         do
         {
-            entry = (u8 *)g_cload_entries + i * CLOAD_DIRECTORY_ENTRY_BYTES;
-            if (func_8001714C(&D_800ECF7C, (void *)(g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0 ||
-                func_8001714C(&D_800ECF8C, (void *)(g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0)
+            if (strncmp(&D_800ECF7C, &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][i], 0xC) == 0 ||
+                strncmp(&D_800ECF8C, &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][i], 0xC) == 0)
             {
                 return 1;
             }
@@ -2996,46 +3067,45 @@ s32 cload_entry_blocks_reach_limit(void)
 
 
 /**
- * @brief Render the two fixed prompt strings (D_800ECF9C, D_800ECFB0).
- * @note Each draw copies a 6-byte header from g_cload_file_template, biases byte 2 by the
- *       current page index (g_cload_card_slot), then emits via func_80016F9C /
- *       func_8001686C.
+ * @brief Erase the two fixed per-slot memory-card files.
+ * @note Each erase starts from the six-byte "bu00:" device path, adjusts the
+ *       slot digit, appends one fixed filename suffix, and calls Psy-Q erase().
  * @see decomp.me (100.00%)
  */
-void cload_render_fixed_prompts(void)
+void cload_erase_fixed_card_files(void)
 {
-    CloadFileHeaderScratch buf;
+    CloadCardPathScratch card_path;
 
-    memcpy(&buf, &g_cload_file_template, 6);
-    ((u8 *)&buf)[2] += *(u8 *)&g_cload_card_slot;
-    func_80016F9C(&buf, &D_800ECF9C);
-    func_8001686C(&buf);
+    memcpy(&card_path, &g_cload_card_path_prefix, 6);
+    ((u8 *)&card_path)[2] += *(u8 *)&g_cload_card_slot;
+    strcat(&card_path, &D_800ECF9C);
+    erase(&card_path);
 
-    memcpy(&buf, &g_cload_file_template, 6);
-    ((u8 *)&buf)[2] += *(u8 *)&g_cload_card_slot;
-    func_80016F9C(&buf, &D_800ECFB0);
-    func_8001686C(&buf);
+    memcpy(&card_path, &g_cload_card_path_prefix, 6);
+    ((u8 *)&card_path)[2] += *(u8 *)&g_cload_card_slot;
+    strcat(&card_path, &D_800ECFB0);
+    erase(&card_path);
 }
 
 
 /**
- * @brief Inlined twin of cload_render_fixed_prompts used inside case 6.
+ * @brief Inlined copy of cload_erase_fixed_card_files used by load-sequence case 6.
  */
 extern void *jtbl_80140040[];
 
-static inline void cload_probe_render_two(void)
+static inline void cload_erase_fixed_card_files_inline(void)
 {
-    CloadFileHeaderScratch p;
+    CloadCardPathScratch card_path;
 
-    memcpy(&p, &g_cload_file_template, 6);
-    ((u8 *)&p)[2] += *(u8 *)&g_cload_card_slot;
-    func_80016F9C(&p, &D_800ECF9C);
-    func_8001686C(&p);
+    memcpy(&card_path, &g_cload_card_path_prefix, 6);
+    ((u8 *)&card_path)[2] += *(u8 *)&g_cload_card_slot;
+    strcat(&card_path, &D_800ECF9C);
+    erase(&card_path);
 
-    memcpy(&p, &g_cload_file_template, 6);
-    ((u8 *)&p)[2] += *(u8 *)&g_cload_card_slot;
-    func_80016F9C(&p, &D_800ECFB0);
-    func_8001686C(&p);
+    memcpy(&card_path, &g_cload_card_path_prefix, 6);
+    ((u8 *)&card_path)[2] += *(u8 *)&g_cload_card_slot;
+    strcat(&card_path, &D_800ECFB0);
+    erase(&card_path);
 }
 
 
@@ -3049,7 +3119,7 @@ static inline void cload_probe_render_two(void)
  */
 s32 cload_advance_load_sequence(void)
 {
-    CloadLoadScratch buf;
+    CloadLoadScratch card_path;
     s32 status0;
     s32 status1;
     s32 phase_result;
@@ -3072,12 +3142,12 @@ s32 cload_advance_load_sequence(void)
         &&block_81, &&block_81, &&cl_case_30
     };
 
-    memcpy(&buf, &g_cload_file_template, 6);
+    memcpy(&card_path, &g_cload_card_path_prefix, 6);
     do
     {
         phase_result = 1;
     } while (0);
-    ((u8 *)&buf)[2] += *(u8 *)&g_cload_card_slot;
+    ((u8 *)&card_path)[2] += *(u8 *)&g_cload_card_slot;
 
     if (g_cload_load_step != NULL)
     {
@@ -3093,8 +3163,8 @@ s32 cload_advance_load_sequence(void)
 
         cl_case_1:
             phase_result = 3;
-            func_8001729C(g_cload_card_slot);
-            func_8001724C(g_cload_card_slot * 0x10);
+            _card_wait(g_cload_card_slot);
+            _card_info(g_cload_card_slot * 0x10);
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
@@ -3173,7 +3243,7 @@ s32 cload_advance_load_sequence(void)
             goto block_81;
 
         cl_case_6:
-            cload_probe_render_two();
+            cload_erase_fixed_card_files_inline();
             g_cload_entry_scan_active = 1;
             if (cload_begin_entry_scan(g_cload_card_slot) == 0)
             {
@@ -3207,15 +3277,15 @@ s32 cload_advance_load_sequence(void)
 
         cl_case_8:
             phase_result = 3;
-            func_8001729C(g_cload_card_slot);
-            func_800172AC(g_cload_card_slot * 0x10);
+            _card_wait(g_cload_card_slot);
+            _card_clear(g_cload_card_slot * 0x10);
             g_cload_load_step = g_cload_load_step + 1;
             goto block_81;
 
         cl_case_9:
             phase_result = 3;
-            func_8001729C(g_cload_card_slot);
-            func_8001725C(g_cload_card_slot * 0x10);
+            _card_wait(g_cload_card_slot);
+            _card_load(g_cload_card_slot * 0x10);
             g_cload_primary_poll_countdown = 0x10;
             g_cload_secondary_poll_countdown = 0x10;
             g_cload_load_step = g_cload_load_step + 1;
@@ -3265,10 +3335,10 @@ s32 cload_advance_load_sequence(void)
                 goto c15_d70zero;
             }
         block_44:
-            func_8001729C(g_cload_card_slot);
-            func_800172AC(g_cload_card_slot * 0x10);
-            func_8001729C(g_cload_card_slot);
-            func_8001725C(g_cload_card_slot * 0x10);
+            _card_wait(g_cload_card_slot);
+            _card_clear(g_cload_card_slot * 0x10);
+            _card_wait(g_cload_card_slot);
+            _card_load(g_cload_card_slot * 0x10);
             goto block_81;
         c15_d70zero:
             phase_result = 5;
@@ -3287,21 +3357,21 @@ s32 cload_advance_load_sequence(void)
         cl_case_17:
             g_cload_io_busy = 1;
             g_cload_selection_status = 0;
-            func_8001729C(g_cload_card_slot);
-            g_cload_file_handle = func_8001680C(&D_80162C90, 0x8001);
+            _card_wait(g_cload_card_slot);
+            g_cload_file_handle = open(&D_80162C90, 0x8001);
             if (g_cload_file_handle == -1)
             {
                 goto block_81;
             }
             cload_release_primary_handles();
-            func_8001729C(g_cload_card_slot);
-            if (func_8001681C(g_cload_file_handle, &D_80162A10,
+            _card_wait(g_cload_card_slot);
+            if (read(g_cload_file_handle, &D_80162A10,
                                g_cload_selected_entry_extended != 0 ? 0x280 : 0x80) != -1)
             {
                 g_cload_load_step = g_cload_load_step + 1;
                 goto block_81;
             }
-            func_8001683C(g_cload_file_handle);
+            close(g_cload_file_handle);
             goto block_81;
 
         cl_case_18:
@@ -3311,7 +3381,7 @@ s32 cload_advance_load_sequence(void)
                 g_cload_io_busy = 0;
                 g_cload_selection_status = 1;
                 g_cload_load_step = g_cload_load_step + 1;
-                func_8001683C(g_cload_file_handle);
+                close(g_cload_file_handle);
                 goto block_81;
             }
             if (poll_result == -1)
@@ -3319,7 +3389,7 @@ s32 cload_advance_load_sequence(void)
                 goto block_81;
             }
             g_cload_io_busy = 0;
-            func_8001683C(g_cload_file_handle);
+            close(g_cload_file_handle);
         block_58:
             g_cload_entry_state = 0xFF;
             g_cload_load_step = D_8014651C;
@@ -3333,17 +3403,17 @@ s32 cload_advance_load_sequence(void)
         cl_case_19:
             g_cload_progress_active = 1;
             g_cload_progress_bar_active = 1;
-            g_cload_progress_start_tick = func_8002054C(-1);
-            func_8001729C(g_cload_card_slot);
-            g_cload_file_handle = func_8001680C(&D_80162C90, 0x8001);
+            g_cload_progress_start_tick = VSync(-1);
+            _card_wait(g_cload_card_slot);
+            g_cload_file_handle = open(&D_80162C90, 0x8001);
             cload_release_primary_handles();
-            func_8001729C(g_cload_card_slot);
-            if (func_8001681C(g_cload_file_handle, &g_cload_save_blob, 0x4000) != -1)
+            _card_wait(g_cload_card_slot);
+            if (read(g_cload_file_handle, &g_cload_save_blob, 0x4000) != -1)
             {
                 g_cload_load_step = g_cload_load_step + 1;
                 goto block_81;
             }
-            func_8001683C(g_cload_file_handle);
+            close(g_cload_file_handle);
             g_cload_retry_count = g_cload_retry_count - 1;
             if (g_cload_retry_count == 0)
             {
@@ -3358,7 +3428,7 @@ s32 cload_advance_load_sequence(void)
             {
                 g_cload_progress_active = 0;
                 g_cload_load_step = g_cload_load_step + 1;
-                func_8001683C(g_cload_file_handle);
+                close(g_cload_file_handle);
                 goto block_81;
             }
             if (poll_result20 < 0)
@@ -3374,11 +3444,11 @@ s32 cload_advance_load_sequence(void)
             {
                 goto c20_378zero;
             }
-            func_8001683C(g_cload_file_handle);
+            close(g_cload_file_handle);
             g_cload_load_step = g_cload_load_step - 1;
             goto block_81;
         c20_378zero:
-            func_8001683C(g_cload_file_handle);
+            close(g_cload_file_handle);
             dialog_state = 1;
             g_cload_progress_bar_active = 0;
             goto block_80;
@@ -3387,11 +3457,11 @@ s32 cload_advance_load_sequence(void)
             wait_attempts = 0;
             do
             {
-                if (func_800342CC(g_cload_card_slot * 0x10) == 1)
+                if (McxCardType(g_cload_card_slot * 0x10) == 1)
                 {
                     break;
                 }
-                func_8002054C(0);
+                VSync(0);
                 wait_attempts = wait_attempts + 1;
             } while (wait_attempts < 0x14);
             if (wait_attempts != 0x14)
@@ -3430,8 +3500,8 @@ block_81:
 void cload_restart_load_sequence(void)
 {
     cload_release_primary_handles();
-    func_8001729C(g_cload_card_slot);
-    func_8001724C(g_cload_card_slot * 0x10);
+    _card_wait(g_cload_card_slot);
+    _card_info(g_cload_card_slot * 0x10);
     g_cload_load_step = &D_80146528;
 }
 
@@ -3448,8 +3518,8 @@ s32 cload_poll_and_rewind_primary_handles(void)
     busy_slot = cload_poll_primary_handle_group();
     if (busy_slot != -1)
     {
-        func_8001729C(g_cload_card_slot);
-        func_8001724C(g_cload_card_slot * 0x10);
+        _card_wait(g_cload_card_slot);
+        _card_info(g_cload_card_slot * 0x10);
     }
     return busy_slot;
 }
@@ -3457,79 +3527,79 @@ s32 cload_poll_and_rewind_primary_handles(void)
 
 /**
  * @brief Allocate and register the eight streaming buffers for this overlay.
- * @note Brackets the eight func_800167AC allocations (handles stored in
- *       g_cload_primary_handle0..g_cload_secondary_handle3) with func_800167EC / func_800167FC and resets the
+ * @note Brackets the eight OpenEvent allocations (handles stored in
+ *       g_cload_primary_handle0..g_cload_secondary_handle3) with EnterCriticalSection / ExitCriticalSection and resets the
  *       stream bookkeeping (g_cload_entry_scan_active, g_cload_progress_start_tick, g_cload_progress_bar_active).
  * @see decomp.me (100.00%)
  */
 void cload_init_stream_handles(void)
 {
-    func_800158E0();
-    func_800167EC();
-    g_cload_primary_handle0 = func_800167AC(0xF4000001, 4, 0x2000, 0);
-    g_cload_primary_handle1 = func_800167AC(0xF4000001, 0x8000, 0x2000, 0);
-    g_cload_primary_handle2 = func_800167AC(0xF4000001, 0x100, 0x2000, 0);
-    g_cload_primary_handle3 = func_800167AC(0xF4000001, 0x2000, 0x2000, 0);
-    g_cload_secondary_handle0 = func_800167AC(0xF0000011, 4, 0x2000, 0);
-    g_cload_secondary_handle1 = func_800167AC(0xF0000011, 0x8000, 0x2000, 0);
-    g_cload_secondary_handle2 = func_800167AC(0xF0000011, 0x100, 0x2000, 0);
-    g_cload_secondary_handle3 = func_800167AC(0xF0000011, 0x2000, 0x2000, 0);
-    func_800167DC(g_cload_primary_handle0);
-    func_800167DC(g_cload_primary_handle1);
-    func_800167DC(g_cload_primary_handle2);
-    func_800167DC(g_cload_primary_handle3);
-    func_800167DC(g_cload_secondary_handle0);
-    func_800167DC(g_cload_secondary_handle1);
-    func_800167DC(g_cload_secondary_handle2);
-    func_800167DC(g_cload_secondary_handle3);
-    func_800167FC();
+    reset_controller_vsync_state();
+    EnterCriticalSection();
+    g_cload_primary_handle0 = OpenEvent(0xF4000001, 4, 0x2000, 0);
+    g_cload_primary_handle1 = OpenEvent(0xF4000001, 0x8000, 0x2000, 0);
+    g_cload_primary_handle2 = OpenEvent(0xF4000001, 0x100, 0x2000, 0);
+    g_cload_primary_handle3 = OpenEvent(0xF4000001, 0x2000, 0x2000, 0);
+    g_cload_secondary_handle0 = OpenEvent(0xF0000011, 4, 0x2000, 0);
+    g_cload_secondary_handle1 = OpenEvent(0xF0000011, 0x8000, 0x2000, 0);
+    g_cload_secondary_handle2 = OpenEvent(0xF0000011, 0x100, 0x2000, 0);
+    g_cload_secondary_handle3 = OpenEvent(0xF0000011, 0x2000, 0x2000, 0);
+    EnableEvent(g_cload_primary_handle0);
+    EnableEvent(g_cload_primary_handle1);
+    EnableEvent(g_cload_primary_handle2);
+    EnableEvent(g_cload_primary_handle3);
+    EnableEvent(g_cload_secondary_handle0);
+    EnableEvent(g_cload_secondary_handle1);
+    EnableEvent(g_cload_secondary_handle2);
+    EnableEvent(g_cload_secondary_handle3);
+    ExitCriticalSection();
     g_cload_entry_scan_active = 0;
-    g_cload_progress_start_tick = func_8002054C(-1);
+    g_cload_progress_start_tick = VSync(-1);
     g_cload_progress_bar_active = 0;
 }
 
 
 /**
  * @brief Tear down / release the eight g_cload_primary_handle0..g_cload_secondary_handle3 handles.
- * @note Wrapped by func_800158E0 and func_800167EC/func_800167FC bracket calls;
- *       each handle is passed to func_800167BC in turn (g_cload_entry_scan_active is skipped).
+ * @note Wrapped by reset_controller_vsync_state and EnterCriticalSection/ExitCriticalSection bracket calls;
+ *       each handle is passed to CloseEvent in turn (g_cload_entry_scan_active is skipped).
  * @see decomp.me (100.00%)
  */
 void cload_shutdown_stream_handles(void)
 {
-    func_800158E0();
-    func_800167EC();
-    func_800167BC(g_cload_primary_handle0);
-    func_800167BC(g_cload_primary_handle1);
-    func_800167BC(g_cload_primary_handle2);
-    func_800167BC(g_cload_primary_handle3);
-    func_800167BC(g_cload_secondary_handle0);
-    func_800167BC(g_cload_secondary_handle1);
-    func_800167BC(g_cload_secondary_handle2);
-    func_800167BC(g_cload_secondary_handle3);
-    func_800167FC();
+    reset_controller_vsync_state();
+    EnterCriticalSection();
+    CloseEvent(g_cload_primary_handle0);
+    CloseEvent(g_cload_primary_handle1);
+    CloseEvent(g_cload_primary_handle2);
+    CloseEvent(g_cload_primary_handle3);
+    CloseEvent(g_cload_secondary_handle0);
+    CloseEvent(g_cload_secondary_handle1);
+    CloseEvent(g_cload_secondary_handle2);
+    CloseEvent(g_cload_secondary_handle3);
+    ExitCriticalSection();
 }
 
 
 /**
- * @brief Begin streaming the page page's first g_cload_entries record.
+ * @brief Begin streaming the page's first g_cload_entries record.
  * @param page Page index (each page is 0x320 bytes in g_cload_entries).
- * @return 1 if func_80016BCC accepted the record (count bumped), else 0.
+ * @return 1 if firstfile accepted the record (count bumped), else 0.
  * @see decomp.me (100%)
  */
 s32 cload_begin_entry_scan(s32 page)
 {
-    CloadEntryHeader buf;
-    CloadEntryHeader *p = &g_cload_entry_header_template;
+    CloadCardSearchPathBuffer search_path;
+    CloadCardSearchPathBuffer *search_template = &g_cload_card_search_path;
 
-    memcpy(&buf, p, 7);
+    memcpy(&search_path, search_template, 7);
     g_cload_scroll_frames = 0;
     g_cload_scroll_target_y = 0;
     g_cload_scroll_y = 0;
     g_cload_selected_row = 0;
     g_cload_entry_state = 0;
-    ((u8 *)&buf)[2] += page;
-    if (func_80016BCC(&buf, g_cload_entries + page * CLOAD_CARD_DIRECTORY_BYTES) != 0)
+    ((u8 *)&search_path)[2] += page;
+    if (firstfile(&search_path, g_cload_entries + page * CLOAD_CARD_DIRECTORY_BYTES) != 0)
     {
         g_cload_entry_state += 1;
         return 1;
@@ -3539,10 +3609,10 @@ s32 cload_begin_entry_scan(s32 page)
 
 
 /**
- * @brief Try to append the page page's next g_cload_entries record; if it cannot,
+ * @brief Try to append the page's next g_cload_entries record; if it cannot,
  *        recompute the page's fixed-point total and update the selection state.
  * @param page Page index (each page is 0x320 bytes / 20 records in g_cload_entries).
- * @return 1 if func_8001684C accepted the new record (count bumped), else 0.
+ * @return 1 if nextfile accepted the new record (count bumped), else 0.
  * @note When the record is rejected, the (directory-entry size >> 13) total over the page's
  *       records decides whether the count is clamped (0xFA) or the selection
  *       (g_cload_selected_row) is set from cload_rank_entries's result; the >= 14 test is
@@ -3562,7 +3632,7 @@ s32 cload_scan_next_entry(s32 page)
 
     term1 = page * CLOAD_CARD_DIRECTORY_BYTES;
     term2 = g_cload_entry_state * CLOAD_DIRECTORY_ENTRY_BYTES + (s32)g_cload_entries;
-    if (func_8001684C((void *)(term1 + term2)) != 0)
+    if (nextfile((void *)(term1 + term2)) != 0)
     {
         g_cload_entry_state += 1;
         return 1;
@@ -3625,61 +3695,45 @@ s32 cload_scan_next_entry(s32 page)
 /**
  * @brief Commit the selected g_cload_entries record and arm the next step.
  * @note Validates the record against the D_800ECFC4 / D_800ECF7C patterns, copies
- *       its header into a local CloadFileHeader, biases byte 2 by the page index, and
- *       registers it via func_800170BC; sets the g_cload_selection_status / g_cload_selected_entry_extended status.
+ *       its header into a local CloadCardPathBuffer, biases byte 2 by the page index, and
+ *       registers it via strcpy; sets the g_cload_selection_status / g_cload_selected_entry_extended status.
  * @see decomp.me (100%)
  */
 void cload_commit_selected_entry(void)
 {
-    CloadFileHeader local;
-    u8 *p;
+    CloadCardPathBuffer card_path;
+    u8 *path;
 
     if (g_cload_entry_state == 0)
     {
         g_cload_selection_status = 3;
         return;
     }
+    if (strncmp(&D_800ECFC4[0],
+            &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][g_cload_selected_row], 8) == 0)
     {
-        s32 term1;
-        s32 term2;
-        term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
-        term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
-        if (func_8001714C(&D_800ECFC4[0], (void *)(term1 + term2), 8) == 0)
-        {
-            g_cload_selection_status = 2;
-            return;
-        }
+        g_cload_selection_status = 2;
+        return;
     }
-    memcpy(&local, &g_cload_file_template, 6);
-    p = (u8 *)&local;
+    memcpy(&card_path, &g_cload_card_path_prefix, 6);
+    path = (u8 *)&card_path;
+    strcat(path, &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][g_cload_selected_row]);
     {
-        s32 term1;
-        s32 term2;
-        term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
-        term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
-        func_80016F9C(p, (void *)(term1 + term2));
-    }
-    {
-        s32 slot;
-        s32 value;
-        value = *((u8 *)&local + 2);
-        slot = (u8)g_cload_card_slot;
+        s32 slot_index;
+        s32 path_slot_digit;
+        path_slot_digit = *((u8 *)&card_path + 2);
+        slot_index = (u8)g_cload_card_slot;
         g_cload_selection_status = 0;
-        value += slot;
-        *((u8 *)&local + 2) = value;
-        func_800170BC(&D_80162C90[0], p, slot);
+        path_slot_digit += slot_index;
+        *((u8 *)&card_path + 2) = path_slot_digit;
+        strcpy(&D_80162C90[0], path, slot_index);
     }
     g_cload_load_step = &D_80146538[0];
+    if (strncmp(&D_800ECF7C[0],
+            &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][g_cload_selected_row], 0xC) == 0)
     {
-        s32 term1;
-        s32 term2;
-        term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
-        term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
-        if (func_8001714C(&D_800ECF7C[0], (void *)(term1 + term2), 0xC) == 0)
-        {
-            g_cload_selected_entry_extended = 1;
-            return;
-        }
+        g_cload_selected_entry_extended = 1;
+        return;
     }
     g_cload_selected_entry_extended = 0;
 }
@@ -3689,15 +3743,15 @@ void cload_commit_selected_entry(void)
  * @brief Release the four cached resource handles for this overlay.
  *
  * Passes the values held in g_cload_primary_handle0, g_cload_primary_handle1, g_cload_primary_handle2, and g_cload_primary_handle3
- * (in that order) to @ref func_800167CC.
+ * (in that order) to @ref TestEvent.
  * @see decomp.me (100.00%)
  */
 void cload_release_primary_handles(void)
 {
-    func_800167CC(g_cload_primary_handle0);
-    func_800167CC(g_cload_primary_handle1);
-    func_800167CC(g_cload_primary_handle2);
-    func_800167CC(g_cload_primary_handle3);
+    TestEvent(g_cload_primary_handle0);
+    TestEvent(g_cload_primary_handle1);
+    TestEvent(g_cload_primary_handle2);
+    TestEvent(g_cload_primary_handle3);
 }
 
 
@@ -3705,15 +3759,15 @@ void cload_release_primary_handles(void)
  * @brief Release the next four cached resource handles for this overlay.
  *
  * Passes the values held in g_cload_secondary_handle0, g_cload_secondary_handle1, g_cload_secondary_handle2, and g_cload_secondary_handle3
- * (in that order) to @ref func_800167CC.
+ * (in that order) to @ref TestEvent.
  * @see decomp.me (100.00%)
  */
 void cload_release_secondary_handles(void)
 {
-    func_800167CC(g_cload_secondary_handle0);
-    func_800167CC(g_cload_secondary_handle1);
-    func_800167CC(g_cload_secondary_handle2);
-    func_800167CC(g_cload_secondary_handle3);
+    TestEvent(g_cload_secondary_handle0);
+    TestEvent(g_cload_secondary_handle1);
+    TestEvent(g_cload_secondary_handle2);
+    TestEvent(g_cload_secondary_handle3);
 }
 
 
@@ -3721,7 +3775,7 @@ void cload_release_secondary_handles(void)
  * @brief Release four cached handles, returning the index of the first busy one.
  *
  * Passes each of g_cload_primary_handle0, g_cload_primary_handle1, g_cload_primary_handle2, g_cload_primary_handle3 to
- * @ref func_800167CC in order; the first call that returns 1 stops the sequence
+ * @ref TestEvent in order; the first call that returns 1 stops the sequence
  * and yields that slot's index (0-3). Returns -1 if none report busy.
  *
  * @return Index 0-3 of the first handle whose release returned 1, else -1.
@@ -3729,19 +3783,19 @@ void cload_release_secondary_handles(void)
  */
 s32 cload_poll_primary_handle_group(void)
 {
-    if (func_800167CC(g_cload_primary_handle0) == 1)
+    if (TestEvent(g_cload_primary_handle0) == 1)
     {
         return 0;
     }
-    if (func_800167CC(g_cload_primary_handle1) == 1)
+    if (TestEvent(g_cload_primary_handle1) == 1)
     {
         return 1;
     }
-    if (func_800167CC(g_cload_primary_handle2) == 1)
+    if (TestEvent(g_cload_primary_handle2) == 1)
     {
         return 2;
     }
-    if (func_800167CC(g_cload_primary_handle3) == 1)
+    if (TestEvent(g_cload_primary_handle3) == 1)
     {
         return 3;
     }
@@ -3753,7 +3807,7 @@ s32 cload_poll_primary_handle_group(void)
  * @brief Release four cached handles, returning the index of the first busy one.
  *
  * Passes each of g_cload_secondary_handle0, g_cload_secondary_handle1, g_cload_secondary_handle2, g_cload_secondary_handle3 to
- * @ref func_800167CC in order; the first call that returns 1 stops the sequence
+ * @ref TestEvent in order; the first call that returns 1 stops the sequence
  * and yields that slot's index (0-3). Returns -1 if none report busy.
  *
  * @return Index 0-3 of the first handle whose release returned 1, else -1.
@@ -3761,19 +3815,19 @@ s32 cload_poll_primary_handle_group(void)
  */
 s32 cload_poll_secondary_handle_group(void)
 {
-    if (func_800167CC(g_cload_secondary_handle0) == 1)
+    if (TestEvent(g_cload_secondary_handle0) == 1)
     {
         return 0;
     }
-    if (func_800167CC(g_cload_secondary_handle1) == 1)
+    if (TestEvent(g_cload_secondary_handle1) == 1)
     {
         return 1;
     }
-    if (func_800167CC(g_cload_secondary_handle2) == 1)
+    if (TestEvent(g_cload_secondary_handle2) == 1)
     {
         return 2;
     }
-    if (func_800167CC(g_cload_secondary_handle3) == 1)
+    if (TestEvent(g_cload_secondary_handle3) == 1)
     {
         return 3;
     }
@@ -3785,7 +3839,7 @@ s32 cload_poll_secondary_handle_group(void)
  * @brief Collate the g_cload_entries page records, ordering them by pattern class.
  * @note Five passes bucket records matching D_800ECF7C, then D_800ECF8C, then
  *       D_800ECFC4, then the remainder, copying each 0x28-byte record with
- *       func_80016E7C before writing the ordered set back to the page.
+ *       bcopy before writing the ordered set back to the page.
  * @see decomp.me (95.37%)
  */
 void cload_sort_entries_by_type(void)
@@ -3848,9 +3902,9 @@ void cload_sort_entries_by_type(void)
             output_offset = offset_tmp_0 * 8;
             do
             {
-                if (*first_suffix == group && func_8001714C(&D_800ECF7C, (card_offset_0 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_0 += (s32)first_entry, (void *)card_offset_0), 0xC) == 0)
+                if (*first_suffix == group && strncmp(&D_800ECF7C, (card_offset_0 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_0 += (s32)first_entry, (void *)card_offset_0), 0xC) == 0)
                 {
-                    func_80016E7C((card_offset_1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_1 += (s32)first_entry, (void *)card_offset_1), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                    bcopy((card_offset_1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_1 += (s32)first_entry, (void *)card_offset_1), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
                     output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
                     output_count += 1;
                 }
@@ -3876,9 +3930,9 @@ void cload_sort_entries_by_type(void)
             output_offset = offset_tmp_1 * 8;
             do
             {
-                if (*second_suffix == group && func_8001714C(&D_800ECF8C, (card_offset_2 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_2 += (s32)second_entry, (void *)card_offset_2), 0xC) == 0)
+                if (*second_suffix == group && strncmp(&D_800ECF8C, (card_offset_2 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_2 += (s32)second_entry, (void *)card_offset_2), 0xC) == 0)
                 {
-                    func_80016E7C((card_offset_3 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_3 += (s32)second_entry, (void *)card_offset_3), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                    bcopy((card_offset_3 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_3 += (s32)second_entry, (void *)card_offset_3), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
                     output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
                     output_count += 1;
                 }
@@ -3900,9 +3954,9 @@ void cload_sort_entries_by_type(void)
         output_offset = offset_tmp_2 * 8;
         do
         {
-            if (func_8001714C(&D_800ECFC4, (card_offset_4 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_4 += (s32)third_entry, (void *)card_offset_4), 8) == 0)
+            if (strncmp(&D_800ECFC4, (card_offset_4 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_4 += (s32)third_entry, (void *)card_offset_4), 8) == 0)
             {
-                func_80016E7C((card_offset_5 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_5 += (s32)third_entry, (void *)card_offset_5), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                bcopy((card_offset_5 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_5 += (s32)third_entry, (void *)card_offset_5), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
                 output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
                 output_count += 1;
             }
@@ -3921,11 +3975,11 @@ void cload_sort_entries_by_type(void)
         output_offset = offset_tmp_3 * 8;
         do
         {
-            if (func_8001714C(&D_800ECF7C, (card_offset_6 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_6 += (s32)other_entry, (void *)card_offset_6), 0xC) != 0 &&
-                func_8001714C(&D_800ECF8C, (card_offset_7 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_7 += (s32)other_entry, (void *)card_offset_7), 0xC) != 0 &&
-                func_8001714C(&D_800ECFC4, (card_offset_8 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_8 += (s32)other_entry, (void *)card_offset_8), 8) != 0)
+            if (strncmp(&D_800ECF7C, (card_offset_6 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_6 += (s32)other_entry, (void *)card_offset_6), 0xC) != 0 &&
+                strncmp(&D_800ECF8C, (card_offset_7 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_7 += (s32)other_entry, (void *)card_offset_7), 0xC) != 0 &&
+                strncmp(&D_800ECFC4, (card_offset_8 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_8 += (s32)other_entry, (void *)card_offset_8), 8) != 0)
             {
-                func_80016E7C((card_offset_9 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_9 += (s32)other_entry, (void *)card_offset_9), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
+                bcopy((card_offset_9 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_9 += (s32)other_entry, (void *)card_offset_9), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
                 output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
             }
             other_limit = g_cload_entry_state;
@@ -3942,7 +3996,7 @@ void cload_sort_entries_by_type(void)
         sorted_entry = &sorted_entries[0];
         do
         {
-            func_80016E7C(sorted_entry, (card_offset_10 = (*write_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_10 += (s32)page_entry, (void *)card_offset_10), CLOAD_DIRECTORY_ENTRY_BYTES);
+            bcopy(sorted_entry, (card_offset_10 = (*write_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_10 += (s32)page_entry, (void *)card_offset_10), CLOAD_DIRECTORY_ENTRY_BYTES);
             sorted_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
             write_index += 1;
             page_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
@@ -4171,7 +4225,7 @@ s32 cload_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette
         entry++;
     }
 
-    font_address = func_8001687C(code & 0xFFFF);
+    font_address = Krom2RawAdd(code & 0xFFFF);
     font_data = (u8 *)font_address;
     if (font_address == -1)
     {
@@ -4233,8 +4287,8 @@ s32 cload_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette
     rect.x = g_cload_glyph_upload_x + 0x140;
     rect.y = g_cload_glyph_upload_y;
 
-    func_80019A34(&rect, g_cload_glyph_raster_cursor);
-    func_80019788(0);
+    LoadImage(&rect, g_cload_glyph_raster_cursor);
+    DrawSync(0);
 
     g_cload_glyph_raster_cursor += CLOAD_GLYPH_RASTER_BYTES;
     return prim;
