@@ -120,7 +120,7 @@ s32 func_80144DF8(void)
 
     if (D_80164E18 == NULL)
     {
-        goto block_return;
+        return phase_result;
     }
 
     switch (0)
@@ -154,13 +154,13 @@ s32 func_80144DF8(void)
         {
             goto block_increment;
         }
-        goto block_return;
+        return phase_result;
     c2_ge3:
         if (poll_result == 3)
         {
             goto c2_eq3;
         }
-        goto block_return;
+        return phase_result;
     c2_pos:
         phase_result = 4;
         D_80164B84 = 0;
@@ -191,11 +191,11 @@ s32 func_80144DF8(void)
         }
         if (poll_result < 0)
         {
-            goto block_return;
+            return phase_result;
         }
         if (poll_result >= 4)
         {
-            goto block_return;
+            return phase_result;
         }
         phase_result = 4;
         goto block_status_fd;
@@ -228,7 +228,7 @@ s32 func_80144DF8(void)
                 D_80164F18 = 0;
                 if (D_80164B78 == 0xF8)
                 {
-                    goto block_return;
+                    return phase_result;
                 }
                 if (D_80164B78 == 0xFA)
                 {

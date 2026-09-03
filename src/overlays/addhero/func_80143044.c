@@ -36,7 +36,6 @@ extern AddheroEntry28 D_80164B60[][20];
 extern u8 D_80160574, D_80160598, D_801605A1;
 extern u16 D_80146FA4, D_80146FA8, D_80146FB4, D_80146FB6, D_80146FC0, D_80146FD6, D_80146FD8;
 extern u16 D_8014700C, D_8014700E, D_80147012;
-extern void *jtbl_80140054[];
 
 s32 func_80142CE8(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 s32 func_80144018(s32 prim, s32 *ot, s32 x, s32 y);
@@ -53,24 +52,15 @@ void func_80145E14(void);
 s32 func_80143044(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
-    s32 dispatch;
-    static void *const keep[] = {
-        &&addhero_f3, &&addhero_f4, &&addhero_f5, &&addhero_f6, &&addhero_f7, &&addhero_f8, &&addhero_f9,
-        &&addhero_fa, &&addhero_fb, &&addhero_fc, &&addhero_fd, &&addhero_fe, &&addhero_ff
-    };
-    switch (0)
+    switch (D_801609A4)
     {
-    case 0:
-        dispatch = D_801609A4 - 0xF3;
-        if ((u32)dispatch >= 0xD) goto addhero_default;
-        goto *jtbl_80140054[dispatch];
-    addhero_f8:
+    case 0xF8:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -arg2 + 0x90, -arg3, 2);
         break;
-    addhero_f9:
+    case 0xF9:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -arg2 + 0x90, -arg3, 2);
         break;
-    addhero_ff:
+    case 0xFF:
         {
             s32 x; u8 *base;
             x = -arg2 + 0x90;
@@ -80,22 +70,22 @@ s32 func_80143044(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
         }
         break;
-    addhero_fa:
+    case 0xFA:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -arg2 + 0x90, -arg3, 2);
         break;
-    addhero_fd:
+    case 0xFD:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA8, 4), 4, -arg2 + 0x90, -arg3, 2);
         break;
-    addhero_fb:
+    case 0xFB:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB4, 0x10), 4, -arg2 + 0x90, -arg3, 2);
         break;
-    addhero_fc:
+    case 0xFC:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB6, 0x12), 4, -arg2 + 0x90, -arg3, 2);
         break;
-    addhero_f7:
+    case 0xF7:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014700C, 0x68), 4, -arg2 + 0x90, -arg3, 2);
         break;
-    addhero_f6:
+    case 0xF6:
         {
             s32 x; u8 *base; AddheroPolyG4Words *g; s32 next, elapsed, extent, color, finalmode;
             x = -arg2 + 0x90;
@@ -133,7 +123,7 @@ s32 func_80143044(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             }
         }
         break;
-    addhero_f3:
+    case 0xF3:
         {
             s32 x; AddheroPacket *packet; s32 i;
             x = -arg2 + 0x90;
@@ -172,7 +162,7 @@ s32 func_80143044(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             }
         }
         break;
-    addhero_f4:
+    case 0xF4:
         {
             s32 x; u8 *base; s32 temp;
             x=-arg2+0x90;
@@ -180,28 +170,39 @@ s32 func_80143044(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             base=(u8 *)&D_8014700E-0x6A;
             prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x6C),4,x,0xE -arg3,2);
             prim=func_80144018(prim,ot,x,0x1C-arg3);
-            if (D_80122988 & 0x40) goto f4_accept;
-            if (D_80122988 & 0x220)
+            if (D_80122988 & 0x40)
+            {
+                func_80144008();
+                D_801609A4 = 0xF3;
+                func_800A3938(0x78, 0x80);
+                func_800AA02C();
+            }
+            else if (D_80122988 & 0x220)
             {
                 if (D_801609B0 != 0)
                 {
-                f4_accept:
-                    func_80144008(); D_801609A4=0xF3; func_800A3938(0x78,0x80); func_800AA02C();
+                    func_80144008();
+                    D_801609A4 = 0xF3;
+                    func_800A3938(0x78, 0x80);
+                    func_800AA02C();
                 }
                 else
                 {
                     func_800A3938(0x7E,0x80);
                     base = D_801609F0;
-                    func_80016E7C(D_8012271C+0x840,base+0x770,0x250);
-                    *(s32 *)(base+0x788) |= 0x80;
-                    temp=func_80144194(base);
-                    *(s32 *)(base+0x33E4)=0x414E41; *(s32 *)(base+0x33E0)=temp;
-                    D_80165200=1; D_80165488=&D_801605A1; D_801609A4=0xF5;
+                    func_80016E7C(D_8012271C + 0x840, base + 0x770, 0x250);
+                    *(s32 *)(base + 0x788) |= 0x80;
+                    temp = func_80144194(base);
+                    *(s32 *)(base + 0x33E4) = 0x414E41;
+                    *(s32 *)(base + 0x33E0) = temp;
+                    D_80165200 = 1;
+                    D_80165488 = &D_801605A1;
+                    D_801609A4 = 0xF5;
                 }
             }
         }
         break;
-    addhero_f5:
+    case 0xF5:
         {
             s32 x; u8 *base; AddheroPolyG4Words *g; s32 next,elapsed,extent,color; AddheroPacket *packet; s32 i;
             x=-arg2+0x90;
@@ -225,7 +226,7 @@ s32 func_80143044(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             }
         }
         break;
-    addhero_default:
+    default:
         {
             s32 x,posv,diff; u8 *base;
             x=-arg2+0x90; base=(u8 *)&D_80146FA4;
@@ -246,8 +247,9 @@ s32 func_80143044(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             }
         }
         break;
+    case 0xFE:
+        break;
     }
-addhero_fe:
     if(D_80164A40!=0)return prim;
     if(D_801609A4==0xF6)return prim; if(D_801609A4==0xF5)return prim; if(D_801609A4==0xF4)return prim; if(D_801609A4==0xF3)return prim;
     if(D_80122988&0x40){

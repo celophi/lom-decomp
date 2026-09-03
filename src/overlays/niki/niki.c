@@ -759,7 +759,7 @@ s32 func_80140D4C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                 row_y = row + 1;
                 if ((u32)(row + 0xE) < 0x65U)
                 {
-                    do { flag_ptr = (s32 *)((u8 *)D_80164E20 + (i * 4)); } while (0);
+                    flag_ptr = &D_80164E20[i];
                     if (*flag_ptr >= 0)
                     {
                         pos.x = base_x + 0x86;
