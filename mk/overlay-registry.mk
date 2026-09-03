@@ -87,6 +87,7 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_choice.c \
 	src/overlays/carda/unk1_after_choice_after_restore.c \
 	src/overlays/carda/unk1_after_choice_tail.c \
+	src/overlays/carda/func_80147588.c \
 	src/overlays/carda/unk1_before_stream_reset.c \
 	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c \
 	src/overlays/carda/unk1_mid2_middle.c
@@ -803,7 +804,7 @@ overlay_wsel_gcc_272_cdk_g0_srcs := \
 overlay_wsel_gcc_280_g0_srcs := \
 	src/overlays/wsel/unk1_tail.c \
 	src/overlays/wsel/func_80050944.c \
-	src/overlays/wsel/unk1_tail_after_interp.c \
+	src/overlays/wsel/func_80050B40.c \
 	src/overlays/wsel/func_80050DB0.c \
 	src/overlays/wsel/unk1_tail_mid.c \
 	src/overlays/wsel/func_800513D0.c \

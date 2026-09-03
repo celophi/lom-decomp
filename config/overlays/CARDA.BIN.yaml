@@ -86,7 +86,8 @@ segments:
       - [0x72F9, c, carda_format_hex]          # gcc272_cdk, func_801472F8, 100%
       - [0x73C1, c, carda_hex_parse]            # gcc272_cdk, 2 funcs, 100%
       - [0x7491, c, carda_parse_hex_suffix_byte] # gcc272_cdk, func_80147490, 100%
-      - [0x7589, c, unk1_before_stream_reset]
+      - [0x7589, c, func_80147588]              # gcc280_g0, func_80147588, 97.82%
+      - [0x77CD, c, unk1_before_stream_reset]
       - [0x7C5D, c, carda_reset_entry_ranks]       # gcc272_cdk, func_80147C5C, 100%
       - [0x7C95, c, carda_known_entry_type]     # gcc272_cdk, func_80147C94, 100%
       - [0x7DCD, c, func_80147DCC]               # gcc272_cdk, func_80147DCC, 100%

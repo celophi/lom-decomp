@@ -46,7 +46,7 @@ segments:
       - [0x34D, c, wsel_audio_fade]       # gcc272_cdk, 7 funcs, 100%
       - [0x781, c, unk1_tail]              # gcc280_g0, func_800503F0 unmatched
       - [0xCD5, c, func_80050944]           # gcc280_g0, func_80050944, 100%
-      - [0xED1, c, unk1_tail_after_interp]  # gcc280_g0, func_80050B40 unmatched
+      - [0xED1, c, func_80050B40]           # gcc280_g0, func_80050B40, 99.92%
       - [0x1141, c, func_80050DB0]          # gcc280_g0, func_80050DB0, 100%
       - [0x129D, c, unk1_tail_mid]          # gcc280_g0, func_80050F0C unmatched
       - [0x1761, c, func_800513D0]          # gcc280_g0, func_800513D0, 100%

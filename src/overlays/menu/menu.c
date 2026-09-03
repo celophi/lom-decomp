@@ -3910,7 +3910,7 @@ static inline s32 menu_mask_test_pref(s32 value, s32 shift, u32 mask)
  * @param var_s1 GPU packet cursor advanced as primitives are emitted.
  * @param arg1 Ordering-table entry passed to render helpers.
  * @return Updated GPU packet cursor after drawing.
- * @note WIP - not yet byte-matching. Currently 93.50%.
+ * @note WIP - not yet byte-matching. Currently 95.06%.
  * @see decomp.me (89.27%) https://decomp.me/scratch/D6Nba
  */
 void* menu_draw_scene_content(void* var_s1, s32* arg1)
@@ -4440,9 +4440,11 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         {
                             u8* base2 = (u8*)((tmp << 6) + (s32)D_80168C30);
                             void* v1;
-                            base2 -= 0x5C0;
-                            if (*(u8*)base2 != 0)
+                            if (*(u8*)(base2 - 0x5C0) != 0)
+                            {
+                                base2 -= 0x5C0;
                                 delta = *(u16*)(base2 + 0x24);
+                            }
                             v1 = (void*)D_801694DC[tmp];
                             if (v1 != 0 && *(u8*)v1 != 0)
                                 delta -= *(u16*)((u8*)v1 + 0x24);
@@ -4466,9 +4468,11 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             void* v1;
                             u8* source;
                             u8* label_buf;
-                            base2 -= 0x6C0;
-                            if (*(u8*)base2 != 0)
+                            if (*(u8*)(base2 - 0x6C0) != 0)
+                            {
+                                base2 -= 0x6C0;
                                 delta2 = *(u16*)(base2 + 0x24);
+                            }
                             v1 = (void*)D_801694CC[tmp];
                             if (v1 != 0 && *(u8*)v1 != 0)
                                 delta2 -= *(u16*)((u8*)v1 + 0x24);
@@ -4543,9 +4547,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         if (g_menu_item_ptr != 0)
                         {
                             s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, tmp - 0x27);
-                            if (diff < 0)
-                                diff = -diff;
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, (u32)diff, 1, pos_p, ((*var_s3 >> 9) & 7));
+                            var_s1 = menu_draw_clamped_number(arg1, var_s1, (u32)(diff < 0 ? -diff : diff), 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                     case 0x2F:
