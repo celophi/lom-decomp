@@ -47,7 +47,7 @@ segments:
       - [0x781, c, unk1_tail]
       - [0x2439, c, func_800520A8]           # gcc272_cdk, func_800520A8, 100%
       - [0x24E5, c, func_80052154]           # gcc272_cdk, func_80052154, 100%
-      - [0x2561, c, unk1_tail_b]
+      - [0x2561, c, func_800521D0]           # gcc272_cdk, func_800521D0, WIP ~78%
       - [0x263D, c, wsel_read_pad_state]     # gcc272_cdk, func_800522AC, 100%
       - [0x2715, c, unk1_tail_mid]
       - [0x28A1, c, wsel_read_pad_input]     # gcc272_cdk, func_80052510, 100%

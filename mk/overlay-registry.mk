@@ -817,12 +817,12 @@ overlay_wsel_gcc_272_cdk_g0_srcs := \
 	src/overlays/wsel/wsel_init_display.c \
 	src/overlays/wsel/func_800520A8.c \
 	src/overlays/wsel/func_80052154.c \
+	src/overlays/wsel/func_800521D0.c \
 	src/overlays/wsel/wsel_audio_fade.c \
 	src/overlays/wsel/wsel_read_pad_state.c \
 	src/overlays/wsel/wsel_read_pad_input.c
 overlay_wsel_gcc_280_g0_srcs := \
 	src/overlays/wsel/unk1_tail.c \
-	src/overlays/wsel/unk1_tail_b.c \
 	src/overlays/wsel/unk1_tail_mid.c
 
 OVERLAYS += zukan
