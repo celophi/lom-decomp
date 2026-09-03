@@ -90,6 +90,8 @@ typedef union
 
 /* CLOAD layout/state constants. */
 #define CLOAD_ELEMENT_COUNT 8
+#define CLOAD_CARD_COUNT 2
+#define CLOAD_ENTRIES_PER_CARD 20
 #define CLOAD_ELEMENT_WORD_STRIDE 3
 #define CLOAD_ELEMENT_STATE_MASK 7
 #define CLOAD_ELEMENT_PHASE_MASK 0x78
@@ -106,8 +108,17 @@ typedef union
 #define CLOAD_COLOR_WHITE 0xFFFFFF
 #define CLOAD_GPU_TAG_HIGH_MASK 0xFF000000
 
+/* Partial layout of the save metadata embedded at selected-file offset 0x180. */
+#define CLOAD_SAVE_PARTY_WORD0_OFFSET 0x18
+#define CLOAD_SAVE_ICON_PALETTE_OFFSET 0x1F
+#define CLOAD_SAVE_PARTY_WORD1_OFFSET 0x20
+#define CLOAD_SAVE_PLAYTIME_TICKS_OFFSET 0x30
+#define CLOAD_SAVE_SLOT_ID_OFFSET 0xCF
+
 #define CLOAD_GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
 #define CLOAD_GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
+#define CLOAD_DIR_ENTRY(card, index) \
+    (((CloadDirEntry (*)[CLOAD_ENTRIES_PER_CARD])g_cload_entries)[(card)][(index)])
 
 /** @brief Generic GPU packet prefix used while advancing the primitive buffer. */
 typedef struct
@@ -130,10 +141,28 @@ typedef struct
 typedef struct
 {
     u8 pad0[0x40B2];
-    /* 0x40B2 */ s16 frame_flag;
+    /* 0x40B2 */ s16 clear_y;
     u8 pad40B4[4];
     /* 0x40B8 */ CloadGpuPacket *prim_cursor;
 } CloadFrameState;
+
+/**
+ * @brief One half of CLOAD's double-buffered GPU render state.
+ *
+ * The 0x7CC4-byte stride and the SDK object boundaries are recovered from the
+ * fixed offsets used by cload_run_menu_loop/cload_init_display.  The trailing
+ * region is still unknown and is intentionally left opaque.
+ */
+typedef struct
+{
+    /* 0x0000 */ u8 header[0x40];
+    /* 0x0040 */ u_long ordering_table[0x1000];
+    /* 0x4040 */ DISPENV disp_env;
+    /* 0x4054 */ DRAWENV draw_env;
+    /* 0x40B0 */ RECT clear_rect;
+    /* 0x40B8 */ CloadGpuPacket *prim_cursor;
+    /* 0x40BC */ u8 trailing[0x3C08];
+} CloadRenderBuffer;
 
 /** @brief Per-element draw callback stored at element + 8. */
 typedef CloadGpuPacket *(*CloadElementDrawFunc)();
@@ -216,7 +245,7 @@ extern s32 g_pad_input;
 extern s32 g_cload_exit_requested;
 extern CloadElementPoolHead g_cload_element_pool;
 extern s32 g_cload_card_slot;
-extern u8 D_8014A988[];
+extern CloadRenderBuffer g_cload_render_buffers[CLOAD_CARD_COUNT];
 extern s16 D_8014EA38;
 extern s32 g_cload_io_busy;
 extern s32 g_cload_icon_resource;
@@ -226,7 +255,7 @@ extern s32 g_cload_progress_active;
 extern s32 g_cload_scroll_target_y;
 extern s32 g_cload_icon_phase;
 extern s32 g_cload_icon_context;
-extern u8 D_8015A350[];
+extern u8 g_cload_primitive_buffers[CLOAD_CARD_COUNT][0x4000];
 extern s32 g_cload_entry_state;
 extern s32 g_cload_selected_row;
 extern s32 g_cload_result;
@@ -234,23 +263,23 @@ extern s32 g_cload_scroll_frames;
 extern s32 g_cload_selection_status;
 extern s32 g_cload_frame_parity;
 extern s32 D_80162370;
-extern s32 D_80162A10;
-extern s32 D_80162A14;
-extern u8 g_cload_entry_metadata[];
+extern u8 g_cload_selected_file_header[];
+extern u8 g_cload_selected_file_title[];
+extern u8 g_cload_selected_save_metadata[];
 extern s32 g_cload_element1_state;
-extern u8 D_8014651C[];
-extern u8 D_8014652C[];
-extern u8 D_80146534[];
-extern u8 D_8014653C[];
+extern u8 g_cload_steps_initial_scan[];
+extern u8 g_cload_steps_refresh_entries[];
+extern u8 g_cload_steps_card_reset[];
+extern u8 g_cload_steps_load_selected_save[];
 extern s32 g_cload_choice_toggle;
 extern u8 *g_cload_load_step;
 extern s32 g_save_slot_index;
-extern char D_800ECF7C[];
+extern char g_lom_save_filename_prefix[];
 extern char g_cload_entries[];
-extern u8 D_80162C5F;
+extern u8 g_cload_selected_save_slot_id;
 extern s32 g_cload_entry_scan_active;
-extern char D_800ECF8C[];
-extern char D_800ECFC4[];
+extern char g_lom_alt_save_filename_prefix[];
+extern char g_new_save_entry_prefix[];
 extern u16 g_cload_text_check_memory_card;
 extern u16 g_cload_text_not_enough_blocks;
 extern u16 g_cload_text_no_memory_card;
@@ -268,7 +297,7 @@ extern u16 g_cload_text_load_prompt;
 extern u16 g_cload_text_loading;
 extern u8 g_cload_save_blob[];
 extern u8 g_menuLayoutBuffer[];
-extern s32 D_80042FB4;
+extern s32 g_playtime_vsync_origin;
 extern s32 g_cload_progress_bar_active;
 extern s32 g_cload_progress_start_tick;
 extern s32 g_cload_dialog_state;
@@ -283,19 +312,19 @@ extern u16 D_80145F4C;
 extern s32 g_cload_rank_count;
 extern s32 g_cload_entry_ranks[];
 extern s32 g_cload_entry_suffix_values[];
-extern u8 D_800EC3F6[2];
+extern u8 g_text_time_separator_offset_bytes[2];
 extern u16 D_80146338[];
 
 /* Globals used by the memory-card I/O, load-state, and glyph-cache block. */
-extern u8 D_800EC3FA[];
-extern u8 D_800ECF9C;
-extern u8 D_800ECFB0;
-extern u8 D_80146528;
-extern u8 D_80146538[];
-extern u8 D_80162C90[];
+extern u8 g_text_choice_glyph_offsets[];
+extern char g_lom_save_dummy_filename[];
+extern char g_lom_alt_save_dummy_filename[];
+extern u8 g_cload_steps_idle[];
+extern u8 g_cload_steps_read_selected_header[];
+extern char g_cload_selected_card_path[0x40];
 extern CloadCardPathBuffer g_cload_card_path_prefix;
 extern CloadCardSearchPathBuffer g_cload_card_search_path;
-extern s32 g_cload_entry_fields[];
+extern s32 g_cload_entry_fields[CLOAD_CARD_COUNT][CLOAD_ENTRIES_PER_CARD];
 extern s32 g_cload_retry_count;
 extern s32 g_cload_primary_poll_countdown;
 extern s32 g_cload_entry_value_limit;
@@ -400,8 +429,8 @@ s32 cload_main(void)
 void cload_run_menu_loop(void)
 {
     RECT rect;
-    u8 *frame;
-    u8 *ordering_table;
+    CloadRenderBuffer *frame;
+    u_long *ordering_table;
     s32 buffer_index;
     s32 dpad_input;
 
@@ -412,46 +441,46 @@ void cload_run_menu_loop(void)
     rect.w = 0x140;
     rect.h = 0x1D8;
     ClearImage(&rect, 0, 0, 0);
-    frame = D_8014A988;
+    frame = &g_cload_render_buffers[0];
     buffer_index = 0;
-    ClearOTagR(frame + 0x40, 0x1000);
-    ClearOTagR(frame + 0x7D04, 0x1000);
-    PutDispEnv(frame + 0x4040);
+    ClearOTagR(frame->ordering_table, 0x1000);
+    ClearOTagR(g_cload_render_buffers[1].ordering_table, 0x1000);
+    PutDispEnv(&frame->disp_env);
     update_controllers();
     SetDispMask(1);
     do
     {
-        ordering_table = frame + 0x40;
+        ordering_table = frame->ordering_table;
         ClearOTagR(ordering_table, 0x1000);
-        *(u8 **)(frame + 0x40B8) = D_8015A350 + (buffer_index << 14);
+        frame->prim_cursor = (CloadGpuPacket *)g_cload_primitive_buffers[buffer_index];
         func_800A9E78();
         dpad_input = g_pad_input & 0xF000;
         if (dpad_input != 0)
         {
             g_pad_input = dpad_input;
         }
-        func_80067BBC(frame);
-        if (cload_update_frame(frame) != 0)
+        field_update_and_render_fade(frame);
+        if (cload_update_frame((s32)frame) != 0)
         {
             break;
         }
         DrawSync(0);
         set_controller_vsync_interval(2);
         VSync(2);
-        ClearImage(frame + 0x40B0, 0, 0, 0);
+        ClearImage(&frame->clear_rect, 0, 0, 0);
         buffer_index = 0;
-        if (frame == D_8014A988)
+        if (frame == &g_cload_render_buffers[0])
         {
-            frame += 0x7CC4;
+            frame = &g_cload_render_buffers[1];
             buffer_index = 1;
         }
         else
         {
-            frame = D_8014A988;
+            frame = &g_cload_render_buffers[0];
         }
-        PutDispEnv(frame + 0x4040);
-        PutDrawEnv(frame + 0x4054);
-        DrawOTag(ordering_table + 0x3FFC);
+        PutDispEnv(&frame->disp_env);
+        PutDrawEnv(&frame->draw_env);
+        DrawOTag(ordering_table + 0xFFF);
         update_controllers();
         cdrom_process_state();
     } while (1);
@@ -490,8 +519,8 @@ void cload_init_display(void)
     SetDefDrawEnv(display_rect + 0x7C68, 0, 0x8, 0x140, 0xE0);
     display_rect[0x7C7E] = 0;
     display_rect[-0x46] = 0;
-    func_80067B8C();
-    func_80067EB4(0x100, 0x100, 0x100, 0x14);
+    field_reset_fade_state();
+    field_set_fade_target(0x100, 0x100, 0x100, 0x14);
 }
 
 /**
@@ -641,7 +670,7 @@ void cload_update_load_sequence(s32 phase)
     {
         if (g_cload_load_step == NULL)
         {
-            g_cload_load_step = D_8014651C;
+            g_cload_load_step = g_cload_steps_initial_scan;
         }
     }
     do
@@ -650,16 +679,16 @@ void cload_update_load_sequence(s32 phase)
     } while (phase == 3);
     if (phase == 2)
     {
-        g_cload_load_step = D_80146534;
+        g_cload_load_step = g_cload_steps_card_reset;
     }
     if (phase == 4)
     {
-        g_cload_load_step = D_8014652C;
+        g_cload_load_step = g_cload_steps_refresh_entries;
     }
     if (phase == 5)
     {
         g_cload_entry_state = 0xF9;
-        g_cload_load_step = D_80146534;
+        g_cload_load_step = g_cload_steps_card_reset;
     }
 }
 
@@ -719,12 +748,12 @@ s32 cload_handle_input(void)
     {
         g_cload_exit_requested = 1;
         g_cload_result = 1;
-        func_800A3938(0x78, 0x80);
+        play_menu_sfx(0x78, 0x80);
         return;
     }
     if (status & 0xA100)
     {
-        func_800A3938(0x7D, 0x80);
+        play_menu_sfx(0x7D, 0x80);
         g_cload_scroll_frames = 0;
         g_cload_scroll_target_y = 0;
         g_cload_scroll_y = 0;
@@ -774,22 +803,22 @@ s32 cload_handle_input(void)
     if (g_pad_input & 0x5000)
     {
         cload_commit_selected_entry();
-        func_800A3938(0x7D, 0x80);
+        play_menu_sfx(0x7D, 0x80);
         cload_scroll_to_selection();
         return;
     }
     if (g_pad_input & 0x220)
     {
-        if (strncmp(D_800ECF7C,
-                &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][g_cload_selected_row], 0xC) != 0)
+        if (strncmp(g_lom_save_filename_prefix,
+                &CLOAD_DIR_ENTRY(g_cload_card_slot, g_cload_selected_row), 0xC) != 0)
         {
             sfx_id = 0x78;
         }
         else
         {
-            if ((D_80162C5F == g_save_slot_index) || (D_80162C5F == 0xFF))
+            if ((g_cload_selected_save_slot_id == g_save_slot_index) || (g_cload_selected_save_slot_id == 0xFF))
             {
-                prompt = (CloadPromptElement *)cload_alloc_element(D_80162C5F);
+                prompt = (CloadPromptElement *)cload_alloc_element(g_cload_selected_save_slot_id);
                 prompt->draw = cload_draw_load_prompt;
                 prompt->attr.f.phase = 1;
                 prompt->attr.f.x = 0x10;
@@ -806,7 +835,7 @@ s32 cload_handle_input(void)
                 sfx_id = 0x78;
             }
         }
-        func_800A3938(sfx_id, 0x80);
+        play_menu_sfx(sfx_id, 0x80);
     }
 }
 
@@ -966,15 +995,15 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                             prim = func_800A88A0(prim, ot, (void *)((s32)D_80145F4C + (s32)base), 1, 0xF8 - x_offset, row_y, 1);
                         }
                     }
-                    if (strncmp(D_800ECF7C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    if (strncmp(g_lom_save_filename_prefix, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)g_cload_text_mana + (s32)base), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(D_800ECF8C, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
+                    else if (strncmp(g_lom_alt_save_filename_prefix, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)D_80145ED6 + (s32)base), 1, base_x, row_y, 0);
                     }
-                    else if (strncmp(D_800ECFC4, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, (char *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)entry), 8) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)g_cload_text_new_save + (s32)base), 1, base_x, row_y, 0);
                     }
@@ -1129,12 +1158,19 @@ s32 cload_draw_card_slot1_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     return func_800A88A0(prim, ot, glyph, a3, -x_offset + 0x40, -y_offset, 2);
 }
 
-/** @brief Fallback save-name view: 0x24-byte header then a 0x20-byte text field. */
-typedef struct CloadFallbackTextMatch
+/**
+ * @brief Text-bearing prefix of a PSX memory-card file header.
+ *
+ * CLOAD reads the first 0x80 or 0x280 bytes of the selected file into the
+ * buffer at g_cload_selected_file_header.  Its encoded title starts at +0x4
+ * and spans two 0x20-byte lines; the second line therefore begins at +0x24.
+ */
+typedef struct
 {
-    u8 pad[0x24];
-    u8 text[0x20];
-} CloadFallbackTextMatch;
+    /* 0x00 */ u8 header[4];
+    /* 0x04 */ u8 title_line_1[0x20];
+    /* 0x24 */ u8 title_line_2[0x20];
+} CloadCardHeaderText;
 
 /**
  * @brief Draw metadata for the selected save entry.
@@ -1185,11 +1221,11 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
             s32 term1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES;
             s32 term2 = (g_cload_selected_row * CLOAD_DIRECTORY_ENTRY_BYTES) + (s32)g_cload_entries;
 
-            if (strncmp(D_800ECF7C, (void *)(term1 + term2), 0xC) == 0)
+            if (strncmp(g_lom_save_filename_prefix, (void *)(term1 + term2), 0xC) == 0)
             {
-                u8 *base90 = g_cload_entry_metadata;
+                u8 *save_metadata = g_cload_selected_save_metadata;
 
-                if (base90[0xCF] == 0xFF || base90[0xCF] == g_save_slot_index)
+                if (save_metadata[CLOAD_SAVE_SLOT_ID_OFFSET] == 0xFF || save_metadata[CLOAD_SAVE_SLOT_ID_OFFSET] == g_save_slot_index)
                 {
                     s32 present_count;
                     s32 i;
@@ -1203,10 +1239,10 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
                     s32 time_val;
 
                     total = 0;
-                    slot[0] = (u32)(*(s32 *)(base90 + 0x18)) >> 0x19;
-                    slot[1] = ((u32)(*(s32 *)(base90 + 0x20)) >> 0x12) & 0x7F;
-                    slot[2] = (u32)(*(s32 *)(base90 + 0x20)) >> 0x19;
-                    g_cload_icon_palette = (s32)base90[0x1F];
+                    slot[0] = (u32)(*(s32 *)(save_metadata + CLOAD_SAVE_PARTY_WORD0_OFFSET)) >> 0x19;
+                    slot[1] = ((u32)(*(s32 *)(save_metadata + CLOAD_SAVE_PARTY_WORD1_OFFSET)) >> 0x12) & 0x7F;
+                    slot[2] = (u32)(*(s32 *)(save_metadata + CLOAD_SAVE_PARTY_WORD1_OFFSET)) >> 0x19;
+                    g_cload_icon_palette = (s32)save_metadata[CLOAD_SAVE_ICON_PALETTE_OFFSET];
 
                     present_count = 0;
                     for (i = 0; i < 3; i++)
@@ -1266,17 +1302,17 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
                     }
 
                     {
-                        u8 *base90_2 = g_cload_entry_metadata;
+                        u8 *save_metadata_2 = g_cload_selected_save_metadata;
                         s32 x = -x_offset;
                         s32 y = -y_offset;
 
-                        base_y = *(s32 *)(base90_2 + 0x30);
+                        base_y = *(s32 *)(save_metadata_2 + CLOAD_SAVE_PLAYTIME_TICKS_OFFSET);
 
                         pos.vx = (s16)(x + 0x70);
                         pos.vy = (s16)y;
                         hours = base_y / 216000;
                         result = func_800A8A78(ot, result, hours, 1, &pos, 1);
-                        result = func_800A88A0(result, ot, D_800EC3F6[0] + ((s32)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8), 1, x + 0x6F, y, 0);
+                        result = func_800A88A0(result, ot, g_text_time_separator_offset_bytes[0] + ((s32)g_text_time_separator_offset_bytes - 0x32) + (g_text_time_separator_offset_bytes[1] << 8), 1, x + 0x6F, y, 0);
                         base_y = (base_y / 3600) - (hours * 0x3C);
                         if (base_y < 0xA)
                         {
@@ -1286,7 +1322,7 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
                         }
                         pos.vx = (s16)(x + 0x85);
                         pos.vy = (s16)y;
-                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, base_y, 1, &pos, 1), ot, base90_2, 1, x + 0x54, y + 0x10, 0), ot, CLOAD_GLYPH_OFF((u8 *)D_80146338, (*(s32 *)(base90_2 + 0x20) & 0x3FFFF) * 2), 1, x + 0x54, y + 0x20, 0);
+                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, base_y, 1, &pos, 1), ot, save_metadata_2, 1, x + 0x54, y + 0x10, 0), ot, CLOAD_GLYPH_OFF((u8 *)D_80146338, (*(s32 *)(save_metadata_2 + CLOAD_SAVE_PARTY_WORD1_OFFSET) & 0x3FFFF) * 2), 1, x + 0x54, y + 0x20, 0);
                     }
                 }
                 else
@@ -1300,8 +1336,8 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
 
                 {
                     u8 *text_base;
-                    cload_terminate_multibyte_text(&D_80162A14);
-                    text_base = (u8 *)&D_80162A14;
+                    cload_terminate_multibyte_text(g_cload_selected_file_title);
+                    text_base = (u8 *)g_cload_selected_file_title;
                     text_base -= 4;
                     if ((u32)(text_base[0x24] - 1) >= 0x7FU)
                     {
@@ -1318,7 +1354,7 @@ s32 cload_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_off
 
                     for (j = 0; j < 0x20; j++)
                     {
-                        name[j] = ((CloadFallbackTextMatch *)&D_80162A10)->text[j];
+                        name[j] = ((CloadCardHeaderText *)g_cload_selected_file_header)->title_line_2[j];
                     }
                     name[j] = 0;
                         result = cload_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 1, 0);
@@ -1497,7 +1533,7 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
         }
     }
 
-    if (frame->frame_flag != 0)
+    if (frame->clear_y != 0)
     {
         SetDefDrawEnv(draw_area, 0, 0xF0, 0x140, 0xE0);
     }
@@ -1562,7 +1598,7 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
                     prim = cload_emit_window_frame(prim, ot,
                                            field + (s32)((((*(u32 *)((u8 *)element_state + 4) & 1) << 8) | high) - scaled_width) / 2,
                                            (*((u8 *)element_state + 2)) + ((s32)((*(u32 *)((u8 *)element_state + 4) >> 1) & 0xFF) - scaled_height) / 2,
-                                           scaled_width, scaled_height, frame->frame_flag, (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
+                                           scaled_width, scaled_height, frame->clear_y, (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
                 }
                 {
                     u32 old_word;
@@ -1587,7 +1623,7 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
                     high = case_word >> 24;
                     prim = cload_emit_window_frame(prim, ot, (case_word >> 7) & 0x1FF, (*((u8 *)element_state + 2)),
                                            ((*(u32 *)((u8 *)element_state + 4) & 1) << 8) | high,
-                                           (*(u32 *)((u8 *)element_state + 4) >> 1) & 0xFF, frame->frame_flag,
+                                           (*(u32 *)((u8 *)element_state + 4) >> 1) & 0xFF, frame->clear_y,
                                            (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
                 }
                 hold_word = *element_state;
@@ -1631,7 +1667,7 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
                     prim = cload_emit_window_frame(prim, ot,
                                            field + (s32)((((*(u32 *)((u8 *)element_state + 4) & 1) << 8) | high) - scaled_width) / 2,
                                            (*((u8 *)element_state + 2)) + ((s32)((*(u32 *)((u8 *)element_state + 4) >> 1) & 0xFF) - scaled_height) / 2,
-                                           scaled_width, scaled_height, frame->frame_flag, (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
+                                           scaled_width, scaled_height, frame->clear_y, (*(u32 *)((u8 *)element_state + 4) >> 9) & 1);
                 }
                 {
                     u32 exiting_word;
@@ -1962,7 +1998,7 @@ s32 cload_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     {
         ((CloadPromptElement *)&g_cload_element_pool)->attr.f.state = 0;
         func_800AA02C();
-        func_800A3938(0x78, 0x80);
+        play_menu_sfx(0x78, 0x80);
         g_cload_entry_state = 0xFF;
         cload_reset_entry_ranks();
         g_cload_load_step = 0;
@@ -1974,8 +2010,8 @@ s32 cload_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             ((CloadPromptElement *)&g_cload_element_pool)->attr.f.state = 0;
             func_800AA02C();
-            func_800A3938(0x78, 0x80);
-            g_cload_load_step = D_80146534;
+            play_menu_sfx(0x78, 0x80);
+            g_cload_load_step = g_cload_steps_card_reset;
         }
         else if (status & 0x220)
         {
@@ -1983,14 +2019,14 @@ s32 cload_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             {
                 ((CloadPromptElement *)&g_cload_element_pool)->attr.f.state = 0;
                 func_800AA02C();
-                func_800A3938(0x78, 0x80);
-                g_cload_load_step = D_80146534;
+                play_menu_sfx(0x78, 0x80);
+                g_cload_load_step = g_cload_steps_card_reset;
             }
             else
             {
-                func_800A3938(0x7E, 0x80);
+                play_menu_sfx(0x7E, 0x80);
                 g_cload_progress_active = 1;
-                g_cload_load_step = D_8014653C;
+                g_cload_load_step = g_cload_steps_load_selected_save;
                 p = (CloadPromptElement *)&g_cload_element_pool;
                 p->draw = cload_draw_load_progress;
                 p->attr.f.phase = 1;
@@ -2044,11 +2080,11 @@ s32 cload_draw_load_progress(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
         }
         else
         {
-            func_800A3938(0x7B, vol);
+            play_menu_sfx(0x7B, vol);
             g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
             bcopy(base + 0x180, g_menuLayoutBuffer, 0x3268);
             g_save_slot_index = g_menuLayoutBuffer[0xCF];
-            D_80042FB4 = VSync(-1);
+            g_playtime_vsync_origin = VSync(-1);
             g_cload_exit_requested = 1;
         }
     }
@@ -2119,7 +2155,7 @@ void cload_open_status_dialog(s32 dialog_state)
     CloadElement *p;
     s32 state;
 
-    func_800A3938(0x78, 0x80);
+    play_menu_sfx(0x78, 0x80);
     g_cload_element_pool.first_state = ((((g_cload_element_pool.first_state & ~CLOAD_ELEMENT_PHASE_MASK) | 8) & ~CLOAD_ELEMENT_STATE_MASK | 1) & 0xFFFF007F | 0x1000) & 0xFFFFFF;
     p = (CloadElement *)&g_cload_element_pool;
     p->size_flags |= 1;
@@ -2414,7 +2450,7 @@ s32 cload_draw_choice_prompt(s32 prim, s32 *ot, s32 x, s32 y)
     s32 hi_byte;
     s32 mode;
 
-    p = (u8 *)&D_800EC3FA;
+    p = g_text_choice_glyph_offsets;
     hi_byte = p[1] << 8;
     base = p - 0x36;
     mode = 4;
@@ -2436,7 +2472,7 @@ s32 cload_draw_choice_prompt(s32 prim, s32 *ot, s32 x, s32 y)
     if (g_pad_input & 0xA000)
     {
         g_cload_choice_toggle ^= 1;
-        func_800A3938(0x7D, 0x80);
+        play_menu_sfx(0x7D, 0x80);
         g_pad_input = 0;
     }
     return prim;
@@ -2724,7 +2760,7 @@ s32 cload_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
  * @brief Parse the hex-string field of each table entry and record the results.
  *
  * Iterates over the g_cload_entry_state active entries. For each entry the 0x28-byte
- * record is validated with @ref strncmp against pattern D_800ECF7C. On a
+ * record is validated with @ref strncmp against pattern g_lom_save_filename_prefix. On a
  * match (return 0) the ASCII hex string at record offset 0xC is scanned for up
  * to five hex digits (0-9, A-F, a-f), accumulated big-endian into a value that
  * is written to the g_cload_entry_fields result array; @ref cload_parse_hex_suffix_byte is then invoked
@@ -2738,17 +2774,16 @@ s32 cload_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
  */
 s32 cload_parse_entry_fields(void)
 {
- typedef struct { u8 data[0x28]; } CloadEntry28;
  s32 i; s32 max; u8 *entry; u8 *p; u8 *field; s32 count; s32 acc; u32 tmp0; u32 tmp1; u32 tmp2; s32 r;
  i=0; max=i;
  while (i < g_cload_entry_state) {
-    if (strncmp(&D_800ECF7C, (u8 *)&((CloadEntry28 (*)[20])g_cload_entries)[g_cload_card_slot][i], 0xC)==0) {
+    if (strncmp(g_lom_save_filename_prefix, (u8 *)&CLOAD_DIR_ENTRY(g_cload_card_slot, i), 0xC)==0) {
      count=5; p=(u8 *)(g_cload_card_slot*CLOAD_CARD_DIRECTORY_BYTES + ((i << 4) + (i << 4) + (i << 3)) + (s32)g_cload_entries + 0xC); acc=0;
      while (((u8)(*p-'0')<10)||((u8)(*p-'a')<6)||((u8)(*p-'A')<6)) { if(count==0)break; acc<<=4; if((u8)(*p-'0')<10){tmp0=acc-0x30;acc=tmp0+*p;} else if((u8)(*p-'A')<6){tmp1=acc-0x37;acc=tmp1+*p;} else if((u8)(*p-'a')<6){tmp2=acc-0x57;acc=tmp2+*p;} p++;count--; }
-     field=(u8 *)&((CloadEntry28 (*)[20])g_cload_entries)[g_cload_card_slot][i].data[0xC];
-     { s32 addr; addr=g_cload_card_slot*0x50+(s32)g_cload_entry_fields; *(s32 *)(addr+i*4)=acc; }
+     field=(u8 *)&CLOAD_DIR_ENTRY(g_cload_card_slot, i).name[0xC];
+     g_cload_entry_fields[g_cload_card_slot][i]=acc;
      r=cload_parse_hex_suffix_byte(field,acc,count); g_cload_entry_suffix_values[i]=r; if(max<r)max=r;
-    } else { { s32 addr; addr=g_cload_card_slot*0x50+(s32)g_cload_entry_fields; *(s32 *)(addr+i*4)=-1; } g_cload_entry_suffix_values[i]=0; }
+    } else { g_cload_entry_fields[g_cload_card_slot][i]=-1; g_cload_entry_suffix_values[i]=0; }
    i++;
  }
  return max;
@@ -2799,7 +2834,7 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         base_rank = &g_cload_entry_ranks[0];
         rank_ptr = base_rank;
         slot = g_cload_card_slot;
-        field1 = g_cload_entry_fields;
+        field1 = &g_cload_entry_fields[0][0];
         row = field1 + slot * 20;
         elem = row;
         do
@@ -2861,8 +2896,8 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         s32 max_count;
         max_count = g_cload_entry_state;
         slot = g_cload_card_slot;
-        field_base = g_cload_entry_fields;
-        max_ptr = (s32 *)((slot * 0x50) + (s32)field_base);
+        field_base = &g_cload_entry_fields[0][0];
+        max_ptr = &g_cload_entry_fields[slot][0];
         do
         {
             if (t0v < *max_ptr)
@@ -2881,7 +2916,7 @@ s32 cload_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         out_ptr = &g_cload_entry_suffix_values[0];
         ent_ptr = &g_cload_entries[0];
     loop_20:
-        if (strncmp(&D_800ECFC4[0], (void *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)ent_ptr), 8) == 0)
+        if (strncmp(g_new_save_entry_prefix, (void *)((g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES) + (s32)ent_ptr), 8) == 0)
         {
             *out_ptr = handle + 1;
         }
@@ -2922,7 +2957,7 @@ void cload_reset_entry_ranks(void)
 /**
  * @brief Scan up to g_cload_entry_state entries of the g_cload_entries table (row
  *        selected by g_cload_card_slot, stride 0x28) and report whether any entry
- *        matches one of the two known-type patterns D_800ECF7C / D_800ECF8C.
+ *        matches one of the two known-type patterns g_lom_save_filename_prefix / g_lom_alt_save_filename_prefix.
  * @return 1 on the first entry that matches either pattern (strncmp returns 0
  *         on a match), 0 if no entry matches.
  * @note The entry address is recomputed from the index each iteration rather than
@@ -2939,8 +2974,8 @@ s32 cload_has_known_entry_type(void)
     {
         do
         {
-            if (strncmp(&D_800ECF7C, &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][i], 0xC) == 0 ||
-                strncmp(&D_800ECF8C, &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][i], 0xC) == 0)
+            if (strncmp(g_lom_save_filename_prefix, &CLOAD_DIR_ENTRY(g_cload_card_slot, i), 0xC) == 0 ||
+                strncmp(g_lom_alt_save_filename_prefix, &CLOAD_DIR_ENTRY(g_cload_card_slot, i), 0xC) == 0)
             {
                 return 1;
             }
@@ -2999,12 +3034,12 @@ void cload_erase_fixed_card_files(void)
 
     memcpy(&card_path, &g_cload_card_path_prefix, 6);
     ((u8 *)&card_path)[2] += *(u8 *)&g_cload_card_slot;
-    strcat(&card_path, &D_800ECF9C);
+    strcat(&card_path, g_lom_save_dummy_filename);
     erase(&card_path);
 
     memcpy(&card_path, &g_cload_card_path_prefix, 6);
     ((u8 *)&card_path)[2] += *(u8 *)&g_cload_card_slot;
-    strcat(&card_path, &D_800ECFB0);
+    strcat(&card_path, g_lom_alt_save_dummy_filename);
     erase(&card_path);
 }
 
@@ -3020,12 +3055,12 @@ static inline void cload_erase_fixed_card_files_inline(void)
 
     memcpy(&card_path, &g_cload_card_path_prefix, 6);
     ((u8 *)&card_path)[2] += *(u8 *)&g_cload_card_slot;
-    strcat(&card_path, &D_800ECF9C);
+    strcat(&card_path, g_lom_save_dummy_filename);
     erase(&card_path);
 
     memcpy(&card_path, &g_cload_card_path_prefix, 6);
     ((u8 *)&card_path)[2] += *(u8 *)&g_cload_card_slot;
-    strcat(&card_path, &D_800ECFB0);
+    strcat(&card_path, g_lom_alt_save_dummy_filename);
     erase(&card_path);
 }
 
@@ -3264,7 +3299,7 @@ s32 cload_advance_load_sequence(void)
         c15_d70zero:
             phase_result = 5;
             g_cload_entry_state = 0xFC;
-            g_cload_load_step = &D_80146528;
+            g_cload_load_step = g_cload_steps_idle;
             goto block_81;
 
         cl_case_16:
@@ -3279,14 +3314,14 @@ s32 cload_advance_load_sequence(void)
             g_cload_io_busy = 1;
             g_cload_selection_status = 0;
             _card_wait(g_cload_card_slot);
-            g_cload_file_handle = open(&D_80162C90, 0x8001);
+            g_cload_file_handle = open(g_cload_selected_card_path, 0x8001);
             if (g_cload_file_handle == -1)
             {
                 goto block_81;
             }
             cload_release_primary_handles();
             _card_wait(g_cload_card_slot);
-            if (read(g_cload_file_handle, &D_80162A10,
+            if (read(g_cload_file_handle, g_cload_selected_file_header,
                                g_cload_selected_entry_extended != 0 ? 0x280 : 0x80) != -1)
             {
                 g_cload_load_step = g_cload_load_step + 1;
@@ -3313,7 +3348,7 @@ s32 cload_advance_load_sequence(void)
             close(g_cload_file_handle);
         block_58:
             g_cload_entry_state = 0xFF;
-            g_cload_load_step = D_8014651C;
+            g_cload_load_step = g_cload_steps_initial_scan;
             goto block_81;
 
         cl_case_30:
@@ -3326,7 +3361,7 @@ s32 cload_advance_load_sequence(void)
             g_cload_progress_bar_active = 1;
             g_cload_progress_start_tick = VSync(-1);
             _card_wait(g_cload_card_slot);
-            g_cload_file_handle = open(&D_80162C90, 0x8001);
+            g_cload_file_handle = open(g_cload_selected_card_path, 0x8001);
             cload_release_primary_handles();
             _card_wait(g_cload_card_slot);
             if (read(g_cload_file_handle, &g_cload_save_blob, 0x4000) != -1)
@@ -3415,7 +3450,7 @@ block_81:
 /**
  * @brief Reset the cached resource handles and arm the first load step.
  * @note Releases the handles (cload_release_primary_handles), rewinds the CD channel, and points
- *       g_cload_load_step at the D_80146528 step table.
+ *       g_cload_load_step at the g_cload_steps_idle step table.
  * @see decomp.me (100.00%)
  */
 void cload_restart_load_sequence(void)
@@ -3423,7 +3458,7 @@ void cload_restart_load_sequence(void)
     cload_release_primary_handles();
     _card_wait(g_cload_card_slot);
     _card_info(g_cload_card_slot * 0x10);
-    g_cload_load_step = &D_80146528;
+    g_cload_load_step = g_cload_steps_idle;
 }
 
 
@@ -3615,7 +3650,7 @@ s32 cload_scan_next_entry(s32 page)
 
 /**
  * @brief Commit the selected g_cload_entries record and arm the next step.
- * @note Validates the record against the D_800ECFC4 / D_800ECF7C patterns, copies
+ * @note Validates the record against the g_new_save_entry_prefix / g_lom_save_filename_prefix patterns, copies
  *       its header into a local CloadCardPathBuffer, biases byte 2 by the page index, and
  *       registers it via strcpy; sets the g_cload_selection_status / g_cload_selected_entry_extended status.
  * @see decomp.me (100%)
@@ -3630,15 +3665,15 @@ void cload_commit_selected_entry(void)
         g_cload_selection_status = 3;
         return;
     }
-    if (strncmp(&D_800ECFC4[0],
-            &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][g_cload_selected_row], 8) == 0)
+    if (strncmp(g_new_save_entry_prefix,
+            &CLOAD_DIR_ENTRY(g_cload_card_slot, g_cload_selected_row), 8) == 0)
     {
         g_cload_selection_status = 2;
         return;
     }
     memcpy(&card_path, &g_cload_card_path_prefix, 6);
     path = (u8 *)&card_path;
-    strcat(path, &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][g_cload_selected_row]);
+    strcat(path, &CLOAD_DIR_ENTRY(g_cload_card_slot, g_cload_selected_row));
     {
         s32 slot_index;
         s32 path_slot_digit;
@@ -3647,11 +3682,11 @@ void cload_commit_selected_entry(void)
         g_cload_selection_status = 0;
         path_slot_digit += slot_index;
         *((u8 *)&card_path + 2) = path_slot_digit;
-        strcpy(&D_80162C90[0], path, slot_index);
+        strcpy(g_cload_selected_card_path, path, slot_index);
     }
-    g_cload_load_step = &D_80146538[0];
-    if (strncmp(&D_800ECF7C[0],
-            &((CloadDirEntry (*)[20])g_cload_entries)[g_cload_card_slot][g_cload_selected_row], 0xC) == 0)
+    g_cload_load_step = &g_cload_steps_read_selected_header[0];
+    if (strncmp(g_lom_save_filename_prefix,
+            &CLOAD_DIR_ENTRY(g_cload_card_slot, g_cload_selected_row), 0xC) == 0)
     {
         g_cload_selected_entry_extended = 1;
         return;
@@ -3758,8 +3793,8 @@ s32 cload_poll_secondary_handle_group(void)
 
 /**
  * @brief Collate the g_cload_entries page records, ordering them by pattern class.
- * @note Five passes bucket records matching D_800ECF7C, then D_800ECF8C, then
- *       D_800ECFC4, then the remainder, copying each 0x28-byte record with
+ * @note Five passes bucket records matching g_lom_save_filename_prefix, then g_lom_alt_save_filename_prefix, then
+ *       g_new_save_entry_prefix, then the remainder, copying each 0x28-byte record with
  *       bcopy before writing the ordered set back to the page.
  * @see decomp.me (95.37%)
  */
@@ -3823,7 +3858,7 @@ void cload_sort_entries_by_type(void)
             output_offset = offset_tmp_0 * 8;
             do
             {
-                if (*first_suffix == group && strncmp(&D_800ECF7C, (card_offset_0 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_0 += (s32)first_entry, (void *)card_offset_0), 0xC) == 0)
+                if (*first_suffix == group && strncmp(g_lom_save_filename_prefix, (card_offset_0 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_0 += (s32)first_entry, (void *)card_offset_0), 0xC) == 0)
                 {
                     bcopy((card_offset_1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_1 += (s32)first_entry, (void *)card_offset_1), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
                     output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
@@ -3851,7 +3886,7 @@ void cload_sort_entries_by_type(void)
             output_offset = offset_tmp_1 * 8;
             do
             {
-                if (*second_suffix == group && strncmp(&D_800ECF8C, (card_offset_2 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_2 += (s32)second_entry, (void *)card_offset_2), 0xC) == 0)
+                if (*second_suffix == group && strncmp(g_lom_alt_save_filename_prefix, (card_offset_2 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_2 += (s32)second_entry, (void *)card_offset_2), 0xC) == 0)
                 {
                     bcopy((card_offset_3 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_3 += (s32)second_entry, (void *)card_offset_3), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
                     output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
@@ -3875,7 +3910,7 @@ void cload_sort_entries_by_type(void)
         output_offset = offset_tmp_2 * 8;
         do
         {
-            if (strncmp(&D_800ECFC4, (card_offset_4 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_4 += (s32)third_entry, (void *)card_offset_4), 8) == 0)
+            if (strncmp(g_new_save_entry_prefix, (card_offset_4 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_4 += (s32)third_entry, (void *)card_offset_4), 8) == 0)
             {
                 bcopy((card_offset_5 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_5 += (s32)third_entry, (void *)card_offset_5), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
                 output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
@@ -3896,9 +3931,9 @@ void cload_sort_entries_by_type(void)
         output_offset = offset_tmp_3 * 8;
         do
         {
-            if (strncmp(&D_800ECF7C, (card_offset_6 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_6 += (s32)other_entry, (void *)card_offset_6), 0xC) != 0 &&
-                strncmp(&D_800ECF8C, (card_offset_7 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_7 += (s32)other_entry, (void *)card_offset_7), 0xC) != 0 &&
-                strncmp(&D_800ECFC4, (card_offset_8 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_8 += (s32)other_entry, (void *)card_offset_8), 8) != 0)
+            if (strncmp(g_lom_save_filename_prefix, (card_offset_6 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_6 += (s32)other_entry, (void *)card_offset_6), 0xC) != 0 &&
+                strncmp(g_lom_alt_save_filename_prefix, (card_offset_7 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_7 += (s32)other_entry, (void *)card_offset_7), 0xC) != 0 &&
+                strncmp(g_new_save_entry_prefix, (card_offset_8 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_8 += (s32)other_entry, (void *)card_offset_8), 8) != 0)
             {
                 bcopy((card_offset_9 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_9 += (s32)other_entry, (void *)card_offset_9), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
                 output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;

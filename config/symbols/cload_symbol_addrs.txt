@@ -1,6 +1,9 @@
 // Field dialogue/text renderer exports used by this overlay.
 field_text_reset_windows             = 0x800643E0;
 field_text_reset_scratch             = 0x8006441C;
+field_reset_fade_state                 = 0x80067B8C;
+field_update_and_render_fade           = 0x80067BBC;
+field_set_fade_target                  = 0x80067EB4;
 
 // Shared main-executable input state used by CLOAD.
 g_pad_input                          = 0x80122988;
@@ -51,6 +54,7 @@ VSync                               = 0x8002054C;
 McxCardType                         = 0x800342CC;
 g_save_slot_index                   = 0x8003EC9C;
 g_menuLayoutBuffer                  = 0x80042FD8;
+play_menu_sfx                       = 0x800A3938;
 
 // Icon-resource header fields inside the 0x80180000 scratch buffer. It is a raw
 // load target, not real data symbols, so keep splat from symbolizing the four
@@ -158,6 +162,8 @@ g_cload_text_card_insert_error           = 0x80145EDC;
 g_cload_text_version_error               = 0x80145EF0;
 
 // CLOAD data/BSS symbols named from their observed roles.
+g_cload_render_buffers                   = 0x8014A988;
+g_cload_primitive_buffers                = 0x8015A350;
 g_cload_exit_requested                   = 0x80146918;
 g_cload_element_pool                     = 0x801468B8;
 g_cload_element1_state                   = 0x801468C4;
@@ -216,4 +222,28 @@ g_cload_primary_poll_countdown           = 0x80162D70;
 g_cload_secondary_poll_countdown         = 0x80162DD4;
 g_cload_selected_entry_extended          = 0x80162DCC;
 g_cload_entry_value_limit                = 0x80162D74;
-g_cload_entry_metadata                   = 0x80162B90;
+g_cload_selected_save_metadata           = 0x80162B90;
+
+// Shared save/card constants named from their contents and CLOAD usage.
+g_lom_save_filename_prefix              = 0x800ECF7C;
+g_lom_alt_save_filename_prefix          = 0x800ECF8C;
+g_lom_save_dummy_filename               = 0x800ECF9C;
+g_lom_alt_save_dummy_filename           = 0x800ECFB0;
+g_new_save_entry_prefix                 = 0x800ECFC4;
+g_playtime_vsync_origin                 = 0x80042FB4;
+g_text_time_separator_offset_bytes      = 0x800EC3F6;
+g_text_choice_glyph_offsets             = 0x800EC3FA;
+
+// CLOAD load-state scripts (byte values dispatch cload_advance_load_sequence cases).
+g_cload_steps_initial_scan              = 0x8014651C;
+g_cload_steps_idle                      = 0x80146528;
+g_cload_steps_refresh_entries           = 0x8014652C;
+g_cload_steps_card_reset                = 0x80146534;
+g_cload_steps_read_selected_header      = 0x80146538;
+g_cload_steps_load_selected_save        = 0x8014653C;
+
+// Selected memory-card file/header buffer and derived views.
+g_cload_selected_file_header            = 0x80162A10;
+g_cload_selected_file_title             = 0x80162A14;
+g_cload_selected_save_slot_id           = 0x80162C5F;
+g_cload_selected_card_path              = 0x80162C90;

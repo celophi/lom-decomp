@@ -41,8 +41,6 @@ segments:
     vram: 0x80140000
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x11D, c, addhero]                  # gcc272_cdk, 0x11D-0x4571, all funcs 100%
-      - [0x4571, c, func_80144570]           # gcc272_cdk, func_80144570, WIP 99.82%
-      - [0x47B5, c, addhero2]                # gcc272_cdk, 0x47B5-0x6FA5, all funcs 100%
+      - [0x11D, c, addhero]                  # gcc272_cdk, merged 0x11D-0x6FA5; func_80144570 WIP 99.82%
       - [0x6FA5, data, data]
   - [0x2D941]
