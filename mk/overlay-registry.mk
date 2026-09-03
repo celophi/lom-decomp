@@ -814,11 +814,11 @@ overlay_title_gcc_272_cdk_g0_srcs := src/overlays/title/title.c
 OVERLAYS += wsel
 overlay_wsel_gcc_272_cdk_g0_srcs := \
 	src/overlays/wsel/wsel_main_loop.c \
+	src/overlays/wsel/wsel_init_display.c \
 	src/overlays/wsel/wsel_audio_fade.c \
 	src/overlays/wsel/wsel_read_pad_state.c \
 	src/overlays/wsel/wsel_read_pad_input.c
 overlay_wsel_gcc_280_g0_srcs := \
-	src/overlays/wsel/unk1.c \
 	src/overlays/wsel/unk1_tail.c \
 	src/overlays/wsel/unk1_tail_mid.c
 

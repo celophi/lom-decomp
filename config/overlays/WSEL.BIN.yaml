@@ -42,7 +42,7 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0xB5, c, wsel_main_loop]     # gcc272_cdk, func_8004FD24, 100%
-      - [0x209, c, unk1]
+      - [0x209, c, wsel_init_display]  # gcc272_cdk, func_8004FE78, 100%
       - [0x34D, c, wsel_audio_fade]       # gcc272_cdk, 7 funcs, 100%
       - [0x781, c, unk1_tail]
       - [0x263D, c, wsel_read_pad_state]     # gcc272_cdk, func_800522AC, 100%
