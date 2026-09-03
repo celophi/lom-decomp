@@ -57,6 +57,6 @@ segments:
       - [0x234D, c, shop_element_init_a]       # gcc272_cdk, func_8014234C, 100%
       - [0x2401, c, unk1_tail_mid]
       - [0x28F1, c, shop_element_init_b]       # gcc272_cdk, func_801428F0, 100%
-      - [0x29A5, c, unk1_tail_end]
+      - [0x29A5, c, func_801429A4]             # gcc272_cdk, func_801429A4, 100%
       - [0x2D05, data, data]
   - [0x5CE5]
