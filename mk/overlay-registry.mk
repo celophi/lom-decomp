@@ -26,6 +26,7 @@ overlay_addhero_gcc_272_cdk_g0_srcs := src/overlays/addhero/addhero.c
 
 OVERLAYS += carda
 overlay_carda_gcc_272_cdk_g0_srcs := \
+	src/overlays/carda/carda_build_ui_elements.c \
 	src/overlays/carda/carda_core_state.c \
 	src/overlays/carda/carda_terminate_multibyte_text.c \
 	src/overlays/carda/carda_string_utils.c \
@@ -76,7 +77,6 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_header_label.c \
 	src/overlays/carda/func_80147100.c
 overlay_carda_gcc_280_g0_srcs := \
-	src/overlays/carda/unk1.c \
 	src/overlays/carda/unk1_after_update_state.c \
 	src/overlays/carda/unk1_core_tail.c \
 	src/overlays/carda/unk1_after_strings.c \
