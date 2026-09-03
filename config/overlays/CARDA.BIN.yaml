@@ -75,6 +75,7 @@ segments:
       - [0x5051, c, unk1_after_choice]
       - [0x6695, c, carda_restore_record]       # gcc272_cdk, func_80146694, 100%
       - [0x66F9, c, unk1_after_choice_after_restore]
+      - [0x6795, c, func_80146794]              # gcc272_cdk, func_80146794, 100%
       - [0x697D, c, carda_choice_init]          # gcc272_cdk, func_8014697C, 100%
       - [0x6AF1, c, carda_choice_cancel]        # gcc272_cdk, func_80146AF0, 100%
       - [0x6CA5, c, unk1_after_choice_mid]
