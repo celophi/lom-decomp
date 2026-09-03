@@ -790,10 +790,16 @@ overlay_wsel_gcc_272_cdk_g0_srcs := \
 	src/overlays/wsel/func_800521D0.c \
 	src/overlays/wsel/wsel_audio_fade.c \
 	src/overlays/wsel/wsel_read_pad_state.c \
+	src/overlays/wsel/func_80052384.c \
 	src/overlays/wsel/wsel_read_pad_input.c
 overlay_wsel_gcc_280_g0_srcs := \
 	src/overlays/wsel/unk1_tail.c \
-	src/overlays/wsel/unk1_tail_mid.c
+	src/overlays/wsel/func_80050944.c \
+	src/overlays/wsel/unk1_tail_after_interp.c \
+	src/overlays/wsel/func_80050DB0.c \
+	src/overlays/wsel/unk1_tail_mid.c \
+	src/overlays/wsel/func_800513D0.c \
+	src/overlays/wsel/unk1_tail_b.c
 
 OVERLAYS += zukan
 overlay_zukan_gcc_272_cdk_g0_srcs := \
