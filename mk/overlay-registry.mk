@@ -23,59 +23,9 @@
 
 OVERLAYS += addhero
 overlay_addhero_gcc_272_cdk_g0_srcs := \
-	src/overlays/addhero/addhero_init.c \
-	src/overlays/addhero/addhero_load_sequence.c \
-	src/overlays/addhero/addhero_reset_state.c \
-	src/overlays/addhero/addhero_choice_cleanup.c \
-	src/overlays/addhero/addhero_state_step.c \
-	src/overlays/addhero/addhero_build_ui_elements.c \
-	src/overlays/addhero/addhero_reset_packets.c \
-	src/overlays/addhero/addhero_core_state.c \
-	src/overlays/addhero/addhero_row_status.c \
-	src/overlays/addhero/addhero_terminate_multibyte_text.c \
-	src/overlays/addhero/addhero_string_utils.c \
-	src/overlays/addhero/addhero_choice_prompt.c \
-	src/overlays/addhero/addhero_checksum.c \
-	src/overlays/addhero/addhero_hex_parse.c \
-	src/overlays/addhero/addhero_update_state.c \
-	src/overlays/addhero/func_801408B0.c \
-	src/overlays/addhero/addhero_panel_tiles.c \
-	src/overlays/addhero/func_80141694.c \
-	src/overlays/addhero/addhero_claim_element.c \
-	src/overlays/addhero/func_80141F00.c \
-	src/overlays/addhero/addhero_known_entry_type.c \
-	src/overlays/addhero/addhero_fixed_prompts.c \
-	src/overlays/addhero/func_80144C28.c \
-	src/overlays/addhero/addhero_reset_entry_ranks.c \
-	src/overlays/addhero/addhero_stream_reset.c \
-	src/overlays/addhero/addhero_init_stream_handles.c \
-	src/overlays/addhero/addhero_shutdown_handles.c \
-	src/overlays/addhero/addhero_begin_entry_scan.c \
-	src/overlays/addhero/addhero_poll_entry_scan.c \
-	src/overlays/addhero/addhero_commit_selected_entry.c \
-	src/overlays/addhero/addhero_handles.c \
-	src/overlays/addhero/func_80146198.c \
-	src/overlays/addhero/addhero_draw_signed_decimal.c \
-	src/overlays/addhero/addhero_text_render.c \
-	src/overlays/addhero/addhero_cache_table.c \
-	src/overlays/addhero/addhero_expand_text_glyph_codes.c \
-	src/overlays/addhero/addhero_timer_bar.c \
-	src/overlays/addhero/addhero_validate_resource.c \
-	src/overlays/addhero/addhero_format_decimal.c \
-	src/overlays/addhero/addhero_nibble_pair.c \
-	src/overlays/addhero/addhero_parse_hex_suffix_byte.c \
-	src/overlays/addhero/addhero_draw_load_prompt.c \
-	src/overlays/addhero/addhero_draw_load_commit.c \
-	src/overlays/addhero/addhero_format_hex.c \
-	src/overlays/addhero/addhero_entry_blocks_reach_limit.c \
-	src/overlays/addhero/addhero_choice_init.c \
-	src/overlays/addhero/addhero_choice_state.c \
-	src/overlays/addhero/func_80143044.c \
-	src/overlays/addhero/addhero_glyph_builder.c \
-	src/overlays/addhero/addhero_rank_entries.c
+	src/overlays/addhero/addhero.c \
+	src/overlays/addhero/addhero2.c
 overlay_addhero_gcc_280_g0_srcs := \
-	src/overlays/addhero/addhero_mode_glyph.c \
-	src/overlays/addhero/addhero_scan_hex_digits.c \
 	src/overlays/addhero/unk1_before_rank.c \
 
 OVERLAYS += carda
