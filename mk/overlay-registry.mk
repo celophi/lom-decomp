@@ -444,7 +444,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split106.c \
 	src/overlays/field/unk2_b_split106_tail.c \
 	src/overlays/field/unk2_b_split106_tail_b.c \
-	src/overlays/field/unk2_b_split107_tail.c \
 	src/overlays/field/unk2_b_split107_tail_b.c \
 	src/overlays/field/unk2_b_split109.c \
 	src/overlays/field/unk2_b_split109_tail.c \
