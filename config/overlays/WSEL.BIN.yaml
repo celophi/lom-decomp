@@ -44,12 +44,18 @@ segments:
       - [0xB5, c, wsel_main_loop]     # gcc272_cdk, func_8004FD24, 100%
       - [0x209, c, wsel_init_display]  # gcc272_cdk, func_8004FE78, 100%
       - [0x34D, c, wsel_audio_fade]       # gcc272_cdk, 7 funcs, 100%
-      - [0x781, c, unk1_tail]
+      - [0x781, c, unk1_tail]              # gcc280_g0, func_800503F0 unmatched
+      - [0xCD5, c, func_80050944]           # gcc280_g0, func_80050944, 100%
+      - [0xED1, c, func_80050B40]           # gcc280_g0, func_80050B40, 99.92%
+      - [0x1141, c, func_80050DB0]          # gcc280_g0, func_80050DB0, 100%
+      - [0x129D, c, unk1_tail_mid]          # gcc280_g0, func_80050F0C unmatched
+      - [0x1761, c, func_800513D0]          # gcc280_g0, func_800513D0, 100%
+      - [0x1869, c, unk1_tail_b]            # gcc280_g0, funcs 800514D8/800517BC/80051D78 unmatched
       - [0x2439, c, func_800520A8]           # gcc272_cdk, func_800520A8, 100%
       - [0x24E5, c, func_80052154]           # gcc272_cdk, func_80052154, 100%
-      - [0x2561, c, func_800521D0]           # gcc272_cdk, func_800521D0, WIP ~78%
+      - [0x2561, c, func_800521D0]           # gcc272_cdk, func_800521D0, 100%
       - [0x263D, c, wsel_read_pad_state]     # gcc272_cdk, func_800522AC, 100%
-      - [0x2715, c, unk1_tail_mid]
+      - [0x2715, c, func_80052384]              # gcc272_cdk, func_80052384, 100%
       - [0x28A1, c, wsel_read_pad_input]     # gcc272_cdk, func_80052510, 100%
       - [0x2999, data, data]
   - [0x7AC75]
