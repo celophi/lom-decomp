@@ -77,7 +77,8 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/func_8014A1C4.c \
 	src/overlays/carda/carda_format_hex.c \
 	src/overlays/carda/carda_glyph_builder.c \
-	src/overlays/carda/carda_header_label.c
+	src/overlays/carda/carda_header_label.c \
+	src/overlays/carda/func_80147100.c
 overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1.c \
 	src/overlays/carda/unk1_after_update_state.c \
@@ -812,6 +813,7 @@ overlay_title_gcc_272_cdk_g0_srcs := src/overlays/title/title.c
 
 OVERLAYS += wsel
 overlay_wsel_gcc_272_cdk_g0_srcs := \
+	src/overlays/wsel/wsel_main_loop.c \
 	src/overlays/wsel/wsel_audio_fade.c \
 	src/overlays/wsel/wsel_read_pad_state.c \
 	src/overlays/wsel/wsel_read_pad_input.c
