@@ -41,26 +41,6 @@ segments:
     vram: 0x80140000
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x11D, c, niki]
-      - [0x4741, c, func_80144740]             # gcc272_cdk, func_80144740, WIP 99.82%
-      - [0x4985, c, niki_rank_entries]         # gcc272_cdk, func_80144984, 100%
-      - [0x4BC1, c, niki_reset_entry_ranks]    # gcc272_cdk, 1 func, 100%
-      - [0x4BF9, c, niki_known_entry_type]    # gcc272_cdk, 1 func, 100%
-      - [0x4CC9, c, niki_entry_blocks_reach_limit] # gcc272_cdk, func_80144CC8, 100%
-      - [0x4D45, c, niki_fixed_prompts]       # gcc272_cdk, 1 func, 100%
-      - [0x4DF9, c, func_80144DF8]            # gcc272_cdk, 1 func, 100%
-      - [0x5995, c, niki_stream_reset]         # gcc272_cdk, 2 funcs, 100%
-      - [0x5A41, c, niki_init_stream_handles]     # gcc272_cdk, 1 func, 100%
-      - [0x5C0D, c, niki_shutdown_handles]     # gcc272_cdk, 1 func, 100%
-      - [0x5CBD, c, niki_begin_entry_scan]         # gcc272_cdk, func_80145CBC, 100%
-      - [0x5DA5, c, func_80145DA4]            # gcc272_cdk, 1 func, 100%
-      - [0x5F69, c, niki_commit_selected_entry]     # gcc272_cdk, func_80145F68, 100%
-      - [0x6115, c, niki_handles]              # gcc272_cdk, 4 funcs, 100%
-      - [0x62ED, c, func_801462EC]            # gcc272_cdk, 1 func, 100%
-      - [0x671D, c, niki_draw_signed_decimal]  # gcc272_cdk, 1 func, 100%
-      - [0x693D, c, niki_nibble_pair]        # gcc272_cdk, 1 func, 100%
-      - [0x69C1, c, niki_text_render]          # gcc272_cdk, 3 funcs, 100%
-      - [0x6EB9, c, niki_cache_table]          # gcc272_cdk, 3 funcs, 100%
-      - [0x6F85, c, niki_expand_text_glyph_codes] # gcc272_cdk, 1 func, 100%
+      - [0x11D, c, niki]                     # gcc272_cdk, consolidated NIKI C, baseline preserved
       - [0x70F9, data, data]
   - [0x2DA81]

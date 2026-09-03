@@ -2573,10 +2573,27 @@ niki_fe:
 u8 *func_801442C4(void *arg0)
 {
     u8 *p = arg0;
+    u32 c;
 
-    while ((u32)(*p - 0x30) < 10 || (u32)(*p - 0x61) < 6 || (u32)(*p - 0x41) < 6)
+    while (1)
     {
+        c = *p;
         p++;
+        if ((u32)(c - '0') < 10)
+            continue;
+        p--;
+        if (p) { p++; p--; }
+        p++;
+        if ((u32)(c - 'a') < 6)
+            continue;
+        p--;
+        if (p) { p++; p--; }
+        p++;
+        if ((u32)(c - 'A') < 6)
+            continue;
+        p--;
+        if (p) { p++; p--; }
+        break;
     }
 
     return p;
@@ -2912,4 +2929,1997 @@ s32 func_80144648(u8 *text, s32 unused1, s32 unused2)
         count--;
     }
     return result;
+}
+
+/* ---- Consolidated from func_80144740.c ---- */
+
+extern s32 D_80164B70;
+extern s32 D_80164B78;
+extern char D_800ECF7C[];
+extern s32 D_80164F20[];
+extern s32 D_80164EB8[];
+
+s32 func_8001714C();
+s32 func_80144648();
+
+/**
+ * @brief Parse the hex rank value out of each NIKI entry whose name matches the
+ *        D_800ECF7C prefix, store it, and return the maximum.
+ * @note NON-MATCHING (99.82%). Sibling of addhero func_80144570 (same body).
+ *       The lone residue is a sched2 arg-order swap at the func_8001714C call:
+ *       the target emits `addiu a0, %lo(D_800ECF7C)` before `li a2, 0xC`, ours
+ *       after. sched_oracle classifies it as a post-allocation (sched2) reorder,
+ *       not an emit-order fix; the do/while(0) fence on `pattern` is the best of
+ *       the forms tried (direct-pass regresses to 98.62%).
+ *       TODO: recover the exact sched2 ordering.
+ * @see (99.82%)
+ */
+s32 func_80144740(void)
+{
+    s32 i;
+    s32 max;
+    u8 *p;
+    u8 *field;
+    s32 count;
+    s32 acc;
+    u32 tmp0;
+    u32 tmp1;
+    u32 tmp2;
+    s32 r;
+
+    i = 0;
+    max = i;
+    while (i < D_80164B78)
+    {
+        u8 *pattern;
+        do { pattern = (u8 *)&D_800ECF7C; } while (0);
+        if (func_8001714C(pattern, (u8 *)&D_80165018[D_80164B70][i], 0xC) == 0)
+        {
+            count = 5;
+            p = (u8 *)(D_80164B70 * 0x320 + ((i << 4) + (i << 4) + (i << 3)) + (s32)D_80165018 + 0xC);
+            acc = 0;
+            while (((u8)(*p - '0') < 10) || ((u8)(*p - 'a') < 6) || ((u8)(*p - 'A') < 6))
+            {
+                if (count == 0)
+                    break;
+                acc <<= 4;
+                if ((u8)(*p - '0') < 10)
+                {
+                    tmp0 = acc - 0x30;
+                    acc = tmp0 + *p;
+                }
+                else if ((u8)(*p - 'A') < 6)
+                {
+                    tmp1 = acc - 0x37;
+                    acc = tmp1 + *p;
+                }
+                else if ((u8)(*p - 'a') < 6)
+                {
+                    tmp2 = acc - 0x57;
+                    acc = tmp2 + *p;
+                }
+                p++;
+                count--;
+            }
+            field = &D_80165018[D_80164B70][i].data[0xC];
+            {
+                s32 addr;
+                addr = D_80164B70 * 0x50 + (s32)D_80164F20;
+                *(s32 *)(addr + i * 4) = acc;
+            }
+            r = func_80144648(field, acc, count);
+            D_80164EB8[i] = r;
+            if (max < r)
+                max = r;
+        }
+        else
+        {
+            s32 addr;
+            addr = D_80164B70 * 0x50 + (s32)D_80164F20;
+            *(s32 *)(addr + i * 4) = -1;
+            D_80164EB8[i] = 0;
+        }
+        i++;
+    }
+    return max;
+}
+
+/* ---- Consolidated from niki_rank_entries.c ---- */
+
+extern s32 D_80164B78;
+extern s32 D_80164E20[];
+extern s32 D_80164B70;
+extern s32 D_80164F20[];
+extern s32 D_80164EB0;
+extern s32 D_80164F14;
+extern s32 D_80164EB8[];
+extern char D_800ECFC4[];
+
+s32 func_80144740();
+void func_801462EC();
+void func_80144BC0(void);
+s32 func_8001714C();
+
+s32 func_80144984(s32 unused0, s32 unused1, s32 unused2)
+{
+    s32 *row;
+    s32 *elem;
+    s32 *rank_ptr;
+    s32 *cmp_ptr;
+    s32 *inc_ptr;
+    s32 *base_rank;
+    s32 *ecopy;
+    s32 *max_ptr;
+    s32 *field_base;
+    s32 *field1;
+    s32 slot;
+    s32 *out_ptr;
+    char *ent_ptr;
+    s32 t0v;
+    s32 i;
+    s32 s3v;
+    s32 count;
+    s32 handle;
+    s32 less_count;
+    s32 j;
+
+    func_80144740();
+    s3v = -1;
+    func_801462EC();
+    i = 0;
+    handle = func_80144740();
+    func_80144BC0();
+    t0v = 1;
+    if (D_80164B78 > 0)
+    {
+        count = D_80164B78;
+        base_rank = &D_80164E20[0];
+        rank_ptr = base_rank;
+        slot = D_80164B70;
+        field1 = D_80164F20;
+        row = field1 + slot * 20;
+        elem = row;
+        do
+        {
+            if (*elem >= 0)
+            {
+                j = 0;
+                if (i > 0)
+                {
+                    j += 1; j -= 1;
+                }
+                if (*elem >= s3v)
+                {
+                    *rank_ptr = t0v;
+                    s3v = *elem;
+                    t0v += 1;
+                }
+                else
+                {
+                    less_count = j;
+                    if (i > 0)
+                    {
+                        ecopy = elem;
+                        inc_ptr = base_rank;
+                        cmp_ptr = row;
+                        do
+                        {
+                            if (*ecopy < *cmp_ptr)
+                            {
+                                less_count += 1;
+                                *inc_ptr += 1;
+                            }
+                            inc_ptr += 1;
+                            j += 1;
+                            cmp_ptr += 1;
+                        } while (j < i);
+                    }
+                    {
+                        s32 rank_value;
+                        do { do { do { rank_value = t0v - less_count; } while (0); } while (0); } while (0);
+                        *rank_ptr = rank_value;
+                    }
+                    t0v += 1;
+                }
+            }
+            rank_ptr += 1;
+            i += 1;
+            elem += 1;
+        } while (i < count);
+    }
+    cmp_ptr = base_rank;
+    inc_ptr = row;
+    D_80164EB0 = t0v;
+    t0v = -1;
+    i = 0;
+    s3v = 0;
+    if (D_80164B78 > 0)
+    {
+        s32 max_count;
+        max_count = D_80164B78;
+        slot = D_80164B70;
+        field_base = D_80164F20;
+        max_ptr = (s32 *)((slot * 0x50) + (s32)field_base);
+        do
+        {
+            if (t0v < *max_ptr)
+            {
+                t0v = *max_ptr;
+                s3v = i;
+            }
+            i += 1;
+            max_ptr += 1;
+        } while (i < max_count);
+        i = 0;
+    }
+    D_80164F14 = t0v + 1;
+    if (D_80164B78 > 0)
+    {
+        out_ptr = &D_80164EB8[0];
+        ent_ptr = (char *)D_80165018;
+    loop_20:
+        if (func_8001714C(&D_800ECFC4[0], (void *)((D_80164B70 * 0x320) + (s32)ent_ptr), 8) == 0)
+        {
+            *out_ptr = handle + 1;
+        }
+        else
+        {
+            out_ptr += 1;
+            ent_ptr += 0x28;
+            i += 1;
+            if (i < D_80164B78)
+            {
+                goto loop_20;
+            }
+        }
+    }
+    return s3v;
+}
+
+/* ---- Consolidated from niki_reset_entry_ranks.c ---- */
+
+extern s32 D_80164EB0;
+extern s32 D_80164E20[];
+
+void func_80144BC0(void)
+{
+    s32 i;
+    s32 val;
+
+    D_80164EB0 = 0x28;
+    val = -1;
+    for (i = 14; i >= 0; i--)
+    {
+        D_80164E20[i] = val;
+    }
+}
+
+/* ---- Consolidated from niki_known_entry_type.c ---- */
+
+extern s32 D_80164B78;
+extern s32 D_80164B70;
+extern char D_800ECF7C[];
+extern char D_800ECF8C[];
+
+extern s32 func_8001714C(void *, void *, s32);
+
+s32 func_80144BF8(void)
+{
+    s32 i;
+    u8 *entry;
+
+    i = 0;
+    if (D_80164B78 > 0)
+    {
+        do
+        {
+            entry = (u8 *)D_80165018 + i * 0x28;
+            if (func_8001714C(&D_800ECF7C, (void *)(D_80164B70 * 0x320 + (s32)entry), 0xC) == 0 ||
+                func_8001714C(&D_800ECF8C, (void *)(D_80164B70 * 0x320 + (s32)entry), 0xC) == 0)
+            {
+                return 1;
+            }
+            i++;
+        } while (i < D_80164B78);
+    }
+    return 0;
+}
+
+/* ---- Consolidated from niki_entry_blocks_reach_limit.c ---- */
+
+typedef struct
+{
+    char name[20];
+    s32 attr;
+    s32 size;
+    void *next;
+    s32 head;
+    char system[4];
+} Entry;
+
+extern s32 D_80164B78;
+extern s32 D_80164B70;
+
+s32 func_80144CC8(void)
+{
+    s32 i;
+    s32 sum;
+    s32 offset;
+
+    i = 0;
+    sum = 0;
+    if (D_80164B78 > 0)
+    {
+        offset = D_80164B70 * 0x320;
+        do
+        {
+            do {
+                sum += ((Entry *)((u8 *)D_80165018 + offset))->size / 8192;
+            } while (0);
+            i++;
+            offset += 0x28;
+        } while (i < D_80164B78);
+    }
+    return sum >= 0xE;
+}
+
+/* ---- Consolidated from niki_fixed_prompts.c ---- */
+
+typedef struct
+{
+    s32 unk0;
+    s16 unk4;
+    s16 unk6;
+    u8 unk8[0x18];
+} NikiFileHeaderScratch;
+
+extern NikiFileHeaderScratch D_80140090;
+extern s32 D_80164B70;
+extern char D_800ECF9C[];
+extern char D_800ECFB0[];
+
+extern s32 func_80016F9C(void *, void *);
+extern s32 func_8001686C(void *);
+
+void func_80144D44(void)
+{
+    NikiFileHeaderScratch buf;
+
+    memcpy(&buf, &D_80140090, 6);
+    ((u8 *)&buf)[2] += *(u8 *)&D_80164B70;
+    func_80016F9C(&buf, &D_800ECF9C);
+    func_8001686C(&buf);
+
+    memcpy(&buf, &D_80140090, 6);
+    ((u8 *)&buf)[2] += *(u8 *)&D_80164B70;
+    func_80016F9C(&buf, &D_800ECFB0);
+    func_8001686C(&buf);
+}
+
+/* ---- Consolidated from func_80144DF8.c ---- */
+
+typedef struct {
+    s32 unk0;
+    s16 unk4;
+    u8 pad[0x62];
+} NikiLoadScratch;
+
+extern void *jtbl_80140098[];
+extern char D_800ECF9C[];
+extern char D_800ECFB0[];
+extern s32 D_80164B78;
+extern s32 D_80164B70;
+extern s32 D_80164B7C;
+extern s32 D_80164B84;
+extern s32 D_80164AD4;
+extern s32 D_80164AE8;
+extern u8 *D_80164E18;
+extern s32 D_80164E1C;
+extern s32 D_80164E20[];
+extern s32 D_80164EB0;
+extern s32 D_80164A78;
+extern s32 D_80164F08;
+extern s32 D_80164B94;
+extern s32 D_80164EB4;
+extern s32 D_80164F10;
+extern s32 D_80164F0C;
+extern s32 D_80164F18;
+extern s32 D_80164FC0;
+extern s32 D_80164FD4;
+extern u8 D_80164FD8[];
+extern s32 D_80164B90;
+extern u8 D_80164E70[];
+extern u8 D_80160A78[];
+extern u8 D_801606D0[];
+
+s32 func_80016F9C(void *, void *);
+s32 func_8001680C(void *, s32);
+s32 func_8001681C(s32, void *, s32);
+s32 func_8001682C(s32, void *, s32);
+s32 func_8001683C(s32);
+s32 func_8001685C(void *, void *);
+s32 func_8001686C(void *);
+s32 func_800170BC(void *, void *, ...);
+s32 func_8001724C(s32);
+s32 func_8001725C(s32);
+s32 func_8001729C(s32);
+s32 func_800172AC(s32);
+s32 func_8002054C(s32);
+s32 func_80032174(s32, void *, s32 *);
+s32 func_800342CC(s32);
+s32 func_80145CBC(s32);
+s32 func_80145DA4(s32);
+void func_80145F68(void);
+void func_80146114(void);
+void func_8014616C(void);
+s32 func_801461C4(void);
+s32 func_80146258(void);
+void func_80142B2C(s32);
+void func_80142C18(s32);
+
+static inline void niki_probe_render_two(void)
+{
+    NikiFileHeaderScratch p;
+
+    memcpy(&p, &D_80140090, 6);
+    ((u8 *)&p)[2] += *(u8 *)&D_80164B70;
+    func_80016F9C(&p, &D_800ECF9C);
+    func_8001686C(&p);
+
+    memcpy(&p, &D_80140090, 6);
+    ((u8 *)&p)[2] += *(u8 *)&D_80164B70;
+    func_80016F9C(&p, &D_800ECFB0);
+    func_8001686C(&p);
+}
+
+s32 func_80144DF8(void)
+{
+    NikiLoadScratch buf;
+    s32 status0;
+    s32 status1;
+    s32 phase_result;
+    s32 wait_attempts;
+    s32 poll_result;
+    s32 poll_result20;
+    s32 rank_index;
+    s32 rank_value;
+    s32 dispatch;
+    static void *const keep[] = {
+        &&cl_case_0, &&cl_case_1, &&cl_case_2, &&cl_case_3,
+        &&cl_case_4, &&cl_case_5, &&cl_case_6, &&block_return,
+        &&cl_case_8, &&cl_case_9, &&cl_case_10, &&block_return,
+        &&block_return, &&block_return, &&block_return, &&cl_case_15,
+        &&cl_case_16, &&cl_case_17, &&cl_case_18, &&cl_case_19,
+        &&cl_case_20, &&block_return, &&block_return, &&block_return,
+        &&cl_case_24, &&cl_case_25, &&cl_case_26, &&cl_case_27,
+        &&cl_case_28, &&block_return, &&cl_case_30
+    };
+
+    memcpy(&buf, &D_80140090, 6);
+    phase_result = 1;
+    ((u8 *)&buf)[2] += *(u8 *)&D_80164B70;
+
+    if (D_80164E18 == NULL)
+    {
+        return phase_result;
+    }
+
+    switch (0)
+    {
+    case 0:
+        dispatch = *D_80164E18;
+        if ((u32)dispatch >= 0x1F)
+        {
+            goto block_return;
+        }
+        goto *jtbl_80140098[dispatch];
+
+    cl_case_1:
+        phase_result = 3;
+        func_8001729C(D_80164B70);
+        func_8001724C(D_80164B70 * 0x10);
+        D_80164E18 = D_80164E18 + 1;
+        goto block_return;
+
+    cl_case_2:
+        poll_result = func_801461C4();
+        if (poll_result >= 3)
+        {
+            goto c2_ge3;
+        }
+        if (poll_result > 0)
+        {
+            goto c2_pos;
+        }
+        if (poll_result == 0)
+        {
+            goto block_increment;
+        }
+        return phase_result;
+    c2_ge3:
+        if (poll_result == 3)
+        {
+            goto c2_eq3;
+        }
+        return phase_result;
+    c2_pos:
+        phase_result = 4;
+        D_80164B84 = 0;
+        D_80164B78 = 0xFD;
+        D_80164E18 = D_80164E18 + 1;
+        goto block_return;
+    c2_eq3:
+        D_80164EB0 = 0x28;
+        rank_value = -1;
+        for (rank_index = 14; rank_index >= 0; rank_index--)
+        {
+            D_80164E20[rank_index] = rank_value;
+        }
+        goto block_status_ff;
+
+    cl_case_3:
+        func_80146114();
+        goto block_increment;
+
+    cl_case_4:
+        do
+        {
+            poll_result = func_80146258();
+        } while (poll_result == -1);
+        if (poll_result == 0)
+        {
+            goto block_increment;
+        }
+        if (poll_result < 0)
+        {
+            return phase_result;
+        }
+        if (poll_result >= 4)
+        {
+            return phase_result;
+        }
+        phase_result = 4;
+        goto block_status_fd;
+
+    cl_case_5:
+        func_8014616C();
+        goto block_increment;
+
+    cl_case_6:
+        niki_probe_render_two();
+        D_80164F18 = 1;
+        if (func_80145CBC(D_80164B70) == 0)
+        {
+            phase_result = 2;
+            D_80164E18 = NULL;
+            D_80164B78 = 0xF8;
+            D_80164F18 = 0;
+            goto block_return;
+        }
+        wait_attempts = 0;
+        D_80164E18 = D_80164E18 + 1;
+        do
+        {
+            if (func_80145DA4(D_80164B70) == 0)
+            {
+                if (D_80164AE8 != 0)
+                {
+                    D_80164B7C = 0;
+                }
+                D_80164F18 = 0;
+                if (D_80164B78 == 0xF8)
+                {
+                    return phase_result;
+                }
+                if (D_80164B78 == 0xFA)
+                {
+                    goto block_return;
+                }
+                func_80145F68();
+                goto block_return;
+            }
+            wait_attempts = wait_attempts + 1;
+        } while (wait_attempts < 0x14);
+        goto block_return;
+
+    cl_case_8:
+        phase_result = 3;
+        func_8001729C(D_80164B70);
+        func_800172AC(D_80164B70 * 0x10);
+        D_80164E18 = D_80164E18 + 1;
+        goto block_return;
+
+    cl_case_9:
+        phase_result = 3;
+        func_8001729C(D_80164B70);
+        func_8001725C(D_80164B70 * 0x10);
+        D_80164F0C = 0x10;
+        D_80164FC0 = 0x10;
+        D_80164E18 = D_80164E18 + 1;
+        goto block_return;
+
+    cl_case_0:
+        phase_result = 2;
+        D_80164B90 = 0;
+        goto block_return;
+
+    cl_case_10:
+        func_80016F9C(&buf, (u8 *)D_80165018 + (D_80164B70 * 0x320) + (D_80164B7C * 0x28));
+        wait_attempts = 0;
+        func_8001729C(D_80164B70);
+        do
+        {
+            poll_result = func_8001686C(&buf);
+            wait_attempts = wait_attempts + 1;
+            if (poll_result != 0)
+            {
+                break;
+            }
+        } while (wait_attempts < 0x14);
+        goto block_increment;
+
+    cl_case_15:
+        poll_result = func_801461C4();
+        if (poll_result >= 3)
+        {
+            goto c15_ge3;
+        }
+        if (poll_result > 0)
+        {
+            goto c15_pos;
+        }
+        if (poll_result == 0)
+        {
+            goto block_increment;
+        }
+        goto block_return;
+    c15_ge3:
+        if (poll_result == 3)
+        {
+            goto c15_eq3;
+        }
+        goto block_return;
+    c15_pos:
+        D_80164FC0 = D_80164FC0 - 1;
+        if (D_80164FC0 != 0)
+        {
+            goto block_reissue;
+        }
+        phase_result = 4;
+    block_status_fd:
+        D_80164B84 = 0;
+        D_80164B78 = 0xFD;
+        goto block_return;
+    c15_eq3:
+        D_80164F0C = D_80164F0C - 1;
+        if (D_80164F0C == 0)
+        {
+            goto c15_d70zero;
+        }
+    block_reissue:
+        func_8001729C(D_80164B70);
+        func_800172AC(D_80164B70 * 0x10);
+        func_8001729C(D_80164B70);
+        func_8001725C(D_80164B70 * 0x10);
+        goto block_return;
+    c15_d70zero:
+        phase_result = 5;
+        D_80164B78 = 0xFC;
+        D_80164E18 = D_801606D0;
+        goto block_return;
+
+    cl_case_16:
+        do
+        {
+            poll_result = func_80146258();
+        } while (poll_result == -1);
+        goto block_increment;
+
+    cl_case_17:
+        D_80164A78 = 1;
+        D_80164B84 = 0;
+        func_8001729C(D_80164B70);
+        D_80164E1C = func_8001680C(D_80164E70, 0x8001);
+        if (D_80164E1C == -1)
+        {
+            goto block_return;
+        }
+        func_80146114();
+        func_8001729C(D_80164B70);
+        if (func_8001681C(D_80164E1C, &D_80164B98,
+                           D_80164EB4 != 0 ? 0x280 : 0x80) == -1)
+        {
+            func_8001683C(D_80164E1C);
+            goto block_return;
+        }
+        goto block_increment;
+
+    cl_case_18:
+        poll_result = func_801461C4();
+        if (poll_result == 0)
+        {
+            D_80164A78 = 0;
+            D_80164B84 = 1;
+            D_80164E18 = D_80164E18 + 1;
+            func_8001683C(D_80164E1C);
+            goto block_return;
+        }
+        if (poll_result == -1)
+        {
+            goto block_return;
+        }
+        D_80164A78 = 0;
+        func_8001683C(D_80164E1C);
+    block_status_ff:
+        D_80164B78 = 0xFF;
+        D_80164E18 = (u8 *)&D_801606C8;
+        goto block_return;
+
+    cl_case_19:
+        D_80164AD4 = 1;
+        D_80164F08 = 1;
+        D_80164F10 = func_8002054C(-1);
+        func_8001729C(D_80164B70);
+        D_80164E1C = func_8001680C(D_80164E70, 0x8001);
+        func_80146114();
+        func_8001729C(D_80164B70);
+        if (func_8001681C(D_80164E1C, D_80160A78, 0x4000) == -1)
+        {
+            D_80164B94 = D_80164B94 - 1;
+            if (D_80164B94 == 0)
+            {
+            block_dialog_read:
+                func_80142B2C(1);
+                goto block_return;
+            }
+            goto block_return;
+        }
+        goto block_increment;
+
+    cl_case_20:
+        poll_result20 = func_801461C4();
+        if (poll_result20 == 0)
+        {
+            D_80164AD4 = 0;
+            D_80164E18 = D_80164E18 + 1;
+            func_8001683C(D_80164E1C);
+            goto block_return;
+        }
+        if (poll_result20 < 0)
+        {
+            goto block_return;
+        }
+        if (poll_result20 >= 4)
+        {
+            goto block_return;
+        }
+        D_80164B94 = D_80164B94 - 1;
+        if (D_80164B94 == 0)
+        {
+            D_80164F08 = 0;
+            goto block_dialog_read;
+        }
+        goto block_decrement_step;
+
+    cl_case_24:
+        wait_attempts = 0;
+        do
+        {
+            if (func_800342CC(D_80164B70 * 0x10) == 1)
+            {
+                break;
+            }
+            func_8002054C(0);
+            wait_attempts = wait_attempts + 1;
+        } while (wait_attempts < 0x14);
+        if (wait_attempts != 0x14)
+        {
+            func_80032174(0, &status0, &status1);
+            if (status1 == 0)
+            {
+                goto block_increment;
+            }
+        }
+        func_80142B2C(3);
+        goto block_return;
+
+    cl_case_27:
+        D_80164AD4 = 1;
+        D_80164F08 = 1;
+        D_80164F10 = func_8002054C(-1);
+        func_8001729C(D_80164B70);
+        D_80164E1C = func_8001680C(D_80164E70, 0x8001);
+        func_80146114();
+        func_8001729C(D_80164B70);
+        if (func_8001681C(D_80164E1C, D_80160A78, 0x4000) == -1)
+        {
+            func_8001683C(D_80164E1C);
+            D_80164B94 = D_80164B94 - 1;
+            if (D_80164B94 == 0)
+            {
+            block_dialog_write_read:
+                func_80142C18(1);
+                goto block_return;
+            }
+            goto block_return;
+        }
+        goto block_increment;
+
+    cl_case_28:
+        poll_result20 = func_801461C4();
+        if (poll_result20 == 0)
+        {
+            D_80164AD4 = 0;
+            D_80164E18 = D_80164E18 + 1;
+            func_8001683C(D_80164E1C);
+            goto block_return;
+        }
+        if (poll_result20 < 0)
+        {
+            goto block_return;
+        }
+        if (poll_result20 >= 4)
+        {
+            goto block_return;
+        }
+        D_80164B94 = D_80164B94 - 1;
+        if (D_80164B94 == 0)
+        {
+            func_8001683C(D_80164E1C);
+            D_80164F08 = 0;
+            func_80142C18(1);
+            return phase_result;
+        }
+        goto block_close_decrement;
+
+    cl_case_30:
+        D_80164B94 = 5;
+        D_80164E18 = D_80164E18 + 1;
+        goto block_return;
+
+    cl_case_25:
+        if (D_80164FD4 == 0)
+        {
+            wait_attempts = 0;
+            do
+            {
+                if (func_8001686C(D_80164E70) != 0)
+                {
+                    break;
+                }
+                wait_attempts = wait_attempts + 1;
+            } while (wait_attempts < 0x14);
+        }
+        func_80016F9C(&buf, D_800ECF9C);
+        func_8001729C(D_80164B70);
+        D_80164E1C = func_8001680C(&buf, 0x20200);
+        if (D_80164E1C != -1)
+        {
+            goto block_write_opened;
+        }
+        func_8001683C(-1);
+        wait_attempts = 0;
+        do
+        {
+            if (func_8001686C(&buf) != 0)
+            {
+                break;
+            }
+            wait_attempts = wait_attempts + 1;
+        } while (wait_attempts < 0x14);
+    block_write_retry:
+        D_80164B94 = D_80164B94 - 1;
+        if (D_80164B94 == 0)
+        {
+        block_dialog_write:
+            func_80142C18(0);
+            goto block_return;
+        }
+        goto block_return;
+
+    block_write_opened:
+        func_8001683C(D_80164E1C);
+        func_800170BC(D_80164FD8, &buf);
+        func_8001729C(D_80164B70);
+        D_80164E1C = func_8001680C(D_80164FD8, 0x8002);
+        func_80146114();
+        D_80164F08 = 1;
+        D_80164F10 = func_8002054C(-1);
+        func_8001729C(D_80164B70);
+        if (func_8001682C(D_80164E1C, D_80160A78, 0x4000) == -1)
+        {
+            func_8001683C(D_80164E1C);
+            wait_attempts = 0;
+            do
+            {
+                if (func_8001686C(D_80164FD8) != 0)
+                {
+                    break;
+                }
+                wait_attempts = wait_attempts + 1;
+            } while (wait_attempts < 0x14);
+            goto block_write_retry;
+        }
+        goto block_increment;
+
+    block_increment:
+        D_80164E18 = D_80164E18 + 1;
+        goto block_return;
+
+    cl_case_26:
+        poll_result20 = func_801461C4();
+        if (poll_result20 != 0)
+        {
+            if (poll_result20 < 0)
+            {
+                goto block_return;
+            }
+            if (poll_result20 >= 4)
+            {
+                goto block_return;
+            }
+            goto block_case26_retry;
+        }
+        if (D_80164FD4 != 0)
+        {
+            func_8001729C(D_80164B70);
+            wait_attempts = 0;
+            do
+            {
+                if (func_8001686C(D_80164E70) != 0)
+                {
+                    break;
+                }
+                wait_attempts = wait_attempts + 1;
+            } while (wait_attempts < 0x14);
+        }
+        func_8001729C(D_80164B70);
+        wait_attempts = 0;
+        do
+        {
+            if (func_8001685C(D_80164FD8, D_80164E70) != 0)
+            {
+                break;
+            }
+            wait_attempts = wait_attempts + 1;
+        } while (wait_attempts < 0x14);
+        D_80164B90 = 0;
+        D_80164E18 = D_80164E18 + 1;
+        func_8001683C(D_80164E1C);
+        goto block_return;
+
+    }
+
+block_case26_retry:
+    D_80164B94 = D_80164B94 - 1;
+    if (D_80164B94 == 0)
+    {
+        goto block_case26_exhausted;
+    }
+
+block_close_decrement:
+    func_8001683C(D_80164E1C);
+block_decrement_step:
+    D_80164E18 = D_80164E18 - 1;
+    goto block_return;
+
+block_case26_exhausted:
+    D_80164F08 = 0;
+    func_80142C18(0);
+    wait_attempts = 0;
+    do
+    {
+        if (func_8001686C(D_80164FD8) != 0)
+        {
+            break;
+        }
+        wait_attempts = wait_attempts + 1;
+    } while (wait_attempts < 0x14);
+
+block_return:
+    return phase_result;
+}
+
+/* ---- Consolidated from niki_stream_reset.c ---- */
+
+extern s32 D_80164B70;
+extern u8 D_801606D0[];
+
+extern s32 func_8001724C(s32);
+extern s32 func_8001729C(s32);
+extern void func_80146114(void);
+extern s32 func_801461C4(void);
+
+/** @see decomp.me (100.00%) */
+void func_80145994(void)
+{
+    func_8001729C(D_80164B70);
+    func_80146114();
+    func_8001724C(D_80164B70 * 0x10);
+    D_80164E18 = D_801606D0;
+}
+
+/** @see decomp.me (100.00%) */
+s32 func_801459E8(void)
+{
+    s32 busy_slot;
+
+    busy_slot = func_801461C4();
+    if (busy_slot != -1)
+    {
+        func_8001729C(D_80164B70);
+        func_8001724C(D_80164B70 * 0x10);
+    }
+    return busy_slot;
+}
+
+/* ---- Consolidated from niki_init_stream_handles.c ---- */
+
+extern s32 D_80164F08;
+extern s32 D_80164F18;
+extern s32 D_80164FC4;
+extern s32 D_80164FC8;
+extern s32 D_80164FCC;
+extern s32 D_80164FD0;
+extern s32 D_80165658;
+extern s32 D_8016565C;
+extern s32 D_80165660;
+extern s32 D_80165664;
+
+extern void func_800158E0(void);
+extern s32 func_800167AC(s32, s32, s32, s32);
+extern void func_800167DC(s32);
+extern void func_800167EC(void);
+extern void func_800167FC(void);
+
+/** @see decomp.me (100.00%) */
+void func_80145A40(void)
+{
+    func_800158E0();
+    func_800167EC();
+    D_80164FC4 = func_800167AC(0xF4000001, 4, 0x2000, 0);
+    D_80164FC8 = func_800167AC(0xF4000001, 0x8000, 0x2000, 0);
+    D_80164FCC = func_800167AC(0xF4000001, 0x100, 0x2000, 0);
+    D_80164FD0 = func_800167AC(0xF4000001, 0x2000, 0x2000, 0);
+    D_80165658 = func_800167AC(0xF0000011, 4, 0x2000, 0);
+    D_8016565C = func_800167AC(0xF0000011, 0x8000, 0x2000, 0);
+    D_80165660 = func_800167AC(0xF0000011, 0x100, 0x2000, 0);
+    D_80165664 = func_800167AC(0xF0000011, 0x2000, 0x2000, 0);
+    func_800167DC(D_80164FC4);
+    func_800167DC(D_80164FC8);
+    func_800167DC(D_80164FCC);
+    func_800167DC(D_80164FD0);
+    func_800167DC(D_80165658);
+    func_800167DC(D_8016565C);
+    func_800167DC(D_80165660);
+    func_800167DC(D_80165664);
+    func_800167FC();
+    D_80164F08 = 0;
+    D_80164F18 = 0;
+}
+
+/* ---- Consolidated from niki_shutdown_handles.c ---- */
+
+extern s32 D_80164FC4;
+extern s32 D_80164FC8;
+extern s32 D_80164FCC;
+extern s32 D_80164FD0;
+extern s32 D_80165658;
+extern s32 D_8016565C;
+extern s32 D_80165660;
+extern s32 D_80165664;
+
+extern void func_800158E0(void);
+extern void func_800167BC(s32);
+extern void func_800167EC(void);
+extern void func_800167FC(void);
+
+/** @see decomp.me (100.00%) */
+void func_80145C0C(void)
+{
+    func_800158E0();
+    func_800167EC();
+    func_800167BC(D_80164FC4);
+    func_800167BC(D_80164FC8);
+    func_800167BC(D_80164FCC);
+    func_800167BC(D_80164FD0);
+    func_800167BC(D_80165658);
+    func_800167BC(D_8016565C);
+    func_800167BC(D_80165660);
+    func_800167BC(D_80165664);
+    func_800167FC();
+}
+
+/* ---- Consolidated from niki_begin_entry_scan.c ---- */
+
+typedef struct EntryHeader7 {
+    s32 unk0;
+    s16 unk4;
+    s8 unk6;
+    u8 pad[9];
+} EntryHeader7;
+
+extern EntryHeader7 D_80140114;
+extern s32 D_80164AE0;
+extern s32 D_80164AEC;
+extern s32 D_80164B78;
+extern s32 D_80164B7C;
+extern s32 D_80164B88;
+
+/** @see decomp.me (100.00%) */
+s32 func_80145CBC(s32 page)
+{
+    EntryHeader7 buf;
+
+    memcpy(&buf, &D_80140114, 7);
+    D_80164B7C = 0;
+    D_80164B88 = 0;
+    D_80164AEC = 0;
+    D_80164AE0 = 0;
+    D_80164B78 = 0;
+    ((u8 *)&buf)[2] += page;
+    if (func_80016BCC(&buf, (u8 *)D_80165018 + page * 0x320) != 0)
+    {
+        func_800B0170((u8 *)D_80165018 + page * 0x320 + D_80164B78 * 0x28);
+        D_80164B78 += 1;
+        return 1;
+    }
+    return 0;
+}
+
+/* ---- Consolidated from func_80145DA4.c ---- */
+
+extern s32 D_80164AE8;
+extern s32 D_80164B78;
+extern s32 D_80164B70;
+extern s32 D_80164B7C;
+extern s32 D_80164F14;
+extern s32 D_80164FD4;
+
+/**
+ * @brief Directory entry as seen by the entry-scan pass: only the size field
+ *        at offset 0x18 is used here.
+ */
+typedef struct NikiDirEntry {
+    u8 pad[0x18];
+    s32 size;
+} NikiDirEntry;
+
+/**
+ * @brief Advance one step of the NIKI entry load scan for the given page.
+ *
+ * If the current entry's streamed resource is ready, hand it off and advance
+ * the entry index. Otherwise poll the stream, and once the scan has stalled or
+ * completed, total the number of loaded blocks across all scanned entries and
+ * either rank/commit a selection or defer, depending on how much has loaded.
+ *
+ * @param page Page index whose entry block is being scanned.
+ * @return 1 if an entry was consumed this step, 0 otherwise.
+ * @see decomp.me (100.00%)
+ */
+s32 func_80145DA4(s32 page)
+{
+    s32 i;
+    s32 sum;
+    s32 offset;
+    s32 selected;
+    s32 page_offset;
+    s32 count;
+    s32 cond;
+
+    page_offset = page * 0x320;
+    if (func_8001684C((void *)((u8 *)D_80165018 + page_offset + D_80164B78 * 0x28)) != 0)
+    {
+        func_800B0170((void *)((u8 *)D_80165018 + page_offset + D_80164B78 * 0x28));
+        D_80164B78 += 1;
+        return 1;
+    }
+
+    func_800AA02C();
+    if ((D_80164AE8 == 0) && (func_80144BF8() == 0))
+    {
+        D_80164B78 = 0xF8;
+    }
+    else
+    {
+        i = 0;
+        sum = 0;
+        D_80164FD4 = 0;
+        count = D_80164B78;
+        if (count > 0)
+        {
+            u8 *entries;
+            do { entries = (u8 *)D_80165018; } while (0);
+            offset = D_80164B70 * 0x320;
+            do
+            {
+                sum += ((NikiDirEntry *)(offset + (s32)entries))->size / 8192;
+                i++;
+                offset += 0x28;
+            } while (i < count);
+        }
+        cond = sum >= 0xE;
+        if (cond != 0)
+        {
+            selected = func_80144984(sum, i, count);
+            if (func_80144BF8() == 0)
+            {
+                D_80164B78 = 0xFA;
+                D_80164F14 = 0;
+            }
+            else
+            {
+                D_80164B7C = selected;
+                func_80140CC8();
+            }
+        }
+        else
+        {
+            D_80164FD4 = 1;
+            selected = func_80144984(sum, i, count);
+            if (func_80144BF8() == 0)
+            {
+                D_80164B7C = 0;
+                func_80140CC8();
+                D_80164F14 = 0;
+            }
+            else
+            {
+                D_80164B7C = selected;
+                func_80140CC8();
+            }
+        }
+    }
+    return 0;
+}
+
+/* ---- Consolidated from niki_commit_selected_entry.c ---- */
+
+typedef struct FileHeader100 {
+    s32 unk0;
+    s16 unk4;
+    u8 pad[0xFA];
+} FileHeader100;
+
+extern s32 D_80164B78;
+extern s32 D_80164B70;
+extern s32 D_80164B7C;
+extern s32 D_80164B84;
+extern s32 D_80164A78;
+extern s32 D_80164EB4;
+extern char D_800ECFC4[];
+extern char D_800ECF7C[];
+extern u8 D_80164E70[];
+extern u8 *D_80164E18;
+extern u8 D_801606E0[];
+
+/** @see decomp.me (100.00%) */
+void func_80145F68(void)
+{
+    FileHeader100 local;
+    u8 *p;
+
+    if (D_80164B78 == 0)
+    {
+        D_80164B84 = 3;
+        return;
+    }
+    {
+        s32 term1;
+        s32 term2;
+        term1 = D_80164B70 * 0x320;
+        term2 = (D_80164B7C * 0x28) + (s32)D_80165018;
+        if (func_8001714C(&D_800ECFC4[0], (void *)(term1 + term2), 8) == 0)
+        {
+            D_80164B84 = 2;
+            return;
+        }
+    }
+    memcpy(&local, &D_80140090, 6);
+    p = (u8 *)&local;
+    {
+        s32 term1;
+        s32 term2;
+        term1 = D_80164B70 * 0x320;
+        term2 = (D_80164B7C * 0x28) + (s32)D_80165018;
+        func_80016F9C(p, (void *)(term1 + term2));
+    }
+    {
+        s32 slot;
+        s32 value;
+        value = *((u8 *)&local + 2);
+        slot = (u8)D_80164B70;
+        D_80164B84 = 0;
+        value += slot;
+        *((u8 *)&local + 2) = value;
+        func_800170BC(&D_80164E70[0], p, slot);
+    }
+    D_80164E18 = &D_801606E0[0];
+    {
+        s32 term1;
+        s32 term2;
+        term1 = D_80164B70 * 0x320;
+        term2 = (D_80164B7C * 0x28) + (s32)D_80165018;
+        if (func_8001714C(&D_800ECF7C[0], (void *)(term1 + term2), 0xC) == 0)
+            D_80164EB4 = 1;
+        else
+            D_80164EB4 = 0;
+    }
+    D_80164A78 = 1;
+}
+
+/* ---- Consolidated from niki_handles.c ---- */
+
+extern s32 D_80164FC4;
+extern s32 D_80164FC8;
+extern s32 D_80164FCC;
+extern s32 D_80164FD0;
+extern s32 D_80165658;
+extern s32 D_8016565C;
+extern s32 D_80165660;
+extern s32 D_80165664;
+
+extern s32 func_800167CC(s32);
+
+/** @see decomp.me (100.00%) */
+void func_80146114(void)
+{
+    func_800167CC(D_80164FC4);
+    func_800167CC(D_80164FC8);
+    func_800167CC(D_80164FCC);
+    func_800167CC(D_80164FD0);
+}
+
+/** @see decomp.me (100.00%) */
+void func_8014616C(void)
+{
+    func_800167CC(D_80165658);
+    func_800167CC(D_8016565C);
+    func_800167CC(D_80165660);
+    func_800167CC(D_80165664);
+}
+
+/** @see decomp.me (100.00%) */
+s32 func_801461C4(void)
+{
+    if (func_800167CC(D_80164FC4) == 1)
+    {
+        return 0;
+    }
+    if (func_800167CC(D_80164FC8) == 1)
+    {
+        return 1;
+    }
+    if (func_800167CC(D_80164FCC) == 1)
+    {
+        return 2;
+    }
+    if (func_800167CC(D_80164FD0) == 1)
+    {
+        return 3;
+    }
+    return -1;
+}
+
+/** @see decomp.me (100.00%) */
+s32 func_80146258(void)
+{
+    if (func_800167CC(D_80165658) == 1)
+    {
+        return 0;
+    }
+    if (func_800167CC(D_8016565C) == 1)
+    {
+        return 1;
+    }
+    if (func_800167CC(D_80165660) == 1)
+    {
+        return 2;
+    }
+    if (func_800167CC(D_80165664) == 1)
+    {
+        return 3;
+    }
+    return -1;
+}
+
+/* ---- Consolidated from func_801462EC.c ---- */
+
+#define NENT 20
+extern s32 D_80164B70;
+extern s32 D_80164B78;
+extern s32 D_80164EB8[];
+extern char D_800ECF7C[];
+extern char D_800ECF8C[];
+extern char D_800ECFC4[];
+extern s32 func_8001714C();
+extern void func_80016E7C();
+
+void func_801462EC(void)
+{
+    NikiEntry28 sorted[NENT];
+    s32 out = 0;
+    s32 group = 0;
+    s32 i;
+    do {
+        i = 0;
+        if (i < D_80164B78) {
+            do {
+                if (D_80164EB8[i] == group &&
+                    func_8001714C(D_800ECF7C, &D_80165018[D_80164B70][i], 0xC) == 0) {
+                    func_80016E7C(&D_80165018[D_80164B70][i], &sorted[out], 0x28);
+                    out++;
+                }
+                i++;
+            } while (i < D_80164B78);
+        }
+        group++;
+    } while (group < 8);
+
+    group = 0;
+    do {
+        i = 0;
+        if (i < D_80164B78) {
+            do {
+                if (D_80164EB8[i] == group &&
+                    func_8001714C(D_800ECF8C, &D_80165018[D_80164B70][i], 0xC) == 0) {
+                    func_80016E7C(&D_80165018[D_80164B70][i], &sorted[out], 0x28);
+                    out++;
+                }
+                i++;
+            } while (i < D_80164B78);
+        }
+        group++;
+    } while (group < 8);
+
+    i = 0;
+    if (D_80164B78 > 0) {
+        do {
+            if (func_8001714C(D_800ECFC4, &D_80165018[D_80164B70][i], 8) == 0) {
+                func_80016E7C(&D_80165018[D_80164B70][i], &sorted[out], 0x28);
+                out++;
+            }
+            i++;
+        } while (i < D_80164B78);
+    }
+
+    if (*(volatile s32 *)&D_80164B78 > 0) {
+        i = 0;
+        do {
+            if (func_8001714C(D_800ECF7C, &D_80165018[D_80164B70][i], 0xC) != 0 &&
+                func_8001714C(D_800ECF8C, &D_80165018[D_80164B70][i], 0xC) != 0 &&
+                func_8001714C(D_800ECFC4, &D_80165018[D_80164B70][i], 8) != 0) {
+                func_80016E7C(&D_80165018[D_80164B70][i], &sorted[out], 0x28);
+                out++;
+            }
+            i++;
+        } while (i < D_80164B78);
+    }
+
+    i = 0;
+    if (D_80164B78 > 0) {
+        do {
+            func_80016E7C(&sorted[i], &D_80165018[D_80164B70][i], 0x28);
+            i++;
+        } while (i < D_80164B78);
+    }
+}
+
+/* ---- Consolidated from niki_draw_signed_decimal.c ---- */
+
+extern u16 D_80160A34[];
+extern s32 func_801469C0(s32, s32 *, u8 *, s32, s32, s32, s32);
+
+s32 func_8014671C(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
+{
+    u16 buf[7];
+    s32 first_digit;
+    s32 magnitude;
+    s32 negative;
+
+    magnitude = value;
+    if (magnitude < 0)
+    {
+        magnitude = -magnitude;
+        negative = 1;
+    }
+    else
+    {
+        negative = 0;
+    }
+    buf[1] = D_80160A34[magnitude / 10000];
+    buf[2] = D_80160A34[(magnitude % 10000) / 1000];
+    buf[3] = D_80160A34[(magnitude % 1000) / 100];
+    buf[4] = D_80160A34[(magnitude % 100) / 10];
+    buf[5] = D_80160A34[magnitude % 10];
+
+    first_digit = 1;
+    buf[6] = 0;
+
+    while (first_digit < 5 && buf[first_digit] == 0x4F82)
+    {
+        first_digit++;
+    }
+
+    if (negative != 0)
+    {
+        first_digit--;
+        buf[first_digit] = 0x5B81;
+    }
+    prim = func_801469C0(prim, ot, (u8 *)&buf[first_digit], x, y, palette, alignment);
+    return prim;
+}
+
+/* ---- Consolidated from niki_nibble_pair.c ---- */
+
+extern u16 D_80160A4C[];
+
+void func_8014693C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+{
+    u16 pair[3];
+    s32 row;
+    s32 adjusted;
+    s32 off;
+    u16 *base;
+
+    adjusted = arg2;
+    if (arg2 < 0)
+        adjusted = arg2 + 15;
+    row = adjusted >> 4;
+    off = row * 2;
+    base = D_80160A4C;
+    pair[0] = *(u16 *)((u8 *)base + off);
+    off = (arg2 - row * 16) * 2;
+    pair[1] = *(u16 *)((u8 *)base + off);
+    pair[2] = 0;
+    func_801469C0(arg0, arg1, pair, arg3, arg4, 0, arg5);
+}
+
+/* ---- Consolidated from niki_text_render.c ---- */
+
+#define GLYPH_CACHE_SLOTS 0x100
+#define GLYPH_CACHE_COLUMNS 16
+#define GLYPH_CACHE_ROW_MASK 0xF0
+#define GLYPH_RASTER_BYTES 0x80
+#define GPU_ADDR_MASK 0xFFFFFF
+#define GPU_TAG_HIGH_MASK 0xFF000000
+
+typedef struct
+{
+    u32 tag;
+    u8 r0, g0, b0, code;
+    s16 x0, y0;
+    u8 u0, v0;
+    u16 clut;
+} NikiSprt16;
+
+typedef struct
+{
+    unsigned addr : 24;
+    unsigned len : 8;
+    u8 r0, g0, b0, code;
+} NikiPrimTag;
+
+#define setlen(prim, length) (((NikiPrimTag *)(prim))->len = (u8)(length))
+#define setaddr(prim, address) (((NikiPrimTag *)(prim))->addr = (u32)(address))
+#define setcode(prim, command) (((NikiPrimTag *)(prim))->code = (u8)(command))
+#define getaddr(prim) ((u32)(((NikiPrimTag *)(prim))->addr))
+#define addPrim(ordering_table, prim) \
+    (setaddr((prim), getaddr(ordering_table)), setaddr((ordering_table), (prim)))
+
+typedef struct
+{
+    s32 tag;
+    s32 word4;
+    s16 x0;
+    s16 y0;
+    s16 unkC;
+    u16 unkE;
+} GenericGpuPacket;
+
+typedef union
+{
+    u32 raw;
+    struct
+    {
+        u16 code;
+        u16 flags;
+    } data;
+} GlyphCacheEntry;
+
+typedef struct
+{
+    NikiSprt16 packet;
+    u32 padding;
+} GlyphSprite;
+
+extern s32 D_8016DA78;
+extern s32 D_80165668;
+extern s32 D_8016DA7C;
+extern GlyphCacheEntry D_8016D678[];
+extern u8 *D_80165674;
+extern s32 D_8016566C;
+extern s32 D_80165670;
+
+extern s32 func_8001687C(s32);
+extern void func_80019A34(RECT *, void *);
+extern void func_80019788(s32);
+
+s32 func_801469C0(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment);
+s32 func_80146B90(s32 prim, s32 *ot, s32 character_code, s32 palette);
+s32 func_80146DB0(GlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette);
+
+s32 func_801469C0(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment)
+{
+    u8 *cursor;
+    s32 count;
+    u16 code;
+    u8 *scan;
+
+    cursor = text;
+    count = 0;
+    if (*cursor >= 0x20)
+    {
+        scan = cursor;
+        do
+        {
+            code = *scan;
+            if (code >= 0x80)
+            {
+                scan++;
+            }
+            scan++;
+            count++;
+        } while (*scan >= 0x20);
+    }
+
+    switch (alignment)
+    {
+    case 1:
+        x -= count * 0x10;
+        break;
+    case 2:
+        x -= count * 8;
+        break;
+    case 0:
+    default:
+        break;
+    }
+    D_80165668 = x;
+    D_8016DA78 = x;
+    D_8016DA7C = y;
+
+    while (1)
+    {
+        u32 lead = *cursor;
+
+        if ((u8)lead == 0x20)
+        {
+            cursor++;
+            D_8016DA78 += 0x10;
+            continue;
+        }
+        if ((u8)lead >= 0x80)
+        {
+            code = cursor[0];
+            code = (code << 8) | cursor[1];
+            cursor += 2;
+        }
+        else
+        {
+            if ((u8)lead < 0x20)
+            {
+                break;
+            }
+            if ((u32)(lead - 0x30) < 0x50)
+            {
+                code = *cursor - 0x7DE1;
+                cursor++;
+            }
+            else
+            {
+                code = *cursor - 0x7AE1;
+                cursor++;
+            }
+        }
+        prim = func_80146B90(prim, ot, code, palette);
+    }
+
+    setlen(prim, 1);
+    ((GenericGpuPacket *)prim)->word4 = 0xE1000005;
+    addPrim(ot, prim);
+    return prim + 8;
+}
+
+s32 func_80146B90(s32 prim, s32 *ot, s32 character_code, s32 palette)
+{
+    GlyphCacheEntry *entry;
+    u8 *font_data;
+    s32 font_address;
+    u32 requested_code;
+    s32 slot;
+    s32 high_pixel_set;
+    s32 code;
+    RECT rect;
+
+    u8 *raster;
+    s32 color_index;
+    s32 high_nibble_color;
+    s32 row;
+    s32 source_byte;
+
+    u16 mask;
+    volatile u8 *raster_byte;
+    u8 packed_pixels;
+
+    code = character_code;
+    slot = 0;
+    requested_code = code & 0xFFFF;
+    entry = D_8016D678;
+
+    while (slot < GLYPH_CACHE_SLOTS)
+    {
+        if (requested_code == entry->data.code)
+        {
+            return func_80146DB0((GlyphSprite *)prim, ot, slot, palette);
+        }
+        slot++;
+        entry++;
+    }
+
+    font_address = func_8001687C(code & 0xFFFF);
+    font_data = (u8 *)font_address;
+    if (font_address == -1)
+    {
+        return prim;
+    }
+
+    raster = D_80165674;
+    row = 0;
+    color_index = (palette + 1) * 2;
+    high_nibble_color = color_index * 16;
+    for (; row < 15; row++)
+    {
+        for (source_byte = 0; source_byte < 2; source_byte++)
+        {
+            mask = 0x80;
+
+            for (slot = 0; slot < 4; slot++)
+            {
+                *raster = ((*font_data) & mask) ? color_index : 0;
+
+                mask >>= 1;
+                high_pixel_set = (*font_data) & mask;
+
+                raster_byte = raster;
+                packed_pixels = *raster_byte;
+                if (high_pixel_set)
+                {
+                    packed_pixels += high_nibble_color;
+                }
+
+                *raster_byte = packed_pixels;
+
+                mask >>= 1;
+                raster++;
+            }
+
+            font_data++;
+        }
+    }
+
+    slot = 0;
+    while ((slot < GLYPH_CACHE_SLOTS) && (D_8016D678[slot].raw != 0))
+    {
+        slot++;
+    }
+
+    if (slot == GLYPH_CACHE_SLOTS)
+    {
+        return prim;
+    }
+    D_8016D678[slot].raw = code & 0xFFFF;
+    prim = func_80146DB0((GlyphSprite *)prim, ot, slot, palette);
+
+    D_8016566C = (slot % GLYPH_CACHE_COLUMNS) * 4;
+    D_80165670 = slot & GLYPH_CACHE_ROW_MASK;
+
+    rect.w = 4;
+    rect.h = 15;
+    rect.x = D_8016566C + 0x140;
+    rect.y = D_80165670;
+
+    func_80019A34(&rect, D_80165674);
+    func_80019788(0);
+
+    D_80165674 += GLYPH_RASTER_BYTES;
+    return prim;
+}
+
+s32 func_80146DB0(GlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette)
+{
+    u32 ot_tag_high_byte;
+    s32 normalized_slot;
+    u32 packet_address;
+    s32 old_x;
+    s32 new_x;
+    s32 fits_line;
+
+    D_8016D678[cache_slot].raw |= 0x10000;
+
+    setlen(sprite, 3);
+    setcode(sprite, 0x7C);
+    sprite->packet.g0 = 0x80;
+    sprite->packet.b0 = 0x80;
+    sprite->packet.r0 = 0x80;
+    normalized_slot = cache_slot;
+    sprite->packet.x0 = D_8016DA78;
+    sprite->packet.y0 = D_8016DA7C;
+
+    if (cache_slot < 0)
+    {
+        normalized_slot = cache_slot + 15;
+    }
+
+    sprite->packet.u0 = (cache_slot - ((normalized_slot >> 4) * 16)) * 16;
+    sprite->packet.v0 = cache_slot & GLYPH_CACHE_ROW_MASK;
+    sprite->packet.clut = 0x7FD3;
+    sprite->packet.tag = (sprite->packet.tag & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
+
+    packet_address = ((u32)sprite) & GPU_ADDR_MASK;
+    ot_tag_high_byte = *ot & GPU_TAG_HIGH_MASK;
+
+    sprite++;
+    old_x = D_8016DA78;
+    new_x = old_x + 16;
+    fits_line = (old_x + 32) < 0x280;
+    D_8016DA78 = new_x;
+
+    *ot = ot_tag_high_byte | packet_address;
+
+    if (!fits_line)
+    {
+        D_8016DA78 = D_80165668;
+        D_8016DA7C += 16;
+    }
+
+    return (s32)sprite;
+}
+
+/* ---- Consolidated from niki_cache_table.c ---- */
+
+extern u8 D_80165678[];
+
+/** @see decomp.me (100.00%) */
+void func_80146EB8(void)
+{
+    s32 i;
+    s32 *p;
+
+    D_80165674 = D_80165678;
+    i = 0;
+    p = (s32 *)D_8016D678;
+    do
+    {
+        *p = (u16)*p;
+        i++;
+        p++;
+    } while (i < 0x100);
+}
+
+/** @see decomp.me (100.00%) */
+void func_80146EF4(void)
+{
+    s32 i;
+    s32 *p;
+    s32 flag;
+
+    i = 0;
+    flag = 0x10000;
+    p = (s32 *)D_8016D678;
+    do
+    {
+        if (!(*p & flag))
+        {
+            *p = 0;
+        }
+        i++;
+        p++;
+    } while (i < 0x100);
+}
+
+/** @see decomp.me (100.00%) */
+void func_80146F34(void)
+{
+    s32 i;
+    s32 *p;
+    u8 *q;
+
+    i = 0xFF;
+    p = (s32 *)D_8016D678;
+    p += 0xFF;
+    do
+    {
+        *p = 0;
+        i--;
+        p--;
+    } while (i >= 0);
+
+    i = 0;
+    q = D_80165678;
+    do
+    {
+        *(u8 *)(i + (s32)q) = 0;
+        i++;
+    } while (i <= 0x7FFF);
+}
+
+/* ---- Consolidated from niki_expand_text_glyph_codes.c ---- */
+
+extern u8 D_8015D508[];
+extern u8 D_801606FC[];
+
+void func_80146F84(u8 *out, u8 *in)
+{
+    u32 c;
+    s32 index;
+    s16 lead;
+
+    for (;;)
+    {
+        c = *in;
+        if ((u8)c == 0)
+        {
+            goto done;
+        }
+        if ((u32)(c - 0x19) < 7)
+        {
+            u32 b1;
+            s32 off;
+            u8 *pa;
+            u8 *pb;
+
+            b1 = in[1];
+            off = b1 >> 4;
+            b1 &= 0xF;
+            pa = D_8015D508 + b1 * 2;
+            pa += off * 33;
+            lead = *(volatile u8 *)in;
+            pa += lead * 528;
+            *out = *pa;
+            out++;
+            b1 = in[1];
+            off = b1 >> 4;
+            b1 &= 0xF;
+            pb = D_8015D508 + 1 + b1 * 2;
+            pb += off * 33;
+            lead = *(volatile u8 *)in;
+            pb += lead * 528;
+            *out = *pb;
+            out++;
+            in += 2;
+        }
+        else if ((u8)c >= 0x21)
+        {
+            lead = *(volatile u8 *)in;
+            index = lead - 0x20;
+            *out = D_801606FC[(index / 16) * 33 + (index & 0xF) * 2];
+            out++;
+            lead = *(volatile u8 *)in;
+            index = lead - 0x20;
+            *out = D_801606FC[(index / 16) * 33 + (index & 0xF) * 2 + 1];
+            out++;
+            in += 1;
+        }
+        else
+        {
+            *out = D_801606FC[0];
+            out++;
+            *out = D_801606FC[1];
+            out++;
+            in += 1;
+        }
+    }
+done:
+    *out = 0;
 }

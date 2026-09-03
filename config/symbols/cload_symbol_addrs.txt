@@ -5,6 +5,53 @@ field_text_reset_scratch             = 0x8006441C;
 // Shared main-executable input state used by CLOAD.
 g_pad_input                          = 0x80122988;
 
+// Main-executable symbols referenced by CLOAD.  Keep these scoped to this
+// overlay symbol map so Splat emits the same recovered names in CLOAD target asm.
+cdrom_process_state                 = 0x800122C0;
+cdrom_wait_queue_empty              = 0x80013F2C;
+cdrom_queue_read                    = 0x800141EC;
+set_controller_vsync_interval       = 0x800157B0;
+update_controllers                  = 0x800157DC;
+reset_controller_vsync_state        = 0x800158E0;
+OpenEvent                           = 0x800167AC;
+CloseEvent                          = 0x800167BC;
+TestEvent                           = 0x800167CC;
+EnableEvent                         = 0x800167DC;
+EnterCriticalSection                = 0x800167EC;
+ExitCriticalSection                 = 0x800167FC;
+open                                = 0x8001680C;
+read                                = 0x8001681C;
+close                               = 0x8001683C;
+nextfile                            = 0x8001684C;
+erase                               = 0x8001686C;
+Krom2RawAdd                         = 0x8001687C;
+firstfile                           = 0x80016BCC;
+bcopy                               = 0x80016E7C;
+strcat                              = 0x80016F9C;
+strcpy                              = 0x800170BC;
+strncmp                             = 0x8001714C;
+_card_info                          = 0x8001724C;
+_card_load                          = 0x8001725C;
+_card_wait                          = 0x8001729C;
+_card_clear                         = 0x800172AC;
+SetDispMask                         = 0x800196F0;
+DrawSync                            = 0x80019788;
+ClearImage                          = 0x8001990C;
+LoadImage                           = 0x80019A34;
+ClearOTagR                          = 0x80019C74;
+DrawOTag                            = 0x80019D7C;
+PutDrawEnv                          = 0x80019DEC;
+PutDispEnv                          = 0x80019FB8;
+SetDrawEnv                          = 0x8001A5D4;
+SetDefDrawEnv                       = 0x8001C56C;
+SetDefDispEnv                       = 0x8001C62C;
+SetGeomOffset                       = 0x8001D58C;
+SetGeomScreen                       = 0x8001D5AC;
+VSync                               = 0x8002054C;
+McxCardType                         = 0x800342CC;
+g_save_slot_index                   = 0x8003EC9C;
+g_menuLayoutBuffer                  = 0x80042FD8;
+
 // Icon-resource header fields inside the 0x80180000 scratch buffer. It is a raw
 // load target, not real data symbols, so keep splat from symbolizing the four
 // header reads in cload_load_icon_resources; the C reads them as plain offsets
@@ -64,7 +111,7 @@ cload_rank_entries                       = 0x80143BA8;
 cload_reset_entry_ranks                  = 0x80143DE4;
 cload_has_known_entry_type               = 0x80143E1C;
 cload_entry_blocks_reach_limit           = 0x80143EEC;
-cload_render_fixed_prompts               = 0x80143F68;
+cload_erase_fixed_card_files             = 0x80143F68;
 cload_advance_load_sequence              = 0x8014401C;
 cload_restart_load_sequence              = 0x801447B4;
 cload_poll_and_rewind_primary_handles    = 0x80144804;
@@ -87,6 +134,28 @@ cload_begin_glyph_cache_frame            = 0x80145C5C;
 cload_evict_unused_glyphs                = 0x80145C98;
 cload_reset_glyph_cache                  = 0x80145CD8;
 cload_expand_text_glyph_codes            = 0x80145D28;
+
+// CLOAD text-table entries decoded from the overlay data table.
+g_cload_text_check_memory_card           = 0x80145E9C;
+g_cload_text_not_enough_blocks           = 0x80145E9E;
+g_cload_text_no_memory_card              = 0x80145EA0;
+g_cload_text_mana                        = 0x80145EA2;
+g_cload_text_other_game                  = 0x80145EA4;
+g_cload_text_card_slot_1                 = 0x80145EA8;
+g_cload_text_card_slot_2                 = 0x80145EAA;
+g_cload_text_card_access_failed          = 0x80145EAC;
+g_cload_text_no_save_data                = 0x80145EAE;
+g_cload_text_new_save                    = 0x80145EB0;
+g_cload_text_new_save_prompt             = 0x80145EC4;
+g_cload_text_load                        = 0x80145EC8;
+g_cload_text_number_prefix               = 0x80145ECA;
+g_cload_text_load_prompt                 = 0x80145ECC;
+g_cload_text_loading                     = 0x80145ECE;
+g_cload_text_no_lom_save_data            = 0x80145ED0;
+g_cload_text_save_failed                 = 0x80145ED8;
+g_cload_text_load_failed                 = 0x80145EDA;
+g_cload_text_card_insert_error           = 0x80145EDC;
+g_cload_text_version_error               = 0x80145EF0;
 
 // CLOAD data/BSS symbols named from their observed roles.
 g_cload_exit_requested                   = 0x80146918;
@@ -140,8 +209,8 @@ g_cload_hex_glyphs                       = 0x80146894;
 g_cload_double_byte_char_table           = 0x801466E0;
 g_cload_single_byte_char_table           = 0x80146544;
 g_cload_save_blob                        = 0x80146920;
-g_cload_file_template                    = 0x80140038;
-g_cload_entry_header_template            = 0x801400BC;
+g_cload_card_path_prefix                 = 0x80140038;
+g_cload_card_search_path                 = 0x801400BC;
 g_cload_retry_count                      = 0x80162378;
 g_cload_primary_poll_countdown           = 0x80162D70;
 g_cload_secondary_poll_countdown         = 0x80162DD4;
