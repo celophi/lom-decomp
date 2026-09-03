@@ -222,4 +222,28 @@ g_cload_primary_poll_countdown           = 0x80162D70;
 g_cload_secondary_poll_countdown         = 0x80162DD4;
 g_cload_selected_entry_extended          = 0x80162DCC;
 g_cload_entry_value_limit                = 0x80162D74;
-g_cload_entry_metadata                   = 0x80162B90;
+g_cload_selected_save_metadata           = 0x80162B90;
+
+// Shared save/card constants named from their contents and CLOAD usage.
+g_lom_save_filename_prefix              = 0x800ECF7C;
+g_lom_alt_save_filename_prefix          = 0x800ECF8C;
+g_lom_save_dummy_filename               = 0x800ECF9C;
+g_lom_alt_save_dummy_filename           = 0x800ECFB0;
+g_new_save_entry_prefix                 = 0x800ECFC4;
+g_playtime_vsync_origin                 = 0x80042FB4;
+g_text_time_separator_offset_bytes      = 0x800EC3F6;
+g_text_choice_glyph_offsets             = 0x800EC3FA;
+
+// CLOAD load-state scripts (byte values dispatch cload_advance_load_sequence cases).
+g_cload_steps_initial_scan              = 0x8014651C;
+g_cload_steps_idle                      = 0x80146528;
+g_cload_steps_refresh_entries           = 0x8014652C;
+g_cload_steps_card_reset                = 0x80146534;
+g_cload_steps_read_selected_header      = 0x80146538;
+g_cload_steps_load_selected_save        = 0x8014653C;
+
+// Selected memory-card file/header buffer and derived views.
+g_cload_selected_file_header            = 0x80162A10;
+g_cload_selected_file_title             = 0x80162A14;
+g_cload_selected_save_slot_id           = 0x80162C5F;
+g_cload_selected_card_path              = 0x80162C90;
