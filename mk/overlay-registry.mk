@@ -762,28 +762,7 @@ OVERLAYS += movie
 overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
 
 OVERLAYS += niki
-overlay_niki_gcc_272_cdk_g0_srcs := \
-	src/overlays/niki/func_80144740.c \
-	src/overlays/niki/niki.c \
-	src/overlays/niki/niki_reset_entry_ranks.c \
-	src/overlays/niki/niki_known_entry_type.c \
-	src/overlays/niki/niki_fixed_prompts.c \
-	src/overlays/niki/niki_stream_reset.c \
-	src/overlays/niki/niki_init_stream_handles.c \
-	src/overlays/niki/niki_shutdown_handles.c \
-	src/overlays/niki/niki_begin_entry_scan.c \
-	src/overlays/niki/niki_commit_selected_entry.c \
-	src/overlays/niki/niki_handles.c \
-	src/overlays/niki/niki_draw_signed_decimal.c \
-	src/overlays/niki/niki_text_render.c \
-	src/overlays/niki/niki_cache_table.c \
-	src/overlays/niki/niki_expand_text_glyph_codes.c \
-	src/overlays/niki/niki_nibble_pair.c \
-	src/overlays/niki/niki_entry_blocks_reach_limit.c \
-	src/overlays/niki/niki_rank_entries.c \
-	src/overlays/niki/func_80144DF8.c \
-	src/overlays/niki/func_80145DA4.c \
-	src/overlays/niki/func_801462EC.c
+overlay_niki_gcc_272_cdk_g0_srcs := src/overlays/niki/niki.c
 
 OVERLAYS += shop
 overlay_shop_gcc_272_cdk_g0_srcs := \
