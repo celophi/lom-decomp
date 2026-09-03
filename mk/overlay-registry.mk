@@ -595,6 +595,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800C21C0.c \
 	src/overlays/field/func_800C2848.c \
 	src/overlays/field/func_800C2D08.c \
+	src/overlays/field/func_800C36F0.c \
 	src/overlays/field/func_800C5760.c \
 	src/overlays/field/func_800C7494.c \
 	src/overlays/field/func_800BD3B0.c \
