@@ -659,7 +659,9 @@ segments:
       - [0x7B965, c, field319]                     # gcc280_g0, func_800CB5D4
       - [0x7B9E1, c, field229]                     # gcc272_cdk, func_800CB650
       - [0x7BA11, c, func_800CB680]                # gcc272_cdk, 100%
-      - [0x7BAE9, c, unk2_b_split098]              # gcc272_cdk, remaining asm-derived C
+      - [0x7BAE9, c, unk2_b_split098]              # gcc272_cdk, func_800CB758 through func_800CBA9C
+      - [0x7BF9D, c, func_800CBC0C]                # gcc272_cdk, 100.00000%, 89/89 instructions
+      - [0x7C101, c, unk2_b_split098_tail]         # gcc272_cdk, func_800CBD70
       - [0x7C1F5, c, func_800CBE64]                # gcc280_g0, 100%
       - [0x7C255, c, func_800CBEC4]                 # gcc272_cdk, 100%
       - [0x7C2D5, data, data]
