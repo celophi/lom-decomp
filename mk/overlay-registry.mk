@@ -22,10 +22,7 @@
 # Splat databin assets referenced through .incbin do not use this setting.
 
 OVERLAYS += addhero
-overlay_addhero_gcc_272_cdk_g0_srcs := \
-	src/overlays/addhero/func_80144570.c \
-	src/overlays/addhero/addhero.c \
-	src/overlays/addhero/addhero2.c
+overlay_addhero_gcc_272_cdk_g0_srcs := src/overlays/addhero/addhero.c
 
 OVERLAYS += carda
 overlay_carda_gcc_272_cdk_g0_srcs := \
