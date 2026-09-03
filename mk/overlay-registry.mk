@@ -24,25 +24,7 @@
 OVERLAYS += addhero
 overlay_addhero_gcc_272_cdk_g0_srcs := \
 	src/overlays/addhero/addhero.c \
-	src/overlays/addhero/addhero_known_entry_type.c \
-	src/overlays/addhero/addhero_fixed_prompts.c \
-	src/overlays/addhero/func_80144C28.c \
-	src/overlays/addhero/addhero_reset_entry_ranks.c \
-	src/overlays/addhero/addhero_stream_reset.c \
-	src/overlays/addhero/addhero_init_stream_handles.c \
-	src/overlays/addhero/addhero_shutdown_handles.c \
-	src/overlays/addhero/addhero_begin_entry_scan.c \
-	src/overlays/addhero/addhero_poll_entry_scan.c \
-	src/overlays/addhero/addhero_commit_selected_entry.c \
-	src/overlays/addhero/addhero_handles.c \
-	src/overlays/addhero/func_80146198.c \
-	src/overlays/addhero/addhero_draw_signed_decimal.c \
-	src/overlays/addhero/addhero_text_render.c \
-	src/overlays/addhero/addhero_cache_table.c \
-	src/overlays/addhero/addhero_expand_text_glyph_codes.c \
-	src/overlays/addhero/addhero_nibble_pair.c \
-	src/overlays/addhero/addhero_entry_blocks_reach_limit.c \
-	src/overlays/addhero/addhero_rank_entries.c
+	src/overlays/addhero/addhero2.c
 overlay_addhero_gcc_280_g0_srcs := \
 	src/overlays/addhero/unk1_before_rank.c \
 
