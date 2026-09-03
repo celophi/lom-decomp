@@ -4852,71 +4852,126 @@ void niki_reset_glyph_cache(void)
 
 /* ---- Consolidated from niki_expand_text_glyph_codes.c ---- */
 
-extern u8 g_niki_double_byte_char_table[];
-extern u8 g_niki_single_byte_char_table[];
+#define NIKI_TEXT_EXTENDED_LEAD_FIRST 0x19
+#define NIKI_TEXT_EXTENDED_PAGE_COUNT 7
+#define NIKI_TEXT_SINGLE_BYTE_BASE 0x20
+#define NIKI_TEXT_PRINTABLE_FIRST 0x21
+#define NIKI_SJIS_CODES_PER_ROW 16
+#define NIKI_SJIS_ROWS_PER_PAGE 16
+#define NIKI_SJIS_ROW_SHIFT 4
 
-void niki_expand_text_glyph_codes(u8 *out, u8 *in)
+typedef struct NikiSjisCode
 {
-    u32 c;
-    s32 index;
-    s16 lead;
+    u8 lead;
+    u8 trail;
+} NikiSjisCode;
+
+typedef struct NikiSjisRow
+{
+    NikiSjisCode codes[NIKI_SJIS_CODES_PER_ROW];
+    u8 newline;
+} NikiSjisRow;
+
+typedef struct NikiSjisPage
+{
+    NikiSjisRow rows[NIKI_SJIS_ROWS_PER_PAGE];
+} NikiSjisPage;
+
+extern NikiSjisPage g_niki_double_byte_char_table[];
+extern NikiSjisRow g_niki_single_byte_char_table[];
+
+/*
+ * The extended table linker symbol is biased backwards by 0x19 pages.  This
+ * lets the original code index it directly with the encoded lead byte
+ * (0x19..0x1F) instead of subtracting NIKI_TEXT_EXTENDED_LEAD_FIRST first.
+ */
+#define g_niki_extended_sjis_page_bias g_niki_double_byte_char_table
+#define g_niki_single_byte_sjis_rows g_niki_single_byte_char_table
+
+/**
+ * @brief Expand NIKI's internal text encoding into a NUL-terminated Shift-JIS
+ *        byte string.
+ * @param dst_sjis Destination buffer. Each decoded source character writes one
+ *        two-byte Shift-JIS code; the function appends a single NUL byte.
+ * @param src_text NUL-terminated NIKI text. Bytes 0x19..0x1F introduce a
+ *        two-byte table code; printable one-byte codes use the compact table.
+ * @note Each lookup row contains 16 two-byte Shift-JIS codes followed by a
+ *       newline byte, so sizeof(NikiSjisRow) is 33 and sizeof(NikiSjisPage) is
+ *       528. The explicit byte views below preserve GCC 2.7.2's matching
+ *       address-expression and register-allocation shape.
+ * @see decomp.me (100.00%)
+ */
+void niki_expand_text_glyph_codes(u8 *dst_sjis, const u8 *src_text)
+{
+    u32 source_byte;
+    s32 glyph_index;
+    s16 lead_byte;
 
     for (;;)
     {
-        c = *in;
-        if ((u8)c != 0)
+        source_byte = *src_text;
+        if ((u8)source_byte != 0)
         {
-            if ((u32)(c - 0x19) < 7)
+            if ((u32)(source_byte - NIKI_TEXT_EXTENDED_LEAD_FIRST) <
+                NIKI_TEXT_EXTENDED_PAGE_COUNT)
             {
-                u32 b1;
-                s32 off;
-                u8 *pa;
-                u8 *pb;
+                u32 trail_byte;
+                s32 row;
+                u8 *sjis_lead;
+                u8 *sjis_trail;
 
-                b1 = in[1];
-                off = b1 >> 4;
-                b1 &= 0xF;
-                pa = g_niki_double_byte_char_table + b1 * 2;
-                pa += off * 33;
-                lead = *(volatile u8 *)in;
-                pa += lead * 528;
-                *out = *pa;
-                out++;
-                b1 = in[1];
-                off = b1 >> 4;
-                b1 &= 0xF;
-                pb = g_niki_double_byte_char_table + 1 + b1 * 2;
-                pb += off * 33;
-                lead = *(volatile u8 *)in;
-                pb += lead * 528;
-                *out = *pb;
-                out++;
-                in += 2;
+                trail_byte = src_text[1];
+                row = trail_byte >> NIKI_SJIS_ROW_SHIFT;
+                trail_byte &= NIKI_SJIS_CODES_PER_ROW - 1;
+                sjis_lead = (u8 *)g_niki_extended_sjis_page_bias +
+                            trail_byte * sizeof(NikiSjisCode);
+                sjis_lead += row * sizeof(NikiSjisRow);
+                lead_byte = *(volatile u8 *)src_text;
+                sjis_lead += lead_byte * sizeof(NikiSjisPage);
+                *dst_sjis = *sjis_lead;
+                dst_sjis++;
+
+                trail_byte = src_text[1];
+                row = trail_byte >> NIKI_SJIS_ROW_SHIFT;
+                trail_byte &= NIKI_SJIS_CODES_PER_ROW - 1;
+                sjis_trail = (u8 *)g_niki_extended_sjis_page_bias + 1 +
+                             trail_byte * sizeof(NikiSjisCode);
+                sjis_trail += row * sizeof(NikiSjisRow);
+                lead_byte = *(volatile u8 *)src_text;
+                sjis_trail += lead_byte * sizeof(NikiSjisPage);
+                *dst_sjis = *sjis_trail;
+                dst_sjis++;
+                src_text += 2;
             }
-            else if ((u8)c >= 0x21)
+            else if ((u8)source_byte >= NIKI_TEXT_PRINTABLE_FIRST)
             {
-                lead = *(volatile u8 *)in;
-                index = lead - 0x20;
-                *out = g_niki_single_byte_char_table[(index / 16) * 33 + (index & 0xF) * 2];
-                out++;
-                lead = *(volatile u8 *)in;
-                index = lead - 0x20;
-                *out = g_niki_single_byte_char_table[(index / 16) * 33 + (index & 0xF) * 2 + 1];
-                out++;
-                in += 1;
+                lead_byte = *(volatile u8 *)src_text;
+                glyph_index = lead_byte - NIKI_TEXT_SINGLE_BYTE_BASE;
+                *dst_sjis = ((u8 *)g_niki_single_byte_sjis_rows)
+                    [(glyph_index / NIKI_SJIS_CODES_PER_ROW) * sizeof(NikiSjisRow) +
+                     (glyph_index & (NIKI_SJIS_CODES_PER_ROW - 1)) * sizeof(NikiSjisCode)];
+                dst_sjis++;
+
+                lead_byte = *(volatile u8 *)src_text;
+                glyph_index = lead_byte - NIKI_TEXT_SINGLE_BYTE_BASE;
+                *dst_sjis = ((u8 *)g_niki_single_byte_sjis_rows)
+                    [(glyph_index / NIKI_SJIS_CODES_PER_ROW) * sizeof(NikiSjisRow) +
+                     (glyph_index & (NIKI_SJIS_CODES_PER_ROW - 1)) * sizeof(NikiSjisCode) + 1];
+                dst_sjis++;
+                src_text += 1;
             }
             else
             {
-                *out = g_niki_single_byte_char_table[0];
-                out++;
-                *out = g_niki_single_byte_char_table[1];
-                out++;
-                in += 1;
+                *dst_sjis = ((u8 *)g_niki_single_byte_sjis_rows)[0];
+                dst_sjis++;
+                *dst_sjis = ((u8 *)g_niki_single_byte_sjis_rows)[1];
+                dst_sjis++;
+                src_text += 1;
             }
         }
         else
         {
-            *out = 0;
+            *dst_sjis = 0;
             return;
         }
     }
