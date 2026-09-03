@@ -1,6 +1,9 @@
 // Field dialogue/text renderer exports used by this overlay.
 field_text_reset_windows             = 0x800643E0;
 field_text_reset_scratch             = 0x8006441C;
+field_reset_fade_state                 = 0x80067B8C;
+field_update_and_render_fade           = 0x80067BBC;
+field_set_fade_target                  = 0x80067EB4;
 
 // Shared main-executable input state used by CLOAD.
 g_pad_input                          = 0x80122988;
@@ -51,6 +54,7 @@ VSync                               = 0x8002054C;
 McxCardType                         = 0x800342CC;
 g_save_slot_index                   = 0x8003EC9C;
 g_menuLayoutBuffer                  = 0x80042FD8;
+play_menu_sfx                       = 0x800A3938;
 
 // Icon-resource header fields inside the 0x80180000 scratch buffer. It is a raw
 // load target, not real data symbols, so keep splat from symbolizing the four
@@ -158,6 +162,8 @@ g_cload_text_card_insert_error           = 0x80145EDC;
 g_cload_text_version_error               = 0x80145EF0;
 
 // CLOAD data/BSS symbols named from their observed roles.
+g_cload_render_buffers                   = 0x8014A988;
+g_cload_primitive_buffers                = 0x8015A350;
 g_cload_exit_requested                   = 0x80146918;
 g_cload_element_pool                     = 0x801468B8;
 g_cload_element1_state                   = 0x801468C4;
