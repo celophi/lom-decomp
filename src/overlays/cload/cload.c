@@ -244,41 +244,41 @@ extern u8 D_80146534[];
 extern u8 D_8014653C[];
 extern s32 g_cload_choice_toggle;
 extern u8 *g_cload_load_step;
-extern s32 D_8003EC9C;
+extern s32 g_save_slot_index;
 extern char D_800ECF7C[];
 extern char g_cload_entries[];
 extern u8 D_80162C5F;
 extern s32 g_cload_entry_scan_active;
 extern char D_800ECF8C[];
 extern char D_800ECFC4[];
-extern u16 D_80145E9C;
-extern u16 D_80145E9E;
-extern u16 D_80145EA0;
-extern u16 D_80145EA2;
-extern u16 D_80145EA4;
-extern u16 D_80145EA8;
-extern u16 D_80145EAA;
-extern u16 D_80145EAC;
-extern u16 D_80145EAE;
-extern u16 D_80145EB0;
-extern u16 D_80145EC4;
-extern u16 D_80145EC8;
-extern u16 D_80145ECA;
-extern u16 D_80145ECC;
-extern u16 D_80145ECE;
+extern u16 g_cload_text_check_memory_card;
+extern u16 g_cload_text_not_enough_blocks;
+extern u16 g_cload_text_no_memory_card;
+extern u16 g_cload_text_mana;
+extern u16 g_cload_text_other_game;
+extern u16 g_cload_text_card_slot_1;
+extern u16 g_cload_text_card_slot_2;
+extern u16 g_cload_text_card_access_failed;
+extern u16 g_cload_text_no_save_data;
+extern u16 g_cload_text_new_save;
+extern u16 g_cload_text_new_save_prompt;
+extern u16 g_cload_text_load;
+extern u16 g_cload_text_number_prefix;
+extern u16 g_cload_text_load_prompt;
+extern u16 g_cload_text_loading;
 extern u8 g_cload_save_blob[];
-extern u8 D_80042FD8[];
+extern u8 g_menuLayoutBuffer[];
 extern s32 D_80042FB4;
 extern s32 g_cload_progress_bar_active;
 extern s32 g_cload_progress_start_tick;
 extern s32 g_cload_dialog_state;
-extern u16 D_80145ED0;
+extern u16 g_cload_text_no_lom_save_data;
 extern u16 D_80145ED6;
-extern u16 D_80145ED8;
-extern u16 D_80145EDA;
-extern u16 D_80145EDC;
+extern u16 g_cload_text_save_failed;
+extern u16 g_cload_text_load_failed;
+extern u16 g_cload_text_card_insert_error;
 extern u16 D_80145EDE;
-extern u16 D_80145EF0;
+extern u16 g_cload_text_version_error;
 extern u16 D_80145F4C;
 extern s32 g_cload_rank_count;
 extern s32 g_cload_entry_ranks[];
@@ -293,8 +293,8 @@ extern u8 D_800ECFB0;
 extern u8 D_80146528;
 extern u8 D_80146538[];
 extern u8 D_80162C90[];
-extern CloadCardPathBuffer g_cload_file_template;
-extern CloadCardSearchPathBuffer g_cload_entry_header_template;
+extern CloadCardPathBuffer g_cload_card_path_prefix;
+extern CloadCardSearchPathBuffer g_cload_card_search_path;
 extern s32 g_cload_entry_fields[];
 extern s32 g_cload_retry_count;
 extern s32 g_cload_primary_poll_countdown;
@@ -337,105 +337,26 @@ void cload_begin_glyph_cache_frame(void);
 void cload_evict_unused_glyphs(void);
 
 /* External callees used by the memory-card I/O/load-state block. */
-s32 func_8001714C(void *, void *, s32);
-s32 func_8001680C(void *, s32);
-s32 func_8001681C(s32, void *, s32);
-s32 func_8001683C(s32);
-void func_8001686C(void *);
-s32 func_8001724C(s32);
-s32 func_8001725C(s32);
-s32 func_8001729C(s32);
-s32 func_800172AC(s32);
+/* strncmp is declared above with the original visible signature. */
+s32 open(void *, s32);
+s32 read(s32, void *, s32);
+s32 close(s32);
+void erase(void *);
+s32 _card_info(s32);
+s32 _card_load(s32);
+s32 _card_wait(s32);
+s32 _card_clear(s32);
 s32 func_80032174(s32, void *, s32 *);
-s32 func_800342CC(s32);
-void func_800167EC(void);
-void func_800167BC(s32);
-void func_800167FC(void);
-s32 func_800167AC(u32, s32, s32, s32);
-void func_800167DC(s32);
-s32 func_800167CC(s32);
-s32 func_80016BCC(void *, void *);
-s32 func_8001684C(void *);
-s32 func_800170BC(void *, void *, u8);
-
-/*
- * Shared executable names recovered from config/symbols/shared_symbol_addrs.txt.
- * Keep these as source aliases so the compiler still emits the historical
- * func_XXXXXXXX relocation names expected by the current target object.
- */
-#define cdrom_process_state             func_800122C0
-#define cdrom_wait_queue_empty          func_80013F2C
-#define cdrom_queue_read                func_800141EC
-#define set_controller_vsync_interval   func_800157B0
-#define update_controllers              func_800157DC
-#define reset_controller_vsync_state    func_800158E0
-#define OpenEvent                       func_800167AC
-#define CloseEvent                      func_800167BC
-#define TestEvent                       func_800167CC
-#define EnableEvent                     func_800167DC
-#define EnterCriticalSection            func_800167EC
-#define ExitCriticalSection             func_800167FC
-#define open                            func_8001680C
-#define read                            func_8001681C
-#define close                           func_8001683C
-#define nextfile                        func_8001684C
-#define erase                           func_8001686C
-#define Krom2RawAdd                     func_8001687C
-#define firstfile                       func_80016BCC
-#define bcopy                           func_80016E7C
-#define strcat                          func_80016F9C
-#define strcpy                          func_800170BC
-#define strncmp                         func_8001714C
-#define _card_info                      func_8001724C
-#define _card_load                      func_8001725C
-#define _card_wait                      func_8001729C
-#define _card_clear                     func_800172AC
-#define SetDispMask                     func_800196F0
-#define DrawSync                        func_80019788
-#define ClearImage                      func_8001990C
-#define LoadImage                       func_80019A34
-#define ClearOTagR                      func_80019C74
-#define DrawOTag                        func_80019D7C
-#define PutDrawEnv                      func_80019DEC
-#define PutDispEnv                      func_80019FB8
-#define SetDrawEnv                      func_8001A5D4
-#define SetDefDrawEnv                   func_8001C56C
-#define SetDefDispEnv                   func_8001C62C
-#define SetGeomOffset                   func_8001D58C
-#define SetGeomScreen                   func_8001D5AC
-#define VSync                           func_8002054C
-#define McxCardType                     func_800342CC
-
-/* Main-executable globals already named in the shared symbol map. */
-#define g_save_slot_index               D_8003EC9C
-#define g_menuLayoutBuffer              D_80042FD8
-#define g_cload_card_path_prefix         g_cload_file_template
-#define g_cload_card_search_path         g_cload_entry_header_template
-
-/* CLOAD-local semantic alias; the target object still names this symbol as below. */
-#define cload_erase_fixed_card_files     cload_render_fixed_prompts
-
-/* CLOAD text-table entries decoded from asm/overlays/cload/data/data.data.s. */
-#define g_cload_text_check_memory_card  D_80145E9C
-#define g_cload_text_not_enough_blocks  D_80145E9E
-#define g_cload_text_no_memory_card     D_80145EA0
-#define g_cload_text_mana               D_80145EA2
-#define g_cload_text_other_game         D_80145EA4
-#define g_cload_text_card_slot_1        D_80145EA8
-#define g_cload_text_card_slot_2        D_80145EAA
-#define g_cload_text_card_access_failed D_80145EAC
-#define g_cload_text_no_save_data       D_80145EAE
-#define g_cload_text_new_save           D_80145EB0
-#define g_cload_text_new_save_prompt    D_80145EC4
-#define g_cload_text_load               D_80145EC8
-#define g_cload_text_number_prefix      D_80145ECA
-#define g_cload_text_load_prompt        D_80145ECC
-#define g_cload_text_loading            D_80145ECE
-#define g_cload_text_no_lom_save_data   D_80145ED0
-#define g_cload_text_save_failed        D_80145ED8
-#define g_cload_text_load_failed        D_80145EDA
-#define g_cload_text_card_insert_error  D_80145EDC
-#define g_cload_text_version_error      D_80145EF0
+s32 McxCardType(s32);
+void EnterCriticalSection(void);
+void CloseEvent(s32);
+void ExitCriticalSection(void);
+s32 OpenEvent(u32, s32, s32, s32);
+void EnableEvent(s32);
+s32 TestEvent(s32);
+s32 firstfile(void *, void *);
+s32 nextfile(void *);
+s32 strcpy(void *, void *, u8);
 
 /**
  * @brief Initialize and run the CLOAD save/continue menu.
