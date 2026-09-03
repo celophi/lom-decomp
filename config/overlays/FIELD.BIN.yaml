@@ -339,6 +339,9 @@ segments:
       - [0x634CD, c, field89]                      # gcc280_g0, func_800B313C
       - [0x634F1, c, func_800B3160]                # gcc280_g0, 100.00000%, 27/27 instructions
       - [0x6355D, c, unk2_b_split025_tail2]        # gcc272_cdk, func_800B31CC
+      - [0x637B1, c, func_800B3420]                # gcc280_g0, 100%
+      - [0x63861, c, func_800B34D0]                # gcc280_g0, 100%
+      - [0x63911, c, unk2_b_split025_tail2_c]      # gcc272_cdk, func_800B3580
       - [0x64115, c, func_800B3D84]                # gcc280_g0, 100%
       - [0x64185, c, unk2_b_split025_tail2b]       # gcc272_cdk, func_800B3DF4
       - [0x64721, c, field325]                     # gcc280_g0, func_800B4390
