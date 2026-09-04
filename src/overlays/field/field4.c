@@ -2545,14 +2545,7 @@ void func_8006B240(s32 arg0, u8 *arg1, s32 arg2)
  *        g_field_resource_cursor's arena and shift every later entry and
  *        D_800FDF58 record down by the freed size.
  * @param arg0 Resource entry index to release.
- * @see decomp.me (98.89%) TODO
- * @note Residual: a 1-insn compiler-temp coloring gap around the `dst`
- *       load right after the entry guard branch (target loads it into v0
- *       then copies to a1; ours loads directly into a1). Possibly the same
- *       class as the sibling func_8006AB38 (src/overlays/field/field4.c,
- *       97.74%, see working/func_8006AB38/STATUS.md), though that function
- *       has not been re-checked under the correct toolchain. No source-shape
- *       change or permuter run closed it here.
+ * @see decomp.me (100%) TODO
  */
 void func_8006B354(s32 arg0)
 {
@@ -2564,9 +2557,9 @@ void func_8006B354(s32 arg0)
 
     if ((g_field_resource_entries[arg0].flags >> 1) & 1)
     {
-        dst = g_field_resource_entries[arg0].start;
         src = g_field_resource_entries[arg0].end;
-        size = src - dst;
+        size = src - g_field_resource_entries[arg0].start;
+        dst = g_field_resource_entries[arg0].start;
 
         while (src != g_field_resource_cursor)
         {

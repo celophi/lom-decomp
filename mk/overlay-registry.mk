@@ -150,6 +150,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_e_tail.c \
 	src/overlays/field/unk2_f.c \
 	src/overlays/field/unk2_f_b.c \
+	src/overlays/field/func_80086030.c \
 	src/overlays/field/unk2_g.c \
 	src/overlays/field/field_load_vram_resource.c \
 	src/overlays/field/unk2_h_b.c \
@@ -828,14 +829,17 @@ overlay_wsel_gcc_280_g0_srcs := \
 	src/overlays/wsel/func_80050DB0.c \
 	src/overlays/wsel/unk1_tail_mid.c \
 	src/overlays/wsel/func_800513D0.c \
-	src/overlays/wsel/unk1_tail_b.c
+	src/overlays/wsel/unk1_tail_b.c \
+	src/overlays/wsel/func_80051D78.c
 
 OVERLAYS += zukan
 overlay_zukan_gcc_272_cdk_g0_srcs := \
 	src/overlays/zukan/zukan_image_upload.c \
 	src/overlays/zukan/zukan_update_frame.c \
 	src/overlays/zukan/zukan_mode_setters.c \
-	src/overlays/zukan/zukan_resource_helpers.c
+	src/overlays/zukan/zukan_resource_helpers.c \
+	src/overlays/zukan/zukan_resource_table_init.c \
+	src/overlays/zukan/zukan_resource_text.c
 overlay_zukan_gcc_280_g0_srcs := \
 	src/overlays/zukan/unk1.c \
 	src/overlays/zukan/unk1_after_update_frame.c \
@@ -844,5 +848,4 @@ overlay_zukan_gcc_280_g0_srcs := \
 	src/overlays/zukan/unk1_mid.c \
 	src/overlays/zukan/unk1_mid_tail.c \
 	src/overlays/zukan/zukan_outline_fade.c \
-	src/overlays/zukan/unk1_tail.c \
 	src/overlays/zukan/unk1_tail_after_resource_helpers.c
