@@ -1629,7 +1629,12 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
 /**
  * @brief Initialize the full menu node tree and global menu state.
- * @see decomp.me (99.27%) https://decomp.me/scratch/XJkmb
+ * @note Not yet matched (17 register-only rows). The layout loop must stay a
+ *       goto loop: the target's loop was never loop-optimized (no invariant
+ *       hoist, unbiased node pointer). The single `var_a3 = 0` after the
+ *       companion check and the dead `temp_v0_9` copy are also required.
+ *       See working/menu_node_tree_init/STATUS.md for the remaining rows.
+ * @see decomp.me (99.85%) https://decomp.me/scratch/XJkmb
  */
 void menu_node_tree_init(void)
 {
@@ -1641,6 +1646,7 @@ void menu_node_tree_init(void)
     s32 temp_v0_9;
     s32 var_a3;
     s32 var_t0;
+    s32 init_idx;
     u8* new_var5;
     MenuNode* new_var2;
     int new_var7;
@@ -1680,7 +1686,7 @@ void menu_node_tree_init(void)
     u16 temp2;
     u16 loop_unk2;
     u32 new_var9;
-    var_t0 = 0;
+    init_idx = 0;
     var_a0 = g_menu_nodes;
     g_menu_prev_node = MENU_NONE;
     g_menu_content_ready = 0;
@@ -1707,18 +1713,18 @@ void menu_node_tree_init(void)
     g_menu_cursor_enable = 0;
     do
     {
-        loop_unk2 = var_a0[var_t0].u2.unk2;
-        var_a0[var_t0].state = MENU_NODE_STATE_UNINIT;
-        var_a0[var_t0].icon_id = 0;
-        var_a0[var_t0].content_id = MENU_NONE;
-        var_a0[var_t0].child3 = MENU_NONE;
-        var_a0[var_t0].child2 = MENU_NONE;
-        var_a0[var_t0].child1 = MENU_NONE;
-        var_a0[var_t0].uA.s.child0 = MENU_NONE;
-        var_a0[var_t0].u2.unk2 = (u16)((loop_unk2 & 0xFFFC) | 0x30);
-        var_a0[var_t0].u2.s.parent_idx = MENU_NONE;
-        var_t0 += 1;
-    } while (var_t0 < MENU_NODE_COUNT);
+        loop_unk2 = var_a0[init_idx].u2.unk2;
+        var_a0[init_idx].state = MENU_NODE_STATE_UNINIT;
+        var_a0[init_idx].icon_id = 0;
+        var_a0[init_idx].content_id = MENU_NONE;
+        var_a0[init_idx].child3 = MENU_NONE;
+        var_a0[init_idx].child2 = MENU_NONE;
+        var_a0[init_idx].child1 = MENU_NONE;
+        var_a0[init_idx].uA.s.child0 = MENU_NONE;
+        var_a0[init_idx].u2.unk2 = (u16)((loop_unk2 & 0xFFFC) | 0x30);
+        var_a0[init_idx].u2.s.parent_idx = MENU_NONE;
+        init_idx += 1;
+    } while (init_idx < MENU_NODE_COUNT);
 
     g_menu_nodes[0].label_id = 1;
     g_menu_nodes[0].idx_nav.s.self_idx = 0;
@@ -1999,16 +2005,15 @@ void menu_node_tree_init(void)
             g_menu_nodes[9].u2.unk2 = (u16)(g_menu_nodes[9].u2.unk2 | 1);
         }
     }
-    var_a3 = 0;
     if ((g_pad_ctx->inject_flags & 0x80) && (g_pad_ctx->inject_enable != 0))
     {
         g_menu_companion_node = 0x2B;
-        var_a3 = 0;
     }
-    var_t0 = var_a3;
-    var_t0_2 = var_a3;
+    var_a3 = 0;
+    var_t0 = 0;
+    temp_v0_9 = 0;
     var_a2 = g_menu_nodes;
-    do
+tail_loop:
     {
         if (var_a2->u2.s.parent_idx == MENU_NONE)
         {
@@ -2019,8 +2024,8 @@ void menu_node_tree_init(void)
                 var_a3 += MENU_ROW_HEIGHT;
                 new_var10 = (temp_a0 & 1) << 15;
                 new_var6 = (temp_a0 >> 1) & 0xFF;
-                var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
                 var_a2->u8_u.nav_y_packed = (u16)(var_a2->u8_u.nav_y_packed & 0x80FF);
+                var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
                 var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | new_var6);
                 new_var8 = (temp_a1 & 1) << 15;
                 var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | new_var10);
@@ -2031,15 +2036,19 @@ void menu_node_tree_init(void)
         }
         var_t0 += 1;
         var_a2++;
-    } while (var_t0 < MENU_NODE_COUNT);
+        if (var_t0 < MENU_NODE_COUNT)
+        {
+            goto tail_loop;
+        }
+    }
     if (g_active_script != 0)
     {
         g_menu_scene_type = -1;
         return;
     }
-    g_menu_scene_type = 0;
+    g_menu_scene_type = temp_v0_9;
     new_var4 = g_menu_init_content_id;
-    g_menu_ability_mask = 0;
+    g_menu_ability_mask = temp_v0_9;
     menu_open_content_page(new_var4);
     menu_set_active_node();
 }
