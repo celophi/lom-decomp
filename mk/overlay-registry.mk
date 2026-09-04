@@ -37,11 +37,14 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_load_prompts.c \
 	src/overlays/carda/func_80143DF4.c \
 	src/overlays/carda/func_80143F90.c \
+	src/overlays/carda/func_801447DC.c \
+	src/overlays/carda/func_80144A24.c \
 	src/overlays/carda/carda_choice_prompt.c \
 	src/overlays/carda/carda_choice_cancel.c \
 	src/overlays/carda/carda_restore_record.c \
 	src/overlays/carda/func_80146794.c \
 	src/overlays/carda/func_80146CA4.c \
+	src/overlays/carda/func_80146EDC.c \
 	src/overlays/carda/carda_choice_init.c \
 	src/overlays/carda/carda_hex_parse.c \
 	src/overlays/carda/carda_panel_tiles.c \
@@ -69,6 +72,8 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_format_decimal.c \
 	src/overlays/carda/carda_nibble_pair.c \
 	src/overlays/carda/carda_parse_hex_suffix_byte.c \
+	src/overlays/carda/func_80147588.c \
+	src/overlays/carda/func_801477CC.c \
 	src/overlays/carda/carda_reset_entry_ranks.c \
 	src/overlays/carda/carda_known_entry_type.c \
 	src/overlays/carda/carda_fixed_prompts.c \
@@ -86,9 +91,6 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_checksum_tail.c \
 	src/overlays/carda/unk1_after_choice.c \
 	src/overlays/carda/unk1_after_choice_after_restore.c \
-	src/overlays/carda/unk1_after_choice_tail.c \
-	src/overlays/carda/func_80147588.c \
-	src/overlays/carda/unk1_before_stream_reset.c \
 	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c \
 	src/overlays/carda/unk1_mid2_middle.c
 
@@ -148,9 +150,11 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_e.c \
 	src/overlays/field/func_80084240.c \
 	src/overlays/field/unk2_e_tail.c \
+	src/overlays/field/func_80084630.c \
 	src/overlays/field/unk2_f.c \
 	src/overlays/field/unk2_f_b.c \
-	src/overlays/field/unk2_g.c \
+	src/overlays/field/func_80086030.c \
+	src/overlays/field/func_800860CC.c \
 	src/overlays/field/field_load_vram_resource.c \
 	src/overlays/field/unk2_h_b.c \
 	src/overlays/field/unk2_i.c \
@@ -322,6 +326,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_restore_entry_music.c \
 	src/overlays/field/unk2_b_split001.c \
 	src/overlays/field/unk2_b_split001_tail.c \
+	src/overlays/field/func_800A3D44.c \
 	src/overlays/field/func_800A3B78.c \
 	src/overlays/field/unk2_b_split003.c \
 	src/overlays/field/func_800A4798.c \
@@ -419,6 +424,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split078.c \
 	src/overlays/field/unk2_b_split081.c \
 	src/overlays/field/func_800C7CF8.c \
+	src/overlays/field/func_800C7F44.c \
 	src/overlays/field/unk2_b_split081_tail.c \
 	src/overlays/field/unk2_b_split081_tail_b.c \
 	src/overlays/field/unk2_b_split082.c \
@@ -453,7 +459,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split111.c \
 	src/overlays/field/unk2_b_split112.c \
 	src/overlays/field/unk2_b_split113.c \
-	src/overlays/field/unk2_b_split114.c \
+	src/overlays/field/func_800869FC.c \
+	src/overlays/field/func_80086ACC.c \
 	src/overlays/field/func_80086C70.c \
 	src/overlays/field/func_80086C00.c \
 	src/overlays/field/func_80086D5C.c \
@@ -520,6 +527,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field3.c
 overlay_field_gcc_280_g0_srcs := \
+	src/overlays/field/func_800BDBAC.c \
+	src/overlays/field/func_800C8FA8.c \
 	src/overlays/field/field303.c \
 	src/overlays/field/field305.c \
 	src/overlays/field/field306.c \
@@ -820,29 +829,36 @@ overlay_wsel_gcc_272_cdk_g0_srcs := \
 	src/overlays/wsel/wsel_audio_fade.c \
 	src/overlays/wsel/wsel_read_pad_state.c \
 	src/overlays/wsel/func_80052384.c \
-	src/overlays/wsel/wsel_read_pad_input.c
+	src/overlays/wsel/wsel_read_pad_input.c \
+	src/overlays/wsel/func_800514D8.c \
+	src/overlays/wsel/func_800517BC.c
 overlay_wsel_gcc_280_g0_srcs := \
 	src/overlays/wsel/unk1_tail.c \
 	src/overlays/wsel/func_80050944.c \
 	src/overlays/wsel/func_80050B40.c \
 	src/overlays/wsel/func_80050DB0.c \
-	src/overlays/wsel/unk1_tail_mid.c \
+	src/overlays/wsel/func_80050F0C.c \
 	src/overlays/wsel/func_800513D0.c \
-	src/overlays/wsel/unk1_tail_b.c
+	src/overlays/wsel/func_80051D78.c
 
 OVERLAYS += zukan
 overlay_zukan_gcc_272_cdk_g0_srcs := \
+	src/overlays/zukan/zukan_init.c \
+	src/overlays/zukan/zukan_build_entry_primitives.c \
 	src/overlays/zukan/zukan_image_upload.c \
 	src/overlays/zukan/zukan_update_frame.c \
 	src/overlays/zukan/zukan_mode_setters.c \
-	src/overlays/zukan/zukan_resource_helpers.c
+	src/overlays/zukan/zukan_transition_update.c \
+	src/overlays/zukan/zukan_resource_helpers.c \
+	src/overlays/zukan/zukan_resource_table_init.c \
+	src/overlays/zukan/zukan_resource_text.c \
+	src/overlays/zukan/zukan_resource_sprites.c \
+	src/overlays/zukan/zukan_resource_loader.c
 overlay_zukan_gcc_280_g0_srcs := \
-	src/overlays/zukan/unk1.c \
 	src/overlays/zukan/unk1_after_update_frame.c \
 	src/overlays/zukan/zukan_scroll_window.c \
 	src/overlays/zukan/zukan_gpu_modes.c \
 	src/overlays/zukan/unk1_mid.c \
 	src/overlays/zukan/unk1_mid_tail.c \
 	src/overlays/zukan/zukan_outline_fade.c \
-	src/overlays/zukan/unk1_tail.c \
 	src/overlays/zukan/unk1_tail_after_resource_helpers.c

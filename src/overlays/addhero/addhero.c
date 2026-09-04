@@ -2468,36 +2468,89 @@ s32 addhero_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
 
 extern s32 g_addhero_entry_fields[];
 
+/**
+ * @brief Parse the hex value suffix of every "SD"-tagged directory entry on the
+ *        active card, recording per-entry field values and their ranked bytes.
+ * @return The maximum suffix byte value seen across all matching entries.
+ * @note 99.82% - stuck on a sched2 load-delay tie: the target puts %lo(pattern)
+ *       in the lw's load-delay slot, ours swaps %lo with the `li 12` length arg.
+ *       The `do { } while (0)` around the pattern load is load-bearing (it fixes
+ *       the lw/%lo ordering, +1.2% over the plain assignment). Same unsolved tie
+ *       leaves niki_parse_entry_fields and cload_parse_entry_fields at 99.82%.
+ */
 s32 addhero_parse_entry_fields(void)
 {
-    s32 i; s32 max; u8 *p; u8 *field; s32 count; s32 acc;
-    u32 tmp0, tmp1, tmp2; s32 r; u8 *pattern;
-    i = 0; max = i;
-    while (i < g_addhero_entry_state) {
-        do { pattern = (u8 *)&D_800ECF7C; } while (0);
-        if (func_8001714C(pattern, (u8 *)&((AddheroDirEntry (*)[20])g_addhero_entries)[g_addhero_card_slot][i], 0xC) == 0) {
-            count = 5;
-            p = (u8 *)(g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES + ((i << 4) + (i << 4) + (i << 3)) + (s32)g_addhero_entries + 0xC);
-            acc = 0;
-            while (((u8)(*p-'0') < 10) || ((u8)(*p-'a') < 6) || ((u8)(*p-'A') < 6)) {
-                if (count == 0) break;
+    s32 i;
+    s32 max;
+    u8 *p;
+    u8 *field;
+    s32 count;
+    s32 acc;
+    u32 tmp0, tmp1, tmp2;
+    s32 r;
+    s32 *fields;
+
+    for (i = 0, max = 0; i < g_addhero_entry_state; i++)
+    {
+        char *ref;
+        u8 *tmp;
+        do { ref = D_800ECF7C; } while (0);
+        tmp = (u8 *)&((AddheroDirEntry (*)[20])g_addhero_entries)[g_addhero_card_slot][i];
+
+        if (func_8001714C(ref, tmp, 0xC) == 0)
+        {
+            p = (u8 *)(
+                g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES +
+                ((i << 4) + (i << 4) + (i << 3)) +
+                (s32)g_addhero_entries +
+                0xC);
+
+            for (count = 5, acc = 0;
+                 (((u8)(*p - '0') < 10) ||
+                  ((u8)(*p - 'a') < 6) ||
+                  ((u8)(*p - 'A') < 6)) &&
+                     count != 0;
+                 p++, count--)
+            {
                 acc <<= 4;
-                if ((u8)(*p-'0') < 10) { tmp0=acc-0x30; acc=tmp0+*p; }
-                else if ((u8)(*p-'A') < 6) { tmp1=acc-0x37; acc=tmp1+*p; }
-                else if ((u8)(*p-'a') < 6) { tmp2=acc-0x57; acc=tmp2+*p; }
-                p++; count--;
+
+                if ((u8)(*p - '0') < 10)
+                {
+                    tmp0 = acc - 0x30;
+                    acc = tmp0 + *p;
+                }
+                else if ((u8)(*p - 'A') < 6)
+                {
+                    tmp1 = acc - 0x37;
+                    acc = tmp1 + *p;
+                }
+                else if ((u8)(*p - 'a') < 6)
+                {
+                    tmp2 = acc - 0x57;
+                    acc = tmp2 + *p;
+                }
             }
+
             field = (u8 *)&((AddheroDirEntry (*)[20])g_addhero_entries)[g_addhero_card_slot][i].name[0xC];
-            { s32 addr; addr = g_addhero_card_slot * 0x50 + (s32)g_addhero_entry_fields; *(s32 *)(addr + i*4) = acc; }
+            fields = &g_addhero_entry_fields[g_addhero_card_slot * 20];
+            fields[i] = acc;
+
             r = addhero_parse_hex_suffix_byte(field, acc, count);
             g_addhero_entry_suffix_values[i] = r;
-            if (max < r) max = r;
-        } else {
-            { s32 addr; addr = g_addhero_card_slot * 0x50 + (s32)g_addhero_entry_fields; *(s32 *)(addr + i*4) = -1; }
+
+            if (max < r)
+            {
+                max = r;
+            }
+        }
+        else
+        {
+            s32 *fields = &g_addhero_entry_fields[g_addhero_card_slot * 20];
+            fields[i] = -1;
             g_addhero_entry_suffix_values[i] = 0;
         }
-        i++;
     }
+
     return max;
 }
 

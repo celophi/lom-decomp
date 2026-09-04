@@ -41,18 +41,23 @@ segments:
     vram: 0x80140000
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x1095, c, unk1]
+      - [0x1095, c, zukan_init] # gcc272_cdk, func_80141094, 100%
       - [0x1145, c, zukan_image_upload] # gcc272_cdk, func_80141144 + func_801411C4, 100%
       - [0x128D, c, zukan_update_frame] # gcc272_cdk, func_8014128C, 100%
       - [0x1355, c, unk1_after_update_frame]
       - [0x1741, c, zukan_scroll_window] # gcc280_g0, func_80141740, 100%
       - [0x1795, c, zukan_gpu_modes]      # gcc280_g0, 3 funcs, 100%
-      - [0x18A5, c, unk1_mid]
+      - [0x18A5, c, zukan_build_entry_primitives] # gcc272_cdk, func_801418A4, 100%
+      - [0x1989, c, unk1_mid]
       - [0x1B91, c, zukan_mode_setters] # gcc272_cdk, 2 funcs, 100%
-      - [0x1C09, c, unk1_mid_tail]
+      - [0x1C09, c, zukan_transition_update] # gcc272_cdk, func_80141C08, 100%
+      - [0x1DF5, c, unk1_mid_tail]
       - [0x2375, c, zukan_outline_fade]   # gcc280_g0, 3 funcs, 100%
-      - [0x27E1, c, unk1_tail]
+      - [0x27E1, c, zukan_resource_table_init] # gcc272_cdk, func_801427E0, 100%
       - [0x2885, c, zukan_resource_helpers] # gcc272_cdk, 2 funcs, 100%
-      - [0x28F1, c, unk1_tail_after_resource_helpers]
+      - [0x28F1, c, zukan_resource_text] # gcc272_cdk, func_801428F0, 100%
+      - [0x29C5, c, zukan_resource_sprites] # gcc272_cdk, func_801429C4, 100%
+      - [0x2B3D, c, zukan_resource_loader] # gcc272_cdk, func_80142B3C, 99.887640% in progress
+      - [0x2CA1, c, unk1_tail_after_resource_helpers]
       - [0x471D, data, data]
   - [0x17D7D]
