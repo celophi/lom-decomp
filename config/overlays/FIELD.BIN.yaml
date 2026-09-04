@@ -86,13 +86,14 @@ segments:
       - [0x345D1, c, func_80084240]              # gcc272_cdk, 100%
       - [0x34671, c, unk2_e_tail]               # gcc272_cdk, remaining asm-derived C
       - [0x347B5, c, field22]                   # gcc272_cdk, func_80084424
-      - [0x349C1, c, unk2_f]                    # gcc272_cdk, func_80084630 .. func_80084700
+      - [0x349C1, c, func_80084630]             # gcc272_cdk, 100%
+      - [0x34A91, c, unk2_f]                    # gcc272_cdk, func_80084700
       - [0x35099, c, field27]                   # gcc272_cdk, func_80084D08 (WIP 94.46%)
       - [0x360C1, c, unk2_f_b]                  # gcc272_cdk, func_80085D30 .. func_80085E80
       - [0x36215, c, field24]                   # gcc272_cdk, func_80085E84
       - [0x3633D, c, field340]                  # gcc272_cdk, func_80085FAC
       - [0x363C1, c, func_80086030]             # gcc272_cdk, 100%
-      - [0x3645D, c, unk2_g]                    # gcc272_cdk, func_800860CC
+      - [0x3645D, c, func_800860CC]             # gcc272_cdk, 100%
       - [0x36515, c, field25]                   # gcc272_cdk, func_80086184
       - [0x366A1, c, field_load_vram_resource]  # gcc272_cdk, field_load_vram_resource + func_80086374 (100%)
       - [0x36825, c, unk2_h_b]                  # gcc272_cdk, func_80086494

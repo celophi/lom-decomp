@@ -150,10 +150,11 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_e.c \
 	src/overlays/field/func_80084240.c \
 	src/overlays/field/unk2_e_tail.c \
+	src/overlays/field/func_80084630.c \
 	src/overlays/field/unk2_f.c \
 	src/overlays/field/unk2_f_b.c \
 	src/overlays/field/func_80086030.c \
-	src/overlays/field/unk2_g.c \
+	src/overlays/field/func_800860CC.c \
 	src/overlays/field/field_load_vram_resource.c \
 	src/overlays/field/unk2_h_b.c \
 	src/overlays/field/unk2_i.c \
