@@ -2476,10 +2476,7 @@ void akao_seq_op_enable_reverb(AkaoChannelState* arg0, s32 arg1)
  *        flags 0x110, and clears channel field 0xD4.
  * @param arg0 Channel state; @c is_sfx_channel selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
- * @note Residual: the seq-channel path register coloring differs (5 rows), a
- *       gcc 2.8 coloring tie-break the permuter cannot move (shared with
- *       akao_seq_op_enable_reverb).
- * @see decomp.me (98.27%)
+ * @see decomp.me (100%)
  */
 void akao_seq_op_disable_reverb(AkaoChannelState* arg0, s32 arg1)
 {
@@ -2525,9 +2522,7 @@ void akao_seq_op_enable_pitch_modulation(AkaoChannelState* arg0, s32 arg1)
  *        driver flags 0x100, and clears channel field 0xD6.
  * @param arg0 Channel state; @c is_sfx_channel selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
- * @note Residual: the seq-channel path register coloring differs (5 rows), a
- *       gcc 2.8 coloring tie-break shared with the reverb handlers.
- * @see decomp.me (98.27%)
+ * @see decomp.me (100%)
  */
 void akao_seq_op_disable_pitch_modulation(AkaoChannelState* arg0, s32 arg1)
 {

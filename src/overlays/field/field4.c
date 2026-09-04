@@ -3509,11 +3509,16 @@ u8 *func_8006C658(Struct_D800FDF58 *rec, u8 *base)
  *       behind an `addu a2, a0, zero` entry copy because the unk3B index temp
  *       takes a0; ours coalesces the entry copy so `rec` keeps a0 and the temp
  *       goes to a1, which also costs a load-delay nop where the target puts the
- *       base[4] read. local_alloc_oracle --search names the needed edit exactly:
- *       `--drop-sugg 80` (kill the parameter's a0 copy-suggestion) plus
- *       `--add-sugg 80=a2`; dropping the suggestion alone does put the index temp
- *       in a0 but lands `rec` in a1, not a2. No C spelling found reaches it -
- *       see [ENTRY-04] for the four probe classes measured dead here.
+ *       base[4] read. Confirmed cause (see idioms.md [ENTRY-05]): in our compile
+ *       `rec` is a block-local allocno, so local-alloc honours its a0
+ *       copy-suggestion before the index temp is placed. The target coloring
+ *       (rec a2, index temp a0, base a1) needs `rec` to be a GLOBAL allocno so
+ *       that the index temp takes a0 first and prunes rec's a0 preference. A
+ *       dummy `rec` read after the branch reproduces the whole entry sequence
+ *       (+2 exact rows, +2 insns), but no natural spelling that keeps `rec`
+ *       live past the branch without emitting a use has been found. Measured
+ *       inert: aliases, named temps, statement order, K&R, if/else, result
+ *       variable, for/while wrappers, volatile field read, u8* parameter.
  * @see decomp.me (89.19%) TODO
  */
 u8 func_8006C7D8(Struct_D800FDF58 *rec)
