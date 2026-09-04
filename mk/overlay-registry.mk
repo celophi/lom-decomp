@@ -837,7 +837,7 @@ overlay_wsel_gcc_280_g0_srcs := \
 	src/overlays/wsel/func_80050944.c \
 	src/overlays/wsel/func_80050B40.c \
 	src/overlays/wsel/func_80050DB0.c \
-	src/overlays/wsel/unk1_tail_mid.c \
+	src/overlays/wsel/func_80050F0C.c \
 	src/overlays/wsel/func_800513D0.c \
 	src/overlays/wsel/func_80051D78.c
 
