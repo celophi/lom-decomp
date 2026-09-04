@@ -40,7 +40,10 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x1, rodata, rodata_before_choice_init]
+      - [0x1, rodata, rodata_before_func_801447DC]
+      - [0x95, .rodata, func_801447DC]
+      - [0xAD, .rodata, func_80144A24]
+      - [0xC5, rodata, rodata_after_func_80144A24]
       - [0x18D, .rodata, carda_choice_init]
       - [0x1A5, rodata, rodata_after_choice_init]
       - [0x371, c, carda_state_step]         # gcc272_cdk, 1 func, 100%
@@ -70,6 +73,8 @@ segments:
       - [0x3DF5, c, func_80143DF4]              # gcc272_cdk, func_80143DF4, 100%
       - [0x3F91, c, func_80143F90]              # gcc272_cdk, func_80143F90, 100%
       - [0x4051, c, unk1_after_checksum_tail]
+      - [0x47DD, c, func_801447DC]             # gcc272_cdk, func_801447DC, 100%
+      - [0x4A25, c, func_80144A24]             # gcc272_cdk, func_80144A24, 100%
       - [0x4CD1, c, carda_glyph_builder]       # gcc272_cdk, func_80144CD0, 100%
       - [0x4F19, c, carda_choice_prompt]        # gcc272_cdk, 2 funcs, 100%
       - [0x5051, c, unk1_after_choice]
@@ -80,14 +85,14 @@ segments:
       - [0x6AF1, c, carda_choice_cancel]        # gcc272_cdk, func_80146AF0, 100%
       - [0x6CA5, c, func_80146CA4]              # gcc272_cdk, func_80146CA4, 100%
       - [0x6E81, c, carda_header_label]        # gcc272_cdk, func_80146E80, 100%
-      - [0x6EDD, c, unk1_after_choice_tail]
+      - [0x6EDD, c, func_80146EDC]              # gcc272_cdk, func_80146EDC, 100%
       - [0x7101, c, func_80147100]             # gcc272_cdk, func_80147100, 100%
       - [0x71E5, c, carda_format_decimal]     # gcc272_cdk, 1 func, 100%
       - [0x72F9, c, carda_format_hex]          # gcc272_cdk, func_801472F8, 100%
       - [0x73C1, c, carda_hex_parse]            # gcc272_cdk, 2 funcs, 100%
       - [0x7491, c, carda_parse_hex_suffix_byte] # gcc272_cdk, func_80147490, 100%
-      - [0x7589, c, func_80147588]              # gcc280_g0, func_80147588, 97.82%
-      - [0x77CD, c, unk1_before_stream_reset]
+      - [0x7589, c, func_80147588]              # WIP gcc272_cdk, 99.82%
+      - [0x77CD, c, func_801477CC]              # WIP gcc272_cdk, 99.25% exact-size
       - [0x7C5D, c, carda_reset_entry_ranks]       # gcc272_cdk, func_80147C5C, 100%
       - [0x7C95, c, carda_known_entry_type]     # gcc272_cdk, func_80147C94, 100%
       - [0x7DCD, c, func_80147DCC]               # gcc272_cdk, func_80147DCC, 100%
