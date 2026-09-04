@@ -837,6 +837,8 @@ overlay_wsel_gcc_280_g0_srcs := \
 
 OVERLAYS += zukan
 overlay_zukan_gcc_272_cdk_g0_srcs := \
+	src/overlays/zukan/zukan_init.c \
+	src/overlays/zukan/zukan_build_entry_primitives.c \
 	src/overlays/zukan/zukan_image_upload.c \
 	src/overlays/zukan/zukan_update_frame.c \
 	src/overlays/zukan/zukan_mode_setters.c \
@@ -844,7 +846,6 @@ overlay_zukan_gcc_272_cdk_g0_srcs := \
 	src/overlays/zukan/zukan_resource_table_init.c \
 	src/overlays/zukan/zukan_resource_text.c
 overlay_zukan_gcc_280_g0_srcs := \
-	src/overlays/zukan/unk1.c \
 	src/overlays/zukan/unk1_after_update_frame.c \
 	src/overlays/zukan/zukan_scroll_window.c \
 	src/overlays/zukan/zukan_gpu_modes.c \

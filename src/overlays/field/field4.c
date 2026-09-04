@@ -116,11 +116,29 @@ typedef struct
     u8 unk10; /* 0x10 */
     u8 unk11; /* 0x11 */
     u8 pad12[0x14 - 0x12];
-    u32 unk14; /* 0x14 (overlaps unk16 at its upper halfword) */
+    union
+    {
+        u32 w; /* 0x14 */
+        struct
+        {
+            u16 lo; /* 0x14 */
+            s16 hi; /* 0x16 */
+        } h;
+    } u14;
     s16 unk18; /* 0x18 */
     u8 pad1A[0x23 - 0x1A];
     u8 unk23; /* 0x23 */
-    u32 unk24; /* 0x24 (overlaps byte writes at 0x24/0x25) */
+    union
+    {
+        u32 w; /* 0x24 */
+        struct
+        {
+            u8 unk24; /* 0x24 */
+            u8 unk25; /* 0x25 */
+            u8 unk26; /* 0x26 */
+            u8 unk27; /* 0x27 */
+        } b;
+    } u24;
     u32 unk28; /* 0x28 */
     u8 unk2C; /* 0x2C */
     u8 pad2D;
@@ -2301,10 +2319,17 @@ Struct_D800FDF58* func_80087C9C(s32);
  *         fold into one displacement (+7);
  *       - D_800EB254 has a 4-byte stride read as s16, not an s16 array;
  *       - g_pad_ctx is loaded ONCE into a local and reused at the func_8009C2E0
- *         call, which is what brings the insn count to exactly 295.
- *       Residue is 31 rows, mostly base-address materialization order in the
- *       arg0 == -2 arm. See working/func_8006AD04/STATUS.md.
- * @see decomp.me (95.68%) TODO
+ *         call, which is what brings the insn count to exactly 295;
+ *       - the post-call unk1C update indexes D_800FDF58[slot] directly and
+ *         assigns `pad` inside the expression (+7); an `entry` pointer there
+ *         makes the arg0 == -2 arm's pointer a global pseudo and its index
+ *         chain leaves s0;
+ *       - in the lookup arm, unk21 is stored after unk8 (+2).
+ *       Residue is 19 rows: the ~0x1FF constant is materialized early, and
+ *       in the arg0 == -2 arm the template pointer takes v1 instead of a0 so
+ *       the D_800EB254 lui cannot fill the unk8 load delay (+1 nop).
+ *       See working/func_8006AD04/STATUS.md.
+ * @see decomp.me (97.53%) TODO
  */
 s32 func_8006AD04(s32 arg0, s32 arg1, s32 arg2)
 {
@@ -2366,9 +2391,7 @@ s32 func_8006AD04(s32 arg0, s32 arg1, s32 arg2)
     func_8006A9A4(slot, slot, id, 0);
     func_8006B4D0(slot, slot);
 
-    pad = (u8*)g_pad_ctx;
-    entry = &D_800FDF58[slot];
-    entry->unk1C = (entry->unk1C & ~0x1FF) | ((pad[(slot * 0x250) + 0x608] >> 7) ^ 1);
+    D_800FDF58[slot].unk1C = (D_800FDF58[slot].unk1C & ~0x1FF) | (((pad = (u8*)g_pad_ctx)[(slot * 0x250) + 0x608] >> 7) ^ 1);
 
     if ((slot == 2) && (arg1 >= 0x41))
     {
@@ -2405,8 +2428,8 @@ s32 func_8006AD04(s32 arg0, s32 arg1, s32 arg2)
     {
         D_800FDF58[slot].unk0 = found->unk0;
         D_800FDF58[slot].unk4 = found->unk4;
-        D_800FDF58[slot].unk21 = 0;
         D_800FDF58[slot].unk8 = found->unk8;
+        D_800FDF58[slot].unk21 = 0;
         found->unk25 = 0xFF;
         D_800FE774--;
     }
@@ -2602,29 +2625,25 @@ void func_8006B354(s32 arg0)
  * @param arg0 D_800FDF58/D_80105AE0 entry index to (re)initialize.
  * @param arg1 Resource slot index whose g_field_resource_entries slot_index
  *        is copied into the new entry's unkC.
- * @see decomp.me (86.64%) TODO
- * @note NOT MATCHED. Required to match, each measured by reverting it:
- *       - the loop counter i must be u32, not s32 (+7 rows) - otherwise gcc
- *         reverses the zero-fill loop into a down-counting form the target
- *         does not use;
- *       - the three 0xFFFF7FFF/0xEFFFFFFF/0xFFFBFFFF masks are separate
- *         locals assigned right after the zero-fill loop, not inline
- *         literals at point of use (+24 rows) - the target computes them
- *         early;
- *       - the flags &= ~0x1FF and flags |= 2 steps are two statements, not
- *         one combined expression (+26 rows);
- *       - the arg0==1 and arg0==2 special cases use an explicit
- *         Struct_D800FDF58* pointer for the constant-indexed entry (+17
- *         rows), not D_800FDF58[1]/[2] directly;
- *       - arg1 is reused as a scratch holding 0x80 for unk1A/unk19/unk18
- *         instead of the literal (structural fix, argdiff/target-only both
- *         drop).
- *       Residue (13 target-only / 8 yours-only rows) is register coloring
- *       around repeated D_800FDF58[arg0] base-address recomputation and
- *       the mask constants; a permuter run (9000+ iterations) found a
- *       `new_var = arg0` copy-and-reuse shape that scores better but did
- *       not reproduce cleanly by hand. See working/func_8006B4D0/ for the
- *       current source.
+ * @see decomp.me (97.06%) TODO
+ * @note NOT MATCHED. Instruction count is exact (180). Required to match,
+ *       each measured by reverting it:
+ *       - the loop counter i is u32 (else gcc reverses the zero-fill loop);
+ *       - the three masks are separate locals assigned after the loop;
+ *       - the unk10/12/14 and unk44/48/4C groups are cleared through a
+ *         pointer to the first member (the target forms the group address
+ *         as a value, `addiu v0, base, 0x10; addu`);
+ *       - unk178 is cleared with two read-modify-write statements; reusing
+ *         one `flags` variable for both the unk178 and unk1C chains gives
+ *         the pseudo two deaths, which pushes it out of local-alloc;
+ *       - unkC is stored before unk3B/unk21, and 0x80 is a literal;
+ *       - the arg0==1 / arg0==2 cases use an explicit pointer to the
+ *         constant-indexed entry.
+ *       Residue (11 rows) is the unk1C chain landing in a0 instead of v1:
+ *       our sched1 hoists its load above the unk22/unk28 stores while the
+ *       target keeps it in place, so the small constants take v1 first.
+ *       Measured inert: every position of the `flags` load statement,
+ *       compound vs two-step forms, a variable for 0xFFFB0000.
  */
 void func_8006B4D0(s32 arg0, s32 arg1)
 {
@@ -2634,6 +2653,8 @@ void func_8006B4D0(s32 arg0, s32 arg1)
     s32 mask_a;
     s32 mask_b;
     s32 mask_c;
+    s16 *q16;
+    u32 *q32;
 
     p = (u8*)&D_800FDF58[arg0];
     i = 0;
@@ -2649,12 +2670,10 @@ void func_8006B4D0(s32 arg0, s32 arg1)
     mask_c = 0xFFFBFFFF;
 
     D_80105AE0[arg0].unk19C = -1;
-    flags = D_80105AE0[arg0].u.unk178;
     D_80105AE0[arg0].unk1A0 = 0;
     D_80105AE0[arg0].unk18E = 0;
-    flags &= ~0x80;
-    flags &= ~0x40;
-    D_80105AE0[arg0].u.unk178 = flags;
+    D_80105AE0[arg0].u.unk178 &= ~0x80;
+    D_80105AE0[arg0].u.unk178 &= ~0x40;
 
     D_800FDF58[arg0].unk22 = (s8)(arg0 + 0x30);
     D_800FDF58[arg0].unk28 = 0xFF;
@@ -2688,21 +2707,22 @@ void func_8006B4D0(s32 arg0, s32 arg1)
     }
 
     D_800FDF58[arg0].unk1C &= ~0x800;
+    D_800FDF58[arg0].unkC = g_field_resource_entries[arg1].slot_index;
     D_800FDF58[arg0].unk3B = arg1;
     D_800FDF58[arg0].unk21 = 0;
-    D_800FDF58[arg0].unkC = g_field_resource_entries[arg1].slot_index;
-    D_800FDF58[arg0].unk10 = 0;
-    D_800FDF58[arg0].unk12 = 0;
-    D_800FDF58[arg0].unk14 = 0;
+    q16 = &D_800FDF58[arg0].unk10;
+    q16[0] = 0;
+    q16[1] = 0;
+    q16[2] = 0;
     D_800FDF58[arg0].unk16 = 1;
     D_800FDF58[arg0].unk34 = 0;
-    D_800FDF58[arg0].unk44 = 0;
-    D_800FDF58[arg0].unk48 = 0;
-    D_800FDF58[arg0].unk4C = 0;
-    arg1 = 0x80;
-    D_800FDF58[arg0].unk1A = arg1;
-    D_800FDF58[arg0].unk19 = arg1;
-    D_800FDF58[arg0].unk18 = arg1;
+    q32 = &D_800FDF58[arg0].unk44;
+    q32[0] = 0;
+    q32[1] = 0;
+    q32[2] = 0;
+    D_800FDF58[arg0].unk1A = 0x80;
+    D_800FDF58[arg0].unk19 = 0x80;
+    D_800FDF58[arg0].unk18 = 0x80;
 
     if (arg0 == 2 && D_800FDCEA >= 0x41)
     {
@@ -2728,40 +2748,32 @@ extern s32 D_80105760;
  *        and a couple of render/state flag bits.
  * @param arg0 D_800FE3A0 entry index to (re)initialize.
  * @param arg1 Selects the unk2E/unk33 timer value (0x40 if zero, else 0x30).
- * @see decomp.me (73.82%) TODO
- * @note NOT MATCHED. Required to match, each measured:
- *       - the loop counter and the flags-related mask both benefit from an
- *         early-hoisted constant (`i = 0xFF;` before the unk2E/unk33 writes,
- *         and splitting `(unk14 & ~0xF0) | 0x20` into two statements) - both
- *         proven via probe_variants (+7 and +1 rows respectively).
- *       Residue (13 target-only / 5 yours-only rows) is the target
- *       RE-COMPUTING `&D_800FE3A0[arg0]` a third time for the final field
- *       writes (unk11/unk14/unk28/unk24), where our compile reuses the entry
- *       pointer from region 2. Root cause traced this session: the target's
- *       `val` if/else compiles to the two-arm form (beqz; then `j`; else),
- *       whose multi-predecessor join label is a cse.c basic-block boundary -
- *       that reset is what forces the recompute (idioms.md [CSE-09]). Ours
- *       instead compiles to the PRELOAD form (val=0x40 hoisted, single
- *       branch), because arg0 dies into the region-2 entry pointer ($a2),
- *       leaving $a3 free for val; with no join label, cse never resets and
- *       folds region 3. So the real lever is forcing the two-arm branch /
- *       keeping arg0 live in $a3 - NOT a local address rewrite. Measured
- *       inert this session: default+override val form, a separate entry2
- *       pointer, splitting the unk14 expression, and a do/while(0) barrier
- *       (the last only shuffles a store, +1 row of scheduling noise). All
- *       seven toolchains tried; the four gcc 2.7.2/2.8.0 ones tie at 73.82%
- *       with this identical gap. A permuter run (70000+ iterations) found
- *       nothing beyond the two hoists above.
+ * @see decomp.me (88.23%) TODO
+ * @note NOT MATCHED. Instruction count is exact (79). Required to match,
+ *       each measured by reverting it:
+ *       - every field access goes through D_800FE3A0[arg0] (no entry
+ *         pointer): cse folds the address within each block and the target
+ *         re-derives it after the if/else join;
+ *       - the arg1 test is a real two-arm if/else that stores unk2E/unk33
+ *         in BOTH arms (the tails cross-jump); a `val` temp compiles to the
+ *         preload form and loses the join label;
+ *       - the 0x16 halfword and 0x24/0x25 bytes are union members, not
+ *         casts, or the address is re-derived per access;
+ *       - `i = 0x12` is assigned before the loop pointer.
+ *       Residue (16 rows) is local-alloc coloring in the two flag-word
+ *       regions: the target hoists `lw unk4` above the `= 8` stores so the
+ *       constant 8 takes v1, and keeps the unk14 chain in a1 with the ~0xF0
+ *       mask in v0. Measured inert: loading the words into locals early,
+ *       statement/operand order of the RMW expressions, reusing `i` or `arg1`
+ *       for constants, do/while(0) wrappers. See working/func_8006B7A0/.
  */
 void func_8006B7A0(s32 arg0, s32 arg1)
 {
     s32 i;
     u32 *p;
-    FieldActorPartDef *entry;
-    s32 val;
 
-    p = (u32*)&D_800FE3A0[arg0];
     i = 0x12;
+    p = (u32*)&D_800FE3A0[arg0];
     do
     {
         *p = 0;
@@ -2769,42 +2781,37 @@ void func_8006B7A0(s32 arg0, s32 arg1)
         p++;
     } while (i != 0);
 
-    entry = &D_800FE3A0[arg0];
-    entry->unk10 = 0x80;
-    entry->unkF = 0x80;
-    entry->unkE = 0x80;
-    entry->unk8 = 1;
-    entry->unk9 = 0xFF;
-    *(s16*)((u8*)entry + 0x16) = 0x14;
-    entry->unkD = 8;
-    *((u8*)entry + 0x25) = 8;
-    *((u8*)entry + 0x24) = 8;
-    entry->unk23 = 8;
-    entry->unk18 = 0x100;
-    entry->unk4 = (entry->unk4 | 0x800) & 0xFF3FFFFF;
-    entry->unk4 |= 0x400000;
-    entry->unk0 = entry->unk0 & 0xFCFFFFFF;
-    entry->unk0 |= 0x2000000;
+    D_800FE3A0[arg0].unk10 = 0x80;
+    D_800FE3A0[arg0].unkF = 0x80;
+    D_800FE3A0[arg0].unkE = 0x80;
+    D_800FE3A0[arg0].unk8 = 1;
+    D_800FE3A0[arg0].unk9 = 0xFF;
+    D_800FE3A0[arg0].u14.h.hi = 0x14;
+    D_800FE3A0[arg0].unkD = 8;
+    D_800FE3A0[arg0].u24.b.unk25 = 8;
+    D_800FE3A0[arg0].u24.b.unk24 = 8;
+    D_800FE3A0[arg0].unk23 = 8;
+    D_800FE3A0[arg0].unk18 = 0x100;
+    D_800FE3A0[arg0].unk4 = (D_800FE3A0[arg0].unk4 | 0x800) & 0xFF3FFFFF;
+    D_800FE3A0[arg0].unk4 |= 0x400000;
+    D_800FE3A0[arg0].unk0 = D_800FE3A0[arg0].unk0 & 0xFCFFFFFF;
+    D_800FE3A0[arg0].unk0 |= 0x2000000;
 
     if (arg1 != 0)
     {
-        val = 0x30;
+        D_800FE3A0[arg0].unk2E = 0x30;
+        D_800FE3A0[arg0].unk33 = 0x30;
     }
     else
     {
-        val = 0x40;
+        D_800FE3A0[arg0].unk2E = 0x40;
+        D_800FE3A0[arg0].unk33 = 0x40;
     }
 
-    i = 0xFF;
-    entry->unk2E = val;
-    entry->unk33 = val;
-
-    entry = &D_800FE3A0[arg0];
-    entry->unk11 = i;
-    val = entry->unk14 & ~0xF0;
-    entry->unk14 = val | 0x20;
-    entry->unk28 |= 0x2000000;
-    entry->unk24 |= 0x100000;
+    D_800FE3A0[arg0].unk11 = 0xFF;
+    D_800FE3A0[arg0].u14.w = (D_800FE3A0[arg0].u14.w & ~0xF0) | 0x20;
+    D_800FE3A0[arg0].unk28 |= 0x2000000;
+    D_800FE3A0[arg0].u24.w |= 0x100000;
 }
 
 /**
@@ -3961,7 +3968,7 @@ void func_8006D310(FieldActorState *actor)
             if (kind != 0xFE &&
                 (!(actor->unkC->unkC & 0x800) || ((actor->unk240[actor->unk29] >> i) & 1)) &&
                 part->unkB != 0xFF &&
-                (!(part->unk14 & 4) || g_field_track_index == 0))
+                (!(part->u14.w & 4) || g_field_track_index == 0))
             {
                 if (actor->unk229[g_field_track_index] == 0xFF)
                 {
