@@ -373,7 +373,7 @@ segments:
       - [0x65075, c, func_800B4CE4]                # gcc280_g0, 100%
       - [0x650AD, c, unk2_b_split025_tail]         # gcc280_g0, func_800B4D1C, 100%
       - [0x65181, c, func_800B4DF0]                # gcc280_g0, 100%
-      - [0x651F1, c, unk2_b_split025_tail_b]       # gcc272_cdk, func_800B4E60
+      - [0x651F1, c, unk2_b_split025_tail_b]       # gcc280_g0, func_800B4E60, 100%
       - [0x652C9, c, field90]                      # gcc272_cdk, func_800B4F38
       - [0x65311, c, unk2_b_split026]              # gcc272_cdk, func_800B4F80
       - [0x6640D, c, func_800B607C]                # gcc280_g0, 100%
