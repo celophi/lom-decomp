@@ -4268,9 +4268,8 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             if (menu_item_is_nondefault((u8*)g_menu_item_ptr) != 0)
                             {
                                 void* a3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x30));
-                                void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
                                 menu_concat_encoded_text(&sp68, (void*)((u8*)a3 + *(u16*)((u8*)a3 + (*(u16*)(g_menu_item_ptr + 0x16) & 0x3F) * 2)),
-                                                         (void*)((u8*)a2 + *(u16*)((u8*)a2 + 0xB4)), a3);
+                                                         (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + *(u16*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + 0xB4)), a3);
                             }
                             else
                             {
@@ -4401,7 +4400,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44));
                             a3ptr = (u8*)g_menu_category2_item;
                             idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
-                            a2_2 = (void*)((u8*)a2 + *(u16*)((u8*)a2 + idx));
+                            a2_2 = (void*)((u8*)a2 + *(u16*)(idx + (u32)a2));
                             var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
                         }
                         break;
@@ -4810,7 +4809,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     {
                         void* base = (void*)g_pad_ctx;
                         s32 idx = shared_s0 - 7;
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)((u8*)base + (idx << 1) + g_menu_char_slot * 0x250 + 0x620) >> 9, 1, &pos, ((*var_s3 >> 9) & 7));
+                        var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)((u8*)base + ((idx << 1) + g_menu_char_slot * 0x250) + 0x620) >> 9, 1, &pos, ((*var_s3 >> 9) & 7));
                     }
                     break;
                     case 0xF:
@@ -4833,7 +4832,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             var_a0 = var_s1;
                             base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
                             {
-                                void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*(u8*)(D_80168C30 + (shared_s0 - 0x10 + 0x18)) * 2)));
+                                void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*(u8*)(D_80168C30 + shared_s0 + 0x18) * 2)));
                                 var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
                             }
                         }
@@ -5354,14 +5353,13 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
 
                 case 7:
                 {
-                    s32 two = 2;
                     shared_s0 = ITEM_SUB;
                     switch (shared_s0)
                     {
                     case 1:
                     {
                         void* base = (void*)g_pad_ctx + g_menu_char_slot * 0x250;
-                        if ((*(u8*)((u8*)base + 0x608) & 0x7F) != two || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                        if ((*(u8*)((u8*)base + 0x608) & 0x7F) != two_outer || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
                         {
                             var_a0 = var_s1;
                             base_a2_11 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
