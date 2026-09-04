@@ -848,7 +848,8 @@ overlay_zukan_gcc_272_cdk_g0_srcs := \
 	src/overlays/zukan/zukan_transition_update.c \
 	src/overlays/zukan/zukan_resource_helpers.c \
 	src/overlays/zukan/zukan_resource_table_init.c \
-	src/overlays/zukan/zukan_resource_text.c
+	src/overlays/zukan/zukan_resource_text.c \
+	src/overlays/zukan/zukan_resource_sprites.c
 overlay_zukan_gcc_280_g0_srcs := \
 	src/overlays/zukan/unk1_after_update_frame.c \
 	src/overlays/zukan/zukan_scroll_window.c \
