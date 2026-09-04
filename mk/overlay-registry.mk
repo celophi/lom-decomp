@@ -325,6 +325,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_restore_entry_music.c \
 	src/overlays/field/unk2_b_split001.c \
 	src/overlays/field/unk2_b_split001_tail.c \
+	src/overlays/field/func_800A3D44.c \
 	src/overlays/field/func_800A3B78.c \
 	src/overlays/field/unk2_b_split003.c \
 	src/overlays/field/func_800A4798.c \
