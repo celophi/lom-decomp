@@ -844,6 +844,7 @@ overlay_zukan_gcc_272_cdk_g0_srcs := \
 	src/overlays/zukan/zukan_image_upload.c \
 	src/overlays/zukan/zukan_update_frame.c \
 	src/overlays/zukan/zukan_mode_setters.c \
+	src/overlays/zukan/zukan_transition_update.c \
 	src/overlays/zukan/zukan_resource_helpers.c \
 	src/overlays/zukan/zukan_resource_table_init.c \
 	src/overlays/zukan/zukan_resource_text.c
