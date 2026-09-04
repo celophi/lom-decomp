@@ -521,6 +521,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field3.c
 overlay_field_gcc_280_g0_srcs := \
+	src/overlays/field/func_800BDBAC.c \
+	src/overlays/field/func_800C8FA8.c \
 	src/overlays/field/field303.c \
 	src/overlays/field/field305.c \
 	src/overlays/field/field306.c \
