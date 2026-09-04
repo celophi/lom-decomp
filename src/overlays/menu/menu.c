@@ -7334,71 +7334,64 @@ typedef struct
  * @brief Scan the item table for the next entry whose kind matches g_menu_active_item_category.
  * @param step Direction/stride to walk the table (1 = forward, -1 = backward).
  * @return Selected item-table index.
- * @see decomp.me (95.00%)
+ * @see decomp.me (100%)
  */
 u32 menu_step_item_selection(s32 step)
 {
-  MenuItemEntry *items;
-  u32 start;
-  u32 index;
-  u32 offset;
-  s32 kind;
-  u32 found;
-  u32 result;
-  PadContext *new_var;
-  g_menu_item_ptr = 0;
-  new_var = g_pad_ctx;
-  start = g_menu_inventory_index + step;
-  offset = (start << 6) + 0xCE0;
-  index = start;
-  items = (MenuItemEntry *) (((u8 *) new_var) + 0xCE0);
-  while (index < 0x64U)
-  {
-    if (items[index].flag != 0)
+    u32 start;
+    u32 index;
+    s32 kind;
+    u8* item;
+    u32 result;
+    u8* base;
+
+    g_menu_item_ptr = 0;
+    base = (u8*)g_pad_ctx;
+    start = g_menu_inventory_index + step;
+    item = base + ((start << 6) + 0xCE0);
+    index = start;
+    while (index < 0x64)
     {
-      kind = (items[index].attr >> 8) & 3;
-      if (kind == g_menu_active_item_category)
-      {
-        found = (u32) (((u8 *) g_pad_ctx) + offset);
-        g_menu_inventory_index = index;
-        g_menu_item_ptr = found;
-        switch (kind)
+        if (item[0] != 0)
         {
-          case 0:
-            g_menu_category0_item = found;
-            break;
-
-          case 1:
-            g_menu_category1_item = found;
-            break;
-
-          case 2:
-            g_menu_category2_item = found;
-            break;
-
+            kind = ((*(u32*)(item + 0x14)) >> 8) & 3;
+            if (kind == g_menu_active_item_category)
+            {
+                g_menu_inventory_index = index;
+                g_menu_item_ptr = (s32)((u8*)g_pad_ctx + ((index << 6) + 0xCE0));
+                switch (kind)
+                {
+                case 0:
+                    g_menu_category0_item = g_menu_item_ptr;
+                    break;
+                case 1:
+                    g_menu_category1_item = g_menu_item_ptr;
+                    break;
+                case 2:
+                    g_menu_category2_item = g_menu_item_ptr;
+                    break;
+                }
+                return index;
+            }
         }
+        index += step;
+        item += step << 6;
+    }
 
-        return index;
-      }
-    }
-    index += step;
-    offset += (kind = step) << 6;
-  }
-
-  result = g_menu_item_ptr;
-  if (result == 0)
-  {
-    if (kind == 1)
+    result = g_menu_item_ptr;
+    if (result == 0)
     {
-      g_menu_inventory_index = -1;
+        if (step == 1)
+        {
+            g_menu_inventory_index = -1;
+        }
+        else
+        {
+            g_menu_inventory_index = 0x64;
+        }
+        result = menu_step_item_selection(step);
     }
-    else
-    {
-      g_menu_inventory_index = 0x64;
-    }
-    result = menu_step_item_selection(kind);
-  }
-  return result;
+    return result;
 }
 
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
