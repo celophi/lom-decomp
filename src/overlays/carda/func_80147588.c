@@ -13,7 +13,7 @@ s32 func_8001714C();
  * @brief Scan directory entries for records whose name matches D_800ECF7C, parse a
  *        hex rank suffix from each, store it, and return the maximum rank seen.
  * @return Highest rank value produced by func_80147490 across matching entries.
- * @note WIP - not yet byte-matching. Currently 97.82% (residual: saved-register
+ * @note WIP - not yet byte-matching. Currently 99.82% with GCC 2.7.2 CDK (residual: saved-register
  *       allocation for the max/index accumulators plus two scheduling swaps in the
  *       name-compare call and the shift-amount reuse).
  */

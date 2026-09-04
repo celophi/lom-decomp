@@ -72,6 +72,8 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_format_decimal.c \
 	src/overlays/carda/carda_nibble_pair.c \
 	src/overlays/carda/carda_parse_hex_suffix_byte.c \
+	src/overlays/carda/func_80147588.c \
+	src/overlays/carda/func_801477CC.c \
 	src/overlays/carda/carda_reset_entry_ranks.c \
 	src/overlays/carda/carda_known_entry_type.c \
 	src/overlays/carda/carda_fixed_prompts.c \
@@ -89,8 +91,6 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_checksum_tail.c \
 	src/overlays/carda/unk1_after_choice.c \
 	src/overlays/carda/unk1_after_choice_after_restore.c \
-	src/overlays/carda/func_80147588.c \
-	src/overlays/carda/unk1_before_stream_reset.c \
 	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c \
 	src/overlays/carda/unk1_mid2_middle.c
 
