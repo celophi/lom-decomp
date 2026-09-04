@@ -116,6 +116,7 @@ overlay_cload_gcc_272_cdk_g0_srcs := \
 
 OVERLAYS += field
 overlay_field_gcc_272_cdk_g0_srcs := \
+	src/overlays/field/func_800CA1E0.c \
 	src/overlays/field/field4.c \
 	src/overlays/field/field_audio.c \
 	src/overlays/field/func_800675c8.c \
@@ -527,6 +528,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field3.c
 overlay_field_gcc_280_g0_srcs := \
+	src/overlays/field/func_800B622C.c \
+	src/overlays/field/func_800BD318.c \
 	src/overlays/field/func_800BDBAC.c \
 	src/overlays/field/func_800C8FA8.c \
 	src/overlays/field/field303.c \
@@ -823,6 +826,7 @@ OVERLAYS += wsel
 overlay_wsel_gcc_272_cdk_g0_srcs := \
 	src/overlays/wsel/wsel_main_loop.c \
 	src/overlays/wsel/wsel_init_display.c \
+	src/overlays/wsel/func_800503F0.c \
 	src/overlays/wsel/func_800520A8.c \
 	src/overlays/wsel/func_80052154.c \
 	src/overlays/wsel/func_800521D0.c \
@@ -833,7 +837,6 @@ overlay_wsel_gcc_272_cdk_g0_srcs := \
 	src/overlays/wsel/func_800514D8.c \
 	src/overlays/wsel/func_800517BC.c
 overlay_wsel_gcc_280_g0_srcs := \
-	src/overlays/wsel/unk1_tail.c \
 	src/overlays/wsel/func_80050944.c \
 	src/overlays/wsel/func_80050B40.c \
 	src/overlays/wsel/func_80050DB0.c \
