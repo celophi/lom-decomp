@@ -40,7 +40,9 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x1, rodata, rodata_before_choice_init]
+      - [0x1, rodata, rodata_before_func_80144A24]
+      - [0xAD, .rodata, func_80144A24]
+      - [0xC5, rodata, rodata_after_func_80144A24]
       - [0x18D, .rodata, carda_choice_init]
       - [0x1A5, rodata, rodata_after_choice_init]
       - [0x371, c, carda_state_step]         # gcc272_cdk, 1 func, 100%
@@ -70,6 +72,7 @@ segments:
       - [0x3DF5, c, func_80143DF4]              # gcc272_cdk, func_80143DF4, 100%
       - [0x3F91, c, func_80143F90]              # gcc272_cdk, func_80143F90, 100%
       - [0x4051, c, unk1_after_checksum_tail]
+      - [0x4A25, c, func_80144A24]             # gcc272_cdk, func_80144A24, 100%
       - [0x4CD1, c, carda_glyph_builder]       # gcc272_cdk, func_80144CD0, 100%
       - [0x4F19, c, carda_choice_prompt]        # gcc272_cdk, 2 funcs, 100%
       - [0x5051, c, unk1_after_choice]
