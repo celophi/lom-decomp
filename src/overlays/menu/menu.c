@@ -1629,12 +1629,13 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
 /**
  * @brief Initialize the full menu node tree and global menu state.
- * @note Not yet matched (17 register-only rows). The layout loop must stay a
- *       goto loop: the target's loop was never loop-optimized (no invariant
- *       hoist, unbiased node pointer). The single `var_a3 = 0` after the
- *       companion check and the dead `temp_v0_9` copy are also required.
- *       See working/menu_node_tree_init/STATUS.md for the remaining rows.
- * @see decomp.me (99.85%) https://decomp.me/scratch/XJkmb
+ * @note Not yet matched (5 register-only rows). Shapes required to match:
+ *       the layout loop stays a goto loop (the target's loop was never
+ *       loop-optimized), the single `var_a3 = 0` after the companion check,
+ *       the separate init-loop counter, the zero-initialized `temp_v0_9`
+ *       stored through `var_v0`/`new_var10`, and the node 0x1A/0x13 store
+ *       orders. See working/menu_node_tree_init/STATUS.md.
+ * @see decomp.me (99.95%) https://decomp.me/scratch/XJkmb
  */
 void menu_node_tree_init(void)
 {
@@ -1883,8 +1884,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x14].icon_id = 0xF;
     g_menu_nodes[0x13].icon_id = 0xB;
     g_menu_nodes[0x13].idx_nav.s.self_idx = 0x13;
-    g_menu_nodes[0x13].content_id = 0;
     g_menu_nodes[0x13].uA.s.child0 = 0x14;
+    g_menu_nodes[0x13].content_id = 0;
     g_menu_nodes[0x13].child1 = 0x15;
     g_menu_nodes[0x14].label_id = 0x12;
     g_menu_nodes[0x14].idx_nav.s.self_idx = 0x14;
@@ -1919,8 +1920,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].uA.s.child0 = 0x1A;
     g_menu_nodes[0x19].child1 = 0x1B;
     g_menu_nodes[0x1A].label_id = 0x17;
-    g_menu_nodes[0x1A].icon_id = 0x11;
     g_menu_nodes[0x1A].idx_nav.s.self_idx = 0x1A;
+    g_menu_nodes[0x1A].icon_id = 0x11;
     g_menu_nodes[0x1B].label_id = 0x13;
     g_menu_nodes[0x1B].idx_nav.s.self_idx = 0x1B;
     g_menu_nodes[0x1B].icon_id = 0x12;
@@ -2046,9 +2047,11 @@ tail_loop:
         g_menu_scene_type = -1;
         return;
     }
-    g_menu_scene_type = temp_v0_9;
+    var_v0 = temp_v0_9;
+    g_menu_scene_type = var_v0;
     new_var4 = g_menu_init_content_id;
-    g_menu_ability_mask = temp_v0_9;
+    new_var10 = temp_v0_9;
+    g_menu_ability_mask = new_var10;
     menu_open_content_page(new_var4);
     menu_set_active_node();
 }
