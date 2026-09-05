@@ -251,7 +251,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field165.c \
 	src/overlays/field/field168.c \
 	src/overlays/field/field178.c \
-	src/overlays/field/field185.c \
 	src/overlays/field/field187.c \
 	src/overlays/field/field_load_selected_small_history_value.c \
 	src/overlays/field/field_reset_music_track_index.c \
@@ -505,12 +504,12 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_i_b_split023_mid_tail.c \
 	src/overlays/field/unk2_i_b_split023_mid_b.c \
 	src/overlays/field/unk2_b_split025_tail3.c \
-	src/overlays/field/unk2_b_split127.c \
-	src/overlays/field/func_800C7168.c
+	src/overlays/field/unk2_b_split127.c
 
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field_text_format_number.c
 overlay_field_gcc_280_g0_srcs := \
+	src/overlays/field/field_gosub_result_ops.c \
 	src/overlays/field/field_menu_action_slots.c \
 	src/overlays/field/field_menu_record_ops.c \
 	src/overlays/field/unk2_b_split025_tail.c \
@@ -647,8 +646,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field179.c \
 	src/overlays/field/field180.c \
 	src/overlays/field/field181.c \
-	src/overlays/field/field184.c \
-	src/overlays/field/field186.c \
 	src/overlays/field/field188.c \
 	src/overlays/field/func_800C7558.c \
 	src/overlays/field/func_800C8014.c \
