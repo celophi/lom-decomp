@@ -239,12 +239,20 @@ typedef struct
 /* Globals                                                            */
 /* ------------------------------------------------------------------ */
 
+/**
+ * @brief ADDHERO overlay identifier stored at the start of the overlay.
+ * @note Placed in .sdata so it links ahead of .rodata without disturbing the
+ * 8-byte alignment of the switch jump table that immediately follows it.
+ */
+const s32 g_addhero_overlay_id __attribute__((section(".sdata"))) = 0x14;
+
 extern AddheroElementPoolHead g_addhero_element_pool;
 extern AddheroElement g_addhero_element1;
 extern AddheroDirEntry g_addhero_entries[][20];
 extern AddheroRecord g_addhero_entry_metadata;
 extern u8 *D_8012271C;
 extern u8 *g_addhero_load_step;
+extern void *jtbl_80140098[];
 
 extern s32 D_8003EC9C;
 extern s32 D_80122718;
@@ -856,6 +864,8 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         break;
     case 0xFC:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB6, 0x12), 4, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xFE:
         break;
     default:
         {
@@ -3001,6 +3011,17 @@ s32 addhero_advance_load_sequence(void)
     s32 poll_result20;
     s32 rank_index;
     s32 rank_value;
+    s32 dispatch;
+    static void *const keep[] __attribute__((section(".discard"))) = {
+        &&cl_case_0, &&cl_case_1, &&cl_case_2, &&cl_case_3,
+        &&cl_case_4, &&cl_case_5, &&cl_case_6, &&block_return,
+        &&cl_case_8, &&cl_case_9, &&cl_case_10, &&block_return,
+        &&block_return, &&block_return, &&block_return, &&cl_case_15,
+        &&cl_case_16, &&cl_case_17, &&cl_case_18, &&cl_case_19,
+        &&cl_case_20, &&block_return, &&block_return, &&block_return,
+        &&cl_case_24, &&cl_case_25, &&cl_case_26, &&cl_case_27,
+        &&cl_case_28, &&block_return, &&cl_case_30
+    };
 
     memcpy(&buf, &g_addhero_file_template, 6);
     phase_result = 1;
@@ -3011,16 +3032,24 @@ s32 addhero_advance_load_sequence(void)
         goto block_return;
     }
 
-    switch (*g_addhero_load_step)
+    switch (0)
     {
-    case 1:
+    case 0:
+        dispatch = *g_addhero_load_step;
+        if ((u32)dispatch >= 0x1F)
+        {
+            goto block_return;
+        }
+        goto *jtbl_80140098[dispatch];
+
+    cl_case_1:
         phase_result = 3;
         func_8001729C(g_addhero_card_slot);
         func_8001724C(g_addhero_card_slot * 0x10);
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 2:
+    cl_case_2:
         poll_result = addhero_poll_primary_handle_group();
         if (poll_result >= 3)
         {
@@ -3061,12 +3090,12 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = &D_80160574;
         break;
 
-    case 3:
+    cl_case_3:
         addhero_release_primary_handles();
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 4:
+    cl_case_4:
         do
         {
             poll_result = addhero_poll_secondary_handle_group();
@@ -3089,12 +3118,12 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_entry_state = 0xFD;
         break;
 
-    case 5:
+    cl_case_5:
         addhero_release_secondary_handles();
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 6:
+    cl_case_6:
         addhero_probe_render_two();
         g_addhero_entry_scan_active = 1;
         if (addhero_begin_entry_scan(g_addhero_card_slot) == 0)
@@ -3131,14 +3160,14 @@ s32 addhero_advance_load_sequence(void)
         } while (wait_attempts < 0x14);
         break;
 
-    case 8:
+    cl_case_8:
         phase_result = 3;
         func_8001729C(g_addhero_card_slot);
         func_800172AC(g_addhero_card_slot * 0x10);
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 9:
+    cl_case_9:
         phase_result = 3;
         func_8001729C(g_addhero_card_slot);
         func_8001725C(g_addhero_card_slot * 0x10);
@@ -3147,12 +3176,12 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 0:
+    cl_case_0:
         phase_result = 2;
         g_addhero_write_in_progress = 0;
         break;
 
-    case 10:
+    cl_case_10:
         func_80016F9C(&buf, (u8 *)g_addhero_entries + (g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES) + (g_addhero_selected_row * ADDHERO_DIRECTORY_ENTRY_BYTES));
         wait_attempts = 0;
         do
@@ -3166,7 +3195,7 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 15:
+    cl_case_15:
         poll_result = addhero_poll_primary_handle_group();
         if (poll_result >= 3)
         {
@@ -3218,7 +3247,7 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = D_8016057C;
         break;
 
-    case 16:
+    cl_case_16:
         do
         {
             poll_result = addhero_poll_secondary_handle_group();
@@ -3226,7 +3255,7 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 17:
+    cl_case_17:
         g_addhero_io_busy = 1;
         g_addhero_selection_status = 0;
         func_8001729C(g_addhero_card_slot);
@@ -3246,7 +3275,7 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 18:
+    cl_case_18:
         if (g_addhero_io_busy != 0)
         {
             poll_result = addhero_poll_primary_handle_group();
@@ -3271,7 +3300,7 @@ s32 addhero_advance_load_sequence(void)
         }
         break;
 
-    case 19:
+    cl_case_19:
         g_addhero_progress_active = 1;
         g_addhero_progress_start_tick = func_8002054C(-1);
         g_addhero_progress_bar_active = 1;
@@ -3294,7 +3323,7 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 20:
+    cl_case_20:
         poll_result20 = addhero_poll_primary_handle_group();
         if (poll_result20 == 0)
         {
@@ -3321,7 +3350,7 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = g_addhero_load_step - 1;
         break;
 
-    case 24:
+    cl_case_24:
         wait_attempts = 0;
         do
         {
@@ -3344,12 +3373,12 @@ s32 addhero_advance_load_sequence(void)
         addhero_open_status_dialog(3);
         break;
 
-    case 30:
+    cl_case_30:
         g_addhero_retry_count = 5;
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 27:
+    cl_case_27:
         g_addhero_progress_active = 1;
         g_addhero_progress_start_tick = func_8002054C(-1);
         g_addhero_progress_bar_active = 1;
@@ -3372,7 +3401,7 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 28:
+    cl_case_28:
         poll_result20 = addhero_poll_primary_handle_group();
         if (poll_result20 == 0)
         {
@@ -3397,7 +3426,7 @@ s32 addhero_advance_load_sequence(void)
         }
         goto block_close_decrement;
 
-    case 25:
+    cl_case_25:
         if (g_addhero_has_free_entry_space == 0)
         {
             func_8001729C(g_addhero_card_slot);
@@ -3464,7 +3493,7 @@ s32 addhero_advance_load_sequence(void)
         g_addhero_load_step = g_addhero_load_step + 1;
         break;
 
-    case 26:
+    cl_case_26:
         poll_result20 = addhero_poll_primary_handle_group();
         if (poll_result20 != 0)
         {
@@ -3515,8 +3544,6 @@ s32 addhero_advance_load_sequence(void)
         }
         goto block_close_decrement;
 
-    default:
-        break;
     }
 
     goto block_return;

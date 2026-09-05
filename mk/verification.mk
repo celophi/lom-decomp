@@ -26,7 +26,7 @@
 # symbols by name and normalizes relocations, so a whole-TU section shift is
 # invisible to it. Add a name here only once `make verify-<name>` actually
 # passes.
-VERIFIED_OVERLAYS := gover movie gname checkps title gosub golem niki
+VERIFIED_OVERLAYS := gover movie gname checkps title gosub golem niki addhero
 
 # Make has no upper-case function; overlay BINs are named in upper case.
 upper-case = $(shell echo '$(1)' | tr '[:lower:]' '[:upper:]')
