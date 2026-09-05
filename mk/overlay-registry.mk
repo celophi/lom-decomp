@@ -480,7 +480,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field264.c \
 	src/overlays/field/field265.c \
 	src/overlays/field/field268.c \
-	src/overlays/field/field269.c \
 	src/overlays/field/field273.c \
 	src/overlays/field/field_load_selected_equipment_mystic_cards.c \
 	src/overlays/field/field_upload_initial_vram_resource.c \
@@ -509,6 +508,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field_text_format_number.c
 overlay_field_gcc_280_g0_srcs := \
+	src/overlays/field/field_menu_count_ops.c \
 	src/overlays/field/field_gosub_result_ops.c \
 	src/overlays/field/field_menu_action_slots.c \
 	src/overlays/field/field_menu_record_ops.c \
@@ -591,7 +591,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800C33E4.c \
 	src/overlays/field/func_800C36F0.c \
 	src/overlays/field/func_800C5760.c \
-	src/overlays/field/func_800C6228.c \
 	src/overlays/field/func_800C7494.c \
 	src/overlays/field/func_800BD3B0.c \
 	src/overlays/field/field_golem_logic_blocks.c \
@@ -641,8 +640,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field170.c \
 	src/overlays/field/func_800C5B64.c \
 	src/overlays/field/field173.c \
-	src/overlays/field/field174.c \
-	src/overlays/field/field176.c \
 	src/overlays/field/field179.c \
 	src/overlays/field/field180.c \
 	src/overlays/field/field181.c \
@@ -689,7 +686,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field291.c \
 	src/overlays/field/field292.c \
 	src/overlays/field/field293.c \
-	src/overlays/field/field295.c \
 	src/overlays/field/field296.c \
 	src/overlays/field/field299.c \
 	src/overlays/field/field300.c \
