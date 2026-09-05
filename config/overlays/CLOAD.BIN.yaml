@@ -40,7 +40,9 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x1, rodata, rodata]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, rodata, rodata]
       - [0xC5, c, cload]     # gcc272_cdk
       - [0x5E9D, data, data]
   - [0x2B259]

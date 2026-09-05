@@ -62,10 +62,6 @@ typedef union
     DR_TPAGE draw_mode;
 } TitleFadePrimitive;
 
-/* The first word is a non-creative section sentinel. Keeping it in this
- * translation unit makes .text begin immediately at 0x8004FC74. */
-const u32 D_8004FC70 = 0x10;
-
 /* The complete .data payload is extracted by Splat as named databins.
  * Symbols used by the code are declared in title.h and assigned fixed overlay
  * addresses by config/symbols/title_symbol_addrs.txt. */

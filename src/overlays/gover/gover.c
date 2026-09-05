@@ -129,8 +129,6 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
 /** Locates the first nested offset table within the staged resource. */
 #define GOVER_SFX_TABLE_OFFSET (*(u32*)0x80180004)
 
-const s32 g_gover_overlay_id = 10;
-
 /** Unreferenced BSS word retained for the original overlay layout. */
 s32 D_80140704;
 

@@ -42,7 +42,8 @@ segments:
     vram: 0x80140000
     align: 2
     subsegments:
-      - [0x1, .rodata, gover]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       - [0x5, c, gover]
       - [0x705, .bss, gover]
   - [0x104D]

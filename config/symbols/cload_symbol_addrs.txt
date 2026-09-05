@@ -247,3 +247,4 @@ g_cload_selected_file_header            = 0x80162A10;
 g_cload_selected_file_title             = 0x80162A14;
 g_cload_selected_save_slot_id           = 0x80162C5F;
 g_cload_selected_card_path              = 0x80162C90;
+g_cload_overlay_id = 0x80140000;

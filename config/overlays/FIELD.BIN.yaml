@@ -44,7 +44,8 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x1, rodata, rodata]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, field_scene_build]
       - [0x65, .rodata, field_render]
       - [0x79, .rodata, field_animation]

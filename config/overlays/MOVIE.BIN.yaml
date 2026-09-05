@@ -33,7 +33,7 @@ options:
   o_as_suffix: True
   subalign: 4
 
-  section_order: [".sdata", ".rodata", ".text", ".data", ".sbss", ".bss"]
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
 
   string_encoding: ASCII
   data_string_encoding: ASCII
@@ -45,7 +45,8 @@ segments:
     vram: 0x80140000
     align: 4
     subsegments:
-      - [0x1, .sdata, movie]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, movie]
       - [0x19, c, movie]
   - [0x1915]

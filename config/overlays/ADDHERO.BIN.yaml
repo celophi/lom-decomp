@@ -29,7 +29,7 @@ options:
   o_as_suffix: True
   subalign: 2
 
-  section_order: [".sdata", ".rodata", ".text", ".data", ".sbss", ".bss"]
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
 
   string_encoding: ASCII
   data_string_encoding: ASCII
@@ -41,7 +41,8 @@ segments:
     vram: 0x80140000
     align: 4
     subsegments:
-      - [0x1, .sdata, addhero]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, addhero]
       - [0x89, rodatabin, addhero_format_overflow_and_file_template]
       - [0x99, rodatabin, addhero_load_jump_table]

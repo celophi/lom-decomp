@@ -47,10 +47,11 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       # Data-only C TU: the auto text anchor makes Splat emit a full target
       # cdrom_data.s for objdiff while linking the real sections from C.
       - [auto, c, cdrom_data]
-      - [0x1, .rodata, cdrom_data]
       - [0x5, .rodata, cdrom]
       - [0x55, .rodata, pattern]
       - [0xA5, c, init]

@@ -42,7 +42,8 @@ segments:
     vram: 0x80140000
     align: 4
     subsegments:
-      - [0x1, .rodata, gname]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       - [0x5, c, gname]
       - start: 0x2C99
         type: index_boundaries
