@@ -155,7 +155,8 @@ segments:
       - [0x42591, c, field_actor_idle_ops]      # gcc272_cdk, func_80092200 .. func_80092550 (6 funcs; func_80092394 99.565% register allocation, rest 100%)
       - [0x4297D, c, unk2_i_b_split008_tail2_tail] # gcc272_cdk, func_800925EC
       - [0x42FB5, c, func_80092C24]                # gcc272_cdk, 100%
-      - [0x43029, c, unk2_i_b_split008_tail2b]     # gcc272_cdk, func_80092C98
+      - [0x43029, c, func_80092C98]                # gcc272_cdk, 97.53% WIP
+      - [0x43E49, c, unk2_i_b_split008_tail2b]     # gcc272_cdk, func_80093AB8 .. func_80094508
       - [0x44A21, c, func_80094690]                # gcc272_cdk, 100%
       - [0x44A8D, c, unk2_i_b_split008_tail3]      # gcc272_cdk, func_800946FC
       - [0x44EED, c, func_80094B5C]                # gcc272_cdk, 100%
