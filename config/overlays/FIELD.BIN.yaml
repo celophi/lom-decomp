@@ -282,15 +282,7 @@ segments:
       - [0x58E09, c, field289]                     # gcc272_cdk, func_800A8A78
       - [0x58E95, c, field290]                     # gcc272_cdk, func_800A8B04
       - [0x58F21, c, unk2_b_split010_tail]         # gcc272_cdk, func_800A8B90
-      - [0x5908D, c, field71]                      # gcc272_cdk, func_800A8CFC
-      - [0x590A1, c, field287]                     # gcc280_g0, func_800A8D10
-      - [0x5911D, c, field243]                     # gcc280_g0, func_800A8D8C
-      - [0x5916D, c, field235]                     # gcc272_cdk, func_800A8DDC
-      - [0x591B9, c, func_800A8E28]                 # gcc272_cdk, func_800A8E28 + func_800A8EAC (100%)
-      - [0x5931D, c, field72]                      # gcc272_cdk, func_800A8F8C
-      - [0x59345, c, field360]                     # gcc272_cdk, func_800A8FB4
-      - [0x593F1, c, field73]                   # gcc272_cdk, func_800A9060
-      - [0x59489, c, func_800A90F8]             # gcc272_cdk, 100%
+      - [0x5908D, c, field_pad_context_ops]     # gcc272_cdk, func_800A8CFC .. func_800A90F8 (11 funcs, 100%; 5 of them do not match under gcc280_g0)
       - [0x59529, c, unk2_b_split013_tail_a]    # gcc272_cdk, func_800A9198
       - [0x5965D, c, field331]                  # gcc272_cdk, func_800A92CC (92.88% WIP)
       - [0x5972D, c, unk2_b_split013_b]         # gcc272_cdk, func_800A939C
