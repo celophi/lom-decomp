@@ -8,12 +8,12 @@ typedef struct
 } UnkStruct80051EB4;
 
 extern UnkStruct80051EB4 D_80051EB4;
-extern void func_800AAFEC(UnkStruct80051EB4 *arg0);
+extern void field_open_gosub_screen_sequence(UnkStruct80051EB4 *arg0);
 
 void func_800C8220(void)
 {
     UnkStruct80051EB4 local;
 
     local = D_80051EB4;
-    func_800AAFEC(&local);
+    field_open_gosub_screen_sequence(&local);
 }

@@ -73,6 +73,9 @@ typedef struct
 
 extern FieldScriptContext* g_field_script;
 
+/* Opcodes 0x80 and above dispatch through this table, indexed by opcode - 0x80. */
+extern void (*g_field_script_ext_op_table[16])();
+
 #define FIELD_SCRIPT_RECORD(index) ((FieldScriptRecord*)((u8*)g_field_script + ((index) * 3 << 2)))
 #define FIELD_SCRIPT_RECORD_STATE(index) ((FieldScriptRecordState*)((u8*)g_field_script + ((index) * 3 << 2)))
 #define FIELD_SCRIPT_ACTIVE_RECORD() FIELD_SCRIPT_RECORD(g_field_script->active_record)

@@ -1629,17 +1629,12 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
 /**
  * @brief Initialize the full menu node tree and global menu state.
- * @note Not yet matched (5 register-only rows). Shapes required to match:
- *       the layout loop stays a goto loop (the target's loop was never
- *       loop-optimized), the single `var_a3 = 0` after the companion check,
- *       the separate init-loop counter, the zero-initialized `temp_v0_9`
- *       stored through `var_v0`/`new_var10`, and the node 0x1A/0x13 store
- *       orders. See working/menu_node_tree_init/STATUS.md.
- * @see decomp.me (99.95%) https://decomp.me/scratch/XJkmb
+ * @see decomp.me (100%) https://decomp.me/scratch/XJkmb
  */
 void menu_node_tree_init(void)
 {
     MenuNode* var_a0;
+    int active_flag;
     MenuNode* var_a2;
     u32 temp_v0_3;
     u32 temp_v0_5;
@@ -1647,7 +1642,6 @@ void menu_node_tree_init(void)
     s32 temp_v0_9;
     s32 var_a3;
     s32 var_t0;
-    s32 init_idx;
     u8* new_var5;
     MenuNode* new_var2;
     int new_var7;
@@ -1687,7 +1681,7 @@ void menu_node_tree_init(void)
     u16 temp2;
     u16 loop_unk2;
     u32 new_var9;
-    init_idx = 0;
+    var_t0 = 0;
     var_a0 = g_menu_nodes;
     g_menu_prev_node = MENU_NONE;
     g_menu_content_ready = 0;
@@ -1702,6 +1696,7 @@ void menu_node_tree_init(void)
     g_menu_item_ptr = 0;
     g_menu_category0_item = 0;
     g_menu_category1_item = 0;
+    active_flag = 1;
     g_menu_category2_item = 0;
     g_menu_active_equipped_item = 0;
     g_menu_saved_category0_item = 0;
@@ -1714,18 +1709,18 @@ void menu_node_tree_init(void)
     g_menu_cursor_enable = 0;
     do
     {
-        loop_unk2 = var_a0[init_idx].u2.unk2;
-        var_a0[init_idx].state = MENU_NODE_STATE_UNINIT;
-        var_a0[init_idx].icon_id = 0;
-        var_a0[init_idx].content_id = MENU_NONE;
-        var_a0[init_idx].child3 = MENU_NONE;
-        var_a0[init_idx].child2 = MENU_NONE;
-        var_a0[init_idx].child1 = MENU_NONE;
-        var_a0[init_idx].uA.s.child0 = MENU_NONE;
-        var_a0[init_idx].u2.unk2 = (u16)((loop_unk2 & 0xFFFC) | 0x30);
-        var_a0[init_idx].u2.s.parent_idx = MENU_NONE;
-        init_idx += 1;
-    } while (init_idx < MENU_NODE_COUNT);
+        loop_unk2 = var_a0[var_t0].u2.unk2;
+        var_a0[var_t0].state = MENU_NODE_STATE_UNINIT;
+        var_a0[var_t0].icon_id = 0;
+        var_a0[var_t0].content_id = MENU_NONE;
+        var_a0[var_t0].child3 = MENU_NONE;
+        var_a0[var_t0].child2 = MENU_NONE;
+        var_a0[var_t0].child1 = MENU_NONE;
+        var_a0[var_t0].uA.s.child0 = MENU_NONE;
+        var_a0[var_t0].u2.unk2 = (u16)((loop_unk2 & 0xFFFC) | 0x30);
+        var_a0[var_t0].u2.s.parent_idx = MENU_NONE;
+        var_t0 += 1;
+    } while (var_t0 < MENU_NODE_COUNT);
 
     g_menu_nodes[0].label_id = 1;
     g_menu_nodes[0].idx_nav.s.self_idx = 0;
@@ -1880,16 +1875,16 @@ void menu_node_tree_init(void)
     *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = (u16)(temp_v0_12 | 1);
     g_menu_nodes[0x12].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x13].label_id = 0x11;
-    g_menu_nodes[0x16].content_id = 1;
     g_menu_nodes[0x14].icon_id = 0xF;
     g_menu_nodes[0x13].icon_id = 0xB;
     g_menu_nodes[0x13].idx_nav.s.self_idx = 0x13;
-    g_menu_nodes[0x13].uA.s.child0 = 0x14;
     g_menu_nodes[0x13].content_id = 0;
+    g_menu_nodes[0x13].uA.s.child0 = 0x14;
     g_menu_nodes[0x13].child1 = 0x15;
     g_menu_nodes[0x14].label_id = 0x12;
     g_menu_nodes[0x14].idx_nav.s.self_idx = 0x14;
     g_menu_nodes[0x15].label_id = 0x13;
+    g_menu_nodes[0x16].content_id = 1;
     g_menu_nodes[0x15].idx_nav.s.self_idx = 0x15;
     g_menu_nodes[0x15].icon_id = 0x12;
     g_menu_nodes[0x16].label_id = 0x14;
@@ -1957,7 +1952,7 @@ void menu_node_tree_init(void)
     temp_v0_13 = temp_v0 & 0xFF3D;
     *((volatile u16*)(&g_menu_nodes[0x1D].u2.unk2)) = temp_v0_13;
     temp_v1 = g_menu_nodes[0x1E].u2.unk2;
-    *((volatile u16*)(&g_menu_nodes[0x1D].u2.unk2)) = (u16)(temp_v0_13 | 1);
+    *((volatile u16*)(&g_menu_nodes[0x1D].u2.unk2)) = (u16)(temp_v0_13 | active_flag);
     g_menu_nodes[0x1D].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x1F].u2.unk2 = (u16)((g_menu_nodes[0x1F].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x1F].u2.s.parent_idx = 0x1E;
@@ -2015,33 +2010,36 @@ void menu_node_tree_init(void)
     temp_v0_9 = 0;
     var_a2 = g_menu_nodes;
 tail_loop:
+    do
     {
-        if (var_a2->u2.s.parent_idx == MENU_NONE)
         {
-            if (var_a2->u2.s.flags & 1)
+            if (var_a2->u2.s.parent_idx == MENU_NONE)
             {
-                temp_a0 = var_a3 & 0xFFFF;
-                temp_a1 = var_a3 & 0x1FF;
-                var_a3 += MENU_ROW_HEIGHT;
-                new_var10 = (temp_a0 & 1) << 15;
-                new_var6 = (temp_a0 >> 1) & 0xFF;
-                var_a2->u8_u.nav_y_packed = (u16)(var_a2->u8_u.nav_y_packed & 0x80FF);
-                var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
-                var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | new_var6);
-                new_var8 = (temp_a1 & 1) << 15;
-                var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | new_var10);
-                var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | new_var8);
-                var_a1 = temp_a1 >> 1;
-                var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0xFF00) | var_a1);
+                if (var_a2->u2.s.flags & 1)
+                {
+                    temp_a0 = var_a3 & 0xFFFF;
+                    temp_a1 = var_a3 & 0x1FF;
+                    var_a3 += MENU_ROW_HEIGHT;
+                    new_var10 = (temp_a0 & 1) << 15;
+                    new_var6 = (temp_a0 >> 1) & 0xFF;
+                    var_a2->u8_u.nav_y_packed = (u16)(var_a2->u8_u.nav_y_packed & 0x80FF);
+                    var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
+                    var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | new_var6);
+                    new_var8 = (temp_a1 & 1) << 15;
+                    var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | new_var10);
+                    var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | new_var8);
+                    var_a1 = temp_a1 >> 1;
+                    var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0xFF00) | var_a1);
+                }
+            }
+            var_t0 += 1;
+            var_a2++;
+            if (var_t0 < MENU_NODE_COUNT)
+            {
+                goto tail_loop;
             }
         }
-        var_t0 += 1;
-        var_a2++;
-        if (var_t0 < MENU_NODE_COUNT)
-        {
-            goto tail_loop;
-        }
-    }
+    } while (0);
     if (g_active_script != 0)
     {
         g_menu_scene_type = -1;
