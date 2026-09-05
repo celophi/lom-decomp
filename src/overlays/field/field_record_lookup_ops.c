@@ -35,7 +35,7 @@ typedef struct
 #define REC_TABLE ((StructC1B98 *)D_80122B78)
 
 SomeRec *func_80087F0C(s32 arg0);
-void func_800B3114(SomeRec *counter, s32 delta);
+void saturating_counter_add(SomeRec *counter, s32 delta);
 void func_8008BD88(s32 arg0);
 u32 *func_800875B4(void);
 void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
@@ -50,7 +50,7 @@ RecC1B98 *func_800C1B98();
 extern u8 *D_80122B78;
 
 /**
- * @brief Scale a counter's value by arg1 / 256 and apply it through func_800B3114.
+ * @brief Scale a counter's value by arg1 / 256 and apply it through saturating_counter_add.
  * @param arg0 Counter id passed to func_80087F0C.
  * @param arg1 Multiplier in 1/256 units.
  */
@@ -61,7 +61,7 @@ void func_800C1B20(s32 arg0, s32 arg1)
 
     rec = func_80087F0C(arg0);
     product = rec->unk0 * arg1;
-    func_800B3114(rec, (u32) product >> 8);
+    saturating_counter_add(rec, (u32) product >> 8);
 }
 
 /**

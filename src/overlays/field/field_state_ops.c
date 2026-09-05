@@ -35,7 +35,7 @@ typedef struct RecordB3160
     StateB3160 *state;
 } RecordB3160;
 
-/** @brief Sub-record of func_800B2A9C's result; unk48 is a 0..0xFF gauge. */
+/** @brief Sub-record of func_800B2A9C's result; unk48 is kept in 0..0xFF by func_800B3420. */
 typedef struct
 {
     u8 pad[0x48];
@@ -99,9 +99,9 @@ extern StructB3580 *D_80123FB0;
 extern u16 g_music_track_index;
 
 /**
- * @brief Roll a percentage chance derived from a record's stat 7.
- * @param arg0 Record passed to func_800B2D34.
- * @return 1 when a random byte is below the chance, else 0.
+ * @brief Roll a random byte against the record's eighth func_800B2D34 value.
+ * @param arg0 Record passed to func_800B2D34; the value read is its byte at 0x2F.
+ * @return 1 when the random byte is below the value, else 0.
  */
 s32 func_800B2FF8(u8 *arg0)
 {
@@ -112,10 +112,10 @@ s32 func_800B2FF8(u8 *arg0)
 }
 
 /**
- * @brief Decide facing between two objects from their X order and the second object's kind.
- * @param arg0 First object.
- * @param arg1 Second object; its kind from func_8008B288 flips the result when in 0x40..0xC0.
- * @return -1 or 0.
+ * @brief Compare two objects' X positions, with the result inverted when the second object's func_8008B288 value is in 0x40..0xC0.
+ * @param arg0 First object id, resolved through func_80087F44.
+ * @param arg1 Second object id; also passed to func_8008B288.
+ * @return -1 when the first object is to the left (or to the right with an inverting kind), else 0.
  */
 s32 func_800B302C(void *arg0, void *arg1)
 {
@@ -145,7 +145,7 @@ s32 func_800B302C(void *arg0, void *arg1)
 }
 
 /**
- * @brief Subtract from a record's counter, clamping at zero; a negative amount is reported to the audio driver.
+ * @brief Subtract from the record's word at 0x4, clamping at zero; a negative amount is reported to the audio driver with the id at 0x14.
  * @param arg0 Record.
  * @param arg1 Amount to subtract.
  */
@@ -176,7 +176,7 @@ void func_800B30B8(SomeStruct *arg0, s32 arg1)
  * @param counter Counter to update.
  * @param delta Amount to add to the counter's value.
  */
-void func_800B3114(SaturatingCounter *counter, s32 delta)
+void saturating_counter_add(SaturatingCounter *counter, s32 delta)
 {
     u32 cap;
     u32 sum;
@@ -202,14 +202,16 @@ void func_800B313C(UnkStruct800B313C *arg0)
 /**
  * @brief Clears one indexed record state or all twelve states.
  *
- * Indices zero through eleven clear the corresponding low flag bit and
- * halfword at record offset 0x50. Any other index clears all twelve halfwords
- * and the low sixteen bits of the flag word.
+ * Indices zero through eleven clear the corresponding low flag bit and the
+ * halfword timer at record offset 0x50. Any other index clears all twelve
+ * timers and the low sixteen bits of the flag word. func_800B4DF0 ticks the
+ * timers and calls this when one expires; func_800B4D1C maps script flags
+ * 0x60..0x6B onto indices 0..11.
  *
  * @param record Record whose states are cleared.
  * @param index State index, or an out-of-range value to clear all states.
  */
-void func_800B3160(RecordB3160 *record, u32 index)
+void field_clear_record_state(RecordB3160 *record, u32 index)
 {
     s32 count;
     u8 *cursor;
@@ -232,8 +234,8 @@ void func_800B3160(RecordB3160 *record, u32 index)
 }
 
 /**
- * @brief Pick the value for script variable 0xD028 from the encounter chance and gauge.
- * @param arg0 Forwarded to func_800C9ED4 to pick a slot index.
+ * @brief Write script variable 0xD028 from a percentage roll against the byte at 0xC06, or from the 0xC04 count, the record gauge and a func_800C9ED4 index.
+ * @param arg0 Forwarded to func_800C9ED4.
  * @see decomp.me (100%)
  */
 void func_800B31CC(s32 arg0)
@@ -266,8 +268,8 @@ void func_800B31CC(s32 arg0)
 }
 
 /**
- * @brief Set script variables 0xD030, 0xD038 and 0xD040 from the encounter table or the chance roll.
- * @param arg0 Encounter table row, valid below 0x24.
+ * @brief Write script variables 0xD030, 0xD038 and 0xD040 from a percentage roll against the byte at 0xC06, or from the 4-byte table row at 0x2A7C.
+ * @param arg0 Table row, valid below 0x24; other rows write the fixed fallback.
  * @see decomp.me (100%)
  */
 void func_800B32FC(s32 arg0)
@@ -298,7 +300,7 @@ void func_800B32FC(s32 arg0)
 }
 
 /**
- * @brief Advance the 0..0xFF gauge by arg0 scaled 4x, 3x, 2x or 1x by its current quarter, wrapping to 0.
+ * @brief Advance the kind-2 record's 8-bit value at 0x48 by arg0 scaled 4x, 3x, 2x or 1x by its current quarter, wrapping to 0.
  * @param arg0 Base increment.
  * @see decomp.me (100%)
  */
@@ -335,8 +337,13 @@ void func_800B3420(s32 arg0)
 }
 
 /**
- * @brief Start a battle setup: publish script variables 0x4280 and 0x4284, or call func_800B4390 when arg0 is 0.
- * @param arg0 Nonzero starts the setup and is forwarded to func_800B3DF4.
+ * @brief Rebuild the D_80123B08 block and write script variables 0x4280 and 0x4284, or call func_800B4390 when arg0 is 0.
+ *
+ * With D_8010D020 set both variables are written as 1 instead of the
+ * computed values. 0x4280 and 0x4284 are the counter pair that func_800B48B8
+ * increments and func_800B62D8 tests for zero.
+ *
+ * @param arg0 Nonzero selects the rebuild path and is forwarded to func_800B3DF4.
  * @see decomp.me (100%)
  */
 void func_800B34D0(s32 arg0)
@@ -372,7 +379,7 @@ void func_800B34D0(s32 arg0)
 }
 
 /**
- * @brief Reset the D_80123B08 block and fill it from the current track's row and resource 1.
+ * @brief Zero the D_80123B08 block, then fill it from the current track's 0xC-byte layout record and resource 1.
  * @see decomp.me (100%)
  */
 void func_800B3580(void)
@@ -398,9 +405,15 @@ void func_800B3580(void)
 }
 
 /**
- * @brief Compute the encounter level from the difficulty table, clamped to the script's bounds and 0x63.
- * @param arg0 Nonzero forces the block-based index; script flag 0x52F0 bit 7 also forces it.
- * @return Level in 0..0x63.
+ * @brief Look up D_800F0AE8 by a 0..0x3F index and clamp the result to script variables 0x52E0..0x52E8 and 0x63.
+ *
+ * The index comes from the byte at 0x2E5 of the layout buffer when @p arg0 or
+ * bit 7 of script variable 0x52F0 is set, otherwise from func_800C3688 for the
+ * current track. Script variable 0x2938 adds 0x14 (mode 1) or forces 0x3F
+ * (mode 2).
+ *
+ * @param arg0 Nonzero selects the byte-at-0x2E5 index.
+ * @return Value in 0..0x63.
  * @see decomp.me (100%)
  */
 s32 func_800B3670(s32 arg0)
