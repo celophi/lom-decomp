@@ -3796,167 +3796,92 @@ s32 cload_poll_secondary_handle_group(void)
  * @note Five passes bucket records matching g_lom_save_filename_prefix, then g_lom_alt_save_filename_prefix, then
  *       g_new_save_entry_prefix, then the remainder, copying each 0x28-byte record with
  *       bcopy before writing the ordered set back to the page.
- * @see decomp.me (95.37%)
+ * @see decomp.me (100.00%)
  */
 void cload_sort_entries_by_type(void)
 {
-    u8 sorted_entries[CLOAD_CARD_DIRECTORY_BYTES];
-    s32 output_count;
-    s32 offset_tmp_0;
-    s32 offset_tmp_1;
-    s32 offset_tmp_2;
-    s32 offset_tmp_3;
+    CloadDirEntry sorted_entries[CLOAD_ENTRIES_PER_CARD];
+    s32 output_count = 0;
+    s32 group = 0;
+    s32 entry_index;
 
-    s32 card_offset_0;
-    s32 card_offset_1;
-    s32 card_offset_2;
-    s32 card_offset_3;
-    s32 card_offset_4;
-    s32 card_offset_5;
-    s32 card_offset_6;
-    s32 card_offset_7;
-    s32 card_offset_8;
-    s32 card_offset_9;
-    s32 card_offset_10;
-
-    s32 group;
-    s32 first_index;
-    s32 first_limit;
-    u8 *first_entry;
-    s32 *first_suffix;
-    s32 *first_suffix_base;
-    s32 output_offset;
-    s32 second_index;
-    s32 second_limit;
-    u8 *second_entry;
-    s32 *second_suffix;
-    s32 *second_suffix_base;
-    s32 third_index;
-    s32 third_limit;
-    u8 *third_entry;
-    s32 other_index;
-    s32 other_limit;
-    u8 *other_entry;
-    s32 *third_card_base;
-    s32 *other_card_base;
-    s32 *write_card_base;
-    s32 write_index;
-    u8 *page_entry;
-    u8 *sorted_entry;
-
-    output_count = 0;
-    group = 0;
-    first_suffix_base = &g_cload_entry_suffix_values;
     do
     {
-        do { do { do { do { do { do { do { do { do { first_index = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
-        if (g_cload_entry_state > 0)
+        entry_index = 0;
+        if (entry_index < g_cload_entry_state)
         {
-            first_entry = &g_cload_entries;
-            first_suffix = first_suffix_base;
-            offset_tmp_0 = output_count * 5;
-            output_offset = offset_tmp_0 * 8;
             do
             {
-                if (*first_suffix == group && strncmp(g_lom_save_filename_prefix, (card_offset_0 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_0 += (s32)first_entry, (void *)card_offset_0), 0xC) == 0)
+                if (g_cload_entry_suffix_values[entry_index] == group &&
+                    strncmp(g_lom_save_filename_prefix, (char *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), 0xC) == 0)
                 {
-                    bcopy((card_offset_1 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_1 += (s32)first_entry, (void *)card_offset_1), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
-                    output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
-                    output_count += 1;
+                    bcopy((u8 *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), (u8 *)&sorted_entries[output_count], CLOAD_DIRECTORY_ENTRY_BYTES);
+                    output_count++;
                 }
-                do { first_entry += CLOAD_DIRECTORY_ENTRY_BYTES; } while (0);
-                first_limit = g_cload_entry_state;
-                first_index += 1;
-                first_suffix += 1;
-            } while (first_index < first_limit);
+                entry_index++;
+            } while (entry_index < g_cload_entry_state);
         }
-        group += 1;
+        group++;
     } while (group < CLOAD_ENTRY_GROUP_COUNT);
 
-    second_suffix_base = &g_cload_entry_suffix_values;
     group = 0;
     do
     {
-        do { do { do { do { do { do { do { do { do { second_index = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
-        if (g_cload_entry_state > 0)
+        entry_index = 0;
+        if (entry_index < g_cload_entry_state)
         {
-            second_entry = &g_cload_entries;
-            second_suffix = second_suffix_base;
-            offset_tmp_1 = output_count * 5;
-            output_offset = offset_tmp_1 * 8;
             do
             {
-                if (*second_suffix == group && strncmp(g_lom_alt_save_filename_prefix, (card_offset_2 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_2 += (s32)second_entry, (void *)card_offset_2), 0xC) == 0)
+                if (g_cload_entry_suffix_values[entry_index] == group &&
+                    strncmp(g_lom_alt_save_filename_prefix, (char *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), 0xC) == 0)
                 {
-                    bcopy((card_offset_3 = g_cload_card_slot * CLOAD_CARD_DIRECTORY_BYTES, card_offset_3 += (s32)second_entry, (void *)card_offset_3), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
-                    output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
-                    output_count += 1;
+                    bcopy((u8 *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), (u8 *)&sorted_entries[output_count], CLOAD_DIRECTORY_ENTRY_BYTES);
+                    output_count++;
                 }
-                do { second_entry += CLOAD_DIRECTORY_ENTRY_BYTES; } while (0);
-                second_limit = g_cload_entry_state;
-                second_index += 1;
-                second_suffix += 1;
-            } while (second_index < second_limit);
+                entry_index++;
+            } while (entry_index < g_cload_entry_state);
         }
-        group += 1;
+        group++;
     } while (group < CLOAD_ENTRY_GROUP_COUNT);
 
-    do { do { do { do { do { do { do { do { do { third_index = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+    entry_index = 0;
     if (g_cload_entry_state > 0)
     {
-        third_card_base = &g_cload_card_slot;
-        third_entry = &g_cload_entries;
-        offset_tmp_2 = output_count * 5;
-        output_offset = offset_tmp_2 * 8;
         do
         {
-            if (strncmp(g_new_save_entry_prefix, (card_offset_4 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_4 += (s32)third_entry, (void *)card_offset_4), 8) == 0)
+            if (strncmp(g_new_save_entry_prefix, (char *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), 8) == 0)
             {
-                bcopy((card_offset_5 = (*third_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_5 += (s32)third_entry, (void *)card_offset_5), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
-                output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
-                output_count += 1;
+                bcopy((u8 *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), (u8 *)&sorted_entries[output_count], CLOAD_DIRECTORY_ENTRY_BYTES);
+                output_count++;
             }
-            third_limit = g_cload_entry_state;
-            third_index += 1;
-            do { third_entry += CLOAD_DIRECTORY_ENTRY_BYTES; } while (0);
-        } while (third_index < third_limit);
+            entry_index++;
+        } while (entry_index < g_cload_entry_state);
     }
 
-    do { do { do { do { do { do { do { do { do { other_index = 0; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
-    if (g_cload_entry_state > 0)
+    entry_index = 0;
+    if (*(volatile s32 *)&g_cload_entry_state > 0)
     {
-        other_card_base = &g_cload_card_slot;
-        other_entry = &g_cload_entries;
-        offset_tmp_3 = output_count * 5;
-        output_offset = offset_tmp_3 * 8;
         do
         {
-            if (strncmp(g_lom_save_filename_prefix, (card_offset_6 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_6 += (s32)other_entry, (void *)card_offset_6), 0xC) != 0 &&
-                strncmp(g_lom_alt_save_filename_prefix, (card_offset_7 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_7 += (s32)other_entry, (void *)card_offset_7), 0xC) != 0 &&
-                strncmp(g_new_save_entry_prefix, (card_offset_8 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_8 += (s32)other_entry, (void *)card_offset_8), 8) != 0)
+            if (strncmp(g_lom_save_filename_prefix, (char *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), 0xC) != 0 &&
+                strncmp(g_lom_alt_save_filename_prefix, (char *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), 0xC) != 0 &&
+                strncmp(g_new_save_entry_prefix, (char *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), 8) != 0)
             {
-                bcopy((card_offset_9 = (*other_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_9 += (s32)other_entry, (void *)card_offset_9), &sorted_entries[output_offset], CLOAD_DIRECTORY_ENTRY_BYTES);
-                output_offset += CLOAD_DIRECTORY_ENTRY_BYTES;
+                bcopy((u8 *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), (u8 *)&sorted_entries[output_count], CLOAD_DIRECTORY_ENTRY_BYTES);
+                output_count++;
             }
-            other_limit = g_cload_entry_state;
-            other_index += 1;
-            do { other_entry += CLOAD_DIRECTORY_ENTRY_BYTES; } while (0);
-        } while (other_index < other_limit);
+            entry_index++;
+        } while (entry_index < g_cload_entry_state);
     }
 
-    write_index = 0;
+    entry_index = 0;
     if (g_cload_entry_state > 0)
     {
-        do { page_entry = &g_cload_entries; } while (0);
-        write_card_base = &g_cload_card_slot;
-        sorted_entry = &sorted_entries[0];
         do
         {
-            bcopy(sorted_entry, (card_offset_10 = (*write_card_base) * CLOAD_CARD_DIRECTORY_BYTES, card_offset_10 += (s32)page_entry, (void *)card_offset_10), CLOAD_DIRECTORY_ENTRY_BYTES);
-            sorted_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
-            write_index += 1;
-            page_entry += CLOAD_DIRECTORY_ENTRY_BYTES;
-        } while (write_index < g_cload_entry_state);
+            bcopy((u8 *)&sorted_entries[entry_index], (u8 *)&CLOAD_DIR_ENTRY(g_cload_card_slot, entry_index), CLOAD_DIRECTORY_ENTRY_BYTES);
+            entry_index++;
+        } while (entry_index < g_cload_entry_state);
     }
 }
 

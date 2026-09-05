@@ -391,7 +391,8 @@ segments:
       - [0x66C21, c, func_800B6890]                 # gcc280_g0, 100%
       - [0x66D41, c, unk2_b_split106_tail_b]        # gcc272_cdk, func_800B69B0
       - [0x66EB9, c, func_800B6B28]                  # gcc280_g0, 100%
-      - [0x66FD9, c, unk2_b_split106_tail_b_after_6b28] # gcc272_cdk, func_800B6C48 .. func_800B7020
+      - [0x66FD9, c, unk2_b_split106_tail_b_after_6b28] # gcc272_cdk, func_800B6C48 .. func_800B6EC0
+      - [0x673B1, c, func_800B7020]                # gcc280_g0, 100%
       - [0x6747D, c, field93]                      # gcc272_cdk, func_800B70EC
       - [0x67485, c, func_800B70F4]                # gcc280_g0, 100%
       - [0x674F5, c, unk2_b_split028]              # gcc272_cdk, func_800B7164
@@ -612,7 +613,8 @@ segments:
       - [0x78B45, c, field_reset_menu_action_slot] # gcc272_cdk, field_reset_menu_action_slot (100%)
       - [0x78BC1, c, unk2_b_split082_b]            # gcc280_g0, func_800C8830, 100%
       - [0x78CC9, c, field191]                     # gcc280_g0, func_800C8938
-      - [0x78CF5, c, unk2_b_split083]           # gcc272_cdk, func_800C8964
+      - [0x78CF5, c, func_800C8964]             # gcc280_g0, 100%
+      - [0x78DBD, c, unk2_b_split083]           # gcc272_cdk, func_800C8A2C .. func_800C8E2C
       - [0x792DD, c, field271]                  # gcc280_g0, func_800C8F4C
       - [0x79339, c, func_800C8FA8]             # gcc280_g0, 100%
       - [0x793ED, c, unk2_b_split125]           # gcc272_cdk, func_800C905C
