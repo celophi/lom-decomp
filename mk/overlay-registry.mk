@@ -28,6 +28,7 @@ OVERLAYS += carda
 overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/func_80140918.c \
 	src/overlays/carda/func_80140BAC.c \
+	src/overlays/carda/func_80141250.c \
 	src/overlays/carda/carda_build_ui_elements.c \
 	src/overlays/carda/carda_core_state.c \
 	src/overlays/carda/carda_terminate_multibyte_text.c \
@@ -87,7 +88,6 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/func_80147100.c \
 	src/overlays/carda/func_80149A4C.c
 overlay_carda_gcc_280_g0_srcs := \
-	src/overlays/carda/unk1_core_tail.c \
 	src/overlays/carda/unk1_after_strings.c \
 	src/overlays/carda/carda_scan_hex_digits.c \
 	src/overlays/carda/unk1_after_checksum_tail.c \
@@ -851,6 +851,7 @@ overlay_zukan_gcc_272_cdk_g0_srcs := \
 	src/overlays/zukan/func_80141354.c \
 	src/overlays/zukan/zukan_mode_setters.c \
 	src/overlays/zukan/zukan_transition_update.c \
+	src/overlays/zukan/func_80141DF4.c \
 	src/overlays/zukan/zukan_resource_helpers.c \
 	src/overlays/zukan/zukan_resource_table_init.c \
 	src/overlays/zukan/zukan_resource_text.c \
@@ -861,6 +862,5 @@ overlay_zukan_gcc_280_g0_srcs := \
 	src/overlays/zukan/zukan_scroll_window.c \
 	src/overlays/zukan/zukan_gpu_modes.c \
 	src/overlays/zukan/func_80141988.c \
-	src/overlays/zukan/unk1_mid_tail.c \
 	src/overlays/zukan/zukan_outline_fade.c \
 	src/overlays/zukan/unk1_tail_after_resource_helpers.c
