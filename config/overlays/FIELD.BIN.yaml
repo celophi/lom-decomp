@@ -277,6 +277,7 @@ segments:
       - [0x5B5A5, c, unk2_b_split105_b]         # gcc272_cdk, func_800AB214
       - [0x5B9C9, c, field_modal_fade_ops]      # gcc272_cdk, func_800AB638 + func_800AB690 + func_800AB710 (100%; none match under gcc280_g0)
       - [0x5BB05, c, unk2_b_split117]           # gcc272_cdk, func_800AB774
+      - [0x5BBFD, c, field_coord_panels]        # gcc272_cdk, func_800AB86C (99.92%) + func_800AC768 (99.91%)
       - [0x5D3C1, c, field329]                     # gcc272_cdk, func_800AD030
       - [0x5D459, c, field75]                      # gcc272_cdk, func_800AD0C8
       - [0x5D4B1, c, func_800AD120]                # gcc272_cdk, func_800AD120 + func_800AD194 (100%)

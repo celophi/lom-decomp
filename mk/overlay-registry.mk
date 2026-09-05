@@ -411,6 +411,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_handle_actor_control_flag_40.c \
 	src/overlays/field/unk2_b_split115.c \
 	src/overlays/field/unk2_b_split117.c \
+	src/overlays/field/field_coord_panels.c \
 	src/overlays/field/unk2_b_split118.c \
 	src/overlays/field/unk2_b_split119.c \
 	src/overlays/field/unk2_b_split120.c \
