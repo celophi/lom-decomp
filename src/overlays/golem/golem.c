@@ -1,6 +1,9 @@
 #include "common.h"
+#include "cdrom.h"
+#include "controller.h"
 #include "display.h"
 #include "gpu_packet.h"
+#include "sdk/libetc.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
@@ -184,6 +187,13 @@ extern GolemGlyphMetric g_golem_glyph_metrics[];
 extern GolemPanelAnimations g_golem_panel_records;
 extern GolemCompositeIconRow g_golem_composite_icon_rows[];
 
+/**
+ * @brief GOLEM overlay identifier stored at the start of the overlay.
+ * @note Placed in .sdata so it links ahead of .rodata without disturbing the
+ * 8-byte alignment of the switch jump table that immediately follows it.
+ */
+const s32 g_golem_overlay_id __attribute__((section(".sdata"))) = 9;
+
 void func_800A3938();
 void func_800CB918();
 s32 func_800CBA9C();
@@ -238,9 +248,9 @@ void golem_run(u8* render_buffers, s32 restore_slot_on_cancel)
     next_buffer = g_golem_render_buffers;
     ClearOTagR(next_buffer, 0x10);
     ClearOTagR(g_golem_render_buffers + 0x40C0, 0x10);
-    func_8002054C(0);
-    func_80019FB8(next_buffer + 0x4050);
-    func_800157DC();
+    VSync(0);
+    PutDispEnv(next_buffer + 0x4050);
+    update_controllers();
 
     for (;;)
     {
@@ -251,9 +261,9 @@ void golem_run(u8* render_buffers, s32 restore_slot_on_cancel)
         func_800A9E78();
         golem_update_frame(draw_buffer);
         func_80063194();
-        func_80019788(0);
-        func_800157B0(2);
-        func_8002054C(2);
+        DrawSync(0);
+        set_controller_vsync_interval(2);
+        VSync(2);
 
         if (g_golem_exit_requested != 0)
         {
@@ -271,8 +281,8 @@ void golem_run(u8* render_buffers, s32 restore_slot_on_cancel)
         PutDrawEnv(next_buffer + 0x4064);
         DrawOTag(draw_buffer + 0x3C);
         draw_buffer = other_buffer;
-        func_800157DC();
-        func_800122C0();
+        update_controllers();
+        cdrom_process_state();
     }
 
     func_800AA02C();
@@ -1081,7 +1091,7 @@ s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
 
     cursor = packet_cursor;
     ordering_table = render_context + 0x34;
-    func_8001A5D4(cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
+    SetDrawEnv(cursor, g_golem_render_buffers + (*(s32*)(render_context + 0x404C) ^ 1) * 0x40C0 + 0x4064);
     addPrim(ordering_table, cursor);
     cursor += 0x40;
     next_packet = cursor;
@@ -1136,7 +1146,7 @@ s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
         {
             draw_y = 0x120;
         }
-        func_8001C56C(draw_env, 0x50, draw_y, 0x40, 0x40);
+        SetDefDrawEnv(draw_env, 0x50, draw_y, 0x40, 0x40);
         break;
     case 1:
         draw_y = 0x30;
@@ -1144,7 +1154,7 @@ s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
         {
             draw_y = 0x118;
         }
-        func_8001C56C(draw_env, 0x48, draw_y, 0x50, 0x50);
+        SetDefDrawEnv(draw_env, 0x48, draw_y, 0x50, 0x50);
         break;
     case 2:
         draw_y = 0x28;
@@ -1152,11 +1162,11 @@ s32 golem_draw_logic_grid(s32 packet_cursor, s32 render_context)
         {
             draw_y = 0x110;
         }
-        func_8001C56C(draw_env, 0x40, draw_y, 0x60, 0x60);
+        SetDefDrawEnv(draw_env, 0x40, draw_y, 0x60, 0x60);
         break;
     }
 
-    func_8001A5D4(cursor, draw_env);
+    SetDrawEnv(cursor, draw_env);
     addPrim(ordering_table, cursor);
     return cursor + 0x40;
 }
