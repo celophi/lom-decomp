@@ -2474,7 +2474,7 @@ extern s32 g_addhero_entry_fields[];
  * @return The maximum suffix byte value seen across all matching entries.
  * @note 99.82% - stuck on a sched2 load-delay tie: the target puts %lo(pattern)
  *       in the lw's load-delay slot, ours swaps %lo with the `li 12` length arg.
- *       The `do { } while (0)` around the pattern load is load-bearing (it fixes
+ *       The `do { } while (0)` around the pattern load is required for the match (it fixes
  *       the lw/%lo ordering, +1.2% over the plain assignment). Same unsolved tie
  *       leaves niki_parse_entry_fields and cload_parse_entry_fields at 99.82%.
  */

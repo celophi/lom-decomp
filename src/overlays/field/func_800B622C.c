@@ -44,7 +44,7 @@ extern A *D_80123FB0;
  * @note 79.93% match (gcc280_g0). Residue is a whole-function register
  *       rotation (target keeps @c D_80123FB0 in a0; this build uses v1) plus
  *       the coupled load-delay scheduling around it. The `do { } while (0)`
- *       wrapper is load-bearing (removing it drops the match to ~73%).
+ *       wrapper is required for the match (removing it drops the match to ~73%).
  */
 s32 func_800B622C(void)
 {

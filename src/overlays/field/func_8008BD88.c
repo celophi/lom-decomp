@@ -24,7 +24,7 @@ extern Struct_D80105AE0 D_80105AE0[];
 extern Struct_D800FDF58 D_800FDF58[];
 
 void func_800952DC(Struct_D800FDF58 *record, s32 value);
-void func_80083B38(Struct_D800FDF58 *record, s32 value);
+void field_stop_actor_animations_for_object(Struct_D800FDF58 *record, s32 force);
 void func_80084424(s32 index);
 
 s32 func_8008BD88(s32 key)
@@ -54,7 +54,7 @@ check:
     found->unk10 = 0;
     found->unk2C++;
     func_800952DC(found, 0);
-    func_80083B38(found, 1);
+    field_stop_actor_animations_for_object(found, 1);
     func_80084424(found->unk3A);
     return 0;
 
