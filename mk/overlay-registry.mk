@@ -139,8 +139,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_8009CF84.c \
 	src/overlays/field/func_8009D0D8.c \
 	src/overlays/field/field18.c \
-	src/overlays/field/field19.c \
-	src/overlays/field/field20.c \
+	src/overlays/field/field_find_free_actor_slot.c \
+	src/overlays/field/field_actor_slot_queries.c \
 	src/overlays/field/field_stop_actor_animations_for_object.c \
 	src/overlays/field/field22.c \
 	src/overlays/field/field24.c \
@@ -486,7 +486,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field269.c \
 	src/overlays/field/field273.c \
 	src/overlays/field/field275.c \
-	src/overlays/field/field279.c \
+	src/overlays/field/field_upload_initial_vram_resource.c \
 	src/overlays/field/unk2_i_b_split024_tail.c \
 	src/overlays/field/field288.c \
 	src/overlays/field/field289.c \

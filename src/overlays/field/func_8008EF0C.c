@@ -239,7 +239,7 @@ block_229:
         if ((M2C_FIELD(arg0, u8 *, 0x3D) != 0) && (--M2C_FIELD(arg0, u8 *, 0x3D) != 0)) {
             return;
         }
-        if (func_80083AB4(M2C_FIELD(arg0, u8 *, 0x3A)) != 0) {
+        if (field_object_has_active_actor_tracks(M2C_FIELD(arg0, u8 *, 0x3A)) != 0) {
             return;
         }
         goto block_set_ff;
@@ -247,7 +247,7 @@ block_229:
         if ((M2C_FIELD(arg0, u8 *, 0x3D) != 0) && (--M2C_FIELD(arg0, u8 *, 0x3D) != 0)) {
             goto block_37_record;
         }
-        if (func_80083AB4(M2C_FIELD(arg0, u8 *, 0x3A)) == 0) {
+        if (field_object_has_active_actor_tracks(M2C_FIELD(arg0, u8 *, 0x3A)) == 0) {
             goto block_37_cleanup;
         }
 block_37_record:

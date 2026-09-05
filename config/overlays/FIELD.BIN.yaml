@@ -78,9 +78,9 @@ segments:
       - [0x32635, c, unk2]                         # gcc272_cdk, func_800822A4
       - [0x33681, c, field30]                      # gcc272_cdk, func_800832F0, func_8008332C, func_8008343C, func_80083868
       - [0x33CD9, c, field18]                   # gcc272_cdk, func_80083948
-      - [0x33CFD, c, field279]                  # gcc272_cdk, func_8008396C
-      - [0x33D89, c, field19]                   # gcc272_cdk, func_800839F8
-      - [0x33E45, c, field20]                   # gcc272_cdk, func_80083AB4
+      - [0x33CFD, c, field_upload_initial_vram_resource] # gcc272_cdk, func_8008396C
+      - [0x33D89, c, field_find_free_actor_slot]  # gcc272_cdk, func_800839F8
+      - [0x33E45, c, field_actor_slot_queries] # gcc272_cdk, field_object_has_active_actor_tracks
       - [0x33EC9, c, field_stop_actor_animations_for_object] # gcc272_cdk, field_stop_actor_animations_for_object
       - [0x33F51, c, unk2_e]                    # gcc272_cdk, func_80083BC0 .. func_8008423C
       - [0x345D1, c, func_80084240]              # gcc272_cdk, 100%
