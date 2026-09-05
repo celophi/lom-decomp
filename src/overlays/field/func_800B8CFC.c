@@ -10,12 +10,12 @@ typedef struct
 extern u8 *g_field_script;
 
 s32 field_script_read_operand_or_owner(s32 arg0, u8 *arg1, s32 *arg2);
-s32 func_800BD2FC(u8 *arg0, u16 *arg1);
+s32 field_script_read_u16(u8 *arg0, u16 *arg1);
 s32 func_800BD3B0(s32 arg0, s32 arg1);
 void func_800BD434(s32 arg0, s32 arg1, s32 arg2);
 
 /**
- * @brief seq-record-nibble-decode family (4-call variant), exemplar func_800B91C4.
+ * @brief seq-record-nibble-decode family (4-call variant), exemplar field_script_op_0e.
  *
  * WIP 95.92% (gcc280_g0). The do-while(0) around the middle three statements
  * supplies NOTE_INSN_LOOP markers that fix the store-vs-arg sched1 ordering;
@@ -38,7 +38,7 @@ void func_800B8CFC(void)
     ((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 =
         field_script_read_operand_or_owner(b & 3, temp_a1 + 2, &sp10);
     ((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 =
-        func_800BD2FC(
+        field_script_read_u16(
             (u8 *)((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8,
             &sp14);
     do
@@ -50,7 +50,7 @@ void func_800B8CFC(void)
                 (u8 *)((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 + 2,
                 &sp18);
         ((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 =
-            func_800BD2FC(
+            field_script_read_u16(
                 (u8 *)((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8,
                 &sp1C);
     } while (0);

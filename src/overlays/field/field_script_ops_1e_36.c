@@ -1,63 +1,11 @@
-#include "common.h"
+#include "field_script.h"
 #include "game_audio.h"
 
-/*
- * Field script opcode handlers 0x1E through 0x36.
- *
- * field_script_run executes byte-coded scripts. Each step reads the opcode at
- * the active record's program counter; opcodes below 0x40 dispatch through
- * g_field_script_op_table, whose entries are the functions below. A handler
- * must advance the program counter past its operands. Clearing
- * FIELD_SCRIPT_RUNNING in the context status word ends the step loop for
- * this frame.
- *
- * Operands follow a descriptor byte at pc[1] that packs one two-bit type per
- * operand, high bits first: 0 reads a script variable, 1 a byte, 2 a
- * halfword, 3 a word. field_script_read_operand decodes one operand and
- * returns the advanced pointer; field_script_read_operand_or_owner also maps
- * the value 0xFF to the script owner's id.
- */
+/* Field script opcode handlers 0x1E through 0x36 (see field_script.h). */
 
-#define FIELD_SCRIPT_RUNNING 0x80000000
-
-/* Operand types packed into the descriptor byte. */
-#define OPERAND_TYPE_0(descriptor) ((descriptor) >> 6)
-#define OPERAND_TYPE_1(descriptor) (((descriptor) >> 4) & 3)
-#define OPERAND_TYPE_2(descriptor) (((descriptor) >> 2) & 3)
-#define OPERAND_TYPE_3(descriptor) ((descriptor) & 3)
-
-/** @brief One script record: the program counter lives at offset 8. */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    u8* pc;
-} FieldScriptRecord;
-
-/**
- * @brief Script context header. Records follow at a 12-byte stride from the
- *        base, so record 0 aliases this header and its pc sits at offset 8.
- */
-typedef struct
-{
-    union
-    {
-        u32 word;
-        u8 owner_id;
-    } status;
-    s32 active_record;
-    u8* pc;
-} FieldScriptContext;
-
-extern FieldScriptContext* g_field_script;
 extern u8* D_80122B74;
 extern u8* D_80122B78;
 
-#define FIELD_SCRIPT_RECORD(index) ((FieldScriptRecord*)((u8*)g_field_script + ((index) * 3 << 2)))
-#define FIELD_SCRIPT_ACTIVE_RECORD() FIELD_SCRIPT_RECORD(g_field_script->active_record)
-
-u8* field_script_read_operand(u32 type, u8* data, s32* value);
-u8* field_script_read_operand_or_owner(u32 type, u8* data, s32* value);
 void func_800B4410(s32 arg0);
 void func_800B4584(void);
 void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
