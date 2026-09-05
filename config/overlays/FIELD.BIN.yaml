@@ -578,13 +578,7 @@ segments:
       - [0x76DC1, c, func_800C6A30]             # gcc272_cdk, 100%
       - [0x76E21, c, field270]                  # gcc280_g0, func_800C6A90
       - [0x76E81, c, unk2_b_split124]           # gcc272_cdk, func_800C6AF0
-      - [0x77011, c, func_800C6C80]             # gcc280_g0, 100%
-      - [0x77131, c, field181]                     # gcc280_g0, func_800C6DA0
-      - [0x771B9, c, field348]                  # gcc280_g0, func_800C6E28
-      - [0x7724D, c, func_800C6EBC]            # gcc272_cdk, 100%
-      - [0x772F1, c, field_load_selected_equipment_mystic_cards] # gcc272_cdk, func_800C6F60
-      - [0x7732D, c, field305]                  # gcc280_g0, func_800C6F9C, 100%
-      - [0x773A5, c, field311]                  # gcc280_g0, func_800C7014
+      - [0x77011, c, field_menu_slot_ops]       # gcc280_g0, func_800C6C80 .. func_800C7014 (9 funcs, 100%)
       - [0x77421, c, unk2_b_split127]           # gcc272_cdk, func_800C7090
       - [0x774F9, c, field_gosub_result_ops]    # gcc280_g0, func_800C7168 .. func_800C72E4 (6 funcs, 100%)
       - [0x776D1, c, unk2_b_split078]           # gcc272_cdk, func_800C7340
