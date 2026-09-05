@@ -96,7 +96,7 @@ memory_card_create_save_file              = 0x8014F9EC;
 memory_card_fill_test_data                = 0x8014FBCC;
 
 // Data
-D_80140000 = 0x80140000;
+g_menu_overlay_id = 0x80140000;
 jtbl_8014049C = 0x8014049C; // type:jtbl visibility:local
 jtbl_801404DC = 0x801404DC; // type:jtbl visibility:local
 g_menu_frame           = 0x801690AC;

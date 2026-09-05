@@ -1,0 +1,2 @@
+// ZUKAN.BIN
+g_zukan_overlay_id = 0x80140000;

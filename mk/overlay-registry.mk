@@ -22,10 +22,11 @@
 # Splat databin assets referenced through .incbin do not use this setting.
 
 OVERLAYS += addhero
-overlay_addhero_gcc_272_cdk_g0_srcs := src/overlays/addhero/addhero.c
+overlay_addhero_gcc_272_cdk_g0_srcs := src/overlays/addhero/overlay_header.c src/overlays/addhero/addhero.c
 
 OVERLAYS += carda
 overlay_carda_gcc_272_cdk_g0_srcs := \
+	src/overlays/carda/overlay_header.c \
 	src/overlays/carda/func_80140918.c \
 	src/overlays/carda/func_80140BAC.c \
 	src/overlays/carda/func_80141250.c \
@@ -97,6 +98,7 @@ overlay_carda_gcc_280_g0_srcs := \
 
 OVERLAYS += checkps
 overlay_checkps_gcc_272_cdk_g0_srcs := \
+	src/overlays/checkps/overlay_header.c \
 	src/overlays/checkps/init.c \
 	src/overlays/checkps/font.c
 overlay_checkps_gcc_280_g0_srcs := src/overlays/checkps/kanji.c
@@ -113,10 +115,12 @@ overlay_checkps_target_as_extra_flags_cdrom := -L
 
 OVERLAYS += cload
 overlay_cload_gcc_272_cdk_g0_srcs := \
+	src/overlays/cload/overlay_header.c \
 	src/overlays/cload/cload.c 
 
 OVERLAYS += field
 overlay_field_gcc_272_cdk_g0_srcs := \
+	src/overlays/field/overlay_header.c \
 	src/overlays/field/field_text_session_ops.c \
 	src/overlays/field/field_actor_idle_ops.c \
 	src/overlays/field/field_prim_builders.c \
@@ -583,28 +587,31 @@ overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_text.c
 
 OVERLAYS += gname
-overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/gname.c
+overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/overlay_header.c src/overlays/gname/gname.c
 
 OVERLAYS += golem
-overlay_golem_gcc_272_cdk_g0_srcs := src/overlays/golem/golem.c
+overlay_golem_gcc_272_cdk_g0_srcs := src/overlays/golem/overlay_header.c src/overlays/golem/golem.c
 
 OVERLAYS += gosub
-overlay_gosub_gcc_272_cdk_g0_srcs := src/overlays/gosub/gosub.c
+overlay_gosub_gcc_272_cdk_g0_srcs := src/overlays/gosub/overlay_header.c src/overlays/gosub/gosub.c
 
 OVERLAYS += gover
-overlay_gover_gcc_272_cdk_g0_srcs := src/overlays/gover/gover.c
+overlay_gover_gcc_272_cdk_g0_srcs := src/overlays/gover/overlay_header.c src/overlays/gover/gover.c
 
 OVERLAYS += menu
-overlay_menu_gcc_272_cdk_g0_srcs := src/overlays/menu/menu_rodata.c src/overlays/menu/menu.c
+overlay_menu_gcc_272_cdk_g0_srcs := src/overlays/menu/overlay_header.c src/overlays/menu/menu.c
 
 OVERLAYS += movie
 overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
+# The header word is a plain -G0 const so it stays in .rodata.
+overlay_movie_gcc_272_cdk_g0_srcs := src/overlays/movie/overlay_header.c
 
 OVERLAYS += niki
-overlay_niki_gcc_272_cdk_g0_srcs := src/overlays/niki/niki.c
+overlay_niki_gcc_272_cdk_g0_srcs := src/overlays/niki/overlay_header.c src/overlays/niki/niki.c
 
 OVERLAYS += shop
 overlay_shop_gcc_272_cdk_g0_srcs := \
+	src/overlays/shop/overlay_header.c \
 	src/overlays/shop/func_801429A4.c \
 	src/overlays/shop/shop_init.c \
 	src/overlays/shop/shop_update_interp.c \
@@ -626,10 +633,11 @@ overlay_shop_gcc_280_g0_srcs := \
 	src/overlays/shop/unk1_tail_mid.c
 
 OVERLAYS += title
-overlay_title_gcc_272_cdk_g0_srcs := src/overlays/title/title.c
+overlay_title_gcc_272_cdk_g0_srcs := src/overlays/title/overlay_header.c src/overlays/title/title.c
 
 OVERLAYS += wsel
 overlay_wsel_gcc_272_cdk_g0_srcs := \
+	src/overlays/wsel/overlay_header.c \
 	src/overlays/wsel/wsel_main_loop.c \
 	src/overlays/wsel/wsel_init_display.c \
 	src/overlays/wsel/func_800503F0.c \
@@ -652,6 +660,7 @@ overlay_wsel_gcc_280_g0_srcs := \
 
 OVERLAYS += zukan
 overlay_zukan_gcc_272_cdk_g0_srcs := \
+	src/overlays/zukan/overlay_header.c \
 	src/overlays/zukan/zukan_init.c \
 	src/overlays/zukan/zukan_build_entry_primitives.c \
 	src/overlays/zukan/zukan_image_upload.c \

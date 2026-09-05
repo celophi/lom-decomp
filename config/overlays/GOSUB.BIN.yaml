@@ -42,7 +42,8 @@ segments:
     vram: 0x80140000
     align: 4
     subsegments:
-      - [0x1, rodatabin, overlay_id]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, gosub]
       - [0x69, rodatabin, group_first_indices]
       - [0x75, rodatabin, group_counts]

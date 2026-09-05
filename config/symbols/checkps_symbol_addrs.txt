@@ -102,3 +102,4 @@ draw_kanji_string = 0x80051830;
 .L80051364 = 0x80051364; // type:label
 .L800513E4 = 0x800513E4; // type:label
 .L80051424 = 0x80051424; // type:label
+g_checkps_overlay_id = 0x8004FC70;

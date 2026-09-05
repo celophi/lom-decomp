@@ -395,8 +395,6 @@ void akao_xa_advance_frame(void);                          /* increments audio f
 s32 akao_xa_get_position(void);                            /* returns SPU/XA position */
 void akao_cmd_98_9a_9c_9e(u32 arg0);
 
-const s32 g_movieOverlayId = 14;
-
 /* These overlay-internal functions retain external linkage because the
  * original MOVIE.BIN exposes each one as a global symbol. */
 void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx);

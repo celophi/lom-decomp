@@ -40,7 +40,9 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x1, rodata, rodata_before_func_801447DC]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
+      - [0x5, rodata, rodata_before_func_801447DC]
       - [0x95, .rodata, func_801447DC]
       - [0xAD, .rodata, func_80144A24]
       - [0xC5, rodata, rodata_after_func_80144A24]

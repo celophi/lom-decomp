@@ -41,9 +41,8 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      # Keep the standalone 0x80140000 word in its own translation unit.
-      - [auto, c, menu_rodata]
-      - [0x1, .rodata, menu_rodata]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, menu]
       - [0x544, .rodata, unk1]
       - [0x909, c, menu]

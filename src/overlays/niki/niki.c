@@ -136,13 +136,6 @@ typedef struct NikiFallbackText
     u8 text[0x20];
 } NikiFallbackText;
 
-/**
- * @brief NIKI overlay identifier stored at the start of the overlay.
- * @note Placed in .sdata so it links ahead of .rodata without disturbing the
- * 8-byte alignment of the switch jump table that immediately follows it.
- */
-const s32 g_niki_overlay_id __attribute__((section(".sdata"))) = 19;
-
 extern s32 g_niki_io_busy;
 extern s32 g_niki_icon_phase;
 extern s32 g_niki_confirm_latch;

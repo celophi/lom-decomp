@@ -1,3 +1,4 @@
 // Field dialogue/text renderer exports used by this overlay.
 field_text_reset_windows             = 0x800643E0;
 field_text_reset_scratch             = 0x8006441C;
+g_carda_overlay_id = 0x80140000;
