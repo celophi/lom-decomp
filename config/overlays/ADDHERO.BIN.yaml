@@ -29,7 +29,7 @@ options:
   o_as_suffix: True
   subalign: 2
 
-  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+  section_order: [".sdata", ".rodata", ".text", ".data", ".sbss", ".bss"]
 
   string_encoding: ASCII
   data_string_encoding: ASCII
@@ -39,8 +39,13 @@ segments:
     type: decompress_overlay
     start: 0x1
     vram: 0x80140000
+    align: 4
     subsegments:
-      - [0x1, rodata, rodata]
-      - [0x11D, c, addhero]                  # gcc272_cdk, merged 0x11D-0x6FA5; func_80144570 WIP 99.82%
-      - [0x6FA5, data, data]
+      - [0x1, .sdata, addhero]
+      - [0x5, .rodata, addhero]
+      - [0x89, rodatabin, addhero_format_overflow_and_file_template]
+      - [0x99, rodatabin, addhero_load_jump_table]
+      - [0x115, rodatabin, addhero_entry_header_template]
+      - [0x11D, c, addhero]                  # gcc272_cdk, 0x11D-0x6FA5
+      - [0x6FA5, databin, addhero_data]
   - [0x2D941]

@@ -21,6 +21,7 @@ options:
   undefined_syms_auto_path: linker/overlays/golem/undefined_syms_auto.txt
 
   symbol_addrs_path:
+    - config/symbols/shared_symbol_addrs.txt
     - config/symbols/golem_symbol_addrs.txt
 
   find_file_boundaries: False
@@ -29,7 +30,7 @@ options:
   o_as_suffix: True
   subalign: 2
 
-  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+  section_order: [".sdata", ".rodata", ".text", ".data", ".sbss", ".bss"]
 
   string_encoding: ASCII
   data_string_encoding: ASCII
@@ -39,8 +40,29 @@ segments:
     type: decompress_overlay
     start: 0x1
     vram: 0x80140000
+    align: 4
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, .sdata, golem]
+      - [0x5, .rodata, golem]
       - [0x25, c, golem]
-      - [0x287D, data, data]
+      - start: 0x287D
+        type: databin
+        name: ui_image
+        dir: golem
+      - start: 0xAAA5
+        type: databin
+        name: text_archive
+        dir: golem
+      - start: 0xB2D1
+        type: databin
+        name: glyph_metrics
+        dir: golem
+      - start: 0xB561
+        type: databin
+        name: panel_records
+        dir: golem
+      - start: 0xC169
+        type: databin
+        name: runtime_state
+        dir: golem
   - [0xC28D]

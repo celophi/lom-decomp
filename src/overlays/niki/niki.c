@@ -136,6 +136,12 @@ typedef struct NikiFallbackText
     u8 text[0x20];
 } NikiFallbackText;
 
+/**
+ * @brief NIKI overlay identifier stored at the start of the overlay.
+ * @note Placed in .sdata so it links ahead of .rodata without disturbing the
+ * 8-byte alignment of the switch jump table that immediately follows it.
+ */
+const s32 g_niki_overlay_id __attribute__((section(".sdata"))) = 19;
 
 extern s32 g_niki_io_busy;
 extern s32 g_niki_icon_phase;
@@ -738,6 +744,8 @@ s32 niki_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case 0xFC:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014710A, 0x12), 4, -x_offset + 0x84, -y_offset, 2);
+        break;
+    case 0xFE:
         break;
     default:
         {
@@ -2080,7 +2088,7 @@ s32 niki_draw_state_page(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     s32 dispatch;
-    static void *const keep[] = {
+    static void *const keep[] __attribute__((section(".discard"))) = {
         &&niki_f3, &&niki_f4, &&niki_f5, &&niki_f6, &&niki_f7, &&niki_f8, &&niki_f9,
         &&niki_fa, &&niki_fb, &&niki_fc, &&niki_fd, &&niki_fe, &&niki_ff
     };
@@ -3385,7 +3393,7 @@ s32 niki_advance_load_sequence(void)
     s32 rank_index;
     s32 rank_value;
     s32 dispatch;
-    static void *const keep[] = {
+    static void *const keep[] __attribute__((section(".discard"))) = {
         &&cl_case_0, &&cl_case_1, &&cl_case_2, &&cl_case_3,
         &&cl_case_4, &&cl_case_5, &&cl_case_6, &&block_return,
         &&cl_case_8, &&cl_case_9, &&cl_case_10, &&block_return,

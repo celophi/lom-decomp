@@ -36,18 +36,18 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | Module | | Status |
 |---|:---:|---|
 | SLUS_010.13 | 🪲 | Non-matching |
-| ADDHERO.BIN | ☑️ | Matching |
+| ADDHERO.BIN | 🔒 | Fully linked |
 | CARDA.BIN | 🌱 | In progress |
 | CHECKPS.BIN | 🔒 | Fully linked |
 | CLOAD.BIN | ☑️ | Matching |
 | FIELD.BIN | 🌱 | In progress |
 | GNAME.BIN | 🔒 | Fully linked |
-| GOLEM.BIN | ☑️ | Matching |
+| GOLEM.BIN | 🔒 | Fully linked |
 | GOSUB.BIN | 🔒 | Fully linked |
 | GOVER.BIN | 🔒 | Fully linked |
 | MENU.BIN | 🪲 | Non-matching |
 | MOVIE.BIN | 🔒 | Fully linked |
-| NIKI.BIN | ☑️ | Matching |
+| NIKI.BIN | 🔒 | Fully linked |
 | SHOP.BIN | 🌱 | In progress |
 | TITLE.BIN | 🔒 | Fully linked |
 | WMAP.BIN | 💤 | Not started |

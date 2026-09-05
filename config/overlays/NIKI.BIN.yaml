@@ -29,7 +29,7 @@ options:
   o_as_suffix: True
   subalign: 2
 
-  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+  section_order: [".sdata", ".rodata", ".text", ".data", ".sbss", ".bss"]
 
   string_encoding: ASCII
   data_string_encoding: ASCII
@@ -39,8 +39,16 @@ segments:
     type: decompress_overlay
     start: 0x1
     vram: 0x80140000
+    align: 4
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, .sdata, niki]
+      - [0x5, .rodata, niki]
+      - [0x51, rodatabin, niki_rodata_padding]
+      - [0x55, rodatabin, niki_state_page_jump_table]
+      - [0x89, rodatabin, niki_decimal_prefix]
+      - [0x91, rodatabin, niki_file_template]
+      - [0x99, rodatabin, niki_load_jump_table]
+      - [0x115, rodatabin, niki_entry_header_template]
       - [0x11D, c, niki]                     # gcc272_cdk, consolidated NIKI C, baseline preserved
-      - [0x70F9, data, data]
+      - [0x70F9, databin, niki_data]
   - [0x2DA81]
