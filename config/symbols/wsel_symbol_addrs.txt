@@ -1,0 +1,2 @@
+// WSEL.BIN
+g_wsel_overlay_id = 0x8004FC70;

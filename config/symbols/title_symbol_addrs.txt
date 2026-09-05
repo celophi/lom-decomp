@@ -85,3 +85,4 @@ g_saveSlotSpriteUvTable = 0x800F98F4;
 g_saveLayoutTable = 0x800F993C;
 D_800F9AED = 0x800F9AED;
 g_startingWeaponRecords = 0x800F9BC4;
+g_title_overlay_id = 0x8004FC70;

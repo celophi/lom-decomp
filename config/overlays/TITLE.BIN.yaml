@@ -45,7 +45,8 @@ segments:
     vram: 0x8004FC70
     align: 4
     subsegments:
-      - [0x1, .rodata, title]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       - [0x5, c, title]
       - start: 0x2679
         type: asset_offset_table

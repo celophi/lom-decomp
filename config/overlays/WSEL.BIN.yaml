@@ -21,7 +21,7 @@ options:
   undefined_syms_auto_path: linker/overlays/wsel/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/overlays/wsel_symbol_addrs.txt
+    - config/symbols/wsel_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
@@ -40,7 +40,8 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x1, rodata, rodata_before_func_800503F0]
+      - [auto, c, overlay_header]
+      - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, func_800503F0]
       - [0x1D, rodata, rodata_after_func_800503F0]
       - [0xB5, c, wsel_main_loop]     # gcc272_cdk, func_8004FD24, 100%

@@ -239,13 +239,6 @@ typedef struct
 /* Globals                                                            */
 /* ------------------------------------------------------------------ */
 
-/**
- * @brief ADDHERO overlay identifier stored at the start of the overlay.
- * @note Placed in .sdata so it links ahead of .rodata without disturbing the
- * 8-byte alignment of the switch jump table that immediately follows it.
- */
-const s32 g_addhero_overlay_id __attribute__((section(".sdata"))) = 0x14;
-
 extern AddheroElementPoolHead g_addhero_element_pool;
 extern AddheroElement g_addhero_element1;
 extern AddheroDirEntry g_addhero_entries[][20];

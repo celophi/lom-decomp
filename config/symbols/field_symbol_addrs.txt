@@ -292,3 +292,4 @@ g_field_node_angle_table              = 0x8018001C;
 g_field_camera_x                      = 0x801ED484;
 g_field_camera_y                      = 0x801ED488;
 g_field_camera_z                      = 0x801ED48C;
+g_field_overlay_id = 0x8004FC70;
