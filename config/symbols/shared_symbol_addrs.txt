@@ -1067,6 +1067,7 @@ g_akao_xa_pan_current               = 0x8004F7A0;
 g_akao_streaming_state              = 0x8004F820;
 
 // Shared input / frame / script state (main executable .bss)
+equipment_combination_find          = 0x800CA480;
 g_frame_counter                     = 0x800F22AC;
 g_prim_rect_buf                     = 0x800FE778;
 g_pad_ctx                           = 0x8012271C;
@@ -1182,4 +1183,3 @@ chkMemArea                          = 0x80034D78;
 _mcxStartFastDsr                    = 0x80034DD8;
 _mcxStopFastDsr                     = 0x80034ECC;
 _mcxVecDsr                          = 0x80034F44;
-
