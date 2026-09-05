@@ -719,7 +719,7 @@ OVERLAYS += gname
 overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/gname.c
 
 OVERLAYS += golem
-overlay_golem_gcc_272_cdk_g0_srcs := src/overlays/golem/golem_rodata.c src/overlays/golem/golem.c
+overlay_golem_gcc_272_cdk_g0_srcs := src/overlays/golem/golem.c
 
 OVERLAYS += gosub
 overlay_gosub_gcc_272_cdk_g0_srcs := src/overlays/gosub/gosub.c

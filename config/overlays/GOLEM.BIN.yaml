@@ -30,7 +30,7 @@ options:
   o_as_suffix: True
   subalign: 2
 
-  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+  section_order: [".sdata", ".rodata", ".text", ".data", ".sbss", ".bss"]
 
   string_encoding: ASCII
   data_string_encoding: ASCII
@@ -42,10 +42,7 @@ segments:
     vram: 0x80140000
     align: 4
     subsegments:
-      # Keep the standalone overlay ID word in its own translation unit so the
-      # golem.c switch jump table retains its original section alignment.
-      - [auto, c, golem_rodata]
-      - [0x1, .rodata, golem_rodata]
+      - [0x1, .sdata, golem]
       - [0x5, .rodata, golem]
       - [0x25, c, golem]
       - start: 0x287D

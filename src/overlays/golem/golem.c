@@ -187,6 +187,13 @@ extern GolemGlyphMetric g_golem_glyph_metrics[];
 extern GolemPanelAnimations g_golem_panel_records;
 extern GolemCompositeIconRow g_golem_composite_icon_rows[];
 
+/**
+ * @brief GOLEM overlay identifier stored at the start of the overlay.
+ * @note Placed in .sdata so it links ahead of .rodata without disturbing the
+ * 8-byte alignment of the switch jump table that immediately follows it.
+ */
+const s32 g_golem_overlay_id __attribute__((section(".sdata"))) = 9;
+
 void func_800A3938();
 void func_800CB918();
 s32 func_800CBA9C();
