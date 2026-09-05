@@ -2857,15 +2857,13 @@ u32 niki_parse_hex(u8 *s, s32 len)
  * @brief Skip to the first non-hex-digit byte, then parse the following two
  *        hex digits into an unsigned value.
  * @param text Pointer to the scan start.
- * @param unused1 Unused (present in the original signature).
- * @param unused2 Unused (present in the original signature).
  * @return The 2-digit hex value parsed after the skipped run.
  * @note The `text--; if (text) { text++; text--; }` sequences are opaque
  *       no-ops that block cross-jump tail-merging and are required to match;
  *       do not remove them. See [[reference_crossjump_optical_noop_fix]].
  * @see decomp.me (100.00%)
  */
-s32 niki_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
+s32 niki_parse_hex_suffix_byte(u8 *text)
 {
     u32 c;
     s32 count;
@@ -2960,14 +2958,12 @@ s32 niki_parse_hex_suffix_byte();
 /**
  * @brief Parse the hex rank value out of each NIKI entry whose name matches the
  *        D_800ECF7C prefix, store it, and return the maximum.
- * @note NON-MATCHING (99.82%). Sibling of addhero func_80144570 (same body).
- *       The lone residue is a sched2 arg-order swap at the func_8001714C call:
- *       the target emits `addiu a0, %lo(D_800ECF7C)` before `li a2, 0xC`, ours
- *       after. sched_oracle classifies it as a post-allocation (sched2) reorder,
- *       not an emit-order fix; the do/while(0) fence on `pattern` is the best of
- *       the forms tried (direct-pass regresses to 98.62%).
- *       TODO: recover the exact sched2 ordering.
- * @see (99.82%)
+ * @note Sibling of addhero_parse_entry_fields (same body). The sched2 arg-order
+ *       tie at the func_8001714C call was resolved by giving the suffix helper
+ *       its true single-arg signature (the phony trailing params were the hack
+ *       that pinned the wrong order); the plain `pattern =` assignment then
+ *       schedules correctly without the old do/while(0) fence.
+ * @see decomp.me (100%)
  */
 s32 niki_parse_entry_fields(void)
 {
@@ -2987,7 +2983,7 @@ s32 niki_parse_entry_fields(void)
     while (i < g_niki_entry_state)
     {
         u8 *pattern;
-        do { pattern = (u8 *)&D_800ECF7C; } while (0);
+        pattern = (u8 *)&D_800ECF7C;
         if (func_8001714C(pattern, (u8 *)&g_niki_entries[g_niki_card_slot][i], 0xC) == 0)
         {
             count = 5;
@@ -3022,7 +3018,7 @@ s32 niki_parse_entry_fields(void)
                 addr = g_niki_card_slot * 0x50 + (s32)g_niki_entry_fields;
                 *(s32 *)(addr + i * 4) = acc;
             }
-            r = niki_parse_hex_suffix_byte(field, acc, count);
+            r = niki_parse_hex_suffix_byte(field);
             g_niki_entry_suffix_values[i] = r;
             if (max < r)
                 max = r;

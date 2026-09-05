@@ -36,7 +36,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | Module | | Status |
 |---|:---:|---|
 | SLUS_010.13 | 🪲 | Non-matching |
-| ADDHERO.BIN | 🪲 | Non-matching |
+| ADDHERO.BIN | ☑️ | Matching |
 | CARDA.BIN | 🌱 | In progress |
 | CHECKPS.BIN | 🔒 | Fully linked |
 | CLOAD.BIN | 🪲 | Non-matching |
@@ -47,7 +47,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | GOVER.BIN | 🔒 | Fully linked |
 | MENU.BIN | 🪲 | Non-matching |
 | MOVIE.BIN | 🔒 | Fully linked |
-| NIKI.BIN | 🪲 | Non-matching |
+| NIKI.BIN | ☑️ | Matching |
 | SHOP.BIN | 🌱 | In progress |
 | TITLE.BIN | 🔒 | Fully linked |
 | WMAP.BIN | 💤 | Not started |
