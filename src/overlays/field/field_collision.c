@@ -4,21 +4,21 @@
  * @brief Probe position and footprint passed to func_8005B368.
  *
  * Carries the world-space probe position (x, y, z) plus the footprint
- * extents (unkC = width along x, unk10 = depth along z) and a height
- * tolerance (unkE).
+ * extents (width along x and depth along z) plus a vertical height
+ * tolerance.
  */
 typedef struct
 {
     s32 x;
     s32 y;
     s32 z;
-    u16 unkC;
-    s16 unkE;
-    u16 unk10;
-} Query;
+    u16 width;
+    s16 height_tolerance;
+    u16 depth;
+} FieldCollisionQuery;
 
 /**
- * @brief Collision object referenced by a CollNode.
+ * @brief Collision object referenced by a FieldCollisionBoundsNode.
  * @note unk10/unk12 are the vertical band the object occupies; unk14 is the
  *       value returned to the caller on a successful hit.
  */
@@ -28,7 +28,7 @@ typedef struct
     s16 unk10;
     s16 unk12;
     s16 unk14;
-} Object;
+} FieldCollisionObject;
 
 /**
  * @brief One entry in the field scene's collision-node list (scene+0x10).
@@ -39,10 +39,10 @@ typedef struct
  *       against mult*coord/denom; when denom == 0 the edge is axis-aligned
  *       and only max/min are used.
  */
-typedef struct CollNode
+typedef struct FieldCollisionBoundsNode
 {
-    struct CollNode *next;
-    Object *obj;
+    struct FieldCollisionBoundsNode *next;
+    FieldCollisionObject *obj;
     u8 pad[8];
     s16 right;
     s16 left;
@@ -56,7 +56,7 @@ typedef struct CollNode
     s32 min1;
     s32 max2;
     s32 min2;
-} CollNode;
+} FieldCollisionBoundsNode;
 
 /**
  * @brief Hit-test a probe against the field scene's collision-node list.
@@ -68,7 +68,7 @@ typedef struct CollNode
  * node's two sloped/axis-aligned edges. The first node that passes returns
  * its object's unk14.
  *
- * @param q Probe query (position, footprint extents, height tolerance).
+ * @param query Probe query (position, footprint extents, height tolerance).
  * @return obj->unk14 of the first node hit, or -1 if nothing is hit.
  *
  * @note Matches 99.02% under gcc280_g4 (no expand-div) and is functionally
@@ -83,7 +83,7 @@ typedef struct CollNode
  *       this state either.
  * @see decomp.me (99.02%) https://decomp.me/scratch/ElbpA
  */
-s16 func_8005B368(Query *q)
+s16 func_8005B368(FieldCollisionQuery *query)
 {
     s32 sx;
     s32 ex;
@@ -96,41 +96,41 @@ s16 func_8005B368(Query *q)
     s32 start_z;
     s32 half_z;
     s32 temp;
-    CollNode *node;
+    FieldCollisionBoundsNode *node;
     s32 hit;
     s32 raw_y;
 
     /* half_x = (s16)unkC / 2: sign-extend, add the sign bit, then arithmetic
      * shift right by one. The two-step (ez then >>1) is kept verbatim
      * because it is required to match. */
-    temp = q->unkC;
+    temp = query->width;
     half_x = ((s16) temp) + (((u32) (temp << 16)) >> 31);
     scene = g_field_scene.scene;
     ez = half_x;
     half_x = ((s32) ez) >> 1;
 
-    /* sx: q->x is read into the dead "temp" slot (reusing it, rather than a
+    /* sx: query->x is read into the dead "temp" slot (reusing it, rather than a
      * fresh local, is required to match) and biased toward zero before the
      * signed /256 shift. */
-    temp = q->x;
+    temp = query->x;
     if (temp < 0)
     {
         temp += 0xFF;
     }
     sx = (temp >> 8) - half_x;
-    /* The nested "half_x = q->unk10" write is a dead store (half_x is
+    /* The nested "half_x = query->depth" write is a dead store (half_x is
      * immediately recomputed below); it exists only to give half_x's pseudo
      * an extra reference, which is required to match its register coloring. */
-    temp = (half_x = q->unk10);
-    ex = sx + ((s16) q->unkC);
+    temp = (half_x = query->depth);
+    ex = sx + ((s16) query->width);
     half_z = ((s32) (((s16) temp) + (((u32) (temp << 16)) >> 31))) >> 1;
 
-    /* sz reads q->z via an "uninitialised read": the compiler keeps q->z in
-     * sz's register from the branch test below, with no explicit "sz = q->z"
+    /* sz reads query->z via an "uninitialised read": the compiler keeps query->z in
+     * sz's register from the branch test below, with no explicit "sz = query->z"
      * load. Unlike sx/sy above, giving sz an explicit temp (or reusing the
      * dead "temp"/"ez" locals) regresses - measured. The "^ 0" is a no-op
      * kept to match. */
-    if (q->z >= 0)
+    if (query->z >= 0)
     {
         sz = (sz ^ 0) >> 8;
     }
@@ -140,8 +140,8 @@ s16 func_8005B368(Query *q)
     }
     sz -= half_z;
     start_z = sz;
-    ez = start_z + ((s16) q->unk10);
-    raw_y = q->y;
+    ez = start_z + ((s16) query->depth);
+    raw_y = query->y;
     if (raw_y >= 0)
     {
         sy = raw_y >> 8;
@@ -155,15 +155,15 @@ s16 func_8005B368(Query *q)
      * The debug marker renderer and collision code are two interpretations of
      * the same spatial-node chain at FieldScene+0x10.
      */
-    for (node = (CollNode*)scene->markers; node != 0; node = node->next)
+    for (node = (FieldCollisionBoundsNode*)scene->markers; node != 0; node = node->next)
     {
-        Object *obj;
+        FieldCollisionObject *obj;
         s16 val;
         obj = node->obj;
         val = obj->unk10;
 
         /* Reject by vertical band and bounding box. */
-        if ((sy - q->unkE) >= val)
+        if ((sy - query->height_tolerance) >= val)
         {
             continue;
         }
@@ -257,49 +257,49 @@ extern long SquareRoot0(long a);
 /** Field allocator cursor at 0x801ED000, i.e. FieldMemState::top. */
 extern s32 D_801ED000;
 
-typedef struct Move_UnkS16 {
-    s16 unk0;
-    s16 unk2;
-} Move_UnkS16;
+typedef struct FieldCollisionSpan {
+    s16 min_x;
+    s16 max_x;
+} FieldCollisionSpan;
 
 /**
  * @brief One run of consecutive boundary points in a node's edge list.
  *
- * The list lives at Move_UnkNode2+0x18 and is terminated by a record whose
+ * The list lives at FieldCollisionSurfaceDef+0x18 and is terminated by a record whose
  * count is zero. A run's points are consecutive entries of
  * g_field_node_angle_table starting at @c index, so only the first index is
  * stored.
  */
-typedef struct Move_EdgeRun {
-    /** 0x00 number of points in this run; only the low 15 bits are the count. */
+typedef struct FieldCollisionEdgeRun {
+    /** Number of points in this run; only the low 15 bits are the count. */
     u16 count;
-    /** 0x02 angle-table index of the run's first point. */
+    /** Angle-table index of the run's first point. */
     u16 index;
-} Move_EdgeRun;
+} FieldCollisionEdgeRun;
 
-typedef struct Move_UnkNode2 {
+typedef struct FieldCollisionSurfaceDef {
     u8 pad0[4];
     s32 unk4;
     u8 pad8[2];
-    /** 0x0A index of the node's third boundary point in g_field_node_angle_table. */
+    /** Index of the node's third boundary point in g_field_node_angle_table. */
     u16 unkA;
-    /** 0x0C index of the node's second boundary point. */
+    /** Index of the node's second boundary point. */
     u16 unkC;
-    /** 0x0E index of the node's first boundary point. */
+    /** Index of the node's first boundary point. */
     u16 unkE;
     s16 unk10;
     s16 unk12;
     s16 unk14;
     u8 pad16[2];
-    /** 0x18 edge-run list; @c runs[0].index doubles as the closing point. */
-    Move_EdgeRun runs[1];
-} Move_UnkNode2;
+    /** Edge-run list; @c runs[0].index doubles as the closing point. */
+    FieldCollisionEdgeRun runs[1];
+} FieldCollisionSurfaceDef;
 
-s32 func_8005E1A8(Move_UnkNode2*, s32, s32, s32);
+s32 func_8005E1A8(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_angle, s32 best_angle);
 
-typedef struct Move_UnkNode1 {
-    struct Move_UnkNode1* unk0;
-    Move_UnkNode2* unk4;
+typedef struct FieldCollisionNode {
+    struct FieldCollisionNode* unk0;
+    FieldCollisionSurfaceDef* unk4;
     u8 pad8[8];
     void* unk10;
     void* unk14;
@@ -317,63 +317,67 @@ typedef struct Move_UnkNode1 {
     s32 unk38;
     s32 unk3C;
     s32 unk40;
-} Move_UnkNode1;
+} FieldCollisionNode;
 
 /* Declared without a prototype: func_8005B6AC has two call sites that pass two
    extra arguments to force the a2/a3 setup the target's codegen shows. */
 s16 func_8005DFAC();
 
-typedef struct Move_UnkNode3 {
+typedef struct FieldCollisionHeaderBounds {
     u8 pad0[0x2C];
     s32 unk2C;
     s16 unk30;
     s16 unk32;
-} Move_UnkNode3;
+} FieldCollisionHeaderBounds;
 
 /**
  * @brief Actor/mover state resolved by func_8005B6AC.
- * @note Distinct from the smaller `Query` probe struct above (which has u16
- *       unkC/unk10). Prologue asm proves word loads at 0x4/0x10 and an s16 load
+ * @note Distinct from the smaller `FieldCollisionQuery` probe struct above, which stores its
+ *       footprint dimensions as u16 values. Prologue asm proves word loads at 0x4/0x10 and an s16 load
  *       at 0x26, so every field here is its asm-confirmed width.
  */
-typedef struct Move_Mover {
-    s32 unk0;       /* 0x00 world X (fixed-point, >>8 to screen) */
-    s32 unk4;       /* 0x04 world Z/height accumulator */
-    s32 unk8;       /* 0x08 world Y */
-    s32 unkC;       /* 0x0C dX this frame */
-    s32 unk10;      /* 0x10 dZ this frame */
-    s32 unk14;      /* 0x14 dY this frame */
-    s32 unk18;      /* 0x18 output height delta (zeroed in prologue) */
-    void* unk1C;    /* 0x1C selected collision node (-1 = needs search) */
-    s32 unk20;      /* 0x20 flags (bit0 sticky-contact) */
-    u16 unk24;      /* 0x24 footprint width */
-    s16 unk26;      /* 0x26 height bias */
-    s32 unk28;      /* 0x28 mode flags (0x30000 gate, low s16 = step size) */
-} Move_Mover;
+typedef struct FieldCollisionMover {
+    s32 x;                /* world X (fixed-point) */
+    s32 height;           /* vertical position/height accumulator */
+    s32 z;                /* world Z (fixed-point) */
+    s32 move_x;           /* horizontal movement this step */
+    s32 move_height;      /* vertical movement this step */
+    s32 move_z;           /* depth movement this step */
+    s32 resolved_height;  /* resolved surface-height delta */
+    void* collision_node; /* selected collision node (-1 = needs search) */
+    s32 flags;            /* state flags (bit 0 tracks sticky contact) */
+    u16 footprint_width;  /* collision footprint width */
+    s16 height_bias;      /* vertical collision bias */
+    s32 mode_flags;       /* mode flags (0x30000 gate, low s16 = step size) */
+} FieldCollisionMover;
 
-void func_80062F48(Move_UnkNode2*, s32*);
+void func_80062F48(FieldCollisionSurfaceDef* surface, s32* movement);
 
-typedef struct Move_Probe {
-    Move_Mover* m;
+typedef struct FieldCollisionMoveProbe {
+    FieldCollisionMover* mover;
     s32 x;
-    s32 y;
+    s32 z;
     s16 w;
     s16 h;
-} Move_Probe;
+} FieldCollisionMoveProbe;
 
-void func_8005DA7C(Move_Probe*, Move_UnkNode1*, s32*, s32*);
+void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch);
 
 /**
+ * @brief Resolve a mover against the field collision surfaces.
+ * @param mover Mover state updated with resolved position, height, contact node, and flags.
+ * @return Collision-resolution status bitmask, or 0 when no scene nodes are present.
+ *
  * @see decomp.me (57.91%) https://decomp.me/scratch/N2GNJ
  * @note local objdiff 93.66% (gcc280_g4_noexpanddiv), 2026-08-17 - active
  *       matching scratch is working/field7/func_8005B6AC.c; see
  *       working/field7/field7_next_steps.md for the open leads.
  */
-s32 func_8005B6AC(Move_Mover* a0) {
+s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 dead_920;
     s32 dh_1312;
     s32 dh_1339;
-    Move_Probe probe;
+    FieldCollisionMoveProbe probe;
     s32 sp20;
     u16 sp24;
     FieldScene* sp28;
@@ -577,50 +581,50 @@ s32 func_8005B6AC(Move_Mover* a0) {
     sp4C = 0;
     sp50 = 0;
     sp28 = g_field_scene.scene;
-    a0->unk18 = 0;
+    mover->resolved_height = 0;
     {
-        s32 x = -a0->unk4 - a0->unk10;
+        s32 x = -mover->height - mover->move_height;
         sp30 = (u16)((u32)(x + ((x < 0) ? 0xFF : 0)) >> 8);
     }
     {
-        s32 x = -((volatile Move_Mover*)a0)->unk4;
-        sp38 = (u16)(((x + ((x < 0) ? 0xFF : 0)) >> 8) + a0->unk26);
+        s32 x = -((volatile FieldCollisionMover*)mover)->height;
+        sp38 = (u16)(((x + ((x < 0) ? 0xFF : 0)) >> 8) + mover->height_bias);
     }
     temp_t6 = sp28->nodes;
     sp2C = temp_t6;
     if (temp_t6 != NULL) {
-        if (a0->unk1C == (void* )-1) {
+        if (mover->collision_node == (void* )-1) {
             var_s2 = 0;
-            var_v0_4 = a0->unk0;
+            var_v0_4 = mover->x;
             var_a3 = 0;
-            a0->unk1C = NULL;
+            mover->collision_node = NULL;
             if (var_v0_4 < 0) {
                 var_v0_4 += 0xFF;
             }
             probe.x = var_v0_4 >> 8;
-            var_v0_5 = a0->unk8;
+            var_v0_5 = mover->z;
             if (var_v0_5 < 0) {
                 var_v0_5 += 0xFF;
             }
             var_fp = sp28->nodes;
-            probe.y = var_v0_5 >> 8;
+            probe.z = var_v0_5 >> 8;
             var_v0_5 = (u16) probe.x;
-            uy = (u16) probe.y;
+            uy = (u16) probe.z;
             var_t8 = 0;
             while (var_fp != NULL) {
-                    temp_s6 = ((Move_UnkNode1*)var_fp)->unk4;
-                    if ((((Move_UnkNode1*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((Move_UnkNode1*)sp2C)->unk38 >> 8, var_v1 = ((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v0, (var_v1 == 0)) || (var_v1 < ((s16) sp30 + a0->unk26)) || (var_v1 < (s16) sp38))) {
-                        temp_a1 = (s32) ((Move_UnkNode1*)sp2C)->unk34 >> 8;
-                        temp_a0 = (s32) (((Move_UnkNode1*)sp2C)->unk40 << 8) >> 0x10;
-                        temp_v1_2 = ((Move_UnkNode1*)var_fp)->unk22 + temp_a0;
-                        if (((s16) uy >= temp_v1_2) && ((((Move_UnkNode1*)var_fp)->unk20 + temp_a0) >= (s16) uy)) {
+                    temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
+                    if ((((FieldCollisionNode*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((FieldCollisionNode*)sp2C)->unk38 >> 8, var_v1 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0, (var_v1 == 0)) || (var_v1 < ((s16) sp30 + mover->height_bias)) || (var_v1 < (s16) sp38))) {
+                        temp_a1 = (s32) ((FieldCollisionNode*)sp2C)->unk34 >> 8;
+                        temp_a0 = (s32) (((FieldCollisionNode*)sp2C)->unk40 << 8) >> 0x10;
+                        temp_v1_2 = ((FieldCollisionNode*)var_fp)->unk22 + temp_a0;
+                        if (((s16) uy >= temp_v1_2) && ((((FieldCollisionNode*)var_fp)->unk20 + temp_a0) >= (s16) uy)) {
                             temp_a0_2 = ((u8*)temp_s6)[6];
-                            var_s1 = (u8*)((Move_UnkNode1*)var_fp)->unk10 + (((s16) uy - temp_v1_2) * temp_a0_2 * 4);
+                            var_s1 = (u8*)((FieldCollisionNode*)var_fp)->unk10 + (((s16) uy - temp_v1_2) * temp_a0_2 * 4);
                             if ((s16) temp_a1 != 0) {
                                 var_s0 = temp_a0_2 - 1;
                                 if (temp_a0_2 != 0) {
                                     do {
-                                        if (((s16) var_v0_5 < (((Move_UnkS16*)var_s1)->unk0 + (s16) temp_a1)) || ((((Move_UnkS16*)var_s1)->unk2 + (s16) temp_a1) < (s16) var_v0_5)) {
+                                        if (((s16) var_v0_5 < (((FieldCollisionSpan*)var_s1)->min_x + (s16) temp_a1)) || ((((FieldCollisionSpan*)var_s1)->max_x + (s16) temp_a1) < (s16) var_v0_5)) {
                                             var_s1 += 4;
                                         } else {
                                             goto a_hit;
@@ -635,7 +639,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                 var_s0 = temp_a0_2 - 1;
                                 if (temp_a0_2 != 0) {
                                     do {
-                                        if (((s16) var_v0_5 < ((Move_UnkS16*)var_s1)->unk0) || (((Move_UnkS16*)var_s1)->unk2 < (s16) var_v0_5)) {
+                                        if (((s16) var_v0_5 < ((FieldCollisionSpan*)var_s1)->min_x) || (((FieldCollisionSpan*)var_s1)->max_x < (s16) var_v0_5)) {
                                             var_s1 += 4;
                                         } else {
                                             goto a_hit;
@@ -648,38 +652,38 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                 temp_v1_3 = ((u8*)temp_s6)[4] & 3;
                                 switch (temp_v1_3) { /* switch 1; irregular */
                                 case 0:             /* switch 1 */
-                                    if ((((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
+                                    if ((((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
                                         if (var_a3 != 0) {
-                                            temp_v1_4 = ((Move_UnkNode2*)temp_s6)->unk10 + (s16) temp_v0;
+                                            temp_v1_4 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) temp_v0;
                                             if ((var_s2 + 0x14) < temp_v1_4) {
                                                 var_s2 = temp_v1_4;
-                                                a0->unk1C = var_fp;
+                                                mover->collision_node = var_fp;
                                             }
                                         } else {
-                                            temp_v1_5 = ((Move_UnkNode2*)temp_s6)->unk10 + (s16) temp_v0;
+                                            temp_v1_5 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) temp_v0;
                                             if (temp_v1_5 >= var_s2) {
                                                 var_fp_2 = var_fp;
                                                 var_s2 = temp_v1_5;
-                                                a0->unk1C = var_fp_2;
+                                                mover->collision_node = var_fp_2;
                                             }
                                         }
                                     }
                                     break;
                                 case 1:             /* switch 1 */
-                                    if ((((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
+                                    if ((((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
                                         *(volatile s32*)&sp8C = var_a3;
-                                        temp_s0 = func_8005DFAC((Move_UnkNode1*)var_fp, &probe.x, temp_v0, var_a3);
+                                        temp_s0 = func_8005DFAC((FieldCollisionNode*)var_fp, &probe.x, temp_v0, var_a3);
                                         if (*(volatile s32*)&sp8C != 0) {
                                             var_a3 = 1;
                                             if (var_s2 < temp_s0) {
                                                 var_s2 = temp_s0;
-                                                a0->unk1C = var_fp_2;
+                                                mover->collision_node = var_fp_2;
                                             }
                                         } else {
                                             var_a3 = 1;
                                             if (var_s2 < (temp_s0 + 0x14)) {
                                                 var_s2 = temp_s0;
-                                                a0->unk1C = var_fp_2;
+                                                mover->collision_node = var_fp_2;
                                             }
                                         }
                                     }
@@ -688,86 +692,86 @@ s32 func_8005B6AC(Move_Mover* a0) {
                             }
                         }
                     }
-                    var_fp = ((Move_UnkNode1*)var_fp)->unk0;
+                    var_fp = ((FieldCollisionNode*)var_fp)->unk0;
             }
         }
-        temp_a0_3 = a0->unk1C;
+        temp_a0_3 = mover->collision_node;
         if ((temp_a0_3 != NULL) && (temp_a0_3 != (void* )-2)) {
             var_fp = temp_a0_3;
-            temp_s6 = ((Move_UnkNode1*)var_fp)->unk4;
-            if (((Move_UnkNode1*)var_fp)->unk18 != 0) {
-                if (((((Move_UnkNode2*)temp_s6)->unk4 & 3) == 1) && (((Move_UnkNode2*)temp_s6)->unk10 != ((Move_UnkNode2*)temp_s6)->unk12)) {
-                    probe.x = a0->unkC;
-                    probe.y = a0->unk14;
+            temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
+            if (((FieldCollisionNode*)var_fp)->unk18 != 0) {
+                if (((((FieldCollisionSurfaceDef*)temp_s6)->unk4 & 3) == 1) && (((FieldCollisionSurfaceDef*)temp_s6)->unk10 != ((FieldCollisionSurfaceDef*)temp_s6)->unk12)) {
+                    probe.x = mover->move_x;
+                    probe.z = mover->move_z;
                     func_80062F48(temp_s6, &probe.x);
-                    a0->unkC = probe.x;
+                    mover->move_x = probe.x;
                     sp50 |= 4;
-                    a0->unk14 = probe.y;
+                    mover->move_z = probe.z;
                 }
-                if (((Move_UnkNode2*)temp_s6)->unk4 & 0x10) {
-                    temp_t5 = a0->unkC;
+                if (((FieldCollisionSurfaceDef*)temp_s6)->unk4 & 0x10) {
+                    temp_t5 = mover->move_x;
                     sp5C = temp_t5;
-                    a0->unkC = (temp_t5 >= 0) ? (temp_t5 >> 1) : ((s32)(sp5C + 1) >> 1);
-                    temp_t5 = a0->unk14;
+                    mover->move_x = (temp_t5 >= 0) ? (temp_t5 >> 1) : ((s32)(sp5C + 1) >> 1);
+                    temp_t5 = mover->move_z;
                     sp60 = temp_t5;
-                    a0->unk14 = (temp_t5 >= 0) ? (temp_t5 >> 1) : ((s32)(sp60 + 1) >> 1);
+                    mover->move_z = (temp_t5 >= 0) ? (temp_t5 >> 1) : ((s32)(sp60 + 1) >> 1);
                     sp50 |= 4;
                 }
-                if (((Move_UnkNode2*)temp_s6)->unk4 & 0x40) {
+                if (((FieldCollisionSurfaceDef*)temp_s6)->unk4 & 0x40) {
                     sp50 |= 0x10;
                 }
-                if (!(a0->unk28 & 0x30000) && ((((Move_UnkNode1*)var_fp)->unk24 != 0) || (((Move_UnkNode1*)var_fp)->unk28 != 0) || (((Move_UnkNode1*)var_fp)->unk2C != 0) || (((Move_UnkNode1*)var_fp)->unk30 != 0))) {
-                    a0->unkC = (s32) (a0->unkC + ((Move_UnkNode1*)var_fp)->unk24);
-                    temp_s2_2 = a0->unk10;
-                    a0->unk14 = (s32) (a0->unk14 + ((Move_UnkNode1*)var_fp)->unk30);
-                    if ((((Move_UnkNode2*)temp_s6)->unk4 & 3) == 1) {
-                        var_v0_8 = a0->unk0;
+                if (!(mover->mode_flags & 0x30000) && ((((FieldCollisionNode*)var_fp)->unk24 != 0) || (((FieldCollisionNode*)var_fp)->unk28 != 0) || (((FieldCollisionNode*)var_fp)->unk2C != 0) || (((FieldCollisionNode*)var_fp)->unk30 != 0))) {
+                    mover->move_x = (s32) (mover->move_x + ((FieldCollisionNode*)var_fp)->unk24);
+                    temp_s2_2 = mover->move_height;
+                    mover->move_z = (s32) (mover->move_z + ((FieldCollisionNode*)var_fp)->unk30);
+                    if ((((FieldCollisionSurfaceDef*)temp_s6)->unk4 & 3) == 1) {
+                        var_v0_8 = mover->x;
                         if (var_v0_8 < 0) {
                             var_v0_8 += 0xFF;
                         }
                         probe.x = var_v0_8 >> 8;
-                        var_v0_9 = a0->unk8;
+                        var_v0_9 = mover->z;
                         if (var_v0_9 < 0) {
                             var_v0_9 += 0xFF;
                         }
-                        probe.y = var_v0_9 >> 8;
-                        a0->unk10 = (s32) (-((s32) (func_8005DFAC(var_fp, &probe.x) << 0x10) >> 8) - a0->unk4);
+                        probe.z = var_v0_9 >> 8;
+                        mover->move_height = (s32) (-((s32) (func_8005DFAC(var_fp, &probe.x) << 0x10) >> 8) - mover->height);
                     } else {
-                        a0->unk10 = (s32) (temp_s2_2 + ((Move_UnkNode1*)var_fp)->unk28);
+                        mover->move_height = (s32) (temp_s2_2 + ((FieldCollisionNode*)var_fp)->unk28);
                     }
-                    if (temp_s2_2 != a0->unk10) {
+                    if (temp_s2_2 != mover->move_height) {
                         sp50 |= 0x30;
-                    } else if ((((Move_UnkNode1*)var_fp)->unk24 != 0) || (((Move_UnkNode1*)var_fp)->unk30 != 0)) {
+                    } else if ((((FieldCollisionNode*)var_fp)->unk24 != 0) || (((FieldCollisionNode*)var_fp)->unk30 != 0)) {
                         sp50 |= 0x10;
                     }
                 } else {
                     var_s3 = sp28->secondary_nodes;
-                    if ((var_s3 != NULL) && (var_s3 != var_fp) && ((((Move_UnkNode1*)var_s3)->unk24 != 0) || (((Move_UnkNode1*)var_s3)->unk28 != 0) || (((Move_UnkNode1*)var_s3)->unk2C != 0) || (((Move_UnkNode1*)var_s3)->unk30 != 0))) {
-                        temp_s2_2 = a0->unk10;
-                        a0->unkC = (s32) (a0->unkC + ((Move_UnkNode1*)var_s3)->unk24);
-                        temp_a0_10 = a0->unk0;
-                        a0->unk14 = (s32) (a0->unk14 + ((Move_UnkNode1*)var_s3)->unk30);
+                    if ((var_s3 != NULL) && (var_s3 != var_fp) && ((((FieldCollisionNode*)var_s3)->unk24 != 0) || (((FieldCollisionNode*)var_s3)->unk28 != 0) || (((FieldCollisionNode*)var_s3)->unk2C != 0) || (((FieldCollisionNode*)var_s3)->unk30 != 0))) {
+                        temp_s2_2 = mover->move_height;
+                        mover->move_x = (s32) (mover->move_x + ((FieldCollisionNode*)var_s3)->unk24);
+                        temp_a0_10 = mover->x;
+                        mover->move_z = (s32) (mover->move_z + ((FieldCollisionNode*)var_s3)->unk30);
                         if (temp_a0_10 >= 0) {
                             var_v0_10 = temp_a0_10 >> 8;
                         } else {
                             var_v0_10 = (s32) (temp_a0_10 + 0xFF) >> 8;
                         }
                         probe.x = var_v0_10;
-                        var_v0_11 = a0->unk8;
+                        var_v0_11 = mover->z;
                         if (var_v0_11 < 0) {
                             var_v0_11 += 0xFF;
                         }
-                        probe.y = var_v0_11 >> 8;
-                        temp_s0_2 = func_8005DFAC(var_s3, &probe.x) - ((Move_UnkNode2*)((Move_UnkNode1*)var_s3)->unk4)->unk10;
-                        if ((((Move_UnkNode2*)temp_s6)->unk4 & 3) == 1) {
+                        probe.z = var_v0_11 >> 8;
+                        temp_s0_2 = func_8005DFAC(var_s3, &probe.x) - ((FieldCollisionSurfaceDef*)((FieldCollisionNode*)var_s3)->unk4)->unk10;
+                        if ((((FieldCollisionSurfaceDef*)temp_s6)->unk4 & 3) == 1) {
                             temp_s0_2 += func_8005DFAC(var_fp, &probe.x);
-                            a0->unk10 = (s32) (-(temp_s0_2 << 8) - a0->unk4);
+                            mover->move_height = (s32) (-(temp_s0_2 << 8) - mover->height);
                         } else {
-                            a0->unk10 = (s32) (a0->unk10 + (((Move_UnkNode1*)var_fp)->unk28 - (temp_s0_2 << 8)));
+                            mover->move_height = (s32) (mover->move_height + (((FieldCollisionNode*)var_fp)->unk28 - (temp_s0_2 << 8)));
                         }
-                        if (temp_s2_2 != a0->unk10) {
+                        if (temp_s2_2 != mover->move_height) {
                             sp50 |= 0x30;
-                        } else if ((((Move_UnkNode1*)var_fp)->unk24 != 0) || (((Move_UnkNode1*)var_fp)->unk30 != 0)) {
+                        } else if ((((FieldCollisionNode*)var_fp)->unk24 != 0) || (((FieldCollisionNode*)var_fp)->unk30 != 0)) {
                             sp50 |= 0x10;
                         }
                     }
@@ -775,48 +779,48 @@ s32 func_8005B6AC(Move_Mover* a0) {
             }
         }
     }
-    if ((a0->unkC == 0) && (a0->unk10 == 0) && (a0->unk14 == 0)) {
+    if ((mover->move_x == 0) && (mover->move_height == 0) && (mover->move_z == 0)) {
         if (sp2C == NULL) {
             goto return_zero;
         }
-        if (a0->unk4 == 0) {
+        if (mover->height == 0) {
             goto return_zero;
         }
-        if (a0->unk20 & 1) {
-            temp_a0_5 = a0->unk1C;
+        if (mover->flags & 1) {
+            temp_a0_5 = mover->collision_node;
             if (temp_a0_5 != (void* )-2) {
                 var_fp = temp_a0_5;
                 if (var_fp == NULL) {
                     goto return_zero;
                 }
-                temp_s6 = ((Move_UnkNode1*)var_fp)->unk4;
+                temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
                 temp_v1_6 = ((u8*)temp_s6)[4] & 3;
                 switch (temp_v1_6) {            /* switch 2; irregular */
                 case 0:                         /* switch 2 */
-                    temp_v1_6 = ((Move_UnkNode2*)temp_s6)->unk10;
-                    var_v0_12 = ((Move_UnkNode1*)var_fp)->unk38;
+                    temp_v1_6 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10;
+                    var_v0_12 = ((FieldCollisionNode*)var_fp)->unk38;
                     temp_v1_6 <<= 8;
                     var_v0_12 += temp_v1_6;
-                    a0->unk18 = (s32) -var_v0_12;
+                    mover->resolved_height = (s32) -var_v0_12;
                     goto return_zero;
                 case 1:                         /* switch 2 */
-                    var_v0_13 = a0->unk0;
+                    var_v0_13 = mover->x;
                     if (var_v0_13 < 0) {
                         var_v0_13 += 0xFF;
                     }
                     probe.x = var_v0_13 >> 8;
-                    var_v0_14 = a0->unk8;
+                    var_v0_14 = mover->z;
                     if (var_v0_14 < 0) {
                         var_v0_14 += 0xFF;
                     }
-                    probe.y = var_v0_14 >> 8;
+                    probe.z = var_v0_14 >> 8;
                     var_s0_3 = func_8005DFAC(var_fp, &probe.x);
                     var_s3 = sp28->secondary_nodes;
                     if ((var_s3 != NULL) && (var_s3 != var_fp)) {
-                        var_s0_3 += func_8005DFAC(var_s3, &probe.x) - ((Move_UnkNode2*)((Move_UnkNode1*)var_s3)->unk4)->unk10;
+                        var_s0_3 += func_8005DFAC(var_s3, &probe.x) - ((FieldCollisionSurfaceDef*)((FieldCollisionNode*)var_s3)->unk4)->unk10;
                     }
                     var_v0_12 = var_s0_3 << 8;
-                    a0->unk18 = (s32) -var_v0_12;
+                    mover->resolved_height = (s32) -var_v0_12;
                     goto return_zero;
                 default:                        /* switch 2 */
                     goto return_zero;
@@ -829,11 +833,11 @@ return_zero:
         return 0;
     }
     {
-        probe.m = a0;
+        probe.mover = mover;
         probe.w = sp30;
         probe.h = sp38;
-        var_v0 = a0->unkC;
-        temp_v1_7 = (s16)a0->unk24;
+        var_v0 = mover->move_x;
+        temp_v1_7 = (s16)mover->footprint_width;
         if (var_v0 < 0) {
             var_v0 = -var_v0;
         }
@@ -844,8 +848,8 @@ return_zero:
         } else {
             var_t9 = 1;
         }
-        var_v0_16 = a0->unk14;
-        temp_v1_8 = (s16) a0->unk28;
+        var_v0_16 = mover->move_z;
+        temp_v1_8 = (s16) mover->mode_flags;
         if (var_v0_16 < 0) {
             var_v0_16 = -var_v0_16;
         }
@@ -859,50 +863,50 @@ return_zero:
             }
         }
         if (var_t9 == 1) {
-            var_v0_17 = a0->unk0 + a0->unkC;
+            var_v0_17 = mover->x + mover->move_x;
             if (var_v0_17 < 0) {
                 var_v0_17 += 0xFF;
             }
             probe.x = var_v0_17 >> 8;
-            var_v0_18 = a0->unk8 + a0->unk14;
+            var_v0_18 = mover->z + mover->move_z;
             if (var_v0_18 < 0) {
                 var_v0_18 += 0xFF;
             }
-            probe.y = var_v0_18 >> 8;
+            probe.z = var_v0_18 >> 8;
             func_8005DA7C(&probe, sp2C, &sp20, &sp24);
         } else {
             sp54 = 0;
             do {
                 temp_t5_3 = sp54 + 1;
                 sp54 = temp_t5_3;
-                var_v0_19 = a0->unk0 + ((s32) (a0->unkC * temp_t5_3) / var_t9);
+                var_v0_19 = mover->x + ((s32) (mover->move_x * temp_t5_3) / var_t9);
                 if (var_v0_19 < 0) {
                     var_v0_19 += 0xFF;
                 }
                 probe.x = var_v0_19 >> 8;
-                var_v0_20 = a0->unk8 + ((s32) (a0->unk14 * sp54) / var_t9);
+                var_v0_20 = mover->z + ((s32) (mover->move_z * sp54) / var_t9);
                 if (var_v0_20 < 0) {
                     var_v0_20 += 0xFF;
                 }
-                probe.y = var_v0_20 >> 8;
+                probe.z = var_v0_20 >> 8;
                 func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             } while ((var_t9 != sp54) && (sp20 == 0));
         }
         var_t8 = 0;
         if (sp20 == 0) {
             FieldScene *qt5_bound;
-            Move_UnkNode3 *qa2_bound;
+            FieldCollisionHeaderBounds *qa2_bound;
             s32 qa0_bound;
             s32 qa3_bound;
             s32 qv0_bound;
             s32 qv1_bound;
             qt5_bound = sp28;
-            qa2_bound = (Move_UnkNode3*)qt5_bound->header;
+            qa2_bound = (FieldCollisionHeaderBounds*)qt5_bound->header;
             if ((qa2_bound->unk2C & 2) != 0) {
-                qa0_bound = (u16)a0->unk24;
-                var_a1 = (u16)a0->unk28;
+                qa0_bound = (u16)mover->footprint_width;
+                var_a1 = (u16)mover->mode_flags;
                 qa3_bound = (u16)probe.x - ((s32)(((s16)qa0_bound) + ((u32)(qa0_bound << 16) >> 31)) >> 1);
-                qv0_bound = (u16)probe.y - ((s32)(((s16)var_a1) + ((u32)(var_a1 << 16) >> 31)) >> 1);
+                qv0_bound = (u16)probe.z - ((s32)(((s16)var_a1) + ((u32)(var_a1 << 16) >> 31)) >> 1);
                 qv1_bound = qv0_bound + var_a1;
                 temp_a0_10 = qa3_bound + qa0_bound;
                 if (((qv0_bound << 16) < 0) ||
@@ -915,17 +919,17 @@ return_zero:
         }
         if ((sp20 == 0) && (var_t8 == 0)) goto direct_move_149;
         {
-        temp_a1_3 = a0->unkC;
+        temp_a1_3 = mover->move_x;
         if (temp_a1_3 == 0) {
             sp58 = 0xC00;
-            if (a0->unk14 >= 0) {
+            if (mover->move_z >= 0) {
                 sp58 = 0x400;
             }
         } else {
-            sp58 = ratan2(a0->unk14, temp_a1_3) & 0xFFF;
+            sp58 = ratan2(mover->move_z, temp_a1_3) & 0xFFF;
         }
-        temp_v0_6 = a0->unkC;
-        var_v1_2 = a0->unk14;
+        temp_v0_6 = mover->move_x;
+        var_v1_2 = mover->move_z;
         if (temp_v0_6 < 0) {
             temp_v0_6 = -temp_v0_6;
         }
@@ -947,23 +951,23 @@ return_zero:
         if (var_t9 != 0) {
             do {
             {
-                Move_Mover *qt6;
+                FieldCollisionMover *qt6;
                 s32 qt5;
                 s32 qv0;
                 s32 qv1;
                 s32 qa0;
-                qt6 = a0;
+                qt6 = mover;
                 qt5 = sp54;
-                qv1 = qt6->unkC;
+                qv1 = qt6->move_x;
                 qv0 = var_t9 - qt5;
                 qv1 *= qv0;
                 qa0 = qv1 / var_t9;
-                qv0 = (u16)qt6->unk24;
+                qv0 = (u16)qt6->footprint_width;
                 qv0 <<= 16;
                 qv1 = qv0 >> 16;
                 qv0 = (s32)((u32)qv0 >> 31);
                 qv1 += qv0;
-                qv0 = qt6->unk0;
+                qv0 = qt6->x;
                 qv0 += qa0;
                 qv1 >>= 1;
                 if (qv0 < 0) {
@@ -971,20 +975,20 @@ return_zero:
                 }
                 qv0 >>= 8;
                 temp_s1 = qv0 - qv1;
-                qt6 = a0;
+                qt6 = mover;
                 qt5 = sp54;
-                qv1 = qt6->unk14;
+                qv1 = qt6->move_z;
                 qv0 = var_t9 - qt5;
                 qv1 *= qv0;
                 qa0 = qv1 / var_t9;
-                qv1 = (u16)qt6->unk24;
-                qv0 = (u16)qt6->unk28;
+                qv1 = (u16)qt6->footprint_width;
+                qv0 = (u16)qt6->mode_flags;
                 temp_s2_3 = temp_s1 + qv1;
                 qv0 <<= 16;
                 qv1 = qv0 >> 16;
                 qv0 = (s32)((u32)qv0 >> 31);
                 qv1 += qv0;
-                qv0 = qt6->unk8;
+                qv0 = qt6->z;
                 qv0 += qa0;
                 qv1 >>= 1;
                 if (qv0 < 0) {
@@ -994,12 +998,12 @@ return_zero:
                 temp_s0_3 = qv0 - qv1;
             }
             temp_a0_7 = sp28->header;
-            temp_v1_9 = temp_s0_3 + (u16) a0->unk28;
-            if (((Move_UnkNode3*)temp_a0_7)->unk2C & 2) {
-                if ((temp_s0_3 < 0) || (temp_v1_9 >= ((Move_UnkNode3*)temp_a0_7)->unk32)) {
+            temp_v1_9 = temp_s0_3 + (u16) mover->mode_flags;
+            if (((FieldCollisionHeaderBounds*)temp_a0_7)->unk2C & 2) {
+                if ((temp_s0_3 < 0) || (temp_v1_9 >= ((FieldCollisionHeaderBounds*)temp_a0_7)->unk32)) {
                     var_s5 = func_8005E1A8(NULL, 0x7F, sp58, var_s5);
                 }
-                if ((temp_s1 < 0) || (temp_s2_3 >= ((Move_UnkNode3*)sp28->header)->unk30)) {
+                if ((temp_s1 < 0) || (temp_s2_3 >= ((FieldCollisionHeaderBounds*)sp28->header)->unk30)) {
                     var_s5 = func_8005E1A8(NULL, 0x7E, sp58, var_s5);
                 }
             }
@@ -1018,13 +1022,13 @@ return_zero:
                 do {
                     var_fp = *sp64;
                     sp64 += 1;
-                    temp_a0_8 = (s32) ((Move_UnkNode1*)sp2C)->unk40 >> 8;
-                    temp_a2_2 = (s32) (((Move_UnkNode1*)sp2C)->unk34 << 8) >> 0x10;
-                    temp_s6 = ((Move_UnkNode1*)var_fp)->unk4;
-                    if (((((Move_UnkNode1*)var_fp)->unk1C + temp_a2_2) < sp6C) && (((((Move_UnkNode1*)var_fp)->unk1E + temp_a2_2) >= e_x_min))) {
-                        temp_a1_3 = ((Move_UnkNode1*)var_fp)->unk22 + (s16) temp_a0_8;
+                    temp_a0_8 = (s32) ((FieldCollisionNode*)sp2C)->unk40 >> 8;
+                    temp_a2_2 = (s32) (((FieldCollisionNode*)sp2C)->unk34 << 8) >> 0x10;
+                    temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
+                    if (((((FieldCollisionNode*)var_fp)->unk1C + temp_a2_2) < sp6C) && (((((FieldCollisionNode*)var_fp)->unk1E + temp_a2_2) >= e_x_min))) {
+                        temp_a1_3 = ((FieldCollisionNode*)var_fp)->unk22 + (s16) temp_a0_8;
                         if (temp_a1_3 < sp70) {
-                            temp_s1 = ((Move_UnkNode1*)var_fp)->unk20 + (s16) temp_a0_8;
+                            temp_s1 = ((FieldCollisionNode*)var_fp)->unk20 + (s16) temp_a0_8;
                             if (temp_s1 >= sp74) {
                                 var_s0 = temp_s1;
                                 var_t1 = temp_a1_3;
@@ -1038,9 +1042,9 @@ return_zero:
                                 temp_lo = (var_t1 - temp_a1_3) * temp_a0_9;
                                 var_s0 = ((var_s0 - var_t1) + 1) * temp_a0_9;
                                 var_t8 = 0;
-                                var_s1 = (u8*)((Move_UnkNode1*)var_fp)->unk10 + (temp_lo * 4);
-                                var_s4 = (s8*)((Move_UnkNode1*)var_fp)->unk14 + (temp_lo * 2);
-                                if (((Move_UnkNode2*)temp_s6)->unk4 & 8) {
+                                var_s1 = (u8*)((FieldCollisionNode*)var_fp)->unk10 + (temp_lo * 4);
+                                var_s4 = (s8*)((FieldCollisionNode*)var_fp)->unk14 + (temp_lo * 2);
+                                if (((FieldCollisionSurfaceDef*)temp_s6)->unk4 & 8) {
                                     var_s0 = var_s0 - 1;
                                     var_s3 = var_s4 + 1;
                                     if (var_s0 != -1) {
@@ -1141,10 +1145,10 @@ return_zero:
             sp54 = temp_t6_2;
             } while (temp_t6_2 != -1);
         }
-        temp_a0_10 = a0->unkC;
+        temp_a0_10 = mover->move_x;
         temp_v0_9 = (var_t9 - 1) - sp54;
         sp5C = (s32) (temp_a0_10 * temp_v0_9) / var_t9;
-        temp_v1_14 = a0->unk14;
+        temp_v1_14 = mover->move_z;
         temp_lo_3 = (s32) (temp_v1_14 * temp_v0_9) / var_t9;
         sp60 = temp_lo_3;
         if ((var_s5 >= 0) && (sp5C == 0) && (temp_lo_3 == 0)) {
@@ -1160,16 +1164,16 @@ return_zero:
                 sp60 = (s32) ((temp_s0_2 * rsin(var_s5)) + 0xFFF) >> 0xC;
             }
             sp20 = 1;
-            sp80 = (s16) (u16) a0->unk24 / 2;
+            sp80 = (s16) (u16) mover->footprint_width / 2;
             do {
             {
-                Move_Mover *qt5;
+                FieldCollisionMover *qt5;
                 s32 qt6;
                 s32 qv0;
                 s32 qv1;
-                qt5 = a0;
+                qt5 = mover;
                 qt6 = sp5C;
-                qv0 = qt5->unk0;
+                qv0 = qt5->x;
                 qv0 += qt6;
                 if (qv0 >= 0) {
                     qv0 >>= 8;
@@ -1179,16 +1183,16 @@ return_zero:
                     qv0 >>= 8;
                     temp_s0_3 = qv0 - sp80;
                 }
-                qt5 = a0;
+                qt5 = mover;
                 qt6 = sp60;
-                qv1 = (u16)qt5->unk24;
-                qv0 = (u16)qt5->unk28;
+                qv1 = (u16)qt5->footprint_width;
+                qv0 = (u16)qt5->mode_flags;
                 temp_s2_3 = temp_s0_3 + qv1;
                 qv0 <<= 16;
                 qv1 = qv0 >> 16;
                 qv0 = (s32)((u32)qv0 >> 31);
                 qv1 += qv0;
-                qv0 = qt5->unk8;
+                qv0 = qt5->z;
                 qv0 += qt6;
                 qv1 >>= 1;
                 if (qv0 < 0) {
@@ -1204,13 +1208,13 @@ return_zero:
             k_blocked = 0x8000;
             sp68 = (void** )0x801E1100;
             temp_a0_11 = sp28->header;
-            temp_v1_15 = temp_s0_5 + (u16) a0->unk28;
-            if (((Move_UnkNode3*)temp_a0_11)->unk2C & 2) {
+            temp_v1_15 = temp_s0_5 + (u16) mover->mode_flags;
+            if (((FieldCollisionHeaderBounds*)temp_a0_11)->unk2C & 2) {
                 if (temp_s0_5 < 0) {
                     var_a3_2 = -temp_s0_5;
                     var_t8 = 1;
                 } else {
-                    temp_a0_12 = ((Move_UnkNode3*)temp_a0_11)->unk32;
+                    temp_a0_12 = ((FieldCollisionHeaderBounds*)temp_a0_11)->unk32;
                     if (temp_v1_15 >= temp_a0_12) {
                         var_a3_2 = (temp_a0_12 - temp_v1_15) - 1;
                         var_t8 = 1;
@@ -1220,7 +1224,7 @@ return_zero:
                     var_t0 = -temp_s0_3;
                     var_t8 = 1;
                 } else {
-                    temp_a0_13 = ((Move_UnkNode3*)sp28->header)->unk30;
+                    temp_a0_13 = ((FieldCollisionHeaderBounds*)sp28->header)->unk30;
                     if (temp_s2_3 >= temp_a0_13) {
                         var_t0 = (temp_a0_13 - temp_s2_3) - 1;
                         var_t8 = 1;
@@ -1234,18 +1238,18 @@ return_zero:
                 f_y_min = temp_s0_5;
                 f_y_max = temp_v1_15;
                 sp8C = f_y_max - 1;
-                temp_v1_16 = (s32) ((Move_UnkNode1*)sp2C)->unk34 >> 8;
+                temp_v1_16 = (s32) ((FieldCollisionNode*)sp2C)->unk34 >> 8;
                 sp40 = (u16) temp_v1_16;
                 sp84 = (s32) (s16) temp_v1_16;
-                sp88 = (s32) (((Move_UnkNode1*)sp2C)->unk40 << 8) >> 0x10;
+                sp88 = (s32) (((FieldCollisionNode*)sp2C)->unk40 << 8) >> 0x10;
                 do {
                     var_fp = *sp68;
                     sp68 += 1;
-                    temp_s6 = ((Move_UnkNode1*)var_fp)->unk4;
-                    if (((((Move_UnkNode1*)var_fp)->unk1C + sp84) < f_x_max) && (((((Move_UnkNode1*)var_fp)->unk1E + sp84) >= f_x_min))) {
-                        temp_a0_14 = ((Move_UnkNode1*)var_fp)->unk22 + sp88;
+                    temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
+                    if (((((FieldCollisionNode*)var_fp)->unk1C + sp84) < f_x_max) && (((((FieldCollisionNode*)var_fp)->unk1E + sp84) >= f_x_min))) {
+                        temp_a0_14 = ((FieldCollisionNode*)var_fp)->unk22 + sp88;
                         if (temp_a0_14 < f_y_max) {
-                            temp_v1_17 = ((Move_UnkNode1*)var_fp)->unk20 + sp88;
+                            temp_v1_17 = ((FieldCollisionNode*)var_fp)->unk20 + sp88;
                             if (temp_v1_17 >= f_y_min) {
                                 var_s0_8 = temp_v1_17;
                                 var_t1_2 = temp_a0_14;
@@ -1257,9 +1261,9 @@ return_zero:
                                 }
                                 temp_lo_4 = (var_t1_2 - temp_a0_14) * ((u8*)temp_s6)[6];
                                 var_s0_8 = var_s0_8 - var_t1_2;
-                                var_s1_4 = (u8*)((Move_UnkNode1*)var_fp)->unk10 + (temp_lo_4 * 4);
+                                var_s1_4 = (u8*)((FieldCollisionNode*)var_fp)->unk10 + (temp_lo_4 * 4);
                                 f_x_max_2 = f_x_max;
-                                var_s4 = (u8*)((Move_UnkNode1*)var_fp)->unk14 + (temp_lo_4 * 2);
+                                var_s4 = (u8*)((FieldCollisionNode*)var_fp)->unk14 + (temp_lo_4 * 2);
                                 if (var_s0_8 != -1) {
                                     sp84 = f_x_max_2 - 1;
                                     do {
@@ -1276,7 +1280,7 @@ return_zero:
                                                     temp_a1_5 = *(s16*)var_t3;
                                                     if (temp_a1_5 >= f_x_min) {
                                                         var_a2 = 0;
-                                                        if (((Move_UnkNode2*)temp_s6)->unk4 & 8) {
+                                                        if (((FieldCollisionSurfaceDef*)temp_s6)->unk4 & 8) {
                                                             var_a0 = 0;
                                                             if ((f_x_min < temp_v1_18) && !(*var_s4 & 0x80)) {
                                                                 var_a2 = 1;
@@ -1425,91 +1429,91 @@ return_zero:
             sp50 |= 1;
         }
         if ((sp5C != 0) || (sp60 != 0)) {
-            var_v0_28 = a0->unk0 + sp5C;
+            var_v0_28 = mover->x + sp5C;
             if (var_v0_28 < 0) {
                 var_v0_28 += 0xFF;
             }
             probe.x = var_v0_28 >> 8;
-            var_v0_29 = a0->unk8 + sp60;
+            var_v0_29 = mover->z + sp60;
             if (var_v0_29 < 0) {
                 var_v0_29 += 0xFF;
             }
-            probe.y = var_v0_29 >> 8;
+            probe.z = var_v0_29 >> 8;
             func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             var_t8 = 0;
             if (sp20 == 0) {
                 s32 qv0_bound2;
                 s32 qv1_bound2;
                 temp_a2_3 = sp28->header;
-                if (((Move_UnkNode3*)temp_a2_3)->unk2C & 2) {
-                    temp_a0_15 = (u16)a0->unk24;
-                    var_a1 = (u16)a0->unk28;
+                if (((FieldCollisionHeaderBounds*)temp_a2_3)->unk2C & 2) {
+                    temp_a0_15 = (u16)mover->footprint_width;
+                    var_a1 = (u16)mover->mode_flags;
                     temp_a3_2 = (u16)probe.x - ((s32)(((s16)temp_a0_15) + ((u32)(temp_a0_15 << 16) >> 31)) >> 1);
-                    qv0_bound2 = (u16)probe.y - ((s32)(((s16)var_a1) + ((u32)(var_a1 << 16) >> 31)) >> 1);
+                    qv0_bound2 = (u16)probe.z - ((s32)(((s16)var_a1) + ((u32)(var_a1 << 16) >> 31)) >> 1);
                     qv1_bound2 = qv0_bound2 + var_a1;
                     temp_a0_15 = temp_a3_2 + temp_a0_15;
                     if (((qv0_bound2 << 16) < 0) ||
-                        ((s16)qv1_bound2 >= ((Move_UnkNode3*)temp_a2_3)->unk32) ||
+                        ((s16)qv1_bound2 >= ((FieldCollisionHeaderBounds*)temp_a2_3)->unk32) ||
                         ((s16)temp_a3_2 < 0) ||
-                        ((s16)temp_a0_15 >= ((Move_UnkNode3*)temp_a2_3)->unk30)) {
+                        ((s16)temp_a0_15 >= ((FieldCollisionHeaderBounds*)temp_a2_3)->unk30)) {
                         var_t8 = 1;
                     }
                 }
             }
             if ((sp20 != 0) || (var_t8 != 0)) {
-                var_v0_30 = a0->unk0;
+                var_v0_30 = mover->x;
                 if (var_v0_30 < 0) {
                     var_v0_30 += 0xFF;
                 }
                 probe.x = var_v0_30 >> 8;
-                var_v0_31 = a0->unk8;
+                var_v0_31 = mover->z;
                 if (var_v0_31 < 0) {
                     var_v0_31 += 0xFF;
                 }
-                probe.y = var_v0_31 >> 8;
+                probe.z = var_v0_31 >> 8;
                 func_8005DA7C(&probe, sp2C, &sp20, &sp24);
                 sp50 |= 3;
             } else {
-                a0->unk0 = (s32) (a0->unk0 + sp5C);
-                a0->unk8 = (s32) (a0->unk8 + sp60);
+                mover->x = (s32) (mover->x + sp5C);
+                mover->z = (s32) (mover->z + sp60);
             }
         } else {
-            var_v0_32 = a0->unk0;
+            var_v0_32 = mover->x;
             if (var_v0_32 < 0) {
                 var_v0_32 += 0xFF;
             }
             probe.x = var_v0_32 >> 8;
-            var_v0_33 = a0->unk8;
+            var_v0_33 = mover->z;
             if (var_v0_33 < 0) {
                 var_v0_33 += 0xFF;
             }
-            probe.y = var_v0_33 >> 8;
+            probe.z = var_v0_33 >> 8;
             func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             sp50 |= 3;
         }
         }
         goto move_done_372;
 direct_move_149:
-        a0->unk0 = (s32) (a0->unk0 + a0->unkC);
-        a0->unk8 = (s32) (a0->unk8 + a0->unk14);
+        mover->x = (s32) (mover->x + mover->move_x);
+        mover->z = (s32) (mover->z + mover->move_z);
 move_done_372:
         sp84 = 0xFFFFFF;
         var_s2 = 0;
         var_s4_3 = 0;
         sp6C = 0;
-        var_v0_34 = a0->unk0;
+        var_v0_34 = mover->x;
         var_fp = NULL;
-        a0->unk1C = NULL;
+        mover->collision_node = NULL;
         if (var_v0_34 < 0) {
             var_v0_34 += 0xFF;
         }
         probe.x = var_v0_34 >> 8;
-        var_v0_35 = a0->unk8;
+        var_v0_35 = mover->z;
         if (var_v0_35 < 0) {
             var_v0_35 += 0xFF;
         }
-        probe.y = var_v0_35 >> 8;
-        late_uy = (u16) probe.y;
+        probe.z = var_v0_35 >> 8;
+        late_uy = (u16) probe.z;
         var_s5 = (u16) probe.x;
         sp68 = (void** )0x801E1100;
         var_s3 = sp28->secondary_nodes;
@@ -1522,20 +1526,20 @@ move_done_372:
                 temp_t5_4 = *sp68;
                 sp68 += 1;
                 dh_1312 = temp_t5_4;
-                temp_s6 = ((Move_UnkNode1*)temp_t5_4)->unk4;
-                temp_a1_8 = (s32) ((Move_UnkNode1*)temp_t5_4)->unk34 >> 8;
-                temp_a0_17 = (s32) (((Move_UnkNode1*)temp_t5_4)->unk40 << 8) >> 0x10;
-                temp_v1_24 = ((Move_UnkNode1*)temp_t5_4)->unk22 + temp_a0_17;
+                temp_s6 = ((FieldCollisionNode*)temp_t5_4)->unk4;
+                temp_a1_8 = (s32) ((FieldCollisionNode*)temp_t5_4)->unk34 >> 8;
+                temp_a0_17 = (s32) (((FieldCollisionNode*)temp_t5_4)->unk40 << 8) >> 0x10;
+                temp_v1_24 = ((FieldCollisionNode*)temp_t5_4)->unk22 + temp_a0_17;
                 var_t8 = 0;
                 do {
-                if ((var_t0_2 >= temp_v1_24) && (((((Move_UnkNode1*)temp_t5_4)->unk20 + temp_a0_17) >= var_t0_2))) {
+                if ((var_t0_2 >= temp_v1_24) && (((((FieldCollisionNode*)temp_t5_4)->unk20 + temp_a0_17) >= var_t0_2))) {
                     temp_a0_18 = ((u8*)temp_s6)[6];
-                    var_s1_5 = (u8*)((Move_UnkNode1*)temp_t5_4)->unk10 + ((var_t0_2 - temp_v1_24) * temp_a0_18 * 4);
+                    var_s1_5 = (u8*)((FieldCollisionNode*)temp_t5_4)->unk10 + ((var_t0_2 - temp_v1_24) * temp_a0_18 * 4);
                     if ((s16) temp_a1_8 != 0) {
                         var_s0_10 = temp_a0_18 - 1;
                         if (temp_a0_18 != 0) {
                             do {
-                                if (((s16) var_s5 < (((Move_UnkS16*)var_s1_5)->unk0 + (s16) temp_a1_8)) || ((((Move_UnkS16*)var_s1_5)->unk2 + (s16) temp_a1_8) < (s16) var_s5)) {
+                                if (((s16) var_s5 < (((FieldCollisionSpan*)var_s1_5)->min_x + (s16) temp_a1_8)) || ((((FieldCollisionSpan*)var_s1_5)->max_x + (s16) temp_a1_8) < (s16) var_s5)) {
                                     var_s1_5 += 4;
                                 } else {
                                     var_t8 = 1;
@@ -1547,7 +1551,7 @@ move_done_372:
                         var_s0_11 = temp_a0_18 - 1;
                         if (temp_a0_18 != 0) {
                             do {
-                                if (((s16) var_s5 < ((Move_UnkS16*)var_s1_5)->unk0) || (((Move_UnkS16*)var_s1_5)->unk2 < (s16) var_s5)) {
+                                if (((s16) var_s5 < ((FieldCollisionSpan*)var_s1_5)->min_x) || (((FieldCollisionSpan*)var_s1_5)->max_x < (s16) var_s5)) {
                                     var_s1_5 += 4;
                                 } else {
                                     dh_1339 = 1;
@@ -1558,37 +1562,37 @@ move_done_372:
                     }
                 }
                 } while (0);
-                temp_a1_9 = ((Move_UnkNode1*)sp2C)->unk38;
+                temp_a1_9 = ((FieldCollisionNode*)sp2C)->unk38;
                 temp_a0_19 = ((u8*)temp_s6)[4] & 3;
                 temp_v1_25 = temp_a1_9 >> 8;
                 switch (temp_a0_19) {               /* switch 3; irregular */
                 case 0:                             /* switch 3 */
-                    var_v1_4 = ((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v1_25;
+                    var_v1_4 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v1_25;
                     temp_a0_19 = var_v1_4 < sp84;
                     if (var_v1_4 < var_t1) {
                         if (var_t8 != 0) {
-                            temp_v0_16 = -(temp_a1_9 + (((Move_UnkNode2*)temp_s6)->unk10 << 8));
-                            if (temp_v0_16 < a0->unk18) {
-                                a0->unk18 = temp_v0_16;
+                            temp_v0_16 = -(temp_a1_9 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8));
+                            if (temp_v0_16 < mover->resolved_height) {
+                                mover->resolved_height = temp_v0_16;
                                 var_fp = sp2C;
                             }
                         }
                         if (sp6C != 0) {
-                            temp_v0_17 = ((Move_UnkNode2*)temp_s6)->unk10 + (s16) temp_v1_25;
+                            temp_v0_17 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) temp_v1_25;
                             if ((var_s2 + 0x14) < temp_v0_17) {
                                 var_s2 = temp_v0_17;
-                                var_s4_3 = ((Move_UnkNode1*)sp2C)->unk38 + (((Move_UnkNode2*)temp_s6)->unk10 << 8);
+                                var_s4_3 = ((FieldCollisionNode*)sp2C)->unk38 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8);
                                 if (var_t8 != 0) {
-                                    a0->unk1C = sp2C;
+                                    mover->collision_node = sp2C;
                                 }
                             }
                         } else {
-                            temp_v1_26 = ((Move_UnkNode2*)temp_s6)->unk10 + (s16) temp_v1_25;
+                            temp_v1_26 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) temp_v1_25;
                             if (temp_v1_26 >= var_s2) {
                                 var_s2 = temp_v1_26;
-                                var_s4_3 = ((Move_UnkNode1*)sp2C)->unk38 + (((Move_UnkNode2*)temp_s6)->unk10 << 8);
+                                var_s4_3 = ((FieldCollisionNode*)sp2C)->unk38 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8);
                                 if (var_t8 != 0) {
-                                    a0->unk1C = sp2C;
+                                    mover->collision_node = sp2C;
                                 }
                             }
                         }
@@ -1599,13 +1603,13 @@ move_done_372:
                     }
                     break;
                 case 1:                             /* switch 3 */
-                    var_v1_4 = ((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v1_25;
+                    var_v1_4 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v1_25;
                     if (var_v1_4 < var_t1) {
-                        temp_s0_6 = func_8005DFAC((Move_UnkNode1*)sp2C, &probe.x, temp_v1_25, sp6C);
+                        temp_s0_6 = func_8005DFAC((FieldCollisionNode*)sp2C, &probe.x, temp_v1_25, sp6C);
                         if (var_t8 != 0) {
                             temp_v1_27 = -(temp_s0_6 << 8);
-                            if (temp_v1_27 < a0->unk18) {
-                                a0->unk18 = temp_v1_27;
+                            if (temp_v1_27 < mover->resolved_height) {
+                                mover->resolved_height = temp_v1_27;
                                 var_fp = sp2C;
                             }
                         }
@@ -1613,17 +1617,17 @@ move_done_372:
                             var_v0_37 = var_s2 < temp_s0_6;
                             if (var_s3 != NULL) {
                                 if (var_s3 == sp2C) {
-                                    temp_v0_18 = temp_s0_6 - ((Move_UnkNode2*)((Move_UnkNode1*)sp2C)->unk4)->unk10;
+                                    temp_v0_18 = temp_s0_6 - ((FieldCollisionSurfaceDef*)((FieldCollisionNode*)sp2C)->unk4)->unk10;
                                     var_s2 += temp_v0_18;
                                     var_s4_3 += temp_v0_18 << 8;
                                 } else {
-                                    var_s2 = (temp_s0_6 + var_s2) - ((Move_UnkNode2*)((Move_UnkNode1*)var_s3)->unk4)->unk10;
+                                    var_s2 = (temp_s0_6 + var_s2) - ((FieldCollisionSurfaceDef*)((FieldCollisionNode*)var_s3)->unk4)->unk10;
                                     var_s4_3 = var_s2 << 8;
                                     if (var_t8 != 0) {
-                                        a0->unk1C = sp2C;
+                                        mover->collision_node = sp2C;
                                     }
                                 }
-                                a0->unk18 = (s32) -(var_s2 << 8);
+                                mover->resolved_height = (s32) -(var_s2 << 8);
                                 var_fp = sp2C;
                                 sp6C = 1;
                             } else {
@@ -1632,7 +1636,7 @@ move_done_372:
                                     var_s2 = temp_s0_6;
                                     var_s4_3 = var_s2 << 8;
                                     if (var_t8 != 0) {
-                                        a0->unk1C = sp2C;
+                                        mover->collision_node = sp2C;
                                     }
                                 }
                             }
@@ -1643,7 +1647,7 @@ move_done_372:
                                 var_s2 = temp_s0_6;
                                 var_s4_3 = var_s2 << 8;
                                 if (var_t8 != 0) {
-                                    a0->unk1C = sp2C;
+                                    mover->collision_node = sp2C;
                                 }
                             }
                         }
@@ -1659,28 +1663,28 @@ move_done_372:
                 sp24 = var_v1;
             } while (var_v1 != -1);
         }
-        if (a0->unk28 & 0x30000) {
-            temp_a0_20 = a0->unk26;
+        if (mover->mode_flags & 0x30000) {
+            temp_a0_20 = mover->height_bias;
             if (sp84 < ((s16) sp30 + temp_a0_20)) {
-                a0->unk4 = (s32) -((sp84 - temp_a0_20) << 8);
+                mover->height = (s32) -((sp84 - temp_a0_20) << 8);
                 var_t5 = sp50 | 0x40;
                 sp50 = var_t5;
             } else if (var_s2 >= (s16) sp30) {
-                a0->unk4 = (s32) -var_s4_3;
+                mover->height = (s32) -var_s4_3;
                 var_t5 = sp50 | 0x80;
                 sp50 = var_t5;
             } else {
-                a0->unk4 = (s32) (a0->unk4 + a0->unk10);
+                mover->height = (s32) (mover->height + mover->move_height);
             }
         } else if (((s16) sp30 != var_s2) || (var_s4_3 != 0)) {
-            a0->unk4 = (s32) -var_s4_3;
+            mover->height = (s32) -var_s4_3;
             var_t5 = sp50 | 0x20;
             sp50 = var_t5;
         }
-        if (var_fp == a0->unk1C) {
-            a0->unk20 = (s32) (a0->unk20 | 1);
+        if (var_fp == mover->collision_node) {
+            mover->flags = (s32) (mover->flags | 1);
         } else {
-            a0->unk20 = (s32) (a0->unk20 & 0xFFFE);
+            mover->flags = (s32) (mover->flags & 0xFFFE);
         }
         var_v0 = sp50;
         return var_v0;
@@ -1697,7 +1701,7 @@ move_done_372:
  * be both.
  *
  * Per node the span [row_top, row_bot] is clipped to the probe's vertical
- * extent, then a run of `Move_UnkS16` edge pairs (`node->unk10`) is scanned for
+ * extent, then a run of `FieldCollisionSpan` edge pairs (`node->unk10`) is scanned for
  * horizontal overlap. `obj->unk4 & 8` selects a variant that also consults the
  * per-edge flag bytes at `node->unk14`; otherwise a cheaper scan runs, with a
  * separate path when the node has a horizontal offset (`dx`). `((u8*)obj)[4] &
@@ -1706,7 +1710,7 @@ move_done_372:
  *
  * @param node      Head of the collision node chain; walked directly (the
  *                  parameter is the loop variable).
- * @param probe     Move_Probe box: owning Move_Mover plus centre x/y and half extents.
+ * @param probe FieldCollisionMoveProbe box: owning mover plus center x/z and half extents.
  * @param out_hit   Receives the number of blocking nodes written to 0x801E1000.
  * @param out_touch Receives the number of touching nodes written to 0x801E1100.
  *
@@ -1726,13 +1730,13 @@ move_done_372:
  *       for the full probe log and the retired hypothesis classes.
  * @note No decomp.me scratch exists for this function yet.
  */
-void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* out_touch)
+void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch)
 {
-    Move_UnkNode1** hit_list;
-    Move_UnkNode1** touch_list;
-    Move_UnkNode2* obj;
-    Move_Mover* m;
-    Move_UnkS16* pt;
+    FieldCollisionNode** hit_list;
+    FieldCollisionNode** touch_list;
+    FieldCollisionSurfaceDef* obj;
+    FieldCollisionMover* m;
+    FieldCollisionSpan* pt;
     u8* fl;
     s16 w;
     s16 h;
@@ -1763,15 +1767,15 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
     *out_touch = 0;
     if (node != NULL)
     {
-        hit_list = (Move_UnkNode1**)0x801E1000;
-        touch_list = (Move_UnkNode1**)0x801E1100;
+        hit_list = (FieldCollisionNode**)0x801E1000;
+        touch_list = (FieldCollisionNode**)0x801E1100;
         h = probe->h;
-        m = probe->m;
+        m = probe->mover;
         w = probe->w;
-        sy = m->unk28;
-        y0 = probe->y - (s16)sy / 2;
+        sy = m->mode_flags;
+        y0 = probe->z - (s16)sy / 2;
         y1 = y0 + sy;
-        sx = m->unk24;
+        sx = m->footprint_width;
         x0 = probe->x - (s16)sx / 2;
         x1 = x0 + sx;
         do
@@ -1781,7 +1785,7 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
             {
                 dz = (s32)node->unk38 >> 8;
                 zc = obj->unk14 + (s16)dz;
-                if ((zc == 0) || (zc < w + m->unk26) || (zc < h))
+                if ((zc == 0) || (zc < w + m->height_bias) || (zc < h))
                 {
                     dy = (s32)node->unk40 >> 8;
                     dx = (s32)(node->unk34 << 8) >> 16;
@@ -1812,21 +1816,21 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
                                 off = (row_clip - row_top) * stride;
                                 count = ((count - row_clip) + 1) * stride;
                                 result = 0;
-                                pt = (Move_UnkS16*)node->unk10 + off;
+                                pt = (FieldCollisionSpan*)node->unk10 + off;
                                 if (obj->unk4 & 8)
                                 {
                                     fl = (u8*)node->unk14 + off * 2;
                                     while (--count != -1)
                                     {
-                                        if ((pt->unk0 < x1) && (pt->unk2 >= x0))
+                                        if ((pt->min_x < x1) && (pt->max_x >= x0))
                                         {
                                             f0 = (s8)fl[0];
-                                            if ((f0 >= 0) && (x0 < pt->unk0))
+                                            if ((f0 >= 0) && (x0 < pt->min_x))
                                             {
                                                 result = 2;
                                                 break;
                                             }
-                                            if (((s8)fl[1] >= 0) && (pt->unk2 < x1 - 1))
+                                            if (((s8)fl[1] >= 0) && (pt->max_x < x1 - 1))
                                             {
                                                 result = 2;
                                                 break;
@@ -1854,7 +1858,7 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
                                     while (--count != -1)
                                     {
                                         zc = dx;
-                                        if (((pt->unk0 + zc) < x1) && ((pt->unk2 + zc) >= x0))
+                                        if (((pt->min_x + zc) < x1) && ((pt->max_x + zc) >= x0))
                                         {
                                             result = 1;
                                             break;
@@ -1866,7 +1870,7 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
                                 {
                                     while (--count != -1)
                                     {
-                                        if ((pt->unk0 < x1) && (pt->unk2 >= x0))
+                                        if ((pt->min_x < x1) && (pt->max_x >= x0))
                                         {
                                             result = 1;
                                             break;
@@ -1887,7 +1891,7 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
                                             }
                                             else
                                             {
-                                                if (m->unk28 & 0x30000)
+                                                if (m->mode_flags & 0x30000)
                                                 {
                                                     over = w < (obj->unk10 + (s16)dz);
                                                     if (over != 0)
@@ -1922,7 +1926,7 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
                                         if ((obj->unk14 + (s16)dz) < h)
                                         {
                                             gnd = func_8005DFAC(node, &probe->x);
-                                            if (m->unk28 & 0x30000)
+                                            if (m->mode_flags & 0x30000)
                                             {
                                                 over = w < gnd;
                                                 if (over != 0)
@@ -1985,35 +1989,35 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
  * divided by 256, translate B and C into world space.
  *
  * The height is found by intersecting the C->B edge with the line that runs
- * through @p pt parallel to A->B: `hit_x` is that intersection's x coordinate,
- * `along` its distance from C along the edge, and `along / dx_bc` the fraction
- * used to blend the node's two height endpoints h0 (at C) and h1 (at B).
+ * through @p position parallel to A->B: hit_x is that intersection's x
+ * coordinate, edge_offset its distance from C along the edge, and
+ * edge_offset / dx_bc the fraction used to blend height0 (at C) and height1
+ * (at B).
  *
  * The fraction is normally taken from the x axis. When the intersection lands
- * exactly on B's x coordinate that axis carries no usable span, so the y axis
- * is used instead; if the intersection is B itself the answer is h1 directly.
- * The blend is finally clamped back into [min(h0, h1), max(h0, h1)], which is
+ * exactly on B's x coordinate that axis carries no usable span, so the z axis
+ * is used instead; if the intersection is B itself the answer is height1 directly.
+ * The blend is finally clamped back between the two endpoint heights, which is
  * spelled twice because which endpoint is the upper bound depends on their
  * order.
  *
  * @param node Collision node whose surface is being sampled.
- * @param pt Probe position in grid cells: pt[0] is x and pt[1] is y.
+ * @param position Probe position in grid cells: position[0] is x and position[1] is z.
  * @return Interpolated surface height, clamped between the node's endpoints.
  *
  * @note Both endpoints are clamped up to zero before use, so a node whose
  *       endpoint resolves below the origin behaves as if it sat on it.
- * @see decomp.me (100%) TODO
  */
-s16 func_8005DFAC(Move_UnkNode1* node, s32* pt)
+s16 func_8005DFAC(FieldCollisionNode* node, s32* position)
 {
-    Move_UnkNode2* def;
-    s16* tbl;
-    s16* vert;
-    s16* vert_b;
-    s32 h0;
-    s32 h1;
-    s32 ox;
-    s32 oy;
+    FieldCollisionSurfaceDef* surface;
+    s16* vertices;
+    s16* vertex;
+    s16* vertex_b;
+    s32 height0;
+    s32 height1;
+    s32 offset_x;
+    s32 offset_z;
     s32 ax;
     s32 ay;
     s32 bx;
@@ -2028,208 +2032,207 @@ s16 func_8005DFAC(Move_UnkNode1* node, s32* pt)
     s32 cx_world;
     s32 cy_world;
     s32 hit_x;
-    s32 along;
+    s32 edge_offset;
     s32 hit_y;
-    s16 height;
+    s16 sampled_height;
 
-    def = node->unk4;
-    tbl = g_field_node_angle_table;
-    vert = &tbl[def->unkE * 2];
-    h0 = (node->unk38 >> 8) + def->unk10;
-    h1 = (node->unk3C >> 8) + def->unk12;
-    vert_b = &tbl[def->unkC * 2];
-    ox = node->unk34 >> 8;
-    if (h0 < 0)
+    surface = node->unk4;
+    vertices = g_field_node_angle_table;
+    vertex = &vertices[surface->unkE * 2];
+    height0 = (node->unk38 >> 8) + surface->unk10;
+    height1 = (node->unk3C >> 8) + surface->unk12;
+    vertex_b = &vertices[surface->unkC * 2];
+    offset_x = node->unk34 >> 8;
+    if (height0 < 0)
     {
-        h0 = 0;
+        height0 = 0;
     }
-    if (h1 < 0)
+    if (height1 < 0)
     {
-        h1 = 0;
+        height1 = 0;
     }
-    ax = vert[0];
-    ay = vert[1];
-    bx = vert_b[0];
-    by = vert_b[1];
-    vert = &tbl[def->unkA * 2];
-    cy = vert[1];
+    ax = vertex[0];
+    ay = vertex[1];
+    bx = vertex_b[0];
+    by = vertex_b[1];
+    vertex = &vertices[surface->unkA * 2];
+    cy = vertex[1];
     dx_ab = ax - bx;
     dy_bc = by - cy;
     cross_xy = dx_ab * dy_bc;
-    oy = node->unk40 >> 8;
-    cy_world = cy + oy;
-    cx = vert[0];
+    offset_z = node->unk40 >> 8;
+    cy_world = cy + offset_z;
+    cx = vertex[0];
     dx_bc = bx - cx;
     cross_yx = (ay - by) * dx_bc;
-    cx_world = cx + ox;
-    hit_x = ((((pt[1] - cy_world) * dx_ab) * dx_bc) + (cross_xy * cx_world) - (pt[0] * cross_yx)) / (cross_xy - cross_yx);
-    along = hit_x - cx_world;
-    hit_y = ((along * dy_bc) / dx_bc) + cy_world;
-    if (hit_x == (bx + ox))
+    cx_world = cx + offset_x;
+    hit_x = ((((position[1] - cy_world) * dx_ab) * dx_bc) + (cross_xy * cx_world) - (position[0] * cross_yx)) / (cross_xy - cross_yx);
+    edge_offset = hit_x - cx_world;
+    hit_y = ((edge_offset * dy_bc) / dx_bc) + cy_world;
+    if (hit_x == (bx + offset_x))
     {
-        if (hit_y == (by + oy))
+        if (hit_y == (by + offset_z))
         {
-            height = h1;
+            sampled_height = height1;
         }
         else
         {
-            height = (((hit_y - cy_world) * (h1 - h0)) / dy_bc) + h0;
+            sampled_height = (((hit_y - cy_world) * (height1 - height0)) / dy_bc) + height0;
         }
     }
     else
     {
-        height = ((along * (h1 - h0)) / dx_bc) + h0;
+        sampled_height = ((edge_offset * (height1 - height0)) / dx_bc) + height0;
     }
 
-    if (h0 < h1)
+    if (height0 < height1)
     {
-        if (height > h1)
+        if (sampled_height > height1)
         {
-            height = h1;
+            sampled_height = height1;
         }
-        else if (height < h0)
+        else if (sampled_height < height0)
         {
-            height = h0;
+            sampled_height = height0;
         }
     }
     else
     {
-        if (height > h0)
+        if (sampled_height > height0)
         {
-            height = h0;
+            sampled_height = height0;
         }
-        else if (height < h1)
+        else if (sampled_height < height1)
         {
-            height = h1;
+            sampled_height = height1;
         }
     }
-    return height;
+    return sampled_height;
 }
 
 /**
  * @brief Resolve the slide direction along one collision edge.
  *
- * Locates boundary edge number @p edge in the node's edge-run list, takes the
+ * Locates boundary edge number @p edge_index in the node's edge-run list, takes the
  * two angle-table points bounding it, and turns them into a wall angle with
  * ratan2. Indices 0x7E and 0x7F skip the walk entirely and stand for the two
  * screen-aligned world edges, giving a fixed angle of 0x400 and 0 respectively.
  *
  * The wall can be slid along in either direction, so the side whose angle sits
- * nearer @p dir is chosen; a tie means the movement runs straight into the wall
+ * nearer @p move_angle is chosen; a tie means the movement runs straight into the wall
  * and nothing can be resolved. The chosen angle is then merged with the running
- * best @p best: when both deviate from @p dir the same way the larger deviation
+ * best @p best_angle: when both deviate from @p move_angle the same way the larger deviation
  * wins, and a deviation of 0x472 or more (about 100 degrees of the 0x1000-unit
  * circle) counts as blocked.
  *
- * @param def Node definition owning the edge list, or NULL when @p edge is
+ * @param surface Surface definition owning the edge list, or NULL when @p edge_index is
  *            0x7E or 0x7F.
- * @param edge Edge index within the node, or 0x7E / 0x7F for a world edge.
- * @param dir Desired movement direction, in 0x1000 units per revolution.
- * @param best Slide direction resolved so far: -2 means none yet and -1 means
+ * @param edge_index Edge index within the node, or 0x7E / 0x7F for a world edge.
+ * @param move_angle Desired movement direction, in 0x1000 units per revolution.
+ * @param best_angle Slide direction resolved so far: -2 means none yet and -1 means
  *             an earlier edge already blocked the movement.
- * @return The resolved slide direction, @p best when the earlier one still
+ * @return The resolved slide direction, @p best_angle when the earlier one still
  *         wins, or -1 when the movement is blocked.
- * @see decomp.me (100%) TODO
  */
-s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
+s32 func_8005E1A8(FieldCollisionSurfaceDef* surface, s32 edge_index, s32 move_angle, s32 best_angle)
 {
-    s16* tbl;
-    s16* prev;
-    s16* ep;
-    Move_EdgeRun* run;
+    s16* vertices;
+    s16* previous_point;
+    s16* edge_point;
+    FieldCollisionEdgeRun* edge_run;
     s32 scratch;
-    s32 angle;
+    s32 slide_angle;
     s32 dx;
     s32 dy;
-    s32 d2;
+    s32 opposite_delta;
     s32 tmp;
-    s32 wrap;
+    s32 wrapped_angle;
 
-    if (best == -1)
+    if (best_angle == -1)
     {
         return -1;
     }
-    prev = NULL;
-    if (edge < 0x7E)
+    previous_point = NULL;
+    if (edge_index < 0x7E)
     {
-        tbl = g_field_node_angle_table;
-        for (run = def->runs; (scratch = run->count & 0x7FFF) != 0; run++)
+        vertices = g_field_node_angle_table;
+        for (edge_run = surface->runs; (scratch = edge_run->count & 0x7FFF) != 0; edge_run++)
         {
-            ep = &tbl[run->index * 2];
+            edge_point = &vertices[edge_run->index * 2];
             while (--scratch != -1)
             {
-                tmp = prev != NULL;
+                tmp = previous_point != NULL;
                 if (tmp)
                 {
-                    if (edge == 0)
+                    if (edge_index == 0)
                     {
                         goto found;
                     }
-                    edge--;
+                    edge_index--;
                 }
-                prev = ep;
-                ep += 2;
+                previous_point = edge_point;
+                edge_point += 2;
             }
         }
-        ep = &tbl[def->runs[0].index * 2];
+        edge_point = &vertices[surface->runs[0].index * 2];
     found:
-        dx = ep[0] - prev[0];
-        dy = ep[1] - prev[1];
+        dx = edge_point[0] - previous_point[0];
+        dy = edge_point[1] - previous_point[1];
         if (dx == 0)
         {
-            angle = 0x400;
+            slide_angle = 0x400;
         }
         else
         {
-            angle = ratan2(dy, dx) & 0x7FF;
+            slide_angle = ratan2(dy, dx) & 0x7FF;
         }
     }
     else
     {
-        angle = (edge == 0x7E) << 10;
+        slide_angle = (edge_index == 0x7E) << 10;
     }
 
-    if (dir < angle)
+    if (move_angle < slide_angle)
     {
-        scratch = angle - dir;
+        scratch = slide_angle - move_angle;
     }
     else
     {
-        scratch = dir - angle;
+        scratch = move_angle - slide_angle;
         if (scratch > 0x800)
         {
-            wrap = dir - 0x1000;
-            scratch = angle - wrap;
+            wrapped_angle = move_angle - 0x1000;
+            scratch = slide_angle - wrapped_angle;
         }
     }
-    tmp = angle + 0x800;
-    if (dir < tmp)
+    tmp = slide_angle + 0x800;
+    if (move_angle < tmp)
     {
-        d2 = tmp - dir;
-        if (d2 > 0x800)
+        opposite_delta = tmp - move_angle;
+        if (opposite_delta > 0x800)
         {
-            wrap = angle - 0x800;
-            d2 = dir - wrap;
+            wrapped_angle = slide_angle - 0x800;
+            opposite_delta = move_angle - wrapped_angle;
         }
     }
     else
     {
-        d2 = dir - tmp;
+        opposite_delta = move_angle - tmp;
     }
-    if (scratch == d2)
+    if (scratch == opposite_delta)
     {
         return -1;
     }
-    if (d2 < scratch)
+    if (opposite_delta < scratch)
     {
-        angle += 0x800;
+        slide_angle += 0x800;
     }
-    if (best == -2)
+    if (best_angle == -2)
     {
-        return angle;
+        return slide_angle;
     }
 
-    scratch = angle - dir;
+    scratch = slide_angle - move_angle;
     if (scratch > 0x800)
     {
         scratch -= 0x1000;
@@ -2238,43 +2241,43 @@ s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
     {
         scratch += 0x1000;
     }
-    d2 = best - dir;
-    if (d2 > 0x800)
+    opposite_delta = best_angle - move_angle;
+    if (opposite_delta > 0x800)
     {
-        d2 -= 0x1000;
+        opposite_delta -= 0x1000;
     }
-    else if (d2 < -0x800)
+    else if (opposite_delta < -0x800)
     {
-        d2 += 0x1000;
+        opposite_delta += 0x1000;
     }
 
-    if ((scratch >= 0) && (d2 >= 0))
+    if ((scratch >= 0) && (opposite_delta >= 0))
     {
-        if (scratch < d2)
+        if (scratch < opposite_delta)
         {
-            angle = best;
+            slide_angle = best_angle;
         }
         else if (scratch >= 0x472)
         {
-            angle = -1;
+            slide_angle = -1;
         }
     }
-    else if ((scratch <= 0) && (d2 <= 0))
+    else if ((scratch <= 0) && (opposite_delta <= 0))
     {
-        if (d2 < scratch)
+        if (opposite_delta < scratch)
         {
-            angle = best;
+            slide_angle = best_angle;
         }
         else if (scratch < -0x471)
         {
-            angle = -1;
+            slide_angle = -1;
         }
     }
     else
     {
-        angle = -1;
+        slide_angle = -1;
     }
-    return angle;
+    return slide_angle;
 }
 
 
@@ -2282,15 +2285,15 @@ s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
  * @brief One boundary point of a collision node, as stored in
  *        g_field_node_angle_table.
  * @note Both fields are loaded unsigned by func_8005E3B0 (the asm uses lhu),
- *       which is why this is not the signed Move_UnkS16 pair used for the
- *       min/max edge records at Move_UnkNode1::unk10.
+ *       which is why this is not the signed FieldCollisionSpan pair used for the
+ *       min/max edge records at FieldCollisionNode::unk10.
  */
-typedef struct Move_EdgePoint {
-    /** 0x00 x coordinate. */
+typedef struct FieldCollisionEdgePoint {
+    /** X coordinate. */
     u16 x;
-    /** 0x02 y coordinate (scanline before node->unk22 is subtracted). */
-    u16 y;
-} Move_EdgePoint;
+    /** Z coordinate (scanline before node->unk22 is subtracted). */
+    u16 z;
+} FieldCollisionEdgePoint;
 
 /**
  * @brief One horizontal span on a scanline: the inclusive x range it covers.
@@ -2299,20 +2302,20 @@ typedef struct Move_EdgePoint {
  *       lw/sw, so the whole-span copies in the bubble sort go through
  *       @c word.
  */
-typedef union Move_Span {
+typedef union FieldCollisionRasterSpan {
     struct {
         s16 x0;
         s16 x1;
     } x;
     s32 word;
-} Move_Span;
+} FieldCollisionRasterSpan;
 
 /**
  * @brief Edge attributes for the two ends of the span at the same index.
- * @note Union for the same alignment reason as Move_Span; @c half carries
+ * @note Union for the same alignment reason as FieldCollisionRasterSpan; @c half carries
  *       the 0xFFFF padding value written to unused entries.
  */
-typedef union Move_SpanFlags {
+typedef union FieldCollisionRasterSpanFlags {
     struct {
         /** Attribute of the span's left (x0) end. */
         u8 f0;
@@ -2320,13 +2323,13 @@ typedef union Move_SpanFlags {
         u8 f1;
     } f;
     u16 half;
-} Move_SpanFlags;
+} FieldCollisionRasterSpanFlags;
 
 /**
  * @brief Rasterise a collision node's outline into per-scanline span lists.
  *
  * Phase 1 walks the node's edge-run list at @c def->runs and draws every
- * polygon edge with a Bresenham line, appending one Move_Span per scanline
+ * polygon edge with a Bresenham line, appending one FieldCollisionRasterSpan per scanline
  * touched. Consecutive edges that continue in the same vertical direction are
  * merged into the span the previous edge left on that row rather than starting
  * a new one. The whole edge body then runs once more for the closing edge back
@@ -2346,7 +2349,7 @@ typedef union Move_SpanFlags {
  *
  * @note The scratchpad at 0x1F800000 holds one span-count byte per scanline.
  * @note @c w is the per-row span capacity, twice the byte at offset 6 of the
- *       node definition. That byte overlaps Move_UnkNode2::unk4, which other
+ *       node definition. That byte overlaps FieldCollisionSurfaceDef::unk4, which other
  *       functions read as a word, so it is taken by cast rather than by
  *       resplitting a field they depend on.
  *
@@ -2365,29 +2368,29 @@ typedef union Move_SpanFlags {
  *       closing edge; and swapping the @c dy / @c row statements (-193).
  * @see decomp.me (94.98%, 650/874 exact) TODO
  */
-void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
+void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
 {
-    Move_UnkNode2* def;
+    FieldCollisionSurfaceDef* def;
     s16* table;
-    Move_Span* spans;
-    Move_SpanFlags* flags;
+    FieldCollisionRasterSpan* spans;
+    FieldCollisionRasterSpanFlags* flags;
     u8* counts;
     s32 first_dir;
     s32 edge;
-    Move_EdgeRun* run;
-    Move_EdgePoint* pt;
-    Move_EdgePoint* prev;
-    Move_Span* sp_row;
-    Move_Span* out_span;
-    Move_Span* p;
-    Move_Span* a;
-    Move_SpanFlags* fl_row;
-    Move_SpanFlags* out_flag;
-    Move_SpanFlags* save_flags;
-    Move_SpanFlags* q;
-    Move_SpanFlags* b;
-    Move_Span tmp_span;
-    Move_SpanFlags tmp_flag;
+    FieldCollisionEdgeRun* run;
+    FieldCollisionEdgePoint* pt;
+    FieldCollisionEdgePoint* prev;
+    FieldCollisionRasterSpan* sp_row;
+    FieldCollisionRasterSpan* out_span;
+    FieldCollisionRasterSpan* p;
+    FieldCollisionRasterSpan* a;
+    FieldCollisionRasterSpanFlags* fl_row;
+    FieldCollisionRasterSpanFlags* out_flag;
+    FieldCollisionRasterSpanFlags* save_flags;
+    FieldCollisionRasterSpanFlags* q;
+    FieldCollisionRasterSpanFlags* b;
+    FieldCollisionRasterSpan tmp_span;
+    FieldCollisionRasterSpanFlags tmp_flag;
     s32* src;
     u8* cp;
     s32 rows;
@@ -2420,11 +2423,11 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
     rows = rows - node->unk22;
     w = ((u8*)def)[6] * 2;
     counts = (u8*)0x1F800000;
-    spans = (Move_Span*)*alloc;
+    spans = (FieldCollisionRasterSpan*)*alloc;
     node->unk10 = *alloc;
     nbytes = (rows + 1) * (w * 2);
     node->unk14 = *alloc + nbytes;
-    flags = (Move_SpanFlags*)(*alloc + ((rows + 1) * (w * 4)));
+    flags = (FieldCollisionRasterSpanFlags*)(*alloc + ((rows + 1) * (w * 4)));
     *alloc = *alloc + ((((rows + 1) * (w * 3)) + 2) & ~3);
 
     cp = counts;
@@ -2444,7 +2447,7 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
     i = run->count & 0x7FFF;
     while (i != 0)
     {
-        pt = (Move_EdgePoint*)&table[run->index * 2];
+        pt = (FieldCollisionEdgePoint*)&table[run->index * 2];
         for (i = i - 1; i != -1; i--)
         {
             if (prev != NULL)
@@ -2460,8 +2463,8 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
                 if (dx >= 0)
                 {
                     x = prev->x;
-                    y0 = prev->y;
-                    dy = pt->y;
+                    y0 = prev->z;
+                    dy = pt->z;
                     ybase = node->unk22;
                     sgn = 1;
                 }
@@ -2470,8 +2473,8 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
                     dx = -dx;
                     x = pt->x;
                     sgn = -1;
-                    y0 = pt->y;
-                    dy = prev->y;
+                    y0 = pt->z;
+                    dy = prev->z;
                     ybase = node->unk22;
                 }
                 dy = dy - y0;
@@ -2490,7 +2493,7 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
                     attr2 = attr;
                     if ((last_dir == 2) || (((ystep * sgn) + 2) == last_dir))
                     {
-                        merge_row = prev->y - node->unk22;
+                        merge_row = prev->z - node->unk22;
                     }
                     else
                     {
@@ -2636,15 +2639,15 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
     {
         hi = prev_hi << 7;
     }
-    pt = (Move_EdgePoint*)&table[run->index * 2];
+    pt = (FieldCollisionEdgePoint*)&table[run->index * 2];
     attr = edge | hi;
     x = pt->x;
     dx = x - prev->x;
     if (dx >= 0)
     {
         x = prev->x;
-        y0 = prev->y;
-        y1 = pt->y;
+        y0 = prev->z;
+        y1 = pt->z;
         ybase = node->unk22;
         sgn = 1;
     }
@@ -2653,8 +2656,8 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
         dx = -dx;
         x = pt->x;
         sgn = -1;
-        y0 = pt->y;
-        y1 = prev->y;
+        y0 = pt->z;
+        y1 = prev->z;
         ybase = node->unk22;
     }
     dy = y1 - y0;
@@ -2672,7 +2675,7 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
         }
         if ((last_dir == 2) || (((ystep * sgn) + 2) == last_dir))
         {
-            merge_row = prev->y - node->unk22;
+            merge_row = prev->z - node->unk22;
         }
         else
         {
@@ -2680,7 +2683,7 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
         }
         if (((ystep * sgn) + 2) == first_dir)
         {
-            merge_row2 = pt->y - node->unk22;
+            merge_row2 = pt->z - node->unk22;
         }
         else
         {
@@ -2898,7 +2901,7 @@ void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
 
     i = w * (((node->unk20 - node->unk22) + 2) / 2);
     src = (s32*)save_flags;
-    flags = (Move_SpanFlags*)node->unk14;
+    flags = (FieldCollisionRasterSpanFlags*)node->unk14;
     for (i = i - 1; i != -1; i--)
     {
         *(s32*)flags = *src;
@@ -3222,7 +3225,7 @@ typedef struct
     /** Sort key: the node's @c row_start, ascending. */
     s16 key;
     s16 pad;
-} NodeEnt;
+} FieldCollisionRasterNode;
 
 /**
  * @brief A horizontal span (inclusive x range) in tile columns.
@@ -3231,7 +3234,7 @@ typedef struct
 {
     s16 x0;
     s16 x1;
-} Span;
+} FieldCollisionTileSpan;
 
 /**
  * @brief One node's in-progress walk over its span table.
@@ -3240,12 +3243,12 @@ typedef struct
  */
 typedef struct
 {
-    u16* src;   /* 0x00 cursor into FieldNode::spans */
-    s16 count;  /* 0x04 sub-rows remaining */
-    s16 step;   /* 0x06 span pairs per sub-row */
-    s16 skip;   /* 0x08 sub-rows still to skip */
+    u16* src;
+    s16 count;
+    s16 step;
+    s16 skip;
     s16 pad;
-} Run;
+} FieldCollisionSpanRun;
 
 /**
  * @brief Rasterise the active nodes of every group into the scene work area.
@@ -3262,7 +3265,7 @@ typedef struct
  * 0x1F800000 / 0x1F800200) and a union in @c acc. The intersection drives
  * plane 0 and the union drives plane 1 of the output words.
  *
- * @param arg0 Unused; the target never reads a0.
+ * @param unused Unused; the target never reads the first argument.
  * @param clip Optional clipping node. When NULL every tile row of the group is
  *             emitted; otherwise only the rows the node covers are, and its
  *             definition is tested against the group id first.
@@ -3282,12 +3285,12 @@ typedef struct
  *       function-scope variable is worth +47 exact rows over a literal 0.
  * @see decomp.me (85.92%) TODO
  */
-void func_8005F5BC(s32 arg0, FieldNode* clip)
+void func_8005F5BC(s32 unused, FieldNode* clip)
 {
-    Span cur[128];
-    Span acc[128];
-    NodeEnt list[50];
-    Run runs[50];
+    FieldCollisionTileSpan cur[128];
+    FieldCollisionTileSpan acc[128];
+    FieldCollisionRasterNode list[50];
+    FieldCollisionSpanRun runs[50];
     FieldScene* scene;
     u32* saved;
     s32 words;
@@ -3300,7 +3303,7 @@ void func_8005F5BC(s32 arg0, FieldNode* clip)
     u32 node_count;
     u32 j;
     s32 n_sp;
-    Run* runs_base;
+    FieldCollisionSpanRun* runs_base;
     u32* out;
     u32 ncur;
     u32 nacc;
@@ -3309,16 +3312,16 @@ void func_8005F5BC(s32 arg0, FieldNode* clip)
     FieldNode* nd;
     FieldNode* ent;
     FieldNodeDef* def;
-    NodeEnt* p;
-    NodeEnt* p2;
-    Run* rp;
-    Run* rq;
-    Span* sp1;
-    Span* sp2;
-    Span* sc0;
-    Span* sc1;
-    Span* prev;
-    Span* dst;
+    FieldCollisionRasterNode* p;
+    FieldCollisionRasterNode* p2;
+    FieldCollisionSpanRun* rp;
+    FieldCollisionSpanRun* rq;
+    FieldCollisionTileSpan* sp1;
+    FieldCollisionTileSpan* sp2;
+    FieldCollisionTileSpan* sc0;
+    FieldCollisionTileSpan* sc1;
+    FieldCollisionTileSpan* prev;
+    FieldCollisionTileSpan* dst;
     u32* wp;
     u32* wq;
     u16* src;
@@ -3779,7 +3782,7 @@ void func_8005F5BC(s32 arg0, FieldNode* clip)
                             {
                                 sc0 = cur;
                                 sc1 = acc;
-                                dst = (Span*)0x1F800000;
+                                dst = (FieldCollisionTileSpan*)0x1F800000;
                                 nacc = ncur;
                                 n_sp = nacc;
                                 n = nacc - 1;
@@ -3802,13 +3805,13 @@ void func_8005F5BC(s32 arg0, FieldNode* clip)
                                 sc0 = cur;
                                 if (!(i & 1))
                                 {
-                                    prev = (Span*)0x1F800000;
-                                    dst = (Span*)0x1F800200;
+                                    prev = (FieldCollisionTileSpan*)0x1F800000;
+                                    dst = (FieldCollisionTileSpan*)0x1F800200;
                                 }
                                 else
                                 {
-                                    prev = (Span*)0x1F800200;
-                                    dst = (Span*)0x1F800000;
+                                    prev = (FieldCollisionTileSpan*)0x1F800200;
+                                    dst = (FieldCollisionTileSpan*)0x1F800000;
                                 }
                                 k = ncur - 1;
                                 nout = 0;
@@ -3905,7 +3908,7 @@ void func_8005F5BC(s32 arg0, FieldNode* clip)
                     }
 
                     k = n_sp - 1;
-                    sp2 = (Span*)0x1F800200;
+                    sp2 = (FieldCollisionTileSpan*)0x1F800200;
                     if (k != -1)
                     {
                         do
@@ -4005,7 +4008,12 @@ void func_8005F5BC(s32 arg0, FieldNode* clip)
  */
 extern u32 D_1F800008;
 
-void func_80060364(s32 arg0, s32 arg1)
+/**
+ * @brief Dilate the active collision-group mask for a rectangular footprint.
+ * @param footprint_width Footprint width in collision-map columns.
+ * @param footprint_depth Footprint depth in collision-map rows.
+ */
+void func_80060364(s32 footprint_width, s32 footprint_depth)
 {
     FieldScene *scene;
     u32 sp4;
@@ -4096,12 +4104,12 @@ void func_80060364(s32 arg0, s32 arg1)
     temp_v1 = (u16) scene->unk46;
     spC = ((s32) (temp_v1 + 0x1F) >> 5) * 2;
     sp10 = (((s32) (temp_v1 - 3) >> 5) + 1) * 3;
-    temp_s3 = arg0 - 1;
-    if (arg1 >= 3)
+    temp_s3 = footprint_width - 1;
+    if (footprint_depth >= 3)
     {
         var_a1 = 0x1F800000;
         var_t9 = 0x1F800000;
-        var_fp = (sp10 * arg1 * 4) + 0x1F800000;
+        var_fp = (sp10 * footprint_depth * 4) + 0x1F800000;
     }
     else
     {
@@ -4117,10 +4125,10 @@ void func_80060364(s32 arg0, s32 arg1)
     sp8 = temp_s6_2;
     if (temp_s6_2 != -1)
     {
-        temp_s6_3 = arg0 - 1;
+        temp_s6_3 = footprint_width - 1;
         sp1C = temp_s6_3;
         sp20 = temp_s6_3 * 4;
-        sp18 = arg0 - 6;
+        sp18 = footprint_width - 6;
         do
         {
             var_a2 = (4 - (s32) var_t7) & 3;
@@ -4161,21 +4169,21 @@ loop_6:
                 } while (var_a2_3 != -1);
             }
             var_s4 = 0;
-            temp_v0 = ((u16) scene->unk48 - arg1) - 4;
+            temp_v0 = ((u16) scene->unk48 - footprint_depth) - 4;
             sp14 = temp_v0;
             if (temp_v0 != -1)
             {
                 stride4 = sp10 * 4;
                 sp24 = 0x20 - temp_s3;
                 sp28 = 0x21 - temp_s3;
-                sp30 = stride4 * arg1;
+                sp30 = stride4 * footprint_depth;
                 do
                 {
                     temp_s1 = sp4;
                     sp4 = temp_s1 + (spC * 4);
                     temp_t2 = *(u32 *) (temp_s1 + 0);
                     temp_t0 = *(u32 *) (temp_s1 + 4);
-                    var_t8_2 = ((u16) scene->unk46 - 1) - arg0;
+                    var_t8_2 = ((u16) scene->unk46 - 1) - footprint_width;
                     temp_s1 += 8;
                     switch (sp1C)
                     {
@@ -4196,9 +4204,9 @@ loop_6:
                                 var_a2_4 -= 1;
                                 var_t1 |= var_a0;
                             } while (var_a2_4 != -1);
-                            if (arg0 & 1)
+                            if (footprint_width & 1)
                             {
-                                var_t6 |= temp_t0 >> (arg0 - 2);
+                                var_t6 |= temp_t0 >> (footprint_width - 2);
                                 var_t1 |= temp_t2 >> temp_s3;
                             }
                             goto block_25;
@@ -4236,9 +4244,9 @@ block_25:
                             break;
                     }
                     var_t0 = 0x20 - temp_s3;
-                    if (arg1 != 1)
+                    if (footprint_depth != 1)
                     {
-                        if (arg1 == 2)
+                        if (footprint_depth == 2)
                         {
                             if (!(var_s4 & 1))
                             {
@@ -4277,7 +4285,7 @@ loop_38:
                             var_t8_2 = 0;
                         }
                         var_t3_2 = var_t3 | var_t6;
-                        switch (arg1)
+                        switch (footprint_depth)
                         {
                         case 1:
                             do
@@ -4341,7 +4349,7 @@ loop_38:
                             *(s32 *) (var_s0 + 0) = var_t6;
                             var_s0 += 0xC;
                             var_a1 += 0xC;
-                            if (var_s4 >= (arg1 - 1))
+                            if (var_s4 >= (footprint_depth - 1))
                             {
                                 var_a3_2 = var_t9 + stride4;
                                 var_t3_3 = var_t3_2 | *(u32 *) (var_t9 + 4);
@@ -4350,7 +4358,7 @@ loop_38:
                                 {
                                     var_a3_2 -= sp30;
                                 }
-                                var_a2_5 = arg1 - 2;
+                                var_a2_5 = footprint_depth - 2;
                                 do
                                 {
                                     temp_a0_4 = *(u32 *) (var_a3_2 + 4);
@@ -4416,7 +4424,7 @@ loop_38:
                                         var_a2_7 -= 1;
                                         var_t1 |= var_a0_2;
                                     } while (var_a2_7 != -1);
-                                    if (arg0 & 1)
+                                    if (footprint_width & 1)
                                     {
                                         var_t6 |= var_t4 >> 0x1F;
                                     }
@@ -4441,9 +4449,9 @@ loop_38:
                                             var_a2_8 -= 1;
                                             var_t1 |= var_a0_3;
                                         } while (var_a2_8 != -1);
-                                        if (arg0 & 1)
+                                        if (footprint_width & 1)
                                         {
-                                            var_t6 |= temp_t0_2 << (arg0 - 2);
+                                            var_t6 |= temp_t0_2 << (footprint_width - 2);
                                             var_t1 |= temp_t2_2 << temp_s3;
                                         }
                                         var_t3 |= temp_t0_2 | (temp_t0_2 << temp_s3);
@@ -4519,9 +4527,9 @@ block_97:
                             }
                         }
                     }
-                    if (var_s4 >= (arg1 - 1))
+                    if (var_s4 >= (footprint_depth - 1))
                     {
-                        var_t8_3 = arg0;
+                        var_t8_3 = footprint_width;
                         if (var_t8_3 != -1)
                         {
                             do
@@ -4538,7 +4546,7 @@ block_97:
                 } while (temp_s6_5 != -1);
             }
             var_a2_9 = (4 - (s32) var_t7) & 3;
-            var_t8_4 = (u16) scene->unk46 * (arg1 + 1);
+            var_t8_4 = (u16) scene->unk46 * (footprint_depth + 1);
             if (var_a2_9 != 0)
             {
 loop_107:
@@ -4583,12 +4591,18 @@ loop_107:
 typedef struct
 {
     u8 pad0[0xC];
-    s16 unkC;
+    s16 x_margin;
     u8 pad1[0x10 - 0xE];
-    s16 unk10;
-} Margin;
+    s16 z_margin;
+} FieldCollisionMargin;
 
-s32 func_80060CB0(Margin *m, Query *q)
+/**
+ * @brief Mark the collision-map tiles covered by a query footprint and margins.
+ * @param margins Extra X/Z footprint margins.
+ * @param query World-space query position and footprint.
+ * @return 0 on success, -1 when group data exists without a work map, or -2 when the footprint lies outside the usable map.
+ */
+s32 func_80060CB0(FieldCollisionMargin *margins, FieldCollisionQuery *query)
 {
     FieldScene *scene;
     s32 count;
@@ -4630,7 +4644,7 @@ s32 func_80060CB0(Margin *m, Query *q)
         return -1;
     }
 
-    y = q->y;
+    y = query->y;
     gy = y >> 8;
     if (y < 0)
     {
@@ -4664,8 +4678,8 @@ s32 func_80060CB0(Margin *m, Query *q)
         }
     }
 
-    tx = q->unkC;
-    ext_z = q->unk10;
+    tx = query->width;
+    ext_z = query->depth;
     tile = scene->unk40;
     shift = 3;
     if (tile == 4)
@@ -4674,9 +4688,9 @@ s32 func_80060CB0(Margin *m, Query *q)
     }
 
     half = ((s16) tx) >> 1;
-    margin = m->unkC;
+    margin = margins->x_margin;
     margin = margin - 1;
-    v = q->x;
+    v = query->x;
     if (v >= 0)
     {
         g = v >> 8;
@@ -4689,9 +4703,9 @@ s32 func_80060CB0(Margin *m, Query *q)
 
     tz = ext_z;
     half2 = ((s16) tz) >> 1;
-    margin = m->unk10;
+    margin = margins->z_margin;
     margin = margin - 1;
-    v = q->z;
+    v = query->z;
     if (v >= 0)
     {
         g = v >> 8;
@@ -4706,9 +4720,9 @@ s32 func_80060CB0(Margin *m, Query *q)
     shift2 = shift + 1;
     row_start = (tz >> shift2) + 2;
     mask = tile - 1;
-    ncol = (((tx & mask) + m->unkC + ((s16) q->unkC) + mask) - 1) >> shift;
+    ncol = (((tx & mask) + margins->x_margin + ((s16) query->width) + mask) - 1) >> shift;
     mask2 = (tile * 2) - 1;
-    nrow = (((tz & mask2) + m->unk10 + ((s16) q->unk10) + mask2) - 1) >> shift2;
+    nrow = (((tz & mask2) + margins->z_margin + ((s16) query->depth) + mask2) - 1) >> shift2;
     cols = (u16) scene->unk46;
     rows = (u16) scene->unk48;
 
@@ -4772,38 +4786,45 @@ s32 func_80060CB0(Margin *m, Query *q)
 /** Two-word result written back through arg2. */
 typedef struct
 {
-    s32 unk0;
-    s32 unk4;
-} OutPair;
+    s32 x;
+    s32 z;
+} FieldCollisionPathPoint;
 
 /** Outgoing parameter block for func_80062820, built at sp+0x4020. */
 typedef struct
 {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-    s32 unk10;
-    s32 unk14;
-    s32 unk18;
-    s32 unk1C;
-    s32 unk20;
+    s32 tile_base;
+    s32 goal_tile;
+    s32 start_x;
+    s32 start_z;
+    s32 end_x;
+    s32 end_z;
+    s32 footprint_width;
+    s32 footprint_depth;
+    s32 tile_size;
     s32 unk24;
-    s32 unk28;
-    u8 unk2C;
-} Req;
+    s32 mode;
+    u8 stamp;
+} FieldCollisionTraceRequest;
 
 /**
+ * @brief Find a collision-grid route between two footprint queries.
+ * @param start_query Starting query and footprint dimensions.
+ * @param goal_query Destination query.
+ * @param output_path Output X/Z path points.
+ * @param mode Trace mode forwarded to the footprint walker.
+ * @return Number of path points, 1 for a direct result, or a negative failure code.
+ *
  * @see decomp.me (81.47%, 701/1586 exact) TODO
  */
-s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
+s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_query, FieldCollisionPathPoint *output_path, s32 mode)
 {
     s32 path[4][0x400]; /* sp+0x0010 */
     s32 flags[4];       /* sp+0x4010 */
-    Req rec;            /* sp+0x4020 */
+    FieldCollisionTraceRequest rec;            /* sp+0x4020 */
     FieldScene *scene;
     FieldScene *new_var3;
-    Query *temp_s2;
+    FieldCollisionQuery *temp_s2;
     s32 sp4058;
     u8 temp_a2;
     u8 var_closed;
@@ -5008,13 +5029,13 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     s32 *var_s4_4;
     s32 var_s5_8;
     s32 var_s3;
-    OutPair *var_a2_2;
+    FieldCollisionPathPoint *var_a2_2;
     s32 temp_v1_42;
     s32 temp_v1_43;
 
     scene = g_field_scene.scene;
     var_bound_early = 0xFF;
-    temp_s2 = arg1;
+    temp_s2 = goal_query;
     if (scene->unk28 == 0)
     {
         if (scene->unk41 != 0)
@@ -5029,7 +5050,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     {
         sp4058 = 2;
     }
-    hx1 = (s32) (arg0->unkC << 0x10) >> 0x11;
+    hx1 = (s32) (start_query->width << 0x10) >> 0x11;
     temp_v1 = temp_s2->x;
     if (temp_v1 >= 0)
     {
@@ -5040,7 +5061,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
         var_v0_2 = (s32) (temp_v1 + 0xFF) >> 8;
     }
     sp4074 = var_v0_2 - hx1;
-    hz1 = (s32) (arg0->unk10 << 0x10) >> 0x11;
+    hz1 = (s32) (start_query->depth << 0x10) >> 0x11;
     temp_v1_2 = temp_s2->z;
     if (temp_v1_2 >= 0)
     {
@@ -5051,8 +5072,8 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
         var_v0_3 = (s32) (temp_v1_2 + 0xFF) >> 8;
     }
     sp4078 = var_v0_3 - hz1;
-    hx2 = (s32) (arg0->unkC << 0x10) >> 0x11;
-    temp_v1_3 = arg0->x;
+    hx2 = (s32) (start_query->width << 0x10) >> 0x11;
+    temp_v1_3 = start_query->x;
     if (temp_v1_3 >= 0)
     {
         var_v0_4 = temp_v1_3 >> 8;
@@ -5062,8 +5083,8 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
         var_v0_4 = (s32) (temp_v1_3 + 0xFF) >> 8;
     }
     sp406C = var_v0_4 - hx2;
-    hz2 = (s32) (arg0->unk10 << 0x10) >> 0x11;
-    temp_a0 = arg0->z;
+    hz2 = (s32) (start_query->depth << 0x10) >> 0x11;
+    temp_a0 = start_query->z;
     if (temp_a0 >= 0)
     {
         var_v0_5 = temp_a0 >> 8;
@@ -5124,7 +5145,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
             }
             var_s0 = (u8 *) (scene->unk2C + ((u16) scene->unk44 * sp4054) + (temp_t4 * sp4068) + sp4064);
             *var_s0 = 0xFC;
-            temp_v0_4 = arg0->y;
+            temp_v0_4 = start_query->y;
             var_a0_2 = temp_v0_4 >> 8;
             if (temp_v0_4 < 0)
             {
@@ -5160,19 +5181,19 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
             if (*temp_s1 != 0xFC)
             {
                 *temp_s1 = 0xFB;
-                rec.unk8 = sp4074;
-                rec.unkC = sp4078;
-                rec.unk10 = sp406C;
+                rec.start_x = sp4074;
+                rec.start_z = sp4078;
+                rec.end_x = sp406C;
                 path[0][0] = (s32) temp_s1 | 0x1FE00000;
-                rec.unk0 = (s32) var_s0;
-                rec.unk14 = sp4070;
-                rec.unk18 = (s32) (s16) arg0->unkC;
-                rec.unk20 = (s32) temp_a2;
+                rec.tile_base = (s32) var_s0;
+                rec.end_z = sp4070;
+                rec.footprint_width = (s32) (s16) start_query->width;
+                rec.tile_size = (s32) temp_a2;
                 rec.unk24 = sp4058;
-                rec.unk2C = 0xFC;
+                rec.stamp = 0xFC;
                 sp408C = (u32) temp_t4;
-                rec.unk28 = arg3;
-                rec.unk1C = (s32) (s16) arg0->unk10;
+                rec.mode = mode;
+                rec.footprint_depth = (s32) (s16) start_query->depth;
                 var_t5 = 0;
                 var_closed = 0xFD;
                 var_open = 0xFC;
@@ -5691,12 +5712,12 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     } while (var_v1_7 >= temp_a0_12);
                                     var_v1_6 = var_v1_7 + temp_a0_12;
                                 }
-                                rec.unk8 = sp4074;
-                                rec.unk0 = (s32) var_s1;
-                                rec.unk2C = 4;
-                                rec.unkC = sp4078;
-                                rec.unk10 = ((var_v1_6 % sp408C) - 2) << sp4058;
-                                rec.unk14 = ((var_v1_6 / sp408C) - 2) << (sp4058 + 1);
+                                rec.start_x = sp4074;
+                                rec.tile_base = (s32) var_s1;
+                                rec.stamp = 4;
+                                rec.start_z = sp4078;
+                                rec.end_x = ((var_v1_6 % sp408C) - 2) << sp4058;
+                                rec.end_z = ((var_v1_6 / sp408C) - 2) << (sp4058 + 1);
                                 var_s7_2 = 1;
                                 if (func_80062820(&rec) != 0)
                                 {
@@ -5707,11 +5728,11 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 }
                                 else
                                 {
-                                    rec.unk4 = (s32) new_var;
-                                    rec.unk2C = 4;
-                                    rec.unk28 = 2;
-                                    rec.unk10 = sp406C;
-                                    rec.unk14 = sp4070;
+                                    rec.goal_tile = (s32) new_var;
+                                    rec.stamp = 4;
+                                    rec.mode = 2;
+                                    rec.end_x = sp406C;
+                                    rec.end_z = sp4070;
                                     var_s7_2 = 1;
                                     if (func_80062820(&rec) != 0)
                                     {
@@ -5725,7 +5746,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                         var_s7_2 = 0;
                                         *var_s1 = 0xFC;
                                     }
-                                    rec.unk28 = arg3;
+                                    rec.mode = mode;
                                 }
                                 var_t1_5 = 1;
                             }
@@ -5880,7 +5901,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                             var_s3_3 = var_s7_2 - 2;
                             *var_fp_3 = scene->unk2C + ((u16) scene->unk44 * sp4050) + (sp408C * sp4060) + sp405C;
                             var_fp_4 = &path[0][0];
-                            rec.unk2C = 0;
+                            rec.stamp = 0;
                             path[1][0] = sp4074;
                             path[2][0] = sp4078;
                             if (var_s3_3 != neg1)
@@ -5935,16 +5956,16 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     if (var_s5_5 != 0)
                                     {
                                         var_s3_4 = var_s5_5;
-                                        rec.unk0 = temp_s1_3;
-                                        rec.unk8 = temp_t9;
-                                        rec.unkC = temp_t8;
+                                        rec.tile_base = temp_s1_3;
+                                        rec.start_x = temp_t9;
+                                        rec.start_z = temp_t8;
                                         var_s0_2 = var_s3_4;
                                         do
                                         {
                                             temp_s2_2 = var_s0_2 + var_s6_3;
                                             temp_s1_4 = var_s0_2 + var_s4_3;
-                                            rec.unk10 = *temp_s2_2;
-                                            rec.unk14 = *temp_s1_4;
+                                            rec.end_x = *temp_s2_2;
+                                            rec.end_z = *temp_s1_4;
                                             if (func_80062820(&rec) != 0)
                                             {
                                                 var_fp_4 += var_s0_2;
@@ -5979,40 +6000,40 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 var_s5_7 = sm2[1];
                                 temp_s6 = sm1[2];
                                 sp4064 = temp_s6;
-                                rec.unk8 = path[1][0];
+                                rec.start_x = path[1][0];
                                 temp_v0_13 = var_fp_5 + temp_s6;
-                                rec.unk0 = sm_p0;
-                                rec.unkC = path[2][0];
+                                rec.tile_base = sm_p0;
+                                rec.start_z = path[2][0];
                                 var_t1_5 = 0;
                                 sp4068 = sm2[2];
                                 temp_s4 = temp_v0_13 / 2;
-                                rec.unk10 = temp_s4;
+                                rec.end_x = temp_s4;
                                 temp_s2_3 = (var_s5_7 + sp4068) / 2;
-                                rec.unk14 = temp_s2_3;
+                                rec.end_z = temp_s2_3;
                                 if (func_80062820(&rec) != 0)
                                 {
-                                    rec.unk0 = temp_s0;
-                                    rec.unk8 = sp4064;
-                                    rec.unkC = sp4068;
+                                    rec.tile_base = temp_s0;
+                                    rec.start_x = sp4064;
+                                    rec.start_z = sp4068;
                                     if (func_80062820(&rec) != 0)
                                     {
                                         var_fp_5 = temp_s4;
                                         var_s5_7 = temp_s2_3;
-                                        rec.unk8 = sp405C;
+                                        rec.start_x = sp405C;
                                         sp407C = 0;
                                         temp_v0 = sp4064;
-                                        rec.unk0 = sm_p0;
+                                        rec.tile_base = sm_p0;
                                         var_t1_5 = 1;
-                                        rec.unkC = sp4060;
+                                        rec.start_z = sp4060;
                                         temp_s4_2 = (var_fp_5 + temp_v0) / 2;
                                         temp_s2_4 = (var_s5_7 + sp4068) / 2;
-                                        rec.unk10 = temp_s4_2;
-                                        rec.unk14 = temp_s2_4;
+                                        rec.end_x = temp_s4_2;
+                                        rec.end_z = temp_s2_4;
                                         if (func_80062820(&rec) != 0)
                                         {
-                                            rec.unk0 = temp_s0;
-                                            rec.unk8 = temp_v0;
-                                            rec.unkC = sp4068;
+                                            rec.tile_base = temp_s0;
+                                            rec.start_x = temp_v0;
+                                            rec.start_z = sp4068;
                                             if (func_80062820(&rec) != 0)
                                             {
                                                 var_fp_5 = temp_s4_2;
@@ -6025,16 +6046,16 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 {
                                     temp_s4_3 = temp_v0 - var_fp_5;
                                     var_v0_27 = temp_s4_3;
-                                    rec.unk0 = sm_p0;
-                                    rec.unk8 = sp405C;
-                                    rec.unkC = sp4060;
+                                    rec.tile_base = sm_p0;
+                                    rec.start_x = sp405C;
+                                    rec.start_z = sp4060;
                                     if (temp_s4_3 < 0)
                                     {
                                         var_v0_27 = temp_s4_3 + 3;
                                     }
                                     temp_v0_14 = var_fp_5 + (var_v0_27 >> 2);
                                     sp4080 = temp_v0_14;
-                                    rec.unk10 = temp_v0_14;
+                                    rec.end_x = temp_v0_14;
                                     temp_s3 = sp4068 - var_s5_7;
                                     var_v0_28 = temp_s3;
                                     if (temp_s3 < 0)
@@ -6042,12 +6063,12 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                         var_v0_28 = temp_s3 + 3;
                                     }
                                     temp_s6_2 = var_s5_7 + (var_v0_28 >> 2);
-                                    rec.unk14 = temp_s6_2;
+                                    rec.end_z = temp_s6_2;
                                     if (func_80062820(&rec) != 0)
                                     {
-                                        rec.unk0 = temp_s0;
-                                        rec.unk8 = temp_v0;
-                                        rec.unkC = sp4068;
+                                        rec.tile_base = temp_s0;
+                                        rec.start_x = temp_v0;
+                                        rec.start_z = sp4068;
                                         if (func_80062820(&rec) != 0)
                                         {
                                             var_t1_5 = 1;
@@ -6057,36 +6078,36 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     }
                                 }
                                 sp407C = 1;
-                                rec.unk8 = temp_v0;
-                                rec.unk0 = temp_s0;
-                                rec.unkC = sp4068;
+                                rec.start_x = temp_v0;
+                                rec.tile_base = temp_s0;
+                                rec.start_z = sp4068;
                                 temp_s4_4 = (var_fp_5 + sp405C) / 2;
                                 temp_s2_5 = (var_s5_7 + sp4060) / 2;
-                                rec.unk10 = temp_s4_4;
-                                rec.unk14 = temp_s2_5;
+                                rec.end_x = temp_s4_4;
+                                rec.end_z = temp_s2_5;
                                 if (func_80062820(&rec) != 0)
                                 {
-                                    rec.unk0 = sm_p0;
-                                    rec.unk8 = sp405C;
-                                    rec.unkC = sp4060;
+                                    rec.tile_base = sm_p0;
+                                    rec.start_x = sp405C;
+                                    rec.start_z = sp4060;
                                     if (func_80062820(&rec) != 0)
                                     {
                                         var_fp_5 = temp_s4_4;
                                         var_s5_7 = temp_s2_5;
-                                        rec.unk8 = temp_v0;
+                                        rec.start_x = temp_v0;
                                         sp407C = 0;
-                                        rec.unk0 = temp_s0;
+                                        rec.tile_base = temp_s0;
                                         var_t1_5 = 1;
-                                        rec.unkC = sp4068;
+                                        rec.start_z = sp4068;
                                         temp_s4_5 = (var_fp_5 + sp405C) / 2;
                                         temp_s2_6 = (var_s5_7 + sp4060) / 2;
-                                        rec.unk10 = temp_s4_5;
-                                        rec.unk14 = temp_s2_6;
+                                        rec.end_x = temp_s4_5;
+                                        rec.end_z = temp_s2_6;
                                         if (func_80062820(&rec) != 0)
                                         {
-                                            rec.unk0 = sm_p0;
-                                            rec.unk8 = sp405C;
-                                            rec.unkC = sp4060;
+                                            rec.tile_base = sm_p0;
+                                            rec.start_x = sp405C;
+                                            rec.start_z = sp4060;
                                             if (func_80062820(&rec) != 0)
                                             {
                                                 var_fp_5 = temp_s4_5;
@@ -6099,15 +6120,15 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 {
                                     temp_s3_2 = sp405C - var_fp_5;
                                     var_v0_30 = temp_s3_2;
-                                    rec.unk0 = temp_s0;
-                                    rec.unk8 = temp_v0;
-                                    rec.unkC = sp4068;
+                                    rec.tile_base = temp_s0;
+                                    rec.start_x = temp_v0;
+                                    rec.start_z = sp4068;
                                     if (temp_s3_2 < 0)
                                     {
                                         var_v0_30 = temp_s3_2 + 3;
                                     }
                                     temp_s6_3 = var_fp_5 + (var_v0_30 >> 2);
-                                    rec.unk10 = temp_s6_3;
+                                    rec.end_x = temp_s6_3;
                                     temp_s2_7 = sp4060 - var_s5_7;
                                     var_v0_31 = temp_s2_7;
                                     if (temp_s2_7 < 0)
@@ -6115,13 +6136,13 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                         var_v0_31 = temp_s2_7 + 3;
                                     }
                                     temp_s4_6 = var_s5_7 + (var_v0_31 >> 2);
-                                    rec.unk14 = temp_s4_6;
+                                    rec.end_z = temp_s4_6;
                                     if (func_80062820(&rec) != 0)
                                     {
-                                        rec.unk0 = sm_p0;
+                                        rec.tile_base = sm_p0;
                                         final_x = sp405C;
-                                        rec.unk8 = final_x;
-                                        rec.unkC = sp4060;
+                                        rec.start_x = final_x;
+                                        rec.start_z = sp4060;
                                         if (func_80062820(&rec) != 0)
                                         {
                                             var_t1_5 = 1;
@@ -6147,17 +6168,17 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                             var_s3 = 0;
                             if (var_s5_8 != neg1)
                             {
-                                var_a2_2 = arg2;
+                                var_a2_2 = output_path;
                                 do
                                 {
                                     temp_v1_42 = *var_s6_4;
                                     var_s6_4 -= 1;
                                     var_s3 += 1;
                                     var_s5_8 -= 1;
-                                    var_a2_2->unk0 = (temp_v1_42 + ((s32) (arg0->unkC << 0x10) >> 0x11)) << 8;
+                                    var_a2_2->x = (temp_v1_42 + ((s32) (start_query->width << 0x10) >> 0x11)) << 8;
                                     temp_v1_43 = *var_s4_4;
                                     var_s4_4 -= 1;
-                                    var_a2_2->unk4 = (temp_v1_43 + ((s32) (arg0->unk10 << 0x10) >> 0x11)) << 8;
+                                    var_a2_2->z = (temp_v1_43 + ((s32) (start_query->depth << 0x10) >> 0x11)) << 8;
                                     var_a2_2 += 1;
                                 } while (var_s5_8 != neg1);
                             }
@@ -6172,8 +6193,8 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     }
     return -2;
 write_pos:
-    arg2->unk0 = temp_s2->x;
-    arg2->unk4 = temp_s2->z;
+    output_path->x = temp_s2->x;
+    output_path->z = temp_s2->z;
     return 1;
 }
 
@@ -6181,140 +6202,138 @@ write_pos:
  * @brief Walk a rectangular tile footprint along a straight line and stamp it
  *        into the group tile map.
  *
- * Bresenham DDA over the field group tile grid. The footprint is @c unk18 by
- * @c unk1C tiles anchored at (@c unk8, @c unkC) and is stepped one tile at a
- * time towards (@c unk10, @c unk14). @c state records which edge of the
+ * Bresenham DDA over the field group tile grid. The footprint uses the request
+ * width and depth, starts at (start_x, start_z), and is stepped one tile at a
+ * time towards (end_x, end_z). edge_state records which edge of the
  * footprint moved on the last step so only the newly covered tiles are
  * re-tested: 1 = a new column, 2 = a new row, 3 = the whole rectangle (the
  * first iteration and both edges crossing at once). Every visited tile must be
  * below 0xFD and must not be 1; anything else aborts the walk.
  *
- * Tiles that pass the test are stamped with @c unk2C, and the stamp value is
- * bumped after each step unless it is 0 or 0xFC. The store happens before the
- * @c unk28 check, so a tile is written even when @c unk28 is not 2 - only the
- * goal comparison is gated on it.
+ * Tiles that pass the test are stamped with request->stamp, and the stamp value
+ * is bumped after each step unless it is 0 or 0xFC. The store happens before
+ * the mode check, so a tile is written even when mode is not 2 - only the goal
+ * comparison is gated on it.
  *
- * @param req Walk request, laid out as @c Req above. @c unk0 is the tile the
- *            walk starts on, @c unk4 the goal tile, @c unk20 the group's tile
- *            pitch (the vertical cell masks use twice that value), and @c unk24
- *            is unused here.
- * @return 1 when the walk ran to completion or reached @c unk4, 0 when a
+ * @param request Walk request. tile_base is the starting tile, goal_tile is
+ *                the optional goal, tile_size controls the cell masks, and
+ *                unk24 is unused here.
+ * @return 1 when the walk ran to completion or reached goal_tile, 0 when a
  *         blocked tile stopped it.
- * @see decomp.me (100%) TODO
  */
-s32 func_80062820(Req *req)
+s32 func_80062820(FieldCollisionTraceRequest *request)
 {
     FieldScene *scene;
-    u8 *base;
-    u8 *goal;
-    u8 *p;
-    u8 *q;
-    s32 w;
-    s32 h;
-    s32 dx;
-    s32 dy;
+    u8 *tile_base;
+    u8 *goal_tile;
+    u8 *tile_ptr;
+    u8 *scan_ptr;
+    s32 footprint_width;
+    s32 footprint_depth;
+    s32 delta_x;
+    s32 delta_z;
     s32 step_x;
     s32 step_y;
-    s32 cell;
+    s32 tile_size;
     s32 mask_x;
     s32 mask_y;
     s32 x_cell;
     s32 y_cell;
     s32 x_end;
     s32 y_end;
-    s32 wm1;
-    s32 hm1;
+    s32 width_minus_one;
+    s32 depth_minus_one;
     s32 col_hi;
     s32 row_hi;
     s32 x_span;
     s32 row_span;
     s32 stride;
-    s32 kind;
-    s32 state;
-    s32 err;
+    s32 mode;
+    s32 edge_state;
+    s32 error_term;
     s32 i;
     s32 n;
     s32 m;
-    u32 tile;
-    u8 mark;
+    u32 tile_value;
+    u8 stamp;
 
-    base = (u8 *)req->unk0;
-    x_cell = req->unk8;
-    dx = req->unk10 - x_cell;
-    y_cell = req->unkC;
-    dy = req->unk14 - y_cell;
-    cell = req->unk20;
-    mask_x = cell - 1;
+    tile_base = (u8 *)request->tile_base;
+    x_cell = request->start_x;
+    delta_x = request->end_x - x_cell;
+    y_cell = request->start_z;
+    delta_z = request->end_z - y_cell;
+    tile_size = request->tile_size;
+    mask_x = tile_size - 1;
     x_cell &= mask_x;
-    w = req->unk18;
-    goal = (u8 *)req->unk4;
-    wm1 = w - 1;
-    x_end = x_cell + wm1;
+    footprint_width = request->footprint_width;
+    goal_tile = (u8 *)request->goal_tile;
+    width_minus_one = footprint_width - 1;
+    x_end = x_cell + width_minus_one;
     col_hi = x_end & mask_x;
-    x_span = x_end >= ((w + mask_x) & ~mask_x);
-    h = req->unk1C;
-    hm1 = h - 1;
-    mask_y = (cell * 2) - 1;
+    x_span = x_end >= ((footprint_width + mask_x) & ~mask_x);
+    footprint_depth = request->footprint_depth;
+    depth_minus_one = footprint_depth - 1;
+    mask_y = (tile_size * 2) - 1;
     y_cell &= mask_y;
-    y_end = y_cell + hm1;
+    y_end = y_cell + depth_minus_one;
     row_hi = y_end & mask_y;
     scene = g_field_scene.scene;
     stride = (u16)scene->unk46;
     row_span = 0;
-    if (y_end >= ((h + mask_y) & ~mask_y))
+    if (y_end >= ((footprint_depth + mask_y) & ~mask_y))
     {
         row_span = stride;
     }
-    mark = req->unk2C;
-    kind = req->unk28;
+    stamp = request->stamp;
+    mode = request->mode;
 
-    if (dx >= 0)
+    if (delta_x >= 0)
     {
         step_x = 1;
     }
     else
     {
-        dx = -dx;
+        delta_x = -delta_x;
         step_x = -1;
     }
-    if (dy >= 0)
+    if (delta_z >= 0)
     {
         step_y = stride;
     }
     else
     {
-        dy = -dy;
+        delta_z = -delta_z;
         step_y = -stride;
     }
 
-    state = 3;
-    if (dx >= dy)
+    edge_state = 3;
+    if (delta_x >= delta_z)
     {
-        err = -dx;
-        for (i = dx; i != -1; i--)
+        error_term = -delta_x;
+        for (i = delta_x; i != -1; i--)
         {
-            if (state != 0)
+            if (edge_state != 0)
             {
-                switch (state)
+                switch (edge_state)
                 {
                 case 1:
-                    p = base;
+                    tile_ptr = tile_base;
                     if (step_x > 0)
                     {
-                        p = base + x_span;
+                        tile_ptr = tile_base + x_span;
                     }
                     n = row_span;
                     for (;;)
                     {
-                        tile = *p;
-                        if (tile >= 0xFD || tile == 1)
+                        tile_value = *tile_ptr;
+                        if (tile_value >= 0xFD || tile_value == 1)
                         {
                             return 0;
                         }
-                        if (mark != 0 && tile != 0xFB)
+                        if (stamp != 0 && tile_value != 0xFB)
                         {
-                            *p = mark;
-                            if (kind == 2 && p == goal)
+                            *tile_ptr = stamp;
+                            if (mode == 2 && tile_ptr == goal_tile)
                             {
                                 return 1;
                             }
@@ -6323,85 +6342,85 @@ s32 func_80062820(Req *req)
                         {
                             break;
                         }
-                        p += stride;
+                        tile_ptr += stride;
                         n -= stride;
                     }
                     break;
                 case 2:
-                    p = base;
+                    tile_ptr = tile_base;
                     if (step_y > 0)
                     {
-                        p = base + row_span;
+                        tile_ptr = tile_base + row_span;
                     }
                     n = x_span;
                     do
                     {
-                        tile = *p;
-                        if (tile >= 0xFD || tile == 1)
+                        tile_value = *tile_ptr;
+                        if (tile_value >= 0xFD || tile_value == 1)
                         {
                             return 0;
                         }
-                        if (mark != 0 && tile != 0xFB)
+                        if (stamp != 0 && tile_value != 0xFB)
                         {
-                            *p = mark;
-                            if (kind == 2 && p == goal)
+                            *tile_ptr = stamp;
+                            if (mode == 2 && tile_ptr == goal_tile)
                             {
                                 return 1;
                             }
                         }
-                        p++;
+                        tile_ptr++;
                     } while (--n != -1);
                     break;
                 case 3:
-                    p = base;
+                    tile_ptr = tile_base;
                     n = row_span;
                     for (;;)
                     {
-                        q = p;
+                        scan_ptr = tile_ptr;
                         m = x_span;
                         do
                         {
-                            tile = *q;
-                            if (tile >= 0xFD || tile == 1)
+                            tile_value = *scan_ptr;
+                            if (tile_value >= 0xFD || tile_value == 1)
                             {
                                 return 0;
                             }
-                            if (mark != 0 && tile != 0xFB)
+                            if (stamp != 0 && tile_value != 0xFB)
                             {
-                                *q = mark;
-                                if (kind == 2 && q == goal)
+                                *scan_ptr = stamp;
+                                if (mode == 2 && scan_ptr == goal_tile)
                                 {
                                     return 1;
                                 }
                             }
-                            q++;
+                            scan_ptr++;
                         } while (--m != -1);
                         if (n == 0)
                         {
                             break;
                         }
-                        p += stride;
+                        tile_ptr += stride;
                         n -= stride;
                     }
                     break;
                 }
-                if (mark != 0 && mark != 0xFC)
+                if (stamp != 0 && stamp != 0xFC)
                 {
-                    mark++;
+                    stamp++;
                 }
             }
             if (i == 0)
             {
                 return 1;
             }
-            state = 0;
+            edge_state = 0;
             if (step_x > 0)
             {
                 if (x_cell == mask_x)
                 {
                     x_cell = 0;
                     x_span--;
-                    base++;
+                    tile_base++;
                 }
                 else
                 {
@@ -6411,7 +6430,7 @@ s32 func_80062820(Req *req)
                 {
                     col_hi = 0;
                     x_span++;
-                    state = 1;
+                    edge_state = 1;
                 }
                 else
                 {
@@ -6424,8 +6443,8 @@ s32 func_80062820(Req *req)
                 {
                     x_cell = mask_x;
                     x_span++;
-                    base--;
-                    state = 1;
+                    tile_base--;
+                    edge_state = 1;
                 }
                 else
                 {
@@ -6441,8 +6460,8 @@ s32 func_80062820(Req *req)
                     col_hi--;
                 }
             }
-            err += dy * 2;
-            if (err >= 0)
+            error_term += delta_z * 2;
+            if (error_term >= 0)
             {
                 if (step_y > 0)
                 {
@@ -6450,7 +6469,7 @@ s32 func_80062820(Req *req)
                     {
                         y_cell = 0;
                         row_span -= stride;
-                        base += stride;
+                        tile_base += stride;
                     }
                     else
                     {
@@ -6460,7 +6479,7 @@ s32 func_80062820(Req *req)
                     {
                         row_hi = 0;
                         row_span += stride;
-                        state |= 2;
+                        edge_state |= 2;
                     }
                     else
                     {
@@ -6473,8 +6492,8 @@ s32 func_80062820(Req *req)
                     {
                         y_cell = mask_y;
                         row_span += stride;
-                        base -= stride;
-                        state |= 2;
+                        tile_base -= stride;
+                        edge_state |= 2;
                     }
                     else
                     {
@@ -6490,37 +6509,37 @@ s32 func_80062820(Req *req)
                         row_hi--;
                     }
                 }
-                err -= dx * 2;
+                error_term -= delta_x * 2;
             }
         }
     }
     else
     {
-        err = -dy;
-        for (i = dy; i != -1; i--)
+        error_term = -delta_z;
+        for (i = delta_z; i != -1; i--)
         {
-            if (state != 0)
+            if (edge_state != 0)
             {
-                switch (state)
+                switch (edge_state)
                 {
                 case 1:
-                    p = base;
+                    tile_ptr = tile_base;
                     if (step_x > 0)
                     {
-                        p = base + x_span;
+                        tile_ptr = tile_base + x_span;
                     }
                     n = row_span;
                     for (;;)
                     {
-                        tile = *p;
-                        if (tile >= 0xFD || tile == 1)
+                        tile_value = *tile_ptr;
+                        if (tile_value >= 0xFD || tile_value == 1)
                         {
                             return 0;
                         }
-                        if (mark != 0 && tile != 0xFB)
+                        if (stamp != 0 && tile_value != 0xFB)
                         {
-                            *p = mark;
-                            if (kind == 2 && p == goal)
+                            *tile_ptr = stamp;
+                            if (mode == 2 && tile_ptr == goal_tile)
                             {
                                 return 1;
                             }
@@ -6529,85 +6548,85 @@ s32 func_80062820(Req *req)
                         {
                             break;
                         }
-                        p += stride;
+                        tile_ptr += stride;
                         n -= stride;
                     }
                     break;
                 case 2:
-                    p = base;
+                    tile_ptr = tile_base;
                     if (step_y > 0)
                     {
-                        p = base + row_span;
+                        tile_ptr = tile_base + row_span;
                     }
                     n = x_span;
                     do
                     {
-                        tile = *p;
-                        if (tile >= 0xFD || tile == 1)
+                        tile_value = *tile_ptr;
+                        if (tile_value >= 0xFD || tile_value == 1)
                         {
                             return 0;
                         }
-                        if (mark != 0 && tile != 0xFB)
+                        if (stamp != 0 && tile_value != 0xFB)
                         {
-                            *p = mark;
-                            if (kind == 2 && p == goal)
+                            *tile_ptr = stamp;
+                            if (mode == 2 && tile_ptr == goal_tile)
                             {
                                 return 1;
                             }
                         }
-                        p++;
+                        tile_ptr++;
                     } while (--n != -1);
                     break;
                 case 3:
-                    p = base;
+                    tile_ptr = tile_base;
                     n = row_span;
                     for (;;)
                     {
-                        q = p;
+                        scan_ptr = tile_ptr;
                         m = x_span;
                         do
                         {
-                            tile = *q;
-                            if (tile >= 0xFD || tile == 1)
+                            tile_value = *scan_ptr;
+                            if (tile_value >= 0xFD || tile_value == 1)
                             {
                                 return 0;
                             }
-                            if (mark != 0 && tile != 0xFB)
+                            if (stamp != 0 && tile_value != 0xFB)
                             {
-                                *q = mark;
-                                if (kind == 2 && q == goal)
+                                *scan_ptr = stamp;
+                                if (mode == 2 && scan_ptr == goal_tile)
                                 {
                                     return 1;
                                 }
                             }
-                            q++;
+                            scan_ptr++;
                         } while (--m != -1);
                         if (n == 0)
                         {
                             break;
                         }
-                        p += stride;
+                        tile_ptr += stride;
                         n -= stride;
                     }
                     break;
                 }
-                if (mark != 0 && mark != 0xFC)
+                if (stamp != 0 && stamp != 0xFC)
                 {
-                    mark++;
+                    stamp++;
                 }
             }
             if (i == 0)
             {
                 return 1;
             }
-            state = 0;
+            edge_state = 0;
             if (step_y > 0)
             {
                 if (y_cell == mask_y)
                 {
                     y_cell = 0;
                     row_span -= stride;
-                    base += stride;
+                    tile_base += stride;
                 }
                 else
                 {
@@ -6617,7 +6636,7 @@ s32 func_80062820(Req *req)
                 {
                     row_hi = 0;
                     row_span += stride;
-                    state = 2;
+                    edge_state = 2;
                 }
                 else
                 {
@@ -6630,8 +6649,8 @@ s32 func_80062820(Req *req)
                 {
                     y_cell = mask_y;
                     row_span += stride;
-                    base -= stride;
-                    state = 2;
+                    tile_base -= stride;
+                    edge_state = 2;
                 }
                 else
                 {
@@ -6647,8 +6666,8 @@ s32 func_80062820(Req *req)
                     row_hi--;
                 }
             }
-            err += dx * 2;
-            if (err >= 0)
+            error_term += delta_x * 2;
+            if (error_term >= 0)
             {
                 if (step_x > 0)
                 {
@@ -6656,7 +6675,7 @@ s32 func_80062820(Req *req)
                     {
                         x_cell = 0;
                         x_span--;
-                        base++;
+                        tile_base++;
                     }
                     else
                     {
@@ -6666,7 +6685,7 @@ s32 func_80062820(Req *req)
                     {
                         col_hi = 0;
                         x_span++;
-                        state |= 1;
+                        edge_state |= 1;
                     }
                     else
                     {
@@ -6679,8 +6698,8 @@ s32 func_80062820(Req *req)
                     {
                         x_cell = mask_x;
                         x_span++;
-                        base--;
-                        state |= 1;
+                        tile_base--;
+                        edge_state |= 1;
                     }
                     else
                     {
@@ -6696,7 +6715,7 @@ s32 func_80062820(Req *req)
                         col_hi--;
                     }
                 }
-                err -= dy * 2;
+                error_term -= delta_z * 2;
             }
         }
     }
@@ -6709,108 +6728,106 @@ s32 func_80062820(Req *req)
  * The node's C->B edge runs between the boundary points named by unkA and
  * unkC in g_field_node_angle_table and rises by unk12 - unk10 over that span.
  * Moving along the edge covers its full 3D length while only advancing by the
- * horizontal run, so @p vec is multiplied by run / slope to hold the ground
+ * horizontal run, so @p movement is multiplied by run / slope to hold the ground
  * speed constant. The run is first shortened by a further 1/16, a flat penalty
  * for travelling on a slope at all.
  *
- * @param def Collision node definition supplying the edge and its heights.
- * @param vec Movement vector rescaled in place; vec[0] is x, vec[1] is y.
+ * @param surface Collision surface definition supplying the edge and its heights.
+ * @param movement Movement vector rescaled in place; movement[0] is x and movement[1] is z.
  *
  * @note dx and dz are each reused to hold their own square once the raw delta
  *       is no longer needed.
- * @see decomp.me (100%) TODO
  */
-void func_80062F48(Move_UnkNode2* def, s32* vec)
+void func_80062F48(FieldCollisionSurfaceDef* surface, s32* movement)
 {
-    s16* tbl;
-    s16* pt_c;
-    s16* pt_b;
+    s16* vertices;
+    s16* vertex_c;
+    s16* vertex_b;
     s32 dx;
     s32 dy;
     s32 dz;
-    s32 run;
-    s32 slope;
+    s32 horizontal_length;
+    s32 surface_length;
 
-    tbl = g_field_node_angle_table;
-    pt_c = &tbl[def->unkA * 2];
-    pt_b = &tbl[def->unkC * 2];
-    dx = pt_b[0] - pt_c[0];
-    dy = pt_b[1] - pt_c[1];
-    dz = def->unk12 - def->unk10;
+    vertices = g_field_node_angle_table;
+    vertex_c = &vertices[surface->unkA * 2];
+    vertex_b = &vertices[surface->unkC * 2];
+    dx = vertex_b[0] - vertex_c[0];
+    dy = vertex_b[1] - vertex_c[1];
+    dz = surface->unk12 - surface->unk10;
     dx = dx * dx + dy * dy;
     dz = dz * dz;
-    run = SquareRoot0(dx);
-    slope = SquareRoot0(dx + dz);
-    run -= run >> 4;
-    vec[0] = vec[0] * run / slope;
-    vec[1] = vec[1] * run / slope;
+    horizontal_length = SquareRoot0(dx);
+    surface_length = SquareRoot0(dx + dz);
+    horizontal_length -= horizontal_length >> 4;
+    movement[0] = movement[0] * horizontal_length / surface_length;
+    movement[1] = movement[1] * horizontal_length / surface_length;
 }
 
 /**
  * @brief Convert a probe's footprint to whole tiles and stencil it.
  *
- * scene->unk40 is the tile edge in pixels, either 4 or 8, and @c shift is its
- * base-2 log. The footprint width (unkC) is rounded up to a whole number of
- * tiles and the depth (unk10) to a whole number of double-height tiles, since
+ * scene->unk40 is the tile edge in pixels, either 4 or 8, and tile_shift is its
+ * base-2 log. The footprint width is rounded up to a whole number of
+ * tiles and the depth to a whole number of double-height tiles, since
  * the depth axis is stored at half the horizontal resolution. The rounding is
  * the usual `(v + n - 1) >> log2(n)` ceiling divide.
  *
  * Does nothing when no per-group work area is allocated.
  *
- * @param q Probe query supplying the footprint extents.
+ * @param query Probe query supplying the footprint extents.
  *
- * @note The extents are read as signed even though Query declares them u16.
- * @see decomp.me (100%) TODO
+ * @note The extents are read as signed even though FieldCollisionQuery declares them u16.
  */
-void func_8006304C(Query* q)
+void func_8006304C(FieldCollisionQuery* query)
 {
     FieldScene* scene;
-    s32 shift;
-    s32 edge;
+    s32 tile_shift;
+    s32 tile_size;
 
     scene = g_field_scene.scene;
     if (scene->unk28 != 0)
     {
-        edge = scene->unk40;
-        shift = 3;
-        if (edge == 4)
+        tile_size = scene->unk40;
+        tile_shift = 3;
+        if (tile_size == 4)
         {
-            shift = 2;
+            tile_shift = 2;
         }
-        func_80060364(((s16) q->unkC + edge - 1) >> shift,
-                      ((s16) q->unk10 + edge * 2 - 1) >> (shift + 1));
+        func_80060364(((s16) query->width + tile_size - 1) >> tile_shift,
+                      ((s16) query->depth + tile_size * 2 - 1) >> (tile_shift + 1));
     }
 }
 
 /**
- * @brief Fetch the body of the count'th record on the scene header's list.
+ * @brief Fetch a record body from the scene header's linked list.
  *
- * Walks @p count links from the head, but stops advancing once it reaches the
+ * Walks @p index links from the head, but stops advancing once it reaches the
  * tail, so an index past the end clamps to the last record rather than running
- * off the list. The counter is a u16, so a count of zero walks nothing and
+ * off the list. The counter is a u16, so an index of zero walks nothing and
  * returns the head's body.
  *
- * @param count Number of links to walk from the head of the list.
+ * @param index Number of links to walk from the head of the list.
  * @return Pointer to the selected record's body, or NULL if the scene carries
  *         no records at all.
  */
-void* func_800630BC(s32 count)
+void* func_800630BC(s32 index)
 {
-    FieldHeaderRec* rec;
-    u16 i;
+    FieldHeaderRec* record;
+    u16 remaining;
 
-    rec = g_field_scene.scene->header->records;
-    if (rec != NULL)
+    record = g_field_scene.scene->header->records;
+    if (record != NULL)
     {
-        i = count;
-        while (i-- != 0)
+        remaining = index;
+        while (remaining-- != 0)
         {
-            if (rec->next != NULL)
+            if (record->next != NULL)
             {
-                rec = rec->next;
+                record = record->next;
             }
         }
-        return &rec->body;
+        return &record->body;
     }
     return NULL;
 }
@@ -6826,15 +6843,15 @@ void* func_800630BC(s32 count)
 void func_8006312C(void)
 {
     FieldNode* node;
-    s32 alloc;
+    s32 allocator_cursor;
 
     node = g_field_scene.scene->nodes;
-    alloc = D_801ED000;
+    allocator_cursor = D_801ED000;
     while (node != NULL)
     {
-        func_8005E3B0((Move_UnkNode1*) node, (u8**) &alloc);
+        func_8005E3B0((FieldCollisionNode*) node, (u8**) &allocator_cursor);
         node = node->next;
     }
-    func_8005F158(&alloc);
-    D_801ED000 = alloc;
+    func_8005F158(&allocator_cursor);
+    D_801ED000 = allocator_cursor;
 }

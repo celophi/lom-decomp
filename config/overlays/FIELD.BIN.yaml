@@ -58,7 +58,7 @@ segments:
       - [0xB57D, c, field_scene_api]            # gcc280_g4, no expand-div
       - [0xB6F9, c, field_collision]            # gcc280_g4, no expand-div (collision only; ends at func_8006312C)
       - [0x13525, c, field_text]                # gcc280_g4, no expand-div (text/dialogue TU: collision tail + field1 + func_800674a8/func_80067598)
-      - [0x17959, c, field3]                    # gcc272_cdk, no-expand-div
+      - [0x17959, c, field_text_format_number]  # gcc272_cdk, no-expand-div
       - [0x17A45, c, func_800675c8]             # gcc272_cdk
       - [0x17C65, c, field2]                    # gcc272_cdk, no-schedule-insns
       - [0x17E35, c, func_80067aa4]             # gcc272_cdk
@@ -118,7 +118,7 @@ segments:
       - [0x382D5, c, field307]                     # gcc272_cdk, func_80087F44, 100%
       - [0x38351, c, unk2_i_b_split003]            # gcc272_cdk, func_80087FC0
       - [0x3847D, c, field35]                      # gcc272_cdk, func_800880EC
-      - [0x384BD, c, func_8008812C]             # gcc272_cdk, 100.00000%, 27/27 instructions
+      - [0x384BD, c, field_get_object_script_command] # gcc272_cdk, field_get_object_script_command (100%)
       - [0x38529, c, func_80088198]             # gcc272_cdk, WIP 89.32%
       - [0x39D11, c, unk2_i_b_split004_tail]    # gcc272_cdk, func_80089980
       - [0x39DF9, c, field308]                  # gcc272_cdk, func_80089A68, 100%
@@ -129,7 +129,7 @@ segments:
       - [0x3AEBD, c, unk2_i_b_split004_tail2]   # gcc272_cdk, func_8008AB2C
       - [0x3B0D5, c, func_8008AD44]             # gcc272_cdk, 100%
       - [0x3B145, c, field254]                  # gcc272_cdk, func_8008ADB4
-      - [0x3B1A5, c, field372]                  # gcc272_cdk, func_8008AE14
+      - [0x3B1A5, c, field_queue_actor_animation_by_handle] # gcc272_cdk, func_8008AE14, 100%
       - [0x3B241, c, func_8008AEB0]             # gcc272_cdk, 100%
       - [0x3B2F9, c, func_8008AF68]             # gcc272_cdk, 100%
       - [0x3B369, c, unk2_i_b_split022_tail]    # gcc272_cdk, func_8008AFD8
