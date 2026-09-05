@@ -243,7 +243,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field140.c \
 	src/overlays/field/field144.c \
 	src/overlays/field/field147.c \
-	src/overlays/field/field153.c \
 	src/overlays/field/field168.c \
 	src/overlays/field/field178.c \
 	src/overlays/field/field187.c \
@@ -500,6 +499,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field_text_format_number.c
 overlay_field_gcc_280_g0_srcs := \
+	src/overlays/field/field_record_lookup_ops.c \
+	src/overlays/field/field_stat_counter_ops.c \
 	src/overlays/field/field_resource_table_ops.c \
 	src/overlays/field/field_record_table_ops.c \
 	src/overlays/field/field_menu_slot_ops.c \
@@ -570,8 +571,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800BD650.c \
 	src/overlays/field/func_800BE550.c \
 	src/overlays/field/func_800BF68C.c \
-	src/overlays/field/func_800C1B98.c \
-	src/overlays/field/func_800C21C0.c \
 	src/overlays/field/func_800C2848.c \
 	src/overlays/field/func_800C2D08.c \
 	src/overlays/field/func_800C5760.c \
@@ -610,10 +609,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field148.c \
 	src/overlays/field/func_800C15AC.c \
 	src/overlays/field/field149.c \
-	src/overlays/field/field150.c \
-	src/overlays/field/field152.c \
-	src/overlays/field/field154.c \
-	src/overlays/field/field155.c \
 	src/overlays/field/field167.c \
 	src/overlays/field/field169.c \
 	src/overlays/field/field170.c \
@@ -645,18 +640,12 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field260.c \
 	src/overlays/field/field261.c \
 	src/overlays/field/field263.c \
-	src/overlays/field/field266.c \
-	src/overlays/field/func_800C1D68.c \
 	src/overlays/field/field267.c \
 	src/overlays/field/field270.c \
 	src/overlays/field/field271.c \
 	src/overlays/field/field274.c \
-	src/overlays/field/field276.c \
-	src/overlays/field/field277.c \
-	src/overlays/field/field278.c \
 	src/overlays/field/field280.c \
 	src/overlays/field/field281.c \
-	src/overlays/field/field283.c \
 	src/overlays/field/field284.c \
 	src/overlays/field/field285.c \
 	src/overlays/field/field286.c \
