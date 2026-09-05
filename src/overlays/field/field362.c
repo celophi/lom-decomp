@@ -6,7 +6,7 @@ extern u8 *D_80122B74;
  * @brief Re-arm the pending-input record for a field object, or notify audio.
  *
  * For an in-range @p arg0 (< 5), resolves the object's 0x60-stride record at
- * @c D_80122B74 + 0x2EF4 and hands it to func_800B2844 and func_800AAF00 (using
+ * @c D_80122B74 + 0x2EF4 and hands it to func_800B2844 and field_run_name_entry (using
  * the record's @c 0x2F09 count byte). Out-of-range indices notify the audio
  * driver instead.
  *
@@ -32,5 +32,5 @@ void func_800C25A0(s32 arg0)
     off = temp_s1 + 0x2EF4;
     func_800B2844(0, D_80122B74 + off, 0x15);
     addr = D_80122B74 + off;
-    func_800AAF00(addr, addr, 3, *(u8 *)(D_80122B74 + temp_s1 + 0x2F09), 0);
+    field_run_name_entry(addr, addr, 3, *(u8 *)(D_80122B74 + temp_s1 + 0x2F09), 0);
 }

@@ -1,7 +1,7 @@
 #include "common.h"
 
 /**
- * @brief Three-word parameter block forwarded to func_800AAFEC.
+ * @brief Three-word parameter block forwarded to field_open_gosub_screen_sequence.
  */
 typedef struct
 {
@@ -26,7 +26,7 @@ typedef struct
     u16 unk4;
 } UnkStruct80122C12;
 
-void func_800AAFEC(UnkStruct80051EC0 *arg0);
+void field_open_gosub_screen_sequence(UnkStruct80051EC0 *arg0);
 void func_800B2844(s32 arg0, u8 *arg1, u8 arg2);
 
 extern UnkStruct80051EC0 D_80051EC0;
@@ -99,14 +99,14 @@ void func_800C71D4(void)
 }
 
 /**
- * @brief Copy the D_80051EC0 constant onto the stack and forward it to func_800AAFEC.
+ * @brief Copy the D_80051EC0 constant onto the stack and forward it to field_open_gosub_screen_sequence.
  */
 void func_800C7238(void)
 {
     UnkStruct80051EC0 local;
 
     local = D_80051EC0;
-    func_800AAFEC(&local);
+    field_open_gosub_screen_sequence(&local);
 }
 
 /**
@@ -123,14 +123,14 @@ void func_800C7278(void)
 }
 
 /**
- * @brief Copy the D_80051ECC constant onto the stack and forward it to func_800AAFEC.
+ * @brief Copy the D_80051ECC constant onto the stack and forward it to field_open_gosub_screen_sequence.
  */
 void func_800C72A4(void)
 {
     UnkStruct80051EC0 sp10;
 
     sp10 = D_80051ECC;
-    func_800AAFEC(&sp10);
+    field_open_gosub_screen_sequence(&sp10);
 }
 
 /**

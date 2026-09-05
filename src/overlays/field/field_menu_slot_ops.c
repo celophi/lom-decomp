@@ -13,7 +13,7 @@ typedef struct
 } MenuLayoutBuffer;
 
 /**
- * @brief Three-word parameter block forwarded to func_800AAFEC.
+ * @brief Three-word parameter block forwarded to field_open_gosub_screen_sequence.
  */
 typedef struct
 {
@@ -55,7 +55,7 @@ typedef struct
 #define MENU_LAYOUT ((MenuLayoutBuffer *)g_menuLayoutBuffer)
 
 void func_800C9ED4();
-void func_800AAFEC(UnkStruct80051EB4 *arg0);
+void field_open_gosub_screen_sequence(UnkStruct80051EB4 *arg0);
 void func_800AD030(s32 arg0);
 void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
 u8 *func_800C1E40(s32 arg0);
@@ -111,14 +111,14 @@ void func_800C6DA0(void)
 }
 
 /**
- * @brief Copy the D_80051EB4 constant onto the stack and forward it to func_800AAFEC.
+ * @brief Copy the D_80051EB4 constant onto the stack and forward it to field_open_gosub_screen_sequence.
  */
 void func_800C6DC8(void)
 {
     UnkStruct80051EB4 local;
 
     local = D_80051EB4;
-    func_800AAFEC(&local);
+    field_open_gosub_screen_sequence(&local);
 }
 
 /**
