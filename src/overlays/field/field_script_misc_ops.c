@@ -1,13 +1,23 @@
 #include "common.h"
 #include "field_script.h"
 
-/** @brief View of D_80122B78 exposing the packed position word at 0x410. */
+/*
+ * Extended field script opcodes 0x86 through 0x8F.
+ *
+ * field_script_run hands opcodes of 0x80 and above to func_800B8308, which
+ * decodes up to four operands from the descriptor bytes that follow the opcode
+ * and jumps through g_field_script_ext_op_table[opcode - 0x80]. Every handler
+ * here receives those decoded operands in order. An operand of 0xFF in an
+ * actor-id slot means the script owner.
+ */
+
+/** @brief View of D_80122B78 exposing the three packed 10-bit fields at 0x410. */
 typedef struct
 {
     u8 pad0[0x404];
     s32 unk404; /* 0x404 */
     u8 pad408[0x410 - 0x408];
-    u32 unk410; /* 0x410 */
+    u32 unk410; /* 0x410 three 10-bit fields */
     u32 unk414; /* 0x414 */
 } StructB78;
 
@@ -25,142 +35,141 @@ extern s32 g_layout_option;
 extern s32 g_layout_sub_mode;
 
 /**
- * @brief Looks up a record and forwards a derived address to func_800B2844.
+ * @brief Opcode 0x86: dispatch an entry of a resource record through func_800B2844.
  *
- * Fetches the record for @p arg1 via func_800C1E40; when non-NULL, reads the
- * halfword at @c arg2*2 + 4 within it and calls func_800B2844 with @p arg0, the
- * record address offset by that halfword plus 4, and @p arg3.
+ * Fetches the record for @p resource_id via func_800C1E40; when non-NULL, reads
+ * the halfword at @c entry_index*2 + 4 within it and calls func_800B2844 with
+ * the record address offset by that halfword plus 4.
  *
- * @param arg0 Forwarded to func_800B2844.
- * @param arg1 Record selector passed to func_800C1E40.
- * @param arg2 Halfword index within the record (scaled by 2).
- * @param arg3 Forwarded to func_800B2844.
+ * @param operand_0 Forwarded to func_800B2844 as its first argument.
+ * @param resource_id Record selector passed to func_800C1E40.
+ * @param entry_index Halfword index within the record (scaled by 2).
+ * @param operand_3 Forwarded to func_800B2844 as its third argument.
  */
-void func_800BCE94(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void field_script_op_86(s32 operand_0, s32 resource_id, s32 entry_index, s32 operand_3)
 {
-    u8 *p = func_800C1E40(arg1);
+    u8 *p = func_800C1E40(resource_id);
 
     if (p != NULL)
     {
-        u16 h = *(u16 *)(p + (arg2 << 1) + 4);
-        func_800B2844(arg0, p + (h + 4), arg3);
+        u16 h = *(u16 *)(p + (entry_index << 1) + 4);
+        func_800B2844(operand_0, p + (h + 4), operand_3);
     }
 }
 
 /**
- * @brief Dispatches to one of two field handlers based on a selector.
+ * @brief Opcode 0x87: route an actor to func_800B28E0 or func_800B286C by selector.
  *
- * If @p p1 is the 0xFF sentinel it is replaced by the script owner's id.
- * Selector 0 forwards to func_800B28E0 and selector 1 to func_800B286C,
- * each with the resolved value and the low bytes of @p p2 and @p p3.
+ * Selector 0 forwards to func_800B28E0 and selector 1 to func_800B286C, each
+ * with the resolved actor id and the low bytes of the last two operands.
  *
- * @param p0 Handler selector, 0 or 1.
- * @param p1 Actor id, or 0xFF for the script owner.
- * @param p2 Low byte forwarded to the handler.
- * @param p3 Low byte forwarded to the handler.
+ * @param selector Handler selector, 0 or 1.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param operand_2 Low byte forwarded to the handler.
+ * @param operand_3 Low byte forwarded to the handler.
  */
-void func_800BCEFC(s32 p0, s32 p1, s32 p2, s32 p3)
+void field_script_op_87(s32 selector, s32 actor_id, s32 operand_2, s32 operand_3)
 {
-    if (p1 == 0xFF)
+    if (actor_id == 0xFF)
     {
-        p1 = g_field_script->status.owner_id;
+        actor_id = g_field_script->status.owner_id;
     }
-    switch (p0)
+    switch (selector)
     {
     case 0:
-        func_800B28E0(p1, p2 & 0xFF, p3 & 0xFF);
+        func_800B28E0(actor_id, operand_2 & 0xFF, operand_3 & 0xFF);
         break;
     case 1:
-        func_800B286C(p1, p2 & 0xFF, p3 & 0xFF);
+        func_800B286C(actor_id, operand_2 & 0xFF, operand_3 & 0xFF);
         break;
     }
 }
 
 /**
- * @brief Reset the layout option globals and forward to func_800681E4 with 0xFF mapped to -1.
- * @param arg0 Forwarded unchanged.
- * @param arg1 0xFF becomes -1.
- * @param arg2 0xFF becomes -1.
+ * @brief Opcode 0x88: reset the layout option globals and start the func_800681E4 transition.
+ * @param operand_0 Forwarded unchanged.
+ * @param operand_1 0xFF becomes -1.
+ * @param operand_2 0xFF becomes -1.
  */
-void func_800BCF68(s32 arg0, s32 arg1, s32 arg2)
+void field_script_op_88(s32 operand_0, s32 operand_1, s32 operand_2)
 {
     s32 var_v0;
     s32 var_a3;
 
     var_v0 = -1;
-    if (arg1 != 0xFF)
+    if (operand_1 != 0xFF)
     {
-        var_v0 = arg1;
+        var_v0 = operand_1;
     }
-    arg1 = var_v0;
+    operand_1 = var_v0;
 
     var_a3 = -1;
-    if (arg2 != 0xFF)
+    if (operand_2 != 0xFF)
     {
-        var_a3 = arg2;
+        var_a3 = operand_2;
     }
 
     g_layout_option = -1;
 
-    arg2 = var_a3;
+    operand_2 = var_a3;
 
     g_layout_sub_mode = -1;
 
-    func_800681E4(arg0, arg1, arg2);
+    func_800681E4(operand_0, operand_1, operand_2);
 }
 
 /**
- * @brief Issue AKAO command 0xA9 with a minimum first operand of 1.
- * @param arg0 Unused.
- * @param arg1 Unused.
- * @param arg2 First operand; 0 is promoted to 1.
- * @param arg3 Second operand.
+ * @brief Opcode 0x89: issue AKAO command 0xA9 with a minimum first value of 1.
+ * @param operand_0 Unused.
+ * @param operand_1 Unused.
+ * @param value First AKAO operand; 0 is promoted to 1.
+ * @param operand_3 Second AKAO operand.
  */
-void func_800BCFBC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void field_script_op_89(s32 operand_0, s32 operand_1, s32 value, s32 operand_3)
 {
-    if (arg2 == 0)
+    if (value == 0)
     {
-        arg2 = 1;
+        value = 1;
     }
-    akao_cmd_a9(arg2, arg3);
+    akao_cmd_a9(value, operand_3);
 }
 
 /**
- * @brief Forward an actor pair to func_8008B5D0, mapping 0xFF to the script owner.
- * @param arg0 Actor id, or 0xFF for the script owner.
- * @param arg1 Forwarded unchanged.
- * @param arg2 Target id, or 0xFF for the script owner; passed by address.
- * @param arg3 Unused.
+ * @brief Opcode 0x8A: forward an actor pair to func_8008B5D0.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param operand_1 Forwarded unchanged.
+ * @param target_id Target id, or 0xFF for the script owner; passed by address.
+ * @param operand_3 Unused.
  */
-void func_800BCFEC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void field_script_op_8a(s32 actor_id, s32 operand_1, s32 target_id, s32 operand_3)
 {
-    s32 sp10;
-    s32 var_a0;
+    s32 resolved_target;
+    s32 resolved_actor;
 
-    var_a0 = arg0;
-    if (arg2 == 0xFF)
+    resolved_actor = actor_id;
+    if (target_id == 0xFF)
     {
-        sp10 = (s32) g_field_script->status.owner_id;
+        resolved_target = (s32) g_field_script->status.owner_id;
     }
     else
     {
-        sp10 = arg2;
+        resolved_target = target_id;
     }
-    if (var_a0 == 0xFF)
+    if (resolved_actor == 0xFF)
     {
-        var_a0 = g_field_script->status.owner_id;
+        resolved_actor = g_field_script->status.owner_id;
     }
-    func_8008B5D0(var_a0, arg1, 1, &sp10);
+    func_8008B5D0(resolved_actor, operand_1, 1, &resolved_target);
 }
 
 /**
- * @brief Pack three 10-bit fields into the word at 0x410 and store arg3 at 0x414.
- * @param arg0 Bits 0-9.
- * @param arg1 Bits 10-19.
- * @param arg2 Bits 20-29.
- * @param arg3 Stored to unk414.
+ * @brief Opcode 0x8B: pack three 10-bit fields into the word at 0x410 and store the fourth operand at 0x414.
+ * @param field_0 Bits 0-9.
+ * @param field_1 Bits 10-19.
+ * @param field_2 Bits 20-29.
+ * @param operand_3 Stored to unk414.
  */
-void func_800BD04C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void field_script_op_8b(s32 field_0, s32 field_1, s32 field_2, s32 operand_3)
 {
     StructB78 *p;
     u32 raw;
@@ -168,60 +177,60 @@ void func_800BD04C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 
     p = D_80122B78;
     raw = p->unk410;
-    p->unk414 = arg3;
+    p->unk414 = operand_3;
     v = raw;
     v &= ~0x3FF;
-    v |= arg0 & 0x3FF;
+    v |= field_0 & 0x3FF;
     v &= 0xFFF003FF;
-    v |= (arg1 & 0x3FF) << 10;
+    v |= (field_1 & 0x3FF) << 10;
     v &= 0xC00FFFFF;
-    v |= (arg2 & 0x3FF) << 20;
+    v |= (field_2 & 0x3FF) << 20;
     p->unk410 = v;
 }
 
 /**
- * @brief Forward to func_80089D44 with 0xFF operands mapped to the owner id or -1.
- * @param arg0 Actor id, or 0xFF for the script owner.
- * @param arg1 0xFF becomes -1.
- * @param arg2 0xFF becomes -1.
- * @param arg3 0xFF becomes -1.
+ * @brief Opcode 0x8C: forward to func_80089D44 with 0xFF operands mapped to the owner id or -1.
+ * @param actor_id Actor id, or 0xFF for the script owner.
+ * @param operand_1 0xFF becomes -1.
+ * @param operand_2 0xFF becomes -1.
+ * @param operand_3 0xFF becomes -1.
  */
-void func_800BD0A4(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void field_script_op_8c(s32 actor_id, s32 operand_1, s32 operand_2, s32 operand_3)
 {
-    s32 v;
+    s32 resolved_actor;
 
-    if (arg0 == 0xFF)
+    if (actor_id == 0xFF)
     {
-        v = g_field_script->status.owner_id;
+        resolved_actor = g_field_script->status.owner_id;
     }
     else
     {
-        v = arg0;
+        resolved_actor = actor_id;
     }
-    func_80089D44(v,
-                  (arg1 == 0xFF) ? -1 : arg1,
-                  (arg2 == 0xFF) ? -1 : arg2,
-                  (arg3 == 0xFF) ? -1 : arg3);
+    func_80089D44(resolved_actor,
+                  (operand_1 == 0xFF) ? -1 : operand_1,
+                  (operand_2 == 0xFF) ? -1 : operand_2,
+                  (operand_3 == 0xFF) ? -1 : operand_3);
 }
 
 /**
- * @brief Empty function; no-op.
+ * @brief Opcode 0x8D: no-op.
  */
-void func_800BD110(void)
+void field_script_op_8d(void)
 {
 }
 
 /**
- * @brief Empty function; no-op.
+ * @brief Opcode 0x8E: no-op.
  */
-void func_800BD118(void)
+void field_script_op_8e(void)
 {
 }
 
 /**
- * @brief Empty function; no-op.
+ * @brief Opcode 0x8F: no-op.
  */
-void func_800BD120(void)
+void field_script_op_8f(void)
 {
 }
 
@@ -229,35 +238,35 @@ void func_800BD120(void)
  * @brief Apply a signed 16-bit relative jump to the active record's program counter.
  *
  * Reads a little-endian 16-bit delta from the active record's program counter
- * at offset @p arg0. A non-zero delta advances the pc by it (sign-extended via
- * the 0x8000 bit); a zero delta hands off to field_script_op_00 to step the
- * cursor.
+ * at offset @p delta_offset. A non-zero delta advances the pc by it
+ * (sign-extended via the 0x8000 bit); a zero delta hands off to
+ * field_script_op_00 to step the cursor.
  *
- * @param arg0 Byte offset from the program counter holding the delta.
+ * @param delta_offset Byte offset from the program counter holding the delta.
  * @see decomp.me (100%) TODO
  */
-void field_script_branch(s32 arg0)
+void field_script_branch(s32 delta_offset)
 {
     FieldScriptRecord *rec;
-    s32 unk8;
+    s32 pc;
     u8 *ptr;
     s32 val;
     s32 lo;
 
     rec = FIELD_SCRIPT_ACTIVE_RECORD();
-    unk8 = (s32)rec->pc;
-    ptr = (u8 *)(unk8 + arg0);
+    pc = (s32)rec->pc;
+    ptr = (u8 *)(pc + delta_offset);
     val = ptr[0] + (ptr[1] << 8);
     lo = val & 0xFFFF;
     if (lo != 0)
     {
         if (val & 0x8000)
         {
-            s32 t = unk8 + 0xFFFF0000;
+            s32 t = pc + 0xFFFF0000;
             rec->pc = (u8 *)(t + lo);
             return;
         }
-        rec->pc = (u8 *)(unk8 + lo);
+        rec->pc = (u8 *)(pc + lo);
         return;
     }
     field_script_op_00();

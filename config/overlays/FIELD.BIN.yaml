@@ -445,7 +445,7 @@ segments:
       - [0x6CFFD, c, field118]                     # gcc272_cdk, func_800BCC6C
       - [0x6D005, c, func_800BCC74]             # gcc272_cdk, 89.26% WIP
       - [0x6D071, c, unk2_b_split040]           # gcc272_cdk, func_800BCCE0
-      - [0x6D225, c, field_script_misc_ops]     # gcc280_g0, func_800BCE94 .. field_script_read_operand_or_owner (12 funcs, 100%)
+      - [0x6D225, c, field_script_misc_ops]     # gcc280_g0, field_script_op_86 .. field_script_read_operand_or_owner (12 funcs, 100%)
       - [0x6D595, c, unk2_b_split113]              # gcc272_cdk, func_800BD204
       - [0x6D68D, c, field123]                     # gcc272_cdk, field_script_read_u16
       - [0x6D6A9, c, func_800BD318]                # gcc280_g0, 84.21%
