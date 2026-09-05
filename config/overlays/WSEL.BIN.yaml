@@ -40,11 +40,13 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, rodata, rodata_before_func_800503F0]
+      - [0x5, .rodata, func_800503F0]
+      - [0x1D, rodata, rodata_after_func_800503F0]
       - [0xB5, c, wsel_main_loop]     # gcc272_cdk, func_8004FD24, 100%
       - [0x209, c, wsel_init_display]  # gcc272_cdk, func_8004FE78, 100%
       - [0x34D, c, wsel_audio_fade]       # gcc272_cdk, 7 funcs, 100%
-      - [0x781, c, unk1_tail]              # gcc280_g0, func_800503F0 unmatched
+      - [0x781, c, func_800503F0]          # gcc272_cdk, func_800503F0, 100%
       - [0xCD5, c, func_80050944]           # gcc280_g0, func_80050944, 100%
       - [0xED1, c, func_80050B40]           # gcc280_g0, func_80050B40, 99.92%
       - [0x1141, c, func_80050DB0]          # gcc280_g0, func_80050DB0, 100%
