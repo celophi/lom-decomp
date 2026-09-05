@@ -263,9 +263,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field200.c \
 	src/overlays/field/field202.c \
 	src/overlays/field/field203.c \
-	src/overlays/field/field204.c \
-	src/overlays/field/field209.c \
-	src/overlays/field/field229.c \
 	src/overlays/field/func_80087CE0.c \
 	src/overlays/field/func_80087E00.c \
 	src/overlays/field/unk2_i_b_split003.c \
@@ -432,12 +429,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split086.c \
 	src/overlays/field/unk2_b_split087_tail.c \
 	src/overlays/field/unk2_b_split088.c \
-	src/overlays/field/func_800CA568.c \
-	src/overlays/field/func_800CB680.c \
 	src/overlays/field/unk2_b_split098.c \
-	src/overlays/field/func_800CBC0C.c \
 	src/overlays/field/unk2_b_split098_tail.c \
-	src/overlays/field/func_800CBEC4.c \
 	src/overlays/field/field235.c \
 	src/overlays/field/func_800A8E28.c \
 	src/overlays/field/unk2_b_split100.c \
@@ -585,7 +578,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field369.c \
 	src/overlays/field/field370.c \
 	src/overlays/field/field372.c \
-	src/overlays/field/field_ca364_predicates.c \
+	src/overlays/field/field_equipment_combination_rules.c \
 	src/overlays/field/field87.c \
 	src/overlays/field/field89.c \
 	src/overlays/field/func_800B31CC.c \
@@ -630,7 +623,10 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800C6228.c \
 	src/overlays/field/func_800C7494.c \
 	src/overlays/field/func_800BD3B0.c \
+	src/overlays/field/field_golem_logic_blocks.c \
+	src/overlays/field/func_800CBC0C.c \
 	src/overlays/field/func_800CBE64.c \
+	src/overlays/field/func_800CBEC4.c \
 	src/overlays/field/field91.c \
 	src/overlays/field/field95.c \
 	src/overlays/field/field99.c \
@@ -686,7 +682,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field197.c \
 	src/overlays/field/field199.c \
 	src/overlays/field/field201.c \
-	src/overlays/field/field208.c \
 	src/overlays/field/field236.c \
 	src/overlays/field/func_800B19FC.c \
 	src/overlays/field/func_800B286C.c \
