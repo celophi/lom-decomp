@@ -585,7 +585,7 @@ segments:
       - [0x77131, c, field181]                     # gcc280_g0, func_800C6DA0
       - [0x771B9, c, field348]                  # gcc280_g0, func_800C6E28
       - [0x7724D, c, func_800C6EBC]            # gcc272_cdk, 100%
-      - [0x772F1, c, field275]                  # gcc272_cdk, func_800C6F60
+      - [0x772F1, c, field_load_selected_equipment_mystic_cards] # gcc272_cdk, func_800C6F60
       - [0x7732D, c, field305]                  # gcc280_g0, func_800C6F9C, 100%
       - [0x773A5, c, field311]                  # gcc280_g0, func_800C7014
       - [0x77421, c, unk2_b_split127]           # gcc272_cdk, func_800C7090
@@ -609,14 +609,14 @@ segments:
       - [0x7844D, c, unk2_b_split081_tail_b]        # gcc272_cdk, func_800C80BC
       - [0x785B1, c, field190]                     # gcc280_g0, func_800C8220
       - [0x785F1, c, unk2_b_split082]              # gcc272_cdk, func_800C8260
-      - [0x78B45, c, field312]                     # gcc272_cdk, func_800C87B4, 100%
+      - [0x78B45, c, field_reset_menu_action_slot] # gcc272_cdk, field_reset_menu_action_slot (100%)
       - [0x78BC1, c, unk2_b_split082_b]            # gcc280_g0, func_800C8830, 100%
       - [0x78CC9, c, field191]                     # gcc280_g0, func_800C8938
       - [0x78CF5, c, unk2_b_split083]           # gcc272_cdk, func_800C8964
       - [0x792DD, c, field271]                  # gcc280_g0, func_800C8F4C
       - [0x79339, c, func_800C8FA8]             # gcc280_g0, 100%
       - [0x793ED, c, unk2_b_split125]           # gcc272_cdk, func_800C905C
-      - [0x7963D, c, field192]                     # gcc272_cdk, func_800C92AC
+      - [0x7963D, c, field_reset_music_track_index] # gcc272_cdk, field_reset_music_track_index
       - [0x79649, c, field303]                     # gcc280_g0, func_800C92B8 + func_800C9330 + func_800C93B4 (100%)
       - [0x79795, c, field193]                     # gcc280_g0, func_800C9404
       - [0x797D9, c, field194]                     # gcc272_cdk, func_800C9448

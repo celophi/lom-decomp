@@ -188,7 +188,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field307.c \
 	src/overlays/field/field308.c \
 	src/overlays/field/field310.c \
-	src/overlays/field/field312.c \
+	src/overlays/field/field_reset_menu_action_slot.c \
 	src/overlays/field/field320.c \
 	src/overlays/field/field321.c \
 	src/overlays/field/field322.c \
@@ -254,7 +254,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field185.c \
 	src/overlays/field/field187.c \
 	src/overlays/field/field189.c \
-	src/overlays/field/field192.c \
+	src/overlays/field/field_reset_music_track_index.c \
 	src/overlays/field/field194.c \
 	src/overlays/field/field198.c \
 	src/overlays/field/field200.c \
@@ -486,7 +486,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field268.c \
 	src/overlays/field/field269.c \
 	src/overlays/field/field273.c \
-	src/overlays/field/field275.c \
+	src/overlays/field/field_load_selected_equipment_mystic_cards.c \
 	src/overlays/field/field_upload_initial_vram_resource.c \
 	src/overlays/field/unk2_i_b_split024_tail.c \
 	src/overlays/field/field288.c \

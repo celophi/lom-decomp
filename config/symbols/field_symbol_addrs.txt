@@ -113,6 +113,8 @@ field_object_has_active_actor_tracks  = 0x80083AB4;
 field_count_free_actor_slots          = 0x80083AFC;
 field_set_actor_horizontal_scale      = 0x8008699C;
 field_get_object_script_command       = 0x8008812C;
+field_reset_menu_action_slot          = 0x800C87B4;
+field_reset_music_track_index         = 0x800C92AC;
 
 equipment_pair_has_classes            = 0x800CA364;
 equipment_combination_quantity        = 0x800CA288;
