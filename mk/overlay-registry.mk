@@ -117,6 +117,7 @@ overlay_cload_gcc_272_cdk_g0_srcs := \
 
 OVERLAYS += field
 overlay_field_gcc_272_cdk_g0_srcs := \
+	src/overlays/field/field_actor_flag_ops.c \
 	src/overlays/field/field_pad_context_ops.c \
 	src/overlays/field/field_overlay_launchers.c \
 	src/overlays/field/func_800CA1E0.c \
@@ -147,7 +148,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field22.c \
 	src/overlays/field/field24.c \
 	src/overlays/field/field25.c \
-	src/overlays/field/field26.c \
 	src/overlays/field/field27.c \
 	src/overlays/field/field29.c \
 	src/overlays/field/unk2.c \
@@ -162,7 +162,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_load_vram_resource.c \
 	src/overlays/field/unk2_h_b.c \
 	src/overlays/field/unk2_i.c \
-	src/overlays/field/func_80086F48.c \
 	src/overlays/field/field30.c \
 	src/overlays/field/field32.c \
 	src/overlays/field/field33.c \
@@ -196,7 +195,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field322.c \
 	src/overlays/field/field323.c \
 	src/overlays/field/field329.c \
-	src/overlays/field/field330.c \
 	src/overlays/field/field331.c \
 	src/overlays/field/field332.c \
 	src/overlays/field/field333.c \
@@ -425,10 +423,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split112.c \
 	src/overlays/field/unk2_b_split113.c \
 	src/overlays/field/field_handle_actor_control_flag_40.c \
-	src/overlays/field/func_80086ACC.c \
-	src/overlays/field/func_80086C70.c \
-	src/overlays/field/func_80086C00.c \
-	src/overlays/field/func_80086D5C.c \
 	src/overlays/field/unk2_b_split115.c \
 	src/overlays/field/unk2_b_split117.c \
 	src/overlays/field/unk2_b_split118.c \

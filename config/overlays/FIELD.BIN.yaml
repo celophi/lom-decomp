@@ -100,13 +100,7 @@ segments:
       - [0x36BE1, c, field337]                  # gcc272_cdk, func_80086850 + func_800868FC (78.85% WIP)
       - [0x36D2D, c, field_set_actor_horizontal_scale] # gcc272_cdk, field_set_actor_horizontal_scale
       - [0x36D8D, c, field_handle_actor_control_flag_40]  # gcc272_cdk, func_800869FC (100%)
-      - [0x36E5D, c, func_80086ACC]             # gcc272_cdk, 100%
-      - [0x36F91, c, func_80086C00]             # gcc272_cdk, 100%
-      - [0x37001, c, func_80086C70]             # gcc272_cdk, 100%
-      - [0x370ED, c, func_80086D5C]             # gcc272_cdk, 100%
-      - [0x37161, c, field330]                  # gcc272_cdk, func_80086DD0 + func_80086E78
-      - [0x372B1, c, field26]                   # gcc272_cdk, func_80086F20
-      - [0x372D9, c, func_80086F48]             # gcc272_cdk, 100%
+      - [0x36E5D, c, field_actor_flag_ops]      # gcc272_cdk, func_80086ACC .. func_80086F48 (8 funcs, 100%; 5 of them do not match under gcc280_g0)
       - [0x37349, c, unk2_i]                    # gcc272_cdk, func_80086FB8
       - [0x37531, c, field29]                   # gcc272_cdk, func_800871A0 (WIP 90.73%)
       - [0x379A5, c, func_80087614]                # gcc272_cdk, 100.00000%, 27/27 instructions
