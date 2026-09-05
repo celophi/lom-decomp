@@ -253,7 +253,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field178.c \
 	src/overlays/field/field185.c \
 	src/overlays/field/field187.c \
-	src/overlays/field/field189.c \
+	src/overlays/field/field_load_selected_small_history_value.c \
 	src/overlays/field/field_reset_music_track_index.c \
 	src/overlays/field/field194.c \
 	src/overlays/field/field198.c \

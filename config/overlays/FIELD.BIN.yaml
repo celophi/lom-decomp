@@ -598,7 +598,7 @@ segments:
       - [0x77825, c, func_800C7494]                 # gcc280_g0, 100%
       - [0x778BD, c, field188]                     # gcc280_g0, func_800C752C
       - [0x778E9, c, func_800C7558]                # gcc280_g0, func_800C7558 + func_800C75C0 (100%)
-      - [0x779B9, c, field189]                     # gcc272_cdk, func_800C7628
+      - [0x779B9, c, field_load_selected_small_history_value] # gcc272_cdk, func_800C7628
       - [0x779FD, c, unk2_b_split081]              # gcc272_cdk, func_800C766C
       - [0x78019, c, func_800C7C88]                # gcc280_g0, 100%
       - [0x78089, c, func_800C7CF8]                # gcc272_cdk, 100%
