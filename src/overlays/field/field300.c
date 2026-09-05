@@ -1,6 +1,6 @@
 #include "common.h"
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 
 s32 func_800C2DC0(void);
 s32 func_800C2D08(void);
@@ -14,7 +14,7 @@ void func_800BC3DC(s32 arg0, s32 arg1)
 
     if (arg0 == 0xFF)
     {
-        var_s1 = *D_80123FB8;
+        var_s1 = *g_field_script;
     }
     else
     {

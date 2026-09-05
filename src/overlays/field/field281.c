@@ -1,6 +1,6 @@
 #include "common.h"
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 extern u8 *D_80122B78;
 
 typedef struct
@@ -17,7 +17,7 @@ void func_800BC9F8(s32 arg0, s32 arg1)
 
     if (arg0 == 0xFF)
     {
-        idx = *D_80123FB8;
+        idx = *g_field_script;
     }
     else
     {

@@ -235,7 +235,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field93.c \
 	src/overlays/field/field94.c \
 	src/overlays/field/field96.c \
-	src/overlays/field/field97.c \
 	src/overlays/field/field98.c \
 	src/overlays/field/field108.c \
 	src/overlays/field/field111.c \
@@ -530,7 +529,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field311.c \
 	src/overlays/field/field325.c \
 	src/overlays/field/field334.c \
-	src/overlays/field/field335.c \
 	src/overlays/field/field336.c \
 	src/overlays/field/field338.c \
 	src/overlays/field/field339.c \
@@ -557,16 +555,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field358.c \
 	src/overlays/field/func_800B8C48.c \
 	src/overlays/field/func_800B91C4.c \
-	src/overlays/field/func_800BA6BC.c \
-	src/overlays/field/func_800BA76C.c \
-	src/overlays/field/func_800BA574.c \
-	src/overlays/field/func_800BAA3C.c \
-	src/overlays/field/field359.c \
-	src/overlays/field/func_800BABD4.c \
-	src/overlays/field/func_800BACF0.c \
-	src/overlays/field/func_800BB004.c \
-	src/overlays/field/func_800BB14C.c \
-	src/overlays/field/func_800BB264.c \
 	src/overlays/field/field360.c \
 	src/overlays/field/field361.c \
 	src/overlays/field/field362.c \
@@ -597,10 +585,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800B70F4.c \
 	src/overlays/field/func_800B78C0.c \
 	src/overlays/field/func_800B88C4.c \
-	src/overlays/field/func_800BA368.c \
-	src/overlays/field/func_800BA470.c \
-	src/overlays/field/func_800BA8D8.c \
-	src/overlays/field/func_800BAE54.c \
 	src/overlays/field/func_800BC474.c \
 	src/overlays/field/func_800BCAD8.c \
 	src/overlays/field/func_800BCE94.c \
@@ -624,6 +608,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800C7494.c \
 	src/overlays/field/func_800BD3B0.c \
 	src/overlays/field/field_golem_logic_blocks.c \
+	src/overlays/field/field_script_ops.c \
 	src/overlays/field/func_800CBC0C.c \
 	src/overlays/field/func_800CBE64.c \
 	src/overlays/field/func_800CBEC4.c \
@@ -697,11 +682,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800B9D40.c \
 	src/overlays/field/func_800B9DD4.c \
 	src/overlays/field/field246.c \
-	src/overlays/field/func_800BA1D4.c \
-	src/overlays/field/field247.c \
-	src/overlays/field/field248.c \
-	src/overlays/field/field249.c \
-	src/overlays/field/field250.c \
 	src/overlays/field/field251.c \
 	src/overlays/field/field252.c \
 	src/overlays/field/field259.c \

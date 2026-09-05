@@ -8,7 +8,7 @@ typedef struct
     s32 unk8;   /* 0x08 running data pointer (stored as an integer) */
 } SeqRec;
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 
 void func_800B85CC(void);
 
@@ -30,7 +30,7 @@ void func_800BD128(s32 arg0)
     s32 val;
     s32 lo;
 
-    rec = (SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2));
+    rec = (SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2));
     unk8 = rec->unk8;
     ptr = (u8 *)(unk8 + arg0);
     val = ptr[0] + (ptr[1] << 8);

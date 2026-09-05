@@ -1,6 +1,6 @@
 #include "common.h"
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 
 extern void func_8008A580(s32 arg0, s32 arg1);
 extern void func_8008B500(s32 arg0, s32 arg1);
@@ -9,7 +9,7 @@ void func_800BC65C(s32 arg0, s32 arg1)
 {
     if (arg0 == 0xFF)
     {
-        arg0 = *D_80123FB8;
+        arg0 = *g_field_script;
     }
 
     if (arg1 & 0x8000)

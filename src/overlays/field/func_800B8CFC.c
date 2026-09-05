@@ -7,9 +7,9 @@ typedef struct
     s32 unk8;
 } SeqRec;
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 
-s32 func_800BD1B4(s32 arg0, u8 *arg1, s32 *arg2);
+s32 field_script_read_operand_or_owner(s32 arg0, u8 *arg1, s32 *arg2);
 s32 func_800BD2FC(u8 *arg0, u16 *arg1);
 s32 func_800BD3B0(s32 arg0, s32 arg1);
 void func_800BD434(s32 arg0, s32 arg1, s32 arg2);
@@ -33,25 +33,25 @@ void func_800B8CFC(void)
     u8 *temp_a1;
     s32 r3;
 
-    temp_a1 = (u8 *)((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8;
+    temp_a1 = (u8 *)((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8;
     b = temp_a1[1];
-    ((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8 =
-        func_800BD1B4(b & 3, temp_a1 + 2, &sp10);
-    ((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8 =
+    ((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 =
+        field_script_read_operand_or_owner(b & 3, temp_a1 + 2, &sp10);
+    ((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 =
         func_800BD2FC(
-            (u8 *)((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8,
+            (u8 *)((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8,
             &sp14);
     do
     {
         r3 = func_800BD3B0(sp10, sp14 << 16);
-        ((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8 =
-            func_800BD1B4(
+        ((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 =
+            field_script_read_operand_or_owner(
                 (b >> 2) & 3,
-                (u8 *)((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8 + 2,
+                (u8 *)((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 + 2,
                 &sp18);
-        ((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8 =
+        ((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 =
             func_800BD2FC(
-                (u8 *)((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8,
+                (u8 *)((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8,
                 &sp1C);
     } while (0);
     func_800BD434(sp18, sp1C << 16, r3);

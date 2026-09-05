@@ -8,11 +8,11 @@ typedef struct
     s32 unk8;
 } UnkStruct80123FB8;
 
-extern UnkStruct80123FB8* D_80123FB8;
+extern UnkStruct80123FB8* g_field_script;
 
 void func_800BB54C(void)
 {
-    UnkStruct80123FB8* p = D_80123FB8;
+    UnkStruct80123FB8* p = g_field_script;
     s32 idx = p->unk4;
 
     p += idx;

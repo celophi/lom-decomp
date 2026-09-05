@@ -36,14 +36,14 @@ typedef struct
 } Rec4;
 
 extern s32 D_80122B78;
-extern s32 D_80123FB8;
+extern s32 g_field_script;
 extern u8 *D_80123FC0;
 extern Cfg *D_80123FC4;
 
 /**
  * @brief Flush the staged config block through the sequence emitter chain.
  *
- * Redirects the active sequence buffer @c D_80123FB8 to the scratch region at
+ * Redirects the active sequence buffer @c g_field_script to the scratch region at
  * @c D_80122B78 + 0xD98, emits the note/param records selected by the config
  * indices (using @c unk4 to pick the base vs. alternate field), restores the
  * buffer, and finally dispatches the mode-0/mode-1 finaliser.
@@ -58,8 +58,8 @@ void func_800BEF74(void)
     u16 var_a0;
     u16 var_a0_2;
 
-    temp_s2 = D_80123FB8;
-    D_80123FB8 = D_80122B78 + 0xD98;
+    temp_s2 = g_field_script;
+    g_field_script = D_80122B78 + 0xD98;
     func_800BF158();
     if (D_80123FC4->unk4 == 0)
     {
@@ -88,7 +88,7 @@ void func_800BEF74(void)
     }
     func_800BF2F0(var_a0_2);
     func_800BF700();
-    D_80123FB8 = temp_s2;
+    g_field_script = temp_s2;
     func_800BFA34();
     switch (D_80123FC4->unk4)
     {

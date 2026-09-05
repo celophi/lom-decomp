@@ -19,7 +19,7 @@ typedef struct StateB8964
     s32 index;
 } StateB8964;
 
-extern StateB8964 *D_80123FB8;
+extern StateB8964 *g_field_script;
 
 /**
  * @brief Rewrites the active entry's flag bit zero and bumps its counter.
@@ -34,11 +34,11 @@ void func_800B8964(void)
     u32 flags;
     u32 masked;
 
-    entry = (EntryB8964 *)((u8 *)D_80123FB8 + D_80123FB8->index * 0xC);
+    entry = (EntryB8964 *)((u8 *)g_field_script + g_field_script->index * 0xC);
     flags = entry->flags;
     masked = flags & ~1;
     masked |= (flags >> 1) & 1;
     entry->flags = masked;
-    entry2 = (EntryB8964 *)((u8 *)D_80123FB8 + D_80123FB8->index * 0xC);
+    entry2 = (EntryB8964 *)((u8 *)g_field_script + g_field_script->index * 0xC);
     entry2->value++;
 }

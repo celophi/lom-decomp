@@ -19,7 +19,7 @@ typedef struct StateB8858
     s32 index;
 } StateB8858;
 
-extern StateB8858 *D_80123FB8;
+extern StateB8858 *g_field_script;
 void func_800BD128(s32);
 
 /**
@@ -32,7 +32,7 @@ void func_800B8858(void)
 {
     EntryB8858 *entry;
 
-    entry = (EntryB8858 *)((u8 *)D_80123FB8 + D_80123FB8->index * 0xC);
+    entry = (EntryB8858 *)((u8 *)g_field_script + g_field_script->index * 0xC);
     if (entry->flags & 1)
     {
         func_800BD128(1);

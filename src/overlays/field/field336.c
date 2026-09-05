@@ -1,7 +1,7 @@
 #include "common.h"
 
 typedef struct { u32 unk0; s32 unk4; u8 *unk8; } SeqRec;
-extern SeqRec *D_80123FB8;
+extern SeqRec *g_field_script;
 extern u8 *D_80122B78;
 
 /**
@@ -17,12 +17,12 @@ void func_800B87D4(void)
     SeqRec *rec;
     SeqRec *rec2;
 
-    rec = D_80123FB8;
+    rec = g_field_script;
     i = rec->unk4;
     rec += i;
     func_800BD6F4(rec->unk8[1], D_80122B78 + 0x24);
 
-    rec2 = D_80123FB8;
+    rec2 = g_field_script;
     j = rec2->unk4;
     rec2 += j;
     rec2->unk8 += 2;

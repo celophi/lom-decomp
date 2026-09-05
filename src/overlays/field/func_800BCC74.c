@@ -8,7 +8,7 @@ typedef struct StateBCC74
     u8 unk0;
 } StateBCC74;
 
-extern StateBCC74 *D_80123FB8;
+extern StateBCC74 *g_field_script;
 void func_800B0710(s32, s32, s32, s32);
 
 /**
@@ -32,7 +32,7 @@ void func_800BCC74(s32 a0, s32 a1, s32 a2, s32 a3)
 
     if (a0 == 0xFF)
     {
-        a0 = D_80123FB8->unk0;
+        a0 = g_field_script->unk0;
     }
     a1 = (t1 == 0xFF) ? -1 : t1;
     a2 = (t2 == 0xFF) ? -1 : t2;

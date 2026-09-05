@@ -10,7 +10,7 @@ typedef struct
     s32 unk10;  /* 0x10 per-record flags */
 } SeqRec;
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 
 /**
  * @brief Step the active sequence cursor back one record, or reset at the head.
@@ -26,16 +26,16 @@ void func_800B85CC(void)
 {
     s32 temp_v1;
 
-    temp_v1 = ((SeqRec *)D_80123FB8)->unk4;
+    temp_v1 = ((SeqRec *)g_field_script)->unk4;
     if (temp_v1 > 0)
     {
-        if ((((SeqRec *)(D_80123FB8 + (temp_v1 * 3 << 2)))->unk10 & 1) == 0)
+        if ((((SeqRec *)(g_field_script + (temp_v1 * 3 << 2)))->unk10 & 1) == 0)
         {
-            ((SeqRec *)D_80123FB8)->unk0 &= 0x7FFFFFFF;
+            ((SeqRec *)g_field_script)->unk0 &= 0x7FFFFFFF;
         }
-        ((SeqRec *)D_80123FB8)->unk4 = ((SeqRec *)D_80123FB8)->unk4 - 1;
+        ((SeqRec *)g_field_script)->unk4 = ((SeqRec *)g_field_script)->unk4 - 1;
         return;
     }
-    ((SeqRec *)D_80123FB8)->unk0 &= 0x7FFFFFFF;
-    ((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8 = 0;
+    ((SeqRec *)g_field_script)->unk0 &= 0x7FFFFFFF;
+    ((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 = 0;
 }
