@@ -43,7 +43,7 @@ void func_800BCFBC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     akao_cmd_a9(arg2, arg3);
 }
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 
 void func_800BCFEC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
@@ -53,7 +53,7 @@ void func_800BCFEC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     var_a0 = arg0;
     if (arg2 == 0xFF)
     {
-        sp10 = (s32) *D_80123FB8;
+        sp10 = (s32) *g_field_script;
     }
     else
     {
@@ -61,7 +61,7 @@ void func_800BCFEC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     }
     if (var_a0 == 0xFF)
     {
-        var_a0 = *D_80123FB8;
+        var_a0 = *g_field_script;
     }
     func_8008B5D0(var_a0, arg1, 1, &sp10);
 }

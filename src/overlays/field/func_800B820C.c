@@ -9,7 +9,7 @@ typedef struct
 
 typedef void (*FieldDispatchFn)(s32, s32);
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 extern FieldDispatchFn D_800F0D48[];
 
 s32 func_800B84B4(s32 arg0, u8 *arg1, s32 *arg2);
@@ -32,18 +32,18 @@ void func_800B820C(void)
     s32 r;
     s32 high;
 
-    temp_a1 = (u8 *)((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8;
+    temp_a1 = (u8 *)((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8;
     temp_s0 = temp_a1[1];
     temp_s1 = temp_a1[0] - 0x40;
     high = temp_s0 >> 4;
-    ((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8 =
+    ((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 =
         func_800B84B4(temp_s0 & 0xF, temp_a1 + 2, &sp10);
     r = func_800B84B4(
         high,
-        (u8 *)((SeqRec *)(D_80123FB8 + (((SeqRec *)D_80123FB8)->unk4 * 3 << 2)))->unk8,
+        (u8 *)((SeqRec *)(g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8,
         &sp14);
-    temp_a3 = ((SeqRec *)D_80123FB8)->unk4;
-    temp_a2 = (SeqRec *)(D_80123FB8 + (temp_a3 * 3 << 2));
+    temp_a3 = ((SeqRec *)g_field_script)->unk4;
+    temp_a2 = (SeqRec *)(g_field_script + (temp_a3 * 3 << 2));
     temp_a2->unk8 = r;
     D_800F0D48[temp_s1](sp10, sp14);
 }

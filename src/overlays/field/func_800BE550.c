@@ -18,7 +18,7 @@ typedef struct
     s32 z;
 } FieldPosition;
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 
 void func_80087F44(s32 index, FieldPosition *position);
 
@@ -35,7 +35,7 @@ void func_800BE550(s32 arg0, FieldPositionCommand *command)
 
     if (command->unk0 == 0xFF)
     {
-        index = *D_80123FB8;
+        index = *g_field_script;
     }
     else
     {

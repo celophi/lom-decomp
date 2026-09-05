@@ -3350,7 +3350,7 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
  * @brief Draw the combination preview for the cursor row.
  *
  * When at least one row is selected and the cursor sits on a different row,
- * func_800CA480 is asked whether the two rows' item indices combine. It
+ * equipment_combination_find is asked whether the two rows' item indices combine. It
  * returns the resulting item in g_gosub_combination_result_id and fills g_gosub_combination_quantity and
  * g_gosub_combination_variant; a zero result means the pair does not combine and nothing is
  * drawn. Otherwise a frame is emitted, then the result's archive name, with
@@ -3385,7 +3385,7 @@ s32 gosub_draw_combination_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_o
         {
             pair[0] = g_gosub_rows[g_gosub_selected_rows[0]].index;
             pair[1] = g_gosub_rows[g_gosub_cursor_row].index;
-            g_gosub_combination_result_id = func_800CA480(pair, &g_gosub_combination_quantity, &g_gosub_combination_variant);
+            g_gosub_combination_result_id = equipment_combination_find(pair, &g_gosub_combination_quantity, &g_gosub_combination_variant);
         }
     }
     if (g_gosub_combination_result_id != 0)

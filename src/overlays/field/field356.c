@@ -11,7 +11,7 @@ typedef struct
     s32 unk10;  /* 0x10 per-record flags */
 } SeqRec;
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 extern s32 D_80123FC0;
 
 /**
@@ -20,7 +20,7 @@ extern s32 D_80123FC0;
  * If the current record already has a payload, advances the cursor @c unk4.
  * Writes @c D_80123FC0 + (arg0 low 16 bits) into the (possibly advanced)
  * record's @c unk8, clears then re-masks its @c unk10 low bit, and finally
- * dispatches func_800BD434 with the base @c unk0 id and notifies func_800B8004.
+ * dispatches func_800BD434 with the base @c unk0 id and notifies field_script_run.
  *
  * @param arg0 Duration/parameter; the low 16 bits are added to @c D_80123FC0.
  * @see decomp.me (100%) TODO
@@ -30,15 +30,15 @@ void func_800BF2F0(s32 arg0)
     s32 temp_v1;
     u8 *p;
 
-    temp_v1 = ((SeqRec *)D_80123FB8)->unk4;
-    if (((SeqRec *)(D_80123FB8 + (temp_v1 * 3 << 2)))->unk8 != 0)
+    temp_v1 = ((SeqRec *)g_field_script)->unk4;
+    if (((SeqRec *)(g_field_script + (temp_v1 * 3 << 2)))->unk8 != 0)
     {
-        ((SeqRec *)D_80123FB8)->unk4 = temp_v1 + 1;
+        ((SeqRec *)g_field_script)->unk4 = temp_v1 + 1;
     }
-    p = D_80123FB8;
+    p = g_field_script;
     ((SeqRec *)(p + (((SeqRec *)p)->unk4 * 3 << 2)))->unk8 = D_80123FC0 + (arg0 & 0xFFFF);
     ((SeqRec *)(p + (((SeqRec *)p)->unk4 * 3 << 2)))->unk10 &= ~1;
     ((SeqRec *)(p + (((SeqRec *)p)->unk4 * 3 << 2)))->unk10 &= 1;
     func_800BD434(((SeqRec *)p)->unk0, 0xD0000000, 0);
-    func_800B8004(D_80123FB8);
+    field_script_run(g_field_script);
 }

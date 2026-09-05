@@ -8,7 +8,7 @@ typedef struct StateBCEFC
     u8 unk0;
 } StateBCEFC;
 
-extern StateBCEFC *D_80123FB8;
+extern StateBCEFC *g_field_script;
 void func_800B28E0(s32, s32, s32);
 void func_800B286C(s32, s32, s32);
 
@@ -27,7 +27,7 @@ void func_800BCEFC(s32 p0, s32 p1, s32 p2, s32 p3)
 {
     if (p1 == 0xFF)
     {
-        p1 = D_80123FB8->unk0;
+        p1 = g_field_script->unk0;
     }
     switch (p0)
     {
