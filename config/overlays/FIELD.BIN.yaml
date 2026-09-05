@@ -426,12 +426,7 @@ segments:
       - [0x6FA1D, c, func_800BF68C]                 # gcc280_g0, 100%
       - [0x6FA91, c, field143]                     # gcc280_g0, func_800BF700
       - [0x6FAC1, c, unk2_b_split052]           # gcc272_cdk, func_800BF730
-      - [0x6FB91, c, field339]                  # gcc280_g0, func_800BF800
-      - [0x6FC11, c, func_800BF880]             # gcc272_cdk, 100%
-      - [0x6FC71, c, field264]                  # gcc272_cdk, func_800BF8E0
-      - [0x6FCD5, c, field265]                  # gcc272_cdk, func_800BF944
-      - [0x6FD31, c, func_800BF9A0]             # gcc272_cdk, 100%
-      - [0x6FD81, c, field144]                     # gcc272_cdk, func_800BF9F0
+      - [0x6FB91, c, field_slot_pool_ops]       # gcc280_g0, func_800BF800 .. func_800BF9F0 (6 funcs, 100%)
       - [0x6FDC5, c, unk2_b_split053]              # gcc272_cdk, func_800BFA34
       - [0x70821, c, field373]                     # gcc280_g0, func_800C0490
       - [0x708F1, c, unk2_b_split053_b]            # gcc272_cdk, func_800C0560
