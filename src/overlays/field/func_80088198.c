@@ -289,8 +289,8 @@ M2C_UNK func_8006C3FC();
 M2C_UNK func_8006C5FC();
 s32 func_8006C7D8();
 s32 func_800839F8();
-s32 func_80083AB4();
-s32 func_80083AFC();
+s32 field_object_has_active_actor_tracks();
+s32 field_count_free_actor_slots();
 s32 func_80083EEC();
 s32 func_8008404C();
 void func_8008A4D0();
@@ -588,10 +588,11 @@ do {
                 goto block_57;
             }
 block_43:
-            if ((func_80083AB4(arg0->unk3A) == 0) && (func_80083AFC() >= 3)) {
+            if ((field_object_has_active_actor_tracks(arg0->unk3A) == 0) && (field_count_free_actor_slots() >= 3)) {
 block_45:
                 if ((M2C_FIELD(temp_s0, u16 *, 0) & 0x8000) && !(M2C_FIELD(temp_s0, u16 *, 2) & 0x400)) {
-                    if (((u8) arg0->unk3A < 3U) && (func_80083AB4(arg0->unk3A) == 0) && (D_8010AE58 == 0) && (func_80083AFC() >= 3)) {
+                    if (((u8) arg0->unk3A < 3U) && (field_object_has_active_actor_tracks(arg0->unk3A) == 0) && (D_8010AE58 == 0) &&
+                        (field_count_free_actor_slots() >= 3)) {
                         temp_a0_2 = arg0->unk3A;
                         if ((D_80105AE0[temp_a0_2].unk48 == 0xFF) && (func_8008404C(temp_a0_2, (M2C_FIELD(temp_s0, u16 *, 0) & 0x7FFF) + (u16)((D_800FD818[temp_a0_2].u0.b.unk1 * 0x18) + 0x88)) != 0)) {
                             if ((u8) arg0->unk3A >= 2U) {

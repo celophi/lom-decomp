@@ -1849,7 +1849,7 @@ void func_800A3D44(s32, u8);
 /**
  * @brief Reset and re-initialize the field actor/voice state tables.
  * @note  Matching decompilation; the pointer arithmetic and forced addition
- *        ordering in the final loops are load-bearing for codegen.
+ *        ordering in the final loops are required to reproduce the codegen.
  * @see decomp.me (100%) https://decomp.me/scratch/0wUsT
  */
 void field_initialize_actor_system(void)

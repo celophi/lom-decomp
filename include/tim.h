@@ -17,8 +17,8 @@
 #define TIM_NEXT_BLOCK(block) ((TimBlock*)((u8*)(block) + (block)->bnum))
 
 /** Locate the pixel block given the TIM base and a pre-loaded CLUT bnum.
- * The parenthesisation (bnum + TIM_HEADER_SIZE) is load-bearing: it forces
- * addiu (bnum+8) before addu (+base), matching the compiler's register
+ * The parenthesisation (bnum + TIM_HEADER_SIZE) is required for the match: it
+ * forces addiu (bnum+8) before addu (+base), matching the compiler's register
  * allocation when bnum is held in a saved register. */
 #define TIM_PIXEL_BLOCK(tim, bnum) \
     ((TimBlock*)((u8*)(tim) + ((bnum) + TIM_HEADER_SIZE)))

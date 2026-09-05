@@ -139,9 +139,9 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_8009CF84.c \
 	src/overlays/field/func_8009D0D8.c \
 	src/overlays/field/field18.c \
-	src/overlays/field/field19.c \
-	src/overlays/field/field20.c \
-	src/overlays/field/field21.c \
+	src/overlays/field/field_find_free_actor_slot.c \
+	src/overlays/field/field_actor_slot_queries.c \
+	src/overlays/field/field_stop_actor_animations_for_object.c \
 	src/overlays/field/field22.c \
 	src/overlays/field/field24.c \
 	src/overlays/field/field25.c \
@@ -188,7 +188,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field307.c \
 	src/overlays/field/field308.c \
 	src/overlays/field/field310.c \
-	src/overlays/field/field312.c \
+	src/overlays/field/field_reset_menu_action_slot.c \
 	src/overlays/field/field320.c \
 	src/overlays/field/field321.c \
 	src/overlays/field/field322.c \
@@ -253,8 +253,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field178.c \
 	src/overlays/field/field185.c \
 	src/overlays/field/field187.c \
-	src/overlays/field/field189.c \
-	src/overlays/field/field192.c \
+	src/overlays/field/field_load_selected_small_history_value.c \
+	src/overlays/field/field_reset_music_track_index.c \
 	src/overlays/field/field194.c \
 	src/overlays/field/field198.c \
 	src/overlays/field/field200.c \
@@ -263,7 +263,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_80087CE0.c \
 	src/overlays/field/func_80087E00.c \
 	src/overlays/field/unk2_i_b_split003.c \
-	src/overlays/field/func_8008812C.c \
+	src/overlays/field/field_get_object_script_command.c \
 	src/overlays/field/func_80088198.c \
 	src/overlays/field/unk2_i_b_split004_tail.c \
 	src/overlays/field/unk2_i_b_split004_tail_b.c \
@@ -272,6 +272,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_i_b_split004_tail2.c \
 	src/overlays/field/func_8008AABC.c \
 	src/overlays/field/func_8008AD44.c \
+	src/overlays/field/field_queue_actor_animation_by_handle.c \
 	src/overlays/field/unk2_i_b_split005.c \
 	src/overlays/field/func_8008C730.c \
 	src/overlays/field/unk2_i_b_split006_tail2.c \
@@ -445,7 +446,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split111.c \
 	src/overlays/field/unk2_b_split112.c \
 	src/overlays/field/unk2_b_split113.c \
-	src/overlays/field/func_800869FC.c \
+	src/overlays/field/field_handle_actor_control_flag_40.c \
 	src/overlays/field/func_80086ACC.c \
 	src/overlays/field/func_80086C70.c \
 	src/overlays/field/func_80086C00.c \
@@ -471,7 +472,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_80098FC4.c \
 	src/overlays/field/unk2_i_b_split023_tail.c \
 	src/overlays/field/func_8009A2A4.c \
-	src/overlays/field/field253.c \
+	src/overlays/field/field_set_actor_horizontal_scale.c \
 	src/overlays/field/field254.c \
 	src/overlays/field/field255.c \
 	src/overlays/field/field256.c \
@@ -485,8 +486,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field268.c \
 	src/overlays/field/field269.c \
 	src/overlays/field/field273.c \
-	src/overlays/field/field275.c \
-	src/overlays/field/field279.c \
+	src/overlays/field/field_load_selected_equipment_mystic_cards.c \
+	src/overlays/field/field_upload_initial_vram_resource.c \
 	src/overlays/field/unk2_i_b_split024_tail.c \
 	src/overlays/field/field288.c \
 	src/overlays/field/field289.c \
@@ -511,7 +512,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800C7168.c
 
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
-overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field3.c
+overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field_text_format_number.c
 overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/unk2_b_split025_tail.c \
 	src/overlays/field/unk2_b_split082_b.c \
@@ -555,7 +556,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field368.c \
 	src/overlays/field/field369.c \
 	src/overlays/field/field370.c \
-	src/overlays/field/field372.c \
 	src/overlays/field/field_equipment_combination_rules.c \
 	src/overlays/field/field87.c \
 	src/overlays/field/field89.c \

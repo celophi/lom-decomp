@@ -1,8 +1,8 @@
 #include "common.h"
 
 /*
- * func_800675C8 (the right-align digit formatter that precedes this function
- * at 0x800675C8) lives in field3.c: it needs the gcc272_cdk no-expand-div
+ * field_text_format_number (the right-align digit formatter at 0x800675C8)
+ * lives in field_text_format_number.c: it needs the gcc272_cdk no-expand-div
  * toolchain, whereas field_build_frame_commands below uses the standard
  * gcc272_cdk (with --expand-div).
  */

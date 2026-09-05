@@ -1188,7 +1188,7 @@ s32 read_pad_state(void)
  *
  * @note The pad registers are read through a raw pointer (with a duplicate
  *       held_buttons load and a volatile axis_y read) rather than the SCDRegs
- *       struct used by read_pad_input; those reads are load-bearing artifacts
+ *       struct used by read_pad_input; those reads are required artifacts
  *       of the matched codegen, so they are left as-is.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/geg1v

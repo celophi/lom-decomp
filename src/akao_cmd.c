@@ -414,7 +414,7 @@ s32 akao_is_sfx_playing(s32 arg0)
  *
  * @note The local pointer @c new_var2 = &new_var is a register-allocation
  *       artifact required for asm matching; do not remove it. Likewise the
- *       ternary form is load-bearing — see project memory
+ *       ternary form is required for the match - see project memory
  *       feedback_no_ternary_rewrites.
  *
  * @see https://decomp.me/scratch/9qTjH (100%)

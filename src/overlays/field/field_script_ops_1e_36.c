@@ -14,7 +14,7 @@ void func_800A43E8(s32 arg0, s32 arg1, u16 arg2, s32 arg3);
 void func_800B286C(s32 arg0, s32 arg1, s32 arg2);
 s32 func_800A4744(void);
 u8 func_800A4778(void);
-void func_800675C8(s32 arg0, s32 arg1, s32 arg2);
+void field_text_format_number(s32 window_index, u32 value, u8 digits);
 void func_800674D8(s32 arg0);
 void func_8008AFD8(s32 arg0, s32 arg1, FieldScriptRecord* record, s32 record_index);
 void func_80087614(s32 arg0, s32 arg1);
@@ -236,38 +236,38 @@ void field_script_op_2a(void)
 }
 
 /**
- * @brief Opcode 0x2B: render a number into a text entry.
- * @note Operands are entry index, value and digit count; a zero digit count is replaced by the value's decimal length.
+ * @brief Opcode 0x2B: format a number into a text window's inline expansion buffer.
+ * @note Operands are window index, value and digit count; a zero digit count is replaced by the value's decimal length.
  */
 void field_script_op_2b(void)
 {
     s32 digits;
     s32 value;
-    s32 entry;
+    s32 window_index;
     u32 descriptor;
     u8* operands;
-    u32 remaining;
+    u32 remaining_value;
 
     operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     descriptor = operands[1];
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_0(descriptor), operands + 2, &entry);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_0(descriptor), operands + 2, &window_index);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &value);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_2(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &digits);
     if (digits == 0)
     {
-        remaining = value;
+        remaining_value = value;
         digits = 1;
         for (;;)
         {
-            remaining /= 10;
-            if (remaining == 0)
+            remaining_value /= 10;
+            if (remaining_value == 0)
             {
                 break;
             }
             digits++;
         }
     }
-    func_800675C8((u16)entry, value, (u8)digits);
+    field_text_format_number((u16)window_index, value, (u8)digits);
 }
 
 /**
