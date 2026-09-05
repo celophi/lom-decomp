@@ -385,15 +385,7 @@ segments:
       - [0x6BD51, c, field99]                      # gcc280_g0, func_800BB9C0
       - [0x6BDD5, c, field343]                     # gcc280_g0, func_800BBA44
       - [0x6BE59, c, unk2_b_split034]              # gcc272_cdk, func_800BBAC8
-      - [0x6C5F9, c, field102]                     # gcc280_g0, func_800BC268
-      - [0x6C631, c, field344]                     # gcc280_g0, func_800BC2A0
-      - [0x6C6B9, c, field353]                     # gcc280_g0, func_800BC328
-      - [0x6C76D, c, field300]                     # gcc280_g0, func_800BC3DC
-      - [0x6C805, c, func_800BC474]                # gcc280_g0, 100.00000%, 29/29 instructions
-      - [0x6C879, c, field354]                     # gcc280_g0, func_800BC4E8
-      - [0x6C91D, c, field103]                     # gcc280_g0, func_800BC58C
-      - [0x6C975, c, field286]                  # gcc280_g0, func_800BC5E4
-      - [0x6C9ED, c, field261]                  # gcc280_g0, func_800BC65C
+      - [0x6C5F9, c, field_script_actor_ops]    # gcc280_g0, func_800BC268 .. func_800BC65C (10 funcs, 100%)
       - [0x6CA41, c, unk2_b_split119]           # gcc272_cdk, func_800BC6B0
       - [0x6CB7D, c, field_script_owner_ops]    # gcc280_g0, func_800BC7EC .. func_800BCC74 (21 funcs, 100%)
       - [0x6D071, c, unk2_b_split040]           # gcc272_cdk, func_800BCCE0

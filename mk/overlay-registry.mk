@@ -473,6 +473,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field_text_format_number.c
 overlay_field_gcc_280_g0_srcs := \
+	src/overlays/field/field_script_actor_ops.c \
 	src/overlays/field/field_script_owner_ops.c \
 	src/overlays/field/field_state_block_ops.c \
 	src/overlays/field/field_state_ops.c \
@@ -497,11 +498,8 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field325.c \
 	src/overlays/field/field339.c \
 	src/overlays/field/field343.c \
-	src/overlays/field/field344.c \
 	src/overlays/field/field345.c \
 	src/overlays/field/func_800C23F4.c \
-	src/overlays/field/field353.c \
-	src/overlays/field/field354.c \
 	src/overlays/field/func_800B820C.c \
 	src/overlays/field/field371.c \
 	src/overlays/field/field373.c \
@@ -525,7 +523,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800B7020.c \
 	src/overlays/field/func_800C8964.c \
 	src/overlays/field/func_800B78C0.c \
-	src/overlays/field/func_800BC474.c \
 	src/overlays/field/func_800BD434.c \
 	src/overlays/field/func_800BD4A8.c \
 	src/overlays/field/func_800BD55C.c \
@@ -550,8 +547,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800CBEC4.c \
 	src/overlays/field/field91.c \
 	src/overlays/field/field99.c \
-	src/overlays/field/field102.c \
-	src/overlays/field/field103.c \
 	src/overlays/field/field124.c \
 	src/overlays/field/field125.c \
 	src/overlays/field/func_800BD6F4.c \
@@ -588,17 +583,14 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800B6B28.c \
 	src/overlays/field/func_800B8CFC.c \
 	src/overlays/field/field260.c \
-	src/overlays/field/field261.c \
 	src/overlays/field/field263.c \
 	src/overlays/field/field267.c \
 	src/overlays/field/field270.c \
 	src/overlays/field/field271.c \
 	src/overlays/field/field274.c \
-	src/overlays/field/field286.c \
 	src/overlays/field/field293.c \
 	src/overlays/field/field296.c \
 	src/overlays/field/field299.c \
-	src/overlays/field/field300.c \
 	src/overlays/field/field301.c \
 	src/overlays/field/unk2_b_split126.c
 overlay_field_gcc_280_g4_srcs := src/overlays/field/field_fade.c
