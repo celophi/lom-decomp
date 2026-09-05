@@ -2664,8 +2664,6 @@ u32 cload_parse_hex(u8 *s, s32 len)
  * @brief Skip a leading run of hex characters, then parse up to two hex digits
  *        into an integer value.
  * @param text Pointer to the ASCII text to scan.
- * @param unused1 Unused ABI argument.
- * @param unused2 Unused ABI argument.
  * @return The value of the (at most two) hex digits found after the skipped run.
  * @note The `text--; if (text) { text++; text--; }` sequences in the skip loop are
  *       required to match: without them gcc's jump.c cross-jumps the three continue
@@ -2674,7 +2672,7 @@ u32 cload_parse_hex(u8 *s, s32 len)
  *       value (result - K) rather than with the freshly read digit.
  * @see decomp.me (100.00%)
  */
-s32 cload_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
+s32 cload_parse_hex_suffix_byte(u8 *text)
 {
     u32 c;
     s32 count;
@@ -2769,8 +2767,10 @@ s32 cload_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
  * validation stores -1 / 0 into the two arrays instead.
  *
  * @return The largest value returned by any @ref cload_parse_hex_suffix_byte call (0 if none).
- * @note WIP match, 98.62% (gcc272_cdk).
- * @see decomp.me (98.62%)
+ * @note Sibling of addhero_parse_entry_fields (same body). Matched once the suffix
+ *       helper was given its true single-arg signature; the phony trailing params
+ *       had pinned the wrong sched2 arg order at the strncmp call.
+ * @see decomp.me (100%)
  */
 s32 cload_parse_entry_fields(void)
 {
@@ -2782,7 +2782,7 @@ s32 cload_parse_entry_fields(void)
      while (((u8)(*p-'0')<10)||((u8)(*p-'a')<6)||((u8)(*p-'A')<6)) { if(count==0)break; acc<<=4; if((u8)(*p-'0')<10){tmp0=acc-0x30;acc=tmp0+*p;} else if((u8)(*p-'A')<6){tmp1=acc-0x37;acc=tmp1+*p;} else if((u8)(*p-'a')<6){tmp2=acc-0x57;acc=tmp2+*p;} p++;count--; }
      field=(u8 *)&CLOAD_DIR_ENTRY(g_cload_card_slot, i).name[0xC];
      g_cload_entry_fields[g_cload_card_slot][i]=acc;
-     r=cload_parse_hex_suffix_byte(field,acc,count); g_cload_entry_suffix_values[i]=r; if(max<r)max=r;
+     r=cload_parse_hex_suffix_byte(field); g_cload_entry_suffix_values[i]=r; if(max<r)max=r;
     } else { g_cload_entry_fields[g_cload_card_slot][i]=-1; g_cload_entry_suffix_values[i]=0; }
    i++;
  }

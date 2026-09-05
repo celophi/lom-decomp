@@ -375,7 +375,7 @@ s8 *addhero_format_decimal(s8 *out, s32 value);
 void addhero_format_hex(s8 *out, s32 value, s32 max_chars);
 void addhero_hex_nibble_to_ascii(s8 *out, s32 value);
 u32 addhero_parse_hex(u8 *s, s32 len);
-s32 addhero_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2);
+s32 addhero_parse_hex_suffix_byte(u8 *text);
 
 /* External functions */
 s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
@@ -2381,7 +2381,7 @@ u32 addhero_parse_hex(u8 *s, s32 len)
     return result;
 }
 
-s32 addhero_parse_hex_suffix_byte(u8 *text, s32 unused1, s32 unused2)
+s32 addhero_parse_hex_suffix_byte(u8 *text)
 {
     u32 c;
     s32 count;
@@ -2472,11 +2472,7 @@ extern s32 g_addhero_entry_fields[];
  * @brief Parse the hex value suffix of every "SD"-tagged directory entry on the
  *        active card, recording per-entry field values and their ranked bytes.
  * @return The maximum suffix byte value seen across all matching entries.
- * @note 99.82% - stuck on a sched2 load-delay tie: the target puts %lo(pattern)
- *       in the lw's load-delay slot, ours swaps %lo with the `li 12` length arg.
- *       The `do { } while (0)` around the pattern load is required for the match (it fixes
- *       the lw/%lo ordering, +1.2% over the plain assignment). Same unsolved tie
- *       leaves niki_parse_entry_fields and cload_parse_entry_fields at 99.82%.
+ * @see decomp.me (100%) https://decomp.me/scratch/7hY8R
  */
 s32 addhero_parse_entry_fields(void)
 {
@@ -2490,11 +2486,13 @@ s32 addhero_parse_entry_fields(void)
     s32 r;
     s32 *fields;
 
-    for (i = 0, max = 0; i < g_addhero_entry_state; i++)
+    max = 0;
+
+    for (i = 0; i < g_addhero_entry_state; i++)
     {
         char *ref;
         u8 *tmp;
-        do { ref = D_800ECF7C; } while (0);
+        ref = D_800ECF7C;
         tmp = (u8 *)&((AddheroDirEntry (*)[20])g_addhero_entries)[g_addhero_card_slot][i];
 
         if (func_8001714C(ref, tmp, 0xC) == 0)
@@ -2535,7 +2533,7 @@ s32 addhero_parse_entry_fields(void)
             fields = &g_addhero_entry_fields[g_addhero_card_slot * 20];
             fields[i] = acc;
 
-            r = addhero_parse_hex_suffix_byte(field, acc, count);
+            r = addhero_parse_hex_suffix_byte(field);
             g_addhero_entry_suffix_values[i] = r;
 
             if (max < r)
