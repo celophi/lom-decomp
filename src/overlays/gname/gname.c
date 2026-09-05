@@ -235,7 +235,7 @@ enum
 #define NAME_MEASURE_CAPACITY 16
 #define NAME_MEASURE_TEXT_COLOR 0
 
-/* Resolve a glyph-table entry from its packed index. */
+/* Resolve a glyph-table entry while retaining offset-plus-base evaluation order. */
 #define GLYPH_TABLE_ENTRY(table, index) ((const GlyphInfo*)(((index) * sizeof(*(table))) + (u32)(table)))
 
 /* Glyph CLUT encoding. */
@@ -275,17 +275,17 @@ typedef struct
 #define KANJI_DATA_HEADER GNAME_HEADER_FROM_FIELD(g_kanji_panel_offset, kanji_records_offset)
 #define PANEL_RECORD_TABLE ((const GnameRecordTable*)((u8*)PANEL_DATA_HEADER + g_panel_tbl_off))
 #define KANJI_RECORD_TABLE ((const GnameRecordTable*)((u32)KANJI_DATA_HEADER + (u32)g_kanji_panel_offset))
-#define PANEL_CHARACTER_TABLE ((GnameRecordTable*)(((u8*)&g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + g_panel_tbl_off))
-#define KANJI_CHARACTER_TABLE ((GnameRecordTable*)(((u8*)&g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (u32)g_kanji_panel_offset))
-#define RANDOM_NAME_TABLE ((GnameRecordTable*)(((u8*)&g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + g_random_names_off))
-#define HISTORY_NAME_TABLE ((GnameRecordTable*)(((u8*)&g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + g_history_names_off))
-/* Packed records store self-relative offsets as u16 values. */
+#define PANEL_CHARACTER_TABLE ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + g_panel_tbl_off))
+#define KANJI_CHARACTER_TABLE ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (u32)g_kanji_panel_offset))
+#define RANDOM_NAME_TABLE ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (*((u32*)g_random_names_off))))
+#define HISTORY_NAME_TABLE ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (*((u32*)g_history_names_off))))
+/* Raw u16 indexing preserves GCC's required address evaluation. */
 #define GNAME_RECORD(table, index) ((u8*)(table) + ((u16*)(table))[(index)])
 #define GNAME_RECORD_IN_RANGE(table, range_start, index) ((u8*)(table) + (&(table)->offsets[(range_start)])[(index)])
 
 #define RANDOM_NAME(index) ((u8*)RANDOM_NAME_TABLE + (&RANDOM_NAME_TABLE->offsets[0])[(index)])
 #define HISTORY_NAME(index) ((u8*)HISTORY_NAME_TABLE + (&HISTORY_NAME_TABLE->offsets[0])[(index)])
-#define HISTORY_SUFFIX_TABLE ((GnameRecordTable*)(((u8*)&g_history_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + g_history_names_off))
+#define HISTORY_SUFFIX_TABLE ((GnameRecordTable*)((g_history_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (*((u32*)g_history_names_off))))
 #define HISTORY_SUFFIX(index) ((u8*)HISTORY_NAME_TABLE + (&HISTORY_SUFFIX_TABLE->offsets[0])[(index)])
 
 /** @brief RGB fade color with an optional remaining interpolation count. */
@@ -316,14 +316,22 @@ typedef struct
     s16 clut_y;
 } TimUploadCoords;
 
-/** @brief Temporary storage used while constructing a drawing environment. */
+/** @brief Partially mapped glyph measurement with width at offset 0x10. */
+typedef struct
+{
+    u8 unknown_0x00[0x10];
+    s16 width;
+    u8 unknown_0x12[2];
+} GlyphMeasure;
+
+/** @brief DRAWENV scratch with the required leading stack padding. */
 typedef struct
 {
     u32 padding[2];
     DRAWENV draw_env;
 } DrawEnvScratch;
 
-/** @brief Temporary storage used while constructing the character-grid drawing environment. */
+/** @brief DRAWENV scratch with one trailing stack word. */
 typedef union
 {
     DRAWENV draw_env;
@@ -360,7 +368,7 @@ u8* g_active_name;
 /** Active standard or kanji character panel. */
 s32 g_char_panel;
 /** Current kanji category display data. */
-u8* g_kanji_cat_name;
+void* g_kanji_cat_name;
 /** Undo clipboard; removed glyphs are prepended here. */
 u8 g_name_clipboard[GNAME_NAME_BUFFER_SIZE];
 /** Frames remaining before name-entry input is accepted at startup. */
@@ -389,13 +397,13 @@ s32 g_strip_width;
 s32 g_navigation_mode;
 /** Current frame index into g_glyph_append_anim_frames. */
 u8 g_glyph_append_anim_frame;
-/** Alignment padding. */
+/** Explicit GCC 2.7.2 BSS alignment padding. */
 u8 pad_8014F8B1[3];
 /** Current horizontal scroll position of the character grid in pixels. */
 s32 g_scroll_pos;
 /** Render ticks until the next append-animation frame. */
 u8 g_glyph_append_anim_timer;
-/** Alignment padding. */
+/** Explicit GCC 2.7.2 BSS alignment padding. */
 u8 pad_8014F8B9[3];
 /** Target name-strip width in pixels for the width lerp. */
 s32 g_strip_width_target;
@@ -424,12 +432,12 @@ extern TabCursorEntry g_tab_cursor_pos[];
 extern TabCursorEntry g_tab_cursor_entries[];
 extern u32 g_kanji_entry_offsets[];
 
-/* Serialized panel-blob header fields. */
-extern u32 g_panel_data_base;
+/* Serialized panel-blob header fields. Types preserve matched address math. */
+extern u8 g_panel_data_base[];
 extern u32 g_panel_tbl_off;
-extern u32 g_kanji_panel_offset;
-extern u32 g_history_names_off;
-extern u32 g_random_names_off;
+extern u8* g_kanji_panel_offset;
+extern u8 g_history_names_off[];
+extern u8 g_random_names_off[];
 
 /* Cross-module helpers without shared headers. */
 /**
@@ -438,36 +446,10 @@ extern u32 g_random_names_off;
  * @param volume Playback volume.
  */
 void play_menu_sfx(s32 sfx_id, s32 volume);
-
-/**
- * @brief Emit field-text sprites into an ordering table.
- * @param sprite_cursor First free sprite packet.
- * @param ot Ordering-table entry that receives the sprites.
- * @param text Encoded text to render.
- * @param text_color Text palette/style selector.
- * @param x Text origin X coordinate.
- * @param y Text origin Y coordinate.
- * @param flags Horizontal alignment and rendering flags.
- * @return First free packet after the emitted text and draw-mode command.
- */
-void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
-
-/**
- * @brief Typeset encoded text into sprite packets.
- * @param prim Output sprite array.
- * @param text Encoded text to typeset.
- * @param style Text palette/style selector.
- * @return Number of sprite spans written.
- */
-s32 field_text_build_sprites(SPRT* prim, u8* text, u16 style);
-
-/** @brief Upload the field-text glyph staging buffer to VRAM. */
 void func_80063194(void);
 void field_text_reset_scratch(void);
 void field_update_audio_timer(void);
-/** @brief Refresh the field-menu live and injected controller input state. */
 void func_800A9E78(void);
-/** @brief Reset field-menu controller input and repeat-control state. */
 void func_800AA02C(void);
 
 /* Static forward declarations retain the original function order. */
@@ -511,6 +493,7 @@ static s32 name_is_blank(const u8* name_buf);
  * @param custom_name Custom random-name source.
  * @param allow_empty_cancel Whether cancel may exit with an empty name.
  * @return Final cancel or confirmation result.
+ * @see https://decomp.me/scratch/FAyP7 (100%)
  */
 s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_name, s32 source_mode, s32 history_index, const u8* custom_name,
               s32 allow_empty_cancel)
@@ -655,6 +638,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
  * Zeros @c g_fade_current (current color) and @c g_fade_target (target color
  * plus step count), so the fade starts from black with no animation pending.
  *
+ * @see https://decomp.me/scratch/ld2aW (100%)
  */
 static void reset_fade_state(void)
 {
@@ -670,6 +654,7 @@ static void reset_fade_state(void)
 /**
  * @brief Advance and render the full-screen fade overlay.
  * @param render_ctx Frame render context.
+ * @see https://decomp.me/scratch/NvocJ (100%)
  */
 static void render_fade_overlay(RenderContext* render_ctx)
 {
@@ -765,6 +750,7 @@ static void render_fade_overlay(RenderContext* render_ctx)
  * @param green Target green value.
  * @param blue Target blue value.
  * @param step_count Frames to reach the target, or 0 to snap.
+ * @see https://decomp.me/scratch/jq3uD (100%)
  */
 static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
 {
@@ -776,6 +762,7 @@ static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
 
 /**
  * @brief Initialize name-entry resources and session state.
+ * @see https://decomp.me/scratch/pnzC1 (100%)
  */
 void gname_init(void)
 {
@@ -791,6 +778,7 @@ void gname_init(void)
 
 /**
  * @brief Upload the name-entry TIM to its fixed VRAM destinations.
+ * @see https://decomp.me/scratch/EWwJI (100%)
  */
 static void load_name_entry_tim(void)
 {
@@ -806,6 +794,7 @@ static void load_name_entry_tim(void)
 /**
  * @brief Apply CLUT transparency and upload the name-entry TIM to VRAM.
  * @param upload_coords Pixel and CLUT upload destinations.
+ * @see https://decomp.me/scratch/P3W9C (100%)
  */
 static void load_tim_to_vram(const TimUploadCoords* upload_coords)
 {
@@ -832,7 +821,7 @@ static void load_tim_to_vram(const TimUploadCoords* upload_coords)
         clut_entry++;
     }
 
-    LoadImage(&upload_rect, (u_long*)name_tim->clut_data);
+    LoadImage(&upload_rect, name_tim->clut_data);
     pixel_block = TIM_PIXEL_BLOCK(name_tim, clut_block_size);
 
     upload_rect.x = upload_coords->pixel_x;
@@ -840,7 +829,7 @@ static void load_tim_to_vram(const TimUploadCoords* upload_coords)
     upload_rect.w = pixel_block->dimensions.width;
     upload_rect.h = pixel_block->dimensions.height;
 
-    LoadImage(&upload_rect, (u_long*)(pixel_block + 1));
+    LoadImage(&upload_rect, pixel_block + 1);
 
     /* Leave the rectangle positioned below the uploaded CLUT. */
     upload_rect.x = upload_coords->clut_x;
@@ -852,6 +841,7 @@ static void load_tim_to_vram(const TimUploadCoords* upload_coords)
 /**
  * @brief Render and update one name-entry frame.
  * @param render_ctx Frame render context.
+ * @see https://decomp.me/scratch/yYkTM (100%)
  */
 void gname_tick(RenderContext* render_ctx)
 {
@@ -863,6 +853,7 @@ void gname_tick(RenderContext* render_ctx)
 
 /**
  * @brief Advance input gating, strip width, and START-button confirmation.
+ * @see https://decomp.me/scratch/g5Rx3 (100%)
  */
 static void gname_update_state(void)
 {
@@ -907,6 +898,7 @@ static void gname_update_state(void)
 
 /**
  * @brief Reset the name-entry state for a new session.
+ * @see https://decomp.me/scratch/FboaU (100%)
  */
 static void reset_run_state(void)
 {
@@ -934,10 +926,12 @@ static void reset_run_state(void)
  * @param mode Current navigation mode.
  * @param buttons Filtered directional and confirm buttons.
  * @return Updated navigation mode.
+ * @see decomp.me (100%) https://decomp.me/scratch/jAuWs
  */
 static s32 handle_navigation_input(s32 mode, s32 buttons)
 {
     s32 repeat_dispatch = GNAME_REDISPATCH_PENDING;
+    /* GCC carries this action-path step value across the later switch arms. */
     s32 navigation_step;
 
     while (repeat_dispatch == GNAME_REDISPATCH_PENDING)
@@ -972,7 +966,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                     name_pop_last_glyph(g_active_name);
                     recalc_name_width();
-                    /* Delete the final glyph when the delete action is selected. */
+                    /* Preserve the delete-action branch boundary. */
                     do
                     {
                     } while (FALSE);
@@ -1236,25 +1230,32 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
 
 /**
  * @brief Process name editing, kanji navigation, and cursor interpolation.
+ * @see decomp.me (100%) https://decomp.me/scratch/pCzH6
  */
 static void gname_process_input(void)
 {
     s32 next_category;
     s32 category_before_step;
     u8 moved_glyph_bytes[NAME_GLYPH_BUFFER_SIZE];
-    s32 sfx_id;
+    s32 move_sfx_id;
     s32 previous_category;
+    u8* clipboard;
     s32 navigation_input;
-    s32 candidate_category;
+    s32 previous_page_category;
     s32 moved_glyph;
     s32 scroll_delta;
     s32* scroll_position;
     s32 category_record_base_index;
+    u16 glyph_value;
     u8* panel_data_base;
+    u32 category_index;
+    u32 category_entry;
     u32 category_name_table_offset;
+    u16* category_name_offset_entry;
     u16 category_name_offset;
-    s32 sfx_volume_or_input_mask;
-    u8** category_name_destination;
+    s32 category_record_base_index_copy;
+    s32 volume_or_nav_mask;
+    void** category_name_ptr;
     s32 remaining_scroll_steps;
 
     g_activated_entry = GNAME_ENTRY_NONE;
@@ -1276,27 +1277,29 @@ static void gname_process_input(void)
         name_prepend_glyph(g_name_clipboard, moved_glyph);
         recalc_name_width();
         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-        sfx_id = GNAME_SFX_MOVE;
-        sfx_volume_or_input_mask = GNAME_SFX_VOLUME;
-        play_menu_sfx(sfx_id, sfx_volume_or_input_mask);
+        move_sfx_id = GNAME_SFX_MOVE;
+        volume_or_nav_mask = GNAME_SFX_VOLUME;
+        play_menu_sfx(move_sfx_id, volume_or_nav_mask);
     }
     /* Redo: move the first clipboard glyph back into the active name. */
     else if (g_pad_input & GNAME_BTN_REDO)
     {
         if (name_glyph_count(g_active_name) < NAME_MAX_GLYPHS)
         {
-            moved_glyph = name_pop_first_glyph(g_name_clipboard);
-            if ((u16)moved_glyph != 0)
+            clipboard = g_name_clipboard;
+            moved_glyph = name_pop_first_glyph(clipboard);
+            glyph_value = moved_glyph;
+            if (glyph_value != 0)
             {
                 moved_glyph_bytes[NAME_GLYPH_LEAD_INDEX] = moved_glyph;
-                moved_glyph_bytes[NAME_GLYPH_TRAIL_INDEX] = HIGH_BYTE((u16)moved_glyph);
+                moved_glyph_bytes[NAME_GLYPH_TRAIL_INDEX] = HIGH_BYTE(glyph_value);
                 moved_glyph_bytes[NAME_GLYPH_TERMINATOR_INDEX] = 0;
                 name_append(g_active_name, moved_glyph_bytes);
                 recalc_name_width();
                 g_strip_width_steps = NAME_STRIP_LERP_STEPS;
             }
-            sfx_id = GNAME_SFX_MOVE;
-            play_menu_sfx(sfx_id, GNAME_SFX_VOLUME);
+            move_sfx_id = GNAME_SFX_MOVE;
+            play_menu_sfx(move_sfx_id, GNAME_SFX_VOLUME);
         }
         else
         {
@@ -1328,13 +1331,13 @@ static void gname_process_input(void)
                 {
                     previous_category = g_kanji_cat;
                     category_before_step = previous_category;
-                    candidate_category = category_before_step - KANJI_CATEGORY_STEP;
-                    g_kanji_cat = candidate_category;
-                    if (candidate_category == KANJI_CATEGORY_PREV_EDGE)
+                    previous_page_category = category_before_step - KANJI_CATEGORY_STEP;
+                    g_kanji_cat = previous_page_category;
+                    if (previous_page_category == KANJI_CATEGORY_PREV_EDGE)
                     {
                         g_kanji_cat = KANJI_CATEGORY_FIRST;
                     }
-                    else if (candidate_category < 0)
+                    else if (previous_page_category < 0)
                     {
                         g_kanji_cat = previous_category + KANJI_CATEGORY_WRAP_OFFSET;
                     }
@@ -1354,26 +1357,30 @@ static void gname_process_input(void)
                     }
                 }
 
-                if (g_kanji_cat_entries[g_kanji_cat] == KANJI_CATEGORY_EMPTY)
+                category_entry = g_kanji_cat;
+                if (g_kanji_cat_entries[category_entry] == KANJI_CATEGORY_EMPTY)
                 {
                     continue;
                 }
 
-                category_name_destination = &g_kanji_cat_name;
+                category_name_ptr = &g_kanji_cat_name;
                 g_scroll_target = 0;
                 g_scroll_pos = 0;
                 category_record_base_index = g_panel_char_offsets[CHAR_PANEL_KANJI_CATEGORY];
-                sfx_volume_or_input_mask = ~GNAME_BTN_KANJI_NAV;
+                volume_or_nav_mask = ~GNAME_BTN_KANJI_NAV;
                 g_scroll_steps = 0;
                 g_char_cursor = 0;
                 g_cursor_x_target = NAME_GRID_X_BASE;
                 g_cursor_y_target = NAME_GRID_Y_TOP;
                 g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
-                category_name_table_offset = ((u32)g_kanji_cat * sizeof(u16)) + ((category_record_base_index * sizeof(u16)) + g_panel_tbl_off);
-                panel_data_base = (u8*)&g_panel_data_base;
-                category_name_offset = *(u16*)(panel_data_base + category_name_table_offset);
-                g_pad_input &= sfx_volume_or_input_mask;
-                *category_name_destination = (u8*)(g_panel_tbl_off + (category_name_offset + ((u32)panel_data_base)));
+                category_record_base_index_copy = category_record_base_index;
+                category_index = g_kanji_cat;
+                category_name_table_offset = (category_index * sizeof(u16)) + ((category_record_base_index_copy * sizeof(u16)) + g_panel_tbl_off);
+                panel_data_base = g_panel_data_base;
+                category_name_offset_entry = (u16*)(panel_data_base + category_name_table_offset);
+                category_name_offset = *category_name_offset_entry;
+                g_pad_input &= volume_or_nav_mask;
+                *category_name_ptr = (void*)(g_panel_tbl_off + (category_name_offset + ((unsigned long)panel_data_base)));
             }
         }
     }
@@ -1409,6 +1416,7 @@ static void gname_process_input(void)
  * @param y Cursor Y coordinate.
  * @return Next free primitive-buffer address.
  * @note No current call sites; @ref gname_render emits the same packet pair inline.
+ * @see decomp.me (100%) https://decomp.me/scratch/oXGkF
  */
 static u_long* emit_cursor_glyph(u_long* packet_cursor, u_long* ot_entry, s16 x, s16 y)
 {
@@ -1422,7 +1430,7 @@ static u_long* emit_cursor_glyph(u_long* packet_cursor, u_long* ot_entry, s16 x,
     setUV0(cursor_sprite, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].u, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].v);
     setWH(cursor_sprite, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].w, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].h);
 
-    clut_id = g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].clut_x & GLYPH_CLUT_X_MASK;
+    clut_id = g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].clut & GLYPH_CLUT_X_MASK;
     cursor_sprite->clut = clut_id | GLYPH_CLUT_PAGE_BITS;
     addPrim(ot_entry, cursor_sprite);
 
@@ -1436,6 +1444,7 @@ static u_long* emit_cursor_glyph(u_long* packet_cursor, u_long* ot_entry, s16 x,
 /**
  * @brief Render the interactive name-entry elements for one frame.
  * @param render_ctx Render context whose ordering table and packet cursor are updated.
+ * @see decomp.me (100%) https://decomp.me/scratch/a0Oye
  */
 static void gname_render(RenderContext* render_ctx)
 {
@@ -1458,7 +1467,7 @@ static void gname_render(RenderContext* render_ctx)
     {
         if (selection_index != GNAME_SELECTION_ENTRY_HIDDEN)
         {
-            packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_CHAR_GRID], selection_entry->glyph_id, selection_entry->x,
+            packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_CHAR_GRID], selection_entry->glyph, selection_entry->x,
                                             selection_entry->y - GNAME_SELECTION_ENTRY_Y_BIAS, GNAME_SELECTION_SHADOW_OFFSET,
                                             (selection_index - GNAME_SELECTION_ENTRY_FIRST) == g_activated_entry, FALSE);
         }
@@ -1480,7 +1489,7 @@ static void gname_render(RenderContext* render_ctx)
     setXY0(cursor_sprite, cursor_x, cursor_y);
     setUV0(cursor_sprite, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].u, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].v);
     setWH(cursor_sprite, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].w, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].h);
-    setClut(cursor_sprite, (g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].clut_x & GLYPH_CLUT_X_MASK) << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
+    setClut(cursor_sprite, (g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].clut & GLYPH_CLUT_X_MASK) << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
     addPrim(&ordering_ctx->ot[GNAME_OT_TEXT_CURSOR], cursor_sprite);
     cursor_draw_mode = (DR_TPAGE*)(cursor_sprite + 1);
     setDrawTPage(cursor_draw_mode, 0, 0, GNAME_GLYPH_TPAGE);
@@ -1490,7 +1499,7 @@ static void gname_render(RenderContext* render_ctx)
     /* Show scroll indicators for content outside the visible grid window. */
     if (g_scroll_pos != 0)
     {
-        packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_FRONT], g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].glyph_id,
+        packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_FRONT], g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].glyph,
                                         g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].x, g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].y, 0, 0, FALSE);
     }
 
@@ -1505,7 +1514,7 @@ static void gname_render(RenderContext* render_ctx)
 
         if ((scroll_offset >> NAME_GRID_CELL_SHIFT) != (g_char_last_row - (NAME_GRID_VISIBLE_ROWS - 1)))
         {
-            packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_FRONT], g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].glyph_id,
+            packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_FRONT], g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].glyph,
                                             g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].x, g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].y, 0, 0, FALSE);
         }
     }
@@ -1522,6 +1531,7 @@ static void gname_render(RenderContext* render_ctx)
  * @param packet_cursor Next free primitive-buffer address.
  * @param ot_entry Ordering-table entry that receives the sprite.
  * @return Next free primitive-buffer address.
+ * @see decomp.me (100%) https://decomp.me/scratch/RnoNS
  */
 static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
 {
@@ -1529,7 +1539,7 @@ static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
 
     if (navigation_mode <= GNAME_MODE_PANEL_LAST)
     {
-        packet_cursor = func_800A88A0((SPRT*)packet_cursor, (s32*)ot_entry,
+        packet_cursor = func_800A88A0(packet_cursor, ot_entry,
                                       GNAME_RECORD(PANEL_RECORD_TABLE, g_tab_cursor_pos[navigation_mode + GNAME_CURSOR_POS_TABLE_OFFSET].sprite_idx),
                                       GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
     }
@@ -1540,14 +1550,13 @@ static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
         /* Select specialized tabs only for the category and kanji panels. */
         if ((u32)(panel_index - CHAR_PANEL_KANJI_CATEGORY) < (CHAR_PANEL_KANJI - CHAR_PANEL_KANJI_CATEGORY + 1))
         {
-            packet_cursor = func_800A88A0((SPRT*)packet_cursor, (s32*)ot_entry,
-                                          GNAME_RECORD(PANEL_RECORD_TABLE, panel_index + GNAME_PANEL_TAB_KANJI_RECORD_OFFSET), GNAME_PANEL_SPRITE_COLOR,
-                                          GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
+            packet_cursor = func_800A88A0(packet_cursor, ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, panel_index + GNAME_PANEL_TAB_KANJI_RECORD_OFFSET),
+                                          GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
         }
         else
         {
-            packet_cursor = func_800A88A0((SPRT*)packet_cursor, (s32*)ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, GNAME_PANEL_TAB_DEFAULT_RECORD),
-                                          GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
+            packet_cursor = func_800A88A0(packet_cursor, ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, GNAME_PANEL_TAB_DEFAULT_RECORD), GNAME_PANEL_SPRITE_COLOR,
+                                          GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
         }
     }
     return packet_cursor;
@@ -1558,6 +1567,7 @@ static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
  * @param packet_cursor Next free primitive-buffer address.
  * @param ot_entry Ordering-table entry that receives the label.
  * @return Next free primitive-buffer address.
+ * @see decomp.me (100%) https://decomp.me/scratch/jK7bc
  */
 static void* emit_panel_label(void* packet_cursor, u_long* ot_entry)
 {
@@ -1565,13 +1575,13 @@ static void* emit_panel_label(void* packet_cursor, u_long* ot_entry)
 
     if (panel_index < CHAR_PANEL_KANJI)
     {
-        packet_cursor = func_800A88A0((SPRT*)packet_cursor, (s32*)ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, panel_index), GNAME_PANEL_SPRITE_COLOR,
-                                      GNAME_PANEL_LABEL_X, GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
+        packet_cursor = func_800A88A0(packet_cursor, ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, panel_index), GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
+                                      GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
     }
     else
     {
-        packet_cursor = func_800A88A0((SPRT*)packet_cursor, (s32*)ot_entry, g_kanji_cat_name, GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
-                                      GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
+        packet_cursor = func_800A88A0(packet_cursor, ot_entry, g_kanji_cat_name, GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X, GNAME_PANEL_LABEL_Y,
+                                      GNAME_PANEL_SPRITE_MODE);
     }
 
     return packet_cursor;
@@ -1582,6 +1592,7 @@ static void* emit_panel_label(void* packet_cursor, u_long* ot_entry)
  * @param render_ctx Render context whose ordering table and packet cursor are updated.
  * @param name Name buffer to render.
  * @param strip_width Backing-strip width in pixels.
+ * @see https://decomp.me/scratch/LxujJ (100%)
  */
 static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_width)
 {
@@ -1595,7 +1606,7 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
 
     ot_entry = &render_ctx->ot[GNAME_OT_NAME_STRIP];
     restore_env_packet = render_ctx->prim_cursor;
-    /* Keep the restore packet address while advancing the packet cursor. */
+    /* The initial alias is required to preserve the target's register allocation. */
     packet_cursor = restore_env_packet;
 
     /* Restore the inactive frame's drawing environment after this OT pass. */
@@ -1604,10 +1615,9 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
     addPrim(ot_entry, restore_env_packet);
 
     /* Emit the name text, decorative glyph, and glyph draw mode. */
-    packet_cursor = func_800A88A0((SPRT*)(restore_env_packet + 1), (s32*)ot_entry, name, NAME_STRIP_TEXT_COLOR, NAME_STRIP_TEXT_X, NAME_STRIP_TEXT_Y,
-                                  NAME_STRIP_TEXT_MODE);
+    packet_cursor = func_800A88A0(restore_env_packet + 1, ot_entry, name, NAME_STRIP_TEXT_COLOR, NAME_STRIP_TEXT_X, NAME_STRIP_TEXT_Y, NAME_STRIP_TEXT_MODE);
     packet_cursor = emit_glyph_sprt(packet_cursor, ot_entry, NAME_STRIP_DECOR_GLYPH, 0, 0, 0, 0, 0);
-    packet_cursor = emit_draw_mode_prim((DR_TPAGE*)packet_cursor, ot_entry);
+    packet_cursor = emit_draw_mode_prim(packet_cursor, ot_entry);
 
     /* Redirect rendering to the strip region on the current backing page. */
     strip_draw_env = &strip_draw_scratch.draw_env;
@@ -1630,11 +1640,12 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
  * @brief Render the visible character-panel glyphs.
  * @param render_ctx Render context whose ordering table and packet cursor are updated.
  * @param panel_index Active standard-panel index; ignored for the kanji panel.
+ * @see decomp.me (100%) https://decomp.me/scratch/ckF2S
  */
 static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
 {
     u_long* ot_entry;
-    u8 stack_padding[8];
+    u8 stack_padding[8]; /* Preserve the packet scratch frame size. */
     GridDrawEnvScratch grid_draw_scratch;
     DR_ENV* packet_cursor;
     void* glyph_packet_cursor;
@@ -1686,7 +1697,7 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
         glyph_end_copy = glyph_end;
         if (NAME_GRID_ROW_VISIBLE(glyph_y))
         {
-            glyph_packet_cursor = func_800A88A0((SPRT*)glyph_packet_cursor, (s32*)ot_entry, GNAME_RECORD(glyph_table, glyph_index), CHAR_PANEL_GLYPH_COLOR,
+            glyph_packet_cursor = func_800A88A0(glyph_packet_cursor, ot_entry, GNAME_RECORD(glyph_table, glyph_index), CHAR_PANEL_GLYPH_COLOR,
                                                 grid_column * NAME_GRID_CELL_SIZE, glyph_y, CHAR_PANEL_GLYPH_MODE);
         }
         glyph_index++;
@@ -1724,6 +1735,7 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
  * @param packet Destination draw-mode packet.
  * @param ot_entry Ordering-table entry that receives the packet.
  * @return Next free primitive-buffer address.
+ * @see https://decomp.me/scratch/EyVeo (100%)
  */
 static void* emit_draw_mode_prim(DR_TPAGE* packet, u_long* ot_entry)
 {
@@ -1744,6 +1756,7 @@ static void* emit_draw_mode_prim(DR_TPAGE* packet, u_long* ot_entry)
  * @param activation_adjust Adjustment applied to the primary and secondary positions.
  * @param use_blue_overlay TRUE for a blue overlay; FALSE for a translucent black shadow.
  * @return Next free primitive-buffer address.
+ * @see decomp.me (100%) https://decomp.me/scratch/Au2h5
  */
 static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id, s32 base_x, s32 base_y, s32 shadow_offset, s32 activation_adjust,
                              s32 use_blue_overlay)
@@ -1758,7 +1771,7 @@ static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id,
     setXY0(primary_sprite, base_x - shadow_offset + activation_adjust, base_y - shadow_offset + activation_adjust);
     setUV0(primary_sprite, primary_glyph_info->u, primary_glyph_info->v);
     setWH(primary_sprite, primary_glyph_info->w, primary_glyph_info->h);
-    setClut(primary_sprite, primary_glyph_info->clut_x << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
+    setClut(primary_sprite, primary_glyph_info->clut << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
     addPrim(ot_entry, primary_sprite);
     packet_cursor += sizeof(SPRT);
 
@@ -1784,7 +1797,7 @@ static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id,
         setXY0((SPRT*)packet_cursor, base_x + secondary_position_offset, base_y + secondary_position_offset);
         setUV0((SPRT*)packet_cursor, secondary_glyph_info->u, secondary_glyph_info->v);
         setWH((SPRT*)packet_cursor, secondary_glyph_info->w, secondary_glyph_info->h);
-        setClut((SPRT*)packet_cursor, secondary_glyph_info->clut_x << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
+        setClut((SPRT*)packet_cursor, secondary_glyph_info->clut << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
         addPrim(ot_entry, packet_cursor);
 
         packet_cursor += sizeof(SPRT);
@@ -1796,6 +1809,7 @@ static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id,
 /**
  * @brief Emit the fixed background layout sprites.
  * @param render_ctx Render context whose ordering table and packet cursor are updated.
+ * @see decomp.me (100%) https://decomp.me/scratch/Q6WL2
  */
 static void render_layout_sprite_batch(RenderContext* render_ctx)
 {
@@ -1836,7 +1850,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
     sprite_cursor = packet_cursor;
     while (sprite_count < GNAME_LAYOUT_SPRITE_COUNT)
     {
-        u32 glyph_id = sequence_entry->glyph_id;
+        u32 glyph_id = sequence_entry->id;
         u32 packed_xy;
         const GlyphInfo* glyph_info;
         u8 glyph_height;
@@ -1847,7 +1861,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
         SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
         setSprt(sprite);
 
-        packed_xy = sequence_entry->packed_xy;
+        packed_xy = sequence_entry->xy;
         glyph_info = GLYPH_TABLE_ENTRY(glyph_table, glyph_id);
         SET_SPRT_XY0_WORD(sprite, packed_xy);
 
@@ -1857,7 +1871,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
         glyph_height = glyph_info->h;
         sprite_count++;
         sprite->h = glyph_height;
-        clut_word = glyph_info->clut_x;
+        clut_word = glyph_info->clut;
         sequence_entry++;
         sprite->clut = (clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS;
 
@@ -1887,6 +1901,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
  * @brief Count the encoded bytes in a name buffer.
  * @param name_buf Null-terminated name buffer.
  * @return Number of bytes excluding the terminator.
+ * @see https://decomp.me/scratch/2QgjW (100%)
  */
 static s32 name_byte_length(const u8* name_buf)
 {
@@ -1917,6 +1932,7 @@ static s32 name_byte_length(const u8* name_buf)
  * @brief Count the glyphs in a name buffer.
  * @param name_buf Null-terminated name buffer.
  * @return Number of encoded glyphs.
+ * @see https://decomp.me/scratch/c8fPe (100%)
  */
 static s32 name_glyph_count(const u8* name_buf)
 {
@@ -1935,6 +1951,7 @@ static s32 name_glyph_count(const u8* name_buf)
  * @brief Append one name buffer to another.
  * @param destination Null-terminated buffer with sufficient capacity.
  * @param source Null-terminated buffer to append.
+ * @see https://decomp.me/scratch/1lsbD (100%)
  */
 static void name_append(u8* destination, const u8* source)
 {
@@ -1991,6 +2008,7 @@ static void name_append(u8* destination, const u8* source)
  * @brief Remove and return the last glyph in a name buffer.
  * @param name_buf Null-terminated buffer to truncate.
  * @return Packed glyph; the low byte is zero when the buffer is empty.
+ * @see https://decomp.me/scratch/agZ8y (100%)
  */
 static s32 name_pop_last_glyph(u8* name_buf)
 {
@@ -2028,6 +2046,7 @@ static s32 name_pop_last_glyph(u8* name_buf)
  * @brief Copy a null-terminated name buffer.
  * @param destination Destination buffer with sufficient capacity.
  * @param source Null-terminated source buffer.
+ * @see https://decomp.me/scratch/UeYRe (100%)
  */
 static void name_copy(u8* destination, const u8* source)
 {
@@ -2062,10 +2081,11 @@ static void name_copy(u8* destination, const u8* source)
 
 /**
  * @brief Recalculate the active name and strip widths.
+ * @see https://decomp.me/scratch/y0CgJ (100%)
  */
 static void recalc_name_width(void)
 {
-    SPRT glyphs[NAME_MEASURE_CAPACITY];
+    GlyphMeasure glyphs[NAME_MEASURE_CAPACITY];
     s16 glyph_width;
     s32 glyph_count;
     s32 glyph_index;
@@ -2078,7 +2098,7 @@ static void recalc_name_width(void)
     {
         while (glyph_index < glyph_count)
         {
-            glyph_width = glyphs[glyph_index].w;
+            glyph_width = glyphs[glyph_index].width;
             g_name_pixel_width += glyph_width;
             glyph_index++;
         }
@@ -2091,6 +2111,7 @@ static void recalc_name_width(void)
  * @brief Prepend a packed glyph to a name buffer.
  * @param name_buf Null-terminated buffer with room for the glyph.
  * @param new_glyph Packed glyph; a zero lead byte is ignored.
+ * @see https://decomp.me/scratch/VOLcD (100%)
  */
 static void name_prepend_glyph(u8* name_buf, u16 new_glyph)
 {
@@ -2150,6 +2171,7 @@ static void name_prepend_glyph(u8* name_buf, u16 new_glyph)
  * @brief Remove and return the first glyph in a name buffer.
  * @param name_buf Null-terminated name buffer updated in place.
  * @return Removed glyph packed in the low 16 bits, or 0 if empty.
+ * @see https://decomp.me/scratch/ArXXq (100%)
  */
 static s32 name_pop_first_glyph(u8* name_buf)
 {
@@ -2213,6 +2235,7 @@ static s32 name_pop_first_glyph(u8* name_buf)
  * @param packet_cursor Next free primitive-buffer address.
  * @param render_ctx Current render context.
  * @return Updated primitive-buffer cursor.
+ * @see decomp.me (100%) https://decomp.me/scratch/3TQG6
  */
 static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render_ctx)
 {
@@ -2223,7 +2246,7 @@ static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render
 
     for (slot_index = 0; slot_index < GLYPH_APPEND_ANIM_SLOT_COUNT; slot_index++, slot++)
     {
-        s32 raw_glyph_id = slot->glyph_id;
+        s32 raw_glyph_id = slot->glyph;
 
         glyph_id = raw_glyph_id;
 
@@ -2252,7 +2275,7 @@ static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render
             return packet_cursor;
         }
 
-        g_glyph_append_anim_timer = g_glyph_append_anim_frames[g_glyph_append_anim_frame].slots[0].duration;
+        g_glyph_append_anim_timer = g_glyph_append_anim_frames[g_glyph_append_anim_frame].slots[0].pad;
     }
 
     return packet_cursor;
@@ -2262,6 +2285,7 @@ static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render
  * @brief Check whether a name contains only blank bytes.
  * @param name_buf Null-terminated name buffer.
  * @return TRUE if blank, otherwise FALSE.
+ * @see https://decomp.me/scratch/rdbBA (100%)
  */
 static s32 name_is_blank(const u8* name_buf)
 {

@@ -258,16 +258,16 @@ typedef GosubGpuPacket* (*GosubElementDrawHandler)();
 /** @brief Unconnected flat-line GPU packet. */
 typedef struct
 {
-    u_long tag;
-    u_char r0;
-    u_char g0;
-    u_char b0;
-    u_char code;
-    s16 x0;
-    s16 y0;
-    s16 x1;
-    s16 y1;
-} GosubLinePacket;
+    u_long tag;  /* 0x00 P_TAG */
+    u_char r0;   /* 0x04 */
+    u_char g0;   /* 0x05 */
+    u_char b0;   /* 0x06 */
+    u_char code; /* 0x07 */
+    s16 x0;      /* 0x08 */
+    s16 y0;      /* 0x0A */
+    s16 x1;      /* 0x0C */
+    s16 y1;      /* 0x0E */
+} GosubLinePacket; /* 0x10 */
 
 /** @brief Packed four-byte record stored in the combination table. */
 typedef struct
@@ -281,7 +281,7 @@ typedef struct
     u8 row_order[GOSUB_SORT_ORDER_CAPACITY];
     GosubPackedRecord packed_records[GOSUB_SORT_ROW_CAPACITY];
     GosubListRow rows[GOSUB_SORT_ROW_CAPACITY];
-} GosubSortWorkspace;
+} GosubSortWorkspace; /* 0x6A0 */
 
 /** @brief One 0x40-byte equipment record in the table at g_pad_ctx + 0xCE0. */
 typedef struct
@@ -341,22 +341,22 @@ typedef struct
  */
 typedef struct
 {
-    u8 addr[3]; /* P_TAG address, set via addPrim. */
-    u8 len; /* P_TAG length. */
-    u8 r;
-    u8 g;
-    u8 b;
-    u8 code;
-    s16 x0;
-    s16 y0;
-    s16 x1;
-    s16 y1;
-    s16 x2;
-    s16 y2;
-    s16 x3;
-    s16 y3;
-    u32 mask; /* LINE_F4 pad word. */
-} GosubScrollMarkerPacket;
+    u8 addr[3]; /* 0x00 P_TAG addr (24-bit, set via addPrim) */
+    u8 len;     /* 0x03 P_TAG len */
+    u8 r;       /* 0x04 */
+    u8 g;       /* 0x05 */
+    u8 b;       /* 0x06 */
+    u8 code;    /* 0x07 */
+    s16 x0;     /* 0x08 */
+    s16 y0;     /* 0x0A */
+    s16 x1;     /* 0x0C */
+    s16 y1;     /* 0x0E */
+    s16 x2;     /* 0x10 */
+    s16 y2;     /* 0x12 */
+    s16 x3;     /* 0x14 */
+    s16 y3;     /* 0x16 */
+    u32 mask;   /* 0x18 LINE_F4 pad word (0x55555555) */
+} GosubScrollMarkerPacket; /* 0x1C */
 
 /** @brief Offset tables at the head of the message archive. */
 typedef struct
@@ -384,36 +384,36 @@ typedef struct
 /** @brief Glyph cell descriptor in the 8-byte g_gosub_glyph_metrics table. */
 typedef struct
 {
-    u8 u0; /* Texture u coordinate. */
+    u8 u0;    /* 0x00 texture u */
     u8 reserved_1;
-    u8 v0; /* Texture v coordinate. */
+    u8 v0;    /* 0x02 texture v */
     u8 reserved_3;
-    u16 w;
-    u16 h;
-} GosubGlyphMetric;
+    u16 w;    /* 0x04 */
+    u16 h;    /* 0x06 */
+} GosubGlyphMetric; /* 0x08 */
 
 /** @brief One positioned glyph in a composite icon layout. */
 typedef struct
 {
-    s8 x; /* Position in 16-pixel cells. */
-    s8 y; /* Position in 16-pixel cells. */
-    s16 glyph_id;
-} GosubCompositeIconPart;
+    s8 x;        /* 0x00, in 16-pixel cells */
+    s8 y;        /* 0x01, in 16-pixel cells */
+    s16 glyph_id; /* 0x02 */
+} GosubCompositeIconPart; /* 0x04 */
 
-/** @brief One composite icon layout in g_gosub_composite_icon_layouts. */
+/** @brief One 88-byte composite icon layout in D_800F1CD0. */
 typedef struct
 {
-    u8 part_count;
+    u8 part_count; /* 0x00 */
     u8 reserved_01;
-    u8 grid_width;
-    u8 grid_height;
-    s16 origin_x; /* Position in 8-pixel cells. */
-    s16 origin_y; /* Position in 8-pixel cells. */
-    s8 base_x; /* Position in 8-pixel cells. */
-    s8 base_y; /* Position in 8-pixel cells. */
+    u8 grid_width;  /* 0x02 */
+    u8 grid_height; /* 0x03 */
+    s16 origin_x;   /* 0x04, in 8-pixel cells */
+    s16 origin_y;   /* 0x06, in 8-pixel cells */
+    s8 base_x;      /* 0x08, in 8-pixel cells */
+    s8 base_y;      /* 0x09, in 8-pixel cells */
     u8 reserved_0a[2];
-    GosubCompositeIconPart parts[GOSUB_COMPOSITE_ICON_PART_CAPACITY];
-} GosubCompositeIconLayout;
+    GosubCompositeIconPart parts[GOSUB_COMPOSITE_ICON_PART_CAPACITY]; /* 0x0C */
+} GosubCompositeIconLayout; /* 0x58 */
 
 /** @brief Byte and structured views of a composite icon table cursor. */
 typedef union
@@ -445,13 +445,13 @@ extern s32 g_gosub_portrait_archive[];
 extern TimPrefix g_gosub_image_archive;
 extern GosubGlyphMetric g_gosub_glyph_metrics[];
 extern u8 g_gosub_font_texture[];
-extern u8 g_gosub_positive_value_prefix_offset_bytes[];
-extern u8 g_gosub_equipment_name_separator_offset_bytes[];
-extern GosubEncodedTextOffset g_gosub_weapon_power_label_offset;
-extern GosubEncodedTextOffset g_gosub_armor_defense_label_offset;
-extern GosubEncodedTextOffset g_gosub_instrument_power_label_offset;
-extern s32 g_gosub_composite_icon_cluts[];
-extern u8 g_gosub_composite_icon_layouts[];
+extern u8 D_800EC3DA[];
+extern u8 D_800EC3E2[];
+extern GosubEncodedTextOffset D_800EC3EE;
+extern GosubEncodedTextOffset D_800EC3F0;
+extern GosubEncodedTextOffset D_800EC3F2;
+extern s32 D_800F2180[];
+extern u8 D_800F1CD0[];
 
 /* Typed access and helper macros. */
 
@@ -529,14 +529,10 @@ extern u8 g_gosub_composite_icon_layouts[];
 
 void bcopy();
 void field_set_default_fade_target();
-void field_upload_text_staging_buffer(void);
-void field_restore_fade_target(void);
-void play_menu_sfx(s32 sound_id, s32 pan);
-void field_compact_item_records(void);
-void field_format_signed_decimal(void* out, s32 value, s32 format);
-void field_reset_menu_input(void);
-s32 field_draw_cached_text(s32 packet_cursor, s32* ordering_table, void* text, s32 color, s32 x, s32 y, s32 alignment);
-s32 field_draw_signed_decimal(s32* ordering_table, s32 packet_cursor, s32 value, s32 color, GosubTextPosition* position, s32 alignment);
+void func_800A8B90();
+void func_800AA02C();
+s32 func_800A88A0(s32 prim, s32* ot, void* text, s32 color, s32 x, s32 y, s32 mode);
+s32 func_800A8A78(s32* ot, s32 prim, s32 value, s32 color, GosubTextPosition* position, s32 mode);
 void gosub_load_screen_sequence(s32*);
 void gosub_build_screen_9_elements();
 void gosub_build_screen_10_elements();
@@ -565,7 +561,7 @@ void gosub_build_equipment_list(u32 item_kind);
 void gosub_build_grouped_option_list(s32 group);
 void gosub_update_screen(s32 render_ctx);
 void gosub_enter_screen();
-s32 gosub_handle_input(s32 render_context);
+s32 gosub_handle_input(s32 unused);
 void gosub_scroll_to_cursor(void);
 s32 gosub_toggle_cursor_selection(void);
 s32 gosub_advance_screen_sequence(void);
@@ -663,17 +659,18 @@ s32 (*g_gosub_dialog_handler)(s32);
 /**
  * @brief Open the gosub overlay for a sequence of screen ids.
  *
- * @param loader_arg Loader argument retained for the overlay entry-point ABI; unused here.
+ * @param unused Unused loader argument.
  * @param screen_sequence Pointer to an s32 array terminated by
  *        @c GOSUB_SCREEN_SEQUENCE_END.
  *
+ * @see decomp.me (100%) https://decomp.me/scratch/qM81L
  */
-void gosub_open_screen_sequence(s32 loader_arg, s32* screen_sequence)
+void gosub_open_screen_sequence(s32 unused, s32 screen_sequence)
 {
     field_set_default_fade_target();
     g_gosub_frame_parity = 0;
     g_gosub_finished = 0;
-    field_reset_menu_input();
+    func_800AA02C();
     gosub_load_screen_sequence(screen_sequence);
 }
 
@@ -681,6 +678,7 @@ void gosub_open_screen_sequence(s32 loader_arg, s32* screen_sequence)
  * @brief Run one frame of the gosub overlay and return its completion state.
  * @param render_ctx Active field rendering context.
  * @return Nonzero after the current gosub sequence finishes.
+ * @see decomp.me (100%) https://decomp.me/scratch/ykfW4
  */
 s32 gosub_update_frame(s32 render_ctx)
 {
@@ -688,7 +686,7 @@ s32 gosub_update_frame(s32 render_ctx)
     s32 finished;
     field_text_reset_scratch();
     gosub_update_screen(render_ctx);
-    field_upload_text_staging_buffer();
+    func_80063194();
     frame_parity = &g_gosub_frame_parity;
     finished = g_gosub_finished;
     *frame_parity ^= 1;
@@ -698,6 +696,7 @@ s32 gosub_update_frame(s32 render_ctx)
 /**
  * @brief Copy and enter a GOSUB_SCREEN_SEQUENCE_END-terminated screen sequence.
  * @param screen_sequence Sequence of screen ids stored as s32 values.
+ * @see decomp.me (100%) https://decomp.me/scratch/weBhP
  */
 void gosub_load_screen_sequence(s32* screen_sequence)
 {
@@ -740,6 +739,7 @@ void gosub_load_screen_sequence(s32* screen_sequence)
  * @brief Initialize a gosub sub-screen and install its selection callbacks.
  * @param screen_id Screen id, 0..19; anything else returns without touching state.
  * @param unused Unused by this function; passed by gosub_load_screen_sequence.
+ * @see decomp.me (100%)
  */
 void gosub_enter_screen(screen_id, unused) s32 screen_id;
 s32 unused;
@@ -1037,6 +1037,7 @@ s32 unused;
 
 /**
  * @brief Build the list, header, and detail elements for screen 9.
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_9_elements(void)
 {
@@ -1073,6 +1074,7 @@ void gosub_build_screen_9_elements(void)
 
 /**
  * @brief Build the list, detail header, and preview elements for screen 10.
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_10_elements(void)
 {
@@ -1109,6 +1111,7 @@ void gosub_build_screen_10_elements(void)
 
 /**
  * @brief Configure reserved element 0 and reset the dialog choice.
+ * @see decomp.me (100%)
  */
 void gosub_initialize_fixed_element(void)
 {
@@ -1128,6 +1131,7 @@ void gosub_initialize_fixed_element(void)
 
 /**
  * @brief Build the three elements of the gosub screens entered by arms 2 to 5.
+ * @see decomp.me (100%)
  */
 void gosub_build_category_screen_elements(void)
 {
@@ -1166,6 +1170,7 @@ void gosub_build_category_screen_elements(void)
  * @brief Build the elements of the gosub screens entered by arms 0, 1, 6-8,
  *        15, 16 and 19.
  * @param include_middle Non-zero to include the middle element, zero to skip it.
+ * @see decomp.me (100%)
  */
 void gosub_build_list_screen_elements(s32 include_middle)
 {
@@ -1205,6 +1210,7 @@ void gosub_build_list_screen_elements(s32 include_middle)
 
 /**
  * @brief Build the three elements of the gosub screen entered by arm 11.
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_11_elements(void)
 {
@@ -1242,6 +1248,7 @@ void gosub_build_screen_11_elements(void)
 /**
  * @brief Build the two elements of the gosub screens entered by arms 12-14 and
  *        17-18.
+ * @see decomp.me (100%)
  */
 void gosub_build_compact_list_elements(void)
 {
@@ -1269,6 +1276,7 @@ void gosub_build_compact_list_elements(void)
 
 /**
  * @brief Build screen 15's rows from nonempty inventory slots 0x60-0x84.
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_15_item_list(void)
 {
@@ -1299,6 +1307,7 @@ void gosub_build_screen_15_item_list(void)
 
 /**
  * @brief Build screen 19's rows from nonempty inventory slots 0x60-0x8F.
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_19_item_list(void)
 {
@@ -1329,6 +1338,7 @@ void gosub_build_screen_19_item_list(void)
 
 /**
  * @brief Build screen 16's rows from nonempty inventory slots 0x40-0x4F.
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_16_item_list(void)
 {
@@ -1358,6 +1368,7 @@ void gosub_build_screen_16_item_list(void)
 
 /**
  * @brief Build screen 1's rows from nonempty inventory slots 0x40-0xFE.
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_1_item_list(void)
 {
@@ -1388,6 +1399,7 @@ void gosub_build_screen_1_item_list(void)
 
 /**
  * @brief Build screen 0's rows from nonempty inventory slots 0x00-0x3F.
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_0_item_list(void)
 {
@@ -1420,6 +1432,7 @@ void gosub_build_screen_0_item_list(void)
  * @brief Build the packed-record list for the gosub screen entered by arm 11.
  * @note Bit 2 of the flag word is cleared only for records that are both unflagged at
  *       bit 16 and have both low bits set; every other record sets it.
+ * @see decomp.me (100%)
  */
 void gosub_build_packed_record_list(void)
 {
@@ -1435,8 +1448,8 @@ void gosub_build_packed_record_list(void)
         gosub_copy_encoded_string(row_name, ARCHIVE_ENTRY(g_gosub_text_archive_offsets_3[0], g_gosub_rows[i].detail_group));
         if (g_gosub_rows[i].detail_id != 0)
         {
-            gosub_append_encoded_string(row_name, g_gosub_positive_value_prefix_offset_bytes - 0x16 + g_gosub_positive_value_prefix_offset_bytes[0] + (g_gosub_positive_value_prefix_offset_bytes[1] << 8));
-            field_format_signed_decimal(number_text, g_gosub_rows[i].detail_id, 1);
+            gosub_append_encoded_string(row_name, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
+            func_800A8B90(number_text, g_gosub_rows[i].detail_id, 1);
             gosub_append_encoded_string(row_name, number_text);
         }
         g_gosub_rows[i].name = row_name;
@@ -1466,6 +1479,7 @@ void gosub_build_packed_record_list(void)
  * @brief Build a roster list for gosub screens 12-14 and 17-18.
  * @param mode Which blocks to emit: 1 = second only, 2 = first only, otherwise
  *             both. Also picks the screen's title message.
+ * @see decomp.me (100%)
  */
 void gosub_build_roster_list(s32 mode)
 {
@@ -1585,6 +1599,7 @@ void gosub_build_roster_list(s32 mode)
  * @brief Confirm the currently highlighted row of the gosub list.
  * @return 0 if the row was rejected by a flag, 1 otherwise. Note that 1 is also
  *         returned when g_gosub_selection_count is clear and nothing was appended.
+ * @see decomp.me (100%)
  */
 s32 gosub_select_row_with_validation(void)
 {
@@ -1621,6 +1636,7 @@ s32 gosub_select_row_with_validation(void)
 /**
  * @brief Append the highlighted row to the selection, with no flag checks.
  * @return Always 1. Nothing is appended while g_gosub_selection_count is clear.
+ * @see decomp.me (100%)
  */
 s32 gosub_select_row(void)
 {
@@ -1639,6 +1655,7 @@ s32 gosub_select_row(void)
 /**
  * @brief Validate a pending two-row selection before publishing it.
  * @return gosub_publish_two_row_selection's result while g_gosub_combination_result_id is set, 0 on every other path.
+ * @see decomp.me (100%)
  */
 s32 gosub_validate_pending_pair_selection(void)
 {
@@ -1660,6 +1677,7 @@ s32 gosub_validate_pending_pair_selection(void)
 /**
  * @brief Commit a pending row move by swapping the two marked rows.
  * @return Always 0.
+ * @see decomp.me (100%)
  */
 s32 gosub_commit_row_reorder(void)
 {
@@ -1700,6 +1718,7 @@ s32 gosub_commit_row_reorder(void)
 /**
  * @brief Update row colors for the current group selection.
  * @return 1 after publishing a complete mixed-group selection, otherwise 0.
+ * @see decomp.me (100%)
  */
 s32 gosub_update_group_selection(void)
 {
@@ -1759,6 +1778,7 @@ s32 gosub_update_group_selection(void)
 /**
  * @brief Publish the picked rows' indices as the screen's result.
  * @return 1 if the result was published, 0 if the picker was not in state 2.
+ * @see decomp.me (100%)
  */
 s32 gosub_publish_two_row_selection(void)
 {
@@ -1781,6 +1801,7 @@ s32 gosub_publish_two_row_selection(void)
  *
  * @param dialog_result Zero to confirm; nonzero to return to the selection.
  * @return 1 if confirming leaves no equipment rows, otherwise 0.
+ * @see decomp.me (100%) https://decomp.me/scratch/2OzmD
  */
 s32 gosub_handle_combination_dialog(s32 dialog_result)
 {
@@ -1813,7 +1834,7 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
             *(g_pad_ctx + 0x29D6) = *(g_pad_ctx + 0x29D6) + 1;
             GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(g_gosub_result_values[0])->name[0] = 0;
             GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(g_gosub_result_values[1])->name[0] = 0;
-            field_compact_item_records();
+            func_800A8FB4();
         }
         if (*(g_pad_ctx + 0x29D6) >= 0x28)
         {
@@ -1843,7 +1864,7 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
         if (g_gosub_row_count == 0)
         {
             g_field_gosub_state = 0;
-            field_restore_fade_target();
+            func_80067F28();
             gosub_start_element_exit();
             return 1;
         }
@@ -1859,6 +1880,7 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
  * @brief Publish the selected group rows as result values.
  *
  * @return 1 when at least one row was published, otherwise 0.
+ * @see decomp.me (100%) https://decomp.me/scratch/pOY6i
  */
 s32 gosub_publish_group_selection(void)
 {
@@ -1883,6 +1905,7 @@ s32 gosub_publish_group_selection(void)
  * @brief Publish the selected rows' entry indices as result values.
  *
  * @return 1 when at least one row was published, otherwise 0.
+ * @see decomp.me (100%) https://decomp.me/scratch/FN7DQ
  */
 s32 gosub_publish_selection(void)
 {
@@ -1908,6 +1931,7 @@ s32 gosub_publish_selection(void)
  *
  * @param row Row index to test.
  * @return 1 if the row is unselected, otherwise 0.
+ * @see decomp.me (100%) https://decomp.me/scratch/lBIH9
  */
 s32 gosub_is_row_unselected(s32 row)
 {
@@ -1931,6 +1955,7 @@ s32 gosub_is_row_unselected(s32 row)
  * Kind 3 accepts every record; kind 4 accepts every record except kind 2.
  *
  * @param item_kind Equipment kind filter, or 3/4 for the aggregate filters.
+ * @see decomp.me (100%) https://decomp.me/scratch/CJYqj
  */
 void gosub_build_equipment_list(u32 item_kind)
 {
@@ -1960,8 +1985,8 @@ void gosub_build_equipment_list(u32 item_kind)
 
                 gosub_copy_encoded_string(GOSUB_TEXT_BUFFER(row_count),
                               ARCHIVE_ENTRY(g_gosub_text_archive_offsets_1[0], GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(item_index)->attributes.half.material & 0x3F));
-                separator_offset = (s32)(g_gosub_equipment_name_separator_offset_bytes - 0x1E) + (g_gosub_equipment_name_separator_offset_bytes[1] << 8);
-                gosub_append_encoded_string(GOSUB_TEXT_BUFFER(row_count), g_gosub_equipment_name_separator_offset_bytes[0] + separator_offset);
+                separator_offset = (s32)(D_800EC3E2 - 0x1E) + (D_800EC3E2[1] << 8);
+                gosub_append_encoded_string(GOSUB_TEXT_BUFFER(row_count), D_800EC3E2[0] + separator_offset);
 
                 item_base = GOSUB_EQUIPMENT_BASE_FROM_INDEX(item_index);
                 g_gosub_rows[row_count].equipment_kind = GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(item_base)->attributes.word);
@@ -2031,6 +2056,7 @@ void gosub_build_equipment_list(u32 item_kind)
  * @brief Build one of the three grouped option lists from the text archive.
  *
  * @param group Option group index, from 0 through 2.
+ * @see decomp.me (100%)
  */
 void gosub_build_grouped_option_list(s32 group)
 {
@@ -2078,6 +2104,7 @@ void gosub_build_grouped_option_list(s32 group)
  * @brief Process input, advance scroll interpolation, and draw the active screen.
  *
  * @param render_ctx Rendering context forwarded to the input and draw handlers.
+ * @see decomp.me (100%)
  */
 void gosub_update_screen(s32 render_ctx)
 {
@@ -2102,10 +2129,11 @@ void gosub_update_screen(s32 render_ctx)
 /**
  * @brief Handle dialog, navigation, selection, completion, and cancellation input.
  *
- * @param render_context Rendering context supplied by the frame driver; unused by input handling.
+ * @param unused Unused rendering context.
  * @return Undefined; callers ignore the value.
+ * @see decomp.me (100%)
  */
-s32 gosub_handle_input(s32 render_context)
+s32 gosub_handle_input(s32 unused)
 {
     GosubElement* elements;
     s32 steps_remaining;
@@ -2134,8 +2162,8 @@ s32 gosub_handle_input(s32 render_context)
             }
             if (g_gosub_suppress_dialog_sound == 0)
             {
-                play_menu_sfx(0x7D, 0x80);
-                field_restore_fade_target();
+                func_800A3938(0x7D, 0x80);
+                func_80067F28();
                 gosub_start_element_exit();
                 return;
             }
@@ -2146,7 +2174,7 @@ s32 gosub_handle_input(s32 render_context)
 
         if (g_pad_input & 0x9000)
         {
-            play_menu_sfx(0x7D, 0x80);
+            func_800A3938(0x7D, 0x80);
             g_gosub_dialog_choice -= 1;
             if (g_gosub_dialog_choice < 0)
             {
@@ -2157,7 +2185,7 @@ s32 gosub_handle_input(s32 render_context)
 
         if (g_pad_input & 0x6000)
         {
-            play_menu_sfx(0x7D, 0x80);
+            func_800A3938(0x7D, 0x80);
             g_gosub_dialog_choice += 1;
             if (g_gosub_dialog_choice == 0xC)
             {
@@ -2168,7 +2196,7 @@ s32 gosub_handle_input(s32 render_context)
 
         if (g_pad_input & 0x220)
         {
-            play_menu_sfx(0x7D, 0x80);
+            func_800A3938(0x7D, 0x80);
             if (g_gosub_dialog_handler == 0)
             {
                 return;
@@ -2177,14 +2205,14 @@ s32 gosub_handle_input(s32 render_context)
             {
                 return;
             }
-            field_restore_fade_target();
+            func_80067F28();
             gosub_start_element_exit();
             return;
         }
 
         if (g_pad_input & 0x40)
         {
-            play_menu_sfx(0x7D, 0x80);
+            func_800A3938(0x7D, 0x80);
             if (g_gosub_dialog_handler == 0)
             {
                 return;
@@ -2193,7 +2221,7 @@ s32 gosub_handle_input(s32 render_context)
             {
                 return;
             }
-            field_restore_fade_target();
+            func_80067F28();
             gosub_start_element_exit();
             return;
         }
@@ -2254,14 +2282,14 @@ s32 gosub_handle_input(s32 render_context)
 
     if (g_pad_input & 0x5000)
     {
-        play_menu_sfx(0x7D, 0x80);
+        func_800A3938(0x7D, 0x80);
         gosub_scroll_to_cursor();
         return;
     }
 
     if (g_pad_input & 0x220)
     {
-        play_menu_sfx(0x7D, 0x80);
+        func_800A3938(0x7D, 0x80);
         if ((g_gosub_rows[g_gosub_cursor_row].text_color & 0xF) != 4)
         {
             return;
@@ -2280,7 +2308,7 @@ s32 gosub_handle_input(s32 render_context)
                 {
                     return;
                 }
-                field_restore_fade_target();
+                func_80067F28();
                 gosub_start_element_exit();
                 return;
             }
@@ -2300,7 +2328,7 @@ s32 gosub_handle_input(s32 render_context)
             {
                 return;
             }
-            field_restore_fade_target();
+            func_80067F28();
             gosub_start_element_exit();
             return;
         }
@@ -2316,14 +2344,14 @@ s32 gosub_handle_input(s32 render_context)
         {
             return;
         }
-        field_restore_fade_target();
+        func_80067F28();
         gosub_start_element_exit();
         return;
     }
 
     if (g_pad_input & 0x800)
     {
-        play_menu_sfx(0x7D, 0x80);
+        func_800A3938(0x7D, 0x80);
         if (g_gosub_finish_handler != 0)
         {
             if (g_gosub_finish_handler() == 0)
@@ -2334,7 +2362,7 @@ s32 gosub_handle_input(s32 render_context)
             {
                 return;
             }
-            field_restore_fade_target();
+            func_80067F28();
             gosub_start_element_exit();
             return;
         }
@@ -2342,7 +2370,7 @@ s32 gosub_handle_input(s32 render_context)
         {
             return;
         }
-        field_restore_fade_target();
+        func_80067F28();
         gosub_start_element_exit();
         return;
     }
@@ -2352,7 +2380,7 @@ s32 gosub_handle_input(s32 render_context)
         return;
     }
 
-    play_menu_sfx(0x7F, 0x80);
+    func_800A3938(0x7F, 0x80);
 
     if (g_gosub_selection_count != 0)
     {
@@ -2389,13 +2417,14 @@ s32 gosub_handle_input(s32 render_context)
     }
 
     g_gosub_result_count = 0;
-    field_restore_fade_target();
+    func_80067F28();
     gosub_start_element_exit();
 }
 
 /**
  * @brief Scroll the list viewport toward the cursor when it leaves view.
  *
+ * @see decomp.me (100%)
  */
 void gosub_scroll_to_cursor(void)
 {
@@ -2422,6 +2451,7 @@ void gosub_scroll_to_cursor(void)
  * @brief Remove the cursor row if selected, or permit the caller to add it.
  *
  * @return 0 if the row was removed, otherwise 1.
+ * @see decomp.me (100%)
  */
 s32 gosub_toggle_cursor_selection(void)
 {
@@ -2453,6 +2483,7 @@ s32 gosub_toggle_cursor_selection(void)
  * @brief Advance to the next screen or open the sequence's final dialog.
  *
  * @return 1 at the sequence terminator, otherwise 0.
+ * @see decomp.me (100%)
  */
 s32 gosub_advance_screen_sequence(void)
 {
@@ -2490,6 +2521,7 @@ s32 gosub_advance_screen_sequence(void)
  * @brief Test whether all fixed elements have finished transitioning.
  *
  * @return 1 when all elements are idle, otherwise 0.
+ * @see decomp.me (100%)
  */
 s32 gosub_are_elements_idle(void)
 {
@@ -2512,6 +2544,7 @@ s32 gosub_are_elements_idle(void)
 
 /**
  * @brief Start the exit transition for every allocated element.
+ * @see decomp.me (100%) https://decomp.me/scratch/RsBVl
  */
 void gosub_start_element_exit(void)
 {
@@ -2520,7 +2553,7 @@ void gosub_start_element_exit(void)
     s32* element_words;
     s32 state_word;
 
-    element_words = (s32*)g_gosub_elements;
+    element_words = &g_gosub_elements;
     element_index = 0;
     do
     {
@@ -2537,6 +2570,7 @@ void gosub_start_element_exit(void)
 
 /**
  * @brief Render and animate all allocated gosub elements.
+ * @see decomp.me (100%) https://decomp.me/scratch/nVefu
  */
 void gosub_render_elements(void)
 {
@@ -2545,13 +2579,14 @@ void gosub_render_elements(void)
 
 /**
  * @brief Mark every gosub element slot inactive.
+ * @see decomp.me (100%) https://decomp.me/scratch/dib6Q
  */
 void gosub_clear_elements(void)
 {
     s32 element_index;
     s32* element_words;
 
-    element_words = (s32*)g_gosub_elements;
+    element_words = &g_gosub_elements;
     element_index = 0;
     do
     {
@@ -2564,6 +2599,7 @@ void gosub_clear_elements(void)
 /**
  * @brief Allocate the first inactive dynamic element slot.
  * @return Allocated element, or element 0 when the pool is full.
+ * @see decomp.me (100%) https://decomp.me/scratch/X1pXK
  */
 GosubElement* gosub_allocate_element(void)
 {
@@ -2579,16 +2615,17 @@ GosubElement* gosub_allocate_element(void)
         if (!(element_word & 7))
         {
             *element_words = (element_word & ~7) | 1;
-            return (GosubElement*)element_words;
+            return element_words;
         }
     }
 
-    return g_gosub_elements;
+    return &g_gosub_elements;
 }
 
 /**
  * @brief Animate, draw, frame, and link every allocated gosub element.
  * @param render_context Field render context and packet cursor.
+ * @see decomp.me (100%) https://decomp.me/scratch/t79hi
  */
 void gosub_update_and_render_elements(GosubRenderContext* render_context)
 {
@@ -2611,6 +2648,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
     s32 packet_address;
     s32 content_height;
     GosubGpuPacket* draw_cursor;
+    GosubGpuPacket* unused_packet;
     u32 marker_word;
     u32 panel_word;
     u32 state_word;
@@ -2642,7 +2680,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
         SetDefDrawEnv((DRAWENV*)draw_env, 0, 8, 0x140, 0xE0);
     }
 
-    element_words = (u32*)g_gosub_elements;
+    element_words = &g_gosub_elements;
     element_index = 0;
     address_mask = 0x00FFFFFF;
     tag_mask = 0xFF000000;
@@ -2667,7 +2705,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                         u32 high;
                         field = (element_word >> 7) & 0x1FF;
                         high = element_word >> 24;
-                        packet_cursor = gosub_emit_scroll_marker(draw_cursor, (s32*)ordering_table, (field + (((geometry_word & 1) << 8) | high)) - 0x10, (*((u8*)element_words + 2)) + element_height, 0);
+                        packet_cursor = gosub_emit_scroll_marker(draw_cursor, ordering_table, (field + (((geometry_word & 1) << 8) | high)) - 0x10, (*((u8*)element_words + 2)) + element_height, 0);
                     }
                 }
                 if (g_gosub_scroll_y != 0)
@@ -2678,7 +2716,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                         marker_word = *element_words;
                         field = (marker_word >> 7) & 0x1FF;
                         high = marker_word >> 24;
-                        packet_cursor = gosub_emit_scroll_marker(packet_cursor, (s32*)ordering_table, (field + (((*(u32*)((u8*)element_words + 4) & 1) << 8) | high)) - 0x10, (*((u8*)element_words + 2)), 1);
+                        packet_cursor = gosub_emit_scroll_marker(packet_cursor, ordering_table, (field + (((*(u32*)((u8*)element_words + 4) & 1) << 8) | high)) - 0x10, (*((u8*)element_words + 2)), 1);
                     }
                 }
                 SetDrawEnv((DR_ENV*)packet_cursor, (DRAWENV*)draw_env);
@@ -2720,7 +2758,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     panel_word = *element_words;
                     field = (panel_word >> 7) & 0x1FF;
                     high = panel_word >> 24;
-                    packet_cursor = gosub_emit_panel(packet_cursor, (s32*)ordering_table, field + (((*(u32*)((u8*)element_words + 4) & 1) << 8) | high) + 3, (*((u8*)element_words + 2)), 0xA,
+                    packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, field + (((*(u32*)((u8*)element_words + 4) & 1) << 8) | high) + 3, (*((u8*)element_words + 2)), 0xA,
                                            (*(u32*)((u8*)element_words + 4) >> 1) & 0xFF, render_context->display_buffer_index);
                 }
                 draw_cursor = packet_cursor;
@@ -2764,7 +2802,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
                     packet_cursor =
-                        gosub_emit_panel(packet_cursor, (s32*)ordering_table, field + (s32)((((*(u32*)((u8*)element_words + 4) & 1) << 8) | high) - animated_width) / 2,
+                        gosub_emit_panel(packet_cursor, ordering_table, field + (s32)((((*(u32*)((u8*)element_words + 4) & 1) << 8) | high) - animated_width) / 2,
                                       (*((u8*)element_words + 2)) + ((s32)((*(u32*)((u8*)element_words + 4) >> 1) & 0xFF) - animated_height) / 2, animated_width, animated_height, render_context->display_buffer_index);
                 }
                 entering_word = *element_words;
@@ -2784,7 +2822,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     u32 high;
                     case_word = *element_words;
                     high = case_word >> 24;
-                    packet_cursor = gosub_emit_panel(packet_cursor, (s32*)ordering_table, (case_word >> 7) & 0x1FF, (*((u8*)element_words + 2)), ((*(u32*)((u8*)element_words + 4) & 1) << 8) | high,
+                    packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, (case_word >> 7) & 0x1FF, (*((u8*)element_words + 2)), ((*(u32*)((u8*)element_words + 4) & 1) << 8) | high,
                                            (*(u32*)((u8*)element_words + 4) >> 1) & 0xFF, render_context->display_buffer_index);
                 }
                 break;
@@ -2817,7 +2855,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
                     packet_cursor =
-                        gosub_emit_panel(packet_cursor, (s32*)ordering_table, field + (s32)((((*(u32*)((u8*)element_words + 4) & 1) << 8) | high) - animated_width) / 2,
+                        gosub_emit_panel(packet_cursor, ordering_table, field + (s32)((((*(u32*)((u8*)element_words + 4) & 1) << 8) | high) - animated_width) / 2,
                                       (*((u8*)element_words + 2)) + ((s32)((*(u32*)((u8*)element_words + 4) >> 1) & 0xFF) - animated_height) / 2, animated_width, animated_height, render_context->display_buffer_index);
                 }
                 exiting_word = *element_words;
@@ -2846,6 +2884,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
  * @param y    Center Y coordinate.
  * @param flag Selects the up vs down vertex arrangement.
  * @return Pointer to the next free packet slot.
+ * @see decomp.me (100%)
  */
 void *gosub_emit_scroll_marker(GosubScrollMarkerPacket *prim, s32 *ot, s32 x, s32 y, s32 flag)
 {
@@ -2934,6 +2973,7 @@ void *gosub_emit_scroll_marker(GosubScrollMarkerPacket *prim, s32 *ot, s32 x, s3
  * @param h    Panel height.
  * @param flag Non-zero selects the lower frame-buffer half.
  * @return Pointer to the next free packet slot.
+ * @see decomp.me (100%)
  */
 GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag)
 {
@@ -2960,7 +3000,7 @@ GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s3
     *ot = (*ot & 0xFF000000) | ((s32)draw_env_packet & 0xFFFFFF);
 
     draw_env_packet = (GosubGpuPacket*)((u8*)draw_env_packet + 0x40);
-    packet_cursor = (GosubGpuPacket*)gosub_emit_panel_corners((SPRT*)draw_env_packet, ot, x, y, w, h);
+    packet_cursor = gosub_emit_panel_corners(draw_env_packet, ot, x, y, w, h);
     packet_cursor = (GosubGpuPacket*)gosub_emit_panel_outline((GosubLinePacket*)packet_cursor, ot, x, y, w, h, 0xFFFFFF);
     packet_cursor = (GosubGpuPacket*)gosub_emit_panel_outline((GosubLinePacket*)packet_cursor, ot, x + 1, y + 1, w - 2, h - 2, 0);
     packet_cursor = (GosubGpuPacket*)gosub_emit_panel_outline((GosubLinePacket*)packet_cursor, ot, x - 1, y - 1, w + 2, h + 2, 0);
@@ -2989,6 +3029,7 @@ GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s3
  * @param h     Rectangle height.
  * @param color Packed 0x00BBGGRR colour written to every line.
  * @return Pointer to the next free packet slot.
+ * @see decomp.me (100%)
  */
 GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 color)
 {
@@ -3047,6 +3088,7 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
  * @param x_off    Horizontal offset subtracted from every column position.
  * @param y_off    Vertical scroll offset subtracted from every row position.
  * @return Packet cursor just past the last highlight tile.
+ * @see decomp.me (100%)
  */
 GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 y_off)
 {
@@ -3101,56 +3143,56 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
                 if (y >= -0x2F && y < g_gosub_window_height)
                 {
                     prim =
-                        field_draw_cached_text(gosub_draw_portrait(prim, ot, row, -x_off, y, drawn_count), ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, label_x, y, 0);
+                        func_800A88A0(gosub_draw_portrait(prim, ot, row, -x_off, y, drawn_count), ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, label_x, y, 0);
                     if (g_gosub_rows[row].flags.f.alternate_format)
                     {
                         if ((g_gosub_rows[row].flags.half & 1) == 0)
                         {
                             line_y = y + 0x10;
-                            prim = field_draw_cached_text(prim, ot, MSG_HI(0x24), g_gosub_rows[row].text_color, label_x, line_y, 0);
+                            prim = func_800A88A0(prim, ot, MSG_HI(0x24), g_gosub_rows[row].text_color, label_x, line_y, 0);
                             pos.x = 0x54 - x_off;
                             pos.y = line_y;
-                            prim = field_draw_signed_decimal(ot, prim, g_gosub_rows[row].detail_variant, g_gosub_rows[row].text_color, pos_p, 0);
+                            prim = func_800A8A78(ot, prim, g_gosub_rows[row].detail_variant, g_gosub_rows[row].text_color, pos_p, 0);
                             detail_block = *(s32*)(base + 0x24);
-                            prim = field_draw_cached_text(prim, ot, (void*)(detail_block + (*(u16*)((detail_block + g_gosub_rows[row].detail_id * 2) + base) + base)), g_gosub_rows[row].text_color,
+                            prim = func_800A88A0(prim, ot, (void*)(detail_block + (*(u16*)((detail_block + g_gosub_rows[row].detail_id * 2) + base) + base)), g_gosub_rows[row].text_color,
                                                  0x84 - x_off, line_y, 0);
                         }
                         else
                         {
                             msg_off = *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset + g_gosub_rows[row].detail_variant * 2 + 0x44);
-                            prim = field_draw_cached_text(prim, ot, (void*)(g_gosub_message_archive_offset + (msg_off + base)), g_gosub_rows[row].text_color, label_x, y + 0x10, 0);
+                            prim = func_800A88A0(prim, ot, (void*)(g_gosub_message_archive_offset + (msg_off + base)), g_gosub_rows[row].text_color, label_x, y + 0x10, 0);
                         }
                     }
                     else
                     {
                         archive_block = g_gosub_text_archive_offsets_5;
-                        prim = field_draw_cached_text(prim, ot, (void*)(archive_block + (*(u16*)((archive_block + g_gosub_rows[row].detail_id * 2) + base) + base)), g_gosub_rows[row].text_color,
+                        prim = func_800A88A0(prim, ot, (void*)(archive_block + (*(u16*)((archive_block + g_gosub_rows[row].detail_id * 2) + base) + base)), g_gosub_rows[row].text_color,
                                              label_x, y + 0x10, 0);
                     }
                     line_y2 = y + 0x20;
-                    prim = field_draw_cached_text(prim, ot, MSG_HI(0x26), g_gosub_rows[row].text_color, label_x, line_y2, 0);
+                    prim = func_800A88A0(prim, ot, MSG_HI(0x26), g_gosub_rows[row].text_color, label_x, line_y2, 0);
                     pos.x = 0x48 - x_off;
                     pos.y = line_y2;
-                    prim = field_draw_signed_decimal(ot, prim, g_gosub_rows[row].secondary_value, g_gosub_rows[row].text_color, pos_p, 0);
+                    prim = func_800A8A78(ot, prim, g_gosub_rows[row].secondary_value, g_gosub_rows[row].text_color, pos_p, 0);
                     msg_off = g_gosub_message_archive_offset - -(*(u16*)((s32)g_gosub_message_archive_offset - -(s32)archive_data) + base);
-                    prim = field_draw_cached_text(prim, ot, (void*)msg_off, g_gosub_rows[row].text_color, 0x64 - x_off, line_y2, 0);
+                    prim = func_800A88A0(prim, ot, (void*)msg_off, g_gosub_rows[row].text_color, 0x64 - x_off, line_y2, 0);
                     pos.x = 0xB0 - x_off;
                     pos.y = line_y2;
-                    prim = field_draw_signed_decimal(ot, prim, g_gosub_rows[row].primary_value, g_gosub_rows[row].text_color, pos_p, 0);
+                    prim = func_800A8A78(ot, prim, g_gosub_rows[row].primary_value, g_gosub_rows[row].text_color, pos_p, 0);
                     if (g_gosub_rows[row].detail_group != 0)
                     {
                         s32 right_padding;
-                        prim = field_draw_cached_text(prim, ot, MSG_LO(0x4A), g_gosub_rows[row].text_color, g_gosub_window_width - (right_padding = x_off, right_padding += 0xC), line_y2, 1);
+                        prim = func_800A88A0(prim, ot, MSG_LO(0x4A), g_gosub_rows[row].text_color, g_gosub_window_width - (right_padding = x_off, right_padding += 0xC), line_y2, 1);
                     }
                     else if (g_gosub_rows[row].flags.half & 1)
                     {
                         s32 right_padding;
-                        prim = field_draw_cached_text(prim, ot, MSG_LO(0x60), g_gosub_rows[row].text_color, g_gosub_window_width - (right_padding = x_off, right_padding += 0xC), line_y2, 1);
+                        prim = func_800A88A0(prim, ot, MSG_LO(0x60), g_gosub_rows[row].text_color, g_gosub_window_width - (right_padding = x_off, right_padding += 0xC), line_y2, 1);
                     }
                     else if (g_gosub_rows[row].flags.f.selection_restricted)
                     {
                         s32 right_padding;
-                        prim = field_draw_cached_text(prim, ot, MSG_LO(0x6E), g_gosub_rows[row].text_color, g_gosub_window_width - (right_padding = x_off, right_padding += 0xC), line_y2, 1);
+                        prim = func_800A88A0(prim, ot, MSG_LO(0x6E), g_gosub_rows[row].text_color, g_gosub_window_width - (right_padding = x_off, right_padding += 0xC), line_y2, 1);
                     }
                     drawn_count += 1;
                 }
@@ -3162,10 +3204,10 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
                 {
                     line_y3 = y + 8;
                     prim = gosub_draw_composite_icon(prim, ot, 0xC - x_off, y, g_gosub_rows[row].detail_group, g_gosub_rows[row].detail_variant);
-                    prim = field_draw_cached_text(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, 0x4C - x_off, line_y3, 0);
+                    prim = func_800A88A0(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, 0x4C - x_off, line_y3, 0);
                     if (g_gosub_rows[row].flags.f.alternate_format)
                     {
-                        prim = field_draw_cached_text(prim, ot, MSG_HI(0x20), g_gosub_rows[row].text_color, 0x110 - x_off, line_y3, 1);
+                        prim = func_800A88A0(prim, ot, MSG_HI(0x20), g_gosub_rows[row].text_color, 0x110 - x_off, line_y3, 1);
                     }
                 }
             }
@@ -3176,13 +3218,13 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
                 y = (status_pad - y_top) - g_gosub_scroll_y;
                 if (-g_gosub_row_height < y && y < g_gosub_window_height)
                 {
-                    prim = field_draw_cached_text(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, 0xC - x_off, y, 0);
+                    prim = func_800A88A0(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].text_color, 0xC - x_off, y, 0);
                     pos.y = y;
                     x_pad = x_off + 0xC;
                     pos.x = g_gosub_window_width - x_pad;
                     if (g_gosub_rows[row].value >= 0)
                     {
-                        prim = field_draw_signed_decimal(ot, prim, g_gosub_rows[row].value, g_gosub_rows[row].text_color, pos_p, 1);
+                        prim = func_800A8A78(ot, prim, g_gosub_rows[row].value, g_gosub_rows[row].text_color, pos_p, 1);
                     }
                 }
             }
@@ -3251,6 +3293,7 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
  * @param count How many portraits were already emitted this frame.
  * @return Packet cursor past the sprite (gosub_finish_glyph_run's return), or prim
  *         when count is 5 or more.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
 {
@@ -3280,14 +3323,14 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     rect.w = 0xC;
     rect.h = 0x30;
     rect.y = g_gosub_frame_parity * 0x30;
-    LoadImage(&rect, (u_long*)((u8*)g_gosub_portrait_archive + g_gosub_portrait_archive[idx] + 0x1C));
+    LoadImage(&rect, (u8*)g_gosub_portrait_archive + g_gosub_portrait_archive[idx] + 0x1C);
 
     rect.y = 0x1F2;
     rect.w = 0x10;
     rect.h = 1;
     n = n * 0x10;
     rect.x = n + g_gosub_frame_parity * 0x50;
-    LoadImage(&rect, (u_long*)((u8*)g_gosub_portrait_archive + g_gosub_portrait_archive[idx] - 4));
+    LoadImage(&rect, (u8*)g_gosub_portrait_archive + g_gosub_portrait_archive[idx] - 4);
 
     sprt = (SPRT*)prim;
     SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
@@ -3320,6 +3363,7 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
  * @return Packet cursor past the last packet, or the incoming cursor when
  *         there is no combination to show.
  *
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_combination_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_off)
 {
@@ -3355,11 +3399,11 @@ s32 gosub_draw_combination_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_o
         gosub_copy_encoded_string(name_cursor, block_offset + (*(u16*)(g_gosub_combination_result_id * 2 + block_offset + base) + base));
         if (g_gosub_combination_quantity != 0)
         {
-            gosub_append_encoded_string(name_cursor, g_gosub_positive_value_prefix_offset_bytes - 0x16 + g_gosub_positive_value_prefix_offset_bytes[0] + (g_gosub_positive_value_prefix_offset_bytes[1] << 8));
-            field_format_signed_decimal(number_text, g_gosub_combination_quantity, 1);
+            gosub_append_encoded_string(name_cursor, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
+            func_800A8B90(number_text, g_gosub_combination_quantity, 1);
             gosub_append_encoded_string(name_cursor, number_text);
         }
-        prim = field_draw_cached_text(prim, ot, name_cursor, 4, 0x4C - x_off, 0xA - y_off, 0);
+        prim = func_800A88A0(prim, ot, name_cursor, 4, 0x4C - x_off, 0xA - y_off, 0);
     }
     return prim;
 }
@@ -3376,6 +3420,7 @@ s32 gosub_draw_combination_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_o
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return Always 0.
+ * @see decomp.me (100%)
  */
 s32 gosub_handle_row_action_dialog(s32 dialog_result)
 {
@@ -3429,6 +3474,7 @@ s32 gosub_handle_row_action_dialog(s32 dialog_result)
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return 1 when no rows remain, otherwise 0.
+ * @see decomp.me (100%)
  */
 s32 gosub_handle_delete_dialog(s32 dialog_result)
 {
@@ -3479,6 +3525,7 @@ s32 gosub_handle_delete_dialog(s32 dialog_result)
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return 1 when the confirm path is taken, otherwise 0.
  *
+ * @see decomp.me (100%)
  */
 s32 gosub_handle_backtrack_dialog(s32 dialog_result)
 {
@@ -3517,6 +3564,7 @@ s32 gosub_handle_backtrack_dialog(s32 dialog_result)
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return Always 0.
+ * @see decomp.me (100%)
  */
 s32 gosub_handle_sort_dialog(s32 dialog_result)
 {
@@ -3541,8 +3589,9 @@ s32 gosub_handle_sort_dialog(s32 dialog_result)
  *
  * Installs gosub_draw_two_option_dialog as element 0's draw handler and gosub_handle_row_action_dialog as the
  * dialog's result handler, clears the pending choice, then starts the element
- * entering at x 0x80 / y 0x24 with code 0x80. field_reset_menu_input runs last.
+ * entering at x 0x80 / y 0x24 with code 0x80. func_800AA02C runs last.
  *
+ * @see decomp.me (100%)
  */
 void gosub_open_row_action_dialog(void)
 {
@@ -3559,11 +3608,12 @@ void gosub_open_row_action_dialog(void)
     element->width_high = 0;
     element->y = 0x24;
     SET_ELEMENT_WIDTH_LOW(element, 0x80);
-    field_reset_menu_input();
+    func_800AA02C();
 }
 
 /**
  * @brief Open the three-option row sorting dialog.
+ * @see decomp.me (100%)
  */
 void gosub_open_sort_dialog(void)
 {
@@ -3580,7 +3630,7 @@ void gosub_open_sort_dialog(void)
     element->width_high = 0;
     element->y = 0x34;
     SET_ELEMENT_WIDTH_LOW(element, 0x80);
-    field_reset_menu_input();
+    func_800AA02C();
 }
 
 /**
@@ -3590,6 +3640,7 @@ void gosub_open_sort_dialog(void)
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both actions.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
@@ -3612,7 +3663,7 @@ s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_
     {
         sort_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, sort_text, sort_color,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, sort_text, sort_color,
                                   GOSUB_ROW_ACTION_DIALOG_X - x_offset,
                                   GOSUB_ROW_ACTION_SORT_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_CENTER);
@@ -3623,7 +3674,7 @@ s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_
     {
         delete_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, delete_text, delete_color,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, delete_text, delete_color,
                                   GOSUB_ROW_ACTION_DIALOG_X - x_offset,
                                   GOSUB_ROW_ACTION_DELETE_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_CENTER);
@@ -3638,6 +3689,7 @@ s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after all three choices.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
@@ -3664,7 +3716,7 @@ s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 
     {
         type_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, type_text, type_color,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, type_text, type_color,
                                   GOSUB_SORT_DIALOG_X - x_offset,
                                   GOSUB_SORT_DIALOG_TYPE_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_CENTER);
@@ -3675,7 +3727,7 @@ s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 
     {
         text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, power_text, text_color,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, power_text, text_color,
                                   GOSUB_SORT_DIALOG_X - x_offset,
                                   GOSUB_SORT_DIALOG_POWER_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_CENTER);
@@ -3686,7 +3738,7 @@ s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 
     {
         text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, shape_text, text_color,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, shape_text, text_color,
                                   GOSUB_SORT_DIALOG_X - x_offset,
                                   GOSUB_SORT_DIALOG_SHAPE_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_CENTER);
@@ -3697,6 +3749,7 @@ s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 
 /**
  * @brief Open a modal dialog containing caller-provided text.
  * @param message_text Pointer to the encoded dialog text.
+ * @see decomp.me (100%)
  */
 void gosub_open_message_dialog(u8* message_text)
 {
@@ -3715,7 +3768,7 @@ void gosub_open_message_dialog(u8* message_text)
     element->width_high = 1;
     element->y = 0x14;
     SET_ELEMENT_WIDTH_LOW(element, 0);
-    field_reset_menu_input();
+    func_800AA02C();
     g_gosub_result_count = 0;
 }
 
@@ -3726,12 +3779,13 @@ void gosub_open_message_dialog(u8* message_text)
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the dialog text.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 stack_padding[14];
 
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table,
                                   g_gosub_dialog_text,
                                   GOSUB_TEXT_COLOR_NORMAL,
                                   GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
@@ -3747,6 +3801,7 @@ s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offs
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the header and optional details.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -3759,7 +3814,7 @@ s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offse
     archive_base = (s32)archive_offset_word - 0x20;
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_DETAIL_HEADER_MESSAGE_OFFSET);
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, text,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
                                   GOSUB_TEXT_COLOR_NORMAL,
                                   GOSUB_DETAIL_HEADER_X - x_offset,
                                   GOSUB_DETAIL_HEADER_Y - y_offset,
@@ -3779,6 +3834,7 @@ s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offse
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both lines.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -3791,14 +3847,14 @@ s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_off
     archive_base = (s32)archive_offset_word - 0x20;
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_TWO_LINE_HEADER_FIRST_MESSAGE_OFFSET);
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, text,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
                                   GOSUB_TEXT_COLOR_NORMAL,
                                   GOSUB_TWO_LINE_HEADER_X - x_offset,
                                   GOSUB_TWO_LINE_HEADER_FIRST_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_CENTER);
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_TWO_LINE_HEADER_SECOND_MESSAGE_OFFSET);
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, text,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
                                   GOSUB_TEXT_COLOR_NORMAL,
                                   GOSUB_TWO_LINE_HEADER_X - x_offset,
                                   GOSUB_TWO_LINE_HEADER_SECOND_Y - y_offset,
@@ -3814,6 +3870,7 @@ s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_off
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the title and both choices.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -3827,7 +3884,7 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
     archive_base = (s32)archive_offset_word - 0x20;
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_TITLE_MESSAGE_OFFSET);
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, text,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
                                   GOSUB_TEXT_COLOR_NORMAL,
                                   GOSUB_CONFIRMATION_TITLE_X - x_offset,
                                   GOSUB_CONFIRMATION_TITLE_Y - y_offset,
@@ -3839,7 +3896,7 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
     {
         text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, text, text_color,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color,
                                   GOSUB_CONFIRMATION_FIRST_CHOICE_X - x_offset,
                                   GOSUB_CONFIRMATION_CHOICE_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_RIGHT);
@@ -3850,7 +3907,7 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
     {
         text_color = GOSUB_TEXT_COLOR_DISABLED;
     }
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table, text, text_color,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color,
                                   GOSUB_CONFIRMATION_SECOND_CHOICE_X - x_offset,
                                   GOSUB_CONFIRMATION_CHOICE_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_LEFT);
@@ -3865,12 +3922,13 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the description and optional details.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 stack_padding[12];
 
-    packet_cursor = field_draw_cached_text(packet_cursor, ordering_table,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table,
                                   g_gosub_rows[g_gosub_cursor_row].desc,
                                   GOSUB_TEXT_COLOR_NORMAL,
                                   GOSUB_ROW_DESCRIPTION_X - x_offset,
@@ -3891,6 +3949,7 @@ s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_off
  * @param x_offset Horizontal dialog animation offset.
  * @param y_offset Vertical dialog animation offset.
  * @return Packet cursor after the equipment detail line.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset)
 {
@@ -3905,27 +3964,27 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
     switch (equipment_kind)
     {
     case GOSUB_EQUIPMENT_KIND_WEAPON:
-        packet_cursor = field_draw_cached_text(packet_cursor, ordering_table,
-                                      (void*)((u8*)&g_gosub_weapon_power_label_offset - 0x2A + g_gosub_weapon_power_label_offset.low + (g_gosub_weapon_power_label_offset.high << 8)),
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                      (void*)((u8*)&D_800EC3EE - 0x2A + D_800EC3EE.low + (D_800EC3EE.high << 8)),
                                       GOSUB_TEXT_COLOR_NORMAL,
                                       GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
                                       GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_signed_decimal(ordering_table, packet_cursor,
+        packet_cursor = func_800A8A78(ordering_table, packet_cursor,
                                       g_gosub_rows[g_gosub_cursor_row].primary_value,
                                       GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
         break;
 
     case GOSUB_EQUIPMENT_KIND_ARMOR:
-        packet_cursor = field_draw_cached_text(packet_cursor, ordering_table,
-                                      (void*)((u8*)&g_gosub_armor_defense_label_offset - 0x2C + g_gosub_armor_defense_label_offset.low + (g_gosub_armor_defense_label_offset.high << 8)),
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                      (void*)((u8*)&D_800EC3F0 - 0x2C + D_800EC3F0.low + (D_800EC3F0.high << 8)),
                                       GOSUB_TEXT_COLOR_NORMAL,
                                       GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
                                       GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_signed_decimal(ordering_table, packet_cursor,
+        packet_cursor = func_800A8A78(ordering_table, packet_cursor,
                                       g_gosub_rows[g_gosub_cursor_row].stats[0] +
                                           g_gosub_rows[g_gosub_cursor_row].stats[1] +
                                           g_gosub_rows[g_gosub_cursor_row].stats[2] +
@@ -3936,14 +3995,14 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
     /* Instruments and the reserved fourth kind use the same detail layout. */
     default:
         archive_block = &g_gosub_text_archive_offsets_6;
-        packet_cursor = field_draw_cached_text(packet_cursor, ordering_table,
-                                      (void*)((u8*)&g_gosub_instrument_power_label_offset - 0x2E + g_gosub_instrument_power_label_offset.low + (g_gosub_instrument_power_label_offset.high << 8)),
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
+                                      (void*)((u8*)&D_800EC3F2 - 0x2E + D_800EC3F2.low + (D_800EC3F2.high << 8)),
                                       GOSUB_TEXT_COLOR_NORMAL,
                                       GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
                                       GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = field_draw_signed_decimal(ordering_table, packet_cursor,
+        packet_cursor = func_800A8A78(ordering_table, packet_cursor,
                                       g_gosub_rows[g_gosub_cursor_row].primary_value,
                                       GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
         archive_base = (u8*)archive_block;
@@ -3951,7 +4010,7 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
         effect_text_offset = (s32)archive_base +
                              *(u16*)(g_gosub_rows[g_gosub_cursor_row].stats[0] * 2 +
                                      g_gosub_text_archive_offsets_6 + archive_base);
-        packet_cursor = field_draw_cached_text(packet_cursor, ordering_table,
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
                                       (void*)(g_gosub_text_archive_offsets_6 + effect_text_offset),
                                       GOSUB_TEXT_COLOR_NORMAL,
                                       GOSUB_INSTRUMENT_EFFECT_X - x_offset,
@@ -3969,12 +4028,13 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
  * @param x_off Horizontal dialog animation offset.
  * @param y_off Vertical dialog animation offset.
  * @return Packet cursor after the title.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_title(s32* ot, s32 prim, s32 x_off, s32 y_off)
 {
     s32 stack_pad[14];
 
-    prim = field_draw_cached_text(prim, ot, g_gosub_title_text, 4, 0x84 - x_off, 2 - y_off, 2);
+    prim = func_800A88A0(prim, ot, g_gosub_title_text, 4, 0x84 - x_off, 2 - y_off, 2);
     return prim;
 }
 
@@ -3982,6 +4042,7 @@ s32 gosub_draw_title(s32* ot, s32 prim, s32 x_off, s32 y_off)
  * @brief Append one encoded string to another.
  * @param dst Null-terminated destination buffer.
  * @param src Null-terminated source string.
+ * @see decomp.me (100%)
  */
 void gosub_append_encoded_string(u8* dst, u8* src)
 {
@@ -4004,6 +4065,7 @@ void gosub_append_encoded_string(u8* dst, u8* src)
  * @brief Count bytes in a null-terminated encoded string.
  * @param text Encoded string to measure.
  * @return Byte count excluding the terminator.
+ * @see decomp.me (100%)
  */
 s32 gosub_encoded_string_length(const u8* text)
 {
@@ -4034,6 +4096,7 @@ s32 gosub_encoded_string_length(const u8* text)
  * @brief Copy a null-terminated encoded string.
  * @param dst Destination buffer.
  * @param src Source string.
+ * @see decomp.me (100%)
  */
 void gosub_copy_encoded_string(u8* dst, u8* src)
 {
@@ -4068,6 +4131,7 @@ void gosub_copy_encoded_string(u8* dst, u8* src)
 
 /**
  * @brief Upload the gosub interface image and CLUT to their fixed VRAM slots.
+ * @see decomp.me (100%)
  */
 void gosub_upload_ui_image(void)
 {
@@ -4084,6 +4148,7 @@ void gosub_upload_ui_image(void)
  * @brief Upload a TIM's optional CLUT and pixel data to selected VRAM positions.
  * @param destinations VRAM destinations for the pixel and CLUT blocks.
  * @param tim TIM resource to upload.
+ * @see decomp.me (100%)
  */
 void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim)
 {
@@ -4122,6 +4187,7 @@ void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* t
  * @param icon_id Icon identifier used for the base glyph and part CLUT.
  * @param layout_index Composite layout index.
  * @return Packet cursor after closing the glyph run.
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s32 y, s32 icon_id, s32 layout_index)
 {
@@ -4138,8 +4204,8 @@ s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s3
     s32 packet_cursor;
     u8* table_bytes;
 
-    clut = g_gosub_composite_icon_cluts[icon_id];
-    table_bytes = g_gosub_composite_icon_layouts;
+    clut = D_800F2180[icon_id];
+    table_bytes = D_800F1CD0;
     layout_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) +
                               (s32)table_bytes);
     layout_x = layout_view.layout->origin_x;
@@ -4158,7 +4224,7 @@ s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s3
     layout_y = 0;
     for (part_index = layout_y; part_index < layout_view.bytes[layout_y]; part_index++)
     {
-        u8* loop_base = &g_gosub_composite_icon_layouts[layout_y];
+        u8* loop_base = &D_800F1CD0[layout_y];
 
         part_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) +
                                 part_index * (s32)sizeof(GosubCompositeIconPart) +
@@ -4179,6 +4245,7 @@ s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s3
  * @param packet_cursor Packet cursor.
  * @param ordering_table Ordering-table tag to link the packet into.
  * @return Packet cursor past the 8-byte draw-mode packet.
+ * @see decomp.me (100%)
  */
 s32 gosub_finish_glyph_run(s32 packet_cursor, s32* ordering_table)
 {
@@ -4200,6 +4267,7 @@ s32 gosub_finish_glyph_run(s32 packet_cursor, s32* ordering_table)
  * @param y Sprite top edge.
  * @param clut_index CLUT slot on the glyph palette row.
  * @return Packet cursor past the 0x14-byte sprite.
+ * @see decomp.me (100%)
  */
 s32 gosub_emit_glyph(s32 packet_cursor, s32* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut_index)
 {
@@ -4220,6 +4288,7 @@ s32 gosub_emit_glyph(s32 packet_cursor, s32* ordering_table, s32 glyph_id, s32 x
  * @brief Delete one packed logic-block record and close the gap.
  *
  * @param record_index Index of the record to remove.
+ * @see decomp.me (100%)
  */
 void gosub_delete_packed_record(s32 record_index)
 {
@@ -4241,6 +4310,7 @@ void gosub_delete_packed_record(s32 record_index)
  * that index pulled down by one so it keeps naming the same record.
  *
  * @param row Index of the row to remove.
+ * @see decomp.me (100%)
  */
 void gosub_delete_list_row(s32 row)
 {
@@ -4265,6 +4335,7 @@ void gosub_delete_list_row(s32 row)
  *
  * @param dst Destination record.
  * @param src Source record.
+ * @see decomp.me (100%)
  */
 inline void gosub_copy_packed_record(void* dst, void* src)
 {
@@ -4288,6 +4359,7 @@ inline void gosub_copy_packed_record(void* dst, void* src)
  *
  * @param dst Destination row.
  * @param src Source row.
+ * @see decomp.me (100%)
  */
 inline void gosub_copy_list_row(void* dst, void* src)
 {
@@ -4315,6 +4387,7 @@ inline void gosub_copy_list_row(void* dst, void* src)
  *
  * @param sort_mode Encoded type, power, or shape key and sort direction.
  *
+ * @see decomp.me (100%)
  */
 void gosub_sort_rows(s32 sort_mode)
 {
@@ -4362,6 +4435,7 @@ void gosub_sort_rows(s32 sort_mode)
  * @param left_row_index  First row index before the optional direction swap.
  * @param right_row_index Second row index before the optional direction swap.
  * @return 1 when the left operand sorts before the right, otherwise 0.
+ * @see decomp.me (100%)
  */
 s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index)
 {
@@ -4402,6 +4476,7 @@ s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index)
  *
  * @note The 0x200-byte texture transfer continues through the first 0x5C bytes
  *       of g_gosub_item_metadata; its live metadata begins at index 0x60.
+ * @see decomp.me (100%)
  */
 void gosub_upload_font_texture(void)
 {
@@ -4431,6 +4506,7 @@ void gosub_upload_font_texture(void)
  * @param w    Panel width.
  * @param h    Panel height.
  * @return Packet cursor past the draw-mode packet.
+ * @see decomp.me (100%)
  */
 GosubGpuPacket* gosub_emit_panel_corners(SPRT* prim, s32* ot, s32 x, s32 y, s32 w, s32 h)
 {
