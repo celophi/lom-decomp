@@ -247,8 +247,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field158.c \
 	src/overlays/field/field160.c \
 	src/overlays/field/field162.c \
-	src/overlays/field/field164.c \
-	src/overlays/field/field165.c \
 	src/overlays/field/field168.c \
 	src/overlays/field/field178.c \
 	src/overlays/field/field187.c \
@@ -398,7 +396,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split062_b.c \
 	src/overlays/field/unk2_b_split064.c \
 	src/overlays/field/unk2_b_split064_tail.c \
-	src/overlays/field/func_800C3688.c \
 	src/overlays/field/unk2_b_split067_b.c \
 	src/overlays/field/unk2_b_split068.c \
 	src/overlays/field/func_800C3CB4.c \
@@ -506,6 +503,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field_text_format_number.c
 overlay_field_gcc_280_g0_srcs := \
+	src/overlays/field/field_record_table_ops.c \
 	src/overlays/field/field_menu_slot_ops.c \
 	src/overlays/field/field_menu_count_ops.c \
 	src/overlays/field/field_gosub_result_ops.c \
@@ -526,9 +524,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field344.c \
 	src/overlays/field/field345.c \
 	src/overlays/field/field346.c \
-	src/overlays/field/func_800C38C8.c \
 	src/overlays/field/func_800C23F4.c \
-	src/overlays/field/field351.c \
 	src/overlays/field/field353.c \
 	src/overlays/field/field354.c \
 	src/overlays/field/func_800B820C.c \
@@ -538,7 +534,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field357.c \
 	src/overlays/field/field358.c \
 	src/overlays/field/field360.c \
-	src/overlays/field/field361.c \
 	src/overlays/field/field362.c \
 	src/overlays/field/field363.c \
 	src/overlays/field/field364.c \
@@ -582,9 +577,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800C2848.c \
 	src/overlays/field/func_800C29CC.c \
 	src/overlays/field/func_800C2D08.c \
-	src/overlays/field/func_800C32C8.c \
-	src/overlays/field/func_800C33E4.c \
-	src/overlays/field/func_800C36F0.c \
 	src/overlays/field/func_800C5760.c \
 	src/overlays/field/func_800C7494.c \
 	src/overlays/field/func_800BD3B0.c \
@@ -628,8 +620,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field156.c \
 	src/overlays/field/field159.c \
 	src/overlays/field/field161.c \
-	src/overlays/field/field163.c \
-	src/overlays/field/field166.c \
 	src/overlays/field/field167.c \
 	src/overlays/field/field169.c \
 	src/overlays/field/field170.c \
@@ -677,8 +667,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field285.c \
 	src/overlays/field/field286.c \
 	src/overlays/field/field287.c \
-	src/overlays/field/field291.c \
-	src/overlays/field/field292.c \
 	src/overlays/field/field293.c \
 	src/overlays/field/field296.c \
 	src/overlays/field/field299.c \
