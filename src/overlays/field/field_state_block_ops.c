@@ -7,7 +7,11 @@ typedef struct
     s32 unk4;
 } SubState;
 
-/** @brief Command entry pointed to by FieldState::unk1C; unk3 is the opcode. */
+/**
+ * @brief Entry pointed to by FieldState::unk1C. Byte 3 selects a D_800F0B98
+ *        handler; the handlers also read the word at +0 (low nibble) and the
+ *        packed word at +4.
+ */
 typedef struct
 {
     u8 pad0[3];
@@ -15,8 +19,10 @@ typedef struct
 } Entry;
 
 /**
- * @brief Block at D_80123FB0. Word 0 carries flag 0x80000000; the pointers at
- *        0x18 and 0x1C select the active sub-state and command entry.
+ * @brief View of the 0x4A4-byte block at D_80123FB0 (D_80123B08, built by
+ *        func_800B3580 in field_state_ops.c). Word 0 carries flag 0x80000000,
+ *        which field309.c tests as the sign bit; the pointers at 0x18 and 0x1C
+ *        select the active sub-state and entry.
  */
 typedef struct
 {
@@ -37,12 +43,23 @@ typedef struct
     u16 unkA;
 } ActorB4934;
 
+/*
+ * D_800F0B98 holds eight handlers indexed by Entry::unk3: func_800B6890,
+ * func_800B69B0, func_800B6B28, func_800B6C48, func_800B6D3C, func_800B6EC0,
+ * func_800B7020 and func_800B70EC. Only entries 0, 2, 6 and 7 are decompiled.
+ */
 typedef s32 (*Handler)(void);
 
 #define FB0_BYTES ((u8 *)D_80123FB0)
 
 u8 *func_800C1E40(s32 arg0);
-s32 func_800B2A9C(void);
+/*
+ * Declared without a prototype: func_800B2A9C takes an id argument (see
+ * func_800B2A9C.c), but func_800B66F0 calls it with none and lets the caller's
+ * a0 flow through. A void prototype would misstate that; an s32 one would add
+ * an argument load.
+ */
+s32 func_800B2A9C();
 s32 func_800B6334(s32 value);
 void func_800B65CC(s32 value);
 void func_800B4934(ActorB4934 *arg0);
@@ -61,8 +78,12 @@ extern u8 *D_80122B74;
 extern Handler D_800F0B98[];
 
 /**
- * @brief Write script variable 0x4288, set the block's high flag, and notify func_800B28E0.
- * @param arg0 Value written to script variable 0x4288.
+ * @brief Write script variable 0x4288, set the block's 0x80000000 flag, and call func_800B28E0 with the block.
+ *
+ * func_800B28E0 is called with four arguments here and three elsewhere, so it
+ * is left implicitly declared.
+ *
+ * @param arg0 Value written to script variable 0x4288. Callers pass func_800B6334's result.
  */
 void func_800B65CC(s32 arg0)
 {
@@ -74,11 +95,13 @@ void func_800B65CC(s32 arg0)
 }
 
 /**
- * @brief Resolve three entries of resource 9 into D_801228F8, or clear them when the resource is absent.
+ * @brief Resolve three entries of resource record 9 into D_801228F8, or clear them when the record is absent.
  *
- * When the layout buffer's 0x840 flag is set and the 0x858 word's low 7 bits
+ * When the layout buffer's 0x840 byte is set and the 0x858 word's low 7 bits
  * equal 2, D_80122698 is set and the entry base advances by (byte 0x859 + 1)
- * groups of three.
+ * groups of three. func_800C31BC and script opcode 0x27 treat 0x840/0x858 as
+ * one of two parallel slots (the other is 0xA90/0xAA8), and func_800C10F0 uses
+ * byte 0x859 as a small per-member index.
  */
 void func_800B661C(void)
 {
@@ -146,8 +169,12 @@ void func_800B66F0(void)
 }
 
 /**
- * @brief Find the first of the actor's four 0x40-byte slots holding id 0x58 with flag 2 set, mark it 0xFF, and run func_800B4934.
- * @param arg0 Actor whose unk4 selects the 0x250-byte block at layout offset 0x5F0.
+ * @brief Find the first of the actor's four 0x40-byte sub-entries holding id 0x58 with bit 1 of its 0x2E flags set, replace the id with 0xFF, clear the flags, and rebuild the status mask via func_800B4934.
+ *
+ * The four sub-entries start at layout offset 0x5F0 + unk4 * 0x250 + 0x50,
+ * the same walk func_800B4934 in field293.c performs.
+ *
+ * @param arg0 Actor whose unk4 selects the 0x250-byte block.
  */
 void func_800B6744(ActorB4934 *arg0)
 {
@@ -179,12 +206,11 @@ void func_800B6744(ActorB4934 *arg0)
 }
 
 /**
- * @brief Advance the active field command through its per-opcode handler.
+ * @brief Dispatch the active entry's byte 3 through the D_800F0B98 handler table.
  *
- * When the field state has a current entry, dispatches its opcode (@c unk3):
- * opcodes below 8 run their handler from the D_800F0B98 table (returning its
- * result); higher opcodes report to akao_set_song_params. Returns 0 when there
- * is no entry or after the report.
+ * Values below 8 run the table entry and return its result; higher values are
+ * reported to akao_set_song_params with the sub-state's word at 0x4. Returns 0
+ * when there is no entry or after the report.
  *
  * @return The dispatched handler's result, or 0.
  * @see decomp.me (100%) TODO
@@ -207,11 +233,13 @@ s32 func_800B6808(void)
 }
 
 /**
- * @brief Unpack the current field opcode word and drive its handler chain.
+ * @brief Handler 0 of D_800F0B98: unpack the entry's packed word at +4 and run the func_800B70F4 .. func_800B742C chain.
  *
- * Reads the packed word at D_80123FB0->unk1C + 4, splits it into nibbles and
- * a byte, and feeds func_800B70F4/7164/729C/742C, then conditionally
- * func_800B2B54, and finally func_800B78C0.
+ * Nibble 0 goes to func_800B70F4, nibble 1 to func_800B7164, byte 1 to
+ * func_800B729C, and the two results to func_800B742C. func_800B2B54 then runs
+ * unless the entry's low nibble is 2 and byte 1 misses the mask at
+ * (*unk24)[0x39]; func_800B78C0 applies the inverse guard. func_800B6B28 is a
+ * near-clone of this function.
  *
  * @return func_800B742C's result.
  */

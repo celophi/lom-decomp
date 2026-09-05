@@ -477,7 +477,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field_text_format_number.c
 overlay_field_gcc_280_g0_srcs := \
-	src/overlays/field/field_command_state_ops.c \
+	src/overlays/field/field_state_block_ops.c \
 	src/overlays/field/field_state_ops.c \
 	src/overlays/field/field_script_misc_ops.c \
 	src/overlays/field/field_record_lookup_ops.c \

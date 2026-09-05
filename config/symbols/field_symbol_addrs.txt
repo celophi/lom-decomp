@@ -261,6 +261,7 @@ g_field_script                        = 0x80123FB8;
 g_equipment_combination_rule_table    = 0x800F1B58;
 g_equipment_combination_quantity_scale= 0x800F1C58;
 g_field_resource_buffer               = 0x800CBF84;
+g_field_resource_blob                 = 0x800DC7A8;
 g_field_fade_target                   = 0x800F2268;
 g_field_fade_restore_color            = 0x800F2270;
 g_field_return_to_title_prompt_delay  = 0x800F2284;

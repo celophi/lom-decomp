@@ -350,7 +350,7 @@ segments:
       - [0x665BD, c, func_800B622C]             # gcc280_g0, 79.93%
       - [0x66669, c, field260]                  # gcc280_g0, func_800B62D8
       - [0x666C5, c, unk2_b_split118]           # gcc272_cdk, func_800B6334
-      - [0x6695D, c, field_command_state_ops]   # gcc280_g0, func_800B65CC .. func_800B6890 (6 funcs, 100%)
+      - [0x6695D, c, field_state_block_ops]     # gcc280_g0, func_800B65CC .. func_800B6890 (6 funcs, 100%)
       - [0x66D41, c, unk2_b_split106_tail_b]        # gcc272_cdk, func_800B69B0
       - [0x66EB9, c, func_800B6B28]                  # gcc280_g0, 100%
       - [0x66FD9, c, unk2_b_split106_tail_b_after_6b28] # gcc272_cdk, func_800B6C48 .. func_800B6EC0
@@ -552,4 +552,16 @@ segments:
       - [0x7C1F5, c, func_800CBE64]                # gcc280_g0, 100%
       - [0x7C255, c, func_800CBEC4]                # gcc280_g0, 100% (also matches gcc272_cdk)
       - [0x7C2D5, data, data]
+      - start: 0x7C315
+        type: tim
+        name: field_resource
+        dir: field
+        trailing_duplicate_word: true
+      - [0x8CB39, databin, field_resource_blob]      # g_field_resource_blob: word 1 is the payload length (see func_80083948)
+      - [0x9B369, data, data_b]
+      - [0x9E269, databin, clut_800EDED8]            # 512 BGR555 entries
+      - [0x9E669, databin, clut_800EE2D8]            # 256 BGR555 entries
+      - [0x9E869, data, data_c]
+      - [0x9F9DD, databin, rect_table_800EF64C]      # 64 RECTs (x, y, w, h halfwords)
+      - [0x9FBDD, data, data_d]
   - [0xD4369]
