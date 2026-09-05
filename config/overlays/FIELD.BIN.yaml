@@ -300,11 +300,7 @@ segments:
       - [0x5ABB5, c, field74]                      # gcc272_cdk, func_800AA824
       - [0x5ABE9, c, field369]                     # gcc272_cdk, func_800AA858
       - [0x5AC9D, c, unk2_b_split014]              # gcc272_cdk, func_800AA90C
-      - [0x5B291, c, field328]                     # gcc272_cdk, func_800AAF00
-      - [0x5B32D, c, field244]                     # gcc272_cdk, func_800AAF9C
-      - [0x5B37D, c, field326]                     # gcc272_cdk, func_800AAFEC
-      - [0x5B401, c, func_800AB070]             # gcc272_cdk, 100%
-      - [0x5B501, c, field327]                     # gcc272_cdk, func_800AB170
+      - [0x5B291, c, field_overlay_launchers]   # gcc272_cdk, func_800AAF00 .. func_800AB170 (5 funcs, 100%; gcc280_g0 drops an insn in each)
       - [0x5B5A5, c, unk2_b_split105_b]         # gcc272_cdk, func_800AB214
       - [0x5B9C9, c, field257]                  # gcc272_cdk, func_800AB638
       - [0x5BA21, c, field323]                     # gcc272_cdk, func_800AB690, 100%

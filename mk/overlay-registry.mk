@@ -117,6 +117,7 @@ overlay_cload_gcc_272_cdk_g0_srcs := \
 
 OVERLAYS += field
 overlay_field_gcc_272_cdk_g0_srcs := \
+	src/overlays/field/field_overlay_launchers.c \
 	src/overlays/field/func_800CA1E0.c \
 	src/overlays/field/field4.c \
 	src/overlays/field/field_audio.c \
@@ -193,9 +194,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field321.c \
 	src/overlays/field/field322.c \
 	src/overlays/field/field323.c \
-	src/overlays/field/field326.c \
-	src/overlays/field/field327.c \
-	src/overlays/field/field328.c \
 	src/overlays/field/field329.c \
 	src/overlays/field/field330.c \
 	src/overlays/field/field331.c \
@@ -424,8 +422,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_i_b_split021.c \
 	src/overlays/field/func_800A20DC.c \
 	src/overlays/field/unk2_i_b_split021_tail.c \
-	src/overlays/field/field244.c \
-	src/overlays/field/func_800AB070.c \
 	src/overlays/field/unk2_b_split105_b.c \
 	src/overlays/field/unk2_b_split106_tail_b.c \
 	src/overlays/field/unk2_b_split106_tail_b_after_6b28.c \
