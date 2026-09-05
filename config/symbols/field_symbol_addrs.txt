@@ -89,6 +89,7 @@ field_get_track_counter_modulo        = 0x80068494;
 field_interpolate_palette_track       = 0x800684E4;
 field_evaluate_parameter_track        = 0x80068734;
 field_finalize_actor_animation        = 0x80068970;
+field_stop_actor_animations_for_object = 0x80083B38;
 field_evaluate_parameter_track_at_time = 0x80068DA8;
 field_reset_actor_track_state         = 0x80068F94;
 field_advance_actor_tracks            = 0x80069028;

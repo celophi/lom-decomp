@@ -81,7 +81,7 @@ segments:
       - [0x33CFD, c, field279]                  # gcc272_cdk, func_8008396C
       - [0x33D89, c, field19]                   # gcc272_cdk, func_800839F8
       - [0x33E45, c, field20]                   # gcc272_cdk, func_80083AB4
-      - [0x33EC9, c, field21]                   # gcc272_cdk, func_80083B38
+      - [0x33EC9, c, field_stop_actor_animations_for_object] # gcc272_cdk, field_stop_actor_animations_for_object
       - [0x33F51, c, unk2_e]                    # gcc272_cdk, func_80083BC0 .. func_8008423C
       - [0x345D1, c, func_80084240]              # gcc272_cdk, 100%
       - [0x34671, c, unk2_e_tail]               # gcc272_cdk, remaining asm-derived C

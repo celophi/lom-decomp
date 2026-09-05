@@ -141,7 +141,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field18.c \
 	src/overlays/field/field19.c \
 	src/overlays/field/field20.c \
-	src/overlays/field/field21.c \
+	src/overlays/field/field_stop_actor_animations_for_object.c \
 	src/overlays/field/field22.c \
 	src/overlays/field/field24.c \
 	src/overlays/field/field25.c \

@@ -17,6 +17,8 @@ extern s32 D_8010AE54;
 extern u8 g_field_actor_slots;
 extern u8 g_field_resource_entries;
 
+void field_stop_actor_animations_for_object(void *record, s32 force);
+
 typedef struct Func8008EF0CScratch {
     s32 sp18;
     u8 pad1C[0x2C];
@@ -253,7 +255,7 @@ block_37_record:
         temp_a0 = (M2C_FIELD(arg0, u8 *, 0x20) * 0x54) + base37;
         if (M2C_FIELD(temp_a0, u8 *, 0x25) == 0xFF) {
 block_37_cleanup:
-            func_80083B38(arg0, 0);
+            field_stop_actor_animations_for_object(arg0, 0);
 block_set_ff:
             M2C_FIELD(arg0, u8 *, 0x25) = 0xFF;
             return;
