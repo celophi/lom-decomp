@@ -445,7 +445,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split111.c \
 	src/overlays/field/unk2_b_split112.c \
 	src/overlays/field/unk2_b_split113.c \
-	src/overlays/field/func_800869FC.c \
+	src/overlays/field/field_handle_actor_control_flag_40.c \
 	src/overlays/field/func_80086ACC.c \
 	src/overlays/field/func_80086C70.c \
 	src/overlays/field/func_80086C00.c \
@@ -471,7 +471,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_80098FC4.c \
 	src/overlays/field/unk2_i_b_split023_tail.c \
 	src/overlays/field/func_8009A2A4.c \
-	src/overlays/field/field253.c \
+	src/overlays/field/field_set_actor_horizontal_scale.c \
 	src/overlays/field/field254.c \
 	src/overlays/field/field255.c \
 	src/overlays/field/field256.c \
