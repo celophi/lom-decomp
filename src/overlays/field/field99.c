@@ -1,10 +1,10 @@
 #include "common.h"
 
-extern u8* D_80123FB8;
+extern u8* g_field_script;
 
 void func_800BB9C0(s32 arg0, s32 arg1)
 {
-    func_800BD520(*D_80123FB8, arg0, arg1);
+    func_800BD520(*g_field_script, arg0, arg1);
 }
 
 void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op);

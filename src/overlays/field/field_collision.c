@@ -4595,6 +4595,7 @@ s32 func_80060CB0(Margin *m, Query *q)
     s32 group;
     s32 i;
     s32 v;
+    s32 y;
     s32 g;
     s32 gy;
     s32 half;
@@ -4629,11 +4630,11 @@ s32 func_80060CB0(Margin *m, Query *q)
         return -1;
     }
 
-    v = q->y;
-    gy = v >> 8;
-    if (v < 0)
+    y = q->y;
+    gy = y >> 8;
+    if (y < 0)
     {
-        gy = (v + 0xFF) >> 8;
+        gy = (y + 0xFF) >> 8;
     }
 
     count = scene->unk41;

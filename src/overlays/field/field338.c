@@ -5,19 +5,19 @@ typedef struct {
     s32 unk90;
 } SomeStruct;
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 extern SomeStruct *func_800C1B60(s32 arg0);
 extern void func_80089AE4(s32 arg0, s32 arg1);
 
 /**
  * @brief Resolve a target index and clear two flag bits on its state record.
  *
- * When @p arg0 is the sentinel 0xFF the index is read from @c D_80123FB8[0];
+ * When @p arg0 is the sentinel 0xFF the index is read from @c g_field_script[0];
  * otherwise it is @p arg0 itself. The resolved index selects a state record via
  * func_800C1B60, whose @c unk90 field has bits 31 and 29 cleared, then the index
  * and @p arg1 are dispatched to func_80089AE4.
  *
- * @param arg0 Target index, or 0xFF to read the default from @c D_80123FB8[0].
+ * @param arg0 Target index, or 0xFF to read the default from @c g_field_script[0].
  * @param arg1 Forwarded to func_80089AE4.
  * @see decomp.me (100%) TODO
  */
@@ -28,7 +28,7 @@ void func_800BC7EC(s32 arg0, s32 arg1)
 
     if (arg0 == 0xFF)
     {
-        var_s0 = *D_80123FB8;
+        var_s0 = *g_field_script;
     }
     else
     {

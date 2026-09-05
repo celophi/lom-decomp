@@ -6,8 +6,8 @@
  * @return arg0 advanced past the two bytes read.
  * @see decomp.me (100%) N/A -- trivial 7-instruction leaf function, no scratch needed.
  */
-u8 *func_800BD2FC(u8 *arg0, s16 *arg1)
+u8* field_script_read_u16(u8* data, u16* value)
 {
-    *arg1 = arg0[0] + (arg0[1] << 8);
-    return arg0 + 2;
+    *value = data[0] + (data[1] << 8);
+    return data + 2;
 }

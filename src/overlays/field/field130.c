@@ -23,7 +23,7 @@ typedef struct
     /* 0xC */ s32 unkC;
 } UnkStruct800BE324;
 
-extern u8 *D_80123FB8;
+extern u8 *g_field_script;
 
 extern void func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 
@@ -33,7 +33,7 @@ void func_800BE324(s32 arg0, UnkStruct800BE324 *arg1)
 
     if (arg1->unk0 == 0xFF)
     {
-        var_a0 = *D_80123FB8;
+        var_a0 = *g_field_script;
     }
     else
     {
