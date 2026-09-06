@@ -2897,8 +2897,8 @@ void menu_handle_input(s32 process_actions)
                     {
                         new_type_left = g_menu_scene_type - 1;
                     }
-                    g_menu_scene_type = new_type_left;
-                    g_menu_active_node = new_type_left;
+                    do { g_menu_scene_type = new_type_left; } while (0);
+                    do { do { do { g_menu_active_node = new_type_left; } while (0); } while (0); } while (0);
                 }
                 if (g_pad_input & 8)
                 {
@@ -2924,8 +2924,8 @@ void menu_handle_input(s32 process_actions)
                             new_type_right = g_menu_scene_type + 1;
                         }
                     }
-                    g_menu_scene_type = new_type_right;
-                    g_menu_active_node = new_type_right;
+                    do { g_menu_scene_type = new_type_right; } while (0);
+                    do { do { do { g_menu_active_node = new_type_right; } while (0); } while (0); } while (0);
                 }
                 if ((g_pad_input & 1) && (g_menu_scene_type < 9))
                 {
@@ -2937,8 +2937,8 @@ void menu_handle_input(s32 process_actions)
                     {
                         new_type_up = g_menu_scene_type - 3;
                     }
-                    g_menu_scene_type = new_type_up;
-                    g_menu_active_node = new_type_up;
+                    do { g_menu_scene_type = new_type_up; } while (0);
+                    do { do { do { g_menu_active_node = new_type_up; } while (0); } while (0); } while (0);
                     menu_set_active_node();
                 }
                 if ((g_pad_input & 2) && (g_menu_scene_type < 9))
@@ -2951,8 +2951,8 @@ void menu_handle_input(s32 process_actions)
                     {
                         new_type_down = g_menu_scene_type + 3;
                     }
-                    g_menu_scene_type = new_type_down;
-                    g_menu_active_node = new_type_down;
+                    do { g_menu_scene_type = new_type_down; } while (0);
+                    do { do { do { g_menu_active_node = new_type_down; } while (0); } while (0); } while (0);
                     menu_set_active_node();
                 }
 
@@ -3296,8 +3296,8 @@ after_do_while:
                             MenuSlot* clear_slot;
 
                             clear_i = 3;
-                            clear_slot = (MenuSlot*)((u8*)g_menu_slots + 0x6C);
                             state_off = *((volatile s32*)((u8*)g_menu_state_ptr + 8));
+                            clear_slot = (MenuSlot*)((u32)g_menu_slots + clear_i * sizeof(MenuSlot));
                             g_menu_message_line1 = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 8))) +
                                                    (*((u16*)((u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 8))) + 0xCA)));
                             g_menu_message_line2 = (u8*)g_menu_state_ptr + state_off +
@@ -3312,17 +3312,16 @@ after_do_while:
                         }
                         else
                         {
-                            g_pad_ctx->inject_flags |= 0x80;
-                            companion = 0x2B;
+                            *(volatile u32*)&g_pad_ctx->inject_flags |= 0x80;
+                            g_menu_companion_node = 0x2B;
                             goto set_companion;
                         }
                         break;
 
                     case 11:
-                        g_pad_ctx->inject_flags &= ~0x80;
-                        companion = 0xFF;
+                        *(volatile u32*)&g_pad_ctx->inject_flags &= ~0x80;
+                        *(u8*)&g_menu_companion_node = 0xFF;
                     set_companion:
-                        g_menu_companion_node = companion;
                         menu_set_active_node();
                         break;
                     }
@@ -3376,7 +3375,7 @@ after_do_while:
                     g_menu_cursor_enable = 2;
                     nav_nodes = g_menu_nodes;
                     active_node = &nav_nodes[g_menu_active_node];
-                    { s32 np = active_node->idx_nav.nav_x_packed; s32 ny = active_node->u8_u.s.nav_y_hi; nav_y = (np >> 15) | (ny << 1); }
+                    { s32 np = (active_node->idx_nav.nav_x_packed >> 15) & 1; s32 ny = active_node->u8_u.s.nav_y_hi; nav_y = (ny << 1) | np; }
                     nav_hi = g_menu_content_height - 12;
                     *view_y_ptr = nav_y - nav_hi;
                     if (*view_y_ptr < 12)
