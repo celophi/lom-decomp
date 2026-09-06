@@ -2738,9 +2738,10 @@ static inline s32 menu_focus_active_item(void)
 /**
  * @brief Per-frame menu navigation, confirm/cancel and cursor-move input handler.
  * @param process_actions Non-zero to also process confirm/cancel and the four cursor-move buttons; 0 runs only node switching.
- * @see decomp.me (99.02%) https://decomp.me/scratch/DRmEd
+ * @return Unused; declared s32 only to reproduce the original codegen (no explicit return statement).
+ * @see decomp.me (100%) https://decomp.me/scratch/DRmEd
  */
-void menu_handle_input(s32 process_actions)
+s32 menu_handle_input(s32 process_actions)
 {
     u8* var_s4 = (u8*)0x801ED600; /* Raw view preserves menu_handle_input codegen. */
     MenuContentItem* s5;
@@ -2904,25 +2905,11 @@ void menu_handle_input(s32 process_actions)
                 {
                     if (g_menu_scene_type < 9)
                     {
-                        if ((g_menu_scene_type / 3) * 3 == g_menu_scene_type - 2)
-                        {
-                            new_type_right = g_menu_scene_type - 2;
-                        }
-                        else
-                        {
-                            new_type_right = g_menu_scene_type + 1;
-                        }
+                        {s32 q = (g_menu_scene_type /3)*3;do {new_type_right=g_menu_scene_type-2;} while(0);if(q == new_type_right){}else new_type_right=g_menu_scene_type+1;}
                     }
                     else
                     {
-                        if ((g_menu_scene_type / 3) * 3 == g_menu_scene_type - 1)
-                        {
-                            new_type_right = g_menu_scene_type - 1;
-                        }
-                        else
-                        {
-                            new_type_right = g_menu_scene_type + 1;
-                        }
+                        {s32 q = (g_menu_scene_type /3)*3;do {new_type_right=g_menu_scene_type-1;} while(0);if(q == new_type_right){}else new_type_right=g_menu_scene_type+1;}
                     }
                     do { g_menu_scene_type = new_type_right; } while (0);
                     do { do { do { g_menu_active_node = new_type_right; } while (0); } while (0); } while (0);
@@ -3116,16 +3103,17 @@ after_do_while:
                             menu_init_item_nav_entries(3);
                         }
                         scroll_list_update_target(var_a3, g_menu_scroll_nav_entries);
-                        new_var7 = (void*)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) + 0x90));
+
+                        {u8* pb; s32 ch;s32* eq=&g_menu_active_equipped_item;ch=g_menu_char_slot; pb=(u8*)g_pad_ctx;*eq = 0;new_var7 = (void*)(pb + ((ch * 0x250) + 0x5F0) + ((content_type << 6) + 0x90));*eq = new_var7;
                         g_menu_item_ptr = new_var7;
                         g_menu_saved_category0_item = g_menu_item_ptr;
                         g_menu_category0_item = g_menu_item_ptr;
                         g_menu_saved_category1_item = g_menu_item_ptr;
                         g_menu_category1_item = g_menu_item_ptr;
                         g_menu_nav_prev[0] = g_menu_item_ptr;
-                        g_menu_active_equipped_item = g_menu_item_ptr;
+
                         g_menu_category2_item = g_menu_item_ptr;
-                        menu_play_se(0x7D, 0x80);
+                        }menu_play_se(0x7D, 0x80);
                     }
                     break;
 
@@ -3144,12 +3132,14 @@ after_do_while:
                         var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x50000;
                         menu_init_item_nav_entries(5);
                         {
-                            void* ptr = (void*)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) - 0x170));
+                            void* ptr;
+
+                            {u8* pb; s32 ch; s32* eq=&g_menu_active_equipped_item;pb=(u8*)g_pad_ctx; ch=g_menu_char_slot;*eq = 0;ptr = (void*)(pb + ((ch * 0x250) + 0x5F0) + ((content_type << 6) - 0x170));*eq = ptr;
                             g_menu_saved_category0_item = ptr;
                             g_menu_saved_category1_item = ptr;
-                            g_menu_active_equipped_item = ptr;
+
                             g_menu_nav_prev[0] = ptr;
-                            menu_play_se(0x7D, 0x80);
+                            }menu_play_se(0x7D, 0x80);
                         }
                     }
                     break;
