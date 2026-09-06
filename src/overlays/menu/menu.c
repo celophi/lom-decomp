@@ -2440,27 +2440,19 @@ unsigned int menu_handle_node_input(void)
             g_menu_cursor_enable = 1;
             var_v1_2 = 0;
             var_a0 = &g_menu_slots;
-            while (1)
+            while (var_v1_2 < 4)
             {
                 if ((*var_a0) != 0)
                 {
+                    g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
+                    g_content_view_x = g_menu_default_view_pos.x;
+                    new_var = &g_menu_default_view_pos.y;
+                    g_content_view_y = *new_var;
                     break;
                 }
                 var_v1_2++;
                 var_a0 += 0x24;
-                if (var_v1_2 >= 4)
-                {
-                    do
-                    {
-                    } while (0);
-                    return;
-                }
             }
-
-            g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
-            g_content_view_x = g_menu_default_view_pos.x;
-            new_var = &g_menu_default_view_pos.y;
-            g_content_view_y = *new_var;
         }
         else
         {
