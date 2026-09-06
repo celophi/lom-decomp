@@ -152,6 +152,8 @@ segments:
       - [0x417C9, c, unk2_i_b_split008]            # gcc272_cdk, func_80091438
       - [0x41BDD, c, func_8009184C]                # gcc272_cdk, 100%
       - [0x41CA5, c, unk2_i_b_split008_after_9184C] # gcc272_cdk, func_80091914
+      - [0x41E59, c, func_80091AC8]                 # gcc272_cdk, 100%
+      - [0x41F59, c, unk2_i_b_split008_after_91AC8] # gcc272_cdk, func_80091BC8 .. func_80091D7C
       - [0x4248D, c, func_800920FC]                # gcc272_cdk, 99% (register allocation)
       - [0x424B5, c, func_80092124]                # gcc272_cdk, 93.73% (register allocation)
       - [0x42591, c, field_actor_idle_ops]      # gcc272_cdk, func_80092200 .. func_80092550 (6 funcs; func_80092394 99.565% register allocation, rest 100%)
@@ -203,7 +205,7 @@ segments:
       - [0x4CDE5, c, unk2_i_b_split016]            # gcc272_cdk, func_8009CA54
       - [0x4CFF1, c, func_8009CC60]                # gcc272_cdk, 100%
       - [0x4D0C1, c, func_8009CD30]                # gcc272_cdk, 100%
-      - [0x4D1A1, c, unk2_i_b_split016_b]          # gcc272_cdk, func_8009CE10
+      - [0x4D1A1, c, func_8009CE10]                # gcc272_cdk, 100%
       - [0x4D2AD, c, func_8009CF1C]                # gcc272_cdk, 100%
       - [0x4D315, c, func_8009CF84]                # gcc272_cdk, 97.88% WIP
       - [0x4D469, c, func_8009D0D8]                # gcc272_cdk, 100%
@@ -343,7 +345,8 @@ segments:
       - [0x65181, c, func_800B4DF0]                # gcc280_g0, 100%
       - [0x651F1, c, func_800B4E60]                # gcc280_g0, 100%
       - [0x652C9, c, field90]                      # gcc272_cdk, func_800B4F38
-      - [0x65311, c, unk2_b_split026]              # gcc272_cdk, func_800B4F80 .. func_800B5C54
+      - [0x65311, c, unk2_b_split026]              # gcc272_cdk, func_800B4F80 .. func_800B5A88
+      - [0x65FE5, c, func_800B5C54]                  # gcc280_g0, 100%
       - [0x660F1, c, func_800B5D60]                  # gcc280_g0, 100%
       - [0x661ED, c, func_800B5E5C]                  # gcc280_g0, 100%
       - [0x662F1, c, unk2_b_split026_after_5e5c]     # gcc272_cdk, func_800B5F60
