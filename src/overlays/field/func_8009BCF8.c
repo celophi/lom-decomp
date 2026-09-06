@@ -28,22 +28,12 @@ typedef struct
  * @param arg2 Extra Y offset added when the header strip is loaded.
  * @param arg3 When non-zero, also loads the header strip before the main
  *        image.
- * @note Below 100% match: one instruction (the `addiu $a0, $sp, 0x10` that
- *       computes &rect for the final LoadImage call) sits one slot early
- *       relative to the target. mcp__lom-dev-mcp__sched_oracle attributes
- *       this to post-reload (sched2) scheduling rather than sched1 emit
- *       order, and it is not reachable by any source-level statement/arg
- *       reordering tried so far (temp locals, arg evaluation order, extra
- *       statements, volatile) - all measured inert. The permuter was not run
- *       (forbidden for this task). Revisit with the permuter if this
- *       function is picked up again.
- * @see decomp.me (96.36%) - no scratch published yet
  */
 void func_8009BCF8(void *arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     RECT rect;
-    register u16 width asm("$4");
-    register u16 height asm("$5");
+    u16 width;
+    u16 height;
     s32 size;
 
     width = ((FieldImgHeader *) arg0)->unk10;
@@ -71,7 +61,10 @@ void func_8009BCF8(void *arg0, s32 arg1, s32 arg2, s32 arg3)
         rect.x = 0x340 - (arg1 << 6);
         rect.y = 0;
     }
-    rect.w = width;
+    do
+    {
+        rect.w = width;
+    } while (0);
     rect.h = height;
     LoadImage(&rect, (u_long *) &((FieldImgSub *) arg0)->unkC);
     DrawSync(0);

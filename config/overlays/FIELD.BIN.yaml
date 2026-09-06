@@ -189,7 +189,7 @@ segments:
       - [0x4B34D, c, field273]                     # gcc272_cdk, func_8009AFBC + field_set_scene_parameters (100%)
       - [0x4B3B9, c, unk2_i_b_split024_tail]       # gcc272_cdk, field_update_scene
       - [0x4C03D, c, field46]                      # gcc272_cdk, func_8009BCAC
-      - [0x4C089, c, func_8009BCF8]                # gcc272_cdk, 96.36%
+      - [0x4C089, c, func_8009BCF8]                # gcc272_cdk, 100%
       - [0x4C165, c, field47]                      # gcc272_cdk, func_8009BDD4
       - [0x4C1AD, c, unk2_i_b_split013]            # gcc272_cdk, func_8009BE1C
       - [0x4C7C5, c, field320]                     # gcc272_cdk, func_8009C434
