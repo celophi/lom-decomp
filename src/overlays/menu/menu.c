@@ -9271,46 +9271,40 @@ s32 menu_build_ability_nav_entries(void)
 
     g_menu_scroll_nav_entries[0] = 0;
     j = 0;
-    if (count > 0)
+    while (j < count)
     {
-        do
+        temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
+
+        tmp = *temp_t0;
+        var_a2 = j - 1;
+
+        temp_v1 = (tmp & ~0x3FFF);
+
+        tmp2 = (j * 0x10);
+        tmp2 = tmp2 & 0x3FFF;
+
+        temp_v1 = temp_v1 | tmp2;
+        *temp_t0 = temp_v1;
+
+        if (var_a2 < 0)
         {
-        do
+            var_a2 = count - 1;
+        }
+
+        tmp3 = (temp_v1 & 0xFF803FFF);
+
+        tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
+
+        *temp_t0 = tmp3;
+        temp_a1 = j + 1;
+        temp_a3 = temp_a1 < count;
+        var_v1 = 0;
+        if (temp_a3 != 0)
         {
-            temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
-
-            tmp = *temp_t0;
-            var_a2 = j - 1;
-
-            temp_v1 = (tmp & ~0x3FFF);
-
-            tmp2 = (j * 0x10);
-            tmp2 = tmp2 & 0x3FFF;
-
-            temp_v1 = temp_v1 | tmp2;
-            *temp_t0 = temp_v1;
-
-            if (var_a2 < 0)
-            {
-                var_a2 = count - 1;
-            }
-
-            tmp3 = (temp_v1 & 0xFF803FFF);
-
-            tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
-
-            *temp_t0 = tmp3;
-            temp_a1 = j + 1;
-            temp_a3 = temp_a1 < count;
-            var_v1 = 0;
-            if (temp_a3 != 0)
-            {
-                var_v1 = temp_a1;
-            }
-            *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
-            j = temp_a1;
-        } while (temp_a3 != 0);
-        } while (0);
+            var_v1 = temp_a1;
+        }
+        *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
+        j = temp_a1;
     }
     return count;
 }
