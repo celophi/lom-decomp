@@ -2873,19 +2873,20 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         if (g_menu_scene_type >= 9)
                         {
-                            new_type_left = g_menu_scene_type + 1;
+                            g_menu_scene_type += 1;
+                            g_menu_active_node = g_menu_scene_type;
                         }
                         else
                         {
-                            new_type_left = g_menu_scene_type + 2;
+                            g_menu_scene_type += 2;
+                            g_menu_active_node = g_menu_scene_type;
                         }
                     }
                     else
                     {
-                        new_type_left = g_menu_scene_type - 1;
+                        g_menu_scene_type -= 1;
+                        g_menu_active_node = g_menu_scene_type;
                     }
-                    do { g_menu_scene_type = new_type_left; } while (0);
-                    do { do { do { g_menu_active_node = new_type_left; } while (0); } while (0); } while (0);
                 }
                 if (g_pad_input & 8)
                 {
@@ -2897,35 +2898,35 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         {s32 q = (g_menu_scene_type /3)*3;do {new_type_right=g_menu_scene_type-1;} while(0);if(q == new_type_right){}else new_type_right=g_menu_scene_type+1;}
                     }
-                    do { g_menu_scene_type = new_type_right; } while (0);
+                    g_menu_scene_type = new_type_right;
                     do { do { do { g_menu_active_node = new_type_right; } while (0); } while (0); } while (0);
                 }
                 if ((g_pad_input & 1) && (g_menu_scene_type < 9))
                 {
                     if ((g_menu_scene_type / 3) == 0)
                     {
-                        new_type_up = g_menu_scene_type + 6;
+                        g_menu_scene_type += 6;
+                        g_menu_active_node = g_menu_scene_type;
                     }
                     else
                     {
-                        new_type_up = g_menu_scene_type - 3;
+                        g_menu_scene_type -= 3;
+                        g_menu_active_node = g_menu_scene_type;
                     }
-                    do { g_menu_scene_type = new_type_up; } while (0);
-                    do { do { do { g_menu_active_node = new_type_up; } while (0); } while (0); } while (0);
                     menu_set_active_node();
                 }
                 if ((g_pad_input & 2) && (g_menu_scene_type < 9))
                 {
                     if ((g_menu_scene_type / 3) == 2)
                     {
-                        new_type_down = g_menu_scene_type - 6;
+                        g_menu_scene_type -= 6;
+                        g_menu_active_node = g_menu_scene_type;
                     }
                     else
                     {
-                        new_type_down = g_menu_scene_type + 3;
+                        g_menu_scene_type += 3;
+                        g_menu_active_node = g_menu_scene_type;
                     }
-                    do { g_menu_scene_type = new_type_down; } while (0);
-                    do { do { do { g_menu_active_node = new_type_down; } while (0); } while (0); } while (0);
                     menu_set_active_node();
                 }
 
