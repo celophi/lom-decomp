@@ -361,7 +361,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split026_after_5948.c \
 	src/overlays/field/unk2_b_split026_after_5e5c.c \
 	src/overlays/field/unk2_b_split026_tail.c \
-	src/overlays/field/unk2_b_split028_after_7164.c \
+	src/overlays/field/unk2_b_split028_after_729c.c \
 	src/overlays/field/unk2_b_split029_mid.c \
 	src/overlays/field/func_800B7A74.c \
 	src/overlays/field/unk2_b_split030.c \
@@ -404,7 +404,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split081.c \
 	src/overlays/field/func_800C7F44.c \
 	src/overlays/field/unk2_b_split081_tail_b.c \
-	src/overlays/field/unk2_b_split082.c \
+	src/overlays/field/unk2_b_split082_after_8260.c \
 	src/overlays/field/unk2_b_split083.c \
 	src/overlays/field/unk2_b_split086.c \
 	src/overlays/field/unk2_b_split087_tail.c \
@@ -416,11 +416,11 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_80087680.c \
 	src/overlays/field/unk2_i_b_split020_tail.c \
 	src/overlays/field/field242.c \
-	src/overlays/field/unk2_i_b_split021.c \
+	src/overlays/field/func_800A1D98.c \
+	src/overlays/field/unk2_i_b_split021_after_1d98.c \
 	src/overlays/field/func_800A20DC.c \
 	src/overlays/field/unk2_i_b_split021_tail.c \
 	src/overlays/field/unk2_b_split105_b.c \
-	src/overlays/field/unk2_b_split106_tail_b.c \
 	src/overlays/field/unk2_b_split106_tail_b_after_6b28.c \
 	src/overlays/field/unk2_b_split107_tail_b_after_9ea8.c \
 	src/overlays/field/unk2_b_split112.c \
@@ -539,6 +539,8 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800B607C.c \
 	src/overlays/field/func_800B70F4.c \
 	src/overlays/field/func_800B7164.c \
+	src/overlays/field/func_800B729C.c \
+	src/overlays/field/func_800B69B0.c \
 	src/overlays/field/func_800B6EC0.c \
 	src/overlays/field/func_800BB3D8.c \
 	src/overlays/field/func_800BE710.c \
@@ -594,6 +596,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field188.c \
 	src/overlays/field/func_800C7558.c \
 	src/overlays/field/func_800C8014.c \
+	src/overlays/field/func_800C8260.c \
 	src/overlays/field/field190.c \
 	src/overlays/field/field191.c \
 	src/overlays/field/field193.c \
