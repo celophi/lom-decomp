@@ -92,7 +92,7 @@ overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/unk1_after_strings.c \
 	src/overlays/carda/carda_scan_hex_digits.c \
 	src/overlays/carda/unk1_after_checksum_tail.c \
-	src/overlays/carda/unk1_after_choice.c \
+	src/overlays/carda/func_80145050.c \
 	src/overlays/carda/unk1_after_choice_after_restore.c \
 	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c
 
