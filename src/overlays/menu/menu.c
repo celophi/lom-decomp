@@ -1633,6 +1633,8 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
  */
 void menu_node_tree_init(void)
 {
+    u32 field_a;
+    u32 field_b;
     MenuNode* var_a0;
     int active_flag;
     MenuNode* var_a2;
@@ -1762,11 +1764,6 @@ void menu_node_tree_init(void)
     g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
     if (D_800FDA80 & 2)
     {
-        /* Empty conditional forces a basic-block boundary the compiler needs
-           to reproduce the target's scheduling here; required to match. */
-        if (1)
-        {
-        }
         g_menu_nodes[3].icon_id = 0x6F;
     }
     else
@@ -2009,37 +2006,34 @@ void menu_node_tree_init(void)
     var_t0 = 0;
     temp_v0_9 = 0;
     var_a2 = g_menu_nodes;
-tail_loop:
     do
     {
+        field_a = MENU_NONE;
+        field_b = var_a2[var_t0].u2.s.parent_idx;
+        if (field_b == field_a)
         {
-            if (var_a2->u2.s.parent_idx == MENU_NONE)
+            field_a = var_a2[var_t0].u2.s.flags & 1;
+            if (field_a)
             {
-                if (var_a2->u2.s.flags & 1)
-                {
-                    temp_a0 = var_a3 & 0xFFFF;
-                    temp_a1 = var_a3 & 0x1FF;
-                    var_a3 += MENU_ROW_HEIGHT;
-                    new_var10 = (temp_a0 & 1) << 15;
-                    new_var6 = (temp_a0 >> 1) & 0xFF;
-                    var_a2->u8_u.nav_y_packed = (u16)(var_a2->u8_u.nav_y_packed & 0x80FF);
-                    var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
-                    var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | new_var6);
-                    new_var8 = (temp_a1 & 1) << 15;
-                    var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | new_var10);
-                    var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | new_var8);
-                    var_a1 = temp_a1 >> 1;
-                    var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0xFF00) | var_a1);
-                }
-            }
-            var_t0 += 1;
-            var_a2++;
-            if (var_t0 < MENU_NODE_COUNT)
-            {
-                goto tail_loop;
+                temp_a0 = var_a3 & 0xFFFF;
+                temp_a1 = var_a3 & 0x1FF;
+                var_a3 += MENU_ROW_HEIGHT;
+                new_var10 = (temp_a0 & 1) << 15;
+                new_var6 = (temp_a0 >> 1) & 0xFF;
+                field_a = var_a2[var_t0].u8_u.nav_y_packed & 0x80FF;
+                var_a2[var_t0].u8_u.nav_y_packed = (u16)field_a;
+                field_b = var_a2[var_t0].idx_nav.nav_x_packed & 0x80FF;
+                var_a2[var_t0].idx_nav.nav_x_packed = (u16)field_b;
+                var_a2[var_t0].uA.layout_child_packed = (u16)((var_a2[var_t0].uA.layout_child_packed & 0xFF00) | new_var6);
+                new_var8 = (temp_a1 & 1) << 15;
+                var_a2[var_t0].u8_u.nav_y_packed = (u16)((var_a2[var_t0].u8_u.nav_y_packed & 0x7FFF) | new_var10);
+                var_a2[var_t0].idx_nav.nav_x_packed = (u16)((var_a2[var_t0].idx_nav.nav_x_packed & 0x7FFF) | new_var8);
+                var_a1 = temp_a1 >> 1;
+                var_a2[var_t0].u8_u.nav_y_packed = (u16)((var_a2[var_t0].u8_u.nav_y_packed & 0xFF00) | var_a1);
             }
         }
-    } while (0);
+        var_t0 += 1;
+    } while (var_t0 < MENU_NODE_COUNT);
     if (g_active_script != 0)
     {
         g_menu_scene_type = -1;
@@ -2446,27 +2440,19 @@ unsigned int menu_handle_node_input(void)
             g_menu_cursor_enable = 1;
             var_v1_2 = 0;
             var_a0 = &g_menu_slots;
-            while (1)
+            while (var_v1_2 < 4)
             {
                 if ((*var_a0) != 0)
                 {
+                    g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
+                    g_content_view_x = g_menu_default_view_pos.x;
+                    new_var = &g_menu_default_view_pos.y;
+                    g_content_view_y = *new_var;
                     break;
                 }
                 var_v1_2++;
                 var_a0 += 0x24;
-                if (var_v1_2 >= 4)
-                {
-                    do
-                    {
-                    } while (0);
-                    return;
-                }
             }
-
-            g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
-            g_content_view_x = g_menu_default_view_pos.x;
-            new_var = &g_menu_default_view_pos.y;
-            g_content_view_y = *new_var;
         }
         else
         {
@@ -2887,19 +2873,20 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         if (g_menu_scene_type >= 9)
                         {
-                            new_type_left = g_menu_scene_type + 1;
+                            g_menu_scene_type += 1;
+                            g_menu_active_node = g_menu_scene_type;
                         }
                         else
                         {
-                            new_type_left = g_menu_scene_type + 2;
+                            g_menu_scene_type += 2;
+                            g_menu_active_node = g_menu_scene_type;
                         }
                     }
                     else
                     {
-                        new_type_left = g_menu_scene_type - 1;
+                        g_menu_scene_type -= 1;
+                        g_menu_active_node = g_menu_scene_type;
                     }
-                    do { g_menu_scene_type = new_type_left; } while (0);
-                    do { do { do { g_menu_active_node = new_type_left; } while (0); } while (0); } while (0);
                 }
                 if (g_pad_input & 8)
                 {
@@ -2911,35 +2898,35 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         {s32 q = (g_menu_scene_type /3)*3;do {new_type_right=g_menu_scene_type-1;} while(0);if(q == new_type_right){}else new_type_right=g_menu_scene_type+1;}
                     }
-                    do { g_menu_scene_type = new_type_right; } while (0);
+                    g_menu_scene_type = new_type_right;
                     do { do { do { g_menu_active_node = new_type_right; } while (0); } while (0); } while (0);
                 }
                 if ((g_pad_input & 1) && (g_menu_scene_type < 9))
                 {
                     if ((g_menu_scene_type / 3) == 0)
                     {
-                        new_type_up = g_menu_scene_type + 6;
+                        g_menu_scene_type += 6;
+                        g_menu_active_node = g_menu_scene_type;
                     }
                     else
                     {
-                        new_type_up = g_menu_scene_type - 3;
+                        g_menu_scene_type -= 3;
+                        g_menu_active_node = g_menu_scene_type;
                     }
-                    do { g_menu_scene_type = new_type_up; } while (0);
-                    do { do { do { g_menu_active_node = new_type_up; } while (0); } while (0); } while (0);
                     menu_set_active_node();
                 }
                 if ((g_pad_input & 2) && (g_menu_scene_type < 9))
                 {
                     if ((g_menu_scene_type / 3) == 2)
                     {
-                        new_type_down = g_menu_scene_type - 6;
+                        g_menu_scene_type -= 6;
+                        g_menu_active_node = g_menu_scene_type;
                     }
                     else
                     {
-                        new_type_down = g_menu_scene_type + 3;
+                        g_menu_scene_type += 3;
+                        g_menu_active_node = g_menu_scene_type;
                     }
-                    do { g_menu_scene_type = new_type_down; } while (0);
-                    do { do { do { g_menu_active_node = new_type_down; } while (0); } while (0); } while (0);
                     menu_set_active_node();
                 }
 
@@ -6978,8 +6965,8 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
             if ((y - scroll_y) >= -0xF && (y - scroll_y) < (list->viewport_h - 0x10))
             {
                 u32 w2;
-                u8* tbl;
                 s32 pal;
+                u8 entry;
 
                 buf = (void*)menu_emit_icon_sprite(buf, ot, icon, 0x10 - view_origin->x, (y - scroll_y) - view_origin->y, 0, 0, 0, 0);
                 setlen((DR_TPAGE*)buf, 1);
@@ -6990,14 +6977,17 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                 w2 = PAD_ITEM_W14(item);
                 if (w2 & 0x300)
                 {
-                    tbl = &D_800F0BEC[(w2 >> 0xA) & 0x3F];
+                    entry = D_800F0BEC[(w2 >> 0xA) & 0x3F];
                 }
                 else
                 {
-                    tbl = &D_800F0BE0[(w2 >> 0xA) & 0x3F];
+                    entry = D_800F0BE0[(w2 >> 0xA) & 0x3F];
                 }
                 pal = 1;
-                { u32 entry=*(volatile u8*)tbl; u32 mask; do { mask=(u8)g_menu_ability_mask; } while(0); mask=entry & mask; if(mask){pal=3;} }
+                if (entry & (u8)g_menu_ability_mask)
+                {
+                    pal = 3;
+                }
                 buf = (void*)func_800A88A0(buf, ot, item, pal, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y, 0);
 
                 if (g_menu_pending_item_row != 0xFF)
@@ -7030,7 +7020,6 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
 
             if ((y >> 4) == list->sel_idx)
             {
-                { u8* shadow_pad = (u8*)g_pad_ctx; }
                 g_menu_inventory_index = idx;
                 g_menu_item_ptr = (s32)((u8*)g_pad_ctx + ((idx << 6) + 0xCE0));
                 switch (g_menu_active_item_category)
@@ -7186,27 +7175,19 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                     else
                     {
                         u32 w = PAD_ITEM_W14(g_menu_item_ptr);
-                        u8* tbl;
+                        u8 entry;
                         if (w & 0x300)
                         {
-                            w >>= 0xA;
-                            w &= 0x3F;
-                            tbl = D_800F0BEC;
+                            entry = D_800F0BEC[(w >> 0xA) & 0x3F];
                         }
                         else
                         {
-                            w >>= 0xA;
-                            w &= 0x3F;
-                            tbl = D_800F0BE0;
+                            entry = D_800F0BE0[(w >> 0xA) & 0x3F];
                         }
-                        w += (u32)tbl;
+                        if (entry & (u8)g_menu_ability_mask)
                         {
-                            u8 entry;
-                            u32 mask;
-                            do { entry = *(volatile u8*)w; } while (0);
-                            mask = (u8)g_menu_ability_mask;
-                            mask = entry & mask;
-                            if (mask) { menu_play_se(0x78, 0x80); return buf; }
+                            menu_play_se(0x78, 0x80);
+                            return buf;
                         }
                         menu_play_se(0x7E, 0x80);
                         MENU_CLEAR_SLOTS();
@@ -9291,46 +9272,40 @@ s32 menu_build_ability_nav_entries(void)
 
     g_menu_scroll_nav_entries[0] = 0;
     j = 0;
-    if (count > 0)
+    while (j < count)
     {
-        do
+        temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
+
+        tmp = *temp_t0;
+        var_a2 = j - 1;
+
+        temp_v1 = (tmp & ~0x3FFF);
+
+        tmp2 = (j * 0x10);
+        tmp2 = tmp2 & 0x3FFF;
+
+        temp_v1 = temp_v1 | tmp2;
+        *temp_t0 = temp_v1;
+
+        if (var_a2 < 0)
         {
-        do
+            var_a2 = count - 1;
+        }
+
+        tmp3 = (temp_v1 & 0xFF803FFF);
+
+        tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
+
+        *temp_t0 = tmp3;
+        temp_a1 = j + 1;
+        temp_a3 = temp_a1 < count;
+        var_v1 = 0;
+        if (temp_a3 != 0)
         {
-            temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
-
-            tmp = *temp_t0;
-            var_a2 = j - 1;
-
-            temp_v1 = (tmp & ~0x3FFF);
-
-            tmp2 = (j * 0x10);
-            tmp2 = tmp2 & 0x3FFF;
-
-            temp_v1 = temp_v1 | tmp2;
-            *temp_t0 = temp_v1;
-
-            if (var_a2 < 0)
-            {
-                var_a2 = count - 1;
-            }
-
-            tmp3 = (temp_v1 & 0xFF803FFF);
-
-            tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
-
-            *temp_t0 = tmp3;
-            temp_a1 = j + 1;
-            temp_a3 = temp_a1 < count;
-            var_v1 = 0;
-            if (temp_a3 != 0)
-            {
-                var_v1 = temp_a1;
-            }
-            *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
-            j = temp_a1;
-        } while (temp_a3 != 0);
-        } while (0);
+            var_v1 = temp_a1;
+        }
+        *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
+        j = temp_a1;
     }
     return count;
 }
