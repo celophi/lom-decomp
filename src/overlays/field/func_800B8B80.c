@@ -41,14 +41,12 @@ void func_800B8B80(void)
     {
         u8 *base;
         s32 index;
-        do
-        {
-            base = g_field_script;
-        } while (0);
+        SeqRec *current;
+        base = g_field_script;
         index = ((SeqRec *)base)->unk4;
-        rec = (SeqRec *)(base + (index * 3 << 2));
+        current = (SeqRec *)(base + (index * 3 << 2));
+        current->unk8 = initial_next;
     }
-    rec->unk8 = initial_next;
     while (1)
     {
         {
