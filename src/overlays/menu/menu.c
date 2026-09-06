@@ -1633,6 +1633,8 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
  */
 void menu_node_tree_init(void)
 {
+    u32 field_a;
+    u32 field_b;
     MenuNode* var_a0;
     int active_flag;
     MenuNode* var_a2;
@@ -1762,11 +1764,6 @@ void menu_node_tree_init(void)
     g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
     if (D_800FDA80 & 2)
     {
-        /* Empty conditional forces a basic-block boundary the compiler needs
-           to reproduce the target's scheduling here; required to match. */
-        if (1)
-        {
-        }
         g_menu_nodes[3].icon_id = 0x6F;
     }
     else
@@ -2009,37 +2006,34 @@ void menu_node_tree_init(void)
     var_t0 = 0;
     temp_v0_9 = 0;
     var_a2 = g_menu_nodes;
-tail_loop:
     do
     {
+        field_a = MENU_NONE;
+        field_b = var_a2[var_t0].u2.s.parent_idx;
+        if (field_b == field_a)
         {
-            if (var_a2->u2.s.parent_idx == MENU_NONE)
+            field_a = var_a2[var_t0].u2.s.flags & 1;
+            if (field_a)
             {
-                if (var_a2->u2.s.flags & 1)
-                {
-                    temp_a0 = var_a3 & 0xFFFF;
-                    temp_a1 = var_a3 & 0x1FF;
-                    var_a3 += MENU_ROW_HEIGHT;
-                    new_var10 = (temp_a0 & 1) << 15;
-                    new_var6 = (temp_a0 >> 1) & 0xFF;
-                    var_a2->u8_u.nav_y_packed = (u16)(var_a2->u8_u.nav_y_packed & 0x80FF);
-                    var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
-                    var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | new_var6);
-                    new_var8 = (temp_a1 & 1) << 15;
-                    var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | new_var10);
-                    var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | new_var8);
-                    var_a1 = temp_a1 >> 1;
-                    var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0xFF00) | var_a1);
-                }
-            }
-            var_t0 += 1;
-            var_a2++;
-            if (var_t0 < MENU_NODE_COUNT)
-            {
-                goto tail_loop;
+                temp_a0 = var_a3 & 0xFFFF;
+                temp_a1 = var_a3 & 0x1FF;
+                var_a3 += MENU_ROW_HEIGHT;
+                new_var10 = (temp_a0 & 1) << 15;
+                new_var6 = (temp_a0 >> 1) & 0xFF;
+                field_a = var_a2[var_t0].u8_u.nav_y_packed & 0x80FF;
+                var_a2[var_t0].u8_u.nav_y_packed = (u16)field_a;
+                field_b = var_a2[var_t0].idx_nav.nav_x_packed & 0x80FF;
+                var_a2[var_t0].idx_nav.nav_x_packed = (u16)field_b;
+                var_a2[var_t0].uA.layout_child_packed = (u16)((var_a2[var_t0].uA.layout_child_packed & 0xFF00) | new_var6);
+                new_var8 = (temp_a1 & 1) << 15;
+                var_a2[var_t0].u8_u.nav_y_packed = (u16)((var_a2[var_t0].u8_u.nav_y_packed & 0x7FFF) | new_var10);
+                var_a2[var_t0].idx_nav.nav_x_packed = (u16)((var_a2[var_t0].idx_nav.nav_x_packed & 0x7FFF) | new_var8);
+                var_a1 = temp_a1 >> 1;
+                var_a2[var_t0].u8_u.nav_y_packed = (u16)((var_a2[var_t0].u8_u.nav_y_packed & 0xFF00) | var_a1);
             }
         }
-    } while (0);
+        var_t0 += 1;
+    } while (var_t0 < MENU_NODE_COUNT);
     if (g_active_script != 0)
     {
         g_menu_scene_type = -1;
