@@ -6964,8 +6964,8 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
             if ((y - scroll_y) >= -0xF && (y - scroll_y) < (list->viewport_h - 0x10))
             {
                 u32 w2;
-                u8* tbl;
                 s32 pal;
+                u8 entry;
 
                 buf = (void*)menu_emit_icon_sprite(buf, ot, icon, 0x10 - view_origin->x, (y - scroll_y) - view_origin->y, 0, 0, 0, 0);
                 setlen((DR_TPAGE*)buf, 1);
@@ -6976,14 +6976,17 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                 w2 = PAD_ITEM_W14(item);
                 if (w2 & 0x300)
                 {
-                    tbl = &D_800F0BEC[(w2 >> 0xA) & 0x3F];
+                    entry = D_800F0BEC[(w2 >> 0xA) & 0x3F];
                 }
                 else
                 {
-                    tbl = &D_800F0BE0[(w2 >> 0xA) & 0x3F];
+                    entry = D_800F0BE0[(w2 >> 0xA) & 0x3F];
                 }
                 pal = 1;
-                { u32 entry=*(volatile u8*)tbl; u32 mask; do { mask=(u8)g_menu_ability_mask; } while(0); mask=entry & mask; if(mask){pal=3;} }
+                if (entry & (u8)g_menu_ability_mask)
+                {
+                    pal = 3;
+                }
                 buf = (void*)func_800A88A0(buf, ot, item, pal, 0x22 - view_origin->x, (y - scroll_y) - view_origin->y, 0);
 
                 if (g_menu_pending_item_row != 0xFF)
@@ -7016,7 +7019,6 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
 
             if ((y >> 4) == list->sel_idx)
             {
-                { u8* shadow_pad = (u8*)g_pad_ctx; }
                 g_menu_inventory_index = idx;
                 g_menu_item_ptr = (s32)((u8*)g_pad_ctx + ((idx << 6) + 0xCE0));
                 switch (g_menu_active_item_category)
@@ -7172,27 +7174,19 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                     else
                     {
                         u32 w = PAD_ITEM_W14(g_menu_item_ptr);
-                        u8* tbl;
+                        u8 entry;
                         if (w & 0x300)
                         {
-                            w >>= 0xA;
-                            w &= 0x3F;
-                            tbl = D_800F0BEC;
+                            entry = D_800F0BEC[(w >> 0xA) & 0x3F];
                         }
                         else
                         {
-                            w >>= 0xA;
-                            w &= 0x3F;
-                            tbl = D_800F0BE0;
+                            entry = D_800F0BE0[(w >> 0xA) & 0x3F];
                         }
-                        w += (u32)tbl;
+                        if (entry & (u8)g_menu_ability_mask)
                         {
-                            u8 entry;
-                            u32 mask;
-                            do { entry = *(volatile u8*)w; } while (0);
-                            mask = (u8)g_menu_ability_mask;
-                            mask = entry & mask;
-                            if (mask) { menu_play_se(0x78, 0x80); return buf; }
+                            menu_play_se(0x78, 0x80);
+                            return buf;
                         }
                         menu_play_se(0x7E, 0x80);
                         MENU_CLEAR_SLOTS();
