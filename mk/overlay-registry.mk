@@ -319,6 +319,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800A88A0.c \
 	src/overlays/field/unk2_b_split013_tail_a.c \
 	src/overlays/field/unk2_b_split013_b.c \
+	src/overlays/field/func_800A9D70.c \
+	src/overlays/field/unk2_b_split013_b_after_9d70.c \
 	src/overlays/field/func_800AA02C.c \
 	src/overlays/field/unk2_b_split013_tail.c \
 	src/overlays/field/unk2_b_split014.c \
@@ -347,6 +349,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split025_tail2b_b.c \
 	src/overlays/field/func_800B4E60.c \
 	src/overlays/field/unk2_b_split026.c \
+	src/overlays/field/unk2_b_split026_after_5e5c.c \
 	src/overlays/field/unk2_b_split026_tail.c \
 	src/overlays/field/unk2_b_split028.c \
 	src/overlays/field/unk2_b_split029_mid.c \
@@ -414,7 +417,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split107_tail_b_after_9ea8.c \
 	src/overlays/field/unk2_b_split111.c \
 	src/overlays/field/unk2_b_split112.c \
-	src/overlays/field/unk2_b_split113.c \
 	src/overlays/field/field_handle_actor_control_flag_40.c \
 	src/overlays/field/unk2_b_split115.c \
 	src/overlays/field/func_800AB774.c \
@@ -500,6 +502,9 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800B977C.c \
 	src/overlays/field/func_800C24BC.c \
 	src/overlays/field/func_800C2640.c \
+	src/overlays/field/func_800B5D60.c \
+	src/overlays/field/func_800B5E5C.c \
+	src/overlays/field/field_script_read_operand.c \
 	src/overlays/field/func_800B7C58.c \
 	src/overlays/field/func_800B820C.c \
 	src/overlays/field/field371.c \
