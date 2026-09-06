@@ -80,7 +80,7 @@ segments:
       - [0x4A25, c, func_80144A24]             # gcc272_cdk, func_80144A24, 100%
       - [0x4CD1, c, carda_glyph_builder]       # gcc272_cdk, func_80144CD0, 100%
       - [0x4F19, c, carda_choice_prompt]        # gcc272_cdk, 2 funcs, 100%
-      - [0x5051, c, unk1_after_choice]
+      - [0x5051, c, func_80145050]
       - [0x6695, c, carda_restore_record]       # gcc272_cdk, func_80146694, 100%
       - [0x66F9, c, unk1_after_choice_after_restore]
       - [0x6795, c, func_80146794]              # gcc272_cdk, func_80146794, 100%
