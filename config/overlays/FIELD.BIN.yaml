@@ -289,7 +289,7 @@ segments:
       - [0x58E95, c, field290]                     # gcc272_cdk, func_800A8B04
       - [0x58F21, c, func_800A8B90]             # gcc272_cdk, 100%
       - [0x5908D, c, field_pad_context_ops]     # gcc272_cdk, func_800A8CFC .. func_800A90F8 (11 funcs, 100%; 5 of them do not match under gcc280_g0)
-      - [0x59529, c, unk2_b_split013_tail_a]    # gcc272_cdk, func_800A9198
+      - [0x59529, c, func_800A9198]               # gcc272_cdk, 100%
       - [0x5965D, c, field331]                  # gcc272_cdk, func_800A92CC (92.88% WIP)
       - [0x5972D, c, unk2_b_split013_b]         # gcc272_cdk, func_800A939C .. func_800A9B88
       - [0x5A101, c, func_800A9D70]               # gcc272_cdk, 100%
@@ -394,7 +394,8 @@ segments:
       - [0x67485, c, func_800B70F4]                # gcc280_g0, 100%
       - [0x674F5, c, func_800B7164]                # gcc280_g0, 100%
       - [0x6762D, c, func_800B729C]                # gcc280_g0, 100%
-      - [0x677BD, c, unk2_b_split028_after_729c]   # gcc272_cdk, func_800B742C .. func_800B76F8
+      - [0x677BD, c, unk2_b_split028_after_729c]   # gcc272_cdk, func_800B742C
+      - [0x67A89, c, func_800B76F8]                # gcc280_g0, 100%
       - [0x67C1D, c, field94]                      # gcc272_cdk, func_800B788C
       - [0x67C51, c, func_800B78C0]                 # gcc280_g0, 100%
       - [0x67D11, c, unk2_b_split029_mid]          # gcc272_cdk, func_800B7980
@@ -499,7 +500,7 @@ segments:
       - [0x7351D, c, field_record_table_ops]    # gcc280_g0, func_800C318C .. func_800C396C (15 funcs; func_800C3688 96.73% allocator-only, rest 100%)
       - [0x73D91, c, unk2_b_split067_b]         # gcc272_cdk, func_800C3A00
       - [0x73EE1, c, field167]                  # gcc280_g0, func_800C3B50
-      - [0x73F69, c, unk2_b_split068]           # gcc272_cdk, func_800C3BD8
+      - [0x73F69, c, func_800C3BD8]              # gcc280_g0, 100%
       - [0x74045, c, func_800C3CB4]            # gcc272_cdk, 100%
       - [0x740C9, c, unk2_b_split068_tail]      # gcc272_cdk, func_800C3D38, func_800C3F18
       - [0x746F5, c, func_800C4364]             # gcc272_cdk, WIP 87.02%
