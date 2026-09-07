@@ -14,7 +14,6 @@
 #define CHECKPS_PATTERN_RED_POLY_F4_COMMAND 0x280000FF
 #define CHECKPS_PATTERN_FIXED_INNER_OFFSET 40
 #define CHECKPS_PATTERN_FIXED_OUTER_OFFSET 48
-#define CHECKPS_PATTERN_VERTEX_PADDING_SIZE 12
 #define CHECKPS_PATTERN_PACK_XY(x, y) (((y) << 16) | (x))
 
 /** @brief POLY_F4 packet with indexed access to its six 32-bit GPU words. */
@@ -33,30 +32,14 @@ typedef struct
 extern u8 g_hardware_pattern_size_table[CHECKPS_PATTERN_SIZE_COUNT][2];
 
 /**
- * @brief Shift-JIS hardware-modification warning shown before termination.
+ * @brief Signs used to reflect one ring segment into all four quadrants.
  *
- * Decoded meaning:
- *   "Execution was forcibly terminated."
- *   "The console may have been modified."
- *
- * The original message is split across three display lines. It remains packed
- * as 15 little-endian words to preserve its exact 60-byte layout, including
- * two trailing NUL bytes.
+ * The four (x, y) sign pairs are {1, 1}, {-1, 1}, {1, -1}, {-1, -1}. The bytes
+ * live in the pattern_vertex_signs rodatabin asset (extracted alongside the
+ * trailing padding so pattern.o keeps no rodata of its own); this declaration
+ * lets draw_hardware_check_pattern reference them by symbol.
  */
-const u32 g_hardware_modification_warning[CHECKPS_HARDWARE_WARNING_WORD_COUNT] = {
-    0xA790AD8B, 0xB997498F, 0xDC82B582, 0xBD82B582, 0x960A4281, 0x82CC917B, 0x91FC89AA, 0x82B382A2,
-    0x82C482EA, 0x0AE982A2, 0xBB82A882, 0xAA82EA82, 0xE882A082, 0xB782DC82, 0x00004281,
-};
-
-/** Signs used to reflect one ring segment into all four quadrants. */
-const CheckPSPatternVertexSigns g_hardware_pattern_vertex_signs = {
-    {
-        {1, 1},
-        {-1, 1},
-        {1, -1},
-        {-1, -1},
-    },
-};
+extern const CheckPSPatternVertexSigns g_hardware_pattern_vertex_signs;
 
 /**
  * @brief Draw the concentric diagnostic pattern used by the failure screen.
@@ -109,8 +92,3 @@ void draw_hardware_check_pattern(void)
 
     DrawPrim(&packet.polygon);
 }
-
-/** Zero-filled padding that preserves the following fixed symbol address. */
-const u8 g_hardware_pattern_vertex_padding[CHECKPS_PATTERN_VERTEX_PADDING_SIZE] = {
-    0,
-};

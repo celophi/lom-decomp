@@ -36,8 +36,20 @@ typedef struct
     } size;
 } KanjiDrawState;
 
-/* Data shared by the hardware-warning renderer and its caller. */
 #define CHECKPS_HARDWARE_WARNING_WORD_COUNT 15
+
+/**
+ * @brief Shift-JIS hardware-modification warning shown before termination.
+ *
+ * Decoded meaning:
+ *   "Execution was forcibly terminated."
+ *   "The console may have been modified."
+ *
+ * The message is split across three display lines and stored as an opaque
+ * 60-byte packed blob (15 little-endian words, including two trailing NUL
+ * bytes). The bytes live in the hardware_modification_warning rodatabin asset;
+ * this declaration lets the renderer in cdrom.c reference them by symbol.
+ */
 extern const u32 g_hardware_modification_warning[CHECKPS_HARDWARE_WARNING_WORD_COUNT];
 
 /* CD state defined in cdrom_data.c and consumed by cdrom.c. */
