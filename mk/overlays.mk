@@ -66,9 +66,10 @@ $(1)_GCC_272_CDK_G0_NOSTRENGTH_SRCS := $$(overlay_$(1)_gcc_272_cdk_g0_nostrength
 $(1)_GCC_272_CDK_G0_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_272_cdk_g0_noexpand_srcs)
 $(1)_GCC_272_GNU_G0_SRCS := $$(overlay_$(1)_gcc_272_gnu_g0_srcs)
 $(1)_GCC_280_G0_SRCS := $$(overlay_$(1)_gcc_280_g0_srcs)
+$(1)_GCC_280_G0_O0_SRCS := $$(overlay_$(1)_gcc_280_g0_o0_srcs)
 $(1)_GCC_280_G4_SRCS := $$(overlay_$(1)_gcc_280_g4_srcs)
 $(1)_GCC_280_G4_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_280_g4_noexpand_srcs)
-$(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_CDK_G0_NOSCHED_SRCS) $$($(1)_GCC_272_CDK_G0_NOSTRENGTH_SRCS) $$($(1)_GCC_272_CDK_G0_NOEXPAND_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$($(1)_GCC_280_G0_SRCS) $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
+$(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_CDK_G0_NOSCHED_SRCS) $$($(1)_GCC_272_CDK_G0_NOSTRENGTH_SRCS) $$($(1)_GCC_272_CDK_G0_NOEXPAND_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$($(1)_GCC_280_G0_SRCS) $$($(1)_GCC_280_G0_O0_SRCS) $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
 # Generated unk*.c files are gitignored and splat does not remove outputs from
 # older configurations. Treat tracked C files and explicitly routed generated
 # files as build inputs so stale ignored files cannot enter the build by accident.
@@ -89,6 +90,7 @@ $(1)_GCC_280_G4_ALL_SRCS := $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND
 
 # ── Derive object paths ──
 $(1)_GCC_280_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G0_SRCS))
+$(1)_GCC_280_G0_O0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G0_O0_SRCS))
 $(1)_GCC_280_G4_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G4_ALL_SRCS))
 $(1)_GCC_280_G4_NOEXPAND_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G4_NOEXPAND_SRCS))
 $(1)_GCC_272_GNU_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_GNU_G0_SRCS))
@@ -107,7 +109,7 @@ $$($(1)_GCC_272_CDK_G0_NOSCHED_OBJS): CFLAGS_272_CDK_SCHED_FLAG := -fno-schedule
 $$($(1)_GCC_272_CDK_G0_NOSTRENGTH_OBJS): CFLAGS_272_CDK_STRENGTH_FLAG := -fno-strength-reduce
 # Clear the div-expansion flag for the CDK no-expand subset (target-specific var).
 $$($(1)_GCC_272_CDK_G0_NOEXPAND_OBJS): MASPSX_CDK_DIV_FLAG :=
-$(1)_C_OBJS := $$($(1)_GCC_272_CDK_G0_OBJS) $$($(1)_GCC_280_G0_OBJS) $$($(1)_GCC_272_GNU_G0_OBJS) $$($(1)_GCC_280_G4_OBJS)
+$(1)_C_OBJS := $$($(1)_GCC_272_CDK_G0_OBJS) $$($(1)_GCC_280_G0_OBJS) $$($(1)_GCC_280_G0_O0_OBJS) $$($(1)_GCC_272_GNU_G0_OBJS) $$($(1)_GCC_280_G4_OBJS)
 
 # ── Optional standalone binary object ──
 # Use asset_src only when the linker script expects assets/<name>.o. This is
@@ -140,6 +142,12 @@ $$($(1)_GCC_272_CDK_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o
 $$($(1)_GCC_280_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+
+# Rule: compile C files with GCC 2.8.0 G0 at -O0 + maspsx.
+$$($(1)_GCC_280_G0_O0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
+	@mkdir -p $$(@D)
+	cd $(STAGING) && $(CC) $(CFLAGS_G0_O0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile C files with GCC 2.8.0 G4 + maspsx.
