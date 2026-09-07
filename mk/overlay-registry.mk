@@ -242,7 +242,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_i_b_split003.c \
 	src/overlays/field/field_get_object_script_command.c \
 	src/overlays/field/func_80088198.c \
-	src/overlays/field/unk2_i_b_split004_tail_b.c \
+	src/overlays/field/func_80089AE4.c \
 	src/overlays/field/func_80089BE8.c \
 	src/overlays/field/unk2_i_b_split004_tail_b_after_89be8.c \
 	src/overlays/field/func_8008A4D0.c \
@@ -325,7 +325,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800A764C.c \
 	src/overlays/field/unk2_b_split009_b.c \
 	src/overlays/field/func_800A88A0.c \
-	src/overlays/field/unk2_b_split013_tail_a.c \
+	src/overlays/field/func_800A9198.c \
 	src/overlays/field/unk2_b_split013_b.c \
 	src/overlays/field/func_800A9D70.c \
 	src/overlays/field/unk2_b_split013_b_after_9d70.c \
@@ -351,7 +351,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split021_tail.c \
 	src/overlays/field/unk2_b_split022.c \
 	src/overlays/field/unk2_b_split022_b.c \
-	src/overlays/field/unk2_b_split022_b_tail_before_1f10.c \
+	src/overlays/field/unk2_b_split022_b_tail_after_1BBC_before_1f10.c \
 	src/overlays/field/unk2_b_split022_b_tail_after_1f10.c \
 	src/overlays/field/unk2_b_split023_tail.c \
 	src/overlays/field/unk2_b_split025_tail2_c.c \
@@ -369,7 +369,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split030.c \
 	src/overlays/field/unk2_b_split031_mid.c \
 	src/overlays/field/unk2_b_split031_tail.c \
-	src/overlays/field/unk2_b_split031_tail_after_977c.c \
+	src/overlays/field/unk2_b_split031_tail_after_9868.c \
 	src/overlays/field/unk2_b_split034.c \
 	src/overlays/field/unk2_b_split040.c \
 	src/overlays/field/unk2_b_split046.c \
@@ -380,6 +380,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split051_c.c \
 	src/overlays/field/unk2_b_split052.c \
 	src/overlays/field/unk2_b_split053.c \
+	src/overlays/field/unk2_b_split053_after_bfe70.c \
 	src/overlays/field/unk2_b_split053_b.c \
 	src/overlays/field/func_800C0C74.c \
 	src/overlays/field/unk2_b_split055.c \
@@ -391,8 +392,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split062_b.c \
 	src/overlays/field/unk2_b_split064.c \
 	src/overlays/field/unk2_b_split064_tail.c \
-	src/overlays/field/unk2_b_split067_b.c \
-	src/overlays/field/unk2_b_split068.c \
 	src/overlays/field/func_800C3CB4.c \
 	src/overlays/field/unk2_b_split068_tail.c \
 	src/overlays/field/func_800C4364.c \
@@ -470,7 +469,9 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_i_b_split023_mid_after_96A90.c \
 	src/overlays/field/func_800970B0.c \
 	src/overlays/field/unk2_i_b_split023_mid_tail.c \
-	src/overlays/field/unk2_i_b_split023_mid_b.c \
+	src/overlays/field/unk2_i_b_split023_mid_b_before_98c7c.c \
+	src/overlays/field/func_80098C7C.c \
+	src/overlays/field/unk2_i_b_split023_mid_b_after_98c7c.c \
 	src/overlays/field/unk2_b_split025_tail3.c \
 	src/overlays/field/unk2_b_split026_after_543c.c
 
@@ -506,12 +507,15 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800C23F4.c \
 	src/overlays/field/func_800B0AF8.c \
 	src/overlays/field/func_800B1AA8.c \
+	src/overlays/field/func_800B1BBC.c \
 	src/overlays/field/func_800B1F10.c \
 	src/overlays/field/func_800B42B4.c \
 	src/overlays/field/func_800B4584.c \
 	src/overlays/field/func_800B543C.c \
 	src/overlays/field/func_800B6C48.c \
 	src/overlays/field/func_800B977C.c \
+	src/overlays/field/func_800B9868.c \
+	src/overlays/field/func_800B9AC4.c \
 	src/overlays/field/func_800C24BC.c \
 	src/overlays/field/func_800C2640.c \
 	src/overlays/field/func_800B5948.c \
@@ -543,6 +547,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800B70F4.c \
 	src/overlays/field/func_800B7164.c \
 	src/overlays/field/func_800B729C.c \
+	src/overlays/field/func_800B76F8.c \
 	src/overlays/field/func_800B69B0.c \
 	src/overlays/field/func_800B6EC0.c \
 	src/overlays/field/func_800BB3D8.c \
@@ -557,8 +562,11 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800BD55C.c \
 	src/overlays/field/func_800BD650.c \
 	src/overlays/field/func_800BF68C.c \
+	src/overlays/field/func_800BFE70.c \
 	src/overlays/field/func_800C2848.c \
 	src/overlays/field/func_800C2D08.c \
+	src/overlays/field/func_800C3A00.c \
+	src/overlays/field/func_800C3BD8.c \
 	src/overlays/field/func_800C5760.c \
 	src/overlays/field/func_800C7494.c \
 	src/overlays/field/func_800C7090.c \
