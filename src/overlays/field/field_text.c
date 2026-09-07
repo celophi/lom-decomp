@@ -1,4 +1,5 @@
 #include "common.h"
+#include "vector.h"
 
 /** @brief Byte view of a field text flags word. */
 typedef struct
@@ -219,13 +220,6 @@ typedef struct
     u32 tag0;               // 0x00
     u32 tag1;               // 0x04
 } FieldOrderingTags;
-
-/** @brief One scratchpad mesh vertex. */
-typedef struct
-{
-    s16 x;                  // 0x00
-    s16 y;                  // 0x02
-} Vec2s;
 
 /** @brief 40-byte textured quad primitive, packet length 9. */
 typedef struct

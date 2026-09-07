@@ -1,4 +1,5 @@
 #include "common.h"
+#include "vector.h"
 
 typedef struct {
     s16 x;
@@ -626,11 +627,6 @@ void niki_update_elements(void)
 }
 
 /* ----- Decls for niki_draw_entry_list (niki row/status list renderer) ----- */
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 typedef struct
 {

@@ -1,5 +1,6 @@
 #include "menu.h"
 #include "display.h"
+#include "vector.h"
 
 /* ----- Macros ----- */
 
@@ -389,12 +390,6 @@ typedef struct
     s16 w;
     s16 h;
 } MenuRectU16;
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 /** @brief 2-D screen coordinate (pixels). */
 typedef struct
