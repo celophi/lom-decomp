@@ -1,5 +1,6 @@
 // CHECKPS.BIN
 g_controller_device_type = 0x801ED600;
+g_hardware_modification_warning = 0x8004FCC4;
 g_hardware_pattern_vertex_signs = 0x8004FD00;
 g_hardware_pattern_vertex_padding = 0x8004FD08;
 g_hardware_pattern_size_table = 0x8005CFF0;

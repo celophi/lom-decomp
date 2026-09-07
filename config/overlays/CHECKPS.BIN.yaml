@@ -53,13 +53,40 @@ segments:
       # cdrom_data.s for objdiff while linking the real sections from C.
       - [auto, c, cdrom_data]
       - [0x5, .rodata, cdrom]
-      - [0x55, .rodata, pattern]
+      # Shift-JIS hardware-modification warning: an opaque packed text blob,
+      # extracted as a raw rodatabin asset rather than hardcoded .word data.
+      - start: 0x55
+        type: rodatabin
+        name: hardware_modification_warning
+        dir: checkps
+      # Pattern vertex signs + trailing padding. These leave pattern.o's rodata
+      # too: GNU as rounds that section's size up to a 16-byte multiple, and the
+      # 60-byte warning was what previously made the combined block land on that
+      # boundary. Extracted as a maspsx-assembled rodatabin (no 16-byte rounding)
+      # so the following init .text still starts at its original address.
+      - start: 0x91
+        type: rodatabin
+        name: pattern_vertex_signs
+        dir: checkps
       - [0xA5, c, init]
       - [0xE95, c, cdrom]
       - [0x1BC1, c, kanji]
       - [0x1DB5, c, pattern]
       - [0x1F45, c, font]
-      - [0x27B9, data, table]
+      # Large binary payloads extracted as raw databin assets (see GOLEM/GOSUB):
+      # the embedded AKAO music sequence and the TIM boot image are opaque blobs
+      # and must not be hardcoded as .word tables in the linked assembly.
+      - start: 0x27B9
+        type: databin
+        name: embedded_akao
+        dir: checkps
+      - start: 0xBAD5
+        type: databin
+        name: image_asset
+        dir: checkps
+      # Residual small tables (CD command table, register/state vars, glyph
+      # lookup tables) remain readable .data.
+      - [0xD321, data, table]
       - [0xD3E5, .data, font]
       - [0xD3F1, .bss, init]
       - [0x31441, .data, cdrom_data]
