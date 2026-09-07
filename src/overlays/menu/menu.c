@@ -275,6 +275,12 @@ typedef struct
     s16 h;
 } MenuRectU16;
 
+typedef struct
+{
+    s16 x;
+    s16 y;
+} Vec2s;
+
 /** @brief 2-D screen coordinate (pixels). */
 typedef struct
 {
@@ -461,6 +467,26 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
 u32 menu_step_item_selection(s32 step);
 
 /* ----- Extern globals ----- */
+
+extern s32 D_80042FB4;
+extern u16 D_800F0C1C;
+extern s32 D_80105AE0;
+/** @brief Default scene content count encoded as count - 1 (value 3). */
+extern u8 g_menu_default_content_count_minus_one;
+extern u8 g_menu_content_item_counts[];
+/** @brief Base of the four default MenuContentItem descriptors used by scene -1. */
+extern MenuContentItem g_menu_default_content_items;
+extern u8 D_80168659[];
+extern u8 D_80168696[];
+extern u8 D_801686B8[];
+extern u8 D_80168C01[];
+extern u8 D_80168C05[];
+extern u8 D_80168C09[];
+extern u8* D_80168C20;
+extern u8* D_80168C24;
+extern u8* D_80168C30;
+extern u32 D_801694CC[];
+extern u32 D_801694DC[];
 
 /** @brief Optional help/description string drawn below the active menu content. */
 extern s32 g_menu_help_text;
@@ -3836,125 +3862,92 @@ s32 menu_build_inventory_nav_entries(s32 arg0)
     }
     return count;
 }
-/* ----- M2C macros required by menu_draw_scene_content ----- */
-typedef s32 M2C_UNK;
-typedef s8 M2C_UNK8;
-typedef s16 M2C_UNK16;
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
-#define M2C_BITWISE(type, expr) ((type)(expr))
-
-typedef struct
+/**
+ * @brief Convert a halfword index to its byte offset.
+ * @param value Halfword index.
+ * @return Byte offset.
+ */
+static inline s32 menu_content_halfword_offset(s32 value)
 {
-    s16 x;
-    s16 y;
-} Vec2s;
-
-extern s32 D_80042FB4;
-extern u16 D_800F0C1C;
-extern M2C_UNK D_80105AE0;
-/** @brief Default scene content count encoded as count - 1 (value 3). */
-extern u8 g_menu_default_content_count_minus_one;
-extern u8 g_menu_content_item_counts[];
-/** @brief Base of the four default MenuContentItem descriptors used by scene -1. */
-extern u16 g_menu_default_content_items;
-extern u8 D_80168659[];
-extern u8 D_80168696[];
-extern u8 D_801686B8[];
-extern u8 D_80168C01[];
-extern u8 D_80168C05[];
-extern u8 D_80168C09[];
-extern u8* D_80168C20;
-extern u8* D_80168C24;
-extern u8* D_80168C30;
-extern u32 D_801694CC[];
-extern u32 D_801694DC[];
+    return value * 2;
+}
 
 /**
- * @brief Draw the active scene's content entries.
- * @param var_s1 GPU packet cursor advanced as primitives are emitted.
- * @param arg1 Ordering-table entry passed to render helpers.
- * @return Updated GPU packet cursor after drawing.
- * @see decomp.me (89.27%) https://decomp.me/scratch/D6Nba
+ * @brief Locate a character slot within the shared context.
+ * @param slot Character slot index.
+ * @return Byte offset of the slot.
  */
-static inline s32 menu_twice(s32 value) { return value * 2; }
-
-static inline s32 menu_probe_slot_off(s32 slot)
+static inline s32 menu_character_slot_offset(s32 slot)
 {
     return slot * 0x250;
 }
 
-static inline s32 menu_probe_node_off(s32 idx)
+/**
+ * @brief Locate a large name-history slot.
+ * @param idx History slot index.
+ * @return Byte offset of the slot.
+ */
+static inline s32 menu_history_slot_offset(s32 idx)
 {
     return idx * 0x14C;
 }
 
-static inline u8 menu_reload_plain_u8(const u8* p)
+/**
+ * @brief Read one byte from content data.
+ * @param p Content byte address.
+ * @return Byte value.
+ */
+static inline u8 menu_read_content_byte(const u8* p)
 {
     return *p;
 }
 
-static inline s32 menu_mask_test_pref(s32 shift, s32 mask)
+/**
+ * @brief Draw the active scene's content entries.
+ * @param packet_cursor GPU packet cursor advanced as primitives are emitted.
+ * @param ot_entry Ordering-table entry passed to render helpers.
+ * @return Updated GPU packet cursor after drawing.
+ * @note Instruction-level 100% match; objdiff reports 99.97% due to 45 splat
+ *       relocation-representation rows (g_pad_ctx GP loads, jump-table and
+ *       rodata symbol references) where every register and opcode is identical.
+ * @see decomp.me (89.27%) https://decomp.me/scratch/D6Nba
+ */
+void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
 {
-    return (mask >> shift) & 1;
-}
-
-#define ITEM_Y (((u8*)var_s3)[2])
-#define ITEM_SUB (((u8*)var_s3)[3])
-
-void* menu_draw_scene_content(void* var_s1, s32* arg1)
-{
-    u8 sp28[0x40];
-    u8 sp68[0x40];
+    u8 text_buffer[0x40];
+    u8 prefix_buffer[0x40];
     Vec2s pos;
-    u8 spB0[16];
-    s32 spC0;
-    s32 var_a0_3, var_a0_4, var_a0_7, var_a0_8;
-    s32 var_a1, var_a2_3, var_a2_4, var_a2_5, var_a2_7, var_a2_8, var_a2_10;
-    s32 var_a2_11, var_a2_12, var_a2_13, var_a2_14, var_a2_15;
-    s32 var_a2_16, var_a2_17, var_a2_18, var_a2_19;
-    s32 var_a2_21, var_a2_22, var_a2_24, var_a2_25, var_a2_29;
-    s32 var_a2_20, var_a2_23;
-    u16 var_a2_9, var_a2_7u, var_a2_15u;
-    u16 var_a2_20u, var_a2_23u;
-    u32 var_a2_26;
-    s32 temp_v0_5, temp_v0_6;
-    u16* var_s3;
-    u8 **var_t0_2, **var_t0_3, **var_t0_4, **var_t0_5;
-    u8 *var_a2_2, *var_a2_6, *var_a2_27, *var_a2_28;
-    u8 *var_v1_2, *var_v1_7, *var_v1_9, *var_v1_12, *var_v1_13, *var_v1_14, *var_v1_15, *var_v1_16, *var_v1_18, *var_v1_20;
+    u8 label_buffer[16];
+    s32 remaining_count;
+    MenuContentItem* content_item;
+    u8* var_a2_2;
     void* var_a0;
-    void *base_a2_0, *base_a2_1, *base_a2_2, *base_a2_3, *base_a2_4, *base_a2_5, *base_a2_6, *base_a2_7, *base_a2_8, *base_a2_9, *base_a2_10, *base_a2_11, *base_a2_12;
-    s32 temp_a1_2, temp_a1_3, temp_a1_4, temp_a1_5, temp_a1_6;
-    u32 temp_a1_2u, temp_hi;
-    s8 temp_v1_13, temp_v1_14, temp_v1_15, temp_v1_16;
-    u8 temp_v1_19, temp_v1_21;
-    u16 temp_s0_17;
-    u32 temp_s0_16, temp_s2;
-    s32 temp_t3;
-    s32 i, k;
-    u32 tmpa0;
+    void *base_a2_0, *base_a2_1, *base_a2_2, *base_a2_3, *base_a2_4, *base_a2_5, *base_a2_6, *base_a2_7, *base_a2_8, *base_a2_9, *base_a2_10, *base_a2_11,
+        *base_a2_12;
+    s32 k;
     u32 shared_s0;
+    s32 content_index;
     s32 two_outer = 2;
     s32 val;
     s32 zero = 0;
 
     if (g_menu_scene_type == -1)
     {
-        var_s3 = &g_menu_default_content_items;
-        spC0 = g_menu_default_content_count_minus_one + 1;
+        content_item = &g_menu_default_content_items;
+        remaining_count = g_menu_default_content_count_minus_one + 1;
     }
     else
     {
         u8 idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
-        var_s3 = (u16*)g_menu_content_table[idx];
-        spC0 = g_menu_content_item_counts[g_menu_content_group_ids[idx]];
+        content_item = g_menu_content_table[idx];
+        remaining_count = g_menu_content_item_counts[g_menu_content_group_ids[idx]];
     }
 
-    if (var_s3 != NULL)
+    if (content_item != NULL)
     {
-        if (var_s3 == (u16*)1)
+        if (content_item == (MenuContentItem*)1)
         {
-            g_menu_load_request = (s32)var_s3;
+            g_menu_load_request = (s32)content_item;
         }
         else
         {
@@ -3972,1420 +3965,1505 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                 g_menu_category2_item = (u32)temp_v1_2;
             }
 
-            if (spC0 != 0)
+            if (remaining_count != 0)
             {
-            do
-            {
-                u8* item = (u8*)var_s3 + 2;
-                pos.x = (s16)(*var_s3 & 0x1FF);
-                pos.y = (s16)(ITEM_Y - 8);
+                do
                 {
-                    s32 t0 = 0xFF;
-                    u16 item_word = *var_s3;
-                    s32 item_type = item_word >> 12;
-                switch (item_type)
-                {
-                case 1:
-                    var_a0 = var_s1;
-                    base_a2_0 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
+                    pos.x = (s16)(content_item->packed_x & 0x1FF);
+                    pos.y = (s16)(content_item->y - 8);
                     {
-                        s32 a3 = 1;
-                        void* a2_2 = (void*)((u8*)base_a2_0 + *(u16*)((u8*)base_a2_0 + (ITEM_SUB * 2)));
-                        var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                    }
-                    break;
-
-                case 2:
-                {
-                    s32 sub;
-                    if (ITEM_SUB < 2)
-                    {
-                        t0 = 0xFF;
-                        { s32 y = two_outer; if (y == 2)
-                            t0 = 0x1E; }
-                    }
-                    {
-                        u8 sub_byte = ITEM_SUB;
-                        sub = sub_byte;
-                    }
-                    if ((u32)(sub - 2) < 8)
-                    {
-                        s32 s;
-                        val = 0;
-                        if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
-                        {
-                            val = *(u8*)(g_menu_category1_item + 0x2C);
-                        }
-                        s = ITEM_SUB;
-                        if (((val >> (s - 2)) & 1) != 0)
-                        {
-                            t0 = s + 0x3B;
-                        }
-                        else
-                        {
-                            t0 = 0x21;
-                        }
-                    }
-                    else if ((u32)(sub - 0xA) < 8)
-                    {
-                        s32 s;
-                        val = 0;
-                        if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
-                        {
-                            val = *(u8*)(g_menu_category1_item + 0x2D);
-                        }
-                        t0 = 0x21;
-                        s = ITEM_SUB;
-                        if (((val >> (s - 0xA)) & 1) != 0)
-                        {
-                            t0 = s + 0x2B;
-                        }
-                    }
-                    else if ((u32)(sub - 0x12) < 8)
-                    {
-                        s32 s;
-                        val = 0;
-                        if (*(u8*)(D_80168C20 + 0x40) != 0)
-                        {
-                            val = *(u8*)(D_80168C20 + 0x6C);
-                        }
-                        if (*(u8*)(D_80168C20 + 0x80) != 0)
-                        {
-                            val |= *(u8*)(D_80168C20 + 0xAC);
-                        }
-                        if (*(u8*)(D_80168C20 + 0xC0) != 0)
-                        {
-                            val |= *(u8*)(D_80168C20 + 0xEC);
-                        }
-                        t0 = 0x21;
-                        s = ITEM_SUB;
-                        if (((val >> (s - 0x12)) & 1) != 0)
-                        {
-                            t0 = s + 0x2B;
-                        }
-                    }
-                    else if ((u32)(sub - 0x1A) < 8)
-                    {
-                        s32 s;
-                        val = 0;
-                        if (*(u8*)(D_80168C20 + 0x40) != 0)
-                        {
-                            val = *(u8*)(D_80168C20 + 0x6D);
-                        }
-                        if (*(u8*)(D_80168C20 + 0x80) != 0)
-                        {
-                            val |= *(u8*)(D_80168C20 + 0xAD);
-                        }
-                        if (*(u8*)(D_80168C20 + 0xC0) != 0)
-                        {
-                            val |= *(u8*)(D_80168C20 + 0xED);
-                        }
-                        s = ITEM_SUB;
-                        if (((val >> (s - 0x1A)) & 1) != 0)
-                        {
-                            t0 = D_80168696[s];
-                        }
-                        else
-                        {
-                            t0 = 0x21;
-                        }
-                    }
-                    else if ((u32)(sub - 0x22) < 8)
-                    {
-                        t0 = 0x21;
-                        if (g_menu_category0_item != 0)
-                        {
-                            s32 s;
-                            s = ITEM_SUB;
-                            if (((*(u8*)(g_menu_category0_item + 0x2C) >> (s - 0x22)) & 1) != 0)
-                            {
-                                t0 = s + 0x13;
-                            }
-                        }
-                    }
-                    else if ((u32)(sub - 0x2A) < 8)
-                    {
-                        s32 idx;
-                        s32 s;
-                        s = ITEM_SUB;
-                        for (idx = 0; idx < 8; idx++)
-                        {
-                            u8* pad = (u8*)g_pad_ctx;
-                            if (*(u8*)(pad + menu_probe_slot_off(g_menu_char_slot) + idx + 0x638) == s - 0x2A)
-                            {
-                                break;
-                            }
-                        }
-                        t0 = D_801686B8[idx];
-                    }
-                    else if ((u32)(sub - 0x32) < 4)
-                    {
-                        if (g_menu_char_slot != 2)
-                        {
-                            u8* tmp2 = (u8*)((ITEM_SUB << 6) + (s32)g_menu_equipment_base) - 0xC80;
-                            t0 = 0x21;
-                            if (*tmp2 != 0)
-                            {
-                                u32 val = *(u32*)(tmp2 + 0x14);
-                                s32 sel = (val >> 8) & 3;
-                                switch (sel)
-                                {
-                                case 1:
-                                    t0 = ((val >> 10) & 0x3F) + 0x50;
-                                    break;
-                                case 2:
-                                    t0 = ((val >> 10) & 0x3F) + 0x5C;
-                                    break;
-                                case 0:
-                                    t0 = ((val >> 10) & 0x3F) + 0x45;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    else if ((u8)sub == 0x36)
-                    {
-                        t0 = 0xFF;
-                        if (g_menu_item_ptr != 0)
-                        {
-                            if (*(u8*)g_menu_item_ptr != 0)
-                            {
-                                u32 val = *(u32*)(g_menu_item_ptr + 0x14);
-                                s32 sel = (val >> 8) & 3;
-                                switch (sel)
-                                {
-                                case 0:
-                                    t0 = ((val >> 10) & 0x3F) + 0x45;
-                                    break;
-                                case 1:
-                                    t0 = ((val >> 10) & 0x3F) + 0x50;
-                                    break;
-                                case 2:
-                                    t0 = ((val >> 10) & 0x3F) + 0x5C;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    else if ((u32)(sub - 0x37) < 0x1E)
-                    {
-                        t0 = D_80168659[ITEM_SUB];
-                    }
-                    else if ((u8)sub == 0x55)
-                    {
-                        t0 = 0xFF;
-                        if (((*(u32*)((void*)g_pad_ctx + 0x28) >> 1) & 1) != 0)
-                        {
-                            t0 = 0x6A;
-                        }
-                    }
-                    else
-                    {
-                        sub = ITEM_SUB;
-                        if (sub == 0x56)
-                        {
-                            t0 = 0x6A;
-                            if (((*(u32*)((void*)g_pad_ctx + 0x28) >> 1) & 1) != 0)
-                            {
-                                t0 = 0xFF;
-                            }
-                        }
-                        else if (sub == 0x57)
-                        {
-                            t0 = 0xFF;
-                            if ((*(u32*)((void*)g_pad_ctx + 0x28) & 1) != 0)
-                            {
-                                t0 = 0x6A;
-                            }
-                        }
-                        else if (sub == 0x58)
-                        {
-                            t0 = 0x6A;
-                            if ((*(u32*)((void*)g_pad_ctx + 0x28) & 1) != 0)
-                            {
-                                t0 = 0xFF;
-                            }
-                        }
-                        else if (sub == 0x59)
-                        {
-                            t0 = 0xFF;
-                            if ((*(s32*)((void*)g_pad_ctx + 0x858) & 0x80) != 0)
-                            {
-                                t0 = 0x6A;
-                            }
-                        }
-                        else if (sub == 0x5A)
-                        {
-                            t0 = 0x6A;
-                            if ((*(s32*)((void*)g_pad_ctx + 0x858) & 0x80) != 0)
-                            {
-                                t0 = 0xFF;
-                            }
-                        }
-                        else
-                        {
-                            t0 = 0xFF;
-                        }
-                    }
-                    if (t0 != 0xFF)
-                    {
-                        var_s1 = menu_emit_draw_mode_primitive(menu_emit_icon_sprite(var_s1, arg1, t0, *var_s3 & 0x1FF, ITEM_Y - 8, 0, 0, 0, 0), arg1);
-                    }
-                }
-                break;
-
-                case 3:
-                {
-                    s32 tmp = ITEM_SUB;
-                    switch (tmp)
-                    {
-                    case 0x1:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_a0 = var_s1;
-                            var_a2_2 = (void*)g_menu_item_ptr;
-                            var_s1 = func_800A88A0(var_a0, arg1, var_a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                        break;
-                    case 0x2:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            u32 v;
-                            u32 v1;
-
-                            if (menu_item_is_nondefault((u8*)g_menu_item_ptr) != 0)
-                            {
-                                void* a3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x30));
-                                menu_concat_encoded_text(&sp68, (void*)((u8*)a3 + *(u16*)((u8*)a3 + (*(u16*)(g_menu_item_ptr + 0x16) & 0x3F) * 2)),
-                                                         (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + *(u16*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + 0xB4)));
-                            }
-                            else
-                            {
-                                sp68[0] = 0;
-                            }
-                            v = *(u32*)(g_menu_item_ptr + 0x14);
-                            v1 = (v >> 8) & 3;
-                            switch (v1)
-                            {
-                            case 0:
-                            {
-                                void* base0 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
-                                menu_concat_encoded_text(&sp28, &sp68, (void*)((u8*)base0 + *(u16*)((s32)((v >> 9) & 0x7E) + (s32)base0)));
-                                break;
-                            }
-                            case 1:
-                            {
-                                void* base1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
-                                menu_concat_encoded_text(&sp28, &sp68, (void*)((u8*)base1 + *(u16*)((s32)((v >> 9) & 0x7E) + (s32)base1 + 0x16)));
-                                break;
-                            }
-                            default:
-                            {
-                                void* base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
-                                menu_concat_encoded_text(&sp28, &sp68, (void*)((u8*)base2 + *(u16*)((s32)((*(u32*)(g_menu_item_ptr + 0x14) >> 9) & 0x7E) + (s32)base2 + 0x2E)));
-                                break;
-                            }
-                            }
-                            var_s1 = func_800A88A0(var_s1, arg1, &sp28, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                        break;
-                    case 0x3:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u32*)(g_menu_item_ptr + 0x18) & 0xF, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x4:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 4) & 0xF, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x5:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 8) & 0xF, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x6:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 12) & 0xF, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x7:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)(g_menu_item_ptr + 0x1A) & 0xF, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x8:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 20) & 0xF, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x9:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u8*)(g_menu_item_ptr + 0x1B) & 0xF, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0xA:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 28) & 0xF, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0xB:
-                    case 0xC:
-                    case 0xD:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_a0 = var_s1;
-                            base_a2_1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x5C));
-                            {
-                                s32 a3 = 1;
-                                void* a2_2 = (void*)((u8*)base_a2_1 + *(u16*)((u8*)base_a2_1 + (*(u8*)(g_menu_item_ptr + tmp + 0x15) * 2)));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                            }
-                        }
-                        break;
-                    case 0xE:
-                    case 0xF:
-                    case 0x10:
-                        if (g_menu_category0_item != 0)
-                        {
-                            var_a0 = var_s1;
-                            base_a2_2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
-                            {
-                                s32 a3 = 1;
-                                void* a2_2 = (void*)((u8*)base_a2_2 + *(u16*)((u8*)base_a2_2 + (*(u8*)(g_menu_category0_item + tmp + 0x1A) * 2)));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                            }
-                        }
-                        break;
-                    case 0x11:
-                        if (g_menu_category0_item != 0)
-                        {
-                            var_s1 = func_800A8A78(arg1, var_s1, *(u16*)(g_menu_category0_item + 0x24), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x12:
-                        if (g_menu_category1_item != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)(g_menu_category1_item + 0x24), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x13:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            void* a2;
-                            u8* a3ptr;
-                            s32 idx;
-                            void* a2_2;
-                            var_a0 = var_s1;
-                            a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44));
-                            a3ptr = (u8*)g_menu_category2_item;
-                            idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
-                            a2_2 = (void*)((u8*)a2 + *(u16*)(idx + (u32)a2));
-                            var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                        break;
-                    case 0x14:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_a0 = var_s1;
-                            base_a2_3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
-                            {
-                                void* a2_2 = (void*)((u8*)base_a2_3 + *(u16*)((u8*)base_a2_3 + (*(u8*)(g_menu_category2_item + 0x24) * 2)));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                            }
-                        }
-                        break;
-                    case 0x15:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_a0 = var_s1;
-                            base_a2_4 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
-                            {
-                                void* a2_2 = (void*)((u8*)base_a2_4 + *(u16*)((u8*)base_a2_4 + (*(u8*)(g_menu_category2_item + 0x25) * 2)));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                            }
-                        }
-                        break;
-                    case 0x16:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            var_s1 = func_800A8A78(arg1, var_s1, *(u8*)(g_menu_category2_item + 0x26), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x17:
-                    case 0x18:
-                    case 0x19:
-                    case 0x1A:
-                    {
-                        val = 0;
-                        if (D_80168C05[tmp] != 0)
-                        {
-                            u8* base2 = (u8*)((tmp << 6) + (s32)D_80168C30) - 0x5C0;
-                            void* v1;
-                            if (*base2 != 0)
-                            {
-                                val = *(u16*)(base2 + 0x24);
-                            }
-                            v1 = (void*)D_801694DC[tmp];
-                            if (v1 != 0 && *(u8*)v1 != 0)
-                                val -= *(u16*)((u8*)v1 + 0x24);
-                            else
-                                val -= D_800F0C1C;
-                            var_s1 = func_800A8A78(arg1, var_s1, abs(val), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                    }
-                    /* fallthrough */
-                    case 0x1B:
-                    case 0x1C:
-                    case 0x1D:
-                    case 0x1E:
-                    {
-                        val = 0;
-                        if (D_80168C01[tmp] != 0)
-                        {
-                            u8* base2 = (u8*)((tmp << 6) + (s32)D_80168C30) - 0x6C0;
-                            void* v1;
-                            u8* source;
-                            u8* label_buf;
-                            if (*base2 != 0)
-                            {
-                                val = *(u16*)(base2 + 0x24);
-                            }
-                            v1 = (void*)D_801694CC[tmp];
-                            if (v1 != 0 && *(u8*)v1 != 0)
-                                val -= *(u16*)((u8*)v1 + 0x24);
-                            else
-                                val -= D_800F0C1C;
-                            label_buf = spB0;
-                            if (val >= 0)
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_a.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            else
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_b.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            label_buf += func_800A8DDC(source);
-                            *label_buf = 0;
-                            var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
-                        }
-                    }
-                    break;
-                    case 0x1F:
-                    case 0x20:
-                    case 0x21:
-                    case 0x22:
-                    case 0x23:
-                    case 0x24:
-                    case 0x25:
-                    case 0x26:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            s32 res = menu_lookup_item_nibble(g_menu_item_ptr, tmp - 0x1F);
-                            u8* source;
-                            u8* label_buf;
-                            label_buf = spB0;
-                            if (res >= 0)
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_a.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            else
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_b.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            label_buf += func_800A8DDC(source);
-                            *label_buf = 0;
-                            var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
-                        }
-                        break;
-                    case 0x27:
-                    case 0x28:
-                    case 0x29:
-                    case 0x2A:
-                    case 0x2B:
-                    case 0x2C:
-                    case 0x2D:
-                    case 0x2E:
-                        if (g_menu_item_ptr != 0)
-                        {
-                            s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, tmp - 0x27);
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, (u32)abs(diff), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x2F:
-                    case 0x30:
-                    case 0x31:
-                    case 0x32:
-                    case 0x33:
-                    case 0x34:
-                    case 0x35:
-                    case 0x36:
-                    {
-                        s32 idx2 = tmp - 0x2F;
-                        if (g_menu_item_ptr != 0)
-                        {
-                            s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
-                            s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
-                            s32 diff = v1 - v2;
-                            u8* source;
-                            u8* label_buf;
-                            label_buf = spB0;
-                            if (diff >= 0)
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_a.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            else
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_b.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            label_buf += func_800A8DDC(source);
-                            *label_buf = 0;
-                            var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
-                        }
-                    }
-                    break;
-                    case 0x37:
-                    case 0x38:
-                    case 0x39:
-                    case 0x3A:
-                    case 0x3B:
-                    case 0x3C:
-                    case 0x3D:
-                    case 0x3E:
-                    {
-                        s32 idx2 = tmp - 0x2F;
-                        if (g_menu_item_ptr != 0)
-                        {
-                            s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
-                            s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
-                            s32 diff = v1 - v2;
-                            var_s1 = func_800A8A78(arg1, var_s1, abs(diff), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                    }
-                    break;
-                    case 0x3F:
-                    case 0x40:
-                    case 0x41:
-                    case 0x42:
-                        if (g_menu_category1_item != 0)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)(g_menu_category1_item + menu_twice(tmp) - 0x5A), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 0x43:
-                    case 0x44:
-                    case 0x45:
-                    case 0x46:
-                    {
-                        s32 has = 0;
-                        s32 total = has;
-                        u8* source;
-                        u8* label_buf;
-                        
-                        for (k = 1; k < 4; k++)
-                        {
-                            u8* slot = D_80168C20 + (k * 0x40);
-                            if (((u8*)&g_item_slot_flags)[k] != 0)
-                            {
-                                if (*slot != 0)
-                                {
-                                    total += *(u16*)(slot + menu_twice(tmp) - 0x62);
-                                }
-                                has = ((u32*)&g_item_slot_data)[k];
-                                if (has != 0 && *(u8*)has != 0)
-                                {
-                                    total -= *(u16*)(has + menu_twice(tmp) - 0x62);
-                                }
-                                has = 1;
-                            }
-                        }
-                        if (has)
-                        {
-                            label_buf = spB0;
-                            if (total >= 0)
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_a.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            else
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_b.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            label_buf += func_800A8DDC(source);
-                            *label_buf = 0;
-                            var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
-                        }
-                    }
-                    break;
-                    case 0x47:
-                    case 0x48:
-                    case 0x49:
-                    case 0x4A:
-                    {
-                        s32 has = 0;
-                        s32 total = has;
-                        
-                        for (k = 1; k < 4; k++)
-                        {
-                            u8* slot = D_80168C20 + (k * 0x40);
-                            if (((u8*)&g_item_slot_flags)[k] != 0)
-                            {
-                                if (*slot != 0)
-                                {
-                                    total += *(u16*)(slot + menu_twice(tmp) - 0x6A);
-                                }
-                                has = ((u32*)&g_item_slot_data)[k];
-                                if (has != 0 && *(u8*)has != 0)
-                                {
-                                    total -= *(u16*)(has + menu_twice(tmp) - 0x6A);
-                                }
-                                has = 1;
-                            }
-                        }
-                        if (has)
-                        {
-                            var_s1 = func_800A8A78(arg1, var_s1, abs(total), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                    }
-                    break;
-                    default:
-                        break;
-                    }
-                }
-                break;
-
-                case 4:
-                {
-                    shared_s0 = ITEM_SUB;
-                    switch (shared_s0)
-                    {
-                    case 0x1:
-                    {
-                        u8 u_val;
-                        u8 v_val;
-                        SET_BGR0_PACKED(var_s1, GPU_TINT_NEUTRAL);
-                        setSprt(var_s1);
-                        ((SPRT*)var_s1)->x0 = *var_s3 & 0x1FF;
-                        ((SPRT*)var_s1)->y0 = ITEM_Y - 8;
-                        u_val = 0xD0;
-                        if (g_menu_char_slot == 2)
-                        {
-                            u_val = 0xA0;
-                        }
-                        ((SPRT*)var_s1)->u0 = u_val;
-                        v_val = 0x50;
-                        if (g_menu_char_slot == 0)
-                        {
-                            v_val = 0x20;
-                        }
-                        ((SPRT*)var_s1)->v0 = v_val;
-                        SET_SPRT_WH_PACKED(var_s1, 0x30, 0x30);
-                        SET_SPRT_CLUT(var_s1, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
-                        addPrim(arg1, var_s1);
-                        var_s1 = (SPRT*)var_s1 + 1;
-                        SET_BGR0_PACKED(var_s1, 0);
-                        setlen(var_s1, 4);
-                        setcode(var_s1, 0x66);
-                        ((SPRT*)var_s1)->x0 = (*var_s3 & 0x1FF) + 2;
-                        ((SPRT*)var_s1)->y0 = ITEM_Y - 6;
-                        u_val = 0xD0;
-                        if (g_menu_char_slot == 2)
-                        {
-                            u_val = 0xA0;
-                        }
-                        ((SPRT*)var_s1)->u0 = u_val;
-                        v_val = 0x50;
-                        if (g_menu_char_slot == 0)
-                        {
-                            v_val = 0x20;
-                        }
-                        ((SPRT*)var_s1)->v0 = v_val;
-                        SET_SPRT_WH_PACKED(var_s1, 0x30, 0x30);
-                        SET_SPRT_CLUT(var_s1, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
-                        addPrim(arg1, var_s1);
-                        var_s1 = (SPRT*)var_s1 + 1;
-                        setDrawTPage(var_s1, 0, 0, 0x1F);
-                        addPrim(arg1, var_s1);
-                        var_s1 = (DR_TPAGE*)var_s1 + 1;
-                    }
-                    break;
-                    case 0x2:
-                    {
-                        u8* call_base = (u8*)g_pad_ctx;
-                        s32 off = g_menu_char_slot * 0x250 + 0x5F0;
-                        var_s1 = func_800A88A0(var_s1, arg1, call_base + off, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                    }
-                    break;
-                    case 0x3:
-                    {
-                        void* base = (void*)g_pad_ctx;
-                        u8 v = *(u8*)((u8*)base + menu_probe_slot_off(g_menu_char_slot) + 0x610);
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, v, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0x4:
-                    {
-                        u8* rec_base = (u8*)&D_80105AE0;
-                        s32 rec_off = g_menu_char_slot * 0x23C;
-                        var_s1 = func_800A8A78(arg1, var_s1, *(s32*)(rec_base + rec_off + 4), 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                        break;
-                    case 0x5:
-                    {
-                        void* base = (void*)g_pad_ctx;
-                        u16 v = *(u16*)((u8*)base + menu_probe_slot_off(g_menu_char_slot) + 0x614);
-                        var_s1 = func_800A8A78(arg1, var_s1, v, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0x6:
-                    {
-                        void* base = (void*)g_pad_ctx;
-                        u32 v = *(u32*)((u8*)base + menu_probe_slot_off(g_menu_char_slot) + 0x610);
-                        var_s1 = func_800A8A78(arg1, var_s1, (v >> 8), 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0x7:
-                    case 0x8:
-                    case 0x9:
-                    case 0xA:
-                    case 0xB:
-                    case 0xC:
-                    case 0xD:
-                    case 0xE:
-                    {
-                        void* base = (void*)g_pad_ctx;
-                        s32 idx = shared_s0 - 7;
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)((u8*)base + (menu_twice(idx) + menu_probe_slot_off(g_menu_char_slot)) + 0x620) >> 9, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0xF:
-                    {
-                        void* a2_2 = (void*)g_menu_equipment_base;
-                        if (*(u8*)a2_2 != 0)
-                        {
-                            s32 a3 = 1;
-                            if (g_item_slot_flags.slot0 != 0)
-                                a3 = 2;
-                            var_s1 = func_800A88A0(var_s1, arg1, a2_2, a3, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                    }
-                    break;
-                    case 0x10:
-                    case 0x11:
-                    case 0x12:
-                        if (*(u8*)D_80168C30 != 0)
-                        {
-                            var_a0 = var_s1;
-                            base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
-                            {
-                                void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*(u8*)(D_80168C30 + shared_s0 + 0x18) * 2)));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                            }
-                        }
-                        break;
-                    case 0x13:
-                    {
-                        s32 a2_15 = zero;
-                        if (g_item_slot_flags.slot0 != 0)
-                        {
-                            void* v1_12 = (void*)g_item_slot_data.slot0;
-                            if (v1_12 == 0 || *(u8*)v1_12 == 0)
-                                a2_15 += D_800F0C1C;
-                            else
-                                a2_15 = *(u16*)((u8*)v1_12 + 0x24);
-                        }
-                        else
-                        {
-                            if (*(u8*)D_80168C30 != 0)
-                                a2_15 = *(u16*)(D_80168C30 + 0x24);
-                        }
-                        var_s1 = func_800A8A78(arg1, var_s1, a2_15, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0x14:
-                    case 0x15:
-                    case 0x16:
-                    {
-                        u32 base = g_menu_equipment_base;
-                        s32 shl = shared_s0 << 6;
-                        if (*(u8*)(shl + base - 0x4C0) != 0)
-                        {
-                            s32 a3 = 1;
-                            s32 off = shl - 0x4C0;
-                            void* a2_2 = (void*)(base + off);
-                            if (D_80168C09[shared_s0] != 0)
-                                a3 = 2;
-                            var_s1 = func_800A88A0(var_s1, arg1, a2_2, a3, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                    }
-                    break;
-                    case 0x17:
-                    case 0x18:
-                    {
-                        void* base;
-                        u8 idx;
-                        var_a0 = var_s1;
-                        base_a2_6 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x10));
-                        base = (void*)g_pad_ctx;
-                        {
-                            u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + shared_s0 + 0x5F3;
-                            idx = *idxp;
-                        }
-                        {
-                            void* a2_2 = (void*)((u8*)base_a2_6 + *(u16*)((u8*)base_a2_6 + (idx * 2)));
-                            var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                    }
-                    break;
-                    case 0x19:
-                    {
-                        s32 v = func_800B607C(g_menu_char_slot);
-                        void* base = (void*)g_pad_ctx;
-                        u32 shift = *(u32*)((u8*)base + menu_probe_slot_off(g_menu_char_slot) + 0x610) >> 8;
-                        var_s1 = func_800A8A78(arg1, var_s1, v - shift, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0x1B:
-                    case 0x1C:
-                    case 0x1D:
-                    case 0x1E:
-                    {
-                        void* base = (void*)g_pad_ctx;
-                        u8* ptr;
-                        u8 val;
-                        shared_s0 = (u32)((u8*)base + g_menu_char_slot * 0x250 + shared_s0);
-                        ptr = (u8*)shared_s0;
-                        val = *(ptr + 0x5F1);
-                        if (val != 0xFF)
-                        {
-                            var_a0 = var_s1;
-                            if (val & 0x80)
-                            {
-                                u16* lvar_v1_2 = (u16*)g_pad_ctx;
-                                void* lvar_a2 = (void*)((u8*)lvar_v1_2 + (g_menu_char_slot * 0x250 + 0x5F0));
-                                void* a2_2 = (void*)((u8*)lvar_a2 + (((*(volatile u8*)(ptr + 0x5F1) & 0x7F) << 6) + 0x150));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                            }
-                            else
-                            {
-                                u32 tmpv;
-                                u8 idx;
-                                u16 off2;
-                                base_a2_7 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20));
-                                tmpv = ((*(u32*)(g_menu_equipment_base + 0x14) >> 10) & 0x3F);
-                                
-                                idx = menu_reload_plain_u8(ptr + 0x5F1);
-                                idx &= 0x7F;
-                                off2 = idx * 2;
-                                {
-                                    void* a2_2 = (void*)((u8*)base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + (s32)base_a2_7)));
-                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                                }
-                            }
-                        }
-                    }
-                    break;
-                    case 0x1F:
-                    {
-                        void* base;
-                        u8 idx;
-                        var_a0 = var_s1;
-                        base_a2_8 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x4C));
-                        base = (void*)g_pad_ctx;
-                        {
-                            u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x609;
-                            idx = *idxp;
-                        }
-                        {
-                            void* a2_2 = (void*)((u8*)base_a2_8 + *(u16*)((u8*)base_a2_8 + (idx * 2)));
-                            var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                    }
-                    break;
-                    case 0x20:
-                    {
-                        u32 total = 0;
-                        for (k = 1; k < 4; k++)
-                        {
-                            if (((u8*)&g_item_slot_flags)[k] != 0)
-                            {
-                                u32 ptr = ((u32*)&g_item_slot_data)[k];
-                                if (ptr != 0 && *(u8*)ptr != 0)
-                                    total += *(u16*)(ptr + 0x24);
-                            }
-                            else
-                            {
-                                u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
-                                if (*v != 0)
-                                    total += *(u16*)(v + 0x24);
-                            }
-                        }
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, total, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0x21:
-                    {
-                        u32 total = 0;
-                        for (k = 1; k < 4; k++)
-                        {
-                            if (((u8*)&g_item_slot_flags)[k] != 0)
-                            {
-                                u32 ptr = ((u32*)&g_item_slot_data)[k];
-                                if (ptr != 0 && *(u8*)ptr != 0)
-                                    total += *(u16*)(ptr + 0x26);
-                            }
-                            else
-                            {
-                                u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
-                                if (*v != 0)
-                                    total += *(u16*)(v + 0x26);
-                            }
-                        }
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, total, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0x22:
-                    {
-                        u32 total = 0;
-                        for (k = 1; k < 4; k++)
-                        {
-                            if (((u8*)&g_item_slot_flags)[k] != 0)
-                            {
-                                u32 ptr = ((u32*)&g_item_slot_data)[k];
-                                if (ptr != 0 && *(u8*)ptr != 0)
-                                    total += *(u16*)(ptr + 0x28);
-                            }
-                            else
-                            {
-                                u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
-                                if (*v != 0)
-                                    total += *(u16*)(v + 0x28);
-                            }
-                        }
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, total, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0x23:
-                    {
-                        u32 total = 0;
-                        for (k = 1; k < 4; k++)
-                        {
-                            if (((u8*)&g_item_slot_flags)[k] != 0)
-                            {
-                                u32 ptr = ((u32*)&g_item_slot_data)[k];
-                                if (ptr != 0 && *(u8*)ptr != 0)
-                                    total += *(u16*)(ptr + 0x2A);
-                            }
-                            else
-                            {
-                                u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
-                                if (*v != 0)
-                                    total += *(u16*)(v + 0x2A);
-                            }
-                        }
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, total, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    case 0x3F:
-                    {
-                        val = 0;
-                        if (g_item_slot_flags.slot0 != 0)
-                        {
-                            
-                            u8* source;
-                            u8* label_buf;
-                            if (*(u8*)D_80168C20 != 0)
-                                val = *(u16*)(D_80168C30 + 0x24);
-                            if (g_item_slot_data.slot0 != 0 && *(u8*)g_item_slot_data.slot0 != 0)
-                                val = val - *(u16*)(g_item_slot_data.slot0 + 0x24);
-                            else
-                                val = val - D_800F0C1C;
-                            label_buf = spB0;
-                            if (val >= 0)
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_a.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            else
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_b.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            label_buf += func_800A8DDC(source);
-                            *label_buf = 0;
-                            var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
-                        }
-                    }
-                    break;
-                    case 0x40:
-                    case 0x41:
-                    case 0x42:
-                    case 0x43:
-                    {
-                        s32 has = 0;
-                        
-                        u8* source;
-                        u8* label_buf;
-                        
-                        val = has;
-                        for (k = 1; k < 4; k++)
-                        {
-                            u8* slot = D_80168C20 + (k * 0x40);
-                            if (((u8*)&g_item_slot_flags)[k] != 0)
-                            {
-                                if (*slot != 0)
-                                {
-                                    val += *(u16*)(slot + menu_twice(shared_s0) - 0x5C);
-                                }
-                                has = ((u32*)&g_item_slot_data)[k];
-                                if (has != 0 && *(u8*)has != 0)
-                                {
-                                    val -= *(u16*)(has + menu_twice(shared_s0) - 0x5C);
-                                }
-                                has = 1;
-                            }
-                        }
-                        if (has)
-                        {
-                            label_buf = spB0;
-                            if (val >= 0)
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_a.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            else
-                            {
-                                s32 string_page_base =
-                                    (g_menu_label_key_b.page << 8) +
-                                    (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source);
-                            }
-                            label_buf += func_800A8DDC(source);
-                            *label_buf = 0;
-                            var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
-                        }
-                    }
-                    break;
-                    case 0x44:
-                    {
-                        u16 a2_23 = 0;
-                        if (g_item_slot_flags.slot0 != 0)
-                        {
-                            s32 diff;
-                            if (*(u8*)D_80168C20 != 0)
-                                a2_23 = *(u16*)(D_80168C30 + 0x24);
-                            if (g_item_slot_data.slot0 != 0 && *(u8*)g_item_slot_data.slot0 != 0)
-                                diff = a2_23 - *(u16*)(g_item_slot_data.slot0 + 0x24);
-                            else
-                                diff = a2_23 - D_800F0C1C;
-                            var_s1 = func_800A8A78(arg1, var_s1, abs(diff), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                    }
-                    break;
-                    case 0x45:
-                    case 0x46:
-                    case 0x47:
-                    case 0x48:
-                    {
-                        s32 has = 0;
-                        s32 total = has;
-                        
-                        for (k = 1; k < 4; k++)
-                        {
-                            u8* slot = D_80168C20 + (k * 0x40);
-                            if (((u8*)&g_item_slot_flags)[k] != 0)
-                            {
-                                if (*slot != 0)
-                                {
-                                    total += *(u16*)(slot + menu_twice(shared_s0) - 0x66);
-                                }
-                                has = ((u32*)&g_item_slot_data)[k];
-                                if (has != 0 && *(u8*)has != 0)
-                                {
-                                    total -= *(u16*)(has + menu_twice(shared_s0) - 0x66);
-                                }
-                                has = 1;
-                            }
-                        }
-                        if (has)
-                        {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, (u32)abs(total), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                    }
-                    break;
-                    case 0x49:
-                    {
-                        void* base;
-                        u8 idx;
-                        var_a0 = var_s1;
-                        base_a2_9 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x74));
-                        base = (void*)g_pad_ctx;
-                        {
-                            u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x633;
-                            idx = *idxp;
-                        }
-                        {
-                            void* a2_2 = (void*)((u8*)base_a2_9 + *(u16*)((u8*)base_a2_9 + (idx * 2)));
-                            var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                    }
-                    break;
-                    case 0x4A:
-                    {
-                        s8 v1 = *(s8*)((void*)g_pad_ctx + 0x29D7);
-                        if (v1 >= 0)
-                        {
-                            void* base = (void*)g_pad_ctx;
-                            u8 v = *(u8*)((u8*)base + menu_probe_node_off(v1) + 0x2B50) & 0xF;
-                            void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
-                            var_s1 =
-                                func_800A88A0(var_s1, arg1, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                    }
-                    break;
-                    case 0x4B:
-                    {
-                        s8 v1 = *(s8*)((void*)g_pad_ctx + 0x29D7);
-                        if (v1 >= 0)
-                        {
-                            void* base = (void*)g_pad_ctx;
-                            u8 v = *(u8*)((u8*)base + menu_probe_node_off(v1) + 0x2B50) >> 4;
-                            void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
-                            var_s1 =
-                                func_800A88A0(var_s1, arg1, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                        }
-                    }
-                    break;
-                    case 0x4C:
-                    {
-                        s8 v1 = *(s8*)((void*)g_pad_ctx + 0x29D7);
-                        if (v1 >= 0)
-                        {
-                            void* base = (void*)g_pad_ctx;
-                            u8 v = *(u8*)((u8*)base + menu_probe_node_off(v1) + 0x2B52);
-                            var_s1 = func_800A8A78(arg1, var_s1, v, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                    }
-                    break;
-                    case 0x4D:
-                    {
-                        s8 v1 = *(s8*)((void*)g_pad_ctx + 0x29D7);
-                        if (v1 >= 0)
-                        {
-                            void* base;
-                            s32 idx;
-                            var_a0 = var_s1;
-                            base_a2_10 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
-                            base = (void*)g_pad_ctx;
-                            idx = *(s32*)((u8*)base + menu_probe_node_off(v1) + 0x2B54);
-                            {
-                                void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                            }
-                        }
-                    }
-                    break;
-                    case 0x4E:
-                    case 0x4F:
-                    case 0x50:
-                    case 0x51:
-                    case 0x52:
-                    case 0x53:
-                    case 0x54:
-                    case 0x55:
-                    {
-                        u32 a2_26 = 0;
-                        switch (shared_s0)
-                        {
-                        case 0x4E:
-                            a2_26 = *(u32*)((u8*)(void*)g_pad_ctx + menu_probe_slot_off(g_menu_char_slot) + 0x658) & 0xF;
-                            break;
-                        case 0x4F:
-                            a2_26 = *(u8*)((u8*)(void*)g_pad_ctx + menu_probe_slot_off(g_menu_char_slot) + 0x658);
-                            a2_26 >>= 4;
-                            break;
-                        case 0x50:
-                            a2_26 = *(u32*)((u8*)(void*)g_pad_ctx + menu_probe_slot_off(g_menu_char_slot) + 0x658) >> 8;
-                            a2_26 &= 0xF;
-                            break;
-                        case 0x51:
-                            a2_26 = *(u32*)((u8*)(void*)g_pad_ctx + menu_probe_slot_off(g_menu_char_slot) + 0x658) >> 12;
-                            a2_26 &= 0xF;
-                            break;
-                        case 0x52:
-                            a2_26 = *(u16*)((u8*)g_pad_ctx + menu_probe_slot_off(g_menu_char_slot) + 0x65A);
-                            a2_26 &= 0xF;
-                            break;
-                        case 0x53:
-                            a2_26 = *(u32*)((u8*)g_pad_ctx + menu_probe_slot_off(g_menu_char_slot) + 0x658) >> 20;
-                            a2_26 &= 0xF;
-                            break;
-                        case 0x54:
-                            a2_26 = *(u8*)((u8*)g_pad_ctx + menu_probe_slot_off(g_menu_char_slot) + 0x65B);
-                            a2_26 &= 0xF;
-                            break;
-                        case 0x55:
-                            a2_26 = *(u32*)((u8*)g_pad_ctx + menu_probe_slot_off(g_menu_char_slot) + 0x658) >> 28;
-                            break;
-                        }
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, a2_26, 1, &pos, ((*var_s3 >> 9) & 7));
-                    }
-                    break;
-                    default:
-                        break;
-                    }
-                }
-                break;
-
-                case 6:
-                {
-                    shared_s0 = ITEM_SUB;
-                    switch (shared_s0)
-                    {
-                    case 1:
-                        if (*(u32*)((void*)g_pad_ctx + 0x2C) > 0x989680U)
-                        {
-                            var_s1 = func_800A8A78(arg1, var_s1, 0x989680U, 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        else
-                        {
-                            var_s1 = func_800A8A78(arg1, var_s1, *(u32*)((void*)g_pad_ctx + 0x2C), 1, &pos, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
-                    case 2:
-                    {
-                        u32 ltemp_v0_6;
-                        s32 v1;
-                        s32 s2;
-                        s32 split_tmp;
-                        s32 one;
-                        ltemp_v0_6 = (*var_s3 >> 9) & 7;
-                        switch (ltemp_v0_6)
+                        s32 t0 = 0xFF;
+                        u16 item_word = content_item->packed_x;
+                        s32 item_type = item_word >> 12;
+                        switch (item_type)
                         {
                         case 1:
-                            pos.x -= 0x32;
+                            var_a0 = packet_cursor;
+                            base_a2_0 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
+                            {
+                                s32 a3 = 1;
+                                void* a2_2 = (void*)((u8*)base_a2_0 + *(u16*)((u8*)base_a2_0 + (content_item->pad[0] * 2)));
+                                packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, a3, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                              (content_item->packed_x >> 9) & 7);
+                            }
                             break;
+
                         case 2:
-                            pos.x -= 0x19;
+                        {
+                            s32 sub;
+                            if (content_item->pad[0] < 2)
+                            {
+                                t0 = 0xFF;
+                                {
+                                    s32 y = two_outer;
+                                    if (y == 2)
+                                    {
+                                        t0 = 0x1E;
+                                    }
+                                }
+                            }
+                            {
+                                u8 sub_byte = content_item->pad[0];
+                                sub = sub_byte;
+                            }
+                            if ((u32)(sub - 2) < 8)
+                            {
+                                s32 s;
+                                val = 0;
+                                if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
+                                {
+                                    val = *(u8*)(g_menu_category1_item + 0x2C);
+                                }
+                                s = content_item->pad[0];
+                                if (((val >> (s - 2)) & 1) != 0)
+                                {
+                                    t0 = s + 0x3B;
+                                }
+                                else
+                                {
+                                    t0 = 0x21;
+                                }
+                            }
+                            else if ((u32)(sub - 0xA) < 8)
+                            {
+                                s32 s;
+                                val = 0;
+                                if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
+                                {
+                                    val = *(u8*)(g_menu_category1_item + 0x2D);
+                                }
+                                t0 = 0x21;
+                                s = content_item->pad[0];
+                                if (((val >> (s - 0xA)) & 1) != 0)
+                                {
+                                    t0 = s + 0x2B;
+                                }
+                            }
+                            else if ((u32)(sub - 0x12) < 8)
+                            {
+                                s32 s;
+                                val = 0;
+                                if (*(u8*)(D_80168C20 + 0x40) != 0)
+                                {
+                                    val = *(u8*)(D_80168C20 + 0x6C);
+                                }
+                                if (*(u8*)(D_80168C20 + 0x80) != 0)
+                                {
+                                    val |= *(u8*)(D_80168C20 + 0xAC);
+                                }
+                                if (*(u8*)(D_80168C20 + 0xC0) != 0)
+                                {
+                                    val |= *(u8*)(D_80168C20 + 0xEC);
+                                }
+                                t0 = 0x21;
+                                s = content_item->pad[0];
+                                if (((val >> (s - 0x12)) & 1) != 0)
+                                {
+                                    t0 = s + 0x2B;
+                                }
+                            }
+                            else if ((u32)(sub - 0x1A) < 8)
+                            {
+                                s32 s;
+                                val = 0;
+                                if (*(u8*)(D_80168C20 + 0x40) != 0)
+                                {
+                                    val = *(u8*)(D_80168C20 + 0x6D);
+                                }
+                                if (*(u8*)(D_80168C20 + 0x80) != 0)
+                                {
+                                    val |= *(u8*)(D_80168C20 + 0xAD);
+                                }
+                                if (*(u8*)(D_80168C20 + 0xC0) != 0)
+                                {
+                                    val |= *(u8*)(D_80168C20 + 0xED);
+                                }
+                                s = content_item->pad[0];
+                                if (((val >> (s - 0x1A)) & 1) != 0)
+                                {
+                                    t0 = D_80168696[s];
+                                }
+                                else
+                                {
+                                    t0 = 0x21;
+                                }
+                            }
+                            else if ((u32)(sub - 0x22) < 8)
+                            {
+                                t0 = 0x21;
+                                if (g_menu_category0_item != 0)
+                                {
+                                    s32 s;
+                                    s = content_item->pad[0];
+                                    if (((*(u8*)(g_menu_category0_item + 0x2C) >> (s - 0x22)) & 1) != 0)
+                                    {
+                                        t0 = s + 0x13;
+                                    }
+                                }
+                            }
+                            else if ((u32)(sub - 0x2A) < 8)
+                            {
+                                s32 idx;
+                                s32 s;
+                                s = content_item->pad[0];
+                                for (idx = 0; idx < 8; idx++)
+                                {
+                                    u8* pad = (u8*)g_pad_ctx;
+                                    if (*(u8*)(pad + menu_character_slot_offset(g_menu_char_slot) + idx + 0x638) == s - 0x2A)
+                                    {
+                                        break;
+                                    }
+                                }
+                                t0 = D_801686B8[idx];
+                            }
+                            else if ((u32)(sub - 0x32) < 4)
+                            {
+                                if (g_menu_char_slot != 2)
+                                {
+                                    u8* tmp2 = (u8*)((content_item->pad[0] << 6) + (s32)g_menu_equipment_base) - 0xC80;
+                                    t0 = 0x21;
+                                    if (*tmp2 != 0)
+                                    {
+                                        u32 val = *(u32*)(tmp2 + 0x14);
+                                        s32 sel = (val >> 8) & 3;
+                                        switch (sel)
+                                        {
+                                        case 1:
+                                            t0 = ((val >> 10) & 0x3F) + 0x50;
+                                            break;
+                                        case 2:
+                                            t0 = ((val >> 10) & 0x3F) + 0x5C;
+                                            break;
+                                        case 0:
+                                            t0 = ((val >> 10) & 0x3F) + 0x45;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            else if ((u8)sub == 0x36)
+                            {
+                                t0 = 0xFF;
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    if (*(u8*)g_menu_item_ptr != 0)
+                                    {
+                                        u32 val = *(u32*)(g_menu_item_ptr + 0x14);
+                                        s32 sel = (val >> 8) & 3;
+                                        switch (sel)
+                                        {
+                                        case 0:
+                                            t0 = ((val >> 10) & 0x3F) + 0x45;
+                                            break;
+                                        case 1:
+                                            t0 = ((val >> 10) & 0x3F) + 0x50;
+                                            break;
+                                        case 2:
+                                            t0 = ((val >> 10) & 0x3F) + 0x5C;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            else if ((u32)(sub - 0x37) < 0x1E)
+                            {
+                                t0 = D_80168659[content_item->pad[0]];
+                            }
+                            else if ((u8)sub == 0x55)
+                            {
+                                t0 = 0xFF;
+                                if (((*(u32*)((void*)g_pad_ctx + 0x28) >> 1) & 1) != 0)
+                                {
+                                    t0 = 0x6A;
+                                }
+                            }
+                            else
+                            {
+                                sub = content_item->pad[0];
+                                if (sub == 0x56)
+                                {
+                                    t0 = 0x6A;
+                                    if (((*(u32*)((void*)g_pad_ctx + 0x28) >> 1) & 1) != 0)
+                                    {
+                                        t0 = 0xFF;
+                                    }
+                                }
+                                else if (sub == 0x57)
+                                {
+                                    t0 = 0xFF;
+                                    if ((*(u32*)((void*)g_pad_ctx + 0x28) & 1) != 0)
+                                    {
+                                        t0 = 0x6A;
+                                    }
+                                }
+                                else if (sub == 0x58)
+                                {
+                                    t0 = 0x6A;
+                                    if ((*(u32*)((void*)g_pad_ctx + 0x28) & 1) != 0)
+                                    {
+                                        t0 = 0xFF;
+                                    }
+                                }
+                                else if (sub == 0x59)
+                                {
+                                    t0 = 0xFF;
+                                    if ((*(s32*)((void*)g_pad_ctx + 0x858) & 0x80) != 0)
+                                    {
+                                        t0 = 0x6A;
+                                    }
+                                }
+                                else if (sub == 0x5A)
+                                {
+                                    t0 = 0x6A;
+                                    if ((*(s32*)((void*)g_pad_ctx + 0x858) & 0x80) != 0)
+                                    {
+                                        t0 = 0xFF;
+                                    }
+                                }
+                                else
+                                {
+                                    t0 = 0xFF;
+                                }
+                            }
+                            if (t0 != 0xFF)
+                            {
+                                packet_cursor = menu_emit_draw_mode_primitive(
+                                    menu_emit_icon_sprite(packet_cursor, ot_entry, t0, content_item->packed_x & 0x1FF, content_item->y - 8, 0, 0, 0, 0),
+                                    ot_entry);
+                            }
+                        }
+                        break;
+
+                        case 3:
+                        {
+                            content_index = content_item->pad[0];
+                            switch (content_index)
+                            {
+                            case 0x1:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    var_a0 = packet_cursor;
+                                    var_a2_2 = (void*)g_menu_item_ptr;
+                                    packet_cursor = func_800A88A0(var_a0, ot_entry, var_a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                  (content_item->packed_x >> 9) & 7);
+                                }
+                                break;
+                            case 0x2:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    u32 v;
+                                    u32 v1;
+
+                                    if (menu_item_is_nondefault((u8*)g_menu_item_ptr) != 0)
+                                    {
+                                        void* a3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x30));
+                                        menu_concat_encoded_text(&prefix_buffer,
+                                                                 (void*)((u8*)a3 + *(u16*)((u8*)a3 + (*(u16*)(g_menu_item_ptr + 0x16) & 0x3F) * 2)),
+                                                                 (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) +
+                                                                         *(u16*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + 0xB4)));
+                                    }
+                                    else
+                                    {
+                                        prefix_buffer[0] = 0;
+                                    }
+                                    v = *(u32*)(g_menu_item_ptr + 0x14);
+                                    v1 = (v >> 8) & 3;
+                                    switch (v1)
+                                    {
+                                    case 0:
+                                    {
+                                        void* base0 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
+                                        menu_concat_encoded_text(&text_buffer, &prefix_buffer,
+                                                                 (void*)((u8*)base0 + *(u16*)((s32)((v >> 9) & 0x7E) + (s32)base0)));
+                                        break;
+                                    }
+                                    case 1:
+                                    {
+                                        void* base1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
+                                        menu_concat_encoded_text(&text_buffer, &prefix_buffer,
+                                                                 (void*)((u8*)base1 + *(u16*)((s32)((v >> 9) & 0x7E) + (s32)base1 + 0x16)));
+                                        break;
+                                    }
+                                    default:
+                                    {
+                                        void* base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
+                                        menu_concat_encoded_text(
+                                            &text_buffer, &prefix_buffer,
+                                            (void*)((u8*)base2 + *(u16*)((s32)((*(u32*)(g_menu_item_ptr + 0x14) >> 9) & 0x7E) + (s32)base2 + 0x2E)));
+                                        break;
+                                    }
+                                    }
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, &text_buffer, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                  (content_item->packed_x >> 9) & 7);
+                                }
+                                break;
+                            case 0x3:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, *(u32*)(g_menu_item_ptr + 0x18) & 0xF, 1, &pos,
+                                                                             ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x4:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (*(u32*)(g_menu_item_ptr + 0x18) >> 4) & 0xF, 1, &pos,
+                                                                             ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x5:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (*(u32*)(g_menu_item_ptr + 0x18) >> 8) & 0xF, 1, &pos,
+                                                                             ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x6:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (*(u32*)(g_menu_item_ptr + 0x18) >> 12) & 0xF, 1, &pos,
+                                                                             ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x7:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, *(u16*)(g_menu_item_ptr + 0x1A) & 0xF, 1, &pos,
+                                                                             ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x8:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (*(u32*)(g_menu_item_ptr + 0x18) >> 20) & 0xF, 1, &pos,
+                                                                             ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x9:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, *(u8*)(g_menu_item_ptr + 0x1B) & 0xF, 1, &pos,
+                                                                             ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0xA:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (*(u32*)(g_menu_item_ptr + 0x18) >> 28) & 0xF, 1, &pos,
+                                                                             ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0xB:
+                            case 0xC:
+                            case 0xD:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    var_a0 = packet_cursor;
+                                    base_a2_1 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x5C));
+                                    {
+                                        s32 a3 = 1;
+                                        void* a2_2 = (void*)((u8*)base_a2_1 + *(u16*)((u8*)base_a2_1 + (*(u8*)(g_menu_item_ptr + content_index + 0x15) * 2)));
+                                        packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, a3, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                      (content_item->packed_x >> 9) & 7);
+                                    }
+                                }
+                                break;
+                            case 0xE:
+                            case 0xF:
+                            case 0x10:
+                                if (g_menu_category0_item != 0)
+                                {
+                                    var_a0 = packet_cursor;
+                                    base_a2_2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
+                                    {
+                                        s32 a3 = 1;
+                                        void* a2_2 =
+                                            (void*)((u8*)base_a2_2 + *(u16*)((u8*)base_a2_2 + (*(u8*)(g_menu_category0_item + content_index + 0x1A) * 2)));
+                                        packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, a3, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                      (content_item->packed_x >> 9) & 7);
+                                    }
+                                }
+                                break;
+                            case 0x11:
+                                if (g_menu_category0_item != 0)
+                                {
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, *(u16*)(g_menu_category0_item + 0x24), 1, &pos,
+                                                                  ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x12:
+                                if (g_menu_category1_item != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, *(u16*)(g_menu_category1_item + 0x24), 1, &pos,
+                                                                             ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x13:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    void* a2;
+                                    u8* a3ptr;
+                                    s32 idx;
+                                    void* a2_2;
+                                    var_a0 = packet_cursor;
+                                    a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44));
+                                    a3ptr = (u8*)g_menu_category2_item;
+                                    idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
+                                    a2_2 = (void*)((u8*)a2 + *(u16*)(idx + (u32)a2));
+                                    packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                  (content_item->packed_x >> 9) & 7);
+                                }
+                                break;
+                            case 0x14:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    var_a0 = packet_cursor;
+                                    base_a2_3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
+                                    {
+                                        void* a2_2 = (void*)((u8*)base_a2_3 + *(u16*)((u8*)base_a2_3 + (*(u8*)(g_menu_category2_item + 0x24) * 2)));
+                                        packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                      (content_item->packed_x >> 9) & 7);
+                                    }
+                                }
+                                break;
+                            case 0x15:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    var_a0 = packet_cursor;
+                                    base_a2_4 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
+                                    {
+                                        void* a2_2 = (void*)((u8*)base_a2_4 + *(u16*)((u8*)base_a2_4 + (*(u8*)(g_menu_category2_item + 0x25) * 2)));
+                                        packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                      (content_item->packed_x >> 9) & 7);
+                                    }
+                                }
+                                break;
+                            case 0x16:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, *(u8*)(g_menu_category2_item + 0x26), 1, &pos,
+                                                                  ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x17:
+                            case 0x18:
+                            case 0x19:
+                            case 0x1A:
+                            {
+                                val = 0;
+                                if (D_80168C05[content_index] != 0)
+                                {
+                                    u8* base2 = (u8*)((content_index << 6) + (s32)D_80168C30) - 0x5C0;
+                                    void* v1;
+                                    if (*base2 != 0)
+                                    {
+                                        val = *(u16*)(base2 + 0x24);
+                                    }
+                                    v1 = (void*)D_801694DC[content_index];
+                                    if (v1 != 0 && *(u8*)v1 != 0)
+                                    {
+                                        val -= *(u16*)((u8*)v1 + 0x24);
+                                    }
+                                    else
+                                    {
+                                        val -= D_800F0C1C;
+                                    }
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(val), 1, &pos, ((content_item->packed_x >> 9) & 7));
+                                }
+                            }
+                            /* fallthrough */
+                            case 0x1B:
+                            case 0x1C:
+                            case 0x1D:
+                            case 0x1E:
+                            {
+                                val = 0;
+                                if (D_80168C01[content_index] != 0)
+                                {
+                                    u8* base2 = (u8*)((content_index << 6) + (s32)D_80168C30) - 0x6C0;
+                                    void* v1;
+                                    u8* source;
+                                    u8* label_buf;
+                                    if (*base2 != 0)
+                                    {
+                                        val = *(u16*)(base2 + 0x24);
+                                    }
+                                    v1 = (void*)D_801694CC[content_index];
+                                    if (v1 != 0 && *(u8*)v1 != 0)
+                                    {
+                                        val -= *(u16*)((u8*)v1 + 0x24);
+                                    }
+                                    else
+                                    {
+                                        val -= D_800F0C1C;
+                                    }
+                                    label_buf = label_buffer;
+                                    if (val >= 0)
+                                    {
+                                        s32 string_page_base =
+                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    else
+                                    {
+                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    label_buf += func_800A8DDC(source);
+                                    *label_buf = 0;
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
+                                }
+                            }
+                            break;
+                            case 0x1F:
+                            case 0x20:
+                            case 0x21:
+                            case 0x22:
+                            case 0x23:
+                            case 0x24:
+                            case 0x25:
+                            case 0x26:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    s32 res = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x1F);
+                                    u8* source;
+                                    u8* label_buf;
+                                    label_buf = label_buffer;
+                                    if (res >= 0)
+                                    {
+                                        s32 string_page_base =
+                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    else
+                                    {
+                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    label_buf += func_800A8DDC(source);
+                                    *label_buf = 0;
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
+                                }
+                                break;
+                            case 0x27:
+                            case 0x28:
+                            case 0x29:
+                            case 0x2A:
+                            case 0x2B:
+                            case 0x2C:
+                            case 0x2D:
+                            case 0x2E:
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x27);
+                                    packet_cursor =
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(diff), 1, &pos, ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x2F:
+                            case 0x30:
+                            case 0x31:
+                            case 0x32:
+                            case 0x33:
+                            case 0x34:
+                            case 0x35:
+                            case 0x36:
+                            {
+                                s32 idx2 = content_index - 0x2F;
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
+                                    s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
+                                    s32 diff = v1 - v2;
+                                    u8* source;
+                                    u8* label_buf;
+                                    label_buf = label_buffer;
+                                    if (diff >= 0)
+                                    {
+                                        s32 string_page_base =
+                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    else
+                                    {
+                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    label_buf += func_800A8DDC(source);
+                                    *label_buf = 0;
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
+                                }
+                            }
+                            break;
+                            case 0x37:
+                            case 0x38:
+                            case 0x39:
+                            case 0x3A:
+                            case 0x3B:
+                            case 0x3C:
+                            case 0x3D:
+                            case 0x3E:
+                            {
+                                s32 idx2 = content_index - 0x2F;
+                                if (g_menu_item_ptr != 0)
+                                {
+                                    s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
+                                    s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
+                                    s32 diff = v1 - v2;
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(diff), 1, &pos, ((content_item->packed_x >> 9) & 7));
+                                }
+                            }
+                            break;
+                            case 0x3F:
+                            case 0x40:
+                            case 0x41:
+                            case 0x42:
+                                if (g_menu_category1_item != 0)
+                                {
+                                    packet_cursor = menu_draw_clamped_number(
+                                        ot_entry, packet_cursor, *(u16*)(g_menu_category1_item + menu_content_halfword_offset(content_index) - 0x5A), 1, &pos,
+                                        ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 0x43:
+                            case 0x44:
+                            case 0x45:
+                            case 0x46:
+                            {
+                                s32 has = 0;
+
+                                u8* source;
+                                u8* label_buf;
+
+                                val = has;
+                                for (k = 1; k < 4; k++)
+                                {
+                                    u8* slot = D_80168C20 + (k * 0x40);
+                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    {
+                                        if (*slot != 0)
+                                        {
+                                            val += *(u16*)(slot + menu_content_halfword_offset(content_index) - 0x62);
+                                        }
+                                        has = ((u32*)&g_item_slot_data)[k];
+                                        if (has != 0 && *(u8*)has != 0)
+                                        {
+                                            val -= *(u16*)(has + menu_content_halfword_offset(content_index) - 0x62);
+                                        }
+                                        has = 1;
+                                    }
+                                }
+                                if (has)
+                                {
+                                    label_buf = label_buffer;
+                                    if (val >= 0)
+                                    {
+                                        s32 string_page_base =
+                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    else
+                                    {
+                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    label_buf += func_800A8DDC(source);
+                                    *label_buf = 0;
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
+                                }
+                            }
+                            break;
+                            case 0x47:
+                            case 0x48:
+                            case 0x49:
+                            case 0x4A:
+                            {
+                                s32 has = 0;
+                                s32 total = has;
+
+                                for (k = 1; k < 4; k++)
+                                {
+                                    u8* slot = D_80168C20 + (k * 0x40);
+                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    {
+                                        if (*slot != 0)
+                                        {
+                                            total += *(u16*)(slot + menu_content_halfword_offset(content_index) - 0x6A);
+                                        }
+                                        has = ((u32*)&g_item_slot_data)[k];
+                                        if (has != 0 && *(u8*)has != 0)
+                                        {
+                                            total -= *(u16*)(has + menu_content_halfword_offset(content_index) - 0x6A);
+                                        }
+                                        has = 1;
+                                    }
+                                }
+                                if (has)
+                                {
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(total), 1, &pos, ((content_item->packed_x >> 9) & 7));
+                                }
+                            }
+                            break;
+                            default:
+                                break;
+                            }
+                        }
+                        break;
+
+                        case 4:
+                        {
+                            content_index = content_item->pad[0];
+                            switch (content_index)
+                            {
+                            case 0x1:
+                            {
+                                u8 u_val;
+                                u8 v_val;
+                                SET_BGR0_PACKED(packet_cursor, GPU_TINT_NEUTRAL);
+                                setSprt(packet_cursor);
+                                ((SPRT*)packet_cursor)->x0 = content_item->packed_x & 0x1FF;
+                                ((SPRT*)packet_cursor)->y0 = content_item->y - 8;
+                                u_val = 0xD0;
+                                if (g_menu_char_slot == 2)
+                                {
+                                    u_val = 0xA0;
+                                }
+                                ((SPRT*)packet_cursor)->u0 = u_val;
+                                v_val = 0x50;
+                                if (g_menu_char_slot == 0)
+                                {
+                                    v_val = 0x20;
+                                }
+                                ((SPRT*)packet_cursor)->v0 = v_val;
+                                SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
+                                SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
+                                addPrim(ot_entry, packet_cursor);
+                                packet_cursor = (SPRT*)packet_cursor + 1;
+                                SET_BGR0_PACKED(packet_cursor, 0);
+                                setlen(packet_cursor, 4);
+                                setcode(packet_cursor, 0x66);
+                                ((SPRT*)packet_cursor)->x0 = (content_item->packed_x & 0x1FF) + 2;
+                                ((SPRT*)packet_cursor)->y0 = content_item->y - 6;
+                                u_val = 0xD0;
+                                if (g_menu_char_slot == 2)
+                                {
+                                    u_val = 0xA0;
+                                }
+                                ((SPRT*)packet_cursor)->u0 = u_val;
+                                v_val = 0x50;
+                                if (g_menu_char_slot == 0)
+                                {
+                                    v_val = 0x20;
+                                }
+                                ((SPRT*)packet_cursor)->v0 = v_val;
+                                SET_SPRT_WH_PACKED(packet_cursor, 0x30, 0x30);
+                                SET_SPRT_CLUT(packet_cursor, (((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
+                                addPrim(ot_entry, packet_cursor);
+                                packet_cursor = (SPRT*)packet_cursor + 1;
+                                setDrawTPage(packet_cursor, 0, 0, 0x1F);
+                                addPrim(ot_entry, packet_cursor);
+                                packet_cursor = (DR_TPAGE*)packet_cursor + 1;
+                            }
+                            break;
+                            case 0x2:
+                            {
+                                u8* call_base = (u8*)g_pad_ctx;
+                                s32 off = g_menu_char_slot * 0x250 + 0x5F0;
+                                packet_cursor = func_800A88A0(packet_cursor, ot_entry, call_base + off, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                              (content_item->packed_x >> 9) & 7);
+                            }
+                            break;
+                            case 0x3:
+                            {
+                                void* base = (void*)g_pad_ctx;
+                                u8 v = *(u8*)((u8*)base + menu_character_slot_offset(g_menu_char_slot) + 0x610);
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, v, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x4:
+                            {
+                                u8* rec_base = (u8*)&D_80105AE0;
+                                s32 rec_off = g_menu_char_slot * 0x23C;
+                                packet_cursor =
+                                    func_800A8A78(ot_entry, packet_cursor, *(s32*)(rec_base + rec_off + 4), 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x5:
+                            {
+                                void* base = (void*)g_pad_ctx;
+                                u16 v = *(u16*)((u8*)base + menu_character_slot_offset(g_menu_char_slot) + 0x614);
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, v, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x6:
+                            {
+                                void* base = (void*)g_pad_ctx;
+                                u32 v = *(u32*)((u8*)base + menu_character_slot_offset(g_menu_char_slot) + 0x610);
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, (v >> 8), 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x7:
+                            case 0x8:
+                            case 0x9:
+                            case 0xA:
+                            case 0xB:
+                            case 0xC:
+                            case 0xD:
+                            case 0xE:
+                            {
+                                void* base = (void*)g_pad_ctx;
+                                s32 idx = content_index - 7;
+                                packet_cursor = menu_draw_clamped_number(
+                                    ot_entry, packet_cursor,
+                                    *(u16*)((u8*)base + (menu_content_halfword_offset(idx) + menu_character_slot_offset(g_menu_char_slot)) + 0x620) >> 9, 1,
+                                    &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0xF:
+                            {
+                                void* a2_2 = (void*)g_menu_equipment_base;
+                                if (*(u8*)a2_2 != 0)
+                                {
+                                    s32 a3 = 1;
+                                    if (g_item_slot_flags.slot0 != 0)
+                                    {
+                                        a3 = 2;
+                                    }
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                  (content_item->packed_x >> 9) & 7);
+                                }
+                            }
+                            break;
+                            case 0x10:
+                            case 0x11:
+                            case 0x12:
+                                if (*(u8*)D_80168C30 != 0)
+                                {
+                                    var_a0 = packet_cursor;
+                                    base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
+                                    {
+                                        void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*(u8*)(D_80168C30 + content_index + 0x18) * 2)));
+                                        packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                      (content_item->packed_x >> 9) & 7);
+                                    }
+                                }
+                                break;
+                            case 0x13:
+                            {
+                                s32 a2_15 = zero;
+                                if (g_item_slot_flags.slot0 != 0)
+                                {
+                                    void* v1_12 = (void*)g_item_slot_data.slot0;
+                                    if (v1_12 == 0 || *(u8*)v1_12 == 0)
+                                    {
+                                        a2_15 += D_800F0C1C;
+                                    }
+                                    else
+                                    {
+                                        a2_15 = *(u16*)((u8*)v1_12 + 0x24);
+                                    }
+                                }
+                                else
+                                {
+                                    if (*(u8*)D_80168C30 != 0)
+                                    {
+                                        a2_15 = *(u16*)(D_80168C30 + 0x24);
+                                    }
+                                }
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, a2_15, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x14:
+                            case 0x15:
+                            case 0x16:
+                            {
+                                u32 base = g_menu_equipment_base;
+                                s32 shl = content_index << 6;
+                                if (*(u8*)(shl + base - 0x4C0) != 0)
+                                {
+                                    s32 a3 = 1;
+                                    s32 off = shl - 0x4C0;
+                                    void* a2_2 = (void*)(base + off);
+                                    if (D_80168C09[content_index] != 0)
+                                    {
+                                        a3 = 2;
+                                    }
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                  (content_item->packed_x >> 9) & 7);
+                                }
+                            }
+                            break;
+                            case 0x17:
+                            case 0x18:
+                            {
+                                void* base;
+                                u8 idx;
+                                var_a0 = packet_cursor;
+                                base_a2_6 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x10));
+                                base = (void*)g_pad_ctx;
+                                {
+                                    u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + content_index + 0x5F3;
+                                    idx = *idxp;
+                                }
+                                {
+                                    void* a2_2 = (void*)((u8*)base_a2_6 + *(u16*)((u8*)base_a2_6 + (idx * 2)));
+                                    packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                  (content_item->packed_x >> 9) & 7);
+                                }
+                            }
+                            break;
+                            case 0x19:
+                            {
+                                s32 v = func_800B607C(g_menu_char_slot);
+                                void* base = (void*)g_pad_ctx;
+                                u32 shift = *(u32*)((u8*)base + menu_character_slot_offset(g_menu_char_slot) + 0x610) >> 8;
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, v - shift, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x1B:
+                            case 0x1C:
+                            case 0x1D:
+                            case 0x1E:
+                            {
+                                void* base = (void*)g_pad_ctx;
+                                u8* ptr;
+                                u8 val;
+                                ptr = (u8*)base + g_menu_char_slot * 0x250;
+                                ptr += content_index;
+                                content_index = (u32)ptr;
+                                val = *(ptr + 0x5F1);
+                                if (val != 0xFF)
+                                {
+                                    var_a0 = packet_cursor;
+                                    if (val & 0x80)
+                                    {
+                                        u16* lvar_v1_2 = (u16*)g_pad_ctx;
+                                        void* lvar_a2 = (void*)((u8*)lvar_v1_2 + (g_menu_char_slot * 0x250 + 0x5F0));
+                                        void* a2_2 = (void*)((u8*)lvar_a2 + (((menu_read_content_byte(ptr + 0x5F1) & 0x7F) << 6) + 0x150));
+                                        packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                      (content_item->packed_x >> 9) & 7);
+                                    }
+                                    else
+                                    {
+                                        u32 tmpv;
+                                        u8 idx;
+                                        u16 off2;
+                                        base_a2_7 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20));
+                                        tmpv = ((*(u32*)(g_menu_equipment_base + 0x14) >> 10) & 0x3F);
+
+                                        idx = menu_read_content_byte(ptr + 0x5F1);
+                                        idx &= 0x7F;
+                                        off2 = idx * 2;
+                                        {
+                                            void* a2_2 = (void*)((u8*)base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + (s32)base_a2_7)));
+                                            packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                          (content_item->packed_x >> 9) & 7);
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                            case 0x1F:
+                            {
+                                void* base;
+                                u8 idx;
+                                var_a0 = packet_cursor;
+                                base_a2_8 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x4C));
+                                base = (void*)g_pad_ctx;
+                                {
+                                    u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x609;
+                                    idx = *idxp;
+                                }
+                                {
+                                    void* a2_2 = (void*)((u8*)base_a2_8 + *(u16*)((u8*)base_a2_8 + (idx * 2)));
+                                    packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                  (content_item->packed_x >> 9) & 7);
+                                }
+                            }
+                            break;
+                            case 0x20:
+                            {
+                                u32 total = 0;
+                                for (k = 1; k < 4; k++)
+                                {
+                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    {
+                                        u32 ptr = ((u32*)&g_item_slot_data)[k];
+                                        if (ptr != 0 && *(u8*)ptr != 0)
+                                        {
+                                            total += *(u16*)(ptr + 0x24);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
+                                        if (*v != 0)
+                                        {
+                                            total += *(u16*)(v + 0x24);
+                                        }
+                                    }
+                                }
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x21:
+                            {
+                                u32 total = 0;
+                                for (k = 1; k < 4; k++)
+                                {
+                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    {
+                                        u32 ptr = ((u32*)&g_item_slot_data)[k];
+                                        if (ptr != 0 && *(u8*)ptr != 0)
+                                        {
+                                            total += *(u16*)(ptr + 0x26);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
+                                        if (*v != 0)
+                                        {
+                                            total += *(u16*)(v + 0x26);
+                                        }
+                                    }
+                                }
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x22:
+                            {
+                                u32 total = 0;
+                                for (k = 1; k < 4; k++)
+                                {
+                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    {
+                                        u32 ptr = ((u32*)&g_item_slot_data)[k];
+                                        if (ptr != 0 && *(u8*)ptr != 0)
+                                        {
+                                            total += *(u16*)(ptr + 0x28);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
+                                        if (*v != 0)
+                                        {
+                                            total += *(u16*)(v + 0x28);
+                                        }
+                                    }
+                                }
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x23:
+                            {
+                                u32 total = 0;
+                                for (k = 1; k < 4; k++)
+                                {
+                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    {
+                                        u32 ptr = ((u32*)&g_item_slot_data)[k];
+                                        if (ptr != 0 && *(u8*)ptr != 0)
+                                        {
+                                            total += *(u16*)(ptr + 0x2A);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        u8* v = D_80168C20 + 0x40 + (k - 1) * 0x40;
+                                        if (*v != 0)
+                                        {
+                                            total += *(u16*)(v + 0x2A);
+                                        }
+                                    }
+                                }
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            case 0x3F:
+                            {
+                                val = 0;
+                                if (g_item_slot_flags.slot0 != 0)
+                                {
+
+                                    u8* source;
+                                    u8* label_buf;
+                                    if (*(u8*)D_80168C20 != 0)
+                                    {
+                                        val = *(u16*)(D_80168C30 + 0x24);
+                                    }
+                                    if (g_item_slot_data.slot0 != 0 && *(u8*)g_item_slot_data.slot0 != 0)
+                                    {
+                                        val = val - *(u16*)(g_item_slot_data.slot0 + 0x24);
+                                    }
+                                    else
+                                    {
+                                        val = val - D_800F0C1C;
+                                    }
+                                    label_buf = label_buffer;
+                                    if (val >= 0)
+                                    {
+                                        s32 string_page_base =
+                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    else
+                                    {
+                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    label_buf += func_800A8DDC(source);
+                                    *label_buf = 0;
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
+                                }
+                            }
+                            break;
+                            case 0x40:
+                            case 0x41:
+                            case 0x42:
+                            case 0x43:
+                            {
+                                s32 has = 0;
+
+                                u8* source;
+                                u8* label_buf;
+
+                                val = has;
+                                for (k = 1; k < 4; k++)
+                                {
+                                    u8* slot = D_80168C20 + (k * 0x40);
+                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    {
+                                        if (*slot != 0)
+                                        {
+                                            val += *(u16*)(slot + menu_content_halfword_offset(content_index) - 0x5C);
+                                        }
+                                        has = ((u32*)&g_item_slot_data)[k];
+                                        if (has != 0 && *(u8*)has != 0)
+                                        {
+                                            val -= *(u16*)(has + menu_content_halfword_offset(content_index) - 0x5C);
+                                        }
+                                        has = 1;
+                                    }
+                                }
+                                if (has)
+                                {
+                                    label_buf = label_buffer;
+                                    if (val >= 0)
+                                    {
+                                        s32 string_page_base =
+                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    else
+                                    {
+                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+                                        func_800A8E28(label_buf, source);
+                                    }
+                                    label_buf += func_800A8DDC(source);
+                                    *label_buf = 0;
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
+                                }
+                            }
+                            break;
+                            case 0x44:
+                            {
+                                u16 a2_23 = 0;
+                                if (g_item_slot_flags.slot0 != 0)
+                                {
+                                    s32 diff;
+                                    if (*(u8*)D_80168C20 != 0)
+                                    {
+                                        a2_23 = *(u16*)(D_80168C30 + 0x24);
+                                    }
+                                    if (g_item_slot_data.slot0 != 0 && *(u8*)g_item_slot_data.slot0 != 0)
+                                    {
+                                        diff = a2_23 - *(u16*)(g_item_slot_data.slot0 + 0x24);
+                                    }
+                                    else
+                                    {
+                                        diff = a2_23 - D_800F0C1C;
+                                    }
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(diff), 1, &pos, ((content_item->packed_x >> 9) & 7));
+                                }
+                            }
+                            break;
+                            case 0x45:
+                            case 0x46:
+                            case 0x47:
+                            case 0x48:
+                            {
+                                s32 has = 0;
+                                s32 total = has;
+
+                                for (k = 1; k < 4; k++)
+                                {
+                                    u8* slot = D_80168C20 + (k * 0x40);
+                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    {
+                                        if (*slot != 0)
+                                        {
+                                            total += *(u16*)(slot + menu_content_halfword_offset(content_index) - 0x66);
+                                        }
+                                        has = ((u32*)&g_item_slot_data)[k];
+                                        if (has != 0 && *(u8*)has != 0)
+                                        {
+                                            total -= *(u16*)(has + menu_content_halfword_offset(content_index) - 0x66);
+                                        }
+                                        has = 1;
+                                    }
+                                }
+                                if (has)
+                                {
+                                    packet_cursor =
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(total), 1, &pos, ((content_item->packed_x >> 9) & 7));
+                                }
+                            }
+                            break;
+                            case 0x49:
+                            {
+                                void* base;
+                                u8 idx;
+                                var_a0 = packet_cursor;
+                                base_a2_9 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x74));
+                                base = (void*)g_pad_ctx;
+                                {
+                                    u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x633;
+                                    idx = *idxp;
+                                }
+                                {
+                                    void* a2_2 = (void*)((u8*)base_a2_9 + *(u16*)((u8*)base_a2_9 + (idx * 2)));
+                                    packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                  (content_item->packed_x >> 9) & 7);
+                                }
+                            }
+                            break;
+                            case 0x4A:
+                            {
+                                s8 v1 = *(s8*)((void*)g_pad_ctx + 0x29D7);
+                                if (v1 >= 0)
+                                {
+                                    void* base = (void*)g_pad_ctx;
+                                    u8 v = *(u8*)((u8*)base + menu_history_slot_offset(v1) + 0x2B50) & 0xF;
+                                    void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
+                                                                  content_item->packed_x & 0x1FF, content_item->y - 8, (content_item->packed_x >> 9) & 7);
+                                }
+                            }
+                            break;
+                            case 0x4B:
+                            {
+                                s8 v1 = *(s8*)((void*)g_pad_ctx + 0x29D7);
+                                if (v1 >= 0)
+                                {
+                                    void* base = (void*)g_pad_ctx;
+                                    u8 v = *(u8*)((u8*)base + menu_history_slot_offset(v1) + 0x2B50) >> 4;
+                                    void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
+                                                                  content_item->packed_x & 0x1FF, content_item->y - 8, (content_item->packed_x >> 9) & 7);
+                                }
+                            }
+                            break;
+                            case 0x4C:
+                            {
+                                s8 v1 = *(s8*)((void*)g_pad_ctx + 0x29D7);
+                                if (v1 >= 0)
+                                {
+                                    void* base = (void*)g_pad_ctx;
+                                    u8 v = *(u8*)((u8*)base + menu_history_slot_offset(v1) + 0x2B52);
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, v, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                                }
+                            }
+                            break;
+                            case 0x4D:
+                            {
+                                s8 v1 = *(s8*)((void*)g_pad_ctx + 0x29D7);
+                                if (v1 >= 0)
+                                {
+                                    void* base;
+                                    s32 idx;
+                                    var_a0 = packet_cursor;
+                                    base_a2_10 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
+                                    base = (void*)g_pad_ctx;
+                                    idx = *(s32*)((u8*)base + menu_history_slot_offset(v1) + 0x2B54);
+                                    {
+                                        void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
+                                        packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                      (content_item->packed_x >> 9) & 7);
+                                    }
+                                }
+                            }
+                            break;
+                            case 0x4E:
+                            case 0x4F:
+                            case 0x50:
+                            case 0x51:
+                            case 0x52:
+                            case 0x53:
+                            case 0x54:
+                            case 0x55:
+                            {
+                                u32 a2_26 = 0;
+                                switch (content_index)
+                                {
+                                case 0x4E:
+                                    a2_26 = *(u32*)((u8*)(void*)g_pad_ctx + menu_character_slot_offset(g_menu_char_slot) + 0x658) & 0xF;
+                                    break;
+                                case 0x4F:
+                                    a2_26 = *(u8*)((u8*)(void*)g_pad_ctx + menu_character_slot_offset(g_menu_char_slot) + 0x658);
+                                    a2_26 >>= 4;
+                                    break;
+                                case 0x50:
+                                    a2_26 = *(u32*)((u8*)(void*)g_pad_ctx + menu_character_slot_offset(g_menu_char_slot) + 0x658) >> 8;
+                                    a2_26 &= 0xF;
+                                    break;
+                                case 0x51:
+                                    a2_26 = *(u32*)((u8*)(void*)g_pad_ctx + menu_character_slot_offset(g_menu_char_slot) + 0x658) >> 12;
+                                    a2_26 &= 0xF;
+                                    break;
+                                case 0x52:
+                                    a2_26 = *(u16*)((u8*)g_pad_ctx + menu_character_slot_offset(g_menu_char_slot) + 0x65A);
+                                    a2_26 &= 0xF;
+                                    break;
+                                case 0x53:
+                                    a2_26 = *(u32*)((u8*)g_pad_ctx + menu_character_slot_offset(g_menu_char_slot) + 0x658) >> 20;
+                                    a2_26 &= 0xF;
+                                    break;
+                                case 0x54:
+                                    a2_26 = *(u8*)((u8*)g_pad_ctx + menu_character_slot_offset(g_menu_char_slot) + 0x65B);
+                                    a2_26 &= 0xF;
+                                    break;
+                                case 0x55:
+                                    a2_26 = *(u32*)((u8*)g_pad_ctx + menu_character_slot_offset(g_menu_char_slot) + 0x658) >> 28;
+                                    break;
+                                }
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, a2_26, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                            }
+                            break;
+                            default:
+                                break;
+                            }
+                        }
+                        break;
+
+                        case 6:
+                        {
+                            shared_s0 = content_item->pad[0];
+                            switch (shared_s0)
+                            {
+                            case 1:
+                                if (*(u32*)((void*)g_pad_ctx + 0x2C) > 0x989680U)
+                                {
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, 0x989680U, 1, &pos, ((content_item->packed_x >> 9) & 7));
+                                }
+                                else
+                                {
+                                    packet_cursor =
+                                        func_800A8A78(ot_entry, packet_cursor, *(u32*)((void*)g_pad_ctx + 0x2C), 1, &pos, ((content_item->packed_x >> 9) & 7));
+                                }
+                                break;
+                            case 2:
+                            {
+                                u32 ltemp_v0_6;
+                                s32 v1;
+                                s32 s2;
+                                s32 split_tmp;
+                                s32 one;
+                                ltemp_v0_6 = (content_item->packed_x >> 9) & 7;
+                                switch (ltemp_v0_6)
+                                {
+                                case 1:
+                                    pos.x -= 0x32;
+                                    break;
+                                case 2:
+                                    pos.x -= 0x19;
+                                    break;
+                                }
+                                v1 = *(s32*)((void*)g_pad_ctx + 0x30) + VSync(-1);
+                                shared_s0 = v1 - D_80042FB4;
+                                pos.x += 0x14;
+                                s2 = shared_s0 / 216000;
+                                one = 1;
+                                packet_cursor = (void*)func_800A8A78(ot_entry, packet_cursor, s2, one, &pos, one);
+                                if ((g_frame_counter / 15) & 1)
+                                {
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, ":", one, pos.x, pos.y, 0);
+                                }
+                                pos.x += 7;
+                                split_tmp = s2 * 0x3C;
+                                shared_s0 = (shared_s0 / 3600) - split_tmp;
+                                if (shared_s0 < 0xA)
+                                {
+                                    packet_cursor = (void*)func_800A8A78(ot_entry, packet_cursor, 0U, 1, &pos, 0);
+                                }
+                                pos.x += 0x10;
+                                packet_cursor = (void*)func_800A8A78(ot_entry, packet_cursor, shared_s0, 1, &pos, one);
+                            }
+                            break;
+                            }
+                        }
+                        break;
+
+                        case 7:
+                        {
+                            shared_s0 = content_item->pad[0];
+                            switch (shared_s0)
+                            {
+                            case 1:
+                            {
+                                void* base = (void*)g_pad_ctx + g_menu_char_slot * 0x250;
+                                if ((*(u8*)((u8*)base + 0x608) & 0x7F) != two_outer || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                                {
+                                    var_a0 = packet_cursor;
+                                    base_a2_11 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
+                                    {
+                                        void* a2_2 = (void*)((u8*)base_a2_11 + *(u16*)((u8*)base_a2_11 + 0x74));
+                                        packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                      (content_item->packed_x >> 9) & 7);
+                                    }
+                                }
+                            }
+                            break;
+                            case 2:
+                            {
+                                void* base = (void*)g_pad_ctx + g_menu_char_slot * 0x250;
+                                if ((*(u8*)((u8*)base + 0x608) & 0x7F) != 2 || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
+                                {
+                                    var_a0 = packet_cursor;
+                                    base_a2_12 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
+                                    {
+                                        void* a2_2 = (void*)((u8*)base_a2_12 + *(u16*)((u8*)base_a2_12 + 0x76));
+                                        packet_cursor = func_800A88A0(var_a0, ot_entry, a2_2, 1, content_item->packed_x & 0x1FF, content_item->y - 8,
+                                                                      (content_item->packed_x >> 9) & 7);
+                                    }
+                                }
+                            }
+                            break;
+                            }
+                        }
+                        break;
+
+                        default:
                             break;
                         }
-                        v1 = *(s32*)((void*)g_pad_ctx + 0x30) + VSync(-1);
-                        shared_s0 = v1 - D_80042FB4;
-                        pos.x += 0x14;
-                        s2 = shared_s0 / 216000;
-                        one = 1;
-                        var_s1 = (void*)func_800A8A78(arg1, var_s1, s2, one, &pos, one);
-                        if ((g_frame_counter / 15) & 1)
-                        {
-                            var_s1 = func_800A88A0(var_s1, arg1, ":", one, pos.x, pos.y, 0);
-                        }
-                        pos.x += 7;
-                        split_tmp = s2 * 0x3C;
-                        shared_s0 = (shared_s0 / 3600) - split_tmp;
-                        if (shared_s0 < 0xA)
-                            var_s1 = (void*)func_800A8A78(arg1, var_s1, 0U, 1, &pos, 0);
-                        pos.x += 0x10;
-                        var_s1 = (void*)func_800A8A78(arg1, var_s1, shared_s0, 1, &pos, one);
                     }
-                    break;
-                    }
-                }
-                break;
 
-                case 7:
-                {
-                    shared_s0 = ITEM_SUB;
-                    switch (shared_s0)
-                    {
-                    case 1:
-                    {
-                        void* base = (void*)g_pad_ctx + g_menu_char_slot * 0x250;
-                        if ((*(u8*)((u8*)base + 0x608) & 0x7F) != two_outer || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
-                        {
-                            var_a0 = var_s1;
-                            base_a2_11 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
-                            {
-                                void* a2_2 = (void*)((u8*)base_a2_11 + *(u16*)((u8*)base_a2_11 + 0x74));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                            }
-                        }
-                    }
-                    break;
-                    case 2:
-                    {
-                        void* base = (void*)g_pad_ctx + g_menu_char_slot * 0x250;
-                        if ((*(u8*)((u8*)base + 0x608) & 0x7F) != 2 || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
-                        {
-                            var_a0 = var_s1;
-                            base_a2_12 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
-                            {
-                                void* a2_2 = (void*)((u8*)base_a2_12 + *(u16*)((u8*)base_a2_12 + 0x76));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
-                            }
-                        }
-                    }
-                    break;
-                    }
-                }
-                break;
-
-                default:
-                    break;
-                }
-                }
-
-                var_s3 += 4;
-                spC0--;
-            } while (spC0 != 0);
+                    content_item++;
+                    remaining_count--;
+                } while (remaining_count != 0);
             }
 
             {
@@ -5396,7 +5474,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     u8* a2_27 = (u8*)g_menu_item_ptr;
                     if (*a2_27 != 0)
                     {
-                        var_s1 = func_800A88A0(var_s1, arg1, a2_27, 1, 0xAC, 0xC, 2);
+                        packet_cursor = func_800A88A0(packet_cursor, ot_entry, a2_27, 1, 0xAC, 0xC, 2);
                     }
                 }
                 else if (g_menu_scene_type == 0x1D)
@@ -5404,14 +5482,14 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     void* a2_28 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
                     u16 v1 = *(u16*)((u8*)a2_28 + 0x78);
                     void* a2_27 = (void*)((u8*)a2_28 + v1);
-                    var_s1 = func_800A88A0(var_s1, arg1, a2_27, 1, 0xAC, 0xC, 2);
+                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, a2_27, 1, 0xAC, 0xC, 2);
                 }
                 else if (g_menu_scene_type != -1)
                 {
                     void* a2_28 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
                     u16 v1 = *(u16*)((u8*)a2_28 + node->label_id * 2);
                     void* a2_27 = (void*)((u8*)a2_28 + v1);
-                    var_s1 = func_800A88A0(var_s1, arg1, a2_27, 1, 0xAC, 0xC, 2);
+                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, a2_27, 1, 0xAC, 0xC, 2);
                 }
             }
 
@@ -5429,18 +5507,18 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                 pos.y = 0x28;
                 if (g_menu_page_count != 0)
                 {
-                    ltemp = func_800AD208(arg1, var_s1, g_script_repeat_last + 1, 3, &pos, 0);
+                    ltemp = func_800AD208(ot_entry, packet_cursor, g_script_repeat_last + 1, 3, &pos, 0);
                 }
                 else
                 {
-                    ltemp = func_800AD208(arg1, var_s1, 0, 3, &pos, 0);
+                    ltemp = func_800AD208(ot_entry, packet_cursor, 0, 3, &pos, 0);
                 }
-                ltemp = func_800AD524(ltemp, arg1, 0xB, &pos, 0);
+                ltemp = func_800AD524(ltemp, ot_entry, 0xB, &pos, 0);
                 pos.x += 8;
-                ltemp = func_800AD208(arg1, ltemp, g_menu_page_count, 3, &pos, 0);
-                ltemp = func_800AD524(ltemp, arg1, 0xB, &pos, 0);
+                ltemp = func_800AD208(ot_entry, ltemp, g_menu_page_count, 3, &pos, 0);
+                ltemp = func_800AD524(ltemp, ot_entry, 0xB, &pos, 0);
                 pos.x += 8;
-                var_s1 = func_800AD208(arg1, ltemp, menu_count_inventory_items(), 3, &pos, 0);
+                packet_cursor = func_800AD208(ot_entry, ltemp, menu_count_inventory_items(), 3, &pos, 0);
             }
             break;
             default:
@@ -5449,9 +5527,8 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
         }
     }
 
-    return var_s1;
+    return packet_cursor;
 }
-
 
 extern u8 D_800F0BE0[];
 extern u8 D_800F0BEC[];
