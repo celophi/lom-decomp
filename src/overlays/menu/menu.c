@@ -9558,40 +9558,30 @@ s32 menu_stage_best_equipment_for_active_slot(void)
         if (*(pad - (-((off << 6) + (g_menu_char_slot * 0x250))) + 0x640) == 0)
         {
             slots = &g_item_slot_data.slot0;
-            do
+            for (; i < 4; i += 1)
             {
                 if ((u32)entry == slots[i])
                 {
-                    goto found_a;
+                    slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+                    break;
                 }
-                i += 1;
-            } while (i < 4);
-done_a:
+            }
             func_800A8F8C((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), entry);
             *entry = 0;
             g_item_slot_data_by_subtype[g_menu_active_subtype] = 0;
             goto tail;
-found_a:
-            slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
-            goto done_a;
         }
         else
         {
-            goto scan_b;
-found_b:
-            slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
-            goto done_b;
-scan_b:
             slots = &g_item_slot_data.slot0;
-            do
+            for (; i < 4; i += 1)
             {
                 if ((u32)entry == slots[i])
                 {
-                    goto found_b;
+                    slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+                    break;
                 }
-                i += 1;
-            } while (i < 4);
-done_b:
+            }
             slot_buf = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + (g_menu_active_subtype << 6) + 0x480;
             func_800A8F8C(buf, slot_buf);
             func_800A8F8C(slot_buf, entry);
