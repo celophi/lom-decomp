@@ -126,33 +126,6 @@ typedef struct
 
 typedef AddheroGpuPacket *(*AddheroElemDrawFunc)();
 
-/** @brief 0x28-byte textured-quad primitive built for a save-slot glyph. */
-typedef struct
-{
-    s32 tag;
-    s32 color0;
-    s16 x0;
-    s16 y0;
-    u8 u0;
-    u8 v0;
-    s16 clut;
-    s16 x1;
-    s16 y1;
-    u8 u1;
-    u8 v1;
-    s16 tpage;
-    s16 x2;
-    s16 y2;
-    u8 u2;
-    u8 v2;
-    u8 pad1E[2];
-    s16 x3;
-    s16 y3;
-    u8 u3;
-    u8 v3;
-    u8 pad26[2];
-} AddheroPolyFT4Packet;
-
 extern AddheroElementPoolHead g_addhero_element_pool;
 extern AddheroElement g_addhero_element1;
 extern AddheroDirEntry g_addhero_entries[][20];
@@ -2043,30 +2016,30 @@ s32 addhero_draw_icon_highlight(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s
     rect.w = 0xC;
     rect.h = 0x30;
     func_80019A34(&rect, (void *)((u8 *)&D_80147658 + 0x1C + D_80147658[slot]));
-    ((AddheroPolyFT4Packet *)result)->color0 = 0x808080;
+    SET_BGR0_PACKED((POLY_FT4 *)result, 0x808080);
     ((u8 *)result)[3] = 9;
-    ((u8 *)result)[7] = 0x2C;
-    ((AddheroPolyFT4Packet *)result)->x2 = x;
-    ((AddheroPolyFT4Packet *)result)->x0 = x;
-    ((AddheroPolyFT4Packet *)result)->y1 = y;
-    ((AddheroPolyFT4Packet *)result)->y0 = y;
-    ((AddheroPolyFT4Packet *)result)->x3 = x + adjust;
+    ((POLY_FT4 *)result)->code = 0x2C;
+    ((POLY_FT4 *)result)->x2 = x;
+    ((POLY_FT4 *)result)->x0 = x;
+    ((POLY_FT4 *)result)->y1 = y;
+    ((POLY_FT4 *)result)->y0 = y;
+    ((POLY_FT4 *)result)->x3 = x + adjust;
     shade = temp * 0x10;
-    ((AddheroPolyFT4Packet *)result)->u2 = shade;
-    ((AddheroPolyFT4Packet *)result)->u0 = shade;
+    ((POLY_FT4 *)result)->u2 = shade;
+    ((POLY_FT4 *)result)->u0 = shade;
     shade += 0x2F;
-    ((AddheroPolyFT4Packet *)result)->u3 = shade;
-    ((AddheroPolyFT4Packet *)result)->u1 = shade;
-    ((AddheroPolyFT4Packet *)result)->v1 = 0xD0;
-    ((AddheroPolyFT4Packet *)result)->v0 = 0xD0;
-    ((AddheroPolyFT4Packet *)result)->x1 = x + adjust;
-    ((AddheroPolyFT4Packet *)result)->y3 = y + 0x2F;
-    ((AddheroPolyFT4Packet *)result)->y2 = y + 0x2F;
-    ((AddheroPolyFT4Packet *)result)->v3 = 0xFF;
-    ((AddheroPolyFT4Packet *)result)->v2 = 0xFF;
-    ((AddheroPolyFT4Packet *)result)->clut = (i & 0x3F) | 0x7C80;
-    ((AddheroPolyFT4Packet *)result)->tpage = 5;
-    ((AddheroPolyFT4Packet *)result)->tag = (((AddheroPolyFT4Packet *)result)->tag & 0xFF000000) | (*ot & 0xFFFFFF);
+    ((POLY_FT4 *)result)->u3 = shade;
+    ((POLY_FT4 *)result)->u1 = shade;
+    ((POLY_FT4 *)result)->v1 = 0xD0;
+    ((POLY_FT4 *)result)->v0 = 0xD0;
+    ((POLY_FT4 *)result)->x1 = x + adjust;
+    ((POLY_FT4 *)result)->y3 = y + 0x2F;
+    ((POLY_FT4 *)result)->y2 = y + 0x2F;
+    ((POLY_FT4 *)result)->v3 = 0xFF;
+    ((POLY_FT4 *)result)->v2 = 0xFF;
+    ((POLY_FT4 *)result)->clut = (i & 0x3F) | 0x7C80;
+    ((POLY_FT4 *)result)->tpage = 5;
+    ((POLY_FT4 *)result)->tag = (((POLY_FT4 *)result)->tag & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | (result & 0xFFFFFF);
     return result + 0x28;
 }
