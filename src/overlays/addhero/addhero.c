@@ -1,9 +1,5 @@
 #include "common.h"
 
-/* ------------------------------------------------------------------ */
-/* Shared types                                                       */
-/* ------------------------------------------------------------------ */
-
 typedef struct
 {
     s16 x;
@@ -151,7 +147,6 @@ typedef struct
     /* 0x24 */ char system[4];
 } AddheroDirEntry;
 
-
 /* ADDHERO layout/state constants recovered from the element and card-directory loops. */
 #define ADDHERO_ELEMENT_COUNT 8
 #define ADDHERO_ELEMENT_WORD_STRIDE 3
@@ -234,10 +229,6 @@ typedef struct
     /* 0x25 */ u8 v3;
     /* 0x26 */ u8 pad26[2];
 } AddheroPolyFT4Packet;
-
-/* ------------------------------------------------------------------ */
-/* Globals                                                            */
-/* ------------------------------------------------------------------ */
 
 extern AddheroElementPoolHead g_addhero_element_pool;
 extern AddheroElement g_addhero_element1;
@@ -330,10 +321,6 @@ extern u16 D_8014700E;
 extern u16 D_80147054;
 extern u16 D_80147470[];
 
-/* ------------------------------------------------------------------ */
-/* Forward declarations                                               */
-/* ------------------------------------------------------------------ */
-
 /* In-file functions */
 void addhero_init(s32 arg0, s32 arg1);
 s32 addhero_state_step(s32 arg0);
@@ -417,10 +404,6 @@ s32 addhero_advance_load_sequence();
 #define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 #define GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
 #define GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
-
-/* ------------------------------------------------------------------ */
-/* Functions                                                          */
-/* ------------------------------------------------------------------ */
 
 /** @see decomp.me (100%) */
 void addhero_init(s32 arg0, s32 arg1)
@@ -2465,10 +2448,6 @@ s32 addhero_parse_hex_suffix_byte(u8 *text)
     return result;
 }
 
-/* ------------------------------------------------------------------ */
-/* Former addhero_parse_entry_fields.c */
-/* ------------------------------------------------------------------ */
-
 extern s32 g_addhero_entry_fields[];
 
 /**
@@ -2555,10 +2534,6 @@ s32 addhero_parse_entry_fields(void)
     return max;
 }
 
-/* ------------------------------------------------------------------ */
-/* ADDHERO continuation declarations                                  */
-/* ------------------------------------------------------------------ */
-
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
 
@@ -2624,10 +2599,6 @@ typedef struct
 #define GLYPH_RASTER_BYTES 0x80
 #define GPU_ADDR_MASK 0xFFFFFF
 #define GPU_TAG_HIGH_MASK 0xFF000000
-
-/* ------------------------------------------------------------------ */
-/* Globals                                                            */
-/* ------------------------------------------------------------------ */
 
 extern AddheroDirEntry g_addhero_entries[][20];
 extern AddheroFileHeader g_addhero_file_template;
@@ -2695,10 +2666,6 @@ extern char D_800ECF9C[];
 extern char D_800ECFB0[];
 extern char D_800ECFC4[];
 
-/* ------------------------------------------------------------------ */
-/* Forward declarations                                               */
-/* ------------------------------------------------------------------ */
-
 /* In-file functions */
 s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2);
 void addhero_reset_entry_ranks(void);
@@ -2764,10 +2731,6 @@ s32 func_800167CC(s32 a);
 void func_800167DC(s32 a);
 void func_800167EC(void);
 void func_800167FC(void);
-
-/* ------------------------------------------------------------------ */
-/* Former addhero2.c functions */
-/* ------------------------------------------------------------------ */
 
 s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
 {
