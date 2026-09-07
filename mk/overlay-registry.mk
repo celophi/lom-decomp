@@ -719,26 +719,12 @@ overlay_wsel_gcc_280_g0_srcs := \
 	src/overlays/wsel/func_80051D78.c
 
 OVERLAYS += zukan
+# The overlay header word stays in its own TU (linked first, before the asm
+# rodata blob). zukan.c holds every optimized function - including the four
+# formerly tagged gcc280_g0, which also match under gcc272_cdk. func_80142D08 is
+# the only -O0 function, so it keeps its own TU.
 overlay_zukan_gcc_272_cdk_g0_srcs := \
 	src/overlays/zukan/overlay_header.c \
-	src/overlays/zukan/zukan_init.c \
-	src/overlays/zukan/zukan_build_entry_primitives.c \
-	src/overlays/zukan/zukan_image_upload.c \
-	src/overlays/zukan/zukan_update_frame.c \
-	src/overlays/zukan/func_80141354.c \
-	src/overlays/zukan/zukan_mode_setters.c \
-	src/overlays/zukan/zukan_transition_update.c \
-	src/overlays/zukan/func_80141DF4.c \
-	src/overlays/zukan/zukan_resource_helpers.c \
-	src/overlays/zukan/zukan_resource_table_init.c \
-	src/overlays/zukan/zukan_resource_text.c \
-	src/overlays/zukan/zukan_resource_sprites.c \
-	src/overlays/zukan/zukan_resource_loader.c \
-	src/overlays/zukan/func_80142CA0.c
-overlay_zukan_gcc_280_g0_srcs := \
-	src/overlays/zukan/zukan_scroll_window.c \
-	src/overlays/zukan/zukan_gpu_modes.c \
-	src/overlays/zukan/func_80141988.c \
-	src/overlays/zukan/zukan_outline_fade.c
+	src/overlays/zukan/zukan.c
 overlay_zukan_gcc_280_g0_o0_srcs := \
 	src/overlays/zukan/func_80142D08.c
