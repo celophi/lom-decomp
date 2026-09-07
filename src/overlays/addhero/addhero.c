@@ -7,14 +7,6 @@ typedef struct
 {
     s16 x;
     s16 y;
-    s16 w;
-    s16 h;
-} AddheroRect;
-
-typedef struct
-{
-    s16 x;
-    s16 y;
 } Vec2s;
 
 typedef struct
@@ -931,7 +923,7 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 
 s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
-    AddheroRect pos;
+    RECT pos;
 
     if (g_addhero_mode == 1)
     {
@@ -946,7 +938,7 @@ s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 
 s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
-    AddheroRect pos;
+    RECT pos;
     AddheroTile *tile;
 
     if (g_addhero_card_slot != 0)
@@ -968,7 +960,7 @@ s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 
 s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
-    AddheroRect pos;
+    RECT pos;
     AddheroTile *tile;
 
     if (g_addhero_card_slot == 0)
