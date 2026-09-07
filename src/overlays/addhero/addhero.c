@@ -4,19 +4,6 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
-typedef struct
-{
-    u32 tag;
-    u8 r0;
-    u8 g0;
-    u8 b0;
-    u8 code;
-    s16 x0;
-    s16 y0;
-    s16 w;
-    s16 h;
-} AddheroTile;
-
 /** @brief One 0xC-byte animated ADDHERO UI element. */
 typedef struct AddheroElement
 {
@@ -78,26 +65,6 @@ typedef struct
     AddheroWordPacket first;
     AddheroWordPacket second;
 } AddheroPacketBlock;
-
-/** @brief Cursor view (0xC) with a bitfield attr and a draw handler pointer. */
-typedef struct
-{
-    union
-    {
-        u32 word;
-        struct
-        {
-            u32 state : 3;
-            u32 phase : 4;
-            u32 x : 9;
-            u32 code : 8;
-        } f;
-    } attr;
-    u32 active : 1;
-    u32 y : 8;
-    u32 rest : 23;
-    void (*draw)();
-} AddheroCursor;
 
 typedef struct AddheroRecord
 {
@@ -934,11 +901,11 @@ s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
-    AddheroTile *tile;
+    TILE *tile;
 
     if (g_addhero_card_slot != 0)
     {
-        tile = (AddheroTile *)prim;
+        tile = (TILE *)prim;
         *(u32 *)&tile->r0 = 0x101010;
         *((u8 *)tile + 3) = 3;
         tile->code = 0x62;
@@ -956,11 +923,11 @@ s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
-    AddheroTile *tile;
+    TILE *tile;
 
     if (g_addhero_card_slot == 0)
     {
-        tile = (AddheroTile *)prim;
+        tile = (TILE *)prim;
         *(u32 *)&tile->r0 = 0x101010;
         *((u8 *)tile + 3) = 3;
         tile->code = 0x62;
@@ -1645,8 +1612,8 @@ s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     RECT pos;
     u8 *base;
     u8 *resource;
-    AddheroCursor *p;
-    AddheroCursor *cursor;
+    AddheroElement *p;
+    AddheroElement *cursor;
     s32 result;
     s32 x;
     s32 i;
@@ -1662,7 +1629,7 @@ s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     if (g_addhero_progress_active == 0)
     {
         resource = g_addhero_save_blob;
-        p = (AddheroCursor *)&g_addhero_element_pool.first;
+        p = (AddheroElement *)&g_addhero_element_pool.first;
         p->attr.f.state = 0;
         if (addhero_validate_save_blob(resource) == 0)
         {
