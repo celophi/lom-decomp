@@ -80,12 +80,12 @@ typedef struct AddheroRecord
 /** @brief Memory-card directory entry; layout matches Psy-Q DIRENTRY (0x28 bytes). */
 typedef struct
 {
-    /* 0x00 */ char name[20];
-    /* 0x14 */ s32 attr;
-    /* 0x18 */ s32 size;
-    /* 0x1C */ void *next;
-    /* 0x20 */ s32 head;
-    /* 0x24 */ char system[4];
+    char name[20];
+    s32 attr;
+    s32 size;
+    void *next;
+    s32 head;
+    char system[4];
 } AddheroDirEntry;
 
 /* ADDHERO layout/state constants recovered from the element and card-directory loops. */
@@ -107,12 +107,12 @@ typedef struct AddheroFallbackText
 /* addhero_update_and_draw_elements element-draw pipeline types */
 typedef struct
 {
-    /* 0x00 */ s32 tag;
-    /* 0x04 */ s32 word4;
-    /* 0x08 */ s16 x0;
-    /* 0x0A */ s16 y0;
-    /* 0x0C */ s16 unkC;
-    /* 0x0E */ u16 unkE;
+    s32 tag;
+    s32 word4;
+    s16 x0;
+    s16 y0;
+    s16 unkC;
+    u16 unkE;
 } AddheroGpuPacket;
 
 typedef struct
@@ -126,49 +126,31 @@ typedef struct
 
 typedef AddheroGpuPacket *(*AddheroElemDrawFunc)();
 
-/** @brief POLY_G4 words used to draw the timer bar. */
-typedef struct
-{
-    /* 0x00 */ s32 tag;
-    /* 0x04 */ s32 color0;
-    /* 0x08 */ s16 x0;
-    /* 0x0A */ s16 y0;
-    /* 0x0C */ s32 color1;
-    /* 0x10 */ s16 x1;
-    /* 0x12 */ s16 y1;
-    /* 0x14 */ s32 color2;
-    /* 0x18 */ s16 x2;
-    /* 0x1A */ s16 y2;
-    /* 0x1C */ s32 color3;
-    /* 0x20 */ s16 x3;
-    /* 0x22 */ s16 y3;
-} AddheroPolyG4Packet;
-
 /** @brief 0x28-byte textured-quad primitive built for a save-slot glyph. */
 typedef struct
 {
-    /* 0x00 */ s32 tag;
-    /* 0x04 */ s32 color0;
-    /* 0x08 */ s16 x0;
-    /* 0x0A */ s16 y0;
-    /* 0x0C */ u8 u0;
-    /* 0x0D */ u8 v0;
-    /* 0x0E */ s16 clut;
-    /* 0x10 */ s16 x1;
-    /* 0x12 */ s16 y1;
-    /* 0x14 */ u8 u1;
-    /* 0x15 */ u8 v1;
-    /* 0x16 */ s16 tpage;
-    /* 0x18 */ s16 x2;
-    /* 0x1A */ s16 y2;
-    /* 0x1C */ u8 u2;
-    /* 0x1D */ u8 v2;
-    /* 0x1E */ u8 pad1E[2];
-    /* 0x20 */ s16 x3;
-    /* 0x22 */ s16 y3;
-    /* 0x24 */ u8 u3;
-    /* 0x25 */ u8 v3;
-    /* 0x26 */ u8 pad26[2];
+    s32 tag;
+    s32 color0;
+    s16 x0;
+    s16 y0;
+    u8 u0;
+    u8 v0;
+    s16 clut;
+    s16 x1;
+    s16 y1;
+    u8 u1;
+    u8 v1;
+    s16 tpage;
+    s16 x2;
+    s16 y2;
+    u8 u2;
+    u8 v2;
+    u8 pad1E[2];
+    s16 x3;
+    s16 y3;
+    u8 u3;
+    u8 v3;
+    u8 pad26[2];
 } AddheroPolyFT4Packet;
 
 extern AddheroElementPoolHead g_addhero_element_pool;
@@ -1664,12 +1646,12 @@ s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 
 s32 addhero_draw_progress_bar(s32 arg0, s32 *arg1)
 {
-    AddheroPolyG4Packet *g;
+    POLY_G4 *g;
     s32 elapsed;
     s32 extent;
     s32 color;
 
-    g = (AddheroPolyG4Packet *)arg0;
+    g = (POLY_G4 *)arg0;
     if (g_addhero_progress_bar_active != 0)
     {
         elapsed = func_8002054C(-1) - g_addhero_progress_start_tick;
@@ -1679,12 +1661,12 @@ s32 addhero_draw_progress_bar(s32 arg0, s32 *arg1)
         }
         color = 0xFFFF00;
         extent = elapsed * 0x120;
-        g->color0 = 0xFF;
-        g->color1 = 0xFFFF;
-        g->color3 = 0xFF0000;
+        SET_BGR0_PACKED(g, 0xFF);
+        SET_POLY_G4_BGR1_PACKED(g, 0xFFFF);
+        SET_POLY_G4_BGR3_PACKED(g, 0xFF0000);
         ((u8 *)g)[3] = 8;
-        g->color2 = color;
-        ((u8 *)g)[7] = 0x38;
+        SET_POLY_G4_BGR2_PACKED(g, color);
+        g->code = 0x38;
         g->x2 = 0;
         g->x0 = 0;
         if (extent < 0)
@@ -1857,20 +1839,20 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         break;
     case 0xF6:
         {
-            s32 x; u8 *base; AddheroPolyG4Packet *g; s32 next, elapsed, extent, color, finalmode;
+            s32 x; u8 *base; POLY_G4 *g; s32 next, elapsed, extent, color, finalmode;
             x = -arg2 + 0x90;
             prim = func_800A88A0(prim, ot, (void *)((s32)&D_80146FD6 - 0x32 + D_80146FD6), 4, x, -arg3, 2);
             base = (u8 *)&D_80146FD6 - 0x32;
             prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - arg3, 2);
             prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
-            next = prim; g = (AddheroPolyG4Packet *)prim;
+            next = prim; g = (POLY_G4 *)prim;
             if (g_addhero_progress_bar_active != 0)
             {
                 elapsed = func_8002054C(-1) - g_addhero_progress_start_tick;
                 if (elapsed >= 0x101) elapsed = 0x100;
                 color = 0xFFFF00; extent = elapsed * 0x120;
-                g->color0=0xFF; g->color1=0xFFFF; g->color3=0xFF0000; ((u8 *)g)[3]=8;
-                g->color2=color; ((u8 *)g)[7]=0x38; g->x2=0; g->x0=0;
+                SET_BGR0_PACKED(g, 0xFF); SET_POLY_G4_BGR1_PACKED(g, 0xFFFF); SET_POLY_G4_BGR3_PACKED(g, 0xFF0000); ((u8 *)g)[3]=8;
+                SET_POLY_G4_BGR2_PACKED(g, color); g->code=0x38; g->x2=0; g->x0=0;
                 if (extent < 0) extent += 0xFF;
                 g->x3=extent>>8; g->x1=extent>>8; g->y1=0; g->y0=0; g->y3=0x2C; g->y2=0x2C;
                 g->tag=(g->tag & 0xFF000000)|(*ot & 0xFFFFFF);
@@ -1974,16 +1956,16 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         break;
     case 0xF5:
         {
-            s32 x; u8 *base; AddheroPolyG4Packet *g; s32 next,elapsed,extent,color; AddheroPacket *packet; s32 i;
+            s32 x; u8 *base; POLY_G4 *g; s32 next,elapsed,extent,color; AddheroPacket *packet; s32 i;
             x=-arg2+0x90;
             prim=func_800A88A0(prim,ot,(void *)((s32)&D_80146FC0-0x1C+D_80146FC0),4,x,-arg3,2);
             base=(u8 *)&D_80146FC0-0x1C;
             prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -arg3,2);
             prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-arg3,2);
-            next=prim; g=(AddheroPolyG4Packet *)prim;
+            next=prim; g=(POLY_G4 *)prim;
             if(g_addhero_progress_bar_active!=0){
                 elapsed=func_8002054C(-1)-g_addhero_progress_start_tick; if(elapsed>=0x101)elapsed=0x100; color=0xFFFF00; extent=elapsed*0x120;
-                g->color0=0xFF;g->color1=0xFFFF;g->color3=0xFF0000;((u8*)g)[3]=8;g->color2=color;((u8*)g)[7]=0x38;g->x2=0;g->x0=0;
+                SET_BGR0_PACKED(g,0xFF);SET_POLY_G4_BGR1_PACKED(g,0xFFFF);SET_POLY_G4_BGR3_PACKED(g,0xFF0000);((u8*)g)[3]=8;SET_POLY_G4_BGR2_PACKED(g,color);g->code=0x38;g->x2=0;g->x0=0;
                 if(extent<0)extent+=0xFF;g->x3=extent>>8;g->x1=extent>>8;g->y1=0;g->y0=0;g->y3=0x2C;g->y2=0x2C;
                 g->tag=(g->tag&0xFF000000)|(*ot&0xFFFFFF);*ot=(*ot&0xFF000000)|(prim&0xFFFFFF);next=prim+0x24;
             }
