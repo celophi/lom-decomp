@@ -292,7 +292,9 @@ segments:
       - [0x5908D, c, field_pad_context_ops]     # gcc272_cdk, func_800A8CFC .. func_800A90F8 (11 funcs, 100%; 5 of them do not match under gcc280_g0)
       - [0x59529, c, func_800A9198]               # gcc272_cdk, 100%
       - [0x5965D, c, field331]                  # gcc272_cdk, func_800A92CC (92.88% WIP)
-      - [0x5972D, c, unk2_b_split013_b]         # gcc272_cdk, func_800A939C .. func_800A9B88
+      - [0x5972D, c, unk2_b_split013_b_before_a9a5c] # gcc272_cdk, func_800A939C
+      - [0x59DED, c, func_800A9A5C]             # gcc272_cdk, 100%
+      - [0x59F19, c, unk2_b_split013_b_after_a9a5c] # gcc272_cdk, func_800A9B88
       - [0x5A101, c, func_800A9D70]               # gcc272_cdk, 100%
       - [0x5A209, c, unk2_b_split013_b_after_9d70] # gcc272_cdk, func_800A9E78
       - [0x5A3BD, c, func_800AA02C]             # gcc272_cdk, 100.00000%, 27/27 instructions
