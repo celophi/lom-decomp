@@ -1,12 +1,7 @@
 #include "common.h"
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} RECT;
+#include "gpu_packet.h"
+#include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 
 typedef struct
 {
@@ -21,14 +16,6 @@ typedef struct
     s16 x;
     s16 y;
 } Vec2s;
-
-typedef struct
-{
-    u32 tag;
-    u8 r0, g0, b0, code;
-    s16 x0, y0;
-    s16 w, h;
-} TILE;
 
 typedef struct
 {
@@ -2533,16 +2520,6 @@ s32 addhero_parse_entry_fields(void)
 
     return max;
 }
-
-#include "gpu_packet.h"
-#include "sdk/libgte.h"
-
-/* addhero.c already has local RECT/TILE ABI views used by the earlier code. */
-#define RECT AddheroSdkRect
-#define TILE AddheroSdkTile
-#include "sdk/libgpu.h"
-#undef TILE
-#undef RECT
 
 typedef struct AddheroEntryHeader
 {

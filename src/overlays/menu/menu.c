@@ -45,24 +45,23 @@
 #define MENU_LABEL_BUFFER_SIZE 16
 
 /* VRAM placement for each slot's cursor strip and content texture block. */
-#define PRIM_STRIP_VRAM_X 0x110  /* 272  - VRAM column                    */
-#define PRIM_STRIP_VRAM_Y0 0x1D8 /* 472  - VRAM row for slot 0            */
-#define PRIM_STRIP_W 0x10        /* 16 halfwords wide                     */
-#define PRIM_STRIP_H 1           /* 1 scanline tall                       */
-#define PRIM_BLOCK_VRAM_X 0x3F4  /* 1012 - VRAM column for slots 0 and 1  */
-#define PRIM_BLOCK_VRAM_X2 0x3E8 /* 1000 - VRAM column for slot 2         */
-#define PRIM_BLOCK_VRAM_Y0 0x120 /* 288  - VRAM row for slot 0            */
-#define PRIM_BLOCK_VRAM_Y1 0x150 /* 336  - VRAM row for slots 1 and 2     */
-#define PRIM_BLOCK_W 0xC         /* 12 halfwords wide                     */
-#define PRIM_BLOCK_H 0x30        /* 48 scanlines tall                     */
+#define PRIM_CURSOR_STRIP_VRAM_X 0x110  /* 272  - VRAM column                */
+#define PRIM_CURSOR_STRIP_VRAM_Y0 0x1D8 /* 472  - VRAM row for slot 0        */
+#define PRIM_CURSOR_STRIP_W 0x10        /* 16 halfwords wide                 */
+#define PRIM_CURSOR_STRIP_H 1           /* 1 scanline tall                   */
+#define PRIM_CONTENT_VRAM_X 0x3F4       /* 1012 - VRAM column for slots 0, 1 */
+#define PRIM_CONTENT_VRAM_X2 0x3E8      /* 1000 - VRAM column for slot 2     */
+#define PRIM_CONTENT_VRAM_Y0 0x120      /* 288  - VRAM row for slot 0        */
+#define PRIM_CONTENT_VRAM_Y1 0x150      /* 336  - VRAM row for slots 1, 2    */
+#define PRIM_CONTENT_W 0xC              /* 12 halfwords wide                 */
+#define PRIM_CONTENT_H 0x30             /* 48 scanlines tall                 */
 #define PRIM_SLOT_COUNT 3
-#define PRIM_STRIP_BYTE_SIZE (PRIM_STRIP_W * PRIM_STRIP_H * sizeof(u16))
-#define PRIM_BLOCK_BYTE_SIZE (PRIM_BLOCK_W * PRIM_BLOCK_H * sizeof(u16))
-#define PRIM_BLOCK_BUF_OFFSET PRIM_STRIP_BYTE_SIZE
-#define PRIM_SLOT_STRIDE (PRIM_STRIP_BYTE_SIZE + PRIM_BLOCK_BYTE_SIZE)
-/** Normalize a byte offset to the word boundary required by LoadImage. */
-#define PRIM_ALIGN_UPLOAD_OFFSET(offset) (((offset) >> 2) << 2)
-#define PRIM_UPLOAD_PTR(base, offset) ((u_long*)(PRIM_ALIGN_UPLOAD_OFFSET(offset) + (u32)(base)))
+#define PRIM_CURSOR_STRIP_BYTE_SIZE (PRIM_CURSOR_STRIP_W * PRIM_CURSOR_STRIP_H * sizeof(u16))
+#define PRIM_CONTENT_BYTE_SIZE (PRIM_CONTENT_W * PRIM_CONTENT_H * sizeof(u16))
+#define PRIM_CONTENT_BUF_OFFSET PRIM_CURSOR_STRIP_BYTE_SIZE
+#define PRIM_SLOT_BYTE_SIZE (PRIM_CURSOR_STRIP_BYTE_SIZE + PRIM_CONTENT_BYTE_SIZE)
+/** Convert a byte offset to a LoadImage source pointer, rounding down to a 4-byte boundary. */
+#define PRIM_LOAD_IMAGE_SOURCE(buffer, byte_offset) ((u_long*)((((byte_offset) >> 2) << 2) + (u32)(buffer)))
 
 /*
  * Node / scroll / layout constants
@@ -922,37 +921,35 @@ void menu_init(void)
 }
 
 /**
- * @brief Upload each menu slot's cursor strip and content block to VRAM.
+ * @brief Upload each menu slot's cursor strip and content texture to VRAM.
+ * Each RAM slot stores the cursor strip first, followed by the content texture.
  */
 void menu_init_prim_rects(void)
 {
     s32 slot = 0;
-    u8* scratch = g_prim_rect_buf;
-    s32 block_byte_offset = PRIM_BLOCK_BUF_OFFSET;
+    u8* upload_buffer = g_prim_rect_buf;
+    s32 content_byte_offset = PRIM_CONTENT_BUF_OFFSET;
     s32 strip_byte_offset = 0;
     RECT rect;
-    u_long* upload_src;
 
     for (; slot < PRIM_SLOT_COUNT; slot++)
     {
         /* Upload the slot's cursor-highlight strip. */
-        rect.x = PRIM_STRIP_VRAM_X;
-        rect.y = slot + PRIM_STRIP_VRAM_Y0;
-        rect.w = PRIM_STRIP_W;
-        rect.h = PRIM_STRIP_H;
-        upload_src = PRIM_UPLOAD_PTR(scratch, strip_byte_offset);
-        LoadImage(&rect, upload_src);
+        rect.x = PRIM_CURSOR_STRIP_VRAM_X;
+        rect.y = slot + PRIM_CURSOR_STRIP_VRAM_Y0;
+        rect.w = PRIM_CURSOR_STRIP_W;
+        rect.h = PRIM_CURSOR_STRIP_H;
+        LoadImage(&rect, PRIM_LOAD_IMAGE_SOURCE(upload_buffer, strip_byte_offset));
 
         /* Upload the slot's content texture block. */
-        rect.x = (slot == PRIM_SLOT_COUNT - 1) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X;
-        rect.y = (slot == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1;
-        rect.w = PRIM_BLOCK_W;
-        rect.h = PRIM_BLOCK_H;
-        upload_src = PRIM_UPLOAD_PTR(scratch, block_byte_offset);
-        LoadImage(&rect, upload_src);
+        rect.x = (slot == PRIM_SLOT_COUNT - 1) ? PRIM_CONTENT_VRAM_X2 : PRIM_CONTENT_VRAM_X;
+        rect.y = (slot == 0) ? PRIM_CONTENT_VRAM_Y0 : PRIM_CONTENT_VRAM_Y1;
+        rect.w = PRIM_CONTENT_W;
+        rect.h = PRIM_CONTENT_H;
+        LoadImage(&rect, PRIM_LOAD_IMAGE_SOURCE(upload_buffer, content_byte_offset));
 
-        block_byte_offset += PRIM_SLOT_STRIDE;
-        strip_byte_offset += PRIM_SLOT_STRIDE;
+        content_byte_offset += PRIM_SLOT_BYTE_SIZE;
+        strip_byte_offset += PRIM_SLOT_BYTE_SIZE;
     }
 }
 
