@@ -733,5 +733,6 @@ overlay_zukan_gcc_280_g0_srcs := \
 	src/overlays/zukan/zukan_scroll_window.c \
 	src/overlays/zukan/zukan_gpu_modes.c \
 	src/overlays/zukan/func_80141988.c \
-	src/overlays/zukan/zukan_outline_fade.c \
-	src/overlays/zukan/unk1_tail_after_resource_helpers.c
+	src/overlays/zukan/zukan_outline_fade.c
+overlay_zukan_gcc_280_g0_o0_srcs := \
+	src/overlays/zukan/func_80142D08.c

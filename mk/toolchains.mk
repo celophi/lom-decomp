@@ -26,6 +26,7 @@ INCLUDE_FLAGS := -Iinclude -Iinclude/sdk
 # GCC 2.8.0 is the default compiler. Sources are routed to G0 or G4 in the
 # source lists; G controls the maximum size of gp-relative data.
 CFLAGS_G0 := -O2 -G0 -gcoff -fsigned-char -fno-builtin
+CFLAGS_G0_O0 := -O0 -G0 -gcoff -fsigned-char -fno-builtin
 CFLAGS_G4 := -O2 -G4 -gcoff -fsigned-char
 
 # Alternate compiler and assembler flags.
