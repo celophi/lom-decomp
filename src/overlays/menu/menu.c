@@ -3876,6 +3876,8 @@ extern u32 D_801694DC[];
  * @return Updated GPU packet cursor after drawing.
  * @see decomp.me (89.27%) https://decomp.me/scratch/D6Nba
  */
+static inline s32 menu_twice(s32 value) { return value * 2; }
+
 static inline s32 menu_probe_slot_off(s32 slot)
 {
     return slot * 0x250;
@@ -4105,11 +4107,11 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     {
                         s32 idx;
                         s32 s;
-                        s = ITEM_SUB - 0x2A;
+                        s = ITEM_SUB;
                         for (idx = 0; idx < 8; idx++)
                         {
                             u8* pad = (u8*)g_pad_ctx;
-                            if (*(u8*)(pad + menu_probe_slot_off(g_menu_char_slot) + idx + 0x638) == s)
+                            if (*(u8*)(pad + menu_probe_slot_off(g_menu_char_slot) + idx + 0x638) == s - 0x2A)
                             {
                                 break;
                             }
@@ -4255,7 +4257,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             {
                                 void* a3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x30));
                                 menu_concat_encoded_text(&sp68, (void*)((u8*)a3 + *(u16*)((u8*)a3 + (*(u16*)(g_menu_item_ptr + 0x16) & 0x3F) * 2)),
-                                                         (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + *(u16*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + 0xB4)), a3);
+                                                         (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + *(u16*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + 0xB4)));
                             }
                             else
                             {
@@ -4469,7 +4471,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                     (g_menu_label_key_a.page << 8) +
                                     (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
                                 source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source, val);
+                                func_800A8E28(label_buf, source);
                             }
                             else
                             {
@@ -4477,7 +4479,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                     (g_menu_label_key_b.page << 8) +
                                     (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
                                 source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source, val);
+                                func_800A8E28(label_buf, source);
                             }
                             label_buf += func_800A8DDC(source);
                             *label_buf = 0;
@@ -4599,7 +4601,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     case 0x42:
                         if (g_menu_category1_item != 0)
                         {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)(g_menu_category1_item + (tmp * 2) - 0x5A), 1, &pos, ((*var_s3 >> 9) & 7));
+                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)(g_menu_category1_item + menu_twice(tmp) - 0x5A), 1, &pos, ((*var_s3 >> 9) & 7));
                         }
                         break;
                     case 0x43:
@@ -4611,7 +4613,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         s32 total = has;
                         u8* source;
                         u8* label_buf;
-                        s32 item_off = tmp * 2;
+                        
                         for (k = 1; k < 4; k++)
                         {
                             u8* slot = D_80168C20 + (k * 0x40);
@@ -4619,12 +4621,12 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             {
                                 if (*slot != 0)
                                 {
-                                    total += *(u16*)(slot + item_off - 0x62);
+                                    total += *(u16*)(slot + menu_twice(tmp) - 0x62);
                                 }
                                 has = ((u32*)&g_item_slot_data)[k];
                                 if (has != 0 && *(u8*)has != 0)
                                 {
-                                    total -= *(u16*)(has + item_off - 0x62);
+                                    total -= *(u16*)(has + menu_twice(tmp) - 0x62);
                                 }
                                 has = 1;
                             }
@@ -4638,7 +4640,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                     (g_menu_label_key_a.page << 8) +
                                     (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
                                 source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source, total, k);
+                                func_800A8E28(label_buf, source);
                             }
                             else
                             {
@@ -4646,7 +4648,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                     (g_menu_label_key_b.page << 8) +
                                     (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
                                 source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source, total, k);
+                                func_800A8E28(label_buf, source);
                             }
                             label_buf += func_800A8DDC(source);
                             *label_buf = 0;
@@ -4661,7 +4663,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     {
                         s32 has = 0;
                         s32 total = has;
-                        s32 item_off = tmp * 2;
+                        
                         for (k = 1; k < 4; k++)
                         {
                             u8* slot = D_80168C20 + (k * 0x40);
@@ -4669,12 +4671,12 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             {
                                 if (*slot != 0)
                                 {
-                                    total += *(u16*)(slot + item_off - 0x6A);
+                                    total += *(u16*)(slot + menu_twice(tmp) - 0x6A);
                                 }
                                 has = ((u32*)&g_item_slot_data)[k];
                                 if (has != 0 && *(u8*)has != 0)
                                 {
-                                    total -= *(u16*)(has + item_off - 0x6A);
+                                    total -= *(u16*)(has + menu_twice(tmp) - 0x6A);
                                 }
                                 has = 1;
                             }
@@ -4792,7 +4794,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     {
                         void* base = (void*)g_pad_ctx;
                         s32 idx = shared_s0 - 7;
-                        var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)((u8*)base + ((idx << 1) + g_menu_char_slot * 0x250) + 0x620) >> 9, 1, &pos, ((*var_s3 >> 9) & 7));
+                        var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)((u8*)base + (menu_twice(idx) + menu_probe_slot_off(g_menu_char_slot)) + 0x620) >> 9, 1, &pos, ((*var_s3 >> 9) & 7));
                     }
                     break;
                     case 0xF:
@@ -4910,13 +4912,12 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                 u16 off2;
                                 base_a2_7 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20));
                                 tmpv = ((*(u32*)(g_menu_equipment_base + 0x14) >> 10) & 0x3F);
-                                tmpv *= 3;
-                                tmpv <<= 4;
+                                
                                 idx = menu_reload_plain_u8(ptr + 0x5F1);
                                 idx &= 0x7F;
                                 off2 = idx * 2;
                                 {
-                                    void* a2_2 = (void*)((u8*)base_a2_7 + *(u16*)((u8*)base_a2_7 + tmpv + off2));
+                                    void* a2_2 = (void*)((u8*)base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + (s32)base_a2_7)));
                                     var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, ITEM_Y - 8, (*var_s3 >> 9) & 7);
                                 }
                             }
@@ -5026,26 +5027,26 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     break;
                     case 0x3F:
                     {
-                        u16 a2_20 = 0;
+                        val = 0;
                         if (g_item_slot_flags.slot0 != 0)
                         {
-                            s32 diff;
+                            
                             u8* source;
                             u8* label_buf;
                             if (*(u8*)D_80168C20 != 0)
-                                a2_20 = *(u16*)(D_80168C30 + 0x24);
+                                val = *(u16*)(D_80168C30 + 0x24);
                             if (g_item_slot_data.slot0 != 0 && *(u8*)g_item_slot_data.slot0 != 0)
-                                diff = a2_20 - *(u16*)(g_item_slot_data.slot0 + 0x24);
+                                val = val - *(u16*)(g_item_slot_data.slot0 + 0x24);
                             else
-                                diff = a2_20 - D_800F0C1C;
+                                val = val - D_800F0C1C;
                             label_buf = spB0;
-                            if (diff >= 0)
+                            if (val >= 0)
                             {
                                 s32 string_page_base =
                                     (g_menu_label_key_a.page << 8) +
                                     (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
                                 source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source, diff);
+                                func_800A8E28(label_buf, source);
                             }
                             else
                             {
@@ -5053,7 +5054,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                     (g_menu_label_key_b.page << 8) +
                                     (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
                                 source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source, diff);
+                                func_800A8E28(label_buf, source);
                             }
                             label_buf += func_800A8DDC(source);
                             *label_buf = 0;
@@ -5067,10 +5068,11 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     case 0x43:
                     {
                         s32 has = 0;
-                        s32 total = has;
+                        
                         u8* source;
                         u8* label_buf;
-                        s32 item_off = shared_s0 * 2;
+                        
+                        val = has;
                         for (k = 1; k < 4; k++)
                         {
                             u8* slot = D_80168C20 + (k * 0x40);
@@ -5078,12 +5080,12 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             {
                                 if (*slot != 0)
                                 {
-                                    total += *(u16*)(slot + item_off - 0x5C);
+                                    val += *(u16*)(slot + menu_twice(shared_s0) - 0x5C);
                                 }
                                 has = ((u32*)&g_item_slot_data)[k];
                                 if (has != 0 && *(u8*)has != 0)
                                 {
-                                    total -= *(u16*)(has + item_off - 0x5C);
+                                    val -= *(u16*)(has + menu_twice(shared_s0) - 0x5C);
                                 }
                                 has = 1;
                             }
@@ -5091,13 +5093,13 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                         if (has)
                         {
                             label_buf = spB0;
-                            if (total >= 0)
+                            if (val >= 0)
                             {
                                 s32 string_page_base =
                                     (g_menu_label_key_a.page << 8) +
                                     (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
                                 source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                func_800A8E28(label_buf, source, total, k);
+                                func_800A8E28(label_buf, source);
                             }
                             else
                             {
@@ -5105,7 +5107,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                                     (g_menu_label_key_b.page << 8) +
                                     (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
                                 source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                func_800A8E28(label_buf, source, total, k);
+                                func_800A8E28(label_buf, source);
                             }
                             label_buf += func_800A8DDC(source);
                             *label_buf = 0;
@@ -5136,7 +5138,7 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                     {
                         s32 has = 0;
                         s32 total = has;
-                        s32 item_off = shared_s0 * 2;
+                        
                         for (k = 1; k < 4; k++)
                         {
                             u8* slot = D_80168C20 + (k * 0x40);
@@ -5144,12 +5146,12 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
                             {
                                 if (*slot != 0)
                                 {
-                                    total += *(u16*)(slot + item_off - 0x66);
+                                    total += *(u16*)(slot + menu_twice(shared_s0) - 0x66);
                                 }
                                 has = ((u32*)&g_item_slot_data)[k];
                                 if (has != 0 && *(u8*)has != 0)
                                 {
-                                    total -= *(u16*)(has + item_off - 0x66);
+                                    total -= *(u16*)(has + menu_twice(shared_s0) - 0x66);
                                 }
                                 has = 1;
                             }
@@ -5387,8 +5389,8 @@ void* menu_draw_scene_content(void* var_s1, s32* arg1)
             }
 
             {
-                MenuNode* node = g_menu_nodes;
-                node += g_menu_scene_type;
+                MenuNode* nodes = g_menu_nodes;
+                MenuNode* node = nodes + g_menu_scene_type;
                 if (node->label_id == 0x13)
                 {
                     u8* a2_27 = (u8*)g_menu_item_ptr;

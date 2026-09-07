@@ -374,7 +374,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split040.c \
 	src/overlays/field/unk2_b_split046.c \
 	src/overlays/field/unk2_b_split048.c \
-	src/overlays/field/unk2_b_split049.c \
 	src/overlays/field/unk2_b_split051.c \
 	src/overlays/field/unk2_b_split051_b_after_bf3d8.c \
 	src/overlays/field/unk2_b_split051_c.c \
@@ -498,6 +497,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800B622C.c \
 	src/overlays/field/func_800BD318.c \
 	src/overlays/field/func_800BDBAC.c \
+	src/overlays/field/func_800BE404.c \
 	src/overlays/field/func_800C8FA8.c \
 	src/overlays/field/field303.c \
 	src/overlays/field/field309.c \
@@ -733,5 +733,6 @@ overlay_zukan_gcc_280_g0_srcs := \
 	src/overlays/zukan/zukan_scroll_window.c \
 	src/overlays/zukan/zukan_gpu_modes.c \
 	src/overlays/zukan/func_80141988.c \
-	src/overlays/zukan/zukan_outline_fade.c \
-	src/overlays/zukan/unk1_tail_after_resource_helpers.c
+	src/overlays/zukan/zukan_outline_fade.c
+overlay_zukan_gcc_280_g0_o0_srcs := \
+	src/overlays/zukan/func_80142D08.c
