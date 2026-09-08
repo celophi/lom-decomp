@@ -256,11 +256,11 @@ void addhero_reset_state(void);
 void addhero_close_all_elements(void);
 void addhero_scroll_to_selection(void);
 void addhero_update_elements(void);
-s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 arg2, s32 arg3);
+s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
+s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
+s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
+s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
+s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 u8 *addhero_skip_hex_digits(void *arg0);
 void addhero_terminate_multibyte_text(void *arg0);
 void addhero_clear_elements();
@@ -270,14 +270,14 @@ void addhero_deactivate_primary_element(void);
 void addhero_text_append(u8 *arg0, u8 *arg1);
 s32 addhero_text_byte_length(u8 *arg0);
 void addhero_text_copy(u8 *arg0, u8 *arg1);
-s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 arg2, s32 arg3);
+s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
+s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 addhero_draw_progress_bar(s32 arg0, s32 *arg1);
 void addhero_open_status_dialog(s32 arg0);
 void addhero_open_exit_dialog(s32 arg0);
-s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3);
-s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3);
+s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
+s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
+s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 addhero_draw_icon_highlight(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s32 slot, s32 i, s32 j);
 void addhero_enable_choice_toggle(void);
 s32 addhero_draw_choice_prompt(s32 prim, s32 *ot, s32 x, s32 y);
@@ -739,25 +739,23 @@ void addhero_reset_state(void)
  */
 void addhero_close_all_elements(void)
 {
-    s32 temp_v1;
-    s32 var_a1;
-    s32 *var_a0;
-    s32 temp;
+    s32 attr;
+    s32 slot;
+    s32 *elem;
+    s32 closing_attr;
 
     func_80067F28();
-    var_a0 = (s32 *)&g_addhero_element_pool.first;
-    var_a1 = 0;
-    do
+    elem = (s32 *)&g_addhero_element_pool.first;
+    slot = 0;
+    for (; slot < 8; slot++, elem += 3)
     {
-        temp_v1 = *var_a0;
-        if (temp_v1 & 7)
+        attr = *elem;
+        if (attr & 7)
         {
-            temp = (temp_v1 & ~7) | 3;
-            *var_a0 = (temp & ~0x78) | 0x40;
+            closing_attr = (attr & ~7) | 3;
+            *elem = (closing_attr & ~0x78) | 0x40;
         }
-        var_a1 += 1;
-        var_a0 += 3;
-    } while (var_a1 < 8);
+    }
 }
 
 /**
@@ -807,34 +805,34 @@ void addhero_update_elements(void)
  *        highlight tile.
  * @param ot   Ordering table the primitives are linked into.
  * @param prim Current primitive pointer/index within the ordering table.
- * @param arg2 Horizontal offset; screen X is derived from it.
- * @param arg3 Vertical offset applied to each row.
+ * @param x_offset Horizontal offset; screen X is derived from it.
+ * @param y_offset Vertical offset applied to each row.
  * @return The updated primitive pointer after linking this frame's glyphs.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     s32 state = g_addhero_entry_state;
 
     switch (state)
     {
     case 0xF8:
-        do { prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -arg2 + 0x84, -arg3, 2); } while (0);
+        do { prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x84, -y_offset, 2); } while (0);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -arg2 + 0x84, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFA:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA6, 2), 4, -arg2 + 0x84, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA6, 2), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFD:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA8, 4), 4, -arg2 + 0x84, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA8, 4), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB4, 0x10), 4, -arg2 + 0x84, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB4, 0x10), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB6, 0x12), 4, -arg2 + 0x84, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB6, 0x12), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFE:
         break;
@@ -848,11 +846,11 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             s32 x;
             u8 *base;
         case ADDHERO_ENTRY_STATE_IDLE:
-            x = -arg2 + 0x84;
+            x = -x_offset + 0x84;
             base = (u8 *)&D_80146FA4;
-            prim = func_800A88A0(prim, ot, base + D_80146FA4, 4, x, -arg3, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - arg3, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
+            prim = func_800A88A0(prim, ot, base + D_80146FA4, 4, x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
             break;
         }
         i = 0;
@@ -866,10 +864,10 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             u8 *base;
 
             base = (u8 *)&D_80146FA4;
-            base_x = -arg2;
+            base_x = -x_offset;
             do
             {
-                row = ((i * 14) - arg3) - g_addhero_scroll_y;
+                row = ((i * 14) - y_offset) - g_addhero_scroll_y;
                 row_y = row + 1;
                 if ((u32)(row + 0xE) < 0x65U)
                 {
@@ -891,30 +889,30 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                         }
                         if (*addhero_skip_hex_digits((void *)((s32)&g_addhero_entries[g_addhero_card_slot][i] + 0xC)) == 0x2B)
                         {
-                            prim = func_800A88A0(prim, ot, (void *)((s32)D_80147054 + (s32)base), 4, 0xF2 - arg2, row_y, 1);
+                            prim = func_800A88A0(prim, ot, (void *)((s32)D_80147054 + (s32)base), 4, 0xF2 - x_offset, row_y, 1);
                         }
                     }
                     if (func_8001714C(D_800ECF7C, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FAA + (s32)base), 4, 1 - arg2, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FAA + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
                     else if (func_8001714C(D_800ECF8C, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FDE + (s32)base), 4, 1 - arg2, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FDE + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
                     else if (func_8001714C(D_800ECFC4, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 8) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FB8 + (s32)base), 4, 1 - arg2, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FB8 + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
                     else
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FAC + (s32)base), 4, 1 - arg2, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FAC + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
                 }
                 i++;
             } while (i < g_addhero_entry_state);
         }
-            row_y = ((g_addhero_selected_row * 14) - arg3) - g_addhero_scroll_y;
+            row_y = ((g_addhero_selected_row * 14) - y_offset) - g_addhero_scroll_y;
 
             if (g_addhero_entry_scan_active == 0)
             {
@@ -940,22 +938,22 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  * @brief Draw the header glyph that reflects the current mode (load vs save).
  * @param ot   Ordering table the glyph is linked into.
  * @param prim Current primitive pointer/index.
- * @param arg2 Horizontal offset; screen X is derived from it.
- * @param arg3 Vertical offset.
+ * @param x_offset Horizontal offset; screen X is derived from it.
+ * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
 
     if (g_addhero_mode == 1)
     {
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FEA, 0x46), 4, -arg2 + 0x78, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FEA, 0x46), 4, -x_offset + 0x78, -y_offset, 2);
     }
     else
     {
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE8, 0x44), 4, -arg2 + 0x78, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE8, 0x44), 4, -x_offset + 0x78, -y_offset, 2);
     }
     return prim;
 }
@@ -965,12 +963,12 @@ s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  *        slot is not the active one.
  * @param ot   Ordering table the primitives are linked into.
  * @param prim Current primitive pointer/index.
- * @param arg2 Horizontal offset; screen X is derived from it.
- * @param arg3 Vertical offset.
+ * @param x_offset Horizontal offset; screen X is derived from it.
+ * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     TILE *tile;
@@ -988,7 +986,7 @@ s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         addPrim(ot, tile);
         prim += 0x10;
     }
-    return func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB0, 0xC), 4, -arg2 + 0x40, -arg3, 2);
+    return func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB0, 0xC), 4, -x_offset + 0x40, -y_offset, 2);
 }
 
 /**
@@ -996,12 +994,12 @@ s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  *        slot is not the active one.
  * @param ot   Ordering table the primitives are linked into.
  * @param prim Current primitive pointer/index.
- * @param arg2 Horizontal offset; screen X is derived from it.
- * @param arg3 Vertical offset.
+ * @param x_offset Horizontal offset; screen X is derived from it.
+ * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     TILE *tile;
@@ -1019,7 +1017,7 @@ s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         addPrim(ot, tile);
         prim += 0x10;
     }
-    return func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB2, 0xE), 4, -arg2 + 0x40, -arg3, 2);
+    return func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB2, 0xE), 4, -x_offset + 0x40, -y_offset, 2);
 }
 
 /**
@@ -1028,12 +1026,12 @@ s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  *        fallback message depending on entry type.
  * @param ot   Ordering table the primitives are linked into.
  * @param prim Current primitive pointer/index.
- * @param arg2 Horizontal offset; screen X is derived from it.
- * @param arg3 Vertical offset.
+ * @param x_offset Horizontal offset; screen X is derived from it.
+ * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     s32 result;
     Vec2s pos;
@@ -1054,12 +1052,12 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     {
         if (g_addhero_selection_status == 2)
         {
-            s32 x = -arg2;
+            s32 x = -x_offset;
             u8 *base;
 
-            result = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FCC, 0x28), 4, x, -arg3, 0);
+            result = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FCC, 0x28), 4, x, -y_offset, 0);
             base = (u8 *)&D_80146FCC - 0x28;
-            return func_800A88A0(result, ot, GLYPH_OFF(base, 0x2A), 4, x, 0x10 - arg3, 0);
+            return func_800A88A0(result, ot, GLYPH_OFF(base, 0x2A), 4, x, 0x10 - y_offset, 0);
         }
         else
         {
@@ -1141,7 +1139,7 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                             {
                                 adjust += delta;
                             }
-                            result = addhero_draw_icon_highlight(result, ot, total - arg2, -arg3, adjust, slot[j], i, j);
+                            result = addhero_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, slot[j], i, j);
                             i += 1;
                             total += adjust;
                         }
@@ -1149,8 +1147,8 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 
                     {
                         u8 *base90 = (u8 *)&g_addhero_entry_metadata;
-                        s32 x = -arg2;
-                        s32 y = -arg3;
+                        s32 x = -x_offset;
+                        s32 y = -y_offset;
 
                         base_y = *(s32 *)(base90 + 0x30);
                         pos.x = (s16)(x + 0x70);
@@ -1184,7 +1182,7 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                 }
                 else
                 {
-                    result = func_800A88A0(result, ot, GLYPH_SYM(D_80146FF8, 0x54), 4, -arg2, -arg3, 0);
+                    result = func_800A88A0(result, ot, GLYPH_SYM(D_80146FF8, 0x54), 4, -x_offset, -y_offset, 0);
                 }
             }
             else
@@ -1202,14 +1200,14 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                         name[j] = record[4 + j];
                     }
                     name[j] = 0;
-                    result = addhero_draw_cached_text(result, ot, name, -arg2, -arg3, 4, 0);
+                    result = addhero_draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
 
                     for (j = 0; j < 0x20; j++)
                     {
                         name[j] = ((AddheroFallbackText *)&D_80165208)->text[j];
                     }
                     name[j] = 0;
-                    result = addhero_draw_cached_text(result, ot, name, -arg2, -arg3 + 0x10, 4, 0);
+                    result = addhero_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
                 }
             }
         }
@@ -1594,25 +1592,25 @@ void addhero_deactivate_primary_element(void)
 }
 
 /**
- * @brief Append the multibyte string @p arg1 onto the end of @p arg0 and
+ * @brief Append the multibyte string @p src onto the end of @p dst and
  *        null-terminate the result.
- * @param arg0 Destination string; appended to in place.
- * @param arg1 Source string copied onto the end of @p arg0.
+ * @param dst Destination string; appended to in place.
+ * @param src Source string copied onto the end of @p dst.
  * @see decomp.me (100%)
  */
-void addhero_text_append(u8 *arg0, u8 *arg1)
+void addhero_text_append(u8 *dst, u8 *src)
 {
-    s32 temp_s0;
-    s32 temp_v0;
+    s32 dst_len;
+    s32 src_len;
     s32 i;
 
-    temp_s0 = addhero_text_byte_length(arg0);
-    temp_v0 = addhero_text_byte_length(arg1);
-    for (i = 0; i < temp_v0; i++)
+    dst_len = addhero_text_byte_length(dst);
+    src_len = addhero_text_byte_length(src);
+    for (i = 0; i < src_len; i++)
     {
-        arg0[temp_s0 + i] = arg1[i];
+        dst[dst_len + i] = src[i];
     }
-    arg0[temp_s0 + i] = 0;
+    dst[dst_len + i] = 0;
 }
 
 /**
@@ -1691,12 +1689,12 @@ void addhero_text_copy(u8 *arg0, u8 *arg1)
  *        the load-progress bar.
  * @param ot   Ordering table the primitives are linked into.
  * @param prim Current primitive pointer/index.
- * @param arg2 Horizontal offset; screen X = 0x90 - arg2.
- * @param arg3 Vertical offset applied to the prompt rows.
+ * @param x_offset Horizontal offset; screen X = 0x90 - x_offset.
+ * @param y_offset Vertical offset applied to the prompt rows.
  * @return The updated primitive pointer after linking the prompt.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     s32 result;
@@ -1704,12 +1702,12 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     s32 status;
     AddheroElement *p;
 
-    x = -arg2 + 0x90;
+    x = -x_offset + 0x90;
     result = addhero_draw_choice_prompt(
         func_800A88A0(prim, ot,
                       (u8 *)&D_80146FD4 + D_80146FD4 - 0x30,
-                      4, x, -arg3, 2),
-        ot, x, 0xE - arg3);
+                      4, x, -y_offset, 2),
+        ot, x, 0xE - y_offset);
 
     if ((u32)(addhero_poll_and_rewind_primary_handles() - 1) < 2U)
     {
@@ -1764,12 +1762,12 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  *        validate and commit the freshly loaded save data.
  * @param ot   Ordering table the prompt primitives are linked into.
  * @param prim Current primitive pointer / index within the ordering table.
- * @param arg2 Horizontal offset used to place the prompt (screen X = 0x90 - arg2).
- * @param arg3 Vertical offset used to place the prompt rows.
+ * @param x_offset Horizontal offset used to place the prompt (screen X = 0x90 - x_offset).
+ * @param y_offset Vertical offset used to place the prompt rows.
  * @return The updated primitive pointer / index after linking the prompt.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     u8 *base;
@@ -1781,11 +1779,11 @@ s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     s32 i;
     u32 saved;
 
-    x = -arg2 + 0x90;
-    result = func_800A88A0(prim, ot, (void *)((s32)&D_80146FD6 - 0x32 + D_80146FD6), 4, x, -arg3, 2);
+    x = -x_offset + 0x90;
+    result = func_800A88A0(prim, ot, (void *)((s32)&D_80146FD6 - 0x32 + D_80146FD6), 4, x, -y_offset, 2);
     base = (u8 *)&D_80146FD6 - 0x32;
-    result = func_800A88A0(result, ot, base + *(u16 *)(base + 0x1E), 4, x, 0xE - arg3, 2);
-    result = func_800A88A0(result, ot, base + *(u16 *)(base + 0xB2), 4, x, 0x1C - arg3, 2);
+    result = func_800A88A0(result, ot, base + *(u16 *)(base + 0x1E), 4, x, 0xE - y_offset, 2);
+    result = func_800A88A0(result, ot, base + *(u16 *)(base + 0xB2), 4, x, 0x1C - y_offset, 2);
     result = addhero_draw_progress_bar(result, ot);
 
     if (g_addhero_progress_active == 0)
@@ -1933,29 +1931,29 @@ void addhero_open_exit_dialog(s32 arg0)
  *        the element once the player acknowledges it.
  * @param ot   Ordering table the message glyph is linked into.
  * @param prim Current primitive pointer/index.
- * @param arg2 Horizontal offset; screen X is derived from it.
- * @param arg3 Vertical offset.
+ * @param x_offset Horizontal offset; screen X is derived from it.
+ * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
 
     switch (g_addhero_dialog_state)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE0, 0x3C), 4, -arg2 + 0x80, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE0, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 2:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE4, 0x40), 4, -arg2 + 0x80, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE4, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE6, 0x42), 4, -arg2 + 0x80, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE6, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 1:
     case 4:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE2, 0x3E), 4, -arg2 + 0x80, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE2, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     }
     if (g_pad_input & 0x220)
@@ -1971,12 +1969,12 @@ s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  *        elements and request the overlay to exit with result 3.
  * @param ot   Ordering table the message glyph is linked into.
  * @param prim Current primitive pointer/index.
- * @param arg2 Horizontal offset; screen X is derived from it.
- * @param arg3 Vertical offset.
+ * @param x_offset Horizontal offset; screen X is derived from it.
+ * @param y_offset Vertical offset.
  * @return The updated primitive pointer.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     AddheroPacket *p;
@@ -1985,17 +1983,17 @@ s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     switch (g_addhero_dialog_state)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE0, 0x3C), 4, -arg2 + 0x80, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE0, 0x3C), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 2:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE4, 0x40), 4, -arg2 + 0x80, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE4, 0x40), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 3:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE6, 0x42), 4, -arg2 + 0x80, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE6, 0x42), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     case 1:
     case 4:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE2, 0x3E), 4, -arg2 + 0x80, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FE2, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     }
     if (g_pad_input & 0x220)
@@ -2021,55 +2019,55 @@ s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  *        and handles cancel/back input.
  * @param ot   Ordering table the primitives are linked into.
  * @param prim Current primitive pointer/index.
- * @param arg2 Horizontal offset; screen X = 0x90 - arg2.
- * @param arg3 Vertical offset applied to the message rows.
+ * @param x_offset Horizontal offset; screen X = 0x90 - x_offset.
+ * @param y_offset Vertical offset applied to the message rows.
  * @return The updated primitive pointer.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     switch (g_addhero_entry_state)
     {
     case 0xF8:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -arg2 + 0x90, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -arg2 + 0x90, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case ADDHERO_ENTRY_STATE_IDLE:
         {
             s32 x; u8 *base;
-            x = -arg2 + 0x90;
+            x = -x_offset + 0x90;
             base = (u8 *)&D_80146FA4;
-            prim = func_800A88A0(prim, ot, base + D_80146FA4, 4, x, -arg3, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - arg3, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
+            prim = func_800A88A0(prim, ot, base + D_80146FA4, 4, x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
         }
         break;
     case 0xFA:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -arg2 + 0x90, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xFD:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA8, 4), 4, -arg2 + 0x90, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA8, 4), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB4, 0x10), 4, -arg2 + 0x90, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB4, 0x10), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB6, 0x12), 4, -arg2 + 0x90, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB6, 0x12), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xF7:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014700C, 0x68), 4, -arg2 + 0x90, -arg3, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014700C, 0x68), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case ADDHERO_ENTRY_STATE_LOAD_PROGRESS:
         {
             s32 x; u8 *base; POLY_G4 *g; s32 next, elapsed, extent, color, finalmode;
-            x = -arg2 + 0x90;
-            prim = func_800A88A0(prim, ot, (void *)((s32)&D_80146FD6 - 0x32 + D_80146FD6), 4, x, -arg3, 2);
+            x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, (void *)((s32)&D_80146FD6 - 0x32 + D_80146FD6), 4, x, -y_offset, 2);
             base = (u8 *)&D_80146FD6 - 0x32;
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - arg3, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
             next = prim; g = (POLY_G4 *)prim;
             if (g_addhero_progress_bar_active != 0)
             {
@@ -2103,9 +2101,9 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     case 0xF3:
         {
             s32 x; AddheroPacket *packet; s32 i;
-            x = -arg2 + 0x90;
-            prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147012,0x6E), 4, x, -arg3, 2);
-            prim = addhero_draw_choice_prompt(prim, ot, x, 0xE -arg3);
+            x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147012,0x6E), 4, x, -y_offset, 2);
+            prim = addhero_draw_choice_prompt(prim, ot, x, 0xE -y_offset);
             if (g_pad_input & 0x40)
             {
                 func_800A3938(0x78, 0x80);
@@ -2142,11 +2140,11 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     case ADDHERO_ENTRY_STATE_SAVE_CONFIRM:
         {
             s32 x; u8 *base; s32 temp;
-            x=-arg2+0x90;
-            prim=func_800A88A0(prim,ot,(void *)((s32)&D_8014700E-0x6A+D_8014700E),4,x,-arg3,2);
+            x=-x_offset+0x90;
+            prim=func_800A88A0(prim,ot,(void *)((s32)&D_8014700E-0x6A+D_8014700E),4,x,-y_offset,2);
             base=(u8 *)&D_8014700E-0x6A;
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x6C),4,x,0xE -arg3,2);
-            prim=addhero_draw_choice_prompt(prim,ot,x,0x1C-arg3);
+            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x6C),4,x,0xE -y_offset,2);
+            prim=addhero_draw_choice_prompt(prim,ot,x,0x1C-y_offset);
             if (g_pad_input & 0x40)
             {
                 addhero_enable_choice_toggle();
@@ -2182,11 +2180,11 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     case ADDHERO_ENTRY_STATE_SAVE_PROGRESS:
         {
             s32 x; u8 *base; POLY_G4 *g; s32 next,elapsed,extent,color; AddheroPacket *packet; s32 i;
-            x=-arg2+0x90;
-            prim=func_800A88A0(prim,ot,(void *)((s32)&D_80146FC0-0x1C+D_80146FC0),4,x,-arg3,2);
+            x=-x_offset+0x90;
+            prim=func_800A88A0(prim,ot,(void *)((s32)&D_80146FC0-0x1C+D_80146FC0),4,x,-y_offset,2);
             base=(u8 *)&D_80146FC0-0x1C;
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -arg3,2);
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-arg3,2);
+            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -y_offset,2);
+            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-y_offset,2);
             next=prim; g=(POLY_G4 *)prim;
             if(g_addhero_progress_bar_active!=0){
                 elapsed=func_8002054C(-1)-g_addhero_progress_start_tick; if(elapsed>=0x101)elapsed=0x100; color=0xFFFF00; extent=elapsed*0x120;
@@ -2206,10 +2204,10 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     default:
         {
             s32 x,posv,diff; u8 *base;
-            x=-arg2+0x90; base=(u8 *)&D_80146FA4;
-            prim=func_800A88A0(prim,ot,base+D_80146FA4,4,x,-arg3,2);
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -arg3,2);
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-arg3,2);
+            x=-x_offset+0x90; base=(u8 *)&D_80146FA4;
+            prim=func_800A88A0(prim,ot,base+D_80146FA4,4,x,-y_offset,2);
+            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -y_offset,2);
+            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-y_offset,2);
             if(g_addhero_entry_scan_active==0){
                 if(g_addhero_io_busy!=0)return prim;
                 if((u32)(*g_addhero_load_step-6)<2U)return prim;
@@ -2902,7 +2900,7 @@ s32 addhero_poll_primary_handle_group(void);
 s32 addhero_poll_secondary_handle_group(void);
 void addhero_sort_entries_by_type(void);
 s32 addhero_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
-void addhero_draw_hex_byte(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
+void addhero_draw_hex_byte(s32 prim, s32 ot, s32 byte_value, s32 x, s32 y, s32 alignment);
 s32 addhero_draw_cached_text(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment);
 s32 addhero_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette);
 s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette);
@@ -4235,15 +4233,15 @@ s32 addhero_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 
 
 /**
  * @brief Render a byte as two hex-digit glyphs via the cached-text renderer.
- * @param arg0 Current primitive pointer/index.
- * @param arg1 Ordering table the glyphs are linked into.
- * @param arg2 Byte value to render.
- * @param arg3 X position.
- * @param arg4 Y baseline.
- * @param arg5 Text alignment mode.
+ * @param prim       Current primitive pointer/index.
+ * @param ot         Ordering table the glyphs are linked into.
+ * @param byte_value Byte value to render.
+ * @param x          X position.
+ * @param y          Y baseline.
+ * @param alignment  Text alignment mode.
  * @see decomp.me (100%)
  */
-void addhero_draw_hex_byte(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+void addhero_draw_hex_byte(s32 prim, s32 ot, s32 byte_value, s32 x, s32 y, s32 alignment)
 {
     u16 pair[3];
     s32 row;
@@ -4251,17 +4249,19 @@ void addhero_draw_hex_byte(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32
     s32 off;
     u16 *base;
 
-    adjusted = arg2;
-    if (arg2 < 0)
-        adjusted = arg2 + 15;
+    adjusted = byte_value;
+    if (byte_value < 0)
+    {
+        adjusted = byte_value + 15;
+    }
     row = adjusted >> 4;
     off = row * 2;
     base = g_addhero_hex_glyphs;
     pair[0] = *(u16 *)((u8 *)base + off);
-    off = (arg2 - row * 16) * 2;
+    off = (byte_value - row * 16) * 2;
     pair[1] = *(u16 *)((u8 *)base + off);
     pair[2] = 0;
-    addhero_draw_cached_text(arg0, arg1, pair, arg3, arg4, 0, arg5);
+    addhero_draw_cached_text(prim, ot, pair, x, y, 0, alignment);
 }
 
 /**
