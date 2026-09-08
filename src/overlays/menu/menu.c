@@ -111,10 +111,14 @@
 #define MENU_ITEM_NAV_NEXT_SHIFT 23
 /** @brief Number of equipment slots associated with one character. */
 #define MENU_EQUIPMENT_SLOT_COUNT 4
+/** @brief First menu subtype corresponding to an equipment slot. */
+#define MENU_EQUIPMENT_SUBTYPE_BASE 7
 /** @brief Number of 0x40-byte records in the inventory item table. */
 #define MENU_ITEM_TABLE_COUNT 100
 /** @brief Byte offset of the inventory item table within g_pad_ctx. */
 #define MENU_ITEM_TABLE_OFFSET 0xCE0
+/** @brief Size in bytes of one inventory/equipment item record. */
+#define MENU_ITEM_RECORD_SIZE 0x40
 /** @brief Mask for the two-bit item-kind field in MenuItemEntry::attributes. */
 #define MENU_ITEM_KIND_MASK 0x300
 #define MENU_ITEM_KIND_SHIFT 8
@@ -3556,15 +3560,13 @@ void menu_snap_view_to_cursor(void)
  * @brief Return non-zero if the item currently under the cursor has a confirm action.
  * @return 1 if the item will trigger a sub-menu or named action on confirm, 0 otherwise.
  */
-int menu_item_has_action(void)
+s32 menu_item_has_action(void)
 {
-    int new_var3;
-    int new_var;
     MenuItem* items;
     MenuItem* item;
-    u16 type_nibble;
-    short item_subtype;
-    int action_code;
+    u16 item_type;
+    s16 item_subtype;
+    s32 action_code;
 
     items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
     if ((g_menu_scene_type == 0x1F) || (g_menu_scene_type == 0x2B))
@@ -3578,10 +3580,10 @@ int menu_item_has_action(void)
         }
     }
 
-    item = (MenuItem*)((g_menu_hit_item_idx * 8u) + ((u32)items));
-    type_nibble = item->packed_x & 0xF000;
+    item = (MenuItem*)((g_menu_hit_item_idx * sizeof(MenuItem)) + (u32)items);
+    item_type = item->packed_x & MENU_CONTENT_ITEM_TYPE_MASK;
 
-    if (type_nibble == 0x5000)
+    if (item_type == MENU_CONTENT_ITEM_TYPE_SUBMENU)
     {
         g_menu_active_subtype = item->action_type;
         item_subtype = item->action_type;
@@ -3601,7 +3603,7 @@ int menu_item_has_action(void)
             }
         }
     }
-    else if (type_nibble == 0xF000)
+    else if (item_type == MENU_CONTENT_ITEM_TYPE_ACTION)
     {
         action_code = g_menu_content_action_codes[g_menu_content_group_ids[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx]][(item->packed_x >> 9) & 7];
         if (action_code == 0)
@@ -3673,7 +3675,6 @@ void menu_init_item_nav_entries(s32 count)
     s32 wrapped_next_index;
     s32* entry;
     s32 packed_entry;
-    s32 position;
     s32 entry_with_previous;
 
     entry_index = 0;
@@ -3686,9 +3687,8 @@ void menu_init_item_nav_entries(s32 count)
             previous_index = entry_index - 1;
 
             entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
-            position = entry_index * MENU_ITEM_NAV_POSITION_STRIDE;
-            position = position & MENU_ITEM_NAV_POSITION_MASK;
-            entry_with_position = entry_with_position | position;
+            entry_with_position = entry_with_position |
+                                  ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
             *entry = entry_with_position;
 
             if (previous_index < 0)
@@ -3733,7 +3733,6 @@ s32 menu_build_spell_nav_entries(void)
     u32* entry;
     u8* presence_rows;
     u32 packed_entry;
-    s32 position;
     u32 entry_with_previous;
 
     item_count = 0;
@@ -3768,9 +3767,8 @@ s32 menu_build_spell_nav_entries(void)
         packed_entry = *entry;
         previous_index = index - 1;
         entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
-        position = index * MENU_ITEM_NAV_POSITION_STRIDE;
-        position = position & MENU_ITEM_NAV_POSITION_MASK;
-        entry_with_position = entry_with_position | position;
+        entry_with_position = entry_with_position |
+                              ((index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
@@ -3778,10 +3776,9 @@ s32 menu_build_spell_nav_entries(void)
             previous_index = item_count - 1;
         }
 
-        working_value = previous_index;
         entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
         entry_with_previous =
-            entry_with_previous | ((working_value & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+            entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
         *entry = entry_with_previous;
 
         index += 1;
@@ -8437,15 +8434,15 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
 s32 menu_item_is_nondefault(s32 item_addr)
 {
     u8* item;
-    u8* cmp;
+    const u8* default_item;
     u32 i;
 
     item = (u8*)item_addr;
-    cmp = D_800F0BF8;
+    default_item = D_800F0BF8;
 
-    for (i = 0; i < 0x40; i++, cmp++, item++)
+    for (i = 0; i < MENU_ITEM_RECORD_SIZE; i++, default_item++, item++)
     {
-        if (*cmp != *item)
+        if (*default_item != *item)
         {
             return 1;
         }
@@ -8461,11 +8458,11 @@ s32 menu_item_is_nondefault(s32 item_addr)
  */
 void menu_swap_item_records(s32 first_addr, s32 second_addr)
 {
-    u8 tmp[0x40];
+    u8 swap_buffer[MENU_ITEM_RECORD_SIZE];
 
-    func_800A8F8C(tmp, first_addr);
+    func_800A8F8C(swap_buffer, first_addr);
     func_800A8F8C(first_addr, second_addr);
-    func_800A8F8C(second_addr, tmp);
+    func_800A8F8C(second_addr, swap_buffer);
 }
 
 /**
@@ -8871,7 +8868,6 @@ s32 menu_build_equipment_nav_entries(void)
     s32* entry;
 
     s32 packed_entry;
-    s32 position;
     s32 entry_with_previous;
 
     s32 item_count;
@@ -8910,10 +8906,8 @@ s32 menu_build_equipment_nav_entries(void)
 
         entry_with_position = (packed_entry & ~MENU_ITEM_NAV_POSITION_MASK);
 
-        position = (j * MENU_ITEM_NAV_POSITION_STRIDE);
-        position = position & MENU_ITEM_NAV_POSITION_MASK;
-
-        entry_with_position = entry_with_position | position;
+        entry_with_position = entry_with_position |
+                              ((j * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
@@ -8921,10 +8915,9 @@ s32 menu_build_equipment_nav_entries(void)
             previous_index = item_count - 1;
         }
 
-        working_value = previous_index;
         entry_with_previous = (entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK);
 
-        entry_with_previous = entry_with_previous | ((working_value & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+        entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
 
         *entry = entry_with_previous;
         j += 1;
@@ -8953,7 +8946,6 @@ s32 menu_build_key_item_nav_entries(void)
     s32* entry;
 
     s32 packed_entry;
-    s32 position;
     s32 entry_with_previous;
 
     s32 item_count;
@@ -8986,10 +8978,8 @@ s32 menu_build_key_item_nav_entries(void)
 
         entry_with_position = (packed_entry & ~MENU_ITEM_NAV_POSITION_MASK);
 
-        position = (entry_index * MENU_ITEM_NAV_POSITION_STRIDE);
-        position = position & MENU_ITEM_NAV_POSITION_MASK;
-
-        entry_with_position = entry_with_position | position;
+        entry_with_position = entry_with_position |
+                              ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
@@ -9029,7 +9019,6 @@ s32 menu_build_ability_nav_entries(void)
     s32* entry;
 
     s32 packed_entry;
-    s32 position;
     s32 entry_with_previous;
 
     s32 item_count;
@@ -9061,10 +9050,8 @@ s32 menu_build_ability_nav_entries(void)
 
         entry_with_position = (packed_entry & ~MENU_ITEM_NAV_POSITION_MASK);
 
-        position = (entry_index * MENU_ITEM_NAV_POSITION_STRIDE);
-        position = position & MENU_ITEM_NAV_POSITION_MASK;
-
-        entry_with_position = entry_with_position | position;
+        entry_with_position = entry_with_position |
+                              ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
@@ -9094,18 +9081,25 @@ s32 menu_build_ability_nav_entries(void)
 
 /* ----- Equipment Selection Helpers ----- */
 
-/** @brief Return non-zero when two 0x40-byte item records differ. */
-static inline s32 buffers_differ(u8* t, u8* p)
+/**
+ * @brief Compare two fixed-size menu item records byte-for-byte.
+ * @param left First item record.
+ * @param right Second item record.
+ * @return 1 when the records differ, otherwise 0.
+ */
+static inline s32 menu_item_records_differ(const u8* left, const u8* right)
 {
     u32 i = 0;
     do
     {
         i += 1;
-        if (*t != *p)
+        if (*left != *right)
+        {
             return 1;
-        t += 1;
-        p += 1;
-    } while (i < 0x40);
+        }
+        left += 1;
+        right += 1;
+    } while (i < MENU_ITEM_RECORD_SIZE);
     return 0;
 }
 
@@ -9116,34 +9110,34 @@ static inline s32 buffers_differ(u8* t, u8* p)
  */
 s32 menu_stage_best_equipment_for_slot0(void)
 {
-    u8 buf[0x40];
-    u8* entry;
-    u8* p;
-    u8* slot_buf;
-    s32 diff;
-    PadContext* ctx;
+    u8 swap_buffer[MENU_ITEM_RECORD_SIZE];
+    MenuItemEntry* candidate;
+    u8* slot_record;
+    u8* slot_buffer;
+    s32 records_differ;
+    PadContext* pad_ctx;
 
     menu_stage_stack_shape(0, 0, 0, 0, 0, 0);
 
-    entry = (u8*)menu_find_best_equipment_for_slot0();
-    if (entry != 0)
+    candidate = (MenuItemEntry*)menu_find_best_equipment_for_slot0();
+    if (candidate != 0)
     {
-        p = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640;
-        diff = buffers_differ(D_800F0BF8, p);
-        if (diff == 0)
+        slot_record = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640;
+        records_differ = menu_item_records_differ(D_800F0BF8, slot_record);
+        if (records_differ == 0)
         {
-            ctx = g_pad_ctx;
-            func_800A8F8C((u8*)((g_menu_char_slot * 0x250) + (s32)ctx) + 0x640, entry);
-            *entry = 0;
+            pad_ctx = g_pad_ctx;
+            func_800A8F8C((u8*)((g_menu_char_slot * 0x250) + (s32)pad_ctx) + 0x640, candidate);
+            candidate->active = 0;
             g_item_slot_data.slot0 = 0;
         }
         else
         {
-            slot_buf = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640;
-            func_800A8F8C(buf, slot_buf);
-            func_800A8F8C(slot_buf, entry);
-            func_800A8F8C(entry, buf);
-            g_item_slot_data.slot0 = (u32)entry;
+            slot_buffer = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640;
+            func_800A8F8C(swap_buffer, slot_buffer);
+            func_800A8F8C(slot_buffer, candidate);
+            func_800A8F8C(candidate, swap_buffer);
+            g_item_slot_data.slot0 = (u32)candidate;
         }
         g_item_slot_flags.slot0 = 1;
         return 1;
@@ -9232,58 +9226,58 @@ void* menu_find_best_equipment_for_slot0(void)
  */
 s32 menu_stage_best_equipment_for_active_slot(void)
 {
-    u8 buf[0x40];
-    u8* entry;
-    u8* slot_buf;
-    u32* slots;
-    u8* pad;
-    s32 ret;
-    s32 off;
-    s32 i;
+    u8 swap_buffer[MENU_ITEM_RECORD_SIZE];
+    MenuItemEntry* candidate;
+    u8* slot_buffer;
+    u32* slot_data;
+    u8* pad_base;
+    s32 slot_flag;
+    s32 subtype_index;
+    s32 slot_index;
     if (0)
     {
         func_800A8F8C(0, 0, 0, 0, 0, 0);
     }
-    entry = (u8*)menu_find_best_equipment_for_active_slot();
-    if (entry != 0)
+    candidate = (MenuItemEntry*)menu_find_best_equipment_for_active_slot();
+    if (candidate != 0)
     {
-        i = 1;
-        off = g_menu_active_subtype - 7;
-        pad = (u8*)g_pad_ctx;
-        if (*(pad - (-((off << 6) + (g_menu_char_slot * 0x250))) + 0x640) == 0)
+        slot_index = 1;
+        subtype_index = g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE;
+        pad_base = (u8*)g_pad_ctx;
+        if (*(pad_base - (-((subtype_index << 6) + (g_menu_char_slot * 0x250))) + 0x640) == 0)
         {
-            slots = &g_item_slot_data.slot0;
-            for (; i < 4; i += 1)
+            slot_data = &g_item_slot_data.slot0;
+            for (; slot_index < MENU_EQUIPMENT_SLOT_COUNT; slot_index += 1)
             {
-                if ((u32)entry == slots[i])
+                if ((u32)candidate == slot_data[slot_index])
                 {
-                    slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+                    slot_data[slot_index] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
                     break;
                 }
             }
-            func_800A8F8C((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), entry);
-            *entry = 0;
+            func_800A8F8C((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), candidate);
+            candidate->active = 0;
             g_item_slot_data_by_subtype[g_menu_active_subtype] = 0;
         }
         else
         {
-            slots = &g_item_slot_data.slot0;
-            for (; i < 4; i += 1)
+            slot_data = &g_item_slot_data.slot0;
+            for (; slot_index < MENU_EQUIPMENT_SLOT_COUNT; slot_index += 1)
             {
-                if ((u32)entry == slots[i])
+                if ((u32)candidate == slot_data[slot_index])
                 {
-                    slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+                    slot_data[slot_index] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
                     break;
                 }
             }
-            slot_buf = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + (g_menu_active_subtype << 6) + 0x480;
-            func_800A8F8C(buf, slot_buf);
-            func_800A8F8C(slot_buf, entry);
-            func_800A8F8C(entry, buf);
-            g_item_slot_data_by_subtype[g_menu_active_subtype] = (u32)entry;
-            ret = 1;
+            slot_buffer = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + (g_menu_active_subtype << 6) + 0x480;
+            func_800A8F8C(swap_buffer, slot_buffer);
+            func_800A8F8C(slot_buffer, candidate);
+            func_800A8F8C(candidate, swap_buffer);
+            g_item_slot_data_by_subtype[g_menu_active_subtype] = (u32)candidate;
+            slot_flag = 1;
         }
-        g_item_slot_flags_by_subtype[g_menu_active_subtype] = ret;
+        g_item_slot_flags_by_subtype[g_menu_active_subtype] = slot_flag;
         return 1;
     }
     return 0;
@@ -9325,7 +9319,7 @@ void* menu_find_best_equipment_for_active_slot(void)
     item = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
     do
     {
-        if ((slot_idx != (g_menu_active_subtype - 7)) && (equipment->active != 0))
+        if ((slot_idx != (g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE)) && (equipment->active != 0))
         {
             equipment_attributes = equipment->attributes;
             if (equipment_attributes & MENU_ITEM_KIND_MASK)
