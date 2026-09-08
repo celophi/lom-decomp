@@ -470,6 +470,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_8008BE38.c \
 	src/overlays/field/func_8008C024.c \
 	src/overlays/field/unk2_i_b_split005_tail_b.c \
+	src/overlays/field/func_8008C4A8.c \
+	src/overlays/field/unk2_i_b_split005_tail_b_after_8C4A8.c \
 	src/overlays/field/func_80096A90.c \
 	src/overlays/field/unk2_i_b_split023_mid_after_96A90.c \
 	src/overlays/field/func_800970B0.c \
