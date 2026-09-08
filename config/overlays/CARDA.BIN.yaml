@@ -55,7 +55,7 @@ segments:
       - [0xBAD, c, func_80140BAC]              # gcc272_cdk, func_80140BAC, 100%
       - [0x10E5, c, carda_reset_menu_state]    # gcc272_cdk, func_801410E4, 100%
       - [0x1165, c, carda_core_state]           # gcc272_cdk, 3 funcs, 100%
-      - [0x1251, c, func_80141250]              # gcc272_cdk, func_80141250, 99.69% WIP
+      - [0x1251, c, func_80141250]              # gcc272_cdk, func_80141250, 99.670135% WIP
       - [0x1B51, c, carda_mode_glyph]           # gcc272_cdk, func_80141B50, 100%
       - [0x1C3D, c, carda_panel_tiles]         # gcc272_cdk, 2 funcs, 100%
       - [0x1DF5, c, carda_selected_entry_details] # gcc272_cdk, func_80141DF4, 100%
@@ -64,7 +64,7 @@ segments:
       - [0x2615, c, carda_claim_element]       # gcc272_cdk, 1 func, 100%
       - [0x2669, c, carda_update_and_draw_elements] # gcc272_cdk, func_80142668, 100%
       - [0x2CA5, c, carda_string_utils]         # gcc272_cdk, 4 funcs, 100%
-      - [0x2E11, c, unk1_after_strings]
+      - [0x2E11, c, func_80142E10]             # gcc272_cdk, func_80142E10, 100%
       - [0x3335, c, carda_scan_hex_digits]     # gcc280, 1 func, 100%
       - [0x3381, c, carda_check_slot_flag]     # gcc272_cdk, func_80143380, 100%
       - [0x33C1, c, carda_validate_resource]  # gcc272_cdk, 1 func, 100%

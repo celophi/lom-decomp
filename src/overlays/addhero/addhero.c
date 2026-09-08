@@ -1,11 +1,13 @@
 #include "common.h"
+#include "pad.h"
 #include "vector.h"
 #include "display.h"
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+#include "sdk/kernel.h"
 
-/** @brief One 0xC-byte animated ADDHERO UI element. */
+/** @brief Animated panel or list element used by the ADDHERO interface. */
 typedef struct AddheroElement
 {
     union
@@ -14,58 +16,31 @@ typedef struct AddheroElement
         struct
         {
             u32 state : 3;
-            u32 phase : 4;
+            u32 transition_step : 4;
             u32 x : 9;
-            u32 code : 8;
-        } f;
+            u32 y : 8;
+            u32 width_low : 8;
+        } bits;
+        struct
+        {
+            u16 control_x;
+            u8 y;
+            u8 width_low;
+        } bytes;
     } attr;
-    u32 active : 1;
-    u32 y : 8;
-    u32 rest : 23;
-    void *draw;
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 width_high : 1;
+            u32 height : 8;
+            u32 scrollable : 1;
+            u32 reserved : 22;
+        } bits;
+    } size;
+    void *draw_handler;
 } AddheroElement;
-
-/**
- * @brief Prefix view of the eight-element pool.
- *
- * The historical code addresses the first element as the pool base and also
- * reads the second element's state word at +0xC. Keeping that overlap explicit
- * preserves GCC 2.7.2's original address/signedness behavior without pretending
- * each element is 0x10 bytes.
- */
-typedef struct
-{
-    AddheroElement first;
-    s32 second_state;
-} AddheroElementPoolHead;
-
-/** @brief Plain 3-word (0xC) view of a menu element. */
-typedef struct
-{
-    s32 state_word;
-    s32 size_flags;
-    s32 draw;
-} AddheroPacket;
-
-typedef struct
-{
-    u32 word;
-} AddheroAttrWord;
-
-/** @brief attr-word view of a menu element used by the claim scan. */
-typedef struct
-{
-    AddheroAttrWord attr;
-    u32 unk4;
-    u32 unk8;
-} AddheroWordPacket;
-
-/** @brief Two-element window over g_addhero_element_pool.first used by addhero_update_and_draw_elements. */
-typedef struct
-{
-    AddheroWordPacket first;
-    AddheroWordPacket second;
-} AddheroPacketBlock;
 
 typedef struct AddheroRecord
 {
@@ -76,28 +51,37 @@ typedef struct AddheroRecord
     u8 padD0[4];
     u16 hero_id;
     u16 reserved_d6;
+    s32 identity;
 } AddheroRecord;
-
-/** @brief Memory-card directory entry; layout matches Psy-Q DIRENTRY (0x28 bytes). */
-typedef struct
-{
-    char name[20];
-    s32 attr;
-    s32 size;
-    void *next;
-    s32 head;
-    char system[4];
-} AddheroDirEntry;
 
 /* ADDHERO layout/state constants recovered from the element and card-directory loops. */
 #define ADDHERO_ELEMENT_COUNT 8
 #define ADDHERO_ELEMENT_WORD_STRIDE 3
 #define ADDHERO_ELEMENT_STATE_MASK 7
 #define ADDHERO_ELEMENT_PHASE_MASK 0x78
-#define ADDHERO_CARD_DIRECTORY_BYTES 0x320
-#define ADDHERO_DIRECTORY_ENTRY_BYTES 0x28
+#define ADDHERO_ELEMENT_STATE_INACTIVE 0
+#define ADDHERO_ELEMENT_STATE_OPENING 1
+#define ADDHERO_ELEMENT_STATE_ACTIVE 2
+#define ADDHERO_ELEMENT_STATE_CLOSING 3
+#define ADDHERO_ELEMENT_STATE_FINISHING 4
+#define ADDHERO_DIRECTORY_ENTRY_COUNT 20
+#define ADDHERO_DIRECTORY_ENTRY_BYTES sizeof(struct DIRENTRY)
+#define ADDHERO_CARD_DIRECTORY_BYTES (ADDHERO_DIRECTORY_ENTRY_COUNT * ADDHERO_DIRECTORY_ENTRY_BYTES)
 #define ADDHERO_ENTRY_ROW_HEIGHT 14
+#define ADDHERO_ENTRY_COUNT_LIMIT 0x10
 #define ADDHERO_NO_ICON 0x7F
+#define ADDHERO_SAVE_FILENAME_PREFIX_LENGTH 12
+#define ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH 8
+
+/* Return codes produced by addhero_advance_load_sequence. */
+#define ADDHERO_LOAD_RESULT_NONE 0
+#define ADDHERO_LOAD_RESULT_PENDING 1
+#define ADDHERO_LOAD_RESULT_ABORT 2
+#define ADDHERO_LOAD_RESULT_CONTINUE 3
+#define ADDHERO_LOAD_RESULT_COMPLETE 4
+#define ADDHERO_LOAD_RESULT_CARD_ERROR 5
+
+#define ADDHERO_LOAD_STEP_COUNT 31
 
 /*
  * g_addhero_entry_state is dual-purpose:
@@ -123,12 +107,95 @@ typedef struct
 #define ADDHERO_ENTRY_STATE_LOAD_PROGRESS 0xF6  /* importing a matched entry; progress bar */
 #define ADDHERO_ENTRY_STATE_SAVE_PROGRESS 0xF5  /* write in progress; progress bar */
 #define ADDHERO_ENTRY_STATE_SAVE_CONFIRM  0xF4  /* confirm dialog; accepting writes the save */
+#define ADDHERO_ENTRY_STATE_CONFIRM_PROMPT 0xF3 /* companion choice prompt for save/exit flow */
+
+#define ADDHERO_CONFIRM_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_L3)
+#define ADDHERO_CARD_SWITCH_BUTTON_MASK (PAD_BTN_SELECT | PAD_BTN_RIGHT | PAD_BTN_LEFT)
+#define ADDHERO_INPUT_INJECTION_ENABLED 0x80
+#define ADDHERO_SAVE_MAGIC 0x414E41
+#define ADDHERO_SAVE_CHECKSUM_BYTES 0x33E0
+#define ADDHERO_SAVE_CHECKSUM_BIAS 0x0414E410
 
 typedef struct AddheroFallbackText
 {
     u8 pad[0x24];
     u8 text[0x20];
 } AddheroFallbackText;
+
+/** @brief Saved context block copied between the live game state and the save image. */
+typedef struct
+{
+    u8 inject_enable;
+    u8 _pad01[0x17];
+    u32 inject_flags;
+    u8 _pad1C[0x234];
+} AddheroSaveContextBlock;
+
+/** @brief Portion of the ADDHERO save image whose layout is used by this overlay. */
+typedef struct
+{
+    u8 _pad0000[0x770];
+    AddheroSaveContextBlock context;
+    u8 _pad09C0[0x2A20];
+    s32 checksum;
+    s32 magic;
+} AddheroSaveBlob;
+
+typedef struct AddheroEntryHeader
+{
+    s32 unk0;
+    s16 unk4;
+    s8 unk6;
+    u8 pad[9];
+} AddheroEntryHeader;
+
+/** @brief Save-file header block at g_addhero_file_template (only the first 6 bytes used). */
+typedef struct
+{
+    s32 unk0;
+    s16 unk4;
+    u8 pad[0xFA];
+} AddheroFileHeader;
+
+typedef struct
+{
+    s32 unk0;
+    s16 unk4;
+    s16 unk6;
+    u8 unk8[0x18];
+} AddheroFileHeaderScratch;
+
+typedef struct
+{
+    s32 unk0;
+    s16 unk4;
+    u8 pad[0x62];
+} AddheroLoadScratch;
+
+/* --- text renderer (addhero_draw_cached_text family) --- */
+
+typedef union
+{
+    u32 raw;
+    struct
+    {
+        u16 code;
+        u16 flags;
+    } data;
+} AddheroGlyphCacheEntry;
+
+typedef struct
+{
+    SPRT_16 packet;
+    u32 padding;
+} AddheroGlyphSprite;
+
+#define GLYPH_CACHE_SLOTS 0x100
+#define GLYPH_CACHE_COLUMNS 16
+#define GLYPH_CACHE_ROW_MASK 0xF0
+#define GLYPH_RASTER_BYTES 0x80
+#define GPU_ADDR_MASK 0xFFFFFF
+#define GPU_TAG_HIGH_MASK 0xFF000000
 
 /* addhero_update_and_draw_elements element-draw pipeline types */
 typedef struct
@@ -150,16 +217,21 @@ typedef struct
     AddheroGpuPacket *prim_cursor;
 } AddheroDrawState;
 
-typedef AddheroGpuPacket *(*AddheroElemDrawFunc)();
+typedef AddheroGpuPacket *(*AddheroElementDrawFunc)();
 
-extern AddheroElementPoolHead g_addhero_element_pool;
+/** @brief Pool of animated UI elements used by the ADDHERO screen. */
+extern AddheroElement g_addhero_element_pool[ADDHERO_ELEMENT_COUNT];
 extern AddheroElement g_addhero_element1;
-extern AddheroDirEntry g_addhero_entries[][20];
+extern struct DIRENTRY g_addhero_entries[][ADDHERO_DIRECTORY_ENTRY_COUNT];
 extern AddheroRecord g_addhero_entry_metadata;
+extern AddheroFileHeader g_addhero_file_template;
+extern AddheroEntryHeader g_addhero_entry_header_template;
+extern AddheroGlyphCacheEntry g_addhero_glyph_cache[];
 /* Shared controller/game context (main.h PadContext); addressed here as a byte
    buffer for the save-blob copies and metadata reads. */
 extern u8 *g_pad_ctx;
 extern u8 *g_addhero_load_step;
+extern u8 *g_addhero_glyph_raster_cursor;
 extern void *jtbl_80140098[];
 
 extern s32 g_save_slot_index;
@@ -196,23 +268,53 @@ extern s32 g_addhero_rank_count;
 extern s32 g_addhero_icon_image_table[];
 extern s32 g_addhero_entry_suffix_values[];
 extern s32 g_addhero_entry_ranks[];
+extern s32 g_addhero_retry_count;
+extern s32 g_addhero_selected_entry_extended;
+extern s32 g_addhero_primary_poll_countdown;
+extern s32 g_addhero_entry_value_limit;
+extern s32 g_addhero_entry_fields[];
+extern s32 g_addhero_secondary_poll_countdown;
+extern s32 g_addhero_primary_handle0;
+extern s32 g_addhero_primary_handle1;
+extern s32 g_addhero_primary_handle2;
+extern s32 g_addhero_primary_handle3;
+extern s32 g_addhero_has_free_entry_space;
+extern s32 g_addhero_file_handle;
+extern s32 g_addhero_secondary_handle0;
+extern s32 g_addhero_secondary_handle1;
+extern s32 g_addhero_secondary_handle2;
+extern s32 g_addhero_secondary_handle3;
+extern s32 g_addhero_glyph_cursor_x;
+extern s32 g_addhero_glyph_cursor_y;
+extern s32 g_addhero_text_line_start_x;
+extern s32 g_addhero_glyph_upload_x;
+extern s32 g_addhero_glyph_upload_y;
 
 extern u8 g_addhero_loadseq_start;
 extern u8 g_addhero_loadseq_abort[];
 extern u8 g_addhero_loadseq_load_begin[];
 extern u8 g_addhero_loadseq_load_progress;
 extern u8 g_addhero_loadseq_save_begin;
+extern u8 g_addhero_loadseq_card[];
+extern u8 g_addhero_loadseq_file_ready[];
+extern u8 g_addhero_single_byte_char_table[];
+extern u8 g_addhero_double_byte_char_table[];
 extern u8 g_addhero_icon_context[];
 extern u8 g_addhero_save_blob[];
 extern u8 g_addhero_entry_read_buffer;
 extern u8 g_addhero_entry_record;
 extern u8 g_addhero_entry_owner_id;
+extern u8 g_addhero_target_file_path[];
+extern u8 g_addhero_glyph_raster_buffer[];
+extern u8 g_addhero_save_file_path[];
 extern u8 g_text_time_separator_offset_bytes[2];
 extern u8 g_text_choice_glyph_offsets[];
 
 extern char g_lom_save_filename_prefix[];
 extern char g_lom_alt_save_filename_prefix[];
 extern char g_new_save_entry_prefix[];
+extern char g_lom_save_dummy_filename[];
+extern char g_lom_alt_save_dummy_filename[];
 
 extern u16 g_addhero_glyph_table;
 extern u16 g_addhero_glyph_status_fa;
@@ -244,6 +346,8 @@ extern u16 g_addhero_glyph_status_f7;
 extern u16 g_addhero_glyph_save_confirm_msg;
 extern u16 g_addhero_glyph_plus_marker;
 extern u16 g_addhero_entry_glyph_table[];
+extern u16 g_addhero_decimal_glyphs[];
+extern u16 g_addhero_hex_glyphs[];
 
 /* In-file functions */
 void addhero_init(s32 work_base, s32 mode);
@@ -288,13 +392,29 @@ void addhero_format_hex(s8 *out, s32 value, s32 max_chars);
 void addhero_hex_nibble_to_ascii(s8 *out, s32 value);
 u32 addhero_parse_hex(u8 *s, s32 len);
 s32 addhero_parse_hex_suffix_byte(u8 *text);
+s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2);
+s32 addhero_has_known_entry_type(void);
+s32 addhero_entry_blocks_reach_limit(void);
+void addhero_render_fixed_prompts(void);
+s32 addhero_begin_entry_scan(s32 page);
+s32 addhero_scan_next_entry(s32 page);
+void addhero_release_primary_handles(void);
+void addhero_release_secondary_handles(void);
+s32 addhero_poll_primary_handle_group(void);
+s32 addhero_poll_secondary_handle_group(void);
+void addhero_sort_entries_by_type(void);
+s32 addhero_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
+void addhero_draw_hex_byte(s32 prim, s32 ot, s32 byte_value, s32 x, s32 y, s32 alignment);
+s32 addhero_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette);
+s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette);
+void addhero_expand_text_glyph_codes(u8 *out, u8 *in);
 
 /* External functions */
 s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, Vec2s *pos, s32 mode);
-s32 strncmp();
+s32 strncmp(void *a, void *b, s32 n);
 void play_menu_sfx();
-void func_800AA02C();
+void func_800AA02C(void);
 void field_restore_fade_target(void);
 void field_set_default_fade_target(void);
 void field_restore_fade_target_with_duration(s32 arg0);
@@ -324,8 +444,33 @@ s32 addhero_poll_and_rewind_primary_handles(void);
 void addhero_commit_selected_entry(void);
 s32 addhero_draw_cached_text(s32 result, s32 *ot, u8 *name, s32 x, s32 y, s32 a5, s32 a6);
 s32 addhero_advance_load_sequence();
+s32 strcat(void *a, void *b);
+s32 open(void *a, s32 b);
+s32 read(s32 a, void *b, s32 c);
+s32 write(s32 a, void *b, s32 c);
+s32 close(s32 a);
+s32 rename(void *a, void *b);
+s32 erase(void *a);
+s32 strcpy(void *a, void *b, ...);
+s32 _card_info(s32 a);
+s32 _card_load(s32 a);
+s32 _card_wait(s32 a);
+s32 _card_clear(s32 a);
+s32 func_80032174(s32 a, void *b, s32 *c);
+s32 McxCardType(s32 a);
+s32 firstfile(void *a, void *b);
+void func_800B0170(void *a);
+s32 nextfile(void *a);
+s32 Krom2RawAdd(s32 a);
+void reset_controller_vsync_state(void);
+s32 OpenEvent(s32 a, s32 b, s32 c, s32 d);
+void CloseEvent(s32 a);
+s32 TestEvent(s32 a);
+void EnableEvent(s32 a);
+void EnterCriticalSection(void);
+void ExitCriticalSection(void);
 
-#define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
+#define SET_ELEM_WIDTH_LOW(element, width) ((element)->attr.word = ((element)->attr.word & 0x00FFFFFF) | ((u32)(width) << 24))
 #define GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
 #define GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
 /** Resolve a glyph string from a preloaded table @p base plus the u16 offset
@@ -418,85 +563,84 @@ void addhero_build_ui_elements(void)
     g_addhero_load_flow_active = 0;
     if (g_addhero_mode != 0)
     {
-        g_addhero_element_pool.first.attr.f.state = 1;
+        g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
         p = addhero_alloc_element();
-        p->draw = (void *)addhero_draw_transfer_status;
-        p->attr.f.phase = 1;
-        p->attr.f.x = 0x10;
-        p->attr.f.code = 0x61;
-        p->active = 1;
-        p->y = 0x2C;
-        SET_ELEM_CODE(p, 0x20);
+        p->draw_handler = (void *)addhero_draw_transfer_status;
+        p->attr.bits.transition_step = 1;
+        p->attr.bits.x = 0x10;
+        p->attr.bits.y = 0x61;
+        p->size.bits.width_high = 1;
+        p->size.bits.height = 0x2C;
+        SET_ELEM_WIDTH_LOW(p, 0x20);
 
         p = addhero_alloc_element();
-        p->draw = (void *)addhero_draw_card_slot0_label;
-        p->attr.f.phase = 1;
-        p->attr.f.x = 0x18;
-        p->attr.f.code = 0x4D;
-        p->active = 0;
-        p->y = 0x10;
-        SET_ELEM_CODE(p, 0x80);
+        p->draw_handler = (void *)addhero_draw_card_slot0_label;
+        p->attr.bits.transition_step = 1;
+        p->attr.bits.x = 0x18;
+        p->attr.bits.y = 0x4D;
+        p->size.bits.width_high = 0;
+        p->size.bits.height = 0x10;
+        SET_ELEM_WIDTH_LOW(p, 0x80);
 
         p = addhero_alloc_element();
-        p->draw = (void *)addhero_draw_card_slot1_label;
-        p->attr.f.phase = 1;
-        p->attr.f.x = 0xA0;
-        p->attr.f.code = 0x4D;
-        p->active = 0;
-        p->y = 0x10;
-        SET_ELEM_CODE(p, 0x80);
-        g_addhero_element_pool.first.attr.f.state = 0;
+        p->draw_handler = (void *)addhero_draw_card_slot1_label;
+        p->attr.bits.transition_step = 1;
+        p->attr.bits.x = 0xA0;
+        p->attr.bits.y = 0x4D;
+        p->size.bits.width_high = 0;
+        p->size.bits.height = 0x10;
+        SET_ELEM_WIDTH_LOW(p, 0x80);
+        g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
         return;
     }
 
-    g_addhero_element_pool.first.attr.f.state = 1;
+    g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
     p = addhero_alloc_element();
-    p->draw = (void *)addhero_draw_entry_list;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0x1C;
-    p->attr.f.code = 0x32;
-    p->active = 1;
-    p->y = 0x58;
-    SET_ELEM_CODE(p, 8);
-    /* ADDHERO-specific flag */
-    *(u32 *)((u8 *)p + 4) |= 0x200;
+    p->draw_handler = (void *)addhero_draw_entry_list;
+    p->attr.bits.transition_step = 1;
+    p->attr.bits.x = 0x1C;
+    p->attr.bits.y = 0x32;
+    p->size.bits.width_high = 1;
+    p->size.bits.height = 0x58;
+    SET_ELEM_WIDTH_LOW(p, 8);
+    p->size.bits.scrollable = 1;
 
     p = addhero_alloc_element();
-    p->draw = (void *)addhero_draw_mode_glyph;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0x24;
-    p->attr.f.code = 0x0A;
-    p->active = 0;
-    p->y = 0x10;
-    SET_ELEM_CODE(p, 0xF0);
+    p->draw_handler = (void *)addhero_draw_mode_glyph;
+    p->attr.bits.transition_step = 1;
+    p->attr.bits.x = 0x24;
+    p->attr.bits.y = 0x0A;
+    p->size.bits.width_high = 0;
+    p->size.bits.height = 0x10;
+    SET_ELEM_WIDTH_LOW(p, 0xF0);
 
     p = addhero_alloc_element();
-    p->draw = (void *)addhero_draw_card_slot0_label;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0x18;
-    p->attr.f.code = 0x1E;
-    p->active = 0;
-    p->y = 0x10;
-    SET_ELEM_CODE(p, 0x80);
+    p->draw_handler = (void *)addhero_draw_card_slot0_label;
+    p->attr.bits.transition_step = 1;
+    p->attr.bits.x = 0x18;
+    p->attr.bits.y = 0x1E;
+    p->size.bits.width_high = 0;
+    p->size.bits.height = 0x10;
+    SET_ELEM_WIDTH_LOW(p, 0x80);
 
     p = addhero_alloc_element();
-    p->draw = (void *)addhero_draw_card_slot1_label;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0xA0;
-    p->attr.f.code = 0x1E;
-    p->active = 0;
-    p->y = 0x10;
-    SET_ELEM_CODE(p, 0x80);
+    p->draw_handler = (void *)addhero_draw_card_slot1_label;
+    p->attr.bits.transition_step = 1;
+    p->attr.bits.x = 0xA0;
+    p->attr.bits.y = 0x1E;
+    p->size.bits.width_high = 0;
+    p->size.bits.height = 0x10;
+    SET_ELEM_WIDTH_LOW(p, 0x80);
 
     p = addhero_alloc_element();
-    p->draw = (void *)addhero_draw_selected_entry_details;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0x1E;
-    p->attr.f.code = 0x8E;
-    p->active = 1;
-    p->y = 0x34;
-    SET_ELEM_CODE(p, 4);
-    g_addhero_element_pool.first.attr.f.state = 0;
+    p->draw_handler = (void *)addhero_draw_selected_entry_details;
+    p->attr.bits.transition_step = 1;
+    p->attr.bits.x = 0x1E;
+    p->attr.bits.y = 0x8E;
+    p->size.bits.width_high = 1;
+    p->size.bits.height = 0x34;
+    SET_ELEM_WIDTH_LOW(p, 4);
+    g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
 }
 
 /**
@@ -554,7 +698,7 @@ s32 addhero_update_load_sequence(void)
     do
     {
         result = addhero_advance_load_sequence();
-    } while (result == 3);
+    } while (result == ADDHERO_LOAD_RESULT_CONTINUE);
 
     if ((g_addhero_load_flow_active != 0) && (g_pad_input & 0x220))
     {
@@ -572,13 +716,13 @@ s32 addhero_update_load_sequence(void)
     {
         switch (result)
         {
-        case 0:
+        case ADDHERO_LOAD_RESULT_NONE:
             break;
-        case 4:
+        case ADDHERO_LOAD_RESULT_COMPLETE:
             g_addhero_load_step = (u8 *)&g_addhero_loadseq_done;
             g_addhero_load_flow_active = 0;
             break;
-        case 5:
+        case ADDHERO_LOAD_RESULT_CARD_ERROR:
             if (g_addhero_mode == 0)
             {
                 g_addhero_entry_state = 0xF9;
@@ -588,7 +732,7 @@ s32 addhero_update_load_sequence(void)
                 g_addhero_entry_state = 0xF8;
             }
             /* fallthrough */
-        case 2:
+        case ADDHERO_LOAD_RESULT_ABORT:
             g_addhero_load_step = (u8 *)&g_addhero_loadseq_abort;
             break;
         }
@@ -596,115 +740,134 @@ s32 addhero_update_load_sequence(void)
 }
 
 /**
- * @brief Handle browser pad input: exit/back, list navigation, entry
- *        selection, and launching the load prompt for a compatible save.
- * @return Unused; declared s32 for the original signature but every path
- *         returns via a bare return with no value.
- * @see decomp.me (100%)
+ * @brief Handle browser input, entry navigation, and load confirmation.
+ * @return Unused.
  */
 s32 addhero_handle_input(void)
 {
-    s32 pending;
-    s32 status;
-    s32 count;
-    s32 term1;
-    s32 term2;
-    AddheroElement *p;
+    s32 entry_count;
+    s32 input;
+    s32 move_count;
+    AddheroElement *prompt;
+    struct DIRENTRY *selected_entry;
 
-    if ((g_addhero_element_pool.second_state & 7) == 0) {
+    if (g_addhero_element_pool[1].attr.bits.state == ADDHERO_ELEMENT_STATE_INACTIVE)
+    {
         g_addhero_exit_requested = g_addhero_result;
         return;
     }
-    if (g_addhero_exit_requested != 0) {
+    if (g_addhero_exit_requested != 0)
+    {
         return;
     }
-    if ((g_addhero_element_pool.second_state & 7) >= 3) {
+    if (g_addhero_element_pool[1].attr.bits.state >= ADDHERO_ELEMENT_STATE_CLOSING)
+    {
         return;
     }
-    if ((g_addhero_element_pool.first.attr.word & 7) != 0) {
-        return;
-    }
-    pending = g_addhero_entry_state;
-    if (pending == 0xFF) {
-        return;
-    }
-    if (g_addhero_entry_scan_active != 0) {
-        return;
-    }
-    if (g_addhero_io_busy != 0) {
-        return;
-    }
-    if ((u32)(*g_addhero_load_step - 6) < 2U) {
-        return;
-    }
-    if (g_addhero_mode != 0) {
+    if (g_addhero_element_pool[0].attr.bits.state != ADDHERO_ELEMENT_STATE_INACTIVE)
+    {
         return;
     }
 
-    status = g_pad_input;
-    if (status & 0x40) {
+    entry_count = g_addhero_entry_state;
+    if (entry_count == ADDHERO_ENTRY_STATE_IDLE)
+    {
+        return;
+    }
+    if (g_addhero_entry_scan_active != 0)
+    {
+        return;
+    }
+    if (g_addhero_io_busy != 0)
+    {
+        return;
+    }
+    if ((u32)(*g_addhero_load_step - 6) < 2U)
+    {
+        return;
+    }
+    if (g_addhero_mode != 0)
+    {
+        return;
+    }
+
+    input = g_pad_input;
+    if (input & PAD_BTN_CIRCLE)
+    {
         D_80122718 = 3;
         play_menu_sfx(0x78, 0x80);
         addhero_close_all_elements();
         return;
     }
-    if (status & 0xA100) {
+    if (input & ADDHERO_CARD_SWITCH_BUTTON_MASK)
+    {
         play_menu_sfx(0x7D, 0x80);
         addhero_reset_state();
         return;
     }
-    if (pending >= 0x10) {
+    if (entry_count >= ADDHERO_ENTRY_COUNT_LIMIT)
+    {
         return;
     }
 
-    count = 1;
-    if (status & 8) {
-        g_pad_input = 0x4000;
-        count = 1;
+    move_count = 1;
+    if (input & PAD_BTN_R1)
+    {
+        g_pad_input = PAD_BTN_DOWN;
+        move_count = 1;
     }
-    if (g_pad_input & 4) {
-        g_pad_input = 0x1000;
-        count = 1;
+    if (g_pad_input & PAD_BTN_L1)
+    {
+        g_pad_input = PAD_BTN_UP;
+        move_count = 1;
     }
 
-    while (count != 0) {
-        if (g_pad_input & 0x1000) {
-            g_addhero_selected_row -= 1;
-            if (g_addhero_selected_row < 0) {
+    while (move_count != 0)
+    {
+        if (g_pad_input & PAD_BTN_UP)
+        {
+            g_addhero_selected_row--;
+            if (g_addhero_selected_row < 0)
+            {
                 g_addhero_selected_row = g_addhero_entry_state - 1;
             }
         }
-        if (g_pad_input & 0x4000) {
-            g_addhero_selected_row += 1;
-            if (g_addhero_selected_row >= g_addhero_entry_state) {
+        if (g_pad_input & PAD_BTN_DOWN)
+        {
+            g_addhero_selected_row++;
+            if (g_addhero_selected_row >= g_addhero_entry_state)
+            {
                 g_addhero_selected_row = 0;
             }
         }
-        count -= 1;
+        move_count--;
     }
 
-    if (g_pad_input & 0x5000) {
+    if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
+    {
         addhero_commit_selected_entry();
         play_menu_sfx(0x7D, 0x80);
         addhero_scroll_to_selection();
         return;
     }
 
-    if (g_pad_input & 0x220) {
-        term1 = g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES;
-        term2 = (g_addhero_selected_row * ADDHERO_DIRECTORY_ENTRY_BYTES) + (s32)g_addhero_entries;
-        if (strncmp(g_lom_save_filename_prefix, (char *)(term1 + term2), 0xC) == 0) {
+    if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
+    {
+        selected_entry = &g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row];
+        if (strncmp(g_lom_save_filename_prefix, selected_entry->name, 0xC) == 0)
+        {
             if ((g_addhero_entry_metadata.hero_id != ((AddheroRecord *)g_pad_ctx)->hero_id) &&
-                ((g_save_slot_index == 0xFF) || (g_addhero_entry_metadata.owner_id == g_save_slot_index))) {
-                p = addhero_alloc_element();
-                p->attr.f.phase = 1;
-                p->attr.f.x = 0x10;
-                p->attr.f.code = 0x61;
-                p->active = 1;
-                p->y = 0x1E;
-                SET_ELEM_CODE(p, 0x20);
+                ((g_save_slot_index == 0xFF) || (g_addhero_entry_metadata.owner_id == g_save_slot_index)))
+            {
+                prompt = addhero_alloc_element();
+                prompt->attr.bits.transition_step = 1;
+                prompt->attr.bits.x = 0x10;
+                prompt->attr.bits.y = 0x61;
+                prompt->size.bits.width_high = 1;
+                prompt->size.bits.height = 0x1E;
+                SET_ELEM_WIDTH_LOW(prompt, 0x20);
                 addhero_enable_choice_toggle();
-                p->draw = addhero_draw_load_prompt;
+                prompt->draw_handler = addhero_draw_load_prompt;
                 addhero_restart_load_sequence();
                 play_menu_sfx(0x7E, 0x80);
                 return;
@@ -742,21 +905,17 @@ void addhero_reset_state(void)
  */
 void addhero_close_all_elements(void)
 {
-    s32 attr;
+    AddheroElement *element;
     s32 slot;
-    s32 *elem;
-    s32 closing_attr;
 
     field_restore_fade_target();
-    elem = (s32 *)&g_addhero_element_pool.first;
-    slot = 0;
-    for (; slot < 8; slot++, elem += 3)
+    element = g_addhero_element_pool;
+    for (slot = 0; slot < ADDHERO_ELEMENT_COUNT; slot++, element++)
     {
-        attr = *elem;
-        if (attr & 7)
+        if (element->attr.bits.state != ADDHERO_ELEMENT_STATE_INACTIVE)
         {
-            closing_attr = (attr & ~7) | 3;
-            *elem = (closing_attr & ~0x78) | 0x40;
+            element->attr.bits.state = ADDHERO_ELEMENT_STATE_CLOSING;
+            element->attr.bits.transition_step = 8;
         }
     }
 }
@@ -811,16 +970,15 @@ void addhero_update_elements(void)
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset applied to each row.
  * @return The updated primitive pointer after linking this frame's glyphs.
- * @see decomp.me (100%)
  */
 s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
-    s32 state = g_addhero_entry_state;
+    s32 entry_state = g_addhero_entry_state;
 
-    switch (state)
+    switch (entry_state)
     {
     case 0xF8:
-        do { prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x84, -y_offset, 2); } while (0);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xF9:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
@@ -839,95 +997,109 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case 0xFE:
         break;
+    case ADDHERO_ENTRY_STATE_IDLE:
+        {
+            s32 message_x;
+            u8 *glyph_base;
+
+            message_x = -x_offset + 0x84;
+            glyph_base = (u8 *)&g_addhero_glyph_table;
+            prim = func_800A88A0(prim, ot, glyph_base + g_addhero_glyph_table, 4, message_x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, ADDHERO_ENTRY_ROW_HEIGHT - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, (ADDHERO_ENTRY_ROW_HEIGHT * 2) - y_offset, 2);
+        }
+        break;
     default:
         {
             s32 row_y;
-            s32 i;
+            s32 entry_index;
 
-        if (g_addhero_entry_scan_active != 0)
-        {
-            s32 x;
-            u8 *base;
-        case ADDHERO_ENTRY_STATE_IDLE:
-            x = -x_offset + 0x84;
-            base = (u8 *)&g_addhero_glyph_table;
-            prim = func_800A88A0(prim, ot, base + g_addhero_glyph_table, 4, x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
-            break;
-        }
-        i = 0;
-        if (state > 0)
-        {
-            s32 base_x;
-            s32 *flag_ptr;
-            u16 misc_glyph;
-            Vec2s pos;
-            s32 row;
-            u8 *base;
-
-            base = (u8 *)&g_addhero_glyph_table;
-            base_x = -x_offset;
-            do
+            if (g_addhero_entry_scan_active != 0)
             {
-                row = ((i * 14) - y_offset) - g_addhero_scroll_y;
-                row_y = row + 1;
-                if ((u32)(row + 0xE) < 0x65U)
+                s32 message_x;
+                u8 *glyph_base;
+
+                message_x = -x_offset + 0x84;
+                glyph_base = (u8 *)&g_addhero_glyph_table;
+                prim = func_800A88A0(prim, ot, glyph_base + g_addhero_glyph_table, 4, message_x, -y_offset, 2);
+                prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, ADDHERO_ENTRY_ROW_HEIGHT - y_offset, 2);
+                prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, (ADDHERO_ENTRY_ROW_HEIGHT * 2) - y_offset, 2);
+                break;
+            }
+            entry_index = 0;
+            if (entry_state > 0)
+            {
+                s32 list_x;
+                u16 rank_glyph;
+                Vec2s value_pos;
+                u8 *glyph_base;
+
+                glyph_base = (u8 *)&g_addhero_glyph_table;
+                list_x = -x_offset;
+                do
                 {
-                    flag_ptr = &g_addhero_entry_ranks[i];
-                    if (*flag_ptr >= 0)
+                    row_y = ((entry_index * ADDHERO_ENTRY_ROW_HEIGHT) - y_offset) - g_addhero_scroll_y + 1;
+                    if ((u32)(row_y + ADDHERO_ENTRY_ROW_HEIGHT - 1) < 0x65U)
                     {
-                        pos.x = base_x + 0x86;
-                        pos.y = row_y;
-                        prim = func_800A88A0(func_800A8A78(ot, prim, g_addhero_entry_suffix_values[i], 4, &pos, 0), ot, GLYPH_ENTRY(base, g_addhero_glyph_entry_value_label), 4, base_x + 0x70, row_y, 0);
-                        if ((g_addhero_rank_count - 1) == *flag_ptr)
+                        if (g_addhero_entry_ranks[entry_index] >= 0)
                         {
-                            misc_glyph = *(u16 *)(base + 0x36);
-                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, misc_glyph), 4, base_x + 0xC0, row_y, 0);
+                            value_pos.x = list_x + 0x86;
+                            value_pos.y = row_y;
+                            prim = func_800A88A0(
+                                func_800A8A78(ot, prim, g_addhero_entry_suffix_values[entry_index], 4, &value_pos, 0), ot,
+                                GLYPH_ENTRY(glyph_base, g_addhero_glyph_entry_value_label), 4, list_x + 0x70, row_y, 0);
+                            if ((g_addhero_rank_count - 1) == g_addhero_entry_ranks[entry_index])
+                            {
+                                rank_glyph = *(u16 *)(glyph_base + 0x36);
+                                prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, rank_glyph), 4, list_x + 0xC0, row_y, 0);
+                            }
+                            else if (g_addhero_entry_ranks[entry_index] < 2)
+                            {
+                                rank_glyph = *(u16 *)(glyph_base + 0x38);
+                                prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, rank_glyph), 4, list_x + 0xC0, row_y, 0);
+                            }
+                            if (*addhero_skip_hex_digits(
+                                    &g_addhero_entries[g_addhero_card_slot][entry_index].name[ADDHERO_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
+                            {
+                                prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_plus_marker), 4, 0xF2 - x_offset, row_y, 1);
+                            }
                         }
-                        else if (*flag_ptr < 2)
+                        if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
+                                    ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                         {
-                            misc_glyph = *(u16 *)(base + 0x38);
-                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, misc_glyph), 4, base_x + 0xC0, row_y, 0);
+                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_save_entry_label), 4, 1 - x_offset, row_y, 0);
                         }
-                        if (*addhero_skip_hex_digits((void *)((s32)&g_addhero_entries[g_addhero_card_slot][i] + 0xC)) == 0x2B)
+                        else if (strncmp(g_lom_alt_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
+                                         ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                         {
-                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_plus_marker), 4, 0xF2 - x_offset, row_y, 1);
+                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_alt_save_entry_label), 4, 1 - x_offset, row_y, 0);
+                        }
+                        else if (strncmp(g_new_save_entry_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
+                                         ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+                        {
+                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_new_entry_label), 4, 1 - x_offset, row_y, 0);
+                        }
+                        else
+                        {
+                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_default_entry_label), 4, 1 - x_offset, row_y, 0);
                         }
                     }
-                    if (strncmp(g_lom_save_filename_prefix, (char *)&g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0)
-                    {
-                        prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_save_entry_label), 4, 1 - x_offset, row_y, 0);
-                    }
-                    else if (strncmp(g_lom_alt_save_filename_prefix, (char *)&g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0)
-                    {
-                        prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_alt_save_entry_label), 4, 1 - x_offset, row_y, 0);
-                    }
-                    else if (strncmp(g_new_save_entry_prefix, (char *)&g_addhero_entries[g_addhero_card_slot][i], 8) == 0)
-                    {
-                        prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_new_entry_label), 4, 1 - x_offset, row_y, 0);
-                    }
-                    else
-                    {
-                        prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_default_entry_label), 4, 1 - x_offset, row_y, 0);
-                    }
-                }
-                i++;
-            } while (i < g_addhero_entry_state);
-        }
-            row_y = ((g_addhero_selected_row * 14) - y_offset) - g_addhero_scroll_y;
+                    entry_index++;
+                } while (entry_index < g_addhero_entry_state);
+            }
+            row_y = ((g_addhero_selected_row * ADDHERO_ENTRY_ROW_HEIGHT) - y_offset) - g_addhero_scroll_y;
 
             if (g_addhero_entry_scan_active == 0)
             {
                 TILE *tile = (TILE *)prim;
 
                 *(u32 *)&tile->r0 = 0xF080F0;
-                *((u8 *)tile + 3) = 3;
-                tile->code = 0x62;
+                setlen(tile, 3);
+                setcode(tile, 0x62);
                 tile->w = 0x108;
                 tile->x0 = 0;
                 tile->y0 = row_y;
-                tile->h = 0xE;
+                tile->h = ADDHERO_ENTRY_ROW_HEIGHT;
                 addPrim(ot, tile);
                 prim += sizeof(TILE);
             }
@@ -1323,15 +1495,15 @@ void addhero_terminate_multibyte_text(void *buffer)
  */
 void addhero_clear_elements(void)
 {
-    AddheroPacket *p;
+    AddheroElement *p;
     s32 i;
 
     g_menu_element_counter = 0x20;
-    p = (AddheroPacket *)&g_addhero_element_pool.first;
+    p = g_addhero_element_pool;
     for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++)
     {
-        p->size_flags &= ~0x200;
-        p->state_word &= ~7;
+        p->size.bits.scrollable = 0;
+        p->attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
         p++;
     }
 }
@@ -1343,246 +1515,238 @@ void addhero_clear_elements(void)
  */
 AddheroElement *addhero_alloc_element(void)
 {
-    AddheroWordPacket *p;
+    AddheroElement *p;
     s32 i;
 
-    p = (AddheroWordPacket *)&g_addhero_element_pool.first;
+    p = g_addhero_element_pool;
     for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, p++)
     {
-        if ((p->attr.word & 7) == 0)
+        if (p->attr.bits.state == ADDHERO_ELEMENT_STATE_INACTIVE)
         {
-            p->attr.word = (p->attr.word & ~7) | 1;
-            return (AddheroElement *)p;
+            p->attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
+            return p;
         }
     }
-    return (AddheroElement *)&g_addhero_element_pool.first;
+    return g_addhero_element_pool;
 }
 
 /**
- * @brief Update and render every active pool element: draw scroll arrows, run
- *        each element's per-state transition (open/hold/close), invoke its draw
- *        callback, and advance the shared primitive cursor.
- * @details Walks the 8 element descriptors in g_addhero_element_pool (12 bytes
- *          each: attr/state word, flags word, draw-func pointer). The low 3 bits
- *          of the attr word select the animation state: 1 = opening (grow, then
- *          switch to hold), 2 = open/hold, 3 = closing (shrink, then finish),
- *          4 = finishing (clear the slot). The (attr >> 3) & 0xF nibble is the
- *          0..8 scale step driving the open/close interpolation.
+ * @brief Update and render the active ADDHERO UI elements.
  * @param draw_state Draw state holding the primitive cursor and frame flag.
  * @see decomp.me (100%)
  */
 void addhero_update_and_draw_elements(AddheroDrawState *draw_state)
 {
-    AddheroGpuPacket *prim;
-    AddheroDrawState *ot;
-    volatile u32 *elem;
-    s32 shrink_x;
-    s32 shrink_y;
-    s32 slot;
-    s32 sp20[24];
-    u32 attr_word;
-    s32 elem_state;
-    u32 flags_word;
-    u32 span;
-    s32 anim_step;
-    s32 span_scaled;
+    AddheroGpuPacket *packet_cursor;
+    AddheroDrawState *ordering_table;
+    volatile u32 *element_words;
+    s32 animated_width;
+    s32 animated_height;
+    s32 element_index;
+    s32 draw_env[24];
+    u32 state_word;
+    s32 state;
+    u32 size_word;
+    u32 width;
+    s32 transition_step;
+    s32 scaled_width;
     s32 height;
-    s32 height_scaled;
-    s32 inner_h;
-    u32 attr_bits;
-    u32 hi_byte;
-    s32 word3;
-    s32 acc3;
-    s32 height3;
-    s32 height_scaled3;
-    s32 inner_h3;
-    u32 elem_word4;
-    u32 anim_word;
-    s32 count;
+    s32 scaled_height;
+    s32 remaining_height;
+    u32 opening_word;
+    u32 width_low;
+    s32 closing_word;
+    s32 closing_scaled_width;
+    s32 closing_height;
+    s32 closing_scaled_height;
+    s32 closing_remaining_height;
+    u32 finishing_word;
+    u32 updated_word;
+    s32 entry_count;
 
-    prim = draw_state->prim_cursor;
-    ot = draw_state;
+    packet_cursor = draw_state->prim_cursor;
+    ordering_table = draw_state;
 
-    count = g_addhero_entry_state;
-    if ((count < 0x10) &&
-        ((((AddheroPacketBlock *)&g_addhero_element_pool.first)->second.attr.word & 7) == 2) &&
-        (((((AddheroPacketBlock *)&g_addhero_element_pool.first)->second.unk4 >> 9) & 1) != 0))
+    entry_count = g_addhero_entry_state;
+    if ((entry_count < 0x10) &&
+        (g_addhero_element_pool[1].attr.bits.state == ADDHERO_ELEMENT_STATE_ACTIVE) &&
+        (g_addhero_element_pool[1].size.bits.scrollable != 0))
     {
-        count *= 0xE;
-        if ((g_addhero_scroll_y + 0x58) < count)
+        entry_count *= ADDHERO_ENTRY_ROW_HEIGHT;
+        if ((g_addhero_scroll_y + 0x58) < entry_count)
         {
-            prim = (AddheroGpuPacket *)func_800AE76C(prim, ot, 0x114, 0x82, 0);
+            packet_cursor = (AddheroGpuPacket *)func_800AE76C(packet_cursor, ordering_table, 0x114, 0x82, 0);
         }
         if (g_addhero_scroll_y != 0)
         {
-            prim = (AddheroGpuPacket *)func_800AE76C(prim, ot, 0x114, 0x3A, 1);
+            packet_cursor = (AddheroGpuPacket *)func_800AE76C(packet_cursor, ordering_table, 0x114, 0x3A, 1);
         }
     }
 
     if (draw_state->frame_flag != 0)
     {
-        func_8001C56C(sp20, 0, 0xF0, 0x140, 0xE0);
+        func_8001C56C(draw_env, 0, 0xF0, 0x140, 0xE0);
     }
     else
     {
-        func_8001C56C(sp20, 0, 8, 0x140, 0xE0);
+        func_8001C56C(draw_env, 0, 8, 0x140, 0xE0);
     }
 
-    elem = (volatile u32 *)&g_addhero_element_pool.first;
-    slot = 0;
+    element_words = (volatile u32 *)&g_addhero_element_pool[0];
+    element_index = 0;
 
-    for (; slot < 8; slot++, elem += 3)
+    for (; element_index < ADDHERO_ELEMENT_COUNT; element_index++, element_words += ADDHERO_ELEMENT_WORD_STRIDE)
     {
-        if (*elem & 7)
+        if (*element_words & ADDHERO_ELEMENT_STATE_MASK)
         {
-            func_8001A5D4((s32)prim, sp20);
+            func_8001A5D4((s32)packet_cursor, draw_env);
 
-            addPrim(ot, prim);
+            addPrim(ordering_table, packet_cursor);
 
-            attr_word = *elem;
-            elem_state = attr_word & 7;
+            state_word = *element_words;
+            state = state_word & ADDHERO_ELEMENT_STATE_MASK;
 
-            prim = (AddheroGpuPacket *)((u8 *)prim + 0x40);
+            packet_cursor = (AddheroGpuPacket *)((u8 *)packet_cursor + 0x40);
 
-            switch (elem_state)
+            switch (state)
             {
-            case 1:
-                attr_bits = *elem;
-                flags_word = *(u32 *)((u8 *)elem + 4);
-                hi_byte = attr_bits >> 24;
-                span = ((flags_word & 1) << 8) | hi_byte;
-                anim_step = (attr_bits >> 3) & 0xF;
-                span_scaled = span * anim_step;
+            case ADDHERO_ELEMENT_STATE_OPENING:
+                opening_word = *element_words;
+                size_word = ((AddheroElement *)element_words)->size.word;
+                width_low = opening_word >> 24;
+                width = ((size_word & 1) << 8) | width_low;
+                transition_step = (opening_word >> 3) & 0xF;
+                scaled_width = width * transition_step;
                 g_pad_input = 0;
-                if (span_scaled < 0)
+                if (scaled_width < 0)
                 {
-                    span_scaled += 7;
+                    scaled_width += 7;
                 }
-                height = (flags_word >> 1) & 0xFF;
-                height_scaled = height * anim_step;
-                shrink_x = span_scaled >> 3;
-                if (height_scaled < 0)
+                height = (size_word >> 1) & 0xFF;
+                scaled_height = height * transition_step;
+                animated_width = scaled_width >> 3;
+                if (scaled_height < 0)
                 {
-                    height_scaled += 7;
+                    scaled_height += 7;
                 }
-                shrink_y = height_scaled >> 3;
-                inner_h = (s32)(height - shrink_y);
+                animated_height = scaled_height >> 3;
+                remaining_height = (s32)(height - animated_height);
 
-                prim = (*(AddheroElemDrawFunc *)((u8 *)elem + 8))(ot, prim, (s32)(span - shrink_x) / 2, inner_h / 2);
+                packet_cursor = ((AddheroElementDrawFunc)((AddheroElement *)element_words)->draw_handler)(ordering_table, packet_cursor, (s32)(width - animated_width) / 2, remaining_height / 2);
                 {
                     u32 post_word;
                     u32 field;
                     u32 high;
-                    post_word = *elem;
+                    post_word = *element_words;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    prim = (AddheroGpuPacket *)func_800AD850(prim, ot,
-                                           field + (s32)((((*(u32 *)((u8 *)elem + 4) & 1) << 8) | high) - shrink_x) / 2,
-                                           (*((u8 *)elem + 2)) + ((s32)((*(u32 *)((u8 *)elem + 4) >> 1) & 0xFF) - shrink_y) / 2,
-                                           shrink_x, shrink_y, draw_state->frame_flag, slot == 0);
+                    packet_cursor = (AddheroGpuPacket *)func_800AD850(packet_cursor, ordering_table,
+                                           field + (s32)((((((AddheroElement *)element_words)->size.word & 1) << 8) | high) - animated_width) / 2,
+                                           (((AddheroElement *)element_words)->attr.bytes.y) + ((s32)((((AddheroElement *)element_words)->size.word >> 1) & 0xFF) - animated_height) / 2,
+                                           animated_width, animated_height, draw_state->frame_flag, element_index == 0);
                 }
                 {
                     u32 old_word;
                     u32 new_word;
-                    old_word = *elem;
-                    new_word = (old_word & ~0x78) | (((((old_word >> 3) & 0xF) + 1) & 0xF) * 8);
-                    *(u32 *)elem = new_word;
+                    old_word = *element_words;
+                    new_word = (old_word & ~ADDHERO_ELEMENT_PHASE_MASK) | (((((old_word >> 3) & 0xF) + 1) & 0xF) * 8);
+                    *(u32 *)element_words = new_word;
                     if (((new_word >> 3) & 0xF) == 8)
                     {
                         func_800AA02C();
-                        *(u32 *)elem = (*elem & ~7) | 2;
+                        *(u32 *)element_words = (*element_words & ~ADDHERO_ELEMENT_STATE_MASK) | ADDHERO_ELEMENT_STATE_ACTIVE;
                     }
                 }
                 break;
 
-            case 2:
-                prim = (*(AddheroElemDrawFunc *)((u8 *)elem + 8))(ot, prim, 0, 0);
+            case ADDHERO_ELEMENT_STATE_ACTIVE:
+                packet_cursor = ((AddheroElementDrawFunc)((AddheroElement *)element_words)->draw_handler)(ordering_table, packet_cursor, 0, 0);
                 {
                     u32 case_word;
                     u32 high;
-                    case_word = *elem;
+                    case_word = *element_words;
                     high = case_word >> 24;
-                    prim = (AddheroGpuPacket *)func_800AD850(prim, ot,
-                                           (case_word >> 7) & 0x1FF, *((u8 *)elem + 2),
-                                           ((*(u32 *)((u8 *)elem + 4) & 1) << 8) | high,
-                                           (*(u32 *)((u8 *)elem + 4) >> 1) & 0xFF, draw_state->frame_flag, slot == 0);
+                    packet_cursor = (AddheroGpuPacket *)func_800AD850(packet_cursor, ordering_table,
+                                           (case_word >> 7) & 0x1FF, ((AddheroElement *)element_words)->attr.bytes.y,
+                                           ((((AddheroElement *)element_words)->size.word & 1) << 8) | high,
+                                           (((AddheroElement *)element_words)->size.word >> 1) & 0xFF, draw_state->frame_flag, element_index == 0);
                 }
-                anim_word = *elem;
-                if (((anim_word >> 3) & 0xF) != 0)
+                updated_word = *element_words;
+                if (((updated_word >> 3) & 0xF) != 0)
                 {
-                    *(u32 *)elem = (anim_word & ~0x78) | (((((anim_word >> 3) & 0xF) - 1) & 0xF) * 8);
+                    *(u32 *)element_words = (updated_word & ~ADDHERO_ELEMENT_PHASE_MASK) | (((((updated_word >> 3) & 0xF) - 1) & 0xF) * 8);
                 }
                 break;
 
-            case 3:
-                word3 = *elem;
-                flags_word = *(u32 *)((u8 *)elem + 4);
-                acc3 = (u32)word3 >> 24;
-                span = ((flags_word & 1) << 8) | acc3;
-                word3 = (u32)word3 >> 3;
-                word3 &= 0xF;
-                acc3 = span * word3;
+            case ADDHERO_ELEMENT_STATE_CLOSING:
+                closing_word = *element_words;
+                size_word = ((AddheroElement *)element_words)->size.word;
+                closing_scaled_width = (u32)closing_word >> 24;
+                width = ((size_word & 1) << 8) | closing_scaled_width;
+                closing_word = (u32)closing_word >> 3;
+                closing_word &= 0xF;
+                closing_scaled_width = width * closing_word;
                 g_pad_input = 0;
-                if (acc3 < 0)
+                if (closing_scaled_width < 0)
                 {
-                    acc3 += 7;
+                    closing_scaled_width += 7;
                 }
-                height3 = (flags_word >> 1) & 0xFF;
-                height_scaled3 = height3 * word3;
-                shrink_x = acc3 >> 3;
-                if (height_scaled3 < 0)
+                closing_height = (size_word >> 1) & 0xFF;
+                closing_scaled_height = closing_height * closing_word;
+                animated_width = closing_scaled_width >> 3;
+                if (closing_scaled_height < 0)
                 {
-                    height_scaled3 += 7;
+                    closing_scaled_height += 7;
                 }
-                shrink_y = height_scaled3 >> 3;
-                inner_h3 = (s32)(height3 - shrink_y);
+                animated_height = closing_scaled_height >> 3;
+                closing_remaining_height = (s32)(closing_height - animated_height);
 
-                prim = (*(AddheroElemDrawFunc *)((u8 *)elem + 8))(ot, prim, (s32)(span - shrink_x) / 2, inner_h3 / 2);
+                packet_cursor = ((AddheroElementDrawFunc)((AddheroElement *)element_words)->draw_handler)(ordering_table, packet_cursor, (s32)(width - animated_width) / 2, closing_remaining_height / 2);
                 {
                     u32 post_word;
                     u32 field;
                     u32 high;
-                    post_word = *elem;
+                    post_word = *element_words;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    prim = (AddheroGpuPacket *)func_800AD850(prim, ot,
-                                           field + (s32)((((*(u32 *)((u8 *)elem + 4) & 1) << 8) | high) - shrink_x) / 2,
-                                           (*((u8 *)elem + 2)) + ((s32)((*(u32 *)((u8 *)elem + 4) >> 1) & 0xFF) - shrink_y) / 2,
-                                           shrink_x, shrink_y, draw_state->frame_flag, slot == 0);
+                    packet_cursor = (AddheroGpuPacket *)func_800AD850(packet_cursor, ordering_table,
+                                           field + (s32)((((((AddheroElement *)element_words)->size.word & 1) << 8) | high) - animated_width) / 2,
+                                           (((AddheroElement *)element_words)->attr.bytes.y) + ((s32)((((AddheroElement *)element_words)->size.word >> 1) & 0xFF) - animated_height) / 2,
+                                           animated_width, animated_height, draw_state->frame_flag, element_index == 0);
                 }
                 {
                     u32 old_word;
-                    old_word = *elem;
-                    acc3 = old_word & ~0x78;
+                    old_word = *element_words;
+                    closing_scaled_width = old_word & ~ADDHERO_ELEMENT_PHASE_MASK;
                     old_word >>= 3;
                     old_word &= 0xF;
                     old_word--;
                     old_word &= 0xF;
                     old_word <<= 3;
-                    acc3 |= old_word;
-                    *(u32 *)elem = acc3;
-                    if (!(((u32)acc3 >> 3) & 0xF))
+                    closing_scaled_width |= old_word;
+                    *(u32 *)element_words = closing_scaled_width;
+                    if (!(((u32)closing_scaled_width >> 3) & 0xF))
                     {
-                        *(u32 *)elem = ((((u32)acc3 & ~0x78) | 0x18) & ~7) | 4;
+                        *(u32 *)element_words = ((((u32)closing_scaled_width & ~ADDHERO_ELEMENT_PHASE_MASK) | 0x18) & ~ADDHERO_ELEMENT_STATE_MASK) | ADDHERO_ELEMENT_STATE_FINISHING;
                     }
                 }
                 break;
 
-            case 4:
-                elem_word4 = *(u32 *)elem;
+            case ADDHERO_ELEMENT_STATE_FINISHING:
+                finishing_word = *(u32 *)element_words;
                 g_pad_input = 0;
-                anim_word = (elem_word4 & ~0x78) | (((((elem_word4 >> 3) & 0xF) - 1) & 0xF) * 8);
-                *(u32 *)elem = anim_word;
-                if (!((anim_word >> 3) & 0xF))
+                updated_word = (finishing_word & ~ADDHERO_ELEMENT_PHASE_MASK) | (((((finishing_word >> 3) & 0xF) - 1) & 0xF) * 8);
+                *(u32 *)element_words = updated_word;
+                if (!((updated_word >> 3) & 0xF))
                 {
-                    *(u32 *)elem = anim_word & ~7;
+                    *(u32 *)element_words = updated_word & ~ADDHERO_ELEMENT_STATE_MASK;
                 }
                 break;
             }
         }
     }
 
-    draw_state->prim_cursor = prim;
+    draw_state->prim_cursor = packet_cursor;
 }
 
 /**
@@ -1591,7 +1755,7 @@ void addhero_update_and_draw_elements(AddheroDrawState *draw_state)
  */
 void addhero_deactivate_primary_element(void)
 {
-    g_addhero_element_pool.first.attr.word &= ~7;
+    g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
 }
 
 /**
@@ -1714,7 +1878,7 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 
     if ((u32)(addhero_poll_and_rewind_primary_handles() - 1) < 2U)
     {
-        g_addhero_element_pool.first.attr.f.state = 0;
+        g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
         func_800AA02C();
         play_menu_sfx(0x78, 0x80);
         g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
@@ -1726,7 +1890,7 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         status = g_pad_input;
         if (status & 0x40)
         {
-            g_addhero_element_pool.first.attr.f.state = 0;
+            g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
             func_800AA02C();
             play_menu_sfx(0x78, 0x80);
             g_addhero_load_step = g_addhero_loadseq_abort;
@@ -1735,7 +1899,7 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             if (g_addhero_choice_toggle != 0)
             {
-                g_addhero_element_pool.first.attr.f.state = 0;
+                g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
                 func_800AA02C();
                 play_menu_sfx(0x78, 0x80);
                 g_addhero_load_step = g_addhero_loadseq_abort;
@@ -1745,15 +1909,15 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                 play_menu_sfx(0x7E, 0x80);
                 g_addhero_progress_active = 1;
                 g_addhero_load_step = g_addhero_loadseq_load_begin;
-                p = &g_addhero_element_pool.first;
-                p->draw = addhero_draw_load_progress;
-                p->attr.f.phase = 1;
-                p->attr.f.state = 1;
-                p->attr.f.x = 0x10;
-                p->attr.f.code = 0x61;
-                p->active = 1;
-                p->y = 0x2C;
-                SET_ELEM_CODE(p, 0x20);
+                p = &g_addhero_element_pool[0];
+                p->draw_handler = addhero_draw_load_progress;
+                p->attr.bits.transition_step = 1;
+                p->attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
+                p->attr.bits.x = 0x10;
+                p->attr.bits.y = 0x61;
+                p->size.bits.width_high = 1;
+                p->size.bits.height = 0x2C;
+                SET_ELEM_WIDTH_LOW(p, 0x20);
             }
         }
     }
@@ -1792,8 +1956,8 @@ s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     if (g_addhero_progress_active == 0)
     {
         resource = g_addhero_save_blob;
-        p = (AddheroElement *)&g_addhero_element_pool.first;
-        p->attr.f.state = 0;
+        p = (AddheroElement *)&g_addhero_element_pool[0];
+        p->attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
         if (addhero_validate_save_blob(resource) == 0)
         {
             addhero_open_status_dialog(4);
@@ -1812,10 +1976,10 @@ s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         cursor = p;
         for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, cursor++)
         {
-            if (cursor->attr.f.state != 0)
+            if (cursor->attr.bits.state != ADDHERO_ELEMENT_STATE_INACTIVE)
             {
-                cursor->attr.f.state = 3;
-                cursor->attr.f.phase = 8;
+                cursor->attr.bits.state = ADDHERO_ELEMENT_STATE_CLOSING;
+                cursor->attr.bits.transition_step = 8;
             }
         }
         field_restore_fade_target_with_duration(8);
@@ -1883,14 +2047,14 @@ s32 addhero_draw_progress_bar(s32 prim, s32 *ot)
 void addhero_open_status_dialog(s32 message_id)
 {
     play_menu_sfx(0x78, 0x80);
-    g_addhero_element_pool.first.draw = (void *)addhero_draw_status_dialog;
-    g_addhero_element_pool.first.attr.f.phase = 1;
-    g_addhero_element_pool.first.attr.f.state = 1;
-    g_addhero_element_pool.first.attr.f.x = 0x20;
-    g_addhero_element_pool.first.attr.f.code = 0x70;
-    g_addhero_element_pool.first.active = 1;
-    g_addhero_element_pool.first.y = 0x14;
-    SET_ELEM_CODE(&g_addhero_element_pool.first, 0);
+    g_addhero_element_pool[0].draw_handler = (void *)addhero_draw_status_dialog;
+    g_addhero_element_pool[0].attr.bits.transition_step = 1;
+    g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
+    g_addhero_element_pool[0].attr.bits.x = 0x20;
+    g_addhero_element_pool[0].attr.bits.y = 0x70;
+    g_addhero_element_pool[0].size.bits.width_high = 1;
+    g_addhero_element_pool[0].size.bits.height = 0x14;
+    SET_ELEM_WIDTH_LOW(&g_addhero_element_pool[0], 0);
     func_800AA02C();
     g_addhero_write_in_progress = 0;
     g_addhero_progress_active = 0;
@@ -1911,14 +2075,14 @@ void addhero_open_status_dialog(s32 message_id)
 void addhero_open_exit_dialog(s32 message_id)
 {
     play_menu_sfx(0x78, 0x80);
-    g_addhero_element1.draw = (void *)addhero_draw_exit_dialog;
-    g_addhero_element1.attr.f.phase = 1;
-    g_addhero_element1.attr.f.state = 1;
-    g_addhero_element1.attr.f.x = 0x20;
-    g_addhero_element1.attr.f.code = 0x70;
-    g_addhero_element1.active = 1;
-    g_addhero_element1.y = 0x14;
-    SET_ELEM_CODE(&g_addhero_element1, 0);
+    g_addhero_element1.draw_handler = (void *)addhero_draw_exit_dialog;
+    g_addhero_element1.attr.bits.transition_step = 1;
+    g_addhero_element1.attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
+    g_addhero_element1.attr.bits.x = 0x20;
+    g_addhero_element1.attr.bits.y = 0x70;
+    g_addhero_element1.size.bits.width_high = 1;
+    g_addhero_element1.size.bits.height = 0x14;
+    SET_ELEM_WIDTH_LOW(&g_addhero_element1, 0);
     func_800AA02C();
     g_addhero_write_in_progress = 0;
     g_addhero_progress_active = 0;
@@ -1961,7 +2125,7 @@ s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     }
     if (g_pad_input & 0x220)
     {
-        g_addhero_element_pool.first.attr.f.state = 0;
+        g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
         func_800AA02C();
     }
     return prim;
@@ -1980,7 +2144,7 @@ s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
-    AddheroPacket *p;
+    AddheroElement *p;
     s32 i;
 
     switch (g_addhero_dialog_state)
@@ -2003,11 +2167,11 @@ s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     {
         g_addhero_result = 3;
         g_menu_element_counter = 0x20;
-        p = &g_addhero_element_pool.first;
+        p = &g_addhero_element_pool[0];
         for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++)
         {
-            p->size_flags &= ~0x200;
-            p->state_word &= ~7;
+            p->size.word &= ~0x200;
+            p->attr.word &= ~7;
             p++;
         }
         field_restore_fade_target_with_duration(8);
@@ -2025,11 +2189,11 @@ s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal offset; screen X = 0x90 - x_offset.
  * @param y_offset Vertical offset applied to the message rows.
  * @return The updated primitive pointer.
- * @see decomp.me (100%)
  */
 s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
+
     switch (g_addhero_entry_state)
     {
     case 0xF8:
@@ -2040,12 +2204,14 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case ADDHERO_ENTRY_STATE_IDLE:
         {
-            s32 x; u8 *base;
-            x = -x_offset + 0x90;
-            base = (u8 *)&g_addhero_glyph_table;
-            prim = func_800A88A0(prim, ot, base + g_addhero_glyph_table, 4, x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
+            s32 message_x;
+            u8 *glyph_base;
+
+            message_x = -x_offset + 0x90;
+            glyph_base = (u8 *)&g_addhero_glyph_table;
+            prim = func_800A88A0(prim, ot, glyph_base + g_addhero_glyph_table, 4, message_x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, 0x1C - y_offset, 2);
         }
         break;
     case 0xFA:
@@ -2065,56 +2231,102 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case ADDHERO_ENTRY_STATE_LOAD_PROGRESS:
         {
-            s32 x; u8 *base; POLY_G4 *g; s32 next, elapsed, extent, color, finalmode;
-            x = -x_offset + 0x90;
-            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_load_progress, 0x32), 4, x, -y_offset, 2);
-            base = (u8 *)&g_addhero_glyph_load_progress - 0x32;
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
-            next = prim; g = (POLY_G4 *)prim;
+            s32 message_x;
+            u8 *glyph_base;
+            POLY_G4 *bar;
+            s32 next_prim;
+            s32 elapsed_frames;
+            s32 bar_extent;
+            s32 bar_color;
+            s32 dialog_state;
+
+            message_x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_load_progress, 0x32), 4, message_x, -y_offset, 2);
+            glyph_base = (u8 *)&g_addhero_glyph_load_progress - 0x32;
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, 0x1C - y_offset, 2);
+            next_prim = prim;
+            bar = (POLY_G4 *)prim;
             if (g_addhero_progress_bar_active != 0)
             {
-                elapsed = VSync(-1) - g_addhero_progress_start_tick;
-                if (elapsed >= 0x101) elapsed = 0x100;
-                color = 0xFFFF00; extent = elapsed * 0x120;
-                SET_BGR0_PACKED(g, 0xFF); SET_POLY_G4_BGR1_PACKED(g, 0xFFFF); SET_POLY_G4_BGR3_PACKED(g, 0xFF0000); ((u8 *)g)[3]=8;
-                SET_POLY_G4_BGR2_PACKED(g, color); g->code=0x38; g->x2=0; g->x0=0;
-                if (extent < 0) extent += 0xFF;
-                g->x3=extent>>8; g->x1=extent>>8; g->y1=0; g->y0=0; g->y3=0x2C; g->y2=0x2C;
-                g->tag=(g->tag & 0xFF000000)|(*ot & 0xFFFFFF);
-                *ot=(*ot & 0xFF000000)|(prim & 0xFFFFFF); next=prim+0x24;
+                elapsed_frames = VSync(-1) - g_addhero_progress_start_tick;
+                if (elapsed_frames >= 0x101)
+                {
+                    elapsed_frames = 0x100;
+                }
+                bar_color = 0xFFFF00;
+                bar_extent = elapsed_frames * 0x120;
+                SET_BGR0_PACKED(bar, 0xFF);
+                SET_POLY_G4_BGR1_PACKED(bar, 0xFFFF);
+                SET_POLY_G4_BGR3_PACKED(bar, 0xFF0000);
+                setlen(bar, 8);
+                SET_POLY_G4_BGR2_PACKED(bar, bar_color);
+                setcode(bar, 0x38);
+                bar->x2 = 0;
+                bar->x0 = 0;
+                if (bar_extent < 0)
+                {
+                    bar_extent += 0xFF;
+                }
+                bar->x3 = bar_extent >> 8;
+                bar->x1 = bar_extent >> 8;
+                bar->y1 = 0;
+                bar->y0 = 0;
+                bar->y3 = 0x2C;
+                bar->y2 = 0x2C;
+                addPrim(ot, bar);
+                next_prim = prim + 0x24;
             }
-            prim = next;
+            prim = next_prim;
             if (g_addhero_progress_active == 0)
             {
                 if (addhero_validate_save_blob(g_addhero_save_blob) == 0)
                 {
                     play_menu_sfx(0x78, 0x80);
-                    g_addhero_element_pool.first.draw=(void *)addhero_draw_status_dialog;
-                    g_addhero_element_pool.first.attr.f.phase=1; g_addhero_element_pool.first.attr.f.state=1; g_addhero_element_pool.first.attr.f.x=0x20; g_addhero_element_pool.first.attr.f.code=0x70;
-                    g_addhero_element_pool.first.active=1; g_addhero_element_pool.first.y=0x14; SET_ELEM_CODE(&g_addhero_element_pool.first,0);
+                    g_addhero_element_pool[0].draw_handler = (void *)addhero_draw_status_dialog;
+                    g_addhero_element_pool[0].attr.bits.transition_step = 1;
+                    g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
+                    g_addhero_element_pool[0].attr.bits.x = 0x20;
+                    g_addhero_element_pool[0].attr.bits.y = 0x70;
+                    g_addhero_element_pool[0].size.bits.width_high = 1;
+                    g_addhero_element_pool[0].size.bits.height = 0x14;
+                    SET_ELEM_WIDTH_LOW(&g_addhero_element_pool[0], 0);
                     func_800AA02C();
-                    g_addhero_write_in_progress=0; g_addhero_selection_status=0; g_addhero_io_busy=0; g_addhero_progress_active=0; g_addhero_entry_state=ADDHERO_ENTRY_STATE_IDLE;
-                    addhero_reset_entry_ranks(); finalmode=4; g_addhero_load_step=0; g_addhero_dialog_state=finalmode; return prim;
+                    g_addhero_write_in_progress = 0;
+                    g_addhero_selection_status = 0;
+                    g_addhero_io_busy = 0;
+                    g_addhero_progress_active = 0;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
+                    addhero_reset_entry_ranks();
+                    dialog_state = 4;
+                    g_addhero_load_step = 0;
+                    g_addhero_dialog_state = dialog_state;
+                    return prim;
                 }
-                play_menu_sfx(0x7B,0x80); g_addhero_entry_state=ADDHERO_ENTRY_STATE_SAVE_CONFIRM; addhero_enable_choice_toggle(); func_800AA02C();
+                play_menu_sfx(0x7B, 0x80);
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
+                addhero_enable_choice_toggle();
+                func_800AA02C();
             }
         }
         break;
-    case 0xF3:
+    case ADDHERO_ENTRY_STATE_CONFIRM_PROMPT:
         {
-            s32 x; AddheroPacket *packet; s32 i;
-            x = -x_offset + 0x90;
-            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f3,0x6E), 4, x, -y_offset, 2);
-            prim = addhero_draw_choice_prompt(prim, ot, x, 0xE -y_offset);
-            if (g_pad_input & 0x40)
+            s32 message_x;
+            AddheroElement *element;
+            s32 i;
+
+            message_x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f3, 0x6E), 4, message_x, -y_offset, 2);
+            prim = addhero_draw_choice_prompt(prim, ot, message_x, 0xE - y_offset);
+            if (g_pad_input & PAD_BTN_CIRCLE)
             {
                 play_menu_sfx(0x78, 0x80);
                 addhero_enable_choice_toggle();
                 g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
                 func_800AA02C();
             }
-            else if (g_pad_input & 0x220)
+            else if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
             {
                 if (g_addhero_choice_toggle != 0)
                 {
@@ -2128,11 +2340,11 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     play_menu_sfx(0x7D, 0x80);
                     g_addhero_result = 3;
                     g_menu_element_counter = 0x20;
-                    packet = (AddheroPacket *)&g_addhero_element_pool.first;
-                    for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, packet++)
+                    element = g_addhero_element_pool;
+                    for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, element++)
                     {
-                        packet->size_flags &= ~0x200;
-                        packet->state_word &= ~7;
+                        element->size.bits.scrollable = 0;
+                        element->attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
                     }
                     field_restore_fade_target_with_duration(8);
                     func_800AA02C();
@@ -2142,37 +2354,40 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case ADDHERO_ENTRY_STATE_SAVE_CONFIRM:
         {
-            s32 x; u8 *base; s32 temp;
-            x=-x_offset+0x90;
-            prim=func_800A88A0(prim,ot,GLYPH_SYM(g_addhero_glyph_save_confirm_msg, 0x6A),4,x,-y_offset,2);
-            base=(u8 *)&g_addhero_glyph_save_confirm_msg-0x6A;
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x6C),4,x,0xE -y_offset,2);
-            prim=addhero_draw_choice_prompt(prim,ot,x,0x1C-y_offset);
-            if (g_pad_input & 0x40)
+            s32 message_x;
+            u8 *base;
+            s32 checksum;
+
+            message_x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_save_confirm_msg, 0x6A), 4, message_x, -y_offset, 2);
+            base = (u8 *)&g_addhero_glyph_save_confirm_msg - 0x6A;
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x6C), 4, message_x, 0xE - y_offset, 2);
+            prim = addhero_draw_choice_prompt(prim, ot, message_x, 0x1C - y_offset);
+            if (g_pad_input & PAD_BTN_CIRCLE)
             {
                 addhero_enable_choice_toggle();
-                g_addhero_entry_state = 0xF3;
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_PROMPT;
                 play_menu_sfx(0x78, 0x80);
                 func_800AA02C();
             }
-            else if (g_pad_input & 0x220)
+            else if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
             {
                 if (g_addhero_choice_toggle != 0)
                 {
                     addhero_enable_choice_toggle();
-                    g_addhero_entry_state = 0xF3;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_PROMPT;
                     play_menu_sfx(0x78, 0x80);
                     func_800AA02C();
                 }
                 else
                 {
-                    play_menu_sfx(0x7E,0x80);
+                    play_menu_sfx(0x7E, 0x80);
                     base = g_addhero_save_blob;
-                    bcopy(g_pad_ctx + 0x840, base + 0x770, 0x250);
-                    *(s32 *)(base + 0x788) |= 0x80;
-                    temp = addhero_compute_save_checksum(base);
-                    *(s32 *)(base + 0x33E4) = 0x414E41;
-                    *(s32 *)(base + 0x33E0) = temp;
+                    bcopy(g_pad_ctx + 0x840, &((AddheroSaveBlob *)base)->context, sizeof(AddheroSaveContextBlock));
+                    ((AddheroSaveBlob *)base)->context.inject_flags |= ADDHERO_INPUT_INJECTION_ENABLED;
+                    checksum = addhero_compute_save_checksum(base);
+                    ((AddheroSaveBlob *)base)->magic = ADDHERO_SAVE_MAGIC;
+                    ((AddheroSaveBlob *)base)->checksum = checksum;
                     g_addhero_write_in_progress = 1;
                     g_addhero_load_step = &g_addhero_loadseq_save_begin;
                     g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_PROGRESS;
@@ -2182,61 +2397,200 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case ADDHERO_ENTRY_STATE_SAVE_PROGRESS:
         {
-            s32 x; u8 *base; POLY_G4 *g; s32 next,elapsed,extent,color; AddheroPacket *packet; s32 i;
-            x=-x_offset+0x90;
-            prim=func_800A88A0(prim,ot,GLYPH_SYM(g_addhero_glyph_save_progress, 0x1C),4,x,-y_offset,2);
-            base=(u8 *)&g_addhero_glyph_save_progress-0x1C;
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -y_offset,2);
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-y_offset,2);
-            next=prim; g=(POLY_G4 *)prim;
-            if(g_addhero_progress_bar_active!=0){
-                elapsed=VSync(-1)-g_addhero_progress_start_tick; if(elapsed>=0x101)elapsed=0x100; color=0xFFFF00; extent=elapsed*0x120;
-                SET_BGR0_PACKED(g,0xFF);SET_POLY_G4_BGR1_PACKED(g,0xFFFF);SET_POLY_G4_BGR3_PACKED(g,0xFF0000);((u8*)g)[3]=8;SET_POLY_G4_BGR2_PACKED(g,color);g->code=0x38;g->x2=0;g->x0=0;
-                if(extent<0)extent+=0xFF;g->x3=extent>>8;g->x1=extent>>8;g->y1=0;g->y0=0;g->y3=0x2C;g->y2=0x2C;
-                g->tag=(g->tag&0xFF000000)|(*ot&0xFFFFFF);*ot=(*ot&0xFF000000)|(prim&0xFFFFFF);next=prim+0x24;
+            s32 message_x;
+            u8 *glyph_base;
+            POLY_G4 *bar;
+            s32 next_prim;
+            s32 elapsed_frames;
+            s32 bar_extent;
+            s32 bar_color;
+            AddheroElement *element;
+            s32 i;
+
+            message_x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_save_progress, 0x1C), 4, message_x, -y_offset, 2);
+            glyph_base = (u8 *)&g_addhero_glyph_save_progress - 0x1C;
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, 0x1C - y_offset, 2);
+            next_prim = prim;
+            bar = (POLY_G4 *)prim;
+            if (g_addhero_progress_bar_active != 0)
+            {
+                elapsed_frames = VSync(-1) - g_addhero_progress_start_tick;
+                if (elapsed_frames >= 0x101)
+                {
+                    elapsed_frames = 0x100;
+                }
+                bar_color = 0xFFFF00;
+                bar_extent = elapsed_frames * 0x120;
+                SET_BGR0_PACKED(bar, 0xFF);
+                SET_POLY_G4_BGR1_PACKED(bar, 0xFFFF);
+                SET_POLY_G4_BGR3_PACKED(bar, 0xFF0000);
+                setlen(bar, 8);
+                SET_POLY_G4_BGR2_PACKED(bar, bar_color);
+                setcode(bar, 0x38);
+                bar->x2 = 0;
+                bar->x0 = 0;
+                if (bar_extent < 0)
+                {
+                    bar_extent += 0xFF;
+                }
+                bar->x3 = bar_extent >> 8;
+                bar->x1 = bar_extent >> 8;
+                bar->y1 = 0;
+                bar->y0 = 0;
+                bar->y3 = 0x2C;
+                bar->y2 = 0x2C;
+                addPrim(ot, bar);
+                next_prim = prim + 0x24;
             }
-            prim=next;
-            if(g_addhero_write_in_progress==0){
-                g_pad_ctx[0x840]=0; play_menu_sfx(0x7A,0x80); g_menu_element_counter=0x20;
-                packet=(AddheroPacket *)&g_addhero_element_pool.first;
-                for(i=0;i<ADDHERO_ELEMENT_COUNT;i++,packet++){ packet->size_flags &= ~0x200; packet->state_word &= ~7; }
-                field_restore_fade_target_with_duration(8); g_addhero_result=2;
+            prim = next_prim;
+            if (g_addhero_write_in_progress == 0)
+            {
+                g_pad_ctx[0x840] = 0;
+                play_menu_sfx(0x7A, 0x80);
+                g_menu_element_counter = 0x20;
+                element = g_addhero_element_pool;
+                for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, element++)
+                {
+                    element->size.bits.scrollable = 0;
+                    element->attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
+                }
+                field_restore_fade_target_with_duration(8);
+                g_addhero_result = 2;
             }
         }
         break;
     default:
         {
-            s32 x,posv,diff; u8 *base;
-            x=-x_offset+0x90; base=(u8 *)&g_addhero_glyph_table;
-            prim=func_800A88A0(prim,ot,base+g_addhero_glyph_table,4,x,-y_offset,2);
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -y_offset,2);
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-y_offset,2);
-            if(g_addhero_entry_scan_active==0){
-                if(g_addhero_io_busy!=0)return prim;
-                if((u32)(*g_addhero_load_step-6)<2U)return prim;
-                if((strncmp(g_lom_save_filename_prefix,&g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row],0xC)!=0) ||
-                   (g_addhero_entry_identity != *(s32 *)(g_pad_ctx+0xD8))) {
+            s32 message_x;
+            s32 selected_y;
+            s32 scroll_delta;
+            u8 *glyph_base;
+
+            message_x = -x_offset + 0x90;
+            glyph_base = (u8 *)&g_addhero_glyph_table;
+            prim = func_800A88A0(prim, ot, glyph_base + g_addhero_glyph_table, 4, message_x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, 0x1C - y_offset, 2);
+            if (g_addhero_entry_scan_active == 0)
+            {
+                if (g_addhero_io_busy != 0)
+                {
+                    return prim;
+                }
+                if ((u32)(*g_addhero_load_step - 6) < 2U)
+                {
+                    return prim;
+                }
+                if ((strncmp(g_lom_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row], 0xC) != 0) ||
+                    (g_addhero_entry_identity != ((AddheroRecord *)g_pad_ctx)->identity))
+                {
                     g_addhero_selected_row++;
-                    if(g_addhero_selected_row>=g_addhero_entry_state){ if(g_addhero_entry_state!=0)g_addhero_entry_state=0xF7; else g_addhero_entry_state=0xF8; }
-                    else { addhero_commit_selected_entry(); posv=g_addhero_selected_row*0xE; diff=posv-g_addhero_scroll_y;
-                        if(diff>=0x4B){g_addhero_scroll_target_y=posv-0x46;g_addhero_scroll_frames=4;} if(diff<0){g_addhero_scroll_target_y=posv;g_addhero_scroll_frames=4;}
+                    if (g_addhero_selected_row >= g_addhero_entry_state)
+                    {
+                        if (g_addhero_entry_state != 0)
+                        {
+                            g_addhero_entry_state = 0xF7;
+                        }
+                        else
+                        {
+                            g_addhero_entry_state = 0xF8;
+                        }
                     }
-                } else { g_addhero_progress_start_tick=VSync(-1);g_addhero_progress_active=1;g_addhero_load_step=&g_addhero_loadseq_load_progress;g_addhero_entry_state=ADDHERO_ENTRY_STATE_LOAD_PROGRESS; }
+                    else
+                    {
+                        addhero_commit_selected_entry();
+                        selected_y = g_addhero_selected_row * 0xE;
+                        scroll_delta = selected_y - g_addhero_scroll_y;
+                        if (scroll_delta >= 0x4B)
+                        {
+                            g_addhero_scroll_target_y = selected_y - 0x46;
+                            g_addhero_scroll_frames = 4;
+                        }
+                        if (scroll_delta < 0)
+                        {
+                            g_addhero_scroll_target_y = selected_y;
+                            g_addhero_scroll_frames = 4;
+                        }
+                    }
+                }
+                else
+                {
+                    g_addhero_progress_start_tick = VSync(-1);
+                    g_addhero_progress_active = 1;
+                    g_addhero_load_step = &g_addhero_loadseq_load_progress;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_LOAD_PROGRESS;
+                }
             }
         }
         break;
     case 0xFE:
         break;
     }
-    if(g_addhero_io_busy!=0)return prim;
-    if(g_addhero_entry_state==ADDHERO_ENTRY_STATE_LOAD_PROGRESS)return prim; if(g_addhero_entry_state==ADDHERO_ENTRY_STATE_SAVE_PROGRESS)return prim; if(g_addhero_entry_state==ADDHERO_ENTRY_STATE_SAVE_CONFIRM)return prim; if(g_addhero_entry_state==0xF3)return prim;
-    if(g_pad_input&0x40){
-        s32 *p; s32 i,word; D_80122718=3;play_menu_sfx(0x78,0x80);field_restore_fade_target();p=(s32 *)&g_addhero_element_pool.first;i=0;
-        do{word=*p;if(word&7)*p=(((word&~7)|3)&~0x78)|0x40;i++;p+=3;}while(i<8);return prim;
+
+    if (g_addhero_io_busy != 0)
+    {
+        return prim;
     }
-    if((g_pad_input&0xA100)&&(g_addhero_entry_state!=ADDHERO_ENTRY_STATE_IDLE)){
-        play_menu_sfx(0x7D,0x80);g_addhero_load_flow_active=0;g_addhero_load_step=0;g_addhero_scroll_frames=0;g_addhero_scroll_target_y=0;g_addhero_scroll_y=0;g_addhero_selected_row=0;g_addhero_entry_state=ADDHERO_ENTRY_STATE_IDLE;g_addhero_selection_status=0;
-        g_addhero_card_slot^=1;addhero_reset_entry_ranks();func_800AA02C();g_addhero_progress_bar_active=0;g_pad_input=0;g_addhero_load_step=&g_addhero_loadseq_start;
+    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_LOAD_PROGRESS)
+    {
+        return prim;
+    }
+    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_SAVE_PROGRESS)
+    {
+        return prim;
+    }
+    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_SAVE_CONFIRM)
+    {
+        return prim;
+    }
+    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_CONFIRM_PROMPT)
+    {
+        return prim;
+    }
+
+    if (g_pad_input & PAD_BTN_CIRCLE)
+    {
+        AddheroElement *element;
+        s32 i;
+        s32 attr;
+
+        D_80122718 = 3;
+        play_menu_sfx(0x78, 0x80);
+        field_restore_fade_target();
+        element = g_addhero_element_pool;
+        i = 0;
+        do
+        {
+            attr = element->attr.word;
+            if (attr & ADDHERO_ELEMENT_STATE_MASK)
+            {
+                element->attr.word = (((attr & ~ADDHERO_ELEMENT_STATE_MASK) | ADDHERO_ELEMENT_STATE_CLOSING) & ~ADDHERO_ELEMENT_PHASE_MASK) | 0x40;
+            }
+            i++;
+            element++;
+        } while (i < ADDHERO_ELEMENT_COUNT);
+        return prim;
+    }
+
+    if ((g_pad_input & ADDHERO_CARD_SWITCH_BUTTON_MASK) && (g_addhero_entry_state != ADDHERO_ENTRY_STATE_IDLE))
+    {
+        play_menu_sfx(0x7D, 0x80);
+        g_addhero_load_flow_active = 0;
+        g_addhero_load_step = 0;
+        g_addhero_scroll_frames = 0;
+        g_addhero_scroll_target_y = 0;
+        g_addhero_scroll_y = 0;
+        g_addhero_selected_row = 0;
+        g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
+        g_addhero_selection_status = 0;
+        g_addhero_card_slot ^= 1;
+        addhero_reset_entry_ranks();
+        func_800AA02C();
+        g_addhero_progress_bar_active = 0;
+        g_pad_input = 0;
+        g_addhero_load_step = &g_addhero_loadseq_start;
     }
     return prim;
 }
@@ -2370,13 +2724,15 @@ s32 addhero_draw_choice_prompt(s32 prim, s32 *ot, s32 x, s32 y)
  *        "ANA" magic tag.
  * @param base Base of the 0x4000-byte save blob.
  * @return 1 when the checksum and magic both match, 0 otherwise.
- * @see decomp.me (100%)
  */
 s32 addhero_validate_save_blob(u8 *base)
 {
-    if (*(s32 *)(base + 0x33E0) == addhero_compute_save_checksum(base))
+    AddheroSaveBlob *save;
+
+    save = (AddheroSaveBlob *)base;
+    if (save->checksum == addhero_compute_save_checksum(base))
     {
-        if (*(s32 *)(base + 0x33E4) == 0x414E41)
+        if (save->magic == ADDHERO_SAVE_MAGIC)
         {
             return 1;
         }
@@ -2387,8 +2743,7 @@ s32 addhero_validate_save_blob(u8 *base)
 /**
  * @brief Compute the save-blob checksum over the first 0x33E0 bytes.
  * @param data Base of the save blob.
- * @return The checksum: (byte sum * 2) + 0x0414E410.
- * @see decomp.me (100%)
+ * @return Twice the byte sum plus ADDHERO_SAVE_CHECKSUM_BIAS.
  */
 s32 addhero_compute_save_checksum(u8 *data)
 {
@@ -2401,24 +2756,23 @@ s32 addhero_compute_save_checksum(u8 *data)
     i = 0;
     do
     {
-        i += 1;
+        i++;
         sum += *p;
-        p += 1;
-    } while (i < 0x33E0U);
-    return (sum * 2) + 0x0414E410;
+        p++;
+    } while (i < ADDHERO_SAVE_CHECKSUM_BYTES);
+    return (sum * 2) + ADDHERO_SAVE_CHECKSUM_BIAS;
 }
 
 /**
  * @brief Format @p value as a big-endian double-byte decimal glyph string,
  *        suppressing leading zeros; emits a fixed overflow string past 999999.
- * @param out   Destination glyph buffer.
+ * @param out Destination glyph buffer.
  * @param value Value to format.
  * @return Pointer to the terminator written after the last glyph.
- * @see decomp.me (100%)
  */
 s8 *addhero_format_decimal(s8 *out, s32 value)
 {
-    struct Copy7 { s8 data[7]; };
+    struct OverflowGlyphString { s8 data[7]; };
     extern s8 g_addhero_decimal_overflow_glyphs[];
     s32 digit;
     s32 divisor;
@@ -2427,14 +2781,12 @@ s8 *addhero_format_decimal(s8 *out, s32 value)
 
     p = out;
     divisor = 100000;
-    if (value < divisor * 10)
+    if (value >= divisor * 10)
     {
-        goto format;
+        *(struct OverflowGlyphString *)p = *(struct OverflowGlyphString *)g_addhero_decimal_overflow_glyphs;
+        return p + 6;
     }
-    *(struct Copy7 *)p = *(struct Copy7 *)g_addhero_decimal_overflow_glyphs;
-    return p + 6;
 
-format:
     started = 0;
     do
     {
@@ -2466,59 +2818,40 @@ format:
  * @param out       Destination character buffer.
  * @param value     Value to format.
  * @param max_chars Maximum number of hex digits to emit.
- * @see decomp.me (100%)
  */
 void addhero_format_hex(s8 *out, s32 value, s32 max_chars)
 {
     s32 nibble;
     s32 shift_index;
-    s32 remaining_chars;
-    s32 remaining_value;
     s32 started;
-    s8 *cursor;
-    s32 end_index;
 
-    cursor = out;
-    remaining_value = value;
-    remaining_chars = max_chars;
     shift_index = 7;
     started = 0;
-    if (remaining_chars != 0)
+    if (max_chars != 0)
     {
-        end_index = -1;
-loop_2:
-        nibble = (remaining_value >> (shift_index * 4)) & 0xF;
         do
         {
-            if ((nibble != 0) || (started != 0))
+            nibble = (value >> (shift_index * 4)) & 0xF;
+            if (nibble != 0 || started != 0)
             {
-                addhero_hex_nibble_to_ascii(cursor, nibble);
-                cursor += 1;
-                remaining_chars -= 1;
+                addhero_hex_nibble_to_ascii(out, nibble);
+                out++;
+                max_chars--;
                 started = 1;
-                remaining_value -= nibble << (shift_index * 4);
+                value -= nibble << (shift_index * 4);
             }
-        } while (0);
-        do
-        {
-            shift_index -= 1;
-        } while (0);
-        if (shift_index != end_index)
-        {
+            shift_index--;
+            if (shift_index == -1)
+            {
+                break;
+            }
             if (shift_index == 0)
             {
                 started = 1;
             }
-            do
-            {
-                if (remaining_chars != 0)
-                {
-                    goto loop_2;
-                }
-            } while (0);
-        }
+        } while (max_chars);
     }
-    *cursor = 0;
+    *out = 0;
 }
 
 /**
@@ -2675,8 +3008,6 @@ s32 addhero_parse_hex_suffix_byte(u8 *text)
     return result;
 }
 
-extern s32 g_addhero_entry_fields[];
-
 /**
  * @brief Parse the hex value suffix of every "SD"-tagged directory entry on the
  *        active card, recording per-entry field values and their ranked bytes.
@@ -2702,7 +3033,7 @@ s32 addhero_parse_entry_fields(void)
         char *ref;
         u8 *tmp;
         ref = g_lom_save_filename_prefix;
-        tmp = (u8 *)&((AddheroDirEntry (*)[20])g_addhero_entries)[g_addhero_card_slot][i];
+        tmp = (u8 *)&g_addhero_entries[g_addhero_card_slot][i];
 
         if (strncmp(ref, tmp, 0xC) == 0)
         {
@@ -2738,8 +3069,8 @@ s32 addhero_parse_entry_fields(void)
                 }
             }
 
-            field = (u8 *)&((AddheroDirEntry (*)[20])g_addhero_entries)[g_addhero_card_slot][i].name[0xC];
-            fields = &g_addhero_entry_fields[g_addhero_card_slot * 20];
+            field = (u8 *)&g_addhero_entries[g_addhero_card_slot][i].name[0xC];
+            fields = &g_addhero_entry_fields[g_addhero_card_slot * ADDHERO_DIRECTORY_ENTRY_COUNT];
             fields[i] = acc;
 
             r = addhero_parse_hex_suffix_byte(field);
@@ -2752,7 +3083,7 @@ s32 addhero_parse_entry_fields(void)
         }
         else
         {
-            s32 *fields = &g_addhero_entry_fields[g_addhero_card_slot * 20];
+            s32 *fields = &g_addhero_entry_fields[g_addhero_card_slot * ADDHERO_DIRECTORY_ENTRY_COUNT];
             fields[i] = -1;
             g_addhero_entry_suffix_values[i] = 0;
         }
@@ -2760,194 +3091,6 @@ s32 addhero_parse_entry_fields(void)
 
     return max;
 }
-
-typedef struct AddheroEntryHeader
-{
-    s32 unk0;
-    s16 unk4;
-    s8 unk6;
-    u8 pad[9];
-} AddheroEntryHeader;
-
-/** @brief Save-file header block at g_addhero_file_template (only the first 6 bytes used). */
-typedef struct
-{
-    s32 unk0;
-    s16 unk4;
-    u8 pad[0xFA];
-} AddheroFileHeader;
-
-typedef struct
-{
-    s32 unk0;
-    s16 unk4;
-    s16 unk6;
-    u8 unk8[0x18];
-} AddheroFileHeaderScratch;
-
-typedef struct
-{
-    s32 unk0;
-    s16 unk4;
-    u8 pad[0x62];
-} AddheroLoadScratch;
-
-/* --- text renderer (addhero_draw_cached_text family) --- */
-
-typedef union
-{
-    u32 raw;
-    struct
-    {
-        u16 code;
-        u16 flags;
-    } data;
-} AddheroGlyphCacheEntry;
-
-typedef struct
-{
-    SPRT_16 packet;
-    u32 padding;
-} AddheroGlyphSprite;
-
-#define GLYPH_CACHE_SLOTS 0x100
-#define GLYPH_CACHE_COLUMNS 16
-#define GLYPH_CACHE_ROW_MASK 0xF0
-#define GLYPH_RASTER_BYTES 0x80
-#define GPU_ADDR_MASK 0xFFFFFF
-#define GPU_TAG_HIGH_MASK 0xFF000000
-
-extern AddheroDirEntry g_addhero_entries[][20];
-extern AddheroFileHeader g_addhero_file_template;
-extern AddheroEntryHeader g_addhero_entry_header_template;
-extern AddheroGlyphCacheEntry g_addhero_glyph_cache[];
-
-extern s32 g_addhero_scroll_y;
-extern s32 g_addhero_progress_active;
-extern s32 g_addhero_scroll_target_y;
-extern s32 g_addhero_mode;
-extern s32 g_addhero_entry_state;
-extern s32 g_addhero_card_slot;
-extern s32 g_addhero_selected_row;
-extern s32 g_addhero_selection_status;
-extern s32 g_addhero_scroll_frames;
-extern s32 g_addhero_io_busy;
-extern s32 g_addhero_retry_count;
-extern s32 g_addhero_progress_bar_active;
-extern s32 g_addhero_selected_entry_extended;
-extern s32 g_addhero_progress_start_tick;
-extern s32 g_addhero_primary_poll_countdown;
-extern s32 g_addhero_entry_value_limit;
-extern s32 g_addhero_entry_scan_active;
-extern s32 g_addhero_entry_fields[];
-extern s32 g_addhero_secondary_poll_countdown;
-extern s32 g_addhero_primary_handle0;
-extern s32 g_addhero_primary_handle1;
-extern s32 g_addhero_primary_handle2;
-extern s32 g_addhero_primary_handle3;
-extern s32 g_addhero_has_free_entry_space;
-extern s32 g_addhero_write_in_progress;
-extern s32 g_addhero_file_handle;
-extern s32 g_addhero_entry_ranks[];
-extern s32 g_addhero_secondary_handle0;
-extern s32 g_addhero_secondary_handle1;
-extern s32 g_addhero_secondary_handle2;
-extern s32 g_addhero_secondary_handle3;
-extern s32 g_addhero_entry_suffix_values[];
-extern s32 g_addhero_rank_count;
-
-extern s32 g_addhero_glyph_cursor_x;
-extern s32 g_addhero_glyph_cursor_y;
-extern s32 g_addhero_text_line_start_x;
-extern s32 g_addhero_glyph_upload_x;
-extern s32 g_addhero_glyph_upload_y;
-
-extern u8 *g_addhero_load_step;
-extern u8 *g_addhero_glyph_raster_cursor;
-
-extern u8 g_addhero_loadseq_card[];
-extern u8 g_addhero_loadseq_file_ready[];
-extern u8 g_addhero_single_byte_char_table[];
-extern u8 g_addhero_double_byte_char_table[];
-extern u8 g_addhero_save_blob[];
-extern u8 g_addhero_target_file_path[];
-extern u8 g_addhero_glyph_raster_buffer[];
-extern u8 g_addhero_save_file_path[];
-
-extern u16 g_addhero_decimal_glyphs[];
-extern u16 g_addhero_hex_glyphs[];
-
-extern char g_lom_save_filename_prefix[];
-extern char g_lom_alt_save_filename_prefix[];
-extern char g_lom_save_dummy_filename[];
-extern char g_lom_alt_save_dummy_filename[];
-extern char g_new_save_entry_prefix[];
-
-/* In-file functions */
-s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2);
-void addhero_reset_entry_ranks(void);
-s32 addhero_has_known_entry_type(void);
-s32 addhero_entry_blocks_reach_limit(void);
-void addhero_render_fixed_prompts(void);
-s32 addhero_advance_load_sequence(void);
-void addhero_restart_load_sequence(void);
-s32 addhero_poll_and_rewind_primary_handles(void);
-void addhero_init_stream_handles(void);
-void addhero_shutdown_stream_handles(void);
-s32 addhero_begin_entry_scan(s32 page);
-s32 addhero_scan_next_entry(s32 page);
-void addhero_commit_selected_entry(void);
-void addhero_release_primary_handles(void);
-void addhero_release_secondary_handles(void);
-s32 addhero_poll_primary_handle_group(void);
-s32 addhero_poll_secondary_handle_group(void);
-void addhero_sort_entries_by_type(void);
-s32 addhero_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
-void addhero_draw_hex_byte(s32 prim, s32 ot, s32 byte_value, s32 x, s32 y, s32 alignment);
-s32 addhero_draw_cached_text(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment);
-s32 addhero_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette);
-s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette);
-void addhero_begin_glyph_cache_frame(void);
-void addhero_evict_unused_glyphs(void);
-void addhero_reset_glyph_cache(void);
-void addhero_expand_text_glyph_codes(u8 *out, u8 *in);
-
-/* External functions (defined in addhero.c or elsewhere) */
-s32 addhero_parse_entry_fields();
-void addhero_scroll_to_selection(void);
-void addhero_open_status_dialog(s32 message_id);
-void addhero_open_exit_dialog(s32 message_id);
-void func_800AA02C(void);
-s32 strncmp(void *a, void *b, s32 n);
-s32 strcat(void *a, void *b);
-s32 open(void *a, s32 b);
-s32 read(s32 a, void *b, s32 c);
-s32 write(s32 a, void *b, s32 c);
-s32 close(s32 a);
-s32 rename(void *a, void *b);
-s32 erase(void *a);
-s32 strcpy(void *a, void *b, ...);
-s32 _card_info(s32 a);
-s32 _card_load(s32 a);
-s32 _card_wait(s32 a);
-s32 _card_clear(s32 a);
-s32 VSync(s32 a);
-s32 func_80032174(s32 a, void *b, s32 *c);
-s32 McxCardType(s32 a);
-s32 firstfile(void *a, void *b);
-void func_800B0170(void *a);
-s32 nextfile(void *a);
-void bcopy(void *a, void *b, s32 c);
-s32 Krom2RawAdd(s32 a);
-void func_80019A34(RECT *rect, void *str);
-void func_80019788(s32 arg0);
-void reset_controller_vsync_state(void);
-s32 OpenEvent(s32 a, s32 b, s32 c, s32 d);
-void CloseEvent(s32 a);
-s32 TestEvent(s32 a);
-void EnableEvent(s32 a);
-void EnterCriticalSection(void);
-void ExitCriticalSection(void);
 
 /**
  * @brief Rank the current card's entries by parsed field value, tag "full"
@@ -2995,7 +3138,7 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         rank_ptr = base_rank;
         slot = g_addhero_card_slot;
         field1 = g_addhero_entry_fields;
-        row = field1 + slot * 20;
+        row = field1 + slot * ADDHERO_DIRECTORY_ENTRY_COUNT;
         elem = row;
         do
         {
@@ -3159,7 +3302,7 @@ s32 addhero_entry_blocks_reach_limit(void)
         do
         {
             do {
-                sum += ((AddheroDirEntry *)((u8 *)g_addhero_entries + offset))->size / 8192;
+                sum += ((struct DIRENTRY *)((u8 *)g_addhero_entries + offset))->size / 8192;
             } while (0);
             i++;
             offset += ADDHERO_DIRECTORY_ENTRY_BYTES;
@@ -3208,149 +3351,143 @@ static inline void addhero_probe_render_two(void)
 }
 
 /**
- * @brief Execute one step of the card load/save/scan sequencer, dispatched by
- *        the current *g_addhero_load_step opcode through jtbl_80140098.
- * @return A phase code: 0/1 idle-ish, 2 done, 3 keep running, 4/5 error paths.
- * @note The computed-goto label table @c keep is discarded at link time; it only
- *       forces GCC to keep the label addresses that the jump table references.
- * @see decomp.me (100%)
+ * @brief Advance the active memory-card load/save sequence by one step.
+ * @return One of the ADDHERO_LOAD_RESULT_* values describing how the caller
+ *         should continue the sequence.
  */
 s32 addhero_advance_load_sequence(void)
 {
-    AddheroLoadScratch buf;
-    s32 status0;
-    s32 status1;
-    s32 phase_result;
-    s32 wait_attempts;
-    s32 poll_result;
-    s32 poll_result20;
-    s32 rank_index;
-    s32 rank_value;
-    s32 dispatch;
-    static void *const keep[] __attribute__((section(".discard"))) = {
-        &&cl_case_0, &&cl_case_1, &&cl_case_2, &&cl_case_3,
-        &&cl_case_4, &&cl_case_5, &&cl_case_6, &&block_return,
-        &&cl_case_8, &&cl_case_9, &&cl_case_10, &&block_return,
-        &&block_return, &&block_return, &&block_return, &&cl_case_15,
-        &&cl_case_16, &&cl_case_17, &&cl_case_18, &&cl_case_19,
-        &&cl_case_20, &&block_return, &&block_return, &&block_return,
-        &&cl_case_24, &&cl_case_25, &&cl_case_26, &&cl_case_27,
-        &&cl_case_28, &&block_return, &&cl_case_30
+    AddheroLoadScratch card_path;
+    s32 card_status0;
+    s32 card_status1;
+    s32 result;
+    s32 attempts;
+    s32 poll_status;
+    s32 io_status;
+    s32 entry_index;
+    s32 empty_rank;
+    s32 load_step;
+    static void *const load_step_targets[] __attribute__((section(".discard"))) = {
+        &&load_step_idle, &&load_step_card_info, &&load_step_poll_card_info, &&load_step_release_primary,
+        &&load_step_poll_secondary, &&load_step_release_secondary, &&load_step_scan_entries, &&done,
+        &&load_step_clear_card, &&load_step_load_card, &&load_step_erase_entry, &&done,
+        &&done, &&done, &&done, &&load_step_poll_card_load,
+        &&load_step_wait_secondary, &&load_step_read_entry, &&load_step_poll_entry_read, &&load_step_read_save,
+        &&load_step_poll_save_read, &&done, &&done, &&done,
+        &&load_step_check_card_type, &&load_step_write_save, &&load_step_poll_save_write, &&load_step_read_before_write,
+        &&load_step_poll_prewrite_read, &&done, &&load_step_init_retries
     };
 
-    memcpy(&buf, &g_addhero_file_template, 6);
-    phase_result = 1;
-    ((u8 *)&buf)[2] += *(u8 *)&g_addhero_card_slot;
+    memcpy(&card_path, &g_addhero_file_template, 6);
+    result = ADDHERO_LOAD_RESULT_PENDING;
+    ((u8 *)&card_path)[2] += *(u8 *)&g_addhero_card_slot;
 
     if (g_addhero_load_step == NULL)
     {
-        goto block_return;
+        goto done;
     }
 
-    switch (0)
+    load_step = *g_addhero_load_step;
+    if ((u32)load_step >= ADDHERO_LOAD_STEP_COUNT)
     {
-    case 0:
-        dispatch = *g_addhero_load_step;
-        if ((u32)dispatch >= 0x1F)
-        {
-            goto block_return;
-        }
-        goto *jtbl_80140098[dispatch];
+        goto done;
+    }
+    goto *jtbl_80140098[load_step];
 
-    cl_case_1:
-        phase_result = 3;
+    load_step_card_info:
+        result = ADDHERO_LOAD_RESULT_CONTINUE;
         _card_wait(g_addhero_card_slot);
         _card_info(g_addhero_card_slot * 0x10);
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_2:
-        poll_result = addhero_poll_primary_handle_group();
-        if (poll_result >= 3)
+    load_step_poll_card_info:
+        poll_status = addhero_poll_primary_handle_group();
+        if (poll_status >= 3)
         {
-            goto c2_ge3;
+            goto poll_card_info_ge3;
         }
-        if (poll_result > 0)
+        if (poll_status > 0)
         {
-            goto c2_pos;
+            goto card_info_error;
         }
-        if (poll_result == 0)
+        if (poll_status == 0)
         {
-            goto c2_increment;
+            goto advance_after_card_info;
         }
-        break;
-    c2_ge3:
-        if (poll_result == 3)
+        goto done;
+    poll_card_info_ge3:
+        if (poll_status == 3)
         {
-            goto c2_eq3;
+            goto card_info_reset;
         }
-        break;
-    c2_increment:
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
-    c2_pos:
-        phase_result = 4;
+        goto done;
+    advance_after_card_info:
+        g_addhero_load_step++;
+        goto done;
+    card_info_error:
+        result = ADDHERO_LOAD_RESULT_COMPLETE;
         g_addhero_selection_status = 0;
         g_addhero_entry_state = 0xFD;
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
-    c2_eq3:
+        g_addhero_load_step++;
+        goto done;
+    card_info_reset:
         g_addhero_rank_count = 0x28;
-        rank_value = -1;
-        for (rank_index = 14; rank_index >= 0; rank_index--)
+        empty_rank = -1;
+        for (entry_index = 14; entry_index >= 0; entry_index--)
         {
-            g_addhero_entry_ranks[rank_index] = rank_value;
+            g_addhero_entry_ranks[entry_index] = empty_rank;
         }
         g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
         g_addhero_load_step = &g_addhero_loadseq_start;
-        break;
+        goto done;
 
-    cl_case_3:
+    load_step_release_primary:
         addhero_release_primary_handles();
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_4:
+    load_step_poll_secondary:
         do
         {
-            poll_result = addhero_poll_secondary_handle_group();
-        } while (poll_result == -1);
-        if (poll_result == 0)
+            poll_status = addhero_poll_secondary_handle_group();
+        } while (poll_status == -1);
+        if (poll_status == 0)
         {
-            g_addhero_load_step = g_addhero_load_step + 1;
-            break;
+            g_addhero_load_step++;
+            goto done;
         }
-        if (poll_result < 0)
+        if (poll_status < 0)
         {
-            break;
+            goto done;
         }
-        if (poll_result >= 4)
+        if (poll_status >= 4)
         {
-            break;
+            goto done;
         }
-        phase_result = 4;
+        result = ADDHERO_LOAD_RESULT_COMPLETE;
         g_addhero_selection_status = 0;
         g_addhero_entry_state = 0xFD;
-        break;
+        goto done;
 
-    cl_case_5:
+    load_step_release_secondary:
         addhero_release_secondary_handles();
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_6:
+    load_step_scan_entries:
         addhero_probe_render_two();
         g_addhero_entry_scan_active = 1;
         if (addhero_begin_entry_scan(g_addhero_card_slot) == 0)
         {
-            phase_result = 2;
+            result = ADDHERO_LOAD_RESULT_ABORT;
             g_addhero_load_step = NULL;
             g_addhero_entry_state = 0xF8;
             g_addhero_entry_scan_active = 0;
-            break;
+            goto done;
         }
-        wait_attempts = 0;
-        g_addhero_load_step = g_addhero_load_step + 1;
+        attempts = 0;
+        g_addhero_load_step++;
         do
         {
             if (addhero_scan_next_entry(g_addhero_card_slot) == 0)
@@ -3371,113 +3508,113 @@ s32 addhero_advance_load_sequence(void)
                 addhero_commit_selected_entry();
                 break;
             }
-            wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 0x14);
-        break;
+            attempts++;
+        } while (attempts < 0x14);
+        goto done;
 
-    cl_case_8:
-        phase_result = 3;
+    load_step_clear_card:
+        result = ADDHERO_LOAD_RESULT_CONTINUE;
         _card_wait(g_addhero_card_slot);
         _card_clear(g_addhero_card_slot * 0x10);
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_9:
-        phase_result = 3;
+    load_step_load_card:
+        result = ADDHERO_LOAD_RESULT_CONTINUE;
         _card_wait(g_addhero_card_slot);
         _card_load(g_addhero_card_slot * 0x10);
         g_addhero_primary_poll_countdown = 0x10;
         g_addhero_secondary_poll_countdown = 0x10;
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_0:
-        phase_result = 2;
+    load_step_idle:
+        result = ADDHERO_LOAD_RESULT_ABORT;
         g_addhero_write_in_progress = 0;
-        break;
+        goto done;
 
-    cl_case_10:
-        strcat(&buf, (u8 *)g_addhero_entries + (g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES) + (g_addhero_selected_row * ADDHERO_DIRECTORY_ENTRY_BYTES));
-        wait_attempts = 0;
+    load_step_erase_entry:
+        strcat(&card_path, (u8 *)g_addhero_entries + (g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES) + (g_addhero_selected_row * ADDHERO_DIRECTORY_ENTRY_BYTES));
+        attempts = 0;
         do
         {
-            if (erase(&buf) != 0)
+            if (erase(&card_path) != 0)
             {
                 break;
             }
-            wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 0x14);
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+            attempts++;
+        } while (attempts < 0x14);
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_15:
-        poll_result = addhero_poll_primary_handle_group();
-        if (poll_result >= 3)
+    load_step_poll_card_load:
+        poll_status = addhero_poll_primary_handle_group();
+        if (poll_status >= 3)
         {
-            goto c15_ge3;
+            goto poll_card_load_ge3;
         }
-        if (poll_result > 0)
+        if (poll_status > 0)
         {
-            goto c15_pos;
+            goto card_load_error;
         }
-        if (poll_result == 0)
+        if (poll_status == 0)
         {
-            goto c15_increment;
+            goto advance_after_card_load;
         }
-        break;
-    c15_ge3:
-        if (poll_result == 3)
+        goto done;
+    poll_card_load_ge3:
+        if (poll_status == 3)
         {
-            goto c15_eq3;
+            goto card_load_retry;
         }
-        break;
-    c15_increment:
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
-    c15_pos:
-        g_addhero_secondary_poll_countdown = g_addhero_secondary_poll_countdown - 1;
+        goto done;
+    advance_after_card_load:
+        g_addhero_load_step++;
+        goto done;
+    card_load_error:
+        g_addhero_secondary_poll_countdown--;
         if (g_addhero_secondary_poll_countdown != 0)
         {
-            goto block_reissue;
+            goto reissue_card_load;
         }
-        phase_result = 4;
+        result = ADDHERO_LOAD_RESULT_COMPLETE;
         g_addhero_selection_status = 0;
         g_addhero_entry_state = 0xFD;
-        break;
-    c15_eq3:
-        g_addhero_primary_poll_countdown = g_addhero_primary_poll_countdown - 1;
+        goto done;
+    card_load_retry:
+        g_addhero_primary_poll_countdown--;
         if (g_addhero_primary_poll_countdown == 0)
         {
-            goto c15_d70zero;
+            goto card_load_timeout;
         }
-    block_reissue:
+    reissue_card_load:
         _card_wait(g_addhero_card_slot);
         _card_clear(g_addhero_card_slot * 0x10);
         _card_wait(g_addhero_card_slot);
         _card_load(g_addhero_card_slot * 0x10);
-        break;
-    c15_d70zero:
-        phase_result = 5;
+        goto done;
+    card_load_timeout:
+        result = ADDHERO_LOAD_RESULT_CARD_ERROR;
         g_addhero_entry_state = 0xFC;
         g_addhero_load_step = g_addhero_loadseq_card;
-        break;
+        goto done;
 
-    cl_case_16:
+    load_step_wait_secondary:
         do
         {
-            poll_result = addhero_poll_secondary_handle_group();
-        } while (poll_result == -1);
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+            poll_status = addhero_poll_secondary_handle_group();
+        } while (poll_status == -1);
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_17:
+    load_step_read_entry:
         g_addhero_io_busy = 1;
         g_addhero_selection_status = 0;
         _card_wait(g_addhero_card_slot);
         g_addhero_file_handle = open(g_addhero_save_file_path, 0x8001);
         if (g_addhero_file_handle == -1)
         {
-            break;
+            goto done;
         }
         addhero_release_primary_handles();
         _card_wait(g_addhero_card_slot);
@@ -3485,25 +3622,25 @@ s32 addhero_advance_load_sequence(void)
                            g_addhero_selected_entry_extended != 0 ? 0x280 : 0x80) == -1)
         {
             close(g_addhero_file_handle);
-            break;
+            goto done;
         }
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_18:
+    load_step_poll_entry_read:
         if (g_addhero_io_busy != 0)
         {
-            poll_result = addhero_poll_primary_handle_group();
-            if (poll_result == 0)
+            poll_status = addhero_poll_primary_handle_group();
+            if (poll_status == 0)
             {
                 g_addhero_io_busy = 0;
                 g_addhero_selection_status = 1;
                 close(g_addhero_file_handle);
-                break;
+                goto done;
             }
-            if (poll_result == -1)
+            if (poll_status == -1)
             {
-                break;
+                goto done;
             }
             close(g_addhero_file_handle);
             g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
@@ -3511,11 +3648,11 @@ s32 addhero_advance_load_sequence(void)
         }
         else
         {
-            g_addhero_load_step = g_addhero_load_step + 1;
+            g_addhero_load_step++;
         }
-        break;
+        goto done;
 
-    cl_case_19:
+    load_step_read_save:
         g_addhero_progress_active = 1;
         g_addhero_progress_start_tick = VSync(-1);
         g_addhero_progress_bar_active = 1;
@@ -3526,47 +3663,47 @@ s32 addhero_advance_load_sequence(void)
         if (read(g_addhero_file_handle, g_addhero_save_blob, 0x4000) == -1)
         {
             close(g_addhero_file_handle);
-            g_addhero_retry_count = g_addhero_retry_count - 1;
+            g_addhero_retry_count--;
             if (g_addhero_retry_count == 0)
             {
-            block_dialog_read:
+            show_read_error:
                 addhero_open_status_dialog(1);
-                break;
+                goto done;
             }
-            break;
+            goto done;
         }
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_20:
-        poll_result20 = addhero_poll_primary_handle_group();
-        if (poll_result20 == 0)
+    load_step_poll_save_read:
+        io_status = addhero_poll_primary_handle_group();
+        if (io_status == 0)
         {
             g_addhero_progress_active = 0;
-            g_addhero_load_step = g_addhero_load_step + 1;
+            g_addhero_load_step++;
             close(g_addhero_file_handle);
-            break;
+            goto done;
         }
-        if (poll_result20 < 0)
+        if (io_status < 0)
         {
-            break;
+            goto done;
         }
-        if (poll_result20 >= 4)
+        if (io_status >= 4)
         {
-            break;
+            goto done;
         }
         close(g_addhero_file_handle);
-        g_addhero_retry_count = g_addhero_retry_count - 1;
+        g_addhero_retry_count--;
         if (g_addhero_retry_count == 0)
         {
             g_addhero_progress_bar_active = 0;
-            goto block_dialog_read;
+            goto show_read_error;
         }
-        g_addhero_load_step = g_addhero_load_step - 1;
-        break;
+        g_addhero_load_step--;
+        goto done;
 
-    cl_case_24:
-        wait_attempts = 0;
+    load_step_check_card_type:
+        attempts = 0;
         do
         {
             if (McxCardType(g_addhero_card_slot * 0x10) == 1)
@@ -3574,26 +3711,26 @@ s32 addhero_advance_load_sequence(void)
                 break;
             }
             VSync(0);
-            wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 0x14);
-        if (wait_attempts != 0x14)
+            attempts++;
+        } while (attempts < 0x14);
+        if (attempts != 0x14)
         {
-            func_80032174(0, &status0, &status1);
-            if (status1 == 0)
+            func_80032174(0, &card_status0, &card_status1);
+            if (card_status1 == 0)
             {
-                g_addhero_load_step = g_addhero_load_step + 1;
-                break;
+                g_addhero_load_step++;
+                goto done;
             }
         }
         addhero_open_status_dialog(3);
-        break;
+        goto done;
 
-    cl_case_30:
+    load_step_init_retries:
         g_addhero_retry_count = 5;
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_27:
+    load_step_read_before_write:
         g_addhero_progress_active = 1;
         g_addhero_progress_start_tick = VSync(-1);
         g_addhero_progress_bar_active = 1;
@@ -3604,87 +3741,87 @@ s32 addhero_advance_load_sequence(void)
         if (read(g_addhero_file_handle, g_addhero_save_blob, 0x4000) == -1)
         {
             close(g_addhero_file_handle);
-            g_addhero_retry_count = g_addhero_retry_count - 1;
+            g_addhero_retry_count--;
             if (g_addhero_retry_count == 0)
             {
-            block_dialog_write_read:
+            show_prewrite_read_error:
                 addhero_open_exit_dialog(1);
-                break;
+                goto done;
             }
-            break;
+            goto done;
         }
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_28:
-        poll_result20 = addhero_poll_primary_handle_group();
-        if (poll_result20 == 0)
+    load_step_poll_prewrite_read:
+        io_status = addhero_poll_primary_handle_group();
+        if (io_status == 0)
         {
             g_addhero_progress_active = 0;
-            g_addhero_load_step = g_addhero_load_step + 1;
+            g_addhero_load_step++;
             close(g_addhero_file_handle);
-            break;
+            goto done;
         }
-        if (poll_result20 < 0)
+        if (io_status < 0)
         {
-            break;
+            goto done;
         }
-        if (poll_result20 >= 4)
+        if (io_status >= 4)
         {
-            break;
+            goto done;
         }
-        g_addhero_retry_count = g_addhero_retry_count - 1;
+        g_addhero_retry_count--;
         if (g_addhero_retry_count == 0)
         {
             g_addhero_progress_bar_active = 0;
-            goto block_dialog_write_read;
+            goto show_prewrite_read_error;
         }
-        goto block_close_decrement;
+        goto retry_previous_step;
 
-    cl_case_25:
+    load_step_write_save:
         if (g_addhero_has_free_entry_space == 0)
         {
             _card_wait(g_addhero_card_slot);
-            wait_attempts = 0;
+            attempts = 0;
             do
             {
                 if (erase(g_addhero_save_file_path) != 0)
                 {
                     break;
                 }
-                wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < 0x14);
+                attempts++;
+            } while (attempts < 0x14);
         }
-        strcat(&buf, g_lom_save_dummy_filename);
+        strcat(&card_path, g_lom_save_dummy_filename);
         _card_wait(g_addhero_card_slot);
-        g_addhero_file_handle = open(&buf, 0x20200);
+        g_addhero_file_handle = open(&card_path, 0x20200);
         if (g_addhero_file_handle != -1)
         {
-            goto block_write_opened;
+            goto write_save_data;
         }
         close(-1);
-        wait_attempts = 0;
+        attempts = 0;
         do
         {
-            if (erase(&buf) != 0)
+            if (erase(&card_path) != 0)
             {
                 break;
             }
-            wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 0x14);
-    block_write_retry:
-        g_addhero_retry_count = g_addhero_retry_count - 1;
+            attempts++;
+        } while (attempts < 0x14);
+    retry_save_write:
+        g_addhero_retry_count--;
         if (g_addhero_retry_count == 0)
         {
-        block_dialog_write:
+        show_write_error:
             addhero_open_exit_dialog(0);
-            break;
+            goto done;
         }
-        break;
+        goto done;
 
-    block_write_opened:
+    write_save_data:
         close(g_addhero_file_handle);
-        strcpy(g_addhero_target_file_path, &buf);
+        strcpy(g_addhero_target_file_path, &card_path);
         _card_wait(g_addhero_card_slot);
         g_addhero_file_handle = open(g_addhero_target_file_path, 0x8002);
         addhero_release_primary_handles();
@@ -3694,81 +3831,77 @@ s32 addhero_advance_load_sequence(void)
         if (write(g_addhero_file_handle, g_addhero_save_blob, 0x4000) == -1)
         {
             close(g_addhero_file_handle);
-            wait_attempts = 0;
+            attempts = 0;
             do
             {
                 if (erase(g_addhero_target_file_path) != 0)
                 {
                     break;
                 }
-                wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < 0x14);
-            goto block_write_retry;
+                attempts++;
+            } while (attempts < 0x14);
+            goto retry_save_write;
         }
-        g_addhero_load_step = g_addhero_load_step + 1;
-        break;
+        g_addhero_load_step++;
+        goto done;
 
-    cl_case_26:
-        poll_result20 = addhero_poll_primary_handle_group();
-        if (poll_result20 != 0)
+    load_step_poll_save_write:
+        io_status = addhero_poll_primary_handle_group();
+        if (io_status != 0)
         {
-            if (poll_result20 < 0)
+            if (io_status < 0)
             {
-                break;
+                goto done;
             }
-            if (poll_result20 >= 4)
+            if (io_status >= 4)
             {
-                break;
+                goto done;
             }
-            goto block_case26_retry;
+            goto retry_save_finalize;
         }
         if (g_addhero_has_free_entry_space != 0)
         {
             _card_wait(g_addhero_card_slot);
-            wait_attempts = 0;
+            attempts = 0;
             do
             {
                 if (erase(g_addhero_save_file_path) != 0)
                 {
                     break;
                 }
-                wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < 0x14);
+                attempts++;
+            } while (attempts < 0x14);
         }
         _card_wait(g_addhero_card_slot);
-        wait_attempts = 0;
+        attempts = 0;
         do
         {
             if (rename(g_addhero_target_file_path, g_addhero_save_file_path) != 0)
             {
                 break;
             }
-            wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 0x14);
+            attempts++;
+        } while (attempts < 0x14);
         g_addhero_write_in_progress = 0;
-        g_addhero_load_step = g_addhero_load_step + 1;
+        g_addhero_load_step++;
         close(g_addhero_file_handle);
-        break;
+        goto done;
 
-    block_case26_retry:
-        g_addhero_retry_count = g_addhero_retry_count - 1;
+    retry_save_finalize:
+        g_addhero_retry_count--;
         if (g_addhero_retry_count == 0)
         {
             g_addhero_progress_bar_active = 0;
-            goto block_dialog_write;
+            goto show_write_error;
         }
-        goto block_close_decrement;
+        goto retry_previous_step;
 
-    }
-
-    goto block_return;
-
-block_close_decrement:
+retry_previous_step:
     close(g_addhero_file_handle);
-    g_addhero_load_step = g_addhero_load_step - 1;
+    g_addhero_load_step--;
 
-block_return:
-    return phase_result;
+done:
+    return result;
 }
 
 /**
@@ -3871,9 +4004,9 @@ s32 addhero_begin_entry_scan(s32 page)
     g_addhero_scroll_y = 0;
     g_addhero_entry_state = 0;
     ((u8 *)&buf)[2] += page;
-    if (firstfile(&buf, (u8 *)g_addhero_entries + page * ADDHERO_CARD_DIRECTORY_BYTES) != 0)
+    if (firstfile(&buf, &g_addhero_entries[page][0]) != 0)
     {
-        func_800B0170((u8 *)g_addhero_entries + page * ADDHERO_CARD_DIRECTORY_BYTES + g_addhero_entry_state * ADDHERO_DIRECTORY_ENTRY_BYTES);
+        func_800B0170(&g_addhero_entries[page][g_addhero_entry_state]);
         g_addhero_entry_state += 1;
         return 1;
     }
@@ -3892,14 +4025,12 @@ s32 addhero_scan_next_entry(s32 page)
     s32 sum;
     s32 offset;
     s32 selected;
-    s32 page_offset;
     s32 count;
     s32 cond;
 
-    page_offset = page * ADDHERO_CARD_DIRECTORY_BYTES;
-    if (nextfile((void *)((u8 *)g_addhero_entries + page_offset + g_addhero_entry_state * ADDHERO_DIRECTORY_ENTRY_BYTES)) != 0)
+    if (nextfile(&g_addhero_entries[page][g_addhero_entry_state]) != 0)
     {
-        func_800B0170((void *)((u8 *)g_addhero_entries + page_offset + g_addhero_entry_state * ADDHERO_DIRECTORY_ENTRY_BYTES));
+        func_800B0170(&g_addhero_entries[page][g_addhero_entry_state]);
         g_addhero_entry_state += 1;
         return 1;
     }
@@ -3922,7 +4053,7 @@ s32 addhero_scan_next_entry(s32 page)
             offset = g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES;
             do
             {
-                sum += ((AddheroDirEntry *)(offset + (s32)entries))->size / 8192;
+                sum += ((struct DIRENTRY *)(offset + (s32)entries))->size / 8192;
                 i++;
                 offset += ADDHERO_DIRECTORY_ENTRY_BYTES;
             } while (i < count);
@@ -4113,7 +4244,7 @@ s32 addhero_poll_secondary_handle_group(void)
  */
 void addhero_sort_entries_by_type(void)
 {
-    AddheroDirEntry sorted[20];
+    struct DIRENTRY sorted[ADDHERO_DIRECTORY_ENTRY_COUNT];
     s32 out = 0;
     s32 group = 0;
     s32 i;
@@ -4123,7 +4254,7 @@ void addhero_sort_entries_by_type(void)
             do {
                 if (g_addhero_entry_suffix_values[i] == group &&
                     strncmp(g_lom_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0) {
-                    bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
+                    bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], sizeof(struct DIRENTRY));
                     out++;
                 }
                 i++;
@@ -4139,7 +4270,7 @@ void addhero_sort_entries_by_type(void)
             do {
                 if (g_addhero_entry_suffix_values[i] == group &&
                     strncmp(g_lom_alt_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0) {
-                    bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
+                    bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], sizeof(struct DIRENTRY));
                     out++;
                 }
                 i++;
@@ -4152,7 +4283,7 @@ void addhero_sort_entries_by_type(void)
     if (g_addhero_entry_state > 0) {
         do {
             if (strncmp(g_new_save_entry_prefix, &g_addhero_entries[g_addhero_card_slot][i], 8) == 0) {
-                bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
+                bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], sizeof(struct DIRENTRY));
                 out++;
             }
             i++;
@@ -4165,7 +4296,7 @@ void addhero_sort_entries_by_type(void)
             if (strncmp(g_lom_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) != 0 &&
                 strncmp(g_lom_alt_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) != 0 &&
                 strncmp(g_new_save_entry_prefix, &g_addhero_entries[g_addhero_card_slot][i], 8) != 0) {
-                bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
+                bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], sizeof(struct DIRENTRY));
                 out++;
             }
             i++;
@@ -4175,7 +4306,7 @@ void addhero_sort_entries_by_type(void)
     i = 0;
     if (g_addhero_entry_state > 0) {
         do {
-            bcopy(&sorted[i], &g_addhero_entries[g_addhero_card_slot][i], 0x28);
+            bcopy(&sorted[i], &g_addhero_entries[g_addhero_card_slot][i], sizeof(struct DIRENTRY));
             i++;
         } while (i < g_addhero_entry_state);
     }
