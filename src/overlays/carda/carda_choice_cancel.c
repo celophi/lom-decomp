@@ -27,7 +27,7 @@ extern u16 D_8014B078;
 extern u16 D_8014B07A;
 extern s32 D_80165F80;
 extern s32 D_80122988;
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 
 s32 func_80146AF0(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
@@ -53,7 +53,7 @@ s32 func_80146AF0(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     }
     if (D_80122988 & 0x220)
     {
-        D_8012298C = 0x20;
+        g_menu_element_counter = 0x20;
         p = (CardaPacket *)&D_80165F80;
         for (i = 0; i < 8; i++)
         {

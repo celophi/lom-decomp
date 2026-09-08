@@ -187,7 +187,7 @@ extern u16 D_801475C4[];
 extern u8 D_800EC3F6[2];
 extern u8 D_800EC3FA[];
 extern u8 D_800EC3D0[];
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 extern u16 D_80147128;
 extern s32 g_niki_choice_toggle;
 extern s32 D_801606E4;
@@ -1224,7 +1224,7 @@ s32 niki_draw_footer_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 
 /**
  * @brief Reset the niki element array: clear the low 3 state bits of each of
- *        the eight g_niki_element_pool entries and reload the D_8012298C counter.
+ *        the eight g_niki_element_pool entries and reload the g_menu_element_counter counter.
  *
  * @see decomp.me (100%)
  */
@@ -1233,7 +1233,7 @@ void niki_clear_elements(void)
     NikiPacket *p;
     s32 i;
 
-    D_8012298C = 0x20;
+    g_menu_element_counter = 0x20;
     p = (NikiPacket *)&g_niki_element_pool;
     for (i = 0; i < 8; i++)
     {
@@ -1920,7 +1920,7 @@ s32 niki_draw_secondary_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_off
     }
     if (g_pad_input & 0x220)
     {
-        D_8012298C = 0x20;
+        g_menu_element_counter = 0x20;
         p = (NikiPacket *)&g_niki_element_pool;
         for (i = 0; i < 8; i++)
         {
@@ -2271,7 +2271,7 @@ s32 niki_draw_state_page(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     func_800A3938(0x7D, 0x80);
                     packet = (NikiPacket *)&g_niki_element_pool;
                     D_8011F428 = 2;
-                    D_8012298C = 0x20;
+                    g_menu_element_counter = 0x20;
                     for (i = 0; i < 8; i++, packet++)
                     {
                         packet->attr.f.state = 0;
@@ -2429,7 +2429,7 @@ s32 niki_draw_state_page(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             if (g_niki_progress_active == 0)
             {
                 func_800A3938(0x7A, 0x80);
-                D_8012298C = 0x20;
+                g_menu_element_counter = 0x20;
                 packet = (NikiPacket *)&g_niki_element_pool;
                 for (i = 0; i < 8; i++, packet++)
                 {

@@ -165,7 +165,7 @@ extern void *jtbl_80140098[];
 extern s32 g_save_slot_index;
 extern s32 D_80122718;
 extern s32 g_pad_input;
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 extern s32 g_addhero_loadseq_done;
 extern s32 g_addhero_icon_phase;
 extern s32 g_addhero_pad_work_ptr;
@@ -1323,7 +1323,7 @@ void addhero_clear_elements(void)
     AddheroPacket *p;
     s32 i;
 
-    D_8012298C = 0x20;
+    g_menu_element_counter = 0x20;
     p = (AddheroPacket *)&g_addhero_element_pool.first;
     for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++)
     {
@@ -1999,7 +1999,7 @@ s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     if (g_pad_input & 0x220)
     {
         g_addhero_result = 3;
-        D_8012298C = 0x20;
+        g_menu_element_counter = 0x20;
         p = &g_addhero_element_pool.first;
         for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++)
         {
@@ -2124,7 +2124,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                 {
                     play_menu_sfx(0x7D, 0x80);
                     g_addhero_result = 3;
-                    D_8012298C = 0x20;
+                    g_menu_element_counter = 0x20;
                     packet = (AddheroPacket *)&g_addhero_element_pool.first;
                     for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, packet++)
                     {
@@ -2194,7 +2194,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             }
             prim=next;
             if(g_addhero_write_in_progress==0){
-                g_pad_ctx[0x840]=0; play_menu_sfx(0x7A,0x80); D_8012298C=0x20;
+                g_pad_ctx[0x840]=0; play_menu_sfx(0x7A,0x80); g_menu_element_counter=0x20;
                 packet=(AddheroPacket *)&g_addhero_element_pool.first;
                 for(i=0;i<ADDHERO_ELEMENT_COUNT;i++,packet++){ packet->size_flags &= ~0x200; packet->state_word &= ~7; }
                 field_restore_fade_target_with_duration(8); g_addhero_result=2;

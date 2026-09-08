@@ -195,3 +195,4 @@ D_80164E70                                   = 0x80164E70;
 D_80164FD4                                   = 0x80164FD4;
 D_80164FD8                                   = 0x80164FD8;
 g_niki_overlay_id                            = 0x80140000;
+g_menu_element_counter                     = 0x8012298C;

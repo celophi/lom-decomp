@@ -234,3 +234,4 @@ g_lom_alt_save_filename_prefix             = 0x800ECF8C;
 g_lom_save_dummy_filename                  = 0x800ECF9C;
 g_lom_alt_save_dummy_filename              = 0x800ECFB0;
 g_new_save_entry_prefix                    = 0x800ECFC4;
+g_menu_element_counter                     = 0x8012298C;

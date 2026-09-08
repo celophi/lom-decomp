@@ -14,7 +14,7 @@ typedef struct
 
 typedef ShopPacket ShopElement;
 
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 extern ShopElement D_801451D8;
 extern void func_80140E00(void);
 
@@ -28,7 +28,7 @@ void func_80140D6C(void)
     ShopPacket *p;
     s32 i;
 
-    D_8012298C = 0x20;
+    g_menu_element_counter = 0x20;
     p = (ShopPacket *)&D_801451D8;
     for (i = 0; i < 8; i++)
     {
