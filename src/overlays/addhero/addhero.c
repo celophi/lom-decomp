@@ -166,9 +166,9 @@ extern s32 g_save_slot_index;
 extern s32 D_80122718;
 extern s32 g_pad_input;
 extern s32 D_8012298C;
-extern s32 D_80160580;
+extern s32 g_addhero_loadseq_done;
 extern s32 g_addhero_icon_phase;
-extern s32 D_80160924;
+extern s32 g_addhero_pad_work_ptr;
 extern s32 g_addhero_scroll_y;
 extern s32 g_addhero_result;
 extern s32 g_addhero_work_ram_base;
@@ -197,11 +197,11 @@ extern s32 g_addhero_icon_image_table[];
 extern s32 g_addhero_entry_suffix_values[];
 extern s32 g_addhero_entry_ranks[];
 
-extern u8 D_80160574;
-extern u8 D_80160588[];
-extern u8 D_80160590[];
-extern u8 D_80160598;
-extern u8 D_801605A1;
+extern u8 g_addhero_loadseq_start;
+extern u8 g_addhero_loadseq_abort[];
+extern u8 g_addhero_loadseq_load_begin[];
+extern u8 g_addhero_loadseq_load_progress;
+extern u8 g_addhero_loadseq_save_begin;
 extern u8 g_addhero_icon_context[];
 extern u8 g_addhero_save_blob[];
 extern u8 g_addhero_entry_read_buffer;
@@ -224,9 +224,9 @@ extern u16 g_addhero_glyph_card_slot1_label;
 extern u16 g_addhero_glyph_status_fb;
 extern u16 g_addhero_glyph_status_fc;
 extern u16 g_addhero_glyph_new_entry_label;
-extern u16 D_80146FC0;
-extern u16 D_80146FCC;
-extern u16 D_80146FD2;
+extern u16 g_addhero_glyph_save_progress;
+extern u16 g_addhero_glyph_details_status2_msg;
+extern u16 g_addhero_glyph_entry_value_label;
 extern u16 g_addhero_glyph_load_prompt;
 extern u16 g_addhero_glyph_load_progress;
 extern u16 g_addhero_glyph_status_f8;
@@ -237,11 +237,11 @@ extern u16 g_addhero_glyph_dialog_msg2;
 extern u16 g_addhero_glyph_dialog_msg3;
 extern u16 g_addhero_glyph_mode0;
 extern u16 g_addhero_glyph_mode1;
-extern u16 D_80146FF4;
-extern u16 D_80146FF8;
-extern u16 D_80147012;
-extern u16 D_8014700C;
-extern u16 D_8014700E;
+extern u16 g_addhero_glyph_current_hero_marker;
+extern u16 g_addhero_glyph_owner_mismatch_msg;
+extern u16 g_addhero_glyph_status_f3;
+extern u16 g_addhero_glyph_status_f7;
+extern u16 g_addhero_glyph_save_confirm_msg;
 extern u16 g_addhero_glyph_plus_marker;
 extern u16 g_addhero_entry_glyph_table[];
 
@@ -409,7 +409,7 @@ void addhero_build_ui_elements(void)
     g_addhero_scroll_y = 0;
     g_addhero_selected_row = 0;
     g_addhero_selection_status = 0;
-    D_80160924 = (s32)g_pad_ctx + 0xCE0;
+    g_addhero_pad_work_ptr = (s32)g_pad_ctx + 0xCE0;
     if (0) addhero_clear_elements(0,0,0,0,0);
     addhero_clear_elements();
     g_addhero_load_flow_active = 0;
@@ -544,7 +544,7 @@ s32 addhero_update_load_sequence(void)
     {
         if (g_addhero_load_step == 0)
         {
-            g_addhero_load_step = (u8 *)&D_80160574;
+            g_addhero_load_step = (u8 *)&g_addhero_loadseq_start;
         }
     }
 
@@ -563,7 +563,7 @@ s32 addhero_update_load_sequence(void)
         {
             g_addhero_entry_state = 0xF8;
         }
-        g_addhero_load_step = (u8 *)&D_80160588;
+        g_addhero_load_step = (u8 *)&g_addhero_loadseq_abort;
     }
     else
     {
@@ -572,7 +572,7 @@ s32 addhero_update_load_sequence(void)
         case 0:
             break;
         case 4:
-            g_addhero_load_step = (u8 *)&D_80160580;
+            g_addhero_load_step = (u8 *)&g_addhero_loadseq_done;
             g_addhero_load_flow_active = 0;
             break;
         case 5:
@@ -586,7 +586,7 @@ s32 addhero_update_load_sequence(void)
             }
             /* fallthrough */
         case 2:
-            g_addhero_load_step = (u8 *)&D_80160588;
+            g_addhero_load_step = (u8 *)&g_addhero_loadseq_abort;
             break;
         }
     }
@@ -876,7 +876,7 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     {
                         pos.x = base_x + 0x86;
                         pos.y = row_y;
-                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)g_addhero_entry_suffix_values + (i * 4)), 4, &pos, 0), ot, (void *)((s32)D_80146FD2 + (s32)base), 4, base_x + 0x70, row_y, 0);
+                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)g_addhero_entry_suffix_values + (i * 4)), 4, &pos, 0), ot, (void *)((s32)g_addhero_glyph_entry_value_label + (s32)base), 4, base_x + 0x70, row_y, 0);
                         if ((g_addhero_rank_count - 1) == *flag_ptr)
                         {
                             misc_glyph = *(u16 *)(base + 0x36);
@@ -1055,8 +1055,8 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_o
             s32 x = -x_offset;
             u8 *base;
 
-            result = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FCC, 0x28), 4, x, -y_offset, 0);
-            base = (u8 *)&D_80146FCC - 0x28;
+            result = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_details_status2_msg, 0x28), 4, x, -y_offset, 0);
+            base = (u8 *)&g_addhero_glyph_details_status2_msg - 0x28;
             return func_800A88A0(result, ot, GLYPH_OFF(base, 0x2A), 4, x, 0x10 - y_offset, 0);
         }
         else
@@ -1171,7 +1171,7 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_o
 
                         if (*(u16 *)(base90 + 0xD4) == ((AddheroRecord *)g_pad_ctx)->hero_id)
                         {
-                            do { result = func_800A88A0(result, ot, GLYPH_SYM(D_80146FF4, 0x50), 4, x + 0x54, y + 0x20, 0); } while (0);
+                            do { result = func_800A88A0(result, ot, GLYPH_SYM(g_addhero_glyph_current_hero_marker, 0x50), 4, x + 0x54, y + 0x20, 0); } while (0);
                         }
                         else
                         {
@@ -1182,7 +1182,7 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_o
                 }
                 else
                 {
-                    result = func_800A88A0(result, ot, GLYPH_SYM(D_80146FF8, 0x54), 4, -x_offset, -y_offset, 0);
+                    result = func_800A88A0(result, ot, GLYPH_SYM(g_addhero_glyph_owner_mismatch_msg, 0x54), 4, -x_offset, -y_offset, 0);
                 }
             }
             else
@@ -1726,7 +1726,7 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             g_addhero_element_pool.first.attr.f.state = 0;
             func_800AA02C();
             play_menu_sfx(0x78, 0x80);
-            g_addhero_load_step = D_80160588;
+            g_addhero_load_step = g_addhero_loadseq_abort;
         }
         else if (status & 0x220)
         {
@@ -1735,13 +1735,13 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                 g_addhero_element_pool.first.attr.f.state = 0;
                 func_800AA02C();
                 play_menu_sfx(0x78, 0x80);
-                g_addhero_load_step = D_80160588;
+                g_addhero_load_step = g_addhero_loadseq_abort;
             }
             else
             {
                 play_menu_sfx(0x7E, 0x80);
                 g_addhero_progress_active = 1;
-                g_addhero_load_step = D_80160590;
+                g_addhero_load_step = g_addhero_loadseq_load_begin;
                 p = &g_addhero_element_pool.first;
                 p->draw = addhero_draw_load_progress;
                 p->attr.f.phase = 1;
@@ -2058,7 +2058,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fc, 0x12), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xF7:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014700C, 0x68), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f7, 0x68), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case ADDHERO_ENTRY_STATE_LOAD_PROGRESS:
         {
@@ -2102,7 +2102,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             s32 x; AddheroPacket *packet; s32 i;
             x = -x_offset + 0x90;
-            prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147012,0x6E), 4, x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f3,0x6E), 4, x, -y_offset, 2);
             prim = addhero_draw_choice_prompt(prim, ot, x, 0xE -y_offset);
             if (g_pad_input & 0x40)
             {
@@ -2141,8 +2141,8 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             s32 x; u8 *base; s32 temp;
             x=-x_offset+0x90;
-            prim=func_800A88A0(prim,ot,(void *)((s32)&D_8014700E-0x6A+D_8014700E),4,x,-y_offset,2);
-            base=(u8 *)&D_8014700E-0x6A;
+            prim=func_800A88A0(prim,ot,(void *)((s32)&g_addhero_glyph_save_confirm_msg-0x6A+g_addhero_glyph_save_confirm_msg),4,x,-y_offset,2);
+            base=(u8 *)&g_addhero_glyph_save_confirm_msg-0x6A;
             prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x6C),4,x,0xE -y_offset,2);
             prim=addhero_draw_choice_prompt(prim,ot,x,0x1C-y_offset);
             if (g_pad_input & 0x40)
@@ -2171,7 +2171,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     *(s32 *)(base + 0x33E4) = 0x414E41;
                     *(s32 *)(base + 0x33E0) = temp;
                     g_addhero_write_in_progress = 1;
-                    g_addhero_load_step = &D_801605A1;
+                    g_addhero_load_step = &g_addhero_loadseq_save_begin;
                     g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_PROGRESS;
                 }
             }
@@ -2181,8 +2181,8 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             s32 x; u8 *base; POLY_G4 *g; s32 next,elapsed,extent,color; AddheroPacket *packet; s32 i;
             x=-x_offset+0x90;
-            prim=func_800A88A0(prim,ot,(void *)((s32)&D_80146FC0-0x1C+D_80146FC0),4,x,-y_offset,2);
-            base=(u8 *)&D_80146FC0-0x1C;
+            prim=func_800A88A0(prim,ot,(void *)((s32)&g_addhero_glyph_save_progress-0x1C+g_addhero_glyph_save_progress),4,x,-y_offset,2);
+            base=(u8 *)&g_addhero_glyph_save_progress-0x1C;
             prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -y_offset,2);
             prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-y_offset,2);
             next=prim; g=(POLY_G4 *)prim;
@@ -2218,7 +2218,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     else { addhero_commit_selected_entry(); posv=g_addhero_selected_row*0xE; diff=posv-g_addhero_scroll_y;
                         if(diff>=0x4B){g_addhero_scroll_target_y=posv-0x46;g_addhero_scroll_frames=4;} if(diff<0){g_addhero_scroll_target_y=posv;g_addhero_scroll_frames=4;}
                     }
-                } else { g_addhero_progress_start_tick=VSync(-1);g_addhero_progress_active=1;g_addhero_load_step=&D_80160598;g_addhero_entry_state=ADDHERO_ENTRY_STATE_LOAD_PROGRESS; }
+                } else { g_addhero_progress_start_tick=VSync(-1);g_addhero_progress_active=1;g_addhero_load_step=&g_addhero_loadseq_load_progress;g_addhero_entry_state=ADDHERO_ENTRY_STATE_LOAD_PROGRESS; }
             }
         }
         break;
@@ -2233,7 +2233,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     }
     if((g_pad_input&0xA100)&&(g_addhero_entry_state!=ADDHERO_ENTRY_STATE_IDLE)){
         play_menu_sfx(0x7D,0x80);g_addhero_load_flow_active=0;g_addhero_load_step=0;g_addhero_scroll_frames=0;g_addhero_scroll_target_y=0;g_addhero_scroll_y=0;g_addhero_selected_row=0;g_addhero_entry_state=ADDHERO_ENTRY_STATE_IDLE;g_addhero_selection_status=0;
-        g_addhero_card_slot^=1;addhero_reset_entry_ranks();func_800AA02C();g_addhero_progress_bar_active=0;g_pad_input=0;g_addhero_load_step=&D_80160574;
+        g_addhero_card_slot^=1;addhero_reset_entry_ranks();func_800AA02C();g_addhero_progress_bar_active=0;g_pad_input=0;g_addhero_load_step=&g_addhero_loadseq_start;
     }
     return prim;
 }
@@ -2416,7 +2416,7 @@ s32 addhero_compute_save_checksum(u8 *data)
 s8 *addhero_format_decimal(s8 *out, s32 value)
 {
     struct Copy7 { s8 data[7]; };
-    extern s8 D_80140088[];
+    extern s8 g_addhero_decimal_overflow_glyphs[];
     s32 digit;
     s32 divisor;
     s32 started;
@@ -2428,7 +2428,7 @@ s8 *addhero_format_decimal(s8 *out, s32 value)
     {
         goto format;
     }
-    *(struct Copy7 *)p = *(struct Copy7 *)D_80140088;
+    *(struct Copy7 *)p = *(struct Copy7 *)g_addhero_decimal_overflow_glyphs;
     return p + 6;
 
 format:
@@ -2862,8 +2862,8 @@ extern s32 g_addhero_glyph_upload_y;
 extern u8 *g_addhero_load_step;
 extern u8 *g_addhero_glyph_raster_cursor;
 
-extern u8 D_8016057C[];
-extern u8 D_8016058C[];
+extern u8 g_addhero_loadseq_card[];
+extern u8 g_addhero_loadseq_file_ready[];
 extern u8 g_addhero_single_byte_char_table[];
 extern u8 g_addhero_double_byte_char_table[];
 extern u8 g_addhero_save_blob[];
@@ -3299,7 +3299,7 @@ s32 addhero_advance_load_sequence(void)
             g_addhero_entry_ranks[rank_index] = rank_value;
         }
         g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
-        g_addhero_load_step = &D_80160574;
+        g_addhero_load_step = &g_addhero_loadseq_start;
         break;
 
     cl_case_3:
@@ -3456,7 +3456,7 @@ s32 addhero_advance_load_sequence(void)
     c15_d70zero:
         phase_result = 5;
         g_addhero_entry_state = 0xFC;
-        g_addhero_load_step = D_8016057C;
+        g_addhero_load_step = g_addhero_loadseq_card;
         break;
 
     cl_case_16:
@@ -3504,7 +3504,7 @@ s32 addhero_advance_load_sequence(void)
             }
             close(g_addhero_file_handle);
             g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
-            g_addhero_load_step = &D_80160574;
+            g_addhero_load_step = &g_addhero_loadseq_start;
         }
         else
         {
@@ -3778,7 +3778,7 @@ void addhero_restart_load_sequence(void)
     _card_wait(g_addhero_card_slot);
     addhero_release_primary_handles();
     _card_info(g_addhero_card_slot * 0x10);
-    g_addhero_load_step = D_8016057C;
+    g_addhero_load_step = g_addhero_loadseq_card;
 }
 
 /**
@@ -4012,7 +4012,7 @@ void addhero_commit_selected_entry(void)
         *((u8 *)&local + 2) = value;
         strcpy(&g_addhero_save_file_path[0], p, slot);
     }
-    g_addhero_load_step = &D_8016058C[0];
+    g_addhero_load_step = &g_addhero_loadseq_file_ready[0];
     {
         s32 term1;
         s32 term2;
