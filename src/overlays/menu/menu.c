@@ -141,6 +141,12 @@
 #define MENU_REDRAW_LAYOUT 8
 /** @brief g_pad_ctx->inject_flags bit enabling injected menu input. */
 #define MENU_PAD_INJECT_ENABLED 0x80
+/** @brief Enables vibration feedback in g_pad_ctx->menu_option_flags. */
+#define MENU_OPTION_VIBRATION_ENABLED 0x01
+/** @brief Enables menu audio in g_pad_ctx->menu_option_flags. */
+#define MENU_OPTION_AUDIO_ENABLED 0x02
+/** @brief Number of directional links stored by each content item. */
+#define MENU_CONTENT_DIRECTION_COUNT 4
 /** @brief Ordering-table entry used as the menu frame's list head. */
 #define MENU_FRAME_OT_INDEX 13
 /** @brief Vertical offset of the node-tree clipping region within a draw page. */
@@ -718,7 +724,7 @@ extern u16 D_800FDCE8;
 /** @brief Ability-compatibility mask rebuilt before item content is loaded. */
 extern s8 g_menu_ability_mask;
 /** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
-extern s8 g_menu_companion_node;
+extern u8 g_menu_companion_node;
 
 /** @brief Nonnegative-label offset embedded in MenuStringTableLayout. */
 extern StringTableOffset g_menu_label_key_a;
@@ -2866,6 +2872,7 @@ s32 menu_handle_input(s32 process_actions)
     s32 scroll_extent;
     s32 next_scene_type;
     u8 item_flag;
+    u32* inject_flags;
     u32 item_word;
     s32 text_variant;
     u8* name_table;
@@ -3001,30 +3008,24 @@ s32 menu_handle_input(s32 process_actions)
                 {
                     if (g_menu_scene_type < 9)
                     {
+                        if ((g_menu_scene_type % 3) == 2)
                         {
-                            s32 row_start = (g_menu_scene_type / 3) * 3;
-                            do
-                            {
-                                next_scene_type = g_menu_scene_type - 2;
-                            } while (0);
-                            if (row_start != next_scene_type)
-                            {
-                                next_scene_type = g_menu_scene_type + 1;
-                            }
+                            next_scene_type = g_menu_scene_type - 2;
+                        }
+                        else
+                        {
+                            next_scene_type = g_menu_scene_type + 1;
                         }
                     }
                     else
                     {
+                        if ((g_menu_scene_type % 3) == 1)
                         {
-                            s32 row_start = (g_menu_scene_type / 3) * 3;
-                            do
-                            {
-                                next_scene_type = g_menu_scene_type - 1;
-                            } while (0);
-                            if (row_start != next_scene_type)
-                            {
-                                next_scene_type = g_menu_scene_type + 1;
-                            }
+                            next_scene_type = g_menu_scene_type - 1;
+                        }
+                        else
+                        {
+                            next_scene_type = g_menu_scene_type + 1;
                         }
                     }
                     g_menu_scene_type = next_scene_type;
@@ -3371,17 +3372,17 @@ after_do_while:
                         break;
 
                     case 6:
-                        ((u32*)((u8*)g_pad_ctx + 0x28))[0] |= 2;
+                        g_pad_ctx->menu_option_flags |= MENU_OPTION_AUDIO_ENABLED;
                         akao_set_paused(0);
                         break;
 
                     case 7:
-                        ((u32*)((u8*)g_pad_ctx + 0x28))[0] &= ~2;
+                        g_pad_ctx->menu_option_flags &= ~MENU_OPTION_AUDIO_ENABLED;
                         akao_set_paused(1);
                         break;
 
                     case 8:
-                        ((u32*)((u8*)g_pad_ctx + 0x28))[0] |= 1;
+                        g_pad_ctx->menu_option_flags |= MENU_OPTION_VIBRATION_ENABLED;
                         actuator_state->ports[0].small_motor_command = 1;
                         actuator_state->ports[0].large_motor_command = MENU_SE_VOLUME;
                         if (g_pad_ctx->inject_flags & MENU_PAD_INJECT_ENABLED)
@@ -3392,7 +3393,7 @@ after_do_while:
                         break;
 
                     case 9:
-                        ((u32*)((u8*)g_pad_ctx + 0x28))[0] &= ~1;
+                        g_pad_ctx->menu_option_flags &= ~MENU_OPTION_VIBRATION_ENABLED;
                         actuator_state->ports[0].small_motor_command = 0;
                         actuator_state->ports[1].small_motor_command = 0;
                         break;
@@ -3412,15 +3413,17 @@ after_do_while:
                         }
                         else
                         {
-                            *(volatile u32*)&g_pad_ctx->inject_flags |= MENU_PAD_INJECT_ENABLED;
+                            inject_flags = &g_pad_ctx->inject_flags;
+                            *inject_flags |= MENU_PAD_INJECT_ENABLED;
                             g_menu_companion_node = 0x2B;
                             menu_set_active_node();
                         }
                         break;
 
                     case 11:
-                        *(volatile u32*)&g_pad_ctx->inject_flags &= ~MENU_PAD_INJECT_ENABLED;
-                        *(u8*)&g_menu_companion_node = MENU_NONE;
+                        inject_flags = &g_pad_ctx->inject_flags;
+                        *inject_flags &= ~MENU_PAD_INJECT_ENABLED;
+                        g_menu_companion_node = MENU_NONE;
                         menu_set_active_node();
                         break;
                     }
@@ -3452,8 +3455,8 @@ after_do_while:
         }
 
         work_index = 0;
-        content_type = 0x1000;
-        for (; work_index < 4; work_index++)
+        content_type = PAD_BTN_UP;
+        for (; work_index < MENU_CONTENT_DIRECTION_COUNT; work_index++)
         {
             if (g_pad_input & content_type)
             {
@@ -3462,7 +3465,7 @@ after_do_while:
             content_type <<= 1;
         }
 
-        if (work_index != 4)
+        if (work_index != MENU_CONTENT_DIRECTION_COUNT)
         {
             menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
             if (content_items[g_menu_hit_item_idx].pad_4[work_index] == MENU_NONE)
@@ -3493,7 +3496,7 @@ after_do_while:
             {
                 if (g_menu_scene_type < 0x11)
                 {
-                    if ((content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_ITEM_TYPE_MASK) == 0x5000)
+                    if ((content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_ITEM_TYPE_MASK) == MENU_CONTENT_ITEM_TYPE_SUBMENU)
                     {
                         if (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x11)
                         {

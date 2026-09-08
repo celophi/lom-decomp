@@ -67,15 +67,15 @@ extern u8 g_prim_rect_buf[];
 /**
  * @brief Controller/pad context object (partial layout).
  *
- * Only the two fields touched by the scripted-input injection path in
- * @ref menu_tick are mapped so far; the rest of the structure is opaque.
- * Both fields together gate whether @c g_pad_input_inject is OR'd into
- * @c g_pad_input on a given frame.
+ * Only fields used by currently decompiled menu/controller paths are mapped;
+ * the rest of the structure remains opaque.
  */
 typedef struct
 {
-    u8  _pad000[0x840];     /**< 0x000: not yet mapped. */
-    u8  inject_enable;      /**< 0x840: non-zero allows input injection. */
+    u8  _pad000[0x28];          /**< 0x000: not yet mapped. */
+    u32 menu_option_flags;      /**< 0x028: menu audio/vibration option bits. */
+    u8  _pad02C[0x840 - 0x2C]; /**< 0x02C: not yet mapped. */
+    u8  inject_enable;          /**< 0x840: non-zero allows input injection. */
     u8  _pad841[0x858 - 0x841]; /**< 0x841: not yet mapped. */
     u32 inject_flags;       /**< 0x858: bit 0x80 enables input injection. */
     u8  _pad85C[0x234];          /**< 0x85C: not yet mapped. */
