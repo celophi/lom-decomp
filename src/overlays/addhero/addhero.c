@@ -261,20 +261,20 @@ s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
-u8 *addhero_skip_hex_digits(void *arg0);
-void addhero_terminate_multibyte_text(void *arg0);
+u8 *addhero_skip_hex_digits(void *text);
+void addhero_terminate_multibyte_text(void *buffer);
 void addhero_clear_elements();
 AddheroElement *addhero_alloc_element(void);
 void addhero_update_and_draw_elements();
 void addhero_deactivate_primary_element(void);
-void addhero_text_append(u8 *arg0, u8 *arg1);
-s32 addhero_text_byte_length(u8 *arg0);
-void addhero_text_copy(u8 *arg0, u8 *arg1);
+void addhero_text_append(u8 *dst, u8 *src);
+s32 addhero_text_byte_length(u8 *str);
+void addhero_text_copy(u8 *dst, u8 *src);
 s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
-s32 addhero_draw_progress_bar(s32 arg0, s32 *arg1);
-void addhero_open_status_dialog(s32 arg0);
-void addhero_open_exit_dialog(s32 arg0);
+s32 addhero_draw_progress_bar(s32 prim, s32 *ot);
+void addhero_open_status_dialog(s32 message_id);
+void addhero_open_exit_dialog(s32 message_id);
 s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
 s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset);
@@ -1218,16 +1218,16 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_o
 /**
  * @brief Advance past a run of hex digit characters (0-9, a-f, A-F) and return
  *        the pointer to the first non-hex byte.
- * @param arg0 Start of the text to scan.
+ * @param text Start of the text to scan.
  * @return Pointer to the first byte that is not a hex digit.
  * @see decomp.me (100%)
  */
-u8 *addhero_skip_hex_digits(void *arg0)
+u8 *addhero_skip_hex_digits(void *text)
 {
     u8 *p;
     u32 c;
 
-    p = arg0;
+    p = text;
     while (1)
     {
         c = *p;
@@ -1274,15 +1274,15 @@ u8 *addhero_skip_hex_digits(void *arg0)
 /**
  * @brief Zero-fill a 0x40-byte text field from the first null byte onward,
  *        walking multibyte (>= 0x80 lead) characters two bytes at a time.
- * @param arg0 Start of the 0x40-byte text buffer to terminate/clear.
+ * @param buffer Start of the 0x40-byte text buffer to terminate/clear.
  * @see decomp.me (100%)
  */
-void addhero_terminate_multibyte_text(void *arg0)
+void addhero_terminate_multibyte_text(void *buffer)
 {
     u8 *p;
     s32 i;
 
-    p = (u8 *)arg0;
+    p = (u8 *)buffer;
     i = 0;
     for (;;)
     {
@@ -1616,17 +1616,17 @@ void addhero_text_append(u8 *dst, u8 *src)
 /**
  * @brief Measure the byte length of a string, counting characters in the
  *        0x19-0x1F lead range as two bytes.
- * @param arg0 Null-terminated string to measure.
+ * @param str Null-terminated string to measure.
  * @return Length in bytes, excluding the terminator.
  * @see decomp.me (100%)
  */
-s32 addhero_text_byte_length(u8 *arg0)
+s32 addhero_text_byte_length(u8 *str)
 {
     u8 *p;
     u8 c;
     s32 len;
 
-    p = arg0;
+    p = str;
     c = *p;
     len = 0;
     while (c != 0)
@@ -1649,18 +1649,18 @@ s32 addhero_text_byte_length(u8 *arg0)
 /**
  * @brief Copy a multibyte string, counting 0x19-0x1F lead bytes as two-byte
  *        characters when computing its length, and null-terminate the result.
- * @param arg0 Destination buffer.
- * @param arg1 Source string to copy.
+ * @param dst Destination buffer.
+ * @param src Source string to copy.
  * @see decomp.me (100%)
  */
-void addhero_text_copy(u8 *arg0, u8 *arg1)
+void addhero_text_copy(u8 *dst, u8 *src)
 {
     u8 *p;
     u8 c;
     s32 len;
     s32 i;
 
-    p = arg1;
+    p = src;
     len = 0;
     while (*p != 0)
     {
@@ -1678,9 +1678,9 @@ void addhero_text_copy(u8 *arg0, u8 *arg1)
     }
     for (i = 0; i < len; i++)
     {
-        arg0[i] = arg1[i];
+        dst[i] = src[i];
     }
-    arg0[i] = 0;
+    dst[i] = 0;
 }
 
 /**
@@ -1825,19 +1825,19 @@ s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 /**
  * @brief Draw the gradient progress bar whose width tracks elapsed ticks, when
  *        the bar is active.
- * @param arg0 Current primitive pointer/index the POLY_G4 is written to.
- * @param arg1 Ordering table the primitive is linked into.
+ * @param prim Current primitive pointer/index the POLY_G4 is written to.
+ * @param ot   Ordering table the primitive is linked into.
  * @return The advanced primitive pointer, unchanged when the bar is inactive.
  * @see decomp.me (100%)
  */
-s32 addhero_draw_progress_bar(s32 arg0, s32 *arg1)
+s32 addhero_draw_progress_bar(s32 prim, s32 *ot)
 {
     POLY_G4 *g;
     s32 elapsed;
     s32 extent;
     s32 color;
 
-    g = (POLY_G4 *)arg0;
+    g = (POLY_G4 *)prim;
     if (g_addhero_progress_bar_active != 0)
     {
         elapsed = func_8002054C(-1) - g_addhero_progress_start_tick;
@@ -1865,19 +1865,19 @@ s32 addhero_draw_progress_bar(s32 arg0, s32 *arg1)
         g->y0 = 0;
         g->y3 = 0x2C;
         g->y2 = 0x2C;
-        addPrim(arg1, g);
-        arg0 += 0x24;
+        addPrim(ot, g);
+        prim += 0x24;
     }
-    return arg0;
+    return prim;
 }
 
 /**
  * @brief Reconfigure the primary element as a modal status dialog and reset the
  *        browser/IO state, storing the dialog message id.
- * @param arg0 Dialog message id stored in g_addhero_dialog_state.
+ * @param message_id Dialog message id stored in g_addhero_dialog_state.
  * @see decomp.me (100%)
  */
-void addhero_open_status_dialog(s32 arg0)
+void addhero_open_status_dialog(s32 message_id)
 {
     func_800A3938(0x78, 0x80);
     g_addhero_element_pool.first.draw = (void *)addhero_draw_status_dialog;
@@ -1896,16 +1896,16 @@ void addhero_open_status_dialog(s32 arg0)
     g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
     addhero_reset_entry_ranks();
     g_addhero_load_step = 0;
-    g_addhero_dialog_state = arg0;
+    g_addhero_dialog_state = message_id;
 }
 
 /**
  * @brief Reconfigure the primary element as a modal exit dialog and reset the
  *        browser/IO state, storing the dialog message id.
- * @param arg0 Dialog message id stored in g_addhero_dialog_state.
+ * @param message_id Dialog message id stored in g_addhero_dialog_state.
  * @see decomp.me (100%)
  */
-void addhero_open_exit_dialog(s32 arg0)
+void addhero_open_exit_dialog(s32 message_id)
 {
     func_800A3938(0x78, 0x80);
     g_addhero_element1.draw = (void *)addhero_draw_exit_dialog;
@@ -1923,7 +1923,7 @@ void addhero_open_exit_dialog(s32 arg0)
     g_addhero_io_busy = 0;
     addhero_reset_entry_ranks();
     g_addhero_load_step = 0;
-    g_addhero_dialog_state = arg0;
+    g_addhero_dialog_state = message_id;
 }
 
 /**
@@ -2912,8 +2912,8 @@ void addhero_expand_text_glyph_codes(u8 *out, u8 *in);
 /* External functions (defined in addhero.c or elsewhere) */
 s32 addhero_parse_entry_fields();
 void addhero_scroll_to_selection(void);
-void addhero_open_status_dialog(s32 arg0);
-void addhero_open_exit_dialog(s32 arg0);
+void addhero_open_status_dialog(s32 message_id);
+void addhero_open_exit_dialog(s32 message_id);
 void func_800AA02C(void);
 s32 func_8001714C(void *a, void *b, s32 n);
 s32 func_80016F9C(void *a, void *b);
