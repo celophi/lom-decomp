@@ -1,5 +1,6 @@
 #include "common.h"
 #include "vector.h"
+#include "display.h"
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
@@ -218,7 +219,7 @@ extern u16 D_80147054;
 extern u16 D_80147470[];
 
 /* In-file functions */
-void addhero_init(s32 arg0, s32 arg1);
+void addhero_init(s32 arg0, s32 mode);
 s32 addhero_state_step(s32 arg0);
 void addhero_build_ui_elements(void);
 void addhero_update_state();
@@ -301,12 +302,17 @@ s32 addhero_advance_load_sequence();
 #define GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
 #define GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
 
-/** @see decomp.me (100%) */
-void addhero_init(s32 arg0, s32 arg1)
+/**
+ * @brief Initialize ADDHERO overlay state and build its initial UI elements.
+ * @param arg0 Value stored in D_80160930 for later use by the overlay. TODO: role unknown.
+ * @param mode Overlay mode selector stored in g_addhero_mode.
+ * @see decomp.me (100%)
+ */
+void addhero_init(s32 arg0, s32 mode)
 {
     RECT rect;
 
-    g_addhero_mode = arg1;
+    g_addhero_mode = mode;
     g_addhero_entry_state = 0xFF;
     g_addhero_card_slot = 0;
     addhero_reset_entry_ranks();
@@ -314,10 +320,10 @@ void addhero_init(s32 arg0, s32 arg1)
     addhero_init_stream_handles();
     g_addhero_icon_phase = 0;
     func_80067F8C();
-    rect.x = 0x140;
-    rect.y = 0;
-    rect.w = 0x40;
-    rect.h = 0x100;
+    rect.x = OVERLAY_INIT_CLEAR_VRAM_X;
+    rect.y = OVERLAY_INIT_CLEAR_VRAM_Y;
+    rect.w = OVERLAY_INIT_CLEAR_VRAM_W;
+    rect.h = OVERLAY_INIT_CLEAR_VRAM_H;
     func_8001990C(&rect, 0, 0, 0);
     addhero_reset_glyph_cache();
     g_addhero_write_in_progress = 0;

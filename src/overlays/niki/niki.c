@@ -1,5 +1,6 @@
 #include "common.h"
 #include "vector.h"
+#include "display.h"
 
 typedef struct {
     s16 x;
@@ -247,10 +248,10 @@ void niki_init(s32 arg0, s32 mode)
     niki_init_stream_handles();
     g_niki_icon_phase = 0;
     func_80067F8C();
-    rect.x = 0x140;
-    rect.y = 0;
-    rect.w = 0x40;
-    rect.h = 0x100;
+    rect.x = OVERLAY_INIT_CLEAR_VRAM_X;
+    rect.y = OVERLAY_INIT_CLEAR_VRAM_Y;
+    rect.w = OVERLAY_INIT_CLEAR_VRAM_W;
+    rect.h = OVERLAY_INIT_CLEAR_VRAM_H;
     func_8001990C(&rect, 0, 0, 0);
     niki_reset_glyph_cache();
     g_niki_progress_active = 0;
