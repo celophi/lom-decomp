@@ -99,6 +99,31 @@ typedef struct
 #define ADDHERO_ENTRY_ROW_HEIGHT 14
 #define ADDHERO_NO_ICON 0x7F
 
+/*
+ * g_addhero_entry_state is dual-purpose:
+ *
+ *   0x00-0x0F  Number of save entries loaded from the current card. A PSX
+ *              memory card holds 15 directory blocks, so the count never
+ *              reaches 0x10; the value is used directly as a count/index
+ *              while scanning and browsing the entry list.
+ *   0xF3-0xFF  Modal state-machine sentinel. The `state >= 0x10` test tells a
+ *              sentinel apart from a live entry count.
+ *
+ * Only the sentinels whose role is unambiguous from the control flow are named
+ * below. The remaining sentinels are message/status screens whose exact meaning
+ * depends on the (binary-resident) message resource each one draws, so they are
+ * left as raw values until identified:
+ *   0xF3  companion prompt page to SAVE_CONFIRM (navigates to it or cancels)
+ *   0xF7  drawn when the selected entry is not found while advancing the list
+ *   0xF8/0xF9  mode-dependent card read/scan failure notice
+ *   0xFA/0xFB/0xFC/0xFD  status/result notices
+ *   0xFE  no-op (draws nothing)
+ */
+#define ADDHERO_ENTRY_STATE_IDLE          0xFF  /* browsing / reset; no operation active */
+#define ADDHERO_ENTRY_STATE_LOAD_PROGRESS 0xF6  /* importing a matched entry; progress bar */
+#define ADDHERO_ENTRY_STATE_SAVE_PROGRESS 0xF5  /* write in progress; progress bar */
+#define ADDHERO_ENTRY_STATE_SAVE_CONFIRM  0xF4  /* confirm dialog; accepting writes the save */
+
 typedef struct AddheroFallbackText
 {
     u8 pad[0x24];
@@ -313,7 +338,7 @@ void addhero_init(s32 arg0, s32 mode)
     RECT rect;
 
     g_addhero_mode = mode;
-    g_addhero_entry_state = 0xFF;
+    g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
     g_addhero_card_slot = 0;
     addhero_reset_entry_ranks();
     g_addhero_result = 3;
@@ -653,7 +678,7 @@ void addhero_reset_state(void)
 {
     D_801609B4 = 0;
     g_addhero_load_step = 0;
-    g_addhero_entry_state = 0xFF;
+    g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
     g_addhero_scroll_frames = 0;
     g_addhero_scroll_target_y = 0;
     g_addhero_scroll_y = 0;
@@ -754,7 +779,7 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         {
             s32 x;
             u8 *base;
-        case 0xFF:
+        case ADDHERO_ENTRY_STATE_IDLE:
             x = -arg2 + 0x84;
             base = (u8 *)&D_80146FA4;
             prim = func_800A88A0(prim, ot, base + D_80146FA4, 4, x, -arg3, 2);
@@ -1516,7 +1541,7 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         g_addhero_element_pool.first.attr.f.state = 0;
         func_800AA02C();
         func_800A3938(0x78, 0x80);
-        g_addhero_entry_state = 0xFF;
+        g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
         addhero_reset_entry_ranks();
         g_addhero_load_step = 0;
     }
@@ -1681,7 +1706,7 @@ void addhero_open_status_dialog(s32 arg0)
     g_addhero_progress_active = 0;
     g_addhero_selection_status = 0;
     g_addhero_io_busy = 0;
-    g_addhero_entry_state = 0xFF;
+    g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
     addhero_reset_entry_ranks();
     g_addhero_load_step = 0;
     g_addhero_dialog_state = arg0;
@@ -1791,7 +1816,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     case 0xF9:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -arg2 + 0x90, -arg3, 2);
         break;
-    case 0xFF:
+    case ADDHERO_ENTRY_STATE_IDLE:
         {
             s32 x; u8 *base;
             x = -arg2 + 0x90;
@@ -1816,7 +1841,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     case 0xF7:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014700C, 0x68), 4, -arg2 + 0x90, -arg3, 2);
         break;
-    case 0xF6:
+    case ADDHERO_ENTRY_STATE_LOAD_PROGRESS:
         {
             s32 x; u8 *base; POLY_G4 *g; s32 next, elapsed, extent, color, finalmode;
             x = -arg2 + 0x90;
@@ -1847,10 +1872,10 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                     g_addhero_element_pool.first.attr.f.phase=1; g_addhero_element_pool.first.attr.f.state=1; g_addhero_element_pool.first.attr.f.x=0x20; g_addhero_element_pool.first.attr.f.code=0x70;
                     g_addhero_element_pool.first.active=1; g_addhero_element_pool.first.y=0x14; SET_ELEM_CODE(&g_addhero_element_pool.first,0);
                     func_800AA02C();
-                    g_addhero_write_in_progress=0; g_addhero_selection_status=0; g_addhero_io_busy=0; g_addhero_progress_active=0; g_addhero_entry_state=0xFF;
+                    g_addhero_write_in_progress=0; g_addhero_selection_status=0; g_addhero_io_busy=0; g_addhero_progress_active=0; g_addhero_entry_state=ADDHERO_ENTRY_STATE_IDLE;
                     addhero_reset_entry_ranks(); finalmode=4; g_addhero_load_step=0; g_addhero_dialog_state=finalmode; return prim;
                 }
-                func_800A3938(0x7B,0x80); g_addhero_entry_state=0xF4; addhero_enable_choice_toggle(); func_800AA02C();
+                func_800A3938(0x7B,0x80); g_addhero_entry_state=ADDHERO_ENTRY_STATE_SAVE_CONFIRM; addhero_enable_choice_toggle(); func_800AA02C();
             }
         }
         break;
@@ -1864,7 +1889,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             {
                 func_800A3938(0x78, 0x80);
                 addhero_enable_choice_toggle();
-                g_addhero_entry_state = 0xF4;
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
                 func_800AA02C();
             }
             else if (g_pad_input & 0x220)
@@ -1873,7 +1898,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                 {
                     func_800A3938(0x78, 0x80);
                     addhero_enable_choice_toggle();
-                    g_addhero_entry_state = 0xF4;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
                     func_800AA02C();
                 }
                 else
@@ -1893,7 +1918,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             }
         }
         break;
-    case 0xF4:
+    case ADDHERO_ENTRY_STATE_SAVE_CONFIRM:
         {
             s32 x; u8 *base; s32 temp;
             x=-arg2+0x90;
@@ -1928,12 +1953,12 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                     *(s32 *)(base + 0x33E0) = temp;
                     g_addhero_write_in_progress = 1;
                     g_addhero_load_step = &D_801605A1;
-                    g_addhero_entry_state = 0xF5;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_PROGRESS;
                 }
             }
         }
         break;
-    case 0xF5:
+    case ADDHERO_ENTRY_STATE_SAVE_PROGRESS:
         {
             s32 x; u8 *base; POLY_G4 *g; s32 next,elapsed,extent,color; AddheroPacket *packet; s32 i;
             x=-arg2+0x90;
@@ -1974,7 +1999,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                     else { addhero_commit_selected_entry(); posv=g_addhero_selected_row*0xE; diff=posv-g_addhero_scroll_y;
                         if(diff>=0x4B){g_addhero_scroll_target_y=posv-0x46;g_addhero_scroll_frames=4;} if(diff<0){g_addhero_scroll_target_y=posv;g_addhero_scroll_frames=4;}
                     }
-                } else { g_addhero_progress_start_tick=func_8002054C(-1);g_addhero_progress_active=1;g_addhero_load_step=&D_80160598;g_addhero_entry_state=0xF6; }
+                } else { g_addhero_progress_start_tick=func_8002054C(-1);g_addhero_progress_active=1;g_addhero_load_step=&D_80160598;g_addhero_entry_state=ADDHERO_ENTRY_STATE_LOAD_PROGRESS; }
             }
         }
         break;
@@ -1982,13 +2007,13 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         break;
     }
     if(g_addhero_io_busy!=0)return prim;
-    if(g_addhero_entry_state==0xF6)return prim; if(g_addhero_entry_state==0xF5)return prim; if(g_addhero_entry_state==0xF4)return prim; if(g_addhero_entry_state==0xF3)return prim;
+    if(g_addhero_entry_state==ADDHERO_ENTRY_STATE_LOAD_PROGRESS)return prim; if(g_addhero_entry_state==ADDHERO_ENTRY_STATE_SAVE_PROGRESS)return prim; if(g_addhero_entry_state==ADDHERO_ENTRY_STATE_SAVE_CONFIRM)return prim; if(g_addhero_entry_state==0xF3)return prim;
     if(g_pad_input&0x40){
         s32 *p; s32 i,word; D_80122718=3;func_800A3938(0x78,0x80);func_80067F28();p=(s32 *)&g_addhero_element_pool.first;i=0;
         do{word=*p;if(word&7)*p=(((word&~7)|3)&~0x78)|0x40;i++;p+=3;}while(i<8);return prim;
     }
-    if((g_pad_input&0xA100)&&(g_addhero_entry_state!=0xFF)){
-        func_800A3938(0x7D,0x80);D_801609B4=0;g_addhero_load_step=0;g_addhero_scroll_frames=0;g_addhero_scroll_target_y=0;g_addhero_scroll_y=0;g_addhero_selected_row=0;g_addhero_entry_state=0xFF;g_addhero_selection_status=0;
+    if((g_pad_input&0xA100)&&(g_addhero_entry_state!=ADDHERO_ENTRY_STATE_IDLE)){
+        func_800A3938(0x7D,0x80);D_801609B4=0;g_addhero_load_step=0;g_addhero_scroll_frames=0;g_addhero_scroll_target_y=0;g_addhero_scroll_y=0;g_addhero_selected_row=0;g_addhero_entry_state=ADDHERO_ENTRY_STATE_IDLE;g_addhero_selection_status=0;
         g_addhero_card_slot^=1;addhero_reset_entry_ranks();func_800AA02C();g_addhero_progress_bar_active=0;g_pad_input=0;g_addhero_load_step=&D_80160574;
     }
     return prim;
@@ -2934,7 +2959,7 @@ s32 addhero_advance_load_sequence(void)
         {
             g_addhero_entry_ranks[rank_index] = rank_value;
         }
-        g_addhero_entry_state = 0xFF;
+        g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
         g_addhero_load_step = &D_80160574;
         break;
 
@@ -3139,7 +3164,7 @@ s32 addhero_advance_load_sequence(void)
                 break;
             }
             func_8001683C(g_addhero_file_handle);
-            g_addhero_entry_state = 0xFF;
+            g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
             g_addhero_load_step = &D_80160574;
         }
         else
