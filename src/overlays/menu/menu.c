@@ -171,6 +171,12 @@
 #define MENU_TREE_DRAW_WIDTH 36
 #define MENU_TREE_DRAW_HEIGHT 170
 
+/** @brief Base CLUT row used by menu icon sprites. */
+#define MENU_ICON_CLUT_Y_BASE 0x1F2
+/** @brief Convert one packed menu icon CLUT code to a Psy-Q CLUT id. */
+#define MENU_ICON_CLUT(code) \
+    getClut(((code) & 0xF) << 4, ((code) >> 4) + MENU_ICON_CLUT_Y_BASE)
+
 /* Sound-effect ids passed to menu_play_se; volume is always MENU_SE_VOLUME. */
 /** @brief Scroll navigation sound (D-up / D-down / Circle to scroll). */
 #define MENU_SE_NAVIGATE 0x7D
@@ -586,7 +592,7 @@ typedef struct
     u8 v_coord; /**< Texture V coordinate. */
     u8 w;       /**< Sprite width in pixels. */
     u8 h;       /**< Sprite height in pixels. */
-} NodeSpriteInfo;
+} MenuIconSpriteInfo;
 
 /** @brief State block for a scrollable circular list widget. */
 typedef struct
@@ -814,7 +820,7 @@ extern s8 D_800F0C38[];
 extern s32 D_80168C6C;
 
 /* Rendering assets. */
-extern NodeSpriteInfo g_menu_icon_sprite_defs[];
+extern MenuIconSpriteInfo g_menu_icon_sprite_defs[];
 extern u8 g_menu_icon_clut_codes[];
 
 /** @brief Three-frame cursor icon-id sequence (0x6B, 0x6C, 0x6D). */
@@ -2344,54 +2350,49 @@ void menu_update_layout(void)
 }
 
 /**
- * @brief Assigns a position slot to a menu node and optionally recurses into its first child.
- * @param node_idx Index into g_menu_nodes of the node to lay out.
+ * @brief Assign a layout position to a menu node and recursively lay out its expanded children.
+ * @param node_index Index into g_menu_nodes of the node to lay out.
  * @param base_pos Running position counter; this node occupies [base_pos, base_pos + MENU_ROW_HEIGHT).
  * @return Updated position counter after processing this node and any expanded children.
  */
-s32 menu_layout_node(s32 node_idx, s32 base_pos)
+s32 menu_layout_node(s32 node_index, s32 base_pos)
 {
-    MenuNode* temp_a0;
-    s32 cur_pos;
-    int child_iter;
+    s32 layout_pos;
     MenuNode* node;
     int is_expanded;
-    u32 layout_y; /* base_pos clamped to 16 bits; packed as 9-bit value into layout_y_lsb/layout_y_hi */
-    union
-    {
-        u16 nav_y_packed;
-        struct
-        {
-            u8 nav_y_hi;
-            u8 layout_y_lsb;
-        } s;
-    }* u8_alias;
-    MenuNode* node2;
-    cur_pos = base_pos;
-    is_expanded = (((u16)(&g_menu_nodes[node_idx])->u2.unk2) >> 1) & 1;
-    layout_y = cur_pos & 0xFFFF;
-    cur_pos += MENU_ROW_HEIGHT;
-    node = &g_menu_nodes[node_idx];
+    u32 layout_y;
+    MenuNode* child_source;
 
-    (*(&g_menu_nodes[node_idx])).state = MENU_NODE_STATE_LAID_OUT;
-    u8_alias = &node->u8_u;
-    /* Pack 9-bit layout Y: bit 0 goes into MENU_LAYOUT_Y0_BIT of u8_u.nav_y_packed (layout_y_lsb bit 7);
-     * bits 1-8 go into layout_y_hi. Reconstruct: (layout_y_hi << 1) | (layout_y_lsb >> 7). */
-    node->u8_u.nav_y_packed = (*u8_alias).s.nav_y_hi | ((layout_y & 1) << 15);
-    (&g_menu_nodes[node_idx])->uA.layout_child_packed = ((&g_menu_nodes[node_idx])->uA.layout_child_packed & 0xFF00) | (0xFF & (layout_y >> 1));
+    layout_pos = base_pos;
+    is_expanded = (((u16)(&g_menu_nodes[node_index])->u2.unk2) >> 1) & 1;
+    layout_y = layout_pos & 0xFFFF;
+    layout_pos += MENU_ROW_HEIGHT;
+    node = &g_menu_nodes[node_index];
+
+    g_menu_nodes[node_index].state = MENU_NODE_STATE_LAID_OUT;
+    /* Pack the 9-bit layout Y across layout_y_lsb and layout_y_hi. */
+    node->u8_u.nav_y_packed = node->u8_u.s.nav_y_hi | ((layout_y & 1) << 15);
+    g_menu_nodes[node_index].uA.layout_child_packed =
+        (g_menu_nodes[node_index].uA.layout_child_packed & 0xFF00) | (0xFF & (layout_y >> 1));
     node->uA.layout_child_packed = (node->uA.layout_child_packed & 0xFF00) | ((layout_y >> 1) & 0xFF);
+
     if (is_expanded)
     {
-        s32 child_idx;
-        child_idx = 0;
-        node2 = node;
-        for (; child_idx < MENU_MAX_CHILDREN;)
+        s32 child_index;
+
+        child_index = 0;
+        child_source = node;
+        for (; child_index < MENU_MAX_CHILDREN;)
         {
-            if (*((u8*)node2 + child_idx + 0xB) == MENU_NONE) break;
-            cur_pos = menu_layout_node(*((u8*)node2 + child_idx++ + 0xB), cur_pos);
+            if (*((u8*)child_source + child_index + 0xB) == MENU_NONE)
+            {
+                break;
+            }
+            layout_pos = menu_layout_node(*((u8*)child_source + child_index++ + 0xB), layout_pos);
         }
     }
-    return cur_pos;
+
+    return layout_pos;
 }
 
 /**
@@ -2692,35 +2693,34 @@ s32 menu_focus_active_content_item(void)
  */
 void menu_set_active_node()
 {
-    s32 node_idx;
+    s32 clear_index;
     s32 walk_off;
     MenuNode* walk_base;
-    MenuNode* curr_node;
     MenuNode* active_node;
     MenuNode* active_base;
     MenuNode* loop_active;
     u16 temp_v0;
     s32 active_idx;
     s32 char_slot_bits;
-    s32 var_s3;     /* parent-walk: current ancestor index; layout: scroll-adjusted flag */
-    s32 layout_pos; /* parent-walk: reused as temp for parent_idx check; layout: y accumulator */
-    s32 node_i;
+    s32 has_visible_children;
+    s32 layout_pos;
+    s32 node_index;
     MenuNode* node;
     s32 prev_layout_y;
     long child_slot;
-    s32 child_idx;
-    s32 child_idx2;
-    u16 child_wide;
+    s32 child_index_value;
+    s32 reloaded_child_index;
+    u16 wide_child_index;
     MenuNode* child_node;
-    s32 child_base_addr;
-    u16 nav_col; /* bits [14:8] of nav_x_packed: 7-bit column, copied to children */
-    s32 parent_packed;
-    s32 parent_y_tmp;
+    s32 node_base_addr;
+    u16 nav_x_bits; /* bits [14:8] of nav_x_packed: 7-bit column, copied to children */
+    s32 parent_nav_x;
+    s32 parent_nav_y_hi;
 
     /* Clear the "expanded" bit (bit 1) on every node, then re-expand only the active path. */
-    for (node_idx = 0; node_idx < MENU_NODE_COUNT; node_idx++)
+    for (clear_index = 0; clear_index < MENU_NODE_COUNT; clear_index++)
     {
-        g_menu_nodes[node_idx].u2.unk2 &= 0xFFFD;
+        g_menu_nodes[clear_index].u2.unk2 &= ~MENU_NODE_FLAG_EXPANDED;
     }
 
     /* Walk from g_menu_active_node up to the root, marking each ancestor expanded. */
@@ -2733,7 +2733,7 @@ void menu_set_active_node()
         {
             child_slot = ((MenuNode*)(walk_off + (s32)walk_base))->u2.s.parent_idx;
             walk_off = child_slot << 4;
-            ((MenuNode*)(walk_off + (s32)walk_base))->u2.unk2 |= 2;
+            ((MenuNode*)(walk_off + (s32)walk_base))->u2.unk2 |= MENU_NODE_FLAG_EXPANDED;
         } while (((MenuNode*)(walk_off + (s32)walk_base))->u2.s.parent_idx != MENU_NONE);
     }
 
@@ -2741,41 +2741,41 @@ void menu_set_active_node()
     active_base = g_menu_nodes;
     active_idx = g_menu_active_node;
     active_node = active_base + active_idx;
-    temp_v0 = active_node->u2.unk2 | 2;
+    temp_v0 = active_node->u2.unk2 | MENU_NODE_FLAG_EXPANDED;
     active_node->u2.unk2 = temp_v0;
     if ((temp_v0 >> 1) & 1)
     {
         child_slot = 0;
-        child_base_addr = (s32)active_base;
+        node_base_addr = (s32)active_base;
         loop_active = active_node;
         for (; child_slot < MENU_MAX_CHILDREN; child_slot++)
         {
-            child_idx = *((u8*)loop_active + child_slot + 0xB);
-            child_wide = child_idx;
-            if (child_idx == (temp_v0 = MENU_NONE))
+            child_index_value = *((u8*)loop_active + child_slot + 0xB);
+            wide_child_index = child_index_value;
+            if (child_index_value == (temp_v0 = MENU_NONE))
             {
                 break;
             }
-            child_node = (MenuNode*)(((u32)child_wide << 4) + child_base_addr);
+            child_node = (MenuNode*)(((u32)wide_child_index << 4) + node_base_addr);
             /* Propagate nav column X (bits [14:8]) from parent to child. */
-            nav_col = loop_active->idx_nav.nav_x_packed & MENU_NAV_X_MASK;
+            nav_x_bits = loop_active->idx_nav.nav_x_packed & MENU_NAV_X_MASK;
             child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed & MENU_NAV_X_CLEAR;
-            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed | nav_col;
+            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed | nav_x_bits;
             child_node->u8_u.nav_y_packed = child_node->u8_u.nav_y_packed & MENU_NAV_X_CLEAR;
-            child_node->u8_u.nav_y_packed = child_node->u8_u.nav_y_packed | nav_col;
-            child_idx2 = (&loop_active->uA.s.child0)[child_slot];
-            child_idx2 ^= child_slot;
-            child_idx2 ^= child_slot;
-            parent_packed = loop_active->idx_nav.nav_x_packed;
-            parent_packed ^= child_slot;
-            parent_packed ^= child_slot;
-            parent_y_tmp = loop_active->u8_u.s.nav_y_hi;
+            child_node->u8_u.nav_y_packed = child_node->u8_u.nav_y_packed | nav_x_bits;
+            reloaded_child_index = (&loop_active->uA.s.child0)[child_slot];
+            reloaded_child_index ^= child_slot;
+            reloaded_child_index ^= child_slot;
+            parent_nav_x = loop_active->idx_nav.nav_x_packed;
+            parent_nav_x ^= child_slot;
+            parent_nav_x ^= child_slot;
+            parent_nav_y_hi = loop_active->u8_u.s.nav_y_hi;
             /* Propagate nav Y bit 0 (bit 15 of nav_x_packed) from parent to child. */
-            ((MenuNode*)(((u32)child_idx2 << 4) + child_base_addr))->idx_nav.nav_x_packed =
-                (((MenuNode*)(((u32)child_idx2 << 4) + child_base_addr))->idx_nav.nav_x_packed & ~MENU_NAV_Y0_BIT) | (parent_packed & MENU_NAV_Y0_BIT);
+            ((MenuNode*)(((u32)reloaded_child_index << 4) + node_base_addr))->idx_nav.nav_x_packed =
+                (((MenuNode*)(((u32)reloaded_child_index << 4) + node_base_addr))->idx_nav.nav_x_packed & ~MENU_NAV_Y0_BIT) | (parent_nav_x & MENU_NAV_Y0_BIT);
             /* Propagate nav_y_hi (nav Y bits 8:1) from parent to child's u8_u low byte. */
-            ((MenuNode*)(((u32)child_idx2 << 4) + child_base_addr))->u8_u.nav_y_packed =
-                (((MenuNode*)(((u32)child_idx2 << 4) + child_base_addr))->u8_u.nav_y_packed & 0xFF00) | parent_y_tmp;
+            ((MenuNode*)(((u32)reloaded_child_index << 4) + node_base_addr))->u8_u.nav_y_packed =
+                (((MenuNode*)(((u32)reloaded_child_index << 4) + node_base_addr))->u8_u.nav_y_packed & 0xFF00) | parent_nav_y_hi;
         }
     }
 
@@ -2787,22 +2787,22 @@ void menu_set_active_node()
     }
 
     /* Re-run layout for all root nodes and adjust scroll if content overflows the viewport. */
-    var_s3 = 0;
+    has_visible_children = 0;
     layout_pos = 0;
     node = g_menu_nodes;
-    for (node_i = 0; node_i < MENU_NODE_COUNT; node_i++, node++)
+    for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++, node++)
     {
         temp_v0 = MENU_VIEW_HEIGHT;
-        if (g_menu_nodes[node_i].u2.s.parent_idx == MENU_NONE)
+        if (g_menu_nodes[node_index].u2.s.parent_idx == MENU_NONE)
         {
-            if (g_menu_nodes[node_i].u2.s.flags & 1)
+            if (g_menu_nodes[node_index].u2.s.flags & MENU_NODE_FLAG_ACTIVE)
             {
                 prev_layout_y = layout_pos;
-                layout_pos = menu_layout_node(node_i, layout_pos);
+                layout_pos = menu_layout_node(node_index, layout_pos);
                 /* If this node contributed more than one row, it has visible children. */
                 if (prev_layout_y != (layout_pos - MENU_ROW_HEIGHT))
                 {
-                    var_s3 = 1;
+                    has_visible_children = 1;
                     if (layout_pos > MENU_VIEW_HEIGHT)
                     {
                         g_menu_scroll_pos = layout_pos - temp_v0;
@@ -2814,7 +2814,7 @@ void menu_set_active_node()
     }
 
     g_menu_layout_end = layout_pos;
-    if (var_s3 == 0)
+    if (has_visible_children == 0)
     {
         g_menu_scroll_pos = 0;
         g_menu_redraw_state = MENU_REDRAW_LAYOUT;
@@ -6383,22 +6383,22 @@ void* menu_draw_content_cursor(void* arg0, s32* arg1, s32 arg2)
 
 /**
  * @brief Render all root menu nodes, then lerp g_menu_content_height toward g_menu_scroll_pos.
- * @param arg0 Current primitive buffer pointer.
- * @param arg1 Pointer to the ordering-table entry used by node-rendering helpers.
+ * @param prim_buf Current primitive buffer pointer.
+ * @param ot Pointer to the ordering-table entry used by node-rendering helpers.
  * @return Updated primitive buffer pointer after rendering all active root nodes.
  */
-s32 menu_draw_node_tree(s32 arg0, s32* arg1)
+s32 menu_draw_node_tree(s32 prim_buf, s32* ot)
 {
-    s32 i;
-    s32 temp_v0;
+    s32 node_index;
+    s32 scroll_step;
 
     g_menu_nav_count = 0;
 
-    for (i = 0; i < MENU_NODE_COUNT; i++)
+    for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++)
     {
-        if ((g_menu_nodes[i].u2.s.parent_idx == MENU_NONE) && (g_menu_nodes[i].u2.s.flags & 1))
+        if ((g_menu_nodes[node_index].u2.s.parent_idx == MENU_NONE) && (g_menu_nodes[node_index].u2.s.flags & MENU_NODE_FLAG_ACTIVE))
         {
-            arg0 = menu_draw_node_recursive(i, arg0, arg1);
+            prim_buf = menu_draw_node_recursive(node_index, prim_buf, ot);
         }
     }
 
@@ -6409,12 +6409,12 @@ s32 menu_draw_node_tree(s32 arg0, s32* arg1)
     }
     else
     {
-        temp_v0 = (g_menu_scroll_pos - g_menu_content_height) / g_menu_redraw_state;
+        scroll_step = (g_menu_scroll_pos - g_menu_content_height) / g_menu_redraw_state;
         g_menu_redraw_state -= 1;
-        g_menu_content_height += temp_v0;
+        g_menu_content_height += scroll_step;
     }
 
-    return arg0;
+    return prim_buf;
 }
 
 
@@ -6529,65 +6529,65 @@ s32 menu_draw_node_recursive(s32 arg0, s32 arg1, s32* arg2)
 
 /**
  * @brief Emit the sprite primitives for one menu icon.
- * @param arg0 Primitive-buffer cursor.
- * @param arg1 Ordering-table entry to update.
- * @param arg2 Icon definition index.
- * @param arg3 Base X coordinate.
- * @param arg4 Base Y coordinate.
- * @param arg5 Nonzero to emit the secondary sprite.
- * @param arg6 Pixel offset applied to the sprite position.
- * @param arg7 Nonzero to use the active secondary-sprite mode.
- * @param arg8 Packed node style bits; currently unused.
+ * @param prim_buf Primitive-buffer cursor.
+ * @param ot Ordering-table entry to update.
+ * @param icon_id Icon definition index.
+ * @param x Base X coordinate.
+ * @param y Base Y coordinate.
+ * @param secondary_offset Nonzero to emit the secondary sprite and offset the primary sprite.
+ * @param animation_offset Pixel offset applied to the animated sprite positions.
+ * @param active Nonzero to use the active secondary-sprite mode.
+ * @param style_bits Packed node style bits; currently unused.
  * @return Next free primitive-buffer address.
  */
-void* menu_emit_icon_sprite(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8)
+void* menu_emit_icon_sprite(void* prim_buf, s32* ot, s32 icon_id, s32 x, s32 y, s32 secondary_offset, s32 animation_offset, s32 active, s32 style_bits)
 {
-    int new_var;
-    u8* p1 = (u8*)arg0;
-    (void)arg8;
-    *((u32*)(p1 + 0x4)) = 0x808080;
-    p1[3] = 4;
-    new_var = arg3 - arg5;
-    p1[7] = 0x64;
-    *((s16*)(p1 + 0x8)) = (s16)(new_var + arg6);
-    *((s16*)(p1 + 0xA)) = (s16)((arg4 - arg5) + arg6);
-    p1[0xC] = g_menu_icon_sprite_defs[arg2].u_coord;
-    p1[0xD] = g_menu_icon_sprite_defs[arg2].v_coord;
-    *((s16*)(p1 + 0x10)) = (s16)g_menu_icon_sprite_defs[arg2].w;
-    *((s16*)(p1 + 0x12)) = (s16)g_menu_icon_sprite_defs[arg2].h;
-    *((s16*)(p1 + 0xE)) = (s16)menu_or_bits(((g_menu_icon_clut_codes[arg2] >> 4) + 0x1F2) << 6, g_menu_icon_clut_codes[arg2] & 0xF);
-    *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*arg1) & 0xFFFFFF);
-    *arg1 = menu_or_bits((*arg1) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
-    p1 += 0x14;
-    if (arg5 != 0)
+    SPRT* sprite = (SPRT*)prim_buf;
+    s32 sprite_x;
+
+    (void)style_bits;
+    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+    setlen(sprite, 4);
+    sprite_x = x - secondary_offset;
+    setcode(sprite, 0x64);
+    sprite->x0 = (s16)(sprite_x + animation_offset);
+    sprite->y0 = (s16)((y - secondary_offset) + animation_offset);
+    sprite->u0 = g_menu_icon_sprite_defs[icon_id].u_coord;
+    sprite->v0 = g_menu_icon_sprite_defs[icon_id].v_coord;
+    sprite->w = (s16)g_menu_icon_sprite_defs[icon_id].w;
+    sprite->h = (s16)g_menu_icon_sprite_defs[icon_id].h;
+    SET_SPRT_CLUT(sprite, MENU_ICON_CLUT(g_menu_icon_clut_codes[icon_id]));
+    addPrim((u_long*)ot, sprite);
+    sprite += 1;
+
+    if (secondary_offset != 0)
     {
-        new_var = 0xA00000;
-        if (arg7 != 0)
+        if (active != 0)
         {
-            *((u32*)(p1 + 0x4)) = new_var;
+            SET_BGR0_PACKED(sprite, GPU_COLOR_WORD(0, 0, 0xA0));
         }
         else
         {
-            *((u32*)(p1 + 0x4)) = 0;
+            SET_BGR0_PACKED(sprite, 0);
         }
-        p1[3] = 4;
-        p1[7] = 0x64;
-        if (arg7 == 0)
+        setlen(sprite, 4);
+        setcode(sprite, 0x64);
+        if (active == 0)
         {
-            p1[7] = 0x66;
+            setcode(sprite, 0x66);
         }
-        *((s16*)(p1 + 0x8)) = (s16)(arg3 + (arg5 - arg6) * 2);
-        *((s16*)(p1 + 0xA)) = (s16)(arg4 + (arg5 - arg6) * 2);
-        p1[0xC] = g_menu_icon_sprite_defs[arg2].u_coord;
-        p1[0xD] = g_menu_icon_sprite_defs[arg2].v_coord;
-        *((s16*)(p1 + 0x10)) = (s16)g_menu_icon_sprite_defs[arg2].w;
-        *((s16*)(p1 + 0x12)) = (s16)g_menu_icon_sprite_defs[arg2].h;
-        *((s16*)(p1 + 0xE)) = (s16)menu_or_bits(((g_menu_icon_clut_codes[arg2] >> 4) + 0x1F2) << 6, g_menu_icon_clut_codes[arg2] & 0xF);
-        *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*arg1) & 0xFFFFFF);
-        *arg1 = menu_or_bits((*arg1) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
-        p1 += 0x14;
+        sprite->x0 = (s16)(x + (secondary_offset - animation_offset) * 2);
+        sprite->y0 = (s16)(y + (secondary_offset - animation_offset) * 2);
+        sprite->u0 = g_menu_icon_sprite_defs[icon_id].u_coord;
+        sprite->v0 = g_menu_icon_sprite_defs[icon_id].v_coord;
+        sprite->w = (s16)g_menu_icon_sprite_defs[icon_id].w;
+        sprite->h = (s16)g_menu_icon_sprite_defs[icon_id].h;
+        SET_SPRT_CLUT(sprite, MENU_ICON_CLUT(g_menu_icon_clut_codes[icon_id]));
+        addPrim((u_long*)ot, sprite);
+        sprite += 1;
     }
-    return p1;
+
+    return sprite;
 }
 
 /**
@@ -6600,21 +6600,18 @@ void* menu_emit_icon_sprite(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4,
  */
 void* menu_emit_sort_marker(void* prim_buf, s32* ot, s16 x, s16 y)
 {
-    u8* p = (u8*)prim_buf;
+    SPRT* sprite = (SPRT*)prim_buf;
 
-    *(u32*)(p + 0x4) = 0x505050;
-    p[3] = 4;
-    *(u32*)(p + 0x10) = 0x100010;
-    p[7] = 0x64;
-    *(s16*)(p + 0xC) = 0x80;
-    *(s16*)(p + 0x8) = x;
-    *(s16*)(p + 0xA) = y;
-    *(s16*)(p + 0xE) = 0x7C86;
-    *(s32*)p = (*(s32*)p & (s32)0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & (s32)0xFF000000) | ((s32)p & 0xFFFFFF);
-    return p + 0x14;
+    SET_BGR0_PACKED(sprite, GPU_COLOR_WORD(0x50, 0x50, 0x50));
+    setSprt(sprite);
+    SET_SPRT_WH_PACKED(sprite, 16, 16);
+    SET_SPRT_UV0_PACKED(sprite, 0x80);
+    sprite->x0 = x;
+    sprite->y0 = y;
+    SET_SPRT_CLUT(sprite, getClut(0x60, MENU_ICON_CLUT_Y_BASE));
+    addPrim((u_long*)ot, sprite);
+    return sprite + 1;
 }
-
 
 
 /**
@@ -6723,78 +6720,78 @@ void scroll_list_update_target(ScrollListState* state, u32* entries)
 
 /**
  * @brief Emit the animated menu cursor: one or two SPRTs plus a texpage prim, OT-linked.
- * @param prim Primitive write cursor; the SPRTs are built here.
+ * @param prim_buf Primitive write cursor; the SPRTs are built here.
  * @param ot Ordering-table entry; updated after each emitted primitive.
  * @param x Cursor screen X before the bob offset is applied.
  * @param y Cursor screen Y before the bob offset is applied.
  * @param active Non-zero to animate and to emit the second, semi-transparent (0x66) SPRT.
  * @return Pointer to the next free primitive slot (past the 8-byte texpage prim).
  */
-s32 menu_emit_cursor(s32 prim, s32* ot, s32 x, s32 y, s32 active)
+s32 menu_emit_cursor(s32 prim_buf, s32* ot, s32 x, s32 y, s32 active)
 {
-    SPRT* p = (SPRT*)prim;
-    DR_TPAGE* tp;
-    u8* id;
-    NodeSpriteInfo* spr;
-    u8* clut;
-    s32 phase;
+    SPRT* sprite = (SPRT*)prim_buf;
+    DR_TPAGE* draw_mode;
+    u8* icon_id;
+    MenuIconSpriteInfo* sprite_defs;
+    u8* clut_codes;
+    s32 bob_phase;
 
     if (active == 0 || g_menu_frame < 9)
     {
-        phase = 0;
+        bob_phase = 0;
     }
     else
     {
         if (g_menu_frame < 0x10)
         {
-            phase = 1;
+            bob_phase = 1;
         }
         else if (g_menu_frame < 0x17)
         {
-            phase = 2;
+            bob_phase = 2;
         }
         else if (g_menu_frame < 0x1E)
         {
-            phase = 1;
+            bob_phase = 1;
         }
         else
         {
-            phase = 0;
+            bob_phase = 0;
             g_menu_frame = 0;
         }
     }
 
-    setlen(p, 4);
-    spr = g_menu_icon_sprite_defs;
-    id = &g_menu_cursor_icon_ids[phase];
-    clut = g_menu_icon_clut_codes;
+    setlen(sprite, 4);
+    sprite_defs = g_menu_icon_sprite_defs;
+    icon_id = &g_menu_cursor_icon_ids[bob_phase];
+    clut_codes = g_menu_icon_clut_codes;
 
-    SET_BGR0_PACKED(p, GPU_TINT_NEUTRAL);
-    setcode(p, 0x64);
-    setXY0(p, x - phase, y + phase);
-    setUV0(p, spr[*id].u_coord, spr[*id].v_coord);
-    setWH(p, spr[*id].w, spr[*id].h);
-    SET_SPRT_CLUT(p, menu_or_bits(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF));
-    addPrim(ot, p);
-    p++;
+    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+    setcode(sprite, 0x64);
+    setXY0(sprite, x - bob_phase, y + bob_phase);
+    setUV0(sprite, sprite_defs[*icon_id].u_coord, sprite_defs[*icon_id].v_coord);
+    setWH(sprite, sprite_defs[*icon_id].w, sprite_defs[*icon_id].h);
+    SET_SPRT_CLUT(sprite, MENU_ICON_CLUT(clut_codes[*icon_id]));
+    addPrim(ot, sprite);
+    sprite++;
 
     if (active != 0)
     {
-        SET_BGR0_PACKED(p, 0);
-        setcode(p, 0x66);
-        setlen(p, 4);
-        setXY0(p, (x - phase) + 2, (y + phase) + 2);
-        setUV0(p, spr[*id].u_coord, spr[*id].v_coord);
-        setWH(p, spr[*id].w, spr[*id].h);
-        SET_SPRT_CLUT(p, menu_or_bits(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF));
-        addPrim(ot, p);
-        p++;
+        SET_BGR0_PACKED(sprite, 0);
+        setcode(sprite, 0x66);
+        setlen(sprite, 4);
+        setXY0(sprite, (x - bob_phase) + 2, (y + bob_phase) + 2);
+        setUV0(sprite, sprite_defs[*icon_id].u_coord, sprite_defs[*icon_id].v_coord);
+        setWH(sprite, sprite_defs[*icon_id].w, sprite_defs[*icon_id].h);
+        SET_SPRT_CLUT(sprite, MENU_ICON_CLUT(clut_codes[*icon_id]));
+        addPrim(ot, sprite);
+        sprite++;
     }
 
-    tp = (DR_TPAGE*)p;
-    setDrawTPage(tp, 0, 0, 5);
-    addPrim(ot, tp);
-    return (s32)(tp + 1);
+    draw_mode = (DR_TPAGE*)sprite;
+    setDrawTPage(draw_mode, 0, 0, 5);
+    addPrim(ot, draw_mode);
+    return (s32)(draw_mode + 1);
 }
 
 
