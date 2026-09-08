@@ -1,4 +1,5 @@
 #include "common.h"
+#include "pad.h"
 #include "vector.h"
 #include "display.h"
 #include "gpu_packet.h"
@@ -49,6 +50,7 @@ typedef struct AddheroRecord
     u8 padD0[4];
     u16 hero_id;
     u16 reserved_d6;
+    s32 identity;
 } AddheroRecord;
 
 /** @brief Memory-card directory entry; layout matches Psy-Q DIRENTRY (0x28 bytes). */
@@ -111,12 +113,37 @@ typedef struct
 #define ADDHERO_ENTRY_STATE_LOAD_PROGRESS 0xF6  /* importing a matched entry; progress bar */
 #define ADDHERO_ENTRY_STATE_SAVE_PROGRESS 0xF5  /* write in progress; progress bar */
 #define ADDHERO_ENTRY_STATE_SAVE_CONFIRM  0xF4  /* confirm dialog; accepting writes the save */
+#define ADDHERO_ENTRY_STATE_CONFIRM_PROMPT 0xF3 /* companion choice prompt for save/exit flow */
+
+#define ADDHERO_CONFIRM_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_L3)
+#define ADDHERO_CARD_SWITCH_BUTTON_MASK (PAD_BTN_SELECT | PAD_BTN_RIGHT | PAD_BTN_LEFT)
+#define ADDHERO_INPUT_INJECTION_ENABLED 0x80
+#define ADDHERO_SAVE_MAGIC 0x414E41
 
 typedef struct AddheroFallbackText
 {
     u8 pad[0x24];
     u8 text[0x20];
 } AddheroFallbackText;
+
+/** @brief Saved context block copied between the live game state and the save image. */
+typedef struct
+{
+    u8 inject_enable;
+    u8 _pad01[0x17];
+    u32 inject_flags;
+    u8 _pad1C[0x234];
+} AddheroSaveContextBlock;
+
+/** @brief Portion of the ADDHERO save image whose layout is used by this overlay. */
+typedef struct
+{
+    u8 _pad0000[0x770];
+    AddheroSaveContextBlock context;
+    u8 _pad09C0[0x2A20];
+    s32 checksum;
+    s32 magic;
+} AddheroSaveBlob;
 
 /* addhero_update_and_draw_elements element-draw pipeline types */
 typedef struct
@@ -2001,11 +2028,11 @@ s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
  * @param x_offset Horizontal offset; screen X = 0x90 - x_offset.
  * @param y_offset Vertical offset applied to the message rows.
  * @return The updated primitive pointer.
- * @see decomp.me (100%)
  */
 s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
+
     switch (g_addhero_entry_state)
     {
     case 0xF8:
@@ -2016,12 +2043,14 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case ADDHERO_ENTRY_STATE_IDLE:
         {
-            s32 x; u8 *base;
-            x = -x_offset + 0x90;
-            base = (u8 *)&g_addhero_glyph_table;
-            prim = func_800A88A0(prim, ot, base + g_addhero_glyph_table, 4, x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
+            s32 message_x;
+            u8 *glyph_base;
+
+            message_x = -x_offset + 0x90;
+            glyph_base = (u8 *)&g_addhero_glyph_table;
+            prim = func_800A88A0(prim, ot, glyph_base + g_addhero_glyph_table, 4, message_x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, 0x1C - y_offset, 2);
         }
         break;
     case 0xFA:
@@ -2041,56 +2070,102 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case ADDHERO_ENTRY_STATE_LOAD_PROGRESS:
         {
-            s32 x; u8 *base; POLY_G4 *g; s32 next, elapsed, extent, color, finalmode;
-            x = -x_offset + 0x90;
-            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_load_progress, 0x32), 4, x, -y_offset, 2);
-            base = (u8 *)&g_addhero_glyph_load_progress - 0x32;
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
-            next = prim; g = (POLY_G4 *)prim;
+            s32 message_x;
+            u8 *glyph_base;
+            POLY_G4 *bar;
+            s32 next_prim;
+            s32 elapsed_frames;
+            s32 bar_extent;
+            s32 bar_color;
+            s32 dialog_state;
+
+            message_x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_load_progress, 0x32), 4, message_x, -y_offset, 2);
+            glyph_base = (u8 *)&g_addhero_glyph_load_progress - 0x32;
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, 0x1C - y_offset, 2);
+            next_prim = prim;
+            bar = (POLY_G4 *)prim;
             if (g_addhero_progress_bar_active != 0)
             {
-                elapsed = VSync(-1) - g_addhero_progress_start_tick;
-                if (elapsed >= 0x101) elapsed = 0x100;
-                color = 0xFFFF00; extent = elapsed * 0x120;
-                SET_BGR0_PACKED(g, 0xFF); SET_POLY_G4_BGR1_PACKED(g, 0xFFFF); SET_POLY_G4_BGR3_PACKED(g, 0xFF0000); ((u8 *)g)[3]=8;
-                SET_POLY_G4_BGR2_PACKED(g, color); g->code=0x38; g->x2=0; g->x0=0;
-                if (extent < 0) extent += 0xFF;
-                g->x3=extent>>8; g->x1=extent>>8; g->y1=0; g->y0=0; g->y3=0x2C; g->y2=0x2C;
-                g->tag=(g->tag & 0xFF000000)|(*ot & 0xFFFFFF);
-                *ot=(*ot & 0xFF000000)|(prim & 0xFFFFFF); next=prim+0x24;
+                elapsed_frames = VSync(-1) - g_addhero_progress_start_tick;
+                if (elapsed_frames >= 0x101)
+                {
+                    elapsed_frames = 0x100;
+                }
+                bar_color = 0xFFFF00;
+                bar_extent = elapsed_frames * 0x120;
+                SET_BGR0_PACKED(bar, 0xFF);
+                SET_POLY_G4_BGR1_PACKED(bar, 0xFFFF);
+                SET_POLY_G4_BGR3_PACKED(bar, 0xFF0000);
+                setlen(bar, 8);
+                SET_POLY_G4_BGR2_PACKED(bar, bar_color);
+                setcode(bar, 0x38);
+                bar->x2 = 0;
+                bar->x0 = 0;
+                if (bar_extent < 0)
+                {
+                    bar_extent += 0xFF;
+                }
+                bar->x3 = bar_extent >> 8;
+                bar->x1 = bar_extent >> 8;
+                bar->y1 = 0;
+                bar->y0 = 0;
+                bar->y3 = 0x2C;
+                bar->y2 = 0x2C;
+                addPrim(ot, bar);
+                next_prim = prim + 0x24;
             }
-            prim = next;
+            prim = next_prim;
             if (g_addhero_progress_active == 0)
             {
                 if (addhero_validate_save_blob(g_addhero_save_blob) == 0)
                 {
                     play_menu_sfx(0x78, 0x80);
-                    g_addhero_element_pool[0].draw_handler=(void *)addhero_draw_status_dialog;
-                    g_addhero_element_pool[0].attr.bits.transition_step=1; g_addhero_element_pool[0].attr.bits.state=1; g_addhero_element_pool[0].attr.bits.x=0x20; g_addhero_element_pool[0].attr.bits.y=0x70;
-                    g_addhero_element_pool[0].size.bits.width_high=1; g_addhero_element_pool[0].size.bits.height=0x14; SET_ELEM_WIDTH_LOW(&g_addhero_element_pool[0],0);
+                    g_addhero_element_pool[0].draw_handler = (void *)addhero_draw_status_dialog;
+                    g_addhero_element_pool[0].attr.bits.transition_step = 1;
+                    g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
+                    g_addhero_element_pool[0].attr.bits.x = 0x20;
+                    g_addhero_element_pool[0].attr.bits.y = 0x70;
+                    g_addhero_element_pool[0].size.bits.width_high = 1;
+                    g_addhero_element_pool[0].size.bits.height = 0x14;
+                    SET_ELEM_WIDTH_LOW(&g_addhero_element_pool[0], 0);
                     func_800AA02C();
-                    g_addhero_write_in_progress=0; g_addhero_selection_status=0; g_addhero_io_busy=0; g_addhero_progress_active=0; g_addhero_entry_state=ADDHERO_ENTRY_STATE_IDLE;
-                    addhero_reset_entry_ranks(); finalmode=4; g_addhero_load_step=0; g_addhero_dialog_state=finalmode; return prim;
+                    g_addhero_write_in_progress = 0;
+                    g_addhero_selection_status = 0;
+                    g_addhero_io_busy = 0;
+                    g_addhero_progress_active = 0;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
+                    addhero_reset_entry_ranks();
+                    dialog_state = 4;
+                    g_addhero_load_step = 0;
+                    g_addhero_dialog_state = dialog_state;
+                    return prim;
                 }
-                play_menu_sfx(0x7B,0x80); g_addhero_entry_state=ADDHERO_ENTRY_STATE_SAVE_CONFIRM; addhero_enable_choice_toggle(); func_800AA02C();
+                play_menu_sfx(0x7B, 0x80);
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
+                addhero_enable_choice_toggle();
+                func_800AA02C();
             }
         }
         break;
-    case 0xF3:
+    case ADDHERO_ENTRY_STATE_CONFIRM_PROMPT:
         {
-            s32 x; AddheroElement *packet; s32 i;
-            x = -x_offset + 0x90;
-            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f3,0x6E), 4, x, -y_offset, 2);
-            prim = addhero_draw_choice_prompt(prim, ot, x, 0xE -y_offset);
-            if (g_pad_input & 0x40)
+            s32 message_x;
+            AddheroElement *element;
+            s32 i;
+
+            message_x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f3, 0x6E), 4, message_x, -y_offset, 2);
+            prim = addhero_draw_choice_prompt(prim, ot, message_x, 0xE - y_offset);
+            if (g_pad_input & PAD_BTN_CIRCLE)
             {
                 play_menu_sfx(0x78, 0x80);
                 addhero_enable_choice_toggle();
                 g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_CONFIRM;
                 func_800AA02C();
             }
-            else if (g_pad_input & 0x220)
+            else if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
             {
                 if (g_addhero_choice_toggle != 0)
                 {
@@ -2104,11 +2179,11 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                     play_menu_sfx(0x7D, 0x80);
                     g_addhero_result = 3;
                     g_menu_element_counter = 0x20;
-                    packet = (AddheroElement *)&g_addhero_element_pool[0];
-                    for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, packet++)
+                    element = g_addhero_element_pool;
+                    for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, element++)
                     {
-                        packet->size.word &= ~0x200;
-                        packet->attr.word &= ~7;
+                        element->size.bits.scrollable = 0;
+                        element->attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
                     }
                     field_restore_fade_target_with_duration(8);
                     func_800AA02C();
@@ -2118,37 +2193,40 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case ADDHERO_ENTRY_STATE_SAVE_CONFIRM:
         {
-            s32 x; u8 *base; s32 temp;
-            x=-x_offset+0x90;
-            prim=func_800A88A0(prim,ot,GLYPH_SYM(g_addhero_glyph_save_confirm_msg, 0x6A),4,x,-y_offset,2);
-            base=(u8 *)&g_addhero_glyph_save_confirm_msg-0x6A;
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x6C),4,x,0xE -y_offset,2);
-            prim=addhero_draw_choice_prompt(prim,ot,x,0x1C-y_offset);
-            if (g_pad_input & 0x40)
+            s32 message_x;
+            u8 *base;
+            s32 checksum;
+
+            message_x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_save_confirm_msg, 0x6A), 4, message_x, -y_offset, 2);
+            base = (u8 *)&g_addhero_glyph_save_confirm_msg - 0x6A;
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x6C), 4, message_x, 0xE - y_offset, 2);
+            prim = addhero_draw_choice_prompt(prim, ot, message_x, 0x1C - y_offset);
+            if (g_pad_input & PAD_BTN_CIRCLE)
             {
                 addhero_enable_choice_toggle();
-                g_addhero_entry_state = 0xF3;
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_PROMPT;
                 play_menu_sfx(0x78, 0x80);
                 func_800AA02C();
             }
-            else if (g_pad_input & 0x220)
+            else if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
             {
                 if (g_addhero_choice_toggle != 0)
                 {
                     addhero_enable_choice_toggle();
-                    g_addhero_entry_state = 0xF3;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_CONFIRM_PROMPT;
                     play_menu_sfx(0x78, 0x80);
                     func_800AA02C();
                 }
                 else
                 {
-                    play_menu_sfx(0x7E,0x80);
+                    play_menu_sfx(0x7E, 0x80);
                     base = g_addhero_save_blob;
-                    bcopy(g_pad_ctx + 0x840, base + 0x770, 0x250);
-                    *(s32 *)(base + 0x788) |= 0x80;
-                    temp = addhero_compute_save_checksum(base);
-                    *(s32 *)(base + 0x33E4) = 0x414E41;
-                    *(s32 *)(base + 0x33E0) = temp;
+                    bcopy(g_pad_ctx + 0x840, &((AddheroSaveBlob *)base)->context, sizeof(AddheroSaveContextBlock));
+                    ((AddheroSaveBlob *)base)->context.inject_flags |= ADDHERO_INPUT_INJECTION_ENABLED;
+                    checksum = addhero_compute_save_checksum(base);
+                    ((AddheroSaveBlob *)base)->magic = ADDHERO_SAVE_MAGIC;
+                    ((AddheroSaveBlob *)base)->checksum = checksum;
                     g_addhero_write_in_progress = 1;
                     g_addhero_load_step = &g_addhero_loadseq_save_begin;
                     g_addhero_entry_state = ADDHERO_ENTRY_STATE_SAVE_PROGRESS;
@@ -2158,61 +2236,200 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case ADDHERO_ENTRY_STATE_SAVE_PROGRESS:
         {
-            s32 x; u8 *base; POLY_G4 *g; s32 next,elapsed,extent,color; AddheroElement *packet; s32 i;
-            x=-x_offset+0x90;
-            prim=func_800A88A0(prim,ot,GLYPH_SYM(g_addhero_glyph_save_progress, 0x1C),4,x,-y_offset,2);
-            base=(u8 *)&g_addhero_glyph_save_progress-0x1C;
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -y_offset,2);
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-y_offset,2);
-            next=prim; g=(POLY_G4 *)prim;
-            if(g_addhero_progress_bar_active!=0){
-                elapsed=VSync(-1)-g_addhero_progress_start_tick; if(elapsed>=0x101)elapsed=0x100; color=0xFFFF00; extent=elapsed*0x120;
-                SET_BGR0_PACKED(g,0xFF);SET_POLY_G4_BGR1_PACKED(g,0xFFFF);SET_POLY_G4_BGR3_PACKED(g,0xFF0000);((u8*)g)[3]=8;SET_POLY_G4_BGR2_PACKED(g,color);g->code=0x38;g->x2=0;g->x0=0;
-                if(extent<0)extent+=0xFF;g->x3=extent>>8;g->x1=extent>>8;g->y1=0;g->y0=0;g->y3=0x2C;g->y2=0x2C;
-                g->tag=(g->tag&0xFF000000)|(*ot&0xFFFFFF);*ot=(*ot&0xFF000000)|(prim&0xFFFFFF);next=prim+0x24;
+            s32 message_x;
+            u8 *glyph_base;
+            POLY_G4 *bar;
+            s32 next_prim;
+            s32 elapsed_frames;
+            s32 bar_extent;
+            s32 bar_color;
+            AddheroElement *element;
+            s32 i;
+
+            message_x = -x_offset + 0x90;
+            prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_save_progress, 0x1C), 4, message_x, -y_offset, 2);
+            glyph_base = (u8 *)&g_addhero_glyph_save_progress - 0x1C;
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, 0x1C - y_offset, 2);
+            next_prim = prim;
+            bar = (POLY_G4 *)prim;
+            if (g_addhero_progress_bar_active != 0)
+            {
+                elapsed_frames = VSync(-1) - g_addhero_progress_start_tick;
+                if (elapsed_frames >= 0x101)
+                {
+                    elapsed_frames = 0x100;
+                }
+                bar_color = 0xFFFF00;
+                bar_extent = elapsed_frames * 0x120;
+                SET_BGR0_PACKED(bar, 0xFF);
+                SET_POLY_G4_BGR1_PACKED(bar, 0xFFFF);
+                SET_POLY_G4_BGR3_PACKED(bar, 0xFF0000);
+                setlen(bar, 8);
+                SET_POLY_G4_BGR2_PACKED(bar, bar_color);
+                setcode(bar, 0x38);
+                bar->x2 = 0;
+                bar->x0 = 0;
+                if (bar_extent < 0)
+                {
+                    bar_extent += 0xFF;
+                }
+                bar->x3 = bar_extent >> 8;
+                bar->x1 = bar_extent >> 8;
+                bar->y1 = 0;
+                bar->y0 = 0;
+                bar->y3 = 0x2C;
+                bar->y2 = 0x2C;
+                addPrim(ot, bar);
+                next_prim = prim + 0x24;
             }
-            prim=next;
-            if(g_addhero_write_in_progress==0){
-                g_pad_ctx[0x840]=0; play_menu_sfx(0x7A,0x80); g_menu_element_counter=0x20;
-                packet=(AddheroElement *)&g_addhero_element_pool[0];
-                for(i=0;i<ADDHERO_ELEMENT_COUNT;i++,packet++){ packet->size.word &= ~0x200; packet->attr.word &= ~7; }
-                field_restore_fade_target_with_duration(8); g_addhero_result=2;
+            prim = next_prim;
+            if (g_addhero_write_in_progress == 0)
+            {
+                g_pad_ctx[0x840] = 0;
+                play_menu_sfx(0x7A, 0x80);
+                g_menu_element_counter = 0x20;
+                element = g_addhero_element_pool;
+                for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, element++)
+                {
+                    element->size.bits.scrollable = 0;
+                    element->attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
+                }
+                field_restore_fade_target_with_duration(8);
+                g_addhero_result = 2;
             }
         }
         break;
     default:
         {
-            s32 x,posv,diff; u8 *base;
-            x=-x_offset+0x90; base=(u8 *)&g_addhero_glyph_table;
-            prim=func_800A88A0(prim,ot,base+g_addhero_glyph_table,4,x,-y_offset,2);
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -y_offset,2);
-            prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-y_offset,2);
-            if(g_addhero_entry_scan_active==0){
-                if(g_addhero_io_busy!=0)return prim;
-                if((u32)(*g_addhero_load_step-6)<2U)return prim;
-                if((strncmp(g_lom_save_filename_prefix,&g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row],0xC)!=0) ||
-                   (g_addhero_entry_identity != *(s32 *)(g_pad_ctx+0xD8))) {
+            s32 message_x;
+            s32 selected_y;
+            s32 scroll_delta;
+            u8 *glyph_base;
+
+            message_x = -x_offset + 0x90;
+            glyph_base = (u8 *)&g_addhero_glyph_table;
+            prim = func_800A88A0(prim, ot, glyph_base + g_addhero_glyph_table, 4, message_x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, 0x1C - y_offset, 2);
+            if (g_addhero_entry_scan_active == 0)
+            {
+                if (g_addhero_io_busy != 0)
+                {
+                    return prim;
+                }
+                if ((u32)(*g_addhero_load_step - 6) < 2U)
+                {
+                    return prim;
+                }
+                if ((strncmp(g_lom_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row], 0xC) != 0) ||
+                    (g_addhero_entry_identity != ((AddheroRecord *)g_pad_ctx)->identity))
+                {
                     g_addhero_selected_row++;
-                    if(g_addhero_selected_row>=g_addhero_entry_state){ if(g_addhero_entry_state!=0)g_addhero_entry_state=0xF7; else g_addhero_entry_state=0xF8; }
-                    else { addhero_commit_selected_entry(); posv=g_addhero_selected_row*0xE; diff=posv-g_addhero_scroll_y;
-                        if(diff>=0x4B){g_addhero_scroll_target_y=posv-0x46;g_addhero_scroll_frames=4;} if(diff<0){g_addhero_scroll_target_y=posv;g_addhero_scroll_frames=4;}
+                    if (g_addhero_selected_row >= g_addhero_entry_state)
+                    {
+                        if (g_addhero_entry_state != 0)
+                        {
+                            g_addhero_entry_state = 0xF7;
+                        }
+                        else
+                        {
+                            g_addhero_entry_state = 0xF8;
+                        }
                     }
-                } else { g_addhero_progress_start_tick=VSync(-1);g_addhero_progress_active=1;g_addhero_load_step=&g_addhero_loadseq_load_progress;g_addhero_entry_state=ADDHERO_ENTRY_STATE_LOAD_PROGRESS; }
+                    else
+                    {
+                        addhero_commit_selected_entry();
+                        selected_y = g_addhero_selected_row * 0xE;
+                        scroll_delta = selected_y - g_addhero_scroll_y;
+                        if (scroll_delta >= 0x4B)
+                        {
+                            g_addhero_scroll_target_y = selected_y - 0x46;
+                            g_addhero_scroll_frames = 4;
+                        }
+                        if (scroll_delta < 0)
+                        {
+                            g_addhero_scroll_target_y = selected_y;
+                            g_addhero_scroll_frames = 4;
+                        }
+                    }
+                }
+                else
+                {
+                    g_addhero_progress_start_tick = VSync(-1);
+                    g_addhero_progress_active = 1;
+                    g_addhero_load_step = &g_addhero_loadseq_load_progress;
+                    g_addhero_entry_state = ADDHERO_ENTRY_STATE_LOAD_PROGRESS;
+                }
             }
         }
         break;
     case 0xFE:
         break;
     }
-    if(g_addhero_io_busy!=0)return prim;
-    if(g_addhero_entry_state==ADDHERO_ENTRY_STATE_LOAD_PROGRESS)return prim; if(g_addhero_entry_state==ADDHERO_ENTRY_STATE_SAVE_PROGRESS)return prim; if(g_addhero_entry_state==ADDHERO_ENTRY_STATE_SAVE_CONFIRM)return prim; if(g_addhero_entry_state==0xF3)return prim;
-    if(g_pad_input&0x40){
-        s32 *p; s32 i,word; D_80122718=3;play_menu_sfx(0x78,0x80);field_restore_fade_target();p=(s32 *)&g_addhero_element_pool[0];i=0;
-        do{word=*p;if(word&7)*p=(((word&~7)|3)&~0x78)|0x40;i++;p+=3;}while(i<8);return prim;
+
+    if (g_addhero_io_busy != 0)
+    {
+        return prim;
     }
-    if((g_pad_input&0xA100)&&(g_addhero_entry_state!=ADDHERO_ENTRY_STATE_IDLE)){
-        play_menu_sfx(0x7D,0x80);g_addhero_load_flow_active=0;g_addhero_load_step=0;g_addhero_scroll_frames=0;g_addhero_scroll_target_y=0;g_addhero_scroll_y=0;g_addhero_selected_row=0;g_addhero_entry_state=ADDHERO_ENTRY_STATE_IDLE;g_addhero_selection_status=0;
-        g_addhero_card_slot^=1;addhero_reset_entry_ranks();func_800AA02C();g_addhero_progress_bar_active=0;g_pad_input=0;g_addhero_load_step=&g_addhero_loadseq_start;
+    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_LOAD_PROGRESS)
+    {
+        return prim;
+    }
+    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_SAVE_PROGRESS)
+    {
+        return prim;
+    }
+    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_SAVE_CONFIRM)
+    {
+        return prim;
+    }
+    if (g_addhero_entry_state == ADDHERO_ENTRY_STATE_CONFIRM_PROMPT)
+    {
+        return prim;
+    }
+
+    if (g_pad_input & PAD_BTN_CIRCLE)
+    {
+        AddheroElement *element;
+        s32 i;
+        s32 attr;
+
+        D_80122718 = 3;
+        play_menu_sfx(0x78, 0x80);
+        field_restore_fade_target();
+        element = g_addhero_element_pool;
+        i = 0;
+        do
+        {
+            attr = element->attr.word;
+            if (attr & ADDHERO_ELEMENT_STATE_MASK)
+            {
+                element->attr.word = (((attr & ~ADDHERO_ELEMENT_STATE_MASK) | ADDHERO_ELEMENT_STATE_CLOSING) & ~ADDHERO_ELEMENT_PHASE_MASK) | 0x40;
+            }
+            i++;
+            element++;
+        } while (i < ADDHERO_ELEMENT_COUNT);
+        return prim;
+    }
+
+    if ((g_pad_input & ADDHERO_CARD_SWITCH_BUTTON_MASK) && (g_addhero_entry_state != ADDHERO_ENTRY_STATE_IDLE))
+    {
+        play_menu_sfx(0x7D, 0x80);
+        g_addhero_load_flow_active = 0;
+        g_addhero_load_step = 0;
+        g_addhero_scroll_frames = 0;
+        g_addhero_scroll_target_y = 0;
+        g_addhero_scroll_y = 0;
+        g_addhero_selected_row = 0;
+        g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
+        g_addhero_selection_status = 0;
+        g_addhero_card_slot ^= 1;
+        addhero_reset_entry_ranks();
+        func_800AA02C();
+        g_addhero_progress_bar_active = 0;
+        g_pad_input = 0;
+        g_addhero_load_step = &g_addhero_loadseq_start;
     }
     return prim;
 }
