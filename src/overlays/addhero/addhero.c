@@ -2659,59 +2659,40 @@ format:
  * @param out       Destination character buffer.
  * @param value     Value to format.
  * @param max_chars Maximum number of hex digits to emit.
- * @see decomp.me (100%)
  */
 void addhero_format_hex(s8 *out, s32 value, s32 max_chars)
 {
     s32 nibble;
     s32 shift_index;
-    s32 remaining_chars;
-    s32 remaining_value;
     s32 started;
-    s8 *cursor;
-    s32 end_index;
 
-    cursor = out;
-    remaining_value = value;
-    remaining_chars = max_chars;
     shift_index = 7;
     started = 0;
-    if (remaining_chars != 0)
+    if (max_chars != 0)
     {
-        end_index = -1;
-loop_2:
-        nibble = (remaining_value >> (shift_index * 4)) & 0xF;
         do
         {
-            if ((nibble != 0) || (started != 0))
+            nibble = (value >> (shift_index * 4)) & 0xF;
+            if (nibble != 0 || started != 0)
             {
-                addhero_hex_nibble_to_ascii(cursor, nibble);
-                cursor += 1;
-                remaining_chars -= 1;
+                addhero_hex_nibble_to_ascii(out, nibble);
+                out++;
+                max_chars--;
                 started = 1;
-                remaining_value -= nibble << (shift_index * 4);
+                value -= nibble << (shift_index * 4);
             }
-        } while (0);
-        do
-        {
-            shift_index -= 1;
-        } while (0);
-        if (shift_index != end_index)
-        {
+            shift_index--;
+            if (shift_index == -1)
+            {
+                break;
+            }
             if (shift_index == 0)
             {
                 started = 1;
             }
-            do
-            {
-                if (remaining_chars != 0)
-                {
-                    goto loop_2;
-                }
-            } while (0);
-        }
+        } while (max_chars);
     }
-    *cursor = 0;
+    *out = 0;
 }
 
 /**
