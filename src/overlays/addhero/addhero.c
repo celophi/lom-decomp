@@ -145,6 +145,62 @@ typedef struct
     s32 magic;
 } AddheroSaveBlob;
 
+typedef struct AddheroEntryHeader
+{
+    s32 unk0;
+    s16 unk4;
+    s8 unk6;
+    u8 pad[9];
+} AddheroEntryHeader;
+
+/** @brief Save-file header block at g_addhero_file_template (only the first 6 bytes used). */
+typedef struct
+{
+    s32 unk0;
+    s16 unk4;
+    u8 pad[0xFA];
+} AddheroFileHeader;
+
+typedef struct
+{
+    s32 unk0;
+    s16 unk4;
+    s16 unk6;
+    u8 unk8[0x18];
+} AddheroFileHeaderScratch;
+
+typedef struct
+{
+    s32 unk0;
+    s16 unk4;
+    u8 pad[0x62];
+} AddheroLoadScratch;
+
+/* --- text renderer (addhero_draw_cached_text family) --- */
+
+typedef union
+{
+    u32 raw;
+    struct
+    {
+        u16 code;
+        u16 flags;
+    } data;
+} AddheroGlyphCacheEntry;
+
+typedef struct
+{
+    SPRT_16 packet;
+    u32 padding;
+} AddheroGlyphSprite;
+
+#define GLYPH_CACHE_SLOTS 0x100
+#define GLYPH_CACHE_COLUMNS 16
+#define GLYPH_CACHE_ROW_MASK 0xF0
+#define GLYPH_RASTER_BYTES 0x80
+#define GPU_ADDR_MASK 0xFFFFFF
+#define GPU_TAG_HIGH_MASK 0xFF000000
+
 /* addhero_update_and_draw_elements element-draw pipeline types */
 typedef struct
 {
@@ -172,10 +228,14 @@ extern AddheroElement g_addhero_element_pool[ADDHERO_ELEMENT_COUNT];
 extern AddheroElement g_addhero_element1;
 extern AddheroDirEntry g_addhero_entries[][20];
 extern AddheroRecord g_addhero_entry_metadata;
+extern AddheroFileHeader g_addhero_file_template;
+extern AddheroEntryHeader g_addhero_entry_header_template;
+extern AddheroGlyphCacheEntry g_addhero_glyph_cache[];
 /* Shared controller/game context (main.h PadContext); addressed here as a byte
    buffer for the save-blob copies and metadata reads. */
 extern u8 *g_pad_ctx;
 extern u8 *g_addhero_load_step;
+extern u8 *g_addhero_glyph_raster_cursor;
 extern void *jtbl_80140098[];
 
 extern s32 g_save_slot_index;
@@ -212,23 +272,53 @@ extern s32 g_addhero_rank_count;
 extern s32 g_addhero_icon_image_table[];
 extern s32 g_addhero_entry_suffix_values[];
 extern s32 g_addhero_entry_ranks[];
+extern s32 g_addhero_retry_count;
+extern s32 g_addhero_selected_entry_extended;
+extern s32 g_addhero_primary_poll_countdown;
+extern s32 g_addhero_entry_value_limit;
+extern s32 g_addhero_entry_fields[];
+extern s32 g_addhero_secondary_poll_countdown;
+extern s32 g_addhero_primary_handle0;
+extern s32 g_addhero_primary_handle1;
+extern s32 g_addhero_primary_handle2;
+extern s32 g_addhero_primary_handle3;
+extern s32 g_addhero_has_free_entry_space;
+extern s32 g_addhero_file_handle;
+extern s32 g_addhero_secondary_handle0;
+extern s32 g_addhero_secondary_handle1;
+extern s32 g_addhero_secondary_handle2;
+extern s32 g_addhero_secondary_handle3;
+extern s32 g_addhero_glyph_cursor_x;
+extern s32 g_addhero_glyph_cursor_y;
+extern s32 g_addhero_text_line_start_x;
+extern s32 g_addhero_glyph_upload_x;
+extern s32 g_addhero_glyph_upload_y;
 
 extern u8 g_addhero_loadseq_start;
 extern u8 g_addhero_loadseq_abort[];
 extern u8 g_addhero_loadseq_load_begin[];
 extern u8 g_addhero_loadseq_load_progress;
 extern u8 g_addhero_loadseq_save_begin;
+extern u8 g_addhero_loadseq_card[];
+extern u8 g_addhero_loadseq_file_ready[];
+extern u8 g_addhero_single_byte_char_table[];
+extern u8 g_addhero_double_byte_char_table[];
 extern u8 g_addhero_icon_context[];
 extern u8 g_addhero_save_blob[];
 extern u8 g_addhero_entry_read_buffer;
 extern u8 g_addhero_entry_record;
 extern u8 g_addhero_entry_owner_id;
+extern u8 g_addhero_target_file_path[];
+extern u8 g_addhero_glyph_raster_buffer[];
+extern u8 g_addhero_save_file_path[];
 extern u8 g_text_time_separator_offset_bytes[2];
 extern u8 g_text_choice_glyph_offsets[];
 
 extern char g_lom_save_filename_prefix[];
 extern char g_lom_alt_save_filename_prefix[];
 extern char g_new_save_entry_prefix[];
+extern char g_lom_save_dummy_filename[];
+extern char g_lom_alt_save_dummy_filename[];
 
 extern u16 g_addhero_glyph_table;
 extern u16 g_addhero_glyph_status_fa;
@@ -260,6 +350,8 @@ extern u16 g_addhero_glyph_status_f7;
 extern u16 g_addhero_glyph_save_confirm_msg;
 extern u16 g_addhero_glyph_plus_marker;
 extern u16 g_addhero_entry_glyph_table[];
+extern u16 g_addhero_decimal_glyphs[];
+extern u16 g_addhero_hex_glyphs[];
 
 /* In-file functions */
 void addhero_init(s32 work_base, s32 mode);
@@ -304,13 +396,29 @@ void addhero_format_hex(s8 *out, s32 value, s32 max_chars);
 void addhero_hex_nibble_to_ascii(s8 *out, s32 value);
 u32 addhero_parse_hex(u8 *s, s32 len);
 s32 addhero_parse_hex_suffix_byte(u8 *text);
+s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2);
+s32 addhero_has_known_entry_type(void);
+s32 addhero_entry_blocks_reach_limit(void);
+void addhero_render_fixed_prompts(void);
+s32 addhero_begin_entry_scan(s32 page);
+s32 addhero_scan_next_entry(s32 page);
+void addhero_release_primary_handles(void);
+void addhero_release_secondary_handles(void);
+s32 addhero_poll_primary_handle_group(void);
+s32 addhero_poll_secondary_handle_group(void);
+void addhero_sort_entries_by_type(void);
+s32 addhero_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
+void addhero_draw_hex_byte(s32 prim, s32 ot, s32 byte_value, s32 x, s32 y, s32 alignment);
+s32 addhero_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette);
+s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette);
+void addhero_expand_text_glyph_codes(u8 *out, u8 *in);
 
 /* External functions */
 s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, Vec2s *pos, s32 mode);
-s32 strncmp();
+s32 strncmp(void *a, void *b, s32 n);
 void play_menu_sfx();
-void func_800AA02C();
+void func_800AA02C(void);
 void field_restore_fade_target(void);
 void field_set_default_fade_target(void);
 void field_restore_fade_target_with_duration(s32 arg0);
@@ -340,6 +448,31 @@ s32 addhero_poll_and_rewind_primary_handles(void);
 void addhero_commit_selected_entry(void);
 s32 addhero_draw_cached_text(s32 result, s32 *ot, u8 *name, s32 x, s32 y, s32 a5, s32 a6);
 s32 addhero_advance_load_sequence();
+s32 strcat(void *a, void *b);
+s32 open(void *a, s32 b);
+s32 read(s32 a, void *b, s32 c);
+s32 write(s32 a, void *b, s32 c);
+s32 close(s32 a);
+s32 rename(void *a, void *b);
+s32 erase(void *a);
+s32 strcpy(void *a, void *b, ...);
+s32 _card_info(s32 a);
+s32 _card_load(s32 a);
+s32 _card_wait(s32 a);
+s32 _card_clear(s32 a);
+s32 func_80032174(s32 a, void *b, s32 *c);
+s32 McxCardType(s32 a);
+s32 firstfile(void *a, void *b);
+void func_800B0170(void *a);
+s32 nextfile(void *a);
+s32 Krom2RawAdd(s32 a);
+void reset_controller_vsync_state(void);
+s32 OpenEvent(s32 a, s32 b, s32 c, s32 d);
+void CloseEvent(s32 a);
+s32 TestEvent(s32 a);
+void EnableEvent(s32 a);
+void EnterCriticalSection(void);
+void ExitCriticalSection(void);
 
 #define SET_ELEM_WIDTH_LOW(element, width) ((element)->attr.word = ((element)->attr.word & 0x00FFFFFF) | ((u32)(width) << 24))
 #define GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
@@ -2849,8 +2982,6 @@ s32 addhero_parse_hex_suffix_byte(u8 *text)
     return result;
 }
 
-extern s32 g_addhero_entry_fields[];
-
 /**
  * @brief Parse the hex value suffix of every "SD"-tagged directory entry on the
  *        active card, recording per-entry field values and their ranked bytes.
@@ -2934,194 +3065,6 @@ s32 addhero_parse_entry_fields(void)
 
     return max;
 }
-
-typedef struct AddheroEntryHeader
-{
-    s32 unk0;
-    s16 unk4;
-    s8 unk6;
-    u8 pad[9];
-} AddheroEntryHeader;
-
-/** @brief Save-file header block at g_addhero_file_template (only the first 6 bytes used). */
-typedef struct
-{
-    s32 unk0;
-    s16 unk4;
-    u8 pad[0xFA];
-} AddheroFileHeader;
-
-typedef struct
-{
-    s32 unk0;
-    s16 unk4;
-    s16 unk6;
-    u8 unk8[0x18];
-} AddheroFileHeaderScratch;
-
-typedef struct
-{
-    s32 unk0;
-    s16 unk4;
-    u8 pad[0x62];
-} AddheroLoadScratch;
-
-/* --- text renderer (addhero_draw_cached_text family) --- */
-
-typedef union
-{
-    u32 raw;
-    struct
-    {
-        u16 code;
-        u16 flags;
-    } data;
-} AddheroGlyphCacheEntry;
-
-typedef struct
-{
-    SPRT_16 packet;
-    u32 padding;
-} AddheroGlyphSprite;
-
-#define GLYPH_CACHE_SLOTS 0x100
-#define GLYPH_CACHE_COLUMNS 16
-#define GLYPH_CACHE_ROW_MASK 0xF0
-#define GLYPH_RASTER_BYTES 0x80
-#define GPU_ADDR_MASK 0xFFFFFF
-#define GPU_TAG_HIGH_MASK 0xFF000000
-
-extern AddheroDirEntry g_addhero_entries[][20];
-extern AddheroFileHeader g_addhero_file_template;
-extern AddheroEntryHeader g_addhero_entry_header_template;
-extern AddheroGlyphCacheEntry g_addhero_glyph_cache[];
-
-extern s32 g_addhero_scroll_y;
-extern s32 g_addhero_progress_active;
-extern s32 g_addhero_scroll_target_y;
-extern s32 g_addhero_mode;
-extern s32 g_addhero_entry_state;
-extern s32 g_addhero_card_slot;
-extern s32 g_addhero_selected_row;
-extern s32 g_addhero_selection_status;
-extern s32 g_addhero_scroll_frames;
-extern s32 g_addhero_io_busy;
-extern s32 g_addhero_retry_count;
-extern s32 g_addhero_progress_bar_active;
-extern s32 g_addhero_selected_entry_extended;
-extern s32 g_addhero_progress_start_tick;
-extern s32 g_addhero_primary_poll_countdown;
-extern s32 g_addhero_entry_value_limit;
-extern s32 g_addhero_entry_scan_active;
-extern s32 g_addhero_entry_fields[];
-extern s32 g_addhero_secondary_poll_countdown;
-extern s32 g_addhero_primary_handle0;
-extern s32 g_addhero_primary_handle1;
-extern s32 g_addhero_primary_handle2;
-extern s32 g_addhero_primary_handle3;
-extern s32 g_addhero_has_free_entry_space;
-extern s32 g_addhero_write_in_progress;
-extern s32 g_addhero_file_handle;
-extern s32 g_addhero_entry_ranks[];
-extern s32 g_addhero_secondary_handle0;
-extern s32 g_addhero_secondary_handle1;
-extern s32 g_addhero_secondary_handle2;
-extern s32 g_addhero_secondary_handle3;
-extern s32 g_addhero_entry_suffix_values[];
-extern s32 g_addhero_rank_count;
-
-extern s32 g_addhero_glyph_cursor_x;
-extern s32 g_addhero_glyph_cursor_y;
-extern s32 g_addhero_text_line_start_x;
-extern s32 g_addhero_glyph_upload_x;
-extern s32 g_addhero_glyph_upload_y;
-
-extern u8 *g_addhero_load_step;
-extern u8 *g_addhero_glyph_raster_cursor;
-
-extern u8 g_addhero_loadseq_card[];
-extern u8 g_addhero_loadseq_file_ready[];
-extern u8 g_addhero_single_byte_char_table[];
-extern u8 g_addhero_double_byte_char_table[];
-extern u8 g_addhero_save_blob[];
-extern u8 g_addhero_target_file_path[];
-extern u8 g_addhero_glyph_raster_buffer[];
-extern u8 g_addhero_save_file_path[];
-
-extern u16 g_addhero_decimal_glyphs[];
-extern u16 g_addhero_hex_glyphs[];
-
-extern char g_lom_save_filename_prefix[];
-extern char g_lom_alt_save_filename_prefix[];
-extern char g_lom_save_dummy_filename[];
-extern char g_lom_alt_save_dummy_filename[];
-extern char g_new_save_entry_prefix[];
-
-/* In-file functions */
-s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2);
-void addhero_reset_entry_ranks(void);
-s32 addhero_has_known_entry_type(void);
-s32 addhero_entry_blocks_reach_limit(void);
-void addhero_render_fixed_prompts(void);
-s32 addhero_advance_load_sequence(void);
-void addhero_restart_load_sequence(void);
-s32 addhero_poll_and_rewind_primary_handles(void);
-void addhero_init_stream_handles(void);
-void addhero_shutdown_stream_handles(void);
-s32 addhero_begin_entry_scan(s32 page);
-s32 addhero_scan_next_entry(s32 page);
-void addhero_commit_selected_entry(void);
-void addhero_release_primary_handles(void);
-void addhero_release_secondary_handles(void);
-s32 addhero_poll_primary_handle_group(void);
-s32 addhero_poll_secondary_handle_group(void);
-void addhero_sort_entries_by_type(void);
-s32 addhero_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
-void addhero_draw_hex_byte(s32 prim, s32 ot, s32 byte_value, s32 x, s32 y, s32 alignment);
-s32 addhero_draw_cached_text(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment);
-s32 addhero_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette);
-s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette);
-void addhero_begin_glyph_cache_frame(void);
-void addhero_evict_unused_glyphs(void);
-void addhero_reset_glyph_cache(void);
-void addhero_expand_text_glyph_codes(u8 *out, u8 *in);
-
-/* External functions (defined in addhero.c or elsewhere) */
-s32 addhero_parse_entry_fields();
-void addhero_scroll_to_selection(void);
-void addhero_open_status_dialog(s32 message_id);
-void addhero_open_exit_dialog(s32 message_id);
-void func_800AA02C(void);
-s32 strncmp(void *a, void *b, s32 n);
-s32 strcat(void *a, void *b);
-s32 open(void *a, s32 b);
-s32 read(s32 a, void *b, s32 c);
-s32 write(s32 a, void *b, s32 c);
-s32 close(s32 a);
-s32 rename(void *a, void *b);
-s32 erase(void *a);
-s32 strcpy(void *a, void *b, ...);
-s32 _card_info(s32 a);
-s32 _card_load(s32 a);
-s32 _card_wait(s32 a);
-s32 _card_clear(s32 a);
-s32 VSync(s32 a);
-s32 func_80032174(s32 a, void *b, s32 *c);
-s32 McxCardType(s32 a);
-s32 firstfile(void *a, void *b);
-void func_800B0170(void *a);
-s32 nextfile(void *a);
-void bcopy(void *a, void *b, s32 c);
-s32 Krom2RawAdd(s32 a);
-void func_80019A34(RECT *rect, void *str);
-void func_80019788(s32 arg0);
-void reset_controller_vsync_state(void);
-s32 OpenEvent(s32 a, s32 b, s32 c, s32 d);
-void CloseEvent(s32 a);
-s32 TestEvent(s32 a);
-void EnableEvent(s32 a);
-void EnterCriticalSection(void);
-void ExitCriticalSection(void);
 
 /**
  * @brief Rank the current card's entries by parsed field value, tag "full"
