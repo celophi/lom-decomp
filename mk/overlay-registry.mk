@@ -160,6 +160,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field29.c \
 	src/overlays/field/unk2.c \
 	src/overlays/field/unk2_e.c \
+	src/overlays/field/func_80083EEC.c \
+	src/overlays/field/unk2_e_after_83EEC.c \
 	src/overlays/field/func_80084240.c \
 	src/overlays/field/func_800842E0.c \
 	src/overlays/field/func_80089980.c \
