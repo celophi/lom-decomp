@@ -87,9 +87,9 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_glyph_builder.c \
 	src/overlays/carda/carda_header_label.c \
 	src/overlays/carda/func_80147100.c \
-	src/overlays/carda/func_80149A4C.c
+	src/overlays/carda/func_80149A4C.c \
+	src/overlays/carda/func_80142E10.c
 overlay_carda_gcc_280_g0_srcs := \
-	src/overlays/carda/unk1_after_strings.c \
 	src/overlays/carda/carda_scan_hex_digits.c \
 	src/overlays/carda/unk1_after_checksum_tail.c \
 	src/overlays/carda/func_80145050.c \
