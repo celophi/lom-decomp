@@ -186,8 +186,26 @@
 #define MENU_SE_SELECT 0x7E
 /** @brief Close / cancel sound (Circle while at MENU_NODE_BROWSE_ALL). */
 #define MENU_SE_CLOSE 0x7F
+/** @brief Invalid-action sound. */
+#define MENU_SE_ERROR 0x78
 /** @brief Full volume level for all menu sound effects (128). */
 #define MENU_SE_VOLUME 0x80
+
+/** @brief Byte offset of the learned Special Technique bitsets in PadContext. */
+#define MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET 0x34
+/** @brief Number of Special Technique category bitsets. */
+#define MENU_SPECIAL_TECHNIQUE_GROUP_COUNT 11
+/** @brief Number of Special Technique bits and names in each category. */
+#define MENU_SPECIAL_TECHNIQUES_PER_GROUP 24
+
+/** @brief Byte offset of the ability-record table in PadContext. */
+#define MENU_ABILITY_TABLE_OFFSET 0x2F0
+/** @brief Number of fixed-size ability records. */
+#define MENU_ABILITY_COUNT 64
+/** @brief Ability is learned and appears in the list. */
+#define MENU_ABILITY_FLAG_LEARNED 0x01
+/** @brief Ability displays the auxiliary list icon. */
+#define MENU_ABILITY_FLAG_SHOW_ICON 0x02
 
 /* Type-view and fixed-address helpers. */
 #define MENU_SLOT_FLAGS_VIEW(slot) (*(MenuSlotFlagsView*)&(slot)->flags)
@@ -615,6 +633,13 @@ typedef struct
     s16 target_y; /**< Y scroll interpolation target. */
     u8 lerp_steps; /**< Remaining interpolation steps. */
 } ScrollListState;
+
+/** @brief Partial view of one 12-byte ability record. */
+typedef struct
+{
+    u8 flags; /**< Learned/display state bits used by the menu. */
+    u8 pad01[0xB];
+} MenuAbilityEntry;
 
 /** @brief Packed eight-nibble property field stored in an item record. */
 typedef union
@@ -3814,85 +3839,87 @@ s32 menu_build_spell_nav_entries(void)
  */
 s32 menu_build_special_technique_nav_entries(void)
 {
-    s32 i;
-    s32 j;
-    s32 prev;
-    s32 next;
-    s32 count;
-    s32 more;
-    s32 link;
-    s32 word_prev;
-    s32 found;
-    s32 sentinel;
-    s32 mask;
-    s32 word;
-    s32* p;
+    s32 group_index;
+    s32 index;
+    s32 previous_index;
+    s32 next_index;
+    s32 item_count;
+    s32 has_next;
+    s32 packed_entry;
+    s32 entry_with_previous;
+    s32 selected_index;
+    s32 none_index;
+    s32 bit_mask;
+    s32 group_flags;
+    s32* group_flags_ptr;
 
-    count = 0;
-    found = 0xFF;
-    i = 0;
-    sentinel = found;
-    p = (s32*)((u8*)g_pad_ctx + 0x34);
+    item_count = 0;
+    selected_index = MENU_NONE;
+    group_index = 0;
+    none_index = selected_index;
+    group_flags_ptr = (s32*)((u8*)g_pad_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
     do
     {
-        mask = 1;
-        word = *p;
-        j = 0x17;
+        bit_mask = 1;
+        group_flags = *group_flags_ptr;
+        index = MENU_SPECIAL_TECHNIQUES_PER_GROUP - 1;
 
         do
         {
-            if ((word & mask) != 0)
+            if ((group_flags & bit_mask) != 0)
             {
-                if ((i == (s32)(((u32)(*(s32*)((u8*)g_menu_equipment_base + 0x14)) >> 0xA) & 0x3F)) && (found == sentinel))
+                if ((group_index ==
+                     (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK)) &&
+                    (selected_index == none_index))
                 {
-                    found = count;
+                    selected_index = item_count;
                 }
-                count += 1;
+                item_count += 1;
             }
-            j -= 1;
-            mask = mask * 2;
-        } while (j >= 0);
-        i += 1;
-        p += 1;
-    } while (i < 0xB);
+            index -= 1;
+            bit_mask <<= 1;
+        } while (index >= 0);
+        group_index += 1;
+        group_flags_ptr += 1;
+    } while (group_index < MENU_SPECIAL_TECHNIQUE_GROUP_COUNT);
 
-    if (found == 0xFF)
+    if (selected_index == MENU_NONE)
     {
-        found = 0;
+        selected_index = 0;
     }
 
     g_menu_scroll_nav_entries[0] = 0;
 
-    j = 0;
-    while (j < count)
+    index = 0;
+    while (index < item_count)
     {
-        s32* slot = (s32*)g_menu_scroll_nav_entries + j;
+        s32* slot = (s32*)g_menu_scroll_nav_entries + index;
         s32 cur = *slot;
         s32 word_self;
 
-        prev = j - 1;
-        link = cur & ~MENU_ITEM_NAV_POSITION_MASK;
-        link = link | ((j * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
-        word_self = link;
+        previous_index = index - 1;
+        packed_entry = cur & ~MENU_ITEM_NAV_POSITION_MASK;
+        packed_entry = packed_entry | ((index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        word_self = packed_entry;
         *slot = word_self;
-        if (prev < 0)
+        if (previous_index < 0)
         {
-            prev = count - 1;
+            previous_index = item_count - 1;
         }
-        word_prev = word_self & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
-        word_prev = word_prev | ((prev & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
-        *slot = word_prev;
-        next = j + 1;
-        more = next < count;
-        link = 0;
-        if (more != 0)
+        entry_with_previous = word_self & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+        entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+        *slot = entry_with_previous;
+        next_index = index + 1;
+        has_next = next_index < item_count;
+        packed_entry = 0;
+        if (has_next != 0)
         {
-            link = next;
+            packed_entry = next_index;
         }
-        *slot = (word_prev & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (link << MENU_ITEM_NAV_NEXT_SHIFT);
-        j = next;
+        *slot = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (packed_entry << MENU_ITEM_NAV_NEXT_SHIFT);
+        index = next_index;
     }
-    return count | (found << 16);
+    return item_count | (selected_index << 16);
 }
 
 /**
@@ -6861,7 +6888,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
 
     if ((g_pad_input & 0x10) && (active != 0))
     {
-        menu_play_se(0x7D, 0x80);
+        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
         switch (g_menu_active_item_category)
         {
         case 0:
@@ -6927,7 +6954,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(0x7F, 0x80);
+        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
         if (g_menu_scene_type < 0x13)
         {
             s32 cat;
@@ -6955,7 +6982,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
             g_menu_nodes[0x16].label_id = 0x14;
             g_menu_nodes[0x19].label_id = 0x16;
             g_menu_content_ready = 0;
-            menu_play_se(0x7F, 0x80);
+            menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
             menu_reset_content_view();
             g_pad_input = 0;
         }
@@ -7203,7 +7230,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                             ctx += g_menu_active_subtype;
                             ctx[0x609] = (s8)((u8)g_menu_active_subtype + 0x7D);
                         }
-                        menu_play_se(0x7E, 0x80);
+                        menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
                         g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = (s8)sub;
                         g_menu_nodes[(g_menu_char_slot * 3) + 2].label_id = (u8)((g_menu_char_slot * 3) + 2);
                         MENU_CLEAR_SLOTS();
@@ -7223,10 +7250,10 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                         }
                         if (entry & (u8)g_menu_ability_mask)
                         {
-                            menu_play_se(0x78, 0x80);
+                            menu_play_se(MENU_SE_ERROR, MENU_SE_VOLUME);
                             return buf;
                         }
-                        menu_play_se(0x7E, 0x80);
+                        menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
                         MENU_CLEAR_SLOTS();
                         if (menu_item_is_nondefault(g_menu_active_equipped_item) != 0)
                         {
@@ -7264,7 +7291,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, V
                     g_menu_nodes[0x13].label_id = 0x11;
                     g_menu_nodes[0x16].label_id = 0x14;
                     g_menu_nodes[0x19].label_id = 0x16;
-                    menu_play_se(0x7D, 0x80);
+                    menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
                     sel = list->sel_idx;
                     if (sel != g_menu_pending_item_row)
                     {
@@ -7414,7 +7441,7 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(0x7F, 0x80);
+        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
         list->unk0 = 3;
         g_pad_input = 0;
     }
@@ -7458,7 +7485,7 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
     if ((g_pad_input & 0x220) && (active != 0))
     {
         *((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype + (row = 0x609)) = sel;
-        menu_play_se(0x7E, 0x80);
+        menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
         list->unk0 = 3;
     }
 
@@ -7501,7 +7528,7 @@ s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(0x7F, 0x80);
+        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
         menu_reset_content_view();
         g_pad_input = 0;
     }
@@ -7593,7 +7620,7 @@ s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(0x7F, 0x80);
+        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
         menu_reset_content_view();
         g_pad_input = 0;
     }
@@ -7653,14 +7680,14 @@ s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
 s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     u32 scroll_y;
-    s32 sel;
-    s32 idx;
-    s32 y;
-    s32 rel_y;
-    u8* item;
-    void* base;
-    void* sel_base;
-    DR_TPAGE* tp;
+    s32 selected_index;
+    s32 ability_index;
+    s32 list_y;
+    s32 relative_y;
+    MenuAbilityEntry* ability;
+    void* name_table;
+    void* help_table;
+    DR_TPAGE* draw_mode;
     ScrollListState* list;
 
     list = state;
@@ -7669,54 +7696,55 @@ s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Ve
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(0x7F, 0x80);
+        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
         menu_reset_content_view();
         g_pad_input = 0;
     }
 
-    y = 0;
-    sel = -1;
-    idx = 0;
-    item = (u8*)g_pad_ctx + 0x2F0;
+    list_y = 0;
+    selected_index = -1;
+    ability_index = 0;
+    ability = (MenuAbilityEntry*)((u8*)g_pad_ctx + MENU_ABILITY_TABLE_OFFSET);
     scroll_y = list->scroll_y;
 
     do
     {
-        if (*item & 1)
+        if (ability->flags & MENU_ABILITY_FLAG_LEARNED)
         {
-            rel_y = y - scroll_y;
-            if ((rel_y >= -0xF) && (rel_y < (list->viewport_h - 0x10)))
+            relative_y = list_y - scroll_y;
+            if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
             {
-                base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x18));
+                name_table = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x18));
                 prim_buf =
-                    func_800A88A0(prim_buf, ot, (void*)((u8*)base + *(u16*)((u8*)base + (idx * 2))), 1, 0x20 - view_origin->x, rel_y - view_origin->y, 0);
-                if (*item & 2)
+                    func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (ability_index * 2))), 1, 0x20 - view_origin->x,
+                                   relative_y - view_origin->y, 0);
+                if (ability->flags & MENU_ABILITY_FLAG_SHOW_ICON)
                 {
-                    prim_buf = (s32)menu_emit_icon_sprite((void*)prim_buf, ot, 0x2C, 0x10 - view_origin->x, rel_y - view_origin->y, 0, 0, 0, 0);
+                    prim_buf = (s32)menu_emit_icon_sprite((void*)prim_buf, ot, 0x2C, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
 
-                    tp = (DR_TPAGE*)prim_buf;
-                    setlen(tp, 1);
-                    tp->code[0] = 0xE1000005;
-                    addPrim(ot, tp);
-                    prim_buf = (s32)(tp + 1);
+                    draw_mode = (DR_TPAGE*)prim_buf;
+                    setlen(draw_mode, 1);
+                    draw_mode->code[0] = 0xE1000005;
+                    addPrim(ot, draw_mode);
+                    prim_buf = (s32)(draw_mode + 1);
                 }
             }
-            if (list->sel_idx == (y >> 4))
+            if (list->sel_idx == (list_y >> 4))
             {
-                sel = idx;
+                selected_index = ability_index;
             }
-            y += 0x10;
+            list_y += 0x10;
         }
-        idx += 1;
-        item += 0xC;
-    } while (idx < 0x40);
+        ability_index += 1;
+        ability += 1;
+    } while (ability_index < MENU_ABILITY_COUNT);
 
-    if (sel != -1)
+    if (selected_index != -1)
     {
         if (active != 0)
         {
-            sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x14));
-            g_menu_help_text = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+            help_table = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x14));
+            g_menu_help_text = (s32)((u8*)help_table + *(u16*)((u8*)help_table + (selected_index * 2)));
         }
     }
 
@@ -7739,12 +7767,8 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
     s32 hi;
     s32 handle;
     s32 off;
-    s8* p;
-    s8* pbase;
     s32 i;
-    s8* p1;
     s32 i1;
-    s8* p3;
     s32 i3;
     u8 flag;
     MenuContentItem* item;
@@ -7757,12 +7781,12 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(0x7F, 0x80);
+        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
         list->unk0 = 3;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
-        menu_play_se(0x7D, 0x80);
+        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
         switch (list->sel_idx)
         {
         case 0:
@@ -7787,14 +7811,11 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
             return buf;
 
         case 1:
-            i1 = 3;
-            p1 = (s8*)g_menu_slots;
-            p1 += 0x6C;
+            i1 = MENU_SLOT_COUNT - 1;
             while (i1 >= 0)
             {
-                *p1 = 0;
+                g_menu_slots[i1].active = 0;
                 i1--;
-                p1 -= 0x24;
             }
             g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 0x29;
             g_menu_nodes[(g_menu_char_slot * 3) + 2].label_id = D_801686A0[g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx];
@@ -7831,14 +7852,11 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
                 else
                 {
                     g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
-                    i = 3;
-                    pbase = (s8*)g_menu_slots;
-                    p = pbase + 0x6C;
+                    i = MENU_SLOT_COUNT - 1;
                     while (i >= 0)
                     {
-                        *p = 0;
+                        g_menu_slots[i].active = 0;
                         i--;
-                        p -= 0x24;
                     }
                     menu_open_content_page(6);
                     return buf;
@@ -7855,14 +7873,11 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
             {
                 break;
             }
-            i3 = 3;
-            p3 = (s8*)g_menu_slots;
-            p3 += 0x6C;
+            i3 = MENU_SLOT_COUNT - 1;
             while (i3 >= 0)
             {
-                *p3 = 0;
+                g_menu_slots[i3].active = 0;
                 i3--;
-                p3 -= 0x24;
             }
             g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 0x1A;
             g_menu_nodes[(g_menu_char_slot * 3) + 2].label_id = 0x17;
@@ -7902,16 +7917,14 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
 s32 menu_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
-    ScrollListState* list;
     s32 buf;
 
-    list = state;
     buf = prim_buf;
 
     if ((g_pad_input & 0x260) && (active != 0))
     {
-        list->unk2 = 0;
-        list->unk0 = 0;
+        state->unk2 = 0;
+        state->unk0 = 0;
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
     }
 
@@ -7931,16 +7944,14 @@ s32 menu_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* 
 s32 menu_two_line_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
-    ScrollListState* list;
     s32 buf;
 
-    list = state;
     buf = prim_buf;
 
     if ((g_pad_input & 0x260) && (active != 0))
     {
-        list->unk2 = 0;
-        list->unk0 = 0;
+        state->unk2 = 0;
+        state->unk0 = 0;
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
     }
 
@@ -8406,7 +8417,7 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
                     }
                 }
                 i += 1;
-            } while (i < 4);
+            } while (i < MENU_EQUIPMENT_SLOT_COUNT);
         }
         else
         {
@@ -8422,18 +8433,13 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
                 {
                     if (menu_clear_pending_status() != 0)
                     {
-                        s32 n = 3;
-                        u8* base;
-                        u8* sp;
+                        s32 n = MENU_SLOT_COUNT - 1;
 
                         g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0x3A);
-                        base = (u8*)g_menu_slots;
-                        sp = base + 0x6C;
                         do
                         {
-                            *sp = 0;
+                            g_menu_slots[n].active = 0;
                             n -= 1;
-                            sp -= 0x24;
                         } while (n >= 0);
                         menu_open_content_page(MENU_REDRAW_NAVIGATE);
                     }
@@ -8502,7 +8508,7 @@ void menu_update_active_slot(void)
 {
     s32 i;
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MENU_SLOT_COUNT; i++)
     {
         if (g_menu_slots[i].active != 0)
         {
@@ -8516,175 +8522,172 @@ void menu_update_active_slot(void)
 /**
  * @brief Draw the learned Special Technique list and handle technique assignment.
  * @param ot Ordering-table pointer, forwarded to the glyph renderer.
- * @param arg1 Scroll-list state for this page (aliased into @c state).
- * @param arg2 Primitive buffer write cursor (aliased into @c prim).
+ * @param state_arg Scroll-list state for this page.
+ * @param prim_arg Primitive buffer write cursor.
  * @param view_origin Viewport anchor; glyph origins are (0x10 - x, rel - y).
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
  */
-s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, s32 active)
+s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s32 prim_arg, Vec2s* view_origin, s32 active)
 {
-    ScrollListState* state = arg1;
-    s32 prim = arg2;
-    s32 found;
-    s32 count;
-    s32 i;
-    s32 j;
-    s32 mask;
-    s32 word;
-    s32* p;
-    s32 rel;
+    ScrollListState* state = state_arg;
+    s32 prim = prim_arg;
+    s32 selected_technique;
+    s32 list_y;
+    s32 group_index;
+    s32 technique_index;
+    s32 bit_mask;
+    s32 group_flags;
+    s32* group_flags_ptr;
+    s32 relative_y;
     s32 scroll_y;
-    u8 flag;
-    s32 v0;
+    u8 assignment_flag;
+    s32 item_handle;
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(0x7F, 0x80);
+        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
         state->unk0 = 3;
         return prim;
     }
 
-    found = -1;
-    count = 0;
-    i = count;
-    p = (s32*)((u8*)g_pad_ctx + 0x34);
+    selected_technique = -1;
+    list_y = 0;
+    group_index = 0;
+    group_flags_ptr = (s32*)((u8*)g_pad_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
     do
     {
-        j = 0;
-        mask = 1;
-        word = *p;
+        technique_index = 0;
+        bit_mask = 1;
+        group_flags = *group_flags_ptr;
         do
         {
-            if (word & mask)
+            if (group_flags & bit_mask)
             {
-                if (state->sel_idx == (count >> 4))
+                if (state->sel_idx == (list_y >> 4))
                 {
-                    found = j + (i * 0x18);
+                    selected_technique = technique_index + (group_index * MENU_SPECIAL_TECHNIQUES_PER_GROUP);
                 }
-                count += 0x10;
+                list_y += 0x10;
             }
-            j += 1;
-            mask = mask << 1;
-        } while (j < 0x18);
-        i += 1;
-        p += 1;
-    } while (i < 0xB);
+            technique_index += 1;
+            bit_mask <<= 1;
+        } while (technique_index < MENU_SPECIAL_TECHNIQUES_PER_GROUP);
+        group_index += 1;
+        group_flags_ptr += 1;
+    } while (group_index < MENU_SPECIAL_TECHNIQUE_GROUP_COUNT);
 
     if ((g_pad_input & 0x220) && (active != 0))
     {
-        if ((found / 24) == (s32)(((u32)(*(s32*)((u8*)g_menu_equipment_base + 0x14)) >> 0xA) & 0x3F))
+        if ((selected_technique / MENU_SPECIAL_TECHNIQUES_PER_GROUP) ==
+            (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
         {
-            u8* flag_ptr = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
-            u8* ctx;
+            u8* assignment_ptr = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+            u8* character_ctx;
 
-            flag_ptr += g_menu_active_subtype;
-            flag = *(flag_ptr + 0x609);
-            if (flag != 0xFF)
+            assignment_ptr += g_menu_active_subtype;
+            assignment_flag = *(assignment_ptr + 0x609);
+            if (assignment_flag != MENU_NONE)
             {
-                if (flag & 0x80)
+                if (assignment_flag & 0x80)
                 {
-                    v0 = func_800A9060();
-                    if (v0 != 0)
+                    item_handle = func_800A9060();
+                    if (item_handle != 0)
                     {
-                        s32 off;
+                        s32 slot_offset;
 
                         do
                         {
-                            func_800A8F8C(v0, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
-                            *((u8*)g_pad_ctx + (off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250)) + 0x640) = 0;
+                            func_800A8F8C(item_handle, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
+                            *((u8*)g_pad_ctx + (slot_offset = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250)) + 0x640) = 0;
                         } while (0);
-                        func_800A8FB4(off);
+                        func_800A8FB4(slot_offset);
                     }
                     else
                     {
-                        s32 n = 3;
-                        MenuSlot* pool;
-                        s8* slot;
-                        u8* b;
+                        s32 slot_index = MENU_SLOT_COUNT - 1;
+                        u8* message_table;
 
-                        b = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 8);
-                        pool = g_menu_slots;
-                        slot = (s8*)pool + 0x6C;
-                        g_menu_message_line1 = b + *(u16*)(b + 0xAC);
+                        message_table = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 8);
+                        g_menu_message_line1 = message_table + *(u16*)(message_table + 0xAC);
                         do
                         {
-                            *slot = 0;
-                            n -= 1;
-                            slot -= 0x24;
-                        } while (n >= 0);
+                            g_menu_slots[slot_index].active = 0;
+                            slot_index -= 1;
+                        } while (slot_index >= 0);
                         menu_open_content_page(6);
                         return prim;
                     }
                 }
             }
-            ctx = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
-            ctx += g_menu_active_subtype;
-            *(ctx + 0x609) = found % 24;
-            menu_play_se(0x7E, 0x80);
+            character_ctx = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+            character_ctx += g_menu_active_subtype;
+            *(character_ctx + 0x609) = selected_technique % MENU_SPECIAL_TECHNIQUES_PER_GROUP;
+            menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
             state->unk0 = 3;
         }
         else
         {
-            menu_play_se(0x78, 0x80);
+            menu_play_se(MENU_SE_ERROR, MENU_SE_VOLUME);
         }
     }
 
     prim = scroll_list_draw(prim, ot, state, (u32*)&g_menu_scroll_nav_entries, view_origin, active);
 
-    found = -1;
-    count = 0;
-    i = count;
-    p = (s32*)((u8*)g_pad_ctx + 0x34);
+    selected_technique = -1;
+    list_y = 0;
+    group_index = 0;
+    group_flags_ptr = (s32*)((u8*)g_pad_ctx + MENU_SPECIAL_TECHNIQUE_FLAGS_OFFSET);
     scroll_y = state->scroll_y;
     do
     {
-        j = 0;
-        mask = 1;
+        technique_index = 0;
+        bit_mask = 1;
         do
         {
-            if (*p & mask)
+            if (*group_flags_ptr & bit_mask)
             {
-                rel = count - scroll_y;
-                if (rel >= -0xF)
+                relative_y = list_y - scroll_y;
+                if (relative_y >= -0xF)
                 {
-                    if (rel < state->viewport_h - 0x10)
+                    if (relative_y < state->viewport_h - 0x10)
                     {
-                        s32 color;
-                        u8* base;
-                        s32 offs;
+                        s32 glyph_color;
+                        u8* name_table;
+                        s32 glyph_offset;
                         u8* glyph;
 
-                        color = 3;
-                        base = g_menu_state_ptr;
-                        base += *(s32*)(base + 0x20);
-                        offs = *(u16*)((u8*)base + (j * 2) + (i * 0x30));
-                        glyph = base + offs;
-                        if (i == (s32)(((u32)(*(s32*)((u8*)g_menu_equipment_base + 0x14)) >> 0xA) & 0x3F))
+                        glyph_color = 3;
+                        name_table = g_menu_state_ptr;
+                        name_table += *(s32*)(name_table + 0x20);
+                        glyph_offset = *(u16*)((u8*)name_table + (technique_index * 2) + (group_index * (MENU_SPECIAL_TECHNIQUES_PER_GROUP * 2)));
+                        glyph = name_table + glyph_offset;
+                        if (group_index ==
+                            (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
                         {
-                            color = 1;
+                            glyph_color = 1;
                         }
-                        prim = func_800A88A0(prim, ot, glyph, color, 0x10 - view_origin->x, rel - view_origin->y, 0);
+                        prim = func_800A88A0(prim, ot, glyph, glyph_color, 0x10 - view_origin->x, relative_y - view_origin->y, 0);
                     }
                 }
-                if (state->sel_idx == (count >> 4))
+                if (state->sel_idx == (list_y >> 4))
                 {
-                    found = j + (i * 0x18);
+                    selected_technique = technique_index + (group_index * MENU_SPECIAL_TECHNIQUES_PER_GROUP);
                 }
-                count += 0x10;
+                list_y += 0x10;
             }
-            j += 1;
-            mask = mask << 1;
-        } while (j < 0x18);
-        i += 1;
-        p += 1;
-    } while (i < 0xB);
+            technique_index += 1;
+            bit_mask <<= 1;
+        } while (technique_index < MENU_SPECIAL_TECHNIQUES_PER_GROUP);
+        group_index += 1;
+        group_flags_ptr += 1;
+    } while (group_index < MENU_SPECIAL_TECHNIQUE_GROUP_COUNT);
 
-    if (found != -1)
+    if (selected_technique != -1)
     {
-        u8* base = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x1C);
+        u8* name_table = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x1C);
 
-        g_menu_help_text = (s32)(base + *(u16*)(base + (found * 2)));
+        g_menu_help_text = (s32)(name_table + *(u16*)(name_table + (selected_technique * 2)));
     }
     return prim;
 }
@@ -9054,19 +9057,19 @@ s32 menu_build_ability_nav_entries(void)
     s32 item_count;
     s32 remaining;
     s32 entry_index;
-    u8* record;
+    MenuAbilityEntry* ability;
 
     item_count = 0;
-    record = (u8*)g_pad_ctx + 0x2F0;
-    remaining = 0x3F;
+    ability = (MenuAbilityEntry*)((u8*)g_pad_ctx + MENU_ABILITY_TABLE_OFFSET);
+    remaining = MENU_ABILITY_COUNT - 1;
     do
     {
-        if (*record & 1)
+        if (ability->flags & MENU_ABILITY_FLAG_LEARNED)
         {
             item_count += 1;
         }
         remaining -= 1;
-        record += 0xC;
+        ability += 1;
     } while (remaining >= 0);
 
     g_menu_scroll_nav_entries[0] = 0;
