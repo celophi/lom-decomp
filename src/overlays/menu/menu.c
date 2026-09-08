@@ -109,6 +109,18 @@
 #define MENU_ITEM_NAV_INDEX_MASK 0x1FF
 #define MENU_ITEM_NAV_PREVIOUS_SHIFT 14
 #define MENU_ITEM_NAV_NEXT_SHIFT 23
+/** @brief Number of equipment slots associated with one character. */
+#define MENU_EQUIPMENT_SLOT_COUNT 4
+/** @brief Number of 0x40-byte records in the inventory item table. */
+#define MENU_ITEM_TABLE_COUNT 100
+/** @brief Byte offset of the inventory item table within g_pad_ctx. */
+#define MENU_ITEM_TABLE_OFFSET 0xCE0
+/** @brief Mask for the two-bit item-kind field in MenuItemEntry::attributes. */
+#define MENU_ITEM_KIND_MASK 0x300
+#define MENU_ITEM_KIND_SHIFT 8
+/** @brief Shift and mask for the six-bit item-category field in MenuItemEntry::attributes. */
+#define MENU_ITEM_CATEGORY_SHIFT 10
+#define MENU_ITEM_CATEGORY_MASK 0x3F
 /** @brief Clears the packed previous-index field while preserving all other bits. */
 #define MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK 0xFF803FFF
 /** @brief Clears the packed next-index field while preserving all other bits. */
@@ -592,13 +604,15 @@ typedef struct
     u8 lerp_steps; /**< Remaining interpolation steps. */
 } ScrollListState;
 
-/** @brief One 0x40-byte menu item entry in the item table at g_pad_ctx + 0xCE0. */
+/** @brief One 0x40-byte inventory/equipment item record. */
 typedef struct
 {
-    u8 flag; /**< Zero marks an empty slot. */
+    u8 active; /**< Zero marks an empty slot. */
     u8 pad01[0x13];
-    u32 attr; /**< Bits 9:8 select the item kind. */
-    u8 pad18[0x28];
+    u32 attributes; /**< Bits 9:8 select the item kind; bits 15:10 select its category. */
+    u8 pad18[0xC];
+    u16 stat_values[4]; /**< Equipment values used when ranking candidates. */
+    u8 pad2C[0x14];
 } MenuItemEntry;
 
 /* ----- Forward Declarations ----- */
@@ -647,7 +661,7 @@ s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries
 void* menu_find_best_equipment_for_active_slot(void);
 void menu_open_content_page(u32 content_id);
 
-s32 menu_build_inventory_nav_entries(s32 arg0);
+s32 menu_build_inventory_nav_entries(s32 item_kind);
 s32 menu_build_equipment_nav_entries(void);
 s32 menu_build_key_item_nav_entries(void);
 s32 menu_build_ability_nav_entries(void);
@@ -3873,11 +3887,11 @@ s32 menu_build_special_technique_nav_entries(void)
 }
 
 /**
- * @brief Count entries at g_pad_ctx + 0xCE0 (stride 0x40) whose 2-bit type field matches arg0, then initialize g_menu_scroll_nav_entries as a circular packed linked list of those entries.
- * @param arg0 2-bit type value to match against bits 9:8 of each entry's s32 field at offset 0x14.
- * @return Number of matching entries (and entries initialized in g_menu_scroll_nav_entries).
+ * @brief Build circular navigation entries for inventory items of one kind.
+ * @param item_kind Item kind to match against MenuItemEntry::attributes.
+ * @return Number of matching inventory items.
  */
-s32 menu_build_inventory_nav_entries(s32 arg0)
+s32 menu_build_inventory_nav_entries(s32 item_kind)
 {
     s32 i;
     s32 prev;
@@ -3886,26 +3900,26 @@ s32 menu_build_inventory_nav_entries(s32 arg0)
     s32 more;
     s32 link;
     s32 word_prev;
-    u8* entry;
+    MenuItemEntry* entry;
 
     i = 0;
     count = 0;
-    entry = (u8*)g_pad_ctx + 0xCE0;
+    entry = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
     do
     {
-        u8 active = entry[0];
+        u8 active = entry->active;
 
         if (active == 0)
         {
             break;
         }
-        if ((((u32) * (s32*)(entry + 0x14) >> 8) & 3) == (u32)arg0)
+        if (((entry->attributes >> MENU_ITEM_KIND_SHIFT) & 3) == (u32)item_kind)
         {
             count += 1;
         }
         i += 1;
-        entry += 0x40;
-    } while (i < 0x64);
+        entry += 1;
+    } while (i < MENU_ITEM_TABLE_COUNT);
 
     g_menu_scroll_nav_entries[0] = 0;
 
@@ -5608,37 +5622,37 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
 
 
 /**
- * @brief Scan up to arg0 entries in g_menu_equipment_base and OR together lookup bytes keyed by bits 10-15 of unk14.
- * @param arg0 Maximum number of entries to inspect (loop exits early when the index equals this value).
- * @return Bitwise OR of the looked-up bytes from each active entry, or 0 if none are active.
+ * @brief Build the equipped-item ability mask while excluding one equipment slot.
+ * @param excluded_slot Equipment slot to omit from the mask.
+ * @return Combined ability mask for the remaining active equipment entries.
  */
-s32 menu_get_equipment_ability_mask(s32 arg0)
+s32 menu_get_equipment_ability_mask(s32 excluded_slot)
 {
     s32 i;
     s32 result;
-    u8* entry;
-    u32 unk14;
+    MenuItemEntry* entry;
+    u32 item_attributes;
 
     result = 0;
-    entry = (u8*)g_menu_equipment_base;
+    entry = (MenuItemEntry*)g_menu_equipment_base;
     i = 0;
     do
     {
-        if ((i != arg0) && (entry[0] != 0))
+        if ((i != excluded_slot) && (entry->active != 0))
         {
-            unk14 = *(u32*)(entry + 0x14);
-            if (unk14 & 0x300)
+            item_attributes = entry->attributes;
+            if (item_attributes & MENU_ITEM_KIND_MASK)
             {
-                result |= D_800F0BEC[(unk14 >> 10) & 0x3F];
+                result |= D_800F0BEC[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK];
             }
             else
             {
-                result |= D_800F0BE0[(unk14 >> 10) & 0x3F];
+                result |= D_800F0BE0[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK];
             }
         }
         i += 1;
-        entry += 0x40;
-    } while (i < 4);
+        entry += 1;
+    } while (i < MENU_EQUIPMENT_SLOT_COUNT);
     return result;
 }
 
@@ -7292,24 +7306,24 @@ u32 menu_step_item_selection(s32 step)
     u32 start;
     u32 index;
     s32 kind;
-    u8* item;
+    MenuItemEntry* item;
     u32 result;
     u8* base;
 
     g_menu_item_ptr = 0;
     base = (u8*)g_pad_ctx;
     start = g_menu_inventory_index + step;
-    item = base + ((start << 6) + 0xCE0);
+    item = (MenuItemEntry*)(base + ((start << 6) + MENU_ITEM_TABLE_OFFSET));
     index = start;
-    while (index < 0x64)
+    while (index < MENU_ITEM_TABLE_COUNT)
     {
-        if (item[0] != 0)
+        if (item->active != 0)
         {
-            kind = ((*(u32*)(item + 0x14)) >> 8) & 3;
+            kind = (item->attributes >> MENU_ITEM_KIND_SHIFT) & 3;
             if (kind == g_menu_active_item_category)
             {
                 g_menu_inventory_index = index;
-                g_menu_item_ptr = (s32)((u8*)g_pad_ctx + ((index << 6) + 0xCE0));
+                g_menu_item_ptr = (s32)((u8*)g_pad_ctx + ((index << 6) + MENU_ITEM_TABLE_OFFSET));
                 switch (kind)
                 {
                 case 0:
@@ -7326,7 +7340,7 @@ u32 menu_step_item_selection(s32 step)
             }
         }
         index += step;
-        item += step << 6;
+        item += step;
     }
 
     result = g_menu_item_ptr;
@@ -9143,74 +9157,72 @@ s32 menu_stage_best_equipment_for_slot0(void)
  */
 void* menu_find_best_equipment_for_slot0(void)
 {
-    s32 var_a0;
-    s32 var_a0_2;
-    s32 var_a1;
-    s32 temp_v1_3;
-    s32 var_t1;
-    u32 temp_v1;
-    u32 temp_v1_2;
-    u8* var_v0;
-    u8* temp_v0;
-    u8* var_a2;
-    u8* var_a3;
-    u8* var_t0;
+    s32 equipment_index;
+    s32 item_index;
+    s32 category_mask;
+    s32 item_value;
+    s32 best_value;
+    u32 item_attributes;
+    u8* category_flag;
+    u8* char_base;
+    MenuItemEntry* equipment;
+    MenuItemEntry* item;
+    MenuItemEntry* best_item;
 
-    var_t1 = 0;
-    temp_v0 = (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0);
-    var_t0 = temp_v0 + 0x50;
-    if (*(u8*)(temp_v0 + 0x50) != 0)
+    best_value = 0;
+    char_base = (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0);
+    best_item = (MenuItemEntry*)(char_base + 0x50);
+    if (best_item->active != 0)
     {
-        var_t1 = *(u16*)(var_t0 + 0x24);
+        best_value = best_item->stat_values[0];
     }
-    var_a3 = (u8*)g_pad_ctx + 0xCE0;
-    var_t0 = 0;
-    var_a1 = 0;
-    var_a2 = (u8*)g_menu_equipment_base;
-    var_a0 = 0;
+    item = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
+    best_item = 0;
+    category_mask = 0;
+    equipment = (MenuItemEntry*)g_menu_equipment_base;
+    equipment_index = 0;
     do
     {
-        if ((var_a0 != 0) && (*var_a2 != 0))
+        if ((equipment_index != 0) && (equipment->active != 0))
         {
-            temp_v1_2 = *(u32*)(var_a2 + 0x14);
-            temp_v1 = temp_v1_2;
-            if (temp_v1 & 0x300)
+            item_attributes = equipment->attributes;
+            if (item_attributes & MENU_ITEM_KIND_MASK)
             {
-                var_v0 = ((temp_v1 >> 0xA) & 0x3F) + D_800F0BEC;
+                category_flag = ((item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + D_800F0BEC;
             }
             else
             {
-                var_v0 = ((temp_v1 >> 0xA) & 0x3F) + D_800F0BE0;
+                category_flag = ((item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + D_800F0BE0;
             }
-            var_a1 ^= temp_v1_2;
-            var_a1 ^= temp_v1_2;
-            var_a1 |= *var_v0;
+            category_mask ^= item_attributes;
+            category_mask ^= item_attributes;
+            category_mask |= *category_flag;
         }
-        var_a0 ^= var_a1;
-        var_a0 ^= var_a1;
-        var_a0 += 1;
-        var_a2 += 0x40;
-    } while (var_a0 < 4);
-    var_a0_2 = 0;
+        equipment_index ^= category_mask;
+        equipment_index ^= category_mask;
+        equipment_index += 1;
+        equipment += 1;
+    } while (equipment_index < MENU_EQUIPMENT_SLOT_COUNT);
+    item_index = 0;
     do
     {
-        if (*var_a3 != 0)
+        if (item->active != 0)
         {
-            temp_v1_2 = *(u32*)(var_a3 + 0x14);
-            if (!(temp_v1_2 & 0x300) && !(var_a1 & D_800F0BE0[(temp_v1_2 >> 0xA) & 0x3F]))
+            item_attributes = item->attributes;
+            if (!(item_attributes & MENU_ITEM_KIND_MASK) && !(category_mask & D_800F0BE0[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK]))
             {
-                temp_v1_3 = *(u16*)(var_a3 + 0x24);
-                if (var_t1 < temp_v1_3)
+                item_value = item->stat_values[0];
+                if (best_value < item_value)
                 {
-                    var_t0 = var_a3;
-                    var_t1 = temp_v1_3;
+                    best_item = item;
+                    best_value = item_value;
                 }
             }
         }
-        var_a0_2 += 1;
-        var_a3 += 0x40;
-    } while (var_a0_2 < 0x64);
-    return var_t0;
+        item_index += 1;
+        item += 1;
+    } while (item_index < MENU_ITEM_TABLE_COUNT);
+    return best_item;
 }
 
 
@@ -9284,76 +9296,73 @@ s32 menu_stage_best_equipment_for_active_slot(void)
 void* menu_find_best_equipment_for_active_slot(void)
 {
     s32 slot_idx;
-    s32 rec_idx;
+    s32 item_index;
     s32 mask;
     s32 total;
     s32 best_total;
-    u32 slot_flags;
-    u32 rec_flags;
-    u8* category;
+    u32 equipment_attributes;
+    u32 item_attributes;
+    u8* category_flag;
     u8* char_base;
-    u8* slot;
-    u8* rec_flag;
-    u8* rec;
-    u8* best;
+    MenuItemEntry* equipment;
+    MenuItemEntry* item;
+    MenuItemEntry* best_item;
 
     char_base = (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0);
-    best = char_base + ((g_menu_active_subtype << 6) - 0x170);
-    if (*best == 0)
+    best_item = (MenuItemEntry*)(char_base + ((g_menu_active_subtype << 6) - 0x170));
+    if (best_item->active == 0)
     {
         best_total = 0;
     }
     else
     {
-        best_total = *(u16*)(best + 0x24) + *(u16*)(best + 0x26) + *(u16*)(best + 0x28) + *(u16*)(best + 0x2A);
+        best_total = best_item->stat_values[0] + best_item->stat_values[1] + best_item->stat_values[2] + best_item->stat_values[3];
     }
-    best = 0;
+    best_item = 0;
     mask = 0;
     slot_idx = 0;
-    slot = (u8*)g_menu_equipment_base;
-    rec_flag = (u8*)g_pad_ctx + 0xCE0;
+    equipment = (MenuItemEntry*)g_menu_equipment_base;
+    item = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
     do
     {
-        if ((slot_idx != (g_menu_active_subtype - 7)) && (*slot != 0))
+        if ((slot_idx != (g_menu_active_subtype - 7)) && (equipment->active != 0))
         {
-            slot_flags = *(u32*)(slot + 0x14);
-            if (slot_flags & 0x300)
+            equipment_attributes = equipment->attributes;
+            if (equipment_attributes & MENU_ITEM_KIND_MASK)
             {
-                category = ((slot_flags >> 0xA) & 0x3F) + D_800F0BEC;
+                category_flag = ((equipment_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + D_800F0BEC;
             }
             else
             {
-                category = ((slot_flags >> 0xA) & 0x3F) + D_800F0BE0;
+                category_flag = ((equipment_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + D_800F0BE0;
             }
-            mask |= *category;
+            mask |= *category_flag;
         }
         slot_idx += 1;
-        slot += 0x40;
-    } while (slot_idx < 4);
+        equipment += 1;
+    } while (slot_idx < MENU_EQUIPMENT_SLOT_COUNT);
     slot_idx = mask;
-    rec_idx = 0;
-    rec = rec_flag;
+    item_index = 0;
     do
     {
-        if (*rec_flag != 0)
+        if (item->active != 0)
         {
-            rec_flags = *(u32*)(rec + 0x14);
-            if (((rec_flags & 0x300) == 0x100) && !(slot_idx & D_800F0BEC[(rec_flags >> 0xA) & 0x3F]))
+            item_attributes = item->attributes;
+            if (((item_attributes & MENU_ITEM_KIND_MASK) == 0x100) && !(slot_idx & D_800F0BEC[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK]))
             {
-                total = *(u16*)(rec + 0x24) + *(u16*)(rec + 0x26) + *(u16*)(rec + 0x28) + *(u16*)(rec + 0x2A);
+                total = item->stat_values[0] + item->stat_values[1] + item->stat_values[2] + item->stat_values[3];
                 if (best_total < total)
                 {
-                    best = rec;
+                    best_item = item;
                     mask = total;
                     best_total = mask;
                 }
             }
         }
-        rec_idx += 1;
-        rec += 0x40;
-        rec_flag += 0x40;
-    } while (rec_idx < 0x64);
-    return best;
+        item_index += 1;
+        item += 1;
+    } while (item_index < MENU_ITEM_TABLE_COUNT);
+    return best_item;
 }
 
 /* ----- Menu Utilities ----- */
@@ -9372,22 +9381,22 @@ void menu_play_se(s32 sound_id, s32 volume)
 }
 
 /**
- * @brief Count the in-use entries in the 100-slot record table at g_pad_ctx+0xCE0.
- * @return Index of the first empty (zero first byte) record, i.e.
+ * @brief Count occupied records at the start of the inventory item table.
+ * @return Number of occupied records before the first empty entry.
  */
 s32 menu_count_inventory_items(void)
 {
     s32 count;
-    u8* rec;
+    MenuItemEntry* item;
 
-    rec = (u8*)g_pad_ctx + 0xCE0;
-    for (count = 0; count < 0x64; count++)
+    item = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
+    for (count = 0; count < MENU_ITEM_TABLE_COUNT; count++)
     {
-        if (*rec == 0)
+        if (item->active == 0)
         {
             break;
         }
-        rec += 0x40;
+        item += 1;
     }
     return count;
 }
