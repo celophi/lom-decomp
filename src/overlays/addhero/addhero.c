@@ -1361,40 +1361,46 @@ AddheroElement *addhero_alloc_element(void)
  * @brief Update and render every active pool element: draw scroll arrows, run
  *        each element's per-state transition (open/hold/close), invoke its draw
  *        callback, and advance the shared primitive cursor.
- * @param arg0 Draw state holding the primitive cursor and frame flag.
+ * @details Walks the 8 element descriptors in g_addhero_element_pool (12 bytes
+ *          each: attr/state word, flags word, draw-func pointer). The low 3 bits
+ *          of the attr word select the animation state: 1 = opening (grow, then
+ *          switch to hold), 2 = open/hold, 3 = closing (shrink, then finish),
+ *          4 = finishing (clear the slot). The (attr >> 3) & 0xF nibble is the
+ *          0..8 scale step driving the open/close interpolation.
+ * @param draw_state Draw state holding the primitive cursor and frame flag.
  * @see decomp.me (100%)
  */
-void addhero_update_and_draw_elements(AddheroDrawState *arg0)
+void addhero_update_and_draw_elements(AddheroDrawState *draw_state)
 {
-    AddheroGpuPacket *var_s0;
-    AddheroDrawState *var_s5;
-    volatile u32 *var_s3;
-    s32 temp_s1;
-    s32 temp_s2;
-    s32 var_s6;
+    AddheroGpuPacket *prim;
+    AddheroDrawState *ot;
+    volatile u32 *elem;
+    s32 shrink_x;
+    s32 shrink_y;
+    s32 slot;
     s32 sp20[24];
-    u32 temp_a0_2;
-    s32 temp_v1_2;
-    u32 temp_a1;
-    u32 temp_a2;
-    s32 temp_a0_3;
-    s32 var_v1;
-    s32 temp_a3_2;
-    s32 var_v0;
-    s32 temp_a3_3;
-    u32 temp_v0_3;
-    u32 temp_a0_4;
-    s32 temp_a0_5;
-    s32 var_v1_2;
-    s32 temp_a3_5;
-    s32 var_v0_2;
-    s32 temp_a3_6;
-    u32 temp_v0_5;
-    u32 temp_v1_3;
+    u32 attr_word;
+    s32 elem_state;
+    u32 flags_word;
+    u32 span;
+    s32 anim_step;
+    s32 span_scaled;
+    s32 height;
+    s32 height_scaled;
+    s32 inner_h;
+    u32 attr_bits;
+    u32 hi_byte;
+    s32 word3;
+    s32 acc3;
+    s32 height3;
+    s32 height_scaled3;
+    s32 inner_h3;
+    u32 elem_word4;
+    u32 anim_word;
     s32 count;
 
-    var_s0 = arg0->prim_cursor;
-    var_s5 = arg0;
+    prim = draw_state->prim_cursor;
+    ot = draw_state;
 
     count = g_addhero_entry_state;
     if ((count < 0x10) &&
@@ -1404,15 +1410,15 @@ void addhero_update_and_draw_elements(AddheroDrawState *arg0)
         count *= 0xE;
         if ((g_addhero_scroll_y + 0x58) < count)
         {
-            var_s0 = (AddheroGpuPacket *)func_800AE76C(var_s0, var_s5, 0x114, 0x82, 0);
+            prim = (AddheroGpuPacket *)func_800AE76C(prim, ot, 0x114, 0x82, 0);
         }
         if (g_addhero_scroll_y != 0)
         {
-            var_s0 = (AddheroGpuPacket *)func_800AE76C(var_s0, var_s5, 0x114, 0x3A, 1);
+            prim = (AddheroGpuPacket *)func_800AE76C(prim, ot, 0x114, 0x3A, 1);
         }
     }
 
-    if (arg0->frame_flag != 0)
+    if (draw_state->frame_flag != 0)
     {
         func_8001C56C(sp20, 0, 0xF0, 0x140, 0xE0);
     }
@@ -1421,161 +1427,161 @@ void addhero_update_and_draw_elements(AddheroDrawState *arg0)
         func_8001C56C(sp20, 0, 8, 0x140, 0xE0);
     }
 
-    var_s3 = (volatile u32 *)&g_addhero_element_pool.first;
-    var_s6 = 0;
+    elem = (volatile u32 *)&g_addhero_element_pool.first;
+    slot = 0;
 
-    for (; var_s6 < 8; var_s6++, var_s3 += 3)
+    for (; slot < 8; slot++, elem += 3)
     {
-        if (*var_s3 & 7)
+        if (*elem & 7)
         {
-            func_8001A5D4((s32)var_s0, sp20);
+            func_8001A5D4((s32)prim, sp20);
 
-            addPrim(var_s5, var_s0);
+            addPrim(ot, prim);
 
-            temp_a0_2 = *var_s3;
-            temp_v1_2 = temp_a0_2 & 7;
+            attr_word = *elem;
+            elem_state = attr_word & 7;
 
-            var_s0 = (AddheroGpuPacket *)((u8 *)var_s0 + 0x40);
+            prim = (AddheroGpuPacket *)((u8 *)prim + 0x40);
 
-            switch (temp_v1_2)
+            switch (elem_state)
             {
             case 1:
-                temp_v0_3 = *var_s3;
-                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
-                temp_a0_4 = temp_v0_3 >> 24;
-                temp_a2 = ((temp_a1 & 1) << 8) | temp_a0_4;
-                temp_a0_3 = (temp_v0_3 >> 3) & 0xF;
-                var_v1 = temp_a2 * temp_a0_3;
+                attr_bits = *elem;
+                flags_word = *(u32 *)((u8 *)elem + 4);
+                hi_byte = attr_bits >> 24;
+                span = ((flags_word & 1) << 8) | hi_byte;
+                anim_step = (attr_bits >> 3) & 0xF;
+                span_scaled = span * anim_step;
                 g_pad_input = 0;
-                if (var_v1 < 0)
+                if (span_scaled < 0)
                 {
-                    var_v1 += 7;
+                    span_scaled += 7;
                 }
-                temp_a3_2 = (temp_a1 >> 1) & 0xFF;
-                var_v0 = temp_a3_2 * temp_a0_3;
-                temp_s1 = var_v1 >> 3;
-                if (var_v0 < 0)
+                height = (flags_word >> 1) & 0xFF;
+                height_scaled = height * anim_step;
+                shrink_x = span_scaled >> 3;
+                if (height_scaled < 0)
                 {
-                    var_v0 += 7;
+                    height_scaled += 7;
                 }
-                temp_s2 = var_v0 >> 3;
-                temp_a3_3 = (s32)(temp_a3_2 - temp_s2);
+                shrink_y = height_scaled >> 3;
+                inner_h = (s32)(height - shrink_y);
 
-                var_s0 = (*(AddheroElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_3 / 2);
+                prim = (*(AddheroElemDrawFunc *)((u8 *)elem + 8))(ot, prim, (s32)(span - shrink_x) / 2, inner_h / 2);
                 {
                     u32 post_word;
                     u32 field;
                     u32 high;
-                    post_word = *var_s3;
+                    post_word = *elem;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    var_s0 = (AddheroGpuPacket *)func_800AD850(var_s0, var_s5,
-                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
-                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
-                                           temp_s1, temp_s2, arg0->frame_flag, var_s6 == 0);
+                    prim = (AddheroGpuPacket *)func_800AD850(prim, ot,
+                                           field + (s32)((((*(u32 *)((u8 *)elem + 4) & 1) << 8) | high) - shrink_x) / 2,
+                                           (*((u8 *)elem + 2)) + ((s32)((*(u32 *)((u8 *)elem + 4) >> 1) & 0xFF) - shrink_y) / 2,
+                                           shrink_x, shrink_y, draw_state->frame_flag, slot == 0);
                 }
                 {
                     u32 old_word;
                     u32 new_word;
-                    old_word = *var_s3;
+                    old_word = *elem;
                     new_word = (old_word & ~0x78) | (((((old_word >> 3) & 0xF) + 1) & 0xF) * 8);
-                    *(u32 *)var_s3 = new_word;
+                    *(u32 *)elem = new_word;
                     if (((new_word >> 3) & 0xF) == 8)
                     {
                         func_800AA02C();
-                        *(u32 *)var_s3 = (*var_s3 & ~7) | 2;
+                        *(u32 *)elem = (*elem & ~7) | 2;
                     }
                 }
                 break;
 
             case 2:
-                var_s0 = (*(AddheroElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, 0, 0);
+                prim = (*(AddheroElemDrawFunc *)((u8 *)elem + 8))(ot, prim, 0, 0);
                 {
                     u32 case_word;
                     u32 high;
-                    case_word = *var_s3;
+                    case_word = *elem;
                     high = case_word >> 24;
-                    var_s0 = (AddheroGpuPacket *)func_800AD850(var_s0, var_s5,
-                                           (case_word >> 7) & 0x1FF, *((u8 *)var_s3 + 2),
-                                           ((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high,
-                                           (*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF, arg0->frame_flag, var_s6 == 0);
+                    prim = (AddheroGpuPacket *)func_800AD850(prim, ot,
+                                           (case_word >> 7) & 0x1FF, *((u8 *)elem + 2),
+                                           ((*(u32 *)((u8 *)elem + 4) & 1) << 8) | high,
+                                           (*(u32 *)((u8 *)elem + 4) >> 1) & 0xFF, draw_state->frame_flag, slot == 0);
                 }
-                temp_v1_3 = *var_s3;
-                if (((temp_v1_3 >> 3) & 0xF) != 0)
+                anim_word = *elem;
+                if (((anim_word >> 3) & 0xF) != 0)
                 {
-                    *(u32 *)var_s3 = (temp_v1_3 & ~0x78) | (((((temp_v1_3 >> 3) & 0xF) - 1) & 0xF) * 8);
+                    *(u32 *)elem = (anim_word & ~0x78) | (((((anim_word >> 3) & 0xF) - 1) & 0xF) * 8);
                 }
                 break;
 
             case 3:
-                temp_a0_5 = *var_s3;
-                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
-                var_v1_2 = (u32)temp_a0_5 >> 24;
-                temp_a2 = ((temp_a1 & 1) << 8) | var_v1_2;
-                temp_a0_5 = (u32)temp_a0_5 >> 3;
-                temp_a0_5 &= 0xF;
-                var_v1_2 = temp_a2 * temp_a0_5;
+                word3 = *elem;
+                flags_word = *(u32 *)((u8 *)elem + 4);
+                acc3 = (u32)word3 >> 24;
+                span = ((flags_word & 1) << 8) | acc3;
+                word3 = (u32)word3 >> 3;
+                word3 &= 0xF;
+                acc3 = span * word3;
                 g_pad_input = 0;
-                if (var_v1_2 < 0)
+                if (acc3 < 0)
                 {
-                    var_v1_2 += 7;
+                    acc3 += 7;
                 }
-                temp_a3_5 = (temp_a1 >> 1) & 0xFF;
-                var_v0_2 = temp_a3_5 * temp_a0_5;
-                temp_s1 = var_v1_2 >> 3;
-                if (var_v0_2 < 0)
+                height3 = (flags_word >> 1) & 0xFF;
+                height_scaled3 = height3 * word3;
+                shrink_x = acc3 >> 3;
+                if (height_scaled3 < 0)
                 {
-                    var_v0_2 += 7;
+                    height_scaled3 += 7;
                 }
-                temp_s2 = var_v0_2 >> 3;
-                temp_a3_6 = (s32)(temp_a3_5 - temp_s2);
+                shrink_y = height_scaled3 >> 3;
+                inner_h3 = (s32)(height3 - shrink_y);
 
-                var_s0 = (*(AddheroElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_6 / 2);
+                prim = (*(AddheroElemDrawFunc *)((u8 *)elem + 8))(ot, prim, (s32)(span - shrink_x) / 2, inner_h3 / 2);
                 {
                     u32 post_word;
                     u32 field;
                     u32 high;
-                    post_word = *var_s3;
+                    post_word = *elem;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    var_s0 = (AddheroGpuPacket *)func_800AD850(var_s0, var_s5,
-                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
-                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
-                                           temp_s1, temp_s2, arg0->frame_flag, var_s6 == 0);
+                    prim = (AddheroGpuPacket *)func_800AD850(prim, ot,
+                                           field + (s32)((((*(u32 *)((u8 *)elem + 4) & 1) << 8) | high) - shrink_x) / 2,
+                                           (*((u8 *)elem + 2)) + ((s32)((*(u32 *)((u8 *)elem + 4) >> 1) & 0xFF) - shrink_y) / 2,
+                                           shrink_x, shrink_y, draw_state->frame_flag, slot == 0);
                 }
                 {
                     u32 old_word;
-                    old_word = *var_s3;
-                    var_v1_2 = old_word & ~0x78;
+                    old_word = *elem;
+                    acc3 = old_word & ~0x78;
                     old_word >>= 3;
                     old_word &= 0xF;
                     old_word--;
                     old_word &= 0xF;
                     old_word <<= 3;
-                    var_v1_2 |= old_word;
-                    *(u32 *)var_s3 = var_v1_2;
-                    if (!(((u32)var_v1_2 >> 3) & 0xF))
+                    acc3 |= old_word;
+                    *(u32 *)elem = acc3;
+                    if (!(((u32)acc3 >> 3) & 0xF))
                     {
-                        *(u32 *)var_s3 = ((((u32)var_v1_2 & ~0x78) | 0x18) & ~7) | 4;
+                        *(u32 *)elem = ((((u32)acc3 & ~0x78) | 0x18) & ~7) | 4;
                     }
                 }
                 break;
 
             case 4:
-                temp_v0_5 = *(u32 *)var_s3;
+                elem_word4 = *(u32 *)elem;
                 g_pad_input = 0;
-                temp_v1_3 = (temp_v0_5 & ~0x78) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
-                *(u32 *)var_s3 = temp_v1_3;
-                if (!((temp_v1_3 >> 3) & 0xF))
+                anim_word = (elem_word4 & ~0x78) | (((((elem_word4 >> 3) & 0xF) - 1) & 0xF) * 8);
+                *(u32 *)elem = anim_word;
+                if (!((anim_word >> 3) & 0xF))
                 {
-                    *(u32 *)var_s3 = temp_v1_3 & ~7;
+                    *(u32 *)elem = anim_word & ~7;
                 }
                 break;
             }
         }
     }
 
-    arg0->prim_cursor = var_s0;
+    draw_state->prim_cursor = prim;
 }
 
 /**
