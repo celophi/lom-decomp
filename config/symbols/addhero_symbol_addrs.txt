@@ -126,6 +126,7 @@ D_8016520C                                = 0x8016520C;
 D_801654E0                                = 0x801654E0;
 
 // ADDHERO data/BSS symbols named from their observed roles.
+g_pad_ctx                                  = 0x8012271C;
 g_pad_input                                = 0x80122988;
 g_addhero_icon_phase                       = 0x80160920;
 g_addhero_scroll_y                         = 0x80160928;

@@ -857,8 +857,6 @@ extern u8 D_8016869B[];
 extern u8 D_800F0BF8[];
 /** @brief The u32 at D_800F0BF8 + 0x14; the item-kind word of the default compare entry. */
 extern u32 D_800F0C0C;
-/** @brief Confirm-action dispatch jump table (rodata), indexed by list->sel_idx. */
-extern void* jtbl_80140544[];
 
 /* Memory-card state. */
 
@@ -8146,13 +8144,10 @@ s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
  * @param view_origin Viewport anchor; label origins are (0x30 - x, N - y).
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note The confirm-action switch on list->sel_idx is emitted as a computed goto
- *       through the rodata jump table jtbl_80140544; the static outer_keep[] array
- *       keeps the case labels address-taken so gcc reproduces that dispatch exactly.
  */
 s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
-    u16 rect[4];
+    MenuSlotRect rect;
     ScrollListState* list;
     MenuContentItem* item;
     MenuContentItem* tbl;
@@ -8166,7 +8161,6 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     u32 lhs_shift;
     u32 cmp_shift;
     s32 mask;
-    s32 arg;
     s32 idx;
     s32 hit;
     s32 buf;
@@ -8174,74 +8168,28 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     s32 handle2;
     s32 off;
     s32 off2;
-    s32 j;
-    s32 prev;
-    s32 next;
-    s32 more;
-    s32 link;
-    s32 word_prev;
     s32 i9;
-    s32 j1;
-    s32 prev1;
-    s32 next1;
-    s32 more1;
-    s32 link1;
-    s32 word_prev1;
-    s32 j2;
-    s32 prev2;
-    s32 next2;
-    s32 more2;
-    s32 link2;
-    s32 word_prev2;
-    s32 i;
-    s32 i1;
-    s32 i2;
-    s32 i3;
-    s32 i4;
-    s32 i5;
-    s32 i6;
-    s32 i7;
-    s32 i8;
-    u16 dispatch;
-
-    static void* const outer_keep[] = {
-        &&outer_case_0, &&outer_case_1, &&outer_case_2, &&outer_case_3, &&outer_case_4
-    };
-
     list = state;
     buf = prim_buf;
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(0x7F, 0x80);
+        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
         list->unk0 = 3;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
-        menu_play_se(0x7D, 0x80);
-        switch (0)
+        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+        switch (list->sel_idx)
         {
         case 0:
-            dispatch = list->sel_idx;
-            if ((u32)dispatch >= 5)
-            {
-                break;
-            }
-            goto *jtbl_80140544[dispatch];
-
-        outer_case_0:
             switch (g_menu_active_subtype)
             {
             case 7:
             {
                 s8* ability_mask_ptr;
 
-                i = 3;
-                while (i >= 0)
-                {
-                    g_menu_slots[i].active = 0;
-                    i--;
-                }
+                MENU_CLEAR_SLOTS();
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 0x24;
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = D_8016869F[g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx];
 
@@ -8253,7 +8201,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 {
                     if ((idx != (g_menu_active_subtype - 7)) && (entry[0] != 0))
                     {
-                        unk14 = *(u32*)(entry + 0x14);
+                        unk14 = PAD_ITEM_W14(entry);
                         if (unk14 & 0x300)
                         {
                             mask |= D_800F0BEC[(unk14 >> 10) & 0x3F];
@@ -8280,12 +8228,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             {
                 s8* ability_mask_ptr;
 
-                i1 = 3;
-                while (i1 >= 0)
-                {
-                    g_menu_slots[i1].active = 0;
-                    i1--;
-                }
+                MENU_CLEAR_SLOTS();
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 0x27;
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = D_8016869B[g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx];
 
@@ -8298,7 +8241,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 {
                     if ((idx != (g_menu_active_subtype - 7)) && (entry[0] != 0))
                     {
-                        unk14 = *(u32*)(entry + 0x14);
+                        unk14 = PAD_ITEM_W14(entry);
                         if (unk14 & 0x300)
                         {
                             mask |= D_800F0BEC[(unk14 >> 10) & 0x3F];
@@ -8324,56 +8267,24 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             }
             break;
 
-        outer_case_1:
+        case 1:
             if (g_menu_active_subtype == 7)
             {
                 if (menu_stage_best_equipment_for_slot0() == 0)
                 {
                     break;
                 }
-                i2 = 3;
-                while (i2 >= 0)
-                {
-                    g_menu_slots[i2].active = 0;
-                    i2--;
-                }
-                rect[0] = 0xB0;
-                rect[1] = 0x40;
-                rect[2] = 0x70;
-                rect[3] = 0x30;
-                list = (ScrollListState*)menu_slot_alloc(0, rect);
+                MENU_CLEAR_SLOTS();
+                rect.x = 0xB0;
+                rect.y = 0x40;
+                rect.w = 0x70;
+                rect.h = 0x30;
+                list = (ScrollListState*)menu_slot_alloc(0, &rect);
                 ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
                 g_menu_compare_window_active = 1;
                 ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
 
-                j = 0;
-                do
-                {
-                    s32 cur = g_menu_item_nav_entries[j];
-                    s32 word_self;
-
-                    prev = 1;
-                    link = cur & ~0x3FFF;
-                    link = link | ((j * 0x10) & 0x3FFF);
-                    word_self = link;
-                    g_menu_item_nav_entries[j] = word_self;
-                    if ((j - 1) >= 0)
-                    {
-                        prev = j - 1;
-                    }
-                    word_prev = word_self & 0xFF803FFF;
-                    word_prev = word_prev | ((prev & 0x1FF) << 14);
-                    g_menu_item_nav_entries[j] = word_prev;
-                    next = j + 1;
-                    more = next < 2;
-                    link = 0;
-                    if (more != 0)
-                    {
-                        link = next;
-                    }
-                    g_menu_item_nav_entries[j] = (word_prev & 0x7FFFFF) | (link << 23);
-                    j = next;
-                } while (more != 0);
+                MENU_RELINK();
                 break;
             }
             g_item_slot_data.slot3 = 0;
@@ -8383,52 +8294,20 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             {
                 break;
             }
-            i3 = 3;
-            while (i3 >= 0)
-            {
-                g_menu_slots[i3].active = 0;
-                i3--;
-            }
-            rect[0] = 0xB0;
-            rect[1] = 0x40;
-            rect[2] = 0x70;
-            rect[3] = 0x30;
-            list = (ScrollListState*)menu_slot_alloc(0, rect);
+            MENU_CLEAR_SLOTS();
+            rect.x = 0xB0;
+            rect.y = 0x40;
+            rect.w = 0x70;
+            rect.h = 0x30;
+            list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
             g_menu_compare_window_active = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
 
-            j1 = 0;
-            do
-            {
-                s32 cur = g_menu_item_nav_entries[j1];
-                s32 word_self;
-
-                prev1 = 1;
-                link1 = cur & ~0x3FFF;
-                link1 = link1 | ((j1 * 0x10) & 0x3FFF);
-                word_self = link1;
-                g_menu_item_nav_entries[j1] = word_self;
-                if ((j1 - 1) >= 0)
-                {
-                    prev1 = j1 - 1;
-                }
-                word_prev1 = word_self & 0xFF803FFF;
-                word_prev1 = word_prev1 | ((prev1 & 0x1FF) << 14);
-                g_menu_item_nav_entries[j1] = word_prev1;
-                next1 = j1 + 1;
-                more1 = next1 < 2;
-                link1 = 0;
-                if (more1 != 0)
-                {
-                    link1 = next1;
-                }
-                g_menu_item_nav_entries[j1] = (word_prev1 & 0x7FFFFF) | (link1 << 23);
-                j1 = next1;
-            } while (more1 != 0);
+            MENU_RELINK();
             break;
 
-        outer_case_2:
+        case 2:
             g_item_slot_data.slot3 = 0;
             g_item_slot_data.slot2 = 0;
             g_item_slot_data.slot1 = 0;
@@ -8440,62 +8319,25 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             g_menu_active_subtype = 0xA;
             menu_stage_best_equipment_for_active_slot();
 
-            i4 = 3;
-            while (i4 >= 0)
-            {
-                g_menu_slots[i4].active = 0;
-                i4--;
-            }
-            rect[0] = 0xB0;
-            rect[1] = 0x40;
-            rect[2] = 0x70;
-            rect[3] = 0x30;
-            list = (ScrollListState*)menu_slot_alloc(0, rect);
+            MENU_CLEAR_SLOTS();
+            rect.x = 0xB0;
+            rect.y = 0x40;
+            rect.w = 0x70;
+            rect.h = 0x30;
+            list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
             g_menu_compare_window_active = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
 
-            j2 = 0;
-            do
-            {
-                s32 cur = g_menu_item_nav_entries[j2];
-                s32 word_self;
-
-                prev2 = 1;
-                link2 = cur & ~0x3FFF;
-                link2 = link2 | ((j2 * 0x10) & 0x3FFF);
-                word_self = link2;
-                g_menu_item_nav_entries[j2] = word_self;
-                if ((j2 - 1) >= 0)
-                {
-                    prev2 = j2 - 1;
-                }
-                word_prev2 = word_self & 0xFF803FFF;
-                word_prev2 = word_prev2 | ((prev2 & 0x1FF) << 14);
-                g_menu_item_nav_entries[j2] = word_prev2;
-                next2 = j2 + 1;
-                more2 = next2 < 2;
-                link2 = 0;
-                if (more2 != 0)
-                {
-                    link2 = next2;
-                }
-                g_menu_item_nav_entries[j2] = (word_prev2 & 0x7FFFFF) | (link2 << 23);
-                j2 = next2;
-            } while (more2 != 0);
+            MENU_RELINK();
             break;
 
-        outer_case_3:
+        case 3:
             if (*(u8*)g_menu_active_equipped_item == 0)
             {
                 break;
             }
-            i5 = 3;
-            while (i5 >= 0)
-            {
-                g_menu_slots[i5].active = 0;
-                i5--;
-            }
+            MENU_CLEAR_SLOTS();
             if (g_menu_active_subtype == 7)
             {
                 g_menu_item_ptr = g_menu_active_equipped_item;
@@ -8527,7 +8369,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             g_menu_draw_early_out = 1;
             return buf;
 
-        outer_case_4:
+        case 4:
             if (*(u8*)g_menu_active_equipped_item == 0)
             {
                 break;
@@ -8568,19 +8410,14 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                                     if (handle2 != 0)
                                     {
                                         func_800A8F8C(handle2, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + (off + 0x50)));
-                                        *((u8*)g_pad_ctx + (off - (-(g_menu_char_slot * 0x250))) + 0x640) = 0;
+                                        *((u8*)g_pad_ctx + (menu_add_s32(off, g_menu_char_slot * 0x250)) + 0x640) = 0;
                                         func_800A8FB4();
                                         break;
                                     }
                                     func_800A8F8C(((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, handle);
                                     *(u8*)handle = 0;
                                     g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
-                                    i6 = 3;
-                                    while (i6 >= 0)
-                                    {
-                                        g_menu_slots[i6].active = 0;
-                                        i6--;
-                                    }
+                                    MENU_CLEAR_SLOTS();
                                     menu_open_content_page(6);
                                     return buf;
                                 }
@@ -8593,12 +8430,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                             break;
                         }
                         g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0x3A);
-                        i7 = 3;
-                        while (i7 >= 0)
-                        {
-                            g_menu_slots[i7].active = 0;
-                            i7--;
-                        }
+                        MENU_CLEAR_SLOTS();
                         menu_open_content_page(6);
                         return buf;
 
@@ -8623,12 +8455,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 break;
             }
             g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
-            i8 = 3;
-            while (i8 >= 0)
-            {
-                g_menu_slots[i8].active = 0;
-                i8--;
-            }
+            MENU_CLEAR_SLOTS();
             menu_open_content_page(6);
             return buf;
         }
