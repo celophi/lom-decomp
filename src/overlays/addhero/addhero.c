@@ -110,6 +110,8 @@ typedef struct AddheroRecord
 #define ADDHERO_CARD_SWITCH_BUTTON_MASK (PAD_BTN_SELECT | PAD_BTN_RIGHT | PAD_BTN_LEFT)
 #define ADDHERO_INPUT_INJECTION_ENABLED 0x80
 #define ADDHERO_SAVE_MAGIC 0x414E41
+#define ADDHERO_SAVE_CHECKSUM_BYTES 0x33E0
+#define ADDHERO_SAVE_CHECKSUM_BIAS 0x0414E410
 
 typedef struct AddheroFallbackText
 {
@@ -2687,13 +2689,15 @@ s32 addhero_draw_choice_prompt(s32 prim, s32 *ot, s32 x, s32 y)
  *        "ANA" magic tag.
  * @param base Base of the 0x4000-byte save blob.
  * @return 1 when the checksum and magic both match, 0 otherwise.
- * @see decomp.me (100%)
  */
 s32 addhero_validate_save_blob(u8 *base)
 {
-    if (*(s32 *)(base + 0x33E0) == addhero_compute_save_checksum(base))
+    AddheroSaveBlob *save;
+
+    save = (AddheroSaveBlob *)base;
+    if (save->checksum == addhero_compute_save_checksum(base))
     {
-        if (*(s32 *)(base + 0x33E4) == 0x414E41)
+        if (save->magic == ADDHERO_SAVE_MAGIC)
         {
             return 1;
         }
@@ -2704,8 +2708,7 @@ s32 addhero_validate_save_blob(u8 *base)
 /**
  * @brief Compute the save-blob checksum over the first 0x33E0 bytes.
  * @param data Base of the save blob.
- * @return The checksum: (byte sum * 2) + 0x0414E410.
- * @see decomp.me (100%)
+ * @return Twice the byte sum plus ADDHERO_SAVE_CHECKSUM_BIAS.
  */
 s32 addhero_compute_save_checksum(u8 *data)
 {
@@ -2718,24 +2721,23 @@ s32 addhero_compute_save_checksum(u8 *data)
     i = 0;
     do
     {
-        i += 1;
+        i++;
         sum += *p;
-        p += 1;
-    } while (i < 0x33E0U);
-    return (sum * 2) + 0x0414E410;
+        p++;
+    } while (i < ADDHERO_SAVE_CHECKSUM_BYTES);
+    return (sum * 2) + ADDHERO_SAVE_CHECKSUM_BIAS;
 }
 
 /**
  * @brief Format @p value as a big-endian double-byte decimal glyph string,
  *        suppressing leading zeros; emits a fixed overflow string past 999999.
- * @param out   Destination glyph buffer.
+ * @param out Destination glyph buffer.
  * @param value Value to format.
  * @return Pointer to the terminator written after the last glyph.
- * @see decomp.me (100%)
  */
 s8 *addhero_format_decimal(s8 *out, s32 value)
 {
-    struct Copy7 { s8 data[7]; };
+    struct OverflowGlyphString { s8 data[7]; };
     extern s8 g_addhero_decimal_overflow_glyphs[];
     s32 digit;
     s32 divisor;
@@ -2744,14 +2746,12 @@ s8 *addhero_format_decimal(s8 *out, s32 value)
 
     p = out;
     divisor = 100000;
-    if (value < divisor * 10)
+    if (value >= divisor * 10)
     {
-        goto format;
+        *(struct OverflowGlyphString *)p = *(struct OverflowGlyphString *)g_addhero_decimal_overflow_glyphs;
+        return p + 6;
     }
-    *(struct Copy7 *)p = *(struct Copy7 *)g_addhero_decimal_overflow_glyphs;
-    return p + 6;
 
-format:
     started = 0;
     do
     {
