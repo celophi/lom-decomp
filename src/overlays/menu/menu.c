@@ -15,6 +15,10 @@
 #define MENU_GRID_TPAGE 5
 
 #define MENU_SLOT_COUNT 4
+#define MENU_SLOT_STATE_FREE 0
+#define MENU_SLOT_STATE_OPENING 1
+#define MENU_SLOT_STATE_OPEN 2
+#define MENU_SLOT_STATE_CLOSING 3
 #define MENU_SLOT_OT_INDEX_SHIFT 25
 #define MENU_SLOT_OT_INDEX_CLEAR_MASK 0x01FFFFFF
 #define MENU_WINDOW_TRANSITION_STEPS 12
@@ -1369,116 +1373,113 @@ void menu_reset_slots(void)
  */
 void menu_update_slots(RenderContext* render_ctx)
 {
-    s16 sp_pair[2];
+    ScreenPos view_origin;
     s32 unused_pad[2];
-    void (*temp_v0_2)(MenuSlot*);
-    s32 var_a3;
-    s32 var_a0;
-    s32 var_s1;
-    s32 rect_i;
-    u8 temp_a0;
-    u8 temp_v0;
-    u8 temp_v1;
-    u8 temp_v1_2;
-    u8 tmp_s5;
-    MenuSlot* base = g_menu_slots;
-    u_int* frame_ot;
+    s32 has_active_slot;
+    s32 slot_index;
 
-    var_a0 = 0;
+    has_active_slot = 0;
     g_menu_help_text = 0;
-    var_s1 = 3;
-    rect_i = 3;
-    tmp_s5 = 2;
+    slot_index = MENU_SLOT_COUNT - 1;
 
-    while (var_s1 >= 0)
+    while (slot_index >= 0)
     {
-        temp_v1 = base[rect_i].active;
-        if (temp_v1 != tmp_s5)
+        u8 anim_frame;
+        s32 slot_state;
+
+        slot_state = g_menu_slots[slot_index].active;
+        if (slot_state != MENU_SLOT_STATE_OPEN)
         {
-            s32 tmpCmp = temp_v1;
-            if (tmpCmp < 3)
+            if (slot_state < MENU_SLOT_STATE_CLOSING)
             {
-                if (temp_v1 != 1)
+                if (slot_state != MENU_SLOT_STATE_OPENING)
                 {
-                    rect_i -= 1;
-                    var_s1 -= 1;
+                    slot_index -= 1;
                     continue;
                 }
             }
             else
             {
-                if (temp_v1 != 3)
+                if (slot_state != MENU_SLOT_STATE_CLOSING)
                 {
-                    rect_i -= 1;
-                    var_s1 -= 1;
+                    slot_index -= 1;
                     continue;
                 }
-                goto branch_11C;
+                goto update_closing_slot;
             }
 
-            menu_draw_window_transition(render_ctx, &base[rect_i], g_menu_cursor_enable != 0);
-            temp_a0 = base[rect_i].anim_frame;
-            temp_v0 = temp_a0 + 1;
-            base[rect_i].anim_frame = temp_v0;
-            if ((temp_v0 & 0xff) == 6)
             {
-                base[rect_i].anim_frame = temp_a0;
-                base[rect_i].active = tmp_s5;
+                u8 previous_anim_frame;
+
+                menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
+                previous_anim_frame = g_menu_slots[slot_index].anim_frame;
+                anim_frame = previous_anim_frame + 1;
+                g_menu_slots[slot_index].anim_frame = anim_frame;
+                if ((anim_frame & 0xFF) == (MENU_WINDOW_TRANSITION_STEPS / 2))
+                {
+                    g_menu_slots[slot_index].anim_frame = previous_anim_frame;
+                    g_menu_slots[slot_index].active = MENU_SLOT_STATE_OPEN;
+                }
             }
         }
         else
         {
-            sp_pair[1] = 0;
-            sp_pair[0] = 0;
-            menu_draw_window(&base[rect_i], render_ctx, (void*)(((u8*)g_menu_slots + 8) + (((rect_i * 2) - rect_i) * 36)), sp_pair, g_menu_cursor_enable != 0);
+            MenuRect* slot_rect;
+
+            slot_rect = (MenuRect*)(((u8*)g_menu_slots + 8) + (((slot_index * 2) - slot_index) * sizeof(MenuSlot)));
+            view_origin.y = 0;
+            view_origin.x = 0;
+            menu_draw_window(&g_menu_slots[slot_index], render_ctx, slot_rect, &view_origin, g_menu_cursor_enable != 0);
         }
 
-        if (var_s1 == g_active_slot)
+        if (slot_index == g_active_slot)
         {
-            temp_v0_2 = (void (*)(MenuSlot*))base[rect_i].tick_cb;
-            if (temp_v0_2 != 0)
+            if (g_menu_slots[slot_index].tick_cb != 0)
             {
-                temp_v0_2(&base[rect_i]);
+                g_menu_slots[slot_index].tick_cb(&g_menu_slots[slot_index]);
             }
         }
-        var_a0 = 1;
-        rect_i -= 1;
-        var_s1 -= 1;
+        has_active_slot = 1;
+        slot_index -= 1;
         continue;
 
-    branch_11C:
-        menu_draw_window_transition(render_ctx, &base[rect_i], g_menu_cursor_enable != 0);
-        temp_v0 = base[rect_i].anim_frame - 1;
-        base[rect_i].anim_frame = temp_v0;
-        if (!(temp_v0 & 0xFF))
+    update_closing_slot:
+        menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
+        anim_frame = g_menu_slots[slot_index].anim_frame - 1;
+        g_menu_slots[slot_index].anim_frame = anim_frame;
+        if (!(anim_frame & 0xFF))
         {
-            base[rect_i].active = 0;
+            g_menu_slots[slot_index].active = MENU_SLOT_STATE_FREE;
             menu_update_active_slot();
         }
-        var_a0 = 1;
-        rect_i -= 1;
-        var_s1 -= 1;
+        has_active_slot = 1;
+        slot_index -= 1;
     }
 
-    var_a3 = 0;
-    if (var_a0 == 0)
     {
-        g_active_slot = -1;
-    }
+        s32 allow_input;
+        u_long* frame_ot;
 
-    frame_ot = &render_ctx->ot[MENU_FRAME_OT_INDEX];
-    sp_pair[1] = 0;
-    sp_pair[0] = 0;
+        allow_input = 0;
+        if (has_active_slot == 0)
+        {
+            g_active_slot = -1;
+        }
 
-    if ((g_active_slot == -1) || (g_menu_cursor_enable == 0))
-    {
-        var_a3 = 1;
-    }
+        frame_ot = &render_ctx->ot[MENU_FRAME_OT_INDEX];
+        view_origin.y = 0;
+        view_origin.x = 0;
 
-    render_ctx->prim_cursor = menu_draw_frame(render_ctx->prim_cursor, frame_ot, render_ctx->frame_parity, var_a3);
-    if (g_menu_help_text != 0)
-    {
-        render_ctx->prim_cursor = (void*)func_800A88A0(render_ctx->prim_cursor, (u_int*)((u8*)render_ctx + 0x34 + g_menu_help_text - g_menu_help_text), g_menu_help_text, 1, 0xA0, 0xCA, 2);
+        if ((g_active_slot == -1) || (g_menu_cursor_enable == 0))
+        {
+            allow_input = 1;
+        }
+
+        render_ctx->prim_cursor = menu_draw_frame(render_ctx->prim_cursor, frame_ot, render_ctx->frame_parity, allow_input);
+        if (g_menu_help_text != 0)
+        {
+            render_ctx->prim_cursor = (void*)func_800A88A0(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, 1, 0xA0, 0xCA, 2);
+        }
     }
 }
 

@@ -244,8 +244,8 @@ extern u16 D_80147054;
 extern u16 D_80147470[];
 
 /* In-file functions */
-void addhero_init(s32 arg0, s32 mode);
-s32 addhero_state_step(s32 arg0);
+void addhero_init(s32 work_base, s32 mode);
+s32 addhero_state_step(s32 render_half);
 void addhero_build_ui_elements(void);
 void addhero_update_state();
 s32 addhero_update_load_sequence(void);
@@ -328,42 +328,53 @@ s32 addhero_advance_load_sequence();
 #define GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
 
 /**
- * @brief Initialize ADDHERO overlay state and build its initial UI elements.
- * @param arg0 Value stored in D_80160930 for later use by the overlay. TODO: role unknown.
- * @param mode Overlay mode selector stored in g_addhero_mode.
+ * @brief Reset overlay state and build the initial UI elements.
+ * @param work_base Work-RAM base (always 0x80170000); stored in D_80160930, unused so far.
+ * @param mode Mode selector, stored in g_addhero_mode.
  * @see decomp.me (100%)
  */
-void addhero_init(s32 arg0, s32 mode)
+void addhero_init(s32 work_base, s32 mode)
 {
     RECT rect;
 
     g_addhero_mode = mode;
     g_addhero_entry_state = ADDHERO_ENTRY_STATE_IDLE;
     g_addhero_card_slot = 0;
+    
     addhero_reset_entry_ranks();
     g_addhero_result = 3;
     addhero_init_stream_handles();
     g_addhero_icon_phase = 0;
     func_80067F8C();
+
     rect.x = OVERLAY_INIT_CLEAR_VRAM_X;
     rect.y = OVERLAY_INIT_CLEAR_VRAM_Y;
     rect.w = OVERLAY_INIT_CLEAR_VRAM_W;
     rect.h = OVERLAY_INIT_CLEAR_VRAM_H;
+
     func_8001990C(&rect, 0, 0, 0);
     addhero_reset_glyph_cache();
+
     g_addhero_write_in_progress = 0;
     g_addhero_progress_active = 0;
     g_addhero_selection_status = 0;
     g_addhero_io_busy = 0;
     g_addhero_frame_parity = 0;
     g_addhero_exit_requested = 0;
+
     func_800AA02C();
     addhero_build_ui_elements();
-    D_80160930 = arg0;
+
+    D_80160930 = work_base;
 }
 
-/** @see decomp.me (100%) */
-s32 addhero_state_step(s32 arg0)
+/**
+ * @brief Run one frame: tear down and exit if requested, else update and render.
+ * @param render_half Render buffer half being drawn; forwarded to addhero_update_state, which ignores it.
+ * @return Non-zero exit code when exiting, 0 while running.
+ * @see decomp.me (100%)
+ */
+s32 addhero_state_step(s32 render_half)
 {
     if (g_addhero_exit_requested != 0)
     {
@@ -374,7 +385,7 @@ s32 addhero_state_step(s32 arg0)
     }
     field_text_reset_scratch();
     addhero_begin_glyph_cache_frame();
-    addhero_update_state(arg0);
+    addhero_update_state(render_half);
     addhero_evict_unused_glyphs();
     func_80063194();
     g_addhero_frame_parity ^= 1;
