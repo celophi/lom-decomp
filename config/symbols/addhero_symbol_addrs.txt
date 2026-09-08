@@ -224,3 +224,13 @@ field_restore_fade_target                  = 0x80067F28;
 field_restore_fade_target_with_duration    = 0x80067F5C;
 field_set_default_fade_target              = 0x80067F8C;
 play_menu_sfx                              = 0x800A3938;
+
+// Shared main-executable data globals referenced from addhero
+g_save_slot_index                          = 0x8003EC9C;
+g_text_time_separator_offset_bytes         = 0x800EC3F6;
+g_text_choice_glyph_offsets                = 0x800EC3FA;
+g_lom_save_filename_prefix                 = 0x800ECF7C;
+g_lom_alt_save_filename_prefix             = 0x800ECF8C;
+g_lom_save_dummy_filename                  = 0x800ECF9C;
+g_lom_alt_save_dummy_filename              = 0x800ECFB0;
+g_new_save_entry_prefix                    = 0x800ECFC4;

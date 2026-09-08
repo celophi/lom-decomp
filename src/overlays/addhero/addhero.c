@@ -162,7 +162,7 @@ extern u8 *g_pad_ctx;
 extern u8 *g_addhero_load_step;
 extern void *jtbl_80140098[];
 
-extern s32 D_8003EC9C;
+extern s32 g_save_slot_index;
 extern s32 D_80122718;
 extern s32 g_pad_input;
 extern s32 D_8012298C;
@@ -207,12 +207,12 @@ extern u8 g_addhero_save_blob[];
 extern u8 D_80165208;
 extern u8 D_8016520C;
 extern u8 g_addhero_entry_owner_id;
-extern u8 D_800EC3F6[2];
-extern u8 D_800EC3FA[];
+extern u8 g_text_time_separator_offset_bytes[2];
+extern u8 g_text_choice_glyph_offsets[];
 
-extern char D_800ECF7C[];
-extern char D_800ECF8C[];
-extern char D_800ECFC4[];
+extern char g_lom_save_filename_prefix[];
+extern char g_lom_alt_save_filename_prefix[];
+extern char g_new_save_entry_prefix[];
 
 extern u16 D_80146FA4;
 extern u16 D_80146FA6;
@@ -690,9 +690,9 @@ s32 addhero_handle_input(void)
     if (g_pad_input & 0x220) {
         term1 = g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES;
         term2 = (g_addhero_selected_row * ADDHERO_DIRECTORY_ENTRY_BYTES) + (s32)g_addhero_entries;
-        if (strncmp(D_800ECF7C, (char *)(term1 + term2), 0xC) == 0) {
+        if (strncmp(g_lom_save_filename_prefix, (char *)(term1 + term2), 0xC) == 0) {
             if ((g_addhero_entry_metadata.hero_id != ((AddheroRecord *)g_pad_ctx)->hero_id) &&
-                ((D_8003EC9C == 0xFF) || (g_addhero_entry_metadata.owner_id == D_8003EC9C))) {
+                ((g_save_slot_index == 0xFF) || (g_addhero_entry_metadata.owner_id == g_save_slot_index))) {
                 p = addhero_alloc_element();
                 p->attr.f.phase = 1;
                 p->attr.f.x = 0x10;
@@ -892,15 +892,15 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                             prim = func_800A88A0(prim, ot, (void *)((s32)D_80147054 + (s32)base), 4, 0xF2 - x_offset, row_y, 1);
                         }
                     }
-                    if (strncmp(D_800ECF7C, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 0xC) == 0)
+                    if (strncmp(g_lom_save_filename_prefix, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FAA + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
-                    else if (strncmp(D_800ECF8C, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 0xC) == 0)
+                    else if (strncmp(g_lom_alt_save_filename_prefix, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 0xC) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FDE + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
-                    else if (strncmp(D_800ECFC4, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 8) == 0)
+                    else if (strncmp(g_new_save_entry_prefix, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 8) == 0)
                     {
                         prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FB8 + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
@@ -1064,9 +1064,9 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_o
             s32 term1 = g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES;
             s32 term2 = (g_addhero_selected_row * ADDHERO_DIRECTORY_ENTRY_BYTES) + (s32)g_addhero_entries;
 
-            if (strncmp(D_800ECF7C, (char *)(term1 + term2), 0xC) == 0)
+            if (strncmp(g_lom_save_filename_prefix, (char *)(term1 + term2), 0xC) == 0)
             {
-                if (D_8003EC9C == 0xFF || g_addhero_entry_owner_id == D_8003EC9C)
+                if (g_save_slot_index == 0xFF || g_addhero_entry_owner_id == g_save_slot_index)
                 {
                     s32 present_count;
                     s32 i;
@@ -1156,7 +1156,7 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 x_offset, s32 y_o
                         hours = base_y / 216000;
                         result = func_800A8A78(ot, result, hours, 4, &pos, 1);
                         result = func_800A88A0(result, ot,
-                            D_800EC3F6[0] + ((s32)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8), 4, x + 0x6F, y, 0);
+                            g_text_time_separator_offset_bytes[0] + ((s32)&g_text_time_separator_offset_bytes - 0x32) + (g_text_time_separator_offset_bytes[1] << 8), 4, x + 0x6F, y, 0);
                         base_y = (base_y / 3600) - (hours * 0x3C);
                         if (base_y < 0xA)
                         {
@@ -2211,7 +2211,7 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             if(g_addhero_entry_scan_active==0){
                 if(g_addhero_io_busy!=0)return prim;
                 if((u32)(*g_addhero_load_step-6)<2U)return prim;
-                if((strncmp(D_800ECF7C,&g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row],0xC)!=0) ||
+                if((strncmp(g_lom_save_filename_prefix,&g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row],0xC)!=0) ||
                    (g_addhero_entry_identity != *(s32 *)(g_pad_ctx+0xD8))) {
                     g_addhero_selected_row++;
                     if(g_addhero_selected_row>=g_addhero_entry_state){ if(g_addhero_entry_state!=0)g_addhero_entry_state=0xF7; else g_addhero_entry_state=0xF8; }
@@ -2336,7 +2336,7 @@ s32 addhero_draw_choice_prompt(s32 prim, s32 *ot, s32 x, s32 y)
     s32 hi;
     s32 a3;
 
-    p = (u8 *)&D_800EC3FA;
+    p = (u8 *)&g_text_choice_glyph_offsets;
     hi = p[1] << 8;
     base = p - 0x36;
     a3 = 4;
@@ -2698,7 +2698,7 @@ s32 addhero_parse_entry_fields(void)
     {
         char *ref;
         u8 *tmp;
-        ref = D_800ECF7C;
+        ref = g_lom_save_filename_prefix;
         tmp = (u8 *)&((AddheroDirEntry (*)[20])g_addhero_entries)[g_addhero_card_slot][i];
 
         if (strncmp(ref, tmp, 0xC) == 0)
@@ -2874,11 +2874,11 @@ extern u8 D_801654E0[];
 extern u16 g_addhero_decimal_glyphs[];
 extern u16 g_addhero_hex_glyphs[];
 
-extern char D_800ECF7C[];
-extern char D_800ECF8C[];
-extern char D_800ECF9C[];
-extern char D_800ECFB0[];
-extern char D_800ECFC4[];
+extern char g_lom_save_filename_prefix[];
+extern char g_lom_alt_save_filename_prefix[];
+extern char g_lom_save_dummy_filename[];
+extern char g_lom_alt_save_dummy_filename[];
+extern char g_new_save_entry_prefix[];
 
 /* In-file functions */
 s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2);
@@ -3073,7 +3073,7 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         out_ptr = &g_addhero_entry_suffix_values[0];
         ent_ptr = (char *)&g_addhero_entries[0];
     loop_20:
-        if (strncmp(&D_800ECFC4[0], (void *)((g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES) + (s32)ent_ptr), 8) == 0)
+        if (strncmp(&g_new_save_entry_prefix[0], (void *)((g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES) + (s32)ent_ptr), 8) == 0)
         {
             *out_ptr = handle + 1;
         }
@@ -3125,8 +3125,8 @@ s32 addhero_has_known_entry_type(void)
         do
         {
             entry = (u8 *)g_addhero_entries + i * ADDHERO_DIRECTORY_ENTRY_BYTES;
-            if (strncmp(&D_800ECF7C, (void *)(g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0 ||
-                strncmp(&D_800ECF8C, (void *)(g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0)
+            if (strncmp(&g_lom_save_filename_prefix, (void *)(g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0 ||
+                strncmp(&g_lom_alt_save_filename_prefix, (void *)(g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES + (s32)entry), 0xC) == 0)
             {
                 return 1;
             }
@@ -3175,12 +3175,12 @@ void addhero_render_fixed_prompts(void)
 
     memcpy(&buf, &g_addhero_file_template, 6);
     ((u8 *)&buf)[2] += *(u8 *)&g_addhero_card_slot;
-    strcat(&buf, &D_800ECF9C);
+    strcat(&buf, &g_lom_save_dummy_filename);
     erase(&buf);
 
     memcpy(&buf, &g_addhero_file_template, 6);
     ((u8 *)&buf)[2] += *(u8 *)&g_addhero_card_slot;
-    strcat(&buf, &D_800ECFB0);
+    strcat(&buf, &g_lom_alt_save_dummy_filename);
     erase(&buf);
 }
 
@@ -3195,12 +3195,12 @@ static inline void addhero_probe_render_two(void)
 
     memcpy(&p, &g_addhero_file_template, 6);
     ((u8 *)&p)[2] += *(u8 *)&g_addhero_card_slot;
-    strcat(&p, &D_800ECF9C);
+    strcat(&p, &g_lom_save_dummy_filename);
     erase(&p);
 
     memcpy(&p, &g_addhero_file_template, 6);
     ((u8 *)&p)[2] += *(u8 *)&g_addhero_card_slot;
-    strcat(&p, &D_800ECFB0);
+    strcat(&p, &g_lom_alt_save_dummy_filename);
     erase(&p);
 }
 
@@ -3652,7 +3652,7 @@ s32 addhero_advance_load_sequence(void)
                 wait_attempts = wait_attempts + 1;
             } while (wait_attempts < 0x14);
         }
-        strcat(&buf, D_800ECF9C);
+        strcat(&buf, g_lom_save_dummy_filename);
         _card_wait(g_addhero_card_slot);
         g_addhero_file_handle = open(&buf, 0x20200);
         if (g_addhero_file_handle != -1)
@@ -3987,7 +3987,7 @@ void addhero_commit_selected_entry(void)
         s32 term2;
         term1 = g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES;
         term2 = (g_addhero_selected_row * ADDHERO_DIRECTORY_ENTRY_BYTES) + (s32)g_addhero_entries;
-        if (strncmp(&D_800ECFC4[0], (void *)(term1 + term2), 8) == 0)
+        if (strncmp(&g_new_save_entry_prefix[0], (void *)(term1 + term2), 8) == 0)
         {
             g_addhero_selection_status = 2;
             return;
@@ -4018,7 +4018,7 @@ void addhero_commit_selected_entry(void)
         s32 term2;
         term1 = g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES;
         term2 = (g_addhero_selected_row * ADDHERO_DIRECTORY_ENTRY_BYTES) + (s32)g_addhero_entries;
-        if (strncmp(&D_800ECF7C[0], (void *)(term1 + term2), 0xC) == 0)
+        if (strncmp(&g_lom_save_filename_prefix[0], (void *)(term1 + term2), 0xC) == 0)
             g_addhero_selected_entry_extended = 1;
         else
             g_addhero_selected_entry_extended = 0;
@@ -4119,7 +4119,7 @@ void addhero_sort_entries_by_type(void)
         if (i < g_addhero_entry_state) {
             do {
                 if (g_addhero_entry_suffix_values[i] == group &&
-                    strncmp(D_800ECF7C, &g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0) {
+                    strncmp(g_lom_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0) {
                     bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
                     out++;
                 }
@@ -4135,7 +4135,7 @@ void addhero_sort_entries_by_type(void)
         if (i < g_addhero_entry_state) {
             do {
                 if (g_addhero_entry_suffix_values[i] == group &&
-                    strncmp(D_800ECF8C, &g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0) {
+                    strncmp(g_lom_alt_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0) {
                     bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
                     out++;
                 }
@@ -4148,7 +4148,7 @@ void addhero_sort_entries_by_type(void)
     i = 0;
     if (g_addhero_entry_state > 0) {
         do {
-            if (strncmp(D_800ECFC4, &g_addhero_entries[g_addhero_card_slot][i], 8) == 0) {
+            if (strncmp(g_new_save_entry_prefix, &g_addhero_entries[g_addhero_card_slot][i], 8) == 0) {
                 bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
                 out++;
             }
@@ -4159,9 +4159,9 @@ void addhero_sort_entries_by_type(void)
     if (*(volatile s32 *)&g_addhero_entry_state > 0) {
         i = 0;
         do {
-            if (strncmp(D_800ECF7C, &g_addhero_entries[g_addhero_card_slot][i], 0xC) != 0 &&
-                strncmp(D_800ECF8C, &g_addhero_entries[g_addhero_card_slot][i], 0xC) != 0 &&
-                strncmp(D_800ECFC4, &g_addhero_entries[g_addhero_card_slot][i], 8) != 0) {
+            if (strncmp(g_lom_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) != 0 &&
+                strncmp(g_lom_alt_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) != 0 &&
+                strncmp(g_new_save_entry_prefix, &g_addhero_entries[g_addhero_card_slot][i], 8) != 0) {
                 bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
                 out++;
             }
