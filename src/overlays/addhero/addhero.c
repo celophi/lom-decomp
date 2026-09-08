@@ -4354,8 +4354,7 @@ s32 addhero_draw_cached_text(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 pale
         prim = addhero_render_cached_glyph(prim, ot, code, palette);
     }
 
-    setlen(prim, 1);
-    ((AddheroGpuPacket *)prim)->word4 = 0xE1000005;
+    setDrawTPage(prim, 0, 0, 5);
     addPrim(ot, prim);
     return prim + 8;
 }
