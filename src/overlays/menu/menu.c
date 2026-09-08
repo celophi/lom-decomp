@@ -1670,59 +1670,48 @@ SPRT* menu_emit_corner(SPRT* sprite, u_long* ot_entry, s16 x, s16 y, u16 uv)
  */
 SPRT* menu_fill_window_interior(SPRT* sprite, u_long* ot_entry, const MenuRectU16* rect, u16 uv)
 {
-    u16 screen_x;
-    volatile s32 stack_pad;
-    u16 origin_y;
-    s32 tile_y = 0;
+    s16 padding[2];
+    s32 y_offset;
 
-    if (rect->h > 0)
+    for (y_offset = 0; y_offset < rect->h; y_offset += MENU_WINDOW_FILL_TILE_SIZE)
     {
-        do
+        s32 x_offset = 0;
+
+        if (rect->w > 0)
         {
-            s32 tile_x = 0;
-
-            if (rect->w > 0)
+            do
             {
-                s32 tile_bottom = tile_y + MENU_WINDOW_FILL_TILE_SIZE;
+                SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+                setSprt(sprite);
+                SET_SPRT_UV0_PACKED(sprite, uv);
 
-                do
+                /* Clamp the final tile in each row and column to the region. */
+                if (x_offset + MENU_WINDOW_FILL_TILE_SIZE > rect->w)
                 {
-                    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
-                    setSprt(sprite);
-                    SET_SPRT_UV0_PACKED(sprite, uv);
+                    sprite->w = rect->w - x_offset;
+                }
+                else
+                {
+                    sprite->w = MENU_WINDOW_FILL_TILE_SIZE;
+                }
 
-                    /* Clamp the final tile in each row and column to the region. */
-                    if (rect->w < (tile_x + MENU_WINDOW_FILL_TILE_SIZE))
-                    {
-                        sprite->w = rect->w - tile_x;
-                    }
-                    else
-                    {
-                        sprite->w = MENU_WINDOW_FILL_TILE_SIZE;
-                    }
+                if (y_offset + MENU_WINDOW_FILL_TILE_SIZE > rect->h)
+                {
+                    sprite->h = rect->h - y_offset;
+                }
+                else
+                {
+                    sprite->h = MENU_WINDOW_FILL_TILE_SIZE;
+                }
 
-                    if (rect->h < tile_bottom)
-                    {
-                        sprite->h = rect->h - tile_y;
-                    }
-                    else
-                    {
-                        sprite->h = MENU_WINDOW_FILL_TILE_SIZE;
-                    }
-
-                    screen_x = rect->x + tile_x;
-                    sprite->x0 = screen_x;
-                    origin_y = rect->y;
-                    tile_x += MENU_WINDOW_FILL_TILE_SIZE;
-                    sprite->y0 = origin_y + tile_y;
-                    SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
-                    addPrim(ot_entry, sprite);
-                    sprite++;
-                } while (tile_x < rect->w);
-            }
-
-            tile_y += MENU_WINDOW_FILL_TILE_SIZE;
-        } while (tile_y < rect->h);
+                sprite->x0 = rect->x + x_offset;
+                x_offset += MENU_WINDOW_FILL_TILE_SIZE;
+                sprite->y0 = rect->y + y_offset;
+                SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
+                addPrim(ot_entry, sprite);
+                sprite++;
+            } while (x_offset < rect->w);
+        }
     }
 
     return sprite;
