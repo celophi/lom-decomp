@@ -4495,16 +4495,15 @@ s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slo
     sprite->packet.b0 = 0x80;
     sprite->packet.r0 = 0x80;
     normalized_slot = cache_slot;
-    sprite->packet.x0 = g_addhero_glyph_cursor_x;
-    sprite->packet.y0 = g_addhero_glyph_cursor_y;
+    setXY0(&sprite->packet, g_addhero_glyph_cursor_x, g_addhero_glyph_cursor_y);
 
     if (cache_slot < 0)
     {
         normalized_slot = cache_slot + 15;
     }
 
-    sprite->packet.u0 = (cache_slot - ((normalized_slot >> 4) * 16)) * 16;
-    sprite->packet.v0 = cache_slot & GLYPH_CACHE_ROW_MASK;
+    setUV0(&sprite->packet, (cache_slot - ((normalized_slot >> 4) * 16)) * 16,
+           cache_slot & GLYPH_CACHE_ROW_MASK);
     sprite->packet.clut = 0x7FD3;
     sprite->packet.tag = (sprite->packet.tag & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
 
