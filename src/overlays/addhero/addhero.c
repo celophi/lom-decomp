@@ -927,8 +927,7 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                 tile->x0 = 0;
                 tile->y0 = row_y;
                 tile->h = 0xE;
-                tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-                *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+                addPrim(ot, tile);
                 prim += sizeof(TILE);
             }
         }
@@ -986,8 +985,7 @@ s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         tile->y0 = 0;
         tile->w = 0x80;
         tile->h = 0x10;
-        tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+        addPrim(ot, tile);
         prim += 0x10;
     }
     return func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB0, 0xC), 4, -arg2 + 0x40, -arg3, 2);
@@ -1018,8 +1016,7 @@ s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         tile->y0 = 0;
         tile->w = 0x80;
         tile->h = 0x10;
-        tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+        addPrim(ot, tile);
         prim += 0x10;
     }
     return func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB2, 0xE), 4, -arg2 + 0x40, -arg3, 2);
@@ -1433,8 +1430,7 @@ void addhero_update_and_draw_elements(AddheroDrawState *arg0)
         {
             func_8001A5D4((s32)var_s0, sp20);
 
-            var_s0->tag = (var_s0->tag & 0xFF000000) | (var_s5->tag & 0x00FFFFFF);
-            var_s5->tag = (s32)((var_s5->tag & 0xFF000000) | ((s32)var_s0 & 0x00FFFFFF));
+            addPrim(var_s5, var_s0);
 
             temp_a0_2 = *var_s3;
             temp_v1_2 = temp_a0_2 & 7;
@@ -1865,8 +1861,7 @@ s32 addhero_draw_progress_bar(s32 arg0, s32 *arg1)
         g->y0 = 0;
         g->y3 = 0x2C;
         g->y2 = 0x2C;
-        g->tag = (g->tag & 0xFF000000) | (*arg1 & 0xFFFFFF);
-        *arg1 = (*arg1 & 0xFF000000) | (arg0 & 0xFFFFFF);
+        addPrim(arg1, g);
         arg0 += 0x24;
     }
     return arg0;
@@ -2305,8 +2300,7 @@ s32 addhero_draw_icon_highlight(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s
     ((POLY_FT4 *)result)->v2 = 0xFF;
     ((POLY_FT4 *)result)->clut = (i & 0x3F) | 0x7C80;
     ((POLY_FT4 *)result)->tpage = 5;
-    ((POLY_FT4 *)result)->tag = (((POLY_FT4 *)result)->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | (result & 0xFFFFFF);
+    addPrim(ot, result);
     return result + 0x28;
 }
 
@@ -4496,8 +4490,7 @@ s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slo
 
     g_addhero_glyph_cache[cache_slot].raw |= 0x10000;
 
-    setlen(sprite, 3);
-    setcode(sprite, 0x7C);
+    setSprt16(sprite);
     sprite->packet.g0 = 0x80;
     sprite->packet.b0 = 0x80;
     sprite->packet.r0 = 0x80;
