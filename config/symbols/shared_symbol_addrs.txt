@@ -1077,6 +1077,7 @@ g_script_repeat_count               = 0x80122730;
 g_active_script                     = 0x801228C8;
 g_gosub_result_count                = 0x801228F0;
 g_pad_input                         = 0x80122988;
+g_menu_element_counter                     = 0x8012298C;
 g_gosub_result_values               = 0x801229B0;
 g_pad_input_inject                  = 0x801229FC;
 

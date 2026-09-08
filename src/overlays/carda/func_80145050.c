@@ -43,7 +43,7 @@ extern u8 D_80165BBD;
 extern u8 *D_8012271C;
 extern s32 D_801227C4;
 extern s32 D_80122988;
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 extern s32 D_8012299C;
 extern s32 D_801229B0;
 
@@ -437,7 +437,7 @@ done_f4_search_outer:
                 {
                     s32 *element;
                     D_8012299C = 7;
-                    D_8012298C = 0x20;
+                    g_menu_element_counter = 0x20;
                     element = &D_80165F80;
                     i = 0;
                     do
@@ -463,7 +463,7 @@ done_f4_search_outer:
                 if (D_80165FE8 == 0)
                 {
                     s32 *element;
-                    D_8012298C = 0x20;
+                    g_menu_element_counter = 0x20;
                     element = &D_80165F80;
                     i = 0;
                     do
@@ -614,7 +614,7 @@ case_f3:
                     func_80146CA4();
                     goto return_prim;
                 }
-                D_8012298C = 0x20;
+                g_menu_element_counter = 0x20;
                 {
                     s32 *element;
                     element = &D_80165F80;

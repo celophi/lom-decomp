@@ -1,6 +1,6 @@
 #include "common.h"
 extern s32 D_80122988;
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 extern unsigned short D_8014B4D4[];
 extern u8 D_80165F48[];
 extern s32 D_80165F38;
@@ -50,7 +50,7 @@ s32 func_80146EDC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
             }
         } else if (D_80122988 & 0x220) {
             func_800A3938(0x7E, 0x80);
-            D_8012298C = 0x20;
+            g_menu_element_counter = 0x20;
             p = D_80165F80;
             j = 0;
             do {

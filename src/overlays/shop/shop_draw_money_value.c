@@ -1,19 +1,14 @@
 #include "common.h"
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-} ShopVec2s;
+#include "vector.h"
 
 extern u8 D_800EC3C4[];
 extern void *D_8012271C;
 extern s32 func_800A88A0(s32, s32 *, void *, s32, s32, s32, s32);
-extern s32 func_800A8A78(s32 *, s32, u32, s32, ShopVec2s *, s32);
+extern s32 func_800A8A78(s32 *, s32, u32, s32, Vec2s *, s32);
 
 s32 func_801414F8(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
-    ShopVec2s pos;
+    Vec2s pos;
     s32 y;
 
     y = 2 - arg3;

@@ -44,7 +44,7 @@ segments:
       - [auto, c, overlay_header]
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, menu]
-      - [0x544, .rodata, unk1]
+      - [0x558, .rodata, unk1]
       - [0x909, c, menu]
       - [0xFBF5, data, data]
   - [0x2B9DD]

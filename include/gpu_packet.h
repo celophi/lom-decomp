@@ -66,6 +66,25 @@
  */
 #define GPU_TINT_NEUTRAL GPU_COLOR_WORD(0x80, 0x80, 0x80)
 
+/* --- POLY_G4-specific packed color words (single store) --- */
+
+/*
+ * Store a pre-packed color word into one of POLY_G4's three later vertex
+ * colors with a single 32-bit write, matching `*(u32*)(p + off) = word;`.
+ * The first vertex color (r0/g0/b0/code at offset 4) is the shared P_TAG word,
+ * so use @ref SET_BGR0_PACKED for it; these cover vertices 1, 2, and 3 at
+ * offsets 0x0C, 0x14, and 0x1C. The argument is the full 32-bit value in
+ * r/g/b/pad layout (byte 0 = r, byte 1 = g, byte 2 = b, byte 3 = pad); pack it
+ * with @ref GPU_COLOR_WORD. Use these when the original emits one word store
+ * per color rather than the three byte stores setRGB1/2/3 would expand to.
+ */
+#define SET_POLY_G4_BGR1_PACKED(p, _word) \
+    (*(u32*)((u8*)(p) + 0x0C) = (u32)(_word))
+#define SET_POLY_G4_BGR2_PACKED(p, _word) \
+    (*(u32*)((u8*)(p) + 0x14) = (u32)(_word))
+#define SET_POLY_G4_BGR3_PACKED(p, _word) \
+    (*(u32*)((u8*)(p) + 0x1C) = (u32)(_word))
+
 /* --- SPRT-specific packed setters (single store) --- */
 
 /*
