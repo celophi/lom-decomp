@@ -471,7 +471,8 @@ segments:
       - [0x6E795, c, func_800BE404]             # gcc280_g0, 100%
       - [0x6E8E1, c, field_script_arith_ops]    # gcc280_g0, func_800BE550 .. func_800BE708 (15 funcs, 100%)
       - [0x6EAA1, c, func_800BE710]              # gcc280_g0, 100%
-      - [0x6EC19, c, unk2_b_split051]              # gcc272_cdk, func_800BE888 .. func_800BEC44
+      - [0x6EC19, c, func_800BE888]                # gcc280_g0, 100%
+      - [0x6EDA1, c, unk2_b_split051]              # gcc272_cdk, func_800BEA10 .. func_800BEC44
       - [0x6F305, c, field358]                     # gcc280_g0, func_800BEF74
       - [0x6F4E9, c, unk2_b_split051_c]            # gcc272_cdk, func_800BF158
       - [0x6F681, c, field356]                     # gcc280_g0, func_800BF2F0
