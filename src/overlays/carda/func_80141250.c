@@ -70,7 +70,7 @@ u8 *func_80143334(void *arg0);
  * @param x_offset Horizontal scroll offset subtracted from each glyph x.
  * @param y_offset Vertical scroll offset subtracted from each row y.
  * @return The advanced packet cursor past the last emitted primitive.
- * @note WIP - not yet byte-matching. Currently 99.69% (gcc272_cdk); residual is
+ * @note WIP - not yet byte-matching. Currently 99.670135% (gcc272_cdk); residual is
  *       a five-row codegen difference near the entry loop (one instruction short).
  */
 s32 func_80141250(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
