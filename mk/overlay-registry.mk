@@ -87,9 +87,9 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_glyph_builder.c \
 	src/overlays/carda/carda_header_label.c \
 	src/overlays/carda/func_80147100.c \
-	src/overlays/carda/func_80149A4C.c
+	src/overlays/carda/func_80149A4C.c \
+	src/overlays/carda/func_80142E10.c
 overlay_carda_gcc_280_g0_srcs := \
-	src/overlays/carda/unk1_after_strings.c \
 	src/overlays/carda/carda_scan_hex_digits.c \
 	src/overlays/carda/unk1_after_checksum_tail.c \
 	src/overlays/carda/func_80145050.c \
@@ -160,6 +160,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field29.c \
 	src/overlays/field/unk2.c \
 	src/overlays/field/unk2_e.c \
+	src/overlays/field/func_80083EEC.c \
+	src/overlays/field/unk2_e_after_83EEC.c \
 	src/overlays/field/func_80084240.c \
 	src/overlays/field/func_800842E0.c \
 	src/overlays/field/func_80089980.c \
@@ -356,7 +358,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split020.c \
 	src/overlays/field/func_800B0710.c \
 	src/overlays/field/func_800B0888.c \
-	src/overlays/field/unk2_b_split021_tail.c \
+	src/overlays/field/unk2_b_split021_tail_before_b0a08.c \
+	src/overlays/field/func_800B0A08.c \
 	src/overlays/field/unk2_b_split022.c \
 	src/overlays/field/unk2_b_split022_b.c \
 	src/overlays/field/unk2_b_split022_b_tail_after_1BBC_before_1f10.c \
@@ -374,7 +377,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_b_split028_after_729c.c \
 	src/overlays/field/unk2_b_split029_mid.c \
 	src/overlays/field/func_800B7A74.c \
-	src/overlays/field/unk2_b_split030.c \
 	src/overlays/field/unk2_b_split031_mid.c \
 	src/overlays/field/unk2_b_split031_tail_before_95ec.c \
 	src/overlays/field/unk2_b_split031_tail_after_9868.c \
@@ -553,6 +555,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_equipment_combination_rules.c \
 	src/overlays/field/func_800B3D84.c \
 	src/overlays/field/func_800B4844.c \
+	src/overlays/field/func_800B4B44.c \
 	src/overlays/field/func_800B4CE4.c \
 	src/overlays/field/func_800B4D1C.c \
 	src/overlays/field/func_800B4DF0.c \
@@ -588,6 +591,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800BD3B0.c \
 	src/overlays/field/field_golem_logic_blocks.c \
 	src/overlays/field/field_script_ops_00_01.c \
+	src/overlays/field/func_800B8684.c \
 	src/overlays/field/field_script_ops_03_08.c \
 	src/overlays/field/func_800B8B80.c \
 	src/overlays/field/field_script_op_0a.c \
