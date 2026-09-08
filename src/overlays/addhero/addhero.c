@@ -5,6 +5,7 @@
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+#include "sdk/kernel.h"
 
 /** @brief Animated panel or list element used by the ADDHERO interface. */
 typedef struct AddheroElement
@@ -53,17 +54,6 @@ typedef struct AddheroRecord
     s32 identity;
 } AddheroRecord;
 
-/** @brief Memory-card directory entry; layout matches Psy-Q DIRENTRY (0x28 bytes). */
-typedef struct
-{
-    char name[20];
-    s32 attr;
-    s32 size;
-    void *next;
-    s32 head;
-    char system[4];
-} AddheroDirEntry;
-
 /* ADDHERO layout/state constants recovered from the element and card-directory loops. */
 #define ADDHERO_ELEMENT_COUNT 8
 #define ADDHERO_ELEMENT_WORD_STRIDE 3
@@ -74,8 +64,9 @@ typedef struct
 #define ADDHERO_ELEMENT_STATE_ACTIVE 2
 #define ADDHERO_ELEMENT_STATE_CLOSING 3
 #define ADDHERO_ELEMENT_STATE_FINISHING 4
-#define ADDHERO_CARD_DIRECTORY_BYTES 0x320
-#define ADDHERO_DIRECTORY_ENTRY_BYTES 0x28
+#define ADDHERO_DIRECTORY_ENTRY_COUNT 20
+#define ADDHERO_DIRECTORY_ENTRY_BYTES sizeof(struct DIRENTRY)
+#define ADDHERO_CARD_DIRECTORY_BYTES (ADDHERO_DIRECTORY_ENTRY_COUNT * ADDHERO_DIRECTORY_ENTRY_BYTES)
 #define ADDHERO_ENTRY_ROW_HEIGHT 14
 #define ADDHERO_NO_ICON 0x7F
 
@@ -226,7 +217,7 @@ typedef AddheroGpuPacket *(*AddheroElementDrawFunc)();
 /** @brief Pool of animated UI elements used by the ADDHERO screen. */
 extern AddheroElement g_addhero_element_pool[ADDHERO_ELEMENT_COUNT];
 extern AddheroElement g_addhero_element1;
-extern AddheroDirEntry g_addhero_entries[][20];
+extern struct DIRENTRY g_addhero_entries[][ADDHERO_DIRECTORY_ENTRY_COUNT];
 extern AddheroRecord g_addhero_entry_metadata;
 extern AddheroFileHeader g_addhero_file_template;
 extern AddheroEntryHeader g_addhero_entry_header_template;
@@ -3007,7 +2998,7 @@ s32 addhero_parse_entry_fields(void)
         char *ref;
         u8 *tmp;
         ref = g_lom_save_filename_prefix;
-        tmp = (u8 *)&((AddheroDirEntry (*)[20])g_addhero_entries)[g_addhero_card_slot][i];
+        tmp = (u8 *)&g_addhero_entries[g_addhero_card_slot][i];
 
         if (strncmp(ref, tmp, 0xC) == 0)
         {
@@ -3043,8 +3034,8 @@ s32 addhero_parse_entry_fields(void)
                 }
             }
 
-            field = (u8 *)&((AddheroDirEntry (*)[20])g_addhero_entries)[g_addhero_card_slot][i].name[0xC];
-            fields = &g_addhero_entry_fields[g_addhero_card_slot * 20];
+            field = (u8 *)&g_addhero_entries[g_addhero_card_slot][i].name[0xC];
+            fields = &g_addhero_entry_fields[g_addhero_card_slot * ADDHERO_DIRECTORY_ENTRY_COUNT];
             fields[i] = acc;
 
             r = addhero_parse_hex_suffix_byte(field);
@@ -3057,7 +3048,7 @@ s32 addhero_parse_entry_fields(void)
         }
         else
         {
-            s32 *fields = &g_addhero_entry_fields[g_addhero_card_slot * 20];
+            s32 *fields = &g_addhero_entry_fields[g_addhero_card_slot * ADDHERO_DIRECTORY_ENTRY_COUNT];
             fields[i] = -1;
             g_addhero_entry_suffix_values[i] = 0;
         }
@@ -3112,7 +3103,7 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         rank_ptr = base_rank;
         slot = g_addhero_card_slot;
         field1 = g_addhero_entry_fields;
-        row = field1 + slot * 20;
+        row = field1 + slot * ADDHERO_DIRECTORY_ENTRY_COUNT;
         elem = row;
         do
         {
@@ -3276,7 +3267,7 @@ s32 addhero_entry_blocks_reach_limit(void)
         do
         {
             do {
-                sum += ((AddheroDirEntry *)((u8 *)g_addhero_entries + offset))->size / 8192;
+                sum += ((struct DIRENTRY *)((u8 *)g_addhero_entries + offset))->size / 8192;
             } while (0);
             i++;
             offset += ADDHERO_DIRECTORY_ENTRY_BYTES;
@@ -3978,9 +3969,9 @@ s32 addhero_begin_entry_scan(s32 page)
     g_addhero_scroll_y = 0;
     g_addhero_entry_state = 0;
     ((u8 *)&buf)[2] += page;
-    if (firstfile(&buf, (u8 *)g_addhero_entries + page * ADDHERO_CARD_DIRECTORY_BYTES) != 0)
+    if (firstfile(&buf, &g_addhero_entries[page][0]) != 0)
     {
-        func_800B0170((u8 *)g_addhero_entries + page * ADDHERO_CARD_DIRECTORY_BYTES + g_addhero_entry_state * ADDHERO_DIRECTORY_ENTRY_BYTES);
+        func_800B0170(&g_addhero_entries[page][g_addhero_entry_state]);
         g_addhero_entry_state += 1;
         return 1;
     }
@@ -3999,14 +3990,12 @@ s32 addhero_scan_next_entry(s32 page)
     s32 sum;
     s32 offset;
     s32 selected;
-    s32 page_offset;
     s32 count;
     s32 cond;
 
-    page_offset = page * ADDHERO_CARD_DIRECTORY_BYTES;
-    if (nextfile((void *)((u8 *)g_addhero_entries + page_offset + g_addhero_entry_state * ADDHERO_DIRECTORY_ENTRY_BYTES)) != 0)
+    if (nextfile(&g_addhero_entries[page][g_addhero_entry_state]) != 0)
     {
-        func_800B0170((void *)((u8 *)g_addhero_entries + page_offset + g_addhero_entry_state * ADDHERO_DIRECTORY_ENTRY_BYTES));
+        func_800B0170(&g_addhero_entries[page][g_addhero_entry_state]);
         g_addhero_entry_state += 1;
         return 1;
     }
@@ -4029,7 +4018,7 @@ s32 addhero_scan_next_entry(s32 page)
             offset = g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES;
             do
             {
-                sum += ((AddheroDirEntry *)(offset + (s32)entries))->size / 8192;
+                sum += ((struct DIRENTRY *)(offset + (s32)entries))->size / 8192;
                 i++;
                 offset += ADDHERO_DIRECTORY_ENTRY_BYTES;
             } while (i < count);
@@ -4220,7 +4209,7 @@ s32 addhero_poll_secondary_handle_group(void)
  */
 void addhero_sort_entries_by_type(void)
 {
-    AddheroDirEntry sorted[20];
+    struct DIRENTRY sorted[ADDHERO_DIRECTORY_ENTRY_COUNT];
     s32 out = 0;
     s32 group = 0;
     s32 i;
@@ -4230,7 +4219,7 @@ void addhero_sort_entries_by_type(void)
             do {
                 if (g_addhero_entry_suffix_values[i] == group &&
                     strncmp(g_lom_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0) {
-                    bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
+                    bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], sizeof(struct DIRENTRY));
                     out++;
                 }
                 i++;
@@ -4246,7 +4235,7 @@ void addhero_sort_entries_by_type(void)
             do {
                 if (g_addhero_entry_suffix_values[i] == group &&
                     strncmp(g_lom_alt_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0) {
-                    bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
+                    bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], sizeof(struct DIRENTRY));
                     out++;
                 }
                 i++;
@@ -4259,7 +4248,7 @@ void addhero_sort_entries_by_type(void)
     if (g_addhero_entry_state > 0) {
         do {
             if (strncmp(g_new_save_entry_prefix, &g_addhero_entries[g_addhero_card_slot][i], 8) == 0) {
-                bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
+                bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], sizeof(struct DIRENTRY));
                 out++;
             }
             i++;
@@ -4272,7 +4261,7 @@ void addhero_sort_entries_by_type(void)
             if (strncmp(g_lom_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) != 0 &&
                 strncmp(g_lom_alt_save_filename_prefix, &g_addhero_entries[g_addhero_card_slot][i], 0xC) != 0 &&
                 strncmp(g_new_save_entry_prefix, &g_addhero_entries[g_addhero_card_slot][i], 8) != 0) {
-                bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], 0x28);
+                bcopy(&g_addhero_entries[g_addhero_card_slot][i], &sorted[out], sizeof(struct DIRENTRY));
                 out++;
             }
             i++;
@@ -4282,7 +4271,7 @@ void addhero_sort_entries_by_type(void)
     i = 0;
     if (g_addhero_entry_state > 0) {
         do {
-            bcopy(&sorted[i], &g_addhero_entries[g_addhero_card_slot][i], 0x28);
+            bcopy(&sorted[i], &g_addhero_entries[g_addhero_card_slot][i], sizeof(struct DIRENTRY));
             i++;
         } while (i < g_addhero_entry_state);
     }
