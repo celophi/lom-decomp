@@ -4538,14 +4538,10 @@ void addhero_begin_glyph_cache_frame(void)
     s32 *p;
 
     g_addhero_glyph_raster_cursor = g_addhero_glyph_raster_buffer;
-    i = 0;
-    p = (s32 *)g_addhero_glyph_cache;
-    do
+    for (i = 0, p = (s32 *)g_addhero_glyph_cache; i < 0x100; i++, p++)
     {
         *p = (u16)*p;
-        i++;
-        p++;
-    } while (i < 0x100);
+    }
 }
 
 /**
@@ -4562,15 +4558,13 @@ void addhero_evict_unused_glyphs(void)
     i = 0;
     flag = 0x10000;
     p = (s32 *)g_addhero_glyph_cache;
-    do
+    for (; i < 0x100; i++, p++)
     {
         if (!(*p & flag))
         {
             *p = 0;
         }
-        i++;
-        p++;
-    } while (i < 0x100);
+    }
 }
 
 /**
@@ -4587,20 +4581,17 @@ void addhero_reset_glyph_cache(void)
     i = 0xFF;
     p = (s32 *)g_addhero_glyph_cache;
     p += 0xFF;
-    do
+    for (; i >= 0; i--, p--)
     {
         *p = 0;
-        i--;
-        p--;
-    } while (i >= 0);
+    }
 
     i = 0;
     q = g_addhero_glyph_raster_buffer;
-    do
+    for (; i <= 0x7FFF; i++)
     {
         *(u8 *)(i + (s32)q) = 0;
-        i++;
-    } while (i <= 0x7FFF);
+    }
 }
 
 /**
