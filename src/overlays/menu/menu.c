@@ -129,12 +129,24 @@
 #define MENU_CONTENT_X_MASK 0x1FF
 /** @brief Converts a content item's Y coordinate to the viewport origin. */
 #define MENU_CONTENT_VIEW_Y_OFFSET 8
+/** @brief High-nibble mask selecting a content item's action class. */
+#define MENU_CONTENT_ITEM_TYPE_MASK 0xF000
+/** @brief Content item class that opens a nested submenu. */
+#define MENU_CONTENT_ITEM_TYPE_SUBMENU 0x5000
+/** @brief Content item class that dispatches a menu action code. */
+#define MENU_CONTENT_ITEM_TYPE_ACTION 0xF000
 /** @brief g_menu_redraw_state: navigation key pressed, scroll position adjusted. */
 #define MENU_REDRAW_NAVIGATE 6
 /** @brief g_menu_redraw_state: layout pass completed (position change or first run). */
 #define MENU_REDRAW_LAYOUT 8
 /** @brief g_pad_ctx->inject_flags bit enabling injected menu input. */
 #define MENU_PAD_INJECT_ENABLED 0x80
+/** @brief Enables vibration feedback in g_pad_ctx->menu_option_flags. */
+#define MENU_OPTION_VIBRATION_ENABLED 0x01
+/** @brief Enables menu audio in g_pad_ctx->menu_option_flags. */
+#define MENU_OPTION_AUDIO_ENABLED 0x02
+/** @brief Number of directional links stored by each content item. */
+#define MENU_CONTENT_DIRECTION_COUNT 4
 /** @brief Ordering-table entry used as the menu frame's list head. */
 #define MENU_FRAME_OT_INDEX 13
 /** @brief Vertical offset of the node-tree clipping region within a draw page. */
@@ -712,7 +724,7 @@ extern u16 D_800FDCE8;
 /** @brief Ability-compatibility mask rebuilt before item content is loaded. */
 extern s8 g_menu_ability_mask;
 /** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
-extern s8 g_menu_companion_node;
+extern u8 g_menu_companion_node;
 
 /** @brief Nonnegative-label offset embedded in MenuStringTableLayout. */
 extern StringTableOffset g_menu_label_key_a;
@@ -2839,56 +2851,48 @@ static inline s32 menu_focus_active_item(void)
 /**
  * @brief Per-frame menu navigation, confirm/cancel and cursor-move input handler.
  * @param process_actions Non-zero to also process confirm/cancel and the four cursor-move buttons; 0 runs only node switching.
- * @return Unused.
+ * @return Unspecified; callers do not consume the return value.
  */
 s32 menu_handle_input(s32 process_actions)
 {
-    u8* var_s4 = (u8*)0x801ED600;
-    MenuContentItem* s5;
+    MenuControllerActuatorState* actuator_state = MENU_CONTROLLER_ACTUATORS;
+    const MenuItem* content_items;
     u32 content_type;
-    MenuSlot* slots;
-    MenuSlot* var_a3;
-    s32 self_idx;
-    s32 idx_a, idx_b;
-    u16 packed_x;
-    u16 top_nibble;
-    u8 table_idx;
-    u8 val;
-    u32 dir_mask;
-    s32 dir_index;
-    MenuNode* active_node;
-    MenuNode* nodes;
-    MenuNode* nav_nodes;
-    s32 nav_y;
-    s32 nav_hi;
-    s32 new_type_left;
-    s32 new_type_right;
-    s32 new_type_up;
-    s32 new_type_down;
-    u8 flag;
-    void* new_var7;
-    u32 item14;
-    s32 shift;
-    u8* base;
-    u8* base1;
-    u8* base2;
-    u8* base3;
-    s32 var_s0;
-    s8 companion;
+    MenuSlot* submenu_slot;
+    s32 node_self_index;
+    s32 sort_index_a, sort_index_b;
+    u16 item_packed_x;
+    u16 item_type;
+    u8 action_group;
+    u8 action_code;
+    s32 work_index;
+    MenuNode* selected_node;
+    MenuNode* node_base;
+    s32 node_nav_y;
+    s32 scroll_extent;
+    s32 next_scene_type;
+    u8 item_flag;
+    u32* inject_flags;
+    u32 item_word;
+    s32 text_variant;
+    u8* name_table;
+    u8* label_table;
+    u8* description_table;
+    u8* detail_table;
     MenuSlotRect rect;
-    s8 sp18[0x40];
-    s8* buf;
+    s8 text_buffer[0x40];
+    s8* text_cursor;
 
     if ((u32)(g_menu_scene_type - 0x14) < 2 || g_menu_scene_type == 0x17 || g_menu_scene_type == 0x18 || g_menu_scene_type == 0x1A || g_menu_scene_type == 0x1B)
     {
-        if (g_pad_input & 0xF)
+        if (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1))
         {
-            menu_play_se(0x7D, 0x80);
-            if (g_pad_input & 3)
+            menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+            if (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2))
             {
-                if (g_menu_item_ptr != ((void*)0))
+                if ((void*)g_menu_item_ptr != NULL)
                 {
-                    if (g_pad_input & 1)
+                    if (g_pad_input & PAD_BTN_L2)
                     {
                         menu_step_item_selection(-1);
                         if (g_script_repeat_last == 0)
@@ -2900,7 +2904,7 @@ s32 menu_handle_input(s32 process_actions)
                             g_script_repeat_last -= 1;
                         }
                     }
-                    else if (g_pad_input & 2)
+                    else if (g_pad_input & PAD_BTN_R2)
                     {
                         menu_step_item_selection(1);
                         if (g_script_repeat_last == (g_menu_page_count - 1))
@@ -2936,24 +2940,22 @@ s32 menu_handle_input(s32 process_actions)
         }
     }
 
-    if (g_menu_scene_type < 0x11U && (g_pad_input & 0xF))
+    if (g_menu_scene_type < 0x11U && (g_pad_input & (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1)))
     {
-        menu_play_se(0x7D, 0x80);
+        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
         switch (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx - 0x14)
         {
         case 0:
         case 3:
         case 6:
-            nodes = g_menu_nodes;
-            nodes[g_menu_scene_type].idx_nav.s.self_idx += 1;
+            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx += 1;
             menu_focus_active_item();
             goto after_do_while;
 
         case 1:
         case 4:
         case 7:
-            nodes = g_menu_nodes;
-            nodes[g_menu_scene_type].idx_nav.s.self_idx -= 1;
+            g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx -= 1;
             menu_focus_active_item();
             goto after_do_while;
 
@@ -2981,7 +2983,7 @@ s32 menu_handle_input(s32 process_actions)
         while (1)
         {
             {
-                if (g_pad_input & 4)
+                if (g_pad_input & PAD_BTN_L1)
                 {
                     if (g_menu_scene_type == ((g_menu_scene_type / 3) * 3))
                     {
@@ -3002,20 +3004,34 @@ s32 menu_handle_input(s32 process_actions)
                         g_menu_active_node = g_menu_scene_type;
                     }
                 }
-                if (g_pad_input & 8)
+                if (g_pad_input & PAD_BTN_R1)
                 {
                     if (g_menu_scene_type < 9)
                     {
-                        {s32 q = (g_menu_scene_type /3)*3;do {new_type_right=g_menu_scene_type-2;} while(0);if(q == new_type_right){}else new_type_right=g_menu_scene_type+1;}
+                        if ((g_menu_scene_type % 3) == 2)
+                        {
+                            next_scene_type = g_menu_scene_type - 2;
+                        }
+                        else
+                        {
+                            next_scene_type = g_menu_scene_type + 1;
+                        }
                     }
                     else
                     {
-                        {s32 q = (g_menu_scene_type /3)*3;do {new_type_right=g_menu_scene_type-1;} while(0);if(q == new_type_right){}else new_type_right=g_menu_scene_type+1;}
+                        if ((g_menu_scene_type % 3) == 1)
+                        {
+                            next_scene_type = g_menu_scene_type - 1;
+                        }
+                        else
+                        {
+                            next_scene_type = g_menu_scene_type + 1;
+                        }
                     }
-                    g_menu_scene_type = new_type_right;
-                    do { do { do { g_menu_active_node = new_type_right; } while (0); } while (0); } while (0);
+                    g_menu_scene_type = next_scene_type;
+                    do { do { do { g_menu_active_node = next_scene_type; } while (0); } while (0); } while (0);
                 }
-                if ((g_pad_input & 1) && (g_menu_scene_type < 9))
+                if ((g_pad_input & PAD_BTN_L2) && (g_menu_scene_type < 9))
                 {
                     if ((g_menu_scene_type / 3) == 0)
                     {
@@ -3029,7 +3045,7 @@ s32 menu_handle_input(s32 process_actions)
                     }
                     menu_set_active_node();
                 }
-                if ((g_pad_input & 2) && (g_menu_scene_type < 9))
+                if ((g_pad_input & PAD_BTN_R2) && (g_menu_scene_type < 9))
                 {
                     if ((g_menu_scene_type / 3) == 2)
                     {
@@ -3046,7 +3062,7 @@ s32 menu_handle_input(s32 process_actions)
 
             }
 
-            if (!(g_menu_nodes[(g_menu_scene_type / 3) * 3].u2.s.flags & 1))
+            if (!(g_menu_nodes[(g_menu_scene_type / 3) * 3].u2.s.flags & MENU_NODE_FLAG_ACTIVE))
             {
                 continue;
             }
@@ -3060,78 +3076,75 @@ s32 menu_handle_input(s32 process_actions)
             }
         }
 
-        for (var_s0 = 3; var_s0 >= 0; var_s0--)
-        {
-            g_menu_slots[var_s0].active = 0;
-        }
+        MENU_CLEAR_SLOTS()
     }
 
 after_do_while:
 
     if (process_actions != 0)
     {
-        s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+        content_items = (const MenuItem*)g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
 
         if ((g_menu_scene_type == 0x1F || g_menu_scene_type == 0x2B) && g_menu_hit_item_idx >= 0x11 && g_menu_hit_item_idx < 0x19)
         {
-            if (g_pad_input & 0x40)
+            if (g_pad_input & PAD_BTN_CIRCLE)
             {
-                if (g_party_sort_marker.selected_idx != 0xFF)
+                if (g_party_sort_marker.selected_idx != MENU_NONE)
                 {
-                    g_pad_input &= ~0x40;
-                    g_party_sort_marker.selected_idx = 0xFF;
+                    g_pad_input &= ~PAD_BTN_CIRCLE;
+                    g_party_sort_marker.selected_idx = MENU_NONE;
                 }
                 else
                 {
-                    g_pad_input &= ~0x40;
-                    menu_play_se(0x7D, 0x80);
+                    g_pad_input &= ~PAD_BTN_CIRCLE;
+                    menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
                     menu_reset_content_view();
                 }
             }
-            if (g_pad_input & 0x220)
+            if (g_pad_input & (PAD_BTN_CROSS | PAD_BTN_L3))
             {
-                if (g_party_sort_marker.selected_idx == 0xFF)
+                if (g_party_sort_marker.selected_idx == MENU_NONE)
                 {
-                    menu_play_se(0x7D, 0x80);
-                    g_party_sort_marker.x = (s8)(((MenuContentItemBits*)s5)[g_menu_hit_item_idx].x - 2);
-                    g_party_sort_marker.y = (s8)(s5[g_menu_hit_item_idx].y - 8);
+                    menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+                    g_party_sort_marker.x = (s8)(((MenuContentItemBits*)content_items)[g_menu_hit_item_idx].x - 2);
+                    g_party_sort_marker.y = (s8)(content_items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET);
                     g_party_sort_marker.selected_idx = (u8)g_menu_hit_item_idx;
                 }
                 else if (g_party_sort_marker.selected_idx != g_menu_hit_item_idx)
                 {
-                    menu_play_se(0x7E, 0x80);
-                    for (idx_a = 0; idx_a < 8; idx_a++)
+                    menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
+                    for (sort_index_a = 0; sort_index_a < 8; sort_index_a++)
                     {
-                        if (MENU_SORT_SLOT(idx_a) == (g_menu_hit_item_idx - 0x11))
+                        if (MENU_SORT_SLOT(sort_index_a) == (g_menu_hit_item_idx - 0x11))
                         {
                             break;
                         }
                     }
-                    for (idx_b = 0; idx_b < 8; idx_b++)
+                    for (sort_index_b = 0; sort_index_b < 8; sort_index_b++)
                     {
-                        if (MENU_SORT_SLOT(idx_b) == (g_party_sort_marker.selected_idx - 0x11))
+                        if (MENU_SORT_SLOT(sort_index_b) == (g_party_sort_marker.selected_idx - 0x11))
                         {
                             break;
                         }
                     }
-                    dir_index = MENU_SORT_SLOT(idx_a);
+                    work_index = MENU_SORT_SLOT(sort_index_a);
                     {
                         u8* sort_base = (u8*)menu_sort_order_record();
-                        u8* sort_dst = sort_base + idx_a + 0x638;
-                        *sort_dst = MENU_SORT_SLOT(idx_b);
+                        u8* sort_dst = sort_base + sort_index_a + 0x638;
+                        *sort_dst = MENU_SORT_SLOT(sort_index_b);
                     }
-                    MENU_SORT_SLOT(idx_b) = dir_index;
-                    g_party_sort_marker.selected_idx = 0xFF;
+                    MENU_SORT_SLOT(sort_index_b) = work_index;
+                    g_party_sort_marker.selected_idx = MENU_NONE;
                 }
                 else
                 {
-                    menu_play_se(0x7F, 0x80);
-                    g_party_sort_marker.selected_idx = 0xFF;
+                    menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+                    g_party_sort_marker.selected_idx = MENU_NONE;
                 }
             }
-            else if (g_pad_input & 0x10)
+            else if (g_pad_input & PAD_BTN_SQUARE)
             {
-                menu_play_se(0x7E, 0x80);
+                menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
                 MENU_SORT_SLOT(0) = 0;
                 MENU_SORT_SLOT(1) = 1;
                 MENU_SORT_SLOT(2) = 2;
@@ -3142,14 +3155,14 @@ after_do_while:
                 MENU_SORT_SLOT(7) = 7;
             }
         }
-        else if (g_pad_input & 0x220)
+        else if (g_pad_input & (PAD_BTN_CROSS | PAD_BTN_L3))
         {
-            packed_x = s5[g_menu_hit_item_idx].packed_x;
-            top_nibble = packed_x & 0xF000;
-            if (top_nibble == 0x5000)
+            item_packed_x = content_items[g_menu_hit_item_idx].packed_x;
+            item_type = item_packed_x & MENU_CONTENT_ITEM_TYPE_MASK;
+            if (item_type == MENU_CONTENT_ITEM_TYPE_SUBMENU)
             {
-                g_menu_active_subtype = s5[g_menu_hit_item_idx].pad[0];
-                content_type = s5[g_menu_hit_item_idx].pad[0];
+                g_menu_active_subtype = content_items[g_menu_hit_item_idx].action_type;
+                content_type = content_items[g_menu_hit_item_idx].action_type;
                 switch (content_type)
                 {
                 case 1:
@@ -3160,12 +3173,12 @@ after_do_while:
                         rect.y = 0x60;
                         rect.w = 0xF0;
                         rect.h = 0x60;
-                        var_a3 = menu_slot_alloc(3, &rect);
-                        var_a3->content_cb = (s32 * (*)()) & menu_spell_list_callback;
-                        var_a3->flags =
-                            (var_a3->flags & 0xFE00FFFF) | ((menu_build_spell_nav_entries() & 0x1FF) << 16);
-                        var_a3->has_title = 1;
-                        menu_play_se(0x7D, 0x80);
+                        submenu_slot = menu_slot_alloc(3, &rect);
+                        submenu_slot->content_cb = (s32 * (*)()) & menu_spell_list_callback;
+                        submenu_slot->flags =
+                            (submenu_slot->flags & 0xFE00FFFF) | ((menu_build_spell_nav_entries() & MENU_ITEM_NAV_INDEX_MASK) << 16);
+                        submenu_slot->has_title = 1;
+                        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
                     }
                     break;
 
@@ -3175,8 +3188,8 @@ after_do_while:
                 case 6:
                     if (g_menu_char_slot == 0)
                     {
-                        { u8* pad_base0 = (u8*)g_pad_ctx; flag = *(pad_base0 + content_type + 0x609); }
-                        if ((flag != 0xFF) && (flag & 0x80))
+                        { u8* pad_base0 = (u8*)g_pad_ctx; item_flag = *(pad_base0 + content_type + 0x609); }
+                        if ((item_flag != MENU_NONE) && (item_flag & 0x80))
                         {
                             rect.x = 0xB0;
                             rect.y = 0x60;
@@ -3190,31 +3203,36 @@ after_do_while:
                             rect.w = 0x70;
                             rect.h = 0x40;
                         }
-                        var_a3 = menu_slot_alloc(3, &rect);
-                        var_a3->content_cb = (s32 * (*)()) & menu_subtype_action_callback;
-                        { u8* pad_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250); flag = *(pad_base + content_type + 0x609); }
-                        if ((flag != 0xFF) && (flag & 0x80))
+                        submenu_slot = menu_slot_alloc(3, &rect);
+                        submenu_slot->content_cb = (s32 * (*)()) & menu_subtype_action_callback;
+                        { u8* pad_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250); item_flag = *(pad_base + content_type + 0x609); }
+                        if ((item_flag != MENU_NONE) && (item_flag & 0x80))
                         {
-                            var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x40000;
+                            submenu_slot->flags = (submenu_slot->flags & 0xFE00FFFF) | 0x40000;
                             menu_init_item_nav_entries(4);
                         }
                         else
                         {
-                            var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x30000;
+                            submenu_slot->flags = (submenu_slot->flags & 0xFE00FFFF) | 0x30000;
                             menu_init_item_nav_entries(3);
                         }
-                        scroll_list_update_target(var_a3, g_menu_scroll_nav_entries);
+                        scroll_list_update_target((ScrollListState*)submenu_slot, g_menu_scroll_nav_entries);
 
-                        {u8* pb; s32 ch;s32* eq=&g_menu_active_equipped_item;ch=g_menu_char_slot; pb=(u8*)g_pad_ctx;*eq = 0;new_var7 = (void*)(pb + ((ch * 0x250) + 0x5F0) + ((content_type << 6) + 0x90));*eq = new_var7;
-                        g_menu_item_ptr = new_var7;
-                        g_menu_saved_category0_item = g_menu_item_ptr;
-                        g_menu_category0_item = g_menu_item_ptr;
-                        g_menu_saved_category1_item = g_menu_item_ptr;
-                        g_menu_category1_item = g_menu_item_ptr;
-                        g_menu_nav_prev[0] = g_menu_item_ptr;
+                        {
+                            u8* equipped_item;
+                            s32* active_equipped_item = &g_menu_active_equipped_item;
 
-                        g_menu_category2_item = g_menu_item_ptr;
-                        }menu_play_se(0x7D, 0x80);
+                            equipped_item = (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) + 0x90);
+                            *active_equipped_item = (s32)equipped_item;
+                            g_menu_item_ptr = (s32)equipped_item;
+                            g_menu_saved_category0_item = g_menu_item_ptr;
+                            g_menu_category0_item = g_menu_item_ptr;
+                            g_menu_saved_category1_item = g_menu_item_ptr;
+                            g_menu_category1_item = g_menu_item_ptr;
+                            g_menu_nav_prev[0] = g_menu_item_ptr;
+                            g_menu_category2_item = g_menu_item_ptr;
+                        }
+                        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
                     }
                     break;
 
@@ -3228,19 +3246,20 @@ after_do_while:
                         rect.y = 0x30;
                         rect.w = 0x70;
                         rect.h = 0x60;
-                        var_a3 = menu_slot_alloc(3, &rect);
-                        var_a3->content_cb = (s32 * (*)()) & menu_equipment_action_callback;
-                        var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x50000;
+                        submenu_slot = menu_slot_alloc(3, &rect);
+                        submenu_slot->content_cb = (s32 * (*)()) & menu_equipment_action_callback;
+                        submenu_slot->flags = (submenu_slot->flags & 0xFE00FFFF) | 0x50000;
                         menu_init_item_nav_entries(5);
                         {
-                            void* ptr;
+                            u8* equipped_item;
+                            s32* active_equipped_item = &g_menu_active_equipped_item;
 
-                            {u8* pb; s32 ch; s32* eq=&g_menu_active_equipped_item;pb=(u8*)g_pad_ctx; ch=g_menu_char_slot;*eq = 0;ptr = (void*)(pb + ((ch * 0x250) + 0x5F0) + ((content_type << 6) - 0x170));*eq = ptr;
-                            g_menu_saved_category0_item = ptr;
-                            g_menu_saved_category1_item = ptr;
-
-                            g_menu_nav_prev[0] = ptr;
-                            }menu_play_se(0x7D, 0x80);
+                            equipped_item = (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) - 0x170);
+                            *active_equipped_item = (s32)equipped_item;
+                            g_menu_saved_category0_item = (s32)equipped_item;
+                            g_menu_saved_category1_item = (s32)equipped_item;
+                            g_menu_nav_prev[0] = (s32)equipped_item;
+                            menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
                         }
                     }
                     break;
@@ -3248,37 +3267,37 @@ after_do_while:
                 case 15:
                     if ((g_menu_scene_type >= 0x12) || (g_menu_scene_type == 1) || (g_menu_scene_type == 2))
                     {
-                        if ((g_menu_item_ptr != ((void*)0)) && (*((u8*)g_menu_item_ptr) != 0))
+                        if (((void*)g_menu_item_ptr != NULL) && (*((u8*)g_menu_item_ptr) != 0))
                         {
-                            D_8011F424 = (((u32)(*((u32*)((char*)g_menu_item_ptr + 0x14)))) >> 8) & 3;
+                            D_8011F424 = (((u32)PAD_ITEM_W14(g_menu_item_ptr)) >> 8) & 3;
                             func_800A8E28(&D_801226F0, g_menu_item_ptr);
-                            sp18[0] = 0;
+                            text_buffer[0] = 0;
                             D_801226B8 = 0;
-                            D_801227D4 = g_menu_item_ptr;
+                            D_801227D4 = (void*)g_menu_item_ptr;
                             if (menu_item_is_nondefault(g_menu_item_ptr) != 0)
                                 {
-                                buf = sp18;
-                                base1 = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
-                                func_800A8E28(buf, (s8*)(base1 + (*((u16*)(base1 + (((*((u16*)((char*)g_menu_item_ptr + 0x16))) & 0x3F) * 2) + 0x48)))));
-                                item14 = *((u32*)((char*)g_menu_item_ptr + 0x14));
-                                shift = (item14 >> 8) & 3;
-                                switch (shift)
+                                text_cursor = text_buffer;
+                                label_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
+                                func_800A8E28(text_cursor, (s8*)(label_table + (*((u16*)(label_table + (((PAD_ITEM_W16(g_menu_item_ptr)) & 0x3F) * 2) + 0x48)))));
+                                item_word = PAD_ITEM_W14(g_menu_item_ptr);
+                                text_variant = (item_word >> 8) & 3;
+                                switch (text_variant)
                                 {
                                 case 0:
-                                    base = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
-                                    menu_concat_encoded_text(&D_801226B8, sp18, (s8*)(base + (*((u16*)(((item14 >> 9) & 0x7E) + (s32)base)))));
+                                    name_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
+                                    menu_concat_encoded_text(&D_801226B8, text_buffer, (s8*)(name_table + (*((u16*)(((item_word >> 9) & 0x7E) + (s32)name_table)))));
                                     break;
 
                                 case 1:
-                                    base2 = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
-                                    menu_concat_encoded_text(&D_801226B8, sp18, (s8*)(base2 + (*((u16*)(((item14 >> 9) & 0x7E) + (s32)base2 + 0x20)))));
+                                    description_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
+                                    menu_concat_encoded_text(&D_801226B8, text_buffer, (s8*)(description_table + (*((u16*)(((item_word >> 9) & 0x7E) + (s32)description_table + 0x20)))));
                                     break;
 
                                 default:
-                                    base3 = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
+                                    detail_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
                                     menu_concat_encoded_text(
-                                        &D_801226B8, sp18,
-                                        (s8*)(base3 + (*((u16*)((((((u32)(*((u32*)((char*)g_menu_item_ptr + 0x14)))) >> 9) & 0x7E)) + (s32)base3 + 0x40)))));
+                                        &D_801226B8, text_buffer,
+                                        (s8*)(detail_table + (*((u16*)((((((u32)PAD_ITEM_W14(g_menu_item_ptr)) >> 9) & 0x7E)) + (s32)detail_table + 0x40)))));
                                     break;
                                 }
                                 g_menu_load_request = 1;
@@ -3301,14 +3320,14 @@ after_do_while:
                     break;
                 }
             }
-            else if (top_nibble == 0xF000)
+            else if (item_type == MENU_CONTENT_ITEM_TYPE_ACTION)
             {
-                table_idx = g_menu_content_group_ids[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-                val = g_menu_content_action_codes[table_idx][(packed_x >> 9) & 7];
-                if (val != 0)
+                action_group = g_menu_content_group_ids[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+                action_code = g_menu_content_action_codes[action_group][(item_packed_x >> 9) & 7];
+                if (action_code != 0)
                 {
-                    menu_play_se(0x7E, 0x80);
-                    switch (val)
+                    menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
+                    switch (action_code)
                     {
                     case 1:
                         {
@@ -3353,88 +3372,80 @@ after_do_while:
                         break;
 
                     case 6:
-                        ((u32*)((u8*)g_pad_ctx + 0x28))[0] |= 2;
+                        g_pad_ctx->menu_option_flags |= MENU_OPTION_AUDIO_ENABLED;
                         akao_set_paused(0);
                         break;
 
                     case 7:
-                        ((u32*)((u8*)g_pad_ctx + 0x28))[0] &= ~2;
+                        g_pad_ctx->menu_option_flags &= ~MENU_OPTION_AUDIO_ENABLED;
                         akao_set_paused(1);
                         break;
 
                     case 8:
-                        ((u32*)((u8*)g_pad_ctx + 0x28))[0] |= 1;
-                        var_s4[0x90] = 1;
-                        var_s4[0x92] = 0x80;
-                        if (g_pad_ctx->inject_flags & 0x80)
+                        g_pad_ctx->menu_option_flags |= MENU_OPTION_VIBRATION_ENABLED;
+                        actuator_state->ports[0].small_motor_command = 1;
+                        actuator_state->ports[0].large_motor_command = MENU_SE_VOLUME;
+                        if (g_pad_ctx->inject_flags & MENU_PAD_INJECT_ENABLED)
                         {
-                            var_s4[0x13E] = 1;
-                            var_s4[0x140] = 0x80;
+                            actuator_state->ports[1].small_motor_command = 1;
+                            actuator_state->ports[1].large_motor_command = MENU_SE_VOLUME;
                         }
                         break;
 
                     case 9:
-                        ((u32*)((u8*)g_pad_ctx + 0x28))[0] &= ~1;
-                        var_s4[0x90] = 0;
-                        var_s4[0x13E] = 0;
+                        g_pad_ctx->menu_option_flags &= ~MENU_OPTION_VIBRATION_ENABLED;
+                        actuator_state->ports[0].small_motor_command = 0;
+                        actuator_state->ports[1].small_motor_command = 0;
                         break;
 
                     case 10:
-                        if (var_s4[0xAE] == 0xFF)
+                        if (actuator_state->ports[1].padding0[0] == MENU_NONE)
                         {
-                            s32 clear_i;
                             s32 state_off;
-                            MenuSlot* clear_slot;
 
-                            clear_i = 3;
                             state_off = *((volatile s32*)((u8*)g_menu_state_ptr + 8));
-                            clear_slot = (MenuSlot*)((u32)g_menu_slots + clear_i * sizeof(MenuSlot));
                             g_menu_message_line1 = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 8))) +
                                                    (*((u16*)((u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 8))) + 0xCA)));
                             g_menu_message_line2 = (u8*)g_menu_state_ptr + state_off +
                                                    (*((u16*)((u8*)g_menu_state_ptr + state_off + 0xCC)));
-                            do
-                            {
-                                clear_slot->active = 0;
-                                clear_i--;
-                                clear_slot--;
-                            } while (clear_i >= 0);
+                            MENU_CLEAR_SLOTS()
                             menu_open_content_page(7);
                         }
                         else
                         {
-                            *(volatile u32*)&g_pad_ctx->inject_flags |= 0x80;
+                            inject_flags = &g_pad_ctx->inject_flags;
+                            *inject_flags |= MENU_PAD_INJECT_ENABLED;
                             g_menu_companion_node = 0x2B;
-                            goto set_companion;
+                            menu_set_active_node();
                         }
                         break;
 
                     case 11:
-                        *(volatile u32*)&g_pad_ctx->inject_flags &= ~0x80;
-                        *(u8*)&g_menu_companion_node = 0xFF;
-                    set_companion:
+                        inject_flags = &g_pad_ctx->inject_flags;
+                        *inject_flags &= ~MENU_PAD_INJECT_ENABLED;
+                        g_menu_companion_node = MENU_NONE;
                         menu_set_active_node();
                         break;
                     }
                 }
             }
         }
-        else if (g_pad_input & 0x40)
+        else if (g_pad_input & PAD_BTN_CIRCLE)
         {
-            menu_play_se(0x7F, 0x80);
-            if ((u32)g_menu_scene_type >= 0x11U || (u8)(self_idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx) < 0x14 || (u8)self_idx >= 0x1C)
+            menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
+            if ((u32)g_menu_scene_type >= 0x11U || (u8)(node_self_index = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx) < 0x14 || (u8)node_self_index >= 0x1C)
             {
                 menu_reset_content_view();
             }
             else
             {
-                if ((u32)(self_idx - 0x14) < 5)
+                if ((u32)(node_self_index - 0x14) < 5)
                 {
                     g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 1;
                     g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = (g_menu_char_slot * 3) + 3;
                     menu_focus_active_item();
                 }
-                else if ((u32)(self_idx - 0x1A) < 2)
+                else if ((u32)(node_self_index - 0x1A) < 2)
                 {
                     g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 2;
                     g_menu_nodes[(g_menu_char_slot * 3) + 2].label_id = (g_menu_char_slot * 3) + 3;
@@ -3443,9 +3454,9 @@ after_do_while:
             }
         }
 
-        dir_index = 0;
-        content_type = 0x1000;
-        for (; dir_index < 4; dir_index++)
+        work_index = 0;
+        content_type = PAD_BTN_UP;
+        for (; work_index < MENU_CONTENT_DIRECTION_COUNT; work_index++)
         {
             if (g_pad_input & content_type)
             {
@@ -3454,51 +3465,51 @@ after_do_while:
             content_type <<= 1;
         }
 
-        if (dir_index != 4)
+        if (work_index != MENU_CONTENT_DIRECTION_COUNT)
         {
-            menu_play_se(0x7D, 0x80);
-            if (s5[g_menu_hit_item_idx].pad[1 + dir_index] == 0xFF)
+            menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+            if (content_items[g_menu_hit_item_idx].pad_4[work_index] == MENU_NONE)
             {
                 if ((u32)g_menu_scene_type >= 0x11U || g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x14 ||
                     g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx >= 0x1C)
                 {
                     s32* view_y_ptr = &g_content_view_y;
-                    g_menu_cursor_enable = 2;
-                    nav_nodes = g_menu_nodes;
-                    active_node = &nav_nodes[g_menu_active_node];
-                    { s32 np = (active_node->idx_nav.nav_x_packed >> 15) & 1; s32 ny = active_node->u8_u.s.nav_y_hi; nav_y = (ny << 1) | np; }
-                    nav_hi = g_menu_content_height - 12;
-                    *view_y_ptr = nav_y - nav_hi;
+                    g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT_EXIT;
+                    node_base = g_menu_nodes;
+                    selected_node = &node_base[g_menu_active_node];
+                    { s32 np = (selected_node->idx_nav.nav_x_packed >> 15) & 1; s32 ny = selected_node->u8_u.s.nav_y_hi; node_nav_y = (ny << 1) | np; }
+                    scroll_extent = g_menu_content_height - 12;
+                    *view_y_ptr = node_nav_y - scroll_extent;
                     if (*view_y_ptr < 12)
                     {
-                        *view_y_ptr = 12;
+                        *view_y_ptr = MENU_CURSOR_Y_MIN;
                     }
-                    if (*view_y_ptr >= 0xA3)
+                    if (*view_y_ptr >= MENU_CURSOR_Y_MAX)
                     {
-                        *view_y_ptr = 0xA3;
+                        *view_y_ptr = MENU_CURSOR_Y_MAX;
                     }
                     g_menu_suppress_cursor = 5;
-                    g_content_view_x = ((active_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
+                    g_content_view_x = ((selected_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
                 }
             }
-            else if (s5[g_menu_hit_item_idx].pad[1 + dir_index] != 0)
+            else if (content_items[g_menu_hit_item_idx].pad_4[work_index] != 0)
             {
                 if (g_menu_scene_type < 0x11)
                 {
-                    if ((s5[g_menu_hit_item_idx].packed_x & 0xF000) == 0x5000)
+                    if ((content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_ITEM_TYPE_MASK) == MENU_CONTENT_ITEM_TYPE_SUBMENU)
                     {
                         if (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x11)
                         {
-                            g_menu_item_ptr = (void*)0;
-                            g_menu_category0_item = (void*)0;
-                            g_menu_category2_item = (void*)0;
-                            g_menu_category1_item = (void*)0;
+                            g_menu_item_ptr = (s32)NULL;
+                            g_menu_category0_item = (s32)NULL;
+                            g_menu_category2_item = (s32)NULL;
+                            g_menu_category1_item = (s32)NULL;
                         }
                     }
                 }
-                g_menu_hit_item_idx = s5[g_menu_hit_item_idx].pad[1 + dir_index];
-                g_content_view_x = s5[g_menu_hit_item_idx].packed_x & 0x1FF;
-                g_content_view_y = s5[g_menu_hit_item_idx].y - 8;
+                g_menu_hit_item_idx = content_items[g_menu_hit_item_idx].pad_4[work_index];
+                g_content_view_x = content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_X_MASK;
+                g_content_view_y = content_items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET;
                 g_menu_suppress_cursor = 3;
             }
         }

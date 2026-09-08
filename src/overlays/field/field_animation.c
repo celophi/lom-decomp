@@ -45,12 +45,9 @@ void func_80140D48(void);
  * and queue a VRAM upload (field_queue_vram_upload); sprite/effect nodes tick their
  * counters; sequence nodes advance a small state machine keyed on flags & 3.
  *
- * @note Match is 98.07% (1005/1058 exact rows). The residual is a cluster of
- *       gcc 2.8.0 codegen-boundary phenomena with no known source lever: the
- *       cross-jump tail-merge topology of the case-3/4/5 @c req->data stores and
- *       the coupled branch-delay-slot fill land at different byte offsets, plus
- *       a handful of sched1 slot shifts (the 0x801ED800 address hoist) and
- *       register-coloring residue (the case-5 v/w pair, the 0x798 flags reload).
+ * @note Match is 98.42% (1015 exact target instructions out of 1033).
+ *       Remaining differences are movie-state scheduling and timer-tail merging,
+ *       the strip-loop entry delay slot, and strip-upload tail merging.
  * @note The second strip copy loop must reuse @c count (not a fresh @c i) to
  *       reproduce the target's counter/sentinel register coloring, and the
  *       @c unkD==0 stride count must be spelled @c (unk5 + 1 - state) so gcc
@@ -61,7 +58,7 @@ void func_80140D48(void);
  *       body gives @c req the extra references it needs to win s1 over @c anim
  *       in the global allocator (see working notes).
  *
- * @see decomp.me (98.07%) TODO
+ * @see decomp.me (98.42%) TODO
  */
 void field_update_scene_animations(void)
 {
@@ -164,9 +161,9 @@ void field_update_scene_animations(void)
                             FIELD_MOVIE_STATE->rects[0].x = def2->unkC * 4 + 0x140;
                             FIELD_MOVIE_STATE->rects[0].y = def2->unkD * 0x10 + 0x100;
                             FIELD_MOVIE_STATE->rects[0].w = def2->unkE * 4;
+                            cel = anim->cels;
                             FIELD_MOVIE_STATE->rects[0].h = def2->unkF * 0x10;
                             FIELD_CD_FLAGS &= ~0x40;
-                            cel = anim->cels;
                             if (def->unk1 < 2)
                             {
                                 func_80140358(def->unk1 * 2 + 0x16A6, 1, def->unk5 - 2, cel->active);
@@ -230,7 +227,7 @@ void field_update_scene_animations(void)
                             {
                                 if (def->unk1 >= 2)
                                 {
-                                    func_80059F18();
+                                    field_begin_scene_fade_in();
                                 }
                                 anim->flags.word &= ~0x40;
                                 anim->timer = 1;
@@ -241,7 +238,7 @@ void field_update_scene_animations(void)
                         {
                             if (def->unk1 < 2)
                             {
-                                func_800157B0(2);
+                                set_controller_vsync_interval(2);
                             }
                             func_801406E4();
                             func_80140D48();
@@ -278,7 +275,6 @@ void field_update_scene_animations(void)
                     field_apply_animation_tween(def, anim, 1);
                     break;
                 }
-            }
             if (anim->timer == 0)
             {
                 prev_state = anim->flags.b.state;
@@ -332,6 +328,7 @@ void field_update_scene_animations(void)
                     break;
                 }
             }
+            }
             anim = anim->next;
         } while (anim != NULL);
     }
@@ -358,7 +355,7 @@ void field_update_scene_animations(void)
                         {
                             dst = anim->buf60;
                         }
-                        anim->flags.word = anim->flags.word & ~0x10;
+                        anim->flags.word = *(volatile s32*)&anim->flags.word & ~0x10;
                     }
                     else
                     {
@@ -520,16 +517,17 @@ void field_update_scene_animations(void)
                                 w = v;
                             }
                             req->rect.w = w;
-                            v = (def->unk10 + 0xF) / 0x10;
+                            y = (def->unk10 + 0xF) / 0x10;
                         }
                         else
                         {
+                            v = 0x100;
                             req->rect.x = 0;
-                            req->rect.w = 0x100;
                             req->rect.y = def->unkE + 0x1D8;
-                            v = def->unk10;
+                            req->rect.w = v;
+                            y = def->unk10;
                         }
-                        req->rect.h = v;
+                        req->rect.h = y;
                         field_queue_vram_upload(req);
                     } while (0);
                     break;
