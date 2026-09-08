@@ -242,21 +242,21 @@
     s32 _link; \
     s32 _word_prev; \
     _j = 0; \
-    do \
+    while (_j < 2) \
     { \
         s32 _cur = g_menu_item_nav_entries[_j]; \
         s32 _word_self; \
         _prev = 1; \
-        _link = _cur & ~0x3FFF; \
-        _link = _link | ((_j * 0x10) & 0x3FFF); \
+        _link = _cur & ~MENU_ITEM_NAV_POSITION_MASK; \
+        _link = _link | ((_j * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK); \
         _word_self = _link; \
         g_menu_item_nav_entries[_j] = _word_self; \
         if ((_j - 1) >= 0) \
         { \
             _prev = _j - 1; \
         } \
-        _word_prev = _word_self & 0xFF803FFF; \
-        _word_prev = _word_prev | ((_prev & 0x1FF) << 14); \
+        _word_prev = _word_self & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK; \
+        _word_prev = _word_prev | ((_prev & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT); \
         g_menu_item_nav_entries[_j] = _word_prev; \
         _next = _j + 1; \
         _more = _next < 2; \
@@ -265,9 +265,9 @@
         { \
             _link = _next; \
         } \
-        g_menu_item_nav_entries[_j] = (_word_prev & 0x7FFFFF) | (_link << 23); \
+        g_menu_item_nav_entries[_j] = (_word_prev & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (_link << MENU_ITEM_NAV_NEXT_SHIFT); \
         _j = _next; \
-    } while (_more != 0); \
+    } \
 }
 
 /* Memory-card file layout and open flags. */
@@ -3841,36 +3841,33 @@ s32 menu_build_special_technique_nav_entries(void)
     g_menu_scroll_nav_entries[0] = 0;
 
     j = 0;
-    if (count > 0)
+    while (j < count)
     {
-        do
-        {
-            s32* slot = (s32*)g_menu_scroll_nav_entries + j;
-            s32 cur = *slot;
-            s32 word_self;
+        s32* slot = (s32*)g_menu_scroll_nav_entries + j;
+        s32 cur = *slot;
+        s32 word_self;
 
-            prev = j - 1;
-            link = cur & ~0x3FFF;
-            link = link | ((j * 0x10) & 0x3FFF);
-            word_self = link;
-            *slot = word_self;
-            if (prev < 0)
-            {
-                prev = count - 1;
-            }
-            word_prev = word_self & 0xFF803FFF;
-            word_prev = word_prev | ((prev & 0x1FF) << 14);
-            *slot = word_prev;
-            next = j + 1;
-            more = next < count;
-            link = 0;
-            if (more != 0)
-            {
-                link = next;
-            }
-            *slot = (word_prev & 0x7FFFFF) | (link << 23);
-            j = next;
-        } while (more != 0);
+        prev = j - 1;
+        link = cur & ~MENU_ITEM_NAV_POSITION_MASK;
+        link = link | ((j * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        word_self = link;
+        *slot = word_self;
+        if (prev < 0)
+        {
+            prev = count - 1;
+        }
+        word_prev = word_self & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+        word_prev = word_prev | ((prev & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+        *slot = word_prev;
+        next = j + 1;
+        more = next < count;
+        link = 0;
+        if (more != 0)
+        {
+            link = next;
+        }
+        *slot = (word_prev & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (link << MENU_ITEM_NAV_NEXT_SHIFT);
+        j = next;
     }
     return count | (found << 16);
 }
@@ -3913,36 +3910,33 @@ s32 menu_build_inventory_nav_entries(s32 arg0)
     g_menu_scroll_nav_entries[0] = 0;
 
     i = 0;
-    if (count > 0)
+    while (i < count)
     {
-        do
-        {
-            s32* slot = (s32*)g_menu_scroll_nav_entries + i;
-            s32 cur = *slot;
-            s32 word_self;
+        s32* slot = (s32*)g_menu_scroll_nav_entries + i;
+        s32 cur = *slot;
+        s32 word_self;
 
-            prev = i - 1;
-            link = cur & ~0x3FFF;
-            link = link | ((i * 0x10) & 0x3FFF);
-            word_self = link;
-            *slot = word_self;
-            if (prev < 0)
-            {
-                prev = count - 1;
-            }
-            word_prev = word_self & 0xFF803FFF;
-            word_prev = word_prev | ((prev & 0x1FF) << 14);
-            *slot = word_prev;
-            next = i + 1;
-            more = next < count;
-            link = 0;
-            if (more != 0)
-            {
-                link = next;
-            }
-            *slot = (word_prev & 0x7FFFFF) | (link << 23);
-            i = next;
-        } while (more != 0);
+        prev = i - 1;
+        link = cur & ~MENU_ITEM_NAV_POSITION_MASK;
+        link = link | ((i * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        word_self = link;
+        *slot = word_self;
+        if (prev < 0)
+        {
+            prev = count - 1;
+        }
+        word_prev = word_self & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+        word_prev = word_prev | ((prev & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+        *slot = word_prev;
+        next = i + 1;
+        more = next < count;
+        link = 0;
+        if (more != 0)
+        {
+            link = next;
+        }
+        *slot = (word_prev & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (link << MENU_ITEM_NAV_NEXT_SHIFT);
+        i = next;
     }
     return count;
 }
@@ -6430,7 +6424,6 @@ s32 menu_draw_node_recursive(s32 arg0, s32 arg1, s32* arg2)
     s32 buf;
     int new_var2;
     int new_var3;
-    int new_var;
 
     new_var3 = 3;
     *((&g_menu_nav_first) + g_menu_nav_count) = arg0;
@@ -6505,9 +6498,9 @@ s32 menu_draw_node_recursive(s32 arg0, s32 arg1, s32* arg2)
             s32 j = 0;
             s32 sentinel;
             new_var4 = node2;
-            for (; j < 4; j++)
+            for (; j < MENU_MAX_CHILDREN; j++)
             {
-                sentinel = 0xFF;
+                sentinel = MENU_NONE;
                 if (*((u8*)new_var4 + j + 0xB) == (u8)sentinel)
                 {
                     break;
@@ -6650,14 +6643,14 @@ s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries
             {
                 if (g_pad_input & PADLup)
                 {
-                    state->sel_idx = (entries[state->sel_idx] >> 14) & 0x1FF;
+                    state->sel_idx = (entries[state->sel_idx] >> MENU_ITEM_NAV_PREVIOUS_SHIFT) & MENU_ITEM_NAV_INDEX_MASK;
                 }
                 else
                 {
-                    state->sel_idx = entries[state->sel_idx] >> 23;
+                    state->sel_idx = entries[state->sel_idx] >> MENU_ITEM_NAV_NEXT_SHIFT;
                 }
                 scroll_list_update_target(state, entries);
-                if (state->sel_idx == ((state->item_count & 0x1FF) - 1))
+                if (state->sel_idx == ((state->item_count & MENU_ITEM_NAV_INDEX_MASK) - 1))
                 {
                     count = 1;
                 }
@@ -6679,9 +6672,9 @@ s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries
         }
     }
     prim_buf =
-        menu_emit_cursor(prim_buf, ot, (4 - view_origin->x) - state->scroll_x, ((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y, active);
+        menu_emit_cursor(prim_buf, ot, (4 - view_origin->x) - state->scroll_x, ((entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK) - view_origin->y) - state->scroll_y, active);
     g_menu_default_view_pos.x = (state->base_x + ((4 - (view_origin->x & 0xFFFFFFFF)) - state->scroll_x)) + 8;
-    g_menu_default_view_pos.y = (state->base_y + (((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y)) + 8;
+    g_menu_default_view_pos.y = (state->base_y + (((entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK) - view_origin->y) - state->scroll_y)) + 8;
     return prim_buf;
 }
 
@@ -6703,12 +6696,12 @@ void scroll_list_update_target(ScrollListState* state, u32* entries)
         state->target_x = 4;
     }
 
-    if ((s32)((entries[state->sel_idx] & 0x3FFF) - state->scroll_y) > state->viewport_h - 0x20)
+    if ((s32)((entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK) - state->scroll_y) > state->viewport_h - 0x20)
     {
-        state->target_y = (entries[state->sel_idx] & 0x3FFF) - state->viewport_h + 0x20;
+        state->target_y = (entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK) - state->viewport_h + 0x20;
     }
 
-    item_y = entries[state->sel_idx] & 0x3FFF;
+    item_y = entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK;
     if (item_y - state->scroll_y < 0)
     {
         state->target_y = item_y;
@@ -8857,83 +8850,79 @@ void menu_open_content_page(u32 content_id)
  */
 s32 menu_build_equipment_nav_entries(void)
 {
-    s32 temp_a1;
-    s32 temp_a3;
-    s32 temp_v1;
-    s32 var_a2;
-    s32 var_v1;
-    s32* temp_t0;
+    s32 has_next;
+    s32 entry_with_position;
+    s32 previous_index;
+    s32 wrapped_next_index;
+    s32* entry;
 
-    s32 tmp;
-    s32 tmp2;
-    s32 tmp3;
+    s32 packed_entry;
+    s32 position;
+    s32 entry_with_previous;
 
-    s32 count;
+    s32 item_count;
     s32 i;
     s32 j;
-    u32 word;
+    u32 working_value;
     s32 mask;
 
-    count = 0;
-    i = count;
+    item_count = 0;
+    i = item_count;
     mask = 0xF;
     do
     {
-        word = *(u32*)((u8*)g_pad_ctx + (i * 4) + 0x104);
+        working_value = *(u32*)((u8*)g_pad_ctx + (i * 4) + 0x104);
         j = 7;
         do
         {
-            if ((word & mask) >= 2)
+            if ((working_value & mask) >= 2)
             {
-                count += 1;
+                item_count += 1;
             }
             j -= 1;
-            word = word >> 4;
+            working_value = working_value >> 4;
         } while (j >= 0);
         i += 1;
     } while (i < 0x10);
 
     g_menu_scroll_nav_entries[0] = 0;
     j = 0;
-    if (count > 0)
+    while (j < item_count)
     {
-        do
+        entry = (s32*)g_menu_scroll_nav_entries + j;
+
+        packed_entry = *entry;
+        previous_index = j - 1;
+
+        entry_with_position = (packed_entry & ~MENU_ITEM_NAV_POSITION_MASK);
+
+        position = (j * MENU_ITEM_NAV_POSITION_STRIDE);
+        position = position & MENU_ITEM_NAV_POSITION_MASK;
+
+        entry_with_position = entry_with_position | position;
+        *entry = entry_with_position;
+
+        if (previous_index < 0)
         {
-            temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
+            previous_index = item_count - 1;
+        }
 
-            tmp = *temp_t0;
-            var_a2 = j - 1;
+        working_value = previous_index;
+        entry_with_previous = (entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK);
 
-            temp_v1 = (tmp & ~0x3FFF);
+        entry_with_previous = entry_with_previous | ((working_value & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
 
-            tmp2 = (j * 0x10);
-            tmp2 = tmp2 & 0x3FFF;
-
-            temp_v1 = temp_v1 | tmp2;
-            *temp_t0 = temp_v1;
-
-            if (var_a2 < 0)
-            {
-                var_a2 = count - 1;
-            }
-
-            word = var_a2;
-            tmp3 = (temp_v1 & 0xFF803FFF);
-
-            tmp3 = tmp3 | ((word & 0x1FF) << 0xE);
-
-            *temp_t0 = tmp3;
-            j += 1;
-            temp_a3 = j < count;
-            var_v1 = 0;
-            if (temp_a3 != 0)
-            {
-                var_v1 = j;
-            }
-            *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
-        } while (temp_a3 != 0);
+        *entry = entry_with_previous;
+        j += 1;
+        has_next = j < item_count;
+        wrapped_next_index = 0;
+        if (has_next != 0)
+        {
+            wrapped_next_index = j;
+        }
+        *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
     }
-    return count;
+    return item_count;
 }
 
 /**
@@ -8942,80 +8931,74 @@ s32 menu_build_equipment_nav_entries(void)
  */
 s32 menu_build_key_item_nav_entries(void)
 {
-    s32 temp_a1;
-    s32 temp_a3;
-    s32 temp_v1;
-    s32 var_a2;
-    s32 var_v1;
-    s32* temp_t0;
+    s32 next_index;
+    s32 has_next;
+    s32 entry_with_position;
+    s32 previous_index;
+    s32 wrapped_next_index;
+    s32* entry;
 
-    s32 tmp;
-    s32 tmp2;
-    s32 tmp3;
+    s32 packed_entry;
+    s32 position;
+    s32 entry_with_previous;
 
-    s32 count;
-    s32 i;
-    s32 j;
-    u8* p;
+    s32 item_count;
+    s32 remaining;
+    s32 entry_index;
+    u8* item_count_ptr;
 
-    count = 0;
+    item_count = 0;
     ((u8*)g_pad_ctx)[0x26DF] = 0;
-    p = (u8*)g_pad_ctx + 0x25E0;
-    i = 0xFF;
+    item_count_ptr = (u8*)g_pad_ctx + 0x25E0;
+    remaining = 0xFF;
     do
     {
-        if (*p != 0)
+        if (*item_count_ptr != 0)
         {
-            count += 1;
+            item_count += 1;
         }
-        i -= 1;
-        p += 1;
-    } while (i >= 0);
+        remaining -= 1;
+        item_count_ptr += 1;
+    } while (remaining >= 0);
 
     g_menu_scroll_nav_entries[0] = 0;
-    j = 0;
-    if (count > 0)
+    entry_index = 0;
+    while (entry_index < item_count)
     {
-        do
+        entry = (s32*)g_menu_scroll_nav_entries + entry_index;
+
+        packed_entry = *entry;
+        previous_index = entry_index - 1;
+
+        entry_with_position = (packed_entry & ~MENU_ITEM_NAV_POSITION_MASK);
+
+        position = (entry_index * MENU_ITEM_NAV_POSITION_STRIDE);
+        position = position & MENU_ITEM_NAV_POSITION_MASK;
+
+        entry_with_position = entry_with_position | position;
+        *entry = entry_with_position;
+
+        if (previous_index < 0)
         {
-        do
+            previous_index = item_count - 1;
+        }
+
+        entry_with_previous = (entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK);
+
+        entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+
+        *entry = entry_with_previous;
+        next_index = entry_index + 1;
+        has_next = next_index < item_count;
+        wrapped_next_index = 0;
+        if (has_next != 0)
         {
-            temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
-
-            tmp = *temp_t0;
-            var_a2 = j - 1;
-
-            temp_v1 = (tmp & ~0x3FFF);
-
-            tmp2 = (j * 0x10);
-            tmp2 = tmp2 & 0x3FFF;
-
-            temp_v1 = temp_v1 | tmp2;
-            *temp_t0 = temp_v1;
-
-            if (var_a2 < 0)
-            {
-                var_a2 = count - 1;
-            }
-
-            tmp3 = (temp_v1 & 0xFF803FFF);
-
-            tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
-
-            *temp_t0 = tmp3;
-            temp_a1 = j + 1;
-            temp_a3 = temp_a1 < count;
-            var_v1 = 0;
-            if (temp_a3 != 0)
-            {
-                var_v1 = temp_a1;
-            }
-            *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
-            j = temp_a1;
-        } while (temp_a3 != 0);
-        } while (0);
+            wrapped_next_index = next_index;
+        }
+        *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
+        entry_index = next_index;
     }
-    return count;
+    return item_count;
 }
 
 /**
@@ -9024,73 +9007,73 @@ s32 menu_build_key_item_nav_entries(void)
  */
 s32 menu_build_ability_nav_entries(void)
 {
-    s32 temp_a1;
-    s32 temp_a3;
-    s32 temp_v1;
-    s32 var_a2;
-    s32 var_v1;
-    s32* temp_t0;
+    s32 next_index;
+    s32 has_next;
+    s32 entry_with_position;
+    s32 previous_index;
+    s32 wrapped_next_index;
+    s32* entry;
 
-    s32 tmp;
-    s32 tmp2;
-    s32 tmp3;
+    s32 packed_entry;
+    s32 position;
+    s32 entry_with_previous;
 
-    s32 count;
-    s32 i;
-    s32 j;
-    u8* p;
+    s32 item_count;
+    s32 remaining;
+    s32 entry_index;
+    u8* record;
 
-    count = 0;
-    p = (u8*)g_pad_ctx + 0x2F0;
-    i = 0x3F;
+    item_count = 0;
+    record = (u8*)g_pad_ctx + 0x2F0;
+    remaining = 0x3F;
     do
     {
-        if (*p & 1)
+        if (*record & 1)
         {
-            count += 1;
+            item_count += 1;
         }
-        i -= 1;
-        p += 0xC;
-    } while (i >= 0);
+        remaining -= 1;
+        record += 0xC;
+    } while (remaining >= 0);
 
     g_menu_scroll_nav_entries[0] = 0;
-    j = 0;
-    while (j < count)
+    entry_index = 0;
+    while (entry_index < item_count)
     {
-        temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
+        entry = (s32*)g_menu_scroll_nav_entries + entry_index;
 
-        tmp = *temp_t0;
-        var_a2 = j - 1;
+        packed_entry = *entry;
+        previous_index = entry_index - 1;
 
-        temp_v1 = (tmp & ~0x3FFF);
+        entry_with_position = (packed_entry & ~MENU_ITEM_NAV_POSITION_MASK);
 
-        tmp2 = (j * 0x10);
-        tmp2 = tmp2 & 0x3FFF;
+        position = (entry_index * MENU_ITEM_NAV_POSITION_STRIDE);
+        position = position & MENU_ITEM_NAV_POSITION_MASK;
 
-        temp_v1 = temp_v1 | tmp2;
-        *temp_t0 = temp_v1;
+        entry_with_position = entry_with_position | position;
+        *entry = entry_with_position;
 
-        if (var_a2 < 0)
+        if (previous_index < 0)
         {
-            var_a2 = count - 1;
+            previous_index = item_count - 1;
         }
 
-        tmp3 = (temp_v1 & 0xFF803FFF);
+        entry_with_previous = (entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK);
 
-        tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
+        entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
 
-        *temp_t0 = tmp3;
-        temp_a1 = j + 1;
-        temp_a3 = temp_a1 < count;
-        var_v1 = 0;
-        if (temp_a3 != 0)
+        *entry = entry_with_previous;
+        next_index = entry_index + 1;
+        has_next = next_index < item_count;
+        wrapped_next_index = 0;
+        if (has_next != 0)
         {
-            var_v1 = temp_a1;
+            wrapped_next_index = next_index;
         }
-        *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
-        j = temp_a1;
+        *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
+        entry_index = next_index;
     }
-    return count;
+    return item_count;
 }
 
 
