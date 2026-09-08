@@ -496,6 +496,11 @@ void addhero_build_ui_elements(void)
     g_addhero_element_pool.first.attr.f.state = 0;
 }
 
+/**
+ * @brief Run one frame of overlay logic: update elements, advance the load
+ *        sequence when armed, sample pad input, and step the scroll animation.
+ * @see decomp.me (100%)
+ */
 void addhero_update_state(void)
 {
     s32 delta;
@@ -524,7 +529,13 @@ void addhero_update_state(void)
     }
 }
 
-/** @see decomp.me (100%) */
+/**
+ * @brief Drive the card load/scan state machine one frame, mapping its result
+ *        code onto the next load step and any error entry-state sentinel.
+ * @return Unused; declared s32 for the original signature but falls through
+ *         without an explicit return value.
+ * @see decomp.me (100%)
+ */
 s32 addhero_update_load_sequence(void)
 {
     s32 result;
@@ -581,6 +592,13 @@ s32 addhero_update_load_sequence(void)
     }
 }
 
+/**
+ * @brief Handle browser pad input: exit/back, list navigation, entry
+ *        selection, and launching the load prompt for a compatible save.
+ * @return Unused; declared s32 for the original signature but every path
+ *         returns via a bare return with no value.
+ * @see decomp.me (100%)
+ */
 s32 addhero_handle_input(void)
 {
     s32 pending;
@@ -693,7 +711,11 @@ s32 addhero_handle_input(void)
     }
 }
 
-/** @see decomp.me (100%) */
+/**
+ * @brief Reset scroll/selection state and flip to the other card slot, then
+ *        clear ranks and pad input to restart browsing.
+ * @see decomp.me (100%)
+ */
 void addhero_reset_state(void)
 {
     D_801609B4 = 0;
@@ -710,6 +732,11 @@ void addhero_reset_state(void)
     g_pad_input = 0;
 }
 
+/**
+ * @brief Put every active pool element into the closing transition (state 3,
+ *        phase 0x40) so they animate out.
+ * @see decomp.me (100%)
+ */
 void addhero_close_all_elements(void)
 {
     s32 temp_v1;
@@ -733,6 +760,11 @@ void addhero_close_all_elements(void)
     } while (var_a1 < 8);
 }
 
+/**
+ * @brief Retarget the list scroll so the selected row stays on screen,
+ *        animating over four frames when it falls above or below the window.
+ * @see decomp.me (100%)
+ */
 void addhero_scroll_to_selection(void)
 {
     s32 index;
@@ -759,11 +791,27 @@ void addhero_scroll_to_selection(void)
     }
 }
 
+/**
+ * @brief Thin wrapper that runs the element update/draw pass on the active
+ *        draw state.
+ * @see decomp.me (100%)
+ */
 void addhero_update_elements(void)
 {
     addhero_update_and_draw_elements();
 }
 
+/**
+ * @brief Draw the save-entry browser: status/error screens by entry-state
+ *        sentinel, the per-row entry list with rank glyphs, and the selection
+ *        highlight tile.
+ * @param ot   Ordering table the primitives are linked into.
+ * @param prim Current primitive pointer/index within the ordering table.
+ * @param arg2 Horizontal offset; screen X is derived from it.
+ * @param arg3 Vertical offset applied to each row.
+ * @return The updated primitive pointer after linking this frame's glyphs.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     s32 state = g_addhero_entry_state;
@@ -889,6 +937,15 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     return prim;
 }
 
+/**
+ * @brief Draw the header glyph that reflects the current mode (load vs save).
+ * @param ot   Ordering table the glyph is linked into.
+ * @param prim Current primitive pointer/index.
+ * @param arg2 Horizontal offset; screen X is derived from it.
+ * @param arg3 Vertical offset.
+ * @return The updated primitive pointer.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
@@ -904,6 +961,16 @@ s32 addhero_draw_mode_glyph(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     return prim;
 }
 
+/**
+ * @brief Draw the slot-0 card label, dimming it with a backing tile when that
+ *        slot is not the active one.
+ * @param ot   Ordering table the primitives are linked into.
+ * @param prim Current primitive pointer/index.
+ * @param arg2 Horizontal offset; screen X is derived from it.
+ * @param arg3 Vertical offset.
+ * @return The updated primitive pointer.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
@@ -926,6 +993,16 @@ s32 addhero_draw_card_slot0_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     return func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB0, 0xC), 4, -arg2 + 0x40, -arg3, 2);
 }
 
+/**
+ * @brief Draw the slot-1 card label, dimming it with a backing tile when that
+ *        slot is not the active one.
+ * @param ot   Ordering table the primitives are linked into.
+ * @param prim Current primitive pointer/index.
+ * @param arg2 Horizontal offset; screen X is derived from it.
+ * @param arg3 Vertical offset.
+ * @return The updated primitive pointer.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
@@ -948,6 +1025,17 @@ s32 addhero_draw_card_slot1_label(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     return func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB2, 0xE), 4, -arg2 + 0x40, -arg3, 2);
 }
 
+/**
+ * @brief Draw the detail panel for the selected entry: animated character
+ *        icons, play-time, hero name, and either the cached name text or a
+ *        fallback message depending on entry type.
+ * @param ot   Ordering table the primitives are linked into.
+ * @param prim Current primitive pointer/index.
+ * @param arg2 Horizontal offset; screen X is derived from it.
+ * @param arg3 Vertical offset.
+ * @return The updated primitive pointer.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     s32 result;
@@ -1132,6 +1220,13 @@ s32 addhero_draw_selected_entry_details(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     return result;
 }
 
+/**
+ * @brief Advance past a run of hex digit characters (0-9, a-f, A-F) and return
+ *        the pointer to the first non-hex byte.
+ * @param arg0 Start of the text to scan.
+ * @return Pointer to the first byte that is not a hex digit.
+ * @see decomp.me (100%)
+ */
 u8 *addhero_skip_hex_digits(void *arg0)
 {
     u8 *p;
@@ -1181,6 +1276,12 @@ u8 *addhero_skip_hex_digits(void *arg0)
     return p;
 }
 
+/**
+ * @brief Zero-fill a 0x40-byte text field from the first null byte onward,
+ *        walking multibyte (>= 0x80 lead) characters two bytes at a time.
+ * @param arg0 Start of the 0x40-byte text buffer to terminate/clear.
+ * @see decomp.me (100%)
+ */
 void addhero_terminate_multibyte_text(void *arg0)
 {
     u8 *p;
@@ -1217,7 +1318,11 @@ void addhero_terminate_multibyte_text(void *arg0)
     }
 }
 
-/** @see decomp.me (100%) */
+/**
+ * @brief Clear the eight-element pool: drop the ADDHERO flag and free (state 0)
+ *        every element, and reset the shared draw scale to 0x20.
+ * @see decomp.me (100%)
+ */
 void addhero_clear_elements(void)
 {
     AddheroPacket *p;
@@ -1233,6 +1338,11 @@ void addhero_clear_elements(void)
     }
 }
 
+/**
+ * @brief Claim the first free pool element, marking it state 1 (opening).
+ * @return The claimed element, or the pool base element when none are free.
+ * @see decomp.me (100%)
+ */
 AddheroElement *addhero_alloc_element(void)
 {
     AddheroWordPacket *p;
@@ -1250,6 +1360,13 @@ AddheroElement *addhero_alloc_element(void)
     return (AddheroElement *)&g_addhero_element_pool.first;
 }
 
+/**
+ * @brief Update and render every active pool element: draw scroll arrows, run
+ *        each element's per-state transition (open/hold/close), invoke its draw
+ *        callback, and advance the shared primitive cursor.
+ * @param arg0 Draw state holding the primitive cursor and frame flag.
+ * @see decomp.me (100%)
+ */
 void addhero_update_and_draw_elements(AddheroDrawState *arg0)
 {
     AddheroGpuPacket *var_s0;
@@ -1465,11 +1582,22 @@ void addhero_update_and_draw_elements(AddheroDrawState *arg0)
     arg0->prim_cursor = var_s0;
 }
 
+/**
+ * @brief Free the primary pool element by clearing its state bits.
+ * @see decomp.me (100%)
+ */
 void addhero_deactivate_primary_element(void)
 {
     g_addhero_element_pool.first.attr.word &= ~7;
 }
 
+/**
+ * @brief Append the multibyte string @p arg1 onto the end of @p arg0 and
+ *        null-terminate the result.
+ * @param arg0 Destination string; appended to in place.
+ * @param arg1 Source string copied onto the end of @p arg0.
+ * @see decomp.me (100%)
+ */
 void addhero_text_append(u8 *arg0, u8 *arg1)
 {
     s32 temp_s0;
@@ -1485,6 +1613,13 @@ void addhero_text_append(u8 *arg0, u8 *arg1)
     arg0[temp_s0 + i] = 0;
 }
 
+/**
+ * @brief Measure the byte length of a string, counting characters in the
+ *        0x19-0x1F lead range as two bytes.
+ * @param arg0 Null-terminated string to measure.
+ * @return Length in bytes, excluding the terminator.
+ * @see decomp.me (100%)
+ */
 s32 addhero_text_byte_length(u8 *arg0)
 {
     u8 *p;
@@ -1511,6 +1646,13 @@ s32 addhero_text_byte_length(u8 *arg0)
     return len;
 }
 
+/**
+ * @brief Copy a multibyte string, counting 0x19-0x1F lead bytes as two-byte
+ *        characters when computing its length, and null-terminate the result.
+ * @param arg0 Destination buffer.
+ * @param arg1 Source string to copy.
+ * @see decomp.me (100%)
+ */
 void addhero_text_copy(u8 *arg0, u8 *arg1)
 {
     u8 *p;
@@ -1541,6 +1683,17 @@ void addhero_text_copy(u8 *arg0, u8 *arg1)
     arg0[i] = 0;
 }
 
+/**
+ * @brief Draw the load confirmation prompt and its yes/no choice, then act on
+ *        input: cancel/back to the browser, or accept and swap this element to
+ *        the load-progress bar.
+ * @param ot   Ordering table the primitives are linked into.
+ * @param prim Current primitive pointer/index.
+ * @param arg2 Horizontal offset; screen X = 0x90 - arg2.
+ * @param arg3 Vertical offset applied to the prompt rows.
+ * @return The updated primitive pointer after linking the prompt.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
@@ -1612,6 +1765,7 @@ s32 addhero_draw_load_prompt(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  * @param arg2 Horizontal offset used to place the prompt (screen X = 0x90 - arg2).
  * @param arg3 Vertical offset used to place the prompt rows.
  * @return The updated primitive pointer / index after linking the prompt.
+ * @see decomp.me (100%)
  */
 s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
@@ -1668,6 +1822,14 @@ s32 addhero_draw_load_progress(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     return result;
 }
 
+/**
+ * @brief Draw the gradient progress bar whose width tracks elapsed ticks, when
+ *        the bar is active.
+ * @param arg0 Current primitive pointer/index the POLY_G4 is written to.
+ * @param arg1 Ordering table the primitive is linked into.
+ * @return The advanced primitive pointer, unchanged when the bar is inactive.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_progress_bar(s32 arg0, s32 *arg1)
 {
     POLY_G4 *g;
@@ -1710,6 +1872,12 @@ s32 addhero_draw_progress_bar(s32 arg0, s32 *arg1)
     return arg0;
 }
 
+/**
+ * @brief Reconfigure the primary element as a modal status dialog and reset the
+ *        browser/IO state, storing the dialog message id.
+ * @param arg0 Dialog message id stored in g_addhero_dialog_state.
+ * @see decomp.me (100%)
+ */
 void addhero_open_status_dialog(s32 arg0)
 {
     func_800A3938(0x78, 0x80);
@@ -1733,7 +1901,9 @@ void addhero_open_status_dialog(s32 arg0)
 }
 
 /**
- * @brief Initialize the secondary choice element and reset its transition state.
+ * @brief Reconfigure the primary element as a modal exit dialog and reset the
+ *        browser/IO state, storing the dialog message id.
+ * @param arg0 Dialog message id stored in g_addhero_dialog_state.
  * @see decomp.me (100%)
  */
 void addhero_open_exit_dialog(s32 arg0)
@@ -1757,6 +1927,16 @@ void addhero_open_exit_dialog(s32 arg0)
     g_addhero_dialog_state = arg0;
 }
 
+/**
+ * @brief Draw the status dialog message for the current dialog state and close
+ *        the element once the player acknowledges it.
+ * @param ot   Ordering table the message glyph is linked into.
+ * @param prim Current primitive pointer/index.
+ * @param arg2 Horizontal offset; screen X is derived from it.
+ * @param arg3 Vertical offset.
+ * @return The updated primitive pointer.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
@@ -1785,7 +1965,16 @@ s32 addhero_draw_status_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     return prim;
 }
 
-/** @see decomp.me (100%) */
+/**
+ * @brief Draw the exit dialog message and, on acknowledge, tear down all
+ *        elements and request the overlay to exit with result 3.
+ * @param ot   Ordering table the message glyph is linked into.
+ * @param prim Current primitive pointer/index.
+ * @param arg2 Horizontal offset; screen X is derived from it.
+ * @param arg3 Vertical offset.
+ * @return The updated primitive pointer.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
@@ -1825,6 +2014,17 @@ s32 addhero_draw_exit_dialog(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     return prim;
 }
 
+/**
+ * @brief Transfer-mode driver/renderer: draws the message for the current
+ *        entry-state sentinel, runs the load/save confirm and progress steps,
+ *        and handles cancel/back input.
+ * @param ot   Ordering table the primitives are linked into.
+ * @param prim Current primitive pointer/index.
+ * @param arg2 Horizontal offset; screen X = 0x90 - arg2.
+ * @param arg3 Vertical offset applied to the message rows.
+ * @return The updated primitive pointer.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
 {
     RECT pos;
@@ -2039,6 +2239,21 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     return prim;
 }
 
+/**
+ * @brief Blit one character-slot icon into VRAM and emit the highlighted
+ *        textured quad for it in the detail panel.
+ * @param result Current primitive pointer/index the POLY_FT4 is written to.
+ * @param ot     Ordering table the quad is linked into.
+ * @param x      Left edge of the quad.
+ * @param y      Top edge of the quad.
+ * @param adjust Width added to the base quad for the highlight animation.
+ * @param slot   Character/icon id for this position (0x7F means empty).
+ * @param i      Index among the present (non-empty) slots.
+ * @param j      Index among all three slots.
+ * @return The advanced primitive pointer (result + 0x28), or @p result when the
+ *         slot is empty.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_icon_highlight(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s32 slot, s32 i, s32 j)
 {
     RECT rect;
@@ -2095,11 +2310,25 @@ s32 addhero_draw_icon_highlight(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s
     return result + 0x28;
 }
 
+/**
+ * @brief Select the second (cancel) option as the default choice.
+ * @see decomp.me (100%)
+ */
 void addhero_enable_choice_toggle(void)
 {
     g_addhero_choice_toggle = 1;
 }
 
+/**
+ * @brief Draw the two-option (yes/no) choice glyphs, highlighting the current
+ *        selection, and flip the selection on left/right pad input.
+ * @param prim Current primitive pointer/index.
+ * @param ot   Ordering table the glyphs are linked into.
+ * @param x    Center X the two options are placed around.
+ * @param y    Baseline Y for both options.
+ * @return The updated primitive pointer.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_choice_prompt(s32 prim, s32 *ot, s32 x, s32 y)
 {
     u8 *p;
@@ -2135,6 +2364,13 @@ s32 addhero_draw_choice_prompt(s32 prim, s32 *ot, s32 x, s32 y)
     return prim;
 }
 
+/**
+ * @brief Validate a loaded save blob by checking its stored checksum and the
+ *        "ANA" magic tag.
+ * @param base Base of the 0x4000-byte save blob.
+ * @return 1 when the checksum and magic both match, 0 otherwise.
+ * @see decomp.me (100%)
+ */
 s32 addhero_validate_save_blob(u8 *base)
 {
     if (*(s32 *)(base + 0x33E0) == addhero_compute_save_checksum(base))
@@ -2147,6 +2383,12 @@ s32 addhero_validate_save_blob(u8 *base)
     return 0;
 }
 
+/**
+ * @brief Compute the save-blob checksum over the first 0x33E0 bytes.
+ * @param data Base of the save blob.
+ * @return The checksum: (byte sum * 2) + 0x0414E410.
+ * @see decomp.me (100%)
+ */
 s32 addhero_compute_save_checksum(u8 *data)
 {
     s32 sum;
@@ -2165,6 +2407,14 @@ s32 addhero_compute_save_checksum(u8 *data)
     return (sum * 2) + 0x0414E410;
 }
 
+/**
+ * @brief Format @p value as a big-endian double-byte decimal glyph string,
+ *        suppressing leading zeros; emits a fixed overflow string past 999999.
+ * @param out   Destination glyph buffer.
+ * @param value Value to format.
+ * @return Pointer to the terminator written after the last glyph.
+ * @see decomp.me (100%)
+ */
 s8 *addhero_format_decimal(s8 *out, s32 value)
 {
     struct Copy7 { s8 data[7]; };
@@ -2209,6 +2459,14 @@ format:
     return p;
 }
 
+/**
+ * @brief Format @p value as an ASCII hex string of up to @p max_chars digits,
+ *        suppressing leading zeros, and null-terminate it.
+ * @param out       Destination character buffer.
+ * @param value     Value to format.
+ * @param max_chars Maximum number of hex digits to emit.
+ * @see decomp.me (100%)
+ */
 void addhero_format_hex(s8 *out, s32 value, s32 max_chars)
 {
     s32 nibble;
@@ -2262,6 +2520,13 @@ loop_2:
     *cursor = 0;
 }
 
+/**
+ * @brief Write one nibble as its ASCII hex digit ('0'-'9', 'A'-'F'), or '_' for
+ *        out-of-range values.
+ * @param out   Destination byte.
+ * @param value Nibble value to convert.
+ * @see decomp.me (100%)
+ */
 void addhero_hex_nibble_to_ascii(s8 *out, s32 value)
 {
     if (value < 10)
@@ -2278,6 +2543,13 @@ void addhero_hex_nibble_to_ascii(s8 *out, s32 value)
     }
 }
 
+/**
+ * @brief Parse up to @p len leading hex digits from @p s into an integer.
+ * @param s   Text to parse.
+ * @param len Maximum number of hex digits to consume.
+ * @return The parsed value; 0 when no hex digits are present.
+ * @see decomp.me (100%)
+ */
 u32 addhero_parse_hex(u8 *s, s32 len)
 {
     u32 result;
@@ -2314,6 +2586,13 @@ u32 addhero_parse_hex(u8 *s, s32 len)
     return result;
 }
 
+/**
+ * @brief Skip the leading hex-digit run of a field, then parse the next two hex
+ *        digits (the suffix byte) that follow it.
+ * @param text Field text to scan.
+ * @return The parsed two-digit suffix byte value.
+ * @see decomp.me (100%)
+ */
 s32 addhero_parse_hex_suffix_byte(u8 *text)
 {
     u32 c;
@@ -2669,6 +2948,15 @@ void func_800167DC(s32 a);
 void func_800167EC(void);
 void func_800167FC(void);
 
+/**
+ * @brief Rank the current card's entries by parsed field value, tag "full"
+ *        entries, and pick the highest-valued entry to select.
+ * @param unused0 Unused; kept for the original signature.
+ * @param unused1 Unused; kept for the original signature.
+ * @param unused2 Unused; kept for the original signature.
+ * @return Index of the highest-valued entry.
+ * @see decomp.me (100%)
+ */
 s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
 {
     s32 *row;
@@ -2805,6 +3093,10 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     return s3v;
 }
 
+/**
+ * @brief Reset the 15 per-entry rank slots to -1 and the rank count to 0x28.
+ * @see decomp.me (100%)
+ */
 void addhero_reset_entry_ranks(void)
 {
     s32 i;
@@ -2818,6 +3110,12 @@ void addhero_reset_entry_ranks(void)
     }
 }
 
+/**
+ * @brief Test whether the active card holds at least one entry matching a known
+ *        save-name prefix.
+ * @return 1 if a known-type entry exists, 0 otherwise.
+ * @see decomp.me (100%)
+ */
 s32 addhero_has_known_entry_type(void)
 {
     s32 i;
@@ -2840,6 +3138,12 @@ s32 addhero_has_known_entry_type(void)
     return 0;
 }
 
+/**
+ * @brief Sum the block usage of the active card's entries and test whether it
+ *        has reached the card's capacity.
+ * @return 1 when total used blocks are >= 0xE, 0 otherwise.
+ * @see decomp.me (100%)
+ */
 s32 addhero_entry_blocks_reach_limit(void)
 {
     s32 i;
@@ -2863,6 +3167,10 @@ s32 addhero_entry_blocks_reach_limit(void)
     return sum >= 0xE;
 }
 
+/**
+ * @brief Issue the two fixed card-directory probe requests for the active slot.
+ * @see decomp.me (100%)
+ */
 void addhero_render_fixed_prompts(void)
 {
     AddheroFileHeaderScratch buf;
@@ -2878,6 +3186,11 @@ void addhero_render_fixed_prompts(void)
     func_8001686C(&buf);
 }
 
+/**
+ * @brief Inlined helper mirroring addhero_render_fixed_prompts: issue the two
+ *        fixed card-directory probe requests for the active slot.
+ * @see decomp.me (100%)
+ */
 static inline void addhero_probe_render_two(void)
 {
     AddheroFileHeaderScratch p;
@@ -2893,6 +3206,14 @@ static inline void addhero_probe_render_two(void)
     func_8001686C(&p);
 }
 
+/**
+ * @brief Execute one step of the card load/save/scan sequencer, dispatched by
+ *        the current *g_addhero_load_step opcode through jtbl_80140098.
+ * @return A phase code: 0/1 idle-ish, 2 done, 3 keep running, 4/5 error paths.
+ * @note The computed-goto label table @c keep is discarded at link time; it only
+ *       forces GCC to keep the label addresses that the jump table references.
+ * @see decomp.me (100%)
+ */
 s32 addhero_advance_load_sequence(void)
 {
     AddheroLoadScratch buf;
@@ -3449,7 +3770,11 @@ block_return:
     return phase_result;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Rewind the active card and restart the load sequence from its first
+ *        step.
+ * @see decomp.me (100.00%)
+ */
 void addhero_restart_load_sequence(void)
 {
     func_8001729C(g_addhero_card_slot);
@@ -3458,7 +3783,12 @@ void addhero_restart_load_sequence(void)
     g_addhero_load_step = D_8016057C;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Poll the primary handle group and, if any handle is still busy, rewind
+ *        the active card so it can be retried.
+ * @return The busy handle index, or -1 when all primary handles are idle.
+ * @see decomp.me (100.00%)
+ */
 s32 addhero_poll_and_rewind_primary_handles(void)
 {
     s32 busy_slot;
@@ -3472,7 +3802,11 @@ s32 addhero_poll_and_rewind_primary_handles(void)
     return busy_slot;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Allocate and register the four primary and four secondary card stream
+ *        handles and clear the progress/scan flags.
+ * @see decomp.me (100.00%)
+ */
 void addhero_init_stream_handles(void)
 {
     func_800158E0();
@@ -3498,7 +3832,11 @@ void addhero_init_stream_handles(void)
     g_addhero_entry_scan_active = 0;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Unregister and free the four primary and four secondary card stream
+ *        handles.
+ * @see decomp.me (100.00%)
+ */
 void addhero_shutdown_stream_handles(void)
 {
     func_800158E0();
@@ -3514,7 +3852,13 @@ void addhero_shutdown_stream_handles(void)
     func_800167FC();
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Reset browser state and read the first directory entry of the given
+ *        card page, priming the scan.
+ * @param page Card page index to begin scanning.
+ * @return 1 if a first entry was read, 0 if the page is empty.
+ * @see decomp.me (100.00%)
+ */
 s32 addhero_begin_entry_scan(s32 page)
 {
     AddheroEntryHeader buf;
@@ -3625,7 +3969,11 @@ s32 addhero_scan_next_entry(s32 page)
     return 0;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Prepare the currently selected directory entry for loading: set the
+ *        selection status, build its file spec, and arm the read step.
+ * @see decomp.me (100.00%)
+ */
 void addhero_commit_selected_entry(void)
 {
     AddheroFileHeader local;
@@ -3680,7 +4028,10 @@ void addhero_commit_selected_entry(void)
     g_addhero_io_busy = 1;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Release (poll to idle) all four primary card stream handles.
+ * @see decomp.me (100.00%)
+ */
 void addhero_release_primary_handles(void)
 {
     func_800167CC(g_addhero_primary_handle0);
@@ -3689,7 +4040,10 @@ void addhero_release_primary_handles(void)
     func_800167CC(g_addhero_primary_handle3);
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Release (poll to idle) all four secondary card stream handles.
+ * @see decomp.me (100.00%)
+ */
 void addhero_release_secondary_handles(void)
 {
     func_800167CC(g_addhero_secondary_handle0);
@@ -3698,7 +4052,11 @@ void addhero_release_secondary_handles(void)
     func_800167CC(g_addhero_secondary_handle3);
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Poll the four primary card stream handles for one that is busy.
+ * @return Index (0-3) of the first busy handle, or -1 when all are idle.
+ * @see decomp.me (100.00%)
+ */
 s32 addhero_poll_primary_handle_group(void)
 {
     if (func_800167CC(g_addhero_primary_handle0) == 1)
@@ -3720,7 +4078,11 @@ s32 addhero_poll_primary_handle_group(void)
     return -1;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Poll the four secondary card stream handles for one that is busy.
+ * @return Index (0-3) of the first busy handle, or -1 when all are idle.
+ * @see decomp.me (100.00%)
+ */
 s32 addhero_poll_secondary_handle_group(void)
 {
     if (func_800167CC(g_addhero_secondary_handle0) == 1)
@@ -3742,6 +4104,12 @@ s32 addhero_poll_secondary_handle_group(void)
     return -1;
 }
 
+/**
+ * @brief Reorder the active card's directory entries into a stable grouping:
+ *        by suffix value within each known name prefix, then a third prefix,
+ *        then any remaining entries, writing the result back in place.
+ * @see decomp.me (100%)
+ */
 void addhero_sort_entries_by_type(void)
 {
     AddheroDirEntry sorted[20];
@@ -3812,6 +4180,19 @@ void addhero_sort_entries_by_type(void)
     }
 }
 
+/**
+ * @brief Render a signed decimal value as cached-glyph text, suppressing
+ *        leading zeros and prefixing a minus glyph when negative.
+ * @param prim      Current primitive pointer/index.
+ * @param ot        Ordering table the glyphs are linked into.
+ * @param value     Signed value to render.
+ * @param x         X position (interpreted per @p alignment).
+ * @param y         Y baseline.
+ * @param palette   Glyph palette index.
+ * @param alignment Text alignment mode passed to addhero_draw_cached_text.
+ * @return The updated primitive pointer.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
 {
     u16 buf[7];
@@ -3852,6 +4233,16 @@ s32 addhero_draw_signed_decimal(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 
     return prim;
 }
 
+/**
+ * @brief Render a byte as two hex-digit glyphs via the cached-text renderer.
+ * @param arg0 Current primitive pointer/index.
+ * @param arg1 Ordering table the glyphs are linked into.
+ * @param arg2 Byte value to render.
+ * @param arg3 X position.
+ * @param arg4 Y baseline.
+ * @param arg5 Text alignment mode.
+ * @see decomp.me (100%)
+ */
 void addhero_draw_hex_byte(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
 {
     u16 pair[3];
@@ -3873,6 +4264,20 @@ void addhero_draw_hex_byte(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32
     addhero_draw_cached_text(arg0, arg1, pair, arg3, arg4, 0, arg5);
 }
 
+/**
+ * @brief Render a multibyte string through the glyph cache: measure it, apply
+ *        left/center/right alignment, then emit one cached glyph per character
+ *        and terminate the primitive list.
+ * @param prim      Current primitive pointer/index.
+ * @param ot        Ordering table the glyphs are linked into.
+ * @param text      Null-terminated multibyte string to render.
+ * @param x         X position (interpreted per @p alignment).
+ * @param y         Y baseline.
+ * @param palette   Glyph palette index.
+ * @param alignment 0 left, 1 right (16px/char), 2 right (8px/char).
+ * @return The updated primitive pointer past the terminator.
+ * @see decomp.me (100%)
+ */
 s32 addhero_draw_cached_text(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment)
 {
     u8 *cursor;
@@ -3955,6 +4360,17 @@ s32 addhero_draw_cached_text(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 pale
     return prim + 8;
 }
 
+/**
+ * @brief Emit one glyph sprite, rasterizing and uploading the glyph to the VRAM
+ *        cache first when it is not already cached.
+ * @param prim           Current primitive pointer/index.
+ * @param ot             Ordering table the sprite is linked into.
+ * @param character_code Glyph code to render.
+ * @param palette        Glyph palette index used when rasterizing.
+ * @return The updated primitive pointer, unchanged when the glyph is missing or
+ *         the cache is full.
+ * @see decomp.me (100%)
+ */
 s32 addhero_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette)
 {
     AddheroGlyphCacheEntry *entry;
@@ -4060,6 +4476,16 @@ s32 addhero_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palet
     return prim;
 }
 
+/**
+ * @brief Write a 16x16 sprite for a cached glyph at the current text cursor,
+ *        mark the slot used, and advance the cursor (wrapping to the next line).
+ * @param sprite     Destination sprite primitive.
+ * @param ot         Ordering table the sprite is linked into.
+ * @param cache_slot Glyph cache slot whose VRAM tile to sample.
+ * @param palette    Unused here; the CLUT is fixed.
+ * @return The primitive pointer advanced past the emitted sprite.
+ * @see decomp.me (100%)
+ */
 s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette)
 {
     u32 ot_tag_high_byte;
@@ -4110,7 +4536,11 @@ s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slo
     return (s32)sprite;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Start a new glyph cache frame: rewind the raster cursor and clear each
+ *        cache entry's per-frame "used" flag (the high half-word).
+ * @see decomp.me (100.00%)
+ */
 void addhero_begin_glyph_cache_frame(void)
 {
     s32 i;
@@ -4127,7 +4557,11 @@ void addhero_begin_glyph_cache_frame(void)
     } while (i < 0x100);
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Evict cache entries not touched this frame by zeroing any slot whose
+ *        "used" flag (bit 0x10000) is clear.
+ * @see decomp.me (100.00%)
+ */
 void addhero_evict_unused_glyphs(void)
 {
     s32 i;
@@ -4148,7 +4582,11 @@ void addhero_evict_unused_glyphs(void)
     } while (i < 0x100);
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Fully reset the glyph cache: zero all 0x100 cache entries and clear the
+ *        entire 0x8000-byte glyph raster buffer.
+ * @see decomp.me (100.00%)
+ */
 void addhero_reset_glyph_cache(void)
 {
     s32 i;
@@ -4174,6 +4612,14 @@ void addhero_reset_glyph_cache(void)
     } while (i <= 0x7FFF);
 }
 
+/**
+ * @brief Translate a source string into internal glyph codes via the single-
+ *        and double-byte character tables, writing two output bytes per input
+ *        character and null-terminating the result.
+ * @param out Destination glyph-code buffer.
+ * @param in  Null-terminated source string.
+ * @see decomp.me (100%)
+ */
 void addhero_expand_text_glyph_codes(u8 *out, u8 *in)
 {
     u32 c;
