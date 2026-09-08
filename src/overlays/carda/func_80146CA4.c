@@ -16,7 +16,7 @@ typedef struct CardaElement {
     void *draw_handler;
 } CardaElement;
 
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 extern s32 D_80165F38;
 extern CardaElement D_80165F80;
 extern s32 D_80165FFC;
@@ -43,7 +43,7 @@ static __inline__ CardaElement *claim_element(void)
 void func_80146CA4(void)
 {
     CardaElement *slot;
-    D_8012298C = 0x20;
+    g_menu_element_counter = 0x20;
     {
         CardaElement *clear_p;
         s32 clear_i;

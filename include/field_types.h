@@ -2,13 +2,7 @@
 #define _FIELD_TYPES_H
 
 #include "common.h"
-
-/** @brief Two-component signed field-space vector. */
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
+#include "vector.h"
 
 /** @brief Three-component signed field vector with a trailing pad word. */
 typedef struct

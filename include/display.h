@@ -50,4 +50,17 @@
  * below both display buffers. */
 #define VRAM_CLUT_Y         498
 
+/*
+ * VRAM rectangle the save-data overlays clear to black on init.
+ *
+ * ADDHERO and NIKI both ClearImage this 64x256 block before building their
+ * glyph/icon caches. Its left edge is the front buffer's right edge
+ * (x = SCREEN_WIDTH), placing it in the texture/CLUT storage area. The exact
+ * contents staged here are not yet confirmed.
+ */
+#define OVERLAY_INIT_CLEAR_VRAM_X   SCREEN_WIDTH    /* 0x140 */
+#define OVERLAY_INIT_CLEAR_VRAM_Y   0
+#define OVERLAY_INIT_CLEAR_VRAM_W   0x40
+#define OVERLAY_INIT_CLEAR_VRAM_H   0x100
+
 #endif

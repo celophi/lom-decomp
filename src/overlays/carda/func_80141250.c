@@ -1,15 +1,10 @@
 #include "common.h"
+#include "vector.h"
 
 /**
  * @brief 2D short vector used as an (x, y) position argument to the glyph
  *        drawing helpers.
  */
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
-
 /**
  * @brief Flat rectangle GPU primitive (code 0x62) used for the selection bar.
  */

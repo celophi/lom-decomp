@@ -12,7 +12,7 @@ typedef struct
     u8 pad4[0x10];
 } RecADEEC;
 
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 extern UnkEntry80122828 D_80122828[];
 
 void func_800ADEB0(void)
@@ -20,7 +20,7 @@ void func_800ADEB0(void)
     UnkEntry80122828 *p;
     s32 i;
 
-    D_8012298C = 0;
+    g_menu_element_counter = 0;
     p = D_80122828;
     for (i = 0; i < 8; i++)
     {

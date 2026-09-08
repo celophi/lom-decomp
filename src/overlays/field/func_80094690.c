@@ -1,4 +1,5 @@
 #include "common.h"
+#include "vector.h"
 
 /**
  * @brief Field record fields used by the scaled position query.
@@ -11,17 +12,7 @@ typedef struct Record94690
     s16 value;
 } Record94690;
 
-/**
- * @brief Three-component scratch vector stored in scratchpad RAM.
- */
-typedef struct Vector94690
-{
-    s32 x;
-    s32 y;
-    s32 z;
-} Vector94690;
-
-s32 func_80097FA0(Record94690 *, Vector94690 *, s32, s32);
+s32 func_80097FA0(Record94690 *, Vec3i *, s32, s32);
 
 /**
  * @brief Tests a scaled X/Z displacement for a field record.
@@ -38,11 +29,11 @@ s32 func_80097FA0(Record94690 *, Vector94690 *, s32, s32);
  */
 void func_80094690(Record94690 *record, s32 x, s32 z)
 {
-    Vector94690 *vector;
+    Vec3i *vector;
     s32 scaled;
 
     scaled = x * record->scale;
-    vector = (Vector94690 *)0x1F800000;
+    vector = (Vec3i *)0x1F800000;
     vector->y = 0;
     vector->x = scaled;
     scaled = z * record->scale;

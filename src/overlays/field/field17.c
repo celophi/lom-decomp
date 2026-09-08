@@ -3,14 +3,6 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
-
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-} Vec3i;
-
 typedef struct
 {
     s16 unk0;

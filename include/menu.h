@@ -51,8 +51,8 @@ typedef struct MenuSlot_s
     u32 flags;     /* 0x04 - bits 31:25 select the ordering-table entry */
     u16 x;         /* 0x08 */
     u16 y;         /* 0x0A */
-    u16 w;         /* 0x0C */
-    u16 h;         /* 0x0E */
+    s16 w;         /* 0x0C */
+    s16 h;         /* 0x0E */
     u16 lerp_cur_a;    /* 0x10 - current interpolated value A (animated toward lerp_target_a) */
     u16 lerp_cur_b;    /* 0x12 - current interpolated value B (animated toward lerp_target_b) */
     u16 lerp_target_a; /* 0x14 - target value A for interpolation */

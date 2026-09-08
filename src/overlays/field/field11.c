@@ -354,7 +354,6 @@ s32 *func_80075C88(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     s32 var_s1_2;
     s32 var_s1_3;
     s32 var_s1_4;
-    s32 var_s1_5;
     s32 var_s2;
     s32 var_v0_15;
     s32 var_v0_20;
@@ -408,10 +407,6 @@ s32 *func_80075C88(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     u8 temp_a2;
     u8 temp_s2;
     s32 temp_t1;
-    s32 temp_v0_11;
-    s32 temp_v0_21;
-    s32 temp_v0_22;
-    s32 temp_v0_23;
     u8 temp_v0_2;
     u8 temp_v0_3;
     u8 temp_v0_4;
@@ -560,7 +555,6 @@ s32 *func_80075C88(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
 block_28:
 block_29:
                     func_8007D8D8(actor, rec, part, (s32 *) ((u8 *) cursor + 4));
-                    do
                     {
                     ((u8 *) &poly->tag)[3] = 9;
                     poly->code = 0x2CU;
@@ -570,7 +564,7 @@ block_29:
                         var_v0_4 = 0x2C;
                     }
                     poly->code = var_v0_4;
-                    } while (0);
+                    }
                     var_s2 = var_s5[-4];
                     var_s1 = (s8) var_s5[-7];
                     temp_s7 = var_s5[-3] - 1;
@@ -585,13 +579,9 @@ block_29:
                         var_s2 -= 1;
                     }
                     func_8007DB98(rec, sxy, cursor, var_s2, temp_s7, (s32) var_s0, var_s1, item, mtx);
-                    do
                     {
-                    do
                     {
-                    do
                     {
-                    do
                     {
                     if ((var_s5[-1] ^ ((u8) rec->unk21 >> 1)) & 0x40)
                     {
@@ -656,10 +646,10 @@ block_29:
                         poly->v2 = (u8) (poly->v2 | 0x80);
                         poly->v3 = (u8) (poly->v3 | 0x80);
                     }
-                    } while (0);
-                    } while (0);
-                    } while (0);
-                    } while (0);
+                    }
+                    }
+                    }
+                    }
                     temp_a1_2 = rec->unkC;
                     temp_a0_2 = temp_a1_2 << 7;
                     if (temp_a1_2 >= 2)
@@ -939,18 +929,15 @@ block_130:
                     temp_v1_19 = slot->unk3C;
                     if (!(temp_v1_19 & 0x8000) && !(slot->unk174 & 0x1800) && (temp_v1_19 != 0xFFFF) && (((temp_a0_4 = rec->unk2A, (temp_a0_4 == 0x91)) && ((rec->unk21 & 0x7F) == 0x2E)) || (temp_a0_4 == 0x85) || (temp_a0_4 == 0x98)) && !(rec->unk3C & 0x01000000))
                     {
-                        temp_v0_11 = func_800839F8(rec->unk3A, 0);
-                        if (temp_v0_11 != -1U)
+                        var_s0 = func_800839F8(rec->unk3A, 0);
+                        if (var_s0 != -1U)
                         {
-                            if (func_80083EEC(rec->unk3A, temp_v0_11, slot->unk3C) != 0)
+                            if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
                             {
-                                ((u8 *) &slot->unk178)[1] = temp_v0_11;
-                                field_start_actor_animation(temp_v0_11, 0, NULL);
-                                do
+                                ((u8 *) &slot->unk178)[1] = var_s0;
+                                field_start_actor_animation(var_s0, 0, NULL);
                                 {
-                                do
                                 {
-                                do
                                 {
                                 if (rec->unk21 & 0x80)
                                 {
@@ -1020,9 +1007,9 @@ block_130:
                                 gte_stlvnl(gte_out);
                                 slot->unk13C = (u16) gte_out->vx;
                                 slot->unk13E = (u16) gte_out->vy;
-                                } while (0);
-                                } while (0);
-                                } while (0);
+                                }
+                                }
+                                }
                             }
                         }
                         slot->unk3C = 0xFFFF;
@@ -1261,26 +1248,26 @@ block_209:
                                         goto block_236;
                                     }
                                     temp_v1_24 = &D_80105AE0[sp28.index];
-                                    var_s1_5 = 1;
+                                    var_s1 = 1;
                                     if (!(*(u8 *)&temp_v1_24->unk178 & 1) || ((temp_v1_25 = &g_field_actor_slots[((u8 *) &temp_v1_24->unk178)[2]], (temp_v1_25->unk24 != 0)) && (temp_v1_25->unk228 == rec->unk3A)))
                                     {
                                         temp_v1_26 = rec->unk21 & 0x7F;
                                         switch (temp_v1_26)
                                         { /* switch 6; irregular */
                                         case 0x48: /* switch 6 */
-                                            var_s1_5 = func_8008A9D8(rec->unk3A, sp28.index, 0x10);
+                                            var_s1 = func_8008A9D8(rec->unk3A, sp28.index, 0x10);
                                             break;
                                         case 0x49: /* switch 6 */
-                                            var_s1_5 = func_8008A9D8(rec->unk3A, sp28.index, 0x11);
+                                            var_s1 = func_8008A9D8(rec->unk3A, sp28.index, 0x11);
                                             break;
                                         case 0x3E: /* switch 6 */
-                                            var_s1_5 = func_8008A9D8(rec->unk3A, sp28.index, 0x19);
+                                            var_s1 = func_8008A9D8(rec->unk3A, sp28.index, 0x19);
                                             break;
                                         case 0x45: /* switch 6 */
-                                            var_s1_5 = func_8008A9D8(rec->unk3A, sp28.index, 0x1A);
+                                            var_s1 = func_8008A9D8(rec->unk3A, sp28.index, 0x1A);
                                             break;
                                         default: /* switch 6 */
-                                            var_s1_5 = func_8008A840(rec->unk3A, sp28.index);
+                                            var_s1 = func_8008A840(rec->unk3A, sp28.index);
                                             break;
                                         }
                                     }
@@ -1293,7 +1280,7 @@ block_209:
                                             func_800A2DD8(sp28.index);
                                         }
                                     }
-                                    if (var_s1_5 == 1)
+                                    if (var_s1 == 1)
                                     {
                                         temp_v1_27 = slot->unk3C;
                                         if ((temp_v1_27 == 1) || (temp_v1_27 == 3) || (temp_v1_27 == 0x10))
@@ -1323,8 +1310,8 @@ block_236:
                                     }
                                     if (slot->unk3C != 0)
                                     {
-                                        temp_v0_21 = func_800839F8(rec->unk3A, 0);
-                                        if (temp_v0_21 != -1U)
+                                        var_s0 = func_800839F8(rec->unk3A, 0);
+                                        if (var_s0 != -1U)
                                         {
                                             temp_v1_28 = ((u32) slot->unk178 >> 2) & 7;
                                             switch (temp_v1_28)
@@ -1336,11 +1323,11 @@ block_236:
                                                 slot->unk3C = 0x75;
                                                 break;
                                             }
-                                            if (func_80083EEC(rec->unk3A, temp_v0_21, slot->unk3C) != 0)
+                                            if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
                                             {
-                                                ((u8 *) &slot->unk178)[1] = temp_v0_21;
+                                                ((u8 *) &slot->unk178)[1] = var_s0;
                                                 scratch.sp30 = sp28.index;
-                                                field_start_actor_animation(temp_v0_21, 1, &scratch.sp30);
+                                                field_start_actor_animation(var_s0, 1, &scratch.sp30);
 block_254:
                                                 temp_v1_29 = sp28.x - sxy->x;
                                                 slot->unk13C = temp_v1_29;
@@ -1355,14 +1342,12 @@ block_254:
                                             }
                                         }
                                     }
-                                    do
                                     {
-                                    do
                                     {
                                     slot->unk3C = 0xFFFF;
                                     var_v0_15 = (slot->unk174 & ~0x1800) | 0x1000;
-                                    } while (0);
-                                    } while (0);
+                                    }
+                                    }
                                     goto block_297;
                                 }
                                 goto block_298;
@@ -1373,15 +1358,14 @@ block_254:
                             if (temp_v0_12 == 2)
                             {
                                 slot->unk3C = 0x1E;
-                                temp_v0_22 = func_800839F8(rec->unk3A, 0);
-                                if (temp_v0_22 != -1U)
+                                var_s0 = func_800839F8(rec->unk3A, 0);
+                                if (var_s0 != -1U)
                                 {
-                                    if (func_80083EEC(rec->unk3A, temp_v0_22, slot->unk3C) != 0)
+                                    if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
                                     {
-                                        ((u8 *) &slot->unk178)[1] = temp_v0_22;
+                                        ((u8 *) &slot->unk178)[1] = var_s0;
                                         scratch.sp30 = sp28.index;
-                                        field_start_actor_animation(temp_v0_22, 1, &scratch.sp30);
-                                        do
+                                        field_start_actor_animation(var_s0, 1, &scratch.sp30);
                                         {
                                         temp_v1_31 = sp28.x - sxy->x;
                                         slot->unk13C = temp_v1_31;
@@ -1393,7 +1377,7 @@ block_254:
                                         slot->unk13A = temp_v1_32;
                                         slot->unk136 = temp_v1_32;
                                         slot->unk132 = temp_v1_32;
-                                        } while (0);
+                                        }
                                     }
                                 }
                                 slot->unk3C = 0xFFFF;
@@ -1536,13 +1520,13 @@ block_254:
                             }
                             else
                             {
-                                temp_v0_23 = func_800839F8(rec->unk3A, 0);
-                                if (temp_v0_23 != -1U)
+                                var_s0 = func_800839F8(rec->unk3A, 0);
+                                if (var_s0 != -1U)
                                 {
-                                    if (func_80083EEC(rec->unk3A, temp_v0_23, slot->unk3C) != 0)
+                                    if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
                                     {
-                                        ((u8 *) &slot->unk178)[1] = temp_v0_23;
-                                        field_start_actor_animation(temp_v0_23, 0, NULL);
+                                        ((u8 *) &slot->unk178)[1] = var_s0;
+                                        field_start_actor_animation(var_s0, 0, NULL);
                                     }
                                 }
                             }

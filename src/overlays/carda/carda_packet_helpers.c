@@ -27,7 +27,7 @@ typedef struct
 } CardaPacket;
 
 extern u8 D_800EC3D0[];
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 extern s32 D_80165F80;
 
 s32 func_8014256C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
@@ -44,7 +44,7 @@ void func_801425D4(void)
     CardaPacket *p;
     s32 i;
 
-    D_8012298C = 0x20;
+    g_menu_element_counter = 0x20;
     p = (CardaPacket *)&D_80165F80;
     for (i = 0; i < 8; i++)
     {

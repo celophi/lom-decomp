@@ -1,5 +1,6 @@
 #include "menu.h"
 #include "display.h"
+#include "vector.h"
 
 /* ----- Macros ----- */
 
@@ -14,6 +15,10 @@
 #define MENU_GRID_TPAGE 5
 
 #define MENU_SLOT_COUNT 4
+#define MENU_SLOT_STATE_FREE 0
+#define MENU_SLOT_STATE_OPENING 1
+#define MENU_SLOT_STATE_OPEN 2
+#define MENU_SLOT_STATE_CLOSING 3
 #define MENU_SLOT_OT_INDEX_SHIFT 25
 #define MENU_SLOT_OT_INDEX_CLEAR_MASK 0x01FFFFFF
 #define MENU_WINDOW_TRANSITION_STEPS 12
@@ -45,24 +50,23 @@
 #define MENU_LABEL_BUFFER_SIZE 16
 
 /* VRAM placement for each slot's cursor strip and content texture block. */
-#define PRIM_STRIP_VRAM_X 0x110  /* 272  - VRAM column                    */
-#define PRIM_STRIP_VRAM_Y0 0x1D8 /* 472  - VRAM row for slot 0            */
-#define PRIM_STRIP_W 0x10        /* 16 halfwords wide                     */
-#define PRIM_STRIP_H 1           /* 1 scanline tall                       */
-#define PRIM_BLOCK_VRAM_X 0x3F4  /* 1012 - VRAM column for slots 0 and 1  */
-#define PRIM_BLOCK_VRAM_X2 0x3E8 /* 1000 - VRAM column for slot 2         */
-#define PRIM_BLOCK_VRAM_Y0 0x120 /* 288  - VRAM row for slot 0            */
-#define PRIM_BLOCK_VRAM_Y1 0x150 /* 336  - VRAM row for slots 1 and 2     */
-#define PRIM_BLOCK_W 0xC         /* 12 halfwords wide                     */
-#define PRIM_BLOCK_H 0x30        /* 48 scanlines tall                     */
+#define PRIM_CURSOR_STRIP_VRAM_X 0x110  /* 272  - VRAM column                */
+#define PRIM_CURSOR_STRIP_VRAM_Y0 0x1D8 /* 472  - VRAM row for slot 0        */
+#define PRIM_CURSOR_STRIP_W 0x10        /* 16 halfwords wide                 */
+#define PRIM_CURSOR_STRIP_H 1           /* 1 scanline tall                   */
+#define PRIM_CONTENT_VRAM_X 0x3F4       /* 1012 - VRAM column for slots 0, 1 */
+#define PRIM_CONTENT_VRAM_X2 0x3E8      /* 1000 - VRAM column for slot 2     */
+#define PRIM_CONTENT_VRAM_Y0 0x120      /* 288  - VRAM row for slot 0        */
+#define PRIM_CONTENT_VRAM_Y1 0x150      /* 336  - VRAM row for slots 1, 2    */
+#define PRIM_CONTENT_W 0xC              /* 12 halfwords wide                 */
+#define PRIM_CONTENT_H 0x30             /* 48 scanlines tall                 */
 #define PRIM_SLOT_COUNT 3
-#define PRIM_STRIP_BYTE_SIZE (PRIM_STRIP_W * PRIM_STRIP_H * sizeof(u16))
-#define PRIM_BLOCK_BYTE_SIZE (PRIM_BLOCK_W * PRIM_BLOCK_H * sizeof(u16))
-#define PRIM_BLOCK_BUF_OFFSET PRIM_STRIP_BYTE_SIZE
-#define PRIM_SLOT_STRIDE (PRIM_STRIP_BYTE_SIZE + PRIM_BLOCK_BYTE_SIZE)
-/** Normalize a byte offset to the word boundary required by LoadImage. */
-#define PRIM_ALIGN_UPLOAD_OFFSET(offset) (((offset) >> 2) << 2)
-#define PRIM_UPLOAD_PTR(base, offset) ((u_long*)(PRIM_ALIGN_UPLOAD_OFFSET(offset) + (u32)(base)))
+#define PRIM_CURSOR_STRIP_BYTE_SIZE (PRIM_CURSOR_STRIP_W * PRIM_CURSOR_STRIP_H * sizeof(u16))
+#define PRIM_CONTENT_BYTE_SIZE (PRIM_CONTENT_W * PRIM_CONTENT_H * sizeof(u16))
+#define PRIM_CONTENT_BUF_OFFSET PRIM_CURSOR_STRIP_BYTE_SIZE
+#define PRIM_SLOT_BYTE_SIZE (PRIM_CURSOR_STRIP_BYTE_SIZE + PRIM_CONTENT_BYTE_SIZE)
+/** Convert a byte offset to a LoadImage source pointer, rounding down to a 4-byte boundary. */
+#define PRIM_LOAD_IMAGE_SOURCE(buffer, byte_offset) ((u_long*)((((byte_offset) >> 2) << 2) + (u32)(buffer)))
 
 /*
  * Node / scroll / layout constants
@@ -308,58 +312,6 @@ typedef struct
 } MenuTimAsset;
 
 
-/**
- * @brief Animation-facing view of a menu window slot.
- */
-typedef struct
-{
-    u8 _pad0[2];
-    u8 anim_frame; /**< Animation frame counter; counts up during open/close. */
-    u8 _pad1[5];
-    u16 x; /**< Window X origin. */
-    u16 y; /**< Window Y origin. */
-    s16 w; /**< Target window width, clamped to MENU_WINDOW_MIN_WIDTH. */
-    s16 h; /**< Target window height, clamped to MENU_WINDOW_MIN_HEIGHT. */
-} MenuSlotAnim;
-
-typedef struct
-{
-    u8 active; /**< Mirrors MenuSlot.active; 2 = open/steady. */
-    u8 index; /**< Mirrors MenuSlot.index. */
-    u8 pad2;
-    u8 has_title; /**< Mirrors MenuSlot.has_title. */
-    union
-    {
-        s32 flags;
-        struct
-        {
-            u16 _unk4lo;
-            u16 unk6;
-        } _s;
-    } _u;
-    u16 x;
-    u16 y;
-    u16 w;
-    u16 h;
-    u16 lerp_cur_a;
-    u16 lerp_cur_b;
-    u16 lerp_target_a;
-    u16 lerp_target_b;
-    u8 lerp_steps;
-    u8 pad19;
-    u8 pad1A;
-    u8 pad1B;
-    s32* (*content_cb)();
-} MenuSlotView;
-
-typedef struct
-{
-    u8 pad[0x4040];
-    s32* prim_cursor; /**< Primitive write cursor. */
-    u8 pad4044[8];
-    s32 draw_buf_idx; /**< Display buffer page index, 0 or 1. */
-} MenuRenderCtx;
-
 typedef struct
 {
     s16 x;
@@ -390,12 +342,6 @@ typedef struct
     s16 w;
     s16 h;
 } MenuRectU16;
-
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 /** @brief 2-D screen coordinate (pixels). */
 typedef struct
@@ -647,7 +593,10 @@ typedef struct
 
 void menu_build_grid();
 void menu_update_slots(RenderContext* render_ctx);
+void menu_draw_window_transition(RenderContext* render_ctx, MenuSlot* slot, s32 cursor_enable);
+void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable);
 u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 allow_input);
+s32 menu_handle_node_input(void);
 u32 menu_step_item_selection(s32 step);
 
 void menu_upload_tim(const MenuTimVramLayout* layout);
@@ -723,7 +672,7 @@ extern s32 g_menu_cursor_enable;
 /** @brief Set non-zero by a content callback to abort @ref menu_draw_window early. */
 extern s32 g_menu_draw_early_out;
 /** @brief Base address of the menu double-buffered DRAWENV array. */
-extern s32 g_menu_draw_buf_base;
+extern u8* g_menu_draw_buf_base;
 /** @brief When non-zero, suppresses cursor highlight even on the active slot. */
 extern s32 g_menu_suppress_cursor;
 /** @brief Scene/language selector used in window title decoration layout switches. */
@@ -859,8 +808,6 @@ extern u8 D_8016869B[];
 extern u8 D_800F0BF8[];
 /** @brief The u32 at D_800F0BF8 + 0x14; the item-kind word of the default compare entry. */
 extern u32 D_800F0C0C;
-/** @brief Confirm-action dispatch jump table (rodata), indexed by list->sel_idx. */
-extern void* jtbl_80140544[];
 
 /* Memory-card state. */
 
@@ -922,37 +869,35 @@ void menu_init(void)
 }
 
 /**
- * @brief Upload each menu slot's cursor strip and content block to VRAM.
+ * @brief Upload each menu slot's cursor strip and content texture to VRAM.
+ * Each RAM slot stores the cursor strip first, followed by the content texture.
  */
 void menu_init_prim_rects(void)
 {
     s32 slot = 0;
-    u8* scratch = g_prim_rect_buf;
-    s32 block_byte_offset = PRIM_BLOCK_BUF_OFFSET;
+    u8* upload_buffer = g_prim_rect_buf;
+    s32 content_byte_offset = PRIM_CONTENT_BUF_OFFSET;
     s32 strip_byte_offset = 0;
     RECT rect;
-    u_long* upload_src;
 
     for (; slot < PRIM_SLOT_COUNT; slot++)
     {
         /* Upload the slot's cursor-highlight strip. */
-        rect.x = PRIM_STRIP_VRAM_X;
-        rect.y = slot + PRIM_STRIP_VRAM_Y0;
-        rect.w = PRIM_STRIP_W;
-        rect.h = PRIM_STRIP_H;
-        upload_src = PRIM_UPLOAD_PTR(scratch, strip_byte_offset);
-        LoadImage(&rect, upload_src);
+        rect.x = PRIM_CURSOR_STRIP_VRAM_X;
+        rect.y = slot + PRIM_CURSOR_STRIP_VRAM_Y0;
+        rect.w = PRIM_CURSOR_STRIP_W;
+        rect.h = PRIM_CURSOR_STRIP_H;
+        LoadImage(&rect, PRIM_LOAD_IMAGE_SOURCE(upload_buffer, strip_byte_offset));
 
         /* Upload the slot's content texture block. */
-        rect.x = (slot == PRIM_SLOT_COUNT - 1) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X;
-        rect.y = (slot == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1;
-        rect.w = PRIM_BLOCK_W;
-        rect.h = PRIM_BLOCK_H;
-        upload_src = PRIM_UPLOAD_PTR(scratch, block_byte_offset);
-        LoadImage(&rect, upload_src);
+        rect.x = (slot == PRIM_SLOT_COUNT - 1) ? PRIM_CONTENT_VRAM_X2 : PRIM_CONTENT_VRAM_X;
+        rect.y = (slot == 0) ? PRIM_CONTENT_VRAM_Y0 : PRIM_CONTENT_VRAM_Y1;
+        rect.w = PRIM_CONTENT_W;
+        rect.h = PRIM_CONTENT_H;
+        LoadImage(&rect, PRIM_LOAD_IMAGE_SOURCE(upload_buffer, content_byte_offset));
 
-        block_byte_offset += PRIM_SLOT_STRIDE;
-        strip_byte_offset += PRIM_SLOT_STRIDE;
+        content_byte_offset += PRIM_SLOT_BYTE_SIZE;
+        strip_byte_offset += PRIM_SLOT_BYTE_SIZE;
     }
 }
 
@@ -1377,116 +1322,113 @@ void menu_reset_slots(void)
  */
 void menu_update_slots(RenderContext* render_ctx)
 {
-    s16 sp_pair[2];
+    ScreenPos view_origin;
     s32 unused_pad[2];
-    void (*temp_v0_2)(MenuSlot*);
-    s32 var_a3;
-    s32 var_a0;
-    s32 var_s1;
-    s32 rect_i;
-    u8 temp_a0;
-    u8 temp_v0;
-    u8 temp_v1;
-    u8 temp_v1_2;
-    u8 tmp_s5;
-    MenuSlot* base = g_menu_slots;
-    u_int* frame_ot;
+    s32 has_active_slot;
+    s32 slot_index;
 
-    var_a0 = 0;
+    has_active_slot = 0;
     g_menu_help_text = 0;
-    var_s1 = 3;
-    rect_i = 3;
-    tmp_s5 = 2;
+    slot_index = MENU_SLOT_COUNT - 1;
 
-    while (var_s1 >= 0)
+    while (slot_index >= 0)
     {
-        temp_v1 = base[rect_i].active;
-        if (temp_v1 != tmp_s5)
+        u8 anim_frame;
+        s32 slot_state;
+
+        slot_state = g_menu_slots[slot_index].active;
+        if (slot_state != MENU_SLOT_STATE_OPEN)
         {
-            s32 tmpCmp = temp_v1;
-            if (tmpCmp < 3)
+            if (slot_state < MENU_SLOT_STATE_CLOSING)
             {
-                if (temp_v1 != 1)
+                if (slot_state != MENU_SLOT_STATE_OPENING)
                 {
-                    rect_i -= 1;
-                    var_s1 -= 1;
+                    slot_index -= 1;
                     continue;
                 }
             }
             else
             {
-                if (temp_v1 != 3)
+                if (slot_state != MENU_SLOT_STATE_CLOSING)
                 {
-                    rect_i -= 1;
-                    var_s1 -= 1;
+                    slot_index -= 1;
                     continue;
                 }
-                goto branch_11C;
+                goto update_closing_slot;
             }
 
-            menu_draw_window_transition(render_ctx, &base[rect_i], g_menu_cursor_enable != 0);
-            temp_a0 = base[rect_i].anim_frame;
-            temp_v0 = temp_a0 + 1;
-            base[rect_i].anim_frame = temp_v0;
-            if ((temp_v0 & 0xff) == 6)
             {
-                base[rect_i].anim_frame = temp_a0;
-                base[rect_i].active = tmp_s5;
+                u8 previous_anim_frame;
+
+                menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
+                previous_anim_frame = g_menu_slots[slot_index].anim_frame;
+                anim_frame = previous_anim_frame + 1;
+                g_menu_slots[slot_index].anim_frame = anim_frame;
+                if ((anim_frame & 0xFF) == (MENU_WINDOW_TRANSITION_STEPS / 2))
+                {
+                    g_menu_slots[slot_index].anim_frame = previous_anim_frame;
+                    g_menu_slots[slot_index].active = MENU_SLOT_STATE_OPEN;
+                }
             }
         }
         else
         {
-            sp_pair[1] = 0;
-            sp_pair[0] = 0;
-            menu_draw_window(&base[rect_i], render_ctx, (void*)(((u8*)g_menu_slots + 8) + (((rect_i * 2) - rect_i) * 36)), sp_pair, g_menu_cursor_enable != 0);
+            MenuRect* slot_rect;
+
+            slot_rect = (MenuRect*)(((u8*)g_menu_slots + 8) + (((slot_index * 2) - slot_index) * sizeof(MenuSlot)));
+            view_origin.y = 0;
+            view_origin.x = 0;
+            menu_draw_window(&g_menu_slots[slot_index], render_ctx, slot_rect, &view_origin, g_menu_cursor_enable != 0);
         }
 
-        if (var_s1 == g_active_slot)
+        if (slot_index == g_active_slot)
         {
-            temp_v0_2 = (void (*)(MenuSlot*))base[rect_i].tick_cb;
-            if (temp_v0_2 != 0)
+            if (g_menu_slots[slot_index].tick_cb != 0)
             {
-                temp_v0_2(&base[rect_i]);
+                g_menu_slots[slot_index].tick_cb(&g_menu_slots[slot_index]);
             }
         }
-        var_a0 = 1;
-        rect_i -= 1;
-        var_s1 -= 1;
+        has_active_slot = 1;
+        slot_index -= 1;
         continue;
 
-    branch_11C:
-        menu_draw_window_transition(render_ctx, &base[rect_i], g_menu_cursor_enable != 0);
-        temp_v0 = base[rect_i].anim_frame - 1;
-        base[rect_i].anim_frame = temp_v0;
-        if (!(temp_v0 & 0xFF))
+    update_closing_slot:
+        menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
+        anim_frame = g_menu_slots[slot_index].anim_frame - 1;
+        g_menu_slots[slot_index].anim_frame = anim_frame;
+        if (!(anim_frame & 0xFF))
         {
-            base[rect_i].active = 0;
+            g_menu_slots[slot_index].active = MENU_SLOT_STATE_FREE;
             menu_update_active_slot();
         }
-        var_a0 = 1;
-        rect_i -= 1;
-        var_s1 -= 1;
+        has_active_slot = 1;
+        slot_index -= 1;
     }
 
-    var_a3 = 0;
-    if (var_a0 == 0)
     {
-        g_active_slot = -1;
-    }
+        s32 allow_input;
+        u_long* frame_ot;
 
-    frame_ot = &render_ctx->ot[MENU_FRAME_OT_INDEX];
-    sp_pair[1] = 0;
-    sp_pair[0] = 0;
+        allow_input = 0;
+        if (has_active_slot == 0)
+        {
+            g_active_slot = -1;
+        }
 
-    if ((g_active_slot == -1) || (g_menu_cursor_enable == 0))
-    {
-        var_a3 = 1;
-    }
+        frame_ot = &render_ctx->ot[MENU_FRAME_OT_INDEX];
+        view_origin.y = 0;
+        view_origin.x = 0;
 
-    render_ctx->prim_cursor = menu_draw_frame(render_ctx->prim_cursor, frame_ot, render_ctx->frame_parity, var_a3);
-    if (g_menu_help_text != 0)
-    {
-        render_ctx->prim_cursor = (void*)func_800A88A0(render_ctx->prim_cursor, (u_int*)((u8*)render_ctx + 0x34 + g_menu_help_text - g_menu_help_text), g_menu_help_text, 1, 0xA0, 0xCA, 2);
+        if ((g_active_slot == -1) || (g_menu_cursor_enable == 0))
+        {
+            allow_input = 1;
+        }
+
+        render_ctx->prim_cursor = menu_draw_frame(render_ctx->prim_cursor, frame_ot, render_ctx->frame_parity, allow_input);
+        if (g_menu_help_text != 0)
+        {
+            render_ctx->prim_cursor = (void*)func_800A88A0(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], g_menu_help_text, 1, 0xA0, 0xCA, 2);
+        }
     }
 }
 
@@ -1496,7 +1438,7 @@ void menu_update_slots(RenderContext* render_ctx)
  * @param slot Window slot being animated.
  * @param cursor_enable Nonzero to allow the active-slot cursor highlight.
  */
-void menu_draw_window_transition(MenuRenderCtx* render_ctx, MenuSlotAnim* slot, s32 cursor_enable)
+void menu_draw_window_transition(RenderContext* render_ctx, MenuSlot* slot, s32 cursor_enable)
 {
     MenuWindowTransitionFrame frame;
     s32 inset_x;
@@ -1540,187 +1482,156 @@ void menu_draw_window_transition(MenuRenderCtx* render_ctx, MenuSlotAnim* slot, 
 /**
  * @brief Build all GPU primitives for one menu window at a given rectangle.
  * @param slot Slot descriptor (geometry, flags, content callback).
- * @param gpu_work Per-frame render context (layout matches @ref RenderContext).
+ * @param render_ctx Per-frame render context.
  * @param rect Window rectangle: x, y, w, h halfwords.
  * @param view_origin View-origin offset forwarded to the content callback.
  * @param cursor_enable Cursor-highlight enable for the active slot.
  */
-void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable)
+void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable)
 {
-    MenuRectU16 sp18;
-    DRAWENV sp20;
-    u16 sp80[2];
-    s16 temp_a0;
-    s32 temp_v1;
-    s32 var_a2_2;
-    s32 var_a3;
-    s32* temp_a1_2;
-    s32* temp_s1_2;
-    s32* temp_s2;
-    s32* prim_cur;
-    s32* var_s1;
-    u16 temp_a1;
-    u16 temp_a2;
-    u16 var_v0;
-    void* temp_v0_2;
-    s32 fill_uv;
-    s32 draw_x;
-    DRAWENV* env;
-    s32 title_mask;
+    MenuRectU16 window_rect;
+    DRAWENV content_draw_env;
+    ScreenPos title_pos;
+    s32 content_draw_y;
+    s32 draw_cursor;
+    u_long* ot_entry;
+    u_long* window_cursor;
+    u_long* packet_cursor;
+    s32 content_draw_x;
+    DRAWENV* draw_env;
 
-    var_s1 = gpu_work->prim_cursor;
-    temp_s2 = (s32*)gpu_work + (((u32)slot->_u.flags >> 0x19));
+    packet_cursor = render_ctx->prim_cursor;
+    ot_entry = &render_ctx->ot[(u32)slot->flags >> MENU_SLOT_OT_INDEX_SHIFT];
     if (slot->lerp_steps != 0)
     {
-        temp_v1 = (s32)(slot->lerp_target_a - slot->lerp_cur_a) / (s32)slot->lerp_steps;
-        temp_a2 = slot->lerp_cur_a;
-        temp_a1 = slot->lerp_cur_b + ((s32)(slot->lerp_target_b - slot->lerp_cur_b) / (s32) * (volatile u8*)&slot->lerp_steps);
-        slot->lerp_steps = (u8)(*(volatile u8*)&slot->lerp_steps - 1);
-        slot->lerp_cur_a = (u16)(temp_a2 + temp_v1);
-        slot->lerp_cur_b = (u16)temp_a1;
+        slot->lerp_cur_a += (slot->lerp_target_a - slot->lerp_cur_a) / slot->lerp_steps;
+        slot->lerp_cur_b += (slot->lerp_target_b - slot->lerp_cur_b) / slot->lerp_steps;
+        slot->lerp_steps--;
     }
     else
     {
-        slot->lerp_cur_a = (u16)slot->lerp_target_a;
-        slot->lerp_cur_b = (u16)slot->lerp_target_b;
+        slot->lerp_cur_a = slot->lerp_target_a;
+        slot->lerp_cur_b = slot->lerp_target_b;
     }
-    if (slot->content_cb != NULL)
+    if ((slot->content_cb != NULL) && ((rect->w - MENU_WINDOW_MIN_WIDTH) > 0) && ((rect->h - MENU_WINDOW_MIN_HEIGHT) > 0))
     {
-        if ((rect->w - 0x20) > 0)
+        SetDrawEnv((DR_ENV*)packet_cursor, (DRAWENV*)(g_menu_draw_buf_base + ((render_ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
+        addPrim(ot_entry, packet_cursor);
+        g_menu_draw_early_out = 0;
+        packet_cursor += PRIM_WORDS(DR_ENV);
+        draw_cursor = (slot->index == g_active_slot) && (cursor_enable != 0) && (g_menu_suppress_cursor == 0) &&
+                      (slot->active == MENU_SLOT_STATE_OPEN);
+        packet_cursor = slot->content_cb(ot_entry, slot, packet_cursor, view_origin, draw_cursor);
+        if (g_menu_draw_early_out != 0)
         {
-            if ((rect->h - 0x10) > 0)
+            render_ctx->prim_cursor = packet_cursor;
+            return;
+        }
+        draw_env = &content_draw_env;
+        content_draw_x = rect->x + 8;
+        content_draw_y = rect->y + 0x10;
+        if (render_ctx->frame_parity != 0)
+        {
+            content_draw_y = rect->y + 0xF8;
+        }
+        SetDefDrawEnv(draw_env, content_draw_x, content_draw_y, rect->w - MENU_WINDOW_MIN_HEIGHT, rect->h - MENU_WINDOW_MIN_HEIGHT);
+        SetDrawEnv((DR_ENV*)packet_cursor, draw_env);
+        addPrim(ot_entry, packet_cursor);
+        packet_cursor += PRIM_WORDS(DR_ENV);
+        if (slot->has_title != 0)
+        {
+            switch (g_menu_scene_type)
             {
-                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_menu_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
-                addPrim(temp_s2, var_s1);
-                var_a3 = 0;
-                g_menu_draw_early_out = 0;
-                var_s1 += PRIM_WORDS(DR_ENV);
-                if ((slot->index == g_active_slot) && (0 != cursor_enable))
-                {
-                    if (g_menu_suppress_cursor == 0)
-                    {
-                        var_a3 = slot->active == 2;
-                    }
-                }
-                var_s1 = slot->content_cb(temp_s2, slot, var_s1, view_origin, var_a3);
-                if (g_menu_draw_early_out != 0)
-                {
-                    gpu_work->prim_cursor = var_s1;
-                    return;
-                }
-                env = &sp20;
-                temp_a0 = rect->y;
-                draw_x = rect->x + 8;
-                var_a2_2 = temp_a0 + 0x10;
-                if (gpu_work->draw_buf_idx != 0)
-                {
-                    var_a2_2 = temp_a0 + 0xF8;
-                }
-                SetDefDrawEnv(env, draw_x, var_a2_2, rect->w - 0x10, rect->h - 0x10);
-                SetDrawEnv((DR_ENV*)var_s1, env);
-                addPrim(temp_s2, var_s1);
-                var_s1 += PRIM_WORDS(DR_ENV);
-                title_mask = 0x1FF;
-                if (slot->has_title != 0)
-                {
-                    switch (g_menu_scene_type)
-                    {        /* switch 1 */
-                    case 1:  /* switch 1 */
-                    case 4:  /* switch 1 */
-                    case 19: /* switch 1 */
-                    case 22: /* switch 1 */
-                    case 25: /* switch 1 */
-                        var_v0 = ((u16)rect->x + (u16)rect->w) - 0x68;
-                        break;
-                    default: /* switch 1 */
-                        var_v0 = ((u16)rect->x + (u16)rect->w) - 0x48;
-                        break;
-                    }
-                    sp80[0] = var_v0;
-                    sp80[1] = (u16)rect->y;
-                    if (slot->_u.flags & 0x01FF0000)
-                    {
-                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.flags + 1, 3, sp80, 0);
-                    }
-                    else
-                    {
-                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, 0, 3, sp80, 0);
-                    }
-                    temp_a1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
-                    sp80[0] += 8;
-                    var_s1 = (s32*)func_800AD208(temp_s2, temp_a1_2, slot->_u._s.unk6 & title_mask, 3, sp80, 0);
-                    switch (g_menu_scene_type)
-                    {        /* switch 2 */
-                    case 1:  /* switch 2 */
-                    case 4:  /* switch 2 */
-                    case 19: /* switch 2 */
-                    case 22: /* switch 2 */
-                    case 25: /* switch 2 */
-                        temp_s1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
-                        sp80[0] += 8;
-                        var_s1 = temp_s1_2;
-                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, menu_count_inventory_items(), 3, sp80, 0);
-                        break;
-                    }
-                    var_s1 = menu_emit_slot_scroll_arrows((s32)var_s1, temp_s2, slot);
-                }
+            case 1:
+            case 4:
+            case 19:
+            case 22:
+            case 25:
+                title_pos.x = ((u16)rect->x + (u16)rect->w) - 0x68;
+                break;
+            default:
+                title_pos.x = ((u16)rect->x + (u16)rect->w) - 0x48;
+                break;
             }
+            title_pos.y = (u16)rect->y;
+            if (slot->flags & 0x01FF0000)
+            {
+                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, (u16)slot->flags + 1, 3, &title_pos, 0);
+            }
+            else
+            {
+                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, 0, 3, &title_pos, 0);
+            }
+            packet_cursor = func_800AD524((s32)packet_cursor, ot_entry, 0xB, &title_pos, 0);
+            title_pos.x += 8;
+            packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, MENU_SLOT_FLAGS_VIEW(slot).half.high & 0x1FF, 3, &title_pos, 0);
+            switch (g_menu_scene_type)
+            {
+            case 1:
+            case 4:
+            case 19:
+            case 22:
+            case 25:
+                packet_cursor = func_800AD524((s32)packet_cursor, ot_entry, 0xB, &title_pos, 0);
+                title_pos.x += 8;
+                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, menu_count_inventory_items(), 3, &title_pos, 0);
+                break;
+            }
+            packet_cursor = menu_emit_slot_scroll_arrows((s32)packet_cursor, ot_entry, slot);
         }
     }
-    sp18.w = 0xFF;
-    sp18.h = 0xFF;
-    sp18.x = 0;
-    sp18.y = 0;
-    setTexWindow((DR_TWIN*)var_s1, &sp18);
-    addPrim(temp_s2, var_s1);
-    prim_cur = var_s1 + PRIM_WORDS(DR_TWIN);
-    fill_uv = MENU_TW_FILL;
-    if (rect->h >= 0x10)
+    window_rect.w = 0xFF;
+    window_rect.h = 0xFF;
+    window_rect.x = 0;
+    window_rect.y = 0;
+    setTexWindow((DR_TWIN*)packet_cursor, &window_rect);
+    addPrim(ot_entry, packet_cursor);
+    window_cursor = packet_cursor + PRIM_WORDS(DR_TWIN);
+    if (rect->h >= MENU_WINDOW_MIN_HEIGHT)
     {
-        sp18.x = (u16)rect->x + 8;
-        sp18.y = (u16)rect->y;
-        sp18.w = (u16)rect->w - 0x10;
-        sp18.h = 8;
-        prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_TOP);
-        if (rect->h >= 0x10)
+        window_rect.x = (u16)rect->x + 8;
+        window_rect.y = (u16)rect->y;
+        window_rect.w = (u16)rect->w - MENU_WINDOW_MIN_HEIGHT;
+        window_rect.h = 8;
+        window_cursor = menu_build_h_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_TOP);
+        if (rect->h >= MENU_WINDOW_MIN_HEIGHT)
         {
-            sp18.x = (u16)rect->x + 8;
-            sp18.y = ((u16)rect->y + (u16)rect->h) - 8;
-            sp18.w = (u16)rect->w - 0x10;
-            sp18.h = 8;
-            prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_BOT);
+            window_rect.x = (u16)rect->x + 8;
+            window_rect.y = ((u16)rect->y + (u16)rect->h) - 8;
+            window_rect.w = (u16)rect->w - MENU_WINDOW_MIN_HEIGHT;
+            window_rect.h = 8;
+            window_cursor = menu_build_h_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_BOT);
         }
     }
-    if (rect->w >= 0x20)
+    if (rect->w >= MENU_WINDOW_MIN_WIDTH)
     {
-        sp18.x = (u16)rect->x;
-        sp18.y = (u16)rect->y + 8;
-        sp18.w = 8;
-        sp18.h = (u16)rect->h - 0x10;
-        prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_LEFT);
-        if (rect->w >= 0x20)
+        window_rect.x = (u16)rect->x;
+        window_rect.y = (u16)rect->y + 8;
+        window_rect.w = 8;
+        window_rect.h = (u16)rect->h - MENU_WINDOW_MIN_HEIGHT;
+        window_cursor = menu_build_v_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_LEFT);
+        if (rect->w >= MENU_WINDOW_MIN_WIDTH)
         {
-            sp18.x = ((u16)rect->x + (u16)rect->w) - 8;
-            sp18.y = (u16)rect->y + 8;
-            sp18.w = 8;
-            sp18.h = (u16)rect->h - 0x10;
-            prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_RIGHT);
+            window_rect.x = ((u16)rect->x + (u16)rect->w) - 8;
+            window_rect.y = (u16)rect->y + 8;
+            window_rect.w = 8;
+            window_rect.h = (u16)rect->h - MENU_WINDOW_MIN_HEIGHT;
+            window_cursor = menu_build_v_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_RIGHT);
         }
     }
-    sp18.x = (u16)rect->x + 8;
-    sp18.y = (u16)rect->y + 8;
-    sp18.w = (u16)rect->w - 0x10;
-    sp18.h = (u16)rect->h - 0x10;
-    prim_cur = menu_fill_window_interior(prim_cur, temp_s2, &sp18, fill_uv);
-    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x, rect->y, MENU_TW_CORNER_TL);
-    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x + rect->w - 8, rect->y, MENU_TW_CORNER_TR);
-    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x, rect->y + rect->h - 8, MENU_TW_CORNER_BL);
-    temp_v0_2 = menu_emit_corner(prim_cur, temp_s2, rect->x + rect->w - 8, rect->y + rect->h - 8, MENU_TW_CORNER_BR);
-    prim_cur = temp_v0_2;
-    setDrawTPage((DR_TPAGE*)prim_cur, 0, 0, 5);
-    setaddr(prim_cur, getaddr(temp_s2));
-    setaddr(temp_s2, temp_v0_2);
-    gpu_work->prim_cursor = (s32*)((char*)prim_cur + 8);
+    window_rect.x = (u16)rect->x + 8;
+    window_rect.y = (u16)rect->y + 8;
+    window_rect.w = (u16)rect->w - MENU_WINDOW_MIN_HEIGHT;
+    window_rect.h = (u16)rect->h - MENU_WINDOW_MIN_HEIGHT;
+    window_cursor = menu_fill_window_interior(window_cursor, ot_entry, &window_rect, MENU_TW_FILL);
+    window_cursor = menu_emit_corner(window_cursor, ot_entry, rect->x, rect->y, MENU_TW_CORNER_TL);
+    window_cursor = menu_emit_corner(window_cursor, ot_entry, rect->x + rect->w - 8, rect->y, MENU_TW_CORNER_TR);
+    window_cursor = menu_emit_corner(window_cursor, ot_entry, rect->x, rect->y + rect->h - 8, MENU_TW_CORNER_BL);
+    window_cursor = menu_emit_corner(window_cursor, ot_entry, rect->x + rect->w - 8, rect->y + rect->h - 8, MENU_TW_CORNER_BR);
+    setDrawTPage((DR_TPAGE*)window_cursor, 0, 0, 5);
+    setaddr(window_cursor, getaddr(ot_entry));
+    setaddr(ot_entry, window_cursor);
+    render_ctx->prim_cursor = window_cursor + PRIM_WORDS(DR_TPAGE);
 }
 
 /**
@@ -1760,59 +1671,48 @@ SPRT* menu_emit_corner(SPRT* sprite, u_long* ot_entry, s16 x, s16 y, u16 uv)
  */
 SPRT* menu_fill_window_interior(SPRT* sprite, u_long* ot_entry, const MenuRectU16* rect, u16 uv)
 {
-    u16 screen_x;
-    volatile s32 stack_pad;
-    u16 origin_y;
-    s32 tile_y = 0;
+    s16 padding[2];
+    s32 y_offset;
 
-    if (rect->h > 0)
+    for (y_offset = 0; y_offset < rect->h; y_offset += MENU_WINDOW_FILL_TILE_SIZE)
     {
-        do
+        s32 x_offset = 0;
+
+        if (rect->w > 0)
         {
-            s32 tile_x = 0;
-
-            if (rect->w > 0)
+            do
             {
-                s32 tile_bottom = tile_y + MENU_WINDOW_FILL_TILE_SIZE;
+                SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+                setSprt(sprite);
+                SET_SPRT_UV0_PACKED(sprite, uv);
 
-                do
+                /* Clamp the final tile in each row and column to the region. */
+                if (x_offset + MENU_WINDOW_FILL_TILE_SIZE > rect->w)
                 {
-                    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
-                    setSprt(sprite);
-                    SET_SPRT_UV0_PACKED(sprite, uv);
+                    sprite->w = rect->w - x_offset;
+                }
+                else
+                {
+                    sprite->w = MENU_WINDOW_FILL_TILE_SIZE;
+                }
 
-                    /* Clamp the final tile in each row and column to the region. */
-                    if (rect->w < (tile_x + MENU_WINDOW_FILL_TILE_SIZE))
-                    {
-                        sprite->w = rect->w - tile_x;
-                    }
-                    else
-                    {
-                        sprite->w = MENU_WINDOW_FILL_TILE_SIZE;
-                    }
+                if (y_offset + MENU_WINDOW_FILL_TILE_SIZE > rect->h)
+                {
+                    sprite->h = rect->h - y_offset;
+                }
+                else
+                {
+                    sprite->h = MENU_WINDOW_FILL_TILE_SIZE;
+                }
 
-                    if (rect->h < tile_bottom)
-                    {
-                        sprite->h = rect->h - tile_y;
-                    }
-                    else
-                    {
-                        sprite->h = MENU_WINDOW_FILL_TILE_SIZE;
-                    }
-
-                    screen_x = rect->x + tile_x;
-                    sprite->x0 = screen_x;
-                    origin_y = rect->y;
-                    tile_x += MENU_WINDOW_FILL_TILE_SIZE;
-                    sprite->y0 = origin_y + tile_y;
-                    SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
-                    addPrim(ot_entry, sprite);
-                    sprite++;
-                } while (tile_x < rect->w);
-            }
-
-            tile_y += MENU_WINDOW_FILL_TILE_SIZE;
-        } while (tile_y < rect->h);
+                sprite->x0 = rect->x + x_offset;
+                x_offset += MENU_WINDOW_FILL_TILE_SIZE;
+                sprite->y0 = rect->y + y_offset;
+                SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
+                addPrim(ot_entry, sprite);
+                sprite++;
+            } while (x_offset < rect->w);
+        }
     }
 
     return sprite;
@@ -1969,58 +1869,39 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
  */
 void menu_node_tree_init(void)
 {
-    u32 field_a;
-    u32 field_b;
-    MenuNode* var_a0;
-    int active_flag;
-    MenuNode* var_a2;
-    u32 temp_v0_3;
-    u32 temp_v0_5;
-    unsigned int temp_v0_7;
-    s32 temp_v0_9;
-    s32 var_a3;
-    s32 var_t0;
-    u8* new_var5;
-    MenuNode* new_var2;
-    int new_var7;
-    int new_var10;
-    s32 var_t0_2;
-    u8 new_var4;
-    int new_var8;
-    s8 var_v0;
-    MenuNode* new_var3;
-    u16 temp_v0;
-    int new_var6;
-    u16 temp_v0_10;
-    u16 temp_v0_11;
-    u16 temp_v0_12;
-    unsigned short temp_v0_13;
-    u16 temp_v0_14;
-    u16 temp_v0_2;
-    u16 temp_v0_4;
-    u16 temp_v0_6;
-    unsigned int temp_v0_8;
-    union
-    {
-        u16 nav_y_packed;
-        struct
-        {
-            u8 nav_y_hi;
-            u8 layout_y_lsb;
-        } s;
-    }* new_var;
-    u16 temp_v1;
-    u16 temp_v1_2;
-    u32 temp_a0;
-    u32 temp_a1;
-    u32 var_a1;
-    u16 original_unk2;
-    u16 temp1;
-    u16 temp2;
-    u16 loop_unk2;
-    u32 new_var9;
-    var_t0 = 0;
-    var_a0 = g_menu_nodes;
+    u32 work_value_a;
+    u32 work_value_b;
+    u32 node3_flags;
+    u32 node6_flags;
+    u32 node9_flags;
+    s32 zero_value;
+    s32 layout_y;
+    s32 node_index;
+    s32 packed_value;
+    s32 nav_x_low_bit;
+    s8 scene_type;
+    u16 flags_value;
+    s32 layout_y_high;
+    u16 node15_flags_base;
+    u16 node15_flags;
+    u16 node18_flags;
+    u16 node29_flags;
+    u16 node3_flags_base;
+    u16 node6_flags_base;
+    u16 node9_flags_base;
+    u32 node12_flags;
+    u16 node30_flags_base;
+    u16 node30_flags;
+    u32 layout_y_16;
+    u32 layout_y_9;
+    u32 layout_y_high_9;
+    u16 node32_flags_base;
+    u16 node32_flags;
+    u16 node0_flags;
+    u16 node0_flags_step1;
+    u16 node0_flags_step2;
+    u16 initial_flags;
+    u32 node18_flags_copy;
     g_menu_prev_node = MENU_NONE;
     g_menu_content_ready = 0;
     g_item_slot_data.slot0 = 0;
@@ -2034,7 +1915,6 @@ void menu_node_tree_init(void)
     g_menu_item_ptr = 0;
     g_menu_category0_item = 0;
     g_menu_category1_item = 0;
-    active_flag = 1;
     g_menu_category2_item = 0;
     g_menu_active_equipped_item = 0;
     g_menu_saved_category0_item = 0;
@@ -2045,29 +1925,28 @@ void menu_node_tree_init(void)
     g_menu_redraw_state = 0;
     g_menu_active_node = 0;
     g_menu_cursor_enable = 0;
-    do
+    for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++)
     {
-        loop_unk2 = var_a0[var_t0].u2.unk2;
-        var_a0[var_t0].state = MENU_NODE_STATE_UNINIT;
-        var_a0[var_t0].icon_id = 0;
-        var_a0[var_t0].content_id = MENU_NONE;
-        var_a0[var_t0].child3 = MENU_NONE;
-        var_a0[var_t0].child2 = MENU_NONE;
-        var_a0[var_t0].child1 = MENU_NONE;
-        var_a0[var_t0].uA.s.child0 = MENU_NONE;
-        var_a0[var_t0].u2.unk2 = (u16)((loop_unk2 & 0xFFFC) | 0x30);
-        var_a0[var_t0].u2.s.parent_idx = MENU_NONE;
-        var_t0 += 1;
-    } while (var_t0 < MENU_NODE_COUNT);
+        initial_flags = g_menu_nodes[node_index].u2.unk2;
+        g_menu_nodes[node_index].state = MENU_NODE_STATE_UNINIT;
+        g_menu_nodes[node_index].icon_id = 0;
+        g_menu_nodes[node_index].content_id = MENU_NONE;
+        g_menu_nodes[node_index].child3 = MENU_NONE;
+        g_menu_nodes[node_index].child2 = MENU_NONE;
+        g_menu_nodes[node_index].child1 = MENU_NONE;
+        g_menu_nodes[node_index].uA.s.child0 = MENU_NONE;
+        g_menu_nodes[node_index].u2.unk2 = (u16)((initial_flags & 0xFFFC) | 0x30);
+        g_menu_nodes[node_index].u2.s.parent_idx = MENU_NONE;
+    }
 
     g_menu_nodes[0].label_id = 1;
     g_menu_nodes[0].idx_nav.s.self_idx = 0;
-    original_unk2 = g_menu_nodes[0].u2.unk2;
-    temp1 = original_unk2 & 0xFFCD;
-    temp2 = original_unk2 & 0xFF0D;
-    *((volatile u16*)(&g_menu_nodes[0].u2.unk2)) = temp1;
-    *((volatile u16*)(&g_menu_nodes[0].u2.unk2)) = temp2;
-    *((volatile u16*)(&g_menu_nodes[0].u2.unk2)) = temp2 | 1;
+    node0_flags = g_menu_nodes[0].u2.unk2;
+    node0_flags_step1 = node0_flags & 0xFFCD;
+    node0_flags_step2 = node0_flags & 0xFF0D;
+    *(volatile u16*)&g_menu_nodes[0].u2.unk2 = node0_flags_step1;
+    *(volatile u16*)&g_menu_nodes[0].u2.unk2 = node0_flags_step2;
+    *(volatile u16*)&g_menu_nodes[0].u2.unk2 = node0_flags_step2 | MENU_NODE_FLAG_ACTIVE;
     g_menu_nodes[0].u2.s.parent_idx = MENU_NONE;
     if (D_800FD818.unk0 & 2)
     {
@@ -2091,12 +1970,12 @@ void menu_node_tree_init(void)
     g_menu_nodes[1].u2.s.parent_idx = 0;
     g_menu_nodes[2].u2.unk2 = (u16)((g_menu_nodes[2].u2.unk2 & 0xFF0F) | 0x40);
     g_menu_nodes[2].u2.s.parent_idx = 0;
-    temp_v0_2 = (g_menu_nodes[3].u2.unk2 & 0xFFCD) | 0x10;
-    *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = temp_v0_2;
-    temp_v0_3 = 0x10;
-    temp_v0_3 = temp_v0_2 | temp_v0_3;
-    *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3F);
-    *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3E);
+    node3_flags_base = (g_menu_nodes[3].u2.unk2 & 0xFFCD) | 0x10;
+    *(volatile u16*)&g_menu_nodes[3].u2.unk2 = node3_flags_base;
+    node3_flags = 0x10;
+    node3_flags = node3_flags_base | node3_flags;
+    *(volatile u16*)&g_menu_nodes[3].u2.unk2 = (u16)(node3_flags & 0xFF3F);
+    *(volatile u16*)&g_menu_nodes[3].u2.unk2 = (u16)(node3_flags & 0xFF3E);
     g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
     if (D_800FDA80 & 2)
     {
@@ -2108,12 +1987,12 @@ void menu_node_tree_init(void)
     }
     g_menu_nodes[4].u2.unk2 = (u16)((0xFF5F & g_menu_nodes[4].u2.unk2) | 0x50);
     g_menu_nodes[5].u2.unk2 = (u16)((g_menu_nodes[5].u2.unk2 & 0xFF5F) | 0x50);
-    temp_v0_4 = (g_menu_nodes[6].u2.unk2 & 0xFFCD) | 0x10;
-    *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = temp_v0_4;
-    temp_v0_5 = 0x10;
-    temp_v0_5 = temp_v0_4 | temp_v0_5;
-    *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3F);
-    *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3E);
+    node6_flags_base = (g_menu_nodes[6].u2.unk2 & 0xFFCD) | 0x10;
+    *(volatile u16*)&g_menu_nodes[6].u2.unk2 = node6_flags_base;
+    node6_flags = 0x10;
+    node6_flags = node6_flags_base | node6_flags;
+    *(volatile u16*)&g_menu_nodes[6].u2.unk2 = (u16)(node6_flags & 0xFF3F);
+    *(volatile u16*)&g_menu_nodes[6].u2.unk2 = (u16)(node6_flags & 0xFF3E);
     g_menu_nodes[3].uA.s.child0 = 4;
     g_menu_nodes[3].child1 = 5;
     g_menu_nodes[4].label_id = 6;
@@ -2130,7 +2009,6 @@ void menu_node_tree_init(void)
     g_menu_nodes[7].label_id = 9;
     g_menu_nodes[7].idx_nav.s.self_idx = 7;
     g_menu_nodes[7].icon_id = 5;
-    new_var7 = 0xFF3E;
     g_menu_nodes[8].label_id = 8;
     g_menu_nodes[4].u2.s.parent_idx = 3;
     g_menu_nodes[5].u2.s.parent_idx = 3;
@@ -2139,22 +2017,22 @@ void menu_node_tree_init(void)
     g_menu_nodes[7].u2.s.parent_idx = 6;
     g_menu_nodes[8].u2.unk2 = (u16)((g_menu_nodes[8].u2.unk2 & 0xFF5F) | 0x50);
     g_menu_nodes[8].idx_nav.s.self_idx = 8;
-    temp_v0_6 = (g_menu_nodes[9].u2.unk2 & 0xFFCD) | 0x20;
-    *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = temp_v0_6;
-    temp_v0_7 = 0x20;
-    temp_v0_7 = temp_v0_6 | temp_v0_7;
-    *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = (u16)(temp_v0_7 & 0xFF3F);
-    *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = (u16)(temp_v0_7 & 0xFF3E);
+    node9_flags_base = (g_menu_nodes[9].u2.unk2 & 0xFFCD) | 0x20;
+    *(volatile u16*)&g_menu_nodes[9].u2.unk2 = node9_flags_base;
+    node9_flags = 0x20;
+    node9_flags = node9_flags_base | node9_flags;
+    *(volatile u16*)&g_menu_nodes[9].u2.unk2 = (u16)(node9_flags & 0xFF3F);
+    *(volatile u16*)&g_menu_nodes[9].u2.unk2 = (u16)(node9_flags & 0xFF3E);
     g_menu_nodes[0xA].u2.unk2 = (u16)((g_menu_nodes[0xA].u2.unk2 & 0xFF6F) | 0x60);
-    temp_v0_8 = (g_menu_nodes[0xC].u2.unk2 & 0xFFCD) | 0x20;
-    *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = temp_v0_8;
-    *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = (u16)((temp_v0_8 | 0x20) & 0xFF3F);
-    *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = (u16)((temp_v0_8 | 0x20) & 0xFF3E);
+    node12_flags = (g_menu_nodes[0xC].u2.unk2 & 0xFFCD) | 0x20;
+    *(volatile u16*)&g_menu_nodes[0xC].u2.unk2 = node12_flags;
+    *(volatile u16*)&g_menu_nodes[0xC].u2.unk2 = (u16)((node12_flags | 0x20) & 0xFF3F);
+    *(volatile u16*)&g_menu_nodes[0xC].u2.unk2 = (u16)((node12_flags | 0x20) & 0xFF3E);
     g_menu_nodes[8].u2.s.parent_idx = 6;
     g_menu_nodes[8].icon_id = 4;
     g_menu_nodes[9].label_id = 0xA;
     g_menu_nodes[9].idx_nav.s.self_idx = 9;
-    (g_menu_nodes + 9)->icon_id = 6;
+    g_menu_nodes[9].icon_id = 6;
     g_menu_nodes[9].uA.s.child0 = 0xA;
     g_menu_nodes[0xA].label_id = 0xB;
     g_menu_nodes[0xA].idx_nav.s.self_idx = 0xA;
@@ -2171,11 +2049,11 @@ void menu_node_tree_init(void)
     g_menu_nodes[0xC].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0xD].u2.unk2 = (u16)((g_menu_nodes[0xD].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0xD].u2.s.parent_idx = 0xC;
-    temp_v0_10 = (g_menu_nodes[0xF].u2.unk2 & 0xFFCD) | 0x20;
-    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_10;
-    temp_v0_11 = (temp_v0_10 & 0xFF6D) | 0x60;
-    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_11;
-    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = (u16)(temp_v0_11 & 0xFFFE);
+    node15_flags_base = (g_menu_nodes[0xF].u2.unk2 & 0xFFCD) | 0x20;
+    *(volatile u16*)&g_menu_nodes[0xF].u2.unk2 = node15_flags_base;
+    node15_flags = (node15_flags_base & 0xFF6D) | 0x60;
+    *(volatile u16*)&g_menu_nodes[0xF].u2.unk2 = node15_flags;
+    *(volatile u16*)&g_menu_nodes[0xF].u2.unk2 = (u16)(node15_flags & 0xFFFE);
     g_menu_nodes[0xF].icon_id = 8;
     g_menu_nodes[0x10].icon_id = 7;
     g_menu_nodes[0xF].label_id = 0xD;
@@ -2199,13 +2077,13 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
     g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
-    new_var9 = g_menu_nodes[0x12].u2.unk2;
-    temp_v0 = new_var9;
+    node18_flags_copy = g_menu_nodes[0x12].u2.unk2;
+    flags_value = node18_flags_copy;
     g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
-    *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = (u16)(temp_v0 & 0xFFFD);
-    temp_v0_12 = temp_v0 & 0xFF3D;
-    *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = temp_v0_12;
-    *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = (u16)(temp_v0_12 | 1);
+    *(volatile u16*)&g_menu_nodes[0x12].u2.unk2 = (u16)(flags_value & 0xFFFD);
+    node18_flags = flags_value & 0xFF3D;
+    *(volatile u16*)&g_menu_nodes[0x12].u2.unk2 = node18_flags;
+    *(volatile u16*)&g_menu_nodes[0x12].u2.unk2 = (u16)(node18_flags | MENU_NODE_FLAG_ACTIVE);
     g_menu_nodes[0x12].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x13].label_id = 0x11;
     g_menu_nodes[0x14].icon_id = 0xF;
@@ -2275,25 +2153,25 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1E].idx_nav.s.self_idx = 0x1E;
     g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
     g_menu_nodes[0x1F].idx_nav.s.self_idx = 0x1F;
-    (g_menu_nodes + 0x1E)->icon_id = 0x13;
+    g_menu_nodes[0x1E].icon_id = 0x13;
     g_menu_nodes[0x1F].label_id = 0x1A;
     g_menu_nodes[0x1F].icon_id = 0x14;
     g_menu_nodes[0x2B].label_id = 0x1A;
     g_menu_nodes[0x2B].idx_nav.s.self_idx = 0x2B;
-    temp_v0 = g_menu_nodes[0x1D].u2.unk2;
-    *((volatile u16*)(&g_menu_nodes[0x1D].u2.unk2)) = (u16)(temp_v0 & 0xFFFD);
-    temp_v0_13 = temp_v0 & 0xFF3D;
-    *((volatile u16*)(&g_menu_nodes[0x1D].u2.unk2)) = temp_v0_13;
-    temp_v1 = g_menu_nodes[0x1E].u2.unk2;
-    *((volatile u16*)(&g_menu_nodes[0x1D].u2.unk2)) = (u16)(temp_v0_13 | active_flag);
+    flags_value = g_menu_nodes[0x1D].u2.unk2;
+    *(volatile u16*)&g_menu_nodes[0x1D].u2.unk2 = (u16)(flags_value & 0xFFFD);
+    node29_flags = flags_value & 0xFF3D;
+    *(volatile u16*)&g_menu_nodes[0x1D].u2.unk2 = node29_flags;
+    node30_flags_base = g_menu_nodes[0x1E].u2.unk2;
+    *(volatile u16*)&g_menu_nodes[0x1D].u2.unk2 = (u16)(node29_flags | MENU_NODE_FLAG_ACTIVE);
     g_menu_nodes[0x1D].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x1F].u2.unk2 = (u16)((g_menu_nodes[0x1F].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x1F].u2.s.parent_idx = 0x1E;
-    *((volatile u16*)(&g_menu_nodes[0x1E].u2.unk2)) = (u16)(temp_v1 & 0xFFFD);
-    temp_v1_2 = temp_v1 & 0xFF3D;
-    *((volatile u16*)(&g_menu_nodes[0x1E].u2.unk2)) = temp_v1_2;
+    *(volatile u16*)&g_menu_nodes[0x1E].u2.unk2 = (u16)(node30_flags_base & 0xFFFD);
+    node30_flags = node30_flags_base & 0xFF3D;
+    *(volatile u16*)&g_menu_nodes[0x1E].u2.unk2 = node30_flags;
     g_menu_nodes[0x2B].u2.unk2 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFF3F) | 0x40);
-    *((volatile u16*)(&g_menu_nodes[0x1E].u2.unk2)) = (u16)(temp_v1_2 | 1);
+    *(volatile u16*)&g_menu_nodes[0x1E].u2.unk2 = (u16)(node30_flags | MENU_NODE_FLAG_ACTIVE);
     g_menu_nodes[0x1E].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x2B].u2.s.parent_idx = 0x1E;
     g_menu_nodes[0x1F].u2.unk2 = (u16)(g_menu_nodes[0x1F].u2.unk2 & 0xFFCF);
@@ -2301,86 +2179,80 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x2B].icon_id = 0x15;
     g_menu_nodes[0x20].label_id = 0x1B;
     g_menu_nodes[0x20].idx_nav.s.self_idx = 0x20;
-    {
-        u16 block_v0;
-        u16 block_v14;
-        block_v0 = g_menu_nodes[0x20].u2.unk2;
-        block_v14 = block_v0 & 0xFF3D;
-        *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(block_v0 & 0xFFFD);
-        *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)block_v14;
-        g_menu_nodes[0x20].icon_id = 0x16;
-        *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(block_v14 | 1);
-    }
+    node32_flags_base = g_menu_nodes[0x20].u2.unk2;
+    node32_flags = node32_flags_base & 0xFF3D;
+    *(volatile u16*)&g_menu_nodes[0x20].u2.unk2 = (u16)(node32_flags_base & 0xFFFD);
+    *(volatile u16*)&g_menu_nodes[0x20].u2.unk2 = (u16)node32_flags;
+    g_menu_nodes[0x20].icon_id = 0x16;
+    *(volatile u16*)&g_menu_nodes[0x20].u2.unk2 = (u16)(node32_flags | MENU_NODE_FLAG_ACTIVE);
     g_menu_nodes[0x20].u2.s.parent_idx = MENU_NONE;
     if (D_800FD818.unk268 & 1)
     {
-        if (D_800FD818.unk26B != 0)
+        if (D_800FD818.unk26B)
         {
-            g_menu_nodes[6].u2.unk2 = (u16)(g_menu_nodes[6].u2.unk2 | 1);
+            g_menu_nodes[6].u2.unk2 = (u16)(g_menu_nodes[6].u2.unk2 | MENU_NODE_FLAG_ACTIVE);
         }
         else
         {
-            g_menu_nodes[3].u2.unk2 = (u16)((g_menu_nodes + 3)->u2.unk2 | 1);
+            g_menu_nodes[3].u2.unk2 = (u16)(g_menu_nodes[3].u2.unk2 | MENU_NODE_FLAG_ACTIVE);
         }
     }
     if (D_800FDCE8 & 1)
     {
         if ((g_pad_ctx->unkAA8 & 0x7F) == 4)
         {
-            g_menu_nodes[0xF].u2.unk2 = (u16)(g_menu_nodes[0xF].u2.unk2 | 1);
+            g_menu_nodes[0xF].u2.unk2 = (u16)(g_menu_nodes[0xF].u2.unk2 | MENU_NODE_FLAG_ACTIVE);
         }
         else
         {
-            g_menu_nodes[9].u2.unk2 = (u16)(g_menu_nodes[9].u2.unk2 | 1);
+            g_menu_nodes[9].u2.unk2 = (u16)(g_menu_nodes[9].u2.unk2 | MENU_NODE_FLAG_ACTIVE);
         }
     }
-    if ((g_pad_ctx->inject_flags & 0x80) && (g_pad_ctx->inject_enable != 0))
+    if ((g_pad_ctx->inject_flags & 0x80) && g_pad_ctx->inject_enable)
     {
         g_menu_companion_node = 0x2B;
     }
-    var_a3 = 0;
-    var_t0 = 0;
-    temp_v0_9 = 0;
-    var_a2 = g_menu_nodes;
-    do
+    layout_y = 0;
+    node_index = 0;
+    zero_value = 0;
+    while (node_index < MENU_NODE_COUNT)
     {
-        field_a = MENU_NONE;
-        field_b = var_a2[var_t0].u2.s.parent_idx;
-        if (field_b == field_a)
+        work_value_a = MENU_NONE;
+        work_value_b = g_menu_nodes[node_index].u2.s.parent_idx;
+        if (work_value_b == work_value_a)
         {
-            field_a = var_a2[var_t0].u2.s.flags & 1;
-            if (field_a)
+            work_value_a = g_menu_nodes[node_index].u2.s.flags & MENU_NODE_FLAG_ACTIVE;
+            if (work_value_a)
             {
-                temp_a0 = var_a3 & 0xFFFF;
-                temp_a1 = var_a3 & 0x1FF;
-                var_a3 += MENU_ROW_HEIGHT;
-                new_var10 = (temp_a0 & 1) << 15;
-                new_var6 = (temp_a0 >> 1) & 0xFF;
-                field_a = var_a2[var_t0].u8_u.nav_y_packed & 0x80FF;
-                var_a2[var_t0].u8_u.nav_y_packed = (u16)field_a;
-                field_b = var_a2[var_t0].idx_nav.nav_x_packed & 0x80FF;
-                var_a2[var_t0].idx_nav.nav_x_packed = (u16)field_b;
-                var_a2[var_t0].uA.layout_child_packed = (u16)((var_a2[var_t0].uA.layout_child_packed & 0xFF00) | new_var6);
-                new_var8 = (temp_a1 & 1) << 15;
-                var_a2[var_t0].u8_u.nav_y_packed = (u16)((var_a2[var_t0].u8_u.nav_y_packed & 0x7FFF) | new_var10);
-                var_a2[var_t0].idx_nav.nav_x_packed = (u16)((var_a2[var_t0].idx_nav.nav_x_packed & 0x7FFF) | new_var8);
-                var_a1 = temp_a1 >> 1;
-                var_a2[var_t0].u8_u.nav_y_packed = (u16)((var_a2[var_t0].u8_u.nav_y_packed & 0xFF00) | var_a1);
+                layout_y_16 = layout_y & 0xFFFF;
+                layout_y_9 = layout_y & 0x1FF;
+                layout_y += MENU_ROW_HEIGHT;
+                packed_value = (layout_y_16 & 1) << 15;
+                layout_y_high = (layout_y_16 >> 1) & 0xFF;
+                work_value_a = g_menu_nodes[node_index].u8_u.nav_y_packed & 0x80FF;
+                g_menu_nodes[node_index].u8_u.nav_y_packed = (u16)work_value_a;
+                work_value_b = g_menu_nodes[node_index].idx_nav.nav_x_packed & 0x80FF;
+                g_menu_nodes[node_index].idx_nav.nav_x_packed = (u16)work_value_b;
+                g_menu_nodes[node_index].uA.layout_child_packed = (u16)((g_menu_nodes[node_index].uA.layout_child_packed & 0xFF00) | layout_y_high);
+                nav_x_low_bit = (layout_y_9 & 1) << 15;
+                g_menu_nodes[node_index].u8_u.nav_y_packed = (u16)((g_menu_nodes[node_index].u8_u.nav_y_packed & 0x7FFF) | packed_value);
+                g_menu_nodes[node_index].idx_nav.nav_x_packed = (u16)((g_menu_nodes[node_index].idx_nav.nav_x_packed & 0x7FFF) | nav_x_low_bit);
+                layout_y_high_9 = layout_y_9 >> 1;
+                g_menu_nodes[node_index].u8_u.nav_y_packed = (u16)((g_menu_nodes[node_index].u8_u.nav_y_packed & 0xFF00) | layout_y_high_9);
             }
         }
-        var_t0 += 1;
-    } while (var_t0 < MENU_NODE_COUNT);
-    if (g_active_script != 0)
+        node_index++;
+    }
+    if (g_active_script)
     {
         g_menu_scene_type = -1;
         return;
     }
-    var_v0 = temp_v0_9;
-    g_menu_scene_type = var_v0;
-    new_var4 = g_menu_init_content_id;
-    new_var10 = temp_v0_9;
-    g_menu_ability_mask = new_var10;
-    menu_open_content_page(new_var4);
+    scene_type = zero_value;
+    g_menu_scene_type = scene_type;
+    packed_value = zero_value;
+    g_menu_ability_mask = packed_value;
+    menu_open_content_page(g_menu_init_content_id);
     menu_set_active_node();
 }
 
@@ -2585,55 +2457,30 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
 
 /**
  * @brief Process D-pad and face-button input to navigate and select menu nodes.
- * @return Undefined; callers ignore the nominal return value.
+ * @return Unspecified; callers ignore the return value.
  */
-unsigned int menu_handle_node_input(void)
+s32 menu_handle_node_input(void)
 {
-    MenuNode* temp_a1;
-    s32 temp_v0;
-    s32 new_var15;
-    MenuNode* new_var11;
-    const u32 new_var14;
-    int new_var13;
-    int new_var4;
-    s32 temp_v1;
-    s32 temp_v0_3;
-    s32 temp_a0_3;
-    int new_var3;
-    union
-    {
-        u16 unk6;
-        struct
-        {
-            u8 self_idx;
-            u8 unk7;
-        } s;
-    }* new_var8;
-    s32 temp_a0;
-    s16* new_var;
-    s32 var_v1_2;
-    s32 new_var10;
-    unsigned char new_var5;
-    int new_var7;
-    char new_var9;
-    u8* var_a0;
-    u8* var_v0;
-    unsigned int new_var12;
-    MenuContentItem* temp_v1_2;
-    u8* new_var6;
-    int new_var2;
-    const u32 browse_all_node = MENU_NODE_BROWSE_ALL;
-    const u8 SENTINEL;
-    temp_v0 = menu_find_nav_node_index(g_menu_active_node);
-    if (temp_v0 == (-1))
+    MenuNode* active_node;
+    s32 nav_index;
+    s32 content_height;
+    MenuNode* nodes;
+    s32 cursor_y_hi;
+    s32 cursor_y_lsb;
+    s32 view_y;
+    s32 active_row_y;
+    s32 work_index;
+    MenuContentItem* active_item;
+    nav_index = menu_find_nav_node_index(g_menu_active_node);
+    if (nav_index == (-1))
     {
         return;
     }
     if (g_pad_input & PAD_BTN_UP)
     {
-        if (temp_v0 != 0)
+        if (nav_index != 0)
         {
-            g_menu_active_node = g_menu_nav_prev[temp_v0];
+            g_menu_active_node = g_menu_nav_prev[nav_index];
         }
         else
         {
@@ -2642,57 +2489,52 @@ unsigned int menu_handle_node_input(void)
     }
     if (g_pad_input & PAD_BTN_DOWN)
     {
-        if (temp_v0 >= (g_menu_nav_count - 1))
+        if (nav_index >= (g_menu_nav_count - 1))
         {
             g_menu_active_node = g_menu_nav_first;
         }
         else
         {
-            g_menu_active_node = g_menu_nav_next[temp_v0];
+            g_menu_active_node = g_menu_nav_next[nav_index];
         }
     }
     if (g_pad_input & PAD_BTN_CIRCLE)
     {
-        if (g_menu_active_node == browse_all_node)
+        if (g_menu_active_node == MENU_NODE_BROWSE_ALL)
         {
             menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
             g_menu_load_request = 1;
             return;
         }
-        g_menu_active_node = g_menu_nav_first;
-        g_menu_active_node = browse_all_node;
+        g_menu_active_node = MENU_NODE_BROWSE_ALL;
     }
-    if ((PAD_BTN_UP | PAD_BTN_DOWN | PAD_BTN_CIRCLE) & (g_pad_input & 0xFFFFu))
+    if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN | PAD_BTN_CIRCLE))
     {
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
-        temp_a0 = menu_find_nav_node_index(g_menu_active_node);
-        temp_a0 = temp_a0 * MENU_ROW_HEIGHT;
-        var_v1_2 = temp_a0 - g_menu_scroll_pos;
-        temp_v1 = var_v1_2;
-        if (temp_v1 < 0)
+        active_row_y = menu_find_nav_node_index(g_menu_active_node);
+        active_row_y *= MENU_ROW_HEIGHT;
+        work_index = active_row_y - g_menu_scroll_pos;
+        if (work_index < 0)
         {
-            g_menu_scroll_pos = temp_a0;
+            g_menu_scroll_pos = active_row_y;
             g_menu_redraw_state = MENU_REDRAW_NAVIGATE;
         }
-        else if (temp_v1 >= MENU_VIEW_HEIGHT)
+        else if (work_index >= MENU_VIEW_HEIGHT)
         {
-            g_menu_scroll_pos = temp_a0 - 0x98; /* 0xAB - 0x13: scroll so item is last row */
+            g_menu_scroll_pos = active_row_y - (MENU_VIEW_HEIGHT - MENU_ROW_HEIGHT);
             g_menu_redraw_state = MENU_REDRAW_NAVIGATE;
         }
         return;
     }
-    /* 0x0200 = undocumented bit, likely L3 (DualShock stick click) - never set on digital pad */
-    if (g_pad_input & (PAD_BTN_RIGHT | PAD_BTN_CROSS | 0x0200))
+    if (g_pad_input & (PAD_BTN_RIGHT | PAD_BTN_CROSS | PAD_BTN_L3))
     {
         menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
-        new_var14 = browse_all_node;
-        if (g_menu_active_node == new_var14)
+        if (g_menu_active_node == MENU_NODE_BROWSE_ALL)
         {
-            if (!(g_pad_input & (PAD_BTN_CROSS | 0x0200)))
+            if (!(g_pad_input & (PAD_BTN_CROSS | PAD_BTN_L3)))
             {
                 return;
             }
-            SENTINEL = 0xFF;
             g_menu_load_request = 1;
         }
         if (g_menu_active_node == 0x11)
@@ -2701,37 +2543,28 @@ unsigned int menu_handle_node_input(void)
             g_menu_transition_code = 0xA;
             return;
         }
-        new_var11 = g_menu_nodes;
-        temp_a1 = &g_menu_nodes[g_menu_active_node];
-        temp_v0_3 = 0xFF;
-        (&g_menu_nodes[g_menu_active_node])->u2.unk2 |= 0xC;
-        new_var10 = temp_v0_3;
-        if (temp_a1->u2.s.parent_idx == temp_v0_3) /* temp_v0_3 = MENU_NONE (0xFF) */
+        nodes = g_menu_nodes;
+        active_node = nodes + g_menu_active_node;
+        active_node->u2.unk2 |= 0xC;
+        if (active_node->u2.s.parent_idx == MENU_NONE)
         {
-            g_menu_category2_item = (g_menu_category1_item = (g_menu_category0_item = (g_menu_item_ptr = 0)));
+            g_menu_item_ptr = 0;
+            g_menu_category0_item = 0;
+            g_menu_category1_item = 0;
+            g_menu_category2_item = 0;
         }
-        g_menu_prev_node = temp_v0_3;
-        new_var8 = &temp_a1->idx_nav;
+        g_menu_prev_node = MENU_NONE;
         if (g_menu_scene_type != g_menu_active_node)
         {
-            if (g_menu_content_table[temp_a1->idx_nav.s.self_idx] != NULL)
+            if (g_menu_content_table[active_node->idx_nav.s.self_idx] != NULL)
             {
-                var_v1_2 = 3;
-                temp_a0_3 = new_var14;
-                new_var6 = &g_menu_slots;
                 g_menu_scene_type = g_menu_active_node;
-                var_v0 = new_var6 + 0x6C;
-                for (var_v1_2 = 3; var_v1_2 >= 0; var_v1_2--)
-                {
-                    *var_v0 = 0;
-                    var_v0 -= 0x24;
-                }
+                MENU_CLEAR_SLOTS();
 
-                var_v1_2 = 3;
                 if (g_menu_nodes[g_menu_scene_type].content_id != MENU_NONE)
                 {
                     g_menu_ability_mask = 0;
-                    menu_open_content_page(g_menu_nodes[g_menu_scene_type].content_id, temp_a1, new_var14, temp_v0_3);
+                    menu_open_content_page(g_menu_nodes[g_menu_scene_type].content_id);
                 }
             }
             menu_set_active_node();
@@ -2741,20 +2574,19 @@ unsigned int menu_handle_node_input(void)
         {
             return;
         }
-        if (g_menu_scene_type == new_var14)
+        if (g_menu_scene_type == MENU_NODE_BROWSE_ALL)
         {
-            if (g_pad_input & (PAD_BTN_CROSS | 0x0200))
+            if (g_pad_input & (PAD_BTN_CROSS | PAD_BTN_L3))
             {
                 g_menu_load_request = 1;
             }
             return;
         }
-        temp_a0_3 = (*new_var8).unk6 >> 0xF;
-        new_var4 = temp_a1->u8_u.s.nav_y_hi;
-        new_var12 = temp_a0_3;
-        new_var15 = g_menu_content_height;
+        cursor_y_lsb = active_node->idx_nav.nav_x_packed >> 15;
+        cursor_y_hi = active_node->u8_u.s.nav_y_hi;
+        content_height = g_menu_content_height;
         g_content_cursor_y = MENU_CURSOR_Y_MIN;
-        g_content_cursor_y = ((new_var4 * 2) | new_var12) - (new_var15 - g_content_cursor_y);
+        g_content_cursor_y = ((cursor_y_hi * 2) | cursor_y_lsb) - (content_height - g_content_cursor_y);
         if (g_content_cursor_y < MENU_CURSOR_Y_MIN)
         {
             g_content_cursor_y = MENU_CURSOR_Y_MIN;
@@ -2763,24 +2595,21 @@ unsigned int menu_handle_node_input(void)
         {
             g_content_cursor_y = MENU_CURSOR_Y_MAX;
         }
-        g_content_cursor_x = (((temp_a1->idx_nav.nav_x_packed >> 4) >> 4) & 0x7F) + 8;
-        if (MENU_NONE != (&g_menu_nodes[g_menu_active_node])->content_id)
+        g_content_cursor_x = MENU_NAV_X(active_node->idx_nav.nav_x_packed) + MENU_CONTENT_CURSOR_X_OFFSET;
+        if (active_node->content_id != MENU_NONE)
         {
-            g_menu_cursor_enable = 1;
-            var_v1_2 = 0;
-            var_a0 = &g_menu_slots;
-            while (var_v1_2 < 4)
+            g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
+            work_index = 0;
+            while (work_index < MENU_SLOT_COUNT)
             {
-                if ((*var_a0) != 0)
+                if (g_menu_slots[work_index].active != 0)
                 {
                     g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
                     g_content_view_x = g_menu_default_view_pos.x;
-                    new_var = &g_menu_default_view_pos.y;
-                    g_content_view_y = *new_var;
+                    g_content_view_y = g_menu_default_view_pos.y;
                     break;
                 }
-                var_v1_2++;
-                var_a0 += 0x24;
+                work_index++;
             }
         }
         else
@@ -2788,12 +2617,12 @@ unsigned int menu_handle_node_input(void)
             g_menu_hit_item_idx = menu_find_active_content_item();
             if (g_menu_hit_item_idx != (-1))
             {
-                temp_v1_2 = g_menu_content_table[new_var11[g_menu_scene_type].idx_nav.s.self_idx] - (-g_menu_hit_item_idx);
-                g_content_view_x = temp_v1_2->packed_x & 0x1FF;
-                new_var3 = temp_v1_2->y - 8;
+                active_item = g_menu_content_table[nodes[g_menu_scene_type].idx_nav.s.self_idx] - (-g_menu_hit_item_idx);
+                g_content_view_x = active_item->packed_x & MENU_CONTENT_X_MASK;
+                view_y = active_item->y - MENU_CONTENT_VIEW_Y_OFFSET;
                 g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
-                g_menu_cursor_enable = 1;
-                g_content_view_y = new_var3;
+                g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
+                g_content_view_y = view_y;
             }
         }
     }
@@ -5999,41 +5828,41 @@ s32 menu_find_nav_node_index(s32 node_id)
 /**
  * @brief Emit up to two scroll-arrow SPRT primitives and a trailing draw-mode reset primitive.
  * @param buf Destination primitive buffer; each arrow occupies 0x14 bytes, the DR_TPAGE tail 8 bytes.
- * @param ot Pointer to the ordering-table entry to prepend each emitted primitive to.
- * @param state Slot view whose scroll fields drive the arrows: x/w place the arrow column, y is the top edge, h the window height, _u._s.unk6 (low 9 bits) the row.
+ * @param ot_entry Ordering-table entry to prepend each emitted primitive to.
+ * @param slot Menu slot whose scroll fields drive the arrows.
  * @return Pointer to the next free byte in @p buf after all emitted primitives.
  */
-void* menu_emit_slot_scroll_arrows(SPRT* buf, s32* ot, MenuSlotView* state)
+void* menu_emit_slot_scroll_arrows(SPRT* buf, u_long* ot_entry, MenuSlot* slot)
 {
     s32 emitted = 0;
     s32 max;
     u8* end;
 
-    if (state->lerp_cur_b != 0)
+    if (slot->lerp_cur_b != 0)
     {
         SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
         setSprt(buf);
-        buf->x0 = state->x + state->w - 0x10;
-        buf->y0 = state->y;
+        buf->x0 = slot->x + slot->w - 0x10;
+        buf->y0 = slot->y;
         SET_SPRT_UV0_PACKED(buf, 0x1080);
         SET_SPRT_CLUT(buf, 0x7C86);
         SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
-        addPrim(ot, buf);
+        addPrim(ot_entry, buf);
         emitted = 1;
         buf++;
     }
 
-    max = ((state->_u._s.unk6 & 0x1FF) << 4) - state->lerp_cur_b;
-    if (((s16)state->h - 0x10) < max)
+    max = ((MENU_SLOT_FLAGS_VIEW(slot).half.high & 0x1FF) << 4) - slot->lerp_cur_b;
+    if ((slot->h - 0x10) < max)
     {
         SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
         setSprt(buf);
-        buf->x0 = state->x + state->w - 0x10;
-        buf->y0 = state->y + state->h - 8;
+        buf->x0 = slot->x + slot->w - 0x10;
+        buf->y0 = slot->y + slot->h - 8;
         SET_SPRT_UV0_PACKED(buf, 0x2080);
         SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
         SET_SPRT_CLUT(buf, 0x7C86);
-        addPrim(ot, buf);
+        addPrim(ot_entry, buf);
         emitted += 1;
         buf++;
     }
@@ -6043,7 +5872,7 @@ void* menu_emit_slot_scroll_arrows(SPRT* buf, s32* ot, MenuSlotView* state)
     {
         DR_TPAGE* mode = (DR_TPAGE*)end;
         setDrawTPage(mode, 0, 0, 5);
-        addPrim(ot, mode);
+        addPrim(ot_entry, mode);
         end = (u8*)(mode + 1);
     }
 
@@ -8153,13 +7982,10 @@ s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
  * @param view_origin Viewport anchor; label origins are (0x30 - x, N - y).
  * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note The confirm-action switch on list->sel_idx is emitted as a computed goto
- *       through the rodata jump table jtbl_80140544; the static outer_keep[] array
- *       keeps the case labels address-taken so gcc reproduces that dispatch exactly.
  */
 s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
-    u16 rect[4];
+    MenuSlotRect rect;
     ScrollListState* list;
     MenuContentItem* item;
     MenuContentItem* tbl;
@@ -8173,7 +7999,6 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     u32 lhs_shift;
     u32 cmp_shift;
     s32 mask;
-    s32 arg;
     s32 idx;
     s32 hit;
     s32 buf;
@@ -8181,74 +8006,28 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     s32 handle2;
     s32 off;
     s32 off2;
-    s32 j;
-    s32 prev;
-    s32 next;
-    s32 more;
-    s32 link;
-    s32 word_prev;
     s32 i9;
-    s32 j1;
-    s32 prev1;
-    s32 next1;
-    s32 more1;
-    s32 link1;
-    s32 word_prev1;
-    s32 j2;
-    s32 prev2;
-    s32 next2;
-    s32 more2;
-    s32 link2;
-    s32 word_prev2;
-    s32 i;
-    s32 i1;
-    s32 i2;
-    s32 i3;
-    s32 i4;
-    s32 i5;
-    s32 i6;
-    s32 i7;
-    s32 i8;
-    u16 dispatch;
-
-    static void* const outer_keep[] = {
-        &&outer_case_0, &&outer_case_1, &&outer_case_2, &&outer_case_3, &&outer_case_4
-    };
-
     list = state;
     buf = prim_buf;
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        menu_play_se(0x7F, 0x80);
+        menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
         list->unk0 = 3;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
-        menu_play_se(0x7D, 0x80);
-        switch (0)
+        menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+        switch (list->sel_idx)
         {
         case 0:
-            dispatch = list->sel_idx;
-            if ((u32)dispatch >= 5)
-            {
-                break;
-            }
-            goto *jtbl_80140544[dispatch];
-
-        outer_case_0:
             switch (g_menu_active_subtype)
             {
             case 7:
             {
                 s8* ability_mask_ptr;
 
-                i = 3;
-                while (i >= 0)
-                {
-                    g_menu_slots[i].active = 0;
-                    i--;
-                }
+                MENU_CLEAR_SLOTS();
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 0x24;
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = D_8016869F[g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx];
 
@@ -8260,7 +8039,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 {
                     if ((idx != (g_menu_active_subtype - 7)) && (entry[0] != 0))
                     {
-                        unk14 = *(u32*)(entry + 0x14);
+                        unk14 = PAD_ITEM_W14(entry);
                         if (unk14 & 0x300)
                         {
                             mask |= D_800F0BEC[(unk14 >> 10) & 0x3F];
@@ -8287,12 +8066,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             {
                 s8* ability_mask_ptr;
 
-                i1 = 3;
-                while (i1 >= 0)
-                {
-                    g_menu_slots[i1].active = 0;
-                    i1--;
-                }
+                MENU_CLEAR_SLOTS();
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 0x27;
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = D_8016869B[g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx];
 
@@ -8305,7 +8079,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 {
                     if ((idx != (g_menu_active_subtype - 7)) && (entry[0] != 0))
                     {
-                        unk14 = *(u32*)(entry + 0x14);
+                        unk14 = PAD_ITEM_W14(entry);
                         if (unk14 & 0x300)
                         {
                             mask |= D_800F0BEC[(unk14 >> 10) & 0x3F];
@@ -8331,56 +8105,24 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             }
             break;
 
-        outer_case_1:
+        case 1:
             if (g_menu_active_subtype == 7)
             {
                 if (menu_stage_best_equipment_for_slot0() == 0)
                 {
                     break;
                 }
-                i2 = 3;
-                while (i2 >= 0)
-                {
-                    g_menu_slots[i2].active = 0;
-                    i2--;
-                }
-                rect[0] = 0xB0;
-                rect[1] = 0x40;
-                rect[2] = 0x70;
-                rect[3] = 0x30;
-                list = (ScrollListState*)menu_slot_alloc(0, rect);
+                MENU_CLEAR_SLOTS();
+                rect.x = 0xB0;
+                rect.y = 0x40;
+                rect.w = 0x70;
+                rect.h = 0x30;
+                list = (ScrollListState*)menu_slot_alloc(0, &rect);
                 ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
                 g_menu_compare_window_active = 1;
                 ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
 
-                j = 0;
-                do
-                {
-                    s32 cur = g_menu_item_nav_entries[j];
-                    s32 word_self;
-
-                    prev = 1;
-                    link = cur & ~0x3FFF;
-                    link = link | ((j * 0x10) & 0x3FFF);
-                    word_self = link;
-                    g_menu_item_nav_entries[j] = word_self;
-                    if ((j - 1) >= 0)
-                    {
-                        prev = j - 1;
-                    }
-                    word_prev = word_self & 0xFF803FFF;
-                    word_prev = word_prev | ((prev & 0x1FF) << 14);
-                    g_menu_item_nav_entries[j] = word_prev;
-                    next = j + 1;
-                    more = next < 2;
-                    link = 0;
-                    if (more != 0)
-                    {
-                        link = next;
-                    }
-                    g_menu_item_nav_entries[j] = (word_prev & 0x7FFFFF) | (link << 23);
-                    j = next;
-                } while (more != 0);
+                MENU_RELINK();
                 break;
             }
             g_item_slot_data.slot3 = 0;
@@ -8390,52 +8132,20 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             {
                 break;
             }
-            i3 = 3;
-            while (i3 >= 0)
-            {
-                g_menu_slots[i3].active = 0;
-                i3--;
-            }
-            rect[0] = 0xB0;
-            rect[1] = 0x40;
-            rect[2] = 0x70;
-            rect[3] = 0x30;
-            list = (ScrollListState*)menu_slot_alloc(0, rect);
+            MENU_CLEAR_SLOTS();
+            rect.x = 0xB0;
+            rect.y = 0x40;
+            rect.w = 0x70;
+            rect.h = 0x30;
+            list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
             g_menu_compare_window_active = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
 
-            j1 = 0;
-            do
-            {
-                s32 cur = g_menu_item_nav_entries[j1];
-                s32 word_self;
-
-                prev1 = 1;
-                link1 = cur & ~0x3FFF;
-                link1 = link1 | ((j1 * 0x10) & 0x3FFF);
-                word_self = link1;
-                g_menu_item_nav_entries[j1] = word_self;
-                if ((j1 - 1) >= 0)
-                {
-                    prev1 = j1 - 1;
-                }
-                word_prev1 = word_self & 0xFF803FFF;
-                word_prev1 = word_prev1 | ((prev1 & 0x1FF) << 14);
-                g_menu_item_nav_entries[j1] = word_prev1;
-                next1 = j1 + 1;
-                more1 = next1 < 2;
-                link1 = 0;
-                if (more1 != 0)
-                {
-                    link1 = next1;
-                }
-                g_menu_item_nav_entries[j1] = (word_prev1 & 0x7FFFFF) | (link1 << 23);
-                j1 = next1;
-            } while (more1 != 0);
+            MENU_RELINK();
             break;
 
-        outer_case_2:
+        case 2:
             g_item_slot_data.slot3 = 0;
             g_item_slot_data.slot2 = 0;
             g_item_slot_data.slot1 = 0;
@@ -8447,62 +8157,25 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             g_menu_active_subtype = 0xA;
             menu_stage_best_equipment_for_active_slot();
 
-            i4 = 3;
-            while (i4 >= 0)
-            {
-                g_menu_slots[i4].active = 0;
-                i4--;
-            }
-            rect[0] = 0xB0;
-            rect[1] = 0x40;
-            rect[2] = 0x70;
-            rect[3] = 0x30;
-            list = (ScrollListState*)menu_slot_alloc(0, rect);
+            MENU_CLEAR_SLOTS();
+            rect.x = 0xB0;
+            rect.y = 0x40;
+            rect.w = 0x70;
+            rect.h = 0x30;
+            list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
             g_menu_compare_window_active = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
 
-            j2 = 0;
-            do
-            {
-                s32 cur = g_menu_item_nav_entries[j2];
-                s32 word_self;
-
-                prev2 = 1;
-                link2 = cur & ~0x3FFF;
-                link2 = link2 | ((j2 * 0x10) & 0x3FFF);
-                word_self = link2;
-                g_menu_item_nav_entries[j2] = word_self;
-                if ((j2 - 1) >= 0)
-                {
-                    prev2 = j2 - 1;
-                }
-                word_prev2 = word_self & 0xFF803FFF;
-                word_prev2 = word_prev2 | ((prev2 & 0x1FF) << 14);
-                g_menu_item_nav_entries[j2] = word_prev2;
-                next2 = j2 + 1;
-                more2 = next2 < 2;
-                link2 = 0;
-                if (more2 != 0)
-                {
-                    link2 = next2;
-                }
-                g_menu_item_nav_entries[j2] = (word_prev2 & 0x7FFFFF) | (link2 << 23);
-                j2 = next2;
-            } while (more2 != 0);
+            MENU_RELINK();
             break;
 
-        outer_case_3:
+        case 3:
             if (*(u8*)g_menu_active_equipped_item == 0)
             {
                 break;
             }
-            i5 = 3;
-            while (i5 >= 0)
-            {
-                g_menu_slots[i5].active = 0;
-                i5--;
-            }
+            MENU_CLEAR_SLOTS();
             if (g_menu_active_subtype == 7)
             {
                 g_menu_item_ptr = g_menu_active_equipped_item;
@@ -8534,7 +8207,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             g_menu_draw_early_out = 1;
             return buf;
 
-        outer_case_4:
+        case 4:
             if (*(u8*)g_menu_active_equipped_item == 0)
             {
                 break;
@@ -8575,19 +8248,14 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                                     if (handle2 != 0)
                                     {
                                         func_800A8F8C(handle2, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + (off + 0x50)));
-                                        *((u8*)g_pad_ctx + (off - (-(g_menu_char_slot * 0x250))) + 0x640) = 0;
+                                        *((u8*)g_pad_ctx + (menu_add_s32(off, g_menu_char_slot * 0x250)) + 0x640) = 0;
                                         func_800A8FB4();
                                         break;
                                     }
                                     func_800A8F8C(((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, handle);
                                     *(u8*)handle = 0;
                                     g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
-                                    i6 = 3;
-                                    while (i6 >= 0)
-                                    {
-                                        g_menu_slots[i6].active = 0;
-                                        i6--;
-                                    }
+                                    MENU_CLEAR_SLOTS();
                                     menu_open_content_page(6);
                                     return buf;
                                 }
@@ -8600,12 +8268,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                             break;
                         }
                         g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0x3A);
-                        i7 = 3;
-                        while (i7 >= 0)
-                        {
-                            g_menu_slots[i7].active = 0;
-                            i7--;
-                        }
+                        MENU_CLEAR_SLOTS();
                         menu_open_content_page(6);
                         return buf;
 
@@ -8630,12 +8293,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 break;
             }
             g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
-            i8 = 3;
-            while (i8 >= 0)
-            {
-                g_menu_slots[i8].active = 0;
-                i8--;
-            }
+            MENU_CLEAR_SLOTS();
             menu_open_content_page(6);
             return buf;
         }
