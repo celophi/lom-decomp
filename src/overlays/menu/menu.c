@@ -1956,9 +1956,9 @@ void menu_node_tree_init(void)
     node0_flags = g_menu_nodes[0].u2.unk2;
     node0_flags_step1 = node0_flags & 0xFFCD;
     node0_flags_step2 = node0_flags & 0xFF0D;
-    *(volatile u16*)&g_menu_nodes[0].u2.unk2 = node0_flags_step1;
+    g_menu_nodes[0].u2.unk2 = node0_flags_step1;
     *(volatile u16*)&g_menu_nodes[0].u2.unk2 = node0_flags_step2;
-    *(volatile u16*)&g_menu_nodes[0].u2.unk2 = node0_flags_step2 | MENU_NODE_FLAG_ACTIVE;
+    g_menu_nodes[0].u2.unk2 = node0_flags_step2 | MENU_NODE_FLAG_ACTIVE;
     g_menu_nodes[0].u2.s.parent_idx = MENU_NONE;
     if (D_800FD818.unk0 & 2)
     {
@@ -1983,11 +1983,11 @@ void menu_node_tree_init(void)
     g_menu_nodes[2].u2.unk2 = (u16)((g_menu_nodes[2].u2.unk2 & 0xFF0F) | 0x40);
     g_menu_nodes[2].u2.s.parent_idx = 0;
     node3_flags_base = (g_menu_nodes[3].u2.unk2 & 0xFFCD) | 0x10;
-    *(volatile u16*)&g_menu_nodes[3].u2.unk2 = node3_flags_base;
+    g_menu_nodes[3].u2.unk2 = node3_flags_base;
     node3_flags = 0x10;
     node3_flags = node3_flags_base | node3_flags;
     *(volatile u16*)&g_menu_nodes[3].u2.unk2 = (u16)(node3_flags & 0xFF3F);
-    *(volatile u16*)&g_menu_nodes[3].u2.unk2 = (u16)(node3_flags & 0xFF3E);
+    g_menu_nodes[3].u2.unk2 = (u16)(node3_flags & 0xFF3E);
     g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
     if (D_800FDA80 & 2)
     {
@@ -2000,11 +2000,11 @@ void menu_node_tree_init(void)
     g_menu_nodes[4].u2.unk2 = (u16)((0xFF5F & g_menu_nodes[4].u2.unk2) | 0x50);
     g_menu_nodes[5].u2.unk2 = (u16)((g_menu_nodes[5].u2.unk2 & 0xFF5F) | 0x50);
     node6_flags_base = (g_menu_nodes[6].u2.unk2 & 0xFFCD) | 0x10;
-    *(volatile u16*)&g_menu_nodes[6].u2.unk2 = node6_flags_base;
+    g_menu_nodes[6].u2.unk2 = node6_flags_base;
     node6_flags = 0x10;
     node6_flags = node6_flags_base | node6_flags;
     *(volatile u16*)&g_menu_nodes[6].u2.unk2 = (u16)(node6_flags & 0xFF3F);
-    *(volatile u16*)&g_menu_nodes[6].u2.unk2 = (u16)(node6_flags & 0xFF3E);
+    g_menu_nodes[6].u2.unk2 = (u16)(node6_flags & 0xFF3E);
     g_menu_nodes[3].uA.s.child0 = 4;
     g_menu_nodes[3].child1 = 5;
     g_menu_nodes[4].label_id = 6;
@@ -2030,16 +2030,16 @@ void menu_node_tree_init(void)
     g_menu_nodes[8].u2.unk2 = (u16)((g_menu_nodes[8].u2.unk2 & 0xFF5F) | 0x50);
     g_menu_nodes[8].idx_nav.s.self_idx = 8;
     node9_flags_base = (g_menu_nodes[9].u2.unk2 & 0xFFCD) | 0x20;
-    *(volatile u16*)&g_menu_nodes[9].u2.unk2 = node9_flags_base;
+    g_menu_nodes[9].u2.unk2 = node9_flags_base;
     node9_flags = 0x20;
     node9_flags = node9_flags_base | node9_flags;
     *(volatile u16*)&g_menu_nodes[9].u2.unk2 = (u16)(node9_flags & 0xFF3F);
-    *(volatile u16*)&g_menu_nodes[9].u2.unk2 = (u16)(node9_flags & 0xFF3E);
+    g_menu_nodes[9].u2.unk2 = (u16)(node9_flags & 0xFF3E);
     g_menu_nodes[0xA].u2.unk2 = (u16)((g_menu_nodes[0xA].u2.unk2 & 0xFF6F) | 0x60);
     node12_flags = (g_menu_nodes[0xC].u2.unk2 & 0xFFCD) | 0x20;
-    *(volatile u16*)&g_menu_nodes[0xC].u2.unk2 = node12_flags;
+    g_menu_nodes[0xC].u2.unk2 = node12_flags;
     *(volatile u16*)&g_menu_nodes[0xC].u2.unk2 = (u16)((node12_flags | 0x20) & 0xFF3F);
-    *(volatile u16*)&g_menu_nodes[0xC].u2.unk2 = (u16)((node12_flags | 0x20) & 0xFF3E);
+    g_menu_nodes[0xC].u2.unk2 = (u16)((node12_flags | 0x20) & 0xFF3E);
     g_menu_nodes[8].u2.s.parent_idx = 6;
     g_menu_nodes[8].icon_id = 4;
     g_menu_nodes[9].label_id = 0xA;
@@ -2062,10 +2062,10 @@ void menu_node_tree_init(void)
     g_menu_nodes[0xD].u2.unk2 = (u16)((g_menu_nodes[0xD].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0xD].u2.s.parent_idx = 0xC;
     node15_flags_base = (g_menu_nodes[0xF].u2.unk2 & 0xFFCD) | 0x20;
-    *(volatile u16*)&g_menu_nodes[0xF].u2.unk2 = node15_flags_base;
+    g_menu_nodes[0xF].u2.unk2 = node15_flags_base;
     node15_flags = (node15_flags_base & 0xFF6D) | 0x60;
     *(volatile u16*)&g_menu_nodes[0xF].u2.unk2 = node15_flags;
-    *(volatile u16*)&g_menu_nodes[0xF].u2.unk2 = (u16)(node15_flags & 0xFFFE);
+    g_menu_nodes[0xF].u2.unk2 = (u16)(node15_flags & 0xFFFE);
     g_menu_nodes[0xF].icon_id = 8;
     g_menu_nodes[0x10].icon_id = 7;
     g_menu_nodes[0xF].label_id = 0xD;
@@ -2092,10 +2092,10 @@ void menu_node_tree_init(void)
     node18_flags_copy = g_menu_nodes[0x12].u2.unk2;
     flags_value = node18_flags_copy;
     g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
-    *(volatile u16*)&g_menu_nodes[0x12].u2.unk2 = (u16)(flags_value & 0xFFFD);
+    g_menu_nodes[0x12].u2.unk2 = (u16)(flags_value & 0xFFFD);
     node18_flags = flags_value & 0xFF3D;
     *(volatile u16*)&g_menu_nodes[0x12].u2.unk2 = node18_flags;
-    *(volatile u16*)&g_menu_nodes[0x12].u2.unk2 = (u16)(node18_flags | MENU_NODE_FLAG_ACTIVE);
+    g_menu_nodes[0x12].u2.unk2 = (u16)(node18_flags | MENU_NODE_FLAG_ACTIVE);
     g_menu_nodes[0x12].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x13].label_id = 0x11;
     g_menu_nodes[0x14].icon_id = 0xF;
@@ -2171,19 +2171,19 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x2B].label_id = 0x1A;
     g_menu_nodes[0x2B].idx_nav.s.self_idx = 0x2B;
     flags_value = g_menu_nodes[0x1D].u2.unk2;
-    *(volatile u16*)&g_menu_nodes[0x1D].u2.unk2 = (u16)(flags_value & 0xFFFD);
+    g_menu_nodes[0x1D].u2.unk2 = (u16)(flags_value & 0xFFFD);
     node29_flags = flags_value & 0xFF3D;
     *(volatile u16*)&g_menu_nodes[0x1D].u2.unk2 = node29_flags;
     node30_flags_base = g_menu_nodes[0x1E].u2.unk2;
-    *(volatile u16*)&g_menu_nodes[0x1D].u2.unk2 = (u16)(node29_flags | MENU_NODE_FLAG_ACTIVE);
+    g_menu_nodes[0x1D].u2.unk2 = (u16)(node29_flags | MENU_NODE_FLAG_ACTIVE);
     g_menu_nodes[0x1D].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x1F].u2.unk2 = (u16)((g_menu_nodes[0x1F].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x1F].u2.s.parent_idx = 0x1E;
-    *(volatile u16*)&g_menu_nodes[0x1E].u2.unk2 = (u16)(node30_flags_base & 0xFFFD);
+    g_menu_nodes[0x1E].u2.unk2 = (u16)(node30_flags_base & 0xFFFD);
     node30_flags = node30_flags_base & 0xFF3D;
     *(volatile u16*)&g_menu_nodes[0x1E].u2.unk2 = node30_flags;
     g_menu_nodes[0x2B].u2.unk2 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFF3F) | 0x40);
-    *(volatile u16*)&g_menu_nodes[0x1E].u2.unk2 = (u16)(node30_flags | MENU_NODE_FLAG_ACTIVE);
+    g_menu_nodes[0x1E].u2.unk2 = (u16)(node30_flags | MENU_NODE_FLAG_ACTIVE);
     g_menu_nodes[0x1E].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x2B].u2.s.parent_idx = 0x1E;
     g_menu_nodes[0x1F].u2.unk2 = (u16)(g_menu_nodes[0x1F].u2.unk2 & 0xFFCF);
@@ -2193,10 +2193,10 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x20].idx_nav.s.self_idx = 0x20;
     node32_flags_base = g_menu_nodes[0x20].u2.unk2;
     node32_flags = node32_flags_base & 0xFF3D;
-    *(volatile u16*)&g_menu_nodes[0x20].u2.unk2 = (u16)(node32_flags_base & 0xFFFD);
+    g_menu_nodes[0x20].u2.unk2 = (u16)(node32_flags_base & 0xFFFD);
     *(volatile u16*)&g_menu_nodes[0x20].u2.unk2 = (u16)node32_flags;
     g_menu_nodes[0x20].icon_id = 0x16;
-    *(volatile u16*)&g_menu_nodes[0x20].u2.unk2 = (u16)(node32_flags | MENU_NODE_FLAG_ACTIVE);
+    g_menu_nodes[0x20].u2.unk2 = (u16)(node32_flags | MENU_NODE_FLAG_ACTIVE);
     g_menu_nodes[0x20].u2.s.parent_idx = MENU_NONE;
     if (D_800FD818.unk268 & 1)
     {
@@ -5982,25 +5982,25 @@ s32 menu_draw_active_node_cursor(s32 buf, s32* ot, s32 label)
 }
 
 
-/** @brief OR two values without exposing the expression directly to the optimizer. */
+/** @brief Return the bitwise OR of two integer values. */
 inline int menu_or_bits(int arg0, int arg1)
 {
     return arg0 | arg1;
 }
 
-/** @brief Read a byte through a helper to preserve address materialization. */
+/** @brief Read the byte addressed by @p arg0. */
 inline u8 menu_read_u8(u8* arg0)
 {
     return arg0[0];
 }
 
-/** @brief Zero-extend a byte through an inline call. */
+/** @brief Convert an unsigned byte to a 32-bit value. */
 inline u32 menu_zext_u8(u8 arg0)
 {
     return (u32)arg0;
 }
 
-/** @brief Add two signed values while preserving operand order. */
+/** @brief Add two signed 32-bit values. */
 inline s32 menu_add_s32(s32 arg0, s32 arg1)
 {
     return arg0 + arg1;
@@ -6020,7 +6020,7 @@ inline u8* menu_load_ptr(u8** p)
 
 /**
  * @brief Render the content cursor, update its lerped position, and optionally render the active hit-item label.
- * @param arg0 Current primitive buffer pointer; reused as the running cursor (the original keeps it in $s0 and copies it from $a0 in the prologue).
+ * @param arg0 Current primitive buffer pointer, reused as the running cursor.
  * @param arg1 Pointer to the current ordering-table entry.
  * @param arg2 Non-zero to also render the label string for the active hit item.
  * @return Updated primitive buffer pointer after all emitted primitives.
@@ -6458,7 +6458,7 @@ s32 menu_draw_node_recursive(s32 arg0, s32 arg1, s32* arg2)
     if (node->state == 0)
     {
         arg1 = node->u8_u.nav_y_packed & 0x8000;
-        ((volatile MenuNode*)node)->idx_nav.nav_x_packed = (node->idx_nav.nav_x_packed & 0x7FFF) | arg1;
+        node->idx_nav.nav_x_packed = (node->idx_nav.nav_x_packed & 0x7FFF) | arg1;
         {
             u16 t = node->u8_u.nav_y_packed;
             t &= 0xFF00;
