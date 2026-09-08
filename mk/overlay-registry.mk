@@ -555,6 +555,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_equipment_combination_rules.c \
 	src/overlays/field/func_800B3D84.c \
 	src/overlays/field/func_800B4844.c \
+	src/overlays/field/func_800B4B44.c \
 	src/overlays/field/func_800B4CE4.c \
 	src/overlays/field/func_800B4D1C.c \
 	src/overlays/field/func_800B4DF0.c \
