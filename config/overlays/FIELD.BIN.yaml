@@ -427,7 +427,7 @@ segments:
       - [0x68699, c, unk2_b_split029_tail_after_820c] # gcc272_cdk, func_800B8308
       - [0x68845, c, func_800B84B4]                # gcc280_g0, 100%
       - [0x6895D, c, field_script_ops_00_01]       # gcc280_g0, field_script_op_00 .. _01
-      - [0x68A15, c, unk2_b_split030]              # gcc272_cdk, func_800B8684
+      - [0x68A15, c, func_800B8684]               # gcc280_g0, 100%
       - [0x68B65, c, field_script_ops_03_08]       # gcc280_g0, field_script_op_03 .. _08
       - [0x68F11, c, func_800B8B80]                # gcc280_g0, 100%
       - [0x68FD9, c, field_script_op_0a]           # gcc280_g0, field_script_op_0a
