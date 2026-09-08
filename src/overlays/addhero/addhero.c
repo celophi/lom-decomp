@@ -214,23 +214,23 @@ extern char g_lom_save_filename_prefix[];
 extern char g_lom_alt_save_filename_prefix[];
 extern char g_new_save_entry_prefix[];
 
-extern u16 D_80146FA4;
-extern u16 D_80146FA6;
-extern u16 D_80146FA8;
-extern u16 D_80146FAA;
-extern u16 D_80146FAC;
+extern u16 g_addhero_glyph_table;
+extern u16 g_addhero_glyph_status_fa;
+extern u16 g_addhero_glyph_status_fd;
+extern u16 g_addhero_glyph_save_entry_label;
+extern u16 g_addhero_glyph_default_entry_label;
 extern u16 g_addhero_glyph_card_slot0_label;
 extern u16 g_addhero_glyph_card_slot1_label;
-extern u16 D_80146FB4;
-extern u16 D_80146FB6;
-extern u16 D_80146FB8;
+extern u16 g_addhero_glyph_status_fb;
+extern u16 g_addhero_glyph_status_fc;
+extern u16 g_addhero_glyph_new_entry_label;
 extern u16 D_80146FC0;
 extern u16 D_80146FCC;
 extern u16 D_80146FD2;
 extern u16 g_addhero_glyph_load_prompt;
 extern u16 g_addhero_glyph_load_progress;
-extern u16 D_80146FD8;
-extern u16 D_80146FDE;
+extern u16 g_addhero_glyph_status_f8;
+extern u16 g_addhero_glyph_alt_save_entry_label;
 extern u16 g_addhero_glyph_dialog_msg0;
 extern u16 g_addhero_glyph_dialog_msg1;
 extern u16 g_addhero_glyph_dialog_msg2;
@@ -242,7 +242,7 @@ extern u16 D_80146FF8;
 extern u16 D_80147012;
 extern u16 D_8014700C;
 extern u16 D_8014700E;
-extern u16 D_80147054;
+extern u16 g_addhero_glyph_plus_marker;
 extern u16 g_addhero_entry_glyph_table[];
 
 /* In-file functions */
@@ -817,22 +817,22 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case 0xF8:
-        do { prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x84, -y_offset, 2); } while (0);
+        do { prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x84, -y_offset, 2); } while (0);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFA:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA6, 2), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fa, 2), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFD:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA8, 4), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fd, 4), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB4, 0x10), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fb, 0x10), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB6, 0x12), 4, -x_offset + 0x84, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fc, 0x12), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFE:
         break;
@@ -847,8 +847,8 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             u8 *base;
         case ADDHERO_ENTRY_STATE_IDLE:
             x = -x_offset + 0x84;
-            base = (u8 *)&D_80146FA4;
-            prim = func_800A88A0(prim, ot, base + D_80146FA4, 4, x, -y_offset, 2);
+            base = (u8 *)&g_addhero_glyph_table;
+            prim = func_800A88A0(prim, ot, base + g_addhero_glyph_table, 4, x, -y_offset, 2);
             prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
             prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
             break;
@@ -863,7 +863,7 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             s32 row;
             u8 *base;
 
-            base = (u8 *)&D_80146FA4;
+            base = (u8 *)&g_addhero_glyph_table;
             base_x = -x_offset;
             do
             {
@@ -889,24 +889,24 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
                         }
                         if (*addhero_skip_hex_digits((void *)((s32)&g_addhero_entries[g_addhero_card_slot][i] + 0xC)) == 0x2B)
                         {
-                            prim = func_800A88A0(prim, ot, (void *)((s32)D_80147054 + (s32)base), 4, 0xF2 - x_offset, row_y, 1);
+                            prim = func_800A88A0(prim, ot, (void *)((s32)g_addhero_glyph_plus_marker + (s32)base), 4, 0xF2 - x_offset, row_y, 1);
                         }
                     }
                     if (strncmp(g_lom_save_filename_prefix, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FAA + (s32)base), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)g_addhero_glyph_save_entry_label + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
                     else if (strncmp(g_lom_alt_save_filename_prefix, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FDE + (s32)base), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)g_addhero_glyph_alt_save_entry_label + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
                     else if (strncmp(g_new_save_entry_prefix, (char *)((s32)&g_addhero_entries[g_addhero_card_slot][i]), 8) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FB8 + (s32)base), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)g_addhero_glyph_new_entry_label + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
                     else
                     {
-                        prim = func_800A88A0(prim, ot, (void *)((s32)D_80146FAC + (s32)base), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void *)((s32)g_addhero_glyph_default_entry_label + (s32)base), 4, 1 - x_offset, row_y, 0);
                     }
                 }
                 i++;
@@ -2030,32 +2030,32 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (g_addhero_entry_state)
     {
     case 0xF8:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xF9:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case ADDHERO_ENTRY_STATE_IDLE:
         {
             s32 x; u8 *base;
             x = -x_offset + 0x90;
-            base = (u8 *)&D_80146FA4;
-            prim = func_800A88A0(prim, ot, base + D_80146FA4, 4, x, -y_offset, 2);
+            base = (u8 *)&g_addhero_glyph_table;
+            prim = func_800A88A0(prim, ot, base + g_addhero_glyph_table, 4, x, -y_offset, 2);
             prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
             prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
         }
         break;
     case 0xFA:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FD8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xFD:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FA8, 4), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fd, 4), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xFB:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB4, 0x10), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fb, 0x10), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xFC:
-        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80146FB6, 0x12), 4, -x_offset + 0x90, -y_offset, 2);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fc, 0x12), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xF7:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014700C, 0x68), 4, -x_offset + 0x90, -y_offset, 2);
@@ -2204,8 +2204,8 @@ s32 addhero_draw_transfer_status(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     default:
         {
             s32 x,posv,diff; u8 *base;
-            x=-x_offset+0x90; base=(u8 *)&D_80146FA4;
-            prim=func_800A88A0(prim,ot,base+D_80146FA4,4,x,-y_offset,2);
+            x=-x_offset+0x90; base=(u8 *)&g_addhero_glyph_table;
+            prim=func_800A88A0(prim,ot,base+g_addhero_glyph_table,4,x,-y_offset,2);
             prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0x1E),4,x,0xE -y_offset,2);
             prim=func_800A88A0(prim,ot,GLYPH_OFF(base,0xB2),4,x,0x1C-y_offset,2);
             if(g_addhero_entry_scan_active==0){
