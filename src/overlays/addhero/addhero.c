@@ -70,6 +70,8 @@ typedef struct AddheroRecord
 #define ADDHERO_ENTRY_ROW_HEIGHT 14
 #define ADDHERO_ENTRY_COUNT_LIMIT 0x10
 #define ADDHERO_NO_ICON 0x7F
+#define ADDHERO_SAVE_FILENAME_PREFIX_LENGTH 12
+#define ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH 8
 
 /* Return codes produced by addhero_advance_load_sequence. */
 #define ADDHERO_LOAD_RESULT_NONE 0
@@ -968,16 +970,15 @@ void addhero_update_elements(void)
  * @param x_offset Horizontal offset; screen X is derived from it.
  * @param y_offset Vertical offset applied to each row.
  * @return The updated primitive pointer after linking this frame's glyphs.
- * @see decomp.me (100%)
  */
 s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
 {
-    s32 state = g_addhero_entry_state;
+    s32 entry_state = g_addhero_entry_state;
 
-    switch (state)
+    switch (entry_state)
     {
     case 0xF8:
-        do { prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x84, -y_offset, 2); } while (0);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xF9:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
@@ -996,95 +997,109 @@ s32 addhero_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case 0xFE:
         break;
+    case ADDHERO_ENTRY_STATE_IDLE:
+        {
+            s32 message_x;
+            u8 *glyph_base;
+
+            message_x = -x_offset + 0x84;
+            glyph_base = (u8 *)&g_addhero_glyph_table;
+            prim = func_800A88A0(prim, ot, glyph_base + g_addhero_glyph_table, 4, message_x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, ADDHERO_ENTRY_ROW_HEIGHT - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, (ADDHERO_ENTRY_ROW_HEIGHT * 2) - y_offset, 2);
+        }
+        break;
     default:
         {
             s32 row_y;
-            s32 i;
+            s32 entry_index;
 
-        if (g_addhero_entry_scan_active != 0)
-        {
-            s32 x;
-            u8 *base;
-        case ADDHERO_ENTRY_STATE_IDLE:
-            x = -x_offset + 0x84;
-            base = (u8 *)&g_addhero_glyph_table;
-            prim = func_800A88A0(prim, ot, base + g_addhero_glyph_table, 4, x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
-            break;
-        }
-        i = 0;
-        if (state > 0)
-        {
-            s32 base_x;
-            s32 *flag_ptr;
-            u16 misc_glyph;
-            Vec2s pos;
-            s32 row;
-            u8 *base;
-
-            base = (u8 *)&g_addhero_glyph_table;
-            base_x = -x_offset;
-            do
+            if (g_addhero_entry_scan_active != 0)
             {
-                row = ((i * 14) - y_offset) - g_addhero_scroll_y;
-                row_y = row + 1;
-                if ((u32)(row + 0xE) < 0x65U)
+                s32 message_x;
+                u8 *glyph_base;
+
+                message_x = -x_offset + 0x84;
+                glyph_base = (u8 *)&g_addhero_glyph_table;
+                prim = func_800A88A0(prim, ot, glyph_base + g_addhero_glyph_table, 4, message_x, -y_offset, 2);
+                prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0x1E), 4, message_x, ADDHERO_ENTRY_ROW_HEIGHT - y_offset, 2);
+                prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, (ADDHERO_ENTRY_ROW_HEIGHT * 2) - y_offset, 2);
+                break;
+            }
+            entry_index = 0;
+            if (entry_state > 0)
+            {
+                s32 list_x;
+                u16 rank_glyph;
+                Vec2s value_pos;
+                u8 *glyph_base;
+
+                glyph_base = (u8 *)&g_addhero_glyph_table;
+                list_x = -x_offset;
+                do
                 {
-                    flag_ptr = &g_addhero_entry_ranks[i];
-                    if (*flag_ptr >= 0)
+                    row_y = ((entry_index * ADDHERO_ENTRY_ROW_HEIGHT) - y_offset) - g_addhero_scroll_y + 1;
+                    if ((u32)(row_y + ADDHERO_ENTRY_ROW_HEIGHT - 1) < 0x65U)
                     {
-                        pos.x = base_x + 0x86;
-                        pos.y = row_y;
-                        prim = func_800A88A0(func_800A8A78(ot, prim, g_addhero_entry_suffix_values[i], 4, &pos, 0), ot, GLYPH_ENTRY(base, g_addhero_glyph_entry_value_label), 4, base_x + 0x70, row_y, 0);
-                        if ((g_addhero_rank_count - 1) == *flag_ptr)
+                        if (g_addhero_entry_ranks[entry_index] >= 0)
                         {
-                            misc_glyph = *(u16 *)(base + 0x36);
-                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, misc_glyph), 4, base_x + 0xC0, row_y, 0);
+                            value_pos.x = list_x + 0x86;
+                            value_pos.y = row_y;
+                            prim = func_800A88A0(
+                                func_800A8A78(ot, prim, g_addhero_entry_suffix_values[entry_index], 4, &value_pos, 0), ot,
+                                GLYPH_ENTRY(glyph_base, g_addhero_glyph_entry_value_label), 4, list_x + 0x70, row_y, 0);
+                            if ((g_addhero_rank_count - 1) == g_addhero_entry_ranks[entry_index])
+                            {
+                                rank_glyph = *(u16 *)(glyph_base + 0x36);
+                                prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, rank_glyph), 4, list_x + 0xC0, row_y, 0);
+                            }
+                            else if (g_addhero_entry_ranks[entry_index] < 2)
+                            {
+                                rank_glyph = *(u16 *)(glyph_base + 0x38);
+                                prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, rank_glyph), 4, list_x + 0xC0, row_y, 0);
+                            }
+                            if (*addhero_skip_hex_digits(
+                                    &g_addhero_entries[g_addhero_card_slot][entry_index].name[ADDHERO_SAVE_FILENAME_PREFIX_LENGTH]) == '+')
+                            {
+                                prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_plus_marker), 4, 0xF2 - x_offset, row_y, 1);
+                            }
                         }
-                        else if (*flag_ptr < 2)
+                        if (strncmp(g_lom_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
+                                    ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                         {
-                            misc_glyph = *(u16 *)(base + 0x38);
-                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, misc_glyph), 4, base_x + 0xC0, row_y, 0);
+                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_save_entry_label), 4, 1 - x_offset, row_y, 0);
                         }
-                        if (*addhero_skip_hex_digits((void *)((s32)&g_addhero_entries[g_addhero_card_slot][i] + 0xC)) == 0x2B)
+                        else if (strncmp(g_lom_alt_save_filename_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
+                                         ADDHERO_SAVE_FILENAME_PREFIX_LENGTH) == 0)
                         {
-                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_plus_marker), 4, 0xF2 - x_offset, row_y, 1);
+                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_alt_save_entry_label), 4, 1 - x_offset, row_y, 0);
+                        }
+                        else if (strncmp(g_new_save_entry_prefix, g_addhero_entries[g_addhero_card_slot][entry_index].name,
+                                         ADDHERO_NEW_SAVE_FILENAME_PREFIX_LENGTH) == 0)
+                        {
+                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_new_entry_label), 4, 1 - x_offset, row_y, 0);
+                        }
+                        else
+                        {
+                            prim = func_800A88A0(prim, ot, GLYPH_ENTRY(glyph_base, g_addhero_glyph_default_entry_label), 4, 1 - x_offset, row_y, 0);
                         }
                     }
-                    if (strncmp(g_lom_save_filename_prefix, (char *)&g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0)
-                    {
-                        prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_save_entry_label), 4, 1 - x_offset, row_y, 0);
-                    }
-                    else if (strncmp(g_lom_alt_save_filename_prefix, (char *)&g_addhero_entries[g_addhero_card_slot][i], 0xC) == 0)
-                    {
-                        prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_alt_save_entry_label), 4, 1 - x_offset, row_y, 0);
-                    }
-                    else if (strncmp(g_new_save_entry_prefix, (char *)&g_addhero_entries[g_addhero_card_slot][i], 8) == 0)
-                    {
-                        prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_new_entry_label), 4, 1 - x_offset, row_y, 0);
-                    }
-                    else
-                    {
-                        prim = func_800A88A0(prim, ot, GLYPH_ENTRY(base, g_addhero_glyph_default_entry_label), 4, 1 - x_offset, row_y, 0);
-                    }
-                }
-                i++;
-            } while (i < g_addhero_entry_state);
-        }
-            row_y = ((g_addhero_selected_row * 14) - y_offset) - g_addhero_scroll_y;
+                    entry_index++;
+                } while (entry_index < g_addhero_entry_state);
+            }
+            row_y = ((g_addhero_selected_row * ADDHERO_ENTRY_ROW_HEIGHT) - y_offset) - g_addhero_scroll_y;
 
             if (g_addhero_entry_scan_active == 0)
             {
                 TILE *tile = (TILE *)prim;
 
                 *(u32 *)&tile->r0 = 0xF080F0;
-                *((u8 *)tile + 3) = 3;
-                tile->code = 0x62;
+                setlen(tile, 3);
+                setcode(tile, 0x62);
                 tile->w = 0x108;
                 tile->x0 = 0;
                 tile->y0 = row_y;
-                tile->h = 0xE;
+                tile->h = ADDHERO_ENTRY_ROW_HEIGHT;
                 addPrim(ot, tile);
                 prim += sizeof(TILE);
             }
