@@ -2779,6 +2779,9 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     s32 chan_mask;
     s32 sfx_id;
     s32 i;
+    s32 flags;
+    const s32 repeat_mask = ~1;
+    s32 start_sequence;
     u8 frame;
     volatile s8 base;
 
@@ -2800,7 +2803,8 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
         } while (0);
     case 3:
         seq = g_field_scene.scene->seqs;
-        if (op != 1)
+        start_sequence = op != 1;
+        if (start_sequence)
         {
             i = index - 1;
             if (index != 0)
@@ -2879,9 +2883,11 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
         /* fallthrough */
     case 0:
         def = anim->def;
-        anim->repeat_count = 0;
         anim->flags.word &= ~2;
-        anim->flags.word = (anim->flags.word & ~1) | ((*(u32*)&def->flags >> 3) & 1);
+        anim->repeat_count = 0;
+        flags = anim->flags.word & repeat_mask;
+        flags |= (*(u32*)&def->flags >> 3) & 1;
+        anim->flags.word = flags;
         if ((list_kind == 0) && ((*(s32*)&def->flags & 7) == 4))
         {
             if ((anim->flags.word & 0x40) == 0)

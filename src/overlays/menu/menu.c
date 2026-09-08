@@ -312,58 +312,6 @@ typedef struct
 } MenuTimAsset;
 
 
-/**
- * @brief Animation-facing view of a menu window slot.
- */
-typedef struct
-{
-    u8 _pad0[2];
-    u8 anim_frame; /**< Animation frame counter; counts up during open/close. */
-    u8 _pad1[5];
-    u16 x; /**< Window X origin. */
-    u16 y; /**< Window Y origin. */
-    s16 w; /**< Target window width, clamped to MENU_WINDOW_MIN_WIDTH. */
-    s16 h; /**< Target window height, clamped to MENU_WINDOW_MIN_HEIGHT. */
-} MenuSlotAnim;
-
-typedef struct
-{
-    u8 active; /**< Mirrors MenuSlot.active; 2 = open/steady. */
-    u8 index; /**< Mirrors MenuSlot.index. */
-    u8 pad2;
-    u8 has_title; /**< Mirrors MenuSlot.has_title. */
-    union
-    {
-        s32 flags;
-        struct
-        {
-            u16 _unk4lo;
-            u16 unk6;
-        } _s;
-    } _u;
-    u16 x;
-    u16 y;
-    u16 w;
-    u16 h;
-    u16 lerp_cur_a;
-    u16 lerp_cur_b;
-    u16 lerp_target_a;
-    u16 lerp_target_b;
-    u8 lerp_steps;
-    u8 pad19;
-    u8 pad1A;
-    u8 pad1B;
-    s32* (*content_cb)();
-} MenuSlotView;
-
-typedef struct
-{
-    u8 pad[0x4040];
-    s32* prim_cursor; /**< Primitive write cursor. */
-    u8 pad4044[8];
-    s32 draw_buf_idx; /**< Display buffer page index, 0 or 1. */
-} MenuRenderCtx;
-
 typedef struct
 {
     s16 x;
@@ -645,6 +593,8 @@ typedef struct
 
 void menu_build_grid();
 void menu_update_slots(RenderContext* render_ctx);
+void menu_draw_window_transition(RenderContext* render_ctx, MenuSlot* slot, s32 cursor_enable);
+void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable);
 u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 allow_input);
 u32 menu_step_item_selection(s32 step);
 
@@ -721,7 +671,7 @@ extern s32 g_menu_cursor_enable;
 /** @brief Set non-zero by a content callback to abort @ref menu_draw_window early. */
 extern s32 g_menu_draw_early_out;
 /** @brief Base address of the menu double-buffered DRAWENV array. */
-extern s32 g_menu_draw_buf_base;
+extern u8* g_menu_draw_buf_base;
 /** @brief When non-zero, suppresses cursor highlight even on the active slot. */
 extern s32 g_menu_suppress_cursor;
 /** @brief Scene/language selector used in window title decoration layout switches. */
@@ -1487,7 +1437,7 @@ void menu_update_slots(RenderContext* render_ctx)
  * @param slot Window slot being animated.
  * @param cursor_enable Nonzero to allow the active-slot cursor highlight.
  */
-void menu_draw_window_transition(MenuRenderCtx* render_ctx, MenuSlotAnim* slot, s32 cursor_enable)
+void menu_draw_window_transition(RenderContext* render_ctx, MenuSlot* slot, s32 cursor_enable)
 {
     MenuWindowTransitionFrame frame;
     s32 inset_x;
@@ -1531,187 +1481,156 @@ void menu_draw_window_transition(MenuRenderCtx* render_ctx, MenuSlotAnim* slot, 
 /**
  * @brief Build all GPU primitives for one menu window at a given rectangle.
  * @param slot Slot descriptor (geometry, flags, content callback).
- * @param gpu_work Per-frame render context (layout matches @ref RenderContext).
+ * @param render_ctx Per-frame render context.
  * @param rect Window rectangle: x, y, w, h halfwords.
  * @param view_origin View-origin offset forwarded to the content callback.
  * @param cursor_enable Cursor-highlight enable for the active slot.
  */
-void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable)
+void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable)
 {
-    MenuRectU16 sp18;
-    DRAWENV sp20;
-    u16 sp80[2];
-    s16 temp_a0;
-    s32 temp_v1;
-    s32 var_a2_2;
-    s32 var_a3;
-    s32* temp_a1_2;
-    s32* temp_s1_2;
-    s32* temp_s2;
-    s32* prim_cur;
-    s32* var_s1;
-    u16 temp_a1;
-    u16 temp_a2;
-    u16 var_v0;
-    void* temp_v0_2;
-    s32 fill_uv;
-    s32 draw_x;
-    DRAWENV* env;
-    s32 title_mask;
+    MenuRectU16 window_rect;
+    DRAWENV content_draw_env;
+    ScreenPos title_pos;
+    s32 content_draw_y;
+    s32 draw_cursor;
+    u_long* ot_entry;
+    u_long* window_cursor;
+    u_long* packet_cursor;
+    s32 content_draw_x;
+    DRAWENV* draw_env;
 
-    var_s1 = gpu_work->prim_cursor;
-    temp_s2 = (s32*)gpu_work + (((u32)slot->_u.flags >> 0x19));
+    packet_cursor = render_ctx->prim_cursor;
+    ot_entry = &render_ctx->ot[(u32)slot->flags >> MENU_SLOT_OT_INDEX_SHIFT];
     if (slot->lerp_steps != 0)
     {
-        temp_v1 = (s32)(slot->lerp_target_a - slot->lerp_cur_a) / (s32)slot->lerp_steps;
-        temp_a2 = slot->lerp_cur_a;
-        temp_a1 = slot->lerp_cur_b + ((s32)(slot->lerp_target_b - slot->lerp_cur_b) / (s32) * (volatile u8*)&slot->lerp_steps);
-        slot->lerp_steps = (u8)(*(volatile u8*)&slot->lerp_steps - 1);
-        slot->lerp_cur_a = (u16)(temp_a2 + temp_v1);
-        slot->lerp_cur_b = (u16)temp_a1;
+        slot->lerp_cur_a += (slot->lerp_target_a - slot->lerp_cur_a) / slot->lerp_steps;
+        slot->lerp_cur_b += (slot->lerp_target_b - slot->lerp_cur_b) / slot->lerp_steps;
+        slot->lerp_steps--;
     }
     else
     {
-        slot->lerp_cur_a = (u16)slot->lerp_target_a;
-        slot->lerp_cur_b = (u16)slot->lerp_target_b;
+        slot->lerp_cur_a = slot->lerp_target_a;
+        slot->lerp_cur_b = slot->lerp_target_b;
     }
-    if (slot->content_cb != NULL)
+    if ((slot->content_cb != NULL) && ((rect->w - MENU_WINDOW_MIN_WIDTH) > 0) && ((rect->h - MENU_WINDOW_MIN_HEIGHT) > 0))
     {
-        if ((rect->w - 0x20) > 0)
+        SetDrawEnv((DR_ENV*)packet_cursor, (DRAWENV*)(g_menu_draw_buf_base + ((render_ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
+        addPrim(ot_entry, packet_cursor);
+        g_menu_draw_early_out = 0;
+        packet_cursor += PRIM_WORDS(DR_ENV);
+        draw_cursor = (slot->index == g_active_slot) && (cursor_enable != 0) && (g_menu_suppress_cursor == 0) &&
+                      (slot->active == MENU_SLOT_STATE_OPEN);
+        packet_cursor = slot->content_cb(ot_entry, slot, packet_cursor, view_origin, draw_cursor);
+        if (g_menu_draw_early_out != 0)
         {
-            if ((rect->h - 0x10) > 0)
+            render_ctx->prim_cursor = packet_cursor;
+            return;
+        }
+        draw_env = &content_draw_env;
+        content_draw_x = rect->x + 8;
+        content_draw_y = rect->y + 0x10;
+        if (render_ctx->frame_parity != 0)
+        {
+            content_draw_y = rect->y + 0xF8;
+        }
+        SetDefDrawEnv(draw_env, content_draw_x, content_draw_y, rect->w - MENU_WINDOW_MIN_HEIGHT, rect->h - MENU_WINDOW_MIN_HEIGHT);
+        SetDrawEnv((DR_ENV*)packet_cursor, draw_env);
+        addPrim(ot_entry, packet_cursor);
+        packet_cursor += PRIM_WORDS(DR_ENV);
+        if (slot->has_title != 0)
+        {
+            switch (g_menu_scene_type)
             {
-                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_menu_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
-                addPrim(temp_s2, var_s1);
-                var_a3 = 0;
-                g_menu_draw_early_out = 0;
-                var_s1 += PRIM_WORDS(DR_ENV);
-                if ((slot->index == g_active_slot) && (0 != cursor_enable))
-                {
-                    if (g_menu_suppress_cursor == 0)
-                    {
-                        var_a3 = slot->active == 2;
-                    }
-                }
-                var_s1 = slot->content_cb(temp_s2, slot, var_s1, view_origin, var_a3);
-                if (g_menu_draw_early_out != 0)
-                {
-                    gpu_work->prim_cursor = var_s1;
-                    return;
-                }
-                env = &sp20;
-                temp_a0 = rect->y;
-                draw_x = rect->x + 8;
-                var_a2_2 = temp_a0 + 0x10;
-                if (gpu_work->draw_buf_idx != 0)
-                {
-                    var_a2_2 = temp_a0 + 0xF8;
-                }
-                SetDefDrawEnv(env, draw_x, var_a2_2, rect->w - 0x10, rect->h - 0x10);
-                SetDrawEnv((DR_ENV*)var_s1, env);
-                addPrim(temp_s2, var_s1);
-                var_s1 += PRIM_WORDS(DR_ENV);
-                title_mask = 0x1FF;
-                if (slot->has_title != 0)
-                {
-                    switch (g_menu_scene_type)
-                    {        /* switch 1 */
-                    case 1:  /* switch 1 */
-                    case 4:  /* switch 1 */
-                    case 19: /* switch 1 */
-                    case 22: /* switch 1 */
-                    case 25: /* switch 1 */
-                        var_v0 = ((u16)rect->x + (u16)rect->w) - 0x68;
-                        break;
-                    default: /* switch 1 */
-                        var_v0 = ((u16)rect->x + (u16)rect->w) - 0x48;
-                        break;
-                    }
-                    sp80[0] = var_v0;
-                    sp80[1] = (u16)rect->y;
-                    if (slot->_u.flags & 0x01FF0000)
-                    {
-                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.flags + 1, 3, sp80, 0);
-                    }
-                    else
-                    {
-                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, 0, 3, sp80, 0);
-                    }
-                    temp_a1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
-                    sp80[0] += 8;
-                    var_s1 = (s32*)func_800AD208(temp_s2, temp_a1_2, slot->_u._s.unk6 & title_mask, 3, sp80, 0);
-                    switch (g_menu_scene_type)
-                    {        /* switch 2 */
-                    case 1:  /* switch 2 */
-                    case 4:  /* switch 2 */
-                    case 19: /* switch 2 */
-                    case 22: /* switch 2 */
-                    case 25: /* switch 2 */
-                        temp_s1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
-                        sp80[0] += 8;
-                        var_s1 = temp_s1_2;
-                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, menu_count_inventory_items(), 3, sp80, 0);
-                        break;
-                    }
-                    var_s1 = menu_emit_slot_scroll_arrows((s32)var_s1, temp_s2, slot);
-                }
+            case 1:
+            case 4:
+            case 19:
+            case 22:
+            case 25:
+                title_pos.x = ((u16)rect->x + (u16)rect->w) - 0x68;
+                break;
+            default:
+                title_pos.x = ((u16)rect->x + (u16)rect->w) - 0x48;
+                break;
             }
+            title_pos.y = (u16)rect->y;
+            if (slot->flags & 0x01FF0000)
+            {
+                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, (u16)slot->flags + 1, 3, &title_pos, 0);
+            }
+            else
+            {
+                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, 0, 3, &title_pos, 0);
+            }
+            packet_cursor = func_800AD524((s32)packet_cursor, ot_entry, 0xB, &title_pos, 0);
+            title_pos.x += 8;
+            packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, MENU_SLOT_FLAGS_VIEW(slot).half.high & 0x1FF, 3, &title_pos, 0);
+            switch (g_menu_scene_type)
+            {
+            case 1:
+            case 4:
+            case 19:
+            case 22:
+            case 25:
+                packet_cursor = func_800AD524((s32)packet_cursor, ot_entry, 0xB, &title_pos, 0);
+                title_pos.x += 8;
+                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, menu_count_inventory_items(), 3, &title_pos, 0);
+                break;
+            }
+            packet_cursor = menu_emit_slot_scroll_arrows((s32)packet_cursor, ot_entry, slot);
         }
     }
-    sp18.w = 0xFF;
-    sp18.h = 0xFF;
-    sp18.x = 0;
-    sp18.y = 0;
-    setTexWindow((DR_TWIN*)var_s1, &sp18);
-    addPrim(temp_s2, var_s1);
-    prim_cur = var_s1 + PRIM_WORDS(DR_TWIN);
-    fill_uv = MENU_TW_FILL;
-    if (rect->h >= 0x10)
+    window_rect.w = 0xFF;
+    window_rect.h = 0xFF;
+    window_rect.x = 0;
+    window_rect.y = 0;
+    setTexWindow((DR_TWIN*)packet_cursor, &window_rect);
+    addPrim(ot_entry, packet_cursor);
+    window_cursor = packet_cursor + PRIM_WORDS(DR_TWIN);
+    if (rect->h >= MENU_WINDOW_MIN_HEIGHT)
     {
-        sp18.x = (u16)rect->x + 8;
-        sp18.y = (u16)rect->y;
-        sp18.w = (u16)rect->w - 0x10;
-        sp18.h = 8;
-        prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_TOP);
-        if (rect->h >= 0x10)
+        window_rect.x = (u16)rect->x + 8;
+        window_rect.y = (u16)rect->y;
+        window_rect.w = (u16)rect->w - MENU_WINDOW_MIN_HEIGHT;
+        window_rect.h = 8;
+        window_cursor = menu_build_h_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_TOP);
+        if (rect->h >= MENU_WINDOW_MIN_HEIGHT)
         {
-            sp18.x = (u16)rect->x + 8;
-            sp18.y = ((u16)rect->y + (u16)rect->h) - 8;
-            sp18.w = (u16)rect->w - 0x10;
-            sp18.h = 8;
-            prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_BOT);
+            window_rect.x = (u16)rect->x + 8;
+            window_rect.y = ((u16)rect->y + (u16)rect->h) - 8;
+            window_rect.w = (u16)rect->w - MENU_WINDOW_MIN_HEIGHT;
+            window_rect.h = 8;
+            window_cursor = menu_build_h_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_BOT);
         }
     }
-    if (rect->w >= 0x20)
+    if (rect->w >= MENU_WINDOW_MIN_WIDTH)
     {
-        sp18.x = (u16)rect->x;
-        sp18.y = (u16)rect->y + 8;
-        sp18.w = 8;
-        sp18.h = (u16)rect->h - 0x10;
-        prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_LEFT);
-        if (rect->w >= 0x20)
+        window_rect.x = (u16)rect->x;
+        window_rect.y = (u16)rect->y + 8;
+        window_rect.w = 8;
+        window_rect.h = (u16)rect->h - MENU_WINDOW_MIN_HEIGHT;
+        window_cursor = menu_build_v_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_LEFT);
+        if (rect->w >= MENU_WINDOW_MIN_WIDTH)
         {
-            sp18.x = ((u16)rect->x + (u16)rect->w) - 8;
-            sp18.y = (u16)rect->y + 8;
-            sp18.w = 8;
-            sp18.h = (u16)rect->h - 0x10;
-            prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_RIGHT);
+            window_rect.x = ((u16)rect->x + (u16)rect->w) - 8;
+            window_rect.y = (u16)rect->y + 8;
+            window_rect.w = 8;
+            window_rect.h = (u16)rect->h - MENU_WINDOW_MIN_HEIGHT;
+            window_cursor = menu_build_v_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_RIGHT);
         }
     }
-    sp18.x = (u16)rect->x + 8;
-    sp18.y = (u16)rect->y + 8;
-    sp18.w = (u16)rect->w - 0x10;
-    sp18.h = (u16)rect->h - 0x10;
-    prim_cur = menu_fill_window_interior(prim_cur, temp_s2, &sp18, fill_uv);
-    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x, rect->y, MENU_TW_CORNER_TL);
-    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x + rect->w - 8, rect->y, MENU_TW_CORNER_TR);
-    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x, rect->y + rect->h - 8, MENU_TW_CORNER_BL);
-    temp_v0_2 = menu_emit_corner(prim_cur, temp_s2, rect->x + rect->w - 8, rect->y + rect->h - 8, MENU_TW_CORNER_BR);
-    prim_cur = temp_v0_2;
-    setDrawTPage((DR_TPAGE*)prim_cur, 0, 0, 5);
-    setaddr(prim_cur, getaddr(temp_s2));
-    setaddr(temp_s2, temp_v0_2);
-    gpu_work->prim_cursor = (s32*)((char*)prim_cur + 8);
+    window_rect.x = (u16)rect->x + 8;
+    window_rect.y = (u16)rect->y + 8;
+    window_rect.w = (u16)rect->w - MENU_WINDOW_MIN_HEIGHT;
+    window_rect.h = (u16)rect->h - MENU_WINDOW_MIN_HEIGHT;
+    window_cursor = menu_fill_window_interior(window_cursor, ot_entry, &window_rect, MENU_TW_FILL);
+    window_cursor = menu_emit_corner(window_cursor, ot_entry, rect->x, rect->y, MENU_TW_CORNER_TL);
+    window_cursor = menu_emit_corner(window_cursor, ot_entry, rect->x + rect->w - 8, rect->y, MENU_TW_CORNER_TR);
+    window_cursor = menu_emit_corner(window_cursor, ot_entry, rect->x, rect->y + rect->h - 8, MENU_TW_CORNER_BL);
+    window_cursor = menu_emit_corner(window_cursor, ot_entry, rect->x + rect->w - 8, rect->y + rect->h - 8, MENU_TW_CORNER_BR);
+    setDrawTPage((DR_TPAGE*)window_cursor, 0, 0, 5);
+    setaddr(window_cursor, getaddr(ot_entry));
+    setaddr(ot_entry, window_cursor);
+    render_ctx->prim_cursor = window_cursor + PRIM_WORDS(DR_TPAGE);
 }
 
 /**
@@ -5990,41 +5909,41 @@ s32 menu_find_nav_node_index(s32 node_id)
 /**
  * @brief Emit up to two scroll-arrow SPRT primitives and a trailing draw-mode reset primitive.
  * @param buf Destination primitive buffer; each arrow occupies 0x14 bytes, the DR_TPAGE tail 8 bytes.
- * @param ot Pointer to the ordering-table entry to prepend each emitted primitive to.
- * @param state Slot view whose scroll fields drive the arrows: x/w place the arrow column, y is the top edge, h the window height, _u._s.unk6 (low 9 bits) the row.
+ * @param ot_entry Ordering-table entry to prepend each emitted primitive to.
+ * @param slot Menu slot whose scroll fields drive the arrows.
  * @return Pointer to the next free byte in @p buf after all emitted primitives.
  */
-void* menu_emit_slot_scroll_arrows(SPRT* buf, s32* ot, MenuSlotView* state)
+void* menu_emit_slot_scroll_arrows(SPRT* buf, u_long* ot_entry, MenuSlot* slot)
 {
     s32 emitted = 0;
     s32 max;
     u8* end;
 
-    if (state->lerp_cur_b != 0)
+    if (slot->lerp_cur_b != 0)
     {
         SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
         setSprt(buf);
-        buf->x0 = state->x + state->w - 0x10;
-        buf->y0 = state->y;
+        buf->x0 = slot->x + slot->w - 0x10;
+        buf->y0 = slot->y;
         SET_SPRT_UV0_PACKED(buf, 0x1080);
         SET_SPRT_CLUT(buf, 0x7C86);
         SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
-        addPrim(ot, buf);
+        addPrim(ot_entry, buf);
         emitted = 1;
         buf++;
     }
 
-    max = ((state->_u._s.unk6 & 0x1FF) << 4) - state->lerp_cur_b;
-    if (((s16)state->h - 0x10) < max)
+    max = ((MENU_SLOT_FLAGS_VIEW(slot).half.high & 0x1FF) << 4) - slot->lerp_cur_b;
+    if ((slot->h - 0x10) < max)
     {
         SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
         setSprt(buf);
-        buf->x0 = state->x + state->w - 0x10;
-        buf->y0 = state->y + state->h - 8;
+        buf->x0 = slot->x + slot->w - 0x10;
+        buf->y0 = slot->y + slot->h - 8;
         SET_SPRT_UV0_PACKED(buf, 0x2080);
         SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
         SET_SPRT_CLUT(buf, 0x7C86);
-        addPrim(ot, buf);
+        addPrim(ot_entry, buf);
         emitted += 1;
         buf++;
     }
@@ -6034,7 +5953,7 @@ void* menu_emit_slot_scroll_arrows(SPRT* buf, s32* ot, MenuSlotView* state)
     {
         DR_TPAGE* mode = (DR_TPAGE*)end;
         setDrawTPage(mode, 0, 0, 5);
-        addPrim(ot, mode);
+        addPrim(ot_entry, mode);
         end = (u8*)(mode + 1);
     }
 
