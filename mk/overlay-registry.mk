@@ -443,7 +443,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/unk2_i_b_split022_tail.c \
 	src/overlays/field/func_8008B1C8.c \
 	src/overlays/field/func_8008AF68.c \
-	src/overlays/field/unk2_i_b_split022_tail_b.c \
+	src/overlays/field/func_8008B5D0.c \
 	src/overlays/field/unk2_i_b_split023.c \
 	src/overlays/field/func_80098FC4.c \
 	src/overlays/field/unk2_i_b_split023_tail.c \

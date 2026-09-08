@@ -139,7 +139,7 @@ segments:
       - [0x3B559, c, func_8008B1C8]               # gcc272_cdk, 100%
       - [0x3B619, c, func_8008B288]              # gcc272_cdk, 100%
       - [0x3B729, c, field_actor_slot_lookup]   # gcc272_cdk, func_8008B398 + func_8008B42C + func_8008B500 (100%; none match under gcc280_g0)
-      - [0x3B961, c, unk2_i_b_split022_tail_b]    # gcc272_cdk, func_8008B5D0
+      - [0x3B961, c, func_8008B5D0]                # gcc272_cdk, 100%
       - [0x3BAB5, c, field36]                      # gcc272_cdk, func_8008B724
       - [0x3BACD, c, unk2_i_b_split005]            # gcc272_cdk, func_8008B73C
       - [0x3BFED, c, field363]                     # gcc272_cdk, func_8008BC5C
