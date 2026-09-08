@@ -68,6 +68,7 @@ typedef struct AddheroRecord
 #define ADDHERO_DIRECTORY_ENTRY_BYTES sizeof(struct DIRENTRY)
 #define ADDHERO_CARD_DIRECTORY_BYTES (ADDHERO_DIRECTORY_ENTRY_COUNT * ADDHERO_DIRECTORY_ENTRY_BYTES)
 #define ADDHERO_ENTRY_ROW_HEIGHT 14
+#define ADDHERO_ENTRY_COUNT_LIMIT 0x10
 #define ADDHERO_NO_ICON 0x7F
 
 /* Return codes produced by addhero_advance_load_sequence. */
@@ -737,115 +738,134 @@ s32 addhero_update_load_sequence(void)
 }
 
 /**
- * @brief Handle browser pad input: exit/back, list navigation, entry
- *        selection, and launching the load prompt for a compatible save.
- * @return Unused; declared s32 for the original signature but every path
- *         returns via a bare return with no value.
- * @see decomp.me (100%)
+ * @brief Handle browser input, entry navigation, and load confirmation.
+ * @return Unused.
  */
 s32 addhero_handle_input(void)
 {
-    s32 pending;
-    s32 status;
-    s32 count;
-    s32 term1;
-    s32 term2;
-    AddheroElement *p;
+    s32 entry_count;
+    s32 input;
+    s32 move_count;
+    AddheroElement *prompt;
+    struct DIRENTRY *selected_entry;
 
-    if (g_addhero_element_pool[1].attr.bits.state == ADDHERO_ELEMENT_STATE_INACTIVE) {
+    if (g_addhero_element_pool[1].attr.bits.state == ADDHERO_ELEMENT_STATE_INACTIVE)
+    {
         g_addhero_exit_requested = g_addhero_result;
         return;
     }
-    if (g_addhero_exit_requested != 0) {
+    if (g_addhero_exit_requested != 0)
+    {
         return;
     }
-    if (g_addhero_element_pool[1].attr.bits.state >= ADDHERO_ELEMENT_STATE_CLOSING) {
+    if (g_addhero_element_pool[1].attr.bits.state >= ADDHERO_ELEMENT_STATE_CLOSING)
+    {
         return;
     }
-    if (g_addhero_element_pool[0].attr.bits.state != ADDHERO_ELEMENT_STATE_INACTIVE) {
-        return;
-    }
-    pending = g_addhero_entry_state;
-    if (pending == 0xFF) {
-        return;
-    }
-    if (g_addhero_entry_scan_active != 0) {
-        return;
-    }
-    if (g_addhero_io_busy != 0) {
-        return;
-    }
-    if ((u32)(*g_addhero_load_step - 6) < 2U) {
-        return;
-    }
-    if (g_addhero_mode != 0) {
+    if (g_addhero_element_pool[0].attr.bits.state != ADDHERO_ELEMENT_STATE_INACTIVE)
+    {
         return;
     }
 
-    status = g_pad_input;
-    if (status & 0x40) {
+    entry_count = g_addhero_entry_state;
+    if (entry_count == ADDHERO_ENTRY_STATE_IDLE)
+    {
+        return;
+    }
+    if (g_addhero_entry_scan_active != 0)
+    {
+        return;
+    }
+    if (g_addhero_io_busy != 0)
+    {
+        return;
+    }
+    if ((u32)(*g_addhero_load_step - 6) < 2U)
+    {
+        return;
+    }
+    if (g_addhero_mode != 0)
+    {
+        return;
+    }
+
+    input = g_pad_input;
+    if (input & PAD_BTN_CIRCLE)
+    {
         D_80122718 = 3;
         play_menu_sfx(0x78, 0x80);
         addhero_close_all_elements();
         return;
     }
-    if (status & 0xA100) {
+    if (input & ADDHERO_CARD_SWITCH_BUTTON_MASK)
+    {
         play_menu_sfx(0x7D, 0x80);
         addhero_reset_state();
         return;
     }
-    if (pending >= 0x10) {
+    if (entry_count >= ADDHERO_ENTRY_COUNT_LIMIT)
+    {
         return;
     }
 
-    count = 1;
-    if (status & 8) {
-        g_pad_input = 0x4000;
-        count = 1;
+    move_count = 1;
+    if (input & PAD_BTN_R1)
+    {
+        g_pad_input = PAD_BTN_DOWN;
+        move_count = 1;
     }
-    if (g_pad_input & 4) {
-        g_pad_input = 0x1000;
-        count = 1;
+    if (g_pad_input & PAD_BTN_L1)
+    {
+        g_pad_input = PAD_BTN_UP;
+        move_count = 1;
     }
 
-    while (count != 0) {
-        if (g_pad_input & 0x1000) {
-            g_addhero_selected_row -= 1;
-            if (g_addhero_selected_row < 0) {
+    while (move_count != 0)
+    {
+        if (g_pad_input & PAD_BTN_UP)
+        {
+            g_addhero_selected_row--;
+            if (g_addhero_selected_row < 0)
+            {
                 g_addhero_selected_row = g_addhero_entry_state - 1;
             }
         }
-        if (g_pad_input & 0x4000) {
-            g_addhero_selected_row += 1;
-            if (g_addhero_selected_row >= g_addhero_entry_state) {
+        if (g_pad_input & PAD_BTN_DOWN)
+        {
+            g_addhero_selected_row++;
+            if (g_addhero_selected_row >= g_addhero_entry_state)
+            {
                 g_addhero_selected_row = 0;
             }
         }
-        count -= 1;
+        move_count--;
     }
 
-    if (g_pad_input & 0x5000) {
+    if (g_pad_input & (PAD_BTN_UP | PAD_BTN_DOWN))
+    {
         addhero_commit_selected_entry();
         play_menu_sfx(0x7D, 0x80);
         addhero_scroll_to_selection();
         return;
     }
 
-    if (g_pad_input & 0x220) {
-        term1 = g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES;
-        term2 = (g_addhero_selected_row * ADDHERO_DIRECTORY_ENTRY_BYTES) + (s32)g_addhero_entries;
-        if (strncmp(g_lom_save_filename_prefix, (char *)(term1 + term2), 0xC) == 0) {
+    if (g_pad_input & ADDHERO_CONFIRM_BUTTON_MASK)
+    {
+        selected_entry = &g_addhero_entries[g_addhero_card_slot][g_addhero_selected_row];
+        if (strncmp(g_lom_save_filename_prefix, selected_entry->name, 0xC) == 0)
+        {
             if ((g_addhero_entry_metadata.hero_id != ((AddheroRecord *)g_pad_ctx)->hero_id) &&
-                ((g_save_slot_index == 0xFF) || (g_addhero_entry_metadata.owner_id == g_save_slot_index))) {
-                p = addhero_alloc_element();
-                p->attr.bits.transition_step = 1;
-                p->attr.bits.x = 0x10;
-                p->attr.bits.y = 0x61;
-                p->size.bits.width_high = 1;
-                p->size.bits.height = 0x1E;
-                SET_ELEM_WIDTH_LOW(p, 0x20);
+                ((g_save_slot_index == 0xFF) || (g_addhero_entry_metadata.owner_id == g_save_slot_index)))
+            {
+                prompt = addhero_alloc_element();
+                prompt->attr.bits.transition_step = 1;
+                prompt->attr.bits.x = 0x10;
+                prompt->attr.bits.y = 0x61;
+                prompt->size.bits.width_high = 1;
+                prompt->size.bits.height = 0x1E;
+                SET_ELEM_WIDTH_LOW(prompt, 0x20);
                 addhero_enable_choice_toggle();
-                p->draw_handler = addhero_draw_load_prompt;
+                prompt->draw_handler = addhero_draw_load_prompt;
                 addhero_restart_load_sequence();
                 play_menu_sfx(0x7E, 0x80);
                 return;
