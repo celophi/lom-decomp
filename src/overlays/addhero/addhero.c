@@ -383,6 +383,7 @@ s32 addhero_state_step(s32 render_half)
         func_80019788(0);
         return g_addhero_exit_requested;
     }
+    
     field_text_reset_scratch();
     addhero_begin_glyph_cache_frame();
     addhero_update_state(render_half);
