@@ -5,6 +5,13 @@
 /** @brief Field CD/movie flag word at 0x801ED800. */
 #define FIELD_CD_FLAGS (*(volatile s32*)0x801ED800)
 
+/**
+ * @brief Full-word bitfield view of the field CD flag word at 0x801ED800.
+ * @note Clearing bit 0x40 through this view reproduces the target's codegen for
+ *       the movie tear-down path (see field_update_scene_animations).
+ */
+typedef struct { u32 word : 32; } CdWordBits;
+
 extern u16 g_field_movie_frame_width;
 extern u16 g_field_movie_frame_height;
 
@@ -45,9 +52,17 @@ void func_80140D48(void);
  * and queue a VRAM upload (field_queue_vram_upload); sprite/effect nodes tick their
  * counters; sequence nodes advance a small state machine keyed on flags & 3.
  *
- * @note Match is 98.42% (1015 exact target instructions out of 1033).
- *       Remaining differences are movie-state scheduling and timer-tail merging,
- *       the strip-loop entry delay slot, and strip-upload tail merging.
+ * @note Match is 99.995160% (1032 exact target instructions out of 1033).
+ *       The one remaining difference is a single register-allocation
+ *       permutation near 0x400 (ALLOC-ORDER, argdiff only; no structural or
+ *       instruction-count change).
+ * @note The timer-tail path clears the CD flag word through @c CdWordBits and
+ *       advances with @c anim = anim->next; continue; and the movie rect setup
+ *       writes @c rects[0].x through a non-volatile cast; both spellings are
+ *       required to reproduce the target's scheduling and codegen.
+ * @note The two strip-upload tails are merged with @c goto strip_upload so the
+ *       shared @c field_queue_vram_upload call is emitted once, matching the
+ *       target's tail merging.
  * @note The second strip copy loop must reuse @c count (not a fresh @c i) to
  *       reproduce the target's counter/sentinel register coloring, and the
  *       @c unkD==0 stride count must be spelled @c (unk5 + 1 - state) so gcc
@@ -58,7 +73,7 @@ void func_80140D48(void);
  *       body gives @c req the extra references it needs to win s1 over @c anim
  *       in the global allocator (see working notes).
  *
- * @see decomp.me (98.42%) TODO
+ * @see decomp.me (99.995160%) TODO
  */
 void field_update_scene_animations(void)
 {
@@ -158,12 +173,12 @@ void field_update_scene_animations(void)
                     case 1:
                         if (cdrom_can_queue_resource(def->unk1 * 2 + 0x16A6) != 0)
                         {
-                            FIELD_MOVIE_STATE->rects[0].x = def2->unkC * 4 + 0x140;
+                            ((FieldMovieState*)0x801ED500)->rects[0].x = def2->unkC * 4 + 0x140;
                             FIELD_MOVIE_STATE->rects[0].y = def2->unkD * 0x10 + 0x100;
                             FIELD_MOVIE_STATE->rects[0].w = def2->unkE * 4;
-                            cel = anim->cels;
                             FIELD_MOVIE_STATE->rects[0].h = def2->unkF * 0x10;
-                            FIELD_CD_FLAGS &= ~0x40;
+                            cel = anim->cels;
+                            ((volatile CdWordBits*)0x801ED800)->word &= ~0x40;
                             if (def->unk1 < 2)
                             {
                                 func_80140358(def->unk1 * 2 + 0x16A6, 1, def->unk5 - 2, cel->active);
@@ -230,8 +245,10 @@ void field_update_scene_animations(void)
                                     field_begin_scene_fade_in();
                                 }
                                 anim->flags.word &= ~0x40;
-                                anim->timer = 1;
                                 func_80084240();
+                                anim->timer = 1;
+                                anim = anim->next;
+                                continue;
                             }
                         }
                         else
@@ -333,10 +350,10 @@ void field_update_scene_animations(void)
         } while (anim != NULL);
     }
 
-    one = 1;
     anim = scene->strips;
     if (anim != NULL)
     {
+        one = 1;
         do
         {
             def = anim->def;
@@ -424,9 +441,9 @@ void field_update_scene_animations(void)
                         y = def3->unkE;
                     }
                     req->rect.y = y + 0x1D8;
-                    req->rect.h = one;
                     req->rect.w = def->unk5 + 1;
-                    field_queue_vram_upload(req);
+                    req->rect.h = one;
+                    goto strip_upload;
                     break;
                 case 3:
                     if (def->unkC == 0)
@@ -528,6 +545,7 @@ void field_update_scene_animations(void)
                             y = def->unk10;
                         }
                         req->rect.h = y;
+                    strip_upload:
                         field_queue_vram_upload(req);
                     } while (0);
                     break;
