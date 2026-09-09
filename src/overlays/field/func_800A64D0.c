@@ -35,7 +35,7 @@ void func_800A6634(ArgA *arg0, UnkStruct801226A0 *arg1);
  * @brief Process pending text entries, or clear their countdowns when disabled.
  * @param arg0 FIELD context forwarded to each active entry's handler.
  * @note The previous active count controls window cleanup on the next frame.
- * @note GCC 2.7.2 CDK matches 98.93258%; only s0/s1 allocation differs.
+ * @note GCC 2.7.2 CDK matches 98.932590%; only s0/s1 allocation differs.
  */
 void func_800A64D0(ArgA *arg0)
 {
