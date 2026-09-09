@@ -3491,34 +3491,20 @@ u8 *func_8006C658(Struct_D800FDF58 *rec, u8 *base)
 }
 
 /**
- * @brief Return the frame count of the animation entry AFTER the record's
- *        current one, or 0 when that entry is past the end of the table.
- * @param rec Field record whose unk3B selects the resource and unk21 the entry.
- * @return Frame count byte of entry (unk21 & 0x7F) + 1, or 0 if out of range.
- * @note WIP - not byte-matching. Insn count and every opcode/offset are exact;
- *       the only defect is one coloring decision. The target keeps `rec` in a2
- *       behind an `addu a2, a0, zero` entry copy because the unk3B index temp
- *       takes a0; ours coalesces the entry copy so `rec` keeps a0 and the temp
- *       goes to a1, which also costs a load-delay nop where the target puts the
- *       base[4] read. Confirmed cause (see idioms.md [ENTRY-05]): in our compile
- *       `rec` is a block-local allocno, so local-alloc honours its a0
- *       copy-suggestion before the index temp is placed. The target coloring
- *       (rec a2, index temp a0, base a1) needs `rec` to be a GLOBAL allocno so
- *       that the index temp takes a0 first and prunes rec's a0 preference. A
- *       dummy `rec` read after the branch reproduces the whole entry sequence
- *       (+2 exact rows, +2 insns), but no natural spelling that keeps `rec`
- *       live past the branch without emitting a use has been found. Measured
- *       inert: aliases, named temps, statement order, K&R, if/else, result
- *       variable, for/while wrappers, volatile field read, u8* parameter.
- * @see decomp.me (89.19%) TODO
+ * @brief Return the next animation entry's frame count, or zero if it is out of range.
+ * @param rec Field record that selects the resource and current animation entry.
+ * @return Frame count of the next entry, or zero when no next entry exists.
  */
-u8 func_8006C7D8(Struct_D800FDF58 *rec)
+u8 func_8006C7D8(Struct_D800FDF58* rec)
 {
-    u8 *base;
-    u8 *p;
+    u8* base;
+    u8* p;
     s32 idx;
 
-    base = g_field_resource_entries[rec->unk3B].start;
+    do
+    {
+        base = g_field_resource_entries[rec->unk3B].start;
+    } while (0);
     p = base + 4;
     idx = (rec->unk21 & 0x7F) + 1;
     if (idx >= (s32)base[4])
@@ -3527,7 +3513,8 @@ u8 func_8006C7D8(Struct_D800FDF58 *rec)
     }
     p = p + (idx * 2 + 2);
     p = base + p[0] + ((p[1] & 0x7F) << 8);
-    return p[0];
+    rec = (Struct_D800FDF58*)(u32)p[0];
+    return (u32)rec;
 }
 
 /**
