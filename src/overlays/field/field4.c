@@ -2637,36 +2637,19 @@ void func_8006B354(s32 arg0)
  * @param arg0 D_800FDF58/D_80105AE0 entry index to (re)initialize.
  * @param arg1 Resource slot index whose g_field_resource_entries slot_index
  *        is copied into the new entry's unkC.
- * @see decomp.me (97.06%) TODO
- * @note NOT MATCHED. Instruction count is exact (180). Required to match,
- *       each measured by reverting it:
- *       - the loop counter i is u32 (else gcc reverses the zero-fill loop);
- *       - the three masks are separate locals assigned after the loop;
- *       - the unk10/12/14 and unk44/48/4C groups are cleared through a
- *         pointer to the first member (the target forms the group address
- *         as a value, `addiu v0, base, 0x10; addu`);
- *       - unk178 is cleared with two read-modify-write statements; reusing
- *         one `flags` variable for both the unk178 and unk1C chains gives
- *         the pseudo two deaths, which pushes it out of local-alloc;
- *       - unkC is stored before unk3B/unk21, and 0x80 is a literal;
- *       - the arg0==1 / arg0==2 cases use an explicit pointer to the
- *         constant-indexed entry.
- *       Residue (11 rows) is the unk1C chain landing in a0 instead of v1:
- *       our sched1 hoists its load above the unk22/unk28 stores while the
- *       target keeps it in place, so the small constants take v1 first.
- *       Measured inert: every position of the `flags` load statement,
- *       compound vs two-step forms, a variable for 0xFFFB0000.
+ * @see decomp.me (100%) TODO
  */
 void func_8006B4D0(s32 arg0, s32 arg1)
 {
     u32 i;
-    u8 *p;
+    u8* p;
     s32 flags;
+    s32 initial_flags;
     s32 mask_a;
     s32 mask_b;
     s32 mask_c;
-    s16 *q16;
-    u32 *q32;
+    s16* q16;
+    u32* q32;
 
     p = (u8*)&D_800FDF58[arg0];
     i = 0;
@@ -2689,7 +2672,7 @@ void func_8006B4D0(s32 arg0, s32 arg1)
 
     D_800FDF58[arg0].unk22 = (s8)(arg0 + 0x30);
     D_800FDF58[arg0].unk28 = 0xFF;
-    flags = D_800FDF58[arg0].unk1C;
+
     D_800FDF58[arg0].unk3A = arg0;
     D_800FDF58[arg0].unk24 = 0;
     D_800FDF58[arg0].unk25 = 0;
@@ -2702,15 +2685,19 @@ void func_8006B4D0(s32 arg0, s32 arg1)
     D_800FDF58[arg0].unk33 = 0;
     D_800FDF58[arg0].unk4 = 0;
     D_800FDF58[arg0].unk8 = 0;
-    flags = flags & ~0x1FF;
-    flags = flags | 2;
+    initial_flags = (D_800FDF58[arg0].unk1C & ~0x1FF) | 2;
+    D_800FDF58[arg0].unk1C = initial_flags;
+    D_800FDF58[arg0].unk0 = 0xFFFB0000;
+    flags = D_800FDF58[arg0].unk1C;
+    flags &= mask_a;
+    flags &= mask_b;
+    flags &= mask_c;
     D_800FDF58[arg0].unk1C = flags;
     D_800FDF58[arg0].unk0 = 0xFFFB0000;
-    D_800FDF58[arg0].unk1C = flags & mask_a & mask_b & mask_c;
 
     if (arg0 == 1 && D_800FDA83 == 0)
     {
-        Struct_D800FDF58 *entry1 = &D_800FDF58[1];
+        Struct_D800FDF58* entry1 = &D_800FDF58[1];
         entry1->unk1C = (entry1->unk1C & 0xFF87FFFF) | 0x500000;
     }
     else
@@ -2738,7 +2725,7 @@ void func_8006B4D0(s32 arg0, s32 arg1)
 
     if (arg0 == 2 && D_800FDCEA >= 0x41)
     {
-        Struct_D800FDF58 *entry2 = &D_800FDF58[2];
+        Struct_D800FDF58* entry2 = &D_800FDF58[2];
         entry2->unk1C = (entry2->unk1C & 0xFFFCFFFF) | (((g_pad_ctx[0x29D7] + 1) & 3) << 16);
         return;
     }
