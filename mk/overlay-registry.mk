@@ -291,7 +291,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field123.c \
 	src/overlays/field/field147.c \
 	src/overlays/field/field168.c \
-	src/overlays/field/field178.c \
 	src/overlays/field/field_layout_slot_state.c \
 	src/overlays/field/func_80087CE0.c \
 	src/overlays/field/func_80087E00.c \
@@ -432,9 +431,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800C4364.c \
 	src/overlays/field/unk2_b_split069.c \
 	src/overlays/field/unk2_b_split071.c \
-	src/overlays/field/unk2_b_split073_tail.c \
-	src/overlays/field/unk2_b_split075.c \
-	src/overlays/field/func_800C6A30.c \
 	src/overlays/field/field_select_distance_bucket.c \
 	src/overlays/field/func_80087614.c \
 	src/overlays/field/func_80087680.c \
@@ -450,7 +446,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_coord_panels.c \
 	src/overlays/field/unk2_b_split118.c \
 	src/overlays/field/unk2_b_split119.c \
-	src/overlays/field/unk2_b_split124.c \
 	src/overlays/field/func_8008AEB0.c \
 	src/overlays/field/func_8008B1C8.c \
 	src/overlays/field/func_8008AF68.c \
@@ -531,7 +526,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_resource_table_ops.c \
 	src/overlays/field/field_record_table_ops.c \
 	src/overlays/field/field_menu_slot_ops.c \
-	src/overlays/field/field_menu_count_ops.c \
+	src/overlays/field/field_menu_object_ops.c \
 	src/overlays/field/field_menu_record_ops.c \
 	src/overlays/field/field_menu_record_setup.c \
 	src/overlays/field/func_800B622C.c \
@@ -654,8 +649,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field170.c \
 	src/overlays/field/func_800C5B64.c \
 	src/overlays/field/field173.c \
-	src/overlays/field/field179.c \
-	src/overlays/field/field180.c \
 	src/overlays/field/field_menu_record_state.c \
 	src/overlays/field/field236.c \
 	src/overlays/field/func_800B19FC.c \
@@ -666,7 +659,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field260.c \
 	src/overlays/field/field263.c \
 	src/overlays/field/field267.c \
-	src/overlays/field/field270.c \
 	src/overlays/field/field_menu_record_transfer.c \
 	src/overlays/field/field274.c \
 	src/overlays/field/field293.c \

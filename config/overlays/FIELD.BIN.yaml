@@ -607,16 +607,8 @@ segments:
       - [0x75F5D, c, func_800C5BCC] # gcc280_g0, 100.000000%
       - [0x76139, c, field173]                  # gcc280_g0, func_800C5DA8
       - [0x761B9, c, unk2_b_split071]              # gcc272_cdk, func_800C5E28
-      - [0x76569, c, field_menu_count_ops]      # gcc280_g0, func_800C61D8 .. func_800C63A0 (7 funcs, 100%)
-      - [0x767BD, c, unk2_b_split073_tail]         # gcc272_cdk, func_800C642C
-      - [0x76BC5, c, field178]                     # gcc272_cdk, func_800C6834
-      - [0x76BE1, c, field179]                  # gcc280_g0, func_800C6850
-      - [0x76C59, c, unk2_b_split075]              # gcc272_cdk, func_800C68C8
-      - [0x76D85, c, field180]                     # gcc280_g0, func_800C69F4
-      - [0x76DC1, c, func_800C6A30]             # gcc272_cdk, 100%
-      - [0x76E21, c, field270]                  # gcc280_g0, func_800C6A90
-      - [0x76E81, c, unk2_b_split124]           # gcc272_cdk, func_800C6AF0
-      - [0x77011, c, field_menu_slot_ops]       # gcc280_g0, func_800C6C80 .. func_800C7014 (9 funcs, 100%)
+      - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; two newly wired WIPs
+      - [0x76C59, c, field_menu_slot_ops] # gcc280_g0, inferred menu function family; two newly wired WIPs
       - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, C7340 94.154930% WIP
       - [0x779FD, c, field_menu_action_runtime] # gcc280_g0, func_800C766C .. action-slot reset; 14 funcs, four WIPs
       - [0x78BC1, c, field_menu_record_setup] # gcc280_g0, func_800C8830 .. func_800C8964; three funcs, 100%
