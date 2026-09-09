@@ -48,6 +48,9 @@
 #define MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE 16
 #define MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE 8
 #define MENU_LABEL_BUFFER_SIZE 16
+/** Prefix range for encoded text units with one following byte. */
+#define MENU_TEXT_PREFIX_FIRST 0x19U
+#define MENU_TEXT_PREFIX_COUNT 7U
 
 /* VRAM placement for each slot's cursor strip and content texture block. */
 #define PRIM_CURSOR_STRIP_VRAM_X 0x110  /* 272  - VRAM column                */
@@ -254,7 +257,7 @@
 #define MENU_TEXT_COPY(d, s)                                                                                                                                   \
     while (menu_or_bits(ch = *(s), 0))                                                                                                                            \
     {                                                                                                                                                          \
-        if (menu_zext_u8(ch - 0x19U) < 7U)                                                                                                                      \
+        if ((u8)(ch - MENU_TEXT_PREFIX_FIRST) < MENU_TEXT_PREFIX_COUNT)                                                                                          \
         {                                                                                                                                                      \
             *(d)++ = ch;                                                                                                                                       \
             (s)++;                                                                                                                                             \
@@ -273,21 +276,20 @@
 /** @brief Emit one content label at the fixed cursor-label position. */
 #define MENU_EMIT_EXPR(e) prim_buf = func_800A88A0(prim_buf, ot, (e), 1, 0xA0, 0xCA, 2)
 
-/** @brief Resolve a state-table base from its stored offset. */
-#define MENU_STATE_BASE(off) ((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + (off)))
+/** @brief Resolve a text table by its directory index. */
+#define MENU_TEXT_TABLE_BASE(table) ((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[table])
 
-/** @brief Resolve a string-table entry from a base and offset. */
-#define MENU_TAIL(base, idx) ((u8*)(base) + *(u16*)((u8*)(base) + (idx)))
+/** @brief Resolve an indexed string from its table-relative byte offset. */
+#define MENU_TEXT_ENTRY(base, index) ((u8*)(base) + ((u16*)(base))[index])
 
-/** @brief Emit one indexed state-table label. */
-#define MENU_EMIT_STATE(off, idx)                                                                                                                              \
+/** @brief Emit a table label selected by its string-offset byte position. */
+#define MENU_EMIT_TABLE_LABEL(table, byte_offset)                                                                                                              \
     MENU_EMIT_EXPR(({                                                                                                                                          \
-        s32 i = (idx);                                                                                                                                         \
-        u8* b = (u8*)g_menu_state_ptr;                                                                                                                         \
-        b = b + *(s32*)((u8*)g_menu_state_ptr + (off));                                                                                                        \
-        (u8*)b + *(u16*)((u8*)b + i);                                                                                                                          \
+        s32 entry_offset = (byte_offset);                                                                                                                      \
+        u8* text_table = (u8*)g_menu_state_ptr;                                                                                                                \
+        text_table = text_table + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[table];                                                                \
+        text_table + *(u16*)(text_table + entry_offset);                                                                                                       \
     }))
-
 
 #define MENU_CLEAR_SLOTS() \
 { \
@@ -446,6 +448,30 @@ typedef struct
     StringTableOffset negative_label;
 } MenuStringTableLayout;
 
+/** @brief Known table indices in the menu text-resource directory. */
+typedef enum
+{
+    MENU_TEXT_MESSAGES = 1,
+    MENU_TEXT_SPELL_NAMES = 3,
+    MENU_TEXT_ABILITY_HELP = 4,
+    MENU_TEXT_ABILITY_NAMES = 5,
+    MENU_TEXT_TECHNIQUE_HELP = 6,
+    MENU_TEXT_TECHNIQUE_NAMES = 7,
+    MENU_TEXT_KEY_ITEM_HELP = 10,
+    MENU_TEXT_KEY_ITEM_NAMES = 11,
+    MENU_TEXT_SPELL_HELP = 14,
+    MENU_TEXT_CATEGORY_ENTRY_HELP = 15,
+    MENU_TEXT_EQUIPMENT_NAMES = 26,
+    MENU_TEXT_EQUIPMENT_HELP = 32,
+    MENU_TEXT_TABLE_COUNT = 34
+} MenuTextTable;
+
+/** @brief Text-resource directory with byte offsets relative to the resource base. */
+typedef struct
+{
+    u32 table_count;
+    s32 table_offsets[MENU_TEXT_TABLE_COUNT];
+} MenuTextResources;
 
 /* Navigation and content types. */
 
@@ -583,15 +609,6 @@ typedef struct
     u8 pad000[0x638]; /**< Unmapped head of the pad-context record. */
     u8 order[8]; /**< Eight party slot indices in display order. */
 } MenuPartyOrder;
-
-/** @brief Content item layout -- mirrors MenuContentItem; action_type is pad[0]. */
-typedef struct
-{
-    u16 packed_x; /**< Bottom 9 bits = X screen pos; bits 15:12 = item type nibble. */
-    u8 y;
-    u8 action_type; /**< Sub-menu routing byte (types 1-15 for 0x5000 items). */
-    u8 pad_4[4];
-} MenuItem;
 
 typedef struct
 {
@@ -2906,7 +2923,7 @@ static inline s32 menu_focus_active_item(void)
 s32 menu_handle_input(s32 process_actions)
 {
     MenuControllerActuatorState* actuator_state = MENU_CONTROLLER_ACTUATORS;
-    const MenuItem* content_items;
+    const MenuContentItem* content_items;
     u32 content_type;
     MenuSlot* submenu_slot;
     s32 node_self_index;
@@ -3128,7 +3145,7 @@ s32 menu_handle_input(s32 process_actions)
 
     if (process_actions != 0)
     {
-        content_items = (const MenuItem*)g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+        content_items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
 
         if ((g_menu_scene_type == 0x1F || g_menu_scene_type == 0x2B) && g_menu_hit_item_idx >= 0x11 && g_menu_hit_item_idx < 0x19)
         {
@@ -3513,7 +3530,7 @@ s32 menu_handle_input(s32 process_actions)
         if (work_index != MENU_CONTENT_DIRECTION_COUNT)
         {
             menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
-            if (content_items[g_menu_hit_item_idx].pad_4[work_index] == MENU_NONE)
+            if (content_items[g_menu_hit_item_idx].params[work_index] == MENU_NONE)
             {
                 if ((u32)g_menu_scene_type >= 0x11U || g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x14 ||
                     g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx >= 0x1C)
@@ -3537,7 +3554,7 @@ s32 menu_handle_input(s32 process_actions)
                     g_content_view_x = ((selected_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
                 }
             }
-            else if (content_items[g_menu_hit_item_idx].pad_4[work_index] != 0)
+            else if (content_items[g_menu_hit_item_idx].params[work_index] != 0)
             {
                 if (g_menu_scene_type < 0x11)
                 {
@@ -3552,7 +3569,7 @@ s32 menu_handle_input(s32 process_actions)
                         }
                     }
                 }
-                g_menu_hit_item_idx = content_items[g_menu_hit_item_idx].pad_4[work_index];
+                g_menu_hit_item_idx = content_items[g_menu_hit_item_idx].params[work_index];
                 g_content_view_x = content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_X_MASK;
                 g_content_view_y = content_items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET;
                 g_menu_suppress_cursor = 3;
@@ -3589,8 +3606,8 @@ void menu_snap_view_to_cursor(void)
  */
 s32 menu_item_has_action(void)
 {
-    MenuItem* items;
-    MenuItem* item;
+    MenuContentItem* items;
+    MenuContentItem* item;
     u16 item_type;
     s16 item_subtype;
     s32 action_code;
@@ -3607,7 +3624,7 @@ s32 menu_item_has_action(void)
         }
     }
 
-    item = (MenuItem*)((g_menu_hit_item_idx * sizeof(MenuItem)) + (u32)items);
+    item = (MenuContentItem*)((g_menu_hit_item_idx * sizeof(MenuContentItem)) + (u32)items);
     item_type = item->packed_x & MENU_CONTENT_ITEM_TYPE_MASK;
 
     if (item_type == MENU_CONTENT_ITEM_TYPE_SUBMENU)
@@ -3695,7 +3712,6 @@ void menu_reset_content_view(void)
 void menu_init_item_nav_entries(s32 count)
 {
     s32 next_index;
-    s32 has_next;
     s32 entry_with_position;
     s32 previous_index;
     s32 entry_index;
@@ -3704,41 +3720,32 @@ void menu_init_item_nav_entries(s32 count)
     s32 packed_entry;
     s32 entry_with_previous;
 
-    entry_index = 0;
-    if (count > 0)
+    for (entry_index = 0; entry_index < count; entry_index++)
     {
-        do
+        entry = entry_index + g_menu_item_nav_entries;
+        packed_entry = *entry;
+        previous_index = entry_index - 1;
+
+        entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+        entry_with_position = entry_with_position | ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        *entry = entry_with_position;
+
+        if (previous_index < 0)
         {
-            entry = entry_index + g_menu_item_nav_entries;
-            packed_entry = *entry;
-            previous_index = entry_index - 1;
+            previous_index = count - 1;
+        }
 
-            entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
-            entry_with_position = entry_with_position |
-                                  ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
-            *entry = entry_with_position;
+        entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+        entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+        *entry = entry_with_previous;
 
-            if (previous_index < 0)
-            {
-                previous_index = count - 1;
-            }
-
-            entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
-            entry_with_previous =
-                entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
-            *entry = entry_with_previous;
-
-            next_index = entry_index + 1;
-            has_next = next_index < count;
-            wrapped_next_index = 0;
-            if (has_next != 0)
-            {
-                wrapped_next_index = next_index;
-            }
-            *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) |
-                     (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
-            entry_index = next_index;
-        } while (has_next != 0);
+        next_index = entry_index + 1;
+        wrapped_next_index = 0;
+        if (next_index < count)
+        {
+            wrapped_next_index = next_index;
+        }
+        *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
     }
 }
 
@@ -3749,7 +3756,7 @@ void menu_init_item_nav_entries(s32 count)
 s32 menu_build_spell_nav_entries(void)
 {
     s32 presence_bits;
-    s32 has_next;
+    s32 next_index;
     u32 entry_with_position;
     s32 index;
     s32 previous_index;
@@ -3782,20 +3789,13 @@ s32 menu_build_spell_nav_entries(void)
     }
 
     g_menu_scroll_nav_entries[0] = 0;
-    index = 0;
-    if (item_count <= 0)
-    {
-        return item_count;
-    }
-
-    do
+    for (index = 0; index < item_count; index++)
     {
         entry = g_menu_scroll_nav_entries + index;
         packed_entry = *entry;
         previous_index = index - 1;
         entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
-        entry_with_position = entry_with_position |
-                              ((index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        entry_with_position = entry_with_position | ((index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
@@ -3804,21 +3804,18 @@ s32 menu_build_spell_nav_entries(void)
         }
 
         entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
-        entry_with_previous =
-            entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+        entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
         *entry = entry_with_previous;
 
-        index += 1;
-        has_next = index < item_count;
+        next_index = index + 1;
         wrapped_next_index = 0;
-        if (has_next != 0)
+        if (next_index < item_count)
         {
-            wrapped_next_index = index;
+            wrapped_next_index = next_index;
         }
 
-        *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) |
-                 (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
-    } while (has_next != 0);
+        *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
+    }
 
     return item_count;
 }
@@ -3834,8 +3831,7 @@ s32 menu_build_special_technique_nav_entries(void)
     s32 previous_index;
     s32 next_index;
     s32 item_count;
-    s32 has_next;
-    s32 packed_entry;
+    s32 wrapped_next_index;
     s32 entry_with_previous;
     s32 selected_index;
     s32 none_index;
@@ -3880,34 +3876,30 @@ s32 menu_build_special_technique_nav_entries(void)
 
     g_menu_scroll_nav_entries[0] = 0;
 
-    index = 0;
-    while (index < item_count)
+    for (index = 0; index < item_count; index++)
     {
-        s32* slot = (s32*)g_menu_scroll_nav_entries + index;
-        s32 cur = *slot;
-        s32 word_self;
+        s32* nav_entry = (s32*)g_menu_scroll_nav_entries + index;
+        s32 previous_entry = *nav_entry;
+        s32 entry_with_position;
 
         previous_index = index - 1;
-        packed_entry = cur & ~MENU_ITEM_NAV_POSITION_MASK;
-        packed_entry = packed_entry | ((index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
-        word_self = packed_entry;
-        *slot = word_self;
+        entry_with_position = previous_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+        entry_with_position |= (index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK;
+        *nav_entry = entry_with_position;
         if (previous_index < 0)
         {
             previous_index = item_count - 1;
         }
-        entry_with_previous = word_self & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+        entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
         entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
-        *slot = entry_with_previous;
+        *nav_entry = entry_with_previous;
         next_index = index + 1;
-        has_next = next_index < item_count;
-        packed_entry = 0;
-        if (has_next != 0)
+        wrapped_next_index = 0;
+        if (next_index < item_count)
         {
-            packed_entry = next_index;
+            wrapped_next_index = next_index;
         }
-        *slot = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (packed_entry << MENU_ITEM_NAV_NEXT_SHIFT);
-        index = next_index;
+        *nav_entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
     }
     return item_count | (selected_index << 16);
 }
@@ -3919,66 +3911,59 @@ s32 menu_build_special_technique_nav_entries(void)
  */
 s32 menu_build_inventory_nav_entries(s32 item_kind)
 {
-    s32 i;
-    s32 prev;
-    s32 next;
-    s32 count;
-    s32 more;
-    s32 link;
-    s32 word_prev;
-    MenuItemEntry* entry;
+    s32 entry_index;
+    s32 previous_index;
+    s32 next_index;
+    s32 item_count;
+    s32 wrapped_next_index;
+    s32 entry_with_previous;
+    MenuItemEntry* item;
 
-    i = 0;
-    count = 0;
-    entry = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
-    do
+    entry_index = 0;
+    item_count = 0;
+    item = (MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET);
+    for (; entry_index < MENU_ITEM_TABLE_COUNT; entry_index++, item++)
     {
-        u8 active = entry->active;
+        u8 active = item->active;
 
         if (active == 0)
         {
             break;
         }
-        if (((entry->attributes.packed >> MENU_ITEM_KIND_SHIFT) & 3) == (u32)item_kind)
+        if (((item->attributes.packed >> MENU_ITEM_KIND_SHIFT) & 3) == (u32)item_kind)
         {
-            count += 1;
+            item_count += 1;
         }
-        i += 1;
-        entry += 1;
-    } while (i < MENU_ITEM_TABLE_COUNT);
+    }
 
     g_menu_scroll_nav_entries[0] = 0;
 
-    i = 0;
-    while (i < count)
+    for (entry_index = 0; entry_index < item_count; entry_index++)
     {
-        s32* slot = (s32*)g_menu_scroll_nav_entries + i;
-        s32 cur = *slot;
-        s32 word_self;
+        s32* nav_entry = (s32*)g_menu_scroll_nav_entries + entry_index;
+        s32 previous_entry = *nav_entry;
+        s32 entry_with_position;
 
-        prev = i - 1;
-        link = cur & ~MENU_ITEM_NAV_POSITION_MASK;
-        link = link | ((i * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
-        word_self = link;
-        *slot = word_self;
-        if (prev < 0)
+        previous_index = entry_index - 1;
+        entry_with_position = previous_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+        entry_with_position |= (entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK;
+        *nav_entry = entry_with_position;
+        if (previous_index < 0)
         {
-            prev = count - 1;
+            previous_index = item_count - 1;
         }
-        word_prev = word_self & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
-        word_prev = word_prev | ((prev & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
-        *slot = word_prev;
-        next = i + 1;
-        more = next < count;
-        link = 0;
-        if (more != 0)
+        entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+        entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+        *nav_entry = entry_with_previous;
+        next_index = entry_index + 1;
+        wrapped_next_index = 0;
+        if (next_index < item_count)
         {
-            link = next;
+            wrapped_next_index = next_index;
         }
-        *slot = (word_prev & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (link << MENU_ITEM_NAV_NEXT_SHIFT);
-        i = next;
+        *nav_entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
     }
-    return count;
+    return item_count;
 }
 /**
  * @brief Convert a halfword index to its byte offset.
@@ -4236,22 +4221,22 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                                 if (g_menu_char_slot != 2)
                                 {
-                                    u8* tmp2 = (u8*)((content_item->action_type << 6) + (s32)g_menu_equipment_base) - 0xC80;
+                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_item->action_type << 6) + (s32)g_menu_equipment_base - 0xC80);
                                     t0 = 0x21;
-                                    if (*tmp2 != 0)
+                                    if (equipment->active != 0)
                                     {
-                                        u32 val = *(u32*)(tmp2 + 0x14);
-                                        s32 sel = (val >> 8) & 3;
-                                        switch (sel)
+                                        u32 attributes = equipment->attributes.packed;
+                                        s32 item_kind = (attributes >> MENU_ITEM_KIND_SHIFT) & 3;
+                                        switch (item_kind)
                                         {
                                         case 1:
-                                            t0 = ((val >> 10) & 0x3F) + 0x50;
+                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x50;
                                             break;
                                         case 2:
-                                            t0 = ((val >> 10) & 0x3F) + 0x5C;
+                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x5C;
                                             break;
                                         case 0:
-                                            t0 = ((val >> 10) & 0x3F) + 0x45;
+                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x45;
                                             break;
                                         }
                                     }
@@ -4262,20 +4247,20 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 t0 = 0xFF;
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    if (*(u8*)g_menu_item_ptr != 0)
+                                    if (((MenuItemEntry*)g_menu_item_ptr)->active != 0)
                                     {
-                                        u32 val = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
-                                        s32 sel = (val >> 8) & 3;
-                                        switch (sel)
+                                        u32 attributes = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
+                                        s32 item_kind = (attributes >> MENU_ITEM_KIND_SHIFT) & 3;
+                                        switch (item_kind)
                                         {
                                         case 0:
-                                            t0 = ((val >> 10) & 0x3F) + 0x45;
+                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x45;
                                             break;
                                         case 1:
-                                            t0 = ((val >> 10) & 0x3F) + 0x50;
+                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x50;
                                             break;
                                         case 2:
-                                            t0 = ((val >> 10) & 0x3F) + 0x5C;
+                                            t0 = ((attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + 0x5C;
                                             break;
                                         }
                                     }
@@ -4373,10 +4358,11 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     if (menu_item_is_nondefault((u8*)g_menu_item_ptr) != 0)
                                     {
                                         void* a3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x30));
-                                        menu_concat_encoded_text(&prefix_buffer,
-                                                                 (void*)((u8*)a3 + *(u16*)((u8*)a3 + (*(u16*)(g_menu_item_ptr + 0x16) & 0x3F) * 2)),
-                                                                 (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) +
-                                                                         *(u16*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + 0xB4)));
+                                        menu_concat_encoded_text(
+                                            &prefix_buffer,
+                                            (void*)((u8*)a3 + *(u16*)((u8*)a3 + (((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high & 0x3F) * 2)),
+                                            (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) +
+                                                    *(u16*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8) + 0xB4)));
                                     }
                                     else
                                     {
@@ -4569,22 +4555,23 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 val = 0;
                                 if (D_80168C05[content_index] != 0)
                                 {
-                                    u8* base2 = (u8*)((content_index << 6) + (s32)D_80168C30) - 0x5C0;
-                                    void* v1;
-                                    if (*base2 != 0)
+                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_index << 6) + (s32)D_80168C30 - 0x5C0);
+                                    MenuItemEntry* comparison_item;
+                                    if (equipment->active != 0)
                                     {
-                                        val = *(u16*)(base2 + 0x24);
+                                        val = equipment->stat_values[0];
                                     }
-                                    v1 = (void*)D_801694DC[content_index];
-                                    if (v1 != 0 && *(u8*)v1 != 0)
+                                    comparison_item = (MenuItemEntry*)D_801694DC[content_index];
+                                    if (comparison_item != 0 && comparison_item->active != 0)
                                     {
-                                        val -= *(u16*)((u8*)v1 + 0x24);
+                                        val -= comparison_item->stat_values[0];
                                     }
                                     else
                                     {
                                         val -= D_800F0C1C;
                                     }
-                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(val), 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(val), 1, &pos,
+                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                             }
                             /* fallthrough */
@@ -4596,18 +4583,18 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 val = 0;
                                 if (D_80168C01[content_index] != 0)
                                 {
-                                    u8* base2 = (u8*)((content_index << 6) + (s32)D_80168C30) - 0x6C0;
-                                    void* v1;
+                                    MenuItemEntry* equipment = (MenuItemEntry*)((content_index << 6) + (s32)D_80168C30 - 0x6C0);
+                                    MenuItemEntry* comparison_item;
                                     u8* source;
                                     u8* label_buf;
-                                    if (*base2 != 0)
+                                    if (equipment->active != 0)
                                     {
-                                        val = *(u16*)(base2 + 0x24);
+                                        val = equipment->stat_values[0];
                                     }
-                                    v1 = (void*)D_801694CC[content_index];
-                                    if (v1 != 0 && *(u8*)v1 != 0)
+                                    comparison_item = (MenuItemEntry*)D_801694CC[content_index];
+                                    if (comparison_item != 0 && comparison_item->active != 0)
                                     {
-                                        val -= *(u16*)((u8*)v1 + 0x24);
+                                        val -= comparison_item->stat_values[0];
                                     }
                                     else
                                     {
@@ -4974,27 +4961,28 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 break;
                             case 0x13:
                             {
-                                s32 a2_15 = zero;
+                                s32 displayed_stat = zero;
                                 if (g_item_slot_flags[0] != 0)
                                 {
-                                    void* v1_12 = (void*)g_item_slot_data[0];
-                                    if (v1_12 == 0 || *(u8*)v1_12 == 0)
+                                    MenuItemEntry* comparison_item = (MenuItemEntry*)g_item_slot_data[0];
+                                    if (comparison_item == 0 || comparison_item->active == 0)
                                     {
-                                        a2_15 += D_800F0C1C;
+                                        displayed_stat += D_800F0C1C;
                                     }
                                     else
                                     {
-                                        a2_15 = *(u16*)((u8*)v1_12 + 0x24);
+                                        displayed_stat = comparison_item->stat_values[0];
                                     }
                                 }
                                 else
                                 {
                                     if (((MenuItemEntry*)D_80168C30)->active != 0)
                                     {
-                                        a2_15 = ((MenuItemEntry*)D_80168C30)->stat_values[0];
+                                        displayed_stat = ((MenuItemEntry*)D_80168C30)->stat_values[0];
                                     }
                                 }
-                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, a2_15, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, displayed_stat, 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x14:
@@ -5698,9 +5686,10 @@ void* menu_emit_draw_mode_primitive(DR_TPAGE* draw_mode, s32* ot)
 
 /**
  * @brief Concatenate two encoded text command streams into a destination buffer.
- * @param dst Destination byte buffer; receives all bytes from src1, then src2, then a null terminator.
- * @param src1 First source stream; processed until its null terminator.
- * @param src2 Second source stream; appended after src1, processed until its null terminator.
+ * @param dst Buffer large enough for both streams and the terminator.
+ * @param src1 First null-terminated stream.
+ * @param src2 Second null-terminated stream.
+ * @note Bytes 0x19-0x1F introduce a second byte, which may be zero.
  */
 void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2)
 {
@@ -5712,7 +5701,7 @@ void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2)
         {
             break;
         }
-        if ((u32)(ch - 0x19) < 7)
+        if ((u32)(ch - MENU_TEXT_PREFIX_FIRST) < MENU_TEXT_PREFIX_COUNT)
         {
             *dst++ = ch;
             src1++;
@@ -5733,7 +5722,7 @@ void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2)
         {
             break;
         }
-        if ((u32)(ch - 0x19) < 7)
+        if ((u32)(ch - MENU_TEXT_PREFIX_FIRST) < MENU_TEXT_PREFIX_COUNT)
         {
             *dst++ = ch;
             src2++;
@@ -6131,7 +6120,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
         {
             if (*(volatile u8*)&content_base[g_menu_hit_item_idx].action_type < 0xF0U)
             {
-                MENU_EMIT_STATE(0x4, (s32)content_base[g_menu_hit_item_idx].action_type * 2);
+                MENU_EMIT_TABLE_LABEL(0, (s32)content_base[g_menu_hit_item_idx].action_type * 2);
             }
             else
             {
@@ -6139,54 +6128,53 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                 switch (action_type)
                 {
                 case 0xF0:
-                    MENU_EMIT_STATE(0x48, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(17, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xF1:
-                    MENU_EMIT_STATE(0x14, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(MENU_TEXT_ABILITY_HELP, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xF2:
-                    MENU_EMIT_STATE(0x34, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(12, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xF3:
-                    MENU_EMIT_STATE(0x24, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(8, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xF4:
-                    MENU_EMIT_STATE(0x40, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(MENU_TEXT_CATEGORY_ENTRY_HELP, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xF5:
-                    MENU_EMIT_STATE(0x58, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(21, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xF6:
-                    MENU_EMIT_STATE(0x50, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(19, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xF7:
-                    MENU_EMIT_STATE(0x60, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(23, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xF8:
                     if (D_80168C6C != 0xFF)
                     {
                         if (D_80168C6C & 0x80)
                         {
-                            MENU_EMIT_STATE(0x40, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                            MENU_EMIT_TABLE_LABEL(MENU_TEXT_CATEGORY_ENTRY_HELP, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                         }
                         else
                         {
-                            MENU_EMIT_STATE(0x1C, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                            MENU_EMIT_TABLE_LABEL(MENU_TEXT_TECHNIQUE_HELP, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                         }
                     }
                     break;
                 case 0xF9:
-                    MENU_EMIT_STATE(0x1C, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(MENU_TEXT_TECHNIQUE_HELP, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xFA:
-                    MENU_EMIT_STATE(0x3C, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
+                    MENU_EMIT_TABLE_LABEL(MENU_TEXT_SPELL_HELP, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                     break;
                 case 0xFB:
                 case 0xFC:
                 case 0xFD:
                 case 0xFE:
-                    MENU_EMIT_STATE(0x2C, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
-
+                    MENU_EMIT_TABLE_LABEL(MENU_TEXT_KEY_ITEM_HELP, (s32)menu_read_u8(&content_base[g_menu_hit_item_idx].action_type) * 2);
                 }
             }
         }
@@ -6326,7 +6314,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                 if (*(char_base + 0x640) != 0)
                 {
                     text_offset = (s32) * (char_base + action_type + 0x65D) * 2;
-                    MENU_EMIT_STATE(0x60, text_offset);
+                    MENU_EMIT_TABLE_LABEL(23, text_offset);
                 }
                 break;
             }
@@ -6352,7 +6340,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                 if (g_menu_item_ptr != 0)
                 {
                     text_offset = (s32) * ((u8*)g_menu_item_ptr + action_type + 0x10) * 2;
-                    MENU_EMIT_STATE(0x58, text_offset);
+                    MENU_EMIT_TABLE_LABEL(21, text_offset);
                 }
                 break;
             case 19:
@@ -6361,7 +6349,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                 if (g_menu_item_ptr != 0)
                 {
                     text_offset = (s32) * ((u8*)g_menu_item_ptr + action_type + 0x15) * 2;
-                    MENU_EMIT_STATE(0x60, text_offset);
+                    MENU_EMIT_TABLE_LABEL(23, text_offset);
                 }
                 break;
             case 22:
@@ -6369,7 +6357,8 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                 {
                     u8 cat = *((u8*)g_menu_category2_item + 0x24);
                     u8 entry = *((u8*)g_menu_category2_item + 0x25);
-                    MENU_EMIT_EXPR((u8*)MENU_STATE_BASE(0x40) + *(u16*)((u8*)MENU_STATE_BASE(0x40) + menu_zext_u8(cat) * 0x1C + menu_zext_u8(entry) * 2));
+                    MENU_EMIT_EXPR((u8*)MENU_TEXT_TABLE_BASE(MENU_TEXT_CATEGORY_ENTRY_HELP) +
+                                   *(u16*)((u8*)MENU_TEXT_TABLE_BASE(MENU_TEXT_CATEGORY_ENTRY_HELP) + menu_zext_u8(cat) * 0x1C + menu_zext_u8(entry) * 2));
                 }
                 break;
             case 23:
@@ -7449,9 +7438,9 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
                 relative_y = y - scroll_y;
                 if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
                 {
-                    name_table = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x10));
-                    prim_buf = func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1, 0x10 - view_origin->x,
-                                             relative_y - view_origin->y, 0);
+                    name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_SPELL_NAMES]);
+                    prim_buf = func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
+                                             0x10 - view_origin->x, relative_y - view_origin->y, 0);
                 }
                 if (list->navigation.fields.selected_index == (y >> 4))
                 {
@@ -7475,8 +7464,8 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
 
     if (selected_index != -1)
     {
-        help_table = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x3C));
-        g_menu_help_text = (s32)((u8*)help_table + *(u16*)((u8*)help_table + (selected_index * 2)));
+        help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_SPELL_HELP]);
+        g_menu_help_text = (s32)((u8*)help_table + ((u16*)help_table)[selected_index]);
     }
 
     return prim_buf;
@@ -7534,9 +7523,9 @@ s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
                 relative_y = y - scroll_y;
                 if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
                 {
-                    name_table = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x6C));
-                    prim_buf = func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1, 0x20 - view_origin->x,
-                                             relative_y - view_origin->y, 0);
+                    name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_NAMES]);
+                    prim_buf = func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1,
+                                             0x20 - view_origin->x, relative_y - view_origin->y, 0);
                     if (entry_kind >= 8)
                     {
                         if (entry_kind >= 0xF)
@@ -7568,8 +7557,8 @@ s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
 
     if ((active != 0) && (selected_index != -1))
     {
-        help_table = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x84));
-        g_menu_help_text = (s32)((u8*)help_table + *(u16*)((u8*)help_table + (selected_index * 2)));
+        help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_EQUIPMENT_HELP]);
+        g_menu_help_text = (s32)((u8*)help_table + ((u16*)help_table)[selected_index]);
     }
 
     return prim_buf;
@@ -7624,9 +7613,9 @@ s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
                 pos.x = 0xC0 - (u16)view_origin->x;
                 pos.y = relative_y - (u16)view_origin->y;
 
-                name_table = (void*)MENU_STATE_BASE(0x30);
+                name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES]);
                 prim_buf =
-                    func_800A88A0(prim_buf, ot, MENU_TAIL(name_table, item_index * 2), 1, 0x10 - view_origin->x, relative_y - view_origin->y, 0);
+                    func_800A88A0(prim_buf, ot, ((u8*)name_table + ((u16*)name_table)[item_index]), 1, 0x10 - view_origin->x, relative_y - view_origin->y, 0);
                 prim_buf = menu_draw_clamped_number(ot, prim_buf, *quantity, 1, &pos, 1);
             }
             if (list->navigation.fields.selected_index == (y >> 4))
@@ -7643,8 +7632,8 @@ s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
     {
         if (active != 0)
         {
-            help_table = (void*)MENU_STATE_BASE(0x2C);
-            g_menu_help_text = (s32)MENU_TAIL(help_table, selected_index * 2);
+            help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_HELP]);
+            g_menu_help_text = (s32)((u8*)help_table + ((u16*)help_table)[selected_index]);
         }
     }
 
@@ -7697,10 +7686,9 @@ s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Ve
             relative_y = list_y - scroll_y;
             if ((relative_y >= -0xF) && (relative_y < (list->viewport_h - 0x10)))
             {
-                name_table = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x18));
-                prim_buf =
-                    func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (ability_index * 2))), 1, 0x20 - view_origin->x,
-                                   relative_y - view_origin->y, 0);
+                name_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ABILITY_NAMES]);
+                prim_buf = func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + ((u16*)name_table)[ability_index]), 1, 0x20 - view_origin->x,
+                                         relative_y - view_origin->y, 0);
                 if (ability->flags & MENU_ABILITY_FLAG_SHOW_ICON)
                 {
                     prim_buf = (s32)menu_emit_icon_sprite((void*)prim_buf, ot, 0x2C, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
@@ -7725,8 +7713,8 @@ s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Ve
     {
         if (active != 0)
         {
-            help_table = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x14));
-            g_menu_help_text = (s32)((u8*)help_table + *(u16*)((u8*)help_table + (selected_index * 2)));
+            help_table = (void*)(g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ABILITY_HELP]);
+            g_menu_help_text = (s32)((u8*)help_table + ((u16*)help_table)[selected_index]);
         }
     }
 
@@ -7833,7 +7821,7 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
                 }
                 else
                 {
-                    g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
+                    g_menu_message_line1 = (void*)MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 86);
                     i = MENU_SLOT_COUNT - 1;
                     while (i >= 0)
                     {
@@ -7880,10 +7868,10 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x7A), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x7C), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x86), 1, 0x30 - view_origin->x, 0x20 - view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x80), 1, 0x30 - view_origin->x, 0x30 - view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 61), 1, 0x30 - view_origin->x, -view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 62), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 67), 1, 0x30 - view_origin->x, 0x20 - view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 64), 1, 0x30 - view_origin->x, 0x30 - view_origin->y, 2);
     return buf;
 }
 
@@ -8004,8 +7992,8 @@ s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x88), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x8A), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 68), 1, 0x30 - view_origin->x, -view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 69), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
     return buf;
 }
 
@@ -8292,7 +8280,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                                     }
                                     func_800A8F8C(((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, handle);
                                     *(u8*)handle = 0;
-                                    g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
+                                    g_menu_message_line1 = (void*)MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 86);
                                     MENU_CLEAR_SLOTS();
                                     menu_open_content_page(6);
                                     return buf;
@@ -8305,7 +8293,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         {
                             break;
                         }
-                        g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0x3A);
+                        g_menu_message_line1 = (void*)MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 29);
                         MENU_CLEAR_SLOTS();
                         menu_open_content_page(6);
                         return buf;
@@ -8329,7 +8317,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 list->active = MENU_SLOT_STATE_CLOSING;
                 break;
             }
-            g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
+            g_menu_message_line1 = (void*)MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 86);
             MENU_CLEAR_SLOTS();
             menu_open_content_page(6);
             return buf;
@@ -8338,11 +8326,11 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
 
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x7E), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x82), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x84), 1, 0x30 - view_origin->x, 0x20 - view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x80), 1, 0x30 - view_origin->x, 0x30 - view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x86), 1, 0x30 - view_origin->x, 0x40 - view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 63), 1, 0x30 - view_origin->x, -view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 65), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 66), 1, 0x30 - view_origin->x, 0x20 - view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 64), 1, 0x30 - view_origin->x, 0x30 - view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 67), 1, 0x30 - view_origin->x, 0x40 - view_origin->y, 2);
     return buf;
 }
 
@@ -8416,7 +8404,7 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
                     {
                         s32 n = MENU_SLOT_COUNT - 1;
 
-                        g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0x3A);
+                        g_menu_message_line1 = (void*)MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 29);
                         do
                         {
                             g_menu_slots[n].active = 0;
@@ -8437,8 +8425,8 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
     }
 
     buf = scroll_list_draw(buf, ot, list, g_menu_item_nav_entries, view_origin, active);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x90), 1, 0x30 - view_origin->x, -view_origin->y, 2);
-    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x92), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 72), 1, 0x30 - view_origin->x, -view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TEXT_ENTRY(MENU_TEXT_TABLE_BASE(MENU_TEXT_MESSAGES), 73), 1, 0x30 - view_origin->x, 0x10 - view_origin->y, 2);
     g_pad_input = 0;
     return buf;
 }
@@ -8587,7 +8575,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
                         s32 slot_index = MENU_SLOT_COUNT - 1;
                         u8* message_table;
 
-                        message_table = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 8);
+                        message_table = g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES];
                         g_menu_message_line1 = message_table + *(u16*)(message_table + 0xAC);
                         do
                         {
@@ -8638,7 +8626,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
 
                         glyph_color = 3;
                         name_table = g_menu_state_ptr;
-                        name_table += *(s32*)(name_table + 0x20);
+                        name_table += ((MenuTextResources*)name_table)->table_offsets[MENU_TEXT_TECHNIQUE_NAMES];
                         glyph_offset = *(u16*)((u8*)name_table + (technique_index * 2) + (group_index * (MENU_SPECIAL_TECHNIQUES_PER_GROUP * 2)));
                         glyph = name_table + glyph_offset;
                         if (group_index ==
@@ -8664,9 +8652,9 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
 
     if (selected_technique != -1)
     {
-        u8* name_table = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x1C);
+        u8* name_table = g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_TECHNIQUE_HELP];
 
-        g_menu_help_text = (s32)(name_table + *(u16*)(name_table + (selected_technique * 2)));
+        g_menu_help_text = (s32)(name_table + ((u16*)name_table)[selected_technique]);
     }
     return prim;
 }
@@ -8868,12 +8856,12 @@ void menu_open_content_page(u32 content_id)
 }
 
 /**
- * @brief Count usable entries in the packed equipment grid and rebuild the g_menu_scroll_nav_entries circular nav list to that size.
- * @return Number of entries counted (also the nav-list length).
+ * @brief Build circular navigation for usable equipment-grid entries.
+ * @return Number of usable entries.
  */
 s32 menu_build_equipment_nav_entries(void)
 {
-    s32 has_next;
+    s32 next_index;
     s32 entry_with_position;
     s32 previous_index;
     s32 wrapped_next_index;
@@ -8908,36 +8896,28 @@ s32 menu_build_equipment_nav_entries(void)
     } while (row < MENU_EQUIPMENT_GRID_ROW_COUNT);
 
     g_menu_scroll_nav_entries[0] = 0;
-    column = 0;
-    while (column < item_count)
+    for (column = 0; column < item_count; column++)
     {
         entry = (s32*)g_menu_scroll_nav_entries + column;
 
         packed_entry = *entry;
         previous_index = column - 1;
-
-        entry_with_position = (packed_entry & ~MENU_ITEM_NAV_POSITION_MASK);
-
-        entry_with_position = entry_with_position |
-                              ((column * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+        entry_with_position = entry_with_position | ((column * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
         {
             previous_index = item_count - 1;
         }
-
-        entry_with_previous = (entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK);
-
+        entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
         entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
-
         *entry = entry_with_previous;
-        column += 1;
-        has_next = column < item_count;
+        next_index = column + 1;
         wrapped_next_index = 0;
-        if (has_next != 0)
+        if (next_index < item_count)
         {
-            wrapped_next_index = column;
+            wrapped_next_index = next_index;
         }
         *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
     }
@@ -8945,13 +8925,12 @@ s32 menu_build_equipment_nav_entries(void)
 }
 
 /**
- * @brief Count active entries in the key-item quantity table and rebuild the g_menu_scroll_nav_entries circular nav list to that size.
- * @return Number of entries counted (also the nav-list length).
+ * @brief Clear the key-item sentinel and build navigation for items with nonzero quantities.
+ * @return Number of available key items.
  */
 s32 menu_build_key_item_nav_entries(void)
 {
     s32 next_index;
-    s32 has_next;
     s32 entry_with_position;
     s32 previous_index;
     s32 wrapped_next_index;
@@ -8980,51 +8959,41 @@ s32 menu_build_key_item_nav_entries(void)
     } while (remaining_entries >= 0);
 
     g_menu_scroll_nav_entries[0] = 0;
-    entry_index = 0;
-    while (entry_index < item_count)
+    for (entry_index = 0; entry_index < item_count; entry_index++)
     {
         entry = (s32*)g_menu_scroll_nav_entries + entry_index;
 
         packed_entry = *entry;
         previous_index = entry_index - 1;
-
-        entry_with_position = (packed_entry & ~MENU_ITEM_NAV_POSITION_MASK);
-
-        entry_with_position = entry_with_position |
-                              ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+        entry_with_position = entry_with_position | ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
         {
             previous_index = item_count - 1;
         }
-
-        entry_with_previous = (entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK);
-
+        entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
         entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
-
         *entry = entry_with_previous;
         next_index = entry_index + 1;
-        has_next = next_index < item_count;
         wrapped_next_index = 0;
-        if (has_next != 0)
+        if (next_index < item_count)
         {
             wrapped_next_index = next_index;
         }
         *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
-        entry_index = next_index;
     }
     return item_count;
 }
 
 /**
- * @brief Count entries with bit 0 set in the pad-ctx table at +0x2F0 and rebuild the g_menu_scroll_nav_entries circular nav list to that size.
- * @return Number of entries counted (also the nav-list length).
+ * @brief Build circular navigation for learned abilities.
+ * @return Number of learned abilities.
  */
 s32 menu_build_ability_nav_entries(void)
 {
     s32 next_index;
-    s32 has_next;
     s32 entry_with_position;
     s32 previous_index;
     s32 wrapped_next_index;
@@ -9052,44 +9021,33 @@ s32 menu_build_ability_nav_entries(void)
     } while (remaining >= 0);
 
     g_menu_scroll_nav_entries[0] = 0;
-    entry_index = 0;
-    while (entry_index < item_count)
+    for (entry_index = 0; entry_index < item_count; entry_index++)
     {
         entry = (s32*)g_menu_scroll_nav_entries + entry_index;
 
         packed_entry = *entry;
         previous_index = entry_index - 1;
-
-        entry_with_position = (packed_entry & ~MENU_ITEM_NAV_POSITION_MASK);
-
-        entry_with_position = entry_with_position |
-                              ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
+        entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+        entry_with_position = entry_with_position | ((entry_index * MENU_ITEM_NAV_POSITION_STRIDE) & MENU_ITEM_NAV_POSITION_MASK);
         *entry = entry_with_position;
 
         if (previous_index < 0)
         {
             previous_index = item_count - 1;
         }
-
-        entry_with_previous = (entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK);
-
+        entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
         entry_with_previous = entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
-
         *entry = entry_with_previous;
         next_index = entry_index + 1;
-        has_next = next_index < item_count;
         wrapped_next_index = 0;
-        if (has_next != 0)
+        if (next_index < item_count)
         {
             wrapped_next_index = next_index;
         }
         *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) | (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
-        entry_index = next_index;
     }
     return item_count;
 }
-
-
 
 /* ----- Equipment Selection Helpers ----- */
 
@@ -9114,7 +9072,6 @@ static inline s32 menu_item_records_differ(const u8* left, const u8* right)
     } while (i < MENU_ITEM_RECORD_SIZE);
     return 0;
 }
-
 
 /**
  * @brief Stage the best slot-0 equipment candidate for comparison.
