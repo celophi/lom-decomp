@@ -81,117 +81,14 @@ typedef struct
 #define FIELD_COUNTER ((UnkStruct2C *)D_80122B74)
 #define FIELD_BLOCK ((FieldBlock80122B74 *)D_80122B74)
 
-void func_800C3B50(void);
-void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-void func_800C3A00(s32 arg0);
-void func_8006AB38(s32 arg0);
-void func_800C1EC8(void *dst, void *src, s32 n);
 void func_800C2138(s32 arg0);
 u8 *func_800C1E40(s32 arg0);
-void func_800C32C8(void);
 s32 func_800C3518(s32 arg0);
 s32 func_800C3688(s32 arg0);
 
 extern u8 *D_80122B74;
 extern u8 D_800F198C[];
 extern u16 g_music_track_index;
-
-/**
- * @brief Refresh the block and return its byte at 0xAA9 offset by 0x41.
- * @return The adjusted byte value.
- */
-s32 func_800C318C(void)
-{
-    func_800C3B50();
-    return D_80122B74[0xAA9] + 0x41;
-}
-
-/**
- * @brief Close either the primary (arg0 == 0) or secondary record and notify func_8006AB38.
- * @param arg0 Zero selects the record at 0x840, nonzero the record at 0xA90.
- */
-void func_800C31BC(s32 arg0)
-{
-    if (arg0 == 0)
-    {
-        if ((*(s32 *)(D_80122B74 + 0x858) & 0x7F) == 2)
-        {
-            func_800BD520(0, (D_80122B74[0x859] << 3) + 0xF87, 0);
-        }
-        func_800BD520(0, 0x2F08, 0xFF);
-        D_80122B74[0x840] = 0;
-        *(s32 *)(D_80122B74 + 0x858) |= 0x7F;
-    }
-    else
-    {
-        if ((*(s32 *)(D_80122B74 + 0xAA8) & 0x7F) == 3)
-        {
-            func_800C32C8();
-            *(s32 *)(D_80122B74 + 0x2EF0) = 5;
-        }
-        else
-        {
-            func_800C3A00(0);
-        }
-        D_80122B74[0xA90] = 0;
-        *(s32 *)(D_80122B74 + 0xAA8) |= 0x7F;
-        func_800BD520(0, 0x2F00, 0xFF);
-    }
-    func_8006AB38(arg0);
-}
-
-/**
- * @brief Copy the pending record at 0xA90 into the menu slot selected by the word at 0x2EF0.
- */
-void func_800C32C8(void)
-{
-    s32 i;
-    s32 dst_off;
-    u8 *src;
-    u8 *p;
-
-    if ((u32)*(s32 *)(D_80122B74 + 0x2EF0) < 5)
-    {
-        i = 0;
-        do
-        {
-            dst_off = i + *(s32 *)(D_80122B74 + 0x2EF0) * 0x60;
-            src = D_80122B74 + i;
-            i += 1;
-            *(u8 *)(D_80122B74 + dst_off + 0x2EF4) = *(u8 *)(src + 0xA90);
-        } while (i < 0x15);
-
-        {
-            u8 *b; s32 idx; s32 off; u32 val;
-            b = D_80122B74;
-            idx = *(s32 *)(b + 0x2EF0);
-            off = idx * 0x60;
-            val = *(u8 *)(b + 0xAB0);
-            b += off;
-            *(u8 *)(b + 0x2F0C) = val;
-        }
-        p = D_80122B74 + *(s32 *)(D_80122B74 + 0x2EF0) * 0x60;
-        {
-            u32 word = *(u32 *)(D_80122B74 + 0xAB0);
-            u32 low = *(u8 *)(p + 0x2F0C);
-            low |= (word >> 8) << 8;
-            *(u32 *)(p + 0x2F0C) = low;
-        }
-        {
-            u8 *b = D_80122B74;
-            s32 off = *(s32 *)(b + 0x2EF0) * 0x60;
-            u16 val = *(u16 *)(b + 0xAB4);
-            b += off;
-            *(u16 *)(b + 0x2F10) = val;
-        }
-        {
-            u8 *b = D_80122B74;
-            s32 off = *(s32 *)(b + 0x2EF0) * 0x60;
-            off += (s32)b;
-            func_800C1EC8(b + 0xAC0, (void *)(off + 0x2F1C), 0x10);
-        }
-    }
-}
 
 /**
  * @brief Try to claim up to two field records and write the claimed ids to a list.

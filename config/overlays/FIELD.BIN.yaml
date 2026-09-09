@@ -577,36 +577,14 @@ segments:
       - [0x71EB1, c, field_record_lookup_ops]   # gcc280_g0, func_800C1B20 .. func_800C1E40 (8 funcs, 100%)
       - [0x72259, c, func_800C1EC8]                # gcc272_cdk, 97.5%
       - [0x722B9, c, field_stat_counter_ops]    # gcc280_g0, func_800C1F28 .. func_800C2228 (8 funcs, 100%)
-      - [0x725F5, c, func_800C2264]                # gcc280_g0, 100%
-      - [0x72785, c, func_800C23F4]                # gcc280_g0, 100%
-      - [0x7284D, c, func_800C24BC]                # gcc280_g0, 100%
-      - [0x72931, c, field362]                     # gcc280_g0, func_800C25A0
-      - [0x729D1, c, func_800C2640]                # gcc280_g0, 100%
-      - [0x72AB5, c, func_800C2724] # gcc280_g0, 85.041100% WIP
-      - [0x72BD9, c, func_800C2848]                # gcc280_g0, 100%
-      - [0x72C49, c, field_resource_table_ops]  # gcc280_g0, func_800C28B8 .. func_800C2AD0 (8 funcs, 100%)
-      - [0x72EA5, c, func_800C2B14] # gcc280_g0, 87.664000% WIP
-      - [0x73099, c, func_800C2D08]                # gcc280_g0, func_800C2D08 + func_800C2DC0 (100%)
-      - [0x731C1, c, unk2_b_split064_tail]         # gcc272_cdk, func_800C2E30
-      - [0x7351D, c, field_record_table_ops]    # gcc280_g0, func_800C318C .. func_800C396C (15 funcs; func_800C3688 96.73% allocator-only, rest 100%)
-      - [0x73D91, c, func_800C3A00]              # gcc280_g0, 100%
-      - [0x73EE1, c, field167]                  # gcc280_g0, func_800C3B50
-      - [0x73F69, c, func_800C3BD8]              # gcc280_g0, 100%
-      - [0x74045, c, func_800C3CB4]            # gcc272_cdk, 100%
-      - [0x740C9, c, func_800C3D38] # gcc280_g0, 97.758330% WIP
-      - [0x742A9, c, unk2_b_split068_tail_tail] # gcc_272_cdk_g0, remaining tail
-      - [0x746F5, c, func_800C4364]             # gcc272_cdk, WIP 87.02%
-      - [0x75A95, c, field267]                  # gcc280_g0, func_800C5704
-      - [0x75AF1, c, func_800C5760]             # gcc280_g0, 100%
-      - [0x75B65, c, field168]                     # gcc272_cdk, func_800C57D4
-      - [0x75B71, c, field169]                     # gcc280_g0, func_800C57E0
-      - [0x75B95, c, unk2_b_split069]              # gcc272_cdk, func_800C5804
-      - [0x75E39, c, field170]                     # gcc280_g0, func_800C5AA8
-      - [0x75EA1, c, field268]                  # gcc272_cdk, func_800C5B10
-      - [0x75EF5, c, func_800C5B64]             # gcc280_g0, 100.00000%, 26/26 instructions
-      - [0x75F5D, c, func_800C5BCC] # gcc280_g0, 100.000000%
-      - [0x76139, c, field173]                  # gcc280_g0, func_800C5DA8
-      - [0x761B9, c, unk2_b_split071]              # gcc272_cdk, func_800C5E28
+      - [0x725F5, c, field_saved_slot_ops] # gcc280_g0; four saved-slot operations, all exact
+      - [0x729D1, c, field_actor_record_ops] # gcc280_g0; four actor-record operations, C2724 WIP
+      - [0x72C89, c, field_resource_table_ops] # gcc280_g0; seven resource/inventory helpers, all exact
+      - [0x72EA5, c, field_active_record_ops] # gcc280_g0; seven load/restore/close/save functions, two WIPs
+      - [0x73775, c, field_record_table_ops] # gcc280_g0; eleven table helpers, C3688 WIP
+      - [0x73D91, c, field_group_layout_ops] # gcc280_g0; six group selection/grid functions, five exact and C3D38 WIP
+      - [0x742A9, c, field_group_stat_transfer] # gcc272_cdk; active-record transfer and derived-stat builder, two WIPs
+      - [0x75A95, c, field_menu_group_ops] # gcc280_g0; group creation/release, state and ordering
       - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; two newly wired WIPs
       - [0x76C59, c, field_menu_slot_ops] # gcc280_g0, inferred menu function family; two newly wired WIPs
       - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, C7340 94.154930% WIP
