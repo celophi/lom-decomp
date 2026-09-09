@@ -128,10 +128,9 @@ overlay_field_gcc_272_gnu_g0_srcs := \
 	src/overlays/field/func_800AEAC0.c \
 
 overlay_field_gcc_272_cdk_g0_srcs := \
-	src/overlays/field/func_800AF0E8.c \
-	src/overlays/field/unk2_b_split018_tail.c \
+	src/overlays/field/field_item_selection.c \
 	src/overlays/field/func_800A8128.c \
-	src/overlays/field/unk2_b_split017_tail_tail.c \
+	src/overlays/field/field_choice_labels.c \
 	src/overlays/field/func_800A623C.c \
 	src/overlays/field/func_80096E60.c \
 	src/overlays/field/func_8009980C.c \
@@ -272,8 +271,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field75.c \
 	src/overlays/field/field76.c \
 	src/overlays/field/field78.c \
-	src/overlays/field/field79.c \
-	src/overlays/field/field80.c \
+	src/overlays/field/field_text_session.c \
 	src/overlays/field/field_resource_load.c \
 	src/overlays/field/field_layout_slot_state.c \
 	src/overlays/field/func_80087CE0.c \
@@ -383,7 +381,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800AE76C.c \
 	src/overlays/field/func_800AE8A8.c \
 	src/overlays/field/func_800AE9E0.c \
-	src/overlays/field/func_800AF8E8.c \
 	src/overlays/field/field_card_clock.c \
 	src/overlays/field/func_800BF158.c \
 	src/overlays/field/field_group_stat_transfer.c \
@@ -472,7 +469,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field363.c \
 	src/overlays/field/field364.c \
 	src/overlays/field/field365.c \
-	src/overlays/field/field368.c \
 	src/overlays/field/field370.c \
 	src/overlays/field/field_equipment_combination_rules.c \
 	src/overlays/field/field_party_setup.c \

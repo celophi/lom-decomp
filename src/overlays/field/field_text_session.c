@@ -1,6 +1,21 @@
 #include "common.h"
 
 extern s32 D_80122714;
+extern s32 D_80122734;
+extern s32 D_80122980;
+extern s32 D_80122A00;
+
+/** @brief Clear active text-session state and associated counters. */
+void func_800AF8C4(void)
+{
+    D_80122980 = 0;
+    D_80122734 = 0;
+    D_80122714 = 0;
+    D_80122A00 = 0;
+}
+
+
+extern s32 D_80122714;
 
 void field_text_reset_scratch(void);
 void func_800AE008(s32 arg0);
