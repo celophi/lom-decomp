@@ -601,7 +601,8 @@ segments:
       - [0x79C65, c, field296]                  # gcc280_g0, func_800C98D4
       - [0x79CF1, c, unk2_b_split087_tail]      # gcc272_cdk, func_800C9960
       - [0x79F55, c, field_menu_record_ops]     # gcc280_g0, func_800C9BC4 .. func_800C9DB4 (6 funcs, 100%)
-      - [0x7A15D, c, unk2_b_split088]              # gcc272_cdk, func_800C9DCC
+      - [0x7A15D, c, func_800C9DCC]                # gcc280_g0, 100%
+      - [0x7A265, c, unk2_b_split088_after_c9dcc]  # gcc272_cdk, func_800C9ED4
       - [0x7A531, c, field203]                     # gcc272_cdk, func_800CA1A0
       - [0x7A571, c, func_800CA1E0]                # gcc272_cdk, 85.17%
       - [0x7A8F9, c, field_equipment_combination_rules] # gcc280_g0, equipment_combination_variant + rule_00 .. _63
