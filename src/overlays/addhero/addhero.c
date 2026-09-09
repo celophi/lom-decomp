@@ -464,10 +464,10 @@ void addhero_update_state(AddheroDrawState* draw_state)
     addhero_handle_input();
     if (g_addhero_scroll_frames != 0)
     {
-        s32 base = g_addhero_scroll_y;
-        delta = (g_addhero_scroll_target_y - g_addhero_scroll_y) / g_addhero_scroll_frames;
+        s32* scroll_y = &g_addhero_scroll_y;
+        delta = (g_addhero_scroll_target_y - *scroll_y) / g_addhero_scroll_frames;
         g_addhero_scroll_frames -= 1;
-        g_addhero_scroll_y += delta;
+        *scroll_y += delta;
     }
     else
     {
@@ -1385,8 +1385,8 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                 animated_height = scaled_height / 8;
                 remaining_height = (s32)(height - animated_height);
 
-                packet_cursor = ((AddheroElementDrawFunc)element->draw_handler)(
-                    ordering_table, packet_cursor, (s32)(width - animated_width) / 2, remaining_height / 2);
+                packet_cursor =
+                    ((AddheroElementDrawFunc)element->draw_handler)(ordering_table, packet_cursor, (s32)(width - animated_width) / 2, remaining_height / 2);
                 {
                     u32 post_word;
                     u32 field;
@@ -1394,11 +1394,10 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                     post_word = element->attr.word;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    packet_cursor = (AddheroGpuPacket*)func_800AD850(
-                        packet_cursor, ordering_table, field + (s32)((((element->size.word & 1) << 8) | high) - animated_width) / 2,
-                        (element->attr.bytes.y) +
-                            ((s32)((element->size.word >> 1) & 0xFF) - animated_height) / 2,
-                        animated_width, animated_height, draw_state->frame_flag, element_index == 0);
+                    packet_cursor = (AddheroGpuPacket*)func_800AD850(packet_cursor, ordering_table,
+                                                                     field + (s32)((((element->size.word & 1) << 8) | high) - animated_width) / 2,
+                                                                     (element->attr.bytes.y) + ((s32)((element->size.word >> 1) & 0xFF) - animated_height) / 2,
+                                                                     animated_width, animated_height, draw_state->frame_flag, element_index == 0);
                 }
                 {
                     u32 old_word;
@@ -1421,10 +1420,9 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                     u32 high;
                     case_word = element->attr.word;
                     high = case_word >> 24;
-                    packet_cursor = (AddheroGpuPacket*)func_800AD850(
-                        packet_cursor, ordering_table, (case_word >> 7) & 0x1FF, element->attr.bytes.y,
-                        ((element->size.word & 1) << 8) | high, (element->size.word >> 1) & 0xFF,
-                        draw_state->frame_flag, element_index == 0);
+                    packet_cursor = (AddheroGpuPacket*)func_800AD850(packet_cursor, ordering_table, (case_word >> 7) & 0x1FF, element->attr.bytes.y,
+                                                                     ((element->size.word & 1) << 8) | high, (element->size.word >> 1) & 0xFF,
+                                                                     draw_state->frame_flag, element_index == 0);
                 }
                 updated_word = element->attr.word;
                 if (((updated_word >> 3) & 0xF) != 0)
@@ -1449,15 +1447,11 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                 closing_height = (size_word >> 1) & 0xFF;
                 closing_scaled_height = closing_height * closing_word;
                 animated_width = closing_scaled_width >> 3;
-                if (closing_scaled_height < 0)
-                {
-                    closing_scaled_height += 7;
-                }
-                animated_height = closing_scaled_height >> 3;
+                animated_height = closing_scaled_height / 8;
                 closing_remaining_height = (s32)(closing_height - animated_height);
 
-                packet_cursor = ((AddheroElementDrawFunc)element->draw_handler)(
-                    ordering_table, packet_cursor, (s32)(width - animated_width) / 2, closing_remaining_height / 2);
+                packet_cursor = ((AddheroElementDrawFunc)element->draw_handler)(ordering_table, packet_cursor, (s32)(width - animated_width) / 2,
+                                                                                closing_remaining_height / 2);
                 {
                     u32 post_word;
                     u32 field;
@@ -1465,11 +1459,10 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                     post_word = element->attr.word;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    packet_cursor = (AddheroGpuPacket*)func_800AD850(
-                        packet_cursor, ordering_table, field + (s32)((((element->size.word & 1) << 8) | high) - animated_width) / 2,
-                        (element->attr.bytes.y) +
-                            ((s32)((element->size.word >> 1) & 0xFF) - animated_height) / 2,
-                        animated_width, animated_height, draw_state->frame_flag, element_index == 0);
+                    packet_cursor = (AddheroGpuPacket*)func_800AD850(packet_cursor, ordering_table,
+                                                                     field + (s32)((((element->size.word & 1) << 8) | high) - animated_width) / 2,
+                                                                     (element->attr.bytes.y) + ((s32)((element->size.word >> 1) & 0xFF) - animated_height) / 2,
+                                                                     animated_width, animated_height, draw_state->frame_flag, element_index == 0);
                 }
                 {
                     u32 old_word;
@@ -1485,7 +1478,7 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                     if (!(((u32)closing_scaled_width >> 3) & 0xF))
                     {
                         element->attr.word = ((((u32)closing_scaled_width & ~ADDHERO_ELEMENT_PHASE_MASK) | 0x18) & ~ADDHERO_ELEMENT_STATE_MASK) |
-                                               ADDHERO_ELEMENT_STATE_FINISHING;
+                                             ADDHERO_ELEMENT_STATE_FINISHING;
                     }
                 }
                 break;
@@ -2832,107 +2825,107 @@ s32 addhero_parse_entry_fields(void)
  */
 s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
 {
-    s32* row;
-    s32* elem;
+    s32* card_values;
+    s32* entry_value;
     s32* rank_ptr;
-    s32* cmp_ptr;
-    s32* inc_ptr;
+    s32* previous_value;
+    s32* previous_rank;
     s32* base_rank;
-    s32* ecopy;
+    s32* current_value;
     s32* max_ptr;
     s32* field_base;
-    s32* field1;
+    s32* field_table;
     s32 slot;
     s32* out_ptr;
-    char* ent_ptr;
-    s32 t0v;
-    s32 i;
-    s32 s3v;
+    char* entry_name;
+    s32 rank_value;
+    s32 entry_index;
+    s32 selection;
     s32 count;
-    s32 handle;
-    s32 less_count;
-    s32 j;
+    s32 maximum_suffix;
+    s32 greater_count;
+    s32 previous_index;
 
     addhero_parse_entry_fields();
-    s3v = -1;
+    selection = -1;
     addhero_sort_entries_by_type();
-    i = 0;
-    handle = addhero_parse_entry_fields();
+    entry_index = 0;
+    maximum_suffix = addhero_parse_entry_fields();
     addhero_reset_entry_ranks();
-    t0v = 1;
+    rank_value = 1;
     if (g_addhero_entry_state > 0)
     {
         count = g_addhero_entry_state;
         base_rank = &g_addhero_entry_ranks[0];
         rank_ptr = base_rank;
         slot = g_addhero_card_slot;
-        field1 = g_addhero_entry_fields;
-        row = field1 + slot * ADDHERO_DIRECTORY_ENTRY_COUNT;
-        elem = row;
+        field_table = g_addhero_entry_fields;
+        card_values = field_table + slot * ADDHERO_DIRECTORY_ENTRY_COUNT;
+        entry_value = card_values;
         do
         {
-            if (*elem >= 0)
+            if (*entry_value >= 0)
             {
-                j = 0;
-                if (i > 0)
+                previous_index = 0;
+                if (entry_index > 0)
                 {
-                    j += 1;
-                    j -= 1;
+                    previous_index += 1;
+                    previous_index -= 1;
                 }
-                if (*elem >= s3v)
+                if (*entry_value >= selection)
                 {
-                    *rank_ptr = t0v;
-                    s3v = *elem;
-                    t0v += 1;
+                    *rank_ptr = rank_value;
+                    selection = *entry_value;
+                    rank_value += 1;
                 }
                 else
                 {
-                    less_count = j;
-                    if (i > 0)
+                    greater_count = previous_index;
+                    if (entry_index > 0)
                     {
-                        ecopy = elem;
-                        inc_ptr = base_rank;
-                        cmp_ptr = row;
+                        current_value = entry_value;
+                        previous_rank = base_rank;
+                        previous_value = card_values;
                         do
                         {
-                            if (*ecopy < *cmp_ptr)
+                            if (*current_value < *previous_value)
                             {
-                                less_count += 1;
-                                *inc_ptr += 1;
+                                greater_count += 1;
+                                *previous_rank += 1;
                             }
-                            inc_ptr += 1;
-                            j += 1;
-                            cmp_ptr += 1;
-                        } while (j < i);
+                            previous_rank += 1;
+                            previous_index += 1;
+                            previous_value += 1;
+                        } while (previous_index < entry_index);
                     }
                     {
-                        s32 rank_value;
+                        s32 assigned_rank;
                         do
                         {
                             do
                             {
                                 do
                                 {
-                                    rank_value = t0v - less_count;
+                                    assigned_rank = rank_value - greater_count;
                                 } while (0);
                             } while (0);
                         } while (0);
-                        *rank_ptr = rank_value;
+                        *rank_ptr = assigned_rank;
                     }
-                    t0v += 1;
+                    rank_value += 1;
                 }
             }
             rank_ptr += 1;
-            i += 1;
-            elem += 1;
-        } while (i < count);
+            entry_index += 1;
+            entry_value += 1;
+        } while (entry_index < count);
     }
-    cmp_ptr = base_rank;
-    inc_ptr = row;
-    g_addhero_rank_count = t0v;
-    t0v = -1;
-    i = 0;
-    s3v = 0;
+    previous_value = base_rank;
+    previous_rank = card_values;
+    g_addhero_rank_count = rank_value;
+    rank_value = -1;
+    entry_index = 0;
+    selection = 0;
     if (g_addhero_entry_state > 0)
     {
         s32 max_count;
@@ -2942,38 +2935,38 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         max_ptr = (s32*)((slot * 0x50) + (s32)field_base);
         do
         {
-            if (t0v < *max_ptr)
+            if (rank_value < *max_ptr)
             {
-                t0v = *max_ptr;
-                s3v = i;
+                rank_value = *max_ptr;
+                selection = entry_index;
             }
-            i += 1;
+            entry_index += 1;
             max_ptr += 1;
-        } while (i < max_count);
-        i = 0;
+        } while (entry_index < max_count);
+        entry_index = 0;
     }
-    g_addhero_entry_value_limit = t0v + 1;
+    g_addhero_entry_value_limit = rank_value + 1;
     if (g_addhero_entry_state > 0)
     {
         out_ptr = &g_addhero_entry_suffix_values[0];
-        ent_ptr = (char*)&g_addhero_entries[0];
+        entry_name = (char*)&g_addhero_entries[0];
     loop_20:
-        if (strncmp(&g_new_save_entry_prefix[0], (void*)((g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES) + (s32)ent_ptr), 8) == 0)
+        if (strncmp(&g_new_save_entry_prefix[0], (void*)((g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES) + (s32)entry_name), 8) == 0)
         {
-            *out_ptr = handle + 1;
+            *out_ptr = maximum_suffix + 1;
         }
         else
         {
             out_ptr += 1;
-            ent_ptr += 0x28;
-            i += 1;
-            if (i < g_addhero_entry_state)
+            entry_name += 0x28;
+            entry_index += 1;
+            if (entry_index < g_addhero_entry_state)
             {
                 goto loop_20;
             }
         }
     }
-    return s3v;
+    return selection;
 }
 
 /**

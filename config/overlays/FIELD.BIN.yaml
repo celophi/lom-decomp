@@ -527,17 +527,9 @@ segments:
       - [0x6DCED, c, field127]                     # gcc280_g0, func_800BD95C
       - [0x6DD2D, c, field371]                     # gcc280_g0, func_800BD99C
       - [0x6DDD9, c, field129]                     # gcc280_g0, func_800BDA48
-      - [0x6DE0D, c, unk2_b_split048]           # gcc272_cdk, func_800BDA7C
-      - [0x6DF3D, c, func_800BDBAC]             # gcc280_g0, 100%
-      - [0x6DFD1, c, field263]                  # gcc280_g0, func_800BDC40
-      - [0x6E035, c, func_800BDCA4] # gcc280_g0, 98.139080% WIP
-      - [0x6E291, c, func_800BDF00] # gcc280_g0, 93.018870% WIP
-      - [0x6E365, c, func_800BDFD4]             # gcc280_g0, 100%
-      - [0x6E471, c, func_800BE0E0] # gcc280_g0, 100.000000%
-      - [0x6E681, c, field130]                  # gcc280_g0, func_800BE2F0
-      - [0x6E70D, c, field345]                  # gcc280_g0, func_800BE37C
-      - [0x6E795, c, func_800BE404]             # gcc280_g0, 100%
-      - [0x6E8E1, c, field_script_arith_ops]    # gcc280_g0, func_800BE550 .. func_800BE708 (15 funcs, 100%)
+      - [0x6DE0D, c, field_script_record_commands] # gcc280_g0; six record/query commands, three WIPs
+      - [0x6E471, c, field_script_actor_commands] # gcc280_g0; six actor/camera command handlers, all exact
+      - [0x6E959, c, field_script_arith_ops] # gcc280_g0; dispatcher and twelve arithmetic handlers, all exact
       - [0x6EAA1, c, field_record_setup_ops] # gcc280_g0; five record setup/sequence dispatch functions, two WIPs
       - [0x6F4E9, c, func_800BF158]                 # gcc272_cdk, 97.696075% (register/epilogue residue)
       - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, two WIPs

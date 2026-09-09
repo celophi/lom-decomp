@@ -1,6 +1,5 @@
 #include "common.h"
 #include "sdk/rand.h"
-#include "field_script.h"
 
 /*
  * Two-operand helpers used by the field script interpreter. func_800BE5C8
@@ -8,55 +7,10 @@
  * arithmetic, logic, min/max and random helpers below share that signature.
  */
 
-/** @brief Field command record containing a selector and resolved position. */
-typedef struct
-{
-    u16 unk0;
-    u16 pad2;
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-} FieldPositionCommand;
-
-/** @brief Three-component field position returned by func_80087F44. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-} FieldPosition;
-
 typedef void (*UnkFunc800F0E58)(s32, s32);
 
-void func_80087F44(s32 index, FieldPosition *position);
 
 extern UnkFunc800F0E58 D_800F0E58[];
-
-/**
- * @brief Resolves a field position and stores it in a command record.
- *
- * @param arg0 Unused command argument.
- * @param command Destination record; selector 0xFF uses the script owner.
- */
-void func_800BE550(s32 arg0, FieldPositionCommand *command)
-{
-    s32 index;
-    FieldPosition position;
-
-    if (command->unk0 == 0xFF)
-    {
-        index = g_field_script->status.owner_id;
-    }
-    else
-    {
-        index = command->unk0;
-    }
-
-    func_80087F44(index, &position);
-    command->unk4 = position.x;
-    command->unk8 = -position.y;
-    command->unkC = position.z;
-}
 
 /**
  * @brief Call entry idx of the D_800F0E58 handler table with two arguments.

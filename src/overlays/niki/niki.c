@@ -10,6 +10,8 @@
 #define NIKI_SAVE_PAYLOAD_BYTES 0x33E0
 #define NIKI_SAVE_MAGIC 0x00414E41
 #define NIKI_SAVE_CHECKSUM_BIAS 0x0414E410
+#define NIKI_CONFIRM_INPUT_MASK 0x220
+#define NIKI_CANCEL_INPUT_MASK 0x40
 #define NIKI_ELEMENT_COUNT 8
 #define NIKI_ELEMENT_WORD_STRIDE 3
 #define NIKI_ELEMENT_STATE_MASK 7
@@ -48,6 +50,16 @@ typedef struct
     s32 checksum;
     s32 magic;
 } NikiSaveBlob;
+
+/** @brief Fields restored from a loaded save before returning to the game. */
+typedef struct
+{
+    u8 unknown_0x000[0x254];
+    u16 unknown_0x254;
+    u16 unknown_0x256;
+    u8 unknown_0x258[0x32E0 - 0x258];
+    u8 trailing_data[0x100];
+} NikiLoadedSavePayload;
 
 /** @brief Three two-byte overflow glyphs and their string terminator. */
 typedef struct
@@ -159,6 +171,24 @@ typedef struct
 /** @brief Element draw callback: returns the advanced GPU-packet cursor. */
 typedef NikiGpuPacket* (*NikiElementDrawFunc)();
 
+/** @brief Packed element animation state, dimensions, and draw callback. */
+typedef struct
+{
+    union
+    {
+        volatile u32 read_word;
+        u32 word;
+        struct
+        {
+            u16 state_phase_x;
+            u8 y;
+            u8 width_low;
+        } bytes;
+    } attributes;
+    u32 dimensions;
+    NikiElementDrawFunc draw;
+} NikiAnimatedElement;
+
 /** @brief GPU linked-list address and packet length, with a packed word view. */
 typedef union
 {
@@ -179,6 +209,17 @@ typedef union
         u8 r, g, b, code;
     } bytes;
 } NikiGpuColor;
+
+/** @brief Flat rectangle packet used for selection and inactive-card shading. */
+typedef struct
+{
+    NikiGpuTag tag;
+    NikiGpuColor color;
+    s16 x0;
+    s16 y0;
+    s16 w;
+    s16 h;
+} NikiTile;
 
 /** @brief Field layout of the POLY_G4 timer-bar packet built by niki_draw_progress_bar. */
 typedef struct
@@ -605,9 +646,10 @@ s32 niki_update_frame(NikiFrameState* frame)
     return 0;
 }
 
+/** @brief Reset selection and create the windows for the active menu mode. */
 void niki_build_ui_elements(void)
 {
-    NikiElement* p;
+    NikiElement* element;
     g_niki_scroll_frames = 0;
     g_niki_scroll_target_y = 0;
     g_niki_scroll_y = 0;
@@ -623,81 +665,81 @@ void niki_build_ui_elements(void)
     if (g_niki_mode != 0)
     {
         g_niki_element_pool.attr.f.state = 1;
-        p = niki_alloc_element();
-        p->draw = (void*)niki_draw_state_page;
-        p->attr.f.phase = 1;
-        p->attr.f.x = 0x10;
-        p->attr.f.code = 0x61;
-        p->active = 1;
-        p->y = 0x2C;
-        SET_ELEM_CODE(p, 0x20);
+        element = niki_alloc_element();
+        element->draw = (void*)niki_draw_state_page;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 0x10;
+        element->attr.f.code = 0x61;
+        element->active = 1;
+        element->y = 0x2C;
+        SET_ELEM_CODE(element, 0x20);
 
-        p = niki_alloc_element();
-        p->draw = (void*)niki_draw_card_slot0_label;
-        p->attr.f.phase = 1;
-        p->attr.f.x = 0x18;
-        p->attr.f.code = 0x4D;
-        p->active = 0;
-        p->y = 0x10;
-        SET_ELEM_CODE(p, 0x80);
+        element = niki_alloc_element();
+        element->draw = (void*)niki_draw_card_slot0_label;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 0x18;
+        element->attr.f.code = 0x4D;
+        element->active = 0;
+        element->y = 0x10;
+        SET_ELEM_CODE(element, 0x80);
 
-        p = niki_alloc_element();
-        p->draw = (void*)niki_draw_card_slot1_label;
-        p->attr.f.phase = 1;
-        p->attr.f.x = 0xA0;
-        p->attr.f.code = 0x4D;
-        p->active = 0;
-        p->y = 0x10;
-        SET_ELEM_CODE(p, 0x80);
+        element = niki_alloc_element();
+        element->draw = (void*)niki_draw_card_slot1_label;
+        element->attr.f.phase = 1;
+        element->attr.f.x = 0xA0;
+        element->attr.f.code = 0x4D;
+        element->active = 0;
+        element->y = 0x10;
+        SET_ELEM_CODE(element, 0x80);
         g_niki_element_pool.attr.f.state = 0;
         return;
     }
 
     g_niki_element_pool.attr.f.state = 1;
-    p = niki_alloc_element();
-    p->draw = (void*)niki_draw_entry_list;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0x1C;
-    p->attr.f.code = 0x32;
-    p->active = 1;
-    p->y = 0x58;
-    SET_ELEM_CODE(p, 8);
+    element = niki_alloc_element();
+    element->draw = (void*)niki_draw_entry_list;
+    element->attr.f.phase = 1;
+    element->attr.f.x = 0x1C;
+    element->attr.f.code = 0x32;
+    element->active = 1;
+    element->y = 0x58;
+    SET_ELEM_CODE(element, 8);
 
-    p = niki_alloc_element();
-    p->draw = (void*)niki_draw_header_label;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0x24;
-    p->attr.f.code = 0x0A;
-    p->active = 0;
-    p->y = 0x10;
-    SET_ELEM_CODE(p, 0xF0);
+    element = niki_alloc_element();
+    element->draw = (void*)niki_draw_header_label;
+    element->attr.f.phase = 1;
+    element->attr.f.x = 0x24;
+    element->attr.f.code = 0x0A;
+    element->active = 0;
+    element->y = 0x10;
+    SET_ELEM_CODE(element, 0xF0);
 
-    p = niki_alloc_element();
-    p->draw = (void*)niki_draw_card_slot0_label;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0x18;
-    p->attr.f.code = 0x1E;
-    p->active = 0;
-    p->y = 0x10;
-    SET_ELEM_CODE(p, 0x80);
+    element = niki_alloc_element();
+    element->draw = (void*)niki_draw_card_slot0_label;
+    element->attr.f.phase = 1;
+    element->attr.f.x = 0x18;
+    element->attr.f.code = 0x1E;
+    element->active = 0;
+    element->y = 0x10;
+    SET_ELEM_CODE(element, 0x80);
 
-    p = niki_alloc_element();
-    p->draw = (void*)niki_draw_card_slot1_label;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0xA0;
-    p->attr.f.code = 0x1E;
-    p->active = 0;
-    p->y = 0x10;
-    SET_ELEM_CODE(p, 0x80);
+    element = niki_alloc_element();
+    element->draw = (void*)niki_draw_card_slot1_label;
+    element->attr.f.phase = 1;
+    element->attr.f.x = 0xA0;
+    element->attr.f.code = 0x1E;
+    element->active = 0;
+    element->y = 0x10;
+    SET_ELEM_CODE(element, 0x80);
 
-    p = niki_alloc_element();
-    p->draw = (void*)niki_draw_selected_entry_details;
-    p->attr.f.phase = 1;
-    p->attr.f.x = 0x1E;
-    p->attr.f.code = 0x8E;
-    p->active = 1;
-    p->y = 0x34;
-    SET_ELEM_CODE(p, 4);
+    element = niki_alloc_element();
+    element->draw = (void*)niki_draw_selected_entry_details;
+    element->attr.f.phase = 1;
+    element->attr.f.x = 0x1E;
+    element->attr.f.code = 0x8E;
+    element->active = 1;
+    element->y = 0x34;
+    SET_ELEM_CODE(element, 4);
     g_niki_element_pool.attr.f.state = 0;
 }
 
@@ -779,16 +821,18 @@ s32 niki_update_load_sequence(void)
     }
 }
 
+/**
+ * @brief Handle card switching, entry navigation, cancellation, and load confirmation.
+ * @return Unspecified; callers ignore the return value.
+ */
 s32 niki_handle_input(void)
 {
-    s32 pending;
+    s32 entry_count;
     s32 status;
-    s32 count;
-    s32 term1;
-    s32 term2;
-    NikiElement* p;
+    s32 navigation_steps;
+    NikiElement* element;
 
-    if ((g_niki_element_pool.second_state & 7) == 0)
+    if ((g_niki_element_pool.second_state & NIKI_ELEMENT_STATE_MASK) == 0)
     {
         g_niki_exit_requested = 1;
         return;
@@ -797,16 +841,16 @@ s32 niki_handle_input(void)
     {
         return;
     }
-    if ((g_niki_element_pool.second_state & 7) >= 3)
+    if ((g_niki_element_pool.second_state & NIKI_ELEMENT_STATE_MASK) >= 3)
     {
         return;
     }
-    if ((g_niki_element_pool.attr.word & 7) != 0)
+    if ((g_niki_element_pool.attr.word & NIKI_ELEMENT_STATE_MASK) != 0)
     {
         return;
     }
-    pending = g_niki_entry_state;
-    if (pending == 0xFF)
+    entry_count = g_niki_entry_state;
+    if (entry_count == 0xFF)
     {
         return;
     }
@@ -828,7 +872,7 @@ s32 niki_handle_input(void)
     }
 
     status = g_pad_input;
-    if (status & 0x40)
+    if (status & NIKI_CANCEL_INPUT_MASK)
     {
         D_80122994 = 3;
         func_800A3938(0x78, 0x80);
@@ -841,24 +885,24 @@ s32 niki_handle_input(void)
         niki_switch_card_slot();
         return;
     }
-    if (pending >= 0x10)
+    if (entry_count >= 0x10)
     {
         return;
     }
 
-    count = 1;
+    navigation_steps = 1;
     if (status & 8)
     {
         g_pad_input = 0x4000;
-        count = 1;
+        navigation_steps = 1;
     }
     if (g_pad_input & 4)
     {
         g_pad_input = 0x1000;
-        count = 1;
+        navigation_steps = 1;
     }
 
-    while (count != 0)
+    while (navigation_steps != 0)
     {
         if (g_pad_input & 0x1000)
         {
@@ -876,7 +920,7 @@ s32 niki_handle_input(void)
                 g_niki_selected_row = 0;
             }
         }
-        count -= 1;
+        navigation_steps -= 1;
     }
 
     if (g_pad_input & 0x5000)
@@ -887,28 +931,26 @@ s32 niki_handle_input(void)
         return;
     }
 
-    if (g_pad_input & 0x220)
+    if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
     {
         if (g_niki_mode != 0)
         {
             return;
         }
-        term1 = g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES;
-        term2 = (g_niki_selected_row * NIKI_DIRECTORY_ENTRY_BYTES) + (s32)g_niki_entries;
-        if (func_8001714C(D_800ECF7C, (char*)(term1 + term2), 0xC) == 0)
+        if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
         {
             if ((g_niki_entry_metadata.unkD4 != D_8012271C->unkD4) && (g_niki_entry_metadata.unk17 != 0) &&
                 ((D_8003EC9C == 0xFF) || (g_niki_entry_metadata.unkCF == D_8003EC9C)))
             {
-                p = niki_alloc_element();
-                p->attr.f.phase = 1;
-                p->attr.f.x = 0x10;
-                p->attr.f.code = 0x61;
-                p->active = 1;
-                p->y = 0x1E;
-                SET_ELEM_CODE(p, 0x20);
+                element = niki_alloc_element();
+                element->attr.f.phase = 1;
+                element->attr.f.x = 0x10;
+                element->attr.f.code = 0x61;
+                element->active = 1;
+                element->y = 0x1E;
+                SET_ELEM_CODE(element, 0x20);
                 niki_enable_choice_toggle();
-                p->draw = niki_draw_confirm_prompt;
+                element->draw = niki_draw_confirm_prompt;
                 niki_restart_load_sequence();
                 func_800A3938(0x7E, 0x80);
                 return;
@@ -1032,96 +1074,96 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     default:
     {
         s32 row_y;
-        s32 i;
+        s32 entry_index;
 
         if (g_niki_entry_scan_active != 0)
         {
             s32 x;
-            u8* base;
+            u8* glyph_table;
         case 0xFF:
             x = -x_offset + 0x84;
-            base = (u8*)&D_801470F8;
-            prim = func_800A88A0(prim, ot, base + D_801470F8, 4, x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 4, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
+            glyph_table = (u8*)&D_801470F8;
+            prim = func_800A88A0(prim, ot, glyph_table + D_801470F8, 4, x, -y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0x1E), 4, x, 0xE - y_offset, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0xB2), 4, x, 0x1C - y_offset, 2);
             break;
         }
-        i = 0;
+        entry_index = 0;
         if (state > 0)
         {
             s32 base_x;
-            s32* flag_ptr;
-            u16 misc_glyph;
+            s32* rank;
+            u16 marker_offset;
             Vec2s pos;
-            s32 row;
-            u8* base;
+            s32 row_top;
+            u8* glyph_table;
 
-            base = (u8*)&D_801470F8;
+            glyph_table = (u8*)&D_801470F8;
             base_x = -x_offset;
             do
             {
-                row = ((i * 14) - y_offset) - g_niki_scroll_y;
-                row_y = row + 1;
-                if ((u32)(row + 0xE) < 0x65U)
+                row_top = ((entry_index * 14) - y_offset) - g_niki_scroll_y;
+                row_y = row_top + 1;
+                if ((u32)(row_top + 0xE) < 0x65U)
                 {
-                    flag_ptr = &g_niki_entry_ranks[i];
-                    if (*flag_ptr >= 0)
+                    rank = &g_niki_entry_ranks[entry_index];
+                    if (*rank >= 0)
                     {
                         pos.x = base_x + 0x86;
                         pos.y = row_y;
-                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32*)((u8*)g_niki_entry_suffix_values + (i * 4)), 4, &pos, 0), ot,
-                                             (void*)((s32)D_80147126 + (s32)base), 4, base_x + 0x70, row_y, 0);
-                        if ((g_niki_rank_count - 1) == *flag_ptr)
+                        prim = func_800A88A0(func_800A8A78(ot, prim, g_niki_entry_suffix_values[entry_index], 4, &pos, 0), ot,
+                                             (void*)((s32)D_80147126 + (s32)glyph_table), 4, base_x + 0x70, row_y, 0);
+                        if ((g_niki_rank_count - 1) == *rank)
                         {
-                            misc_glyph = *(u16*)(base + 0x36);
-                            prim = func_800A88A0(prim, ot, (void*)((s32)misc_glyph + (s32)base), 4, base_x + 0xC0, row_y, 0);
+                            marker_offset = *(u16*)(glyph_table + 0x36);
+                            prim = func_800A88A0(prim, ot, (void*)((s32)marker_offset + (s32)glyph_table), 4, base_x + 0xC0, row_y, 0);
                         }
-                        else if (*flag_ptr < 2)
+                        else if (*rank < 2)
                         {
-                            misc_glyph = *(u16*)(base + 0x38);
-                            prim = func_800A88A0(prim, ot, (void*)((s32)misc_glyph + (s32)base), 4, base_x + 0xC0, row_y, 0);
+                            marker_offset = *(u16*)(glyph_table + 0x38);
+                            prim = func_800A88A0(prim, ot, (void*)((s32)marker_offset + (s32)glyph_table), 4, base_x + 0xC0, row_y, 0);
                         }
-                        if (*niki_skip_hex_digits((void*)((s32)&g_niki_entries[g_niki_card_slot][i] + 0xC)) == 0x2B)
+                        if (*niki_skip_hex_digits(&g_niki_entries[g_niki_card_slot][entry_index].name[12]) == '+')
                         {
-                            prim = func_800A88A0(prim, ot, (void*)((s32)D_801471A8 + (s32)base), 4, 0xF2 - x_offset, row_y, 1);
+                            prim = func_800A88A0(prim, ot, (void*)((s32)D_801471A8 + (s32)glyph_table), 4, 0xF2 - x_offset, row_y, 1);
                         }
                     }
-                    if (func_8001714C(D_800ECF7C, (char*)((s32)&g_niki_entries[g_niki_card_slot][i]), 0xC) == 0)
+                    if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][entry_index].name, 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_801470FE + (s32)base), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void*)((s32)D_801470FE + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECF8C, (char*)((s32)&g_niki_entries[g_niki_card_slot][i]), 0xC) == 0)
+                    else if (func_8001714C(D_800ECF8C, g_niki_entries[g_niki_card_slot][entry_index].name, 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_80147132 + (s32)base), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void*)((s32)D_80147132 + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
-                    else if (func_8001714C(D_800ECFC4, (char*)((s32)&g_niki_entries[g_niki_card_slot][i]), 8) == 0)
+                    else if (func_8001714C(D_800ECFC4, g_niki_entries[g_niki_card_slot][entry_index].name, 8) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_8014710C + (s32)base), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void*)((s32)D_8014710C + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
                     else
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_80147100 + (s32)base), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, (void*)((s32)D_80147100 + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
                     }
                 }
-                i++;
-            } while (i < g_niki_entry_state);
+                entry_index++;
+            } while (entry_index < g_niki_entry_state);
         }
         row_y = ((g_niki_selected_row * 14) - y_offset) - g_niki_scroll_y;
 
         if (g_niki_entry_scan_active == 0)
         {
-            TILE* tile = (TILE*)prim;
+            NikiTile* tile = (NikiTile*)prim;
 
-            *(u32*)&tile->r0 = 0xF080F0;
-            *((u8*)tile + 3) = 3;
-            tile->code = 0x62;
+            tile->color.word = 0xF080F0;
+            tile->tag.bytes.length = 3;
+            tile->color.bytes.code = 0x62;
             tile->w = 0x108;
             tile->x0 = 0;
             tile->y0 = row_y;
             tile->h = 0xE;
-            tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-            *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
-            prim += sizeof(TILE);
+            tile->tag.word = (tile->tag.word & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
+            *ot = (*ot & GPU_TAG_HIGH_MASK) | ((s32)tile & GPU_ADDR_MASK);
+            prim += sizeof(NikiTile);
         }
     }
     break;
@@ -1155,13 +1197,7 @@ s32 niki_draw_header_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 }
 
 /**
- * @brief Draw the niki page header: an optional dark backdrop tile for pages
- *        past the first, then the header caption glyph.
- *
- * The backdrop is a 0x80 x 0x10 flat tile (code 0x62, color 0x101010) linked
- * into @p ot ahead of the caption, and is emitted only when g_niki_card_slot selects
- * a non-zero page.
- *
+ * @brief Draw the first card-slot label, shading it when the other slot is selected.
  * @param ot Ordering-table pointer.
  * @param prim Primitive-buffer write cursor.
  * @param x_offset Horizontal scroll offset (subtracted from the caption x).
@@ -1172,33 +1208,27 @@ s32 niki_draw_header_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 s32 niki_draw_card_slot0_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
-    TILE* tile;
+    NikiTile* tile;
 
     if (g_niki_card_slot != 0)
     {
-        tile = (TILE*)prim;
-        *(u32*)&tile->r0 = 0x101010;
-        *((u8*)tile + 3) = 3;
-        tile->code = 0x62;
+        tile = (NikiTile*)prim;
+        tile->color.word = 0x101010;
+        tile->tag.bytes.length = 3;
+        tile->color.bytes.code = 0x62;
         tile->x0 = 0;
         tile->y0 = 0;
         tile->w = 0x80;
         tile->h = 0x10;
-        tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
-        prim += 0x10;
+        tile->tag.word = (tile->tag.word & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
+        *ot = (*ot & GPU_TAG_HIGH_MASK) | ((s32)tile & GPU_ADDR_MASK);
+        prim += sizeof(NikiTile);
     }
     return func_800A88A0(prim, ot, GLYPH_SYM(D_80147104, 0xC), 4, -x_offset + 0x40, -y_offset, 2);
 }
 
 /**
- * @brief Draw the niki first-page header: an optional dark backdrop tile,
- *        then the header caption glyph.
- *
- * Mirror of niki_draw_card_slot0_label: identical 0x80 x 0x10 flat backdrop tile (code
- * 0x62, color 0x101010), but emitted only when g_niki_card_slot selects page zero,
- * and paired with a different caption glyph.
- *
+ * @brief Draw the second card-slot label, shading it when the other slot is selected.
  * @param ot Ordering-table pointer.
  * @param prim Primitive-buffer write cursor.
  * @param x_offset Horizontal scroll offset (subtracted from the caption x).
@@ -1209,21 +1239,21 @@ s32 niki_draw_card_slot0_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 s32 niki_draw_card_slot1_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
-    TILE* tile;
+    NikiTile* tile;
 
     if (g_niki_card_slot == 0)
     {
-        tile = (TILE*)prim;
-        *(u32*)&tile->r0 = 0x101010;
-        *((u8*)tile + 3) = 3;
-        tile->code = 0x62;
+        tile = (NikiTile*)prim;
+        tile->color.word = 0x101010;
+        tile->tag.bytes.length = 3;
+        tile->color.bytes.code = 0x62;
         tile->x0 = 0;
         tile->y0 = 0;
         tile->w = 0x80;
         tile->h = 0x10;
-        tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
-        prim += 0x10;
+        tile->tag.word = (tile->tag.word & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
+        *ot = (*ot & GPU_TAG_HIGH_MASK) | ((s32)tile & GPU_ADDR_MASK);
+        prim += sizeof(NikiTile);
     }
 
     return func_800A88A0(prim, ot, GLYPH_SYM(D_80147106, 0xE), 4, -x_offset + 0x40, -y_offset, 2);
@@ -1549,43 +1579,36 @@ NikiElement* niki_alloc_element(void)
 }
 
 /**
- * @brief Advance and draw the eight niki element packets for one frame.
- *
- * Reinitialises the GPU primitive window (clip variant selected by
- * frame_arg->frame_flag), then walks the eight g_niki_element_pool element slots. Active slots
- * (low 3 state bits set) are stepped through their animation phase (switch on
- * the state code) and rendered via each slot's draw callback plus func_800AD850,
- * advancing the shared GPU-packet cursor which is written back to frame_arg->prim_cursor.
- *
- * @param frame_arg Per-frame draw state (see NikiFrameState).
+ * @brief Animate element windows and append their content and borders to the frame.
+ * @param frame_arg Draw context supplying the clip variant and primitive cursor.
  * @see decomp.me (100%)
  */
 void niki_update_and_draw_elements(NikiFrameState* frame_arg)
 {
     NikiGpuPacket* prim;
     NikiFrameState* frame;
-    volatile u32* element_state;
+    NikiAnimatedElement* element;
     s32 scaled_width;
     s32 scaled_height;
     s32 element_index;
     s32 draw_area[24];
     u32 dispatch_word;
     s32 state;
-    u32 temp_a1;
-    u32 temp_a2;
-    s32 temp_a0_3;
-    s32 var_v1;
-    s32 temp_a3_2;
-    s32 var_v0;
-    s32 temp_a3_3;
-    u32 temp_v0_3;
-    u32 temp_a0_4;
-    s32 temp_a0_5;
-    s32 var_v1_2;
-    s32 temp_a3_5;
-    s32 var_v0_2;
-    s32 temp_a3_6;
-    u32 temp_v0_5;
+    u32 dimensions;
+    u32 width;
+    s32 opening_phase;
+    s32 opening_width_product;
+    s32 opening_height;
+    s32 opening_height_product;
+    s32 opening_height_margin;
+    u32 opening_attributes;
+    u32 width_low;
+    s32 closing_phase;
+    s32 closing_value;
+    s32 closing_height;
+    s32 closing_height_product;
+    s32 closing_height_margin;
+    u32 closing_attributes;
     u32 hold_word;
     s32 entry_count;
 
@@ -1594,26 +1617,25 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
 
     if (frame_arg->frame_flag != 0)
     {
-        func_8001C56C(draw_area, 0, 0xF0, 0x140, 0xE0);
+        func_8001C56C(draw_area, 0, SCREEN_HEIGHT, SCREEN_WIDTH, 224);
     }
     else
     {
-        func_8001C56C(draw_area, 0, 8, 0x140, 0xE0);
+        func_8001C56C(draw_area, 0, 8, SCREEN_WIDTH, 224);
     }
 
-    element_state = (volatile u32*)&g_niki_element_pool;
+    element = (NikiAnimatedElement*)&g_niki_element_pool;
     element_index = 0;
 
-    for (; element_index < NIKI_ELEMENT_COUNT; element_index++, element_state += NIKI_ELEMENT_WORD_STRIDE)
+    for (; element_index < NIKI_ELEMENT_COUNT; element_index++, element++)
     {
-        if (*element_state & NIKI_ELEMENT_STATE_MASK)
+        if (element->attributes.read_word & NIKI_ELEMENT_STATE_MASK)
         {
             entry_count = g_niki_entry_state;
-            if ((entry_count < 0x10) && (*(NikiElementDrawFunc*)((u8*)element_state + 8) == (NikiElementDrawFunc)niki_draw_entry_list) &&
-                ((g_niki_element1.attr.word & 7) == 2))
+            if ((entry_count < 16) && (element->draw == (NikiElementDrawFunc)niki_draw_entry_list) && ((g_niki_element1.attr.word & 7) == 2))
             {
-                entry_count *= 0xE;
-                if ((g_niki_scroll_y + 0x58) < entry_count)
+                entry_count *= 14;
+                if ((g_niki_scroll_y + 88) < entry_count)
                 {
                     prim = (NikiGpuPacket*)func_800AE76C(prim, frame, 0x114, 0x82, 0);
                 }
@@ -1625,10 +1647,10 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
 
             func_8001A5D4((s32)prim, draw_area);
 
-            prim->tag = (prim->tag & 0xFF000000) | (frame->head_tag & 0x00FFFFFF);
-            frame->head_tag = (s32)((frame->head_tag & 0xFF000000) | ((s32)prim & 0x00FFFFFF));
+            prim->tag = (prim->tag & GPU_TAG_HIGH_MASK) | (frame->head_tag & GPU_ADDR_MASK);
+            frame->head_tag = (s32)((frame->head_tag & GPU_TAG_HIGH_MASK) | ((s32)prim & GPU_ADDR_MASK));
 
-            dispatch_word = *element_state;
+            dispatch_word = element->attributes.read_word;
             state = dispatch_word & NIKI_ELEMENT_STATE_MASK;
 
             prim = (NikiGpuPacket*)((u8*)prim + 0x40);
@@ -1636,134 +1658,132 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
             switch (state)
             {
             case 1:
-                temp_v0_3 = *element_state;
-                temp_a1 = *(u32*)((u8*)element_state + 4);
-                temp_a0_4 = temp_v0_3 >> 24;
-                temp_a2 = ((temp_a1 & 1) << 8) | temp_a0_4;
-                temp_a0_3 = (temp_v0_3 >> 3) & 0xF;
-                var_v1 = temp_a2 * temp_a0_3;
+                opening_attributes = element->attributes.read_word;
+                dimensions = element->dimensions;
+                width_low = opening_attributes >> 24;
+                width = ((dimensions & 1) << 8) | width_low;
+                opening_phase = (opening_attributes >> 3) & 0xF;
+                opening_width_product = width * opening_phase;
                 g_pad_input = 0;
-                if (var_v1 < 0)
+                if (opening_width_product < 0)
                 {
-                    var_v1 += 7;
+                    opening_width_product += 7;
                 }
-                temp_a3_2 = (temp_a1 >> 1) & 0xFF;
-                var_v0 = temp_a3_2 * temp_a0_3;
-                scaled_width = var_v1 >> 3;
-                if (var_v0 < 0)
+                opening_height = (dimensions >> 1) & 0xFF;
+                opening_height_product = opening_height * opening_phase;
+                scaled_width = opening_width_product >> 3;
+                if (opening_height_product < 0)
                 {
-                    var_v0 += 7;
+                    opening_height_product += 7;
                 }
-                scaled_height = var_v0 >> 3;
-                temp_a3_3 = (s32)(temp_a3_2 - scaled_height);
+                scaled_height = opening_height_product >> 3;
+                opening_height_margin = (s32)(opening_height - scaled_height);
 
-                prim = (*(NikiElementDrawFunc*)((u8*)element_state + 8))(frame, prim, (s32)(temp_a2 - scaled_width) / 2, temp_a3_3 / 2);
+                prim = element->draw(frame, prim, (s32)(width - scaled_width) / 2, opening_height_margin / 2);
                 {
-                    u32 post_word;
-                    u32 field;
-                    u32 high;
-                    post_word = *element_state;
-                    field = (post_word >> 7) & 0x1FF;
-                    high = post_word >> 24;
-                    prim =
-                        (NikiGpuPacket*)func_800AD850(prim, frame, field + (s32)((((*(u32*)((u8*)element_state + 4) & 1) << 8) | high) - scaled_width) / 2,
-                                                      (*((u8*)element_state + 2)) + ((s32)((*(u32*)((u8*)element_state + 4) >> 1) & 0xFF) - scaled_height) / 2,
-                                                      scaled_width, scaled_height, frame_arg->frame_flag, element_index == 0);
+                    u32 attributes;
+                    u32 x;
+                    u32 width_low;
+                    attributes = element->attributes.read_word;
+                    x = (attributes >> 7) & 0x1FF;
+                    width_low = attributes >> 24;
+                    prim = (NikiGpuPacket*)func_800AD850(prim, frame, x + (s32)((((element->dimensions & 1) << 8) | width_low) - scaled_width) / 2,
+                                                         (element->attributes.bytes.y) + ((s32)((element->dimensions >> 1) & 0xFF) - scaled_height) / 2,
+                                                         scaled_width, scaled_height, frame_arg->frame_flag, element_index == 0);
                 }
                 {
                     u32 old_word;
                     u32 new_word;
-                    old_word = *element_state;
+                    old_word = element->attributes.read_word;
                     new_word = (old_word & ~NIKI_ELEMENT_PHASE_MASK) | (((((old_word >> 3) & 0xF) + 1) & 0xF) * 8);
-                    *(u32*)element_state = new_word;
+                    element->attributes.word = new_word;
                     if (((new_word >> 3) & 0xF) == 8)
                     {
                         func_800AA02C();
-                        *(u32*)element_state = (*element_state & ~7) | 2;
+                        element->attributes.word = (element->attributes.read_word & ~7) | 2;
                     }
                 }
                 break;
 
             case 2:
-                prim = (*(NikiElementDrawFunc*)((u8*)element_state + 8))(frame, prim, 0, 0);
+                prim = element->draw(frame, prim, 0, 0);
                 {
-                    u32 case_word;
-                    u32 high;
-                    case_word = *element_state;
-                    high = case_word >> 24;
-                    prim = (NikiGpuPacket*)func_800AD850(prim, frame, (case_word >> 7) & 0x1FF, *((u8*)element_state + 2),
-                                                         ((*(u32*)((u8*)element_state + 4) & 1) << 8) | high, (*(u32*)((u8*)element_state + 4) >> 1) & 0xFF,
-                                                         frame_arg->frame_flag, element_index == 0);
+                    u32 attributes;
+                    u32 width_low;
+                    attributes = element->attributes.read_word;
+                    width_low = attributes >> 24;
+                    prim = (NikiGpuPacket*)func_800AD850(prim, frame, (attributes >> 7) & 0x1FF, element->attributes.bytes.y,
+                                                         ((element->dimensions & 1) << 8) | width_low, (element->dimensions >> 1) & 0xFF, frame_arg->frame_flag,
+                                                         element_index == 0);
                 }
-                hold_word = *element_state;
+                hold_word = element->attributes.read_word;
                 if (((hold_word >> 3) & 0xF) != 0)
                 {
-                    *(u32*)element_state = (hold_word & ~NIKI_ELEMENT_PHASE_MASK) | (((((hold_word >> 3) & 0xF) - 1) & 0xF) * 8);
+                    element->attributes.word = (hold_word & ~NIKI_ELEMENT_PHASE_MASK) | (((((hold_word >> 3) & 0xF) - 1) & 0xF) * 8);
                 }
                 break;
 
             case 3:
-                temp_a0_5 = *element_state;
-                temp_a1 = *(u32*)((u8*)element_state + 4);
-                var_v1_2 = (u32)temp_a0_5 >> 24;
-                temp_a2 = ((temp_a1 & 1) << 8) | var_v1_2;
-                temp_a0_5 = (u32)temp_a0_5 >> 3;
-                temp_a0_5 &= 0xF;
-                var_v1_2 = temp_a2 * temp_a0_5;
+                closing_phase = element->attributes.read_word;
+                dimensions = element->dimensions;
+                closing_value = (u32)closing_phase >> 24;
+                width = ((dimensions & 1) << 8) | closing_value;
+                closing_phase = (u32)closing_phase >> 3;
+                closing_phase &= 0xF;
+                closing_value = width * closing_phase;
                 g_pad_input = 0;
-                if (var_v1_2 < 0)
+                if (closing_value < 0)
                 {
-                    var_v1_2 += 7;
+                    closing_value += 7;
                 }
-                temp_a3_5 = (temp_a1 >> 1) & 0xFF;
-                var_v0_2 = temp_a3_5 * temp_a0_5;
-                scaled_width = var_v1_2 >> 3;
-                if (var_v0_2 < 0)
+                closing_height = (dimensions >> 1) & 0xFF;
+                closing_height_product = closing_height * closing_phase;
+                scaled_width = closing_value >> 3;
+                if (closing_height_product < 0)
                 {
-                    var_v0_2 += 7;
+                    closing_height_product += 7;
                 }
-                scaled_height = var_v0_2 >> 3;
-                temp_a3_6 = (s32)(temp_a3_5 - scaled_height);
+                scaled_height = closing_height_product >> 3;
+                closing_height_margin = (s32)(closing_height - scaled_height);
 
-                prim = (*(NikiElementDrawFunc*)((u8*)element_state + 8))(frame, prim, (s32)(temp_a2 - scaled_width) / 2, temp_a3_6 / 2);
+                prim = element->draw(frame, prim, (s32)(width - scaled_width) / 2, closing_height_margin / 2);
                 {
-                    u32 post_word;
-                    u32 field;
-                    u32 high;
-                    post_word = *element_state;
-                    field = (post_word >> 7) & 0x1FF;
-                    high = post_word >> 24;
-                    prim =
-                        (NikiGpuPacket*)func_800AD850(prim, frame, field + (s32)((((*(u32*)((u8*)element_state + 4) & 1) << 8) | high) - scaled_width) / 2,
-                                                      (*((u8*)element_state + 2)) + ((s32)((*(u32*)((u8*)element_state + 4) >> 1) & 0xFF) - scaled_height) / 2,
-                                                      scaled_width, scaled_height, frame_arg->frame_flag, element_index == 0);
+                    u32 attributes;
+                    u32 x;
+                    u32 width_low;
+                    attributes = element->attributes.read_word;
+                    x = (attributes >> 7) & 0x1FF;
+                    width_low = attributes >> 24;
+                    prim = (NikiGpuPacket*)func_800AD850(prim, frame, x + (s32)((((element->dimensions & 1) << 8) | width_low) - scaled_width) / 2,
+                                                         (element->attributes.bytes.y) + ((s32)((element->dimensions >> 1) & 0xFF) - scaled_height) / 2,
+                                                         scaled_width, scaled_height, frame_arg->frame_flag, element_index == 0);
                 }
                 {
                     u32 old_word;
-                    old_word = *element_state;
-                    var_v1_2 = old_word & ~NIKI_ELEMENT_PHASE_MASK;
+                    old_word = element->attributes.read_word;
+                    closing_value = old_word & ~NIKI_ELEMENT_PHASE_MASK;
                     old_word >>= 3;
                     old_word &= 0xF;
                     old_word--;
                     old_word &= 0xF;
                     old_word <<= 3;
-                    var_v1_2 |= old_word;
-                    *(u32*)element_state = var_v1_2;
-                    if (!(((u32)var_v1_2 >> 3) & 0xF))
+                    closing_value |= old_word;
+                    element->attributes.word = closing_value;
+                    if (!(((u32)closing_value >> 3) & 0xF))
                     {
-                        *(u32*)element_state = ((((u32)var_v1_2 & ~NIKI_ELEMENT_PHASE_MASK) | 0x18) & ~7) | 4;
+                        element->attributes.word = ((((u32)closing_value & ~NIKI_ELEMENT_PHASE_MASK) | 0x18) & ~7) | 4;
                     }
                 }
                 break;
 
             case 4:
-                temp_v0_5 = *(u32*)element_state;
+                closing_attributes = element->attributes.word;
                 g_pad_input = 0;
-                hold_word = (temp_v0_5 & ~NIKI_ELEMENT_PHASE_MASK) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
-                *(u32*)element_state = hold_word;
+                hold_word = (closing_attributes & ~NIKI_ELEMENT_PHASE_MASK) | (((((closing_attributes >> 3) & 0xF) - 1) & 0xF) * 8);
+                element->attributes.word = hold_word;
                 if (!((hold_word >> 3) & 0xF))
                 {
-                    *(u32*)element_state = hold_word & ~7;
+                    element->attributes.word = hold_word & ~7;
                 }
                 break;
             }
@@ -1876,12 +1896,7 @@ void niki_text_copy(u8* dst, u8* src)
 }
 
 /**
- * @brief Draw and advance the niki confirmation element.
- *
- * Emits the confirmation caption glyph, then reads input: L1/R1-class cancels
- * (niki_poll_and_rewind_primary_handles result 1 or 2) and the cancel button tear down the element and
- * restore the prior menu; the confirm button spawns the confirmation element at
- * a fixed position with its draw handler set to niki_draw_save_confirm_dialog.
+ * @brief Draw the load confirmation choice and dispatch acceptance or cancellation.
  *
  * @param ot Ordering-table pointer.
  * @param prim Primitive-buffer write cursor.
@@ -1896,7 +1911,7 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     s32 result;
     s32 x;
     s32 status;
-    NikiElement* p;
+    NikiElement* element;
 
     x = -x_offset + 0x90;
     result = niki_draw_choice_prompt(func_800A88A0(prim, ot, (u8*)&D_80147128 + D_80147128 - 0x30, 4, x, -y_offset, 2), ot, x, 0xE - y_offset);
@@ -1913,14 +1928,14 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     else
     {
         status = g_pad_input;
-        if (status & 0x40)
+        if (status & NIKI_CANCEL_INPUT_MASK)
         {
             g_niki_element_pool.attr.f.state = 0;
             func_800AA02C();
             func_800A3938(0x78, 0x80);
             g_niki_load_step = D_801606DC;
         }
-        else if (status & 0x220)
+        else if (status & NIKI_CONFIRM_INPUT_MASK)
         {
             if (g_niki_choice_toggle != 0)
             {
@@ -1934,15 +1949,15 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 func_800A3938(0x7E, 0x80);
                 g_niki_confirm_latch = 1;
                 g_niki_load_step = D_801606E4;
-                p = &g_niki_element_pool;
-                p->draw = niki_draw_save_confirm_dialog;
-                p->attr.f.phase = 1;
-                p->attr.f.state = 1;
-                p->attr.f.x = 0x10;
-                p->attr.f.code = 0x61;
-                p->active = 1;
-                p->y = 0x2C;
-                SET_ELEM_CODE(p, 0x20);
+                element = &g_niki_element_pool;
+                element->draw = niki_draw_save_confirm_dialog;
+                element->attr.f.phase = 1;
+                element->attr.f.state = 1;
+                element->attr.f.x = 0x10;
+                element->attr.f.code = 0x61;
+                element->active = 1;
+                element->y = 0x2C;
+                SET_ELEM_CODE(element, 0x20);
             }
         }
     }
@@ -1950,13 +1965,11 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 }
 
 /**
- * @brief Draw the niki save-confirm dialog and, on accept, commit the save.
+ * @brief Draw loading progress, then restore a validated save and close the menu.
  *
- * Emits the three caption glyphs and the sub-panel (niki_draw_progress_bar). When the
- * confirm latch g_niki_confirm_latch is clear, reads the selected save resource: if the
- * slot is empty (niki_validate_save_blob == 0) it just re-arms the chooser, otherwise it
- * copies the save payload out, kicks the write, and flips every active element
- * to its closing animation state.
+ * A failed validation opens the status dialog. Once loading finishes successfully,
+ * restore the saved fields and trailing data, then start every active window's
+ * closing animation before returning to the game.
  *
  * @param ot Ordering-table pointer.
  * @param prim Primitive-buffer write cursor.
@@ -1969,12 +1982,12 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
     u8* base;
-    u8* resource;
-    NikiPacket* p;
-    NikiPacket* cursor;
+    NikiLoadedSavePayload* resource;
+    NikiPacket* element;
+    NikiPacket* closing_element;
     s32 result;
     s32 x;
-    s32 i;
+    s32 element_index;
 
     x = -x_offset + 0x90;
     result = func_800A88A0(prim, ot, (void*)((s32)&D_8014712A - 0x32 + D_8014712A), 4, x, -y_offset, 2);
@@ -1985,9 +1998,9 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
     if (g_niki_confirm_latch == 0)
     {
-        resource = g_niki_save_blob;
-        p = (NikiPacket*)&g_niki_element_pool;
-        p->attr.f.state = 0;
+        resource = (NikiLoadedSavePayload*)g_niki_save_blob;
+        element = (NikiPacket*)&g_niki_element_pool;
+        element->attr.f.state = 0;
         if (niki_validate_save_blob((NikiSaveBlob*)resource) == 0)
         {
             niki_open_status_dialog(4);
@@ -1996,20 +2009,20 @@ s32 niki_draw_save_confirm_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
         func_800A3938(0x7B, 0x80);
         D_8011F428 = 1;
-        D_801227CC = *(u16*)&resource[0x254];
-        D_801227F4 = *(u16*)&resource[0x256];
+        D_801227CC = resource->unknown_0x254;
+        D_801227F4 = resource->unknown_0x256;
         D_8011F418 = g_niki_card_slot;
         func_800170BC(D_8011F3D8, D_80164E70);
-        func_80016E7C(&resource[0x32E0], D_80122A08, 0x100);
+        func_80016E7C(resource->trailing_data, D_80122A08, sizeof(resource->trailing_data));
         func_80067F28();
 
-        cursor = p;
-        for (i = 0; i < 8; i++, cursor++)
+        closing_element = element;
+        for (element_index = 0; element_index < NIKI_ELEMENT_COUNT; element_index++, closing_element++)
         {
-            if (cursor->attr.f.state != 0)
+            if (closing_element->attr.f.state != 0)
             {
-                cursor->attr.f.state = 3;
-                cursor->attr.f.phase = 8;
+                closing_element->attr.f.state = 3;
+                closing_element->attr.f.phase = 8;
             }
         }
         func_80067F5C(8);
@@ -2068,6 +2081,8 @@ s32 niki_draw_progress_bar(s32 prim, s32* ot)
 }
 
 /**
+ * @brief Open the primary status window and reset the active card operation.
+ * @param dialog_state Message selector consumed by the status draw callback.
  * @see decomp.me (100%)
  */
 void niki_open_status_dialog(s32 dialog_state)
@@ -2093,6 +2108,8 @@ void niki_open_status_dialog(s32 dialog_state)
 }
 
 /**
+ * @brief Open the secondary status window and reset the active card operation.
+ * @param dialog_state Message selector consumed by the status draw callback.
  * @see decomp.me (100%)
  */
 void niki_open_secondary_status_dialog(s32 dialog_state)
@@ -2118,6 +2135,12 @@ void niki_open_secondary_status_dialog(s32 dialog_state)
 }
 
 /**
+ * @brief Draw the current status message and dismiss its window on confirmation.
+ * @param ot Ordering-table entry receiving the text primitives.
+ * @param prim Primitive-buffer write cursor.
+ * @param x_offset Horizontal displacement subtracted from the caption position.
+ * @param y_offset Vertical displacement subtracted from the caption position.
+ * @return Advanced primitive-buffer write cursor.
  * @see decomp.me (100%)
  */
 s32 niki_draw_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
@@ -2140,7 +2163,7 @@ s32 niki_draw_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147136, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     }
-    if (g_pad_input & 0x220)
+    if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
     {
         g_niki_element_pool.attr.f.state = 0;
         func_800AA02C();
@@ -2149,13 +2172,19 @@ s32 niki_draw_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 }
 
 /**
+ * @brief Draw the current status message and exit the menu on confirmation.
+ * @param ot Ordering-table entry receiving the text primitives.
+ * @param prim Primitive-buffer write cursor.
+ * @param x_offset Horizontal displacement subtracted from the caption position.
+ * @param y_offset Vertical displacement subtracted from the caption position.
+ * @return Advanced primitive-buffer write cursor.
  * @see decomp.me (100%)
  */
 s32 niki_draw_secondary_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
     RECT pos;
-    NikiPacket* p;
-    s32 i;
+    NikiPacket* element;
+    s32 element_index;
 
     switch (g_niki_dialog_state)
     {
@@ -2173,14 +2202,14 @@ s32 niki_draw_secondary_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_off
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80147136, 0x3E), 4, -x_offset + 0x80, -y_offset, 2);
         break;
     }
-    if (g_pad_input & 0x220)
+    if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
     {
         g_menu_element_counter = 0x20;
-        p = (NikiPacket*)&g_niki_element_pool;
-        for (i = 0; i < 8; i++)
+        element = (NikiPacket*)&g_niki_element_pool;
+        for (element_index = 0; element_index < NIKI_ELEMENT_COUNT; element_index++)
         {
-            p->attr.word &= ~7;
-            p++;
+            element->attr.word &= ~NIKI_ELEMENT_STATE_MASK;
+            element++;
         }
         func_80067F5C(8);
         func_800AA02C();
