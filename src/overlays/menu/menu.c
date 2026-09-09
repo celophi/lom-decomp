@@ -87,7 +87,7 @@
 #define MENU_NAV_Y0_BIT 0x8000
 /** @brief Bit 15 of u8_u.nav_y_packed: bit 0 of the 9-bit layout Y position. */
 #define MENU_LAYOUT_Y0_BIT 0x8000
-/** @brief Number of child-index slots per node (child0..child3). */
+/** @brief Maximum number of children per menu node. */
 #define MENU_MAX_CHILDREN 4
 /** @brief MenuNode::state value before menu_layout_node has run. */
 #define MENU_NODE_STATE_UNINIT 0
@@ -109,6 +109,8 @@
 #define MENU_ITEM_NAV_INDEX_MASK 0x1FF
 #define MENU_ITEM_NAV_PREVIOUS_SHIFT 14
 #define MENU_ITEM_NAV_NEXT_SHIFT 23
+#define MENU_LIST_COUNT_SHIFT 16
+#define MENU_LIST_COUNT_MASK (MENU_ITEM_NAV_INDEX_MASK << MENU_LIST_COUNT_SHIFT)
 /** @brief Number of equipment slots associated with one character. */
 #define MENU_EQUIPMENT_SLOT_COUNT 4
 /** @brief First menu subtype corresponding to an equipment slot. */
@@ -286,12 +288,6 @@
         (u8*)b + *(u16*)((u8*)b + i);                                                                                                                          \
     }))
 
-/* Scroll-list and equipment helper macros. */
-/* Packed word at ScrollListState+0x04: low 16 = sel_idx, bits 16-24 = item_count. */
-#define LIST_WORD(st) (*(u32*)((u8*)(st) + 4))
-/* Packed fields of a 0x40-byte pad-context item record. */
-#define PAD_ITEM_W14(p) (*(u32*)((u8*)(p) + 0x14))
-#define PAD_ITEM_W16(p) (*(u16*)((u8*)(p) + 0x16))
 
 #define MENU_CLEAR_SLOTS() \
 { \
@@ -403,21 +399,6 @@ typedef struct
 
 typedef struct
 {
-    union
-    {
-        s32 unk0;
-        struct
-        {
-            u8 _pad0[3];
-            u8 unk3;
-        } _s;
-    } _u;
-    s32 unk4;
-    s32 unk8;
-} MenuPrimHead;
-
-typedef struct
-{
     u16 x;
     u16 y;
     s16 w;
@@ -506,37 +487,15 @@ typedef struct
     } u8_u;
     union
     {
-        u16 layout_child_packed; /**< Raw word; high byte = child0, low byte = layout_y_hi. */
+        u16 layout_child_packed; /**< Low byte: layout Y bits 8:1; high byte: first child index. */
         struct
         {
-            u8 layout_y_hi; /**< Bits 1-8 of the 9-bit layout Y position: reconstruct as
-                               (layout_y_hi<<1)|(layout_y_lsb>>7). */
-            u8 child0;      /**< First child node index (0xFF = none). */
+            u8 layout_y_hi;                 /**< Layout Y bits 8:1. */
+            u8 children[MENU_MAX_CHILDREN]; /**< Child indices, terminated by MENU_NONE. */
+            u8 unknown_0xf;
         } s;
-    } uA;
-    u8 child1; /**< Second child node index (0xFF = none). */
-    u8 child2; /**< Third child node index (0xFF = none). */
-    u8 child3; /**< Fourth child node index (0xFF = none). */
-    u8 unkF;
+    } layout;
 } MenuNode;
-
-/** @brief Four item-record pointers used by the comparison slots. */
-typedef struct
-{
-    u32 slot0; /**< Slot 0 data pointer. */
-    u32 slot1; /**< Slot 1 data pointer. */
-    u32 slot2; /**< Slot 2 data pointer. */
-    u32 slot3; /**< Slot 3 data pointer. */
-} ItemSlotData;
-
-/** @brief Occupancy flags parallel to g_item_slot_data. */
-typedef struct
-{
-    u8 slot0; /**< Slot 0 occupied flag. */
-    u8 slot1; /**< Slot 1 occupied flag. */
-    u8 slot2; /**< Slot 2 occupied flag. */
-    u8 slot3; /**< Slot 3 occupied flag. */
-} ItemSlotFlags;
 
 typedef struct
 {
@@ -642,24 +601,34 @@ typedef struct
     u8 h;       /**< Sprite height in pixels. */
 } MenuIconSpriteInfo;
 
-/** @brief State block for a scrollable circular list widget. */
+/** @brief List navigation fields sharing a menu slot's flags word. */
+typedef union
+{
+    u32 packed;
+    struct
+    {
+        u16 selected_index;
+        u16 count_and_ot; /**< Low nine bits: item count; upper seven: ordering-table index. */
+    } fields;
+} MenuListNavigation;
+
+/** @brief Partial menu-slot view used by scrollable list callbacks. */
 typedef struct
 {
-    u8 unk0; /**< Set to 3 to request a state change. */
-    u8 pad01;
-    u8 unk2; /**< Cleared when the page opens a sub-window. */
-    u8 pad03;
-    u16 sel_idx; /**< Currently selected item index. */
-    u16 item_count; /**< Total items; lower nine bits are active. */
-    u16 base_x; /**< Widget screen base X. */
-    u16 base_y; /**< Widget screen base Y. */
+    u8 active; /**< MENU_SLOT_STATE_* lifecycle state. */
+    u8 index;
+    u8 anim_frame;
+    u8 has_title;
+    MenuListNavigation navigation;
+    u16 base_x;     /**< Widget screen base X. */
+    u16 base_y;     /**< Widget screen base Y. */
     s16 viewport_w; /**< Visible list width. */
     s16 viewport_h; /**< Visible list height; also determines the fast-scroll step. */
-    u16 scroll_x; /**< Current X scroll offset. */
-    u16 scroll_y; /**< Current Y scroll offset. */
-    s16 target_x; /**< X scroll interpolation target. */
-    s16 target_y; /**< Y scroll interpolation target. */
-    u8 lerp_steps; /**< Remaining interpolation steps. */
+    u16 scroll_x;   /**< Current X scroll offset. */
+    u16 scroll_y;   /**< Current Y scroll offset. */
+    s16 target_x;   /**< X scroll interpolation target. */
+    s16 target_y;   /**< Y scroll interpolation target. */
+    u8 lerp_steps;  /**< Remaining interpolation steps. */
 } ScrollListState;
 
 /** @brief Partial view of one 12-byte ability record. */
@@ -672,21 +641,32 @@ typedef struct
 /** @brief Packed eight-nibble property field stored in an item record. */
 typedef union
 {
-    u32 packed; /**< All eight four-bit properties packed into one word. */
-    u8 bytes[4]; /**< Byte view used by selectors that only need one pair of nibbles. */
+    u32 packed;       /**< All eight four-bit properties packed into one word. */
+    u8 bytes[4];      /**< Byte view used by selectors that only need one pair of nibbles. */
     u16 halfwords[2]; /**< Halfword view used by the middle property pair. */
 } MenuItemNibbleField;
+
+/** @brief Packed item classification, name index, and flags. */
+typedef union
+{
+    u32 packed;
+    struct
+    {
+        u16 low;  /**< Bits 9:8 select the item kind; bits 15:10 select its category. */
+        u16 high; /**< Low six bits select an entry in the item-name table. */
+    } halves;
+} MenuItemAttributes;
 
 /** @brief One 0x40-byte inventory/equipment item record. */
 typedef struct
 {
     u8 active; /**< Zero marks an empty slot. */
     u8 pad01[0x13];
-    u32 attributes; /**< Bits 9:8 select the item kind; bits 15:10 select its category. */
+    MenuItemAttributes attributes;
     MenuItemNibbleField display_nibbles; /**< Eight packed four-bit values displayed by the item-detail scene. */
-    MenuItemNibbleField nibbles; /**< Eight packed four-bit item properties used by comparison helpers. */
+    MenuItemNibbleField nibbles;         /**< Eight packed four-bit item properties used by comparison helpers. */
     u8 pad20[4];
-    u16 stat_values[4]; /**< Equipment values used when ranking candidates. */
+    u16 stat_values[4];    /**< Equipment values used when ranking candidates. */
     u8 effect_flags[0x14]; /**< Per-item effect and ability flag bytes. */
 } MenuItemEntry;
 
@@ -784,8 +764,10 @@ extern u8 g_menu_prev_node;
 /** @brief Gate flag for menu_draw_content_cursor: 0 = draw empty slot, nonzero = full item render. */
 extern s32 g_menu_content_ready;
 
-extern ItemSlotData g_item_slot_data;
-extern ItemSlotFlags g_item_slot_flags;
+/** @brief Comparison item addresses, or zero for an empty replacement. */
+extern u32 g_item_slot_data[MENU_EQUIPMENT_SLOT_COUNT];
+/** @brief Nonzero for slots with a pending comparison change. */
+extern u8 g_item_slot_flags[MENU_EQUIPMENT_SLOT_COUNT];
 
 /** @brief Pointer into g_pad_ctx item data for the current category; null = no items. */
 extern s32 g_menu_item_ptr;
@@ -822,8 +804,8 @@ extern StringTableOffset g_menu_label_key_b;
 
 /** @brief Number of nodes in the linear navigation list. */
 extern s32 g_menu_nav_count;
-/** @brief Node ID at the start of the navigation list; used for wrap-around on down-navigation. */
-extern s32 g_menu_nav_first;
+/** @brief Visible node IDs in drawing and navigation order. */
+extern s32 g_menu_nav_nodes[];
 /** @brief Y display coordinate for the content viewport origin. */
 extern s32 g_content_view_y;
 /** @brief Set to 1 to request an overlay/scene load at end of this input frame. */
@@ -894,7 +876,7 @@ extern u8 g_menu_cursor_icon_ids[];
 /* Inventory and equipment state. */
 extern u8 D_8016869F[];
 extern u8 D_801686A0[];
-/** @brief Slot-occupied flags indexed by equipment subtype; g_item_slot_flags is the subtype-7 view. */
+/** @brief Pending-change flags indexed by equipment subtype; subtype 7 starts g_item_slot_flags. */
 extern u8 g_item_slot_flags_by_subtype[];
 extern u8 g_menu_item_description_buffer[];
 extern s32 g_menu_inventory_index;
@@ -1460,7 +1442,7 @@ void menu_update_slots(RenderContext* render_ctx)
             {
                 MenuRect* slot_rect;
 
-                slot_rect = (MenuRect*)(((u8*)g_menu_slots + 8) + (((slot_index * 2) - slot_index) * sizeof(MenuSlot)));
+                slot_rect = (MenuRect*)&g_menu_slots[slot_index].x;
                 view_origin.y = 0;
                 view_origin.x = 0;
                 menu_draw_window(&g_menu_slots[slot_index], render_ctx, slot_rect, &view_origin, g_menu_cursor_enable != 0);
@@ -1993,14 +1975,14 @@ void menu_node_tree_init(void)
     u32 node18_flags_copy;
     g_menu_prev_node = MENU_NONE;
     g_menu_content_ready = 0;
-    g_item_slot_data.slot0 = 0;
-    g_item_slot_data.slot1 = 0;
-    g_item_slot_data.slot2 = 0;
-    g_item_slot_data.slot3 = 0;
-    g_item_slot_flags.slot0 = 0;
-    g_item_slot_flags.slot1 = 0;
-    g_item_slot_flags.slot2 = 0;
-    g_item_slot_flags.slot3 = 0;
+    g_item_slot_data[0] = 0;
+    g_item_slot_data[1] = 0;
+    g_item_slot_data[2] = 0;
+    g_item_slot_data[3] = 0;
+    g_item_slot_flags[0] = 0;
+    g_item_slot_flags[1] = 0;
+    g_item_slot_flags[2] = 0;
+    g_item_slot_flags[3] = 0;
     g_menu_item_ptr = 0;
     g_menu_category0_item = 0;
     g_menu_category1_item = 0;
@@ -2020,10 +2002,10 @@ void menu_node_tree_init(void)
         g_menu_nodes[node_index].state = MENU_NODE_STATE_UNINIT;
         g_menu_nodes[node_index].icon_id = 0;
         g_menu_nodes[node_index].content_id = MENU_NONE;
-        g_menu_nodes[node_index].child3 = MENU_NONE;
-        g_menu_nodes[node_index].child2 = MENU_NONE;
-        g_menu_nodes[node_index].child1 = MENU_NONE;
-        g_menu_nodes[node_index].uA.s.child0 = MENU_NONE;
+        g_menu_nodes[node_index].layout.s.children[3] = MENU_NONE;
+        g_menu_nodes[node_index].layout.s.children[2] = MENU_NONE;
+        g_menu_nodes[node_index].layout.s.children[1] = MENU_NONE;
+        g_menu_nodes[node_index].layout.s.children[0] = MENU_NONE;
         g_menu_nodes[node_index].u2.unk2 = (u16)((initial_flags & 0xFFFC) | 0x30);
         g_menu_nodes[node_index].u2.s.parent_idx = MENU_NONE;
     }
@@ -2045,9 +2027,9 @@ void menu_node_tree_init(void)
     {
         g_menu_nodes[0].icon_id = 1;
     }
-    g_menu_nodes[0].uA.s.child0 = 1;
+    g_menu_nodes[0].layout.s.children[0] = 1;
     g_menu_nodes[1].idx_nav.s.self_idx = 1;
-    g_menu_nodes[0].child1 = 2;
+    g_menu_nodes[0].layout.s.children[1] = 2;
     g_menu_nodes[1].icon_id = 5;
     g_menu_nodes[2].label_id = 2;
     g_menu_nodes[2].idx_nav.s.self_idx = 2;
@@ -2082,8 +2064,8 @@ void menu_node_tree_init(void)
     node6_flags = node6_flags_base | node6_flags;
     *(volatile u16*)&g_menu_nodes[6].u2.unk2 = (u16)(node6_flags & 0xFF3F);
     g_menu_nodes[6].u2.unk2 = (u16)(node6_flags & 0xFF3E);
-    g_menu_nodes[3].uA.s.child0 = 4;
-    g_menu_nodes[3].child1 = 5;
+    g_menu_nodes[3].layout.s.children[0] = 4;
+    g_menu_nodes[3].layout.s.children[1] = 5;
     g_menu_nodes[4].label_id = 6;
     g_menu_nodes[4].idx_nav.s.self_idx = 4;
     g_menu_nodes[4].icon_id = 5;
@@ -2093,8 +2075,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[6].label_id = 7;
     g_menu_nodes[6].idx_nav.s.self_idx = 6;
     g_menu_nodes[6].icon_id = 3;
-    g_menu_nodes[6].uA.s.child0 = 7;
-    g_menu_nodes[6].child1 = 8;
+    g_menu_nodes[6].layout.s.children[0] = 7;
+    g_menu_nodes[6].layout.s.children[1] = 8;
     g_menu_nodes[7].label_id = 9;
     g_menu_nodes[7].idx_nav.s.self_idx = 7;
     g_menu_nodes[7].icon_id = 5;
@@ -2122,14 +2104,14 @@ void menu_node_tree_init(void)
     g_menu_nodes[9].label_id = 0xA;
     g_menu_nodes[9].idx_nav.s.self_idx = 9;
     g_menu_nodes[9].icon_id = 6;
-    g_menu_nodes[9].uA.s.child0 = 0xA;
+    g_menu_nodes[9].layout.s.children[0] = 0xA;
     g_menu_nodes[0xA].label_id = 0xB;
     g_menu_nodes[0xA].idx_nav.s.self_idx = 0xA;
     g_menu_nodes[0xA].icon_id = 7;
     g_menu_nodes[0xC].label_id = 0xA;
     g_menu_nodes[0xC].idx_nav.s.self_idx = 0xC;
     g_menu_nodes[0xC].icon_id = 6;
-    g_menu_nodes[0xC].uA.s.child0 = 0xD;
+    g_menu_nodes[0xC].layout.s.children[0] = 0xD;
     g_menu_nodes[0xD].label_id = 0xB;
     g_menu_nodes[0xD].idx_nav.s.self_idx = 0xD;
     g_menu_nodes[0xD].icon_id = 7;
@@ -2148,8 +2130,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0xF].label_id = 0xD;
     g_menu_nodes[0xF].idx_nav.s.self_idx = 0xF;
     g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0xF].uA.s.child0 = 0x10;
-    g_menu_nodes[0xF].child1 = 0x11;
+    g_menu_nodes[0xF].layout.s.children[0] = 0x10;
+    g_menu_nodes[0xF].layout.s.children[1] = 0x11;
     g_menu_nodes[0x10].label_id = 0xC;
     g_menu_nodes[0x10].idx_nav.s.self_idx = 0x10;
     g_menu_nodes[0x11].label_id = 0xE;
@@ -2159,10 +2141,10 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x12].idx_nav.s.self_idx = 0x12;
     g_menu_nodes[0x12].icon_id = 0xA;
     g_menu_nodes[0x12].content_id = 4;
-    g_menu_nodes[0x12].uA.s.child0 = 0x13;
-    g_menu_nodes[0x12].child1 = 0x16;
-    g_menu_nodes[0x12].child2 = 0x19;
-    g_menu_nodes[0x12].child3 = 0x1C;
+    g_menu_nodes[0x12].layout.s.children[0] = 0x13;
+    g_menu_nodes[0x12].layout.s.children[1] = 0x16;
+    g_menu_nodes[0x12].layout.s.children[2] = 0x19;
+    g_menu_nodes[0x12].layout.s.children[3] = 0x1C;
     g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
     g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
@@ -2179,8 +2161,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x13].icon_id = 0xB;
     g_menu_nodes[0x13].idx_nav.s.self_idx = 0x13;
     g_menu_nodes[0x13].content_id = 0;
-    g_menu_nodes[0x13].uA.s.child0 = 0x14;
-    g_menu_nodes[0x13].child1 = 0x15;
+    g_menu_nodes[0x13].layout.s.children[0] = 0x14;
+    g_menu_nodes[0x13].layout.s.children[1] = 0x15;
     g_menu_nodes[0x14].label_id = 0x12;
     g_menu_nodes[0x14].idx_nav.s.self_idx = 0x14;
     g_menu_nodes[0x15].label_id = 0x13;
@@ -2190,8 +2172,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x16].label_id = 0x14;
     g_menu_nodes[0x16].idx_nav.s.self_idx = 0x16;
     g_menu_nodes[0x16].icon_id = 0xC;
-    g_menu_nodes[0x16].uA.s.child0 = 0x17;
-    g_menu_nodes[0x16].child1 = 0x18;
+    g_menu_nodes[0x16].layout.s.children[0] = 0x17;
+    g_menu_nodes[0x16].layout.s.children[1] = 0x18;
     g_menu_nodes[0x17].label_id = 0x15;
     g_menu_nodes[0x17].idx_nav.s.self_idx = 0x17;
     g_menu_nodes[0x13].u2.unk2 = (u16)((g_menu_nodes[0x13].u2.unk2 & 0xFF3F) | 0x40);
@@ -2212,8 +2194,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].label_id = 0x16;
     g_menu_nodes[0x19].idx_nav.s.self_idx = 0x19;
     g_menu_nodes[0x19].icon_id = 0xD;
-    g_menu_nodes[0x19].uA.s.child0 = 0x1A;
-    g_menu_nodes[0x19].child1 = 0x1B;
+    g_menu_nodes[0x19].layout.s.children[0] = 0x1A;
+    g_menu_nodes[0x19].layout.s.children[1] = 0x1B;
     g_menu_nodes[0x1A].label_id = 0x17;
     g_menu_nodes[0x1A].idx_nav.s.self_idx = 0x1A;
     g_menu_nodes[0x1A].icon_id = 0x11;
@@ -2240,7 +2222,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
     g_menu_nodes[0x1E].label_id = 0x19;
     g_menu_nodes[0x1E].idx_nav.s.self_idx = 0x1E;
-    g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
+    g_menu_nodes[0x1E].layout.s.children[0] = 0x1F;
     g_menu_nodes[0x1F].idx_nav.s.self_idx = 0x1F;
     g_menu_nodes[0x1E].icon_id = 0x13;
     g_menu_nodes[0x1F].label_id = 0x1A;
@@ -2322,7 +2304,7 @@ void menu_node_tree_init(void)
                 g_menu_nodes[node_index].u8_u.nav_y_packed = (u16)work_value_a;
                 work_value_b = g_menu_nodes[node_index].idx_nav.nav_x_packed & 0x80FF;
                 g_menu_nodes[node_index].idx_nav.nav_x_packed = (u16)work_value_b;
-                g_menu_nodes[node_index].uA.layout_child_packed = (u16)((g_menu_nodes[node_index].uA.layout_child_packed & 0xFF00) | layout_y_high);
+                g_menu_nodes[node_index].layout.layout_child_packed = (u16)((g_menu_nodes[node_index].layout.layout_child_packed & 0xFF00) | layout_y_high);
                 nav_x_low_bit = (layout_y_9 & 1) << 15;
                 g_menu_nodes[node_index].u8_u.nav_y_packed = (u16)((g_menu_nodes[node_index].u8_u.nav_y_packed & 0x7FFF) | packed_value);
                 g_menu_nodes[node_index].idx_nav.nav_x_packed = (u16)((g_menu_nodes[node_index].idx_nav.nav_x_packed & 0x7FFF) | nav_x_low_bit);
@@ -2403,10 +2385,10 @@ void menu_update_layout(void)
 }
 
 /**
- * @brief Assign a layout position to a menu node and recursively lay out its expanded children.
- * @param node_index Index into g_menu_nodes of the node to lay out.
- * @param base_pos Running position counter; this node occupies [base_pos, base_pos + MENU_ROW_HEIGHT).
- * @return Updated position counter after processing this node and any expanded children.
+ * @brief Assign rows to a node and its visible descendants.
+ * @param node_index Node to lay out.
+ * @param base_pos Top of the node's row.
+ * @return Position following the last assigned row.
  */
 s32 menu_layout_node(s32 node_index, s32 base_pos)
 {
@@ -2425,9 +2407,8 @@ s32 menu_layout_node(s32 node_index, s32 base_pos)
     g_menu_nodes[node_index].state = MENU_NODE_STATE_LAID_OUT;
     /* Pack the 9-bit layout Y across layout_y_lsb and layout_y_hi. */
     node->u8_u.nav_y_packed = node->u8_u.s.nav_y_hi | ((layout_y & 1) << 15);
-    g_menu_nodes[node_index].uA.layout_child_packed =
-        (g_menu_nodes[node_index].uA.layout_child_packed & 0xFF00) | (0xFF & (layout_y >> 1));
-    node->uA.layout_child_packed = (node->uA.layout_child_packed & 0xFF00) | ((layout_y >> 1) & 0xFF);
+    g_menu_nodes[node_index].layout.layout_child_packed = (g_menu_nodes[node_index].layout.layout_child_packed & 0xFF00) | (0xFF & (layout_y >> 1));
+    node->layout.layout_child_packed = (node->layout.layout_child_packed & 0xFF00) | ((layout_y >> 1) & 0xFF);
 
     if (is_expanded)
     {
@@ -2435,13 +2416,13 @@ s32 menu_layout_node(s32 node_index, s32 base_pos)
 
         child_index = 0;
         child_source = node;
-        for (; child_index < MENU_MAX_CHILDREN;)
+        while (child_index < MENU_MAX_CHILDREN)
         {
-            if (*((u8*)child_source + child_index + 0xB) == MENU_NONE)
+            if (child_source->layout.s.children[child_index] == MENU_NONE)
             {
                 break;
             }
-            layout_pos = menu_layout_node(*((u8*)child_source + child_index++ + 0xB), layout_pos);
+            layout_pos = menu_layout_node(child_source->layout.s.children[child_index++], layout_pos);
         }
     }
 
@@ -2575,7 +2556,7 @@ s32 menu_handle_node_input(void)
     {
         if (nav_index >= (g_menu_nav_count - 1))
         {
-            g_menu_active_node = g_menu_nav_first;
+            g_menu_active_node = g_menu_nav_nodes[0];
         }
         else
         {
@@ -2742,7 +2723,7 @@ s32 menu_focus_active_content_item(void)
 
 
 /**
- * @brief Mark the active node's ancestor chain as expanded, propagate its nav cursor position to its children, update g_menu_char_slot, and re-run the full layout.
+ * @brief Expand the active path, initialize child cursor positions, and rebuild the layout.
  */
 void menu_set_active_node()
 {
@@ -2752,13 +2733,12 @@ void menu_set_active_node()
     MenuNode* active_node;
     MenuNode* active_base;
     MenuNode* loop_active;
-    u16 temp_v0;
+    u16 packed_value;
     s32 active_idx;
     s32 char_slot_bits;
     s32 has_visible_children;
     s32 layout_pos;
     s32 node_index;
-    MenuNode* node;
     s32 prev_layout_y;
     long child_slot;
     s32 child_index_value;
@@ -2794,18 +2774,18 @@ void menu_set_active_node()
     active_base = g_menu_nodes;
     active_idx = g_menu_active_node;
     active_node = active_base + active_idx;
-    temp_v0 = active_node->u2.unk2 | MENU_NODE_FLAG_EXPANDED;
-    active_node->u2.unk2 = temp_v0;
-    if ((temp_v0 >> 1) & 1)
+    packed_value = active_node->u2.unk2 | MENU_NODE_FLAG_EXPANDED;
+    active_node->u2.unk2 = packed_value;
+    if ((packed_value >> 1) & 1)
     {
         child_slot = 0;
         node_base_addr = (s32)active_base;
         loop_active = active_node;
         for (; child_slot < MENU_MAX_CHILDREN; child_slot++)
         {
-            child_index_value = *((u8*)loop_active + child_slot + 0xB);
+            child_index_value = loop_active->layout.s.children[child_slot];
             wide_child_index = child_index_value;
-            if (child_index_value == (temp_v0 = MENU_NONE))
+            if (child_index_value == (packed_value = MENU_NONE))
             {
                 break;
             }
@@ -2816,7 +2796,7 @@ void menu_set_active_node()
             child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed | nav_x_bits;
             child_node->u8_u.nav_y_packed = child_node->u8_u.nav_y_packed & MENU_NAV_X_CLEAR;
             child_node->u8_u.nav_y_packed = child_node->u8_u.nav_y_packed | nav_x_bits;
-            reloaded_child_index = (&loop_active->uA.s.child0)[child_slot];
+            reloaded_child_index = loop_active->layout.s.children[child_slot];
             reloaded_child_index ^= child_slot;
             reloaded_child_index ^= child_slot;
             parent_nav_x = loop_active->idx_nav.nav_x_packed;
@@ -2842,10 +2822,9 @@ void menu_set_active_node()
     /* Re-run layout for all root nodes and adjust scroll if content overflows the viewport. */
     has_visible_children = 0;
     layout_pos = 0;
-    node = g_menu_nodes;
-    for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++, node++)
+    for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++)
     {
-        temp_v0 = MENU_VIEW_HEIGHT;
+        packed_value = MENU_VIEW_HEIGHT;
         if (g_menu_nodes[node_index].u2.s.parent_idx == MENU_NONE)
         {
             if (g_menu_nodes[node_index].u2.s.flags & MENU_NODE_FLAG_ACTIVE)
@@ -2858,7 +2837,7 @@ void menu_set_active_node()
                     has_visible_children = 1;
                     if (layout_pos > MENU_VIEW_HEIGHT)
                     {
-                        g_menu_scroll_pos = layout_pos - temp_v0;
+                        g_menu_scroll_pos = layout_pos - packed_value;
                         g_menu_redraw_state = MENU_REDRAW_LAYOUT;
                     }
                 }
@@ -3335,7 +3314,7 @@ s32 menu_handle_input(s32 process_actions)
                     {
                         if (((void*)g_menu_item_ptr != NULL) && (*((u8*)g_menu_item_ptr) != 0))
                         {
-                            D_8011F424 = (((u32)PAD_ITEM_W14(g_menu_item_ptr)) >> 8) & 3;
+                            D_8011F424 = (((u32)((MenuItemEntry*)g_menu_item_ptr)->attributes.packed) >> 8) & 3;
                             func_800A8E28(&D_801226F0, g_menu_item_ptr);
                             text_buffer[0] = 0;
                             D_801226B8 = 0;
@@ -3344,8 +3323,8 @@ s32 menu_handle_input(s32 process_actions)
                                 {
                                 text_cursor = text_buffer;
                                 label_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
-                                func_800A8E28(text_cursor, (s8*)(label_table + (*((u16*)(label_table + (((PAD_ITEM_W16(g_menu_item_ptr)) & 0x3F) * 2) + 0x48)))));
-                                item_word = PAD_ITEM_W14(g_menu_item_ptr);
+                                func_800A8E28(text_cursor, (s8*)(label_table + (*((u16*)(label_table + (((((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high) & 0x3F) * 2) + 0x48)))));
+                                item_word = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
                                 text_variant = (item_word >> 8) & 3;
                                 switch (text_variant)
                                 {
@@ -3363,7 +3342,7 @@ s32 menu_handle_input(s32 process_actions)
                                     detail_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
                                     menu_concat_encoded_text(
                                         &D_801226B8, text_buffer,
-                                        (s8*)(detail_table + (*((u16*)((((((u32)PAD_ITEM_W14(g_menu_item_ptr)) >> 9) & 0x7E)) + (s32)detail_table + 0x40)))));
+                                        (s8*)(detail_table + (*((u16*)((((((u32)((MenuItemEntry*)g_menu_item_ptr)->attributes.packed) >> 9) & 0x7E)) + (s32)detail_table + 0x40)))));
                                     break;
                                 }
                                 g_menu_load_request = 1;
@@ -3846,7 +3825,7 @@ s32 menu_build_spell_nav_entries(void)
 
 /**
  * @brief Build navigation entries for the learned Special Technique list.
- * @return Low 16 bits: total set-bit count.
+ * @return Item count in the low halfword; initial selected row in the high halfword.
  */
 s32 menu_build_special_technique_nav_entries(void)
 {
@@ -3880,7 +3859,7 @@ s32 menu_build_special_technique_nav_entries(void)
             if ((group_flags & bit_mask) != 0)
             {
                 if ((group_index ==
-                     (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK)) &&
+                     (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK)) &&
                     (selected_index == none_index))
                 {
                     selected_index = item_count;
@@ -3960,7 +3939,7 @@ s32 menu_build_inventory_nav_entries(s32 item_kind)
         {
             break;
         }
-        if (((entry->attributes >> MENU_ITEM_KIND_SHIFT) & 3) == (u32)item_kind)
+        if (((entry->attributes.packed >> MENU_ITEM_KIND_SHIFT) & 3) == (u32)item_kind)
         {
             count += 1;
         }
@@ -4285,7 +4264,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 {
                                     if (*(u8*)g_menu_item_ptr != 0)
                                     {
-                                        u32 val = ((MenuItemEntry*)g_menu_item_ptr)->attributes;
+                                        u32 val = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
                                         s32 sel = (val >> 8) & 3;
                                         switch (sel)
                                         {
@@ -4403,7 +4382,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         prefix_buffer[0] = 0;
                                     }
-                                    v = ((MenuItemEntry*)g_menu_item_ptr)->attributes;
+                                    v = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
                                     v1 = (v >> 8) & 3;
                                     switch (v1)
                                     {
@@ -4426,7 +4405,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         void* base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
                                         menu_concat_encoded_text(
                                             &text_buffer, &prefix_buffer,
-                                            (void*)((u8*)base2 + *(u16*)((s32)((((MenuItemEntry*)g_menu_item_ptr)->attributes >> 9) & 0x7E) + (s32)base2 + 0x2E)));
+                                            (void*)((u8*)base2 + *(u16*)((s32)((((MenuItemEntry*)g_menu_item_ptr)->attributes.packed >> 9) & 0x7E) + (s32)base2 + 0x2E)));
                                         break;
                                     }
                                     }
@@ -4782,13 +4761,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 for (k = 1; k < 4; k++)
                                 {
                                     u8* slot = D_80168C20 + (k * 0x40);
-                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    if (g_item_slot_flags[k] != 0)
                                     {
                                         if (((MenuItemEntry*)slot)->active != 0)
                                         {
                                             val += *(u16*)(slot + menu_content_halfword_offset(content_index) - 0x62);
                                         }
-                                        has = ((u32*)&g_item_slot_data)[k];
+                                        has = g_item_slot_data[k];
                                         if (has != 0 && ((MenuItemEntry*)has)->active != 0)
                                         {
                                             val -= *(u16*)(has + menu_content_halfword_offset(content_index) - 0x62);
@@ -4829,13 +4808,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 for (k = 1; k < 4; k++)
                                 {
                                     u8* slot = D_80168C20 + (k * 0x40);
-                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    if (g_item_slot_flags[k] != 0)
                                     {
                                         if (((MenuItemEntry*)slot)->active != 0)
                                         {
                                             total += *(u16*)(slot + menu_content_halfword_offset(content_index) - 0x6A);
                                         }
-                                        has = ((u32*)&g_item_slot_data)[k];
+                                        has = g_item_slot_data[k];
                                         if (has != 0 && ((MenuItemEntry*)has)->active != 0)
                                         {
                                             total -= *(u16*)(has + menu_content_halfword_offset(content_index) - 0x6A);
@@ -4970,7 +4949,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (*(u8*)a2_2 != 0)
                                 {
                                     s32 a3 = 1;
-                                    if (g_item_slot_flags.slot0 != 0)
+                                    if (g_item_slot_flags[0] != 0)
                                     {
                                         a3 = 2;
                                     }
@@ -4996,9 +4975,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x13:
                             {
                                 s32 a2_15 = zero;
-                                if (g_item_slot_flags.slot0 != 0)
+                                if (g_item_slot_flags[0] != 0)
                                 {
-                                    void* v1_12 = (void*)g_item_slot_data.slot0;
+                                    void* v1_12 = (void*)g_item_slot_data[0];
                                     if (v1_12 == 0 || *(u8*)v1_12 == 0)
                                     {
                                         a2_15 += D_800F0C1C;
@@ -5094,7 +5073,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         u8 idx;
                                         u16 off2;
                                         base_a2_7 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20));
-                                        tmpv = ((((MenuItemEntry*)g_menu_equipment_base)->attributes >> 10) & 0x3F);
+                                        tmpv = ((((MenuItemEntry*)g_menu_equipment_base)->attributes.packed >> 10) & 0x3F);
 
                                         idx = menu_read_content_byte(ptr + 0x5F1);
                                         idx &= 0x7F;
@@ -5131,9 +5110,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 u32 total = 0;
                                 for (k = 1; k < 4; k++)
                                 {
-                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    if (g_item_slot_flags[k] != 0)
                                     {
-                                        u32 ptr = ((u32*)&g_item_slot_data)[k];
+                                        u32 ptr = g_item_slot_data[k];
                                         if (ptr != 0 && ((MenuItemEntry*)ptr)->active != 0)
                                         {
                                             total += ((MenuItemEntry*)ptr)->stat_values[0];
@@ -5156,9 +5135,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 u32 total = 0;
                                 for (k = 1; k < 4; k++)
                                 {
-                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    if (g_item_slot_flags[k] != 0)
                                     {
-                                        u32 ptr = ((u32*)&g_item_slot_data)[k];
+                                        u32 ptr = g_item_slot_data[k];
                                         if (ptr != 0 && ((MenuItemEntry*)ptr)->active != 0)
                                         {
                                             total += ((MenuItemEntry*)ptr)->stat_values[1];
@@ -5181,9 +5160,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 u32 total = 0;
                                 for (k = 1; k < 4; k++)
                                 {
-                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    if (g_item_slot_flags[k] != 0)
                                     {
-                                        u32 ptr = ((u32*)&g_item_slot_data)[k];
+                                        u32 ptr = g_item_slot_data[k];
                                         if (ptr != 0 && ((MenuItemEntry*)ptr)->active != 0)
                                         {
                                             total += ((MenuItemEntry*)ptr)->stat_values[2];
@@ -5206,9 +5185,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 u32 total = 0;
                                 for (k = 1; k < 4; k++)
                                 {
-                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    if (g_item_slot_flags[k] != 0)
                                     {
-                                        u32 ptr = ((u32*)&g_item_slot_data)[k];
+                                        u32 ptr = g_item_slot_data[k];
                                         if (ptr != 0 && ((MenuItemEntry*)ptr)->active != 0)
                                         {
                                             total += ((MenuItemEntry*)ptr)->stat_values[3];
@@ -5229,7 +5208,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x3F:
                             {
                                 val = 0;
-                                if (g_item_slot_flags.slot0 != 0)
+                                if (g_item_slot_flags[0] != 0)
                                 {
 
                                     u8* source;
@@ -5238,9 +5217,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         val = ((MenuItemEntry*)D_80168C30)->stat_values[0];
                                     }
-                                    if (g_item_slot_data.slot0 != 0 && *(u8*)g_item_slot_data.slot0 != 0)
+                                    if (g_item_slot_data[0] != 0 && *(u8*)g_item_slot_data[0] != 0)
                                     {
-                                        val = val - ((MenuItemEntry*)g_item_slot_data.slot0)->stat_values[0];
+                                        val = val - ((MenuItemEntry*)g_item_slot_data[0])->stat_values[0];
                                     }
                                     else
                                     {
@@ -5280,13 +5259,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 for (k = 1; k < 4; k++)
                                 {
                                     u8* slot = D_80168C20 + (k * 0x40);
-                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    if (g_item_slot_flags[k] != 0)
                                     {
                                         if (((MenuItemEntry*)slot)->active != 0)
                                         {
                                             val += ((MenuItemEntry*)slot)->stat_values[content_index - 0x40];
                                         }
-                                        has = ((u32*)&g_item_slot_data)[k];
+                                        has = g_item_slot_data[k];
                                         if (has != 0 && ((MenuItemEntry*)has)->active != 0)
                                         {
                                             val -= ((MenuItemEntry*)has)->stat_values[content_index - 0x40];
@@ -5319,16 +5298,16 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x44:
                             {
                                 u16 a2_23 = 0;
-                                if (g_item_slot_flags.slot0 != 0)
+                                if (g_item_slot_flags[0] != 0)
                                 {
                                     s32 diff;
                                     if (((MenuItemEntry*)D_80168C20)->active != 0)
                                     {
                                         a2_23 = ((MenuItemEntry*)D_80168C30)->stat_values[0];
                                     }
-                                    if (g_item_slot_data.slot0 != 0 && *(u8*)g_item_slot_data.slot0 != 0)
+                                    if (g_item_slot_data[0] != 0 && *(u8*)g_item_slot_data[0] != 0)
                                     {
-                                        diff = a2_23 - ((MenuItemEntry*)g_item_slot_data.slot0)->stat_values[0];
+                                        diff = a2_23 - ((MenuItemEntry*)g_item_slot_data[0])->stat_values[0];
                                     }
                                     else
                                     {
@@ -5349,13 +5328,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 for (k = 1; k < 4; k++)
                                 {
                                     u8* slot = D_80168C20 + (k * 0x40);
-                                    if (((u8*)&g_item_slot_flags)[k] != 0)
+                                    if (g_item_slot_flags[k] != 0)
                                     {
                                         if (((MenuItemEntry*)slot)->active != 0)
                                         {
                                             total += ((MenuItemEntry*)slot)->stat_values[content_index - 0x45];
                                         }
-                                        has = ((u32*)&g_item_slot_data)[k];
+                                        has = g_item_slot_data[k];
                                         if (has != 0 && ((MenuItemEntry*)has)->active != 0)
                                         {
                                             total -= ((MenuItemEntry*)has)->stat_values[content_index - 0x45];
@@ -5687,7 +5666,7 @@ s32 menu_get_equipment_ability_mask(s32 excluded_slot)
     {
         if ((i != excluded_slot) && (entry->active != 0))
         {
-            item_attributes = entry->attributes;
+            item_attributes = entry->attributes.packed;
             if (item_attributes & MENU_ITEM_KIND_MASK)
             {
                 result |= D_800F0BEC[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK];
@@ -5704,17 +5683,14 @@ s32 menu_get_equipment_ability_mask(s32 excluded_slot)
 }
 
 /**
- * @brief Initialize a one-word Draw Mode Setting primitive (GP0 0xE1000005) and link it into an OT slot.
- * @param prim Pointer to an uninitialized MenuPrimHead to fill in (must have at least 8 bytes of space).
- * @param ot Pointer to the ordering-table entry that the new primitive should be prepended to.
- * @return Pointer to the byte immediately following the 8-byte primitive (next free prim slot).
+ * @brief Emit and link the menu texture-page command.
+ * @param draw_mode Primitive-buffer cursor.
+ * @param ot Ordering-table entry to prepend to.
+ * @return Primitive-buffer cursor after the command.
  */
-void* menu_emit_draw_mode_primitive(MenuPrimHead* prim, s32* ot)
+void* menu_emit_draw_mode_primitive(DR_TPAGE* draw_mode, s32* ot)
 {
-    DR_TPAGE* draw_mode;
-
-    draw_mode = (DR_TPAGE*)prim;
-    setDrawTPage(draw_mode, 0, 0, 5);
+    setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
     addPrim(ot, draw_mode);
     draw_mode++;
     return draw_mode;
@@ -5864,8 +5840,8 @@ s32 menu_find_active_content_item(void)
 
 /**
  * @brief Find the navigation-list index of a given node ID.
- * @param node_id Node ID to search for (typically g_menu_active_node at call sites).
- * @return Zero-based index of @p node_id within the navigation list starting at g_menu_nav_first, or -1 if not found or the list is empty.
+ * @param node_id Node ID to locate.
+ * @return Navigation index, or -1 if the node is absent.
  */
 s32 menu_find_nav_node_index(s32 node_id)
 {
@@ -5877,7 +5853,7 @@ s32 menu_find_nav_node_index(s32 node_id)
     if (g_menu_nav_count > 0)
     {
         nav_count = g_menu_nav_count;
-        nav_entry = &g_menu_nav_first;
+        nav_entry = g_menu_nav_nodes;
         do
         {
             if (*nav_entry == node_id)
@@ -6113,7 +6089,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
     MenuContentItem* content_base;
     u16 content_type;
     s32 action_type;
-    MenuPrimHead* draw_mode;
+    DR_TPAGE* draw_mode;
 
     if (g_menu_content_ready == 0)
     {
@@ -6438,12 +6414,10 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
     if (g_party_sort_marker.selected_idx != MENU_NONE)
     {
         prim_buf = menu_emit_sort_marker(prim_buf, ot, g_party_sort_marker.x, g_party_sort_marker.y);
-        draw_mode = (MenuPrimHead*)prim_buf;
-        draw_mode->_u._s.unk3 = 1;
-        draw_mode->unk4 = 0xE1000005;
-        draw_mode->_u.unk0 = (s32)((draw_mode->_u.unk0 & 0xFF000000) | (*ot & 0xFFFFFF));
-        *ot = (*ot & 0xFF000000) | ((s32)prim_buf & 0xFFFFFF);
-        prim_buf = (u8*)prim_buf + 8;
+        draw_mode = (DR_TPAGE*)prim_buf;
+        setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
+        addPrim(ot, draw_mode);
+        prim_buf = draw_mode + 1;
     }
 
     return prim_buf;
@@ -6508,7 +6482,7 @@ s32 menu_draw_node_recursive(s32 node_index, s32 prim_buf, s32* ot)
     int style_bits;
 
     style_bits = 3;
-    *((&g_menu_nav_first) + g_menu_nav_count) = node_index;
+    g_menu_nav_nodes[g_menu_nav_count] = node_index;
     node_base = g_menu_nodes;
     node = node_base + node_index;
     g_menu_nav_count += 1;
@@ -6537,7 +6511,7 @@ s32 menu_draw_node_recursive(s32 node_index, s32 prim_buf, s32* ot)
         {
             u16 packed_y = node->u8_u.nav_y_packed;
             packed_y &= 0xFF00;
-            packed_y |= node->uA.s.layout_y_hi;
+            packed_y |= node->layout.s.layout_y_hi;
             node->u8_u.nav_y_packed = packed_y;
         }
     }
@@ -6547,7 +6521,7 @@ s32 menu_draw_node_recursive(s32 node_index, s32 prim_buf, s32* ot)
         u16 nav_y_packed = node->u8_u.nav_y_packed;
         s32 current_y_low_bit = nav_x_packed >> 15;
         s32 current_y = ((nav_y_packed & 0xFF) << 1) | current_y_low_bit;
-        u16 target_y = (nav_y_packed >> 15) | (node->uA.s.layout_y_hi << 1);
+        u16 target_y = (nav_y_packed >> 15) | (node->layout.s.layout_y_hi << 1);
 
         if (((u16)current_y) == target_y)
         {
@@ -6583,11 +6557,11 @@ s32 menu_draw_node_recursive(s32 node_index, s32 prim_buf, s32* ot)
             for (; child_slot < MENU_MAX_CHILDREN; child_slot++)
             {
                 child_sentinel = MENU_NONE;
-                if (*((u8*)child_source + child_slot + 0xB) == (u8)child_sentinel)
+                if (child_source->layout.s.children[child_slot] == (u8)child_sentinel)
                 {
                     break;
                 }
-                next_prim = menu_draw_node_recursive(*((u8*)child_source + child_slot + 0xB), next_prim, ot);
+                next_prim = menu_draw_node_recursive(child_source->layout.s.children[child_slot], next_prim, ot);
                 child_sentinel = 0;
             }
         }
@@ -6684,16 +6658,15 @@ void* menu_emit_sort_marker(void* prim_buf, s32* ot, s16 x, s16 y)
     return sprite + 1;
 }
 
-
 /**
- * @brief Process shoulder/D-pad scroll input for a list widget and draw its animated cursor.
- * @param prim_buf Primitive buffer write cursor; forwarded to menu_emit_cursor.
- * @param ot Ordering-table pointer; forwarded to menu_emit_cursor.
- * @param state Scroll-list state block.
- * @param entries Packed circular linked-list entry array (g_menu_scroll_nav_entries).
- * @param view_origin Viewport anchor in list-local coordinates.
- * @param active Non-zero to process input this frame; zero draws cursor only.
- * @return The advanced primitive write cursor (the value menu_emit_cursor returns).
+ * @brief Handle list navigation and draw its cursor.
+ * @param prim_buf Primitive-buffer cursor.
+ * @param ot Ordering-table entry for the cursor.
+ * @param state List state to update.
+ * @param entries Packed row positions and circular navigation links.
+ * @param view_origin Viewport origin in list coordinates.
+ * @param active Nonzero to process input and animate the cursor.
+ * @return Primitive-buffer cursor after drawing.
  */
 s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
 {
@@ -6722,18 +6695,19 @@ s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries
             {
                 if (g_pad_input & PADLup)
                 {
-                    state->sel_idx = (entries[state->sel_idx] >> MENU_ITEM_NAV_PREVIOUS_SHIFT) & MENU_ITEM_NAV_INDEX_MASK;
+                    state->navigation.fields.selected_index =
+                        (entries[state->navigation.fields.selected_index] >> MENU_ITEM_NAV_PREVIOUS_SHIFT) & MENU_ITEM_NAV_INDEX_MASK;
                 }
                 else
                 {
-                    state->sel_idx = entries[state->sel_idx] >> MENU_ITEM_NAV_NEXT_SHIFT;
+                    state->navigation.fields.selected_index = entries[state->navigation.fields.selected_index] >> MENU_ITEM_NAV_NEXT_SHIFT;
                 }
                 scroll_list_update_target(state, entries);
-                if (state->sel_idx == ((state->item_count & MENU_ITEM_NAV_INDEX_MASK) - 1))
+                if (state->navigation.fields.selected_index == ((state->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK) - 1))
                 {
                     count = 1;
                 }
-                if (state->sel_idx == 0)
+                if (state->navigation.fields.selected_index == 0)
                 {
                     count = 1;
                 }
@@ -6750,17 +6724,18 @@ s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries
             g_pad_input |= PAD_BTN_CIRCLE;
         }
     }
-    prim_buf =
-        menu_emit_cursor(prim_buf, ot, (4 - view_origin->x) - state->scroll_x, ((entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK) - view_origin->y) - state->scroll_y, active);
+    prim_buf = menu_emit_cursor(prim_buf, ot, (4 - view_origin->x) - state->scroll_x,
+                                ((entries[state->navigation.fields.selected_index] & MENU_ITEM_NAV_POSITION_MASK) - view_origin->y) - state->scroll_y, active);
     g_menu_default_view_pos.x = (state->base_x + ((4 - (view_origin->x & 0xFFFFFFFF)) - state->scroll_x)) + 8;
-    g_menu_default_view_pos.y = (state->base_y + (((entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK) - view_origin->y) - state->scroll_y)) + 8;
+    g_menu_default_view_pos.y =
+        (state->base_y + (((entries[state->navigation.fields.selected_index] & MENU_ITEM_NAV_POSITION_MASK) - view_origin->y) - state->scroll_y)) + 8;
     return prim_buf;
 }
 
 /**
- * @brief Recompute the scroll lerp targets so the selected list item is inside the viewport.
- * @param state Scroll-list state block to update.
- * @param entries Packed circular linked-list entry array; bits [13:0] hold the item y position.
+ * @brief Set scroll targets to keep the selected row visible.
+ * @param state List state to update.
+ * @param entries Packed row positions and circular navigation links.
  */
 void scroll_list_update_target(ScrollListState* state, u32* entries)
 {
@@ -6775,19 +6750,18 @@ void scroll_list_update_target(ScrollListState* state, u32* entries)
         state->target_x = 4;
     }
 
-    if ((s32)((entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK) - state->scroll_y) > state->viewport_h - 0x20)
+    if ((s32)((entries[state->navigation.fields.selected_index] & MENU_ITEM_NAV_POSITION_MASK) - state->scroll_y) > state->viewport_h - 0x20)
     {
-        state->target_y = (entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK) - state->viewport_h + 0x20;
+        state->target_y = (entries[state->navigation.fields.selected_index] & MENU_ITEM_NAV_POSITION_MASK) - state->viewport_h + 0x20;
     }
 
-    item_y = entries[state->sel_idx] & MENU_ITEM_NAV_POSITION_MASK;
+    item_y = entries[state->navigation.fields.selected_index] & MENU_ITEM_NAV_POSITION_MASK;
     if (item_y - state->scroll_y < 0)
     {
         state->target_y = item_y;
     }
     state->lerp_steps = 4;
 }
-
 
 /**
  * @brief Emit the animated menu cursor: one or two SPRTs plus a texpage prim, OT-linked.
@@ -7018,7 +6992,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
         {
             break;
         }
-        item_attributes = item_record->attributes;
+        item_attributes = item_record->attributes.packed;
         item_kind = (item_attributes >> MENU_ITEM_KIND_SHIFT) & 3;
         icon_id = 0x45;
 
@@ -7044,12 +7018,11 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 u8 ability_flags;
 
                 packet_cursor = (void*)menu_emit_icon_sprite(packet_cursor, ot, icon_id, 0x10 - view_origin->x, (y - scroll_y) - view_origin->y, 0, 0, 0, 0);
-                setlen((DR_TPAGE*)packet_cursor, 1);
-                ((DR_TPAGE*)packet_cursor)->code[0] = 0xE1000005;
+                setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, MENU_GRID_TPAGE);
                 addPrim(ot, (DR_TPAGE*)packet_cursor);
                 packet_cursor = (DR_TPAGE*)packet_cursor + 1;
 
-                display_attributes = item_record->attributes;
+                display_attributes = item_record->attributes.packed;
                 if (display_attributes & MENU_ITEM_KIND_MASK)
                 {
                     ability_flags = D_800F0BEC[(display_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK];
@@ -7080,8 +7053,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         SET_YX0((SPRT*)packet_cursor, (y - scroll_y) - view_y, -2 - view_x);
                         addPrim(ot, (SPRT*)packet_cursor);
                         packet_cursor = (SPRT*)packet_cursor + 1;
-                        setlen((DR_TPAGE*)packet_cursor, 1);
-                        ((DR_TPAGE*)packet_cursor)->code[0] = 0xE1000005;
+                        setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, MENU_GRID_TPAGE);
                         addPrim(ot, (DR_TPAGE*)packet_cursor);
                         packet_cursor = (DR_TPAGE*)packet_cursor + 1;
                     }
@@ -7093,7 +7065,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 pending_item_record = &((MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET))[item_index];
             }
 
-            if ((y >> 4) == list->sel_idx)
+            if ((y >> 4) == list->navigation.fields.selected_index)
             {
                 g_menu_inventory_index = item_index;
                 g_menu_item_ptr = (s32)(&((MenuItemEntry*)((u8*)g_pad_ctx + MENU_ITEM_TABLE_OFFSET))[item_index]);
@@ -7127,17 +7099,18 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
         }
     }
 
-    LIST_WORD(list) = (LIST_WORD(list) & 0xFE00FFFF) | ((menu_build_inventory_nav_entries(g_menu_active_item_category) & 0x1FF) << 0x10);
-    g_menu_page_count = (LIST_WORD(list) >> 0x10) & 0x1FF;
-    g_script_repeat_last = list->sel_idx;
+    list->navigation.packed = (list->navigation.packed & ~MENU_LIST_COUNT_MASK) |
+                              ((menu_build_inventory_nav_entries(g_menu_active_item_category) & MENU_ITEM_NAV_INDEX_MASK) << MENU_LIST_COUNT_SHIFT);
+    g_menu_page_count = (list->navigation.packed >> MENU_LIST_COUNT_SHIFT) & MENU_ITEM_NAV_INDEX_MASK;
+    g_script_repeat_last = list->navigation.fields.selected_index;
 
-    if (LIST_WORD(list) & 0x01FF0000)
+    if (list->navigation.packed & MENU_LIST_COUNT_MASK)
     {
-        if ((u32)((LIST_WORD(list) >> 0x10) & 0x1FF) <= (u32)list->sel_idx)
+        if ((u32)((list->navigation.packed >> MENU_LIST_COUNT_SHIFT) & MENU_ITEM_NAV_INDEX_MASK) <= (u32)list->navigation.fields.selected_index)
         {
             menu_step_item_selection(-1);
-            list->sel_idx = (u16)((list->item_count & 0x1FF) - 1);
-            if (((list->sel_idx * 0x10) - scroll_y) < (list->viewport_h - 0x10))
+            list->navigation.fields.selected_index = (u16)((list->navigation.fields.count_and_ot & 0x1FF) - 1);
+            if (((list->navigation.fields.selected_index * 0x10) - scroll_y) < (list->viewport_h - 0x10))
             {
                 u16 cur = list->scroll_y;
                 if (cur != 0)
@@ -7147,8 +7120,8 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 }
             }
         }
-        g_menu_page_count = list->item_count & 0x1FF;
-        g_script_repeat_last = list->sel_idx;
+        g_menu_page_count = list->navigation.fields.count_and_ot & 0x1FF;
+        g_script_repeat_last = list->navigation.fields.selected_index;
 
         if (g_menu_item_ptr != 0)
         {
@@ -7157,7 +7130,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 if (menu_item_is_nondefault(g_menu_item_ptr) != 0)
                 {
                     u8* state = g_menu_state_ptr;
-                    u16 item16 = PAD_ITEM_W16(g_menu_item_ptr);
+                    u16 item16 = ((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high;
                     s32 name_idx = (item16 & 0x3F) * 2;
                     s32 o30 = *(s32*)(state + 0x30);
                     s32 o04 = *(s32*)(state + 0x04);
@@ -7172,7 +7145,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 } else { item_name_buffer[0] = 0; }
 
                 {
-                    u32 item_word = ((MenuItemEntry*)g_menu_item_ptr)->attributes;
+                    u32 item_word = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
                     u32 kind = (item_word >> MENU_ITEM_KIND_SHIFT) & 3;
                     switch (kind)
                     {
@@ -7205,7 +7178,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                     default:
                     {
                         s32* state68_off = (s32*)(g_menu_state_ptr + 0x68);
-                        u32 item_word2 = ((MenuItemEntry*)g_menu_item_ptr)->attributes;
+                        u32 item_word2 = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
                         u32 str_idx = (item_word2 >> 9) & 0x7E;
                         u8* state68 = g_menu_state_ptr + *state68_off;
                         u8* str2 = state68 + *(u16*)((u8*)((s32)str_idx + (s32)state68) + 0x2E);
@@ -7249,7 +7222,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                     }
                     else
                     {
-                        u32 w = ((MenuItemEntry*)g_menu_item_ptr)->attributes;
+                        u32 w = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
                         u8 ability_flags;
                         if (w & MENU_ITEM_KIND_MASK)
                         {
@@ -7303,7 +7276,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                     g_menu_nodes[0x16].label_id = 0x14;
                     g_menu_nodes[0x19].label_id = 0x16;
                     menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
-                    sel = list->sel_idx;
+                    sel = list->navigation.fields.selected_index;
                     if (sel != g_menu_pending_item_row)
                     {
                         if (g_menu_pending_item_row != MENU_NONE)
@@ -7384,7 +7357,7 @@ u32 menu_step_item_selection(s32 step)
     {
         if (item->active != 0)
         {
-            kind = (item->attributes >> MENU_ITEM_KIND_SHIFT) & 3;
+            kind = (item->attributes.packed >> MENU_ITEM_KIND_SHIFT) & 3;
             if (kind == g_menu_active_item_category)
             {
                 g_menu_inventory_index = index;
@@ -7453,7 +7426,7 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
     if ((g_pad_input & 0x40) && (active != 0))
     {
         menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
-        list->unk0 = 3;
+        list->active = MENU_SLOT_STATE_CLOSING;
         g_pad_input = 0;
     }
 
@@ -7480,7 +7453,7 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
                     prim_buf = func_800A88A0(prim_buf, ot, (void*)((u8*)name_table + *(u16*)((u8*)name_table + (col * 2) + (row * 0x10))), 1, 0x10 - view_origin->x,
                                              relative_y - view_origin->y, 0);
                 }
-                if (list->sel_idx == (y >> 4))
+                if (list->navigation.fields.selected_index == (y >> 4))
                 {
                     selected_index = col + (row * 8);
                 }
@@ -7497,7 +7470,7 @@ s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2
     {
         *((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype + (row = 0x609)) = selected_index;
         menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
-        list->unk0 = 3;
+        list->active = MENU_SLOT_STATE_CLOSING;
     }
 
     if (selected_index != -1)
@@ -7576,13 +7549,12 @@ s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
                         }
 
                         draw_mode = (DR_TPAGE*)prim_buf;
-                        setlen(draw_mode, 1);
-                        draw_mode->code[0] = 0xE1000005;
+                        setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
                         addPrim(ot, draw_mode);
                         prim_buf = (s32)(draw_mode + 1);
                     }
                 }
-                if (list->sel_idx == (y >> 4))
+                if (list->navigation.fields.selected_index == (y >> 4))
                 {
                     selected_index = col + (row * 8);
                 }
@@ -7657,7 +7629,7 @@ s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
                     func_800A88A0(prim_buf, ot, MENU_TAIL(name_table, item_index * 2), 1, 0x10 - view_origin->x, relative_y - view_origin->y, 0);
                 prim_buf = menu_draw_clamped_number(ot, prim_buf, *quantity, 1, &pos, 1);
             }
-            if (list->sel_idx == (y >> 4))
+            if (list->navigation.fields.selected_index == (y >> 4))
             {
                 selected_index = item_index;
             }
@@ -7734,13 +7706,12 @@ s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Ve
                     prim_buf = (s32)menu_emit_icon_sprite((void*)prim_buf, ot, 0x2C, 0x10 - view_origin->x, relative_y - view_origin->y, 0, 0, 0, 0);
 
                     draw_mode = (DR_TPAGE*)prim_buf;
-                    setlen(draw_mode, 1);
-                    draw_mode->code[0] = 0xE1000005;
+                    setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
                     addPrim(ot, draw_mode);
                     prim_buf = (s32)(draw_mode + 1);
                 }
             }
-            if (list->sel_idx == (list_y >> 4))
+            if (list->navigation.fields.selected_index == (list_y >> 4))
             {
                 selected_index = ability_index;
             }
@@ -7793,16 +7764,16 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
     if ((g_pad_input & 0x40) && (active != 0))
     {
         menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
-        list->unk0 = 3;
+        list->active = MENU_SLOT_STATE_CLOSING;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
-        switch (list->sel_idx)
+        switch (list->navigation.fields.selected_index)
         {
         case 0:
-            list->unk2 = 0;
-            list->unk0 = 0;
+            list->anim_frame = 0;
+            list->active = 0;
             rect.x = 0x40;
             rect.y = 0x60;
             rect.w = 0xF0;
@@ -7875,7 +7846,7 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
             }
             flag_ptr = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype;
             *(flag_ptr + 0x609) = 0xFF;
-            list->unk0 = 3;
+            list->active = MENU_SLOT_STATE_CLOSING;
             break;
         }
 
@@ -7934,8 +7905,8 @@ s32 menu_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* 
 
     if ((g_pad_input & 0x260) && (active != 0))
     {
-        state->unk2 = 0;
-        state->unk0 = 0;
+        state->anim_frame = 0;
+        state->active = 0;
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
     }
 
@@ -7961,8 +7932,8 @@ s32 menu_two_line_message_callback(s32* ot, ScrollListState* state, s32 prim_buf
 
     if ((g_pad_input & 0x260) && (active != 0))
     {
-        state->unk2 = 0;
-        state->unk0 = 0;
+        state->anim_frame = 0;
+        state->active = 0;
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
     }
 
@@ -7996,14 +7967,14 @@ s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
     if ((g_pad_input & 0x40) && (active != 0))
     {
         menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
-        list->unk0 = 3;
+        list->active = MENU_SLOT_STATE_CLOSING;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
-        if (list->sel_idx != 0)
+        if (list->navigation.fields.selected_index != 0)
         {
-            list->unk0 = 3;
+            list->active = MENU_SLOT_STATE_CLOSING;
             *(u8*)g_menu_item_ptr = 0;
             func_800A8FB4();
             g_menu_pending_item_row = 0xFF;
@@ -8056,17 +8027,17 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     ScrollListState* list;
     MenuContentItem* item;
     MenuContentItem* tbl;
-    u8* entry;
+    MenuItemEntry* equipment;
     u8* pad_item;
     u8* cmp_tbl;
     u8* ctx;
     u8* equipment_ctx;
     s32 slot_off;
-    u32 unk14;
+    u32 item_attributes;
     u32 lhs_shift;
     u32 cmp_shift;
     s32 mask;
-    s32 idx;
+    s32 equipment_index;
     s32 hit;
     s32 buf;
     s32 handle;
@@ -8080,12 +8051,12 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     if ((g_pad_input & 0x40) && (active != 0))
     {
         menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
-        list->unk0 = 3;
+        list->active = MENU_SLOT_STATE_CLOSING;
     }
     else if ((g_pad_input & 0x220) && (active != 0))
     {
         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
-        switch (list->sel_idx)
+        switch (list->navigation.fields.selected_index)
         {
         case 0:
             switch (g_menu_active_subtype)
@@ -8100,25 +8071,25 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
 
                 ability_mask_ptr = &g_menu_ability_mask;
                 mask = 0;
-                entry = (u8*)g_menu_equipment_base;
-                idx = 0;
+                equipment = (MenuItemEntry*)g_menu_equipment_base;
+                equipment_index = 0;
                 do
                 {
-                    if ((idx != (g_menu_active_subtype - 7)) && (entry[0] != 0))
+                    if ((equipment_index != (g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE)) && (equipment->active != 0))
                     {
-                        unk14 = PAD_ITEM_W14(entry);
-                        if (unk14 & 0x300)
+                        item_attributes = equipment->attributes.packed;
+                        if (item_attributes & MENU_ITEM_KIND_MASK)
                         {
-                            mask |= D_800F0BEC[(unk14 >> 10) & 0x3F];
+                            mask |= D_800F0BEC[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK];
                         }
                         else
                         {
-                            mask |= D_800F0BE0[(unk14 >> 10) & 0x3F];
+                            mask |= D_800F0BE0[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK];
                         }
                     }
-                    idx += 1;
-                    entry += 0x40;
-                } while (idx < 4);
+                    equipment_index += 1;
+                    equipment++;
+                } while (equipment_index < MENU_EQUIPMENT_SLOT_COUNT);
 
                 *ability_mask_ptr = mask;
                 g_menu_content_ready = 1;
@@ -8139,26 +8110,26 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
 
                 ability_mask_ptr = &g_menu_ability_mask;
                 mask = 0;
-                idx = 0;
-                entry = (u8*)g_menu_equipment_base;
+                equipment_index = 0;
+                equipment = (MenuItemEntry*)g_menu_equipment_base;
 
                 do
                 {
-                    if ((idx != (g_menu_active_subtype - 7)) && (entry[0] != 0))
+                    if ((equipment_index != (g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE)) && (equipment->active != 0))
                     {
-                        unk14 = PAD_ITEM_W14(entry);
-                        if (unk14 & 0x300)
+                        item_attributes = equipment->attributes.packed;
+                        if (item_attributes & MENU_ITEM_KIND_MASK)
                         {
-                            mask |= D_800F0BEC[(unk14 >> 10) & 0x3F];
+                            mask |= D_800F0BEC[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK];
                         }
                         else
                         {
-                            mask |= D_800F0BE0[(unk14 >> 10) & 0x3F];
+                            mask |= D_800F0BE0[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK];
                         }
                     }
-                    idx += 1;
-                    entry += 0x40;
-                } while (idx < 4);
+                    equipment_index += 1;
+                    equipment++;
+                } while (equipment_index < MENU_EQUIPMENT_SLOT_COUNT);
 
                 *ability_mask_ptr = mask;
                 g_menu_content_ready = 1;
@@ -8192,9 +8163,9 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 MENU_RELINK();
                 break;
             }
-            g_item_slot_data.slot3 = 0;
-            g_item_slot_data.slot2 = 0;
-            g_item_slot_data.slot1 = 0;
+            g_item_slot_data[3] = 0;
+            g_item_slot_data[2] = 0;
+            g_item_slot_data[1] = 0;
             if (menu_stage_best_equipment_for_active_slot() == 0)
             {
                 break;
@@ -8213,9 +8184,9 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             break;
 
         case 2:
-            g_item_slot_data.slot3 = 0;
-            g_item_slot_data.slot2 = 0;
-            g_item_slot_data.slot1 = 0;
+            g_item_slot_data[3] = 0;
+            g_item_slot_data[2] = 0;
+            g_item_slot_data[1] = 0;
             menu_stage_best_equipment_for_slot0();
             g_menu_active_subtype = 8;
             menu_stage_best_equipment_for_active_slot();
@@ -8355,7 +8326,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         break;
                     }
                 }
-                list->unk0 = 3;
+                list->active = MENU_SLOT_STATE_CLOSING;
                 break;
             }
             g_menu_message_line1 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
@@ -8399,17 +8370,17 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
     {
         g_menu_compare_window_active = 0;
 
-        if ((list->sel_idx != 0) || (g_pad_input & 0x40))
+        if ((list->navigation.fields.selected_index != 0) || (g_pad_input & 0x40))
         {
             menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
-            list->unk0 = 3;
+            list->active = MENU_SLOT_STATE_CLOSING;
 
             i = 0;
             do
             {
-                if (((u8*)&g_item_slot_flags)[i] != 0)
+                if (g_item_slot_flags[i] != 0)
                 {
-                    item = (s32)((u32*)&g_item_slot_data)[i];
+                    item = (s32)g_item_slot_data[i];
                     if (item != 0)
                     {
                         menu_swap_item_records(item, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((i << 6) + 0x50)));
@@ -8432,14 +8403,14 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
         else
         {
             menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
-            list->unk0 = 3;
+            list->active = MENU_SLOT_STATE_CLOSING;
 
-            if (g_item_slot_flags.slot0 != 0)
+            if (g_item_slot_flags[0] != 0)
             {
-                if (((g_item_slot_data.slot0 != 0) &&
-                     ((PAD_ITEM_W14(g_item_slot_data.slot0) & 0xFC00) != (PAD_ITEM_W14(g_menu_equipment_base) & 0xFC00))) ||
-                    ((g_item_slot_data.slot0 == 0) &&
-                     ((D_800F0C0C & 0xFC00) != (PAD_ITEM_W14(g_menu_equipment_base) & 0xFC00))))
+                if (((g_item_slot_data[0] != 0) &&
+                     ((((MenuItemEntry*)g_item_slot_data[0])->attributes.packed & 0xFC00) != (((MenuItemEntry*)g_menu_equipment_base)->attributes.packed & 0xFC00))) ||
+                    ((g_item_slot_data[0] == 0) &&
+                     ((D_800F0C0C & 0xFC00) != (((MenuItemEntry*)g_menu_equipment_base)->attributes.packed & 0xFC00))))
                 {
                     if (menu_clear_pending_status() != 0)
                     {
@@ -8458,10 +8429,10 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
         }
 
         func_800A8FB4();
-        g_item_slot_flags.slot0 = 0;
-        g_item_slot_flags.slot1 = 0;
-        g_item_slot_flags.slot2 = 0;
-        g_item_slot_flags.slot3 = 0;
+        g_item_slot_flags[0] = 0;
+        g_item_slot_flags[1] = 0;
+        g_item_slot_flags[2] = 0;
+        g_item_slot_flags[3] = 0;
         return buf;
     }
 
@@ -8557,7 +8528,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
     if ((g_pad_input & 0x40) && (active != 0))
     {
         menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
-        state->unk0 = 3;
+        state->active = MENU_SLOT_STATE_CLOSING;
         return prim;
     }
 
@@ -8574,7 +8545,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
         {
             if (group_flags & bit_mask)
             {
-                if (state->sel_idx == (list_y >> 4))
+                if (state->navigation.fields.selected_index == (list_y >> 4))
                 {
                     selected_technique = technique_index + (group_index * MENU_SPECIAL_TECHNIQUES_PER_GROUP);
                 }
@@ -8590,7 +8561,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
     if ((g_pad_input & 0x220) && (active != 0))
     {
         if ((selected_technique / MENU_SPECIAL_TECHNIQUES_PER_GROUP) ==
-            (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
+            (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
         {
             u8* assignment_ptr = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
             u8* character_ctx;
@@ -8632,7 +8603,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
             character_ctx += g_menu_active_subtype;
             *(character_ctx + 0x609) = selected_technique % MENU_SPECIAL_TECHNIQUES_PER_GROUP;
             menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
-            state->unk0 = 3;
+            state->active = MENU_SLOT_STATE_CLOSING;
         }
         else
         {
@@ -8671,14 +8642,14 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
                         glyph_offset = *(u16*)((u8*)name_table + (technique_index * 2) + (group_index * (MENU_SPECIAL_TECHNIQUES_PER_GROUP * 2)));
                         glyph = name_table + glyph_offset;
                         if (group_index ==
-                            (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
+                            (s32)(((u32)(((MenuItemEntry*)g_menu_equipment_base)->attributes.packed) >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK))
                         {
                             glyph_color = 1;
                         }
                         prim = func_800A88A0(prim, ot, glyph, glyph_color, 0x10 - view_origin->x, relative_y - view_origin->y, 0);
                     }
                 }
-                if (state->sel_idx == (list_y >> 4))
+                if (state->navigation.fields.selected_index == (list_y >> 4))
                 {
                     selected_technique = technique_index + (group_index * MENU_SPECIAL_TECHNIQUES_PER_GROUP);
                 }
@@ -9170,7 +9141,7 @@ s32 menu_stage_best_equipment_for_slot0(void)
             pad_ctx = g_pad_ctx;
             func_800A8F8C((u8*)((g_menu_char_slot * 0x250) + (s32)pad_ctx) + 0x640, candidate);
             candidate->active = 0;
-            g_item_slot_data.slot0 = 0;
+            g_item_slot_data[0] = 0;
         }
         else
         {
@@ -9178,9 +9149,9 @@ s32 menu_stage_best_equipment_for_slot0(void)
             func_800A8F8C(swap_buffer, slot_buffer);
             func_800A8F8C(slot_buffer, candidate);
             func_800A8F8C(candidate, swap_buffer);
-            g_item_slot_data.slot0 = (u32)candidate;
+            g_item_slot_data[0] = (u32)candidate;
         }
-        g_item_slot_flags.slot0 = 1;
+        g_item_slot_flags[0] = 1;
         return 1;
     }
     return 0;
@@ -9220,7 +9191,7 @@ void* menu_find_best_equipment_for_slot0(void)
     {
         if ((equipment_index != 0) && (equipment->active != 0))
         {
-            item_attributes = equipment->attributes;
+            item_attributes = equipment->attributes.packed;
             if (item_attributes & MENU_ITEM_KIND_MASK)
             {
                 category_flag = ((item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + D_800F0BEC;
@@ -9243,7 +9214,7 @@ void* menu_find_best_equipment_for_slot0(void)
     {
         if (item->active != 0)
         {
-            item_attributes = item->attributes;
+            item_attributes = item->attributes.packed;
             if (!(item_attributes & MENU_ITEM_KIND_MASK) && !(category_mask & D_800F0BE0[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK]))
             {
                 item_value = item->stat_values[0];
@@ -9287,7 +9258,7 @@ s32 menu_stage_best_equipment_for_active_slot(void)
         pad_base = (u8*)g_pad_ctx;
         if (*(pad_base - (-((subtype_index << 6) + (g_menu_char_slot * 0x250))) + 0x640) == 0)
         {
-            slot_data = &g_item_slot_data.slot0;
+            slot_data = &g_item_slot_data[0];
             for (; slot_index < MENU_EQUIPMENT_SLOT_COUNT; slot_index += 1)
             {
                 if ((u32)candidate == slot_data[slot_index])
@@ -9302,7 +9273,7 @@ s32 menu_stage_best_equipment_for_active_slot(void)
         }
         else
         {
-            slot_data = &g_item_slot_data.slot0;
+            slot_data = &g_item_slot_data[0];
             for (; slot_index < MENU_EQUIPMENT_SLOT_COUNT; slot_index += 1)
             {
                 if ((u32)candidate == slot_data[slot_index])
@@ -9362,7 +9333,7 @@ void* menu_find_best_equipment_for_active_slot(void)
     {
         if ((slot_idx != (g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE)) && (equipment->active != 0))
         {
-            equipment_attributes = equipment->attributes;
+            equipment_attributes = equipment->attributes.packed;
             if (equipment_attributes & MENU_ITEM_KIND_MASK)
             {
                 category_flag = ((equipment_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK) + D_800F0BEC;
@@ -9382,7 +9353,7 @@ void* menu_find_best_equipment_for_active_slot(void)
     {
         if (item->active != 0)
         {
-            item_attributes = item->attributes;
+            item_attributes = item->attributes.packed;
             if (((item_attributes & MENU_ITEM_KIND_MASK) == 0x100) && !(slot_idx & D_800F0BEC[(item_attributes >> MENU_ITEM_CATEGORY_SHIFT) & MENU_ITEM_CATEGORY_MASK]))
             {
                 total = item->stat_values[0] + item->stat_values[1] + item->stat_values[2] + item->stat_values[3];
