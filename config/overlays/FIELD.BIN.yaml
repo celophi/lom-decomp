@@ -56,6 +56,8 @@ segments:
       - [0xCED, rodata, unk2_rodata_1]
       - [0xCF1, .rodata, func_8008B288]
       - [0xF2D, rodata, unk2_rodata_2]
+      - [0x1759, .rodata, func_800A838C]
+      - [0x1779, rodata, unk2_rodata_2_after_a838c]
       - [0x1941, .rodata, func_800B543C]
       - [0x19B9, rodata, unk2_rodata_3]
       - [0x19F1, .rodata, func_800B84B4]
@@ -292,7 +294,9 @@ segments:
       - [0x57849, c, field69]                      # gcc272_cdk, func_800A74B8
       - [0x57879, c, unk2_b_split009]              # gcc272_cdk, func_800A74E8
       - [0x579DD, c, func_800A764C]                 # gcc272_cdk, 75.63% (see src file note)
-      - [0x57AB5, c, unk2_b_split009_b]             # gcc272_cdk, func_800A7724
+      - [0x57AB5, c, unk2_b_split009_b_before_a838c] # gcc272_cdk, func_800A7724
+      - [0x5871D, c, func_800A838C]                 # gcc272_cdk, 100%
+      - [0x588B5, c, unk2_b_split009_b_after_a838c] # gcc272_cdk, func_800A8524
       - [0x58C11, c, field70]                      # gcc272_cdk, func_800A8880
       - [0x58C31, c, func_800A88A0]                # gcc272_cdk, 100%
       - [0x58E09, c, field289]                     # gcc272_cdk, func_800A8A78
