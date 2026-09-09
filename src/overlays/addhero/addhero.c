@@ -174,6 +174,7 @@ typedef struct
 
 /* --- text renderer (addhero_draw_cached_text family) --- */
 
+/** @brief Cached character code and flags recording use in the current frame. */
 typedef union
 {
     u32 raw;
@@ -194,6 +195,8 @@ typedef struct
 #define GLYPH_CACHE_COLUMNS 16
 #define GLYPH_CACHE_ROW_MASK 0xF0
 #define GLYPH_RASTER_BYTES 0x80
+#define GLYPH_RASTER_BUFFER_BYTES 0x8000
+#define GLYPH_CACHE_USED 0x10000
 #define GPU_ADDR_MASK 0xFFFFFF
 #define GPU_TAG_HIGH_MASK 0xFF000000
 
@@ -4674,13 +4677,13 @@ s32 addhero_emit_glyph_sprite(AddheroGlyphSprite *sprite, s32 *ot, s32 cache_slo
  */
 void addhero_begin_glyph_cache_frame(void)
 {
-    s32 i;
-    s32 *p;
+    s32 slot;
+    AddheroGlyphCacheEntry *entry;
 
     g_addhero_glyph_raster_cursor = g_addhero_glyph_raster_buffer;
-    for (i = 0, p = (s32 *)g_addhero_glyph_cache; i < 0x100; i++, p++)
+    for (slot = 0, entry = g_addhero_glyph_cache; slot < GLYPH_CACHE_SLOTS; slot++, entry++)
     {
-        *p = (u16)*p;
+        entry->raw = (u16)entry->raw;
     }
 }
 
@@ -4691,18 +4694,19 @@ void addhero_begin_glyph_cache_frame(void)
  */
 void addhero_evict_unused_glyphs(void)
 {
-    s32 i;
-    s32 *p;
-    s32 flag;
+    s32 slot;
+    AddheroGlyphCacheEntry *entry;
 
-    i = 0;
-    flag = 0x10000;
-    p = (s32 *)g_addhero_glyph_cache;
-    for (; i < 0x100; i++, p++)
+    s32 used_flag;
+
+    slot = 0;
+    used_flag = GLYPH_CACHE_USED;
+    entry = g_addhero_glyph_cache;
+    for (; slot < GLYPH_CACHE_SLOTS; slot++, entry++)
     {
-        if (!(*p & flag))
+        if (!(entry->raw & used_flag))
         {
-            *p = 0;
+            entry->raw = 0;
         }
     }
 }
@@ -4714,23 +4718,23 @@ void addhero_evict_unused_glyphs(void)
  */
 void addhero_reset_glyph_cache(void)
 {
-    s32 i;
-    s32 *p;
-    u8 *q;
+    s32 slot;
+    AddheroGlyphCacheEntry *entry;
+    u8 *raster;
 
-    i = 0xFF;
-    p = (s32 *)g_addhero_glyph_cache;
-    p += 0xFF;
-    for (; i >= 0; i--, p--)
+    slot = GLYPH_CACHE_SLOTS - 1;
+    entry = g_addhero_glyph_cache;
+    entry += GLYPH_CACHE_SLOTS - 1;
+    for (; slot >= 0; slot--, entry--)
     {
-        *p = 0;
+        entry->raw = 0;
     }
 
-    i = 0;
-    q = g_addhero_glyph_raster_buffer;
-    for (; i <= 0x7FFF; i++)
+    slot = 0;
+    raster = g_addhero_glyph_raster_buffer;
+    for (; slot < GLYPH_RASTER_BUFFER_BYTES; slot++)
     {
-        *(u8 *)(i + (s32)q) = 0;
+        *(slot + raster) = 0;
     }
 }
 

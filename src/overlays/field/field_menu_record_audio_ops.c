@@ -1,4 +1,13 @@
-#include "common.h"
+#include "main.h"
+
+/**
+ * @brief Reset the current music track index to zero.
+ */
+void field_reset_music_track_index(void)
+{
+    g_music_track_index = 0;
+}
+
 
 extern u8 D_80122C19;
 extern u8 D_80122C11;
@@ -6,7 +15,10 @@ extern u8 g_menuLayoutBuffer[];
 extern s32 func_800BD414(s32 arg0, s32 arg1);
 extern void func_800AD194(s32 arg0);
 
-/** @see decomp.me (100%) */
+/**
+ * @brief Clear the selected record flag or send audio command 0x4B.
+ * @see decomp.me (100%)
+ */
 void func_800C92B8(void)
 {
     s32 index;
@@ -26,7 +38,10 @@ void func_800C92B8(void)
     }
 }
 
-/** @see decomp.me (100%) */
+/**
+ * @brief Update the selected record value or send audio command 0x4C.
+ * @see decomp.me (100%)
+ */
 void func_800C9330(void)
 {
     s32 index;

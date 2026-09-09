@@ -617,44 +617,13 @@ segments:
       - [0x76E21, c, field270]                  # gcc280_g0, func_800C6A90
       - [0x76E81, c, unk2_b_split124]           # gcc272_cdk, func_800C6AF0
       - [0x77011, c, field_menu_slot_ops]       # gcc280_g0, func_800C6C80 .. func_800C7014 (9 funcs, 100%)
-      - [0x77421, c, func_800C7090]             # gcc280_g0, 100%
-      - [0x774F9, c, field_gosub_result_ops]    # gcc280_g0, func_800C7168 .. func_800C72E4 (6 funcs, 100%)
-      - [0x776D1, c, func_800C7340] # gcc280_g0, 94.154930% WIP
-      - [0x777ED, c, field187]                     # gcc272_cdk, func_800C745C
-      - [0x77825, c, func_800C7494]                 # gcc280_g0, 100%
-      - [0x778BD, c, field188]                     # gcc280_g0, func_800C752C
-      - [0x778E9, c, func_800C7558]                # gcc280_g0, func_800C7558 + func_800C75C0 (100%)
-      - [0x779B9, c, field_load_selected_small_history_value] # gcc272_cdk, func_800C7628
-      - [0x779FD, c, func_800C766C] # gcc280_g0, 93.102560% WIP
-      - [0x77BD1, c, func_800C7840] # gcc280_g0, 86.787400% WIP
-      - [0x77DCD, c, func_800C7A3C] # gcc280_g0, 100.000000%
-      - [0x78019, c, field_menu_action_slots]   # gcc280_g0, func_800C7C88 + func_800C7CF8 + func_800C7D5C (100%)
-      - [0x78149, c, func_800C7DB8]              # gcc280_g0, 100%
-      - [0x782D5, c, func_800C7F44]                 # gcc272_cdk, 100%
-      - [0x783A5, c, func_800C8014]                 # gcc280_g0, 100%
-      - [0x7844D, c, func_800C80BC] # gcc272_cdk, 92.303370% WIP
-      - [0x785B1, c, field190]                     # gcc280_g0, func_800C8220
-      - [0x785F1, c, func_800C8260]                # gcc280_g0, 100%
-      - [0x7876D, c, unk2_b_split082_after_8260]   # gcc272_cdk, func_800C83DC
-      - [0x78B45, c, field_reset_menu_action_slot] # gcc272_cdk, field_reset_menu_action_slot (100%)
-      - [0x78BC1, c, unk2_b_split082_b]            # gcc280_g0, func_800C8830, 100%
-      - [0x78CC9, c, field191]                     # gcc280_g0, func_800C8938
-      - [0x78CF5, c, func_800C8964]             # gcc280_g0, 100%
-      - [0x78DBD, c, unk2_b_split083]           # gcc272_cdk, func_800C8A2C .. func_800C8E2C
-      - [0x792DD, c, field271]                  # gcc280_g0, func_800C8F4C
-      - [0x79339, c, func_800C8FA8]             # gcc280_g0, 100%
-      - [0x793ED, c, func_800C905C] # gcc280_g0, 95.000000% WIP
-      - [0x7963D, c, field_reset_music_track_index] # gcc272_cdk, field_reset_music_track_index
-      - [0x79649, c, field303]                     # gcc280_g0, func_800C92B8 + func_800C9330 + func_800C93B4 (100%)
-      - [0x79795, c, field193]                     # gcc280_g0, func_800C9404
-      - [0x797D9, c, field194]                     # gcc272_cdk, func_800C9448
-      - [0x79885, c, func_800C94F4]                # gcc280_g0, 100%
-      - [0x799CD, c, field197]                     # gcc280_g0, func_800C963C
-      - [0x79A15, c, field198]                     # gcc272_cdk, func_800C9684
-      - [0x79A55, c, func_800C96C4] # gcc280_g0, 90.465515% WIP
-      - [0x79C25, c, field199]                     # gcc280_g0, func_800C9894
-      - [0x79C65, c, field296]                  # gcc280_g0, func_800C98D4
-      - [0x79CF1, c, func_800C9960] # gcc280_g0, 85.320260% WIP
+      - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, C7340 94.154930% WIP
+      - [0x779FD, c, field_menu_action_runtime] # gcc280_g0, func_800C766C .. action-slot reset; 14 funcs, four WIPs
+      - [0x78BC1, c, field_menu_record_setup] # gcc280_g0, func_800C8830 .. func_800C8964; three funcs, 100%
+      - [0x78DBD, c, field_menu_record_transfer] # gcc280_g0, func_800C8A2C .. func_800C905C; three WIPs
+      - [0x7963D, c, field_menu_record_audio_ops] # gcc280_g0, music reset + record/audio updates; four funcs, 100%
+      - [0x79795, c, field_menu_record_state] # gcc280_g0, inferred related-function unit; see boundary report
+      - [0x79A55, c, field_menu_attribute_ops] # gcc280_g0, inferred related-function unit; see boundary report
       - [0x79F55, c, field_menu_record_ops]     # gcc280_g0, func_800C9BC4 .. func_800C9DCC (7 funcs, 100%)
       - [0x7A265, c, field_select_distance_bucket] # gcc272_cdk, func_800C9ED4, 85.865920% WIP; provisional boundary
       - [0x7A531, c, field_layout_slot_state] # gcc272_cdk, func_800CA1A0 + func_800CA1E0; 100% / 85.166664%
