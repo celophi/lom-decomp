@@ -461,7 +461,7 @@ segments:
       - [0x69215, c, unk2_b_split031_mid]          # gcc272_cdk, remaining asm-derived C
       - [0x69555, c, field_script_op_0e]           # gcc280_g0, field_script_op_0e
       - [0x69609, c, func_800B9278]                # gcc280_g0, 100%
-      - [0x697AD, c, unk2_b_split031_tail_before_95ec_tail] # gcc272_cdk, func_800B941C
+      - [0x697AD, c, func_800B941C] # gcc272_cdk, 80.525860% WIP
       - [0x6997D, c, func_800B95EC]                 # gcc280_g0, 100%
       - [0x69B0D, c, func_800B977C]                 # gcc280_g0, 100%
       - [0x69BF9, c, func_800B9868]             # gcc280_g0, 100%
