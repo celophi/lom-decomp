@@ -1301,7 +1301,7 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     Struct_D800FDF58 *scan;
     s32 light_off;
     s32 color_off;
-    s32 scan_index;
+    u8 *color_row;
     s32 scan_off;
     s32 *sxy;
     SVECTOR *normals;
@@ -1309,13 +1309,12 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     s16 *screen;
     u8 *face;
     s32 mesh_off;
+    s32 mesh_bytes;
     s32 count;
     s32 kind;
-    s32 *base;
     s32 sx, sy, rx, ry, rz, sz;
 
     mp = &tmp;
-    base = arg3_base;
     mp = &mtx;
     { FieldActorState *actor_base = g_field_actor_slots; part = &actor_base[rec->unk22].unk0[rec->unk23]; actor = &actor_base[rec->unk22]; }
     func_80082C90(actor, rec, part, mp, &tmp);
@@ -1334,17 +1333,18 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     part_iter = (u8 *)part;
     do {
         u8 light_id = part_iter[0x23];
-        scan_index = 0;
+        count = 0;
         if (light_id < 8) {
             scan = D_800FF658;
             scan_off = 0;
 scan_loop:
             if (light_id != scan->unk23 || rec->unk22 != scan->unk22) {
                 scan++;
-                scan_index++;
+                count++;
                 scan_off += 0x54;
-                if (scan_index < 0x100) goto scan_loop;
+                if (count < 0x100) goto scan_loop;
             } else {
+                u8 *found_row;
                 RotMatrix_gte((SVECTOR *)((u8 *)&D_800FF668 + scan_off), &tmp);
                 RotMatrixZ(rec->unk32 * 0x10, &tmp);
                 RotMatrixY(rec->unk33 * 0x10, &tmp);
@@ -1355,27 +1355,30 @@ scan_loop:
                 gte_ldv0(&dir);
                 gte_rtv0();
                 gte_stsv(&out);
+                found_row = (u8 *)(color_off + (s32)pad);
                 {
                     s16 *light_row = (s16 *)((u8 *)&light_mtx + light_off);
                     light_row[0] = out.vx;
                     light_row[1] = out.vy;
                     light_row[2] = out.vz;
                 }
-                *(s16 *)((u8 *)pad + color_off + 0x70) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkE * 0x10;
-                *(s16 *)((u8 *)pad + color_off + 0x76) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
-                *(s16 *)((u8 *)pad + color_off + 0x7C) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
+                *(s16 *)(found_row + 0x70) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkE * 0x10;
+                *(s16 *)(found_row + 0x76) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
+                *(s16 *)(found_row + 0x7C) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
             }
-        }
-        if (light_id >= 8 || scan_index == 0x100) {
-            *(s16 *)((u8 *)pad + color_off + 0x7C) = 0;
-            *(s16 *)((u8 *)pad + color_off + 0x76) = 0;
-            *(s16 *)((u8 *)pad + color_off + 0x70) = 0;
+            if (count == 0x100) goto zero_light;
+        } else {
+zero_light:
+            color_row = (u8 *)(color_off + (s32)pad);
+            *(s16 *)(color_row + 0x7C) = 0;
+            *(s16 *)(color_row + 0x76) = 0;
+            *(s16 *)(color_row + 0x70) = 0;
             *(s16 *)((u8 *)&light_mtx + light_off) = 0;
         }
         color_off += 2;
         light_off += 6;
         part_iter++;
-    } while (part_iter < (u8 *)part + 3);
+    } while ((s32)part_iter < (s32)part + 3);
 
     gte_SetLightMatrix(&light_mtx);
     gte_SetColorMatrix(&color_mtx);
@@ -1383,7 +1386,8 @@ scan_loop:
     normals = D_80105870;
     depths = D_80105878;
     sx = D_800F22A0;
-    mesh_off = part_index * 0x18;
+    mesh_bytes = part_index * 0x18;
+    mesh_off = mesh_bytes;
     { s32 fa = mesh_off; fa += (s32)actor->unk18; face = *(u8 **)(fa + 0x14); }
     screen[0] = 0xA0 + D_800F22A0 / 256 + rec->unk0 / 256;
     screen[1] = 0x70 + D_800F22A4 / 256 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512;
@@ -1422,7 +1426,7 @@ scan_loop:
                 if (opz > 0) {
                     gte_ldv0(normals);
                     gte_ncs();
-                    gte_strgb(p - 0x32);
+                    gte_strgb((u8 *)cursor + 4);
                     *(s32 *)(p - 0x2E) = sxy[0];
                     *(s32 *)(p - 0x26) = sxy[1];
                     *(s32 *)(p - 0x1E) = sxy[2];
@@ -1447,19 +1451,19 @@ scan_loop:
                     idx = d + off;
                     if (idx < 0) {
                         p += 0x20;
-                        *cursor = (*cursor & highmask) | (base[0] & lowmask);
-                        base[0] = (base[0] & highmask) | ((s32)cursor & lowmask);
+                        *cursor = (*cursor & highmask) | (arg3_base[0] & lowmask);
+                        arg3_base[0] = (arg3_base[0] & highmask) | ((s32)cursor & lowmask);
                         cursor = (s32 *)((u8 *)cursor + 0x20);
                     } else if (idx >= 0x1000) {
                         p += 0x20;
-                        *cursor = (*cursor & highmask) | (base[0xFFF] & lowmask);
-                        base[0xFFF] = (base[0xFFF] & highmask) | ((s32)cursor & lowmask);
+                        *cursor = (*cursor & highmask) | (arg3_base[0xFFF] & lowmask);
+                        arg3_base[0xFFF] = (arg3_base[0xFFF] & highmask) | ((s32)cursor & lowmask);
                         cursor = (s32 *)((u8 *)cursor + 0x20);
                     } else {
                         s32 *entry;
                         p += 0x20;
-                        *cursor = (*cursor & highmask) | (base[idx] & lowmask);
-                        entry = &base[(rec->unk8 >> 7) + *depths];
+                        *cursor = (*cursor & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)arg3_base))) & lowmask);
+                        { s32 rd = rec->unk8 >> 7; s32 roff = *depths; entry = (s32 *)((roff << 2) + ((rd << 2) + (s32)arg3_base)); }
                         *entry = (*entry & highmask) | ((s32)cursor & lowmask);
                         cursor = (s32 *)((u8 *)cursor + 0x20);
                     }
@@ -1520,23 +1524,23 @@ scan_loop:
                         s32 idx = d + off;
                         if (idx < 0) {
                             s32 addr;
-                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (base[0] & lowmask);
+                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (arg3_base[0] & lowmask);
                             addr = (s32)basecur & lowmask;
                             basecur += 0x28;
-                            base[0] = (base[0] & highmask) | addr;
+                            arg3_base[0] = (arg3_base[0] & highmask) | addr;
                         } else if (idx >= 0x1000) {
                             s32 addr;
-                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (base[0xFFF] & lowmask);
+                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (arg3_base[0xFFF] & lowmask);
                             addr = (s32)basecur & lowmask;
                             basecur += 0x28;
-                            base[0xFFF] = (base[0xFFF] & highmask) | addr;
+                            arg3_base[0xFFF] = (arg3_base[0xFFF] & highmask) | addr;
                         } else {
                             s32 addr;
                             s32 *entry;
                             addr = (s32)basecur & lowmask;
-                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)base))) & lowmask);
+                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)arg3_base))) & lowmask);
                             { s32 rd2; s32 roff2; rd2 = rec->unk8 >> 7; roff2 = *depths;
-                                entry = (s32 *)((roff2 << 2) + ((rd2 << 2) + (s32)base)); }
+                                entry = (s32 *)((roff2 << 2) + ((rd2 << 2) + (s32)arg3_base)); }
                             basecur += 0x28;
                             *entry = (*entry & highmask) | addr;
                         }
@@ -1591,19 +1595,19 @@ scan_loop:
                     d = rec->unk8 >> 7;
                     idx = d + off;
                     if (idx < 0) {
-                        *p = (*p & highmask) | (base[0] & lowmask);
-                        base[0] = (base[0] & highmask) | ((s32)p & lowmask);
+                        *p = (*p & highmask) | (arg3_base[0] & lowmask);
+                        arg3_base[0] = (arg3_base[0] & highmask) | ((s32)p & lowmask);
                         p = (s32 *)((u8 *)p + 0x14);
                     } else if (idx >= 0x1000) {
-                        *p = (*p & highmask) | (base[0xFFF] & lowmask);
-                        base[0xFFF] = (base[0xFFF] & highmask) | ((s32)p & lowmask);
+                        *p = (*p & highmask) | (arg3_base[0xFFF] & lowmask);
+                        arg3_base[0xFFF] = (arg3_base[0xFFF] & highmask) | ((s32)p & lowmask);
                         p = (s32 *)((u8 *)p + 0x14);
                     } else {
-                        *p = (*p & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)base))) & lowmask);
+                        *p = (*p & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)arg3_base))) & lowmask);
                         {
                             s32 rd = rec->unk8 >> 7;
                             s32 roff = *depths;
-                            s32 *entry = (s32 *)((roff << 2) + ((rd << 2) + (s32)base));
+                            s32 *entry = (s32 *)((roff << 2) + ((rd << 2) + (s32)arg3_base));
                             *entry = (*entry & highmask) | ((s32)p & lowmask);
                         }
                         p = (s32 *)((u8 *)p + 0x14);
@@ -1626,19 +1630,19 @@ scan_loop:
                         s32 *next;
                         if (idx < 0) {
                             next = (s32 *)((u8 *)p + 8);
-                            *p = (*p & highmask) | (base[0] & lowmask);
-                            base[0] = (base[0] & highmask) | ((s32)p & lowmask);
+                            *p = (*p & highmask) | (arg3_base[0] & lowmask);
+                            arg3_base[0] = (arg3_base[0] & highmask) | ((s32)p & lowmask);
                         } else if (idx >= 0x1000) {
                             next = (s32 *)((u8 *)p + 8);
-                            *p = (*p & highmask) | (base[0xFFF] & lowmask);
-                            base[0xFFF] = (base[0xFFF] & highmask) | ((s32)p & lowmask);
+                            *p = (*p & highmask) | (arg3_base[0xFFF] & lowmask);
+                            arg3_base[0xFFF] = (arg3_base[0xFFF] & highmask) | ((s32)p & lowmask);
                         } else {
                             next = (s32 *)((u8 *)p + 8);
-                            *p = (*p & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)base))) & lowmask);
+                            *p = (*p & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)arg3_base))) & lowmask);
                             {
                                 s32 rd = rec->unk8 >> 7;
                                 s32 roff = *depths;
-                                s32 *entry = (s32 *)((roff << 2) + ((rd << 2) + (s32)base));
+                                s32 *entry = (s32 *)((roff << 2) + ((rd << 2) + (s32)arg3_base));
                                 *entry = (*entry & highmask) | ((s32)p & lowmask);
                             }
                         }
