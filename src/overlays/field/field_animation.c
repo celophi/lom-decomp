@@ -1366,9 +1366,9 @@ void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
                 col *= 8;
                 do { mid = x + position / 256; } while (0);
                 x = mid + col; }
-                row = part->def->u.b.rows * 8;
+                att = part->def->u.b.rows * 8;
                 y = y + ((obj->y + part->y) * 2 - (obj->z + part->z)) / 512;
-                cam_z = row - 0xE0;
+                cam_z = att - 0xE0;
                 y = y - cam_z;
                 if (x < -0x20)
                 {

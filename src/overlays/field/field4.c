@@ -2319,12 +2319,13 @@ extern Struct_D800EB254 D_800EB254[];
 extern u8 D_800FDA81;
 
 Struct_D800FDF58* func_80087C9C(s32);
+void func_8009C2E0(Struct_D800FDF58* entry, s32* args);
 
 /**
  * @brief Bind a resource to actor slot @p arg2 + 1 and bring the slot online.
  *
  * Marks the slot in use, records its source kind, derives the resource id for
- * that kind, loads it, seeds the actor's buffer pointers from either a cleared
+ * that kind, loads it, seeds the actor's position from either a cleared
  * state (arg0 == -1), the template at D_800FDF58[0] (arg0 == -2), or a located
  * donor slot, then resets the render state and notifies the audio side.
  *
@@ -2334,41 +2335,16 @@ Struct_D800FDF58* func_80087C9C(s32);
  * @param arg2 Slot index minus one.
  * @return 0 if the slot was already in use, -1 if the lookup failed, else 1.
  *
- * @note NOT MATCHED. Instruction count and frame are exact. Required to match,
- *       each measured by reverting it:
- *       - `id` is s32, not s16 (+7 exact rows);
- *       - the mid-function switch reads through a pointer scoped to the switch
- *         ALONE (+4); widening that pointer to cover the `unk2` store before it
- *         or the `unk254` store after it both measure far worse;
- *       - `arg1` is s32, not u8, or the 0x41 test emits andi+sltiu (+2);
- *       - D_800FDF58[2] goes through its own pointer or the +0xA8 and +0x1C
- *         fold into one displacement (+7);
- *       - D_800EB254 has a 4-byte stride read as s16, not an s16 array;
- *       - g_pad_ctx is loaded ONCE into a local and reused at the func_8009C2E0
- *         call, which is what brings the insn count to exactly 295;
- *       - the post-call unk1C update indexes D_800FDF58[slot] directly and
- *         assigns `pad` inside the expression (+7); an `entry` pointer there
- *         makes the arg0 == -2 arm's pointer a global pseudo and its index
- *         chain leaves s0;
- *       - in the lookup arm, unk21 is stored after unk8 (+2).
- *       Residue is 19 rows: the ~0x1FF constant is materialized early, and
- *       in the arg0 == -2 arm the template pointer takes v1 instead of a0 so
- *       the D_800EB254 lui cannot fill the unk8 load delay (+1 nop).
- *       See working/func_8006AD04/STATUS.md.
- * @see decomp.me (97.53%) TODO
  */
 s32 func_8006AD04(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 slot = arg2 + 1;
-    Struct_D800FDF58* entry;
     Struct_D800FDF58* found;
-    s32 args[3];
-    Struct_D800EB254* def;
     D_800FD818_type* s;
-    Struct_D800FDF58* two;
     u8* pad;
-    Struct_D800FDF58* first;
     s32 id;
+    s32 flags;
+    u8* pad_slot;
 
     if (D_800FD818[slot].u0.b.unk0 & 1)
     {
@@ -2417,11 +2393,14 @@ s32 func_8006AD04(s32 arg0, s32 arg1, s32 arg2)
     func_8006A9A4(slot, slot, id, 0);
     func_8006B4D0(slot, slot);
 
-    D_800FDF58[slot].unk1C = (D_800FDF58[slot].unk1C & ~0x1FF) | (((pad = (u8*)g_pad_ctx)[(slot * 0x250) + 0x608] >> 7) ^ 1);
+    flags = D_800FDF58[slot].unk1C;
+    pad = g_pad_ctx;
+    pad_slot = pad + slot * 0x250;
+    D_800FDF58[slot].unk1C = (flags & ~0x1FF) | ((pad_slot[0x608] >> 7) ^ 1);
 
     if ((slot == 2) && (arg1 >= 0x41))
     {
-        two = &D_800FDF58[2];
+        Struct_D800FDF58* two = &D_800FDF58[2];
         two->unk1C = (two->unk1C & 0xFFFCFFFF) | (((pad[0x29D7] + 1) & 3) << 16);
     }
     else
@@ -2438,16 +2417,23 @@ s32 func_8006AD04(s32 arg0, s32 arg1, s32 arg2)
     }
     else if (arg0 == -2)
     {
-        first = D_800FDF58;
+        Struct_D800FDF58* entry;
+        Struct_D800FDF58* template;
+        Struct_D800EB254* definition;
+        Struct_D800EB254* definitions;
+        s32 args[3];
+
+        template = D_800FDF58;
         entry = &D_800FDF58[slot];
-        entry->unk0 = first->unk0;
-        entry->unk4 = first->unk4;
-        entry->unk8 = first->unk8;
-        def = &D_800EB254[first->unk1B >> 5];
-        args[0] = def->unk0;
+        entry->unk0 = template->unk0;
+        entry->unk4 = template->unk4;
+        entry->unk8 = template->unk8;
+        definitions = D_800EB254;
+        definition = &definitions[template->unk1B >> 5];
+        args[0] = definition->unk0;
         args[1] = 0;
-        args[2] = def->unk0;
-        func_8009C2E0(entry, args, pad);
+        args[2] = definition->unk0;
+        func_8009C2E0(entry, args);
         entry->unk21 = 0;
     }
     else
