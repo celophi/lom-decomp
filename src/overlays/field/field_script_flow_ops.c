@@ -1,5 +1,95 @@
 #include "field_script.h"
 void akao_set_song_params(s32, s32, s32, s32);
+void func_800B820C();
+void func_800B8308();
+void func_800BD520(s32, s32, s32);
+s32 func_800C1B60(s32);
+extern void (*g_field_script_op_table[])();
+
+/** @brief Run a script until it yields, preserving any enclosing script context. */
+void field_script_run(FieldScriptContext *arg0)
+{
+    s32 temp_v0_2;
+    u32 temp_a0;
+    u32 temp_v0;
+    u32 temp_v1;
+    FieldScriptContext *temp_s2;
+    u8 *temp_t0;
+    u8 temp_v1_2;
+    FieldScriptRecordState *temp_a1;
+    FieldScriptRecordState *temp_t1;
+
+    temp_s2 = g_field_script;
+    g_field_script = arg0;
+    func_800BD520(g_field_script->status.owner_id, 0xD000, ((u8 *)func_800C1B60(arg0->status.owner_id))[5]);
+    temp_a1 = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+    temp_v1 = temp_a1->wait;
+    temp_v0 = temp_v1 >> 1;
+    if (temp_v0 != 0)
+    {
+        temp_a1->wait = (u32) ((temp_v1 & 1) | ((temp_v0 - 1) * 2));
+    }
+    else
+    {
+        temp_v0_2 = (s32) g_field_script->status.word | 0x80000000;
+        g_field_script->status.word = temp_v0_2;
+        if (temp_v0_2 < 0)
+        {
+loop_5:
+            temp_t1 = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+            temp_t0 = temp_t1->pc;
+            temp_v1_2 = *temp_t0;
+            temp_a0 = temp_v1_2 & 0xFF;
+            if (temp_a0 < 0x40U)
+            {
+                g_field_script_op_table[temp_v1_2 & 0xFF](temp_a0);
+                goto block_15;
+            }
+            if ((u32) ((temp_v1_2 - 0x40) & 0xFF) < 0x40U)
+            {
+                if (temp_a0 < 0x60U)
+                {
+                    func_800B820C(0x8001);
+                    goto block_15;
+                }
+                goto block_2;
+            }
+            if ((u32) ((temp_v1_2 + 0x80) & 0xFF) < 0x40U)
+            {
+                if (temp_a0 < 0xD0U)
+                {
+                    func_800B8308(0x8001);
+                    goto block_15;
+                }
+block_2:
+                temp_t1->pc = (u8 *) (temp_t0 + 1);
+                akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, *temp_t0);
+                g_field_script->status.word = (s32) ((s32) g_field_script->status.word & 0x7FFFFFFF);
+            }
+            else
+            {
+                if (temp_a0 >= 0xC0U)
+                {
+                    temp_t1->pc = (u8 *) (temp_t0 + 1);
+                    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, *temp_t0);
+                    g_field_script->status.word = (s32) ((s32) g_field_script->status.word & 0x7FFFFFFF);
+                }
+block_15:
+                if ((s32) g_field_script->status.word < 0)
+                {
+                    goto loop_5;
+                }
+            }
+        }
+    }
+    if (temp_s2 != NULL)
+    {
+        g_field_script = temp_s2;
+    }
+}
+
+
+void akao_set_song_params(s32, s32, s32, s32);
 
 typedef struct
 {

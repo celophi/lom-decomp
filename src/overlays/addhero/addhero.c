@@ -2418,31 +2418,31 @@ void addhero_enable_choice_toggle(void)
  */
 s32 addhero_draw_choice_prompt(s32 prim, s32* ot, s32 x, s32 y)
 {
-    u8* p;
-    u8* base;
-    s32 g1;
-    s32 g2;
-    s32 hi;
-    s32 a3;
+    u8* offset_bytes;
+    u8* glyph_base;
+    u8* first_glyph;
+    u8* second_glyph;
+    s32 offset_high;
+    s32 palette;
 
-    p = (u8*)&g_text_choice_glyph_offsets;
-    hi = p[1] << 8;
-    base = p - 0x36;
-    a3 = 4;
-    g1 = p[0] + (hi + (s32)base);
+    offset_bytes = g_text_choice_glyph_offsets;
+    offset_high = offset_bytes[1] << 8;
+    glyph_base = offset_bytes - 0x36;
+    palette = 4;
+    first_glyph = (u8*)(offset_bytes[0] + (offset_high + (s32)glyph_base));
     if (g_addhero_choice_toggle != 0)
     {
-        a3 = 5;
+        palette = 5;
     }
-    prim = func_800A88A0(prim, ot, (void*)g1, a3, x - 0x10, y, 1);
-    a3 = 4;
-    g2 = base[0x38] + ((base[0x39] << 8) + (s32)base);
+    prim = func_800A88A0(prim, ot, first_glyph, palette, x - 0x10, y, 1);
+    palette = 4;
+    second_glyph = (u8*)(glyph_base[0x38] + ((glyph_base[0x39] << 8) + (s32)glyph_base));
     if (g_addhero_choice_toggle == 0)
     {
-        a3 = 5;
+        palette = 5;
     }
-    prim = func_800A88A0(prim, ot, (void*)g2, a3, x + 8, y, 0);
-    if (g_pad_input & 0xA000)
+    prim = func_800A88A0(prim, ot, second_glyph, palette, x + 8, y, 0);
+    if (g_pad_input & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
     {
         g_addhero_choice_toggle ^= 1;
         play_menu_sfx(0x7D, 0x80);
@@ -2480,18 +2480,15 @@ s32 addhero_validate_save_blob(u8* base)
 s32 addhero_compute_save_checksum(u8* data)
 {
     s32 sum;
-    u32 i;
-    u8* p;
+    u32 bytes_read;
 
-    p = data;
     sum = 0;
-    i = 0;
+    bytes_read = 0;
     do
     {
-        i++;
-        sum += *p;
-        p++;
-    } while (i < ADDHERO_SAVE_CHECKSUM_BYTES);
+        bytes_read++;
+        sum += *data++;
+    } while (bytes_read < ADDHERO_SAVE_CHECKSUM_BYTES);
     return (sum * 2) + ADDHERO_SAVE_CHECKSUM_BIAS;
 }
 
@@ -2595,15 +2592,15 @@ void addhero_hex_nibble_to_ascii(s8* out, s32 value)
 {
     if (value < 10)
     {
-        *out = value + 0x30;
+        *out = value + '0';
     }
     else if (value < 16)
     {
-        *out = value + 0x37;
+        *out = value + ('A' - 10);
     }
     else
     {
-        *out = 0x5F;
+        *out = '_';
     }
 }
 
@@ -2800,24 +2797,14 @@ s32 addhero_parse_entry_fields(void)
 s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
 {
     s32* card_values;
-    s32* entry_value;
-    s32* rank_ptr;
     s32* previous_value;
     s32* previous_rank;
     s32* base_rank;
-    s32* current_value;
-    s32* max_ptr;
-    s32* field_base;
-    s32* field_table;
     s32 slot;
-    s32* out_ptr;
-    struct DIRENTRY* entry;
     s32 rank_value;
     s32 entry_index;
     s32 selection;
-    s32 count;
     s32 maximum_suffix;
-    s32 greater_count;
     s32 previous_index;
 
     addhero_parse_entry_fields();
@@ -2829,6 +2816,11 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     rank_value = 1;
     if (g_addhero_entry_state > 0)
     {
+        s32* entry_value;
+        s32* rank_ptr;
+        s32* field_table;
+        s32 count;
+
         count = g_addhero_entry_state;
         base_rank = &g_addhero_entry_ranks[0];
         rank_ptr = base_rank;
@@ -2854,9 +2846,13 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
                 }
                 else
                 {
+                    s32 greater_count;
+
                     greater_count = previous_index;
                     if (entry_index > 0)
                     {
+                        s32* current_value;
+
                         current_value = entry_value;
                         previous_rank = base_rank;
                         previous_value = card_values;
@@ -2902,6 +2898,8 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     selection = 0;
     if (g_addhero_entry_state > 0)
     {
+        s32* max_ptr;
+        s32* field_base;
         s32 max_count;
         max_count = g_addhero_entry_state;
         slot = g_addhero_card_slot;
@@ -2922,6 +2920,9 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     g_addhero_entry_value_limit = rank_value + 1;
     if (g_addhero_entry_state > 0)
     {
+        s32* out_ptr;
+        struct DIRENTRY* entry;
+
         out_ptr = &g_addhero_entry_suffix_values[0];
         entry = g_addhero_entries[0];
     loop_20:

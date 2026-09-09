@@ -1,5 +1,8 @@
 #include "addhero_internal.h"
 
+#define GLYPH_CHAR_TABLE_ROW_BYTES 33
+#define GLYPH_CHAR_TABLE_PAGE_BYTES (16 * GLYPH_CHAR_TABLE_ROW_BYTES)
+
 #define GLYPH_CACHE_SLOTS 0x100
 #define GLYPH_CACHE_COLUMNS 16
 #define GLYPH_CACHE_ROW_MASK 0xF0
@@ -472,53 +475,53 @@ void addhero_reset_glyph_cache(void)
  */
 void addhero_expand_text_glyph_codes(u8* out, u8* in)
 {
-    u32 c;
-    s32 index;
-    s16 lead;
+    u32 character;
+    s32 character_index;
+    s16 character_code;
 
     for (;;)
     {
-        c = *in;
-        if ((u8)c == 0)
+        character = *in;
+        if ((u8)character == 0)
         {
             goto done;
         }
-        if ((u32)(c - 0x19) < 7)
+        if ((u32)(character - 0x19) < 7)
         {
-            u32 b1;
-            s32 off;
-            u8* pa;
-            u8* pb;
+            u32 trail_byte;
+            s32 row_index;
+            u8* first_byte;
+            u8* second_byte;
 
-            b1 = in[1];
-            off = b1 >> 4;
-            b1 &= 0xF;
-            pa = g_addhero_double_byte_char_table + b1 * 2;
-            pa += off * 33;
-            lead = *in;
-            pa += lead * 528;
-            *out = *pa;
+            trail_byte = in[1];
+            row_index = trail_byte >> 4;
+            trail_byte &= 0xF;
+            first_byte = g_addhero_double_byte_char_table + trail_byte * 2;
+            first_byte += row_index * GLYPH_CHAR_TABLE_ROW_BYTES;
+            character_code = *in;
+            first_byte += character_code * GLYPH_CHAR_TABLE_PAGE_BYTES;
+            *out = *first_byte;
             out++;
-            b1 = in[1];
-            off = b1 >> 4;
-            b1 &= 0xF;
-            pb = g_addhero_double_byte_char_table + 1 + b1 * 2;
-            pb += off * 33;
-            lead = *in;
-            pb += lead * 528;
-            *out = *pb;
+            trail_byte = in[1];
+            row_index = trail_byte >> 4;
+            trail_byte &= 0xF;
+            second_byte = g_addhero_double_byte_char_table + 1 + trail_byte * 2;
+            second_byte += row_index * GLYPH_CHAR_TABLE_ROW_BYTES;
+            character_code = *in;
+            second_byte += character_code * GLYPH_CHAR_TABLE_PAGE_BYTES;
+            *out = *second_byte;
             out++;
             in += 2;
         }
-        else if ((u8)c >= 0x21)
+        else if ((u8)character >= 0x21)
         {
-            lead = *in;
-            index = lead - 0x20;
-            *out = g_addhero_single_byte_char_table[(index / 16) * 33 + (index & 0xF) * 2];
+            character_code = *in;
+            character_index = character_code - 0x20;
+            *out = g_addhero_single_byte_char_table[(character_index / 16) * GLYPH_CHAR_TABLE_ROW_BYTES + (character_index & 0xF) * 2];
             out++;
-            lead = *in;
-            index = lead - 0x20;
-            *out = g_addhero_single_byte_char_table[(index / 16) * 33 + (index & 0xF) * 2 + 1];
+            character_code = *in;
+            character_index = character_code - 0x20;
+            *out = g_addhero_single_byte_char_table[(character_index / 16) * GLYPH_CHAR_TABLE_ROW_BYTES + (character_index & 0xF) * 2 + 1];
             out++;
             in += 1;
         }
