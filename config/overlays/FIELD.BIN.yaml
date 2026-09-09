@@ -220,7 +220,7 @@ segments:
       - [0x4C845, c, func_8009C4B4]                # gcc272_cdk, func_8009C4B4 + func_8009C56C (100%)
       - [0x4C9B1, c, func_8009C620]                # gcc272_cdk, 100%
       - [0x4CB0D, c, field48]                      # gcc272_cdk, func_8009C77C
-      - [0x4CB41, c, unk2_i_b_split014]            # gcc272_cdk, func_8009C7B0
+      - [0x4CB41, c, func_8009C7B0]                # gcc272_cdk, 100%
       - [0x4CCE5, c, field49]                      # gcc272_cdk, func_8009C954
       - [0x4CD05, c, field349]                     # gcc272_cdk, func_8009C974
       - [0x4CD99, c, field50]                      # gcc272_cdk, func_8009CA08
