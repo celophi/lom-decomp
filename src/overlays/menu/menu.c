@@ -3658,7 +3658,7 @@ s32 menu_item_has_action(void)
             {
                 if (item_subtype == 15)
                 {
-                    goto success;
+                    return 1;
                 }
                 return 0;
             }
@@ -3680,7 +3680,6 @@ s32 menu_item_has_action(void)
         }
         else if ((action_code != 0) && (action_code < 12) && (action_code >= 6))
         {
-success:
             return 1;
         }
     }
