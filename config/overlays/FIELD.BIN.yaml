@@ -514,7 +514,7 @@ segments:
       - [0x71EB1, c, field_record_lookup_ops]   # gcc280_g0, func_800C1B20 .. func_800C1E40 (8 funcs, 100%)
       - [0x72259, c, func_800C1EC8]                # gcc272_cdk, 97.5%
       - [0x722B9, c, field_stat_counter_ops]    # gcc280_g0, func_800C1F28 .. func_800C2228 (8 funcs, 100%)
-      - [0x725F5, c, unk2_b_split062]              # gcc272_cdk, func_800C2264
+      - [0x725F5, c, func_800C2264]                # gcc280_g0, 100%
       - [0x72785, c, func_800C23F4]                # gcc280_g0, 100%
       - [0x7284D, c, func_800C24BC]                # gcc280_g0, 100%
       - [0x72931, c, field362]                     # gcc280_g0, func_800C25A0
