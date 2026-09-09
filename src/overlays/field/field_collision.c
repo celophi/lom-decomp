@@ -1692,43 +1692,11 @@ move_done_372:
 }
 
 /**
- * @brief Classify a linked list of collision nodes against a probe box.
- *
- * Walks @p node's `unk0` chain and tests each node's tile span against the
- * probe rectangle. Nodes that block movement are appended to the array at
- * 0x801E1000 and counted in @p out_hit; nodes that are merely touched are
- * appended to the array at 0x801E1100 and counted in @p out_touch. A node can
- * be both.
- *
- * Per node the span [row_top, row_bot] is clipped to the probe's vertical
- * extent, then a run of `FieldCollisionSpan` edge pairs (`node->unk10`) is scanned for
- * horizontal overlap. `obj->unk4 & 8` selects a variant that also consults the
- * per-edge flag bytes at `node->unk14`; otherwise a cheaper scan runs, with a
- * separate path when the node has a horizontal offset (`dx`). `((u8*)obj)[4] &
- * 3` then selects the height test: case 0 compares against the node's own
- * height, case 1 asks func_8005DFAC for the interpolated ground height.
- *
- * @param node      Head of the collision node chain; walked directly (the
- *                  parameter is the loop variable).
- * @param probe FieldCollisionMoveProbe box: owning mover plus center x/z and half extents.
- * @param out_hit   Receives the number of blocking nodes written to 0x801E1000.
- * @param out_touch Receives the number of touching nodes written to 0x801E1100.
- *
- * @note `result` bit 1 = touching, bit 2 = blocking.
- * @note `obj->unk4` is read as a word for the `& 8` and `& 4` tests but as a
- *       byte for the `& 3` dispatch, matching the original's access widths.
- * @note The flag bytes are read both signed and unsigned from the same address
- *       (`(s8)fl[n] >= 0` versus `fl[n] == 0x7F`); these are deliberately
- *       distinct reads and must not be collapsed into one.
- * @note NOT YET MATCHED - 99.67% (329/332 exact rows, frame and all sp slots
- *       match, instruction count is one short). The single remaining defect is
- *       at +0xE8: the original emits `sra v0,v0,8 / addu t8,v0,zero /
- *       sll v0,v0,16`, keeping `dz` in a separate register from the temporary
- *       the sign-extension reads, while this source fuses them into
- *       `sra t8,v0,8 / sll v0,t8,16`. Declaring `dz` as `s16` does reproduce
- *       the copy but costs rows elsewhere. See working/func_8005DA7C/status.md
- *       for the full probe log and the retired hypothesis classes.
- * @note No decomp.me scratch exists for this function yet.
+ * @brief Classify collision nodes against a mover probe and collect blocking and touching nodes.
+ * @param probe Probe position, vertical extents, and owning mover.
+ * @param node Head of the collision node chain.
+ * @param out_hit Receives the number of blocking nodes written to the hit list.
+ * @param out_touch Receives the number of touching nodes written to the touch list.
  */
 void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32* out_hit, s32* out_touch)
 {
@@ -1750,8 +1718,8 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
     s32 row_lim;
     s32 dx;
     s32 dy;
-    s32 dz;
-    s32 zc;
+    s16 dz;
+    s32 value;
     s32 off;
     s32 count;
     s32 result;
@@ -1784,8 +1752,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
             if (node->unk18 != 0)
             {
                 dz = (s32)node->unk38 >> 8;
-                zc = obj->unk14 + (s16)dz;
-                if ((zc == 0) || (zc < w + m->height_bias) || (zc < h))
+                if (obj->unk14 + dz == 0 || (value = obj->unk14 + dz) < w + m->height_bias || value < h)
                 {
                     dy = (s32)node->unk40 >> 8;
                     dx = (s32)(node->unk34 << 8) >> 16;
@@ -1857,8 +1824,8 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
                                 {
                                     while (--count != -1)
                                     {
-                                        zc = dx;
-                                        if (((pt->min_x + zc) < x1) && ((pt->max_x + zc) >= x0))
+                                        value = dx;
+                                        if (((pt->min_x + value) < x1) && ((pt->max_x + value) >= x0))
                                         {
                                             result = 1;
                                             break;
@@ -1883,7 +1850,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
                                     switch (((u8*)obj)[4] & 3)
                                     {
                                     case 0:
-                                        if ((obj->unk14 + (s16)dz) < h)
+                                        if ((obj->unk14 + dz) < h)
                                         {
                                             if (obj->unk4 & 4)
                                             {
@@ -1893,7 +1860,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
                                             {
                                                 if (m->mode_flags & 0x30000)
                                                 {
-                                                    over = w < (obj->unk10 + (s16)dz);
+                                                    over = w < (obj->unk10 + dz);
                                                     if (over != 0)
                                                     {
                                                         result = 2;
@@ -1905,7 +1872,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
                                                 }
                                                 else
                                                 {
-                                                    over = (w + 0x10) < (obj->unk10 + (s16)dz);
+                                                    over = (w + 0x10) < (obj->unk10 + dz);
                                                     if (over != 0)
                                                     {
                                                         result = 2;
@@ -1923,7 +1890,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
                                         }
                                         break;
                                     case 1:
-                                        if ((obj->unk14 + (s16)dz) < h)
+                                        if ((obj->unk14 + dz) < h)
                                         {
                                             gnd = func_8005DFAC(node, &probe->x);
                                             if (m->mode_flags & 0x30000)
