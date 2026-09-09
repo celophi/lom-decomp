@@ -52,14 +52,16 @@ void func_80140D48(void);
  * and queue a VRAM upload (field_queue_vram_upload); sprite/effect nodes tick their
  * counters; sequence nodes advance a small state machine keyed on flags & 3.
  *
- * @note Match is 99.995160% (1032 exact target instructions out of 1033).
- *       The one remaining difference is a single register-allocation
- *       permutation near 0x400 (ALLOC-ORDER, argdiff only; no structural or
- *       instruction-count change).
- * @note The timer-tail path clears the CD flag word through @c CdWordBits and
- *       advances with @c anim = anim->next; continue; and the movie rect setup
- *       writes @c rects[0].x through a non-volatile cast; both spellings are
- *       required to reproduce the target's scheduling and codegen.
+ * @note Match is 100% (1033 exact target instructions out of 1033).
+ * @note The state==1 CD-flag set is written through
+ *       @c (u32)anim ^ ((u32)anim ^ 0x801ED800U): the same address and type as
+ *       @c FIELD_CD_FLAGS, but forcing the constant through the @c anim register
+ *       reproduces the target's codegen. The tear-down path clears the CD flag
+ *       word through @c CdWordBits, and the movie rect setup writes
+ *       @c rects[0].x through a non-volatile cast; both spellings are required
+ *       to reproduce the target's scheduling and codegen.
+ * @note The movie default-state timer tail falls through @c goto movie_timer to
+ *       a single shared @c anim->timer = 1; matching the target's tail merging.
  * @note The two strip-upload tails are merged with @c goto strip_upload so the
  *       shared @c field_queue_vram_upload call is emitted once, matching the
  *       target's tail merging.
@@ -73,7 +75,7 @@ void func_80140D48(void);
  *       body gives @c req the extra references it needs to win s1 over @c anim
  *       in the global allocator (see working notes).
  *
- * @see decomp.me (99.995160%) TODO
+ * @see decomp.me (100%) TODO
  */
 void field_update_scene_animations(void)
 {
@@ -167,7 +169,9 @@ void field_update_scene_animations(void)
                             cdrom_stream(0xB, (void*)0x80140000);
                             cdrom_queue_seek(def->unk1 * 2 + 0x16A6);
                             anim->flags.b.state = 1;
-                            FIELD_CD_FLAGS |= 0x40;
+                            /* Same address/type as FIELD_CD_FLAGS, but forced
+                             * through the anim register to match codegen. */
+                            (*(volatile s32*)((u32)anim ^ ((u32)anim ^ 0x801ED800U))) |= 0x40;
                         }
                         /* fallthrough */
                     case 1:
@@ -246,9 +250,7 @@ void field_update_scene_animations(void)
                                 }
                                 anim->flags.word &= ~0x40;
                                 func_80084240();
-                                anim->timer = 1;
-                                anim = anim->next;
-                                continue;
+                                goto movie_timer;
                             }
                         }
                         else
@@ -282,6 +284,7 @@ void field_update_scene_animations(void)
                                 cdrom_queue_read(def->unk1 * 2 + 0x16A7, (void*)0x80140000);
                                 FIELD_MOVIE_STATE->end_state = 3;
                             }
+                        movie_timer:
                             anim->timer = 1;
                         }
                         break;
@@ -1348,17 +1351,24 @@ void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
                 if (cam_z >= 0)
                 {
                     q = cam_z >> 9;
+                    cam_y = cam_y - q;
                 }
                 else
                 {
                     q = (cam_z + 0x1FF) >> 9;
+                    cam_y = cam_y - q;
                 }
-                y = cam_y - q;
-                col = part->def->u.b.cols * 8;
-                x = x + (obj->x + part->x) / 256 + col;
-                row = part->def->u.b.rows * 8;
-                y = y + ((obj->y + part->y) * 2 - (obj->z + part->z)) / 512;
-                cam_z = row - 0xE0;
+                y = cam_y;
+                { s32 position; s32 mid; u8 columns; FieldPartDef* part_def;
+                part_def = part->def;
+                columns = part_def->u.b.cols;
+                position = obj->x + part->x;
+                col = columns * 8;
+                do { mid = x + position / 256; } while (0);
+                x = mid + col; }
+                att = part->def->u.b.rows * 8;
+                y = y + ((obj->y + part->y) * 2 - (part->z + obj->z)) / 512;
+                cam_z = att - 0xE0;
                 y = y - cam_z;
                 if (x < -0x20)
                 {
