@@ -538,43 +538,14 @@ segments:
       - [0x6E70D, c, field345]                  # gcc280_g0, func_800BE37C
       - [0x6E795, c, func_800BE404]             # gcc280_g0, 100%
       - [0x6E8E1, c, field_script_arith_ops]    # gcc280_g0, func_800BE550 .. func_800BE708 (15 funcs, 100%)
-      - [0x6EAA1, c, func_800BE710]              # gcc280_g0, 100%
-      - [0x6EC19, c, func_800BE888]                # gcc280_g0, 100%
-      - [0x6EDA1, c, func_800BEA10] # gcc280_g0, 95.950356% WIP
-      - [0x6EFD5, c, unk2_b_split051_tail] # gcc_272_cdk_g0, remaining tail
-      - [0x6F305, c, field358]                     # gcc280_g0, func_800BEF74
+      - [0x6EAA1, c, field_record_setup_ops] # gcc280_g0; five record setup/sequence dispatch functions, two WIPs
       - [0x6F4E9, c, func_800BF158]                 # gcc272_cdk, 97.696075% (register/epilogue residue)
-      - [0x6F681, c, field356]                     # gcc280_g0, func_800BF2F0
-      - [0x6F769, c, func_800BF3D8]                # gcc280_g0, 100%
-      - [0x6F8A5, c, func_800BF514] # gcc280_g0, 84.308510% WIP
-      - [0x6FA1D, c, func_800BF68C]                 # gcc280_g0, 100%
-      - [0x6FA91, c, field143]                     # gcc280_g0, func_800BF700
-      - [0x6FAC1, c, func_800BF730] # gcc272_cdk, 92.307690% WIP
-      - [0x6FB91, c, field_slot_pool_ops]       # gcc280_g0, func_800BF800 .. func_800BF9F0 (6 funcs, 100%)
-      - [0x6FDC5, c, unk2_b_split053]              # gcc272_cdk, func_800BFA34
-      - [0x70201, c, func_800BFE70]                # gcc280_g0, 100%
-      - [0x70321, c, func_800BFF90] # gcc272_cdk, 99.826090% WIP
-      - [0x704ED, c, func_800C015C]                # gcc280_g0, 100%
-      - [0x705F1, c, func_800C0260] # gcc280_g0, 85.257140% WIP
-      - [0x70821, c, field373]                     # gcc280_g0, func_800C0490
-      - [0x708F1, c, unk2_b_split053_b] # gcc_272_cdk_g0, remaining prefix
-      - [0x70BA5, c, func_800C0814] # gcc280_g0, 97.649635% WIP
-      - [0x70DC9, c, func_800C0A38] # gcc280_g0, 91.287880% WIP
-      - [0x70ED1, c, unk2_b_split053_b_tail] # gcc_272_cdk_g0, remaining tail
-      - [0x71005, c, func_800C0C74]                 # gcc272_cdk, 100%
-      - [0x710E9, c, field145]                     # gcc280_g0, func_800C0D58
-      - [0x711A9, c, field147]                     # gcc272_cdk, func_800C0E18
-      - [0x711E5, c, unk2_b_split055]              # gcc272_cdk, func_800C0E54
-      - [0x71481, c, func_800C10F0]                # gcc272_cdk, 100%
-      - [0x714E5, c, field301]                     # gcc280_g0, func_800C1154
-      - [0x71581, c, field148]                     # gcc280_g0, func_800C11F0
-      - [0x715C1, c, func_800C1230] # gcc280_g0, 91.477710% WIP
-      - [0x71835, c, func_800C14A4]                # gcc280_g0, 100%
-      - [0x7193D, c, func_800C15AC]                # gcc280_g0, 100%
-      - [0x719E9, c, unk2_b_split056_b]            # gcc272_cdk, func_800C1658
-      - [0x71D61, c, field149]                     # gcc280_g0, func_800C19D0
-      - [0x71DA9, c, func_800C1A18] # gcc280_g0, 95.530304% WIP
-      - [0x71EB1, c, field_record_lookup_ops]   # gcc280_g0, func_800C1B20 .. func_800C1E40 (8 funcs, 100%)
+      - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, two WIPs
+      - [0x6FDC5, c, field_generated_record_ops] # gcc280_g0; initializer, name builder and two stat modes, two WIPs
+      - [0x705F1, c, field_record_effect_ops] # gcc280_g0; effect generation/classification/application, four WIPs
+      - [0x70DC9, c, field_reward_command_ops] # gcc280_g0; selector, reward dispatcher and four table handlers, two WIPs
+      - [0x711A9, c, field_record_growth_ops] # gcc280_g0; ten reward/experience/growth functions, three WIPs
+      - [0x71DA9, c, field_record_lookup_ops] # gcc280_g0; nine record dispatch/lookup functions, C1A18 WIP
       - [0x72259, c, func_800C1EC8]                # gcc272_cdk, 97.5%
       - [0x722B9, c, field_stat_counter_ops]    # gcc280_g0, func_800C1F28 .. func_800C2228 (8 funcs, 100%)
       - [0x725F5, c, field_saved_slot_ops] # gcc280_g0; four saved-slot operations, all exact
