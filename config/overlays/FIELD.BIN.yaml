@@ -655,23 +655,11 @@ segments:
       - [0x79C25, c, field199]                     # gcc280_g0, func_800C9894
       - [0x79C65, c, field296]                  # gcc280_g0, func_800C98D4
       - [0x79CF1, c, func_800C9960] # gcc280_g0, 85.320260% WIP
-      - [0x79F55, c, field_menu_record_ops]     # gcc280_g0, func_800C9BC4 .. func_800C9DB4 (6 funcs, 100%)
-      - [0x7A15D, c, func_800C9DCC]                # gcc280_g0, 100%
-      - [0x7A265, c, unk2_b_split088_after_c9dcc]  # gcc272_cdk, func_800C9ED4
-      - [0x7A531, c, field203]                     # gcc272_cdk, func_800CA1A0
-      - [0x7A571, c, func_800CA1E0]                # gcc272_cdk, 85.17%
-      - [0x7A619, c, equipment_combination_quantity] # gcc280_g0, 100%
-      - [0x7A6F5, c, equipment_pair_has_classes] # gcc280_g0, 100.000000%
-      - [0x7A811, c, equipment_combination_find] # gcc280_g0, 100.000000%
-      - [0x7A8F9, c, field_equipment_combination_rules] # gcc280_g0, equipment_combination_variant + rule_00 .. _63
-      - [0x7BA11, c, field_golem_logic_blocks]      # gcc280_g0, golem_logic_block_append (also matches gcc272_cdk)
-      - [0x7BAE9, c, func_800CB758] # gcc272_cdk, 100.000000%
-      - [0x7BCA9, c, func_800CB918]                # gcc272_cdk, 100%
-      - [0x7BE2D, c, unk2_b_split098_after_cb918]  # gcc272_cdk, func_800CBA9C
-      - [0x7BF9D, c, func_800CBC0C]                # gcc280_g0, 100% (also matches gcc272_cdk)
-      - [0x7C101, c, func_800CBD70] # gcc272_cdk, 92.950820% WIP
-      - [0x7C1F5, c, func_800CBE64]                # gcc280_g0, 100%
-      - [0x7C255, c, func_800CBEC4]                # gcc280_g0, 100% (also matches gcc272_cdk)
+      - [0x79F55, c, field_menu_record_ops]     # gcc280_g0, func_800C9BC4 .. func_800C9DCC (7 funcs, 100%)
+      - [0x7A265, c, field_select_distance_bucket] # gcc272_cdk, func_800C9ED4, 85.865920% WIP; provisional boundary
+      - [0x7A531, c, field_layout_slot_state] # gcc272_cdk, func_800CA1A0 + func_800CA1E0; 100% / 85.166664%
+      - [0x7A619, c, field_equipment_combination_rules] # gcc280_g0, quantity + class test + search + variant + 64 rules; 68 funcs, 100%
+      - [0x7BA11, c, field_golem_logic_blocks]      # gcc280_g0, golem logic-block TU: append .. func_800CBEC4; two WIPs
       - [0x7C2D5, data, data]
       - start: 0x7C315
         type: tim

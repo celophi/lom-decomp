@@ -3,6 +3,23 @@
 extern u8 g_menuLayoutBuffer[];
 
 /**
+ * @brief Activate a layout slot and assign its insertion sequence number.
+ * @param arg0 Index of the 12-byte layout-slot record.
+ */
+void func_800CA1A0(s32 arg0)
+{
+    u8 *rec;
+
+    rec = &g_menuLayoutBuffer[arg0 * 0xC];
+    g_menuLayoutBuffer[0x2E4]++;
+    rec[0x2F0] |= 1;
+    rec[0x2F3] = g_menuLayoutBuffer[0x2E4];
+}
+
+
+
+
+/**
  * @brief Reset the 0x40 per-slot layout records in g_menuLayoutBuffer.
  *
  * Clears the two header bytes at 0x2E4/0x2E5, then walks 0x40 records of 0xC
