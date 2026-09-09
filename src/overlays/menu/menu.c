@@ -6155,7 +6155,7 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
         {
             if (*(volatile u8*)&content_base[g_menu_hit_item_idx].action_type < 0xF0U)
             {
-                MENU_EMIT_STATE(0x4, (s32) * (volatile u8*)&content_base[g_menu_hit_item_idx].action_type * 2);
+                MENU_EMIT_STATE(0x4, (s32)content_base[g_menu_hit_item_idx].action_type * 2);
             }
             else
             {
