@@ -1,16 +1,5 @@
 #include "common.h"
 
-/**
- * @brief Record returned by func_800C1B60: an id byte and a flag word at 0x90.
- */
-typedef struct
-{
-    u8 unk0;
-    u8 pad[0x8F];
-    s32 unk90;
-} UnkStruct800C1B60Ret;
-
-UnkStruct800C1B60Ret *func_800C1B60(void);
 void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
 u8 *func_800C1E40(s32 arg0);
 void *func_800A9060(void);
@@ -21,21 +10,6 @@ s32 func_800C2AD0(void);
 
 extern u8 D_801148B0[];
 extern u8 *D_80122B74;
-
-/**
- * @brief Clear bit 30 of the current record's flag word and re-dispatch its id.
- */
-void func_800C28B8(void)
-{
-    UnkStruct800C1B60Ret *p;
-
-    s32 arg0;
-
-    p = func_800C1B60();
-    arg0 = p->unk0;
-    p->unk90 &= 0xBFFFFFFF;
-    func_800C1D14(arg0, 0);
-}
 
 /**
  * @brief Resolve an entry of the first offset table in a 4 KB resource page.

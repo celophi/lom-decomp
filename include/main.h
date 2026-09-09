@@ -64,6 +64,22 @@ extern s32 g_frame_counter;
 /** @brief Base of the primitive-rect scratch buffer (stride 0x4A0 per record). */
 extern u8 g_prim_rect_buf[];
 
+/** @brief Large saved-history record with a leading encoded name. */
+typedef struct
+{
+    u8 name[0x15];
+    u8 unknown_0x15[0x46 - 0x15];
+    u8 unknown_0x46;
+    u8 unknown_0x47[0x14C - 0x47];
+} LargeHistoryRecord;
+
+/** @brief Compact saved-history record with a leading encoded name. */
+typedef struct
+{
+    u8 name[0x15];
+    u8 unknown_0x15[0x60 - 0x15];
+} SmallHistoryRecord;
+
 /**
  * @brief Controller/pad context object (partial layout).
  *
@@ -82,11 +98,11 @@ typedef struct
     u8  gname_name[0x18];        /**< 0xA90: name buffer edited by the GNAME overlay. */
     u32 unkAA8;
     u8  _padAAC[0x29D7 - 0xAAC];  /**< 0xAAC: not yet mapped. */
-    s8  large_history_index;      /**< 0x29D7: slot index into @c large_history_names. */
+    s8  large_history_index;      /**< 0x29D7: slot index into @c large_history_records. */
     u8  _pad29D8[0x2B0C - 0x29D8];/**< 0x29D8: not yet mapped. */
-    u8  large_history_names[3][0x14C]; /**< 0x2B0C: three large name-history slots. */
-    u32 small_history_index;      /**< 0x2EF0: slot index into @c small_history_names. */
-    u8  small_history_names[3][0x60]; /**< 0x2EF4: three compact name-history slots. */
+    LargeHistoryRecord large_history_records[3];
+    u32 small_history_index;      /**< 0x2EF0: slot index into @c small_history_records. */
+    SmallHistoryRecord small_history_records[5];
 } PadContext;
 
 /** @brief Pointer to the controller/pad context object. */

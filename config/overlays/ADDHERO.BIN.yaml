@@ -45,8 +45,11 @@ segments:
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, addhero]
       - [0x89, rodatabin, addhero_format_overflow_and_file_template]
-      - [0x99, rodatabin, addhero_load_jump_table]
+      - [0x99, .rodata, addhero_card_sequence]
       - [0x115, rodatabin, addhero_entry_header_template]
-      - [0x11D, c, addhero]                  # gcc272_cdk, 0x11D-0x6FA5
+      - [0x11D, c, addhero]
+      - [0x4C29, c, addhero_card_sequence]
+      - [0x5825, c, addhero_card]
+      - [0x65C9, c, addhero_glyph]
       - [0x6FA5, databin, addhero_data]
   - [0x2D941]

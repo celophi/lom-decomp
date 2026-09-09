@@ -1,5 +1,190 @@
 #include "common.h"
 
+extern u8 g_menuLayoutBuffer[];
+
+/**
+ * @brief Calculate the quantity contribution for a pair of equipment records.
+ * @param record_indices Two indices into the equipment record table.
+ * @return Combined quantity divided by 17 and clamped to the range 0 through 9.
+ */
+s32 equipment_combination_quantity(s32* record_indices)
+{
+    s32 record_cursor;
+    s32 total_quantity;
+    s32 menu_base;
+    s32 quantity_base;
+    s32 record_end;
+    s32 record_offset;
+    s16 record_class;
+    s32 scratch;
+    s32 quantity_index;
+    s32 result;
+    s32 class_one;
+
+    record_cursor = (s32)record_indices;
+    total_quantity = 0;
+    menu_base = (s32)g_menuLayoutBuffer;
+    quantity_base = menu_base + 0xCE0;
+    class_one = 1;
+    record_end = record_cursor + 8;
+    do
+    {
+        record_offset = *(s32*)record_cursor << 6;
+        scratch = *(u32*)(record_offset + menu_base + 0xCF4);
+        scratch = (u32)scratch >> 8;
+        record_class = scratch & 3;
+        if (record_class == 0)
+        {
+            total_quantity += *(u16*)(record_offset + quantity_base + 0x24);
+            goto next_record;
+        }
+        if (record_class == class_one)
+        {
+            quantity_index = 0;
+            do
+            {
+                total_quantity += *(u16*)(record_offset + quantity_base + 0x24 + quantity_index * 2);
+                quantity_index += 1;
+            } while (quantity_index < 4);
+            record_cursor += 4;
+        }
+        else
+        {
+            scratch = 2;
+            if (record_class == scratch)
+            {
+                total_quantity += *(u8*)(record_offset + quantity_base + 0x26);
+            }
+next_record:
+            record_cursor += 4;
+        }
+    } while (record_cursor < record_end);
+
+    total_quantity /= 17;
+    if (total_quantity >= 0)
+    {
+        result = 9;
+        if (total_quantity < 10)
+        {
+            result = total_quantity;
+        }
+    }
+    else
+    {
+        result = 0;
+    }
+
+    return result;
+}
+
+extern u8 g_menuLayoutBuffer[];
+/** @brief Equipment record view exposing the packed class word. */
+typedef struct
+{
+    u8 pad[0xCF4];
+    u32 flags;
+} EquipmentView;
+
+/**
+ * @brief Test whether two equipment records supply one item of each requested class.
+ * @param class_a Class required of one record.
+ * @param class_b Class required of the other record.
+ * @param record_indices Two equipment-record indices.
+ * @return 1 when distinct records satisfy the pair, otherwise 0.
+ * @note Reuse j for the decoded class and the later inner-loop index; this
+ * reproduces the target's temporary allocation without forcing registers.
+ * @note GCC 2.8.0 G0: 100% match, 71 instructions (284 bytes).
+ */
+s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32 *record_indices)
+{
+    s32 classes[2];
+    s32 i;
+    s32 j;
+
+    i = 0;
+    do
+    {
+        j = (((EquipmentView *)(g_menuLayoutBuffer + (*record_indices << 6)))->flags >> 10) & 0x3F;
+        classes[i] = j;
+        if (((((EquipmentView *)(g_menuLayoutBuffer + (*record_indices << 6)))->flags >> 8) & 3) == 1)
+        {
+            classes[i] = j + 11;
+        }
+        if (((((EquipmentView *)(g_menuLayoutBuffer + (*record_indices << 6)))->flags >> 8) & 3) == 2)
+        {
+            classes[i] += 23;
+        }
+        i++;
+        record_indices++;
+    } while (i < 2);
+    i = 0;
+    do
+    {
+        if (classes[i] == class_a)
+        {
+            j = 0;
+            do
+            {
+                if (classes[j] == class_b && j != i)
+                {
+                    return 1;
+                }
+                j++;
+            } while (j < 2);
+        }
+        i++;
+    } while (i < 2);
+    return 0;
+}
+
+extern s32 equipment_combination_variant(s32 *);
+extern s32 equipment_combination_quantity(s32 *);
+extern u8 g_equipment_combination_quantity_scale[];
+extern s32 (*g_equipment_combination_rule_table[])(s32 *);
+
+/**
+ * @brief Find the first equipment rule matching the supplied record pair.
+ * @param record_indices Two equipment-record indices tested by each rule.
+ * @param quantity Receives the scaled quantity when a rule matches.
+ * @param variant Receives the matching variant clamped to the range 0 through 10.
+ * @return Matching rule index, or 0 if no rule matched.
+ * @note Preserve both variant stores and the indexed rule-table call.
+ * @note GCC 2.8.0 G0: 100% match, 58 instructions (232 bytes).
+ */
+s32 equipment_combination_find(s32 *record_indices, s32 *quantity, s32 *variant)
+{
+    s32 index;
+    s32 value;
+    s32 clamped;
+
+    index = 0;
+    do
+    {
+        if (g_equipment_combination_rule_table[index](record_indices) != 0)
+        {
+            value = equipment_combination_variant(record_indices);
+            *variant = value;
+            if (value >= 0)
+            {
+                clamped = 10;
+                if (value < 11)
+                {
+                    clamped = value;
+                }
+            }
+            else
+            {
+                clamped = 0;
+            }
+            *variant = clamped;
+            *quantity = equipment_combination_quantity(record_indices) * g_equipment_combination_quantity_scale[index];
+            return index;
+        }
+        index++;
+    } while (index < 64);
+    return 0;
+}
+
 /*
  * Equipment combination rules.
  *

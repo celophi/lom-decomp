@@ -98,6 +98,308 @@ extern u8 *D_80123FAC;
 extern StructB3580 *D_80123FB0;
 extern u16 g_music_track_index;
 
+
+
+
+void akao_set_song_params(s32, s32, s32, s32);
+
+/**
+ * @brief Finds a field-state record with the requested byte identifier.
+ *
+ * Searches eleven 0x68-byte records using the identifier at offset 0x2C and
+ * returns the corresponding payload at offset 0x28. A failed search issues an
+ * AKAO diagnostic command and returns null.
+ *
+ * @param value Identifier to find.
+ * @return Pointer to the matching record payload, or null when absent.
+ * @note 100% match. Loading the base before initializing the offset
+ *       reproduces the target load/copy allocation.
+ */
+RecordB2A9C *func_800B2A9C(s32 value)
+{
+    s32 offset;
+    s32 index;
+    u8 *record;
+    u8 *base;
+
+    index = 0;
+    base = (u8 *)D_80123FB0;
+    offset = 0x28;
+    record = base;
+    do
+    {
+        index++;
+        if (value != record[0x2C])
+        {
+            offset += 0x68;
+            record += 0x68;
+        }
+        else
+        {
+            return (RecordB2A9C *)(base + offset);
+        }
+    } while (index < 0xB);
+    akao_set_song_params(0x8001, 0x68, value, -1);
+    return 0;
+}
+
+
+void *func_800B2B08(void)
+{
+    s32 offset;
+    s32 i;
+    u8 *p;
+    u8 *base;
+    i = 3;
+    base = (u8 *)D_80123FB0;
+    offset = 0x160;
+    p = base + 0x138;
+    do {
+        i++;
+        if ((*(u32 *)(p + 0x2C) >> 8) & 1) {
+            offset += 0x68;
+            p += 0x68;
+        } else {
+            return base + offset;
+        }
+    } while (i < 0xB);
+    return 0;
+}
+
+
+/** @brief Active-state word and applied-effect flags. */
+typedef struct
+{
+    u32 pad;
+    u32 active;
+    u32 pad8;
+    u32 flags;
+} State;
+/** @brief Actor fields used to validate and scale an effect. */
+typedef struct
+{
+    u8 pad[0x10];
+    State *state;
+    u8 pad14[0x24];
+    u8 immunity;
+    u8 pad39[0x14];
+    volatile u8 slots[3];
+    u16 values[15];
+} Actor;
+extern u8 D_800F0B28[], D_800F0B38[];
+extern s32 rand(void);
+
+/**
+ * @brief Apply a permitted effect with a chance check and scaled duration.
+ * @param source Actor providing the offensive scale.
+ * @param target Actor receiving the effect.
+ * @param flags Bit 0 bypasses immunity; bit 1 permits an already active effect.
+ * @param type Effect index, accepted when below 15.
+ * @param chance Threshold compared against an eight-bit random value.
+ * @param duration Base duration scaled by the actors and capped at 240.
+ */
+void func_800B2B54(Actor *source, Actor *target, s32 flags, s32 type, s32 chance, s32 duration)
+{
+    s32 mask, i, attack, defense, value;
+    u8 *table, *scales;
+    Actor *slot;
+    if (type >= 15)
+    {
+        return;
+    }
+    if (target->state->active == 0)
+    {
+        return;
+    }
+    if (!(flags & 1))
+    {
+        table = D_800F0B28;
+        if (target->immunity & table[type])
+        {
+            return;
+        }
+        mask = 0;
+        i = mask;
+        slot = (Actor *)((u8 *)target + i);
+        do
+        {
+            if ((u32)(slot->slots[0] - 0x60) < 0x10)
+            {
+                mask |= table[slot->slots[0] - 0x60];
+            }
+            i++;
+            slot = (Actor *)((u8 *)target + i);
+        } while (i < 3);
+        if (mask & D_800F0B28[type])
+        {
+            return;
+        }
+    }
+    mask = 1 << type;
+    if (!(flags & 2) && (target->state->flags & mask))
+    {
+        return;
+    }
+    if ((rand() & 0xFF) >= chance)
+    {
+        return;
+    }
+    target->state->flags |= mask;
+    scales = &D_800F0B38[type];
+    attack = func_800B2D34((u8 *)source, *scales >> 4);
+    defense = func_800B2D34((u8 *)target, *scales & 0xF);
+    value = duration * attack / defense;
+    slot = (Actor *)((u8 *)target + type * 2);
+    if (value > 0xF0)
+    {
+        value = 0xF0;
+    }
+    slot->values[0] = value;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_800B2D34(u8 *arg0, s32 arg1)
+{
+    u32 result;
+
+    if (arg1 < 8)
+    {
+        arg0 += arg1;
+        if (arg0[0x28] == 0)
+        {
+            result = 1;
+        }
+        else
+        {
+            result = arg0[0x28];
+        }
+        return result;
+    }
+
+    return 1;
+}
+
+extern u8 D_800F0B50[];
+extern void func_8008B500(s32, s32);
+
+/** @brief Scale current attributes against their base values and signal the change. */
+void func_800B2D64(u8 *arg0, u32 arg1, u32 arg2, s32 arg3)
+{
+    s32 var_a1;
+    s32 var_s0;
+    u32 var_v1;
+    u8 temp_a2;
+    u8 temp_a2_2;
+    u32 var_v0;
+    u8 *temp_a0;
+
+    if (*(s32 *)(*(u8 **)(arg0 + 0x10) + 4) == 0)
+
+    {
+        return;
+    }
+    temp_a0 = arg0 + arg1;
+    if (arg1 < 8U)
+    {
+        var_v1 = (u32) (temp_a0[0x30] * arg2) >> 3;
+        if (arg2 >= 9U)
+        {
+            temp_a2_2 = temp_a0[0x28];
+            var_v0 = var_v1 < temp_a2_2;
+            if (var_v0 != 0)
+            {
+                var_v1 = (u32) temp_a2_2;
+            }
+            temp_a0[0x28] = (u8) var_v1;
+            if (arg3 != 0)
+            {
+                (*(u8 **)(arg0 + 0x10))[0x60] = (u8) D_800F0B50[arg2 - 8];
+                var_v0 = (*(u8 **)(arg0 + 0x10))[0x60];
+                if (var_v0 != 0)
+                {
+                    func_8008B500(arg0[4], arg1 + 0x9E);
+                    return;
+                }
+            }
+
+            return;
+        }
+        temp_a2 = temp_a0[0x28];
+        var_v0 = temp_a2 < var_v1;
+        if (var_v0 != 0)
+        {
+            var_v1 = (u32) temp_a2;
+        }
+        temp_a0[0x28] = (u8) var_v1;
+        if (arg3 != 0)
+        {
+            (*(u8 **)(arg0 + 0x10))[0x60] = (u8) D_800F0B50[8 - arg2];
+            var_v0 = (*(u8 **)(arg0 + 0x10))[0x60];
+            if (var_v0 != 0)
+            {
+                func_8008B500(arg0[4], arg1 + 0xA7);
+                    return;
+            }
+        }
+
+        return;
+    }
+    var_v0 = arg1 < 9U;
+    if (arg1 != 9)
+    {
+        if (var_v0 == 0)
+        {
+            switch (arg1) {                         /* irregular */
+            case 10:
+                func_800B2D64(arg0, 0, arg2, 0);
+                func_800B2D64(arg0, 1, arg2, 0);
+                var_a1 = 2;
+block_27:
+                func_800B2D64(arg0, var_a1, arg2, 0);
+
+                return;
+            case 11:
+                func_800B2D64(arg0, 3, arg2, 0);
+                func_800B2D64(arg0, 5, arg2, 0);
+                var_a1 = 6;
+                goto block_27;
+            default:
+                return;
+            }
+        }
+        else
+        {
+
+            return;
+        }
+    }
+    else
+    {
+        var_s0 = 0;
+        do
+        {
+            func_800B2D64(arg0, var_s0, arg2, 0);
+            var_s0 += 1;
+            var_v0 = var_s0 < 8;
+        } while (var_v0 != 0);
+        if (arg3 != 0)
+        {
+            if (arg2 >= 9U)
+            {
+                (*(u8 **)(arg0 + 0x10))[0x60] = (u8) D_800F0B50[arg2 - 8];
+                func_8008B500(arg0[4], 0x9D);
+                    return;
+            }
+            (*(u8 **)(arg0 + 0x10))[0x60] = (u8) D_800F0B50[8 - arg2];
+            func_8008B500(arg0[4], 0xA6);
+                    return;
+        }
+        return;
+    }
+}
+
 /**
  * @brief Roll a random byte against the record's eighth func_800B2D34 value.
  * @param arg0 Record passed to func_800B2D34; the value read is its byte at 0x2F.
@@ -334,154 +636,4 @@ void func_800B3420(s32 arg0)
     {
         rec->unk10->unk48 = 0;
     }
-}
-
-/**
- * @brief Rebuild the D_80123B08 block and write script variables 0x4280 and 0x4284, or call func_800B4390 when arg0 is 0.
- *
- * With D_8010D020 set both variables are written as 1 instead of the
- * computed values. 0x4280 and 0x4284 are the counter pair that func_800B48B8
- * increments and func_800B62D8 tests for zero.
- *
- * @param arg0 Nonzero selects the rebuild path and is forwarded to func_800B3DF4.
- * @see decomp.me (100%)
- */
-void func_800B34D0(s32 arg0)
-{
-    s32 value;
-
-    if (arg0 != 0)
-    {
-        func_800B3580();
-        value = func_800B37D4();
-        if (D_8010D020 != 0)
-        {
-            func_800BD520(0, 0x4280, 1);
-        }
-        else
-        {
-            func_800BD520(0, 0x4280, value);
-        }
-        value = func_800B3DF4(arg0);
-        if (D_8010D020 != 0)
-        {
-            func_800BD520(0, 0x4284, 1);
-        }
-        else
-        {
-            func_800BD520(0, 0x4284, value);
-        }
-    }
-    else
-    {
-        func_800B4390();
-    }
-}
-
-/**
- * @brief Zero the D_80123B08 block, then fill it from the current track's 0xC-byte layout record and resource 1.
- * @see decomp.me (100%)
- */
-void func_800B3580(void)
-{
-    s32 i;
-    u8 *p;
-
-    D_80123FAC = D_800EF8C0;
-    D_80123FB0 = &D_80123B08;
-    func_800C1EC8(0, &D_80123B08, 0x4A4);
-    D_80123FB0->unk18 = 0;
-    D_80123FB0->unk0 = func_800B3670(0);
-
-    for (i = 0; i < 8; i++)
-    {
-        D_80123FB0->unkC[i] = D_800F0B48[FIELD_B74->unk2F4[g_music_track_index][i]];
-    }
-
-    p = func_800C1E40(1);
-    D_80123FB0->unk4 = p + *(s32 *)(p + 4);
-    D_80123FB0->unk8 = p + *(s32 *)(p + 8);
-    func_800BD520(0, 0x428C, -1);
-}
-
-/**
- * @brief Look up D_800F0AE8 by a 0..0x3F index and clamp the result to script variables 0x52E0..0x52E8 and 0x63.
- *
- * The index comes from the byte at 0x2E5 of the layout buffer when @p arg0 or
- * bit 7 of script variable 0x52F0 is set, otherwise from func_800C3688 for the
- * current track. Script variable 0x2938 adds 0x14 (mode 1) or forces 0x3F
- * (mode 2).
- *
- * @param arg0 Nonzero selects the byte-at-0x2E5 index.
- * @return Value in 0..0x63.
- * @see decomp.me (100%)
- */
-s32 func_800B3670(s32 arg0)
-{
-    s32 flag;
-    s32 mode;
-    s32 index;
-    s32 value;
-    u32 lo;
-    u32 hi;
-
-    flag = arg0;
-    if (func_800BD414(0, 0x52F0) & 0x80)
-    {
-        flag = 1;
-    }
-    mode = func_800BD414(0, 0x2938);
-
-    if (flag != 0)
-    {
-        switch (mode)
-        {
-            case 1:
-                index = FIELD_B74->unk2E5 + 0x14;
-                break;
-            case 2:
-                index = 0x3F;
-                break;
-            default:
-                index = FIELD_B74->unk2E5;
-                break;
-        }
-        index = (index * 3) / 2;
-    }
-    else
-    {
-        index = func_800C3688(g_music_track_index);
-        switch (mode)
-        {
-            case 1:
-                index += 0x14;
-                break;
-            case 2:
-                index = 0x3F;
-                break;
-        }
-    }
-
-    if (index >= 0x40)
-    {
-        index = 0x3F;
-    }
-
-    value = D_800F0AE8[index];
-    lo = func_800BD414(0, 0x52E0);
-    hi = func_800BD414(0, 0x52E8);
-    if (value < lo)
-    {
-        value = lo;
-    }
-    else if (value > hi)
-    {
-        value = hi;
-    }
-
-    if (value >= 0x64)
-    {
-        value = 0x63;
-    }
-    return value;
 }
