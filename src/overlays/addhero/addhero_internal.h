@@ -38,13 +38,25 @@
  * below. The remaining sentinels are message/status screens whose exact meaning
  * depends on the (binary-resident) message resource each one draws, so they are
  * left as raw values until identified:
- *   0xF3  companion prompt page to SAVE_CONFIRM (navigates to it or cancels)
  *   0xF7  drawn when the selected entry is not found while advancing the list
  *   0xF8/0xF9  mode-dependent card read/scan failure notice
- *   0xFA/0xFB/0xFC/0xFD  status/result notices
+ *   0xFB/0xFC  status/result notices
  *   0xFE  no-op (draws nothing)
  */
-#define ADDHERO_ENTRY_STATE_IDLE 0xFF /* browsing / reset; no operation active */
+#define ADDHERO_ENTRY_STATE_CARD_FULL 0xFA     /* no known save entry and insufficient free blocks */
+#define ADDHERO_ENTRY_STATE_CARD_IO_ERROR 0xFD /* card event error or exhausted timeout retries */
+#define ADDHERO_ENTRY_STATE_IDLE 0xFF          /* browsing / reset; no operation active */
+
+/** @brief Result returned when consuming a software or hardware card event. */
+typedef enum
+{
+    ADDHERO_CARD_EVENT_NONE = -1,
+    ADDHERO_CARD_EVENT_COMPLETE = 0,
+    ADDHERO_CARD_EVENT_ERROR = 1,
+    ADDHERO_CARD_EVENT_TIMEOUT = 2,
+    ADDHERO_CARD_EVENT_NEW_CARD = 3,
+    ADDHERO_CARD_EVENT_COUNT = 4
+} AddheroCardEvent;
 
 /** @brief Memory-card device prefix, such as "bu00", stored with word alignment. */
 typedef union
@@ -120,8 +132,6 @@ s32 addhero_poll_hardware_card_events(void);
 void addhero_sort_entries_by_type(void);
 s32 strncmp(void* a, void* b, s32 n);
 void func_800AA02C(void);
-void func_80019788(s32 arg0);
-void func_80019A34(RECT* rect, void* str);
 s32 VSync(s32 arg0);
 void bcopy(void* dst, void* src, s32 len);
 void addhero_shutdown_card_events(void);

@@ -60,7 +60,7 @@ s32 addhero_poll_and_retry_card_info(void)
     s32 event_status;
 
     event_status = addhero_poll_software_card_events();
-    if (event_status != -1)
+    if (event_status != ADDHERO_CARD_EVENT_NONE)
     {
         _card_wait(g_addhero_card_slot);
         _card_info(g_addhero_card_slot * 0x10);
@@ -198,7 +198,7 @@ s32 addhero_scan_next_entry(s32 page)
             selected_entry = addhero_rank_entries(used_blocks, entry_index, entry_count);
             if (addhero_has_known_entry_type() == 0)
             {
-                g_addhero_entry_state = 0xFA;
+                g_addhero_entry_state = ADDHERO_ENTRY_STATE_CARD_FULL;
                 g_addhero_entry_value_limit = 0;
             }
             else
@@ -306,54 +306,54 @@ void addhero_clear_hardware_card_events(void)
 
 /**
  * @brief Consume the first pending software memory-card event.
- * @return Event index: 0 complete, 1 error, 2 timeout, 3 new card; -1 if none.
+ * @return An ADDHERO_CARD_EVENT_* result; NONE when no event is pending.
  * @see decomp.me (100.00%)
  */
 s32 addhero_poll_software_card_events(void)
 {
     if (TestEvent(g_addhero_software_event_io_complete) == 1)
     {
-        return 0;
+        return ADDHERO_CARD_EVENT_COMPLETE;
     }
     if (TestEvent(g_addhero_software_event_error) == 1)
     {
-        return 1;
+        return ADDHERO_CARD_EVENT_ERROR;
     }
     if (TestEvent(g_addhero_software_event_timeout) == 1)
     {
-        return 2;
+        return ADDHERO_CARD_EVENT_TIMEOUT;
     }
     if (TestEvent(g_addhero_software_event_new_card) == 1)
     {
-        return 3;
+        return ADDHERO_CARD_EVENT_NEW_CARD;
     }
-    return -1;
+    return ADDHERO_CARD_EVENT_NONE;
 }
 
 /**
  * @brief Consume the first pending hardware memory-card event.
- * @return Event index: 0 complete, 1 error, 2 timeout, 3 new card; -1 if none.
+ * @return An ADDHERO_CARD_EVENT_* result; NONE when no event is pending.
  * @see decomp.me (100.00%)
  */
 s32 addhero_poll_hardware_card_events(void)
 {
     if (TestEvent(g_addhero_hardware_event_io_complete) == 1)
     {
-        return 0;
+        return ADDHERO_CARD_EVENT_COMPLETE;
     }
     if (TestEvent(g_addhero_hardware_event_error) == 1)
     {
-        return 1;
+        return ADDHERO_CARD_EVENT_ERROR;
     }
     if (TestEvent(g_addhero_hardware_event_timeout) == 1)
     {
-        return 2;
+        return ADDHERO_CARD_EVENT_TIMEOUT;
     }
     if (TestEvent(g_addhero_hardware_event_new_card) == 1)
     {
-        return 3;
+        return ADDHERO_CARD_EVENT_NEW_CARD;
     }
-    return -1;
+    return ADDHERO_CARD_EVENT_NONE;
 }
 
 /**

@@ -113,22 +113,16 @@ s32 addhero_draw_signed_decimal(s32 prim, s32* ot, s32 value, s32 x, s32 y, s32 
 void addhero_draw_hex_byte(s32 prim, s32* ot, s32 byte_value, s32 x, s32 y, s32 alignment)
 {
     u16 pair[3];
-    s32 row;
-    s32 adjusted;
-    s32 off;
-    u16* base;
+    s32 high_digit;
+    s32 glyph_offset;
+    u16* glyphs;
 
-    adjusted = byte_value;
-    if (byte_value < 0)
-    {
-        adjusted = byte_value + 15;
-    }
-    row = adjusted >> 4;
-    off = row * 2;
-    base = g_addhero_hex_glyphs;
-    pair[0] = *(u16*)((u8*)base + off);
-    off = (byte_value - row * 16) * 2;
-    pair[1] = *(u16*)((u8*)base + off);
+    high_digit = byte_value / 16;
+    glyph_offset = high_digit * 2;
+    glyphs = g_addhero_hex_glyphs;
+    pair[0] = *(u16*)((u8*)glyphs + glyph_offset);
+    glyph_offset = (byte_value - high_digit * 16) * 2;
+    pair[1] = *(u16*)((u8*)glyphs + glyph_offset);
     pair[2] = 0;
     addhero_draw_cached_text(prim, ot, (u8*)pair, x, y, 0, alignment);
 }
@@ -337,8 +331,8 @@ s32 addhero_render_cached_glyph(s32 prim, s32* ot, s32 character_code, s32 palet
     rect.x = g_addhero_glyph_upload_x + 0x140;
     rect.y = g_addhero_glyph_upload_y;
 
-    func_80019A34(&rect, g_addhero_glyph_raster_cursor);
-    func_80019788(0);
+    LoadImage(&rect, (u_long*)g_addhero_glyph_raster_cursor);
+    DrawSync(0);
 
     g_addhero_glyph_raster_cursor += GLYPH_RASTER_BYTES;
     return prim;

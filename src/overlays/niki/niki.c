@@ -1,6 +1,7 @@
 #include "common.h"
 #include "vector.h"
 #include "display.h"
+#include "sdk/kernel.h"
 
 #define NIKI_SJIS_FULLWIDTH_ZERO 0x4F82
 #define NIKI_SJIS_MINUS 0x5B81
@@ -54,7 +55,9 @@ typedef struct
 /** @brief Fields restored from a loaded save before returning to the game. */
 typedef struct
 {
-    u8 unknown_0x000[0x254];
+    u8 unknown_0x000[0x197];
+    u8 trailing_record_count;
+    u8 unknown_0x198[0x254 - 0x198];
     u16 unknown_0x254;
     u16 unknown_0x256;
     u8 unknown_0x258[0x32E0 - 0x258];
@@ -95,15 +98,22 @@ typedef struct NikiElement
     s32 second_state;
 } NikiElement;
 
-typedef struct NikiEntryMetadata
+/** @brief Save-entry preview, packed party icons, playtime, and comparison fields. */
+typedef struct
 {
-    u8 pad0[0x17];
-    u8 unk17;
-    u8 pad18[0xCF - 0x18];
-    u8 unkCF;
-    u8 padD0[4];
-    u16 unkD4;
-    u16 unkD6;
+    u8 text[0x17];
+    u8 status;
+    s32 first_icon_word;
+    u8 unknown_0x1c[3];
+    u8 icon_palette;
+    s32 party_word;
+    u8 unknown_0x24[12];
+    s32 playtime_frames;
+    u8 unknown_0x34[0xCF - 0x34];
+    u8 unknown_0xcf;
+    u8 unknown_0xd0[4];
+    u16 identifier;
+    u16 unknown_0xd6;
 } NikiEntryMetadata;
 
 /** @brief Memory-card directory entry; layout matches Psy-Q DIRENTRY. */
@@ -595,7 +605,12 @@ void niki_begin_glyph_cache_frame(void);
 void niki_evict_unused_glyphs(void);
 void niki_reset_glyph_cache(void);
 
-void niki_init(s32 arg0, s32 mode)
+/**
+ * @brief Initialize card browsing, drawing resources, and the selected menu mode.
+ * @param context_value Caller value retained for the overlay; its meaning is unresolved.
+ * @param mode Menu mode, with zero selecting the entry browser.
+ */
+void niki_init(s32 context_value, s32 mode)
 {
     RECT rect;
 
@@ -620,7 +635,7 @@ void niki_init(s32 arg0, s32 mode)
     g_niki_exit_requested = 0;
     func_800AA02C();
     niki_build_ui_elements();
-    D_80164AE4 = arg0;
+    D_80164AE4 = context_value;
 }
 
 /**
@@ -939,8 +954,8 @@ s32 niki_handle_input(void)
         }
         if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
         {
-            if ((g_niki_entry_metadata.unkD4 != D_8012271C->unkD4) && (g_niki_entry_metadata.unk17 != 0) &&
-                ((D_8003EC9C == 0xFF) || (g_niki_entry_metadata.unkCF == D_8003EC9C)))
+            if ((g_niki_entry_metadata.identifier != D_8012271C->identifier) && (g_niki_entry_metadata.status != 0) &&
+                ((D_8003EC9C == 0xFF) || (g_niki_entry_metadata.unknown_0xcf == D_8003EC9C)))
             {
                 element = niki_alloc_element();
                 element->attr.f.phase = 1;
@@ -1283,7 +1298,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
     Vec2s pos;
     u8 name[0x21];
     char unused_pad[212];
-    s32 slot[3];
+    s32 icons[3];
 
     result = prim;
     if (g_niki_selection_status == 0)
@@ -1307,105 +1322,112 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
         }
         else
         {
-            s32 term1 = g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES;
-            s32 term2 = (g_niki_selected_row * NIKI_DIRECTORY_ENTRY_BYTES) + (s32)g_niki_entries;
-
-            if (func_8001714C(D_800ECF7C, (char*)(term1 + term2), 0xC) == 0)
+            if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
             {
                 if (D_8003EC9C == 0xFF || D_80164DE7 == D_8003EC9C)
                 {
-                    s32 present_count;
-                    s32 i;
-                    s32 j;
-                    s32 step;
-                    s32 half_step;
-                    s32 base_x;
-                    s32 base_y;
-                    s32 total;
+                    s32 icon_count;
+                    s32 visible_icon_index;
+                    s32 slot_index;
+                    s32 base_icon_width;
+                    s32 phase_span;
+                    s32 phase_end;
+                    s32 phase_start;
+                    s32 icon_x;
                     s32 hours;
                     s32 minutes;
-                    s32 time_val;
+                    s32 wrapped_phase;
 
                     {
-                        u8* record = (u8*)&g_niki_entry_metadata;
-                        slot[0] = (u32)(*(s32*)(record + 0x18)) >> 0x19;
-                        slot[1] = ((u32)(*(s32*)(record + 0x20)) >> 0x12) & 0x7F;
-                        slot[2] = (u32)(*(s32*)(record + 0x20)) >> 0x19;
-                        g_niki_icon_palette = (s32)record[0x1F];
+                        NikiEntryMetadata* record = &g_niki_entry_metadata;
+                        icons[0] = (u32)(record->first_icon_word) >> 0x19;
+                        icons[1] = ((u32)(record->party_word) >> 0x12) & 0x7F;
+                        icons[2] = (u32)(record->party_word) >> 0x19;
+                        g_niki_icon_palette = (s32)record->icon_palette;
                     }
 
-                    total = 0;
-                    present_count = 0;
-                    for (i = 0; i < 3; i++)
+                    icon_x = 0;
+                    icon_count = 0;
+                    for (visible_icon_index = 0; visible_icon_index < 3; visible_icon_index++)
                     {
-                        if (slot[i] != 0x7F)
+                        if (icons[visible_icon_index] != 0x7F)
                         {
-                            present_count += 1;
+                            icon_count += 1;
                         }
                     }
 
-                    switch (present_count)
+                    switch (icon_count)
                     {
                     case 2:
-                        step = 0x20;
-                        half_step = 0x10;
-                        time_val = g_niki_icon_phase;
+                        base_icon_width = 0x20;
+                        phase_span = 0x10;
+                        wrapped_phase = g_niki_icon_phase;
                         if (g_niki_icon_phase < 0)
                         {
-                            time_val = g_niki_icon_phase + 0x1F;
+                            wrapped_phase = g_niki_icon_phase + 0x1F;
                         }
-                        g_niki_icon_phase -= (time_val >> 5) << 5;
+                        g_niki_icon_phase -= (wrapped_phase >> 5) << 5;
                         break;
                     case 3:
-                        step = 0x10;
-                        half_step = 0x20;
+                        base_icon_width = 0x10;
+                        phase_span = 0x20;
                         g_niki_icon_phase %= 0x60;
                         break;
                     default:
-                        step = 0x10;
-                        half_step = 0x20;
+                        base_icon_width = 0x10;
+                        phase_span = 0x20;
                         g_niki_icon_phase = 0x1F;
                         break;
                     }
 
-                    i = 0;
-                    j = i;
-                    for (; j < 3; j++)
+                    visible_icon_index = 0;
+                    slot_index = visible_icon_index;
+                    for (; slot_index < 3; slot_index++)
                     {
-                        base_y = i * half_step;
-                        base_x = base_y + half_step;
-                        if (slot[j] != 0x7F)
+                        phase_start = visible_icon_index * phase_span;
+                        phase_end = phase_start + phase_span;
+                        if (icons[slot_index] != 0x7F)
                         {
-                            s32 adjust = step;
-                            s32 rem;
-                            s32 hi;
+                            s32 icon_width = base_icon_width;
+                            s32 wrapped_start;
+                            s32 wrapped_end;
                             s32 delta;
 
-                            if ((g_niki_icon_phase >= base_y && g_niki_icon_phase < base_x && (delta = g_niki_icon_phase - base_y, 1)) ||
-                                (rem = base_x % (half_step * present_count),
-                                 g_niki_icon_phase >= rem && g_niki_icon_phase < (hi = rem + half_step) && (delta = hi - g_niki_icon_phase, 1)))
+                            if (g_niki_icon_phase >= phase_start && g_niki_icon_phase < phase_end)
                             {
-                                adjust += delta;
+                                delta = g_niki_icon_phase - phase_start;
+                                icon_width += delta;
                             }
-                            result = niki_draw_icon_highlight(result, ot, total - x_offset, -y_offset, adjust, slot[j], i, j);
-                            i += 1;
-                            total += adjust;
+                            else
+                            {
+                                wrapped_start = phase_end % (phase_span * icon_count);
+                                if (g_niki_icon_phase >= wrapped_start && g_niki_icon_phase < (wrapped_end = wrapped_start + phase_span))
+                                {
+                                    delta = wrapped_end - g_niki_icon_phase;
+                                    icon_width += delta;
+                                }
+                            }
+                            result = niki_draw_icon_highlight(result, ot, icon_x - x_offset, -y_offset, icon_width, icons[slot_index], visible_icon_index,
+                                                              slot_index);
+                            visible_icon_index += 1;
+                            icon_x += icon_width;
                         }
                     }
 
                     {
-                        u8* base90 = (u8*)&g_niki_entry_metadata;
+                        NikiEntryMetadata* preview = &g_niki_entry_metadata;
                         s32 x = -x_offset;
                         s32 y = -y_offset;
+                        s32 playtime;
 
-                        base_y = *(s32*)(base90 + 0x30);
+                        playtime = preview->playtime_frames;
                         pos.x = (s16)(x + 0x70);
                         pos.y = (s16)y;
-                        hours = base_y / 216000;
+                        hours = playtime / 216000;
                         result = func_800A8A78(ot, result, hours, 4, &pos, 1);
-                        result = func_800A88A0(result, ot, D_800EC3F6[0] + ((s32)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8), 4, x + 0x6F, y, 0);
-                        base_y = (base_y / 3600) - (hours * 0x3C);
-                        if (base_y < 0xA)
+                        result = func_800A88A0(result, ot, (void*)(D_800EC3F6[0] + ((s32)&D_800EC3F6 - 0x32) + (D_800EC3F6[1] << 8)), 4, x + 0x6F, y, 0);
+                        playtime = (playtime / 3600) - (hours * 0x3C);
+                        if (playtime < 0xA)
                         {
                             pos.x = (s16)(x + 0x7D);
                             pos.y = (s16)y;
@@ -1413,20 +1435,20 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                         }
                         pos.x = (s16)(x + 0x85);
                         pos.y = (s16)y;
-                        result = func_800A8A78(ot, result, base_y, 4, &pos, 1);
-                        result = func_800A88A0(result, ot, base90, 4, x + 0x54, y + 0x10, 0);
+                        result = func_800A8A78(ot, result, playtime, 4, &pos, 1);
+                        result = func_800A88A0(result, ot, preview->text, 4, x + 0x54, y + 0x10, 0);
 
-                        if (*(u16*)(base90 + 0xD4) == *(u16*)((u8*)D_8012271C + 0xD4))
+                        if (preview->identifier == D_8012271C->identifier)
                         {
                             result = func_800A88A0(result, ot, GLYPH_SYM(D_80147148, 0x50), 4, x + 0x54, y + 0x20, 0);
                         }
-                        else if (base90[0x17] == 0)
+                        else if (preview->status == 0)
                         {
                             result = func_800A88A0(result, ot, GLYPH_SYM(D_80147146, 0x4E), 4, x + 0x54, y + 0x20, 0);
                         }
                         else
                         {
-                            result = func_800A88A0(result, ot, GLYPH_OFF((u8*)D_801475C4, (*(s32*)(base90 + 0x20) & 0x3FFFF) * 2), 4, x + 0x54, y + 0x20, 0);
+                            result = func_800A88A0(result, ot, GLYPH_OFF((u8*)D_801475C4, (preview->party_word & 0x3FFFF) * 2), 4, x + 0x54, y + 0x20, 0);
                         }
                     }
                 }
@@ -1437,7 +1459,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
             }
             else
             {
-                s32 j;
+                s32 slot_index;
                 u8* record;
 
                 niki_terminate_multibyte_text(&D_80164B9C);
@@ -1445,18 +1467,18 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                 record -= 4;
                 if ((u32)(record[0x24] - 1) >= 0x7FU)
                 {
-                    for (j = 0; j < 0x20; j++)
+                    for (slot_index = 0; slot_index < 0x20; slot_index++)
                     {
-                        name[j] = record[4 + j];
+                        name[slot_index] = record[4 + slot_index];
                     }
-                    name[j] = 0;
+                    name[slot_index] = 0;
                     result = niki_draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
 
-                    for (j = 0; j < 0x20; j++)
+                    for (slot_index = 0; slot_index < 0x20; slot_index++)
                     {
-                        name[j] = ((NikiFallbackText*)&D_80164B98)->text[j];
+                        name[slot_index] = ((NikiFallbackText*)&D_80164B98)->text[slot_index];
                     }
-                    name[j] = 0;
+                    name[slot_index] = 0;
                     result = niki_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
                 }
             }
@@ -1466,47 +1488,41 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
 }
 
 /**
- * @brief Zero-fill the tail of a 0x40-byte record once a terminator is seen.
- *
- * Walks a variable-width byte stream up to logical index 0x40: a lead byte
- * >= 0x80 consumes two positions, otherwise one. On the first zero byte the
- * remaining bytes through index 0x40 are cleared.
- *
- * @param arg0 Pointer to the record buffer to scan and pad.
+ * @brief Zero-fill a 64-byte text field from its first character-boundary terminator.
+ * @param text Text field to scan; bytes with the high bit set begin two-byte characters.
  * @see decomp.me (100%)
  */
-void niki_terminate_multibyte_text(void* arg0)
+void niki_terminate_multibyte_text(void* text)
 {
-    u8* p;
-    s32 i;
+    u8* cursor;
+    s32 byte_index;
 
-    p = (u8*)arg0;
-    i = 0;
-    for (;;)
+    cursor = (u8*)text;
+    for (byte_index = 0;;)
     {
-        if (i >= 0x40)
+        if (byte_index >= 64)
         {
             return;
         }
-        if (*p == 0)
+        if (*cursor == 0)
         {
-            while (i < 0x40)
+            while (byte_index < 64)
             {
-                *p = 0;
-                i++;
-                p++;
+                *cursor = 0;
+                byte_index++;
+                cursor++;
             }
             return;
         }
-        if (*p >= 0x80)
+        if (*cursor >= 0x80)
         {
-            p += 2;
-            i += 2;
+            cursor += 2;
+            byte_index += 2;
         }
         else
         {
-            p += 1;
-            i += 1;
+            cursor += 1;
+            byte_index += 1;
         }
     }
 }
@@ -2298,6 +2314,7 @@ s32 niki_draw_icon_highlight(s32 prim, s32* ot, s32 x, s32 y, s32 width, s32 ico
 }
 
 /**
+ * @brief Select the cancellation choice when opening a confirmation prompt.
  * @see decomp.me (100%)
  */
 void niki_enable_choice_toggle(void)
@@ -2306,34 +2323,40 @@ void niki_enable_choice_toggle(void)
 }
 
 /**
+ * @brief Draw both choices and toggle the selection on horizontal input.
+ * @param prim GPU packet write cursor.
+ * @param ot Ordering-table entry receiving the captions.
+ * @param x Horizontal anchor between the choices.
+ * @param y Caption baseline.
+ * @return Advanced GPU packet cursor.
  * @see decomp.me (100%)
  */
 s32 niki_draw_choice_prompt(s32 prim, s32* ot, s32 x, s32 y)
 {
     u8* p;
     u8* base;
-    s32 g1;
-    s32 g2;
-    s32 hi;
-    s32 a3;
+    s32 first_caption;
+    s32 second_caption;
+    s32 offset_high;
+    s32 palette;
 
     p = (u8*)&D_800EC3FA;
-    hi = p[1] << 8;
+    offset_high = p[1] << 8;
     base = p - 0x36;
-    a3 = 4;
-    g1 = p[0] + (hi + (s32)base);
+    palette = 4;
+    first_caption = p[0] + (offset_high + (s32)base);
     if (g_niki_choice_toggle != 0)
     {
-        a3 = 5;
+        palette = 5;
     }
-    prim = func_800A88A0(prim, ot, (void*)g1, a3, x - 0x10, y, 1);
-    a3 = 4;
-    g2 = base[0x38] + ((base[0x39] << 8) + (s32)base);
+    prim = func_800A88A0(prim, ot, (void*)first_caption, palette, x - 0x10, y, 1);
+    palette = 4;
+    second_caption = base[0x38] + ((base[0x39] << 8) + (s32)base);
     if (g_niki_choice_toggle == 0)
     {
-        a3 = 5;
+        palette = 5;
     }
-    prim = func_800A88A0(prim, ot, (void*)g2, a3, x + 8, y, 0);
+    prim = func_800A88A0(prim, ot, (void*)second_caption, palette, x + 8, y, 0);
     if (g_pad_input & 0xA000)
     {
         g_niki_choice_toggle ^= 1;
@@ -2344,23 +2367,12 @@ s32 niki_draw_choice_prompt(s32 prim, s32* ot, s32 x, s32 y)
 }
 
 /**
- * @brief Draw/update dispatcher for the niki save-menu state machine.
- *
- * Dispatches on the state code in g_niki_entry_state (0xF3..0xFF) through the rodata
- * jump table jtbl_80140054, emitting the glyph primitives for the active
- * dialog page and advancing the state on pad input.
- *
- * @param ot Ordering-table entry the glyph primitives are linked into.
+ * @brief Draw the save-menu page and process its confirmation and progress states.
+ * @param ot Ordering-table entry receiving the page primitives.
  * @param prim GPU packet write cursor.
- * @param arg2 X scroll offset subtracted from all glyph positions.
- * @param arg3 Y scroll offset subtracted from all glyph positions.
+ * @param x_offset Horizontal displacement subtracted from glyph positions.
+ * @param y_offset Vertical displacement subtracted from glyph positions.
  * @return Advanced GPU packet cursor.
- *
- * @note The `switch (0)` wrapper, the static `keep[]` label-address array and
- *       `goto *jtbl_80140054[dispatch]` reproduce the original rodata jump
- *       table dispatch; same computed-goto pattern as the menu.c matches.
- * @note Verified 100.000000% (962/962 exact, gcc272_cdk) in-tree 2026-08-25;
- *       scratch history in working/niki_draw_state_page/.
  */
 s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 {
@@ -2413,12 +2425,12 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     {
         s32 x;
         u8* base;
-        NikiPolyG4Packet* g;
+        NikiPolyG4Packet* bar;
         s32 next;
         s32 elapsed;
         s32 extent;
         s32 color;
-        s32 finalmode;
+        s32 dialog_state;
 
         x = -x_offset + 0x90;
         prim = func_800A88A0(prim, ot, (void*)((s32)&D_8014712A - 0x32 + D_8014712A), 4, x, -y_offset, 2);
@@ -2427,7 +2439,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 
         next = prim;
-        g = (NikiPolyG4Packet*)prim;
+        bar = (NikiPolyG4Packet*)prim;
         if (g_niki_progress_bar_active != 0)
         {
             elapsed = func_8002054C(-1) - g_niki_progress_start_tick;
@@ -2437,27 +2449,27 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             }
             color = 0xFFFF00;
             extent = elapsed * NIKI_PROGRESS_WIDTH;
-            g->color0.word = 0xFF;
-            g->color1.word = 0xFFFF;
-            g->color3.word = 0xFF0000;
-            g->tag.bytes.length = 8;
-            g->color2.word = color;
-            g->color0.bytes.code = 0x38;
-            g->x2 = 0;
-            g->x0 = 0;
+            bar->color0.word = 0xFF;
+            bar->color1.word = 0xFFFF;
+            bar->color3.word = 0xFF0000;
+            bar->tag.bytes.length = 8;
+            bar->color2.word = color;
+            bar->color0.bytes.code = 0x38;
+            bar->x2 = 0;
+            bar->x0 = 0;
             if (extent < 0)
             {
                 extent += 0xFF;
             }
-            g->x3 = extent >> 8;
-            g->x1 = extent >> 8;
-            g->y1 = 0;
-            g->y0 = 0;
-            g->y3 = NIKI_PROGRESS_HEIGHT;
-            g->y2 = NIKI_PROGRESS_HEIGHT;
-            g->tag.word = (g->tag.word & 0xFF000000) | (*ot & 0xFFFFFF);
+            bar->x3 = extent >> 8;
+            bar->x1 = extent >> 8;
+            bar->y1 = 0;
+            bar->y0 = 0;
+            bar->y3 = NIKI_PROGRESS_HEIGHT;
+            bar->y2 = NIKI_PROGRESS_HEIGHT;
+            bar->tag.word = (bar->tag.word & 0xFF000000) | (*ot & 0xFFFFFF);
             *ot = (*ot & 0xFF000000) | (prim & 0xFFFFFF);
-            next = prim + 0x24;
+            next = prim + sizeof(NikiPolyG4Packet);
         }
         prim = next;
 
@@ -2481,9 +2493,9 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 g_niki_confirm_latch = 0;
                 g_niki_entry_state = 0xFF;
                 niki_reset_entry_ranks();
-                finalmode = 4;
+                dialog_state = 4;
                 g_niki_load_step = 0;
-                g_niki_dialog_state = finalmode;
+                g_niki_dialog_state = dialog_state;
                 return prim;
             }
             func_800A3938(0x7B, 0x80);
@@ -2500,10 +2512,10 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         s32 y;
         u8* p;
         u8* base;
-        s32 g1;
-        s32 g2;
-        s32 hi;
-        s32 a3;
+        s32 first_caption;
+        s32 second_caption;
+        s32 offset_high;
+        s32 palette;
         NikiPacket* packet;
         s32 i;
 
@@ -2511,22 +2523,22 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014716A, 0x72), 4, x + 0x90, -y_offset, 2);
         y = 0xE - y_offset;
         p = (u8*)&D_800EC3FA;
-        hi = p[1] << 8;
+        offset_high = p[1] << 8;
         base = p - 0x36;
-        a3 = 4;
-        g1 = p[0] + (hi + (s32)base);
+        palette = 4;
+        first_caption = p[0] + (offset_high + (s32)base);
         if (g_niki_choice_toggle != 0)
         {
-            a3 = 5;
+            palette = 5;
         }
-        result = func_800A88A0(prim, ot, (void*)g1, a3, x + 0x80, y, 1);
-        a3 = 4;
-        g2 = base[0x38] + ((base[0x39] << 8) + (s32)base);
+        result = func_800A88A0(prim, ot, (void*)first_caption, palette, x + 0x80, y, 1);
+        palette = 4;
+        second_caption = base[0x38] + ((base[0x39] << 8) + (s32)base);
         if (g_niki_choice_toggle == 0)
         {
-            a3 = 5;
+            palette = 5;
         }
-        result = func_800A88A0(result, ot, (void*)g2, a3, x + 0x98, y, 0);
+        result = func_800A88A0(result, ot, (void*)second_caption, palette, x + 0x98, y, 0);
         if (g_pad_input & 0xA000)
         {
             g_niki_choice_toggle ^= 1;
@@ -2536,14 +2548,14 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
         prim = result;
 
-        if (g_pad_input & 0x40)
+        if (g_pad_input & NIKI_CANCEL_INPUT_MASK)
         {
             func_800A3938(0x78, 0x80);
             g_niki_choice_toggle = 1;
             g_niki_entry_state = 0xF4;
             func_800AA02C();
         }
-        else if (g_pad_input & 0x220)
+        else if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
         {
             if (g_niki_choice_toggle != 0)
             {
@@ -2558,7 +2570,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 packet = (NikiPacket*)&g_niki_element_pool;
                 D_8011F428 = 2;
                 g_menu_element_counter = 0x20;
-                for (i = 0; i < 8; i++, packet++)
+                for (i = 0; i < NIKI_ELEMENT_COUNT; i++, packet++)
                 {
                     packet->attr.f.state = 0;
                 }
@@ -2574,43 +2586,43 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         s32 result;
         s32 one;
         s32 y;
-        u8* glyphbase;
+        u8* caption_table;
         u8* p;
         u8* base;
-        s32 g1;
-        s32 g2;
-        s32 hi;
-        s32 a3;
-        s32 count;
-        s32 i;
-        u8* cursor;
+        s32 first_caption;
+        s32 second_caption;
+        s32 offset_high;
+        s32 palette;
+        s32 record_count;
+        s32 record_index;
+        u8(*records)[64];
         u8* resource;
-        s32 temp;
+        s32 checksum;
 
         x = -x_offset;
         prim = func_800A88A0(prim, ot, (void*)((s32)&D_80147162 - 0x6A + D_80147162), 4, x + 0x90, -y_offset, 2);
-        glyphbase = (u8*)&D_80147162 - 0x6A;
-        prim = func_800A88A0(prim, ot, GLYPH_OFF(glyphbase, 0x70), 4, x + 0x90, 0xE - y_offset, 2);
+        caption_table = (u8*)&D_80147162 - 0x6A;
+        prim = func_800A88A0(prim, ot, GLYPH_OFF(caption_table, 0x70), 4, x + 0x90, 0xE - y_offset, 2);
 
         y = 0x1C - y_offset;
         p = (u8*)&D_800EC3FA;
-        hi = p[1] << 8;
+        offset_high = p[1] << 8;
         base = p - 0x36;
-        a3 = 4;
-        g1 = p[0] + (hi + (s32)base);
+        palette = 4;
+        first_caption = p[0] + (offset_high + (s32)base);
         if (g_niki_choice_toggle != 0)
         {
-            a3 = 5;
+            palette = 5;
         }
         one = 1;
-        result = func_800A88A0(prim, ot, (void*)g1, a3, x + 0x80, y, one);
-        a3 = 4;
-        g2 = base[0x38] + ((base[0x39] << 8) + (s32)base);
+        result = func_800A88A0(prim, ot, (void*)first_caption, palette, x + 0x80, y, one);
+        palette = 4;
+        second_caption = base[0x38] + ((base[0x39] << 8) + (s32)base);
         if (g_niki_choice_toggle == 0)
         {
-            a3 = 5;
+            palette = 5;
         }
-        result = func_800A88A0(result, ot, (void*)g2, a3, x + 0x98, y, 0);
+        result = func_800A88A0(result, ot, (void*)second_caption, palette, x + 0x98, y, 0);
         if (g_pad_input & 0xA000)
         {
             g_niki_choice_toggle ^= 1;
@@ -2620,42 +2632,34 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
         prim = result;
 
-        if (g_pad_input & 0x40)
+        if ((g_pad_input & NIKI_CANCEL_INPUT_MASK) || ((g_pad_input & NIKI_CONFIRM_INPUT_MASK) && g_niki_choice_toggle != 0))
         {
-            goto f4_accept;
+            g_niki_choice_toggle = one;
+            g_niki_entry_state = 0xF3;
+            func_800A3938(0x78, 0x80);
+            func_800AA02C();
         }
-        if (g_pad_input & 0x220)
+        else if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
         {
-            if (g_niki_choice_toggle != 0)
+            func_800A3938(0x7E, 0x80);
+            records = (u8(*)[64])D_80122A08;
+            resource = g_niki_save_blob;
+            func_80016E7C(D_80122A08, ((NikiLoadedSavePayload*)resource)->trailing_data, 0x100);
+            record_count = 0;
+            for (record_index = 0; record_index < 4; record_index++)
             {
-            f4_accept:
-                g_niki_choice_toggle = one;
-                g_niki_entry_state = 0xF3;
-                func_800A3938(0x78, 0x80);
-                func_800AA02C();
-            }
-            else
-            {
-                func_800A3938(0x7E, 0x80);
-                cursor = D_80122A08;
-                resource = g_niki_save_blob;
-                func_80016E7C(D_80122A08, resource + 0x32E0, 0x100);
-                count = 0;
-                for (i = 0; i < 4; i++)
+                if (records[record_index][0] != 0)
                 {
-                    if (cursor[i * 0x40] != 0)
-                    {
-                        count++;
-                    }
+                    record_count++;
                 }
-                resource[0x197] = count;
-                temp = niki_compute_save_checksum(resource);
-                ((NikiSaveBlob*)resource)->magic = NIKI_SAVE_MAGIC;
-                ((NikiSaveBlob*)resource)->checksum = temp;
-                g_niki_progress_active = 1;
-                g_niki_load_step = &D_801606F5;
-                g_niki_entry_state = 0xF5;
             }
+            ((NikiLoadedSavePayload*)resource)->trailing_record_count = record_count;
+            checksum = niki_compute_save_checksum(resource);
+            ((NikiSaveBlob*)resource)->magic = NIKI_SAVE_MAGIC;
+            ((NikiSaveBlob*)resource)->checksum = checksum;
+            g_niki_progress_active = 1;
+            g_niki_load_step = &D_801606F5;
+            g_niki_entry_state = 0xF5;
         }
     }
     break;
@@ -2663,7 +2667,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     {
         s32 x;
         u8* base;
-        NikiPolyG4Packet* g;
+        NikiPolyG4Packet* bar;
         s32 next;
         s32 elapsed;
         s32 extent;
@@ -2678,7 +2682,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 4, x, 0x1C - y_offset, 2);
 
         next = prim;
-        g = (NikiPolyG4Packet*)prim;
+        bar = (NikiPolyG4Packet*)prim;
         if (g_niki_progress_bar_active != 0)
         {
             elapsed = func_8002054C(-1) - g_niki_progress_start_tick;
@@ -2688,27 +2692,27 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             }
             color = 0xFFFF00;
             extent = elapsed * NIKI_PROGRESS_WIDTH;
-            g->color0.word = 0xFF;
-            g->color1.word = 0xFFFF;
-            g->color3.word = 0xFF0000;
-            g->tag.bytes.length = 8;
-            g->color2.word = color;
-            g->color0.bytes.code = 0x38;
-            g->x2 = 0;
-            g->x0 = 0;
+            bar->color0.word = 0xFF;
+            bar->color1.word = 0xFFFF;
+            bar->color3.word = 0xFF0000;
+            bar->tag.bytes.length = 8;
+            bar->color2.word = color;
+            bar->color0.bytes.code = 0x38;
+            bar->x2 = 0;
+            bar->x0 = 0;
             if (extent < 0)
             {
                 extent += 0xFF;
             }
-            g->x3 = extent >> 8;
-            g->x1 = extent >> 8;
-            g->y1 = 0;
-            g->y0 = 0;
-            g->y3 = NIKI_PROGRESS_HEIGHT;
-            g->y2 = NIKI_PROGRESS_HEIGHT;
-            g->tag.word = (g->tag.word & 0xFF000000) | (*ot & 0xFFFFFF);
+            bar->x3 = extent >> 8;
+            bar->x1 = extent >> 8;
+            bar->y1 = 0;
+            bar->y0 = 0;
+            bar->y3 = NIKI_PROGRESS_HEIGHT;
+            bar->y2 = NIKI_PROGRESS_HEIGHT;
+            bar->tag.word = (bar->tag.word & 0xFF000000) | (*ot & 0xFFFFFF);
             *ot = (*ot & 0xFF000000) | (prim & 0xFFFFFF);
-            next = prim + 0x24;
+            next = prim + sizeof(NikiPolyG4Packet);
         }
         prim = next;
 
@@ -2717,7 +2721,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             func_800A3938(0x7A, 0x80);
             g_menu_element_counter = 0x20;
             packet = (NikiPacket*)&g_niki_element_pool;
-            for (i = 0; i < 8; i++, packet++)
+            for (i = 0; i < NIKI_ELEMENT_COUNT; i++, packet++)
             {
                 packet->attr.f.state = 0;
             }
@@ -2749,8 +2753,8 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             {
                 return prim;
             }
-            if ((func_8001714C(D_800ECF7C, &g_niki_entries[g_niki_card_slot][g_niki_selected_row], 0xC) != 0) || (g_niki_entry_metadata.unkD4 != D_801227CC) ||
-                (g_niki_entry_metadata.unkD6 != D_801227F4))
+            if ((func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) != 0) ||
+                (g_niki_entry_metadata.identifier != D_801227CC) || (g_niki_entry_metadata.unknown_0xd6 != D_801227F4))
             {
                 g_niki_selected_row++;
                 if (g_niki_selected_row >= g_niki_entry_state)
@@ -2815,26 +2819,26 @@ niki_fe:
         return prim;
     }
 
-    if (g_pad_input & 0x40)
+    if (g_pad_input & NIKI_CANCEL_INPUT_MASK)
     {
-        s32* p;
+        NikiPacket* element;
         s32 i;
         s32 word;
         D_80122994 = 3;
         func_800A3938(0x78, 0x80);
         func_80067F28();
-        p = (s32*)&g_niki_element_pool;
+        element = (NikiPacket*)&g_niki_element_pool;
         i = 0;
         do
         {
-            word = *p;
+            word = element->attr.word;
             if (word & 7)
             {
-                *p = (((word & ~7) | 3) & ~NIKI_ELEMENT_PHASE_MASK) | 0x40;
+                element->attr.word = (((word & ~7) | 3) & ~NIKI_ELEMENT_PHASE_MASK) | 0x40;
             }
             i++;
-            p += 3;
-        } while (i < 8);
+            element++;
+        } while (i < NIKI_ELEMENT_COUNT);
         return prim;
     }
 
@@ -3448,20 +3452,46 @@ static inline void niki_erase_placeholder_paths(void)
 s32 niki_advance_load_sequence(void)
 {
     NikiSequencePath path;
-    s32 status0;
-    s32 status1;
+    s32 card_command;
+    s32 card_result;
     s32 phase_result;
     s32 wait_attempts;
     s32 poll_result;
-    s32 poll_result20;
+    s32 io_result;
     s32 rank_index;
     s32 rank_value;
-    s32 dispatch;
-    static void* const keep[] __attribute__((section(".discard"))) = {
-        &&cl_case_0,  &&cl_case_1,  &&cl_case_2,  &&cl_case_3,    &&cl_case_4,    &&cl_case_5,    &&cl_case_6,    &&block_return,
-        &&cl_case_8,  &&cl_case_9,  &&cl_case_10, &&block_return, &&block_return, &&block_return, &&block_return, &&cl_case_15,
-        &&cl_case_16, &&cl_case_17, &&cl_case_18, &&cl_case_19,   &&cl_case_20,   &&block_return, &&block_return, &&block_return,
-        &&cl_case_24, &&cl_case_25, &&cl_case_26, &&cl_case_27,   &&cl_case_28,   &&block_return, &&cl_case_30};
+    s32 command;
+    static void* const keep[] __attribute__((section(".discard"))) = {&&stop_sequence,
+                                                                      &&request_card_info,
+                                                                      &&poll_card_info,
+                                                                      &&release_primary,
+                                                                      &&wait_secondary,
+                                                                      &&release_secondary,
+                                                                      &&scan_directory,
+                                                                      &&block_return,
+                                                                      &&request_card_clear,
+                                                                      &&request_card_load,
+                                                                      &&erase_selected_file,
+                                                                      &&block_return,
+                                                                      &&block_return,
+                                                                      &&block_return,
+                                                                      &&block_return,
+                                                                      &&poll_card_ready,
+                                                                      &&wait_secondary_complete,
+                                                                      &&read_entry_preview,
+                                                                      &&poll_entry_preview,
+                                                                      &&read_save,
+                                                                      &&poll_save_read,
+                                                                      &&block_return,
+                                                                      &&block_return,
+                                                                      &&block_return,
+                                                                      &&check_card_type,
+                                                                      &&write_save,
+                                                                      &&poll_save_write,
+                                                                      &&read_saved_copy,
+                                                                      &&poll_saved_copy,
+                                                                      &&block_return,
+                                                                      &&reset_retries};
 
     memcpy(&path, &g_niki_file_template, 6);
     phase_result = 1;
@@ -3475,48 +3505,48 @@ s32 niki_advance_load_sequence(void)
     switch (0)
     {
     case 0:
-        dispatch = *g_niki_load_step;
-        if ((u32)dispatch >= 0x1F)
+        command = *g_niki_load_step;
+        if ((u32)command >= 0x1F)
         {
             goto block_return;
         }
-        goto* jtbl_80140098[dispatch];
+        goto* jtbl_80140098[command];
 
-    cl_case_1:
+    request_card_info:
         phase_result = 3;
         func_8001729C(g_niki_card_slot);
         func_8001724C(g_niki_card_slot * 0x10);
         g_niki_load_step = g_niki_load_step + 1;
         goto block_return;
 
-    cl_case_2:
+    poll_card_info:
         poll_result = niki_poll_primary_handle_group();
         if (poll_result >= 3)
         {
-            goto c2_ge3;
+            goto check_card_info_change;
         }
         if (poll_result > 0)
         {
-            goto c2_pos;
+            goto card_info_error;
         }
         if (poll_result == 0)
         {
             goto block_increment;
         }
         return phase_result;
-    c2_ge3:
+    check_card_info_change:
         if (poll_result == 3)
         {
-            goto c2_eq3;
+            goto card_info_changed;
         }
         return phase_result;
-    c2_pos:
+    card_info_error:
         phase_result = 4;
         g_niki_selection_status = 0;
         g_niki_entry_state = 0xFD;
         g_niki_load_step = g_niki_load_step + 1;
         goto block_return;
-    c2_eq3:
+    card_info_changed:
         g_niki_rank_count = 0x28;
         rank_value = -1;
         for (rank_index = 14; rank_index >= 0; rank_index--)
@@ -3525,11 +3555,11 @@ s32 niki_advance_load_sequence(void)
         }
         goto block_status_ff;
 
-    cl_case_3:
+    release_primary:
         niki_release_primary_handles();
         goto block_increment;
 
-    cl_case_4:
+    wait_secondary:
         do
         {
             poll_result = niki_poll_secondary_handle_group();
@@ -3549,11 +3579,11 @@ s32 niki_advance_load_sequence(void)
         phase_result = 4;
         goto block_status_fd;
 
-    cl_case_5:
+    release_secondary:
         niki_release_secondary_handles();
         goto block_increment;
 
-    cl_case_6:
+    scan_directory:
         niki_erase_placeholder_paths();
         g_niki_entry_scan_active = 1;
         if (niki_begin_entry_scan(g_niki_card_slot) == 0)
@@ -3587,17 +3617,17 @@ s32 niki_advance_load_sequence(void)
                 goto block_return;
             }
             wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 0x14);
+        } while (wait_attempts < 20);
         goto block_return;
 
-    cl_case_8:
+    request_card_clear:
         phase_result = 3;
         func_8001729C(g_niki_card_slot);
         func_800172AC(g_niki_card_slot * 0x10);
         g_niki_load_step = g_niki_load_step + 1;
         goto block_return;
 
-    cl_case_9:
+    request_card_load:
         phase_result = 3;
         func_8001729C(g_niki_card_slot);
         func_8001725C(g_niki_card_slot * 0x10);
@@ -3606,13 +3636,13 @@ s32 niki_advance_load_sequence(void)
         g_niki_load_step = g_niki_load_step + 1;
         goto block_return;
 
-    cl_case_0:
+    stop_sequence:
         phase_result = 2;
         g_niki_progress_active = 0;
         goto block_return;
 
-    cl_case_10:
-        func_80016F9C(&path, (u8*)g_niki_entries + (g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES) + (g_niki_selected_row * NIKI_DIRECTORY_ENTRY_BYTES));
+    erase_selected_file:
+        func_80016F9C(&path, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name);
         wait_attempts = 0;
         func_8001729C(g_niki_card_slot);
         do
@@ -3623,31 +3653,31 @@ s32 niki_advance_load_sequence(void)
             {
                 break;
             }
-        } while (wait_attempts < 0x14);
+        } while (wait_attempts < 20);
         goto block_increment;
 
-    cl_case_15:
+    poll_card_ready:
         poll_result = niki_poll_primary_handle_group();
         if (poll_result >= 3)
         {
-            goto c15_ge3;
+            goto check_card_change;
         }
         if (poll_result > 0)
         {
-            goto c15_pos;
+            goto retry_card_ready;
         }
         if (poll_result == 0)
         {
             goto block_increment;
         }
         goto block_return;
-    c15_ge3:
+    check_card_change:
         if (poll_result == 3)
         {
-            goto c15_eq3;
+            goto retry_card_change;
         }
         goto block_return;
-    c15_pos:
+    retry_card_ready:
         g_niki_secondary_poll_countdown = g_niki_secondary_poll_countdown - 1;
         if (g_niki_secondary_poll_countdown != 0)
         {
@@ -3658,11 +3688,11 @@ s32 niki_advance_load_sequence(void)
         g_niki_selection_status = 0;
         g_niki_entry_state = 0xFD;
         goto block_return;
-    c15_eq3:
+    retry_card_change:
         g_niki_primary_poll_countdown = g_niki_primary_poll_countdown - 1;
         if (g_niki_primary_poll_countdown == 0)
         {
-            goto c15_d70zero;
+            goto card_change_timeout;
         }
     block_reissue:
         func_8001729C(g_niki_card_slot);
@@ -3670,20 +3700,20 @@ s32 niki_advance_load_sequence(void)
         func_8001729C(g_niki_card_slot);
         func_8001725C(g_niki_card_slot * 0x10);
         goto block_return;
-    c15_d70zero:
+    card_change_timeout:
         phase_result = 5;
         g_niki_entry_state = 0xFC;
         g_niki_load_step = D_801606D0;
         goto block_return;
 
-    cl_case_16:
+    wait_secondary_complete:
         do
         {
             poll_result = niki_poll_secondary_handle_group();
         } while (poll_result == -1);
         goto block_increment;
 
-    cl_case_17:
+    read_entry_preview:
         g_niki_io_busy = 1;
         g_niki_selection_status = 0;
         func_8001729C(g_niki_card_slot);
@@ -3701,7 +3731,7 @@ s32 niki_advance_load_sequence(void)
         }
         goto block_increment;
 
-    cl_case_18:
+    poll_entry_preview:
         poll_result = niki_poll_primary_handle_group();
         if (poll_result == 0)
         {
@@ -3722,7 +3752,7 @@ s32 niki_advance_load_sequence(void)
         g_niki_load_step = D_801606C8;
         goto block_return;
 
-    cl_case_19:
+    read_save:
         g_niki_confirm_latch = 1;
         g_niki_progress_bar_active = 1;
         g_niki_progress_start_tick = func_8002054C(-1);
@@ -3743,20 +3773,20 @@ s32 niki_advance_load_sequence(void)
         }
         goto block_increment;
 
-    cl_case_20:
-        poll_result20 = niki_poll_primary_handle_group();
-        if (poll_result20 == 0)
+    poll_save_read:
+        io_result = niki_poll_primary_handle_group();
+        if (io_result == 0)
         {
             g_niki_confirm_latch = 0;
             g_niki_load_step = g_niki_load_step + 1;
             func_8001683C(g_niki_file_handle);
             goto block_return;
         }
-        if (poll_result20 < 0)
+        if (io_result < 0)
         {
             goto block_return;
         }
-        if (poll_result20 >= 4)
+        if (io_result >= 4)
         {
             goto block_return;
         }
@@ -3768,7 +3798,7 @@ s32 niki_advance_load_sequence(void)
         }
         goto block_decrement_step;
 
-    cl_case_24:
+    check_card_type:
         wait_attempts = 0;
         do
         {
@@ -3778,11 +3808,11 @@ s32 niki_advance_load_sequence(void)
             }
             func_8002054C(0);
             wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 0x14);
-        if (wait_attempts != 0x14)
+        } while (wait_attempts < 20);
+        if (wait_attempts != 20)
         {
-            func_80032174(0, &status0, &status1);
-            if (status1 == 0)
+            func_80032174(0, &card_command, &card_result);
+            if (card_result == 0)
             {
                 goto block_increment;
             }
@@ -3790,7 +3820,7 @@ s32 niki_advance_load_sequence(void)
         niki_open_status_dialog(3);
         goto block_return;
 
-    cl_case_27:
+    read_saved_copy:
         g_niki_confirm_latch = 1;
         g_niki_progress_bar_active = 1;
         g_niki_progress_start_tick = func_8002054C(-1);
@@ -3812,20 +3842,20 @@ s32 niki_advance_load_sequence(void)
         }
         goto block_increment;
 
-    cl_case_28:
-        poll_result20 = niki_poll_primary_handle_group();
-        if (poll_result20 == 0)
+    poll_saved_copy:
+        io_result = niki_poll_primary_handle_group();
+        if (io_result == 0)
         {
             g_niki_confirm_latch = 0;
             g_niki_load_step = g_niki_load_step + 1;
             func_8001683C(g_niki_file_handle);
             goto block_return;
         }
-        if (poll_result20 < 0)
+        if (io_result < 0)
         {
             goto block_return;
         }
-        if (poll_result20 >= 4)
+        if (io_result >= 4)
         {
             goto block_return;
         }
@@ -3839,12 +3869,12 @@ s32 niki_advance_load_sequence(void)
         }
         goto block_close_decrement;
 
-    cl_case_30:
+    reset_retries:
         g_niki_retry_count = 5;
         g_niki_load_step = g_niki_load_step + 1;
         goto block_return;
 
-    cl_case_25:
+    write_save:
         if (D_80164FD4 == 0)
         {
             wait_attempts = 0;
@@ -3855,7 +3885,7 @@ s32 niki_advance_load_sequence(void)
                     break;
                 }
                 wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < 0x14);
+            } while (wait_attempts < 20);
         }
         func_80016F9C(&path, D_800ECF9C);
         func_8001729C(g_niki_card_slot);
@@ -3873,7 +3903,7 @@ s32 niki_advance_load_sequence(void)
                 break;
             }
             wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 0x14);
+        } while (wait_attempts < 20);
     block_write_retry:
         g_niki_retry_count = g_niki_retry_count - 1;
         if (g_niki_retry_count == 0)
@@ -3904,7 +3934,7 @@ s32 niki_advance_load_sequence(void)
                     break;
                 }
                 wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < 0x14);
+            } while (wait_attempts < 20);
             goto block_write_retry;
         }
         goto block_increment;
@@ -3913,15 +3943,15 @@ s32 niki_advance_load_sequence(void)
         g_niki_load_step = g_niki_load_step + 1;
         goto block_return;
 
-    cl_case_26:
-        poll_result20 = niki_poll_primary_handle_group();
-        if (poll_result20 != 0)
+    poll_save_write:
+        io_result = niki_poll_primary_handle_group();
+        if (io_result != 0)
         {
-            if (poll_result20 < 0)
+            if (io_result < 0)
             {
                 goto block_return;
             }
-            if (poll_result20 >= 4)
+            if (io_result >= 4)
             {
                 goto block_return;
             }
@@ -3938,7 +3968,7 @@ s32 niki_advance_load_sequence(void)
                     break;
                 }
                 wait_attempts = wait_attempts + 1;
-            } while (wait_attempts < 0x14);
+            } while (wait_attempts < 20);
         }
         func_8001729C(g_niki_card_slot);
         wait_attempts = 0;
@@ -3949,7 +3979,7 @@ s32 niki_advance_load_sequence(void)
                 break;
             }
             wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 0x14);
+        } while (wait_attempts < 20);
         g_niki_progress_active = 0;
         g_niki_load_step = g_niki_load_step + 1;
         func_8001683C(g_niki_file_handle);
@@ -3980,13 +4010,16 @@ block_case26_exhausted:
             break;
         }
         wait_attempts = wait_attempts + 1;
-    } while (wait_attempts < 0x14);
+    } while (wait_attempts < 20);
 
 block_return:
     return phase_result;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Request fresh card information and restart the load sequence.
+ * @see decomp.me (100.00%)
+ */
 void niki_restart_load_sequence(void)
 {
     func_8001729C(g_niki_card_slot);
@@ -3995,33 +4028,40 @@ void niki_restart_load_sequence(void)
     g_niki_load_step = D_801606D0;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Poll software card events and request fresh card information after an event.
+ * @return Event index: 0 completion, 1 error, 2 timeout, 3 new card; -1 if none is pending.
+ * @see decomp.me (100.00%)
+ */
 s32 niki_poll_and_rewind_primary_handles(void)
 {
-    s32 busy_slot;
+    s32 event_index;
 
-    busy_slot = niki_poll_primary_handle_group();
-    if (busy_slot != -1)
+    event_index = niki_poll_primary_handle_group();
+    if (event_index != -1)
     {
         func_8001729C(g_niki_card_slot);
         func_8001724C(g_niki_card_slot * 0x10);
     }
-    return busy_slot;
+    return event_index;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Open and enable software and hardware memory-card events for polling.
+ * @see decomp.me (100.00%)
+ */
 void niki_init_stream_handles(void)
 {
     func_800158E0();
     func_800167EC();
-    g_niki_primary_handle0 = func_800167AC(0xF4000001, 4, 0x2000, 0);
-    g_niki_primary_handle1 = func_800167AC(0xF4000001, 0x8000, 0x2000, 0);
-    g_niki_primary_handle2 = func_800167AC(0xF4000001, 0x100, 0x2000, 0);
-    g_niki_primary_handle3 = func_800167AC(0xF4000001, 0x2000, 0x2000, 0);
-    g_niki_secondary_handle0 = func_800167AC(0xF0000011, 4, 0x2000, 0);
-    g_niki_secondary_handle1 = func_800167AC(0xF0000011, 0x8000, 0x2000, 0);
-    g_niki_secondary_handle2 = func_800167AC(0xF0000011, 0x100, 0x2000, 0);
-    g_niki_secondary_handle3 = func_800167AC(0xF0000011, 0x2000, 0x2000, 0);
+    g_niki_primary_handle0 = func_800167AC(SwCARD, EvSpIOE, EvMdNOINTR, 0);
+    g_niki_primary_handle1 = func_800167AC(SwCARD, EvSpERROR, EvMdNOINTR, 0);
+    g_niki_primary_handle2 = func_800167AC(SwCARD, EvSpTIMOUT, EvMdNOINTR, 0);
+    g_niki_primary_handle3 = func_800167AC(SwCARD, EvSpNEW, EvMdNOINTR, 0);
+    g_niki_secondary_handle0 = func_800167AC(HwCARD, EvSpIOE, EvMdNOINTR, 0);
+    g_niki_secondary_handle1 = func_800167AC(HwCARD, EvSpERROR, EvMdNOINTR, 0);
+    g_niki_secondary_handle2 = func_800167AC(HwCARD, EvSpTIMOUT, EvMdNOINTR, 0);
+    g_niki_secondary_handle3 = func_800167AC(HwCARD, EvSpNEW, EvMdNOINTR, 0);
     func_800167DC(g_niki_primary_handle0);
     func_800167DC(g_niki_primary_handle1);
     func_800167DC(g_niki_primary_handle2);
@@ -4035,7 +4075,10 @@ void niki_init_stream_handles(void)
     g_niki_entry_scan_active = 0;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Close all software and hardware memory-card event handles.
+ * @see decomp.me (100.00%)
+ */
 void niki_shutdown_stream_handles(void)
 {
     func_800158E0();
@@ -4210,7 +4253,10 @@ void niki_commit_selected_entry(void)
     g_niki_io_busy = 1;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Consume pending software memory-card events.
+ * @see decomp.me (100.00%)
+ */
 void niki_release_primary_handles(void)
 {
     func_800167CC(g_niki_primary_handle0);
@@ -4219,7 +4265,10 @@ void niki_release_primary_handles(void)
     func_800167CC(g_niki_primary_handle3);
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Consume pending hardware memory-card events.
+ * @see decomp.me (100.00%)
+ */
 void niki_release_secondary_handles(void)
 {
     func_800167CC(g_niki_secondary_handle0);
@@ -4228,7 +4277,11 @@ void niki_release_secondary_handles(void)
     func_800167CC(g_niki_secondary_handle3);
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Consume the first pending software card event in priority order.
+ * @return Event index: 0 completion, 1 error, 2 timeout, 3 new card; -1 if none is pending.
+ * @see decomp.me (100.00%)
+ */
 s32 niki_poll_primary_handle_group(void)
 {
     if (func_800167CC(g_niki_primary_handle0) == 1)
@@ -4250,7 +4303,11 @@ s32 niki_poll_primary_handle_group(void)
     return -1;
 }
 
-/** @see decomp.me (100.00%) */
+/**
+ * @brief Consume the first pending hardware card event in priority order.
+ * @return Event index: 0 completion, 1 error, 2 timeout, 3 new card; -1 if none is pending.
+ * @see decomp.me (100.00%)
+ */
 s32 niki_poll_secondary_handle_group(void)
 {
     if (func_800167CC(g_niki_secondary_handle0) == 1)

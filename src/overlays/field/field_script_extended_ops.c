@@ -2,7 +2,7 @@
 #include "field_script.h"
 
 /*
- * Extended field script opcodes 0x86 through 0x8F.
+ * Extended field script opcodes 0x80 through 0x8F.
  *
  * field_script_run hands opcodes of 0x80 and above to func_800B8308, which
  * decodes up to four operands from the descriptor bytes that follow the opcode
@@ -30,9 +30,209 @@ void akao_cmd_a9(s32 arg0, s32 arg1);
 void func_80089D44(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void field_script_op_00(void);
 
-extern StructB78 *D_80122B78;
+extern u8 *D_80122B78;
 extern s32 g_layout_option;
 extern s32 g_layout_sub_mode;
+
+void func_8006B8DC(s32, s32, s32, s32, s32);
+void func_800C28B8(s32);
+void func_80087A9C(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+void func_800B0710(s32, s32, s32, s32);
+
+/**
+ * @brief Forward four values to akao_set_song_params.
+ * @param flags AKAO flags word.
+ * @param duration Duration.
+ * @param field_id Field id.
+ * @param sub_id Sub id.
+ */
+void func_800BCB68(s32 flags, s32 duration, s32 field_id, s32 sub_id)
+{
+    akao_set_song_params(flags, duration, field_id, sub_id);
+}
+
+/**
+ * @brief Split bit 7 of arg0 into a flag and forward the rest to func_8006B8DC.
+ * @param arg0 Id with an optional 0x80 flag bit.
+ * @param arg1 Forwarded as the first argument.
+ * @param arg2 Forwarded as the second argument.
+ * @param arg3 Forwarded as the third argument.
+ */
+void func_800BCB88(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    s32 flag;
+
+    if (arg0 & 0x80)
+    {
+        flag = 1;
+        arg0 &= 0x7F;
+    }
+    else
+    {
+        flag = 0;
+    }
+    func_8006B8DC(arg1, arg2, arg3, flag, arg0);
+}
+
+/**
+ * @brief Split bit 7 of arg0 into a flag, run func_800C28B8 on the id, then forward everything to func_80087A9C.
+ * @param arg0 Actor id with an optional 0x80 flag bit.
+ * @param arg1 Forwarded to func_80087A9C.
+ * @param arg2 Forwarded to func_80087A9C.
+ * @param arg3 Forwarded to func_80087A9C.
+ */
+void func_800BCBD0(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    s32 var_s0;
+    s32 var_s1;
+
+    if (arg0 & 0x80)
+    {
+        var_s1 = 1;
+        var_s0 = arg0 & 0x7F;
+    }
+    else
+    {
+        var_s1 = 0;
+        var_s0 = arg0;
+    }
+    func_800C28B8(var_s0);
+    func_80087A9C(var_s0, arg1, arg2, arg3, 0, -1, -1, -1, 0, var_s1);
+}
+
+/**
+ * @brief Empty function; no-op.
+ */
+void func_800BCC6C(void)
+{
+}
+
+/**
+ * @brief Forward four values to func_800B0710, mapping 0xFF to the script owner in the first and to -1 in the rest.
+ * @param arg0 Actor id, or 0xFF for the script owner.
+ * @param arg1 0xFF becomes -1.
+ * @param arg2 0xFF becomes -1.
+ * @param arg3 0xFF becomes -1.
+ */
+void func_800BCC74(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    s32 v;
+
+    if (arg0 == 0xFF)
+    {
+        v = g_field_script->status.owner_id;
+    }
+    else
+    {
+        v = arg0;
+    }
+    func_800B0710(v,
+                  (arg1 == 0xFF) ? -1 : arg1,
+                  (arg2 == 0xFF) ? -1 : arg2,
+                  (arg3 == 0xFF) ? -1 : arg3);
+}
+
+
+/** @brief Pending layout transition state with overlapping control fields at 0x418. */
+typedef struct
+{
+    u8 pad[0x404];
+    s32 layout, option, third_selector;
+    u8 pad410[8];
+    union
+    {
+        s32 word;
+        struct
+        {
+            s16 id;
+            s8 mode;
+            u8 flags;
+        } fields;
+    } control;
+} State;
+extern u8 *D_80122B78;
+extern s32 g_layout_flag;
+extern s32 g_layout_option;
+
+/**
+ * @brief Set pending layout selectors and reset execution to script record zero.
+ * @param transition_id Transition identifier stored in the control word's low halfword.
+ * @param mode Mode byte stored at offset 0x41A.
+ * @param selectors Three packed selector bytes; 0xFE and 0xFF select sentinel behavior.
+ * @param flags Five-bit transition flags stored at control bits 24 through 28.
+ * @note 100% match with GCC 2.7.2 CDK and GCC 2.8.0 G0: 109 instructions, 436 bytes.
+ */
+void func_800BCCE0(s16 transition_id, s8 mode, s32 selectors, s32 flags)
+{
+    s32 layout;
+    s32 third_selector;
+    s32 option;
+
+    State *state = (State *)D_80122B78;
+    option = selectors & 0xFF;
+    state->control.word = (s32)(state->control.word | 0x40000000);
+    state->control.fields.mode = mode;
+    layout = (selectors >> 8) & 0xFF;
+    third_selector = (selectors >> 0x10) & 0xFF;
+    state->control.fields.id = transition_id;
+    switch (option)
+    {
+    case 0xFE:
+        ((State *)D_80122B78)->option = -2;
+        break;
+    case 0xFF:
+        g_layout_option = -1;
+        ((State *)D_80122B78)->option = -1;
+        break;
+    default:
+        if (option == g_layout_option)
+        {
+            ((State *)D_80122B78)->option = -2;
+        }
+        else
+        {
+            ((State *)D_80122B78)->option = option;
+        }
+        break;
+    }
+    switch (layout)
+    {
+    case 0xFE:
+        ((State *)D_80122B78)->layout = -2;
+        break;
+    case 0xFF:
+        ((State *)D_80122B78)->layout = -1;
+        break;
+    default:
+        if (layout == g_layout_flag)
+        {
+            ((State *)D_80122B78)->layout = -1;
+        }
+        else
+        {
+            ((State *)D_80122B78)->layout = layout;
+        }
+        break;
+    }
+    switch (third_selector)
+    {
+    case 0xFE:
+        ((State *)D_80122B78)->third_selector = -2;
+        break;
+    case 0xFF:
+        ((State *)D_80122B78)->third_selector = -1;
+        break;
+    default:
+        ((State *)D_80122B78)->third_selector = third_selector;
+        break;
+    }
+    ((State *)D_80122B78)->control.word =
+        (s32)((((State *)D_80122B78)->control.word & 0xE0FFFFFF) | ((flags & 0x1F) << 0x18));
+    g_field_script->active_record = 0;
+    g_field_script->status.word = (s32)(g_field_script->status.word & 0x7FFFFFFF);
+    ((FieldScriptRecord *)((u8 *)g_field_script + ((g_field_script->active_record * 3) << 2)))->pc =
+        0;
+}
 
 /**
  * @brief Opcode 0x86: dispatch an entry of a resource record through func_800B2844.
@@ -175,7 +375,7 @@ void field_script_op_8b(s32 field_0, s32 field_1, s32 field_2, s32 operand_3)
     u32 raw;
     u32 v;
 
-    p = D_80122B78;
+    p = (StructB78 *)D_80122B78;
     raw = p->unk410;
     p->unk414 = operand_3;
     v = raw;
@@ -232,61 +432,4 @@ void field_script_op_8e(void)
  */
 void field_script_op_8f(void)
 {
-}
-
-/**
- * @brief Apply a signed 16-bit relative jump to the active record's program counter.
- *
- * Reads a little-endian 16-bit delta from the active record's program counter
- * at offset @p delta_offset. A non-zero delta advances the pc by it
- * (sign-extended via the 0x8000 bit); a zero delta hands off to
- * field_script_op_00 to step the cursor.
- *
- * @param delta_offset Byte offset from the program counter holding the delta.
- * @see decomp.me (100%) TODO
- */
-void field_script_branch(s32 delta_offset)
-{
-    FieldScriptRecord *rec;
-    s32 pc;
-    u8 *ptr;
-    s32 val;
-    s32 lo;
-
-    rec = FIELD_SCRIPT_ACTIVE_RECORD();
-    pc = (s32)rec->pc;
-    ptr = (u8 *)(pc + delta_offset);
-    val = ptr[0] + (ptr[1] << 8);
-    lo = val & 0xFFFF;
-    if (lo != 0)
-    {
-        if (val & 0x8000)
-        {
-            s32 t = pc + 0xFFFF0000;
-            rec->pc = (u8 *)(t + lo);
-            return;
-        }
-        rec->pc = (u8 *)(pc + lo);
-        return;
-    }
-    field_script_op_00();
-}
-
-/**
- * @brief Read one operand, mapping the value 0xFF to the script owner's id.
- * @param type Operand type from the descriptor byte.
- * @param data Operand stream position.
- * @param value Receives the decoded value.
- * @return The advanced operand stream position.
- */
-u8 *field_script_read_operand_or_owner(u32 type, u8 *data, s32 *value)
-{
-    u8 *result;
-
-    result = field_script_read_operand(type, data, value);
-    if (*value == 0xFF)
-    {
-        *value = g_field_script->status.owner_id;
-    }
-    return result;
 }

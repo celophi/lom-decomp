@@ -3,7 +3,6 @@
 /* UI states and memory-card limits. */
 #define ADDHERO_ELEMENT_COUNT 8
 #define ADDHERO_ELEMENT_STATE_MASK 7
-#define ADDHERO_ELEMENT_PHASE_MASK 0x78
 #define ADDHERO_ELEMENT_STATE_INACTIVE 0
 #define ADDHERO_ELEMENT_STATE_OPENING 1
 #define ADDHERO_ELEMENT_STATE_ACTIVE 2
@@ -32,6 +31,9 @@
 /** Resolve a glyph string from a preloaded table @p base plus the u16 offset
  *  held in @p sym (@p sym is a table entry naming its own offset value). */
 #define GLYPH_ENTRY(base, sym) ((void*)((s32)(sym) + (s32)(base)))
+
+/** @brief Draw an element at its current animation offset and return the packet cursor. */
+typedef s32 (*AddheroElementDrawFunc)(s32* ot, s32 prim, s32 x_offset, s32 y_offset);
 
 /** @brief Animated panel or list element used by the ADDHERO interface. */
 typedef struct AddheroElement
@@ -65,7 +67,7 @@ typedef struct AddheroElement
             u32 reserved : 22;
         } bits;
     } size;
-    void* draw_handler;
+    AddheroElementDrawFunc draw_handler;
 } AddheroElement;
 
 /** @brief Saved character metadata displayed in the card browser. */
@@ -73,10 +75,13 @@ typedef struct AddheroRecord
 {
     u8 name[23];
     u8 marker_17;
-    u32 first_icon_and_flags;
+    u32 unknown_18 : 25;
+    u32 first_icon : 7;
     u8 _pad1c[3];
     u8 icon_palette;
-    u32 label_and_icons;
+    u32 entry_label : 18;
+    u32 second_icon : 7;
+    u32 third_icon : 7;
     u8 _pad24[12];
     s32 play_time_frames;
     u8 _pad34[0xCF - 0x34];
@@ -133,8 +138,6 @@ typedef struct
     u8 _pad40b4[4];
     AddheroGpuPacket* prim_cursor;
 } AddheroDrawState;
-
-typedef AddheroGpuPacket* (*AddheroElementDrawFunc)();
 
 /** @brief Pool of animated UI elements used by the ADDHERO screen. */
 /** @brief Three double-byte overflow glyphs and their string terminator. */
@@ -260,11 +263,8 @@ void field_restore_fade_target(void);
 void field_set_default_fade_target(void);
 void field_restore_fade_target_with_duration(s32 arg0);
 void func_80063194(void);
-void func_8001990C(RECT* rect, s32 a1, s32 a2, s32 a3);
 void func_800A55E4(void* buf, s32 arg1);
 void func_800A5638(void* buf, s32 arg1);
-void func_8001A5D4(s32 arg0, s32* arg1);
-void func_8001C56C(s32* arg0, s32 a1, s32 a2, s32 a3, s32 a4);
 s32 func_800AD850();
 s32 func_800AE76C();
 void field_text_reset_scratch(void);
@@ -297,7 +297,7 @@ void addhero_init(s32 work_base, s32 mode)
     rect.w = OVERLAY_INIT_CLEAR_VRAM_W;
     rect.h = OVERLAY_INIT_CLEAR_VRAM_H;
 
-    func_8001990C(&rect, 0, 0, 0);
+    ClearImage(&rect, 0, 0, 0);
     addhero_reset_glyph_cache();
 
     g_addhero_write_in_progress = 0;
@@ -325,7 +325,7 @@ s32 addhero_state_step(AddheroDrawState* draw_state)
     {
         addhero_shutdown_card_events();
         field_text_reset_windows();
-        func_80019788(0);
+        DrawSync(0);
         return g_addhero_exit_requested;
     }
 
@@ -363,7 +363,7 @@ void addhero_build_ui_elements(void)
     {
         g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
         element = addhero_alloc_element();
-        element->draw_handler = (void*)addhero_draw_transfer_status;
+        element->draw_handler = addhero_draw_transfer_status;
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = 0x10;
         element->attr.bits.y = 0x61;
@@ -372,7 +372,7 @@ void addhero_build_ui_elements(void)
         SET_ELEM_WIDTH_LOW(element, 0x20);
 
         element = addhero_alloc_element();
-        element->draw_handler = (void*)addhero_draw_card_slot0_label;
+        element->draw_handler = addhero_draw_card_slot0_label;
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = 0x18;
         element->attr.bits.y = 0x4D;
@@ -381,7 +381,7 @@ void addhero_build_ui_elements(void)
         SET_ELEM_WIDTH_LOW(element, 0x80);
 
         element = addhero_alloc_element();
-        element->draw_handler = (void*)addhero_draw_card_slot1_label;
+        element->draw_handler = addhero_draw_card_slot1_label;
         element->attr.bits.transition_step = 1;
         element->attr.bits.x = 0xA0;
         element->attr.bits.y = 0x4D;
@@ -394,7 +394,7 @@ void addhero_build_ui_elements(void)
 
     g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
     element = addhero_alloc_element();
-    element->draw_handler = (void*)addhero_draw_entry_list;
+    element->draw_handler = addhero_draw_entry_list;
     element->attr.bits.transition_step = 1;
     element->attr.bits.x = 0x1C;
     element->attr.bits.y = 0x32;
@@ -404,7 +404,7 @@ void addhero_build_ui_elements(void)
     element->size.bits.scrollable = 1;
 
     element = addhero_alloc_element();
-    element->draw_handler = (void*)addhero_draw_mode_glyph;
+    element->draw_handler = addhero_draw_mode_glyph;
     element->attr.bits.transition_step = 1;
     element->attr.bits.x = 0x24;
     element->attr.bits.y = 0x0A;
@@ -413,7 +413,7 @@ void addhero_build_ui_elements(void)
     SET_ELEM_WIDTH_LOW(element, 0xF0);
 
     element = addhero_alloc_element();
-    element->draw_handler = (void*)addhero_draw_card_slot0_label;
+    element->draw_handler = addhero_draw_card_slot0_label;
     element->attr.bits.transition_step = 1;
     element->attr.bits.x = 0x18;
     element->attr.bits.y = 0x1E;
@@ -422,7 +422,7 @@ void addhero_build_ui_elements(void)
     SET_ELEM_WIDTH_LOW(element, 0x80);
 
     element = addhero_alloc_element();
-    element->draw_handler = (void*)addhero_draw_card_slot1_label;
+    element->draw_handler = addhero_draw_card_slot1_label;
     element->attr.bits.transition_step = 1;
     element->attr.bits.x = 0xA0;
     element->attr.bits.y = 0x1E;
@@ -431,7 +431,7 @@ void addhero_build_ui_elements(void)
     SET_ELEM_WIDTH_LOW(element, 0x80);
 
     element = addhero_alloc_element();
-    element->draw_handler = (void*)addhero_draw_selected_entry_details;
+    element->draw_handler = addhero_draw_selected_entry_details;
     element->attr.bits.transition_step = 1;
     element->attr.bits.x = 0x1E;
     element->attr.bits.y = 0x8E;
@@ -782,10 +782,10 @@ s32 addhero_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     case 0xF9:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
-    case 0xFA:
+    case ADDHERO_ENTRY_STATE_CARD_FULL:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fa, 2), 4, -x_offset + 0x84, -y_offset, 2);
         break;
-    case 0xFD:
+    case ADDHERO_ENTRY_STATE_CARD_IO_ERROR:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fd, 4), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xFB:
@@ -1050,9 +1050,9 @@ s32 addhero_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_o
 
                     {
                         AddheroRecord* record = &g_addhero_entry_metadata;
-                        slot[0] = record->first_icon_and_flags >> 0x19;
-                        slot[1] = (record->label_and_icons >> 0x12) & 0x7F;
-                        slot[2] = record->label_and_icons >> 0x19;
+                        slot[0] = record->first_icon;
+                        slot[1] = record->second_icon;
+                        slot[2] = record->third_icon;
                         g_addhero_icon_palette = (s32)record->icon_palette;
                     }
 
@@ -1150,8 +1150,8 @@ s32 addhero_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_o
                         }
                         else
                         {
-                            result = func_800A88A0(result, ot, GLYPH_OFF((u8*)g_addhero_entry_glyph_table, ((s32)record->label_and_icons & 0x3FFFF) * 2), 4,
-                                                   x + 0x54, y + 0x20, 0);
+                            result = func_800A88A0(result, ot, GLYPH_OFF((u8*)g_addhero_entry_glyph_table, ((s32)record->entry_label) * 2), 4, x + 0x54,
+                                                   y + 0x20, 0);
                         }
                     }
                 }
@@ -1305,7 +1305,7 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
     s32 animated_width;
     s32 animated_height;
     s32 element_index;
-    s32 draw_env[24];
+    DRAWENV draw_env;
     u32 state_word;
     s32 state;
     u32 size_word;
@@ -1322,8 +1322,6 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
     s32 closing_height;
     s32 closing_scaled_height;
     s32 closing_remaining_height;
-    u32 finishing_word;
-    u32 updated_word;
     s32 entry_count;
 
     packet_cursor = draw_state->prim_cursor;
@@ -1346,11 +1344,11 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
 
     if (draw_state->frame_flag != 0)
     {
-        func_8001C56C(draw_env, 0, 0xF0, 0x140, 0xE0);
+        SetDefDrawEnv(&draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     }
     else
     {
-        func_8001C56C(draw_env, 0, 8, 0x140, 0xE0);
+        SetDefDrawEnv(&draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     }
 
     element = g_addhero_element_pool;
@@ -1358,16 +1356,16 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
 
     for (; element_index < ADDHERO_ELEMENT_COUNT; element_index++, element++)
     {
-        if (element->attr.word & ADDHERO_ELEMENT_STATE_MASK)
+        if (element->attr.bits.state != ADDHERO_ELEMENT_STATE_INACTIVE)
         {
-            func_8001A5D4((s32)packet_cursor, draw_env);
+            SetDrawEnv((DR_ENV*)packet_cursor, &draw_env);
 
             addPrim(ordering_table, packet_cursor);
 
             state_word = ((volatile AddheroElement*)element)->attr.word;
             state = state_word & ADDHERO_ELEMENT_STATE_MASK;
 
-            packet_cursor = (AddheroGpuPacket*)((u8*)packet_cursor + 0x40);
+            packet_cursor = (AddheroGpuPacket*)((u8*)packet_cursor + sizeof(DR_ENV));
 
             switch (state)
             {
@@ -1375,7 +1373,7 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                 opening_word = element->attr.word;
                 size_word = element->size.word;
                 width_low = opening_word >> 24;
-                width = ((size_word & 1) << 8) | width_low;
+                width = (element->size.bits.width_high << 8) | width_low;
                 transition_step = (opening_word >> 3) & 0xF;
                 scaled_width = width * transition_step;
                 g_pad_input = 0;
@@ -1386,48 +1384,41 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                 remaining_height = (s32)(height - animated_height);
 
                 packet_cursor =
-                    ((AddheroElementDrawFunc)element->draw_handler)(ordering_table, packet_cursor, (s32)(width - animated_width) / 2, remaining_height / 2);
+                    (AddheroGpuPacket*)element->draw_handler((s32*)ordering_table, (s32)packet_cursor, (s32)(width - animated_width) / 2, remaining_height / 2);
                 {
                     u32 post_word;
                     u32 field;
                     u32 high;
                     post_word = element->attr.word;
-                    field = (post_word >> 7) & 0x1FF;
+                    field = element->attr.bits.x;
                     high = post_word >> 24;
                     packet_cursor = (AddheroGpuPacket*)func_800AD850(packet_cursor, ordering_table,
-                                                                     field + (s32)((((element->size.word & 1) << 8) | high) - animated_width) / 2,
-                                                                     (element->attr.bytes.y) + ((s32)((element->size.word >> 1) & 0xFF) - animated_height) / 2,
+                                                                     field + (s32)(((element->size.bits.width_high << 8) | high) - animated_width) / 2,
+                                                                     (element->attr.bytes.y) + ((s32)(element->size.bits.height) - animated_height) / 2,
                                                                      animated_width, animated_height, draw_state->frame_flag, element_index == 0);
                 }
+                element->attr.bits.transition_step++;
+                if (element->attr.bits.transition_step == 8)
                 {
-                    u32 old_word;
-                    u32 new_word;
-                    old_word = element->attr.word;
-                    new_word = (old_word & ~ADDHERO_ELEMENT_PHASE_MASK) | (((((old_word >> 3) & 0xF) + 1) & 0xF) * 8);
-                    element->attr.word = new_word;
-                    if (((new_word >> 3) & 0xF) == 8)
-                    {
-                        func_800AA02C();
-                        element->attr.word = (element->attr.word & ~ADDHERO_ELEMENT_STATE_MASK) | ADDHERO_ELEMENT_STATE_ACTIVE;
-                    }
+                    func_800AA02C();
+                    element->attr.bits.state = ADDHERO_ELEMENT_STATE_ACTIVE;
                 }
                 break;
 
             case ADDHERO_ELEMENT_STATE_ACTIVE:
-                packet_cursor = ((AddheroElementDrawFunc)element->draw_handler)(ordering_table, packet_cursor, 0, 0);
+                packet_cursor = (AddheroGpuPacket*)element->draw_handler((s32*)ordering_table, (s32)packet_cursor, 0, 0);
                 {
                     u32 case_word;
                     u32 high;
                     case_word = element->attr.word;
                     high = case_word >> 24;
-                    packet_cursor = (AddheroGpuPacket*)func_800AD850(packet_cursor, ordering_table, (case_word >> 7) & 0x1FF, element->attr.bytes.y,
-                                                                     ((element->size.word & 1) << 8) | high, (element->size.word >> 1) & 0xFF,
+                    packet_cursor = (AddheroGpuPacket*)func_800AD850(packet_cursor, ordering_table, element->attr.bits.x, element->attr.bytes.y,
+                                                                     (element->size.bits.width_high << 8) | high, element->size.bits.height,
                                                                      draw_state->frame_flag, element_index == 0);
                 }
-                updated_word = element->attr.word;
-                if (((updated_word >> 3) & 0xF) != 0)
+                if (element->attr.bits.transition_step != 0)
                 {
-                    element->attr.word = (updated_word & ~ADDHERO_ELEMENT_PHASE_MASK) | (((((updated_word >> 3) & 0xF) - 1) & 0xF) * 8);
+                    element->attr.bits.transition_step--;
                 }
                 break;
 
@@ -1435,7 +1426,7 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                 closing_word = element->attr.word;
                 size_word = element->size.word;
                 closing_scaled_width = (u32)closing_word >> 24;
-                width = ((size_word & 1) << 8) | closing_scaled_width;
+                width = (element->size.bits.width_high << 8) | closing_scaled_width;
                 closing_word = (u32)closing_word >> 3;
                 closing_word &= 0xF;
                 closing_scaled_width = width * closing_word;
@@ -1450,47 +1441,34 @@ void addhero_update_and_draw_elements(AddheroDrawState* draw_state)
                 animated_height = closing_scaled_height / 8;
                 closing_remaining_height = (s32)(closing_height - animated_height);
 
-                packet_cursor = ((AddheroElementDrawFunc)element->draw_handler)(ordering_table, packet_cursor, (s32)(width - animated_width) / 2,
-                                                                                closing_remaining_height / 2);
+                packet_cursor = (AddheroGpuPacket*)element->draw_handler((s32*)ordering_table, (s32)packet_cursor, (s32)(width - animated_width) / 2,
+                                                                         closing_remaining_height / 2);
                 {
                     u32 post_word;
                     u32 field;
                     u32 high;
                     post_word = element->attr.word;
-                    field = (post_word >> 7) & 0x1FF;
+                    field = element->attr.bits.x;
                     high = post_word >> 24;
                     packet_cursor = (AddheroGpuPacket*)func_800AD850(packet_cursor, ordering_table,
-                                                                     field + (s32)((((element->size.word & 1) << 8) | high) - animated_width) / 2,
-                                                                     (element->attr.bytes.y) + ((s32)((element->size.word >> 1) & 0xFF) - animated_height) / 2,
+                                                                     field + (s32)(((element->size.bits.width_high << 8) | high) - animated_width) / 2,
+                                                                     (element->attr.bytes.y) + ((s32)(element->size.bits.height) - animated_height) / 2,
                                                                      animated_width, animated_height, draw_state->frame_flag, element_index == 0);
                 }
+                element->attr.bits.transition_step--;
+                if (element->attr.bits.transition_step == 0)
                 {
-                    u32 old_word;
-                    old_word = element->attr.word;
-                    closing_scaled_width = old_word & ~ADDHERO_ELEMENT_PHASE_MASK;
-                    old_word >>= 3;
-                    old_word &= 0xF;
-                    old_word--;
-                    old_word &= 0xF;
-                    old_word <<= 3;
-                    closing_scaled_width |= old_word;
-                    element->attr.word = closing_scaled_width;
-                    if (!(((u32)closing_scaled_width >> 3) & 0xF))
-                    {
-                        element->attr.word = ((((u32)closing_scaled_width & ~ADDHERO_ELEMENT_PHASE_MASK) | 0x18) & ~ADDHERO_ELEMENT_STATE_MASK) |
-                                             ADDHERO_ELEMENT_STATE_FINISHING;
-                    }
+                    element->attr.bits.transition_step = 3;
+                    element->attr.bits.state = ADDHERO_ELEMENT_STATE_FINISHING;
                 }
                 break;
 
             case ADDHERO_ELEMENT_STATE_FINISHING:
-                finishing_word = element->attr.word;
                 g_pad_input = 0;
-                updated_word = (finishing_word & ~ADDHERO_ELEMENT_PHASE_MASK) | (((((finishing_word >> 3) & 0xF) - 1) & 0xF) * 8);
-                element->attr.word = updated_word;
-                if (!((updated_word >> 3) & 0xF))
+                element->attr.bits.transition_step--;
+                if (element->attr.bits.transition_step == 0)
                 {
-                    element->attr.word = updated_word & ~ADDHERO_ELEMENT_STATE_MASK;
+                    element->attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
                 }
                 break;
             }
@@ -1624,7 +1602,7 @@ s32 addhero_draw_load_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     result = addhero_draw_choice_prompt(func_800A88A0(prim, ot, (u8*)&g_addhero_glyph_load_prompt + g_addhero_glyph_load_prompt - 0x30, 4, x, -y_offset, 2), ot,
                                         x, 0xE - y_offset);
 
-    if ((u32)(addhero_poll_and_retry_card_info() - 1) < 2U)
+    if ((u32)(addhero_poll_and_retry_card_info() - ADDHERO_CARD_EVENT_ERROR) < 2U)
     {
         g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_INACTIVE;
         func_800AA02C();
@@ -1795,7 +1773,7 @@ s32 addhero_draw_progress_bar(s32 prim, s32* ot)
 void addhero_open_status_dialog(s32 message_id)
 {
     play_menu_sfx(0x78, 0x80);
-    g_addhero_element_pool[0].draw_handler = (void*)addhero_draw_status_dialog;
+    g_addhero_element_pool[0].draw_handler = addhero_draw_status_dialog;
     g_addhero_element_pool[0].attr.bits.transition_step = 1;
     g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
     g_addhero_element_pool[0].attr.bits.x = 0x20;
@@ -1823,7 +1801,7 @@ void addhero_open_status_dialog(s32 message_id)
 void addhero_open_exit_dialog(s32 message_id)
 {
     play_menu_sfx(0x78, 0x80);
-    g_addhero_element1.draw_handler = (void*)addhero_draw_exit_dialog;
+    g_addhero_element1.draw_handler = addhero_draw_exit_dialog;
     g_addhero_element1.attr.bits.transition_step = 1;
     g_addhero_element1.attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
     g_addhero_element1.attr.bits.x = 0x20;
@@ -1962,10 +1940,10 @@ s32 addhero_draw_transfer_status(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_base, 0xB2), 4, message_x, 0x1C - y_offset, 2);
     }
     break;
-    case 0xFA:
+    case ADDHERO_ENTRY_STATE_CARD_FULL:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_f8, 0x34), 4, -x_offset + 0x90, -y_offset, 2);
         break;
-    case 0xFD:
+    case ADDHERO_ENTRY_STATE_CARD_IO_ERROR:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(g_addhero_glyph_status_fd, 4), 4, -x_offset + 0x90, -y_offset, 2);
         break;
     case 0xFB:
@@ -2031,7 +2009,7 @@ s32 addhero_draw_transfer_status(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             if (addhero_validate_save_blob(g_addhero_save_blob) == 0)
             {
                 play_menu_sfx(0x78, 0x80);
-                g_addhero_element_pool[0].draw_handler = (void*)addhero_draw_status_dialog;
+                g_addhero_element_pool[0].draw_handler = addhero_draw_status_dialog;
                 g_addhero_element_pool[0].attr.bits.transition_step = 1;
                 g_addhero_element_pool[0].attr.bits.state = ADDHERO_ELEMENT_STATE_OPENING;
                 g_addhero_element_pool[0].attr.bits.x = 0x20;
@@ -2302,23 +2280,19 @@ s32 addhero_draw_transfer_status(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     {
         AddheroElement* element;
         s32 i;
-        s32 attr;
 
         D_80122718 = 3;
         play_menu_sfx(0x78, 0x80);
         field_restore_fade_target();
         element = g_addhero_element_pool;
-        i = 0;
-        do
+        for (i = 0; i < ADDHERO_ELEMENT_COUNT; i++, element++)
         {
-            attr = element->attr.word;
-            if (attr & ADDHERO_ELEMENT_STATE_MASK)
+            if (element->attr.bits.state != ADDHERO_ELEMENT_STATE_INACTIVE)
             {
-                element->attr.word = (((attr & ~ADDHERO_ELEMENT_STATE_MASK) | ADDHERO_ELEMENT_STATE_CLOSING) & ~ADDHERO_ELEMENT_PHASE_MASK) | 0x40;
+                element->attr.bits.state = ADDHERO_ELEMENT_STATE_CLOSING;
+                element->attr.bits.transition_step = 8;
             }
-            i++;
-            element++;
-        } while (i < ADDHERO_ELEMENT_COUNT);
+        }
         return prim;
     }
 
@@ -2376,25 +2350,25 @@ s32 addhero_draw_icon_highlight(s32 result, s32* ot, s32 x, s32 y, s32 adjust, s
     if ((party_index == 1) && (slot < 2))
     {
         func_800A5638(g_addhero_icon_context, slot);
-        func_80019A34(&rect, g_addhero_icon_context);
-        func_80019788(0);
+        LoadImage(&rect, (u_long*)g_addhero_icon_context);
+        DrawSync(0);
     }
     else if (slot >= 0x4F)
     {
         func_800A55E4(g_addhero_icon_context, g_addhero_icon_palette);
-        func_80019A34(&rect, g_addhero_icon_context);
-        func_80019788(0);
+        LoadImage(&rect, (u_long*)g_addhero_icon_context);
+        DrawSync(0);
     }
     else
     {
-        func_80019A34(&rect, (void*)((u8*)&g_addhero_icon_image_table - 4 + g_addhero_icon_image_table[slot]));
+        LoadImage(&rect, (u_long*)((u8*)&g_addhero_icon_image_table - 4 + g_addhero_icon_image_table[slot]));
     }
     icon_column = visible_index * 3;
     rect.x = icon_column * 4 + SCREEN_WIDTH;
     rect.y = 0xD0;
     rect.w = 0xC;
     rect.h = 0x30;
-    func_80019A34(&rect, (void*)((u8*)&g_addhero_icon_image_table + 0x1C + g_addhero_icon_image_table[slot]));
+    LoadImage(&rect, (u_long*)((u8*)&g_addhero_icon_image_table + 0x1C + g_addhero_icon_image_table[slot]));
     icon = (POLY_FT4*)result;
     SET_BGR0_PACKED(icon, GPU_TINT_NEUTRAL);
     setlen(icon, 9);
@@ -2837,7 +2811,7 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     s32* field_table;
     s32 slot;
     s32* out_ptr;
-    char* entry_name;
+    struct DIRENTRY* entry;
     s32 rank_value;
     s32 entry_index;
     s32 selection;
@@ -2932,7 +2906,7 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
         max_count = g_addhero_entry_state;
         slot = g_addhero_card_slot;
         field_base = g_addhero_entry_fields;
-        max_ptr = (s32*)((slot * 0x50) + (s32)field_base);
+        max_ptr = &field_base[slot * ADDHERO_DIRECTORY_ENTRY_COUNT];
         do
         {
             if (rank_value < *max_ptr)
@@ -2949,16 +2923,16 @@ s32 addhero_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     if (g_addhero_entry_state > 0)
     {
         out_ptr = &g_addhero_entry_suffix_values[0];
-        entry_name = (char*)&g_addhero_entries[0];
+        entry = g_addhero_entries[0];
     loop_20:
-        if (strncmp(&g_new_save_entry_prefix[0], (void*)((g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES) + (s32)entry_name), 8) == 0)
+        if (strncmp(&g_new_save_entry_prefix[0], ((struct DIRENTRY*)(g_addhero_card_slot * ADDHERO_CARD_DIRECTORY_BYTES + (s32)entry))->name, 8) == 0)
         {
             *out_ptr = maximum_suffix + 1;
         }
         else
         {
             out_ptr += 1;
-            entry_name += 0x28;
+            entry++;
             entry_index += 1;
             if (entry_index < g_addhero_entry_state)
             {
