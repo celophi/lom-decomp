@@ -52,14 +52,16 @@ void func_80140D48(void);
  * and queue a VRAM upload (field_queue_vram_upload); sprite/effect nodes tick their
  * counters; sequence nodes advance a small state machine keyed on flags & 3.
  *
- * @note Match is 99.995160% (1032 exact target instructions out of 1033).
- *       The one remaining difference is a single register-allocation
- *       permutation near 0x400 (ALLOC-ORDER, argdiff only; no structural or
- *       instruction-count change).
- * @note The timer-tail path clears the CD flag word through @c CdWordBits and
- *       advances with @c anim = anim->next; continue; and the movie rect setup
- *       writes @c rects[0].x through a non-volatile cast; both spellings are
- *       required to reproduce the target's scheduling and codegen.
+ * @note Match is 100% (1033 exact target instructions out of 1033).
+ * @note The state==1 CD-flag set is written through
+ *       @c (u32)anim ^ ((u32)anim ^ 0x801ED800U): the same address and type as
+ *       @c FIELD_CD_FLAGS, but forcing the constant through the @c anim register
+ *       reproduces the target's codegen. The tear-down path clears the CD flag
+ *       word through @c CdWordBits, and the movie rect setup writes
+ *       @c rects[0].x through a non-volatile cast; both spellings are required
+ *       to reproduce the target's scheduling and codegen.
+ * @note The movie default-state timer tail falls through @c goto movie_timer to
+ *       a single shared @c anim->timer = 1; matching the target's tail merging.
  * @note The two strip-upload tails are merged with @c goto strip_upload so the
  *       shared @c field_queue_vram_upload call is emitted once, matching the
  *       target's tail merging.
@@ -73,7 +75,7 @@ void func_80140D48(void);
  *       body gives @c req the extra references it needs to win s1 over @c anim
  *       in the global allocator (see working notes).
  *
- * @see decomp.me (99.995160%) TODO
+ * @see decomp.me (100%) TODO
  */
 void field_update_scene_animations(void)
 {

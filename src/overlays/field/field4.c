@@ -103,51 +103,77 @@ typedef struct FieldActorAnimationDef
 } FieldActorAnimationDef;
 typedef struct
 {
-    u32 unk0; /* 0x00 */
-    u32 unk4; /* 0x04 */
-    u8 unk8; /* 0x08 */
-    u8 unk9; /* 0x09 */
+    union
+    {
+        u32 w;
+        struct
+        {
+            unsigned pad : 24;
+            unsigned mode : 2;
+            unsigned rest : 6;
+        } b;
+    } u0;
+    union
+    {
+        u32 w;
+        struct
+        {
+            unsigned pad : 11;
+            unsigned flag : 1;
+            unsigned pad2 : 10;
+            unsigned mode : 2;
+            unsigned rest : 8;
+        } b;
+    } u4;
+    u8 unk8;
+    u8 unk9;
     u8 padA;
-    u8 unkB; /* 0x0B */
-    u8 unkC; /* 0x0C */
-    u8 unkD; /* 0x0D */
-    u8 unkE; /* 0x0E */
-    u8 unkF; /* 0x0F */
-    u8 unk10; /* 0x10 */
-    u8 unk11; /* 0x11 */
+    u8 unkB;
+    u8 unkC;
+    u8 unkD;
+    u8 unkE;
+    u8 unkF;
+    u8 unk10;
+    u8 unk11;
     u8 pad12[0x14 - 0x12];
     union
     {
-        u32 w; /* 0x14 */
+        u32 w;
         struct
         {
-            u16 lo; /* 0x14 */
-            s16 hi; /* 0x16 */
+            unsigned pad : 4;
+            unsigned mode : 4;
+            unsigned rest : 24;
+        } b;
+        struct
+        {
+            u16 lo;
+            s16 hi;
         } h;
     } u14;
-    s16 unk18; /* 0x18 */
+    s16 unk18;
     u8 pad1A[0x23 - 0x1A];
-    u8 unk23; /* 0x23 */
+    u8 unk23;
     union
     {
-        u32 w; /* 0x24 */
+        u32 w;
         struct
         {
-            u8 unk24; /* 0x24 */
-            u8 unk25; /* 0x25 */
-            u8 unk26; /* 0x26 */
-            u8 unk27; /* 0x27 */
+            u8 unk24;
+            u8 unk25;
+            u8 unk26;
+            u8 unk27;
         } b;
     } u24;
-    u32 unk28; /* 0x28 */
-    u8 unk2C; /* 0x2C */
+    u32 unk28;
+    u8 unk2C;
     u8 pad2D;
-    u8 unk2E; /* 0x2E */
+    u8 unk2E;
     u8 pad2F[0x31 - 0x2F];
-    u8 unk31; /* 0x31 */
-    u8 unk32; /* 0x32 */
-    u8 unk33; /* 0x33 */
-    u32 unk34; /* 0x34 */
+    u8 unk31;
+    u8 unk32;
+    u8 unk33;
+    u32 unk34;
     u8 pad38[0x48 - 0x38];
 } FieldActorPartDef;
 
@@ -2743,75 +2769,54 @@ extern s32 D_8012269C;
 extern s32 D_80105760;
 
 /**
- * @brief Zero-fill D_800FE3A0 entry arg0, then set it up as a default field
- *        actor part: fade timers, kind 8, a size/idle-timer sized by arg1,
- *        and a couple of render/state flag bits.
- * @param arg0 D_800FE3A0 entry index to (re)initialize.
- * @param arg1 Selects the unk2E/unk33 timer value (0x40 if zero, else 0x30).
- * @see decomp.me (88.23%) TODO
- * @note NOT MATCHED. Instruction count is exact (79). Required to match,
- *       each measured by reverting it:
- *       - every field access goes through D_800FE3A0[arg0] (no entry
- *         pointer): cse folds the address within each block and the target
- *         re-derives it after the if/else join;
- *       - the arg1 test is a real two-arm if/else that stores unk2E/unk33
- *         in BOTH arms (the tails cross-jump); a `val` temp compiles to the
- *         preload form and loses the join label;
- *       - the 0x16 halfword and 0x24/0x25 bytes are union members, not
- *         casts, or the address is re-derived per access;
- *       - `i = 0x12` is assigned before the loop pointer.
- *       Residue (16 rows) is local-alloc coloring in the two flag-word
- *       regions: the target hoists `lw unk4` above the `= 8` stores so the
- *       constant 8 takes v1, and keeps the unk14 chain in a1 with the ~0xF0
- *       mask in v0. Measured inert: loading the words into locals early,
- *       statement/operand order of the RMW expressions, reusing `i` or `arg1`
- *       for constants, do/while(0) wrappers. See working/func_8006B7A0/.
+ * @brief Clear an actor part and initialize its default timers and render state.
+ * @param part_index Index of the actor part to initialize.
+ * @param timer_mode Selects timer defaults of 0x30 when nonzero, or 0x40 when zero.
  */
-void func_8006B7A0(s32 arg0, s32 arg1)
+void func_8006B7A0(s32 part_index, s32 timer_mode)
 {
-    s32 i;
-    u32 *p;
+    s32 words_remaining;
+    u32* word_cursor;
 
-    i = 0x12;
-    p = (u32*)&D_800FE3A0[arg0];
+    words_remaining = sizeof(D_800FE3A0[part_index]) / sizeof(*word_cursor);
+    word_cursor = (u32*)&D_800FE3A0[part_index];
     do
     {
-        *p = 0;
-        i--;
-        p++;
-    } while (i != 0);
+        *word_cursor = 0;
+        words_remaining--;
+        word_cursor++;
+    } while (words_remaining != 0);
 
-    D_800FE3A0[arg0].unk10 = 0x80;
-    D_800FE3A0[arg0].unkF = 0x80;
-    D_800FE3A0[arg0].unkE = 0x80;
-    D_800FE3A0[arg0].unk8 = 1;
-    D_800FE3A0[arg0].unk9 = 0xFF;
-    D_800FE3A0[arg0].u14.h.hi = 0x14;
-    D_800FE3A0[arg0].unkD = 8;
-    D_800FE3A0[arg0].u24.b.unk25 = 8;
-    D_800FE3A0[arg0].u24.b.unk24 = 8;
-    D_800FE3A0[arg0].unk23 = 8;
-    D_800FE3A0[arg0].unk18 = 0x100;
-    D_800FE3A0[arg0].unk4 = (D_800FE3A0[arg0].unk4 | 0x800) & 0xFF3FFFFF;
-    D_800FE3A0[arg0].unk4 |= 0x400000;
-    D_800FE3A0[arg0].unk0 = D_800FE3A0[arg0].unk0 & 0xFCFFFFFF;
-    D_800FE3A0[arg0].unk0 |= 0x2000000;
+    D_800FE3A0[part_index].unk10 = 0x80;
+    D_800FE3A0[part_index].unkF = 0x80;
+    D_800FE3A0[part_index].unkE = 0x80;
+    D_800FE3A0[part_index].unk8 = 1;
+    D_800FE3A0[part_index].unk9 = 0xFF;
+    D_800FE3A0[part_index].unkD = 8;
+    D_800FE3A0[part_index].u14.h.hi = 20;
+    D_800FE3A0[part_index].u24.b.unk25 = 8;
+    D_800FE3A0[part_index].u24.b.unk24 = 8;
+    D_800FE3A0[part_index].unk23 = 8;
+    D_800FE3A0[part_index].unk18 = 0x100;
+    D_800FE3A0[part_index].u4.b.flag = 1;
+    D_800FE3A0[part_index].u4.b.mode = 1;
+    D_800FE3A0[part_index].u0.b.mode = 2;
 
-    if (arg1 != 0)
+    if (timer_mode != 0)
     {
-        D_800FE3A0[arg0].unk2E = 0x30;
-        D_800FE3A0[arg0].unk33 = 0x30;
+        D_800FE3A0[part_index].unk2E = 0x30;
+        D_800FE3A0[part_index].unk33 = 0x30;
     }
     else
     {
-        D_800FE3A0[arg0].unk2E = 0x40;
-        D_800FE3A0[arg0].unk33 = 0x40;
+        D_800FE3A0[part_index].unk2E = 0x40;
+        D_800FE3A0[part_index].unk33 = 0x40;
     }
 
-    D_800FE3A0[arg0].unk11 = 0xFF;
-    D_800FE3A0[arg0].u14.w = (D_800FE3A0[arg0].u14.w & ~0xF0) | 0x20;
-    D_800FE3A0[arg0].unk28 |= 0x2000000;
-    D_800FE3A0[arg0].u24.w |= 0x100000;
+    D_800FE3A0[part_index].unk11 = 0xFF;
+    D_800FE3A0[part_index].unk28 |= 0x2000000;
+    D_800FE3A0[part_index].u14.b.mode = 2;
+    D_800FE3A0[part_index].u24.w |= 0x100000;
 }
 
 /**
@@ -2841,7 +2846,7 @@ void func_8006B8DC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
         D_800FE3A0[i].unkE = arg0;
         D_800FE3A0[i].unkF = arg1;
         D_800FE3A0[i].unk10 = arg2;
-        D_800FE3A0[i].unk4 = (D_800FE3A0[i].unk4 & 0xFF3FFFFF) | mode;
+        D_800FE3A0[i].u4.w = (D_800FE3A0[i].u4.w & 0xFF3FFFFF) | mode;
     }
 
     for (i = 0; i < 13; i++)
@@ -2883,7 +2888,7 @@ s32 func_8006B984(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
     D_800FE3A0[rec->unk3A].unkE = arg0;
     D_800FE3A0[rec->unk3A].unkF = arg1;
     D_800FE3A0[rec->unk3A].unk10 = arg2;
-    D_800FE3A0[rec->unk3A].unk4 = (D_800FE3A0[rec->unk3A].unk4 & 0xFF3FFFFF) | ((arg4 & 3) << 22);
+    D_800FE3A0[rec->unk3A].u4.w = (D_800FE3A0[rec->unk3A].u4.w & 0xFF3FFFFF) | ((arg4 & 3) << 22);
     rec->unk1C = (rec->unk1C & 0xFF7FFFFF) | ((arg3 & 1) << 23);
     return 0;
 }
@@ -3595,7 +3600,7 @@ u8 *func_8006C854(Struct_D800FDF58 *rec, u8 *base)
         if (cursor >= p[0])
         {
             part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
-            if (!((part->unk4 >> 4) & 3))
+            if (!((part->u4.w >> 4) & 3))
             {
                 func_80071500(rec, part);
                 return 0;
@@ -4004,7 +4009,7 @@ void func_8006D310(FieldActorState *actor)
                     goto next;
                 }
 
-                if ((part->unk0 >> 15) & 1)
+                if ((part->u0.w >> 15) & 1)
                 {
                     if (((flags >> 24) & 1) && actor->unk3B[g_field_track_index][i] != 0)
                     {
@@ -4066,7 +4071,7 @@ void func_8006D310(FieldActorState *actor)
  */
 void func_8006D6A8(Struct_D800FDF58 *dst, FieldActorPartDef *part, Struct_D800FDF58 *rec)
 {
-    if (!((part->unk4 >> 11) & 1) && !((part->unk28 >> 25) & 1) && (part->unk2C >> 5) == 0 &&
+    if (!((part->u4.w >> 11) & 1) && !((part->unk28 >> 25) & 1) && (part->unk2C >> 5) == 0 &&
         (*(u32 *)&part->unkC & 0xFFFF0000) == 0x80800000 && part->unk10 == 0x80)
     {
         dst->unk1C |= 0x10008000;
