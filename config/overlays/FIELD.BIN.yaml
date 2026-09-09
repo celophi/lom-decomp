@@ -612,7 +612,7 @@ segments:
       - [0x7A531, c, field203]                     # gcc272_cdk, func_800CA1A0
       - [0x7A571, c, func_800CA1E0]                # gcc272_cdk, 85.17%
       - [0x7A619, c, equipment_combination_quantity] # gcc280_g0, 100%
-      - [0x7A6F5, c, equipment_combination_helpers] # gcc272_cdk, equipment_pair_has_classes .. equipment_combination_find
+      - [0x7A6F5, c, unk2_equipment_combination_helpers] # gcc272_cdk, equipment_pair_has_classes .. equipment_combination_find
       - [0x7A8F9, c, field_equipment_combination_rules] # gcc280_g0, equipment_combination_variant + rule_00 .. _63
       - [0x7BA11, c, field_golem_logic_blocks]      # gcc280_g0, golem_logic_block_append (also matches gcc272_cdk)
       - [0x7BAE9, c, unk2_b_split098]              # gcc272_cdk, func_800CB758

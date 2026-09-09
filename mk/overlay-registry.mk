@@ -131,7 +131,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_pad_context_ops.c \
 	src/overlays/field/field_overlay_launchers.c \
 	src/overlays/field/func_800CA1E0.c \
-	src/overlays/field/equipment_combination_helpers.c \
+	src/overlays/field/unk2_equipment_combination_helpers.c \
 	src/overlays/field/field4.c \
 	src/overlays/field/field_audio.c \
 	src/overlays/field/func_800675c8.c \
