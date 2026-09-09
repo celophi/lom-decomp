@@ -1438,26 +1438,9 @@ void menu_update_slots(RenderContext* render_ctx)
         s32 slot_state;
 
         slot_state = g_menu_slots[slot_index].active;
-        if (slot_state != MENU_SLOT_STATE_OPEN)
+        switch (slot_state)
         {
-            if (slot_state < MENU_SLOT_STATE_CLOSING)
-            {
-                if (slot_state != MENU_SLOT_STATE_OPENING)
-                {
-                    slot_index -= 1;
-                    continue;
-                }
-            }
-            else
-            {
-                if (slot_state != MENU_SLOT_STATE_CLOSING)
-                {
-                    slot_index -= 1;
-                    continue;
-                }
-                goto update_closing_slot;
-            }
-
+        case MENU_SLOT_STATE_OPENING:
             {
                 u8 previous_anim_frame;
 
@@ -1471,39 +1454,44 @@ void menu_update_slots(RenderContext* render_ctx)
                     g_menu_slots[slot_index].active = MENU_SLOT_STATE_OPEN;
                 }
             }
-        }
-        else
-        {
-            MenuRect* slot_rect;
-
-            slot_rect = (MenuRect*)(((u8*)g_menu_slots + 8) + (((slot_index * 2) - slot_index) * sizeof(MenuSlot)));
-            view_origin.y = 0;
-            view_origin.x = 0;
-            menu_draw_window(&g_menu_slots[slot_index], render_ctx, slot_rect, &view_origin, g_menu_cursor_enable != 0);
-        }
-
-        if (slot_index == g_active_slot)
-        {
-            if (g_menu_slots[slot_index].tick_cb != 0)
+            /* Fall through to the shared active-slot callback. */
+        case MENU_SLOT_STATE_OPEN:
+            if (slot_state == MENU_SLOT_STATE_OPEN)
             {
-                g_menu_slots[slot_index].tick_cb(&g_menu_slots[slot_index]);
-            }
-        }
-        has_active_slot = 1;
-        slot_index -= 1;
-        continue;
+                MenuRect* slot_rect;
 
-    update_closing_slot:
-        menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
-        anim_frame = g_menu_slots[slot_index].anim_frame - 1;
-        g_menu_slots[slot_index].anim_frame = anim_frame;
-        if (!(anim_frame & 0xFF))
-        {
-            g_menu_slots[slot_index].active = MENU_SLOT_STATE_FREE;
-            menu_update_active_slot();
+                slot_rect = (MenuRect*)(((u8*)g_menu_slots + 8) + (((slot_index * 2) - slot_index) * sizeof(MenuSlot)));
+                view_origin.y = 0;
+                view_origin.x = 0;
+                menu_draw_window(&g_menu_slots[slot_index], render_ctx, slot_rect, &view_origin, g_menu_cursor_enable != 0);
+            }
+            if (slot_index == g_active_slot)
+            {
+                if (g_menu_slots[slot_index].tick_cb != 0)
+                {
+                    g_menu_slots[slot_index].tick_cb(&g_menu_slots[slot_index]);
+                }
+            }
+            has_active_slot = 1;
+            slot_index -= 1;
+            continue;
+
+        case MENU_SLOT_STATE_CLOSING:
+            menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
+            anim_frame = g_menu_slots[slot_index].anim_frame - 1;
+            g_menu_slots[slot_index].anim_frame = anim_frame;
+            if (!(anim_frame & 0xFF))
+            {
+                g_menu_slots[slot_index].active = MENU_SLOT_STATE_FREE;
+                menu_update_active_slot();
+            }
+            has_active_slot = 1;
+            slot_index -= 1;
+            continue;
+        default:
+            slot_index -= 1;
+            continue;
         }
-        has_active_slot = 1;
-        slot_index -= 1;
     }
 
     {
@@ -3033,22 +3021,13 @@ s32 menu_handle_input(s32 process_actions)
         case 6:
             g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx += 1;
             menu_focus_active_item();
-            goto after_do_while;
+            break;
 
         case 1:
         case 4:
         case 7:
             g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx -= 1;
             menu_focus_active_item();
-            goto after_do_while;
-
-        case 2:
-        case 5:
-        case 8:
-        case 9:
-        case 10:
-        case 11:
-        case 12:
             break;
 
         case 13:
@@ -3060,11 +3039,17 @@ s32 menu_handle_input(s32 process_actions)
         case 19:
         case 20:
         case 21:
-            goto after_do_while;
-        }
+            break;
 
-        while (1)
-        {
+        case 2:
+        case 5:
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+        default:
+            while (1)
             {
                 if (g_pad_input & PAD_BTN_L1)
                 {
@@ -3143,26 +3128,24 @@ s32 menu_handle_input(s32 process_actions)
                     menu_set_active_node();
                 }
 
+                if (!(g_menu_nodes[(g_menu_scene_type / 3) * 3].u2.s.flags & MENU_NODE_FLAG_ACTIVE))
+                {
+                    continue;
+                }
+                if (g_menu_cursor_enable == 0)
+                {
+                    menu_snap_view_to_cursor();
+                }
+                if (menu_focus_active_item())
+                {
+                    break;
+                }
             }
 
-            if (!(g_menu_nodes[(g_menu_scene_type / 3) * 3].u2.s.flags & MENU_NODE_FLAG_ACTIVE))
-            {
-                continue;
-            }
-            if (g_menu_cursor_enable == 0)
-            {
-                menu_snap_view_to_cursor();
-            }
-            if (menu_focus_active_item())
-            {
-                break;
-            }
+            MENU_CLEAR_SLOTS()
+            break;
         }
-
-        MENU_CLEAR_SLOTS()
     }
-
-after_do_while:
 
     if (process_actions != 0)
     {
@@ -3658,7 +3641,7 @@ s32 menu_item_has_action(void)
             {
                 if (item_subtype == 15)
                 {
-                    return 1;
+                    goto success;
                 }
                 return 0;
             }
@@ -3680,6 +3663,7 @@ s32 menu_item_has_action(void)
         }
         else if ((action_code != 0) && (action_code < 12) && (action_code >= 6))
         {
+success:
             return 1;
         }
     }
@@ -8076,7 +8060,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     u8* pad_item;
     u8* cmp_tbl;
     u8* ctx;
-    u8* ctx2;
+    u8* equipment_ctx;
     s32 slot_off;
     u32 unk14;
     u32 lhs_shift;
@@ -8088,7 +8072,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     s32 handle;
     s32 handle2;
     s32 off;
-    s32 off2;
+    s32 equipment_offset;
     s32 i9;
     list = state;
     buf = prim_buf;
@@ -8360,15 +8344,14 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                     case 0xA:
                         g_menu_active_equipped_item = 0;
                         g_menu_saved_category1_item = 0;
-                        do
                         {
-                            s32 subtype2;
-                            subtype2 = g_menu_active_subtype;
-                            ctx2 = (u8*)g_pad_ctx;
-                            off2 = ((subtype2 - 7) << 6) + (g_menu_char_slot * 0x250);
-                            *(ctx2 + off2 + 0x640) = 0;
-                        } while (0);
-                        func_800A8FB4(off2);
+                            s32 equipment_subtype;
+                            equipment_subtype = g_menu_active_subtype;
+                            equipment_ctx = (u8*)g_pad_ctx;
+                            equipment_offset = ((equipment_subtype - MENU_EQUIPMENT_SUBTYPE_BASE) << 6) + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
+                            *(equipment_ctx + equipment_offset + 0x640) = 0;
+                            func_800A8FB4();
+                        }
                         break;
                     }
                 }
@@ -8623,12 +8606,10 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
                     {
                         s32 slot_offset;
 
-                        do
-                        {
-                            func_800A8F8C(item_handle, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
-                            *((u8*)g_pad_ctx + (slot_offset = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250)) + 0x640) = 0;
-                        } while (0);
-                        func_800A8FB4(slot_offset);
+                        func_800A8F8C(item_handle, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
+                        slot_offset = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250);
+                        *((u8*)g_pad_ctx + slot_offset + 0x640) = 0;
+                        func_800A8FB4();
                     }
                     else
                     {
