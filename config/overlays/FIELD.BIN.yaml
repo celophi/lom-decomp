@@ -197,7 +197,7 @@ segments:
       - [0x3B729, c, field_actor_slot_lookup]   # gcc272_cdk, func_8008B398 + func_8008B42C + func_8008B500 (100%; none match under gcc280_g0)
       - [0x3B961, c, func_8008B5D0]                # gcc272_cdk, 100%
       - [0x3BAB5, c, field36]                      # gcc272_cdk, func_8008B724
-      - [0x3BACD, c, func_8008B73C] # gcc272_cdk, 91.831170% WIP
+      - [0x3BACD, c, func_8008B73C] # gcc272_cdk, 100%
       # TU hypothesis: field_actor_reactions (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x3BC01, c, func_8008B870] # gcc272_cdk, 100%
       - [0x3BFED, c, field363]                     # gcc272_cdk, func_8008BC5C
