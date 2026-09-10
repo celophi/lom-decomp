@@ -9,7 +9,7 @@ typedef struct
     u8 pad_21[0x19];
     u8 slot;
 } FieldMovingActor;
-/** @brief FieldObjectVisualKind-kind byte in a 0x48-byte field object record. */
+/** @brief Visual kind byte in a 0x48-byte field object record. */
 typedef struct
 {
     u8 pad[0x2E];
