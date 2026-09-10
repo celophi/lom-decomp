@@ -373,7 +373,7 @@ segments:
       - [0x550AD, c, func_800A4D1C] # gcc272_cdk, 97.341730% WIP
       - [0x55505, c, func_800A5174]                # gcc272_cdk, 100%
       - [0x555B5, c, func_800A5224] # gcc272_cdk, 94.280700% WIP
-      - [0x55861, c, func_800A54D0] # gcc272_cdk, 94.115944% WIP
+      - [0x55861, c, func_800A54D0] # gcc272_cdk, 100%
       - [0x55975, c, func_800A55E4]                 # gcc272_cdk, 100%
       # TU hypothesis: field_timed_panel (high). See docs/decompilation/field-boundaries/map.md.
       - [0x559C9, c, field65]                      # gcc272_cdk, func_800A5638
