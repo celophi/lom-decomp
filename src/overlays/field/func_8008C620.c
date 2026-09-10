@@ -70,7 +70,7 @@ extern ActorSlotData D_80105AE0[];
 /**
  * @brief Reset actor control fields and slot flags, then refresh its resources.
  * @param rec Actor state to reset.
- * @note WIP: instruction order and temporary-register differences remain.
+ * @see decomp.me (100%) TODO
  */
 void func_8008C620(FieldActorState *rec)
 {
@@ -80,11 +80,11 @@ void func_8008C620(FieldActorState *rec)
     rec->unk2A = 0xB7;
     rec->unk20 = 0x1E;
     rec->unk2E = 1;
-    rec->unk24 = 1;
     rec->unk30 = 0;
     rec->unk4 = 0;
     rec->unk27 = 0;
     rec->unk21 = (rec->unk21 & 0x80) + 0x13;
+    rec->unk24 = 1;
     D_80105AE0[rec->unk3A].unk174 &= ~0x1800;
     func_8006C5FC(rec);
 }

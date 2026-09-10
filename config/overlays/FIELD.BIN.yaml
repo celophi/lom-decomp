@@ -180,7 +180,7 @@ segments:
       - [0x3A0D5, c, func_80089D44] # gcc272_cdk, 100%
       - [0x3A441, c, func_8008A0B0] # gcc272_cdk, 99.242424% WIP
       - [0x3A861, c, func_8008A4D0]             # gcc272_cdk, 100%
-      - [0x3A911, c, func_8008A580] # gcc272_cdk, 89.193550% WIP
+      - [0x3A911, c, func_8008A580] # gcc272_cdk, 100%
       - [0x3AA09, c, func_8008A678] # gcc272_cdk, 100.000000%
       - [0x3ABD1, c, func_8008A840]             # gcc272_cdk, 100%
       - [0x3AD69, c, func_8008A9D8]              # gcc272_cdk, 100%
@@ -209,7 +209,7 @@ segments:
       - [0x3C495, c, func_8008C104] # gcc272_cdk, 99.016396% WIP
       - [0x3C67D, c, func_8008C2EC] # gcc272_cdk, 84.954956% WIP
       - [0x3C839, c, func_8008C4A8]                # gcc272_cdk, 100%
-      - [0x3C9B1, c, func_8008C620] # gcc272_cdk, 90.378784% WIP
+      - [0x3C9B1, c, func_8008C620] # gcc272_cdk, 100%
       # TU hypothesis: field_actor_routes (high). See docs/decompilation/field-boundaries/map.md.
       - [0x3CAB9, c, field37]                      # gcc272_cdk, func_8008C728
       - [0x3CAC1, c, func_8008C730]                 # gcc272_cdk, 100%
@@ -425,7 +425,7 @@ segments:
       - [0x5A209, c, func_800A9E78] # gcc272_cdk, 100.000000%
       - [0x5A3BD, c, func_800AA02C]             # gcc272_cdk, 100.00000%, 27/27 instructions
       - [0x5A429, c, func_800AA098] # gcc272_cdk, 100%
-      - [0x5A829, c, func_800AA498] # gcc272_cdk, 94.074070% WIP
+      - [0x5A829, c, func_800AA498] # gcc272_cdk, 100%
       # TU hypothesis: field_modal_runtime (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x5A901, c, func_800AA570] # gcc272_cdk, 100.000000%
       - [0x5AB35, c, field_text_session_ops]    # gcc272_cdk, func_800AA7A4 + func_800AA824 + func_800AA858 (100%; two do not match under gcc280_g0)
