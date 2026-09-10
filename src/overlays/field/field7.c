@@ -261,7 +261,7 @@ extern s32 g_field_track_index;
  * @return Index of the slot that was filled, or -1 if no slot was free or the
  *         placement opcode rejected the spawn.
  *
- * @note WIP - 99.832% assembly match (gcc272_cdk).
+ * @note WIP - 99.941% assembly match (gcc272_cdk).
  *       Current matching evidence: working/func_8006D79C/status.md.
  */
 s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
@@ -746,6 +746,7 @@ after_source:
             }
             placement_index = actor->unk229[g_field_track_index];
             kind -= 0xA;
+src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
         }
         else
         {
@@ -759,11 +760,9 @@ after_source:
                 goto fail_slot;
             }
             placement_index = actor->owner_object_index;
+src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
         }
-        { Struct_D800FDF58 *objects_base = D_800FDF58;
-        src = &objects_base[placement_index]; }
-        slot = &D_80105AE0[placement_index];
-        nA = 0;
+
         if ((part->unk28 >> 9) & 1)
         {
             width = abs(slot->unk144 - slot->unk140);
@@ -771,9 +770,10 @@ after_source:
         }
         if ((part->unk28 >> 1) & 1)
         {
+            nA = 0;
             width = abs(slot->unk146 - slot->unk142);
             part->unk33 = width * 2;
-        }
+        } else { nA = 0; }
         count = nA;
         switch (kind)
         {
@@ -1100,16 +1100,15 @@ after_source:
         }
         break;
 
-    case 0x28: { s32 raw_index;
-        raw_index = actor->unk229[g_field_track_index]; track_obj = raw_index;
-        if (track_obj == 0xFF)
+    case 0x28: {
+        if (actor->unk229[g_field_track_index] == 0xFF)
         {
             rec->unk25 = 0xFF;
             actor->unk3B[g_field_track_index][part_index]--;
             actor->unkCC[g_field_track_index][part_index]--;
             return -1;
         }
-        src = &D_800FDF58[raw_index];
+        src = &D_800FDF58[actor->unk229[g_field_track_index]];
         if ((part->unk34 & 0x08000000) && !(D_800FDF58[actor->owner_object_index].unk21 & 0x80))
         {
             rec->unk0 += src->unk0 - (part->unk38 << 8);
@@ -1231,16 +1230,15 @@ after_source:
         rec->flags.bits.placement = *(u16*)&D_80105760;
         break;
 
-    case 0x34: { s32 raw_index;
-        raw_index = actor->unk229[g_field_track_index]; track_obj = raw_index;
-        if (track_obj == 0xFF)
+    case 0x34: {
+        if (actor->unk229[g_field_track_index] == 0xFF)
         {
             rec->unk25 = 0xFF;
             actor->unk3B[g_field_track_index][part_index]--;
             actor->unkCC[g_field_track_index][part_index]--;
             return -1;
         }
-        src = &D_800FDF58[raw_index];
+        src = &D_800FDF58[actor->unk229[g_field_track_index]];
         if (!(src->unk21 & 0x80))
         {
             rec->unk0 += src->unk0 + (actor->unk1FE[g_field_track_index].x << 8);

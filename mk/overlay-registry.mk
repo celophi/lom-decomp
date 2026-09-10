@@ -47,6 +47,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/func_80143DF4.c \
 	src/overlays/carda/func_80143F90.c \
 	src/overlays/carda/func_80144050.c \
+	src/overlays/carda/func_801443F0.c \
 	src/overlays/carda/func_801447DC.c \
 	src/overlays/carda/func_80144A24.c \
 	src/overlays/carda/carda_choice_prompt.c \
@@ -97,7 +98,6 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/func_80142E10.c
 overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/carda_scan_hex_digits.c \
-	src/overlays/carda/unk1_after_checksum_tail.c \
 	src/overlays/carda/func_80145050.c \
 	src/overlays/carda/unk1_after_choice_after_restore.c \
 	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c
