@@ -212,9 +212,11 @@ typedef struct
 extern u8 *g_field_script;
 s32 func_80087F44(s32, s32 *);
 /**
- * @brief Tests an explicit or actor position against command bounds.
- * @note Initial nonmatching C. Modes outside 0-2 leave target registers unset;
- *       the corresponding C locals deliberately have no invented defaults.
+ * @brief Tests an explicit or resolved actor position against command bounds.
+ * @param arg0 Auxiliary command value used by the bounds test.
+ * @param command Bounds-test command and result destination.
+ * @param arg2 Auxiliary command value used by the bounds test.
+ * @param arg3 Auxiliary command value used by the bounds test.
  */
 void func_800BDA7C(u32 arg0, BoundsCommand *command, u32 arg2, u32 arg3)
 {
@@ -225,7 +227,6 @@ void func_800BDA7C(u32 arg0, BoundsCommand *command, u32 arg2, u32 arg3)
     u32 top;
     u32 right = arg3;
     u32 bottom = arg0;
-    u32 actor;
     s16 result;
 
     switch (command->mode)
@@ -247,12 +248,15 @@ void func_800BDA7C(u32 arg0, BoundsCommand *command, u32 arg2, u32 arg3)
         bottom = command->top + command->height;
         break;
     case 2:
-        actor = command->x;
-        if (actor == 0xFF)
+        if (command->x != 0xFF)
         {
-            actor = *g_field_script;
+            x = command->x;
         }
-        func_80087F44(actor, position);
+        else
+        {
+            x = *g_field_script;
+        }
+        func_80087F44(x, position);
         left = command->left;
         top = command->top;
         right = command->width;

@@ -3974,7 +3974,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
 /**
  * @brief Expand a group's rasterised tile-column bitmask into a per-pixel
  *        stencil buffer, dilated by the group's edge width.
- * @see decomp.me (97.05%) TODO
+ * @see decomp.me (97.44874%) TODO
  */
 extern u32 D_1F800008;
 
@@ -4103,12 +4103,13 @@ loop_6:
             var_a2 = (var_t8 & 3);            var_a2 -= 1;
             if (var_a2 != -1)
             {
+                s32 end = -1;
                 do
                 {
                     *var_t7 = -1;
                     var_a2 -= 1;
                     var_t7 += 1;
-                } while (var_a2 != -1);
+                } while (var_a2 != end);
             }
             var_s4 = 0;
             temp_v0 = ((u16) scene->unk48 - footprint_depth) - 4;
@@ -4127,8 +4128,8 @@ loop_6:
                     temp_t2 = *(u32 *) (temp_s1 + 0);
                     temp_t0 = *(u32 *) (temp_s1 + 4);
                     var_t8 = (u16) scene->unk46;
-                    var_t8--;
-                    var_t8 -= footprint_width;
+                    temp_v0 = var_t8 - 1;
+                    var_t8 = temp_v0 - footprint_width;
                     temp_s1 += 8;
                     switch (sp1C)
                     {
@@ -4480,12 +4481,13 @@ block_97:
                         var_t8 = footprint_width;
                         if (var_t8 != -1)
                         {
+                            s32 end = -1;
                             do
                             {
                                 *var_t7 = -1;
                                 var_t8 -= 1;
                                 var_t7 += 1;
-                            } while (var_t8 != -1);
+                            } while (var_t8 != end);
                         }
                     }
                     var_s4 += 1;
@@ -4530,9 +4532,8 @@ loop_107:
                     var_t7 += 1;
                 } while (var_a2 != -1);
             }
-            temp_s6_4 = sp8 - 1;
-            sp8 = temp_s6_4;
-        } while (temp_s6_4 != -1);
+            sp8--;
+        } while (sp8 != -1);
     }
 }
 
