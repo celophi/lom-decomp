@@ -34,7 +34,7 @@ typedef struct
     s16 unk6;
 } UVRec;
 
-extern s32 D_8012298C;
+extern s32 g_menu_element_counter;
 
 /**
  * @brief Tile a rectangle with sprite primitives and link them into an ordering table.
@@ -91,7 +91,7 @@ void *func_800ADCD0(void *arg0, u32 *arg1, SizeRec *arg2, UVRec *arg3)
                     ((PrimSprt20 *)arg0)->w = seg_w;
                     ((PrimSprt20 *)arg0)->h = seg_h;
                     clut = 0x7CD0;
-                    if (D_8012298C != 0)
+                    if (g_menu_element_counter != 0)
                     {
                         clut = 0x7D10;
                     }

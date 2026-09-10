@@ -144,8 +144,6 @@ void func_80073F60(s32 arg0, s32 arg1, s32 arg2)
     D_800473F8 = (arg0 << 0x10) | (arg1 << 8) | arg2;
 }
 
-extern void *jtbl_80050144[];
-
 /**
  * @brief Resolve a record's world-position source into arg2, dispatching on
  *        the record's unk1B mode selector.
@@ -153,9 +151,9 @@ extern void *jtbl_80050144[];
  * @param arg1 View/camera parameter block (rotation/flags read in modes 5/6/9).
  * @param arg2 Output position triple (unk0/unk4/unk8).
  * @note The unk1B mode switch is emitted as a computed goto through the rodata
- *       jump table jtbl_80050144 (indexed by unk1B - 1); the static keep[] array
- *       holds the case-label addresses so gcc keeps them address-taken and
- *       reproduces the original dispatch exactly.
+ *       dispatch_table (indexed by unk1B - 1). Modes 12 and 13 share one
+ *       handler; the final null entry preserves the original table padding.
+ *       FIELD.BIN.yaml places this table at the original jtbl_80050144 range.
  * @see decomp.me (100%)
  */
 void func_80073F7C(Struct_D800FDF58 *arg0, FieldViewParams *arg1, FieldPosOut *arg2)
@@ -182,10 +180,10 @@ void func_80073F7C(Struct_D800FDF58 *arg0, FieldViewParams *arg1, FieldPosOut *a
     s32 boff;
     s32 subv;
     s32 dispatch;
-    static void *const keep[] = {
+    static void *const dispatch_table[] = {
         &&case1, &&case2, &&case3, &&case4, &&case5,
         &&case6, &&case7, &&case8, &&case9, &&case10,
-        &&case11, &&case12, &&case14, &&case15
+        &&case11, &&case12, &&case12, &&case14, &&case15, 0
     };
 
     switch (0)
@@ -196,7 +194,7 @@ void func_80073F7C(Struct_D800FDF58 *arg0, FieldViewParams *arg1, FieldPosOut *a
         {
             break;
         }
-        goto *jtbl_80050144[dispatch];
+        goto *dispatch_table[dispatch];
 
     case1:
         slots = g_field_actor_slots;
