@@ -61,14 +61,12 @@ typedef struct Actor
 } Actor;
 /**
  * @brief Complete a pending field reset after fifteen consecutive idle checks.
- * @note Restores global state and resets each active actor in the first three slots.
  */
 void func_80096E60(void)
 {
-    u8 *var_s0;
-    u8 *var_s1;
-    u8 *var_s2;
-    s32 var_v0;
+    Entry *entry;
+    Actor *actor;
+    u8 *slot_cursor;
     u8 *slot_base;
 
     if (D_8010AE54 != 0)
@@ -98,48 +96,48 @@ void func_80096E60(void)
             func_8005A0D0(-1, 0x100, 0x100, 0x100);
             func_800A6204();
             func_800A3938(0x24, 0x80);
-            var_s1 = D_80105AE0;
-            var_s0 = D_800FDF58;
+            actor = (Actor *)D_80105AE0;
+            entry = (Entry *)D_800FDF58;
             slot_base = D_800FD818;
-            var_s2 = slot_base;
+            slot_cursor = slot_base;
         loop:
         {
-            if (*var_s2 & 1)
+            if (*slot_cursor & 1)
             {
-                ((Actor *)var_s1)->resource = 0;
-                ((Actor *)var_s1)->flags178.word &= ~1;
-                ((Actor *)var_s1)->flags178.word &= ~2;
-                ((Actor *)var_s1)->flags178.word &= ~0x20;
-                ((Actor *)var_s1)->flags178.bytes[3] = 0;
-                ((Actor *)var_s1)->value = 0xFFFF;
-                ((Entry *)var_s0)->y = 0;
-                if ((D_8010D020 != 0) && (((Entry *)var_s0)->anim == 0x8E))
+                actor->resource = 0;
+                actor->flags178.word &= ~1;
+                actor->flags178.word &= ~2;
+                actor->flags178.word &= ~0x20;
+                actor->flags178.bytes[3] = 0;
+                actor->value = 0xFFFF;
+                entry->y = 0;
+                if ((D_8010D020 != 0) && (entry->anim == 0x8E))
                 {
-                    var_v0 = (((Entry *)var_s0)->state & 0x80) + 0x31;
+                    entry->state = (entry->state & 0x80) + 0x31;
                 }
                 else
                 {
-                    var_v0 = (((Entry *)var_s0)->state & 0x80) + 0x13;
+                    entry->state = (entry->state & 0x80) + 0x13;
                 }
-                ((Entry *)var_s0)->state = var_v0;
-                ((Entry *)var_s0)->timer = 1;
-                ((Entry *)var_s0)->enabled = 1;
-                ((Entry *)var_s0)->anim = 0;
-                ((Entry *)var_s0)->slot = 0;
-                ((Entry *)var_s0)->unk27 = 0;
-                ((Entry *)var_s0)->flags = (s32)(((Entry *)var_s0)->flags & ~0x800);
-                ((Actor *)var_s1)->flags174 = (s32)(((Actor *)var_s1)->flags174 & ~0x1800);
-                func_8006C3FC(var_s0);
+                entry->timer = 1;
+                entry->enabled = 1;
+                entry->anim = 0;
+                entry->slot = 0;
+                entry->unk27 = 0;
+                entry->flags = (s32)(entry->flags & ~0x800);
+                actor->flags174 = (s32)(actor->flags174 & ~0x1800);
+                func_8006C3FC((u8 *)entry);
             }
-            var_s1 += 0x23C;
-            var_s2 += 0x268;
-            var_s0 += 0x54;
+            actor++;
+            slot_cursor += 0x268;
+            entry++;
         }
-            if ((s32)var_s2 < (s32)(slot_base + 0x738))
+            if ((s32)slot_cursor < ((s32)slot_base + 0x738))
             {
                 goto loop;
             }
-            D_8010AE54 = 0;
+            slot_base = 0;
+            D_8010AE54 = (s32)slot_base;
         }
     }
 }

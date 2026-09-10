@@ -273,7 +273,7 @@ segments:
       - [0x46D91, c, field298]                  # gcc272_cdk, func_80096A00
       - [0x46E21, c, func_80096A90]             # gcc272_cdk, 100%
       - [0x46EE5, c, func_80096B54] # gcc272_cdk, 96.333336% WIP
-      - [0x471F1, c, func_80096E60] # gcc272_cdk, 98.547295% WIP
+      - [0x471F1, c, func_80096E60] # gcc272_cdk, 100%
       # TU hypothesis: field_contact_geometry (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x47441, c, func_800970B0]             # gcc272_cdk, 100%
       - [0x474E1, c, func_80097150] # gcc272_cdk, 95.562630% WIP
@@ -293,7 +293,7 @@ segments:
       - [0x4A6F5, c, field41]                      # gcc272_cdk, func_8009A364
       - [0x4A779, c, func_8009A3E8]                # gcc272_cdk, 100%
       - [0x4A831, c, field45]                      # gcc272_cdk, func_8009A4A0
-      - [0x4A85D, c, func_8009A4CC] # gcc272_cdk,99.668330% WIP
+      - [0x4A85D, c, func_8009A4CC] # gcc272_cdk,100%
       - [0x4B1C9, c, func_8009AE38] # gcc272_cdk, 81.690720% WIP
       # TU hypothesis: field_scene_transition (high). See docs/decompilation/field-boundaries/map.md.
       - [0x4B34D, c, field273]                     # gcc272_cdk, func_8009AFBC + field_set_scene_parameters (100%)

@@ -66,6 +66,7 @@ void func_8009AE38(u8 *, s32);
  * @param group Allocation group; values at least three use allocation tag two.
  * @param actor Actor slot receiving resource pointers, counts, and header state.
  * @note Resource offsets, alignment, optional sections, and record remapping follow the packed format.
+ * @see decomp.me (100%)
  */
 void func_8009A4CC(s32 group, Actor *actor)
 {
@@ -134,7 +135,7 @@ void func_8009A4CC(s32 group, Actor *actor)
     u32 optional_offset;
     u8 *part;
     u8 *part_fields;
-    u16 payload_offset;
+    s32 payload_offset;
     u16 component;
     u16 pixel;
     s32 byte_index;
@@ -160,10 +161,13 @@ void func_8009A4CC(s32 group, Actor *actor)
     cursor = (u8 *)((u32)(cursor + 5) & ~3);
     if (has_payload != 0)
     {
-        payload_offset = U16_AT(cursor, 0);
+        do
+        {
+            payload_offset = U16_AT(cursor, 0);
+        } while (0);
+        payload_tag = group;
         payload_source = header_cursor + payload_offset;
         payload_size = U16_AT(cursor, 2) - payload_offset;
-        payload_tag = group;
         if (payload_tag >= 3)
         {
             payload_tag = 2;
@@ -317,31 +321,32 @@ void func_8009A4CC(s32 group, Actor *actor)
                     texture_height = U8_AT(texture_fields, 3);
                     row_input = resource_base + U16_AT(resource_base, 0) + 0x220;
                     row_input = row_input + *texture_record * 2 + (U8_AT(texture_fields, 1) << 7);
-                    do {
-                    if (texture_height != 0)
+                    do
                     {
-                        do
+                        if (texture_height != 0)
                         {
-                            pixel_input = row_input;
-                            column = 0;
-                            if (U8_AT(texture_fields, 2) != 0)
+                            do
                             {
-                                do
+                                pixel_input = row_input;
+                                column = 0;
+                                if (U8_AT(texture_fields, 2) != 0)
                                 {
-                                    column += 1;
-                                    pixel = U16_AT(pixel_input, 0);
-                                    pixel_input += 2;
-                                    U16_AT(pixel_output, 0) = pixel;
-                                    pixel_output += 2;
-                                } while (column < (s32)U8_AT(texture_fields, 2));
-                            }
-                            row += 1;
-                            row_input += 0x80;
-                        } while (row < (s32)U8_AT(texture_fields, 3));
-                    }
-                    byte_index += 1;
-                    texture_fields += 8;
-                    texture_record += 8;
+                                    do
+                                    {
+                                        column += 1;
+                                        pixel = U16_AT(pixel_input, 0);
+                                        pixel_input += 2;
+                                        U16_AT(pixel_output, 0) = pixel;
+                                        pixel_output += 2;
+                                    } while (column < (s32)U8_AT(texture_fields, 2));
+                                }
+                                row += 1;
+                                row_input += 0x80;
+                            } while (row < (s32)U8_AT(texture_fields, 3));
+                        }
+                        byte_index += 1;
+                        texture_fields += 8;
+                        texture_record += 8;
                     } while (0);
                 } while (byte_index < (s32)U8_AT(part_fields, 2));
             }
