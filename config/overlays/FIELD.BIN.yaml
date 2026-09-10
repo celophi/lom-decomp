@@ -51,21 +51,28 @@ segments:
       - [0x79, .rodata, field_animation]
       - [0x129, .rodata, field_collision]
       - [0x155, .rodata, field_text]
-      - [0x285, rodata, unk2_rodata_0]
+      - [0x285, .rodata, field7] # animation switch tables
+      - [0x3AD, .rodata, field8] # placement switch tables
+      - [0x4D5, .rodata, field9]
+      - [0x515, .rodata, field11]
+      - [0x535, .rodata, field12]
+      - [0x555, .rodata, field17] # actor update switch tables
       - [0x691, .rodata, func_80086494] # eight-entry animation-kind jump table
-      - [0x6B1, rodata, unk2_rodata_0_after_86494]
+      - [0x6B1, .rodata, func_80088198]
       - [0xAB1, .rodata, func_80089980]
       - [0xCED, rodata, unk2_rodata_1]
       - [0xCF1, .rodata, func_8008B288]
-      - [0xF2D, rodata, unk2_rodata_2]
+      - [0xF2D, .rodata, func_8008EF0C]
       - [0x109D, .rodata, func_80090D48] # 58-entry animation jump table
       - [0x1185, .rodata, func_80092AD8] # 72-entry movement-state jump table
-      - [0x12A5, rodata, unk2_rodata_2_after_92ad8]
+      - [0x12A5, .rodata, func_80092C98]
       - [0x139D, .rodata, func_800954F0] # twenty-entry actor sequence switch
       - [0x13ED, .rodata, func_80099018] # thirty-entry hit reaction switch
       - [0x1465, .rodata, func_80099A48] # twenty-entry reaction switch
       - [0x14B5, .rodata, func_8009D4D8] # seven-entry movement-mode jump table
       - [0x14D1, rodata, unk2_rodata_2_after_9d4d8]
+      - [0x14D5, .rodata, field347]
+      - [0x14F5, .rodata, func_8009D9E0]
       - [0x1531, .rodata, func_800A29F8] # 128-entry input command jump table
       - [0x1731, .rodata, func_800A3FB0] # five-entry audio transfer state jump table
       - [0x1745, .rodata, func_800A5960] # five-entry effect switch
@@ -81,7 +88,8 @@ segments:
       - [0x1A41, .rodata, field_script_primary_ops]
       - [0x1A81, .rodata, field_script_pair_ops] # 79-entry runtime subcommand jump table
       - [0x1BBD, .rodata, field_script_commands] # actor and record command jump tables
-      - [0x1BFD, rodata, unk2_rodata_after_bdca4]
+      - [0x1BFD, .rodata, field_reward_command_ops]
+      - [0x1C19, rodata, unk2_rodata_after_bdca4]
       - [0x22B9, c, field_scene_load]           # gcc280_g4, no expand-div
       - [0x29B9, c, field_scene_build]          # gcc280_g4, no expand-div
       - [0x5039, c, field_render]               # gcc280_g4, no expand-div

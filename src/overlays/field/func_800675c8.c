@@ -12,7 +12,7 @@ void field_update_actor_animations(void);               /* extern */
 void field_update_audio_timer(void);                       /* extern */
 void field_update_gover_load(void);                        /* extern */
 void field_update_return_to_title_prompt(s32);         /* extern */
-void func_80067BBC(s32);                               /* extern */
+void field_update_and_render_fade(s32);                               /* extern */
 void func_80067FB0(s32);                               /* extern */
 void func_8006BC50(void);                                  /* extern */
 void func_8006BFE8(s32);                               /* extern */
@@ -69,7 +69,7 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
     D_800473F8[0] = temp;
     func_800A9E78(temp);
     func_800AA098(arg0);
-    func_80067BBC(arg0);
+    field_update_and_render_fade(arg0);
     func_800B0244();
     if (D_800FE754[0] != 0)
     {
