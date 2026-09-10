@@ -283,18 +283,13 @@ extern D_800FD818_type D_800FD818[];
  *             values (unk1E divisor, unk32 timing-table index, unk9/unkA
  *             track selectors).
  * @param arg2 Output record to fill in (unk10/unk12/unk14).
- * @see decomp.me (99.80%) TODO
- * @note Residual is a single register-coloring swap (v0/v1) on the final
- *       `arg2->unk14 += part * 8` accumulate; insn count and every other row
- *       already match. See idioms.md ALLOC-15/ALLOC-14 for the mechanism;
- *       local_alloc_oracle confirms the swap needs either an explicit copy
- *       insertion or a birth-order change that no plain C reshape reaches.
+ * @return Scaled track value added to arg2->unk14.
  */
-void func_80070CB8(FieldActorState *arg0, FieldActorPartDef *arg1, FieldTrackResult *arg2)
+s32 func_80070CB8(FieldActorState *arg0, FieldActorPartDef *arg1, FieldTrackResult *arg2)
 {
     s16 var_v0;
     s32 var_lo;
-    s32 var_v0_2;
+    s32 track_value;
     s32 temp_s0;
 
     arg2->unk10 = 0;
@@ -323,13 +318,15 @@ void func_80070CB8(FieldActorState *arg0, FieldActorPartDef *arg1, FieldTrackRes
 
     if ((arg1->unk0 >> 0xC) & 1)
     {
-        var_v0_2 = field_evaluate_parameter_track(arg0, arg1->unkA & 0xF);
+        track_value = field_evaluate_parameter_track(arg0, arg1->unkA & 0xF);
     }
     else
     {
-        var_v0_2 = arg1->unkA;
+        track_value = arg1->unkA;
     }
-    arg2->unk14 += ((long long) var_v0_2) * 8;
+    track_value *= 8;
+    arg2->unk14 += track_value;
+    return track_value;
 }
 
 /**

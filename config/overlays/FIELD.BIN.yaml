@@ -385,7 +385,7 @@ segments:
       - [0x56595, c, field66]                      # gcc272_cdk, func_800A6204
       - [0x565CD, c, func_800A623C] # gcc272_cdk, 88.959730% WIP
       - [0x56821, c, field67]                      # gcc272_cdk, func_800A6490
-      - [0x56861, c, func_800A64D0] # gcc272_cdk, 98.932590% WIP
+      - [0x56861, c, func_800A64D0] # gcc272_cdk, 100%
       - [0x569C5, c, field321]                     # gcc272_cdk, func_800A6634
       - [0x56A45, c, func_800A66B4]                 # gcc272_cdk, 100%
       # TU hypothesis: field_ability_progression (low). See docs/decompilation/field-boundaries/map.md.
@@ -507,7 +507,7 @@ segments:
       - [0x75A95, c, field_menu_group_ops] # gcc280_g0; group creation/release, state and ordering
       - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; two newly wired WIPs
       - [0x76C59, c, field_menu_slot_ops] # gcc280_g0, inferred menu function family; two newly wired WIPs
-      - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, C7340 94.154930% WIP
+      - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, 100%
       - [0x779FD, c, field_menu_action_runtime] # gcc280_g0, func_800C766C .. action-slot reset; 14 funcs, four WIPs
       - [0x78BC1, c, field_menu_record_setup] # gcc280_g0, func_800C8830 .. func_800C8964; three funcs, 100%
       - [0x78DBD, c, field_menu_record_transfer] # gcc280_g0, func_800C8A2C .. func_800C905C; two WIPs
