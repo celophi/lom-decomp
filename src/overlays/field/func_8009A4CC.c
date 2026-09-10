@@ -94,15 +94,12 @@ void func_8009A4CC(s32 group, Actor *actor)
         } h;
     } packed;
     s32 allocation_size;
+    s32 has_payload;
     s32 payload_size;
     s32 record_bytes;
     s32 index_bytes;
     s32 entry_bytes;
     s32 optional_bytes;
-    u8 *extra_header;
-    s32 direct_header_group;
-    u8 *temp_s4_8;
-    s32 unused_packed_word;
     s32 payload_tag;
     s32 header_tag;
     s32 optional_tag;
@@ -116,91 +113,64 @@ void func_8009A4CC(s32 group, Actor *actor)
     s32 row;
     s32 item_index;
     s32 record_offset;
-    s32 texture_index;
     s32 optional_count;
+    s32 has_optional;
     u8 *cursor;
     s32 part_index;
-    s32 record_index;
-    s32 optional_index;
     s32 table_group;
     s32 table_group_offset;
     s32 column;
-    s8 entry_count;
-    u8 *temp_a0;
-    u8 *temp_a0_2;
-    u8 *temp_a0_3;
-    u8 *initial_base;
-    u8 *temp_s1_10;
-    u8 *temp_s1_9;
-    u8 *temp_s4;
     u8 *indices;
     u8 *entries;
     u8 *header;
     u8 *payload;
     u8 *records;
     u8 *vector_output;
-    u8 *byte_output;
     u8 *pixel_input;
     u8 *row_input;
     u8 *pixel_output;
     u8 *header_cursor;
+    u32 optional_offset;
     u8 *part;
     u8 *part_fields;
-    u16 header_id;
-    u16 temp_t0;
     u16 payload_offset;
     u16 component;
-    u16 temp_v0_4;
-    u16 temp_v0_5;
     u16 pixel;
-    u32 byte_index;
-    u8 *temp_s4_3;
-    u8 *temp_s4_5;
-    u8 *input;
+    s32 byte_index;
     u8 *texture_record;
-    u8 packed_entry_count;
-    u8 record_count;
+    s32 record_count;
     u8 byte_value;
     u8 texture_count;
-    u8 *temp_s1_2;
-    u8 *temp_s1_3;
-    u8 *temp_s1_4;
-    u8 *temp_s1_5;
-    u8 *temp_s1_6;
-    u8 *temp_s1_7;
     u8 *payload_source;
-    u8 *temp_s4_2;
-    u8 *temp_s4_4;
-    u8 *temp_s4_6;
-    u8 *temp_s4_7;
-    u8 *temp_s4_9;
     u8 *texture_fields;
-    u8 *optional_slot;
+    u8 **header_pool;
+    u8 **optional_pool;
+    u8 *shared_base;
 
-    cursor = D_8010D038;
-    initial_base = cursor;
+    header_cursor = D_8010D038;
+    cursor = header_cursor;
     resource_base = cursor;
     if (U16_AT(cursor, 0) != 0)
     {
         func_8009AE38(cursor + U16_AT(cursor, 0), group);
     }
-    cursor += 2;
-    allocation_size = U16_AT(cursor, 0);
+    cursor = header_cursor + 2;
+    has_payload = U16_AT(cursor, 0);
     cursor = (u8 *)((u32)(cursor + 5) & ~3);
-    if (allocation_size != 0)
+    if (has_payload != 0)
     {
         payload_offset = U16_AT(cursor, 0);
-        payload_source = initial_base + payload_offset;
+        payload_source = header_cursor + payload_offset;
         payload_size = U16_AT(cursor, 2) - payload_offset;
         payload_tag = group;
         if (payload_tag >= 3)
         {
             payload_tag = 2;
         }
+        header_cursor = func_8009CA54(D_8010D034, payload_size, payload_tag);
         cursor += 2;
-        payload = func_8009CA54(D_8010D034, payload_size, payload_tag);
-        memcpy(payload, payload_source, payload_size);
-        actor->payload = payload;
+        memcpy(header_cursor, payload_source, payload_size);
+        actor->payload = header_cursor;
     }
     cursor += 2;
     part_count = U16_AT(cursor, 0);
@@ -219,15 +189,15 @@ void func_8009A4CC(s32 group, Actor *actor)
     texture_total = 0;
     if (part_count != 0)
     {
+        part_fields = part;
         direct_group = group < 3;
         do
         {
-            part_fields = part + 2;
-            input = resource_base + U16_AT(cursor, 0);
-            U16_AT(part, 0) = U16_AT(input, 0);
-            input += 4;
-            U8_AT(part_fields, 0) = *input;
-            input += 4;
+            header_cursor = resource_base + U16_AT(cursor, 0);
+            U16_AT(part, 0) = U16_AT(header_cursor, 0);
+            header_cursor += 4;
+            U8_AT(part_fields, 2) = *header_cursor;
+            header_cursor += 4;
             allocation_size = U16_AT(part, 0) * 0x28;
             vector_tag = group;
             if (direct_group == 0)
@@ -236,59 +206,59 @@ void func_8009A4CC(s32 group, Actor *actor)
             }
             item_index = 0;
             vector_output = func_8009CA54(D_8010D034, allocation_size, vector_tag);
-            PTR_AT(part_fields, 0x6) = vector_output;
+            PTR_AT(part_fields, 8) = vector_output;
             if ((U16_AT(part, 0) * 3) != 0)
             {
                 do
                 {
-                    component = U16_AT(input, 0);
-                    input += 2;
+                    component = U16_AT(header_cursor, 0);
+                    header_cursor += 2;
                     item_index++;
                     U16_AT(vector_output, 0) = component;
                     vector_output += 2;
-                    U16_AT(vector_output, 0) = U16_AT(input, 0);
-                    input += 2;
+                    U16_AT(vector_output, 0) = U16_AT(header_cursor, 0);
+                    header_cursor += 2;
                     vector_output += 2;
-                    U16_AT(vector_output, 0) = U16_AT(input, 0);
-                    input += 2;
+                    U16_AT(vector_output, 0) = U16_AT(header_cursor, 0);
+                    header_cursor += 2;
                     vector_output += 4;
                 } while (item_index < (U16_AT(part, 0) * 3));
             }
-            PTR_AT(part_fields, 0xA) = vector_output;
+            PTR_AT(part_fields, 12) = vector_output;
             item_index = 0;
             if (U16_AT(part, 0) != 0)
             {
                 do
                 {
-                    component = U16_AT(input, 0);
-                    input += 2;
+                    component = U16_AT(header_cursor, 0);
+                    header_cursor += 2;
                     item_index++;
                     U16_AT(vector_output, 0) = component;
                     vector_output += 2;
-                    U16_AT(vector_output, 0) = U16_AT(input, 0);
-                    input += 2;
+                    U16_AT(vector_output, 0) = U16_AT(header_cursor, 0);
+                    header_cursor += 2;
                     vector_output += 2;
-                    U16_AT(vector_output, 0) = U16_AT(input, 0);
-                    input += 2;
+                    U16_AT(vector_output, 0) = U16_AT(header_cursor, 0);
+                    header_cursor += 2;
                     vector_output += 4;
                 } while (item_index < (s32)U16_AT(part, 0));
             }
-            PTR_AT(part_fields, 0xE) = vector_output;
+            PTR_AT(part_fields, 16) = vector_output;
             item_index = 0;
             if (U16_AT(part, 0) != 0)
             {
                 do
                 {
-                    component = U16_AT(input, 0);
-                    input += 2;
+                    component = U16_AT(header_cursor, 0);
+                    header_cursor += 2;
                     item_index++;
                     U16_AT(vector_output, 0) = component;
                     vector_output += 2;
-                    U16_AT(vector_output, 0) = U16_AT(input, 0);
-                    input += 2;
+                    U16_AT(vector_output, 0) = U16_AT(header_cursor, 0);
+                    header_cursor += 2;
                     vector_output += 2;
-                    U16_AT(vector_output, 0) = U16_AT(input, 0);
-                    input += 2;
+                    U16_AT(vector_output, 0) = U16_AT(header_cursor, 0);
+                    header_cursor += 2;
                     vector_output += 4;
                 } while (item_index < (s32)U16_AT(part, 0));
             }
@@ -299,45 +269,43 @@ void func_8009A4CC(s32 group, Actor *actor)
                 byte_tag = 2;
             }
             item_index = 0;
-            byte_output = func_8009CA54(D_8010D034, allocation_size, byte_tag);
-            PTR_AT(part_fields, 0x12) = byte_output;
-            byte_index = 0;
+            vector_output = func_8009CA54(D_8010D034, allocation_size, byte_tag);
+            PTR_AT(part_fields, 20) = vector_output;
             if (U16_AT(part, 0) != 0)
             {
                 do
                 {
+                    byte_index = 0;
                     do
                     {
                         byte_index += 1;
-                        byte_value = *input;
-                        input += 1;
-                        *byte_output = byte_value;
-                        byte_output += 1;
-                    } while (byte_index < 0x10U);
+                        byte_value = *header_cursor;
+                        header_cursor += 1;
+                        *vector_output = byte_value;
+                        vector_output += 1;
+                    } while ((u32)byte_index < 0x10U);
                     item_index += 1;
-                    byte_index = 0;
                 } while (item_index < (s32)U16_AT(part, 0));
             }
             table_group = group;
-            table_group_offset = table_group * 8;
             if (direct_group == 0)
             {
                 table_group = 2;
-                table_group_offset = 2 * 8;
             }
-            texture_index = 0;
-            texture_record = ((table_group_offset + table_group) * 8) + ((texture_total * 8) + D_80105798);
-            PTR_AT(part_fields, 0x2) = texture_record;
-            if (U8_AT(part_fields, 0) != 0)
+            table_group_offset = table_group * 8;
+            texture_record = PTR_AT(part_fields, 4) = (u8 *)(((table_group_offset + table_group) * 8) + ((texture_total * 8) + (u32)D_80105798));
+            byte_index = 0;
+            if (U8_AT(part_fields, 2) != 0)
             {
-                texture_fields = texture_record + 3;
+                texture_fields = texture_record;
                 do
                 {
-                    *texture_record = *input++;
-                    U8_AT(texture_fields, -2) = *input++;
-                    U8_AT(texture_fields, -1) = *input++;
-                    U8_AT(texture_fields, 0) = *input++;
-                    allocation_size = U8_AT(texture_fields, -1) * U8_AT(texture_fields, 0) * 2;
+                    do {
+                    *texture_record = *header_cursor++;
+                    U8_AT(texture_fields, 1) = *header_cursor++;
+                    U8_AT(texture_fields, 2) = *header_cursor++;
+                    U8_AT(texture_fields, 3) = *header_cursor++;
+                    allocation_size = U8_AT(texture_fields, 2) * U8_AT(texture_fields, 3) * 2;
                     texture_tag = group;
                     if (direct_group == 0)
                     {
@@ -345,16 +313,16 @@ void func_8009A4CC(s32 group, Actor *actor)
                     }
                     pixel_output = func_8009CA54(D_8010D034, allocation_size, texture_tag);
                     row = 0;
-                    PTR_AT(texture_fields, 1) = pixel_output;
-                    row_input = resource_base + U16_AT(resource_base, 0) + 0x220 + (*texture_record * 2) +
-                                (U8_AT(texture_fields, -2) << 7);
-                    if (U8_AT(texture_fields, 0) != 0)
+                    PTR_AT(texture_fields, 4) = pixel_output;
+                    row_input = resource_base + U16_AT(resource_base, 0) + 0x220;
+                    row_input = row_input + *texture_record * 2 + (U8_AT(texture_fields, 1) << 7);
+                    if (U8_AT(texture_fields, 3) != 0)
                     {
                         do
                         {
                             pixel_input = row_input;
                             column = 0;
-                            if (U8_AT(texture_fields, -1) != 0)
+                            if (U8_AT(texture_fields, 2) != 0)
                             {
                                 do
                                 {
@@ -363,76 +331,79 @@ void func_8009A4CC(s32 group, Actor *actor)
                                     pixel_input += 2;
                                     U16_AT(pixel_output, 0) = pixel;
                                     pixel_output += 2;
-                                } while (column < (s32)U8_AT(texture_fields, -1));
+                                } while (column < (s32)U8_AT(texture_fields, 2));
                             }
                             row += 1;
                             row_input += 0x80;
-                        } while (row < (s32)U8_AT(texture_fields, 0));
+                        } while (row < (s32)U8_AT(texture_fields, 3));
                     }
-                    texture_index += 1;
+                    byte_index += 1;
                     texture_fields += 8;
                     texture_record += 8;
-                } while (texture_index < (s32)U8_AT(part_fields, 0));
+                    } while (0);
+                } while (byte_index < (s32)U8_AT(part_fields, 2));
             }
             part_index += 1;
             cursor += 2;
-            texture_count = U8_AT(part_fields, 0);
+            texture_count = U8_AT(part_fields, 2);
             texture_total += texture_count;
+            part_fields += 0x18;
             part += 0x18;
         } while (part_index < part_count);
     }
-    header_id = U16_AT(cursor, 0);
+    header_pool = &D_8010D034;
+    part_index = U16_AT(cursor, 0);
     cursor += 2;
     record_count = *cursor++;
     record_tag = group;
-    direct_header_group = record_tag < 3;
     record_bytes = record_count * 6;
-    if (!direct_header_group)
+    if (record_tag >= 3)
     {
         record_tag = 2;
     }
-    records = func_8009CA54(D_8010D034, record_bytes, record_tag);
+    records = func_8009CA54(*header_pool, record_bytes, record_tag);
     actor->records = records;
     memcpy(records, cursor, record_bytes);
     cursor += record_bytes;
-    index_bytes = *cursor++ * 2;
+    byte_index = *cursor++;
+    index_bytes = byte_index * 2;
     index_tag = group;
-    if (!direct_header_group)
+    if (group >= 3)
     {
         index_tag = 2;
     }
-    indices = func_8009CA54(D_8010D034, index_bytes, index_tag);
+    indices = func_8009CA54(*header_pool, index_bytes, index_tag);
     actor->indices = indices;
     memcpy(indices, cursor, index_bytes);
     cursor += index_bytes;
-    packed_entry_count = *cursor;
-    optional_count = packed_entry_count >> 6;
+    byte_index = *cursor;
+    optional_count = byte_index >> 6;
     if (optional_count >= 3)
     {
         optional_count = 0;
     }
-    entry_count = packed_entry_count & 0x3F;
+    byte_index = byte_index & 0x3F;
     cursor++;
-    actor->count = entry_count;
-    entry_bytes = entry_count * 0x48;
+    actor->count = byte_index;
+    entry_bytes = byte_index * 0x48;
     entry_tag = group;
-    if (!direct_header_group)
+    if (group >= 3)
     {
         entry_tag = 2;
     }
-    entries = func_8009CA54(D_8010D034, entry_bytes, entry_tag);
+    entries = func_8009CA54(*header_pool, entry_bytes, entry_tag);
     actor->entries = entries;
     memcpy(entries, cursor, entry_bytes);
     cursor += entry_bytes;
     actor->state29 = 0;
     header_tag = group;
-    if (!direct_header_group)
+    if (group >= 3)
     {
         header_tag = 2;
     }
-    header = func_8009CA54(D_8010D034, 0x5A, header_tag);
+    header = func_8009CA54(*header_pool, 0x5A, header_tag);
     actor->header = header;
-    U16_AT(header, 0x12) = header_id;
+    U16_AT(header, 0x12) = part_index;
     header_cursor = actor->header;
     actor->current = header_cursor;
     *(Copy18 *)header_cursor = *(Copy18 *)cursor;
@@ -446,21 +417,21 @@ void func_8009A4CC(s32 group, Actor *actor)
     }
     if ((u32)((u8)U8_AT(actor->entries, 0x14) >> 4) < 2U)
     {
-        record_index = 0;
+        part_index = 0;
         if (record_count != 0)
         {
             record_offset = 0;
             do
             {
-                packed.bits.x = U8_AT(actor->records, record_offset) & 0x7F;
-                packed.bits.flag = U16_AT(actor->records, record_offset) >> 15;
-                packed.h.b1 = ((u16)U16_AT(actor->records, record_offset) >> 8) & 0x7F;
+                packed.bits.x = *(u8 *)(record_offset + (u32)actor->records) & 0x7F;
+                packed.bits.flag = *(u16 *)(record_offset + (u32)actor->records) >> 15;
+                packed.h.b1 = ((u16)*(u16 *)(record_offset + (u32)actor->records) >> 8) & 0x7F;
                 packed.h.h4 = U16_AT(actor->records, record_offset + 4);
-                record_index += 1;
                 packed.h.h2 = U16_AT(actor->records, record_offset + 2);
                 bcopy((u8 *)&packed, actor->records + record_offset, 6);
+                part_index += 1;
                 record_offset += 6;
-            } while (record_index < (s32)record_count);
+            } while (part_index < (s32)record_count);
         }
     }
     actor->header_id = (u16)U16_AT(actor->header, 0x12);
@@ -471,21 +442,24 @@ void func_8009A4CC(s32 group, Actor *actor)
         cursor += 0x1C;
         *(Copy28 *)header_cursor = *(Copy28 *)cursor;
         cursor += 0x1C;
-        extra_header = (u8 *)((u32)(header_cursor + 0x1D) & ~1);
-        actor->extra = extra_header;
+        header_cursor = (u8 *)((u32)(header_cursor + 0x1D) & ~1);
+        actor->extra = header_cursor;
         actor->state29 = 0;
         actor->state2a = 0;
-        *(Copy6 *)extra_header = *(Copy6 *)cursor;
+        *(Copy6 *)header_cursor = *(Copy6 *)cursor;
     }
     if (optional_count != 0)
     {
-        optional_index = 0;
-        if (optional_count != 0)
+        part_index = 0;
+        has_optional = optional_count != 0;
+        if (has_optional)
         {
-            optional_slot = (u8 *)actor;
+            optional_offset = 0;
             do
             {
                 cursor = (u8 *)((u32)(cursor + 3) & ~3);
+                optional_pool = &D_8010D034;
+                shared_base = D_8011BF00;
                 optional_bytes = S32_AT(cursor, 0);
                 if (optional_bytes < 0x1000)
                 {
@@ -494,21 +468,21 @@ void func_8009A4CC(s32 group, Actor *actor)
                     {
                         optional_tag = 2;
                     }
-                    PTR_AT(optional_slot, 0x1C) = func_8009CA54(D_8010D034, optional_bytes, optional_tag);
+                    PTR_AT((u8 *)actor + optional_offset, 0x1C) = func_8009CA54(*optional_pool, optional_bytes, optional_tag);
                 }
                 else
                 {
-                    PTR_AT(optional_slot, 0x1C) = (u8 *)(S32_AT(D_8011BF00, 4) + D_8011BF00);
+                    PTR_AT((u8 *)actor + optional_offset, 0x1C) = (u8 *)(S32_AT(shared_base, 4) + (u32)shared_base);
                 }
                 cursor += 4;
                 if (optional_bytes < 0x1000)
                 {
-                    memcpy(PTR_AT(optional_slot, 0x1C), cursor, optional_bytes);
+                    memcpy(PTR_AT((u8 *)actor + optional_offset, 0x1C), cursor, optional_bytes);
                 }
                 cursor += optional_bytes;
-                optional_index += 1;
-                optional_slot += 4;
-            } while (optional_index < optional_count);
+                part_index += 1;
+                optional_offset += 4;
+            } while (part_index < optional_count);
         }
     }
 }

@@ -293,7 +293,7 @@ segments:
       - [0x4A6F5, c, field41]                      # gcc272_cdk, func_8009A364
       - [0x4A779, c, func_8009A3E8]                # gcc272_cdk, 100%
       - [0x4A831, c, field45]                      # gcc272_cdk, func_8009A4A0
-      - [0x4A85D, c, func_8009A4CC] # gcc272_cdk, 87.950250% WIP
+      - [0x4A85D, c, func_8009A4CC] # gcc272_cdk,99.203980% WIP
       - [0x4B1C9, c, func_8009AE38] # gcc272_cdk, 81.690720% WIP
       # TU hypothesis: field_scene_transition (high). See docs/decompilation/field-boundaries/map.md.
       - [0x4B34D, c, field273]                     # gcc272_cdk, func_8009AFBC + field_set_scene_parameters (100%)
@@ -319,7 +319,7 @@ segments:
       - [0x4D0C1, c, func_8009CD30]                # gcc272_cdk, 100%
       - [0x4D1A1, c, func_8009CE10]                # gcc272_cdk, 100%
       - [0x4D2AD, c, func_8009CF1C]                # gcc272_cdk, 100%
-      - [0x4D315, c, func_8009CF84]                # gcc272_cdk, 97.88% WIP
+      - [0x4D315, c, func_8009CF84]                # gcc272_cdk, 100%
       - [0x4D469, c, func_8009D0D8]                # gcc272_cdk, 100%
       - [0x4D575, c, func_8009D1E4] # gcc272_cdk, 95.206350% WIP
       # TU hypothesis: field_actor_effects (medium). See docs/decompilation/field-boundaries/map.md.
@@ -434,7 +434,7 @@ segments:
       - [0x5B5A5, c, func_800AB214] # gcc272_cdk, 99.377360% WIP
       - [0x5B9C9, c, field_modal_fade_ops]      # gcc272_cdk, func_800AB638 + func_800AB690 + func_800AB710 (100%; none match under gcc280_g0)
       - [0x5BB05, c, func_800AB774]             # gcc272_cdk, 100%
-      - [0x5BBFD, c, field_coord_panels]        # gcc272_cdk, func_800AB86C (99.92%) + func_800AC768 (99.91%)
+      - [0x5BBFD, c, field_coord_panels]        # gcc272_cdk, func_800AB86C (100%) + func_800AC768 (99.98%)
       # TU hypothesis: field_modal_stream_start (high). See docs/decompilation/field-boundaries/map.md.
       - [0x5D3C1, c, field329]                     # gcc272_cdk, func_800AD030
       - [0x5D459, c, field75]                      # gcc272_cdk, func_800AD0C8
