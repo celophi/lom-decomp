@@ -116,9 +116,8 @@ void func_800A2DD8(u8 index);
  *       D_800FD818 index load is shared with the func_80083EEC first argument in
  *       the target (register a0), ours reloads it (2 sites); (3) the
  *       tmp * 8 + unk3A * 0x190 offset sum has swapped operands at 2 sites.
- * @note The jump table jtbl_80050F14 lives in the FIELD data region
- *       (asm/overlays/field/unk2.s), not in this function's .rodata; placing it
- *       correctly in the final link still needs handling.
+ * @note FIELD.BIN.yaml assigns jtbl_80050F14 to this translation unit's
+ *       .rodata so its entries resolve to the compiled switch labels.
  * @see decomp.me (97.53%) TODO
  */
 s32 func_80092C98(FieldRec *rec)
