@@ -516,7 +516,7 @@ segments:
       - [0x79A55, c, field_menu_attribute_ops] # gcc280_g0, inferred related-function unit; see boundary report
       - [0x79F55, c, field_menu_record_ops]     # gcc280_g0, func_800C9BC4 .. func_800C9DCC (7 funcs, 100%)
       - [0x7A265, c, field_select_distance_bucket] # gcc272_cdk, func_800C9ED4, 85.865920% WIP; provisional boundary
-      - [0x7A531, c, field_layout_slot_state] # gcc272_cdk, func_800CA1A0 + func_800CA1E0; 100% / 85.166664%
+      - [0x7A531, c, field_layout_slot_state] # gcc272_cdk, func_800CA1A0 + func_800CA1E0; 100%
       - [0x7A619, c, field_equipment_combination_rules] # gcc280_g0, quantity + class test + search + variant + 64 rules; 68 funcs, 100%
       - [0x7BA11, c, field_golem_logic_blocks]      # gcc280_g0, golem logic-block TU: append .. func_800CBEC4; two WIPs
       - [0x7C2D5, data, data]
