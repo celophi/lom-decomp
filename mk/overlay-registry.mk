@@ -53,6 +53,7 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_choice_prompt.c \
 	src/overlays/carda/carda_choice_cancel.c \
 	src/overlays/carda/carda_restore_record.c \
+	src/overlays/carda/func_801466F8.c \
 	src/overlays/carda/func_80146794.c \
 	src/overlays/carda/func_80146CA4.c \
 	src/overlays/carda/func_80146EDC.c \
@@ -99,7 +100,6 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 overlay_carda_gcc_280_g0_srcs := \
 	src/overlays/carda/carda_scan_hex_digits.c \
 	src/overlays/carda/func_80145050.c \
-	src/overlays/carda/unk1_after_choice_after_restore.c \
 	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c
 
 OVERLAYS += checkps
