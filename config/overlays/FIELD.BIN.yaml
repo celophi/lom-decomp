@@ -510,7 +510,7 @@ segments:
       - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, C7340 94.154930% WIP
       - [0x779FD, c, field_menu_action_runtime] # gcc280_g0, func_800C766C .. action-slot reset; 14 funcs, four WIPs
       - [0x78BC1, c, field_menu_record_setup] # gcc280_g0, func_800C8830 .. func_800C8964; three funcs, 100%
-      - [0x78DBD, c, field_menu_record_transfer] # gcc280_g0, func_800C8A2C .. func_800C905C; three WIPs
+      - [0x78DBD, c, field_menu_record_transfer] # gcc280_g0, func_800C8A2C .. func_800C905C; two WIPs
       - [0x7963D, c, field_menu_record_audio_ops] # gcc280_g0, music reset + record/audio updates; four funcs, 100%
       - [0x79795, c, field_menu_record_state] # gcc280_g0, inferred related-function unit; see boundary report
       - [0x79A55, c, field_menu_attribute_ops] # gcc280_g0, inferred related-function unit; see boundary report
