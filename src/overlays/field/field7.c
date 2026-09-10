@@ -44,7 +44,7 @@ typedef struct
     u8 unk19;  /* 0x19 */
     u8 unk1A;  /* 0x1A */
     u8 unk1B;  /* 0x1B */
-    s32 unk1C; /* 0x1C (halfword view at 0x1E) */
+    union { s32 word; u16 half[2]; struct { unsigned low:13; unsigned placement:2; unsigned bit15:1; unsigned group:2; unsigned bit18:1; unsigned kind:4; unsigned high:9; } bits; } flags;
     u8 unk20;  /* 0x20 */
     u8 unk21;  /* 0x21 */
     u8 unk22;  /* 0x22 */
@@ -85,8 +85,7 @@ typedef struct
     u32 unkC;   /* 0x0C */
     u32 unk10;  /* 0x10 */
     u8 pad14[0x60 - 0x14];
-    u8 unk60;   /* 0x60 */
-    u8 pad61[0x12C - 0x61];
+    u8 unk60[0x12C - 0x60];
     u32 unk12C; /* 0x12C */
     Vec2s unk130[4]; /* 0x130 */
     s16 unk140; /* 0x140 */
@@ -94,7 +93,7 @@ typedef struct
     s16 unk144; /* 0x144 */
     s16 unk146; /* 0x146 */
     u8 pad148[0x178 - 0x148];
-    s32 unk178; /* 0x178 (byte views at 0x178 and 0x17A) */
+    union { u32 word; u8 bytes[4]; } state;
     u8 pad17C[0x18E - 0x17C];
     u8 unk18E;  /* 0x18E */
     u8 pad18F[0x190 - 0x18F];
@@ -213,10 +212,10 @@ typedef struct
 
 typedef struct
 {
-    u8 unk0;
-    u8 pad1[0xC - 1];
-    u8 unkC;
-    u8 padD[0x1C - 0xD];
+    u32 unk0;
+    u8 pad4[0xC - 4];
+    u32 unkC;
+    u8 pad10[0x1C - 0x10];
 } Struct_D80105880;
 
 extern Struct_D800FDF58 D_800FDF58[];
@@ -262,13 +261,8 @@ extern s32 g_field_track_index;
  * @return Index of the slot that was filled, or -1 if no slot was free or the
  *         placement opcode rejected the spawn.
  *
- * @note WIP - 95.37% (2939/3399 exact, gcc272_cdk). Structure, case order,
- *       shared-label placement and struct access widths are settled; the residue
- *       is register-coloring (argdiff rows) plus a small +17-insn/saved-register
- *       shortfall and one 5-insn run near tgt 0x24C8. Diff needs the TOOL-11
- *       target (GTE ops + jtbl_8004FEF4/FFF4): working/func_8006D79C/target_test.s
- *       with extra_as_flags "-I /lom/include". Full handoff in
- *       working/func_8006D79C/STATUS.md.
+ * @note WIP - 99.832% assembly match (gcc272_cdk).
+ *       Current matching evidence: working/func_8006D79C/status.md.
  */
 s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
 {
@@ -277,42 +271,42 @@ s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
     FieldSVector* dir = (FieldSVector*)0x1F800030;
     FieldMatrix* mtx = (FieldMatrix*)0x1F800040;
     Struct_D800FDF58* rec;
-    Struct_D800FDF58* src;
-    Struct_D800FDF58* src27;
-    Struct_D800FDF58* src28;
     Struct_D800FDF58* scan;
     Struct_D800FDF58* scanA;
     Struct_D800FDF58* scanB;
     Struct_D80105AE0* slot;
+    Struct_D80105AE0* init_slot;
     Struct_D80105AE0* slots_base_init;
     Struct_D80105AE0* slot27;
+    Struct_D80105AE0* slot27_guard;
     Struct_D80105AE0* slot28;
     Struct_D80105AE0* slot_place_check;
     Struct_D80105AE0* slot_place_attach;
     Struct_D80105AE0* slot_place_base;
-    Struct_D80105AE0* slot_owner_late;
     Struct_D80105AE0* slot_owner_valid;
-    Struct_D800FDF58* src2_owner;
-    Struct_D800FDF58* src3_track;
+    Struct_D800FDF58* src;
+    Struct_D800FDF58* source33;
+    Struct_D800FDF58* source_actor;
     Struct_D80105AE0* slot2_owner;
     Struct_D80105AE0* slot3_track;
     FieldSVector* scanA_rot;
     FieldSVector* scanB_rot;
     FieldActorPartDef* part;
-    volatile s32 base_x;
-    s32 speed;
+    s32 base_x;
     s32 count;
     s32 place_y;
+    s32 width;
+    s32 placement_x;
     s32 i;
     s32 n;
-    s32 j;
+    s32 placement_index;
     s32 val;
+    s32 direction_z;
     s32 kind;
     s32 sub;
     s32 nA;
     s32 nB;
     s32 subA;
-    s32 subB;
     s32 pos27;
     s32 pos28;
     s32 pos37;
@@ -321,14 +315,14 @@ s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
     u8* drop_count_ptr;
 
     i = 0;
-    val = 0xFF;
-    src = D_800FF658;
-    scan = src;
+    count = 0xFF;
+    source_actor = D_800FF658;
+    scanA = source_actor;
 find_slot:
-    if (scan->unk25 != val)
+    if (scanA->unk25 != count)
     {
         i++;
-        scan++;
+        scanA++;
         if (i < 0x100)
         {
             goto find_slot;
@@ -340,11 +334,11 @@ find_slot:
         return -1;
     }
 
-    rec = &src[i];
+    rec = (Struct_D800FDF58*)((u32)(i * sizeof(*rec)) + (u32)source_actor);
     part = &actor->unk0[part_index];
     if ((s32)part->unk24 < 0)
     {
-        rec->unk3D = val;
+        rec->unk3D = count;
     }
 
     if ((u32)(((part->unk28 >> 18) & 0x3F) - 0x2A) < 8U &&
@@ -365,27 +359,28 @@ find_slot:
 
     if (part->unk14 & 0xF0)
     {
-        rec->unk1B = (*(volatile u16*)((u8*)part + 0x26)) & 0xF;
+        s32 parameter = *(u16*)((u8*)part + 0x26);
+        rec->unk1B = parameter & 0xF;
     }
     else
     {
         rec->unk1B = (part->unk4 >> 8) & 7;
     }
-    rec->unk1C = (rec->unk1C & 0xF8FFFFFF) | (((part->unk4 >> 13) & 7) << 24);
-    rec->unk1C = (rec->unk1C & ~0x600) | ((part->unk20 >> 6) << 9);
+    rec->flags.word = (rec->flags.word & 0xF8FFFFFF) | (((part->unk4 >> 13) & 7) << 24);
+    rec->flags.word = (rec->flags.word & ~0x600) | ((part->unk20 >> 6) << 9);
     rec->unk28 = part->unkD;
     rec->unk2A = ((u16*)&part->unk14)[1];
     rec->unk2E = part->unk18;
     rec->unk29 = g_field_track_index;
-    rec->unk1C = ((rec->unk1C & 0x9FFFFFFF) | ((*(u8*)&part->unk14 & 3) << 29)) & ~0x1000;
-    rec->unk1C = (rec->unk1C & 0xF7FFFFFF) | (((part->unk34 >> 18) & 1) << 27);
-    rec->unk1C &= ~0x6000;
-    rec->unk1C &= 0xFFFBFFFF;
-    rec->unk1C &= 0xFF87FFFF;
+    rec->flags.word = ((rec->flags.word & 0x9FFFFFFF) | ((*(u8*)&part->unk14 & 3) << 29)) & ~0x1000;
+    rec->flags.word = (rec->flags.word & 0xF7FFFFFF) | (((part->unk34 >> 18) & 1) << 27);
+    rec->flags.word &= ~0x6000;
+    rec->flags.word &= 0xFFFBFFFF;
+    rec->flags.word &= 0xFF87FFFF;
     if (part->unk24 & 0x800000)
     {
         s32 eval = field_evaluate_parameter_track_at_time(actor, (part->unk24 >> 25) & 0xF, 0) != 0;
-        rec->unk1C = (rec->unk1C & 0xFF7FFFFF) | (eval << 23);
+        rec->flags.word = (rec->flags.word & 0xFF7FFFFF) | (eval << 23);
         goto bit23_done;
     scan_slot_found:
         rec->unk20 = n;
@@ -393,28 +388,28 @@ find_slot:
     }
     else
     {
-        rec->unk1C = (rec->unk1C & 0xFF7FFFFF) | (((part->unk4 >> 1) & 1) << 23);
+        rec->flags.word = (rec->flags.word & 0xFF7FFFFF) | (((part->unk4 >> 1) & 1) << 23);
     }
 bit23_done:
-    rec->unk1C = rec->unk1C & 0xFFFCFFFF;
+    rec->flags.word = rec->flags.word & 0xFFFCFFFF;
     if (rec->unk1B == 8)
     {
         s32 scan_ff;
         n = 0;
-        count = n;
+        val = n;
         scan_ff = 0xFF;
-        j = actor->unk3B[g_field_track_index][part_index];
+        count = actor->unk3B[g_field_track_index][part_index];
         scan = D_800FF658;
     scan_slots:
         if (scan->unk25 != scan_ff && scan->unk23 == part->unk46 && scan->unk22 == actor->unk233)
         {
-            count = 1;
-            if (j == 0)
+            val = 1;
+            if (count == 0)
             {
                 goto scan_slot_found;
             }
             rec->unk20 = n;
-            j--;
+            count--;
         }
         n++;
         scan++;
@@ -423,16 +418,19 @@ bit23_done:
             goto scan_slots;
         }
     scan_slots_done:
-        if (count == 0)
+        if (val == 0)
         {
             rec->unk25 = 0xFF;
             return -1;
         }
     }
 
-    rec->unk27 = 0;
-    rec->unk34 = 0;
-    rec->unk25 = part->unkB;
+    {
+        s32 record_type = part->unkB;
+        rec->unk27 = 0;
+        rec->unk34 = 0;
+        rec->unk25 = record_type;
+    }
     rec->unk44 = part->unk40 << 8;
     rec->unk48 = part->unk42 << 8;
     rec->unk4C = part->unk44 << 8;
@@ -440,21 +438,22 @@ bit23_done:
     {
         if (part->unk34 & 0x10000)
         {
-            val = (*(u32*)&part->unk2C >> 24) & 0xF;
+            s32 limit = (*(u32*)&part->unk2C >> 24) & 0xF;
             n = 0;
-            if (val != 0)
+            if (limit != 0)
             {
+                val = limit;
                 slots_base_init = D_80105AE0;
                 do
                 {
-                    slot = &slots_base_init[actor->owner_object_index];
-                    if ((&slot->unk60)[n] == 0)
+                    init_slot = &slots_base_init[actor->owner_object_index];
+                    if (init_slot->unk60[n] == 0)
                     {
                         n++;
                     }
                     else
                     {
-                        (&slot->unk60)[n] = (&slot->unk60)[n] - 1;
+                        init_slot->unk60[n] = init_slot->unk60[n] - 1;
                         rec->unk21 = part->unk1A + n;
                         break;
                     }
@@ -476,8 +475,7 @@ bit23_done:
         rec->unk21 = part->unk1A;
     }
 
-    val = (part->unk28 >> 26) & 3;
-    switch (val)
+    switch ((s32)((part->unk28 >> 26) & 3))
     {
     case 0:
         rec->unk32 = part->unk21;
@@ -489,8 +487,7 @@ bit23_done:
         rec->unk32 = field_evaluate_parameter_track_at_time(actor, part->unk21 & 0xF, 0);
         break;
     }
-    val = (part->unk28 >> 28) & 3;
-    switch (val)
+    switch ((s32)((part->unk28 >> 28) & 3))
     {
     case 0:
         rec->unk33 = part->unk22;
@@ -517,8 +514,8 @@ bit23_done:
         if ((part->unk4 >> 12) & 1)
         {
             rec->unk18 = field_evaluate_parameter_track(actor, (part->unk4 >> 16) & 0xF);
-            rec->unk19 = field_evaluate_parameter_track(actor, (((u16*)&part->unk4)[0] & 0xF) + 1);
-            rec->unk1A = field_evaluate_parameter_track(actor, (((u16*)&part->unk4)[0] & 0xF) + 2);
+            rec->unk19 = field_evaluate_parameter_track(actor, (((((u16*)&part->unk4)[1] & 0xF) + 1) & 0xF));
+            rec->unk1A = field_evaluate_parameter_track(actor, (((((u16*)&part->unk4)[1] & 0xF) + 2) & 0xF));
         }
         else
         {
@@ -526,8 +523,8 @@ bit23_done:
                 field_evaluate_parameter_track(actor, (part->unk4 >> 16) & 0xF);
         }
     }
-    rec->unk1C = (rec->unk1C & 0xFFFF7FFF) | ((part->unk4 * 0x10) & 0x8000);
-    rec->unk1C = (rec->unk1C & 0xEFFFFFFF) | (((part->unk28 >> 25) & 1) << 28);
+    rec->flags.word = (rec->flags.word & 0xFFFF7FFF) | ((part->unk4 * 0x10) & 0x8000);
+    rec->flags.word = (rec->flags.word & 0xEFFFFFFF) | (((part->unk28 >> 25) & 1) << 28);
     func_80070CB8(actor, part, rec);
     RotMatrix_gte((FieldSVector*)&rec->unk10, mtx);
     RotMatrixZ(rec->unk32 * 16, mtx);
@@ -553,11 +550,11 @@ bit23_done:
         }
     }
     base_x = vec->vx;
-    speed = func_8007E754(actor, part);
-    rec->unk1C = (rec->unk1C & ~0x1FF) | (speed & 0x1FF);
-    rec->unk0 = (speed * vec->vx) >> 4;
-    rec->unk4 = (speed * vec->vy) >> 4;
-    rec->unk8 = (speed * vec->vz) >> 4;
+    n = func_8007E754(actor, part);
+    rec->flags.word = (rec->flags.word & ~0x1FF) | (n & 0x1FF);
+    rec->unk0 = (n * vec->vx) >> 4;
+    rec->unk4 = (n * vec->vy) >> 4;
+    rec->unk8 = (n * vec->vz) >> 4;
     rec->unk24 = part->unk8;
     rec->unk3A = actor->owner_object_index;
     if (rec->unk25 == 0)
@@ -577,32 +574,33 @@ bit23_done:
     }
     if (rec->unk25 == 2)
     {
-        slot2_owner = &D_80105AE0[actor->owner_object_index];
-        if (*(u8*)&slot2_owner->unk178 & 1)
+        { Struct_D80105AE0 *owner_slots = D_80105AE0;
+          u8 owner_index = actor->owner_object_index;
+        slot2_owner = &owner_slots[owner_index]; }
+        if (*(u8*)&slot2_owner->state.word & 1)
         {
-            if (((u8*)&slot2_owner->unk178)[2] != actor->unk233)
+            if (slot2_owner->state.bytes[2] != actor->unk233)
             {
                 goto kill_rec;
             }
         }
-        src2_owner = &D_800FDF58[*(volatile u8*)&actor->owner_object_index];
+        source_actor = &D_800FDF58[*(u8*)&actor->owner_object_index];
         if (!((part->unk4 >> 11) & 1) && !((part->unk28 >> 25) & 1) && (part->unk2C >> 5) == 0 &&
             (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->unk10 == 0x80)
         {
-            rec->unk1C |= 0x10008000;
-            rec->unk18 = D_800FE3A0[src2_owner->unk3A].unkE;
-            rec->unk19 = D_800FE3A0[src2_owner->unk3A].unkF;
-            rec->unk1A = D_800FE3A0[src2_owner->unk3A].unk10;
+            rec->flags.word |= 0x10008000;
+            rec->unk18 = D_800FE3A0[source_actor->unk3A].unkE;
+            rec->unk19 = D_800FE3A0[source_actor->unk3A].unkF;
+            rec->unk1A = D_800FE3A0[source_actor->unk3A].unk10;
         }
         rec->unk3A = D_800FDF58[actor->owner_object_index].unk3A;
         rec->unk3B = D_800FDF58[actor->owner_object_index].unk3B;
         rec->unkC = D_800FDF58[actor->owner_object_index].unkC;
         rec->unk21 |= D_800FDF58[actor->owner_object_index].unk21 & 0x80;
-        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) |
-                     ((((u16*)&D_800FDF58[actor->owner_object_index].unk1C)[1] & 3) << 16);
-        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FDF58[actor->owner_object_index].unk1C & 0x780000);
-        src = &D_800FDF58[actor->owner_object_index];
-        res = g_field_resource_entries[src->unk3B].start;
+        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) |
+                     ((D_800FDF58[actor->owner_object_index].flags.half[1] & 3) << 16);
+        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (D_800FDF58[actor->owner_object_index].flags.word & 0x780000);
+        res = g_field_resource_entries[D_800FDF58[actor->owner_object_index].unk3B].start;
         if (res != 0)
         {
             func_8006C3FC(rec, res);
@@ -619,62 +617,69 @@ bit23_done:
             actor->unkCC[g_field_track_index][part_index]--;
             return -1;
         }
-        if (!((D_80105AE0[actor->unk229[g_field_track_index]].unk178 >> 6) & 1))
+        if (!((D_80105AE0[actor->unk229[g_field_track_index]].state.word >> 6) & 1))
         {
+            s32 offset;
+            s32 offset2;
+            s32 metadata_index;
+            Struct_D80105880 *metadata = D_80105880;
             if (actor->unk229[g_field_track_index] < 2U)
             {
-                n = actor->unk229[g_field_track_index] * 0x1C;
+                offset = actor->unk229[g_field_track_index] * 0x1C;
             }
             else
             {
-                n = 0x38;
+                offset = 0x38;
             }
-            val = ((Struct_D80105880*)((u8*)D_80105880 + n))->unkC;
-            if (val == actor->unk229[g_field_track_index])
+            metadata_index = ((Struct_D80105880*)((u8*)metadata + offset))->unkC;
+            if (metadata_index == actor->unk229[g_field_track_index])
             {
-                if ((u32)(val & 0xFF) < 2U)
+                Struct_D80105880 *next_metadata = D_80105880;
+                if ((u32)(metadata_index & 0xFF) < 2U)
                 {
-                    j = val * 0x1C;
+                    offset2 = metadata_index * 0x1C;
                 }
                 else
                 {
-                    j = 0x38;
+                    offset2 = 0x38;
                 }
-                if (((Struct_D80105880*)((u8*)D_80105880 + j))->unk0 != 0)
+                if (((Struct_D80105880*)((u8*)next_metadata + offset2))->unk0 != 0)
                 {
                     goto kill_rec;
                 }
             }
         }
-        slot3_track = &D_80105AE0[actor->unk229[g_field_track_index]];
-        if (*(u8*)&slot3_track->unk178 & 1)
         {
-            if (((u8*)&slot3_track->unk178)[2] != actor->unk233)
+            Struct_D80105AE0 *table_base = D_80105AE0;
+            slot3_track = &table_base[actor->unk229[g_field_track_index]];
+        }
+        if (*(u8*)&slot3_track->state.word & 1)
+        {
+            if (slot3_track->state.bytes[2] != actor->unk233)
             {
             kill_rec:
                 rec->unk25 = 0xFF;
                 goto after_source;
             }
         }
-        src3_track = &D_800FDF58[actor->unk229[g_field_track_index]];
+        source_actor = &D_800FDF58[actor->unk229[g_field_track_index]];
         if (!((part->unk4 >> 11) & 1) && !((part->unk28 >> 25) & 1) && (part->unk2C >> 5) == 0 &&
             (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->unk10 == 0x80)
         {
-            rec->unk1C |= 0x10008000;
-            rec->unk18 = D_800FE3A0[src3_track->unk3A].unkE;
-            rec->unk19 = D_800FE3A0[src3_track->unk3A].unkF;
-            rec->unk1A = D_800FE3A0[src3_track->unk3A].unk10;
+            rec->flags.word |= 0x10008000;
+            rec->unk18 = D_800FE3A0[source_actor->unk3A].unkE;
+            rec->unk19 = D_800FE3A0[source_actor->unk3A].unkF;
+            rec->unk1A = D_800FE3A0[source_actor->unk3A].unk10;
         }
         rec->unk3A = D_800FDF58[actor->unk229[g_field_track_index]].unk3A;
         rec->unk3B = D_800FDF58[actor->unk229[g_field_track_index]].unk3B;
         rec->unkC = D_800FDF58[actor->unk229[g_field_track_index]].unkC;
         rec->unk21 |= D_800FDF58[actor->unk229[g_field_track_index]].unk21 & 0x80;
-        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) |
-                     ((((u16*)&D_800FDF58[actor->unk229[g_field_track_index]].unk1C)[1] & 3) << 16);
-        rec->unk1C =
-            (rec->unk1C & 0xFF87FFFF) | (D_800FDF58[actor->unk229[g_field_track_index]].unk1C & 0x780000);
-        src = &D_800FDF58[actor->unk229[g_field_track_index]];
-        res = g_field_resource_entries[src->unk3B].start;
+        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) |
+                     ((D_800FDF58[actor->unk229[g_field_track_index]].flags.half[1] & 3) << 16);
+        rec->flags.word =
+            (rec->flags.word & 0xFF87FFFF) | (D_800FDF58[actor->unk229[g_field_track_index]].flags.word & 0x780000);
+        res = g_field_resource_entries[D_800FDF58[actor->unk229[g_field_track_index]].unk3B].start;
         if (res != 0)
         {
             func_8006C3FC(rec, res);
@@ -692,7 +697,7 @@ after_source:
         base_x = -base_x;
         rec->unk0 = -rec->unk0;
     }
-    if ((rec->unk1C & 0x07000000) == 0x05000000)
+    if ((rec->flags.word & 0x07000000) == 0x05000000)
     {
         rec->unk0 = 0;
         rec->unk4 = 0;
@@ -705,7 +710,8 @@ after_source:
         rec->unk8 = 0;
     }
 
-    do { do { do { do { do { do { do { do { do { do { kind = (part->unk28 >> 18) & 0x3F; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
+    kind = part->unk28 >> 18;
+    kind &= 0x3F;
     switch (kind)
     {
     case 0x0:
@@ -738,39 +744,35 @@ after_source:
                 actor->unkCC[g_field_track_index][part_index]--;
             return -1;
             }
-            n = actor->unk229[g_field_track_index];
+            placement_index = actor->unk229[g_field_track_index];
             kind -= 0xA;
         }
         else
         {
-            slot_place_check = &D_80105AE0[actor->owner_object_index];
-            if ((*(u8*)&slot_place_check->unk178 & 1) && actor->unk233 >= 0x40U &&
-                !(((u32)slot_place_check->unk178 >> 5) & 1) && ((u8*)&slot_place_check->unk178)[2] != actor->unk233)
+            {
+                Struct_D80105AE0 *table_base = D_80105AE0;
+                slot_place_check = &table_base[actor->owner_object_index];
+            }
+            if ((*(u8*)&slot_place_check->state.word & 1) && actor->unk233 >= 0x40U &&
+                !(((u32)slot_place_check->state.word >> 5) & 1) && slot_place_check->state.bytes[2] != actor->unk233)
             {
                 goto fail_slot;
             }
-            n = actor->owner_object_index;
+            placement_index = actor->owner_object_index;
         }
-        do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { do { src = &D_800FDF58[n]; } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0); } while (0);
-        slot = &D_80105AE0[n];
+        { Struct_D800FDF58 *objects_base = D_800FDF58;
+        src = &objects_base[placement_index]; }
+        slot = &D_80105AE0[placement_index];
+        nA = 0;
         if ((part->unk28 >> 9) & 1)
         {
-            val = slot->unk144 - slot->unk140;
-            if (val < 0)
-            {
-                val = -val;
-            }
-            part->unk2E = val * 2;
+            width = abs(slot->unk144 - slot->unk140);
+            part->unk2E = width * 2;
         }
-        nA = 0;
         if ((part->unk28 >> 1) & 1)
         {
-            val = slot->unk146 - slot->unk142;
-            if (val < 0)
-            {
-                val = -val;
-            }
-            part->unk33 = val * 2;
+            width = abs(slot->unk146 - slot->unk142);
+            part->unk33 = width * 2;
         }
         count = nA;
         switch (kind)
@@ -814,9 +816,9 @@ after_source:
         default:
             break;
         }
-        n = count << 8;
+        count <<= 8;
         nA <<= 8;
-        rec->unk0 += src->unk0 + n;
+        rec->unk0 += src->unk0 + count;
         rec->unk4 += src->unk4 + nA;
         rec->unk8 += src->unk8;
         if (rec->unk25 == 0xFD)
@@ -824,16 +826,16 @@ after_source:
             slot_place_base = D_80105AE0;
             rec->unk3A = src->unk3A;
             slot_place_attach = &slot_place_base[src->unk3A];
-            if (!(*(u8*)&slot_place_attach->unk178 & 1) || ((u8*)&slot_place_attach->unk178)[2] == actor->unk233)
+            if (!(*(u8*)&slot_place_attach->state.word & 1) || slot_place_attach->state.bytes[2] == actor->unk233)
             {
                 rec->unkC = src->unkC;
                 rec->unk3B = src->unk3B;
-                rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (src->unk1C & 0x780000);
-                rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&src->unk1C)[1] & 3) << 16);
+                rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (src->flags.word & 0x780000);
+                rec->flags.bits.group = src->flags.half[1];
                 if (!((part->unk4 >> 11) & 1) && !((part->unk28 >> 25) & 1) && (part->unk2C >> 5) == 0 &&
                     (*(u32*)&part->unkC & 0xFFFF0000) == 0x80800000 && part->unk10 == 0x80)
                 {
-                    rec->unk1C |= 0x10008000;
+                    rec->flags.word |= 0x10008000;
                     rec->unk18 = D_800FE3A0[src->unk3A].unkE;
                     rec->unk19 = D_800FE3A0[src->unk3A].unkF;
                     rec->unk1A = D_800FE3A0[src->unk3A].unk10;
@@ -916,7 +918,7 @@ after_source:
                     rec->unk0 += D_800FF658[nA].unk0;
                     rec->unk4 += D_800FF658[nA].unk4;
                     rec->unk8 += D_800FF658[nA].unk8;
-                    rec->unk1C = (rec->unk1C & ~0x1000) | (D_800FF658[nA].unk1C & 0x1000);
+                    rec->flags.word = (rec->flags.word & ~0x1000) | (D_800FF658[nA].flags.word & 0x1000);
                     if (part->unk1C & 0x08000000)
                     {
                         rec->unk10 = ((FieldSVector*)&D_800FF658[nA].unk10)->unk0;
@@ -930,16 +932,16 @@ after_source:
                         rec->unkC = D_800FF658[nA].unkC;
                         rec->unk25 = D_800FF658[nA].unk25;
                         rec->unk3A = D_800FF658[nA].unk3A;
-                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FF658[nA].unk1C & 0x780000);
-                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&D_800FF658[nA].unk1C)[1] & 3) << 16);
+                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)D_800FF658[nA].flags.word >> 19 & 15) << 19);
+                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)D_800FF658[nA].flags.word >> 16) & 3) << 16);
                         if (rec->unk21 == 0xFF)
                         {
                             goto scanA_copy;
                         }
                         rec->unk3A = D_800FF658[nA].unk3A;
                         rec->unk25 = D_800FF658[nA].unk25;
-                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FF658[nA].unk1C & 0x780000);
-                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&D_800FF658[nA].unk1C)[1] & 3) << 16);
+                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)D_800FF658[nA].flags.word >> 19 & 15) << 19);
+                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)D_800FF658[nA].flags.word >> 16) & 3) << 16);
                         rec->unk27 = D_800FF658[nA].unk27;
                         rec->unk21 = D_800FF658[nA].unk21;
                         res = g_field_resource_entries
@@ -967,28 +969,32 @@ after_source:
         rec->unk0 += (part->unk38 << 8) - D_800F22A0;
         rec->unk4 += (part->unk3A << 8) - D_800F22A4;
         rec->unk8 += (part->unk3C << 8) - D_800F22A8;
-        goto check_dead;
+        if (rec->unk25 == 0xFD)
+        {
+            rec->unk25 = 0xFE;
+        }
+        break;
 
     case 0x1C:
         rec->unk0 -= D_800F22A0;
         rec->unk4 -= D_800F22A4;
         rec->unk8 -= D_800F22A8;
-        rec->unk1C |= 0x1000;
+        rec->flags.word |= 0x1000;
         break;
 
     case 0x1D:
         rec->unk4 -= 0x7000;
-        rec->unk8 -= D_800F22A8;
         rec->unk0 -= D_800F22A0;
-        rec->unk1C |= 0x1000;
+        rec->unk8 -= D_800F22A8;
+        rec->flags.word |= 0x1000;
         rec->unk4 -= D_800F22A4;
         break;
 
     case 0x1E:
         rec->unk4 += 0x7000;
-        rec->unk8 -= D_800F22A8;
         rec->unk0 -= D_800F22A0;
-        rec->unk1C |= 0x1000;
+        rec->unk8 -= D_800F22A8;
+        rec->flags.word |= 0x1000;
         rec->unk4 -= D_800F22A4;
         break;
 
@@ -997,7 +1003,7 @@ after_source:
         rec->unk0 -= D_800F22A0;
         rec->unk4 -= D_800F22A4;
         rec->unk8 -= D_800F22A8;
-        rec->unk1C |= 0x1000;
+        rec->flags.word |= 0x1000;
         break;
 
     case 0x20:
@@ -1005,81 +1011,87 @@ after_source:
         rec->unk0 -= D_800F22A0;
         rec->unk4 -= D_800F22A4;
         rec->unk8 -= D_800F22A8;
-        rec->unk1C |= 0x1000;
+        rec->flags.word |= 0x1000;
         break;
 
     case 0x21:
         rec->unk0 += 0xFFFF6000;
         rec->unk4 -= 0x7000;
-        rec->unk1C |= 0x1000;
-        rec->unk8 -= D_800F22A8;
         rec->unk0 -= D_800F22A0;
+        rec->unk8 -= D_800F22A8;
+        rec->flags.word |= 0x1000;
         rec->unk4 -= D_800F22A4;
         break;
 
     case 0x22:
         rec->unk0 += 0xA000;
         rec->unk4 -= 0x7000;
-        rec->unk1C |= 0x1000;
-        rec->unk8 -= D_800F22A8;
         rec->unk0 -= D_800F22A0;
+        rec->unk8 -= D_800F22A8;
+        rec->flags.word |= 0x1000;
         rec->unk4 -= D_800F22A4;
         break;
 
     case 0x23:
         rec->unk0 += 0xFFFF6000;
         rec->unk4 += 0x7000;
-        rec->unk1C |= 0x1000;
-        rec->unk8 -= D_800F22A8;
         rec->unk0 -= D_800F22A0;
+        rec->unk8 -= D_800F22A8;
+        rec->flags.word |= 0x1000;
         rec->unk4 -= D_800F22A4;
         break;
 
     case 0x24:
         rec->unk0 += 0xA000;
         rec->unk4 += 0x7000;
-        rec->unk1C |= 0x1000;
-        rec->unk8 -= D_800F22A8;
         rec->unk0 -= D_800F22A0;
+        rec->unk8 -= D_800F22A8;
+        rec->flags.word |= 0x1000;
         rec->unk4 -= D_800F22A4;
         break;
 
     case 0x27:
-        slot27 = &D_80105AE0[actor->owner_object_index];
-        if ((*(u8*)&slot27->unk178 & 1) && ((u8*)&slot27->unk178)[2] != actor->unk233 &&
-            actor->unk233 >= 0x40U && !(((u32)slot27->unk178 >> 5) & 1))
+        {
+            Struct_D80105AE0 *table_base = D_80105AE0;
+            slot27_guard = &table_base[actor->owner_object_index];
+        }
+        if ((*(u8*)&slot27_guard->state.word & 1) && slot27_guard->state.bytes[2] != actor->unk233 &&
+            actor->unk233 >= 0x40U && !(((u32)slot27_guard->state.word >> 5) & 1))
         {
             goto fail_slot;
         }
-        src27 = &D_800FDF58[actor->owner_object_index];
-        if (((part->unk28 >> 10) & 1) && !(src27->unk21 & 0x80))
+        src = &D_800FDF58[actor->owner_object_index];
+        if (((part->unk28 >> 10) & 1) && !(src->unk21 & 0x80))
         {
-            rec->unk0 += src27->unk0 - (part->unk38 << 8);
+            rec->unk0 += src->unk0 - (part->unk38 << 8);
         }
         else
         {
-            rec->unk0 += src27->unk0 + (part->unk38 << 8);
+            rec->unk0 += src->unk0 + (part->unk38 << 8);
         }
-        rec->unk4 += src27->unk4 + (part->unk3A << 8);
-        rec->unk8 += src27->unk8 + (part->unk3C << 8);
+        rec->unk4 += src->unk4 + (part->unk3A << 8);
+        rec->unk8 += src->unk8 + (part->unk3C << 8);
         if (rec->unk25 == 0xFD && rec->unk21 == 0xFF)
         {
-            rec->unk3A = src27->unk3A;
-            slot27 = &D_80105AE0[src27->unk3A];
-            if (*(u8*)&slot27->unk178 & 1)
+            rec->unk3A = src->unk3A;
             {
-                if (((u8*)&slot27->unk178)[2] != actor->unk233)
+                Struct_D80105AE0 *table_base = D_80105AE0;
+                slot27 = &table_base[src->unk3A];
+            }
+            if (*(u8*)&slot27->state.word & 1)
+            {
+                if (slot27->state.bytes[2] != actor->unk233)
                 {
                     goto mark_dead;
                 }
             }
-            rec->unk3B = src27->unk3B;
-            rec->unkC = src27->unkC;
-            rec->unk21 = src27->unk21;
-            rec->unk27 = src27->unk27;
-            rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (src27->unk1C & 0x780000);
-            rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&src27->unk1C)[1] & 3) << 16);
-            res = g_field_resource_entries[src27->unk3B].start;
+            rec->unk3B = src->unk3B;
+            rec->unkC = src->unkC;
+            rec->unk21 = src->unk21;
+            rec->unk27 = src->unk27;
+            rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (src->flags.word & 0x780000);
+            rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((src->flags.half[1] & 3) << 16);
+            res = g_field_resource_entries[src->unk3B].start;
             if (res != 0)
             {
                 func_8006C3FC(rec, res);
@@ -1088,47 +1100,51 @@ after_source:
         }
         break;
 
-    case 0x28:
-        track_obj = actor->unk229[g_field_track_index];
+    case 0x28: { s32 raw_index;
+        raw_index = actor->unk229[g_field_track_index]; track_obj = raw_index;
         if (track_obj == 0xFF)
         {
-            rec->unk25 = track_obj;
-            (*(volatile u8*)&actor->unk3B[g_field_track_index][part_index])--;
-            goto drop_slot;
+            rec->unk25 = 0xFF;
+            actor->unk3B[g_field_track_index][part_index]--;
+            actor->unkCC[g_field_track_index][part_index]--;
+            return -1;
         }
-        src28 = &D_800FDF58[actor->unk229[g_field_track_index]];
+        src = &D_800FDF58[raw_index];
         if ((part->unk34 & 0x08000000) && !(D_800FDF58[actor->owner_object_index].unk21 & 0x80))
         {
-            rec->unk0 += src28->unk0 - (part->unk38 << 8);
+            rec->unk0 += src->unk0 - (part->unk38 << 8);
         }
-        else if (((part->unk28 >> 10) & 1) && !(src28->unk21 & 0x80))
+        else if (((part->unk28 >> 10) & 1) && !(src->unk21 & 0x80))
         {
-            rec->unk0 += src28->unk0 - (part->unk38 << 8);
+            rec->unk0 += src->unk0 - (part->unk38 << 8);
         }
         else
         {
-            rec->unk0 += src28->unk0 + (part->unk38 << 8);
+            rec->unk0 += src->unk0 + (part->unk38 << 8);
         }
-        rec->unk4 += src28->unk4 + (part->unk3A << 8);
-        rec->unk8 += src28->unk8 + (part->unk3C << 8);
+        rec->unk4 += src->unk4 + (part->unk3A << 8);
+        rec->unk8 += src->unk8 + (part->unk3C << 8);
         if (rec->unk25 == 0xFD && rec->unk21 == 0xFF)
         {
-            rec->unk3A = src28->unk3A;
-            slot28 = &D_80105AE0[src28->unk3A];
-            if (*(u8*)&slot28->unk178 & 1)
+            rec->unk3A = src->unk3A;
             {
-                if (((u8*)&slot28->unk178)[2] != actor->unk233)
+                Struct_D80105AE0 *table_base = D_80105AE0;
+                slot28 = &table_base[src->unk3A];
+            }
+            if (*(u8*)&slot28->state.word & 1)
+            {
+                if (slot28->state.bytes[2] != actor->unk233)
                 {
                     goto mark_dead;
                 }
             }
-            rec->unk3B = src28->unk3B;
-            rec->unkC = src28->unkC;
-            rec->unk21 = src28->unk21;
-            rec->unk27 = src28->unk27;
-            rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (src28->unk1C & 0x780000);
-            rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&src28->unk1C)[1] & 3) << 16);
-            res = g_field_resource_entries[src28->unk3B].start;
+            rec->unk3B = src->unk3B;
+            rec->unkC = src->unkC;
+            rec->unk21 = src->unk21;
+            rec->unk27 = src->unk27;
+            rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (src->flags.word & 0x780000);
+            rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((src->flags.half[1] & 3) << 16);
+            res = g_field_resource_entries[src->unk3B].start;
             if (res != 0)
             {
                 func_8006C3FC(rec, res);
@@ -1137,45 +1153,54 @@ after_source:
         }
         break;
 
+    }
     case 0x29:
-        slot_owner_late = &D_80105AE0[actor->owner_object_index];
+        slot = &D_80105AE0[actor->owner_object_index];
         src = &D_800FDF58[actor->owner_object_index];
-        rec->unk0 += src->unk0 + (slot_owner_late->unk130[(part->unk24 >> 21) & 3].x << 8);
-        rec->unk4 += src->unk4 + (slot_owner_late->unk130[(part->unk24 >> 21) & 3].y << 8);
+        rec->unk0 += src->unk0 + (slot->unk130[(part->unk24 >> 21) & 3].x << 8);
+        rec->unk4 += src->unk4 + (slot->unk130[(part->unk24 >> 21) & 3].y << 8);
         rec->unk8 += src->unk8;
         if (rec->unk25 == 0xFD)
         {
             rec->unk3A = src->unk3A;
-            rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (src->unk1C & 0x780000);
-            rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&src->unk1C)[1] & 3) << 16);
-            slot_owner_valid = &D_80105AE0[src->unk3A];
+            rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (src->flags.word & 0x780000);
+            rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((src->flags.half[1] & 3) << 16);
+            {
+                Struct_D80105AE0 *table_base = D_80105AE0;
+                slot_owner_valid = &table_base[src->unk3A];
+            }
             goto check_owner;
         }
         break;
 
     case 0x32:
-        slot_owner_late = &D_80105AE0[actor->owner_object_index];
+        {
+            Struct_D80105AE0 *table_base = D_80105AE0;
+            slot = &table_base[actor->owner_object_index];
+        }
         src = &D_800FDF58[actor->owner_object_index];
-        rec->unk0 += src->unk0 + (slot_owner_late->unk130[(part->unk24 >> 21) & 3].x << 8);
+        rec->unk0 += src->unk0 + (slot->unk130[(part->unk24 >> 21) & 3].x << 8);
         rec->unk4 += src->unk4;
         rec->unk8 += src->unk8 + (part->unk3C << 8);
         if (((part->unk28 >> 10) & 1) && !(src->unk21 & 0x80))
         {
-            val = rec->unk0 - (part->unk38 << 8);
+            rec->unk0 = rec->unk0 - (part->unk38 << 8);
         }
         else
         {
-            val = rec->unk0 + (part->unk38 << 8);
+            rec->unk0 = rec->unk0 + (part->unk38 << 8);
         }
-        rec->unk0 = val;
         if (rec->unk25 == 0xFD)
         {
-            rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (src->unk1C & 0x780000);
-            rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&src->unk1C)[1] & 3) << 16);
+            rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (src->flags.word & 0x780000);
+            rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((src->flags.half[1] & 3) << 16);
             rec->unk3A = src->unk3A;
-            slot_owner_valid = &D_80105AE0[src->unk3A];
+            {
+                Struct_D80105AE0 *table_base = D_80105AE0;
+                slot_owner_valid = &table_base[src->unk3A];
+            }
         check_owner:
-            if (!(*(u8*)&slot_owner_valid->unk178 & 1) || ((u8*)&slot_owner_valid->unk178)[2] == actor->unk233)
+            if (!(*(u8*)&slot_owner_valid->state.word & 1) || slot_owner_valid->state.bytes[2] == actor->unk233)
             {
                 rec->unk25 = 2;
                 if (rec->unk21 == 0xFF)
@@ -1198,24 +1223,24 @@ after_source:
         break;
 
     case 0x33:
-        src = &D_800FDF58[actor->owner_object_index];
         slot = &D_80105AE0[actor->owner_object_index];
+        src = &D_800FDF58[actor->owner_object_index];
         rec->unk0 += src->unk0 + (slot->unk190[D_80105760].x << 8);
         rec->unk4 += src->unk4;
         rec->unk8 += src->unk8 + (slot->unk190[D_80105760].y << 8);
-        rec->unk1C = (rec->unk1C & ~0x6000) | (((*(u16*)&D_80105760) & 3) << 13);
+        rec->flags.bits.placement = *(u16*)&D_80105760;
         break;
 
-    case 0x34:
-        track_obj = actor->unk229[g_field_track_index];
+    case 0x34: { s32 raw_index;
+        raw_index = actor->unk229[g_field_track_index]; track_obj = raw_index;
         if (track_obj == 0xFF)
         {
-            rec->unk25 = track_obj;
+            rec->unk25 = 0xFF;
             actor->unk3B[g_field_track_index][part_index]--;
             actor->unkCC[g_field_track_index][part_index]--;
             return -1;
         }
-        src = &D_800FDF58[actor->unk229[g_field_track_index]];
+        src = &D_800FDF58[raw_index];
         if (!(src->unk21 & 0x80))
         {
             rec->unk0 += src->unk0 + (actor->unk1FE[g_field_track_index].x << 8);
@@ -1225,15 +1250,14 @@ after_source:
             rec->unk0 += src->unk0 - (actor->unk1FE[g_field_track_index].x << 8);
         }
         rec->unk4 += src->unk4 + (actor->unk1FE[g_field_track_index].y << 8);
-        val = rec->unk8 + src->unk8;
-        goto set_z;
+        rec->unk8 += src->unk8;
+        break;
 
+    }
     case 0x35:
         rec->unk0 += D_80105778.vx;
         rec->unk4 += D_80105778.vy;
-        val = rec->unk8 + D_80105778.vz;
-    set_z:
-        rec->unk8 = val;
+        rec->unk8 += D_80105778.vz;
         break;
 
     case 0x36:
@@ -1268,13 +1292,13 @@ after_source:
     case 0x3D:
     case 0x3E:
         nB = start;
-        subB = kind - 0x37;
+        count = kind - 0x37;
         if (nB < 0x100)
         {
             do
             {
-                if (D_800FF658[nB].unk25 != 0xFF && D_800FF658[nB].unk23 == subB && D_800FF658[nB].unk22 == actor->unk233 &&
-                    ((actor->unk0[subB].unk14 & 4) || D_800FF658[nB].unk29 == g_field_track_index))
+                if (D_800FF658[nB].unk25 != 0xFF && D_800FF658[nB].unk23 == count && D_800FF658[nB].unk22 == actor->unk233 &&
+                    ((actor->unk0[count].unk14 & 4) || D_800FF658[nB].unk29 == g_field_track_index))
                 {
                     rec->unk0 += D_800FF658[nB].unk0;
                     rec->unk4 += D_800FF658[nB].unk4;
@@ -1293,7 +1317,7 @@ after_source:
                     }
                     rec->unk4 += part->unk3A << 8;
                     rec->unk8 += part->unk3C << 8;
-                    rec->unk1C = (rec->unk1C & ~0x1000) | (D_800FF658[nB].unk1C & 0x1000);
+                    rec->flags.word = (rec->flags.word & ~0x1000) | (D_800FF658[nB].flags.word & 0x1000);
                     if (part->unk1C & 0x08000000)
                     {
                         rec->unk10 = ((FieldSVector*)&D_800FF658[nB].unk10)->unk0;
@@ -1307,16 +1331,16 @@ after_source:
                         rec->unkC = D_800FF658[nB].unkC;
                         rec->unk25 = D_800FF658[nB].unk25;
                         rec->unk3A = D_800FF658[nB].unk3A;
-                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FF658[nB].unk1C & 0x780000);
-                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&D_800FF658[nB].unk1C)[1] & 3) << 16);
+                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)D_800FF658[nB].flags.word >> 19 & 15) << 19);
+                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)D_800FF658[nB].flags.word >> 16) & 3) << 16);
                         if (rec->unk21 == 0xFF)
                         {
                             goto scanB_copy;
                         }
                         rec->unk3A = D_800FF658[nB].unk3A;
                         rec->unk25 = D_800FF658[nB].unk25;
-                        rec->unk1C = (rec->unk1C & 0xFF87FFFF) | (D_800FF658[nB].unk1C & 0x780000);
-                        rec->unk1C = (rec->unk1C & 0xFFFCFFFF) | ((((u16*)&D_800FF658[nB].unk1C)[1] & 3) << 16);
+                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)D_800FF658[nB].flags.word >> 19 & 15) << 19);
+                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)D_800FF658[nB].flags.word >> 16) & 3) << 16);
                         rec->unk27 = D_800FF658[nB].unk27;
                         rec->unk21 = D_800FF658[nB].unk21;
                         res = g_field_resource_entries
@@ -1353,9 +1377,8 @@ after_source:
         case 1:
             vec->vx = (D_800FDF58[actor->owner_object_index].unk0 - rec->unk0) >> 8;
             vec->vy = (D_800FDF58[actor->owner_object_index].unk4 - rec->unk4) >> 8;
-            val = (D_800FDF58[actor->owner_object_index].unk8 - rec->unk8) >> 8;
-            vec->vz = val;
-            rec->unk12 = ratan2(-val, vec->vx);
+            direction_z = (vec->vz = (D_800FDF58[actor->owner_object_index].unk8 - rec->unk8) >> 8);
+            rec->unk12 = ratan2(-direction_z, vec->vx);
             GTE_LDLVL(vec);
             GTE_SQR0();
             GTE_STLVNL(sqr);
@@ -1368,9 +1391,9 @@ after_source:
         case 2:
             vec->vx = (D_800FDF58[actor->unk229[g_field_track_index]].unk0 - rec->unk0) >> 8;
             vec->vy = (D_800FDF58[actor->unk229[g_field_track_index]].unk4 - rec->unk4) >> 8;
-            val = (D_800FDF58[actor->unk229[g_field_track_index]].unk8 - rec->unk8) >> 8;
-            vec->vz = val;
-            rec->unk12 = ratan2(-val, vec->vx);
+            direction_z = (D_800FDF58[actor->unk229[g_field_track_index]].unk8 - rec->unk8) >> 8;
+            vec->vz = direction_z;
+            rec->unk12 = ratan2(-direction_z, vec->vx);
             GTE_LDLVL(vec);
             GTE_SQR0();
             GTE_STLVNL(sqr);
@@ -1381,7 +1404,7 @@ after_source:
             rec->unk8 = D_800FDF58[actor->unk229[g_field_track_index]].unk8;
             break;
         }
-        if ((rec->unk1C & 0x07000000) == 0x05000000)
+        if ((rec->flags.word & 0x07000000) == 0x05000000)
         {
             func_800A1D98(rec, func_8007E754(actor, part), (part->unk28 >> 15) & 1, D_80105770);
             rec->unk20 = 0;
@@ -1397,7 +1420,7 @@ after_source:
         {
             func_80070E4C(rec, part);
         }
-        if (!(rec->unk1C & 0x07000000) && rec->unk1B != 0)
+        if (!(rec->flags.word & 0x07000000) && rec->unk1B != 0)
         {
             func_80070EF0(rec, part);
         }
@@ -1410,14 +1433,14 @@ after_source:
             }
             else
             {
-                rec->unk4 = field_evaluate_parameter_track_at_time(actor, (part->unk28 >> 4) & 0xF, 0) * -0x100;
+                rec->unk4 = (-field_evaluate_parameter_track_at_time(actor, (part->unk28 >> 4) & 0xF, 0)) << 8;
             }
         }
         if (part->unk28 & 1)
         {
             rec->unk8 += 0x80;
         }
-        switch ((rec->unk1C >> 29) & 3)
+        switch ((s32)(((u32)rec->flags.word >> 29) & 3))
         {
         case 1:
             rec->unk2A = field_evaluate_parameter_track(actor, ((u16*)&part->unk14)[1] & 0xF);
@@ -1429,19 +1452,23 @@ after_source:
             func_80073F7C(rec, part, vec);
             vec->vx -= rec->unk0;
             vec->vy -= rec->unk4;
-            vec->vx = vec->vx >> 8;
             vec->vz -= rec->unk8;
-            vec->vz = vec->vz >> 8;
-            vec->vy = vec->vy >> 8;
+            vec->vx >>= 8;
+            vec->vy >>= 8;
+            vec->vz >>= 8;
             GTE_LDLVL(vec);
             GTE_SQR0();
             GTE_STLVNL(sqr);
-            val = SquareRoot0(sqr->vx + sqr->vy + sqr->vz) << 8;
+            { s32 distance = SquareRoot0(sqr->vx + sqr->vy + sqr->vz) << 8;
             if (((s16*)&part->unk14)[1] != 0)
             {
-                val = val / ((s16*)&part->unk14)[1];
+                rec->unk2A = (u32)(distance / ((s16*)&part->unk14)[1]) >> 2;
             }
-            rec->unk2A = (u32)val >> 2;
+            else
+            {
+                rec->unk2A = (u32)distance >> 2;
+            }
+            }
             break;
         }
         if (part->unk34 & 0x08000000)
@@ -1489,8 +1516,8 @@ after_source:
                 if ((actor->unkC->unk18 & 0x14) == 0x14 && (actor->unkC->unk18 >> 12) == part_index)
                 {
                     D_800FDF58[actor->unk229[g_field_track_index]].unk25 = 0xFE;
-                    D_80105AE0[actor->unk229[g_field_track_index]].unk178 |= 1;
-                    ((u8*)&D_80105AE0[actor->unk229[g_field_track_index]].unk178)[2] = actor->unk233;
+                    D_80105AE0[actor->unk229[g_field_track_index]].state.word |= 1;
+                    D_80105AE0[actor->unk229[g_field_track_index]].state.bytes[2] = actor->unk233;
                     ((u8*)&actor->unk224)[1] = 1;
                 }
             }
@@ -1499,8 +1526,8 @@ after_source:
                 if (((actor->unkC->unk18 >> 8) & 0xF) == part_index)
                 {
                     D_800FDF58[actor->owner_object_index].unk25 = 0xFE;
-                    D_80105AE0[actor->owner_object_index].unk178 |= 1;
-                    ((u8*)&D_80105AE0[actor->owner_object_index].unk178)[2] = actor->unk233;
+                    D_80105AE0[actor->owner_object_index].state.word |= 1;
+                    D_80105AE0[actor->owner_object_index].state.bytes[2] = actor->unk233;
                 }
             }
         }
