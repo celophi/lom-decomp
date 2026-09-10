@@ -111,6 +111,7 @@ void func_8009A4CC(s32 group, Actor *actor)
     s32 index_tag;
     s32 entry_tag;
     s32 row;
+    s32 texture_height;
     s32 item_index;
     s32 record_offset;
     s32 optional_count;
@@ -293,14 +294,13 @@ void func_8009A4CC(s32 group, Actor *actor)
                 table_group = 2;
             }
             table_group_offset = table_group * 8;
-            texture_record = PTR_AT(part_fields, 4) = (u8 *)(((table_group_offset + table_group) * 8) + ((texture_total * 8) + (u32)D_80105798));
+            texture_record = PTR_AT(part_fields, 4) = (u8 *)((((table_group_offset + table_group) * 8) + (u32)D_80105798) + (texture_total * 8));
             byte_index = 0;
             if (U8_AT(part_fields, 2) != 0)
             {
                 texture_fields = texture_record;
                 do
                 {
-                    do {
                     *texture_record = *header_cursor++;
                     U8_AT(texture_fields, 1) = *header_cursor++;
                     U8_AT(texture_fields, 2) = *header_cursor++;
@@ -314,9 +314,11 @@ void func_8009A4CC(s32 group, Actor *actor)
                     pixel_output = func_8009CA54(D_8010D034, allocation_size, texture_tag);
                     row = 0;
                     PTR_AT(texture_fields, 4) = pixel_output;
+                    texture_height = U8_AT(texture_fields, 3);
                     row_input = resource_base + U16_AT(resource_base, 0) + 0x220;
                     row_input = row_input + *texture_record * 2 + (U8_AT(texture_fields, 1) << 7);
-                    if (U8_AT(texture_fields, 3) != 0)
+                    do {
+                    if (texture_height != 0)
                     {
                         do
                         {
