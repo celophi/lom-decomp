@@ -261,7 +261,7 @@ extern s32 g_field_track_index;
  * @return Index of the slot that was filled, or -1 if no slot was free or the
  *         placement opcode rejected the spawn.
  *
- * @note WIP - 99.941% assembly match (gcc272_cdk).
+ * @note WIP - 99.941160% assembly match (gcc272_cdk).
  *       Current matching evidence: working/func_8006D79C/status.md.
  */
 s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
