@@ -368,10 +368,8 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @param mover Mover state updated with resolved position, height, contact node, and flags.
  * @return Collision-resolution status bitmask, or 0 when no scene nodes are present.
  *
- * @see decomp.me (57.91%) https://decomp.me/scratch/N2GNJ
- * @note local objdiff 93.66% (gcc280_g4_noexpanddiv), 2026-08-17 - active
- *       matching scratch is working/field7/func_8005B6AC.c; see
- *       working/field7/field7_next_steps.md for the open leads.
+ * @see decomp.me (93.939790%) https://decomp.me/scratch/N2GNJ
+ * @note Active matching scratch: working/func_8005B6AC/code.c; see its status.md.
  */
 s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 dead_920;
@@ -379,7 +377,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 dh_1339;
     FieldCollisionMoveProbe probe;
     s32 sp20;
-    u16 sp24;
+    s32 sp24;
     FieldScene* sp28;
     void* sp2C;
     u16 sp30;
@@ -401,6 +399,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 sp88;
     s32 sp7C;
     s32 sp84;
+    s32 node_x_offset;
     s32 sp80;
     s32 sp8C;
     u8* spA8;
@@ -416,7 +415,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 temp_s0_6;
     s32 temp_s1;
     s16 temp_s2_3;
-    s16 temp_v0_17;
+    s32 temp_v0_17;
     s16 temp_v1_11;
     s16 temp_v1_13;
     s16 temp_v1_15;
@@ -587,7 +586,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
         sp30 = (u16)((u32)(x + ((x < 0) ? 0xFF : 0)) >> 8);
     }
     {
-        s32 x = -((volatile FieldCollisionMover*)mover)->height;
+        s32 x = -mover->height;
         sp38 = (u16)(((x + ((x < 0) ? 0xFF : 0)) >> 8) + mover->height_bias);
     }
     temp_t6 = sp28->nodes;
@@ -602,18 +601,20 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                 var_v0_4 += 0xFF;
             }
             probe.x = var_v0_4 >> 8;
-            var_v0_5 = mover->z;
-            if (var_v0_5 < 0) {
-                var_v0_5 += 0xFF;
+            var_v0_4 = mover->z;
+            if (var_v0_4 < 0) {
+                var_v0_4 += 0xFF;
             }
             var_fp = sp28->nodes;
-            probe.z = var_v0_5 >> 8;
+            probe.z = var_v0_4 >> 8;
             var_v0_5 = (u16) probe.x;
             uy = (u16) probe.z;
             var_t8 = 0;
             while (var_fp != NULL) {
+                    var_s5 = (s16) sp30;
+                    var_fp_2 = var_fp;
                     temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
-                    if ((((FieldCollisionNode*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((FieldCollisionNode*)sp2C)->unk38 >> 8, var_v1 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0, (var_v1 == 0)) || (var_v1 < ((s16) sp30 + mover->height_bias)) || (var_v1 < (s16) sp38))) {
+                    if ((((FieldCollisionNode*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((FieldCollisionNode*)sp2C)->unk38 >> 8, var_v1 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0, (var_v1 == 0)) || (var_v1 < (var_s5 + mover->height_bias)) || (var_v1 < (s16) sp38))) {
                         temp_a1 = (s32) ((FieldCollisionNode*)sp2C)->unk34 >> 8;
                         temp_a0 = (s32) (((FieldCollisionNode*)sp2C)->unk40 << 8) >> 0x10;
                         temp_v1_2 = ((FieldCollisionNode*)var_fp)->unk22 + temp_a0;
@@ -1135,7 +1136,7 @@ return_zero:
                             }
                         }
                     }
-                    dead_920 -= 1;
+                    var_t7 -= 1;
                 } while (var_t7 != -1);
             }
             if (var_s5 != -2) {
@@ -1208,7 +1209,8 @@ return_zero:
             k_blocked = 0x8000;
             sp68 = (void** )0x801E1100;
             temp_a0_11 = sp28->header;
-            temp_v1_15 = temp_s0_5 + (u16) mover->mode_flags;
+            temp_v1_15 = (u16) mover->mode_flags;
+            temp_v1_15 += temp_s0_5;
             if (((FieldCollisionHeaderBounds*)temp_a0_11)->unk2C & 2) {
                 if (temp_s0_5 < 0) {
                     var_a3_2 = -temp_s0_5;
@@ -1240,13 +1242,13 @@ return_zero:
                 sp8C = f_y_max - 1;
                 temp_v1_16 = (s32) ((FieldCollisionNode*)sp2C)->unk34 >> 8;
                 sp40 = (u16) temp_v1_16;
-                sp84 = (s32) (s16) temp_v1_16;
+                node_x_offset = (s32) (s16) temp_v1_16;
                 sp88 = (s32) (((FieldCollisionNode*)sp2C)->unk40 << 8) >> 0x10;
                 do {
                     var_fp = *sp68;
                     sp68 += 1;
                     temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
-                    if (((((FieldCollisionNode*)var_fp)->unk1C + sp84) < f_x_max) && (((((FieldCollisionNode*)var_fp)->unk1E + sp84) >= f_x_min))) {
+                    if (((((FieldCollisionNode*)var_fp )->unk1C + node_x_offset) < f_x_max) && (((((FieldCollisionNode*)var_fp )->unk1E + node_x_offset) >= f_x_min))) {
                         temp_a0_14 = ((FieldCollisionNode*)var_fp)->unk22 + sp88;
                         if (temp_a0_14 < f_y_max) {
                             temp_v1_17 = ((FieldCollisionNode*)var_fp)->unk20 + sp88;
@@ -1368,7 +1370,7 @@ return_zero:
                                                 }
                                                 var_t3 += 4;
                                                 var_s1_4 += 4;
-                                                var_s4_2 += 2;
+                                                var_s4 += 2;
                                                 var_t7 -= 1;
                                                 spA8 += 2;
                                             } while (var_t7 != -1);
@@ -1524,8 +1526,8 @@ move_done_372:
             var_t1 = (s16) sp38;
             do {
                 temp_t5_4 = *sp68;
+                sp2C = temp_t5_4;
                 sp68 += 1;
-                dh_1312 = temp_t5_4;
                 temp_s6 = ((FieldCollisionNode*)temp_t5_4)->unk4;
                 temp_a1_8 = (s32) ((FieldCollisionNode*)temp_t5_4)->unk34 >> 8;
                 temp_a0_17 = (s32) (((FieldCollisionNode*)temp_t5_4)->unk40 << 8) >> 0x10;
@@ -1542,8 +1544,7 @@ move_done_372:
                                 if (((s16) var_s5 < (((FieldCollisionSpan*)var_s1_5)->min_x + (s16) temp_a1_8)) || ((((FieldCollisionSpan*)var_s1_5)->max_x + (s16) temp_a1_8) < (s16) var_s5)) {
                                     var_s1_5 += 4;
                                 } else {
-                                    var_t8 = 1;
-                                    break;
+                                    goto g_hit;
                                 }
                             } while (--var_s0_10 != -1);
                         }
@@ -1554,14 +1555,17 @@ move_done_372:
                                 if (((s16) var_s5 < ((FieldCollisionSpan*)var_s1_5)->min_x) || (((FieldCollisionSpan*)var_s1_5)->max_x < (s16) var_s5)) {
                                     var_s1_5 += 4;
                                 } else {
-                                    dh_1339 = 1;
-                                    break;
+                                    goto g_hit;
                                 }
                             } while (--var_s0_11 != -1);
                         }
                     }
                 }
                 } while (0);
+                goto g_done;
+            g_hit:
+                var_t8 = 1;
+            g_done:;
                 temp_a1_9 = ((FieldCollisionNode*)sp2C)->unk38;
                 temp_a0_19 = ((u8*)temp_s6)[4] & 3;
                 temp_v1_25 = temp_a1_9 >> 8;
@@ -1578,8 +1582,9 @@ move_done_372:
                             }
                         }
                         if (sp6C != 0) {
+                            s32 height_threshold = var_s2 + 0x14;
                             temp_v0_17 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) temp_v1_25;
-                            if ((var_s2 + 0x14) < temp_v0_17) {
+                            if (height_threshold < temp_v0_17) {
                                 var_s2 = temp_v0_17;
                                 var_s4_3 = ((FieldCollisionNode*)sp2C)->unk38 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8);
                                 if (var_t8 != 0) {
