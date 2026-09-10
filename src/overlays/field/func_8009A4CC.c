@@ -69,10 +69,10 @@ void func_8009AE38(u8 *, s32);
  */
 void func_8009A4CC(s32 group, Actor *actor)
 {
-    s32 direct_group;
-    s32 texture_total;
-    u8 *resource_base;
     s32 part_count;
+    u8 *resource_base;
+    s32 texture_total;
+    s32 direct_group;
     /** @brief Six-byte remapping record with word-sized bitfield writes. */
     union
     {
