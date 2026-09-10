@@ -3974,7 +3974,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
 /**
  * @brief Expand a group's rasterised tile-column bitmask into a per-pixel
  *        stencil buffer, dilated by the group's edge width.
- * @see decomp.me (94.25%) TODO
+ * @see decomp.me (97.05%) TODO
  */
 extern u32 D_1F800008;
 
@@ -3998,7 +3998,7 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
     s32 sp28;
     s32 sp30;
     s32 stride4;
-    s32 row_stride;
+    s32 ring_words;
     u16 temp_v1;
     u8 temp_s6;
     s32 temp_s6_2;
@@ -4008,6 +4008,7 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
     s32 temp_s3;
     s32 temp_s1;
     s32 var_s1;
+    s32 word_bits;
     u8 *var_t7;
     u32 var_a1;
     u32 var_t9;
@@ -4066,6 +4067,7 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
     if (temp_s6_2 != -1)
     {
         temp_s6_3 = footprint_width - 1;
+        word_bits = 0x20;
         sp1C = temp_s6_3;
         sp20 = temp_s6_3 * 4;
         sp18 = footprint_width - 6;
@@ -4113,17 +4115,17 @@ loop_6:
             sp14 = temp_v0;
             if (temp_v0 != -1)
             {
+                ring_words = sp10 * footprint_depth;
                 stride4 = sp10 * 4;
-                sp24 = 0x20 - temp_s3;
+                sp24 = word_bits - temp_s3;
                 sp28 = 0x21 - temp_s3;
-                sp30 = stride4 * footprint_depth;
+                sp30 = ring_words * 4;
                 do
                 {
                     temp_s1 = sp4;
                     sp4 = temp_s1 + (spC * 4);
                     temp_t2 = *(u32 *) (temp_s1 + 0);
                     temp_t0 = *(u32 *) (temp_s1 + 4);
-                    row_stride = stride4;
                     var_t8 = (u16) scene->unk46;
                     var_t8--;
                     var_t8 -= footprint_width;
@@ -4149,7 +4151,7 @@ loop_6:
                             } while (var_a2 != -1);
                             if (footprint_width & 1)
                             {
-                                var_t6 |= temp_t0 >> (temp_s3 - 1);
+                                var_t6 |= temp_t0 >> (footprint_width - 2);
                                 var_t1 |= temp_t2 >> temp_s3;
                             }
                             goto block_25;
@@ -4186,7 +4188,7 @@ block_25:
                             var_t5 = 0;
                             break;
                     }
-                    var_t0 = 0x20;
+                    var_t0 = word_bits;
                     var_t0 -= temp_s3;
                     if (footprint_depth != 1)
                     {
@@ -4195,7 +4197,7 @@ block_25:
                             if (!(var_s4 & 1))
                             {
                                 var_a1 = 0x1F800000;
-                                var_t9 = row_stride + 0x1F800000;
+                                var_t9 = stride4 + 0x1F800000;
                             }
                             else
                             {
@@ -4295,7 +4297,7 @@ loop_38:
                             var_a1 += 0xC;
                             if (var_s4 >= (footprint_depth - 1))
                             {
-                                var_a3 = var_t9 + row_stride;
+                                var_a3 = var_t9 + stride4;
                                 emit_mask = emit_mask | *(u32 *) (var_t9 + 4);
                                 var_t1 = var_t1 | *(u32 *) (var_t9 + 0);
                                 if (var_a3 >= var_fp)
@@ -4308,7 +4310,7 @@ loop_38:
                                     temp_a0_4 = *(u32 *) (var_a3 + 4);
                                     temp_v0_3 = *(u32 *) (var_a3 + 0);
                                     temp_v1_2 = *(u32 *) (var_a3 + 8);
-                                    var_a3 = var_a3 + row_stride;
+                                    var_a3 = var_a3 + stride4;
                                     var_t1 |= temp_v0_3 | temp_v1_2;
                                     emit_mask |= temp_a0_4;
                                     if (var_a3 >= var_fp)
@@ -4466,7 +4468,7 @@ block_97:
                                     var_t3 = temp_t0;
                                     break;
                             }
-                            var_t0 = 0x20;
+                            var_t0 = word_bits;
                             if (var_t8 != 0)
                             {
                                 goto loop_38;

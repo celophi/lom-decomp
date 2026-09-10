@@ -285,7 +285,7 @@ segments:
       - [0x49165, c, func_80098DD4] # gcc272_cdk, 100.000000%
       - [0x49355, c, func_80098FC4]             # gcc272_cdk, 100%
       - [0x493A9, c, func_80099018] # gcc272_cdk, 90.432220% WIP
-      - [0x49B9D, c, func_8009980C] # gcc272_cdk, 99.601400% WIP
+      - [0x49B9D, c, func_8009980C] # gcc272_cdk, 100.000000%
       - [0x49DD9, c, func_80099A48] # gcc272_cdk, 96.602020% WIP
       - [0x4A595, c, func_8009A204]                # gcc272_cdk, 100%
       # TU hypothesis: field_actor_resource_unpack (medium). See docs/decompilation/field-boundaries/map.md.
