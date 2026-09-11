@@ -1,7 +1,7 @@
 #include "common.h"
 #include "field_script.h"
 
-/** @brief Packed 16-bit reference to field-script variable storage. */
+/** @brief Packed 16-bit reference used by the field-script variable helpers. */
 typedef struct
 {
     u16 value;
@@ -127,12 +127,12 @@ typedef struct
 StructC1B60 *func_800C1B60(s32 arg0);
 
 /**
- * @brief Decode a field-script variable reference into storage coordinates.
- * @param arg0 Owner identifier used for owner-relative references.
- * @param arg1 Packed field-script variable reference.
- * @param arg2 Receives the primary storage index.
- * @param arg3 Receives the bit offset within the selected value.
- * @return Base address of the selected variable storage.
+ * @brief Decode a packed field-script variable reference.
+ * @param arg0 Owner or record identifier used when resolving adjusted references.
+ * @param arg1 Packed variable reference to decode.
+ * @param arg2 Receives the reference's primary bit-field value.
+ * @param arg3 Receives the reference's low five-bit value.
+ * @return Base value selected by the reference kind.
  */
 s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32 *arg2, s32 *arg3)
 {
@@ -163,10 +163,10 @@ s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32 *arg2, s32 *arg3);
 s32 func_800BD650(s32 arg0, u8 *arg1, s32 arg2, s32 arg3, s32 arg4);
 
 /**
- * @brief Read the value addressed by a field-script variable reference.
- * @param arg0 Owner identifier used for owner-relative references.
- * @param arg1 Packed field-script variable reference.
- * @return Extracted variable value.
+ * @brief Resolve and read a packed field-script variable reference.
+ * @param arg0 Owner or record identifier used while resolving the reference.
+ * @param arg1 Packed variable reference to read.
+ * @return Value read from the resolved variable.
  */
 s32 func_800BD3B0(s32 arg0, FieldScriptVariableRef arg1)
 {
@@ -180,6 +180,11 @@ s32 func_800BD3B0(s32 arg0, FieldScriptVariableRef arg1)
 
 s32 func_800BD3B0(s32 arg0, FieldScriptVariableRef arg1);
 
+/**
+ * @brief Resolve a 16-bit field-script variable reference and discard its value.
+ * @param arg0 Owner or record identifier used while resolving the reference.
+ * @param arg1 Packed 16-bit variable reference.
+ */
 void func_800BD414(s32 arg0, s32 arg1)
 {
     FieldScriptVariableRef var_ref;
@@ -194,9 +199,9 @@ s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32 *arg2, s32 *arg3);
 void func_800BD55C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
 
 /**
- * @brief Write a value through a field-script variable reference.
- * @param arg0 Owner identifier used for owner-relative references.
- * @param arg1 Packed field-script variable reference.
+ * @brief Resolve a packed field-script variable reference and write a value.
+ * @param arg0 Owner or record identifier used while resolving the reference.
+ * @param arg1 Packed variable reference to write.
  * @param arg2 Value to write.
  */
 void func_800BD434(s32 arg0, FieldScriptVariableRef arg1, s32 arg2)
@@ -215,9 +220,9 @@ s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32 *arg2, s32 *arg3);
 void func_800BD55C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
 
 /**
- * @brief Write a value through a field-script variable reference using the preceding width class.
- * @param arg0 Owner identifier used for owner-relative references.
- * @param arg1 Packed field-script variable reference.
+ * @brief Resolve a packed variable reference and write using decremented width metadata.
+ * @param arg0 Owner or record identifier used while resolving the reference.
+ * @param arg1 Packed variable reference to write.
  * @param arg2 Value to write.
  */
 void func_800BD4A8(s32 arg0, FieldScriptVariableRef arg1, s32 arg2)
@@ -233,6 +238,12 @@ void func_800BD4A8(s32 arg0, FieldScriptVariableRef arg1, s32 arg2)
 void func_800BD434(s32 arg0, FieldScriptVariableRef arg1, s32 arg2);
 void func_800BD4A8(s32 arg0, FieldScriptVariableRef arg1, s32 arg2);
 
+/**
+ * @brief Dispatch a raw variable reference to the appropriate write helper.
+ * @param arg0 Owner or record identifier used while resolving the reference.
+ * @param arg1 Raw variable reference value.
+ * @param arg2 Value to write.
+ */
 void func_800BD520(s32 arg0, u32 arg1, s32 arg2)
 {
     FieldScriptVariableRef var_ref;

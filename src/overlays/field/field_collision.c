@@ -366,7 +366,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @param mover Mover state updated with resolved position, height, contact node, and flags.
  * @return Collision-resolution status bitmask.
  *
- * @see decomp.me (99.658810%) https://decomp.me/scratch/N2GNJ
+ * @see decomp.me (99.746070%) https://decomp.me/scratch/N2GNJ
  * @note Active matching scratch: working/func_8005B6AC/code.c; see its status.md.
  */
 s32 func_8005B6AC(FieldCollisionMover* mover) {
@@ -418,6 +418,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s16 temp_v1_11;
     s16 temp_v1_13;
     s16 temp_v1_15;
+    s32 f_upper_raw;
     s16 temp_v1_18;
     s16 temp_v1_19;
     s32 temp_v1_26;
@@ -467,7 +468,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 temp_t5;
     s32 temp_t5_3;
     s32 temp_t6_2;
-    s32 temp_v0;
+    s16 temp_v0;
     s32 temp_v0_10;
     s32 temp_v0_12;
     s32 temp_v0_13;
@@ -621,9 +622,10 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
             uy = var_s0;
             var_t8 = 0;
             while (var_fp != NULL) {
+                    s32 initial_ceiling;
                     predicted_height = (s16) sp30;
                     temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
-                    if ((((FieldCollisionNode*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((FieldCollisionNode*)sp2C)->unk38 >> 8, var_v1 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0, (var_v1 == 0)) || (var_v1 < (predicted_height + mover->height_bias)) || (var_v1 < (s16) sp38))) {
+                    if ((((FieldCollisionNode*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((FieldCollisionNode*)sp2C)->unk38 >> 8, initial_ceiling = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0, (initial_ceiling == 0)) || (initial_ceiling < (predicted_height + mover->height_bias)) || (initial_ceiling < (s16) sp38))) {
                         temp_a1 = (s32) ((FieldCollisionNode*)sp2C)->unk34 >> 8;
                         temp_a0 = (s32) (((FieldCollisionNode*)sp2C)->unk40 << 8) >> 0x10;
                         temp_v1_2 = ((FieldCollisionNode*)var_fp)->unk22 + temp_a0;
@@ -998,8 +1000,10 @@ return_zero:
                 qv0 = var_t9 - qt5;
                 qv1 *= qv0;
                 qa0 = qv1 / var_t9;
-                qv1 = (u16)qt6->footprint_width;
-                qv0 = (u16)qt6->mode_flags;
+                do {
+                    qv1 = (u16)qt6->footprint_width;
+                    qv0 = (u16)qt6->mode_flags;
+                } while (0);
                 temp_s2_3 = temp_s1 + qv1;
                 qv0 <<= 16;
                 qv1 = qv0 >> 16;
@@ -1244,16 +1248,16 @@ return_zero:
             var_a3_2 = 0;
             k_blocked = 0x8000;
             temp_a0_11 = sp28->header;
-            temp_v1_15 = (s16)var_s0;
-            temp_v1_15 += (u16)footprint_depth;
+            f_upper_raw = var_s0 + (u16)footprint_depth;
+            temp_v1_9 = f_upper_raw;
             if (((FieldCollisionHeaderBounds*)temp_a0_11)->unk2C & 2) {
                 if ((s16)var_s0 < 0) {
                     var_a3_2 = -(s16)var_s0;
                     var_t8 = 1;
                 } else {
                     temp_a0_12 = ((FieldCollisionHeaderBounds*)temp_a0_11)->unk32;
-                    if (temp_v1_15 >= temp_a0_12) {
-                        var_a3_2 = (temp_a0_12 - temp_v1_15) - 1;
+                    if (temp_v1_9 >= temp_a0_12) {
+                        var_a3_2 = (temp_a0_12 - temp_v1_9) - 1;
                         var_t8 = 1;
                     }
                 }
@@ -1273,7 +1277,7 @@ return_zero:
                 f_x_max = temp_s2_3;
                 f_x_min = (s16)(s32)var_s1;
                 f_y_min = (s16)var_s0;
-                f_y_max = temp_v1_15;
+                f_y_max = temp_v1_9;
                 sp8C = f_y_max - 1;
                 temp_v1_16 = (s32) ((FieldCollisionNode*)sp2C)->unk34 >> 8;
                 sp40 = (u16) temp_v1_16;
@@ -1481,15 +1485,16 @@ return_zero:
             var_t8 = 0;
             if (sp20 == 0) {
                 s32 qv0_bound2;
+                s32 footprint_width;
                 s32 qv1_bound2;
                 temp_a2_3 = sp28->header;
                 if (((FieldCollisionHeaderBounds*)temp_a2_3)->unk2C & 2) {
-                    temp_a0_15 = (u16)mover->footprint_width;
+                    footprint_width = (u16)mover->footprint_width;
                     var_a1 = (u16)mover->mode_flags;
-                    temp_a3_2 = (u16)probe.x - ((s32)(((s16)temp_a0_15) + ((u32)(temp_a0_15 << 16) >> 31)) >> 1);
+                    temp_a3_2 = (u16)probe.x - ((s32)(((s16)footprint_width) + ((u32)(footprint_width << 16) >> 31)) >> 1);
                     qv0_bound2 = (u16)probe.z - ((s32)(((s16)var_a1) + ((u32)(var_a1 << 16) >> 31)) >> 1);
                     qv1_bound2 = qv0_bound2 + var_a1;
-                    temp_a0_15 = temp_a3_2 + temp_a0_15;
+                    temp_a0_15 = temp_a3_2 + footprint_width;
                     if (((qv0_bound2 << 16) < 0) ||
                         ((s16)qv1_bound2 >= ((FieldCollisionHeaderBounds*)temp_a2_3)->unk32) ||
                         ((s16)temp_a3_2 < 0) ||
