@@ -381,13 +381,13 @@ void func_800BDCA4(s32 arg0, Command *arg1)
     s32 temp_v0_5;
     u16 temp_v1;
     u32 temp_v1_2;
-    u32 var_v0;
     u8 *temp_s1;
     s32 temp_v0_2;
     s32 temp_v0_3;
     u8 *temp_a1_2;
     u8 *temp_v1_3;
     u8 *temp_v1_4;
+    u32 allocation_offset;
 
     temp_v1 = arg1->opcode;
     switch (temp_v1)
@@ -399,7 +399,6 @@ void func_800BDCA4(s32 arg0, Command *arg1)
         return;
     case 1:
         temp_s1 = func_800A9060();
-        var_v0 = 0xFA;
         if (temp_s1 != 0)
         {
             context = &D_80122B74;
@@ -412,23 +411,26 @@ void func_800BDCA4(s32 arg0, Command *arg1)
                 {
                     temp_v1_3[0x25E0] = (u8)(temp_v0_2 - 1);
                     func_800BE888(temp_s1, arg1->arg4, arg1->arg8, arg1->argC);
-                    var_v0 = (u32)temp_s1 - 0xCE0;
-                    var_v0 = (var_v0 - (u32)*context) >> 12;
+                    allocation_offset = (u32)temp_s1 - 0xCE0;
+                    arg1->result = (u16)((allocation_offset - (u32)*context) >> 12);
+                    return;
                 }
                 else
                 {
-                    var_v0 = 0xFD;
+                    arg1->result = 0xFD;
+                    return;
                 }
             }
             else
             {
-                var_v0 = 0xFE;
+                arg1->result = 0xFE;
+                return;
             }
         }
-        goto block_22;
+        arg1->result = 0xFA;
+        return;
     case 2:
         temp_s1 = D_80122B74 + ((arg1->arg4 << 6) + 0xCE0);
-        var_v0 = 0xFB;
         if (*temp_s1 != 0)
         {
             temp_v1_4 = D_80122B74 + arg1->arg8;
@@ -440,10 +442,11 @@ void func_800BDCA4(s32 arg0, Command *arg1)
                 arg1->result = (u16)arg1->arg4;
                 return;
             }
-            var_v0 = 0xFD;
-            goto block_22;
+            arg1->result = 0xFD;
+            return;
         }
-        goto block_22;
+        arg1->result = 0xFB;
+        return;
     case 3:
         if (arg1->arg8 != 0)
         {
@@ -478,12 +481,10 @@ void func_800BDCA4(s32 arg0, Command *arg1)
         return;
     case 7:
     default:
-        var_v0 = 0xFF;
-        goto block_22;
+        arg1->result = 0xFF;
+        return;
     }
     return;
-block_22:
-    arg1->result = (u16)var_v0;
 }
 
 

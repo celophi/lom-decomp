@@ -4819,7 +4819,7 @@ typedef struct
  * @param mode Trace mode forwarded to the footprint walker.
  * @return Number of path points, 1 for a direct result, or a negative failure code.
  *
- * @see decomp.me (87.02%, 997/1586 exact) TODO
+ * @see decomp.me (87.69%, 1023/1586 exact) TODO
  */
 s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_query, FieldCollisionPathPoint *output_path, s32 mode)
 {
@@ -4926,8 +4926,6 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 var_s3_2;
     s32 var_v1_5;
     s32 neg1;
-    s32 sm_p0;
-    u8 * start_tile;
     s32 *sm1;
     s32 *sm2;
     s32 *sm0;
@@ -4978,9 +4976,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 var_s0_2;
     s32 *temp_s2_2;
     s32 *temp_s1_4;
-    s32 temp_s0;
     s32 var_fp_5;
-    s32 var_s5_7;
     s32 temp_s6;
     s32 temp_v0_13;
     s32 temp_s4;
@@ -5009,7 +5005,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 temp_v1_42;
     s32 temp_v1_43;
 
-    u32 count;
+    s32 count;
 
     scene = g_field_scene.scene;
     temp_s2 = goal_query;
@@ -5165,7 +5161,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 }
                             }
                         }
-                        var_fp = sp4084 + (var_t5 << 10) + var_s7 - 1;
+                        var_fp = sp4084 + (var_t5 << 10) + (var_s7 - 1);
                         var_t0 = 0;
                         count -= 1;
                         temp_v1_8 = (var_t5 + 1) & 3;
@@ -5931,59 +5927,58 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                     if ((var_t1_5 & 0xFF) && (var_s7 >= 2U))
                     {
                         sp407C = 1;
-                        sm_p0 = path[0][0];
+                        temp_s1 = (u8 *) path[0][0];
                         sm0 = &path[0][0];
-                        sm1 = &path[1][0];
-                        sm2 = &path[2][0];
-                        sp405C = sm1[0];
-                        sp4060 = sm2[0];
+                                        sp405C = path[1][0];
+                        sp4060 = path[2][0];
                         temp_v0_12 = &path[0][var_s7];
                         temp_v0_12[0] = *var_fp;
                         temp_v0_12[0x400] = *var_s6;
+                var_s6 = &path[1][0];
                         temp_v0_12[0x800] = *var_s4;
-                        temp_s0 = sm0[2];
-                        var_fp_5 = sm1[1];
-                        var_s5_7 = sm2[1];
-                        temp_s6 = sm1[2];
+                var_s4 = &path[2][0];
+                        var_s0 = (u8 *) sm0[2];
+                        var_fp_5 = var_s6[1];
+                        count = var_s4[1];
+                        temp_s6 = var_s6[2];
                         sp4064 = temp_s6;
                         rec.start_x = path[1][0];
                         temp_v0_13 = var_fp_5 + temp_s6;
-                        start_tile = (u8 *) sm_p0;
-                rec.tile_base = (s32) start_tile;
+                        rec.tile_base = (s32) temp_s1;
                         rec.start_z = path[2][0];
                         var_t1_5 = 0;
-                        sp4068 = sm2[2];
+                        sp4068 = var_s4[2];
                         temp_s4 = temp_v0_13 / 2;
                         rec.end_x = temp_s4;
-                        temp_s2_3 = (var_s5_7 + sp4068) / 2;
+                        temp_s2_3 = (count + sp4068) / 2;
                         rec.end_z = temp_s2_3;
                         if (func_80062820(&rec) != 0)
                         {
-                            rec.tile_base = temp_s0;
+                            rec.tile_base = (s32) var_s0;
                             rec.start_x = sp4064;
                             rec.start_z = sp4068;
                             if (func_80062820(&rec) != 0)
                             {
                                 var_fp_5 = temp_s4;
-                                var_s5_7 = temp_s2_3;
+                                count = temp_s2_3;
                                 rec.start_x = sp405C;
                                 sp407C = 0;
-                                rec.tile_base = (s32) start_tile;
+                                rec.tile_base = (s32) temp_s1;
                                 var_t1_5 = 1;
                                 rec.start_z = sp4060;
                                 temp_s4_2 = (var_fp_5 + sp4064) / 2;
-                                temp_s2_4 = (var_s5_7 + sp4068) / 2;
+                                temp_s2_4 = (count + sp4068) / 2;
                                 rec.end_x = temp_s4_2;
                                 rec.end_z = temp_s2_4;
                                 if (func_80062820(&rec) != 0)
                                 {
-                                    rec.tile_base = temp_s0;
+                                    rec.tile_base = (s32) var_s0;
                                     rec.start_x = sp4064;
                                     rec.start_z = sp4068;
                                     if (func_80062820(&rec) != 0)
                                     {
                                         var_fp_5 = temp_s4_2;
-                                        var_s5_7 = temp_s2_4;
+                                        count = temp_s2_4;
                                     }
                                 }
                             }
@@ -5992,7 +5987,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         {
                             temp_s4_3 = sp4064 - var_fp_5;
                             var_v0_27 = temp_s4_3;
-                            rec.tile_base = (s32) start_tile;
+                            rec.tile_base = (s32) temp_s1;
                             rec.start_x = sp405C;
                             rec.start_z = sp4060;
                             if (temp_s4_3 < 0)
@@ -6002,62 +5997,62 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             temp_v0_14 = var_fp_5 + (var_v0_27 >> 2);
                             sp4080 = temp_v0_14;
                             rec.end_x = temp_v0_14;
-                            temp_s3 = sp4068 - var_s5_7;
+                            temp_s3 = sp4068 - count;
                             var_v0_28 = temp_s3;
                             if (temp_s3 < 0)
                             {
                                 var_v0_28 = temp_s3 + 3;
                             }
-                            temp_s6_2 = var_s5_7 + (var_v0_28 >> 2);
+                            temp_s6_2 = count + (var_v0_28 >> 2);
                             rec.end_z = temp_s6_2;
                             if (func_80062820(&rec) != 0)
                             {
-                                rec.tile_base = temp_s0;
+                                rec.tile_base = (s32) var_s0;
                                 rec.start_x = sp4064;
                                 rec.start_z = sp4068;
                                 if (func_80062820(&rec) != 0)
                                 {
                                     var_t1_5 = 1;
                                     var_fp_5 = sp4080;
-                                    var_s5_7 = temp_s6_2;
+                                    count = temp_s6_2;
                                 }
                             }
                         }
                         sp407C = 1;
                         rec.start_x = sp4064;
-                        rec.tile_base = temp_s0;
+                        rec.tile_base = (s32) var_s0;
                         rec.start_z = sp4068;
                         temp_s4_4 = (var_fp_5 + sp405C) / 2;
-                        temp_s2_5 = (var_s5_7 + sp4060) / 2;
+                        temp_s2_5 = (count + sp4060) / 2;
                         rec.end_x = temp_s4_4;
                         rec.end_z = temp_s2_5;
                         if (func_80062820(&rec) != 0)
                         {
-                            rec.tile_base = (s32) start_tile;
+                            rec.tile_base = (s32) temp_s1;
                             rec.start_x = sp405C;
                             rec.start_z = sp4060;
                             if (func_80062820(&rec) != 0)
                             {
                                 var_fp_5 = temp_s4_4;
-                                var_s5_7 = temp_s2_5;
+                                count = temp_s2_5;
                                 rec.start_x = sp4064;
                                 sp407C = 0;
-                                rec.tile_base = temp_s0;
+                                rec.tile_base = (s32) var_s0;
                                 var_t1_5 = 1;
                                 rec.start_z = sp4068;
                                 temp_s4_5 = (var_fp_5 + sp405C) / 2;
-                                temp_s2_6 = (var_s5_7 + sp4060) / 2;
+                                temp_s2_6 = (count + sp4060) / 2;
                                 rec.end_x = temp_s4_5;
                                 rec.end_z = temp_s2_6;
                                 if (func_80062820(&rec) != 0)
                                 {
-                                    rec.tile_base = (s32) start_tile;
+                                    rec.tile_base = (s32) temp_s1;
                                     rec.start_x = sp405C;
                                     rec.start_z = sp4060;
                                     if (func_80062820(&rec) != 0)
                                     {
                                         var_fp_5 = temp_s4_5;
-                                        var_s5_7 = temp_s2_6;
+                                        count = temp_s2_6;
                                     }
                                 }
                             }
@@ -6066,7 +6061,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         {
                             temp_s3_2 = sp405C - var_fp_5;
                             var_v0_30 = temp_s3_2;
-                            rec.tile_base = temp_s0;
+                            rec.tile_base = (s32) var_s0;
                             rec.start_x = sp4064;
                             rec.start_z = sp4068;
                             if (temp_s3_2 < 0)
@@ -6075,17 +6070,17 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             }
                             temp_s6_3 = var_fp_5 + (var_v0_30 >> 2);
                             rec.end_x = temp_s6_3;
-                            temp_s2_7 = sp4060 - var_s5_7;
+                            temp_s2_7 = sp4060 - count;
                             var_v0_31 = temp_s2_7;
                             if (temp_s2_7 < 0)
                             {
                                 var_v0_31 = temp_s2_7 + 3;
                             }
-                            temp_s4_6 = var_s5_7 + (var_v0_31 >> 2);
+                            temp_s4_6 = count + (var_v0_31 >> 2);
                             rec.end_z = temp_s4_6;
                             if (func_80062820(&rec) != 0)
                             {
-                                rec.tile_base = (s32) start_tile;
+                                rec.tile_base = (s32) temp_s1;
                                 final_x = sp405C;
                                 rec.start_x = final_x;
                                 rec.start_z = sp4060;
@@ -6093,7 +6088,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 {
                                     var_t1_5 = 1;
                                     var_fp_5 = temp_s6_3;
-                                    var_s5_7 = temp_s4_6;
+                                    count = temp_s4_6;
                                 }
                             }
                         }
@@ -6101,7 +6096,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         {
                             temp_s4_3 = 1;
                             path[1][1] = var_fp_5;
-                            path[2][temp_s4_3] = var_s5_7;
+                            path[2][temp_s4_3] = count;
                         }
                     }
                     count = var_s7;
