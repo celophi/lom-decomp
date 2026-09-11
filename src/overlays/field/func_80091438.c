@@ -28,13 +28,9 @@ extern Slot8 D_8010A038[][50];
  */
 void func_80091438(s32 arg0)
 {
-    u8 *values;
     s32 i;
-    u8 *slot;
 
-    i = 0;
-    slot = D_800EB21C;
-    do
+    for (i = 0; i < 5; i++)
     {
         switch (D_800FD818[arg0].unk1)
         {
@@ -42,17 +38,14 @@ void func_80091438(s32 arg0)
         case 7:
         case 8:
         case 9:
-            values = D_800EB22C;
+            D_8010A038[arg0][D_800EB21C[i]].unk6 = D_800EB22C[i];
             break;
         case 10:
-            values = D_800EB234;
+            D_8010A038[arg0][D_800EB21C[i]].unk6 = D_800EB234[i];
             break;
         default:
-            values = D_800EB224;
+            D_8010A038[arg0][D_800EB21C[i]].unk6 = D_800EB224[i];
             break;
         }
-        D_8010A038[arg0][*slot].unk6 = *(i + values);
-        i++;
-        slot++;
-    } while (i < 5);
+    }
 }

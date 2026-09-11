@@ -25,3 +25,24 @@ rom:0x6745 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10A8D reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10A91 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10AD9 reloc:MIPS_NONE symbol:D_1F800008
+
+// func_80091438: the branch-delay-slot page load at 0x800914A8 is the
+// high half of D_800EB22C. Splat loses the relocation on this control-flow
+// path even though GCC emits the same instruction with an R_MIPS_HI16 reloc.
+rom:0x41839 reloc:MIPS_HI16 symbol:D_800EB22C
+
+// func_800920FC: 0x801ED400 is a fixed field-work-area address. Splat
+// auto-symbolizes the literal load as D_801ED400; preserve the retail literal.
+rom:0x424A1 reloc:MIPS_NONE symbol:D_801ED400
+rom:0x424A5 reloc:MIPS_NONE symbol:D_801ED400
+
+// func_80092124: this reset path reads the same fixed field-work-area address.
+// Splat auto-symbolizes the literal load as D_801ED400; preserve the retail literal.
+rom:0x424E1 reloc:MIPS_NONE symbol:D_801ED400
+rom:0x424E5 reloc:MIPS_NONE symbol:D_801ED400
+
+// func_800A3728: the first word of the 0x80180000 SEQ scratch buffer is read
+// through a literal address. Splat auto-symbolizes the raw page-base load as
+// D_80180000, but the retail instruction words carry no recoverable symbol.
+rom:0x53AE5 reloc:MIPS_NONE symbol:D_80180000
+rom:0x53AE9 reloc:MIPS_NONE symbol:D_80180000

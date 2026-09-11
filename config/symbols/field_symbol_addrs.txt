@@ -289,6 +289,8 @@ g_field_marker_overlay_enabled        = 0x8003524C;
 g_field_movie_frame_width             = 0x80140000;
 g_field_movie_frame_height            = 0x80140002;
 g_field_node_angle_table              = 0x8018001C;
+// FIELD bounds/work data is accessed through a fixed address, not a relocatable symbol.
+D_801ED400                            = 0x801ED400; // ignore:true
 g_field_camera_x                      = 0x801ED484;
 g_field_camera_y                      = 0x801ED488;
 g_field_camera_z                      = 0x801ED48C;

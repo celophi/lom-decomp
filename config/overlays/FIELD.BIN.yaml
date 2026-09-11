@@ -230,7 +230,7 @@ segments:
       - [0x413DD, c, func_8009104C] # gcc272_cdk, 98.983406% WIP
       # TU hypothesis: field_actor_input_maps (high). See docs/decompilation/field-boundaries/map.md.
       - [0x417A1, c, field39]                      # gcc272_cdk, func_80091410
-      - [0x417C9, c, func_80091438] # gcc272_cdk, 83.285710% WIP
+      - [0x417C9, c, func_80091438] # gcc272_cdk, 100%
       - [0x418A9, c, func_80091518] # gcc272_cdk, 90.992424% WIP
       - [0x41AB9, c, func_80091728]                 # gcc272_cdk, 100%
       - [0x41BDD, c, func_8009184C]                # gcc272_cdk, 100%
@@ -239,7 +239,7 @@ segments:
       # TU hypothesis: field_actor_camera (high). See docs/decompilation/field-boundaries/map.md.
       - [0x41F59, c, func_80091BC8] # gcc272_cdk, 93.889910% WIP
       - [0x4210D, c, func_80091D7C] # gcc272_cdk, 100%
-      - [0x4248D, c, func_800920FC]                # gcc272_cdk, 99% (register allocation)
+      - [0x4248D, c, func_800920FC]                # gcc272_cdk, 100%
       - [0x424B5, c, func_80092124]                # gcc272_cdk, 100%
       # TU hypothesis: field_actor_state_updates (medium; starts inside this source). See docs/decompilation/field-boundaries/map.md.
       - [0x42591, c, field_actor_idle_ops]      # gcc272_cdk, func_80092200 .. func_80092550 (6 funcs; 100%)
@@ -350,7 +350,7 @@ segments:
       # TU hypothesis: field_audio_runtime (high). See docs/decompilation/field-boundaries/map.md.
       - [0x538C5, c, field_restore_entry_music]    # gcc272_cdk, 1 func, 100%
       - [0x53985, c, field56]                   # gcc272_cdk, func_800A35F4
-      - [0x53A1D, c, field_audio]               # gcc272_cdk, covers func_800A368C .. func_800A3858
+      - [0x53A1D, c, field_audio]               # gcc272_cdk, 7 funcs, 100%
       - [0x53C65, c, field57]                      # gcc272_cdk, func_800A38D4
       - [0x53D39, c, func_800A39A8]             # gcc272_cdk, 100%
       - [0x53E21, c, func_800A3A90]             # gcc272_cdk, 100%
@@ -478,13 +478,13 @@ segments:
       - [0x658C5, c, field_action_setup] # gcc280_g0; action execution and six helpers; B5534 new C 93.789270%, six exact
       - [0x6640D, c, field_progression_ops] # gcc280_g0; progression query and initialization, both exact
       - [0x66555, c, field_action_modifiers] # gcc280_g0; action/depletion handlers and helpers; 23 exact, two WIPs
-      - [0x67D11, c, field_record_stat_ops] # gcc280_g0; seven compatibility/record/stat helpers, three WIPs
+      - [0x67D11, c, field_record_stat_ops] # gcc280_g0; seven compatibility/record/stat helpers, one WIP
       - [0x68395, c, field_script_flow_ops] # gcc280_g0; interpreter, dispatchers and early primary opcodes
       - [0x697AD, c, func_800B941C] # gcc272_cdk, 80.525860% WIP
       - [0x6997D, c, field_script_primary_ops] # gcc280_g0; primary opcodes 12-3F and reset helper
       - [0x6BD51, c, field_script_pair_ops] # gcc280_g0; complete 32-entry two-operand family, two WIPs
       - [0x6CEF9, c, field_script_extended_ops] # gcc280_g0; complete sixteen-entry extended opcode family, all exact
-      - [0x6D4B9, c, field_script_operands] # gcc280_g0; branch and eleven operand helpers, four WIPs
+      - [0x6D4B9, c, field_script_operands] # gcc280_g0; branch and eleven operand helpers, all exact
       - [0x6DA85, c, field_script_commands] # gcc280_g0; dispatcher, seventeen commands and query helper
       - [0x6E959, c, field_script_arith_ops] # gcc280_g0; dispatcher and twelve arithmetic handlers, all exact
       - [0x6EAA1, c, field_record_setup_ops] # gcc280_g0; five record setup/sequence dispatch functions, two WIPs
@@ -495,13 +495,13 @@ segments:
       - [0x70DC9, c, field_reward_command_ops] # gcc280_g0; selector, reward dispatcher and four table handlers, one WIP
       - [0x711A9, c, field_record_growth_ops] # gcc280_g0; ten reward/experience/growth functions, three WIPs
       - [0x71DA9, c, field_record_lookup_ops] # gcc280_g0; nine record dispatch/lookup functions, C1A18 WIP
-      - [0x72259, c, func_800C1EC8]                # gcc272_cdk, 97.5%
+      - [0x72259, c, func_800C1EC8]                # gcc280_g0, 100%
       - [0x722B9, c, field_stat_counter_ops]    # gcc280_g0, func_800C1F28 .. func_800C2228 (8 funcs, 100%)
       - [0x725F5, c, field_saved_slot_ops] # gcc280_g0; four saved-slot operations, all exact
       - [0x729D1, c, field_actor_record_ops] # gcc280_g0; four actor-record operations, C2724 WIP
       - [0x72C89, c, field_resource_table_ops] # gcc280_g0; seven resource/inventory helpers, all exact
       - [0x72EA5, c, field_active_record_ops] # gcc280_g0; seven load/restore/close/save functions, two WIPs
-      - [0x73775, c, field_record_table_ops] # gcc280_g0; eleven table helpers, C3688 WIP
+      - [0x73775, c, field_record_table_ops] # gcc280_g0; eleven table helpers, all exact
       - [0x73D91, c, field_group_layout_ops] # gcc280_g0; six group selection/grid functions, five exact and C3D38 WIP
       - [0x742A9, c, field_group_stat_transfer] # gcc272_cdk; active-record transfer and derived-stat builder, two WIPs
       - [0x75A95, c, field_menu_group_ops] # gcc280_g0; group creation/release, state and ordering

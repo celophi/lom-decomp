@@ -2320,50 +2320,11 @@ void field_retarget_cel_list_cluts(FieldAnimDef* def, FieldTintSrc* src, s32 fra
 }
 
 /**
- * @brief Walk a run-length-encoded count table to locate the record covering a
- *        given linear index, returning that record and the cumulative count
- *        consumed before it.
- *
- * The first byte of @p table holds a 7-bit count (high bit ignored). If
- * @p linear_index is below that count the table does not reach the requested
- * index, so @p range_start_out is left 0 and @p table is returned unchanged.
- * Otherwise the leading count is committed to @p range_start_out, the 0x18-byte
- * header is skipped, and the function steps through the
- * following 4-byte records, accumulating each record's 7-bit count, until the
- * running total would exceed @p linear_index. The pointer to that record is
- * returned and @p range_start_out holds the cumulative count of all preceding
- * records.
- *
- * @param table Pointer to the count table (RLE header followed by 4-byte records).
- * @param linear_index Linear index to resolve against each running total.
- * @param range_start_out Receives the count consumed before the returned record.
- * @return Pointer to the record whose range contains @p linear_index.
- *
- * @note NOT MATCHED - 99.82%, one row. The dead read of byte 7 lands in v0 where
- *       the target uses v1. Both registers are dead at that point and gcc scans
- *       hard regs in numeric order (MIPS defines no REG_ALLOC_ORDER), so it takes
- *       v0; the original had v0 occupied by something this version lets die. A
- *       `register u8 unused asm("$3")` pin closes the row and reaches 100%, but
- *       register pins are not allowed in this tree, so the row stays open until
- *       the natural shape that busies v0 is found.
- * @note @p range_start_out must stay @c volatile and the otherwise-dead read of byte 7 must
- *       be preserved; both are required for the original codegen (the reload of
- *       @c *range_start_out and the stray load).
- * @note The natural @c while (linear_index >= header_count) loop with a final
- *       @c break measures identically to the former artificial @c do/while(0)
- *       wrapper. A plain @c if still loses six exact rows because the loop notes
- *       affect GCC 2.8.0 allocation priorities (see [ALLOC-23]).
- * @note The loop body's apparently redundant recompute of @c range_end is genuine.
- *       Folding it into the natural
- *       `while (linear_index >= (u8) (range_start + (raw_count & 0x7F)))`
- *       form costs 9 exact rows and
- *       one instruction.
- * @note A fresh temporary for the dead byte-7 read allocates to v0. Reusing an
- *       existing byte variable can inherit that variable's register, but every
- *       tested natural spelling still leaves this function one row short; the
- *       remaining target load uses v1. Register pinning would close the row but
- *       is intentionally forbidden.
- * @see decomp.me (99.82%) TODO
+ * @brief Find the count-table record containing a linear animation index.
+ * @param table Pointer to the animation count table.
+ * @param linear_index Linear animation index to resolve.
+ * @param range_start_out Receives the cumulative count before the returned record.
+ * @return Pointer to the count-table record containing @p linear_index.
  */
 u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_start_out)
 {
@@ -2371,21 +2332,28 @@ u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_
     u8 raw_count;
     u8 range_start;
     u8 range_end;
-    u8 unused;
 
     *range_start_out = 0;
     header_count = *table & 0x7F;
     while (linear_index >= header_count)
     {
         *range_start_out = header_count;
-        unused = *(volatile u8*)(table + 7);
-        table += 0x18;
+        header_count = table[7];
+        *(volatile u8*)(table + 7);
+        if (header_count)
+        {
+            table += sizeof(FieldTweenKey) * 3;
+        }
+        else
+        {
+            table += sizeof(FieldTweenKey) * 3;
+        }
         raw_count = *table;
         range_start = *range_start_out;
         range_end = range_start + (raw_count & 0x7F);
         while (linear_index >= (u8)range_end)
         {
-            table += 4;
+            table += sizeof(FieldTweenSpan);
             range_end = range_start + (raw_count & 0x7F);
             *range_start_out = range_end;
             raw_count = *table;
