@@ -279,10 +279,12 @@ extern FieldResourceEntry g_field_resource_entries[];
  * @param part Part definition supplying flags and placement selectors.
  * @return Updated cursor pointer.
  * @note Matching work and probe evidence: working/func_80075C88/status.md.
- * @see decomp.me (98.086%)
+ * @see decomp.me (99.784615%)
  */
 s32 *func_80075C88(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part)
 {
+    typedef struct { unsigned addr:24; unsigned len:8; } PrimitiveTag;
+    extern int abs(int);
     FieldMatrix *mtx = (FieldMatrix *) 0x1F800000;
     Vec2s *sxy = (Vec2s *) 0x1F800040;
     s32 sp5C;
@@ -292,6 +294,7 @@ s32 *func_80075C88(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     Vec2s *sp68;
     Vec2s *sp6C;
     FieldActorState *actor;
+    FieldActorState *actor_base;
     s32 sp74;
     s32 sp78;
     s32 sp7C;
@@ -310,7 +313,7 @@ s32 *func_80075C88(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     s32 *temp_v1_16;
     s32 temp_a0_2;
     s32 temp_a1_2;
-    s32 temp_a1_3;
+    Struct_D80105880 *clamp_base;
     s32 temp_a3_2;
     s32 temp_s7;
     s32 temp_t1_2;
@@ -474,9 +477,8 @@ s32 *func_80075C88(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     slot->unk142 = (u16) sp64[1];
     slot->unk144 = (u16) sp64[4];
     slot->unk146 = (u16) sp64[5];
-    temp_t1 = *item++;
-    sp5C = temp_t1;
-    if (temp_t1 != 0)
+    sp5C = *item++;
+    if (sp5C != 0)
     {
         sp7C = 0xFFFFFF;
         poly = (FieldPolyFT4 *) cursor;
@@ -662,7 +664,11 @@ block_58:
                     {
                         if (temp_a0_3 & 0x40000)
                         {
-                            if (((u32) part->unk28 >> 0xC) & 3)
+                            if (!(((u32) part->unk28 >> 0xC) & 3))
+                            { /* switch 1 case 0 (shares case 2's body) */
+                                poly->clut = (s16) (((rec->unk3B + 0x1F4) << 6) | 9);
+                            }
+                            else
                             {
                                 temp_v1_9 = part->unk2D;
                                 if (temp_v1_9 >= 0x40U)
@@ -677,16 +683,12 @@ block_58:
                                 switch (temp_v0_6)
                                 {
                                 case 1:
-                                    poly->clut = (var_s1 << 6) | (part->unk2D & 0xF);
+                                    poly->clut = (var_s1 << 6) | ((((part->unk2D & 0xF) << 4) >> 4) & 0x3F);
                                     break;
                                 case 2:
                                     poly->clut = (s16) (((rec->unk3B + 0x1F4) << 6) | 9);
                                     break;
                                 }
-                            }
-                            else
-                            { /* switch 1 case 0 (shares case 2's body) */
-                                poly->clut = (s16) (((rec->unk3B + 0x1F4) << 6) | 9);
                             }
                         }
                         else if (temp_a0_3 & 0x780000)
@@ -709,7 +711,7 @@ block_58:
                             switch (temp_v0_7)
                             { /* switch 2; irregular */
                             case 1: /* switch 2 */
-                                poly->clut = (var_s1 << 6) | (part->unk2D & 0xF);
+                                poly->clut = (var_s1 << 6) | ((((part->unk2D & 0xF) << 4) >> 4) & 0x3F);
                                     goto clut_done;
                             case 2: /* switch 2 */
                                 poly->clut = ((rec->unk3B + 0x1F4) << 6) | (((u32) rec->unk1C >> 0x13) & 0xF);
@@ -718,8 +720,11 @@ block_58:
                         }
                         else
                         {
-                            var_v0_9 = temp_a0_3 >> 0x10;
-                            if (((u32) part->unk28 >> 0xC) & 3)
+                            if (!(((u32) part->unk28 >> 0xC) & 3))
+                            {
+                                poly->clut = (s16) (((((temp_a0_3 >> 16) & 3) + 0x1EF) << 6) | 0x10);
+                            }
+                            else
                             {
                                 temp_v1_11 = part->unk2D;
                                 if (temp_v1_11 >= 0x40U)
@@ -734,22 +739,19 @@ block_58:
                                 switch (temp_v0_8)
                                 { /* switch 3; irregular */
                                 case 1: /* switch 3 */
-                                    poly->clut = (var_s1 << 6) | (part->unk2D & 0xF);
+                                    poly->clut = (var_s1 << 6) | ((((part->unk2D & 0xF) << 4) >> 4) & 0x3F);
                                     goto clut_done;
                                 case 2: /* switch 3 */
                                     poly->clut = ((((*(u16 *) ((u8 *) rec + 0x1E)) & 3) + 0x1EF) << 6) | 0x10;
                                     goto clut_done;
                                 }
                             }
-                            else
-                            {
-                                poly->clut = (s16) ((((var_v0_9 & 3) + 0x1EF) << 6) | 0x10);
-                            }
                         }
                     }
-                    else if (!(((u32) part->unk28 >> 0xC) & 3))
+                    else if ((temp_t1 = 2, !(((u32) part->unk28 >> 0xC) & 3)))
                     {
-                        if ((item[7] & 3) != 2)
+                        do {
+                        if ((item[7] & 3) != temp_t1)
                         {
                             if (rec->unk3B == 8)
                             {
@@ -757,7 +759,7 @@ block_58:
                             }
                             else
                             {
-                                var_v0_10 = ((rec->unk3B + 0x1F4) << 6) | (item[6] & 0x3F);
+                                var_v0_10 = ((rec->unk3B + 0x1F4) << 6) | (((item[6] << 4) >> 4) & 0x3F);
                             }
                             poly->clut = var_v0_10;
                             if (item[6] == 0xB)
@@ -769,6 +771,7 @@ block_58:
                         {
                             goto block_113;
                         }
+                        } while (0);
                     }
                     else
                     {
@@ -789,7 +792,7 @@ block_58:
                         switch (temp_v0_9)
                         { /* switch 4; irregular */
                         case 1: /* switch 4 */
-                            poly->clut = (var_s1 << 6) | (part->unk2D & 0xF);
+                            poly->clut = (var_s1 << 6) | ((((part->unk2D & 0xF) << 4) >> 4) & 0x3F);
                             break;
                         case 2: /* switch 4 */
                             if ((u8) actor->unk228 >= 3U)
@@ -825,29 +828,24 @@ clut_done:
                     temp_v1_13 = (s32) rec->unk8 >> 7;
                     if (temp_v1_13 < 0)
                     {
-                        *cursor = (*cursor & 0xFF000000) | (base[0] & sp7C);
-                        temp_v1_14 = (s32) cursor & sp7C;
-                        poly += 1;
+                        ((PrimitiveTag *) cursor)->addr = ((PrimitiveTag *) base)->addr,
+                        ((PrimitiveTag *) base)->addr = (u32) cursor;
+                        poly++;
                         cursor = (s32 *) ((u8 *) cursor + 0x28);
-                        base[0] = (s32) ((base[0] & 0xFF000000) | temp_v1_14);
                     }
                     else if (temp_v1_13 >= 0x1000)
                     {
-                        *cursor = (*cursor & 0xFF000000) | (base[0xFFF] & sp7C);
-                        temp_v1_15 = (s32) cursor & sp7C;
-                        poly += 1;
+                        ((PrimitiveTag *) cursor)->addr = ((PrimitiveTag *) &base[0xFFF])->addr,
+                        ((PrimitiveTag *) &base[0xFFF])->addr = (u32) cursor;
+                        poly++;
                         cursor = (s32 *) ((u8 *) cursor + 0x28);
-                        base[0xFFF] = (s32) ((base[0xFFF] & 0xFF000000) | temp_v1_15);
                     }
                     else
                     {
-                        poly += 1;
-                        *cursor = (*cursor & 0xFF000000) | (base[temp_v1_13] & sp7C);
-                        temp_v1_16 = &base[(s32) rec->unk8 >> 7];
-                        var_s1 = 0xFF000000;
-                        temp_v0_10 = (*temp_v1_16 & var_s1) | ((s32) cursor & sp7C);
+                        poly++;
+                        ((PrimitiveTag *) cursor)->addr = ((PrimitiveTag *) &base[temp_v1_13])->addr,
+                        ((PrimitiveTag *) &base[(s32) rec->unk8 >> 7])->addr = (u32) cursor;
                         cursor = (s32 *) ((u8 *) cursor + 0x28);
-                        *temp_v1_16 = temp_v0_10;
                     }
                 }
                 goto block_298;
@@ -1048,54 +1046,54 @@ block_297:
                                 actor->unk23A = (u8) (actor->unk23A | (1 << actor->unk232));
                                 actor->unk229[actor->unk232] = (u8) sp28.index;
                                 {
-                                    s32 a0;
                                     s32 a1;
-                                    s32 v0;
                                     Struct_D800FDF58 *entry;
 
-                                    a0 = D_800F22A0;
-                                    if (a0 < 0)
+                                    temp_a0_2 = D_800F22A0;
+                                    if (temp_a0_2 < 0)
                                     {
-                                        a0 += 0xFF;
+                                        temp_a0_2 += 0xFF;
                                     }
                                     temp_v0_12 = D_800FDF58[sp28.index].unk0;
-                                    a1 = a0 >> 8;
+                                    a1 = temp_a0_2 >> 8;
                                     if (temp_v0_12 < 0)
                                     {
                                         temp_v0_12 += 0xFF;
                                     }
-                                    a0 = D_800F22A4;
-                                    v0 = temp_v0_12 >> 8;
-                                    v0 += 0xA0;
-                                    sp6C->x = (u16) (a1 + v0);
-                                    if (a0 < 0)
+                                    temp_a0_2 = D_800F22A4;
+                                    do {
+                                    var_v0_27 = temp_v0_12 >> 8;
+                                    var_v0_27 += 0xA0;
+                                    sp6C->x = (u16) (a1 + var_v0_27);
+                                    } while (0);
+                                    if (temp_a0_2 < 0)
                                     {
-                                        a0 += 0xFF;
+                                        temp_a0_2 += 0xFF;
                                     }
                                     entry = &D_800FDF58[sp28.index];
-                                    v0 = entry->unk4;
-                                    a1 = a0 >> 8;
-                                    if (v0 < 0)
+                                    var_v0_27 = entry->unk4;
+                                    a1 = temp_a0_2 >> 8;
+                                    if (var_v0_27 < 0)
                                     {
-                                        v0 += 0xFF;
+                                        var_v0_27 += 0xFF;
                                     }
-                                    a0 = entry->unk8;
-                                    v0 >>= 8;
-                                    v0 += 0x70;
-                                    a1 += v0;
-                                    if (a0 < 0)
+                                    temp_a0_2 = entry->unk8;
+                                    var_v0_27 >>= 8;
+                                    var_v0_27 += 0x70;
+                                    a1 += var_v0_27;
+                                    if (temp_a0_2 < 0)
                                     {
-                                        a0 += 0x1FF;
+                                        temp_a0_2 += 0x1FF;
                                     }
                                     temp_v0_12 = D_800F22A8;
-                                    v0 = a0 >> 9;
-                                    a0 = a1 - v0;
+                                    var_v0_27 = temp_a0_2 >> 9;
+                                    temp_a0_2 = a1 - var_v0_27;
                                     if (temp_v0_12 < 0)
                                     {
                                         temp_v0_12 += 0x1FF;
                                     }
-                                    v0 = temp_v0_12 >> 9;
-                                    sp6C->y = (u16) (a0 - v0);
+                                    var_v0_27 = temp_v0_12 >> 9;
+                                    sp6C->y = (u16) (temp_a0_2 - var_v0_27);
                                 }
                                 if (D_800FDF58[sp28.index].unk21 & 0x80)
                                 {
@@ -1117,9 +1115,9 @@ block_297:
                                 slot->unk138 = temp_v0_15;
                                 slot->unk134 = temp_v0_15;
                                 slot->unk130 = temp_v0_15;
-                                slot->unk174 = temp_a0_2 | 0x1000;
-                                temp_v0_16 = sxy->y;
-                                temp_v0_16 = sp28.y - temp_v0_16;
+                                temp_v0_16 = sp28.y - sxy->y;
+                                temp_a0_2 |= 0x1000;
+                                slot->unk174 = temp_a0_2;
                                 slot->unk13E = temp_v0_16;
                                 slot->unk13A = temp_v0_16;
                                 slot->unk136 = temp_v0_16;
@@ -1146,20 +1144,21 @@ block_297:
                                         if (!(((u32) D_80105AE0[sp28.index].unk178 >> 6) & 1))
                                         {
                                             var_v1_10 = sp28.index;
-                                            temp_a1_3 = sp28.index < 3;
-                                            if (temp_a1_3 == 0)
+                                            do { clamp_base = D_80105880; } while (0);
+                                            temp_a1_2 = sp28.index < 3;
+                                            if (temp_a1_2 == 0)
                                             {
                                                 var_v1_10 = 2;
                                             }
-                                            temp_v0_18 = D_80105880[var_v1_10].unkC;
+                                            temp_v0_18 = clamp_base[var_v1_10].unkC;
                                             if (temp_v0_18 == sp28.index)
                                             {
                                                 var_v1_11 = temp_v0_18;
-                                                if (temp_a1_3 == 0)
+                                                if (temp_a1_2 == 0)
                                                 {
                                                     var_v1_11 = 2;
                                                 }
-                                                if (D_80105880[var_v1_11].unk0 == 0)
+                                                if (clamp_base[var_v1_11].unk0 == 0)
                                                 {
                                                     goto block_208;
                                                 }
@@ -1188,7 +1187,7 @@ block_209:
                                     }
                                     temp_v1_24 = &D_80105AE0[sp28.index];
                                     var_s1 = 1;
-                                    if (!(*(u8 *)&temp_v1_24->unk178 & 1) || ((temp_v1_25 = g_field_actor_slots, temp_v1_25 = &temp_v1_25[((u8 *) &temp_v1_24->unk178)[2]], (temp_v1_25->unk24 != 0)) && (temp_v1_25->unk228 == rec->unk3A)))
+                                    if (!(*(u8 *)&temp_v1_24->unk178 & 1) || ((actor_base = g_field_actor_slots, temp_v1_25 = &actor_base[((u8 *) &temp_v1_24->unk178)[2]], (temp_v1_25->unk24 != 0)) && (temp_v1_25->unk228 == rec->unk3A)))
                                     {
                                         temp_v1_26 = rec->unk21 & 0x7F;
                                         switch (temp_v1_26)
@@ -1259,7 +1258,10 @@ block_236:
                                                 slot->unk3C = 0x74;
                                                 break;
                                             case 4: /* switch 7 */
-                                                slot->unk3C = (temp_v1_27 = 0x75);
+                                                slot->unk3C = 0x75;
+                                                break;
+                                            default:
+                                                slot->unk3C = slot->unk3C;
                                                 break;
                                             }
                                             if (func_80083EEC(rec->unk3A, var_s0, slot->unk3C) != 0)
@@ -1483,42 +1485,23 @@ block_254:
 block_298:
                 
             }
-            temp_t1_2 = sp5C - 1;
             item += 9;
-            sp5C = temp_t1_2;
-        } while (temp_t1_2 != 0);
+        } while (--sp5C != 0);
     }
     if (sp78 != 0)
     {
-        var_a1 = (u8 *) sp64;
-        temp_v0_24 = var_a1 + 0x10;
-        var_a0_12 = var_a1 + 2;
-        if (var_a1 != temp_v0_24)
-        {
-
-            do
-            {
-                *(s16 *) var_a1 = (s16) ((s32) (((s32) (*(s16 *) var_a1 * part->unk2E) >> 6) * D_80105768.unk0) >> 0xC);
-                var_a1 += 4;
-                *(s16 *) var_a0_12 = (s16) ((s32) (((s32) (*(s16 *) var_a0_12 * part->unk33) >> 6) * D_80105768.unk4) >> 0xC);
-                var_a0_12 += 4;
-            } while (var_a1 != temp_v0_24);
+        s16 *p = sp64;
+        while (p != sp64 + 8) {
+            p[0] = ((p[0] * part->unk2E >> 6) * D_80105768.unk0) >> 12;
+            p[1] = ((p[1] * part->unk33 >> 6) * D_80105768.unk4) >> 12;
+            p += 2;
         }
         slot->unk12C = (s16) ((s32) (sp64[2] + sp64[0]) >> 1);
-        var_v0_27 = sp64[2] - sp64[0];
-        if (var_v0_27 < 0)
-        {
-            var_v0_27 = -var_v0_27;
-        }
+        var_v0_27 = abs(sp64[2] - sp64[0]);
         slot->unk12E = var_v0_27;
-        if ((var_v0_27 << 0x10) == 0)
+        if (slot->unk12E == 0)
         {
-            var_v0_28 = (s16) sp64[4] - sp64[0];
-            if (var_v0_28 < 0)
-            {
-                var_v0_28 = -var_v0_28;
-            }
-            slot->unk12E = var_v0_28;
+            slot->unk12E = abs((s16)sp64[4] - sp64[0]);
             slot->unk12C = (s16) ((s32) ((s16) sp64[4] + sp64[0]) >> 1);
         }
         cursor = func_800871A0(rec, cursor, base, sp64);
