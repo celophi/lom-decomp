@@ -3974,7 +3974,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
 /**
  * @brief Expand a group's rasterised tile-column bitmask into a per-pixel
  *        stencil buffer, dilated by the group's edge width.
- * @see decomp.me (99.85042%) TODO
+ * @see decomp.me (99.9563%) TODO
  */
 extern u32 D_1F800008;
 
@@ -4002,6 +4002,7 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
     u16 temp_v1;
     u8 temp_s6;
     s32 temp_s6_2;
+    u32 next_input;
     s32 temp_s6_3;
     s32 temp_s6_4;
     s32 temp_s6_5;
@@ -4047,7 +4048,7 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
     spC = ((s32) (temp_v1 + 0x1F) >> 5) * 2;
     sp10 = (((s32) (temp_v1 - 3) >> 5) + 1) * 3;
     temp_s3 = footprint_width - 1;
-    if (footprint_depth >= 3)
+    do { if (footprint_depth >= 3)
     {
         var_a1 = 0x1F800000;
         var_t9 = 0x1F800000;
@@ -4059,6 +4060,7 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
         var_t9 = 0;
         var_fp = 0;
     }
+    } while (0);
     sp4 = (u32) scene->unk28;
     temp_s6 = scene->unk41;
     sp8 = (s32) temp_s6;
@@ -4111,8 +4113,8 @@ loop_6:
                     var_t7 += 1;
                 } while (var_a2 != end);
             }
-            var_s4 = 0;
-            temp_v0 = ((u16) scene->unk48 - footprint_depth) - 4;
+            do { var_s4 = 0;
+            temp_v0 = ((u16) scene->unk48 - footprint_depth) - 4; } while (0);
             sp14 = temp_v0;
             if (temp_v0 != -1)
             {
@@ -4209,10 +4211,10 @@ block_25:
                         }
                         else
                         {
-                            if (var_a1 >= var_fp)
+                            do { if (var_a1 >= var_fp)
                             {
                                 var_a1 -= sp30;
-                            }
+                            } } while (0);
                             if (var_t9 >= var_fp)
                             {
                                 var_t9 -= sp30;
@@ -4313,7 +4315,7 @@ loop_38:
                                     temp_a0_4 = *(u32 *) (var_a3 + 4);
                                     temp_v0_3 = *(u32 *) (var_a3 + 0);
                                     temp_v1_2 = *(u32 *) (var_a3 + 8);
-                                    var_a3 = var_a3 + stride4;
+                                    do { var_a3 = var_a3 + stride4; } while (0);
                                     var_t1 |= temp_v0_3 | temp_v1_2;
                                     var_t3 |= temp_a0_4;
                                     if (var_a3 >= var_fp)
@@ -4352,6 +4354,7 @@ loop_38:
                             temp_t0 = *(u32 *) (temp_s1 + 4);
                             do { emit_mask = temp_t2; } while (0);
                             temp_s1 += 8;
+                            next_input = emit_mask;
                             switch (sp1C)
                             {
                                 default:
@@ -4388,7 +4391,7 @@ loop_38:
                                     {
                                         var_a3 = (temp_t0 * 2) | (temp_t0 * 4);
                                         var_t6 |= var_a3;
-                                        do { var_a0 = emit_mask | (emit_mask * 2); } while (0);
+                                        do { var_a0 = next_input | (next_input * 2); } while (0);
                                         temp_v1_4 = var_a0 * 4;
                                         var_t1 |= var_a0 | temp_v1_4;
                                         var_a0 = temp_v1_4;
@@ -4403,8 +4406,8 @@ loop_38:
                                         } while (var_a2 != -1);
                                         if (footprint_width & 1)
                                         {
-                                            var_t6 |= temp_t0 << (temp_s3 - 1);
-                                            do { var_t1 |= emit_mask << temp_s3; } while (0);
+                                            var_t6 |= temp_t0 << (footprint_width - 2);
+                                            do { var_t1 |= next_input << temp_s3; } while (0);
                                         }
                                         var_t3 |= temp_t0 | (temp_t0 << temp_s3);
                                         goto block_96;
@@ -4423,8 +4426,8 @@ loop_38:
                                         left_bits = (temp_t0 * 2) | (temp_t0 * 4) | (temp_t0 * 8);
                                         var_t6 |= left_bits;
                                         var_t3 |= temp_t0 | (temp_t0 * 0x10);
-                                        do { var_a0 = emit_mask | (emit_mask * 2); } while (0);
-                                        do { sp20 = var_a0 * 4; var_v0_2 = var_a0 | sp20; left_bits = emit_mask * 0x10; var_v0_2 |= left_bits; } while (0);
+                                        do { var_a0 = next_input | (next_input * 2); } while (0);
+                                        do { sp20 = var_a0 * 4; var_v0_2 = var_a0 | sp20; left_bits = next_input * 0x10; var_v0_2 |= left_bits; } while (0);
                                         goto block_95;
                                     }
                                     goto block_97;
@@ -4432,15 +4435,16 @@ loop_38:
                                     do {
                                     var_t6 = (var_t4 >> 0x1E) | (var_t4 >> 0x1F);
                                     var_t3 = var_t4 >> 0x1D;
-                                    var_t5 >>= 0x1D;
-                                    var_t1 = var_t5 | (var_t5 >> 1) | (var_t5 >> 2);
+                                    left_bits = (var_t5 >> 0x1D) | (var_t5 >> 0x1E);
+                                    var_t5 = (s32)var_t5 >> 0x1F;
+                                    var_t1 = left_bits | (var_t5 & 1);
                                     } while (0);
                                     if (temp_t0 != 0)
                                     {
                                         left_bits = (temp_t0 * 2) | (temp_t0 * 4);
                                         var_t6 |= left_bits;
                                         var_t3 |= temp_t0 | (temp_t0 * 8);
-                                        do { var_a0 = emit_mask | (emit_mask * 2); } while (0);
+                                        do { var_a0 = next_input | (next_input * 2); } while (0);
                                         var_v0_2 = var_a0 | (var_a0 * 4);
                                         goto block_95;
                                     }
@@ -4455,7 +4459,7 @@ loop_38:
                                     {
                                         var_t6 |= temp_t0 * 2;
                                         var_t3 |= temp_t0 | (temp_t0 * 4);
-                                        do { sp20 = emit_mask * 2; var_v0_2 = emit_mask | sp20; left_bits = emit_mask * 4; var_v0_2 |= left_bits; } while (0);
+                                        do { sp20 = next_input * 2; var_v0_2 = next_input | sp20; left_bits = next_input * 4; var_v0_2 |= left_bits; } while (0);
                                         goto block_95;
                                     }
                                     goto block_97;
@@ -4467,12 +4471,12 @@ loop_38:
                                     if (temp_t0 != 0)
                                     {
                                         var_t3 |= temp_t0 | (temp_t0 * 2);
-                                        do { var_v0_2 = emit_mask | (emit_mask * 2); } while (0);
+                                        do { var_v0_2 = next_input | (next_input * 2); } while (0);
 block_95:
                                         var_t1 |= var_v0_2;
 block_96:
                                         var_t4 = temp_t0;
-                                        do { var_t5 = emit_mask; } while (0);
+                                        do { var_t5 = next_input; } while (0);
                                         break;
                                     }
 block_97:
@@ -4480,7 +4484,7 @@ block_97:
                                     var_t5 = 0;
                                     break;
                                 case 0:
-                                    do { var_t1 = emit_mask; } while (0);
+                                    do { var_t1 = next_input; } while (0);
                                     var_t3 = temp_t0;
                                     break;
                             }
@@ -4506,9 +4510,8 @@ block_97:
                         }
                     }
                     var_s4 += 1;
-                    temp_s6_5 = sp14 - 1;
-                    sp14 = temp_s6_5;
-                } while (temp_s6_5 != -1);
+                    sp14--;
+                } while (sp14 != -1);
             }
             var_a2 = (4 - (s32) var_t7) & 3;
             var_t8 = (u16) scene->unk46 * (footprint_depth + 1);

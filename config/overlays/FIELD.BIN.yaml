@@ -178,14 +178,14 @@ segments:
       - [0x39E75, c, func_80089AE4]              # gcc272_cdk, 100%
       - [0x39F79, c, func_80089BE8]              # gcc272_cdk, 100%
       - [0x3A0D5, c, func_80089D44] # gcc272_cdk, 100%
-      - [0x3A441, c, func_8008A0B0] # gcc272_cdk, 99.242424% WIP
+      - [0x3A441, c, func_8008A0B0] # gcc272_cdk, 100%
       - [0x3A861, c, func_8008A4D0]             # gcc272_cdk, 100%
       - [0x3A911, c, func_8008A580] # gcc272_cdk, 100%
       - [0x3AA09, c, func_8008A678] # gcc272_cdk, 100.000000%
       - [0x3ABD1, c, func_8008A840]             # gcc272_cdk, 100%
       - [0x3AD69, c, func_8008A9D8]              # gcc272_cdk, 100%
       - [0x3AE4D, c, func_8008AABC]             # gcc272_cdk, 100%
-      - [0x3AEBD, c, func_8008AB2C] # gcc272_cdk, 98.880600% WIP
+      - [0x3AEBD, c, func_8008AB2C] # gcc272_cdk, 100.000000%
       - [0x3B0D5, c, func_8008AD44]             # gcc272_cdk, 100%
       - [0x3B145, c, field254]                  # gcc272_cdk, func_8008ADB4
       - [0x3B1A5, c, field_queue_actor_animation_by_handle] # gcc272_cdk, func_8008AE14, 100%
@@ -206,7 +206,7 @@ segments:
       - [0x3C1C9, c, func_8008BE38]                 # gcc272_cdk, 100%
       - [0x3C319, c, field364]                     # gcc272_cdk, func_8008BF88
       - [0x3C3B5, c, func_8008C024]                # gcc272_cdk, 100%
-      - [0x3C495, c, func_8008C104] # gcc272_cdk, 99.016396% WIP
+      - [0x3C495, c, func_8008C104] # gcc272_cdk, 100%
       - [0x3C67D, c, func_8008C2EC] # gcc272_cdk, 84.954956% WIP
       - [0x3C839, c, func_8008C4A8]                # gcc272_cdk, 100%
       - [0x3C9B1, c, func_8008C620] # gcc272_cdk, 100%
@@ -249,7 +249,7 @@ segments:
       - [0x42FB5, c, func_80092C24]                # gcc272_cdk, 100%
       - [0x43029, c, func_80092C98]                # gcc272_cdk, 97.53% WIP
       - [0x43E49, c, func_80093AB8] # gcc272_cdk, 99.588234% WIP
-      - [0x44245, c, func_80093EB4]                # gcc272_cdk, WIP 99.39%
+      - [0x44245, c, func_80093EB4]                # gcc272_cdk, 100%
       - [0x443CD, c, func_8009403C] # gcc272_cdk, 99.283390% WIP
       - [0x44899, c, func_80094508]                # gcc272_cdk, 95.918365% (load scheduling)
       - [0x44A21, c, func_80094690]                # gcc272_cdk, 100%
@@ -443,11 +443,11 @@ segments:
       - [0x5D599, c, func_800AD208] # gcc272_cdk, 96.846720% WIP
       - [0x5D7BD, c, func_800AD42C]             # gcc272_cdk, 100%
       - [0x5D8B5, c, func_800AD524] # gcc272_cdk, 82.038960% WIP
-      - [0x5D9E9, c, func_800AD658] # gcc272_cdk, 99.505160% WIP
+      - [0x5D9E9, c, func_800AD658] # gcc272_cdk, 100%
       # TU hypothesis: field_pair_rule_lookup (low). See docs/decompilation/field-boundaries/map.md.
       - [0x5DB6D, c, func_800AD7DC]                # gcc272_cdk, 100%
       # TU hypothesis: field_menu_windows (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x5DBE1, c, func_800AD850] # gcc272_cdk, 99.756940% WIP
+      - [0x5DBE1, c, func_800AD850] # gcc272_cdk, 100%
       - [0x5E061, c, func_800ADCD0] # gcc272_cdk, 95.459770% WIP
       - [0x5E1BD, c, field342]                     # gcc272_cdk, func_800ADE2C
       - [0x5E241, c, field76]                      # gcc272_cdk, func_800ADEB0
@@ -473,7 +473,7 @@ segments:
       - [0x64185, c, field_actor_templates] # gcc280_g0; actor selection 81.959460%, initialization 89.043480%, scaling exact
       - [0x64721, c, field_actor_lifecycle] # gcc280_g0; four actor setup/reset routines, two exact/two WIP
       - [0x64BD5, c, func_800B4844]                # gcc280_g0, 100.00000%, 29/29 instructions
-      - [0x64C49, c, field_status_ticks] # gcc280_g0; ten status/update routines, nine exact, B49C0 96.556700%
+      - [0x64C49, c, field_status_ticks] # gcc280_g0; ten status/update routines, all exact
       - [0x65449, c, field_action_descriptors] # gcc280_g0; B50B8 new C 83.8%, B543C exact codegen
       - [0x658C5, c, field_action_setup] # gcc280_g0; action execution and six helpers; B5534 new C 93.789270%, six exact
       - [0x6640D, c, field_progression_ops] # gcc280_g0; progression query and initialization, both exact
