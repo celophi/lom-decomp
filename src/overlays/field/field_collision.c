@@ -3974,7 +3974,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
 /**
  * @brief Expand a group's rasterised tile-column bitmask into a per-pixel
  *        stencil buffer, dilated by the group's edge width.
- * @see decomp.me (99.9563%) TODO
+ * @see decomp.me (99.97311%) TODO
  */
 extern u32 D_1F800008;
 
@@ -4303,8 +4303,8 @@ loop_38:
                             {
                                 var_a3 = var_t9 + stride4;
                                 var_t3 = var_t3 | *(u32 *) (var_t9 + 4);
-                                temp_t2 = *(u32 *) (var_t9 + 0);
-                                var_t1 = var_t1 | temp_t2;
+                                temp_t2 = *(u32 *) (var_t9 + 0) & 0xFFFF;
+                                var_t1 |= temp_t2 | (*(u32 *) (var_t9 + 0) & 0xFFFF0000);
                                 if (var_a3 >= var_fp)
                                 {
                                     var_a3 -= sp30;

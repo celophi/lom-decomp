@@ -250,7 +250,7 @@ segments:
       - [0x43029, c, func_80092C98]                # gcc272_cdk, 97.53% WIP
       - [0x43E49, c, func_80093AB8] # gcc272_cdk, 99.588234% WIP
       - [0x44245, c, func_80093EB4]                # gcc272_cdk, 100%
-      - [0x443CD, c, func_8009403C] # gcc272_cdk, 99.283390% WIP
+      - [0x443CD, c, func_8009403C] # gcc272_cdk, 100.000000%
       - [0x44899, c, func_80094508]                # gcc272_cdk, 95.918365% (load scheduling)
       - [0x44A21, c, func_80094690]                # gcc272_cdk, 100%
       - [0x44A8D, c, func_800946FC] # gcc272_cdk, 100.000000%
@@ -468,7 +468,7 @@ segments:
       - [0x6058D, c, field_resource_load] # gcc272_cdk; eight pending-actor/resource routines, six exact, two base C
       - [0x60E89, c, field_interaction_start] # gcc280_g0; twenty-one initialization/action/update routines, seventeen exact, four WIPs
       - [0x62BFD, c, field_event_dispatch] # gcc280_g0; claim/start owner events, both exact
-      - [0x62E2D, c, field_state_ops] # gcc280_g0; record/effect/attribute helpers, twelve exact and two WIPs
+      - [0x62E2D, c, field_state_ops] # gcc280_g0; record/effect/attribute helpers, thirteen exact and one WIP
       - [0x63861, c, field_party_setup] # gcc280_g0; context and party initialization; four exact, B37D4 WIP
       - [0x64185, c, field_actor_templates] # gcc280_g0; actor selection 81.959460%, initialization 89.043480%, scaling exact
       - [0x64721, c, field_actor_lifecycle] # gcc280_g0; four actor setup/reset routines, two exact/two WIP
