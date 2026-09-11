@@ -489,7 +489,7 @@ segments:
       - [0x6E959, c, field_script_arith_ops] # gcc280_g0; dispatcher and twelve arithmetic handlers, all exact
       - [0x6EAA1, c, field_record_setup_ops] # gcc280_g0; five record setup/sequence dispatch functions, two WIPs
       - [0x6F4E9, c, func_800BF158]                 # gcc272_cdk, 97.696075% (register/epilogue residue)
-      - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, two WIPs
+      - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, one WIP
       - [0x6FDC5, c, field_generated_record_ops] # gcc280_g0; initializer, name builder and two stat modes, two WIPs
       - [0x705F1, c, field_record_effect_ops] # gcc280_g0; effect generation/classification/application, three WIPs
       - [0x70DC9, c, field_reward_command_ops] # gcc280_g0; selector, reward dispatcher and four table handlers, one WIP

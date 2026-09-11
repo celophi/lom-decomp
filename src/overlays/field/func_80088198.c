@@ -362,6 +362,7 @@ void func_80088198(Struct_D800FDF58 *arg0) {
     s16 var_v0_2;
     s16 var_v0_4;
     s16 var_v1;
+    u16 offset_88;
     s16 var_v1_2;
     s32 *var_v1_4;
     s32 temp_a0_3;
@@ -376,9 +377,7 @@ void func_80088198(Struct_D800FDF58 *arg0) {
     s32 temp_v0_12;
     s32 temp_v1_5;
     s32 var_a3;
-    s32 var_s0_2;
     s32 var_s2;
-    s32 var_s2_2;
     s32 var_s6;
     s32 var_v0_3;
     s32 var_v0_5;
@@ -393,9 +392,9 @@ void func_80088198(Struct_D800FDF58 *arg0) {
     s32 temp_a1;
     u8 temp_a1_4;
     s32 temp_a1_6;
-    u8 temp_a3;
+    s32 temp_a3;
     u8 temp_a3_2;
-    u8 temp_s0_2;
+    s32 temp_s0_2;
     u8 temp_s5;
     u8 temp_v0_10;
     u8 temp_v0_2;
@@ -408,6 +407,7 @@ void func_80088198(Struct_D800FDF58 *arg0) {
     void *temp_s3;
     void *temp_s3_2;
     void *temp_v1_10;
+    Struct_D800FDF58 *call_actor;
     u16 phi_v0;
 
     temp_a2 = 0x801ED400;
@@ -452,8 +452,8 @@ void func_80088198(Struct_D800FDF58 *arg0) {
         goto block_168;
     case 0xAA:
         func_800A3938(M2C_FIELD(temp_s3, u8 *, 1), 0x80);
-        var_v0 = arg0->unk2C + 2;
-        goto block_169;
+        arg0->unk2C = arg0->unk2C + 2;
+        return;
     case 0xAB:
         if ((u8)arg0->unk3A < 3U) {
             func_800A3A90(M2C_FIELD(temp_s3, u8 *, 1), 0x80, arg0->unk3A);
@@ -461,8 +461,8 @@ void func_80088198(Struct_D800FDF58 *arg0) {
             temp_a3 = arg0->unk3A;
             func_800A39A8(M2C_FIELD(temp_s3, u8 *, 1), 0x80, temp_a3 - 3, temp_a3);
         }
-        var_v0 = arg0->unk2C + 2;
-        goto block_169;
+        arg0->unk2C = arg0->unk2C + 2;
+        return;
     case 0xB9:
         do {
         do {
@@ -521,8 +521,8 @@ loop_15:
         } while (0);
         } while (0);
         } while (0);
-        var_v0 = arg0->unk2C + 2;
-        goto block_169;
+        arg0->unk2C = arg0->unk2C + 2;
+        return;
     case 0x81:
         arg0->unk2A = (s16) M2C_FIELD(temp_s3, u8 *, 0);
         temp_v0_2 = M2C_FIELD(temp_s3, u8 *, 1);
@@ -580,7 +580,7 @@ do {
             temp_s0 = (arg0->unk3B * 0x190) + ((D_80105AE0[arg0->unk3A].pad148[0x27] * 8) + D_8010A038);
             if (!(M2C_FIELD(temp_s0, u16 *, 2) & 0x400)) {
                 if ((M2C_FIELD(temp_s0, u16 *, 0) != 0) || (M2C_FIELD(temp_s0, u16 *, 4) != 0)) {
-                    if (M2C_FIELD(temp_s0, u16 *, 2) & 0x400) {
+                    if (M2C_FIELD(temp_s0, volatile u16 *, 2) & 0x400) {
                         goto block_43;
                     }
                     goto block_45;
@@ -588,13 +588,15 @@ do {
                 goto block_57;
             }
 block_43:
-            if ((field_object_has_active_actor_tracks(arg0->unk3A) == 0) && (field_count_free_actor_slots() >= 3)) {
+            if ((field_object_has_active_actor_tracks(arg0->unk3A) == 0) && (field_count_free_actor_slots(arg0->unk3A) >= 3)) {
 block_45:
                 if ((M2C_FIELD(temp_s0, u16 *, 0) & 0x8000) && !(M2C_FIELD(temp_s0, u16 *, 2) & 0x400)) {
                     if (((u8) arg0->unk3A < 3U) && (field_object_has_active_actor_tracks(arg0->unk3A) == 0) && (D_8010AE58 == 0) &&
-                        (field_count_free_actor_slots() >= 3)) {
+                        (field_count_free_actor_slots(arg0->unk3A) >= 3)) {
                         temp_a0_2 = arg0->unk3A;
                         if ((D_80105AE0[temp_a0_2].unk48 == 0xFF) && (func_8008404C(temp_a0_2, (M2C_FIELD(temp_s0, u16 *, 0) & 0x7FFF) + (u16)((D_800FD818[temp_a0_2].u0.b.unk1 * 0x18) + 0x88)) != 0)) {
+                            casea9_slots = g_field_actor_slots;
+                            casea9_entries = D_80105880;
                             if ((u8) arg0->unk3A >= 2U) {
                                 var_v0_3 = 0x38;
                             } else {
@@ -610,6 +612,8 @@ block_45:
                     if (func_8008404C(arg0->unk3A, temp_a1_3 & 0x3FF) == 0) {
                         goto block_57;
                     }
+                    casea9_slots = g_field_actor_slots;
+                    casea9_entries = D_80105880;
                     if ((u8) arg0->unk3A < 2U) {
 block_59:
                         var_v0_3 = arg0->unk3A * 0x1C;
@@ -617,7 +621,7 @@ block_59:
                         var_v0_3 = 0x38;
                     }
 block_61:
-                    g_field_actor_slots[M2C_FIELD(&D_80105880[var_v0_3], s32 *, 0x18)].unk26 = D_80105AE0[arg0->unk3A].pad148[0x27];
+                    casea9_slots[M2C_FIELD(&casea9_entries[var_v0_3], s32 *, 0x18)].unk26 = D_80105AE0[arg0->unk3A].pad148[0x27];
                     goto block_62;
                 }
 block_62:
@@ -667,11 +671,15 @@ block_57:
         } else {
             arg0->unk21 = D_800EB0A4[temp_a1_4 >> 5] + ((arg0->unk33 & 1) * 5) + 5;
         }
+        call_actor = arg0;
         var_a1 = M2C_FIELD(temp_s3, u8 *, 2);
         arg0->unk24 = 1;
-        var_v1 = (u16) arg0->unk2C + 3;
+        offset_88 = arg0->unk2C;
+        offset_88 += 3;
         arg0->unk2E = (u16) var_a1;
-        goto block_143;
+        call_actor->unk2C = offset_88;
+        func_8006C3FC(call_actor);
+        return;
     case 0x8D:
         arg0->unk2A = (s16) M2C_FIELD(temp_s3, u8 *, 0);
         temp_v0_10 = M2C_FIELD(temp_s3, u8 *, 1) | (arg0->unk21 & 0x80);
@@ -681,15 +689,17 @@ block_57:
         } else {
             arg0->unk1B = 0x80;
         }
+        call_actor = arg0;
         var_a1 = M2C_FIELD(temp_s3, u8 *, 2);
         arg0->unk24 = 1;
-        var_v1 = (u16) arg0->unk2C + 3;
+        var_v1 = arg0->unk2C;
+        var_v1 += 3;
         arg0->unk2E = (u16) var_a1;
         goto block_143;
     case 0x8F:
         func_8008BF88(arg0, M2C_FIELD(temp_s3, u8 *, 1), M2C_FIELD(temp_s3, u8 *, 2), M2C_FIELD(temp_s3, u8 *, 3));
-        var_v0 = (u16) arg0->unk2C + 4;
-        goto block_169;
+        arg0->unk2C = (u16) arg0->unk2C + 4;
+        return;
     case 0xB0:
     case 0xB1:
         temp_a1_5 = arg0->unk0;
@@ -699,6 +709,7 @@ block_57:
             M2C_FIELD(temp_v0_13, s32 *, 0x1AC) = (s32) M2C_FIELD(temp_v0_13, s32 *, 0x50);
             temp_v0_14 = &D_80105AE0[arg0->unk3A];
             M2C_FIELD(temp_v0_14, s32 *, 0x1B0) = (s32) M2C_FIELD(temp_v0_14, s32 *, 0x58);
+            call_actor = arg0;
             var_a1 = 1;
             M2C_FIELD(&D_80105AE0[arg0->unk3A], s16 *, 0x1A4) = 1;
             arg0->unk2E = 0xFF;
@@ -709,11 +720,11 @@ block_57:
             sp18.x = temp_a1_5;
             sp18.y = arg0->unk4;
             sp18.z = arg0->unk8;
-            var_v1_2 = 9;
             if (D_800FE3A0[arg0->unk3A].unk2E == 0x40) {
                 var_v1_2 = 0xC;
                 var_v0_4 = 8;
             } else {
+                var_v1_2 = 9;
                 var_v0_4 = 6;
             }
             sp18.unkC = var_v1_2;
@@ -733,6 +744,7 @@ block_57:
                 M2C_FIELD(temp_v0_16, s32 *, 0x1AC) = (s32) M2C_FIELD(temp_v0_16, s32 *, 0x50);
                 temp_v0_17 = &D_80105AE0[arg0->unk3A];
                 M2C_FIELD(temp_v0_17, s32 *, 0x1B0) = (s32) M2C_FIELD(temp_v0_17, s32 *, 0x58);
+                call_actor = arg0;
                 var_a1 = 1;
                 M2C_FIELD(&D_80105AE0[arg0->unk3A], s16 *, 0x1A4) = 1;
                 arg0->unk2E = 0xFF;
@@ -742,6 +754,7 @@ block_57:
             } else {
                 M2C_FIELD(&D_80105AE0[arg0->unk3A], s16 *, 0x1A4) = temp_v0_15;
                 M2C_FIELD(&D_80105AE0[arg0->unk3A], s16 *, 0x1A6) = 0;
+                call_actor = arg0;
                 var_a1 = M2C_FIELD(temp_s3, u8 *, 0);
                 arg0->unk2E = 0xFF;
                 arg0->unk24 = 1;
@@ -757,8 +770,8 @@ block_57:
     case 0xAC:
         arg0->unk2A = (s16) M2C_FIELD(temp_s3, u8 *, 0);
         arg0->unk2C = (u16) arg0->unk2C + 2;
-        arg0->unk24 = 1;
         arg0->unk2E = (u16) M2C_FIELD(temp_s3, u8 *, 1);
+        arg0->unk24 = 1;
         func_8006C3FC(arg0);
         return;
     case 0x9C:
@@ -867,24 +880,24 @@ block_57:
             if (temp_a0_4 != 1) {
                 temp_v1_11 = &g_field_actor_slots[M2C_FIELD(temp_v1_10, s32 *, 0x18)];
                 if (temp_v1_11->unk23A == 0) {
-                    var_s2_2 = 0;
+                    var_s2 = 0;
                     if (M2C_FIELD(M2C_FIELD(temp_v1_11, void **, 0x10), u16 *, 0xC) & 0x800) {
-                        var_s0_2 = 0;
+                        temp_s0_2 = 0;
                         var_v1_3 = temp_v1_11->unk240;
-                        do {
+loop_count_tracks:
+                        {
                             if (*var_v1_3 != 0) {
-                                var_s2_2 += 1;
+                                var_s2 += 1;
                             }
-                            var_s0_2 += 1;
+                            temp_s0_2 += 1;
                             var_v1_3 += 1;
-                        } while (var_s0_2 < 3);
-                        var_a0 = arg0->unk3A;
-                        var_a3 = ((var_s2_2 - 1) << 0xC) | 0x4400;
+                            if (temp_s0_2 < 3) { goto loop_count_tracks; }
+                        }
+                        temp_v0 = func_8009104C(arg0->unk3A, 0, 0, ((var_s2 - 1) << 0xC) | 0x4400);
                     } else {
-                        var_a0 = (u8) temp_a1_7;
-                        var_a3 = 0;
+                        temp_v0 = func_8009104C(temp_a1_7, 0, 0, 0);
                     }
-                    if (func_8009104C((s32) var_a0, 0, 0, var_a3) != 0) {
+                    if (temp_v0 != 0) {
                         arg0->unk2A = 0xBC;
                         D_80105AE0[arg0->unk3A].u.b.pad2 = 0;
                     }
@@ -935,9 +948,10 @@ block_140:
         actor->unk24 = 1;
         var_v1 += 5;
         actor->unk21 = var_a1;
+        call_actor = actor;
 block_143:
-        actor->unk2C = var_v1;
-        func_8006C3FC(actor);
+        call_actor->unk2C = var_v1;
+        func_8006C3FC(call_actor);
         return;
     }
     case 0x82:
@@ -973,7 +987,7 @@ block_143:
         if ((u8) arg0->unk3A < 2U) {
             var_v1_4 = &D_8010A020[arg0->unk3A];
         } else {
-            var_v1_4 = D_8010A020 + 8;
+            var_v1_4 = D_8010A020 + 2;
         }
         *var_v1_4 = 1;
         return;
@@ -991,8 +1005,8 @@ block_155:
             arg0->unk21 = M2C_FIELD(temp_s3, u8 *, 1) | (arg0->unk21 & 0x80);
             func_8006C3FC(arg0);
         }
-        var_v0 = (u16) arg0->unk2C + 2;
-        goto block_169;
+        arg0->unk2C = (u16) arg0->unk2C + 2;
+        return;
     case 0xA5:
         casea5_base = D_800FE3A0;
         temp_v0_19 = &casea5_base[arg0->unk3A];
