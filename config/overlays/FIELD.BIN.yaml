@@ -161,7 +161,7 @@ segments:
       - [0x379A5, c, func_80087614]                # gcc272_cdk, 100.00000%, 27/27 instructions
       - [0x37A11, c, func_80087680]                # gcc272_cdk, 100%
       - [0x37B01, c, func_80087770] # gcc272_cdk, 100.000000%
-      - [0x37C45, c, func_800878B4] # gcc272_cdk, 98.770490% WIP
+      - [0x37C45, c, func_800878B4] # gcc272_cdk, 100%
       - [0x37E2D, c, func_80087A9C] # gcc272_cdk, 96.718750% WIP
       - [0x3802D, c, field32]                      # gcc272_cdk, func_80087C9C
       - [0x38071, c, func_80087CE0]                # gcc272_cdk, func_80087CE0 + func_80087D8C (100%)
@@ -505,7 +505,7 @@ segments:
       - [0x73D91, c, field_group_layout_ops] # gcc280_g0; six group selection/grid functions, five exact and C3D38 WIP
       - [0x742A9, c, field_group_stat_transfer] # gcc272_cdk; active-record transfer and derived-stat builder, two WIPs
       - [0x75A95, c, field_menu_group_ops] # gcc280_g0; group creation/release, state and ordering
-      - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; two newly wired WIPs
+      - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; func_800C642C WIP
       - [0x76C59, c, field_menu_slot_ops] # gcc280_g0, inferred menu function family; two newly wired WIPs
       - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, 100%
       - [0x779FD, c, field_menu_action_runtime] # gcc280_g0, func_800C766C .. action-slot reset; 14 funcs, four WIPs
