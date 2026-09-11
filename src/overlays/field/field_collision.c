@@ -366,7 +366,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @param mover Mover state updated with resolved position, height, contact node, and flags.
  * @return Collision-resolution status bitmask.
  *
- * @see decomp.me (99.746070%) https://decomp.me/scratch/N2GNJ
+ * @see decomp.me (99.876960%) https://decomp.me/scratch/N2GNJ
  * @note Active matching scratch: working/func_8005B6AC/code.c; see its status.md.
  */
 s32 func_8005B6AC(FieldCollisionMover* mover) {
@@ -691,11 +691,11 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                                                 mover->collision_node = var_fp;
                                             }
                                         } else {
-                                            var_a3 = 1;
                                             if (var_s2 < (var_s0 + 0x14)) {
-                                                mover->collision_node = var_fp;
                                                 var_s2 = var_s0;
+                                                mover->collision_node = var_fp;
                                             }
+                                            var_a3 = 1;
                                         }
                                     }
                                     break;
