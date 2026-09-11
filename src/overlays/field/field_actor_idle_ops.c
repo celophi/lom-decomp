@@ -41,7 +41,6 @@ extern s32 D_8010AE7C;
 extern s32 D_8010AE80;
 extern s32 D_8010CFD8;
 extern s32 D_8010CFDC;
-extern s16 D_801ED400;
 
 /**
  * @brief Step the D_8010AE60 / D_8010AE68 pair toward D_8010AE6C / D_8010AE70 over the remaining D_8010AE58 frames.
@@ -83,19 +82,13 @@ void func_800922B8(void)
 }
 
 /**
- * @brief Clears the interpolation state above and seeds D_8010AE68 and D_8010AE70 from D_801ED400.
- *
- * @note 99.565% match. The only residue is the address register used to load
- *       `D_801ED400`; all 23 instructions and 92 bytes are otherwise exact.
+ * @brief Clears the interpolation state and seeds the active bounds value.
  */
 void func_80092394(void)
 {
     s32 value;
 
-    do
-    {
-        value = D_801ED400;
-    } while (0);
+    value = *(s16*)0x801ED400;
 
     D_8010AE6C = 0;
     D_8010AE60 = 0;
