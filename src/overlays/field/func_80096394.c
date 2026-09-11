@@ -140,9 +140,9 @@ check_blink:
                         slot->options = options | 0x8000;
                         if (g_frame_counter & 4)
                         {
-                            visual->red = (slot->red * 100) / 128;
-                            visual->green = (slot->green * 100) / 128;
-                            visual->blue = (slot->blue * 100) / 128;
+                            D_800FE3A0[i].red = (slot->red * 100) / 128;
+                            D_800FE3A0[i].green = (slot->green * 100) / 128;
+                            D_800FE3A0[i].blue = (slot->blue * 100) / 128;
                         }
                         else
                         {

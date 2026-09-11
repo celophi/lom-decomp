@@ -267,7 +267,7 @@ segments:
       - [0x45881, c, func_800954F0] # gcc272_cdk, 86.774840% WIP
       - [0x464ED, c, func_8009615C] # gcc272_cdk, 96.864410% WIP
       - [0x466C5, c, field255]                  # gcc272_cdk, func_80096334
-      - [0x46725, c, func_80096394] # gcc272_cdk, 99.758140% WIP
+      - [0x46725, c, func_80096394] # gcc272_cdk, 100%
       # TU hypothesis: field_actor_transition_reset (high). See docs/decompilation/field-boundaries/map.md.
       - [0x46A81, c, func_800966F0] # gcc272_cdk, 92.362240% WIP
       - [0x46D91, c, field298]                  # gcc272_cdk, func_80096A00
