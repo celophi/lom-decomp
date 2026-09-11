@@ -129,7 +129,7 @@ segments:
       - [0x2F07D, c, field17]                   # gcc272_cdk
       - [0x32635, c, func_800822A4] # gcc272_cdk, 100%
       - [0x32D31, c, func_800829A0] # gcc272_cdk, 100%
-      - [0x33021, c, func_80082C90] # gcc272_cdk, 99.264710% WIP
+      - [0x33021, c, func_80082C90] # gcc272_cdk, 100%
       - [0x33681, c, field30]                      # gcc272_cdk, func_800832F0, func_8008332C, func_8008343C, func_80083868
       # TU hypothesis: field_actor_slot_resources (high). See docs/decompilation/field-boundaries/map.md.
       - [0x33CD9, c, field18]                   # gcc272_cdk, func_80083948
@@ -466,7 +466,7 @@ segments:
       - [0x601A5, c, field_card_clock] # gcc272_cdk; decode/refresh cached card clock, AFE14 base C, B0094 exact
       - [0x60501, c, field288]                     # gcc272_cdk, func_800B0170
       - [0x6058D, c, field_resource_load] # gcc272_cdk; eight pending-actor/resource routines, seven exact, one base C
-      - [0x60E89, c, field_interaction_start] # gcc280_g0; twenty-one initialization/action/update routines, seventeen exact, four WIPs
+      - [0x60E89, c, field_interaction_start] # gcc280_g0; twenty-one initialization/action/update routines, eighteen exact, three WIPs
       - [0x62BFD, c, field_event_dispatch] # gcc280_g0; claim/start owner events, both exact
       - [0x62E2D, c, field_state_ops] # gcc280_g0; record/effect/attribute helpers, thirteen exact and one WIP
       - [0x63861, c, field_party_setup] # gcc280_g0; context and party initialization; four exact, B37D4 WIP

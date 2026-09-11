@@ -4819,77 +4819,67 @@ typedef struct
  * @param mode Trace mode forwarded to the footprint walker.
  * @return Number of path points, 1 for a direct result, or a negative failure code.
  *
- * @see decomp.me (81.47%, 701/1586 exact) TODO
+ * @see decomp.me (87.02%, 997/1586 exact) TODO
  */
 s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_query, FieldCollisionPathPoint *output_path, s32 mode)
 {
     s32 path[4][0x400]; /* sp+0x0010 */
     s32 flags[4];       /* sp+0x4010 */
     FieldCollisionTraceRequest rec;            /* sp+0x4020 */
+    s32 sp4050;
+    s32 sp4054;
+    s32 sp4058;
+    s32 sp405C;
+    s32 sp4060;
+    s32 sp4064;
+    s32 sp4068;
+    s32 sp406C;
+    s32 sp4070;
+    s32 sp4074;
+    s32 sp4078;
+    u8 sp407C;
+    s32 sp4080;
+    s32 *sp4084;
+    u32 *sp4094;
     FieldScene *scene;
     FieldScene *new_var3;
     FieldCollisionQuery *temp_s2;
-    s32 sp4058;
-    u8 temp_a2;
     u8 var_closed;
     u8 var_open;
     s32 hx1;
     s32 temp_v1;
-    s32 var_v0_2;
-    s32 sp4074;
     s32 hz1;
     s32 temp_v1_2;
-    s32 var_v0_3;
-    s32 sp4078;
     s32 hx2;
     s32 temp_v1_3;
-    s32 var_v0_4;
-    s32 sp406C;
     s32 hz2;
     s32 temp_a0;
-    s32 var_v0_5;
-    s32 sp4070;
     s32 temp_v1_4;
-    s32 sp4064;
-    s32 sp4068;
-    s32 temp_v0;
-    s32 sp405C;
-    s32 sp4060;
-    u16 temp_t4;
+    u32 columns;
     s32 temp_v1_5;
     s32 temp_v0_2;
     s32 var_a0;
     u8 temp_v0_3;
-    s32 var_s5;
-    s32 sp4054;
     s32 var_a1;
     s16 temp_v1_6;
     u8 *var_s0;
     s32 temp_v0_4;
     s32 var_a0_2;
     u8 temp_v0_5;
-    s32 var_s5_2;
-    s32 sp4050;
     s16 temp_v1_7;
     u8 *temp_s1;
-    u32 sp408C;
     s32 var_t5;
     u32 var_s7;
     u8 *var_s2;
     u8 var_a3;
-    s32 *sp4084;
-    u32 *sp4094;
     s32 var_v0;
     u32 var_t0;
-    s32 var_s5_3;
-    u32 *var_fp;
+    s32 *var_fp;
     s32 temp_v1_8;
     s32 *var_s4;
     s32 *var_s6;
     u32 temp_t3;
-    u32 var_bound_early;
     u32 temp_v1_9;
-    u8 *temp_s1_2;
     u32 temp_a2_2;
     s32 var_a1_2;
     u8 temp_a0_3;
@@ -4937,26 +4927,21 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 var_v1_5;
     s32 neg1;
     s32 sm_p0;
+    u8 * start_tile;
     s32 *sm1;
     s32 *sm2;
     s32 *sm0;
-    s32 var_s5_4;
-    s32 *var_fp_2;
     s32 temp_v1_31;
     u32 temp_a0_12;
     u32 temp_lo;
     s32 temp_v1_32;
     u8 *new_var;
-    u8 *var_s1;
-    s32 *var_fp_3;
     u32 var_v1_6;
     u32 var_v1_7;
-    u32 var_s7_2;
     s32 var_t1_5;
     s32 var_t2;
     s32 var_t3;
     u8 var_t0_2;
-    s32 var_a3_2;
     u8 temp_a0_13;
     s32 var_a1_3;
     u32 temp_v1_33;
@@ -4979,17 +4964,10 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     u32 temp_v1_39;
     u8 temp_a0_20;
     u32 temp_v1_40;
-    s32 *var_s6_2;
-    s32 *var_s4_2;
     s32 var_s3_3;
-    s32 *var_fp_4;
     u32 temp_a0_21;
     u32 var_v1_8;
     u32 var_v1_9;
-    u32 var_s7_3;
-    s32 var_s5_5;
-    s32 *var_s6_3;
-    s32 *var_s4_3;
     s32 temp_s1_3;
     s32 temp_t9;
     s32 temp_v1_41;
@@ -5000,8 +4978,6 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 var_s0_2;
     s32 *temp_s2_2;
     s32 *temp_s1_4;
-    u32 var_s5_6;
-    u8 sp407C;
     s32 temp_s0;
     s32 var_fp_5;
     s32 var_s5_7;
@@ -5014,7 +4990,6 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 temp_s4_3;
     s32 var_v0_27;
     s32 temp_v0_14;
-    s32 sp4080;
     s32 temp_s3;
     s32 var_v0_28;
     s32 temp_s6_2;
@@ -5029,16 +5004,14 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 var_v0_31;
     s32 temp_s4_6;
     s32 final_x;
-    s32 *var_s6_4;
-    s32 *var_s4_4;
-    s32 var_s5_8;
     s32 var_s3;
     FieldCollisionPathPoint *var_a2_2;
     s32 temp_v1_42;
     s32 temp_v1_43;
 
+    u32 count;
+
     scene = g_field_scene.scene;
-    var_bound_early = 0xFF;
     temp_s2 = goal_query;
     if (scene->unk28 == 0)
     {
@@ -5049,67 +5022,34 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
         goto write_pos;
     }
     sp4058 = 3;
-    temp_a2 = scene->unk40;
-    if (temp_a2 == 4)
+    temp_a2_2 = scene->unk40;
+    if (temp_a2_2 == 4)
     {
         sp4058 = 2;
     }
     hx1 = (s32) (start_query->width << 0x10) >> 0x11;
     temp_v1 = temp_s2->x;
-    if (temp_v1 >= 0)
-    {
-        var_v0_2 = temp_v1 >> 8;
-    }
-    else
-    {
-        var_v0_2 = (s32) (temp_v1 + 0xFF) >> 8;
-    }
-    sp4074 = var_v0_2 - hx1;
+    sp4074 = (temp_v1 >= 0 ? temp_v1 >> 8 : (temp_v1 + 0xFF) >> 8) - hx1;
     hz1 = (s32) (start_query->depth << 0x10) >> 0x11;
     temp_v1_2 = temp_s2->z;
-    if (temp_v1_2 >= 0)
-    {
-        var_v0_3 = temp_v1_2 >> 8;
-    }
-    else
-    {
-        var_v0_3 = (s32) (temp_v1_2 + 0xFF) >> 8;
-    }
-    sp4078 = var_v0_3 - hz1;
+    sp4078 = (temp_v1_2 >= 0 ? temp_v1_2 >> 8 : (temp_v1_2 + 0xFF) >> 8) - hz1;
     hx2 = (s32) (start_query->width << 0x10) >> 0x11;
     temp_v1_3 = start_query->x;
-    if (temp_v1_3 >= 0)
-    {
-        var_v0_4 = temp_v1_3 >> 8;
-    }
-    else
-    {
-        var_v0_4 = (s32) (temp_v1_3 + 0xFF) >> 8;
-    }
-    sp406C = var_v0_4 - hx2;
+    sp406C = (temp_v1_3 >= 0 ? temp_v1_3 >> 8 : (temp_v1_3 + 0xFF) >> 8) - hx2;
     hz2 = (s32) (start_query->depth << 0x10) >> 0x11;
     temp_a0 = start_query->z;
-    if (temp_a0 >= 0)
-    {
-        var_v0_5 = temp_a0 >> 8;
-    }
-    else
-    {
-        var_v0_5 = (s32) (temp_a0 + 0xFF) >> 8;
-    }
-    sp4070 = var_v0_5 - hz2;
+    sp4070 = (temp_a0 >= 0 ? temp_a0 >> 8 : (temp_a0 + 0xFF) >> 8) - hz2;
     temp_v1_4 = sp4058 + 1;
     sp4064 = (sp4074 >> sp4058) + 2;
     sp4068 = (sp4078 >> temp_v1_4) + 2;
     new_var3 = scene;
-    temp_v0 = (sp406C >> sp4058) + 2;
-    sp405C = temp_v0;
+    sp405C = (sp406C >> sp4058) + 2;
     sp4060 = (sp4070 >> temp_v1_4) + 2;
-    temp_t4 = (u16) scene->unk46;
-    if ((temp_v0 > 0) && (sp4060 > 0) && (sp4064 > 0) && (sp4068 > 0))
+    columns = (u16) scene->unk46;
+    if ((sp405C > 0) && (sp4060 > 0) && (sp4064 > 0) && (sp4068 > 0))
     {
         temp_v1_5 = (u16) scene->unk48 - 1;
-        if ((temp_v0 < temp_t4 - 1) && (sp4060 < temp_v1_5) && (sp4064 < temp_t4 - 1))
+        if ((sp405C < (s32) columns - 1) && (sp4060 < temp_v1_5) && (sp4064 < (s32) columns - 1))
         {
             if (sp4068 >= temp_v1_5)
             {
@@ -5122,32 +5062,32 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                 var_a0 = (s32) (temp_v0_2 + 0xFF) >> 8;
             }
             temp_v0_3 = scene->unk41;
-            var_s5 = 0;
+            count = 0;
             sp4054 = temp_v0_3 - 1;
             if (temp_v0_3 != 0)
             {
                 var_a1 = temp_v0_3;
                 do
                 {
-                    temp_v1_6 = scene->unk4A[var_s5];
+                    temp_v1_6 = scene->unk4A[count];
                     if (var_a0 < temp_v1_6)
                     {
-                        if (var_s5 != 0)
+                        if (count != 0)
                         {
-                            var_s5 -= 1;
+                            count -= 1;
                         }
-                        sp4054 = var_s5;
+                        sp4054 = count;
                         break;
                     }
                     if (temp_v1_6 == var_a0)
                     {
-                        sp4054 = var_s5;
+                        sp4054 = count;
                         break;
                     }
-                    var_s5 += 1;
-                } while (var_s5 != var_a1);
+                    count += 1;
+                } while (count != var_a1);
             }
-            var_s0 = (u8 *) (scene->unk2C + ((u16) scene->unk44 * sp4054) + (temp_t4 * sp4068) + sp4064);
+            var_s0 = (u8 *) (scene->unk2C + ((u16) scene->unk44 * sp4054) + (columns * sp4068) + sp4064);
             *var_s0 = 0xFC;
             temp_v0_4 = start_query->y;
             var_a0_2 = temp_v0_4 >> 8;
@@ -5156,32 +5096,32 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                 var_a0_2 = (s32) (temp_v0_4 + 0xFF) >> 8;
             }
             temp_v0_5 = new_var3->unk41;
-            var_s5_2 = 0;
+            count = 0;
             sp4050 = temp_v0_5 - 1;
             if (temp_v0_5 != 0)
             {
                 var_a1 = temp_v0_5;
                 do
                 {
-                    temp_v1_7 = scene->unk4A[var_s5_2];
+                    temp_v1_7 = scene->unk4A[count];
                     if (var_a0_2 < temp_v1_7)
                     {
-                        if (var_s5_2 != 0)
+                        if (count != 0)
                         {
-                            var_s5_2 -= 1;
+                            count -= 1;
                         }
-                        sp4050 = var_s5_2;
+                        sp4050 = count;
                         break;
                     }
                     if (temp_v1_7 == var_a0_2)
                     {
-                        sp4050 = var_s5_2;
+                        sp4050 = count;
                         break;
                     }
-                    var_s5_2 += 1;
-                } while (var_s5_2 != var_a1);
+                    count += 1;
+                } while (count != var_a1);
             }
-            temp_s1 = (u8 *) (scene->unk2C + ((u16) scene->unk44 * sp4050) + (temp_t4 * sp4060) + sp405C);
+            temp_s1 = (u8 *) (scene->unk2C + ((u16) scene->unk44 * sp4050) + (columns * sp4060) + sp405C);
             if (*temp_s1 != 0xFC)
             {
                 *temp_s1 = 0xFB;
@@ -5192,17 +5132,16 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                 rec.tile_base = (s32) var_s0;
                 rec.end_z = sp4070;
                 rec.footprint_width = (s32) (s16) start_query->width;
-                rec.tile_size = (s32) temp_a2;
+                rec.tile_size = (s32) temp_a2_2;
                 rec.unk24 = sp4058;
                 rec.stamp = 0xFC;
-                sp408C = (u32) temp_t4;
                 rec.mode = mode;
                 rec.footprint_depth = (s32) (s16) start_query->depth;
-                var_t5 = 0;
-                var_closed = 0xFD;
-                var_open = 0xFC;
                 if (func_80062820(&rec) == 0)
                 {
+                    var_t5 = 0;
+                    var_closed = 0xFD;
+                    var_open = 0xFC;
                     var_s7 = 1;
                     var_s2 = NULL;
                     var_a3 = 0xFA;
@@ -5214,7 +5153,8 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                     flags[1] = 0;
                     while (1)
                     {
-                        if (var_s7 == 0)
+                        count = var_s7;
+                        if (count == 0)
                         {
                             if ((flags[0] == 0) && (flags[1] == 0) && (flags[2] == 0))
                             {
@@ -5225,14 +5165,14 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 }
                             }
                         }
+                        var_fp = sp4084 + (var_t5 << 10) + var_s7 - 1;
                         var_t0 = 0;
-                        var_s5_3 = var_s7 - 1;
-                        var_fp = (u32 *) (sp4084 + (var_t5 << 10) + var_s5_3);
+                        count -= 1;
                         temp_v1_8 = (var_t5 + 1) & 3;
                         var_s7 = sp4094[temp_v1_8];
                         var_s4 = sp4084 + (((var_t5 + 3) & 3) << 10);
                         var_s6 = sp4084 + (temp_v1_8 << 10) + var_s7;
-                        if (var_s5_3 != -1)
+                        if (count != -1)
                         {
                             temp_t3 = var_a3 & 0xFF;
                             do
@@ -5243,24 +5183,24 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 }
                                 temp_v1_9 = *var_fp;
                                 var_fp -= 1;
-                                temp_s1_2 = (u8 *) (temp_v1_9 & 0x801FFFFF);
+                                temp_s1 = (u8 *) (temp_v1_9 & 0x801FFFFF);
                                 temp_a2_2 = temp_v1_9 >> 0x15;
                                 var_a1_2 = 0;
                                 if ((temp_a2_2 & 0x300) == 0x300)
                                 {
-                                    var_t0 = var_t0 + 1 + var_s5_3;
+                                    var_t0 = var_t0 + 1 + count;
                                     do
                                     {
                                         *var_s4 = var_fp[1] & 0xBFFFFFFF;
                                         var_fp -= 1;
-                                        var_s5_3 -= 1;
+                                        count -= 1;
                                         var_s4 += 1;
-                                    } while (var_s5_3 != -1);
+                                    } while (count != -1);
                                     break;
                                 }
                                 if (temp_a2_2 & 2)
                                 {
-                                    var_s0 = temp_s1_2 - sp408C;
+                                    var_s0 = temp_s1 - columns;
                                     temp_a0_3 = *var_s0;
                                     temp_v1_10 = temp_a0_3 & 0xFF;
                                     if ((temp_v1_10 < temp_t3) && ((temp_v1_10 < 4U) || !(temp_a2_2 & 0x100)))
@@ -5293,7 +5233,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 }
                                 if (temp_a2_2 & 0x40)
                                 {
-                                    var_s0 = temp_s1_2 + sp408C;
+                                    var_s0 = temp_s1 + columns;
                                     temp_a0_4 = *var_s0;
                                     temp_v1_11 = temp_a0_4 & 0xFF;
                                     if ((temp_v1_11 < temp_t3) && ((temp_v1_11 < 4U) || !(temp_a2_2 & 0x100)))
@@ -5326,9 +5266,9 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 }
                                 if (temp_a2_2 & 8)
                                 {
-                                    temp_a0_5 = temp_s1_2[-1];
+                                    temp_a0_5 = temp_s1[-1];
                                     temp_v1_12 = temp_a0_5 & 0xFF;
-                                    var_s0 = temp_s1_2 - 1;
+                                    var_s0 = temp_s1 - 1;
                                     if ((temp_v1_12 < temp_t3) && ((temp_v1_12 < 4U) || !(temp_a2_2 & 0x100)))
                                     {
                                         if (temp_v1_12 != 1)
@@ -5337,7 +5277,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                             var_s6 += 1;
                                             var_s7 += 1;
                                             var_a1_2 |= 8;
-                                            temp_s1_2[-1] = var_a3;
+                                            temp_s1[-1] = var_a3;
                                         }
                                         else
                                         {
@@ -5345,7 +5285,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                             var_s4 += 1;
                                             var_t0 += 1;
                                             var_a1_2 |= 0x808;
-                                            temp_s1_2[-1] = var_closed;
+                                            temp_s1[-1] = var_closed;
                                         }
                                     }
                                     else if (temp_a0_5 == var_open)
@@ -5359,9 +5299,9 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 }
                                 if (temp_a2_2 & 0x10)
                                 {
-                                    temp_a0_6 = temp_s1_2[1];
+                                    temp_a0_6 = temp_s1[1];
                                     temp_v1_13 = temp_a0_6 & 0xFF;
-                                    var_s0 = temp_s1_2 + 1;
+                                    var_s0 = temp_s1 + 1;
                                     if ((temp_v1_13 < temp_t3) && ((temp_v1_13 < 4U) || !(temp_a2_2 & 0x100)))
                                     {
                                         if (temp_v1_13 != 1)
@@ -5370,7 +5310,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                             var_s6 += 1;
                                             var_s7 += 1;
                                             var_a1_2 |= 0x10;
-                                            temp_s1_2[1] = var_a3;
+                                            temp_s1[1] = var_a3;
                                         }
                                         else
                                         {
@@ -5378,7 +5318,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                             var_s4 += 1;
                                             var_t0 += 1;
                                             var_a1_2 |= 0x1010;
-                                            temp_s1_2[1] = var_closed;
+                                            temp_s1[1] = var_closed;
                                         }
                                     }
                                     else if (temp_a0_6 == var_open)
@@ -5390,7 +5330,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                         }
                                     }
                                 }
-                                temp_v0_7 = temp_s1_2 - sp408C;
+                                temp_v0_7 = temp_s1 - columns;
                                 if (temp_a2_2 & 1)
                                 {
                                     temp_a0_7 = temp_v0_7[-1];
@@ -5404,7 +5344,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                         {
                                             if ((temp_v1_15 == 1) || (temp_v1_15 == 0xFD))
                                             {
-                                                temp_v1_16 = temp_s1_2[-1];
+                                                temp_v1_16 = temp_s1[-1];
                                                 if ((temp_v1_16 == 1) || (temp_v1_16 == 0xFD))
                                                 {
                                                     var_t1 = 1;
@@ -5412,7 +5352,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                             }
                                             else
                                             {
-                                                temp_v1_17 = temp_s1_2[-1];
+                                                temp_v1_17 = temp_s1[-1];
                                                 if ((temp_v1_17 < 0xFDU) && (temp_v1_17 != 1))
                                                 {
                                                     var_t1 = 1;
@@ -5456,7 +5396,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                         }
                                     }
                                 }
-                                temp_v0_8 = temp_s1_2 - sp408C;
+                                temp_v0_8 = temp_s1 - columns;
                                 if (temp_a2_2 & 4)
                                 {
                                     temp_a0_8 = temp_v0_8[1];
@@ -5470,7 +5410,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                         {
                                             if ((temp_v1_19 == 1) || (temp_v1_19 == 0xFD))
                                             {
-                                                temp_v1_20 = temp_s1_2[1];
+                                                temp_v1_20 = temp_s1[1];
                                         if ((temp_v1_20 == 1) || (temp_v1_20 == 0xFD))
                                                 {
                                                     var_t1_2 = 1;
@@ -5478,7 +5418,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                             }
                                             else
                                             {
-                                                temp_v1_21 = temp_s1_2[1];
+                                                temp_v1_21 = temp_s1[1];
                                                 if ((temp_v1_21 < 0xFDU) && (temp_v1_21 != 1))
                                                 {
                                                     var_t1_2 = 1;
@@ -5522,7 +5462,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                         }
                                     }
                                 }
-                                temp_v0_9 = temp_s1_2 + sp408C;
+                                temp_v0_9 = temp_s1 + columns;
                                 if (temp_a2_2 & 0x20)
                                 {
                                     temp_a0_9 = temp_v0_9[-1];
@@ -5536,7 +5476,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                         {
                                             if ((temp_v1_23 == 1) || (temp_v1_23 == 0xFD))
                                             {
-                                                temp_v1_24 = temp_s1_2[-1];
+                                                temp_v1_24 = temp_s1[-1];
                                                 if ((temp_v1_24 == 1) || (temp_v1_24 == 0xFD))
                                                 {
                                                     var_t1_3 = 1;
@@ -5544,7 +5484,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                             }
                                             else
                                             {
-                                                temp_v1_25 = temp_s1_2[-1];
+                                                temp_v1_25 = temp_s1[-1];
                                                 if ((temp_v1_25 < 0xFDU) && (temp_v1_25 != 1))
                                                 {
                                                     var_t1_3 = 1;
@@ -5588,7 +5528,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                         }
                                     }
                                 }
-                                temp_v0_10 = temp_s1_2 + sp408C;
+                                temp_v0_10 = temp_s1 + columns;
                                 if (temp_a2_2 & 0x80)
                                 {
                                     temp_a0_10 = temp_v0_10[1];
@@ -5602,7 +5542,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                         {
                                             if ((temp_v1_27 == 1) || (temp_v1_27 == 0xFD))
                                             {
-                                                temp_v1_28 = temp_s1_2[1];
+                                                temp_v1_28 = temp_s1[1];
                                                 if ((temp_v1_28 == 1) || (temp_v1_28 == 0xFD))
                                                 {
                                                     var_t1_4 = 1;
@@ -5610,7 +5550,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                             }
                                             else
                                             {
-                                                temp_v1_29 = temp_s1_2[1];
+                                                temp_v1_29 = temp_s1[1];
                                                 if ((temp_v1_29 < 0xFDU) && (temp_v1_29 != 1))
                                                 {
                                                     var_t1_4 = 1;
@@ -5656,10 +5596,10 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 }
                                 if ((temp_a2_2 & 0x100) && (var_a1_2 != 0))
                                 {
-                                    temp_s1_2[0] = (s8) (var_a3 + 1);
+                                    temp_s1[0] = (s8) (var_a3 + 1);
                                 }
-                                var_s5_3 -= 1;
-                            } while (var_s5_3 != -1);
+                                count -= 1;
+                            } while (count != -1);
                         }
                         var_a3 -= 1;
                         if (((u32) (var_a3 & 0xFF) < 4U) && (var_s2 == NULL))
@@ -5673,347 +5613,368 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         sp4094[temp_v1_30 & 3] = var_t0;
                         if (var_s2 != NULL)
                         {
-                            var_s3_2 = 2;
-                            var_v1_5 = var_t5;
-                            neg1 = -1;
+                            break;
+                        }
+                    }
+
+                    var_s3_2 = 2;
+                    var_v1_5 = var_t5;
+                    neg1 = -1;
+                    do
+                    {
+                        count = var_s7 - 1;
+                        var_fp = &path[var_v1_5][var_s7 - 1];
+                        if (count != neg1)
+                        {
                             do
                             {
-                                var_s5_4 = var_s7 - 1;
-                                var_fp_2 = &path[var_v1_5][var_s7 - 1];
-                                if (var_s5_4 != neg1)
+                                temp_v1_31 = *var_fp;
+                                var_fp -= 1;
+                                if (temp_v1_31 & 0x20000000)
                                 {
-                                    do
-                                    {
-                                        temp_v1_31 = *var_fp_2;
-                                        var_fp_2 -= 1;
-                                        if (temp_v1_31 & 0x20000000)
-                                        {
-                                            *(u8 *) (temp_v1_31 & 0x801FFFFF) = 0xFD;
-                                        }
-                                        var_s5_4 -= 1;
-                                    } while (var_s5_4 != neg1);
+                                    *(u8 *) (temp_v1_31 & 0x801FFFFF) = 0xFD;
                                 }
-                                var_t5 = (var_t5 + 1) & 3;
-                                var_s7 = flags[var_t5];
-                                var_s3_2 -= 1;
-                                var_v1_5 = var_t5;
-                            } while (var_s3_2 != neg1);
-                            temp_a0_12 = (u16) scene->unk44;
-                            temp_lo = sp408C * sp4068;
-                            temp_v1_32 = scene->unk2C;
-                            new_var = var_s2;
-                            var_s1 = (u8 *) (temp_v1_32 + (temp_a0_12 * sp4054) + temp_lo + sp4064);
-                            var_fp_3 = &path[0][0];
-                            if (var_s1 != var_s2)
+                                count -= 1;
+                            } while (count != neg1);
+                        }
+                        var_t5 = (var_t5 + 1) & 3;
+                        var_s7 = flags[var_t5];
+                        var_s3_2 -= 1;
+                        var_v1_5 = var_t5;
+                    } while (var_s3_2 != neg1);
+                    temp_a0_12 = (u16) scene->unk44;
+                    temp_lo = columns * sp4068;
+                    temp_v1_32 = scene->unk2C;
+                    new_var = var_s2;
+                    temp_s1 = (u8 *) (temp_v1_32 + (temp_a0_12 * sp4054) + temp_lo + sp4064);
+                    var_fp = &path[0][0];
+                    if (temp_s1 != var_s2)
+                    {
+                        var_v1_6 = (u32) new_var - (u32) temp_v1_32;
+                        if (var_v1_6 >= temp_a0_12)
+                        {
+                            var_v1_7 = var_v1_6 - temp_a0_12;
+                            do
                             {
-                                var_v1_6 = (u32) new_var - (u32) temp_v1_32;
-                                if (var_v1_6 >= temp_a0_12)
-                                {
-                                    var_v1_7 = var_v1_6 - temp_a0_12;
-                                    do
-                                    {
-                                        var_v1_7 -= temp_a0_12;
-                                    } while (var_v1_7 >= temp_a0_12);
-                                    var_v1_6 = var_v1_7 + temp_a0_12;
-                                }
-                                rec.start_x = sp4074;
-                                rec.tile_base = (s32) var_s1;
-                                rec.stamp = 4;
-                                rec.start_z = sp4078;
-                                rec.end_x = ((var_v1_6 % sp408C) - 2) << sp4058;
-                                rec.end_z = ((var_v1_6 / sp408C) - 2) << (sp4058 + 1);
-                                var_s7_2 = 1;
-                                if (func_80062820(&rec) != 0)
-                                {
-                                    *var_fp_3 = (s32) var_s1;
-                                    var_fp_3 += 1;
-                                    *var_s1 = 0xFC;
-                                    var_s1 = var_s2;
-                                }
-                                else
-                                {
-                                    rec.goal_tile = (s32) new_var;
-                                    rec.stamp = 4;
-                                    rec.mode = 2;
-                                    rec.end_x = sp406C;
-                                    rec.end_z = sp4070;
-                                    var_s7_2 = 1;
-                                    if (func_80062820(&rec) != 0)
-                                    {
-                                        *var_fp_3 = (s32) var_s1;
-                                        var_fp_3 += 1;
-                                        *var_s1 = 0xFC;
-                                        var_s1 = new_var;
-                                    }
-                                    else
-                                    {
-                                        var_s7_2 = 0;
-                                        *var_s1 = 0xFC;
-                                    }
-                                    rec.mode = mode;
-                                }
-                                var_t1_5 = 1;
+                                var_v1_7 -= temp_a0_12;
+                            } while (var_v1_7 >= temp_a0_12);
+                            var_v1_6 = var_v1_7 + temp_a0_12;
+                        }
+                        rec.start_x = sp4074;
+                        rec.tile_base = (s32) temp_s1;
+                        rec.stamp = 4;
+                        rec.start_z = sp4078;
+                        rec.end_x = ((var_v1_6 % columns) - 2) << sp4058;
+                        rec.end_z = ((var_v1_6 / columns) - 2) << (sp4058 + 1);
+                        var_s7 = 1;
+                        if (func_80062820(&rec) != 0)
+                        {
+                            *var_fp = (s32) temp_s1;
+                            var_fp += 1;
+                            *temp_s1 = 0xFC;
+                            temp_s1 = var_s2;
+                        }
+                        else
+                        {
+                            rec.goal_tile = (s32) new_var;
+                            rec.stamp = 4;
+                            rec.mode = 2;
+                            rec.end_x = sp406C;
+                            rec.end_z = sp4070;
+                            var_s7 = 1;
+                            if (func_80062820(&rec) != 0)
+                            {
+                                *var_fp = (s32) temp_s1;
+                                var_fp += 1;
+                                *temp_s1 = 0xFC;
+                                temp_s1 = new_var;
                             }
                             else
                             {
-                                var_s7_2 = 0;
-                                var_t1_5 = 0;
+                                var_s7 = 0;
+                                *temp_s1 = 0xFC;
                             }
-                            var_t2 = 0;
-                            var_t3 = 0;
-                            var_t0_2 = 0;
-                            do
+                            rec.mode = mode;
+                        }
+                        var_t1_5 = 1;
+                    }
+                    else
+                    {
+                        var_s7 = 0;
+                        var_t1_5 = 0;
+                    }
+                    var_t2 = 0;
+                    var_t3 = 0;
+                    var_t0_2 = 0;
+                    do
+                    {
+                        var_a3 = 0;
+                        temp_a0_13 = temp_s1[-1];
+                        var_a1_3 = 0;
+                        temp_v1_33 = temp_a0_13 & 0xFF;
+                        if (((u32) ((temp_a0_13 - 4) & 0xFF) < 0xF8U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_33) && ((u32) (var_a3 & 0xFF) < temp_v1_33))
+                        {
+                            var_s0 = temp_s1 - 1;
+                            var_t2 = 4;
+                            var_a3 = temp_a0_13;
+                        }
+                        else
+                        {
+                            var_a1_3 |= 8;
+                        }
+                        temp_a0_14 = temp_s1[1];
+                        temp_v1_34 = temp_a0_14 & 0xFF;
+                        if (((u32) ((temp_a0_14 - 4) & 0xFF) < 0xF8U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_34) && ((u32) (var_a3 & 0xFF) < temp_v1_34))
+                        {
+                            var_s0 = temp_s1 + 1;
+                            var_t2 = 5;
+                            var_a3 = temp_a0_14;
+                        }
+                        else
+                        {
+                            var_a1_3 |= 0x10;
+                        }
+                        temp_a2_3 = temp_s1 - columns;
+                        temp_a0_15 = *temp_a2_3;
+                        temp_v1_35 = temp_a0_15 & 0xFF;
+                        if (((u32) ((temp_a0_15 - 4) & 0xFF) < 0xF8U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_35) && ((u32) (var_a3 & 0xFF) < temp_v1_35))
+                        {
+                            var_s0 = temp_a2_3;
+                            var_t2 = 2;
+                            var_a3 = temp_a0_15;
+                        }
+                        else
+                        {
+                            var_a1_3 |= 2;
+                        }
+                        temp_a2_4 = temp_s1 + columns;
+                        temp_a0_16 = *temp_a2_4;
+                        temp_v1_36 = temp_a0_16 & 0xFF;
+                        if (((u32) ((temp_a0_16 - 4) & 0xFF) < 0xF8U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_36) && ((u32) (var_a3 & 0xFF) < temp_v1_36))
+                        {
+                            var_s0 = temp_a2_4;
+                            var_t2 = 7;
+                            var_a3 = temp_a0_16;
+                        }
+                        else
+                        {
+                            var_a1_3 |= 0x40;
+                        }
+                        var_a2 = temp_s1 - columns;
+                        temp_a0_17 = var_a2[-1];
+                        if (!(var_a1_3 & 0xA) || !(var_a3 & 0xFF))
+                        {
+                            temp_v1_37 = temp_a0_17 & 0xFF;
+                            if (temp_v1_37 < 0xFCU)
                             {
-                                var_a3_2 = 0;
-                                temp_a0_13 = var_s1[-1];
-                                var_a1_3 = 0;
-                                temp_v1_33 = temp_a0_13 & 0xFF;
-                                if (((u32) ((temp_a0_13 - 4) & 0xFF) < 0xF8U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_33) && ((u32) (var_a3_2 & 0xFF) < temp_v1_33))
-                                {
-                                    var_s0 = var_s1 - 1;
-                                    var_t2 = 4;
-                                    var_a3_2 = temp_a0_13;
-                                }
-                                else
-                                {
-                                    var_a1_3 |= 8;
-                                }
-                                temp_a0_14 = var_s1[1];
-                                temp_v1_34 = temp_a0_14 & 0xFF;
-                                if (((u32) ((temp_a0_14 - 4) & 0xFF) < 0xF8U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_34) && ((u32) (var_a3_2 & 0xFF) < temp_v1_34))
-                                {
-                                    var_s0 = var_s1 + 1;
-                                    var_t2 = 5;
-                                    var_a3_2 = temp_a0_14;
-                                }
-                                else
-                                {
-                                    var_a1_3 |= 0x10;
-                                }
-                                temp_a2_3 = var_s1 - sp408C;
-                                temp_t3 = var_bound_early;
-                                temp_a0_15 = *temp_a2_3;
-                                temp_v1_35 = temp_a0_15 & temp_t3;
-                                if (((u32) ((temp_a0_15 - 4) & temp_t3) < 0xF8U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_35) && ((u32) (var_a3_2 & temp_t3) < temp_v1_35))
-                                {
-                                    var_s0 = temp_a2_3;
-                                    var_t2 = 2;
-                                    var_a3_2 = temp_a0_15;
-                                }
-                                else
-                                {
-                                    var_a1_3 |= 2;
-                                }
-                                temp_a2_4 = var_s1 + sp408C;
-                                temp_a0_16 = *temp_a2_4;
-                                temp_v1_36 = temp_a0_16 & temp_t3;
-                                if (((u32) ((temp_a0_16 - 4) & temp_t3) < 0xF8U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_36) && ((u32) (var_a3_2 & temp_t3) < temp_v1_36))
-                                {
-                                    var_s0 = temp_a2_4;
-                                    var_t2 = 7;
-                                    var_a3_2 = temp_a0_16;
-                                }
-                                else
-                                {
-                                    var_a1_3 |= 0x40;
-                                }
-                                var_a2 = var_s1 - sp408C;
-                                temp_a0_17 = var_a2[-1];
-                                if (!(var_a1_3 & 0xA) || !(var_a3_2 & temp_t3))
-                                {
-                                    temp_v1_37 = temp_a0_17 & temp_t3;
-                                    if (temp_v1_37 < 0xFCU)
-                                    {
-                                    if ((temp_v1_37 >= 4U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_37) && ((u32) (var_a3_2 & temp_t3) < temp_v1_37))
-                                    {
-                                        var_s0 = (var_s1 - sp408C) - 1;
-                                        var_t2 = 1;
-                                        var_a3_2 = temp_a0_17;
-                                    }
-                                    
-                                    }
-                                }
-                                temp_a0_18 = (var_s1 - sp408C)[1];
-                                var_v0_24 = var_s1 + sp408C;
-                                if (!(var_a1_3 & 0x12) || !(var_a3_2 & temp_t3))
-                                {
-                                    temp_v1_38 = temp_a0_18 & temp_t3;
-                                    if (temp_v1_38 < 0xFCU)
-                                    {
-                                    if ((temp_v1_38 >= 4U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_38) && ((u32) (var_a3_2 & temp_t3) < temp_v1_38))
-                                    {
-                                        var_s0 = (var_s1 - sp408C) + 1;
-                                        var_t2 = 3;
-                                        var_a3_2 = temp_a0_18;
-                                    }
-                                    
-                                    }
-                                }
-                                temp_a0_19 = (var_s1 + sp408C)[-1];
-                                var_v0_25 = var_s1 + sp408C;
-                                if (!(var_a1_3 & 0x48) || !(var_a3_2 & temp_t3))
-                                {
-                                    temp_v1_39 = temp_a0_19 & temp_t3;
-                                    if (temp_v1_39 < 0xFCU)
-                                    {
-                                    if ((temp_v1_39 >= 4U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_39) && ((u32) (var_a3_2 & temp_t3) < temp_v1_39))
-                                    {
-                                        var_s0 = (var_s1 + sp408C) - 1;
-                                        var_t2 = 6;
-                                        var_a3_2 = temp_a0_19;
-                                    }
-                                    
-                                    }
-                                }
-                                temp_a0_20 = (var_s1 + sp408C)[1];
-                                if (!(var_a1_3 & 0x50) || !(var_a3_2 & temp_t3))
-                                {
-                                    temp_v1_40 = temp_a0_20 & temp_t3;
-                                    if (temp_v1_40 < 0xFCU)
-                                    {
-                                    if ((temp_v1_40 >= 4U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_40) && ((u32) (var_a3_2 & temp_t3) < temp_v1_40))
-                                    {
-                                        var_s0 = (var_s1 + sp408C) + 1;
-                                        var_t2 = 8;
-                                        var_a3_2 = temp_a0_20;
-                                    }
-                                    
-                                    }
-                                    var_v0 = -5;
-                                    if ((var_a3_2 & temp_t3) == 0)
-                                    {
-                                        return var_v0;
-                                    }
-                                }
-                                var_t0_2 = var_a3_2;
-                                if (var_t2 != var_t3)
-                                {
-                                    var_t3 = var_t2;
-                                    *var_fp_3 = (s32) var_s1;
-                                    var_s7_2 += 1;
-                                    var_fp_3 += 1;
-                                    if (var_s7_2 >= 0x400U)
-                                    {
-                                        return -4;
-                                    }
-                                    var_t0_2 = var_a3_2;
-                                }
-                                var_s1 = var_s0;
-                            } while ((var_t0_2 & 0xFF) != 0xFB);
-                            var_s6_2 = &path[1][1];
-                            var_s4_2 = &path[2][1];
-                            var_s3_3 = var_s7_2 - 2;
-                            *var_fp_3 = scene->unk2C + ((u16) scene->unk44 * sp4050) + (sp408C * sp4060) + sp405C;
-                            var_fp_4 = &path[0][0];
-                            rec.stamp = 0;
-                            path[1][0] = sp4074;
-                            path[2][0] = sp4078;
-                            if (var_s3_3 != neg1)
+                            if ((temp_v1_37 >= 4U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_37) && ((u32) (var_a3 & 0xFF) < temp_v1_37))
                             {
+                                var_s0 = (temp_s1 - columns) - 1;
+                                var_t2 = 1;
+                                var_a3 = temp_a0_17;
+                            }
+                            
+                            }
+                        }
+                        temp_a0_18 = (temp_s1 - columns)[1];
+                        var_v0_24 = temp_s1 + columns;
+                        if (!(var_a1_3 & 0x12) || !(var_a3 & 0xFF))
+                        {
+                            temp_v1_38 = temp_a0_18 & 0xFF;
+                            if (temp_v1_38 < 0xFCU)
+                            {
+                            if ((temp_v1_38 >= 4U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_38) && ((u32) (var_a3 & 0xFF) < temp_v1_38))
+                            {
+                                var_s0 = (temp_s1 - columns) + 1;
+                                var_t2 = 3;
+                                var_a3 = temp_a0_18;
+                            }
+                            
+                            }
+                        }
+                        temp_a0_19 = (temp_s1 + columns)[-1];
+                        var_v0_25 = temp_s1 + columns;
+                        if (!(var_a1_3 & 0x48) || !(var_a3 & 0xFF))
+                        {
+                            temp_v1_39 = temp_a0_19 & 0xFF;
+                            if (temp_v1_39 < 0xFCU)
+                            {
+                            if ((temp_v1_39 >= 4U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_39) && ((u32) (var_a3 & 0xFF) < temp_v1_39))
+                            {
+                                var_s0 = (temp_s1 + columns) - 1;
+                                var_t2 = 6;
+                                var_a3 = temp_a0_19;
+                            }
+                            
+                            }
+                        }
+                        temp_a0_20 = (temp_s1 + columns)[1];
+                        if (!(var_a1_3 & 0x50) || !(var_a3 & 0xFF))
+                        {
+                            temp_v1_40 = temp_a0_20 & 0xFF;
+                            if (temp_v1_40 < 0xFCU)
+                            {
+                            if ((temp_v1_40 >= 4U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_40) && ((u32) (var_a3 & 0xFF) < temp_v1_40))
+                            {
+                                var_s0 = (temp_s1 + columns) + 1;
+                                var_t2 = 8;
+                                var_a3 = temp_a0_20;
+                            }
+                            
+                            }
+                            var_v0 = -5;
+                            if ((var_a3 & 0xFF) == 0)
+                            {
+                                return var_v0;
+                            }
+                        }
+                        var_t0_2 = var_a3;
+                        if (var_t2 != var_t3)
+                        {
+                            var_t3 = var_t2;
+                            *var_fp = (s32) temp_s1;
+                            var_s7 += 1;
+                            var_fp += 1;
+                            if (var_s7 >= 0x400U)
+                            {
+                                return -4;
+                            }
+                            var_t0_2 = var_a3;
+                        }
+                        temp_s1 = var_s0;
+                    } while ((var_t0_2 & 0xFF) != 0xFB);
+                    var_s6 = &path[1][1];
+                    var_s4 = &path[2][1];
+                    var_s3_3 = var_s7 - 2;
+                    *var_fp = scene->unk2C + ((u16) scene->unk44 * sp4050) + (columns * sp4060) + sp405C;
+                    var_fp = &path[0][0];
+                    rec.stamp = 0;
+                    path[1][0] = sp4074;
+                    path[2][0] = sp4078;
+                    if (var_s3_3 != neg1)
+                    {
+                        do
+                        {
+                            var_fp += 1;
+                            temp_a0_21 = (u16) scene->unk44;
+                            var_v1_8 = *var_fp - scene->unk2C;
+                            if (var_v1_8 >= temp_a0_21)
+                            {
+                                var_v1_9 = var_v1_8 - temp_a0_21;
                                 do
                                 {
-                                    var_fp_4 += 1;
-                                    temp_a0_21 = (u16) scene->unk44;
-                                    var_v1_8 = *var_fp_4 - scene->unk2C;
-                                    if (var_v1_8 >= temp_a0_21)
-                                    {
-                                        var_v1_9 = var_v1_8 - temp_a0_21;
-                                        do
-                                        {
-                                            var_v1_9 -= temp_a0_21;
-                                        } while (var_v1_9 >= temp_a0_21);
-                                        var_v1_8 = var_v1_9 + temp_a0_21;
-                                    }
-                                    var_s3_3 -= 1;
-                                    *var_s6_2 = ((var_v1_8 % sp408C) - 2) << sp4058;
-                                    var_s6_2 += 1;
-                                    *var_s4_2 = ((var_v1_8 / sp408C) - 2) << (sp4058 + 1);
-                                    var_s4_2 += 1;
-                                } while (var_s3_3 != neg1);
-                                var_fp_4 = &path[0][0];
+                                    var_v1_9 -= temp_a0_21;
+                                } while (var_v1_9 >= temp_a0_21);
+                                var_v1_8 = var_v1_9 + temp_a0_21;
                             }
-                            var_s7_3 = 0;
-                            var_s5_5 = var_s7_2 - 1;
-                            *var_s6_2 = sp406C;
-                            var_s6_3 = &path[1][0];
-                            *var_s4_2 = sp4070;
-                            var_s4_3 = &path[2][0];
-                            if (var_s5_5 != neg1)
+                            var_s3_3 -= 1;
+                            *var_s6 = ((var_v1_8 % columns) - 2) << sp4058;
+                            var_s6 += 1;
+                            *var_s4 = ((var_v1_8 / columns) - 2) << (sp4058 + 1);
+                            var_s4 += 1;
+                        } while (var_s3_3 != neg1);
+                        var_fp = &path[0][0];
+                    }
+                    count = var_s7 - 1;
+                    var_s7 = 0;
+                    *var_s6 = sp406C;
+                    var_s6 = &path[1][0];
+                    *var_s4 = sp4070;
+                    var_s4 = &path[2][0];
+                    if (count != neg1)
+                    {
+                        do
+                        {
+                            temp_s1_3 = *var_fp;
+                            var_fp += 1;
+                            temp_t9 = *var_s6;
+                            var_s6 += 1;
+                            temp_v1_41 = var_s7;
+                            var_s7 += 1;
+                            temp_v0_12 = &path[0][temp_v1_41];
+                            sp406C = temp_t9;
+                            new_var2 = *var_s4;
+                            temp_t8 = new_var2;
+                            var_s4 += 1;
+                            sp4070 = temp_t8;
+                            temp_v0_12[0] = temp_s1_3;
+                            temp_v0_12[0x400] = temp_t9;
+                            temp_v0_12[0x800] = temp_t8;
+                            if (count != 0)
                             {
+                                var_s3_4 = count;
+                                rec.tile_base = temp_s1_3;
+                                rec.start_x = temp_t9;
+                                rec.start_z = temp_t8;
+                                var_s0_2 = var_s3_4;
                                 do
                                 {
-                                    temp_s1_3 = *var_fp_4;
-                                    var_fp_4 += 1;
-                                    temp_t9 = *var_s6_3;
-                                    var_s6_3 += 1;
-                                    temp_v1_41 = var_s7_3;
-                                    var_s7_3 += 1;
-                                    temp_v0_12 = &path[0][temp_v1_41];
-                                    sp406C = temp_t9;
-                                    new_var2 = *var_s4_3;
-                                    temp_t8 = new_var2;
-                                    var_s4_3 += 1;
-                                    sp4070 = temp_t8;
-                                    temp_v0_12[0] = temp_s1_3;
-                                    temp_v0_12[0x400] = temp_t9;
-                                    temp_v0_12[0x800] = temp_t8;
-                                    if (var_s5_5 != 0)
+                                    temp_s2_2 = var_s0_2 + var_s6;
+                                    temp_s1_4 = var_s0_2 + var_s4;
+                                    rec.end_x = *temp_s2_2;
+                                    rec.end_z = *temp_s1_4;
+                                    if (func_80062820(&rec) != 0)
                                     {
-                                        var_s3_4 = var_s5_5;
-                                        rec.tile_base = temp_s1_3;
-                                        rec.start_x = temp_t9;
-                                        rec.start_z = temp_t8;
-                                        var_s0_2 = var_s3_4;
-                                        do
-                                        {
-                                            temp_s2_2 = var_s0_2 + var_s6_3;
-                                            temp_s1_4 = var_s0_2 + var_s4_3;
-                                            rec.end_x = *temp_s2_2;
-                                            rec.end_z = *temp_s1_4;
-                                            if (func_80062820(&rec) != 0)
-                                            {
-                                                var_fp_4 += var_s0_2;
-                                                var_s6_3 = temp_s2_2;
-                                                var_s4_3 = temp_s1_4;
-                                                var_s5_5 -= var_s3_4;
-                                                break;
-                                            }
-                                            var_s3_4 -= 1;
-                                            var_s0_2 = var_s3_4;
-                                        } while (var_s3_4 != 0);
+                                        var_fp += var_s0_2;
+                                        var_s6 = temp_s2_2;
+                                        var_s4 = temp_s1_4;
+                                        count -= var_s3_4;
+                                        break;
                                     }
-                                    var_s5_5 -= 1;
-                                } while (var_s5_5 != neg1);
+                                    var_s3_4 -= 1;
+                                    var_s0_2 = var_s3_4;
+                                } while (var_s3_4 != 0);
                             }
-                            var_s5_6 = var_s7_3;
-                            if ((var_t1_5 & 0xFF) && (var_s7_3 >= 2U))
+                            count -= 1;
+                        } while (count != neg1);
+                    }
+                    if ((var_t1_5 & 0xFF) && (var_s7 >= 2U))
+                    {
+                        sp407C = 1;
+                        sm_p0 = path[0][0];
+                        sm0 = &path[0][0];
+                        sm1 = &path[1][0];
+                        sm2 = &path[2][0];
+                        sp405C = sm1[0];
+                        sp4060 = sm2[0];
+                        temp_v0_12 = &path[0][var_s7];
+                        temp_v0_12[0] = *var_fp;
+                        temp_v0_12[0x400] = *var_s6;
+                        temp_v0_12[0x800] = *var_s4;
+                        temp_s0 = sm0[2];
+                        var_fp_5 = sm1[1];
+                        var_s5_7 = sm2[1];
+                        temp_s6 = sm1[2];
+                        sp4064 = temp_s6;
+                        rec.start_x = path[1][0];
+                        temp_v0_13 = var_fp_5 + temp_s6;
+                        start_tile = (u8 *) sm_p0;
+                rec.tile_base = (s32) start_tile;
+                        rec.start_z = path[2][0];
+                        var_t1_5 = 0;
+                        sp4068 = sm2[2];
+                        temp_s4 = temp_v0_13 / 2;
+                        rec.end_x = temp_s4;
+                        temp_s2_3 = (var_s5_7 + sp4068) / 2;
+                        rec.end_z = temp_s2_3;
+                        if (func_80062820(&rec) != 0)
+                        {
+                            rec.tile_base = temp_s0;
+                            rec.start_x = sp4064;
+                            rec.start_z = sp4068;
+                            if (func_80062820(&rec) != 0)
                             {
-                                sp407C = 1;
-                                sm_p0 = path[0][0];
-                                sm0 = &path[0][0];
-                                sm1 = &path[1][0];
-                                sm2 = &path[2][0];
-                                sp405C = sm1[0];
-                                sp4060 = sm2[0];
-                                temp_v0_12 = &path[0][var_s7_3];
-                                temp_v0_12[0] = *var_fp_4;
-                                temp_v0_12[0x400] = *var_s6_3;
-                                temp_v0_12[0x800] = *var_s4_3;
-                                temp_s0 = sm0[2];
-                                var_fp_5 = sm1[1];
-                                var_s5_7 = sm2[1];
-                                temp_s6 = sm1[2];
-                                sp4064 = temp_s6;
-                                rec.start_x = path[1][0];
-                                temp_v0_13 = var_fp_5 + temp_s6;
-                                rec.tile_base = sm_p0;
-                                rec.start_z = path[2][0];
-                                var_t1_5 = 0;
-                                sp4068 = sm2[2];
-                                temp_s4 = temp_v0_13 / 2;
-                                rec.end_x = temp_s4;
-                                temp_s2_3 = (var_s5_7 + sp4068) / 2;
-                                rec.end_z = temp_s2_3;
+                                var_fp_5 = temp_s4;
+                                var_s5_7 = temp_s2_3;
+                                rec.start_x = sp405C;
+                                sp407C = 0;
+                                rec.tile_base = (s32) start_tile;
+                                var_t1_5 = 1;
+                                rec.start_z = sp4060;
+                                temp_s4_2 = (var_fp_5 + sp4064) / 2;
+                                temp_s2_4 = (var_s5_7 + sp4068) / 2;
+                                rec.end_x = temp_s4_2;
+                                rec.end_z = temp_s2_4;
                                 if (func_80062820(&rec) != 0)
                                 {
                                     rec.tile_base = temp_s0;
@@ -6021,174 +5982,155 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                     rec.start_z = sp4068;
                                     if (func_80062820(&rec) != 0)
                                     {
-                                        var_fp_5 = temp_s4;
-                                        var_s5_7 = temp_s2_3;
-                                        rec.start_x = sp405C;
-                                        sp407C = 0;
-                                        temp_v0 = sp4064;
-                                        rec.tile_base = sm_p0;
-                                        var_t1_5 = 1;
-                                        rec.start_z = sp4060;
-                                        temp_s4_2 = (var_fp_5 + temp_v0) / 2;
-                                        temp_s2_4 = (var_s5_7 + sp4068) / 2;
-                                        rec.end_x = temp_s4_2;
-                                        rec.end_z = temp_s2_4;
-                                        if (func_80062820(&rec) != 0)
-                                        {
-                                            rec.tile_base = temp_s0;
-                                            rec.start_x = temp_v0;
-                                            rec.start_z = sp4068;
-                                            if (func_80062820(&rec) != 0)
-                                            {
-                                                var_fp_5 = temp_s4_2;
-                                                var_s5_7 = temp_s2_4;
-                                            }
-                                        }
+                                        var_fp_5 = temp_s4_2;
+                                        var_s5_7 = temp_s2_4;
                                     }
                                 }
-                                if (sp407C != 0)
-                                {
-                                    temp_s4_3 = temp_v0 - var_fp_5;
-                                    var_v0_27 = temp_s4_3;
-                                    rec.tile_base = sm_p0;
-                                    rec.start_x = sp405C;
-                                    rec.start_z = sp4060;
-                                    if (temp_s4_3 < 0)
-                                    {
-                                        var_v0_27 = temp_s4_3 + 3;
-                                    }
-                                    temp_v0_14 = var_fp_5 + (var_v0_27 >> 2);
-                                    sp4080 = temp_v0_14;
-                                    rec.end_x = temp_v0_14;
-                                    temp_s3 = sp4068 - var_s5_7;
-                                    var_v0_28 = temp_s3;
-                                    if (temp_s3 < 0)
-                                    {
-                                        var_v0_28 = temp_s3 + 3;
-                                    }
-                                    temp_s6_2 = var_s5_7 + (var_v0_28 >> 2);
-                                    rec.end_z = temp_s6_2;
-                                    if (func_80062820(&rec) != 0)
-                                    {
-                                        rec.tile_base = temp_s0;
-                                        rec.start_x = temp_v0;
-                                        rec.start_z = sp4068;
-                                        if (func_80062820(&rec) != 0)
-                                        {
-                                            var_t1_5 = 1;
-                                            var_fp_5 = sp4080;
-                                            var_s5_7 = temp_s6_2;
-                                        }
-                                    }
-                                }
-                                sp407C = 1;
-                                rec.start_x = temp_v0;
+                            }
+                        }
+                        if (sp407C != 0)
+                        {
+                            temp_s4_3 = sp4064 - var_fp_5;
+                            var_v0_27 = temp_s4_3;
+                            rec.tile_base = (s32) start_tile;
+                            rec.start_x = sp405C;
+                            rec.start_z = sp4060;
+                            if (temp_s4_3 < 0)
+                            {
+                                var_v0_27 = temp_s4_3 + 3;
+                            }
+                            temp_v0_14 = var_fp_5 + (var_v0_27 >> 2);
+                            sp4080 = temp_v0_14;
+                            rec.end_x = temp_v0_14;
+                            temp_s3 = sp4068 - var_s5_7;
+                            var_v0_28 = temp_s3;
+                            if (temp_s3 < 0)
+                            {
+                                var_v0_28 = temp_s3 + 3;
+                            }
+                            temp_s6_2 = var_s5_7 + (var_v0_28 >> 2);
+                            rec.end_z = temp_s6_2;
+                            if (func_80062820(&rec) != 0)
+                            {
                                 rec.tile_base = temp_s0;
+                                rec.start_x = sp4064;
                                 rec.start_z = sp4068;
-                                temp_s4_4 = (var_fp_5 + sp405C) / 2;
-                                temp_s2_5 = (var_s5_7 + sp4060) / 2;
-                                rec.end_x = temp_s4_4;
-                                rec.end_z = temp_s2_5;
                                 if (func_80062820(&rec) != 0)
                                 {
-                                    rec.tile_base = sm_p0;
+                                    var_t1_5 = 1;
+                                    var_fp_5 = sp4080;
+                                    var_s5_7 = temp_s6_2;
+                                }
+                            }
+                        }
+                        sp407C = 1;
+                        rec.start_x = sp4064;
+                        rec.tile_base = temp_s0;
+                        rec.start_z = sp4068;
+                        temp_s4_4 = (var_fp_5 + sp405C) / 2;
+                        temp_s2_5 = (var_s5_7 + sp4060) / 2;
+                        rec.end_x = temp_s4_4;
+                        rec.end_z = temp_s2_5;
+                        if (func_80062820(&rec) != 0)
+                        {
+                            rec.tile_base = (s32) start_tile;
+                            rec.start_x = sp405C;
+                            rec.start_z = sp4060;
+                            if (func_80062820(&rec) != 0)
+                            {
+                                var_fp_5 = temp_s4_4;
+                                var_s5_7 = temp_s2_5;
+                                rec.start_x = sp4064;
+                                sp407C = 0;
+                                rec.tile_base = temp_s0;
+                                var_t1_5 = 1;
+                                rec.start_z = sp4068;
+                                temp_s4_5 = (var_fp_5 + sp405C) / 2;
+                                temp_s2_6 = (var_s5_7 + sp4060) / 2;
+                                rec.end_x = temp_s4_5;
+                                rec.end_z = temp_s2_6;
+                                if (func_80062820(&rec) != 0)
+                                {
+                                    rec.tile_base = (s32) start_tile;
                                     rec.start_x = sp405C;
                                     rec.start_z = sp4060;
                                     if (func_80062820(&rec) != 0)
                                     {
-                                        var_fp_5 = temp_s4_4;
-                                        var_s5_7 = temp_s2_5;
-                                        rec.start_x = temp_v0;
-                                        sp407C = 0;
-                                        rec.tile_base = temp_s0;
-                                        var_t1_5 = 1;
-                                        rec.start_z = sp4068;
-                                        temp_s4_5 = (var_fp_5 + sp405C) / 2;
-                                        temp_s2_6 = (var_s5_7 + sp4060) / 2;
-                                        rec.end_x = temp_s4_5;
-                                        rec.end_z = temp_s2_6;
-                                        if (func_80062820(&rec) != 0)
-                                        {
-                                            rec.tile_base = sm_p0;
-                                            rec.start_x = sp405C;
-                                            rec.start_z = sp4060;
-                                            if (func_80062820(&rec) != 0)
-                                            {
-                                                var_fp_5 = temp_s4_5;
-                                                var_s5_7 = temp_s2_6;
-                                            }
-                                        }
+                                        var_fp_5 = temp_s4_5;
+                                        var_s5_7 = temp_s2_6;
                                     }
-                                }
-                                if (sp407C != 0)
-                                {
-                                    temp_s3_2 = sp405C - var_fp_5;
-                                    var_v0_30 = temp_s3_2;
-                                    rec.tile_base = temp_s0;
-                                    rec.start_x = temp_v0;
-                                    rec.start_z = sp4068;
-                                    if (temp_s3_2 < 0)
-                                    {
-                                        var_v0_30 = temp_s3_2 + 3;
-                                    }
-                                    temp_s6_3 = var_fp_5 + (var_v0_30 >> 2);
-                                    rec.end_x = temp_s6_3;
-                                    temp_s2_7 = sp4060 - var_s5_7;
-                                    var_v0_31 = temp_s2_7;
-                                    if (temp_s2_7 < 0)
-                                    {
-                                        var_v0_31 = temp_s2_7 + 3;
-                                    }
-                                    temp_s4_6 = var_s5_7 + (var_v0_31 >> 2);
-                                    rec.end_z = temp_s4_6;
-                                    if (func_80062820(&rec) != 0)
-                                    {
-                                        rec.tile_base = sm_p0;
-                                        final_x = sp405C;
-                                        rec.start_x = final_x;
-                                        rec.start_z = sp4060;
-                                        if (func_80062820(&rec) != 0)
-                                        {
-                                            var_t1_5 = 1;
-                                            var_fp_5 = temp_s6_3;
-                                            var_s5_7 = temp_s4_6;
-                                        }
-                                    }
-                                }
-                                if ((var_t1_5 & 0xFF) != 0)
-                                {
-                                    temp_s4_3 = 1;
-                                    path[1][1] = var_fp_5;
-                                    path[2][temp_s4_3] = var_s5_7;
                                 }
                             }
-                            if (var_s5_6 >= 0x11U)
+                        }
+                        if (sp407C != 0)
+                        {
+                            temp_s3_2 = sp405C - var_fp_5;
+                            var_v0_30 = temp_s3_2;
+                            rec.tile_base = temp_s0;
+                            rec.start_x = sp4064;
+                            rec.start_z = sp4068;
+                            if (temp_s3_2 < 0)
                             {
-                                var_s5_6 = 0x10;
+                                var_v0_30 = temp_s3_2 + 3;
                             }
-                            var_s6_4 = &path[1][var_s7_3 - 1];
-                            var_s4_4 = &path[2][var_s7_3 - 1];
-                            var_s5_8 = var_s5_6 - 1;
-                            var_s3 = 0;
-                            if (var_s5_8 != neg1)
+                            temp_s6_3 = var_fp_5 + (var_v0_30 >> 2);
+                            rec.end_x = temp_s6_3;
+                            temp_s2_7 = sp4060 - var_s5_7;
+                            var_v0_31 = temp_s2_7;
+                            if (temp_s2_7 < 0)
                             {
-                                var_a2_2 = output_path;
-                                do
-                                {
-                                    temp_v1_42 = *var_s6_4;
-                                    var_s6_4 -= 1;
-                                    var_s3 += 1;
-                                    var_s5_8 -= 1;
-                                    var_a2_2->x = (temp_v1_42 + ((s32) (start_query->width << 0x10) >> 0x11)) << 8;
-                                    temp_v1_43 = *var_s4_4;
-                                    var_s4_4 -= 1;
-                                    var_a2_2->z = (temp_v1_43 + ((s32) (start_query->depth << 0x10) >> 0x11)) << 8;
-                                    var_a2_2 += 1;
-                                } while (var_s5_8 != neg1);
+                                var_v0_31 = temp_s2_7 + 3;
                             }
-                            return var_s3;
+                            temp_s4_6 = var_s5_7 + (var_v0_31 >> 2);
+                            rec.end_z = temp_s4_6;
+                            if (func_80062820(&rec) != 0)
+                            {
+                                rec.tile_base = (s32) start_tile;
+                                final_x = sp405C;
+                                rec.start_x = final_x;
+                                rec.start_z = sp4060;
+                                if (func_80062820(&rec) != 0)
+                                {
+                                    var_t1_5 = 1;
+                                    var_fp_5 = temp_s6_3;
+                                    var_s5_7 = temp_s4_6;
+                                }
+                            }
+                        }
+                        if ((var_t1_5 & 0xFF) != 0)
+                        {
+                            temp_s4_3 = 1;
+                            path[1][1] = var_fp_5;
+                            path[2][temp_s4_3] = var_s5_7;
                         }
                     }
+                    count = var_s7;
+                    if (count >= 0x11U)
+                    {
+                        count = 0x10;
+                    }
+                    var_s6 = &path[1][var_s7 - 1];
+                    var_s4 = &path[2][var_s7 - 1];
+                    count = count - 1;
+                    var_s3 = 0;
+                    if (count != neg1)
+                    {
+                        var_a2_2 = output_path;
+                        do
+                        {
+                            temp_v1_42 = *var_s6;
+                            var_s6 -= 1;
+                            var_s3 += 1;
+                            count -= 1;
+                            var_a2_2->x = (temp_v1_42 + ((s32) (start_query->width << 0x10) >> 0x11)) << 8;
+                            temp_v1_43 = *var_s4;
+                            var_s4 -= 1;
+                            var_a2_2->z = (temp_v1_43 + ((s32) (start_query->depth << 0x10) >> 0x11)) << 8;
+                            var_a2_2 += 1;
+                        } while (count != neg1);
+                    }
+                    return var_s3;
+                
                 }
                 goto write_pos;
             }
