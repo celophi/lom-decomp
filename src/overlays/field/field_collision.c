@@ -366,8 +366,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @param mover Mover state updated with resolved position, height, contact node, and flags.
  * @return Collision-resolution status bitmask.
  *
- * @see decomp.me (99.876960%) https://decomp.me/scratch/N2GNJ
- * @note Active matching scratch: working/func_8005B6AC/code.c; see its status.md.
+ * @see decomp.me (100%) https://decomp.me/scratch/N2GNJ
  */
 s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 dead_920;
@@ -1021,8 +1020,8 @@ return_zero:
 
             }
             temp_a0_7 = sp28->header;
-            temp_v1_9 = (s16)var_s0;
-            temp_v1_9 += (u16)mover->mode_flags;
+            f_upper_raw = var_s0 + (u16)mover->mode_flags;
+            temp_v1_9 = f_upper_raw;
             if (((FieldCollisionHeaderBounds*)temp_a0_7)->unk2C & 2) {
                 if (((s16)var_s0 < 0) || (temp_v1_9 >= ((FieldCollisionHeaderBounds*)temp_a0_7)->unk32)) {
                     var_s5 = func_8005E1A8(NULL, 0x7F, sp58, var_s5);
@@ -1036,7 +1035,8 @@ return_zero:
             var_t7 = sp20;
             var_t7 -= 1;
             *(s32*)&sp24 = 0;
-            if (var_t7 != -1) {
+            if (var_t7 == -1) goto e_nodes_done;
+            {
                 e_x_min = (s16) temp_s1;
                 sp74 = (s16)var_s0;
                 sp70 = temp_v1_9;
@@ -1171,9 +1171,10 @@ return_zero:
                             }
                         }
                     }
-                    var_t7 -= 1;
+                    do { var_t7 -= 1; } while (0);
                 } while (var_t7 != -1);
             }
+        e_nodes_done:
             if (var_s5 != -2) {
                 break;
             }
@@ -1247,15 +1248,15 @@ return_zero:
             footprint_depth = (u16)mover->mode_flags;
             var_a3_2 = 0;
             k_blocked = 0x8000;
-            temp_a0_11 = sp28->header;
+            temp_a0_7 = sp28->header;
             f_upper_raw = var_s0 + (u16)footprint_depth;
             temp_v1_9 = f_upper_raw;
-            if (((FieldCollisionHeaderBounds*)temp_a0_11)->unk2C & 2) {
+            if (((FieldCollisionHeaderBounds*)temp_a0_7)->unk2C & 2) {
                 if ((s16)var_s0 < 0) {
                     var_a3_2 = -(s16)var_s0;
                     var_t8 = 1;
                 } else {
-                    temp_a0_12 = ((FieldCollisionHeaderBounds*)temp_a0_11)->unk32;
+                    temp_a0_12 = ((FieldCollisionHeaderBounds*)temp_a0_7)->unk32;
                     if (temp_v1_9 >= temp_a0_12) {
                         var_a3_2 = (temp_a0_12 - temp_v1_9) - 1;
                         var_t8 = 1;
@@ -1548,11 +1549,13 @@ return_zero:
         }
         sp84 = 0xFFFFFF;
         var_s2 = 0;
-        var_s4_3 = 0;
-        var_a3 = 0;
-        var_v0_34 = mover->x;
-        var_fp = NULL;
-        mover->collision_node = NULL;
+        do {
+            var_s4_3 = 0;
+            var_a3 = 0;
+            var_v0_34 = mover->x;
+            var_fp = NULL;
+            mover->collision_node = NULL;
+        } while (0);
         if (var_v0_34 < 0) {
             var_v0_34 = (var_v0_34 + 0xFF) >> 8;
         } else {
@@ -1646,11 +1649,10 @@ return_zero:
                             if (height_threshold < temp_v0_17) {
                                 var_s2 = temp_v0_17;
                                 {
-                                    s32 fixed_height = ((FieldCollisionNode*)sp2C)->unk38 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8);
+                                    var_s4_3 = ((FieldCollisionNode*)sp2C)->unk38 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8);
                                     if (var_t8 != 0) {
                                         mover->collision_node = sp2C;
                                     }
-                                    var_s4_3 = fixed_height;
                                 }
                             }
                         } else {
@@ -1658,11 +1660,10 @@ return_zero:
                             if (temp_v1_26 >= var_s2) {
                                 var_s2 = temp_v1_26;
                                 {
-                                    s32 fixed_height = ((FieldCollisionNode*)sp2C)->unk38 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8);
+                                    var_s4_3 = ((FieldCollisionNode*)sp2C)->unk38 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8);
                                     if (var_t8 != 0) {
                                         mover->collision_node = sp2C;
                                     }
-                                    var_s4_3 = fixed_height;
                                 }
                             }
                         }
@@ -1704,7 +1705,6 @@ return_zero:
                                 mover->resolved_height = (s32) -(var_s2 << 8);
                                 var_fp = sp2C;
                             } else {
-                                var_a3 = 1;
                                 if (var_v0_37 != 0) {
                                     var_s2 = var_s0;
                                     var_s4_3 = var_s2 << 8;
@@ -1712,10 +1712,10 @@ return_zero:
                                         mover->collision_node = sp2C;
                                     }
                                 }
+                                var_a3 = 1;
                             }
                         } else {
                             var_v0_37 = var_s2 < (var_s0 + 0x14);
-                            var_a3 = 1;
                             if (var_v0_37 != 0) {
                                 var_s2 = var_s0;
                                 var_s4_3 = var_s2 << 8;
@@ -1723,6 +1723,7 @@ return_zero:
                                     mover->collision_node = sp2C;
                                 }
                             }
+                            var_a3 = 1;
                         }
                     } else {
                         if (var_v1_4 < sp84) {

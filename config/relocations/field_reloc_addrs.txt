@@ -26,6 +26,11 @@ rom:0x10A8D reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10A91 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10AD9 reloc:MIPS_NONE symbol:D_1F800008
 
+// func_80091438: the branch-delay-slot page load at 0x800914A8 is the
+// high half of D_800EB22C. Splat loses the relocation on this control-flow
+// path even though GCC emits the same instruction with an R_MIPS_HI16 reloc.
+rom:0x41839 reloc:MIPS_HI16 symbol:D_800EB22C
+
 // func_800920FC: 0x801ED400 is a fixed field-work-area address. Splat
 // auto-symbolizes the literal load as D_801ED400; preserve the retail literal.
 rom:0x424A1 reloc:MIPS_NONE symbol:D_801ED400
