@@ -239,7 +239,7 @@ segments:
       # TU hypothesis: field_actor_camera (high). See docs/decompilation/field-boundaries/map.md.
       - [0x41F59, c, func_80091BC8] # gcc272_cdk, 93.889910% WIP
       - [0x4210D, c, func_80091D7C] # gcc272_cdk, 100%
-      - [0x4248D, c, func_800920FC]                # gcc272_cdk, 99% (register allocation)
+      - [0x4248D, c, func_800920FC]                # gcc272_cdk, 100%
       - [0x424B5, c, func_80092124]                # gcc272_cdk, 100%
       # TU hypothesis: field_actor_state_updates (medium; starts inside this source). See docs/decompilation/field-boundaries/map.md.
       - [0x42591, c, field_actor_idle_ops]      # gcc272_cdk, func_80092200 .. func_80092550 (6 funcs; 100%)

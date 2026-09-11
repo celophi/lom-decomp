@@ -82,7 +82,7 @@ void func_800922B8(void)
 }
 
 /**
- * @brief Clears the interpolation state and seeds the active bounds value.
+ * @brief Clear the interpolation state and seed both active bounds from the field bounds block.
  */
 void func_80092394(void)
 {
