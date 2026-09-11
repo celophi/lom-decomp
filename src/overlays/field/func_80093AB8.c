@@ -101,11 +101,11 @@ s32 func_80093AB8(Actor *input)
                                     {
                                         goto cancel_pending;
                                     }
-                                    goto check_next_mode;
+                                    goto check_mode;
                                 }
                                 goto check_mode;
                             }
-                            goto check_next_mode;
+                            goto check_mode;
                         }
                     }
                 cancel_pending:
@@ -122,8 +122,6 @@ s32 func_80093AB8(Actor *input)
     clear_pending_counter:
         D_80105AE0[actor->unk3A].unk18D = 0;
         actor->unk30 = 0U;
-    check_next_mode:
-        goto check_mode;
     }
 check_mode:
     object_index = actor->unk3A;
@@ -139,7 +137,9 @@ check_mode:
             actor->unk30 = 0;
             reset_slot = &D_80105AE0[actor->unk3A];
         reset_actor:
-            reset_slot->unkC &= clear_mask;
+            flags = reset_slot->unkC;
+            flags &= clear_mask;
+            reset_slot->unkC = flags;
             func_8006C5FC(actor);
             actor->unk2A = 0x95;
             actor->unk20 = 0x14;

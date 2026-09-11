@@ -1,116 +1,88 @@
 #include "common.h"
-
-/** @brief Partial PrimSprt20 layout used by func_800ADCD0. */
-typedef struct
-{
-    u32 tag;
-    u32 rgbc;
-    s16 x0;
-    s16 y0;
-    u8 u0;
-    u8 v0;
-    u16 clut;
-    s16 w;
-    s16 h;
-} PrimSprt20;
-
-/** @brief Partial SizeRec layout used by func_800ADCD0. */
-typedef struct
-{
-    u16 unk0;
-    u16 unk2;
-    s16 unk4;
-    s16 unk6;
-} SizeRec;
-
-/** @brief Partial UVRec layout used by func_800ADCD0. */
-typedef struct
-{
-    u8 unk0;
-    u8 unk1;
-    u8 unk2;
-    u8 unk3;
-    s16 unk4;
-    s16 unk6;
-} UVRec;
+#include "sdk/libgpu.h"
 
 extern s32 g_menu_element_counter;
 
 /**
  * @brief Tile a rectangle with sprite primitives and link them into an ordering table.
- * @param arg0 Next free primitive-buffer address.
- * @param arg1 Ordering-table entry receiving the primitive chain.
- * @param arg2 Destination rectangle position and dimensions.
- * @param arg3 Texture origin and maximum tile dimensions.
+ * @param packet_cursor Next free primitive-buffer address.
+ * @param ordering_table Ordering-table entry receiving the primitive chain.
+ * @param destination Destination rectangle position and dimensions.
+ * @param texture Texture origin and maximum tile dimensions.
  * @return The first free buffer address after the emitted primitives.
- * @note WIP: allocation and instruction-order differences remain.
  */
-void *func_800ADCD0(void *arg0, u32 *arg1, SizeRec *arg2, UVRec *arg3)
+void *func_800ADCD0(void *packet_cursor, u32 *ordering_table, RECT *destination, RECT *texture)
 {
-    s32 rows_h;
-    s32 cols_w;
-    s32 y_accum;
-    s32 x_accum;
-    s32 seg_h;
-    s32 seg_w;
-    u32 tmp;
-    s32 tag_len;
-    s32 code_byte;
+    s32 remaining_height;
+    s32 remaining_width;
+    s32 y_offset;
+    s32 x_offset;
+    s32 tile_height;
+    s32 tile_width;
+    u32 primitive_addr;
+    s32 tag_length;
+    s32 command;
     s16 clut;
-    s32 rgbc_const;
-    s32 mask_lo;
-    s32 mask_hi;
+    s32 color_word;
+    s32 tag_length_mask;
 
-    if (arg2->unk4 > 0)
+    if (destination->w > 0)
     {
-        if (arg2->unk6 > 0)
+        if (destination->h > 0)
         {
-            y_accum = 0;
-            rows_h = arg2->unk6;
-            rgbc_const = 0x808080;
-            tag_len = 4;
-            code_byte = 0x64;
-            mask_lo = 0xFFFFFF;
+            y_offset = 0;
+            remaining_height = destination->h;
+            color_word = 0x808080;
+            tag_length = 4;
+            command = 0x64;
             do
             {
-                x_accum = 0;
-                seg_h = (arg3->unk6 < rows_h) ? arg3->unk6 : rows_h;
-                cols_w = arg2->unk4;
-                mask_hi = 0xFF000000;
+                x_offset = 0;
+                tile_height = remaining_height;
+                if (texture->h < remaining_height)
+                {
+                    tile_height = texture->h;
+                }
+                remaining_width = destination->w;
+                tag_length_mask = 0xFF000000;
                 do
                 {
-                    seg_w = (arg3->unk4 < cols_w) ? arg3->unk4 : cols_w;
+                    tile_width = remaining_width;
+                    if (texture->w < remaining_width)
+                    {
+                        tile_width = texture->w;
+                    }
 
-                    ((PrimSprt20 *)arg0)->rgbc = rgbc_const;
-                    ((u8 *)arg0)[3] = tag_len;
-                    ((u8 *)arg0)[7] = code_byte;
-                    ((PrimSprt20 *)arg0)->x0 = (s16)(arg2->unk0 + x_accum);
-                    ((PrimSprt20 *)arg0)->y0 = (s16)(arg2->unk2 + y_accum);
-                    ((PrimSprt20 *)arg0)->u0 = arg3->unk0;
-                    ((PrimSprt20 *)arg0)->v0 = arg3->unk2;
-                    ((PrimSprt20 *)arg0)->w = seg_w;
-                    ((PrimSprt20 *)arg0)->h = seg_h;
+                    *(u32 *)&((SPRT *)packet_cursor)->r0 = color_word;
+                    setlen((SPRT *)packet_cursor, tag_length);
+                    setcode((SPRT *)packet_cursor, command);
+                    ((SPRT *)packet_cursor)->x0 = (s16)((u16)destination->x + x_offset);
+                    ((SPRT *)packet_cursor)->y0 = (s16)((u16)destination->y + y_offset);
+                    ((SPRT *)packet_cursor)->u0 = (u8)texture->x;
+                    ((SPRT *)packet_cursor)->v0 = (u8)texture->y;
+                    ((SPRT *)packet_cursor)->w = tile_width;
+                    ((SPRT *)packet_cursor)->h = tile_height;
                     clut = 0x7CD0;
                     if (g_menu_element_counter != 0)
                     {
                         clut = 0x7D10;
                     }
-                    ((PrimSprt20 *)arg0)->clut = clut;
+                    ((SPRT *)packet_cursor)->clut = clut;
 
-                    ((PrimSprt20 *)arg0)->tag = (((PrimSprt20 *)arg0)->tag & mask_hi) | (*arg1 & mask_lo);
-                    tmp = (u32)arg0 & mask_lo;
-                    arg0 = (u8 *)arg0 + 0x14;
-                    *arg1 = (*arg1 & mask_hi) | tmp;
+                    ((SPRT *)packet_cursor)->tag = (((SPRT *)packet_cursor)->tag & tag_length_mask) | (*ordering_table & 0xFFFFFF);
+                    primitive_addr = (u32)packet_cursor & 0xFFFFFF;
+                    *ordering_table = (*ordering_table & tag_length_mask) | (primitive_addr & 0xFFFFFF);
+                    packet_cursor = (u8 *)packet_cursor + sizeof(SPRT);
 
-                    x_accum += seg_w;
-                    cols_w -= seg_w;
-                } while (cols_w != 0);
+                    x_offset += tile_width;
+                    remaining_width -= tile_width;
+                } while (remaining_width != 0);
 
-                rows_h -= seg_h;
-                y_accum += seg_h;
-            } while (rows_h != 0);
+                remaining_height -= tile_height;
+                y_offset += tile_height;
+            } while (remaining_height != 0);
         }
-        return arg0;
+        return packet_cursor;
     }
-    return arg0;
+    return packet_cursor;
 }

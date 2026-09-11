@@ -97,6 +97,22 @@ typedef struct
     s32 unk418;
 } FieldStateB19FC;
 
+typedef struct
+{
+    u8 pad0[4];
+    u32 flags;
+    u8 pad8[8];
+    u8 *state;
+    u8 pad14[0x68 - 0x14];
+} FieldStatusRecord;
+
+typedef struct
+{
+    s32 unk0;
+    u8 pad4[0x28 - 4];
+    FieldStatusRecord records[11];
+} FieldStatusContext;
+
 
 
 
@@ -109,67 +125,55 @@ void func_800B4F80();
 s32 func_800BD414(s32 arg0, s32 arg1);
 
 /**
- * @brief Run the two update passes over eleven flagged field records.
- * @note The first three records receive additional updates in the first pass.
- * @note WIP: address recomputation and temporary-register differences remain.
+ * @brief Run two update passes over the active field status records.
  */
 void func_800B49C0(void)
 {
-    s32 var_s0;
-    s32 var_s1;
-    s32 var_s2;
+    s32 i;
     s32 keep;
 
-    if ((D_80123FB0 != NULL) && (*(s32 *)D_80123FB0 >= 0))
+    if ((D_80123FB0 != NULL) && (((FieldStatusContext *)D_80123FB0)->unk0 >= 0))
     {
-        var_s1 = 0;
+        i = 0;
         func_800B4B44();
-        var_s0 = 0x28;
-        var_s2 = 0;
         do
         {
-            if ((*(u32 *)((u8 *)D_80123FB0 + var_s2 + 0x2C) >> 8) & 1)
+            if ((((FieldStatusContext *)D_80123FB0)->records[i].flags >> 8) & 1)
             {
                 if (func_800BD414(0, 0xFFD) == 0)
                 {
-                    keep = var_s1 < 3;
+                    keep = i < 3;
                 }
                 else
                 {
-                    if (*((u8 *)D_80123FB0 + var_s2 + 0x2C) < 2)
+                    if ((u8)((FieldStatusContext *)D_80123FB0)->records[i].flags < 2)
                     {
-                        *(u16 *)(*(u8 **)((u8 *)D_80123FB0 + var_s2 + 0x38) + 0x48) = 0xFF;
+                        *(u16 *)(((FieldStatusContext *)D_80123FB0)->records[i].state + 0x48) = 0xFF;
                     }
-                    keep = var_s1 < 3;
+                    keep = i < 3;
                 }
-                if (keep != 0)
+                if (keep)
                 {
-                    func_800B4D1C((u8 *)D_80123FB0 + var_s0);
-                    func_800B4F80((u8 *)D_80123FB0 + var_s0);
+                    func_800B4D1C(&((FieldStatusContext *)D_80123FB0)->records[i]);
+                    func_800B4F80(&((FieldStatusContext *)D_80123FB0)->records[i]);
                 }
-                func_800B4DF0((u8 *)D_80123FB0 + var_s0);
+                func_800B4DF0(&((FieldStatusContext *)D_80123FB0)->records[i]);
             }
-            var_s0 += 0x68;
-            var_s1 += 1;
-            var_s2 += 0x68;
-        } while (var_s1 < 0xB);
+            i++;
+        } while (i < 11);
 
-        var_s1 = 0;
-        if (!(((FieldStateB19FC *)D_80122B78)->unkBC & 0xF))
+        i = 0;
+        if ((((FieldStateB19FC *)D_80122B78)->unkBC & 0xF) == 0)
         {
-            var_s0 = 0x28;
-            var_s2 = 0;
             do
             {
-                if ((*(u32 *)((u8 *)D_80123FB0 + var_s2 + 0x2C) >> 8) & 1)
+                if ((((FieldStatusContext *)D_80123FB0)->records[i].flags >> 8) & 1)
                 {
-                    func_800B4E60((u8 *)D_80123FB0 + var_s0);
-                    func_800B4F38((u8 *)D_80123FB0 + var_s0);
+                    func_800B4E60(&((FieldStatusContext *)D_80123FB0)->records[i]);
+                    func_800B4F38(&((FieldStatusContext *)D_80123FB0)->records[i]);
                 }
-                var_s0 += 0x68;
-                var_s1 += 1;
-                var_s2 += 0x68;
-            } while (var_s1 < 0xB);
+                i++;
+            } while (i < 11);
         }
     }
 }

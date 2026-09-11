@@ -161,50 +161,58 @@ extern u8 g_menuLayoutBuffer[];
 /** @brief Remove spent records and compact the four-entry pending table. */
 void func_800C8E2C(void)
 {
-    s32 i;
     u8 *rec;
     s32 outer_i;
     s32 src_off;
     u8 *scan;
+    u8 *base;
     u8 *dest_base;
     s32 inner_i;
     s32 off;
     u8 *a1;
     u8 *s0;
+    s32 dest_off;
 
-    i = 0;
+    outer_i = 0;
     rec = g_menuLayoutBuffer;
-    do
-
-{
+clear_records:
+    {
         if (rec[0x3160] != 0 && *(s32 *)(rec + 0x3194) == 0)
         {
             rec[0x3160] = 0;
         }
-        i += 1;
+        outer_i += 1;
         rec += 0x40;
-    } while (i < 4);
+    }
+    if (outer_i < 4)
+    {
+        goto clear_records;
+    }
 
     outer_i = 0;
-    scan = g_menuLayoutBuffer;
-    dest_base = scan + 0x3160;
-    src_off = 0;
-    do
-
-{
+    base = g_menuLayoutBuffer;
+    dest_base = base + 0x3160;
+    src_off = outer_i;
+    scan = base;
+compact_records:
+    {
         if (scan[0x3160] == 0 && *(s32 *)(scan + 0x3194) == 0)
         {
             inner_i = outer_i + 1;
-            off = inner_i << 6;
             if (inner_i < 4)
             {
-                a1 = off + dest_base;
-                s0 = off + g_menuLayoutBuffer;
+                off = inner_i << 6;
+                dest_off = src_off;
+                a1 = (u8 *)((u32)off + (u32)dest_base);
+                s0 = (u8 *)((u32)off + (u32)base);
             loop_10:
                 inner_i += 1;
                 if (s0[0x3160] != 0)
                 {
-                    func_800A8F8C(src_off + dest_base, a1);
+                    do
+                    {
+                        func_800A8F8C((void *)((u32)dest_off + (u32)dest_base), a1);
+                    } while (0);
                     s0[0x3160] = 0;
                     *(s32 *)(s0 + 0x3194) = 0;
                 }
@@ -222,7 +230,11 @@ void func_800C8E2C(void)
         src_off += 0x40;
         outer_i += 1;
         scan += 0x40;
-    } while (outer_i < 4);
+    }
+    if (outer_i < 4)
+    {
+        goto compact_records;
+    }
 }
 
 

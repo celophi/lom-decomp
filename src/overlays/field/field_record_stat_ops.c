@@ -242,23 +242,30 @@ extern volatile u8 D_800F0C38[];
  */
 void func_800B7D10(Source *source, Result *result)
 {
-    u32 y;
     result->pairs[0].x = (s8)D_800F0C38[source->n0] + result->pairs[0].x;
-    y = result->pairs[0].y;
-    y += (s8)D_800F0C38[source->n1];
-    result->pairs[0].y = y;
+    {
+        u32 y = result->pairs[0].y;
+        y += (s8)D_800F0C38[source->n1];
+        result->pairs[0].y = y;
+    }
     result->pairs[1].x = (s8)D_800F0C38[source->n2] + result->pairs[1].x;
-    y = result->pairs[1].y;
-    y += (s8)D_800F0C38[source->n3];
-    result->pairs[1].y = y;
+    {
+        u32 y = result->pairs[1].y;
+        y += (s8)D_800F0C38[source->n3];
+        result->pairs[1].y = y;
+    }
     result->pairs[2].x = (s8)D_800F0C38[source->n4] + result->pairs[2].x;
-    y = result->pairs[2].y;
-    y += (s8)D_800F0C38[source->n5];
-    result->pairs[2].y = y;
+    {
+        u32 y = result->pairs[2].y;
+        y += (s8)D_800F0C38[source->n5];
+        result->pairs[2].y = y;
+    }
     result->pairs[3].x = (s8)D_800F0C38[source->n6] + result->pairs[3].x;
-    y = result->pairs[3].y;
-    y += (s8)D_800F0C38[source->n7];
-    result->pairs[3].y = y;
+    {
+        u32 y = result->pairs[3].y;
+        y += (s8)D_800F0C38[source->n7];
+        result->pairs[3].y = y;
+    }
 }
 
 /** @brief Apply four packed record modifiers and clamp the selected stat to 1-99. */

@@ -3,70 +3,54 @@
 #include "sdk/memory.h"
 
 /**
- * @brief Add four black, one-pixel-offset copies of a sprite group.
+ * @brief Add four black one-pixel-offset copies of a sprite group.
  * @param ordering_table Ordering-table entry receiving the copied sprites.
- * @param primitive_buffer First free primitive address after the template group.
- * @param sprite_count Number of sprites in the fixed template group.
- * @return First free primitive address after the four copied groups.
- * @note Match: 99.505160% gcc272_cdk; six independent prologue rows differ.
- * @see decomp.me WIP
+ * @param sprite_cursor First free sprite after the template group.
+ * @param sprite_count Number of sprites in the template group.
+ * @return First free sprite after the four copied groups.
  */
-s32 *func_800AD658(s32 *ordering_table, s32 *primitive_buffer, s32 sprite_count)
+SPRT *func_800AD658(s32 *ordering_table, SPRT *sprite_cursor, s32 sprite_count)
 {
-    SPRT *cur;
-    SPRT *base;
-    s32 dir;
-    u32 mask_hi;
-    s32 stride;
+    SPRT *source = sprite_cursor;
+    s32 direction = 0;
     s32 count;
-    u16 val;
-    SPRT *rec;
+    SPRT *sprite;
 
-    cur = (SPRT *)primitive_buffer;
-    /* The template remains relative to the original buffer position. */
-    base = cur;
-    dir = 0;
-    stride = sprite_count * 0x14;
     do
     {
-        bcopy((u8 *)base - stride, (u8 *)cur, stride);
+        bcopy((u8 *)(source - sprite_count), (u8 *)sprite_cursor, sprite_count * sizeof(SPRT));
         count = 0;
         if (sprite_count > 0)
         {
-            rec = cur;
+            sprite = sprite_cursor;
             do
             {
-                rec->b0 = 0;
-                rec->g0 = 0;
-                rec->r0 = 0;
-                switch (dir)
+                sprite->b0 = 0;
+                sprite->g0 = 0;
+                sprite->r0 = 0;
+                switch (direction)
                 {
                     case 0:
-                        rec->x0 = rec->x0 + 1;
+                        sprite->x0++;
                         break;
                     case 1:
-                        rec->x0 = rec->x0 - 1;
+                        sprite->x0--;
                         break;
                     case 2:
-                        val = rec->y0 + 1;
-                        goto store_y;
+                        sprite->y0++;
+                        break;
                     default:
-                        val = rec->y0 - 1;
-                    store_y:
-                        rec->y0 = val;
+                        sprite->y0--;
                         break;
                 }
-                /* Keep this mask local to the inner loop across bcopy calls. */
-                mask_hi = 0xFF000000;
-                rec = (SPRT *)((u8 *)rec + 0x14);
+                sprite++;
                 count++;
-                cur->tag = (cur->tag & mask_hi) | (*ordering_table & 0xFFFFFF);
-                *ordering_table = (*ordering_table & mask_hi) | ((s32)cur & 0xFFFFFF);
-                cur = (SPRT *)((u8 *)cur + 0x14);
+                addPrim(ordering_table, sprite_cursor);
+                sprite_cursor++;
             } while (count < sprite_count);
         }
-        dir++;
-    } while (dir < 4);
+        direction++;
+    } while (direction < 4);
 
-    return (s32 *)cur;
+    return sprite_cursor;
 }

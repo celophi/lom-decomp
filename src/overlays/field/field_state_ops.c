@@ -220,15 +220,16 @@ void func_800B2B54(Actor *source, Actor *target, s32 flags, s32 type, s32 chance
         }
         mask = 0;
         i = mask;
-        slot = (Actor *)((u8 *)target + i);
         do
         {
-            if ((u32)(slot->slots[0] - 0x60) < 0x10)
+            do
             {
-                mask |= table[slot->slots[0] - 0x60];
-            }
+                if ((u32)(target->slots[i] - 0x60) < 0x10)
+                {
+                    mask |= table[target->slots[i] - 0x60];
+                }
+            } while (0);
             i++;
-            slot = (Actor *)((u8 *)target + i);
         } while (i < 3);
         if (mask & D_800F0B28[type])
         {

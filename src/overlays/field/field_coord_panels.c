@@ -39,9 +39,6 @@ void func_800A8E28(u8 *dest, u8 *src);
 s32 func_800AEAC0(s32 handle, void *arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
 s32 func_800AF950(s32 handle, void *arg1, u8 *str, s32 arg3, s32 x, s32 y, s32 arg6, s32 arg7, s32 arg8, s32 arg9, s32 arg10, s32 arg11);
 
-/** @brief Resolve a string-table entry: table base plus its 16-bit offset. */
-#define STR_TABLE_ENTRY(sym, off) ((u8 *)(((sym).unk1 << 8) + (sym).unk0 + ((u8 *)&(sym) - (off))))
-
 /** @brief True for a DBCS lead byte (0x19-0x1F), which owns the following byte. */
 #define IS_DBCS(c) ((u32)((c) - 0x19) < 7)
 
@@ -115,6 +112,7 @@ s32 func_800AF950(s32 handle, void *arg1, u8 *str, s32 arg3, s32 x, s32 y, s32 a
 
 /** @brief Shared strcat body: append @p s_ after the last glyph of @p d_. */
 #define STR_CAT_BODY(d_, s_, qsrc)                                    \
+    {                                                                 \
         volatile u8 *p = d_;                                          \
         s32 len_d = 0;                                                \
         volatile u8 *q;                                               \
@@ -130,7 +128,8 @@ s32 func_800AF950(s32 handle, void *arg1, u8 *str, s32 arg3, s32 x, s32 y, s32 a
         {                                                             \
             d_[i + append] = s_[i];                                   \
         }                                                             \
-        d_[i + append] = 0;
+        d_[i + append] = 0;                                           \
+    }
 
 /** @brief Append buffer @p s onto @p d. */
 #define STR_CAT(d, s)                                                 \
@@ -144,7 +143,8 @@ s32 func_800AF950(s32 handle, void *arg1, u8 *str, s32 arg3, s32 x, s32 y, s32 a
 #define STR_CAT_ENTRY(d, sym, off)                                    \
     {                                                                 \
         u8 *d_ = (d);                                                 \
-        u8 *s_ = STR_TABLE_ENTRY(sym, off);                                \
+        u8 *s_ = (u8 *)(((sym).unk1 << 8) + (sym).unk0);             \
+        s_ += (s32)((u8 *)&(sym) - (off));                            \
         STR_CAT_BODY(d_, s_, s_)                                      \
     }
 
@@ -161,10 +161,6 @@ s32 func_800AF950(s32 handle, void *arg1, u8 *str, s32 arg3, s32 x, s32 y, s32 a
  *
  * @param arg0 Block holding the draw handle at 0x40B8.
  * @return 1 once the panel has fully slid out (state 3), otherwise 0.
- * @note 99.92% (943/959 rows): the only residue is the register holding the
- *       16-bit offset sum inside STR_CAT_ENTRY (target lands it in the entry
- *       pointer's register, ours in a temp) at the four call sites.
- * @see decomp.me (99.92%) TODO
  */
 s32 func_800AB86C(ArgA *arg0)
 {
@@ -246,10 +242,8 @@ s32 func_800AB86C(ArgA *arg0)
  *
  * @param arg0 Block holding the draw handle at 0x40B8.
  * @return 1 once the panel has fully slid out (state 3), otherwise 0.
- * @note 99.91% (552/562 rows): the STR_CAT_ENTRY offset-sum register residue
- *       (see func_800AB86C) at two sites, plus one register pick for the
- *       second record-address computation.
- * @see decomp.me (99.91%) TODO
+ * @note 99.98%: the remaining residue is the register chosen for the second
+ *       record-address computation.
  */
 s32 func_800AC768(ArgA *arg0)
 {

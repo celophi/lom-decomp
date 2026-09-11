@@ -48,7 +48,7 @@ extern void func_800AA570(void *, s32);
 extern s32 cdrom_get_error_status(void);
 extern void func_800AA7A4(void);
 extern s32 func_8005B218(void);
-extern void func_800AA498(void);
+extern s32 func_800AA498(void);
 extern void func_800AEE28(void);
 extern void func_800A3938(s32, s32);
 

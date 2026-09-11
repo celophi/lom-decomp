@@ -81,16 +81,12 @@ void func_8006C3FC(FieldRecord *);
  * @param record Actor record whose runtime path should be updated.
  * @param source_index Record supplying the destination coordinates.
  * @param update_animation Nonzero to reset and apply the actor animation.
- * @note Repeated runtime-index reads preserve aliasing with record updates.
- * @note GCC 2.7.2 CDK currently matches 99.242424 percent of the target.
  */
 void func_8008A0B0(FieldRecord *record, s32 source_index, s32 update_animation)
 {
     CollisionQuery start;
     CollisionQuery goal;
     s32 path_length;
-    s16 depth;
-    s16 width;
     MapBounds *bounds;
     s32 x;
     s32 map_depth;
@@ -98,11 +94,7 @@ void func_8008A0B0(FieldRecord *record, s32 source_index, s32 update_animation)
     s32 state_x;
     s32 state_z;
     s32 z;
-    FieldState *unused_state_base;
     FieldRecord *source;
-    FieldState *unused_state;
-    FieldRecord *unused_source;
-    FieldState *unused_result_state;
 
     bounds = (MapBounds *)0x801ED400;
     x = record->unk0;
@@ -127,19 +119,18 @@ void func_8008A0B0(FieldRecord *record, s32 source_index, s32 update_animation)
         start.z = record->unk8;
         if ((&D_800FE3A0[record->unk3a])->unk2e == 0x40)
         {
-            width = 0xC;
-            depth = 8;
+            start.width = 0xC;
+            start.depth = 8;
+            goal.width = 0xC;
+            goal.depth = 8;
         }
         else
         {
-            width = 9;
-            depth = 6;
+            start.width = 9;
+            start.depth = 6;
+            goal.width = 9;
+            goal.depth = 6;
         }
-        /* Preserve the four independent footprint stores in target order. */
-        *(volatile u16 *)&start.width = width;
-        *(volatile u16 *)&start.depth = depth;
-        *(volatile u16 *)&goal.width = width;
-        *(volatile u16 *)&goal.depth = depth;
         start.height = 0x10;
         goal.height = 0x10;
         func_8006304C(&start);

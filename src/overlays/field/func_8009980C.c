@@ -68,7 +68,15 @@ s32 func_8009980C(s32 *arg0, s32 arg1, u8 *arg2, s32 arg3)
         {
             goto next;
         }
-        delta[0] = (*(s32 *)var_s3 - arg0[0]) >> 8;
+        {
+            s32 actor_x = *(s32 *)var_s3;
+            s32 reference_x;
+            do
+            {
+                reference_x = arg0[0];
+            } while (0);
+            delta[0] = (actor_x - reference_x) >> 8;
+        }
         delta[1] = (*(s32 *)(var_s1 - 4) - arg0[1]) >> 8;
         delta[2] = (*(s32 *)var_s1 - arg0[2]) >> 8;
         gte_ldlvl(delta);

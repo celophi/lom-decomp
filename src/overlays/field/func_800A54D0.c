@@ -13,7 +13,9 @@ typedef struct
     s32 unk2B54;
 } PadCtxB800A54D0;
 
-/** @brief Upload palettes for the three active runtime slots. */
+/** @brief Upload palettes for the three active runtime slots.
+ * @see decomp.me (100%)
+ */
 void func_800A54D0(void)
 {
     RECT rect;
@@ -22,9 +24,9 @@ void func_800A54D0(void)
     s32 offset;
 
     i = 0;
-    offset = i;
     do
     {
+        offset = i * 0x14C;
         p = (PadCtxB800A54D0 *) (g_pad_ctx + offset);
         if (p->unk2B0C != 0)
         {
@@ -46,6 +48,5 @@ void func_800A54D0(void)
             }
         }
         i += 1;
-        offset += 0x14C;
     } while (i < 3);
 }

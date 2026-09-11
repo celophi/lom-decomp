@@ -18,3 +18,10 @@ rom:0x3ACD reloc:MIPS_NONE symbol:D_80180018
 rom:0x63D5 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x650D reloc:MIPS_NONE symbol:D_1F800008
 rom:0x6745 reloc:MIPS_NONE symbol:D_1F800008
+
+// func_80060364: two literal scratchpad page bases feed a moving row cursor.
+// The addiu at 0x80060748 adds the third-word offset (8) to that cursor;
+// it does not complete a symbol address. Keep the retail literal operands.
+rom:0x10A8D reloc:MIPS_NONE symbol:D_1F800008
+rom:0x10A91 reloc:MIPS_NONE symbol:D_1F800008
+rom:0x10AD9 reloc:MIPS_NONE symbol:D_1F800008

@@ -38,12 +38,13 @@ extern void func_80083BC0(Actor *, void *, s32), func_800952DC(Actor *, s32), fu
 /**
  * @brief Reset actor state and select the appropriate transition animation.
  * @param actor Actor whose state and animation resources are updated.
+ * @return Unspecified value; callers do not consume the result.
  */
-void func_8008C104(Actor *actor)
+s32 func_8008C104(Actor *actor)
 {
     Record *records, *record, *final_records;
     Resource *resource, *resources;
-    s32 selector, animation;
+    s32 selector;
     func_8008BC5C();
     func_8008BCF8(actor);
     actor->animation = 0x8E;

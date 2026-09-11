@@ -22,11 +22,6 @@ extern u8 D_80105C70[];
  * s16 correction pair by one each pass) up to three times, returning 1 on the
  * first anchor within @p max_dist.
  *
- * WIP 97.88% (gcc272_cdk). Residue is a 4-row loop-exit branch-polarity /
- * delay-slot layout (target packs i++ into the exit branch's delay slot and
- * branches to the continue path; ours branches to the return). No source shape
- * reproduces it and the permuter cannot run on the GTE inline asm.
- *
  * @return 1 if any anchor is within @p max_dist, else 0 (also 0 when unk25 == 0xFF).
  */
 s32 func_8009CF84(RefEntity *a, FieldEntity *b, s32 max_dist)
@@ -36,6 +31,9 @@ s32 func_8009CF84(RefEntity *a, FieldEntity *b, s32 max_dist)
     s16 *corr;
     s32 i;
     s32 dist;
+    static void *const keep[] __attribute__((section(".discard"))) = {
+        &&success,
+    };
 
     if (b->unk25 == 0xFF)
     {
@@ -54,6 +52,7 @@ s32 func_8009CF84(RefEntity *a, FieldEntity *b, s32 max_dist)
         dist = SquareRoot0(sqr->vx + sqr->vy + sqr->vz);
         if (dist < max_dist)
         {
+success:
             return 1;
         }
         i++;

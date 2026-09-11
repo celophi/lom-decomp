@@ -219,40 +219,42 @@ extern u8 g_menuLayoutBuffer[];
  */
 void func_800C7340(void)
 {
-    s32 temp_s2;
-    s32 i;
-    s32 count;
-    s32 rec_off;
-    u8 *p;
-    u8 flag;
-    s32 tbl_off;
+    s32 selection;
+    s32 slot_index;
+    s32 dispatch_count;
+    s32 record_offset;
+    u8 *menu_base;
+    u8 slot_flag;
+    s32 table_offset;
+    u8 *table_base;
 
-    temp_s2 = D_80122C10;
-    if (temp_s2 < 5)
+    selection = D_80122C10;
+    if (selection < 5)
     {
-        count = 0;
-        i = 0;
-        rec_off = temp_s2 * 0x60;
+        dispatch_count = 0;
+        slot_index = 0;
+        menu_base = g_menuLayoutBuffer;
+        record_offset = selection * 0x60;
         do
         {
-            p = &g_menuLayoutBuffer[i + rec_off];
-            flag = p[0x2F38];
-            if (flag != 0xFF)
+            table_base = D_800F0E98;
+            slot_flag = menu_base[slot_index + record_offset + 0x2F38];
+            if (slot_flag != 0xFF)
             {
-                if (flag != 0xFE)
+                if (slot_flag != 0xFE)
                 {
-                    tbl_off = flag * 2;
-                    func_800B2844(count, D_800F0E98[tbl_off] + (D_800F0E98[tbl_off + 1] << 8) + D_800F0E98, 0xFF);
-                    count++;
+                    table_offset = slot_flag * 2;
+                    func_800B2844(dispatch_count, D_800F0E98[table_offset] + (D_800F0E98[table_offset + 1] << 8) + table_base, 0xFF);
+                    dispatch_count++;
                 }
             }
-            i++;
-        } while (i < 3);
-        func_800B2844(3, (temp_s2 * 0x60) + D_80045ECC, 0xFF);
-        D_80122C16 = (u16)count;
+            slot_index++;
+        } while (slot_index < 3);
+        func_800B2844(3, (selection * 0x60) + D_80045ECC, 0xFF);
+        D_80122C16 = (u16)dispatch_count;
         return;
     }
-    akao_set_song_params(0x8002, 0x2E, temp_s2, 0);
+    akao_set_song_params(0x8002, 0x2E, selection, 0);
 }
 
 /** @brief Clear the selected large-history record status. */

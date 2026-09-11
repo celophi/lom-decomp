@@ -17,9 +17,9 @@ void func_800A3938(s32, s32);
 
 /**
  * @brief Check two frame-phased sound queues and submit their guarded sound command.
- * @note WIP: the second queue check retains load and delay-slot differences.
+ * @see decomp.me (100%) TODO
  */
-void func_800AA498(void)
+s32 func_800AA498(void)
 {
     if (D_800FE754 != 0)
     {

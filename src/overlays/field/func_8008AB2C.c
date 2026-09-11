@@ -37,36 +37,36 @@ extern Actor D_80105AE0[];
 extern Data D_800FD818[];
 extern Pad *g_pad_ctx;
 extern s32 D_8010A000;
-extern void func_8008B870(Entry *);
+extern void func_8008B870(Entry *, s32);
 /**
  * @brief Mark an actor for an action and dispatch its state-dependent update.
  * @param arg0 Actor ID to locate among the field records.
+ * @param arg1 Reaction-mode selector forwarded to func_8008B870.
  * @return Zero when found, or -1 when no record has the requested ID.
  */
-s32 func_8008AB2C(s32 arg0)
+s32 func_8008AB2C(s32 arg0, s32 arg1)
 {
-    Entry *var_a0;
-    Actor *var_a2;
-    Entry *var_a2_2;
-    s16 temp_v1;
-    s32 temp_v0;
-    s32 var_v1;
-    s32 temp_v1_2;
-    Actor *temp_v0_2;
+    Entry *entry_cursor;
+    Actor *actor_cursor;
+    Entry *entry;
+    s16 action;
+    s32 pad_counter;
+    s32 entry_count;
+    Actor *actor;
     u8 *actor_base;
 
-    var_a0 = D_800FDF58;
-    var_a2 = D_80105AE0;
-    var_v1 = 0;
+    entry_cursor = D_800FDF58;
+    actor_cursor = D_80105AE0;
+    entry_count = 0;
 loop_1:
-    var_v1 += 1;
-    if (var_a2->unk14 != arg0)
+    entry_count += 1;
+    if (actor_cursor->unk14 != arg0)
     {
-        var_a2++;
-        var_a0++;
-        if (var_v1 >= 0xD)
+        actor_cursor++;
+        entry_cursor++;
+        if (entry_count >= 0xD)
         {
-            var_a2_2 = (Entry *)-1;
+            entry = (Entry *)-1;
         }
         else
         {
@@ -78,51 +78,50 @@ loop_1:
         goto found;
     }
 check:
-    if (var_a2_2 != (Entry *)-1)
+    if (entry != (Entry *)-1)
     {
         goto body;
     }
     return -1;
 found:
-    var_a2_2 = var_a0;
+    entry = entry_cursor;
     goto check;
 body:
-    if (var_a2_2->unk3A == 0)
+    if (entry->unk3A == 0)
     {
-        temp_v0 = g_pad_ctx->unk3154;
-        if (temp_v0 != -1)
+        pad_counter = g_pad_ctx->unk3154;
+        if (pad_counter != -1)
         {
-            g_pad_ctx->unk3154 = (s32)(temp_v0 + 1);
+            g_pad_ctx->unk3154 = (s32)(pad_counter + 1);
         }
     }
     actor_base = (u8 *)D_80105AE0;
-    temp_v0_2 = (Actor *)(actor_base + var_a2_2->unk3A * 0x23C);
-    temp_v0_2->unkC = (s32)(temp_v0_2->unkC | 0x10000000);
-    if ((u8)var_a2_2->unk3A < 3U)
+    actor = (Actor *)(actor_base + entry->unk3A * 0x23C);
+    actor->unkC = (s32)(actor->unkC | 0x10000000);
+    if ((u8)entry->unk3A < 3U)
     {
-        D_800FD818[var_a2_2->unk3A].unk259 = 5;
+        D_800FD818[entry->unk3A].unk259 = 5;
     }
-    else if (((Actor *)(actor_base + var_a2_2->unk3A * 0x23C))->unk8 < 0)
+    else if (((Actor *)(actor_base + entry->unk3A * 0x23C))->unk8 < 0)
     {
         D_8010A000 = 5;
     }
-    temp_v1 = var_a2_2->unk2A;
-    if (temp_v1 == 0x87)
+    action = entry->unk2A;
+    if (action == 0x87)
     {
         return 0;
     }
-    if (temp_v1 >= 0x88)
+    if (action >= 0x88)
     {
-        if (temp_v1 == 0x91)
+        if (action != 0x91)
         {
-            return 0;
+            func_8008B870(entry, arg1);
         }
-        goto finish;
+        return 0;
     }
-    if (temp_v1 >= 0x85)
+    if (action >= 0x85)
     {
-        actor_base = (u8 *)D_80105AE0;
-        switch (((Actor *)(actor_base + var_a2_2->unk3A * 0x23C))->unk16F)
+        switch (((Actor *)((u8 *)D_80105AE0 + entry->unk3A * 0x23C))->unk16F)
         {
         case 0:
         case 1:
@@ -133,15 +132,13 @@ body:
         case 10:
             break;
         default:
-            actor_base = (u8 *)D_80105AE0;
-            if (!(((u32)((Actor *)(actor_base + var_a2_2->unk3A * 0x23C))->unk178 >> 6) & 1))
+            if (!(((u32)((Actor *)((u8 *)D_80105AE0 + entry->unk3A * 0x23C))->unk178 >> 6) & 1))
             {
                 return 0;
             }
             break;
         }
     }
-finish:
-    func_8008B870(var_a2_2);
+    func_8008B870(entry, arg1);
     return 0;
 }
