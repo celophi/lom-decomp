@@ -88,6 +88,6 @@ u8* field_script_read_u16(u8* data, u16* value);
 /* Declared without a prototype: opcode 0x0E passes the record and its depth as extra arguments. */
 void field_script_branch();
 s32 func_800BD3B0();
-void func_800BD434(s32 owner_id, s32 var_ref, s32 value);
+void func_800BD434();
 
 #endif

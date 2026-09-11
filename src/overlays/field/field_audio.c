@@ -44,15 +44,6 @@ extern s32 D_8003ECA4[];
 extern unsigned char D_80117EF8;
 
 /**
- * @brief First word of the SEQ scratch blob: the number of entries in the
- *        offset table that follows it at SEQ_BLOB_OFFSETS.
- * @note Aliases SEQ_BLOB_BASE. It is declared as a symbol rather than spelled
- *       as a literal because the original code emits it %hi/%lo, unlike the
- *       raw 0x80180000 constants used for the buffer base itself.
- */
-extern u32 D_80180000;
-
-/**
  * @brief Stop-modifier passed to akao_stop_song by func_800A37BC.
  * @note Written by func_800A380C (below) with the value akao_play_song leaves
  *       in the return register, and again by func_800A3858 (below).
@@ -121,37 +112,23 @@ void func_800A368C(s32 music_index, s32 destination_index)
  * @brief Load the fixed field SEQ resource from CD-ROM and play it.
  *
  * @details Variant of func_800A368C with no parameters: the resource index is
- * hardcoded and the destination is always D_8003ECA0. It also locates its
- * sub-block differently -- rather than using the first two offset-table
- * entries, it reads the blob's leading entry count and takes the LAST offset,
- * off_end[-1], using it both as the copy length and as the byte offset of the
- * AKAO instrument-bank sub-block.
- *
- * @note Unlike func_800A368C, the copy source is the blob base itself rather
- *       than base + off[0], so the copied region includes the header.
- *
- * @note NOT YET MATCHED. The single remaining defect is that the target emits
- *       @c "lui s0,%hi(D_80180000); lw s0,%lo(D_80180000)(s0)" (one register)
- *       where this C produces @c "lui v0,%hi(...); lw s0,%lo(...)(v0)" (two),
- *       which also displaces the SEQ_BLOB_OFFSETS constant from v0 to v1. All
- *       5 differing rows are that one cause; instruction count, frame layout
- *       and emit order are already exact. Binding @c dst before the @c off_end
- *       statement is required (+1 exact row); binding it after is worth 0.
- *       See working/func_800A3728/status.md for the 22 probe variants already
- *       measured inert, and do not re-probe those classes.
- *
- * @see decomp.me (98.97%) TODO
+ * hardcoded and the destination is always D_8003ECA0. The scratch blob begins
+ * with the number of offset entries, and the last entry supplies both the copy
+ * length and the byte offset of the AKAO instrument-bank sub-block.
  */
 void func_800A3728(void)
 {
     u8* dst;
     u32* off_end;
+    u32 count;
 
     cdrom_queue_read(FIELD_FIXED_SEQ_RESOURCE, (void*)SEQ_BLOB_BASE);
     cdrom_wait_queue_empty();
 
     dst = &D_8003ECA0;
-    off_end = (u32*)SEQ_BLOB_OFFSETS + D_80180000;
+    count = SEQ_BLOB_BASE;
+    count = *(u32*)count;
+    off_end = (u32*)SEQ_BLOB_OFFSETS + count;
 
     bcopy((u8*)SEQ_BLOB_BASE, dst, off_end[-1]);
     akao_upload_bank_blocking((AkaoBankHeader*)(off_end[-1] + SEQ_BLOB_BASE), 1);

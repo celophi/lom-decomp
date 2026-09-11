@@ -350,7 +350,7 @@ segments:
       # TU hypothesis: field_audio_runtime (high). See docs/decompilation/field-boundaries/map.md.
       - [0x538C5, c, field_restore_entry_music]    # gcc272_cdk, 1 func, 100%
       - [0x53985, c, field56]                   # gcc272_cdk, func_800A35F4
-      - [0x53A1D, c, field_audio]               # gcc272_cdk, covers func_800A368C .. func_800A3858
+      - [0x53A1D, c, field_audio]               # gcc272_cdk, 7 funcs, 100%
       - [0x53C65, c, field57]                      # gcc272_cdk, func_800A38D4
       - [0x53D39, c, func_800A39A8]             # gcc272_cdk, 100%
       - [0x53E21, c, func_800A3A90]             # gcc272_cdk, 100%
@@ -484,7 +484,7 @@ segments:
       - [0x6997D, c, field_script_primary_ops] # gcc280_g0; primary opcodes 12-3F and reset helper
       - [0x6BD51, c, field_script_pair_ops] # gcc280_g0; complete 32-entry two-operand family, two WIPs
       - [0x6CEF9, c, field_script_extended_ops] # gcc280_g0; complete sixteen-entry extended opcode family, all exact
-      - [0x6D4B9, c, field_script_operands] # gcc280_g0; branch and eleven operand helpers, four WIPs
+      - [0x6D4B9, c, field_script_operands] # gcc280_g0; branch and eleven operand helpers, all exact
       - [0x6DA85, c, field_script_commands] # gcc280_g0; dispatcher, seventeen commands and query helper
       - [0x6E959, c, field_script_arith_ops] # gcc280_g0; dispatcher and twelve arithmetic handlers, all exact
       - [0x6EAA1, c, field_record_setup_ops] # gcc280_g0; five record setup/sequence dispatch functions, two WIPs

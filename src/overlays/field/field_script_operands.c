@@ -1,6 +1,12 @@
 #include "common.h"
 #include "field_script.h"
 
+/** @brief Packed 16-bit reference to field-script variable storage. */
+typedef struct
+{
+    u16 value;
+} FieldScriptVariableRef;
+
 void field_script_op_00(void);
 
 /**
@@ -61,7 +67,7 @@ u8 *field_script_read_operand_or_owner(u32 type, u8 *data, s32 *value)
 }
 
 u8 *field_script_read_u16(u8 *data, u16 *value);
-s32 func_800BD3B0(s32 arg0, s32 arg1);
+s32 func_800BD3B0(s32 arg0, FieldScriptVariableRef arg1);
 
 /**
  * @brief Decode one field script operand and advance the read pointer.
@@ -79,10 +85,10 @@ u8 *field_script_read_operand(u32 operand_type, u8 *data, s32 *value)
     {
     case 0:
     {
-        u16 var_index;
+        FieldScriptVariableRef var_ref;
 
-        data = field_script_read_u16(data, &var_index);
-        *value = func_800BD3B0(g_field_script->status.owner_id, var_index << 16);
+        data = field_script_read_u16(data, &var_ref.value);
+        *value = func_800BD3B0(g_field_script->status.owner_id, var_ref);
         return data;
     }
     case 1:
@@ -121,41 +127,29 @@ typedef struct
 StructC1B60 *func_800C1B60(s32 arg0);
 
 /**
- * @brief Decode a packed slot value and emit its two sub-fields.
- *
- * Extracts the 16-bit field @c (arg1>>16), splits its low 12 bits into
- * @c v>>5 (written to @p arg2) and @c v&0x1F (written to @p arg3), then
- * selects a return record based on bits 12-14 of the field: for values below
- * 3 it returns @c D_80122B74+0xE4; otherwise @c D_80122B78, additionally
- * folding a per-slot adjustment into @p arg2 when bit 15 is set.
- *
- * @param arg0 Slot handle passed through to func_800C1B60.
- * @param arg1 Packed value; the slot descriptor is its high 16 bits.
- * @param arg2 Out: primary sub-field (updated again on the bit-15 path).
- * @param arg3 Out: secondary sub-field (low 5 bits).
- * @return Selected record pointer/value, or 0 when bit 14 of the field is set.
- * @note 84.21% match (gcc280_g0). Residue is a coupled sched1 emit-order tie:
- *       `arg1>>16` will not schedule ahead of the arg2->s1 parameter-save copy
- *       (a LUID tie-break). Same mechanism as sibling func_800BD3B0.
+ * @brief Decode a field-script variable reference into storage coordinates.
+ * @param arg0 Owner identifier used for owner-relative references.
+ * @param arg1 Packed field-script variable reference.
+ * @param arg2 Receives the primary storage index.
+ * @param arg3 Receives the bit offset within the selected value.
+ * @return Base address of the selected variable storage.
  */
-s32 func_800BD318(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3)
+s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32 *arg2, s32 *arg3)
 {
-    s32 a;
-    u32 v;
+    u32 value;
     s32 result;
 
-    a = arg1 >> 16;
-    v = ((unsigned short)a) & 0xFFF;
-    *arg2 = v >> 5;
-    *arg3 = v & 0x1F;
-    if ((((u32)a >> 12) & 7) < 3)
+    value = arg1.value & 0xFFF;
+    *arg2 = value >> 5;
+    *arg3 = value & 0x1F;
+    if (((arg1.value >> 12) & 7) < 3)
     {
         result = D_80122B74 + 0xE4;
     }
     else
     {
         result = D_80122B78;
-        if (a & 0x8000)
+        if (arg1.value & 0x8000)
         {
             *arg2 += (func_800C1B60(arg0)->unk28 >> 9) & 0x7F;
         }
@@ -165,131 +159,91 @@ s32 func_800BD318(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3)
 
 extern u8 D_800F0E08[8];
 
-s32 func_800BD318(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3);
+s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32 *arg2, s32 *arg3);
 s32 func_800BD650(s32 arg0, u8 *arg1, s32 arg2, s32 arg3, s32 arg4);
 
 /**
- * @brief Adds a value into a per-slot record and forwards it through two calls.
- *
- * Extracts the high 16 bits of @p arg1 as a slot index, calls func_800BD318
- * with that index re-packed into the high half (@p arg0 is passed straight
- * through), then forwards the result plus the two out-params to func_800BD650,
- * indexing @c D_800F0E08 by bits 28-30 of @p arg1.
- *
- * @param arg0 Passed through unchanged to func_800BD318 (kept in a0).
- * @param arg1 Packed value; high 16 bits select the slot, bits 28-30 index
- *             D_800F0E08.
- * @note 68.0% match (gcc280_g0). The residue is a coupled scheduling/register
- *       decision: the target keeps @c arg1>>16 in caller-saved a1 with an s0
- *       copy, flipping both the sra-before-prologue placement and the jal
- *       delay-slot fill. The `result`/`index` split and the `do {} while (0)`
- *       wrapper are required to reproduce the target's separate copy insn
- *       (without them the match drops to 47.6%); do not remove them.
+ * @brief Read the value addressed by a field-script variable reference.
+ * @param arg0 Owner identifier used for owner-relative references.
+ * @param arg1 Packed field-script variable reference.
+ * @return Extracted variable value.
  */
-s32 func_800BD3B0(s32 arg0, s32 arg1)
+s32 func_800BD3B0(s32 arg0, FieldScriptVariableRef arg1)
 {
     s32 sp18;
     s32 sp1c;
-    s32 index;
     s32 result;
 
-    result = arg1 >> 0x10;
-    index = result;
-    do
-    {
-        result = func_800BD318(arg0, index << 0x10, &sp18, &sp1c);
-        return func_800BD650(2, (u8 *)result, sp18, sp1c, D_800F0E08[((u32) index >> 0xC) & 7]);
-    } while (0);
+    result = func_800BD318(arg0, arg1, &sp18, &sp1c);
+    return func_800BD650(2, (u8 *)result, sp18, sp1c, D_800F0E08[(arg1.value >> 12) & 7]);
 }
 
-s32 func_800BD3B0(s32 arg0, s32 arg1);
+s32 func_800BD3B0(s32 arg0, FieldScriptVariableRef arg1);
 
 void func_800BD414(s32 arg0, s32 arg1)
 {
-    func_800BD3B0(arg0, arg1 << 0x10);
+    FieldScriptVariableRef var_ref;
+
+    var_ref.value = arg1;
+    func_800BD3B0(arg0, var_ref);
 }
 
 extern u8 D_800F0E08[8];
 
-s32 func_800BD318(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3);
+s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32 *arg2, s32 *arg3);
 void func_800BD55C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
 
 /**
- * @brief Resolves a packed slot and forwards the resulting field parameters.
- *
- * @param arg0 Passed through to func_800BD318.
- * @param arg1 Packed value whose high half selects the slot.
- * @param arg2 Final argument forwarded to func_800BD55C.
- * @note 72.034485% match with gcc280_g0. The remaining four-row mismatch is
- *       scheduling around the first call; all 29 target instructions and the
- *       0x30-byte stack frame are otherwise represented.
+ * @brief Write a value through a field-script variable reference.
+ * @param arg0 Owner identifier used for owner-relative references.
+ * @param arg1 Packed field-script variable reference.
+ * @param arg2 Value to write.
  */
-void func_800BD434(s32 arg0, s32 arg1, s32 arg2)
+void func_800BD434(s32 arg0, FieldScriptVariableRef arg1, s32 arg2)
 {
     s32 sp18;
     s32 sp1c;
-    s32 index;
     s32 result;
 
-    result = arg1 >> 0x10;
-    index = result;
-    /* Retain the original scheduler's saved-register ordering. */
-    arg2++;
-    arg2--;
-    do
-    {
-        result = func_800BD318(arg0, index << 0x10, &sp18, &sp1c);
-        func_800BD55C(2, result, sp18, sp1c,
-                      D_800F0E08[((u32)index >> 0xC) & 7], arg2);
-    } while (0);
+    result = func_800BD318(arg0, arg1, &sp18, &sp1c);
+    func_800BD55C(2, result, sp18, sp1c, D_800F0E08[(arg1.value >> 12) & 7], arg2);
 }
 
 extern u8 D_800F0E08[8];
 
-s32 func_800BD318(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3);
+s32 func_800BD318(s32 arg0, FieldScriptVariableRef arg1, s32 *arg2, s32 *arg3);
 void func_800BD55C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
 
 /**
- * @brief Resolves a packed slot and forwards decremented slot metadata.
- *
- * @param arg0 Passed through to func_800BD318.
- * @param arg1 Packed value whose high half selects the slot.
- * @param arg2 Final argument forwarded to func_800BD55C.
- * @note 72.966670% match with gcc280_g0. The remaining four-row mismatch is
- *       scheduling around the first call; all 30 target instructions and the
- *       0x30-byte stack frame are otherwise represented.
+ * @brief Write a value through a field-script variable reference using the preceding width class.
+ * @param arg0 Owner identifier used for owner-relative references.
+ * @param arg1 Packed field-script variable reference.
+ * @param arg2 Value to write.
  */
-void func_800BD4A8(s32 arg0, s32 arg1, s32 arg2)
+void func_800BD4A8(s32 arg0, FieldScriptVariableRef arg1, s32 arg2)
 {
     s32 sp18;
     s32 sp1c;
-    s32 index;
     s32 result;
 
-    result = arg1 >> 0x10;
-    index = result;
-    /* Retain the original scheduler's saved-register ordering. */
-    arg2++;
-    arg2--;
-    do
-    {
-        result = func_800BD318(arg0, index << 0x10, &sp18, &sp1c);
-        func_800BD55C(2, result, sp18, sp1c,
-                      D_800F0E08[((u32)index >> 0xC) & 7] - 1, arg2);
-    } while (0);
+    result = func_800BD318(arg0, arg1, &sp18, &sp1c);
+    func_800BD55C(2, result, sp18, sp1c, D_800F0E08[(arg1.value >> 12) & 7] - 1, arg2);
 }
 
-void func_800BD434(s32 arg0, s32 arg1, s32 arg2);
-void func_800BD4A8(s32 arg0, s32 arg1, s32 arg2);
+void func_800BD434(s32 arg0, FieldScriptVariableRef arg1, s32 arg2);
+void func_800BD4A8(s32 arg0, FieldScriptVariableRef arg1, s32 arg2);
 
 void func_800BD520(s32 arg0, u32 arg1, s32 arg2)
 {
+    FieldScriptVariableRef var_ref;
+
+    var_ref.value = arg1;
     if (arg1 <= 0xFFFFU)
     {
-        func_800BD434(arg0, arg1 << 0x10, arg2);
+        func_800BD434(arg0, var_ref, arg2);
         return;
     }
-    func_800BD4A8(arg0, arg1 << 0x10, arg2);
+    func_800BD4A8(arg0, var_ref, arg2);
 }
 
 void func_800BD55C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)

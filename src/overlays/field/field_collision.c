@@ -366,7 +366,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @param mover Mover state updated with resolved position, height, contact node, and flags.
  * @return Collision-resolution status bitmask.
  *
- * @see decomp.me (98.690%) https://decomp.me/scratch/N2GNJ
+ * @see decomp.me (99.187170%) https://decomp.me/scratch/N2GNJ
  * @note Active matching scratch: working/func_8005B6AC/code.c; see its status.md.
  */
 s32 func_8005B6AC(FieldCollisionMover* mover) {
@@ -436,7 +436,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 f_y_min;
     s32 f_y_max;
     s32 var_s2;
-    s16 var_t0_2;
+    s32 var_t0_2;
     s32 var_t1_2;
     u8* var_s1;
     u8* var_s1_5;
@@ -576,7 +576,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
 
     s32 late_uy;
     s32 predicted_height;
-    s32 height_limit;
+    s16 height_limit;
     u32 footprint_depth;
     s32 node_max_z;
     s32 scan_hit;
@@ -1234,16 +1234,16 @@ return_zero:
                 qv0 >>= 8;
                 var_s0 = qv0 - qv1;
             }
-            var_t8 = 0;
             sp68 = (void** )0x801E1100;
+            var_t8 = 0;
             var_t0 = 0;
             var_t9 = sp24;
             footprint_depth = (u16)mover->mode_flags;
             var_a3_2 = 0;
             k_blocked = 0x8000;
             temp_a0_11 = sp28->header;
-            temp_v1_15 = (u16)footprint_depth;
-            temp_v1_15 += (s16)var_s0;
+            temp_v1_15 = (s16)var_s0;
+            temp_v1_15 += (u16)footprint_depth;
             if (((FieldCollisionHeaderBounds*)temp_a0_11)->unk2C & 2) {
                 if ((s16)var_s0 < 0) {
                     var_a3_2 = -(s16)var_s0;
@@ -1310,10 +1310,10 @@ return_zero:
                                             }
                                         } while (0);
                                         {
+                                            spAC = (s32) (s16) sp40;
                                             var_s5 = var_t1_2 + 1;
                                             var_fp = (void*)(var_s5 - f_y_max);
                                             var_t3 = var_s1 + 2;
-                                            spAC = (s32) (s16) sp40;
                                             spA8 = var_s4 + 1;
                                             do {
                                                 temp_v1_18 = *(s16*)var_s1;
@@ -1557,10 +1557,10 @@ return_zero:
             var_v0_35 >>= 8;
         }
         probe.z = var_v0_35;
-        var_s0 = (u16) probe.z;
-        late_uy = var_s0;
         var_s1 = (u8*)(u32)(u16)probe.x;
         late_scan_x = (s32)var_s1;
+        var_s0 = (u16) probe.z;
+        late_uy = var_s0;
         sp68 = (void** )0x801E1100;
         var_s3 = sp28->secondary_nodes;
         temp_v0_15 = *(s32*)&sp24 - 1;
