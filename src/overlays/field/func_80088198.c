@@ -330,7 +330,6 @@ void func_80088198(Struct_D800FDF58 *arg0) {
     FieldActorPartDef *casea5_base;
     FieldActorPartDef *temp_v0_20;
     FieldActorPartDef *casea6_base;
-    s32 casea4_one;
     s32 casea6_mask;
     FieldActorState *temp_v1_11;
     FieldActorState *temp_v1_9;
@@ -428,6 +427,20 @@ void func_80088198(Struct_D800FDF58 *arg0) {
     Struct_D80105AE0 *query_base;
     Struct_D80105AE0 *precheck_states;
     FieldActorState *bc_slots;
+    u8 desc_index;
+    u8 resource_index;
+    s32 resource_offset;
+    s32 action_allowed;
+    u8 *action_row;
+    s32 action_flags;
+    s32 action_mask;
+    s32 decoded_a4;
+    s32 a4_old_flags;
+    s32 a4_command_flags;
+    s32 decoded_b2;
+    s32 track_owner;
+    s32 slot_offset_83;
+    s32 slot_offset_a9;
     u16 phi_v0;
 
     temp_a2 = 0x801ED400;
@@ -499,17 +512,16 @@ loop_15:
         temp_s5 = var_s0->unk25;
         if (temp_s5 == 0xFF) {
             func_8006B4D0(var_s2, 3, temp_a2);
-            temp_a1_2 = var_s0->unk1C;
+            temp_a1_2 = var_s0->unk1C & ~0x1FF;
             var_s0->unk0 = arg0->unk0;
-            temp_a1_2 &= ~0x1FF;
             var_s0->unk4 = arg0->unk4;
             temp_a1_2 |= 2;
             var_s0->unk8 = arg0->unk8;
             var_s0->unk25 = 0xFE;
             spawn_command = M2C_FIELD(temp_s3, u8 *, 1);
-            var_s0->unk2A = 0xB8;
             var_s0->unk27 = 0;
             var_s0->unk24 = var_s6;
+            var_s0->unk2A = 0xB8;
             var_s0->unk21 = spawn_command;
             parent_index = arg0->unk3A;
             M2C_FIELD(var_s0, s8 *, 0x3D) = 3;
@@ -598,11 +610,16 @@ loop_15:
 block_36:
         precheck_states = D_80105AE0;
         temp_v1_2 = &precheck_states[arg0->unk3A];
-        if (!(temp_v1_2->unkC & 0x400) && ((D_8010AE54 == 0) || ((u32) (temp_v1_2->pad148[0x27] - 4) >= 4U))) {
+        if (temp_v1_2->unkC & 0x400) { goto block_57; }
+        if (D_8010AE54 == 0) { action_allowed = 0; }
+        else { action_allowed = (u32)(temp_v1_2->pad148[0x27] - 4) < 4U; }
+        if (!action_allowed) {
             do {
 do {
 do {
-            temp_s0 = (arg0->unk3B * 0x190) + ((D_80105AE0[arg0->unk3A].pad148[0x27] * 8) + D_8010A038);
+            resource_offset = arg0->unk3B * 0x190;
+            action_row = D_8010A038 + D_80105AE0[arg0->unk3A].pad148[0x27] * 8;
+            temp_s0 = (void *)(resource_offset + (s32)action_row);
             if (!(M2C_FIELD(temp_s0, u16 *, 2) & 0x400)) {
                 if ((M2C_FIELD(temp_s0, u16 *, 0) != 0) || (M2C_FIELD(temp_s0, u16 *, 4) != 0)) {
                     if (M2C_FIELD(temp_s0, volatile u16 *, 2) & 0x400) {
@@ -648,7 +665,8 @@ block_59:
                         var_v0_3 = 0x38;
                     }
 block_61:
-                    case83_slots[M2C_FIELD(&case83_entries[var_v0_3], s32 *, 0x18)].unk26 = D_80105AE0[arg0->unk3A].pad148[0x27];
+                    slot_offset_83 = (M2C_FIELD(&case83_entries[var_v0_3], s32 *, 0x18)) * (s32)sizeof(FieldActorState);
+                    ((FieldActorState *)((s32)case83_slots + slot_offset_83))->unk26 = D_80105AE0[arg0->unk3A].pad148[0x27];
                     goto block_62;
                 }
 block_62:
@@ -657,10 +675,12 @@ block_62:
                     temp_v0_6 = &update_states[arg0->unk3A];
                     temp_v0_6->u.unk178 |= 0x40;
                     temp_v0_7 = &D_80105AE0[arg0->unk3A];
-                    temp_v0_7->unk174 &= ~0x400;
+                    action_mask = ~0x400;
+                    temp_v0_7->unk174 = temp_v0_7->unk174 & action_mask;
                     D_80105AE0[arg0->unk3A].unk4A = 0;
                     temp_v0_8 = &D_80105AE0[arg0->unk3A];
-                    temp_v0_8->unk4C = (s32) (temp_v0_8->unk4C & ~1);
+                    action_mask = ~1;
+                    temp_v0_8->unk4C = temp_v0_8->unk4C & action_mask;
                     temp_v1_3 = M2C_FIELD(temp_s0, u16 *, 4);
                     if ((temp_v1_3 != 0xFFFF) && (temp_v1_3 != 0)) {
                         D_80105AE0[arg0->unk3A].unk3C = (s32) M2C_FIELD(temp_s0, u16 *, 4);
@@ -753,16 +773,16 @@ block_62:
             sp18.y = arg0->unk4;
             sp18.z = arg0->unk8;
             if (D_800FE3A0[arg0->unk3A].unk2E == 0x40) {
-                var_v1_2 = 0xC;
-                var_v0_4 = 8;
+                sp18.unkC = 0xC;
+                sp18.unk10 = 8;
+                sp30.unkC = 0xC;
+                sp30.unk10 = 8;
             } else {
-                var_v1_2 = 9;
-                var_v0_4 = 6;
+                sp18.unkC = 9;
+                sp18.unk10 = 6;
+                sp30.unkC = 9;
+                sp30.unk10 = 6;
             }
-            sp18.unkC = var_v1_2;
-            sp18.unk10 = var_v0_4;
-            sp30.unkC = var_v1_2;
-            sp30.unk10 = var_v0_4;
             sp18.unkE = 0x10;
             sp30.unkE = 0x10;
             func_8006304C(&sp18);
@@ -809,8 +829,8 @@ block_62:
     case 0x8C:
     case 0xAC:
         arg0->unk2A = (s16) M2C_FIELD(temp_s3, u8 *, 0);
-        arg0->unk2C = (u16) arg0->unk2C + 2;
         arg0->unk2E = (u16) M2C_FIELD(temp_s3, u8 *, 1);
+        arg0->unk2C = (u16) arg0->unk2C + 2;
         arg0->unk24 = 1;
         func_8006C3FC(arg0);
         return;
@@ -821,8 +841,8 @@ block_62:
         arg0->pad20[0] = M2C_FIELD(temp_s3, u8 *, 2);
         arg0->unk2A = (s16) M2C_FIELD(temp_s3, u8 *, 0);
         arg0->unk2C = (u16) arg0->unk2C + 4;
-        arg0->unk24 = 1;
         arg0->pad26[0] = M2C_FIELD(temp_s3, u8 *, 3);
+        arg0->unk24 = 1;
         func_8006C3FC(arg0);
         return;
     case 0x9E:
@@ -878,7 +898,8 @@ block_62:
             } else {
                 var_v0_7 = 0x38;
             }
-            casea9_slots[M2C_FIELD(&casea9_entries[var_v0_7], s32 *, 0x18)].unk26 = temp_s0_2;
+            slot_offset_a9 = (M2C_FIELD(&casea9_entries[var_v0_7], s32 *, 0x18)) * (s32)sizeof(FieldActorState);
+            ((FieldActorState *)((s32)casea9_slots + slot_offset_a9))->unk26 = temp_s0_2;
             casea9_state->pad148[0x27] = temp_s0_2;
             D_80105AE0[arg0->unk3A].unk174 |= 0x8000;
             return;
@@ -919,7 +940,7 @@ block_62:
         track_entries = D_80105880;
         temp_v1_10 = (shared_s1 * 0x1C) + track_entries;
         temp_a0_4 = M2C_FIELD(temp_v1_10, s32 *, 0);
-        if (((u32) (temp_a0_4 - 1) < 2U) && (temp_a1_7 = M2C_FIELD(temp_v1_10, s32 *, 0xC), (temp_a1_7 == arg0->unk3A))) {
+        if (((u32) (temp_a0_4 - 1) < 2U) && (track_owner = arg0->unk3A, temp_a1_7 = M2C_FIELD(temp_v1_10, s32 *, 0xC), (temp_a1_7 == track_owner))) {
             if (temp_a0_4 != 1) {
                 track_slots = g_field_actor_slots;
                 temp_v1_11 = &track_slots[M2C_FIELD(temp_v1_10, s32 *, 0x18)];
@@ -978,8 +999,9 @@ block_140:
         Struct_D80105AE0 *states;
         u8 value;
         actor = arg0;
+        temp_v1 = M2C_FIELD(temp_s3, u8 *, 0);
         actor->unk2E = 0xFA;
-        value = M2C_FIELD(temp_s3, u8 *, 0);
+        value = temp_v1;
         actor->unk2A = value;
         value = M2C_FIELD(temp_s3, u8 *, 1);
         actor->unk1B = value;
@@ -1042,12 +1064,15 @@ block_155:
         arg0->unk10 = 0;
         return;
     case 0xA4:
-        casea4_one = 1;
+        temp_a1 = 1;
         if ((u8) arg0->unk3A < 2U) {
-            arg0->unk2E = casea4_one;
-            arg0->unk2A = (s16) M2C_FIELD(temp_s3, u8 *, 0);
-            arg0->unk24 = casea4_one;
-            arg0->unk21 = M2C_FIELD(temp_s3, u8 *, 1) | (arg0->unk21 & 0x80);
+            decoded_a4 = M2C_FIELD(temp_s3, u8 *, 0);
+            arg0->unk2E = temp_a1;
+            arg0->unk2A = decoded_a4;
+            a4_old_flags = arg0->unk21;
+            a4_command_flags = M2C_FIELD(temp_s3, u8 *, 1);
+            arg0->unk24 = temp_a1;
+            arg0->unk21 = a4_command_flags | (a4_old_flags & 0x80);
             func_8006C3FC(arg0);
         }
         arg0->unk2C = (u16) arg0->unk2C + 2;
@@ -1073,9 +1098,9 @@ block_155:
         actor->unk2E = value;
         off = actor->unk2C;
         value = M2C_FIELD(temp_s3, u8 *, 1);
-        actor->unk27 = 0;
         off += 3;
         actor->unk2C = off;
+        actor->unk27 = 0;
         actor->unk24 = 1;
         actor->unk21 = value;
         func_8006C3FC(actor);
@@ -1089,22 +1114,22 @@ block_155:
         actor->unk2A = M2C_FIELD(temp_s3, u8 *, 0);
         value = M2C_FIELD(temp_s3, u8 *, 2);
         actor->unk2E = value;
-        value = M2C_FIELD(temp_s3, u8 *, 1);
-        actor->unk21 = value;
+        value = actor->unk21 = M2C_FIELD(temp_s3, u8 *, 1);
         off = actor->unk2C;
         value = M2C_FIELD(temp_s3, u8 *, 3);
-        actor->unk27 = 0;
         off += 4;
         actor->unk2C = off;
+        actor->unk27 = 0;
         actor->unk24 = 1;
         actor->pad20[0] = value;
         func_8006C5FC(actor);
         return;
     }
     case 0xB2:
+        decoded_b2 = M2C_FIELD(temp_s3, u8 *, 0);
         arg0->pad20[0] = 0;
         var_v0 = (u16) arg0->unk2C + 1;
-        arg0->unk2A = (s16) M2C_FIELD(temp_s3, u8 *, 0);
+        arg0->unk2A = decoded_b2;
         arg0->unk2C = var_v0;
         return;
     case 0xB4:
