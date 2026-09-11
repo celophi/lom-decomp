@@ -224,7 +224,7 @@ segments:
       - [0x3EF35, c, func_8008EBA4] # gcc272_cdk, 98.165140% WIP
       - [0x3F29D, c, func_8008EF0C]                # gcc272_cdk, WIP 96.25%
       - [0x40EC9, c, func_80090B38] # gcc272_cdk, 100.000000%
-      - [0x410D9, c, func_80090D48] # gcc272_cdk, 98.023080% WIP
+      - [0x410D9, c, func_80090D48] # gcc272_cdk, 100%
       - [0x412E1, c, field38]                      # gcc272_cdk, func_80090F50
       - [0x41311, c, func_80090F80]                # gcc272_cdk, 100%
       - [0x413DD, c, func_8009104C] # gcc272_cdk, 98.983406% WIP
@@ -477,7 +477,7 @@ segments:
       - [0x65449, c, field_action_descriptors] # gcc280_g0; B50B8 new C 83.8%, B543C exact codegen
       - [0x658C5, c, field_action_setup] # gcc280_g0; action execution and six helpers; B5534 new C 93.789270%, six exact
       - [0x6640D, c, field_progression_ops] # gcc280_g0; progression query and initialization, both exact
-      - [0x66555, c, field_action_modifiers] # gcc280_g0; action/depletion handlers and helpers; 22 exact, three WIPs
+      - [0x66555, c, field_action_modifiers] # gcc280_g0; action/depletion handlers and helpers; 23 exact, two WIPs
       - [0x67D11, c, field_record_stat_ops] # gcc280_g0; seven compatibility/record/stat helpers, three WIPs
       - [0x68395, c, field_script_flow_ops] # gcc280_g0; interpreter, dispatchers and early primary opcodes
       - [0x697AD, c, func_800B941C] # gcc272_cdk, 80.525860% WIP

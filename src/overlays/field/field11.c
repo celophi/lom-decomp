@@ -279,7 +279,7 @@ extern FieldResourceEntry g_field_resource_entries[];
  * @param part Part definition supplying flags and placement selectors.
  * @return Updated cursor pointer.
  * @note Matching work and probe evidence: working/func_80075C88/status.md.
- * @see decomp.me (99.784615%)
+ * @see decomp.me (99.877%)
  */
 s32 *func_80075C88(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part)
 {
@@ -1035,7 +1035,7 @@ block_297:
                             temp_v0_12 = sp28.index;
                             temp_v0_13 = &D_80105AE0[temp_v0_12];
                             temp_v0_13->unkC = (s32) (temp_v0_13->unkC & ~0x400);
-                            ((u8 *) &slot->unk180)[((u8 *) &slot->unk178)[3]] = (u8) sp28.index;
+                            *(((u8 *) &slot->unk178)[3] + (u8 *)slot + 0x180) = (u8) sp28.index;
                             temp_v1_21 = ((u8 *) &slot->unk178)[3];
                             if (temp_v1_21 < 9U)
                             {
@@ -1109,15 +1109,15 @@ block_297:
                                 temp_v0_14->unk178 = (s32) (temp_v0_14->unk178 | 0x80);
                                 
                                 func_8008A840(actor->unk228, sp28.index);
-                                temp_a0_2 = (slot->unk174 & ~0x1800);
                                 temp_v0_15 = sp28.x - sxy->x;
+                                temp_a1_2 = (slot->unk174 & ~0x1800);
                                 slot->unk13C = temp_v0_15;
                                 slot->unk138 = temp_v0_15;
                                 slot->unk134 = temp_v0_15;
                                 slot->unk130 = temp_v0_15;
                                 temp_v0_16 = sp28.y - sxy->y;
-                                temp_a0_2 |= 0x1000;
-                                slot->unk174 = temp_a0_2;
+                                temp_a1_2 |= 0x1000;
+                                slot->unk174 = temp_a1_2;
                                 slot->unk13E = temp_v0_16;
                                 slot->unk13A = temp_v0_16;
                                 slot->unk136 = temp_v0_16;
@@ -1143,9 +1143,10 @@ block_297:
                                     {
                                         if (!(((u32) D_80105AE0[sp28.index].unk178 >> 6) & 1))
                                         {
+                                            var_s1_3 = sp28.index < 3;
                                             var_v1_10 = sp28.index;
                                             do { clamp_base = D_80105880; } while (0);
-                                            temp_a1_2 = sp28.index < 3;
+                                            temp_a1_2 = var_s1_3;
                                             if (temp_a1_2 == 0)
                                             {
                                                 var_v1_10 = 2;
