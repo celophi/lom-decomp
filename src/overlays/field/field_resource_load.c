@@ -9,6 +9,17 @@ typedef struct
 
 typedef struct
 {
+    u8* start;
+    u8* end;
+    u8 unk8;
+    u8 slot_index;
+    u8 padA[4];
+    s16 unkE;
+    u32 flags;
+} FieldResourceEntry;
+
+typedef struct
+{
     s32 unk0;
     s32 unk4;
     s32 unk8;
@@ -476,7 +487,7 @@ s32 func_800B0888(void)
 extern u8 *D_8010D038;
 extern s32 D_80122B18[];
 extern s32 g_field_resource_cursor;
-extern u8 g_field_resource_entries[];
+extern FieldResourceEntry g_field_resource_entries[];
 void func_8006B354(s32);
 void func_8006CB6C(u8 *, s32, s32, s32);
 void func_8009C434(void);
@@ -488,26 +499,28 @@ void func_8009C434(void);
  */
 void func_800B08FC(s32 arg0, s32 arg1)
 {
-    s32 *temp_s4;
-    s32 temp_s3;
-    u8 *temp_s0;
+    FieldResourceEntry* entry;
+    FieldResourceEntry* base;
+    u32 flags;
 
-    temp_s3 = arg1 * 4;
-    temp_s4 = (s32 *)((u8 *)D_80122B68 + temp_s3);
-    if (*temp_s4 != 0)
+    if (D_80122B68[arg1] != 0)
     {
         func_8006B354(arg1);
-        temp_s0 = (arg1 * 0x14) + g_field_resource_entries;
-        (*(s8 *)(temp_s0 + 0x9)) = arg1;
-        (*(u8 *)(temp_s0 + 0x8)) = 0;
+        base = g_field_resource_entries;
+        entry = base + arg1;
+        entry->slot_index = (u8)arg1;
+        entry->unk8 = 0;
         func_8009C434();
-        (*(u16 *)(temp_s0 + 0xE)) = 0x2F;
-        (*(s32 *)(temp_s0 + 0x10)) = (s32) (((*(s32 *)(temp_s0 + 0x10)) & ~1) | (arg0 & 1));
-        (*(s32 *)(temp_s0 + 0x0)) = (s32) g_field_resource_cursor;
-        func_8006CB6C(D_8010D038 + ((arg1 * 0x18000) + 0x8000), *(s32 *)((u8 *)D_80122B18 + temp_s3), arg1, arg1);
-        (*(s32 *)(temp_s0 + 0x4)) = (s32) g_field_resource_cursor;
-        (*(s32 *)(temp_s0 + 0x10)) = (s32) ((*(s32 *)(temp_s0 + 0x10)) | 2);
-        *temp_s4 = 0;
+        entry->unkE = 0x2F;
+        flags = entry->flags;
+        flags &= ~1;
+        flags |= arg0 & 1;
+        entry->flags = flags;
+        entry->start = (u8*)g_field_resource_cursor;
+        func_8006CB6C(D_8010D038 + (0x8000 + arg1 * 0x18000), D_80122B18[arg1], arg1, arg1);
+        entry->end = (u8*)g_field_resource_cursor;
+        entry->flags |= 2;
+        D_80122B68[arg1] = 0;
     }
 }
 
