@@ -4823,6 +4823,8 @@ typedef struct
  */
 s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_query, FieldCollisionPathPoint *output_path, s32 mode)
 {
+    s32 trace_result;
+    FieldCollisionTraceRequest *request;
     s32 path[4][0x400]; /* sp+0x0010 */
     s32 flags[4];       /* sp+0x4010 */
     FieldCollisionTraceRequest rec;            /* sp+0x4020 */
@@ -4916,9 +4918,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 *sm0;
     s32 temp_v1_31;
     u32 temp_a0_12;
-    u32 temp_lo;
     s32 temp_v1_32;
-    u8 *new_var;
     u32 var_v1_6;
     u32 var_v1_7;
     s32 var_t2;
@@ -5624,14 +5624,13 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         var_v1_5 = var_t5;
                     } while (var_s3_2 != neg1);
                     temp_a0_12 = (u16) scene->unk44;
-                    temp_lo = columns * sp4068;
                     temp_v1_32 = scene->unk2C;
-                    new_var = var_s2;
-                    temp_s1 = (u8 *) (temp_v1_32 + (temp_a0_12 * sp4054) + temp_lo + sp4064);
+                    temp_s1 = (u8 *) (temp_v1_32 + (temp_a0_12 * sp4054) + (columns * sp4068) + sp4064);
                     var_fp = &path[0][0];
                     if (temp_s1 != var_s2)
                     {
-                        var_v1_6 = (u32) new_var - (u32) temp_v1_32;
+                        request = &rec;
+                        var_v1_6 = (u32) var_s2 - (u32) temp_v1_32;
                         if (var_v1_6 >= temp_a0_12)
                         {
                             var_v1_7 = var_v1_6 - temp_a0_12;
@@ -5643,12 +5642,13 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         }
                         rec.start_x = sp4074;
                         rec.tile_base = (s32) temp_s1;
-                        rec.stamp = 4;
+                        request->stamp = 4;
                         rec.start_z = sp4078;
                         rec.end_x = ((var_v1_6 % columns) - 2) << sp4058;
                         rec.end_z = ((var_v1_6 / columns) - 2) << (sp4058 + 1);
+                        trace_result = func_80062820(request);
                         var_s7 = 1;
-                        if (func_80062820(&rec) != 0)
+                        if (trace_result != 0)
                         {
                             *var_fp = (s32) temp_s1;
                             var_fp += 1;
@@ -5657,18 +5657,19 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         }
                         else
                         {
-                            rec.goal_tile = (s32) new_var;
-                            rec.stamp = 4;
+                            rec.goal_tile = (s32) var_s2;
+                            request->stamp = 4;
                             rec.mode = 2;
                             rec.end_x = sp406C;
                             rec.end_z = sp4070;
-                            var_s7 = 1;
-                            if (func_80062820(&rec) != 0)
+                            trace_result = func_80062820(request);
+                        var_s7 = 1;
+                        if (trace_result != 0)
                             {
                                 *var_fp = (s32) temp_s1;
                                 var_fp += 1;
                                 *temp_s1 = 0xFC;
-                                temp_s1 = new_var;
+                                temp_s1 = var_s2;
                             }
                             else
                             {
@@ -5914,6 +5915,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                     }
                     if ((trace_flag & 0xFF) && (var_s7 >= 2U))
                     {
+                        trace_flag = 0;
                         sp407C = 1;
                         temp_s1 = (u8 *) path[0][0];
                         sm0 = &path[0][0];
@@ -5930,11 +5932,10 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         count = var_s4[1];
                         temp_s6 = var_s6[2];
                         sp4064 = temp_s6;
-                        rec.start_x = path[1][0];
+                        rec.start_x = sp405C;
                         temp_v0_13 = ((s32) var_fp) + temp_s6;
                         rec.tile_base = (s32) temp_s1;
-                        rec.start_z = path[2][0];
-                        trace_flag = 0;
+                        rec.start_z = sp4060;
                         sp4068 = var_s4[2];
                         temp_s4 = temp_v0_13 / 2;
                         rec.end_x = temp_s4;
