@@ -366,7 +366,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @param mover Mover state updated with resolved position, height, contact node, and flags.
  * @return Collision-resolution status bitmask.
  *
- * @see decomp.me (99.187170%) https://decomp.me/scratch/N2GNJ
+ * @see decomp.me (99.658810%) https://decomp.me/scratch/N2GNJ
  * @note Active matching scratch: working/func_8005B6AC/code.c; see its status.md.
  */
 s32 func_8005B6AC(FieldCollisionMover* mover) {
@@ -589,11 +589,11 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
         s32 x = -mover->height - mover->move_height;
         sp30 = (u16)((u32)(x + ((x < 0) ? 0xFF : 0)) >> 8);
     }
-    {
+    do {
         s32 x = -mover->height;
-        height_with_bias = (u16)(((x + ((x < 0) ? 0xFF : 0)) >> 8) + mover->height_bias);
-        sp38 = height_with_bias;
-    }
+        height_with_bias = ((x + ((x < 0) ? 0xFF : 0)) >> 8) + mover->height_bias;
+        sp38 = (u16)height_with_bias;
+    } while (0);
     temp_t6 = sp28->nodes;
     sp2C = temp_t6;
     if (temp_t6 != NULL) {
@@ -603,14 +603,16 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
             var_a3 = 0;
             mover->collision_node = NULL;
             if (var_v0_4 < 0) {
-                var_v0_4 += 0xFF;
+                var_v0_4 = (var_v0_4 + 0xFF) >> 8;
+            } else {
+                var_v0_4 >>= 8;
             }
-            probe.x = var_v0_4 >> 8;
+            probe.x = var_v0_4;
             var_v0_4 = mover->z;
             if (var_v0_4 < 0) {
                 var_v0_4 += 0xFF;
             }
-            var_fp = sp28->nodes;
+            var_fp = sp2C;
             var_v0_19 = var_v0_4 >> 8;
             probe.z = var_v0_19;
             var_s1 = (u8*)(u32)(u16)probe.x;
@@ -1313,8 +1315,8 @@ return_zero:
                                             spAC = (s32) (s16) sp40;
                                             var_s5 = var_t1_2 + 1;
                                             var_fp = (void*)(var_s5 - f_y_max);
-                                            var_t3 = var_s1 + 2;
                                             spA8 = var_s4 + 1;
+                                            var_t3 = var_s1 + 2;
                                             do {
                                                 temp_v1_18 = *(s16*)var_s1;
                                                 if (temp_v1_18 < f_x_max) {
@@ -1547,9 +1549,11 @@ return_zero:
         var_fp = NULL;
         mover->collision_node = NULL;
         if (var_v0_34 < 0) {
-            var_v0_34 += 0xFF;
+            var_v0_34 = (var_v0_34 + 0xFF) >> 8;
+        } else {
+            var_v0_34 >>= 8;
         }
-        probe.x = var_v0_34 >> 8;
+        probe.x = var_v0_34;
         var_v0_35 = mover->z;
         if (var_v0_35 < 0) {
             var_v0_35 = (var_v0_35 + 0xFF) >> 8;
