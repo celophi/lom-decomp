@@ -366,7 +366,7 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @param mover Mover state updated with resolved position, height, contact node, and flags.
  * @return Collision-resolution status bitmask.
  *
- * @see decomp.me (97.037%) https://decomp.me/scratch/N2GNJ
+ * @see decomp.me (98.690%) https://decomp.me/scratch/N2GNJ
  * @note Active matching scratch: working/func_8005B6AC/code.c; see its status.md.
  */
 s32 func_8005B6AC(FieldCollisionMover* mover) {
@@ -611,7 +611,8 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                 var_v0_4 += 0xFF;
             }
             var_fp = sp28->nodes;
-            probe.z = var_v0_4 >> 8;
+            var_v0_19 = var_v0_4 >> 8;
+            probe.z = var_v0_19;
             var_s1 = (u8*)(u32)(u16)probe.x;
             var_v0_5 = (s32)var_s1;
             var_s0 = (u16) probe.z;
@@ -733,15 +734,18 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                     if ((((FieldCollisionSurfaceDef*)temp_s6)->unk4 & 3) == 1) {
                         var_v0_8 = mover->x;
                         if (var_v0_8 < 0) {
-                            var_v0_8 += 0xFF;
+                            var_v0_8 = (var_v0_8 + 0xFF) >> 8;
+                        } else {
+                            var_v0_8 >>= 8;
                         }
-                        probe.x = var_v0_8 >> 8;
+                        probe.x = var_v0_8;
                         var_v0_9 = mover->z;
                         if (var_v0_9 < 0) {
-                            probe.z = (var_v0_9 + 0xFF) >> 8;
+                            var_v0_9 = (var_v0_9 + 0xFF) >> 8;
                         } else {
-                            probe.z = var_v0_9 >> 8;
+                            var_v0_9 >>= 8;
                         }
+                        probe.z = var_v0_9;
                         mover->move_height = (s32) (-((s32) (func_8005DFAC(var_fp, &probe.x) << 0x10) >> 8) - mover->height);
                     } else {
                         mover->move_height = (s32) (temp_s2_2 + ((FieldCollisionNode*)var_fp)->unk28);
@@ -766,9 +770,11 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                         probe.x = var_v0_10;
                         var_v0_11 = mover->z;
                         if (var_v0_11 < 0) {
-                            var_v0_11 += 0xFF;
+                            var_v0_11 = (var_v0_11 + 0xFF) >> 8;
+                        } else {
+                            var_v0_11 >>= 8;
                         }
-                        probe.z = var_v0_11 >> 8;
+                        probe.z = var_v0_11;
                         temp_s0_2 = func_8005DFAC(var_s3, &probe.x) - ((FieldCollisionSurfaceDef*)((FieldCollisionNode*)var_s3)->unk4)->unk10;
                         if ((((FieldCollisionSurfaceDef*)temp_s6)->unk4 & 3) == 1) {
                             temp_s0_2 += func_8005DFAC(var_fp, &probe.x);
@@ -813,14 +819,18 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                 case 1:                         /* switch 2 */
                     var_v0_13 = mover->x;
                     if (var_v0_13 < 0) {
-                        var_v0_13 += 0xFF;
+                        var_v0_13 = (var_v0_13 + 0xFF) >> 8;
+                    } else {
+                        var_v0_13 >>= 8;
                     }
-                    probe.x = var_v0_13 >> 8;
+                    probe.x = var_v0_13;
                     var_v0_14 = mover->z;
                     if (var_v0_14 < 0) {
-                        var_v0_14 += 0xFF;
+                        var_v0_14 = (var_v0_14 + 0xFF) >> 8;
+                    } else {
+                        var_v0_14 >>= 8;
                     }
-                    late_scan_x = (probe.z = var_v0_14 >> 8);
+                    late_scan_x = (probe.z = var_v0_14);
                     var_s0_3 = func_8005DFAC(var_fp, &probe.x);
                     var_s3 = sp28->secondary_nodes;
                     if ((var_s3 != NULL) && (var_s3 != var_fp)) {
@@ -872,9 +882,11 @@ return_zero:
         if (var_t9 == 1) {
             var_v0_17 = mover->x + mover->move_x;
             if (var_v0_17 < 0) {
-                var_v0_17 += 0xFF;
+                var_v0_17 = (var_v0_17 + 0xFF) >> 8;
+            } else {
+                var_v0_17 >>= 8;
             }
-            probe.x = var_v0_17 >> 8;
+            probe.x = var_v0_17;
             var_v0_18 = mover->z + mover->move_z;
             if (var_v0_18 < 0) {
                 var_v0_18 += 0xFF;
@@ -888,9 +900,11 @@ return_zero:
                 sp54 = temp_t5_3;
                 var_v0_19 = mover->x + ((s32) (mover->move_x * temp_t5_3) / var_t9);
                 if (var_v0_19 < 0) {
-                    var_v0_19 += 0xFF;
+                    var_v0_19 = (var_v0_19 + 0xFF) >> 8;
+                } else {
+                    var_v0_19 >>= 8;
                 }
-                probe.x = var_v0_19 >> 8;
+                probe.x = var_v0_19;
                 var_v0_20 = mover->z + ((s32) (mover->move_z * sp54) / var_t9);
                 if (var_v0_20 < 0) {
                     var_v0_20 += 0xFF;
@@ -937,9 +951,7 @@ return_zero:
         temp_v0_6 = mover->move_x;
         var_v1_2 = mover->move_z;
         var_t9 = abs(temp_v0_6);
-        if (var_v1_2 < 0) {
-            var_v1_2 = -var_v1_2;
-        }
+        var_v1_2 = abs(var_v1_2);
         sp54 = var_v1_2;
         if (var_t9 >= var_v1_2) {
             var_t9 = var_t9 >> 8;
@@ -1451,14 +1463,18 @@ return_zero:
         if ((sp5C != 0) || (sp60 != 0)) {
             var_v0_28 = mover->x + sp5C;
             if (var_v0_28 < 0) {
-                var_v0_28 += 0xFF;
+                var_v0_28 = (var_v0_28 + 0xFF) >> 8;
+            } else {
+                var_v0_28 >>= 8;
             }
-            probe.x = var_v0_28 >> 8;
+            probe.x = var_v0_28;
             var_v0_29 = mover->z + sp60;
             if (var_v0_29 < 0) {
-                var_v0_29 += 0xFF;
+                var_v0_29 = (var_v0_29 + 0xFF) >> 8;
+            } else {
+                var_v0_29 >>= 8;
             }
-            probe.z = var_v0_29 >> 8;
+            probe.z = var_v0_29;
             func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             var_t8 = 0;
             if (sp20 == 0) {
@@ -1483,14 +1499,18 @@ return_zero:
             if ((sp20 != 0) || (var_t8 != 0)) {
                 var_v0_30 = mover->x;
                 if (var_v0_30 < 0) {
-                    var_v0_30 += 0xFF;
+                    var_v0_30 = (var_v0_30 + 0xFF) >> 8;
+                } else {
+                    var_v0_30 >>= 8;
                 }
-                probe.x = var_v0_30 >> 8;
+                probe.x = var_v0_30;
                 var_v0_31 = mover->z;
                 if (var_v0_31 < 0) {
-                    var_v0_31 += 0xFF;
+                    var_v0_31 = (var_v0_31 + 0xFF) >> 8;
+                } else {
+                    var_v0_31 >>= 8;
                 }
-                probe.z = var_v0_31 >> 8;
+                probe.z = var_v0_31;
                 func_8005DA7C(&probe, sp2C, &sp20, &sp24);
                 sp50 |= 3;
             } else {
@@ -1500,14 +1520,18 @@ return_zero:
         } else {
             var_v0_32 = mover->x;
             if (var_v0_32 < 0) {
-                var_v0_32 += 0xFF;
+                var_v0_32 = (var_v0_32 + 0xFF) >> 8;
+            } else {
+                var_v0_32 >>= 8;
             }
-            probe.x = var_v0_32 >> 8;
+            probe.x = var_v0_32;
             var_v0_33 = mover->z;
             if (var_v0_33 < 0) {
-                var_v0_33 += 0xFF;
+                var_v0_33 = (var_v0_33 + 0xFF) >> 8;
+            } else {
+                var_v0_33 >>= 8;
             }
-            probe.z = var_v0_33 >> 8;
+            probe.z = var_v0_33;
             func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             sp50 |= 3;
         }
@@ -1517,6 +1541,7 @@ return_zero:
         }
         sp84 = 0xFFFFFF;
         var_s2 = 0;
+        var_s4_3 = 0;
         var_a3 = 0;
         var_v0_34 = mover->x;
         var_fp = NULL;
@@ -1524,13 +1549,14 @@ return_zero:
         if (var_v0_34 < 0) {
             var_v0_34 += 0xFF;
         }
-        var_s4_3 = 0;
         probe.x = var_v0_34 >> 8;
         var_v0_35 = mover->z;
         if (var_v0_35 < 0) {
-            var_v0_35 += 0xFF;
+            var_v0_35 = (var_v0_35 + 0xFF) >> 8;
+        } else {
+            var_v0_35 >>= 8;
         }
-        probe.z = var_v0_35 >> 8;
+        probe.z = var_v0_35;
         var_s0 = (u16) probe.z;
         late_uy = var_s0;
         var_s1 = (u8*)(u32)(u16)probe.x;

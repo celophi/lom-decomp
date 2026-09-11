@@ -501,7 +501,7 @@ segments:
       - [0x729D1, c, field_actor_record_ops] # gcc280_g0; four actor-record operations, C2724 WIP
       - [0x72C89, c, field_resource_table_ops] # gcc280_g0; seven resource/inventory helpers, all exact
       - [0x72EA5, c, field_active_record_ops] # gcc280_g0; seven load/restore/close/save functions, two WIPs
-      - [0x73775, c, field_record_table_ops] # gcc280_g0; eleven table helpers, C3688 WIP
+      - [0x73775, c, field_record_table_ops] # gcc280_g0; eleven table helpers, all exact
       - [0x73D91, c, field_group_layout_ops] # gcc280_g0; six group selection/grid functions, five exact and C3D38 WIP
       - [0x742A9, c, field_group_stat_transfer] # gcc272_cdk; active-record transfer and derived-stat builder, two WIPs
       - [0x75A95, c, field_menu_group_ops] # gcc280_g0; group creation/release, state and ordering
