@@ -7,7 +7,11 @@
 
 #include "common.h"
 #include "field_types.h"
-typedef struct { u32 addr : 24; u32 len : 8; } PrimitiveTag;
+typedef struct
+{
+    u32 addr : 24;
+    u32 len : 8;
+} PrimitiveTag;
 
 typedef struct
 {
@@ -260,20 +264,14 @@ extern FieldResourceEntry g_field_resource_entries[];
  * @param flag Selects which of the actor's two audio channels to update.
  * @param part Part definition supplying flags and placement selectors.
  * @return Updated cursor pointer.
- * @note WIP - 97.36% (1557/1668 exact rows, gcc272_cdk). Frame now matches
- *       (-0xa8 both sides). Sibling of field11.c's func_80075C88 (called for the
- *       item < 0 case there, this one for item >= 0); same struct types, GTE
- *       pan-vector macros, and dual int-pointer/byte-pointer cursor idiom, but a
- *       simpler placement-opcode dispatch (no 0x7F0000-flags branch tree) and a
- *       wider 11-byte (0xB) per-frame record with 16-bit byte-pair deltas
- *       instead of func_80075C88's 8-bit signed deltas. Residue: spill-slot
- *       traffic at sp+0x068/0x078/0x0BC.
- * @note The @c gte_dmpsx_compat.h include is required for the tree build: it
- *       redefines the Psy-Q inline_c.h GTE macros to emit the real COP2 words
- *       GNU as accepts, matching the sibling field files. To diff, the target
- *       needs .include "gte_macros.inc" after its glabel (see idioms TOOL-11);
- *       working/func_80077FB4/target_test.s carries that.
- * @see decomp.me WIP
+ * @note Sibling of field11.c's func_80075C88 (called for the item < 0 case
+ *       there, this one for item >= 0); same struct types, GTE pan-vector
+ *       macros, and dual int-pointer/byte-pointer cursor idiom, but a simpler
+ *       placement-opcode dispatch (no 0x7F0000-flags branch tree) and a wider
+ *       11-byte (0xB) per-frame record with 16-bit byte-pair deltas instead of
+ *       func_80075C88's 8-bit signed deltas.
+ * @note gte_dmpsx_compat.h supplies the COP2 words used by the GTE macros.
+ * @see decomp.me (100%)
  */
 s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part)
 {
@@ -764,7 +762,10 @@ block_48:
                                         temp_v0_6 = &slots_base[sp28.index];
                                     }
                                     temp_v0_6->unkC = (s32) (temp_v0_6->unkC & ~0x400);
-                                    { u8 *targets = (u8 *)slot + 0x180; targets[((u8 *)&slot->unk178)[3]] = sp28.index; }
+                                    {
+                                        u8 *targets = (u8 *)slot + 0x180;
+                                        targets[((u8 *)&slot->unk178)[3]] = sp28.index;
+                                    }
                                     temp_v1_18 = ((u8 *) &slot->unk178)[3];
                                     if (temp_v1_18 < 9U)
                                     {

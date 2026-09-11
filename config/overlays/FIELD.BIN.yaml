@@ -325,7 +325,7 @@ segments:
       # TU hypothesis: field_actor_effects (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x4D869, c, func_8009D4D8] # gcc272_cdk, 97.647060% WIP
       - [0x4DCED, c, field347]                     # gcc272_cdk, func_8009D95C
-      - [0x4DD71, c, func_8009D9E0]                # gcc272_cdk, 99.966380%, 7 register operand differences
+      - [0x4DD71, c, func_8009D9E0]                # gcc272_cdk, 100%
       - [0x4E9FD, c, func_8009E66C]                # gcc272_cdk, 100%
       - [0x501E5, c, func_8009FE54]                # gcc272_cdk, 100%, 814/814 instructions
       - [0x50E9D, c, func_800A0B0C] # gcc272_cdk, 80.566540% WIP
