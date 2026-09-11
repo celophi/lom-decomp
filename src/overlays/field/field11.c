@@ -279,7 +279,7 @@ extern FieldResourceEntry g_field_resource_entries[];
  * @param part Part definition supplying flags and placement selectors.
  * @return Updated cursor pointer.
  * @note Matching work and probe evidence: working/func_80075C88/status.md.
- * @see decomp.me (99.877%)
+ * @see decomp.me (99.976%)
  */
 s32 *func_80075C88(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part)
 {
@@ -1168,7 +1168,7 @@ block_297:
                                             goto block_208;
                                         }
 block_208:
-                                        if ((var_a1 = (u8 *) &D_80105AE0[sp28.index].unk178, *var_a1 & 1))
+                                        if ((var_a1 = (u8 *) &D_80105AE0[sp28.index], var_a1[0x178] & 1))
                                         {
 block_209:
                                             slot->unk3C = 0;
@@ -1238,14 +1238,23 @@ block_236:
                                                 temp_v0_20 = &D_80105AE0[sp28.index];
                                                 temp_v0_20->unk178 = (s32) (temp_v0_20->unk178 | 0x80);
                                                 field_start_actor_animation(((u8 *) &slot->unk178)[1], 1, &scratch.sp30);
-                                                goto block_254;
                                             }
                                         }
                                         else if (func_8009104C(rec->unk3A, 1, &scratch.sp30, slot->unk3C) != 0)
                                         {
                                             slot->unk174 = (s32) ((slot->unk174 & ~0x1800) | 0x1000);
                                         }
-                                        goto block_254;
+                                                temp_v1_29 = sp28.x - sxy->x;
+                                                slot->unk13C = temp_v1_29;
+                                                slot->unk138 = temp_v1_29;
+                                                slot->unk134 = temp_v1_29;
+                                                slot->unk130 = temp_v1_29;
+                                                temp_v1_30 = sp28.y - sxy->y;
+                                                slot->unk13E = temp_v1_30;
+                                                slot->unk13A = temp_v1_30;
+                                                slot->unk136 = temp_v1_30;
+                                                slot->unk132 = temp_v1_30;
+                                        goto coords_done;
                                     }
                                     if (slot->unk3C != 0)
                                     {
@@ -1284,6 +1293,7 @@ block_254:
                                             }
                                         }
                                     }
+coords_done:
                                     {
                                     {
                                     slot->unk3C = 0xFFFF;

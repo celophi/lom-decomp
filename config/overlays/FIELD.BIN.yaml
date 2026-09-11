@@ -465,7 +465,7 @@ segments:
       - [0x5FCE1, c, field_text_quad] # gcc272_cdk; textured text and outline, AF950 base C, AFC50 exact
       - [0x601A5, c, field_card_clock] # gcc272_cdk; decode/refresh cached card clock, AFE14 base C, B0094 exact
       - [0x60501, c, field288]                     # gcc272_cdk, func_800B0170
-      - [0x6058D, c, field_resource_load] # gcc272_cdk; eight pending-actor/resource routines, six exact, two base C
+      - [0x6058D, c, field_resource_load] # gcc272_cdk; eight pending-actor/resource routines, seven exact, one base C
       - [0x60E89, c, field_interaction_start] # gcc280_g0; twenty-one initialization/action/update routines, seventeen exact, four WIPs
       - [0x62BFD, c, field_event_dispatch] # gcc280_g0; claim/start owner events, both exact
       - [0x62E2D, c, field_state_ops] # gcc280_g0; record/effect/attribute helpers, thirteen exact and one WIP
