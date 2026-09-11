@@ -154,64 +154,64 @@ typedef struct A
 
 
 /**
- * @brief Compute a tri-state status from the active record's flags.
- *
- * Reads the record at @c ((A *)D_80123FB0)->unk24. Returns 0 immediately when its
- * 0x4000 flag is set. Otherwise derives a parity @c flag from bit 9 of the
- * record's and the node's word fields, and a 2-bit selector @c sel from bits
- * 4-5 of @c *unk1C. For @c sel in {0,1} the result is -1 when @c flag is set
- * else 0; for @c sel in {2,3} the result is -1.
- *
- * @return -1, 0, or 0 per the selector/flag combination described above.
- * @note 79.93% match (gcc280_g0). Residue is a whole-function register
- *       rotation (target keeps @c D_80123FB0 in a0; this build uses v1) plus
- *       the coupled load-delay scheduling around it. The `do { } while (0)`
- *       wrapper is required for the match (removing it drops the match to ~73%).
+ * @brief Compute the active record status from its parity and selector bits.
+ * @return -1 for selectors 2-3, or for selectors 0-1 when parity is set; otherwise 0.
  */
 s32 func_800B622C(void)
 {
-    s32 sel;
-    s32 flag;
-    s32 var_v0;
-    B *temp_v1;
-    Node *n20;
-    u32 *pv;
+    s32 selector;
+    s32 parity;
+    s32 case_one;
+    u32 record_bit;
+    u32 node_bit;
+    u8 parity_byte;
+    u32 selector_word;
+    u32 record_flags;
+    B *record;
+    Node *node;
+    u32 *selector_ptr;
 
-    temp_v1 = ((A *)D_80123FB0)->unk24;
-    if (temp_v1->u.h.unk6 & 0x4000)
+    record = ((A *)D_80123FB0)->unk24;
+    if (record->u.h.unk6 & 0x4000)
     {
         return 0;
     }
-    n20 = ((A *)D_80123FB0)->unk20;
-    pv = ((A *)D_80123FB0)->unk1C;
+    node = ((A *)D_80123FB0)->unk20;
+    record_flags = record->u.unk4;
+    selector_ptr = ((A *)D_80123FB0)->unk1C;
     do
     {
-        flag = ((((u32)temp_v1->u.unk4 >> 9) & 1) ^ (((u32)n20->unk4 >> 9) & 1)) & 0xFF;
+        record_bit = (record_flags >> 9) & 1;
+        node_bit = ((u32)node->unk4 >> 9) & 1;
+        parity_byte = node_bit ^ record_bit;
     } while (0);
-    sel = ((u32)*pv >> 4) & 3;
-    var_v0 = sel < 2;
-    if (sel != 1)
+    selector_word = *selector_ptr;
+    parity = parity_byte;
+    case_one = 1;
+    selector = (selector_word >> 4) & 3;
+    if (selector == case_one)
     {
-        if (var_v0 != 0)
-        {
-            if (sel != 0)
-            {
-                return var_v0;
-            }
-            goto block_7;
-        }
-        if (sel < 4)
+        goto common;
+    }
+    switch (selector)
+    {
+    case 0:
+        if (parity != 0)
         {
             return -1;
         }
-        return (sel < 4);
-    }
-block_7:
-    if (flag != 0)
-    {
+        return 0;
+    case 1:
+common:
+        if (parity != 0)
+        {
+            return -1;
+        }
+        return 0;
+    case 2:
+    case 3:
         return -1;
     }
-    return 0;
 }
 
 typedef struct

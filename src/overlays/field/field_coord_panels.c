@@ -242,8 +242,6 @@ s32 func_800AB86C(ArgA *arg0)
  *
  * @param arg0 Block holding the draw handle at 0x40B8.
  * @return 1 once the panel has fully slid out (state 3), otherwise 0.
- * @note 99.98%: the remaining residue is the register chosen for the second
- *       record-address computation.
  */
 s32 func_800AC768(ArgA *arg0)
 {
@@ -296,10 +294,12 @@ s32 func_800AC768(ArgA *arg0)
     rec = g_pad_ctx + D_80122820 * 0x250;
     if ((u32)(rec[0x608] & 0x7F) < 2)
     {
+        u8 *rec2;
+
         FORMAT_SIGNED(buf, *(u16 *)(rec + 0x634));
         STR_CAT_ENTRY(buf, D_800EC408, 0x44);
-        rec = g_pad_ctx + D_80122820 * 0x250;
-        FORMAT_SIGNED(buf2, *(u16 *)(rec + 0x636));
+        rec2 = g_pad_ctx + D_80122820 * 0x250;
+        FORMAT_SIGNED(buf2, *(u16 *)(rec2 + 0x636));
         STR_CAT(buf, buf2);
         STR_CAT_ENTRY(buf, D_800EC40A, 0x46);
         handle = func_800AF950(handle, ctx, buf, 4, D_80122990 + 0x8C, 0x84, 0, 7, 0x180, 0x180, -4, DRAW_FLAG);

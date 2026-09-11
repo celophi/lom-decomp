@@ -297,8 +297,6 @@ void func_800A54D0(void);
 
 /**
  * @brief Translate the selected resource id to a layout palette index and upload it.
- * @note Nonmatching C. The 37-byte stack copy retains the target table size;
- * valid selection ids address that copy after subtracting 0x60.
  */
 void func_800C66DC(void)
 {
@@ -314,7 +312,7 @@ void func_800C66DC(void)
 
     offset = g_gosub_result_values[0];
     half_val = *(u16 *)g_gosub_result_values;
-    raw_val = *((u8 *)&tmp + offset - 0x60);
+    raw_val = tmp.raw[offset - 0x60];
     *(u16 *)&D_80122C08 = half_val;
 
     if (raw_val >= 0x20)
@@ -322,17 +320,17 @@ void func_800C66DC(void)
         raw_val = 0;
     }
 
-    if (raw_val < 0)
-    {
-        clamped = 0;
-    }
-    else if (raw_val >= 0x20)
+    if (raw_val >= 0)
     {
         clamped = 0x1F;
+        if (raw_val < 0x20)
+        {
+            clamped = raw_val;
+        }
     }
     else
     {
-        clamped = raw_val;
+        clamped = 0;
     }
 
     base = g_menuLayoutBuffer;

@@ -50,9 +50,6 @@ typedef struct
  * @brief Draw and advance an actor effect, including controller-driven offsets.
  * @param arg0 Actor supplying the position, facing flag, and effect slot.
  * @param arg1 Effect type, from 0 through 6.
- * @note Matches 99.966380% with gcc272_cdk: 803 instructions, 3212 bytes.
- * @note Seven register operand differences remain in the initial bounds switch.
- * @note Preserve scratch arrays and local lifetimes for matching code generation.
  */
 void func_8009D9E0(Actor *arg0, u32 arg1)
 {
@@ -133,13 +130,16 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
     {
         s32 *high;
         s32 *low;
-        high = &limits[1];
         low = &limits[0];
+        high = &limits[1];
         switch (arg1)
         {
         case 0:
             *low = 30;
-            *high = 96;
+            do
+            {
+                *high = 96;
+            } while (0);
             break;
         case 1:
             *low = 64;

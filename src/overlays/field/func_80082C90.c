@@ -60,11 +60,12 @@ void func_800832F0(MATRIX *, MATRIX *);
  * @param part Part descriptor specifying rotation and scale behavior.
  * @param matrix Destination matrix initialized and updated by this function.
  * @param base_matrix Matrix passed to the base-transform composition helper.
+ * @return Unspecified; callers ignore the value.
  */
-void func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPartDef *part,
+s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPartDef *part,
                    MATRIX *matrix, MATRIX *base_matrix)
 {
-    VECTOR *scale = (VECTOR *)0x1F800000;
+    VECTOR *scale;
     VECTOR *delta = (VECTOR *)0x1F800010;
     VECTOR *square = (VECTOR *)0x1F800020;
     s32 axis;
@@ -88,7 +89,11 @@ void func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorP
     /* Initialize the packed rotation and translation words to identity. */
     ((s32 *)matrix)[4] = 0x1000;
     ((s32 *)matrix)[2] = 0x1000;
-    ((s32 *)matrix)[0] = 0x1000;
+    do
+    {
+        ((s32 *)matrix)[0] = 0x1000;
+    } while (0);
+    scale = (VECTOR *)0x1F800000;
     ((s32 *)matrix)[7] = 0;
     ((s32 *)matrix)[6] = 0;
     ((s32 *)matrix)[5] = 0;
@@ -109,7 +114,10 @@ void func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorP
             break;
         case 2:
             RotMatrixX(0x400, matrix);
-            rotation = record->unk12;
+            do
+            {
+                rotation = record->unk12;
+            } while (0);
             axis = 2;
             break;
         case 3:

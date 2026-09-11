@@ -22,7 +22,7 @@ typedef struct FieldMotionRecord
     u8 resource_index;
 } FieldMotionRecord;
 
-/** @brief Resource metadata entry with animation-layout flags at offset 0x10. */
+/** @brief Resource metadata entry containing animation-layout flags. */
 typedef struct FieldMotionResource
 {
     u8 pad00[0x10];
@@ -42,7 +42,6 @@ extern void func_8006C3FC(FieldMotionRecord *record);
  * @param delta_x Horizontal displacement used to select a direction.
  * @param delta_z Depth displacement used to select a direction.
  * @note Resource flag 1 selects the alternate directional animation tables.
- * @note WIP: 98.165140% gcc272_cdk; two instruction scheduling positions differ.
  */
 void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
 {
@@ -61,6 +60,7 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
     s32 low_state;
     s32 idle_state;
     s32 state_mask;
+    FieldMotionRecord *refresh_record;
     u8 idle_delay;
     u8 movement_delay;
 
@@ -83,8 +83,11 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
             sector_or_flags = direction_or_animation >> 5;
             if ((sector_or_flags == 2) || (sector_or_flags == 6))
             {
+                s32 *vertical_base;
+
                 state_mask = ~0x80;
-                vertical_entry = &D_800EB0C4[sector_or_flags];
+                vertical_base = D_800EB0C4;
+                vertical_entry = vertical_base + sector_or_flags;
                 if ((record->animation & state_mask) != (*vertical_entry & state_mask))
                 {
                     record->direction = (s8)(direction_or_animation & 0xE0);
@@ -113,13 +116,9 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
                     {
                         record->animation = D_800EB0C4[direction_or_animation >> 5];
                     }
-                    /* Keep the animation reset after the selected direction store. */
-                    do
-                    {
-                        record->animation_frame = 0;
-                        record->active = 1;
-                        func_8006C3FC(record);
-                    } while (0);
+                    record->animation_frame = 0;
+                    record->active = 1;
+                    func_8006C3FC(record);
                 }
             }
             goto keep_moving;
@@ -134,15 +133,18 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
         if (((idle_state >= 2) && (record->stop_delay == 0)) ||
             ((idle_state < 2) && (record->idle_mode == 0)))
         {
-            /* Reuse the no-longer-needed displacement for the idle facing flag. */
+            s32 random_value;
+
             delta_z = record->animation;
             delta_z &= 0x80;
-            delta_z += rand() >= 0x6001;
-            record->animation = delta_z;
-            record->animation_frame = 0;
-            record->idle_mode = 1U;
-            record->active = 1;
-            func_8006C3FC(record);
+            random_value = rand();
+            refresh_record = record;
+            delta_z += random_value >= 0x6001;
+            refresh_record->animation = delta_z;
+            refresh_record->animation_frame = 0;
+            refresh_record->idle_mode = 1U;
+            refresh_record->active = 1;
+            func_8006C3FC(refresh_record);
         }
     }
     else
@@ -191,10 +193,11 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
         low_state &= 0x7F;
         if ((low_state >= 5) && (record->stop_delay == 0))
         {
-            record->active = 1;
-            record->animation_frame = 0;
-            record->animation = (u8)((low_state % 5) | (previous_animation & 0x80));
-            func_8006C3FC(record);
+            refresh_record = record;
+            refresh_record->active = 1;
+            refresh_record->animation_frame = 0;
+            refresh_record->animation = (u8)((low_state % 5) | (previous_animation & 0x80));
+            func_8006C3FC(refresh_record);
         }
     }
 }

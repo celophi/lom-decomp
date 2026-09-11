@@ -33,7 +33,7 @@ extern Record *func_80087C9C(s32);
 s32 func_800878B4(s32 index)
 {
     Record *record;
-    u8 *base;
+    u8 *base, *owner_base;
     Actor *actors, *actor;
     s32 offset, owner;
     record = func_80087C9C(index);
@@ -63,11 +63,12 @@ s32 func_800878B4(s32 index)
     {
         offset = 56;
     }
-    if (record->selector != (owner = ((Binding *)(base + offset))->owner))
+    if (((Binding *)(base + offset))->owner != record->selector)
     {
         return 1;
     }
-    base = (u8 *)D_80105880;
+    owner = ((Binding *)(base + offset))->owner;
+    owner_base = (u8 *)D_80105880;
     if ((u8)owner < 2)
     {
         offset = owner * 28;
@@ -76,7 +77,7 @@ s32 func_800878B4(s32 index)
     {
         offset = 56;
     }
-    if (((Binding *)(base + offset))->state == 1)
+    if (((Binding *)(owner_base + offset))->state == 1)
     {
         return 2;
     }
@@ -93,7 +94,7 @@ s32 func_800878B4(s32 index)
     actor = (Actor *)((u8 *)actors + ((Binding *)(base + offset))->slot * 0x244);
     if (actor->first != 0)
     {
-        return 3;
+        goto return_three;
     }
     actors = g_field_actor_slots;
     base = (u8 *)D_80105880;
@@ -106,9 +107,12 @@ s32 func_800878B4(s32 index)
         offset = 56;
     }
     actor = (Actor *)((u8 *)actors + ((Binding *)(base + offset))->slot * 0x244);
-    if (actor->second != 0)
+    if (actor->second == 0)
     {
-        return 3;
+        goto return_four;
     }
+return_three:
+    return 3;
+return_four:
     return 4;
 }

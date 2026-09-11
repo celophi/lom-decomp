@@ -18,8 +18,6 @@ s32 rand(void);
  * @brief Select a bounded random entry and invoke its dispatch handler.
  * @param arg0 Actor record containing flags and selection tables.
  * @return The handler result, or -1 for a null record or invalid dispatch entry.
- * @note WIP: load scheduling and temporary-register differences remain.
- * @see decomp.me (91.29%) WIP
  */
 s32 func_800C0A38(Rec *arg0)
 {
@@ -27,21 +25,21 @@ s32 func_800C0A38(Rec *arg0)
     s32 count;
     s32 mask;
     s32 shift_count;
-    s32 within_range;
     u8 *entry;
     u8 dispatch_idx;
 
-    result = -1;
+    do
+    {
+        result = -1;
+    } while (0);
     if (arg0 != NULL)
     {
         count = D_800F18C4[(u8)(arg0->unk10[0x4C]) >> 5];
-        within_range = count < 8;
         if (arg0->unkC & 0x04000000)
         {
             count += 2;
-            within_range = count < 8;
         }
-        if (!within_range)
+        if (count >= 8)
         {
             count = 7;
         }

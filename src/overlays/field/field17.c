@@ -168,7 +168,7 @@ void func_8007E5FC(s16 *out, s32 mirror, u8 *item);
 void func_800801F8(u16 *buf, s32 count, s32 flag);
 void func_8007D8D8(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
 void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, s32 part_index);
-void func_80082C90(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, MATRIX *mtx, MATRIX *tmp);
+s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, MATRIX *mtx, MATRIX *tmp);
 s32 *func_80080274(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *base);
 
 /**

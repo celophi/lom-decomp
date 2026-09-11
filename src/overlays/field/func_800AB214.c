@@ -87,7 +87,6 @@ void func_800AB214(s32 context_or_delay)
 {
     s32 slot_address;
     s32 result;
-    s32 *request;
     s32 index_or_zero;
     u16 temp_v1;
 
@@ -167,15 +166,16 @@ void func_800AB214(s32 context_or_delay)
         }
         break;
     case 4:
-        request = &D_80122994;
-        if ((*request != 0) && (func_801401F0(context_or_delay) != 0))
+        if ((D_80122994 != 0) && (func_801401F0(context_or_delay) != 0))
         {
-            goto block_32;
+            func_80084240();
+            D_80122994 = 0;
+            D_8012269C = 0;
+            return;
         }
         break;
     case 5:
-        request = &D_80122994;
-        if (*request != 0)
+        if (D_80122994 != 0)
         {
             result = func_801401F8(context_or_delay);
             switch (result)
@@ -185,14 +185,19 @@ void func_800AB214(s32 context_or_delay)
                 D_800FD818[1].status.bits.selected = g_pad_ctx->unk858 & 1;
                 D_800FD818[1].unk3 = 0;
                 func_8006AD04(-2, 0, 0);
-                goto block_32;
+                func_80084240();
+                D_80122994 = 0;
+                D_8012269C = 0;
+                return;
             case 3:
-                goto block_32;
+                func_80084240();
+                D_80122994 = 0;
+                D_8012269C = 0;
+                return;
             case 2:
                 func_8006AB38(0);
-            block_32:
                 func_80084240();
-                *request = 0;
+                D_80122994 = 0;
                 D_8012269C = 0;
                 return;
             }

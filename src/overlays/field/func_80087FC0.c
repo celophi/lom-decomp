@@ -40,14 +40,13 @@ extern StateB80087FC0 D_80105AE0[];
 extern RecordB80087FC0 D_800FDF58[];
 extern PadCtxB80087FC0 *g_pad_ctx;
 
-void func_8008C7A8(s32 arg0, void *arg1, void *arg2);
+void func_8008C7A8(void);
 
 /**
  * @brief Find an actor by key and update its nine-bit control mode.
  * @param arg0 Actor-slot lookup key.
  * @param arg1 New mode; only its low nine bits are used.
  * @return -1 when no actor matches, or 0 after updating the record.
- * @note WIP: additional instructions and temporary-register differences remain.
  */
 s32 func_80087FC0(s32 arg0, s32 arg1)
 {
@@ -57,7 +56,7 @@ s32 func_80087FC0(s32 arg0, s32 arg1)
     s32 i;
     s32 masked;
     u8 unk3a;
-    volatile FixedB80087FC0 *fixed = (volatile FixedB80087FC0 *) 0x801ED600;
+    FixedB80087FC0 *fixed = (FixedB80087FC0 *) 0x801ED600;
 
     rb = D_800FDF58;
     ra = D_80105AE0;
@@ -105,7 +104,7 @@ body:
     {
         found->unk28 = 0xFF;
         found->unk10 = 0;
-        func_8008C7A8(1, ra, rb);
+        func_8008C7A8();
         if (found->unk3A == masked)
         {
         zero_flag:

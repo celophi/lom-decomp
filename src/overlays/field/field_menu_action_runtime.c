@@ -660,74 +660,70 @@ void func_800A8F8C(void *arg0, u8 *arg1);
 void func_800C2A88(s32 arg0);
 
 /**
- * @brief Move the gosub-selected menu record into the first available active slot.
- * @note D_80122C1F reports no result (0), copied (1), empty (2), or duplicate (3).
- * @note WIP: redundant address computation and instruction-order differences remain.
+ * @brief Copy the gosub-selected menu record into the first free slot.
  */
 void func_800C80BC(void)
 {
-    s32 sel;
-    u8 *sel_rec;
-    s32 i;
-    s32 v0;
+    s32 selected_index;
+    u8 *selected_record;
+    u8 *initial_base;
+    u8 *scan_base;
+    s32 record_index;
+    s32 count;
 
     D_80122C1F = 0;
     if (g_gosub_result_count == 0)
-   
-   {
+    {
         return;
     }
 
-    sel = g_gosub_result_values[0];
-    sel_rec = g_menuLayoutBuffer + sel * 0x40;
-
-    if (*(s32 *)(sel_rec + 0xD18) == 0)
-   
-   {
-        if (*(s32 *)(sel_rec + 0xD1C) == 0)
-       
-       {
-            D_80122C1F = 2;
-            return;
+    selected_index = g_gosub_result_values[0];
+    initial_base = g_menuLayoutBuffer;
+    {
+        u8 *check_record = initial_base + selected_index * 0x40;
+        if (*(s32 *)(check_record + 0xD18) == 0)
+        {
+            if (*(s32 *)(check_record + 0xD1C) == 0)
+            {
+                D_80122C1F = 2;
+                return;
+            }
         }
     }
 
-    for (i = 0; i < 4; i++)
-   
-   {
-        u8 *rowp = (u8 *)((s32)g_menuLayoutBuffer + i * 0x40);
-        if (rowp[0x3160] != 0)
-       
-       {
-            if (*(s32 *)(sel_rec + 0xD18) == *(s32 *)(rowp + 0x3198))
-           
-           {
-                if (*(s32 *)(sel_rec + 0xD1C) == *(s32 *)(rowp + 0x319C))
-               
-               {
+    record_index = 0;
+    scan_base = g_menuLayoutBuffer;
+    selected_record = scan_base + selected_index * 0x40;
+    while (record_index < 4)
+    {
+        u8 *record = (u8 *)((s32)g_menuLayoutBuffer + record_index * 0x40);
+        if (record[0x3160] != 0)
+        {
+            if (*(s32 *)(selected_record + 0xD18) == *(s32 *)(record + 0x3198))
+            {
+                if (*(s32 *)(selected_record + 0xD1C) == *(s32 *)(record + 0x319C))
+                {
                     D_80122C1F = 3;
                     return;
                 }
             }
         }
+        record_index++;
     }
 
-    for (i = 0; i < 4; i++)
-   
-   {
-        u8 *rowp = (u8 *)((s32)g_menuLayoutBuffer + i * 0x40);
-        if (rowp[0x3160] == 0)
-       
-       {
-            func_800A8F8C(g_menuLayoutBuffer + i * 0x40 + 0x3160, g_menuLayoutBuffer + 0xCE0 + sel * 0x40);
-            func_800C2A88(sel);
-            v0 = *(s32 *)(rowp + 0x3194);
-            if (v0 == 0)
-           
-           {
-                v0 = 1;
+    for (record_index = 0; record_index < 4; record_index++)
+    {
+        u8 *record = (u8 *)((s32)g_menuLayoutBuffer + record_index * 0x40);
+        if (record[0x3160] == 0)
+        {
+            func_800A8F8C(g_menuLayoutBuffer + record_index * 0x40 + 0x3160, g_menuLayoutBuffer + 0xCE0 + selected_index * 0x40);
+            func_800C2A88(selected_index);
+            count = *(s32 *)(record + 0x3194);
+            if (count == 0)
+            {
+                count = 1;
             }
-            *(s32 *)(rowp + 0x3194) = v0;
+            *(s32 *)(record + 0x3194) = count;
             D_80122C1F = 1;
             return;
         }

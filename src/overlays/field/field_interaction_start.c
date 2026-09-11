@@ -152,28 +152,69 @@ void func_800B0C54(void)
 void func_800B0D3C(void)
 {
     s32 temp_v1;
+    s32 current;
+    u16 invalid;
+    s32 fixed0;
+    s32 fixed1;
+    s32 fixed2;
+    s32 masked1;
+    s32 masked2;
+    u32 fixed_mask;
+    u32 loop_mask;
+    u32 mask_d;
     s32 var_a0;
     s32 var_a2;
     s32 var_a3;
-    s32 var_a3_2;
     s32 var_t1_2;
     s32 var_t1;
     u8 *temp_a0;
     u8 *var_t0;
+    u8 *base;
 
     var_t1 = 0;
-    var_a2 = 0;
     do
     {
-        temp_a0 = (u8 *)D_80122B78 + var_a2;
+        var_a2 = var_t1 * 0x94;
+        temp_a0 = (u8 *)D_80122B78;
+        temp_a0 += 1;
+        temp_a0 -= 1;
+        temp_a0 += var_a2;
         var_a3 = 0;
+        var_a3 += 1;
+        var_a3 += 1;
+        var_a3 -= 2;
         (*(u8 *)((u8 *)temp_a0 + 0x430)) = var_t1;
-        (*(s32 *)((u8 *)temp_a0 + 0x4C0)) = (s32) (((*(s32 *)((u8 *)temp_a0 + 0x4C0)) | 0x80000000) & 0xBFFFFFFF & 0xDFFFFFFF);
+        (*(s32 *)((u8 *)temp_a0 + 0x4C0)) |= 0x80000000;
+        invalid = 0xFFFF;
+        (*(s32 *)((u8 *)temp_a0 + 0x4C0)) &= 0xBFFFFFFF;
+        mask_d = 0xDFFFFFFF;
+        mask_d += (u32)temp_a0;
+        mask_d -= (u32)temp_a0;
+        (*(s32 *)((u8 *)temp_a0 + 0x4C0)) &= mask_d;
         var_a0 = var_a2;
         (*(u8 *)((u8 *)(u8 *)D_80122B78 + var_a2 + 0x431)) = (s8) (var_t1 - 0x80);
         (*(u8 *)((u8 *)(u8 *)D_80122B78 + var_a2 + 0x434)) = 0xFF;
+        do
+        {
+            do
+                    {
+                        do
+                                {
+                                    do
+                                            {
+                                                do
+                                                        {
+                                                            do
+                                                                    {
+                                                                        base = (u8 *)D_80122B78;
+                                                                    } while (0);
+                                                        } while (0);
+                                            } while (0);
+                                } while (0);
+                    } while (0);
+        } while (0);
 loop_2:
-        (*(u16 *)((u8 *)(u8 *)D_80122B78 + var_a0 + 0x438)) = 0xFFFF;
+        (*(u16 *)(base + var_a0 + 0x438)) = invalid;
         var_a3 += 1;
         var_a0 += 2;
         if (var_a3 < 0x10)
@@ -182,22 +223,37 @@ loop_2:
         }
         var_t1 += 1;
         (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400)) = (u16) ((*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400)) + 1);
-        var_a2 += 0x94;
     } while (var_t1 < 3);
+    fixed_mask = 0xFFFF01FF;
     var_t1_2 = 3;
-    var_a3_2 = 0xFF;
+    var_a3 = 0xFF;
     var_t0 = (u8 *)D_80122B78 + 0x1BC;
-    (*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x458)) = (s32) (((*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x458)) & 0xFFFF01FF) | 0x6000);
-    (*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x4EC)) = (s32) (((*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x4EC)) & 0xFFFF01FF) | 0x6200);
-    (*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x580)) = (s32) (((*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x580)) & 0xFFFF01FF) | 0x7000);
-    do
+    fixed0 = *(s32 *)((u8 *)D_80122B78 + 0x458);
+    fixed1 = *(s32 *)((u8 *)D_80122B78 + 0x4EC);
+    fixed2 = *(s32 *)((u8 *)D_80122B78 + 0x580);
+    fixed0 &= fixed_mask;
+    fixed0 |= 0x6000;
+    masked1 = fixed1 & fixed_mask;
+    masked1 |= 0x6200;
+    masked2 = fixed2 & fixed_mask;
+    masked2 |= 0x7000;
+    *(s32 *)((u8 *)D_80122B78 + 0x458) = fixed0;
+    *(s32 *)((u8 *)D_80122B78 + 0x4EC) = masked1;
+    *(s32 *)((u8 *)D_80122B78 + 0x580) = masked2;
+    loop_mask = 0xFFFF01FF;
+loop_3:
+    var_t1_2 += 1;
+    temp_v1 = var_a3 & 0x7F;
+    var_a3 -= 1;
+    current = *(s32 *)((u8 *)var_t0 + 0x458);
+    current &= loop_mask;
+    current |= temp_v1 << 9;
+    (*(s32 *)((u8 *)var_t0 + 0x458)) = current;
+    var_t0 += 0x94;
+    if (var_t1_2 < 0x10)
     {
-        var_t1_2 += 1;
-        temp_v1 = var_a3_2 & 0x7F;
-        var_a3_2 -= 1;
-        (*(s32 *)((u8 *)var_t0 + 0x458)) = (s32) (((*(s32 *)((u8 *)var_t0 + 0x458)) & 0xFFFF01FF) | (temp_v1 << 9));
-        var_t0 += 0x94;
-    } while (var_t1_2 < 0x10);
+        goto loop_3;
+    }
     (*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x0)) = 0x40;
 }
 
