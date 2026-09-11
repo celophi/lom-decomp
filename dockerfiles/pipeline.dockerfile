@@ -2,7 +2,7 @@
 # It expects an archive to exist at the local path ROM/ containing a .7z file with the game files. 
 # The .7z should contain a .bin and .cue pair, which will be converted to an ISO and unpacked into /rom.
 # To build this run the following from the repo root (replace the version string):
-# docker build -t ghcr.io/celophi/slus-01013:v4.0 -f dockerfiles/pipeline.dockerfile dockerfiles
+# docker build -t ghcr.io/celophi/slus-01013:v5.0 -f dockerfiles/pipeline.dockerfile dockerfiles
 
 # Stage 1: grab compiler artifacts
 FROM old-gcc/gcc-2.8.0-psx AS psx-gcc-2.8.0
