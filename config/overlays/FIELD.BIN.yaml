@@ -248,7 +248,7 @@ segments:
       - [0x42E69, c, func_80092AD8] # gcc272_cdk, 100.000000%
       - [0x42FB5, c, func_80092C24]                # gcc272_cdk, 100%
       - [0x43029, c, func_80092C98]                # gcc272_cdk, 97.53% WIP
-      - [0x43E49, c, func_80093AB8] # gcc272_cdk, 99.588234% WIP
+      - [0x43E49, c, func_80093AB8] # gcc272_cdk, 100%
       - [0x44245, c, func_80093EB4]                # gcc272_cdk, 100%
       - [0x443CD, c, func_8009403C] # gcc272_cdk, 100.000000%
       - [0x44899, c, func_80094508]                # gcc272_cdk, 95.918365% (load scheduling)
@@ -448,7 +448,7 @@ segments:
       - [0x5DB6D, c, func_800AD7DC]                # gcc272_cdk, 100%
       # TU hypothesis: field_menu_windows (high). See docs/decompilation/field-boundaries/map.md.
       - [0x5DBE1, c, func_800AD850] # gcc272_cdk, 100%
-      - [0x5E061, c, func_800ADCD0] # gcc272_cdk, 95.459770% WIP
+      - [0x5E061, c, func_800ADCD0] # gcc272_cdk, 100%
       - [0x5E1BD, c, field342]                     # gcc272_cdk, func_800ADE2C
       - [0x5E241, c, field76]                      # gcc272_cdk, func_800ADEB0
       - [0x5E315, c, func_800ADF84]                 # gcc272_cdk, 100%

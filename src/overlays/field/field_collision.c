@@ -3974,28 +3974,19 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
 /**
  * @brief Expand a group's rasterised tile-column bitmask into a per-pixel
  *        stencil buffer, dilated by the group's edge width.
- * @see decomp.me (99.97311%) TODO
- */
-extern u32 D_1F800008;
-
-/**
- * @brief Dilate the active collision-group mask for a rectangular footprint.
  * @param footprint_width Footprint width in collision-map columns.
  * @param footprint_depth Footprint depth in collision-map rows.
+ * @see decomp.me (100%) TODO
  */
 void func_80060364(s32 footprint_width, s32 footprint_depth)
 {
-    FieldScene *scene;
+    FieldScene* scene;
     u32 sp4;
     s32 sp8;
-    s32 spC;
+    s32 sp_c;
     s32 sp10;
     s32 sp14;
-    s32 sp18;
-    u32 sp1C;
     s32 sp20;
-    s32 sp24;
-    s32 sp28;
     s32 sp30;
     s32 stride4;
     s32 ring_words;
@@ -4003,14 +3994,10 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
     u8 temp_s6;
     s32 temp_s6_2;
     u32 next_input;
-    s32 temp_s6_3;
-    s32 temp_s6_4;
-    s32 temp_s6_5;
     s32 temp_s3;
     s32 temp_s1;
-    s32 var_s1;
     s32 word_bits;
-    u8 *var_t7;
+    u8* var_t7;
     u32 var_a1;
     u32 var_t9;
     u32 var_fp;
@@ -4044,42 +4031,41 @@ void func_80060364(s32 footprint_width, s32 footprint_depth)
     u32 temp_v1_4;
 
     scene = g_field_scene.scene;
-    temp_v1 = (u16) scene->unk46;
-    spC = ((s32) (temp_v1 + 0x1F) >> 5) * 2;
-    sp10 = (((s32) (temp_v1 - 3) >> 5) + 1) * 3;
+    temp_v1 = (u16)scene->unk46;
+    sp_c = ((s32)(temp_v1 + 0x1F) >> 5) * 2;
+    sp10 = (((s32)(temp_v1 - 3) >> 5) + 1) * 3;
     temp_s3 = footprint_width - 1;
-    do { if (footprint_depth >= 3)
+    do
     {
-        var_a1 = 0x1F800000;
-        var_t9 = 0x1F800000;
-        var_fp = (sp10 * footprint_depth * 4) + 0x1F800000;
-    }
-    else
-    {
-        var_a1 = 0;
-        var_t9 = 0;
-        var_fp = 0;
-    }
+        if (footprint_depth >= 3)
+        {
+            var_a1 = 0x1F800000;
+            var_t9 = 0x1F800000;
+            var_fp = (sp10 * footprint_depth * 4) + 0x1F800000;
+        }
+        else
+        {
+            var_a1 = 0;
+            var_t9 = 0;
+            var_fp = 0;
+        }
     } while (0);
-    sp4 = (u32) scene->unk28;
+    sp4 = (u32)scene->unk28;
     temp_s6 = scene->unk41;
-    sp8 = (s32) temp_s6;
-    var_t7 = (u8 *) scene->unk2C;
+    sp8 = (s32)temp_s6;
+    var_t7 = (u8*)scene->unk2C;
     temp_s6_2 = temp_s6 - 1;
     sp8 = temp_s6_2;
     if (temp_s6_2 != -1)
     {
-        temp_s6_3 = footprint_width - 1;
         word_bits = 0x20;
-        sp1C = temp_s6_3;
-        sp20 = temp_s6_3 * 4;
         do
         {
-            var_a2 = (4 - (s32) var_t7) & 3;
-            var_t8 = (u16) scene->unk46 * 2;
+            var_a2 = (4 - (s32)var_t7) & 3;
+            var_t8 = (u16)scene->unk46 * 2;
             if (var_a2 != 0)
             {
-loop_6:
+            loop_6:
                 if (var_t8 != 0)
                 {
                     *var_t7 = -1;
@@ -4092,17 +4078,21 @@ loop_6:
                     }
                 }
             }
-            var_a2 = (var_t8 >> 2);            var_a2 -= 1;
+            var_a2 = (var_t8 >> 2);
+            var_a2 -= 1;
             if (var_a2 != -1)
             {
                 do
                 {
-                    do { *(s32 *) var_t7 = -1; } while (0);
+
+                    *(s32*)var_t7 = -1;
+
                     var_a2 -= 1;
                     var_t7 += 4;
                 } while (var_a2 != -1);
             }
-            var_a2 = (var_t8 & 3);            var_a2 -= 1;
+            var_a2 = (var_t8 & 3);
+            var_a2 -= 1;
             if (var_a2 != -1)
             {
                 s32 end = -1;
@@ -4113,84 +4103,85 @@ loop_6:
                     var_t7 += 1;
                 } while (var_a2 != end);
             }
-            do { var_s4 = 0;
-            temp_v0 = ((u16) scene->unk48 - footprint_depth) - 4; } while (0);
+            do
+            {
+                var_s4 = 0;
+                temp_v0 = ((u16)scene->unk48 - footprint_depth) - 4;
+            } while (0);
             sp14 = temp_v0;
             if (temp_v0 != -1)
             {
                 ring_words = sp10 * footprint_depth;
                 stride4 = sp10 * 4;
-                sp24 = word_bits - temp_s3;
-                sp28 = 0x21 - temp_s3;
                 sp30 = ring_words * 4;
                 do
                 {
                     temp_s1 = sp4;
-                    var_t8 = (u16) scene->unk46;
-                    var_t5 = *(u32 *) (temp_s1 + 4);
-                    sp4 = temp_s1 + (spC * 4);
-                    temp_t2 = *(u32 *) (temp_s1 + 0);
+                    var_t8 = (u16)scene->unk46;
+                    var_t5 = *(u32*)(temp_s1 + 4);
+                    sp4 = temp_s1 + (sp_c * 4);
+                    temp_t2 = *(u32*)(temp_s1 + 0);
                     temp_t0 = var_t5;
                     temp_v0 = var_t8 - 1;
                     var_t8 = temp_v0 - footprint_width;
                     temp_s1 += 8;
-                    switch (sp1C)
+                    switch (footprint_width - 1)
                     {
-                        default:
-                            var_t3 = temp_t0 | (temp_t0 >> temp_s3);
-                            var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2);
-                            var_a3 = var_t6;
-                            var_a0 = temp_t2 | (temp_t2 >> 1);
-                            temp_v0_2 = var_a0 >> 2;
-                            var_t1 = var_a0 | temp_v0_2;
-                            var_a0 = temp_v0_2;
-                            var_a2 = (footprint_width - 6) >> 1;
-                            do
-                            {
-                                var_a3 = var_a3 >> 2;
-                                var_t6 |= var_a3;
-                                var_a0 = var_a0 >> 2;
-                                var_a2 -= 1;
-                                var_t1 |= var_a0;
-                            } while (var_a2 != -1);
-                            if (footprint_width & 1)
-                            {
-                                var_t6 |= temp_t0 >> (footprint_width - 2);
-                                var_t1 |= temp_t2 >> temp_s3;
-                            }
-                            goto block_25;
-                        case 4:
-                            var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2) | (temp_t0 >> 3);
-                            var_t3 = temp_t0 | (temp_t0 >> 4);
-                            var_a0 = temp_t2 | (temp_t2 >> 1);
-                            var_t1 = var_a0 | (var_a0 >> 2) | (temp_t2 >> 4);
-                            goto block_25;
-                        case 3:
-                            var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2);
-                            var_t3 = temp_t0 | (temp_t0 >> 3);
-                            var_a0 = temp_t2 | (temp_t2 >> 1);
-                            var_t1 = var_a0 | (var_a0 >> 2);
-                            goto block_25;
-                        case 2:
-                            var_t6 = temp_t0 >> 1;
-                            var_t3 = temp_t0 | (temp_t0 >> 2);
-                            var_t1 = temp_t2 | (temp_t2 >> 1) | (temp_t2 >> 2);
-                            goto block_25;
-                        case 1:
-                            var_t6 = 0;
-                            var_t3 = temp_t0 | (temp_t0 >> 1);
-                            var_t1 = temp_t2 | (temp_t2 >> 1);
-block_25:
-                            var_t4 = temp_t0;
-                            var_t5 = temp_t2;
-                            break;
-                        case 0:
-                            var_t6 = 0;
-                            var_t3 = temp_t0;
-                            var_t1 = temp_t2;
-                            var_t4 = 0;
-                            var_t5 = 0;
-                            break;
+                    default:
+                        var_t3 = temp_t0 | (temp_t0 >> temp_s3);
+                        var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2);
+                        var_a3 = var_t6;
+                        var_a0 = temp_t2 | (temp_t2 >> 1);
+                        temp_v0_2 = var_a0 >> 2;
+                        var_t1 = var_a0 | temp_v0_2;
+                        var_a0 = temp_v0_2;
+                        var_a2 = (footprint_width - 6) >> 1;
+                        do
+                        {
+                            var_a3 = var_a3 >> 2;
+                            var_t6 |= var_a3;
+                            var_a0 = var_a0 >> 2;
+                            var_a2 -= 1;
+                            var_t1 |= var_a0;
+                        } while (var_a2 != -1);
+                        if (footprint_width & 1)
+                        {
+                            var_t6 |= temp_t0 >> (footprint_width - 2);
+                            var_t1 |= temp_t2 >> temp_s3;
+                        }
+                        goto block_25;
+                    case 4:
+                        var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2) | (temp_t0 >> 3);
+                        var_t3 = temp_t0 | (temp_t0 >> 4);
+                        var_a0 = temp_t2 | (temp_t2 >> 1);
+                        var_t1 = var_a0 | (var_a0 >> 2) | (temp_t2 >> 4);
+                        goto block_25;
+                    case 3:
+                        var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2);
+                        var_t3 = temp_t0 | (temp_t0 >> 3);
+                        var_a0 = temp_t2 | (temp_t2 >> 1);
+                        var_t1 = var_a0 | (var_a0 >> 2);
+                        goto block_25;
+                    case 2:
+                        var_t6 = temp_t0 >> 1;
+                        var_t3 = temp_t0 | (temp_t0 >> 2);
+                        var_t1 = temp_t2 | (temp_t2 >> 1) | (temp_t2 >> 2);
+                        goto block_25;
+                    case 1:
+                        var_t6 = 0;
+                        var_t3 = temp_t0 | (temp_t0 >> 1);
+                        var_t1 = temp_t2 | (temp_t2 >> 1);
+                    block_25:
+                        var_t4 = temp_t0;
+                        var_t5 = temp_t2;
+                        break;
+                    case 0:
+                        var_t6 = 0;
+                        var_t3 = temp_t0;
+                        var_t1 = temp_t2;
+                        var_t4 = 0;
+                        var_t5 = 0;
+                        break;
                     }
                     var_t0 = word_bits;
                     var_t0 -= temp_s3;
@@ -4211,10 +4202,13 @@ block_25:
                         }
                         else
                         {
-                            do { if (var_a1 >= var_fp)
+                            do
                             {
-                                var_a1 -= sp30;
-                            } } while (0);
+                                if (var_a1 >= var_fp)
+                                {
+                                    var_a1 -= sp30;
+                                }
+                            } while (0);
                             if (var_t9 >= var_fp)
                             {
                                 var_t9 -= sp30;
@@ -4224,7 +4218,7 @@ block_25:
                     if (var_t8 != 0)
                     {
                         var_s0 = var_a1 + 8;
-loop_38:
+                    loop_38:
                         if (var_t0 < var_t8)
                         {
                             var_t8 -= var_t0;
@@ -4260,14 +4254,14 @@ loop_38:
                             } while (var_t0 != 0);
                             break;
                         case 2:
-                            *(s32 *) var_a1 = var_t1;
-                            *(s32 *) (var_s0 - 4) = var_t3;
+                            *(s32*)var_a1 = var_t1;
+                            *(s32*)(var_s0 - 4) = var_t3;
                             var_s0 += 0xC;
                             var_a1 += 0xC;
                             if (var_s4 != 0)
                             {
-                                temp_v0_4 = *(u32 *) (var_t9 + 4);
-                                temp_v1_3 = *(u32 *) (var_t9 + 0);
+                                temp_v0_4 = *(u32*)(var_t9 + 4);
+                                temp_v1_3 = *(u32*)(var_t9 + 0);
                                 var_t9 += 0xC;
                                 var_t3 = var_t3 | temp_v0_4;
                                 var_t1 = var_t1 | temp_v1_3;
@@ -4294,17 +4288,17 @@ loop_38:
                             }
                             break;
                         default:
-                            *(s32 *) var_a1 = var_t1;
-                            *(s32 *) (var_s0 - 4) = var_t3;
-                            *(s32 *) (var_s0 + 0) = var_t6;
+                            *(s32*)var_a1 = var_t1;
+                            *(s32*)(var_s0 - 4) = var_t3;
+                            *(s32*)(var_s0 + 0) = var_t6;
                             var_s0 += 0xC;
                             var_a1 += 0xC;
                             if (var_s4 >= (footprint_depth - 1))
                             {
                                 var_a3 = var_t9 + stride4;
-                                var_t3 = var_t3 | *(u32 *) (var_t9 + 4);
-                                temp_t2 = *(u32 *) (var_t9 + 0) & 0xFFFF;
-                                var_t1 |= temp_t2 | (*(u32 *) (var_t9 + 0) & 0xFFFF0000);
+                                var_t3 = var_t3 | *(u32*)(var_t9 + 4);
+                                temp_t2 = *(u32*)(var_t9 + 0) & 0xFFFF;
+                                var_t1 |= temp_t2 | (*(u32*)(var_t9 + 0) & 0xFFFF0000);
                                 if (var_a3 >= var_fp)
                                 {
                                     var_a3 -= sp30;
@@ -4312,10 +4306,13 @@ loop_38:
                                 var_a2 = footprint_depth - 2;
                                 do
                                 {
-                                    temp_a0_4 = *(u32 *) (var_a3 + 4);
-                                    temp_v0_3 = *(u32 *) (var_a3 + 0);
-                                    temp_v1_2 = *(u32 *) (var_a3 + 8);
-                                    do { var_a3 = var_a3 + stride4; } while (0);
+                                    temp_a0_4 = *(u32*)(var_a3 + 4);
+                                    temp_v0_3 = *(u32*)(var_a3 + 0);
+                                    temp_v1_2 = *(u32*)(var_a3 + 8);
+                                    do
+                                    {
+                                        var_a3 = var_a3 + stride4;
+                                    } while (0);
                                     var_t1 |= temp_v0_3 | temp_v1_2;
                                     var_t3 |= temp_a0_4;
                                     if (var_a3 >= var_fp)
@@ -4350,143 +4347,180 @@ loop_38:
                         }
                         if (var_t8 != 0)
                         {
-                            temp_t2 = *(u32 *) (temp_s1 + 0);
-                            temp_t0 = *(u32 *) (temp_s1 + 4);
-                            do { emit_mask = temp_t2; } while (0);
+                            temp_t2 = *(u32*)(temp_s1 + 0);
+                            temp_t0 = *(u32*)(temp_s1 + 4);
+
+                            emit_mask = temp_t2;
+
                             temp_s1 += 8;
                             next_input = emit_mask;
-                            switch (sp1C)
+                            switch (footprint_width - 1)
                             {
-                                default:
-                                    do {
-                                    var_t3 = var_t4 >> sp24;
-                                    var_t6 = (var_t4 >> sp28) | (var_t4 >> (0x22 - temp_s3));
+                            default:
+                                do
+                                {
+                                    s32 edge_shift = 0x20 - temp_s3;
+                                    s32 word_bits_plus_one = 0x21;
+                                    s32 inner_shift = word_bits_plus_one - temp_s3;
+                                    var_t3 = var_t4 >> edge_shift;
+                                    var_t6 = (var_t4 >> inner_shift) | (var_t4 >> (0x22 - temp_s3));
                                     var_a3 = var_t6;
                                     var_a2 = (footprint_width - 6) >> 1;
-                                    } while (0);
+                                } while (0);
+                                do
+                                {
+                                    var_a3 = var_a3 >> 2;
+                                    var_a2 -= 1;
+                                    var_t6 |= var_a3;
+                                } while (var_a2 != -1);
+                                {
+                                    s32 edge_shift = 0x20 - temp_s3;
+                                    s32 word_bits_plus_one = 0x21;
+                                    s32 inner_shift = word_bits_plus_one - temp_s3;
+                                    var_t1 = (var_t5 >> edge_shift) | (var_t5 >> inner_shift);
+                                }
+                                var_a0 = var_t1;
+                                var_a2 = (s32)(temp_s3 - 4) >> 1;
+                                do
+                                {
+                                    var_a0 = var_a0 >> 2;
+                                    var_a2 -= 1;
+                                    var_t1 |= var_a0;
+                                } while (var_a2 != -1);
+                                if (footprint_width & 1)
+                                {
+                                    var_t6 |= var_t4 >> 0x1F;
+                                }
+                                else
+                                {
+                                    var_t1 |= var_t5 >> 0x1F;
+                                }
+                                if (temp_t0 != 0)
+                                {
+                                    var_a3 = (temp_t0 * 2) | (temp_t0 * 4);
+                                    var_t6 |= var_a3;
+
+                                    var_a0 = next_input | (next_input * 2);
+
+                                    temp_v1_4 = var_a0 * 4;
+                                    var_t1 |= var_a0 | temp_v1_4;
+                                    var_a0 = temp_v1_4;
+                                    var_a2 = (footprint_width - 6) >> 1;
                                     do
                                     {
-                                        var_a3 = var_a3 >> 2;
-                                        var_a2 -= 1;
+                                        var_a3 *= 4;
                                         var_t6 |= var_a3;
-                                    } while (var_a2 != -1);
-                                    var_t1 = (var_t5 >> sp24) | (var_t5 >> sp28);
-                                    var_a0 = var_t1;
-                                    var_a2 = (s32) (temp_s3 - 4) >> 1;
-                                    do
-                                    {
-                                        var_a0 = var_a0 >> 2;
+                                        var_a0 *= 4;
                                         var_a2 -= 1;
                                         var_t1 |= var_a0;
                                     } while (var_a2 != -1);
                                     if (footprint_width & 1)
                                     {
-                                        var_t6 |= var_t4 >> 0x1F;
+                                        var_t6 |= temp_t0 << (footprint_width - 2);
+
+                                        var_t1 |= next_input << temp_s3;
                                     }
-                                    else
-                                    {
-                                        var_t1 |= var_t5 >> 0x1F;
-                                    }
-                                    if (temp_t0 != 0)
-                                    {
-                                        var_a3 = (temp_t0 * 2) | (temp_t0 * 4);
-                                        var_t6 |= var_a3;
-                                        do { var_a0 = next_input | (next_input * 2); } while (0);
-                                        temp_v1_4 = var_a0 * 4;
-                                        var_t1 |= var_a0 | temp_v1_4;
-                                        var_a0 = temp_v1_4;
-                                        var_a2 = (footprint_width - 6) >> 1;
-                                        do
-                                        {
-                                            var_a3 *= 4;
-                                            var_t6 |= var_a3;
-                                            var_a0 *= 4;
-                                            var_a2 -= 1;
-                                            var_t1 |= var_a0;
-                                        } while (var_a2 != -1);
-                                        if (footprint_width & 1)
-                                        {
-                                            var_t6 |= temp_t0 << (footprint_width - 2);
-                                            do { var_t1 |= next_input << temp_s3; } while (0);
-                                        }
-                                        var_t3 |= temp_t0 | (temp_t0 << temp_s3);
-                                        goto block_96;
-                                    }
-                                    goto block_97;
-                                case 4:
-                                    do {
+                                    var_t3 |= temp_t0 | (temp_t0 << temp_s3);
+                                    goto block_96;
+                                }
+                                goto block_97;
+                            case 4:
+                                do
+                                {
                                     var_t6 = (var_t4 >> 0x1D) | (var_t4 >> 0x1E) | (var_t4 >> 0x1F);
                                     var_t3 = var_t4;
                                     var_t3 >>= 0x1C;
                                     var_a0 = (var_t5 >> 0x1C) | (var_t5 >> 0x1D);
                                     var_t1 = var_a0 | (var_a0 >> 2);
-                                    } while (0);
-                                    if (temp_t0 != 0)
-                                    {
-                                        left_bits = (temp_t0 * 2) | (temp_t0 * 4) | (temp_t0 * 8);
-                                        var_t6 |= left_bits;
-                                        var_t3 |= temp_t0 | (temp_t0 * 0x10);
-                                        do { var_a0 = next_input | (next_input * 2); } while (0);
-                                        do { sp20 = var_a0 * 4; var_v0_2 = var_a0 | sp20; left_bits = next_input * 0x10; var_v0_2 |= left_bits; } while (0);
-                                        goto block_95;
-                                    }
-                                    goto block_97;
-                                case 3:
-                                    do {
+                                } while (0);
+                                if (temp_t0 != 0)
+                                {
+                                    left_bits = (temp_t0 * 2) | (temp_t0 * 4) | (temp_t0 * 8);
+                                    var_t6 |= left_bits;
+                                    var_t3 |= temp_t0 | (temp_t0 * 0x10);
+
+                                    var_a0 = next_input | (next_input * 2);
+
+                                    sp20 = var_a0 * 4;
+                                    var_v0_2 = var_a0 | sp20;
+                                    left_bits = next_input * 0x10;
+                                    var_v0_2 |= left_bits;
+
+                                    goto block_95;
+                                }
+                                goto block_97;
+                            case 3:
+                                do
+                                {
                                     var_t6 = (var_t4 >> 0x1E) | (var_t4 >> 0x1F);
                                     var_t3 = var_t4 >> 0x1D;
                                     left_bits = (var_t5 >> 0x1D) | (var_t5 >> 0x1E);
                                     var_t5 = (s32)var_t5 >> 0x1F;
                                     var_t1 = left_bits | (var_t5 & 1);
-                                    } while (0);
-                                    if (temp_t0 != 0)
-                                    {
-                                        left_bits = (temp_t0 * 2) | (temp_t0 * 4);
-                                        var_t6 |= left_bits;
-                                        var_t3 |= temp_t0 | (temp_t0 * 8);
-                                        do { var_a0 = next_input | (next_input * 2); } while (0);
-                                        var_v0_2 = var_a0 | (var_a0 * 4);
-                                        goto block_95;
-                                    }
-                                    goto block_97;
-                                case 2:
-                                    do {
-                                    var_t6 = var_t4 >> 0x1F;
-                                    var_t3 = var_t4 >> 0x1E;
-                                    var_t1 = (var_t5 >> 0x1E) | (var_t5 >> 0x1F);
-                                    } while (0);
-                                    if (temp_t0 != 0)
-                                    {
-                                        var_t6 |= temp_t0 * 2;
-                                        var_t3 |= temp_t0 | (temp_t0 * 4);
-                                        do { sp20 = next_input * 2; var_v0_2 = next_input | sp20; left_bits = next_input * 4; var_v0_2 |= left_bits; } while (0);
-                                        goto block_95;
-                                    }
-                                    goto block_97;
-                                case 1:
-                                    do {
+                                } while (0);
+                                if (temp_t0 != 0)
+                                {
+                                    left_bits = (temp_t0 * 2) | (temp_t0 * 4);
+                                    var_t6 |= left_bits;
+                                    var_t3 |= temp_t0 | (temp_t0 * 8);
+
+                                    var_a0 = next_input | (next_input * 2);
+
+                                    var_v0_2 = var_a0 | (var_a0 * 4);
+                                    goto block_95;
+                                }
+                                goto block_97;
+                            case 2:
+
+                                var_t6 = var_t4 >> 0x1F;
+                                var_t3 = var_t4 >> 0x1E;
+                                var_t1 = (var_t5 >> 0x1E) | (var_t5 >> 0x1F);
+
+                                if (temp_t0 != 0)
+                                {
+                                    var_t6 |= temp_t0 * 2;
+                                    var_t3 |= temp_t0 | (temp_t0 * 4);
+
+                                    sp20 = next_input * 2;
+                                    var_v0_2 = next_input | sp20;
+                                    left_bits = next_input * 4;
+                                    var_v0_2 |= left_bits;
+
+                                    goto block_95;
+                                }
+                                goto block_97;
+                            case 1:
+                                do
+                                {
                                     var_t3 = var_t4 >> 0x1F;
                                     var_t1 = var_t5 >> 0x1F;
-                                    } while (0);
-                                    if (temp_t0 != 0)
+                                } while (0);
+                                if (temp_t0 != 0)
+                                {
+                                    var_t3 |= temp_t0 | (temp_t0 * 2);
+
+                                    var_v0_2 = next_input | (next_input * 2);
+
+                                block_95:
+                                    var_t1 |= var_v0_2;
+                                block_96:
+                                    var_t4 = temp_t0;
+                                    do
                                     {
-                                        var_t3 |= temp_t0 | (temp_t0 * 2);
-                                        do { var_v0_2 = next_input | (next_input * 2); } while (0);
-block_95:
-                                        var_t1 |= var_v0_2;
-block_96:
-                                        var_t4 = temp_t0;
-                                        do { var_t5 = next_input; } while (0);
-                                        break;
-                                    }
-block_97:
-                                    var_t4 = 0;
-                                    var_t5 = 0;
+                                        var_t5 = next_input;
+                                    } while (0);
                                     break;
-                                case 0:
-                                    do { var_t1 = next_input; } while (0);
-                                    var_t3 = temp_t0;
-                                    break;
+                                }
+                            block_97:
+                                var_t4 = 0;
+                                var_t5 = 0;
+                                break;
+                            case 0:
+
+                                var_t1 = next_input;
+
+                                var_t3 = temp_t0;
+                                break;
                             }
                             var_t0 = word_bits;
                             if (var_t8 != 0)
@@ -4513,11 +4547,11 @@ block_97:
                     sp14--;
                 } while (sp14 != -1);
             }
-            var_a2 = (4 - (s32) var_t7) & 3;
-            var_t8 = (u16) scene->unk46 * (footprint_depth + 1);
+            var_a2 = (4 - (s32)var_t7) & 3;
+            var_t8 = (u16)scene->unk46 * (footprint_depth + 1);
             if (var_a2 != 0)
             {
-loop_107:
+            loop_107:
                 if (var_t8 != 0)
                 {
                     *var_t7 = -1;
@@ -4530,17 +4564,19 @@ loop_107:
                     }
                 }
             }
-            var_a2 = (var_t8 >> 2);            var_a2 -= 1;
+            var_a2 = (var_t8 >> 2);
+            var_a2 -= 1;
             if (var_a2 != -1)
             {
                 do
                 {
-                    *(s32 *) var_t7 = -1;
+                    *(s32*)var_t7 = -1;
                     var_a2 -= 1;
                     var_t7 += 4;
                 } while (var_a2 != -1);
             }
-            var_a2 = (var_t8 & 3);            var_a2 -= 1;
+            var_a2 = (var_t8 & 3);
+            var_a2 -= 1;
             if (var_a2 != -1)
             {
                 s32 end = -1;
