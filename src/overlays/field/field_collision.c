@@ -4819,7 +4819,7 @@ typedef struct
  * @param mode Trace mode forwarded to the footprint walker.
  * @return Number of path points, 1 for a direct result, or a negative failure code.
  *
- * @see decomp.me (87.69%, 1023/1586 exact) TODO
+ * @see decomp.me (93.05%, 1296/1586 exact) TODO
  */
 s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_query, FieldCollisionPathPoint *output_path, s32 mode)
 {
@@ -4842,7 +4842,6 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 *sp4084;
     u32 *sp4094;
     FieldScene *scene;
-    FieldScene *new_var3;
     FieldCollisionQuery *temp_s2;
     u8 var_closed;
     u8 var_open;
@@ -4882,45 +4881,31 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     u32 temp_v1_9;
     u32 temp_a2_2;
     s32 var_a1_2;
-    u8 temp_a0_3;
+    u32 temp_a0_3;
     u32 temp_v1_10;
-    u8 temp_a0_4;
+    u32 temp_a0_4;
     u32 temp_v1_11;
-    u8 temp_a0_5;
+    u32 temp_a0_5;
     u32 temp_v1_12;
-    u8 temp_a0_6;
+    u32 temp_a0_6;
     u32 temp_v1_13;
     u8 *temp_v0_7;
-    u8 temp_a0_7;
+    u32 temp_a0_7;
     u32 temp_v1_14;
-    u8 temp_v1_15;
-    u8 var_t1;
-    u8 temp_v1_16;
-    u8 temp_v1_17;
+    u32 adj_tile;
+    u8 trace_flag;
     s32 var_v1;
     u8 *temp_v0_8;
-    u8 temp_a0_8;
+    u32 temp_a0_8;
     u32 temp_v1_18;
-    u8 temp_v1_19;
-    u8 var_t1_2;
-    u8 temp_v1_20;
-    u8 temp_v1_21;
     s32 var_v1_2;
     u8 *temp_v0_9;
-    u8 temp_a0_9;
+    u32 temp_a0_9;
     u32 temp_v1_22;
-    u8 temp_v1_23;
-    u8 var_t1_3;
-    u8 temp_v1_24;
-    u8 temp_v1_25;
     s32 var_v1_3;
     u8 *temp_v0_10;
-    u8 temp_a0_10;
+    u32 temp_a0_10;
     u32 temp_v1_26;
-    u8 temp_v1_27;
-    u8 var_t1_4;
-    u8 temp_v1_28;
-    u8 temp_v1_29;
     s32 var_v1_4;
     s32 temp_v1_30;
     s32 var_s3_2;
@@ -4936,7 +4921,6 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     u8 *new_var;
     u32 var_v1_6;
     u32 var_v1_7;
-    s32 var_t1_5;
     s32 var_t2;
     s32 var_t3;
     u8 var_t0_2;
@@ -4976,7 +4960,6 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     s32 var_s0_2;
     s32 *temp_s2_2;
     s32 *temp_s1_4;
-    s32 var_fp_5;
     s32 temp_s6;
     s32 temp_v0_13;
     s32 temp_s4;
@@ -5038,16 +5021,15 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
     temp_v1_4 = sp4058 + 1;
     sp4064 = (sp4074 >> sp4058) + 2;
     sp4068 = (sp4078 >> temp_v1_4) + 2;
-    new_var3 = scene;
     sp405C = (sp406C >> sp4058) + 2;
     sp4060 = (sp4070 >> temp_v1_4) + 2;
     columns = (u16) scene->unk46;
+    temp_v1_5 = (u16) scene->unk48;
     if ((sp405C > 0) && (sp4060 > 0) && (sp4064 > 0) && (sp4068 > 0))
     {
-        temp_v1_5 = (u16) scene->unk48 - 1;
-        if ((sp405C < (s32) columns - 1) && (sp4060 < temp_v1_5) && (sp4064 < (s32) columns - 1))
+        if ((sp405C < (s32) columns - 1) && (sp4060 < temp_v1_5 - 1) && (sp4064 < (s32) columns - 1))
         {
-            if (sp4068 >= temp_v1_5)
+            if (sp4068 >= temp_v1_5 - 1)
             {
                 return -2;
             }
@@ -5091,7 +5073,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
             {
                 var_a0_2 = (s32) (temp_v0_4 + 0xFF) >> 8;
             }
-            temp_v0_5 = new_var3->unk41;
+            temp_v0_5 = scene->unk41;
             count = 0;
             sp4050 = temp_v0_5 - 1;
             if (temp_v0_5 != 0)
@@ -5334,28 +5316,28 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                     temp_v1_14 = temp_a0_7 & 0xFF;
                                     if ((temp_v1_14 < temp_t3) && ((temp_v1_14 < 4U) || !(temp_a2_2 & 0x100)))
                                     {
-                                        temp_v1_15 = temp_v0_7[0];
-                                        var_t1 = 0;
-                                        if (temp_v1_15 < 0xFEU)
+                                        adj_tile = var_s0[1];
+                                        trace_flag = 0;
+                                        if (adj_tile < 0xFEU)
                                         {
-                                            if ((temp_v1_15 == 1) || (temp_v1_15 == 0xFD))
+                                            if ((adj_tile == 1) || (adj_tile == 0xFD))
                                             {
-                                                temp_v1_16 = temp_s1[-1];
-                                                if ((temp_v1_16 == 1) || (temp_v1_16 == 0xFD))
+                                                adj_tile = temp_s1[-1];
+                                                if ((adj_tile == 1) || (adj_tile == 0xFD))
                                                 {
-                                                    var_t1 = 1;
+                                                    trace_flag = 1;
                                                 }
                                             }
                                             else
                                             {
-                                                temp_v1_17 = temp_s1[-1];
-                                                if ((temp_v1_17 < 0xFDU) && (temp_v1_17 != 1))
+                                                adj_tile = temp_s1[-1];
+                                                if ((adj_tile < 0xFDU) && (adj_tile != 1))
                                                 {
-                                                    var_t1 = 1;
+                                                    trace_flag = 1;
                                                 }
                                             }
                                         }
-                                        if (var_t1 != 0)
+                                        if ((trace_flag & 0xFF) != 0)
                                         {
                                             var_v1 = (s32) var_s0 | 0x01600000;
                                             if (!(var_a1_2 & 2))
@@ -5393,6 +5375,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                     }
                                 }
                                 temp_v0_8 = temp_s1 - columns;
+                                trace_flag = 0;
                                 if (temp_a2_2 & 4)
                                 {
                                     temp_a0_8 = temp_v0_8[1];
@@ -5400,28 +5383,28 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                     temp_v1_18 = temp_a0_8 & 0xFF;
                                     if ((temp_v1_18 < temp_t3) && ((temp_v1_18 < 4U) || !(temp_a2_2 & 0x100)))
                                     {
-                                        temp_v1_19 = var_s0[-1];
-                                        var_t1_2 = 0;
-                                        if (temp_v1_19 < 0xFEU)
+                                        adj_tile = var_s0[-1];
+                                        
+                                        if (adj_tile < 0xFEU)
                                         {
-                                            if ((temp_v1_19 == 1) || (temp_v1_19 == 0xFD))
+                                            if ((adj_tile == 1) || (adj_tile == 0xFD))
                                             {
-                                                temp_v1_20 = temp_s1[1];
-                                        if ((temp_v1_20 == 1) || (temp_v1_20 == 0xFD))
+                                                adj_tile = temp_s1[1];
+                                        if ((adj_tile == 1) || (adj_tile == 0xFD))
                                                 {
-                                                    var_t1_2 = 1;
+                                                    trace_flag = 1;
                                                 }
                                             }
                                             else
                                             {
-                                                temp_v1_21 = temp_s1[1];
-                                                if ((temp_v1_21 < 0xFDU) && (temp_v1_21 != 1))
+                                                adj_tile = temp_s1[1];
+                                                if ((adj_tile < 0xFDU) && (adj_tile != 1))
                                                 {
-                                                    var_t1_2 = 1;
+                                                    trace_flag = 1;
                                                 }
                                             }
                                         }
-                                        if (var_t1_2 != 0)
+                                        if ((trace_flag & 0xFF) != 0)
                                         {
                                             var_v1_2 = (s32) var_s0 | 0x02C00000;
                                             if (!(var_a1_2 & 2))
@@ -5459,6 +5442,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                     }
                                 }
                                 temp_v0_9 = temp_s1 + columns;
+                                trace_flag = 0;
                                 if (temp_a2_2 & 0x20)
                                 {
                                     temp_a0_9 = temp_v0_9[-1];
@@ -5466,28 +5450,28 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                     temp_v1_22 = temp_a0_9 & 0xFF;
                                     if ((temp_v1_22 < temp_t3) && ((temp_v1_22 < 4U) || !(temp_a2_2 & 0x100)))
                                     {
-                                        temp_v1_23 = temp_v0_9[0];
-                                        var_t1_3 = 0;
-                                        if (temp_v1_23 < 0xFEU)
+                                        adj_tile = var_s0[1];
+                                        
+                                        if (adj_tile < 0xFEU)
                                         {
-                                            if ((temp_v1_23 == 1) || (temp_v1_23 == 0xFD))
+                                            if ((adj_tile == 1) || (adj_tile == 0xFD))
                                             {
-                                                temp_v1_24 = temp_s1[-1];
-                                                if ((temp_v1_24 == 1) || (temp_v1_24 == 0xFD))
+                                                adj_tile = temp_s1[-1];
+                                                if ((adj_tile == 1) || (adj_tile == 0xFD))
                                                 {
-                                                    var_t1_3 = 1;
+                                                    trace_flag = 1;
                                                 }
                                             }
                                             else
                                             {
-                                                temp_v1_25 = temp_s1[-1];
-                                                if ((temp_v1_25 < 0xFDU) && (temp_v1_25 != 1))
+                                                adj_tile = temp_s1[-1];
+                                                if ((adj_tile < 0xFDU) && (adj_tile != 1))
                                                 {
-                                                    var_t1_3 = 1;
+                                                    trace_flag = 1;
                                                 }
                                             }
                                         }
-                                        if (var_t1_3 != 0)
+                                        if ((trace_flag & 0xFF) != 0)
                                         {
                                             var_v1_3 = (s32) var_s0 | 0x0D000000;
                                             if (!(var_a1_2 & 0x40))
@@ -5532,28 +5516,28 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                     temp_v1_26 = temp_a0_10 & 0xFF;
                                     if ((temp_v1_26 < temp_t3) && ((temp_v1_26 < 4U) || !(temp_a2_2 & 0x100)))
                                     {
-                                        temp_v1_27 = var_s0[-1];
-                                        var_t1_4 = 0;
-                                        if (temp_v1_27 < 0xFEU)
+                                        adj_tile = var_s0[-1];
+                                        trace_flag = 0;
+                                        if (adj_tile < 0xFEU)
                                         {
-                                            if ((temp_v1_27 == 1) || (temp_v1_27 == 0xFD))
+                                            if ((adj_tile == 1) || (adj_tile == 0xFD))
                                             {
-                                                temp_v1_28 = temp_s1[1];
-                                                if ((temp_v1_28 == 1) || (temp_v1_28 == 0xFD))
+                                                adj_tile = temp_s1[1];
+                                                if ((adj_tile == 1) || (adj_tile == 0xFD))
                                                 {
-                                                    var_t1_4 = 1;
+                                                    trace_flag = 1;
                                                 }
                                             }
                                             else
                                             {
-                                                temp_v1_29 = temp_s1[1];
-                                                if ((temp_v1_29 < 0xFDU) && (temp_v1_29 != 1))
+                                                adj_tile = temp_s1[1];
+                                                if ((adj_tile < 0xFDU) && (adj_tile != 1))
                                                 {
-                                                    var_t1_4 = 1;
+                                                    trace_flag = 1;
                                                 }
                                             }
                                         }
-                                        if (var_t1_4 != 0)
+                                        if ((trace_flag & 0xFF) != 0)
                                         {
                                             var_v1_4 = (s32) var_s0 | 0x1A000000;
                                             if (!(var_a1_2 & 0x40))
@@ -5628,7 +5612,8 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 var_fp -= 1;
                                 if (temp_v1_31 & 0x20000000)
                                 {
-                                    *(u8 *) (temp_v1_31 & 0x801FFFFF) = 0xFD;
+                                    temp_s1 = (u8 *) (temp_v1_31 & 0x801FFFFF);
+                                    *temp_s1 = 0xFD;
                                 }
                                 count -= 1;
                             } while (count != neg1);
@@ -5692,12 +5677,12 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             }
                             rec.mode = mode;
                         }
-                        var_t1_5 = 1;
+                        trace_flag = 1;
                     }
                     else
                     {
                         var_s7 = 0;
-                        var_t1_5 = 0;
+                        trace_flag = 0;
                     }
                     var_t2 = 0;
                     var_t3 = 0;
@@ -5824,7 +5809,6 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 return var_v0;
                             }
                         }
-                        var_t0_2 = var_a3;
                         if (var_t2 != var_t3)
                         {
                             var_t3 = var_t2;
@@ -5837,12 +5821,18 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             }
                             var_t0_2 = var_a3;
                         }
+                        else
+                        {
+                            var_t0_2 = var_a3;
+                        }
                         temp_s1 = var_s0;
                     } while ((var_t0_2 & 0xFF) != 0xFB);
                     var_s6 = &path[1][1];
                     var_s4 = &path[2][1];
-                    var_s3_3 = var_s7 - 2;
-                    *var_fp = scene->unk2C + ((u16) scene->unk44 * sp4050) + (columns * sp4060) + sp405C;
+                    count = var_s7;
+                    var_s3_3 = count - 2;
+                    temp_s1 = (u8 *) (scene->unk2C + ((u16) scene->unk44 * sp4050) + (columns * sp4060) + sp405C);
+                    *var_fp = (s32) temp_s1;
                     var_fp = &path[0][0];
                     rec.stamp = 0;
                     path[1][0] = sp4074;
@@ -5871,7 +5861,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         } while (var_s3_3 != neg1);
                         var_fp = &path[0][0];
                     }
-                    count = var_s7 - 1;
+                    count -= 1;
                     var_s7 = 0;
                     *var_s6 = sp406C;
                     var_s6 = &path[1][0];
@@ -5885,9 +5875,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             var_fp += 1;
                             temp_t9 = *var_s6;
                             var_s6 += 1;
-                            temp_v1_41 = var_s7;
-                            var_s7 += 1;
-                            temp_v0_12 = &path[0][temp_v1_41];
+                            temp_v0_12 = &path[0][var_s7++];
                             sp406C = temp_t9;
                             new_var2 = *var_s4;
                             temp_t8 = new_var2;
@@ -5924,7 +5912,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             count -= 1;
                         } while (count != neg1);
                     }
-                    if ((var_t1_5 & 0xFF) && (var_s7 >= 2U))
+                    if ((trace_flag & 0xFF) && (var_s7 >= 2U))
                     {
                         sp407C = 1;
                         temp_s1 = (u8 *) path[0][0];
@@ -5938,15 +5926,15 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         temp_v0_12[0x800] = *var_s4;
                 var_s4 = &path[2][0];
                         var_s0 = (u8 *) sm0[2];
-                        var_fp_5 = var_s6[1];
+                        var_fp = (s32 *) (var_s6[1]);
                         count = var_s4[1];
                         temp_s6 = var_s6[2];
                         sp4064 = temp_s6;
                         rec.start_x = path[1][0];
-                        temp_v0_13 = var_fp_5 + temp_s6;
+                        temp_v0_13 = ((s32) var_fp) + temp_s6;
                         rec.tile_base = (s32) temp_s1;
                         rec.start_z = path[2][0];
-                        var_t1_5 = 0;
+                        trace_flag = 0;
                         sp4068 = var_s4[2];
                         temp_s4 = temp_v0_13 / 2;
                         rec.end_x = temp_s4;
@@ -5959,14 +5947,14 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             rec.start_z = sp4068;
                             if (func_80062820(&rec) != 0)
                             {
-                                var_fp_5 = temp_s4;
+                                var_fp = (s32 *) (temp_s4);
                                 count = temp_s2_3;
                                 rec.start_x = sp405C;
                                 sp407C = 0;
                                 rec.tile_base = (s32) temp_s1;
-                                var_t1_5 = 1;
+                                trace_flag = 1;
                                 rec.start_z = sp4060;
-                                temp_s4_2 = (var_fp_5 + sp4064) / 2;
+                                temp_s4_2 = (((s32) var_fp) + sp4064) / 2;
                                 temp_s2_4 = (count + sp4068) / 2;
                                 rec.end_x = temp_s4_2;
                                 rec.end_z = temp_s2_4;
@@ -5977,7 +5965,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                     rec.start_z = sp4068;
                                     if (func_80062820(&rec) != 0)
                                     {
-                                        var_fp_5 = temp_s4_2;
+                                        var_fp = (s32 *) (temp_s4_2);
                                         count = temp_s2_4;
                                     }
                                 }
@@ -5985,7 +5973,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         }
                         if (sp407C != 0)
                         {
-                            temp_s4_3 = sp4064 - var_fp_5;
+                            temp_s4_3 = sp4064 - ((s32) var_fp);
                             var_v0_27 = temp_s4_3;
                             rec.tile_base = (s32) temp_s1;
                             rec.start_x = sp405C;
@@ -5994,7 +5982,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             {
                                 var_v0_27 = temp_s4_3 + 3;
                             }
-                            temp_v0_14 = var_fp_5 + (var_v0_27 >> 2);
+                            temp_v0_14 = ((s32) var_fp) + (var_v0_27 >> 2);
                             sp4080 = temp_v0_14;
                             rec.end_x = temp_v0_14;
                             temp_s3 = sp4068 - count;
@@ -6012,8 +6000,8 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 rec.start_z = sp4068;
                                 if (func_80062820(&rec) != 0)
                                 {
-                                    var_t1_5 = 1;
-                                    var_fp_5 = sp4080;
+                                    trace_flag = 1;
+                                    var_fp = (s32 *) (sp4080);
                                     count = temp_s6_2;
                                 }
                             }
@@ -6022,7 +6010,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         rec.start_x = sp4064;
                         rec.tile_base = (s32) var_s0;
                         rec.start_z = sp4068;
-                        temp_s4_4 = (var_fp_5 + sp405C) / 2;
+                        temp_s4_4 = (((s32) var_fp) + sp405C) / 2;
                         temp_s2_5 = (count + sp4060) / 2;
                         rec.end_x = temp_s4_4;
                         rec.end_z = temp_s2_5;
@@ -6033,14 +6021,14 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             rec.start_z = sp4060;
                             if (func_80062820(&rec) != 0)
                             {
-                                var_fp_5 = temp_s4_4;
+                                var_fp = (s32 *) (temp_s4_4);
                                 count = temp_s2_5;
                                 rec.start_x = sp4064;
                                 sp407C = 0;
                                 rec.tile_base = (s32) var_s0;
-                                var_t1_5 = 1;
+                                trace_flag = 1;
                                 rec.start_z = sp4068;
-                                temp_s4_5 = (var_fp_5 + sp405C) / 2;
+                                temp_s4_5 = (((s32) var_fp) + sp405C) / 2;
                                 temp_s2_6 = (count + sp4060) / 2;
                                 rec.end_x = temp_s4_5;
                                 rec.end_z = temp_s2_6;
@@ -6051,7 +6039,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                     rec.start_z = sp4060;
                                     if (func_80062820(&rec) != 0)
                                     {
-                                        var_fp_5 = temp_s4_5;
+                                        var_fp = (s32 *) (temp_s4_5);
                                         count = temp_s2_6;
                                     }
                                 }
@@ -6059,7 +6047,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                         }
                         if (sp407C != 0)
                         {
-                            temp_s3_2 = sp405C - var_fp_5;
+                            temp_s3_2 = sp405C - ((s32) var_fp);
                             var_v0_30 = temp_s3_2;
                             rec.tile_base = (s32) var_s0;
                             rec.start_x = sp4064;
@@ -6068,7 +6056,7 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                             {
                                 var_v0_30 = temp_s3_2 + 3;
                             }
-                            temp_s6_3 = var_fp_5 + (var_v0_30 >> 2);
+                            temp_s6_3 = ((s32) var_fp) + (var_v0_30 >> 2);
                             rec.end_x = temp_s6_3;
                             temp_s2_7 = sp4060 - count;
                             var_v0_31 = temp_s2_7;
@@ -6086,16 +6074,16 @@ s32 func_80060F58(FieldCollisionQuery *start_query, FieldCollisionQuery *goal_qu
                                 rec.start_z = sp4060;
                                 if (func_80062820(&rec) != 0)
                                 {
-                                    var_t1_5 = 1;
-                                    var_fp_5 = temp_s6_3;
+                                    trace_flag = 1;
+                                    var_fp = (s32 *) (temp_s6_3);
                                     count = temp_s4_6;
                                 }
                             }
                         }
-                        if ((var_t1_5 & 0xFF) != 0)
+                        if ((trace_flag & 0xFF) != 0)
                         {
                             temp_s4_3 = 1;
-                            path[1][1] = var_fp_5;
+                            path[1][1] = ((s32) var_fp);
                             path[2][temp_s4_3] = count;
                         }
                     }
