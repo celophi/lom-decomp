@@ -492,7 +492,7 @@ segments:
       - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, two WIPs
       - [0x6FDC5, c, field_generated_record_ops] # gcc280_g0; initializer, name builder and two stat modes, two WIPs
       - [0x705F1, c, field_record_effect_ops] # gcc280_g0; effect generation/classification/application, four WIPs
-      - [0x70DC9, c, field_reward_command_ops] # gcc280_g0; selector, reward dispatcher and four table handlers, two WIPs
+      - [0x70DC9, c, field_reward_command_ops] # gcc280_g0; selector, reward dispatcher and four table handlers, one WIP
       - [0x711A9, c, field_record_growth_ops] # gcc280_g0; ten reward/experience/growth functions, three WIPs
       - [0x71DA9, c, field_record_lookup_ops] # gcc280_g0; nine record dispatch/lookup functions, C1A18 WIP
       - [0x72259, c, func_800C1EC8]                # gcc272_cdk, 97.5%

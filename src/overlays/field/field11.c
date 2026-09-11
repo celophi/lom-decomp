@@ -278,7 +278,11 @@ extern FieldResourceEntry g_field_resource_entries[];
  * @param flag Selects which of the actor's two audio channels to update.
  * @param part Part definition supplying flags and placement selectors.
  * @return Updated cursor pointer.
- * @see decomp.me (100%)
+ * @see decomp.me (99.99%)
+ * @note A now-reverted maspsx patch kept consecutive labels before an
+ *       inserted load-delay NOP and produced a 100% match. Compatibility
+ *       with original ASPSX 2.67 is unverified; retain 99.99% pending review.
+ *       See docs/decompilation/func_80075C88-assembler-patch.md.
  */
 s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 flag, FieldActorPartDef* part)
 {
