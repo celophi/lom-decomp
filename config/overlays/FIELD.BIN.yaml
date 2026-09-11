@@ -431,7 +431,7 @@ segments:
       - [0x5AB35, c, field_text_session_ops]    # gcc272_cdk, func_800AA7A4 + func_800AA824 + func_800AA858 (100%; two do not match under gcc280_g0)
       - [0x5AC9D, c, func_800AA90C] # gcc272_cdk, 90.918630% WIP
       - [0x5B291, c, field_overlay_launchers]   # gcc272_cdk, field_run_name_entry .. field_open_shop_mode_1 (5 funcs, 100%; gcc280_g0 drops an insn in each)
-      - [0x5B5A5, c, func_800AB214] # gcc272_cdk, 99.377360% WIP
+      - [0x5B5A5, c, func_800AB214] # gcc272_cdk, 100%
       - [0x5B9C9, c, field_modal_fade_ops]      # gcc272_cdk, func_800AB638 + func_800AB690 + func_800AB710 (100%; none match under gcc280_g0)
       - [0x5BB05, c, func_800AB774]             # gcc272_cdk, 100%
       - [0x5BBFD, c, field_coord_panels]        # gcc272_cdk, func_800AB86C (100%) + func_800AC768 (100%)
