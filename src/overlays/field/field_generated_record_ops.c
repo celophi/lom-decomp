@@ -272,7 +272,7 @@ typedef struct
  */
 void func_800BFF90(Result *result)
 {
-    s32 i, sum, bonus, product, power;
+    s32 i, sum, bonus, offset, power;
     Table *level;
     u16 divisor;
     Source *source;
@@ -280,8 +280,8 @@ void func_800BFF90(Result *result)
     sum = 0;
     do
     {
-        sum += ((Table *)((u8 *)D_80123FC0 + (((Source *)D_80123FC4)->type * 12 + i)))->weight *
-               ((Source *)D_80123FC4)->weights[i];
+        offset = i + ((Source *)D_80123FC4)->type * 12;
+        sum += ((Table *)((u8 *)D_80123FC0 + offset))->weight * ((Source *)D_80123FC4)->weights[i];
         i++;
     } while (i < 4);
     i = 0;
@@ -311,7 +311,7 @@ void func_800BFF90(Result *result)
     result->value = ((Source *)D_80123FC4)->value;
     do
     {
-        level = (Table *)((u8 *)D_80123FC0 + (((Source *)D_80123FC4)->type * 12 + i));
+        level = (Table *)((u8 *)D_80123FC0 + (i + ((Source *)D_80123FC4)->type * 12));
         result->scaled[i] = (level->factor * ((Source *)D_80123FC4)->multipliers[i]) >> 6;
         i++;
     } while (i < 4);

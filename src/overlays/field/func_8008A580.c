@@ -29,7 +29,7 @@ s32 func_8008404C();
  * @param key Actor-slot lookup key.
  * @param arg1 Value forwarded to the actor update helper; meaning unknown.
  * @return -1 when absent, 1 when the helper returns zero, or 0 after marking the slot.
- * @note WIP: branch layout and scheduling differ from the target.
+ * @see decomp.me (100%) TODO
  */
 s32 func_8008A580(s32 key, s32 arg1)
 {
@@ -37,7 +37,6 @@ s32 func_8008A580(s32 key, s32 arg1)
     FieldActorRecord *found;
     FieldActorSlot *e;
     s32 i;
-    s32 result;
     s32 *slot;
     s32 *table;
 
@@ -67,23 +66,23 @@ found_label:
     found = scan;
     goto check;
 body:
-    if (func_8008404C(found->unk3A, arg1) == 0)
+    if (func_8008404C(found->unk3A, arg1) != 0)
     {
-        result = 1;
-        goto done;
-    }
-    table = D_8010A020;
-    if (found->unk3A < 2)
-    {
-        slot = &table[found->unk3A];
+        table = D_8010A020;
+        if (found->unk3A < 2)
+        {
+            slot = &table[found->unk3A];
+        }
+        else
+        {
+            slot = table + 2;
+        }
+        *slot = 1;
+        D_80105AE0[found->unk3A].unk3C = 0xFFFF;
     }
     else
     {
-        slot = table + 2;
+        return 1;
     }
-    *slot = 1;
-    D_80105AE0[found->unk3A].unk3C = 0xFFFF;
-    result = 0;
-done:
-    return result;
+    return 0;
 }

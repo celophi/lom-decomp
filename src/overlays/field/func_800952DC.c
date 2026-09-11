@@ -27,8 +27,6 @@ extern void func_80084424(u8);
 void func_800952DC(Entry *arg0, s32 arg1)
 {
     u8 *base;
-    u8 *lookup;
-    Actor *actors;
     s32 slot;
     s32 temp_a0;
     s32 temp_a0_2;
@@ -70,10 +68,12 @@ void func_800952DC(Entry *arg0, s32 arg1)
             {
                 var_v0_3 = 0x38;
             }
-            slot = arg0->unk3A;
-            temp_a0 = *(s32 *)(base + var_v0_3 + 0xC);
-            if (temp_a0 == slot)
+            if (*(s32 *)(base + var_v0_3 + 0xC) == arg0->unk3A)
             {
+                Actor *actors;
+                u8 *lookup;
+
+                temp_a0 = *(s32 *)(base + var_v0_3 + 0xC);
                 actors = g_field_actor_slots;
                 lookup = D_80105880;
                 if ((u32)(temp_a0 & 0xFF) < 2U)
@@ -84,7 +84,12 @@ void func_800952DC(Entry *arg0, s32 arg1)
                 {
                     var_v0_4 = 0x38;
                 }
-                actors[*(s32 *)(lookup + var_v0_4 + 0x18)].unk2A = 1;
+                {
+                    u32 actor_address;
+                    actor_address = (u32)actors;
+                    actor_address += *(s32 *)(lookup + var_v0_4 + 0x18) * 0x244;
+                    ((Actor *)actor_address)->unk2A = 1;
+                }
             }
         }
         else
@@ -104,6 +109,9 @@ void func_800952DC(Entry *arg0, s32 arg1)
             {
                 if (arg1 != 0)
                 {
+                    Actor *actors;
+                    u8 *lookup;
+
                     actors = g_field_actor_slots;
                     lookup = D_80105880;
                     if ((u32)(temp_a0_2 & 0xFF) < 2U)
@@ -114,7 +122,12 @@ void func_800952DC(Entry *arg0, s32 arg1)
                     {
                         var_v0_6 = 0x38;
                     }
-                    actors[*(s32 *)(lookup + var_v0_6 + 0x18)].unk24 = 0;
+                    {
+                        u32 actor_address;
+                        actor_address = (u32)actors;
+                        actor_address += *(s32 *)(lookup + var_v0_6 + 0x18) * 0x244;
+                        ((Actor *)actor_address)->unk24 = 0;
+                    }
                 }
                 func_80084424(arg0->unk3A);
             }

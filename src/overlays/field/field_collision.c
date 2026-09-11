@@ -319,8 +319,6 @@ typedef struct FieldCollisionNode {
     s32 unk40;
 } FieldCollisionNode;
 
-/* Declared without a prototype: func_8005B6AC has two call sites that pass two
-   extra arguments to force the a2/a3 setup the target's codegen shows. */
 s16 func_8005DFAC();
 
 typedef struct FieldCollisionHeaderBounds {
@@ -368,10 +366,8 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
  * @param mover Mover state updated with resolved position, height, contact node, and flags.
  * @return Collision-resolution status bitmask, or 0 when no scene nodes are present.
  *
- * @see decomp.me (57.91%) https://decomp.me/scratch/N2GNJ
- * @note local objdiff 93.66% (gcc280_g4_noexpanddiv), 2026-08-17 - active
- *       matching scratch is working/field7/func_8005B6AC.c; see
- *       working/field7/field7_next_steps.md for the open leads.
+ * @see decomp.me (93.839874%) https://decomp.me/scratch/N2GNJ
+ * @note Active matching scratch: working/func_8005B6AC/code.c; see its status.md.
  */
 s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 dead_920;
@@ -379,7 +375,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 dh_1339;
     FieldCollisionMoveProbe probe;
     s32 sp20;
-    u16 sp24;
+    s32 sp24;
     FieldScene* sp28;
     void* sp2C;
     u16 sp30;
@@ -395,14 +391,16 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     void** sp64;
     void** sp68;
     s32 sp6C;
-    s32 sp78;
+    s32 f_x_max;
     s32 sp70;
     s32 sp74;
-    s32 sp88;
+    s32 sp78;
     s32 sp7C;
-    s32 sp84;
     s32 sp80;
+    s32 node_x_offset;
+    s32 sp88;
     s32 sp8C;
+    s32 sp84;
     u8* spA8;
     s32 spAC;
     s16 temp_a0_12;
@@ -416,7 +414,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 temp_s0_6;
     s32 temp_s1;
     s16 temp_s2_3;
-    s16 temp_v0_17;
+    s32 temp_v0_17;
     s16 temp_v1_11;
     s16 temp_v1_13;
     s16 temp_v1_15;
@@ -434,7 +432,6 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 var_s0_3;
     s32 e_x_min;
     s32 f_x_min;
-    s32 f_x_max;
     s32 f_x_max_2;
     s32 f_y_min;
     s32 f_y_max;
@@ -509,6 +506,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 var_s4_3;
     s32 var_s5;
     s32 var_t0;
+    s32 late_scan_x;
     s32 var_t1;
     s32 var_t5;
     s32 var_t7;
@@ -587,7 +585,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
         sp30 = (u16)((u32)(x + ((x < 0) ? 0xFF : 0)) >> 8);
     }
     {
-        s32 x = -((volatile FieldCollisionMover*)mover)->height;
+        s32 x = -mover->height;
         sp38 = (u16)(((x + ((x < 0) ? 0xFF : 0)) >> 8) + mover->height_bias);
     }
     temp_t6 = sp28->nodes;
@@ -602,20 +600,22 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                 var_v0_4 += 0xFF;
             }
             probe.x = var_v0_4 >> 8;
-            var_v0_5 = mover->z;
-            if (var_v0_5 < 0) {
-                var_v0_5 += 0xFF;
+            var_v0_4 = mover->z;
+            if (var_v0_4 < 0) {
+                var_v0_4 += 0xFF;
             }
             var_fp = sp28->nodes;
-            probe.z = var_v0_5 >> 8;
+            probe.z = var_v0_4 >> 8;
             var_v0_5 = (u16) probe.x;
             uy = (u16) probe.z;
             var_t8 = 0;
             while (var_fp != NULL) {
+                    var_s5 = (s16) sp30;
                     temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
-                    if ((((FieldCollisionNode*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((FieldCollisionNode*)sp2C)->unk38 >> 8, var_v1 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0, (var_v1 == 0)) || (var_v1 < ((s16) sp30 + mover->height_bias)) || (var_v1 < (s16) sp38))) {
+                    if ((((FieldCollisionNode*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((FieldCollisionNode*)sp2C)->unk38 >> 8, var_v1 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0, (var_v1 == 0)) || (var_v1 < (var_s5 + mover->height_bias)) || (var_v1 < (s16) sp38))) {
                         temp_a1 = (s32) ((FieldCollisionNode*)sp2C)->unk34 >> 8;
                         temp_a0 = (s32) (((FieldCollisionNode*)sp2C)->unk40 << 8) >> 0x10;
+                        sp6C = temp_v0;
                         temp_v1_2 = ((FieldCollisionNode*)var_fp)->unk22 + temp_a0;
                         if (((s16) uy >= temp_v1_2) && ((((FieldCollisionNode*)var_fp)->unk20 + temp_a0) >= (s16) uy)) {
                             temp_a0_2 = ((u8*)temp_s6)[6];
@@ -654,7 +654,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                                 case 0:             /* switch 1 */
                                     if ((((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
                                         if (var_a3 != 0) {
-                                            temp_v1_4 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) temp_v0;
+                                            temp_v1_4 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) sp6C;
                                             if ((var_s2 + 0x14) < temp_v1_4) {
                                                 var_s2 = temp_v1_4;
                                                 mover->collision_node = var_fp;
@@ -662,28 +662,26 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                                         } else {
                                             temp_v1_5 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) temp_v0;
                                             if (temp_v1_5 >= var_s2) {
-                                                var_fp_2 = var_fp;
-                                                var_s2 = temp_v1_5;
-                                                mover->collision_node = var_fp_2;
+                                                                            var_s2 = temp_v1_5;
+                                                mover->collision_node = var_fp;
                                             }
                                         }
                                     }
                                     break;
                                 case 1:             /* switch 1 */
-                                    if ((((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
-                                        *(volatile s32*)&sp8C = var_a3;
-                                        temp_s0 = func_8005DFAC((FieldCollisionNode*)var_fp, &probe.x, temp_v0, var_a3);
-                                        if (*(volatile s32*)&sp8C != 0) {
+                                    if ((((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) sp6C) < (s16) sp38) {
+                                        var_s0 = func_8005DFAC((FieldCollisionNode*)var_fp, &probe.x);
+                                        if (var_a3 != 0) {
                                             var_a3 = 1;
-                                            if (var_s2 < temp_s0) {
-                                                var_s2 = temp_s0;
-                                                mover->collision_node = var_fp_2;
+                                            if (var_s2 < var_s0) {
+                                                var_s2 = var_s0;
+                                                mover->collision_node = var_fp;
                                             }
                                         } else {
                                             var_a3 = 1;
-                                            if (var_s2 < (temp_s0 + 0x14)) {
-                                                var_s2 = temp_s0;
-                                                mover->collision_node = var_fp_2;
+                                            if (var_s2 < (var_s0 + 0x14)) {
+                                                mover->collision_node = var_fp;
+                                                var_s2 = var_s0;
                                             }
                                         }
                                     }
@@ -917,8 +915,7 @@ return_zero:
                 }
             }
         }
-        if ((sp20 == 0) && (var_t8 == 0)) goto direct_move_149;
-        {
+        if ((sp20 != 0) || (var_t8 != 0)) {
         temp_a1_3 = mover->move_x;
         if (temp_a1_3 == 0) {
             sp58 = 0xC00;
@@ -1050,7 +1047,8 @@ return_zero:
                                     if (var_s0 != -1) {
                                         var_s2_2 = var_s1 + 2;
                                         do {
-                                            temp_v1_11 = *(s16*)var_s1;
+                                            temp_a1_9 = *(s16*)var_s1;
+                                            temp_v1_11 = temp_a1_9;
                                             if ((temp_v1_11 < sp6C) && (*(s16*)var_s2_2 >= e_x_min)) {
                                                 if ((e_x_min < temp_v1_11) && (*(s8*)var_s4 >= 0)) {
                                                     var_s5 = func_8005E1A8(temp_s6, (u8) *var_s4 & 0x7F, sp58, var_s5);
@@ -1135,7 +1133,7 @@ return_zero:
                             }
                         }
                     }
-                    dead_920 -= 1;
+                    var_t7 -= 1;
                 } while (var_t7 != -1);
             }
             if (var_s5 != -2) {
@@ -1146,7 +1144,10 @@ return_zero:
             } while (temp_t6_2 != -1);
         }
         temp_a0_10 = mover->move_x;
-        temp_v0_9 = (var_t9 - 1) - sp54;
+        {
+            s32 remaining_steps = var_t9 - 1;
+            temp_v0_9 = remaining_steps - sp54;
+        }
         sp5C = (s32) (temp_a0_10 * temp_v0_9) / var_t9;
         temp_v1_14 = mover->move_z;
         temp_lo_3 = (s32) (temp_v1_14 * temp_v0_9) / var_t9;
@@ -1208,7 +1209,8 @@ return_zero:
             k_blocked = 0x8000;
             sp68 = (void** )0x801E1100;
             temp_a0_11 = sp28->header;
-            temp_v1_15 = temp_s0_5 + (u16) mover->mode_flags;
+            temp_v1_15 = (u16) mover->mode_flags;
+            temp_v1_15 += temp_s0_5;
             if (((FieldCollisionHeaderBounds*)temp_a0_11)->unk2C & 2) {
                 if (temp_s0_5 < 0) {
                     var_a3_2 = -temp_s0_5;
@@ -1226,7 +1228,8 @@ return_zero:
                 } else {
                     temp_a0_13 = ((FieldCollisionHeaderBounds*)sp28->header)->unk30;
                     if (temp_s2_3 >= temp_a0_13) {
-                        var_t0 = (temp_a0_13 - temp_s2_3) - 1;
+                        var_t0 = temp_a0_13 - temp_s2_3;
+                        var_t0 -= 1;
                         var_t8 = 1;
                     }
                 }
@@ -1240,13 +1243,13 @@ return_zero:
                 sp8C = f_y_max - 1;
                 temp_v1_16 = (s32) ((FieldCollisionNode*)sp2C)->unk34 >> 8;
                 sp40 = (u16) temp_v1_16;
-                sp84 = (s32) (s16) temp_v1_16;
+                node_x_offset = (s32) (s16) temp_v1_16;
                 sp88 = (s32) (((FieldCollisionNode*)sp2C)->unk40 << 8) >> 0x10;
                 do {
                     var_fp = *sp68;
                     sp68 += 1;
                     temp_s6 = ((FieldCollisionNode*)var_fp)->unk4;
-                    if (((((FieldCollisionNode*)var_fp)->unk1C + sp84) < f_x_max) && (((((FieldCollisionNode*)var_fp)->unk1E + sp84) >= f_x_min))) {
+                    if (((((FieldCollisionNode*)var_fp )->unk1C + node_x_offset) < f_x_max) && (((((FieldCollisionNode*)var_fp )->unk1E + node_x_offset) >= f_x_min))) {
                         temp_a0_14 = ((FieldCollisionNode*)var_fp)->unk22 + sp88;
                         if (temp_a0_14 < f_y_max) {
                             temp_v1_17 = ((FieldCollisionNode*)var_fp)->unk20 + sp88;
@@ -1368,7 +1371,7 @@ return_zero:
                                                 }
                                                 var_t3 += 4;
                                                 var_s1_4 += 4;
-                                                var_s4_2 += 2;
+                                                var_s4 += 2;
                                                 var_t7 -= 1;
                                                 spA8 += 2;
                                             } while (var_t7 != -1);
@@ -1491,16 +1494,14 @@ return_zero:
             func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             sp50 |= 3;
         }
+        } else {
+            mover->x = (s32) (mover->x + mover->move_x);
+            mover->z = (s32) (mover->z + mover->move_z);
         }
-        goto move_done_372;
-direct_move_149:
-        mover->x = (s32) (mover->x + mover->move_x);
-        mover->z = (s32) (mover->z + mover->move_z);
-move_done_372:
         sp84 = 0xFFFFFF;
         var_s2 = 0;
         var_s4_3 = 0;
-        sp6C = 0;
+        var_a3 = 0;
         var_v0_34 = mover->x;
         var_fp = NULL;
         mover->collision_node = NULL;
@@ -1514,7 +1515,7 @@ move_done_372:
         }
         probe.z = var_v0_35 >> 8;
         late_uy = (u16) probe.z;
-        var_s5 = (u16) probe.x;
+        late_scan_x = (u16) probe.x;
         sp68 = (void** )0x801E1100;
         var_s3 = sp28->secondary_nodes;
         temp_v0_15 = *(s32*)&sp24 - 1;
@@ -1524,8 +1525,8 @@ move_done_372:
             var_t1 = (s16) sp38;
             do {
                 temp_t5_4 = *sp68;
+                sp2C = temp_t5_4;
                 sp68 += 1;
-                dh_1312 = temp_t5_4;
                 temp_s6 = ((FieldCollisionNode*)temp_t5_4)->unk4;
                 temp_a1_8 = (s32) ((FieldCollisionNode*)temp_t5_4)->unk34 >> 8;
                 temp_a0_17 = (s32) (((FieldCollisionNode*)temp_t5_4)->unk40 << 8) >> 0x10;
@@ -1539,11 +1540,10 @@ move_done_372:
                         var_s0_10 = temp_a0_18 - 1;
                         if (temp_a0_18 != 0) {
                             do {
-                                if (((s16) var_s5 < (((FieldCollisionSpan*)var_s1_5)->min_x + (s16) temp_a1_8)) || ((((FieldCollisionSpan*)var_s1_5)->max_x + (s16) temp_a1_8) < (s16) var_s5)) {
+                                if (((s16) late_scan_x < (((FieldCollisionSpan*)var_s1_5)->min_x + (s16) temp_a1_8)) || ((((FieldCollisionSpan*)var_s1_5)->max_x + (s16) temp_a1_8) < (s16) late_scan_x)) {
                                     var_s1_5 += 4;
                                 } else {
-                                    var_t8 = 1;
-                                    break;
+                                    goto g_hit;
                                 }
                             } while (--var_s0_10 != -1);
                         }
@@ -1551,17 +1551,20 @@ move_done_372:
                         var_s0_11 = temp_a0_18 - 1;
                         if (temp_a0_18 != 0) {
                             do {
-                                if (((s16) var_s5 < ((FieldCollisionSpan*)var_s1_5)->min_x) || (((FieldCollisionSpan*)var_s1_5)->max_x < (s16) var_s5)) {
+                                if (((s16) late_scan_x < ((FieldCollisionSpan*)var_s1_5)->min_x) || (((FieldCollisionSpan*)var_s1_5)->max_x < (s16) late_scan_x)) {
                                     var_s1_5 += 4;
                                 } else {
-                                    dh_1339 = 1;
-                                    break;
+                                    goto g_hit;
                                 }
                             } while (--var_s0_11 != -1);
                         }
                     }
                 }
                 } while (0);
+                goto g_done;
+            g_hit:
+                var_t8 = 1;
+            g_done:;
                 temp_a1_9 = ((FieldCollisionNode*)sp2C)->unk38;
                 temp_a0_19 = ((u8*)temp_s6)[4] & 3;
                 temp_v1_25 = temp_a1_9 >> 8;
@@ -1577,9 +1580,10 @@ move_done_372:
                                 var_fp = sp2C;
                             }
                         }
-                        if (sp6C != 0) {
+                        if (var_a3 != 0) {
+                            s32 height_threshold = var_s2 + 0x14;
                             temp_v0_17 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) temp_v1_25;
-                            if ((var_s2 + 0x14) < temp_v0_17) {
+                            if (height_threshold < temp_v0_17) {
                                 var_s2 = temp_v0_17;
                                 var_s4_3 = ((FieldCollisionNode*)sp2C)->unk38 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8);
                                 if (var_t8 != 0) {
@@ -1605,7 +1609,7 @@ move_done_372:
                 case 1:                             /* switch 3 */
                     var_v1_4 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v1_25;
                     if (var_v1_4 < var_t1) {
-                        temp_s0_6 = func_8005DFAC((FieldCollisionNode*)sp2C, &probe.x, temp_v1_25, sp6C);
+                        temp_s0_6 = func_8005DFAC((FieldCollisionNode*)sp2C, &probe.x);
                         if (var_t8 != 0) {
                             temp_v1_27 = -(temp_s0_6 << 8);
                             if (temp_v1_27 < mover->resolved_height) {
@@ -1613,7 +1617,7 @@ move_done_372:
                                 var_fp = sp2C;
                             }
                         }
-                        if (sp6C != 0) {
+                        if (var_a3 != 0) {
                             var_v0_37 = var_s2 < temp_s0_6;
                             if (var_s3 != NULL) {
                                 if (var_s3 == sp2C) {
@@ -1629,9 +1633,9 @@ move_done_372:
                                 }
                                 mover->resolved_height = (s32) -(var_s2 << 8);
                                 var_fp = sp2C;
-                                sp6C = 1;
+                                var_a3 = 1;
                             } else {
-                                sp6C = 1;
+                                var_a3 = 1;
                                 if (var_v0_37 != 0) {
                                     var_s2 = temp_s0_6;
                                     var_s4_3 = var_s2 << 8;
@@ -1642,7 +1646,7 @@ move_done_372:
                             }
                         } else {
                             var_v0_37 = var_s2 < (temp_s0_6 + 0x14);
-                            sp6C = 1;
+                            var_a3 = 1;
                             if (var_v0_37 != 0) {
                                 var_s2 = temp_s0_6;
                                 var_s4_3 = var_s2 << 8;
@@ -3970,138 +3974,98 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
 /**
  * @brief Expand a group's rasterised tile-column bitmask into a per-pixel
  *        stencil buffer, dilated by the group's edge width.
- * @see decomp.me (88%) TODO
- */
-extern u32 D_1F800008;
-
-/**
- * @brief Dilate the active collision-group mask for a rectangular footprint.
  * @param footprint_width Footprint width in collision-map columns.
  * @param footprint_depth Footprint depth in collision-map rows.
+ * @see decomp.me (100%) TODO
  */
 void func_80060364(s32 footprint_width, s32 footprint_depth)
 {
-    FieldScene *scene;
+    FieldScene* scene;
     u32 sp4;
     s32 sp8;
-    s32 spC;
+    s32 sp_c;
     s32 sp10;
     s32 sp14;
-    s32 sp18;
-    u32 sp1C;
     s32 sp20;
-    s32 sp24;
-    s32 sp28;
     s32 sp30;
     s32 stride4;
+    s32 ring_words;
     u16 temp_v1;
     u8 temp_s6;
     s32 temp_s6_2;
-    s32 temp_s6_3;
-    s32 temp_s6_4;
-    s32 temp_s6_5;
+    u32 next_input;
     s32 temp_s3;
     s32 temp_s1;
-    s32 var_s1;
-    u8 *var_t7;
+    s32 word_bits;
+    u8* var_t7;
     u32 var_a1;
     u32 var_t9;
     u32 var_fp;
     s32 var_a2;
     s32 var_t8;
-    s32 var_a2_2;
-    s32 var_a2_3;
     s32 var_s4;
     s32 temp_v0;
     u32 temp_t2;
     u32 temp_t0;
-    s32 var_t8_2;
     u32 var_t6;
     u32 var_t3;
-    u32 temp_a0;
+    u32 emit_mask;
+    u32 left_bits;
     u32 var_t1;
-    u32 temp_a0_2;
-    u32 temp_a0_3;
     u32 temp_v0_2;
     u32 var_a0;
-    s32 var_a2_4;
     u32 var_a3;
     u32 var_t4;
     u32 var_t5;
     s32 var_t0;
     u32 var_s0;
-    u32 var_t3_2;
-    u32 var_a3_2;
-    u32 var_t3_3;
-    u32 var_t1_2;
-    s32 var_a2_5;
     u32 temp_a0_4;
     u32 temp_v0_3;
     u32 temp_v1_2;
     u8 var_v1;
     u32 temp_v0_4;
     u32 temp_v1_3;
-    u32 var_t3_4;
-    u32 var_t1_3;
     u8 var_v1_2;
     u8 var_v1_3;
-    u32 temp_t2_2;
-    u32 temp_t0_2;
-    u32 temp_a0_5;
     u32 var_v0_2;
-    u32 temp_a0_6;
-    u32 temp_a0_7;
-    u32 var_a3_3;
-    s32 var_a2_6;
-    u32 var_a0_2;
-    s32 var_a2_7;
-    u32 var_a3_4;
-    u32 temp_a0_8;
     u32 temp_v1_4;
-    u32 var_a0_3;
-    s32 var_a2_8;
-    s32 var_t8_3;
-    s32 var_a2_9;
-    s32 var_t8_4;
-    s32 var_a2_10;
-    s32 var_a2_11;
 
     scene = g_field_scene.scene;
-    temp_v1 = (u16) scene->unk46;
-    spC = ((s32) (temp_v1 + 0x1F) >> 5) * 2;
-    sp10 = (((s32) (temp_v1 - 3) >> 5) + 1) * 3;
+    temp_v1 = (u16)scene->unk46;
+    sp_c = ((s32)(temp_v1 + 0x1F) >> 5) * 2;
+    sp10 = (((s32)(temp_v1 - 3) >> 5) + 1) * 3;
     temp_s3 = footprint_width - 1;
-    if (footprint_depth >= 3)
+    do
     {
-        var_a1 = 0x1F800000;
-        var_t9 = 0x1F800000;
-        var_fp = (sp10 * footprint_depth * 4) + 0x1F800000;
-    }
-    else
-    {
-        var_a1 = 0;
-        var_t9 = 0;
-        var_fp = 0;
-    }
-    sp4 = (u32) scene->unk28;
+        if (footprint_depth >= 3)
+        {
+            var_a1 = 0x1F800000;
+            var_t9 = 0x1F800000;
+            var_fp = (sp10 * footprint_depth * 4) + 0x1F800000;
+        }
+        else
+        {
+            var_a1 = 0;
+            var_t9 = 0;
+            var_fp = 0;
+        }
+    } while (0);
+    sp4 = (u32)scene->unk28;
     temp_s6 = scene->unk41;
-    sp8 = (s32) temp_s6;
-    var_t7 = (u8 *) scene->unk2C;
+    sp8 = (s32)temp_s6;
+    var_t7 = (u8*)scene->unk2C;
     temp_s6_2 = temp_s6 - 1;
     sp8 = temp_s6_2;
     if (temp_s6_2 != -1)
     {
-        temp_s6_3 = footprint_width - 1;
-        sp1C = temp_s6_3;
-        sp20 = temp_s6_3 * 4;
-        sp18 = footprint_width - 6;
+        word_bits = 0x20;
         do
         {
-            var_a2 = (4 - (s32) var_t7) & 3;
-            var_t8 = (u16) scene->unk46 * 2;
+            var_a2 = (4 - (s32)var_t7) & 3;
+            var_t8 = (u16)scene->unk46 * 2;
             if (var_a2 != 0)
             {
-loop_6:
+            loop_6:
                 if (var_t8 != 0)
                 {
                     *var_t7 = -1;
@@ -4114,149 +4078,163 @@ loop_6:
                     }
                 }
             }
-            var_a2_2 = (var_t8 >> 2) - 1;
-            if (var_a2_2 != -1)
+            var_a2 = (var_t8 >> 2);
+            var_a2 -= 1;
+            if (var_a2 != -1)
             {
                 do
                 {
-                    *(s32 *) var_t7 = -1;
-                    var_a2_2 -= 1;
+
+                    *(s32*)var_t7 = -1;
+
+                    var_a2 -= 1;
                     var_t7 += 4;
-                } while (var_a2_2 != -1);
+                } while (var_a2 != -1);
             }
-            var_a2_3 = (var_t8 & 3) - 1;
-            if (var_a2_3 != -1)
+            var_a2 = (var_t8 & 3);
+            var_a2 -= 1;
+            if (var_a2 != -1)
             {
+                s32 end = -1;
                 do
                 {
                     *var_t7 = -1;
-                    var_a2_3 -= 1;
+                    var_a2 -= 1;
                     var_t7 += 1;
-                } while (var_a2_3 != -1);
+                } while (var_a2 != end);
             }
-            var_s4 = 0;
-            temp_v0 = ((u16) scene->unk48 - footprint_depth) - 4;
+            do
+            {
+                var_s4 = 0;
+                temp_v0 = ((u16)scene->unk48 - footprint_depth) - 4;
+            } while (0);
             sp14 = temp_v0;
             if (temp_v0 != -1)
             {
+                ring_words = sp10 * footprint_depth;
                 stride4 = sp10 * 4;
-                sp24 = 0x20 - temp_s3;
-                sp28 = 0x21 - temp_s3;
-                sp30 = stride4 * footprint_depth;
+                sp30 = ring_words * 4;
                 do
                 {
                     temp_s1 = sp4;
-                    sp4 = temp_s1 + (spC * 4);
-                    temp_t2 = *(u32 *) (temp_s1 + 0);
-                    temp_t0 = *(u32 *) (temp_s1 + 4);
-                    var_t8_2 = ((u16) scene->unk46 - 1) - footprint_width;
+                    var_t8 = (u16)scene->unk46;
+                    var_t5 = *(u32*)(temp_s1 + 4);
+                    sp4 = temp_s1 + (sp_c * 4);
+                    temp_t2 = *(u32*)(temp_s1 + 0);
+                    temp_t0 = var_t5;
+                    temp_v0 = var_t8 - 1;
+                    var_t8 = temp_v0 - footprint_width;
                     temp_s1 += 8;
-                    switch (sp1C)
+                    switch (footprint_width - 1)
                     {
-                        default:
-                            var_t3 = temp_t0 | (temp_t0 >> temp_s3);
-                            var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2);
-                            var_a3 = var_t6;
-                            temp_a0_3 = temp_t2 | (temp_t2 >> 1);
-                            temp_v0_2 = temp_a0_3 >> 2;
-                            var_t1 = temp_a0_3 | temp_v0_2;
-                            var_a0 = temp_v0_2;
-                            var_a2_4 = sp18 >> 1;
-                            do
-                            {
-                                var_a3 = var_a3 >> 2;
-                                var_t6 |= var_a3;
-                                var_a0 = var_a0 >> 2;
-                                var_a2_4 -= 1;
-                                var_t1 |= var_a0;
-                            } while (var_a2_4 != -1);
-                            if (footprint_width & 1)
-                            {
-                                var_t6 |= temp_t0 >> (footprint_width - 2);
-                                var_t1 |= temp_t2 >> temp_s3;
-                            }
-                            goto block_25;
-                        case 4:
-                            var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2) | (temp_t0 >> 3);
-                            var_t3 = temp_t0 | (temp_t0 >> 4);
-                            temp_a0 = temp_t2 | (temp_t2 >> 1);
-                            var_t1 = temp_a0 | (temp_a0 >> 2) | (temp_t2 >> 4);
-                            goto block_25;
-                        case 3:
-                            var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2);
-                            var_t3 = temp_t0 | (temp_t0 >> 3);
-                            temp_a0_2 = temp_t2 | (temp_t2 >> 1);
-                            var_t1 = temp_a0_2 | (temp_a0_2 >> 2);
-                            goto block_25;
-                        case 2:
-                            var_t6 = temp_t0 >> 1;
-                            var_t3 = temp_t0 | (temp_t0 >> 2);
-                            var_t1 = temp_t2 | (temp_t2 >> 1) | (temp_t2 >> 2);
-                            goto block_25;
-                        case 1:
-                            var_t6 = 0;
-                            var_t3 = temp_t0 | (temp_t0 >> 1);
-                            var_t1 = temp_t2 | (temp_t2 >> 1);
-block_25:
-                            var_t4 = temp_t0;
-                            var_t5 = temp_t2;
-                            break;
-                        case 0:
-                            var_t6 = 0;
-                            var_t3 = temp_t0;
-                            var_t1 = temp_t2;
-                            var_t4 = 0;
-                            var_t5 = 0;
-                            break;
+                    default:
+                        var_t3 = temp_t0 | (temp_t0 >> temp_s3);
+                        var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2);
+                        var_a3 = var_t6;
+                        var_a0 = temp_t2 | (temp_t2 >> 1);
+                        temp_v0_2 = var_a0 >> 2;
+                        var_t1 = var_a0 | temp_v0_2;
+                        var_a0 = temp_v0_2;
+                        var_a2 = (footprint_width - 6) >> 1;
+                        do
+                        {
+                            var_a3 = var_a3 >> 2;
+                            var_t6 |= var_a3;
+                            var_a0 = var_a0 >> 2;
+                            var_a2 -= 1;
+                            var_t1 |= var_a0;
+                        } while (var_a2 != -1);
+                        if (footprint_width & 1)
+                        {
+                            var_t6 |= temp_t0 >> (footprint_width - 2);
+                            var_t1 |= temp_t2 >> temp_s3;
+                        }
+                        goto block_25;
+                    case 4:
+                        var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2) | (temp_t0 >> 3);
+                        var_t3 = temp_t0 | (temp_t0 >> 4);
+                        var_a0 = temp_t2 | (temp_t2 >> 1);
+                        var_t1 = var_a0 | (var_a0 >> 2) | (temp_t2 >> 4);
+                        goto block_25;
+                    case 3:
+                        var_t6 = (temp_t0 >> 1) | (temp_t0 >> 2);
+                        var_t3 = temp_t0 | (temp_t0 >> 3);
+                        var_a0 = temp_t2 | (temp_t2 >> 1);
+                        var_t1 = var_a0 | (var_a0 >> 2);
+                        goto block_25;
+                    case 2:
+                        var_t6 = temp_t0 >> 1;
+                        var_t3 = temp_t0 | (temp_t0 >> 2);
+                        var_t1 = temp_t2 | (temp_t2 >> 1) | (temp_t2 >> 2);
+                        goto block_25;
+                    case 1:
+                        var_t6 = 0;
+                        var_t3 = temp_t0 | (temp_t0 >> 1);
+                        var_t1 = temp_t2 | (temp_t2 >> 1);
+                    block_25:
+                        var_t4 = temp_t0;
+                        var_t5 = temp_t2;
+                        break;
+                    case 0:
+                        var_t6 = 0;
+                        var_t3 = temp_t0;
+                        var_t1 = temp_t2;
+                        var_t4 = 0;
+                        var_t5 = 0;
+                        break;
                     }
-                    var_t0 = 0x20 - temp_s3;
+                    var_t0 = word_bits;
+                    var_t0 -= temp_s3;
                     if (footprint_depth != 1)
                     {
                         if (footprint_depth == 2)
                         {
                             if (!(var_s4 & 1))
                             {
-                                var_a1 = (u32) &D_1F800008;
-                                var_t9 = stride4 + (u32) &D_1F800008;
+                                var_a1 = 0x1F800000;
+                                var_t9 = stride4 + 0x1F800000;
                             }
                             else
                             {
-                                var_a1 = (u32) &D_1F800008 + stride4;
-                                var_t9 = (u32) &D_1F800008;
+                                var_a1 = 0x1F800000 + stride4;
+                                var_t9 = 0x1F800000;
                             }
                         }
                         else
                         {
-                            if (var_a1 >= var_fp)
+                            do
                             {
-                                var_a1 -= sp30;
-                            }
+                                if (var_a1 >= var_fp)
+                                {
+                                    var_a1 -= sp30;
+                                }
+                            } while (0);
                             if (var_t9 >= var_fp)
                             {
                                 var_t9 -= sp30;
                             }
                         }
                     }
-                    if (var_t8_2 != 0)
+                    if (var_t8 != 0)
                     {
-                        var_s0 = var_a1;
-loop_38:
-                        if (var_t0 < var_t8_2)
+                        var_s0 = var_a1 + 8;
+                    loop_38:
+                        if (var_t0 < var_t8)
                         {
-                            var_t8_2 -= var_t0;
+                            var_t8 -= var_t0;
                         }
                         else
                         {
-                            var_t0 = var_t8_2;
-                            var_t8_2 = 0;
+                            var_t0 = var_t8;
+                            var_t8 = 0;
                         }
-                        var_t3_2 = var_t3 | var_t6;
+                        var_t3 = var_t3 | var_t6;
                         switch (footprint_depth)
                         {
                         case 1:
                             do
                             {
-                                if (var_t3_2 & 1)
+                                if (var_t3 & 1)
                                 {
                                     var_v1_3 = 1;
                                     if (var_t1 & 1)
@@ -4270,29 +4248,29 @@ loop_38:
                                 }
                                 *var_t7 = var_v1_3;
                                 var_t7 += 1;
-                                var_t3_2 = var_t3_2 >> 1;
+                                var_t3 = var_t3 >> 1;
                                 var_t0 -= 1;
                                 var_t1 = var_t1 >> 1;
                             } while (var_t0 != 0);
                             break;
                         case 2:
-                            *(s32 *) var_a1 = var_t1;
-                            *(s32 *) (var_s0 - 4) = var_t3_2;
+                            *(s32*)var_a1 = var_t1;
+                            *(s32*)(var_s0 - 4) = var_t3;
                             var_s0 += 0xC;
                             var_a1 += 0xC;
                             if (var_s4 != 0)
                             {
-                                temp_v0_4 = *(u32 *) (var_t9 + 4);
-                                temp_v1_3 = *(u32 *) (var_t9 + 0);
+                                temp_v0_4 = *(u32*)(var_t9 + 4);
+                                temp_v1_3 = *(u32*)(var_t9 + 0);
                                 var_t9 += 0xC;
-                                var_t3_4 = var_t3_2 | temp_v0_4;
-                                var_t1_3 = var_t1 | temp_v1_3;
+                                var_t3 = var_t3 | temp_v0_4;
+                                var_t1 = var_t1 | temp_v1_3;
                                 do
                                 {
-                                    if (var_t3_4 & 1)
+                                    if (var_t3 & 1)
                                     {
                                         var_v1_2 = 1;
-                                        if (var_t1_3 & 1)
+                                        if (var_t1 & 1)
                                         {
                                             var_v1_2 = -1;
                                         }
@@ -4303,49 +4281,53 @@ loop_38:
                                     }
                                     *var_t7 = var_v1_2;
                                     var_t7 += 1;
-                                    var_t3_4 = var_t3_4 >> 1;
+                                    var_t3 = var_t3 >> 1;
                                     var_t0 -= 1;
-                                    var_t1_3 = var_t1_3 >> 1;
+                                    var_t1 = var_t1 >> 1;
                                 } while (var_t0 != 0);
                             }
                             break;
                         default:
-                            *(s32 *) var_a1 = var_t1;
-                            *(s32 *) (var_s0 - 4) = var_t3_2;
-                            *(s32 *) (var_s0 + 0) = var_t6;
+                            *(s32*)var_a1 = var_t1;
+                            *(s32*)(var_s0 - 4) = var_t3;
+                            *(s32*)(var_s0 + 0) = var_t6;
                             var_s0 += 0xC;
                             var_a1 += 0xC;
                             if (var_s4 >= (footprint_depth - 1))
                             {
-                                var_a3_2 = var_t9 + stride4;
-                                var_t3_3 = var_t3_2 | *(u32 *) (var_t9 + 4);
-                                var_t1_2 = var_t1 | *(u32 *) (var_t9 + 0);
-                                if (var_a3_2 >= var_fp)
+                                var_a3 = var_t9 + stride4;
+                                var_t3 = var_t3 | *(u32*)(var_t9 + 4);
+                                temp_t2 = *(u32*)(var_t9 + 0) & 0xFFFF;
+                                var_t1 |= temp_t2 | (*(u32*)(var_t9 + 0) & 0xFFFF0000);
+                                if (var_a3 >= var_fp)
                                 {
-                                    var_a3_2 -= sp30;
+                                    var_a3 -= sp30;
                                 }
-                                var_a2_5 = footprint_depth - 2;
+                                var_a2 = footprint_depth - 2;
                                 do
                                 {
-                                    temp_a0_4 = *(u32 *) (var_a3_2 + 4);
-                                    temp_v0_3 = *(u32 *) (var_a3_2 + 0);
-                                    temp_v1_2 = *(u32 *) (var_a3_2 + 8);
-                                    var_a3_2 = var_a3_2 + stride4;
-                                    var_t1_2 |= temp_v0_3 | temp_v1_2;
-                                    var_t3_3 |= temp_a0_4;
-                                    if (var_a3_2 >= var_fp)
+                                    temp_a0_4 = *(u32*)(var_a3 + 4);
+                                    temp_v0_3 = *(u32*)(var_a3 + 0);
+                                    temp_v1_2 = *(u32*)(var_a3 + 8);
+                                    do
                                     {
-                                        var_a3_2 -= sp30;
+                                        var_a3 = var_a3 + stride4;
+                                    } while (0);
+                                    var_t1 |= temp_v0_3 | temp_v1_2;
+                                    var_t3 |= temp_a0_4;
+                                    if (var_a3 >= var_fp)
+                                    {
+                                        var_a3 -= sp30;
                                     }
-                                    var_a2_5 -= 1;
-                                } while (var_a2_5 != 0);
+                                    var_a2 -= 1;
+                                } while (var_a2 != 0);
                                 var_t9 += 0xC;
                                 do
                                 {
-                                    if (var_t3_3 & 1)
+                                    if (var_t3 & 1)
                                     {
                                         var_v1 = 1;
-                                        if (var_t1_2 & 1)
+                                        if (var_t1 & 1)
                                         {
                                             var_v1 = -1;
                                         }
@@ -4356,138 +4338,192 @@ loop_38:
                                     }
                                     *var_t7 = var_v1;
                                     var_t7 += 1;
-                                    var_t3_3 = var_t3_3 >> 1;
+                                    var_t3 = var_t3 >> 1;
                                     var_t0 -= 1;
-                                    var_t1_2 = var_t1_2 >> 1;
+                                    var_t1 = var_t1 >> 1;
                                 } while (var_t0 != 0);
                             }
                             break;
                         }
-                        if (var_t8_2 != 0)
+                        if (var_t8 != 0)
                         {
-                            temp_t2_2 = *(u32 *) (temp_s1 + 0);
-                            temp_t0_2 = *(u32 *) (temp_s1 + 4);
+                            temp_t2 = *(u32*)(temp_s1 + 0);
+                            temp_t0 = *(u32*)(temp_s1 + 4);
+
+                            emit_mask = temp_t2;
+
                             temp_s1 += 8;
-                            switch (sp1C)
+                            next_input = emit_mask;
+                            switch (footprint_width - 1)
                             {
-                                default:
-                                    var_t3 = var_t4 >> sp24;
-                                    var_t6 = (var_t4 >> sp28) | (var_t4 >> (0x22 - temp_s3));
-                                    var_a3_3 = var_t6;
-                                    var_a2_6 = sp18 >> 1;
+                            default:
+                                do
+                                {
+                                    s32 edge_shift = 0x20 - temp_s3;
+                                    s32 word_bits_plus_one = 0x21;
+                                    s32 inner_shift = word_bits_plus_one - temp_s3;
+                                    var_t3 = var_t4 >> edge_shift;
+                                    var_t6 = (var_t4 >> inner_shift) | (var_t4 >> (0x22 - temp_s3));
+                                    var_a3 = var_t6;
+                                    var_a2 = (footprint_width - 6) >> 1;
+                                } while (0);
+                                do
+                                {
+                                    var_a3 = var_a3 >> 2;
+                                    var_a2 -= 1;
+                                    var_t6 |= var_a3;
+                                } while (var_a2 != -1);
+                                {
+                                    s32 edge_shift = 0x20 - temp_s3;
+                                    s32 word_bits_plus_one = 0x21;
+                                    s32 inner_shift = word_bits_plus_one - temp_s3;
+                                    var_t1 = (var_t5 >> edge_shift) | (var_t5 >> inner_shift);
+                                }
+                                var_a0 = var_t1;
+                                var_a2 = (s32)(temp_s3 - 4) >> 1;
+                                do
+                                {
+                                    var_a0 = var_a0 >> 2;
+                                    var_a2 -= 1;
+                                    var_t1 |= var_a0;
+                                } while (var_a2 != -1);
+                                if (footprint_width & 1)
+                                {
+                                    var_t6 |= var_t4 >> 0x1F;
+                                }
+                                else
+                                {
+                                    var_t1 |= var_t5 >> 0x1F;
+                                }
+                                if (temp_t0 != 0)
+                                {
+                                    var_a3 = (temp_t0 * 2) | (temp_t0 * 4);
+                                    var_t6 |= var_a3;
+
+                                    var_a0 = next_input | (next_input * 2);
+
+                                    temp_v1_4 = var_a0 * 4;
+                                    var_t1 |= var_a0 | temp_v1_4;
+                                    var_a0 = temp_v1_4;
+                                    var_a2 = (footprint_width - 6) >> 1;
                                     do
                                     {
-                                        var_a3_3 = var_a3_3 >> 2;
-                                        var_a2_6 -= 1;
-                                        var_t6 |= var_a3_3;
-                                    } while (var_a2_6 != -1);
-                                    var_t1 = (var_t5 >> sp24) | (var_t5 >> sp28);
-                                    var_a0_2 = var_t1;
-                                    var_a2_7 = (s32) (temp_s3 - 4) >> 1;
-                                    do
-                                    {
-                                        var_a0_2 = var_a0_2 >> 2;
-                                        var_a2_7 -= 1;
-                                        var_t1 |= var_a0_2;
-                                    } while (var_a2_7 != -1);
+                                        var_a3 *= 4;
+                                        var_t6 |= var_a3;
+                                        var_a0 *= 4;
+                                        var_a2 -= 1;
+                                        var_t1 |= var_a0;
+                                    } while (var_a2 != -1);
                                     if (footprint_width & 1)
                                     {
-                                        var_t6 |= var_t4 >> 0x1F;
+                                        var_t6 |= temp_t0 << (footprint_width - 2);
+
+                                        var_t1 |= next_input << temp_s3;
                                     }
-                                    else
-                                    {
-                                        var_t1 |= var_t5 >> 0x1F;
-                                    }
-                                    if (temp_t0_2 != 0)
-                                    {
-                                        var_a3_4 = (temp_t0_2 * 2) | (temp_t0_2 * 4);
-                                        var_t6 |= var_a3_4;
-                                        temp_a0_8 = temp_t2_2 | (temp_t2_2 * 2);
-                                        temp_v1_4 = temp_a0_8 * 4;
-                                        var_t1 |= temp_a0_8 | temp_v1_4;
-                                        var_a0_3 = temp_v1_4;
-                                        var_a2_8 = sp18 >> 1;
-                                        do
-                                        {
-                                            var_a3_4 *= 4;
-                                            var_t6 |= var_a3_4;
-                                            var_a0_3 *= 4;
-                                            var_a2_8 -= 1;
-                                            var_t1 |= var_a0_3;
-                                        } while (var_a2_8 != -1);
-                                        if (footprint_width & 1)
-                                        {
-                                            var_t6 |= temp_t0_2 << (footprint_width - 2);
-                                            var_t1 |= temp_t2_2 << temp_s3;
-                                        }
-                                        var_t3 |= temp_t0_2 | (temp_t0_2 << temp_s3);
-                                        goto block_96;
-                                    }
-                                    goto block_97;
-                                case 4:
+                                    var_t3 |= temp_t0 | (temp_t0 << temp_s3);
+                                    goto block_96;
+                                }
+                                goto block_97;
+                            case 4:
+                                do
+                                {
                                     var_t6 = (var_t4 >> 0x1D) | (var_t4 >> 0x1E) | (var_t4 >> 0x1F);
-                                    var_t3 = var_t4 >> 0x1C;
-                                    temp_a0_5 = (var_t5 >> 0x1C) | (var_t5 >> 0x1D);
-                                    var_t1 = temp_a0_5 | (temp_a0_5 >> 2);
-                                    if (temp_t0_2 != 0)
-                                    {
-                                        var_t6 |= (temp_t0_2 * 2) | (temp_t0_2 * 4) | (temp_t0_2 * 8);
-                                        var_t3 |= temp_t0_2 | (temp_t0_2 * 0x10);
-                                        temp_a0_6 = temp_t2_2 | (temp_t2_2 * 2);
-                                        var_v0_2 = temp_a0_6 | (temp_a0_6 * 4) | (temp_t2_2 * 0x10);
-                                        goto block_95;
-                                    }
-                                    goto block_97;
-                                case 3:
+                                    var_t3 = var_t4;
+                                    var_t3 >>= 0x1C;
+                                    var_a0 = (var_t5 >> 0x1C) | (var_t5 >> 0x1D);
+                                    var_t1 = var_a0 | (var_a0 >> 2);
+                                } while (0);
+                                if (temp_t0 != 0)
+                                {
+                                    left_bits = (temp_t0 * 2) | (temp_t0 * 4) | (temp_t0 * 8);
+                                    var_t6 |= left_bits;
+                                    var_t3 |= temp_t0 | (temp_t0 * 0x10);
+
+                                    var_a0 = next_input | (next_input * 2);
+
+                                    sp20 = var_a0 * 4;
+                                    var_v0_2 = var_a0 | sp20;
+                                    left_bits = next_input * 0x10;
+                                    var_v0_2 |= left_bits;
+
+                                    goto block_95;
+                                }
+                                goto block_97;
+                            case 3:
+                                do
+                                {
                                     var_t6 = (var_t4 >> 0x1E) | (var_t4 >> 0x1F);
                                     var_t3 = var_t4 >> 0x1D;
-                                    var_t1 = (var_t5 >> 0x1D) | (var_t5 >> 0x1E) | (var_t5 >> 0x1F);
-                                    if (temp_t0_2 != 0)
-                                    {
-                                        var_t6 |= (temp_t0_2 * 2) | (temp_t0_2 * 4);
-                                        var_t3 |= temp_t0_2 | (temp_t0_2 * 8);
-                                        temp_a0_7 = temp_t2_2 | (temp_t2_2 * 2);
-                                        var_v0_2 = temp_a0_7 | (temp_a0_7 * 4);
-                                        goto block_95;
-                                    }
-                                    goto block_97;
-                                case 2:
-                                    var_t6 = var_t4 >> 0x1F;
-                                    var_t3 = var_t4 >> 0x1E;
-                                    var_t1 = (var_t5 >> 0x1E) | (var_t5 >> 0x1F);
-                                    if (temp_t0_2 != 0)
-                                    {
-                                        var_t6 |= temp_t0_2 * 2;
-                                        var_t3 |= temp_t0_2 | (temp_t0_2 * 4);
-                                        var_v0_2 = temp_t2_2 | (temp_t2_2 * 2) | (temp_t2_2 * 4);
-                                        goto block_95;
-                                    }
-                                    goto block_97;
-                                case 1:
+                                    left_bits = (var_t5 >> 0x1D) | (var_t5 >> 0x1E);
+                                    var_t5 = (s32)var_t5 >> 0x1F;
+                                    var_t1 = left_bits | (var_t5 & 1);
+                                } while (0);
+                                if (temp_t0 != 0)
+                                {
+                                    left_bits = (temp_t0 * 2) | (temp_t0 * 4);
+                                    var_t6 |= left_bits;
+                                    var_t3 |= temp_t0 | (temp_t0 * 8);
+
+                                    var_a0 = next_input | (next_input * 2);
+
+                                    var_v0_2 = var_a0 | (var_a0 * 4);
+                                    goto block_95;
+                                }
+                                goto block_97;
+                            case 2:
+
+                                var_t6 = var_t4 >> 0x1F;
+                                var_t3 = var_t4 >> 0x1E;
+                                var_t1 = (var_t5 >> 0x1E) | (var_t5 >> 0x1F);
+
+                                if (temp_t0 != 0)
+                                {
+                                    var_t6 |= temp_t0 * 2;
+                                    var_t3 |= temp_t0 | (temp_t0 * 4);
+
+                                    sp20 = next_input * 2;
+                                    var_v0_2 = next_input | sp20;
+                                    left_bits = next_input * 4;
+                                    var_v0_2 |= left_bits;
+
+                                    goto block_95;
+                                }
+                                goto block_97;
+                            case 1:
+                                do
+                                {
                                     var_t3 = var_t4 >> 0x1F;
                                     var_t1 = var_t5 >> 0x1F;
-                                    if (temp_t0_2 != 0)
+                                } while (0);
+                                if (temp_t0 != 0)
+                                {
+                                    var_t3 |= temp_t0 | (temp_t0 * 2);
+
+                                    var_v0_2 = next_input | (next_input * 2);
+
+                                block_95:
+                                    var_t1 |= var_v0_2;
+                                block_96:
+                                    var_t4 = temp_t0;
+                                    do
                                     {
-                                        var_t3 |= temp_t0_2 | (temp_t0_2 * 2);
-                                        var_v0_2 = temp_t2_2 | (temp_t2_2 * 2);
-block_95:
-                                        var_t1 |= var_v0_2;
-block_96:
-                                        var_t4 = temp_t0_2;
-                                        var_t5 = temp_t2_2;
-                                        break;
-                                    }
-block_97:
-                                    var_t4 = 0;
-                                    var_t5 = 0;
+                                        var_t5 = next_input;
+                                    } while (0);
                                     break;
-                                case 0:
-                                    var_t1 = temp_t2_2;
-                                    var_t3 = temp_t0_2;
-                                    break;
+                                }
+                            block_97:
+                                var_t4 = 0;
+                                var_t5 = 0;
+                                break;
+                            case 0:
+
+                                var_t1 = next_input;
+
+                                var_t3 = temp_t0;
+                                break;
                             }
-                            var_t0 = 0x20;
-                            if (var_t8_2 != 0)
+                            var_t0 = word_bits;
+                            if (var_t8 != 0)
                             {
                                 goto loop_38;
                             }
@@ -4495,62 +4531,64 @@ block_97:
                     }
                     if (var_s4 >= (footprint_depth - 1))
                     {
-                        var_t8_3 = footprint_width;
-                        if (var_t8_3 != -1)
+                        var_t8 = footprint_width;
+                        if (var_t8 != -1)
                         {
+                            s32 end = -1;
                             do
                             {
                                 *var_t7 = -1;
-                                var_t8_3 -= 1;
+                                var_t8 -= 1;
                                 var_t7 += 1;
-                            } while (var_t8_3 != -1);
+                            } while (var_t8 != end);
                         }
                     }
                     var_s4 += 1;
-                    temp_s6_5 = sp14 - 1;
-                    sp14 = temp_s6_5;
-                } while (temp_s6_5 != -1);
+                    sp14--;
+                } while (sp14 != -1);
             }
-            var_a2_9 = (4 - (s32) var_t7) & 3;
-            var_t8_4 = (u16) scene->unk46 * (footprint_depth + 1);
-            if (var_a2_9 != 0)
+            var_a2 = (4 - (s32)var_t7) & 3;
+            var_t8 = (u16)scene->unk46 * (footprint_depth + 1);
+            if (var_a2 != 0)
             {
-loop_107:
-                if (var_t8_4 != 0)
+            loop_107:
+                if (var_t8 != 0)
                 {
                     *var_t7 = -1;
                     var_t7 += 1;
-                    var_a2_9 -= 1;
-                    var_t8_4 -= 1;
-                    if (var_a2_9 != 0)
+                    var_a2 -= 1;
+                    var_t8 -= 1;
+                    if (var_a2 != 0)
                     {
                         goto loop_107;
                     }
                 }
             }
-            var_a2_10 = (var_t8_4 >> 2) - 1;
-            if (var_a2_10 != -1)
+            var_a2 = (var_t8 >> 2);
+            var_a2 -= 1;
+            if (var_a2 != -1)
             {
                 do
                 {
-                    *(s32 *) var_t7 = -1;
-                    var_a2_10 -= 1;
+                    *(s32*)var_t7 = -1;
+                    var_a2 -= 1;
                     var_t7 += 4;
-                } while (var_a2_10 != -1);
+                } while (var_a2 != -1);
             }
-            var_a2_11 = (var_t8_4 & 3) - 1;
-            if (var_a2_11 != -1)
+            var_a2 = (var_t8 & 3);
+            var_a2 -= 1;
+            if (var_a2 != -1)
             {
+                s32 end = -1;
                 do
                 {
                     *var_t7 = -1;
-                    var_a2_11 -= 1;
+                    var_a2 -= 1;
                     var_t7 += 1;
-                } while (var_a2_11 != -1);
+                } while (var_a2 != end);
             }
-            temp_s6_4 = sp8 - 1;
-            sp8 = temp_s6_4;
-        } while (temp_s6_4 != -1);
+            sp8--;
+        } while (sp8 != -1);
     }
 }
 

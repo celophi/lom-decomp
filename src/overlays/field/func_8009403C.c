@@ -1,4 +1,5 @@
 #include "common.h"
+#include "vector.h"
 
 /** @brief Accessed fields of an actor sequence record. */
 typedef struct
@@ -71,7 +72,7 @@ void func_8006C3FC(FieldSequenceRecord *);
 void func_8008A678(s32);
 void func_800952DC(FieldSequenceRecord *, s32);
 s32 func_800954F0(FieldSequenceRecord *, s32);
-s32 func_80097FA0(FieldSequenceRecord *, s32 *, s32);
+s32 func_80097FA0(FieldSequenceRecord *, Vec3i *, s32);
 void func_800A2DD8(s32);
 
 /**
@@ -79,11 +80,10 @@ void func_800A2DD8(s32);
  * @param record Actor sequence record to update.
  * @param sequence_index Script row within the object's selected bank.
  * @note Command 0xF1 advances the cursor; 0xEF handles sequence completion.
- * @note Separate cursor reads and arithmetic steps preserve the original scheduling.
  */
 void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
 {
-    s32 *scratch = (s32 *)0x1F800000;
+    Vec3i *scratch = (Vec3i *)0x1F800000;
     FieldSequenceSlot *slot_base;
     FieldSequenceSlot *slot;
     FieldSequenceSlot *timer_slot, *reset_slot, *final_slot;
@@ -100,8 +100,8 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
     s32 position;
     s32 row_offset;
     s32 row_address;
+    s32 combined_address;
     s32 amount;
-    s32 displacement;
     u8 delay;
     u8 command;
 
@@ -159,7 +159,8 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
         row_address = bank << 1;
         row_address += bank;
         row_address <<= 8;
-        row_address = row_offset + row_address;
+        combined_address = row_offset + row_address;
+        row_address = combined_address;
     } while (0);
     slot = &slot_base[object];
     first_position = slot->script_position;
@@ -176,7 +177,8 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
         row_address = bank << 1;
         row_address += bank;
         row_address <<= 8;
-        row_address = row_offset + row_address;
+        combined_address = row_offset + row_address;
+        row_address = combined_address;
     } while (0);
     slot = &slot_base[object];
     position = slot->script_position;
@@ -216,19 +218,15 @@ apply_motion:
     record->motion_remainder = (u8)record->motion_remainder - amount;
     if (record->facing_flags & 0x80)
     {
-        displacement = (amount << 8) * motion->scale;
+        scratch->x = ((amount << 8) * motion->scale) >> 6;
     }
     else
     {
-        displacement = -(amount << 8) * motion->scale;
+        scratch->x = (-(amount << 8) * motion->scale) >> 6;
     }
-    scratch[0] = displacement >> 6;
-    do
-    {
-        scratch[2] = 0;
-        scratch[1] = 0;
-        func_80097FA0(record, scratch, 1);
-    } while (0);
+    scratch->z = 0;
+    scratch->y = 0;
+    func_80097FA0(record, scratch, 1);
     if (g_field_resource_entries[record->resource_id].mode == 0)
     {
         final_base = D_80105AE0;

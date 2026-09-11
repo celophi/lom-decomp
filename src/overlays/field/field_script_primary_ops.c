@@ -201,27 +201,36 @@ extern FieldScriptContext *g_field_script;
 extern u8 *D_80122B78;
 
 s32 func_8006751C(s32 arg0);
-u8 func_80067598(s32 arg0);
 void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 
 /**
  * @brief Handle a script mode query, advancing the PC or clearing the run flag.
  * @note A 0xFF operand selects the mode from the shared field state.
- * @note WIP: control-flow and temporary-register differences remain.
+ * @see decomp.me (100%)
  */
 void func_800B99A8(void)
 {
-    FieldScriptContext *rec;
+    FieldScriptRecord *rec;
+    FieldScriptContext *ctx;
+    s32 active_record;
     s32 mode;
+    s32 resolved;
     s32 selector;
     s32 result;
 
-    rec = &g_field_script[g_field_script->active_record];
+    active_record = g_field_script->active_record;
+    ctx = g_field_script;
+    rec = (FieldScriptRecord *)((u8 *)ctx + ((active_record * 3) << 2));
     mode = rec->pc[1];
     if (mode == 0xFF)
     {
-        mode = (((StructB800B99A8 *)D_80122B78)->unk41C >> 8) & 3;
+        resolved = (((StructB800B99A8 *)D_80122B78)->unk41C >> 8) & 3;
     }
+    else
+    {
+        resolved = mode;
+    }
+    mode = resolved;
     selector = mode & 3;
     result = func_8006751C(selector);
     if (!(mode & 0x80))
@@ -236,7 +245,9 @@ void func_800B99A8(void)
     if (result == 3)
     {
     advance_pc:
-        rec = &g_field_script[g_field_script->active_record];
+        active_record = g_field_script->active_record;
+        ctx = g_field_script;
+        rec = (FieldScriptRecord *)((u8 *)ctx + ((active_record * 3) << 2));
         rec->pc += 2;
         return;
     }

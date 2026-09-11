@@ -1,20 +1,9 @@
 #include "common.h"
 #include "sdk/libgpu.h"
 
-/** @brief Position or texture origin followed by signed tile dimensions. */
-typedef struct
-{
-    u16 x, y;
-    s16 w, h;
-} Rect;
-/** @brief Fill tile packet, also providing the tag and command of a draw-mode packet. */
-typedef struct
-{
-    u32 tag, color;
-    u16 x, y, w, h;
-} Packet;
-s32 *func_800ADCD0(s32 *, s32 *, Rect *, Rect *);
+s32 *func_800ADCD0(s32 *, s32 *, RECT *, RECT *);
 extern u16 g_menu_element_counter;
+
 /**
  * @brief Emit a bordered menu rectangle, fill tile and draw-mode command.
  * @param buffer First free primitive-buffer address.
@@ -31,13 +20,12 @@ s32 *func_800AD850(s32 *buffer, s32 *ordering, s32 x, s32 y, s32 width, s32 heig
                    s32 bottom_buffer, s32 bright)
 {
     s32 *ot = ordering;
-    s32 *draw_packet = buffer;
+    DR_ENV *draw_packet = (DR_ENV *)buffer;
     DRAWENV draw_env;
-    Rect destination;
-    Rect texture;
+    RECT destination;
+    RECT texture;
     s32 *cursor;
-    u32 packet_link;
-    Packet *packet;
+    u_long *packet;
 
     if (bottom_buffer != 0)
     {
@@ -47,105 +35,51 @@ s32 *func_800AD850(s32 *buffer, s32 *ordering, s32 x, s32 y, s32 width, s32 heig
     {
         SetDefDrawEnv(&draw_env, x + 2, y + 0xA, width - 4, height - 4);
     }
-    SetDrawEnv((DR_ENV *)draw_packet, &draw_env);
-    *draw_packet = (*draw_packet & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)draw_packet & 0xFFFFFF);
-    cursor = (s32 *)((u8 *)draw_packet + 0x40);
-    destination.x = x - 4;
-    destination.y = y - 4;
-    destination.w = 8;
-    destination.h = 8;
-    texture.x = g_menu_element_counter + 0x40;
-    texture.y = 0xE0;
-    texture.w = 8;
-    texture.h = 8;
+    SetDrawEnv(draw_packet, &draw_env);
+    addPrim(ot, draw_packet);
+    cursor = (s32 *)(draw_packet + 1);
+    setRECT(&destination, x - 4, y - 4, 8, 8);
+    setRECT(&texture, g_menu_element_counter + 0x40, 0xE0, 8, 8);
     cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    destination.x = x + width - 4;
-    destination.y = y - 4;
-    destination.w = 8;
-    destination.h = 8;
-    texture.x = g_menu_element_counter + 0x58;
-    texture.y = 0xE0;
-    texture.w = 8;
-    texture.h = 8;
+    setRECT(&destination, x + width - 4, y - 4, 8, 8);
+    setRECT(&texture, g_menu_element_counter + 0x58, 0xE0, 8, 8);
     cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    destination.x = x - 4;
-    destination.y = y + height - 4;
-    destination.w = 8;
-    destination.h = 8;
-    texture.x = g_menu_element_counter + 0x40;
-    texture.y = 0xF8;
-    texture.w = 8;
-    texture.h = 8;
+    setRECT(&destination, x - 4, y + height - 4, 8, 8);
+    setRECT(&texture, g_menu_element_counter + 0x40, 0xF8, 8, 8);
     cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    destination.x = x + width - 4;
-    destination.y = y + height - 4;
-    destination.w = 8;
-    destination.h = 8;
-    texture.x = g_menu_element_counter + 0x58;
-    texture.y = 0xF8;
-    texture.w = 8;
-    texture.h = 8;
+    setRECT(&destination, x + width - 4, y + height - 4, 8, 8);
+    setRECT(&texture, g_menu_element_counter + 0x58, 0xF8, 8, 8);
     cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    destination.x = x + 4;
-    destination.y = y - 4;
-    destination.w = width - 8;
-    destination.h = 8;
-    texture.x = g_menu_element_counter + 0x48;
-    texture.y = 0xE0;
-    texture.w = 16;
-    texture.h = 8;
+    setRECT(&destination, x + 4, y - 4, width - 8, 8);
+    setRECT(&texture, g_menu_element_counter + 0x48, 0xE0, 16, 8);
     cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    destination.x = x + 4;
-    destination.y = y + height - 4;
-    destination.w = width - 8;
-    destination.h = 8;
-    texture.x = g_menu_element_counter + 0x48;
-    texture.y = 0xF8;
-    texture.w = 16;
-    texture.h = 8;
+    setRECT(&destination, x + 4, y + height - 4, width - 8, 8);
+    setRECT(&texture, g_menu_element_counter + 0x48, 0xF8, 16, 8);
     cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    destination.x = x - 4;
-    destination.y = y + 4;
-    destination.w = 8;
-    destination.h = height - 8;
-    texture.x = g_menu_element_counter + 0x40;
-    texture.y = 0xE8;
-    texture.w = 8;
-    texture.h = 16;
+    setRECT(&destination, x - 4, y + 4, 8, height - 8);
+    setRECT(&texture, g_menu_element_counter + 0x40, 0xE8, 8, 16);
     cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    destination.x = x + width - 4;
-    destination.y = y + 4;
-    destination.w = 8;
-    destination.h = height - 8;
-    texture.x = g_menu_element_counter + 0x58;
-    texture.y = 0xE8;
-    texture.w = 8;
-    texture.h = 16;
+    setRECT(&destination, x + width - 4, y + 4, 8, height - 8);
+    setRECT(&texture, g_menu_element_counter + 0x58, 0xE8, 8, 16);
     cursor = func_800ADCD0(cursor, ot, &destination, &texture);
-    packet = (Packet *)cursor;
+    packet = (u_long *)cursor;
     if (bright != 0)
     {
-        packet->color = 0xA0A0A0;
+        *(u32 *)&((TILE *)packet)->r0 = 0xA0A0A0;
     }
     else
     {
-        packet->color = 0x303030;
+        *(u32 *)&((TILE *)packet)->r0 = 0x303030;
     }
 
-    ((u8 *)packet)[3] = 3;
-    ((u8 *)packet)[7] = 0x62;
-    packet->x = (u16)x;
-    packet->y = (u16)y;
-    packet->w = (u16)width;
-    packet->h = (u16)height;
-    packet->tag = (packet->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-    packet_link = (s32)packet & 0xFFFFFF;
-    packet = (Packet *)((u8 *)packet + 0x10);
-    *ot = (*ot & 0xFF000000) | packet_link;
-    ((u8 *)packet)[3] = 1;
-    packet->color = 0xE1000054;
-    packet->tag = (s32)((packet->tag & 0xFF000000) | (*ot & 0xFFFFFF));
-    *ot = (*ot & 0xFF000000) | ((s32)packet & 0xFFFFFF);
-    return (s32 *)((u8 *)packet + 8);
+    setTile((TILE *)packet);
+    setSemiTrans((TILE *)packet, 1);
+    setXY0((TILE *)packet, x, y);
+    setWH((TILE *)packet, width, height);
+    addPrim(ot, packet);
+    packet += sizeof(TILE) / sizeof(*packet);
+    setlen((DR_TPAGE *)packet, 1);
+    ((DR_TPAGE *)packet)->code[0] = 0xE1000054;
+    addPrim(ot, (DR_TPAGE *)packet);
+    return (s32 *)((DR_TPAGE *)packet + 1);
 }
