@@ -364,9 +364,9 @@ void func_8005DA7C(FieldCollisionMoveProbe* probe, FieldCollisionNode* node, s32
 /**
  * @brief Resolve a mover against the field collision surfaces.
  * @param mover Mover state updated with resolved position, height, contact node, and flags.
- * @return Collision-resolution status bitmask, or 0 when no scene nodes are present.
+ * @return Collision-resolution status bitmask.
  *
- * @see decomp.me (96.404%) https://decomp.me/scratch/N2GNJ
+ * @see decomp.me (97.037%) https://decomp.me/scratch/N2GNJ
  * @note Active matching scratch: working/func_8005B6AC/code.c; see its status.md.
  */
 s32 func_8005B6AC(FieldCollisionMover* mover) {
@@ -411,7 +411,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 temp_s0;
     s16 temp_s0_3;
     s16 temp_s0_5;
-    s32 temp_s0_6;
+    s32 height_with_bias;
     s32 temp_s1;
     s16 temp_s2_3;
     s32 temp_v0_17;
@@ -577,6 +577,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     s32 late_uy;
     s32 predicted_height;
     s32 height_limit;
+    u32 footprint_depth;
     s32 node_max_z;
     s32 scan_hit;
     sp48 = 0;
@@ -590,7 +591,8 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
     }
     {
         s32 x = -mover->height;
-        sp38 = (u16)(((x + ((x < 0) ? 0xFF : 0)) >> 8) + mover->height_bias);
+        height_with_bias = (u16)(((x + ((x < 0) ? 0xFF : 0)) >> 8) + mover->height_bias);
+        sp38 = height_with_bias;
     }
     temp_t6 = sp28->nodes;
     sp2C = temp_t6;
@@ -659,8 +661,9 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                                 case 0:             /* switch 1 */
                                     if ((((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
                                         if (var_a3 != 0) {
+                                            s32 initial_height_threshold = var_s2 + 0x14;
                                             temp_v1_4 = ((FieldCollisionSurfaceDef*)temp_s6)->unk10 + (s16) temp_v0;
-                                            if ((var_s2 + 0x14) < temp_v1_4) {
+                                            if (initial_height_threshold < temp_v1_4) {
                                                 var_s2 = temp_v1_4;
                                                 mover->collision_node = var_fp;
                                             }
@@ -735,9 +738,10 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                         probe.x = var_v0_8 >> 8;
                         var_v0_9 = mover->z;
                         if (var_v0_9 < 0) {
-                            var_v0_9 += 0xFF;
+                            probe.z = (var_v0_9 + 0xFF) >> 8;
+                        } else {
+                            probe.z = var_v0_9 >> 8;
                         }
-                        probe.z = var_v0_9 >> 8;
                         mover->move_height = (s32) (-((s32) (func_8005DFAC(var_fp, &probe.x) << 0x10) >> 8) - mover->height);
                     } else {
                         mover->move_height = (s32) (temp_s2_2 + ((FieldCollisionNode*)var_fp)->unk28);
@@ -816,8 +820,7 @@ s32 func_8005B6AC(FieldCollisionMover* mover) {
                     if (var_v0_14 < 0) {
                         var_v0_14 += 0xFF;
                     }
-                    late_scan_x = var_v0_14 >> 8;
-            probe.z = late_scan_x;
+                    late_scan_x = (probe.z = var_v0_14 >> 8);
                     var_s0_3 = func_8005DFAC(var_fp, &probe.x);
                     var_s3 = sp28->secondary_nodes;
                     if ((var_s3 != NULL) && (var_s3 != var_fp)) {
@@ -1033,19 +1036,18 @@ return_zero:
                         if (temp_a1_3 < sp70) {
                             node_max_z = ((FieldCollisionNode*)var_fp)->unk20 + (s16) temp_a0_8;
                             if (node_max_z >= sp74) {
-                                var_t1 = temp_a1_3;
+                                var_t1_2 = temp_a1_3;
                                 if (sp78 < node_max_z) {
                                     var_s0 = sp78;
                                 } else {
                                     var_s0 = node_max_z;
                                 }
-                                if (var_t1 < sp74) {
-                                    var_t1 = sp74;
+                                if (var_t1_2 < sp74) {
+                                    var_t1_2 = sp74;
                                 }
                                 temp_a0_9 = ((u8*)temp_s6)[6];
-                                late_scan_x = var_t1;
-                                temp_lo = (late_scan_x - temp_a1_3) * temp_a0_9;
-                                var_s0 = ((var_s0 - var_t1) + 1) * temp_a0_9;
+                                temp_lo = (var_t1_2 - temp_a1_3) * temp_a0_9;
+                                var_s0 = ((var_s0 - var_t1_2) + 1) * temp_a0_9;
                                 var_t8 = 0;
                                 var_s1 = (u8*)((FieldCollisionNode*)var_fp)->unk10 + (temp_lo * 4);
                                 var_s4 = (s8*)((FieldCollisionNode*)var_fp)->unk14 + (temp_lo * 2);
@@ -1055,8 +1057,9 @@ return_zero:
                                     if (var_s0 != -1) {
                                         var_s2_2 = var_s1 + 2;
                                         do {
-                                            temp_a1_9 = *(s16*)var_s1;
-                                            temp_v1_11 = temp_a1_9;
+                                            s32 span_flag;
+                                            span_flag = *(s16*)var_s1;
+                                            temp_v1_11 = span_flag;
                                             if ((temp_v1_11 < sp6C) && (*(s16*)var_s2_2 >= e_x_min)) {
                                                 if ((e_x_min < temp_v1_11) && (*(s8*)var_s4 >= 0)) {
                                                     var_s5 = func_8005E1A8(temp_s6, (u8) *var_s4 & 0x7F, sp58, var_s5);
@@ -1066,10 +1069,18 @@ return_zero:
                                                     var_s5 = func_8005E1A8(temp_s6, (u8) *var_s3 & 0x7F, sp58, var_s5);
                                                     var_t8 = 2;
                                                 }
-                                                sp8C = e_x_min;
-                                                if ((*(s8*)var_s4 >= 0) && (*var_s3 >= 0) && (((u8) *var_s4 == 0x7F) || ((u8) *var_s3 == 0x7F)) && (*(s16*)var_s1 < sp8C) && (*(s16*)var_s2_2 >= sp6C)) {
-                                                    var_s5 = func_8005E1A8(temp_s6, 0x7F, sp58, var_s5);
-                                                    var_t8 = 2;
+                                                {
+                                                    u8 left_flag = *var_s4;
+                                                    if ((s8)left_flag >= 0) {
+                                                        u8 right_flag = *var_s3;
+                                                        if ((s8)right_flag >= 0) {
+                                                            span_flag = 0x7F;
+                                                            if (((left_flag == span_flag) || (right_flag == span_flag)) && (*(s16*)var_s1 < e_x_min) && (*(s16*)var_s2_2 >= sp6C)) {
+                                                                var_s5 = func_8005E1A8(temp_s6, 0x7F, sp58, var_s5);
+                                                                var_t8 = 2;
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                             var_s2_2 += 4;
@@ -1215,10 +1226,11 @@ return_zero:
             sp68 = (void** )0x801E1100;
             var_t0 = 0;
             var_t9 = sp24;
+            footprint_depth = (u16)mover->mode_flags;
             var_a3_2 = 0;
             k_blocked = 0x8000;
             temp_a0_11 = sp28->header;
-            temp_v1_15 = (u16) mover->mode_flags;
+            temp_v1_15 = (u16)footprint_depth;
             temp_v1_15 += (s16)var_s0;
             if (((FieldCollisionHeaderBounds*)temp_a0_11)->unk2C & 2) {
                 if ((s16)var_s0 < 0) {
@@ -1281,8 +1293,11 @@ return_zero:
                                         {
                                             var_t7 = ((u8*)temp_s6)[6];
                                             var_t7 -= 1;
+                                            if (var_t7 == -1) {
+                                                goto f_next_row;
+                                            }
                                         } while (0);
-                                        if (var_t7 != -1) {
+                                        {
                                             var_s5 = var_t1_2 + 1;
                                             var_fp = (void*)(var_s5 - f_y_max);
                                             var_t3 = var_s1 + 2;
@@ -1334,38 +1349,28 @@ return_zero:
                                                             } else {
                                                                 var_a1 = (s32)var_fp - 1;
                                                             }
-                                                            sp70 = var_a3_2;
                                                             if ((var_t0 != 0) || (var_a3_2 != 0)) {
-                                                                if ((var_t0 != 0x8000) && (var_a0 != 0)) {
-                                                                    if (var_a0 > 0)
-                                                                    {
-                                                                        if (var_t0 < 0)
-                                                                        {
-                                                                            goto x_blocked;
+                                                                if ((var_t0 != k_blocked) && (var_a0 != 0)) {
+                                                                    if (var_a0 > 0) {
+                                                                        if (var_t0 >= 0) {
+                                                                            if (var_t0 < var_a0) {
+                                                                                var_t0 = var_a0;
+                                                                            }
+                                                                        } else {
+                                                                            var_t0 = 0x8000;
                                                                         }
-                                                                        var_v0_26 = var_t0 < var_a0;
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        if (var_t0 > 0)
-                                                                        {
-                                                                            goto x_blocked;
+                                                                    } else if (var_t0 <= 0) {
+                                                                        if (var_a0 < var_t0) {
+                                                                            var_t0 = var_a0;
                                                                         }
-                                                                        var_v0_26 = var_a0 < var_t0;
+                                                                    } else {
+                                                                        var_t0 = 0x8000;
                                                                     }
-                                                                    if (var_v0_26 != 0)
-                                                                    {
-                                                                        var_t0 = var_a0;
-                                                                    }
-                                                                    goto x_correction_done;
-                                                                x_blocked:
-                                                                    var_t0 = 0x8000;
-                                                                x_correction_done:;
                                                                 }
                                                                 if (var_a3_2 != k_blocked) {
                                                                     if (var_a1 > 0) {
-                                                                        if (sp70 >= 0) {
-                                                                            if (sp70 < var_a1) {
+                                                                        if (var_a3_2 >= 0) {
+                                                                            if (var_a3_2 < var_a1) {
                                                                                 var_a3_2 = var_a1;
                                                                             }
                                                                         } else {
@@ -1393,6 +1398,7 @@ return_zero:
                                                 spA8 += 2;
                                             } while (var_t7 != -1);
                                         }
+                                    f_next_row:
                                         var_s0 -= 1;
                                         var_t1_2 += 1;
                                     } while (var_s0 != -1);
@@ -1562,6 +1568,10 @@ return_zero:
                                 }
                             } while (--var_s0 != temp_a0_18);
                         }
+                        goto g_done;
+                    g_hit:
+                        var_t8 = 1;
+                        goto g_done;
                     } else {
                         var_s0 = temp_a0_18 - 1;
                         if (temp_a0_18 != 0) {
@@ -1577,9 +1587,6 @@ return_zero:
                     }
                 }
                 } while (0);
-                goto g_done;
-            g_hit:
-                var_t8 = 1;
             g_done:;
                 temp_a1_9 = ((FieldCollisionNode*)sp2C)->unk38;
                 {
@@ -1590,7 +1597,6 @@ return_zero:
                 switch (temp_a0_19) {               /* switch 3; irregular */
                 case 0:                             /* switch 3 */
                     var_v1_4 = ((FieldCollisionSurfaceDef*)temp_s6)->unk14 + (s16) temp_v1_25;
-                    temp_a0_19 = var_v1_4 < sp84;
                     if (var_v1_4 < height_limit) {
                         if (var_t8 != 0) {
                             temp_v0_16 = -(temp_a1_9 + (((FieldCollisionSurfaceDef*)temp_s6)->unk10 << 8));
@@ -1626,7 +1632,7 @@ return_zero:
                             }
                         }
                     } else {
-                        if (temp_a0_19 != 0) {
+                        if (var_v1_4 < sp84) {
                             sp84 = var_v1_4;
                         }
                     }
@@ -1659,9 +1665,9 @@ return_zero:
                                         mover->collision_node = sp2C;
                                     }
                                 }
+                                var_a3 = 1;
                                 mover->resolved_height = (s32) -(var_s2 << 8);
                                 var_fp = sp2C;
-                                var_a3 = 1;
                             } else {
                                 var_a3 = 1;
                                 if (var_v0_37 != 0) {
@@ -1684,8 +1690,7 @@ return_zero:
                             }
                         }
                     } else {
-                        temp_a0_19 = var_v1_4 < sp84;
-                        if (temp_a0_19 != 0) {
+                        if (var_v1_4 < sp84) {
                             sp84 = var_v1_4;
                         }
                     }

@@ -25,3 +25,8 @@ rom:0x6745 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10A8D reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10A91 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10AD9 reloc:MIPS_NONE symbol:D_1F800008
+
+// func_800920FC: 0x801ED400 is a fixed field-work-area address. Splat
+// auto-symbolizes the literal load as D_801ED400; preserve the retail literal.
+rom:0x424A1 reloc:MIPS_NONE symbol:D_801ED400
+rom:0x424A5 reloc:MIPS_NONE symbol:D_801ED400
