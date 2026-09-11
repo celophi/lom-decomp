@@ -221,8 +221,8 @@ segments:
       # TU hypothesis: field_actor_behavior (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x3DFE5, c, func_8008DC54] # gcc272_cdk, 99.264120% WIP
       - [0x3EA21, c, func_8008E690] # gcc272_cdk, 96.556920% WIP
-      - [0x3EF35, c, func_8008EBA4] # gcc272_cdk, 98.165140% WIP
-      - [0x3F29D, c, func_8008EF0C]                # gcc272_cdk, WIP 96.25%
+      - [0x3EF35, c, func_8008EBA4] # gcc272_cdk, 100%
+      - [0x3F29D, c, func_8008EF0C]                # gcc272_cdk
       - [0x40EC9, c, func_80090B38] # gcc272_cdk, 100.000000%
       - [0x410D9, c, func_80090D48] # gcc272_cdk, 100%
       - [0x412E1, c, field38]                      # gcc272_cdk, func_80090F50
