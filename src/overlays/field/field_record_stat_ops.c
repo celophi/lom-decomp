@@ -2,55 +2,62 @@
 extern u8 D_800F0BE0[], D_800F0BEC[];
 void func_800B7A74(void *, s32, u8 *);
 
-/** @brief Check whether a candidate record is compatible with a slot and its peers. */
-s32 func_800B7980(u8 *record, s32 arg1, u8 *arg2)
+/**
+ * @brief Check whether a candidate record is compatible with a slot and its peers.
+ * @param records Record set used to build the peer compatibility mask.
+ * @param slot_index Slot index being checked.
+ * @param candidate Candidate record containing packed compatibility metadata.
+ * @return 0 when compatible, or -1 when the candidate conflicts with the slot.
+ */
+s32 func_800B7980(u8 *records, s32 slot_index, u8 *candidate)
 {
-    u8 sp10;
-    s32 temp_a2;
-    s32 var_v0;
-    s32 var_v1;
+    u8 mask;
+    s32 mode;
 
-    temp_a2 = ((u32) (*(u32 *)(arg2 + 0x14)) >> 8) & 3;
-    if (temp_a2 != 1)
+    mode = (*(u32 *)(candidate + 0x14) >> 8) & 3;
+    switch (mode)
     {
-        if (temp_a2 < 2)
-        {
-            var_v0 = 0;
-            if (temp_a2 != 0)
-            {
-                return 0;
-            }
-            if (arg1 == 0)
-            {
-                func_800B7A74(record, 0, &sp10);
-                var_v0 = 0;
-                var_v1 = D_800F0BE0[((*(u32 *)(arg2 + 0x14)) >> 10) & 0x3F] & sp10;
-                goto block_11;
-            }
-            /* Duplicate return node #13. Try simplifying control flow for better match */
-            return var_v0;
-        }
-        var_v0 = 0;
-        if (temp_a2 != 2)
+    case 0:
+    {
+        s32 compatible;
+
+        if (slot_index != 0)
         {
             return 0;
         }
-        var_v1 = arg1 < 4;
-        goto block_11;
-    }
-    var_v0 = 0;
-    if ((u32) (arg1 - 1) < 3U)
-    {
-        func_800B7A74(record, arg1, &sp10);
-        var_v0 = 0;
-        var_v1 = D_800F0BEC[((*(u32 *)(arg2 + 0x14)) >> 10) & 0x3F] & sp10;
-block_11:
-        if (var_v1 == 0)
+        func_800B7A74(records, 0, &mask);
+        compatible = D_800F0BE0[(*(u32 *)(candidate + 0x14) >> 10) & 0x3F] & mask;
+        if (compatible != 0)
         {
-            var_v0 = -1;
+            return 0;
         }
+        return -1;
     }
-    return var_v0;
+    case 1:
+    {
+        s32 compatible;
+
+        if ((u32)(slot_index - 1) >= 3U)
+        {
+            return 0;
+        }
+        func_800B7A74(records, slot_index, &mask);
+        compatible = D_800F0BEC[(*(u32 *)(candidate + 0x14) >> 10) & 0x3F] & mask;
+        if (compatible != 0)
+        {
+            return 0;
+        }
+        return -1;
+    }
+    case 2:
+        if (slot_index < 4)
+        {
+            return 0;
+        }
+        return -1;
+    default:
+        return 0;
+    }
 }
 
 

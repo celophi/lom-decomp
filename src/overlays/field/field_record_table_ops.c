@@ -255,46 +255,57 @@ s32 func_800C35E4(s32 arg0)
  *
  * @param arg0 Index of the 12-byte field record to measure.
  * @return The two-nibble Manhattan distance plus the record's extra byte.
- * @note 96.73% match (26/26 instructions, 10 register-allocation-only rows).
- *       Identical result under gcc272_cdk and gcc280_g0; see
- *       working/func_800C3688/STATUS.md.
  */
 s32 func_800C3688(s32 arg0)
 {
     s32 var_a2;
-    s32 split_tmp;
-    u32 temp_a0;
+    s32 temp_v1;
     u8 temp_v0;
-    u8 temp_v1;
-    u8 *new_var;
     u8 *base;
     u8 *temp_a1;
-    s32 offset;
+    u8 *new_var;
+    u8 **base_ptr;
 
-    base = D_80122B74;
-    offset = arg0 * 3;
-    offset *= 4;
-    new_var = base + offset;
+    do
+    {
+        base_ptr = &D_80122B74;
+    } while (0);
+    temp_a1 = (u8 *)(arg0 << 1);
+    temp_a1 = (u8 *)((s32)temp_a1 + arg0);
+    base = *base_ptr;
+    temp_a1 = (u8 *)((s32)temp_a1 << 2);
+    new_var = base + (s32)temp_a1;
     temp_a1 = new_var;
     temp_v1 = temp_a1[0x2F1];
-    temp_a0 = *(u32 *)(base + 0x2F0);
-    split_tmp = temp_v1;
-    split_tmp &= 0xF;
-    split_tmp -= (temp_a0 >> 8) & 0xF;
-    var_a2 = split_tmp;
+    do
+    {
+        arg0 = *(u32 *)(base + 0x2F0);
+    } while (0);
+    var_a2 = temp_v1 & 0xF;
+    var_a2 -= ((u32)arg0 >> 8) & 0xF;
     if (var_a2 < 0)
     {
         var_a2 = -var_a2;
     }
-    arg0 = temp_a0 >> 12;
-    arg0 = (temp_v1 >> 4) - (arg0 & 0xF);
-    temp_v0 = temp_a1[0x2F2];
-    if (arg0 < 0)
+    temp_v1 = (u32)temp_v1 >> 4;
+    arg0 = (u32)arg0 >> 12;
+    arg0 &= 0xF;
+    temp_v1 -= arg0;
+    do
     {
-        arg0 = -arg0;
-    }
-    ;
-    return temp_v0 + var_a2 + arg0;
+        temp_v0 = temp_a1[0x2F2];
+    } while (0);
+    do
+    {
+        do
+        {
+            if (temp_v1 < 0)
+            {
+                temp_v1 = -temp_v1;
+            }
+        } while (0);
+    } while (0);
+    return temp_v0 + var_a2 + temp_v1;
 }
 
 /**

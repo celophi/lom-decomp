@@ -1,4 +1,5 @@
 #include "common.h"
+#include "display.h"
 
 typedef struct
 {
@@ -22,45 +23,45 @@ extern s32 D_8010AE6C;
 extern s32 D_8010AE70;
 
 /**
- * @brief Select the interpolation bounds and duration for the current field camera mode.
+ * @brief Configure horizontal camera interpolation bounds for the active field camera mode.
  */
 void func_80092124(void)
 {
-    s32 mode;
-    FieldThreshold* thresholds;
-    FieldThreshold* entry;
+    s32 camera_mode;
+    FieldThreshold* camera_thresholds;
+    FieldThreshold* threshold;
     FieldCamera* camera;
-    s32 index;
-    s32 value;
+    s32 threshold_index;
+    s32 lower_bound;
 
     camera = (FieldCamera*)0x801ED480;
-    mode = D_800FE754;
-    if (mode == 0)
+    camera_mode = D_800FE754;
+    if (camera_mode == 0)
     {
         D_8010AE6C = 0;
-        D_8010AE58 = 0x20;
+        D_8010AE58 = 32;
         D_8010AE70 = *(s16*)0x801ED400;
         return;
     }
 
-    if (D_800FF650 < mode)
+    if (D_800FF650 < camera_mode)
     {
-        goto camera_path;
+        goto camera_bounds;
     }
 
-    thresholds = D_800FF610;
-    index = mode - 1;
-    entry = &thresholds[index];
-    if (entry->span < 0x140)
+    camera_thresholds = D_800FF610;
+    threshold_index = camera_mode - 1;
+    threshold = &camera_thresholds[threshold_index];
+    if (threshold->span < SCREEN_WIDTH)
     {
-camera_path:
-        D_8010AE58 = 0x10;
-        value = D_8010AE6C = -(camera->x >> 8);
-        D_8010AE70 = value + 0x140;
+camera_bounds:
+        D_8010AE58 = 16;
+        lower_bound = D_8010AE6C = -(camera->x >> 8);
+        D_8010AE70 = lower_bound + SCREEN_WIDTH;
         return;
     }
 
-    D_8010AE58 = 0x20;
-    D_8010AE6C = entry->min;
-    D_8010AE70 = entry->min + entry->span;
+    D_8010AE58 = 32;
+    D_8010AE6C = threshold->min;
+    D_8010AE70 = threshold->min + threshold->span;
 }

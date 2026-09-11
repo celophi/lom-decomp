@@ -428,7 +428,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field254.c \
 	src/overlays/field/field255.c \
 	src/overlays/field/field256.c \
-	src/overlays/field/func_800C1EC8.c \
 	src/overlays/field/field273.c \
 	src/overlays/field/field_upload_initial_vram_resource.c \
 	src/overlays/field/field_update_scene.c \
@@ -474,6 +473,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_slot_pool_ops.c \
 	src/overlays/field/field_state_ops.c \
 	src/overlays/field/field_record_lookup_ops.c \
+	src/overlays/field/func_800C1EC8.c \
 	src/overlays/field/field_stat_counter_ops.c \
 	src/overlays/field/field_resource_table_ops.c \
 	src/overlays/field/field_record_table_ops.c \
