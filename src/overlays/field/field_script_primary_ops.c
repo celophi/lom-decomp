@@ -5,6 +5,12 @@ s32 func_8005A84C(s32 arg0, s32 arg1);
 s32 func_8008B398(s32 key);
 s32 func_8006751C(s32 arg0);
 
+typedef struct
+{
+    s32 actor;
+    u16 reference;
+} FieldScriptPositionOperands;
+
 /**
  * @brief Evaluate opcode 0x12's condition selector and advance or pause the active script.
  * @param unused0 Unused value inherited from the opcode dispatcher.
@@ -446,34 +452,65 @@ void field_script_op_1c(void)
     func_800BD434(g_field_script->status.owner_id, var_ref << 16, result);
 }
 
-s32 func_80087F44(s32, s32 *);
+s32 func_80087F44(s32, s32*);
+void func_800BD434(s32, FieldScriptVariableRef, s32);
 
 /**
  * @brief Opcode 0x1D: write an actor position into three packed script variables.
- * @note Initial nonmatching C; the vertical component is negated.
  */
 void func_800B9FF8(void)
 {
-    u16 reference;
-    s32 actor;
     s32 position[4];
-    s32 kind;
-    s32 high;
-    s32 offset;
+    FieldScriptPositionOperands operands;
+    s32 scratch[4];
+    u16 offset;
     u32 packed;
-    u8 *pc;
+    u32 high;
+    u32 first_reference;
+    u32 second_reference;
+    s32 first_offset;
+    s32 second_offset;
+    u8* pc;
 
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand_or_owner(pc[1], pc + 2, &actor);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &reference);
-    packed = reference & 0xFFFF;
-    kind = packed & 0x7000;
-    high = (packed >> 15) << 15;
-    offset = reference & 0xFFF;
-    func_80087F44(actor, position);
-    func_800BD434(g_field_script->status.owner_id, reference << 16, position[0]);
-    func_800BD434(g_field_script->status.owner_id, (high | kind | ((offset + 0x20) & 0xFFF)) << 16, -position[1]);
-    func_800BD434(g_field_script->status.owner_id, (high | kind | ((offset + 0x40) & 0xFFF)) << 16, position[2]);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand_or_owner(pc[1], pc + 2, &operands.actor);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &operands.reference);
+
+    packed = offset = operands.reference;
+    high = packed >> 15;
+    packed &= 0x7000;
+    first_reference = high << 15;
+    second_reference = first_reference + high - high;
+
+    offset &= 0xFFF;
+    first_offset = offset + 0x20;
+    first_offset &= 0xFFF;
+    first_reference |= packed;
+    first_reference |= first_offset;
+    second_offset = offset + 0x40;
+    second_offset &= 0xFFF;
+    second_reference |= packed;
+    second_reference |= second_offset;
+
+    func_80087F44(operands.actor, position);
+    {
+        FieldScriptVariableRef reference;
+
+        reference.value = operands.reference;
+        func_800BD434(g_field_script->status.owner_id, reference, position[0]);
+    }
+    {
+        FieldScriptVariableRef reference;
+
+        reference.value = first_reference;
+        func_800BD434(g_field_script->status.owner_id, reference, -position[1]);
+    }
+    {
+        FieldScriptVariableRef reference;
+
+        reference.value = second_reference;
+        func_800BD434(g_field_script->status.owner_id, reference, position[2]);
+    }
 }
 
 /* Field script opcode handlers 0x1E through 0x36 (see field_script.h). */

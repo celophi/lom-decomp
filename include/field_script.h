@@ -71,6 +71,12 @@ typedef struct
     u8* pc;
 } FieldScriptContext;
 
+/** @brief Packed 16-bit reference used by field-script variable helpers. */
+typedef struct
+{
+    u16 value;
+} FieldScriptVariableRef;
+
 extern FieldScriptContext* g_field_script;
 
 /* Opcodes 0x80 and above dispatch through this table, indexed by opcode - 0x80. */
