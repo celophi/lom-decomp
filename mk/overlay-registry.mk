@@ -453,6 +453,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs :=
 overlay_field_gcc_280_g0_srcs := \
+	src/overlays/field/func_800C4364.c \
 	src/overlays/field/field_action_modifiers.c \
 	src/overlays/field/field_record_stat_ops.c \
 	src/overlays/field/field_script_flow_ops.c \

@@ -503,7 +503,8 @@ segments:
       - [0x72EA5, c, field_active_record_ops] # gcc280_g0; seven load/restore/close/save functions, two WIPs
       - [0x73775, c, field_record_table_ops] # gcc280_g0; eleven table helpers, all exact
       - [0x73D91, c, field_group_layout_ops] # gcc280_g0; six group selection/grid functions, five exact and C3D38 WIP
-      - [0x742A9, c, field_group_stat_transfer] # gcc272_cdk; active-record transfer and derived-stat builder, two WIPs
+      - [0x742A9, c, field_group_stat_transfer] # gcc272_cdk; active-record transfer, WIP
+      - [0x746F5, c, func_800C4364] # gcc280_g0, 100%
       - [0x75A95, c, field_menu_group_ops] # gcc280_g0; group creation/release, state and ordering
       - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; func_800C642C WIP
       - [0x76C59, c, field_menu_slot_ops] # gcc280_g0, inferred menu function family; func_800C6AF0 remains WIP

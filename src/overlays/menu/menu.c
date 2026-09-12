@@ -1,5 +1,6 @@
 #include "menu.h"
 #include "display.h"
+#include "controller.h"
 #include "vector.h"
 
 /* ----- Macros ----- */
@@ -9,6 +10,7 @@
 #define MENU_CLUT_GRID_ALT 0x7C81
 #define MENU_CLUT_CORNER 0x7CCA
 #define MENU_GRID_OT_INDEX 0x0F
+#define MENU_OT_ENTRY_COUNT 16
 #define MENU_GRID_ALT_CLUT_START 0x11
 #define MENU_GRID_SPRITE_COUNT 0x1D
 #define MENU_GRID_TEXTURE_WINDOW_SIZE 0xFF
@@ -652,6 +654,8 @@ typedef union
 
 /* ----- Forward Declarations ----- */
 
+void menu_init(void);
+void menu_tick(RenderContext* render_ctx);
 void menu_build_grid(RenderContext* render_ctx);
 void menu_set_active_node(void);
 void menu_snap_view_to_cursor(void);
@@ -759,6 +763,7 @@ extern s32 g_menu_cursor_enable;
 extern s32 g_menu_draw_early_out;
 /** @brief Base address of the menu double-buffered DRAWENV array. */
 extern RenderContext* g_menu_draw_buf_base;
+extern s32 D_80168C08;
 /** @brief When non-zero, suppresses cursor highlight even on the active slot. */
 extern s32 g_menu_suppress_cursor;
 /** @brief Scene/language selector used in window title decoration layout switches. */
@@ -1116,6 +1121,120 @@ static inline s32 menu_nav_x(u16 packed)
 }
 
 /* ----- Initialization and Core Frame Processing ----- */
+
+/**
+ * @brief Run the menu overlay until an exit or follow-up screen is requested.
+ * @param render_buffers Pair of render buffers used for alternating frames.
+ * @return Requested follow-up screen code, or zero when the menu closes.
+ */
+s32 func_801405B0(RenderContext* render_buffers)
+{
+    RECT clear_rect;
+    RenderContext* draw_buffer;
+    RenderContext* next_buffer;
+    RenderContext* other_buffer;
+    RenderContext* draw_env_buffers;
+    MenuControllerActuatorState* actuator_state = MENU_CONTROLLER_ACTUATORS;
+
+    g_menu_draw_buf_base = render_buffers;
+    DrawSync(0);
+    VSync(0);
+    SetDispMask(0);
+    clear_rect.x = 0;
+    clear_rect.y = 0;
+    clear_rect.w = SCREEN_WIDTH;
+    clear_rect.h = (SCREEN_HEIGHT + VRAM_DRAW_HEIGHT);
+    ClearImage(&clear_rect, 0, 0, 0);
+    g_menu_draw_buf_base[0].clear_rect.x = 0;
+    g_menu_draw_buf_base[0].clear_rect.y = VRAM_BACK_DRAW_Y;
+    g_menu_draw_buf_base[0].clear_rect.w = SCREEN_WIDTH;
+    g_menu_draw_buf_base[0].clear_rect.h = VRAM_DRAW_HEIGHT;
+    g_menu_draw_buf_base[1].clear_rect.x = 0;
+    g_menu_draw_buf_base[1].clear_rect.y = SCREEN_HEIGHT;
+    g_menu_draw_buf_base[1].clear_rect.w = SCREEN_WIDTH;
+    g_menu_draw_buf_base[1].clear_rect.h = VRAM_DRAW_HEIGHT;
+    SetDefDispEnv(&g_menu_draw_buf_base[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&g_menu_draw_buf_base[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&g_menu_draw_buf_base[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&g_menu_draw_buf_base[1].draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    draw_env_buffers = g_menu_draw_buf_base;
+    draw_env_buffers[1].draw_env.dtd = 0;
+    draw_env_buffers[0].draw_env.dtd = 0;
+    g_menu_load_request = 0;
+    g_menu_transition_code = 0;
+    g_menu_draw_buf_base[0].frame_parity = 0;
+    g_menu_draw_buf_base[1].frame_parity = 1;
+    menu_init();
+    next_buffer = g_menu_draw_buf_base;
+    ClearOTagR(next_buffer->ot, MENU_OT_ENTRY_COUNT);
+    ClearOTagR(g_menu_draw_buf_base[1].ot, MENU_OT_ENTRY_COUNT);
+    VSync(0);
+    PutDispEnv(&next_buffer->disp_env);
+    update_controllers();
+    if (g_active_script == 0)
+    {
+        DrawSync(0);
+        VSync(0);
+        SetDispMask(1);
+        D_80168C08 = 0;
+    }
+    else
+    {
+        D_80168C08 = 2;
+    }
+    for (;;)
+    {
+        draw_buffer = next_buffer;
+        ClearOTagR(draw_buffer->ot, MENU_OT_ENTRY_COUNT);
+        draw_buffer->prim_cursor = &draw_buffer->ot[MENU_OT_ENTRY_COUNT];
+        func_8006441C();
+        menu_tick(draw_buffer);
+        func_80063194();
+        func_80068440();
+        DrawSync(0);
+        set_controller_vsync_interval(2);
+        VSync(2);
+
+        if (g_menu_load_request != 0 || g_pad_input == PAD_BTN_START)
+        {
+            break;
+        }
+
+        ClearImage(&draw_buffer->clear_rect, (*(u8*)&g_menu_initial_clut_pair & 0x1F) * 8,
+                   (g_menu_initial_clut_pair >> 2) & 0xF8, (g_menu_initial_clut_pair >> 7) & 0xF8);
+        other_buffer = g_menu_draw_buf_base;
+        if (draw_buffer == g_menu_draw_buf_base)
+        {
+            other_buffer = draw_buffer + 1;
+        }
+        next_buffer = other_buffer;
+        PutDispEnv(&other_buffer->disp_env);
+        PutDrawEnv(&next_buffer->draw_env);
+        DrawOTag(&draw_buffer->ot[MENU_GRID_OT_INDEX]);
+        update_controllers();
+        cdrom_process_state();
+        if (g_active_script == 0)
+        {
+            if (D_80168C08 != 0)
+            {
+                D_80168C08--;
+                if (D_80168C08 != 0)
+                {
+                    DrawSync(0);
+                    VSync(0);
+                    SetDispMask(1);
+                }
+            }
+        }
+    }
+    actuator_state->ports[1].large_motor_command = 0;
+    actuator_state->ports[0].large_motor_command = 0;
+    DrawSync(0);
+    VSync(0);
+    func_800AA02C();
+    func_800643E0();
+    return g_menu_transition_code;
+}
 
 /**
  * @brief Initialize menu graphics, runtime state, window slots, and the node tree.

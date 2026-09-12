@@ -1,6 +1,7 @@
 // MENU.BIN
 
 // Functions
+func_801405B0                            = 0x801405B0;
 menu_init                                 = 0x80140908;
 menu_init_prim_rects                      = 0x80140968;
 menu_tick                                 = 0x80140A48;

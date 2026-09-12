@@ -11,10 +11,10 @@ extern s32 D_8011F424, D_801227D4, D_8012291C, D_80122984, D_801229F4, g_active_
     g_script_repeat_count;
 /**
  * @brief Run the menu overlay and dispatch its requested follow-up screens.
- * @param arg0 Initial mode passed to the menu overlay entry point.
+ * @param render_buffer_addr Address of the pair of MENU render buffers.
  * @note Fixed entry addresses are reused by the overlays loaded before each call.
  */
-void func_800AA570(s32 arg0)
+void func_800AA570(s32 render_buffer_addr)
 {
     s32 var_a0;
     u8 *screen;
@@ -49,7 +49,7 @@ start:
     {
         cdrom_stream(6, 0x80140000);
         cdrom_wait_queue_empty();
-        temp_v0 = func_801405B0(arg0);
+        temp_v0 = func_801405B0(render_buffer_addr);
         if (temp_v0 == 0)
         {
             goto finished;
