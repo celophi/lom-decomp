@@ -1298,6 +1298,7 @@ extern SVECTOR *D_80105870;
 s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3_base)
 {
     s32 pad[2];
+    s32 *prim_cursor;
     MATRIX mtx;
     MATRIX tmp;
     MATRIX *mp;
@@ -1310,15 +1311,12 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     SVECTOR *rotation_table;
     SVECTOR *rotation_base;
     s32 opz;
-    s32 light_direction_y;
+    s32 no_light_index;
     FieldActorState *actor;
     FieldActorPartDef *part;
     u8 *part_iter;
     Struct_D800FDF58 *scan;
-    s32 light_off;
-    s32 color_off;
     s32 light_index;
-    u8 *color_row;
     s32 scan_off;
     s32 *sxy;
     SVECTOR *normals;
@@ -1329,8 +1327,8 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     s32 mesh_bytes;
     s32 count;
     s32 kind;
-    s32 sx, sy, rx, ry, rz, sz;
 
+    prim_cursor = cursor;
     mp = &mtx;
     { FieldActorState *actor_base = g_field_actor_slots; part = &actor_base[rec->unk22].unk0[rec->unk23]; actor = &actor_base[rec->unk22]; }
     func_80082C90(actor, rec, part, mp, &tmp);
@@ -1341,10 +1339,10 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     screen = (s16 *)0x1F800000;
     gte_SetRotMatrix(mp);
     gte_SetTransMatrix(mp);
-    light_direction_y = -0x1000;
     func_800822A4(actor, rec, part, part_index);
     func_800829A0(actor, rec, part, part_index, &tmp);
 
+    no_light_index = 0x100;
     light_index = 0;
     rotation_base = &D_800FF668;
     part_iter = (u8 *)part;
@@ -1357,20 +1355,19 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
                 scan_off = count * 0x54;
                 if(part_iter[0x23] == scan->unk23 && rec->unk22 == scan->unk22) goto found_light;
                 count++;
-            } while(count<0x100);
+            } while(count<no_light_index);
 checked_light:
-            if(count!=0x100) goto next_light;
+            if(count!=no_light_index) goto next_light;
             goto zero_light;
 found_light:
             {
-                u8 *found_row;
                 rotation_matrix = &tmp;
                 RotMatrix_gte((SVECTOR *)(scan_off + (s32)rotation_table), rotation_matrix);
                 RotMatrixZ(rec->unk32 * 0x10, rotation_matrix);
                 RotMatrixY(rec->unk33 * 0x10, rotation_matrix);
                 dir.vz = 0;
                 dir.vx = 0;
-                dir.vy = light_direction_y;
+                dir.vy = -0x1000;
                 gte_SetRotMatrix(rotation_matrix);
                 gte_ldv0(&dir);
                 gte_rtv0();
@@ -1402,7 +1399,6 @@ next_light:
     sxy = D_80105790;
     normals = D_80105870;
     depths = D_80105878;
-    sx = D_800F22A0;
     mesh_bytes = part_index * 0x18;
     mesh_off = mesh_bytes;
     { s32 fa = mesh_off; fa += (s32)actor->unk18; face = *(u8 **)(fa + 0x14); }
@@ -1422,14 +1418,14 @@ next_light:
         gte_SetBackColor(color[0], color[1], color[2]);
         if (actor->owner_object_index < 2) {
             { u8 actor_index; s32 palette; lowmask = actor->owner_object_index; actor_index = lowmask; palette = part->unk2D;
-              *(u16 *)((u8 *)cursor + 0xE) = ((actor_index << 7) + 0x7B80) | (palette & 0x3F); }
-            *(s16 *)((u8 *)cursor + 0x16) = ((part->unk34 >> 15) & 0x80) | ((part->unk4 >> 17) & 0x60) | 0x10 | ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
+              *(u16 *)((u8 *)prim_cursor + 0xE) = ((actor_index << 7) + 0x7B80) | (palette & 0x3F); }
+            *(s16 *)((u8 *)prim_cursor + 0x16) = ((part->unk34 >> 15) & 0x80) | ((part->unk4 >> 17) & 0x60) | 0x10 | ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
         } else {
-            *(u16 *)((u8 *)cursor + 0xE) = (part->unk2D & 0x3F) | 0x7C80;
-            *(s16 *)((u8 *)cursor + 0x16) = ((part->unk34 >> 15) & 0x80) | ((part->unk4 >> 17) & 0x60) | 5;
+            *(u16 *)((u8 *)prim_cursor + 0xE) = (part->unk2D & 0x3F) | 0x7C80;
+            *(s16 *)((u8 *)prim_cursor + 0x16) = ((part->unk34 >> 15) & 0x80) | ((part->unk4 >> 17) & 0x60) | 5;
         }
         if ((part->unk0 >> 21) & 1)
-            *(u16 *)((u8 *)cursor + 0xE) = (*(u16 *)((u8 *)cursor + 0xE) & 0xFFC0) + 0x40;
+            *(u16 *)((u8 *)prim_cursor + 0xE) = (*(u16 *)((u8 *)prim_cursor + 0xE) & 0xFFC0) + 0x40;
 
         count = *(u16 *)(actor->unk18 + part_index * 0x18);
         if (count != 0) {
@@ -1437,14 +1433,14 @@ next_light:
             lowmask = 0xFFFFFF;
             highmask = 0xFF000000;
             do {
-                p = (u8 *)cursor + 0x36;
+                p = (u8 *)prim_cursor + 0x36;
                 gte_ldsxy3(sxy[0], sxy[1], sxy[2]);
                 gte_nclip();
                 gte_stopz(&opz);
                 if (opz > 0) {
                     gte_ldv0(normals);
                     gte_ncs();
-                    gte_strgb((u8 *)cursor + 4);
+                    gte_strgb((u8 *)prim_cursor + 4);
                     *(s32 *)(p - 0x2E) = sxy[0];
                     *(s32 *)(p - 0x26) = sxy[1];
                     *(s32 *)(p - 0x1E) = sxy[2];
@@ -1462,25 +1458,25 @@ next_light:
                     *(u16 *)(p - 0x22) = *(u16 *)(face + 2);
                     *(u16 *)(p - 0x1A) = *(u16 *)(face + 4);
                     *(u16 *)(p - 8) = *(u16 *)(p - 0x28);
-                    *(u16 *)((u8 *)cursor + 0x36) = *(u16 *)(p - 0x20);
+                    *(u16 *)((u8 *)prim_cursor + 0x36) = *(u16 *)(p - 0x20);
 
                     off = *depths;
                     d = rec->unk8 >> 7;
                     idx = d + off;
                     if (idx < 0) {
-                        *cursor = (*cursor & highmask) | (arg3_base[0] & lowmask);
-                        arg3_base[0] = (arg3_base[0] & highmask) | ((s32)cursor & lowmask);
-                        cursor = (s32 *)((u8 *)cursor + 0x20);
+                        *prim_cursor = (*prim_cursor & highmask) | (arg3_base[0] & lowmask);
+                        arg3_base[0] = (arg3_base[0] & highmask) | ((s32)prim_cursor & lowmask);
+                        prim_cursor = (s32 *)((u8 *)prim_cursor + 0x20);
                     } else if (idx >= 0x1000) {
-                        *cursor = (*cursor & highmask) | (arg3_base[0xFFF] & lowmask);
-                        arg3_base[0xFFF] = (arg3_base[0xFFF] & highmask) | ((s32)cursor & lowmask);
-                        cursor = (s32 *)((u8 *)cursor + 0x20);
+                        *prim_cursor = (*prim_cursor & highmask) | (arg3_base[0xFFF] & lowmask);
+                        arg3_base[0xFFF] = (arg3_base[0xFFF] & highmask) | ((s32)prim_cursor & lowmask);
+                        prim_cursor = (s32 *)((u8 *)prim_cursor + 0x20);
                     } else {
                         s32 *entry;
-                        *cursor = (*cursor & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)arg3_base))) & lowmask);
+                        *prim_cursor = (*prim_cursor & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)arg3_base))) & lowmask);
                         { s32 rd = rec->unk8 >> 7; s32 roff = *depths; entry = (s32 *)((roff << 2) + ((rd << 2) + (s32)arg3_base)); }
-                        *entry = (*entry & highmask) | ((s32)cursor & lowmask);
-                        cursor = (s32 *)((u8 *)cursor + 0x20);
+                        *entry = (*entry & highmask) | ((s32)prim_cursor & lowmask);
+                        prim_cursor = (s32 *)((u8 *)prim_cursor + 0x20);
                     }
                 }
                 face += 0x10;
@@ -1490,13 +1486,13 @@ next_light:
                 depths++;
             } while (count != 0);
         }
-        return cursor;
+        return prim_cursor;
     }
     case 2:
     {
         u8 *basecur;
         { s32 ca = mesh_off; ca += (s32)actor->unk18; count = *(u16 *)ca; }
-        basecur = (u8 *)cursor;
+        basecur = (u8 *)prim_cursor;
         if(count!=0){
             do {
                 gte_ldsxy3(sxy[0],sxy[1],sxy[2]); gte_nclip(); gte_stopz(&opz);
@@ -1551,12 +1547,12 @@ next_light:
                 face += 0x10; count--; sxy += 3; depths++;
             }while(count!=0);
         }
-        cursor=(s32*)basecur;
+        prim_cursor=(s32*)basecur;
         break;
     }
     case 1:
     {
-        s32 *p = cursor;
+        s32 *p = prim_cursor;
         u8 *fc;
         s32 d, off, idx;
         s32 prim_code;
@@ -1658,11 +1654,11 @@ next_light:
                 depths++;
             } while (count != 0);
         }
-        cursor = p;
+        prim_cursor = p;
         break;
     }
     default:
-        return cursor;
+        return prim_cursor;
     }
-    return cursor;
+    return prim_cursor;
 }
