@@ -335,7 +335,7 @@ segments:
       - [0x52129, c, func_800A1D98]                # gcc272_cdk, 100%
       - [0x522BD, c, func_800A1F2C] # gcc272_cdk, 100.000000%
       - [0x5246D, c, func_800A20DC]                # gcc272_cdk, 100%
-      - [0x524B9, c, func_800A2128] # gcc280_g0, 80.572914% WIP
+      - [0x524B9, c, func_800A2128] # gcc280_g0, 100.000000%
       - [0x52639, c, func_800A22A8] # gcc272_cdk, 100.000000%
       # TU hypothesis: field_command_history (high). See docs/decompilation/field-boundaries/map.md.
       - [0x528ED, c, field51]                      # gcc272_cdk, func_800A255C
