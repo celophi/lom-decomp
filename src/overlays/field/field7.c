@@ -261,11 +261,11 @@ extern s32 g_field_track_index;
  * @return Index of the slot that was filled, or -1 if no slot was free or the
  *         placement opcode rejected the spawn.
  *
- * @note WIP - 99.941160% assembly match (gcc272_cdk).
- *       Current matching evidence: working/func_8006D79C/status.md.
+ * @see decomp.me (100%)
  */
 s32 func_8006D79C(FieldActorState* actor, s32 part_index, s32 start)
 {
+    s32 half_turn;
     FieldVector* vec = (FieldVector*)0x1F800000;
     FieldVector* sqr = (FieldVector*)0x1F800010;
     FieldSVector* dir = (FieldSVector*)0x1F800030;
@@ -376,6 +376,7 @@ find_slot:
     rec->flags.word = (rec->flags.word & 0xF7FFFFFF) | (((part->unk34 >> 18) & 1) << 27);
     rec->flags.word &= ~0x6000;
     rec->flags.word &= 0xFFFBFFFF;
+    half_turn = 128;
     rec->flags.word &= 0xFF87FFFF;
     if (part->unk24 & 0x800000)
     {
@@ -502,7 +503,20 @@ bit23_done:
     if ((((part->unk28 >> 10) & 1) || (part->unk34 & 0x08000000)) && rec->unk1B == 0 &&
         !(D_800FDF58[actor->owner_object_index].unk21 & 0x80))
     {
-        rec->unk33 = 0x80 - rec->unk33;
+        u8 angle;
+        u8 original_angle;
+
+        original_angle = rec->unk33;
+        angle = original_angle;
+        if (angle >= 64 && original_angle < 128)
+        {
+            rec->unk33 = 128 - original_angle;
+        }
+        else
+        {
+            original_angle -= half_turn;
+            rec->unk33 = -original_angle;
+        }
     }
     rec->unk2C = 0;
     actor->unk3B[g_field_track_index][part_index]++;
