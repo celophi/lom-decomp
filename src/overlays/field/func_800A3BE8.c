@@ -24,7 +24,6 @@ void akao_upload_bank_blocking(AkaoBankHeader *bank, s32 wait_for_completion);
 /**
  * @brief Load field sound-bank tables and upload their associated audio banks.
  * @param bank_id Resource index; -2 preserves state and -1 clears only the header.
- * @note GCC 2.7.2 CDK currently matches 94.310350 percent of the target.
  */
 void func_800A3BE8(s32 bank_id)
 {
@@ -35,6 +34,7 @@ void func_800A3BE8(s32 bank_id)
     u8 *sub_block;
     u8 *sub_block_end;
     u8 *flag;
+    u8 *header_base;
     s32 *offsets;
     s32 resource_id;
     s32 count;
@@ -45,7 +45,6 @@ void func_800A3BE8(s32 bank_id)
         return;
     }
 
-    /* The temporary first addresses the header, then the resource offsets. */
     offsets = (s32 *)&D_80119F00;
     offsets[2] = 0;
     offsets[1] = 0;
@@ -57,33 +56,42 @@ void func_800A3BE8(s32 bank_id)
         return;
     }
 
+    resource_id = (u16)resource_id;
     header = (FieldBankCopyHeader *)offsets;
-    cursor = (u8 *)header + 0xC;
+    if (bank_id != 0)
+    {
+        header = (FieldBankCopyHeader *)offsets;
+    }
+    cursor = (u8 *)header + sizeof(*header);
     offsets = (s32 *)D_8010D038;
 
-    cdrom_queue_read(resource_id & 0xFFFF, offsets);
+    cdrom_queue_read(resource_id, offsets);
     src = (u8 *)offsets;
+    offsets = NULL;
     cdrom_wait_queue_empty();
 
     i = 0;
     offsets = (s32 *)(src + 4);
-    count = *(s32 *)src;
+    do
+    {
+        count = *(volatile s32 *)src;
+    } while (0);
 
     if (count <= 0)
     {
         return;
     }
 
-    /* Preserve the source pointer conversion used for flag indexing. */
+    header_base = (u8 *)header;
+
     flag = (u8 *)bank_id;
     flag += (s32)D_800EC398;
 
     do
     {
-        header->table_offset = (s32)(((cursor - (u8 *)&D_80119F00) >> 2) * 4);
+        header->table_offset = (s32)(((cursor - header_base) >> 2) * 4);
 
-        sub_block = (u8 *)*offsets;
-        sub_block = src + (s32)sub_block;
+        sub_block = src + (s32)(sub_block = (u8 *)*offsets);
         sub_block_end = sub_block + *(s32 *)(sub_block + (*(s32 *)sub_block) * 4);
 
         copy_cursor = cursor;

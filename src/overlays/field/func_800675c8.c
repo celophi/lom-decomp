@@ -35,12 +35,12 @@ void func_800AD118(s32);                               /* extern */
 void func_800AF8E8(s32);                               /* extern */
 void func_800B0244(void);                                  /* extern */
 void func_800B19FC(void);                                  /* extern */
-extern s32 D_800473F8[];
+extern s32 g_field_action_context[];
 extern s32 D_800F2288[];
 extern s32 D_800F2298[];
 extern s32 D_800F22C0[];
 extern s32 D_800FE754[];
-extern s32 D_80105764[];
+extern s32 g_field_pickup_sound_played[];
 extern s32 D_8010AE48[];
 extern s32 D_8011F3AC[];
 extern s32 D_8012269C[];
@@ -54,7 +54,7 @@ extern s32 g_frame_counter[];
  * @brief Build one frame's worth of draw commands for the given render half.
  * @param arg0 Render half being drawn.
  * @param arg1 Non-zero when drawing the alternate half.
- * @note WIP - not yet byte-matching. +10 insns; the D_800473F8[0] byte-read/
+ * @note WIP - not yet byte-matching. +10 insns; the g_field_action_context[0] byte-read/
  *       word-write pair at the top is a guess. See
  *       working/field_build_frame_commands/STATUS.md.
  * @see decomp.me (100%) TODO
@@ -64,9 +64,9 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
     s32 temp;
 
     D_800F2288[0] = arg0;
-    D_80105764[0] = 0;
-    temp = *(u8*)&D_800473F8[0];
-    D_800473F8[0] = temp;
+    g_field_pickup_sound_played[0] = 0;
+    temp = *(u8*)&g_field_action_context[0];
+    g_field_action_context[0] = temp;
     func_800A9E78(temp);
     func_800AA098(arg0);
     field_update_and_render_fade(arg0);

@@ -740,56 +740,53 @@ s32 func_800C38C8(u8 *);
 void field_open_shop_mode_1(u32, ScriptShopEntry *, u8 *, s32);
 
 /**
- * @brief Build a shop inventory with scaled prices and open shop mode one.
- * @note Initial nonmatching C; resource entries retain separate byte and word reads.
+ * @brief Build a shop inventory from a packed item list and open shop mode one.
+ * @param list_index Index of the packed shop list to load.
+ * @param price_scale Scale applied to each generated item price.
  */
 void func_800BC6B0(s32 list_index, s32 price_scale)
 {
-    ScriptShopEntry entries[32];
-    ScriptShopEntry *entry;
-    u8 *items;
     u8 *lists;
+    u8 *list;
+    u8 *items;
+    ScriptShopEntry entries[32];
+    s32 index;
     s32 price;
-    u32 *list;
-    u32 *source;
-    u32 index;
     u32 scaled;
     u8 *item;
 
     lists = func_800C1E40(0xA);
-    index = 0;
-    list = (u32 *)(lists + ((u32 *)lists)[list_index + 1]);
+    list = lists + *(u32 *)(lists + list_index * 4 + 4);
     items = func_800C1E40(5);
-    if (*list != 0)
+    index = 0;
+
+    if (*(u32 *)list != 0)
     {
-        entry = entries;
-        source = list;
         do
         {
-            if ((source[1] >> 8) & 1)
+            if ((*(u32 *)(list + index * 4 + 4) >> 8) & 1)
             {
-                entry->item = *((u8 *)(source + 1)) | 0x8000;
-                entry->unused = 0;
-                item = items + ((*((u8 *)(source + 1)) << 6) + 4);
+                entries[index].item = *(u8 *)(list + index * 4 + 4) | 0x8000;
+                item = items + ((*(u8 *)(list + index * 4 + 4) << 6) + 4);
+                entries[index].unused = 0;
                 price = func_800C38C8(item);
                 *(s32 *)(item + 0x34) = price;
                 scaled = (u32)(price * price_scale) >> 3;
+                entries[index].price = scaled;
             }
             else
             {
-                entry->unused = 0;
-                entry->item = *((u8 *)(source + 1));
-                scaled = (s32)((source[1] >> 9) * price_scale) >> 3;
+                entries[index].item = *(u8 *)(list + index * 4 + 4);
+                entries[index].unused = 0;
+                scaled = (s32)((*(u32 *)(list + index * 4 + 4) >> 9) * price_scale) >> 3;
+                entries[index].price = scaled;
             }
-            entry->price = scaled;
-            entry++;
             index++;
-            source++;
-        } while (index < *list);
+        } while ((u32)index < *(u32 *)list);
     }
-    field_open_shop_mode_1(*list, entries, items + 4, 2);
-}
 
+    field_open_shop_mode_1(*(u32 *)list, entries, items + 4, 2);
+}
 
 
 

@@ -355,7 +355,7 @@ segments:
       - [0x53D39, c, func_800A39A8]             # gcc272_cdk, 100%
       - [0x53E21, c, func_800A3A90]             # gcc272_cdk, 100%
       - [0x53F09, c, func_800A3B78]             # gcc272_cdk, 100%
-      - [0x53F79, c, func_800A3BE8] # gcc272_cdk, 94.310350% WIP
+      - [0x53F79, c, func_800A3BE8] # gcc272_cdk, 100%
       - [0x540D5, c, func_800A3D44]             # gcc272_cdk, 100%
       - [0x541A1, c, field333]                  # gcc272_cdk, func_800A3E10, 100%
       - [0x5424D, c, field256]                  # gcc272_cdk, func_800A3EBC
@@ -400,13 +400,13 @@ segments:
       - [0x57849, c, field69]                      # gcc272_cdk, func_800A74B8
       - [0x57879, c, func_800A74E8] # gcc272_cdk, 100.000000%
       - [0x579DD, c, func_800A764C]                 # gcc272_cdk, 100.000000%
-      - [0x57AB5, c, func_800A7724] # gcc272_cdk, 85.700000% WIP
+      - [0x57AB5, c, func_800A7724]                 # gcc272_cdk, 100.000000%
       - [0x57C1D, c, func_800A788C]                # gcc272_cdk, WIP 96.85%
       - [0x57EE5, c, func_800A7B54] # gcc272_cdk, 87.585720% WIP
       - [0x58345, c, func_800A7FB4] # gcc272_cdk, 86.591400% WIP
       - [0x584B9, c, func_800A8128] # gcc272_cdk, 93.673200% WIP
       - [0x5871D, c, func_800A838C]                 # gcc272_cdk, 100%
-      - [0x588B5, c, func_800A8524] # gcc272_cdk, 90.886080% WIP
+      - [0x588B5, c, func_800A8524] # gcc272_cdk, 100%
       - [0x589F1, c, func_800A8660] # gcc272_cdk, 93.470590% WIP
       - [0x58C11, c, field70]                      # gcc272_cdk, func_800A8880
       # TU hypothesis: field_immediate_text (high). See docs/decompilation/field-boundaries/map.md.
@@ -442,7 +442,7 @@ segments:
       # TU hypothesis: field_numeric_sprites (high). See docs/decompilation/field-boundaries/map.md.
       - [0x5D599, c, func_800AD208] # gcc272_cdk, 96.846720% WIP
       - [0x5D7BD, c, func_800AD42C]             # gcc272_cdk, 100%
-      - [0x5D8B5, c, func_800AD524] # gcc272_cdk, 82.038960% WIP
+      - [0x5D8B5, c, func_800AD524]             # gcc272_cdk, 100%
       - [0x5D9E9, c, func_800AD658] # gcc272_cdk, 100%
       # TU hypothesis: field_pair_rule_lookup (low). See docs/decompilation/field-boundaries/map.md.
       - [0x5DB6D, c, func_800AD7DC]                # gcc272_cdk, 100%
@@ -459,7 +459,7 @@ segments:
       - [0x5EC39, c, func_800AE8A8]                # gcc272_cdk, 100%
       - [0x5ED71, c, func_800AE9E0]                # gcc272_cdk, 100%
       - [0x5EE51, c, func_800AEAC0] # gcc272_gnu, 66.572365% WIP
-      - [0x5F0B1, c, field_choice_labels] # gcc272_cdk; AED20 base C, provisional boundary
+      - [0x5F0B1, c, field_choice_labels] # gcc272_cdk; 100%
       - [0x5F1B9, c, field_item_selection] # gcc272_cdk; initialize/sound/draw/select/release, two exact, three WIPs
       - [0x5FC55, c, field_text_session] # gcc272_cdk; session reset and teardown, both exact
       - [0x5FCE1, c, field_text_quad] # gcc272_cdk; textured text and outline, AF950 base C, AFC50 exact
@@ -470,7 +470,7 @@ segments:
       - [0x62BFD, c, field_event_dispatch] # gcc280_g0; claim/start owner events, both exact
       - [0x62E2D, c, field_state_ops] # gcc280_g0; record/effect/attribute helpers, thirteen exact and one WIP
       - [0x63861, c, field_party_setup] # gcc280_g0; context and party initialization; four exact, B37D4 WIP
-      - [0x64185, c, field_actor_templates] # gcc280_g0; actor selection 81.959460%, initialization 89.043480%, scaling exact
+      - [0x64185, c, field_actor_templates] # gcc280_g0; actor selection exact, initialization 89.043480%, scaling exact
       - [0x64721, c, field_actor_lifecycle] # gcc280_g0; four actor setup/reset routines, two exact/two WIP
       - [0x64BD5, c, func_800B4844]                # gcc280_g0, 100.00000%, 29/29 instructions
       - [0x64C49, c, field_status_ticks] # gcc280_g0; ten status/update routines, all exact
@@ -482,7 +482,7 @@ segments:
       - [0x68395, c, field_script_flow_ops] # gcc280_g0; interpreter, dispatchers and early primary opcodes
       - [0x697AD, c, func_800B941C] # gcc272_cdk, 80.525860% WIP
       - [0x6997D, c, field_script_primary_ops] # gcc280_g0; primary opcodes 12-3F and reset helper
-      - [0x6BD51, c, field_script_pair_ops] # gcc280_g0; complete 32-entry two-operand family, two WIPs
+      - [0x6BD51, c, field_script_pair_ops] # gcc280_g0; complete 32-entry two-operand family, one WIP
       - [0x6CEF9, c, field_script_extended_ops] # gcc280_g0; complete sixteen-entry extended opcode family, all exact
       - [0x6D4B9, c, field_script_operands] # gcc280_g0; branch and eleven operand helpers, all exact
       - [0x6DA85, c, field_script_commands] # gcc280_g0; dispatcher, seventeen commands and query helper
@@ -491,8 +491,8 @@ segments:
       - [0x6F4E9, c, func_800BF158]                 # gcc272_cdk, 97.696075% (register/epilogue residue)
       - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, one WIP
       - [0x6FDC5, c, field_generated_record_ops] # gcc280_g0; initializer, name builder and two stat modes, two WIPs
-      - [0x705F1, c, field_record_effect_ops] # gcc280_g0; effect generation/classification/application, three WIPs
-      - [0x70DC9, c, field_reward_command_ops] # gcc280_g0; selector, reward dispatcher and four table handlers, one WIP
+      - [0x705F1, c, field_record_effect_ops] # gcc280_g0; effect generation/classification/application, two WIPs
+      - [0x70DC9, c, field_reward_command_ops] # gcc280_g0; selector, reward dispatcher and four table handlers, all exact
       - [0x711A9, c, field_record_growth_ops] # gcc280_g0; ten reward/experience/growth functions, three WIPs
       - [0x71DA9, c, field_record_lookup_ops] # gcc280_g0; nine record dispatch/lookup functions, all exact
       - [0x72259, c, func_800C1EC8]                # gcc280_g0, 100%

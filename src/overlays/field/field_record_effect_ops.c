@@ -75,6 +75,14 @@ void func_800C0260(s32 arg0, s32 arg1)
 
 #define EFFECT_U8(p, o) (*(u8 *)((u8 *)(p) + (o)))
 #define EFFECT_U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
+#define EFFECT_RECORD_COUNT 5
+#define EFFECT_RECORD_STRIDE 0x60
+#define EFFECT_RECORD_HALF_STRIDE (EFFECT_RECORD_STRIDE / 2)
+#define EFFECT_RECORD_BASE_OFFSET 0x2EF4
+#define EFFECT_STATUS_OFFSET 0x2F38
+#define EFFECT_SUBSLOT_COUNT 3
+#define EFFECT_EMPTY_ID 0xFF
+
 void func_800C0814(u8 *, s32, u8 *);
 
 /** @brief D_80122B74 record; per-slot data at 0x8C stride, sub-slots at 0x10. */
@@ -86,7 +94,6 @@ typedef struct
 } Rec;
 
 extern u8 *D_80122B74;
-
 
 extern s32 func_800C0560(s32 arg0, s32 arg1, s32 arg2);
 extern void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
@@ -204,53 +211,59 @@ loop_8:
     return -var_t0;
 }
 
-/** @brief Applies each pending effect to the five saved slots once.
- * @note Initial nonmatching C recovered from assembly.
+/**
+ * @brief Apply each unprocessed effect in the five saved records.
  */
 void func_800C06E8(void)
 {
-    s32 temp_a2;
-    u8 *temp_s6;
-    s32 var_s0;
-    s32 var_s2;
-    s32 var_s4;
-    s32 var_s5;
-    u32 temp_a1;
-    u8 *temp_a3;
-    u8 *temp_t0;
+    s32 processed_mask;
+    u8 *effect_table;
+    s32 effect_index;
+    s32 record_offset;
+    s32 record_base_offset;
+    s32 record_index;
+    s32 inner_record_offset;
+    s32 inner_record_base_offset;
+    u32 packed_status;
+    u8 *record_base;
+    u8 *effect_byte;
+    u8 *destination;
+    u32 value;
 
-    temp_s6 = func_800C1E40(0x12);
-    var_s5 = 0;
-    var_s4 = 0x2EF4;
-    var_s2 = 0;
+    effect_table = func_800C1E40(0x12);
+    record_index = 0;
     do
     {
-        if (EFFECT_U8((D_80122B74 + var_s2), 0x2EF4) != 0)
+        record_offset = (record_index << 1) * EFFECT_RECORD_HALF_STRIDE;
+        record_base_offset = record_offset + EFFECT_RECORD_BASE_OFFSET;
+        if (EFFECT_U8(D_80122B74 + record_offset, EFFECT_RECORD_BASE_OFFSET) != 0)
         {
-            var_s0 = 0;
+            effect_index = 0;
+            inner_record_offset = record_offset;
+            inner_record_base_offset = record_base_offset;
             do
             {
-                temp_t0 = D_80122B74 + (var_s0 + var_s2);
-                temp_a3 = D_80122B74 + var_s2;
-                if (EFFECT_U8(temp_t0, 0x2F38) != 0xFF)
+                effect_byte = D_80122B74 + (effect_index + inner_record_offset);
+                record_base = D_80122B74 + inner_record_offset;
+                value = EFFECT_U8(effect_byte, EFFECT_STATUS_OFFSET);
+                if (value != EFFECT_EMPTY_ID)
                 {
-                    temp_a1 = EFFECT_U32(temp_a3, 0x2F38);
-                    temp_a2 = (temp_a1 >> 0x18) & 7;
-                    if (!((temp_a2 >> var_s0) & 1))
+                    packed_status = EFFECT_U32(record_base, EFFECT_STATUS_OFFSET);
+                    processed_mask = (packed_status >> 24) & 7;
+                    if (!((processed_mask >> effect_index) & 1))
                     {
-                        EFFECT_U32(temp_a3, 0x2F38) = (u32) ((temp_a1 & 0xF8FFFFFF) | (((temp_a2 | (1 << var_s0)) & 7) << 0x18));
-                        func_800C0814(D_80122B74 + var_s4, EFFECT_U8(temp_t0, 0x2F38), temp_s6);
+                        destination = D_80122B74 + inner_record_base_offset;
+                        value = (u32)((packed_status & 0xF8FFFFFF) | (((processed_mask | (1 << effect_index)) & 7) << 24));
+                        EFFECT_U32(record_base, EFFECT_STATUS_OFFSET) = value;
+                        func_800C0814(destination, EFFECT_U8(effect_byte, EFFECT_STATUS_OFFSET), effect_table);
                     }
                 }
-                var_s0 += 1;
-            } while (var_s0 < 3);
+                effect_index += 1;
+            } while (effect_index < EFFECT_SUBSLOT_COUNT);
         }
-        var_s4 += 0x60;
-        var_s5 += 1;
-        var_s2 += 0x60;
-    } while (var_s5 < 5);
+        record_index += 1;
+    } while (record_index < EFFECT_RECORD_COUNT);
 }
-
 
 s32 rand(void); /* extern */
 

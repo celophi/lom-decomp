@@ -46,7 +46,7 @@ typedef struct
 extern FieldTransformSlot D_80105AE0[];
 extern s32 g_field_track_index;
 s32 field_evaluate_parameter_track_at_time(FieldActorState *, u32, u16);
-void func_80073F7C(Struct_D800FDF58 *, FieldActorPartDef *, VECTOR *);
+void field_resolve_effect_position(Struct_D800FDF58 *, FieldActorPartDef *, VECTOR *);
 void func_800832F0(MATRIX *, MATRIX *);
 /**
  * @brief Build the transformed and scaled matrix for an actor part.
@@ -152,7 +152,7 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
     {
         if (((u32)part->unk28 >> 0xB) & 1)
         {
-            func_80073F7C(record, part, scale);
+            field_resolve_effect_position(record, part, scale);
             component = scale->vz;
             facing_angle = ratan2(record->unk8 - component, scale->vx - record->unk0);
             delta->vx = (s32)((s32)(scale->vx - record->unk0) >> 8);
@@ -179,7 +179,7 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
     if (((u32)part->unk28 >> 2) & 1)
     {
         g_field_track_index = (s32)record->unk29;
-        func_80073F7C(record, part, scale);
+        field_resolve_effect_position(record, part, scale);
         /* Keep subtraction and normalization as separate scratchpad updates. */
         scale->vx -= record->unk0;
         scale->vy -= record->unk4;

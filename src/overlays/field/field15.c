@@ -213,7 +213,7 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     }
     step = 0x800 / segments;
 
-    func_80073F7C(rec, part, (void *) 0x1F800000);
+    field_resolve_effect_position(rec, part, (void *) 0x1F800000);
 
     i = segments - 1;
 
