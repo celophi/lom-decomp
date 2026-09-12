@@ -39,53 +39,46 @@ void func_800B28E0(s32 arg0, s32 arg1, s32 arg2);
 s32 func_80087FC0(s32 arg0, s32 arg1);
 
 /**
- * @brief Notify actors matching a status key and update the three idle slots.
- * @param arg0 Status key to broadcast and store in the shared field state.
- * @note Preserve the loop-variable record-count comparison and repeated pointer reads.
- * @note WIP: pointer reload and register-allocation differences remain.
+ * @brief Notify matching actors and refresh the first three actor slots.
+ * @param arg0 Value matched against actor flags and stored in the field state.
  */
 void func_800B4410(s32 arg0)
 {
-    s32 off;
-    s32 i;
-    s32 off2;
+    s32 record_offset;
+    s32 index;
+    s32 slot_offset;
 
-    i = 3;
-    if (i < *(u16 *)(D_80122B78 + 0x400))
+    for (index = 3; index < *(u16 *)(D_80122B78 + 0x400); index++)
     {
-        off = 0x1BC;
-        do
+        record_offset = index * 0x94;
+        if ((*(u32 *)(D_80122B78 + record_offset + 0x4C0) & 0xF) == arg0)
         {
-            if ((*(u32 *)(D_80122B78 + off + 0x4C0) & 0xF) == arg0)
-            {
-                func_80087614(*(u8 *)(D_80122B78 + off + 0x430), arg0);
-                func_800B28E0(*(u8 *)(D_80122B78 + off + 0x430), 0xD, 0);
-            }
-            i++;
-            off += 0x94;
-        } while (i < *(u16 *)(D_80122B78 + 0x400));
+            func_80087614(*(u8 *)(D_80122B78 + record_offset + 0x430), arg0);
+            func_800B28E0(*(u8 *)(D_80122B78 + record_offset + 0x430), 0xD, 0);
+        }
     }
 
-    *(u32 *)(D_80122B78 + 0x400) |= 0x10000;
-    *(u8 *)(D_80122B78 + 0x403) = arg0;
-    func_800966F0(arg0, D_80122B78);
-
-    off = 0;
-    off2 = 0;
-    for (i = 0; i < 3; i++)
     {
-        if ((*(u8 *)(D_80122B74 + off2 + 0x608) >> 7) != 0)
+        u8 *state = D_80122B78;
+        *(u32 *)(state + 0x400) |= 0x10000;
+        *(u8 *)(state + 0x403) = arg0;
+        func_800966F0(arg0, state);
+    }
+
+    for (index = 0; index < 3; index++)
+    {
+        slot_offset = index * 0x250;
+        record_offset = index * 0x94;
+        if ((*(u8 *)(D_80122B74 + slot_offset + 0x608) >> 7) != 0)
         {
-            func_80087FC0(i, 0);
+            func_80087FC0(index, 0);
         }
         else
         {
-            *(u16 *)(D_80122B78 + off + 0x436) = 0xFFFF;
-            func_80087FC0(i, 2);
-            func_800B28E0(*(u8 *)(D_80122B78 + off + 0x430), 0xF, 0);
+            *(u16 *)(D_80122B78 + record_offset + 0x436) = 0xFFFF;
+            func_80087FC0(index, 2);
+            func_800B28E0(*(u8 *)(D_80122B78 + record_offset + 0x430), 0xF, 0);
         }
-        off += 0x94;
-        off2 += 0x250;
     }
 
     func_800B28E0(0x80, 0xD, 0);

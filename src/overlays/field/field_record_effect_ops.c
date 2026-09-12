@@ -93,9 +93,21 @@ typedef struct
     u8 unk26F4;
 } Rec;
 
+typedef struct
+{
+    u8 low;
+    u8 high;
+} EffectThreshold;
+
+typedef struct
+{
+    u8 unk00[4];
+    EffectThreshold thresholds[256];
+} EffectThresholdTable;
+
 extern u8 *D_80122B74;
 
-extern s32 func_800C0560(s32 arg0, s32 arg1, s32 arg2);
+extern s32 func_800C0560(s32 arg0, s32 arg1, u8 *arg2);
 extern void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
 
 /**
@@ -129,86 +141,98 @@ void func_800C0490(s32 arg0)
         if (rec->unk26F4 != (sentinel = 0xFF))
         {
             sentinel = temp_v0;
-            ((Rec *)(D_80122B74 + (arg0 * 0x8C + var_s1 * 0x10)))->unk26F0 = func_800C0560(arg0, var_s1, sentinel);
+            ((Rec *)(D_80122B74 + (arg0 * 0x8C + var_s1 * 0x10)))->unk26F0 = func_800C0560(arg0, var_s1, (u8 *)sentinel);
         }
         var_s1 += 1;
     } while (var_s1 < 8);
 }
 
-/** @brief Classifies an effect slot against resource thresholds.
- * @note Initial nonmatching C recovered from assembly.
+/**
+ * @brief Classify an effect slot against the selected effect thresholds.
+ * @param arg0 Field record index.
+ * @param arg1 Effect slot index within the record.
+ * @param arg2 Effect threshold table.
+ * @return Classification value from 0 through 3.
  */
-s32 func_800C0560(s32 arg0, s32 arg1, s32 arg2)
+s32 func_800C0560(s32 arg0, s32 arg1, u8 *arg2)
 {
-    s32 temp_t2;
-    s32 temp_t2_2;
-    s32 temp_t3;
-    s32 temp_t3_2;
-    s32 var_a0;
-    s32 var_a0_2;
-    s32 var_a3;
-    s32 var_a3_2;
-    s32 var_a3_3;
-    s32 var_t0;
-    s32 var_t0_2;
-    s32 var_v0;
+    s32 flag;
+    s32 i;
 
-    var_a3 = 0;
-    temp_t3 = arg1 * 0x10;
-    temp_t2 = arg0 * 0x8C;
-    var_t0_2 = -1;
-    var_a0 = arg1 * 0x10;
-loop_1:
-    var_a3 += 1;
-    if ((u8) EFFECT_U8((D_80122B74 + (var_a0 + temp_t2)), 0x26F8) >= (u8) EFFECT_U8((arg2 + (EFFECT_U8((arg2 + (var_a3 + ((EFFECT_U8((D_80122B74 + (temp_t3 + temp_t2)), 0x26F4) - 0x60) * 8))), 0x14) * 2)), 0x5))
     {
-        var_a0 = var_a3 + temp_t3;
-        if (var_a3 < 8)
+        s32 record_offset;
+        s32 slot_offset;
+        s32 table_offset;
+        s32 scan_offset;
+        u8 *base;
+
+        i = 0;
+        base = D_80122B74;
+        slot_offset = arg1 * 0x10;
+        record_offset = arg0 * 0x8C;
+        table_offset = (*(base + (slot_offset + record_offset) + 0x26F4) - 0x60) * 8;
+        flag = -1;
+        for (i = 0; i < 8; i++)
         {
-            goto loop_1;
+            scan_offset = i + slot_offset;
+            if (*(base + (scan_offset + record_offset) + 0x26F8) < ((EffectThresholdTable *)arg2)->thresholds[*(arg2 + (i + table_offset) + 0x14)].high)
+            {
+                flag = 0;
+                break;
+            }
         }
-    } else
-    {
-        var_t0_2 = 0;
     }
-    var_a3_2 = 0;
-    if (var_t0_2 != 0)
+    if (flag != 0)
     {
         return 3;
     }
-    temp_t3_2 = arg1 * 0x10;
-    temp_t2_2 = arg0 * 0x8C;
-    var_t0 = -1;
-    var_a0_2 = arg1 * 0x10;
-loop_8:
-    var_a3_2 += 1;
-    if ((u8) EFFECT_U8((D_80122B74 + (var_a0_2 + temp_t2_2)), 0x26F8) >= (u8) EFFECT_U8((arg2 + (EFFECT_U8((arg2 + (var_a3_2 + ((EFFECT_U8((D_80122B74 + (temp_t3_2 + temp_t2_2)), 0x26F4) - 0x60) * 8))), 0x14) * 2)), 0x4))
+
     {
-        var_a0_2 = var_a3_2 + temp_t3_2;
-        if (var_a3_2 < 8)
+        s32 record_offset;
+        s32 slot_offset;
+        s32 table_offset;
+        s32 scan_offset;
+        u8 *base;
+
+        i = 0;
+        base = D_80122B74;
+        slot_offset = arg1 * 0x10;
+        record_offset = arg0 * 0x8C;
+        table_offset = (*(base + (slot_offset + record_offset) + 0x26F4) - 0x60) * 8;
+        flag = -1;
+        for (i = 0; i < 8; i++)
         {
-            goto loop_8;
+            scan_offset = i + slot_offset;
+            if (*(base + (scan_offset + record_offset) + 0x26F8) < ((EffectThresholdTable *)arg2)->thresholds[*(arg2 + (i + table_offset) + 0x14)].low)
+            {
+                flag = 0;
+                break;
+            }
         }
-    } else
-    {
-        var_t0 = 0;
     }
-    var_a3_3 = 0;
-    if (var_t0 != 0)
+    if (flag != 0)
     {
         return 2;
     }
-    var_v0 = arg1 * 0x10;
-    do
+
     {
-        if (EFFECT_U8((D_80122B74 + (var_v0 + (arg0 * 0x8C))), 0x26F8) != 0)
+        s32 record_offset;
+        s32 slot_offset;
+        u8 *base;
+
+        i = 0;
+        base = D_80122B74;
+        slot_offset = arg1 * 0x10;
+        record_offset = arg0 * 0x8C;
+        for (i = 0; i < 8; i++)
         {
-            var_t0 = -1;
+            if (*(base + (i + slot_offset + record_offset) + 0x26F8) != 0)
+            {
+                flag = -1;
+            }
         }
-        var_a3_3 += 1;
-        var_v0 = var_a3_3 + (arg1 * 0x10);
-    } while (var_a3_3 < 8);
-    return -var_t0;
+    }
+    return -flag;
 }
 
 /**

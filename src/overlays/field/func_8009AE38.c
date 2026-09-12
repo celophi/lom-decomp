@@ -11,15 +11,16 @@ void *memcpy(void *palette_dst, const void *src, s32 n);
  * @brief Upload a field texture and its optional palette to the selected slot.
  * @param resource Pointer to the image resource header and payload blocks.
  * @param slot Upload slot; values of three or more share the third flags entry.
- * @note GCC 2.7.2 CDK currently matches 81.690720 percent of the target.
  */
 void func_8009AE38(u8 *resource, s32 slot)
 {
     s32 original_slot;
+    s32 flags_slot;
     u8 *cursor;
     s32 block_size;
     s32 copy_size;
     u8 *palette_dst;
+    u8 *palette_base;
     RECT rect;
     s32 width;
     s32 height;
@@ -33,25 +34,27 @@ void func_8009AE38(u8 *resource, s32 slot)
     }
     D_80105758[slot] = *cursor;
     cursor += 4;
-    /* Preserve the pointer-valued flags index used by the original code. */
-    resource = (u8 *)original_slot;
+    flags_slot = original_slot;
     if (original_slot >= 3)
     {
-        resource = (u8 *)2;
+        flags_slot = 2;
     }
-    if (D_80105758[(s32)resource] & 8)
+    if (D_80105758[flags_slot] & 8)
     {
         block_size = *(s32 *)cursor;
         cursor += 0xC;
         if (original_slot < 2)
         {
             copy_size = 0x200;
-            rect.y = (original_slot * 2) + 0x1EE;
-            rect.w = 0x100;
-            rect.h = 1;
-            palette_dst = (u8 *)(original_slot << 10);
-            palette_dst += (s32)D_80104B58;
-            /* Reusing slot here keeps the two palette paths separate. */
+            do
+            {
+                rect.y = (original_slot * 2) + 0x1EE;
+                rect.w = 0x100;
+                rect.h = 1;
+            } while (0);
+            palette_base = D_80104B58;
+            palette_dst = palette_base + (original_slot << 10);
+
             slot = block_size - 0xC;
             rect.x = 0;
             if (slot < 0x201)
@@ -62,9 +65,12 @@ void func_8009AE38(u8 *resource, s32 slot)
         else
         {
             copy_size = 0x200;
-            rect.y = 0x1F2;
-            rect.w = 0x100;
-            rect.h = 1;
+            do
+            {
+                rect.y = 0x1F2;
+                rect.w = 0x100;
+                rect.h = 1;
+            } while (0);
             palette_dst = D_80105358;
             rect.x = 0;
             if (block_size - 0xC < 0x201)
@@ -72,12 +78,24 @@ void func_8009AE38(u8 *resource, s32 slot)
                 copy_size = block_size - 0xC;
             }
         }
-        memcpy(palette_dst, cursor, copy_size);
+        do
+        {
+            do
+            {
+                do
+                {
+                    memcpy(palette_dst, cursor, copy_size);
+                } while (0);
+            } while (0);
+        } while (0);
         LoadImage(&rect, (u_long *)cursor);
         cursor = cursor + block_size - 0xC;
     }
     cursor += 8;
-    width = *(u16 *)cursor;
+    do
+    {
+        width = *(u16 *)cursor;
+    } while (0);
     cursor += 2;
     height = *(u16 *)cursor;
     cursor += 2;
@@ -91,7 +109,10 @@ void func_8009AE38(u8 *resource, s32 slot)
         rect.x = 0x140;
         rect.y = 0;
     }
-    rect.w = width;
-    rect.h = height;
+    do
+    {
+        rect.w = width;
+        rect.h = height;
+    } while (0);
     LoadImage(&rect, (u_long *)cursor);
 }

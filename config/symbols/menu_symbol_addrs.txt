@@ -1,6 +1,7 @@
 // MENU.BIN
 
 // Functions
+func_801405B0                            = 0x801405B0;
 menu_init                                 = 0x80140908;
 menu_init_prim_rects                      = 0x80140968;
 menu_tick                                 = 0x80140A48;
@@ -184,7 +185,7 @@ g_menu_scroll_pos      = 0x8016954C;
 g_menu_redraw_state    = 0x80169400;
 g_menu_layout_end      = 0x801693F8;
 g_menu_nav_count       = 0x801690B4;
-g_menu_nav_prev        = 0x801694B4;
+g_menu_saved_equipment_item = 0x801694B4;
 g_menu_nav_nodes       = 0x801694B8;
 g_menu_nav_next        = 0x801694BC;
 g_menu_load_request    = 0x8016940C;

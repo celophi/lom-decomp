@@ -41,6 +41,17 @@ typedef struct
     u16 h;
 } MenuSlotRect;
 
+/** @brief List navigation fields sharing a menu slot's flags word. */
+typedef union
+{
+    u32 packed;
+    struct
+    {
+        u16 selected_index;
+        u16 count_and_ot; /**< Low nine bits: item count; upper seven: ordering-table index. */
+    } fields;
+} MenuListNavigation;
+
 /** @brief One 0x24-byte menu window slot. */
 typedef struct MenuSlot_s
 {
@@ -48,7 +59,7 @@ typedef struct MenuSlot_s
     u8 index;      /* 0x01 - slot index within the pool */
     u8 anim_frame; /* 0x02 - animation frame counter: counts up to 6 on open, down to 0 on close */
     u8 has_title;  /* 0x03 - non-zero to draw the title/decoration bar above the window */
-    u32 flags;     /* 0x04 - bits 31:25 select the ordering-table entry */
+    MenuListNavigation navigation; /* 0x04 - selection, item count, and ordering-table index */
     u16 x;         /* 0x08 */
     u16 y;         /* 0x0A */
     s16 w;         /* 0x0C */

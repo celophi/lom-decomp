@@ -1,12 +1,6 @@
 #include "common.h"
 #include "field_script.h"
 
-/** @brief Packed 16-bit reference used by the field-script variable helpers. */
-typedef struct
-{
-    u16 value;
-} FieldScriptVariableRef;
-
 void field_script_op_00(void);
 
 /**

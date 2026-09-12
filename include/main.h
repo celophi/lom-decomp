@@ -68,9 +68,13 @@ extern u8 g_prim_rect_buf[];
 typedef struct
 {
     u8 name[0x15];
-    u8 unknown_0x15[0x46 - 0x15];
+    u8 unknown_0x15[0x44 - 0x15];
+    u8 unknown_0x44; /**< Packed indices into two menu text tables. */
+    u8 unknown_0x45;
     u8 unknown_0x46;
-    u8 unknown_0x47[0x14C - 0x47];
+    u8 unknown_0x47;
+    s32 unknown_0x48; /**< Index into a menu text table. */
+    u8 unknown_0x4C[0x14C - 0x4C];
 } LargeHistoryRecord;
 
 /** @brief Compact saved-history record with a leading encoded name. */
