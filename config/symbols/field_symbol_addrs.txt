@@ -307,3 +307,5 @@ field_restore_actor_capacity_fraction        = 0x800C1B20;
 field_release_actor_if_no_effects           = 0x80073EAC;
 field_actor_has_live_effects                = 0x80073F10;
 field_resolve_effect_position                = 0x80073F7C;
+field_swap_effect_position_source            = 0x80070E4C;
+field_collect_effect_hits                    = 0x80099018;

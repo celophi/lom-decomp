@@ -1430,7 +1430,7 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
         }
         if (part->unk1C & 0x10000000)
         {
-            func_80070E4C(rec, part);
+            field_swap_effect_position_source(rec, part);
         }
         if (!(rec->flags.word & 0x07000000) && rec->unk1B != 0)
         {
