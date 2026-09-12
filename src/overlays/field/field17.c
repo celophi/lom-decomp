@@ -1289,12 +1289,15 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     MATRIX mtx;
     MATRIX tmp;
     MATRIX *mp;
+    MATRIX *rotation_matrix;
     u8 color[4];
     MATRIX light_mtx;
     MATRIX color_mtx;
     SVECTOR dir;
     SVECTOR out;
+    SVECTOR *rotation_table;
     s32 opz;
+    s32 light_direction_y;
     FieldActorState *actor;
     FieldActorPartDef *part;
     u8 *part_iter;
@@ -1334,24 +1337,30 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     do {
         u8 light_id = part_iter[0x23];
         count = 0;
+        rotation_table = &D_800FF668;
         if (light_id < 8) {
+            rotation_matrix = &tmp;
             scan = D_800FF658;
             scan_off = 0;
-scan_loop:
-            if (light_id != scan->unk23 || rec->unk22 != scan->unk22) {
-                scan++;
-                count++;
-                scan_off += 0x54;
-                if (count < 0x100) goto scan_loop;
-            } else {
+            do {
+                if(light_id == scan->unk23 && rec->unk22 == scan->unk22) goto found_light;
+                scan++; count++; scan_off += 0x54;
+            } while(count<0x100);
+checked_light:
+            if(count!=0x100) goto next_light;
+            goto zero_light;
+found_light:
+            {
                 u8 *found_row;
-                RotMatrix_gte((SVECTOR *)((u8 *)&D_800FF668 + scan_off), &tmp);
-                RotMatrixZ(rec->unk32 * 0x10, &tmp);
-                RotMatrixY(rec->unk33 * 0x10, &tmp);
+                scan_off += (s32)(u8 *)rotation_table;
+                light_direction_y = -0x1000;
+                RotMatrix_gte((SVECTOR *)scan_off, rotation_matrix);
+                RotMatrixZ(rec->unk32 * 0x10, rotation_matrix);
+                RotMatrixY(rec->unk33 * 0x10, rotation_matrix);
                 dir.vz = 0;
                 dir.vx = 0;
-                dir.vy = -0x1000;
-                gte_SetRotMatrix(&tmp);
+                dir.vy = light_direction_y;
+                gte_SetRotMatrix(rotation_matrix);
                 gte_ldv0(&dir);
                 gte_rtv0();
                 gte_stsv(&out);
@@ -1366,6 +1375,7 @@ scan_loop:
                 *(s16 *)(found_row + 0x76) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
                 *(s16 *)(found_row + 0x7C) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
             }
+            goto checked_light;
             if (count == 0x100) goto zero_light;
         } else {
 zero_light:
@@ -1375,6 +1385,7 @@ zero_light:
             *(s16 *)(color_row + 0x70) = 0;
             *(s16 *)((u8 *)&light_mtx + light_off) = 0;
         }
+next_light:
         color_off += 2;
         light_off += 6;
         part_iter++;
@@ -1404,7 +1415,8 @@ zero_light:
 
         gte_SetBackColor(color[0], color[1], color[2]);
         if (actor->owner_object_index < 2) {
-            *(u16 *)((u8 *)cursor + 0xE) = ((actor->owner_object_index << 7) + 0x7B80) | (part->unk2D & 0x3F);
+            { s32 actor_index = actor->owner_object_index; s32 palette = part->unk2D;
+              *(u16 *)((u8 *)cursor + 0xE) = ((actor_index << 7) + 0x7B80) | (palette & 0x3F); }
             *(s16 *)((u8 *)cursor + 0x16) = ((part->unk34 >> 15) & 0x80) | ((part->unk4 >> 17) & 0x60) | 0x10 | ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
         } else {
             *(u16 *)((u8 *)cursor + 0xE) = (part->unk2D & 0x3F) | 0x7C80;
@@ -1418,8 +1430,8 @@ zero_light:
             prim_code = 0x24;
             lowmask = 0xFFFFFF;
             highmask = 0xFF000000;
-            p = (u8 *)cursor + 0x36;
             do {
+                p = (u8 *)cursor + 0x36;
                 gte_ldsxy3(sxy[0], sxy[1], sxy[2]);
                 gte_nclip();
                 gte_stopz(&opz);
@@ -1444,24 +1456,21 @@ zero_light:
                     *(u16 *)(p - 0x22) = *(u16 *)(face + 2);
                     *(u16 *)(p - 0x1A) = *(u16 *)(face + 4);
                     *(u16 *)(p - 8) = *(u16 *)(p - 0x28);
-                    *(u16 *)p = *(u16 *)(p - 0x20);
+                    *(u16 *)((u8 *)cursor + 0x36) = *(u16 *)(p - 0x20);
 
                     off = *depths;
                     d = rec->unk8 >> 7;
                     idx = d + off;
                     if (idx < 0) {
-                        p += 0x20;
                         *cursor = (*cursor & highmask) | (arg3_base[0] & lowmask);
                         arg3_base[0] = (arg3_base[0] & highmask) | ((s32)cursor & lowmask);
                         cursor = (s32 *)((u8 *)cursor + 0x20);
                     } else if (idx >= 0x1000) {
-                        p += 0x20;
                         *cursor = (*cursor & highmask) | (arg3_base[0xFFF] & lowmask);
                         arg3_base[0xFFF] = (arg3_base[0xFFF] & highmask) | ((s32)cursor & lowmask);
                         cursor = (s32 *)((u8 *)cursor + 0x20);
                     } else {
                         s32 *entry;
-                        p += 0x20;
                         *cursor = (*cursor & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)arg3_base))) & lowmask);
                         { s32 rd = rec->unk8 >> 7; s32 roff = *depths; entry = (s32 *)((roff << 2) + ((rd << 2) + (s32)arg3_base)); }
                         *entry = (*entry & highmask) | ((s32)cursor & lowmask);
@@ -1500,9 +1509,12 @@ zero_light:
                     CLAMP_TO(basecur[18], face[12]+color[2]-0x80);
                     CLAMP_TO(basecur[28], face[13]+color[0]-0x80);
                     CLAMP_TO(basecur[29], face[14]+color[1]-0x80);
-                    CLAMP_TO(basecur[30], face[15]+color[2]-0x80);
-                    basecur[3] = 9;
-                    code2 = 0x34;
+                    { s32 blue;
+                        CLAMP_TO(blue, face[15]+color[2]-0x80);
+                        basecur[3] = 9;
+                        code2 = 0x34;
+                        basecur[30] = blue;
+                    }
                     basecur[7]=code2;
                     if (rec->unk1C & 0x800000) basecur[7]=0x36; else basecur[7]=code2;
                     do { *(s32 *)(basecur+8)=sxy[0]; *(s32 *)(basecur+20)=sxy[1]; *(s32 *)(basecur+32)=sxy[2]; } while (0);
