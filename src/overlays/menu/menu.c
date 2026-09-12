@@ -69,8 +69,6 @@
 #define PRIM_CONTENT_BYTE_SIZE (PRIM_CONTENT_W * PRIM_CONTENT_H * sizeof(u16))
 #define PRIM_CONTENT_BUF_OFFSET PRIM_CURSOR_STRIP_BYTE_SIZE
 #define PRIM_SLOT_BYTE_SIZE (PRIM_CURSOR_STRIP_BYTE_SIZE + PRIM_CONTENT_BYTE_SIZE)
-/** Convert a byte offset to a LoadImage source pointer, rounding down to a 4-byte boundary. */
-#define PRIM_LOAD_IMAGE_SOURCE(buffer, byte_offset) ((u_long*)((((byte_offset) >> 2) << 2) + (u32)(buffer)))
 
 /*
  * Node / scroll / layout constants
@@ -238,14 +236,6 @@
 #define MENU_ABILITY_FLAG_SHOW_ICON 0x02
 
 /* Type-view and fixed-address helpers. */
-#define MENU_SLOT_FLAGS_VIEW(slot) (*(MenuSlotFlagsView*)&(slot)->flags)
-
-/** Recover the enclosing string-table base from one of its embedded offsets. */
-#define MENU_STRING_TABLE_MEMBER_OFFSET(member) \
-    ((u32)&((MenuStringTableLayout*)0)->member)
-#define MENU_STRING_TABLE_BASE(key, member) \
-    ((u8*)&(key) - MENU_STRING_TABLE_MEMBER_OFFSET(member))
-
 #define MENU_CONTROLLER_ACTUATORS ((MenuControllerActuatorState*)0x801ED600)
 
 /* Memory-card file layout and open flags. */
@@ -270,18 +260,6 @@ typedef struct
     s16 clut_x;
     s16 clut_y;
 } MenuTimVramLayout;
-
-/** Halfword view of MenuSlot.flags for width-accurate field initialization. */
-typedef union
-{
-    u32 value;
-    struct
-    {
-        u16 low;
-        u16 high;
-    } half;
-} MenuSlotFlagsView;
-
 
 /**
  * @brief Container holding the menu TIM and its additional CLUT.
@@ -336,19 +314,6 @@ typedef struct
     u8 entry; /**< Entry index within the page. */
     u8 page;  /**< Page index. */
 } StringTableOffset;
-
-/**
- * @brief Known prefix of the shared menu string-table layout.
- *
- * The two sign-dependent label offsets are embedded within the table data.
- */
-typedef struct
-{
-    u8 prefix[0x16];
-    StringTableOffset nonnegative_label;
-    u8 between_labels[8];
-    StringTableOffset negative_label;
-} MenuStringTableLayout;
 
 /** @brief Known table indices in the menu text-resource directory. */
 typedef enum
@@ -541,17 +506,6 @@ typedef struct
     u8 w;       /**< Sprite width in pixels. */
     u8 h;       /**< Sprite height in pixels. */
 } MenuIconSpriteInfo;
-
-/** @brief List navigation fields sharing a menu slot's flags word. */
-typedef union
-{
-    u32 packed;
-    struct
-    {
-        u16 selected_index;
-        u16 count_and_ot; /**< Low nine bits: item count; upper seven: ordering-table index. */
-    } fields;
-} MenuListNavigation;
 
 /** @brief Partial menu-slot view used by scrollable list callbacks. */
 typedef struct
@@ -761,14 +715,9 @@ extern MenuContentItem g_menu_default_content_items;
 extern u8 D_80168659[];
 extern u8 D_80168696[];
 extern u8 D_801686B8[];
-extern u8 D_80168C01[];
-extern u8 D_80168C05[];
-extern u8 D_80168C09[];
 extern u8* D_80168C20;
 extern u8* D_80168C24;
 extern u8* D_80168C30;
-extern u32 D_801694CC[];
-extern u32 D_801694DC[];
 
 /** @brief Optional help/description string drawn below the active menu content. */
 extern s32 g_menu_help_text;
@@ -822,9 +771,9 @@ extern s8 g_menu_ability_mask;
 /** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
 extern u8 g_menu_companion_node;
 
-/** @brief Nonnegative-label offset embedded in MenuStringTableLayout. */
+/** @brief Shared string-directory entry 11: nonnegative label. */
 extern StringTableOffset g_menu_label_key_a;
-/** @brief Negative-label offset embedded in MenuStringTableLayout. */
+/** @brief Shared string-directory entry 16: negative label. */
 extern StringTableOffset g_menu_label_key_b;
 
 /** @brief Number of nodes in the linear navigation list. */
@@ -1106,6 +1055,17 @@ static inline u8* menu_text_entry(void* base, s32 index)
     return (u8*)base + ((u16*)base)[index];
 }
 
+/**
+ * @brief Locate image data at a word-aligned offset in the upload buffer.
+ * @param buffer Word-aligned base of the image upload buffer.
+ * @param byte_offset Byte offset, rounded down to a four-byte boundary.
+ * @return Source words for LoadImage.
+ */
+static inline u_long* menu_image_upload_source(void* buffer, s32 byte_offset)
+{
+    return (u_long*)(((byte_offset >> 2) << 2) + (u32)buffer);
+}
+
 /** @brief Convert a packed menu icon palette code to a Psy-Q CLUT id. */
 static inline u16 menu_icon_clut(u8 code)
 {
@@ -1275,14 +1235,14 @@ void menu_init_prim_rects(void)
         rect.y = slot + PRIM_CURSOR_STRIP_VRAM_Y0;
         rect.w = PRIM_CURSOR_STRIP_W;
         rect.h = PRIM_CURSOR_STRIP_H;
-        LoadImage(&rect, PRIM_LOAD_IMAGE_SOURCE(upload_buffer, strip_byte_offset));
+        LoadImage(&rect, menu_image_upload_source(upload_buffer, strip_byte_offset));
 
         /* Upload the slot's content texture block. */
         rect.x = (slot == PRIM_SLOT_COUNT - 1) ? PRIM_CONTENT_VRAM_X2 : PRIM_CONTENT_VRAM_X;
         rect.y = (slot == 0) ? PRIM_CONTENT_VRAM_Y0 : PRIM_CONTENT_VRAM_Y1;
         rect.w = PRIM_CONTENT_W;
         rect.h = PRIM_CONTENT_H;
-        LoadImage(&rect, PRIM_LOAD_IMAGE_SOURCE(upload_buffer, content_byte_offset));
+        LoadImage(&rect, menu_image_upload_source(upload_buffer, content_byte_offset));
 
         content_byte_offset += PRIM_SLOT_BYTE_SIZE;
         strip_byte_offset += PRIM_SLOT_BYTE_SIZE;
@@ -1653,8 +1613,8 @@ MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect)
     slot = (MenuSlot*)((slot_index * sizeof(MenuSlot)) + (u32)slot_pool);
 
     /* Clear low flags while retaining the slot's previous bits 24:16. */
-    MENU_SLOT_FLAGS_VIEW(slot).half.low = 0;
-    slot_flags = slot->flags;
+    slot->navigation.fields.selected_index = 0;
+    slot_flags = slot->navigation.packed;
     slot->active = 1;
     slot->content_cb = 0;
     slot->index = (u8)slot_index;
@@ -1663,7 +1623,7 @@ MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect)
     ot_index_clear_mask = MENU_SLOT_OT_INDEX_CLEAR_MASK;
     slot_flags = slot_flags & ot_index_clear_mask;
     slot_flags = slot_flags | (((u32)ot_index) << MENU_SLOT_OT_INDEX_SHIFT);
-    slot->flags = slot_flags;
+    slot->navigation.packed = slot_flags;
     slot->x = rect->x;
     slot->y = rect->y;
     slot->w = rect->w;
@@ -1871,7 +1831,7 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
     DRAWENV* draw_env;
 
     packet_cursor = render_ctx->prim_cursor;
-    ot_entry = &render_ctx->ot[(u32)slot->flags >> MENU_SLOT_OT_INDEX_SHIFT];
+    ot_entry = &render_ctx->ot[(u32)slot->navigation.packed >> MENU_SLOT_OT_INDEX_SHIFT];
     if (slot->lerp_steps != 0)
     {
         slot->lerp_cur_a += (slot->lerp_target_a - slot->lerp_cur_a) / slot->lerp_steps;
@@ -1923,9 +1883,9 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
                 break;
             }
             title_pos.y = (u16)rect->y;
-            if (slot->flags & MENU_LIST_COUNT_MASK)
+            if (slot->navigation.packed & MENU_LIST_COUNT_MASK)
             {
-                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, (u16)slot->flags + 1, 3, &title_pos, 0);
+                packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, slot->navigation.fields.selected_index + 1, 3, &title_pos, 0);
             }
             else
             {
@@ -1933,7 +1893,7 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
             }
             packet_cursor = func_800AD524((s32)packet_cursor, ot_entry, 0xB, &title_pos, 0);
             title_pos.x += 8;
-            packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, MENU_SLOT_FLAGS_VIEW(slot).half.high & MENU_ITEM_NAV_INDEX_MASK, 3, &title_pos, 0);
+            packet_cursor = (u_long*)func_800AD208(ot_entry, packet_cursor, slot->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK, 3, &title_pos, 0);
             switch (g_menu_scene_type)
             {
             case 1:
@@ -2182,6 +2142,38 @@ u_long* menu_build_v_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRec
 }
 
 /**
+ * @brief Resolve a string offset using its entry's position in the shared directory.
+ * @param entry Address of the two-byte offset entry.
+ * @param index Entry index in the shared string directory.
+ * @return Encoded string referenced by the entry.
+ */
+static inline u8* menu_shared_text_entry(const StringTableOffset* entry, s32 index)
+{
+    s32 string_page_base = (entry->page << 8) + (s32)((u8*)entry - index * sizeof(StringTableOffset));
+    return (u8*)(entry->entry + string_page_base);
+}
+
+/** @brief Copy the label for a value's sign and append its terminator. */
+static inline void menu_copy_sign_label(u8* buffer, s32 value)
+{
+    u8* write_cursor = buffer;
+    u8* source;
+
+    if (value >= 0)
+    {
+        source = menu_shared_text_entry(&g_menu_label_key_a, 11);
+        func_800A8E28(write_cursor, source);
+    }
+    else
+    {
+        source = menu_shared_text_entry(&g_menu_label_key_b, 16);
+        func_800A8E28(write_cursor, source);
+    }
+    write_cursor += func_800A8DDC(source);
+    *write_cursor = 0;
+}
+
+/**
  * @brief Draw a sign-dependent label at a screen position.
  * @param ot_entry Ordering-table entry for the label primitives.
  * @param packet_cursor Primitive buffer location for the label.
@@ -2192,30 +2184,8 @@ u_long* menu_build_v_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRec
 u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos* position, s32 value)
 {
     u8 label_buffer[MENU_LABEL_BUFFER_SIZE];
-    u8* write_cursor = label_buffer;
-    u8* source;
 
-    /* Recover the shared table base from each key's table-relative address. */
-    if (value >= 0)
-    {
-        s32 string_page_base =
-            (g_menu_label_key_a.page << 8) +
-            (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-        func_800A8E28(write_cursor, source);
-    }
-    else
-    {
-        s32 string_page_base =
-            (g_menu_label_key_b.page << 8) +
-            (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-        func_800A8E28(write_cursor, source);
-    }
-
-    write_cursor += func_800A8DDC(source);
-
-    *write_cursor = 0;
+    menu_copy_sign_label(label_buffer, value);
 
     packet_cursor =
         (u_long*)func_800A88A0(packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, 0);
@@ -2821,7 +2791,7 @@ s32 menu_handle_node_input(void)
     s32 view_y;
     s32 active_row_y;
     s32 work_index;
-    MenuContentItem* active_item;
+    MenuContentItem* content_items;
     nav_index = menu_find_nav_node_index(g_menu_active_node);
     if (nav_index == (-1))
     {
@@ -2968,9 +2938,9 @@ s32 menu_handle_node_input(void)
             g_menu_hit_item_idx = menu_find_active_content_item();
             if (g_menu_hit_item_idx != (-1))
             {
-                active_item = g_menu_content_table[nodes[g_menu_scene_type].idx_nav.s.self_idx] - (-g_menu_hit_item_idx);
-                g_content_view_x = active_item->packed_x & MENU_CONTENT_X_MASK;
-                view_y = active_item->y - MENU_CONTENT_VIEW_Y_OFFSET;
+                content_items = g_menu_content_table[nodes[g_menu_scene_type].idx_nav.s.self_idx];
+                g_content_view_x = content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_X_MASK;
+                view_y = content_items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET;
                 g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
                 g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
                 g_content_view_y = view_y;
@@ -2986,7 +2956,6 @@ s32 menu_handle_node_input(void)
 inline s32 menu_focus_active_content_item(void)
 {
     MenuContentItem* content_items;
-    MenuContentItem* active_item;
     s32 view_y;
 
     g_menu_hit_item_idx = menu_find_active_content_item();
@@ -2996,9 +2965,8 @@ inline s32 menu_focus_active_content_item(void)
         u8 content_table_idx = (nodes + g_menu_scene_type)->idx_nav.s.self_idx;
 
         content_items = g_menu_content_table[content_table_idx];
-        active_item = content_items - (-g_menu_hit_item_idx);
-        g_content_view_x = active_item->packed_x & MENU_CONTENT_X_MASK;
-        view_y = active_item->y - MENU_CONTENT_VIEW_Y_OFFSET;
+        g_content_view_x = content_items[g_menu_hit_item_idx].packed_x & MENU_CONTENT_X_MASK;
+        view_y = content_items[g_menu_hit_item_idx].y - MENU_CONTENT_VIEW_Y_OFFSET;
         g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
         g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
         g_content_view_y = view_y;
@@ -3458,8 +3426,8 @@ s32 menu_handle_input(s32 process_actions)
                         rect.h = 0x60;
                         submenu_slot = menu_slot_alloc(3, &rect);
                         submenu_slot->content_cb = (s32 * (*)()) & menu_spell_list_callback;
-                        submenu_slot->flags =
-                            (submenu_slot->flags & 0xFE00FFFF) | ((menu_build_spell_nav_entries() & MENU_ITEM_NAV_INDEX_MASK) << 16);
+                        submenu_slot->navigation.packed =
+                            (submenu_slot->navigation.packed & 0xFE00FFFF) | ((menu_build_spell_nav_entries() & MENU_ITEM_NAV_INDEX_MASK) << 16);
                         submenu_slot->has_title = 1;
                         menu_play_se(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
                     }
@@ -3491,12 +3459,12 @@ s32 menu_handle_input(s32 process_actions)
                         { u8* pad_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250); item_flag = *(pad_base + content_type + 0x609); }
                         if ((item_flag != MENU_NONE) && (item_flag & 0x80))
                         {
-                            submenu_slot->flags = (submenu_slot->flags & 0xFE00FFFF) | 0x40000;
+                            submenu_slot->navigation.packed = (submenu_slot->navigation.packed & 0xFE00FFFF) | 0x40000;
                             menu_init_item_nav_entries(4);
                         }
                         else
                         {
-                            submenu_slot->flags = (submenu_slot->flags & 0xFE00FFFF) | 0x30000;
+                            submenu_slot->navigation.packed = (submenu_slot->navigation.packed & 0xFE00FFFF) | 0x30000;
                             menu_init_item_nav_entries(3);
                         }
                         scroll_list_update_target((ScrollListState*)submenu_slot, g_menu_scroll_nav_entries);
@@ -3531,7 +3499,7 @@ s32 menu_handle_input(s32 process_actions)
                         rect.h = 0x60;
                         submenu_slot = menu_slot_alloc(3, &rect);
                         submenu_slot->content_cb = (s32 * (*)()) & menu_equipment_action_callback;
-                        submenu_slot->flags = (submenu_slot->flags & 0xFE00FFFF) | 0x50000;
+                        submenu_slot->navigation.packed = (submenu_slot->navigation.packed & 0xFE00FFFF) | 0x50000;
                         menu_init_item_nav_entries(5);
                         {
                             u8* equipped_item;
@@ -4773,7 +4741,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x1A:
                             {
                                 val = 0;
-                                if (D_80168C05[content_index] != 0)
+                                if (g_item_slot_flags[content_index - 0x17] != 0)
                                 {
                                     MenuItemEntry* equipment = (MenuItemEntry*)((content_index << 6) + (s32)D_80168C30 - 0x5C0);
                                     MenuItemEntry* comparison_item;
@@ -4781,7 +4749,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         val = equipment->stat_values[0];
                                     }
-                                    comparison_item = (MenuItemEntry*)D_801694DC[content_index];
+                                    comparison_item = (MenuItemEntry*)g_item_slot_data[content_index - 0x17];
                                     if (comparison_item != 0 && comparison_item->active != 0)
                                     {
                                         val -= comparison_item->stat_values[0];
@@ -4801,17 +4769,15 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x1E:
                             {
                                 val = 0;
-                                if (D_80168C01[content_index] != 0)
+                                if (g_item_slot_flags[content_index - 0x1B] != 0)
                                 {
                                     MenuItemEntry* equipment = (MenuItemEntry*)((content_index << 6) + (s32)D_80168C30 - 0x6C0);
                                     MenuItemEntry* comparison_item;
-                                    u8* source;
-                                    u8* label_buf;
                                     if (equipment->active != 0)
                                     {
                                         val = equipment->stat_values[0];
                                     }
-                                    comparison_item = (MenuItemEntry*)D_801694CC[content_index];
+                                    comparison_item = (MenuItemEntry*)g_item_slot_data[content_index - 0x1B];
                                     if (comparison_item != 0 && comparison_item->active != 0)
                                     {
                                         val -= comparison_item->stat_values[0];
@@ -4820,22 +4786,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         val -= D_800F0C1C;
                                     }
-                                    label_buf = label_buffer;
-                                    if (val >= 0)
-                                    {
-                                        s32 string_page_base =
-                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    else
-                                    {
-                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    label_buf += func_800A8DDC(source);
-                                    *label_buf = 0;
+                                    menu_copy_sign_label(label_buffer, val);
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
                                 }
                             }
@@ -4851,24 +4802,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     s32 res = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x1F);
-                                    u8* source;
-                                    u8* label_buf;
-                                    label_buf = label_buffer;
-                                    if (res >= 0)
-                                    {
-                                        s32 string_page_base =
-                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    else
-                                    {
-                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    label_buf += func_800A8DDC(source);
-                                    *label_buf = 0;
+                                    menu_copy_sign_label(label_buffer, res);
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
                                 }
                                 break;
@@ -4902,24 +4836,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
                                     s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
                                     s32 diff = v1 - v2;
-                                    u8* source;
-                                    u8* label_buf;
-                                    label_buf = label_buffer;
-                                    if (diff >= 0)
-                                    {
-                                        s32 string_page_base =
-                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    else
-                                    {
-                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    label_buf += func_800A8DDC(source);
-                                    *label_buf = 0;
+                                    menu_copy_sign_label(label_buffer, diff);
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
                                 }
                             }
@@ -4961,9 +4878,6 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                                 s32 has = 0;
 
-                                u8* source;
-                                u8* label_buf;
-
                                 val = has;
                                 for (k = 1; k < 4; k++)
                                 {
@@ -4984,22 +4898,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 }
                                 if (has)
                                 {
-                                    label_buf = label_buffer;
-                                    if (val >= 0)
-                                    {
-                                        s32 string_page_base =
-                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    else
-                                    {
-                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    label_buf += func_800A8DDC(source);
-                                    *label_buf = 0;
+                                    menu_copy_sign_label(label_buffer, val);
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
                                 }
                             }
@@ -5216,7 +5115,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     s32 a3 = 1;
                                     s32 off = shl - 0x4C0;
                                     void* a2_2 = (void*)(base + off);
-                                    if (D_80168C09[content_index] != 0)
+                                    if (g_item_slot_flags[content_index - 0x13] != 0)
                                     {
                                         a3 = 2;
                                     }
@@ -5417,9 +5316,6 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 val = 0;
                                 if (g_item_slot_flags[0] != 0)
                                 {
-
-                                    u8* source;
-                                    u8* label_buf;
                                     if (((MenuItemEntry*)D_80168C20)->active != 0)
                                     {
                                         val = ((MenuItemEntry*)D_80168C30)->stat_values[0];
@@ -5432,22 +5328,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         val = val - D_800F0C1C;
                                     }
-                                    label_buf = label_buffer;
-                                    if (val >= 0)
-                                    {
-                                        s32 string_page_base =
-                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    else
-                                    {
-                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    label_buf += func_800A8DDC(source);
-                                    *label_buf = 0;
+                                    menu_copy_sign_label(label_buffer, val);
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
                                 }
                             }
@@ -5458,9 +5339,6 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x43:
                             {
                                 s32 has = 0;
-
-                                u8* source;
-                                u8* label_buf;
 
                                 val = has;
                                 for (k = 1; k < 4; k++)
@@ -5482,22 +5360,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 }
                                 if (has)
                                 {
-                                    label_buf = label_buffer;
-                                    if (val >= 0)
-                                    {
-                                        s32 string_page_base =
-                                            (g_menu_label_key_a.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
-                                        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    else
-                                    {
-                                        s32 string_page_base = (g_menu_label_key_b.page << 8) + (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
-                                        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
-                                        func_800A8E28(label_buf, source);
-                                    }
-                                    label_buf += func_800A8DDC(source);
-                                    *label_buf = 0;
+                                    menu_copy_sign_label(label_buffer, val);
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, &label_buffer, 1, pos.x, pos.y, 0);
                                 }
                             }
@@ -6060,7 +5923,7 @@ void* menu_emit_slot_scroll_arrows(SPRT* sprite, u_long* ot_entry, MenuSlot* slo
         sprite++;
     }
 
-    remaining_height = ((MENU_SLOT_FLAGS_VIEW(slot).half.high & MENU_ITEM_NAV_INDEX_MASK) << 4) - slot->lerp_cur_b;
+    remaining_height = ((slot->navigation.fields.count_and_ot & MENU_ITEM_NAV_INDEX_MASK) << 4) - slot->lerp_cur_b;
     if ((slot->h - MENU_SCROLL_ARROW_SIZE) < remaining_height)
     {
         SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
@@ -7332,7 +7195,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         list = (ScrollListState*)menu_slot_alloc(0, &rect);
                         ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
                         g_menu_compare_window_active = 1;
-                        ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
+                        ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
                         menu_relink_pair();
                         g_menu_content_ready = 0;
                         g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 1;
@@ -7369,7 +7232,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         rect.h = 0x30;
                         list = (ScrollListState*)menu_slot_alloc(0, &rect);
                         ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_item_followup_callback;
-                        ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
+                        ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
                         menu_relink_pair();
                     }
                 }
@@ -7824,7 +7687,6 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
     s32 i1;
     s32 i3;
     u8 flag;
-    MenuContentItem* item;
     MenuContentItem* items;
     ScrollListState* list;
     s32 buf;
@@ -7859,8 +7721,8 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
             ((MenuSlot*)list)->active = 2;
             ((MenuSlot*)list)->has_title = 1;
             g_menu_draw_early_out = 1;
-            ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | ((packed & 0x1FF) << 0x10);
-            *(u16*)&((MenuSlot*)list)->flags = (u16)hi;
+            ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | ((packed & 0x1FF) << 0x10);
+            ((MenuSlot*)list)->navigation.fields.selected_index = (u16)hi;
             return buf;
 
         case 1:
@@ -7938,9 +7800,8 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
             if (g_menu_hit_item_idx != -1)
             {
                 items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-                item = items - (-g_menu_hit_item_idx);
-                g_content_view_x = item->packed_x & 0x1FF;
-                g_content_view_y = item->y - 8;
+                g_content_view_x = items[g_menu_hit_item_idx].packed_x & 0x1FF;
+                g_content_view_y = items[g_menu_hit_item_idx].y - 8;
                 g_menu_suppress_cursor = 5;
                 g_menu_cursor_enable = 1;
             }
@@ -8102,7 +7963,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
     u8* cmp_tbl;
     u8* ctx;
     u8* equipment_ctx;
-    s32 slot_off;
+    s32 character_offset;
     u32 lhs_shift;
     u32 cmp_shift;
     s32 mask;
@@ -8187,7 +8048,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                 list = (ScrollListState*)menu_slot_alloc(0, &rect);
                 ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
                 g_menu_compare_window_active = 1;
-                ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
+                ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
 
                 menu_relink_pair();
                 break;
@@ -8207,7 +8068,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
             g_menu_compare_window_active = 1;
-            ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
+            ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
 
             menu_relink_pair();
             break;
@@ -8232,7 +8093,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
             g_menu_compare_window_active = 1;
-            ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
+            ((MenuSlot*)list)->navigation.packed = (((MenuSlot*)list)->navigation.packed & 0xFE00FFFF) | 0x20000;
 
             menu_relink_pair();
             break;
@@ -8290,17 +8151,16 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                     case 7:
                         g_menu_active_equipped_item = 0;
                         g_menu_saved_category0_item = 0;
-                        slot_off = g_menu_char_slot * 0x250;
+                        character_offset = g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE;
                         ctx = (u8*)g_pad_ctx;
-                        pad_item = ctx - (-slot_off);
-                        lhs_shift = *(u32*)(pad_item + 0x654) >> 10;
-                        cmp_shift = *(u32*)((cmp_tbl = D_800F0BF8) + 0x14) >> 10;
+                        lhs_shift = ((MenuCharacterRecord*)(ctx + character_offset + MENU_CHARACTER_RECORD_OFFSET))->items[0].attributes.packed >> 10;
+                        cmp_shift = ((MenuItemEntry*)(cmp_tbl = D_800F0BF8))->attributes.packed >> 10;
                         if ((lhs_shift & 0x3F) == (cmp_shift & 0x3F))
                         {
-                            func_800A8F8C((slot_off + (s32)ctx) + 0x640, cmp_tbl);
+                            func_800A8F8C(&menu_character_record((PadContext*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
                             break;
                         }
-                        func_800A8F8C((slot_off + (s32)ctx) + 0x640, cmp_tbl);
+                        func_800A8F8C(&menu_character_record((PadContext*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
 
                         i9 = 1;
                         do
@@ -8733,7 +8593,7 @@ void menu_open_content_page(u32 content_id)
         slot->active = 2;
         v0 = menu_build_inventory_nav_entries(0);
         g_menu_active_item_category = 0;
-        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
     case 1:
@@ -8748,7 +8608,7 @@ void menu_open_content_page(u32 content_id)
         slot->active = 2;
         v0 = menu_build_inventory_nav_entries(1);
         g_menu_active_item_category = 1;
-        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
     case 2:
@@ -8763,7 +8623,7 @@ void menu_open_content_page(u32 content_id)
         slot->active = 2;
         v0 = menu_build_inventory_nav_entries(2);
         g_menu_active_item_category = 2;
-        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
     case 3:
@@ -8778,7 +8638,7 @@ void menu_open_content_page(u32 content_id)
         slot->active = 2;
         v0 = menu_build_equipment_nav_entries();
         g_menu_active_item_category = 3;
-        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
     case 4:
@@ -8793,7 +8653,7 @@ void menu_open_content_page(u32 content_id)
         slot->active = 2;
         v0 = menu_build_key_item_nav_entries();
         g_menu_active_item_category = 3;
-        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
     case 5:
@@ -8808,7 +8668,7 @@ void menu_open_content_page(u32 content_id)
         slot->active = 2;
         v0 = menu_build_ability_nav_entries();
         g_menu_active_item_category = 3;
-        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
     case 6:
@@ -8820,7 +8680,7 @@ void menu_open_content_page(u32 content_id)
         slot->content_cb = (s32 * (*)()) & menu_message_callback;
         slot->anim_frame = 5;
         slot->active = 2;
-        slot->flags = (slot->flags & 0xFE00FFFF) | 0x10000;
+        slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | 0x10000;
 
         j = 0;
         do
@@ -8861,7 +8721,7 @@ void menu_open_content_page(u32 content_id)
         slot->content_cb = (s32 * (*)()) & menu_two_line_message_callback;
         slot->anim_frame = 5;
         slot->active = 2;
-        slot->flags = (slot->flags & 0xFE00FFFF) | 0x10000;
+        slot->navigation.packed = (slot->navigation.packed & 0xFE00FFFF) | 0x10000;
 
         j = 0;
         do
@@ -9183,7 +9043,7 @@ s32 menu_stage_best_equipment_for_active_slot(void)
     MenuItemEntry* candidate;
     MenuItemEntry* slot_buffer;
     u32* slot_data;
-    u8* pad_base;
+    PadContext* pad_context;
     s32 slot_flag;
     s32 subtype_index;
     s32 slot_index;
@@ -9196,8 +9056,8 @@ s32 menu_stage_best_equipment_for_active_slot(void)
     {
         slot_index = 1;
         subtype_index = g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE;
-        pad_base = (u8*)g_pad_ctx;
-        if (((MenuItemEntry*)(pad_base - (-((subtype_index << 6) + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE))) + 0x640))->active == 0)
+        pad_context = g_pad_ctx;
+        if (menu_equipped_item(pad_context, subtype_index)->active == 0)
         {
             slot_data = &g_item_slot_data[0];
             for (; slot_index < MENU_EQUIPMENT_SLOT_COUNT; slot_index += 1)
@@ -9241,7 +9101,6 @@ s32 menu_stage_best_equipment_for_active_slot(void)
 MenuItemEntry* menu_find_best_equipment_for_active_slot(void)
 {
     s32 item_index;
-    s32 category_mask;
     s32 excluded_categories;
     s32 item_value;
     s32 best_value;
@@ -9275,8 +9134,7 @@ MenuItemEntry* menu_find_best_equipment_for_active_slot(void)
                 if (best_value < item_value)
                 {
                     best_item = item;
-                    category_mask = item_value;
-                    best_value = category_mask;
+                    best_value = item_value;
                 }
             }
         }

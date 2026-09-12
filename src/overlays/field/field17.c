@@ -1331,7 +1331,7 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     func_800822A4(actor, rec, part, part_index);
     func_800829A0(actor, rec, part, part_index, &tmp);
 
-    color_off = 0;
+    do { color_off = 0; } while (0);
     light_off = 0;
     part_iter = (u8 *)part;
     do {
@@ -1415,7 +1415,7 @@ next_light:
 
         gte_SetBackColor(color[0], color[1], color[2]);
         if (actor->owner_object_index < 2) {
-            { s32 actor_index = actor->owner_object_index; s32 palette = part->unk2D;
+            { s32 actor_index; s32 palette; lowmask = actor->owner_object_index; actor_index = lowmask; palette = part->unk2D;
               *(u16 *)((u8 *)cursor + 0xE) = ((actor_index << 7) + 0x7B80) | (palette & 0x3F); }
             *(s16 *)((u8 *)cursor + 0x16) = ((part->unk34 >> 15) & 0x80) | ((part->unk4 >> 17) & 0x60) | 0x10 | ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
         } else {
