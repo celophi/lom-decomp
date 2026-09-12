@@ -1,73 +1,59 @@
 #include "common.h"
+#include "gpu_packet.h"
+#include "sdk/libgpu.h"
 
-void *func_800AD658(s32 *, void *, s32);
+SPRT *func_800AD658(s32 *ordering_table, SPRT *sprite_cursor, s32 count);
 
 /**
- * @brief Emit a digit sprite and optionally append the auxiliary primitive.
- * @param arg0 Next free primitive-buffer address.
- * @param arg1 Ordering-table entry receiving the primitive chain.
- * @param arg2 Value whose decimal units select the digit glyph.
- * @param arg3 Packed destination coordinates.
- * @param arg4 Palette selector and optional-primitive flag (bit 7).
- * @return The next free primitive-buffer address.
- * @note WIP: arithmetic scheduling and temporary-register differences remain.
+ * @brief Emit a decimal digit sprite and optionally append its shadow sprites.
+ * @param sprite Sprite primitive to populate.
+ * @param ordering_table Ordering-table tag to link the sprite into.
+ * @param value Value whose decimal units digit selects the glyph.
+ * @param packed_position Packed x/y position copied into the sprite.
+ * @param flags Low bits select the clut; bit 7 requests the shadow pass.
+ * @return Pointer just past the generated primitive data.
  */
-void *func_800AD524(u8 *arg0, s32 *arg1, s32 arg2, s32 *arg3, s32 arg4)
+void *func_800AD524(SPRT *sprite, s32 *ordering_table, s32 value, s32 *packed_position, s32 flags)
 {
-    s16 var_v0;
-    s16 var_v0_2;
-    s32 temp_v0;
-    s32 temp_v1;
-    u8 *var_t0;
+    s32 palette_selector;
+    s16 sprite_value;
 
-    *(u32 *)(arg0 + 4) = 0x808080;
-    arg0[3] = 4;
-    arg0[7] = 0x64;
-    *(s32 *)(arg0 + 8) = *arg3;
-    temp_v0 = arg2 % 10;
-    if (arg2 >= 0xA)
+    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+    setSprt(sprite);
+    SET_SPRT_XY0_WORD(sprite, *packed_position);
+    sprite_value = (value % 10) * 8;
+    if (value >= 10)
     {
-        var_v0 = temp_v0 * 8 + 0x2800;
+        SET_SPRT_UV0_PACKED(sprite, sprite_value + 0x2800);
     }
     else
     {
-        var_v0 = temp_v0 * 8 + 0x2000;
+        SET_SPRT_UV0_PACKED(sprite, sprite_value + 0x2000);
     }
-    *(s16 *)(arg0 + 0xC) = var_v0;
-    *(u32 *)(arg0 + 0x10) = 0x80008;
-    temp_v1 = arg4 & 0x7F;
-    if (temp_v1 != 1)
+    SET_SPRT_WH_WORD(sprite, 0x80008);
+    palette_selector = flags & 0x7F;
+    switch (palette_selector)
     {
-        var_v0_2 = 0x7B03;
-        if (temp_v1 >= 2)
-        {
-            if (temp_v1 != 2)
-            {
-                *(s16 *)(arg0 + 0xE) = 0x7B03;
-            }
-            else
-            {
-                var_v0_2 = 0x7AC9;
-                goto block_9;
-            }
-        }
-        else
-        {
-            goto block_9;
-        }
+    case 1:
+        sprite_value = 0x7AC8;
+        break;
+    case 0:
+        sprite_value = 0x7B03;
+        break;
+    case 2:
+        sprite_value = 0x7AC9;
+        break;
+    default:
+        sprite->clut = 0x7B03;
+        goto after_switch;
     }
-    else
+    sprite->clut = sprite_value;
+after_switch:
+    addPrim(ordering_table, sprite);
+    sprite++;
+    if (flags & 0x80)
     {
-        var_v0_2 = 0x7AC8;
-    block_9:
-        *(s16 *)(arg0 + 0xE) = var_v0_2;
+        sprite = func_800AD658(ordering_table, sprite, 1);
     }
-    *(s32 *)(arg0 + 0) = (*(s32 *)(arg0 + 0) & 0xFF000000) | (*arg1 & 0xFFFFFF);
-    *arg1 = (*arg1 & 0xFF000000) | ((s32)arg0 & 0xFFFFFF);
-    var_t0 = arg0 + 0x14;
-    if (arg4 & 0x80)
-    {
-        var_t0 = func_800AD658(arg1, var_t0, 1);
-    }
-    return var_t0;
+    return sprite;
 }

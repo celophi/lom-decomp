@@ -812,6 +812,16 @@ typedef struct
 } FieldCounterView;
 
 /**
+ * @brief Placement selector within the part flags word.
+ */
+typedef struct
+{
+    unsigned int lower : 18;
+    unsigned int opcode : 6;
+    unsigned int upper : 8;
+} FieldPlacementBits;
+
+/**
  * @brief Per-effect-record parameter-track/placement update: rolls angle and
  *        scale tracks, resolves the effect's world position through one of a
  *        large table of placement opcodes (owner/tracked-object relative,
@@ -978,7 +988,7 @@ void func_80071D40(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldActorSta
         gte_rtv0();
         gte_stsv(dest);
 
-        opcode = ((u32) part->unk28 >> 0x12) & 0x3F;
+        opcode = ((FieldPlacementBits *) &part->unk28)->opcode;
         switch (opcode)
         {
             case 0x0: case 0x1: case 0x2: case 0x3: case 0x4:
@@ -1379,20 +1389,18 @@ block_114:
             else
             {
                 s32 position_z;
+                D_800473F8 += 0x100;
                 mover->unk0 = rec->unk0;
                 mover->unk4 = 0;
-                position_z = rec->unk8;
-                mover->unk14 = dest->unk4;
-                dx = dest->unk0;
-                D_800473F8 += 0x100;
-                mover->mode.bits.status = 8;
+                mover->unk8 = rec->unk8;
+                mover->unkC = dest->unk0;
                 mover->unk10 = 0;
+                mover->unk14 = dest->unk4;
                 mover->unk24 = 0xC;
+                mover->mode.bits.status = 8;
                 mover->unk26 = 0x10;
-                mover->unk20 = 0;
-                mover->unkC = dx;
                 mover->unk1C = invalid_pointer;
-                mover->unk8 = position_z;
+                mover->unk20 = 0;
                 mover->mode.bits.flag17 = 0;
                 mover->mode.bits.flag16 = 0;
                 if (func_8005B6AC(mover) & 3)
@@ -1408,13 +1416,13 @@ block_152:
                 else if (!((*(u32 *) &part->unk34) & 0x10000000))
                 {
                     query->unkC = 0xC;
-                    query->unkE = 0x10;
                     query->unk10 = 8;
+                    query->unkE = 0x10;
                     query->x = mover->unk0;
+                    position_z = mover->unk8;
                     {
-                        s32 query_z = mover->unk8;
                         s32 query_y = rec->unk4;
-                        query->z = query_z;
+                        query->z = position_z;
                         query->y = query_y;
                     }
                     if ((D_800FE754 != 0) && (func_8005B368(query) != -1))
@@ -1433,13 +1441,15 @@ block_152:
 
         if ((*(u32 *) &part->unk34) & 0x01000000)
         {
+            s32 camera_x;
+            s32 next_z;
             dx = rec->unk0 + (s16) dest->unk0;
-            dz = -(*(s32 *) &sp48->unk4);
-            if (((dz + 0x500) < dx) && (dx < (dz + 0x13B00)))
+            camera_x = -(*(s32 *) &sp48->unk4);
+            if (((camera_x + 0x500) < dx) && (dx < (camera_x + 0x13B00)))
             {
-                dz = rec->unk8 + (s16) dest->unk4;
+                next_z = rec->unk8 + (s16) dest->unk4;
                 x = -(*(s32 *) &sp48->unkC);
-                if ((x < dz) && (dz < (x + 0x1E800)))
+                if ((x < next_z) && (next_z < (x + 0x1E800)))
                 {
                     rec->unk0 = dx;
                     goto block_165;
@@ -1619,10 +1629,10 @@ block_185:
                         base_heading = rec->unk14;
                         if (pitch < base_heading)
                         {
-                            opcode = base_heading - pitch;
-                            if (opcode < 0x200)
+                            kind = base_heading - pitch;
+                            if (kind < 0x200)
                             {
-                                rec->unk14 = base_heading - (opcode >> 2);
+                                rec->unk14 = base_heading - (kind >> 2);
                             }
                             else
                             {
@@ -1631,10 +1641,10 @@ block_185:
                         }
                         else if (base_heading < pitch)
                         {
-                            opcode = pitch - base_heading;
-                            if (opcode < 0x200)
+                            kind = pitch - base_heading;
+                            if (kind < 0x200)
                             {
-                                rec->unk14 = base_heading + (opcode >> 2);
+                                rec->unk14 = base_heading + (kind >> 2);
                             }
                             else
                             {

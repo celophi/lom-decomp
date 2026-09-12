@@ -78,53 +78,56 @@ void func_800C0E54(s32, s32);
 void func_800C0E18(s32, s32);
 void func_800C1A18(void *, void *);
 void func_800C1B20(s32, s32);
-/** @brief Dispatches an experience, currency, item or counter reward.
- * @note Initial nonmatching C recovered with the seven-entry jump table.
+/**
+ * @brief Dispatch an experience, currency, item, or counter reward.
+ * @param recipient Recipient identifier passed to reward handlers.
+ * @param context Context value used by object and audio reward operations.
+ * @param selector Reward operation selector.
  */
-void func_800C0B40(s32 recipient, void *arg1, u32 arg2)
+void func_800C0B40(s32 recipient, void *context, u32 selector)
 {
-    s32 var_a1;
-    u8 var_v1;
-    u8 var_v1_2;
+    s32 argument_value;
+    s32 reward_value;
 
-    switch (arg2)
-
+    switch (selector)
     {
     case 0:
-        var_v1 = *D_80123FB0;
-        var_a1 = var_v1 * 4;
-        if ((s32) var_v1 >= 0xB)
+        reward_value = *D_80123FB0;
+        argument_value = reward_value * 4;
+        if (reward_value >= 11)
         {
-            var_v1 = ((s32) (var_v1 - 0xA) / 2) + 0xA;
-            var_a1 = var_v1 * 4;
+            reward_value = ((reward_value - 10) / 2) + 10;
+            argument_value = reward_value * 4;
         }
-        func_800C0E54(recipient, (var_a1 + var_v1) * 2);
+        func_800C0E54(recipient, (argument_value + reward_value) * 2);
         return;
     case 1:
-        var_v1_2 = *D_80123FB0;
-        if ((s32) var_v1_2 >= 0xB)
+        reward_value = *D_80123FB0;
+        if (reward_value >= 11)
         {
-            var_v1_2 = ((s32) (var_v1_2 - 0xA) / 2) + 0xA;
+            reward_value = ((reward_value - 10) / 2) + 10;
         }
-        func_800C0E54(recipient, var_v1_2);
+        argument_value = reward_value;
+        func_800C0E54(recipient, argument_value);
         return;
     case 2:
-        func_800C0E18(recipient, 0x32);
+        func_800C0E18(recipient, 50);
         return;
     case 3:
-        func_800C0E18(recipient, 0xA);
+        func_800C0E18(recipient, 10);
         return;
     case 4:
-        func_800C1A18((void *)recipient, arg1);
+        func_800C1A18((void *)recipient, context);
         return;
     case 5:
-        func_800C1B20(recipient, 0x40);
+        func_800C1B20(recipient, 64);
         return;
     case 6:
-        func_800C1B20(recipient, 0x80);
+        func_800C1B20(recipient, 128);
         return;
     default:
-        akao_set_song_params(0x8001, 0x12C, (s32)arg1, arg2);
+        argument_value = (s32)context;
+        akao_set_song_params(0x8001, 300, argument_value, selector);
         return;
     }
 }

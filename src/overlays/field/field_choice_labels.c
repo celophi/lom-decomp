@@ -1,35 +1,47 @@
 #include "common.h"
+
+s32 func_800A88A0(void* arg0, void* arg1, void* arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6);
 extern u8 D_800EC3EA[];
 extern s32 D_801226D8;
-s32 func_800A88A0(s32, s32, u8 *, s32, s32, s32, s32);
 
 /**
- * @brief Draw two choice labels with the active choice highlighted.
- * @param arg0 Ordering-table address.
- * @param arg1 Primitive buffer address.
- * @param arg2 Horizontal scroll offset.
- * @param arg3 Vertical scroll offset.
+ * @brief Draw the two return-to-title choice labels with the active choice highlighted.
+ * @param arg0 Ordering-table context passed to the label renderer.
+ * @param arg1 Initial packet handle.
+ * @param arg2 Horizontal label offset.
+ * @param arg3 Vertical label offset.
  */
-void func_800AED20(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void func_800AED20(void* arg0, s32 arg1, s32 arg2, s32 arg3)
 {
-    s32 var_a3;
-    s32 var_t0;
-    s32 temp_a1;
-    s32 temp_s2;
-    u8 *temp_s1;
+    u8* text_base;
+    void* first_text;
+    void* second_text;
+    s32 first_color;
+    s32 second_color;
+    s32 draw_x;
+    s32 second_y_offset;
+    s32 text_base_offset;
+    s32 handle;
+    s32 pad[2];
+    void* draw_ctx;
 
-    var_t0 = 5;
-    temp_s1 = D_800EC3EA - 0x26;
+    draw_ctx = arg0;
+    handle = arg1;
+    text_base_offset = 0x26;
+    first_text = (void*)(D_800EC3EA[0] + ((D_800EC3EA[1] << 8) + (s32)(text_base = D_800EC3EA - text_base_offset)));
+    first_color = 5;
     if (D_801226D8 == 0)
     {
-        var_t0 = 4;
+        first_color = 4;
     }
-    temp_s2 = 0x50 - arg2;
-    temp_a1 = func_800A88A0(arg1, arg0, D_800EC3EA[0] + ((D_800EC3EA[1] << 8) + temp_s1), var_t0, temp_s2, 1 - arg3, 2);
-    var_a3 = 5;
+    draw_x = 0x50 - arg2;
+    handle = func_800A88A0((void*)handle, draw_ctx, first_text, first_color, draw_x, 1 - arg3, 2);
+    second_y_offset = arg3;
+    second_text = (void*)(text_base[0x28] + ((text_base[0x29] << 8) + (s32)text_base));
+    second_color = 5;
     if (D_801226D8 == 1)
     {
-        var_a3 = 4;
+        second_color = 4;
     }
-    func_800A88A0(temp_a1, arg0, temp_s1[0x28] + ((temp_s1[0x29] << 8) + temp_s1), var_a3, temp_s2, 0x11 - arg3, 2);
+    func_800A88A0((void*)handle, draw_ctx, second_text, second_color, draw_x, 0x11 - second_y_offset, 2);
 }
