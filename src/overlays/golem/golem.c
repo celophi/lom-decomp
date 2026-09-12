@@ -155,15 +155,6 @@ typedef struct
     GolemIconRotation rotations[GOLEM_ROTATION_COUNT];
 } GolemCompositeIconRow;
 
-/** @brief Positioned glyph view at row + variant*0x14 + part*4. */
-typedef struct
-{
-    u8 pad_00[0xC];
-    s8 x;
-    s8 y;
-    s16 glyph_id;
-} GolemCompositeIconPartView;
-
 /** @brief UV coordinates and dimensions for one glyph. */
 typedef struct
 {
@@ -813,7 +804,8 @@ u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
     s32 horizontal_marker;
     s32 glyph;
     s32* marker_base;
-    s32* marker_ptr;
+    s32* vertical_markers;
+    s32* horizontal_markers;
     s32 row_y;
     s32 call_x;
 
@@ -827,11 +819,11 @@ u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
     {
         column = 0;
         row_y = y;
-        marker_ptr = (s32*)((marker_index << 2) + (s32)marker_base);
+        vertical_markers = (s32*)((marker_index << 2) + (s32)marker_base);
         x = 0xC;
         for (; column < GOLEM_GRID_SIDE - 1;)
         {
-            vertical_marker = *marker_ptr;
+            vertical_marker = *vertical_markers;
             if (vertical_marker != 0)
             {
                 glyph = GOLEM_VERTICAL_MARKER;
@@ -848,11 +840,8 @@ u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
                 packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, call_x, row_y, glyph);
             }
             x += GOLEM_GRID_CELL_SIZE;
-            do
-            {
-                column++;
-            } while (0);
-            marker_ptr++;
+            column++;
+            vertical_markers++;
             marker_index++;
         }
         y += GOLEM_GRID_CELL_SIZE;
@@ -862,11 +851,11 @@ u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
     {
         column = 0;
         y = row * GOLEM_GRID_CELL_SIZE;
-        marker_ptr = (s32*)((marker_index << 2) + (s32)markers);
+        horizontal_markers = (s32*)((marker_index << 2) + (s32)markers);
         x = 4;
         for (; column < GOLEM_GRID_SIDE;)
         {
-            horizontal_marker = *marker_ptr;
+            horizontal_marker = *horizontal_markers;
             if (horizontal_marker != 0)
             {
                 do
@@ -875,11 +864,8 @@ u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
                 } while (0);
             }
             x += GOLEM_GRID_CELL_SIZE;
-            do
-            {
-                column++;
-            } while (0);
-            marker_ptr++;
+            column++;
+            horizontal_markers++;
             marker_index++;
         }
     }
@@ -1134,13 +1120,10 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
     u8* next_packet;
     s32 block_index;
     u32 logic_block;
-    GolemIconRotation* variant_position;
     s32 cursor_target_x;
     s32 cursor_target_y;
     s32 draw_y;
     GolemLogicBlockStatus* block_status;
-    u8* icon_base;
-    s32 icon_offset;
 
     cursor = packet_cursor;
     ordering_table = &render_context->ordering_table[GOLEM_LAYER_GRID];
@@ -1153,12 +1136,10 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
     {
         next_packet = golem_draw_composite_icon(cursor, ordering_table, g_golem_selected_block, g_golem_block_rotation, g_golem_block_x * GOLEM_GRID_CELL_SIZE,
                                                 g_golem_block_y * GOLEM_GRID_CELL_SIZE, g_golem_block_status[g_golem_selected_block].clut, 0, 3);
-        icon_base = (u8*)g_golem_composite_icon_rows;
-        icon_offset =
-            g_golem_block_rotation * sizeof(GolemIconRotation) + ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF) * sizeof(GolemCompositeIconRow);
-        variant_position = (GolemIconRotation*)(icon_base + icon_offset + sizeof(GolemIconHeader));
-        cursor_target_x = variant_position->origin.x * 8 + g_golem_block_x * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
-        cursor_target_y = variant_position->origin.y * 8 + g_golem_block_y * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
+        cursor_target_x = g_golem_composite_icon_rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].rotations[g_golem_block_rotation].origin.x * 8 +
+                          g_golem_block_x * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
+        cursor_target_y = g_golem_composite_icon_rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].rotations[g_golem_block_rotation].origin.y * 8 +
+                          g_golem_block_y * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
         if ((cursor_target_x != g_golem_cursor_x || cursor_target_y != g_golem_cursor_y) && g_golem_cursor_steps == 0)
         {
             g_golem_cursor_target_x = cursor_target_x;
@@ -1386,9 +1367,6 @@ u8* golem_draw_composite_icon(u8* packet_cursor, u_long* ordering_table, s32 blo
 {
     u32 logic_block;
     s32 layout_index;
-    s32 rotation_offset;
-    s32 layout_offset;
-    u8* table;
     GolemCompositeIconRow* layout;
     DR_TPAGE* draw_mode;
     s32 part_index;
@@ -1403,29 +1381,21 @@ u8* golem_draw_composite_icon(u8* packet_cursor, u_long* ordering_table, s32 blo
         x += row->header.origin_x * 8;
         y += row->header.origin_y * 8;
     }
-    table = (u8*)g_golem_composite_icon_rows;
-    rotation_offset = rotation * sizeof(GolemIconRotation);
-    layout_offset = layout_index * sizeof(GolemCompositeIconRow);
-    {
-        GolemIconRotation* variant = (GolemIconRotation*)(rotation_offset + layout_offset + table + sizeof(GolemIconHeader));
-        packet_cursor =
-            golem_emit_glyph(packet_cursor, ordering_table, ((logic_block >> 2) & 0x3F) + 0x13, (variant->origin.x * 8) + x, (variant->origin.y * 8) + y, 9, 0);
-    }
-    layout = (GolemCompositeIconRow*)(layout_offset + table);
+    packet_cursor = golem_emit_glyph(packet_cursor, ordering_table, ((logic_block >> 2) & 0x3F) + 0x13,
+                                     (g_golem_composite_icon_rows[layout_index].rotations[rotation].origin.x * 8) + x,
+                                     (g_golem_composite_icon_rows[layout_index].rotations[rotation].origin.y * 8) + y, 9, 0);
+    layout = &g_golem_composite_icon_rows[layout_index];
     part_index = 0;
     if (layout->header.part_count != 0)
     {
-        u8* table_base = table;
-        s32 row_base = layout_offset;
-        GolemCompositeIconRow* icon_layout = layout;
-        s32 part_offset = rotation_offset;
         do
         {
-            GolemCompositeIconPartView* part = (GolemCompositeIconPartView*)(part_offset + row_base + (s32)table_base);
-            packet_cursor = golem_emit_glyph(packet_cursor, ordering_table, part->glyph_id, (part->x * 0x10) + x, (part->y * 0x10) + y, clut, style);
-            part_offset += sizeof(GolemIconPart);
-            part_index += 1;
-        } while (part_index < icon_layout->header.part_count);
+            packet_cursor =
+                golem_emit_glyph(packet_cursor, ordering_table, g_golem_composite_icon_rows[layout_index].rotations[rotation].parts[part_index].glyph_id,
+                                 g_golem_composite_icon_rows[layout_index].rotations[rotation].parts[part_index].x * GOLEM_GRID_CELL_SIZE + x,
+                                 g_golem_composite_icon_rows[layout_index].rotations[rotation].parts[part_index].y * GOLEM_GRID_CELL_SIZE + y, clut, style);
+            part_index++;
+        } while (part_index < g_golem_composite_icon_rows[layout_index].header.part_count);
     }
     draw_mode = (DR_TPAGE*)packet_cursor;
     setDrawTPage(draw_mode, 0, 0, 0x25);

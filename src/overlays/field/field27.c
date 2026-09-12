@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+#include "sdk/libgpu.h"
 
 typedef struct {
     u32 unk0;
@@ -80,7 +81,7 @@ extern s32 g_frame_counter;
  * @note WIP: the layout reloads and coordinate temporary widths still differ.
  *       The raw layout x load is kept separate from its short coordinate.
  *       Matching evidence is in working/func_80084D08/status.md.
- * @see decomp.me (95.66%)
+ * @see decomp.me (96.40%)
  */
 void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
     s16 *scratch = (s16 *)0x1F800000;
@@ -110,6 +111,7 @@ void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
     s16 var_v1_2;
     s32 *temp_a0_7;
     s32 *temp_s1;
+    s32 counter_offset;
     s32 *temp_v1;
     s32 *temp_v1_2;
     s32 *temp_v1_8;
@@ -218,11 +220,9 @@ void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
     }
     var_s0 = var_a0;
     if (arg2 < 3) {
-        temp_v1 = D_801077F0;
-        temp_v1 += arg2;
-        if (*temp_v1 < 6) {
-            (*temp_v1)++;
-            if (*temp_v1 < 6) {
+        if (D_801077F0[arg2] < 6) {
+            D_801077F0[arg2]++;
+            if (D_801077F0[arg2] < 6) {
                 goto build_first_prim;
             }
         }
@@ -235,7 +235,9 @@ void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
                 break;
             }
         }
-        temp_s1 = &D_801077F0[arg2];
+        temp_s1 = D_801077F0;
+        counter_offset = arg2 * 4;
+        temp_s1 = (s32 *)((s32)temp_s1 + counter_offset);
         if ((*temp_s1 != 0) && !(rand() & 0x3F)) {
             *temp_s1 = 0;
         }
@@ -308,19 +310,12 @@ build_first_prim:
             W(var_t1, 0x1C) = 0xFFFFFF;
             var_a2 = (s16) temp_a0_4->unk260;
             var_a2 = (s32) (D_8010A008 * temp_a0_4->unk25E) / (s32) var_a2;
-            temp_a1_2 = (u16) D_8010A010 + var_s6;
-            H(var_t1, 0x12) = temp_a1_2;
-            H(var_t1, 0xA) = temp_a1_2;
-            temp_v1_5 = (u16) D_8010A00C + arg0;
-            temp_t0 = (u16) D_8010A004;
-            var_a0_2 = temp_a1_2 + temp_t0;
-            H(var_t1, 0x22) = var_a0_2;
-            H(var_t1, 0x1A) = var_a0_2;
-            H(var_t1, 0x8) = temp_v1_5;
-            H(var_t1, 0x18) = (s16) (temp_v1_5 - 3);
-            temp_v1_6 = temp_v1_5 + var_a2;
-            H(var_t1, 0x10) = temp_v1_6;
-            H(var_t1, 0x20) = (s16) (temp_v1_6 - 3);
+            ((POLY_G4 *)var_t1)->x0 = (u16)D_8010A00C + arg0;
+            ((POLY_G4 *)var_t1)->y0 = ((POLY_G4 *)var_t1)->y1 = ((u16)D_8010A010 + var_s6);
+            ((POLY_G4 *)var_t1)->x1 = ((u16)D_8010A00C + arg0) + var_a2;
+            ((POLY_G4 *)var_t1)->x2 = ((u16)D_8010A00C + arg0) - 3;
+            ((POLY_G4 *)var_t1)->y2 = ((POLY_G4 *)var_t1)->y3 = ((u16)D_8010A010 + var_s6) + (u16)D_8010A004;
+            ((POLY_G4 *)var_t1)->x3 = ((u16)D_8010A00C + arg0) + var_a2 - 3;
             temp_a3 = (s32) var_t1 & 0xFFFFFF;
             W(var_t1, 0x0) = (s32) ((W(var_t1, 0x0) & 0xFF000000) | (W(ctx, 0xC) & 0xFFFFFF));
             var_t1 += 0x24;
@@ -346,19 +341,12 @@ build_first_prim:
             W(var_t1, 0x1C) = temp_v1_9;
             W(var_t1, 0x14) = temp_v1_9;
             temp_v1_11 = (s32) (D_8010A008 * (temp_v1_7 % arg4)) / (s32) arg4;
-            temp_a1_3 = (u16) D_8010A010 + var_s6;
-            H(var_t1, 0x12) = temp_a1_3;
-            H(var_t1, 0xA) = temp_a1_3;
-            temp_v1_10 = (u16) D_8010A00C + arg0;
-            var_a2 = (u16) D_8010A004;
-            temp_a0_6 = temp_a1_3 + var_a2;
-            H(var_t1, 0x22) = temp_a0_6;
-            H(var_t1, 0x1A) = temp_a0_6;
-            H(var_t1, 0x8) = temp_v1_10;
-            H(var_t1, 0x18) = (s16) (temp_v1_10 - 3);
-            temp_v1_11 += temp_v1_10;
-            H(var_t1, 0x10) = temp_v1_11;
-            H(var_t1, 0x20) = (s16) (temp_v1_11 - 3);
+            ((POLY_G4 *)var_t1)->x0 = (u16)D_8010A00C + arg0;
+            ((POLY_G4 *)var_t1)->y0 = ((POLY_G4 *)var_t1)->y1 = ((u16)D_8010A010 + var_s6);
+            ((POLY_G4 *)var_t1)->x1 = ((u16)D_8010A00C + arg0) + temp_v1_11;
+            ((POLY_G4 *)var_t1)->x2 = ((u16)D_8010A00C + arg0) - 3;
+            ((POLY_G4 *)var_t1)->y2 = ((POLY_G4 *)var_t1)->y3 = ((u16)D_8010A010 + var_s6) + (u16)D_8010A004;
+            ((POLY_G4 *)var_t1)->x3 = ((u16)D_8010A00C + arg0) + temp_v1_11 - 3;
             W(var_t1, 0x0) = (s32) ((W(var_t1, 0x0) & 0xFF000000) | (W(ctx, 0xC) & temp_t0));
             temp_v1_12 = (s32) var_t1 & temp_t0;
             var_t1 += 0x24;
@@ -373,9 +361,9 @@ build_first_prim:
             }
             temp_a0_7 = &D_800EAFD8[var_a0_5];
             W(var_t1, 0x4) = (s32) (*temp_a0_7 & 0x3F3F3F);
+            W(var_t1, 0x14) = (s32) (*temp_a0_7 & 0x7F7F7F);
             B(var_t1, 0x3) = 8;
             B(var_t1, 0x7) = 0x38;
-            W(var_t1, 0x14) = (s32) (*temp_a0_7 & 0x7F7F7F);
             temp_v0_5 = *temp_a0_7;
             W(var_t1, 0x1C) = temp_v0_5;
             W(var_t1, 0xC) = temp_v0_5;
@@ -412,21 +400,25 @@ block_64:
     temp_a0_9 = temp_a1_5 & mask24;
     if (temp_a0_9 < temp_v1_14) {
         if ((u32) (temp_v1_14 - temp_a0_9) >= 3U) {
-            var_v1_3 = temp_a1_5 & 0xFF000000;
+            var_v1_3 = 0xFF000000;
+            var_v1_3 &= temp_a1_5;
             var_v0_6 = temp_a0_9 + ((temp_v1_14 - temp_a0_9) / 3);
         } else {
-            var_v1_3 = temp_a1_5 & 0xFF000000;
+            var_v1_3 = 0xFF000000;
+            var_v1_3 &= temp_a1_5;
             var_v0_6 = temp_a0_9 + 1;
         }
         var_v1_3 |= var_v0_6 & mask24;
         *(volatile u32 *)&temp_s2->unk8 = var_v1_3;
         temp_v1_15 = *(volatile u32 *)&temp_s2->unk4;
         if ((temp_v1_15 / arg4) == ((s32) (temp_s2->unk8 & 0xFFFFFF) / (s32) arg4)) {
-            temp_a3_2 = (u16) D_8010A00C + arg0;
+            temp_a3_2 = (u16) D_8010A00C;
+            temp_a3_2 += arg0;
             H(var_t1, 0xC) = (s16) (temp_a3_2 + ((u32) (D_8010A008 * (temp_v1_15 % arg4)) / arg4));
             var_a2_3 = ctx + 8;
             var_a0_6 = var_t1;
-            H(var_a0_6, 0x8) = (s16) (temp_a3_2 + ((s32) (D_8010A008 * ((s32) (temp_s2->unk8 & 0xFFFFFF) % (s32) arg4)) / (s32) arg4));
+            temp_a3_2 += ((s32) (D_8010A008 * ((s32) (temp_s2->unk8 & 0xFFFFFF) % (s32) arg4)) / (s32) arg4);
+            H(var_a0_6, 0x8) = temp_a3_2;
             var_a0_7 = func_800860CC(var_a0_6, var_s6, var_a2_3);
         } else {
             temp_v1_16 = (u16) D_8010A00C + arg0;
@@ -442,7 +434,7 @@ block_64:
             H(var_a0_6, 0xC) = var_v0_7;
             }
             var_a2_3 = ctx + 8;
-            H(var_a0_6, 0x8) = (s16) ((u16) D_8010A008 + ((u16) D_8010A00C + arg0));
+            H(var_a0_6, 0x8) = (s16) (((u16) D_8010A00C + arg0) + (u16) D_8010A008);
             var_a0_7 = func_800860CC(var_a0_6, var_s6, var_a2_3);
         }
         var_t1 = var_a0_7;
@@ -450,21 +442,25 @@ block_64:
     }
     if (temp_v1_14 < temp_a0_9) {
         if ((u32) (temp_a0_9 - temp_v1_14) >= 4U) {
-            var_v1_4 = temp_a1_5 & 0xFF000000;
+            var_v1_4 = 0xFF000000;
+            var_v1_4 &= temp_a1_5;
             var_v0_8 = temp_a0_9 - ((temp_a0_9 - temp_v1_14) / 3);
         } else {
-            var_v1_4 = temp_a1_5 & 0xFF000000;
+            var_v1_4 = 0xFF000000;
+            var_v1_4 &= temp_a1_5;
             var_v0_8 = temp_a0_9 - 1;
         }
         var_v1_4 |= var_v0_8 & mask24;
         *(volatile u32 *)&temp_s2->unk8 = var_v1_4;
         temp_v1_18 = *(volatile u32 *)&temp_s2->unk4;
         if ((temp_v1_18 / arg4) == ((s32) (temp_s2->unk8 & 0xFFFFFF) / (s32) arg4)) {
-            temp_a3_3 = (u16) D_8010A00C + arg0;
+            temp_a3_3 = (u16) D_8010A00C;
+            temp_a3_3 += arg0;
             H(var_t1, 0xC) = (s16) (temp_a3_3 + ((u32) (D_8010A008 * (temp_v1_18 % arg4)) / arg4));
             var_a2_4 = ctx + 8;
             var_a0_8 = var_t1;
-            H(var_a0_8, 0x8) = (s16) (temp_a3_3 + ((s32) (D_8010A008 * ((s32) (temp_s2->unk8 & 0xFFFFFF) % (s32) arg4)) / (s32) arg4));
+            temp_a3_3 += ((s32) (D_8010A008 * ((s32) (temp_s2->unk8 & 0xFFFFFF) % (s32) arg4)) / (s32) arg4);
+            H(var_a0_8, 0x8) = temp_a3_3;
             var_a0_7 = func_80086030(var_a0_8, var_s6, var_a2_4);
         } else {
             temp_v1_19 = (u16) D_8010A00C + arg0;
@@ -480,7 +476,7 @@ block_64:
             H(var_a0_8, 0xC) = var_v0_9;
             }
             var_a2_4 = ctx + 8;
-            H(var_a0_8, 0x8) = (s16) ((u16) D_8010A008 + ((u16) D_8010A00C + arg0));
+            H(var_a0_8, 0x8) = (s16) (((u16) D_8010A00C + arg0) + (u16) D_8010A008);
             var_a0_7 = func_80086030(var_a0_8, var_s6, var_a2_4);
         }
         var_t1 = var_a0_7;

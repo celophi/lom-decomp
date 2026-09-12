@@ -394,7 +394,7 @@ segments:
       - [0x5727D, c, field68]                      # gcc272_cdk, func_800A6EEC
       - [0x572AD, c, func_800A6F1C] # gcc272_cdk, 100.000000%
       - [0x5749D, c, field370]                     # gcc272_cdk, func_800A710C
-      - [0x5755D, c, func_800A71CC] # gcc272_cdk, 86.227270% WIP
+      - [0x5755D, c, func_800A71CC] # gcc272_cdk, 100.000000%
       - [0x57715, c, func_800A7384]                # gcc272_cdk, 100%
       - [0x577C5, c, field341]                     # gcc272_cdk, func_800A7434
       - [0x57849, c, field69]                      # gcc272_cdk, func_800A74B8
@@ -488,7 +488,7 @@ segments:
       - [0x6DA85, c, field_script_commands] # gcc280_g0; dispatcher, seventeen commands and query helper
       - [0x6E959, c, field_script_arith_ops] # gcc280_g0; dispatcher and twelve arithmetic handlers, all exact
       - [0x6EAA1, c, field_record_setup_ops] # gcc280_g0; five record setup/sequence dispatch functions, two WIPs
-      - [0x6F4E9, c, func_800BF158]                 # gcc272_cdk, 97.696075% (register/epilogue residue)
+      - [0x6F4E9, c, func_800BF158]                 # gcc280_g0, 100.000000%
       - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, all exact
       - [0x6FDC5, c, field_generated_record_ops] # gcc280_g0; initializer, name builder and two stat modes, two WIPs
       - [0x705F1, c, field_record_effect_ops] # gcc280_g0; effect generation/classification/application, one WIP
