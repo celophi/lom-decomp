@@ -2058,26 +2058,25 @@ void field_initialize_actor_system(void)
 }
 
 /**
- * @brief TODO: relocate field entry buffer into the streaming window.
- *
- * Copies the entry's payload into the rolling destination at
- * g_field_resource_cursor,
- * repoints the entry's begin/end pointers at the new location, updates its
- * state flags, and hands the previous buffer to func_8006C3FC.
- *
- * @param resource_index Index into g_field_resource_entries / D_800FDF58.
- * @note WIP - not yet byte-matching. Currently 99.52%; the only residue is the
- *       a1/a2 load order in the first bcopy argument setup.
- * @see decomp.me (99.52%) https://decomp.me/scratch/iTv8i
+ * @brief Relocate a field resource payload into the streaming buffer.
+ * @param resource_index Resource entry index to relocate.
  */
 void field_relocate_resource_buffer(s32 resource_index)
 {
     u32 new_var4;
     Struct_D800FDF58* new_var;
     u8* old_start;
+    void** cursor_ref;
+    u8* source_base;
+    u8* buffer_base;
 
-    g_field_resource_cursor += 0;
-    bcopy((void*)(((u32)0x80180000 - (u32)g_field_resource_buffer) + ((u32)g_field_resource_entries[resource_index].start)), g_field_resource_cursor,
+    buffer_base = g_field_resource_buffer;
+    buffer_base++;
+    buffer_base--;
+    source_base = (u8*)0x80180000;
+    cursor_ref = &g_field_resource_cursor;
+    *(u32*)&g_field_resource_entries[resource_index].start += 0;
+    bcopy((void*)(source_base - (u32)buffer_base + (u32)g_field_resource_entries[resource_index].start), *cursor_ref,
           g_field_resource_entries[resource_index].end - g_field_resource_entries[resource_index].start);
     new_var4 = g_field_resource_entries[resource_index].end;
     old_start = g_field_resource_entries[resource_index].start;

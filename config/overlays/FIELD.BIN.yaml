@@ -355,7 +355,7 @@ segments:
       - [0x53D39, c, func_800A39A8]             # gcc272_cdk, 100%
       - [0x53E21, c, func_800A3A90]             # gcc272_cdk, 100%
       - [0x53F09, c, func_800A3B78]             # gcc272_cdk, 100%
-      - [0x53F79, c, func_800A3BE8] # gcc272_cdk, 94.310350% WIP
+      - [0x53F79, c, func_800A3BE8] # gcc272_cdk, 100%
       - [0x540D5, c, func_800A3D44]             # gcc272_cdk, 100%
       - [0x541A1, c, field333]                  # gcc272_cdk, func_800A3E10, 100%
       - [0x5424D, c, field256]                  # gcc272_cdk, func_800A3EBC
@@ -406,7 +406,7 @@ segments:
       - [0x58345, c, func_800A7FB4] # gcc272_cdk, 86.591400% WIP
       - [0x584B9, c, func_800A8128] # gcc272_cdk, 93.673200% WIP
       - [0x5871D, c, func_800A838C]                 # gcc272_cdk, 100%
-      - [0x588B5, c, func_800A8524] # gcc272_cdk, 90.886080% WIP
+      - [0x588B5, c, func_800A8524] # gcc272_cdk, 100%
       - [0x589F1, c, func_800A8660] # gcc272_cdk, 93.470590% WIP
       - [0x58C11, c, field70]                      # gcc272_cdk, func_800A8880
       # TU hypothesis: field_immediate_text (high). See docs/decompilation/field-boundaries/map.md.
@@ -470,7 +470,7 @@ segments:
       - [0x62BFD, c, field_event_dispatch] # gcc280_g0; claim/start owner events, both exact
       - [0x62E2D, c, field_state_ops] # gcc280_g0; record/effect/attribute helpers, thirteen exact and one WIP
       - [0x63861, c, field_party_setup] # gcc280_g0; context and party initialization; four exact, B37D4 WIP
-      - [0x64185, c, field_actor_templates] # gcc280_g0; actor selection 81.959460%, initialization 89.043480%, scaling exact
+      - [0x64185, c, field_actor_templates] # gcc280_g0; actor selection exact, initialization 89.043480%, scaling exact
       - [0x64721, c, field_actor_lifecycle] # gcc280_g0; four actor setup/reset routines, two exact/two WIP
       - [0x64BD5, c, func_800B4844]                # gcc280_g0, 100.00000%, 29/29 instructions
       - [0x64C49, c, field_status_ticks] # gcc280_g0; ten status/update routines, all exact
