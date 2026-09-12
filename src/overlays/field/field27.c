@@ -80,7 +80,7 @@ extern s32 g_frame_counter;
  * @note WIP: the layout reloads and coordinate temporary widths still differ.
  *       The raw layout x load is kept separate from its short coordinate.
  *       Matching evidence is in working/func_80084D08/status.md.
- * @see decomp.me (94.60%)
+ * @see decomp.me (95.64%)
  */
 void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
     s16 *scratch = (s16 *)0x1F800000;
@@ -164,7 +164,6 @@ void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
     u8 *temp_s0;
     State23C *temp_s2;
     u8 *var_a0;
-    u8 *var_a0_3;
     u8 *var_a0_6;
     u8 *var_a0_7;
     u8 *var_a0_8;
@@ -270,7 +269,7 @@ build_first_prim:
         var_s0 = func_80085E84(var_s0, ctx, var_a2, scratch);
     }
     temp_v1_4 = temp_s2->u4C.bytes.unk4D;
-    var_a0_3 = var_s0;
+    var_a0_7 = var_s0;
     if (temp_v1_4 < 2U) {
         if (temp_s2->u4C.unk4C & 1) {
             if (temp_s2->unk48 == 0xFF) {
@@ -289,12 +288,12 @@ build_first_prim:
             var_a2 = (u32) D_800EAFF4;
             var_a3 = temp_s2->unk4A;
         }
-        var_a0_3 = func_80085D30(var_a0_3, call_ctx, (u32 *) var_a2, var_a3, (s32) arg0, (s32) var_s6);
+        var_a0_7 = func_80085D30(var_a0_7, call_ctx, (u32 *) var_a2, var_a3, (s32) arg0, (s32) var_s6);
     } else if ((temp_v1_4 == 2) && ((u8) D_800FDCEA >= 0x41U)) {
         var_a2 = (u32) D_800EB004;
-        var_a0_3 = func_80085D30(var_a0_3, ctx, (u32 *) var_a2, temp_s2->unk48, (s32) arg0, (s32) var_s6);
+        var_a0_7 = func_80085D30(var_a0_7, ctx, (u32 *) var_a2, temp_s2->unk48, (s32) arg0, (s32) var_s6);
     }
-    var_t1 = var_a0_3;
+    var_t1 = var_a0_7;
     if (arg2 < 3) {
         entry_base = D_800FD818;
         temp_a0_4 = &entry_base[arg2];
@@ -426,6 +425,7 @@ block_64:
             var_a2_3 = ctx + 8;
             var_a0_6 = var_t1;
             H(var_a0_6, 0x8) = (s16) (temp_a3_2 + ((s32) (D_8010A008 * ((s32) (temp_s2->unk8 & 0xFFFFFF) % (s32) arg4)) / (s32) arg4));
+            var_a0_7 = func_800860CC(var_a0_6, var_s6, var_a2_3);
         } else {
             temp_v1_16 = (u16) D_8010A00C + arg0;
             H(var_t1, 0xC) = temp_v1_16;
@@ -434,15 +434,17 @@ block_64:
             temp_v1_17 = temp_s2->unk4;
             if ((u32) ((temp_s2->unk8 & 0xFFFFFF) - temp_v1_17) < arg4) {
                 var_v0_7 = (u16) D_8010A00C + arg0 + ((u32) (D_8010A008 * (temp_v1_17 % arg4)) / arg4);
+            H(var_a0_6, 0xC) = var_v0_7;
             } else {
                 var_v0_7 = (u16) D_8010A00C + arg0;
-            }
             H(var_a0_6, 0xC) = var_v0_7;
+            }
             var_a2_3 = ctx + 8;
             H(var_a0_6, 0x8) = (s16) ((u16) D_8010A008 + ((u16) D_8010A00C + arg0));
+            var_a0_7 = func_800860CC(var_a0_6, var_s6, var_a2_3);
         }
-        var_a0_7 = func_800860CC(var_a0_6, var_s6, var_a2_3);
-        goto block_88;
+        var_t1 = var_a0_7;
+        goto animate_done;
     }
     if (temp_v1_14 < temp_a0_9) {
         if ((u32) (temp_a0_9 - temp_v1_14) >= 4U) {
@@ -461,6 +463,7 @@ block_64:
             var_a2_4 = ctx + 8;
             var_a0_8 = var_t1;
             H(var_a0_8, 0x8) = (s16) (temp_a3_3 + ((s32) (D_8010A008 * ((s32) (temp_s2->unk8 & 0xFFFFFF) % (s32) arg4)) / (s32) arg4));
+            var_a0_7 = func_80086030(var_a0_8, var_s6, var_a2_4);
         } else {
             temp_v1_19 = (u16) D_8010A00C + arg0;
             H(var_t1, 0xC) = temp_v1_19;
@@ -469,17 +472,18 @@ block_64:
             temp_v1_20 = temp_s2->unk4;
             if ((u32) ((temp_s2->unk8 & 0xFFFFFF) - temp_v1_20) < arg4) {
                 var_v0_9 = (u16) D_8010A00C + arg0 + ((u32) (D_8010A008 * (temp_v1_20 % arg4)) / arg4);
+            H(var_a0_8, 0xC) = var_v0_9;
             } else {
                 var_v0_9 = (u16) D_8010A00C + arg0;
-            }
             H(var_a0_8, 0xC) = var_v0_9;
+            }
             var_a2_4 = ctx + 8;
             H(var_a0_8, 0x8) = (s16) ((u16) D_8010A008 + ((u16) D_8010A00C + arg0));
+            var_a0_7 = func_80086030(var_a0_8, var_s6, var_a2_4);
         }
-        var_a0_7 = func_80086030(var_a0_8, var_s6, var_a2_4);
-block_88:
         var_t1 = var_a0_7;
     }
+animate_done:
     var_s0 = var_t1;
     W(var_s0, 0x4) = 0x808080;
     B(var_s0, 0x3) = 4;

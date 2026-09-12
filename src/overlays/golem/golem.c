@@ -1061,11 +1061,10 @@ void golem_render(GolemRenderContext* render_context)
 }
 
 /**
- * @brief Link a base primitive into the render context OT, emit a highlight
- *        primitive for each on-screen panel cell, then link a final frame prim.
- * @param packet_buffer Starting primitive pointer for this pass.
- * @param render_context Render context containing the panel ordering table.
- * @return Packet cursor after the final frame primitive.
+ * @brief Draw the visible logic-block list and highlight the selected block.
+ * @param packet_buffer Next free GPU packet.
+ * @param render_context Frame buffer and block-list ordering table.
+ * @return Packet cursor after the icons and viewport commands.
  * @see decomp.me (100.00%)
  * @see working/func_80141478/code.c
  */
@@ -1126,12 +1125,10 @@ u8* golem_draw_block_list(u8* packet_buffer, GolemRenderContext* render_context)
 }
 
 /**
- * @brief Link a base primitive into the render context OT, emit a highlight prim
- *        for the selected cursor cell and for each active grid cell, then draw a
- *        framing box sized by the current panel mode.
- * @param packet_cursor Running primitive pointer, advanced for each primitive.
- * @param render_context Render context containing the grid ordering table.
- * @return Packet cursor after the final frame primitive.
+ * @brief Draw placed blocks, the active placement preview, and grid dividers.
+ * @param packet_cursor Next free GPU packet.
+ * @param render_context Frame buffer and grid ordering table.
+ * @return Packet cursor after the icons, dividers, and viewport commands.
  * @see decomp.me (100.00%)
  * @see working/func_801416C8/code.c
  */
@@ -1160,14 +1157,14 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
 
     if (g_golem_is_placing_block != 0)
     {
-        next_packet = golem_draw_composite_icon(cursor, ordering_table, g_golem_selected_block, g_golem_block_rotation, g_golem_block_x * 0x10,
-                                                g_golem_block_y * 0x10, g_golem_block_status[g_golem_selected_block].clut, 0, 3);
+        next_packet = golem_draw_composite_icon(cursor, ordering_table, g_golem_selected_block, g_golem_block_rotation, g_golem_block_x * GOLEM_GRID_CELL_SIZE,
+                                                g_golem_block_y * GOLEM_GRID_CELL_SIZE, g_golem_block_status[g_golem_selected_block].clut, 0, 3);
         icon_base = (u8*)g_golem_composite_icon_rows;
         icon_offset =
             g_golem_block_rotation * sizeof(GolemIconRotation) + ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF) * sizeof(GolemCompositeIconRow);
         variant_position = (GolemIconRotation*)(icon_base + icon_offset + sizeof(GolemIconHeader));
-        cursor_target_x = variant_position->origin.x * 8 + g_golem_block_x * 0x10 - g_golem_grid_size_class * 8 + 0x3C;
-        cursor_target_y = variant_position->origin.y * 8 + g_golem_block_y * 0x10 - g_golem_grid_size_class * 8 + 0x3C;
+        cursor_target_x = variant_position->origin.x * 8 + g_golem_block_x * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
+        cursor_target_y = variant_position->origin.y * 8 + g_golem_block_y * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
         if ((cursor_target_x != g_golem_cursor_x || cursor_target_y != g_golem_cursor_y) && g_golem_cursor_steps == 0)
         {
             g_golem_cursor_target_x = cursor_target_x;
@@ -1187,10 +1184,10 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
             logic_block = GOLEM_LOGIC_BLOCK(block_index);
             if ((logic_block & 3) == g_golem_active_logic_type)
             {
-                next_packet =
-                    golem_draw_composite_icon(next_packet, ordering_table, block_index, (logic_block >> 0x11) & 3, ((s32)(logic_block << 8) >> 27) << 4,
-                                              ((s32)(GOLEM_LOGIC_BLOCK(block_index) << 3) >> 27) << 4, block_status->clut, 0,
-                                              block_index == g_golem_selected_block ? (g_golem_is_placing_block ? 0x80 : 2) : 0);
+                next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, (logic_block >> 0x11) & 3,
+                                                        ((s32)(logic_block << 8) >> 27) * GOLEM_GRID_CELL_SIZE,
+                                                        ((s32)(GOLEM_LOGIC_BLOCK(block_index) << 3) >> 27) * GOLEM_GRID_CELL_SIZE, block_status->clut, 0,
+                                                        block_index == g_golem_selected_block ? (g_golem_is_placing_block ? 0x80 : 2) : 0);
             }
             block_status++;
             block_index++;
@@ -1377,20 +1374,17 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
 }
 
 /**
- * @brief Draw one grid cell's icon: the base glyph plus each positioned part
- *        from its layout row, then splice a draw-mode packet.
+ * @brief Draw a rotated logic-block icon from its base glyph and positioned parts.
  * @param packet_cursor Running packet cursor.
  * @param ordering_table Ordering-table tag for the icon packets.
  * @param block_index Logic-block index selecting the packed record.
- * @param rotation Layout rotation index; each view has a 0x14-byte stride.
+ * @param rotation Index of the icon's four rotated layouts.
  * @param x          Screen x of the cell.
  * @param y          Screen y of the cell.
  * @param clut       CLUT selector passed to the part glyphs.
  * @param use_origin When 1, offset x/y by the layout row's origin fields.
  * @param style      Style flags forwarded to golem_emit_glyph for each part.
  * @return Packet cursor past the trailing draw-mode packet.
- * @note Each part view starts at the rotation-specific offset and advances
- *       four bytes per layout entry.
  * @see decomp.me (100.00%)
  * @see working/func_80141EB4_golem/
  */

@@ -488,58 +488,46 @@ void field_script_op_0a(void)
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-} WordRecord;
-
-
-
-void func_800BD434(s32 arg0, s32 arg1, s32 arg2);
-
 /**
- * @brief seq-record-nibble-decode family (4-call variant), exemplar field_script_op_0e.
- *
- * WIP 95.92% (gcc280_g0). The do-while(0) around the middle three statements
- * supplies NOTE_INSN_LOOP markers that fix the store-vs-arg sched1 ordering;
- * do not remove it. The remaining ~4% is a block-4 a1/a2 register-coloring
- * race with no clean natural-C spelling (the permuter only reaches lower
- * scores via scaffolding). See working/func_800B8CFC/STATUS.md.
+ * @brief Copy a script-variable value between two script-selected owners.
  */
 void func_800B8CFC(void)
 {
-    s32 sp10;
-    u16 sp14;
-    s32 sp18;
-    u16 sp1C;
-    u8 b;
-    u8 *temp_a1;
-    s32 r3;
+    s32 source_owner;
+    u16 source_ref;
+    s32 destination_owner;
+    FieldScriptVariableRef destination_ref;
+    u8 descriptor;
+    u8 *operands;
+    s32 value;
 
-    temp_a1 = (u8 *)((WordRecord *)((u8 *)g_field_script + (((WordRecord *)g_field_script)->unk4 * 3 << 2)))->unk8;
-    b = temp_a1[1];
-    ((WordRecord *)((u8 *)g_field_script + (((WordRecord *)g_field_script)->unk4 * 3 << 2)))->unk8 =
-        (s32)field_script_read_operand_or_owner(b & 3, temp_a1 + 2, &sp10);
-    ((WordRecord *)((u8 *)g_field_script + (((WordRecord *)g_field_script)->unk4 * 3 << 2)))->unk8 =
-        (s32)field_script_read_u16(
-            (u8 *)((WordRecord *)((u8 *)g_field_script + (((WordRecord *)g_field_script)->unk4 * 3 << 2)))->unk8,
-            &sp14);
+    operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
+    descriptor = operands[1];
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc =
+        field_script_read_operand_or_owner(OPERAND_TYPE_3(descriptor), operands + 2, &source_owner);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc =
+        field_script_read_u16(
+            FIELD_SCRIPT_ACTIVE_RECORD()->pc,
+            &source_ref);
     do
     {
-        r3 = func_800BD3B0(sp10, sp14 << 16);
-        ((WordRecord *)((u8 *)g_field_script + (((WordRecord *)g_field_script)->unk4 * 3 << 2)))->unk8 =
-            (s32)field_script_read_operand_or_owner(
-                (b >> 2) & 3,
-                (u8 *)((WordRecord *)((u8 *)g_field_script + (((WordRecord *)g_field_script)->unk4 * 3 << 2)))->unk8 + 2,
-                &sp18);
-        ((WordRecord *)((u8 *)g_field_script + (((WordRecord *)g_field_script)->unk4 * 3 << 2)))->unk8 =
-            (s32)field_script_read_u16(
-                (u8 *)((WordRecord *)((u8 *)g_field_script + (((WordRecord *)g_field_script)->unk4 * 3 << 2)))->unk8,
-                &sp1C);
+        value = func_800BD3B0(source_owner, source_ref << 16);
+        {
+            u8 *destination_operands;
+            destination_operands = (u8 *)g_field_script;
+            destination_operands += ((FieldScriptRecord *)destination_operands)->unk4 * 3 << 2;
+            destination_operands = ((FieldScriptRecord *)destination_operands)->pc;
+            FIELD_SCRIPT_ACTIVE_RECORD()->pc =
+                field_script_read_operand_or_owner(OPERAND_TYPE_2(descriptor), destination_operands + 2, &destination_owner);
+        }
     } while (0);
-    func_800BD434(sp18, sp1C << 16, r3);
+    {
+        void func_800BD434(s32 arg0, FieldScriptVariableRef arg1, s32 arg2);
+        u8 *next;
+        next = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &destination_ref.value);
+        FIELD_SCRIPT_ACTIVE_RECORD()->pc = next;
+        func_800BD434(destination_owner, destination_ref, value);
+    }
 }
 
 s32 func_80087F0C(s32);
