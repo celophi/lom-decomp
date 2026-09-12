@@ -9,7 +9,14 @@ extern u8 g_menuLayoutBuffer[];
 
 typedef struct { u8 pad[0x2B0C]; u8 unk2B0C; } NameView;
 typedef struct { s32 a[27]; } LocalTableCopy;
+typedef struct { u8 pad[4]; u8 value; } ResourceByte;
 
+typedef struct { u8 pad[0x2B30]; unsigned int a0:4; unsigned int a1:4; unsigned int a2:4; unsigned int a3:4; unsigned int a4:4; unsigned int a5:4; unsigned int a6:4; unsigned int a7:4; unsigned int a8:4; unsigned int a9:4; unsigned int a10:4; unsigned int a11:4; unsigned int a12:4; unsigned int a13:4; unsigned int a14:4; unsigned int a15:4; } StatNibbles;
+
+typedef struct { u8 pad[0x2B22]; u16 hp, stat0, stat1, stat2, stat3, stat4; } OutputStats;
+typedef struct {u8 pad[0x2B48];u8 flags0,flags1,flags2,enabled;u32 zero;unsigned int low:4;unsigned int high:4;unsigned int rest:24;} GroupOutput;
+typedef struct {u8 pad[0x2B38];u16 resistance;} ResistanceView;
+typedef struct {u8 pad[0xCF4];unsigned int id:8;unsigned int type:2;unsigned int category:6;unsigned int rest:16;} ItemHeader;
 #define U8(p,o)  (*(u8 *)((u8 *)(p) + (o)))
 #define U16(p,o) (*(u16 *)((u8 *)(p) + (o)))
 #define U32(p,o) (*(u32 *)((u8 *)(p) + (o)))
@@ -205,6 +212,7 @@ void func_800C4364(s32 arg0)
     s32 count;
     s32 i;
     s32 digit;
+    s32 resourceIndex; s32 highIndex; s32 nextDigit;
     s32 value;
     s32 recordOffset;
     s32 itemOffset;
@@ -222,15 +230,15 @@ void func_800C4364(s32 arg0)
     base = g_menuLayoutBuffer;
     accum[15] = (s32)base[0x29D5];
     digit = accum[15] / 50 + 11;
-    accum[0] = func_800C1E40(0x100)[digit * 2 + 4] + (func_800C1E40(0x100)[digit * 2 + 5] << 8);
-    accum[1] = func_800C1E40(0x100)[(digit + 1) * 2 + 4] + (func_800C1E40(0x100)[(digit + 1) * 2 + 5] << 8);
+    {s32 highIndex;accum[0] = ((ResourceByte *)(func_800C1E40(0x100) + (resourceIndex = digit * 2)))->value + (((ResourceByte *)(func_800C1E40(0x100) + ((highIndex = digit * 2 + 1))))->value << 8);}
+    {s32 highIndex;accum[1] = ((ResourceByte *)(func_800C1E40(0x100) + (resourceIndex = (digit + 1) * 2)))->value + (((ResourceByte *)(func_800C1E40(0x100) + ((highIndex = (digit + 1) * 2 + 1))))->value << 8);}
     i = accum[0];
     if (i < accum[1]) {
         outBase = base;
         recordOffset = arg0 * 0x14C;
         do {
-            if (count < 21) ((NameView *)(outBase + count + recordOffset))->unk2B0C = func_800C1E40(0x100)[i + 4];
-            i++; count++;
+            if (count < 21) ((NameView *)((count + recordOffset) + (u32)outBase))->unk2B0C = ((ResourceByte *)(func_800C1E40(0x100) + i))->value;
+            count++; i++;
         } while (i < accum[1]);
     }
 
@@ -239,47 +247,47 @@ void func_800C4364(s32 arg0)
         accum[15] = value % 50 + 1;
         digit = accum[15] / 100;
         if (accum[15] >= 100) {
-            accum[0] = func_800C1E40(0x100)[digit * 2 + 4] + (func_800C1E40(0x100)[digit * 2 + 5] << 8);
-            accum[1] = func_800C1E40(0x100)[(digit + 1) * 2 + 4] + (func_800C1E40(0x100)[(digit + 1) * 2 + 5] << 8);
+            {s32 highIndex;accum[0] = ((ResourceByte *)(func_800C1E40(0x100) + (resourceIndex = digit * 2)))->value + (((ResourceByte *)(func_800C1E40(0x100) + ((highIndex = digit * 2 + 1))))->value << 8);}
+            {s32 highIndex;accum[1] = ((ResourceByte *)(func_800C1E40(0x100) + (resourceIndex = (digit + 1) * 2)))->value + (((ResourceByte *)(func_800C1E40(0x100) + ((highIndex = (digit + 1) * 2 + 1))))->value << 8);}
             i = accum[0];
             if (i < accum[1]) {
                 outBase = g_menuLayoutBuffer; recordOffset = arg0 * 0x14C;
-                do { if (count < 21) ((NameView *)(outBase + count + recordOffset))->unk2B0C = func_800C1E40(0x100)[i + 4]; i++; count++; } while (i < accum[1]);
+                do { if (count < 21) ((NameView *)((count + recordOffset) + (u32)outBase))->unk2B0C = ((ResourceByte *)(func_800C1E40(0x100) + i))->value; count++; i++; } while (i < accum[1]);
             }
         }
         digit = (accum[15] % 100) / 10;
         if (accum[15] >= 10) {
-            accum[0] = func_800C1E40(0x100)[digit * 2 + 4] + (func_800C1E40(0x100)[digit * 2 + 5] << 8);
-            accum[1] = func_800C1E40(0x100)[(digit + 1) * 2 + 4] + (func_800C1E40(0x100)[(digit + 1) * 2 + 5] << 8);
+            {s32 highIndex;accum[0] = ((ResourceByte *)(func_800C1E40(0x100) + (resourceIndex = digit * 2)))->value + (((ResourceByte *)(func_800C1E40(0x100) + ((highIndex = digit * 2 + 1))))->value << 8);}
+            {s32 highIndex;accum[1] = ((ResourceByte *)(func_800C1E40(0x100) + (resourceIndex = (digit + 1) * 2)))->value + (((ResourceByte *)(func_800C1E40(0x100) + ((highIndex = (digit + 1) * 2 + 1))))->value << 8);}
             i = accum[0];
             if (i < accum[1]) {
                 outBase = g_menuLayoutBuffer; recordOffset = arg0 * 0x14C;
-                do { if (count < 21) ((NameView *)(outBase + count + recordOffset))->unk2B0C = func_800C1E40(0x100)[i + 4]; i++; count++; } while (i < accum[1]);
+                do { if (count < 21) ((NameView *)((count + recordOffset) + (u32)outBase))->unk2B0C = ((ResourceByte *)(func_800C1E40(0x100) + i))->value; count++; i++; } while (i < accum[1]);
             }
         }
         digit = accum[15] % 10;
-        accum[0] = func_800C1E40(0x100)[digit * 2 + 4] + (func_800C1E40(0x100)[digit * 2 + 5] << 8);
-        accum[1] = func_800C1E40(0x100)[(digit + 1) * 2 + 4] + (func_800C1E40(0x100)[(digit + 1) * 2 + 5] << 8);
+        {s32 highIndex;accum[0] = ((ResourceByte *)(func_800C1E40(0x100) + (resourceIndex = digit * 2)))->value + (((ResourceByte *)(func_800C1E40(0x100) + ((highIndex = digit * 2 + 1))))->value << 8);}
+        {s32 highIndex;accum[1] = ((ResourceByte *)(func_800C1E40(0x100) + (resourceIndex = (digit + 1) * 2)))->value + (((ResourceByte *)(func_800C1E40(0x100) + ((highIndex = (digit + 1) * 2 + 1))))->value << 8);}
         i = accum[0];
         if (i < accum[1]) {
             outBase = g_menuLayoutBuffer; recordOffset = arg0 * 0x14C;
-            do { if (count < 21) ((NameView *)(outBase + count + recordOffset))->unk2B0C = func_800C1E40(0x100)[i + 4]; i++; count++; } while (i < accum[1]);
+            do { if (count < 21) ((NameView *)((count + recordOffset) + (u32)outBase))->unk2B0C = ((ResourceByte *)(func_800C1E40(0x100) + i))->value; count++; i++; } while (i < accum[1]);
         }
         accum[0] = func_800C1E40(0x100)[0x18] + (func_800C1E40(0x100)[0x19] << 8);
         accum[1] = func_800C1E40(0x100)[0x1A] + (func_800C1E40(0x100)[0x1B] << 8);
         i = accum[0];
         if (i < accum[1]) {
             outBase = g_menuLayoutBuffer; recordOffset = arg0 * 0x14C;
-            do { if (count < 21) ((NameView *)(outBase + count + recordOffset))->unk2B0C = func_800C1E40(0x100)[i + 4]; i++; count++; } while (i < accum[1]);
+            do { if (count < 21) ((NameView *)((count + recordOffset) + (u32)outBase))->unk2B0C = ((ResourceByte *)(func_800C1E40(0x100) + i))->value; count++; i++; } while (i < accum[1]);
         }
     }
-    if (count < 21) { outBase = g_menuLayoutBuffer; recordOffset = arg0 * 0x14C; ((NameView *)(outBase + count + recordOffset))->unk2B0C = 0; }
+    if (count < 21) ((NameView *)(g_menuLayoutBuffer+(count+arg0*0x14C)))->unk2B0C = 0;
 
     i = 0; accum[0] = 0;
     if (g_gosub_result_count > 0) {
         u8 *scanBase = g_menuLayoutBuffer;
         u8 *recBase = scanBase + 0xCE0;
-        s32 resultCount = g_gosub_result_count;
+        s32 resultCount = g_gosub_result_count; s32 *results;
         results = g_gosub_result_values;
         do {
             itemOffset = *results << 6;
@@ -287,34 +295,36 @@ void func_800C4364(s32 arg0)
             i++; results++;
         } while (i < resultCount);
     }
-    value = 10; if (accum[0] >= 10) { value = 200; if (accum[0] < 201) value = accum[0]; }
-    accum[0] = value; U16(g_menuLayoutBuffer, arg0 * 0x14C + 0x2B24) = (u16)accum[0];
+    accum[0] = accum[0]<10 ? 10 : accum[0]>200 ? 200 : accum[0]; ((OutputStats *)(g_menuLayoutBuffer+arg0*0x14C))->stat0 = (u16)accum[0];
 
     i = 0; accum[0]=0; accum[1]=0; accum[2]=0; accum[3]=0;
-    if (g_gosub_result_count > 0) {
+    if (g_gosub_result_count > 0) {s32 selectedType=1;
         u8 *scanBase = g_menuLayoutBuffer;
         u8 *recBase = scanBase + 0xCE0;
-        s32 resultCount = g_gosub_result_count;
+        s32 resultCount = g_gosub_result_count; s32 *results;
         results = g_gosub_result_values;
         do {
             itemOffset = *results << 6;
-            if (((U32(scanBase,itemOffset+0xCF4)>>8)&3)==1) {
+            if (((U32(scanBase,itemOffset+0xCF4)>>8)&3)==selectedType) {
                 accum[0]+=U16(recBase,itemOffset+0x24); accum[1]+=U16(recBase,itemOffset+0x26); accum[2]+=U16(recBase,itemOffset+0x28); accum[3]+=U16(recBase,itemOffset+0x2A);
             }
             i++; results++;
         } while (i < resultCount);
         i=0;
     }
-    ap=accum; recordOffset=arg0*0x14C;
-    do { if (*ap>=0) { value=99; if (*ap<100) value=*ap; } else value=0; *ap=value; U16(g_menuLayoutBuffer,recordOffset+0x2B26)=(u16)*ap; ap++; i++; recordOffset+=2; } while(i<4);
+    {u8 *statBase;i=0;statBase=g_menuLayoutBuffer;
+    for(;i<4;i++) {s32 outputOffset;
+        accum[i] = accum[i]<0 ? 0 : accum[i]>99 ? 99 : accum[i];
+        ((OutputStats *)(statBase+(outputOffset=arg0*0x14C+i*2)))->stat1=(u16)accum[i];
+    }}
 
     accum[0]=0; accum[1]=0; accum[2]=0; accum[3]=0; accum[4]=0; accum[5]=0; accum[6]=0; accum[7]=0;
     accum[8]=0; accum[9]=0; accum[10]=0; accum[11]=0; accum[12]=0; accum[13]=0; accum[14]=0; accum[15]=0;
     i=0;
-    if (g_gosub_result_count>0) {
-        results=g_gosub_result_values;
+    if (g_gosub_result_count>i) {
+        u8 *itemBase=g_menuLayoutBuffer; s32 resultCount=g_gosub_result_count; s32 *results=g_gosub_result_values;
         do {
-            u8 *item = g_menuLayoutBuffer + (*results << 6);
+            u8 *item = (u8 *)((*results << 6) + (u32)itemBase);
             type=(U32(item,0xCF4)>>8)&3;
             if(type==0){
                 accum[0]+=U32(item,0xCF8)&0xF;
@@ -336,51 +346,60 @@ void func_800C4364(s32 arg0)
                 accum[15]+=U32(item,0xCF8)>>28;
             }
             i++;results++;
-        }while(i<g_gosub_result_count);
+        }while(i<resultCount);
     }
-    i = 0;
-    do {
+    for (i=0;i<16;i++) {
         if (g_menuLayoutBuffer[0x29D5] >= 200) accum[i] += 2;
-        if (accum[i] >= 0) {
-            value = 9;
-            if (accum[i] < 10) value = accum[i];
-        } else {
-            value = 0;
-        }
-        accum[i] = value;
-        i++;
-    } while (i < 16);
+        accum[i] = accum[i]<0 ? 0 : accum[i]>9 ? 9 : accum[i];
+    }
 
-    p=g_menuLayoutBuffer+arg0*0x14C;
-    value=U32(p,0x2B30); value=(value&~0xF)|(accum[0]&0xF);U32(p,0x2B30)=value; value=(value&~0xF0)|((accum[1]&0xF)<<4);U32(p,0x2B30)=value; value=(value&~0xF00)|((accum[2]&0xF)<<8);U32(p,0x2B30)=value; value=(value&0xFFFF0FFF)|((accum[3]&0xF)<<12);U32(p,0x2B30)=value; value=(value&0xFFF0FFFF)|((accum[4]&0xF)<<16);U32(p,0x2B30)=value; value=(value&0xFF0FFFFF)|((accum[5]&0xF)<<20);U32(p,0x2B30)=value; value=(value&0xF0FFFFFF)|((accum[6]&0xF)<<24);U32(p,0x2B30)=value; U32(p,0x2B30)=(value&0x0FFFFFFF)|(accum[7]<<28);
-    value=U32(p,0x2B34); value=(value&~0xF)|(accum[8]&0xF);U32(p,0x2B34)=value; value=(value&~0xF0)|((accum[9]&0xF)<<4);U32(p,0x2B34)=value; value=(value&~0xF00)|((accum[10]&0xF)<<8);U32(p,0x2B34)=value; value=(value&0xFFFF0FFF)|((accum[11]&0xF)<<12);U32(p,0x2B34)=value; value=(value&0xFFF0FFFF)|((accum[12]&0xF)<<16);U32(p,0x2B34)=value; value=(value&0xFF0FFFFF)|((accum[13]&0xF)<<20);U32(p,0x2B34)=value; value=(value&0xF0FFFFFF)|((accum[14]&0xF)<<24);U32(p,0x2B34)=value; U32(p,0x2B34)=(value&0x0FFFFFFF)|(accum[15]<<28);
+    
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a0 = accum[0];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a1 = accum[1];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a2 = accum[2];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a3 = accum[3];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a4 = accum[4];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a5 = accum[5];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a6 = accum[6];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a7 = accum[7];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a8 = accum[8];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a9 = accum[9];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a10 = accum[10];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a11 = accum[11];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a12 = accum[12];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a13 = accum[13];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a14 = accum[14];
+    ((StatNibbles *)(g_menuLayoutBuffer+arg0*0x14C))->a15 = accum[15];
+
 
     accum[0]=0;accum[1]=0;accum[2]=0;accum[3]=0;accum[4]=0;accum[5]=0;accum[6]=0;accum[7]=0;i=0;
-    if(g_gosub_result_count>0){results=g_gosub_result_values;do{u8 *item=g_menuLayoutBuffer+(*results<<6);accum[0]+=D_800F0C38[U32(item,0xCFC)&0xF];accum[1]+=D_800F0C38[U8(item,0xCFC)>>4];accum[2]+=D_800F0C38[(U32(item,0xCFC)>>8)&0xF];accum[3]+=D_800F0C38[(U32(item,0xCFC)>>12)&0xF];accum[4]+=D_800F0C38[U16(item,0xCFE)&0xF];accum[5]+=D_800F0C38[(U32(item,0xCFC)>>20)&0xF];accum[6]+=D_800F0C38[U8(item,0xCFF)&0xF];accum[7]+=D_800F0C38[U32(item,0xCFC)>>28];results++;i++;}while(i<g_gosub_result_count);i=0;}
-    ap=accum;recordOffset=arg0*0x14C;do{value=(*ap*5)+20;*ap=value;if(value>=20){if(value<100)value=value;else value=99;}else value=20;*ap=value;U16(g_menuLayoutBuffer,recordOffset+0x2B38+i*2)&=0xFE00;U16(g_menuLayoutBuffer,recordOffset+0x2B38+i*2)=(u16)*ap<<9;ap++;i++;}while(i<8);
+    for(i=0;i<g_gosub_result_count;i++){s8 *resistanceTable=D_800F0C38;u8 *item=g_menuLayoutBuffer+(g_gosub_result_values[i]<<6);accum[0]+=resistanceTable[U32(item,0xCFC)&0xF];accum[1]+=resistanceTable[U8(item,0xCFC)>>4];accum[2]+=resistanceTable[(U32(item,0xCFC)>>8)&0xF];accum[3]+=resistanceTable[(U32(item,0xCFC)>>12)&0xF];accum[4]+=resistanceTable[U16(item,0xCFE)&0xF];accum[5]+=resistanceTable[(U32(item,0xCFC)>>20)&0xF];accum[6]+=resistanceTable[U8(item,0xCFF)&0xF];accum[7]+=resistanceTable[U32(item,0xCFC)>>28];}
+    for(i=0;i<8;i++){accum[i]=(accum[i]*5)+20;accum[i] = accum[i]<20 ? 20 : accum[i]>99 ? 99 : accum[i];((ResistanceView *)(g_menuLayoutBuffer+arg0*0x14C+i*2))->resistance&=0xFE00;((ResistanceView *)(g_menuLayoutBuffer+arg0*0x14C+i*2))->resistance=(u16)accum[i]<<9;}
 
-    accum[0]=0;i=0;if(g_gosub_result_count>0){results=g_gosub_result_values;do{itemOffset=*results<<6;if(((U32(g_menuLayoutBuffer,itemOffset+0xCF4)>>8)&3)==1)accum[0]|=U8(g_menuLayoutBuffer,itemOffset+0xD0C);i++;results++;}while(i<g_gosub_result_count);}g_menuLayoutBuffer[arg0*0x14C+0x2B48]=(u8)accum[0];
-    accum[0]=0;i=0;if(g_gosub_result_count>0){results=g_gosub_result_values;do{itemOffset=*results<<6;if(((U32(g_menuLayoutBuffer,itemOffset+0xCF4)>>8)&3)==0)accum[0]|=U8(g_menuLayoutBuffer,itemOffset+0xD0C);i++;results++;}while(i<g_gosub_result_count);}g_menuLayoutBuffer[arg0*0x14C+0x2B49]=(u8)accum[0];
-    accum[0]=0;i=0;if(g_gosub_result_count>0){results=g_gosub_result_values;do{itemOffset=*results<<6;if(((U32(g_menuLayoutBuffer,itemOffset+0xCF4)>>8)&3)==1)accum[0]|=U8(g_menuLayoutBuffer,itemOffset+0xD0D);i++;results++;}while(i<g_gosub_result_count);i=0;}
+    accum[0]=0;i=0;if(g_gosub_result_count>i){s32 selectedType=1;u8 *scanBase=g_menuLayoutBuffer;u8 *recBase=scanBase+0xCE0;s32 resultCount=g_gosub_result_count;s32 *results;results=g_gosub_result_values;do{itemOffset=*results<<6;if(((U32(scanBase,itemOffset+0xCF4)>>8)&3)==selectedType)accum[0]|=U8(recBase,itemOffset+0x2c);i++;results++;}while(i<resultCount);}g_menuLayoutBuffer[arg0*0x14C+0x2B48]=(u8)accum[0];
+    accum[0]=0;i=0;if(g_gosub_result_count>0){u8 *scanBase=g_menuLayoutBuffer;u8 *recBase=scanBase+0xCE0;s32 resultCount=g_gosub_result_count;s32 *results;results=g_gosub_result_values;do{itemOffset=*results<<6;if(((U32(scanBase,itemOffset+0xCF4)>>8)&3)==0)accum[0]|=U8(recBase,itemOffset+0x2c);i++;results++;}while(i<resultCount);}g_menuLayoutBuffer[arg0*0x14C+0x2B49]=(u8)accum[0];
+    accum[0]=0;i=0;if(g_gosub_result_count>0){s32 selectedType=1;u8 *scanBase=g_menuLayoutBuffer;u8 *recBase=scanBase+0xCE0;s32 resultCount=g_gosub_result_count;s32 *results;results=g_gosub_result_values;do{itemOffset=*results<<6;if(((U32(scanBase,itemOffset+0xCF4)>>8)&3)==selectedType)accum[0]|=U8(recBase,itemOffset+0x2d);i++;results++;}while(i<resultCount);i=0;}
 
-    tb0=g_menuLayoutBuffer;p=tb0+arg0*0x14C;p[0x2B4B]=1;p[0x2B4C]=0;p[0x2B4A]=(u8)accum[0];U32(p,0x2B50)&=~0xF;
-    { s32 resultCount = g_gosub_result_count; if(resultCount>0){u8 *scanBase=g_menuLayoutBuffer;results=g_gosub_result_values;do{value=U32(scanBase,(*results<<6)+0xCF4);if(((value>>8)&3)==0)U32(p,0x2B50)=(U32(p,0x2B50)&~0xF)|(localTable[((value>>8)&0xFC)>>2]&0xF);i++;results++;}while(i<resultCount);} }
+    tb0=g_menuLayoutBuffer;(tb0+arg0*0x14C)[0x2B4A]=(u8)accum[0];(tb0+arg0*0x14C)[0x2B4B]=1;U32((tb0+arg0*0x14C),0x2B4C)=0;((GroupOutput *)(tb0+arg0*0x14C))->low=0;
+    for(i=0;i<g_gosub_result_count;i++){if(((ItemHeader *)(g_menuLayoutBuffer+(g_gosub_result_values[i]<<6)))->type==0)((GroupOutput *)(tb0+arg0*0x14C))->low=(u8)localTable[((ItemHeader *)(g_menuLayoutBuffer+(g_gosub_result_values[i]<<6)))->category];}
+
     i=0; accum[0]=0;
-    tb1=g_menuLayoutBuffer;p=tb1+arg0*0x14C;
-    U32(p,0x2B50)=(U32(p,0x2B50)&~0xF0)|0x40;
-    { s32 resultCount = g_gosub_result_count; if(resultCount>0){u8 *scanBase=g_menuLayoutBuffer;results=g_gosub_result_values;do{if(((U32(scanBase,(*results<<6)+0xCF4)>>8)&3)==1)accum[0]++;i++;results++;}while(i<resultCount);} }
-    if(accum[0]==2){ tb2=g_menuLayoutBuffer;p=tb2+arg0*0x14C; U32(p,0x2B50)=(U32(p,0x2B50)&~0xF0)|0x50; }
-    if(accum[0]==3){ tb3=g_menuLayoutBuffer;p=tb3+arg0*0x14C; U32(p,0x2B50)=(U32(p,0x2B50)&~0xF0)|0x60; }
-    tb4=g_menuLayoutBuffer;p=tb4+arg0*0x14C;
-    p[0x2B51]=0;
-    accum[0]=75-((p[0x2B50]>>4)*10);
-    if(accum[0]>=0){value=50;if(accum[0]<51)value=accum[0];}else value=0;
-    accum[0]=value;
-    tb5=g_menuLayoutBuffer;p=tb5+arg0*0x14C;
-    p[0x2B53]=0; U32(p,0x2B54)=0; p[0x2B52]=(u8)accum[0];
-    accum[0]=U16(p,0x2B24);accum[1]=U16(p,0x2B26);accum[2]=U16(p,0x2B28);accum[3]=U16(p,0x2B2A);accum[4]=U16(p,0x2B2C);
-    count=(accum[0]+accum[1]+accum[2]+accum[3]+accum[4])*5>>1;
-    if(count>=50){value=999;if(count<1000)value=count;}else value=50;
-    tb5=g_menuLayoutBuffer;p=tb5+arg0*0x14C;
-    U16(p,0x2B22)=(s16)value;
+    tb1=g_menuLayoutBuffer;
+    ((GroupOutput *)(tb1+arg0*0x14C))->high=4;
+    { s32 resultCount = g_gosub_result_count; s32 *results; if(resultCount>0){u8 *scanBase=g_menuLayoutBuffer;s32 selectedType=1;results=g_gosub_result_values;do{if(((U32(scanBase,(*results<<6)+0xCF4)>>8)&3)==selectedType)accum[0]++;i++;results++;}while(i<resultCount);} }
+    if(accum[0]==2){ tb2=g_menuLayoutBuffer; ((GroupOutput *)(tb2+arg0*0x14C))->high=5; }
+    if(accum[0]==3){ tb3=g_menuLayoutBuffer; ((GroupOutput *)(tb3+arg0*0x14C))->high=6; }
+    tb4=g_menuLayoutBuffer;
+    (tb4+arg0*0x14C)[0x2B51]=0;
+    accum[0]=75-(((tb4+arg0*0x14C)[0x2B50]>>4)*10);
+    accum[0] = accum[0]<0 ? 0 : accum[0]>50 ? 50 : accum[0];
+    tb5=g_menuLayoutBuffer;
+    (tb5+arg0*0x14C)[0x2B52]=(u8)accum[0];(tb5+arg0*0x14C)[0x2B53]=0; U32((tb5+arg0*0x14C),0x2B54)=0; 
+    accum[0]=U16((tb5+arg0*0x14C),0x2B24);accum[1]=U16((tb5+arg0*0x14C),0x2B26);accum[2]=U16((tb5+arg0*0x14C),0x2B28);accum[3]=U16((tb5+arg0*0x14C),0x2B2A);accum[4]=U16((tb5+arg0*0x14C),0x2B2C);
+    count=accum[0]+accum[1]+accum[2]+accum[3]+accum[4];count=count*5>>1;
+    if(count>=50){itemOffset=999;if(count<1000)itemOffset=count;}else itemOffset=50;
+    {u8 *hpBase;
+    hpBase=g_menuLayoutBuffer;
+    U16((hpBase+arg0*0x14C),0x2B22)=(s16)itemOffset;
+}
 }

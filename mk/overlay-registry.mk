@@ -96,11 +96,11 @@ overlay_carda_gcc_272_cdk_g0_srcs := \
 	src/overlays/carda/carda_header_label.c \
 	src/overlays/carda/func_80147100.c \
 	src/overlays/carda/func_80149A4C.c \
-	src/overlays/carda/func_80142E10.c
-overlay_carda_gcc_280_g0_srcs := \
-	src/overlays/carda/carda_scan_hex_digits.c \
+	src/overlays/carda/func_80142E10.c \
 	src/overlays/carda/func_80145050.c \
-	src/overlays/carda/unk1_before_stream_reset_tail_after_fixed_prompts.c
+	src/overlays/carda/func_80147F4C.c
+overlay_carda_gcc_280_g0_srcs := \
+	src/overlays/carda/carda_scan_hex_digits.c
 
 OVERLAYS += checkps
 overlay_checkps_gcc_272_cdk_g0_srcs := \
