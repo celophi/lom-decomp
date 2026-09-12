@@ -732,7 +732,7 @@ typedef enum
  * @note Some work scalars serve disjoint phases to preserve original allocation.
  * @see working/func_80071D40/target.s
  * @see docs/decompilation/func_80071D40-semantics.md
- * @note WIP - 99.956985% assembly match; placement copies and collision registers remain.
+ * @note WIP - 99.988310% assembly match; placement registers remain.
  */
 void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part, FieldActorState *actor)
 {
@@ -914,21 +914,15 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
                 owner_base = D_80105AE0;
                 owner = &owner_base[actor->owner_object_index];
                 offset_y = 0;
-                if (*(u8 *) &owner->state_flags & 1)
+                state_or_delta = *(u8 *) &owner->state_flags;
+                if ((state_or_delta & 1) && ((u8) actor->actor_index >= 0x40U))
                 {
-                    if ((u8) actor->actor_index >= 0x40U)
+                    offset_or_angle = offset_y;
+                    if (!(((u32) owner->state_flags >> 5) & 1))
                     {
+                        offset_y = 0x800000;
                         offset_or_angle = offset_y;
-                        if (!((((u32) owner->state_flags >> 5) & 1)))
-                        {
-                            offset_y = 0x800000;
-                            offset_or_angle = offset_y;
-                            selector = -1;
-                        }
-                    }
-                    else
-                    {
-                        offset_or_angle = offset_y;
+                        selector = -1;
                     }
                 }
                 else
@@ -1284,6 +1278,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
             else
             {
                 s32 position_z;
+                s32 position_x;
                 /* Advance the packed context during a collision attempt; protocol remains unresolved. */
                 g_field_action_context += 0x100;
                 mover->x = rec->x;
@@ -1310,10 +1305,15 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
                 }
                 else if (!(part->spawn_flags.word & FIELD_PART_RETIRE_ON_COLLISION))
                 {
+                    position_x = mover->x;
                     query->width = FIELD_EFFECT_COLLISION_WIDTH;
-                    query->depth = FIELD_EFFECT_COLLISION_DEPTH;
                     query->height_tolerance = FIELD_EFFECT_COLLISION_HEIGHT;
-                    query->x = mover->x;
+                    /* This scope preserves the depth register's allocation priority. */
+                    do
+                    {
+                        query->depth = FIELD_EFFECT_COLLISION_DEPTH;
+                    } while (0);
+                    query->x = position_x;
                     position_z = mover->z;
                     {
                         s32 query_y = rec->y;
