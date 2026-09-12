@@ -1308,6 +1308,7 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     SVECTOR dir;
     SVECTOR out;
     SVECTOR *rotation_table;
+    SVECTOR *rotation_base;
     s32 opz;
     s32 light_direction_y;
     FieldActorState *actor;
@@ -1345,10 +1346,11 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     func_800829A0(actor, rec, part, part_index, &tmp);
 
     light_index = 0;
+    rotation_base = &D_800FF668;
     part_iter = (u8 *)part;
     do {
         count = 0;
-        rotation_table = &D_800FF668;
+        rotation_table = rotation_base;
         if (part_iter[0x23] < 8) {
             do {
                 scan = &D_800FF658[count];
@@ -1493,17 +1495,11 @@ next_light:
     case 2:
     {
         u8 *basecur;
-        s32 *last_xy;
-        s32 lowmask;
-        s32 highmask;
         { s32 ca = mesh_off; ca += (s32)actor->unk18; count = *(u16 *)ca; }
         basecur = (u8 *)cursor;
         if(count!=0){
-            last_xy = sxy + 2;
-            lowmask = 0xFFFFFF;
-            highmask = 0xFF000000;
             do {
-                gte_ldsxy3(sxy[0],last_xy[-1],last_xy[0]); gte_nclip(); gte_stopz(&opz);
+                gte_ldsxy3(sxy[0],sxy[1],sxy[2]); gte_nclip(); gte_stopz(&opz);
                 if(opz>0){
                     CLAMP_LIGHTED_COLOR_TO(basecur[4], face[7]+color[0]-0x80);
                     CLAMP_LIGHTED_COLOR_TO(basecur[5], face[8]+color[1]-0x80);
@@ -1520,7 +1516,7 @@ next_light:
                     }
                     setcode(basecur, 0x34);
                     setSemiTrans(basecur, rec->unk1C & 0x800000);
-                    *(s32 *)(basecur+8)=sxy[0]; *(s32 *)(basecur+20)=last_xy[-1]; *(s32 *)(basecur+32)=last_xy[0];
+                    *(s32 *)(basecur+8)=sxy[0]; *(s32 *)(basecur+20)=sxy[1]; *(s32 *)(basecur+32)=sxy[2];
                     *(u16 *)(basecur+8)+=(u16)screen[0]; *(u16 *)(basecur+10)+=(u16)screen[1];
                     *(u16 *)(basecur+20)+=(u16)screen[0]; *(u16 *)(basecur+22)+=(u16)screen[1];
                     *(u16 *)(basecur+32)+=(u16)screen[0]; *(u16 *)(basecur+34)+=(u16)screen[1];
@@ -1538,30 +1534,21 @@ next_light:
                         s32 d = rec->unk8 >> 7;
                         s32 idx = d + off;
                         if (idx < 0) {
-                            s32 addr;
-                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (arg3_base[0] & lowmask);
-                            addr = (s32)basecur & lowmask;
+                        addPrim(arg3_base, basecur);
+                        basecur += 0x28;
+                    } else {
+                        if (idx >= 0x1000) {
+                            addPrim(&arg3_base[0xFFF], basecur);
                             basecur += 0x28;
-                            arg3_base[0] = (arg3_base[0] & highmask) | addr;
-                        } else if (idx >= 0x1000) {
-                            s32 addr;
-                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (arg3_base[0xFFF] & lowmask);
-                            addr = (s32)basecur & lowmask;
-                            basecur += 0x28;
-                            arg3_base[0xFFF] = (arg3_base[0xFFF] & highmask) | addr;
                         } else {
-                            s32 addr;
-                            s32 *entry;
-                            addr = (s32)basecur & lowmask;
-                            *(s32 *)basecur = (*(s32 *)basecur & highmask) | (*((s32 *)((off << 2) + ((d << 2) + (s32)arg3_base))) & lowmask);
-                            { s32 rd2; s32 roff2; rd2 = rec->unk8 >> 7; roff2 = *depths;
-                                entry = (s32 *)((roff2 << 2) + ((rd2 << 2) + (s32)arg3_base)); }
+                            { s32 rd; s32 roff;
+                            addPrim((rd = rec->unk8 >> 7, roff = *depths, (s32 *)((roff << 2) + ((rd << 2) + (s32)arg3_base))), basecur); }
                             basecur += 0x28;
-                            *entry = (*entry & highmask) | addr;
                         }
                     }
                 }
-                face += 0x10; count--; last_xy += 3; sxy += 3; depths++;
+                }
+                face += 0x10; count--; sxy += 3; depths++;
             }while(count!=0);
         }
         cursor=(s32*)basecur;
