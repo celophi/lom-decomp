@@ -15,67 +15,65 @@ typedef struct
 extern StructD80122C0A D_80122C0A;
 
 /**
- * @brief Swap the selected layout owner in the packed three-slot ordering.
- * @note Nonmatching C. The input ordering must contain the selected owners;
- * the target leaves the found index unset if the first search fails.
+ * @brief Reconcile the selected layout entry with the packed three-slot ordering.
  */
 void func_800C68C8(void)
 {
-    s32 sp[3];
-    s32 slot_idx;
-    s32 found_idx;
-    s32 flags;
-    s32 d0;
-    s8 key;
+    s32 order[3];
+    s32 active_slot;
+    s32 matching_index;
+    s32 packed_order;
+    s32 active_index;
+    s8 selected_index;
 
-    flags = g_menuLayoutBuffer[0x29DB];
-    slot_idx = 3;
-    found_idx = 3;
-    sp[0] = flags & 3;
-    sp[1] = (flags >> 2) & 3;
-    sp[2] = (flags >> 4) & 3;
-    key = (s8)g_menuLayoutBuffer[0x29D7];
-    d0 = D_80122C00;
-    if (g_menuLayoutBuffer[d0 + 0x29D8] != key)
+    packed_order = g_menuLayoutBuffer[0x29DB];
+    active_slot = 3;
+    matching_index = 3;
+    order[0] = packed_order & 3;
+    order[1] = (packed_order >> 2) & 3;
+    order[2] = (packed_order >> 4) & 3;
+    selected_index = (s8)g_menuLayoutBuffer[0x29D7];
+    active_index = D_80122C00;
+    if (g_menuLayoutBuffer[active_index + 0x29D8] != selected_index)
     {
         s32 i;
-        s32 t1;
+        s32 matching_slot;
 
         i = 0;
         do
         {
-            if (key == g_menuLayoutBuffer[i + 0x29D8])
+            if (selected_index == g_menuLayoutBuffer[i + 0x29D8])
             {
-                found_idx = i;
+                matching_index = i;
             }
             i += 1;
         } while (i < 3);
         i = 0;
         do
         {
-            if (sp[i] == found_idx)
+            if (order[i] == matching_index)
             {
-                t1 = i;
+                matching_slot = i;
             }
             i += 1;
         } while (i < 3);
         i = 0;
         do
         {
-            if (sp[i] == d0)
+            if (order[i] == active_index)
             {
-                slot_idx = i;
+                active_slot = i;
             }
             i += 1;
         } while (i < 3);
-        sp[t1] = d0;
-        sp[slot_idx] = found_idx;
-        D_800459B3 = sp[0] + (sp[1] * 4) + (sp[2] * 0x10);
+        order[matching_slot] = active_index;
+        order[active_slot] = matching_index;
+        packed_order = order[0] + (order[1] * 4) + (order[2] * 0x10);
+        D_800459B3 = packed_order;
     }
-    D_80122C0A.unk0 = slot_idx;
-    D_80122C0A.unk12 = (s16)found_idx;
+    D_80122C0A.unk0 = active_slot;
+    D_80122C0A.unk12 = (s16)matching_index;
 }
-
 
 extern s16 D_80122C10;
 extern u8 D_80043CB8[];
