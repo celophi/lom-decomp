@@ -77,14 +77,10 @@ extern s32 g_frame_counter;
  * @param arg2 Track/slot index (0..2 use the extended blink/shake path).
  * @param arg3 Pointer to the primitive-buffer cursor cell; updated on return.
  * @param arg4 Gauge full-scale denominator used for value-to-width scaling.
- * @note WIP - 94.46% (822/1034 exact rows). Body is raw m2c output kept
- *       verbatim to preserve the verified match; brace style will be
- *       normalised to Allman when the function reaches 100%. Remaining
- *       residue is CSE-FOLD: the target re-reads the D_8010A00C/D_8010A010/
- *       D_8010A004 layout globals where this draft folds them into earlier
- *       loads. Callees func_80085D30/func_80086030/func_800860CC/func_80086184
- *       are still asm in the neighbouring unk2_f / unk2_g fragments.
- * @see decomp.me WIP
+ * @note WIP: the layout reloads and coordinate temporary widths still differ.
+ *       The raw layout x load is kept separate from its short coordinate.
+ *       Matching evidence is in working/func_80084D08/status.md.
+ * @see decomp.me (94.58%)
  */
 void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
     s16 *scratch = (s16 *)0x1F800000;
@@ -382,7 +378,8 @@ build_first_prim:
             temp_v0_5 = *temp_a0_7;
             W(var_t1, 0x1C) = temp_v0_5;
             W(var_t1, 0xC) = temp_v0_5;
-            temp_a0_8 = (u16) D_8010A00C;
+            temp_a3_2 = (u16) D_8010A00C;
+            temp_a0_8 = temp_a3_2;
             temp_v0_6 = (u16) D_8010A008;
             temp_a1_4 = (u16) D_8010A010;
             temp_v0_7 = (u16) D_8010A004;
