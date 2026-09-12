@@ -1257,6 +1257,18 @@ s32 *func_80080274(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
 extern SVECTOR D_800FF668;
 extern SVECTOR *D_80105870;
 
+#define CLAMP_LIGHTED_COLOR_TO(dst, expr) { \
+    s32 _v = (expr); \
+    s32 _out; \
+    if (_v >= 0) { \
+        _out = 0xFF; \
+        if (_v < 0x100) _out = _v; \
+    } else { \
+        _out = 0; \
+    } \
+    (dst) = _out; \
+}
+
 /**
  * @brief Emit lit ordering-table primitives for one mesh of an actor part.
  *
@@ -1297,12 +1309,14 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     SVECTOR out;
     SVECTOR *rotation_table;
     s32 opz;
+    s32 light_direction_y;
     FieldActorState *actor;
     FieldActorPartDef *part;
     u8 *part_iter;
     Struct_D800FDF58 *scan;
     s32 light_off;
     s32 color_off;
+    s32 light_index;
     u8 *color_row;
     s32 scan_off;
     s32 *sxy;
@@ -1326,21 +1340,20 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     screen = (s16 *)0x1F800000;
     gte_SetRotMatrix(mp);
     gte_SetTransMatrix(mp);
+    light_direction_y = -0x1000;
     func_800822A4(actor, rec, part, part_index);
     func_800829A0(actor, rec, part, part_index, &tmp);
 
-    do { color_off = 0; } while (0);
-    light_off = 0;
+    light_index = 0;
     part_iter = (u8 *)part;
     do {
-        u8 light_id = part_iter[0x23];
         count = 0;
         rotation_table = &D_800FF668;
-        if (light_id < 8) {
+        if (part_iter[0x23] < 8) {
             do {
                 scan = &D_800FF658[count];
                 scan_off = count * 0x54;
-                if(light_id == scan->unk23 && rec->unk22 == scan->unk22) goto found_light;
+                if(part_iter[0x23] == scan->unk23 && rec->unk22 == scan->unk22) goto found_light;
                 count++;
             } while(count<0x100);
 checked_light:
@@ -1355,36 +1368,32 @@ found_light:
                 RotMatrixY(rec->unk33 * 0x10, rotation_matrix);
                 dir.vz = 0;
                 dir.vx = 0;
-                dir.vy = -0x1000;
+                dir.vy = light_direction_y;
                 gte_SetRotMatrix(rotation_matrix);
                 gte_ldv0(&dir);
                 gte_rtv0();
                 gte_stsv(&out);
-                found_row = (u8 *)&color_mtx + color_off;
-                {
-                    s16 *light_row = (s16 *)((u8 *)&light_mtx + light_off);
-                    light_row[0] = out.vx;
-                    light_row[1] = out.vy;
-                    light_row[2] = out.vz;
-                }
-                *(s16 *)(found_row + 0) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkE * 0x10;
-                *(s16 *)(found_row + 6) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
-                *(s16 *)(found_row + 12) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
+                light_mtx.m[light_index][0] = out.vx;
+                light_mtx.m[light_index][1] = out.vy;
+                light_mtx.m[light_index][2] = out.vz;
+                color_mtx.m[0][light_index] = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkE * 0x10;
+                color_mtx.m[1][light_index] = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
+                color_mtx.m[2][light_index] = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
             }
             goto checked_light;
         } else {
 zero_light:
-            color_row = (u8 *)&color_mtx + color_off;
-            *(s16 *)(color_row + 12) = 0;
-            *(s16 *)(color_row + 6) = 0;
-            *(s16 *)(color_row + 0) = 0;
-            *(s16 *)((u8 *)&light_mtx + light_off) = 0;
+            do {
+            color_mtx.m[2][light_index] = 0;
+            color_mtx.m[1][light_index] = 0;
+            color_mtx.m[0][light_index] = 0;
+            light_mtx.m[light_index][0] = 0;
+            } while(0);
         }
 next_light:
-        color_off += 2;
-        light_off += 6;
+        light_index++;
         part_iter++;
-    } while ((s32)part_iter < (s32)part + 3);
+    } while((s32)part_iter < (s32)((u8 *)part + 3));
 
     gte_SetLightMatrix(&light_mtx);
     gte_SetColorMatrix(&color_mtx);
@@ -1410,7 +1419,7 @@ next_light:
 
         gte_SetBackColor(color[0], color[1], color[2]);
         if (actor->owner_object_index < 2) {
-            { s32 actor_index; s32 palette; lowmask = actor->owner_object_index; actor_index = lowmask; palette = part->unk2D;
+            { u8 actor_index; s32 palette; lowmask = actor->owner_object_index; actor_index = lowmask; palette = part->unk2D;
               *(u16 *)((u8 *)cursor + 0xE) = ((actor_index << 7) + 0x7B80) | (palette & 0x3F); }
             *(s16 *)((u8 *)cursor + 0x16) = ((part->unk34 >> 15) & 0x80) | ((part->unk4 >> 17) & 0x60) | 0x10 | ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
         } else {
@@ -1484,33 +1493,34 @@ next_light:
     case 2:
     {
         u8 *basecur;
+        s32 *last_xy;
         s32 lowmask;
         s32 highmask;
         { s32 ca = mesh_off; ca += (s32)actor->unk18; count = *(u16 *)ca; }
-        do { do { do { do { do { basecur=(u8*)cursor; } while (0); } while (0); } while (0); } while (0); } while (0);
+        basecur = (u8 *)cursor;
         if(count!=0){
-            do { do { do { lowmask=0xFFFFFF; } while (0); } while (0); } while (0);
+            last_xy = sxy + 2;
+            lowmask = 0xFFFFFF;
             highmask = 0xFF000000;
             do {
-                s32 a=sxy[0],b=sxy[1],c=sxy[2];
-                gte_ldsxy3(a,b,c); gte_nclip(); gte_stopz(&opz);
+                gte_ldsxy3(sxy[0],last_xy[-1],last_xy[0]); gte_nclip(); gte_stopz(&opz);
                 if(opz>0){
-                    CLAMP_TO(basecur[4], face[7]+color[0]-0x80);
-                    CLAMP_TO(basecur[5], face[8]+color[1]-0x80);
-                    CLAMP_TO(basecur[6], face[9]+color[2]-0x80);
-                    CLAMP_TO(basecur[16], face[10]+color[0]-0x80);
-                    CLAMP_TO(basecur[17], face[11]+color[1]-0x80);
-                    CLAMP_TO(basecur[18], face[12]+color[2]-0x80);
-                    CLAMP_TO(basecur[28], face[13]+color[0]-0x80);
-                    CLAMP_TO(basecur[29], face[14]+color[1]-0x80);
+                    CLAMP_LIGHTED_COLOR_TO(basecur[4], face[7]+color[0]-0x80);
+                    CLAMP_LIGHTED_COLOR_TO(basecur[5], face[8]+color[1]-0x80);
+                    CLAMP_LIGHTED_COLOR_TO(basecur[6], face[9]+color[2]-0x80);
+                    CLAMP_LIGHTED_COLOR_TO(basecur[16], face[10]+color[0]-0x80);
+                    CLAMP_LIGHTED_COLOR_TO(basecur[17], face[11]+color[1]-0x80);
+                    CLAMP_LIGHTED_COLOR_TO(basecur[18], face[12]+color[2]-0x80);
+                    CLAMP_LIGHTED_COLOR_TO(basecur[28], face[13]+color[0]-0x80);
+                    CLAMP_LIGHTED_COLOR_TO(basecur[29], face[14]+color[1]-0x80);
                     { s32 blue;
-                        CLAMP_TO(blue, face[15]+color[2]-0x80);
+                        CLAMP_LIGHTED_COLOR_TO(blue, face[15]+color[2]-0x80);
                         setlen(basecur, 9);
                         basecur[30] = blue;
                     }
                     setcode(basecur, 0x34);
                     setSemiTrans(basecur, rec->unk1C & 0x800000);
-                    do { *(s32 *)(basecur+8)=sxy[0]; *(s32 *)(basecur+20)=sxy[1]; *(s32 *)(basecur+32)=sxy[2]; } while (0);
+                    *(s32 *)(basecur+8)=sxy[0]; *(s32 *)(basecur+20)=last_xy[-1]; *(s32 *)(basecur+32)=last_xy[0];
                     *(u16 *)(basecur+8)+=(u16)screen[0]; *(u16 *)(basecur+10)+=(u16)screen[1];
                     *(u16 *)(basecur+20)+=(u16)screen[0]; *(u16 *)(basecur+22)+=(u16)screen[1];
                     *(u16 *)(basecur+32)+=(u16)screen[0]; *(u16 *)(basecur+34)+=(u16)screen[1];
@@ -1551,7 +1561,7 @@ next_light:
                         }
                     }
                 }
-                face += 0x10; count--; sxy += 3; depths++;
+                face += 0x10; count--; last_xy += 3; sxy += 3; depths++;
             }while(count!=0);
         }
         cursor=(s32*)basecur;
