@@ -765,7 +765,7 @@ void func_8007AA2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     if (rec->unk1B != 0)
     {
         *(s32 *)(primbuf + 8) = *(s32 *)&pan;
-        func_80073F7C(rec, part, &point);
+        field_resolve_effect_position(rec, part, &point);
         pan.unk0 = (s16)(0xA0 + D_800F22A0_B / 256 + point.vx / 256);
         pan.unk2 = (s16)(0x70 + D_800F22A4_B / 256 + point.vy / 256 - point.vz / 512 - D_800F22A8_B / 512);
         *(s32 *)(primbuf + 0x10) = *(s32 *)&pan;

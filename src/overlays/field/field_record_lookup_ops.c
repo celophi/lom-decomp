@@ -27,15 +27,21 @@ typedef struct
     RecC1B98 unk430[16];
 } StructC1B98;
 
+/**
+ * @brief Maximum/current capacity at the start of a runtime actor record.
+ * @note func_80087F0C returns the enclosing 0x23C-byte object by record id.
+ * This local view exposes only the two words used by capacity operations.
+ */
 typedef struct
 {
-    s32 unk0;
-} SomeRec;
+    s32 maximum;
+    s32 current;
+} FieldActorCapacity;
 
 #define REC_TABLE ((StructC1B98 *)D_80122B78)
 
-SomeRec *func_80087F0C(s32 arg0);
-void saturating_counter_add(SomeRec *counter, s32 delta);
+FieldActorCapacity *func_80087F0C(s32 arg0);
+void saturating_counter_add(FieldActorCapacity *counter, s32 delta);
 void func_8008BD88(s32 arg0);
 u32 *func_800875B4(void);
 void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
@@ -178,18 +184,20 @@ void func_800C1A18(void *arg0, void *arg1)
 }
 
 /**
- * @brief Scale a counter's value by arg1 / 256 and apply it through saturating_counter_add.
- * @param arg0 Counter id passed to func_80087F0C.
- * @param arg1 Multiplier in 1/256 units.
+ * @brief Restore a fraction of an actor's maximum capacity, capped at that maximum.
+ * @param record_id Identifier of an existing runtime actor.
+ * @param fraction_256 Fraction in units of 1/256; pickups use 64 or 128.
+ * @note The amount comes from maximum capacity, not the current value.
+ * Keep the signed product and unsigned right shift used by the original code.
  */
-void func_800C1B20(s32 arg0, s32 arg1)
+void field_restore_actor_capacity_fraction(s32 record_id, s32 fraction_256)
 {
-    SomeRec *rec;
-    s32 product;
+    FieldActorCapacity *capacity;
+    s32 scaled_capacity;
 
-    rec = func_80087F0C(arg0);
-    product = rec->unk0 * arg1;
-    saturating_counter_add(rec, (u32) product >> 8);
+    capacity = func_80087F0C(record_id);
+    scaled_capacity = capacity->maximum * fraction_256;
+    saturating_counter_add(capacity, (u32) scaled_capacity >> 8);
 }
 
 /**
