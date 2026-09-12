@@ -36,7 +36,8 @@ golem_copy_encoded_string            = 0x801427F8;
 
 // Golem resources and editor state.
 g_golem_ui_image                     = 0x8014287C;
-g_golem_text_archive_offset          = 0x8014AAA4;
+g_golem_text_archive                 = 0x8014AAA0;
+g_golem_text_section_offsets         = 0x8014AAA4;
 g_golem_glyph_metrics                = 0x8014B2D0;
 g_golem_panel_records                = 0x8014B560;
 g_golem_render_buffers               = 0x8014C168;

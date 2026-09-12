@@ -6,6 +6,12 @@ extern u16 D_80122720;
 extern u16 D_80122722;
 void func_80086F48(const void* src, s16 value);
 
+/**
+ * @brief Build and link a textured field quad using the current field dimensions.
+ * @param prim Primitive buffer slot to populate.
+ * @param ordering_table Ordering-table entry receiving the primitive.
+ * @return Pointer to the next primitive buffer slot.
+ */
 POLY_FT4* func_800A6060(POLY_FT4* prim, u_long* ordering_table)
 {
     s32 value0;
@@ -14,7 +20,7 @@ POLY_FT4* func_800A6060(POLY_FT4* prim, u_long* ordering_table)
     s32 value3;
     s32 value4;
     s32 value5;
-    u32 condition;
+    u32 address_mask;
 
     value0 = 9;
     setlen(prim, value0);
@@ -41,7 +47,10 @@ POLY_FT4* func_800A6060(POLY_FT4* prim, u_long* ordering_table)
     prim->x0 = value0;
     value0 = value4 * 4;
     value0 += 0xA0;
-    value0 -= value1;
+    do
+    {
+        value0 -= value1;
+    } while (0);
     value3 = D_80122722;
     value1 = value3 * value5;
     value0 += value2;
@@ -62,6 +71,7 @@ POLY_FT4* func_800A6060(POLY_FT4* prim, u_long* ordering_table)
     prim->y0 = value0;
     value0 = value2 - 0x70;
     value0 = value3 - value0;
+    address_mask = 0xFFFFFF;
     value0 += value5;
     value0--;
     prim->y3 = value0;
@@ -83,10 +93,9 @@ POLY_FT4* func_800A6060(POLY_FT4* prim, u_long* ordering_table)
     value0--;
     prim->v3 = value0;
     prim->v2 = value0;
-    addPrim(ordering_table, prim);
-    condition = (u16)D_8011F3D0;
-    condition = condition < 0x7C;
-    if (condition != 0)
+    prim->tag = (prim->tag & 0xFF000000) | (*ordering_table & address_mask);
+    setaddr(ordering_table, prim);
+    if ((u16)D_8011F3D0 < 0x7C)
     {
         func_80086F48(prim, 0);
     }

@@ -80,7 +80,7 @@ extern s32 g_frame_counter;
  * @note WIP: the layout reloads and coordinate temporary widths still differ.
  *       The raw layout x load is kept separate from its short coordinate.
  *       Matching evidence is in working/func_80084D08/status.md.
- * @see decomp.me (94.58%)
+ * @see decomp.me (94.60%)
  */
 void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
     s16 *scratch = (s16 *)0x1F800000;
@@ -417,7 +417,8 @@ block_64:
             var_v1_3 = temp_a1_5 & 0xFF000000;
             var_v0_6 = temp_a0_9 + 1;
         }
-        *(volatile u32 *)&temp_s2->unk8 = (u32) (var_v1_3 | (var_v0_6 & mask24));
+        var_v1_3 |= var_v0_6 & mask24;
+        *(volatile u32 *)&temp_s2->unk8 = var_v1_3;
         temp_v1_15 = *(volatile u32 *)&temp_s2->unk4;
         if ((temp_v1_15 / arg4) == ((s32) (temp_s2->unk8 & 0xFFFFFF) / (s32) arg4)) {
             temp_a3_2 = (u16) D_8010A00C + arg0;
@@ -451,7 +452,8 @@ block_64:
             var_v1_4 = temp_a1_5 & 0xFF000000;
             var_v0_8 = temp_a0_9 - 1;
         }
-        *(volatile u32 *)&temp_s2->unk8 = (u32) (var_v1_4 | (var_v0_8 & mask24));
+        var_v1_4 |= var_v0_8 & mask24;
+        *(volatile u32 *)&temp_s2->unk8 = var_v1_4;
         temp_v1_18 = *(volatile u32 *)&temp_s2->unk4;
         if ((temp_v1_18 / arg4) == ((s32) (temp_s2->unk8 & 0xFFFFFF) / (s32) arg4)) {
             temp_a3_3 = (u16) D_8010A00C + arg0;

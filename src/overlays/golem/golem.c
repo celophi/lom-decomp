@@ -184,6 +184,24 @@ typedef struct
     s16 steps_remaining;
 } GolemFadeState;
 
+/** @brief Byte offsets of the name and description sections from the archive header. */
+typedef struct
+{
+    s32 names_offset;
+    s32 descriptions_offset;
+} GolemTextSections;
+
+/**
+ * @brief Counted archive containing the two golem text sections.
+ * @note Section offsets are relative to this header. Each section begins with
+ *       u16 string offsets relative to that section, followed by encoded text.
+ */
+typedef struct
+{
+    u32 section_count;
+    GolemTextSections sections;
+} GolemTextArchive;
+
 extern u8 g_menuLayoutBuffer[];
 extern s32 g_pad_input;
 extern s32 g_frame_counter;
@@ -218,7 +236,7 @@ extern s32 D_8014C280;
 extern s32 g_golem_selected_block;
 extern s32 g_golem_restore_slot_on_cancel;
 extern TimPrefix g_golem_ui_image;
-extern s32 g_golem_text_archive_offset;
+extern GolemTextSections g_golem_text_section_offsets;
 extern GolemGlyphMetric g_golem_glyph_metrics[];
 extern GolemPanelRecord g_golem_panel_records[GOLEM_PANEL_COUNT];
 extern GolemCompositeIconRow g_golem_composite_icon_rows[];
@@ -985,14 +1003,20 @@ u8* golem_draw_cursor(u8* packet_cursor, GolemRenderContext* render_context)
 void golem_render(GolemRenderContext* render_context)
 {
     s32 stack_pad[2];
-    u8 name_buf[0x100];
-    u8 number_buf[0x100];
+    u8 name_buffer[0x100];
+    u8* name_text;
+    u8 number_text[0x100];
     GolemPanelRecord* panel_record;
-    s32 archive;
+    s32 archive_address;
     u8* packet_cursor;
     s32 panel_index;
     u_long* panel_ordering_table;
-    s32 detail_block;
+    s32 descriptions_offset;
+    s32 description_index;
+    s32 description_offset;
+    s32 names_offset;
+    s32 name_index;
+    s32 name_offset;
 
     panel_ordering_table = &render_context->ordering_table[GOLEM_LAYER_PANELS];
     packet_cursor = render_context->packet_cursor;
@@ -1012,21 +1036,25 @@ void golem_render(GolemRenderContext* render_context)
 
     if (g_golem_logic_block_count != 0)
     {
-        golem_copy_encoded_string(
-            name_buf, (u8*)(g_golem_text_archive_offset + (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + g_golem_text_archive_offset +
-                                                                   (archive = (s32)&g_golem_text_archive_offset - 4)) +
-                                                           archive)));
+        name_text = name_buffer;
+        /* The linked offset table follows the archive count word. */
+        names_offset = g_golem_text_section_offsets.names_offset;
+        name_index = (u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2;
+        archive_address = (s32)&g_golem_text_section_offsets - (s32)sizeof(u32);
+        name_offset = *(u16*)(name_index * (s32)sizeof(u16) + names_offset + archive_address);
+        golem_copy_encoded_string(name_text, (u8*)(names_offset + (name_offset + archive_address)));
         if ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF)
         {
-            golem_append_encoded_string(name_buf, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
-            func_800A8B90(number_buf, (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF, 1);
-            golem_append_encoded_string(name_buf, number_buf);
+            golem_append_encoded_string(name_text, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
+            func_800A8B90(number_text, (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF, 1);
+            golem_append_encoded_string(name_text, number_text);
         }
-        packet_cursor = (u8*)func_800A88A0(packet_cursor, panel_ordering_table, name_buf, 0, 0xA0, 0xA0, 2);
-        detail_block = *(s32*)(archive + 8);
-        packet_cursor = (u8*)func_800A88A0(
-            packet_cursor, panel_ordering_table,
-            detail_block + (*(u16*)(((u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2) * 2 + detail_block + archive) + archive), 0, 0xA0, 0xB0, 2);
+        packet_cursor = (u8*)func_800A88A0(packet_cursor, panel_ordering_table, name_text, 0, 0xA0, 0xA0, 2);
+        descriptions_offset = ((GolemTextArchive*)archive_address)->sections.descriptions_offset;
+        description_index = (u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2;
+        description_offset = *(u16*)(description_index * (s32)sizeof(u16) + descriptions_offset + archive_address);
+        packet_cursor =
+            (u8*)func_800A88A0(packet_cursor, panel_ordering_table, (u8*)(descriptions_offset + (description_offset + archive_address)), 0, 0xA0, 0xB0, 2);
     }
 
     render_context->packet_cursor = golem_render_fade(packet_cursor, &render_context->ordering_table[GOLEM_LAYER_FADE]);

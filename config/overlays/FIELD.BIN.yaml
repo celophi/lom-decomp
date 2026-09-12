@@ -237,7 +237,7 @@ segments:
       - [0x41CA5, c, func_80091914] # gcc272_cdk, 100.000000%
       - [0x41E59, c, func_80091AC8]                 # gcc272_cdk, 100%
       # TU hypothesis: field_actor_camera (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x41F59, c, func_80091BC8] # gcc272_cdk, 93.889910% WIP
+      - [0x41F59, c, func_80091BC8] # gcc272_cdk, 100%
       - [0x4210D, c, func_80091D7C] # gcc272_cdk, 100%
       - [0x4248D, c, func_800920FC]                # gcc272_cdk, 100%
       - [0x424B5, c, func_80092124]                # gcc272_cdk, 100%
@@ -380,7 +380,7 @@ segments:
       - [0x55A01, c, func_800A5670]               # gcc272_cdk, 100%
       - [0x55B25, c, func_800A5794] # gcc272_cdk, 100.000000%
       - [0x55CF1, c, func_800A5960] # gcc272_cdk, 90.430800% WIP
-      - [0x563F1, c, func_800A6060]                # gcc272_cdk, WIP 94.33%
+      - [0x563F1, c, func_800A6060]                # gcc272_cdk, 100.000000%
       # TU hypothesis: field_actor_text_queue (high). See docs/decompilation/field-boundaries/map.md.
       - [0x56595, c, field66]                      # gcc272_cdk, func_800A6204
       - [0x565CD, c, func_800A623C] # gcc272_cdk, 88.959730% WIP

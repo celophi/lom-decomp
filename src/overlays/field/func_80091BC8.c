@@ -18,6 +18,7 @@ typedef struct
     s16 height;
     u8 pad178[0xC4];
 } Slot;
+extern int abs(int);
 extern Actor D_800FDF58[];
 extern Slot D_80105AE0[];
 extern s32 D_8010AE4C;
@@ -27,7 +28,6 @@ extern s32 D_8010D014;
 
 /**
  * @brief Update the actor-derived target and approach each coordinate by at most 0x800.
- * @note Best current match: 93.889910% with GCC 2.7.2 CDK.
  */
 void func_80091BC8(void)
 {
@@ -69,45 +69,63 @@ void func_80091BC8(void)
     }
 
     {
-        s32 position = (s32)&D_8010D010;
-        if (D_8010AE4C != *(s32 *)position)
+        s32 target = D_8010AE4C;
+        s32 current = D_8010D010;
+
+        if (target != current)
         {
-            s32 delta = D_8010AE4C - *(s32 *)position;
-            s32 magnitude = delta;
-            magnitude = __builtin_abs(delta);
+            s32 delta = target - current;
+            s32 magnitude = abs(delta);
+
             if (magnitude < 0x800)
             {
-                *(s32 *)position = D_8010AE4C;
-            }
-            else if (delta < 0)
-            {
-                *(s32 *)position -= 0x800;
+                D_8010D010 = target;
             }
             else
             {
-                *(s32 *)position += 0x800;
+                s32 value;
+                s32 *write_position = &D_8010D010;
+
+                if (delta < 0)
+                {
+                    value = current - 0x800;
+                }
+                else
+                {
+                    value = current + 0x800;
+                }
+                *write_position = value;
             }
         }
     }
 
     {
-        s32 position = (s32)&D_8010D014;
-        if (D_8010AE50 != *(s32 *)position)
+        s32 target = D_8010AE50;
+        s32 current = D_8010D014;
+
+        if (target != current)
         {
-            s32 delta = D_8010AE50 - *(s32 *)position;
-            s32 magnitude = delta;
-            magnitude = __builtin_abs(delta);
+            s32 delta = target - current;
+            s32 magnitude = abs(delta);
+
             if (magnitude < 0x800)
             {
-                *(s32 *)position = D_8010AE50;
-            }
-            else if (delta < 0)
-            {
-                *(s32 *)position -= 0x800;
+                D_8010D014 = target;
             }
             else
             {
-                *(s32 *)position += 0x800;
+                s32 value;
+                s32 *write_position = &D_8010D014;
+
+                if (delta < 0)
+                {
+                    value = current - 0x800;
+                }
+                else
+                {
+                    value = current + 0x800;
+                }
+                *write_position = value;
             }
         }
     }
