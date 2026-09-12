@@ -28,7 +28,7 @@ typedef struct
 } ActionMap;
 extern Slot D_80105AE0[];
 extern u8 g_field_action_animation_maps[];
-extern s32 D_800473F8;
+extern s32 g_field_action_context;
 extern s32 D_8010AE54;
 s32 func_800A29F8(s32, s32, s32);
 void func_800A3938(s32, s32);
@@ -53,7 +53,7 @@ u16 func_80091914(Actor *actor, s32 map_index)
     action = func_800A29F8(map_index, (actor->mode >> 7) ^ 1, 0);
     if (action != 0xFF)
     {
-        D_800473F8 = (D_800473F8 & ~0xFF) | action;
+        g_field_action_context = (g_field_action_context & ~0xFF) | action;
     }
     else if ((actor->mode & 0x7F) != 0x3D)
     {

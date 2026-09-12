@@ -150,7 +150,7 @@ extern s32 g_field_track_index;
 
 s32 field_evaluate_parameter_track(FieldActorState *actor, s32 track);
 s32 field_evaluate_parameter_track_at_time(FieldActorState *actor, u32 track, u16 time);
-void func_80073F7C(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldVector *out);
+void field_resolve_effect_position(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldVector *out);
 s32 func_8007D078(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldMatrix *mtx, FieldActorState *actor);
 void func_8007D8D8(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
 u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s32 *base);
@@ -163,7 +163,7 @@ u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s
  *        for the actor part, seeds a chain of randomly rotated matrices in the
  *        scratchpad, then walks the chain emitting textured quads that sweep
  *        from the effect origin out to the target point returned by
- *        func_80073F7C, threading each quad into the depth-indexed ordering
+ *        field_resolve_effect_position, threading each quad into the depth-indexed ordering
  *        table in base[].
  * @param rec Effect record supplying position, flags and segment count (unk24).
  * @param primbuf Output primitive buffer; advanced 0x28 bytes per emitted quad.
@@ -270,7 +270,7 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     }
     step = 0x800 / segments;
 
-    func_80073F7C(rec, part, (FieldVector *) 0x1F800000);
+    field_resolve_effect_position(rec, part, (FieldVector *) 0x1F800000);
     {
         volatile s32 *scratch = (volatile s32 *) 0x1F800000;
         ptr_a->vx = (scratch[0] + rec->unk0) >> 1;
@@ -599,7 +599,7 @@ after_track_rotation:
         RotMatrixY(0x400, (MATRIX *) mtx);
         if ((part->unk28 >> 11) & 1)
         {
-            func_80073F7C(rec, part, scale);
+            field_resolve_effect_position(rec, part, scale);
             temp = scale->vz;
             angle = ratan2(rec->unk8 - temp, scale->vx - rec->unk0);
             delta->vx = (scale->vx - rec->unk0) >> 8;
@@ -632,7 +632,7 @@ after_track_rotation:
 
     if ((part->unk28 >> 2) & 1)
     {
-        func_80073F7C(rec, part, scale);
+        field_resolve_effect_position(rec, part, scale);
         delta->vx = (scale->vx - rec->unk0) >> 8;
         delta->vy = (scale->vy - rec->unk4) >> 8;
         delta->vz = (scale->vz - rec->unk8) >> 8;

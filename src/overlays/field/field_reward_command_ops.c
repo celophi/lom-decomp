@@ -77,7 +77,7 @@ extern u8 *D_80123FB0;
 void func_800C0E54(s32, s32);
 void func_800C0E18(s32, s32);
 void func_800C1A18(void *, void *);
-void func_800C1B20(s32, s32);
+void field_restore_actor_capacity_fraction(s32, s32);
 /**
  * @brief Dispatch an experience, currency, item, or counter reward.
  * @param recipient Recipient identifier passed to reward handlers.
@@ -120,10 +120,10 @@ void func_800C0B40(s32 recipient, void *context, u32 selector)
         func_800C1A18((void *)recipient, context);
         return;
     case 5:
-        func_800C1B20(recipient, 64);
+        field_restore_actor_capacity_fraction(recipient, 64);
         return;
     case 6:
-        func_800C1B20(recipient, 128);
+        field_restore_actor_capacity_fraction(recipient, 128);
         return;
     default:
         argument_value = (s32)context;

@@ -4,356 +4,291 @@
  */
 
 #include "common.h"
-#include "field_types.h"
+#include "field_effect_types.h"
 
-
-typedef struct
-{
-    s32 unk0;  /* 0x00 */
-    s32 unk4;  /* 0x04 */
-    s32 unk8;  /* 0x08 */
-    u32 unkC;  /* 0x0C */
-    s16 unk10; /* 0x10 */
-    s16 unk12; /* 0x12 */
-    s16 unk14; /* 0x14 */
-    s16 unk16; /* 0x16 */
-    u8 unk18;  /* 0x18 */
-    u8 unk19;  /* 0x19 */
-    u8 unk1A;  /* 0x1A */
-    u8 unk1B;  /* 0x1B */
-    s32 unk1C; /* 0x1C */
-    u8 unk20;  /* 0x20 */
-    u8 unk21;  /* 0x21 */
-    u8 unk22;  /* 0x22 */
-    u8 unk23;  /* 0x23 */
-    u8 unk24;  /* 0x24 */
-    u8 unk25;  /* 0x25 */
-    u8 pad26[0x30 - 0x26];
-    u16 unk30; /* 0x30 */
-    u8 pad32[0x44 - 0x32];
-    u32 unk44; /* 0x44 */
-    u32 unk48; /* 0x48 */
-    u32 unk4C; /* 0x4C */
-    u8 pad50[0x54 - 0x50];
-} Struct_D800FDF58;
-
-typedef struct
-{
-    u8 pad0[0x6C];
-    s16 unk6C; /* 0x6C */
-    s16 unk6E; /* 0x6E */
-    u8 pad70[0x130 - 0x70];
-    Vec2s unk130[4]; /* 0x130 */
-    s16 unk140; /* 0x140 */
-    s16 unk142; /* 0x142 */
-    s16 unk144; /* 0x144 */
-    s16 unk146; /* 0x146 */
-    u8 pad148[0x23C - 0x148];
-} Struct_D80105AE0;
-
-typedef struct
-{
-    u8 pad0[0x22];
-    u8 unk22;  /* 0x22 */
-    u8 unk23;  /* 0x23 */
-    u8 unk24;  /* 0x24 */
-    u8 pad25[0x228 - 0x25];
-    u8 unk228; /* 0x228 */
-    u8 unk229[9]; /* 0x229 */
-    u8 pad232[0x23A - 0x232];
-    u8 unk23A; /* 0x23A */
-    u8 unk23B; /* 0x23B */
-    u8 pad23C[0x244 - 0x23C];
-} FieldActorState;
-
-typedef struct
-{
-    u8 pad0[0x24];
-    u32 unk24; /* 0x24 */
-    u32 unk28; /* 0x28 */
-    u8 pad2C[0x34 - 0x2C];
-    u32 unk34; /* 0x34 */
-} FieldViewParams;
-
-typedef struct
-{
-    s32 unk0; /* 0x00 */
-    s32 unk4; /* 0x04 */
-    s32 unk8; /* 0x08 */
-} FieldPosOut;
 
 extern FieldActorState g_field_actor_slots[80];
-extern Struct_D800FDF58 D_800FDF58[];
-extern Struct_D800FDF58 D_800FF658[];
-extern Struct_D80105AE0 D_80105AE0[];
+extern FieldMotionRecord D_800FDF58[];
+extern FieldMotionRecord D_800FF658[];
+extern FieldObjectPlacement D_80105AE0[];
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
 extern s32 g_field_track_index;
-extern s32 D_800473F8;
+extern s32 g_field_action_context;
 
 /**
+ * @brief Release an effect's owning actor after its last live effect retires.
+ * @param effect Motion record whose actor_index identifies the owning actor slot.
+ * @note Callers retire the effect before this check. Other live effects keep the
+ * actor active; this function does not retire records or free their storage.
  * @see decomp.me (100%)
  */
-void func_80073EAC(FieldActorState *actor)
+void field_release_actor_if_no_effects(FieldMotionRecord *effect)
 {
     FieldActorState *slots;
     FieldActorState *slot;
 
-    if (func_80073F10(actor->unk22) == 0)
+    if (field_actor_has_live_effects(effect->actor_index) == 0)
     {
         slots = g_field_actor_slots;
-        slot = &slots[actor->unk22];
-        slot->unk24 = 0;
-        slot->unk23B = 0;
-        slot->unk23A = 0;
+        slot = &slots[effect->actor_index];
+        slot->is_active = 0;
+        slot->unknown_0x23b = 0;
+        slot->active_track_mask = 0;
     }
 }
 
 /**
+ * @brief Check the effect pool for an unretired record owned by an actor.
+ * @param actor_index Actor slot index to compare with each record's owner.
+ * @return 1 if a matching live effect exists, otherwise 0.
  * @see decomp.me (100%)
  */
-s32 func_80073F10(s32 arg0)
+s32 field_actor_has_live_effects(s32 actor_index)
 {
-    s32 i;
-    s32 val;
-    Struct_D800FDF58 *base;
-    u8 *p;
+    s32 effect_index;
+    s32 retired_state;
+    FieldMotionRecord *effect;
 
-    i = 0;
-    val = 0xFF;
-    base = D_800FF658;
-    p = (u8 *)base + 0x22;
-    while (i < 0x103)
+    effect_index = 0;
+    retired_state = FIELD_EFFECT_RETIRED;
+    effect = D_800FF658;
+    for (; effect_index < FIELD_EFFECT_POOL_COUNT; effect_index++)
     {
-        if (p[3] != val && *p == arg0)
+        if (effect->state != retired_state && effect->actor_index == actor_index)
         {
             return 1;
         }
-        i++;
-        p += 0x54;
+        effect++;
     }
     return 0;
 }
 
 /**
+ * @brief Pack recipient, source, and action identifiers into shared action context.
+ * @param recipient_id Identifier placed starting at bit 16.
+ * @param source_id Identifier placed starting at bit 8.
+ * @param action Action/reward selector placed in the low bits.
+ * @note Inputs are not masked here; preserve their original word-wide behavior.
  * @see decomp.me (100%)
  */
-void func_80073F60(s32 arg0, s32 arg1, s32 arg2)
+void field_set_action_context(s32 recipient_id, s32 source_id, s32 action)
 {
-    D_800473F8 = (arg0 << 0x10) | (arg1 << 8) | arg2;
+    g_field_action_context = (recipient_id << 0x10) | (source_id << 8) | action;
 }
 
 /**
- * @brief Resolve a record's world-position source into arg2, dispatching on
- *        the record's unk1B mode selector.
- * @param arg0 Record whose unk1B selects the position source.
- * @param arg1 View/camera parameter block (rotation/flags read in modes 5/6/9).
- * @param arg2 Output position triple (unk0/unk4/unk8).
- * @note The unk1B mode switch is emitted as a computed goto through the rodata
- *       dispatch_table (indexed by unk1B - 1). Modes 12 and 13 share one
- *       handler; the final null entry preserves the original table padding.
- *       FIELD.BIN.yaml places this table at the original jtbl_80050144 range.
+ * @brief Resolve an effect's selected target/attachment position in world coordinates.
+ * @param rec Record selecting a source and supplying saved positions or effect links.
+ * @param part Part definition controlling anchor choice, placement, and facing updates.
+ * @param out Destination X/Y/Z; its pad word is untouched.
+ * @note Sources 0 and values above 15 leave out unchanged. Source 9 can update
+ * the record's facing bit. References at +0x30 use an unsigned halfword read.
  * @see decomp.me (100%)
  */
-void func_80073F7C(Struct_D800FDF58 *arg0, FieldViewParams *arg1, FieldPosOut *arg2)
+void field_resolve_effect_position(FieldMotionRecord *rec, FieldActorPartDef *part, FieldVector *out)
 {
-    FieldActorState *var_v0_7;
-    Struct_D800FDF58 *var_a1;
-    Struct_D800FDF58 *var_a2;
-    Struct_D800FDF58 *var_v0;
-    Struct_D800FDF58 *var_v0_5;
-    Struct_D800FDF58 *base12;
-    Struct_D800FDF58 *var_c1;
-    Struct_D800FDF58 *var_c2;
-    Struct_D800FDF58 *var_c8;
-    Struct_D80105AE0 *pe;
+    FieldMotionRecord *source_record;
+    FieldMotionRecord *opposite_record;
+    FieldMotionRecord *track_record;
+    FieldMotionRecord *owner_record;
+    FieldMotionRecord *linked_record;
+    FieldObjectPlacement *source_object;
     FieldActorState *slots;
-    FieldActorState *slots2;
-    s32 var_v1;
-    u16 tail_idx;
-    s32 idx6;
-    s32 idx2;
-    s32 val;
-    s32 v;
-    s32 pos;
-    s32 boff;
-    s32 subv;
+    FieldActorState *owner_slots;
+    s32 object_index;
+    s32 source_index;
+    s32 owner_index;
+    s32 placement;
+    s32 delta_x;
+    s32 position_x;
+    s32 x_term;
+    s32 offset_x;
     s32 dispatch;
     static void *const dispatch_table[] = {
-        &&case1, &&case2, &&case3, &&case4, &&case5,
-        &&case6, &&case7, &&case8, &&case9, &&case10,
-        &&case11, &&case12, &&case12, &&case14, &&case15, 0
+        &&track_object, &&owner_object, &&saved, &&reference_effect, &&owner_attachment, &&facing_offset, &&track_stored_xz, &&linked_effect, &&relative_side_offset, &&owner_bounds_center, &&track_bounds_center, &&reflect_track_x, &&reflect_track_x, &&extend_track_xz, &&extend_link_xz, 0
     };
 
     switch (0)
     {
     case 0:
-        dispatch = arg0->unk1B - 1;
+        dispatch = rec->position_source - 1;
         if ((u32) dispatch >= 0xFU)
         {
             break;
         }
         goto *dispatch_table[dispatch];
 
-    case1:
+    track_object:
         slots = g_field_actor_slots;
-        arg2->unk0 = D_800FDF58[slots[arg0->unk22].unk229[g_field_track_index]].unk0;
-        arg2->unk4 = D_800FDF58[slots[arg0->unk22].unk229[g_field_track_index]].unk4;
-        var_v1 = slots[arg0->unk22].unk229[g_field_track_index];
-        do { var_c1 = &D_800FDF58[var_v1]; } while (0);
-        arg2->unk8 = var_c1->unk8;
-        return;
-    case2:
-        slots2 = g_field_actor_slots;
-        arg2->unk0 = D_800FDF58[slots2[arg0->unk22].unk228].unk0;
-        arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk4;
-        idx2 = slots2[arg0->unk22].unk228;
-        do { var_c2 = &D_800FDF58[idx2]; } while (0);
-        arg2->unk8 = var_c2->unk8;
-        return;
-    case3:
-        arg2->unk0 = arg0->unk44 - D_800F22A0;
-        arg2->unk4 = arg0->unk48 - D_800F22A4;
-        arg2->unk8 = arg0->unk4C - D_800F22A8;
-        return;
-    case4:
-        if (D_800FF658[arg0->unk30].unk25 != 0xFF)
+        out->vx = D_800FDF58[slots[rec->actor_index].track_object_indices[g_field_track_index]].x;
+        out->vy = D_800FDF58[slots[rec->actor_index].track_object_indices[g_field_track_index]].y;
+        object_index = slots[rec->actor_index].track_object_indices[g_field_track_index];
+        do
         {
-            arg2->unk0 = D_800FF658[arg0->unk30].unk0;
-            arg2->unk4 = D_800FF658[arg0->unk30].unk4;
-            arg2->unk8 = D_800FF658[arg0->unk30].unk8;
+            track_record = &D_800FDF58[object_index];
+        } while (0);
+        out->vz = track_record->z;
+        return;
+    owner_object:
+        owner_slots = g_field_actor_slots;
+        out->vx = D_800FDF58[owner_slots[rec->actor_index].owner_object_index].x;
+        out->vy = D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].y;
+        owner_index = owner_slots[rec->actor_index].owner_object_index;
+        do
+        {
+            owner_record = &D_800FDF58[owner_index];
+        } while (0);
+        out->vz = owner_record->z;
+        return;
+    saved:
+        out->vx = rec->work_x - D_800F22A0;
+        out->vy = rec->work_y - D_800F22A4;
+        out->vz = rec->work_z - D_800F22A8;
+        return;
+    reference_effect:
+        if (D_800FF658[(u16) rec->reference_index].state != FIELD_EFFECT_RETIRED)
+        {
+            out->vx = D_800FF658[(u16) rec->reference_index].x;
+            out->vy = D_800FF658[(u16) rec->reference_index].y;
+            out->vz = D_800FF658[(u16) rec->reference_index].z;
             return;
         }
-        arg2->unk0 = arg0->unk0;
-        arg2->unk4 = arg0->unk4;
-        arg2->unk8 = arg0->unk8;
+        out->vx = rec->x;
+        out->vy = rec->y;
+        out->vz = rec->z;
         return;
-    case5:
-        var_a2 = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk228];
-        pe = &D_80105AE0[g_field_actor_slots[arg0->unk22].unk228];
-        arg2->unk0 = var_a2->unk0 + (*(s16 *)((u8 *)pe + (((u32)arg1->unk24 >> 0x13) & 0xC) + 0x130) << 8);
-        arg2->unk4 = var_a2->unk4 + (*(s16 *)((u8 *)pe + (((u32)arg1->unk24 >> 0x13) & 0xC) + 0x132) << 8);
-        arg2->unk8 = var_a2->unk8;
+    owner_attachment:
+        source_record = &D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index];
+        source_object = &D_80105AE0[g_field_actor_slots[rec->actor_index].owner_object_index];
+        out->vx = source_record->x + (source_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].x << 8);
+        out->vy = source_record->y + (source_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].y << 8);
+        out->vz = source_record->z;
         return;
-    case6:
-        val = ((u32)arg1->unk28 >> 0x12) & 0x3F;
-        if (val >= 0xA)
+    facing_offset:
+        placement = ((u32)part->placement_flags >> 0x12) & 0x3F;
+        if (placement >= 0xA)
         {
-            if (val < 0x26)
+            if (placement < 0x26)
             {
-                idx6 = g_field_actor_slots[arg0->unk22].unk229[g_field_track_index];
+                source_index = g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index];
             }
             else
             {
-                goto owner6;
+                source_index = g_field_actor_slots[rec->actor_index].owner_object_index;
             }
         }
         else
         {
-owner6:
-            idx6 = g_field_actor_slots[arg0->unk22].unk228;
+            source_index = g_field_actor_slots[rec->actor_index].owner_object_index;
         }
-        var_a2 = &D_800FDF58[idx6];
-        if (var_a2->unk21 & 0x80)
+        source_record = &D_800FDF58[source_index];
+        if (source_record->facing_or_reward_kind & 0x80)
         {
-            goto block_32;
-        }
-        boff = arg0->unk44;
-        pos = -boff;
-        pos += var_a2->unk0;
-        goto block_33;
-    case7:
-        arg2->unk0 = D_80105AE0[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk6C << 8;
-        arg2->unk8 = D_80105AE0[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk6E << 8;
-        arg2->unk4 = 0;
-        return;
-    case8:
-        arg2->unk0 = D_800FF658[arg0->unk20].unk0;
-        arg2->unk4 = D_800FF658[arg0->unk20].unk4;
-        var_c8 = &D_800FF658[arg0->unk20];
-        arg2->unk8 = var_c8->unk8;
-        return;
-    case9:
-        val = ((u32)arg1->unk28 >> 0x12) & 0x3F;
-        if (val < 0xA)
-        {
-            var_a2 = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk228];
-            var_v0_5 = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]];
+            position_x = rec->work_x;
+            x_term = source_record->x;
+            position_x = position_x + x_term;
         }
         else
         {
-            if (val < 0x26)
+            x_term = rec->work_x;
+            position_x = -x_term;
+            position_x += source_record->x;
+        }
+        out->vx = position_x;
+        out->vy = rec->work_y + source_record->y;
+        out->vz = rec->work_z + source_record->z;
+        return;
+    track_stored_xz:
+        out->vx = D_80105AE0[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].unknown_0x6c << 8;
+        out->vz = D_80105AE0[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].unknown_0x6e << 8;
+        out->vy = 0;
+        return;
+    linked_effect:
+        out->vx = D_800FF658[rec->position_data.linked_effect_index].x;
+        out->vy = D_800FF658[rec->position_data.linked_effect_index].y;
+        linked_record = &D_800FF658[rec->position_data.linked_effect_index];
+        out->vz = linked_record->z;
+        return;
+    relative_side_offset:
+        placement = ((u32)part->placement_flags >> 0x12) & 0x3F;
+        if (placement < 0xA)
+        {
+            source_record = &D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index];
+            opposite_record = &D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]];
+        }
+        else
+        {
+            if (placement < 0x26)
             {
-                var_v1 = g_field_actor_slots[arg0->unk22].unk229[g_field_track_index];
-                var_a2 = &D_800FDF58[var_v1];
+                object_index = g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index];
+                source_record = &D_800FDF58[object_index];
             }
             else
             {
-                var_v1 = g_field_actor_slots[arg0->unk22].unk228;
-                var_a2 = &D_800FDF58[var_v1];
+                object_index = g_field_actor_slots[rec->actor_index].owner_object_index;
+                source_record = &D_800FDF58[object_index];
             }
-            var_v0_5 = &D_800FDF58[g_field_actor_slots[arg0->unk22].unk228];
+            opposite_record = &D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index];
         }
-        if (var_a2->unk0 > var_v0_5->unk0)
+        if (source_record->x > opposite_record->x)
         {
-            if (((arg1->unk28 >> 0xA) & 1) || (arg1->unk34 & 0x08000000))
+            if (((part->placement_flags >> 0xA) & 1) || (part->spawn_flags.word & 0x08000000))
             {
-                arg0->unk21 = arg0->unk21 & 0x7F;
+                rec->facing_or_reward_kind = rec->facing_or_reward_kind & 0x7F;
             }
-            subv = arg0->unk44;
-            pos = var_a2->unk0 - subv;
+            offset_x = rec->work_x;
+            position_x = source_record->x - offset_x;
         }
         else
         {
-            if (((arg1->unk28 >> 0xA) & 1) || (arg1->unk34 & 0x08000000))
+            if (((part->placement_flags >> 0xA) & 1) || (part->spawn_flags.word & 0x08000000))
             {
-                arg0->unk21 = arg0->unk21 | 0x80;
+                rec->facing_or_reward_kind = rec->facing_or_reward_kind | 0x80;
             }
-block_32:
-            pos = arg0->unk44;
-            boff = var_a2->unk0;
-            pos = pos + boff;
+            position_x = rec->work_x;
+            x_term = source_record->x;
+            position_x = position_x + x_term;
         }
-block_33:
-        arg2->unk0 = pos;
-        arg2->unk4 = arg0->unk48 + var_a2->unk4;
-        arg2->unk8 = arg0->unk4C + var_a2->unk8;
+        out->vx = position_x;
+        out->vy = rec->work_y + source_record->y;
+        out->vz = rec->work_z + source_record->z;
         return;
-    case10:
-        pe = &D_80105AE0[g_field_actor_slots[arg0->unk22].unk228];
-        arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk0 + ((pe->unk144 + pe->unk140) << 7);
-        arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk4 + ((pe->unk146 + pe->unk142) << 7);
-        arg2->unk8 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk8;
+    owner_bounds_center:
+        source_object = &D_80105AE0[g_field_actor_slots[rec->actor_index].owner_object_index];
+        out->vx = D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].x + ((source_object->bounds_right + source_object->bounds_left) << 7);
+        out->vy = D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].y + ((source_object->bounds_bottom + source_object->bounds_top) << 7);
+        out->vz = D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].z;
         return;
-    case11:
-        pe = &D_80105AE0[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]];
-        arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 + ((pe->unk144 + pe->unk140) << 7);
-        arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk4 + ((pe->unk146 + pe->unk142) << 7);
-        arg2->unk8 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk8;
+    track_bounds_center:
+        source_object = &D_80105AE0[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]];
+        out->vx = D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].x + ((source_object->bounds_right + source_object->bounds_left) << 7);
+        out->vy = D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].y + ((source_object->bounds_bottom + source_object->bounds_top) << 7);
+        out->vz = D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].z;
         return;
-    case12:
-        v = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 - D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk0;
-        if (arg0->unk1B == 0xC)
+    reflect_track_x:
+        delta_x = D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].x - D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].x;
+        if (rec->position_source == FIELD_POSITION_REFLECT_TRACK_X)
         {
-            arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk0 - v;
+            out->vx = D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].x - delta_x;
         }
         else
         {
-            arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 + v;
+            out->vx = D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].x + delta_x;
         }
-        arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk4;
-        arg2->unk8 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk8;
+        out->vy = D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].y;
+        out->vz = D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].z;
         return;
-    case14:
-        arg2->unk0 = (D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 * 2) - D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk0;
-        arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk4;
-        arg2->unk8 = (D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk8 * 2) - D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk8;
+    extend_track_xz:
+        out->vx = (D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].x * 2) - D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].x;
+        out->vy = D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].y;
+        out->vz = (D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].z * 2) - D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].z;
         return;
-    case15:
-        arg2->unk0 = (D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk0 * 2) - D_800FF658[arg0->unk20].unk0;
-        arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk4;
-        arg2->unk8 = (D_800FDF58[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk8 * 2) - D_800FF658[arg0->unk20].unk8;
+    extend_link_xz:
+        out->vx = (D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].x * 2) - D_800FF658[rec->position_data.linked_effect_index].x;
+        out->vy = D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].y;
+        out->vz = (D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].z * 2) - D_800FF658[rec->position_data.linked_effect_index].z;
         return;
     }
 }

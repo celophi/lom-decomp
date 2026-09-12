@@ -225,7 +225,7 @@ extern FieldActorPartDef D_800FE3A0[];
 extern FieldActorState g_field_actor_slots[];
 extern Struct_D80105880 D_80105880[];
 extern FieldVector D_80105778;
-extern s32 D_800473F8;
+extern s32 g_field_action_context;
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
@@ -330,7 +330,7 @@ find_slot:
     }
     if (i == 0x100)
     {
-        D_800473F8 = 0x10101010;
+        g_field_action_context = 0x10101010;
         return -1;
     }
 
@@ -1461,7 +1461,7 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
             rec->unk2A = field_evaluate_parameter_track_at_time(actor, ((u16*)&part->unk14)[1] & 0xF, 0);
             break;
         case 3:
-            func_80073F7C(rec, part, vec);
+            field_resolve_effect_position(rec, part, vec);
             vec->vx -= rec->unk0;
             vec->vy -= rec->unk4;
             vec->vz -= rec->unk8;

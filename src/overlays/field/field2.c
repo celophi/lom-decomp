@@ -53,7 +53,7 @@ extern s32 g_previousGameState[];
 extern s32 g_field_audio_timer[];
 extern u16 g_music_track_index[];
 extern u8 g_music_track_table[];
-extern s32 D_800473F8[];
+extern s32 g_field_action_context[];
 extern s32 D_800F2288[];
 extern s32 D_800F2298[];
 extern s32 D_800F22C0[];
