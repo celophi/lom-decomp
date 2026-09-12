@@ -300,3 +300,5 @@ field_text_format_number = 0x800675C8;
 
 // Scratchpad pointer increments are constants, not relocatable symbols.
 D_1F800004 = 0x1F800004; // ignore:true
+field_update_effect_record               = 0x80071D40;
+g_field_pickup_sound_played               = 0x80105764;

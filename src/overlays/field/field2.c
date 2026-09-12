@@ -58,7 +58,7 @@ extern s32 D_800F2288[];
 extern s32 D_800F2298[];
 extern s32 D_800F22C0[];
 extern s32 D_800FE754[];
-extern s32 D_80105764[];
+extern s32 g_field_pickup_sound_played[];
 extern s32 D_8010AE48[];
 extern s32 D_8011F3AC[];
 extern s32 D_8012269C[];

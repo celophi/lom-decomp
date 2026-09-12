@@ -40,7 +40,7 @@ extern s32 D_800F2288[];
 extern s32 D_800F2298[];
 extern s32 D_800F22C0[];
 extern s32 D_800FE754[];
-extern s32 D_80105764[];
+extern s32 g_field_pickup_sound_played[];
 extern s32 D_8010AE48[];
 extern s32 D_8011F3AC[];
 extern s32 D_8012269C[];
@@ -64,7 +64,7 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
     s32 temp;
 
     D_800F2288[0] = arg0;
-    D_80105764[0] = 0;
+    g_field_pickup_sound_played[0] = 0;
     temp = *(u8*)&D_800473F8[0];
     D_800473F8[0] = temp;
     func_800A9E78(temp);
