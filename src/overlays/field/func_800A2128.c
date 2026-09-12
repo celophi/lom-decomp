@@ -6,69 +6,79 @@ extern s32 D_80117E74;
 extern s32 D_80117E80;
 
 /**
- * @brief Combine and copy selected source words into an output array in three passes.
- * @param arg0 Source records at an eight-byte stride.
- * @param arg1 Destination words; pass ranges come from the shared counters.
- * @note The shared parity selector chooses one of the two words in each source record.
- * @note WIP: loop address calculations and register allocation differ from the target.
+ * @brief Build interpolation samples from the selected coefficient column.
+ * @param source Two-word coefficient records.
+ * @param output Destination sample array.
  */
-void func_800A2128(u8 *arg0, s32 *arg1)
+void func_800A2128(s32 (*source)[2], s32 *output)
 {
-    s32 mask;
-    s32 i;
-    s32 count;
-    s32 e70;
-    u8 *out;
-    u8 *base;
-    s32 v0, v1;
+    s32 selector;
+    s32 index;
+    s32 *output_cursor;
+    s32 value0;
+    s32 value1;
 
-    count = D_80117E74;
-    if (count > 0)
+    index = 0;
+    if (D_80117E74 > 0)
     {
-        out = (u8 *)arg1;
-        e70 = D_80117E70;
-        mask = ((D_80117E68 - 1) & 1) * 4;
-        i = 0;
+        s32 count;
+        s32 offset;
+
+        count = D_80117E74;
+        output_cursor = output;
+        selector = (D_80117E68 - 1) & 1;
+        offset = D_80117E70;
         do
         {
-            v1 = *(s32 *)(arg0 + mask + (i + count) * 8 - 8);
-            v0 = *(s32 *)(arg0 + mask + (i + e70 + count) * 8 - 8);
-            i++;
-            *(s32 *)out = v1 + v0;
-            out += 4;
-        } while (i < count);
+            value1 = source[index + count - 1][selector];
+            value0 = source[index + offset + count - 1][selector];
+            index++;
+            *output_cursor = value1 + value0;
+            output_cursor++;
+        } while (index < count);
     }
 
-    count = D_80117E70 - D_80117E80;
-    if (count > 0)
+    index = 0;
+    if (D_80117E70 - D_80117E80 > 0)
     {
-        s32 e74 = D_80117E74;
-        s32 e80 = D_80117E80;
-        mask = ((D_80117E68 - 1) & 1) * 4;
-        i = 0;
+        s32 output_offset;
+        s32 source_offset;
+        s32 count;
+
+        output_offset = D_80117E74;
+        source_offset = D_80117E80;
+        count = D_80117E70 - D_80117E80;
+        selector = (D_80117E68 - 1) & 1;
         do
         {
-            s32 idx = i + e74;
-            s32 src_index = i + e80;
-            i++;
-            *(s32 *)((u8 *)arg1 + idx * 4) = *(s32 *)(arg0 + mask + src_index * 8);
-        } while (i < count);
+            s32 output_index;
+            s32 source_index;
+
+            output_index = index + output_offset;
+            source_index = index + source_offset;
+            index++;
+            output[output_index] = source[source_index][selector];
+        } while (index < count);
     }
 
-    count = D_80117E74 - 1;
-    if (count > 0)
+    index = 0;
+    if (D_80117E74 - 1 > 0)
     {
-        base = arg0;
-        e70 = D_80117E70;
-        mask = ((D_80117E68 - 1) & 1) * 4;
-        i = 0;
+        s32 output_offset;
+        s32 count;
+        s32 source_offset;
+
+        output_offset = D_80117E74;
+        count = D_80117E74 - 1;
+        source_offset = D_80117E70;
+        selector = (D_80117E68 - 1) & 1;
         do
         {
-            s32 src_index = i + e70;
-            i++;
-            *(s32 *)((u8 *)arg1 + (src_index - D_80117E74) * 4 + 4) =
-                *(s32 *)(arg0 + mask + src_index * 8) + *(s32 *)(mask + base);
-            base += 8;
-        } while (i < count);
+            s32 source_index;
+
+            source_index = index + source_offset;
+            output[source_index - output_offset + 1] = source[source_index][selector] + source[index][selector];
+            index++;
+        } while (index < count);
     }
 }

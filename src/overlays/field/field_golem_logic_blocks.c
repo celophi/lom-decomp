@@ -222,68 +222,85 @@ extern u8 D_800F2098[];
  * @param arg2 Horizontal grid offset.
  * @param arg3 Vertical grid offset.
  * @return One when the occupied cells are empty and the class is compatible.
- * @note Nonmatching C recovered from the existing m2c-based draft.
  */
 s32 func_800CBA9C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
-    s32 temp_a1;
-    s32 temp_v1;
-    s32 cell_offset;
+    s32 part_y;
+    s32 grid_index;
+    s32 logic_block_offset;
     s32 valid;
-    s32 saved_arg0;
-    u8 *temp_v0;
-    s32 cursor;
-    u8 *table;
-    u8 *grid;
-    s32 idx;
-    s32 record_byte;
-    s32 lookup;
-    s32 limit;
+    u8 *shape_part;
+    s32 part_offset;
+    s32 part_index;
+    s32 shape_offset;
+    s32 shape_index;
 
-    saved_arg0 = arg0;
     valid = 1;
-    cell_offset = saved_arg0 * 4;
-    table = D_800F1CD0;
-    cursor = (s32)g_menuLayoutBuffer;
-
-    idx = (*(u32 *)(cell_offset + cursor + 0x29DC) >> 12) & 0xF;
-    if (table[(((idx << valid) + idx) * 4 - idx) * 8] != 0)
+    logic_block_offset = arg0 * 4;
+    part_index = 0;
+    if (D_800F1CD0[((((((((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF) << valid)
+                       + ((((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) * 4
+                      - ((((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) * 8)] != 0)
     {
-        grid = (u8 *)cursor;
-        cursor = arg1 * 0x14;
-        arg0 = 0;
-        do
-        {
-            idx = (*(u32 *)(cell_offset + (s32)grid + 0x29DC) >> 12) & 0xF;
-            temp_v0 = (u8 *)(cursor + (((idx << 1) + idx) * 4 - idx) * 8 + (s32)table);
-            temp_v1 = *(s8 *)(temp_v0 + 0xC) + arg2;
-            temp_a1 = *(s8 *)(temp_v0 + 0xD) + arg3;
+        u8 *shape_table;
+        u8 *layout;
 
-            if (grid[(temp_v1 + temp_a1 * 6) * 4 + 0x2A7F] != 0x63)
-            {
-                valid = 0;
-            }
-
-            cursor += 4;
-        } while (++arg0 < table[(((idx << 1) + idx) * 4 - idx) * 8]);
-    }
-
-    cursor = (s32)g_menuLayoutBuffer;
-    record_byte = *(u8 *)(cell_offset + cursor + 0x29DC) & 0xFC;
-    lookup = *(s32 *)((u8 *)D_800F2098 + record_byte);
-    if (lookup != 0)
-    {
-        idx = *(u8 *)(D_80122C00 + cursor + 0x29D8);
-        limit = *(u8 *)(idx * 332 + cursor + 0x2B50) & 0xF;
-        if (lookup != limit)
+        shape_table = D_800F1CD0;
+        layout = g_menuLayoutBuffer;
+        part_offset = arg1 * 0x14;
+loop:
+        part_index++;
+        part_index--;
+        part_index++;
+        part_index--;
+        logic_block_offset++;
+        logic_block_offset--;
+        logic_block_offset++;
+        logic_block_offset--;
+        logic_block_offset++;
+        logic_block_offset--;
+        layout++;
+        layout--;
+        shape_table++;
+        shape_table--;
+        part_offset++;
+        part_offset--;
+        shape_index = ((*(u32 *)(logic_block_offset + (s32)layout + 0x29DC) >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF);
+        shape_part = (u8 *)(shape_index * 11);
+        shape_offset = (s32)shape_part * 8;
+        shape_part = (u8 *)(part_offset + shape_offset + (s32)shape_table);
+        part_y = arg3 + *(s8 *)(shape_part + 0xD);
+        grid_index = arg2 + *(s8 *)(shape_part + 0xC);
+        grid_index += part_y * 6;
+        if (layout[grid_index * 4 + 0x2A7F] != 0x63)
         {
             valid = 0;
         }
+        part_offset += 4;
+        if (++part_index < *(u8 *)(shape_offset + (s32)shape_table))
+        {
+            goto loop;
+        }
     }
 
+    {
+        u8 *class_lookup_table;
+        u8 *layout_base;
+        s32 logic_class;
+
+        class_lookup_table = D_800F2098;
+        layout_base = g_menuLayoutBuffer;
+        logic_class = *(s32 *)(class_lookup_table + (layout_base[arg0 * 4 + 0x29DC] & LOGIC_BLOCK_ID_MASK));
+        if (logic_class != 0)
+        {
+            if (logic_class != (layout_base[layout_base[D_80122C00 + 0x29D8] * 332 + 0x2B50] & 0xF))
+            {
+                valid = 0;
+            }
+        }
+    }
     return valid;
 }
-
 
 /**
  * @brief Check whether all parts of a selected composite layout fit within the active menu grid.

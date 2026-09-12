@@ -40,11 +40,12 @@ segments:
     type: decompress_overlay
     start: 0x1
     vram: 0x80140000
+    align: 4
     subsegments:
       - [auto, c, overlay_header]
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, menu]
-      - [0x558, .rodata, unk1]
-      - [0x909, c, menu]
+      - [0x57D, rodata, card_strings]
+      - [0x5B1, c, menu]
       - [0xFBF5, data, data]
   - [0x2B9DD]

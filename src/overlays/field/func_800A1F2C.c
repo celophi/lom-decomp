@@ -8,7 +8,7 @@ extern s32 D_80117E74;
 extern s32 D_80117E80;
 void func_800A20DC(s32 *);
 void func_800A22A8(s32, s32, s32 *, s32 *, s32 *);
-void func_800A2128(u8 *, s32 *);
+void func_800A2128(s32 (*)[2], s32 *);
 
 /** @brief Field position with the vertical component left unchanged here. */
 typedef struct
@@ -55,7 +55,7 @@ void func_800A1F2C(s32 time, FieldPosition *position, s32 group)
 
     func_800A20DC(work.knots);
     func_800A22A8(D_80117E68, (time << 12) / D_801178E0, &work.span, work.knots, work.coefficients);
-    func_800A2128((u8 *)work.coefficients, work.samples);
+    func_800A2128((s32 (*)[2])work.coefficients, work.samples);
     last = work.span - D_80117E74 + 1;
     first = last - D_80117E80;
     if (first < 0 || D_80117E70 - 1 < last)
