@@ -665,25 +665,19 @@ void golem_handle_input(void)
                 limit = g_golem_logic_block_count;
                 menu_data = (GolemMenuData*)g_menuLayoutBuffer;
                 logic_type = g_golem_active_logic_type;
-                block_index++;
-                for (;;)
+                do
                 {
+                    block_index++;
                     if (block_index == limit)
                     {
                         block_index = 0;
                     }
                     repeat_count++;
-                    if ((menu_data->logic_blocks[block_index] & 3) != logic_type)
+                    if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
                     {
-                        block_index++;
-                        if (repeat_count < limit)
-                        {
-                            continue;
-                        }
-                        block_index--;
+                        break;
                     }
-                    break;
-                }
+                } while (repeat_count < limit);
             }
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;

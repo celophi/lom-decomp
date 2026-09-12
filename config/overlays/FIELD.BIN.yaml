@@ -207,7 +207,7 @@ segments:
       - [0x3C319, c, field364]                     # gcc272_cdk, func_8008BF88
       - [0x3C3B5, c, func_8008C024]                # gcc272_cdk, 100%
       - [0x3C495, c, func_8008C104] # gcc272_cdk, 100%
-      - [0x3C67D, c, func_8008C2EC] # gcc272_cdk, 84.954956% WIP
+      - [0x3C67D, c, func_8008C2EC] # gcc272_cdk, 100%
       - [0x3C839, c, func_8008C4A8]                # gcc272_cdk, 100%
       - [0x3C9B1, c, func_8008C620] # gcc272_cdk, 100%
       # TU hypothesis: field_actor_routes (high). See docs/decompilation/field-boundaries/map.md.

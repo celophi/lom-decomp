@@ -80,7 +80,7 @@ extern s32 g_frame_counter;
  * @note WIP: the layout reloads and coordinate temporary widths still differ.
  *       The raw layout x load is kept separate from its short coordinate.
  *       Matching evidence is in working/func_80084D08/status.md.
- * @see decomp.me (95.64%)
+ * @see decomp.me (95.66%)
  */
 void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
     s16 *scratch = (s16 *)0x1F800000;
@@ -204,16 +204,18 @@ void func_80084D08(s32 arg0, s32 var_s6, s32 arg2, u8 *arg3, u32 arg4) {
         scratch[1] = var_s6;
         var_a0 = func_80086184(var_a0, ctx + 0xC, temp_s2->u4C.bytes.unk4D, scratch);
         D_8010A008 = 0x36;
+        D_8010A004 = 3;
     } else if (sp18 != 0) {
         D_8010A00C = 0xF;
         D_8010A010 = 6;
         D_8010A008 = 0xE3;
+        D_8010A004 = 3;
     } else {
         D_8010A00C = 4;
         D_8010A010 = 6;
         D_8010A008 = 0x36;
+        D_8010A004 = 3;
     }
-    D_8010A004 = 3;
     var_s0 = var_a0;
     if (arg2 < 3) {
         temp_v1 = D_801077F0;
