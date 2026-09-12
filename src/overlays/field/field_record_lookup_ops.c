@@ -74,7 +74,7 @@ typedef struct
     SlotRec *unk8;
 } FieldStateB;
 
-void func_800C2138(s32 arg0);
+void func_800C2138();
 u8 *func_800A9060(void);
 void func_800A8F8C(u8 *dst, u8 *src);
 void func_800A8D8C(u8 *arg0, u8 arg1);
@@ -86,18 +86,17 @@ extern u16 D_800F0E98[];
  * @brief Resolve a command to a slot record or table entry and submit its data.
  * @param arg0 Unused.
  * @param arg1 Command source passed to func_800C1B60.
- * @note WIP: two target instructions and temporary-register differences remain.
  */
 void func_800C1A18(void *arg0, void *arg1)
 {
     RetC1B60 *ret;
     u16 flags;
     s32 code;
-    s32 i;
     s32 count;
     SlotRec *table;
     SlotRec *cursor;
     s32 offset;
+    s32 old_offset;
     u8 *found;
     u8 *handle;
     u8 *arg0_2;
@@ -110,34 +109,50 @@ void func_800C1A18(void *arg0, void *arg1)
     {
         s32 key;
 
-        found = NULL;
         table = D_80123FB0->unk8;
-        offset = 0;
-        count = table->unk2;
-        i = offset;
-        if (count != 0)
+        do
         {
-            s32 n;
-            SlotRec *base;
-
-            key = flags & 0xFFFF;
-            base = table;
-            n = count;
-            cursor = base;
-            i = 0;
-            do
+            found = NULL;
+        } while (0);
+        count = table->unk2;
+        do
+        {
+            code = 0;
+            if (count != 0)
             {
-                if (cursor->unk4 == key)
+                s32 n;
+                SlotRec *base;
+
+                key = flags & 0xFFFF;
+                base = table;
+                n = count;
+                cursor = base;
+                offset = 0;
+                code = 0;
+                do
                 {
-                    found = (u8 *)base + offset + 8;
-                    goto found_match;
-                }
-                cursor = (SlotRec *)((u8 *)cursor + 0x44);
-                offset += 0x44;
-                i += 1;
-            } while (i < n);
-found_match:;
-        }
+                    do
+                    {
+                        do
+                        {
+                            old_offset = offset;
+                        } while (0);
+                    } while (0);
+                    if (cursor->unk4 == key)
+                    {
+                        found = (u8 *)(old_offset + (s32)base + 8);
+                        goto found_match;
+                    }
+                    do
+                    {
+                        cursor++;
+                    } while (0);
+                    offset = old_offset + 0x44;
+                    code += 1;
+                } while (code < n);
+            found_match:;
+            }
+        } while (0);
         if (found == NULL)
         {
             return;
@@ -155,7 +170,7 @@ found_match:;
     }
     else
     {
-        func_800C2138(code);
+        func_800C2138(code, ret);
         arg0_2 = (u8 *)D_800F0E98 + D_800F0E98[code];
         arg1_2 = 1;
     }

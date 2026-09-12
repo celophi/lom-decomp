@@ -225,64 +225,63 @@ extern s8 D_800F0C38[];
 extern u8 D_800F0E88[];
 
 /**
- * @brief Clamp eight slot level nibbles against their selected table bounds.
- * @note Preserve the high nibble and choose the input using absolute table values.
- * @note WIP: the target retains a separate low-nibble copy; see working notes.
+ * @brief Clamp eight slot low nibbles against the selected table bounds.
  */
 void func_800BF730(void)
 {
     s32 i;
     u8 *entry;
-    u8 byte20;
-    u8 byte50;
-    s32 v1;
-    s32 v0;
-    s32 idx;
-    s32 val;
-    s8 *tbl1;
-    u8 *table2;
-    u8 lower;
-    s32 upper;
-    u8 result;
+    u8 packed_value, result;
+    s32 alternate_value;
+    s32 first_score, second_score, pair_index, selected_value, upper_bound, low_nibble;
+    s8 *score_table, *score_entry, *bounds_entry;
 
     for (i = 0; i < 8; i++)
     {
-        tbl1 = D_800F0C38;
+        score_table = D_800F0C38;
         entry = D_80123FC4 + i;
-        byte20 = entry[0x20];
-        byte50 = entry[0x50];
-
-        val = byte20 & 0xF;
-
-        v1 = tbl1[val];
-        v0 = tbl1[byte50];
-
-        if (v1 < 0)
+        do
         {
-            v1 = -v1;
+            packed_value = entry[0x20];
+            alternate_value = entry[0x50];
+        } while (0);
+
+        low_nibble = packed_value & 0xF;
+        score_entry = (s8 *)((s32)low_nibble + (s32)score_table);
+        selected_value = low_nibble;
+        do
+        {
+            score_entry = (s8 *)((s32)selected_value + (s32)score_table);
+        } while (0);
+        bounds_entry = (s8 *)((s32)alternate_value + (s32)score_table);
+
+        first_score = *score_entry;
+        second_score = *bounds_entry;
+        if (first_score < 0)
+        {
+            first_score = -first_score;
         }
-        if (v0 < 0)
+        if (second_score < 0)
         {
-            v0 = -v0;
+            second_score = -second_score;
         }
 
-        v1 = (v1 < v0);
-        if (v1)
+        first_score = first_score < second_score;
+        if (first_score)
         {
-            val = byte50;
+            selected_value = alternate_value;
         }
 
-        idx = (byte20 >> 4) * 2;
-        table2 = &D_800F0E88[idx];
-
-        result = table2[0];
-        if (!(val < result))
+        pair_index = (packed_value >> 4) * 2;
+        bounds_entry = (s8 *)&D_800F0E88[pair_index];
+        result = ((u8 *)bounds_entry)[0];
+        if (!(selected_value < result))
         {
-            upper = table2[1];
-            result = upper;
-            if (!(upper < val))
+            upper_bound = ((u8 *)bounds_entry)[1];
+            result = upper_bound;
+            if (!(upper_bound < selected_value))
             {
-                result = val;
+                result = selected_value;
             }
         }
 
