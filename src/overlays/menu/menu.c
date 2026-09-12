@@ -8961,7 +8961,6 @@ s32 menu_stage_best_equipment_for_slot0(void)
     MenuItemEntry* slot_record;
     MenuItemEntry* slot_buffer;
     s32 records_differ;
-    PadContext* pad_ctx;
 
     menu_stage_stack_shape(0, 0, 0, 0, 0, 0);
 
@@ -8972,8 +8971,7 @@ s32 menu_stage_best_equipment_for_slot0(void)
         records_differ = menu_item_is_nondefault(slot_record);
         if (records_differ == 0)
         {
-            pad_ctx = g_pad_ctx;
-            func_800A8F8C((MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)pad_ctx + 0x640), candidate);
+            func_800A8F8C(&menu_character_record(g_pad_ctx, g_menu_char_slot)->items[0], candidate);
             candidate->active = 0;
             g_item_slot_data[0] = 0;
         }
@@ -9000,13 +8998,11 @@ MenuItemEntry* menu_find_best_equipment_for_slot0(void)
     s32 item_value;
     s32 best_value;
     u32 item_attributes;
-    u8* char_base;
     MenuItemEntry* item;
     MenuItemEntry* best_item;
 
     best_value = 0;
-    char_base = (u8*)g_pad_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET);
-    best_item = (MenuItemEntry*)(char_base + MENU_CHARACTER_ITEMS_OFFSET);
+    best_item = &menu_character_record(g_pad_ctx, g_menu_char_slot)->items[0];
     if (best_item->active != 0)
     {
         best_value = best_item->stat_values[0];
@@ -9041,10 +9037,8 @@ MenuItemEntry* menu_find_best_equipment_for_slot0(void)
 s32 menu_stage_best_equipment_for_active_slot(void)
 {
     MenuItemEntry* candidate;
-    MenuItemEntry* slot_buffer;
     u32* slot_data;
     PadContext* pad_context;
-    s32 slot_flag;
     s32 subtype_index;
     s32 slot_index;
     if (0)
@@ -9083,12 +9077,10 @@ s32 menu_stage_best_equipment_for_active_slot(void)
                     break;
                 }
             }
-            slot_buffer = (MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_pad_ctx + (g_menu_active_subtype << 6) + 0x480);
-            menu_swap_item_records(slot_buffer, candidate);
+            menu_swap_item_records((MenuItemEntry*)((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + (s32)g_pad_ctx + (g_menu_active_subtype << 6) + 0x480), candidate);
             g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = (u32)candidate;
-            slot_flag = 1;
         }
-        g_item_slot_flags[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = slot_flag;
+        g_item_slot_flags[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 1;
         return 1;
     }
     return 0;
@@ -9105,12 +9097,10 @@ MenuItemEntry* menu_find_best_equipment_for_active_slot(void)
     s32 item_value;
     s32 best_value;
     u32 item_attributes;
-    u8* equipment_area;
     MenuItemEntry* item;
     MenuItemEntry* best_item;
 
-    equipment_area = (u8*)g_pad_ctx + ((g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE) + MENU_CHARACTER_RECORD_OFFSET);
-    best_item = &((MenuItemEntry*)(equipment_area + MENU_CHARACTER_ITEMS_OFFSET))[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE];
+    best_item = &menu_character_record(g_pad_ctx, g_menu_char_slot)->items[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE];
     if (best_item->active == 0)
     {
         best_value = 0;

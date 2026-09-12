@@ -1285,7 +1285,7 @@ extern SVECTOR *D_80105870;
  */
 s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3_base)
 {
-    volatile s32 pad[2];
+    s32 pad[2];
     MATRIX mtx;
     MATRIX tmp;
     MATRIX *mp;
@@ -1297,7 +1297,6 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     SVECTOR out;
     SVECTOR *rotation_table;
     s32 opz;
-    s32 light_direction_y;
     FieldActorState *actor;
     FieldActorPartDef *part;
     u8 *part_iter;
@@ -1317,7 +1316,6 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     s32 kind;
     s32 sx, sy, rx, ry, rz, sz;
 
-    mp = &tmp;
     mp = &mtx;
     { FieldActorState *actor_base = g_field_actor_slots; part = &actor_base[rec->unk22].unk0[rec->unk23]; actor = &actor_base[rec->unk22]; }
     func_80082C90(actor, rec, part, mp, &tmp);
@@ -1339,12 +1337,11 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
         count = 0;
         rotation_table = &D_800FF668;
         if (light_id < 8) {
-            rotation_matrix = &tmp;
-            scan = D_800FF658;
-            scan_off = 0;
             do {
+                scan = &D_800FF658[count];
+                scan_off = count * 0x54;
                 if(light_id == scan->unk23 && rec->unk22 == scan->unk22) goto found_light;
-                scan++; count++; scan_off += 0x54;
+                count++;
             } while(count<0x100);
 checked_light:
             if(count!=0x100) goto next_light;
@@ -1352,37 +1349,35 @@ checked_light:
 found_light:
             {
                 u8 *found_row;
-                scan_off += (s32)(u8 *)rotation_table;
-                light_direction_y = -0x1000;
-                RotMatrix_gte((SVECTOR *)scan_off, rotation_matrix);
+                rotation_matrix = &tmp;
+                RotMatrix_gte((SVECTOR *)(scan_off + (s32)rotation_table), rotation_matrix);
                 RotMatrixZ(rec->unk32 * 0x10, rotation_matrix);
                 RotMatrixY(rec->unk33 * 0x10, rotation_matrix);
                 dir.vz = 0;
                 dir.vx = 0;
-                dir.vy = light_direction_y;
+                dir.vy = -0x1000;
                 gte_SetRotMatrix(rotation_matrix);
                 gte_ldv0(&dir);
                 gte_rtv0();
                 gte_stsv(&out);
-                found_row = (u8 *)(color_off + (s32)pad);
+                found_row = (u8 *)&color_mtx + color_off;
                 {
                     s16 *light_row = (s16 *)((u8 *)&light_mtx + light_off);
                     light_row[0] = out.vx;
                     light_row[1] = out.vy;
                     light_row[2] = out.vz;
                 }
-                *(s16 *)(found_row + 0x70) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkE * 0x10;
-                *(s16 *)(found_row + 0x76) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
-                *(s16 *)(found_row + 0x7C) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
+                *(s16 *)(found_row + 0) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkE * 0x10;
+                *(s16 *)(found_row + 6) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
+                *(s16 *)(found_row + 12) = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
             }
             goto checked_light;
-            if (count == 0x100) goto zero_light;
         } else {
 zero_light:
-            color_row = (u8 *)(color_off + (s32)pad);
-            *(s16 *)(color_row + 0x7C) = 0;
-            *(s16 *)(color_row + 0x76) = 0;
-            *(s16 *)(color_row + 0x70) = 0;
+            color_row = (u8 *)&color_mtx + color_off;
+            *(s16 *)(color_row + 12) = 0;
+            *(s16 *)(color_row + 6) = 0;
+            *(s16 *)(color_row + 0) = 0;
             *(s16 *)((u8 *)&light_mtx + light_off) = 0;
         }
 next_light:
@@ -1491,7 +1486,6 @@ next_light:
         u8 *basecur;
         s32 lowmask;
         s32 highmask;
-        u8 code2;
         { s32 ca = mesh_off; ca += (s32)actor->unk18; count = *(u16 *)ca; }
         do { do { do { do { do { basecur=(u8*)cursor; } while (0); } while (0); } while (0); } while (0); } while (0);
         if(count!=0){
@@ -1511,12 +1505,11 @@ next_light:
                     CLAMP_TO(basecur[29], face[14]+color[1]-0x80);
                     { s32 blue;
                         CLAMP_TO(blue, face[15]+color[2]-0x80);
-                        basecur[3] = 9;
-                        code2 = 0x34;
+                        setlen(basecur, 9);
                         basecur[30] = blue;
                     }
-                    basecur[7]=code2;
-                    if (rec->unk1C & 0x800000) basecur[7]=0x36; else basecur[7]=code2;
+                    setcode(basecur, 0x34);
+                    setSemiTrans(basecur, rec->unk1C & 0x800000);
                     do { *(s32 *)(basecur+8)=sxy[0]; *(s32 *)(basecur+20)=sxy[1]; *(s32 *)(basecur+32)=sxy[2]; } while (0);
                     *(u16 *)(basecur+8)+=(u16)screen[0]; *(u16 *)(basecur+10)+=(u16)screen[1];
                     *(u16 *)(basecur+20)+=(u16)screen[0]; *(u16 *)(basecur+22)+=(u16)screen[1];
