@@ -1,6 +1,7 @@
 #include "common.h"
 
 
+/** @brief 0x94-byte actor record stored in the FIELD actor table. */
 typedef struct
 {
     u8 unk0;
@@ -16,10 +17,45 @@ typedef struct
     s32 unk90;
 } RecC1B98;
 
+/** @brief FIELD actor table containing the 16 records scanned by func_800C2724. */
+typedef struct
+{
+    u8 pad0[0x400];
+    u16 unk400;
+    u8 pad402[0x2E];
+    RecC1B98 records[16];
+} FieldActorTable;
+
+/** @brief Three-dimensional field position. */
+typedef struct
+{
+    s32 x;
+    s32 y;
+    s32 z;
+} FieldPosition;
+
+/** @brief Actor identifier paired with its distance from a reference position. */
+typedef struct
+{
+    s32 object_id;
+    s32 distance;
+} FieldDistanceEntry;
+
+/** @brief Sortable list of actor identifiers and their distances. */
+typedef struct
+{
+    s32 count;
+    FieldDistanceEntry entries[16];
+} FieldDistanceList;
+
 void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
 RecC1B98 *func_800C1C50(s32 id);
 RecC1B98 *func_800C1B60();
 void func_800B28E0(s32, s32, s32);
+s32 func_80087770(s32 arg0, s32 arg1);
+void func_80087F44(s32 index, FieldPosition *position);
+void func_800C1F28(u32 *arg0);
+s32 func_800C1FBC(FieldPosition *arg0, FieldPosition *arg1);
 
 extern u8 *D_80122B78;
 
@@ -58,77 +94,41 @@ void func_800C2640(s32 arg0, s32 arg1)
     rec->unk90 &= 0xDFFFFFFF;
 }
 
-/** @brief Partial FieldPosition layout used by func_800C2724. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s32 z;
-} FieldPosition;
-
-/** @brief Partial Struct_UnkVec8 layout used by func_800C2724. */
-typedef struct
-{
-    s32 unk0;
-    u8 pad4[0x8 - 0x4];
-    s32 unk8;
-} Struct_UnkVec8;
-
-/** @brief Partial OutRec layout used by func_800C2724. */
-typedef struct
-{
-    u8 pad0[4];
-    s32 unk4;
-    s32 unk8;
-} OutRec;
-
-s32 func_80087770(s32 arg0, s32 arg1);
-void func_80087F44(s32 index, FieldPosition *position);
-void func_800C1F28(u32 *arg0);
-s32 func_800C1FBC(Struct_UnkVec8 *arg0, Struct_UnkVec8 *arg1);
-
-extern u8 *D_80122B78;
-
 /**
- * @brief Collect eligible actors, sort them by distance from actor six, and select one.
- * @return The first sorted actor ID, or 0xFF if none qualified.
- * @note Only records with bits 31 and 29 set and a successful eligibility check qualify.
- * @note WIP: invariant-load placement and saved-register differences remain.
+ * @brief Select the nearest eligible actor to actor six.
+ * @return Object ID of the nearest eligible actor, or 0xFF when none qualify.
  */
 s32 func_800C2724(void)
 {
-    s32 buf[0x22];
-    FieldPosition sp98;
-    FieldPosition spA8;
-    s32 pad_tail[2];
-    s32 i;
-    s32 offset;
+    FieldDistanceList list;
+    FieldPosition reference_position;
+    FieldPosition actor_position;
+    s32 actor_index;
     s32 flags;
-    RecC1B98 *rec;
+    RecC1B98 *actor;
 
-    func_80087F44(6, &sp98);
-    i = 3;
-    offset = 0x5EC;
-    buf[0] = 0;
+    func_80087F44(6, &reference_position);
+    actor_index = 3;
+    list.count = 0;
     do
     {
-        rec = (RecC1B98 *)(D_80122B78 + offset);
-        flags = rec->unk90;
+        actor = &((FieldActorTable *)D_80122B78)->records[actor_index];
+        flags = actor->unk90;
         if (flags < 0 && ((((u32)flags) >> 0x1D) & 1) &&
-            func_80087770(6, rec->unk0) == 1)
+            func_80087770(6, actor->unk0) == 1)
         {
-            func_80087F44(rec->unk0, &spA8);
-            ((OutRec *)((u8 *)buf + buf[0] * 8))->unk4 = rec->unk0;
-            ((OutRec *)((u8 *)buf + buf[0] * 8))->unk8 = func_800C1FBC((Struct_UnkVec8 *)&sp98, (Struct_UnkVec8 *)&spA8);
-            buf[0] += 1;
+            func_80087F44(actor->unk0, &actor_position);
+            list.entries[list.count].object_id = actor->unk0;
+            list.entries[list.count].distance = func_800C1FBC(&reference_position, &actor_position);
+            list.count += 1;
         }
-        i += 1;
-        offset += 0x94;
-    } while (i < 0x10);
-    func_800C1F28((u32 *)buf);
-    if (buf[0] != 0)
+        actor_index += 1;
+    } while (actor_index < 16);
+
+    func_800C1F28((u32 *)&list);
+    if (list.count != 0)
     {
-        return ((OutRec *)buf)->unk4;
+        return list.entries[0].object_id;
     }
     return 0xFF;
 }

@@ -275,63 +275,66 @@ void func_800B7D10(Source *source, Result *result)
     }
 }
 
-/** @brief Apply four packed record modifiers and clamp the selected stat to 1-99. */
-s32 func_800B7EE8(u8 *arg0, u32 arg1)
+/**
+ * @brief Accumulate four packed record modifiers for a selected stat.
+ * @param record Base record containing the stat values and modifier slots.
+ * @param stat_index Index of the stat and packed modifier nibble to evaluate.
+ * @return Adjusted stat clamped to the range 1 through 99.
+ */
+s32 func_800B7EE8(u8* record, u32 stat_index)
 {
-    u32 var_a2;
-    u32 var_v0;
-    u32 var_v1;
-    u8 *var_a3;
+    s32 slot_offset;
+    s32 value;
+    s32 result;
 
-    var_a3 = arg0;
-    var_a2 = (u32) (*(u16 *)(arg0 + arg1 * 2 + 0x30) & 0x1FF) >> 2;
+    value = (u32)(((Rec*)record)->vals[stat_index] & 0x1FF) >> 2;
+    slot_offset = 0;
     do
     {
-        if (var_a3[0x50] != 0)
+        if (record[slot_offset + 0x50] != 0)
         {
-            switch (arg1)
+            switch (stat_index)
             {
             case 0:
-                var_v0 = (*(u32 *)(var_a3 + 0x6C)) & 0xF;
-block_12:
-                var_a2 += ((s8 *)D_800F0C38)[var_v0];
+                value += ((s8*)D_800F0C38)[*(u32*)(record + slot_offset + 0x6C) & 0xF];
                 break;
             case 1:
-                var_v0 = var_a3[0x6C] >> 4;
-                goto block_12;
+                value += ((s8*)D_800F0C38)[*(u8*)(record + slot_offset + 0x6C) >> 4];
+                break;
             case 2:
-                var_v0 = ((u32) (*(u32 *)(var_a3 + 0x6C)) >> 8) & 0xF;
-                goto block_12;
+                value += ((s8*)D_800F0C38)[(*(u32*)(record + slot_offset + 0x6C) >> 8) & 0xF];
+                break;
             case 3:
-                var_v0 = ((u32) (*(u32 *)(var_a3 + 0x6C)) >> 0xC) & 0xF;
-                goto block_12;
+                value += ((s8*)D_800F0C38)[(*(u32*)(record + slot_offset + 0x6C) >> 12) & 0xF];
+                break;
             case 4:
-                var_v0 = (*(u16 *)(var_a3 + 0x6E)) & 0xF;
-                goto block_12;
+                value += ((s8*)D_800F0C38)[*(u16*)(record + slot_offset + 0x6E) & 0xF];
+                break;
             case 5:
-                var_v0 = ((u32) (*(u32 *)(var_a3 + 0x6C)) >> 0x14) & 0xF;
-                goto block_12;
+                value += ((s8*)D_800F0C38)[(*(u32*)(record + slot_offset + 0x6C) >> 20) & 0xF];
+                break;
             case 6:
-                var_v0 = var_a3[0x6F] & 0xF;
-                goto block_12;
+                value += ((s8*)D_800F0C38)[*(u8*)(record + slot_offset + 0x6F) & 0xF];
+                break;
             case 7:
-                var_v0 = (u32) (*(u32 *)(var_a3 + 0x6C)) >> 0x1C;
-                goto block_12;
+                value += ((s8*)D_800F0C38)[*(u32*)(record + slot_offset + 0x6C) >> 28];
+                break;
             }
         }
-        var_a3 += 0x40;
-    } while ((s32) var_a3 < (s32) (arg0 + 0x100));
-    var_v1 = var_a2;
-    if ((s32) var_a2 > 0)
+        slot_offset += 0x40;
+    } while ((s32)(record + slot_offset) < (s32)(record + 0x100));
+
+    if (value > 0)
     {
-        if ((s32) var_v1 >= 0x64)
+        result = value;
+        if (result >= 100)
         {
-            var_v1 = 0x63;
+            result = 99;
         }
     }
     else
     {
-        var_v1 = 1;
+        result = 1;
     }
-    return (s32) var_v1;
+    return result;
 }
