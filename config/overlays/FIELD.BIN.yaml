@@ -294,7 +294,7 @@ segments:
       - [0x4A779, c, func_8009A3E8]                # gcc272_cdk, 100%
       - [0x4A831, c, field45]                      # gcc272_cdk, func_8009A4A0
       - [0x4A85D, c, func_8009A4CC] # gcc272_cdk,100%
-      - [0x4B1C9, c, func_8009AE38] # gcc272_cdk, 81.690720% WIP
+      - [0x4B1C9, c, func_8009AE38] # gcc272_cdk, 100.000000%
       # TU hypothesis: field_scene_transition (high). See docs/decompilation/field-boundaries/map.md.
       - [0x4B34D, c, field273]                     # gcc272_cdk, func_8009AFBC + field_set_scene_parameters (100%)
       - [0x4B3B9, c, field_update_scene] # gcc272_cdk, 88.348310% WIP
