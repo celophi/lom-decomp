@@ -471,7 +471,7 @@ segments:
       - [0x62E2D, c, field_state_ops] # gcc280_g0; record/effect/attribute helpers, thirteen exact and one WIP
       - [0x63861, c, field_party_setup] # gcc280_g0; context and party initialization; four exact, B37D4 WIP
       - [0x64185, c, field_actor_templates] # gcc280_g0; actor selection exact, initialization 89.043480%, scaling exact
-      - [0x64721, c, field_actor_lifecycle] # gcc280_g0; four actor setup/reset routines, two exact/two WIP
+      - [0x64721, c, field_actor_lifecycle] # gcc280_g0; four actor setup/reset routines, three exact/one WIP
       - [0x64BD5, c, func_800B4844]                # gcc280_g0, 100.00000%, 29/29 instructions
       - [0x64C49, c, field_status_ticks] # gcc280_g0; ten status/update routines, all exact
       - [0x65449, c, field_action_descriptors] # gcc280_g0; B50B8 new C 83.8%, B543C exact codegen
