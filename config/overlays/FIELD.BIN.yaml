@@ -172,7 +172,7 @@ segments:
       # TU hypothesis: field_actor_script_ops (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x3847D, c, field35]                      # gcc272_cdk, func_800880EC
       - [0x384BD, c, field_get_object_script_command] # gcc272_cdk, field_get_object_script_command (100%)
-      - [0x38529, c, func_80088198]             # gcc272_cdk, WIP 89.32%
+      - [0x38529, c, func_80088198]             # gcc272_cdk, 100.000000%
       - [0x39D11, c, func_80089980]              # gcc272_cdk, 100%
       - [0x39DF9, c, field308]                  # gcc272_cdk, func_80089A68, 100%
       - [0x39E75, c, func_80089AE4]              # gcc272_cdk, 100%
