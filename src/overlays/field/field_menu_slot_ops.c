@@ -145,15 +145,7 @@ void func_800C6A90(void)
 
 typedef struct
 {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-} Rec16;
-
-typedef struct
-{
-    u8 pad[0xE8];
+    s32 words[0xE8 / 4];
 } Struct0xE8;
 
 extern Struct0xE8 D_80051CE4;
@@ -165,95 +157,52 @@ void func_800C3BB0(void);
 
 /**
  * @brief Reconcile active logic blocks with the selected layout class.
- * @note Nonmatching C. Copies both 0xE8-byte tables; only the first is read
- * by the visible ownership check. Preserve the second copy from the target.
  */
 void func_800C6AF0(void)
 {
-    Struct0xE8 sp10;
-    Struct0xE8 spF8;
-    Rec16 *v0;
-    Rec16 *v1;
-    u8 *a0;
-    s32 a1;
-    s32 key;
-    u32 v1w;
-    s32 v0w;
-    u8 *rec;
+    Struct0xE8 primary_table;
+    Struct0xE8 secondary_table;
+    u8 *layout_buffer;
+    s32 index;
+    s8 layout_class;
+    s32 selected_value;
+    u32 packed_state;
+    s32 table_value;
+    u8 *layout_record;
+    s32 active_flag;
+    u8 *primary_table_bytes;
+    u32 clear_active_mask;
 
-    v1 = (Rec16 *)&sp10;
-    v0 = (Rec16 *)&D_80051CE4;
-    do
-    {
-        s32 t4, t5, t6, t7;
-        t4 = v0->unk0;
-        t5 = v0->unk4;
-        t6 = v0->unk8;
-        t7 = v0->unkC;
-        v1->unk0 = t4;
-        v1->unk4 = t5;
-        v1->unk8 = t6;
-        v1->unkC = t7;
-        v0++;
-        v1++;
-    } while (v0 != (Rec16 *)((u8 *)&D_80051CE4 + 0xE0));
-    {
-        s32 t4, t5;
-        t4 = v0->unk0;
-        t5 = v0->unk4;
-        v1->unk0 = t4;
-        v1->unk4 = t5;
-    }
+    primary_table = D_80051CE4;
+    secondary_table = D_80051DCC;
 
-    v1 = (Rec16 *)&spF8;
-    v0 = (Rec16 *)&D_80051DCC;
-    do
+    layout_buffer = g_menuLayoutBuffer;
+    layout_class = ((s8 *)layout_buffer)[0x29D7];
+    selected_value = D_80122C1C;
+    if (layout_class < 3)
     {
-        s32 t4, t5, t6, t7;
-        t4 = v0->unk0;
-        t5 = v0->unk4;
-        t6 = v0->unk8;
-        t7 = v0->unkC;
-        v1->unk0 = t4;
-        v1->unk4 = t5;
-        v1->unk8 = t6;
-        v1->unkC = t7;
-        v0++;
-        v1++;
-    } while (v0 != (Rec16 *)((u8 *)&D_80051DCC + 0xE0));
-    {
-        s32 t4, t5;
-        t4 = v0->unk0;
-        t5 = v0->unk4;
-        v1->unk0 = t4;
-        v1->unk4 = t5;
-    }
-
-    key = ((s8 *)g_menuLayoutBuffer)[0x29D7];
-    if (key < 3)
-    {
-        rec = g_menuLayoutBuffer + key * 0x14C;
-        a0 = (u8 *)-0x10;
+        layout_record = layout_buffer + layout_class * 0x14C;
         g_menuLayoutBuffer[0xAA9] = (u8)D_80122C1C;
-        *(s32 *)(rec + 0x2B50) = (*(s32 *)(rec + 0x2B50) & ~0xF) | ((u8)D_80122C1C & 0xF);
-        a1 = 0;
-        if (g_menuLayoutBuffer[0x29D6] != 0)
+        *(s32 *)(layout_record + 0x2B50) = (*(s32 *)(layout_record + 0x2B50) & ~0xF) | ((u8)D_80122C1C & 0xF);
+        index = 0;
+        if (layout_buffer[0x29D6] != 0)
         {
-            a0 = g_menuLayoutBuffer;
+            active_flag = 1;
+            primary_table_bytes = (u8 *)&primary_table;
+            clear_active_mask = 0xFFFEFFFF;
             do
             {
-                v1w = *(u32 *)(a0 + 0x29DC);
-                if (((v1w >> 0x10) & 1) == 1 && (v1w & 3) == key)
+                packed_state = *(u32 *)(layout_buffer + index * 4 + 0x29DC);
+                if (((packed_state >> 0x10) & 1) == active_flag && (packed_state & 3) == layout_class)
                 {
-                    v0w = *(s32 *)((u8 *)&sp10 + (v1w & 0xFC));
-                    if (v0w != 0 && v0w != D_80122C1C)
+                    table_value = *(s32 *)(primary_table_bytes + (packed_state & 0xFC));
+                    if (table_value != 0 && table_value != selected_value)
                     {
-                        *(u32 *)(a0 + 0x29DC) = (v1w & 0xFFFEFFFF) | 3;
+                        *(u32 *)(layout_buffer + index * 4 + 0x29DC) = (packed_state & clear_active_mask) | 3;
                     }
                 }
-                a1 = a1 + 1;
-                a0 = a0 + 4;
-            } while (a1 < g_menuLayoutBuffer[0x29D6]);
+                index = index + 1;
+            } while (index < layout_buffer[0x29D6]);
         }
         func_800C3BB0();
     }
