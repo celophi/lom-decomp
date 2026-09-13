@@ -139,7 +139,7 @@ segments:
       - [0x33EC9, c, field_stop_actor_animations_for_object] # gcc272_cdk, field_stop_actor_animations_for_object
       - [0x33F51, c, func_80083BC0] # gcc272_cdk, 100%
       - [0x3427D, c, func_80083EEC]              # gcc272_cdk, 100%
-      - [0x343DD, c, func_8008404C] # gcc272_cdk, 99.240000% WIP
+      - [0x343DD, c, func_8008404C] # gcc272_cdk, 100%
       - [0x345D1, c, func_80084240]              # gcc272_cdk, 100%
       - [0x34671, c, func_800842E0]             # gcc272_cdk, 100%
       - [0x347B5, c, field22]                   # gcc272_cdk, func_80084424
