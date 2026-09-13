@@ -2398,7 +2398,7 @@ typedef union FieldCollisionRasterSpanFlags {
  *       instructions; this source has 875. The 0x60-byte frame and stack
  *       slots match. Register and instruction differences remain.
  *       See working/func_8005E3B0/status.md for prior matching evidence.
- * @note Current objdiff match: 98.561780% (715/874 exact instructions).
+ * @see decomp.me (99.557205%, 841/874 exact) TODO
  */
 void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
 {
@@ -2430,10 +2430,11 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     s32 i;
     s32 j;
     s32 n;
-    s32 count;
+    s32 sort_n;
+    
     s32 last_dir;
     s32 attr;
-    s32 attr2;
+    
     s32 nbytes;
     s32 hi;
     s32 closing_hi;
@@ -2443,15 +2444,18 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     u16 y1;
     u16 ybase;
     s16 dx;
+    
     s32 dy;
+    s32 main_dy;
     s16 x;
     s16 sgn;
+    s16 main_sgn;
     s16 ystep;
     s16 row;
     s16 err;
     s16 merge_row;
     s16 merge_row2;
-    s16 dx_closing;
+    
 
     def = node->unk4;
     rows = node->unk20;
@@ -2502,37 +2506,38 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 {
                     x = prev->x;
                     y0 = prev->z;
-                    dy = pt->z;
+                    main_dy = pt->z;
                     ybase = node->unk22;
-                    sgn = 1;
+                    main_sgn = 1;
                 }
                 else
                 {
                     dx = -dx;
                     x = pt->x;
-                    sgn = -1;
-                    y0 = pt->z;
-                    dy = prev->z;
+                    main_sgn = -1;
+                    main_dy = pt->z;
+                    y0 = main_dy;
+                    main_dy = prev->z;
                     ybase = node->unk22;
                 }
                 do
                 {
-                    dy = dy - y0;
+                    main_dy = main_dy - y0;
                 } while (0);
-                row = y0 - ybase;
+                do { row = y0 - ybase; } while (0);
                 cp = &counts[row];
                 sp_row = &spans[row * w];
                 fl_row = &flags[row * w];
-                if ((s16)dy != 0)
+                if ((s16)main_dy != 0)
                 {
                     ystep = 1;
-                    if ((s16)dy < 0)
+                    if ((s16)main_dy < 0)
                     {
-                        dy = -(s16)dy;
+                        main_dy = -main_dy;
                         ystep = -1;
                     }
-                    attr2 = attr;
-                    if ((last_dir == 2) || (((ystep * sgn) + 2) == last_dir))
+                    
+                    if ((last_dir == 2) || (((ystep * main_sgn) + 2) == last_dir))
                     {
                         merge_row = prev->z - node->unk22;
                     }
@@ -2540,19 +2545,16 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                     {
                         merge_row = -1;
                     }
-                    last_dir = (ystep * sgn) + 2;
+                    last_dir = (ystep * main_sgn) + 2;
                     if ((first_dir == 0) || (first_dir == 2))
                     {
                         first_dir = last_dir;
                     }
-                    if ((s16)dy < dx)
+                    if ((s16)main_dy < dx)
                     {
-                        count = dx + 1;
-                        do
-                        {
-                            err = -dx;
-                        } while (0);
-                        while (count > 0)
+                        j = dx + 1;
+                        err = -dx;
+                        while (j > 0)
                         {
                             n = *cp;
                             if (row == merge_row)
@@ -2560,7 +2562,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                                 if (sp_row[n - 1].x.x0 > x)
                                 {
                                     sp_row[n - 1].x.x0 = x;
-                                    fl_row[n - 1].f.f0 = attr2;
+                                    fl_row[n - 1].f.f0 = attr;
                                 }
                             }
                             else
@@ -2572,9 +2574,9 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                             do
                             {
                                 x++;
-                                err += (s16)dy * 2;
-                                count--;
-                            } while ((err < 0) && (count > 0));
+                                err += (s16)main_dy * 2;
+                                j--;
+                            } while ((err < 0) && (j > 0));
                             if (row == merge_row)
                             {
                                 if (sp_row[n - 1].x.x1 < x)
@@ -2597,14 +2599,14 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                     }
                     else
                     {
-                        err = -(s16)dy;
-                        for (j = (s16)dy; j != -1; j--)
+                        err = -(s16)main_dy;
+                        for (j = (s16)main_dy; j != -1; j--)
                         {
                             n = *cp;
-                            hi = merge_row;
-                            if (row == hi)
+                            
+                            if (row == merge_row)
                             {
-                                if (x < sp_row[n - 1].x.x0)
+                                if (sp_row[n - 1].x.x0 > x)
                                 {
                                     sp_row[n - 1].x.x0 = x;
                                     fl_row[n - 1].f.f0 = attr;
@@ -2619,8 +2621,8 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                             {
                                 sp_row[n].x.x1 = x;
                                 sp_row[n].x.x0 = x;
-                                fl_row[n].f.f1 = attr2;
-                                fl_row[n].f.f0 = attr2;
+                                fl_row[n].f.f1 = attr;
+                                fl_row[n].f.f0 = attr;
                                 *cp = n + 1;
                             }
                             sp_row += ystep * w;
@@ -2631,7 +2633,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                             if (err >= 0)
                             {
                                 x++;
-                                err -= (s16)dy * 2;
+                                err -= (s16)main_dy * 2;
                             }
                         }
                     }
@@ -2679,14 +2681,15 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     /* closing edge: back to the first run's first point */
     closing_hi = 0;
     run = def->runs;
-    if (run->count & 0x8000)
+    y0 = run->count & 0x8000;
+    if (y0)
     {
         closing_hi = prev_hi << 7;
     }
     pt = (FieldCollisionEdgePoint*)&table[run->index * 2];
     attr = edge | closing_hi;
-    dx_closing = pt->x - prev->x;
-    if (dx_closing >= 0)
+    dx = pt->x - prev->x;
+    if (dx >= 0)
     {
         x = prev->x;
         y0 = prev->z;
@@ -2696,7 +2699,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     }
     else
     {
-        dx_closing = -dx_closing;
+        dx = -dx;
         x = pt->x;
         sgn = -1;
         y0 = pt->z;
@@ -2707,7 +2710,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     {
         dy = y1 - y0;
     } while (0);
-    row = y0 - ybase;
+    do { row = y0 - ybase; } while (0);
     cp = &counts[row];
     sp_row = &spans[row * w];
     fl_row = &flags[row * w];
@@ -2735,11 +2738,12 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
         {
             merge_row2 = -1;
         }
-        if ((s16)dy < dx_closing)
+        
+        if ((s16)dy < dx)
         {
-            count = dx_closing + 1;
-            err = -dx_closing;
-            while (count > 0)
+            j = dx + 1;
+            err = -dx;
+            while (j > 0)
             {
                 n = *cp;
                 if (row == merge_row)
@@ -2768,18 +2772,15 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 {
                     x++;
                     err += (s16)dy * 2;
-                    count--;
-                } while ((err < 0) && (count > 0));
+                    j--;
+                } while ((err < 0) && (j > 0));
                 if (row == merge_row)
                 {
-                    do
+                    if (sp_row[n - 1].x.x1 < x)
                     {
-                        if (sp_row[n - 1].x.x1 < x)
-                        {
-                            sp_row[n - 1].x.x1 = x;
-                            fl_row[n - 1].f.f1 = attr;
-                        }
-                    } while (0);
+                        sp_row[n - 1].x.x1 = x;
+                        fl_row[n - 1].f.f1 = attr;
+                    }
                 }
                 else if (row == merge_row2)
                 {
@@ -2794,10 +2795,10 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                     sp_row[n].x.x1 = x - 1;
                     *cp = n + 1;
                 }
-                row += ystep;
                 cp += ystep;
-                err -= dx_closing * 2;
+                err -= dx * 2;
                 sp_row += ystep * w;
+                row += ystep;
                 fl_row += ystep * w;
             }
         }
@@ -2809,7 +2810,8 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 n = *cp;
                 if (row == merge_row)
                 {
-                    if (sp_row[n - 1].x.x0 > x)
+                    i = sp_row[n - 1].x.x0 > x;
+                if (i)
                     {
                         sp_row[n - 1].x.x0 = x;
                         fl_row[n - 1].f.f0 = attr;
@@ -2845,7 +2847,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 fl_row += ystep * w;
                 cp += ystep;
                 row += ystep;
-                err += dx_closing * 2;
+                err += dx * 2;
                 if (err >= 0)
                 {
                     x++;
@@ -2872,9 +2874,9 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 sp_row[n - 1].x.x0 = x;
                 fl_row[n - 1].f.f0 = attr | 0x7F;
             }
-            if (sp_row[n - 1].x.x1 <= (s16)(x + dx_closing))
+            if (sp_row[n - 1].x.x1 <= (s16)(x + dx))
             {
-                sp_row[n - 1].x.x1 = x + dx_closing;
+                sp_row[n - 1].x.x1 = x + dx;
                 fl_row[n - 1].f.f1 = attr | 0x7F;
             }
         }
@@ -2890,10 +2892,10 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
         q = flags;
         for (j = *counts - 2; j != -1; j--)
         {
-            n = j + 1;
-            a = &p[n];
-            b = &q[n];
-            for (n = j; n != -1; n--)
+            sort_n = j + 1;
+            a = &p[sort_n];
+            b = &q[sort_n];
+            for (sort_n = j; sort_n != -1; sort_n--)
             {
                 if (p->x.x0 > a->x.x0)
                 {
@@ -2935,12 +2937,16 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
             q += 2;
         }
 
-        for (j = ((capacity - *counts) / 2) - 1; j != -1; j--)
+        j = (capacity - *counts) / 2;
+        j--;
+        for (; j != -1; j--)
         {
             out_span->word = 0x80007F00;
             out_span++;
         }
-        for (j = ((capacity - *counts) / 2) - 1; j != -1; j--)
+        j = (capacity - *counts) / 2;
+        j--;
+        for (; j != -1; j--)
         {
             out_flag->half = 0xFFFF;
             out_flag++;

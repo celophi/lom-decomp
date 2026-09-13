@@ -407,7 +407,7 @@ segments:
       - [0x584B9, c, func_800A8128] # gcc272_cdk, 93.673200% WIP
       - [0x5871D, c, func_800A838C]                 # gcc272_cdk, 100%
       - [0x588B5, c, func_800A8524] # gcc272_cdk, 100%
-      - [0x589F1, c, func_800A8660] # gcc272_cdk, 93.470590% WIP
+      - [0x589F1, c, func_800A8660]                # gcc272_cdk, 100.000000%
       - [0x58C11, c, field70]                      # gcc272_cdk, func_800A8880
       # TU hypothesis: field_immediate_text (high). See docs/decompilation/field-boundaries/map.md.
       - [0x58C31, c, func_800A88A0]                # gcc272_cdk, 100%
