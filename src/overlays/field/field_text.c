@@ -2224,13 +2224,21 @@ void field_text_build_transition_quad(FieldTextState* state, Quad* out, s32 fram
     out->y3 = cy + y3;
 }
 
+static inline s32 field_text_portrait_y_word(s32 y, s32 h)
+{
+    h -= 0x30;
+    h >>= 1;
+    h += 8;
+    y += h;
+    return y << 16;
+}
+
 /**
  * @brief Build a flat field text-window packet chain and splice it into the OT.
  * @param state Text-window state.
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
- * @note WIP - not yet byte-matching. Currently 97.57%.
- * @see decomp.me (97.57%)
+ * @see decomp.me (100%)
  */
 
 void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrderingTags* ot)
@@ -2239,10 +2247,8 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
     PrimSprt* prim;
     u8* first;
     u8* cur;
-    s32 row;
     s32 y;
     s32 uv;
-    s32 portrait_uv;
     s32 xy;
     s32 w;
     s32 rows;
@@ -2254,9 +2260,6 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
     s32 skip;
     s32 avail;
     s32 over;
-    s32 x;
-    s32 glyph_x;
-    s32 icon_v;
     u32 rgbc;
     s32 uv_bottom;
     u32 tag_mask;
@@ -2277,470 +2280,12 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
     if ((st->flags.word & 0xC0) == 0)
     {
         y = st->y;
-        do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-row = 1;
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
+        rows = 1;
         clip = 0xF000;
         uv_bottom = 0xF800;
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-tag_mask = 0xFFFFFF;
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-        do {
-tag_len = 0x04000000;
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-        do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-wh8 = 0x80008;
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
+        tag_mask = 0xFFFFFF;
+        tag_len = 0x04000000;
+        wh8 = 0x80008;
         wh40 = 0x80040;
         over = 0x80000;
         do
@@ -2748,74 +2293,23 @@ wh8 = 0x80008;
             {
                 s32 uv_hi;
                 uv_hi = hw->window_clut << 16;
-                if (row != 0)
+                if (rows != 0)
                 {
-                    uv_hi |= clip;
+                    uv = (uv_hi | clip) | u_org;
                 }
                 else
                 {
-                    uv_hi |= uv_bottom;
+                    uv = (uv_hi | uv_bottom) | u_org;
                 }
-                uv = uv_hi | u_org;
             }
             prim = (PrimSprt*)cur;
             cur += 0x14;
+            xy = st->x | (y << 16);
             prim->uv = uv;
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
-            do {
             uv += 8;
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
-            } while (0);
             prim->tag = ((u32)cur & tag_mask) | tag_len;
             prim->rgbc = rgbc;
             prim->wh = wh8;
-            xy = st->x | (y << 16);
             prim->xy = xy;
             xy += 8;
             if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
@@ -2853,14 +2347,18 @@ wh8 = 0x80008;
             uv += 0x40;
             prim = (PrimSprt*)cur;
             cur += 0x14;
-            row -= 1;
+            rows -= 1;
             prim->tag = ((u32)cur & tag_mask) | tag_len;
             prim->rgbc = rgbc;
             prim->xy = xy;
             prim->uv = uv;
             prim->wh = wh8;
-            y = y + 8 + st->height;
-        } while (row != -1);
+            {
+                s32 next_y;
+                next_y = y + 8;
+                y = next_y + st->height;
+            }
+        } while (rows != -1);
         rows = st->height;
         y = st->y + 8;
         if (rows > 0)
@@ -2927,15 +2425,7 @@ wh8 = 0x80008;
                 prim->wh = size | 8;
             } while (rows > 0);
         }
-        do {
-        do {
-        do {
-        do {
         u_org = 0;
-        } while (0);
-        } while (0);
-        } while (0);
-        } while (0);
     }
     uv_base = 0x80;
     size = st->line_height;
@@ -2948,12 +2438,6 @@ wh8 = 0x80008;
     if (rows != -1)
     {
         s32 neg16;
-        s32 one16;
-do {
-do {
-one16 = 0x10;
-} while (0);
-} while (0);
         do
         {
             if ((st->portrait != 0) && ((st->flags.word & 0x30) == 0))
@@ -2967,76 +2451,38 @@ one16 = 0x10;
             w = st->line_advance;
             if (w > 0)
             {
-                over = (u32)(one16 - skip) < (u32)size;
-                neg16 = 0xFFF0;
-                clip = size + (skip + neg16);
                 do
                 {
-                    if ((skip != 0) && (over == 0))
+                    if ((skip != 0) && ((u32)(0x10 - skip) >= (u32)size))
                     {
                         avail = 0x100 - col;
                         col += w;
-                        if ((u32)w < (u32)avail)
-                        {
-                            w = 0;
-                        }
-                        else
+                        if ((u32)w >= (u32)avail)
                         {
                             xy += avail;
                             w -= avail;
                             row_v += size;
                             col = 0;
                         }
+                        else
+                        {
+                            w = 0;
+                        }
                     }
                     else
                     {
                         prim = (PrimSprt*)cur;
                         cur += 0x14;
-                        ((PrimGlyph*)prim)->tag = (u32)cur;
-                        ((PrimGlyph*)prim)->tag |= 0x04000000;
-                        ((PrimGlyph*)prim)->tag &= 0x04FFFFFF;
-                        do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-do {
-((PrimGlyph*)prim)->rgbc = rgbc;
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
+                        ((PrimGlyph*)prim)->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
+                        ((PrimGlyph*)prim)->rgbc = rgbc;
                         ((PrimGlyph*)prim)->xy = xy;
                         ((PrimGlyph*)prim)->u0 = u_org + col;
                         ((PrimGlyph*)prim)->clut = hw->text_clut;
                         if (skip != 0)
                         {
+                            neg16 = 0xFFF0;
                             ((PrimGlyph*)prim)->v0 = (uv_base + row_v + 0x10) - skip;
-                            do {
-do {
-do {
-do {
-do {
-do {
-((PrimGlyph*)prim)->h = clip;
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
-} while (0);
+                            ((PrimGlyph*)prim)->h = size + (skip + neg16);
                         }
                         else
                         {
@@ -3070,15 +2516,7 @@ do {
             {
                 y += 0x10;
             }
-            do {
-do {
-do {
-do {
-rows -= 1;
-} while (0);
-} while (0);
-} while (0);
-} while (0);
+            rows -= 1;
 
         } while (rows != -1);
     }
@@ -3113,29 +2551,25 @@ rows -= 1;
             pflags = st->flags.word;
             prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
             prim->rgbc = 0x66000000;
-            ph -= 0x30;
-            ph >>= 1;
-            ph += 8;
-            py += ph;
-            py <<= 16;
+            py = field_text_portrait_y_word(py, ph);
             xy |= py;
             prim->xy = xy + 0x20002;
-            portrait_uv = ((((((pflags >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        prim->uv = (hw->text_clut << 16) | portrait_uv;
-        prim->wh = 0x300030;
-        prim = (PrimSprt*)cur;
-        cur += 0x14;
-        prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-        prim->rgbc = rgbc;
-        prim->xy = xy;
-        prim->uv = ((&hw->portrait_clut0)[(st->flags.word >> 3) & 1] << 16) | portrait_uv;
-        prim->wh = 0x300030;
+            uv = ((((((pflags >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+            prim->uv = (hw->text_clut << 16) | uv;
+            prim->wh = 0x300030;
+            prim = (PrimSprt*)cur;
+            cur += 0x14;
+            prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
+            prim->rgbc = rgbc;
+            prim->xy = xy;
+            prim->uv =
+                (((FieldTextSystem*)((u8*)hw + ((st->flags.word >> 2) & 2)))->portrait_clut0 << 16) | uv;
+            prim->wh = 0x300030;
         }
     }
     if (st->flow_code != 0)
     {
-        if (((st->flags.word & 0xC0) == 0) ||
-            (((st->flags.word & 0xC0) == 0x40) && (st->flow_code == 0x10)))
+        if (((st->flags.word & 0xC0) == 0) || (((st->flags.word & 0xC0) == 0x40) && (st->flow_code == 0x10)))
         {
             prim = (PrimSprt*)cur;
             cur += 8;
@@ -3156,12 +2590,12 @@ rows -= 1;
                     ((PrimSprt16*)prim)->x0 = st->x + 0xE;
                 }
                 ((PrimSprt16*)prim)->y0 = st->y + ((st->choice_start_line + st->choice_index) * 0x10);
-                portrait_uv = st->prompt_frame;
-                if (portrait_uv == 3)
+                rows = st->prompt_frame;
+                if (rows == 3)
                 {
-                    portrait_uv = 1;
+                    rows = 1;
                 }
-                ((PrimSprt16*)prim)->u0 = (portrait_uv << 4) + 0x60;
+                ((PrimSprt16*)prim)->u0 = (rows << 4) + 0x60;
                 ((PrimSprt16*)prim)->v0 = 0xE0;
                 ((PrimSprt16*)prim)->clut = hw->prompt_clut;
             }
