@@ -91,16 +91,16 @@ void akao_spu_arm_xfer(void)
  * Installs the completion callback before submitting the source buffer.
  * Pair with akao_spu_wait when synchronous completion is needed.
  *
- * @param src_addr   Source address in main RAM.
+ * @param source     Source buffer in main RAM.
  * @param byte_count Number of bytes to upload.
  *
  * @see https://decomp.me/scratch/D2YiT (100%)
  */
-void akao_spu_write(s32 src_addr, s32 byte_count)
+void akao_spu_write(void* source, s32 byte_count)
 {
     g_akao_spu_xfer_pending = 1;
     SpuSetTransferCallback(&akao_spu_xfer_done_cb);
-    SpuWrite((u_char*)src_addr, byte_count);
+    SpuWrite(source, byte_count);
 }
 
 /**
@@ -109,15 +109,15 @@ void akao_spu_write(s32 src_addr, s32 byte_count)
  * Installs the completion callback before submitting the destination buffer.
  * Pair with akao_spu_wait before consuming the returned data.
  *
- * @param dst_addr   Destination address in main RAM.
+ * @param destination Destination buffer in main RAM.
  * @param byte_count Number of bytes to read back from the SPU.
  *
  * @see https://decomp.me/scratch/lLOqn (100%)
  */
-void akao_spu_read(s32 dst_addr, s32 byte_count)
+void akao_spu_read(void* destination, s32 byte_count)
 {
     akao_spu_arm_xfer();
-    SpuRead((u_char*)dst_addr, byte_count);
+    SpuRead(destination, byte_count);
 }
 
 /**
@@ -208,7 +208,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
         SpuSetTransferStartAddr(spu_base);
         bank = header + 1;
         articulations = bank;
-        akao_spu_write((s32)&articulations[header->articulation_count], header->sample_size);
+        akao_spu_write(&articulations[header->articulation_count], header->sample_size);
         akao_relocate_articulations(articulations,
                                    &((AkaoArticulation*)g_akao_articulation_slots)[bank_id],
                                    spu_base, header->articulation_count);

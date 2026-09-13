@@ -1,5 +1,6 @@
 #include "main.h"
 #include "akao.h"
+#include "akao_cmd.h"
 #include "checkps.h"
 #include "cd_resources.h"
 #include "cdrom.h"
@@ -24,8 +25,6 @@ void __main(void);
 void _bu_init(void);
 extern void SpuInit(void);
 void McxStartCom();
-undefined4 FUN_80021fbc(void);
-s32 akao_cmd_f0(void);
 u32 func_8004FC8C(u32);
 u32 run_overlay(u32, u32, u32, s32, s32, u32, s32);
 s32 func_801400C4(void);
@@ -86,7 +85,7 @@ void Main(void)
     ChangeClearPAD(0);
     initialize_controllers(0);
     cdrom_load_resource_table(0x18, 0xB598);
-    FUN_80021fbc();
+    akao_init();
     cdrom_stream(0xB2, 0x801E1200);
     initialize_controller_vsync();
     srand(1);

@@ -51,6 +51,7 @@ jtbl_80010C30                       = 0x80010C30; // type:jtbl rom:0x1430
 field_scene_reset                   = 0x80051FBC;
 field_draw_frame                    = 0x80051FF8;
 field_clear_node_accumulators       = 0x800520A0;
+field_restore_entry_music           = 0x800A3534;
 
 // Uncategorized
 run_overlay                         = 0x80140004;

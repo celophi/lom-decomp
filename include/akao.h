@@ -160,9 +160,7 @@ typedef struct AkaoHeader
  *                                      driver's articulation slot table)
  *   0x1C        articulation_count   — number of 16-byte articulation entries
  *                                      stored at offset 0x40
- *   0x20        cached_spu_addr      — SPU base address cached by
- *                                      akao_upload_xa_program (cmd 0xEC)
- *                                      after a streaming upload starts
+ *   0x20        unknown_0x20        - meaning unknown for instrument banks
  *   0x24..0x3F  reserved             — unused / unknown
  *
  * The articulation table starts at offset 0x40 and is articulation_count
@@ -178,7 +176,7 @@ typedef struct AkaoBankHeader
     u32 sample_size;
     u32 bank_id;
     u32 articulation_count;
-    u32 cached_spu_addr;
+    u32 unknown_0x20;
     u8  reserved[0x1C];
 } AkaoBankHeader;
 

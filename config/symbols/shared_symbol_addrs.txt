@@ -605,7 +605,8 @@ _spu_Fw1ts                          = 0x80021F24;
 _SpuDataCallback                    = 0x80021F8C;
 
 // Uncategorized
-FUN_80021fbc                        = 0x80021FBC;
+akao_init                          = 0x80021FBC;
+akao_shutdown                      = 0x80021FDC;
 akao_register_bank                  = 0x80021FFC;
 akao_play_song                      = 0x80022040;
 akao_stop_song                      = 0x80022068;

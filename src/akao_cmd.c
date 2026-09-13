@@ -13,18 +13,10 @@
  */
 typedef struct
 {
-    u8* articulation_dst;     /* 0x00: current dst into the driver's
-                                          articulation slot table
-                                          (g_akao_articulation_slots + bank_id * 0x10),
-                                          advances as bytes are copied      */
-    u32 spu_addr;               /* 0x04: current SPU upload address - seeded
-                                          from AkaoBankHeader.spu_dest_addr,
-                                          advances as samples are written;
-                                          a value of 0 marks "first tick"   */
-    u32 sample_remaining;       /* 0x08: bytes of sample data still to send
-                                          to the SPU                        */
-    u32 articulation_remaining; /* 0x0C: bytes of articulation data still to
-                                          copy into the driver's slot table */
+    u8* articulation_dst;      /* 0x00: current destination in the articulation table */
+    u32 spu_addr;              /* 0x04: next SPU write address; zero marks the first tick */
+    u32 sample_remaining;      /* 0x08: sample bytes still to upload */
+    u32 articulation_remaining; /* 0x0C: articulation bytes still to copy */
 } AkaoStreamingState;
 
 /** @brief Bank identity prefix; the key combines the header's id and length. */
@@ -34,9 +26,25 @@ typedef struct
     s32 key;
 } AkaoBankIdentity;
 
+/** @brief XA program header preceding the sample data at offset 0x40. */
+typedef struct
+{
+    AkaoHeader header;
+    u32 sample_size;       /* 0x10: bytes uploaded to the SPU */
+    u8 unknown_0x14[0x0C];
+    u32 cached_spu_addr;   /* 0x20: selected SPU upload address */
+    u8 unknown_0x24[0x1C];
+} AkaoXaProgramHeader;
+
+/** @brief Staged XA header and the first 16 bytes of its sample data. */
+typedef struct
+{
+    AkaoXaProgramHeader header;
+    u8 sample_prefix[0x10];
+} AkaoXaProgramStaging;
+
 extern s32 D_8004F794;
-/* 0x50-byte staging copy of an XA program's AkaoBankHeader (akao_upload_xa_program). */
-extern AkaoBankHeader g_akao_xa_program_staging;
+extern AkaoXaProgramStaging g_akao_xa_program_staging;
 extern CdlATV g_akao_cdmix;
 extern s32 D_8004F754;
 extern s32 D_8004F824;
@@ -68,7 +76,7 @@ s32 akao_send_command(u32 opcode);
  *
  * @see https://decomp.me/scratch/hDNyF (100%)
  */
-s32 FUN_80021fbc(void)
+s32 akao_init(void)
 {
     akao_driver_init();
     return 0;
@@ -80,7 +88,7 @@ s32 FUN_80021fbc(void)
  *
  * @see https://decomp.me/scratch/z7ZEh (100%)
  */
-s32 func_80021FDC(void)
+s32 akao_shutdown(void)
 {
     akao_driver_shutdown();
     return 0;
@@ -322,8 +330,7 @@ s32 akao_get_active_sfx_ids(void)
     u32 channel_bit;
 
     active_channels = g_akao_sfx_control.unk0;
-    active_ids = active_channels == 0;
-    if (active_ids)
+    if (active_channels == 0)
     {
         return 0;
     }
@@ -339,7 +346,8 @@ s32 akao_get_active_sfx_ids(void)
         channel_bit <<= 1;
         channel++;
     } while (channel_bit & 0xFFFFFF);
-    return active_ids & 0xFFFFFF;
+    active_ids &= 0xFFFFFF;
+    return active_ids;
 }
 
 /**
@@ -373,12 +381,9 @@ s32 akao_is_sfx_playing(s32 sound_id)
     channel_bit = 0x1000;
     do
     {
-        if (active_channels & channel_bit)
+        if ((active_channels & channel_bit) && sound_id == channel->tempo_acc)
         {
-            if (sound_id == channel->tempo_acc)
-            {
-                return 1;
-            }
+            return 1;
         }
         channel_bit <<= 1;
         channel++;
@@ -1062,77 +1067,76 @@ s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
     u32 sample_chunk;
     AkaoArticulation* articulations;
 
-    if ((g_akao_driver_flags.unk0 & 1) == 0)
+    if (g_akao_driver_flags.unk0 & 1)
     {
-        return D_8004F828;
-    }
-    if (g_akao_streaming_state.spu_addr == 0)
-    {
-        if (akao_check_magic((AkaoHeader*)source) == 0)
+        if (g_akao_streaming_state.spu_addr == 0)
         {
-            akao_copy_bytes(*(&source), &g_akao_bank_staging, sizeof(AkaoBankHeader));
-            source = (u8*)((AkaoBankHeader*)source + 1);
-            avail -= sizeof(AkaoBankHeader);
-            g_akao_streaming_state.spu_addr = g_akao_bank_staging.spu_dest_addr;
-            g_akao_streaming_state.sample_remaining = g_akao_bank_staging.sample_size;
-            g_akao_streaming_state.articulation_dst = (u8*)&((AkaoArticulation*)g_akao_articulation_slots)[g_akao_bank_staging.bank_id];
-            g_akao_streaming_state.articulation_remaining = g_akao_bank_staging.articulation_count * sizeof(AkaoArticulation);
+            if (akao_check_magic((AkaoHeader*)source) == 0)
+            {
+                akao_copy_bytes(source, &g_akao_bank_staging, sizeof(AkaoBankHeader));
+                source = (u8*)((AkaoBankHeader*)source + 1);
+                avail -= sizeof(AkaoBankHeader);
+                g_akao_streaming_state.spu_addr = g_akao_bank_staging.spu_dest_addr;
+                g_akao_streaming_state.sample_remaining = g_akao_bank_staging.sample_size;
+                g_akao_streaming_state.articulation_dst = (u8*)&((AkaoArticulation*)g_akao_articulation_slots)[g_akao_bank_staging.bank_id];
+                g_akao_streaming_state.articulation_remaining = g_akao_bank_staging.articulation_count * sizeof(AkaoArticulation);
+            }
+            else
+            {
+                avail = 0;
+                g_akao_streaming_state.sample_remaining = 0U;
+                g_akao_streaming_state.articulation_remaining = 0U;
+            }
+        }
+        if (g_akao_streaming_state.articulation_remaining != 0)
+        {
+            articulation_chunk = g_akao_streaming_state.articulation_remaining;
+            if (avail != 0)
+            {
+                if (articulation_chunk >= avail)
+                {
+                    articulation_chunk = avail;
+                }
+                akao_copy_bytes(source, g_akao_streaming_state.articulation_dst, articulation_chunk);
+                copied_bytes = (articulation_chunk >> 2) * 4;
+                source += copied_bytes;
+                avail -= articulation_chunk;
+                g_akao_streaming_state.articulation_dst = g_akao_streaming_state.articulation_dst + copied_bytes;
+                g_akao_streaming_state.articulation_remaining -= articulation_chunk;
+                if (g_akao_streaming_state.articulation_remaining == 0)
+                {
+                    articulations = &((AkaoArticulation*)g_akao_articulation_slots)[g_akao_bank_staging.bank_id];
+                    akao_relocate_articulations(articulations, articulations, g_akao_bank_staging.spu_dest_addr, g_akao_bank_staging.articulation_count);
+                }
+            }
+        }
+        if (avail != 0 && g_akao_streaming_state.sample_remaining == 0)
+        {
+            g_akao_driver_flags.unk0 &= ~1;
         }
         else
         {
-            avail = 0;
-            g_akao_streaming_state.sample_remaining = 0U;
-            g_akao_streaming_state.articulation_remaining = 0U;
-        }
-    }
-    if (g_akao_streaming_state.articulation_remaining != 0)
-    {
-        articulation_chunk = g_akao_streaming_state.articulation_remaining;
-        if (avail != 0)
-        {
-            if (articulation_chunk >= avail)
+            if (avail != 0)
             {
-                articulation_chunk = avail;
+                sample_chunk = g_akao_streaming_state.sample_remaining;
+                if (g_akao_streaming_state.sample_remaining >= avail)
+                {
+                    sample_chunk = avail;
+                }
+                avail = sample_chunk;
+                SpuSetTransferStartAddr(g_akao_streaming_state.spu_addr);
+                akao_spu_write(source, avail);
+                g_akao_streaming_state.spu_addr += avail;
+                g_akao_streaming_state.sample_remaining -= avail;
+                if (wait_for_spu != 0)
+                {
+                    akao_spu_wait();
+                }
             }
-            akao_copy_bytes(source, g_akao_streaming_state.articulation_dst, articulation_chunk);
-            copied_bytes = (articulation_chunk >> 2) * 4;
-            source += copied_bytes;
-            avail -= articulation_chunk;
-            g_akao_streaming_state.articulation_dst = g_akao_streaming_state.articulation_dst + copied_bytes;
-            g_akao_streaming_state.articulation_remaining -= articulation_chunk;
-            if (g_akao_streaming_state.articulation_remaining == 0)
+            if (D_8004F828 == 0)
             {
-                articulations = &((AkaoArticulation*)g_akao_articulation_slots)[g_akao_bank_staging.bank_id];
-                akao_relocate_articulations(articulations, articulations, g_akao_bank_staging.spu_dest_addr, g_akao_bank_staging.articulation_count);
+                g_akao_driver_flags.unk0 &= ~1;
             }
-        }
-    }
-    if (avail != 0 && g_akao_streaming_state.sample_remaining == 0)
-    {
-        g_akao_driver_flags.unk0 &= ~1;
-    }
-    else
-    {
-        if (avail != 0)
-        {
-            sample_chunk = g_akao_streaming_state.sample_remaining;
-            if (g_akao_streaming_state.sample_remaining >= avail)
-            {
-                sample_chunk = avail;
-            }
-            avail = sample_chunk;
-            SpuSetTransferStartAddr(g_akao_streaming_state.spu_addr);
-            akao_spu_write(source, avail);
-            g_akao_streaming_state.spu_addr += avail;
-            g_akao_streaming_state.sample_remaining -= avail;
-            if (wait_for_spu != 0)
-            {
-                akao_spu_wait();
-            }
-        }
-        if (D_8004F828 == 0)
-        {
-            g_akao_driver_flags.unk0 &= ~1;
         }
     }
     return D_8004F828;
@@ -1375,18 +1379,18 @@ s32 akao_cmd_e6(s32 value0)
  * @brief Magic-checks an AKAO XA program and stages it for the SPU.
  *
  * After verifying the AKAO magic, picks a hardcoded SPU base
- * (@c 0x50900 if @p upper_slot != 0, otherwise @c 0x43100) - and biases it by
- * @c 0xFFFD0000 when channel 0's @c flags & 0x40 is set with any in-flight
+ * (@c 0x50900 if @p upper_slot != 0, otherwise @c 0x43100) - and subtracts
+ * @c 0x30000 when channel 0's song-state bit 0x40 is set with any in-flight
  * activity. Programs @c SpuSetTransferStartAddr, kicks off the sample upload
  * (akao_spu_write), caches the SPU base back into the buffer's
- * @c cached_spu_addr field, then memcpys the 0x50-byte header to the staging
- * area @c g_akao_xa_program_staging.
+ * @c cached_spu_addr field, then copies the header and first 16 sample bytes
+ * to @c g_akao_xa_program_staging.
  *
  * @param buffer  Pointer to an AKAO buffer in main RAM.
  * @param upper_slot  Selects the upper SPU slot (non-zero) vs the lower slot.
  *
  * @return 0 on success; the akao_check_magic delta on failure (also clears
- *         @c g_akao_xa_program_staging.cached_spu_addr).
+ *         @c g_akao_xa_program_staging.header.cached_spu_addr).
  *
  * @see https://decomp.me/scratch/C06sg (100%)
  */
@@ -1394,7 +1398,7 @@ s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
 {
     s32 result;
     s32 spu_base;
-    AkaoBankHeader* bank;
+    AkaoXaProgramHeader* program;
 
     result = akao_check_magic(buffer);
     if (result == 0)
@@ -1409,18 +1413,18 @@ s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
          * seq_cursor is the song-role flag word here, not a bytecode cursor. */
         if (((AKAO_CHANNEL_STATE->w04.song.active_mask | AKAO_CHANNEL_STATE->unk1C) != 0) && ((u32)AKAO_CHANNEL_STATE->seq_cursor & 0x40))
         {
-            spu_base += 0xFFFD0000;
+            spu_base -= 0x30000;
         }
-        bank = buffer;
-        buffer = bank + 1;
+        program = buffer;
+        buffer = program + 1;
         SpuSetTransferStartAddr(spu_base);
-        akao_spu_write(buffer, bank->spu_dest_addr);
-        bank->cached_spu_addr = spu_base;
-        akao_copy_bytes(bank, &g_akao_xa_program_staging, 0x50);
+        akao_spu_write(buffer, program->sample_size);
+        program->cached_spu_addr = spu_base;
+        akao_copy_bytes(program, &g_akao_xa_program_staging, sizeof(g_akao_xa_program_staging));
         return result;
     }
 
-    g_akao_xa_program_staging.cached_spu_addr = 0;
+    g_akao_xa_program_staging.header.cached_spu_addr = 0;
     return result;
 }
 
@@ -1444,7 +1448,7 @@ s32 akao_cmd_ed(s32 value0, s32 value1)
  * @brief AKAO command 0xEC - magic-checked AKAO buffer with mode flags.
  *
  * Picks a hardcoded SPU base (@c 0x50900 if @p upper_slot != 0, else
- * @c 0x43100), biases by @c 0xFFFD0000 when channel 0 is active and busy,
+ * @c 0x43100), subtracts @c 0x30000 when a loaded song has state bit 0x40 set,
  * then dispatches with (buf, 8-bit packed into <<8, spu_base, value3).
  *
  * @param buf        Pointer to an AKAO buffer in main RAM (validated via
@@ -1470,7 +1474,7 @@ void akao_cmd_ec(void* buf, s32 value1, s32 upper_slot, s32 value3)
 
     if (((AKAO_CHANNEL_STATE->w04.song.active_mask | AKAO_CHANNEL_STATE->unk1C) != 0) && ((u32)AKAO_CHANNEL_STATE->seq_cursor & 0x40))
     {
-        spu_base += 0xFFFD0000;
+        spu_base -= 0x30000;
     }
 
     g_akao_cmd_params[0].buffer = buf;
