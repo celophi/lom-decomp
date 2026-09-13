@@ -247,7 +247,7 @@ segments:
       - [0x42D19, c, func_80092988] # gcc272_cdk, 100.000000%
       - [0x42E69, c, func_80092AD8] # gcc272_cdk, 100.000000%
       - [0x42FB5, c, func_80092C24]                # gcc272_cdk, 100%
-      - [0x43029, c, func_80092C98]                # gcc272_cdk, 97.53% WIP
+      - [0x43029, c, func_80092C98]                # gcc272_cdk
       - [0x43E49, c, func_80093AB8] # gcc272_cdk, 100%
       - [0x44245, c, func_80093EB4]                # gcc272_cdk, 100%
       - [0x443CD, c, func_8009403C] # gcc272_cdk, 100.000000%

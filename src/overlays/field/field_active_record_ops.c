@@ -33,48 +33,43 @@ extern void akao_set_song_params(s32, s32, s32, s32);
  */
 s32 func_800C2B14(s32 record_id)
 {
-    s32 var_a3;
-    s32 bonus_offset;
-    u8 *bonus_record;
-    s32 *bonus_table;
-    u8 **context_ref;
-    s32 record_offset;
     s32 level_index;
     s32 record_index;
+    s32 record_offset;
     u32 packed_value;
     u32 saved_flag;
     u8 level;
     u8 *table;
-    u8 *temp_v0_2;
-    u8 *cursor;
     u8 *bank;
 
     if (record_id < 0xC)
     {
         table = func_800C1E40(3);
-        record_index = 0;
-        if ((*(u16 *)(table + 2)) != 0)
+        do
         {
-            bonus_table = D_800F190C;
-            record_offset = 4;
-            cursor = table;
-        loop_3:
-            record_index += 1;
-            if ((*(s32 *)(cursor + 4)) == record_id)
+            do
             {
-                level = ((Context *)D_80122B74)->level;
-                saved_flag = ((Context *)D_80122B74)->flags.byte[0] >> 7;
-                if (level < 6U)
+                record_index = 0;
+            } while (0);
+        } while (0);
+        if (*(u16 *)(table + 2) != 0)
+        {
+            do
+            {
+                if ((*(s32 *)(table + record_index * 0x944 + 4)) == record_id)
                 {
-                    bank = table + record_offset + 4;
-                }
-                else if (level < 0xCU)
-                {
-                    bank = table + record_offset + 0x254;
-                }
-                else
-                {
-                    if (level < 0x12U)
+                    record_offset = record_index * 0x944 + 4;
+                    level = ((Context *)D_80122B74)->level;
+                    saved_flag = ((Context *)D_80122B74)->flags.byte[0] >> 7;
+                    if (level < 6U)
+                    {
+                        bank = table + record_offset + 4;
+                    }
+                    else if (level < 0xCU)
+                    {
+                        bank = table + record_offset + 0x254;
+                    }
+                    else if (level < 0x12U)
                     {
                         bank = table + record_offset + 0x4A4;
                     }
@@ -82,41 +77,37 @@ s32 func_800C2B14(s32 record_id)
                     {
                         bank = table + record_offset + 0x6F4;
                     }
+                    func_800C1EC8(bank, D_80122B74 + 0x840, 0x250);
+                    ((Context *)D_80122B74)->flags.word = (((Context *)D_80122B74)->flags.word & ~0x80) | (saved_flag << 7);
+                    if (((Context *)D_80122B74)->level < 0x20U)
+                    {
+                        level_index = ((Context *)D_80122B74)->level - 1;
+                    }
+                    else
+                    {
+                        level_index = 0x1F;
+                    }
+                    packed_value = ((Context *)D_80122B74)->packed.byte[0];
+                    packed_value = packed_value | ((*(s32 *)((u8 *)((s32)D_80122B74 - -((record_id + 0x68 + level_index - level_index) * 4)) + 0xE4) +
+                                                    D_800F190C[level_index])
+                                                   << 8);
+                    ((Context *)D_80122B74)->packed.word = packed_value;
+                    if ((s32)(packed_value >> 8) > 0x98967F)
+                    {
+                        u32 clamped_value;
+
+                        clamped_value = packed_value & 0xFF;
+                        clamped_value |= 0x98967F00;
+                        ((Context *)D_80122B74)->packed.word = clamped_value;
+                    }
+                    func_800C11F0(1, 0);
+                    func_800B7C58(1);
+                    func_800BD520(0, record_id * 8 + 0xF87, 1);
+                    return -1;
                 }
-                func_800C1EC8(bank, (u8 *)D_80122B74 + 0x840, 0x250);
-                ((Context *)D_80122B74)->flags.word =
-                    (s32)(((s32)((Context *)D_80122B74)->flags.word & ~0x80) | (saved_flag << 7));
-                if ((u8)((Context *)D_80122B74)->level < 0x20U)
-                {
-                    level_index = ((Context *)D_80122B74)->level - 1;
-                }
-                else
-                {
-                    level_index = 0x1F;
-                }
-                bonus_offset = (record_id + 0x68) * 4;
-                bonus_record = (u8 *)D_80122B74 + bonus_offset;
-                packed_value = ((Context *)D_80122B74)->packed.byte[0] |
-                               (((*(s32 *)(bonus_record + 0xE4)) + bonus_table[level_index]) << 8);
-                ((Context *)D_80122B74)->packed.word = packed_value;
-                if ((s32)(packed_value >> 8) > 0x98967F)
-                {
-                    ((Context *)D_80122B74)->packed.word = (s32)((packed_value & 0xFF) | 0x98967F00);
-                }
-                func_800C11F0(1, 0);
-                func_800B7C58(1);
-                func_800BD520(0, (record_id * 8) + 0xF87, 1);
-                return -1;
-            }
-            record_offset += 0x944;
-            cursor += 0x944;
-            if (record_index >= (s32)(*(u16 *)(table + 2)))
-            {
-                goto block_18;
-            }
-            goto loop_3;
+                record_index++;
+            } while (record_index < (s32)*(u16 *)(table + 2));
         }
-    block_18:
         akao_set_song_params(0x8001, 0x6D, record_id, 0);
     }
     else
@@ -125,7 +116,6 @@ s32 func_800C2B14(s32 record_id)
     }
     return 0;
 }
-
 #define ACTIVE_U8(p, o) (*(u8 *)((u8 *)(p) + (o)))
 #define ACTIVE_U16(p, o) (*(u16 *)((u8 *)(p) + (o)))
 #define ACTIVE_U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
