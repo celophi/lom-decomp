@@ -88,9 +88,8 @@ void akao_spu_arm_xfer(void)
 /**
  * @brief Begins an asynchronous SPU write (SpuWrite + done-callback hookup).
  *
- * Inlined equivalent of akao_spu_arm_xfer immediately followed by
- * @c SpuWrite(arg0, arg1). Caller pairs this with akao_spu_wait when it
- * needs synchronous completion.
+ * Installs the completion callback before submitting the source buffer.
+ * Pair with akao_spu_wait when synchronous completion is needed.
  *
  * @param src_addr   Source address in main RAM.
  * @param byte_count Number of bytes to upload.
@@ -101,15 +100,14 @@ void akao_spu_write(s32 src_addr, s32 byte_count)
 {
     g_akao_spu_xfer_pending = 1;
     SpuSetTransferCallback(&akao_spu_xfer_done_cb);
-    SpuWrite(src_addr, byte_count);
+    SpuWrite((u_char*)src_addr, byte_count);
 }
 
 /**
  * @brief Begins an asynchronous SPU read (SpuRead + done-callback hookup).
  *
- * Mirror of akao_spu_write but invokes @c SpuRead. Currently unused inside
- * akao_spu.c; kept here because it is part of the AKAO SPU helper set and is
- * referenced via the .ld linker script.
+ * Installs the completion callback before submitting the destination buffer.
+ * Pair with akao_spu_wait before consuming the returned data.
  *
  * @param dst_addr   Destination address in main RAM.
  * @param byte_count Number of bytes to read back from the SPU.
@@ -119,7 +117,7 @@ void akao_spu_write(s32 src_addr, s32 byte_count)
 void akao_spu_read(s32 dst_addr, s32 byte_count)
 {
     akao_spu_arm_xfer();
-    SpuRead(dst_addr, byte_count);
+    SpuRead((u_char*)dst_addr, byte_count);
 }
 
 /**
@@ -133,7 +131,9 @@ void akao_spu_read(s32 dst_addr, s32 byte_count)
  */
 void akao_spu_wait(void)
 {
-    while ((*((volatile s32*)(&g_akao_spu_xfer_pending))) == 1);
+    while (*(volatile s32*)&g_akao_spu_xfer_pending == 1)
+    {
+    }
 }
 
 /**
@@ -195,39 +195,30 @@ s32 akao_submit_bank(AkaoBankHeader* bank, s32 wait_for_completion)
  */
 s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_base)
 {
-    u8* base;
-    s32 new_var;
-    s32 var_v0;
-    s32 ret_val;
-    AkaoBankHeader* bank_hdr;
-    s32 hdr_copy;
+    AkaoBankHeader* header;
+    AkaoArticulation* articulations;
+    s32 result;
 
     akao_spu_wait();
-    var_v0 = -1;
-    if ((hdr_copy = akao_check_magic((AkaoHeader*)bank)) == 0)
+    if (akao_check_magic(bank) == 0)
     {
-        hdr_copy = bank;
-        bank_hdr = (AkaoBankHeader*)hdr_copy;
-
+        header = bank;
         SpuSetTransferStartAddr(spu_base);
-        bank = (u8*)bank + 0x40;
-        base = (u8*)bank;
-        akao_spu_write((s32)(base + (bank_hdr->articulation_count * 0x10)), bank_hdr->sample_size);
-        akao_relocate_articulations((AkaoArticulation*)base,
-                                    (AkaoArticulation*)(g_akao_articulation_slots + (bank_id * 0x10)), spu_base,
-                                    bank_hdr->articulation_count);
-        var_v0 = 0;
+        articulations = (AkaoArticulation*)(header + 1);
+        akao_spu_write((s32)&articulations[header->articulation_count], header->sample_size);
+        akao_relocate_articulations(articulations,
+                                   &((AkaoArticulation*)g_akao_articulation_slots)[bank_id],
+                                   spu_base, header->articulation_count);
         if (wait_for_completion != 0)
         {
             akao_spu_wait();
         }
-        ret_val = 0;
+        result = 0;
     }
     else
     {
         g_akao_spu_xfer_pending = -1;
-        ret_val = -1;
+        result = -1;
     }
-    new_var = ret_val;
-    return new_var;
+    return result;
 }

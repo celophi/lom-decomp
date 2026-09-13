@@ -3,22 +3,17 @@
 #include "akao_driver.h"
 #include "sdk/libcd.h"
 
-extern SfxControl g_akao_sfx_control;
-extern u8 g_sfx_channels[];
-
 /**
- * Per-tick scratch state for the AKAO bank-streaming uploader.
+ * @brief Pending articulation and sample bytes for a streaming bank upload.
  *
  * Primed on the first tick of a streaming upload from the AkaoBankHeader at
  * the head of the source buffer; each subsequent call to
  * akao_streaming_upload_tick consumes some bytes from the source and shrinks
- * the two `*_remaining` counters. When both reach zero (and the external
- * latch @c D_8004F828 is also clear), the streaming-pending bit in
- * @c g_akao_driver_flags is cleared.
+ * the two remaining-byte counters.
  */
 typedef struct
 {
-    void* articulation_dst;     /* 0x00: current dst into the driver's
+    u8* articulation_dst;     /* 0x00: current dst into the driver's
                                           articulation slot table
                                           (g_akao_articulation_slots + bank_id * 0x10),
                                           advances as bytes are copied      */
@@ -32,40 +27,24 @@ typedef struct
                                           copy into the driver's slot table */
 } AkaoStreamingState;
 
+/** @brief Bank identity prefix; the key combines the header's id and length. */
+typedef struct
+{
+    u32 magic;
+    s32 key;
+} AkaoBankIdentity;
+
 extern s32 D_8004F794;
 /* 0x50-byte staging copy of an XA program's AkaoBankHeader (akao_upload_xa_program). */
 extern AkaoBankHeader g_akao_xa_program_staging;
-extern AkaoChannelState* g_akao_seq_channel0;
 extern CdlATV g_akao_cdmix;
 extern s32 D_8004F754;
-extern u8 g_akao_articulation_slots[];
-extern s32 g_akao_spu_xfer_pending;
 extern s32 D_8004F824;
 extern s32 D_8004F828;
 extern AkaoStreamingState g_akao_streaming_state;
 extern AkaoBankHeader g_akao_bank_staging;
 
-
 #define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
-
-s32 FUN_80021fbc(void);
-s32 func_80021FDC(void);
-void akao_stop_song(s32 arg0);
-void akao_cmd_40(void);
-void akao_cmd_14(s32 arg0, s32 arg1);
-s32 akao_cmd_19_c0(s32 arg0, s32 arg1);
-void akao_cmd_12(s32 arg0, s32 arg1);
-void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-s32 akao_play_sfx_from_buffer(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void akao_cmd_21(s32 arg0, s32 arg1);
-void akao_stop_sfx_by_id(s32 arg0);
-s32 akao_get_active_sfx_ids(void);
-s32 akao_is_sfx_playing(s32 arg0);
-void akao_set_paused(s32 arg0);
-void akao_cmd_90(s32 arg0);
-void akao_cmd_92(s32 arg0);
-void akao_cmd_99_9b_9d_9f(u32 param_1);
-void akao_cmd_98_9a_9c_9e(u32 arg0);
 
 /**
  * Central dispatcher for the AKAO sound driver. Each high-level wrapper
@@ -188,8 +167,8 @@ void akao_cmd_40(void)
 /**
  * @brief AKAO command 0x14 - three args, third slot forced 0; semantics TBD.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; semantics unknown.
  *
  * @see https://decomp.me/scratch/c2C3m (100%)
  */
@@ -204,8 +183,8 @@ void akao_cmd_14(s32 value0, s32 value1)
 /**
  * @brief Combo: dispatch AKAO command 0x19 (a) then 0xC0 (b masked to 7 bits).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; semantics unknown.
  * @return Current transfer or position latch.
  *
  * @see https://decomp.me/scratch/d6xXt (100%)
@@ -216,7 +195,7 @@ s32 akao_cmd_19_c0(s32 value0, s32 value1)
 
     g_akao_cmd_params[0].value = value0;
     result = akao_send_command(AKAO_CMD_19);
-    g_akao_cmd_params[0].value = (s32)(value1 & 0x7F);
+    g_akao_cmd_params[0].value = (value1 & 0x7F);
     g_akao_cmd_params[3].value = 0;
     akao_send_command(AKAO_CMD_SET_SONG_VOLUME);
     return result;
@@ -225,8 +204,8 @@ s32 akao_cmd_19_c0(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0x12 - two unmasked args; semantics TBD.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; semantics unknown.
  *
  * @see https://decomp.me/scratch/jigab (100%)
  */
@@ -258,7 +237,7 @@ void akao_cmd_12(s32 value0, s32 value1)
  */
 void akao_play_sfx(s32 sound_id, s32 parameter, s32 pan, s32 volume)
 {
-    g_akao_cmd_params[0].value = (s32)(sound_id & 0x3FF);
+    g_akao_cmd_params[0].value = (sound_id & 0x3FF);
     g_akao_cmd_params[1].value = (parameter & 0xFFFFFF);
     g_akao_cmd_params[2].value = (pan & 0xFF);
     g_akao_cmd_params[3].value = (volume & 0x7F);
@@ -269,24 +248,24 @@ void akao_play_sfx(s32 sound_id, s32 parameter, s32 pan, s32 volume)
  * @brief AKAO command 0x24 - play SFX from a caller-supplied AKAO buffer (magic-checked); same arg shape as
  * akao_play_sfx (24/8/7-bit).
  *
- * @param buffer_address Command parameter 0; TODO: precise meaning unknown.
- * @param parameter Command parameter 1; TODO: precise meaning unknown.
- * @param pan Command parameter 2; TODO: precise meaning unknown.
- * @param volume Command parameter 3; TODO: precise meaning unknown.
+ * @param buffer_address Address of an AKAO-tagged sound buffer.
+ * @param parameter Packed parameter; only the low 24 bits are used.
+ * @param pan Pan parameter; only the low 8 bits are used.
+ * @param volume Volume; only the low 7 bits are used.
  * @return Current transfer or position latch.
  *
  * @see https://decomp.me/scratch/FFGei (100%)
  */
 s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 parameter, s32 pan, s32 volume)
 {
-    s32 result = akao_check_magic(buffer_address);
+    s32 result = akao_check_magic((AkaoHeader*)buffer_address);
 
     if (result != 0)
     {
         return result;
     }
 
-    g_akao_cmd_params[0].value = buffer_address;
+    g_akao_cmd_params[0].buffer = (void*)buffer_address;
     g_akao_cmd_params[1].value = parameter & 0xFFFFFF;
     g_akao_cmd_params[2].value = pan & 0xFF;
     g_akao_cmd_params[3].value = volume & 0x7F;
@@ -298,8 +277,8 @@ s32 akao_play_sfx_from_buffer(s32 buffer_address, s32 parameter, s32 pan, s32 vo
 /**
  * @brief AKAO command 0x21 - (id, p24) sound id plus 24-bit param.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 24 bits are used.
  *
  * @see https://decomp.me/scratch/lu9nS (100%)
  */
@@ -313,7 +292,7 @@ void akao_cmd_21(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0x30 - stop SFX whose 10-bit sound id matches @p sound_id.
  *
- * @param sound_id Command parameter 0; TODO: precise meaning unknown.
+ * @param sound_id Sound identifier; only the low 10 bits are used.
  *
  * @see https://decomp.me/scratch/0mLzI (100%)
  */
@@ -434,7 +413,7 @@ void akao_set_paused(s32 mode)
 /**
  * @brief AKAO command 0x90 - single unmasked arg; semantics TBD.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
  *
  * @see https://decomp.me/scratch/x94md (100%)
  */
@@ -447,7 +426,7 @@ void akao_cmd_90(s32 value0)
 /**
  * @brief AKAO command 0x92 - single unmasked arg; semantics TBD.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
  *
  * @see https://decomp.me/scratch/y9TAf (100%)
  */
@@ -460,7 +439,7 @@ void akao_cmd_92(s32 value0)
 /**
  * @brief Dispatch one of AKAO commands 0x99/0x9B/0x9D/0x9F (zero-arg) selected by @p mode (1/2/3/default).
  *
- * @param mode Command parameter 0; TODO: precise meaning unknown.
+ * @param mode Selects one of the command family members; 1, 2, and 3 have dedicated commands.
  *
  * @see https://decomp.me/scratch/qqSuG (100%)
  */
@@ -490,7 +469,7 @@ void akao_cmd_99_9b_9d_9f(u32 mode)
 /**
  * @brief Dispatch one of AKAO commands 0x98/0x9A/0x9C/0x9E (zero-arg) selected by @p mode (1/2/3/default).
  *
- * @param mode Command parameter 0; TODO: precise meaning unknown.
+ * @param mode Selects one of the command family members; 1, 2, and 3 have dedicated commands.
  *
  * @see https://decomp.me/scratch/iREFc (100%)
  */
@@ -520,7 +499,7 @@ void akao_cmd_98_9a_9c_9e(u32 mode)
 /**
  * @brief AKAO command 0xA8 - global counterpart of 0xA0; takes a 7-bit value.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; only the low 7 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/VTGCB (100%)
@@ -534,8 +513,8 @@ s32 akao_cmd_a8(s32 value0)
 /**
  * @brief AKAO command 0xA9 - global counterpart of 0xA1; (a, 7-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 7 bits are used.
  *
  * @see https://decomp.me/scratch/03hNO (100%)
  */
@@ -549,9 +528,9 @@ void akao_cmd_a9(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0xA0 - per-channel: (channel, 24-bit fade duration, 7-bit target value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 24 bits are used.
+ * @param value2 Value for command slot 2; only the low 7 bits are used.
  *
  * @see https://decomp.me/scratch/C8UTP (100%)
  */
@@ -566,10 +545,10 @@ void akao_cmd_a0(s32 value0, s32 value1, s32 value2)
 /**
  * @brief AKAO command 0xA1 - per-channel: (channel, 24-bit fade duration, p, 7-bit target value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
- * @param value3 Command parameter 3; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 24 bits are used.
+ * @param value2 Value for command slot 2; semantics unknown.
+ * @param value3 Value for command slot 3; only the low 7 bits are used.
  *
  * @see https://decomp.me/scratch/xMNn0 (100%)
  */
@@ -585,7 +564,7 @@ void akao_cmd_a1(s32 value0, s32 value1, s32 value2, s32 value3)
 /**
  * @brief AKAO command 0xAA - global counterpart of 0xA2; takes an 8-bit value.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; only the low 8 bits are used.
  *
  * @see https://decomp.me/scratch/AuyLX (100%)
  */
@@ -598,8 +577,8 @@ void akao_cmd_aa(s32 value0)
 /**
  * @brief AKAO command 0xAB - global counterpart of 0xA3; (a, 8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 8 bits are used.
  *
  * @see https://decomp.me/scratch/IaBX9 (100%)
  */
@@ -613,9 +592,9 @@ void akao_cmd_ab(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0xA2 - per-channel: (channel, 24-bit fade duration, 8-bit target value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 24 bits are used.
+ * @param value2 Value for command slot 2; only the low 8 bits are used.
  *
  * @see https://decomp.me/scratch/LhoLV (100%)
  */
@@ -630,10 +609,10 @@ void akao_cmd_a2(s32 value0, s32 value1, s32 value2)
 /**
  * @brief AKAO command 0xA3 - per-channel: (channel, 24-bit fade duration, p, 8-bit target value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
- * @param value3 Command parameter 3; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 24 bits are used.
+ * @param value2 Value for command slot 2; semantics unknown.
+ * @param value3 Value for command slot 3; only the low 8 bits are used.
  *
  * @see https://decomp.me/scratch/Al5YT (100%)
  */
@@ -649,7 +628,7 @@ void akao_cmd_a3(s32 value0, s32 value1, s32 value2, s32 value3)
 /**
  * @brief AKAO command 0xAC - global counterpart of 0xA4; takes an 8-bit value.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; only the low 8 bits are used.
  *
  * @see https://decomp.me/scratch/e4D90 (100%)
  */
@@ -662,8 +641,8 @@ void akao_cmd_ac(s32 value0)
 /**
  * @brief AKAO command 0xAD - global counterpart of 0xA5; (a, 8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 8 bits are used.
  *
  * @see https://decomp.me/scratch/Fw2d9 (100%)
  */
@@ -677,9 +656,9 @@ void akao_cmd_ad(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0xA4 - per-channel: (channel, 24-bit fade duration, 8-bit target value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 24 bits are used.
+ * @param value2 Value for command slot 2; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/vHMVZ (100%)
@@ -695,10 +674,10 @@ s32 akao_cmd_a4(s32 value0, s32 value1, s32 value2)
 /**
  * @brief AKAO command 0xA5 - per-channel: (channel, 24-bit fade duration, p, 8-bit target value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
- * @param value3 Command parameter 3; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 24 bits are used.
+ * @param value2 Value for command slot 2; semantics unknown.
+ * @param value3 Value for command slot 3; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/exTVG (100%)
@@ -734,9 +713,9 @@ s32 akao_set_song_volume(s32 song_handle, s32 volume)
 /**
  * @brief AKAO command 0xC1 - 0xC0 with extra middle parameter: (a, b, 7-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; semantics unknown.
+ * @param value2 Value for command slot 2; only the low 7 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/cSIwP (100%)
@@ -752,10 +731,10 @@ s32 akao_cmd_c1(s32 value0, s32 value1, s32 value2)
 /**
  * @brief AKAO command 0xC2 - 0xC0 with two trailing 7-bit values: (a, b, 7-bit, 7-bit).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
- * @param value3 Command parameter 3; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; semantics unknown.
+ * @param value2 Value for command slot 2; only the low 7 bits are used.
+ * @param value3 Value for command slot 3; only the low 7 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/PbMJC (100%)
@@ -772,7 +751,7 @@ s32 akao_cmd_c2(s32 value0, s32 value1, s32 value2, s32 value3)
 /**
  * @brief AKAO command 0xC8 - single unmasked arg; semantics TBD.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/BeJR1 (100%)
@@ -786,8 +765,8 @@ s32 akao_cmd_c8(s32 value0)
 /**
  * @brief AKAO command 0xC9 - two unmasked args; semantics TBD.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; semantics unknown.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/yo40G (100%)
@@ -802,9 +781,9 @@ s32 akao_cmd_c9(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0xCA - three unmasked args; semantics TBD.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; semantics unknown.
+ * @param value2 Value for command slot 2; semantics unknown.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/pLMBi (100%)
@@ -820,7 +799,7 @@ s32 akao_cmd_ca(s32 value0, s32 value1, s32 value2)
 /**
  * @brief AKAO command 0xD0 - (8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/klUxi (100%)
@@ -834,8 +813,8 @@ s32 akao_cmd_d0(s32 value0)
 /**
  * @brief AKAO command 0xD1 - (a, 8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/XXHwt (100%)
@@ -850,9 +829,9 @@ s32 akao_cmd_d1(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0xD2 - (a, 8-bit value, 8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 8 bits are used.
+ * @param value2 Value for command slot 2; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/074UT (100%)
@@ -868,7 +847,7 @@ s32 akao_cmd_d2(s32 value0, s32 value1, s32 value2)
 /**
  * @brief AKAO command 0xD4 - (8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/yJdLv (100%)
@@ -882,8 +861,8 @@ s32 akao_cmd_d4(s32 value0)
 /**
  * @brief AKAO command 0xD5 - (a, 8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/u6Eys (100%)
@@ -898,9 +877,9 @@ s32 akao_cmd_d5(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0xD6 - (a, 8-bit value, 8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 8 bits are used.
+ * @param value2 Value for command slot 2; only the low 8 bits are used.
  *
  * @see https://decomp.me/scratch/ITNFU (100%)
  */
@@ -915,7 +894,7 @@ void akao_cmd_d6(s32 value0, s32 value1, s32 value2)
 /**
  * @brief AKAO command 0xD8 - (8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/JS2nD (100%)
@@ -929,8 +908,8 @@ s32 akao_cmd_d8(s32 value0)
 /**
  * @brief AKAO command 0xD9 - (a, 8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/YD6rZ (100%)
@@ -945,9 +924,9 @@ s32 akao_cmd_d9(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0xDA - (a, 8-bit value, 8-bit value).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 8 bits are used.
+ * @param value2 Value for command slot 2; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/jzW0l (100%)
@@ -1058,11 +1037,11 @@ s32 akao_reset_xfer_state(void)
  *
  * Stage 3 (sample upload):
  *   - SpuSetTransferStartAddr(@c spu_addr), then akao_spu_write the source.
- *   - Advance @c spu_addr by the articulation_chunk size and shrink @c sample_remaining.
+ *   - Advance @c spu_addr by the sample chunk size and shrink @c sample_remaining.
  *   - If @p wait_for_spu is non-zero, block on akao_spu_wait.
  *
- * Once everything is consumed (and the @c D_8004F828 latch is also clear),
- * the streaming-pending bit in @c g_akao_driver_flags is cleared.
+ * Clears the pending bit when input remains after sample exhaustion, or when
+ * the external status latch is zero. Articulation copies advance by whole words.
  *
  * @param source_address          Source byte pointer in main RAM. Starts at the AKAO
  *                     header on the first tick and advances through the
@@ -1082,6 +1061,7 @@ s32 akao_streaming_upload_tick(s32 source_address, u32 avail, s32 wait_for_spu)
     u32 articulation_chunk;
     u32 sample_chunk;
     AkaoArticulation* articulations;
+
     if ((g_akao_driver_flags.unk0 & 1) == 0)
     {
         return D_8004F828;
@@ -1118,7 +1098,7 @@ s32 akao_streaming_upload_tick(s32 source_address, u32 avail, s32 wait_for_spu)
             copied_bytes = (articulation_chunk >> 2) * 4;
             source_address = (s32)((u8*)source_address + copied_bytes);
             avail -= articulation_chunk;
-            g_akao_streaming_state.articulation_dst = (u8*)g_akao_streaming_state.articulation_dst + copied_bytes;
+            g_akao_streaming_state.articulation_dst = g_akao_streaming_state.articulation_dst + copied_bytes;
             g_akao_streaming_state.articulation_remaining -= articulation_chunk;
             if (g_akao_streaming_state.articulation_remaining == 0)
             {
@@ -1173,108 +1153,104 @@ s32 akao_load_bank(AkaoBankHeader* bank, s32 wait_for_completion)
 }
 
 /**
- * @brief Routes an AKAO bank to one of six SPU base/slot pairs by @p value1, records the bank id, and uploads.
+ * @brief Routes an AKAO bank to one of six SPU base/slot pairs by @p slot, records the bank id, and uploads.
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param bank AKAO instrument bank in RAM.
+ * @param slot Slot 1 through 5; other values select slot 0.
+ * @param wait_for_completion Non-zero to wait for the SPU transfer.
  * @return 0 after the operation completes.
  *
  * @see https://decomp.me/scratch/FWcdy (100%)
  */
-s32 akao_upload_bank_slot(void* value0, s32 value1, s32 value2)
+s32 akao_upload_bank_slot(void* bank, s32 slot, s32 wait_for_completion)
 {
-    s32 var_a2;
-    s32* var_t0;
-    u32 var_a3;
-    void* tmp = value0;
+    s32 articulation_index;
+    s32* slot_key;
+    u32 spu_base;
+    AkaoBankIdentity* identity = bank;
 
-    var_a3 = 0;
-    var_t0 = g_akao_bank_slot_keys;
-
-    do
+    for (spu_base = 0, slot_key = g_akao_bank_slot_keys; spu_base < 6; spu_base++, slot_key++)
     {
-        if (*var_t0 == ((s32*)tmp)[1])
+        if (*slot_key == identity->key)
         {
-            *var_t0 = 0;
+            *slot_key = 0;
         }
 
-        var_a3 += 1;
-        var_t0 += 1;
-    } while (var_a3 < 6U);
+    }
 
-    switch (value1)
+    switch (slot)
     {
     case 1:
-        var_a3 = 0x47900;
-        var_a2 = 0x90;
-        g_akao_bank_slot_keys[1] = ((s32*)tmp)[1];
+        spu_base = 0x47900;
+        articulation_index = 0x90;
+        g_akao_bank_slot_keys[1] = identity->key;
         break;
 
     case 2:
-        var_a3 = 0x4C100;
-        var_a2 = 0xA0;
-        g_akao_bank_slot_keys[2] = ((s32*)tmp)[1];
+        spu_base = 0x4C100;
+        articulation_index = 0xA0;
+        g_akao_bank_slot_keys[2] = identity->key;
         break;
 
     case 3:
-        var_a3 = 0x50900;
-        var_a2 = 0xB0;
-        g_akao_bank_slot_keys[3] = ((s32*)tmp)[1];
+        spu_base = 0x50900;
+        articulation_index = 0xB0;
+        g_akao_bank_slot_keys[3] = identity->key;
         break;
 
     case 4:
-        var_a3 = 0x55100;
-        var_a2 = 0xC0;
-        g_akao_bank_slot_keys[4] = ((s32*)tmp)[1];
+        spu_base = 0x55100;
+        articulation_index = 0xC0;
+        g_akao_bank_slot_keys[4] = identity->key;
         break;
 
     case 5:
-        var_a3 = 0x59900;
-        var_a2 = 0xD0;
-        g_akao_bank_slot_keys[5] = ((s32*)tmp)[1];
+        spu_base = 0x59900;
+        articulation_index = 0xD0;
+        g_akao_bank_slot_keys[5] = identity->key;
         break;
 
     default:
-        var_a3 = 0x43100;
-        var_a2 = 0x80;
-        g_akao_bank_slot_keys[0] = ((s32*)tmp)[1];
+        spu_base = 0x43100;
+        articulation_index = 0x80;
+        g_akao_bank_slot_keys[0] = identity->key;
         break;
     }
 
-    akao_upload_bank(value0, value2, var_a2, var_a3);
+    akao_upload_bank(bank, wait_for_completion, articulation_index, spu_base);
     return 0;
 }
 
 /**
- * @brief Wrapper: forwards @p value1 unchanged to akao_upload_bank_slot
+ * @brief Wrapper: forwards @p slot unchanged to akao_upload_bank_slot
  *        (selects bank slots 0..5 directly).
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param bank AKAO instrument bank in RAM.
+ * @param slot Slot selector forwarded to akao_upload_bank_slot.
+ * @param wait_for_completion Non-zero to wait for the SPU transfer.
  * @return 0 after the operation completes.
  *
  * @see https://decomp.me/scratch/sa1fh (100%)
  */
-s32 func_80022ED8(void* value0, s32 value1, s32 value2)
+s32 func_80022ED8(void* bank, s32 slot, s32 wait_for_completion)
 {
-    akao_upload_bank_slot(value0, value1, value2);
+    akao_upload_bank_slot(bank, slot, wait_for_completion);
     return 0;
 }
 
 /**
- * @brief Wrapper: biases @p value1 by 3 before calling akao_upload_bank_slot
- *        (selects the second-half bank slots 3..8).
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @brief Wrapper: biases @p slot by 3 before calling akao_upload_bank_slot
+ *        (0 through 2 select slots 3 through 5; other values follow the callee
+ *        fallback to slot 0 after the bias).
+ * @param bank AKAO instrument bank in RAM.
+ * @param slot Slot selector forwarded to akao_upload_bank_slot.
+ * @param wait_for_completion Non-zero to wait for the SPU transfer.
  * @return 0 after the operation completes.
  *
  * @see https://decomp.me/scratch/PnDWc (100%)
  */
-s32 func_80022EF8(void* value0, s32 value1, s32 value2)
+s32 func_80022EF8(void* bank, s32 slot, s32 wait_for_completion)
 {
-    akao_upload_bank_slot(value0, value1 + 3, value2);
+    akao_upload_bank_slot(bank, slot + 3, wait_for_completion);
     return 0;
 }
 
@@ -1317,18 +1293,18 @@ s32 akao_xa_setup_panning(s32 volume, void* reserved)
 /**
  * @brief AKAO command 0xE0 - magic-checks @p value0 (AKAO buffer) then dispatches with (buf*, 16-bit packed, c).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
- * @param value2 Command parameter 2; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 8 bits are used.
+ * @param value2 Value for command slot 2; semantics unknown.
  *
  * @see https://decomp.me/scratch/vw9QX (100%)
  */
 void akao_cmd_e0(s32 value0, s32 value1, s32 value2)
 {
-    if (akao_check_magic(value0) == 0)
+    if (akao_check_magic((AkaoHeader*)value0) == 0)
     {
         g_akao_cmd_params[0].value = value0;
-        g_akao_cmd_params[1].value = (s32)((value1 & 0xFF) << 8);
+        g_akao_cmd_params[1].value = ((value1 & 0xFF) << 8);
         g_akao_cmd_params[2].value = value2;
         akao_send_command(AKAO_CMD_E0);
     }
@@ -1368,8 +1344,8 @@ s32 akao_cmd_e4_set_cd_volume(s32 value0)
 /**
  * @brief AKAO command 0xE5 - (a, 7-bit value packed into <<8).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; semantics unknown.
+ * @param value1 Value for command slot 1; only the low 7 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/7PxF8 (100%)
@@ -1384,7 +1360,7 @@ s32 akao_cmd_e5(s32 value0, s32 value1)
 /**
  * @brief AKAO command 0xE6 - (8-bit value packed into <<8).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; only the low 8 bits are used.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/XeUon (100%)
@@ -1451,15 +1427,15 @@ s32 akao_upload_xa_program(void* buffer, s32 upper_slot)
 /**
  * @brief AKAO command 0xED - (8-bit value packed into <<8, b).
  *
- * @param value0 Command parameter 0; TODO: precise meaning unknown.
- * @param value1 Command parameter 1; TODO: precise meaning unknown.
+ * @param value0 Value for command slot 0; only the low 8 bits are used.
+ * @param value1 Value for command slot 1; semantics unknown.
  * @return Result returned by the AKAO command dispatcher.
  *
  * @see https://decomp.me/scratch/ULEGL (100%)
  */
 s32 akao_cmd_ed(s32 value0, s32 value1)
 {
-    g_akao_cmd_params[0].value = (s32)((value0 & 0xFF) << 8);
+    g_akao_cmd_params[0].value = ((value0 & 0xFF) << 8);
     g_akao_cmd_params[1].value = value1;
     return akao_send_command(AKAO_CMD_ED);
 }
@@ -1498,7 +1474,7 @@ void akao_cmd_ec(void* buf, s32 value1, s32 upper_slot, s32 value3)
     }
 
     g_akao_cmd_params[0].buffer = buf;
-    g_akao_cmd_params[1].value = (s32)((value1 & 0xFF) << 8);
+    g_akao_cmd_params[1].value = ((value1 & 0xFF) << 8);
     g_akao_cmd_params[2].value = spu_base;
     g_akao_cmd_params[3].value = value3;
     akao_send_command(AKAO_CMD_EC);

@@ -3310,7 +3310,7 @@ typedef struct
  *             emitted; otherwise only the rows the node covers are, and its
  *             definition is tested against the group id first.
  *
- * @note UNMATCHED (85.92%, 414/874 exact). Structure and semantics are
+ * @note UNMATCHED (86.98%, 421/874 exact). Structure and semantics are
  *       believed correct; the residual is a register-allocation cascade. The
  *       target keeps @c base in @c s5 and needs no reload temps, giving a
  *       -0x850 frame; this source spills @c base to 0x820 plus six reload
@@ -3323,7 +3323,7 @@ typedef struct
  *       negative or inert).
  * @note @c zero_v is required to match: sourcing @c nrun's zero from a
  *       function-scope variable is worth +47 exact rows over a literal 0.
- * @see decomp.me (85.92%) TODO
+ * @see decomp.me (86.98%) TODO
  */
 void func_8005F5BC(s32 unused, FieldNode* clip)
 {
@@ -3347,7 +3347,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     u32* out;
     u32 ncur;
     u32 nacc;
-    u32 nout;
+    s32 nout;
     s32 nrun;
     FieldNode* nd;
     FieldNode* ent;
@@ -3457,8 +3457,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     tile = scene->unk40;
     if (tile == 4)
     {
-        shift1 = 3;
         shift0 = 2;
+        shift1 = 3;
     }
     else
     {
@@ -3467,7 +3467,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     }
     group = 0;
     tile2 = tile * 2;
-    words = (scene->unk46 + 0x1F) >> 5;
+    words = ((u16)scene->unk46 + 0x1F) >> 5;
     if (scene->unk41 == 0)
     {
         return;
@@ -3480,12 +3480,12 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         base = 0;
         if (clip == NULL)
         {
-            rows = scene->unk48 - 4;
+            rows = (u16)scene->unk48 - 4;
         }
         else
         {
             def = clip->def;
-            saved = out + (words * ((scene->unk48 - 4) * 2));
+            saved = out + (words * (((u16)scene->unk48 - 4) * 2));
             hit = 0;
             if (def->flags & 4)
             {
@@ -3531,7 +3531,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 if (clip->row_start >= 0)
                 {
                     base = (u16)clip->row_start & -tile2;
-                    n = scene->unk48;
+                    n = (u16)scene->unk48;
                     k = clip->row_end >> shift1;
                     if (k >= (n - 4))
                     {
@@ -3545,7 +3545,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 else
                 {
                     k = clip->row_end >> shift1;
-                    rows = scene->unk48 - 4;
+                    rows = (u16)scene->unk48 - 4;
                     if (k < rows)
                     {
                         rows = k + 1;
@@ -3646,7 +3646,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                     } while (i != -1);
                 }
 
-                k = (scene->unk46 - 1) & 0x1F;
+                k = ((u16)scene->unk46 - 1) & 0x1F;
                 if (k == 0)
                 {
                     w0 = wp[-2] | 0x80000000;
