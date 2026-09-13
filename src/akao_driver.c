@@ -198,13 +198,16 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
     AkaoBankHeader* header;
     AkaoArticulation* articulations;
     s32 result;
+    s32 header_address;
 
     akao_spu_wait();
-    if (akao_check_magic(bank) == 0)
+    if ((header_address = akao_check_magic(bank)) == 0)
     {
-        header = bank;
+        header_address = (s32)bank;
+        header = (AkaoBankHeader*)header_address;
         SpuSetTransferStartAddr(spu_base);
-        articulations = (AkaoArticulation*)(header + 1);
+        bank = header + 1;
+        articulations = bank;
         akao_spu_write((s32)&articulations[header->articulation_count], header->sample_size);
         akao_relocate_articulations(articulations,
                                    &((AkaoArticulation*)g_akao_articulation_slots)[bank_id],

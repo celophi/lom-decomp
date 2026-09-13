@@ -1017,11 +1017,11 @@ s32 akao_reset_xfer_state(void)
  * read from disk so far.
  *
  * Stage 1 (first tick - @c g_akao_streaming_state.spu_addr == 0):
- *   - Magic-check @p source_address. On failure, zero the residual counters so the
+ *   - Magic-check @p source. On failure, zero the residual counters so the
  *     subsequent stages all short-circuit and the streaming-pending bit
  *     gets cleared at the bottom.
  *   - Copy the 0x40-byte AkaoBankHeader into @c g_akao_bank_staging and
- *     copied_bytes @p source_address/@p avail past it.
+ *     copied_bytes @p source/@p avail past it.
  *   - Seed @c g_akao_streaming_state from the staged header:
  *       @c spu_addr               = spu_dest_addr
  *       @c sample_remaining       = sample_size
@@ -1043,7 +1043,7 @@ s32 akao_reset_xfer_state(void)
  * Clears the pending bit when input remains after sample exhaustion, or when
  * the external status latch is zero. Articulation copies advance by whole words.
  *
- * @param source_address          Source byte pointer in main RAM. Starts at the AKAO
+ * @param source Source byte pointer in main RAM. Starts at the AKAO
  *                     header on the first tick and advances through the
  *                     articulation and sample regions across subsequent
  *                     ticks.
@@ -1055,7 +1055,7 @@ s32 akao_reset_xfer_state(void)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/0IPqT
  */
-s32 akao_streaming_upload_tick(s32 source_address, u32 avail, s32 wait_for_spu)
+s32 akao_streaming_upload_tick(u8* source, u32 avail, s32 wait_for_spu)
 {
     s32 copied_bytes;
     u32 articulation_chunk;
@@ -1068,14 +1068,14 @@ s32 akao_streaming_upload_tick(s32 source_address, u32 avail, s32 wait_for_spu)
     }
     if (g_akao_streaming_state.spu_addr == 0)
     {
-        if (akao_check_magic((AkaoHeader*)source_address) == 0)
+        if (akao_check_magic((AkaoHeader*)source) == 0)
         {
-            akao_copy_bytes(*(&source_address), &g_akao_bank_staging, sizeof(AkaoBankHeader));
-            source_address = (s32)((AkaoBankHeader*)source_address + 1);
+            akao_copy_bytes(*(&source), &g_akao_bank_staging, sizeof(AkaoBankHeader));
+            source = (u8*)((AkaoBankHeader*)source + 1);
             avail -= sizeof(AkaoBankHeader);
             g_akao_streaming_state.spu_addr = g_akao_bank_staging.spu_dest_addr;
             g_akao_streaming_state.sample_remaining = g_akao_bank_staging.sample_size;
-            g_akao_streaming_state.articulation_dst = &((AkaoArticulation*)g_akao_articulation_slots)[g_akao_bank_staging.bank_id];
+            g_akao_streaming_state.articulation_dst = (u8*)&((AkaoArticulation*)g_akao_articulation_slots)[g_akao_bank_staging.bank_id];
             g_akao_streaming_state.articulation_remaining = g_akao_bank_staging.articulation_count * sizeof(AkaoArticulation);
         }
         else
@@ -1094,9 +1094,9 @@ s32 akao_streaming_upload_tick(s32 source_address, u32 avail, s32 wait_for_spu)
             {
                 articulation_chunk = avail;
             }
-            akao_copy_bytes(source_address, g_akao_streaming_state.articulation_dst, articulation_chunk);
+            akao_copy_bytes(source, g_akao_streaming_state.articulation_dst, articulation_chunk);
             copied_bytes = (articulation_chunk >> 2) * 4;
-            source_address = (s32)((u8*)source_address + copied_bytes);
+            source += copied_bytes;
             avail -= articulation_chunk;
             g_akao_streaming_state.articulation_dst = g_akao_streaming_state.articulation_dst + copied_bytes;
             g_akao_streaming_state.articulation_remaining -= articulation_chunk;
@@ -1122,7 +1122,7 @@ s32 akao_streaming_upload_tick(s32 source_address, u32 avail, s32 wait_for_spu)
             }
             avail = sample_chunk;
             SpuSetTransferStartAddr(g_akao_streaming_state.spu_addr);
-            akao_spu_write(source_address, avail);
+            akao_spu_write(source, avail);
             g_akao_streaming_state.spu_addr += avail;
             g_akao_streaming_state.sample_remaining -= avail;
             if (wait_for_spu != 0)
