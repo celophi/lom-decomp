@@ -1,5 +1,28 @@
 #include "common.h"
 
+/** @brief Layout buffer view for active records, identity words, and packed metadata. */
+typedef struct FieldMenuRecordLayout
+{
+    u8 pad0[0x640];
+    u8 unk640;
+    u8 pad641[0x37];
+    u32 unk678, unk67C;
+    u8 pad680[0x660];
+    u8 unkCE0;
+    u8 padCE1[0x37];
+    u32 unkD18, unkD1C;
+    u8 padD20[0x2440];
+    u8 unk3160;
+    u8 pad3161[0x13];
+    union
+    {
+        u32 word;
+        u16 halves[2];
+    } packed;
+    u8 pad3178[0x20];
+    u32 unk3198, unk319C;
+} FieldMenuRecordLayout;
+
 extern u8 g_menuLayoutBuffer[], D_80122A08[], D_800F0E98[];
 extern u8 D_80122C02, D_80122C03, D_80122C04, D_80122C0C;
 void func_800B2844();
@@ -325,148 +348,140 @@ loop:
 
 extern void func_800B2844(s32, u8 *, s32);
 
-/** @brief Layout buffer view for active records, identity words, and packed metadata. */
-typedef struct Layout
-{
-    u8 pad0[0x640];
-    u8 unk640;
-    u8 pad641[0x37];
-    u32 unk678, unk67C;
-    u8 pad680[0x660];
-    u8 unkCE0;
-    u8 padCE1[0x37];
-    u32 unkD18, unkD1C;
-    u8 padD20[0x2440];
-    u8 unk3160;
-    u8 pad3161[0x13];
-    union
-
-{
-        u32 word;
-        u16 halves[2];
-    } packed;
-    u8 pad3178[0x20];
-    u32 unk3198, unk319C;
-} Layout;
 extern u8 D_80046138[], D_800F0E98[], g_menuLayoutBuffer[];
 extern u8 D_80122C02, D_80122C03, D_80122C04, D_80122C06;
 /**
- * @brief Count available records, detect duplicate identities, and prepare the selected display.
- * @note Status is 1 for an empty selection and 2 for an identity found in either table.
+ * @brief Count available records, detect duplicate identities, and prepare the selected record display.
  */
 void func_800C905C(void)
 {
+    s32 layout_base;
+    s32 second_search_base;
+    s32 display_base;
+    s32 metadata_index;
+    s32 lookup_offset;
+    s32 selected_offset;
+    s32 work_index;
+    s32 duplicate_found;
+    s32 record_type;
+    s32 work_value;
+    s32 lookup_row;
+    u32 packed_metadata;
+    u8 *search_record;
+    u8 *selected_record;
+    u8 *lookup_base;
+    u8 *record_base;
+    s32 selected_index;
 
-    s32 var_v1;
-    s32 temp_s0;
-    s32 temp_s0_2;
-    s32 temp_v0;
-    s32 temp_v0_3;
-    s32 var_a1;
-    s32 var_a3;
-    s32 temp_s2;
-    s32 var_a0;
-    s32 var_s1;
-    u32 temp_v0_2;
-    u8 *temp_a2;
-    u8 *temp_v1;
-
-    s32 selected;
-    selected = D_80122C02;
-    var_a0 = 0;
-    var_a1 = var_a0;
-    var_v1 = (s32)g_menuLayoutBuffer + var_a1 * 0x40;
+    selected_index = D_80122C02;
+    work_value = 0;
+    work_index = work_value;
+    layout_base = (s32)g_menuLayoutBuffer + work_index * 0x40;
     do
-
-{
-        if (((Layout *)var_v1)->unk3160 != 0)
-        {
-            var_a0 += 1;
-        }
-        var_a1 += 1;
-        var_v1 = (s32)g_menuLayoutBuffer + var_a1 * 0x40;
-    } while (var_a1 < 4);
-    var_a1 = (s32)&D_80122C06;
-    *(u8 *)var_a1 = var_a0;
-    var_a0 = (s32)g_menuLayoutBuffer;
-    temp_v1 = (selected << 6) + g_menuLayoutBuffer;
-    ((u8 *)var_a1)[-3] = 0;
-    var_a3 = 0;
-    if (((Layout *)temp_v1)->unk3160 == 0)
     {
-        ((u8 *)var_a1)[-3] = 1;
+        if (((FieldMenuRecordLayout *)layout_base)->unk3160 != 0)
+        {
+            work_value += 1;
+        }
+        work_index += 1;
+        layout_base = (s32)g_menuLayoutBuffer + work_index * 0x40;
+    } while (work_index < 4);
+
+    work_index = (s32)&D_80122C06;
+    *(u8 *)work_index = work_value;
+    work_value = (s32)g_menuLayoutBuffer;
+    selected_record = (selected_index << 6) + g_menuLayoutBuffer;
+    ((u8 *)work_index)[-3] = 0;
+    if (((FieldMenuRecordLayout *)selected_record)->unk3160 == 0)
+    {
+        ((u8 *)work_index)[-3] = 1;
         return;
     }
-    goto search_first;
-found_first:
-    var_a3 = 1;
-    goto search_second;
-found_second:
-    var_a3 = 1;
-    goto searches_done;
-search_first:
-    var_a1 = var_a3;
-    temp_a2 = temp_v1;
-first_loop:
-    if (((Layout *)var_a0)->unkCE0 != 0 &&
-        ((Layout *)var_a0)->unkD18 == ((Layout *)temp_a2)->unk3198 &&
-        ((Layout *)var_a0)->unkD1C == ((Layout *)temp_a2)->unk319C)
 
-{
+    duplicate_found = 0;
+    goto search_first;
+
+found_first:
+    duplicate_found = 1;
+    goto search_second;
+
+found_second:
+    duplicate_found = 1;
+    goto searches_done;
+
+search_first:
+    work_index = duplicate_found;
+    search_record = selected_record;
+first_loop:
+    if (((FieldMenuRecordLayout *)work_value)->unkCE0 != 0 &&
+        ((FieldMenuRecordLayout *)work_value)->unkD18 == ((FieldMenuRecordLayout *)search_record)->unk3198 &&
+        ((FieldMenuRecordLayout *)work_value)->unkD1C == ((FieldMenuRecordLayout *)search_record)->unk319C)
+    {
         goto found_first;
     }
-    var_a1++;
-    var_a0 += 0x40;
-    if (var_a1 < 100)
+    work_index++;
+    work_value += 0x40;
+    if (work_index < 100)
     {
         goto first_loop;
     }
-search_second:
-    var_a1 = 0;
-    var_v1 = (s32)g_menuLayoutBuffer;
-    temp_a2 = (u8 *)((selected << 6) + var_v1);
-    var_a0 = var_v1;
-second_loop:
-    if (((Layout *)var_a0)->unk640 != 0 &&
-        ((Layout *)var_a0)->unk678 == ((Layout *)temp_a2)->unk3198 &&
-        ((Layout *)var_a0)->unk67C == ((Layout *)temp_a2)->unk319C)
 
-{
+search_second:
+    work_index = 0;
+    second_search_base = (s32)g_menuLayoutBuffer;
+    search_record = (u8 *)((selected_index << 6) + second_search_base);
+    work_value = second_search_base;
+second_loop:
+    if (((FieldMenuRecordLayout *)work_value)->unk640 != 0 &&
+        ((FieldMenuRecordLayout *)work_value)->unk678 == ((FieldMenuRecordLayout *)search_record)->unk3198 &&
+        ((FieldMenuRecordLayout *)work_value)->unk67C == ((FieldMenuRecordLayout *)search_record)->unk319C)
+    {
         goto found_second;
     }
-    var_a1++;
-    var_a0 += 0x40;
-    if (var_a1 < 8)
+    work_index++;
+    work_value += 0x40;
+    if (work_index < 8)
     {
         goto second_loop;
     }
+
 searches_done:
-    temp_v0 = selected << 6;
-    if (var_a3 == 0)
+    if (duplicate_found == 0)
     {
-        var_v1 = (s32)g_menuLayoutBuffer;
-        temp_v0_2 = ((Layout *)(temp_v0 + var_v1))->packed.word;
-        temp_s2 = (temp_v0_2 >> 8) & 3;
-        var_s1 = (temp_v0_2 >> 0xA) & 0x3F;
-        if (temp_s2 == 1)
+        s32 row_offset = selected_index << 6;
+
+        layout_base = (s32)g_menuLayoutBuffer;
+        packed_metadata = ((FieldMenuRecordLayout *)(row_offset + layout_base))->packed.word;
+        record_type = (packed_metadata >> 8) & 3;
+        lookup_row = (packed_metadata >> 0xA) & 0x3F;
+        if (record_type == 1)
         {
-            var_s1 += 0xB;
+            lookup_row += 0xB;
+            work_value = 0;
         }
-        else if (temp_s2 == 2)
+        else if (record_type == 2)
         {
-            var_s1 += 0x17;
+            lookup_row += 0x17;
+            work_value = 0;
         }
-        var_v1 = (s32)g_menuLayoutBuffer;
-        temp_v0_3 = selected << 6;
-        temp_s0 = ((Layout *)(temp_v0_3 + var_v1))->packed.halves[1] & 0x3F;
-        func_800B2844(0, temp_v0_3 + ((u8 *)var_v1 + 0x3160), 0xFF);
-        D_80122C04 = temp_s2;
-        temp_s0_2 = temp_s0 * 2;
-        (&D_80122C04)[1] = var_s1;
-        func_800B2844(1, D_800F0E98[temp_s0_2] + (D_800F0E98[temp_s0_2 + 1] << 8) + D_800F0E98,
-                      0xFF);
+        else
+        {
+            work_value = 0;
+        }
+
+        display_base = (s32)g_menuLayoutBuffer;
+        selected_offset = selected_index << 6;
+        metadata_index = ((FieldMenuRecordLayout *)(selected_offset + display_base))->packed.halves[1] & 0x3F;
+        record_base = (u8 *)display_base + 0x3160;
+        func_800B2844(work_value, selected_offset + record_base, 0xFF);
+        D_80122C04 = record_type;
+        lookup_base = D_800F0E98;
+        lookup_offset = metadata_index * 2;
+        (&D_80122C04)[1] = lookup_row;
+        func_800B2844(1, lookup_base[lookup_offset] + (D_800F0E98[lookup_offset + 1] << 8) + D_800F0E98, 0xFF);
         return;
     }
-    func_800B2844(0, temp_v0 + D_80046138, 0xFF);
+
+    func_800B2844(0, (selected_index << 6) + D_80046138, 0xFF);
     D_80122C03 = 2;
 }

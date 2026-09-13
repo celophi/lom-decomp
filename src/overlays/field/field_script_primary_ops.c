@@ -11,6 +11,14 @@ typedef struct
     u16 reference;
 } FieldScriptPositionOperands;
 
+/** @brief View of reset fields addressed relative to successive 0x60-byte slots. */
+typedef struct
+{
+    u8 pad[0x2F36];
+    u16 count;
+    s32 flags;
+} FieldResetSlotView;
+
 /**
  * @brief Evaluate opcode 0x12's condition selector and advance or pause the active script.
  * @param unused0 Unused value inherited from the opcode dispatcher.
@@ -1159,113 +1167,107 @@ s32 field_script_op_3f(void)
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
-/** @brief Reset fields addressed relative to successive 0x60-byte slots. */
-typedef struct
-{
-    u8 pad[0x2F36];
-    u16 count;
-    s32 flags;
-} Reset;
-/** @brief Script header and 12-byte slot view used to locate the current bytecode. */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    u8 *unk8;
-} Script;
-
 extern u8 *D_80122B74;
 extern u8 *D_80122B78;
 extern void func_800B34D0(s32);
 extern void func_800C1230(s32);
 extern u8 *func_800C1E40(s32);
 extern s32 *func_800C1EC8(s32 *, s32 *, s32);
-/** @brief Dispatch a reset command and advance the current script by two bytes. */
+/**
+ * @brief Dispatch the reset subcommand at the active script PC and advance by two bytes.
+ */
 void func_800BB7B4(void)
 {
-    s32 fill;
-    s32 mask;
-    s32 var_a0;
-    s32 index;
-    s32 var_a0_2;
-    u8 temp_v1;
-    Script *temp_a0;
-    u8 *temp_v0;
-    Script *temp_v1_2;
-    u8 *var_v0;
-    Reset *var_v1;
+    s32 value;
+    s32 flag_mask;
+    s32 i;
+    s32 record_index;
+    u8 subcommand;
+    FieldScriptRecord* record;
+    u8* counter_ptr;
+    FieldScriptRecord* active_record;
+    u8* word_ptr;
+    FieldResetSlotView* slot;
+    s32 buffer_base;
 
-    temp_v1_2 = (Script *)g_field_script;
-    index = temp_v1_2->unk4;
-    temp_v1_2 += index;
-    temp_v1 = temp_v1_2->unk8[1];
-    switch (temp_v1)
+    active_record = (FieldScriptRecord *)g_field_script;
+    record_index = active_record->unk4;
+    active_record += record_index;
+    subcommand = active_record->pc[1];
+    switch (subcommand)
     {
     case 0:
-        fill = 0xFFFFFF;
-        var_a0 = 0xA;
-        var_v0 = D_80122B74 + 0x28;
+        value = 0xFFFFFF;
+        i = 0xA;
+        word_ptr = D_80122B74 + 0x28;
         do
         {
-            *(s32 *)(var_v0 + 0x34) = fill;
-            var_a0 -= 1;
-            var_v0 -= 4;
-        } while (var_a0 >= 0);
+            *(s32 *)(word_ptr + 0x34) = value;
+            i -= 1;
+            word_ptr -= 4;
+        } while (i >= 0);
         *(s32 *)(D_80122B74 + 0x60) = 0x500;
         *(s32 *)(D_80122B74 + 0x64) = -0x8000;
-        temp_a0 = (Script *)g_field_script;
+        record = (FieldScriptRecord *)g_field_script;
         *(s32 *)(D_80122B74 + 0x68) = 0x803F;
-        goto block_7;
+        value = record->unk4;
+        record += value;
+        record->pc += 2;
+        return;
     case 1:
         func_800B34D0(1);
-        goto block_16;
+        break;
     case 3:
-        fill = (s32)func_800C1E40(6);
-        temp_v0 = D_80122B78;
-        temp_a0 = (Script *)g_field_script;
-        *(s32 *)(temp_v0 + 0xF00) = fill;
-    block_7:
-        temp_a0 += temp_a0->unk4;
-        temp_a0->unk8 = temp_a0->unk8 + 2;
+        value = (s32)func_800C1E40(6);
+        buffer_base = (s32)*(u8 *volatile *)&D_80122B78;
+        record = *(FieldScriptRecord *volatile *)&g_field_script;
+        *(s32 *)(buffer_base + 0xF00) = value;
+        value = record->unk4;
+        record += value;
+        record->pc += 2;
         return;
     case 4:
+    {
+        FieldScriptRecord* current_record;
+
         func_800C1EC8(0, (s32 *)(D_80122B74 + 0xE4), 0x200);
-        goto block_16;
+        current_record = (FieldScriptRecord *)g_field_script;
+        current_record += current_record->unk4;
+        current_record->pc += 2;
+        return;
+    }
     case 5:
         func_800C1230(0);
         func_800C1230(1);
         func_800C1230(2);
         func_800C1230(3);
         func_800C1230(4);
-        goto block_16;
+        break;
     case 6:
-        var_a0 = 0;
-        mask = 0x7FFFFFFF;
-        var_v1 = (Reset *)D_80122B74;
+        i = 0;
+        flag_mask = 0x7FFFFFFF;
         do
         {
-            var_a0 += 1;
-            var_v1->count = 0;
-            var_v1->flags = (s32)(var_v1->flags & mask);
-            var_v1 = (Reset *)((u8 *)var_v1 + 0x60);
-        } while (var_a0 < 5);
-        goto block_16;
+            slot = (FieldResetSlotView *)(D_80122B74 + i * 0x60);
+            slot->count = 0;
+            slot->flags = (s32)(slot->flags & flag_mask);
+            i += 1;
+        } while (i < 5);
+        break;
     case 7:
-        var_a0 = 0;
+        i = 0;
         do
         {
-            temp_v0 = D_80122B74 + var_a0;
-            var_a0 += 1;
-            *(u8 *)(temp_v0 + 0x25E0) = 0x63;
-        } while (var_a0 < 0xFD);
+            counter_ptr = D_80122B74 + i;
+            i += 1;
+            *(u8 *)(counter_ptr + 0x25E0) = 0x63;
+        } while (i < 0xFD);
         /* fallthrough */
     default:
-        goto block_16;
+        break;
     }
-block_16:
-    temp_v1_2 = (Script *)g_field_script;
-    index = temp_v1_2->unk4;
-    temp_v1_2 += index;
-    temp_v1_2->unk8 = temp_v1_2->unk8 + 2;
-    return;
+    active_record = (FieldScriptRecord *)g_field_script;
+    record_index = active_record->unk4;
+    active_record += record_index;
+    active_record->pc += 2;
 }
