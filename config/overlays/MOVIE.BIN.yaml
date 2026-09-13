@@ -49,4 +49,5 @@ segments:
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, movie]
       - [0x19, c, movie]
+      - [0xAC1, c, movie_stream]
   - [0x1915]

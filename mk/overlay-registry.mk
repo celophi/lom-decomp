@@ -536,7 +536,9 @@ overlay_menu_gcc_272_cdk_g0_srcs := \
 	src/overlays/menu/menu_card.c
 
 OVERLAYS += movie
-overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
+overlay_movie_gcc_280_g4_srcs := \
+	src/overlays/movie/movie.c \
+	src/overlays/movie/movie_stream.c
 # The header word is a plain -G0 const so it stays in .rodata.
 overlay_movie_gcc_272_cdk_g0_srcs := src/overlays/movie/overlay_header.c
 
@@ -567,7 +569,10 @@ overlay_shop_gcc_280_g0_srcs := \
 	src/overlays/shop/unk1_tail_mid.c
 
 OVERLAYS += title
-overlay_title_gcc_272_cdk_g0_srcs := src/overlays/title/overlay_header.c src/overlays/title/title.c
+overlay_title_gcc_272_cdk_g0_srcs := \
+	src/overlays/title/overlay_header.c \
+	src/overlays/title/title.c \
+	src/overlays/title/title_save.c
 
 OVERLAYS += wsel
 overlay_wsel_gcc_272_cdk_g0_srcs := \
