@@ -3335,7 +3335,6 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     FieldCollisionSpanRun* runs_base;
     u32* out;
     u32 ncur;
-    FieldCollisionSpanRun* next_run;
     u32 nacc;
     s32 nout;
     s32 nrun;
@@ -3343,6 +3342,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     FieldNodeDef* def;
     FieldCollisionRasterNode* p;
     FieldCollisionRasterNode* p2;
+    s32 union_end;
     FieldCollisionSpanRun* rp;
     FieldCollisionSpanRun* rq;
     FieldCollisionTileSpan* sp1;
@@ -3376,8 +3376,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     s32 wlead;
     s32 wtail;
     s16 base;
-    s16 key;
     u16 id;
+    s32 signed_id;
     u16 tmp;
     u16 x0;
     u16 x1;
@@ -3425,14 +3425,14 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         {
             do
             {
-                key = list[i].key;
+                base = list[i].key;
                 for (k = i - 1; k != -1; k--)
                 {
-                    if ((s16)key < list[k].key)
+                    if ((s16)base < list[k].key)
                     {
                         tmp = list[k].key;
-                        list[k].key = key;
-                        key = tmp;
+                        list[k].key = base;
+                        base = tmp;
                         list[i].key = tmp;
                         swap = list[k].node;
                         list[k].node = list[i].node;
@@ -3556,17 +3556,16 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         rows = rows - 1;
         if (rows != -1)
         {
+            signed_id = (s16)id;
             p2 = list;
             do
             {
                 if (j < node_count)
                 {
-                    next_run = &runs_base[nrun];
                     if (p2->key < ((s16)base + tile2))
                     {
                         sbase = (s16)base;
                         n = (s16)base + tile2;
-                        rp = next_run;
                         do
                         {
                             nd = p2->node;
@@ -3574,7 +3573,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                             hit = 0;
                             if (def->flags & 4)
                             {
-                                hit = (s16)id >= def->id_min;
+                                hit = signed_id >= def->id_min;
                             }
                             else
                             {
@@ -3582,17 +3581,17 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                 {
                                     lo2 = def->base_x;
                                     hi2 = def->base_y;
-                                    fresh = (s16)id < lo2;
+                                    fresh = signed_id < lo2;
                                     if (lo2 >= hi2)
                                     {
-                                        fresh = (s16)id < hi2;
+                                        fresh = signed_id < hi2;
                                     }
                                 }
                                 else
                                 {
-                                    fresh = (s16)id < def->base_x;
+                                    fresh = signed_id < def->base_x;
                                 }
-                                if ((fresh != 0) && ((s16)id >= def->id_min))
+                                if ((fresh != 0) && (signed_id >= def->id_min))
                                 {
                                     hit = 1;
                                 }
@@ -3602,19 +3601,18 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                 k = nd->row_start;
                                 if (sbase >= k)
                                 {
-                                    rp->src = nd->spans + ((sbase - k) * FIELD_NODE_DEF_ROWS(nd->def) * 2);
-                                    rp->skip = 0;
-                                    rp->count = ((u16)nd->row_end - (s16)base) + 1;
+                                    runs_base[nrun].src = nd->spans + ((sbase - k) * FIELD_NODE_DEF_ROWS(nd->def) * 2);
+                                    runs_base[nrun].skip = 0;
+                                    runs_base[nrun].count = ((u16)nd->row_end - (s16)base) + 1;
                                 }
                                 else
                                 {
-                                    rp->src = nd->spans;
-                                    rp->count = ((u16)nd->row_end - (u16)nd->row_start) + 1;
-                                    rp->skip = (u16)nd->row_start - (s16)base;
+                                    runs_base[nrun].src = nd->spans;
+                                    runs_base[nrun].count = ((u16)nd->row_end - (u16)nd->row_start) + 1;
+                                    runs_base[nrun].skip = (u16)nd->row_start - (s16)base;
                                 }
+                                runs_base[nrun].step = FIELD_NODE_DEF_ROWS(nd->def);
                                 nrun++;
-                                rp->step = FIELD_NODE_DEF_ROWS(nd->def);
-                                rp++;
                             }
                             p2++;
                             j++;
@@ -3667,15 +3665,13 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                             ncur = 0;
                             if (k != -1)
                             {
-                                rq = &runs_base[k];
-                                rp = &runs_base[nrun];
                                 do
                                 {
-                                    if (rq->skip == 0)
+                                    if (runs_base[k].skip == 0)
                                     {
-                                        src = rq->src;
-                                        n = rq->step - 1;
-                                        rq->count = rq->count - 1;
+                                        src = runs_base[k].src;
+                                        n = runs_base[k].step - 1;
+                                        runs_base[k].count = runs_base[k].count - 1;
                                         if (n != -1)
                                         {
                                             do
@@ -3725,28 +3721,26 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                 n--;
                                             } while (n != -1);
                                         }
-                                        if (rq->count == 0)
+                                        if (runs_base[k].count == 0)
                                         {
                                             nrun--;
-                                            rp--;
                                             if (k != nrun)
                                             {
-                                                rq->src = rp->src;
-                                                rq->count = rp->count;
-                                                rq->step = rp->step;
+                                                runs_base[k].src = runs_base[nrun].src;
+                                                runs_base[k].count = runs_base[nrun].count;
+                                                runs_base[k].step = runs_base[nrun].step;
                                             }
                                         }
                                         else
                                         {
-                                            rq->src = src;
+                                            runs_base[k].src = src;
                                         }
                                     }
                                     else
                                     {
-                                        rq->skip = rq->skip - 1;
+                                        runs_base[k].skip = runs_base[k].skip - 1;
                                     }
                                     k--;
-                                    rq--;
                                 } while (k != -1);
                             }
 
@@ -3896,6 +3890,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                         fresh = 1;
                                         if (n != -1)
                                         {
+                                            union_end = -1;
                                             do
                                             {
                                                 if ((((s16)x1 + 1) >= other->x0) && ((other->x1 + 1) >= (s16)x0))
@@ -3913,7 +3908,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                 }
                                                 other++;
                                                 n--;
-                                            } while (n != -1);
+                                            } while (n != union_end);
                                         }
                                         if (fresh != 0)
                                         {

@@ -146,35 +146,37 @@ void func_800C7840(void)
     s32 slot_limit;
     s32 group;
     s32 capacity;
-    u8 *layout_base;
-    u8 *second_base;
+    s32 layout_base;
+    s32 post_layout_base;
+    s32 second_base;
     s32 second_offset;
     u8 *text_base;
-    s32 group_offset;
+    s32 flag_mask;
     s32 initial_offset;
     s32 text_offset;
-    s32 var_a0;
+    s32 group_offset;
     s32 occupied_count;
     s32 slot_index;
-    s32 item_index;
-    s32 var_v0;
+    s32 empty_slot;
     s32 new_count;
     s32 item_id;
     s32 available_count;
     u32 group_flags;
     u8 *selected_count;
-    u8 *item_counts;
-    u8 *var_v0_2;
+    u8 *text_low;
+    u8 *text_high;
+    s32 item_counts_base;
     FieldActionGroupView *group_view;
 
     occupied_count = 0;
     slot_index = occupied_count;
-    layout_base = g_menuLayoutBuffer;
     group = D_80122C1F;
     initial_offset = group * 0x8C;
-    group_flags = ((FieldActionGroupView *)(layout_base + initial_offset))->unk26E4;
-    var_a0 = initial_offset;
-    slot_limit = (group_flags >> 8) & 0xF;
+    group_flags = ((FieldActionGroupView *)(g_menuLayoutBuffer + initial_offset))->unk26E4;
+    layout_base = (s32)g_menuLayoutBuffer;
+    group_offset = initial_offset;
+    slot_limit = group_flags >> 8;
+    slot_limit &= 0xF;
     capacity = group_flags & 0xF;
     do
     {
@@ -189,53 +191,55 @@ void func_800C7840(void)
     slot_index = 0;
     if (slot_limit != 0)
     {
-        second_base = g_menuLayoutBuffer;
+        second_base = (s32)g_menuLayoutBuffer;
         second_offset = group * 0x8C;
-        var_v0 = slot_index + second_offset;
-    loop_6:
-        if (((FieldActionGroupView *)(var_v0 + second_base))->unk26EC != 0xFF)
+        empty_slot = 0xFF;
+loop_6:
+        if (((FieldActionGroupView *)(slot_index + second_offset + second_base))->unk26EC != empty_slot)
         {
             slot_index += 1;
-            var_v0 = slot_index + second_offset;
             if (slot_index < slot_limit)
             {
                 goto loop_6;
             }
         }
     }
+    flag_mask = 0xFFFF0FFF;
     new_count = slot_index + 1;
-    layout_base = g_menuLayoutBuffer;
+    post_layout_base = (s32)g_menuLayoutBuffer;
     group_offset = group * 0x8C;
-    group_view = (FieldActionGroupView *)(layout_base + group_offset);
+    group_view = (FieldActionGroupView *)(post_layout_base + group_offset);
     D_80122C0B[0] = new_count;
-    group_view->unk26E4 = (s32)((group_view->unk26E4 & 0xFFFF0FFF) | ((new_count & 0xF) << 0xC));
+    group_view->unk26E4 = (s32)((group_view->unk26E4 & flag_mask) | ((new_count & 0xF) << 0xC));
     if (capacity < (slot_index + 3))
     {
         D_80122C0B[1] = 1;
     }
-    item_counts = D_80122C0B - 0xB;
+    item_counts_base = (s32)(D_80122C0B - 0xB);
     text_base = D_800F0E98;
-    selected_count = (*(s16 *)(D_80122C0B + 9)) + item_counts;
+    selected_count = (u8 *)((*(s16 *)(D_80122C0B + 9)) + item_counts_base);
     item_id = (*(s16 *)(D_80122C0B + 9)) + 0x58;
     *selected_count -= 1;
-    ((FieldActionGroupView *)(layout_base + slot_index + group_offset))->unk26EC = item_id;
+    ((FieldActionGroupView *)(slot_index + group_offset + post_layout_base))->unk26EC = item_id;
     text_offset = item_id * 2;
-    func_800B2844(0, text_base[text_offset] + (text_base[text_offset + 1] << 8) + text_base, 0xFF,
-                  slot_index);
+    text_low = text_offset + text_base;
+    {
+        s32 text_offset2 = text_offset + 1;
+        text_high = text_offset2 + text_base;
+    }
+    func_800B2844(0, *text_low + (*text_high << 8) + text_base, 0xFF, slot_index);
     available_mask = 0x1FFF;
     available_count = 0;
-    item_index = available_count;
+    slot_index = available_count;
 
     do
     {
-        if (item_counts[item_index] != 0)
-        {
-            available_mask &= ~(1 << item_index);
+        if (*(u8 *)(slot_index + item_counts_base) != 0) {
+            available_mask &= ~(1 << slot_index);
             available_count += 1;
         }
-        item_index += 1;
-
-    } while (item_index < 8);
+        slot_index += 1;
+    } while (slot_index < 8);
     ((Availability *)D_80122C08)->mask = available_mask;
     ((Availability *)D_80122C08)->count = available_count;
 }

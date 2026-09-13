@@ -1064,11 +1064,6 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case 0xF8:
-        do
-        {
-            prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
-        } while (0);
-        break;
     case 0xF9:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
@@ -4154,18 +4149,15 @@ s32 niki_scan_next_entry(s32 page)
         entry_count = g_niki_entry_state;
         if (entry_count > 0)
         {
-            u8* entries;
-            s32 offset;
+            NikiDirEntry (*entries)[NIKI_DIRECTORY_ENTRY_COUNT];
+            s32 card_slot;
+
+            entries = g_niki_entries;
+            card_slot = g_niki_card_slot;
             do
             {
-                entries = (u8*)g_niki_entries;
-            } while (0);
-            offset = g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES;
-            do
-            {
-                used_blocks += ((NikiDirEntry*)(offset + (s32)entries))->size / NIKI_MEMORY_CARD_BLOCK_BYTES;
+                used_blocks += entries[card_slot][entry_index].size / NIKI_MEMORY_CARD_BLOCK_BYTES;
                 entry_index++;
-                offset += NIKI_DIRECTORY_ENTRY_BYTES;
             } while (entry_index < entry_count);
         }
         card_full = used_blocks >= 0xE;
@@ -4765,7 +4757,7 @@ void niki_reset_glyph_cache(void)
     raster_buffer = g_niki_glyph_raster_buffer;
     for (; slot < GLYPH_CACHE_SLOTS * GLYPH_RASTER_BYTES; slot++)
     {
-        *(u8*)(slot + (s32)raster_buffer) = 0;
+        g_niki_glyph_raster_buffer[slot] = 0;
     }
 }
 
