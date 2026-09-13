@@ -17,7 +17,7 @@ typedef struct
     u8 pad14[0x10];
     u8 active;
     u8 pad25[4];
-    volatile u8 animation;
+    u8 animation;
     u8 pad_2a[0x1F8];
     u16 value;
     u8 pad224[15];
@@ -60,8 +60,6 @@ s32 func_8009615C(s32 index, s32 flags)
 {
     s32 slot, binding;
     Actor *actor, *updated, *slots;
-    Animation *animation, *animations;
-    s32 mode, mode_offset, current_offset;
     Binding *bindings;
     slot = func_800839F8(index, 0);
     if (slot != -1)
@@ -83,12 +81,8 @@ s32 func_8009615C(s32 index, s32 flags)
         slots = g_field_actor_slots;
         updated = &slots[slot];
         binding = index;
-        mode_offset = updated->animation * 0x1C;
-        current_offset = updated->animation * 0x1C;
-        animations = updated->animations;
-        mode = ((Animation *)(mode_offset + (u8 *)animations))->mode;
-        updated->current = (Animation *)((u8 *)animations + current_offset);
-        updated->mode = mode;
+        updated->mode = updated->animations[updated->animation].mode;
+        updated->current = &updated->animations[updated->animation];
         D_80105AE0[binding].slot = slot;
         bindings = D_80105880;
         if (binding >= 3)

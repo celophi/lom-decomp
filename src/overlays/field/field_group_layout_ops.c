@@ -261,24 +261,43 @@ void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y)
     s32 offset, i, step;
     u8 *layout, *entry, *cell, *loop_layout;
     Shape *point;
+
     table = D_80051888;
     offset = index * 4;
     layout = g_menuLayoutBuffer;
-    i = 0;
-    if (table.shapes[(*(u32 *)(layout + offset + 0x29DC) >> 12) & 0xF].count != 0)
+    do
     {
-        loop_layout = layout;
-        step = rotation * 20;
-        entry = loop_layout + 0x29DC + offset;
+        i = 0;
+    } while (0);
+
+    if (table.shapes[(*(u32 *)(offset - -(s32)layout + 0x29DC) >> 12) & 0xF].count != 0)
+    {
         do
         {
-            point = (Shape *)((u8 *)&table + (step + ((*(u32 *)(entry) >> 12) & 0xF) * 88));
-            cell = loop_layout + (x + point->x + (y + point->y) * 6) * 4;
+            do
+            {
+                do
+                {
+                    loop_layout = layout;
+                } while (0);
+            } while (0);
+        } while (0);
+
+        step = rotation * 20;
+        do
+        {
+            entry = loop_layout + offset;
+        } while (0);
+
+        do
+        {
+            point = (Shape *)((u8 *)&table + (step + ((*(u32 *)(entry + 0x29DC) >> 12) & 0xF) * 88));
+            cell = (u8 *)(((x + point->x + (y + point->y) * 6) * 4) + (s32)loop_layout);
             cell[0x2A7F] = index;
-            cell[0x2A7C] = entry[0] >> 2;
-            cell[0x2A7D] = (*(u32 *)(entry) >> 8) & 0xF;
+            cell[0x2A7C] = entry[0x29DC] >> 2;
+            cell[0x2A7D] = (*(u32 *)(entry + 0x29DC) >> 8) & 0xF;
             i++;
             step += 4;
-        } while (i < table.shapes[(*(u32 *)(entry) >> 12) & 0xF].count);
+        } while (i < table.shapes[(*(u32 *)(entry + 0x29DC) >> 12) & 0xF].count);
     }
 }
