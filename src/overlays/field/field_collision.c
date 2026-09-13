@@ -3310,20 +3310,7 @@ typedef struct
  *             emitted; otherwise only the rows the node covers are, and its
  *             definition is tested against the group id first.
  *
- * @note UNMATCHED (85.92%, 414/874 exact). Structure and semantics are
- *       believed correct; the residual is a register-allocation cascade. The
- *       target keeps @c base in @c s5 and needs no reload temps, giving a
- *       -0x850 frame; this source spills @c base to 0x820 plus six reload
- *       temps, giving -0x868. Every sp offset is therefore shifted, which is
- *       what most of the 403 argdiff rows are. The 14 named stack slots
- *       already match the target's order exactly - do NOT reorder the
- *       declarations. See working/func_8005F5BC/status.md for the measured
- *       dead ends (volatile counters, shared-tail goto in the clip test, rp
- *       address-computation spellings, base as s32/u16 - all measured
- *       negative or inert).
- * @note @c zero_v is required to match: sourcing @c nrun's zero from a
- *       function-scope variable is worth +47 exact rows over a literal 0.
- * @see decomp.me (85.92%) TODO
+ * @see decomp.me (100%) TODO
  */
 void func_8005F5BC(s32 unused, FieldNode* clip)
 {
@@ -3347,19 +3334,21 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     u32* out;
     u32 ncur;
     u32 nacc;
-    u32 nout;
+    s32 clip_tail;
+    s32 clip_rows;
     s32 nrun;
     FieldNode* nd;
-    FieldNode* ent;
     FieldNodeDef* def;
     FieldCollisionRasterNode* p;
-    FieldCollisionRasterNode* p2;
-    FieldCollisionSpanRun* rp;
-    FieldCollisionSpanRun* rq;
+    u32 list_offset;
+    s32 group_end;
+    s32 union_end;
+    s32 eligible;
+    s32 threshold;
+    s32 node_start;
     FieldCollisionTileSpan* sp1;
     FieldCollisionTileSpan* sp2;
-    FieldCollisionTileSpan* sc0;
-    FieldCollisionTileSpan* sc1;
+    FieldCollisionTileSpan* other;
     FieldCollisionTileSpan* prev;
     FieldCollisionTileSpan* dst;
     u32* wp;
@@ -3368,7 +3357,6 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     s32 i;
     s32 k;
     s32 n;
-    s32 hit;
     s32 fresh;
     s32 lo;
     s32 hi;
@@ -3378,20 +3366,18 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     s32 w1;
     s32 word;
     s32 zero_v;
-    s32 sbase;
     s32 m0;
     s32 m1;
     s32 lead;
     s32 tail;
-    s32 wlead;
+
     s32 wtail;
     s16 base;
-    s16 key;
     u16 id;
+    s32 signed_id;
     u16 tmp;
     u16 x0;
     u16 x1;
-    FieldNode* swap;
 
     zero_v = 0;
     saved = NULL;
@@ -3435,18 +3421,18 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         {
             do
             {
-                key = list[i].key;
+                base = list[i].key;
                 for (k = i - 1; k != -1; k--)
                 {
-                    if ((s16)key < list[k].key)
+                    if ((s16)base < list[k].key)
                     {
                         tmp = list[k].key;
-                        list[k].key = key;
-                        key = tmp;
+                        list[k].key = base;
+                        base = tmp;
                         list[i].key = tmp;
-                        swap = list[k].node;
+                        nd = list[k].node;
                         list[k].node = list[i].node;
-                        list[i].node = swap;
+                        list[i].node = nd;
                     }
                 }
                 i--;
@@ -3457,8 +3443,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     tile = scene->unk40;
     if (tile == 4)
     {
-        shift1 = 3;
         shift0 = 2;
+        shift1 = 3;
     }
     else
     {
@@ -3467,29 +3453,30 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     }
     group = 0;
     tile2 = tile * 2;
-    words = (scene->unk46 + 0x1F) >> 5;
+    words = ((u16)scene->unk46 + 0x1F) >> 5;
     if (scene->unk41 == 0)
     {
         return;
     }
 
+    group_end = -1;
     runs_base = runs;
     do
     {
         id = scene->unk4A[group];
-        base = 0;
         if (clip == NULL)
         {
-            rows = scene->unk48 - 4;
+            base = 0;
+            rows = (u16)scene->unk48 - 4;
         }
         else
         {
             def = clip->def;
-            saved = out + (words * ((scene->unk48 - 4) * 2));
-            hit = 0;
+            saved = out + ((words * 2) * ((u16)scene->unk48 - 4));
+            fresh = 0;
             if (def->flags & 4)
             {
-                hit = (s16)id >= def->id_min;
+                fresh = def->id_min <= (s16)id;
             }
             else if ((def->flags & 3) == 1)
             {
@@ -3501,7 +3488,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                     {
                         if (((s16)id < def->id_min) == 0)
                         {
-                            hit = 1;
+                            fresh = 1;
                         }
                     }
                 }
@@ -3509,54 +3496,56 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 {
                     if (((s16)id < def->id_min) == 0)
                     {
-                        hit = 1;
+                        fresh = 1;
                     }
                 }
             }
             else
             {
-                lo2 = def->base_x;
-                if ((s16)id < lo2)
+                w0 = def->base_x;
+                w0 = (s16)id < w0;
+                if (w0 != 0)
                 {
                     if (((s16)id < def->id_min) == 0)
                     {
-                        hit = 1;
+                        fresh = 1;
                     }
                 }
             }
 
-            if (hit != 0)
+            if (fresh != 0)
             {
                 base = 0;
                 if (clip->row_start >= 0)
                 {
                     base = (u16)clip->row_start & -tile2;
-                    n = scene->unk48;
-                    k = clip->row_end >> shift1;
-                    if (k >= (n - 4))
+                    clip_rows = (u16)scene->unk48;
+                    i = clip->row_end >> shift1;
+                    if (i >= (clip_rows - 4))
                     {
-                        rows = n - (((s16)base >> shift1) + 4);
+                        clip_tail = ((s16)base >> shift1) + 4;
+                        rows = clip_rows - clip_tail;
                     }
                     else
                     {
-                        rows = (k - ((s16)base >> shift1)) + 1;
+                        rows = (i - ((s16)base >> shift1)) + 1;
                     }
                 }
                 else
                 {
-                    k = clip->row_end >> shift1;
-                    rows = scene->unk48 - 4;
-                    if (k < rows)
+                    i = clip->row_end >> shift1;
+                    rows = (u16)scene->unk48 - 4;
+                    if (i < rows)
                     {
-                        rows = k + 1;
+                        rows = i + 1;
                     }
                 }
-                out = out + (words * (((s16)base >> shift1) * 2));
+                out = out + ((words * 2) * ((s16)base >> shift1));
             }
             else
             {
-                group++;
                 out = saved;
+                group++;
                 continue;
             }
         }
@@ -3564,70 +3553,80 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         nrun = zero_v;
         j = 0;
         rows = rows - 1;
-        if (rows != -1)
+        if (rows != group_end)
         {
-            p2 = list;
+            signed_id = (s16)id;
+            list_offset = 0;
             do
             {
                 if (j < node_count)
                 {
-                    sbase = (s16)base;
-                    n = sbase + tile2;
-                    if (p2->key < n)
+                    def = (FieldNodeDef*)list;
+                    if (((FieldCollisionRasterNode*)((u8*)def + list_offset))->key < ((s16)base + tile2))
                     {
-                        rp = &runs_base[nrun];
+                        m0 = (s16)base;
+                        threshold = (s16)base + tile2;
                         do
                         {
-                            ent = p2->node;
-                            def = ent->def;
-                            hit = 0;
+                            nd = ((FieldCollisionRasterNode*)((u8*)def + list_offset))->node;
+                            def = nd->def;
+                            fresh = 0;
                             if (def->flags & 4)
                             {
-                                hit = (s16)id >= def->id_min;
+                                fresh = signed_id >= def->id_min;
                             }
                             else
                             {
-                                if ((def->flags & 3) == 1)
+                                do
                                 {
-                                    lo2 = def->base_x;
-                                    hi2 = def->base_y;
-                                    fresh = (s16)id < lo2;
-                                    if (lo2 >= hi2)
+                                    if ((def->flags & 3) == 1)
                                     {
-                                        fresh = (s16)id < hi2;
+                                        lo2 = def->base_x;
+                                        hi2 = def->base_y;
+                                        if (lo2 < hi2)
+                                        {
+                                            eligible = signed_id < lo2;
+                                        }
+                                        else
+                                        {
+                                            eligible = signed_id < hi2;
+                                        }
                                     }
-                                }
-                                else
-                                {
-                                    fresh = (s16)id < def->base_x;
-                                }
-                                if ((fresh != 0) && ((s16)id >= def->id_min))
-                                {
-                                    hit = 1;
-                                }
+                                    else
+                                    {
+                                        eligible = signed_id < def->base_x;
+                                    }
+                                    if ((eligible != 0) && (signed_id >= def->id_min))
+                                    {
+                                        fresh = 1;
+                                    }
+                                } while (0);
                             }
-                            if ((hit != 0) && (ent->row_end >= sbase))
+                            if ((fresh != 0) && (nd->row_end >= m0))
                             {
-                                k = ent->row_start;
-                                if (sbase >= k)
+                                node_start = nd->row_start;
+                                if (m0 >= node_start)
                                 {
-                                    rp->src = ent->spans + ((sbase - k) * FIELD_NODE_DEF_ROWS(ent->def) * 2);
-                                    rp->skip = 0;
-                                    rp->count = ((u16)ent->row_end - (s16)base) + 1;
+                                    runs_base[nrun].src = nd->spans + ((m0 - node_start) * FIELD_NODE_DEF_ROWS(nd->def) * 2);
+                                    runs_base[nrun].count = ((u16)nd->row_end - (s16)base) + 1;
+                                    runs_base[nrun].skip = 0;
                                 }
                                 else
                                 {
-                                    rp->src = ent->spans;
-                                    rp->count = ((u16)ent->row_end - (u16)ent->row_start) + 1;
-                                    rp->skip = (u16)ent->row_start - (s16)base;
+                                    runs_base[nrun].src = nd->spans;
+                                    runs_base[nrun].count = ((u16)nd->row_end - (u16)nd->row_start) + 1;
+                                    runs_base[nrun].skip = (u16)nd->row_start - (s16)base;
                                 }
+                                runs_base[nrun].step = FIELD_NODE_DEF_ROWS(nd->def);
                                 nrun++;
-                                rp->step = FIELD_NODE_DEF_ROWS(ent->def);
-                                rp++;
                             }
-                            p2++;
+                            list_offset += 8;
                             j++;
-                        } while ((j < node_count) && (list[j].key < n));
+                            if (j < node_count)
+                            {
+                                def = (FieldNodeDef*)list;
+                            }
+                        } while ((j < node_count) && (list[j].key < threshold));
                     }
                 }
 
@@ -3635,31 +3634,33 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 wp[1] = 3;
                 i = words - 2;
                 out[0] = 3;
-                if (i != -1)
+                if (i != group_end)
                 {
+                    s32 clear_end = -1;
                     do
                     {
                         wp += 2;
                         i--;
                         wp[1] = 0;
                         wp[0] = 0;
-                    } while (i != -1);
+                    } while (i != clear_end);
                 }
 
-                k = (scene->unk46 - 1) & 0x1F;
-                if (k == 0)
+                node_start = ((u16)scene->unk46 - 1) & 0x1F;
+                if (node_start == 0)
                 {
                     w0 = wp[-2] | 0x80000000;
-                    w1 = wp[0] | 1;
+                    node_start = wp[0] | 1;
                     wp[-1] = w0;
                     wp[-2] = w0;
-                    wp[1] = w1;
-                    wp[0] = w1;
+                    wp[1] = node_start;
+                    wp[0] = node_start;
                 }
                 else
                 {
-                    m0 = 1 << k;
-                    w0 = wp[0] | m0 | (m0 >> 1);
+                    m0 = node_start;
+                    m0 = 1 << m0;
+                    w0 = wp[0] | m0 | ((u32)m0 >> 1);
                     wp[1] = w0;
                     wp[0] = w0;
                 }
@@ -3667,37 +3668,42 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 if (nrun != 0)
                 {
                     i = tile2 - 1;
-                    if (i != -1)
+                    if (i != group_end)
                     {
                         do
                         {
-                            k = nrun - 1;
+                            k = nrun;
+                            k--;
                             ncur = 0;
-                            if (k != -1)
+                            if (k != group_end)
                             {
-                                rq = &runs_base[k];
-                                rp = &runs_base[nrun];
                                 do
                                 {
-                                    if (rq->skip == 0)
+                                    if (runs_base[k].skip == 0)
                                     {
-                                        src = rq->src;
-                                        n = rq->step - 1;
-                                        rq->count = rq->count - 1;
-                                        if (n != -1)
+                                        do
+                                        {
+                                            src = runs_base[k].src;
+                                            n = runs_base[k].step;
+                                            runs_base[k].count = runs_base[k].count - 1;
+                                            n--;
+                                        } while (0);
+                                        if (n != group_end)
                                         {
                                             do
                                             {
                                                 x0 = src[0];
                                                 x1 = src[1];
                                                 src += 2;
-                                                if ((s16)x1 >= (s16)x0)
+                                                if ((s16)x0 <= (s16)x1)
                                                 {
                                                     sp1 = cur;
-                                                    m0 = ncur - 1;
+                                                    m0 = ncur;
+                                                    m0--;
                                                     fresh = 1;
-                                                    if (m0 != -1)
+                                                    if (m0 != group_end)
                                                     {
+                                                        s32 collect_end = -1;
                                                         do
                                                         {
                                                             if ((((s16)x1 + 1) >= sp1->x0) && ((sp1->x1 + 1) >= (s16)x0))
@@ -3707,15 +3713,18 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                                     sp1->x0 = x0;
                                                                 }
                                                                 fresh = 0;
-                                                                if (sp1->x1 < (s16)x1)
+                                                                do
                                                                 {
-                                                                    sp1->x1 = x1;
-                                                                }
+                                                                    if (sp1->x1 < (s16)x1)
+                                                                    {
+                                                                        sp1->x1 = x1;
+                                                                    }
+                                                                } while (0);
                                                                 break;
                                                             }
                                                             sp1++;
                                                             m0--;
-                                                        } while (m0 != -1);
+                                                        } while (m0 != collect_end);
                                                     }
                                                     if (fresh != 0)
                                                     {
@@ -3731,118 +3740,115 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                     }
                                                 }
                                                 n--;
-                                            } while (n != -1);
+                                            } while (n != group_end);
                                         }
-                                        if (rq->count == 0)
+                                        if (runs_base[k].count == 0)
                                         {
                                             nrun--;
-                                            rp--;
                                             if (k != nrun)
                                             {
-                                                rq->src = rp->src;
-                                                rq->count = rp->count;
-                                                rq->step = rp->step;
+                                                runs_base[k].src = runs_base[nrun].src;
+                                                runs_base[k].count = runs_base[nrun].count;
+                                                runs_base[k].step = runs_base[nrun].step;
                                             }
                                         }
                                         else
                                         {
-                                            rq->src = src;
+                                            runs_base[k].src = src;
                                         }
                                     }
                                     else
                                     {
-                                        rq->skip = rq->skip - 1;
+                                        runs_base[k].skip = runs_base[k].skip - 1;
                                     }
                                     k--;
-                                    rq--;
-                                } while (k != -1);
+                                } while (k != group_end);
                             }
 
                             k = ncur - 1;
                             sp1 = cur;
-                            if (k != -1)
+                            if (k != group_end)
                             {
                                 do
                                 {
                                     n = k - 1;
-                                    x0 = sp1->x0;
-                                    x1 = sp1->x1;
-                                    sp2 = sp1 + 1;
-                                    if (n != -1)
+                                    do
                                     {
+                                        x0 = sp1->x0;
+                                    } while (0);
+                                    x1 = sp1->x1;
+                                    other = sp1 + 1;
+                                    if (n != group_end)
+                                    {
+                                        s32 compact_end = -1;
                                         do
                                         {
-                                            if ((((s16)x1 + 1) >= sp2->x0) && ((sp2->x1 + 1) >= (s16)x0))
+                                            if ((((s16)x1 + 1) >= other->x0) && ((s16)x0 <= (other->x1 + 1)))
                                             {
                                                 ncur--;
                                                 k--;
-                                                if (sp2->x0 >= (s16)x0)
+                                                if (other->x0 < (s16)x0 || (s16)x1 < other->x1)
                                                 {
-                                                    if ((s16)x1 < sp2->x1)
+                                                    if (other->x0 < (s16)x0)
                                                     {
-                                                        goto grow;
+                                                        x0 = other->x0;
                                                     }
-                                                    if (n != 0)
+                                                    if ((s16)x1 < other->x1)
                                                     {
-                                                        *(s32*)sp2 = *(s32*)&sp2[n];
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    x0 = sp2->x0;
-                                                grow:
-                                                    n_sp = (s16)x1 < sp2->x1;
-                                                    if (n_sp)
-                                                    {
-                                                        x1 = sp2->x1;
+                                                        x1 = other->x1;
                                                     }
                                                     sp1->x0 = x0;
                                                     sp1->x1 = x1;
                                                     if (n != 0)
                                                     {
-                                                        *(s32*)sp2 = *(s32*)&sp2[n];
+                                                        *(s32*)other = *(s32*)&other[n];
                                                     }
                                                     n = k;
-                                                    sp2 = sp1 + 1;
+                                                    other = sp1 + 1;
+                                                }
+                                                else if (n != 0)
+                                                {
+                                                    *(s32*)other = *(s32*)&other[n];
                                                 }
                                             }
                                             else
                                             {
-                                                sp2++;
+                                                other++;
                                             }
                                             n--;
-                                        } while (n != -1);
+                                        } while (n != compact_end);
                                     }
-                                    k--;
                                     sp1++;
-                                } while (k != -1);
+                                    k--;
+                                } while (k != group_end);
                             }
 
                             if (i == (tile2 - 1))
                             {
-                                sc0 = cur;
-                                sc1 = acc;
-                                dst = (FieldCollisionTileSpan*)0x1F800000;
+                                sp1 = cur;
+                                other = acc;
+                                prev = (FieldCollisionTileSpan*)0x1F800000;
                                 nacc = ncur;
                                 n_sp = nacc;
-                                n = nacc - 1;
-                                if (n != -1)
+                                k = nacc - 1;
+                                if (k != group_end)
                                 {
+                                    s32 copy_end = -1;
                                     do
                                     {
-                                        word = *(s32*)sc0;
-                                        sc0++;
-                                        n--;
-                                        *(s32*)sc1 = word;
-                                        sc1++;
-                                        *(s32*)dst = word;
-                                        dst++;
-                                    } while (n != -1);
+                                        word = *(s32*)sp1;
+                                        sp1++;
+                                        k--;
+                                        *(s32*)other = word;
+                                        other++;
+                                        *(s32*)prev = word;
+                                        prev++;
+                                    } while (k != copy_end);
                                 }
                             }
                             else
                             {
-                                sc0 = cur;
+                                sp1 = cur;
                                 if (!(i & 1))
                                 {
                                     prev = (FieldCollisionTileSpan*)0x1F800000;
@@ -3854,22 +3860,24 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                     dst = (FieldCollisionTileSpan*)0x1F800000;
                                 }
                                 k = ncur - 1;
-                                nout = 0;
-                                if (k != -1)
+                                m0 = 0;
+                                if (k != group_end)
                                 {
                                     do
                                     {
-                                        x0 = sc0->x0;
-                                        x1 = sc0->x1;
-                                        n = n_sp - 1;
+                                        x0 = sp1->x0;
+                                        x1 = sp1->x1;
+                                        n = n_sp;
+                                        n = n - 1;
                                         sp2 = prev;
-                                        if (n != -1)
+                                        if (n != group_end)
                                         {
+                                            s32 intersect_end;
                                             do
                                             {
                                                 if (((s16)x1 >= sp2->x0) && (sp2->x1 >= (s16)x0))
                                                 {
-                                                    if (nout >= 0x80)
+                                                    if (m0 >= 0x80)
                                                     {
                                                         scene->unk28 = 0;
                                                         scene->unk41 = 4;
@@ -3892,38 +3900,45 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                     {
                                                         dst->x1 = x1;
                                                     }
-                                                    nout++;
-                                                    dst++;
+                                                    do
+                                                    {
+                                                        m0++;
+                                                        dst++;
+                                                    } while (0);
                                                 }
-                                                n--;
+                                                intersect_end = -1;
                                                 sp2++;
-                                            } while (n != -1);
+                                                n--;
+                                            } while (n != intersect_end);
                                         }
 
-                                        wtail = 0;
-                                        sp1 = acc;
+                                        other = acc;
                                         n = nacc - 1;
                                         fresh = 1;
-                                        if (n != -1)
+                                        if (n != group_end)
                                         {
                                             do
                                             {
-                                                if ((((s16)x1 + 1) >= sp1->x0) && ((sp1->x1 + 1) >= (s16)x0))
+                                                if ((((s16)x1 + 1) >= other->x0) && ((other->x1 + 1) >= (s16)x0))
                                                 {
-                                                    if ((s16)x0 < sp1->x0)
+                                                    if ((s16)x0 < other->x0)
                                                     {
-                                                        sp1->x0 = x0;
+                                                        other->x0 = x0;
                                                     }
-                                                    fresh = wtail;
-                                                    if (sp1->x1 < (s16)x1)
+                                                    fresh = 0;
+                                                    do
                                                     {
-                                                        sp1->x1 = x1;
-                                                    }
+                                                        if (other->x1 < (s16)x1)
+                                                        {
+                                                            other->x1 = x1;
+                                                        }
+                                                    } while (0);
                                                     break;
                                                 }
-                                                sp1++;
+                                                union_end = -1;
+                                                other++;
                                                 n--;
-                                            } while (n != -1);
+                                            } while (n != union_end);
                                         }
                                         if (fresh != 0)
                                         {
@@ -3934,86 +3949,90 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                 return;
                                             }
                                             nacc++;
-                                            sp1->x0 = x0;
-                                            sp1->x1 = x1;
+                                            other->x0 = x0;
+                                            other->x1 = x1;
                                         }
                                         k--;
-                                        sc0++;
-                                    } while (k != -1);
+                                        sp1++;
+                                    } while (k != group_end);
                                 }
-                                n_sp = nout;
+                                n_sp = m0;
                             }
                             i--;
-                        } while (i != -1);
+                        } while (i != group_end);
                     }
 
-                    k = n_sp - 1;
-                    sp2 = (FieldCollisionTileSpan*)0x1F800200;
-                    if (k != -1)
+                    prev = (FieldCollisionTileSpan*)0x1F800200;
+                    i = n_sp;
+                    i--;
+                    if (i != group_end)
                     {
                         do
                         {
-                            lead = (((sp2->x0 + tile) - 1) >> shift0) + 2;
-                            tail = ((sp2->x1 + 1) >> shift0) + 1;
-                            wlead = lead >> 5;
+                            lead = (((prev->x0 + tile) - 1) >> shift0) + 2;
+                            tail = ((prev->x1 + 1) >> shift0) + 1;
+                            n = lead >> 5;
                             if (tail >= lead)
                             {
                                 wtail = tail >> 5;
-                                wq = out + (wlead * 2);
-                                m0 = -1 << (lead & 0x1F);
-                                m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
-                                if (wlead != wtail)
+                                wp = out + (n * 2);
+                                m0 = lead;
+                                m0 = group_end << (m0 & 0x1F);
+                                m1 = (u32)group_end >> (0x1F - (tail & 0x1F));
+                                if (n != wtail)
                                 {
-                                    n = (wtail - wlead) - 2;
-                                    wq[0] |= m0;
-                                    wq += 2;
-                                    if (n != -1)
+                                    k = (wtail - n) - 2;
+                                    wp[0] |= m0;
+                                    wp += 2;
+                                    if (k != group_end)
                                     {
                                         do
                                         {
-                                            wq[0] = -1;
-                                            n--;
-                                            wq += 2;
-                                        } while (n != -1);
+                                            wp[0] = group_end;
+                                            k--;
+                                            wp += 2;
+                                        } while (k != group_end);
                                     }
-                                    wq[0] |= m1;
+                                    wp[0] |= m1;
                                 }
                                 else
                                 {
-                                    wq[0] |= m0 & m1;
+                                    wp[0] |= m0 & m1;
                                 }
                             }
-                            k--;
-                            sp2++;
-                        } while (k != -1);
+                            i--;
+                            prev++;
+                        } while (i != group_end);
                     }
 
-                    k = nacc - 1;
-                    sp1 = acc;
-                    if (k != -1)
+                    i = nacc - 1;
+                    other = acc;
+                    if (i != group_end)
                     {
                         do
                         {
-                            lead = (sp1->x0 >> shift0) + 2;
-                            tail = (sp1->x1 >> shift0) + 2;
-                            wlead = lead >> 5;
+                            lead = (other->x0 >> shift0) + 2;
+                            tail = other->x1 >> shift0;
+                            tail = tail + 2;
+                            n = lead >> 5;
                             wtail = tail >> 5;
-                            m0 = -1 << (lead & 0x1F);
-                            m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
-                            wq = out + (wlead * 2);
-                            if (wlead != wtail)
+                            m0 = lead;
+                            m0 = group_end << (m0 & 0x1F);
+                            m1 = (u32)group_end >> (0x1F - (tail & 0x1F));
+                            wq = out + (n * 2);
+                            if (n != wtail)
                             {
                                 wp = wq + 3;
-                                n = (wtail - wlead) - 2;
+                                k = (wtail - n) - 2;
                                 wq[1] |= m0;
-                                if (n != -1)
+                                if (k != group_end)
                                 {
                                     do
                                     {
-                                        wp[0] = -1;
-                                        n--;
+                                        wp[0] = group_end;
+                                        k--;
                                         wp += 2;
-                                    } while (n != -1);
+                                    } while (k != group_end);
                                 }
                                 wp[0] |= m1;
                             }
@@ -4021,16 +4040,16 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                             {
                                 wq[1] |= m0 & m1;
                             }
-                            k--;
-                            sp1++;
-                        } while (k != -1);
+                            i--;
+                            other++;
+                        } while (i != group_end);
                     }
                 }
 
                 out += words * 2;
                 base += tile2;
                 rows--;
-            } while (rows != -1);
+            } while (rows != group_end);
         }
 
         if (clip != NULL)

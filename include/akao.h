@@ -3,6 +3,15 @@
 
 #include "common.h"
 
+/** @brief One 32-bit command slot, interpreted according to its opcode. */
+typedef union
+{
+    s32 value;
+    void* buffer;
+} AkaoCommandParam;
+
+extern AkaoCommandParam g_akao_cmd_params[];
+
 /** Maximum representable value for AKAO's 7-bit volume controls. */
 #define AKAO_VOLUME_MAX 0x7F
 
@@ -11,7 +20,7 @@
  *
  * The host CPU pokes a one-byte opcode into akao_send_command (which indexes
  * a 256-entry MESSAGE_HANDLERS dispatch table) after staging up to four
- * 32-bit parameters in @c g_akaoCmdParams. Only the opcodes LOM actually
+ * 32-bit parameters in @c g_akao_cmd_params. Only the opcodes LOM actually
  * issues are listed here.
  *
  * @note These are *driver-command* opcodes, not the in-sequence channel
@@ -151,9 +160,7 @@ typedef struct AkaoHeader
  *                                      driver's articulation slot table)
  *   0x1C        articulation_count   — number of 16-byte articulation entries
  *                                      stored at offset 0x40
- *   0x20        cached_spu_addr      — SPU base address cached by
- *                                      akao_upload_xa_program (cmd 0xEC)
- *                                      after a streaming upload starts
+ *   0x20        unknown_0x20        - meaning unknown for instrument banks
  *   0x24..0x3F  reserved             — unused / unknown
  *
  * The articulation table starts at offset 0x40 and is articulation_count
@@ -169,7 +176,7 @@ typedef struct AkaoBankHeader
     u32 sample_size;
     u32 bank_id;
     u32 articulation_count;
-    u32 cached_spu_addr;
+    u32 unknown_0x20;
     u8  reserved[0x1C];
 } AkaoBankHeader;
 

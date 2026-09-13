@@ -4,7 +4,6 @@
 #include "sdk/libspu.h"
 
 /* Defined in akao_driver.c / akao_driver_init_state.c. */
-void akao_spu_write(s32 src_addr, s32 byte_count);
 void akao_spu_wait(void);
 void akao_driver_init_state(void);
 

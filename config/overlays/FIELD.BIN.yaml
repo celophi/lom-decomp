@@ -162,7 +162,7 @@ segments:
       - [0x37A11, c, func_80087680]                # gcc272_cdk, 100%
       - [0x37B01, c, func_80087770] # gcc272_cdk, 100.000000%
       - [0x37C45, c, func_800878B4] # gcc272_cdk, 100%
-      - [0x37E2D, c, func_80087A9C] # gcc272_cdk, 96.718750% WIP
+      - [0x37E2D, c, func_80087A9C] # gcc272_cdk, 100.000000%
       - [0x3802D, c, field32]                      # gcc272_cdk, func_80087C9C
       - [0x38071, c, func_80087CE0]                # gcc272_cdk, func_80087CE0 + func_80087D8C (100%)
       - [0x38191, c, func_80087E00]                # gcc272_cdk, 100%
@@ -191,7 +191,7 @@ segments:
       - [0x3B1A5, c, field_queue_actor_animation_by_handle] # gcc272_cdk, func_8008AE14, 100%
       - [0x3B241, c, func_8008AEB0]             # gcc272_cdk, 100%
       - [0x3B2F9, c, func_8008AF68]             # gcc272_cdk, 100%
-      - [0x3B369, c, func_8008AFD8] # gcc272_cdk, 95.387100% WIP
+      - [0x3B369, c, func_8008AFD8] # gcc272_cdk, 100.000000%
       - [0x3B559, c, func_8008B1C8]               # gcc272_cdk, 100%
       - [0x3B619, c, func_8008B288]              # gcc272_cdk, 100%
       - [0x3B729, c, field_actor_slot_lookup]   # gcc272_cdk, func_8008B398 + func_8008B42C + func_8008B500 (100%; none match under gcc280_g0)
@@ -231,7 +231,7 @@ segments:
       # TU hypothesis: field_actor_input_maps (high). See docs/decompilation/field-boundaries/map.md.
       - [0x417A1, c, field39]                      # gcc272_cdk, func_80091410
       - [0x417C9, c, func_80091438] # gcc272_cdk, 100%
-      - [0x418A9, c, func_80091518] # gcc272_cdk, 90.992424% WIP
+      - [0x418A9, c, func_80091518] # gcc272_cdk, -fno-strength-reduce, 100.000000%
       - [0x41AB9, c, func_80091728]                 # gcc272_cdk, 100%
       - [0x41BDD, c, func_8009184C]                # gcc272_cdk, 100%
       - [0x41CA5, c, func_80091914] # gcc272_cdk, 100.000000%
@@ -247,7 +247,7 @@ segments:
       - [0x42D19, c, func_80092988] # gcc272_cdk, 100.000000%
       - [0x42E69, c, func_80092AD8] # gcc272_cdk, 100.000000%
       - [0x42FB5, c, func_80092C24]                # gcc272_cdk, 100%
-      - [0x43029, c, func_80092C98]                # gcc272_cdk, 97.53% WIP
+      - [0x43029, c, func_80092C98]                # gcc272_cdk
       - [0x43E49, c, func_80093AB8] # gcc272_cdk, 100%
       - [0x44245, c, func_80093EB4]                # gcc272_cdk, 100%
       - [0x443CD, c, func_8009403C] # gcc272_cdk, 100.000000%
@@ -480,7 +480,7 @@ segments:
       - [0x66555, c, field_action_modifiers] # gcc280_g0; action/depletion handlers and helpers; 23 exact, two WIPs
       - [0x67D11, c, field_record_stat_ops] # gcc280_g0; seven compatibility/record/stat helpers, one WIP
       - [0x68395, c, field_script_flow_ops] # gcc280_g0; interpreter, dispatchers and early primary opcodes
-      - [0x697AD, c, func_800B941C] # gcc272_cdk, 80.525860% WIP
+      - [0x697AD, c, func_800B941C] # gcc280_g0, 100.000000%
       - [0x6997D, c, field_script_primary_ops] # gcc280_g0; primary opcodes 12-3F and reset helper
       - [0x6BD51, c, field_script_pair_ops] # gcc280_g0; complete 32-entry two-operand family, one WIP
       - [0x6CEF9, c, field_script_extended_ops] # gcc280_g0; complete sixteen-entry extended opcode family, all exact
@@ -509,7 +509,7 @@ segments:
       - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; func_800C642C WIP
       - [0x76C59, c, field_menu_slot_ops] # gcc280_g0, inferred menu function family; func_800C6AF0 100%
       - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, 100%
-      - [0x779FD, c, field_menu_action_runtime] # gcc280_g0, func_800C766C .. action-slot reset; 14 funcs, two WIPs
+      - [0x779FD, c, field_menu_action_runtime] # gcc280_g0, func_800C766C .. action-slot reset; 14 funcs, one WIP
       - [0x78BC1, c, field_menu_record_setup] # gcc280_g0, func_800C8830 .. func_800C8964; three funcs, 100%
       - [0x78DBD, c, field_menu_record_transfer] # gcc280_g0, func_800C8A2C .. func_800C905C; two WIPs
       - [0x7963D, c, field_menu_record_audio_ops] # gcc280_g0, music reset + record/audio updates; four funcs, 100%

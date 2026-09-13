@@ -78,7 +78,7 @@ extern AkaoChannelState *g_akao_seq_channel0;
 extern void *D_8003EC58;
 extern u8 D_8004C2D0[];
 extern SfxControl g_akao_sfx_control;
-extern u8 D_8004F830[];
+extern u32 D_8004F830[3];
 extern AkaoDriverFlags g_akao_driver_flags;
 /**
  * @brief Keys of the banks loaded into the 6 SPU bank slots.
@@ -89,7 +89,7 @@ extern AkaoDriverFlags g_akao_driver_flags;
  * akao_driver_init_state.
  */
 extern s32 g_akao_bank_slot_keys[6];
-extern u8 D_8003EC30[];
+extern u32 D_8003EC30[2];
 extern u8 g_akao_seq_channels[];
 extern AkaoChannelState g_akao_seq_master_state;
 extern char g_akao_spu_malloc_table[];
@@ -102,6 +102,8 @@ extern s32 g_akao_bank_region_c;
 extern s32 akao_check_magic(AkaoHeader* header);
 extern s32 akao_submit_bank(AkaoBankHeader* bank, s32 wait_for_completion);
 extern s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_base);
+void akao_spu_write(void* source, s32 byte_count);
+void akao_spu_read(void* destination, s32 byte_count);
 extern void akao_irq_handler(void);
 
 // Fix the off() helper to accept any pointer type

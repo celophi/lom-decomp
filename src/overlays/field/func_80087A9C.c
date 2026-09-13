@@ -32,7 +32,7 @@ typedef struct
 } Resource;
 extern Actor D_80105AE0[];
 extern Resource g_field_resource_entries[];
-extern Entry *func_80087C9C(void);
+extern Entry *func_80087C9C(s32);
 extern void func_8006B240(s32, s32, s32);
 extern void func_8006B4D0(u8, s32);
 extern void func_8006B7A0(u8, s32);
@@ -56,7 +56,6 @@ s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_
 {
     s32 position[3];
     s32 saved_state;
-    s32 var_v0;
     Entry *entry;
     Actor *actor;
     Resource *resource;
@@ -64,7 +63,7 @@ s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_
     Actor *actor_base;
     Actor *final_base;
 
-    entry = func_80087C9C();
+    entry = func_80087C9C(owner_id);
     if (entry == (Entry *)-1)
     {
         return -1;
