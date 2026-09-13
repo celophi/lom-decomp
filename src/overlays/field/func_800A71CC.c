@@ -1,5 +1,6 @@
 #include "common.h"
-/** @brief Menu record with packed flags, height, and update callback. */
+
+/** @brief Menu display record with packed flags, state, offsets, and update callback. */
 typedef struct
 {
     union
@@ -21,14 +22,18 @@ typedef struct
             s16 height;
         } fields;
     } state;
-    s16 scroll_offset, scroll_target, scroll_tick, pad_e;
+    s16 scroll_offset;
+    s16 scroll_target;
+    s16 scroll_tick;
+    s16 pad_e;
     void (*update)(void);
-} Record;
+} FieldMenuRecord;
+
 void cdrom_queue_read(s32, s32);
 void cdrom_wait_queue_empty(void);
 void func_800A3938(s32, s32);
 void func_800ADF34(void);
-Record *func_800ADF84(void);
+FieldMenuRecord *func_800ADF84(void);
 extern s32 D_800F229C;
 extern s32 D_8010D038;
 extern u16 D_80122920;
@@ -37,13 +42,13 @@ extern void func_800A8128(void);
 
 /**
  * @brief Load menu data and size its display record for both entry categories.
- * @note Adds one 16-pixel header for each category present in the entry list.
- * @note Best current match: 86.227270% with GCC 2.7.2 CDK.
  */
 void func_800A71CC(void)
 {
-    s16 height;
-    s32 count;
+    s16 raw_height;
+    s32 height;
+    u16 entry_count;
+    s32 entry_limit;
     s32 padding;
     s32 index;
     s32 saw_special;
@@ -52,7 +57,7 @@ void func_800A71CC(void)
     u32 large_state;
     u32 state;
     u32 small_state;
-    Record *record;
+    FieldMenuRecord *record;
 
     cdrom_queue_read(0x5DF, D_8010D038);
     cdrom_wait_queue_empty();
@@ -60,14 +65,15 @@ void func_800A71CC(void)
     D_800F229C = 3;
     func_800ADF34();
     record = func_800ADF84();
+    record->flags.word = (s32)((((record->flags.word & ~0x78) | 8) & 0xFFFF007F) | 0x1000);
     saw_normal = 0;
     saw_special = 0;
     index = 0;
     padding = 0;
-    record->flags.word = (s32)((((record->flags.word & ~0x78) | 8) & 0xFFFF007F) | 0x1000);
-    count = D_80122998;
-    if (count != 0)
+    entry_count = D_80122998;
+    if (entry_count != 0)
     {
+        entry_limit = entry_count;
         entry = &D_80122920;
         do
         {
@@ -76,29 +82,28 @@ void func_800A71CC(void)
                 if (saw_special == 0)
                 {
                     saw_special = 1;
-                    goto add_padding;
+                    padding += 0x10;
                 }
             }
             else if (saw_normal == 0)
             {
                 saw_normal = 1;
-            add_padding:
                 padding += 0x10;
             }
             index += 1;
             entry++;
-        } while (index < count);
+        } while (index < entry_limit);
     }
+
     record->update = &func_800A8128;
     record->flags.word = (s32)(record->flags.word & 0xFFFFFF);
-    state = record->state.word | 1;
-    do
-    {
-        record->state.word = state;
-    } while (0);
-    record->state.word = (u32)(state | 0x200);
-    height = (D_80122998 * 0x10) + padding;
-    record->state.fields.height = height;
+    state = record->state.word;
+    state |= 1;
+    record->state.word = state;
+    raw_height = (D_80122998 * 0x10) + padding;
+    record->state.word = state | 0x200;
+    record->state.fields.height = raw_height;
+    height = raw_height;
     if (height < 0xA1)
     {
         small_state = (record->state.word & ~0x1FE) | ((height & 0xFF) * 2);
@@ -106,6 +111,7 @@ void func_800A71CC(void)
         record->flags.fields.priority = (s8)(0x70 - ((small_state >> 2) & 0x7F));
         return;
     }
+
     record->scroll_offset = 0;
     record->scroll_target = 0;
     record->scroll_tick = 0;

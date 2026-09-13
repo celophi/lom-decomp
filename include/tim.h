@@ -11,6 +11,9 @@
 /** Size of the TIM file header (magic word + flags word) in bytes. */
 #define TIM_HEADER_SIZE 8
 
+/** The TIM file contains a CLUT block before its pixel block. */
+#define TIM_FLAG_HAS_CLUT 8
+
 /** Advance to the next TIM block by skipping @p block->bnum bytes.
  * Re-reads bnum at the call site; use TIM_PIXEL_BLOCK when bnum is
  * already cached in a local variable and codegen order matters. */
@@ -23,7 +26,7 @@
 #define TIM_PIXEL_BLOCK(tim, bnum) \
     ((TimBlock*)((u8*)(tim) + ((bnum) + TIM_HEADER_SIZE)))
 
-/** Number of entries in a 256-color (8bpp) CLUT. */
+/** Number of color entries in a 256-entry palette block. */
 #define CLUT_ENTRY_COUNT 0x100
 
 /** PSX 16bpp mask bit: set on a CLUT entry to enable semi-transparency. */

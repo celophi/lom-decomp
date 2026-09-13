@@ -30,7 +30,6 @@ extern s32 D_8010D020;
  * @param first_id Identifier whose position supplies the center of the depth test.
  * @param second_id Identifier whose eligibility and position are checked.
  * @return -1 for a missing actor, 1 for an eligible overlap, or 0 otherwise.
- * @note Best current match: 84.954956% with GCC 2.7.2 CDK.
  */
 s32 func_8008C2EC(s32 first_id, s32 second_id)
 {
@@ -43,7 +42,8 @@ s32 func_8008C2EC(s32 first_id, s32 second_id)
     s32 second_z;
     s32 first_z;
     s32 first_extent;
-    s32 second_extent;
+    s16 second_extent;
+    s32 result;
     s32 index;
     u8 second_slot;
     u8 first_index;
@@ -137,10 +137,15 @@ check_second:
     first_z = first->z;
     second_z = second->z;
     first_extent = ((s32)(D_80105AE0[first->slot_index].extent << 16) >> 17) << 8;
-    second_extent = (s16)slot->extent << 7;
-    if (second_z >= first_z - first_extent - second_extent)
+    second_extent = (s16)slot->extent;
+    if (second_z < first_z - first_extent - (second_extent << 7))
     {
-        return first_z + first_extent + second_extent >= second_z;
+        goto no_overlap;
     }
-    return 0;
+    result = first_z + first_extent + (second_extent << 7) >= second_z;
+    goto done;
+no_overlap:
+    result = 0;
+done:
+    return result;
 }

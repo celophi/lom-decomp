@@ -50,7 +50,7 @@ segments:
         type: databin
         name: ui_image
         dir: golem
-      - start: 0xAAA5
+      - start: 0xAAA1
         type: databin
         name: text_archive
         dir: golem

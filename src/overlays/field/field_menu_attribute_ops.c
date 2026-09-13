@@ -5,14 +5,19 @@ typedef struct
 {
     s32 entries[8];
 } Choices;
-/** @brief Layout fields used to weight the available choices. */
+/** @brief Menu-layout field used to select the preferred choice. */
 typedef struct
 {
     u8 pad[0x2E6];
     u16 selected;
-    u8 pad2[12];
-    u8 values[1];
-} Layout;
+} AttributeLayout;
+
+/** @brief Scratch storage reused for the active layout and selected choice. */
+typedef union
+{
+    AttributeLayout *layout;
+    s32 selected;
+} LayoutSelection;
 extern Choices D_80051ED8;
 extern u8 g_menuLayoutBuffer[];
 extern u16 g_music_track_index;
@@ -23,47 +28,48 @@ void func_800C96C4(void)
 {
     s32 weights[8];
     Choices choices;
-    s32 total, i, offset, value, square, weight, draw, selected;
+    s32 total, i, offset, value, weight, draw;
+    LayoutSelection selection;
     s32 *cursor, *base;
-    Layout *layout;
-    s32 track, clamped, byte_offset, random_product;
-    u8 raw;
-    u8 mode;
+    s32 track, byte_offset, random_product;
+    s32 mode;
     total = 0;
     i = total;
-    layout = (Layout *)g_menuLayoutBuffer;
+    selection.layout = (AttributeLayout *)g_menuLayoutBuffer;
     mode = D_80122C00;
     track = g_music_track_index;
     choices = D_80051ED8;
     offset = track * 12;
-    do
+loop_weights:
+    value = ((u8 *)selection.layout)[i + offset + 0x2F4];
+    weight = value - 3;
+    if (i == choices.entries[selection.layout->selected & 0x7F])
     {
-        raw = layout->values[i + offset];
-        value = raw - 3;
-        if (i == choices.entries[layout->selected & 0x7F])
+        weight = value - 2;
+    }
+    if (weight >= 0)
+    {
+        value = 3;
+        if (weight < 4)
         {
-            value = raw - 2;
+            value = weight;
         }
-        if (value >= 0)
-        {
-            clamped = 3;
-            if (value < 4)
-            {
-                clamped = value;
-            }
-        }
-        else
-        {
-            clamped = 0;
-        }
-        square = clamped * clamped;
-        weight = square * square;
-        byte_offset = i * 4;
-        i++;
-        base = weights;
-        *(s32 *)((u8 *)base + byte_offset) = weight;
-        total += weight;
-    } while (i < 8);
+    }
+    else
+    {
+        value = 0;
+    }
+    weight = value * value;
+    weight = weight * weight;
+    byte_offset = i * 4;
+    i++;
+    base = weights;
+    *(s32 *)((u8 *)base + byte_offset) = weight;
+    total += weight;
+    if (i < 8)
+    {
+        goto loop_weights;
+    }
     if (mode == 1)
     {
         total = 0x288;
@@ -75,11 +81,10 @@ void func_800C96C4(void)
         draw = (random_product + 0x7FFF) >> 15;
     }
     total = 0;
-    selected = 0xFF;
+    selection.selected = 0xFF;
     i = total;
     cursor = base;
 loop:
-{
     if (draw >= total && draw < total + *cursor)
     {
         goto found;
@@ -98,20 +103,20 @@ loop:
     {
         goto loop;
     }
-}
 finish:
-    if (mode == 0)
+    if (mode != 0)
     {
-        D_80122C05 = selected;
+        goto store_mode_one;
     }
-    else
-    {
-        D_80122C06 = selected;
-    }
-    return;
+    D_80122C05 = selection.selected;
+    goto done;
 found:
-    selected = i;
+    selection.selected = i;
     goto finish;
+store_mode_one:
+    D_80122C06 = selection.selected;
+done:
+    return;
 }
 
 typedef struct
