@@ -440,7 +440,7 @@ segments:
       - [0x5D459, c, field75]                      # gcc272_cdk, func_800AD0C8
       - [0x5D4B1, c, func_800AD120]                # gcc272_cdk, func_800AD120 + func_800AD194 (100%)
       # TU hypothesis: field_numeric_sprites (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x5D599, c, func_800AD208] # gcc272_cdk, 96.846720% WIP
+      - [0x5D599, c, func_800AD208] # gcc272_cdk, 100%
       - [0x5D7BD, c, func_800AD42C]             # gcc272_cdk, 100%
       - [0x5D8B5, c, func_800AD524]             # gcc272_cdk, 100%
       - [0x5D9E9, c, func_800AD658] # gcc272_cdk, 100%
