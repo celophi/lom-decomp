@@ -3342,7 +3342,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     FieldNode* nd;
     FieldNodeDef* def;
     FieldCollisionRasterNode* p;
-    FieldCollisionRasterNode* p2;
+    u32 list_offset;
     FieldCollisionRasterNode* sort_slot;
     s32 union_end;
     s32 eligible;
@@ -3428,8 +3428,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         {
             do
             {
-                sort_slot = &list[i];
-                base = sort_slot->key;
+                base = list[i].key;
                 for (k = i - 1; k != -1; k--)
                 {
                     if ((s16)base < list[k].key)
@@ -3437,10 +3436,10 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                         tmp = list[k].key;
                         list[k].key = base;
                         base = tmp;
-                        sort_slot->key = tmp;
-                        swap = list[k].node;
-                        list[k].node = sort_slot->node;
-                        sort_slot->node = swap;
+                        list[i].key = tmp;
+                        nd = list[k].node;
+                        list[k].node = list[i].node;
+                        list[i].node = nd;
                     }
                 }
                 i--;
@@ -3563,18 +3562,19 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         if (rows != -1)
         {
             signed_id = (s16)id;
-            p2 = list;
+            list_offset = 0;
             do
             {
                 if (j < node_count)
                 {
-                    if (p2->key < ((s16)base + tile2))
+                    def = (FieldNodeDef*)list;
+                    if (((FieldCollisionRasterNode*)((u8*)def + list_offset))->key < ((s16)base + tile2))
                     {
                         m0 = (s16)base;
                         threshold = (s16)base + tile2;
                         do
                         {
-                            nd = p2->node;
+                            nd = ((FieldCollisionRasterNode*)((u8*)def + list_offset))->node;
                             def = nd->def;
                             fresh = 0;
                             if (def->flags & 4)
@@ -3626,8 +3626,12 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                 runs_base[nrun].step = FIELD_NODE_DEF_ROWS(nd->def);
                                 nrun++;
                             }
-                            p2++;
+                            list_offset += 8;
                             j++;
+                            if (j < node_count)
+                            {
+                                def = (FieldNodeDef*)list;
+                            }
                         } while ((j < node_count) && (list[j].key < threshold));
                     }
                 }
@@ -3968,8 +3972,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                             {
                                 wtail = tail >> 5;
                                 wp = out + (n * 2);
-                                m0 = -1;
-                                m0 <<= lead & 0x1F;
+                                m0 = lead;
+                                m0 = -1 << (m0 & 0x1F);
                                 m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
                                 if (n != wtail)
                                 {
@@ -4004,11 +4008,12 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                         do
                         {
                             lead = (other->x0 >> shift0) + 2;
-                            tail = (other->x1 >> shift0) + 2;
+                            tail = other->x1 >> shift0;
+                            tail = tail + 2;
                             n = lead >> 5;
                             wtail = tail >> 5;
-                            m0 = -1;
-                            m0 <<= lead & 0x1F;
+                            m0 = lead;
+                            m0 = -1 << (m0 & 0x1F);
                             m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
                             wq = out + (n * 2);
                             if (n != wtail)

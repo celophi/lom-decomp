@@ -449,10 +449,9 @@ void niki_update_elements(NikiFrameState* frame)
  * @param ot Ordering-table entry receiving the packet.
  * @param tag Tag at the start of the packet.
  */
-static inline void niki_link_packet(s32* ot, NikiGpuTag* tag)
+static inline void niki_link_packet(NikiGpuTag* ot, NikiGpuTag* tag)
 {
-    tag->word = (tag->word & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
-    *ot = (*ot & GPU_TAG_HIGH_MASK) | ((s32)tag & GPU_ADDR_MASK);
+    NIKI_ADD_PRIMITIVE(ot, tag);
 }
 
 /**
@@ -584,7 +583,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             tile->x0 = 0;
             tile->y0 = row_y;
             tile->h = 0xE;
-            niki_link_packet(ot, &tile->tag);
+            niki_link_packet((NikiGpuTag*)ot, &tile->tag);
             prim = (s32)(tile + 1);
         }
     }
@@ -2646,7 +2645,7 @@ s32 niki_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     s32* entry_field_table;
     s32 slot;
     s32* suffix_output;
-    char* entry_cursor;
+    NikiDirEntry* entry_cursor;
     s32 next_rank;
     s32 entry_index;
     s32 maximum;
@@ -2758,16 +2757,16 @@ s32 niki_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     if (g_niki_entry_state > 0)
     {
         suffix_output = &g_niki_entry_suffix_values[0];
-        entry_cursor = (char*)g_niki_entries;
+        entry_cursor = g_niki_entries[0];
     loop_20:
-        if (func_8001714C(&D_800ECFC4[0], (void*)((g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES) + (s32)entry_cursor), 8) == 0)
+        if (func_8001714C(&D_800ECFC4[0], ((NikiDirEntry*)((g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES) + (s32)entry_cursor))->name, 8) == 0)
         {
             *suffix_output = max_suffix + 1;
         }
         else
         {
             suffix_output += 1;
-            entry_cursor += NIKI_DIRECTORY_ENTRY_BYTES;
+            entry_cursor++;
             entry_index += 1;
             if (entry_index < g_niki_entry_state)
             {
