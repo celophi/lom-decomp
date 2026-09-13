@@ -3310,9 +3310,7 @@ typedef struct
  *             emitted; otherwise only the rows the node covers are, and its
  *             definition is tested against the group id first.
  *
- * @note Matching remains incomplete. The 0x850-byte stack frame matches;
- *       register allocation and instruction differences remain. Evidence is
- *       recorded in working/func_8005F5BC/status.md.
+ * @see decomp.me (100%) TODO
  */
 void func_8005F5BC(s32 unused, FieldNode* clip)
 {
@@ -3343,17 +3341,13 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     FieldNodeDef* def;
     FieldCollisionRasterNode* p;
     u32 list_offset;
-    FieldCollisionRasterNode* sort_slot;
+    s32 group_end;
     s32 union_end;
     s32 eligible;
     s32 threshold;
     s32 node_start;
-    FieldCollisionSpanRun* rp;
-    FieldCollisionSpanRun* rq;
     FieldCollisionTileSpan* sp1;
     FieldCollisionTileSpan* sp2;
-    FieldCollisionTileSpan* sc0;
-    FieldCollisionTileSpan* sc1;
     FieldCollisionTileSpan* other;
     FieldCollisionTileSpan* prev;
     FieldCollisionTileSpan* dst;
@@ -3384,7 +3378,6 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     u16 tmp;
     u16 x0;
     u16 x1;
-    FieldNode* swap;
 
     zero_v = 0;
     saved = NULL;
@@ -3466,13 +3459,14 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         return;
     }
 
+    group_end = -1;
     runs_base = runs;
     do
     {
         id = scene->unk4A[group];
-        base = 0;
         if (clip == NULL)
         {
+            base = 0;
             rows = (u16)scene->unk48 - 4;
         }
         else
@@ -3559,7 +3553,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         nrun = zero_v;
         j = 0;
         rows = rows - 1;
-        if (rows != -1)
+        if (rows != group_end)
         {
             signed_id = (s16)id;
             list_offset = 0;
@@ -3640,7 +3634,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 wp[1] = 3;
                 i = words - 2;
                 out[0] = 3;
-                if (i != -1)
+                if (i != group_end)
                 {
                     s32 clear_end = -1;
                     do
@@ -3652,8 +3646,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                     } while (i != clear_end);
                 }
 
-                node_start = (u16)scene->unk46 - 1;
-                node_start &= 0x1F;
+                node_start = ((u16)scene->unk46 - 1) & 0x1F;
                 if (node_start == 0)
                 {
                     w0 = wp[-2] | 0x80000000;
@@ -3665,8 +3658,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 }
                 else
                 {
-                    m0 = 1;
-                    m0 <<= node_start;
+                    m0 = node_start;
+                    m0 = 1 << m0;
                     w0 = wp[0] | m0 | ((u32)m0 >> 1);
                     wp[1] = w0;
                     wp[0] = w0;
@@ -3675,14 +3668,14 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 if (nrun != 0)
                 {
                     i = tile2 - 1;
-                    if (i != -1)
+                    if (i != group_end)
                     {
                         do
                         {
                             k = nrun;
                             k--;
                             ncur = 0;
-                            if (k != -1)
+                            if (k != group_end)
                             {
                                 do
                                 {
@@ -3695,7 +3688,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                             runs_base[k].count = runs_base[k].count - 1;
                                             n--;
                                         } while (0);
-                                        if (n != -1)
+                                        if (n != group_end)
                                         {
                                             do
                                             {
@@ -3708,7 +3701,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                     m0 = ncur;
                                                     m0--;
                                                     fresh = 1;
-                                                    if (m0 != -1)
+                                                    if (m0 != group_end)
                                                     {
                                                         s32 collect_end = -1;
                                                         do
@@ -3720,10 +3713,13 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                                     sp1->x0 = x0;
                                                                 }
                                                                 fresh = 0;
-                                                                if (sp1->x1 < (s16)x1)
+                                                                do
                                                                 {
-                                                                    sp1->x1 = x1;
-                                                                }
+                                                                    if (sp1->x1 < (s16)x1)
+                                                                    {
+                                                                        sp1->x1 = x1;
+                                                                    }
+                                                                } while (0);
                                                                 break;
                                                             }
                                                             sp1++;
@@ -3744,7 +3740,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                     }
                                                 }
                                                 n--;
-                                            } while (n != -1);
+                                            } while (n != group_end);
                                         }
                                         if (runs_base[k].count == 0)
                                         {
@@ -3766,20 +3762,23 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                         runs_base[k].skip = runs_base[k].skip - 1;
                                     }
                                     k--;
-                                } while (k != -1);
+                                } while (k != group_end);
                             }
 
                             k = ncur - 1;
                             sp1 = cur;
-                            if (k != -1)
+                            if (k != group_end)
                             {
                                 do
                                 {
                                     n = k - 1;
-                                    x0 = sp1->x0;
+                                    do
+                                    {
+                                        x0 = sp1->x0;
+                                    } while (0);
                                     x1 = sp1->x1;
                                     other = sp1 + 1;
-                                    if (n != -1)
+                                    if (n != group_end)
                                     {
                                         s32 compact_end = -1;
                                         do
@@ -3821,7 +3820,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                     }
                                     sp1++;
                                     k--;
-                                } while (k != -1);
+                                } while (k != group_end);
                             }
 
                             if (i == (tile2 - 1))
@@ -3832,7 +3831,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                 nacc = ncur;
                                 n_sp = nacc;
                                 k = nacc - 1;
-                                if (k != -1)
+                                if (k != group_end)
                                 {
                                     s32 copy_end = -1;
                                     do
@@ -3853,7 +3852,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                 if (!(i & 1))
                                 {
                                     prev = (FieldCollisionTileSpan*)0x1F800000;
-                                    do { dst = (FieldCollisionTileSpan*)0x1F800200; } while (0);
+                                    dst = (FieldCollisionTileSpan*)0x1F800200;
                                 }
                                 else
                                 {
@@ -3862,7 +3861,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                 }
                                 k = ncur - 1;
                                 m0 = 0;
-                                if (k != -1)
+                                if (k != group_end)
                                 {
                                     do
                                     {
@@ -3871,8 +3870,9 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                         n = n_sp;
                                         n = n - 1;
                                         sp2 = prev;
-                                        if (n != -1)
+                                        if (n != group_end)
                                         {
+                                            s32 intersect_end;
                                             do
                                             {
                                                 if (((s16)x1 >= sp2->x0) && (sp2->x1 >= (s16)x0))
@@ -3906,17 +3906,17 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                         dst++;
                                                     } while (0);
                                                 }
+                                                intersect_end = -1;
                                                 sp2++;
                                                 n--;
-                                            } while (n != -1);
+                                            } while (n != intersect_end);
                                         }
 
                                         other = acc;
                                         n = nacc - 1;
                                         fresh = 1;
-                                        if (n != -1)
+                                        if (n != group_end)
                                         {
-                                            do { union_end = -1; } while (0);
                                             do
                                             {
                                                 if ((((s16)x1 + 1) >= other->x0) && ((other->x1 + 1) >= (s16)x0))
@@ -3926,12 +3926,16 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                         other->x0 = x0;
                                                     }
                                                     fresh = 0;
-                                                    if (other->x1 < (s16)x1)
+                                                    do
                                                     {
-                                                        other->x1 = x1;
-                                                    }
+                                                        if (other->x1 < (s16)x1)
+                                                        {
+                                                            other->x1 = x1;
+                                                        }
+                                                    } while (0);
                                                     break;
                                                 }
+                                                union_end = -1;
                                                 other++;
                                                 n--;
                                             } while (n != union_end);
@@ -3950,18 +3954,18 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                         }
                                         k--;
                                         sp1++;
-                                    } while (k != -1);
+                                    } while (k != group_end);
                                 }
                                 n_sp = m0;
                             }
                             i--;
-                        } while (i != -1);
+                        } while (i != group_end);
                     }
 
                     prev = (FieldCollisionTileSpan*)0x1F800200;
                     i = n_sp;
                     i--;
-                    if (i != -1)
+                    if (i != group_end)
                     {
                         do
                         {
@@ -3973,21 +3977,21 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                 wtail = tail >> 5;
                                 wp = out + (n * 2);
                                 m0 = lead;
-                                m0 = -1 << (m0 & 0x1F);
-                                m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
+                                m0 = group_end << (m0 & 0x1F);
+                                m1 = (u32)group_end >> (0x1F - (tail & 0x1F));
                                 if (n != wtail)
                                 {
                                     k = (wtail - n) - 2;
                                     wp[0] |= m0;
                                     wp += 2;
-                                    if (k != -1)
+                                    if (k != group_end)
                                     {
                                         do
                                         {
-                                            wp[0] = -1;
+                                            wp[0] = group_end;
                                             k--;
                                             wp += 2;
-                                        } while (k != -1);
+                                        } while (k != group_end);
                                     }
                                     wp[0] |= m1;
                                 }
@@ -3998,12 +4002,12 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                             }
                             i--;
                             prev++;
-                        } while (i != -1);
+                        } while (i != group_end);
                     }
 
                     i = nacc - 1;
                     other = acc;
-                    if (i != -1)
+                    if (i != group_end)
                     {
                         do
                         {
@@ -4013,22 +4017,22 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                             n = lead >> 5;
                             wtail = tail >> 5;
                             m0 = lead;
-                            m0 = -1 << (m0 & 0x1F);
-                            m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
+                            m0 = group_end << (m0 & 0x1F);
+                            m1 = (u32)group_end >> (0x1F - (tail & 0x1F));
                             wq = out + (n * 2);
                             if (n != wtail)
                             {
                                 wp = wq + 3;
                                 k = (wtail - n) - 2;
                                 wq[1] |= m0;
-                                if (k != -1)
+                                if (k != group_end)
                                 {
                                     do
                                     {
-                                        wp[0] = -1;
+                                        wp[0] = group_end;
                                         k--;
                                         wp += 2;
-                                    } while (k != -1);
+                                    } while (k != group_end);
                                 }
                                 wp[0] |= m1;
                             }
@@ -4038,14 +4042,14 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                             }
                             i--;
                             other++;
-                        } while (i != -1);
+                        } while (i != group_end);
                     }
                 }
 
                 out += words * 2;
                 base += tile2;
                 rows--;
-            } while (rows != -1);
+            } while (rows != group_end);
         }
 
         if (clip != NULL)
