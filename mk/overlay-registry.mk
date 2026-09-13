@@ -401,7 +401,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800AE8A8.c \
 	src/overlays/field/func_800AE9E0.c \
 	src/overlays/field/field_card_clock.c \
-	src/overlays/field/func_800BF158.c \
 	src/overlays/field/field_group_stat_transfer.c \
 	src/overlays/field/field_select_distance_bucket.c \
 	src/overlays/field/func_80087614.c \
@@ -471,6 +470,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800A2128.c \
 	src/overlays/field/field_reward_command_ops.c \
 	src/overlays/field/field_script_arith_ops.c \
+	src/overlays/field/func_800BF158.c \
 	src/overlays/field/field_slot_pool_ops.c \
 	src/overlays/field/field_state_ops.c \
 	src/overlays/field/field_record_lookup_ops.c \

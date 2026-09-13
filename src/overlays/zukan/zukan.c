@@ -118,6 +118,7 @@ typedef struct
 {
     u8 pad[0xC];
     s32 size;
+    s32 data_offset;
 } ZukanResourceHeader;
 
 /* ---- outline/fade helpers (func_80142374 / func_801424EC) ---- */
@@ -1107,6 +1108,9 @@ void *func_801429C4(SPRT *spr, s32 *ot)
 
 /* ============================ 0x80142B3C ============================ */
 
+/**
+ * @brief Copy the current encyclopedia resource, upload its TIM image, and cache its metadata.
+ */
 void func_80142B3C(void)
 {
     extern u8 *D_80157520;
@@ -1120,13 +1124,10 @@ void func_80142B3C(void)
     u8 *dst;
     u8 *end;
     u8 *tim;
-    u8 *tail_base;
     s32 flags;
     s32 clut_block_size;
     u16 *pixel_dimensions;
     s32 mode;
-    s32 off0;
-    s32 off1;
 
     func_80013F2C();
 
@@ -1134,8 +1135,10 @@ void func_80142B3C(void)
     dst = D_80157D6C;
     end = (u8 *)header + header->size;
     src = (u8 *)header;
-    if (src != end) {
-        do {
+    if (src != end)
+    {
+        do
+        {
             *dst++ = *src++;
         } while (src != end);
     }
@@ -1147,19 +1150,22 @@ void func_80142B3C(void)
 
     rect = &upload_rect;
     layout = &destinations;
-    tim = D_80157520 + *(s32 *)(D_80157520 + 0xC);
+    tim = D_80157520 + ((ZukanResourceHeader *)D_80157520)->size;
     flags = *(s32 *)(tim + 4);
     clut_block_size = *(s32 *)(tim + 8);
     mode = flags & 7;
 
-    if (flags & 8) {
+    if (flags & 8)
+    {
         upload_rect.x = layout->clut_x;
         upload_rect.y = layout->clut_y;
         rect->w = 0x100;
         rect->h = 1;
         func_80019A34(rect, tim + 0x14);
-        do { pixel_dimensions = (u16 *)(clut_block_size - (-(s32)tim) + 0x10); } while (0);
-    } else {
+        pixel_dimensions = (u16 *)(clut_block_size + (s32)tim + 0x10);
+    }
+    else
+    {
         pixel_dimensions = (u16 *)(tim + 0x10);
     }
 
@@ -1167,16 +1173,14 @@ void func_80142B3C(void)
     upload_rect.y = layout->y;
     upload_rect.w = pixel_dimensions[0];
     upload_rect.h = pixel_dimensions[1];
-    func_80019A34(&upload_rect, clut_block_size - (-(s32)tim) + 0x14);
+    func_80019A34(&upload_rect, clut_block_size + (s32)tim + 0x14);
 
-    do { do { do {
-    tail_base = D_80157520;
-    D_80157D5C = mode;
-    off0 = *(volatile s32 *)(tail_base + 0x10);
-    off1 = *(volatile s32 *)(tail_base + 0x10);
-    D_80157D40 = *(u16 *)(tail_base + off0);
-    D_80157D78 = *(u16 *)(tail_base + off1 + 2);
-    } while (0); } while (0); } while (0);
+    {
+        ZukanResourceHeader *resource = (ZukanResourceHeader *)D_80157520;
+        D_80157D5C = mode;
+        D_80157D40 = *(u16 *)((u8 *)resource + resource->data_offset);
+        D_80157D78 = *(u16 *)((u8 *)resource + resource->data_offset + 2);
+    }
 }
 
 /* ============================ 0x80142CA0 ============================ */
