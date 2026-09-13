@@ -166,113 +166,120 @@ extern void func_800BFA34(void);
 extern u8 *func_800C1E40(s32);
 extern void func_800C21C0(s32);
 /** @brief Resource table view exposing the command halfword at offset 0x244. */
-typedef struct ResourceRow
+typedef struct FieldResourceCommandEntry
 {
     u8 padding[0x244];
     u16 command;
-} ResourceRow;
+} FieldResourceCommandEntry;
 /** @brief Effect setup header followed by packed state bytes. */
-typedef struct Header
+typedef struct FieldSequenceHeader
 {
     u8 *owner;
     u8 mode;
     u8 rest[0x2D];
-} Header;
+} FieldSequenceHeader;
 extern u8 *D_80122B78, *D_80123FC0, *g_field_script;
 
 /**
  * @brief Initialize effect state, run its command, and copy the resulting parameters.
- * @param arg0 Destination record receiving bytes at offsets 0x24 through 0x26.
- * @param arg1 Effect setup mode.
- * @param arg2 Resource subentry selector.
- * @param arg3 Primary resource selector.
- * @param arg4 Command selector relative to 0x40.
+ * @param destination Destination record receiving bytes at offsets 0x24 through 0x26.
+ * @param mode Effect setup mode.
+ * @param subentry Resource subentry selector.
+ * @param resource_index Primary resource selector.
+ * @param command_selector Command selector relative to 0x40.
  */
-void func_800BEA10(u8 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+void func_800BEA10(u8 *destination, s32 mode, s32 subentry, s32 resource_index, s32 command_selector)
 {
-    Header **state;
-    u8 **resource;
+    FieldSequenceHeader **config_slot;
+    u8 **resource_slot;
     s32 command;
-    u8 *clamp_base;
-    s32 temp_a0;
-    u8 *temp_s1;
-    u8 *temp_v0_3;
-    s32 var_a0;
-    s32 var_a0_3;
-    s32 var_a1;
-    u8 temp_v1;
-    s32 temp_v1_2;
-    s32 temp_v1_3;
-    u8 *temp_v0;
-    u8 *temp_v0_2;
+    u8 *command_entry;
+    s32 resource_offset;
+    u8 *saved_script;
+    u8 *loaded_resource;
+    s32 index;
+    s32 row;
+    s32 column;
+    u8 flags;
+    u8 *flag_entry;
+    u8 *reset_entry;
 
-    func_800C21C0(arg3);
-    func_800C21C0(arg4);
-    ((Header *)D_80123FC4)->owner = arg0;
-    ((Header *)D_80123FC4)->mode = arg1;
-    ((u8 *)D_80123FC4)[0x5] = arg2;
-    ((u8 *)D_80123FC4)[0x6] = (s8)arg3;
-    var_a0 = 0;
-    ((u8 *)D_80123FC4)[0x7] = (s8)arg4;
+    func_800C21C0(resource_index);
+    func_800C21C0(command_selector);
+    ((FieldSequenceHeader *)D_80123FC4)->owner = destination;
+    ((FieldSequenceHeader *)D_80123FC4)->mode = mode;
+    ((u8 *)D_80123FC4)[0x5] = subentry;
+    ((u8 *)D_80123FC4)[0x6] = (s8)resource_index;
+    index = 0;
+    ((u8 *)D_80123FC4)[0x7] = (s8)command_selector;
     do
     {
-        temp_v0 = (u8 *)D_80123FC4 + var_a0;
-        temp_v1 = temp_v0[0x20];
-        var_a0 += 1;
-        temp_v0[0x20] = (s8)((temp_v1 & 0xF0) | 4);
-    } while (var_a0 < 8);
-    var_a0 = 0;
+        flag_entry = (u8 *)D_80123FC4 + index;
+        flags = flag_entry[0x20];
+        index += 1;
+        flag_entry[0x20] = (s8)((flags & 0xF0) | 4);
+    } while (index < 8);
+    index = 0;
     do
     {
-        temp_v0_2 = (u8 *)D_80123FC4 + var_a0;
-        var_a0 += 1;
-        temp_v0_2[0x28] = 0xFF;
-    } while (var_a0 < 6);
-    resource = &D_80123FC0;
-    temp_v0_3 = func_800C1E40(0xF);
-    state = (Header **)&D_80123FC4;
-    temp_a0 = (arg2 * 2) + (arg3 * 8);
-    *resource = temp_v0_3;
-    ((u8 *)(*state))[0x2F] = (s8)((temp_v0_3 + temp_a0)[0x44] & 7);
-    ((u8 *)(*state))[0x30] = (s8)((u8)(*resource + temp_a0)[0x44] >> 3);
-    ((u8 *)(*state))[0x31] = (u8)(*resource + temp_a0)[0x45];
-    command = ((ResourceRow *)(*resource + ((arg4 - 0x40) * 2)))->command;
-    temp_s1 = g_field_script;
+        reset_entry = (u8 *)D_80123FC4 + index;
+        index += 1;
+        reset_entry[0x28] = 0xFF;
+    } while (index < 6);
+    resource_slot = &D_80123FC0;
+    loaded_resource = func_800C1E40(0xF);
+    config_slot = (FieldSequenceHeader **)&D_80123FC4;
+    resource_offset = (subentry * 2) + (resource_index * 8);
+    *resource_slot = loaded_resource;
+    ((u8 *)(*config_slot))[0x2F] = (s8)((loaded_resource + resource_offset)[0x44] & 7);
+    ((u8 *)(*config_slot))[0x30] = (s8)((u8)(*resource_slot + resource_offset)[0x44] >> 3);
+    ((u8 *)(*config_slot))[0x31] = (u8)(*resource_slot + resource_offset)[0x45];
+    command_entry = *resource_slot;
+    command_entry += (command_selector - 0x40) * 2;
+    command = ((FieldResourceCommandEntry *)command_entry)->command;
+    saved_script = g_field_script;
     g_field_script = D_80122B78 + 0xD98;
     func_800BF2F0(command);
-    g_field_script = temp_s1;
+    g_field_script = saved_script;
     func_800BFA34();
-    arg0[0x24] = (u8)((u8 *)(*state))[0x2E];
-    clamp_base = (u8 *)D_80123FC4;
-    temp_v1_2 = clamp_base[0x2F];
-    if ((s8)clamp_base[0x2F] >= 0)
+    destination[0x24] = (u8)((u8 *)(*config_slot))[0x2E];
     {
-        var_a1 = 7;
-        if (temp_v1_2 < 8U)
+        u8 *clamp_base = (u8 *)D_80123FC4;
+
+        if ((s8)clamp_base[0x2F] >= 0)
         {
-            var_a1 = temp_v1_2 & 0xFF;
+            column = 7;
+            if (clamp_base[0x2F] < 8U)
+            {
+                column = clamp_base[0x2F] & 0xFF;
+            }
+        }
+        else
+        {
+            column = 0;
         }
     }
-    else
     {
-        var_a1 = 0;
-    }
-    clamp_base = (u8 *)D_80123FC4;
-    temp_v1_3 = clamp_base[0x30];
-    if ((s8)clamp_base[0x30] >= 0)
-    {
-        var_a0_3 = 7;
-        if (temp_v1_3 < 8U)
+        u8 *clamp_base = (u8 *)D_80123FC4;
+
+        if ((s8)clamp_base[0x30] >= 0)
         {
-            var_a0_3 = temp_v1_3 & 0xFF;
+            row = 7;
+            if (clamp_base[0x30] < 8U)
+            {
+                row = clamp_base[0x30] & 0xFF;
+            }
+        }
+        else
+        {
+            row = 0;
         }
     }
-    else
     {
-        var_a0_3 = 0;
+        u8 *resource_base = D_80123FC0;
+        destination[0x25] = (resource_base + (column + (row << 3)))[4];
     }
-    arg0[0x25] = (u8)(D_80123FC0 + (var_a1 + (var_a0_3 * 8)))[4];
-    arg0[0x26] = (u8)((u8 *)D_80123FC4)[0x31];
+    destination[0x26] = (u8)((u8 *)D_80123FC4)[0x31];
 }
 
 /** @brief Expands packed record fields into the shared sequence configuration.
