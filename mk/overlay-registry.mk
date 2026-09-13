@@ -166,7 +166,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_8009C2E0.c \
 	src/overlays/field/func_80091BC8.c \
 	src/overlays/field/func_80091D7C.c \
-	src/overlays/field/func_800B941C.c \
 	src/overlays/field/func_80091914.c \
 	src/overlays/field/func_800A1F2C.c \
 	src/overlays/field/func_800A22A8.c \
@@ -456,6 +455,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_action_modifiers.c \
 	src/overlays/field/field_record_stat_ops.c \
 	src/overlays/field/field_script_flow_ops.c \
+	src/overlays/field/func_800B941C.c \
 	src/overlays/field/field_script_primary_ops.c \
 	src/overlays/field/field_script_pair_ops.c \
 	src/overlays/field/field_script_extended_ops.c \
@@ -543,7 +543,7 @@ overlay_movie_gcc_280_g4_srcs := \
 overlay_movie_gcc_272_cdk_g0_srcs := src/overlays/movie/overlay_header.c
 
 OVERLAYS += niki
-overlay_niki_gcc_272_cdk_g0_srcs := src/overlays/niki/overlay_header.c src/overlays/niki/niki.c
+overlay_niki_gcc_272_cdk_g0_srcs := src/overlays/niki/overlay_header.c src/overlays/niki/niki.c src/overlays/niki/niki_io.c
 
 OVERLAYS += shop
 overlay_shop_gcc_272_cdk_g0_srcs := \

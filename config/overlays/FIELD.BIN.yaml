@@ -191,7 +191,7 @@ segments:
       - [0x3B1A5, c, field_queue_actor_animation_by_handle] # gcc272_cdk, func_8008AE14, 100%
       - [0x3B241, c, func_8008AEB0]             # gcc272_cdk, 100%
       - [0x3B2F9, c, func_8008AF68]             # gcc272_cdk, 100%
-      - [0x3B369, c, func_8008AFD8] # gcc272_cdk, 95.387100% WIP
+      - [0x3B369, c, func_8008AFD8] # gcc272_cdk, 100.000000%
       - [0x3B559, c, func_8008B1C8]               # gcc272_cdk, 100%
       - [0x3B619, c, func_8008B288]              # gcc272_cdk, 100%
       - [0x3B729, c, field_actor_slot_lookup]   # gcc272_cdk, func_8008B398 + func_8008B42C + func_8008B500 (100%; none match under gcc280_g0)
@@ -480,7 +480,7 @@ segments:
       - [0x66555, c, field_action_modifiers] # gcc280_g0; action/depletion handlers and helpers; 23 exact, two WIPs
       - [0x67D11, c, field_record_stat_ops] # gcc280_g0; seven compatibility/record/stat helpers, one WIP
       - [0x68395, c, field_script_flow_ops] # gcc280_g0; interpreter, dispatchers and early primary opcodes
-      - [0x697AD, c, func_800B941C] # gcc272_cdk, 80.525860% WIP
+      - [0x697AD, c, func_800B941C] # gcc280_g0, 100.000000%
       - [0x6997D, c, field_script_primary_ops] # gcc280_g0; primary opcodes 12-3F and reset helper
       - [0x6BD51, c, field_script_pair_ops] # gcc280_g0; complete 32-entry two-operand family, one WIP
       - [0x6CEF9, c, field_script_extended_ops] # gcc280_g0; complete sixteen-entry extended opcode family, all exact
