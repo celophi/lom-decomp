@@ -3335,6 +3335,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     FieldCollisionSpanRun* runs_base;
     u32* out;
     u32 ncur;
+    FieldCollisionSpanRun* next_run;
     u32 nacc;
     s32 nout;
     s32 nrun;
@@ -3560,11 +3561,12 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
             {
                 if (j < node_count)
                 {
+                    next_run = &runs_base[nrun];
                     if (p2->key < ((s16)base + tile2))
                     {
                         sbase = (s16)base;
                         n = (s16)base + tile2;
-                        rp = &runs_base[nrun];
+                        rp = next_run;
                         do
                         {
                             nd = p2->node;

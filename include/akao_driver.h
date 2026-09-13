@@ -78,7 +78,7 @@ extern AkaoChannelState *g_akao_seq_channel0;
 extern void *D_8003EC58;
 extern u8 D_8004C2D0[];
 extern SfxControl g_akao_sfx_control;
-extern u8 D_8004F830[];
+extern u32 D_8004F830[3];
 extern AkaoDriverFlags g_akao_driver_flags;
 /**
  * @brief Keys of the banks loaded into the 6 SPU bank slots.
@@ -89,7 +89,7 @@ extern AkaoDriverFlags g_akao_driver_flags;
  * akao_driver_init_state.
  */
 extern s32 g_akao_bank_slot_keys[6];
-extern u8 D_8003EC30[];
+extern u32 D_8003EC30[2];
 extern u8 g_akao_seq_channels[];
 extern AkaoChannelState g_akao_seq_master_state;
 extern char g_akao_spu_malloc_table[];
