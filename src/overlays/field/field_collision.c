@@ -2398,7 +2398,7 @@ typedef union FieldCollisionRasterSpanFlags {
  *       instructions; this source has 875. The 0x60-byte frame and stack
  *       slots match. Register and instruction differences remain.
  *       See working/func_8005E3B0/status.md for prior matching evidence.
- * @see decomp.me (98.229980%, 699/874 exact) TODO
+ * @note Current objdiff match: 98.561780% (715/874 exact instructions).
  */
 void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
 {
@@ -2451,6 +2451,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     s16 err;
     s16 merge_row;
     s16 merge_row2;
+    s16 dx_closing;
 
     def = node->unk4;
     rows = node->unk20;
@@ -2544,9 +2545,9 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                     {
                         first_dir = last_dir;
                     }
-                    count = dx + 1;
                     if ((s16)dy < dx)
                     {
+                        count = dx + 1;
                         do
                         {
                             err = -dx;
@@ -2684,8 +2685,8 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     }
     pt = (FieldCollisionEdgePoint*)&table[run->index * 2];
     attr = edge | closing_hi;
-    dx = pt->x - prev->x;
-    if (dx >= 0)
+    dx_closing = pt->x - prev->x;
+    if (dx_closing >= 0)
     {
         x = prev->x;
         y0 = prev->z;
@@ -2695,7 +2696,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     }
     else
     {
-        dx = -dx;
+        dx_closing = -dx_closing;
         x = pt->x;
         sgn = -1;
         y0 = pt->z;
@@ -2734,10 +2735,10 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
         {
             merge_row2 = -1;
         }
-        count = dx + 1;
-        if ((s16)dy < dx)
+        if ((s16)dy < dx_closing)
         {
-            err = -dx;
+            count = dx_closing + 1;
+            err = -dx_closing;
             while (count > 0)
             {
                 n = *cp;
@@ -2771,11 +2772,14 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 } while ((err < 0) && (count > 0));
                 if (row == merge_row)
                 {
-                    if (sp_row[n - 1].x.x1 < x)
+                    do
                     {
-                        sp_row[n - 1].x.x1 = x;
-                        fl_row[n - 1].f.f1 = attr;
-                    }
+                        if (sp_row[n - 1].x.x1 < x)
+                        {
+                            sp_row[n - 1].x.x1 = x;
+                            fl_row[n - 1].f.f1 = attr;
+                        }
+                    } while (0);
                 }
                 else if (row == merge_row2)
                 {
@@ -2792,7 +2796,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 }
                 row += ystep;
                 cp += ystep;
-                err -= dx * 2;
+                err -= dx_closing * 2;
                 sp_row += ystep * w;
                 fl_row += ystep * w;
             }
@@ -2841,7 +2845,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 fl_row += ystep * w;
                 cp += ystep;
                 row += ystep;
-                err += dx * 2;
+                err += dx_closing * 2;
                 if (err >= 0)
                 {
                     x++;
@@ -2868,9 +2872,9 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 sp_row[n - 1].x.x0 = x;
                 fl_row[n - 1].f.f0 = attr | 0x7F;
             }
-            if ((s16)(x + dx) >= sp_row[n - 1].x.x1)
+            if (sp_row[n - 1].x.x1 <= (s16)(x + dx_closing))
             {
-                sp_row[n - 1].x.x1 = x + dx;
+                sp_row[n - 1].x.x1 = x + dx_closing;
                 fl_row[n - 1].f.f1 = attr | 0x7F;
             }
         }
@@ -2909,7 +2913,9 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
 
         p = spans;
         q = flags;
-        for (j = (*counts >> 1) - 1; j != -1; j--)
+        j = (*counts >> 1);
+        j--;
+        for (; j != -1; j--)
         {
             if (p[0].x.x1 < p[1].x.x1)
             {
