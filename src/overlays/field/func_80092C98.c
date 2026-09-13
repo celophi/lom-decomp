@@ -110,15 +110,7 @@ void func_800A2DD8(u8 index);
  * @param rec Field actor record.
  * @return Never set; the declared non-void return keeps v0 live at the epilogue,
  *         which is what the original codegen shows (all exits are bare returns).
- * @note 97.53% (830/904 rows). Remaining residue: (1) the second 0x3D compare
- *       re-reads D_8010A038[unk3A].unk0 and compares against 0x3D in the target,
- *       ours CSEs it against the first read (9 target-only rows); (2) the
- *       D_800FD818 index load is shared with the func_80083EEC first argument in
- *       the target (register a0), ours reloads it (2 sites); (3) the
- *       tmp * 8 + unk3A * 0x190 offset sum has swapped operands at 2 sites.
- * @note FIELD.BIN.yaml assigns jtbl_80050F14 to this translation unit's
- *       .rodata so its entries resolve to the compiled switch labels.
- * @see decomp.me (97.53%) TODO
+ * @see decomp.me (100%) TODO
  */
 s32 func_80092C98(FieldRec *rec)
 {
@@ -126,6 +118,7 @@ s32 func_80092C98(FieldRec *rec)
     s32 tmp;
     s32 anim;
     s32 anim_id;
+    s32 index;
 
     if (rec->unk1C & 0x1FF)
     {
@@ -137,8 +130,16 @@ s32 func_80092C98(FieldRec *rec)
         if (tmp == 0x3D)
         {
             anim = func_80091914(rec, rec->unk3A);
-            if ((D_8010A038[rec->unk3A].unk8 == tmp && anim == 0x185) ||
-                (D_8010A038[rec->unk3A].unk0 == 0x3D && anim == 0x85))
+            if (D_8010A038[rec->unk3A].unk8 == tmp && anim == 0x185)
+            {
+                rec->unk2A = anim;
+                rec->unk4 -= STEP_OFFSET(rec);
+                func_8008E690(rec);
+                func_800A2DD8(rec->unk3A);
+                rec->unk2A = 0x9B;
+                return;
+            }
+            else if (D_8010A038[rec->unk3A].unk0 == 0x3D && anim == 0x85)
             {
                 rec->unk2A = anim;
                 rec->unk4 -= STEP_OFFSET(rec);
@@ -223,8 +224,9 @@ s32 func_80092C98(FieldRec *rec)
                         {
                             func_8008A9D8(rec->unk3A, D_80105AE0[rec->unk3A].unk170, 0xC);
                         }
+                        index = rec->unk3A;
                         anim_id = 0x64;
-                        if (D_800FD818[rec->unk3A].unk1 == 8)
+                        if (D_800FD818[index].unk1 == 8)
                         {
                             anim_id = 0x61;
                         }
@@ -239,13 +241,14 @@ s32 func_80092C98(FieldRec *rec)
                         {
                             func_8008A9D8(D_80105AE0[rec->unk3A].unk170, rec->unk3A, 0x17);
                         }
+                        index = rec->unk3A;
                         anim_id = 0x65;
-                        if (D_800FD818[rec->unk3A].unk1 == 8)
+                        if (D_800FD818[index].unk1 == 8)
                         {
                             anim_id = 0x63;
                         }
                     }
-                    if (func_80083EEC(rec->unk3A, tmp, anim_id) != 0)
+                    if (func_80083EEC(index, tmp, anim_id) != 0)
                     {
                         targets = D_80105AE0[rec->unk3A].unk170;
                         field_start_actor_animation(tmp, 1, &targets);
@@ -265,16 +268,34 @@ s32 func_80092C98(FieldRec *rec)
         switch (rec->unk21 & 0x7F)
         {
         case 0x25:
-            anim = *(u16 *)(tmp * 8 + rec->unk3A * 0x190 + (u8 *)D_8010A038);
-            if (anim == 8 || anim == 0x3C)
+        {
+            s32 base;
+            s32 actor_offset;
+            s32 track_offset;
+            s32 offset;
+            base = (s32)D_8010A038;
+            track_offset = tmp * 8;
+            actor_offset = rec->unk3A * 0x190;
+            offset = track_offset + actor_offset + base;
+            if (*(u16 *)offset == 8 || *(u16 *)offset == 0x3C)
             {
                 rec->unk2A = 0x985;
                 func_8008E690(rec);
                 func_800A2DD8(rec->unk3A);
             }
             break;
+        }
         case 0x31:
-            if (*(u16 *)(tmp * 8 + rec->unk3A * 0x190 + (u8 *)D_8010A038) == 8)
+        {
+            s32 base;
+            s32 track_offset;
+            s32 actor_offset;
+            s32 offset;
+            base = (s32)D_8010A038;
+            track_offset = tmp * 8;
+            actor_offset = rec->unk3A * 0x190;
+            offset = track_offset + actor_offset + base;
+            if (*(u16 *)offset == 8)
             {
                 SET_ANIM(rec->unk3A, 0x3C, 0, 1);
                 rec->unk2A = 0xB85;
@@ -282,6 +303,7 @@ s32 func_80092C98(FieldRec *rec)
                 func_800A2DD8(rec->unk3A);
             }
             break;
+        }
         }
     }
     else if (func_80091728(rec->unk3A, 2, rec) != 0)
@@ -313,8 +335,9 @@ s32 func_80092C98(FieldRec *rec)
                         {
                             func_8008A9D8(rec->unk3A, D_80105AE0[rec->unk3A].unk170, 0xC);
                         }
+                        index = rec->unk3A;
                         anim_id = 0x64;
-                        if (D_800FD818[rec->unk3A].unk1 == 8)
+                        if (D_800FD818[index].unk1 == 8)
                         {
                             anim_id = 0x61;
                         }
@@ -329,13 +352,14 @@ s32 func_80092C98(FieldRec *rec)
                         {
                             func_8008A9D8(D_80105AE0[rec->unk3A].unk170, rec->unk3A, 0x17);
                         }
+                        index = rec->unk3A;
                         anim_id = 0x65;
-                        if (D_800FD818[rec->unk3A].unk1 == 8)
+                        if (D_800FD818[index].unk1 == 8)
                         {
                             anim_id = 0x63;
                         }
                     }
-                    if (func_80083EEC(rec->unk3A, tmp, anim_id) != 0)
+                    if (func_80083EEC(index, tmp, anim_id) != 0)
                     {
                         targets = D_80105AE0[rec->unk3A].unk170;
                         field_start_actor_animation(tmp, 1, &targets);

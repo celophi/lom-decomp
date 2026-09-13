@@ -36,3 +36,17 @@ rom:0x1A08 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
 // Prevent assigning a symbol in main
 rom:0x15D4 reloc:MIPS_NONE symbol:g_field_scene_config
 rom:0x17D0 reloc:MIPS_NONE symbol:g_field_scene_config
+
+// Preserve array and struct references within the AKAO bank objects.
+rom:0x1362c reloc:MIPS_HI16 symbol:g_akao_bank_slot_keys addend:0x4
+rom:0x13634 reloc:MIPS_LO16 symbol:g_akao_bank_slot_keys addend:0x4
+rom:0x13648 reloc:MIPS_HI16 symbol:g_akao_bank_slot_keys addend:0x8
+rom:0x13650 reloc:MIPS_LO16 symbol:g_akao_bank_slot_keys addend:0x8
+rom:0x13664 reloc:MIPS_HI16 symbol:g_akao_bank_slot_keys addend:0xc
+rom:0x1366c reloc:MIPS_LO16 symbol:g_akao_bank_slot_keys addend:0xc
+rom:0x13680 reloc:MIPS_HI16 symbol:g_akao_bank_slot_keys addend:0x10
+rom:0x13688 reloc:MIPS_LO16 symbol:g_akao_bank_slot_keys addend:0x10
+rom:0x1369c reloc:MIPS_HI16 symbol:g_akao_bank_slot_keys addend:0x14
+rom:0x136a4 reloc:MIPS_LO16 symbol:g_akao_bank_slot_keys addend:0x14
+rom:0x138F4 reloc:MIPS_HI16 symbol:g_akao_xa_program_staging addend:0x20
+rom:0x13988 reloc:MIPS_LO16 symbol:g_akao_xa_program_staging addend:0x20

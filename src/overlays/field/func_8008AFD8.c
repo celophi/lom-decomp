@@ -57,7 +57,7 @@ s32 func_8008AFD8(s32 source_id, s32 target_id)
     Actor *slot;
     s32 i;
     s32 angle;
-    u8 direction;
+
     entry = D_800FDF58;
     actor = D_80105AE0;
     for (i = 0; i < 13; i++, actor++, entry++)
@@ -94,74 +94,72 @@ second_start:
 second_check:
     if (second == (Entry *)-1)
     {
-        goto fail;
+        return -1;
     }
+
     angle = ratan2(first->unk8 - second->unk8, second->unk0 - first->unk0);
     if (!(g_field_resource_entries[first->unk3B].unk10 & 1))
     {
         if (angle < -0x700)
         {
-            direction = 2;
-            goto store_direction;
+            first->unk21 = 2;
         }
         else if (angle < -0x500)
         {
-            direction = 3;
-            goto store_direction;
+            first->unk21 = 3;
         }
         else if (angle < -0x300)
         {
-            direction = 4;
-            goto store_direction;
+            first->unk21 = 4;
         }
         else if (angle < -0x100)
         {
-            direction = 0x83;
-            goto store_direction;
+            first->unk21 = 0x83;
         }
         else if (angle < 0x100)
         {
-            direction = 0x82;
-            goto store_direction;
+            first->unk21 = 0x82;
         }
         else if (angle < 0x300)
         {
-            direction = 0x81;
-            goto store_direction;
+            first->unk21 = 0x81;
         }
         else if (angle < 0x500)
         {
-            goto zero_direction;
+            first->unk21 = 0;
         }
         else if (angle < 0x700)
         {
-            direction = 1;
-            goto store_direction;
+            first->unk21 = 1;
         }
         else
         {
-            direction = 2;
-            goto store_direction;
+            first->unk21 = 2;
         }
     }
     else
     {
-        if ((angle > 0x400 && angle < 0xC00) || (angle < -0x400 && angle > -0xC00))
+        if ((u32)(angle - 0x401) < 0x7FFU)
         {
-            goto zero_direction;
+            first->unk21 = 0;
+        }
+        else if (angle < -0x400)
+        {
+            if (angle < -0xBFF)
+            {
+                first->unk21 = 0x80;
+            }
+            else
+            {
+                first->unk21 = 0;
+            }
         }
         else
         {
-            direction = 0x80;
-            goto store_direction;
+            first->unk21 = 0x80;
         }
     }
-zero_direction:
-    first->unk21 = 0;
-    goto reset_state;
-store_direction:
-    first->unk21 = direction;
-reset_state:
+
     base = D_80105AE0;
     first->unk2E = 1;
     first->unk27 = 0;
@@ -170,6 +168,4 @@ reset_state:
     slot->unk174 &= ~0x1800;
     func_8006C3FC(first);
     return 0;
-fail:
-    return -1;
 }

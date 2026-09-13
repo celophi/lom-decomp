@@ -1,12 +1,12 @@
 #include "common.h"
 #include "akao.h"
+#include "akao_cmd.h"
 #include "sdk/memory.h"
 
 s32 akao_cmd_d0(s32);
 s32 akao_cmd_d4(s32);
 s32 akao_get_xfer_state(void);
 s32 akao_reset_xfer_state(void);
-s32 akao_streaming_upload_tick(s32, u32, s32);
 void func_800A4320(u8 *, u8 *, s32); /* extern */
 extern u8 D_8003ECA0[];
 extern s32 D_8011588C;
@@ -73,7 +73,7 @@ void func_800A3FB0(void)
                 bcopy(D_80117EEC, (void *)(D_8011F320 + 0x801DD000), 0x800);
                 D_8011F320 += 0x800;
                 akao_reset_xfer_state();
-                akao_streaming_upload_tick(0x801DD000, 0x800, 1);
+                akao_streaming_upload_tick((u8*)0x801DD000, 0x800, 1);
                 remaining_bytes = D_8011F320 - 0x800;
                 D_8011F320 = remaining_bytes;
                 func_800A4320((void *)0x801DD000, (void *)0x801DD800, remaining_bytes);
@@ -86,14 +86,14 @@ void func_800A3FB0(void)
                 {
                     upload_bytes = D_8011F320 + D_8011F324;
                     D_8011F320 = upload_bytes;
-                    akao_streaming_upload_tick(0x801DD000, upload_bytes, 1);
+                    akao_streaming_upload_tick((u8*)0x801DD000, upload_bytes, 1);
                     D_8011F308 = 4;
                     D_8011F320 = 0;
                 }
                 else
                 {
                     D_8011F320 += 0x800;
-                    akao_streaming_upload_tick(0x801DD000, 0x800, 1);
+                    akao_streaming_upload_tick((u8*)0x801DD000, 0x800, 1);
                     D_8011F308 = 3;
                     remaining_bytes_second = D_8011F320 - 0x800;
                     D_8011F320 = remaining_bytes_second;

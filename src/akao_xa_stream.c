@@ -121,7 +121,7 @@ void spu_set_key_on(u32 voice_mask);
 void spu_set_voice_volume(s32 voice, u32 vol_l, u32 vol_r, s32 scale);
 void spu_set_voice_repeat_addr(s32 voice, u32 addr);
 void akao_spu_arm_xfer(void);
-void akao_spu_write(s32 src_addr, s32 byte_count);
+void akao_spu_write(void* source, s32 byte_count);
 void akao_cmd_e5(s32 a0, s32 a1);
 
 /* ---- forward prototypes for internal callback targets used before defn ---- */
@@ -841,7 +841,7 @@ void func_8002DD08(void)
 {
     typedef struct
     {
-        s32  buf;        /* 0x00 - SPU source addr */
+        void* buf;      /* 0x00 - source buffer in main RAM */
         u8   pad0[0x08]; /* 0x04 - 0x0B */
         s32  unkC;       /* 0x0C - key-on voice mask */
         s32  unk10;      /* 0x10 - base SPU voice index */
