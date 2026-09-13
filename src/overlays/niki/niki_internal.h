@@ -46,6 +46,33 @@
 #define NIKI_TEXT_PRINTABLE_FIRST 0x21
 #define NIKI_SJIS_CODES_PER_ROW 16
 #define NIKI_SJIS_ROWS_PER_PAGE 16
+
+/** @brief Memory-card sequence commands; unassigned values leave the sequence unchanged. */
+typedef enum
+{
+    NIKI_COMMAND_STOP = 0,
+    NIKI_COMMAND_REQUEST_CARD_INFO = 1,
+    NIKI_COMMAND_POLL_CARD_INFO = 2,
+    NIKI_COMMAND_RELEASE_PRIMARY = 3,
+    NIKI_COMMAND_WAIT_SECONDARY = 4,
+    NIKI_COMMAND_RELEASE_SECONDARY = 5,
+    NIKI_COMMAND_SCAN_DIRECTORY = 6,
+    NIKI_COMMAND_REQUEST_CARD_CLEAR = 8,
+    NIKI_COMMAND_REQUEST_CARD_LOAD = 9,
+    NIKI_COMMAND_ERASE_SELECTED_FILE = 10,
+    NIKI_COMMAND_POLL_CARD_READY = 15,
+    NIKI_COMMAND_WAIT_SECONDARY_COMPLETE = 16,
+    NIKI_COMMAND_READ_ENTRY_PREVIEW = 17,
+    NIKI_COMMAND_POLL_ENTRY_PREVIEW = 18,
+    NIKI_COMMAND_READ_SAVE = 19,
+    NIKI_COMMAND_POLL_SAVE_READ = 20,
+    NIKI_COMMAND_CHECK_CARD_TYPE = 24,
+    NIKI_COMMAND_WRITE_SAVE = 25,
+    NIKI_COMMAND_POLL_SAVE_WRITE = 26,
+    NIKI_COMMAND_READ_SAVED_COPY = 27,
+    NIKI_COMMAND_POLL_SAVED_COPY = 28,
+    NIKI_COMMAND_RESET_RETRIES = 30
+} NikiLoadCommand;
 #define NIKI_SJIS_ROW_SHIFT 4
 
 /** @brief Serialized save payload followed by its checksum and format marker. */
@@ -254,15 +281,19 @@ typedef struct
     s16 y3;
 } NikiPolyG4Packet;
 
-/**
- * @brief Fallback name/second-line text carried alongside the save-slot record.
- * @note Consumed only when the primary slot compare (func_8001714C) fails.
- */
-typedef struct NikiFallbackText
+/** @brief Preview transfer buffer with a two-line title and extended save metadata. */
+typedef struct
 {
-    u8 pad[0x24];
-    u8 text[0x20];
-} NikiFallbackText;
+    u8 header[4];
+    union
+    {
+        u8 text[64];
+        u8 lines[2][32];
+    } title;
+    u8 unknown_0x44[0x180 - 0x44];
+    NikiEntryMetadata metadata;
+    u8 unknown_0x258[0x280 - 0x258];
+} NikiEntryPreview;
 
 typedef struct
 {
@@ -409,23 +440,23 @@ extern s32 g_niki_scroll_frames;
 extern s32 g_niki_scroll_y;
 extern s32 g_niki_scroll_target_y;
 extern s32 D_80164B80;
-extern u8 D_801606C8[];
-extern u8 D_801606D4[];
-extern u8 D_801606DC[];
+/** @brief Clear/load card state, then scan its directory. */
+extern u8 g_niki_card_setup_sequence[];
+/** @brief Release card events, refresh card information, and rescan entries. */
+extern u8 g_niki_rescan_sequence[];
+/** @brief Release primary events, then request and poll card information. */
+extern u8 g_niki_card_info_sequence[];
 extern NikiElement g_niki_element_pool[NIKI_ELEMENT_COUNT];
 extern s32 g_niki_entry_scan_active;
 extern u8* g_niki_load_step;
 extern s32 D_80122994;
 extern char D_800ECF7C[];
 extern NikiDirEntry g_niki_entries[][NIKI_DIRECTORY_ENTRY_COUNT];
-extern NikiEntryMetadata g_niki_entry_metadata;
 extern NikiEntryMetadata* D_8012271C;
 extern s32 D_8003EC9C;
 extern s32 g_niki_icon_palette;
 extern s32 g_niki_dialog_state;
-extern u8 D_80164DE7;
-extern u8 D_80164B98;
-extern u8 D_80164B9C;
+extern NikiEntryPreview g_niki_entry_preview;
 extern u16 D_80147120;
 extern u16 D_80147146;
 extern u16 D_80147148;
@@ -437,7 +468,8 @@ extern u8 D_800EC3D0[];
 extern s32 g_menu_element_counter;
 extern u16 D_80147128;
 extern s32 g_niki_choice_toggle;
-extern u8 D_801606E4[];
+/** @brief Reset retries and read the selected save into the transfer buffer. */
+extern u8 g_niki_load_save_sequence[];
 extern u16 D_8014712A;
 extern NikiSaveBuffer g_niki_save_blob;
 extern u8 D_8011F3D8[];
@@ -481,8 +513,10 @@ extern u16 D_80147114;
 extern u16 D_80147160;
 extern u16 D_80147162;
 extern u16 D_8014716A;
-extern u8 D_801606EC;
-extern u8 D_801606F5;
+/** @brief Read the existing save before modifying and writing it back. */
+extern u8 g_niki_read_saved_copy_sequence[];
+/** @brief Reset retries and write the replacement save. */
+extern u8 g_niki_write_save_sequence[];
 extern s32 g_niki_entry_fields[];
 extern s32 g_niki_entry_value_limit;
 extern const char g_niki_file_template[8] __attribute__((aligned(4)));
@@ -497,7 +531,8 @@ extern s32 g_niki_secondary_poll_countdown;
 extern s32 g_niki_preserve_old_save;
 /** @brief Path written before renaming the replacement to the selected save path. */
 extern u8 g_niki_temporary_save_path[];
-extern u8 D_801606D0[];
+/** @brief Hold at unhandled command 14 until the menu chooses another sequence. */
+extern u8 g_niki_idle_sequence[];
 extern s32 g_niki_primary_handle0;
 extern s32 g_niki_primary_handle1;
 extern s32 g_niki_primary_handle2;
@@ -507,7 +542,8 @@ extern s32 g_niki_secondary_handle1;
 extern s32 g_niki_secondary_handle2;
 extern s32 g_niki_secondary_handle3;
 extern const char g_niki_entry_header_template[7] __attribute__((aligned(4)));
-extern u8 D_801606E0[];
+/** @brief Read and poll the selected entry's preview header. */
+extern u8 g_niki_preview_sequence[];
 extern u16 g_niki_decimal_glyphs[];
 extern u16 g_niki_hex_glyphs[];
 extern s32 g_niki_glyph_cursor_x;

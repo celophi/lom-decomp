@@ -45,62 +45,56 @@ s32 niki_advance_load_sequence(void)
     command = *g_niki_load_step;
     switch (command)
     {
-
-    case 1:
+    case NIKI_COMMAND_REQUEST_CARD_INFO:
         phase_result = 3;
         func_8001729C(g_niki_card_slot);
         func_8001724C(g_niki_card_slot * 0x10);
         g_niki_load_step = g_niki_load_step + 1;
         break;
 
-    case 2:
+    case NIKI_COMMAND_POLL_CARD_INFO:
         poll_result = niki_poll_primary_handle_group();
-        if (poll_result >= 3)
+        switch (poll_result)
         {
-            goto check_card_info_change;
+        case 1:
+        case 2:
+            phase_result = 4;
+            g_niki_selection_status = 0;
+            g_niki_entry_state = 0xFD;
+            g_niki_load_step = g_niki_load_step + 1;
+            break;
+        case 3:
+            g_niki_rank_count = 0x28;
+            rank_value = -1;
+            for (rank_index = 14; rank_index >= 0; rank_index--)
+            {
+                g_niki_entry_ranks[rank_index] = rank_value;
+            }
+            g_niki_entry_state = 0xFF;
+            g_niki_load_step = g_niki_card_setup_sequence;
+            break;
+        case 0:
+            g_niki_load_step = g_niki_load_step + 1;
+            break;
+        default:
+            return phase_result;
         }
-        if (poll_result > 0)
-        {
-            goto card_info_error;
-        }
-        if (poll_result == 0)
-        {
-            goto block_increment;
-        }
-        return phase_result;
-    check_card_info_change:
-        if (poll_result == 3)
-        {
-            goto card_info_changed;
-        }
-        return phase_result;
-    card_info_error:
-        phase_result = 4;
-        g_niki_selection_status = 0;
-        g_niki_entry_state = 0xFD;
+        break;
+
+    case NIKI_COMMAND_RELEASE_PRIMARY:
+        niki_release_primary_handles();
         g_niki_load_step = g_niki_load_step + 1;
         break;
-    card_info_changed:
-        g_niki_rank_count = 0x28;
-        rank_value = -1;
-        for (rank_index = 14; rank_index >= 0; rank_index--)
-        {
-            g_niki_entry_ranks[rank_index] = rank_value;
-        }
-        goto block_status_ff;
 
-    case 3:
-        niki_release_primary_handles();
-        goto block_increment;
-
-    case 4:
+    case NIKI_COMMAND_WAIT_SECONDARY:
         do
         {
             poll_result = niki_poll_secondary_handle_group();
         } while (poll_result == -1);
         if (poll_result == 0)
         {
-            goto block_increment;
+            g_niki_load_step = g_niki_load_step + 1;
+            break;
         }
         if (poll_result < 0)
         {
@@ -111,13 +105,16 @@ s32 niki_advance_load_sequence(void)
             return phase_result;
         }
         phase_result = 4;
-        goto block_status_fd;
+        g_niki_selection_status = 0;
+        g_niki_entry_state = 0xFD;
+        break;
 
-    case 5:
+    case NIKI_COMMAND_RELEASE_SECONDARY:
         niki_release_secondary_handles();
-        goto block_increment;
+        g_niki_load_step = g_niki_load_step + 1;
+        break;
 
-    case 6:
+    case NIKI_COMMAND_SCAN_DIRECTORY:
         niki_erase_placeholder_paths();
         g_niki_entry_scan_active = 1;
         if (niki_begin_entry_scan(g_niki_card_slot) == 0)
@@ -154,14 +151,14 @@ s32 niki_advance_load_sequence(void)
         } while (wait_attempts < 20);
         break;
 
-    case 8:
+    case NIKI_COMMAND_REQUEST_CARD_CLEAR:
         phase_result = 3;
         func_8001729C(g_niki_card_slot);
         func_800172AC(g_niki_card_slot * 0x10);
         g_niki_load_step = g_niki_load_step + 1;
         break;
 
-    case 9:
+    case NIKI_COMMAND_REQUEST_CARD_LOAD:
         phase_result = 3;
         func_8001729C(g_niki_card_slot);
         func_8001725C(g_niki_card_slot * 0x10);
@@ -170,12 +167,12 @@ s32 niki_advance_load_sequence(void)
         g_niki_load_step = g_niki_load_step + 1;
         break;
 
-    case 0:
+    case NIKI_COMMAND_STOP:
         phase_result = 2;
         g_niki_progress_active = 0;
         break;
 
-    case 10:
+    case NIKI_COMMAND_ERASE_SELECTED_FILE:
         func_80016F9C(&path, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name);
         wait_attempts = 0;
         func_8001729C(g_niki_card_slot);
@@ -188,66 +185,57 @@ s32 niki_advance_load_sequence(void)
                 break;
             }
         } while (wait_attempts < 20);
-        goto block_increment;
+        g_niki_load_step = g_niki_load_step + 1;
+        break;
 
-    case 15:
+    case NIKI_COMMAND_POLL_CARD_READY:
         poll_result = niki_poll_primary_handle_group();
-        if (poll_result >= 3)
+        switch (poll_result)
         {
-            goto check_card_change;
+        case 1:
+        case 2:
+            g_niki_secondary_poll_countdown = g_niki_secondary_poll_countdown - 1;
+            if (g_niki_secondary_poll_countdown == 0)
+            {
+                phase_result = 4;
+                g_niki_selection_status = 0;
+                g_niki_entry_state = 0xFD;
+                break;
+            }
+            func_8001729C(g_niki_card_slot);
+            func_800172AC(g_niki_card_slot * 0x10);
+            func_8001729C(g_niki_card_slot);
+            func_8001725C(g_niki_card_slot * 0x10);
+            break;
+        case 3:
+            g_niki_primary_poll_countdown = g_niki_primary_poll_countdown - 1;
+            if (g_niki_primary_poll_countdown != 0)
+            {
+                func_8001729C(g_niki_card_slot);
+                func_800172AC(g_niki_card_slot * 0x10);
+                func_8001729C(g_niki_card_slot);
+                func_8001725C(g_niki_card_slot * 0x10);
+                break;
+            }
+            phase_result = 5;
+            g_niki_entry_state = 0xFC;
+            g_niki_load_step = g_niki_idle_sequence;
+            break;
+        case 0:
+            g_niki_load_step = g_niki_load_step + 1;
+            break;
         }
-        if (poll_result > 0)
-        {
-            goto retry_card_ready;
-        }
-        if (poll_result == 0)
-        {
-            goto block_increment;
-        }
-        break;
-    check_card_change:
-        if (poll_result == 3)
-        {
-            goto retry_card_change;
-        }
-        break;
-    retry_card_ready:
-        g_niki_secondary_poll_countdown = g_niki_secondary_poll_countdown - 1;
-        if (g_niki_secondary_poll_countdown != 0)
-        {
-            goto block_reissue;
-        }
-        phase_result = 4;
-    block_status_fd:
-        g_niki_selection_status = 0;
-        g_niki_entry_state = 0xFD;
-        break;
-    retry_card_change:
-        g_niki_primary_poll_countdown = g_niki_primary_poll_countdown - 1;
-        if (g_niki_primary_poll_countdown == 0)
-        {
-            goto card_change_timeout;
-        }
-    block_reissue:
-        func_8001729C(g_niki_card_slot);
-        func_800172AC(g_niki_card_slot * 0x10);
-        func_8001729C(g_niki_card_slot);
-        func_8001725C(g_niki_card_slot * 0x10);
-        break;
-    card_change_timeout:
-        phase_result = 5;
-        g_niki_entry_state = 0xFC;
-        g_niki_load_step = D_801606D0;
         break;
 
-    case 16:
+    case NIKI_COMMAND_WAIT_SECONDARY_COMPLETE:
         do
         {
             poll_result = niki_poll_secondary_handle_group();
         } while (poll_result == -1);
-        goto block_increment;
+        g_niki_load_step = g_niki_load_step + 1;
+        break;
 
-    case 17:
+    case NIKI_COMMAND_READ_ENTRY_PREVIEW:
         g_niki_io_busy = 1;
         g_niki_selection_status = 0;
         func_8001729C(g_niki_card_slot);
@@ -258,14 +246,15 @@ s32 niki_advance_load_sequence(void)
         }
         niki_release_primary_handles();
         func_8001729C(g_niki_card_slot);
-        if (func_8001681C(g_niki_file_handle, &D_80164B98, g_niki_selected_entry_extended != 0 ? 0x280 : 0x80) == -1)
+        if (func_8001681C(g_niki_file_handle, &g_niki_entry_preview, g_niki_selected_entry_extended != 0 ? sizeof(NikiEntryPreview) : 0x80) == -1)
         {
             func_8001683C(g_niki_file_handle);
             break;
         }
-        goto block_increment;
+        g_niki_load_step = g_niki_load_step + 1;
+        break;
 
-    case 18:
+    case NIKI_COMMAND_POLL_ENTRY_PREVIEW:
         poll_result = niki_poll_primary_handle_group();
         if (poll_result == 0)
         {
@@ -281,12 +270,11 @@ s32 niki_advance_load_sequence(void)
         }
         g_niki_io_busy = 0;
         func_8001683C(g_niki_file_handle);
-    block_status_ff:
         g_niki_entry_state = 0xFF;
-        g_niki_load_step = D_801606C8;
+        g_niki_load_step = g_niki_card_setup_sequence;
         break;
 
-    case 19:
+    case NIKI_COMMAND_READ_SAVE:
         g_niki_confirm_latch = 1;
         g_niki_progress_bar_active = 1;
         g_niki_progress_start_tick = func_8002054C(-1);
@@ -299,15 +287,15 @@ s32 niki_advance_load_sequence(void)
             g_niki_retry_count = g_niki_retry_count - 1;
             if (g_niki_retry_count == 0)
             {
-            block_dialog_read:
                 niki_open_status_dialog(1);
                 break;
             }
             break;
         }
-        goto block_increment;
+        g_niki_load_step = g_niki_load_step + 1;
+        break;
 
-    case 20:
+    case NIKI_COMMAND_POLL_SAVE_READ:
         io_result = niki_poll_primary_handle_group();
         if (io_result == 0)
         {
@@ -328,11 +316,13 @@ s32 niki_advance_load_sequence(void)
         if (g_niki_retry_count == 0)
         {
             g_niki_progress_bar_active = 0;
-            goto block_dialog_read;
+            niki_open_status_dialog(1);
+            return phase_result;
         }
-        goto block_decrement_step;
+        g_niki_load_step = g_niki_load_step - 1;
+        break;
 
-    case 24:
+    case NIKI_COMMAND_CHECK_CARD_TYPE:
         wait_attempts = 0;
         do
         {
@@ -348,13 +338,14 @@ s32 niki_advance_load_sequence(void)
             func_80032174(0, &card_command, &card_result);
             if (card_result == 0)
             {
-                goto block_increment;
+                g_niki_load_step = g_niki_load_step + 1;
+                break;
             }
         }
         niki_open_status_dialog(3);
         break;
 
-    case 27:
+    case NIKI_COMMAND_READ_SAVED_COPY:
         g_niki_confirm_latch = 1;
         g_niki_progress_bar_active = 1;
         g_niki_progress_start_tick = func_8002054C(-1);
@@ -368,15 +359,15 @@ s32 niki_advance_load_sequence(void)
             g_niki_retry_count = g_niki_retry_count - 1;
             if (g_niki_retry_count == 0)
             {
-            block_dialog_write_read:
                 niki_open_secondary_status_dialog(1);
                 break;
             }
             break;
         }
-        goto block_increment;
+        g_niki_load_step = g_niki_load_step + 1;
+        break;
 
-    case 28:
+    case NIKI_COMMAND_POLL_SAVED_COPY:
         io_result = niki_poll_primary_handle_group();
         if (io_result == 0)
         {
@@ -401,14 +392,16 @@ s32 niki_advance_load_sequence(void)
             niki_open_secondary_status_dialog(1);
             return phase_result;
         }
-        goto block_close_decrement;
+        func_8001683C(g_niki_file_handle);
+        g_niki_load_step = g_niki_load_step - 1;
+        break;
 
-    case 30:
+    case NIKI_COMMAND_RESET_RETRIES:
         g_niki_retry_count = 5;
         g_niki_load_step = g_niki_load_step + 1;
         break;
 
-    case 25:
+    case NIKI_COMMAND_WRITE_SAVE:
         if (g_niki_preserve_old_save == 0)
         {
             /* A full card needs the old save's blocks before writing its replacement. */
@@ -425,31 +418,27 @@ s32 niki_advance_load_sequence(void)
         func_80016F9C(&path, D_800ECF9C);
         func_8001729C(g_niki_card_slot);
         g_niki_file_handle = func_8001680C(&path, 0x20200);
-        if (g_niki_file_handle != -1)
+        if (g_niki_file_handle == -1)
         {
-            goto block_write_opened;
-        }
-        func_8001683C(-1);
-        wait_attempts = 0;
-        do
-        {
-            if (func_8001686C(&path) != 0)
+            func_8001683C(-1);
+            wait_attempts = 0;
+            do
             {
+                if (func_8001686C(&path) != 0)
+                {
+                    break;
+                }
+                wait_attempts = wait_attempts + 1;
+            } while (wait_attempts < 20);
+            g_niki_retry_count = g_niki_retry_count - 1;
+            if (g_niki_retry_count == 0)
+            {
+                niki_open_secondary_status_dialog(0);
                 break;
             }
-            wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 20);
-    block_write_retry:
-        g_niki_retry_count = g_niki_retry_count - 1;
-        if (g_niki_retry_count == 0)
-        {
-        block_dialog_write:
-            niki_open_secondary_status_dialog(0);
             break;
         }
-        break;
 
-    block_write_opened:
         func_8001683C(g_niki_file_handle);
         func_800170BC(g_niki_temporary_save_path, &path);
         func_8001729C(g_niki_card_slot);
@@ -470,84 +459,76 @@ s32 niki_advance_load_sequence(void)
                 }
                 wait_attempts = wait_attempts + 1;
             } while (wait_attempts < 20);
-            goto block_write_retry;
+            g_niki_retry_count = g_niki_retry_count - 1;
+            if (g_niki_retry_count == 0)
+            {
+                niki_open_secondary_status_dialog(0);
+                return phase_result;
+            }
+            break;
         }
-        goto block_increment;
-
-    block_increment:
         g_niki_load_step = g_niki_load_step + 1;
         break;
 
-    case 26:
+    case NIKI_COMMAND_POLL_SAVE_WRITE:
         io_result = niki_poll_primary_handle_group();
-        if (io_result != 0)
+        switch (io_result)
         {
-            if (io_result < 0)
+        case 0:
+            if (g_niki_preserve_old_save != 0)
             {
-                break;
+                /* The replacement has finished writing; the old save can now be removed. */
+                func_8001729C(g_niki_card_slot);
+                wait_attempts = 0;
+                do
+                {
+                    if (func_8001686C(g_niki_selected_save_path) != 0)
+                    {
+                        break;
+                    }
+                    wait_attempts = wait_attempts + 1;
+                } while (wait_attempts < 20);
             }
-            if (io_result >= 4)
-            {
-                break;
-            }
-            goto block_case26_retry;
-        }
-        if (g_niki_preserve_old_save != 0)
-        {
-            /* The replacement has finished writing; the old save can now be removed. */
             func_8001729C(g_niki_card_slot);
             wait_attempts = 0;
             do
             {
-                if (func_8001686C(g_niki_selected_save_path) != 0)
+                if (func_8001685C(g_niki_temporary_save_path, g_niki_selected_save_path) != 0)
                 {
                     break;
                 }
                 wait_attempts = wait_attempts + 1;
             } while (wait_attempts < 20);
-        }
-        func_8001729C(g_niki_card_slot);
-        wait_attempts = 0;
-        do
-        {
-            if (func_8001685C(g_niki_temporary_save_path, g_niki_selected_save_path) != 0)
+            g_niki_progress_active = 0;
+            g_niki_load_step = g_niki_load_step + 1;
+            func_8001683C(g_niki_file_handle);
+            break;
+        case 1:
+        case 2:
+        case 3:
+            g_niki_retry_count = g_niki_retry_count - 1;
+            if (g_niki_retry_count != 0)
             {
+                func_8001683C(g_niki_file_handle);
+                g_niki_load_step = g_niki_load_step - 1;
                 break;
             }
-            wait_attempts = wait_attempts + 1;
-        } while (wait_attempts < 20);
-        g_niki_progress_active = 0;
-        g_niki_load_step = g_niki_load_step + 1;
-        func_8001683C(g_niki_file_handle);
+            g_niki_progress_bar_active = 0;
+            niki_open_secondary_status_dialog(0);
+            wait_attempts = 0;
+            do
+            {
+                if (func_8001686C(g_niki_temporary_save_path) != 0)
+                {
+                    break;
+                }
+                wait_attempts = wait_attempts + 1;
+            } while (wait_attempts < 20);
+            break;
+        }
         break;
     default:
         return phase_result;
-
-block_case26_retry:
-    g_niki_retry_count = g_niki_retry_count - 1;
-    if (g_niki_retry_count == 0)
-    {
-        goto block_case26_exhausted;
-    }
-
-block_close_decrement:
-    func_8001683C(g_niki_file_handle);
-block_decrement_step:
-    g_niki_load_step = g_niki_load_step - 1;
-    break;
-
-block_case26_exhausted:
-    g_niki_progress_bar_active = 0;
-    niki_open_secondary_status_dialog(0);
-    wait_attempts = 0;
-    do
-    {
-        if (func_8001686C(g_niki_temporary_save_path) != 0)
-        {
-            break;
-        }
-        wait_attempts = wait_attempts + 1;
-    } while (wait_attempts < 20);
     }
 
     return phase_result;
@@ -565,7 +546,7 @@ void niki_restart_load_sequence(void)
     func_8001729C(g_niki_card_slot);
     niki_release_primary_handles();
     func_8001724C(g_niki_card_slot * 0x10);
-    g_niki_load_step = D_801606D0;
+    g_niki_load_step = g_niki_idle_sequence;
 }
 
 /**
@@ -779,7 +760,7 @@ void niki_commit_selected_entry(void)
         path.device.characters.slot = value;
         func_800170BC(&g_niki_selected_save_path[0], path_bytes, slot);
     }
-    g_niki_load_step = &D_801606E0[0];
+    g_niki_load_step = &g_niki_preview_sequence[0];
     {
         if (func_8001714C(&D_800ECF7C[0], g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
         {

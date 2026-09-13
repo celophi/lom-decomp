@@ -231,7 +231,7 @@ segments:
       # TU hypothesis: field_actor_input_maps (high). See docs/decompilation/field-boundaries/map.md.
       - [0x417A1, c, field39]                      # gcc272_cdk, func_80091410
       - [0x417C9, c, func_80091438] # gcc272_cdk, 100%
-      - [0x418A9, c, func_80091518] # gcc272_cdk, 90.992424% WIP
+      - [0x418A9, c, func_80091518] # gcc272_cdk, -fno-strength-reduce, 100.000000%
       - [0x41AB9, c, func_80091728]                 # gcc272_cdk, 100%
       - [0x41BDD, c, func_8009184C]                # gcc272_cdk, 100%
       - [0x41CA5, c, func_80091914] # gcc272_cdk, 100.000000%

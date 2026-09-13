@@ -197,7 +197,7 @@ s32 niki_update_load_sequence(void)
     {
         if (g_niki_load_step == NULL)
         {
-            g_niki_load_step = D_801606C8;
+            g_niki_load_step = g_niki_card_setup_sequence;
         }
     }
 
@@ -209,7 +209,7 @@ s32 niki_update_load_sequence(void)
     if ((D_80164B80 != 0) && (g_pad_input & 0x220))
     {
         g_niki_entry_state = 0xF8;
-        g_niki_load_step = D_801606DC;
+        g_niki_load_step = g_niki_card_info_sequence;
     }
     else
     {
@@ -218,14 +218,14 @@ s32 niki_update_load_sequence(void)
         case 0:
             break;
         case 4:
-            g_niki_load_step = D_801606D4;
+            g_niki_load_step = g_niki_rescan_sequence;
             D_80164B80 = 0;
             break;
         case 5:
             g_niki_entry_state = 0xF8;
             /* fallthrough */
         case 2:
-            g_niki_load_step = D_801606DC;
+            g_niki_load_step = g_niki_card_info_sequence;
             break;
         }
     }
@@ -233,6 +233,7 @@ s32 niki_update_load_sequence(void)
 
 /**
  * @brief Handle card switching, entry navigation, cancellation, and load confirmation.
+ * @return Unspecified; callers ignore the return value.
  * @return Unspecified; callers ignore the return value.
  */
 s32 niki_handle_input(void)
@@ -349,8 +350,9 @@ s32 niki_handle_input(void)
         }
         if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
         {
-            if ((g_niki_entry_metadata.identifier != D_8012271C->identifier) && (g_niki_entry_metadata.status != 0) &&
-                ((D_8003EC9C == 0xFF) || (g_niki_entry_metadata.unknown_0xcf == D_8003EC9C)))
+            NikiEntryMetadata* metadata = &g_niki_entry_preview.metadata;
+            if ((metadata->identifier != D_8012271C->identifier) && (metadata->status != 0) &&
+                ((D_8003EC9C == 0xFF) || (metadata->unknown_0xcf == D_8003EC9C)))
             {
                 element = niki_alloc_element();
                 element->attr.f.phase = 1;
@@ -551,7 +553,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                     }
                     if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][entry_index].name, 0xC) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_801470FE + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, glyph_table + D_801470FE, 4, 1 - x_offset, row_y, 0);
                     }
                     else if (func_8001714C(D_800ECF8C, g_niki_entries[g_niki_card_slot][entry_index].name, 0xC) == 0)
                     {
@@ -559,7 +561,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                     }
                     else if (func_8001714C(D_800ECFC4, g_niki_entries[g_niki_card_slot][entry_index].name, 8) == 0)
                     {
-                        prim = func_800A88A0(prim, ot, (void*)((s32)D_8014710C + (s32)glyph_table), 4, 1 - x_offset, row_y, 0);
+                        prim = func_800A88A0(prim, ot, glyph_table + D_8014710C, 4, 1 - x_offset, row_y, 0);
                     }
                     else
                     {
@@ -583,7 +585,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             tile->y0 = row_y;
             tile->h = 0xE;
             niki_link_packet(ot, &tile->tag);
-            prim += sizeof(NikiTile);
+            prim = (s32)(tile + 1);
         }
     }
     break;
@@ -729,7 +731,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
         {
             if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
             {
-                if (D_8003EC9C == 0xFF || D_80164DE7 == D_8003EC9C)
+                if (D_8003EC9C == 0xFF || g_niki_entry_preview.metadata.unknown_0xcf == D_8003EC9C)
                 {
                     s32 icon_count;
                     s32 visible_icon_index;
@@ -744,7 +746,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                     s32 wrapped_phase;
 
                     {
-                        NikiEntryMetadata* record = &g_niki_entry_metadata;
+                        NikiEntryMetadata* record = &g_niki_entry_preview.metadata;
                         icons[0] = (u32)(record->first_icon_word) >> 0x19;
                         icons[1] = ((u32)(record->party_word) >> 0x12) & 0x7F;
                         icons[2] = (u32)(record->party_word) >> 0x19;
@@ -820,7 +822,7 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
                     }
 
                     {
-                        NikiEntryMetadata* preview = &g_niki_entry_metadata;
+                        NikiEntryMetadata* preview = &g_niki_entry_preview.metadata;
                         s32 x = -x_offset;
                         s32 y = -y_offset;
                         s32 playtime;
@@ -865,23 +867,22 @@ s32 niki_draw_selected_entry_details(s32* ot, s32 prim, s32 x_offset, s32 y_offs
             else
             {
                 s32 slot_index;
-                u8* record;
+                NikiEntryPreview* record;
 
-                niki_terminate_multibyte_text(&D_80164B9C);
-                record = &D_80164B9C;
-                record -= 4;
-                if ((u32)(record[0x24] - 1) >= 0x7FU)
+                niki_terminate_multibyte_text(g_niki_entry_preview.title.text);
+                record = &g_niki_entry_preview;
+                if ((u32)(record->title.lines[1][0] - 1) >= 0x7FU)
                 {
                     for (slot_index = 0; slot_index < 0x20; slot_index++)
                     {
-                        name[slot_index] = record[4 + slot_index];
+                        name[slot_index] = *(record->title.lines[0] + slot_index);
                     }
                     name[slot_index] = 0;
                     result = niki_draw_cached_text(result, ot, name, -x_offset, -y_offset, 4, 0);
 
                     for (slot_index = 0; slot_index < 0x20; slot_index++)
                     {
-                        name[slot_index] = ((NikiFallbackText*)&D_80164B98)->text[slot_index];
+                        name[slot_index] = g_niki_entry_preview.title.lines[1][slot_index];
                     }
                     name[slot_index] = 0;
                     result = niki_draw_cached_text(result, ot, name, -x_offset, -y_offset + 0x10, 4, 0);
@@ -1354,7 +1355,7 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             g_niki_element_pool[0].attr.f.state = 0;
             func_800AA02C();
             func_800A3938(0x78, 0x80);
-            g_niki_load_step = D_801606DC;
+            g_niki_load_step = g_niki_card_info_sequence;
         }
         else if (status & NIKI_CONFIRM_INPUT_MASK)
         {
@@ -1363,13 +1364,13 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 g_niki_element_pool[0].attr.f.state = 0;
                 func_800AA02C();
                 func_800A3938(0x78, 0x80);
-                g_niki_load_step = D_801606DC;
+                g_niki_load_step = g_niki_card_info_sequence;
             }
             else
             {
                 func_800A3938(0x7E, 0x80);
                 g_niki_confirm_latch = 1;
-                g_niki_load_step = D_801606E4;
+                g_niki_load_step = g_niki_load_save_sequence;
                 element = g_niki_element_pool;
                 element->draw = niki_draw_save_confirm_dialog;
                 element->attr.f.phase = 1;
@@ -1775,6 +1776,15 @@ s32 niki_draw_choice_prompt(s32 prim, s32* ot, s32 x, s32 y)
 }
 
 /**
+ * @brief Access the extended metadata in the preview transfer buffer.
+ * @return Preview metadata record.
+ */
+static inline NikiEntryMetadata* niki_preview_metadata(void)
+{
+    return &g_niki_entry_preview.metadata;
+}
+
+/**
  * @brief Draw the save-menu page and process its confirmation and progress states.
  * @param ot Ordering-table entry receiving the page primitives.
  * @param prim GPU packet write cursor.
@@ -2058,7 +2068,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             resource->save.magic = NIKI_SAVE_MAGIC;
             resource->save.checksum = checksum;
             g_niki_progress_active = 1;
-            g_niki_load_step = &D_801606F5;
+            g_niki_load_step = g_niki_write_save_sequence;
             g_niki_entry_state = 0xF5;
         }
     }
@@ -2154,7 +2164,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 return prim;
             }
             if ((func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) != 0) ||
-                (g_niki_entry_metadata.identifier != D_801227CC) || (g_niki_entry_metadata.unknown_0xd6 != D_801227F4))
+                (niki_preview_metadata()->identifier != D_801227CC) || (niki_preview_metadata()->unknown_0xd6 != D_801227F4))
             {
                 g_niki_selected_row++;
                 if (g_niki_selected_row >= g_niki_entry_state)
@@ -2189,7 +2199,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             {
                 g_niki_progress_start_tick = func_8002054C(-1);
                 g_niki_confirm_latch = 1;
-                g_niki_load_step = &D_801606EC;
+                g_niki_load_step = g_niki_read_saved_copy_sequence;
                 g_niki_entry_state = 0xF6;
             }
         }
@@ -2257,7 +2267,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         g_niki_card_slot ^= 1;
         niki_reset_entry_ranks();
         g_niki_progress_bar_active = 0;
-        g_niki_load_step = D_801606C8;
+        g_niki_load_step = g_niki_card_setup_sequence;
     }
 
     return prim;
@@ -2562,7 +2572,7 @@ s32 niki_parse_entry_fields(void)
     {
         u8* pattern;
         pattern = (u8*)&D_800ECF7C;
-        if (func_8001714C(pattern, (u8*)&g_niki_entries[g_niki_card_slot][entry_index], 0xC) == 0)
+        if (func_8001714C(pattern, g_niki_entries[g_niki_card_slot][entry_index].name, 0xC) == 0)
         {
             digits_left = 5;
             cursor = (u8*)(g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES + entry_index * NIKI_DIRECTORY_ENTRY_BYTES + (s32)g_niki_entries + 0xC);
@@ -2768,16 +2778,17 @@ s32 niki_rank_entries(s32 unused0, s32 unused1, s32 unused2)
     return maximum;
 }
 
+/** @brief Mark all fifteen rank slots unused and reset the rank-count sentinel. */
 void niki_reset_entry_ranks(void)
 {
-    s32 i;
-    s32 val;
+    s32 rank_index;
+    s32 unused_rank;
 
     g_niki_rank_count = 0x28;
-    val = -1;
-    for (i = 14; i >= 0; i--)
+    unused_rank = -1;
+    for (rank_index = 14; rank_index >= 0; rank_index--)
     {
-        g_niki_entry_ranks[i] = val;
+        g_niki_entry_ranks[rank_index] = unused_rank;
     }
 }
 

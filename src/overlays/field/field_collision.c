@@ -3336,7 +3336,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
     u32* out;
     u32 ncur;
     u32 nacc;
-    s32 nout;
+    s32 clip_tail;
+    s32 clip_rows;
     s32 nrun;
     FieldNode* nd;
     FieldNodeDef* def;
@@ -3478,7 +3479,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
         else
         {
             def = clip->def;
-            saved = out + (((u16)scene->unk48 - 4) * (words * 2));
+            saved = out + ((words * 2) * ((u16)scene->unk48 - 4));
             fresh = 0;
             if (def->flags & 4)
             {
@@ -3525,12 +3526,12 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 if (clip->row_start >= 0)
                 {
                     base = (u16)clip->row_start & -tile2;
-                    n = (u16)scene->unk48;
-                    i = clip->row_end;
-                    i >>= shift1;
-                    if (i >= (n - 4))
+                    clip_rows = (u16)scene->unk48;
+                    i = clip->row_end >> shift1;
+                    if (i >= (clip_rows - 4))
                     {
-                        rows = n - (((s16)base >> shift1) + 4);
+                        clip_tail = ((s16)base >> shift1) + 4;
+                        rows = clip_rows - clip_tail;
                     }
                     else
                     {
@@ -3539,15 +3540,14 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 }
                 else
                 {
-                    i = clip->row_end;
-                    i >>= shift1;
+                    i = clip->row_end >> shift1;
                     rows = (u16)scene->unk48 - 4;
                     if (i < rows)
                     {
                         rows = i + 1;
                     }
                 }
-                out = out + (((s16)base >> shift1) * (words * 2));
+                out = out + ((words * 2) * ((s16)base >> shift1));
             }
             else
             {
@@ -3638,13 +3638,14 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 out[0] = 3;
                 if (i != -1)
                 {
+                    s32 clear_end = -1;
                     do
                     {
                         wp += 2;
                         i--;
                         wp[1] = 0;
                         wp[0] = 0;
-                    } while (i != -1);
+                    } while (i != clear_end);
                 }
 
                 node_start = (u16)scene->unk46 - 1;
@@ -3660,7 +3661,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                 }
                 else
                 {
-                    m0 = 1 << node_start;
+                    m0 = 1;
+                    m0 <<= node_start;
                     w0 = wp[0] | m0 | ((u32)m0 >> 1);
                     wp[1] = w0;
                     wp[0] = w0;
@@ -3682,9 +3684,9 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                 {
                                     if (runs_base[k].skip == 0)
                                     {
-                                        src = runs_base[k].src;
                                         do
                                         {
+                                            src = runs_base[k].src;
                                             n = runs_base[k].step;
                                             runs_base[k].count = runs_base[k].count - 1;
                                             n--;
@@ -3699,10 +3701,12 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                 if ((s16)x0 <= (s16)x1)
                                                 {
                                                     sp1 = cur;
-                                                    m0 = ncur - 1;
+                                                    m0 = ncur;
+                                                    m0--;
                                                     fresh = 1;
                                                     if (m0 != -1)
                                                     {
+                                                        s32 collect_end = -1;
                                                         do
                                                         {
                                                             if ((((s16)x1 + 1) >= sp1->x0) && ((sp1->x1 + 1) >= (s16)x0))
@@ -3720,7 +3724,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                             }
                                                             sp1++;
                                                             m0--;
-                                                        } while (m0 != -1);
+                                                        } while (m0 != collect_end);
                                                     }
                                                     if (fresh != 0)
                                                     {
@@ -3776,33 +3780,30 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                         s32 compact_end = -1;
                                         do
                                         {
-                                            if ((((s16)x1 + 1) >= other->x0) && ((other->x1 + 1) >= (s16)x0))
+                                            if ((((s16)x1 + 1) >= other->x0) && ((s16)x0 <= (other->x1 + 1)))
                                             {
                                                 ncur--;
                                                 k--;
-                                                if (other->x0 < (s16)x0)
+                                                if (other->x0 < (s16)x0 || (s16)x1 < other->x1)
                                                 {
-                                                    x0 = other->x0;
+                                                    if (other->x0 < (s16)x0)
+                                                    {
+                                                        x0 = other->x0;
+                                                    }
+                                                    if ((s16)x1 < other->x1)
+                                                    {
+                                                        x1 = other->x1;
+                                                    }
+                                                    sp1->x0 = x0;
+                                                    sp1->x1 = x1;
+                                                    if (n != 0)
+                                                    {
+                                                        *(s32*)other = *(s32*)&other[n];
+                                                    }
+                                                    n = k;
+                                                    other = sp1 + 1;
                                                 }
-                                                else if ((s16)x1 >= other->x1)
-                                                {
-                                                    goto no_grow;
-                                                }
-                                                if ((s16)x1 < other->x1)
-                                                {
-                                                    x1 = other->x1;
-                                                }
-                                                sp1->x0 = x0;
-                                                sp1->x1 = x1;
-                                                if (n != 0)
-                                                {
-                                                    *(s32*)other = *(s32*)&other[n];
-                                                }
-                                                n = k;
-                                                other = sp1 + 1;
-                                                goto compact_next;
-                                            no_grow:
-                                                if (n != 0)
+                                                else if (n != 0)
                                                 {
                                                     *(s32*)other = *(s32*)&other[n];
                                                 }
@@ -3811,12 +3812,11 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                             {
                                                 other++;
                                             }
-                                        compact_next:
                                             n--;
                                         } while (n != compact_end);
                                     }
-                                    k--;
                                     sp1++;
+                                    k--;
                                 } while (k != -1);
                             }
 
@@ -3849,7 +3849,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                 if (!(i & 1))
                                 {
                                     prev = (FieldCollisionTileSpan*)0x1F800000;
-                                    dst = (FieldCollisionTileSpan*)0x1F800200;
+                                    do { dst = (FieldCollisionTileSpan*)0x1F800200; } while (0);
                                 }
                                 else
                                 {
@@ -3857,14 +3857,15 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                     dst = (FieldCollisionTileSpan*)0x1F800000;
                                 }
                                 k = ncur - 1;
-                                nout = 0;
+                                m0 = 0;
                                 if (k != -1)
                                 {
                                     do
                                     {
                                         x0 = sp1->x0;
                                         x1 = sp1->x1;
-                                        n = n_sp - 1;
+                                        n = n_sp;
+                                        n = n - 1;
                                         sp2 = prev;
                                         if (n != -1)
                                         {
@@ -3872,7 +3873,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                             {
                                                 if (((s16)x1 >= sp2->x0) && (sp2->x1 >= (s16)x0))
                                                 {
-                                                    if (nout >= 0x80)
+                                                    if (m0 >= 0x80)
                                                     {
                                                         scene->unk28 = 0;
                                                         scene->unk41 = 4;
@@ -3895,15 +3896,17 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                     {
                                                         dst->x1 = x1;
                                                     }
-                                                    nout++;
-                                                    dst++;
+                                                    do
+                                                    {
+                                                        m0++;
+                                                        dst++;
+                                                    } while (0);
                                                 }
-                                                n--;
                                                 sp2++;
+                                                n--;
                                             } while (n != -1);
                                         }
 
-                                        wtail = 0;
                                         other = acc;
                                         n = nacc - 1;
                                         fresh = 1;
@@ -3918,7 +3921,7 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                                     {
                                                         other->x0 = x0;
                                                     }
-                                                    fresh = wtail;
+                                                    fresh = 0;
                                                     if (other->x1 < (s16)x1)
                                                     {
                                                         other->x1 = x1;
@@ -3945,14 +3948,15 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                                         sp1++;
                                     } while (k != -1);
                                 }
-                                n_sp = nout;
+                                n_sp = m0;
                             }
                             i--;
                         } while (i != -1);
                     }
 
                     prev = (FieldCollisionTileSpan*)0x1F800200;
-                    i = n_sp - 1;
+                    i = n_sp;
+                    i--;
                     if (i != -1)
                     {
                         do
@@ -3964,7 +3968,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                             {
                                 wtail = tail >> 5;
                                 wp = out + (n * 2);
-                                m0 = -1 << (lead & 0x1F);
+                                m0 = -1;
+                                m0 <<= lead & 0x1F;
                                 m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
                                 if (n != wtail)
                                 {
@@ -4002,7 +4007,8 @@ void func_8005F5BC(s32 unused, FieldNode* clip)
                             tail = (other->x1 >> shift0) + 2;
                             n = lead >> 5;
                             wtail = tail >> 5;
-                            m0 = -1 << (lead & 0x1F);
+                            m0 = -1;
+                            m0 <<= lead & 0x1F;
                             m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
                             wq = out + (n * 2);
                             if (n != wtail)
