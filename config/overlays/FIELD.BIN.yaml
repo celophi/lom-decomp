@@ -155,7 +155,7 @@ segments:
       - [0x36D2D, c, field_set_actor_horizontal_scale] # gcc272_cdk, field_set_actor_horizontal_scale
       - [0x36D8D, c, field_handle_actor_control_flag_40]  # gcc272_cdk, func_800869FC (100%)
       - [0x36E5D, c, field_actor_flag_ops]      # gcc272_cdk, func_80086ACC .. func_80086F48 (8 funcs, 100%; 5 of them do not match under gcc280_g0)
-      - [0x37349, c, func_80086FB8] # gcc272_cdk, 91.229510% WIP
+      - [0x37349, c, func_80086FB8] # gcc272_cdk, 100.000000%
       - [0x37531, c, field29]                   # gcc272_cdk, func_800871A0 (WIP 90.73%)
       # TU hypothesis: field_actor_key_ops (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x379A5, c, func_80087614]                # gcc272_cdk, 100.00000%, 27/27 instructions
@@ -265,7 +265,7 @@ segments:
       - [0x4555D, c, func_800951CC]             # gcc272_cdk, 100%
       - [0x4566D, c, func_800952DC]             # gcc272_cdk, 100%
       - [0x45881, c, func_800954F0] # gcc272_cdk, 86.774840% WIP
-      - [0x464ED, c, func_8009615C] # gcc272_cdk, 96.864410% WIP
+      - [0x464ED, c, func_8009615C] # gcc272_cdk, 100.000000%
       - [0x466C5, c, field255]                  # gcc272_cdk, func_80096334
       - [0x46725, c, func_80096394] # gcc272_cdk, 100%
       # TU hypothesis: field_actor_transition_reset (high). See docs/decompilation/field-boundaries/map.md.
