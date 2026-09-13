@@ -51,7 +51,6 @@ s32 func_8008404C(s32 actor_id, s32 resource_id)
     Binding *binding_cursor;
     s32 binding_index;
     Slot *slot_cursor;
-    s32 temp_a0;
     s32 load_id;
     s32 free_slot;
     s32 first_index;
@@ -81,36 +80,30 @@ s32 func_8008404C(s32 actor_id, s32 resource_id)
             free_slot = -1;
             if (binding_base[second_index].unk0 == 0)
             {
-                search_base = binding_base;
                 slot_index = 0;
+                search_base = binding_base;
                 slot_cursor = g_field_actor_slots;
-            loop_8:
+            scan_slot:
                 binding_index = 0;
                 if (slot_cursor->unk24 == 0)
                 {
                     binding_cursor = search_base;
-                loop_10:
-                    if ((binding_cursor->unk0 == 0) || (binding_cursor->unk18 != slot_index))
+                    for (; binding_index < 3; binding_index++, binding_cursor++)
                     {
-                        binding_index += 1;
-                        binding_cursor++;
-                        if ((s32)binding_index >= 3)
+                        if ((binding_cursor->unk0 != 0) && (binding_cursor->unk18 == slot_index))
                         {
-                        }
-                        else
-                        {
-                            goto loop_10;
+                            break;
                         }
                     }
-                    free_slot = slot_index;
                     if (binding_index != 3)
                     {
-                        goto block_15;
+                        goto next_slot;
                     }
+                    free_slot = slot_index;
                 }
                 else
                 {
-                block_15:
+                next_slot:
                     slot_index += 1;
                     slot_cursor++;
                     if (slot_index >= 0x30)
@@ -119,7 +112,7 @@ s32 func_8008404C(s32 actor_id, s32 resource_id)
                     }
                     else
                     {
-                        goto loop_8;
+                        goto scan_slot;
                     }
                 }
             }
