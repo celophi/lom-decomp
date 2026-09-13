@@ -24,7 +24,12 @@
 #define GOLEM_SOUND_PICK_UP 0x7E
 #define GOLEM_SOUND_PLACE 0x120
 #define GOLEM_LOGIC_BLOCK(index) (((GolemMenuData*)g_menuLayoutBuffer)->logic_blocks[(index)])
-#define GOLEM_ACTIVATE_PANEL(word) (((word) & ~0x780) | 0x180)
+#define GOLEM_PANEL_BEHAVIOR_SHIFT 3
+#define GOLEM_PANEL_FLASH_SHIFT 7
+#define GOLEM_PANEL_FLASH_MASK (0xF << GOLEM_PANEL_FLASH_SHIFT)
+#define GOLEM_PANEL_FLASH_FRAMES 3
+#define GOLEM_ACTIVATE_PANEL(word) (((word) & ~GOLEM_PANEL_FLASH_MASK) | (GOLEM_PANEL_FLASH_FRAMES << GOLEM_PANEL_FLASH_SHIFT))
+#define GOLEM_SHARED_PLUS_TEXT_INDEX 11
 #define GOLEM_FADE_NEUTRAL 0x100
 #define GOLEM_FADE_ADDITIVE_THRESHOLD (GOLEM_FADE_NEUTRAL + 1)
 #define GOLEM_FADE_ADDITIVE_DRAW_MODE 0x25
@@ -38,6 +43,19 @@ typedef enum
     GOLEM_PANEL_SCROLL_UP = 1,
     GOLEM_PANEL_ROTATE = 3
 } GolemPanelIndex;
+
+/** @brief Visibility and flash behavior encoded in a panel record. */
+typedef enum
+{
+    GOLEM_PANEL_ALWAYS = 0,
+    GOLEM_PANEL_GRID_4X4 = 1,
+    GOLEM_PANEL_GRID_5X5 = 2,
+    GOLEM_PANEL_GRID_6X6 = 3,
+    GOLEM_PANEL_IF_SCROLL_UP = 4,
+    GOLEM_PANEL_IF_SCROLL_DOWN = 5,
+    GOLEM_PANEL_FLASH_WHITE = 6,
+    GOLEM_PANEL_ALWAYS_7 = 7
+} GolemPanelBehavior;
 
 /** @brief Ordering-table layers, drawn from highest index to lowest. */
 typedef enum
@@ -96,7 +114,11 @@ typedef union
 /** @brief Texture, animation, and screen rectangle for one UI panel. */
 typedef struct
 {
+    /** @brief Blend mode [1:0], semitransparency [2], behavior [6:3],
+     *         flash frames [10:7], and texture U [18:11]. */
     u32 attributes;
+    /** @brief Texture V [10:3], CLUT X / 16 [16:11], cell width [25:17],
+     *         and the low six cell-height bits [31:26]. */
     u32 texture;
     GolemPanelDimensions dimensions;
     u16 y;
@@ -197,6 +219,7 @@ extern u8 g_menuLayoutBuffer[];
 extern s32 g_pad_input;
 extern s32 g_frame_counter;
 extern s32 D_80122C00;
+/** @brief Two-byte little-endian offset of "+" in the shared text directory. */
 extern u8 D_800EC3DA[];
 extern GolemRenderContext* g_golem_render_buffers;
 extern s32 g_golem_exit_requested;
@@ -220,12 +243,16 @@ extern s32 g_golem_cursor_target_x;
 extern s32 g_golem_cursor_target_y;
 extern s32 D_8014C26C;
 extern s32 g_golem_saved_logic_type_slot;
-extern s32 D_8014C274;
-extern s32 D_8014C278;
+/** @brief Frames remaining in the auxiliary scalar interpolation. */
+extern s32 g_golem_interpolation_steps;
+/** @brief Interpolated scalar; its purpose is not yet identified. */
+extern s32 g_golem_interpolation_value;
 extern s32 g_golem_block_rotation;
-extern s32 D_8014C280;
+/** @brief Target for the auxiliary scalar interpolation. */
+extern s32 g_golem_interpolation_target;
 extern s32 g_golem_selected_block;
 extern s32 g_golem_restore_slot_on_cancel;
+/** @brief 4bpp editor atlas with sixteen 16-color palettes. */
 extern TimPrefix g_golem_ui_image;
 extern GolemTextSections g_golem_text_section_offsets;
 extern GolemGlyphMetric g_golem_glyph_metrics[];
@@ -401,9 +428,9 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     func_800AA02C();
     golem_set_fade_target(0x100, 0x100, 0x100, 6);
     D_8014C26C = 0;
-    D_8014C280 = 0;
-    D_8014C278 = 0;
-    D_8014C274 = 0;
+    g_golem_interpolation_target = 0;
+    g_golem_interpolation_value = 0;
+    g_golem_interpolation_steps = 0;
     return work_buffer;
 }
 
@@ -423,9 +450,10 @@ void golem_upload_ui_image(void)
 }
 
 /**
- * @brief Upload a TIM image and its optional CLUT to VRAM.
+ * @brief Upload the editor TIM image and flatten its palettes into one VRAM row.
  * @param destinations VRAM destinations for the image and CLUT blocks.
- * @param tim TIM resource to upload.
+ * @param tim TIM resource containing 256 palette entries.
+ * @note Requires a CLUT block; CLUT-less TIM files are not supported.
  * @see decomp.me (100%)
  */
 void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim)
@@ -438,7 +466,7 @@ void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim)
     flags = tim->flags;
     clut_block_size = tim->clut_block.bnum;
 
-    if (flags & 8)
+    if (flags & TIM_FLAG_HAS_CLUT)
     {
         upload_rect.x = destinations->clut_x;
         upload_rect.y = destinations->clut_y;
@@ -469,13 +497,13 @@ void golem_update_frame(GolemRenderContext* render_context)
     golem_render(render_context);
     g_frame_counter += 1;
     golem_handle_input();
-    if (D_8014C274 != 0)
+    if (g_golem_interpolation_steps != 0)
     {
-        D_8014C278 += (D_8014C280 - D_8014C278) / D_8014C274;
-        D_8014C274 -= 1;
+        g_golem_interpolation_value += (g_golem_interpolation_target - g_golem_interpolation_value) / g_golem_interpolation_steps;
+        g_golem_interpolation_steps -= 1;
         return;
     }
-    D_8014C278 = D_8014C280;
+    g_golem_interpolation_value = g_golem_interpolation_target;
 }
 
 /**
@@ -1025,7 +1053,8 @@ void golem_render(GolemRenderContext* render_context)
         golem_copy_encoded_string(name_text, (u8*)(names_offset + (name_offset + archive_address)));
         if ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF)
         {
-            golem_append_encoded_string(name_text, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
+            /* Directory offsets are relative to the first entry. */
+            golem_append_encoded_string(name_text, D_800EC3DA - GOLEM_SHARED_PLUS_TEXT_INDEX * sizeof(u16) + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
             func_800A8B90(number_text, (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF, 1);
             golem_append_encoded_string(name_text, number_text);
         }
@@ -1221,8 +1250,8 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
 u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index, s32 x, s32 y, s32 width, s32 height)
 {
     SPRT* sprite;
-    s32 animation;
-    s32 color;
+    s32 flash_frames;
+    s32 tint;
     s32 y_offset;
     s32 x_offset;
     s32 row_height;
@@ -1235,51 +1264,54 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
     DR_TPAGE* draw_mode;
     u8 stack_pad[0x10];
 
-    color = 0x808080;
+    tint = GPU_TINT_NEUTRAL;
 
-    switch ((g_golem_panel_records[panel_index].attributes >> 3) & 0xF)
+    switch ((g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_BEHAVIOR_SHIFT) & 0xF)
     {
-    case 0:
-    case 7:
+    case GOLEM_PANEL_ALWAYS:
+    case GOLEM_PANEL_ALWAYS_7:
         break;
-    case 1:
-    case 2:
-    case 3:
-        if ((((g_golem_panel_records[panel_index].attributes >> 3) & 0xF) - 1) != g_golem_grid_size_class)
+    case GOLEM_PANEL_GRID_4X4:
+    case GOLEM_PANEL_GRID_5X5:
+    case GOLEM_PANEL_GRID_6X6:
+        if ((((g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_BEHAVIOR_SHIFT) & 0xF) - GOLEM_PANEL_GRID_4X4) != g_golem_grid_size_class)
         {
             return packet_cursor;
         }
         break;
-    case 4:
+    case GOLEM_PANEL_IF_SCROLL_UP:
         if (g_golem_scroll_y == 0)
         {
             return packet_cursor;
         }
-        animation = (g_golem_panel_records[panel_index].attributes >> 7) & 0xF;
-        if (animation != 0)
+        flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
+        if (flash_frames != 0)
         {
-            color = 0xC0;
-            g_golem_panel_records[panel_index].attributes = (g_golem_panel_records[panel_index].attributes & ~0x780) | (((animation - 1) & 0xF) << 7);
+            tint = GPU_COLOR_WORD(0xC0, 0, 0);
+            g_golem_panel_records[panel_index].attributes =
+                (g_golem_panel_records[panel_index].attributes & ~GOLEM_PANEL_FLASH_MASK) | (((flash_frames - 1) & 0xF) << GOLEM_PANEL_FLASH_SHIFT);
         }
         break;
-    case 5:
+    case GOLEM_PANEL_IF_SCROLL_DOWN:
         if (g_golem_scroll_y / GOLEM_BLOCK_LIST_ROW_HEIGHT >= g_golem_logic_block_count - 1)
         {
             return packet_cursor;
         }
-        animation = (g_golem_panel_records[panel_index].attributes >> 7) & 0xF;
-        if (animation != 0)
+        flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
+        if (flash_frames != 0)
         {
-            color = 0xC0;
-            g_golem_panel_records[panel_index].attributes = (g_golem_panel_records[panel_index].attributes & ~0x780) | (((animation - 1) & 0xF) << 7);
+            tint = GPU_COLOR_WORD(0xC0, 0, 0);
+            g_golem_panel_records[panel_index].attributes =
+                (g_golem_panel_records[panel_index].attributes & ~GOLEM_PANEL_FLASH_MASK) | (((flash_frames - 1) & 0xF) << GOLEM_PANEL_FLASH_SHIFT);
         }
         break;
-    case 6:
-        animation = (g_golem_panel_records[panel_index].attributes >> 7) & 0xF;
-        if (animation != 0)
+    case GOLEM_PANEL_FLASH_WHITE:
+        flash_frames = (g_golem_panel_records[panel_index].attributes >> GOLEM_PANEL_FLASH_SHIFT) & 0xF;
+        if (flash_frames != 0)
         {
-            color = 0xC0C0C0;
-            g_golem_panel_records[panel_index].attributes = (g_golem_panel_records[panel_index].attributes & ~0x780) | (((animation - 1) & 0xF) << 7);
+            tint = GPU_COLOR_WORD(0xC0, 0xC0, 0xC0);
+            g_golem_panel_records[panel_index].attributes =
+                (g_golem_panel_records[panel_index].attributes & ~GOLEM_PANEL_FLASH_MASK) | (((flash_frames - 1) & 0xF) << GOLEM_PANEL_FLASH_SHIFT);
         }
         break;
     }
@@ -1310,7 +1342,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
                 {
                     segment_width = available_width;
                 }
-                SET_BGR0_PACKED(sprite, color);
+                SET_BGR0_PACKED(sprite, tint);
                 setlen(sprite, 4);
                 do
                 {
@@ -1329,7 +1361,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
                 sprite->h = row_height;
                 sprite->u0 = g_golem_panel_records[panel_index].attributes >> 11;
                 sprite->v0 = g_golem_panel_records[panel_index].texture >> 3;
-                sprite->clut = ((g_golem_panel_records[panel_index].texture >> 11) & 0x3F) | 0x7C80;
+                sprite->clut = ((g_golem_panel_records[panel_index].texture >> 11) & 0x3F) | getClut(0, VRAM_CLUT_Y);
                 addPrim(ordering_table, sprite);
                 x_offset += (g_golem_panel_records[panel_index].texture >> 17) & 0x1FF;
                 packet_cursor += sizeof(SPRT);
@@ -1474,7 +1506,7 @@ u8* golem_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s3
     setWH(sprite, sprite_metric->width, sprite_metric->height);
     sprite->u0 = sprite_metric->u0;
     sprite->v0 = sprite_metric->v0;
-    sprite->clut = (clut & 0x3F) | 0x7C80;
+    sprite->clut = (clut & 0x3F) | getClut(0, VRAM_CLUT_Y);
     addPrim(ordering_table, sprite);
     return packet_cursor + sizeof(SPRT);
 }

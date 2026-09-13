@@ -64,3 +64,8 @@ g_golem_saved_logic_type_slot        = 0x8014C270;
 g_golem_block_rotation               = 0x8014C27C;
 g_golem_selected_block               = 0x8014C284;
 g_golem_restore_slot_on_cancel       = 0x8014C288;
+
+// Auxiliary scalar interpolation; destination purpose not yet identified.
+g_golem_interpolation_steps          = 0x8014C274;
+g_golem_interpolation_value          = 0x8014C278;
+g_golem_interpolation_target         = 0x8014C280;
