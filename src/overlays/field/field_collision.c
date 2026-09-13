@@ -2398,7 +2398,7 @@ typedef union FieldCollisionRasterSpanFlags {
  *       instructions; this source has 875. The 0x60-byte frame and stack
  *       slots match. Register and instruction differences remain.
  *       See working/func_8005E3B0/status.md for prior matching evidence.
- * @see decomp.me (99.759730%, 855/874 exact) TODO
+ * @see decomp.me (99.776886%, 858/874 exact) TODO
  */
 void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
 {
@@ -2427,7 +2427,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     u8* cp;
     s32 rows;
     s16 capacity;
-    s32 i;
+    union { s32 count; FieldCollisionRasterSpan* span; } cursor;
     s32 j;
     s32 n;
     s32 sort_n;
@@ -2467,15 +2467,15 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     counts = (u8*)0x1F800000;
     spans = (FieldCollisionRasterSpan*)*alloc;
     node->unk10 = *alloc;
-    i = rows + 1;
-    nbytes = i * (capacity << 1);
+    cursor.count = rows + 1;
+    nbytes = cursor.count * (capacity << 1);
     node->unk14 = *alloc + nbytes;
-    flags = (FieldCollisionRasterSpanFlags*)(*alloc + (i * (capacity << 2)));
-    *alloc = *alloc + (((i * ((capacity << 1) + capacity)) + 2) & ~3);
+    flags = (FieldCollisionRasterSpanFlags*)(*alloc + (cursor.count * (capacity << 2)));
+    *alloc = *alloc + (((cursor.count * ((capacity << 1) + capacity)) + 2) & ~3);
 
     w = capacity;
     cp = counts;
-    for (i = rows; i != -1; i--)
+    for (cursor.count = rows; cursor.count != -1; cursor.count--)
     {
         *cp = 0;
         cp++;
@@ -2488,11 +2488,11 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     edge = 0;
     run = def->runs;
     table = g_field_node_angle_table;
-    i = run->count & 0x7FFF;
-    while (i != 0)
+    cursor.count = run->count & 0x7FFF;
+    while (cursor.count != 0)
     {
         pt = (FieldCollisionEdgePoint*)&table[run->index * 2];
-        for (i = i - 1; i != -1; i--)
+        for (cursor.count = cursor.count - 1; cursor.count != -1; cursor.count--)
         {
             if (prev != NULL)
             {
@@ -2678,7 +2678,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
             prev_hi = run->count >> 15;
         }
         run++;
-        i = run->count & 0x7FFF;
+        cursor.count = run->count & 0x7FFF;
     }
 
     /* closing edge: back to the first run's first point */
@@ -2815,15 +2815,15 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 n = *cp;
                 if (row == merge_row)
                 {
-                    i = sp_row[n - 1].x.x0 > x;
-                if (i)
+                    cursor.span = sp_row + n - 1;
+                    if (sp_row[n - 1].x.x0 > x)
                     {
                         sp_row[n - 1].x.x0 = x;
                         fl_row[n - 1].f.f0 = attr;
                     }
-                    if (sp_row[n - 1].x.x1 < x)
+                    if (cursor.span->x.x1 < x)
                     {
-                        sp_row[n - 1].x.x1 = x;
+                        cursor.span->x.x1 = x;
                         fl_row[n - 1].f.f1 = attr;
                     }
                 }
@@ -2891,7 +2891,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     out_span = spans;
     out_flag = flags;
     save_flags = flags;
-    for (i = node->unk20 - node->unk22; i != -1; i--)
+    for (cursor.count = node->unk20 - node->unk22; cursor.count != -1; cursor.count--)
     {
         p = spans;
         q = flags;
@@ -2962,10 +2962,10 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
         counts++;
     }
 
-    i = w * (((node->unk20 - node->unk22) + 2) / 2);
+    cursor.count = w * (((node->unk20 - node->unk22) + 2) / 2);
     fl_row = save_flags;
     flags = (FieldCollisionRasterSpanFlags*)node->unk14;
-    for (i = i - 1; i != -1; i--)
+    for (cursor.count = cursor.count - 1; cursor.count != -1; cursor.count--)
     {
         *(s32*)flags = *(s32*)fl_row;
         fl_row += 2;
