@@ -47,7 +47,6 @@ extern s32 g_akao_cdvol_step;
 extern s32 g_akao_masterpan_step;
 extern s32 g_akao_mastervol_step;
 extern s32 D_8004D410;
-extern void* g_akaoCmdParams[];
 extern s32 D_8004D340[6];
 extern void (*D_8003DDE0[])(s32*);
 extern void (*D_8003E120[])(s32*);
@@ -4334,7 +4333,7 @@ void akao_apply_reverb_type(s32 reverb_type)
  * remapped indices for opcodes that fan out into several handlers at once
  * (0x98/0x99) or that go through a dedicated indirect callback instead of the
  * table (0xD8/0xD9/0xDA). Opcodes 0x10/0x12/0x14/0x19 (song load/change)
- * additionally validate the AKAO magic on @c g_akaoCmdParams[0] and skip the
+ * additionally validate the AKAO magic on @c g_akao_cmd_params[0] and skip the
  * update entirely when the requested song is already active on both channels.
  * The driver's rcnt2 tick event is disabled for the duration of the dispatch
  * so a tick cannot observe a half-updated command-parameter buffer.
@@ -4367,9 +4366,9 @@ s32 akao_send_command(u32 opcode)
     case 0x12:
     case 0x14:
     case 0x19:
-        if (akao_check_magic(g_akaoCmdParams[0]) == 0)
+        if (akao_check_magic(g_akao_cmd_params[0].buffer) == 0)
         {
-            header = g_akaoCmdParams[0];
+            header = g_akao_cmd_params[0].buffer;
             current_id = g_akao_seq_channel0->unk5E;
             if ((current_id != header->id) ||
                 ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk5E != current_id)))
@@ -4379,18 +4378,18 @@ s32 akao_send_command(u32 opcode)
                 params[2] = ((volatile AkaoHeader*)header)->id;
                 if (opcode == 0x12)
                 {
-                    params[4] = (s32)g_akaoCmdParams[1];
+                    params[4] = g_akao_cmd_params[1].value;
                 }
                 else
                 {
-                    tmp = (s32)g_akaoCmdParams[1];
+                    tmp = g_akao_cmd_params[1].value;
                     masked = -1;
                     if (tmp != 0)
                     {
                         masked = tmp | 1;
                     }
                     params[3] = masked;
-                    params[4] = (s32)g_akaoCmdParams[2];
+                    params[4] = g_akao_cmd_params[2].value;
                 }
                 result = header->id;
             }
@@ -4408,22 +4407,22 @@ s32 akao_send_command(u32 opcode)
         break;
 
     case 0xD8:
-        params[0] = (s32)g_akaoCmdParams[0];
+        params[0] = g_akao_cmd_params[0].value;
         D_8003E120[0](params);
         opcode = 0xD4;
         break;
 
     case 0xD9:
-        params[0] = (s32)g_akaoCmdParams[0];
-        params[1] = (s32)g_akaoCmdParams[1];
+        params[0] = g_akao_cmd_params[0].value;
+        params[1] = g_akao_cmd_params[1].value;
         D_8003E124[0](params);
         opcode = 0xD5;
         break;
 
     case 0xDA:
-        params[0] = (s32)g_akaoCmdParams[0];
-        params[1] = (s32)g_akaoCmdParams[1];
-        params[2] = (s32)g_akaoCmdParams[2];
+        params[0] = g_akao_cmd_params[0].value;
+        params[1] = g_akao_cmd_params[1].value;
+        params[2] = g_akao_cmd_params[2].value;
         D_8003E128[0](params);
         opcode = 0xD6;
         break;
@@ -4441,12 +4440,12 @@ s32 akao_send_command(u32 opcode)
         break;
 
     default:
-        params[0] = (s32)g_akaoCmdParams[0];
-        params[1] = (s32)g_akaoCmdParams[1];
-        params[2] = (s32)g_akaoCmdParams[2];
-        params[3] = (s32)g_akaoCmdParams[3];
-        params[4] = (s32)g_akaoCmdParams[4];
-        params[5] = (s32)g_akaoCmdParams[5];
+        params[0] = g_akao_cmd_params[0].value;
+        params[1] = g_akao_cmd_params[1].value;
+        params[2] = g_akao_cmd_params[2].value;
+        params[3] = g_akao_cmd_params[3].value;
+        params[4] = g_akao_cmd_params[4].value;
+        params[5] = g_akao_cmd_params[5].value;
         break;
     }
 
