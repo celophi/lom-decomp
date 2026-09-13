@@ -6,88 +6,118 @@ void func_800BD520(s32, s32, s32);
 s32 func_800C1B60(s32);
 extern void (*g_field_script_op_table[])();
 
-/** @brief Run a script until it yields, preserving any enclosing script context. */
-void field_script_run(FieldScriptContext *arg0)
+/**
+ * @brief Run a field script until it yields, preserving any enclosing script context.
+ * @param context Script context to run.
+ */
+void field_script_run(FieldScriptContext *context)
 {
-    s32 temp_v0_2;
-    u32 temp_a0;
-    u32 temp_v0;
-    u32 temp_v1;
-    FieldScriptContext *temp_s2;
-    u8 *temp_t0;
-    u8 temp_v1_2;
-    FieldScriptRecordState *temp_a1;
-    FieldScriptRecordState *temp_t1;
+    s32 status;
+    u32 opcode_value;
+    u32 wait_count;
+    u32 wait_state;
+    FieldScriptContext *previous_context;
+    u8 *pc;
+    s32 opcode;
+    FieldScriptRecordState *wait_record;
+    FieldScriptContext *current_context;
+    FieldScriptContext *stop_context;
+    FieldScriptRecordState *active_record;
+    void (**op_table)();
+    s32 pc_advance;
+    s32 owner_id;
+    s32 song_param;
 
-    temp_s2 = g_field_script;
-    g_field_script = arg0;
-    func_800BD520(g_field_script->status.owner_id, 0xD000, ((u8 *)func_800C1B60(arg0->status.owner_id))[5]);
-    temp_a1 = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
-    temp_v1 = temp_a1->wait;
-    temp_v0 = temp_v1 >> 1;
-    if (temp_v0 != 0)
+    previous_context = g_field_script;
+    g_field_script = context;
+    func_800BD520(g_field_script->status.owner_id, 0xD000, ((u8 *)func_800C1B60(context->status.owner_id))[5]);
+    wait_record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
+    wait_state = wait_record->wait;
+    wait_count = wait_state >> 1;
+    if (wait_count != 0)
     {
-        temp_a1->wait = (u32) ((temp_v1 & 1) | ((temp_v0 - 1) * 2));
+        wait_record->wait = (u32)((wait_state & 1) | ((wait_count - 1) * 2));
+        goto restore_context;
     }
-    else
+    goto start_interpreter;
+
+stop_script_primary:
+    pc_advance = 1;
+    owner_id = current_context->status.owner_id;
+    song_param = *pc;
+    active_record->pc = pc + pc_advance;
+    akao_set_song_params(0x8001, pc_advance, owner_id, song_param);
+    g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
+    goto restore_context;
+
+stop_script_extended:
+    pc_advance = 1;
+    owner_id = current_context->status.owner_id;
+    song_param = *pc;
+    active_record->pc = pc + pc_advance;
+    akao_set_song_params(0x8001, pc_advance, owner_id, song_param);
+    g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
+    goto restore_context;
+
+start_interpreter:
+    status = (s32)g_field_script->status.word;
+    status |= FIELD_SCRIPT_RUNNING;
+    g_field_script->status.word = status;
+    if (status < 0)
     {
-        temp_v0_2 = (s32) g_field_script->status.word | 0x80000000;
-        g_field_script->status.word = temp_v0_2;
-        if (temp_v0_2 < 0)
+        op_table = g_field_script_op_table;
+        do
         {
-loop_5:
-            temp_t1 = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
-            temp_t0 = temp_t1->pc;
-            temp_v1_2 = *temp_t0;
-            temp_a0 = temp_v1_2 & 0xFF;
-            if (temp_a0 < 0x40U)
+            current_context = g_field_script;
+            active_record = (FieldScriptRecordState *)((u8 *)current_context + (current_context->active_record * 3 << 2));
+            pc = active_record->pc;
+            opcode = *pc++;
+            pc--;
+            opcode_value = opcode & 0xFF;
+            if (opcode_value < 0x40U)
             {
-                g_field_script_op_table[temp_v1_2 & 0xFF](temp_a0);
-                goto block_15;
+                opcode++;
+                opcode--;
+                op_table[opcode & 0xFF](opcode_value);
+                continue;
             }
-            if ((u32) ((temp_v1_2 - 0x40) & 0xFF) < 0x40U)
+            if ((u32)((opcode - 0x40) & 0xFF) < 0x40U)
             {
-                if (temp_a0 < 0x60U)
+                if (opcode_value < 0x60U)
                 {
-                    func_800B820C(0x8001);
-                    goto block_15;
+                    func_800B820C();
+                    continue;
                 }
-                goto block_2;
+                goto stop_script_primary;
             }
-            if ((u32) ((temp_v1_2 + 0x80) & 0xFF) < 0x40U)
+            if ((u32)((opcode + 0x80) & 0xFF) < 0x40U)
             {
-                if (temp_a0 < 0xD0U)
+                if (opcode_value < 0xD0U)
                 {
-                    func_800B8308(0x8001);
-                    goto block_15;
+                    func_800B8308();
+                    continue;
                 }
-block_2:
-                temp_t1->pc = (u8 *) (temp_t0 + 1);
-                akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, *temp_t0);
-                g_field_script->status.word = (s32) ((s32) g_field_script->status.word & 0x7FFFFFFF);
+                goto stop_script_extended;
             }
-            else
+            if (opcode_value >= 0xC0U)
             {
-                if (temp_a0 >= 0xC0U)
-                {
-                    temp_t1->pc = (u8 *) (temp_t0 + 1);
-                    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, *temp_t0);
-                    g_field_script->status.word = (s32) ((s32) g_field_script->status.word & 0x7FFFFFFF);
-                }
-block_15:
-                if ((s32) g_field_script->status.word < 0)
-                {
-                    goto loop_5;
-                }
+                pc_advance = 1;
+                owner_id = current_context->status.owner_id;
+                song_param = *pc;
+                active_record->pc = pc + pc_advance;
+                akao_set_song_params(0x8001, pc_advance, owner_id, song_param);
+                stop_context = g_field_script;
+                stop_context->status.word &= ~FIELD_SCRIPT_RUNNING;
             }
-        }
+        } while ((s32)g_field_script->status.word < 0);
     }
-    if (temp_s2 != NULL)
+
+restore_context:
+    if (previous_context != NULL)
     {
-        g_field_script = temp_s2;
+        g_field_script = previous_context;
     }
 }
-
 
 void akao_set_song_params(s32, s32, s32, s32);
 

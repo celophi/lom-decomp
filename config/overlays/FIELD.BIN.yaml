@@ -303,7 +303,7 @@ segments:
       - [0x6D4B9, c, field_script_operands] # gcc280_g0; branch and eleven operand helpers, all exact
       - [0x6DA85, c, field_script_commands] # gcc280_g0; dispatcher, seventeen commands and query helper
       - [0x6E959, c, field_script_arith_ops] # gcc280_g0; dispatcher and twelve arithmetic handlers, all exact
-      - [0x6EAA1, c, field_record_setup_ops] # gcc280_g0; five record setup/sequence dispatch functions, two WIPs
+      - [0x6EAA1, c, field_record_setup_ops] # gcc280_g0; five record setup/sequence dispatch functions, one WIP
       - [0x6F4E9, c, func_800BF158]                 # gcc280_g0, 100.000000%
       - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, all exact
       - [0x6FDC5, c, field_generated_record_ops] # gcc280_g0; initializer, name builder and two stat modes, two WIPs
