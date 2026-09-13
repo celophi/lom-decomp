@@ -2398,7 +2398,7 @@ typedef union FieldCollisionRasterSpanFlags {
  *       instructions; this source has 875. The 0x60-byte frame and stack
  *       slots match. Register and instruction differences remain.
  *       See working/func_8005E3B0/status.md for prior matching evidence.
- * @see decomp.me (99.557205%, 841/874 exact) TODO
+ * @see decomp.me (99.759730%, 855/874 exact) TODO
  */
 void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
 {
@@ -2450,6 +2450,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     s16 x;
     s16 sgn;
     s16 main_sgn;
+    s32 raster_dy;
     s16 ystep;
     s16 row;
     s16 err;
@@ -2507,7 +2508,9 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                     x = prev->x;
                     y0 = prev->z;
                     main_dy = pt->z;
+                    main_dy -= y0;
                     ybase = node->unk22;
+                    row = y0 - ybase;
                     main_sgn = 1;
                 }
                 else
@@ -2518,15 +2521,15 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                     main_dy = pt->z;
                     y0 = main_dy;
                     main_dy = prev->z;
+                    main_dy -= y0;
                     ybase = node->unk22;
+                    row = y0 - ybase;
                 }
-                do
-                {
-                    main_dy = main_dy - y0;
-                } while (0);
-                do { row = y0 - ybase; } while (0);
+                
+                
                 cp = &counts[row];
                 sp_row = &spans[row * w];
+                sgn = main_sgn;
                 fl_row = &flags[row * w];
                 if ((s16)main_dy != 0)
                 {
@@ -2537,7 +2540,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                         ystep = -1;
                     }
                     
-                    if ((last_dir == 2) || (((ystep * main_sgn) + 2) == last_dir))
+                    if ((last_dir == 2) || (((ystep * sgn) + 2) == last_dir))
                     {
                         merge_row = prev->z - node->unk22;
                     }
@@ -2545,7 +2548,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                     {
                         merge_row = -1;
                     }
-                    last_dir = (ystep * main_sgn) + 2;
+                    last_dir = (ystep * sgn) + 2;
                     if ((first_dir == 0) || (first_dir == 2))
                     {
                         first_dir = last_dir;
@@ -2693,8 +2696,10 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     {
         x = prev->x;
         y0 = prev->z;
-        y1 = pt->z;
+        dy = pt->z;
+        dy -= y0;
         ybase = node->unk22;
+        row = y0 - ybase;
         sgn = 1;
     }
     else
@@ -2703,14 +2708,13 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
         x = pt->x;
         sgn = -1;
         y0 = pt->z;
-        y1 = prev->z;
+        dy = prev->z;
+        dy -= y0;
         ybase = node->unk22;
+        row = y0 - ybase;
     }
-    do
-    {
-        dy = y1 - y0;
-    } while (0);
-    do { row = y0 - ybase; } while (0);
+    
+    
     cp = &counts[row];
     sp_row = &spans[row * w];
     fl_row = &flags[row * w];
@@ -2719,7 +2723,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
         ystep = 1;
         if ((s16)dy < 0)
         {
-            dy = -(s16)dy;
+            dy = -dy;
             ystep = -1;
         }
         if ((last_dir == 2) || (((ystep * sgn) + 2) == last_dir))
@@ -2804,6 +2808,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
         }
         else
         {
+            raster_dy = dy;
             err = -(s16)dy;
             for (j = (s16)dy; j != -1; j--)
             {
@@ -2851,7 +2856,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 if (err >= 0)
                 {
                     x++;
-                    err -= (s16)dy * 2;
+                    err -= (s16)raster_dy * 2;
                 }
             }
         }
@@ -2883,8 +2888,8 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     }
 
     capacity = w;
-    out_flag = flags;
     out_span = spans;
+    out_flag = flags;
     save_flags = flags;
     for (i = node->unk20 - node->unk22; i != -1; i--)
     {
@@ -2941,8 +2946,8 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
         j--;
         for (; j != -1; j--)
         {
-            out_span->word = 0x80007F00;
-            out_span++;
+            do { out_span->word = 0x80007F00;
+            out_span++; } while (0);
         }
         j = (capacity - *counts) / 2;
         j--;
