@@ -274,7 +274,7 @@ segments:
       # TU hypothesis: field_coordinate_icon (high). See docs/decompilation/field-boundaries/map.md.
       - [0x5EC39, c, func_800AE8A8]                # gcc272_cdk, 100%
       - [0x5ED71, c, func_800AE9E0]                # gcc272_cdk, 100%
-      - [0x5EE51, c, func_800AEAC0] # gcc272_gnu, 66.572365% WIP
+      - [0x5EE51, c, func_800AEAC0] # gcc272_cdk, 95.177635% WIP
       - [0x5F0B1, c, field_choice_labels] # gcc272_cdk; 100%
       - [0x5F1B9, c, field_item_selection] # gcc272_cdk; initialize/sound/draw/select/release, three exact, two WIPs
       - [0x5FC55, c, field_text_session] # gcc272_cdk; session reset and teardown, both exact

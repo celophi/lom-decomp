@@ -11,7 +11,7 @@ extern s32 D_800CA8D0;
  * @param p GPU packet cursor to write primitives into.
  * @param arg1 Ordering-table entry the primitives are linked into via addPrim.
  * @return Pointer just past the emitted primitives (p advanced by 5 * 0x10 + 8).
- * @note WIP - not yet byte-matching. Currently 99.92% (residual: two GPU-store
+ * @note WIP - not yet byte-matching. Currently 99.923080% (residual: two GPU-store
  *       instructions swap order at the first primitive; a scheduling coin-flip
  *       the permuter could not close over 27k iterations).
  */
