@@ -233,7 +233,7 @@ segments:
       - [0x4CFF1, c, field_actor_target_queries] # gcc272_cdk; 9CC60..9D1E4 (7 funcs, 100% except func_8009D1E4 95.206350% WIP)
       # TU hypothesis: field_actor_effects (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x4D869, c, func_8009D4D8] # gcc272_cdk, 97.647060% WIP
-      - [0x4DCED, c, field_actor_effects] # gcc272_cdk; 9D95C..A1344 (6 funcs, 100% except func_800A0B0C 80.566540% WIP; func_8009D4D8 kept separate above due to interleaved unk rodata)
+      - [0x4DCED, c, field_actor_effects] # gcc272_cdk; 9D95C..A1344 (6 funcs, 100% except func_800A0B0C 99.923960% WIP; func_8009D4D8 kept separate above due to interleaved unk rodata)
       # TU hypothesis: field_path_interpolation (high). See docs/decompilation/field-boundaries/map.md.
       - [0x520D9, c, field242]                     # gcc272_cdk, func_800A1D48
       - [0x52129, c, func_800A1D98]                # gcc272_cdk, 100%
@@ -293,7 +293,7 @@ segments:
       - [0x65449, c, field_action_descriptors] # gcc280_g0; B50B8 new C 83.8%, B543C exact codegen
       - [0x658C5, c, field_action_setup] # gcc280_g0; action execution and six helpers; B5534 new C 93.789270%, six exact
       - [0x6640D, c, field_progression_ops] # gcc280_g0; progression query and initialization, both exact
-      - [0x66555, c, field_action_modifiers] # gcc280_g0; action/depletion handlers and helpers; 23 exact, two WIPs
+      - [0x66555, c, field_action_modifiers] # gcc280_g0; action/depletion handlers and helpers; 24 exact, one WIP
       - [0x67D11, c, field_record_stat_ops] # gcc280_g0; seven compatibility/record/stat helpers, one WIP
       - [0x68395, c, field_script_flow_ops] # gcc280_g0; interpreter, dispatchers and early primary opcodes
       - [0x697AD, c, func_800B941C] # gcc280_g0, 100.000000%

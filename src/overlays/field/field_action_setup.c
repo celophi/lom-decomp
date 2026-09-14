@@ -79,7 +79,7 @@ extern s32 func_800B5A88(void);
 extern s32 func_800B5C54(void);
 extern void func_800B5D60(s32);
 extern void func_800B5E5C(void);
-extern s32 func_800B6334(void *);
+extern s32 func_800B6334(u8 *);
 extern void func_800B65CC(s32);
 /* The target forwards the source actor in a0 to the no-argument dispatcher. */
 extern s32 func_800B6808();
@@ -180,7 +180,7 @@ s32 func_800B5534(ArgB800B5948 *arg0)
                         temp_v0_4 = ((ActionContext5534 *)D_80123FB0)->unk24;
                         temp_v0_4->unkC = (s32) (temp_v0_4->unkC | 0x01000000);
                     }
-                    temp_v0_5 = func_800B6334(((ActionContext5534 *)D_80123FB0)->unk24);
+                    temp_v0_5 = func_800B6334((u8 *)((ActionContext5534 *)D_80123FB0)->unk24);
                     if (temp_v0_5 != 0)
                     {
                         func_800B65CC(temp_v0_5);

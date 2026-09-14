@@ -872,6 +872,10 @@ u8 *func_8009FE54(s32 *base, u8 *arg1, VECTOR *pos, s32 radius)
 
 /* ---- func_800A0B0C ---- */
 
+#define ADD_PACKET_A0(depth)                                                                                                                                   \
+    (*(s32*)primitive = (*(s32*)primitive & tag_mask) | (ordering_table[depth] & addr_mask),                                                                   \
+     ordering_table[depth] = (ordering_table[depth] & tag_mask) | ((s32)primitive & addr_mask))
+
 /**
  * @brief Draw animated curved quad strips extending from a fixed-point position.
  * @param ordering_table Ordering table with 0x1000 depth entries.
@@ -883,9 +887,6 @@ u8 *func_8009FE54(s32 *base, u8 *arg1, VECTOR *pos, s32 radius)
  * @note Emits at least one strip and at most four, with nine quads per strip.
  * @note Adjacent strips are separated by twice their 0x1400 fixed-point width.
  */
-#define ADD_PACKET_A0(depth)                                                                                                                                   \
-    (*(s32*)primitive = (*(s32*)primitive & tag_mask) | (ordering_table[depth] & addr_mask),                                                                   \
-     ordering_table[depth] = (ordering_table[depth] & tag_mask) | ((s32)primitive & addr_mask))
 u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s32 extent, s32 forward)
 {
     extern s32 D_801178D8;
