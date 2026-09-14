@@ -4724,7 +4724,10 @@ s32 func_80060CB0(FieldCollisionMargin *margins, FieldCollisionQuery *query)
     s32 gy;
     s32 half;
     s32 half2;
+    s32 ext_x;
     s32 ext_z;
+    s16 raw_margin_x;
+    s16 raw_margin_z;
     s32 margin;
     s32 tile;
     s32 shift;
@@ -4766,8 +4769,9 @@ s32 func_80060CB0(FieldCollisionMargin *margins, FieldCollisionQuery *query)
     i = 0;
     if (count != 0)
     {
-        half = count;
-        for (; i != half; i++)
+        s32 group_count;
+        group_count = count;
+        for (; i != group_count; i++)
         {
             s32 gid = scene->unk4A[i];
 
@@ -4788,8 +4792,6 @@ s32 func_80060CB0(FieldCollisionMargin *margins, FieldCollisionQuery *query)
         }
     }
 
-    tx = query->width;
-    ext_z = query->depth;
     tile = scene->unk40;
     shift = 3;
     if (tile == 4)
@@ -4797,9 +4799,13 @@ s32 func_80060CB0(FieldCollisionMargin *margins, FieldCollisionQuery *query)
         shift = 2;
     }
 
-    half = ((s16) tx) >> 1;
-    margin = margins->x_margin;
-    margin = margin - 1;
+    ext_x = query->width;
+    half = ((s16) ext_x) >> 1;
+    do
+    {
+        raw_margin_x = margins->x_margin;
+    } while (0);
+    margin = raw_margin_x - 1;
     v = query->x;
     if (v >= 0)
     {
@@ -4809,12 +4815,18 @@ s32 func_80060CB0(FieldCollisionMargin *margins, FieldCollisionQuery *query)
     {
         g = (v + 0xFF) >> 8;
     }
-    tx = (g - half) - margin;
+    do
+    {
+        tx = (g - half) - margin;
+    } while (0);
 
-    tz = ext_z;
-    half2 = ((s16) tz) >> 1;
-    margin = margins->z_margin;
-    margin = margin - 1;
+    ext_z = query->depth;
+    half2 = ((s16) ext_z) >> 1;
+    do
+    {
+        raw_margin_z = margins->z_margin;
+    } while (0);
+    margin = raw_margin_z - 1;
     v = query->z;
     if (v >= 0)
     {
@@ -4833,7 +4845,10 @@ s32 func_80060CB0(FieldCollisionMargin *margins, FieldCollisionQuery *query)
     ncol = (((tx & mask) + margins->x_margin + ((s16) query->width) + mask) - 1) >> shift;
     mask2 = (tile * 2) - 1;
     nrow = (((tz & mask2) + margins->z_margin + ((s16) query->depth) + mask2) - 1) >> shift2;
-    cols = (u16) scene->unk46;
+    do
+    {
+        cols = (u16) scene->unk46;
+    } while (0);
     rows = (u16) scene->unk48;
 
     if (col_start <= 0)
@@ -4842,31 +4857,39 @@ s32 func_80060CB0(FieldCollisionMargin *margins, FieldCollisionQuery *query)
         g = g + col_start;
         if (g <= 0)
         {
-            return -2;
+            goto bounds_fail;
         }
         ncol = g;
         col_start = 1;
     }
-    if (row_start <= 0)
+    if (row_start > 0)
     {
-        if ((nrow + (row_start - 1)) <= 0)
-        {
-            return -2;
-        }
-        ncol += col_start - 1;
-        col_start = 1;
+        goto check_bounds;
     }
+    if ((nrow + (row_start - 1)) > 0)
+    {
+        goto row_clip_ok;
+    }
+
+bounds_fail:
+    return -2;
+
+row_clip_ok:
+    ncol += col_start - 1;
+    col_start = 1;
+
+check_bounds:
     if (col_start >= cols - 1)
     {
-        return -2;
+        goto bounds_fail;
     }
     if (row_start >= rows - 1)
     {
-        return -2;
+        goto bounds_fail;
     }
 
-    tz = (u16) scene->unk44;
-    base = (u8 *) (scene->unk2C + (tz * group) + (cols * row_start) + col_start);
+    tz = (u16) scene->unk44 * group;
+    base = (u8 *) (scene->unk2C + tz + (cols * row_start) + col_start);
     for (nrow -= 1; nrow != -1; nrow--)
     {
         p = base;
