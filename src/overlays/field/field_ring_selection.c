@@ -622,11 +622,20 @@ void func_800A5174(s32 arg0, s32 arg1)
  * @brief Queue five textured strips using the selected field rendering layout.
  * @param context Render context containing the ordering table and packet cursor.
  * @param layout Zero selects two quads per strip; nonzero selects one quad.
- * @note Partial match; loop-invariant scheduling and register differences remain.
  */
 void func_800A5224(RenderContext *context, s32 layout)
 {
     u32 *head;
+    u32 split_address_mask;
+    u32 split_tag_mask;
+    u32 full_address_mask;
+    u32 full_tag_mask;
+    s32 full_color;
+    s32 full_length;
+    s32 full_height;
+    s32 full_v_top;
+    s32 full_u_right;
+    s32 full_v_bottom;
     s16 split_left_x;
     s16 full_left_x;
     s16 full_right_x;
@@ -635,6 +644,7 @@ void func_800A5224(RenderContext *context, s32 layout)
     s32 split_page;
     s32 full_page;
     s32 strip_index;
+    s32 packet_code;
     TexturedQuad *full_quad;
     TexturedQuad *split_quad;
 
@@ -645,7 +655,6 @@ void func_800A5224(RenderContext *context, s32 layout)
         if (layout == 0)
         {
             strip_index = 0;
-            split_right_x = 0x10;
             split_quad = (TexturedQuad *)packet;
             do
             {
@@ -656,11 +665,11 @@ void func_800A5224(RenderContext *context, s32 layout)
                 split_quad->color.bytes.code = 0x2C;
                 split_quad->x0 = split_left_x;
                 split_quad->y0 = 0;
-                split_quad->x1 = split_right_x;
+                split_quad->x1 = ((strip_index * 0x10) + 0x10);
                 split_quad->y1 = 0;
                 split_quad->x2 = split_left_x;
                 split_quad->y2 = 4;
-                split_quad->x3 = split_right_x;
+                split_quad->x3 = ((strip_index * 0x10) + 0x10);
                 split_quad->y3 = 4;
                 split_quad->u0 = 0;
                 split_quad->v0 = 0xF0;
@@ -673,22 +682,16 @@ void func_800A5224(RenderContext *context, s32 layout)
                 split_quad->clut = 0;
                 split_quad->tpage = (s16) (split_page | 0x120);
                 split_quad++;
-                strip_index += 1;
-                ((TexturedQuad *)packet)->tag.word = (*head & 0xFFFFFF) | (((TexturedQuad *)packet)->tag.word & 0xFF000000);
-                *head = (s32) ((*head & 0xFF000000) | ((s32) packet & 0xFFFFFF));
+                split_address_mask = 0xFFFFFF;
+                split_tag_mask = 0xFF000000;
+                ((TexturedQuad *)packet)->tag.word = (((TexturedQuad *)packet)->tag.word & split_tag_mask) | (*head & split_address_mask);
+                *head = (s32) ((*head & split_tag_mask) | ((s32) packet & split_address_mask));
                 packet += 0x28;
                 split_quad->color.word = 0x808080;
                 split_quad->tag.bytes.length = 9;
                 split_quad->color.bytes.code = 0x2C;
-                split_quad->x0 = split_left_x;
-                split_quad->y0 = 4;
-                split_quad->x1 = split_right_x;
-                split_quad->y1 = 4;
-                split_quad->x2 = split_left_x;
-                split_quad->x3 = split_right_x;
-                split_right_x += 0x10;
-                split_quad->y2 = 0x38;
-                split_quad->y3 = 0x38;
+                setXY4(split_quad, split_left_x, 4, ((strip_index * 0x10) + 0x10), 4, split_left_x, 0x38, ((strip_index * 0x10) + 0x10), 0x38);
+                strip_index += 1;
                 split_quad->u0 = 0;
                 split_quad->v0 = 0;
                 split_quad->u1 = 0x40;
@@ -700,14 +703,22 @@ void func_800A5224(RenderContext *context, s32 layout)
                 split_quad->clut = 0;
                 split_quad->tpage = (s16) (split_page | 0x130);
                 split_quad += 2;
-                ((TexturedQuad *)packet)->tag.word = (s32) ((*head & 0xFFFFFF) | (((TexturedQuad *)packet)->tag.word & 0xFF000000));
-                *head = (s32) ((*head & 0xFF000000) | ((s32) packet & 0xFFFFFF));
+                ((TexturedQuad *)packet)->tag.word = (s32) ((((TexturedQuad *)packet)->tag.word & split_tag_mask) | (*head & split_address_mask));
+                *head = (s32) ((*head & split_tag_mask) | ((s32) packet & split_address_mask));
                 packet += 0x50;
             } while (strip_index < 5);
             context->cursor = packet;
             return;
         }
         strip_index = 0;
+        full_color = 0x808080;
+        full_length = 9;
+        full_height = 0x38;
+        full_v_top = 8;
+        full_u_right = 0x40;
+        full_v_bottom = 0xE8;
+        full_address_mask = 0xFFFFFF;
+        full_tag_mask = 0xFF000000;
         full_right_x = 0x10;
         full_quad = (TexturedQuad *)packet;
         do
@@ -718,28 +729,30 @@ void func_800A5224(RenderContext *context, s32 layout)
             full_left_x = strip_index * 0x10;
             full_page = strip_index & 0xF;
             strip_index += 1;
-            full_quad->color.word = 0x808080;
-            full_quad->tag.bytes.length = 9;
-            full_quad->color.bytes.code = 0x2C;
+            full_quad->color.word = full_color;
+            full_quad->tag.bytes.length = full_length;
+            packet_code = 0x2C;
+            full_quad->color.bytes.code = packet_code;
             full_quad->x0 = full_left_x;
-            full_quad->y0 = 0;
+            packet_code = 0;
+            full_quad->y0 = packet_code;
             full_quad->y1 = 0;
             full_quad->x2 = full_left_x;
-            full_quad->y2 = 0x38;
-            full_quad->y3 = 0x38;
+            full_quad->y2 = full_height;
+            full_quad->y3 = full_height;
             full_quad->u0 = 0;
-            full_quad->v0 = 8;
-            full_quad->u1 = 0x40;
-            full_quad->v1 = 8;
+            full_quad->v0 = full_v_top;
+            full_quad->u1 = full_u_right;
+            full_quad->v1 = full_v_top;
             full_quad->u2 = 0;
-            full_quad->v2 = 0xE8;
-            full_quad->u3 = 0x40;
-            full_quad->v3 = 0xE8;
+            full_quad->v2 = full_v_bottom;
+            full_quad->u3 = full_u_right;
+            full_quad->v3 = full_v_bottom;
             full_quad->clut = 0;
             full_quad->tpage = (s16) (full_page | 0x120);
             full_quad += 2;
-            ((TexturedQuad *)packet)->tag.word = (*head & 0xFFFFFF) | (((TexturedQuad *)packet)->tag.word & 0xFF000000);
-            *head = (s32) ((*head & 0xFF000000) | ((s32) packet & 0xFFFFFF));
+            ((TexturedQuad *)packet)->tag.word = (((TexturedQuad *)packet)->tag.word & full_tag_mask) | (*head & full_address_mask);
+            *head = (s32) ((*head & full_tag_mask) | ((s32) packet & full_address_mask));
             packet += 0x50;
         } while (strip_index < 5);
         context->cursor = packet;

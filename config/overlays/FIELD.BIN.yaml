@@ -248,7 +248,7 @@ segments:
       # TU hypothesis: field_audio_runtime (high). See docs/decompilation/field-boundaries/map.md.
       - [0x538C5, c, field_audio_runtime] # gcc272_cdk; A3534..A43C0 (27 funcs, 100%)
       # TU hypothesis: field_ring_selection (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x54779, c, field_ring_selection] # gcc272_cdk; A43E8..A55E4 (12 funcs, 100% except func_800A4D1C 97.341730% + func_800A5224 94.280700% WIP)
+      - [0x54779, c, field_ring_selection] # gcc272_cdk; A43E8..A55E4 (12 funcs, 100% except func_800A4D1C 97.341730%)
       # TU hypothesis: field_timed_panel (high). See docs/decompilation/field-boundaries/map.md.
       - [0x559C9, c, field_timed_panel] # gcc272_cdk; A5638..A6060 (5 funcs, 100% except func_800A5960 90.430800% WIP)
       # TU hypothesis: field_actor_text_queue (high). See docs/decompilation/field-boundaries/map.md.
