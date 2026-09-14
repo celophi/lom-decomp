@@ -26,6 +26,14 @@ rom:0x10A8D reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10A91 reloc:MIPS_NONE symbol:D_1F800008
 rom:0x10AD9 reloc:MIPS_NONE symbol:D_1F800008
 
+// field_text_build_transition_packets: literal scratchpad page and cursor
+// offsets. The low halves add 8 or 16 to moving vertex pointers; they do not
+// complete symbol addresses. Preserve the original instruction operands.
+rom:0x166F5 reloc:MIPS_NONE symbol:D_1F800010
+rom:0x16A65 reloc:MIPS_NONE symbol:D_1F800008
+rom:0x16BA1 reloc:MIPS_NONE symbol:D_1F800008
+rom:0x16C95 reloc:MIPS_NONE symbol:D_1F800010
+
 // func_80091438: the branch-delay-slot page load at 0x800914A8 is the
 // high half of D_800EB22C. Splat loses the relocation on this control-flow
 // path even though GCC emits the same instruction with an R_MIPS_HI16 reloc.

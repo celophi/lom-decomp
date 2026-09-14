@@ -252,11 +252,11 @@ segments:
       # TU hypothesis: field_timed_panel (high). See docs/decompilation/field-boundaries/map.md.
       - [0x559C9, c, field_timed_panel] # gcc272_cdk; A5638..A6060 (5 funcs, 100% except func_800A5960 90.430800% WIP)
       # TU hypothesis: field_actor_text_queue (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x56595, c, field_actor_text_queue] # gcc272_cdk; A6204..A66B4 (6 funcs, 100% except func_800A623C 88.959730% WIP)
+      - [0x56595, c, field_actor_text_queue] # gcc272_cdk; A6204..A66B4 (6 funcs, 100%)
       # TU hypothesis: field_ability_progression (low). See docs/decompilation/field-boundaries/map.md.
       - [0x56C45, c, func_800A68B4] # gcc272_cdk, 91.258800% WIP
       # TU hypothesis: field_dialog_screens (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x5727D, c, field_dialog_screens] # gcc272_cdk; A6EEC..A8880 (18 funcs; func_800A788C 96.848310% + func_800A7B54 87.585720% + func_800A8128 93.673200% + func_800A838C 99.901960% WIP, rest 100%)
+      - [0x5727D, c, field_dialog_screens] # gcc272_cdk; A6EEC..A8880 (18 funcs; func_800A788C 96.848310% + func_800A7B54 87.585720% + func_800A838C 99.901960% WIP, rest 100%)
       # TU hypothesis: field_immediate_text (high). See docs/decompilation/field-boundaries/map.md.
       - [0x58C31, c, field_immediate_text] # gcc272_cdk; A88A0..A8B90 (4 funcs, 100%)
       # TU hypothesis: field_input_text_session (medium). See docs/decompilation/field-boundaries/map.md.
@@ -307,7 +307,7 @@ segments:
       - [0x6F4E9, c, func_800BF158]                 # gcc280_g0, 100.000000%
       - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, all exact
       - [0x6FDC5, c, field_generated_record_ops] # gcc280_g0; initializer, name builder and two stat modes, two WIPs
-      - [0x705F1, c, field_record_effect_ops] # gcc280_g0; effect generation/classification/application, one WIP
+      - [0x705F1, c, field_record_effect_ops] # gcc280_g0; effect generation/classification/application, all exact
       - [0x70DC9, c, field_reward_command_ops] # gcc280_g0; selector, reward dispatcher and four table handlers, all exact
       - [0x711A9, c, field_record_growth_ops] # gcc280_g0; ten reward/experience/growth functions, three WIPs
       - [0x71DA9, c, field_record_lookup_ops] # gcc280_g0; nine record dispatch/lookup functions, all exact
