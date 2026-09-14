@@ -317,7 +317,7 @@ typedef struct RecordB4D1C
     StateB4D1C *state;
 } RecordB4D1C;
 
-void func_800B2D64(RecordB4D1C *arg0, s32 arg1, s32 arg2, s32 arg3);
+s32 func_800B2D64(RecordB4D1C *arg0, s32 arg1, s32 arg2, s32 arg3);
 
 /**
  * @brief Clear selected record state and apply active field record actions.

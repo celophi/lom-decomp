@@ -224,7 +224,6 @@ extern s16 D_80122C10[2];
  * @brief Apply packed category and element multipliers to the two pending values.
  *
  * Both results remain signed 32-bit values until clamped to 0..32767.
- * @note Partial match; compiler and expression probes are retained in working/func_800C9960.
  */
 void func_800C9960(void)
 {
@@ -254,6 +253,11 @@ void func_800C9960(void)
     s32 result1;
     s32 result2;
     lookup = D_80051F04;
+    factor1 = 10;
+    do
+    {
+        factor1 = factor1;
+    } while (0);
     base = &D_80122C06;
     packed = base[0];
     first = *(s16 *)(base + 10);
@@ -261,6 +265,8 @@ void func_800C9960(void)
     element = base[-3];
     amount = base[-2];
     level = base[2];
+    second++;
+    second--;
     primary = packed & 3;
     secondary = (packed >> 2) & 3;
     third = (packed >> 4) & 3;
@@ -272,7 +278,6 @@ void func_800C9960(void)
     packed = base[1];
     selected = packed;
     mode = base[4];
-    factor1 = 10;
     if (selected != primary)
     {
         factor1 = 2;
@@ -290,37 +295,37 @@ void func_800C9960(void)
             factor2 = 1;
         }
     }
-    element1 = 2;
     if (mode == 0)
     {
         if (element == low)
         {
             element1 = 3;
         }
+        else if (element == lookup.values[low])
+        {
+            element1 = 1;
+        }
         else
         {
             element1 = 2;
-            if (element == lookup.values[low])
-            {
-                element1 = 1;
-            }
         }
         if (element == high)
         {
             element2 = 3;
         }
+        else if (element == lookup.values[high])
+        {
+            element2 = 1;
+        }
         else
         {
             element2 = 2;
-            if (element == lookup.values[high])
-            {
-                element2 = 1;
-            }
         }
     }
     else
     {
-        element2 = 2;
+        element1 = 2;
+        element2 = element1;
     }
     first /= level + 6;
     second /= level + 6;
@@ -332,31 +337,42 @@ void func_800C9960(void)
     second += scaled2;
     first *= level + 7;
     second *= level + 7;
-    clamp = 0x7FFF;
     if (first >= 0)
     {
-        if (first <= 0x7FFF)
+        result1 = 0x7FFF;
+        clamp = result1;
+        clamp = clamp < first;
+        if (!clamp)
         {
-            clamp = first;
+            result1 = first;
         }
     }
     else
     {
-        clamp = 0;
+        result1 = 0;
     }
-    first = clamp;
+    first = result1;
     if (second >= 0)
     {
-        clamp = 0x7FFF;
-        if (second <= 0x7FFF)
+        result2 = 0x7FFF;
+        if (factor1)
         {
-            clamp = second;
+            clamp = result2;
+        }
+        else
+        {
+            clamp = (result2 | 0x10000) & 0x7FFF;
+        }
+        clamp = clamp < second;
+        if (!clamp)
+        {
+            result2 = second;
         }
     }
     else
     {
-        clamp = 0;
+        result2 = 0;
     }
     D_80122C10[0] = first;
-    D_80122C10[1] = clamp;
+    D_80122C10[1] = result2;
 }

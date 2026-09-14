@@ -44,7 +44,7 @@
  * @return The actor's two-bit movement state, or zero when input processing is blocked.
  * @note The collision request occupies scratchpad 0x1F800000; the secondary probe uses 0x1F800040.
  * @note Contiguous work vectors retain the target's stack layout and screen-coordinate stores.
- * @note WIP: 99.264120% gcc272_cdk; only the s0/s1 register assignment differs.
+ * @see decomp.me (100%)
  */
 s32 func_8008DC54(s32 *actor, s32 pad_index)
 {
@@ -128,6 +128,7 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
     void func_8008E690(void *);
     void func_8008EBA4(void *, s32, s32);
 
+    s32 *movement_actor;
     MovementWork work;
     u8 *pad_base = (u8 *)0x801ED600;
     u8 *map = (u8 *)0x801ED400;
@@ -271,11 +272,12 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
         work.input.vz = -work.input.vz;
     }
     func_8001CDAC(&work.input.vx, &work.motion.vx);
-    speed_divisor = S16_AT(actor, 0x16);
+    movement_actor = actor;
+    speed_divisor = S16_AT(movement_actor, 0x16);
     if (speed_divisor != 0)
     {
-        speed_step = (s8)S8_AT(actor, 0x36) / speed_divisor;
-        S8_AT(actor, 0x36) = (s8)((u8)S8_AT(actor, 0x36) - speed_step);
+        speed_step = (s8)S8_AT(movement_actor, 0x36) / speed_divisor;
+        S8_AT(movement_actor, 0x36) = (s8)((u8)S8_AT(movement_actor, 0x36) - speed_step);
     }
     else
     {
@@ -287,14 +289,14 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
     work.motion.vz = motion_z;
     if (D_8010AE84 == 0)
     {
-        if (func_80092988(actor, &work.motion.vx) == 0)
+        if (func_80092988(movement_actor, &work.motion.vx) == 0)
         {
-            collision->x = S32_AT(actor, 0x0);
-            collision->y = S32_AT(actor, 0x4);
-            collision->z = S32_AT(actor, 0x8);
-            actor_x = S32_AT(actor, 0x0);
+            collision->x = S32_AT(movement_actor, 0x0);
+            collision->y = S32_AT(movement_actor, 0x4);
+            collision->z = S32_AT(movement_actor, 0x8);
+            actor_x = S32_AT(movement_actor, 0x0);
             if ((actor_x >= 0) && (actor_x < (S16_AT(map, 0) << 8)) &&
-                (actor_z = S32_AT(actor, 0x8), (actor_z >= 0)) &&
+                (actor_z = S32_AT(movement_actor, 0x8), (actor_z >= 0)) &&
                 (actor_z < ((s32)(U16_AT(map, 2) << 0x10) >> 7)))
             {
                 collision->dy = 0;
@@ -302,7 +304,7 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
                 S16_AT(probe, 0xE) = 0x10;
                 collision->dx = work.motion.vx;
                 collision->dz = work.motion.vz;
-                if (D_800FE3A0[U8_AT(actor, 0x3A)].scale == 0x40)
+                if (D_800FE3A0[U8_AT(movement_actor, 0x3A)].scale == 0x40)
                 {
                     collision->radius_x = 0xC;
                     S16_AT(probe, 0xC) = 0xC;
@@ -319,39 +321,39 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
 
                 collision->tail.flags &= 0xFFFDFFFF;
                 collision->tail.flags &= 0xFFFEFFFF;
-                collision->polygon = D_80105AE0[U8_AT(actor, 0x3A)].polygon;
-                collision->region = D_80105AE0[U8_AT(actor, 0x3A)].region;
+                collision->polygon = D_80105AE0[U8_AT(movement_actor, 0x3A)].polygon;
+                collision->region = D_80105AE0[U8_AT(movement_actor, 0x3A)].region;
                 if ((func_8005B6AC(collision) & 3) == 3)
                 {
-                    ((MovementFlags *)actor)->flags =
-                        (u32)(((MovementFlags *)actor)->flags & ~0x600);
+                    ((MovementFlags *)movement_actor)->flags =
+                        (u32)(((MovementFlags *)movement_actor)->flags & ~0x600);
                 }
-                D_80105AE0[U8_AT(actor, 0x3A)].polygon = (s32)collision->polygon;
-                D_80105AE0[U8_AT(actor, 0x3A)].region = (s32)collision->region;
-                S32_AT(actor, 0x4) = (s32)collision->y;
-                D_80105AE0[U8_AT(actor, 0x3A)].state.half.height = collision->height / 256;
+                D_80105AE0[U8_AT(movement_actor, 0x3A)].polygon = (s32)collision->polygon;
+                D_80105AE0[U8_AT(movement_actor, 0x3A)].region = (s32)collision->region;
+                S32_AT(movement_actor, 0x4) = (s32)collision->y;
+                D_80105AE0[U8_AT(movement_actor, 0x3A)].state.half.height = collision->height / 256;
             }
             else
             {
-                D_80105AE0[U8_AT(actor, 0x3A)].polygon = -1;
-                D_80105AE0[U8_AT(actor, 0x3A)].region = 0;
-                D_80105AE0[U8_AT(actor, 0x3A)].state.half.height = 0;
+                D_80105AE0[U8_AT(movement_actor, 0x3A)].polygon = -1;
+                D_80105AE0[U8_AT(movement_actor, 0x3A)].region = 0;
+                D_80105AE0[U8_AT(movement_actor, 0x3A)].state.half.height = 0;
             }
             collision_x = collision->x;
             collision_z = collision->z;
             work.motion.vx = collision_x;
             work.motion.vz = collision_z;
-            work.change.vx = collision_x - S32_AT(actor, 0x0);
+            work.change.vx = collision_x - S32_AT(movement_actor, 0x0);
             work.change.vy = 0;
-            work.change.vz = collision_z - S32_AT(actor, 0x8);
-            if (func_80092988(actor, &work.change.vx) != 0)
+            work.change.vz = collision_z - S32_AT(movement_actor, 0x8);
+            if (func_80092988(movement_actor, &work.change.vx) != 0)
             {
-                work.motion.vx = S32_AT(actor, 0x0);
-                work.motion.vz = S32_AT(actor, 0x8);
-                ((MovementFlags *)actor)->flags = (u32)(((MovementFlags *)actor)->flags & ~0x600);
+                work.motion.vx = S32_AT(movement_actor, 0x0);
+                work.motion.vz = S32_AT(movement_actor, 0x8);
+                ((MovementFlags *)movement_actor)->flags = (u32)(((MovementFlags *)movement_actor)->flags & ~0x600);
             }
             S32_AT(probe, 0x0) = (s32)collision->x;
-            S32_AT(probe, 0x4) = (s32)S32_AT(actor, 0x4);
+            S32_AT(probe, 0x4) = (s32)S32_AT(movement_actor, 0x4);
             S32_AT(probe, 0x8) = (s32)collision->z;
             if ((D_800FE754 != 0) && (func_8005B368(probe) != -1))
             {
@@ -361,66 +363,66 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
         else
         {
         cancel_movement:
-            work.motion.vx = S32_AT(actor, 0x0);
-            work.motion.vz = S32_AT(actor, 0x8);
-            ((MovementFlags *)actor)->flags = (u32)(((MovementFlags *)actor)->flags & ~0x600);
+            work.motion.vx = S32_AT(movement_actor, 0x0);
+            work.motion.vz = S32_AT(movement_actor, 0x8);
+            ((MovementFlags *)movement_actor)->flags = (u32)(((MovementFlags *)movement_actor)->flags & ~0x600);
         }
     }
     else
     {
-        work.motion.vx = motion_x + S32_AT(actor, 0x0);
-        work.motion.vz = motion_z + S32_AT(actor, 0x8);
+        work.motion.vx = motion_x + S32_AT(movement_actor, 0x0);
+        work.motion.vz = motion_z + S32_AT(movement_actor, 0x8);
     }
-    work.motion.vy = S32_AT(actor, 0x4);
-    if (S16_AT(actor, 0x2A) == 0)
+    work.motion.vy = S32_AT(movement_actor, 0x4);
+    if (S16_AT(movement_actor, 0x2A) == 0)
     {
-        func_8008EBA4(actor, input_x, input_z);
+        func_8008EBA4(movement_actor, input_x, input_z);
     }
     else
     {
-        func_8008E690(actor);
+        func_8008E690(movement_actor);
     }
     work.screen_x = D_800F22A0 / 256 + (s16)(work.motion.vx / 256 + 160);
     work.screen_y = D_800F22A4 / 256 + (s16)(work.motion.vy / 256 + 112) - work.motion.vz / 512 -
                     D_800F22A8 / 512;
-    if (S16_AT(actor, 0x2A) == 0)
+    if (S16_AT(movement_actor, 0x2A) == 0)
     {
-        if (((u32)D_80105AE0[U8_AT(actor, 0x3A)].state.flags >> 0xE) & 1)
+        if (((u32)D_80105AE0[U8_AT(movement_actor, 0x3A)].state.flags >> 0xE) & 1)
         {
-            S32_AT(actor, 0x0) = work.motion.vx;
-            S32_AT(actor, 0x8) = work.motion.vz;
-            if (func_800987DC(actor, actor, 0) == 0)
+            S32_AT(movement_actor, 0x0) = work.motion.vx;
+            S32_AT(movement_actor, 0x8) = work.motion.vz;
+            if (func_800987DC(movement_actor, movement_actor, 0) == 0)
             {
-                old_slot = (U8_AT(actor, 0x3A) * 0x23C) + (s32)D_80105AE0;
+                old_slot = (U8_AT(movement_actor, 0x3A) * 0x23C) + (s32)D_80105AE0;
                 S32_AT(old_slot, 0x174) = (s32)(S32_AT(old_slot, 0x174) & ~0x4000);
             }
         }
         else
         {
-            sentinel_or_reaction = func_800987DC(actor, &work.motion.vx, 0) & 0x7FFF;
+            sentinel_or_reaction = func_800987DC(movement_actor, &work.motion.vx, 0) & 0x7FFF;
             if (sentinel_or_reaction < 3)
             {
-                S32_AT(actor, 0x0) = work.motion.vx;
-                S32_AT(actor, 0x8) = work.motion.vz;
+                S32_AT(movement_actor, 0x0) = work.motion.vx;
+                S32_AT(movement_actor, 0x8) = work.motion.vz;
             }
             else
             {
-                if (func_800987DC(actor, actor, 0) != 0)
+                if (func_800987DC(movement_actor, movement_actor, 0) != 0)
                 {
-                    new_slot = (U8_AT(actor, 0x3A) * 0x23C) + (s32)D_80105AE0;
+                    new_slot = (U8_AT(movement_actor, 0x3A) * 0x23C) + (s32)D_80105AE0;
                     S32_AT(new_slot, 0x174) = (s32)(S32_AT(new_slot, 0x174) | 0x4000);
                 }
-                ((MovementFlags *)actor)->flags = (u32)(((MovementFlags *)actor)->flags & ~0x600);
-                func_80098C7C(actor, sentinel_or_reaction);
+                ((MovementFlags *)movement_actor)->flags = (u32)(((MovementFlags *)movement_actor)->flags & ~0x600);
+                func_80098C7C(movement_actor, sentinel_or_reaction);
             }
         }
     }
-    func_80091AC8(actor, pad_index);
-    if (S16_AT(actor, 0x2A) != 0)
+    func_80091AC8(movement_actor, pad_index);
+    if (S16_AT(movement_actor, 0x2A) != 0)
     {
-        func_8008EF0C(actor);
+        func_8008EF0C(movement_actor);
     }
-    return ((u32)((MovementFlags *)actor)->flags >> 9) & 3;
+    return ((u32)((MovementFlags *)movement_actor)->flags >> 9) & 3;
 }
 
 /** @brief Partial 0x54-byte actor layout used by the func_8008E690 action dispatcher. */

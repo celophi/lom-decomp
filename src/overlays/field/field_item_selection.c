@@ -21,13 +21,25 @@ struct Window;
 u8 *func_800AF0E8(u32 *, u8 *, s32, s32, s32, struct Window *);
 void func_800AF0C4(void);
 
+
+typedef struct
+{
+    u32 flags;
+    u32 state;
+    s16 scroll;
+    s16 scroll_target;
+    s16 scroll_ticks;
+    u16 padE;
+    void *draw;
+} ItemWindowSlot;
+
 /** @brief Build the available item list and open its selection window. */
 void func_800AEE28(void)
 {
     u8 *var_a0_2;
-    s16 temp_v1_3;
-    s32 *var_a0_3;
-    s32 *var_a2;
+    s32 temp_v1_3;
+    ItemWindowSlot *var_a0_3;
+    ItemWindowSlot *var_a2;
     s32 *var_v1;
     s32 temp_a0;
     s32 temp_v1;
@@ -53,76 +65,83 @@ void func_800AEE28(void)
     {
         if (g_pad_ctx[var_v1_2 + 0x25E0] != 0)
         {
-            (*(u8 *)((u8 *)var_a0_2 + 0x0)) = var_v1_2;
+            var_a0_2[0] = var_v1_2;
             var_a1 += 1;
-            (*(u8 *)((u8 *)var_a0_2 + 0x1)) = (u8) g_pad_ctx[var_v1_2 + 0x25E0];
+            var_a0_2[1] = g_pad_ctx[var_v1_2 + 0x25E0];
             var_a0_2 += 2;
         }
         var_v1_2 += 1;
     } while (var_v1_2 < 0x90);
     D_80122734 = var_a1;
-    if (var_a1 == 0)
+    if (var_a1 != 0)
     {
-        func_800AF0C4();
-        return;
+        goto start_window;
     }
+    func_800AF0C4();
+    return;
+
+initialize_slot:
+    var_a2 = var_a0_3;
+    var_a2->flags = (temp_v1 & ~7) | 1;
+    var_a2->scroll = 0;
+    var_a2->scroll_target = 0;
+    var_a2->scroll_ticks = 0;
+    var_a2->state &= ~0x200;
+    var_a2->state &= ~0xC00;
+    ((s16 *)&var_a2->state)[1] = 0;
+    goto setup_slot;
+
+start_window:
     D_80122714 = 1;
     func_800A3938(0xB9, 0x80);
     var_a0_3 = &D_80122828;
     var_a1_2 = 0;
-loop_10:
-    temp_v1 = (*(s32 *)((u8 *)var_a0_3 + 0x0));
+scan_slot:
+    do { temp_v1 = var_a0_3->flags; } while (0);
     var_a1_2 += 1;
-    if (temp_v1 & 7)
+    if ((temp_v1 & 7) == 0)
     {
-        var_a0_3 += 5;
-        if (var_a1_2 >= 8)
-        {
-            var_a2 = &D_80122828;
-        }
-        else
-        {
-            goto loop_10;
-        }
+        goto initialize_slot;
     }
-    else
+    if (var_a1_2 < 8)
     {
-        var_a2 = var_a0_3;
-        (*(s32 *)((u8 *)var_a2 + 0x0)) = (temp_v1 & ~7) | 1;
-        (*(s16 *)((u8 *)var_a2 + 0x8)) = 0;
-        (*(s16 *)((u8 *)var_a2 + 0xA)) = 0;
-        (*(s16 *)((u8 *)var_a2 + 0xC)) = 0;
-        (*(s32 *)((u8 *)var_a2 + 0x4)) = (s32) ((*(s32 *)((u8 *)var_a2 + 0x4)) & ~0x200 & ~0xC00);
-        (*(s16 *)((u8 *)var_a2 + 0x6)) = 0;
+        var_a0_3 += 1;
+        goto scan_slot;
     }
-    *(void **)((u8 *)var_a2 + 0x10) = (void *)func_800AF0E8;
-    (*(s16 *)((u8 *)var_a2 + 0x8)) = 0;
-    (*(s32 *)((u8 *)var_a2 + 0x0)) = ((((*(s32 *)((u8 *)var_a2 + 0x0)) & ~0x78) | 8) & 0xFFFF007F) | 0x1600;
-    (*(u8 *)((u8 *)var_a2 + 0x2)) = 0x20;
-    temp_v1_2 = ((*(s32 *)((u8 *)var_a2 + 0x4)) & ~1 & ~0x1FE) | 0x140;
-    (*(s32 *)((u8 *)var_a2 + 0x4)) = temp_v1_2;
-    (*(s32 *)((u8 *)var_a2 + 0x4)) = (u32) ((temp_v1_2 & ~0xC00) | 0x800);
-    (*(s32 *)((u8 *)var_a2 + 0x0)) = ((*(s32 *)((u8 *)var_a2 + 0x0)) & 0xFFFFFF) | 0xE8000000;
-    (*(s16 *)((u8 *)var_a2 + 0x6)) = (s16) (D_80122734 * 0x10);
+    var_a2 = &D_80122828;
+
+setup_slot:
+    var_a2->draw = (void *)func_800AF0E8;
+    var_a2->scroll = 0;
+    var_a2->flags = (((var_a2->flags & ~0x78) | 8) & 0xFFFF007F) | 0x1600;
+    ((u8 *)var_a2)[2] = 0x20;
+    var_a2->state &= ~1;
+    var_a2->state &= ~0x1FE;
+    var_a2->state |= 0x140;
+    var_a2->flags &= 0xFFFFFF;
+    var_a2->flags |= 0xE8000000;
+    var_a2->state &= ~0xC00;
+    var_a2->state |= 0x800;
+    ((s16 *)&var_a2->state)[1] = D_80122734 * 0x10;
     if (D_80122A00 >= D_80122734)
     {
         D_80122A00 = D_80122734 - 1;
     }
     temp_v1_3 = D_80122A00 * 0x10;
-    (*(s16 *)((u8 *)var_a2 + 0xA)) = 0;
-    if (D_80122A00 & 0x08000000)
+    var_a2->scroll_target = 0;
+    if (temp_v1_3 < 0)
     {
-        (*(s16 *)((u8 *)var_a2 + 0xA)) = temp_v1_3;
+        var_a2->scroll_target = temp_v1_3;
     }
     else
     {
-        temp_a0 = ((u32) (*(s32 *)((u8 *)var_a2 + 0x4)) >> 1) & 0xFF;
+        temp_a0 = ((u32)var_a2->state >> 1) & 0xFF;
         if ((temp_a0 - 0x10) < temp_v1_3)
         {
-            (*(s16 *)((u8 *)var_a2 + 0xA)) = (s16) (temp_v1_3 - (temp_a0 - 0x10));
+            var_a2->scroll_target = temp_v1_3 - (temp_a0 - 0x10);
         }
     }
-    (*(s16 *)((u8 *)var_a2 + 0xC)) = 0;
+    var_a2->scroll_ticks = 0;
     g_pad_input = 0;
     D_801227BC = func_800A9D70(0);
     D_801227C0 = 0xF;
@@ -164,16 +183,16 @@ extern u8 *func_800A88A0(u8 *, u32 *, u8 *, s32, s32, s32, s32);
 extern void func_800A8B90(u8 *, s32, s32);
 extern void func_800AF350(u8 *);
 /**
- * Format and draw one numeric value using a temporary text buffer.
- * @param ot Ordering table.
+ * @brief Format and draw one numeric value using a temporary text buffer.
  * @param cursor Primitive buffer cursor.
+ * @param ot Ordering table.
  * @param number Value to format.
- * @param color Text color selector.
  * @param position Signed coordinates stored as halfwords.
+ * @param color Text color selector.
  * @param flags Text rendering flags.
  * @return Cursor after the generated text primitives.
  */
-static __inline__ u8 *draw_number(u32 *ot, u8 *cursor, s32 number, s32 color, u16 *position,
+static __inline__ u8 *draw_number(u8 *cursor, u32 *ot, s32 number, u16 *position, s32 color,
                                   s32 flags)
 {
     u8 text[64];
@@ -181,7 +200,7 @@ static __inline__ u8 *draw_number(u32 *ot, u8 *cursor, s32 number, s32 color, u1
     return func_800A88A0(cursor, ot, text, color, (s16)position[0], (s16)position[1], flags);
 }
 /**
- * Draw the visible name/value rows and append the highlighted-row tile.
+ * @brief Draw the visible item rows and append the highlighted-row tile.
  * @param ot Ordering table.
  * @param cursor Primitive buffer cursor.
  * @param scroll_x Horizontal scroll offset.
@@ -189,44 +208,40 @@ static __inline__ u8 *draw_number(u32 *ot, u8 *cursor, s32 number, s32 color, u1
  * @param unused Unused callback argument retained for the six-argument ABI.
  * @param window Window used to prepare the list and determine its clipping height.
  * @return Cursor after the list, highlight tile, and draw-mode packet.
- * @note Partial match; detailed probe results are retained in working/func_800AF0E8.
  */
 u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, Window *window)
 {
     u16 point[4];
+    Window *draw_window;
     s32 number_x;
     u8 *entry;
     u8 *names;
-    u16 *position;
     s32 y;
     s32 index;
     u8 *mode;
     Tile *tile;
-    func_800AF350((u8 *)window);
+
+    draw_window = window;
+    func_800AF350((u8 *)draw_window);
     if (D_80122714 == 0)
     {
         return cursor;
     }
-    index = 0;
-    if (D_80122734 > 0)
+
+    for (index = 0; index < D_80122734; index++)
     {
         names = D_800EE72C;
         number_x = 0xCA - scroll_x;
-        position = point;
-        entry = D_80122738;
-        do
+        entry = D_80122738 + index * 2;
+        y = index * 16 - scroll_y;
+        if (y >= -15 && y < (s32)((draw_window->size >> 1) & 255))
         {
-            y = index * 16 - scroll_y;
-            if (y >= -15 && y < (s32)((window->size >> 1) & 255))
-            {
-                cursor =
-                    func_800A88A0(cursor, ot, names + ((u16 *)names)[entry[0]], 4, -scroll_x, y, 0);
-                point[1] = y;
-                point[0] = number_x;
-                cursor = draw_number(ot, cursor, entry[1], 4, position, 1);
-            }
-            entry += 2;
-        } while (++index < D_80122734);
+            cursor = func_800A88A0(cursor, ot, (u8 *)(((u16 *)names)[entry[0]] + (u32)names), 4,
+                                    -scroll_x, y, 0);
+            point[1] = y;
+            point[0] = number_x;
+            cursor = draw_number(cursor, ot, entry[1], point, 4, 1);
+        }
     }
     tile = (Tile *)cursor;
     tile->color = 0xF080F0;

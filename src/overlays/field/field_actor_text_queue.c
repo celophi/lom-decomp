@@ -78,28 +78,49 @@ void func_800A623C(s32 arg0, s32 arg1)
     Position *actor;
     s32 offset;
     s32 xoff, x, y, width;
+    s32 screen_y;
+    s32 actor_screen_x;
+    s32 actor_screen_y;
 
-    s32 first, second;
+    s32 first;
     if (arg0 < 2)
     {
         initial_base = (u8 *)D_801226A0;
         initial = (Slot *)(arg0 * 8 + initial_base);
         if (!((initial->flags >> 17) & 0x3F))
         {
-            first = arg1 * 2;
-            if (arg1 < 0)
+            do
             {
-                first = ((u32)arg1 >> 16) & 0xFF;
-                second = first * 0x250 + 0x5F0;
-                first = (s32)g_pad_ctx + second;
-                second = ((arg1 & 0xFF) << 6) + 0x150;
-            }
-            else
-            {
-                second = (u32)D_800ED064;
-                first = *(u16 *)(first + second);
-            }
-            initial->text = (u8 *)(first + second);
+                first = arg1 * 2;
+                if (arg1 < 0)
+                {
+                    s32 second;
+                    s32 selector;
+                    u8 **pad_context_ptr;
+                    do
+                    {
+                        pad_context_ptr = &g_pad_ctx;
+                    } while (0);
+                    selector = (u32)arg1 >> 16;
+                    selector &= 0xFF;
+                    second = selector * 0x250 + 0x5F0;
+                    first = (s32)*pad_context_ptr + second;
+                    second = ((arg1 & 0xFF) << 6) + 0x150;
+                    first += second;
+                    initial->text = (u8 *)first;
+                }
+                else
+                {
+                    s32 second;
+                    second = (u32)D_800ED064;
+                    first = *(u16 *)(first + second);
+                    do
+                    {
+                        first += second;
+                        initial->text = (u8 *)first;
+                    } while (0);
+                }
+            } while (0);
             xoff = D_800F22A0;
             base = D_801226A0;
             offset = arg0 * 8;
@@ -118,7 +139,8 @@ void func_800A623C(s32 arg0, s32 arg1)
             }
             arg0 = xoff >> 8;
             xoff = D_800F22A4;
-            point[0] = arg0 + ((x >> 8) + 160);
+            actor_screen_x = (x >> 8) + 160;
+            point[0] = arg0 + actor_screen_x;
             if (xoff < 0)
             {
                 xoff += 255;
@@ -130,13 +152,14 @@ void func_800A623C(s32 arg0, s32 arg1)
                 y += 255;
             }
             xoff = actor->z;
-            y = x + ((y >> 8) + 112);
+            actor_screen_y = (y >> 8) + 112;
+            screen_y = x + actor_screen_y;
             if (xoff < 0)
             {
                 xoff += 511;
             }
             x = D_800F22A8;
-            xoff = y - (xoff >> 9);
+            xoff = screen_y - (xoff >> 9);
             if (x < 0)
             {
                 x += 511;
@@ -159,8 +182,12 @@ void func_800A623C(s32 arg0, s32 arg1)
             {
                 point[1] = 50;
             }
-            output = (Slot *)(offset + (u8 *)base);
-            output->flags = (output->flags & ~0x1FF) | (point[0] & 0x1FF);
+            output = (Slot *)((s32)offset + (s32)base);
+            {
+                s32 point_x;
+                point_x = point[0];
+                output->flags = (output->flags & ~0x1FF) | (point_x & 0x1FF);
+            }
             output->flags = (output->flags & 0xFFFE01FF) | (((point[1] + 4) & 0xFF) << 9);
         }
     }

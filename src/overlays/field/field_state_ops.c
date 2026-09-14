@@ -283,122 +283,125 @@ s32 func_800B2D34(u8 *arg0, s32 arg1)
 }
 
 extern u8 D_800F0B50[];
-extern void func_8008B500(s32, s32);
+extern s32 func_8008B500(s32, s32);
 
-/** @brief Scale current attributes against their base values and signal the change. */
-void func_800B2D64(u8 *arg0, u32 arg1, u32 arg2, s32 arg3)
+/**
+ * @brief Update record values selected by a selector and optionally signal the associated actor.
+ * @param record Record containing the values and actor-state pointer used by the operation.
+ * @param selector Value or grouped-operation selector.
+ * @param scale Scale factor and signal selector used by the selected operation.
+ * @param signal Nonzero to emit the associated actor signal when applicable.
+ * @return Result produced by the selected operation or signaling helper.
+ */
+s32 func_800B2D64(u8 *record, u32 selector, u32 scale, s32 signal)
 {
-    s32 var_a1;
-    s32 var_s0;
-    u32 var_v1;
-    u8 temp_a2;
-    u8 temp_a2_2;
-    u32 var_v0;
-    u8 *temp_a0;
+    s32 recursive_selector;
+    s32 index;
+    u32 scaled_value;
+    u32 maximum_value;
+    u8 minimum_value;
+    u32 result;
+    u8 *record_ptr;
 
-    if (*(s32 *)(*(u8 **)(arg0 + 0x10) + 4) == 0)
-
+    if (*(s32 *)(*(u8 **)(record + 0x10) + 4) == 0)
     {
-        return;
+        return 0;
     }
-    temp_a0 = arg0 + arg1;
-    if (arg1 < 8U)
+    record_ptr = record + selector;
+    if (selector < 8U)
     {
-        var_v1 = (u32) (temp_a0[0x30] * arg2) >> 3;
-        if (arg2 >= 9U)
+        scaled_value = (u32)(record_ptr[0x30] * scale) >> 3;
+        if (scale >= 9U)
         {
-            temp_a2_2 = temp_a0[0x28];
-            var_v0 = var_v1 < temp_a2_2;
-            if (var_v0 != 0)
+            minimum_value = record_ptr[0x28];
+            result = scaled_value < minimum_value;
+            if (result != 0)
             {
-                var_v1 = (u32) temp_a2_2;
+                scaled_value = (u32)minimum_value;
             }
-            temp_a0[0x28] = (u8) var_v1;
-            if (arg3 != 0)
+            record_ptr[0x28] = (u8)scaled_value;
+            if (signal != 0)
             {
-                (*(u8 **)(arg0 + 0x10))[0x60] = (u8) D_800F0B50[arg2 - 8];
-                var_v0 = (*(u8 **)(arg0 + 0x10))[0x60];
-                if (var_v0 != 0)
+                (*(u8 **)(record + 0x10))[0x60] = (u8)D_800F0B50[scale - 8];
+                result = (*(u8 **)(record + 0x10))[0x60];
+                if (result != 0)
                 {
-                    func_8008B500(arg0[4], arg1 + 0x9E);
-                    return;
+                    return func_8008B500(record[4], selector + 0x9E);
                 }
             }
-
-            return;
+            return result;
         }
-        temp_a2 = temp_a0[0x28];
-        var_v0 = temp_a2 < var_v1;
-        if (var_v0 != 0)
+        maximum_value = record_ptr[0x28];
+        result = maximum_value < scaled_value;
+        if (result != 0)
         {
-            var_v1 = (u32) temp_a2;
+            scaled_value = (u32)maximum_value;
         }
-        temp_a0[0x28] = (u8) var_v1;
-        if (arg3 != 0)
+        record_ptr[0x28] = (u8)scaled_value;
+        if (signal != 0)
         {
-            (*(u8 **)(arg0 + 0x10))[0x60] = (u8) D_800F0B50[8 - arg2];
-            var_v0 = (*(u8 **)(arg0 + 0x10))[0x60];
-            if (var_v0 != 0)
+            (*(u8 **)(record + 0x10))[0x60] = (u8)D_800F0B50[8 - scale];
+            result = (*(u8 **)(record + 0x10))[0x60];
+            if (result != 0)
             {
-                func_8008B500(arg0[4], arg1 + 0xA7);
-                    return;
+                return func_8008B500(record[4], selector + 0xA7);
             }
         }
-
-        return;
+        return result;
     }
-    var_v0 = arg1 < 9U;
-    if (arg1 != 9)
+    if (selector != 9)
     {
-        if (var_v0 == 0)
+        result = selector < 9U;
+        if (result == 0)
         {
-            switch (arg1) {                         /* irregular */
-            case 10:
-                func_800B2D64(arg0, 0, arg2, 0);
-                func_800B2D64(arg0, 1, arg2, 0);
-                var_a1 = 2;
-block_27:
-                func_800B2D64(arg0, var_a1, arg2, 0);
-
-                return;
-            case 11:
-                func_800B2D64(arg0, 3, arg2, 0);
-                func_800B2D64(arg0, 5, arg2, 0);
-                var_a1 = 6;
-                goto block_27;
-            default:
-                return;
-            }
-        }
-        else
-        {
-
-            return;
-        }
-    }
-    else
-    {
-        var_s0 = 0;
-        do
-        {
-            func_800B2D64(arg0, var_s0, arg2, 0);
-            var_s0 += 1;
-            var_v0 = var_s0 < 8;
-        } while (var_v0 != 0);
-        if (arg3 != 0)
-        {
-            if (arg2 >= 9U)
+            if (selector == 10)
             {
-                (*(u8 **)(arg0 + 0x10))[0x60] = (u8) D_800F0B50[arg2 - 8];
-                func_8008B500(arg0[4], 0x9D);
-                    return;
+                goto case_10;
             }
-            (*(u8 **)(arg0 + 0x10))[0x60] = (u8) D_800F0B50[8 - arg2];
-            func_8008B500(arg0[4], 0xA6);
-                    return;
+            if (selector == 11)
+            {
+                goto case_11;
+            }
+            return 11;
         }
-        return;
+        return result;
     }
+
+    index = 0;
+    do
+    {
+        func_800B2D64(record, index, scale, 0);
+        index += 1;
+        result = index < 8;
+    } while (result != 0);
+    if (signal != 0)
+    {
+        if (scale >= 9U)
+        {
+            (*(u8 **)(record + 0x10))[0x60] = (u8)D_800F0B50[scale - 8];
+            return func_8008B500(record[4], 0x9D);
+        }
+        (*(u8 **)(record + 0x10))[0x60] = (u8)D_800F0B50[8 - scale];
+        return func_8008B500(record[4], 0xA6);
+    }
+    return result;
+
+case_10:
+    func_800B2D64(record, 0, scale, 0);
+    func_800B2D64(record, 1, scale, 0);
+    record_ptr = record;
+    recursive_selector = 2;
+    goto recursive_tail;
+
+case_11:
+    func_800B2D64(record, 3, scale, 0);
+    func_800B2D64(record, 5, scale, 0);
+    record_ptr = record;
+    recursive_selector = 6;
+
+recursive_tail:
+    result = func_800B2D64(record_ptr, recursive_selector, scale, 0);
+    return result;
 }
 
 /**
