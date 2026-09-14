@@ -86,103 +86,96 @@ void func_800C57E0(void)
     field_open_gosub_screen_sequence(&D_800F19AC);
 }
 
-/** @brief Creates a group from selected inventory records.
- * @note Initial nonmatching C recovered from the original assembly.
+/**
+ * @brief Creates a group from selected inventory records.
  */
 void func_800C5804(void)
 {
-    u8 *var_v0;
-    s32 *var_s1_2;
-    s32 temp_a0;
-    s32 temp_v1_2;
-    s32 var_s0_2;
-    s32 var_s0_3;
-    s32 var_v1;
-    s8 var_a0;
-    s8 var_s0;
-    s8 var_s1;
-    u8 temp_v0;
-    u8 temp_v1;
+    s32 entry_offset;
+    s32 packed_flags;
+    s32 scan_index;
+    s32 candidate_index;
+    s32 index;
+    s32 unused_index;
+    u8 count;
+    u8 record_index;
 
-    var_s1 = 3;
-    var_s0 = 0;
-    var_a0 = 0;
+    unused_index = 3;
+    index = 0;
     do
     {
-        var_v1 = 0;
-        var_v0 = g_menuLayoutBuffer;
-        loop_2:
-        if (var_v0[0x29D8] == var_s0)
+        candidate_index = index;
+        scan_index = 0;
+        do
         {
-            var_a0 = 3;
-        }
-        var_v1 += 1;
-        var_v0 = var_v1 + g_menuLayoutBuffer;
-        if (var_v1 < 3)
+            if (g_menuLayoutBuffer[scan_index + 0x29D8] == index)
+            {
+                candidate_index = 3;
+            }
+            scan_index += 1;
+        } while (scan_index < 3);
+        if (candidate_index != 3)
         {
-            goto loop_2;
+            unused_index = candidate_index;
         }
-        if (var_a0 != 3)
-        {
-            var_s1 = var_a0;
-        }
-        var_s0 += 1;
-        var_a0 = var_s0;
-    } while (var_s0 < 3);
-    if (var_s1 != 3)
+        index += 1;
+    } while (index < 3);
+    if (unused_index != 3)
     {
-        func_800C4364(var_s1);
-        temp_v0 = g_menuLayoutBuffer[0x29D5] + 1;
-        g_menuLayoutBuffer[0x29D5] = temp_v0;
-        if ((u32) (temp_v0 & 0xFF) >= 0xC9U)
+        func_800C4364(unused_index);
+        count = g_menuLayoutBuffer[0x29D5] + 1;
+        g_menuLayoutBuffer[0x29D5] = count;
+        if ((u32) (count & 0xFF) >= 0xC9U)
         {
             g_menuLayoutBuffer[0x29D5] = 0xC8U;
         }
-        temp_v1 = g_menuLayoutBuffer[D_80122C00 + 0x29D8];
-        if (temp_v1 != 3)
+        record_index = g_menuLayoutBuffer[D_80122C00 + 0x29D8];
+        if (record_index != 3)
         {
             if (g_menuLayoutBuffer[0x29D8] == 3)
             {
-                g_menuLayoutBuffer[0x29D8] = temp_v1;
+                g_menuLayoutBuffer[0x29D8] = record_index;
             }
             else if (g_menuLayoutBuffer[0x29D9] == 3)
             {
-                g_menuLayoutBuffer[0x29D9] = temp_v1;
+                g_menuLayoutBuffer[0x29D9] = record_index;
             }
             else if (g_menuLayoutBuffer[0x29DA] == 3)
             {
-                g_menuLayoutBuffer[0x29DA] = temp_v1;
+                g_menuLayoutBuffer[0x29DA] = record_index;
             }
         }
-        g_menuLayoutBuffer[D_80122C00 + 0x29D8] = var_s1;
-        temp_v1_2 = ((*(s32 *)&g_menuLayoutBuffer[0x29D4]) & ~0xF) | (((g_menuLayoutBuffer[0x29D4] & 0xF) + 1) & 0xF);
-        (*(s32 *)&g_menuLayoutBuffer[0x29D4]) = temp_v1_2;
+        g_menuLayoutBuffer[D_80122C00 + 0x29D8] = unused_index;
+        packed_flags = ((*(s32 *)&g_menuLayoutBuffer[0x29D4]) & ~0xF) | (((g_menuLayoutBuffer[0x29D4] & 0xF) + 1) & 0xF);
+        (*(s32 *)&g_menuLayoutBuffer[0x29D4]) = packed_flags;
         if ((u32) (g_menuLayoutBuffer[0x29D4] & 0xF) >= 4U)
         {
-            (*(s32 *)&g_menuLayoutBuffer[0x29D4]) = (s32) ((temp_v1_2 & ~0xF) | 3);
+            (*(s32 *)&g_menuLayoutBuffer[0x29D4]) = (s32) ((packed_flags & ~0xF) | 3);
         }
-        var_s0_2 = 0;
+        index = 0;
         if (g_gosub_result_count > 0)
         {
-            var_s1_2 = g_gosub_result_values;
             do
             {
-                func_800A8F8C((g_menuLayoutBuffer[D_80122C00 + 0x29D8] * 0x14C) + (g_menuLayoutBuffer + 0x2B58) + (var_s0_2 << 6), (*var_s1_2 << 6) + (g_menuLayoutBuffer + 0xCE0));
-                var_s0_2 += 1;
-                g_menuLayoutBuffer[(*var_s1_2 << 6) + 0xCE0] = 0;
-                var_s1_2 += 1;
-            } while (var_s0_2 < g_gosub_result_count);
+                u8 *destination;
+
+                destination = (g_menuLayoutBuffer[D_80122C00 + 0x29D8] * 0x14C) + (g_menuLayoutBuffer + 0x2B58);
+                destination += index << 6;
+                func_800A8F8C(destination, (g_gosub_result_values[index] << 6) + (g_menuLayoutBuffer + 0xCE0));
+                g_menuLayoutBuffer[(g_gosub_result_values[index] << 6) + 0xCE0] = 0;
+                index += 1;
+            } while (index < g_gosub_result_count);
         }
         func_800A8FB4();
-        var_s0_3 = g_gosub_result_count;
-        if (var_s0_3 < 4)
+        index = g_gosub_result_count;
+        if (index < 4)
         {
             do
             {
-                temp_a0 = var_s0_3 << 6;
-                var_s0_3 += 1;
-                g_menuLayoutBuffer[temp_a0 + g_menuLayoutBuffer[D_80122C00 + 0x29D8] * 0x14C + 0x2B58] = 0;
-            } while (var_s0_3 < 4);
+                entry_offset = index << 6;
+                index += 1;
+                g_menuLayoutBuffer[entry_offset + g_menuLayoutBuffer[D_80122C00 + 0x29D8] * 0x14C + 0x2B58] = 0;
+            } while (index < 4);
         }
         func_800A54D0();
     }
