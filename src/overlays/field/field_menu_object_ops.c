@@ -174,110 +174,127 @@ void func_800C63A0(void)
 
 /**
  * @brief Move the selected object toward its target position with decreasing steps.
- * @note Nonmatching m2c translation; target components are signed halfwords,
- * but negating the vertical component produces a full signed word.
+ *
+ * Fetches the object's position, converts it from fixed-point units, moves the
+ * horizontal coordinates toward their targets while below the target height,
+ * then moves the vertical coordinate toward its target.
  */
 void func_800C642C(void)
 {
     s32 pos[3];
-    s32 temp_a1;
-    s32 temp_a0;
-    s32 temp_a0_2;
-    s32 temp_a0_3;
-    s32 temp_a0_4;
-    s32 temp_a2;
-    s32 var_v0;
-    s32 var_v0_2;
-    s32 var_v1;
-    s32 var_v1_2;
-    s32 var_v1_3;
-    s32 var_v1_4;
+    s32 target_y;
+    s32 target_x;
+    s32 target_z;
+    s32 scaled_y;
+    s32 x_delta;
+    s32 z_delta;
+    s32 y_delta;
+    s32 scaled_x;
+    s32 raw_x;
+    s32 raw_z;
+    s32 raw_y;
+    s32 x_distance;
+    s32 z_distance;
+    s32 y_distance;
 
     func_80087F44(D_80122C0C.unk0, pos);
-    var_v0 = pos[0];
-    if (var_v0 < 0)
+    raw_x = pos[0];
+    if (raw_x < 0)
     {
-        var_v0 += 0xFF;
+        raw_x += 0xFF;
     }
-    var_v1 = pos[1];
-    temp_a2 = var_v0 >> 8;
-    pos[0] = temp_a2;
-    if (var_v1 < 0)
+    raw_y = pos[1];
+    scaled_x = raw_x >> 8;
+    pos[0] = scaled_x;
+    if (raw_y < 0)
     {
-        var_v1 += 0xFF;
+        raw_y += 0xFF;
     }
-    var_v0_2 = pos[2];
-    temp_a0 = var_v1 >> 8;
-    pos[1] = temp_a0;
-    if (var_v0_2 < 0)
+    raw_z = pos[2];
+    scaled_y = raw_y >> 8;
+    pos[1] = scaled_y;
+    if (raw_z < 0)
     {
-        var_v0_2 += 0xFF;
+        raw_z += 0xFF;
     }
-    pos[2] = var_v0_2 >> 8;
-    temp_a1 = -D_80122C0C.unkC;
-    if ((temp_a0 == temp_a1) || (temp_a0 < temp_a1))
+    pos[2] = raw_z >> 8;
+
+    target_y = -D_80122C0C.unkC;
+    target_x = D_80122C0C.unk8;
+    target_z = D_80122C0C.unkA;
+
+    if ((scaled_y == target_y) || (scaled_y < target_y))
     {
-        temp_a0_2 = temp_a2 - D_80122C0C.unk8;
-        var_v1_2 = temp_a0_2;
-        if (temp_a0_2 < 0)
+        x_delta = scaled_x - target_x;
+        x_distance = x_delta;
+        if (x_delta < 0)
         {
-            var_v1_2 = -var_v1_2;
+            x_delta++;
+            x_delta--;
+            x_distance = -x_distance;
         }
-        if ((var_v1_2 * 2) >= 4)
+        if ((x_distance * 2) >= 4)
         {
-            pos[0] = D_80122C0C.unk8 + ((temp_a0_2 * 2) / 3);
+            pos[0] = target_x + ((x_delta * 2) / 3);
         }
-    else if (var_v1_2 > 0)
-    {
-            pos[0] = temp_a2 - (temp_a0_2 / var_v1_2);
-        }
-    else
-    {
-            pos[0] = (s32) D_80122C0C.unk8;
-        }
-    }
-    if ((pos[1] == temp_a1) || (pos[1] < temp_a1))
-    {
-        temp_a0_3 = pos[2] - D_80122C0C.unkA;
-        var_v1_3 = temp_a0_3;
-        if (temp_a0_3 < 0)
+        else if (x_distance > 0)
         {
-            var_v1_3 = -var_v1_3;
+            pos[0] = scaled_x - (x_delta / x_distance);
         }
-        if ((var_v1_3 * 2) >= 4)
+        else
         {
-            pos[2] = D_80122C0C.unkA + ((temp_a0_3 * 2) / 3);
-        }
-    else if (var_v1_3 > 0)
-    {
-            pos[2] -= temp_a0_3 / var_v1_3;
-        }
-    else
-    {
-            pos[2] = (s32) D_80122C0C.unkA;
+            pos[0] = target_x;
         }
     }
-    if (((pos[0] == D_80122C0C.unk8) && (pos[2] == D_80122C0C.unkA)) || (pos[1] >= temp_a1))
+
+    if ((pos[1] == target_y) || (pos[1] < target_y))
     {
-        temp_a0_4 = pos[1] - temp_a1;
-        var_v1_4 = temp_a0_4;
-        if (temp_a0_4 < 0)
+        z_delta = pos[2] - target_z;
+        z_distance = z_delta;
+        if (z_delta < 0)
         {
-            var_v1_4 = -var_v1_4;
+            z_delta++;
+            z_delta--;
+            z_distance = -z_distance;
         }
-        if ((var_v1_4 * 2) >= 4)
+        if ((z_distance * 2) >= 4)
         {
-            pos[1] = temp_a1 + ((temp_a0_4 * 2) / 3);
+            pos[2] = target_z + ((z_delta * 2) / 3);
         }
-    else if (var_v1_4 > 0)
-    {
-            pos[1] -= temp_a0_4 / var_v1_4;
+        else if (z_distance > 0)
+        {
+            pos[2] -= z_delta / z_distance;
         }
-    else
-    {
-            pos[1] = (s32) temp_a1;
+        else
+        {
+            pos[2] = target_z;
         }
     }
+
+    if (((pos[0] == target_x) && (pos[2] == target_z)) || (pos[1] >= target_y))
+    {
+        y_delta = pos[1] - target_y;
+        y_distance = y_delta;
+        if (y_delta < 0)
+        {
+            y_delta++;
+            y_delta--;
+            y_distance = -y_distance;
+        }
+        if ((y_distance * 2) >= 4)
+        {
+            pos[1] = target_y + ((y_delta * 2) / 3);
+        }
+        else if (y_distance > 0)
+        {
+            pos[1] -= y_delta / y_distance;
+        }
+        else
+        {
+            pos[1] = target_y;
+        }
+    }
+
     func_80087D8C(D_80122C0C.unk0, pos[0], pos[1], pos[2]);
 }
 

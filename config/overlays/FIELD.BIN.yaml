@@ -322,7 +322,7 @@ segments:
       - [0x742A9, c, field_group_stat_transfer] # gcc272_cdk; active-record transfer, WIP
       - [0x746F5, c, func_800C4364] # gcc280_g0, 100%
       - [0x75A95, c, field_menu_group_ops] # gcc280_g0; group creation/release, state and ordering
-      - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; func_800C642C WIP
+      - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; func_800C642C 100%, func_800C66DC WIP
       - [0x76C59, c, field_menu_slot_ops] # gcc280_g0, inferred menu function family; func_800C6AF0 100%
       - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, 100%
       - [0x779FD, c, field_menu_action_runtime] # gcc280_g0, func_800C766C .. action-slot reset; 14 funcs, one WIP
