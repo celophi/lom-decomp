@@ -881,14 +881,12 @@ u8 *func_8009FE54(s32 *base, u8 *arg1, VECTOR *pos, s32 radius)
  * @param forward Nonzero extends toward positive X; zero extends toward negative X.
  * @return First byte after the emitted primitives and draw-page command.
  * @note Emits at least one strip and at most four, with nine quads per strip.
- * @note Unused local workspace storage preserves the recovered frame layout.
- * @note WIP: 80.566540% standalone; unchanged instruction stream in this TU
- *       (the merged diff drops one exact row solely because an intra-object
- *       j func_800A0B0C+0x2b8 renders at a shifted address - a position
- *       artifact, byte-identical and links identically).
+ * @note Adjacent strips are separated by twice their 0x1400 fixed-point width.
  */
-#define ADD_PACKET_A0(depth) (*(s32*)primitive = (*(s32*)primitive & tag_mask) | (ordering_table[depth] & addr_mask), ordering_table[depth] = (ordering_table[depth] & tag_mask) | ((s32)primitive & addr_mask))
-u8 *func_800A0B0C(s32 *ordering_table, u8 *primitive_buffer, VECTOR *position, s32 extent, s32 forward)
+#define ADD_PACKET_A0(depth)                                                                                                                                   \
+    (*(s32*)primitive = (*(s32*)primitive & tag_mask) | (ordering_table[depth] & addr_mask),                                                                   \
+     ordering_table[depth] = (ordering_table[depth] & tag_mask) | ((s32)primitive & addr_mask))
+u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s32 extent, s32 forward)
 {
     extern s32 D_801178D8;
     s32 trig_angle;
@@ -898,25 +896,27 @@ u8 *func_800A0B0C(s32 *ordering_table, u8 *primitive_buffer, VECTOR *position, s
     s32 strip_index;
     s32 first_xy;
     s32 second_xy;
-    /* Only element 1 is accessed; other recovered workspace roles are unknown. */
-    struct { VECTOR rotated; VECTOR world; VECTOR unused; SVECTOR input; MATRIX matrices[5]; } work;
-    s32 *temp_v1_8;
-    u8 *primitive;
-    s32 temp_a0_2;
-    s32 temp_t0;
-    s32 temp_v1;
-    s32 temp_v1_5;
-    s32 temp_v1_6;
-    s32 temp_v1_7;
-    s32 temp_v1_9;
+    /* This effect uses the world vector of the shared strip workspace layout. */
+    struct
+    {
+        VECTOR rotated;
+        VECTOR world;
+        VECTOR unused;
+        SVECTOR input;
+        MATRIX matrices[5];
+    } work;
+    u8* primitive;
+    s32 segment_depth;
+    s32 closing_depth;
+    s32 drawpage_depth;
     s32 angle;
     s32 offset;
-    s32 var_v0;
-    s32 var_v0_10;
-    s32 var_v0_4;
-    s32 var_v0_7;
-    u8 *strip_code;
-    u8 *outer_code;
+    s32 first_x;
+    s32 outer_x;
+    s32 second_x;
+    s32 inner_x;
+    u8* strip_code;
+    u8* outer_code;
 
     s32 addr_mask;
     s32 tag_mask;
@@ -931,162 +931,218 @@ next_strip:
     /* Save both initial packed XY values to close the strip after eight steps. */
     if (forward != 0)
     {
-        var_v0 = position->vx + offset;
+        first_x = position->vx + offset;
     }
     else
     {
-        var_v0 = position->vx - offset;
+        first_x = position->vx - offset;
     }
-    do {
-    work.world.vx = var_v0;
-    work.world.vy = position->vy;
-    work.world.vz = position->vz + 0x2000;
+    do
+    {
+        work.world.vx = first_x;
+        work.world.vy = position->vy;
+        work.world.vz = position->vz + 0x2000;
     } while (0);
-    screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR *)&work.world)->vx / 256;
+    screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
     camera_y = D_800F22A4;
-    *(s16 *)(outer_code + 1) = screen_x;
-    if (camera_y < 0) camera_y += 255;
-    *(s16 *)(outer_code + 3) = 112 + (camera_y >> 8) + ((volatile VECTOR *)&work.world)->vy / 256 - ((volatile VECTOR *)&work.world)->vz / 512 - D_800F22A8 / 512;
-    first_xy = (s32) *(s32 *)(outer_code + (1));
+    *(s16*)(outer_code + 1) = screen_x;
+    if (camera_y < 0)
+    {
+        camera_y += 255;
+    }
+    *(s16*)(outer_code + 3) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+    first_xy = (s32) * (s32*)(outer_code + (1));
     if (forward != 0)
     {
-        var_v0_4 = position->vx + offset + 0x1400;
+        second_x = position->vx + offset + 0x1400;
     }
     else
     {
-        var_v0_4 = (position->vx - offset) - 0x1400;
+        second_x = (position->vx - offset) - 0x1400;
     }
-    do {
-    work.world.vx = var_v0_4;
-    work.world.vy = position->vy;
-    work.world.vz = position->vz + 0x2000;
+    do
+    {
+        work.world.vx = second_x;
+        work.world.vy = position->vy;
+        work.world.vz = position->vz + 0x2000;
     } while (0);
-    screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR *)&work.world)->vx / 256;
+    screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
     camera_y = D_800F22A4;
-    *(s16 *)(outer_code + 9) = screen_x;
-    if (camera_y < 0) camera_y += 255;
-    *(s16 *)(outer_code + 11) = 112 + (camera_y >> 8) + ((volatile VECTOR *)&work.world)->vy / 256 - ((volatile VECTOR *)&work.world)->vz / 512 - D_800F22A8 / 512;
+    *(s16*)(outer_code + 9) = screen_x;
+    if (camera_y < 0)
+    {
+        camera_y += 255;
+    }
+    *(s16*)(outer_code + 11) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
     step = 1;
     angle = 0x100;
     strip_code = primitive + 7;
-    second_xy = (s32) *(s32 *)(outer_code + (9));
+    second_xy = (s32) * (s32*)(outer_code + (9));
 next_segment:
+{
+    do
     {
-        do {
-        do {
-        trig_angle = angle;
-        if (forward != 0)
+        do
         {
-            var_v0_7 = position->vx + offset + angle;
-        }
-        else
-        {
-            var_v0_7 = (position->vx - offset) - angle;
-        }
-    work.world.vx = var_v0_7;
-        work.world.vy = position->vy - (rsin(trig_angle) * 2);
-        work.world.vz = position->vz + (rcos(angle) * 2);
-    } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR *)&work.world)->vx / 256;
-    camera_y = D_800F22A4;
-    *(s16 *)(strip_code + 17) = screen_x;
-    if (camera_y < 0) camera_y += 255;
-    *(s16 *)(strip_code + 19) = 112 + (camera_y >> 8) + ((volatile VECTOR *)&work.world)->vy / 256 - ((volatile VECTOR *)&work.world)->vz / 512 - D_800F22A8 / 512;
-        do {
-        *(s32 *)(strip_code + (37)) = (s32) *(s32 *)(strip_code + (17));
-        do {
-        trig_angle = angle;
-        if (forward != 0)
-        {
-            var_v0_10 = position->vx + offset + angle + 0x1400;
-        }
-        else
-        {
-            var_v0_10 = ((position->vx - offset) - angle) - 0x1400;
-        }
-    work.world.vx = var_v0_10;
-        work.world.vy = position->vy - (rsin(trig_angle) * 2);
-        work.world.vz = position->vz + (rcos(angle) * 2);
-    } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR *)&work.world)->vx / 256;
-    camera_y = D_800F22A4;
-    *(s16 *)(strip_code + 25) = screen_x;
-    if (camera_y < 0) camera_y += 255;
-    *(s16 *)(strip_code + 27) = 112 + (camera_y >> 8) + ((volatile VECTOR *)&work.world)->vy / 256 - ((volatile VECTOR *)&work.world)->vz / 512 - D_800F22A8 / 512;
-        /* Fade the curved strip from black to blue. */
-        *(s32 *)(strip_code + (-3)) = 0;
-        *(s32 *)(strip_code + (5)) = 0xA00000;
-        *(s32 *)(strip_code + (13)) = 0;
-        *(s32 *)(strip_code + (21)) = 0xA00000;
-        *(s32 *)(strip_code + (45)) = (s32) *(s32 *)(strip_code + (25));
-        SetPolyG4((POLY_G4 *)primitive);
-        *strip_code |= 2;
-        temp_v1 = position->vz >> 7;
-        if (temp_v1 < 0) {
-            ADD_PACKET_A0(0);
-            primitive += 0x24; strip_code += 0x24; outer_code += 0x24;
-        } else if (temp_v1 >= 0x1000) {
-            ADD_PACKET_A0(0xFFF);
-            primitive += 0x24; strip_code += 0x24; outer_code += 0x24;
-        } else {
-            ADD_PACKET_A0(position->vz >> 7);
-            primitive += 0x24; strip_code += 0x24; outer_code += 0x24;
-        }
-        angle += 0x100;
-        step++;
+            trig_angle = angle;
+            if (forward != 0)
+            {
+                inner_x = position->vx + offset + angle;
+            }
+            else
+            {
+                inner_x = (position->vx - offset) - angle;
+            }
+            work.world.vx = inner_x;
+            work.world.vy = position->vy - (rsin(trig_angle) * 2);
+            work.world.vz = position->vz + (rcos(angle) * 2);
         } while (0);
+        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = D_800F22A4;
+        *(s16*)(strip_code + 17) = screen_x;
+        if (camera_y < 0)
+        {
+            camera_y += 255;
+        }
+        *(s16*)(strip_code + 19) =
+            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+        do
+        {
+            *(s32*)(strip_code + (37)) = (s32) * (s32*)(strip_code + (17));
+            do
+            {
+                trig_angle = angle;
+                if (forward != 0)
+                {
+                    outer_x = position->vx + offset + angle + 0x1400;
+                }
+                else
+                {
+                    outer_x = ((position->vx - offset) - angle) - 0x1400;
+                }
+                work.world.vx = outer_x;
+                work.world.vy = position->vy - (rsin(trig_angle) * 2);
+                work.world.vz = position->vz + (rcos(angle) * 2);
+            } while (0);
+            screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+            camera_y = D_800F22A4;
+            *(s16*)(strip_code + 25) = screen_x;
+            if (camera_y < 0)
+            {
+                camera_y += 255;
+            }
+            *(s16*)(strip_code + 27) =
+                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+            /* Fade the curved strip from black to blue. */
+            *(s32*)(strip_code + (-3)) = 0;
+            *(s32*)(strip_code + (5)) = 0xA00000;
+            *(s32*)(strip_code + (13)) = 0;
+            *(s32*)(strip_code + (21)) = 0xA00000;
+            *(s32*)(strip_code + (45)) = (s32) * (s32*)(strip_code + (25));
+            SetPolyG4((POLY_G4*)primitive);
+            *strip_code |= 2;
+            segment_depth = position->vz >> 7;
+            if (segment_depth < 0)
+            {
+                ADD_PACKET_A0(0);
+                primitive += 0x24;
+                strip_code += 0x24;
+                outer_code += 0x24;
+            }
+            else if (segment_depth >= 0x1000)
+            {
+                ADD_PACKET_A0(0xFFF);
+                primitive += 0x24;
+                strip_code += 0x24;
+                outer_code += 0x24;
+            }
+            else
+            {
+                ADD_PACKET_A0(position->vz >> 7);
+                primitive += 0x24;
+                strip_code += 0x24;
+                outer_code += 0x24;
+            }
+            angle += 0x100;
+            step++;
         } while (0);
-        }
-        if (step < 9) goto next_segment;
-        *(s32 *)(outer_code + (17)) = first_xy;
-        *(s32 *)(outer_code + (25)) = second_xy;
-        *(s32 *)(outer_code + (-3)) = 0;
-        *(s32 *)(outer_code + (5)) = 0xA000;
-        *(s32 *)(outer_code + (13)) = 0;
-        *(s32 *)(outer_code + (21)) = 0xA000;
-        SetPolyG4((POLY_G4 *)primitive);
-        *(u8 *)(outer_code + (0)) = (u8) (*(u8 *)(outer_code + (0)) | 2);
-        temp_v1_5 = position->vz >> 7;
-        if (temp_v1_5 < 0) {
-            do {
+    } while (0);
+}
+    if (step < 9)
+    {
+        goto next_segment;
+    }
+    *(s32*)(outer_code + (17)) = first_xy;
+    *(s32*)(outer_code + (25)) = second_xy;
+    *(s32*)(outer_code + (-3)) = 0;
+    *(s32*)(outer_code + (5)) = 0xA000;
+    *(s32*)(outer_code + (13)) = 0;
+    *(s32*)(outer_code + (21)) = 0xA000;
+    SetPolyG4((POLY_G4*)primitive);
+    *(u8*)(outer_code + (0)) = (u8)(*(u8*)(outer_code + (0)) | 2);
+    closing_depth = position->vz >> 7;
+    if (closing_depth < 0)
+    {
+        do
+        {
             ADD_PACKET_A0(0);
-            primitive += 0x24; outer_code += 0x24;
-            } while (0);
-        } else if (temp_v1_5 >= 0x1000) {
-            do {
+            primitive += 0x24;
+            outer_code += 0x24;
+        } while (0);
+    }
+    else if (closing_depth >= 0x1000)
+    {
+        do
+        {
             ADD_PACKET_A0(0xFFF);
-            primitive += 0x24; outer_code += 0x24;
-            } while (0);
-        } else {
-            do {
+            primitive += 0x24;
+            outer_code += 0x24;
+        } while (0);
+    }
+    else
+    {
+        do
+        {
             ADD_PACKET_A0(position->vz >> 7);
-            primitive += 0x24; outer_code += 0x24;
-            } while (0);
-        }
-        do {
+            primitive += 0x24;
+            outer_code += 0x24;
+        } while (0);
+    }
+    do
+    {
         offset += 0x1400;
         offset += 0x1400;
         if (offset < (extent << 8) && ++strip_index < 4)
         {
             goto next_strip;
         }
-        } while (0);
-        *(u8 *)(primitive + 3) = 1;
-        *(s32 *)(primitive + 4) = 0xE1000025;
-        temp_v1_9 = position->vz >> 7;
-        if (temp_v1_9 < 0) {
-            addPrim(&ordering_table[0], primitive);
-            primitive += 8;
-        } else if (temp_v1_9 >= 0x1000) {
-            addPrim(&ordering_table[0xFFF], primitive);
-            primitive += 8;
-        } else {
-            addPrim(&ordering_table[position->vz >> 7], primitive);
-            primitive += 8;
-        }
-        return primitive;
+    } while (0);
+    *(u8*)(primitive + 3) = 1;
+    *(s32*)(primitive + 4) = 0xE1000025;
+    drawpage_depth = position->vz >> 7;
+    if (drawpage_depth < 0)
+    {
+        addPrim(&ordering_table[0], primitive);
+        primitive += 8;
+    }
+    else if (drawpage_depth >= 0x1000)
+    {
+        addPrim(&ordering_table[0xFFF], primitive);
+        primitive += 8;
+    }
+    else
+    {
+        addPrim(&ordering_table[position->vz >> 7], primitive);
+        primitive += 8;
+    }
+    return primitive;
 }
 #undef ADD_PACKET_A0
+
+/* ---- func_800A1344 ---- */
+
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 typedef struct
 {
