@@ -164,16 +164,16 @@ extern u8 *func_800A88A0(u8 *, u32 *, u8 *, s32, s32, s32, s32);
 extern void func_800A8B90(u8 *, s32, s32);
 extern void func_800AF350(u8 *);
 /**
- * Format and draw one numeric value using a temporary text buffer.
- * @param ot Ordering table.
+ * @brief Format and draw one numeric value using a temporary text buffer.
  * @param cursor Primitive buffer cursor.
+ * @param ot Ordering table.
  * @param number Value to format.
- * @param color Text color selector.
  * @param position Signed coordinates stored as halfwords.
+ * @param color Text color selector.
  * @param flags Text rendering flags.
  * @return Cursor after the generated text primitives.
  */
-static __inline__ u8 *draw_number(u32 *ot, u8 *cursor, s32 number, s32 color, u16 *position,
+static __inline__ u8 *draw_number(u8 *cursor, u32 *ot, s32 number, u16 *position, s32 color,
                                   s32 flags)
 {
     u8 text[64];
@@ -181,7 +181,7 @@ static __inline__ u8 *draw_number(u32 *ot, u8 *cursor, s32 number, s32 color, u1
     return func_800A88A0(cursor, ot, text, color, (s16)position[0], (s16)position[1], flags);
 }
 /**
- * Draw the visible name/value rows and append the highlighted-row tile.
+ * @brief Draw the visible item rows and append the highlighted-row tile.
  * @param ot Ordering table.
  * @param cursor Primitive buffer cursor.
  * @param scroll_x Horizontal scroll offset.
@@ -189,44 +189,40 @@ static __inline__ u8 *draw_number(u32 *ot, u8 *cursor, s32 number, s32 color, u1
  * @param unused Unused callback argument retained for the six-argument ABI.
  * @param window Window used to prepare the list and determine its clipping height.
  * @return Cursor after the list, highlight tile, and draw-mode packet.
- * @note Partial match; detailed probe results are retained in working/func_800AF0E8.
  */
 u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, Window *window)
 {
     u16 point[4];
+    Window *draw_window;
     s32 number_x;
     u8 *entry;
     u8 *names;
-    u16 *position;
     s32 y;
     s32 index;
     u8 *mode;
     Tile *tile;
-    func_800AF350((u8 *)window);
+
+    draw_window = window;
+    func_800AF350((u8 *)draw_window);
     if (D_80122714 == 0)
     {
         return cursor;
     }
-    index = 0;
-    if (D_80122734 > 0)
+
+    for (index = 0; index < D_80122734; index++)
     {
         names = D_800EE72C;
         number_x = 0xCA - scroll_x;
-        position = point;
-        entry = D_80122738;
-        do
+        entry = D_80122738 + index * 2;
+        y = index * 16 - scroll_y;
+        if (y >= -15 && y < (s32)((draw_window->size >> 1) & 255))
         {
-            y = index * 16 - scroll_y;
-            if (y >= -15 && y < (s32)((window->size >> 1) & 255))
-            {
-                cursor =
-                    func_800A88A0(cursor, ot, names + ((u16 *)names)[entry[0]], 4, -scroll_x, y, 0);
-                point[1] = y;
-                point[0] = number_x;
-                cursor = draw_number(ot, cursor, entry[1], 4, position, 1);
-            }
-            entry += 2;
-        } while (++index < D_80122734);
+            cursor = func_800A88A0(cursor, ot, (u8 *)(((u16 *)names)[entry[0]] + (u32)names), 4,
+                                    -scroll_x, y, 0);
+            point[1] = y;
+            point[0] = number_x;
+            cursor = draw_number(cursor, ot, entry[1], point, 4, 1);
+        }
     }
     tile = (Tile *)cursor;
     tile->color = 0xF080F0;
