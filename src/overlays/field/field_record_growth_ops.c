@@ -224,12 +224,8 @@ typedef struct Record
 extern u8 *D_80122B74;
 
 /**
- * Apply every pending level increase for an active character slot.
- *
- * Updates packed stat growth, fractional carries, and derived values, then clears
- * the three cached status bytes. The level is capped at 99.
- * @param slot Character slot; values at least five take the original error-sound path.
- * @note Partial assembly match; retained probes document the remaining scheduling differences.
+ * @brief Apply each pending level increase for an active character slot.
+ * @param slot Character slot to update.
  */
 void func_800C1230(s32 slot)
 {
@@ -333,9 +329,11 @@ void func_800C1230(s32 slot)
                 }
                 do
                 {
-                    carry = ((Record *)record)->extra.bytes[0];
-                    carry >>= 7;
+                    pending++;
+                    pending--;
                 } while (0);
+                carry = ((Record *)record)->extra.bytes[0];
+                carry >>= 7;
                 extra_word = mask | 0x70;
                 extra_word &= (s32)((Record *)record)->extra.word;
                 ((Record *)record)->extra.word = extra_word;
