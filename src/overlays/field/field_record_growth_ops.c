@@ -31,100 +31,93 @@ void func_800C0E18(s32 type, s32 amount)
     }
 }
 
-/** @brief Distributes experience and advances eligible active records.
- * @note Initial nonmatching C; retains the original overflow-store target.
+/**
+ * @brief Apply a progression increment, distributing it across eligible records when flagged.
+ * @param record_index Record index that selects the update descriptor and direct target.
+ * @param amount Increment to apply.
  */
-void func_800C0E54(s32 arg0, s32 arg1)
+void func_800C0E54(s32 record_index, s32 amount)
 {
-    s32 temp_lo;
-    s32 var_s0;
-    s32 var_s0_2;
-    s32 var_s1;
-    s32 var_s1_2;
-    s32 var_s2;
-    s32 var_v0;
-    u32 temp_v0_2;
-    u32 temp_v0_3;
-    u32 temp_v1_2;
-    u32 temp_v1_4;
-    u8 temp_v1;
-    u8 *temp_a1;
-    u8 *temp_a1_2;
-    u8 *temp_v0;
-    u8 *temp_v1_3;
+    s32 eligible_count;
+    s32 record_offset;
+    s32 index;
+    s32 scan_offset;
+    u32 packed_value;
+    u32 clamped_value;
+    u32 distributed_value;
+    u32 updated_value;
+    u8 mode;
+    u8 *record;
+    u8 *entry;
+    u8 *target_record;
 
-    if ((arg0 < 3) && (temp_v0 = func_800B2A9C(arg0), (temp_v0 != NULL)))
-
+    if ((record_index < 3) && (entry = func_800B2A9C(record_index), (entry != NULL)))
     {
-        temp_v1 = GROW_U8(temp_v0, 0x4);
-        switch (temp_v1)
-        {                          /* irregular */
+        mode = GROW_U8(entry, 0x4);
+        switch (mode)
+        {
         case 0:
-            func_800C1154(arg1);
+            func_800C1154(amount);
             break;
         case 1:
-            func_800C10F0(arg1);
+            func_800C10F0(amount);
             break;
         }
-        var_s1 = 0;
-        if (GROW_U16(temp_v0, 0xA) & 4)
+        index = 0;
+        if (GROW_U16(entry, 0xA) & 4)
         {
-            var_s0 = 0;
-            var_s2 = 0;
+            eligible_count = 0;
             do
             {
-                if ((GROW_U8(D_80122B74 + var_s2, 0x5F0) != 0) && (GROW_U32(func_80087F0C(var_s1), 4) != 0))
+                scan_offset = index * 0x250;
+                if ((GROW_U8(D_80122B74 + scan_offset, 0x5F0) != 0) && (GROW_U32(func_80087F0C(index), 4) != 0))
                 {
-                    var_s0 += 1;
+                    eligible_count += 1;
                 }
-                var_s1 += 1;
-                var_s2 += 0x250;
-            } while (var_s1 < 3);
-            if (var_s0 <= 0)
+                index += 1;
+            } while (index < 3);
+            if (eligible_count <= 0)
             {
-                var_s0 = 1;
+                eligible_count = 1;
             }
-            temp_lo = arg1 / var_s0;
-            var_v0 = temp_lo;
-            if (temp_lo == 0)
-            {
-                var_v0 = 1;
-            }
-            var_s1_2 = 0;
-            var_s0_2 = 0;
+            amount /= eligible_count;
+            amount = amount == 0 ? 1 : amount;
+            index = 0;
             do
             {
-                if ((GROW_U8(D_80122B74 + var_s0_2, 0x5F0) != 0) && (GROW_U32(func_80087F0C(var_s1_2), 4) != 0))
+                record_offset = index * 0x250;
+                if ((GROW_U8(D_80122B74 + record_offset, 0x5F0) != 0) && (GROW_U32(func_80087F0C(index), 4) != 0))
                 {
-                    if (var_s1_2 == 1)
+                    if (index == 1)
                     {
-                        func_800C10F0(var_v0);
+                        func_800C10F0(amount);
                     }
-                    temp_a1 = D_80122B74 + var_s0_2;
-                    temp_v0_2 = GROW_U32(temp_a1, 0x610);
-                    temp_v1_2 = (temp_v0_2 & 0xFF) | (((temp_v0_2 >> 8) + var_v0) << 8);
-                    GROW_U32(temp_a1, 0x610) = temp_v1_2;
-                    if ((s32) (temp_v1_2 >> 8) > 0x98967F)
+                    record = D_80122B74 + record_offset;
+                    packed_value = GROW_U32(record, 0x610);
+                    distributed_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
+                    GROW_U32(record, 0x610) = distributed_value;
+                    if ((s32) (distributed_value >> 8) > 0x98967F)
                     {
-                        temp_v1_3 = D_80122B74 + (arg0 * 0x250);
-                        GROW_U32(temp_v1_3, 0x610) = (s32) (GROW_U8(temp_v1_3, 0x610) | 0x98967F00);
+                        target_record = D_80122B74 + (record_index * 0x250);
+                        GROW_U32(target_record, 0x610) = (s32) (GROW_U8(target_record, 0x610) | 0x98967F00);
                     }
-                    func_800C11F0(var_s1_2, 1);
+                    func_800C11F0(index, 1);
                 }
-                var_s1_2 += 1;
-                var_s0_2 += 0x250;
-            } while (var_s1_2 < 3);
+                index += 1;
+            } while (index < 3);
             return;
         }
-        temp_a1_2 = D_80122B74 + (arg0 * 0x250);
-        temp_v0_3 = GROW_U32(temp_a1_2, 0x610);
-        temp_v1_4 = (temp_v0_3 & 0xFF) | (((temp_v0_3 >> 8) + arg1) << 8);
-        GROW_U32(temp_a1_2, 0x610) = temp_v1_4;
-        if ((s32) (temp_v1_4 >> 8) > 0x98967F)
+        record = D_80122B74 + (record_index * 0x250);
+        packed_value = GROW_U32(record, 0x610);
+        updated_value = (packed_value & 0xFF) | (((packed_value >> 8) + amount) << 8);
+        GROW_U32(record, 0x610) = updated_value;
+        if ((s32) (updated_value >> 8) > 0x98967F)
         {
-            GROW_U32(temp_a1_2, 0x610) = (u32) ((temp_v1_4 & 0xFF) | 0x98967F00);
+            clamped_value = updated_value & 0xFF;
+            clamped_value |= 0x98967F00;
+            GROW_U32(record, 0x610) = clamped_value;
         }
-        func_800C11F0(arg0, 1);
+        func_800C11F0(record_index, 1);
     }
 }
 
