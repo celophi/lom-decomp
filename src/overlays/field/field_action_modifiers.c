@@ -606,7 +606,7 @@ s32 func_800B69B0(void)
 
 
 
-extern void func_800B2D64(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+extern s32 func_800B2D64(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 
 /**
  * @brief Decode the current packed field command and dispatch its two effects.
