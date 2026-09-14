@@ -175,6 +175,7 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     s32 first_d0;
     s32 temp_x;
     s32 raw_d4;
+    FieldVector *origin;
 
     gte_out = (FieldVector *) 0x1F800010;
     ptr_a = (FieldVector *) 0x1F800020;
@@ -185,14 +186,24 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
     state = &g_field_actor_slots[rec->unk22];
 
-    func_8007D078(rec, part, (FieldMatrix *) 0x1F800058, state);
-    gte_SetRotMatrix((FieldMatrix *) 0x1F800058);
+    cur = (FieldMatrix *)0x1F800058;
+    func_8007D078(rec, part, cur, state);
+    gte_SetRotMatrix(cur);
 
+    {
+        s32 first_d0;
+        s32 temp_x;
+        s32 raw_d4;
     first_d0 = D_800F22A0 / 256;
-    temp_x = rec->unk0 / 256 + 0xA0;
-    raw_d4 = D_800F22A4 / 256;
-    *(s16 *) (primbuf + 0x8) = (s16) (first_d0 + temp_x);
-    *(s16 *) (primbuf + 0xA) = (s16) (0x70 + raw_d4 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512);
+    temp_x = rec->unk0 / 256;
+    raw_d4 = D_800F22A4;
+    *(s16 *) (primbuf + 0x8) = first_d0 + (s16) (temp_x + 0xA0);
+    if (raw_d4 < 0)
+    {
+        raw_d4 += 255;
+    }
+    *(s16 *) (primbuf + 0xA) = 0x70 + (raw_d4 >> 8) + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512;
+    }
 
     func_8007D8D8(state, rec, part, primbuf + 4);
 
@@ -217,12 +228,13 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 
     i = segments - 1;
 
-    ptr_a->vx = (((FieldVector *)0x1F800000)->vx + rec->unk0) >> 1;
-    ptr_a->vy = ((FieldVector *)0x1F800000)->vy;
-    ptr_a->vz = (((FieldVector *)0x1F800000)->vz + rec->unk8) >> 1;
-    ptr_b->vx = (((FieldVector *)0x1F800000)->vx - rec->unk0) >> 1;
-    ptr_b->vy = rec->unk4 - ((FieldVector *)0x1F800000)->vy;
-    ptr_b->vz = (((FieldVector *)0x1F800000)->vz - rec->unk8) >> 1;
+    origin = (FieldVector *)0x1F800000;
+    ptr_a->vx = (origin->vx + rec->unk0) >> 1;
+    ptr_a->vy = origin->vy;
+    ptr_a->vz = (origin->vz + rec->unk8) >> 1;
+    ptr_b->vx = (origin->vx - rec->unk0) >> 1;
+    ptr_b->vy = rec->unk4 - origin->vy;
+    ptr_b->vz = (origin->vz - rec->unk8) >> 1;
 
     if (i > 0)
     {
@@ -288,11 +300,20 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
             gte_out->vx = ((ptr_b->vx * rcos(i * step)) >> 12) + ptr_a->vx + ptr_c->vx;
             gte_out->vz = ((ptr_b->vz * rcos(i * step)) >> 12) + ptr_a->vz + ptr_c->vz;
 
+            {
+                s32 first_d0;
+                s32 temp_x;
+                s32 raw_d4;
             first_d0 = D_800F22A0 / 256;
-            temp_x = gte_out->vx / 256 + 0xA0;
-            raw_d4 = D_800F22A4 / 256;
-            *(s16 *) (p2 - 0x4) = (s16) (first_d0 + temp_x);
-            *(s16 *) (p2 - 0x2) = (s16) (0x70 + raw_d4 + gte_out->vy / 256 - gte_out->vz / 512 - D_800F22A8 / 512);
+    temp_x = gte_out->vx / 256;
+    raw_d4 = D_800F22A4;
+    *(s16 *) (p2 - 0x4) = first_d0 + (s16) (temp_x + 0xA0);
+    if (raw_d4 < 0)
+    {
+        raw_d4 += 255;
+    }
+    *(s16 *) (p2 - 0x2) = 0x70 + (raw_d4 >> 8) + gte_out->vy / 256 - gte_out->vz / 512 - D_800F22A8 / 512;
+            }
             *(s32 *) (p2 + 0x8) = *(s32 *) (p2 - 0x4);
 
             temp_v1 = (s32) rec->unk8 >> 7;
@@ -301,7 +322,7 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
                 s32 addr;
                 p2 += 0x10;
                 addr = (s32) primbuf & 0xFFFFFF;
-                *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0] & 0xFFFFFF);
+                ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[0])->addr;
                 primbuf += 0x10;
                 base[0] = (base[0] & 0xFF000000) | addr;
             }
@@ -310,7 +331,7 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
                 s32 addr;
                 p2 += 0x10;
                 addr = (s32) primbuf & 0xFFFFFF;
-                *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
+                ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[0xFFF])->addr;
                 primbuf += 0x10;
                 base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
             }
@@ -320,7 +341,7 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
                 s32 *entry;
                 p2 += 0x10;
                 addr = (s32) primbuf & 0xFFFFFF;
-                *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[temp_v1] & 0xFFFFFF);
+                ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[temp_v1])->addr;
                 entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
                 primbuf += 0x10;
                 *entry = (*entry & 0xFF000000) | addr;
@@ -335,18 +356,29 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     *(s8 *) (primbuf + 7) = 0x40;
     ((rec->unk1C & 0x800000) ? (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) | 2) : (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) & ~2));
 
+    {
+        s32 first_d0;
+        s32 temp_x;
+        s32 raw_d4;
     first_d0 = D_800F22A0 / 256;
-    temp_x = *(s32 *) 0x1F800000 / 256 + 0xA0;
-    raw_d4 = D_800F22A4 / 256;
-    *(s16 *) (primbuf + 0xC) = (s16) (first_d0 + temp_x);
-    *(s16 *) (primbuf + 0xE) = (s16) (0x70 + raw_d4 + *(s32 *) 0x1F800004 / 256 - *(s32 *) 0x1F800008 / 512 - D_800F22A8 / 512);
+    temp_x = origin->vx / 256;
+    raw_d4 = D_800F22A4;
+    *(s16 *) (primbuf + 0xC) = first_d0 + (s16) (temp_x + 0xA0);
+    if (raw_d4 < 0)
+    {
+        raw_d4 += 255;
+    }
+    raw_d4 = 0x70 + (raw_d4 >> 8) + origin->vy / 256;
+    raw_d4 -= origin->vz / 512;
+    *(s16 *) (primbuf + 0xE) = raw_d4 - D_800F22A8 / 512;
+    }
 
     temp_v1 = (s32) rec->unk8 >> 7;
     if (temp_v1 < 0)
     {
         s32 addr;
         addr = (s32) primbuf & 0xFFFFFF;
-        *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0] & 0xFFFFFF);
+        ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[0])->addr;
         primbuf += 0x10;
         base[0] = (base[0] & 0xFF000000) | addr;
     }
@@ -354,7 +386,7 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     {
         s32 addr;
         addr = (s32) primbuf & 0xFFFFFF;
-        *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
+        ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[0xFFF])->addr;
         primbuf += 0x10;
         base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
     }
@@ -363,7 +395,7 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         s32 addr;
         s32 *entry;
         addr = (s32) primbuf & 0xFFFFFF;
-        *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[temp_v1] & 0xFFFFFF);
+        ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[temp_v1])->addr;
         entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
         primbuf += 0x10;
         *entry = (*entry & 0xFF000000) | addr;

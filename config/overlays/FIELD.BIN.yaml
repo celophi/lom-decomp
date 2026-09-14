@@ -282,7 +282,7 @@ segments:
       - [0x601A5, c, field_card_clock] # gcc272_cdk; decode/refresh cached card clock, AFE14 base C, B0094 exact
       - [0x60501, c, field288]                     # gcc272_cdk, func_800B0170
       - [0x6058D, c, field_resource_load] # gcc272_cdk; eight pending-actor/resource routines, seven exact, one base C
-      - [0x60E89, c, field_interaction_start] # gcc280_g0; twenty-one initialization/action/update routines, eighteen exact, three WIPs
+      - [0x60E89, c, field_interaction_start] # gcc280_g0; twenty-one initialization/action/update routines, nineteen exact, two WIPs
       - [0x62BFD, c, field_event_dispatch] # gcc280_g0; claim/start owner events, both exact
       - [0x62E2D, c, field_state_ops] # gcc280_g0; record/effect/attribute helpers, thirteen exact and one WIP
       - [0x63861, c, field_party_setup] # gcc280_g0; context and party initialization; four exact, B37D4 WIP
