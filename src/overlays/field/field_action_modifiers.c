@@ -88,7 +88,7 @@ u8 *func_800C1E40(s32 arg0);
  * an argument load.
  */
 s32 func_800B2A9C();
-s32 func_800B6334(s32 value);
+s32 func_800B6334(u8 *arg0);
 void func_800B65CC(s32 value);
 void func_800B4934(ActorB4934 *arg0);
 
@@ -257,26 +257,23 @@ extern s32 func_800C0A38(u8 *);
 extern void func_800C2848(s32, s32);
 extern void func_800B6744(ActorB4934 *);
 
-/** @brief Update actor depletion state and return the remaining-side result. */
-s32 func_800B6334(s32 value)
+/**
+ * @brief Update actor depletion state and return the remaining-side result.
+ * @param arg0 Actor record to update.
+ * @return Remaining-side result from func_800B62D8.
+ */
+s32 func_800B6334(u8 *arg0)
 {
-    u8 *arg0;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 *temp_v0;
-    s32 var_a2;
-    s32 var_s0;
-    s32 var_s2;
-    FieldCounter6334 *temp_a0;
-    FieldCounter6334 *temp_a0_2;
-    FieldCounter6334 *temp_v1;
-    FieldCounter6334 *temp_v1_2;
-    FieldCounter6334 *temp_v1_3;
+    s32 *entry_word;
+    s32 remaining_count;
+    s32 effect_duration;
+    FieldCounter6334 *reset_counter;
+    FieldCounter6334 *clear_counter;
+    FieldCounter6334 *copy_counter;
+    FieldCounter6334 *set_counter;
+    FieldCounter6334 *flag_counter;
 
-    arg0 = (u8 *)value;
-
-    if ((u8) arg0[4] < 3U)
-
+    if ((u8)arg0[4] < 3U)
     {
         if (func_800BD414(0, 0x428C) == arg0[4])
         {
@@ -284,73 +281,70 @@ s32 func_800B6334(s32 value)
         }
         if (*(s32 *)(arg0 + 4) & 0x200)
         {
-            var_a1 = 0x4280;
+            remaining_count = func_800BD414(0, 0x4280);
         }
         else
         {
-            var_a1 = 0x4284;
+            remaining_count = func_800BD414(0, 0x4284);
         }
-        var_s0 = func_800BD414(0, var_a1) - 1;
-        if ((var_s0 == 0) && (*(u16 *)(arg0 + 0xA) & 2))
+        remaining_count--;
+        if ((remaining_count == 0) && (*(u16 *)(arg0 + 0xA) & 2))
         {
             func_8008B500(arg0[4], 0x2C);
-            temp_v1 = *(FieldCounter6334 **)(arg0 + 0x10);
-            var_s0 = 1;
-            temp_v1->unk4 = (s32) temp_v1->unk0;
+            copy_counter = *(FieldCounter6334 **)(arg0 + 0x10);
+            remaining_count = 1;
+            copy_counter->unk4 = (s32)copy_counter->unk0;
             func_800B6744((ActorB4934 *)arg0);
         }
         else
         {
-            temp_a0 = *(FieldCounter6334 **)(arg0 + 0x10);
-            temp_a0->unkC = (s32) (temp_a0->unkC & ~0x7FF);
-            temp_v1_2 = *(FieldCounter6334 **)(arg0 + 0x10);
-            temp_v1_2->unkC = (s32) (temp_v1_2->unkC | 0x200);
+            reset_counter = *(FieldCounter6334 **)(arg0 + 0x10);
+            reset_counter->unkC = (s32)(reset_counter->unkC & ~0x7FF);
+            set_counter = *(FieldCounter6334 **)(arg0 + 0x10);
+            set_counter->unkC = (s32)(set_counter->unkC | 0x200);
             func_8008AE14(arg0[4], -1);
-            var_s2 = 0x384;
+            effect_duration = 0x384;
             if (*(u16 *)(arg0 + 0xA) & 0x20)
             {
-                var_s2 = 0x1C2;
+                effect_duration = 0x1C2;
             }
             if (func_800B4CE4((s32)arg0, 0xC) != 0)
             {
-                temp_v0 = D_80123FB0->unk1C;
-                if ((temp_v0 != NULL) && ((u32) (*temp_v0 & 0xF) < 2U))
+                entry_word = D_80123FB0->unk1C;
+                if ((entry_word != NULL) && ((u32)(*entry_word & 0xF) < 2U))
                 {
-                    var_s2 = 0xF;
+                    effect_duration = 0xF;
                 }
             }
             if (!(*(u16 *)(arg0 + 0xA) & 0x40))
             {
-                func_80089BE8(*(s32 *)(D_80123FB0->unk18 + 0xC), 0x1E, 0x2C, -1, var_s2);
+                func_80089BE8(*(s32 *)(D_80123FB0->unk18 + 0xC), 0x1E, 0x2C, -1, effect_duration);
             }
         }
-        var_a1_2 = 0x4280;
         if (*(s32 *)(arg0 + 4) & 0x200)
         {
-            var_a2 = var_s0;
+            func_800BD520(0, 0x4280, remaining_count);
         }
         else
         {
-            var_a1_2 = 0x4284;
-            var_a2 = var_s0;
+            func_800BD520(0, 0x4284, remaining_count);
         }
     }
-        else
+    else
     {
-        temp_a0_2 = *(FieldCounter6334 **)(arg0 + 0x10);
-        temp_a0_2->unkC = (s32) (temp_a0_2->unkC & ~0x7FF);
+        clear_counter = *(FieldCounter6334 **)(arg0 + 0x10);
+        clear_counter->unkC = (s32)(clear_counter->unkC & ~0x7FF);
         if ((*(u16 *)(arg0 + 6) & 1) || ((*(u8 **)(arg0 + 0x14))[0x3F] & 1))
         {
-            temp_v1_3 = *(FieldCounter6334 **)(arg0 + 0x10);
-            temp_v1_3->unkC = (s32) (temp_v1_3->unkC | 0x200);
+            flag_counter = *(FieldCounter6334 **)(arg0 + 0x10);
+            flag_counter->unkC = (s32)(flag_counter->unkC | 0x200);
         }
         func_800C2848(arg0[4], 0);
-        *(s32 *)(arg0 + 4) = (s32) (*(s32 *)(arg0 + 4) & ~0x100);
+        *(s32 *)(arg0 + 4) = (s32)(*(s32 *)(arg0 + 4) & ~0x100);
         func_8008AE14(arg0[4], func_800C0A38(arg0));
-        var_a1_2 = 0x4284;
-        var_a2 = func_800BD414(0, 0x4284) - 1;
+        remaining_count = func_800BD414(0, 0x4284) - 1;
+        func_800BD520(0, 0x4284, remaining_count);
     }
-    func_800BD520(0, var_a1_2, var_a2);
     return func_800B62D8((UnkStruct800B62D8 *)arg0);
 }
 
@@ -437,7 +431,7 @@ void func_800B66F0(void)
     ((FieldStateBlockView *)D_80123FB0)->unk1C = 0;
     if (value != 0)
     {
-        result = func_800B6334(value);
+        result = func_800B6334((u8 *)value);
         if (result != 0)
         {
             func_800B65CC(result);
@@ -606,7 +600,7 @@ s32 func_800B69B0(void)
 
 
 
-extern void func_800B2D64(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+extern s32 func_800B2D64(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 
 /**
  * @brief Decode the current packed field command and dispatch its two effects.

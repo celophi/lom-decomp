@@ -125,10 +125,10 @@ overlay_cload_gcc_272_cdk_g0_srcs := \
 	src/overlays/cload/cload.c 
 
 OVERLAYS += field
-overlay_field_gcc_272_gnu_g0_srcs := \
-	src/overlays/field/func_800AEAC0.c \
+overlay_field_gcc_272_gnu_g0_srcs :=
 
 overlay_field_gcc_272_cdk_g0_srcs := \
+	src/overlays/field/func_800AEAC0.c \
 	src/overlays/field/field_ring_selection.c \
 	src/overlays/field/field364.c \
 	src/overlays/field/field_item_selection.c \

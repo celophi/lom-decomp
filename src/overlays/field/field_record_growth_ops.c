@@ -249,8 +249,10 @@ void func_800C1230(s32 slot)
     s32 growth_high;
     s32 stat_index;
     s32 index;
+    s32 clear_index;
     s32 pending;
     u16 stat;
+    u32 low;
     u32 extra_word;
     u32 experience;
     u32 growth_value;
@@ -297,9 +299,9 @@ void func_800C1230(s32 slot)
             {
                 growth_cursor = record + stat_index;
                 stat = ((Record *)stat_cursor)->stats[0];
-                stat =
-                    ((((u8)((Record *)growth_cursor)->growth[0] >> 4) + (stat & 0x1FF)) & 0x1FF) |
-                    (stat & 0xFE00);
+                low = ((u8)((Record *)growth_cursor)->growth[0] >> 4) + (stat & 0x1FF);
+                low &= 0x1FF;
+                stat = (stat & 0xFE00) | low;
                 ((Record *)stat_cursor)->stats[0] = stat;
                 if ((u32)(stat & 0x1FF) >= 0x18DU)
                 {
@@ -336,30 +338,39 @@ void func_800C1230(s32 slot)
                 {
                     goto value_loop;
                 }
-                carry = ((Record *)record)->extra.bytes[0] >> 7;
-                extra_word = (mask | 0x70) & (s32)((Record *)record)->extra.word;
+                do
+                {
+                    carry = ((Record *)record)->extra.bytes[0];
+                    carry >>= 7;
+                } while (0);
+                extra_word = mask | 0x70;
+                extra_word &= (s32)((Record *)record)->extra.word;
                 ((Record *)record)->extra.word = extra_word;
                 ((Record *)record)->mp = (u16)(((Record *)record)->mp + carry);
-                updated_extra =
-                    (extra_word & mask) |
+                updated_extra = extra_word & mask;
+                updated_extra |=
                     (((((extra_word >> 4) & 0xF) + (((Record *)record)->extra.bytes[0] & 0xF)) &
                       0xF) *
                      0x10);
                 ((Record *)record)->extra.word = updated_extra;
                 ((Record *)record)->hp = func_800C19D0(
                     ((Record *)record)->hp, (u32)(((Record *)record)->stats[4] & 0x1FF) >> 2, 3);
-                index = 2;
-                status_cursor = record + index;
                 ((Record *)record)->extra.halves[1] =
                     (u16)(((Record *)record)->extra.halves[1] + ((Record *)record)->extra.bytes[1]);
                 ((Record *)record)->status.word =
                     (s32)(((Record *)record)->status.word & 0xF8FFFFFF);
+                extra_word = 0xFF;
+                clear_index = 2;
+                status_cursor = record + clear_index;
                 do
                 {
-                    ((Record *)status_cursor)->status.bytes[0] = 0xFF;
-                    index -= 1;
+                    ((Record *)status_cursor)->status.bytes[0] = extra_word;
+                    do
+                    {
+                        clear_index -= 1;
+                    } while (0);
                     status_cursor -= 1;
-                } while (index >= 0);
+                } while (clear_index >= 0);
             }
             else
             {

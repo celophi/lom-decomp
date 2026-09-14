@@ -2636,68 +2636,57 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
  * @param quad Transition quad.
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
- * @note WIP - not yet byte-matching. Currently 91.45%.
- * @see decomp.me (91.45%)
+ * @note WIP - 98.10% assembly match with gcc280_g4_noexpanddiv.
  */
 
 void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cursor, FieldOrderingTags* ot)
 {
+    typedef union
+    {
+        Vec2s pos;
+        u32 word;
+    } FieldTextVertex;
+
     FieldTextSystem* hw = (FieldTextSystem*)0x801ED000;
-    Vec2s* p;
-    Vec2s* build;
+    FieldTextVertex* build;
     Vec2s* mesh;
-    u32* vp;
     u32* hvp2;
-    u32* hvp;
-    u32* vvp;
-    u32* gvp;
-    u32* pvp;
     PrimQuad* poly;
+    PrimQuad* phase_poly;
     u8* first;
     s32 w;
     s32 span;
     s32 v;
     s32 y;
-    s32 text_y;
-    s32 n;
-    s32 inner;
+    s32 tile_width;
+    s32 packet_height;
     s32 chunk;
     s32 edge;
+    s32 glyph_u;
+    s32 glyph_v;
     s32 prows;
-    s32 mesh_rows;
+    u16 glyph_height;
     s32 count;
     s32 u;
     s32 avail;
     s32 stride;
     s32 den_x;
+    u32 tpage;
     s32 den_y;
+    s32 clut;
     s32 base_x;
+    u8* packet_cursor;
     s32 base_y;
     s32 dx;
     s32 dy;
+    u32 tag_len;
     s32 prev;
-    s32 yv;
-    s32 x0;
-    s32 y0;
-    s32 x1;
-    s32 y1;
-    s32 uv;
-    s32 vvval;
-    s32 clut;
-    s32 col;
     s32 row_v;
     s32 sel;
     s32 u_org;
     u32 rgbc;
-    s32 hspan;
-    s32 vspan;
-    s32 hy;
-    s32 hn;
-    s32 vy;
-    s32 gspan;
     s32 grows;
     s32 vbase;
-    s32 tpage;
 
     base_x = 0;
     base_y = 0;
@@ -2713,10 +2702,10 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
     }
 
     /* Build the unwarped mesh in scratchpad RAM. */
-    build = (Vec2s*)0x1F800000;
+    build = (FieldTextVertex*)0x1F800000;
     y = 0;
-    build->x = 0;
-    build->y = y;
+    build->pos.x = 0;
+    build->pos.y = y;
     build += 1;
     v = 8;
     span = w;
@@ -2724,8 +2713,8 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
     {
         do
         {
-            build->x = v;
-            build->y = y;
+            build->pos.x = v;
+            build->pos.y = y;
             build += 1;
             if (span >= 0x41)
             {
@@ -2739,21 +2728,21 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
             }
         } while (span > 0);
     }
-    build->x = v;
-    build->y = y;
-    build[1].x = v + 8;
-    build[1].y = y;
+    build->pos.x = v;
+    build->pos.y = y;
+    build[1].pos.x = v + 8;
+    build[1].pos.y = y;
     build += 2;
 
-    mesh_rows = st->height;
-    mesh_rows -= 1;
+    grows = st->height;
+    grows -= 1;
     y += 8;
-    if (mesh_rows != -1)
+    if (grows != -1)
     {
         do
         {
-            build->x = 0;
-            build->y = y;
+            build->pos.x = 0;
+            build->pos.y = y;
             build += 1;
             v = 8;
             span = w;
@@ -2761,8 +2750,8 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
             {
                 do
                 {
-                    build->x = v;
-                    build->y = y;
+                    build->pos.x = v;
+                    build->pos.y = y;
                     build += 1;
                     if (span >= 0x41)
                     {
@@ -2776,30 +2765,30 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                     }
                 } while (span > 0);
             }
-            build->x = v;
-            build->y = y;
-            build[1].x = v + 8;
-            build[1].y = y;
+            build->pos.x = v;
+            build->pos.y = y;
+            build[1].pos.x = v + 8;
+            build[1].pos.y = y;
             build += 2;
-            if (mesh_rows >= 0x21)
+            if (grows >= 0x21)
             {
                 y += 0x20;
-                mesh_rows -= 0x20;
+                grows -= 0x20;
             }
             else
             {
-                y += mesh_rows;
-                mesh_rows = 0;
+                y += grows;
+                grows = 0;
             }
-            mesh_rows -= 1;
-        } while (mesh_rows != -1);
+            grows -= 1;
+        } while (grows != -1);
     }
 
-    n = 1;
+    grows = 1;
     do
     {
-        build->x = 0;
-        build->y = y;
+        build->pos.x = 0;
+        build->pos.y = y;
         build += 1;
         v = 8;
         span = w;
@@ -2807,8 +2796,8 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
         {
             do
             {
-                build->x = v;
-                build->y = y;
+                build->pos.x = v;
+                build->pos.y = y;
                 build += 1;
                 if (span >= 0x41)
                 {
@@ -2822,16 +2811,16 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                 }
             } while (span > 0);
         }
-        build->x = v;
-        build->y = y;
-        build[1].x = v + 8;
-        build[1].y = y;
+        build->pos.x = v;
+        build->pos.y = y;
+        build[1].pos.x = v + 8;
+        build[1].pos.y = y;
         build += 2;
-        n -= 1;
+        grows -= 1;
         y += 8;
-    } while (n != -1);
+    } while (grows != -1);
 
-    text_y = 8;
+    y = 8;
     u = st->region_start_u;
     grows = st->height >> 4;
     grows -= 1;
@@ -2850,13 +2839,13 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
             {
                 do
                 {
-                    build->x = v;
-                    build->y = text_y;
-                    build[1].x = v;
-                    avail = 0x100 - u;
-                    build[1].y = st->line_height + text_y;
+                    build->pos.x = v;
+                    build->pos.y = y;
+                    build[1].pos.x = v;
+                    build[1].pos.y = st->line_height + y;
                     build += 2;
                     count += 2;
+                    avail = 0x100 - u;
                     if (span >= avail)
                     {
                         v += avail;
@@ -2871,18 +2860,18 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                     }
                 } while (span > 0);
             }
-            build->x = v;
-            build->y = text_y;
-            build[1].x = v;
-            grows -= 1;
-            build[1].y = st->line_height + text_y;
+            build->pos.x = v;
+            build->pos.y = y;
+            build[1].pos.x = v;
+            build[1].pos.y = st->line_height + y;
             build += 2;
             count += 2;
-            text_y += 0x10;
+            grows -= 1;
+            y += 0x10;
         } while (grows != -1);
     }
 
-    n = 1;
+    grows = 1;
     y = ((s32)(st->height - 0x30) >> 1) + 0xA;
     do
     {
@@ -2894,20 +2883,18 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
         {
             v = st->width + 0x12;
         }
-        inner = 1;
-        do
+        for (span = 1; span != -1; span--)
         {
-            build->x = v;
-            build->y = y;
+            build->pos.x = v;
+            build->pos.y = y;
             build += 1;
-            inner -= 1;
             v += 0x30;
-        } while (inner != -1);
-        n -= 1;
+        }
+        grows -= 1;
         y += 0x30;
-    } while (n != -1);
+    } while (grows != -1);
 
-    n = 1;
+    grows = 1;
     y = ((s32)(st->height - 0x30) >> 1) + 8;
     do
     {
@@ -2919,49 +2906,40 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
         {
             v = st->width + 0x10;
         }
-        inner = 1;
-        do
+        for (span = 1; span != -1; span--)
         {
-            build->x = v;
-            build->y = y;
+            build->pos.x = v;
+            build->pos.y = y;
             build += 1;
-            inner -= 1;
             v += 0x30;
-        } while (inner != -1);
-        n -= 1;
+        }
+        grows -= 1;
         y += 0x30;
-    } while (n != -1);
+    } while (grows != -1);
 
     /* Warp every mesh vertex into the quad. */
-    mesh = (Vec2s*)0x1F800000;
+    build = (FieldTextVertex*)0x1F800000;
     prev = -1;
     den_x = w + 0x10;
     grows = ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3)) + count + 7;
     den_y = st->height + 0x10;
     if (grows != -1)
     {
-        p = mesh;
         do
         {
-            yv = p->y;
-            if (prev != yv)
+            u = build->pos.y;
+            if (prev != u)
             {
-                do
-                {
-                    do
-                    {
-                        prev = yv;
-                        base_x = (((quad->x2 - quad->x0) * yv) / den_y) + quad->x0;
-                        base_y = (((quad->y2 - quad->y0) * yv) / den_y) + quad->y0;
-                        dx = ((((quad->x3 - quad->x1) * yv) / den_y) + quad->x1) - base_x;
-                        dy = ((((quad->y3 - quad->y1) * yv) / den_y) + quad->y1) - base_y;
-                    } while (0);
-                } while (0);
+                prev = u;
+                base_x = (((quad->x2 - quad->x0) * u) / den_y) + quad->x0;
+                base_y = (((quad->y2 - quad->y0) * u) / den_y) + quad->y0;
+                dx = ((((quad->x3 - quad->x1) * u) / den_y) + quad->x1) - base_x;
+                dy = ((((quad->y3 - quad->y1) * u) / den_y) + quad->y1) - base_y;
             }
-            p->y = ((dy * p->x) / den_x) + base_y;
+            build->pos.y = ((dy * build->pos.x) / den_x) + base_y;
             grows -= 1;
-            p->x = ((dx * p->x) / den_x) + base_x;
-            p += 1;
+            build->pos.x = ((dx * build->pos.x) / den_x) + base_x;
+            build += 1;
         } while (grows != -1);
     }
 
@@ -2970,164 +2948,168 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
     u_org = 0;
     vbase = 0xE0;
     rgbc = 0x2D808080;
-    vp = (u32*)0x1F800000;
-    hy = 8;
-    hn = 1;
+    build = (FieldTextVertex*)((u32*)0x1F800000);
+    packet_height = 8;
+    grows = 1;
     stride = ((w + 0x3F) >> 6) + 3;
     first = *cursor;
-    base_x = (s32)first;
-    dy = 0x09000000;
-    clut = hw->window_clut << 16;
+    packet_cursor = first;
+    tag_len = 0x09000000;
+    clut = hw->window_clut;
+    clut <<= 16;
+    tile_width = 0x40;
     do
     {
-        if (hn == 0)
+        if (grows == 0)
         {
-            uv = u_org | 0xF800;
+            base_y = u_org | 0xF800;
         }
         else
         {
-            uv = u_org | 0xF000;
+            base_y = u_org | 0xF000;
         }
-        poly = (PrimQuad*)base_x;
-        base_x += 0x28;
-        poly->tag = ((u32)base_x & 0xFFFFFF) | dy;
-        poly->uv0 = clut | uv;
-        poly->uv1 = tpage | (uv + 8);
-        poly->uv2 = uv + (hy << 8);
+        poly = (PrimQuad*)packet_cursor;
+        packet_cursor += sizeof(PrimQuad);
+        sel = (u32)packet_cursor & 0xFFFFFF;
+        poly->tag = sel | tag_len;
+        poly->uv0 = clut | base_y;
+        poly->uv1 = tpage | (base_y + 8);
+        poly->uv2 = base_y + (packet_height << 8);
         poly->rgbc = rgbc;
-        poly->uv3 = uv + ((hy << 8) | 8);
-        poly->xy0 = vp[0];
-        hspan = w;
-        poly->xy1 = vp[1];
-        uv += 8;
-        hvp2 = vp + ((w + 0x3F) >> 6) + 4;
+        poly->uv3 = base_y + ((packet_height << 8) | 8);
+        base_y += 8;
+        poly->xy0 = build[0].word;
+        span = w;
+        poly->xy1 = build[1].word;
+        hvp2 = ((u32*)build) + ((w + 0x3F) >> 6) + 4;
         poly->xy2 = hvp2[-1];
         poly->xy3 = hvp2[0];
+        build += 1;
         if (w > 0)
         {
             do
             {
-                poly = (PrimQuad*)base_x;
-                base_x += 0x28;
-                poly->tag = ((u32)base_x & 0xFFFFFF) | dy;
+                poly = (PrimQuad*)packet_cursor;
+                packet_cursor += sizeof(PrimQuad);
+                poly->tag = ((u32)packet_cursor & 0xFFFFFF) | tag_len;
                 poly->rgbc = rgbc;
-                if (hspan >= 0x41)
+                if (span >= 0x41)
                 {
                     chunk = 0x3F;
-                    hspan -= 0x40;
+                    span -= tile_width;
                 }
                 else
                 {
-                    chunk = hspan - 1;
-                    hspan = 0;
+                    chunk = span - 1;
+                    span = 0;
                 }
-                poly->uv1 = tpage | (uv + chunk);
-                poly->uv0 = clut | uv;
-                poly->uv2 = uv + (hy << 8);
-                poly->uv3 = uv + ((hy << 8) | chunk);
-                poly->xy0 = vp[0];
-                poly->xy1 = vp[1];
-                vp += 1;
+                poly->uv1 = tpage | (base_y + chunk);
+                poly->uv0 = clut | base_y;
+                poly->uv2 = base_y + (packet_height << 8);
+                poly->uv3 = base_y + ((packet_height << 8) | chunk);
+                poly->xy0 = build[0].word;
+                poly->xy1 = build[1].word;
+                build += 1;
                 poly->xy2 = hvp2[0];
                 poly->xy3 = hvp2[1];
                 hvp2 += 1;
-            } while (hspan > 0);
+            } while (span > 0);
         }
-        uv += 0x40;
-        poly = (PrimQuad*)base_x;
-        base_x += 0x28;
-        poly->tag = ((u32)base_x & 0xFFFFFF) | dy;
-        poly->uv0 = clut | uv;
-        poly->uv1 = tpage | (uv + 7);
+        base_y += tile_width;
+        poly = (PrimQuad*)packet_cursor;
+        packet_cursor += sizeof(PrimQuad);
+        poly->tag = ((u32)packet_cursor & 0xFFFFFF) | tag_len;
+        poly->uv0 = clut | base_y;
+        poly->uv1 = tpage | (base_y + 7);
         poly->rgbc = rgbc;
-        poly->uv2 = uv + (hy << 8);
-        poly->uv3 = uv + ((hy << 8) | 7);
-        poly->xy0 = vp[0];
-        poly->xy1 = vp[1];
+        poly->uv2 = base_y + (packet_height << 8);
+        poly->uv3 = base_y + ((packet_height << 8) | 7);
+        poly->xy0 = build[0].word;
+        poly->xy1 = build[1].word;
         poly->xy2 = hvp2[0];
         poly->xy3 = hvp2[1];
-        hn -= 1;
-        vp = (u32*)0x1F800000 + ((((st->height + 0x1F) >> 5) + 1) * stride);
-        hy = 7;
-    } while (hn != -1);
+        grows -= 1;
+        build = (FieldTextVertex*)((u32*)0x1F800000 + ((((st->height + 0x1F) >> 5) + 1) * stride));
+        packet_height = 7;
+    } while (grows != -1);
 
     {
         u32* vp2;
 
-        vp = (u32*)0x1F80000C + ((w + 0x3F) >> 6);
-        vp2 = vp + stride;
+        build = (FieldTextVertex*)((u32*)0x1F80000C + ((w + 0x3F) >> 6));
+        vp2 = ((u32*)build) + ((w + 0x3F) >> 6) + 3;
         grows = st->height;
         if (grows > 0)
         {
             do
             {
-                uv = (vbase << 8) | (u_org + 0xE0);
-                vy = 0x1F00;
+                base_y = (vbase << 8) | (u_org + 0xE0);
+                packet_height = 0x1F00;
                 if (grows < 0x20)
                 {
-                    vy = grows << 8;
+                    packet_height = grows << 8;
                 }
-                poly = (PrimQuad*)base_x;
-                base_x += 0x28;
-                poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
-                poly->uv0 = clut | uv;
-                poly->uv1 = tpage | (uv + 8);
-                poly->uv2 = uv + vy;
+                poly = (PrimQuad*)packet_cursor;
+                packet_cursor += sizeof(PrimQuad);
+                poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                poly->uv0 = clut | base_y;
+                poly->uv1 = tpage | (base_y + 8);
+                poly->uv2 = base_y + packet_height;
                 poly->rgbc = rgbc;
-                poly->uv3 = uv + (vy | 8);
-                vvval = uv - 0x40;
-                poly->xy0 = vp[0];
-                vspan = w;
-                poly->xy1 = vp[1];
+                poly->uv3 = base_y + (packet_height | 8);
+                base_y = base_y - tile_width;
+                poly->xy0 = build[0].word;
+                span = w;
+                poly->xy1 = build[1].word;
                 poly->xy2 = vp2[0];
                 poly->xy3 = vp2[1];
-                vp += 1;
+                build += 1;
                 vp2 += 1;
                 if (w > 0)
                 {
                     do
                     {
-                        poly = (PrimQuad*)base_x;
-                        base_x += 0x28;
-                        poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
+                        poly = (PrimQuad*)packet_cursor;
+                        packet_cursor += sizeof(PrimQuad);
+                        poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
                         poly->rgbc = rgbc;
-                        if (vspan >= 0x41)
+                        if (span >= 0x41)
                         {
-                            chunk = 0x40;
-                            vspan -= 0x40;
+                            chunk = tile_width;
+                            span -= 0x40;
                         }
                         else
                         {
-                            chunk = vspan;
-                            vspan = 0;
+                            chunk = span;
+                            span = 0;
                         }
-                        poly->uv1 = tpage | (vvval + chunk);
-                        poly->uv0 = clut | vvval;
-                        poly->uv2 = vvval + vy;
-                        poly->uv3 = vvval + (vy | chunk);
-                        poly->xy0 = vp[0];
-                        poly->xy1 = vp[1];
+                        poly->uv1 = tpage | (base_y + chunk);
+                        poly->uv0 = clut | base_y;
+                        poly->uv2 = base_y + packet_height;
+                        poly->uv3 = base_y + (packet_height | chunk);
+                        poly->xy0 = build[0].word;
+                        poly->xy1 = build[1].word;
                         poly->xy2 = vp2[0];
                         poly->xy3 = vp2[1];
-                        vp += 1;
+                        build += 1;
                         vp2 += 1;
-                    } while (vspan > 0);
+                    } while (span > 0);
                 }
-                vvval += 0x48;
-                poly = (PrimQuad*)base_x;
-                base_x += 0x28;
-                poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
-                poly->uv0 = clut | vvval;
-                poly->uv1 = tpage | (vvval + 8);
-                poly->uv2 = vvval + vy;
+                base_y += 0x48;
+                poly = (PrimQuad*)packet_cursor;
+                packet_cursor += sizeof(PrimQuad);
+                poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                poly->uv0 = clut | base_y;
+                poly->uv1 = tpage | (base_y + 8);
+                poly->uv2 = base_y + packet_height;
                 poly->rgbc = rgbc;
-                poly->uv3 = vvval + (vy | 8);
-                poly->xy0 = vp[0];
+                poly->uv3 = base_y + (packet_height | 8);
+                poly->xy0 = build[0].word;
                 grows -= 0x20;
-                poly->xy1 = vp[1];
+                poly->xy1 = build[1].word;
                 poly->xy2 = vp2[0];
                 poly->xy3 = vp2[1];
-                vp += 2;
+                build += 2;
                 vp2 += 2;
             } while (grows > 0);
         }
@@ -3135,104 +3117,110 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
 
     u_org = 0;
     vbase = 0x80;
-    col = st->region_start_u;
+    u = st->region_start_u;
     row_v = st->region_start_v;
-    grows = st->height >> 4;
+    glyph_height = st->height;
+    grows = glyph_height >> 4;
     grows -= 1;
-    vp = (u32*)0x1F800008 + ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3));
+    build = (FieldTextVertex*)((u32*)0x1F800000 + ((((glyph_height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3)));
     if (grows != -1)
     {
         do
         {
-            gspan = st->line_advance;
-            v = row_v + vbase;
-            if (gspan > 0)
+            span = st->line_advance;
+            glyph_v = vbase + row_v;
+            if (span > 0)
             {
                 do
                 {
-                    uv = (v << 8) | (u_org + col);
-                    poly = (PrimQuad*)base_x;
-                    base_x += 0x28;
-                    poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
+                    glyph_u = u_org + u;
+                    glyph_v <<= 8;
+                    base_y = glyph_v | glyph_u;
+                    poly = (PrimQuad*)packet_cursor;
+                    packet_cursor += sizeof(PrimQuad);
+                    poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
                     poly->rgbc = rgbc;
-                    poly->uv1 = tpage | uv;
-                    poly->uv0 = (hw->text_clut << 16) | uv;
-                    poly->uv2 = uv + (st->line_height << 8);
-                    poly->uv3 = uv + (st->line_height << 8);
-                    poly->xy0 = vp[0];
-                    avail = 0x100 - col;
-                    poly->xy1 = vp[1];
-                    poly->xy2 = vp[2];
-                    poly->xy3 = vp[3];
-                    vp += 2;
-                    if (gspan >= avail)
+                    poly->uv0 = (hw->text_clut << 16) | base_y;
+                    poly->uv1 = tpage | base_y;
+                    poly->uv2 = base_y + (st->line_height << 8);
+                    poly->uv3 = base_y + (st->line_height << 8);
+                    poly->xy0 = build[0].word;
+                    avail = 0x100 - u;
+                    poly->xy1 = build[2].word;
+                    poly->xy2 = build[1].word;
+                    poly->xy3 = build[3].word;
+                    build += 2;
+                    if (span >= avail)
                     {
-                        gspan -= avail;
-                        edge = (col + avail) - 1;
-                        poly->uv3 = edge;
-                        poly->uv1 = edge;
-                        col = 0;
+                        span -= avail;
+                        edge = (glyph_u + avail) - 1;
+                        *(u8*)&poly->uv3 = edge;
+                        *(u8*)&poly->uv1 = edge;
+                        u = 0;
                         row_v += st->line_height;
                     }
                     else
                     {
-                        col += gspan;
-                        edge = col;
-                        gspan = 0;
-                        poly->uv3 = edge;
-                        poly->uv1 = edge;
+                        u += span;
+                        edge = glyph_u + span;
+                        span = 0;
+                        *(u8*)&poly->uv3 = edge;
+                        *(u8*)&poly->uv1 = edge;
                     }
-                    v = row_v + vbase;
-                } while (gspan > 0);
+                    glyph_v = vbase + row_v;
+                } while (span > 0);
             }
             grows -= 1;
+            build += 2;
         } while (grows != -1);
     }
 
+    tpage = 0x1F0000;
+    mesh = (Vec2s*)0x1F800000;
     if (st->portrait != 0)
     {
-        poly = (PrimQuad*)base_x;
-        base_x += 0x28;
+        phase_poly = (PrimQuad*)packet_cursor;
+        packet_cursor += sizeof(PrimQuad);
         prows = st->height;
         prows += 0x1F;
         prows >>= 5;
         prows += 3;
-        sel = st->flags.word;
+        sel = (st->flags.word >> 3) & 1;
         clut = hw->text_clut;
-        poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
-        poly->rgbc = 0x2E000000;
-        sel >>= 3;
-        sel &= 1;
-        uv = (((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0);
-        poly->uv0 = (clut << 16) | uv;
-        poly->uv2 = uv + 0x3000;
-        poly->uv1 = (uv + 0x2F) | tpage;
-        pvp = (u32*)0x1F800000 + count + (prows * (((w + 0x3F) >> 6) + 3));
-        poly->uv3 = uv + 0x302F;
-        poly->xy0 = pvp[0];
-        poly->xy1 = pvp[1];
-        poly->xy2 = pvp[2];
-        poly->xy3 = pvp[3];
-        pvp += 4;
-        poly = (PrimQuad*)base_x;
-        base_x += 0x28;
+        phase_poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+        phase_poly->rgbc = 0x2E000000;
+        base_y = (((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0);
+        phase_poly->uv0 = (clut << 16) | base_y;
+        phase_poly->uv2 = base_y + 0x3000;
+        phase_poly->uv1 = (base_y + 0x2F) | tpage;
+        build = (FieldTextVertex*)((u32*)mesh + count + (prows * (((w + 0x3F) >> 6) + 3)));
+        phase_poly->uv3 = base_y + 0x302F;
+        phase_poly->xy0 = build[0].word;
+        phase_poly->xy1 = build[1].word;
+        phase_poly->xy2 = build[2].word;
+        phase_poly->xy3 = build[3].word;
+        build += 4;
+        phase_poly = (PrimQuad*)packet_cursor;
+        packet_cursor += sizeof(PrimQuad);
         sel = (st->flags.word >> 3) & 1;
         clut = (&hw->portrait_clut0)[sel];
-        uv = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        poly->uv2 = uv + 0x3000;
-        poly->uv1 = (uv + 0x2F) | tpage;
-        poly->tag = ((u32)base_x & 0xFFFFFF) | 0x09000000;
-        poly->rgbc = rgbc;
-        poly->uv3 = uv + 0x302F;
-        poly->uv0 = (clut << 16) | uv;
-        poly->xy0 = pvp[0];
-        poly->xy1 = pvp[1];
-        poly->xy2 = pvp[2];
-        poly->xy3 = pvp[3];
+        base_y = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        phase_poly->uv2 = base_y + 0x3000;
+        phase_poly->uv1 = (base_y + 0x2F) | tpage;
+        dy = (u32)packet_cursor & 0xFFFFFF;
+        phase_poly->tag = dy | 0x09000000;
+        phase_poly->rgbc = rgbc;
+        phase_poly->uv3 = base_y + 0x302F;
+        phase_poly->uv0 = (clut << 16) | base_y;
+        phase_poly->xy0 = build[0].word;
+        phase_poly->xy1 = build[1].word;
+        phase_poly->xy2 = build[2].word;
+        phase_poly->xy3 = build[3].word;
+        poly = phase_poly;
     }
     poly->tag = (poly->tag & 0xFF000000) | (ot->tag1 & 0xFFFFFF);
     ot->tag1 = (ot->tag1 & 0xFF000000) | ((u32)first & 0xFFFFFF);
-    *cursor = (u8*)base_x;
+    *cursor = packet_cursor;
 }
 
 /**

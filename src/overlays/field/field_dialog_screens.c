@@ -215,7 +215,7 @@ extern s32 D_801227EC;
 extern s32 D_801227C8;
 extern s32 D_80122908;
 extern u16 D_80122998;
-extern u16 D_80122920;
+extern u16 D_80122920[];
 extern s32 D_800F229C;
 extern s32 D_801226D8;
 extern s32 D_80122828;
@@ -431,7 +431,7 @@ void func_800A71CC(void)
     if (entry_count != 0)
     {
         entry_limit = entry_count;
-        entry = &D_80122920;
+        entry = D_80122920;
         do
         {
             if (*entry & 0x8000)
@@ -942,20 +942,19 @@ s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
  * @param scroll_y Vertical scroll offset.
  * @param viewport_height Bottom clipping boundary.
  * @return Primitive buffer cursor after drawing the visible text.
- * @note Partial assembly match; probe evidence is retained in working/func_800A8128.
  */
 s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s32 viewport_height)
 {
     s32 func_800A88A0(s32, s32, void *, s32, s32, s32, s32); /* extern */
     extern TextResource *D_8010D038;
 
+    unsigned char pad[8];
+    unsigned char *normal_names;
+    unsigned char *special_names;
     s32 header_x;
     s32 item_x;
-    void *special_names;
-    void *normal_names;
     s32 normal_header_y;
     s32 special_header_y;
-    s32 draw_cursor;
     s32 next_cursor;
     s32 special_header_drawn;
     s32 row;
@@ -966,7 +965,7 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
     s32 item_y;
     u16 *entry;
     u16 name_index;
-    void *name_table;
+    s32 entry_count;
 
     next_cursor = cursor;
     special_header_drawn = 0;
@@ -979,7 +978,7 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
     {
         header_x = 0x20 - scroll_x;
         item_x = 0x80 - scroll_x;
-        entry = &D_80122920;
+        entry = D_80122920;
         do
         {
             if (*entry & 0x8000)
@@ -990,11 +989,14 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
                     special_header_y = special_row_y - scroll_y;
                     if ((special_header_y >= -0xF) && (special_header_y < viewport_height))
                     {
-                        next_cursor =
-                            func_800A88A0(next_cursor, ordering_table,
-                                          D_800EC3CE.low + ((D_800EC3CE.high << 8) +
-                                                            (unsigned char *)&D_800EC3CE - 10),
-                                          4, header_x, special_header_y, 0);
+                        s32 low;
+                        s32 offset;
+                        unsigned char *base;
+
+                        low = D_800EC3CE.low;
+                        base = D_800EC3C4;
+                        offset = (D_800EC3CE.high << 8) + (s32)base;
+                        next_cursor = func_800A88A0(next_cursor, ordering_table, (void *)(low + offset), 4, header_x, special_header_y, 0);
                     }
                     special_header_drawn = 1;
                     row += 1;
@@ -1003,14 +1005,12 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
                 item_y = special_row_y - scroll_y;
                 if (item_y >= -0xF)
                 {
-                    draw_cursor = next_cursor;
                     if (item_y < viewport_height)
                     {
-                        name_table = special_names;
                         name_index = *entry & 0x7FFF;
-                        next_cursor = func_800A88A0(draw_cursor, ordering_table,
-                                                    (unsigned char *)name_table +
-                                                        ((u16 *)name_table)[name_index],
+                        next_cursor = func_800A88A0(next_cursor, ordering_table,
+                                                    special_names +
+                                                        ((u16 *)special_names)[name_index],
                                                     4, item_x, item_y, 2);
                     }
                 }
@@ -1025,8 +1025,7 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
                     {
                         next_cursor =
                             func_800A88A0(next_cursor, ordering_table,
-                                          D_800EC3CC.low + ((D_800EC3CC.high << 8) +
-                                                            (unsigned char *)&D_800EC3CC - 8),
+                                          D_800EC3C4 + D_800EC3CC.low + (D_800EC3CC.high << 8),
                                           4, header_x, normal_header_y, 0);
                     }
                     normal_header_drawn = 1;
@@ -1036,21 +1035,24 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
                 item_y = normal_row_y - scroll_y;
                 if (item_y >= -0xF)
                 {
-                    draw_cursor = next_cursor;
                     if (item_y < viewport_height)
                     {
                         name_index = *entry;
-                        name_table = normal_names;
-                        next_cursor = func_800A88A0(draw_cursor, ordering_table,
-                                                    (unsigned char *)name_table +
-                                                        ((u16 *)name_table)[name_index],
+                        next_cursor = func_800A88A0(next_cursor, ordering_table,
+                                                    normal_names +
+                                                        ((u16 *)normal_names)[name_index],
                                                     4, item_x, item_y, 2);
                     }
                 }
             }
             row += 1;
             entry += 1;
-        } while (++index < (s32)D_80122998);
+            do
+            {
+                entry_count = D_80122998;
+                index += 1;
+            } while (0);
+        } while (index < entry_count);
     }
     return next_cursor;
 }
