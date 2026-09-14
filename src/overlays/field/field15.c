@@ -217,12 +217,12 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 
     i = segments - 1;
 
-    ptr_a->vx = (*(s32 *) 0x1F800000 + rec->unk0) >> 1;
-    ptr_a->vy = *(s32 *) 0x1F800004;
-    ptr_a->vz = (*(s32 *) 0x1F800008 + rec->unk8) >> 1;
-    ptr_b->vx = (*(s32 *) 0x1F800000 - rec->unk0) >> 1;
-    ptr_b->vy = rec->unk4 - *(s32 *) 0x1F800004;
-    ptr_b->vz = (*(s32 *) 0x1F800008 - rec->unk8) >> 1;
+    ptr_a->vx = (((FieldVector *)0x1F800000)->vx + rec->unk0) >> 1;
+    ptr_a->vy = ((FieldVector *)0x1F800000)->vy;
+    ptr_a->vz = (((FieldVector *)0x1F800000)->vz + rec->unk8) >> 1;
+    ptr_b->vx = (((FieldVector *)0x1F800000)->vx - rec->unk0) >> 1;
+    ptr_b->vy = rec->unk4 - ((FieldVector *)0x1F800000)->vy;
+    ptr_b->vz = (((FieldVector *)0x1F800000)->vz - rec->unk8) >> 1;
 
     if (i > 0)
     {

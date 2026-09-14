@@ -169,11 +169,9 @@ u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s
  * @param primbuf Output primitive buffer; advanced 0x28 bytes per emitted quad.
  * @param base Depth-indexed ordering-table / primitive base array.
  * @return The advanced primbuf cursor.
- * @note WIP - not yet byte-matching. Residue is spread across the emit loop:
- *       98 argdiff rows plus a four-slot shuffle of the sp+0x1C..0x28 spill
- *       block, i.e. the callee-saved/spill assignment for the loop-carried
- *       values differs from the target rather than the codegen shape.
- * @see decomp.me (95.42%) WIP
+ * @note WIP - remaining differences are final projection register allocation
+ *       and packet-store scheduling. Frame and spill assignments match.
+ * @see decomp.me (99.94%) WIP
  */
 u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
@@ -184,6 +182,7 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     FieldVector *ptr_b;
     FieldVector *ptr_c;
     FieldMatrix *cur;
+    s32 *endpoint;
     s32 segments;
     s32 i;
     s32 amp;
@@ -193,7 +192,6 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     FieldSVector *dir;
     s32 temp_v1;
     u8 uvflags;
-    u8 prim_code;
 
     gte_out = (FieldVector *) 0x1F800010;
     ptr_a = (FieldVector *) 0x1F800020;
@@ -259,11 +257,13 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     *(s8 *) (primbuf + 7) = 0x2C;
     ((rec->unk1C & 0x800000) ? (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) | 2) : (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) & ~2));
 
+    cur = (FieldMatrix *) 0x1F800058;
     segments = 0x14;
     if (rec->unk24 < 0x14)
     {
         segments = rec->unk24;
     }
+    endpoint = (s32 *) 0x1F800000;
     if (segments <= 0)
     {
         segments = 1;
@@ -272,11 +272,10 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 
     field_resolve_effect_position(rec, part, (FieldVector *) 0x1F800000);
     {
-        volatile s32 *scratch = (volatile s32 *) 0x1F800000;
-        ptr_a->vx = (scratch[0] + rec->unk0) >> 1;
-        ptr_a->vy = scratch[1];
-        ptr_a->vz = (rec->unk8 + scratch[2]) >> 1;
-        ptr_c->vx = *(s32 *) 0x1F800000 - rec->unk0;
+        ptr_a->vx = (((FieldVector *) 0x1F800000)->vx + rec->unk0) >> 1;
+        ptr_a->vy = ((FieldVector *) 0x1F800000)->vy;
+        ptr_a->vz = (((FieldVector *) 0x1F800000)->vz + rec->unk8) >> 1;
+        ptr_c->vx = *endpoint - rec->unk0;
         ptr_b->vx = ptr_c->vx >> 1;
         ptr_c->vy = rec->unk4 - *(s32 *) 0x1F800004;
         ptr_b->vy = ptr_c->vy;
@@ -350,15 +349,10 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         do
         {
             temp_v1 = *(s32 *) (primbuf + 0x4);
+            *(s32 *) (primbuf + 0x2C) = temp_v1;
             *(s8 *) (primbuf + 0x3) = 9;
             *(s8 *) (primbuf + 0x7) = 0x2C;
-            *(s32 *) (primbuf + 0x2C) = temp_v1;
-            prim_code = 0x2E;
-            if (!(rec->unk1C & 0x800000))
-            {
-                prim_code = 0x2C;
-            }
-            *(u8 *) (primbuf + 7) = prim_code;
+            ((rec->unk1C & 0x800000) ? (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) | 2) : (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) & ~2));
 
             gte_SetRotMatrix(cur);
             gte_ldv0(dir);
@@ -450,14 +444,20 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         s32 temp_x;
         s32 raw_d4;
         first_d0 = D_800F22A0 / 256;
-        temp_x = *(s32 *) 0x1F800000 / 256 + 0xA0;
+        temp_x = *endpoint / 256 + 0xA0;
         raw_d4 = D_800F22A4;
         *(s16 *) (primbuf + 0x10) = (s16) (first_d0 + temp_x);
         if (raw_d4 < 0)
         {
             raw_d4 += 0xFF;
         }
-        *(s16 *) (primbuf + 0x12) = (s16) (0x70 + (raw_d4 >> 8) + *(s32 *) 0x1F800004 / 256 - *(s32 *) 0x1F800008 / 512 - D_800F22A8 / 512);
+        {
+            s32 depth;
+            raw_d4 = 0x70 + (raw_d4 >> 8) + *(s32 *) 0x1F800004 / 256;
+            depth = *(s32 *) 0x1F800008;
+            raw_d4 -= depth / 512;
+            *(s16 *) (primbuf + 0x12) = raw_d4 - D_800F22A8 / 512;
+        }
     }
     *(s16 *) (primbuf + 0x20) = *(s16 *) (primbuf + 0x10) + off_x;
     *(s16 *) (primbuf + 0x22) = *(s16 *) (primbuf + 0x12) + angle;
@@ -483,8 +483,10 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     {
         s32 addr;
         s32 *entry;
+        s32 srcval;
         addr = (s32) primbuf & 0xFFFFFF;
-        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (base[temp_v1] & 0xFFFFFF);
+        srcval = base[temp_v1];
+        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (srcval & 0xFFFFFF);
         entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
         primbuf += 0x28;
         *entry = (*entry & 0xFF000000) | addr;

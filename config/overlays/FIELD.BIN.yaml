@@ -176,7 +176,7 @@ segments:
       # TU hypothesis: field_actor_routes (high). See docs/decompilation/field-boundaries/map.md.
       - [0x3CAB9, c, field_actor_routes] # gcc272_cdk; 8C728..8D29C (7 funcs; func_8008CAA4 94.262250% WIP + func_8008D29C 98.3% WIP [merged objdiff 98.300644%, pure intra-object j reloc artifact, instruction-identical], rest 100%)
       # TU hypothesis: field_actor_behavior (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x3DFE5, c, field_actor_behavior] # gcc272_cdk; 8DC54..9104C (9 funcs; func_8008DC54 99.264120% + func_8008E690 96.556920% + func_8009104C 98.983406% WIP, rest 100%; func_80090D48 100% instr, reloc-artifact objdiff)
+      - [0x3DFE5, c, field_actor_behavior] # gcc272_cdk; 8DC54..9104C (9 funcs; func_8008DC54 100% + func_8008E690 96.556920% + func_8009104C 98.983406% WIP, rest 100%; func_80090D48 100% instr, reloc-artifact objdiff)
       # TU hypothesis: field_actor_input_maps (high). See docs/decompilation/field-boundaries/map.md.
       - [0x417A1, c, field39]                      # gcc272_cdk, func_80091410
       - [0x417C9, c, func_80091438] # gcc272_cdk, 100%
@@ -213,7 +213,7 @@ segments:
       - [0x454F9, c, func_80095168]             # gcc272_cdk, 100%
       - [0x4555D, c, func_800951CC]             # gcc272_cdk, 100%
       - [0x4566D, c, func_800952DC]             # gcc272_cdk, 100%
-      - [0x45881, c, func_800954F0] # gcc272_cdk, 86.774840% WIP
+      - [0x45881, c, func_800954F0] # gcc272_cdk, 97.554720% WIP
       - [0x464ED, c, func_8009615C] # gcc272_cdk, 100.000000%
       - [0x466C5, c, field255]                  # gcc272_cdk, func_80096334
       - [0x46725, c, func_80096394] # gcc272_cdk, 100%

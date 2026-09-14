@@ -1003,80 +1003,90 @@ static inline s32 pack_position(Position *position)
 }
 /**
  * @brief Refresh actor map positions and dispatch the first newly entered trigger.
+ * @note WIP: best match 98.59% on gcc280_g0 (one extra insn near +0xA0); not yet exact.
  */
 void func_800B1D10(void)
 {
     Position positions[3];
-    s32 *packed_cursor;
-    Position *position_cursor;
-    s32 region_offset;
+    s32 *var_s0;
+    Position *var_s2;
     s32 used;
     Point *point;
-    s32 region_bit;
-    s32 index;
+    TriggerContext *context;
+    s32 var_a3;
+    s32 var_s1;
 
-    s32 packed;
-    u8 *table;
-    Region *region;
-    Region *trigger;
+    s32 var_v0;
+    s32 sentinel;
+    u8 *temp_v0;
+    Region *temp_v1;
+    Region *temp_v1_2;
 
-    index = 0;
-    position_cursor = positions;
+    var_s1 = 0;
+    sentinel = -1;
+    var_s2 = positions;
     ((TriggerContext *)D_80122B78)->unk54 = (s32)-D_80122B70->unk4;
-    packed_cursor = ((TriggerContext *)D_80122B78)->positions;
-    ((TriggerContext *)D_80122B78)->unk58 = (s32) - (D_80122B70->unk8 + D_80122B70->unkC);
+    var_s0 = ((TriggerContext *)D_80122B78)->positions;
+    ((TriggerContext *)D_80122B78)->unk58 = (s32)-(D_80122B70->unk8 + D_80122B70->unkC);
+loop_actor:
+    var_v0 = ((s32 (*)(s32, Position *))func_80087F44)(var_s1, var_s2);
+    if (var_v0 != sentinel)
+    {
+        var_v0 = ((var_s2->unk0 << 8) & 0xFFFF0000) | ((var_s2->unk8 >> 8) & 0xFFFF);
+    }
     do
     {
-        packed = ((s32 (*)(s32, Position *))func_80087F44)(index, position_cursor);
-        if (packed != -1)
+        do
         {
-            packed = pack_position(position_cursor);
-        }
-        *packed_cursor = packed;
-        position_cursor++;
-        index += 1;
-        packed_cursor++;
-    } while (index < 3);
-    point = &D_80042FC8;
+            do
+            {
+                *var_s0 = var_v0;
+            } while (0);
+        } while (0);
+    } while (0);
+    var_s2++;
+    var_s1 += 1;
+    var_s0++;
+    if (var_s1 < 3)
+    {
+        goto loop_actor;
+    }
+    do
+    {
+        point = &D_80042FC8;
+    } while (0);
+    context = (TriggerContext *)D_80122B78;
     point->x = (u16)(positions[0].unk0 >> 8);
     point->z = (u16)(positions[0].unk8 >> 8);
-    table = ((TriggerContext *)D_80122B78)->unkF00;
-    if ((table != 0) &&
-        (region_bit = 1, used = ((TriggerContext *)D_80122B78)->unkB8, index = 0, ((*(u16 *)(table + 2)) != 0)))
+    temp_v0 = context->unkF00;
+    if (temp_v0 != 0)
     {
-        region_offset = index;
-    loop_7:
-        if (!(used & region_bit))
+        var_a3 = 1;
+        used = context->unkB8;
+        used += 1;
+        used -= 1;
+        var_s1 = 0;
+        while (var_s1 < (s32)*(u16 *)(*(u8 **)&((TriggerContext *)D_80122B78)->unkF00 + 2))
         {
-            region = (Region *)(((TriggerContext *)D_80122B78)->unkF00 + region_offset);
-            if (((u16)point->x >= (u16)region->unk4) && ((u16)region->unk8 >= (u16)point->x) &&
-                ((u16)point->z >= (u16)region->unk6))
+            if (!(used & var_a3))
             {
-                if ((u16)region->unkA >= (u16)point->z)
+                temp_v1 = (Region *)(((TriggerContext *)D_80122B78)->unkF00 + (var_s1 * 12));
+                if (((u16)D_80042FC8.x >= (u16)temp_v1->unk4) && ((u16)temp_v1->unk8 >= (u16)D_80042FC8.x) &&
+                    ((u16)D_80042FC8.z >= (u16)temp_v1->unk6) && ((u16)temp_v1->unkA >= (u16)D_80042FC8.z))
                 {
-                    trigger = (Region *)(((TriggerContext *)D_80122B78)->unkF00 + region_offset);
-                    ((TriggerContext *)D_80122B78)->unkB8 = (s32)(((TriggerContext *)D_80122B78)->unkB8 | region_bit);
-                    if (trigger->unkC & 0x8000)
+                    temp_v1_2 = (Region *)(((TriggerContext *)D_80122B78)->unkF00 + (var_s1 * 12));
+                    ((TriggerContext *)D_80122B78)->unkB8 = (s32)(((TriggerContext *)D_80122B78)->unkB8 | var_a3);
+                    if (temp_v1_2->unkC & 0x8000)
                     {
-                        func_800B22F0(0, trigger->unkC);
+                        func_800B22F0(0, temp_v1_2->unkC);
                         return;
                     }
-                    func_800B4410(trigger->unkC);
+                    func_800B4410(temp_v1_2->unkC);
                     return;
                 }
-                goto block_16;
             }
-        }
-    block_16:
-        region_bit *= 2;
-        index += 1;
-        region_offset += 0xC;
-        if (index >= (s32)(*(u16 *)(((TriggerContext *)D_80122B78)->unkF00 + 2)))
-        {
-        }
-        else
-        {
-            goto loop_7;
+            var_a3 *= 2;
+            var_s1 += 1;
         }
     }
 }
