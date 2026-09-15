@@ -925,199 +925,199 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
     primitive = primitive_buffer;
     addr_mask = 0xFFFFFF;
     strip_index = 0;
-    tag_mask = 0xFF000000;
-    outer_code = primitive + 7;
+
+    outer_code = primitive;
     offset = (D_801178D8 % 40) << 8;
-next_strip:
-    /* Save both initial packed XY values to close the strip after eight steps. */
-    if (forward != 0)
-    {
-        first_x = position->vx + offset;
-    }
-    else
-    {
-        first_x = position->vx - offset;
-    }
     do
     {
-        work.world.vx = first_x;
-        work.world.vy = position->vy;
-        work.world.vz = position->vz + 0x2000;
-    } while (0);
-    screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-    camera_y = D_800F22A4;
-    *(s16*)(outer_code + 1) = screen_x;
-    if (camera_y < 0)
-    {
-        camera_y += 255;
-    }
-    *(s16*)(outer_code + 3) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
-    first_xy = (s32) * (s32*)(outer_code + (1));
-    if (forward != 0)
-    {
-        second_x = position->vx + offset + 0x1400;
-    }
-    else
-    {
-        second_x = (position->vx - offset) - 0x1400;
-    }
-    do
-    {
-        work.world.vx = second_x;
-        work.world.vy = position->vy;
-        work.world.vz = position->vz + 0x2000;
-    } while (0);
-    screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-    camera_y = D_800F22A4;
-    *(s16*)(outer_code + 9) = screen_x;
-    if (camera_y < 0)
-    {
-        camera_y += 255;
-    }
-    *(s16*)(outer_code + 11) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
-    step = 1;
-    angle = 0x100;
-    strip_code = primitive + 7;
-    second_xy = (s32) * (s32*)(outer_code + (9));
-next_segment:
-{
-    do
-    {
+        tag_mask = 0xFF000000;
+        /* Save both initial packed XY values to close the strip after eight steps. */
+        if (forward != 0)
+        {
+            first_x = position->vx + offset;
+        }
+        else
+        {
+            first_x = position->vx - offset;
+        }
         do
         {
-            trig_angle = angle;
-            if (forward != 0)
-            {
-                inner_x = position->vx + offset + angle;
-            }
-            else
-            {
-                inner_x = (position->vx - offset) - angle;
-            }
-            work.world.vx = inner_x;
-            work.world.vy = position->vy - (rsin(trig_angle) * 2);
-            work.world.vz = position->vz + (rcos(angle) * 2);
+            work.world.vx = first_x;
+            work.world.vy = position->vy;
+            work.world.vz = position->vz + 0x2000;
         } while (0);
         screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
         camera_y = D_800F22A4;
-        *(s16*)(strip_code + 17) = screen_x;
+        *(s16*)(outer_code + 8) = screen_x;
         if (camera_y < 0)
         {
             camera_y += 255;
         }
-        *(s16*)(strip_code + 19) =
+        *(s16*)(outer_code + 10) =
             112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+        first_xy = (s32) * (s32*)(outer_code + 8);
+        if (forward != 0)
+        {
+            second_x = position->vx + offset + 0x1400;
+        }
+        else
+        {
+            second_x = (position->vx - offset) - 0x1400;
+        }
         do
         {
-            *(s32*)(strip_code + (37)) = (s32) * (s32*)(strip_code + (17));
+            work.world.vx = second_x;
+            work.world.vy = position->vy;
+            work.world.vz = position->vz + 0x2000;
+        } while (0);
+        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = D_800F22A4;
+        *(s16*)(outer_code + 16) = screen_x;
+        if (camera_y < 0)
+        {
+            camera_y += 255;
+        }
+        *(s16*)(outer_code + 18) =
+            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+        step = 1;
+        angle = 0x100;
+        strip_code = primitive;
+        second_xy = (s32) * (s32*)(outer_code + 16);
+        do
+        {
             do
             {
-                trig_angle = angle;
-                if (forward != 0)
+                do
                 {
-                    outer_x = position->vx + offset + angle + 0x1400;
-                }
-                else
-                {
-                    outer_x = ((position->vx - offset) - angle) - 0x1400;
-                }
-                work.world.vx = outer_x;
-                work.world.vy = position->vy - (rsin(trig_angle) * 2);
-                work.world.vz = position->vz + (rcos(angle) * 2);
+                    do
+                    {
+                        trig_angle = angle;
+                        if (forward != 0)
+                        {
+                            inner_x = position->vx + offset + angle;
+                        }
+                        else
+                        {
+                            inner_x = (position->vx - offset) - angle;
+                        }
+                        work.world.vx = inner_x;
+                        work.world.vy = position->vy - (rsin(trig_angle) * 2);
+                        work.world.vz = position->vz + (rcos(angle) * 2);
+                    } while (0);
+                    screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+                    camera_y = D_800F22A4;
+                    *(s16*)(strip_code + 24) = screen_x;
+                    if (camera_y < 0)
+                    {
+                        camera_y += 255;
+                    }
+                    *(s16*)(strip_code + 26) =
+                        112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                    do
+                    {
+                        *(s32*)(strip_code + 44) = (s32) * (s32*)(strip_code + 24);
+                        do
+                        {
+                            trig_angle = angle;
+                            if (forward != 0)
+                            {
+                                outer_x = position->vx + offset + angle + 0x1400;
+                            }
+                            else
+                            {
+                                outer_x = ((position->vx - offset) - angle) - 0x1400;
+                            }
+                            work.world.vx = outer_x;
+                            work.world.vy = position->vy - (rsin(trig_angle) * 2);
+                            work.world.vz = position->vz + (rcos(angle) * 2);
+                        } while (0);
+                        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+                        camera_y = D_800F22A4;
+                        *(s16*)(strip_code + 32) = screen_x;
+                        if (camera_y < 0)
+                        {
+                            camera_y += 255;
+                        }
+                        *(s16*)(strip_code + 34) =
+                            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                        /* Fade the curved strip from black to blue. */
+                        *(s32*)(strip_code + 4) = 0;
+                        *(s32*)(strip_code + 12) = 0xA00000;
+                        *(s32*)(strip_code + 20) = 0;
+                        *(s32*)(strip_code + 28) = 0xA00000;
+                        *(s32*)(strip_code + 52) = (s32) * (s32*)(strip_code + 32);
+                        SetPolyG4((POLY_G4*)primitive);
+                        *(strip_code + 7) |= 2;
+                        segment_depth = position->vz >> 7;
+                        if (segment_depth < 0)
+                        {
+                            ADD_PACKET_A0(0);
+                            primitive += 0x24;
+                            strip_code += 0x24;
+                            outer_code += 0x24;
+                        }
+                        else if (segment_depth >= 0x1000)
+                        {
+                            ADD_PACKET_A0(0xFFF);
+                            primitive += 0x24;
+                            strip_code += 0x24;
+                            outer_code += 0x24;
+                        }
+                        else
+                        {
+                            ADD_PACKET_A0(position->vz >> 7);
+                            primitive += 0x24;
+                            strip_code += 0x24;
+                            outer_code += 0x24;
+                        }
+                        angle += 0x100;
+                        step++;
+                    } while (0);
+                } while (0);
             } while (0);
-            screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-            camera_y = D_800F22A4;
-            *(s16*)(strip_code + 25) = screen_x;
-            if (camera_y < 0)
+        } while (step < 9);
+        *(s32*)(outer_code + 24) = first_xy;
+        *(s32*)(outer_code + 32) = second_xy;
+        *(s32*)(outer_code + 4) = 0;
+        *(s32*)(outer_code + 12) = 0xA000;
+        *(s32*)(outer_code + 20) = 0;
+        *(s32*)(outer_code + 28) = 0xA000;
+        SetPolyG4((POLY_G4*)primitive);
+        *(u8*)(outer_code + 7) = (u8)(*(u8*)(outer_code + 7) | 2);
+        do
+        {
+            closing_depth = position->vz >> 7;
+            if (closing_depth < 0)
             {
-                camera_y += 255;
+                do
+                {
+                    ADD_PACKET_A0(0);
+                    primitive += 0x24;
+                    outer_code += 0x24;
+                } while (0);
             }
-            *(s16*)(strip_code + 27) =
-                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
-            /* Fade the curved strip from black to blue. */
-            *(s32*)(strip_code + (-3)) = 0;
-            *(s32*)(strip_code + (5)) = 0xA00000;
-            *(s32*)(strip_code + (13)) = 0;
-            *(s32*)(strip_code + (21)) = 0xA00000;
-            *(s32*)(strip_code + (45)) = (s32) * (s32*)(strip_code + (25));
-            SetPolyG4((POLY_G4*)primitive);
-            *strip_code |= 2;
-            segment_depth = position->vz >> 7;
-            if (segment_depth < 0)
+            else if (closing_depth >= 0x1000)
             {
-                ADD_PACKET_A0(0);
-                primitive += 0x24;
-                strip_code += 0x24;
-                outer_code += 0x24;
-            }
-            else if (segment_depth >= 0x1000)
-            {
-                ADD_PACKET_A0(0xFFF);
-                primitive += 0x24;
-                strip_code += 0x24;
-                outer_code += 0x24;
+                do
+                {
+                    ADD_PACKET_A0(0xFFF);
+                    primitive += 0x24;
+                    outer_code += 0x24;
+                } while (0);
             }
             else
             {
-                ADD_PACKET_A0(position->vz >> 7);
-                primitive += 0x24;
-                strip_code += 0x24;
-                outer_code += 0x24;
+                do
+                {
+                    ADD_PACKET_A0(position->vz >> 7);
+                    primitive += 0x24;
+                    outer_code += 0x24;
+                } while (0);
             }
-            angle += 0x100;
-            step++;
         } while (0);
-    } while (0);
-}
-    if (step < 9)
-    {
-        goto next_segment;
-    }
-    *(s32*)(outer_code + (17)) = first_xy;
-    *(s32*)(outer_code + (25)) = second_xy;
-    *(s32*)(outer_code + (-3)) = 0;
-    *(s32*)(outer_code + (5)) = 0xA000;
-    *(s32*)(outer_code + (13)) = 0;
-    *(s32*)(outer_code + (21)) = 0xA000;
-    SetPolyG4((POLY_G4*)primitive);
-    *(u8*)(outer_code + (0)) = (u8)(*(u8*)(outer_code + (0)) | 2);
-    closing_depth = position->vz >> 7;
-    if (closing_depth < 0)
-    {
-        do
-        {
-            ADD_PACKET_A0(0);
-            primitive += 0x24;
-            outer_code += 0x24;
-        } while (0);
-    }
-    else if (closing_depth >= 0x1000)
-    {
-        do
-        {
-            ADD_PACKET_A0(0xFFF);
-            primitive += 0x24;
-            outer_code += 0x24;
-        } while (0);
-    }
-    else
-    {
-        do
-        {
-            ADD_PACKET_A0(position->vz >> 7);
-            primitive += 0x24;
-            outer_code += 0x24;
-        } while (0);
-    }
-    do
-    {
         offset += 0x1400;
         offset += 0x1400;
-        if (offset < (extent << 8) && ++strip_index < 4)
-        {
-            goto next_strip;
-        }
-    } while (0);
+    } while (offset < (extent << 8) && ++strip_index < 4);
     *(u8*)(primitive + 3) = 1;
     *(s32*)(primitive + 4) = 0xE1000025;
     drawpage_depth = position->vz >> 7;
@@ -1138,6 +1138,7 @@ next_segment:
     }
     return primitive;
 }
+
 #undef ADD_PACKET_A0
 
 /* ---- func_800A1344 ---- */

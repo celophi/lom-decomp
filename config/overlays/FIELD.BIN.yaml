@@ -230,7 +230,7 @@ segments:
       # TU hypothesis: field_block_allocator (high). See docs/decompilation/field-boundaries/map.md.
       - [0x4CD99, c, field_block_allocator] # gcc272_cdk; initialize, allocate, free/coalesce
       # TU hypothesis: field_actor_target_queries (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x4CFF1, c, field_actor_target_queries] # gcc272_cdk; 9CC60..9D1E4 (7 funcs, 100% except func_8009D1E4 95.206350% WIP)
+      - [0x4CFF1, c, field_actor_target_queries] # gcc272_cdk; 9CC60..9D1E4 (7 funcs, 100%)
       # TU hypothesis: field_actor_effects (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x4D869, c, func_8009D4D8] # gcc272_cdk, 97.647060% WIP
       - [0x4DCED, c, field_actor_effects] # gcc272_cdk; 9D95C..A1344 (6 funcs, 100% except func_800A0B0C 99.923960% WIP; func_8009D4D8 kept separate above due to interleaved unk rodata)
