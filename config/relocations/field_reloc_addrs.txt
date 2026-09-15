@@ -61,3 +61,11 @@ rom:0x53AE9 reloc:MIPS_NONE symbol:D_80180000
 // operands used by the matching C page-base access. No instruction bytes change.
 rom:0x46F1D reloc:MIPS_NONE symbol:D_80105AE0
 rom:0x4715D reloc:MIPS_NONE symbol:D_80105AE0
+
+// func_800632E0: glyph widths use the fixed RAM table at 0x801E26E0.
+// The low halves remain load displacements after adding the glyph index.
+// Suppress inferred symbol relocations; preserve the original literal operands.
+rom:0x13A71 reloc:MIPS_NONE symbol:D_801E26E0
+rom:0x13A81 reloc:MIPS_NONE symbol:D_801E26E0
+rom:0x13D11 reloc:MIPS_NONE symbol:D_801E26E0
+rom:0x13D21 reloc:MIPS_NONE symbol:D_801E26E0

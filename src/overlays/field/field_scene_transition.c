@@ -931,7 +931,6 @@ void func_8009BDD4(s32 *src, s32 *end)
  * @brief Initialize active actors from a count-prefixed field entry list.
  * @param data Entry count followed by 0x30-byte actor load records.
  * @note Active entries fill consecutive actor slots beginning at slot three.
- * @note GCC 2.7.2 CDK currently matches 94.607140 percent of the target.
  */
 void func_8009BE1C(s32 *data)
 {
@@ -1030,6 +1029,7 @@ void func_8009BE1C(s32 *data)
     s32 count = *data;
     s32 i;
     u32 tag;
+    u32 slot_base;
     u8 blue;
 
     D_800FE774 = 3;
@@ -1059,11 +1059,9 @@ void func_8009BE1C(s32 *data)
                 actor->x = entry->position.halves.x << 8;
                 actor->z = (entry->position.halves.z & 0x7FF) << 8;
                 actor->y = (entry->position.word >> 30) << 8;
-                /* Keep the separate packed-bit updates for target codegen. */
                 slot->state.bits.bit6 = 0;
                 slot->state.bits.bit7 = 0;
                 slot->options &= 0xFFFF7FFF;
-                i = 0;
                 slot->red = D_800FE3A0[actor->slot].red;
                 slot->green = D_800FE3A0[actor->slot].green;
                 blue = D_800FE3A0[actor->slot].blue;
@@ -1074,8 +1072,13 @@ void func_8009BE1C(s32 *data)
                 slot->tag = tag;
                 slot->blue = blue;
                 slot->tag = (tag & 0xFF000000) | (slot->base & 0xFFFFFF);
-                slot->index = index + 3;
-                slot->link = slot->base & 0xFFFFFF;
+                i = 0;
+                do
+                {
+                    slot_base = slot->base;
+                    slot->index = index + 3;
+                } while (0);
+                slot->link = slot_base & 0xFFFFFF;
                 slot->id = entry->id;
                 slot->flags = entry->flags;
                 do
@@ -1089,7 +1092,10 @@ void func_8009BE1C(s32 *data)
                 active++;
                 D_800FE774++;
             }
-            index++;
+            do
+            {
+                index++;
+            } while (0);
             entry++;
         } while (index < count);
     }

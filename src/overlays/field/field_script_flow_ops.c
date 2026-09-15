@@ -569,80 +569,89 @@ void func_800BD55C(s32, s32, s32, s32, s32, s32);
 extern s32 D_80122B74, D_80122B78, D_80123FB0, D_80123FC4;
 
 /**
- * @brief Opcodes 0x0C/0x0D: read or write a selected record bitfield.
- * @note Initial nonmatching C; invalid record selectors leave the base unset.
+ * @brief Read or write a selected field-script record value.
  */
 void func_800B8E84(void)
 {
-    u32 sp24;
-    u16 sp20;
-    u32 sp1C;
-    s32 sp18;
-    s32 temp_a1;
-    s32 var_s1;
-    u8 *temp_v1;
-    u8 *temp_v1_2;
-    u8 *temp_v1_3;
-    u8 temp_s2;
-    u8 temp_s3;
-    u8 temp_s4;
-    FieldScriptRecord *temp_v0;
-    FieldScriptRecord *temp_v0_2;
-    FieldScriptRecord *temp_v0_3;
+    u32 value;
+    u16 destination_ref;
+    u32 packed_field;
+    s32 target_index;
+    s32 selected_base;
+    u8 *opcode_pc;
+    u8 *operand_pc;
+    u8 *selector_pc;
+    u32 operand_type;
+    s32 base_selector;
+    s32 opcode;
+    FieldScriptRecord *opcode_record;
+    FieldScriptRecord *operand_record;
+    FieldScriptRecord *selector_record;
 
-    /* Invalid selectors retain the target's unset base register. */
-    temp_v0 = (FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC));
-    temp_v1 = temp_v0->pc;
-    temp_s4 = *temp_v1;
-    temp_v0->pc = (u8 *) (temp_v1 + 1);
-    temp_v0_2 = (FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC));
-    temp_v1_2 = temp_v0_2->pc;
-    temp_s2 = *temp_v1_2;
-    temp_v0_2->pc = (u8 *) (temp_v1_2 + 1);
-    temp_v0_3 = (FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC));
-    temp_v1_3 = temp_v0_3->pc;
-    temp_s3 = *temp_v1_3;
-    temp_v0_3->pc = (u8 *) (temp_v1_3 + 1);
-    ((FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC)))->pc = field_script_read_operand_or_owner(temp_s2, ((FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC)))->pc, &sp18);
-    temp_a1 = g_field_script->active_record;
-    ((FieldScriptRecord *)((u8 *)g_field_script + (temp_a1 * 0xC)))->pc = field_script_read_operand(3U, ((FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC)))->pc, (s32 *)&sp1C);
-    switch (temp_s3)
+    opcode_record = FIELD_SCRIPT_ACTIVE_RECORD();
+    opcode_pc = opcode_record->pc;
+    opcode = *opcode_pc;
+    opcode_record->pc = (u8 *) (opcode_pc + 1);
+    operand_record = FIELD_SCRIPT_ACTIVE_RECORD();
+    operand_pc = operand_record->pc;
+    operand_type = *operand_pc;
+    operand_record->pc = (u8 *) (operand_pc + 1);
+    selector_record = FIELD_SCRIPT_ACTIVE_RECORD();
+    selector_pc = selector_record->pc;
+    base_selector = *selector_pc;
+    selector_record->pc = (u8 *) (selector_pc + 1);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand_or_owner(operand_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &target_index);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(3U, FIELD_SCRIPT_ACTIVE_RECORD()->pc, (s32 *)&packed_field);
+    operand_type >>= 2;
+    switch (base_selector)
     {
     case 0:
-        var_s1 = func_80087F0C(sp18);
+        selected_base = func_80087F0C(target_index);
     default:
         break;
     case 1:
-        var_s1 = D_80122B78 + 0x400;
+        selected_base = D_80122B78 + 0x400;
         break;
     case 2:
-        var_s1 = (s32)func_800C1B60(sp18);
+        selected_base = (s32)func_800C1B60(target_index);
         break;
     case 3:
-        var_s1 = D_80123FC4;
+        selected_base = D_80123FC4;
         break;
     case 4:
-        var_s1 = D_80123FB0;
+        selected_base = D_80123FB0;
         break;
     case 5:
-        var_s1 = func_800B2A9C(sp18);
+        selected_base = func_800B2A9C(target_index);
         break;
     case 6:
-        var_s1 = D_80122B74 + ((sp18 * 0x250) + 0x5F0);
-        break;
-    case 7:
-        var_s1 = D_80122B74;
+    {
+        s32 *base_ptr = &D_80122B74;
+        s32 offset = target_index * 0x250 + 0x5F0;
+        selected_base = *base_ptr + offset;
         break;
     }
-    if (temp_s4 == 0xC)
+    case 7:
+        selected_base = D_80122B74;
+        break;
+    }
+    if (opcode == 0xC)
     {
-        sp24 = func_800BD650(sp1C >> 0x1E, var_s1, (sp1C >> 0x10) & 0x3FFF, *((u8 *)&sp1C + 1), (s32) (u8) sp1C);
-        ((FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC)))->pc = field_script_read_u16(((FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC)))->pc, &sp20);
-        func_800BD434(g_field_script->status.owner_id, sp20 << 0x10, sp24);
+        value = func_800BD650(packed_field >> 0x1E, selected_base, (packed_field >> 0x10) & 0x3FFF, *((u8 *)&packed_field + 1), (s32) (u8) packed_field);
+        FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &destination_ref);
+        func_800BD434(g_field_script->status.owner_id, destination_ref << 0x10, value);
         return;
     }
-    ((FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC)))->pc = field_script_read_operand(temp_s2 >> 2, ((FieldScriptRecord *)((u8 *)g_field_script + (g_field_script->active_record * 0xC)))->pc, (s32 *)&sp24);
-    func_800BD55C(sp1C >> 0x1E, var_s1, (sp1C >> 0x10) & 0x3FFF, *((u8 *)&sp1C + 1), (s32) (u8) sp1C, sp24);
+    {
+        u8 *next;
+        u8 **pc;
+        s32 call_base;
+        next = field_script_read_operand(operand_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, (s32 *)&value);
+        call_base = selected_base;
+        pc = &FIELD_SCRIPT_ACTIVE_RECORD()->pc;
+        *pc = next;
+        func_800BD55C(packed_field >> 0x1E, call_base, (packed_field >> 0x10) & 0x3FFF, *((u8 *)&packed_field + 1), (s32) (u8) packed_field, value);
+    }
 }
 
 /**

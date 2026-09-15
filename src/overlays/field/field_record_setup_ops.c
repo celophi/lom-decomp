@@ -16,7 +16,39 @@ void func_800C015C(s32);
 #define SETUP_U32(p,o) (*(u32 *)((u8 *)(p)+(o)))
 #define SETUP_PTR(p,o) (*(u8 **)((u8 *)(p)+(o)))
 
+/** @brief Eight four-bit values packed into one record word. */
+typedef struct
+{
+    u32 n0 : 4;
+    u32 n1 : 4;
+    u32 n2 : 4;
+    u32 n3 : 4;
+    u32 n4 : 4;
+    u32 n5 : 4;
+    u32 n6 : 4;
+    u32 n7 : 4;
+} SetupNibbles;
 
+/** @brief Packed 0x40-byte record expanded into the shared sequence configuration. */
+typedef struct
+{
+    u8 pad0[0x14];
+    u32 : 8;
+    u32 mode : 2;
+    u32 primary_index : 6;
+    u32 secondary_index : 6;
+    u32 : 10;
+    SetupNibbles values18;
+    SetupNibbles values1c;
+    u8 values20[3];
+    u8 value23;
+    u8 pad24[2];
+    u8 values26[6];
+    u8 value2c;
+    u8 pad2d;
+    u8 value2e;
+    u8 pad2f[0x11];
+} SetupSourceRecord;
 
 extern s32 D_801227F0;
 extern s32 g_gosub_result_count;
@@ -27,7 +59,7 @@ extern u8 *func_800A9060(void);
 extern void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 extern void func_800BE888(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 extern void func_800BEA10(u8 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
-extern void func_800BEC44(u8 *arg0, s32 arg1);
+extern void func_800BEC44(SetupSourceRecord *record, s32 resource_index);
 extern s32 *func_800C1EC8(s32 *src, s32 *dest, s32 n);
 
 /**
@@ -67,7 +99,7 @@ void func_800BE710(s32 arg0)
         case 3:
         {
             s32 offset = (g_gosub_result_values[0] << 6) + 0xCE0;
-            func_800BEC44(D_80122B74 + offset, g_gosub_result_values[1]);
+            func_800BEC44((SetupSourceRecord *)(D_80122B74 + offset), g_gosub_result_values[1]);
             func_800BD520(0, 0x7100, g_gosub_result_values[0]);
             break;
         }
@@ -283,98 +315,92 @@ void func_800BEA10(u8 *destination, s32 mode, s32 subentry, s32 resource_index, 
     destination[0x26] = (u8)((u8 *)D_80123FC4)[0x31];
 }
 
-/** @brief Expands packed record fields into the shared sequence configuration.
- * @note Initial nonmatching C recovered from assembly.
+/**
+ * @brief Expand packed record fields into the shared sequence configuration.
+ * @param record Packed source record.
+ * @param resource_index Resource-table selector stored in the staged configuration.
  */
-void func_800BEC44(u8 *arg0, s32 arg1)
+void func_800BEC44(SetupSourceRecord *record, s32 resource_index)
 {
-    u8 *var_a0;
-    u8 *var_v0;
-    u8 *var_v0_2;
-    s32 temp_v0;
-    s32 temp_v0_2;
-    s32 temp_v0_3;
-    s32 temp_v1;
-    s32 temp_v1_2;
-    s32 temp_v1_3;
-    s32 var_t1;
-    s32 var_t1_2;
-    s32 var_t1_3;
-    u8 temp_v1_5;
-    u8 *temp_v0_4;
-    u8 *temp_v1_4;
-    u8 *temp_v1_6;
+    u8 *config_ptr;
+    s32 config_word24;
+    s32 config_word24_2;
+    s32 config_word24_3;
+    s32 config_word20;
+    s32 config_word20_2;
+    s32 config_word20_3;
+    s32 i;
+    u8 mode;
+    u8 *config_entry;
 
     D_80123FC0 = func_800C1E40(4);
-    func_800C21C0(arg1);
-    SETUP_PTR(D_80123FC4, 0) = arg0;
-    SETUP_U8(D_80123FC4, 0x4) = (u8) (((u32) SETUP_U32(arg0, 0x14) >> 8) & 3);
-    SETUP_U8(D_80123FC4, 0x5) = (s8) (((u32) SETUP_U32(arg0, 0x14) >> 0xA) & 0x3F);
-    SETUP_U8(D_80123FC4, 0x6) = (s8) (SETUP_U16(arg0, 0x16) & 0x3F);
-    var_t1 = 0;
-    SETUP_U8(D_80123FC4, 0x7) = arg1;
-    SETUP_U32(D_80123FC4, 0x8) = (s32) (SETUP_U32(D_80123FC4, 0x8) + SETUP_U8(D_80123FC0 + (arg1 - 0x40) * 4, 0x684));
-    SETUP_U8(D_80123FC4, 0xD) = (s8) (SETUP_U32(arg0, 0x18) & 0xF);
-    SETUP_U8(D_80123FC4, 0xF) = (s8) (SETUP_U8(arg0, 0x18) >> 4);
-    SETUP_U8(D_80123FC4, 0x11) = (s8) (((u32) SETUP_U32(arg0, 0x18) >> 8) & 0xF);
-    SETUP_U8(D_80123FC4, 0x13) = (s8) (((u32) SETUP_U32(arg0, 0x18) >> 0xC) & 0xF);
-    SETUP_U8(D_80123FC4, 0x15) = (s8) (SETUP_U16(arg0, 0x1A) & 0xF);
-    SETUP_U8(D_80123FC4, 0x17) = (s8) (((u32) SETUP_U32(arg0, 0x18) >> 0x14) & 0xF);
-    SETUP_U8(D_80123FC4, 0x19) = (s8) (SETUP_U8(arg0, 0x1B) & 0xF);
-    SETUP_U8(D_80123FC4, 0x1B) = (s8) ((u32) SETUP_U32(arg0, 0x18) >> 0x1C);
-    SETUP_U8(D_80123FC4, 0x1C) = (u8) SETUP_U8(arg0, 0x2E);
-    temp_v1 = (SETUP_U32(D_80123FC4, 0x20) & ~0xF) | (SETUP_U32(arg0, 0x1C) & 0xF);
-    SETUP_U32(D_80123FC4, 0x20) = temp_v1;
-    temp_v1_2 = (temp_v1 & ~0xF00) | ((SETUP_U8(arg0, 0x1C) >> 4) << 8);
-    SETUP_U32(D_80123FC4, 0x20) = temp_v1_2;
-    temp_v1_3 = (temp_v1_2 & 0xFFF0FFFF) | ((((u32) SETUP_U32(arg0, 0x1C) >> 8) & 0xF) << 0x10);
-    SETUP_U32(D_80123FC4, 0x20) = temp_v1_3;
-    SETUP_U32(D_80123FC4, 0x20) = (s32) ((temp_v1_3 & 0xF0FFFFFF) | ((((u32) SETUP_U32(arg0, 0x1C) >> 0xC) & 0xF) << 0x18));
-    temp_v0 = (SETUP_U32(D_80123FC4, 0x24) & ~0xF) | (SETUP_U16(arg0, 0x1E) & 0xF);
-    SETUP_U32(D_80123FC4, 0x24) = temp_v0;
-    temp_v0_2 = (temp_v0 & ~0xF00) | (((u32) SETUP_U32(arg0, 0x1C) >> 0xC) & 0xF00);
-    SETUP_U32(D_80123FC4, 0x24) = temp_v0_2;
-    temp_v0_3 = (temp_v0_2 & 0xFFF0FFFF) | ((SETUP_U8(arg0, 0x1F) & 0xF) << 0x10);
-    SETUP_U32(D_80123FC4, 0x24) = temp_v0_3;
-    SETUP_U32(D_80123FC4, 0x24) = (s32) ((temp_v0_3 & 0xF0FFFFFF) | (((u32) SETUP_U32(arg0, 0x1C) >> 0x1C) << 0x18));
+    func_800C21C0(resource_index);
+    {
+        u8 *config = D_80123FC4;
+        SETUP_PTR(config, 0) = (u8 *)record;
+        SETUP_U8(config, 0x4) = (u8)record->mode;
+    }
+    SETUP_U8(D_80123FC4, 0x5) = (s8)record->primary_index;
+    SETUP_U8(D_80123FC4, 0x6) = (s8)record->secondary_index;
+    SETUP_U8(D_80123FC4, 0x7) = resource_index;
+    resource_index -= 0x40;
+    resource_index *= 4;
+    SETUP_U32(D_80123FC4, 0x8) = (s32)(SETUP_U32(D_80123FC4, 0x8) + SETUP_U8(D_80123FC0 + resource_index, 0x684));
+    SETUP_U8(D_80123FC4, 0xD) = (s8)record->values18.n0;
+    SETUP_U8(D_80123FC4, 0xF) = (s8)record->values18.n1;
+    SETUP_U8(D_80123FC4, 0x11) = (s8)record->values18.n2;
+    SETUP_U8(D_80123FC4, 0x13) = (s8)record->values18.n3;
+    SETUP_U8(D_80123FC4, 0x15) = (s8)record->values18.n4;
+    SETUP_U8(D_80123FC4, 0x17) = (s8)record->values18.n5;
+    SETUP_U8(D_80123FC4, 0x19) = (s8)record->values18.n6;
+    SETUP_U8(D_80123FC4, 0x1B) = (s8)record->values18.n7;
+    SETUP_U8(D_80123FC4, 0x1C) = record->value2e;
+    config_word20 = (SETUP_U32(D_80123FC4, 0x20) & ~0xF) | record->values1c.n0;
+    SETUP_U32(D_80123FC4, 0x20) = config_word20;
+    config_word20_2 = (config_word20 & ~0xF00) | (record->values1c.n1 << 8);
+    SETUP_U32(D_80123FC4, 0x20) = config_word20_2;
+    config_word20_3 = (config_word20_2 & 0xFFF0FFFF) | (record->values1c.n2 << 0x10);
+    SETUP_U32(D_80123FC4, 0x20) = config_word20_3;
+    SETUP_U32(D_80123FC4, 0x20) = (s32)((config_word20_3 & 0xF0FFFFFF) | (record->values1c.n3 << 0x18));
+    i = 0;
+    config_word24 = (SETUP_U32(D_80123FC4, 0x24) & ~0xF) | record->values1c.n4;
+    SETUP_U32(D_80123FC4, 0x24) = config_word24;
+    config_word24_2 = (config_word24 & ~0xF00) | (record->values1c.n5 << 8);
+    SETUP_U32(D_80123FC4, 0x24) = config_word24_2;
+    config_word24_3 = (config_word24_2 & 0xFFF0FFFF) | (record->values1c.n6 << 0x10);
+    SETUP_U32(D_80123FC4, 0x24) = config_word24_3;
+    SETUP_U32(D_80123FC4, 0x24) = (s32)((config_word24_3 & 0xF0FFFFFF) | (record->values1c.n7 << 0x18));
     do
     {
-        temp_v0_4 = D_80123FC4 + var_t1;
-        var_t1 += 1;
-        SETUP_U8(temp_v0_4, 0x50) = 4;
-    } while (var_t1 < 8);
-    var_t1_2 = 0;
+        config_entry = D_80123FC4 + i;
+        i += 1;
+        SETUP_U8(config_entry, 0x50) = 4;
+    } while (i < 8);
+    i = 0;
     SETUP_U8(D_80123FC4, 0x28) = 0xFF;
-    SETUP_U8(D_80123FC4, 0x29) = (u8) SETUP_U8(arg0, 0x23);
-    var_v0 = arg0;
+    SETUP_U8(D_80123FC4, 0x29) = record->value23;
     do
     {
-        temp_v1_4 = var_t1_2 + D_80123FC4;
-        var_t1_2 += 1;
-        SETUP_U8(temp_v1_4, 0x2A) = (u8) SETUP_U8(var_v0, 0x20);
-        var_v0 = arg0 + var_t1_2;
-    } while (var_t1_2 < 3);
+        SETUP_U8((u8 *)((s32)i + (s32)D_80123FC4), 0x2A) = record->values20[i];
+        i += 1;
+    } while (i < 3);
     SETUP_U8(D_80123FC4, 0x2D) = 0xFF;
-    var_a0 = D_80123FC4;
-    temp_v1_5 = SETUP_U8(var_a0, 0x4);
-    switch (temp_v1_5)
-    {                            /* irregular */
+    config_ptr = D_80123FC4;
+    mode = SETUP_U8(config_ptr, 0x4);
+    switch (mode)
+    {
     case 0:
-        var_t1_3 = 0;
-        var_a0 = (u8 *)&D_80123FC4;
-        var_v0_2 = arg0;
+        i = 0;
         do
         {
-            temp_v1_6 = D_80123FC4 + var_t1_3;
-            var_t1_3 += 1;
-            SETUP_U8(temp_v1_6, 0x2E) = (u8) SETUP_U8(var_v0_2, 0x26);
-            var_v0_2 = arg0 + var_t1_3;
-        } while (var_t1_3 < 6);
+            SETUP_U8(D_80123FC4 + i, 0x2E) = record->values26[i];
+            i += 1;
+        } while (i < 6);
         SETUP_U8(D_80123FC4, 0x34) = 0;
         break;
     case 1:
-        SETUP_U8(var_a0, 0x35) = 0;
-        SETUP_U8(D_80123FC4, 0x36) = (u8) SETUP_U8(arg0, 0x2C);
+        SETUP_U8(config_ptr, 0x35) = 0;
+        SETUP_U8(D_80123FC4, 0x36) = record->value2c;
         break;
     }
     func_800BEF74();
