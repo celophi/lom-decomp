@@ -305,14 +305,20 @@ s32 func_8009D0D8(RefEntity *a, FieldEntity *b, s32 max_dist)
  * @param filter_arg Additional predicate argument.
  * @param output Destination for the accepted indices.
  * @return Number of indices written to output.
- * @note Unless D_8010D020 enables all slots, group_mode must be zero or one.
  */
 s32 func_8009D1E4(s32 source_index, FilterSpec *spec, s32 group_mode, s32 filter_arg, s32 *output)
 {
+    enum
+    {
+        STATE_ACTIVE_WORD = -93,
+        STATE_FLAGS_C_WORD = -91,
+        STATE_CATEGORY_WORD = -90,
+        STATE_VALID_WORD = -19,
+        STATE_FLAGS174_WORD = -1
+    };
     s16 actor_state;
     s32 *output_cursor;
     s32 flags_or_offset;
-    s32 is_party_slot;
     s32 index;
     s32 count;
     s32 end;
@@ -321,7 +327,7 @@ s32 func_8009D1E4(s32 source_index, FilterSpec *spec, s32 group_mode, s32 filter
     s32 state_slot;
     s32 prior;
     u8 *actor_start;
-    FieldState *state;
+    volatile s32 *state_fields;
     FieldState *state_start;
     u8 *actor_state_ptr;
     u8 *actor;
@@ -369,78 +375,76 @@ s32 func_8009D1E4(s32 source_index, FilterSpec *spec, s32 group_mode, s32 filter
     if (index < end)
     {
         bindings = D_80105880;
-        state = state_start;
+        state_fields = &state_start->flags178;
         actor_state_ptr = actor_start + 0x2A;
         actor = actor_start;
         output_cursor = output;
         do
         {
             if ((index != source_index) && (ACCESS(u8, actor_state_ptr, -5) != 0xFF) &&
-                (state->active != 0))
+                (state_fields[STATE_ACTIVE_WORD] != 0))
             {
-                flags_or_offset = state->flags178;
+                flags_or_offset = *((s32 *)state_fields);
                 if (!(flags_or_offset & 1) &&
-                    ((D_800FE754 == (state->category & 0xF)) || (index < 3)) &&
+                    ((D_800FE754 == (state_fields[STATE_CATEGORY_WORD] & 0xF)) || (index < 3)) &&
                     !(flags_or_offset & 0x20))
                 {
                     actor_state = ACCESS(s16, actor_state_ptr, 0);
                     if ((actor_state != 0x91) && (actor_state != 0xAE) && (actor_state != 0x87))
                     {
-                        is_party_slot = index < 3;
                         if (!(flags_or_offset & 0x40))
                         {
+                            flags_or_offset = index < 3;
                             owner_slot = index;
-                            if (is_party_slot == 0)
+                            if (flags_or_offset == 0)
                             {
                                 owner_slot = 2;
                             }
                             if (bindings[owner_slot].owner == index)
                             {
                                 state_slot = index;
-                                if (is_party_slot == 0)
+                                if (flags_or_offset == 0)
                                 {
                                     state_slot = 2;
                                 }
-                                if (bindings[state_slot].state == 0)
+                                if (bindings[state_slot].state != 0)
                                 {
-                                    goto check_remaining_flags;
+                                    goto next_actor;
                                 }
-                            }
-                            else
-                            {
-                                goto check_remaining_flags;
                             }
                         }
-                        else
+                        if (!(state_fields[STATE_FLAGS_C_WORD] & 0x2280) && (state_fields[STATE_VALID_WORD] != 0) &&
+                            !(state_fields[STATE_FLAGS174_WORD] & 0x8000) && !(*((s32 *)state_fields) & 0x80))
                         {
-                        check_remaining_flags:
-                            if (!(state->flags_c & 0x2280) && (state->valid != 0) &&
-                                !(state->flags174 & 0x8000) && !(state->flags178 & 0x80))
+                            u8 *actor_base;
+
+                            actor_start = actor;
+                            flags_or_offset = source_index;
+                            flags_or_offset <<= 2;
+                            flags_or_offset += source_index;
+                            flags_or_offset <<= 2;
+                            flags_or_offset += source_index;
+                            flags_or_offset <<= 2;
+                            actor_base = D_800FDF58;
+                            if (D_800EC2D8[spec->filter](actor_base + flags_or_offset, actor_start,
+                                                         filter_arg) != 0)
                             {
-                                /* Preserve the staged calculation of the 0x54-byte actor stride. */
-                                flags_or_offset = source_index * 5;
-                                flags_or_offset = flags_or_offset * 4 + source_index;
-                                flags_or_offset *= 4;
-                                if (D_800EC2D8[spec->filter](flags_or_offset + D_800FDF58, actor,
-                                                             filter_arg) != 0)
+                                for (prior = 0; prior < count; prior++)
                                 {
-                                    /* This empty scan is present in the original code. */
-                                    for (prior = 0; prior < count; prior++)
-                                    {
-                                    }
-                                    *output_cursor = index;
-                                    output_cursor++;
-                                    count += 1;
                                 }
+                                *output_cursor = index;
+                                output_cursor++;
+                                count += 1;
                             }
                         }
                     }
                 }
             }
+    next_actor:
             actor += 0x54;
             index += 1;
             actor_state_ptr += 0x54;
-            state++;
+            state_fields += 0x8F;
         } while (index < end);
     }
     return count;
