@@ -161,18 +161,8 @@ segments:
       - [0x3B961, c, func_8008B5D0]                # gcc272_cdk, 100%
       - [0x3BAB5, c, field36]                      # gcc272_cdk, func_8008B724
       - [0x3BACD, c, func_8008B73C] # gcc272_cdk, 100%
-      # TU hypothesis: field_actor_reactions (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x3BC01, c, func_8008B870] # gcc272_cdk, 100%
-      - [0x3BFED, c, field363]                     # gcc272_cdk, func_8008BC5C
-      - [0x3C089, c, field297]                     # gcc272_cdk, func_8008BCF8
-      - [0x3C119, c, func_8008BD88]                # gcc272_cdk, 100%
-      - [0x3C1C9, c, func_8008BE38]                 # gcc272_cdk, 100%
-      - [0x3C319, c, field364]                     # gcc272_cdk, func_8008BF88
-      - [0x3C3B5, c, func_8008C024]                # gcc272_cdk, 100%
-      - [0x3C495, c, func_8008C104] # gcc272_cdk, 100%
-      - [0x3C67D, c, func_8008C2EC] # gcc272_cdk, 100%
-      - [0x3C839, c, func_8008C4A8]                # gcc272_cdk, 100%
-      - [0x3C9B1, c, func_8008C620] # gcc272_cdk, 100%
+      # TU: field_actor_reactions (medium). See docs/decompilation/field-boundaries/map.md.
+      - [0x3BC01, c, field_actor_reactions] # gcc272_cdk; 8B870..8C728 (11 funcs, 100%): reaction state, pending-flag clears, animation re-arm, depth-overlap eligibility
       # TU hypothesis: field_actor_routes (high). See docs/decompilation/field-boundaries/map.md.
       - [0x3CAB9, c, field_actor_routes] # gcc272_cdk; 8C728..8D29C (7 funcs; func_8008CAA4 94.262250% WIP + func_8008D29C 98.3% WIP [merged objdiff 98.300644%, pure intra-object j reloc artifact, instruction-identical], rest 100%)
       # TU hypothesis: field_actor_behavior (medium). See docs/decompilation/field-boundaries/map.md.
@@ -185,11 +175,8 @@ segments:
       - [0x41BDD, c, func_8009184C]                # gcc272_cdk, 100%
       - [0x41CA5, c, func_80091914] # gcc272_cdk, 100.000000%
       - [0x41E59, c, func_80091AC8]                 # gcc272_cdk, 100%
-      # TU hypothesis: field_actor_camera (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x41F59, c, func_80091BC8] # gcc272_cdk, 100%
-      - [0x4210D, c, func_80091D7C] # gcc272_cdk, 100%
-      - [0x4248D, c, func_800920FC]                # gcc272_cdk, 100%
-      - [0x424B5, c, func_80092124]                # gcc272_cdk, 100%
+      # TU: field_actor_camera (high). See docs/decompilation/field-boundaries/map.md.
+      - [0x41F59, c, field_actor_camera] # gcc272_cdk; 91BC8 target derive/approach, 91D7C update/clamp, 920FC/92124 bound setup (4 funcs, 100%)
       # TU hypothesis: field_actor_state_updates (medium; starts inside this source). See docs/decompilation/field-boundaries/map.md.
       - [0x42591, c, field_actor_idle_ops]      # gcc272_cdk, func_80092200 .. func_80092550 (6 funcs; 100%)
       - [0x4297D, c, func_800925EC] # gcc272_cdk, 99.567100% WIP
@@ -234,13 +221,8 @@ segments:
       # TU hypothesis: field_actor_effects (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x4D869, c, func_8009D4D8] # gcc272_cdk, 97.647060% WIP
       - [0x4DCED, c, field_actor_effects] # gcc272_cdk; 9D95C..A1344 (6 funcs, 100%; func_8009D4D8 kept separate above due to interleaved unk rodata)
-      # TU hypothesis: field_path_interpolation (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x520D9, c, field242]                     # gcc272_cdk, func_800A1D48
-      - [0x52129, c, func_800A1D98]                # gcc272_cdk, 100%
-      - [0x522BD, c, func_800A1F2C] # gcc272_cdk, 100.000000%
-      - [0x5246D, c, func_800A20DC]                # gcc272_cdk, 100%
-      - [0x524B9, c, func_800A2128] # gcc280_g0, 100.000000%
-      - [0x52639, c, func_800A22A8] # gcc272_cdk, 100.000000%
+      # TU: field_path_interpolation (high). See docs/decompilation/field-boundaries/map.md.
+      - [0x520D9, c, field_path_interpolation]     # gcc272_cdk; A1D48..A22A8 (6 funcs, 100%; func_800A2128 also matches under CDK, no longer a g0 split)
       # TU hypothesis: field_command_history (high). See docs/decompilation/field-boundaries/map.md.
       - [0x528ED, c, field_command_history] # gcc272_cdk; A255C..A2E34 (8 funcs, 100% except func_800A2594 97.966805% + func_800A29F8 81.145164% WIP)
       # TU hypothesis: field_pair_indicators (high). See docs/decompilation/field-boundaries/map.md.
