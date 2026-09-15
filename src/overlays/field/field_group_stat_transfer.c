@@ -192,4 +192,3 @@ void func_800C3F18(s32 arg0, void *destination)
     U8(arg1, 0x177) = (u8) U8(temp_a1, 0x2B53);
     U32(arg1, 0x178) = (s32) U32(temp_a1, 0x2B54);
 }
-

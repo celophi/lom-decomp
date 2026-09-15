@@ -411,4 +411,3 @@ void func_800C32C8(void)
         }
     }
 }
-

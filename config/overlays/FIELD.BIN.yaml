@@ -44,28 +44,27 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [auto, c, overlay_header]
+      - [auto, c, overlay_header] # overlay metadata
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, field_scene_build]
       - [0x65, .rodata, field_render]
       - [0x79, .rodata, field_animation]
+      - [0x115, .rodata, field_scene_control]
       - [0x129, .rodata, field_collision]
       - [0x155, .rodata, field_text]
       - [0x285, .rodata, field_effect_update] # field7/8/9 animation + placement switch tables
-      - [0x515, .rodata, field11]
-      - [0x535, .rodata, field12]
-      - [0x555, .rodata, field17] # actor update switch tables
+      - [0x515, .rodata, field_effect_frames]
+      - [0x555, .rodata, field_effect_geometry] # actor update switch tables
+      - [0x679, .rodata, field_mesh_render]
       - [0x691, .rodata, field_actor_control_effects] # func_80086494 eight-entry animation-kind jump table
-      - [0x6B1, .rodata, func_80088198]
-      - [0xAB1, .rodata, func_80089980]
+      - [0x6B1, .rodata, field_actor_script_dispatch]
       - [0xCED, rodata, unk2_rodata_1]
-      - [0xCF1, .rodata, func_8008B288]
+      - [0xCF1, .rodata, field_actor_animation_commands]
       - [0xF2D, .rodata, field_actor_behavior] # func_8008EF0C + func_80090D48 (58-entry) jump tables
-      - [0x1185, .rodata, func_80092AD8] # 72-entry movement-state jump table
-      - [0x12A5, .rodata, func_80092C98]
-      - [0x139D, .rodata, func_800954F0] # twenty-entry actor sequence switch
+      - [0x1185, .rodata, field_actor_movement_states] # 72-entry movement-state jump table
+      - [0x139D, .rodata, field_actor_sequence_runtime] # twenty-entry actor sequence switch
       - [0x13ED, .rodata, field_contact_geometry] # func_80099018 (30-entry) + func_80099A48 (20-entry) reaction switches
-      - [0x14B5, .rodata, func_8009D4D8] # seven-entry movement-mode jump table
+      - [0x14B5, .rodata, field_actor_movement_modes] # seven-entry movement-mode jump table
       - [0x14D1, rodata, unk2_rodata_2_after_9d4d8]
       - [0x14D5, .rodata, field_actor_effects] # func_8009D95C + func_8009D9E0 switch tables
       - [0x1531, .rodata, field_command_history] # func_800A29F8 128-entry input command jump table
@@ -85,239 +84,154 @@ segments:
       - [0x1BBD, .rodata, field_script_commands] # actor and record command jump tables
       - [0x1BFD, .rodata, field_reward_command_ops]
       - [0x1C19, rodata, unk2_rodata_after_bdca4]
-      # TU hypothesis: field_scene_load (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x22B9, c, field_scene_load]           # gcc280_g4, no expand-div
-      # TU hypothesis: field_scene_build (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x29B9, c, field_scene_build]          # gcc280_g4, no expand-div
-      # TU hypothesis: field_render (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x5039, c, field_render]               # gcc280_g4, no expand-div
-      # TU hypothesis: field_animation_update (medium). See docs/decompilation/field-boundaries/map.md.
-      # TU hypothesis: field_scene_control (medium; starts inside this source). See docs/decompilation/field-boundaries/map.md.
-      - [0x6D95, c, field_animation]            # gcc280_g4, no expand-div
-      - [0xB57D, c, field_scene_api]            # gcc280_g4, no expand-div
-      # TU hypothesis: field_collision (high). See docs/decompilation/field-boundaries/map.md.
-      - [0xB6F9, c, field_collision]            # gcc280_g4, no expand-div (collision only; ends at func_8006312C)
-      # TU hypothesis: field_text (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x13525, c, field_text]                # gcc280_g4, no expand-div; includes field_text_format_number (also exact on this toolchain)
-      # TU hypothesis: field_frame_runtime (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x17A45, c, func_800675c8]             # gcc272_cdk
-      - [0x17C65, c, field2]                    # gcc272_cdk, no-schedule-insns
-      # TU hypothesis: field_draw_state (low). See docs/decompilation/field-boundaries/map.md.
-      - [0x17E35, c, func_80067aa4]             # gcc272_cdk
-      # TU hypothesis: field_fade (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x17F1D, c, field_fade]                # gcc280_g4, expand-div (fade TU: reset + update/render + targets)
-      # TU hypothesis: field_actor_runtime (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x18341, c, field4]                    # gcc272_cdk (runtime/actor-resource TU; absorbs func_80067fb0/func_800681c0/field6)
-      # TU hypothesis: field_effect_update (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x1DB2D, c, field_effect_update] # gcc272_cdk; 6D79C..73F7C (11 funcs; func_8007100C 80.28% + func_80071500 97.78% + field_update_effect_record 99.99% WIP, rest 100%)
-      # TU hypothesis: field_effect_render (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x2510D, c, field10]                   # gcc272_cdk
-      - [0x26019, c, field11]                   # gcc272_cdk
-      - [0x28345, c, field12]                   # gcc272_cdk
-      - [0x29D55, c, field13]                   # gcc272_cdk
-      - [0x2B1BD, c, field14]                   # gcc272_cdk
-      - [0x2BD8D, c, field15]                   # gcc272_cdk
-      - [0x2C789, c, field16]                   # gcc272_cdk
-      # TU hypothesis: field_mesh_render (medium; starts inside this source). See docs/decompilation/field-boundaries/map.md.
-      - [0x2F07D, c, field17]                   # gcc272_cdk
-      - [0x32635, c, func_800822A4] # gcc272_cdk, 100%
-      - [0x32D31, c, func_800829A0] # gcc272_cdk, 100%
-      - [0x33021, c, func_80082C90] # gcc272_cdk, 100%
-      - [0x33681, c, field30]                      # gcc272_cdk, func_800832F0, func_8008332C, func_8008343C, func_80083868
-      # TU hypothesis: field_actor_slot_resources (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x33CD9, c, field_actor_slot_resources] # gcc272_cdk; 83948..84630 (14 funcs, 100%)
-      # TU hypothesis: field_actor_hud (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x34A91, c, field_actor_hud] # gcc272_cdk; 84700..86374 (10 funcs, 100% except func_80084700 89.839380% WIP)
-      # TU hypothesis: field_actor_control_effects (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x36825, c, field_actor_control_effects] # gcc272_cdk; 86494..875C4 (18 funcs, 100% except func_80086494 94.163180% + func_800871A0 90.726140% WIP)
-      # TU hypothesis: field_actor_key_ops (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x379A5, c, field_actor_key_ops] # gcc272_cdk; 87614..87FC0 (13 funcs, 100%)
-      # TU hypothesis: field_actor_script_ops (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x3847D, c, field35]                      # gcc272_cdk, func_800880EC
-      - [0x384BD, c, field_get_object_script_command] # gcc272_cdk, field_get_object_script_command (100%)
-      - [0x38529, c, func_80088198]             # gcc272_cdk, 100.000000%
-      - [0x39D11, c, func_80089980]              # gcc272_cdk, 100%
-      - [0x39DF9, c, field308]                  # gcc272_cdk, func_80089A68, 100%
-      - [0x39E75, c, func_80089AE4]              # gcc272_cdk, 100%
-      - [0x39F79, c, func_80089BE8]              # gcc272_cdk, 100%
-      - [0x3A0D5, c, func_80089D44] # gcc272_cdk, 100%
-      - [0x3A441, c, func_8008A0B0] # gcc272_cdk, 100%
-      - [0x3A861, c, func_8008A4D0]             # gcc272_cdk, 100%
-      - [0x3A911, c, func_8008A580] # gcc272_cdk, 100%
-      - [0x3AA09, c, func_8008A678] # gcc272_cdk, 100.000000%
-      - [0x3ABD1, c, func_8008A840]             # gcc272_cdk, 100%
-      - [0x3AD69, c, func_8008A9D8]              # gcc272_cdk, 100%
-      - [0x3AE4D, c, func_8008AABC]             # gcc272_cdk, 100%
-      - [0x3AEBD, c, func_8008AB2C] # gcc272_cdk, 100.000000%
-      - [0x3B0D5, c, func_8008AD44]             # gcc272_cdk, 100%
-      - [0x3B145, c, field254]                  # gcc272_cdk, func_8008ADB4
-      - [0x3B1A5, c, field_queue_actor_animation_by_handle] # gcc272_cdk, func_8008AE14, 100%
-      - [0x3B241, c, func_8008AEB0]             # gcc272_cdk, 100%
-      - [0x3B2F9, c, func_8008AF68]             # gcc272_cdk, 100%
-      - [0x3B369, c, func_8008AFD8] # gcc272_cdk, 100.000000%
-      - [0x3B559, c, func_8008B1C8]               # gcc272_cdk, 100%
-      - [0x3B619, c, func_8008B288]              # gcc272_cdk, 100%
-      - [0x3B729, c, field_actor_slot_lookup]   # gcc272_cdk, func_8008B398 + func_8008B42C + func_8008B500 (100%; none match under gcc280_g0)
-      - [0x3B961, c, func_8008B5D0]                # gcc272_cdk, 100%
-      - [0x3BAB5, c, field36]                      # gcc272_cdk, func_8008B724
-      - [0x3BACD, c, func_8008B73C] # gcc272_cdk, 100%
-      # TU: field_actor_reactions (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x3BC01, c, field_actor_reactions] # gcc272_cdk; 8B870..8C728 (11 funcs, 100%): reaction state, pending-flag clears, animation re-arm, depth-overlap eligibility
-      # TU hypothesis: field_actor_routes (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x3CAB9, c, field_actor_routes] # gcc272_cdk; 8C728..8D29C (7 funcs; func_8008CAA4 94.262250% WIP + func_8008D29C 98.3% WIP [merged objdiff 98.300644%, pure intra-object j reloc artifact, instruction-identical], rest 100%)
-      # TU hypothesis: field_actor_behavior (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x3DFE5, c, field_actor_behavior] # gcc272_cdk; 8DC54..9104C (9 funcs; func_8008DC54 100% + func_8008E690 96.556920% + func_8009104C 98.983406% WIP, rest 100%; func_80090D48 100% instr, reloc-artifact objdiff)
-      # TU hypothesis: field_actor_input_maps (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x417A1, c, field39]                      # gcc272_cdk, func_80091410
-      - [0x417C9, c, func_80091438] # gcc272_cdk, 100%
-      - [0x418A9, c, func_80091518] # gcc272_cdk, -fno-strength-reduce, 100.000000%
-      - [0x41AB9, c, func_80091728]                 # gcc272_cdk, 100%
-      - [0x41BDD, c, func_8009184C]                # gcc272_cdk, 100%
-      - [0x41CA5, c, func_80091914] # gcc272_cdk, 100.000000%
-      - [0x41E59, c, func_80091AC8]                 # gcc272_cdk, 100%
-      # TU: field_actor_camera (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x41F59, c, field_actor_camera] # gcc272_cdk; 91BC8 target derive/approach, 91D7C update/clamp, 920FC/92124 bound setup (4 funcs, 100%)
-      # TU hypothesis: field_actor_state_updates (medium; starts inside this source). See docs/decompilation/field-boundaries/map.md.
-      - [0x42591, c, field_actor_idle_ops]      # gcc272_cdk, func_80092200 .. func_80092550 (6 funcs; 100%)
-      - [0x4297D, c, func_800925EC] # gcc272_cdk, 99.567100% WIP
-      - [0x42D19, c, func_80092988] # gcc272_cdk, 100.000000%
-      - [0x42E69, c, func_80092AD8] # gcc272_cdk, 100.000000%
-      - [0x42FB5, c, func_80092C24]                # gcc272_cdk, 100%
-      - [0x43029, c, func_80092C98]                # gcc272_cdk
-      - [0x43E49, c, func_80093AB8] # gcc272_cdk, 100%
-      - [0x44245, c, func_80093EB4]                # gcc272_cdk, 100%
-      - [0x443CD, c, func_8009403C] # gcc272_cdk, 100.000000%
-      - [0x44899, c, func_80094508]                # gcc272_cdk, 100.000000%
-      - [0x44A21, c, func_80094690]                # gcc272_cdk, 100%
-      - [0x44A8D, c, func_800946FC] # gcc272_cdk, 100.000000%
-      - [0x44D5D, c, func_800949CC]                 # gcc272_cdk, 100%
-      - [0x44EED, c, func_80094B5C]                # gcc272_cdk, 100%
-      - [0x44F55, c, field40]                      # gcc272_cdk, func_80094BC4
-      - [0x44F91, c, func_80094C00] # gcc272_cdk, 100.000000%
-      - [0x45235, c, field332]                  # gcc272_cdk, func_80094EA4 + func_80094F40, 100%
-      - [0x4536D, c, func_80094FDC]             # gcc272_cdk, 100%
-      - [0x45405, c, func_80095074]             # gcc272_cdk, 100%
-      - [0x454F9, c, func_80095168]             # gcc272_cdk, 100%
-      - [0x4555D, c, func_800951CC]             # gcc272_cdk, 100%
-      - [0x4566D, c, func_800952DC]             # gcc272_cdk, 100%
-      - [0x45881, c, func_800954F0] # gcc272_cdk, 97.554720% WIP
-      - [0x464ED, c, func_8009615C] # gcc272_cdk, 100.000000%
-      - [0x466C5, c, field255]                  # gcc272_cdk, func_80096334
-      - [0x46725, c, func_80096394] # gcc272_cdk, 100%
-      # TU hypothesis: field_actor_transition_reset (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x46A81, c, field_actor_transition_reset] # gcc272_cdk; 966F0..96E60 (5 funcs; func_800966F0 92.362240% WIP, rest 100%)
-      # TU hypothesis: field_contact_geometry (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x47441, c, field_contact_geometry] # gcc272_cdk; 970B0..9A204 (13 funcs; 97150/978AC/97FA0/987DC/99018/99A48 WIP, rest 100%; func_80099A48 100% instr, reloc-artifact objdiff)
-      # TU hypothesis: field_actor_resource_unpack (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x4A635, c, field_actor_resource_unpack] # gcc272_cdk; 9A2A4..9AE38 (9 funcs, 100%)
-      # TU hypothesis: field_scene_transition (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x4B34D, c, field_scene_transition] # gcc272_cdk; 9AFBC..9C56C (12 funcs, 100% except field_update_scene 88.348310% + func_8009BE1C 94.607140% WIP)
-      # TU hypothesis: field_text_window_api (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x4C9B1, c, field_text_window_api] # gcc272_cdk; 9C620..9C974 (5 funcs, 100%)
-      # TU hypothesis: field_block_allocator (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x4CD99, c, field_block_allocator] # gcc272_cdk; initialize, allocate, free/coalesce
-      # TU hypothesis: field_actor_target_queries (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x4CFF1, c, field_actor_target_queries] # gcc272_cdk; 9CC60..9D1E4 (7 funcs, 100%)
-      # TU hypothesis: field_actor_effects (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x4D869, c, func_8009D4D8] # gcc272_cdk, 97.647060% WIP
-      - [0x4DCED, c, field_actor_effects] # gcc272_cdk; 9D95C..A1344 (6 funcs, 100%; func_8009D4D8 kept separate above due to interleaved unk rodata)
-      # TU: field_path_interpolation (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x520D9, c, field_path_interpolation]     # gcc272_cdk; A1D48..A22A8 (6 funcs, 100%; func_800A2128 also matches under CDK, no longer a g0 split)
-      # TU hypothesis: field_command_history (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x528ED, c, field_command_history] # gcc272_cdk; A255C..A2E34 (8 funcs, 100% except func_800A2594 97.966805% + func_800A29F8 81.145164% WIP)
-      # TU hypothesis: field_pair_indicators (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x531D1, c, field_pair_indicators] # gcc272_cdk; A2E40 (98.652480% WIP) + A32A8 (100%)
-      # TU hypothesis: field_audio_runtime (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x538C5, c, field_audio_runtime] # gcc272_cdk; A3534..A43C0 (27 funcs, 100%)
-      # TU hypothesis: field_ring_selection (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x54779, c, field_ring_selection] # gcc272_cdk; A43E8..A55E4 (12 funcs, 100% except func_800A4D1C 97.341730%)
-      # TU hypothesis: field_timed_panel (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x559C9, c, field_timed_panel] # gcc272_cdk; A5638..A6060 (5 funcs, 100% except func_800A5960 90.430800% WIP)
-      # TU hypothesis: field_actor_text_queue (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x56595, c, field_actor_text_queue] # gcc272_cdk; A6204..A66B4 (6 funcs, 100%)
-      # TU hypothesis: field_ability_progression (low). See docs/decompilation/field-boundaries/map.md.
-      - [0x56C45, c, func_800A68B4] # gcc272_cdk, 91.258800% WIP
-      # TU hypothesis: field_dialog_screens (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x5727D, c, field_dialog_screens] # gcc272_cdk; A6EEC..A8880 (18 funcs; func_800A7B54 87.585720% + func_800A838C 99.901960% WIP, rest 100%)
-      # TU hypothesis: field_immediate_text (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x58C31, c, field_immediate_text] # gcc272_cdk; A88A0..A8B90 (4 funcs, 100%)
-      # TU hypothesis: field_input_text_session (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x5908D, c, field_input_text_session] # gcc272_cdk; A8CFC..AA498 (21 funcs, 100% except func_800A939C 97.534720% WIP)
-      # TU hypothesis: field_modal_runtime (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x5A901, c, field_modal_runtime] # gcc272_cdk; AA570..AC768 (17 funcs, 100% except func_800AA90C 90.918630% WIP)
-      # TU hypothesis: field_modal_stream_start (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x5D3C1, c, field_modal_stream_start] # gcc272_cdk; AD030..AD194 (5 funcs, 100%)
-      # TU hypothesis: field_numeric_sprites (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x5D599, c, field_numeric_sprites] # gcc272_cdk; AD208..AD658 (4 funcs, 100%)
-      # TU hypothesis: field_pair_rule_lookup (low). See docs/decompilation/field-boundaries/map.md.
-      - [0x5DB6D, c, func_800AD7DC]                # gcc272_cdk, 100%
-      # TU hypothesis: field_menu_windows (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x5DBE1, c, field_menu_windows] # gcc272_cdk; AD850..AE864 (10 funcs, all 100% except func_800AE008 98.693440% WIP)
-      # TU hypothesis: field_coordinate_icon (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x5EC39, c, func_800AE8A8]                # gcc272_cdk, 100%
-      - [0x5ED71, c, func_800AE9E0]                # gcc272_cdk, 100%
-      - [0x5EE51, c, func_800AEAC0] # gcc272_cdk, 100%
-      - [0x5F0B1, c, field_choice_labels] # gcc272_cdk; 100%
-      - [0x5F1B9, c, field_item_selection] # gcc272_cdk; initialize/sound/draw/select/release, three exact, two WIPs
-      - [0x5FC55, c, field_text_session] # gcc272_cdk; session reset and teardown, both exact
-      - [0x5FCE1, c, field_text_quad] # gcc272_cdk; textured text and outline, both exact
-      - [0x601A5, c, field_card_clock] # gcc272_cdk; decode/refresh cached card clock, both exact
-      - [0x60501, c, field288]                     # gcc272_cdk, func_800B0170
-      - [0x6058D, c, field_resource_load] # gcc272_cdk; eight pending-actor/resource routines, seven exact, one base C
-      - [0x60E89, c, field_interaction_start] # gcc280_g0; twenty-one initialization/action/update routines, nineteen exact, two WIPs
-      - [0x62BFD, c, field_event_dispatch] # gcc280_g0; claim/start owner events, both exact
-      - [0x62E2D, c, field_state_ops] # gcc280_g0; record/effect/attribute helpers, fourteen exact
-      - [0x63861, c, field_party_setup] # gcc280_g0; context and party initialization; four exact, B37D4 WIP
-      - [0x64185, c, field_actor_templates] # gcc280_g0; actor selection exact, initialization 89.043480%, scaling exact
-      - [0x64721, c, field_actor_lifecycle] # gcc280_g0; four actor setup/reset routines, three exact/one WIP
-      - [0x64BD5, c, func_800B4844]                # gcc280_g0, 100.00000%, 29/29 instructions
-      - [0x64C49, c, field_status_ticks] # gcc280_g0; ten status/update routines, all exact
-      - [0x65449, c, field_action_descriptors] # gcc280_g0; B50B8 new C 83.8%, B543C exact codegen
-      - [0x658C5, c, field_action_setup] # gcc280_g0; action execution and six helpers; B5534 new C 93.789270%, six exact
-      - [0x6640D, c, field_progression_ops] # gcc280_g0; progression query and initialization, both exact
-      - [0x66555, c, field_action_modifiers] # gcc280_g0; action/depletion handlers and helpers; 24 exact, one WIP
-      - [0x67D11, c, field_record_stat_ops] # gcc280_g0; seven compatibility/record/stat helpers, one WIP
-      - [0x68395, c, field_script_flow_ops] # gcc280_g0; interpreter, dispatchers and early primary opcodes
-      - [0x697AD, c, func_800B941C] # gcc280_g0, 100.000000%
-      - [0x6997D, c, field_script_primary_ops] # gcc280_g0; primary opcodes 12-3F and reset helper
-      - [0x6BD51, c, field_script_pair_ops] # gcc280_g0; complete 32-entry two-operand family, one WIP
-      - [0x6CEF9, c, field_script_extended_ops] # gcc280_g0; complete sixteen-entry extended opcode family, all exact
-      - [0x6D4B9, c, field_script_operands] # gcc280_g0; branch and eleven operand helpers, all exact
-      - [0x6DA85, c, field_script_commands] # gcc280_g0; dispatcher, seventeen commands and query helper
-      - [0x6E959, c, field_script_arith_ops] # gcc280_g0; dispatcher and twelve arithmetic handlers, all exact
-      - [0x6EAA1, c, field_record_setup_ops] # gcc280_g0; five record setup/sequence dispatch functions, one WIP
-      - [0x6F4E9, c, func_800BF158]                 # gcc280_g0, 100.000000%
-      - [0x6F681, c, field_slot_pool_ops] # gcc280_g0; twelve effect-sequence/slot/pool functions, all exact
-      - [0x6FDC5, c, field_generated_record_ops] # gcc280_g0; initializer, name builder and two stat modes, two WIPs
-      - [0x705F1, c, field_record_effect_ops] # gcc280_g0; effect generation/classification/application, all exact
-      - [0x70DC9, c, field_reward_command_ops] # gcc280_g0; selector, reward dispatcher and four table handlers, all exact
-      - [0x711A9, c, field_record_growth_ops] # gcc280_g0; ten reward/experience/growth functions, two WIPs
-      - [0x71DA9, c, field_record_lookup_ops] # gcc280_g0; nine record dispatch/lookup functions, all exact
-      - [0x72259, c, func_800C1EC8]                # gcc280_g0, 100%
-      - [0x722B9, c, field_stat_counter_ops]    # gcc280_g0, func_800C1F28 .. func_800C2228 (8 funcs, 100%)
-      - [0x725F5, c, field_saved_slot_ops] # gcc280_g0; four saved-slot operations, all exact
-      - [0x729D1, c, field_actor_record_ops] # gcc280_g0; four actor-record operations, all exact
-      - [0x72C89, c, field_resource_table_ops] # gcc280_g0; seven resource/inventory helpers, all exact
-      - [0x72EA5, c, field_active_record_ops] # gcc280_g0; seven load/restore/close/save functions, two WIPs
-      - [0x73775, c, field_record_table_ops] # gcc280_g0; eleven table helpers, all exact
-      - [0x73D91, c, field_group_layout_ops] # gcc280_g0; six group selection/grid functions, five exact and C3D38 WIP
-      - [0x742A9, c, field_group_stat_transfer] # gcc272_cdk; active-record transfer, WIP
-      - [0x746F5, c, func_800C4364] # gcc280_g0, 100%
-      - [0x75A95, c, field_menu_group_ops] # gcc280_g0; group creation/release, state and ordering
-      - [0x76569, c, field_menu_object_ops] # gcc280_g0, inferred menu function family; func_800C642C 100%, func_800C66DC WIP
-      - [0x76C59, c, field_menu_slot_ops] # gcc280_g0, inferred menu function family; func_800C6AF0 100%
-      - [0x77421, c, field_gosub_history_ops] # gcc280_g0, func_800C7090 .. func_800C7628; 14 funcs, 100%
-      - [0x779FD, c, field_menu_action_runtime] # gcc280_g0, func_800C766C .. action-slot reset; 14 funcs, one WIP
-      - [0x78BC1, c, field_menu_record_setup] # gcc280_g0, func_800C8830 .. func_800C8964; three funcs, 100%
-      - [0x78DBD, c, field_menu_record_transfer] # gcc280_g0, func_800C8A2C WIP; func_800C905C 100%
-      - [0x7963D, c, field_menu_record_audio_ops] # gcc280_g0, music reset + record/audio updates; four funcs, 100%
-      - [0x79795, c, field_menu_record_state] # gcc280_g0, inferred related-function unit; see boundary report
-      - [0x79A55, c, field_menu_attribute_ops] # gcc280_g0, func_800C96C4 and func_800C9960 100%; inferred related-function unit; see boundary report
-      - [0x79F55, c, field_menu_record_ops]     # gcc280_g0, func_800C9BC4 .. func_800C9DCC (7 funcs, 100%)
-      - [0x7A265, c, field_select_distance_bucket] # gcc280_g0_builtin, func_800C9ED4, 100%
-      - [0x7A531, c, field_layout_slot_state] # gcc272_cdk, func_800CA1A0 + func_800CA1E0; 100%
-      - [0x7A619, c, field_equipment_combination_rules] # gcc280_g0, quantity + class test + search + variant + 64 rules; 68 funcs, 100%
-      - [0x7BA11, c, field_golem_logic_blocks]      # gcc280_g0, golem logic-block TU: append .. func_800CBEC4; eight funcs, 100%
+
+      # Scene loading, construction, rendering, animation, and text.
+      - [0x22B9, c, field_scene_load] # gcc_280_g4_noexpand
+      - [0x29B9, c, field_scene_build] # gcc_280_g4_noexpand
+      - [0x5039, c, field_render] # gcc_280_g4_noexpand
+      - [0x6D95, c, field_animation] # gcc_280_g4_noexpand
+      - [0x9645, c, field_scene_control] # gcc_280_g4_noexpand
+      - [0xB6F9, c, field_collision] # gcc_280_g4_noexpand
+      - [0x13525, c, field_text] # gcc_280_g4_noexpand
+
+      # Frame orchestration and actor resource runtime.
+      - [0x17A45, c, field_frame_commands]
+      - [0x17C65, c, field_subsystem_init] # gcc_272_cdk_g0_nosched
+      - [0x17E35, c, field_draw_state]
+      - [0x17F1D, c, field_fade]
+      - [0x18341, c, field_actor_runtime]
+
+      # Effect updates, primitive generation, geometry, and mesh transforms.
+      - [0x1DB2D, c, field_effect_update]
+      - [0x2510D, c, field_effect_dispatch]
+      - [0x26019, c, field_effect_frames]
+      - [0x29D55, c, field_effect_primitives]
+      - [0x2C789, c, field_effect_transform]
+      - [0x2F07D, c, field_effect_geometry]
+      - [0x30359, c, field_mesh_render]
+      - [0x32635, c, field_mesh_transform]
+      - [0x33681, c, field_mesh_part_animation]
+
+      # Actor resources, script commands, input, movement, and state machines.
+      - [0x33CD9, c, field_actor_slot_resources]
+      - [0x34A91, c, field_actor_hud]
+      - [0x36825, c, field_actor_control_effects]
+      - [0x379A5, c, field_actor_key_ops]
+      - [0x3847D, c, field_actor_script_dispatch]
+      - [0x39DF9, c, field_actor_action_commands]
+      - [0x3B0D5, c, field_actor_animation_commands]
+      - [0x3BC01, c, field_actor_reactions]
+      - [0x3CAB9, c, field_actor_routes]
+      - [0x3DFE5, c, field_actor_behavior]
+      - [0x417A1, c, field_actor_input_map_init]
+      - [0x418A9, c, field_actor_action_defaults] # gcc_272_cdk_g0_nostrength
+      - [0x41AB9, c, field_actor_input_actions]
+      - [0x41F59, c, field_actor_camera]
+      - [0x42781, c, field_actor_idle_ops]
+      - [0x4297D, c, field_actor_motion]
+      - [0x42E69, c, field_actor_movement_states]
+      - [0x43E49, c, field_actor_action_runtime]
+      - [0x44899, c, field_actor_displacement]
+      - [0x45235, c, field_actor_resource_states]
+      - [0x4536D, c, field_actor_animation_resume]
+      - [0x4555D, c, field_actor_sequence_runtime]
+      - [0x46A81, c, field_actor_transition_reset]
+
+      # Contact geometry, scene transitions, actor effects, and paths.
+      - [0x47441, c, field_contact_geometry]
+      - [0x4A635, c, field_actor_resource_unpack]
+      - [0x4B34D, c, field_scene_transition]
+      - [0x4C9B1, c, field_text_window_api]
+      - [0x4CD99, c, field_block_allocator]
+      - [0x4CFF1, c, field_actor_target_queries]
+      - [0x4D869, c, field_actor_movement_modes]
+      - [0x4DCED, c, field_actor_effects]
+      - [0x520D9, c, field_path_interpolation]
+
+      # Command history, audio, dialogs, and field UI.
+      - [0x528ED, c, field_command_history]
+      - [0x531D1, c, field_pair_indicators]
+      - [0x538C5, c, field_audio_runtime]
+      - [0x54779, c, field_ring_selection]
+      - [0x559C9, c, field_timed_panel]
+      - [0x56595, c, field_actor_text_queue]
+      - [0x56C45, c, field_ability_progression]
+      - [0x5727D, c, field_dialog_screens]
+      - [0x58C31, c, field_immediate_text]
+      - [0x5908D, c, field_input_text_session]
+      - [0x5A901, c, field_modal_runtime]
+      - [0x5D3C1, c, field_modal_stream_start]
+      - [0x5D599, c, field_numeric_sprites]
+      - [0x5DB6D, c, field_pair_rule_lookup]
+      - [0x5DBE1, c, field_menu_windows]
+      - [0x5EC39, c, field_coordinate_icon]
+      - [0x5F0B1, c, field_choice_labels]
+      - [0x5F1B9, c, field_item_selection]
+      - [0x5FC55, c, field_text_session]
+      - [0x5FCE1, c, field_text_quad]
+      - [0x601A5, c, field_card_clock]
+      - [0x60501, c, field_character_name_flags]
+
+      # Resource installation, actor records, action setup, and status.
+      - [0x6058D, c, field_resource_load]
+      - [0x60E89, c, field_interaction_start]
+      - [0x62BFD, c, field_event_dispatch]
+      - [0x62E2D, c, field_state_ops]
+      - [0x63861, c, field_party_setup]
+      - [0x64185, c, field_actor_templates]
+      - [0x64721, c, field_actor_lifecycle]
+      - [0x64C49, c, field_status_ticks]
+      - [0x65449, c, field_action_descriptors]
+      - [0x658C5, c, field_action_setup]
+      - [0x6640D, c, field_progression_ops]
+      - [0x66555, c, field_action_modifiers]
+      - [0x67D11, c, field_record_stat_ops]
+
+      # Script dispatch and opcode families.
+      - [0x68395, c, field_script_flow_ops]
+      - [0x6997D, c, field_script_primary_ops]
+      - [0x6BD51, c, field_script_pair_ops]
+      - [0x6CEF9, c, field_script_extended_ops]
+      - [0x6D4B9, c, field_script_operands]
+      - [0x6DA85, c, field_script_commands]
+      - [0x6E959, c, field_script_arith_ops]
+
+      # Record creation, rewards, growth, queries, and counters.
+      - [0x6EAA1, c, field_record_setup_ops]
+      - [0x6F681, c, field_slot_pool_ops]
+      - [0x6FDC5, c, field_generated_record_ops]
+      - [0x705F1, c, field_record_effect_ops]
+      - [0x70DC9, c, field_reward_command_ops]
+      - [0x711A9, c, field_record_growth_ops]
+      - [0x71DA9, c, field_record_lookup_ops]
+      - [0x72259, c, field_record_buffer_ops]
+      - [0x7234D, c, field_record_position_queries]
+      - [0x72425, c, field_stat_counter_ops]
+      - [0x725F5, c, field_saved_slot_ops]
+      - [0x729D1, c, field_actor_record_ops]
+      - [0x72C89, c, field_resource_table_ops]
+      - [0x72EA5, c, field_active_record_ops]
+      - [0x73775, c, field_record_table_ops]
+
+      # Group layouts, menu records, equipment rules, and golem logic.
+      - [0x73D91, c, field_group_layout_ops]
+      - [0x742A9, c, field_group_stat_transfer]
+      - [0x746F5, c, field_group_derived_stats]
+      - [0x75A95, c, field_menu_group_ops]
+      - [0x76569, c, field_menu_object_ops]
+      - [0x76C59, c, field_menu_slot_ops]
+      - [0x77421, c, field_gosub_history_ops]
+      - [0x779FD, c, field_menu_action_runtime]
+      - [0x78BC1, c, field_menu_record_setup]
+      - [0x78DBD, c, field_menu_record_transfer]
+      - [0x7963D, c, field_menu_record_audio_ops]
+      - [0x79795, c, field_menu_record_state]
+      - [0x79A55, c, field_menu_attribute_ops]
+      - [0x79F55, c, field_menu_record_ops]
+      - [0x7A265, c, field_select_distance_bucket] # gcc_280_g0_builtin
+      - [0x7A531, c, field_layout_slot_state]
+      - [0x7A619, c, field_equipment_combination_rules]
+      - [0x7BA11, c, field_golem_logic_blocks]
       - [0x7C2D5, data, data]
       - start: 0x7C315
         type: tim

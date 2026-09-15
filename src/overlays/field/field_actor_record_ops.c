@@ -177,4 +177,3 @@ void func_800C28B8(void)
     p->unk90 &= 0xBFFFFFFF;
     func_800C1D14(arg0, 0);
 }
-

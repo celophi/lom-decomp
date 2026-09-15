@@ -410,7 +410,7 @@ typedef struct Records_Node
 } Records_Node;
 extern void DecDCTReset(int mode);
 extern void DecDCTvlcBuild(u_short *table);
-void field_prepare_animation_definitions(void *, s32);
+void field_prepare_animation_definitions(Build_FieldAnimDefRasterView *, s32);
 void field_build_animation_list(Build_FieldAnimDef *, u8 **, Build_FieldAnim **);
 void field_build_sprite_tile_record(FieldTileDesc *, FieldTileRec *, s32, s32);
 void field_build_quad_tile_record(FieldTileDesc *, FieldTileRec *, s32, s32);
@@ -469,7 +469,7 @@ extern u16 D_80180008;
  */
 void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
 {
-  union 
+  union
   {
     s32 sp10[3];
     volatile s32 sp74;
@@ -679,27 +679,27 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
         {
           var_s0 = var_s0 - 1;
           temp_a1_5 = var_t5_2 + (var_t0[1] * 2);
-          
+
             if (var_s0 != early_outer_end)
             {
               early_inner_end = -1;
-              
-                
-                  
-                    
-                      
-                        
-                          
-                            
+
+
+
+
+
+
+
+
                               var_a2 = temp_a1_5 + 1;
-                            
-                          
-                        
-                      
-                    
-                  
-                
-              
+
+
+
+
+
+
+
+
               do
               {
                 var_a0 = (u16) (*temp_a1_5);
@@ -734,7 +734,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
             }
             var_t0 = var_t0 + 2;
             var_s0 = (*var_t0) & 0x7FFF;
-          
+
         }
         while (var_s0 != 0);
       }
@@ -1061,7 +1061,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
             *((s16 *) (((u8 *) temp_s2) + 0x44)) = (s16) (*((u16 *) (((u8 *) temp_s4) + 0x18)));
             *((s16 *) (((u8 *) temp_s2) + 0x46)) = (s16) (*((u16 *) (((u8 *) temp_s4) + 0x1A)));
             *((s16 *) (((u8 *) temp_s2) + 0x48)) = (s16) (*((u16 *) (((u8 *) temp_s4) + 0x1C)));
-                          var_v0_5 = (s16) (*((u16 *) (((u8 *) temp_s4) + 0x1E)));              
+                          var_v0_5 = (s16) (*((u16 *) (((u8 *) temp_s4) + 0x1E)));
           }
           do { *((s16 *) (((u8 *) temp_s2) + 0x4A)) = var_v0_5; } while (0);
           var_s6 = 0;
@@ -1098,8 +1098,8 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               sp3C = temp_v1_14;
               *((s32 *) (((u8 *) temp_s2) + 0x14)) = (s32) (temp_v0_6 * 4);
               sp24 = (Records_Unk *) (((u8 *) var_s3) + (temp_v0_6 * 4));
-              
-              
+
+
               var_s1_4 = 1;
               if (var_s0 != (-1))
               {
@@ -1166,8 +1166,8 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               }
               if (var_s6 == 1)
               {
-                
-                
+
+
                 *((s32 *) (((u8 *) temp_s2) + 0x1C)) = (s32) ((var_t4 + (var_t8 << 9)) + 1);
               }
               else
@@ -1264,7 +1264,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
             }
             else
             {
-                         temp_v1_12 = var_s2->unk21;           
+                         temp_v1_12 = var_s2->unk21;
               var_t1_4 = 0;
               if (temp_v1_12 == 1)
               {
@@ -1299,7 +1299,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               if (temp_v1_14 != 0)
               {
                 var_v0_6 = temp_v1_14 - 1;
-                
+
                   var_t4 = var_v0_6;
                   var_s2->unk1C = *((s32 *) (((var_t4 & 0xFF) * 4) + 0x1F800000));
                   var_s6 = 1;
@@ -1307,7 +1307,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                   {
                     *(((u8 *) var_s2) + 0x1F) = (u8) ((*(((u8 *) var_s2) + 0x1F)) | 2);
                   }
-                
+
                 var_s5 = 8;
               }
               else
