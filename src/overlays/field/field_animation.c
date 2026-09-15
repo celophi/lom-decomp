@@ -2435,7 +2435,7 @@ FieldPart* func_8005AB80(s32, s32);
  * every object after it in the list; for the single-part case it touches only
  * that part.
  *
- * Objects whose FieldObjFlags::unk1 (parts whose FieldPart::node_count) is
+ * Objects whose FieldObjFlags::node_count (or FieldPart::node_count) is
  * non-zero also get the per-axis movement pushed through func_8005AA68 /
  * func_8005A984 before the new position lands, one call per axis.
  *
@@ -2446,33 +2446,14 @@ FieldPart* func_8005AB80(s32, s32);
  * @param rebias_cluts  Zero to only reposition; non-zero to also push the
  *                      per-axis movement through the notifier and rebias the
  *                      parts' CLUT ids by the depth change.
- *
- * @note NOT MATCHED - 97.47%. Two residues remain, both in the CLUT walk:
- *       - the delay slot of the `part == NULL` guard is filled here with the
- *         hoisted `(s16)delta` sign-extension, but is a `nop` in the target;
- *       - the fourth (clut_tr) clamp keeps its result in @c v1 and stores from
- *         it, where the target moves it into @c v0 through two extra copies.
- *       Everything else, including all four clamp blocks and both call
- *       sequences, is exact. See working/func_800592B4/status.md.
- * @note TODO: this function is IN the build but does not byte-match, so the
- *       field_animation segment will not either until the two residues above are
- *       closed.
- * @note @c delta must be @c s32 with an explicit @c (s16) cast at each of the
- *       four uses. Declaring it @c s16 lets gcc drop the truncation of the
- *       @c /256 result and weakens the @c pos->z load to @c lhu (-4 exact
- *       rows).
- * @note @c zpos must be read into a local before the subtraction; folding it
- *       back into the expression evaluates the divide first and schedules the
- *       @c lh out of the load-delay slot (-2 exact rows).
- * @see decomp.me (97.47%) TODO
  */
 void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32 rebias_cluts)
 {
     FieldObj* obj;
     FieldPart* part;
     s32 delta;
-    s32 sum;
-    s32 value;
+    s32 clut_sum;
+    s32 clamped_clut;
     s32 zpos;
 
     part = NULL;
@@ -2524,65 +2505,66 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
             }
             while (part != NULL)
             {
-                sum = part->clut_bl + (s16)delta;
-                if (sum > 0)
+                clut_sum = part->clut_bl + (s16)delta;
+                if (clut_sum > 0)
                 {
-                    value = sum;
-                    if (value >= 0x800)
+                    clamped_clut = clut_sum;
+                    if (clamped_clut >= 0x800)
                     {
-                        value = 0x7FF;
+                        clamped_clut = 0x7FF;
                     }
                 }
                 else
                 {
-                    value = 0;
+                    clamped_clut = 0;
                 }
-                part->clut_bl = value;
+                part->clut_bl = clamped_clut;
 
-                sum = part->clut_tl + (s16)delta;
-                if (sum > 0)
+                clut_sum = part->clut_tl + (s16)delta;
+                if (clut_sum > 0)
                 {
-                    value = sum;
-                    if (value >= 0x800)
+                    clamped_clut = clut_sum;
+                    if (clamped_clut >= 0x800)
                     {
-                        value = 0x7FF;
+                        clamped_clut = 0x7FF;
                     }
                 }
                 else
                 {
-                    value = 0;
+                    clamped_clut = 0;
                 }
-                part->clut_tl = value;
+                part->clut_tl = clamped_clut;
 
-                sum = part->clut_br + (s16)delta;
-                if (sum > 0)
+                clut_sum = part->clut_br + (s16)delta;
+                if (clut_sum > 0)
                 {
-                    value = sum;
-                    if (value >= 0x800)
+                    clamped_clut = clut_sum;
+                    if (clamped_clut >= 0x800)
                     {
-                        value = 0x7FF;
+                        clamped_clut = 0x7FF;
                     }
                 }
                 else
                 {
-                    value = 0;
+                    clamped_clut = 0;
                 }
-                part->clut_br = value;
+                part->clut_br = clamped_clut;
 
-                sum = part->clut_tr + (s16)delta;
-                if (sum > 0)
+                clut_sum = part->clut_tr + (s16)delta;
+                if (clut_sum > 0)
                 {
-                    value = sum;
-                    if (value >= 0x800)
+                    clamped_clut = clut_sum;
+                    if (clamped_clut >= 0x800)
                     {
-                        value = 0x7FF;
+                        clamped_clut = 0x7FF;
                     }
+                    clut_sum = clamped_clut;
                 }
                 else
                 {
-                    value = 0;
+                    clut_sum = 0;
                 }
-                part->clut_tr = value;
+                part->clut_tr = clut_sum;
 
                 if (obj == NULL)
                 {
