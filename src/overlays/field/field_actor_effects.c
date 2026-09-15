@@ -877,6 +877,7 @@ u8 *func_8009FE54(s32 *base, u8 *arg1, VECTOR *pos, s32 radius)
      ordering_table[depth] = (ordering_table[depth] & tag_mask) | ((s32)primitive & addr_mask))
 
 /**
+ * @see decomp.me (100%)
  * @brief Draw animated curved quad strips extending from a fixed-point position.
  * @param ordering_table Ordering table with 0x1000 depth entries.
  * @param primitive_buffer Destination for the generated GPU packets.
