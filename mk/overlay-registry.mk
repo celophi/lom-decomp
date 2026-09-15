@@ -123,198 +123,154 @@ overlay_checkps_target_as_extra_flags_cdrom := -L
 OVERLAYS += cload
 overlay_cload_gcc_272_cdk_g0_srcs := \
 	src/overlays/cload/overlay_header.c \
-	src/overlays/cload/cload.c 
+	src/overlays/cload/cload.c
 
 OVERLAYS += field
+# Sources follow FIELD.BIN.yaml address order within each compiler configuration.
 overlay_field_gcc_272_gnu_g0_srcs :=
 
 overlay_field_gcc_272_cdk_g0_srcs := \
-	src/overlays/field/func_800AEAC0.c \
-	src/overlays/field/field_ring_selection.c \
-	src/overlays/field/field_item_selection.c \
-	src/overlays/field/field_choice_labels.c \
-	src/overlays/field/field_modal_runtime.c \
-	src/overlays/field/field_numeric_sprites.c \
-	src/overlays/field/func_8008AB2C.c \
-	src/overlays/field/func_800952DC.c \
-	src/overlays/field/func_800954F0.c \
-	src/overlays/field/func_8008AFD8.c \
-	src/overlays/field/func_8009615C.c \
-	src/overlays/field/field_text_quad.c \
-	src/overlays/field/field_actor_camera.c \
-	src/overlays/field/func_80091914.c \
-	src/overlays/field/func_8008B73C.c \
-	src/overlays/field/field_actor_reactions.c \
-	src/overlays/field/func_8008A580.c \
-	src/overlays/field/func_8008A678.c \
 	src/overlays/field/overlay_header.c \
-	src/overlays/field/field_actor_idle_ops.c \
-	src/overlays/field/field_actor_slot_lookup.c \
-	src/overlays/field/field4.c \
-	src/overlays/field/func_800675c8.c \
-	src/overlays/field/func_80067aa4.c \
+	src/overlays/field/field_frame_commands.c \
+	src/overlays/field/field_draw_state.c \
+	src/overlays/field/field_fade.c \
+	src/overlays/field/field_actor_runtime.c \
 	src/overlays/field/field_effect_update.c \
-	src/overlays/field/field10.c \
-	src/overlays/field/field11.c \
-	src/overlays/field/field12.c \
-	src/overlays/field/field13.c \
-	src/overlays/field/field14.c \
-	src/overlays/field/field15.c \
-	src/overlays/field/field16.c \
-	src/overlays/field/field17.c \
-	src/overlays/field/field_actor_target_queries.c \
+	src/overlays/field/field_effect_dispatch.c \
+	src/overlays/field/field_effect_frames.c \
+	src/overlays/field/field_effect_primitives.c \
+	src/overlays/field/field_effect_transform.c \
+	src/overlays/field/field_effect_geometry.c \
+	src/overlays/field/field_mesh_render.c \
+	src/overlays/field/field_mesh_transform.c \
+	src/overlays/field/field_mesh_part_animation.c \
 	src/overlays/field/field_actor_slot_resources.c \
-	src/overlays/field/func_800822A4.c \
-	src/overlays/field/func_800829A0.c \
-	src/overlays/field/func_80082C90.c \
-	src/overlays/field/func_80089980.c \
-	src/overlays/field/func_8008B288.c \
 	src/overlays/field/field_actor_hud.c \
 	src/overlays/field/field_actor_control_effects.c \
-	src/overlays/field/field30.c \
-	src/overlays/field/field35.c \
-	src/overlays/field/field36.c \
+	src/overlays/field/field_actor_key_ops.c \
+	src/overlays/field/field_actor_script_dispatch.c \
+	src/overlays/field/field_actor_action_commands.c \
+	src/overlays/field/field_actor_animation_commands.c \
+	src/overlays/field/field_actor_reactions.c \
 	src/overlays/field/field_actor_routes.c \
-	src/overlays/field/field39.c \
-	src/overlays/field/field40.c \
-	src/overlays/field/field_actor_resource_unpack.c \
-	src/overlays/field/field_block_allocator.c \
-	src/overlays/field/field_command_history.c \
-	src/overlays/field/field308.c \
-	src/overlays/field/field_modal_stream_start.c \
-	src/overlays/field/field_input_text_session.c \
-	src/overlays/field/field332.c \
-	src/overlays/field/field_actor_effects.c \
-	src/overlays/field/field_timed_panel.c \
-	src/overlays/field/field_actor_text_queue.c \
-	src/overlays/field/field_dialog_screens.c \
-	src/overlays/field/field_text_session.c \
-	src/overlays/field/field_resource_load.c \
-	src/overlays/field/field_layout_slot_state.c \
-	src/overlays/field/field_get_object_script_command.c \
-	src/overlays/field/func_80088198.c \
-	src/overlays/field/func_80089AE4.c \
-	src/overlays/field/func_80089BE8.c \
-	src/overlays/field/func_80089D44.c \
-	src/overlays/field/func_8008A0B0.c \
-	src/overlays/field/func_8008A4D0.c \
-	src/overlays/field/func_8008A840.c \
-	src/overlays/field/func_8008A9D8.c \
-	src/overlays/field/func_8008AABC.c \
-	src/overlays/field/func_8008AD44.c \
-	src/overlays/field/field_queue_actor_animation_by_handle.c \
 	src/overlays/field/field_actor_behavior.c \
-	src/overlays/field/func_80091438.c \
-	src/overlays/field/func_80091728.c \
-	src/overlays/field/func_8009184C.c \
-	src/overlays/field/func_80091AC8.c \
-	src/overlays/field/func_800925EC.c \
-	src/overlays/field/func_80092988.c \
-	src/overlays/field/func_80092AD8.c \
-	src/overlays/field/func_80092C98.c \
-	src/overlays/field/func_80093AB8.c \
-	src/overlays/field/func_80093EB4.c \
-	src/overlays/field/func_8009403C.c \
-	src/overlays/field/func_80094508.c \
-	src/overlays/field/func_80092C24.c \
-	src/overlays/field/func_80094690.c \
-	src/overlays/field/func_800946FC.c \
-	src/overlays/field/func_800949CC.c \
-	src/overlays/field/func_80094B5C.c \
-	src/overlays/field/func_80094C00.c \
-	src/overlays/field/func_80094FDC.c \
-	src/overlays/field/func_80095074.c \
-	src/overlays/field/func_80095168.c \
-	src/overlays/field/func_800951CC.c \
+	src/overlays/field/field_actor_input_map_init.c \
+	src/overlays/field/field_actor_input_actions.c \
+	src/overlays/field/field_actor_camera.c \
+	src/overlays/field/field_actor_idle_ops.c \
+	src/overlays/field/field_actor_motion.c \
+	src/overlays/field/field_actor_movement_states.c \
+	src/overlays/field/field_actor_action_runtime.c \
+	src/overlays/field/field_actor_displacement.c \
+	src/overlays/field/field_actor_resource_states.c \
+	src/overlays/field/field_actor_animation_resume.c \
+	src/overlays/field/field_actor_sequence_runtime.c \
+	src/overlays/field/field_actor_transition_reset.c \
+	src/overlays/field/field_contact_geometry.c \
+	src/overlays/field/field_actor_resource_unpack.c \
+	src/overlays/field/field_scene_transition.c \
 	src/overlays/field/field_text_window_api.c \
-	src/overlays/field/func_8009D4D8.c \
+	src/overlays/field/field_block_allocator.c \
+	src/overlays/field/field_actor_target_queries.c \
+	src/overlays/field/field_actor_movement_modes.c \
+	src/overlays/field/field_actor_effects.c \
+	src/overlays/field/field_path_interpolation.c \
+	src/overlays/field/field_command_history.c \
 	src/overlays/field/field_pair_indicators.c \
 	src/overlays/field/field_audio_runtime.c \
-	src/overlays/field/func_800A68B4.c \
+	src/overlays/field/field_ring_selection.c \
+	src/overlays/field/field_timed_panel.c \
+	src/overlays/field/field_actor_text_queue.c \
+	src/overlays/field/field_ability_progression.c \
+	src/overlays/field/field_dialog_screens.c \
 	src/overlays/field/field_immediate_text.c \
-	src/overlays/field/func_800AD7DC.c \
+	src/overlays/field/field_input_text_session.c \
+	src/overlays/field/field_modal_runtime.c \
+	src/overlays/field/field_modal_stream_start.c \
+	src/overlays/field/field_numeric_sprites.c \
+	src/overlays/field/field_pair_rule_lookup.c \
 	src/overlays/field/field_menu_windows.c \
-	src/overlays/field/func_800AE8A8.c \
-	src/overlays/field/func_800AE9E0.c \
+	src/overlays/field/field_coordinate_icon.c \
+	src/overlays/field/field_choice_labels.c \
+	src/overlays/field/field_item_selection.c \
+	src/overlays/field/field_text_session.c \
+	src/overlays/field/field_text_quad.c \
 	src/overlays/field/field_card_clock.c \
-	src/overlays/field/field_group_stat_transfer.c \
-	src/overlays/field/field_actor_key_ops.c \
-	src/overlays/field/field_path_interpolation.c \
-	src/overlays/field/func_8008AEB0.c \
-	src/overlays/field/func_8008B1C8.c \
-	src/overlays/field/func_8008AF68.c \
-	src/overlays/field/func_8008B5D0.c \
-	src/overlays/field/func_80096394.c \
-	src/overlays/field/field_actor_transition_reset.c \
-	src/overlays/field/field254.c \
-	src/overlays/field/field255.c \
-	src/overlays/field/field_scene_transition.c \
-	src/overlays/field/field288.c \
-	src/overlays/field/field_contact_geometry.c \
+	src/overlays/field/field_character_name_flags.c \
+	src/overlays/field/field_resource_load.c
 
-overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
-overlay_field_gcc_272_cdk_g0_nostrength_srcs := src/overlays/field/func_80091518.c
+overlay_field_gcc_272_cdk_g0_nosched_srcs := \
+	src/overlays/field/field_subsystem_init.c
+
+overlay_field_gcc_272_cdk_g0_nostrength_srcs := \
+	src/overlays/field/field_actor_action_defaults.c
+
 overlay_field_gcc_272_cdk_g0_noexpand_srcs :=
-overlay_field_gcc_280_g0_builtin_srcs := src/overlays/field/field_select_distance_bucket.c
+
+overlay_field_gcc_280_g0_builtin_srcs := \
+	src/overlays/field/field_select_distance_bucket.c
+
 overlay_field_gcc_280_g0_srcs := \
-	src/overlays/field/func_800C4364.c \
+	src/overlays/field/field_interaction_start.c \
+	src/overlays/field/field_event_dispatch.c \
+	src/overlays/field/field_state_ops.c \
+	src/overlays/field/field_party_setup.c \
+	src/overlays/field/field_actor_templates.c \
+	src/overlays/field/field_actor_lifecycle.c \
+	src/overlays/field/field_status_ticks.c \
+	src/overlays/field/field_action_descriptors.c \
+	src/overlays/field/field_action_setup.c \
+	src/overlays/field/field_progression_ops.c \
 	src/overlays/field/field_action_modifiers.c \
 	src/overlays/field/field_record_stat_ops.c \
 	src/overlays/field/field_script_flow_ops.c \
-	src/overlays/field/func_800B941C.c \
 	src/overlays/field/field_script_primary_ops.c \
 	src/overlays/field/field_script_pair_ops.c \
 	src/overlays/field/field_script_extended_ops.c \
 	src/overlays/field/field_script_operands.c \
 	src/overlays/field/field_script_commands.c \
-	src/overlays/field/field_record_growth_ops.c \
-	src/overlays/field/field_record_effect_ops.c \
-	src/overlays/field/field_active_record_ops.c \
-	src/overlays/field/field_interaction_start.c \
-	src/overlays/field/field_menu_action_runtime.c \
-	src/overlays/field/field_menu_attribute_ops.c \
-	src/overlays/field/field_reward_command_ops.c \
 	src/overlays/field/field_script_arith_ops.c \
-	src/overlays/field/func_800BF158.c \
-	src/overlays/field/field_slot_pool_ops.c \
-	src/overlays/field/field_state_ops.c \
-	src/overlays/field/field_record_lookup_ops.c \
-	src/overlays/field/func_800C1EC8.c \
-	src/overlays/field/field_stat_counter_ops.c \
-	src/overlays/field/field_resource_table_ops.c \
-	src/overlays/field/field_record_table_ops.c \
-	src/overlays/field/field_menu_slot_ops.c \
-	src/overlays/field/field_menu_object_ops.c \
-	src/overlays/field/field_menu_record_ops.c \
-	src/overlays/field/field_menu_record_setup.c \
-	src/overlays/field/field_menu_record_audio_ops.c \
-	src/overlays/field/field_actor_lifecycle.c \
-	src/overlays/field/field_saved_slot_ops.c \
-	src/overlays/field/field_actor_templates.c \
-	src/overlays/field/field_action_descriptors.c \
-	src/overlays/field/field_actor_record_ops.c \
-	src/overlays/field/field_action_setup.c \
-	src/overlays/field/field_equipment_combination_rules.c \
-	src/overlays/field/field_party_setup.c \
-	src/overlays/field/func_800B4844.c \
-	src/overlays/field/field_status_ticks.c \
-	src/overlays/field/field_progression_ops.c \
 	src/overlays/field/field_record_setup_ops.c \
+	src/overlays/field/field_slot_pool_ops.c \
 	src/overlays/field/field_generated_record_ops.c \
-	src/overlays/field/field_gosub_history_ops.c \
-	src/overlays/field/field_golem_logic_blocks.c \
+	src/overlays/field/field_record_effect_ops.c \
+	src/overlays/field/field_reward_command_ops.c \
+	src/overlays/field/field_record_growth_ops.c \
+	src/overlays/field/field_record_lookup_ops.c \
+	src/overlays/field/field_record_buffer_ops.c \
+	src/overlays/field/field_record_position_queries.c \
+	src/overlays/field/field_stat_counter_ops.c \
+	src/overlays/field/field_saved_slot_ops.c \
+	src/overlays/field/field_actor_record_ops.c \
+	src/overlays/field/field_resource_table_ops.c \
+	src/overlays/field/field_active_record_ops.c \
+	src/overlays/field/field_record_table_ops.c \
 	src/overlays/field/field_group_layout_ops.c \
-	src/overlays/field/field_menu_record_state.c \
-	src/overlays/field/field_event_dispatch.c \
+	src/overlays/field/field_group_stat_transfer.c \
+	src/overlays/field/field_group_derived_stats.c \
 	src/overlays/field/field_menu_group_ops.c \
-	src/overlays/field/field_menu_record_transfer.c
-overlay_field_gcc_280_g4_srcs := src/overlays/field/field_fade.c
+	src/overlays/field/field_menu_object_ops.c \
+	src/overlays/field/field_menu_slot_ops.c \
+	src/overlays/field/field_gosub_history_ops.c \
+	src/overlays/field/field_menu_action_runtime.c \
+	src/overlays/field/field_menu_record_setup.c \
+	src/overlays/field/field_menu_record_transfer.c \
+	src/overlays/field/field_menu_record_audio_ops.c \
+	src/overlays/field/field_menu_record_state.c \
+	src/overlays/field/field_menu_attribute_ops.c \
+	src/overlays/field/field_menu_record_ops.c \
+	src/overlays/field/field_layout_slot_state.c \
+	src/overlays/field/field_equipment_combination_rules.c \
+	src/overlays/field/field_golem_logic_blocks.c
+
+overlay_field_gcc_280_g4_srcs :=
+
 overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_scene_load.c \
 	src/overlays/field/field_scene_build.c \
 	src/overlays/field/field_render.c \
 	src/overlays/field/field_animation.c \
-	src/overlays/field/field_scene_api.c \
+	src/overlays/field/field_scene_control.c \
 	src/overlays/field/field_collision.c \
 	src/overlays/field/field_text.c
 

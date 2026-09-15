@@ -1,9 +1,10 @@
+/* field_script_flow_ops */
 #include "field_script.h"
 void akao_set_song_params(s32, s32, s32, s32);
 void func_800B820C();
 void func_800B8308();
 void func_800BD520(s32, s32, s32);
-s32 func_800C1B60(s32);
+u8 *func_800C1B60(s32);
 extern void (*g_field_script_op_table[])();
 
 /**
@@ -561,7 +562,7 @@ void func_800B8CFC(void)
 }
 
 s32 func_80087F0C(s32);
-s32 func_800C1B60(s32);
+u8 *func_800C1B60(s32);
 s32 func_800B2A9C(s32);
 s32 func_800BD650(s32, s32, s32, s32, s32);
 void func_800BD55C(s32, s32, s32, s32, s32, s32);
@@ -615,7 +616,7 @@ void func_800B8E84(void)
         var_s1 = D_80122B78 + 0x400;
         break;
     case 2:
-        var_s1 = func_800C1B60(sp18);
+        var_s1 = (s32)func_800C1B60(sp18);
         break;
     case 3:
         var_s1 = D_80123FC4;
@@ -695,4 +696,84 @@ void func_800B9278(void)
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait &= 1;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc = field_script_read_u16(FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc + 1, &operand);
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = func_80087EF0(func_800BD3B0(g_field_script->status.owner_id, operand << 16) & 0x7FFF);
+}
+
+
+/* func_800B941C */
+#include "field_script.h"
+
+extern u8* func_800C1B60(s32);
+extern void func_8009C620(s32, s32, s32, s32);
+extern void func_8009C77C(s32, s32, s32);
+
+/**
+ * @brief Decode a seven-byte field command and dispatch its action parameters.
+ */
+void func_800B941C(void)
+{
+    u8* first_pc;
+    u8* command_pc;
+    u8* state_pc;
+    u8* call_pc;
+    s32 owner;
+    s32 value;
+    s32 flags;
+    s32 target;
+    u8 mode;
+    u8 kind;
+
+    first_pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
+    if (first_pc[1] != 0xFF)
+    {
+        owner = first_pc[1];
+    }
+    else
+    {
+        owner = g_field_script->status.owner_id;
+    }
+
+    command_pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
+    mode = command_pc[4];
+    value = command_pc[2] + (command_pc[3] << 8);
+
+    switch (mode)
+    {
+    case 0xFE:
+        target = -1;
+        break;
+    case 0xFF:
+        call_pc = func_800C1B60(owner);
+        target = -1;
+        if (call_pc[1] != mode)
+        {
+            target = call_pc[1];
+        }
+        break;
+    default:
+        target = FIELD_SCRIPT_ACTIVE_RECORD()->pc[4];
+        break;
+    }
+
+    state_pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
+    kind = state_pc[6];
+    flags = state_pc[5];
+    if (kind == 7)
+    {
+        target = -1;
+    }
+    if (!(flags & 0x80))
+    {
+        if (flags & 0x40)
+        {
+            target |= 0x40;
+        }
+        else
+        {
+            target |= (flags & 1) << 6;
+        }
+    }
+
+    func_8009C620(flags & 3, kind, owner, target);
+    func_8009C77C(flags, value, 1);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc += 7;
 }
