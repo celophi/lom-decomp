@@ -439,7 +439,7 @@ extern void func_80087FC0(s32, s32);
 void func_800B0AF8(void);
 void func_800B168C(s32);
 s32 func_800B1894(FieldActionRequest *, FieldActionEntry **, s32, s32 *);
-s32 func_800B22F0(u8, s32);
+s32 func_800B22F0(s32, s32);
 s32 func_800BD3B0(s32, s32);
 void func_800C0490(u8);
 
@@ -986,7 +986,7 @@ extern Position *D_80122B70;
 
 extern Point D_80042FC8;
 
-extern s32 func_800B22F0(u8, s32);
+extern s32 func_800B22F0(s32, s32);
 extern void func_800B4410(u16);
 /**
  * @brief Refresh actor map positions and dispatch the first newly entered trigger.
@@ -1082,6 +1082,13 @@ typedef struct
 
 typedef struct
 {
+    u32 value;
+    u32 unk4;
+    u32 flags;
+} FieldScriptFrame1F10;
+
+typedef struct
+{
     u8 pad0[0x400];
     union { u16 count; u32 flags; } actors;
     u8 pad404[0x418 - 0x404];
@@ -1091,7 +1098,7 @@ typedef struct
     u8 padD70[0xE98 - (0x430 + 16 * 0x94)];
     u32 script_status;
     s32 script_depth;
-    u8 *script_pc;
+    FieldScriptFrame1F10 scripts[1];
 } FieldState1F10;
 
 
@@ -1290,152 +1297,143 @@ void func_800B2198(s32 arg0, void *arg1)
     }
 }
 
-/** @brief Start an actor interaction through its script or presentation path. */
-s32 func_800B22F0(u8 arg0, s32 arg1)
+/**
+ * @brief Start an actor interaction through its script or presentation path.
+ * @param arg0 Actor identifier for the interaction.
+ * @param arg1 Interaction/script identifier and option flags.
+ * @return -1 when the interaction starts successfully, or 0 when it cannot start.
+ */
+s32 func_800B22F0(s32 arg0, s32 arg1)
 {
+    u16 saved_arg1;
     s32 sp1C;
     s32 sp18;
     s32 sp14;
     s32 sp10;
-    s32 var_a2;
-    s32 var_a2_2;
     s32 temp_a0;
     s32 var_s0;
     s32 var_s0_2;
-    s32 var_s1;
-    s32 var_s1_2;
-    s32 var_v0;
-    s32 var_v0_2;
     u32 temp_v1;
-    u8 var_a0;
-    u8 var_a0_2;
+    s32 var_a0;
+    s32 var_a0_2;
     u8 *temp_a1;
     u8 *temp_v0;
     u8 *temp_v0_2;
 
-    if ((arg1 & 0xFFFF) != 0xFFFF)
-
+    saved_arg1 = arg1;
+    if ((saved_arg1 & 0xFFFF) == 0xFFFF)
     {
-        var_v0 = 0;
-        if (!(((u32) *(u32 *)(((u8 *)D_80122B78) + 0x418) >> 0x1E) & 1))
+        return 0;
+    }
+
+    if (((((FieldState1F10 *)D_80122B78)->state418 >> 0x1E) & 1) != 0)
+    {
+        return 0;
+    }
+    if (func_800BD414(0, 0xFE1) != 0)
+    {
+        return 0;
+    }
+
+    temp_v0 = func_800C1B98(arg0);
+    if (temp_v0 == NULL)
+    {
+        return 0;
+    }
+
+    temp_v1 = *(u32 *)(temp_v0 + 0x90);
+    if ((temp_v1 >> 0x1E) & 1)
+    {
+        return 0;
+    }
+    if ((temp_v1 >> 0x1D) & 1)
+    {
+        return 0;
+    }
+
+    temp_a0 = (temp_v1 >> 4) & 0x3FF;
+    if (temp_a0 != 0)
+    {
+        func_800C299C(temp_a0);
+    }
+
+    if ((arg1 & 0x8000) != 0)
+    {
+        if (((FieldState1F10 *)D_80122B78)->scripts[((FieldState1F10 *)D_80122B78)->script_depth].value != 0)
         {
-            var_v0 = 0;
-            if (func_800BD414(0, 0xFE1) == 0)
+            return 0;
+        }
+
+        var_s0 = 0;
+        if (((FieldState1F10 *)D_80122B78)->actors.count != 0)
+        {
+            do
             {
-                temp_v0 = func_800C1B98(arg0);
-                var_v0 = 0;
-                if (temp_v0 != NULL)
+                if (var_s0 < 3)
                 {
-                    temp_v1 = *(u32 *)(temp_v0 + 0x90);
-                    if ((temp_v1 >> 0x1E) & 1)
+                    func_80087CE0(var_s0, 0);
+                }
+                else
+                {
+                    var_a0 = ((FieldState1F10 *)D_80122B78)->rec[var_s0].id;
+                    if (var_a0 == arg0)
                     {
-                        goto block_5;
+                        func_800B286C(arg0, 0xD, 0x80);
                     }
-                    var_v0 = 0;
-                    if (!((temp_v1 >> 0x1D) & 1))
+                    else
                     {
-                        temp_a0 = (temp_v1 >> 4) & 0x3FF;
-                        var_v0_2 = arg1 & 0x8000;
-                        if (temp_a0 != 0)
-                        {
-                            func_800C299C(temp_a0);
-                            var_v0_2 = arg1 & 0x8000;
-                        }
-                        if (var_v0_2 != 0)
-                        {
-                            var_v0 = 0;
-                            if (*(u32 *)((((u8 *)D_80122B78) + (*(s32 *)(((u8 *)D_80122B78) + 0xE9C) * 0xC)) + 0xEA0) == 0)
-                            {
-                                var_s0 = 0;
-                                if (*(u16 *)(((u8 *)D_80122B78) + 0x400) != 0)
-                                {
-                                    var_s1 = 0;
-                                    do
-                                    {
-                                        if (var_s0 < 3)
-                                        {
-                                            func_80087CE0(var_s0, 0);
-                                        }
-                                        else
-                                        {
-                                            var_a0 = *(u8 *)((((u8 *)D_80122B78) + var_s1) + 0x430);
-                                            if (var_a0 == arg0)
-                                            {
-                                                var_a0 = arg0;
-                                                var_a2 = 0x80;
-                                            }
-                                            else
-                                            {
-                                                var_a2 = 0x81;
-                                            }
-                                            func_800B286C(var_a0, 0xD, var_a2);
-                                        }
-                                        var_s0 += 1;
-                                        var_s1 += 0x94;
-                                    } while (var_s0 < (s32) *(u16 *)(((u8 *)D_80122B78) + 0x400));
-                                }
-                                D_8010AE78 = 1;
-                                ((u8 *)D_80122B78)[0xE98] = arg0;
-                                *(u32 *)(((u8 *)D_80122B78) + 0xE98) = (s32) (((s32) *(u32 *)(((u8 *)D_80122B78) + 0xE98) & 0xFFFF01FF) | (*(u32 *)(temp_v0 + 0x28) & 0xFE00));
-                                *(u32 *)((((u8 *)D_80122B78) + (*(s32 *)(((u8 *)D_80122B78) + 0xE9C) * 0xC)) + 0xEA0) = func_80087EF0(arg1 & 0x7FFF);
-                                temp_v0_2 = ((u8 *)D_80122B78) + (*(s32 *)(((u8 *)D_80122B78) + 0xE9C) * 0xC);
-                                *(u32 *)(temp_v0_2 + 0xEA8) = (s32) (*(u32 *)(temp_v0_2 + 0xEA8) & ~1);
-                                temp_a1 = ((u8 *)D_80122B78) + (*(s32 *)(((u8 *)D_80122B78) + 0xE9C) * 0xC);
-                                *(u32 *)(temp_a1 + 0xEA8) = (s32) (*(u32 *)(temp_a1 + 0xEA8) & 1);
-                                return -1;
-                            }
-
-                            return var_v0;
-                        }
-                        var_s0_2 = 0;
-                        if (*(u16 *)(((u8 *)D_80122B78) + 0x400) != 0)
-                        {
-                            var_s1_2 = 0;
-                            do
-                            {
-                                if (var_s0_2 < 3)
-                                {
-                                    func_80087CE0(var_s0_2, 0);
-                                }
-                                else
-                                {
-                                    var_a0_2 = *(u8 *)((((u8 *)D_80122B78) + var_s1_2) + 0x430);
-                                    if (var_a0_2 == arg0)
-                                    {
-                                        var_a0_2 = arg0;
-                                        var_a2_2 = 0x83;
-                                    }
-                                    else
-                                    {
-                                        var_a2_2 = 0x84;
-                                    }
-                                    func_800B286C(var_a0_2, 0xD, var_a2_2);
-                                }
-                                var_s0_2 += 1;
-                                var_s1_2 += 0x94;
-                            } while (var_s0_2 < (s32) *(u16 *)(((u8 *)D_80122B78) + 0x400));
-                        }
-                        sp10 = (s32) arg0;
-                        sp14 = 0xFF;
-                        sp18 = 0xFE;
-                        sp1C = 0xFF;
-                        *(u32 *)(((u8 *)D_80122B78) + 0x400) = (s32) (*(u32 *)(((u8 *)D_80122B78) + 0x400) | 0x80000);
-                        func_800B2654(&sp10, &sp14, &sp18, &sp1C);
-                        func_8009C620(sp14, sp1C, sp10, sp18);
-                        func_8009C77C(sp14, arg1 & 0xFFFF, 1);
-                        var_v0 = -1;
-
-                        return var_v0;
+                        func_800B286C(var_a0, 0xD, 0x81);
                     }
+                }
+                var_s0 += 1;
+            } while (var_s0 < (s32)((FieldState1F10 *)D_80122B78)->actors.count);
+        }
 
-                    return var_v0;
+        D_8010AE78 = 1;
+        ((u8 *)D_80122B78)[0xE98] = arg0;
+        *(u32 *)(((u8 *)D_80122B78) + 0xE98) = (s32)(((s32) * (u32 *)(((u8 *)D_80122B78) + 0xE98) & 0xFFFF01FF) | (*(u32 *)(temp_v0 + 0x28) & 0xFE00));
+        ((FieldState1F10 *)D_80122B78)->scripts[((FieldState1F10 *)D_80122B78)->script_depth].value = func_80087EF0(saved_arg1 & 0x7FFF);
+        temp_v0_2 = ((u8 *)D_80122B78) + (*(s32 *)(((u8 *)D_80122B78) + 0xE9C) * 0xC);
+        *(u32 *)(temp_v0_2 + 0xEA8) = (s32)(*(u32 *)(temp_v0_2 + 0xEA8) & ~1);
+        temp_a1 = ((u8 *)D_80122B78) + (*(s32 *)(((u8 *)D_80122B78) + 0xE9C) * 0xC);
+        *(u32 *)(temp_a1 + 0xEA8) = (s32)(*(u32 *)(temp_a1 + 0xEA8) & 1);
+        return -1;
+    }
+
+    var_s0_2 = 0;
+    if (((FieldState1F10 *)D_80122B78)->actors.count != 0)
+    {
+        do
+        {
+            if (var_s0_2 < 3)
+            {
+                func_80087CE0(var_s0_2, 0);
+            }
+            else
+            {
+                var_a0_2 = ((FieldState1F10 *)D_80122B78)->rec[var_s0_2].id;
+                if (var_a0_2 == arg0)
+                {
+                    func_800B286C(arg0, 0xD, 0x83);
+                }
+                else
+                {
+                    func_800B286C(var_a0_2, 0xD, 0x84);
                 }
             }
-        }
-        return var_v0;
+            var_s0_2 += 1;
+        } while (var_s0_2 < (s32)((FieldState1F10 *)D_80122B78)->actors.count);
     }
-block_5:
-    return 0;
+
+    sp10 = (s32)arg0;
+    sp14 = 0xFF;
+    sp18 = 0xFE;
+    sp1C = 0xFF;
+    *(u32 *)(((u8 *)D_80122B78) + 0x400) = (s32)(*(u32 *)(((u8 *)D_80122B78) + 0x400) | 0x80000);
+    func_800B2654(&sp10, &sp14, &sp18, &sp1C);
+    func_8009C620(sp14, sp1C, sp10, sp18);
+    func_8009C77C(sp14, saved_arg1 & 0xFFFF, 1);
+    return -1;
 }
 
 /**

@@ -1007,6 +1007,7 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
 
     FieldMoveVector delta;
     FieldMoveState *height_state;
+    FieldMoveState *states;
     s32 hit;
     FieldMoveBounds *bounds = (FieldMoveBounds *)0x801ED400;
     FieldMoveRequest *mover = (FieldMoveRequest *)0x1F800010;
@@ -1056,27 +1057,30 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
                 mover->x = temp_v1_2;
                 mover->y = (s32)actor->y;
                 mover->z = (s32)actor->z;
-                temp_a0_2 = position->x;
-                mover->unkc = temp_a0_2;
+                mover->unkc = position->x;
+                temp_a0_2 = mover->unkc;
                 mover->unk10 = (s32)position->y;
-                temp_v1_3 = position->z;
+                mover->unk14 = position->z;
+                temp_v1_3 = mover->unk14;
                 mover->height_tolerance = 0x10;
-                query->unke = 0x10;
-                mover->unk14 = temp_v1_3;
+                {
+                FieldMoveQuery *footprint = (FieldMoveQuery *)0x1F800080;
+                footprint->unke = 0x10;
                 if (D_800FE3A0[actor->index].visual_kind == 0x40)
                 {
                     mover->width = 0xC;
-                    query->unkc = 0xC;
-                    var_v0 = 8;
+                    footprint->unkc = 0xC;
+                    mover->packed.h.step = 8;
+                    footprint->unk10 = 8;
                 }
                 else
                 {
                     mover->width = 9;
-                    query->unkc = 9;
-                    var_v0 = 6;
+                    footprint->unkc = 9;
+                    mover->packed.h.step = 6;
+                    footprint->unk10 = 6;
                 }
-                mover->packed.h.step = var_v0;
-                query->unk10 = var_v0;
+                }
                 mover->height_tolerance = 0x10;
                 mover->packed.bits.bit17 = 0;
                 mover->packed.bits.bit16 = 0;
@@ -1090,18 +1094,24 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
                 {
                     delta.x = temp_a0_2 - actor->x;
                     delta.y = 0;
-                    var_v0_2 = temp_v1_3 - actor->z;
+                    delta.z = temp_v1_3 - actor->z;
                 }
                 else
                 {
                     delta.x = mover->x - actor->x;
                     delta.y = 0;
-                    var_v0_2 = mover->z - actor->z;
+                    delta.z = mover->z - actor->z;
                 }
-                delta.z = var_v0_2;
-                query->x = (s32)mover->x;
-                query->z = (s32)mover->z;
-                query->y = (s32)(position->y + actor->y);
+                do
+                {
+                    query->x = (s32)mover->x;
+                } while (0);
+                {
+                    s32 z = mover->z;
+                    s32 y = position->y + actor->y;
+                    query->z = z;
+                    query->y = y;
+                }
                 if (((D_800FE754 == 0) || (actor->flags & 0x1FF) || (func_8005B368(query) == -1)) &&
                     ((temp_v1_5 = actor->kind, (((u32)(temp_v1_5 - 0xB0) < 2U) != 0)) || ((s16)temp_v1_5 == 0xB5) ||
                      (D_800FE754 == 0) || (func_80092988(actor, &delta) == 0)))
@@ -1109,15 +1119,15 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
                     position->x = mover->x;
                     if (((actor->state & 0x7F) == 0x3D) && ((u8)actor->index < 2U))
                     {
-                        var_v0_3 = position->y + actor->y;
+                        position->y = position->y + actor->y;
                     }
                     else
                     {
-                        var_v0_3 = mover->y;
+                        position->y = mover->y;
                     }
-                    position->y = var_v0_3;
+                    states = D_80105AE0;
                     position->z = (s32)mover->z;
-                    height_state = &D_80105AE0[actor->index];
+                    height_state = &states[actor->index];
                     var_a1 = mover->unk18;
                     if (var_a1 < 0)
                     {
@@ -1177,8 +1187,10 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
             temp_v1_6->packed.word = (s32)(temp_v1_6->packed.word | 0x2000);
         }
     }
-    if (var_a1_2 != 0)
+    if (var_a1_2 == 0)
     {
+        return 0;
+    }
         if (((u32)D_80105AE0[actor->index].packed.word >> 0xE) & 1)
         {
             actor->x = position->x;
@@ -1205,8 +1217,6 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
             temp_v1_8 = &D_80105AE0[actor->index];
             temp_v1_8->packed.word = (s32)(temp_v1_8->packed.word | 0x4000);
         }
-        return 0;
-    }
     return 0;
 }
 
