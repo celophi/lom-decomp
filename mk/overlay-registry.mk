@@ -131,7 +131,6 @@ overlay_field_gcc_272_gnu_g0_srcs :=
 overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800AEAC0.c \
 	src/overlays/field/field_ring_selection.c \
-	src/overlays/field/field364.c \
 	src/overlays/field/field_item_selection.c \
 	src/overlays/field/field_choice_labels.c \
 	src/overlays/field/field_modal_runtime.c \
@@ -140,18 +139,12 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800952DC.c \
 	src/overlays/field/func_800954F0.c \
 	src/overlays/field/func_8008AFD8.c \
-	src/overlays/field/func_8008C104.c \
 	src/overlays/field/func_8009615C.c \
-	src/overlays/field/func_8008C2EC.c \
 	src/overlays/field/field_text_quad.c \
-	src/overlays/field/func_80091BC8.c \
-	src/overlays/field/func_80091D7C.c \
+	src/overlays/field/field_actor_camera.c \
 	src/overlays/field/func_80091914.c \
-	src/overlays/field/func_800A1F2C.c \
-	src/overlays/field/func_800A22A8.c \
 	src/overlays/field/func_8008B73C.c \
-	src/overlays/field/func_8008B870.c \
-	src/overlays/field/func_8008C620.c \
+	src/overlays/field/field_actor_reactions.c \
 	src/overlays/field/func_8008A580.c \
 	src/overlays/field/func_8008A678.c \
 	src/overlays/field/overlay_header.c \
@@ -215,8 +208,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_80091728.c \
 	src/overlays/field/func_8009184C.c \
 	src/overlays/field/func_80091AC8.c \
-	src/overlays/field/func_800920FC.c \
-	src/overlays/field/func_80092124.c \
 	src/overlays/field/func_800925EC.c \
 	src/overlays/field/func_80092988.c \
 	src/overlays/field/func_80092AD8.c \
@@ -248,9 +239,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_card_clock.c \
 	src/overlays/field/field_group_stat_transfer.c \
 	src/overlays/field/field_actor_key_ops.c \
-	src/overlays/field/field242.c \
-	src/overlays/field/func_800A1D98.c \
-	src/overlays/field/func_800A20DC.c \
+	src/overlays/field/field_path_interpolation.c \
 	src/overlays/field/func_8008AEB0.c \
 	src/overlays/field/func_8008B1C8.c \
 	src/overlays/field/func_8008AF68.c \
@@ -261,11 +250,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field255.c \
 	src/overlays/field/field_scene_transition.c \
 	src/overlays/field/field288.c \
-	src/overlays/field/field297.c \
-	src/overlays/field/func_8008BD88.c \
-	src/overlays/field/func_8008BE38.c \
-	src/overlays/field/func_8008C024.c \
-	src/overlays/field/func_8008C4A8.c \
 	src/overlays/field/field_contact_geometry.c \
 
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
@@ -289,7 +273,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_interaction_start.c \
 	src/overlays/field/field_menu_action_runtime.c \
 	src/overlays/field/field_menu_attribute_ops.c \
-	src/overlays/field/func_800A2128.c \
 	src/overlays/field/field_reward_command_ops.c \
 	src/overlays/field/field_script_arith_ops.c \
 	src/overlays/field/func_800BF158.c \
@@ -311,7 +294,6 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_action_descriptors.c \
 	src/overlays/field/field_actor_record_ops.c \
 	src/overlays/field/field_action_setup.c \
-	src/overlays/field/field363.c \
 	src/overlays/field/field_equipment_combination_rules.c \
 	src/overlays/field/field_party_setup.c \
 	src/overlays/field/func_800B4844.c \
