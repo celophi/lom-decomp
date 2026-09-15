@@ -846,4 +846,82 @@ void field_draw_marker_overlay(u32*, u32*);
 void field_draw_part(FieldPart*, s32, s32*, s32);
 
 
+
+/* Shared animation key formats used by updates and control APIs. */
+/**
+ * @brief One entry of an animation's keyframe table (FieldAnimDef::data).
+ *
+ * The three signed deltas are the horizontal / vertical / depth offsets the
+ * keyframe ends on; they are scaled by the fraction of the keyframe elapsed so
+ * far. Only bit 15 of the trailing halfword is used.
+ */
+typedef struct
+{
+    /** 0x00 horizontal end offset. */
+    s16 x;
+    /** 0x02 vertical end offset. */
+    s16 y;
+    /** 0x04 depth end offset. */
+    s16 z;
+    /** 0x06 bit 15 is copied to the target's visibility flag. */
+    u16 visibility;
+} FieldTweenKey;
+
+/**
+ * @brief Count-table record returned by field_find_count_table_span.
+ *
+ * Only the duration is read here; field_blit_animation_frame's caller uses the same halfword
+ * to reload FieldAnim::timer.
+ */
+typedef struct
+{
+    u8 _pad0;
+    /** 0x01 running total of the spans before this one, in frames. */
+    u8 range_start;
+    /** 0x02 length of the keyframe this record covers, in frames. */
+    u16 duration;
+} FieldTweenSpan;
+
+/**
+ * @brief 16-bit field of a FieldSfxKey, addressed as a whole or by byte.
+ *
+ * Word 0 is read as a byte for the entry kind and as a halfword for the flag
+ * bits; word 1 as a byte for the sound's bank/index and as a halfword for its
+ * flag bit and base attenuation.
+ */
+typedef union
+{
+    u16 word;
+    struct
+    {
+        u8 lo;
+        u8 hi;
+    } b;
+} FieldSfxWord;
+
+/**
+ * @brief One entry of the sound keyframe table at FieldAnimDef::data.
+ *
+ * Shares the 8-byte stride with FieldTweenKey; the low three bits of byte 0
+ * say which of the two an entry is (1 = sound).
+ */
+typedef struct
+{
+    /**
+     * 0x00 bits 0-2 entry kind (1 = sound); bits 8-12 a channel-slot number
+     * (zero means "use sfx_id" instead); bit 14 clear selects
+     * positional playback; bit 15 clear stops the channel.
+     */
+    FieldSfxWord control;
+    /**
+     * 0x02 low byte is the sound's bank/index, bits 8-14 its base attenuation
+     * and bit 15 selects one-shot playback over the a1/a3 pair.
+     */
+    FieldSfxWord sound;
+    /** 0x04 bits 0-9 sound id, used when control carries no channel slot. */
+    u16 sfx_id;
+    u16 unk6; /* 0x06 */
+} FieldSfxKey;
+
+
 #endif
