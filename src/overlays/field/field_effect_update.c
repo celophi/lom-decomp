@@ -2045,7 +2045,7 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
 {
     FieldActorState *state;
     FieldActorPartDef *track_part;
-    FieldMotionRecord *newrec;
+    FieldMotionRecord *newrec; FieldMotionRecord *candidate;
     FieldObjectPlacement *slot;
     FieldVector new_pos;
     FieldVector vec;
@@ -2063,7 +2063,7 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
 
     if (*(u32 *) &part->unknown_0x2c & 0xF0000000)
     {
-        rec->state = (rec->height_or_retired_state == -1) ? 0xFE : (u8) rec->height_or_retired_state;
+        if (rec->height_or_retired_state == -1) { rec->state = 0xFE; } else { rec->state = rec->height_or_retired_state; }
 
         for (bit = 0, mask = 1; bit < 4; bit++, mask <<= 1)
         {
@@ -2091,9 +2091,10 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
                         newslot = func_8006D79C(&g_field_actor_slots[rec->actor_index], (part->spawn_flags.halves.part_selectors >> (bit * 4)) & 0xF, 0);
                         if (newslot != -1)
                         {
-                            newrec = &D_800FF658[newslot];
-                            if (!(((u8 *) &newrec->flags)[3] & 7) && (newrec->position_source != 0))
+                            candidate = &D_800FF658[newslot];
+                            if (!(((u8 *) &candidate->flags)[3] & 7) && (candidate->position_source != 0))
                             {
+                                newrec = candidate;
                                 field_resolve_effect_position(newrec, part, &new_pos);
                                 vec.vx = (new_pos.vx - newrec->x) >> 8;
                                 vec.vy = (new_pos.vy - newrec->y) >> 8;
@@ -2157,16 +2158,17 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
         slot = &D_80105AE0[state->owner_object_index];
         if (((u8 *) &slot->state_flags)[2] == state->actor_index)
         {
-            anim_flags = D_800FDF58[state->owner_object_index].motion_parameter;
+            FieldActorState *owner = state;
+            anim_flags = D_800FDF58[owner->owner_object_index].motion_parameter;
             if ((anim_flags != 0x90 && anim_flags != 0x94) || (slot->object_flags & 0x200))
             {
-                D_800FDF58[state->owner_object_index].state = 0;
+                D_800FDF58[owner->owner_object_index].state = 0;
             }
             else
             {
-                D_800FDF58[state->owner_object_index].state = 0xFE;
+                D_800FDF58[owner->owner_object_index].state = 0xFE;
             }
-            D_80105AE0[state->owner_object_index].state_flags &= ~1;
+            D_80105AE0[owner->owner_object_index].state_flags &= ~1;
         }
     }
 
