@@ -685,6 +685,7 @@ void func_8008D174(FieldPositionRecord* record)
  *
  * @param actor Follower actor whose position and state are updated.
  * @param follower_index Follower order controlling the permitted path separation.
+ * @see decomp.me (100%)
  */
 void func_8008D29C(Actor *actor, s32 follower_index)
 {
@@ -763,7 +764,6 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     Mover *mover = (Mover *)0x1F800000;
     Actor *scan;
     s16 decay_period;
-    s16 radius_z;
     s32 limit;
     s32 position_z;
     s32 animation_kind;
@@ -787,9 +787,10 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     Slot *advance_slot;
     Slot *retreat_slot;
     s32 collision_height;
+    u8 collision_flag;
 
     /* The leader search inspects only the low half of the actor flags. */
-    for (leader_index = 0, scan = D_800FDF58; leader_index < 13; leader_index++)
+    for (leader_index = 0; leader_index < 13; leader_index++)
     {
         scan = &D_800FDF58[leader_index];
         if (scan->unk25 != 255 && !(*(u16 *)&scan->unk1C & 0x1FF))
@@ -846,7 +847,9 @@ void func_8008D29C(Actor *actor, s32 follower_index)
         {
             dz = dx;
             retreat_slot->unk16E = (u8)(sample_index - 1);
-            goto clear_delta;
+            delta.vx = 0;
+            delta.vz = 0;
+            goto update_collision;
         }
         else
         {
@@ -913,7 +916,6 @@ void func_8008D29C(Actor *actor, s32 follower_index)
                 gte_ldlvl(&delta);
                 gte_sqr12();
                 gte_stlvnl(&square);
-                /* A signed low-bit test preserves the original separate distance checks. */
                 if (((square.vx + square.vz) >= 0x181) &&
                     (!(g_field_resource_entries[actor->unk3B].flags & 1)))
                 {
@@ -926,22 +928,25 @@ void func_8008D29C(Actor *actor, s32 follower_index)
                     actor->unk33 = 0;
                 }
                 collision_height = actor->unk4;
-                goto collision_after_y;
+                collision_flag = D_8010AE84;
+                goto apply_collision_state;
             }
         }
         dz = dx;
         goto clear_delta;
     }
     collision_height = actor->unk4;
-    goto collision_after_y;
+    collision_flag = D_8010AE84;
+    goto apply_collision_state;
 clear_delta:
     delta.vx = 0;
     delta.vz = 0;
 update_collision:
     collision_height = actor->unk4;
-collision_after_y:
+    collision_flag = D_8010AE84;
+apply_collision_state:
     mover->y = collision_height;
-    if (D_8010AE84 == 0)
+    if (collision_flag == 0)
     {
         position_x = actor->unk0;
         if ((position_x >= 0) && (position_x < (dimensions->width << 8)))
@@ -1033,7 +1038,6 @@ collision_after_y:
         {
             actor->unk21 = (u8)((animation_kind % 5) | (old_animation & 0x80));
         restart_animation:
-        restart_animation_shared:
             actor->unk27 = 0;
             actor->unk24 = 1;
             func_8006C3FC(actor);
