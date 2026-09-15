@@ -934,8 +934,9 @@ pack_result:
  * @return One when the proposed or resolved position is accepted, zero otherwise.
  * @note Uses mover and probe records at scratchpad addresses 0x1F800010 and
  *       0x1F800080. The query result is consumed as a full return-register value.
+ * @see decomp.me (100%)
  */
-s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
+s32 func_80097FA0(FieldMoveActor* actor, s32* position, s32 mode)
 {
     /** @brief Visual kind and flags in a 0x48-byte object record. */
     typedef struct
@@ -998,88 +999,83 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
         u16 unk2;
     } FieldMoveBounds;
 
-    s32 func_8005B368(FieldMoveQuery *);
-    s32 func_8005B6AC(FieldMoveRequest *);
-    s32 func_80092988(FieldMoveActor *, FieldMoveVector *);
+    s32 func_8005B368(FieldMoveQuery*);
+    s32 func_8005B6AC(FieldMoveRequest*);
+    s32 func_80092988(FieldMoveActor*, FieldMoveVector*);
     extern FieldMoveObject D_800FE3A0[];
     extern FieldMoveState D_80105AE0[];
     extern s32 D_800FE754, D_8010D024;
 
     FieldMoveVector delta;
-    FieldMoveState *height_state;
-    FieldMoveState *states;
+    FieldMoveState* height_state;
+    FieldMoveState* states;
     s32 hit;
-    FieldMoveBounds *bounds = (FieldMoveBounds *)0x801ED400;
-    FieldMoveRequest *mover = (FieldMoveRequest *)0x1F800010;
-    FieldMoveQuery *query = (FieldMoveQuery *)0x1F800080;
-    s16 var_v0;
-    s32 temp_a0;
-    s32 temp_a0_2;
-    s32 temp_v1_2;
-    s32 temp_v1_3;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_v0_2;
-    s32 var_v0_3;
+    FieldMoveBounds* bounds = (FieldMoveBounds*)0x801ED400;
+    FieldMoveRequest* mover = (FieldMoveRequest*)0x1F800010;
+    FieldMoveQuery* query = (FieldMoveQuery*)0x1F800080;
+    s32 actor_z;
+    s32 requested_x;
+    s32 actor_x;
+    s32 requested_z;
+    s32 height;
+    s32 can_move;
     u16 temp_v1;
     u16 temp_v1_4;
     u16 temp_v1_5;
-    FieldMoveState *temp_v0;
-    FieldMoveState *temp_v0_2;
-    FieldMoveState *temp_v0_3;
-    FieldMoveState *temp_v1_6;
-    FieldMoveState *temp_v1_7;
-    FieldMoveState *temp_v1_8;
+    FieldMoveState* temp_v0;
+    FieldMoveState* temp_v0_2;
+    FieldMoveState* temp_v0_3;
+    FieldMoveState* temp_v1_6;
+    FieldMoveState* temp_v1_7;
+    FieldMoveState* temp_v1_8;
 
     if (((u32)D_800FE3A0[actor->index].flags >> 0x17) & 1)
     {
-        actor->x += position->x;
-        actor->y = (s32)(actor->y + position->y);
-        actor->z = (s32)(actor->z + position->z);
+        actor->x += position[0];
+        actor->y = (s32)(actor->y + position[1]);
+        position += 2;
+        actor->z += position[0];
         return 1;
     }
     if (D_800FE754 != 0)
     {
         temp_v1 = actor->kind;
-        if (((u32)(temp_v1 - 0xB0) >= 2U) && ((s16)temp_v1 != 0xB5) && (func_80092988(actor, position) != 0))
+        if (((u32)(temp_v1 - 0xB0) >= 2U) && ((s16)temp_v1 != 0xB5) && (func_80092988(actor, (FieldMoveVector*)position) != 0))
         {
-            position->x = 0;
+            position[0] = 0;
         }
     }
-    temp_v1_2 = actor->x;
-    if ((temp_v1_2 >= 0) && (temp_v1_2 < (bounds->x << 8)))
+    actor_x = actor->x;
+    if ((actor_x >= 0) && (actor_x < (bounds->x << 8)))
     {
-        temp_a0 = actor->z;
-        if (temp_a0 >= 0)
+        actor_z = actor->z;
+        if (actor_z >= 0)
         {
-            if (temp_a0 < ((s32)(bounds->unk2 << 0x10) >> 7))
+            if (actor_z < ((s32)(bounds->unk2 << 0x10) >> 7))
             {
-                mover->x = temp_v1_2;
+                mover->x = actor_x;
                 mover->y = (s32)actor->y;
                 mover->z = (s32)actor->z;
-                mover->unkc = position->x;
-                temp_a0_2 = mover->unkc;
-                mover->unk10 = (s32)position->y;
-                mover->unk14 = position->z;
-                temp_v1_3 = mover->unk14;
+                mover->unkc = position[0];
+                requested_x = mover->unkc;
+                mover->unk10 = (s32)position[1];
+                mover->unk14 = position[2];
+                requested_z = mover->unk14;
                 mover->height_tolerance = 0x10;
-                {
-                FieldMoveQuery *footprint = (FieldMoveQuery *)0x1F800080;
-                footprint->unke = 0x10;
+                query->unke = 0x10;
                 if (D_800FE3A0[actor->index].visual_kind == 0x40)
                 {
                     mover->width = 0xC;
-                    footprint->unkc = 0xC;
+                    query->unkc = 0xC;
                     mover->packed.h.step = 8;
-                    footprint->unk10 = 8;
+                    query->unk10 = 8;
                 }
                 else
                 {
                     mover->width = 9;
-                    footprint->unkc = 9;
+                    query->unkc = 9;
                     mover->packed.h.step = 6;
-                    footprint->unk10 = 6;
-                }
+                    query->unk10 = 6;
                 }
                 mover->height_tolerance = 0x10;
                 mover->packed.bits.bit17 = 0;
@@ -1092,9 +1088,9 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
                 temp_v1_4 = actor->kind;
                 if (((u32)(temp_v1_4 - 0xB0) < 2U) || ((s16)temp_v1_4 == 0xB5))
                 {
-                    delta.x = temp_a0_2 - actor->x;
+                    delta.x = requested_x - actor->x;
                     delta.y = 0;
-                    delta.z = temp_v1_3 - actor->z;
+                    delta.z = requested_z - actor->z;
                 }
                 else
                 {
@@ -1102,38 +1098,35 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
                     delta.y = 0;
                     delta.z = mover->z - actor->z;
                 }
-                do
-                {
-                    query->x = (s32)mover->x;
-                } while (0);
+                query->x = mover->x;
                 {
                     s32 z = mover->z;
-                    s32 y = position->y + actor->y;
+                    s32 y = position[1] + actor->y;
                     query->z = z;
                     query->y = y;
                 }
                 if (((D_800FE754 == 0) || (actor->flags & 0x1FF) || (func_8005B368(query) == -1)) &&
-                    ((temp_v1_5 = actor->kind, (((u32)(temp_v1_5 - 0xB0) < 2U) != 0)) || ((s16)temp_v1_5 == 0xB5) ||
-                     (D_800FE754 == 0) || (func_80092988(actor, &delta) == 0)))
+                    ((temp_v1_5 = actor->kind, (((u32)(temp_v1_5 - 0xB0) < 2U) != 0)) || ((s16)temp_v1_5 == 0xB5) || (D_800FE754 == 0) ||
+                     (func_80092988(actor, &delta) == 0)))
                 {
-                    position->x = mover->x;
+                    position[0] = mover->x;
                     if (((actor->state & 0x7F) == 0x3D) && ((u8)actor->index < 2U))
                     {
-                        position->y = position->y + actor->y;
+                        position[1] = position[1] + actor->y;
                     }
                     else
                     {
-                        position->y = mover->y;
+                        position[1] = mover->y;
                     }
                     states = D_80105AE0;
-                    position->z = (s32)mover->z;
+                    position[2] = (s32)mover->z;
                     height_state = &states[actor->index];
-                    var_a1 = mover->unk18;
-                    if (var_a1 < 0)
+                    height = mover->unk18;
+                    if (height < 0)
                     {
-                        var_a1 += 0xFF;
+                        height += 0xFF;
                     }
-                    height_state->packed.h.height = (s16)(var_a1 >> 8);
+                    height_state->packed.h.height = (s16)(height >> 8);
                 }
                 else
                 {
@@ -1157,9 +1150,9 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
         D_80105AE0[actor->index].contact = -1;
         D_80105AE0[actor->index].surface = 0;
     block_34:
-        position->x = actor->x;
-        position->y = (s32)actor->y;
-        position->z = (s32)actor->z;
+        position[0] = actor->x;
+        position[1] = (s32)actor->y;
+        position[2] = (s32)actor->z;
     }
     D_8010D024 = 0;
     if (((u32)D_80105AE0[actor->index].packed.word >> 0xD) & 1)
@@ -1169,54 +1162,54 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
             temp_v0 = &D_80105AE0[actor->index];
             temp_v0->packed.word = (s32)(temp_v0->packed.word & ~0x2000);
         }
-        var_a1_2 = 1;
+        can_move = 1;
     }
     else if (func_80098748(actor, position) == 0)
     {
-        var_a1_2 = 1;
+        can_move = 1;
         temp_v0_2 = &D_80105AE0[actor->index];
         temp_v0_2->packed.word = (s32)(temp_v0_2->packed.word & ~0x2000);
     }
     else
     {
         hit = func_80098748(actor, actor);
-        var_a1_2 = 0;
+        can_move = 0;
         if (hit != 0)
         {
             temp_v1_6 = &D_80105AE0[actor->index];
             temp_v1_6->packed.word = (s32)(temp_v1_6->packed.word | 0x2000);
         }
     }
-    if (var_a1_2 == 0)
+    if (can_move == 0)
     {
         return 0;
     }
-        if (((u32)D_80105AE0[actor->index].packed.word >> 0xE) & 1)
+    if (((u32)D_80105AE0[actor->index].packed.word >> 0xE) & 1)
+    {
+        actor->x = position[0];
+        actor->y = (s32)position[1];
+        actor->z = (s32)position[2];
+        if (func_800987DC(actor, actor, mode) == 0)
         {
-            actor->x = position->x;
-            actor->y = (s32)position->y;
-            actor->z = (s32)position->z;
-            if (func_800987DC(actor, actor, mode) == 0)
-            {
-                temp_v0_3 = &D_80105AE0[actor->index];
-                temp_v0_3->packed.word = (s32)(temp_v0_3->packed.word & ~0x4000);
-            }
-            return 1;
+            temp_v0_3 = &D_80105AE0[actor->index];
+            temp_v0_3->packed.word = (s32)(temp_v0_3->packed.word & ~0x4000);
         }
-        if (func_800987DC(actor, position, mode) == 0)
-        {
-            actor->x = position->x;
-            actor->y = (s32)position->y;
-            actor->z = (s32)position->z;
-            temp_v1_7 = &D_80105AE0[actor->index];
-            temp_v1_7->packed.word = (s32)(temp_v1_7->packed.word & ~0x4000);
-            return 1;
-        }
-        if (func_800987DC(actor, actor, mode) != 0)
-        {
-            temp_v1_8 = &D_80105AE0[actor->index];
-            temp_v1_8->packed.word = (s32)(temp_v1_8->packed.word | 0x4000);
-        }
+        return 1;
+    }
+    if (func_800987DC(actor, position, mode) == 0)
+    {
+        actor->x = position[0];
+        actor->y = (s32)position[1];
+        actor->z = (s32)position[2];
+        temp_v1_7 = &D_80105AE0[actor->index];
+        temp_v1_7->packed.word = (s32)(temp_v1_7->packed.word & ~0x4000);
+        return 1;
+    }
+    if (func_800987DC(actor, actor, mode) != 0)
+    {
+        temp_v1_8 = &D_80105AE0[actor->index];
+        temp_v1_8->packed.word = (s32)(temp_v1_8->packed.word | 0x4000);
+    }
     return 0;
 }
 
