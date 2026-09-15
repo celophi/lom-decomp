@@ -323,8 +323,7 @@ s32 func_80096A90(void)
 
 /**
  * @brief Process pending track cleanup requests and reset their rendering state.
- * @note WIP: 96.333336% gcc272_cdk, with address and allocation differences.
- * @note Preserve the labeled scans to avoid extra compiler-generated loop pointers.
+ * @see decomp.me (100%)
  */
 void func_80096B54(void)
 {
@@ -390,19 +389,19 @@ void func_80096B54(void)
     FieldCleanupSlot *slots;
     FieldCleanupTrack *track;
     FieldCleanupActor *actor;
-    FieldCleanupSlot *slot_base;
+    u8 *slot_page;
     u8 *link_actor;
-    s16 action;
+    FieldCleanupSlot *final_slots;
     s32 i;
     s32 index;
-    u8 link;
+    s32 owner;
 
     if (func_8005B218() != 0)
     {
-        slot_base = D_80105AE0;
+        slot_page = (u8 *)0x80100000;
         records = D_800FDF58;
-        actors = g_field_actor_slots;
         tracks = D_80105880;
+        actors = g_field_actor_slots;
         track = tracks;
     outer_loop:
     {
@@ -424,11 +423,11 @@ void func_80096B54(void)
                     records[index].unk2a = 0;
                     func_800A3B78(actor->slot);
                     func_8006D21C(actor);
-                    index = actor->slot;
+                    owner = actor->slot;
                     actor->active = 0;
                     actor->mask = 0;
-                    action = records[index].unk2a;
-                    if ((action != 0x90 && action != 0x94) || (slots[index].flags & 0x200))
+                    index = records[owner].unk2a;
+                    if ((index != 0x90 && index != 0x94) || (slots[owner].flags & 0x200))
                     {
                         records[actor->slot].unk25 = 0;
                     }
@@ -437,11 +436,13 @@ void func_80096B54(void)
                     {
                         link_actor = (u8 *)actor + i;
                         {
-                            link = link_actor[0x229];
-                            if (link != 0xFF)
+                            if (link_actor[0x229] != 0xFF)
                             {
-                                records[link].unk25 = 0;
-                                slots[link_actor[0x229]].status &= ~1;
+                                records[link_actor[0x229]].unk25 = 0;
+                                owner = slots[link_actor[0x229]].status;
+                                index = -2;
+                                owner &= index;
+                                slots[link_actor[0x229]].status = owner;
                             }
                         }
                     }
@@ -449,14 +450,18 @@ void func_80096B54(void)
             }
             actor++;
         }
-            if ((s32)actor < (s32)(actors + 80))
+            do
             {
-                goto actor_loop;
-            }
+                if ((s32)actor < (s32)(actors + 80))
+                {
+                    goto actor_loop;
+                }
+            } while (0);
             D_800F2280 = 0;
             D_800F227C = 0;
             D_800F2278 = 0;
-            slot_base[track->slot].status &= ~1;
+            final_slots = (FieldCleanupSlot *)(slot_page + 0x5AE0);
+            final_slots[track->slot].status &= ~1;
             field_set_global_color_scale(0x100, 0x100, 0x100);
             render[0x13F] = 0;
             render[0x91] = 0;

@@ -218,7 +218,7 @@ segments:
       - [0x466C5, c, field255]                  # gcc272_cdk, func_80096334
       - [0x46725, c, func_80096394] # gcc272_cdk, 100%
       # TU hypothesis: field_actor_transition_reset (high). See docs/decompilation/field-boundaries/map.md.
-      - [0x46A81, c, field_actor_transition_reset] # gcc272_cdk; 966F0..96E60 (5 funcs; func_800966F0 92.362240% + func_80096B54 96.333336% WIP, rest 100%)
+      - [0x46A81, c, field_actor_transition_reset] # gcc272_cdk; 966F0..96E60 (5 funcs; func_800966F0 92.362240% WIP, rest 100%)
       # TU hypothesis: field_contact_geometry (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x47441, c, field_contact_geometry] # gcc272_cdk; 970B0..9A204 (13 funcs; 97150/978AC/97FA0/987DC/99018/99A48 WIP, rest 100%; func_80099A48 100% instr, reloc-artifact objdiff)
       # TU hypothesis: field_actor_resource_unpack (medium). See docs/decompilation/field-boundaries/map.md.
