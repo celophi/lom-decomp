@@ -685,6 +685,7 @@ void func_8008D174(FieldPositionRecord* record)
  *
  * @param actor Follower actor whose position and state are updated.
  * @param follower_index Follower order controlling the permitted path separation.
+ * @see decomp.me (100%)
  */
 void func_8008D29C(Actor *actor, s32 follower_index)
 {
@@ -763,7 +764,6 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     Mover *mover = (Mover *)0x1F800000;
     Actor *scan;
     s16 decay_period;
-    s16 radius_z;
     s32 limit;
     s32 position_z;
     s32 animation_kind;
@@ -786,10 +786,13 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     Actor *leader;
     Slot *advance_slot;
     Slot *retreat_slot;
+    s32 collision_height;
+    u8 collision_flag;
 
     /* The leader search inspects only the low half of the actor flags. */
-    for (leader_index = 0, scan = D_800FDF58; leader_index < 13; leader_index++, scan++)
+    for (leader_index = 0; leader_index < 13; leader_index++)
     {
+        scan = &D_800FDF58[leader_index];
         if (scan->unk25 != 255 && !(*(u16 *)&scan->unk1C & 0x1FF))
         {
             break;
@@ -822,8 +825,11 @@ void func_8008D29C(Actor *actor, s32 follower_index)
         return;
     }
     actor_x = actor->unk0;
-    sample_base =
-        (Slot *)((s32)D_80105AE0 + (D_80105AE0[actor->unk3A].unk16E + leader->unk3A * 0x8F) * 4);
+    {
+        Slot *base = D_80105AE0;
+        Slot *slot = &base[actor->unk3A];
+        sample_base = (Slot *)((s32)D_80105AE0 + (leader->unk3A * 0x8F + slot->unk16E) * 4);
+    }
     if (sample_base->points[0].x != actor_x / 256 || sample_base->points[0].z != actor->unk8 / 256)
     {
         limit = 0x18;
@@ -831,14 +837,19 @@ void func_8008D29C(Actor *actor, s32 follower_index)
         {
             limit = 0;
         }
-        retreat_slot = &D_80105AE0[actor->unk3A];
+        {
+            Slot *base = D_80105AE0;
+            retreat_slot = &base[actor->unk3A];
+        }
         sample_index = retreat_slot->unk16E;
         dx = 0;
         if (limit < (s32)sample_index)
         {
             dz = dx;
             retreat_slot->unk16E = (u8)(sample_index - 1);
-            goto clear_delta;
+            delta.vx = 0;
+            delta.vz = 0;
+            goto update_collision;
         }
         else
         {
@@ -905,9 +916,8 @@ void func_8008D29C(Actor *actor, s32 follower_index)
                 gte_ldlvl(&delta);
                 gte_sqr12();
                 gte_stlvnl(&square);
-                /* A signed low-bit test preserves the original separate distance checks. */
                 if (((square.vx + square.vz) >= 0x181) &&
-                    ((g_field_resource_entries[actor->unk3B].flags << 31) >= 0))
+                    (!(g_field_resource_entries[actor->unk3B].flags & 1)))
                 {
                 mark_moving:
                     actor->unk33 = 1;
@@ -917,19 +927,26 @@ void func_8008D29C(Actor *actor, s32 follower_index)
                 mark_walking:
                     actor->unk33 = 0;
                 }
-                goto update_collision;
+                collision_height = actor->unk4;
+                collision_flag = D_8010AE84;
+                goto apply_collision_state;
             }
         }
         dz = dx;
         goto clear_delta;
     }
-    goto update_collision;
+    collision_height = actor->unk4;
+    collision_flag = D_8010AE84;
+    goto apply_collision_state;
 clear_delta:
     delta.vx = 0;
     delta.vz = 0;
 update_collision:
-    mover->y = actor->unk4;
-    if (D_8010AE84 == 0)
+    collision_height = actor->unk4;
+    collision_flag = D_8010AE84;
+apply_collision_state:
+    mover->y = collision_height;
+    if (collision_flag == 0)
     {
         position_x = actor->unk0;
         if ((position_x >= 0) && (position_x < (dimensions->width << 8)))
@@ -948,14 +965,13 @@ update_collision:
                     if (D_800FE3A0[actor->unk3A].unk2E == 0x40)
                     {
                         mover->radius = 0xC;
-                        radius_z = 8;
+                        mover->flags.parts.radius_z = 8;
                     }
                     else
                     {
                         mover->radius = 9;
-                        radius_z = 6;
+                        mover->flags.parts.radius_z = 6;
                     }
-                    mover->flags.parts.radius_z = radius_z;
                     mover->height = 0x10;
                     /* Clear the two collision flags without disturbing the radius. */
                     mover->flags.parts.flag1 = 0;
@@ -1022,7 +1038,6 @@ update_collision:
         {
             actor->unk21 = (u8)((animation_kind % 5) | (old_animation & 0x80));
         restart_animation:
-        restart_animation_shared:
             actor->unk27 = 0;
             actor->unk24 = 1;
             func_8006C3FC(actor);

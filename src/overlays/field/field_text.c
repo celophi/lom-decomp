@@ -284,7 +284,6 @@ typedef struct
 } FieldTextMacro;
 
 extern FieldTextMacro D_80122B80[];
-extern u8 D_801E26E0[];
 void func_8006429C(FieldTextState*);
 void func_80063B6C(FieldTextState*, s32, u16);
 
@@ -359,17 +358,18 @@ void func_80063194(void)
  * @param st Text-window state; its cursor stack is advanced in place.
  * @param arg1 Budget of characters to emit before returning.
  *
- * @see decomp.me (97.19%) TODO
+ * @see decomp.me (100%)
  */
 void func_800632E0(FieldTextState* st, s32 arg1)
 {
+    u8* selected;
     u8* cur;
     u8* look;
     u8* look_str;
     u8* look_exp;
     u8* look_run;
     s32 remaining;
-    s32 advance;
+    signed char advance;
     s32 fresh;
     s32 first;
     s32 look_adv;
@@ -378,17 +378,15 @@ void func_800632E0(FieldTextState* st, s32 arg1)
     u16 width;
     u16 look_code;
     u16 look_width;
-    u16 look_count;
+    s16 look_count;
     u32 v1;
     u16 y;
     u32 x;
     s16 tmp;
     u8 c;
-    u8 look_c;
     u8 flag;
-    s32 four;
     FieldTextMacro* rec;
-    u16 nc;
+    FieldTextMacro* look_rec;
     u16 nc2;
 
     remaining = arg1;
@@ -416,22 +414,25 @@ void func_800632E0(FieldTextState* st, s32 arg1)
     {
         fresh = 0;
     }
-    four = 4;
 
     while (1)
     {
-        cur = st->glyph_cursor;
+        selected = st->glyph_cursor;
+        if (selected != NULL)
+        {
+            cur = selected;
+            code = 0;
+            goto decode_character;
+        }
+        cur = st->macro_cursor;
         if (cur == NULL)
         {
-            cur = st->macro_cursor;
-            if (cur == NULL)
-            {
-                cur = st->text_cursor;
-            }
+            cur = st->text_cursor;
         }
         code = 0;
+    decode_character:
 
-        while (1)
+        do
         {
             if (st->pending_spaces != 0)
             {
@@ -487,7 +488,7 @@ void func_800632E0(FieldTextState* st, s32 arg1)
                         st->text_cursor = NULL;
                         if (st->flags.word & 0x1000)
                         {
-                            func_8006700C(st, 1, c);
+                            func_8006700C(st, 1);
                         }
                         return;
                     case 1:
@@ -512,7 +513,7 @@ void func_800632E0(FieldTextState* st, s32 arg1)
                         func_8006429C(st);
                         goto store_and_return;
                     case 5:
-                        st->flow_code = four;
+                        st->flow_code = 4;
                         goto set_break;
                     case 7:
                         if (st->choice_count == 0)
@@ -528,14 +529,14 @@ void func_800632E0(FieldTextState* st, s32 arg1)
                         st->pending_spaces = 3;
                         break;
                     case 10:
-                        st->pending_spaces = four;
+                        st->pending_spaces = 4;
                         break;
                     case 11:
                         st->pending_spaces = *cur;
                         cur++;
                         break;
                     case 12:
-                        st->char_delay = four;
+                        st->char_delay = 4;
                         goto store_and_return;
                     case 13:
                         st->char_delay = *cur;
@@ -546,8 +547,8 @@ void func_800632E0(FieldTextState* st, s32 arg1)
                         cur++;
                         st->text_cursor = cur;
                         rec = &D_80122B80[c];
-                        cur = rec->unk4;
-                        st->macro_cursor = cur;
+                        st->macro_cursor = rec->unk4;
+                        cur = st->macro_cursor;
                         st->macro_remaining = rec->unk0;
                         break;
                     case 15:
@@ -596,7 +597,7 @@ void func_800632E0(FieldTextState* st, s32 arg1)
                         {
                             st->text_cursor = cur;
                         }
-                        st->glyph_cursor = (u8*) 0x801E2780 + ((u16*) 0x801E2758)[c];
+                        st->glyph_cursor = (u8*)0x801E2780 + ((u16*)0x801E2758)[c];
                         cur = st->glyph_cursor;
                         break;
                     }
@@ -626,7 +627,7 @@ void func_800632E0(FieldTextState* st, s32 arg1)
                     }
                     else
                     {
-                        width = D_801E26E0[v1];
+                        width = ((u8*)0x801E26E0)[v1];
                     }
                 }
             }
@@ -642,153 +643,158 @@ void func_800632E0(FieldTextState* st, s32 arg1)
                     code = 0;
                 }
             }
-            if (code == 0)
+        } while (code == 0);
+        if (st->remaining_width < width)
+        {
+            if (func_80064210(st) == 1)
             {
-                continue;
+                return;
             }
-            if (st->remaining_width < width)
+            fresh = 1;
+            st->last_was_break = 0;
+        }
+        flag = st->last_was_break;
+        if ((code == 0x20) || (code == 0x80) || (code == 0xFFFF))
+        {
+            st->last_was_break = 1;
+            goto emit_glyph;
+        }
+        look_width = width;
+        if (flag != 0)
+        {
+            look_adv = advance;
+            look = cur;
+            look_str = st->text_cursor;
+            look_exp = st->macro_cursor;
+            look_run = st->glyph_cursor;
+            look_count = st->macro_remaining;
+            do
             {
-                if (func_80064210(st) == 1)
+                if (look_run != NULL)
                 {
-                    return;
+                    look_run = look;
                 }
-                fresh = 1;
-                st->last_was_break = 0;
-            }
-            flag = st->last_was_break;
-            if ((code == 0x20) || (code == 0x80) || (code == 0xFFFF))
-            {
-                st->last_was_break = 1;
-                break;
-            }
-            look_width = width;
-            if (flag != 0)
-            {
-                look_adv = advance;
-                look = cur;
-                look_str = st->text_cursor;
-                look_exp = st->macro_cursor;
-                look_run = st->glyph_cursor;
-                look_count = st->macro_remaining;
+                else if (look_exp != NULL)
+                {
+                    if ((s16)look_count != -1)
+                    {
+                        if ((s16)(look_count -= look_adv) <= 0)
+                        {
+                            look = NULL;
+                        }
+                    }
+                    look_exp = look;
+                }
+                else
+                {
+                    look_str = look;
+                }
+                look = look_run;
+                if (look == NULL)
+                {
+                    look = look_str;
+                    if (look_exp != NULL)
+                    {
+                        look = look_exp;
+                    }
+                }
+                look_code = 0;
                 do
                 {
-                    if (look_run != NULL)
+                    c = *look;
+                    look++;
+                    if ((c < 0x20) && (c != 0x19))
                     {
-                        look_run = look;
-                    }
-                    else if (look_exp != NULL)
-                    {
-                        nc = look_count - look_adv;
-                        if ((s16) look_count != -1)
+                        switch (c)
                         {
-                            look_count = nc;
-                            if ((nc << 16) <= 0)
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 4:
+                        case 5:
+                        case 7:
+                        case 8:
+                        case 9:
+                        case 10:
+                        case 11:
+                        case 19:
+                            goto stop_lookahead;
+                        case 12:
+                        case 13:
+                        case 16:
+                        case 17:
+                            break;
+                        case 0:
+                        case 6:
+                            if (look_run != NULL)
                             {
-                                look = NULL;
+                                look_run = NULL;
+                                look = look_str;
+                                if (look_exp != NULL)
+                                {
+                                    look = look_exp;
+                                }
                             }
+                            else if (look_exp != NULL)
+                            {
+                                look_exp = NULL;
+                                look = look_str;
+                            }
+                            else
+                            {
+                                flag = 0;
+                            }
+                            break;
+                        case 14:
+                            c = *look;
+                            look_str = ++look;
+                            look_rec = &D_80122B80[c];
+                            look = look_rec->unk4;
+                            look_count = look_rec->unk0;
+                            look_exp = look;
+                            break;
+                        case 15:
+                            look_str = look;
+                            look = st->inline_text;
+                            look_exp = look;
+                            look_count = -1;
+                            break;
+                        case 18:
+                            c = *look;
+                            look++;
+                            if (c == 0)
+                            {
+                                flag = 0;
+                            }
+                            /* fallthrough */
+                        case 31:
+                            c = *look + 0x1F;
+                            look++;
+                            /* fallthrough */
+                        default:
+                            if (look_exp != NULL)
+                            {
+                                look_exp = look;
+                            }
+                            else
+                            {
+                                look_str = look;
+                            }
+                            look = (u8*)0x801E2780 + ((u16*)0x801E2758)[c];
+                            look_run = look;
+                            break;
                         }
-                        look_exp = look;
                     }
                     else
                     {
-                        look_str = look;
-                    }
-                    look = look_run;
-                    look_code = 0;
-                    if (look == NULL)
-                    {
-                        look = look_str;
-                        if (look_exp != NULL)
+                        if (c >= 0x20)
                         {
-                            look = look_exp;
-                        }
-                    }
-                    while (1)
-                    {
-                        look_c = *look;
-                        look++;
-                        if ((look_c < 0x20) && (look_c != 0x19))
-                        {
-                            switch (look_c)
-                            {
-                            case 0:
-                            case 6:
-                                if (look_run != NULL)
-                                {
-                                    look_run = NULL;
-                                    look = look_str;
-                                    if (look_exp != NULL)
-                                    {
-                                        look = look_exp;
-                                    }
-                                }
-                                else if (look_exp != NULL)
-                                {
-                                    look_exp = NULL;
-                                    look = look_str;
-                                }
-                                else
-                                {
-                                    flag = 0;
-                                }
-                                break;
-                            case 14:
-                                look_str = look + 1;
-                                look_c = *look;
-                                rec = &D_80122B80[look_c];
-                                look = rec->unk4;
-                                look_count = rec->unk0;
-                                look_exp = look;
-                                break;
-                            case 15:
-                                look_str = look;
-                                look = st->inline_text;
-                                look_exp = look;
-                                look_count = -1;
-                                break;
-                            case 18:
-                                look_c = *look;
-                                look++;
-                                if (look_c == 0)
-                                {
-                                    flag = 0;
-                                }
-                                /* fallthrough */
-                            case 31:
-                                look_c = *look + 0x1F;
-                                look++;
-                                /* fallthrough */
-                            default:
-                                if (look_exp != NULL)
-                                {
-                                    look_exp = look;
-                                }
-                                else
-                                {
-                                    look_str = look;
-                                }
-                                look = (u8*) 0x801E2780 + ((u16*) 0x801E2758)[look_c];
-                                look_run = look;
-                                break;
-                            }
-                            if (look_code != 0)
-                            {
-                                break;
-                            }
-                            if (flag != 0)
-                            {
-                                continue;
-                            }
-                            break;
-                        }
-                        if (look_c >= 0x20)
-                        {
-                            look_code = look_c;
+                            look_code = c;
                             look_adv = 1;
                         }
                         else
                         {
-                            look_code = *look | ((look_c + 0xFFE8) << 8);
+                            look_code = *look | ((c + 0xFFE8) << 8);
                             look++;
                             look_adv = 2;
                         }
@@ -796,6 +802,7 @@ void func_800632E0(FieldTextState* st, s32 arg1)
                         {
                             if ((look_code == 0x20) || (look_code == 0x80) || (look_code == 0xFFFF))
                             {
+                            stop_lookahead:
                                 flag = 0;
                             }
                             else if (look_code >= 0x80)
@@ -804,42 +811,32 @@ void func_800632E0(FieldTextState* st, s32 arg1)
                             }
                             else
                             {
-                                look_width += D_801E26E0[look_code];
+                                look_width += ((u8*)0x801E26E0)[look_code];
                             }
-                            if (look_code != 0)
-                            {
-                                break;
-                            }
-                        }
-                        if (flag == 0)
-                        {
-                            break;
                         }
                     }
-                } while (flag != 0);
+                } while (look_code == 0 && flag != 0);
+            } while (flag != 0);
 
-                if (st->remaining_width >= look_width)
+            if (st->remaining_width < look_width)
+            {
+                if (func_80064210(st) == 1)
                 {
-                    break;
+                    return;
                 }
-                if (func_80064210(st) != 1)
-                {
-                    fresh = 1;
-                    st->last_was_break = 0;
-                    break;
-                }
-                return;
+                fresh = 1;
             }
-            break;
+            st->last_was_break = 0;
         }
 
+    emit_glyph:
         if (st->glyph_cursor != NULL)
         {
             st->glyph_cursor = cur;
         }
         else if (st->macro_cursor != NULL)
         {
-            if ((s16) st->macro_remaining != -1)
+            if ((s16)st->macro_remaining != -1)
             {
                 nc2 = st->macro_remaining - advance;
                 st->macro_remaining = nc2;
@@ -876,10 +873,11 @@ void func_800632E0(FieldTextState* st, s32 arg1)
             fresh = 0;
             if (remaining == 0)
             {
-                return;
+                break;
             }
         }
     }
+    return;
 
 set_wide:
     st->flow_code = 0x10;
