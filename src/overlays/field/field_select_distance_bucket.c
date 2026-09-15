@@ -1,136 +1,126 @@
 #include "common.h"
 #include "sdk/rand.h"
 
+extern int abs(int);
+
 extern u8 g_menuLayoutBuffer[];
 s32 func_80087F44(s32 arg0, void *arg1);
 
 /**
  * @brief Select a distance-weighted index within the active layout bound.
  * @param arg0 Actor identifier whose first coordinate is compared with actor 2.
- * @return Selected index, or the distance bucket if no interval was selected.
- * @note Nonmatching m2c translation. The target reads incoming s0 when the
- * layout selector is 3 and accumulates into incoming s2 without initializing
- * it. The corresponding locals intentionally remain uninitialized; their
- * original source-level contract is unresolved.
+ * @return Selected weighted index, or the center index when no interval is selected.
  */
 s32 func_800C9ED4(s32 arg0)
 {
-    s32 sp20[4];
-    s32 sp10[4];
-    s32 sp30[6];
-    s32 *var_a0_2;
-    s32 *var_v1_2;
-    s32 temp_a0;
-    s32 temp_s1;
-    s32 temp_v1;
-    s32 var_a0;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_a1_3;
-    s32 var_a2;
-    s32 var_a2_2;
-    s32 var_s1;
-    s32 var_s2;
-    s32 var_s3;
-    s32 var_v0;
-    s32 var_v0_2;
-    s32 var_v0_3;
-    u32 var_s0;
-    u32 var_v1;
+    s32 reference_position[4];
+    s32 actor_position[4];
+    s32 weight_values[6];
+    s32 *selection_weight;
+    s32 *sum_weight;
+    s32 *weight_table;
+    s32 random_value;
+    s32 table_index;
+    s32 radius;
+    s32 selection_index;
+    s32 weight_divisor;
+    s32 cumulative_weight;
+    s32 center_index;
+    s32 weight_total;
+    s32 selected_index;
+    s32 distance;
+    u32 slot_count;
+    u32 bounded_count;
+    u8 *layout;
 
-    var_s3 = -1;
-    if (((s8 *)g_menuLayoutBuffer)[0x29D7] != 3)
+    selected_index = -1;
+    layout = g_menuLayoutBuffer;
+    if (((s8 *)layout)[0x29D7] != 3)
     {
-        var_s0 = g_menuLayoutBuffer[((s8 *)g_menuLayoutBuffer)[0x29D7] * 0x14C + 0x2B50] >> 4;
+        slot_count = layout[((s8 *)layout)[0x29D7] * 0x14C + 0x2B50] >> 4;
     }
-    var_v1 = 4;
-    if ((s32) var_s0 >= 4)
+    if ((s32)slot_count >= 4)
     {
-        var_v1 = 6;
-        if ((s32) var_s0 < 7)
+        bounded_count = 6;
+        if ((s32)slot_count < 7)
         {
-            var_v1 = var_s0;
+            bounded_count = slot_count;
         }
     }
-    func_80087F44(2, sp10);
-    func_80087F44(arg0, sp20);
-    var_v0_2 = sp10[0] - sp20[0];
-    if (var_v0_2 < 0)
+    else
     {
-        var_v0_2 = -var_v0_2;
+        bounded_count = 4;
     }
-    var_s1 = var_v0_2 >> 8;
-    if (var_v0_2 < 0)
+    slot_count = bounded_count;
+    func_80087F44(2, reference_position);
+    func_80087F44(arg0, actor_position);
+    distance = abs(reference_position[0] - actor_position[0]);
+    center_index = distance / 0x100;
+    if (center_index >= 0)
     {
-        var_s1 = (s32) (var_v0_2 + 0xFF) >> 8;
-    }
-    if (var_s1 >= 0)
-    {
-        var_a0 = 0x95;
-        if (var_s1 < 0x96)
+        table_index = 0x95;
+        if (center_index < 0x96)
         {
-            var_a0 = var_s1;
+            table_index = center_index;
         }
-    } else
-    {
-        var_a0 = 0;
     }
-    var_a2 = 1;
-    temp_s1 = var_a0 / (s32) (0x96 / (s32) var_v1);
-    var_a1 = 0;
-    if ((s32) var_v1 > 0)
+    else
     {
-        var_a0 = temp_s1;
+        table_index = 0;
+    }
+    weight_divisor = 1;
+    center_index = table_index / (s32)(0x96 / (s32)slot_count);
+    radius = 0;
+    if ((s32)slot_count > 0)
+    {
+        weight_table = weight_values;
         do
         {
-            if (var_a0 < (s32) var_v1)
+            table_index = center_index + radius;
+            if (table_index < (s32)slot_count)
             {
-                (&sp30[0])[var_a0] = 0x400 / var_a2;
+                *(s32 *)((u8 *)weight_table + (table_index << 2)) = 0x400 / weight_divisor;
             }
-            temp_a0 = temp_s1 - var_a1;
-            var_v0_3 = var_a2 * 2;
-            if (temp_a0 >= 0)
+            table_index = center_index - radius;
+            if (table_index >= 0)
             {
-                (&sp30[0])[temp_a0] = 0x400 / var_a2;
-                var_v0_3 = var_a2 * 2;
+                *(s32 *)((u8 *)weight_table + (table_index << 2)) = 0x400 / weight_divisor;
             }
-            var_a2 += var_v0_3;
-            var_a1 += 1;
-            var_a0 = temp_s1 + var_a1;
-        } while (var_a1 < (s32) var_v1);
+            weight_divisor += weight_divisor * 2;
+            radius += 1;
+        } while (radius < (s32)slot_count);
     }
-    var_a1_2 = 0;
-    if ((s32) var_v1 > 0)
+    slot_count++;
+    slot_count--;
+    radius = 0;
+    if ((s32)slot_count > 0)
     {
-        var_v1_2 = &sp30[0];
+        sum_weight = &weight_values[0];
         do
         {
-            var_a1_2 += 1;
-            var_s2 += *var_v1_2;
-            var_v1_2 += 1;
-        } while (var_a1_2 < (s32) var_v1);
+            weight_total += *sum_weight++;
+            radius += 1;
+        } while (radius < (s32)slot_count);
     }
-    var_a2_2 = 0;
-    var_a1_3 = 0;
-    temp_v1 = (rand() * var_s2) / 32767;
-    if ((s32) var_v1 > 0)
+    random_value = (rand() * weight_total) / 32767;
+    cumulative_weight = 0;
+    selection_index = 0;
+    if ((s32)slot_count > 0)
     {
-        var_a0_2 = &sp30[0];
+        selection_weight = &weight_values[0];
         do
         {
-            if ((temp_v1 >= var_a2_2) && (temp_v1 < (var_a2_2 + *var_a0_2)))
+            if ((random_value >= cumulative_weight) && (random_value < (cumulative_weight + *selection_weight)))
             {
-                var_s3 = var_a1_3;
+                selected_index = selection_index;
             }
-            var_a1_3 += 1;
-            var_a2_2 += *var_a0_2;
-            var_a0_2 += 1;
-        } while (var_a1_3 < (s32) var_v1);
+            cumulative_weight += *selection_weight++;
+            selection_index += 1;
+        } while (selection_index < (s32)slot_count);
     }
-    var_v0 = var_s3;
-    if (var_s3 == -1)
+    if (selected_index == -1)
     {
-        var_v0 = temp_s1;
+        selected_index = center_index;
     }
-    return var_v0;
+    return selected_index;
 }

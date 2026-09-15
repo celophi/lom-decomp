@@ -11,6 +11,7 @@
 #   overlay_<name>_gcc_272_cdk_g0_noexpand_srcs
 #   overlay_<name>_gcc_272_gnu_g0_srcs
 #   overlay_<name>_gcc_280_g0_srcs
+#   overlay_<name>_gcc_280_g0_builtin_srcs
 #   overlay_<name>_gcc_280_g4_srcs
 #   overlay_<name>_gcc_280_g4_noexpand_srcs
 #
@@ -246,7 +247,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800AE9E0.c \
 	src/overlays/field/field_card_clock.c \
 	src/overlays/field/field_group_stat_transfer.c \
-	src/overlays/field/field_select_distance_bucket.c \
 	src/overlays/field/field_actor_key_ops.c \
 	src/overlays/field/field242.c \
 	src/overlays/field/func_800A1D98.c \
@@ -271,6 +271,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
 overlay_field_gcc_272_cdk_g0_nostrength_srcs := src/overlays/field/func_80091518.c
 overlay_field_gcc_272_cdk_g0_noexpand_srcs :=
+overlay_field_gcc_280_g0_builtin_srcs := src/overlays/field/field_select_distance_bucket.c
 overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/func_800C4364.c \
 	src/overlays/field/field_action_modifiers.c \
