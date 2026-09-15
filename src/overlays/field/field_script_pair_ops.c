@@ -138,316 +138,304 @@ void func_800BBA44(s32 arg0, s32 arg1)
 
 /**
  * @brief Dispatch a two-operand runtime subcommand and update script or field state.
- * @note Initial nonmatching C recovered with the 79-entry jump table.
+ * @see decomp.me (100%)
  */
-void func_800BBAC8(u32 arg0, s32 arg1)
+void func_800BBAC8(u32 command, s32 operand)
 {
-    s32 var_a0;
-    s32 var_a0_2;
-    s32 temp_v0;
-    s32 var_a1_2;
-    s32 var_a2;
-    s32 var_v0;
-    s32 var_v0_2;
-    u32 temp_a1;
-    u32 temp_v0_2;
-    s32 var_a1;
-    u8 *temp_v0_3;
-    u8 *temp_v1;
-    u8 *temp_v1_2;
-    u8 *temp_v1_3;
+    s32 record_offset;
+    s32 actor_index;
+    u8* script_record;
+    u8* record;
+    u8* low_flags_record;
+    u8* high_flags_record;
 
-    if (arg1 == 0xFF)
+    if (operand == 0xFF)
 
     {
-        var_a1 = g_field_script->status.owner_id;
-        var_v0 = arg0 < 0x4FU;
+        actor_index = g_field_script->status.owner_id;
     }
     else
     {
-        var_a1 = arg1;
-        var_v0 = arg0 < 0x4FU;
+        actor_index = operand;
     }
-    if (var_v0 != 0)
+    switch (command)
     {
-        switch (arg0)
+    case 0x0:
+        func_800681C0((s32)operand);
+        return;
+    case 0x1:
+        func_800A5670((s32)operand);
+        return;
+    case 0x2:
+        func_800C2094((s32)operand);
+        return;
+    case 0x3:
+        func_8008BD88((s32)operand);
+        return;
+    case 0x4:
+        func_8005B0F4((s32)operand, 1);
+        return;
+    case 0x5:
+        func_8005B0F4((s32)operand, 0);
+        return;
+    case 0x6:
+        record = D_80122B74 + (operand * 0xC);
+        record[0x2F0] = (u8)(record[0x2F0] | 4);
+        return;
+    case 0x7:
+        field_control_animation(0, operand, 0, 2);
+        return;
+    case 0x8:
+        field_control_animation(0, (s32)operand, -1, 4);
+        return;
+    case 0x9:
+        func_800A37E4();
+        return;
+    case 0xA:
+        field_run_zukan((s32)operand);
+        return;
+    case 0xB:
+        func_800C5704((s32)operand);
+        return;
+    case 0xC:
+        field_open_gosub_screen_sequence(D_80122B78 + (operand * 4));
+        return;
+    case 0xD:
+        func_800BE710((s32)operand);
+        return;
+    case 0xE:
+        (*(s32*)(D_80122B78 + 0x404)) = (s32)((*(s32*)(D_80122B78 + 0x404)) | 0x8000);
+        func_800A38D4();
+        return;
+    case 0xF:
+        func_800C35AC((s32)operand);
+        return;
+    case 0x10:
+        func_800C31BC((s32)operand);
+        return;
+    case 0x11:
+        func_800C1D14((s32)actor_index, 0);
+        return;
+    case 0x12:
+        func_800BD520(0, 0x7100, func_800C20D8((s32)operand));
+        return;
+    case 0x13:
+        func_800C2138((s32)operand);
+        return;
+    case 0x14:
+        func_800C21C0((s32)operand);
+        return;
+    case 0x15:
+        func_800BD520(0, 0x7100, func_800C35E4((s32)operand));
+        return;
+    case 0x16:
+        func_80089A68((s32)actor_index);
+        return;
+    case 0x17:
+        func_80089980((s32)actor_index);
+        return;
+    case 0x18:
+        func_800BD520(0, 0x7100, func_800C2264((s32)operand));
+        return;
+    case 0x19:
+        func_800BD520(0, 0x7100, func_800C23F4());
+        return;
+    case 0x1A:
+        func_800C2848((s32)actor_index, 2);
+        return;
+    case 0x1B:
+        func_800B22F0(0x80, operand & 0xFFFF);
+        return;
+    case 0x1C:
+        field_control_animation(1, operand, 0, 2);
+        return;
+    case 0x1D:
+        field_control_animation(1, operand, -1, 1);
+        return;
+    case 0x1E:
+        field_control_animation(2, operand, 0, 2);
+        return;
+    case 0x1F:
+        field_control_animation(2, operand, -1, 1);
+        return;
+    case 0x20:
+        func_8005B228((s32)operand, 1);
+        return;
+    case 0x21:
+        func_8005B228((s32)operand, 0);
+        return;
+    case 0x22:
+        func_800BD520(0, 0x7100, func_800C29CC((s32)operand));
+        return;
+    case 0x23:
+        func_800B31CC((s32)actor_index);
+        return;
+    case 0x24:
+        func_800B32FC((s32)operand);
+        return;
+    case 0x25:
+        func_800B3420((s32)operand);
+        return;
+    case 0x26:
+        func_800C2A88((s32)operand);
+        return;
+    case 0x27:
+        func_800C1D68();
+        return;
+    case 0x28:
+        func_800C1E08();
+        return;
+    case 0x29:
+        func_800C299C((s32)operand);
+        return;
+    case 0x2A:
+        func_800AD030((s32)operand);
+        return;
+    case 0x2B:
+        func_800BD520(0, (s32)operand, 1);
+        return;
+    case 0x2C:
+        func_800C28B8((s32)actor_index);
+        return;
+    case 0x2D:
+        func_800BD520(0, 0x7100, func_800C24BC((s32)operand));
+        return;
+    case 0x2E:
+        func_800C25A0((s32)operand);
+        return;
+    case 0x32:
+        D_80122980 = (s32)operand;
+        return;
+    case 0x33:
+        D_80117EC4 = (s32)operand;
+        return;
+    case 0x34:
+        func_800BD520(0, 0x7100, func_800C2724((s32)operand));
+        return;
+    case 0x35:
+        func_8005A67C((s32)operand, 0);
+        return;
+    case 0x36:
+        func_8005A67C((s32)operand, 1);
+        return;
+    case 0x37:
+        func_8009C974((s32)operand);
+        return;
+    case 0x38:
+        func_800B66F0((s32)actor_index);
+        return;
+    case 0x39:
+        func_800BD520(0, 0x7100, func_800C3860((s32)operand));
+        return;
+    case 0x3A:
+        func_800BD520(0, 0x7100, func_800C3894((s32)operand));
+        return;
+    case 0x3B:
+        if ((s32)operand >= 0x40)
         {
-        case 0x0:
-            func_800681C0((s32) arg1);
+            akao_set_song_params(0x8001, 1, 0x2C, (s32)operand);
             return;
-        case 0x1:
-            func_800A5670((s32) arg1);
-            return;
-        case 0x2:
-            func_800C2094((s32) arg1);
-            return;
-        case 0x3:
-            func_8008BD88((s32) arg1);
-            return;
-        case 0x4:
-            func_8005B0F4((s32) arg1, 1);
-            return;
-        case 0x5:
-            func_8005B0F4((s32) arg1, 0);
-            return;
-        case 0x6:
-            temp_v1 = D_80122B74 + (arg1 * 0xC);
-            temp_v1[0x2F0] = (u8) (temp_v1[0x2F0] | 4);
-            return;
-        case 0x7:
-            var_a0 = 0;
-block_36:
-            field_control_animation(var_a0, (s32) arg1, 0, 2);
-            return;
-        case 0x8:
-            field_control_animation(0, (s32) arg1, -1, 4);
-            return;
-        case 0x9:
-            func_800A37E4();
-            return;
-        case 0xA:
-            field_run_zukan((s32) arg1);
-            return;
-        case 0xB:
-            func_800C5704((s32) arg1);
-            return;
-        case 0xC:
-            field_open_gosub_screen_sequence(D_80122B78 + (arg1 * 4));
-            return;
-        case 0xD:
-            func_800BE710((s32) arg1);
-            return;
-        case 0xE:
-            (*(s32 *)(D_80122B78 + 0x404)) = (s32) ((*(s32 *)(D_80122B78 + 0x404)) | 0x8000);
-            func_800A38D4();
-            return;
-        case 0xF:
-            func_800C35AC((s32) arg1);
-            return;
-        case 0x10:
-            func_800C31BC((s32) arg1);
-            return;
-        case 0x11:
-            func_800C1D14((s32) var_a1, 0);
-            return;
-        case 0x12:
-            var_v0_2 = func_800C20D8((s32) arg1);
-block_63:
-            func_800BD520(0, 0x7100, var_v0_2);
-            return;
-        case 0x13:
-            func_800C2138((s32) arg1);
-            return;
-        case 0x14:
-            func_800C21C0((s32) arg1);
-            return;
-        case 0x15:
-            var_v0_2 = func_800C35E4((s32) arg1);
-            goto block_63;
-        case 0x16:
-            func_80089A68((s32) var_a1);
-            return;
-        case 0x17:
-            func_80089980((s32) var_a1);
-            return;
-        case 0x18:
-            var_v0_2 = func_800C2264((s32) arg1);
-            goto block_63;
-        case 0x19:
-            var_v0_2 = func_800C23F4();
-            goto block_63;
-        case 0x1A:
-            func_800C2848((s32) var_a1, 2);
-            return;
-        case 0x1B:
-            func_800B22F0(0x80, arg1 & 0xFFFF);
-            return;
-        case 0x1C:
-            var_a0 = 1;
-            goto block_36;
-        case 0x1D:
-            var_a0_2 = 1;
-block_38:
-            field_control_animation(var_a0_2, (s32) arg1, -1, 1);
-            return;
-        case 0x1E:
-            var_a0 = 2;
-            goto block_36;
-        case 0x1F:
-            var_a0_2 = 2;
-            goto block_38;
-        case 0x20:
-            func_8005B228((s32) arg1, 1);
-            return;
-        case 0x21:
-            func_8005B228((s32) arg1, 0);
-            return;
-        case 0x22:
-            var_v0_2 = func_800C29CC((s32) arg1);
-            goto block_63;
-        case 0x23:
-            func_800B31CC((s32) var_a1);
-            return;
-        case 0x24:
-            func_800B32FC((s32) arg1);
-            return;
-        case 0x25:
-            func_800B3420((s32) arg1);
-            return;
-        case 0x26:
-            func_800C2A88((s32) arg1);
-            return;
-        case 0x27:
-            func_800C1D68();
-            return;
-        case 0x28:
-            func_800C1E08();
-            return;
-        case 0x29:
-            func_800C299C((s32) arg1);
-            return;
-        case 0x2A:
-            func_800AD030((s32) arg1);
-            return;
-        case 0x2B:
-            func_800BD520(0, (s32) arg1, 1);
-            return;
-        case 0x2C:
-            func_800C28B8((s32) var_a1);
-            return;
-        case 0x2D:
-            var_v0_2 = func_800C24BC((s32) arg1);
-            goto block_63;
-        case 0x2E:
-            func_800C25A0((s32) arg1);
-            return;
-        case 0x32:
-            D_80122980 = (s32) arg1;
-            return;
-        case 0x33:
-            D_80117EC4 = (s32) arg1;
-            return;
-        case 0x34:
-            var_v0_2 = func_800C2724((s32) arg1);
-            goto block_63;
-        case 0x35:
-            func_8005A67C((s32) arg1, 0);
-            return;
-        case 0x36:
-            func_8005A67C((s32) arg1, 1);
-            return;
-        case 0x37:
-            func_8009C974((s32) arg1);
-            return;
-        case 0x38:
-            func_800B66F0((s32) var_a1);
-            return;
-        case 0x39:
-            var_v0_2 = func_800C3860((s32) arg1);
-            goto block_63;
-        case 0x3A:
-            var_v0_2 = func_800C3894((s32) arg1);
-            goto block_63;
-        case 0x3B:
-            if ((s32) arg1 >= 0x40)
-            {
-                akao_set_song_params(0x8001, 1, 0x2C, (s32) arg1);
-                return;
-            }
-            g_music_track_index = (s16) arg1;
-            return;
-        case 0x3C:
-            temp_a1 = (*(s32 *)(D_80122B74 + 0x2E4));
-            temp_v0 = (((temp_a1 >> 0x10) & 0x7F) + 1) & 0x7F;
-            temp_v0_2 = temp_v0 << 0x10;
-            (*(s32 *)(D_80122B74 + 0x2E4)) = (u32) ((((temp_a1 & 0xFF80FFFF) | temp_v0_2) & 0xFF80FFFF) | ((((temp_v0_2 >> 0x10) - (((temp_v0 << 0x10) / 393216) * 6)) & 0x7F) << 0x10));
-            return;
-        case 0x3D:
-            D_8010AE48 = (s32) arg1;
-            return;
-        case 0x3E:
-            field_open_shop_mode_0((s32) arg1);
-            return;
-        case 0x3F:
-            func_800C396C();
-            return;
-        case 0x40:
-            func_8008BD88((s32) var_a1);
-            return;
-        case 0x41:
-            func_800C06E8();
-            return;
-        case 0x42:
-            func_8005B1EC();
-            return;
-        case 0x2F:
-        case 0x43:
-            func_8005B288((s32) arg1);
-            return;
-        case 0x44:
-            D_8010D020 = (s32) arg1;
-            return;
-        case 0x45:
-            akao_stop_song(0);
-            return;
-        case 0x46:
-            akao_cmd_f1();
-            return;
-        case 0x47:
-            func_800B60DC((s32) arg1);
-            return;
-        case 0x48:
-            func_800C1230((s32) arg1);
-            return;
-        case 0x49:
-            D_800473E0 = (s32) arg1;
-            return;
-        case 0x4A:
-            temp_v0_3 = (u8 *)g_field_script + (g_field_script->active_record * 0xC);
-            (*(s32 *)(temp_v0_3 + 0x10)) = (s32) (((*(s32 *)(temp_v0_3 + 0x10)) & 1) | (arg1 * 2));
-            g_field_script->status.word = (s32) ((s32) g_field_script->status.word & 0x7FFFFFFF);
-            return;
-        case 0x4B:
-            g_gosub_result_count = 1;
-            g_gosub_result_values = (s32) arg1;
-            return;
-        case 0x4C:
-            (*(s32 *)(D_80122B74 + 0x2C)) = (s32) arg1;
-            return;
-        case 0x4D:
-            g_music_track_index = 0;
-            func_800AD030(0);
-            func_800BCCE0(0xFFFE, 0, 0, 0);
-            return;
-        case 0x4E:
-            (*(s32 *)(D_80122B74 + 0x28)) = (s32) ((*(s32 *)(D_80122B74 + 0x28)) | 0xC);
-            func_800C1EC8(0, D_80122B74 + 0xE4, 0x200);
-            func_800C1EC8(0, D_80122B74 + 0x2E4, 0x30C);
-            var_a1_2 = 0;
-            D_80122B74[0x2E4] = 1;
-            var_a2 = 0;
-            (*(s32 *)(D_80122B74 + 0x2E8)) = (s32) ((*(s32 *)(D_80122B74 + 0x2E8)) | 0x10000000);
-            do
-            {
-                temp_v1_2 = D_80122B74 + var_a2;
-                temp_v1_2[0x2F1] = (u8) (temp_v1_2[0x2F1] | 0xF);
-                var_a1_2 += 1;
-                temp_v1_3 = D_80122B74 + var_a2;
-                temp_v1_3[0x2F1] = (u8) (temp_v1_3[0x2F1] | 0xF0);
-                var_a2 += 0xC;
-            } while (var_a1_2 < 0x40);
-            (*(s32 *)(D_80122B74 + 0x2F0)) = (s32) ((*(s32 *)(D_80122B74 + 0x2F0)) | 1);
-            D_80122B74[0x2F3] = 1;
-            (*(s32 *)(D_80122B74 + 0x2F0)) = (s32) ((*(s32 *)(D_80122B74 + 0x2F0)) | 4);
-            (*(s32 *)(D_80122B74 + 0x2FC)) = (s32) ((*(s32 *)(D_80122B74 + 0x2FC)) | 4);
-            (*(s32 *)(D_80122B74 + 0x308)) = (s32) ((*(s32 *)(D_80122B74 + 0x308)) | 4);
-            (*(s32 *)(D_80122B74 + 0x314)) = (s32) ((*(s32 *)(D_80122B74 + 0x314)) | 4);
-            (*(s32 *)(D_80122B74 + 0x320)) = (s32) ((*(s32 *)(D_80122B74 + 0x320)) | 4);
-            (*(s32 *)(D_80122B74 + 0x32C)) = (s32) ((*(s32 *)(D_80122B74 + 0x32C)) | 4);
-            (*(s32 *)(D_80122B74 + 0x338)) = (s32) ((*(s32 *)(D_80122B74 + 0x338)) | 4);
-            (*(s32 *)(D_80122B74 + 0x470)) = (s32) ((*(s32 *)(D_80122B74 + 0x470)) | 4);
-            break;
         }
+        g_music_track_index = (s16)operand;
+        return;
+    case 0x3C:
+    {
+        typedef struct
+        {
+            unsigned low : 16;
+            unsigned phase : 7;
+            unsigned high : 9;
+        } PhaseWord;
+        PhaseWord* state = (PhaseWord*)(D_80122B74 + 0x2E4);
+        state->phase++;
+        state->phase %= 6U;
+        return;
+    }
+    case 0x3D:
+        D_8010AE48 = (s32)operand;
+        return;
+    case 0x3E:
+        field_open_shop_mode_0((s32)operand);
+        return;
+    case 0x3F:
+        func_800C396C();
+        return;
+    case 0x40:
+        func_8008BD88((s32)actor_index);
+        return;
+    case 0x41:
+        func_800C06E8();
+        return;
+    case 0x42:
+        func_8005B1EC();
+        return;
+    case 0x2F:
+    case 0x43:
+        func_8005B288((s32)operand);
+        return;
+    case 0x44:
+        D_8010D020 = (s32)operand;
+        return;
+    case 0x45:
+        akao_stop_song(0);
+        return;
+    case 0x46:
+        akao_cmd_f1();
+        return;
+    case 0x47:
+        func_800B60DC((s32)operand);
+        return;
+    case 0x48:
+        func_800C1230((s32)operand);
+        return;
+    case 0x49:
+        D_800473E0 = (s32)operand;
+        return;
+    case 0x4A:
+        script_record = (u8*)g_field_script + (g_field_script->active_record * 0xC);
+        (*(s32*)(script_record + 0x10)) = (s32)(((*(s32*)(script_record + 0x10)) & 1) | (operand * 2));
+        g_field_script->status.word = (s32)((s32)g_field_script->status.word & 0x7FFFFFFF);
+        return;
+    case 0x4B:
+        g_gosub_result_count = 1;
+        g_gosub_result_values = (s32)operand;
+        return;
+    case 0x4C:
+        (*(s32*)(D_80122B74 + 0x2C)) = (s32)operand;
+        return;
+    case 0x4D:
+        g_music_track_index = 0;
+        func_800AD030(0);
+        func_800BCCE0(0xFFFE, 0, 0, 0);
+        return;
+    case 0x4E:
+        (*(s32*)(D_80122B74 + 0x28)) = (s32)((*(s32*)(D_80122B74 + 0x28)) | 0xC);
+        func_800C1EC8(0, D_80122B74 + 0xE4, 0x200);
+        func_800C1EC8(0, D_80122B74 + 0x2E4, 0x30C);
+        actor_index = 0;
+        D_80122B74[0x2E4] = 1;
+        record_offset = 0;
+        (*(s32*)(D_80122B74 + 0x2E8)) = (s32)((*(s32*)(D_80122B74 + 0x2E8)) | 0x10000000);
+        do
+        {
+            low_flags_record = D_80122B74 + record_offset;
+            low_flags_record[0x2F1] = (u8)(low_flags_record[0x2F1] | 0xF);
+            actor_index += 1;
+            high_flags_record = D_80122B74 + record_offset;
+            high_flags_record[0x2F1] = (u8)(high_flags_record[0x2F1] | 0xF0);
+            record_offset += 0xC;
+        } while (actor_index < 0x40);
+        (*(s32*)(D_80122B74 + 0x2F0)) = (s32)((*(s32*)(D_80122B74 + 0x2F0)) | 1);
+        D_80122B74[0x2F3] = 1;
+        (*(s32*)(D_80122B74 + 0x2F0)) = (s32)((*(s32*)(D_80122B74 + 0x2F0)) | 4);
+        (*(s32*)(D_80122B74 + 0x2FC)) = (s32)((*(s32*)(D_80122B74 + 0x2FC)) | 4);
+        (*(s32*)(D_80122B74 + 0x308)) = (s32)((*(s32*)(D_80122B74 + 0x308)) | 4);
+        (*(s32*)(D_80122B74 + 0x314)) = (s32)((*(s32*)(D_80122B74 + 0x314)) | 4);
+        (*(s32*)(D_80122B74 + 0x320)) = (s32)((*(s32*)(D_80122B74 + 0x320)) | 4);
+        (*(s32*)(D_80122B74 + 0x32C)) = (s32)((*(s32*)(D_80122B74 + 0x32C)) | 4);
+        (*(s32*)(D_80122B74 + 0x338)) = (s32)((*(s32*)(D_80122B74 + 0x338)) | 4);
+        (*(s32*)(D_80122B74 + 0x470)) = (s32)((*(s32*)(D_80122B74 + 0x470)) | 4);
+        break;
     }
 }
 
