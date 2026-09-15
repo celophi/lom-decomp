@@ -693,7 +693,7 @@ void func_800A788C(void *ot, void *cursor, s32 x_offset, s32 y_offset)
     s32 i;
     s32 total_x;
     s32 total_y;
-    volatile u8 *entry;
+    u8 *entry;
     u8 *pad;
     volatile u8 *text_base;
     void *handle;
@@ -730,18 +730,21 @@ loop_setup:
     {
         if (pad[0x5F0] != 0)
         {
-            total_x += entry[0x25C];
-            total_y += entry[0x25D];
+            FieldEntry268 *record = (FieldEntry268 *)entry;
+
+            total_x += record->unk25C;
+            total_y += record->unk25D;
         }
-        entry += 0x268;
+        entry += sizeof(FieldEntry268) - sizeof(((FieldEntry268 *)0)->pad25E);
+        entry += sizeof(((FieldEntry268 *)0)->pad25E);
         i++;
         pad += 0x250;
     } while (i < 3);
 
-    text_base = D_800EC3D6 - 0x12;
     handle = func_800A88A0(first_cursor, ot,
-        D_800EC3D6[0] + ((D_800EC3D6[1] << 8) + text_base),
+        D_800EC3D6[0] + (D_800EC3D6 - 0x12) + (D_800EC3D6[1] << 8),
         4, 0x10 - x_offset, -y_offset, 0);
+    text_base = D_800EC3D6 - 0x12;
 
     y = 0x10 - y_offset;
     position[1] = y;
