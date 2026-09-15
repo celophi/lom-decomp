@@ -260,7 +260,7 @@ segments:
       # TU hypothesis: field_immediate_text (high). See docs/decompilation/field-boundaries/map.md.
       - [0x58C31, c, field_immediate_text] # gcc272_cdk; A88A0..A8B90 (4 funcs, 100%)
       # TU hypothesis: field_input_text_session (medium). See docs/decompilation/field-boundaries/map.md.
-      - [0x5908D, c, field_input_text_session] # gcc272_cdk; A8CFC..AA498 (21 funcs, 100% except func_800A939C 83.439810% WIP)
+      - [0x5908D, c, field_input_text_session] # gcc272_cdk; A8CFC..AA498 (21 funcs, 100% except func_800A939C 97.534720% WIP)
       # TU hypothesis: field_modal_runtime (medium). See docs/decompilation/field-boundaries/map.md.
       - [0x5A901, c, field_modal_runtime] # gcc272_cdk; AA570..AC768 (17 funcs, 100% except func_800AA90C 90.918630% WIP)
       # TU hypothesis: field_modal_stream_start (high). See docs/decompilation/field-boundaries/map.md.
