@@ -24,9 +24,9 @@
 #endif
 
 #if INCLUDE_ASM_USE_MACRO_INC
-__asm__(".include \"include/macro.inc\"\n");
+__asm__(".include \"/lom/include/macro.inc\"\n");
 #else
-__asm__(".include \"include/labels.inc\"\n");
+__asm__(".include \"/lom/include/labels.inc\"\n");
 #endif
 
 #else

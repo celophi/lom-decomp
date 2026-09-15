@@ -696,27 +696,33 @@ void func_800A939C(void *context)
     extern u8 D_800FE3A0[];
     extern u8 D_80105AE0[];
     extern u8 D_8011F3D2;
-    s32 pad_offset;
     s32 custom_text_offset;
+    s32 pad_offset;
     FieldLabelPosition point;
     u8 *object_record;
+    u8 *label_low;
+    u8 *label_descriptor;
     s32 text_style;
+    s32 text_x;
     s32 swapped_buttons;
-    s32 buttons;
     s32 text_address;
+    void **context_slot;
     s32 text_base;
+    s32 label_base;
     s32 local_pad_offset;
     s32 local_text_offset;
     s32 screen_y;
+    s32 projected_y;
     s32 camera_x_pixels;
+    s32 actor_screen_x;
     s32 label_ot;
     s32 label_half_width;
-    s32 text_index;
     s32 actor_x;
     s32 camera_height;
     s32 number_ot;
     s32 camera_x;
     s32 camera_y;
+    s32 camera_y_pixels;
     s32 text_ot;
     s32 left_glyph_ot;
     s32 right_glyph_ot;
@@ -729,14 +735,11 @@ void func_800A939C(void *context)
     s32 actor_height;
     u16 raw_buttons;
     u8 *default_label_offset;
-    s32 action_code;
     s32 actor_id;
     s32 action_slot;
     s32 secondary_action;
     s32 secondary_action_alt;
     s32 text_low_or_base;
-    s32 pad_record;
-    void *actor_slot;
     void *highlight_motion;
     void *actor_position;
     void *normal_motion;
@@ -744,13 +747,15 @@ void func_800A939C(void *context)
     s32 text_high_or_offset;
 
     label_ot = (s32)context + 0x3C;
+    context_slot = &context;
     index = 0;
     default_label_offset = D_800EC3E0;
+                label_low = D_800EC3E0;
     object_record = D_800FD818;
     action_offset = index;
-    primitive = S32_AT(context, 0x40B8);
-    pad_sample = (void *)0x801ED600;
+    primitive = S32_AT(*context_slot, 0x40B8);
     custom_text_offset = 0x5F0;
+    pad_sample = (void *)0x801ED600;
     pad_offset = 0;
     do
     {
@@ -763,14 +768,15 @@ void func_800A939C(void *context)
             raw_buttons = U16_AT(pad_sample, 0x2);
             local_text_offset = custom_text_offset;
             swapped_buttons = ((raw_buttons << 8) & 0xFF00) | (raw_buttons >> 8);
-            buttons = (((u32)(swapped_buttons & 0x40) >> 1) | ((swapped_buttons & 0x20) * 2) |
+            swapped_buttons = (((u32)(swapped_buttons & 0x40) >> 1) | ((swapped_buttons & 0x20) * 2) |
                        ((u32)(swapped_buttons & 0x80) >> 3) | ((swapped_buttons & 0x10) * 8) |
                        (swapped_buttons & 0xFF0F));
+            label_base = text_base;
         scan_buttons:
-            if (buttons & button_mask_or_y_offset)
+            if (swapped_buttons & button_mask_or_y_offset)
             {
-                pad_record = g_pad_ctx + local_pad_offset;
-                action_slot = U8_AT(pad_record + D_800EC2FC[button_index], 0x638);
+                swapped_buttons = g_pad_ctx + local_pad_offset;
+                action_slot = U8_AT(swapped_buttons + D_800EC2FC[button_index], 0x638);
                 do
                 {
                     switch (action_slot)
@@ -778,65 +784,79 @@ void func_800A939C(void *context)
                     case 2:
                     case 3:
                         text_low_or_base = (s32)D_800EDBE4;
-                        text_index = U16_AT(D_8010A028, action_offset + action_slot * 8) & 0x7FFF;
+                        swapped_buttons = (s32)D_8010A028 + action_offset;
+                        actor_id = action_slot * 8;
+                        swapped_buttons = U16_AT(swapped_buttons, actor_id) & 0x7FFF;
                         goto read_text_offset;
 
                     case 0:
-                        if (((U8_AT(pad_record, 0x608) & 0x7F) == 2) &&
-                            ((secondary_action = U8_AT(pad_record, 0x609),
+                        if (((U8_AT(swapped_buttons, 0x608) & 0x7F) == 2) &&
+                            ((secondary_action = U8_AT(swapped_buttons, 0x609),
                               (secondary_action == 5)) ||
                              (secondary_action == 8)))
                         {
-                            text_high_or_offset = (default_label_offset[1] << 8) + text_base;
-                            text_low_or_base = D_800EC3E0[0];
+                            do { text_high_or_offset = (default_label_offset[1] << 8) + label_base;
+                            text_low_or_base = *label_low; } while (0);
+                            text_address = text_high_or_offset + text_low_or_base;
                         }
                         else
                         {
-                            text_high_or_offset = (D_800EC3E6[1] << 8) + text_base;
-                            text_low_or_base = D_800EC3E6[0];
+                            label_descriptor = D_800EC3E6;
+                            text_high_or_offset = label_descriptor[1];
+                            do { text_low_or_base = D_800EC3E6[0];
+                            text_high_or_offset = (text_high_or_offset << 8) + label_base; } while (0);
+                            text_address = text_high_or_offset + text_low_or_base;
                         }
 
                         break;
                     case 1:
-                        if (((U8_AT(pad_record, 0x608) & 0x7F) == 2) &&
-                            ((secondary_action_alt = U8_AT(pad_record, 0x609),
+                        if (((U8_AT(swapped_buttons, 0x608) & 0x7F) == 2) &&
+                            ((secondary_action_alt = U8_AT(swapped_buttons, 0x609),
                               (secondary_action_alt == 5)) ||
                              (secondary_action_alt == 8)))
                         {
-                            text_high_or_offset = (default_label_offset[1] << 8) + text_base;
-                            text_low_or_base = D_800EC3E0[0];
+                            do { text_high_or_offset = (default_label_offset[1] << 8) + label_base;
+                            text_low_or_base = *label_low; } while (0);
+                            text_address = text_high_or_offset + text_low_or_base;
                         }
                         else
                         {
-                            text_high_or_offset = (D_800EC3E8[1] << 8) + text_base;
-                            text_low_or_base = D_800EC3E8[0];
+                            do { text_high_or_offset = D_800EC3E8[1]; text_high_or_offset <<= 8; text_high_or_offset += label_base;
+                            text_low_or_base = D_800EC3E8[0]; } while (0);
+                            text_address = text_high_or_offset + text_low_or_base;
                         }
                         break;
                     default:
-                        action_code = U8_AT(g_pad_ctx + local_pad_offset + action_slot, 0x608);
-                        if (action_code == 0xFF)
+                        swapped_buttons = U8_AT(g_pad_ctx + local_pad_offset + action_slot, 0x608);
+                        if (swapped_buttons == 0xFF)
                         {
-                            text_high_or_offset = (default_label_offset[1] << 8) + text_base;
-                            text_low_or_base = D_800EC3E0[0];
+                            do { text_high_or_offset = (default_label_offset[1] << 8) + label_base;
+                            text_low_or_base = *label_low; } while (0);
+                            text_address = text_high_or_offset + text_low_or_base;
                         }
-                        else if (action_code & 0x80)
+                        else if (swapped_buttons & 0x80)
                         {
-                            text_low_or_base = g_pad_ctx + local_text_offset;
-                            text_high_or_offset = ((action_code & 0xFF7F) << 6) + 0x150;
+                            do { text_low_or_base = g_pad_ctx + local_text_offset;
+                            text_high_or_offset = ((swapped_buttons & 0xFF7F) << 6) + 0x150; } while (0);
+                            text_address = text_high_or_offset + text_low_or_base;
                         }
                         else
                         {
-                            text_index =
-                                (U16_AT(D_8010A038, action_offset + action_slot * 8) & 0x7FFF) +
+                            actor_id = action_slot * 8;
+                            text_x = (s32)D_8010A038;
+                            text_base = text_x;
+                            swapped_buttons =
+                                (U16_AT(text_base, action_offset + actor_id) & 0x7FFF) +
                                 (U8_AT(object_record, 0x1) * 0x18);
-                            text_low_or_base = (s32)D_800ED064;
+                            do { text_low_or_base = (s32)D_800ED064; } while (0);
                         read_text_offset:
-                            text_high_or_offset = U16_AT(text_low_or_base, text_index * 2);
+                            text_high_or_offset = U16_AT(text_low_or_base, swapped_buttons * 2);
+                            text_address = text_high_or_offset + text_low_or_base;
                         }
 
                         break;
                     }
-                    text_address = text_high_or_offset + text_low_or_base;
+
                 } while (0);
                 button_mask_or_y_offset = index << 5;
                 point.x = 0x60;
@@ -870,7 +890,7 @@ void func_800A939C(void *context)
         {
             actor_id = D_801226E0[index];
             camera_x = D_800F22A0;
-            actor_slot = (void *)((actor_id * 0x23C) + (s32)D_80105AE0);
+            text_address = (s32)((actor_id * 0x23C) + (s32)D_80105AE0);
             actor_position = (void *)((actor_id * 0x54) + (s32)D_800FDF58);
             if (camera_x < 0)
             {
@@ -883,36 +903,41 @@ void func_800A939C(void *context)
                 actor_x += 0xFF;
             }
             camera_y = D_800F22A4;
-            point.x = camera_x_pixels + ((actor_x >> 8) + 0xA0);
+            actor_screen_x = (actor_x >> 8) + 0xA0;
+            point.x = camera_x_pixels + actor_screen_x;
             if (camera_y < 0)
             {
                 camera_y += 0xFF;
             }
+            camera_y_pixels = camera_y >> 8;
             actor_y = S32_AT(actor_position, 0x4);
             if (actor_y < 0)
             {
                 actor_y += 0xFF;
             }
             actor_height = S32_AT(actor_position, 0x8);
-            screen_y = (camera_y >> 8) + ((actor_y >> 8) + 0x70);
+            actor_y = (actor_y >> 8) + 0x70;
+            screen_y = camera_y_pixels + actor_y;
             if (actor_height < 0)
             {
                 actor_height += 0x1FF;
             }
             camera_height = D_800F22A8;
+            projected_y = screen_y - (actor_height >> 9);
             if (camera_height < 0)
             {
                 camera_height += 0x1FF;
             }
-            point.y = (screen_y - (actor_height >> 9)) - (camera_height >> 9);
-            label_half_width = func_800AE864((u8 *)S32_AT(actor_slot, 0x64)) * 6;
+            point.y = projected_y - (camera_height >> 9);
+            label_half_width = func_800AE864((u8 *)S32_AT(text_address, 0x64)) * 6;
             if ((point.x + label_half_width) >= 0x141)
             {
                 point.x = 0x140 - label_half_width;
             }
             if (((point.x - label_half_width) - 8) < 0)
             {
-                point.x = label_half_width + 8;
+                local_pad_offset = label_half_width + 8;
+                point.x = local_pad_offset;
             }
             if (point.y >= 0xB1)
             {
@@ -922,6 +947,7 @@ void func_800A939C(void *context)
             {
                 point.y = 0x32;
             }
+            camera_x_pixels = point.x;
             text_ot = label_ot;
             if (D_8011F3D2 == index)
             {
@@ -932,8 +958,8 @@ void func_800A939C(void *context)
             {
                 text_style = 4;
             }
-            primitive = func_800A88A0(primitive, text_ot, (void *)S32_AT(actor_slot, 0x64),
-                                      text_style, (s32)point.x, (s32)point.y, 0x82);
+            primitive = func_800A88A0(primitive, text_ot, (void *)S32_AT(text_address, 0x64),
+                                      text_style, camera_x_pixels, (s32)point.y, 0x82);
             left_glyph_ot = label_ot;
             point.y = (u16)point.y - 8;
             if (D_8011F3D2 == index)
@@ -960,9 +986,9 @@ void func_800A939C(void *context)
             {
             }
             primitive = (s32)func_800AD208((s32 *)number_ot, (void *)primitive,
-                                           (u8)U8_AT(actor_slot, 0x4C) >> 1, 2, (u16 *)&point,
+                                           (u8)U8_AT(text_address, 0x4C) >> 1, 2, (u16 *)&point,
                                            D_8011F3D2 == index ? 0x81 : 0x82);
-            if ((D_8011F3D2 == index) && (S32_AT(actor_slot, 0x8) >= 0))
+            if ((D_8011F3D2 == index) && (S32_AT(text_address, 0x8) >= 0))
             {
                 highlight_motion = (void *)((actor_id * 0x48) + (s32)D_800FE3A0);
                 U8_AT(highlight_motion, 0x2E) = 0x80;
