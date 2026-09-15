@@ -2045,16 +2045,16 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
 {
     FieldActorState *state;
     FieldActorPartDef *track_part;
-    FieldMotionRecord *newrec; FieldMotionRecord *candidate;
-    FieldObjectPlacement *slot;
+    FieldMotionRecord *newrec; FieldMotionRecord *candidate; FieldMotionRecord *pool;
+    FieldObjectPlacement *slot; FieldObjectPlacement *objects;
     FieldVector new_pos;
     FieldVector vec;
     FieldVector sqr;
     s32 bit, mask;
     s32 newslot;
-    s32 spawn_count;
+    s32 spawn_count; s32 spawn_kind;
     s16 anim_flags;
-    u8 t;
+    u8 t; s32 object_index;
 
     g_field_actor_slots[rec->actor_index].active_counts[rec->track_index][part->unknown_0x32]--;
 
@@ -2065,6 +2065,7 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
     {
         if (rec->height_or_retired_state == -1) { rec->state = 0xFE; } else { rec->state = rec->height_or_retired_state; }
 
+        pool = D_800FF658;
         for (bit = 0, mask = 1; bit < 4; bit++, mask <<= 1)
         {
             if ((*(u32 *) &part->unknown_0x2c >> 0x1C) & mask)
@@ -2076,7 +2077,8 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
 
                 track_part = &g_field_actor_slots[rec->actor_index].parts[(part->spawn_flags.halves.part_selectors >> (bit * 4)) & 0xF];
                 spawn_count = 1;
-                if (((track_part->placement_flags >> 0x12) & 0x3F) == 0x35)
+                spawn_kind = 0x35;
+                if (((track_part->placement_flags >> 0x12) & 0x3F) == spawn_kind)
                 {
                     if (track_part->unknown_0xc != 0)
                     {
@@ -2091,7 +2093,7 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
                         newslot = func_8006D79C(&g_field_actor_slots[rec->actor_index], (part->spawn_flags.halves.part_selectors >> (bit * 4)) & 0xF, 0);
                         if (newslot != -1)
                         {
-                            candidate = &D_800FF658[newslot];
+                            candidate = (FieldMotionRecord *)(newslot * (s32)sizeof(FieldMotionRecord) + (s32)pool);
                             if (!(((u8 *) &candidate->flags)[3] & 7) && (candidate->position_source != 0))
                             {
                                 newrec = candidate;
@@ -2137,10 +2139,13 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
     {
         if (state->track_object_indices[rec->track_index] != 0xFF)
         {
-            if (((u8 *) &D_80105AE0[state->track_object_indices[rec->track_index]].state_flags)[2] == state->actor_index)
+            objects = D_80105AE0;
+            object_index = state->track_object_indices[rec->track_index];
+            slot = &objects[object_index];
+            if (((u8 *) &slot->state_flags)[2] == state->actor_index)
             {
-                anim_flags = D_800FDF58[state->track_object_indices[rec->track_index]].motion_parameter;
-                if ((anim_flags != 0x90 && anim_flags != 0x94) || (D_80105AE0[state->track_object_indices[rec->track_index]].object_flags & 0x200))
+                anim_flags = D_800FDF58[object_index].motion_parameter;
+                if ((anim_flags != 0x90 && anim_flags != 0x94) || (slot->object_flags & 0x200))
                 {
                     D_800FDF58[state->track_object_indices[rec->track_index]].state = 0;
                 }
@@ -2158,17 +2163,16 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
         slot = &D_80105AE0[state->owner_object_index];
         if (((u8 *) &slot->state_flags)[2] == state->actor_index)
         {
-            FieldActorState *owner = state;
-            anim_flags = D_800FDF58[owner->owner_object_index].motion_parameter;
+            anim_flags = D_800FDF58[state->owner_object_index].motion_parameter;
             if ((anim_flags != 0x90 && anim_flags != 0x94) || (slot->object_flags & 0x200))
             {
-                D_800FDF58[owner->owner_object_index].state = 0;
+                D_800FDF58[state->owner_object_index].state = 0;
             }
             else
             {
-                D_800FDF58[owner->owner_object_index].state = 0xFE;
+                D_800FDF58[state->owner_object_index].state = 0xFE;
             }
-            D_80105AE0[owner->owner_object_index].state_flags &= ~1;
+            D_80105AE0[state->owner_object_index].state_flags &= ~1;
         }
     }
 
@@ -2200,7 +2204,9 @@ void func_80071500(FieldMotionRecord *rec, FieldActorPartDef *part)
         t = rec->next_effect_index;
         if (t != 0xFF)
         {
-            D_800FF658[t].previous_effect_index = 0xFF;
+            FieldMotionRecord *records = D_800FF658;
+            s32 next_index = rec->next_effect_index;
+            records[next_index].previous_effect_index = 0xFF;
         }
     }
 }
