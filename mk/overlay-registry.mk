@@ -133,6 +133,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/overlay_header.c \
 	src/overlays/field/field_frame_commands.c \
 	src/overlays/field/field_draw_state.c \
+	src/overlays/field/field_fade.c \
 	src/overlays/field/field_actor_runtime.c \
 	src/overlays/field/field_effect_update.c \
 	src/overlays/field/field_effect_dispatch.c \
@@ -196,9 +197,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_text_quad.c \
 	src/overlays/field/field_card_clock.c \
 	src/overlays/field/field_character_name_flags.c \
-	src/overlays/field/field_resource_load.c \
-	src/overlays/field/field_group_stat_transfer.c \
-	src/overlays/field/field_layout_slot_state.c
+	src/overlays/field/field_resource_load.c
 
 overlay_field_gcc_272_cdk_g0_nosched_srcs := \
 	src/overlays/field/field_subsystem_init.c
@@ -247,6 +246,7 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_active_record_ops.c \
 	src/overlays/field/field_record_table_ops.c \
 	src/overlays/field/field_group_layout_ops.c \
+	src/overlays/field/field_group_stat_transfer.c \
 	src/overlays/field/field_group_derived_stats.c \
 	src/overlays/field/field_menu_group_ops.c \
 	src/overlays/field/field_menu_object_ops.c \
@@ -259,11 +259,11 @@ overlay_field_gcc_280_g0_srcs := \
 	src/overlays/field/field_menu_record_state.c \
 	src/overlays/field/field_menu_attribute_ops.c \
 	src/overlays/field/field_menu_record_ops.c \
+	src/overlays/field/field_layout_slot_state.c \
 	src/overlays/field/field_equipment_combination_rules.c \
 	src/overlays/field/field_golem_logic_blocks.c
 
-overlay_field_gcc_280_g4_srcs := \
-	src/overlays/field/field_fade.c
+overlay_field_gcc_280_g4_srcs :=
 
 overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_scene_load.c \

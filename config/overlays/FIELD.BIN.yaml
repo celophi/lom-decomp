@@ -44,7 +44,7 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [auto, c, overlay_header] # gcc_272_cdk_g0; overlay metadata
+      - [auto, c, overlay_header] # overlay metadata
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, field_scene_build]
       - [0x65, .rodata, field_render]
@@ -86,152 +86,152 @@ segments:
       - [0x1C19, rodata, unk2_rodata_after_bdca4]
 
       # Scene loading, construction, rendering, animation, and text.
-      - [0x22B9, c, field_scene_load] # gcc_280_g4_noexpand; 8 functions, 7 exact
-      - [0x29B9, c, field_scene_build] # gcc_280_g4_noexpand; 6 functions, 6 exact
-      - [0x5039, c, field_render] # gcc_280_g4_noexpand; 9 functions, 9 exact
-      - [0x6D95, c, field_animation] # gcc_280_g4_noexpand; 13 functions, 12 exact
-      - [0x9645, c, field_scene_control] # gcc_280_g4_noexpand; 30 functions, 30 exact
-      - [0xB6F9, c, field_collision] # gcc_280_g4_noexpand; 16 functions, 13 exact
-      - [0x13525, c, field_text] # gcc_280_g4_noexpand; 31 functions, 28 exact
+      - [0x22B9, c, field_scene_load] # gcc_280_g4_noexpand
+      - [0x29B9, c, field_scene_build] # gcc_280_g4_noexpand
+      - [0x5039, c, field_render] # gcc_280_g4_noexpand
+      - [0x6D95, c, field_animation] # gcc_280_g4_noexpand
+      - [0x9645, c, field_scene_control] # gcc_280_g4_noexpand
+      - [0xB6F9, c, field_collision] # gcc_280_g4_noexpand
+      - [0x13525, c, field_text] # gcc_280_g4_noexpand
 
       # Frame orchestration and actor resource runtime.
-      - [0x17A45, c, field_frame_commands] # gcc_272_cdk_g0; 1 function, 1 exact
-      - [0x17C65, c, field_subsystem_init] # gcc_272_cdk_g0_nosched; 1 function, 1 exact
-      - [0x17E35, c, field_draw_state] # gcc_272_cdk_g0; 2 functions, 2 exact
-      - [0x17F1D, c, field_fade] # gcc_280_g4; 8 functions, 8 exact
-      - [0x18341, c, field_actor_runtime] # gcc_272_cdk_g0; 70 functions, 70 exact
+      - [0x17A45, c, field_frame_commands]
+      - [0x17C65, c, field_subsystem_init] # gcc_272_cdk_g0_nosched
+      - [0x17E35, c, field_draw_state]
+      - [0x17F1D, c, field_fade]
+      - [0x18341, c, field_actor_runtime]
 
       # Effect updates, primitive generation, geometry, and mesh transforms.
-      - [0x1DB2D, c, field_effect_update] # gcc_272_cdk_g0; 11 functions, 7 exact
-      - [0x2510D, c, field_effect_dispatch] # gcc_272_cdk_g0; 2 functions, 2 exact
-      - [0x26019, c, field_effect_frames] # gcc_272_cdk_g0; 2 functions, 2 exact
-      - [0x29D55, c, field_effect_primitives] # gcc_272_cdk_g0; 6 functions, 5 exact
-      - [0x2C789, c, field_effect_transform] # gcc_272_cdk_g0; 8 functions, 7 exact
-      - [0x2F07D, c, field_effect_geometry] # gcc_272_cdk_g0; 6 functions, 6 exact
-      - [0x30359, c, field_mesh_render] # gcc_272_cdk_g0; 4 functions, 3 exact
-      - [0x32635, c, field_mesh_transform] # gcc_272_cdk_g0; 3 functions, 2 exact
-      - [0x33681, c, field_mesh_part_animation] # gcc_272_cdk_g0; 4 functions, 3 exact
+      - [0x1DB2D, c, field_effect_update]
+      - [0x2510D, c, field_effect_dispatch]
+      - [0x26019, c, field_effect_frames]
+      - [0x29D55, c, field_effect_primitives]
+      - [0x2C789, c, field_effect_transform]
+      - [0x2F07D, c, field_effect_geometry]
+      - [0x30359, c, field_mesh_render]
+      - [0x32635, c, field_mesh_transform]
+      - [0x33681, c, field_mesh_part_animation]
 
       # Actor resources, script commands, input, movement, and state machines.
-      - [0x33CD9, c, field_actor_slot_resources] # gcc_272_cdk_g0; 14 functions, 14 exact
-      - [0x34A91, c, field_actor_hud] # gcc_272_cdk_g0; 10 functions, 9 exact
-      - [0x36825, c, field_actor_control_effects] # gcc_272_cdk_g0; 18 functions, 16 exact
-      - [0x379A5, c, field_actor_key_ops] # gcc_272_cdk_g0; 13 functions, 13 exact
-      - [0x3847D, c, field_actor_script_dispatch] # gcc_272_cdk_g0; 4 functions, 4 exact
-      - [0x39DF9, c, field_actor_action_commands] # gcc_272_cdk_g0; 12 functions, 12 exact
-      - [0x3B0D5, c, field_actor_animation_commands] # gcc_272_cdk_g0; 14 functions, 14 exact
-      - [0x3BC01, c, field_actor_reactions] # gcc_272_cdk_g0; 11 functions, 11 exact
-      - [0x3CAB9, c, field_actor_routes] # gcc_272_cdk_g0; 7 functions, 5 exact
-      - [0x3DFE5, c, field_actor_behavior] # gcc_272_cdk_g0; 9 functions, 7 exact
-      - [0x417A1, c, field_actor_input_map_init] # gcc_272_cdk_g0; 2 functions, 2 exact
-      - [0x418A9, c, field_actor_action_defaults] # gcc_272_cdk_g0_nostrength; 1 function, 1 exact
-      - [0x41AB9, c, field_actor_input_actions] # gcc_272_cdk_g0; 4 functions, 4 exact
-      - [0x41F59, c, field_actor_camera] # gcc_272_cdk_g0; 7 functions, 7 exact
-      - [0x42781, c, field_actor_idle_ops] # gcc_272_cdk_g0; 3 functions, 3 exact
-      - [0x4297D, c, field_actor_motion] # gcc_272_cdk_g0; 2 functions, 1 exact
-      - [0x42E69, c, field_actor_movement_states] # gcc_272_cdk_g0; 3 functions, 3 exact
-      - [0x43E49, c, field_actor_action_runtime] # gcc_272_cdk_g0; 3 functions, 3 exact
-      - [0x44899, c, field_actor_displacement] # gcc_272_cdk_g0; 7 functions, 7 exact
-      - [0x45235, c, field_actor_resource_states] # gcc_272_cdk_g0; 2 functions, 2 exact
-      - [0x4536D, c, field_actor_animation_resume] # gcc_272_cdk_g0; 3 functions, 3 exact
-      - [0x4555D, c, field_actor_sequence_runtime] # gcc_272_cdk_g0; 6 functions, 5 exact
-      - [0x46A81, c, field_actor_transition_reset] # gcc_272_cdk_g0; 5 functions, 4 exact
+      - [0x33CD9, c, field_actor_slot_resources]
+      - [0x34A91, c, field_actor_hud]
+      - [0x36825, c, field_actor_control_effects]
+      - [0x379A5, c, field_actor_key_ops]
+      - [0x3847D, c, field_actor_script_dispatch]
+      - [0x39DF9, c, field_actor_action_commands]
+      - [0x3B0D5, c, field_actor_animation_commands]
+      - [0x3BC01, c, field_actor_reactions]
+      - [0x3CAB9, c, field_actor_routes]
+      - [0x3DFE5, c, field_actor_behavior]
+      - [0x417A1, c, field_actor_input_map_init]
+      - [0x418A9, c, field_actor_action_defaults] # gcc_272_cdk_g0_nostrength
+      - [0x41AB9, c, field_actor_input_actions]
+      - [0x41F59, c, field_actor_camera]
+      - [0x42781, c, field_actor_idle_ops]
+      - [0x4297D, c, field_actor_motion]
+      - [0x42E69, c, field_actor_movement_states]
+      - [0x43E49, c, field_actor_action_runtime]
+      - [0x44899, c, field_actor_displacement]
+      - [0x45235, c, field_actor_resource_states]
+      - [0x4536D, c, field_actor_animation_resume]
+      - [0x4555D, c, field_actor_sequence_runtime]
+      - [0x46A81, c, field_actor_transition_reset]
 
       # Contact geometry, scene transitions, actor effects, and paths.
-      - [0x47441, c, field_contact_geometry] # gcc_272_cdk_g0; 13 functions, 7 exact
-      - [0x4A635, c, field_actor_resource_unpack] # gcc_272_cdk_g0; 9 functions, 9 exact
-      - [0x4B34D, c, field_scene_transition] # gcc_272_cdk_g0; 12 functions, 10 exact
-      - [0x4C9B1, c, field_text_window_api] # gcc_272_cdk_g0; 5 functions, 5 exact
-      - [0x4CD99, c, field_block_allocator] # gcc_272_cdk_g0; 3 functions, 3 exact
-      - [0x4CFF1, c, field_actor_target_queries] # gcc_272_cdk_g0; 7 functions, 7 exact
-      - [0x4D869, c, field_actor_movement_modes] # gcc_272_cdk_g0; 1 function, 0 exact
-      - [0x4DCED, c, field_actor_effects] # gcc_272_cdk_g0; 6 functions, 6 exact
-      - [0x520D9, c, field_path_interpolation] # gcc_272_cdk_g0; 6 functions, 6 exact
+      - [0x47441, c, field_contact_geometry]
+      - [0x4A635, c, field_actor_resource_unpack]
+      - [0x4B34D, c, field_scene_transition]
+      - [0x4C9B1, c, field_text_window_api]
+      - [0x4CD99, c, field_block_allocator]
+      - [0x4CFF1, c, field_actor_target_queries]
+      - [0x4D869, c, field_actor_movement_modes]
+      - [0x4DCED, c, field_actor_effects]
+      - [0x520D9, c, field_path_interpolation]
 
       # Command history, audio, dialogs, and field UI.
-      - [0x528ED, c, field_command_history] # gcc_272_cdk_g0; 8 functions, 6 exact
-      - [0x531D1, c, field_pair_indicators] # gcc_272_cdk_g0; 2 functions, 1 exact
-      - [0x538C5, c, field_audio_runtime] # gcc_272_cdk_g0; 27 functions, 27 exact
-      - [0x54779, c, field_ring_selection] # gcc_272_cdk_g0; 12 functions, 11 exact
-      - [0x559C9, c, field_timed_panel] # gcc_272_cdk_g0; 5 functions, 4 exact
-      - [0x56595, c, field_actor_text_queue] # gcc_272_cdk_g0; 6 functions, 6 exact
-      - [0x56C45, c, field_ability_progression] # gcc_272_cdk_g0; 1 function, 0 exact
-      - [0x5727D, c, field_dialog_screens] # gcc_272_cdk_g0; 18 functions, 17 exact
-      - [0x58C31, c, field_immediate_text] # gcc_272_cdk_g0; 4 functions, 4 exact
-      - [0x5908D, c, field_input_text_session] # gcc_272_cdk_g0; 21 functions, 20 exact
-      - [0x5A901, c, field_modal_runtime] # gcc_272_cdk_g0; 17 functions, 16 exact
-      - [0x5D3C1, c, field_modal_stream_start] # gcc_272_cdk_g0; 5 functions, 5 exact
-      - [0x5D599, c, field_numeric_sprites] # gcc_272_cdk_g0; 4 functions, 4 exact
-      - [0x5DB6D, c, field_pair_rule_lookup] # gcc_272_cdk_g0; 1 function, 1 exact
-      - [0x5DBE1, c, field_menu_windows] # gcc_272_cdk_g0; 10 functions, 9 exact
-      - [0x5EC39, c, field_coordinate_icon] # gcc_272_cdk_g0; 3 functions, 3 exact
-      - [0x5F0B1, c, field_choice_labels] # gcc_272_cdk_g0; 1 function, 1 exact
-      - [0x5F1B9, c, field_item_selection] # gcc_272_cdk_g0; 5 functions, 3 exact
-      - [0x5FC55, c, field_text_session] # gcc_272_cdk_g0; 2 functions, 2 exact
-      - [0x5FCE1, c, field_text_quad] # gcc_272_cdk_g0; 2 functions, 2 exact
-      - [0x601A5, c, field_card_clock] # gcc_272_cdk_g0; 2 functions, 2 exact
-      - [0x60501, c, field_character_name_flags] # gcc_272_cdk_g0; 1 function, 1 exact
+      - [0x528ED, c, field_command_history]
+      - [0x531D1, c, field_pair_indicators]
+      - [0x538C5, c, field_audio_runtime]
+      - [0x54779, c, field_ring_selection]
+      - [0x559C9, c, field_timed_panel]
+      - [0x56595, c, field_actor_text_queue]
+      - [0x56C45, c, field_ability_progression]
+      - [0x5727D, c, field_dialog_screens]
+      - [0x58C31, c, field_immediate_text]
+      - [0x5908D, c, field_input_text_session]
+      - [0x5A901, c, field_modal_runtime]
+      - [0x5D3C1, c, field_modal_stream_start]
+      - [0x5D599, c, field_numeric_sprites]
+      - [0x5DB6D, c, field_pair_rule_lookup]
+      - [0x5DBE1, c, field_menu_windows]
+      - [0x5EC39, c, field_coordinate_icon]
+      - [0x5F0B1, c, field_choice_labels]
+      - [0x5F1B9, c, field_item_selection]
+      - [0x5FC55, c, field_text_session]
+      - [0x5FCE1, c, field_text_quad]
+      - [0x601A5, c, field_card_clock]
+      - [0x60501, c, field_character_name_flags]
 
       # Resource installation, actor records, action setup, and status.
-      - [0x6058D, c, field_resource_load] # gcc_272_cdk_g0; 8 functions, 7 exact
-      - [0x60E89, c, field_interaction_start] # gcc_280_g0; 21 functions, 19 exact
-      - [0x62BFD, c, field_event_dispatch] # gcc_280_g0; 2 functions, 2 exact
-      - [0x62E2D, c, field_state_ops] # gcc_280_g0; 14 functions, 14 exact
-      - [0x63861, c, field_party_setup] # gcc_280_g0; 5 functions, 4 exact
-      - [0x64185, c, field_actor_templates] # gcc_280_g0; 3 functions, 2 exact
-      - [0x64721, c, field_actor_lifecycle] # gcc_280_g0; 5 functions, 5 exact
-      - [0x64C49, c, field_status_ticks] # gcc_280_g0; 10 functions, 10 exact
-      - [0x65449, c, field_action_descriptors] # gcc_280_g0; 2 functions, 1 exact
-      - [0x658C5, c, field_action_setup] # gcc_280_g0; 7 functions, 6 exact
-      - [0x6640D, c, field_progression_ops] # gcc_280_g0; 2 functions, 2 exact
-      - [0x66555, c, field_action_modifiers] # gcc_280_g0; 25 functions, 24 exact
-      - [0x67D11, c, field_record_stat_ops] # gcc_280_g0; 7 functions, 7 exact
+      - [0x6058D, c, field_resource_load]
+      - [0x60E89, c, field_interaction_start]
+      - [0x62BFD, c, field_event_dispatch]
+      - [0x62E2D, c, field_state_ops]
+      - [0x63861, c, field_party_setup]
+      - [0x64185, c, field_actor_templates]
+      - [0x64721, c, field_actor_lifecycle]
+      - [0x64C49, c, field_status_ticks]
+      - [0x65449, c, field_action_descriptors]
+      - [0x658C5, c, field_action_setup]
+      - [0x6640D, c, field_progression_ops]
+      - [0x66555, c, field_action_modifiers]
+      - [0x67D11, c, field_record_stat_ops]
 
       # Script dispatch and opcode families.
-      - [0x68395, c, field_script_flow_ops] # gcc_280_g0; 20 functions, 19 exact
-      - [0x6997D, c, field_script_primary_ops] # gcc_280_g0; 47 functions, 47 exact
-      - [0x6BD51, c, field_script_pair_ops] # gcc_280_g0; 32 functions, 31 exact
-      - [0x6CEF9, c, field_script_extended_ops] # gcc_280_g0; 16 functions, 16 exact
-      - [0x6D4B9, c, field_script_operands] # gcc_280_g0; 12 functions, 12 exact
-      - [0x6DA85, c, field_script_commands] # gcc_280_g0; 19 functions, 19 exact
-      - [0x6E959, c, field_script_arith_ops] # gcc_280_g0; 13 functions, 13 exact
+      - [0x68395, c, field_script_flow_ops]
+      - [0x6997D, c, field_script_primary_ops]
+      - [0x6BD51, c, field_script_pair_ops]
+      - [0x6CEF9, c, field_script_extended_ops]
+      - [0x6D4B9, c, field_script_operands]
+      - [0x6DA85, c, field_script_commands]
+      - [0x6E959, c, field_script_arith_ops]
 
       # Record creation, rewards, growth, queries, and counters.
-      - [0x6EAA1, c, field_record_setup_ops] # gcc_280_g0; 6 functions, 5 exact
-      - [0x6F681, c, field_slot_pool_ops] # gcc_280_g0; 12 functions, 12 exact
-      - [0x6FDC5, c, field_generated_record_ops] # gcc_280_g0; 4 functions, 3 exact
-      - [0x705F1, c, field_record_effect_ops] # gcc_280_g0; 5 functions, 5 exact
-      - [0x70DC9, c, field_reward_command_ops] # gcc_280_g0; 6 functions, 6 exact
-      - [0x711A9, c, field_record_growth_ops] # gcc_280_g0; 10 functions, 9 exact
-      - [0x71DA9, c, field_record_lookup_ops] # gcc_280_g0; 9 functions, 9 exact
-      - [0x72259, c, field_record_buffer_ops] # gcc_280_g0; 2 functions, 2 exact
-      - [0x7234D, c, field_record_position_queries] # gcc_280_g0; 2 functions, 2 exact
-      - [0x72425, c, field_stat_counter_ops] # gcc_280_g0; 5 functions, 5 exact
-      - [0x725F5, c, field_saved_slot_ops] # gcc_280_g0; 4 functions, 4 exact
-      - [0x729D1, c, field_actor_record_ops] # gcc_280_g0; 4 functions, 4 exact
-      - [0x72C89, c, field_resource_table_ops] # gcc_280_g0; 7 functions, 7 exact
-      - [0x72EA5, c, field_active_record_ops] # gcc_280_g0; 7 functions, 6 exact
-      - [0x73775, c, field_record_table_ops] # gcc_280_g0; 11 functions, 11 exact
+      - [0x6EAA1, c, field_record_setup_ops]
+      - [0x6F681, c, field_slot_pool_ops]
+      - [0x6FDC5, c, field_generated_record_ops]
+      - [0x705F1, c, field_record_effect_ops]
+      - [0x70DC9, c, field_reward_command_ops]
+      - [0x711A9, c, field_record_growth_ops]
+      - [0x71DA9, c, field_record_lookup_ops]
+      - [0x72259, c, field_record_buffer_ops]
+      - [0x7234D, c, field_record_position_queries]
+      - [0x72425, c, field_stat_counter_ops]
+      - [0x725F5, c, field_saved_slot_ops]
+      - [0x729D1, c, field_actor_record_ops]
+      - [0x72C89, c, field_resource_table_ops]
+      - [0x72EA5, c, field_active_record_ops]
+      - [0x73775, c, field_record_table_ops]
 
       # Group layouts, menu records, equipment rules, and golem logic.
-      - [0x73D91, c, field_group_layout_ops] # gcc_280_g0; 6 functions, 6 exact
-      - [0x742A9, c, field_group_stat_transfer] # gcc_272_cdk_g0; 1 function, 0 exact
-      - [0x746F5, c, field_group_derived_stats] # gcc_280_g0; 1 function, 1 exact
-      - [0x75A95, c, field_menu_group_ops] # gcc_280_g0; 14 functions, 13 exact
-      - [0x76569, c, field_menu_object_ops] # gcc_280_g0; 12 functions, 12 exact
-      - [0x76C59, c, field_menu_slot_ops] # gcc_280_g0; 14 functions, 14 exact
-      - [0x77421, c, field_gosub_history_ops] # gcc_280_g0; 14 functions, 14 exact
-      - [0x779FD, c, field_menu_action_runtime] # gcc_280_g0; 14 functions, 13 exact
-      - [0x78BC1, c, field_menu_record_setup] # gcc_280_g0; 3 functions, 3 exact
-      - [0x78DBD, c, field_menu_record_transfer] # gcc_280_g0; 5 functions, 4 exact
-      - [0x7963D, c, field_menu_record_audio_ops] # gcc_280_g0; 4 functions, 4 exact
-      - [0x79795, c, field_menu_record_state] # gcc_280_g0; 7 functions, 7 exact
-      - [0x79A55, c, field_menu_attribute_ops] # gcc_280_g0; 4 functions, 4 exact
-      - [0x79F55, c, field_menu_record_ops] # gcc_280_g0; 7 functions, 7 exact
-      - [0x7A265, c, field_select_distance_bucket] # gcc_280_g0_builtin; 1 function, 1 exact
-      - [0x7A531, c, field_layout_slot_state] # gcc_272_cdk_g0; 2 functions, 2 exact
-      - [0x7A619, c, field_equipment_combination_rules] # gcc_280_g0; 68 functions, 68 exact
-      - [0x7BA11, c, field_golem_logic_blocks] # gcc_280_g0; 8 functions, 8 exact
+      - [0x73D91, c, field_group_layout_ops]
+      - [0x742A9, c, field_group_stat_transfer]
+      - [0x746F5, c, field_group_derived_stats]
+      - [0x75A95, c, field_menu_group_ops]
+      - [0x76569, c, field_menu_object_ops]
+      - [0x76C59, c, field_menu_slot_ops]
+      - [0x77421, c, field_gosub_history_ops]
+      - [0x779FD, c, field_menu_action_runtime]
+      - [0x78BC1, c, field_menu_record_setup]
+      - [0x78DBD, c, field_menu_record_transfer]
+      - [0x7963D, c, field_menu_record_audio_ops]
+      - [0x79795, c, field_menu_record_state]
+      - [0x79A55, c, field_menu_attribute_ops]
+      - [0x79F55, c, field_menu_record_ops]
+      - [0x7A265, c, field_select_distance_bucket] # gcc_280_g0_builtin
+      - [0x7A531, c, field_layout_slot_state]
+      - [0x7A619, c, field_equipment_combination_rules]
+      - [0x7BA11, c, field_golem_logic_blocks]
       - [0x7C2D5, data, data]
       - start: 0x7C315
         type: tim
