@@ -60,88 +60,64 @@ typedef struct FieldCollisionBoundsNode
 
 /**
  * @brief Hit-test a probe against the field scene's collision-node list.
- *
- * Converts the query position from world units to grid cells (signed divide
- * by 256, i.e. a >> 8 with a round-toward-zero bias for negatives) and
- * centres the footprint by subtracting half the extent. Each node is
- * rejected by its bounding box first; survivors are tested against the
- * node's two sloped/axis-aligned edges. The first node that passes returns
- * its object's unk14.
- *
- * @param query Probe query (position, footprint extents, height tolerance).
- * @return obj->unk14 of the first node hit, or -1 if nothing is hit.
- *
- * @note Matches 99.02% under gcc280_g4 (no expand-div) and is functionally
- *       faithful to the target. The remaining residue is two register-
- *       allocation clusters, each confirmed by multiple measured probe
- *       alternatives to require their current shape: the z-axis setup (sz
- *       must keep the "uninitialised read" trick described below - an
- *       explicit temp, or reusing the dead "temp"/"ez" locals, both regress)
- *       and the two mult/denom-divide blocks (sched_oracle flags both as
- *       unmodelled imuldiv function-unit hazards; every reorder/indirection
- *       variant tried regresses). Decomp-permuter finds no improvement over
- *       this state either.
- * @see decomp.me (99.02%) https://decomp.me/scratch/ElbpA
+ * @param query Probe position, footprint dimensions, and vertical tolerance.
+ * @return Collision object's value on the first hit, or -1 when no node intersects the probe.
  */
 s16 func_8005B368(FieldCollisionQuery *query)
 {
     s32 sx;
     s32 ex;
-    unsigned long new_var;
-    s32 sz;
-    FieldScene *scene;
+    s32 work0;
+    s32 work1;
     s32 ez;
     s32 sy;
-    s32 half_x;
     s32 start_z;
     s32 half_z;
-    s32 temp;
     FieldCollisionBoundsNode *node;
     s32 hit;
     s32 raw_y;
+    s32 tx;
+    s32 ty;
 
-    /* half_x = (s16)unkC / 2: sign-extend, add the sign bit, then arithmetic
-     * shift right by one. The two-step (ez then >>1) is kept verbatim
-     * because it is required to match. */
-    temp = query->width;
-    half_x = ((s16) temp) + (((u32) (temp << 16)) >> 31);
-    scene = g_field_scene.scene;
-    ez = half_x;
-    half_x = ((s32) ez) >> 1;
-
-    /* sx: query->x is read into the dead "temp" slot (reusing it, rather than a
-     * fresh local, is required to match) and biased toward zero before the
-     * signed /256 shift. */
-    temp = query->x;
-    if (temp < 0)
+    work0 = query->width;
+    node = (FieldCollisionBoundsNode*)g_field_scene.scene;
+    work0 <<= 16;
+    work1 = work0 >> 16;
+    work0 = (u32)work0 >> 31;
+    work1 += work0;
+    work0 = query->x;
+    work1 >>= 1;
+    if (work0 < 0)
     {
-        temp += 0xFF;
+        work0 += 0xFF;
     }
-    sx = (temp >> 8) - half_x;
-    /* The nested "half_x = query->depth" write is a dead store (half_x is
-     * immediately recomputed below); it exists only to give half_x's pseudo
-     * an extra reference, which is required to match its register coloring. */
-    temp = (half_x = query->depth);
-    ex = sx + ((s16) query->width);
-    half_z = ((s32) (((s16) temp) + (((u32) (temp << 16)) >> 31))) >> 1;
+    work0 >>= 8;
+    sx = work0 - work1;
 
-    /* sz reads query->z via an "uninitialised read": the compiler keeps query->z in
-     * sz's register from the branch test below, with no explicit "sz = query->z"
-     * load. Unlike sx/sy above, giving sz an explicit temp (or reusing the
-     * dead "temp"/"ez" locals) regresses - measured. The "^ 0" is a no-op
-     * kept to match. */
-    if (query->z >= 0)
+    work0 = (s16)query->width;
+    work1 = query->depth;
+    do
     {
-        sz = (sz ^ 0) >> 8;
+        ex = sx + work0;
+    } while (0);
+    work1 <<= 16;
+    work0 = work1 >> 16;
+    work1 = (u32)work1 >> 31;
+    work0 += work1;
+    work1 = query->z;
+    half_z = work0 >> 1;
+    if (work1 >= 0)
+    {
+        work0 = work1 >> 8;
     }
     else
     {
-        sz = (sz + 0xFF) >> 8;
+        work0 = (work1 + 0xFF) >> 8;
     }
-    sz -= half_z;
-    start_z = sz;
-    ez = start_z + ((s16) query->depth);
+    start_z = work0 - half_z;
+    work0 = (s16)query->depth;
     raw_y = query->y;
+    ez = start_z + work0;
     if (raw_y >= 0)
     {
         sy = raw_y >> 8;
@@ -151,18 +127,17 @@ s16 func_8005B368(FieldCollisionQuery *query)
         sy = (raw_y + 0xFF) >> 8;
     }
 
-    /*
-     * The debug marker renderer and collision code are two interpretations of
-     * the same spatial-node chain at FieldScene+0x10.
-     */
-    for (node = (FieldCollisionBoundsNode*)scene->markers; node != 0; node = node->next)
+    for (node = *(FieldCollisionBoundsNode**)((u8*)node + 0x10); node != 0; node = node->next)
     {
         FieldCollisionObject *obj;
         s16 val;
-        obj = node->obj;
+
+        do
+        {
+            obj = node->obj;
+        } while (0);
         val = obj->unk10;
 
-        /* Reject by vertical band and bounding box. */
         if ((sy - query->height_tolerance) >= val)
         {
             continue;
@@ -191,11 +166,8 @@ s16 func_8005B368(FieldCollisionQuery *query)
         hit = 0;
         if (node->denom1 != 0)
         {
-            s32 tx;
-            s32 ty;
-            new_var = (node->mult1 * ex) / node->denom1;
             tx = (node->mult1 * sx) / node->denom1;
-            ty = new_var;
+            ty = (node->mult1 * ex) / node->denom1;
             if (((((start_z - tx) >= node->max1) || ((ez - tx) >= node->max1)) || ((start_z - ty) >= node->max1)) || ((ez - ty) >= node->max1))
             {
                 if ((((node->min1 >= (start_z - tx)) || (node->min1 >= (ez - tx))) || (node->min1 >= (start_z - ty))) || (node->min1 >= (ez - ty)))
@@ -204,10 +176,9 @@ s16 func_8005B368(FieldCollisionQuery *query)
                 }
             }
         }
-        else
-            if (ex >= node->max1)
+        else if (ex >= node->max1)
         {
-            if (node->min1 >= (sx ^ 0))
+            if (node->min1 >= sx)
             {
                 hit = 1;
             }
@@ -217,25 +188,17 @@ s16 func_8005B368(FieldCollisionQuery *query)
         {
             if (node->denom2 != 0)
             {
-                s32 tx;
-                s32 ty;
                 tx = (node->mult2 * sx) / node->denom2;
                 ty = (node->mult2 * ex) / node->denom2;
-                /* half_x is reused here as a scratch for ty; required to match. */
-                half_x = ty;
-                if (((((start_z - tx) >= node->max2) || ((ez - tx) >= node->max2)) || ((start_z - half_x) >= node->max2)) || ((ez - half_x) >= node->max2))
+                if (((((start_z - tx) >= node->max2) || ((ez - tx) >= node->max2)) || ((start_z - ty) >= node->max2)) || ((ez - ty) >= node->max2))
                 {
-                    if ((((node->min2 < (start_z - tx)) && (node->min2 < (ez - tx))) && (node->min2 < (start_z - half_x))) && (node->min2 < (ez - half_x)))
-                    {
-                    }
-                    else
+                    if (!((((node->min2 < (start_z - tx)) && (node->min2 < (ez - tx))) && (node->min2 < (start_z - ty))) && (node->min2 < (ez - ty))))
                     {
                         return obj->unk14;
                     }
                 }
             }
-            else
-                if (ex >= node->max2)
+            else if (ex >= node->max2)
             {
                 if (node->min2 >= sx)
                 {
