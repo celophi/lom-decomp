@@ -304,7 +304,7 @@ s32 func_80097150(Point *quad, ContactRecord *record, Contact *contact)
     s32 owner_extent;
     s32 candidate_extent;
     s32 candidate_flags;
-    s32 requested_actor;
+
     s32 intersection;
     s32 candidate_mode;
     s32 centroid_layer;
@@ -330,6 +330,7 @@ s32 func_80097150(Point *quad, ContactRecord *record, Contact *contact)
     State *reaction_state_40;
     State *reaction_state_3f;
     State *state_base;
+    State *target_base;
     Request *request_base;
     ActorSlot *slot_base;
     Point *input_vertex;
@@ -366,6 +367,9 @@ initialize:
     scan_record = D_800FDF58;
     scan_mode = (u8 *)D_800FDF58 + 0x21;
     scan_extent = scan_state + 0x12E;
+    target_base = D_80105AE0;
+    request_base = D_80105880;
+    slot_base = g_field_actor_slots;
 scan_actor:
     if ((READ_U8(scan_mode, 0x4) != 0xFF) && !(READ_U32(scan_extent, -0x122) & 0x2280) &&
         ((actor_index < 3) || ((READ_U32(scan_extent, -0x11e) & 0xF) == D_800FE754)) &&
@@ -377,8 +381,7 @@ scan_actor:
             eligible = 0;
             if (owner_record->animation == 0x91)
             {
-                state_base = D_80105AE0;
-                target_state = &state_base[owner_record->actor_index];
+                target_state = &target_base[owner_record->actor_index];
                 target_count = target_state->status.bytes.count;
                 list_index_or_layer = 0;
                 if (target_count != 0)
@@ -386,7 +389,7 @@ scan_actor:
                     target_list_base = (u8 *)target_state;
                     do
                     {
-                        if (READ_U8(target_list_base, 0x180 + list_index_or_layer) == actor_index)
+                        if (READ_U8(target_list_base + list_index_or_layer, 0x180) == actor_index)
                         {
                             goto eligible_candidate;
                         }
@@ -403,7 +406,6 @@ scan_actor:
         if ((eligible != 0) && !(READ_U32(scan_extent, 0x46) & 0x8000))
         {
             candidate_flags = READ_U32(scan_extent, 0x4a);
-            slot_base = g_field_actor_slots;
             if (!(candidate_flags & 0x20) &&
                 (!(candidate_flags & 1) ||
                  (slot_base[READ_U8(scan_extent, 0x4c)].owner_index == record->actor_index)) &&
@@ -419,20 +421,18 @@ scan_actor:
                     {
                         request_offset = 0x38;
                     }
-                    request_base = D_80105880;
-                    requested_actor = ((Request *)((u8 *)request_base + request_offset))->actor_index;
-                    if (requested_actor == READ_U8(scan_mode, 0x19))
+                    
+                    if (((Request *)((u8 *)request_base + request_offset))->actor_index == READ_U8(scan_mode, 0x19))
                     {
-                        if ((u32)(requested_actor & 0xFF) < 2U)
+                        if ((u32)(((Request *)((u8 *)request_base + request_offset))->actor_index & 0xFF) < 2U)
                         {
-                            matched_request_offset = requested_actor * 0x1C;
+                            matched_request_offset = ((Request *)((u8 *)request_base + request_offset))->actor_index * 0x1C;
                         }
                         else
                         {
                             matched_request_offset = 0x38;
                         }
-                        request_base = D_80105880;
-                        if (((Request *)((u8 *)request_base + matched_request_offset))->unk0 == 0)
+                            if (((Request *)((u8 *)request_base + matched_request_offset))->unk0 == 0)
                         {
                             goto check_animation;
                         }
@@ -451,8 +451,7 @@ scan_actor:
                         {
                             if ((u8)READ_U8(scan_mode, 0x19) < 3U)
                             {
-                                actor_index += 1;
-                                goto advance_actor;
+                                goto next_actor;
                             }
                             goto check_height;
                         }
@@ -479,16 +478,16 @@ scan_actor:
                     {
                         owner_extent = -owner_extent;
                     }
-                    owner_extent += candidate_extent;
-                    vertical_distance = vertical_distance < owner_extent;
+                    candidate_extent += owner_extent;
+                    vertical_distance = vertical_distance < candidate_extent;
                     if (vertical_distance)
                     {
                         list_index_or_layer = 4;
                         input_quad = quad;
 
                     scan_layer:
-                        candidate_edge = 0;
                         candidate_quad = (Point *)(scan_state + (list_index_or_layer * 4 + 0x148));
+                        candidate_edge = 0;
                         do
                         {
                             input_edge = 0;
@@ -548,6 +547,8 @@ scan_actor:
                                 center_y += 3;
                             }
                             scratch.center.coord.y = (s16)(center_y >> 2);
+                            do
+                            {
                             if (NormalClip(scratch.center.packed, candidate_quad[0].packed,
                                            candidate_quad[1].packed) < 0)
                             {
@@ -565,6 +566,7 @@ scan_actor:
                                 }
                                 goto next_layer;
                             }
+                            } while (0);
                             if ((NormalClip(scratch.center.packed, candidate_quad[1].packed,
                                             candidate_quad[2].packed) > 0) &&
                                 (NormalClip(scratch.center.packed, candidate_quad[2].packed,
