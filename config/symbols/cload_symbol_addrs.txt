@@ -217,6 +217,7 @@ g_cload_single_byte_char_table           = 0x80146544;
 g_cload_save_blob                        = 0x80146920;
 g_cload_card_path_prefix                 = 0x80140038;
 g_cload_card_search_path                 = 0x801400BC;
+jtbl_80140040                             = 0x80140040;
 g_cload_retry_count                      = 0x80162378;
 g_cload_primary_poll_countdown           = 0x80162D70;
 g_cload_secondary_poll_countdown         = 0x80162DD4;
