@@ -69,12 +69,12 @@ extern s32 func_80097FA0(FieldMotionActor *, Vec3i *, s32);
  * @brief Advance actor motion state or apply its remaining scaled displacement.
  * @param actor Actor supplying movement, state, visual slot, and resource index.
  * @param update Nonzero permits the initial timed/state-specific update.
+ * @return Unspecified; callers use this routine only for its side effects.
  * @note Displacement is written to the three-component scratchpad vector.
  */
-void func_800925EC(FieldMotionActor *actor, s32 update)
+s32 func_800925EC(FieldMotionActor *actor, s32 update)
 {
     Vec3i *scratch = (Vec3i *)0x1F800000;
-    /* Preserve the target's eight-byte unused local allocation. */
     Vec2s unused_position[2];
     s32 state;
     s32 step;
