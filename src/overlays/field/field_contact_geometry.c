@@ -239,6 +239,7 @@ void func_800970B0(void)
  * @return Zero for no contact, one or two for a collision layer, or three for a handled reaction.
  * @note A failed edge test also writes the 0x80008000 sentinel to contact->point.
  * @note The target's strict NormalClip signs and signed distance rounding are preserved.
+ * @see decomp.me (100%)
  */
 s32 func_80097150(Point *quad, ContactRecord *record, Contact *contact)
 {
@@ -289,11 +290,11 @@ s32 func_80097150(Point *quad, ContactRecord *record, Contact *contact)
     extern s32 D_800FE754, D_8010D020;
     void func_8008E690(ContactRecord *);
 
-    Point *input_quad;
-    ContactRecord *scan_record;
-    ContactRecord *owner_record;
-    u8 *scan_state;
-    State *owner_state;
+    Point* input_quad;
+    ContactRecord* scan_record;
+    ContactRecord* owner_record;
+    u8* scan_state;
+    State* owner_state;
     /** @brief Centroid and unused bytes in the original 0x28-byte local workspace. */
     union
     {
@@ -301,10 +302,9 @@ s32 func_80097150(Point *quad, ContactRecord *record, Contact *contact)
         u8 storage[0x28];
     } scratch;
     s16 candidate_animation;
-    s32 owner_extent;
     s32 candidate_extent;
-    s32 candidate_flags;
-    s32 requested_actor;
+    s32 flags_or_extent;
+
     s32 intersection;
     s32 candidate_mode;
     s32 centroid_layer;
@@ -315,27 +315,30 @@ s32 func_80097150(Point *quad, ContactRecord *record, Contact *contact)
     s32 next_edge_offset;
     s32 list_index_or_layer;
     s32 edge_layer;
-    s32 unused_flags;
+    s32 target_address;
     s32 request_offset;
     s32 matched_request_offset;
-    s32 unused_layer_offset;
-    s32 center_x_or_point;
+    s32 center_x;
+    s32 packed_center;
     s32 center_y;
     s32 vertical_distance;
     u8 owner_index;
     u8 target_count;
-    Point *candidate_quad;
-    ContactRecord *initial_owner;
-    State *target_state;
-    State *reaction_state_40;
-    State *reaction_state_3f;
-    State *state_base;
-    Request *request_base;
-    ActorSlot *slot_base;
-    Point *input_vertex;
-    u8 *scan_mode;
-    u8 *scan_extent;
-    u8 *target_list_base;
+    Point* candidate_quad;
+    ContactRecord* initial_owner;
+    State* target_state;
+    State* reaction_state_40;
+    State* reaction_state_3f;
+    State* reaction_base_3f;
+    State* reaction_base_40;
+    State* target_base;
+    Request* request_base;
+    Request* request;
+    ActorSlot* slot_base;
+    Point* input_vertex;
+    u8* scan_mode;
+    u8* scan_extent;
+    u8* target_list_base;
 
     owner_index = record->actor_index;
     initial_owner = &D_800FDF58[owner_index];
@@ -348,45 +351,48 @@ s32 func_80097150(Point *quad, ContactRecord *record, Contact *contact)
 special_3f:
     scan_record->animation = 0x285;
     func_8008E690(scan_record);
-    state_base = D_80105AE0;
-    reaction_state_3f = &state_base[scan_record->actor_index];
+    reaction_base_3f = D_80105AE0;
+    reaction_state_3f = &reaction_base_3f[scan_record->actor_index];
     reaction_state_3f->status.flags = (s32)((reaction_state_3f->status.flags & ~0x1C) | 8);
     return 3;
 special_40:
     scan_record->animation = 0x385;
     func_8008E690(scan_record);
-    state_base = D_80105AE0;
-    reaction_state_40 = &state_base[scan_record->actor_index];
+    reaction_base_40 = D_80105AE0;
+    reaction_state_40 = &reaction_base_40[scan_record->actor_index];
     reaction_state_40->status.flags = (s32)((reaction_state_40->status.flags & ~0x1C) | 0x10);
     return 3;
 initialize:
-    scan_state = (u8 *)D_80105AE0;
-    owner_state = (State *)(scan_state + owner_index * 0x23C);
+    scan_state = (u8*)D_80105AE0;
+    owner_state = (State*)(scan_state + owner_index * 0x23C);
     actor_index = 0;
     scan_record = D_800FDF58;
-    scan_mode = (u8 *)D_800FDF58 + 0x21;
+    scan_mode = (u8*)D_800FDF58 + 0x21;
     scan_extent = scan_state + 0x12E;
+    target_base = D_80105AE0;
+    request_base = D_80105880;
+    slot_base = g_field_actor_slots;
 scan_actor:
     if ((READ_U8(scan_mode, 0x4) != 0xFF) && !(READ_U32(scan_extent, -0x122) & 0x2280) &&
-        ((actor_index < 3) || ((READ_U32(scan_extent, -0x11e) & 0xF) == D_800FE754)) &&
-        (READ_U32(scan_extent, -0x12a) != 0) && ((u32)((READ_U8(scan_mode, 0x0) & 0x7F) - 0x38) >= 2U) &&
-        (READ_U8(scan_mode, 0x19) != record->actor_index))
+        ((actor_index < 3) || ((READ_U32(scan_extent, -0x11e) & 0xF) == D_800FE754)) && (READ_U32(scan_extent, -0x12a) != 0) &&
+        ((u32)((READ_U8(scan_mode, 0x0) & 0x7F) - 0x38) >= 2U) && (READ_U8(scan_mode, 0x19) != record->actor_index))
     {
         if (READ_U32(scan_extent, 0x4a) & 0x80)
         {
             eligible = 0;
             if (owner_record->animation == 0x91)
             {
-                state_base = D_80105AE0;
-                target_state = &state_base[owner_record->actor_index];
+                target_address = owner_record->actor_index * 0x23C;
+                target_address += (s32)target_base;
+                target_state = (State*)target_address;
                 target_count = target_state->status.bytes.count;
                 list_index_or_layer = 0;
                 if (target_count != 0)
                 {
-                    target_list_base = (u8 *)target_state;
+                    target_list_base = (u8*)target_state;
                     do
                     {
-                        if (READ_U8(target_list_base, 0x180 + list_index_or_layer) == actor_index)
+                        if (READ_U8(target_list_base + list_index_or_layer, 0x180) == actor_index)
                         {
                             goto eligible_candidate;
                         }
@@ -402,14 +408,11 @@ scan_actor:
         }
         if ((eligible != 0) && !(READ_U32(scan_extent, 0x46) & 0x8000))
         {
-            candidate_flags = READ_U32(scan_extent, 0x4a);
-            slot_base = g_field_actor_slots;
-            if (!(candidate_flags & 0x20) &&
-                (!(candidate_flags & 1) ||
-                 (slot_base[READ_U8(scan_extent, 0x4c)].owner_index == record->actor_index)) &&
-                !(candidate_flags & 2))
+            flags_or_extent = READ_U32(scan_extent, 0x4a);
+            if (!(flags_or_extent & 0x20) && (!(flags_or_extent & 1) || (slot_base[READ_U8(scan_extent, 0x4c)].owner_index == record->actor_index)) &&
+                !(flags_or_extent & 2))
             {
-                if (!(candidate_flags & 0x40))
+                if (!(flags_or_extent & 0x40))
                 {
                     if ((u8)READ_U8(scan_mode, 0x19) < 2U)
                     {
@@ -419,20 +422,19 @@ scan_actor:
                     {
                         request_offset = 0x38;
                     }
-                    request_base = D_80105880;
-                    requested_actor = ((Request *)((u8 *)request_base + request_offset))->actor_index;
-                    if (requested_actor == READ_U8(scan_mode, 0x19))
+
+                    request = (Request*)((u8*)request_base + request_offset);
+                    if (request->actor_index == READ_U8(scan_mode, 0x19))
                     {
-                        if ((u32)(requested_actor & 0xFF) < 2U)
+                        if ((u32)(request->actor_index & 0xFF) < 2U)
                         {
-                            matched_request_offset = requested_actor * 0x1C;
+                            matched_request_offset = request->actor_index * 0x1C;
                         }
                         else
                         {
                             matched_request_offset = 0x38;
                         }
-                        request_base = D_80105880;
-                        if (((Request *)((u8 *)request_base + matched_request_offset))->unk0 == 0)
+                        if (((Request*)((u8*)request_base + matched_request_offset))->unk0 == 0)
                         {
                             goto check_animation;
                         }
@@ -442,8 +444,7 @@ scan_actor:
                 }
             check_animation:
                 candidate_animation = READ_S16(scan_mode, 0x9);
-                if ((candidate_animation != 0x91) && (candidate_animation != 0x87) &&
-                    (candidate_animation != 0xAE))
+                if ((candidate_animation != 0x91) && (candidate_animation != 0x87) && (candidate_animation != 0xAE))
                 {
                     if (D_8010D020 == 0)
                     {
@@ -451,8 +452,7 @@ scan_actor:
                         {
                             if ((u8)READ_U8(scan_mode, 0x19) < 3U)
                             {
-                                actor_index += 1;
-                                goto advance_actor;
+                                goto next_actor;
                             }
                             goto check_height;
                         }
@@ -470,25 +470,25 @@ scan_actor:
                         vertical_distance = -vertical_distance;
                     }
                     candidate_extent = READ_S16(scan_extent, 0x0);
-                    owner_extent = owner_state->extent;
+                    flags_or_extent = owner_state->extent;
                     if (candidate_extent < 0)
                     {
                         candidate_extent = -candidate_extent;
                     }
-                    if (owner_extent < 0)
+                    if (flags_or_extent < 0)
                     {
-                        owner_extent = -owner_extent;
+                        flags_or_extent = -flags_or_extent;
                     }
-                    owner_extent += candidate_extent;
-                    vertical_distance = vertical_distance < owner_extent;
+                    flags_or_extent += candidate_extent;
+                    vertical_distance = vertical_distance < flags_or_extent;
                     if (vertical_distance)
                     {
                         list_index_or_layer = 4;
                         input_quad = quad;
 
                     scan_layer:
+                        candidate_quad = (Point*)(scan_state + (list_index_or_layer * 4 + 0x148));
                         candidate_edge = 0;
-                        candidate_quad = (Point *)(scan_state + (list_index_or_layer * 4 + 0x148));
                         do
                         {
                             input_edge = 0;
@@ -498,10 +498,8 @@ scan_actor:
                             {
                                 if ((candidate_quad[0].packed != 0) || (candidate_quad[1].packed != 0))
                                 {
-                                    intersection =
-                                        func_800978AC(input_vertex, input_quad + ((input_edge + 1) & 3),
-                                                      candidate_quad + candidate_edge,
-                                                      (Point *)((u8 *)candidate_quad + next_edge_offset));
+                                    intersection = func_800978AC(input_vertex, input_quad + ((input_edge + 1) & 3), candidate_quad + candidate_edge,
+                                                                 (Point*)((u8*)candidate_quad + next_edge_offset));
                                     contact->point = intersection;
                                     if (intersection != 0x80008000)
                                     {
@@ -535,50 +533,42 @@ scan_actor:
                         } while (candidate_edge < 4);
                         if ((candidate_quad[0].packed != 0) || (candidate_quad[1].packed != 0))
                         {
-                            center_x_or_point =
-                                quad[0].coord.x + quad[1].coord.x + quad[2].coord.x + quad[3].coord.x;
-                            if (center_x_or_point < 0)
+                            center_x = quad[0].coord.x + quad[1].coord.x + quad[2].coord.x + quad[3].coord.x;
+                            if (center_x < 0)
                             {
-                                center_x_or_point += 3;
+                                center_x += 3;
                             }
-                            scratch.center.coord.x = (u16)(center_x_or_point >> 2);
+                            scratch.center.coord.x = (u16)(center_x >> 2);
                             center_y = quad[0].coord.y + quad[1].coord.y + quad[2].coord.y + quad[3].coord.y;
                             if (center_y < 0)
                             {
                                 center_y += 3;
                             }
                             scratch.center.coord.y = (s16)(center_y >> 2);
-                            if (NormalClip(scratch.center.packed, candidate_quad[0].packed,
-                                           candidate_quad[1].packed) < 0)
+                            do
                             {
-                                if ((NormalClip(scratch.center.packed, candidate_quad[1].packed,
-                                                candidate_quad[2].packed) < 0) &&
-                                    (NormalClip(scratch.center.packed, candidate_quad[2].packed,
-                                                candidate_quad[3].packed) < 0))
+                                if (NormalClip(scratch.center.packed, candidate_quad[0].packed, candidate_quad[1].packed) >= 0)
                                 {
-                                    if (NormalClip(scratch.center.packed, candidate_quad[3].packed,
-                                                   candidate_quad[0].packed) >= 0)
-                                    {
-                                        goto next_layer;
-                                    }
-                                    goto centroid_contact;
+                                    break;
                                 }
-                                goto next_layer;
-                            }
-                            if ((NormalClip(scratch.center.packed, candidate_quad[1].packed,
-                                            candidate_quad[2].packed) > 0) &&
-                                (NormalClip(scratch.center.packed, candidate_quad[2].packed,
-                                            candidate_quad[3].packed) > 0))
+                                if (NormalClip(scratch.center.packed, candidate_quad[1].packed, candidate_quad[2].packed) >= 0 ||
+                                    NormalClip(scratch.center.packed, candidate_quad[2].packed, candidate_quad[3].packed) >= 0 ||
+                                    NormalClip(scratch.center.packed, candidate_quad[3].packed, candidate_quad[0].packed) >= 0)
+                                {
+                                    goto next_layer;
+                                }
+                                goto centroid_contact;
+                            } while (0);
+                            if ((NormalClip(scratch.center.packed, candidate_quad[1].packed, candidate_quad[2].packed) > 0) &&
+                                (NormalClip(scratch.center.packed, candidate_quad[2].packed, candidate_quad[3].packed) > 0))
                             {
-                                if (NormalClip(scratch.center.packed, candidate_quad[3].packed,
-                                               candidate_quad[0].packed) > 0)
+                                if (NormalClip(scratch.center.packed, candidate_quad[3].packed, candidate_quad[0].packed) > 0)
                                 {
                                 centroid_contact:
                                     centroid_layer = list_index_or_layer;
-                                    center_x_or_point =
-                                        (s32)((u16)scratch.center.coord.x | (scratch.center.coord.y << 16));
+                                    packed_center = (s32)((u16)scratch.center.coord.x | (scratch.center.coord.y << 16));
                                     contact->actor = actor_index;
-                                    contact->point = center_x_or_point;
+                                    contact->point = packed_center;
                                     if (list_index_or_layer < 0)
                                     {
                                         centroid_layer = list_index_or_layer + 3;
@@ -606,7 +596,6 @@ scan_actor:
     }
 next_actor:
     actor_index += 1;
-advance_actor:
     scan_mode += 0x54;
     scan_extent += 0x23C;
     scan_record++;
@@ -934,8 +923,9 @@ pack_result:
  * @return One when the proposed or resolved position is accepted, zero otherwise.
  * @note Uses mover and probe records at scratchpad addresses 0x1F800010 and
  *       0x1F800080. The query result is consumed as a full return-register value.
+ * @see decomp.me (100%)
  */
-s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
+s32 func_80097FA0(FieldMoveActor* actor, s32* position, s32 mode)
 {
     /** @brief Visual kind and flags in a 0x48-byte object record. */
     typedef struct
@@ -998,85 +988,84 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
         u16 unk2;
     } FieldMoveBounds;
 
-    s32 func_8005B368(FieldMoveQuery *);
-    s32 func_8005B6AC(FieldMoveRequest *);
-    s32 func_80092988(FieldMoveActor *, FieldMoveVector *);
+    s32 func_8005B368(FieldMoveQuery*);
+    s32 func_8005B6AC(FieldMoveRequest*);
+    s32 func_80092988(FieldMoveActor*, FieldMoveVector*);
     extern FieldMoveObject D_800FE3A0[];
     extern FieldMoveState D_80105AE0[];
     extern s32 D_800FE754, D_8010D024;
 
     FieldMoveVector delta;
-    FieldMoveState *height_state;
+    FieldMoveState* height_state;
+    FieldMoveState* states;
     s32 hit;
-    FieldMoveBounds *bounds = (FieldMoveBounds *)0x801ED400;
-    FieldMoveRequest *mover = (FieldMoveRequest *)0x1F800010;
-    FieldMoveQuery *query = (FieldMoveQuery *)0x1F800080;
-    s16 var_v0;
-    s32 temp_a0;
-    s32 temp_a0_2;
-    s32 temp_v1_2;
-    s32 temp_v1_3;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_v0_2;
-    s32 var_v0_3;
+    FieldMoveBounds* bounds = (FieldMoveBounds*)0x801ED400;
+    FieldMoveRequest* mover = (FieldMoveRequest*)0x1F800010;
+    FieldMoveQuery* query = (FieldMoveQuery*)0x1F800080;
+    s32 actor_z;
+    s32 requested_x;
+    s32 actor_x;
+    s32 requested_z;
+    s32 height;
+    s32 can_move;
     u16 temp_v1;
     u16 temp_v1_4;
     u16 temp_v1_5;
-    FieldMoveState *temp_v0;
-    FieldMoveState *temp_v0_2;
-    FieldMoveState *temp_v0_3;
-    FieldMoveState *temp_v1_6;
-    FieldMoveState *temp_v1_7;
-    FieldMoveState *temp_v1_8;
+    FieldMoveState* temp_v0;
+    FieldMoveState* temp_v0_2;
+    FieldMoveState* temp_v0_3;
+    FieldMoveState* temp_v1_6;
+    FieldMoveState* temp_v1_7;
+    FieldMoveState* temp_v1_8;
 
     if (((u32)D_800FE3A0[actor->index].flags >> 0x17) & 1)
     {
-        actor->x += position->x;
-        actor->y = (s32)(actor->y + position->y);
-        actor->z = (s32)(actor->z + position->z);
+        actor->x += position[0];
+        actor->y = (s32)(actor->y + position[1]);
+        position += 2;
+        actor->z += position[0];
         return 1;
     }
     if (D_800FE754 != 0)
     {
         temp_v1 = actor->kind;
-        if (((u32)(temp_v1 - 0xB0) >= 2U) && ((s16)temp_v1 != 0xB5) && (func_80092988(actor, position) != 0))
+        if (((u32)(temp_v1 - 0xB0) >= 2U) && ((s16)temp_v1 != 0xB5) && (func_80092988(actor, (FieldMoveVector*)position) != 0))
         {
-            position->x = 0;
+            position[0] = 0;
         }
     }
-    temp_v1_2 = actor->x;
-    if ((temp_v1_2 >= 0) && (temp_v1_2 < (bounds->x << 8)))
+    actor_x = actor->x;
+    if ((actor_x >= 0) && (actor_x < (bounds->x << 8)))
     {
-        temp_a0 = actor->z;
-        if (temp_a0 >= 0)
+        actor_z = actor->z;
+        if (actor_z >= 0)
         {
-            if (temp_a0 < ((s32)(bounds->unk2 << 0x10) >> 7))
+            if (actor_z < ((s32)(bounds->unk2 << 0x10) >> 7))
             {
-                mover->x = temp_v1_2;
+                mover->x = actor_x;
                 mover->y = (s32)actor->y;
                 mover->z = (s32)actor->z;
-                temp_a0_2 = position->x;
-                mover->unkc = temp_a0_2;
-                mover->unk10 = (s32)position->y;
-                temp_v1_3 = position->z;
+                mover->unkc = position[0];
+                requested_x = mover->unkc;
+                mover->unk10 = (s32)position[1];
+                mover->unk14 = position[2];
+                requested_z = mover->unk14;
                 mover->height_tolerance = 0x10;
                 query->unke = 0x10;
-                mover->unk14 = temp_v1_3;
                 if (D_800FE3A0[actor->index].visual_kind == 0x40)
                 {
                     mover->width = 0xC;
                     query->unkc = 0xC;
-                    var_v0 = 8;
+                    mover->packed.h.step = 8;
+                    query->unk10 = 8;
                 }
                 else
                 {
                     mover->width = 9;
                     query->unkc = 9;
-                    var_v0 = 6;
+                    mover->packed.h.step = 6;
+                    query->unk10 = 6;
                 }
-                mover->packed.h.step = var_v0;
-                query->unk10 = var_v0;
                 mover->height_tolerance = 0x10;
                 mover->packed.bits.bit17 = 0;
                 mover->packed.bits.bit16 = 0;
@@ -1088,42 +1077,45 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
                 temp_v1_4 = actor->kind;
                 if (((u32)(temp_v1_4 - 0xB0) < 2U) || ((s16)temp_v1_4 == 0xB5))
                 {
-                    delta.x = temp_a0_2 - actor->x;
+                    delta.x = requested_x - actor->x;
                     delta.y = 0;
-                    var_v0_2 = temp_v1_3 - actor->z;
+                    delta.z = requested_z - actor->z;
                 }
                 else
                 {
                     delta.x = mover->x - actor->x;
                     delta.y = 0;
-                    var_v0_2 = mover->z - actor->z;
+                    delta.z = mover->z - actor->z;
                 }
-                delta.z = var_v0_2;
-                query->x = (s32)mover->x;
-                query->z = (s32)mover->z;
-                query->y = (s32)(position->y + actor->y);
-                if (((D_800FE754 == 0) || (actor->flags & 0x1FF) || (func_8005B368(query) == -1)) &&
-                    ((temp_v1_5 = actor->kind, (((u32)(temp_v1_5 - 0xB0) < 2U) != 0)) || ((s16)temp_v1_5 == 0xB5) ||
-                     (D_800FE754 == 0) || (func_80092988(actor, &delta) == 0)))
+                query->x = mover->x;
                 {
-                    position->x = mover->x;
+                    s32 z = mover->z;
+                    s32 y = position[1] + actor->y;
+                    query->z = z;
+                    query->y = y;
+                }
+                if (((D_800FE754 == 0) || (actor->flags & 0x1FF) || (func_8005B368(query) == -1)) &&
+                    ((temp_v1_5 = actor->kind, (((u32)(temp_v1_5 - 0xB0) < 2U) != 0)) || ((s16)temp_v1_5 == 0xB5) || (D_800FE754 == 0) ||
+                     (func_80092988(actor, &delta) == 0)))
+                {
+                    position[0] = mover->x;
                     if (((actor->state & 0x7F) == 0x3D) && ((u8)actor->index < 2U))
                     {
-                        var_v0_3 = position->y + actor->y;
+                        position[1] = position[1] + actor->y;
                     }
                     else
                     {
-                        var_v0_3 = mover->y;
+                        position[1] = mover->y;
                     }
-                    position->y = var_v0_3;
-                    position->z = (s32)mover->z;
-                    height_state = &D_80105AE0[actor->index];
-                    var_a1 = mover->unk18;
-                    if (var_a1 < 0)
+                    states = D_80105AE0;
+                    position[2] = (s32)mover->z;
+                    height_state = &states[actor->index];
+                    height = mover->unk18;
+                    if (height < 0)
                     {
-                        var_a1 += 0xFF;
+                        height += 0xFF;
                     }
-                    height_state->packed.h.height = (s16)(var_a1 >> 8);
+                    height_state->packed.h.height = (s16)(height >> 8);
                 }
                 else
                 {
@@ -1147,9 +1139,9 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
         D_80105AE0[actor->index].contact = -1;
         D_80105AE0[actor->index].surface = 0;
     block_34:
-        position->x = actor->x;
-        position->y = (s32)actor->y;
-        position->z = (s32)actor->z;
+        position[0] = actor->x;
+        position[1] = (s32)actor->y;
+        position[2] = (s32)actor->z;
     }
     D_8010D024 = 0;
     if (((u32)D_80105AE0[actor->index].packed.word >> 0xD) & 1)
@@ -1159,53 +1151,53 @@ s32 func_80097FA0(FieldMoveActor *actor, FieldMoveVector *position, s32 mode)
             temp_v0 = &D_80105AE0[actor->index];
             temp_v0->packed.word = (s32)(temp_v0->packed.word & ~0x2000);
         }
-        var_a1_2 = 1;
+        can_move = 1;
     }
     else if (func_80098748(actor, position) == 0)
     {
-        var_a1_2 = 1;
+        can_move = 1;
         temp_v0_2 = &D_80105AE0[actor->index];
         temp_v0_2->packed.word = (s32)(temp_v0_2->packed.word & ~0x2000);
     }
     else
     {
         hit = func_80098748(actor, actor);
-        var_a1_2 = 0;
+        can_move = 0;
         if (hit != 0)
         {
             temp_v1_6 = &D_80105AE0[actor->index];
             temp_v1_6->packed.word = (s32)(temp_v1_6->packed.word | 0x2000);
         }
     }
-    if (var_a1_2 != 0)
+    if (can_move == 0)
     {
-        if (((u32)D_80105AE0[actor->index].packed.word >> 0xE) & 1)
-        {
-            actor->x = position->x;
-            actor->y = (s32)position->y;
-            actor->z = (s32)position->z;
-            if (func_800987DC(actor, actor, mode) == 0)
-            {
-                temp_v0_3 = &D_80105AE0[actor->index];
-                temp_v0_3->packed.word = (s32)(temp_v0_3->packed.word & ~0x4000);
-            }
-            return 1;
-        }
-        if (func_800987DC(actor, position, mode) == 0)
-        {
-            actor->x = position->x;
-            actor->y = (s32)position->y;
-            actor->z = (s32)position->z;
-            temp_v1_7 = &D_80105AE0[actor->index];
-            temp_v1_7->packed.word = (s32)(temp_v1_7->packed.word & ~0x4000);
-            return 1;
-        }
-        if (func_800987DC(actor, actor, mode) != 0)
-        {
-            temp_v1_8 = &D_80105AE0[actor->index];
-            temp_v1_8->packed.word = (s32)(temp_v1_8->packed.word | 0x4000);
-        }
         return 0;
+    }
+    if (((u32)D_80105AE0[actor->index].packed.word >> 0xE) & 1)
+    {
+        actor->x = position[0];
+        actor->y = (s32)position[1];
+        actor->z = (s32)position[2];
+        if (func_800987DC(actor, actor, mode) == 0)
+        {
+            temp_v0_3 = &D_80105AE0[actor->index];
+            temp_v0_3->packed.word = (s32)(temp_v0_3->packed.word & ~0x4000);
+        }
+        return 1;
+    }
+    if (func_800987DC(actor, position, mode) == 0)
+    {
+        actor->x = position[0];
+        actor->y = (s32)position[1];
+        actor->z = (s32)position[2];
+        temp_v1_7 = &D_80105AE0[actor->index];
+        temp_v1_7->packed.word = (s32)(temp_v1_7->packed.word & ~0x4000);
+        return 1;
+    }
+    if (func_800987DC(actor, actor, mode) != 0)
+    {
+        temp_v1_8 = &D_80105AE0[actor->index];
+        temp_v1_8->packed.word = (s32)(temp_v1_8->packed.word | 0x4000);
     }
     return 0;
 }
@@ -2241,14 +2233,15 @@ s32 func_8009980C(s32 *arg0, s32 arg1, u8 *arg2, s32 arg3)
  * @param part Actor part used to obtain the attack radius and sphere centers.
  * @note Eligibility checks retain repeated reads of actor flags and target counts.
  * @note Distances use the GTE square operation followed by SquareRoot0.
+ * @see decomp.me (100%)
  */
-void func_80099A48(void *actor, void *part)
+void func_80099A48(void* actor, void* part)
 {
-    s32 func_8007E754(void *, void *);
-    void func_8007ECEC(void *, void *, void *, s32);
+    s32 func_8007E754(void*, void*);
+    void func_8007ECEC(void*, void*, void*, s32);
     s32 func_8008A840(s32, s32);
     s32 func_8008A9D8(s32, s32, s32);
-    void func_8008BC5C(void *);
+    void func_8008BC5C(void*);
     void func_800A2DD8(s32);
     extern u8 D_800FDF58[], D_80105880[], D_80105AE0[];
     extern s32 D_800FE754, D_8010D020;
@@ -2272,25 +2265,28 @@ void func_80099A48(void *actor, void *part)
         s32 object;
     } FieldTargetController;
 
-    s32 *delta = (s32 *)0x1F800080;
-    s32 *squares = (s32 *)0x1F800090;
+    u8* controllers;
+    u8* positions;
+    u8* actors;
+    s32* delta = (s32*)0x1F800080;
+    s32* squares = (s32*)0x1F800090;
     s32 target_end;
     s32 sphere_count;
     s32 attack_radius;
     s32 sphere_base;
     s32 checked_position_offset;
-    s32 *checked_position;
-    s32 *position_cursor;
+    s32* checked_position;
+    s32* position_cursor;
     s32 position_offset;
     s16 target_state;
-    s32 *target_position;
+    s32* target_position;
     s32 target_flags;
     s32 controlled_actor;
+    s32 controller_index;
     s32 initial_position_offset;
     s32 eligible;
     s32 sphere_address;
     s32 sphere_index;
-    s32 range_end;
     s32 controller_offset;
     s32 active_controller_offset;
     s32 existing_index;
@@ -2299,86 +2295,85 @@ void func_80099A48(void *actor, void *part)
     u8 source_index;
     u8 existing_count;
     u8 hit_count;
-    void *source_slot;
-    void *append_slot;
-    void *count_slot;
-    void *target_flags_address;
-    void *target_z_address;
+    void* source_slot;
+    void* existing_base;
+    void* existing_cursor;
+    void* append_slot;
+    void* count_slot;
+    void* target_base;
+    void* target_z_address;
 
-    sphere_base = 0x1F800000;
+    sphere_base = 0x1F8000A0;
     attack_radius = func_8007E754(actor, part);
-    func_8007ECEC(actor, part, (void *)0x1F8000A0, 0);
-    sphere_base |= 0xA0;
+    func_8007ECEC(actor, part, (void*)0x1F8000A0, 0);
     if ((S32_AT(actor, 0x224) & 0x1E) == 8)
     {
-        func_8007ECEC(actor, part, (void *)0x1F8000B0, 1);
-        func_8007ECEC(actor, part, (void *)0x1F8000C0, 2);
+        func_8007ECEC(actor, part, (void*)0x1F8000B0, 1);
+        func_8007ECEC(actor, part, (void*)0x1F8000C0, 2);
         sphere_count = 3;
     }
     else
     {
         sphere_count = 1;
     }
-    target_index = 0;
     if (D_8010D020 != 0)
     {
-        range_end = 0xD;
-        goto set_target_end;
-    }
-    if (U16_AT(S32_AT(actor, 0xC), 0x18) & 1)
-    {
         target_index = 0;
-        if ((u8)U8_AT(actor, 0x228) < 3U)
+        target_end = 13;
+    }
+    else if (U16_AT(S32_AT(actor, 0xC), 0x18) & 1)
+    {
+        if (U8_AT(actor, 0x228) < 3)
         {
+            target_index = 0;
             target_end = 3;
         }
         else
         {
             target_index = 3;
-            range_end = 0xD;
-            goto set_target_end;
+            target_end = 13;
         }
+    }
+    else if (U8_AT(actor, 0x228) < 3)
+    {
+        target_index = 3;
+        target_end = 13;
     }
     else
     {
-        target_index = 3;
-        if ((u8)U8_AT(actor, 0x228) < 3U)
-        {
-            target_end = 0xD;
-        }
-        else
-        {
-            target_index = 0;
-            range_end = 3;
-        set_target_end:
-            target_end = range_end;
-        }
+        target_index = 0;
+        target_end = 3;
     }
     initial_position_offset = target_index * 0x54;
-    target_position = (s32 *)(initial_position_offset + (s32)D_800FDF58);
-    target_flags_address = (void *)((target_index * 0x23C) + (s32)D_80105AE0);
+    target_position = (s32*)(initial_position_offset + (s32)D_800FDF58);
+    target_base = (void*)((target_index * 0x23C) + (s32)D_80105AE0);
     if (target_index < target_end)
     {
-        target_flags_address += 0xC;
-        target_z_address = (u8 *)target_position + 8;
+        void* target_flags_address = target_base + 0xC;
+        target_z_address = (u8*)target_position + 8;
         position_cursor = target_position;
         position_offset = initial_position_offset;
+        controllers = D_80105880;
+        positions = D_800FDF58;
+        actors = D_80105AE0;
     next_target:
         if (S32_AT(target_flags_address, 0x16C) & 0x80)
         {
             source_index = U8_AT(actor, 0x228);
             eligible = 0;
-            if (((FieldTargetState *)(D_800FDF58 + source_index * 0x54))->state == 0x91)
+            if (((FieldTargetState*)(positions + source_index * 0x54))->state == 0x91)
             {
-                source_slot = (void *)((source_index * 0x23C) + (s32)D_80105AE0);
+                source_slot = (void*)((source_index * 0x23C) + (s32)actors);
                 existing_count = U8_AT(source_slot, 0x17B);
                 existing_index = 0;
                 if (existing_count != 0)
                 {
+                    existing_base = source_slot;
                 scan_existing_targets:
-                    if (U8_AT(source_slot + existing_index, 0x180) != target_index)
+                    existing_cursor = existing_base + existing_index;
+                    existing_index += 1;
+                    if (U8_AT(existing_cursor, 0x180) != target_index)
                     {
-                        existing_index += 1;
                         if (existing_index >= (s32)existing_count)
                         {
                         }
@@ -2403,16 +2398,12 @@ void func_80099A48(void *actor, void *part)
         {
             target_state = S16_AT(target_z_address, 0x22);
             if ((target_state != 0x91) && (target_state != 0xAE) && (target_state != 0x87) &&
-                ((target_index >= 2) || ((U8_AT(target_z_address, 0x19) & 0x7F) != 0x3C)) &&
-                (U8_AT(target_z_address, 0x1D) != 0xFF) && (U8_AT(actor, 0x228) != target_index) &&
-                (S32_AT(target_flags_address, -0x8) != 0))
+                ((target_index >= 2) || ((U8_AT(target_z_address, 0x19) & 0x7F) != 0x3C)) && (U8_AT(target_z_address, 0x1D) != 0xFF) &&
+                (U8_AT(actor, 0x228) != target_index) && (S32_AT(target_flags_address, -0x8) != 0))
             {
                 target_flags = S32_AT(target_flags_address, 0x16C);
-                if (!(target_flags & 1) &&
-                    ((((target_index < 3) != 0)) ||
-                     (((S32_AT(target_flags_address, 0x4) & 0xF) == D_800FE754))) &&
-                    ((target_flags & 0x20) == 0) && (eligible != 0) &&
-                    !(S32_AT(target_flags_address, 0x168) & 0x8000))
+                if (!(target_flags & 1) && ((((target_index < 3) != 0)) || (((S32_AT(target_flags_address, 0x4) & 0xF) == D_800FE754))) &&
+                    ((target_flags & 0x20) == 0) && (eligible != 0) && !(S32_AT(target_flags_address, 0x168) & 0x8000))
                 {
                     if (!(target_flags & 0x40))
                     {
@@ -2424,9 +2415,12 @@ void func_80099A48(void *actor, void *part)
                         {
                             controller_offset = 0x38;
                         }
-                        controlled_actor =
-                            ((FieldTargetController *)(D_80105880 + controller_offset))->object;
-                        if (controlled_actor == U8_AT(target_z_address, 0x32))
+                        {
+                            FieldTargetController* controller = (FieldTargetController*)(controllers + controller_offset);
+                            controller_index = U8_AT(target_z_address, 0x32);
+                            controlled_actor = controller->object;
+                        }
+                        if (controlled_actor == controller_index)
                         {
                             if ((u32)(controlled_actor & 0xFF) < 2U)
                             {
@@ -2436,7 +2430,7 @@ void func_80099A48(void *actor, void *part)
                             {
                                 active_controller_offset = 0x38;
                             }
-                            if (S32_AT(D_80105880, active_controller_offset) == 0)
+                            if (S32_AT(controllers, active_controller_offset) == 0)
                             {
                                 goto check_target_list;
                             }
@@ -2475,127 +2469,64 @@ void func_80099A48(void *actor, void *part)
                                     checked_position = position_cursor;
                                     do
                                     {
-                                        delta[0] = (s32)((s32)(*target_position -
-                                                               S32_AT(sphere_address, 0x0)) >>
-                                                         8);
-                                        delta[1] = (s32)((s32)(S32_AT(target_z_address, -0x4) -
-                                                               S32_AT(sphere_address, 0x4)) >>
-                                                         8);
-                                        delta[2] = (s32)((s32)(S32_AT(target_z_address, 0x0) -
-                                                               S32_AT(sphere_address, 0x8)) >>
-                                                         8);
+                                        delta[0] = (s32)((s32)(*target_position - S32_AT(sphere_address, 0x0)) >> 8);
+                                        delta[1] = (s32)((s32)(S32_AT(target_z_address, -0x4) - S32_AT(sphere_address, 0x4)) >> 8);
+                                        delta[2] = (s32)((s32)(S32_AT(target_z_address, 0x0) - S32_AT(sphere_address, 0x8)) >> 8);
                                         gte_ldlvl(delta);
                                         gte_sqr0();
                                         gte_stlvnl(squares);
                                         if ((SquareRoot0(squares[0] + squares[1] + squares[2]) <
-                                             (attack_radius +
-                                              ((s16)U16_AT(target_flags_address, 0x122) >> 1))) &&
-                                            ((u8)((FieldActorTargetCount *)(D_80105AE0 +
-                                                                            U8_AT(actor, 0x228) *
-                                                                                0x23C))
-                                                 ->count < 9U))
+                                             (attack_radius + ((s16)U16_AT(target_flags_address, 0x122) >> 1))) &&
+                                            ((u8)((FieldActorTargetCount*)(D_80105AE0 + U8_AT(actor, 0x228) * 0x23C))->count < 9U))
                                         {
-                                            S32_AT(target_flags_address, 0x16C) =
-                                                (s32)(S32_AT(target_flags_address, 0x16C) | 0x80);
-                                            S32_AT(target_flags_address, 0x0) =
-                                                (s32)(S32_AT(target_flags_address, 0x0) & ~0x400);
-                                            append_slot = (void *)((U8_AT(actor, 0x228) * 0x23C) +
-                                                                   (s32)D_80105AE0);
-                                            U8_AT(append_slot, U8_AT(append_slot, 0x17B) + 0x180) =
-                                                target_index;
-                                            count_slot = (void *)((U8_AT(actor, 0x228) * 0x23C) +
-                                                                  (s32)D_80105AE0);
-                                            U8_AT(count_slot, 0x17B) =
-                                                (u8)(U8_AT(count_slot, 0x17B) + 1);
-                                            U8_AT(actor, 0x23A) = (u8)(U8_AT(actor, 0x23A) |
-                                                                       (1 << U8_AT(actor, 0x232)));
-                                            U8_AT(actor, U8_AT(actor, 0x232) + 0x229) =
-                                                target_index;
+                                            S32_AT(target_flags_address, 0x16C) = (s32)(S32_AT(target_flags_address, 0x16C) | 0x80);
+                                            S32_AT(target_flags_address, 0x0) = (s32)(S32_AT(target_flags_address, 0x0) & ~0x400);
+                                            append_slot = (void*)((U8_AT(actor, 0x228) * 0x23C) + (s32)D_80105AE0);
+                                            U8_AT(append_slot, U8_AT(append_slot, 0x17B) + 0x180) = target_index;
+                                            count_slot = (void*)((U8_AT(actor, 0x228) * 0x23C) + (s32)D_80105AE0);
+                                            U8_AT(count_slot, 0x17B) = (u8)(U8_AT(count_slot, 0x17B) + 1);
+                                            U8_AT(actor, 0x23A) = (u8)(U8_AT(actor, 0x23A) | (1 << U8_AT(actor, 0x232)));
+                                            U8_AT(actor, U8_AT(actor, 0x232) + 0x229) = target_index;
                                             U8_AT(actor, 0x232) = (u8)(U8_AT(actor, 0x232) + 1);
-                                            if ((target_index < 2) &&
-                                                !(U16_AT(checked_position, 0x1C) & 0x1FF))
+                                            if ((target_index < 2) && !(U16_AT(checked_position, 0x1C) & 0x1FF))
                                             {
                                                 func_800A2DD8(target_index);
                                             }
-                                            func_8008BC5C((void *)(checked_position_offset +
-                                                                   (s32)D_800FDF58));
+                                            func_8008BC5C((void*)(checked_position_offset + (s32)D_800FDF58));
                                             if (((u8)U8_AT(actor, 0x26) < 0xCU) ||
-                                                (((FieldTargetState *)(D_800FDF58 +
-                                                                       U8_AT(actor, 0x228) * 0x54))
-                                                     ->state == 0xBC))
+                                                (((FieldTargetState*)(D_800FDF58 + U8_AT(actor, 0x228) * 0x54))->state == 0xBC))
                                             {
-                                                do
-                                                {
-                                                    func_8008A9D8(U8_AT(actor, 0x228), target_index,
-                                                                  U8_AT(actor, 0x26));
-                                                } while (0);
-                                                goto sphere_done;
+                                                func_8008A9D8(U8_AT(actor, 0x228), target_index, U8_AT(actor, 0x26));
                                             }
                                             else
                                             {
                                                 switch (U8_AT(actor, 0x26))
                                                 {
                                                 case 0x50:
-                                                    do
-                                                    {
-                                                        func_8008A9D8(U8_AT(actor, 0x228),
-                                                                      target_index, 0x12U);
-                                                    } while (0);
-                                                    sphere_index += 1;
+                                                    func_8008A9D8(U8_AT(actor, 0x228), target_index, 0x12U);
                                                     break;
                                                 case 0x51:
-                                                    do
-                                                    {
-                                                        func_8008A9D8(U8_AT(actor, 0x228),
-                                                                      target_index, 0x13U);
-                                                    } while (0);
-                                                    sphere_index += 1;
+                                                    func_8008A9D8(U8_AT(actor, 0x228), target_index, 0x13U);
                                                     break;
                                                 case 0x4E:
-                                                    do
-                                                    {
-                                                        func_8008A9D8(U8_AT(actor, 0x228),
-                                                                      target_index, 0x14U);
-                                                    } while (0);
-                                                    sphere_index += 1;
+                                                    func_8008A9D8(U8_AT(actor, 0x228), target_index, 0x14U);
                                                     break;
                                                 case 0x4F:
-                                                    do
-                                                    {
-                                                        func_8008A9D8(U8_AT(actor, 0x228),
-                                                                      target_index, 0x15U);
-                                                    } while (0);
-                                                    sphere_index += 1;
+                                                    func_8008A9D8(U8_AT(actor, 0x228), target_index, 0x15U);
                                                     break;
                                                 case 0x3E:
-                                                    do
-                                                    {
-                                                        func_8008A9D8(U8_AT(actor, 0x228),
-                                                                      target_index, 0x19U);
-                                                    } while (0);
-                                                    sphere_index += 1;
+                                                    func_8008A9D8(U8_AT(actor, 0x228), target_index, 0x19U);
                                                     break;
                                                 case 0x45:
-                                                    do
-                                                    {
-                                                        func_8008A9D8(U8_AT(actor, 0x228),
-                                                                      target_index, 0x1AU);
-                                                    } while (0);
-                                                    sphere_index += 1;
+                                                    func_8008A9D8(U8_AT(actor, 0x228), target_index, 0x1AU);
                                                     break;
                                                 default:
-                                                    func_8008A840(U8_AT(actor, 0x228),
-                                                                  target_index);
-                                                    goto advance_sphere;
+                                                    func_8008A840(U8_AT(actor, 0x228), target_index);
+                                                    break;
                                                 }
                                             }
                                         }
-                                        else
-                                        {
-                                        advance_sphere:
-                                        sphere_done:
-                                            sphere_index += 1;
-                                        }
+                                        sphere_index += 1;
                                         sphere_address += 0x10;
                                     } while (sphere_index < sphere_count);
                                 }
@@ -2607,9 +2538,9 @@ void func_80099A48(void *actor, void *part)
         }
         target_index += 1;
         target_z_address += 0x54;
-        target_position = (s32 *)((u8 *)target_position + 0x54);
+        target_position = (s32*)((u8*)target_position + 0x54);
         target_flags_address += 0x23C;
-        position_cursor = (s32 *)((u8 *)position_cursor + 0x54);
+        position_cursor = (s32*)((u8*)position_cursor + 0x54);
         position_offset += 0x54;
         if (target_index < target_end)
         {

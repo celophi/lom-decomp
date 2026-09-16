@@ -22,126 +22,160 @@ u8 *func_800AF0E8(u32 *, u8 *, s32, s32, s32, struct Window *);
 void func_800AF0C4(void);
 
 
+/** @brief Packed item-window flags controlling state, type, priority, and value. */
+typedef union
+{
+    u32 word;
+    struct
+    {
+        u32 low : 3;
+        u32 type : 4;
+        u32 priority : 9;
+        u32 value : 8;
+        u32 high : 8;
+    } bits;
+} ItemWindowFlags;
+
+/** @brief Packed item-window state controlling visibility, height, and display mode. */
+typedef union
+{
+    u32 word;
+    struct
+    {
+        u32 enabled : 1;
+        u32 value : 8;
+        u32 bit9 : 1;
+        u32 mode : 2;
+        u32 high : 20;
+    } bits;
+    s16 half[2];
+} ItemWindowState;
+
+/** @brief Item-selection window slot and its draw callback. */
 typedef struct
 {
-    u32 flags;
-    u32 state;
+    ItemWindowFlags flags;
+    ItemWindowState state;
     s16 scroll;
     s16 scroll_target;
     s16 scroll_ticks;
-    u16 padE;
-    void *draw;
+    u16 padding;
+    u8 *(*draw_callback)(u32 *, u8 *, s32, s32, s32, struct Window *);
 } ItemWindowSlot;
 
 /** @brief Build the available item list and open its selection window. */
 void func_800AEE28(void)
 {
-    u8 *var_a0_2;
-    s32 temp_v1_3;
-    ItemWindowSlot *var_a0_3;
-    ItemWindowSlot *var_a2;
-    s32 *var_v1;
-    s32 temp_a0;
-    s32 temp_v1;
-    s32 var_a0;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_v1_2;
-    u32 temp_v1_2;
+    u8 *item_entry;
+    s32 scroll_offset;
+    ItemWindowSlot *slot_cursor;
+    ItemWindowSlot *slot;
+    s32 *reset_flags;
+    s32 packed_flags;
+    s32 slot_flags;
+    s32 reset_index;
+    s32 item_count;
+    s32 slot_index;
+    s32 item_id;
+    u32 claimed_flags;
 
     g_menu_element_counter = 0;
-    var_v1 = &D_80122828;
-    var_a0 = 0;
+    reset_flags = &D_80122828;
+    reset_index = 0;
     do
     {
-        var_a0 += 1;
-        *var_v1 &= ~7;
-        var_v1 += 5;
-    } while (var_a0 < 8);
-    var_a1 = 0;
-    var_v1_2 = 0x60;
-    var_a0_2 = D_80122738;
+        reset_index += 1;
+        *reset_flags &= ~7;
+        reset_flags += 5;
+    } while (reset_index < 8);
+    item_count = 0;
+    item_id = 0x60;
     do
     {
-        if (g_pad_ctx[var_v1_2 + 0x25E0] != 0)
+        if (*(item_id + g_pad_ctx + 0x25E0) != 0)
         {
-            var_a0_2[0] = var_v1_2;
-            var_a1 += 1;
-            var_a0_2[1] = g_pad_ctx[var_v1_2 + 0x25E0];
-            var_a0_2 += 2;
+            item_entry = &D_80122738[item_count * 2];
+            item_entry[0] = item_id;
+            item_entry[1] = *(item_id + g_pad_ctx + 0x25E0);
+            item_count += 1;
         }
-        var_v1_2 += 1;
-    } while (var_v1_2 < 0x90);
-    D_80122734 = var_a1;
-    if (var_a1 != 0)
+        item_id += 1;
+    } while (item_id < 0x90);
+    D_80122734 = item_count;
+    if (item_count == 0)
     {
-        goto start_window;
+        func_800AF0C4();
+        return;
     }
-    func_800AF0C4();
-    return;
+
+    goto start_window;
 
 initialize_slot:
-    var_a2 = var_a0_3;
-    var_a2->flags = (temp_v1 & ~7) | 1;
-    var_a2->scroll = 0;
-    var_a2->scroll_target = 0;
-    var_a2->scroll_ticks = 0;
-    var_a2->state &= ~0x200;
-    var_a2->state &= ~0xC00;
-    ((s16 *)&var_a2->state)[1] = 0;
+    claimed_flags = (slot_flags & ~7) | 1;
+    do
+    {
+        slot = slot_cursor;
+    } while (0);
+    slot->flags.word = claimed_flags;
+    slot->scroll = 0;
+    slot->scroll_target = 0;
+    slot->scroll_ticks = 0;
+    slot->state.word &= ~0x200;
+    slot->state.word &= ~0xC00;
+    slot->state.half[1] = 0;
     goto setup_slot;
 
 start_window:
     D_80122714 = 1;
     func_800A3938(0xB9, 0x80);
-    var_a0_3 = &D_80122828;
-    var_a1_2 = 0;
+    slot_cursor = (ItemWindowSlot *)&D_80122828;
+    slot_index = 0;
 scan_slot:
-    do { temp_v1 = var_a0_3->flags; } while (0);
-    var_a1_2 += 1;
-    if ((temp_v1 & 7) == 0)
+    do { slot_flags = slot_cursor->flags.word; } while (0);
+    slot_index += 1;
+    if ((slot_flags & 7) == 0)
     {
         goto initialize_slot;
     }
-    if (var_a1_2 < 8)
+    if (slot_index < 8)
     {
-        var_a0_3 += 1;
+        slot_cursor += 1;
         goto scan_slot;
     }
-    var_a2 = &D_80122828;
+    slot = (ItemWindowSlot *)&D_80122828;
 
 setup_slot:
-    var_a2->draw = (void *)func_800AF0E8;
-    var_a2->scroll = 0;
-    var_a2->flags = (((var_a2->flags & ~0x78) | 8) & 0xFFFF007F) | 0x1600;
-    ((u8 *)var_a2)[2] = 0x20;
-    var_a2->state &= ~1;
-    var_a2->state &= ~0x1FE;
-    var_a2->state |= 0x140;
-    var_a2->flags &= 0xFFFFFF;
-    var_a2->flags |= 0xE8000000;
-    var_a2->state &= ~0xC00;
-    var_a2->state |= 0x800;
-    ((s16 *)&var_a2->state)[1] = D_80122734 * 0x10;
+    slot->draw_callback = func_800AF0E8;
+    slot->scroll = 0;
+    slot->flags.bits.type = 1;
+    slot->flags.bits.priority = 0x2C;
+    slot->flags.bits.value = 0x20;
+    slot->state.bits.enabled = 0;
+    slot->state.bits.value = 0xA0;
+    packed_flags = slot->flags.word;
+    packed_flags &= 0xFFFFFF;
+    packed_flags |= 0xE8000000;
+    slot->flags.word = packed_flags;
+    slot->state.bits.mode = 2;
+    slot->state.half[1] = D_80122734 * 0x10;
     if (D_80122A00 >= D_80122734)
     {
         D_80122A00 = D_80122734 - 1;
     }
-    temp_v1_3 = D_80122A00 * 0x10;
-    var_a2->scroll_target = 0;
-    if (temp_v1_3 < 0)
+    scroll_offset = D_80122A00 * 0x10;
+    slot->scroll_target = 0;
+    if (scroll_offset < 0)
     {
-        var_a2->scroll_target = temp_v1_3;
+        slot->scroll_target = scroll_offset;
     }
     else
     {
-        temp_a0 = ((u32)var_a2->state >> 1) & 0xFF;
-        if ((temp_a0 - 0x10) < temp_v1_3)
+        if ((slot->state.bits.value - 0x10) < scroll_offset)
         {
-            var_a2->scroll_target = temp_v1_3 - (temp_a0 - 0x10);
+            slot->scroll_target = scroll_offset - (slot->state.bits.value - 0x10);
         }
     }
-    var_a2->scroll_ticks = 0;
+    slot->scroll_ticks = 0;
     g_pad_input = 0;
     D_801227BC = func_800A9D70(0);
     D_801227C0 = 0xF;
