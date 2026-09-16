@@ -88,6 +88,13 @@ typedef union
     u32 align;
 } CloadCardSearchPathBuffer;
 
+/** @brief Eight-byte, word-aligned memory-card path template. */
+typedef union
+{
+    char text[8];
+    u32 align[2];
+} CloadCardPathTemplate;
+
 /* CLOAD layout/state constants. */
 #define CLOAD_ELEMENT_COUNT 8
 #define CLOAD_CARD_COUNT 2
@@ -322,8 +329,8 @@ extern char g_lom_alt_save_dummy_filename[];
 extern u8 g_cload_steps_idle[];
 extern u8 g_cload_steps_read_selected_header[];
 extern char g_cload_selected_card_path[0x40];
-extern CloadCardPathBuffer g_cload_card_path_prefix;
-extern CloadCardSearchPathBuffer g_cload_card_search_path;
+extern const CloadCardPathTemplate g_cload_card_path_prefix;
+extern const CloadCardPathTemplate g_cload_card_search_path;
 extern s32 g_cload_entry_fields[CLOAD_CARD_COUNT][CLOAD_ENTRIES_PER_CARD];
 extern s32 g_cload_retry_count;
 extern s32 g_cload_primary_poll_countdown;
@@ -935,6 +942,8 @@ s32 cload_draw_entry_list(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case 0xFC:
         prim = func_800A88A0(prim, ot, CLOAD_GLYPH_SYM(g_cload_text_no_save_data, 0x12), 1, -x_offset + 0x84, -y_offset, 2);
+        break;
+    case 0xFE:
         break;
     default:
         {
@@ -2233,6 +2242,8 @@ s32 cload_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     return prim;
 }
 
+const CloadCardPathTemplate g_cload_card_path_prefix = {"bu00:"};
+
 /**
  * @brief Draw one icon-highlight row: set the text scissor window and build a
  *        textured (POLY_FT4) quad for the icon at slot @p index, linked into
@@ -3047,8 +3058,6 @@ void cload_erase_fixed_card_files(void)
 /**
  * @brief Inlined copy of cload_erase_fixed_card_files used by load-sequence case 6.
  */
-extern void *jtbl_80140040[];
-
 static inline void cload_erase_fixed_card_files_inline(void)
 {
     CloadCardPathScratch card_path;
@@ -3087,7 +3096,7 @@ s32 cload_advance_load_sequence(void)
     s32 rank_index;
     s32 rank_value;
     s32 dispatch;
-    static void *const keep[] = {
+    static void *const dispatch_table[] = {
         &&cl_case_0, &&cl_case_1, &&cl_case_2, &&cl_case_3,
         &&cl_case_4, &&cl_case_5, &&cl_case_6, &&block_81,
         &&cl_case_8, &&cl_case_9, &&block_81, &&block_81,
@@ -3115,7 +3124,7 @@ s32 cload_advance_load_sequence(void)
             {
                 goto block_81;
             }
-            goto *jtbl_80140040[dispatch];
+            goto *dispatch_table[dispatch];
 
         cl_case_1:
             phase_result = 3;
@@ -3445,6 +3454,7 @@ block_81:
     return phase_result;
 }
 
+const CloadCardPathTemplate g_cload_card_search_path = {"bu00:*"};
 
 
 /**
@@ -3546,7 +3556,7 @@ void cload_shutdown_stream_handles(void)
 s32 cload_begin_entry_scan(s32 page)
 {
     CloadCardSearchPathBuffer search_path;
-    CloadCardSearchPathBuffer *search_template = &g_cload_card_search_path;
+    const CloadCardPathTemplate *search_template = &g_cload_card_search_path;
 
     memcpy(&search_path, search_template, 7);
     g_cload_scroll_frames = 0;
