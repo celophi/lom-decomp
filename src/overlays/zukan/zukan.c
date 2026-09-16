@@ -187,11 +187,13 @@ s32 func_80141094(s32 arg0, s32 arg1)
     D_80157D70 = 0;
     D_80157D68 = 0;
     func_801427E0(arg1);
-    do {
-        do {
+    while (1)
+    {
+        while (1)
+        {
             return ret;
-        } while (0);
-    } while (0);
+        }
+    }
 }
 
 /* ============================ 0x80141144 ============================ */
@@ -737,7 +739,11 @@ void func_80141DF4(ZukanDrawState *ctx)
         i = 0;
         if (D_80157D3C > 0)
         {
-            do { do { base = &D_8014471C; } while (0); } while (0);
+            while (1)
+            {
+                base = &D_8014471C;
+                break;
+            }
             fallback_sym = &D_800EC3E0;
             fallback_base = fallback_sym - 0x1C;
             entry = D_80157530;
