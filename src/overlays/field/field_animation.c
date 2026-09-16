@@ -1172,30 +1172,6 @@ void akao_cmd_a3(s32, s32, s32, s32);
  *             (FieldAnim::cels) and object (FieldAnim::unk10), the repeat
  *             counter, and the retrigger flag (bit 3 of FieldAnim::flags).
  *
- * @warning **THIS FUNCTION IS NOT A MATCH (95.20%, 195/226 exact rows).** It is
- *          committed as work in progress and may not be functionally
- *          equivalent. Re-verify before building a release image. The running
- *          analysis, including thirteen measured-and-retired probe classes,
- *          lives in working/func_80058154/status.md.
- *
- * @note The residual is four instructions, all in the screen-position block.
- *       The target RELOADS `part->def` for the `row` term; gcc 2.8's cse
- *       deletes the second load here because the `/ 256` rounding expands to a
- *       branch around a single insn whose join label has `LABEL_NUSES == 1`, so
- *       `cse_end_of_basic_block` walks straight through it. The target also
- *       keeps `cam_y - cam_z` in its own pseudo and copies it into `y`, where
- *       regmove coalesces the two here. The other two instructions are the
- *       delay-slot `nop` pair that follows from the reload. Everything else in
- *       the block is register naming downstream of those two.
- * @note `cam_z` is deliberately reused to carry `row - 0xE0` (it is dead by
- *       then). It is worth 15 exact rows; every other carrier, including a
- *       fresh local, loses 17-20. Likewise the three camera divides must be
- *       spelled as explicit if/else rounding sharing one `q` temp, and `col` /
- *       `row` must be named statements rather than inline terms.
- * @note `kind` is read through a second, duplicate address expression so that
- *       `key` becomes a separate pseudo, matching the target's `addu` copy.
- *
- * @see decomp.me (95.20%) TODO
  */
 void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
 {
@@ -1205,21 +1181,23 @@ void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
     s32 sfx_id;
     s32 chan_mask;
     s32 kind;
-    s32 cam_x;
     s32 cam_y;
-    s32 cam_z;
+    s32 grid_y_offset;
     s32 x;
     s32 y;
     u32 vol;
     u32 att;
     u32 tmp;
     s32 col;
-    s32 row;
     s32 q;
+    s32 obj_y;
+    s32 key_offset;
+    FieldPartDef* row_def;
 
     part = (FieldPart*)anim->cels;
     obj = (FieldObj*)anim->unk10;
-    kind = def->data[anim->flags.b.state * 8] & 7;
+    key_offset = anim->flags.b.state * 8;
+    kind = def->data[key_offset] & 7;
     if (kind == 1)
     {
         key = (FieldSfxKey*)(def->data + anim->flags.b.state * 8);
@@ -1254,23 +1232,23 @@ void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
             {
                 if (obj->def->flags & 2)
                 {
-                    cam_x = 0;
+                    x = 0;
                     cam_y = 0;
-                    cam_z = 0;
+                    y = 0;
                 }
                 else
                 {
-                    cam_x = ((FieldCamera*)0x801ED480)->x;
+                    x = ((FieldCamera*)0x801ED480)->x;
                     cam_y = ((FieldCamera*)0x801ED480)->y;
-                    cam_z = ((FieldCamera*)0x801ED480)->z;
+                    y = ((FieldCamera*)0x801ED480)->z;
                 }
-                if (cam_x >= 0)
+                if (x >= 0)
                 {
-                    q = cam_x >> 8;
+                    q = x >> 8;
                 }
                 else
                 {
-                    q = (cam_x + 0xFF) >> 8;
+                    q = (x + 0xFF) >> 8;
                 }
                 x = q;
                 if (cam_y >= 0)
@@ -1281,28 +1259,54 @@ void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
                 {
                     cam_y = (cam_y + 0xFF) >> 8;
                 }
-                if (cam_z >= 0)
+                if (y >= 0)
                 {
-                    q = cam_z >> 9;
+                    q = y >> 9;
                     cam_y = cam_y - q;
                 }
                 else
                 {
-                    q = (cam_z + 0x1FF) >> 9;
+                    q = (y + 0x1FF) >> 9;
                     cam_y = cam_y - q;
                 }
                 y = cam_y;
-                { s32 position; s32 mid; u8 columns; FieldPartDef* part_def;
-                part_def = part->def;
-                columns = part_def->u.b.cols;
-                position = obj->x + part->x;
-                col = columns * 8;
-                do { mid = x + position / 256; } while (0);
-                x = mid + col; }
-                att = part->def->u.b.rows * 8;
-                y = y + ((obj->y + part->y) * 2 - (part->z + obj->z)) / 512;
-                cam_z = att - 0xE0;
-                y = y - cam_z;
+                {
+                    s32 position;
+                    s32 mid;
+                    s32 columns;
+                    FieldPartDef* part_def;
+
+                    part_def = part->def;
+                    columns = part_def->u.b.cols;
+                    position = obj->x + part->x;
+                    col = columns * 8;
+                    do
+                    {
+                        mid = x + position / 256;
+                    } while (0);
+                    x = mid + col;
+                    do
+                    {
+                        row_def = *(FieldPartDef* volatile*)&part->def;
+                    } while (0);
+                }
+                obj_y = obj->y;
+                {
+                    s32 coordinate;
+                    s32 part_value;
+                    s32 y_sum;
+                    s32 mid;
+
+                    part_value = row_def->u.b.rows;
+                    coordinate = part->y;
+                    att = part_value * 8;
+                    y_sum = obj_y + coordinate;
+                    coordinate = obj->z;
+                    part_value = part->z;
+                    mid = y + (y_sum * 2 - (coordinate + part_value)) / 512;
+                    grid_y_offset = att - 0xE0;
+                    y = mid - grid_y_offset;
+                }
                 if (x < -0x20)
                 {
                     vol = (-0x20 - x) >> 2;
