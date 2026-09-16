@@ -281,7 +281,16 @@ OVERLAYS += golem
 overlay_golem_gcc_272_cdk_g0_srcs := src/overlays/golem/overlay_header.c src/overlays/golem/golem.c
 
 OVERLAYS += gosub
-overlay_gosub_gcc_272_cdk_g0_srcs := src/overlays/gosub/overlay_header.c src/overlays/gosub/gosub.c
+overlay_gosub_gcc_272_cdk_g0_srcs := \
+	src/overlays/gosub/overlay_header.c \
+	src/overlays/gosub/gosub.c \
+	src/overlays/gosub/gosub_elements.c \
+	src/overlays/gosub/gosub_lists.c \
+	src/overlays/gosub/gosub_selection.c \
+	src/overlays/gosub/gosub_runtime.c \
+	src/overlays/gosub/gosub_render.c \
+	src/overlays/gosub/gosub_dialogs.c \
+	src/overlays/gosub/gosub_helpers.c
 
 OVERLAYS += gover
 overlay_gover_gcc_272_cdk_g0_srcs := src/overlays/gover/overlay_header.c src/overlays/gover/gover.c
