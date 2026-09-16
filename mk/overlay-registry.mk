@@ -121,6 +121,10 @@ overlay_checkps_gcc_272_gnu_objcopy_flags_cdrom := --remove-section=.data --remo
 overlay_checkps_target_as_extra_flags_cdrom := -L
 
 OVERLAYS += cload
+# cload_advance_load_sequence intentionally references the target jump-table
+# symbol so objdiff retains the original relocation. The compiler emits that
+# table locally at this address; expose the address to the final linker.
+overlay_cload_ld_extra_flags := --defsym=jtbl_80140040=0x80140040
 overlay_cload_gcc_272_cdk_g0_srcs := \
 	src/overlays/cload/overlay_header.c \
 	src/overlays/cload/cload.c

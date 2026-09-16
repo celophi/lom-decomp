@@ -187,7 +187,7 @@ endif
 # The standalone asset object is included only when asset_src is configured.
 $$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $$($(1)_LINKER_SCRIPTS) | $(1)-validate validate-assets
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(LD) -o $$($(1)_BUILD_DIR)/$(1).elf \
+	cd $(STAGING) && $(LD) $$(overlay_$(1)_ld_extra_flags) -o $$($(1)_BUILD_DIR)/$(1).elf \
 		-T $$($(1)_LINK_DIR)/$(1).ld \
 		-T $$($(1)_LINK_DIR)/undefined_funcs_auto.txt \
 		-T $$($(1)_LINK_DIR)/undefined_syms_auto.txt \
