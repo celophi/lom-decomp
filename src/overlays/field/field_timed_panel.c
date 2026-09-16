@@ -201,7 +201,7 @@ dispatch_event:
 }
 
 /**
- * @see decomp.me (97.76%)
+ * @see decomp.me (100%)
  * @brief Append up to four textured quads for a field transition effect.
  * @param packet Next available primitive packet.
  * @param ordering_table Ordering-table entry receiving each generated primitive.
@@ -209,15 +209,12 @@ dispatch_event:
  * @return First unused packet after the generated textured quads.
  * @note Effect flags select expansion, translation, rotation or brightness;
  *       disabled descriptors have X equal to 0xFFFF.
- * @note Matching remains incomplete: alpha address loads, call delay slots,
- *       register-save order and a few register/address operands still differ.
  */
 s32 *func_800A5960(s32 *packet, s32 *ordering_table, s32 index)
 {
     extern u16 D_8011F3D0;
     extern u16 D_80122904;
     s32 quad_index;
-    u16 *alpha;
     u32 half_width;
     s16 temp_v0_2;
     s16 temp_v0_5;
@@ -228,18 +225,15 @@ s32 *func_800A5960(s32 *packet, s32 *ordering_table, s32 index)
     s32 temp_a0_3;
     s32 temp_a0_4;
     s32 temp_a2;
-    s32 temp_a2_3;
-    s32 temp_a3;
     s32 temp_lo;
     s32 temp_lo_2;
-    s32 temp_s0;
+    s32 cosine_first, sine_first, cosine_second, sine_second;
     s32 temp_s2;
     s32 expansion;
     s32 angle;
     s32 negative_width;
     s32 temp_v1_3;
     s32 temp_v1_4;
-    s32 temp_v1_6;
     s32 var_a0;
     s32 bottom_edge;
     s32 fade_active;
@@ -253,9 +247,8 @@ s32 *func_800A5960(s32 *packet, s32 *ordering_table, s32 index)
     s32 var_v0_7;
     s32 var_v0_8;
     s32 var_v1_2;
-    s32 var_v1_3;
     s32 var_v1_4;
-    s32 palette_mask;
+    s32 mask;
     s32 var_v1_5;
     s32 var_v1_6;
     s32 var_v1_7;
@@ -264,6 +257,7 @@ s32 *func_800A5960(s32 *packet, s32 *ordering_table, s32 index)
     s8 temp_v0_11;
     s8 temp_v0_13;
     u16 *quad_x;
+    u8 *flags_base;
     u16 temp_v0;
     u16 temp_v0_3;
     u16 temp_v0_4;
@@ -278,296 +272,298 @@ s32 *func_800A5960(s32 *packet, s32 *ordering_table, s32 index)
     u8 temp_v0_10;
     u8 temp_v0_12;
     u8 var_v0_9;
-    u8 *packet_tpage;
     u8 *quad_flags;
 
     quad_x = (u16 *)((index * 0x30) + D_800EF124);
-    quad_flags = (u8 *)quad_x + 0xA;
-    packet_tpage = (u8 *)packet + 0x16;
-    quad_index = 0;
-draw_next:
-{
-    if (*quad_x != 0xFFFF)
+    flags_base = (u8 *)quad_x + 0xA;
+    for (quad_index = 0; quad_index < 4; quad_index++, quad_x += 6)
     {
-        var_v1 = *(u16 *)(quad_flags + (-4));
-        if (*(u16 *)(quad_flags + (0)) & 0xF)
+        quad_flags = flags_base + quad_index * 12;
+        if (*quad_x != 0xFFFF)
         {
-            var_v1 = (u16)(var_v1 >> 1);
-        }
-        *(u8 *)(packet_tpage + (-19)) = 9;
-        *(u8 *)(packet_tpage + (-15)) = 0x2CU;
-        width = var_v1 & 0xFFFF;
-        alpha = &D_8011F3D0;
-        *(u8 *)(packet_tpage + (-18)) = *(u8 *)(packet_tpage + (-17)) = *(u8 *)(packet_tpage + (-16)) = *(u8 *)alpha;
-        var_v1 = *alpha;
-        if ((var_v1 != 0x80) || (*(u16 *)(quad_flags + (0)) & 0x100))
-        {
-            *(u8 *)(packet_tpage + (-15)) = (u8)(*(u8 *)(packet_tpage + (-15)) | 2);
-        }
-        expansion = 0x80 - *alpha;
-        temp_v1 = ((u16) * (u16 *)(quad_flags + (0)) >> 0xB) & 0xF;
-        switch (temp_v1)
-        {
-        case 0:
-            temp_lo = width * expansion;
-            var_a0 = temp_lo;
-            if (temp_lo < 0)
+            var_v1 = *(u16 *)(quad_flags + (-4));
+            if (*(u16 *)(quad_flags + (0)) & 0xF)
             {
-                var_a0 = temp_lo + 0x7F;
+                var_v1 = (u16)(var_v1 >> 1);
             }
-            left_edge = *quad_x;
-            var_a0 = var_a0 >> 7;
-            goto block_52;
-        case 1:
-            if ((u16)D_80122904 < 0x25U)
+            *(u8 *)((u8 *)packet + 3) = 9;
+            *(u8 *)((u8 *)packet + 7) = 0x2CU;
+            width = var_v1 & 0xFFFF;
+            *(u8 *)((u8 *)packet + 4) = *(u8 *)((u8 *)packet + 5) = *(u8 *)((u8 *)packet + 6) = *(u8 *)&D_8011F3D0;
+            var_v1 = D_8011F3D0;
+            if ((var_v1 != 0x80) || (*(u16 *)(quad_flags + (0)) & 0x100))
             {
-                var_a0 = width * expansion;
-                var_v1_2 = var_a0;
-                if (var_a0 < 0)
-                {
-                    var_v1_2 = var_a0 + 0x7F;
-                }
-                temp_v1_3 = var_v1_2 >> 7;
-                temp_v0_3 = *quad_x - temp_v1_3;
-                *(s16 *)(packet_tpage + (2)) = temp_v0_3;
-                *(s16 *)(packet_tpage + (-14)) = temp_v0_3;
-                var_v0_4 = (*quad_x + width) - temp_v1_3;
+                *(u8 *)((u8 *)packet + 7) = (u8)(*(u8 *)((u8 *)packet + 7) | 2);
             }
-            else
-            {
-                var_a0 = width * expansion;
-                var_v1_2 = var_a0;
-                if (var_a0 < 0)
-                {
-                    var_v1_2 = var_a0 + 0x7F;
-                }
-                temp_v1_4 = var_v1_2 >> 7;
-                temp_v0_4 = *quad_x + temp_v1_4;
-                *(s16 *)(packet_tpage + (2)) = temp_v0_4;
-                *(s16 *)(packet_tpage + (-14)) = temp_v0_4;
-                var_v0_4 = *quad_x + width + temp_v1_4;
-            }
-            temp_v0_5 = var_v0_4 - 1;
-            *(s16 *)(packet_tpage + (10)) = temp_v0_5;
-            *(s16 *)(packet_tpage + (-6)) = temp_v0_5;
-            temp_v0_6 = *(u16 *)(quad_flags + (-8));
-            *(s16 *)(packet_tpage + (-4)) = temp_v0_6;
-            *(s16 *)(packet_tpage + (-12)) = temp_v0_6;
-            var_v0_2 = *(u16 *)(quad_flags + (-8));
-            var_v1_2 = *(u16 *)(quad_flags + (-2));
-            var_v0_2 += var_v1_2;
-            goto block_57;
-        case 2:
-            do { angle = expansion * 0x32;
-            temp_s0 = rcos(angle);
-            temp_a0 = rsin(angle);
-            } while (0);
-            do { var_v1_4 = width * temp_s0; } while (0);
-            if (var_v1_4 < 0)
-            {
-                var_v1_4 += 0x1FFF;
-            }
-            var_v1_4 >>= 13;
-            var_v0_5 = *(u16 *)(quad_flags + (-2)) * temp_a0;
-            if (var_v0_5 < 0)
-            {
-                var_v0_5 += 0x1FFF;
-            }
-            temp_s2 = (var_v1_4) + (var_v0_5 >> 0xD);
-            temp_s0 = rsin(angle);
-            temp_a0_2 = rcos(angle);
-            do { var_v1_5 = width * temp_s0; } while (0);
-            if (var_v1_5 < 0)
-            {
-                var_v1_5 += 0x1FFF;
-            }
-            var_v1_5 >>= 13;
-            var_v0_6 = *(u16 *)(quad_flags + (-2)) * temp_a0_2;
-            if (var_v0_6 < 0)
-            {
-                var_v0_6 += 0x1FFF;
-            }
-            var_a0 = expansion * temp_s2;
-            temp_a2 = (var_v1_5) - (var_v0_6 >> 0xD);
-            if (var_a0 < 0)
-            {
-                var_a0 += 0x7F;
-            }
-            var_v1_6 = expansion * temp_a2;
-            temp_s2 = temp_s2 + (var_a0 >> 7);
-            if (var_v1_6 < 0)
-            {
-                var_v1_6 += 0x7F;
-            }
-            temp_a2 = temp_a2 + (var_v1_6 >> 7);
-            temp_a3_2 = width >> 1;
-            half_width = temp_a3_2;
-            *(s16 *)(packet_tpage + (-14)) = (u16)((*quad_x + temp_a3_2) - temp_s2);
-            *(s16 *)(packet_tpage + (10)) = (s16)(*quad_x + temp_a3_2 + temp_s2);
-            *(s16 *)(packet_tpage + (-12)) =
-                (u16)(*(u16 *)(quad_flags + (-8)) + ((u16) * (u16 *)(quad_flags + (-2)) >> 1) + temp_a2);
-            *(s16 *)(packet_tpage + (12)) =
-                (s16)((*(u16 *)(quad_flags + (-8)) + ((u16) * (u16 *)(quad_flags + (-2)) >> 1)) - temp_a2);
-            temp_s0 = rcos(angle);
-            do { negative_width = -(s32)width; } while (0);
-            temp_a0_3 = rsin(angle);
-            var_v1_7 = negative_width * temp_s0;
-            if (var_v1_7 < 0)
-            {
-                var_v1_7 += 0x1FFF;
-            }
-            var_v1_7 >>= 13;
-            var_v0_7 = *(u16 *)(quad_flags + (-2)) * temp_a0_3;
-            if (var_v0_7 < 0)
-            {
-                var_v0_7 += 0x1FFF;
-            }
-            temp_s2 = (var_v1_7) + (var_v0_7 >> 0xD);
-            temp_s0 = rsin(angle);
-            temp_a0_4 = rcos(angle);
-            var_v1_8 = negative_width * temp_s0;
-            if (var_v1_8 < 0)
-            {
-                var_v1_8 += 0x1FFF;
-            }
-            var_v1_8 >>= 13;
-            var_v0_8 = *(u16 *)(quad_flags + (-2)) * temp_a0_4;
-            if (var_v0_8 < 0)
-            {
-                var_v0_8 += 0x1FFF;
-            }
-            var_a1 = expansion * temp_s2;
-            temp_a2 = (var_v1_8) - (var_v0_8 >> 0xD);
-            if (var_a1 < 0)
-            {
-                var_a1 += 0x7F;
-            }
-            var_v1_9 = expansion * temp_a2;
-            temp_s2 = temp_s2 + (var_a1 >> 7);
-            if (var_v1_9 < 0)
-            {
-                var_v1_9 += 0x7F;
-            }
-            *(s16 *)(packet_tpage + (-6)) = (s16)((*quad_x + half_width) - temp_s2);
-            temp_a2 = temp_a2 + (var_v1_9 >> 7);
-            *(s16 *)(packet_tpage + (2)) = (u16)(*quad_x + half_width + temp_s2);
-            *(s16 *)(packet_tpage + (-4)) =
-                (u16)(*(u16 *)(quad_flags + (-8)) + ((u16) * (u16 *)(quad_flags + (-2)) >> 1) + temp_a2);
-            var_v1_2 = *(u16 *)(quad_flags + (-2));
-            var_v1_2 = (u32)var_v1_2 >> 1;
-            var_v0_3 = *(u16 *)(quad_flags + (-8)) + var_v1_2 - temp_a2;
-            goto block_58;
-        case 3:
-            if (D_8011F3D0 < 0x40U)
-            {
-                var_v0_9 = D_8011F3D0 * 4;
-            }
-            else
-            {
-                var_v0_9 = ~((D_8011F3D0 - 0x40) * 2);
-            }
-            *(u8 *)(packet_tpage + (-16)) = var_v0_9;
-            *(u8 *)(packet_tpage + (-17)) = var_v0_9;
-            *(u8 *)(packet_tpage + (-18)) = var_v0_9;
-            temp_v0_7 = *quad_x;
-            *(s16 *)(packet_tpage + (2)) = temp_v0_7;
-            *(s16 *)(packet_tpage + (-14)) = temp_v0_7;
-            temp_v0_8 = (*quad_x + width) - 1;
-            *(s16 *)(packet_tpage + (10)) = temp_v0_8;
-            *(s16 *)(packet_tpage + (-6)) = temp_v0_8;
-            temp_v0_9 = *(u16 *)(quad_flags + (-8));
-            *(s16 *)(packet_tpage + (-4)) = temp_v0_9;
-            *(s16 *)(packet_tpage + (-12)) = temp_v0_9;
-            var_v0_2 = *(u16 *)(quad_flags + (-8));
-            var_v1_2 = *(u16 *)(quad_flags + (-2));
-            var_v0_2 += var_v1_2;
-            goto block_57;
-        case 4:
-            temp_lo = width * expansion;
-            var_a0 = temp_lo;
-            if (temp_lo < 0)
-            {
-                var_a0 = temp_lo + 0x3F;
-            }
-            left_edge = *quad_x;
-            var_a0 = var_a0 >> 6;
-        block_52:
-            temp_v0 = left_edge - var_a0;
-            *(s16 *)(packet_tpage + (2)) = temp_v0;
-            *(s16 *)(packet_tpage + (-14)) = temp_v0;
-            temp_v0_2 = (*quad_x + width + var_a0) - 1;
-            *(s16 *)(packet_tpage + (10)) = temp_v0_2;
-            *(s16 *)(packet_tpage + (-6)) = temp_v0_2;
-            var_v0 = *(u16 *)(quad_flags + (-2)) * expansion;
-            if (var_v0 < 0)
-            {
-                var_v0 += 0x7F;
-            }
-            var_v1_2 = *(u16 *)(quad_flags + (-8)) - (var_v0 >> 7);
-            *(s16 *)(packet_tpage + (-4)) = var_v1_2;
-            *(s16 *)(packet_tpage + (-12)) = var_v1_2;
-            var_a0 = *(u16 *)(quad_flags + (-2)) * expansion;
-            bottom_edge = quad_x[1] + quad_x[4];
-            if (var_a0 < 0)
-            {
-                var_a0 += 0x7F;
-            }
-            temp_lo_2 = var_a0 >> 7;
-            var_v0_2 = bottom_edge + temp_lo_2;
-        block_57:
-            var_v0_3 = var_v0_2 - 1;
-            *(s16 *)(packet_tpage + (12)) = var_v0_3;
-        block_58:
-            *(s16 *)(packet_tpage + (4)) = var_v0_3;
-            break;
-        }
-        temp_v0_10 = *(u8 *)(quad_flags + (-6));
-        *(u8 *)(packet_tpage + (6)) = temp_v0_10;
-        *(u8 *)(packet_tpage + (-10)) = temp_v0_10;
-        temp_v0_11 = (*(u8 *)(quad_flags + (-6)) + width) - 1;
-        *(u8 *)(packet_tpage + (14)) = temp_v0_11;
-        *(u8 *)(packet_tpage + (-2)) = temp_v0_11;
-        temp_v0_12 = *(u8 *)(quad_flags + (-5));
-        *(u8 *)(packet_tpage + (-1)) = temp_v0_12;
-        *(u8 *)(packet_tpage + (-9)) = temp_v0_12;
-        palette_mask = 0xF0;
-        temp_v0_13 = (*(u8 *)(quad_flags + (-5)) + (u8) * (u16 *)(quad_flags + (-2))) - 1;
-        *(u8 *)(packet_tpage + (15)) = temp_v0_13;
-        *(u8 *)(packet_tpage + (7)) = temp_v0_13;
-        var_a1 = 0xFFFFFF;
-        *(s16 *)(packet_tpage + (-8)) = (s16)(((u32)(*(u16 *)(quad_flags + (0)) & palette_mask) >> 4) | 0x7C80);
-        temp_v1_5 = *(u16 *)(quad_flags + (0));
-        *(s16 *)(packet_tpage + (0)) = (s16)(((temp_v1_5 & 3) << 7) | ((temp_v1_5 >> 4) & 0x60) | 5);
-        var_a0 = 0xFF000000;
-        *packet = (*packet & var_a0) | (*ordering_table & var_a1);
-        index = (*ordering_table & var_a0) | ((s32)packet & var_a1);
-        fade_active = *alpha < 0x7CU;
-        *ordering_table = index;
-        if (fade_active)
-        {
-            temp_lo = (*(u16 *)quad_flags >> 11) & 15;
-            switch (temp_lo)
+            expansion = 0x80 - D_8011F3D0;
+            temp_v1 = ((u16) * (u16 *)(quad_flags + (0)) >> 0xB) & 0xF;
+            switch (temp_v1)
             {
             case 0:
-                break;
+                do
+                {
+                    temp_lo = width * expansion;
+                } while (0);
+                var_a0 = temp_lo;
+                if (temp_lo < 0)
+                {
+                    var_a0 = temp_lo + 0x7F;
+                }
+                left_edge = *quad_x;
+                var_a0 = var_a0 >> 7;
+                goto block_52;
             case 1:
-                func_80086F48(packet, 0);
-                break;
+                if ((u16)D_80122904 < 0x25U)
+                {
+                    var_a0 = width * expansion;
+                    var_v1_2 = var_a0;
+                    if (var_a0 < 0)
+                    {
+                        var_v1_2 = var_a0 + 0x7F;
+                    }
+                    temp_v1_3 = var_v1_2 >> 7;
+                    temp_v0_3 = *quad_x - temp_v1_3;
+                    *(s16 *)((u8 *)packet + 24) = temp_v0_3;
+                    *(s16 *)((u8 *)packet + 8) = temp_v0_3;
+                    var_v0_4 = (*quad_x + width) - temp_v1_3;
+                }
+                else
+                {
+                    var_a0 = width * expansion;
+                    var_v1_2 = var_a0;
+                    if (var_a0 < 0)
+                    {
+                        var_v1_2 = var_a0 + 0x7F;
+                    }
+                    temp_v1_4 = var_v1_2 >> 7;
+                    temp_v0_4 = *quad_x + temp_v1_4;
+                    *(s16 *)((u8 *)packet + 24) = temp_v0_4;
+                    *(s16 *)((u8 *)packet + 8) = temp_v0_4;
+                    var_v0_4 = *quad_x + width + temp_v1_4;
+                }
+                temp_v0_5 = var_v0_4 - 1;
+                *(s16 *)((u8 *)packet + 32) = temp_v0_5;
+                *(s16 *)((u8 *)packet + 16) = temp_v0_5;
+                temp_v0_6 = *(u16 *)(quad_flags + (-8));
+                *(s16 *)((u8 *)packet + 18) = temp_v0_6;
+                *(s16 *)((u8 *)packet + 10) = temp_v0_6;
+                var_v0_2 = *(u16 *)(quad_flags + (-8));
+                var_v1_2 = *(u16 *)(quad_flags + (-2));
+                var_v0_2 += var_v1_2;
+                goto block_57;
             case 2:
-                func_80086F48(packet, 0);
+                do
+                {
+                    angle = expansion * 0x32;
+                    cosine_first = rcos(angle);
+                    temp_a0 = rsin(angle);
+                } while (0);
+                do
+                {
+                    var_v1_4 = width * cosine_first;
+                } while (0);
+                if (var_v1_4 < 0)
+                {
+                    var_v1_4 += 0x1FFF;
+                }
+                var_v1_4 >>= 13;
+                var_v0_5 = *(u16 *)(quad_flags + (-2)) * temp_a0;
+                if (var_v0_5 < 0)
+                {
+                    var_v0_5 += 0x1FFF;
+                }
+                temp_s2 = (var_v1_4) + (var_v0_5 >> 0xD);
+                sine_first = rsin(angle);
+                temp_a0_2 = rcos(angle);
+                do
+                {
+                    var_v1_5 = width * sine_first;
+                } while (0);
+                if (var_v1_5 < 0)
+                {
+                    var_v1_5 += 0x1FFF;
+                }
+                var_v1_5 >>= 13;
+                var_v0_6 = *(u16 *)(quad_flags + (-2)) * temp_a0_2;
+                if (var_v0_6 < 0)
+                {
+                    var_v0_6 += 0x1FFF;
+                }
+                var_a0 = expansion * temp_s2;
+                temp_a2 = (var_v1_5) - (var_v0_6 >> 0xD);
+                if (var_a0 < 0)
+                {
+                    var_a0 += 0x7F;
+                }
+                var_v1_6 = expansion * temp_a2;
+                temp_s2 = temp_s2 + (var_a0 >> 7);
+                if (var_v1_6 < 0)
+                {
+                    var_v1_6 += 0x7F;
+                }
+                temp_a2 = temp_a2 + (var_v1_6 >> 7);
+                temp_a3_2 = width >> 1;
+                half_width = temp_a3_2;
+                *(s16 *)((u8 *)packet + 8) = (u16)((*quad_x + temp_a3_2) - temp_s2);
+                *(s16 *)((u8 *)packet + 32) = (s16)(*quad_x + temp_a3_2 + temp_s2);
+                *(s16 *)((u8 *)packet + 10) =
+                    (u16)(*(u16 *)(quad_flags + (-8)) + ((u16) * (u16 *)(quad_flags + (-2)) >> 1) + temp_a2);
+                *(s16 *)((u8 *)packet + 34) =
+                    (s16)((*(u16 *)(quad_flags + (-8)) + ((u16) * (u16 *)(quad_flags + (-2)) >> 1)) - temp_a2);
+                cosine_second = rcos(angle);
+                temp_a0_3 = rsin(angle);
+                negative_width = -(s32)width;
+                var_v1_7 = negative_width * cosine_second;
+                if (var_v1_7 < 0)
+                {
+                    var_v1_7 += 0x1FFF;
+                }
+                var_v1_7 >>= 13;
+                var_v0_7 = *(u16 *)(quad_flags + (-2)) * temp_a0_3;
+                if (var_v0_7 < 0)
+                {
+                    var_v0_7 += 0x1FFF;
+                }
+                temp_s2 = (var_v1_7) + (var_v0_7 >> 0xD);
+                sine_second = rsin(angle);
+                temp_a0_4 = rcos(angle);
+                var_v1_8 = negative_width * sine_second;
+                if (var_v1_8 < 0)
+                {
+                    var_v1_8 += 0x1FFF;
+                }
+                var_v1_8 >>= 13;
+                var_v0_8 = *(u16 *)(quad_flags + (-2)) * temp_a0_4;
+                if (var_v0_8 < 0)
+                {
+                    var_v0_8 += 0x1FFF;
+                }
+                var_a1 = expansion * temp_s2;
+                temp_a2 = (var_v1_8) - (var_v0_8 >> 0xD);
+                if (var_a1 < 0)
+                {
+                    var_a1 += 0x7F;
+                }
+                var_v1_9 = expansion * temp_a2;
+                temp_s2 = temp_s2 + (var_a1 >> 7);
+                if (var_v1_9 < 0)
+                {
+                    var_v1_9 += 0x7F;
+                }
+                *(s16 *)((u8 *)packet + 16) = (s16)((*quad_x + half_width) - temp_s2);
+                temp_a2 = temp_a2 + (var_v1_9 >> 7);
+                *(s16 *)((u8 *)packet + 24) = (u16)(*quad_x + half_width + temp_s2);
+                *(s16 *)((u8 *)packet + 18) =
+                    (u16)(*(u16 *)(quad_flags + (-8)) + ((u16) * (u16 *)(quad_flags + (-2)) >> 1) + temp_a2);
+                var_v1_2 = *(u16 *)(quad_flags + (-2));
+                var_v1_2 = (u32)var_v1_2 >> 1;
+                var_v0_3 = *(u16 *)(quad_flags + (-8)) + var_v1_2 - temp_a2;
+                goto block_58;
+            case 3:
+                if (D_8011F3D0 < 0x40U)
+                {
+                    var_v0_9 = D_8011F3D0 * 4;
+                }
+                else
+                {
+                    var_v0_9 = ~((D_8011F3D0 - 0x40) * 2);
+                }
+                *(u8 *)((u8 *)packet + 6) = var_v0_9;
+                *(u8 *)((u8 *)packet + 5) = var_v0_9;
+                *(u8 *)((u8 *)packet + 4) = var_v0_9;
+                temp_v0_7 = *quad_x;
+                *(s16 *)((u8 *)packet + 24) = temp_v0_7;
+                *(s16 *)((u8 *)packet + 8) = temp_v0_7;
+                temp_v0_8 = (*quad_x + width) - 1;
+                *(s16 *)((u8 *)packet + 32) = temp_v0_8;
+                *(s16 *)((u8 *)packet + 16) = temp_v0_8;
+                temp_v0_9 = *(u16 *)(quad_flags + (-8));
+                *(s16 *)((u8 *)packet + 18) = temp_v0_9;
+                *(s16 *)((u8 *)packet + 10) = temp_v0_9;
+                var_v0_2 = *(u16 *)(quad_flags + (-8));
+                var_v1_2 = *(u16 *)(quad_flags + (-2));
+                var_v0_2 += var_v1_2;
+                goto block_57;
+            case 4:
+                do
+                {
+                    temp_lo = width * expansion;
+                } while (0);
+                var_a0 = temp_lo;
+                if (temp_lo < 0)
+                {
+                    var_a0 = temp_lo + 0x3F;
+                }
+                left_edge = *quad_x;
+                var_a0 = var_a0 >> 6;
+            block_52:
+                temp_v0 = left_edge - var_a0;
+                *(s16 *)((u8 *)packet + 24) = temp_v0;
+                *(s16 *)((u8 *)packet + 8) = temp_v0;
+                temp_v0_2 = (*quad_x + width + var_a0) - 1;
+                *(s16 *)((u8 *)packet + 32) = temp_v0_2;
+                *(s16 *)((u8 *)packet + 16) = temp_v0_2;
+                var_v0 = *(u16 *)(quad_flags + (-2)) * expansion;
+                if (var_v0 < 0)
+                {
+                    var_v0 += 0x7F;
+                }
+                var_v1_2 = *(u16 *)(quad_flags + (-8)) - (var_v0 >> 7);
+                *(s16 *)((u8 *)packet + 18) = var_v1_2;
+                *(s16 *)((u8 *)packet + 10) = var_v1_2;
+                var_a0 = *(volatile u16 *)(quad_flags - 2) * expansion;
+                bottom_edge = *(u16 *)(quad_flags - 8) + *(u16 *)(quad_flags - 2);
+                if (var_a0 < 0)
+                {
+                    var_a0 += 0x7F;
+                }
+                temp_lo_2 = var_a0 >> 7;
+                var_v0_2 = bottom_edge + temp_lo_2;
+            block_57:
+                var_v0_3 = var_v0_2 - 1;
+                *(s16 *)((u8 *)packet + 34) = var_v0_3;
+            block_58:
+                *(s16 *)((u8 *)packet + 26) = var_v0_3;
                 break;
             }
+            temp_v0_10 = *(u8 *)(quad_flags + (-6));
+            *(u8 *)((u8 *)packet + 28) = temp_v0_10;
+            *(u8 *)((u8 *)packet + 12) = temp_v0_10;
+            temp_v0_11 = (*(u8 *)(quad_flags + (-6)) + width) - 1;
+            *(u8 *)((u8 *)packet + 36) = temp_v0_11;
+            *(u8 *)((u8 *)packet + 20) = temp_v0_11;
+            temp_v0_12 = *(u8 *)(quad_flags + (-5));
+            *(u8 *)((u8 *)packet + 21) = temp_v0_12;
+            *(u8 *)((u8 *)packet + 13) = temp_v0_12;
+            mask = 0xF0;
+            temp_v0_13 = (*(u8 *)(quad_flags + (-5)) + (u8) * (u16 *)(quad_flags + (-2))) - 1;
+            *(u8 *)((u8 *)packet + 37) = temp_v0_13;
+            *(u8 *)((u8 *)packet + 29) = temp_v0_13;
+            *(s16 *)((u8 *)packet + 14) = (s16)(((u32)(*(u16 *)(quad_flags + (0)) & mask) >> 4) | 0x7C80);
+            temp_v1_5 = *(u16 *)(quad_flags + (0));
+            *(s16 *)((u8 *)packet + 22) = (s16)(((temp_v1_5 & 3) << 7) | ((temp_v1_5 >> 4) & 0x60) | 5);
+            mask = 0xFFFFFF;
+            *packet = (*packet & 0xFF000000) | (*ordering_table & mask);
+            index = (*ordering_table & 0xFF000000) | ((s32)packet & mask);
+            fade_active = D_8011F3D0 < 0x7CU;
+            *ordering_table = index;
+            if (fade_active)
+            {
+                temp_lo = (*(u16 *)quad_flags >> 11) & 15;
+                switch (temp_lo)
+                {
+                case 0:
+                    break;
+                case 1:
+                    func_80086F48(packet, 0);
+                    break;
+                case 2:
+                    func_80086F48(packet, 0);
+                    break;
+                }
+            }
+            packet += 10;
         }
-        packet_tpage += 0x28;
-        packet += 10;
-    }
-    quad_flags += 0xC;
-    quad_x += 6;
-    temp_a3 = quad_index = quad_index + 1;
-}
-    if (temp_a3 < 4)
-    {
-        goto draw_next;
     }
     return packet;
 }
