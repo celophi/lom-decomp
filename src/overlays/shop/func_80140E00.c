@@ -1,4 +1,5 @@
 #include "common.h"
+#include "sdk/libgpu.h"
 
 typedef struct { s32 tag; u32 color; s16 x; s16 y; s16 w; u16 h; } ShopGpuPacket;
 typedef struct { s32 tag; u8 pad4[0x40AE]; s16 frame_flag; } ShopDrawState;
@@ -20,8 +21,6 @@ void func_80140E00(ShopDrawState *arg0, ShopPrimState *arg1)
     s32 temp_s2;
     s32 var_s7;
     s32 sp20[24];
-    u32 address_mask;
-    u32 tag_mask;
     u32 temp_a0_2;
     s32 temp_v1_2;
     u32 temp_a1;
@@ -51,8 +50,6 @@ void func_80140E00(ShopDrawState *arg0, ShopPrimState *arg1)
 
     var_s5 = (u32 *)&D_801451D8;
     var_s7 = 0;
-    do { do { address_mask = 0x00FFFFFF; } while (0); } while (0);
-    tag_mask = 0xFF000000;
 
     for (; var_s7 < 8; var_s7++, var_s5 += 3)
     {
@@ -71,8 +68,7 @@ void func_80140E00(ShopDrawState *arg0, ShopPrimState *arg1)
                     var_s0 = (ShopGpuPacket *)func_800AE76C(var_s0, var_s4, 0x11E, 0x38, 1);
 
                 func_8001A5D4((s32)var_s0, sp20);
-                var_s0->tag = (var_s0->tag & tag_mask) | (var_s4->tag & address_mask);
-                var_s4->tag = (s32)((var_s4->tag & tag_mask) | ((s32)var_s0 & address_mask));
+                addPrim(var_s4, var_s0);
                 var_s0 = (ShopGpuPacket *)((u8 *)var_s0 + 0x40);
 
                 ((u8 *)var_s0)[3] = 3;
@@ -85,8 +81,7 @@ void func_80140E00(ShopDrawState *arg0, ShopPrimState *arg1)
                     var_s0->h = (u16)((*(u32 *)((u8 *)var_s5 + 4) >> 1) & 0xFF);
                 var_s0->x = 1;
                 var_s0->y = (s16)(((((s32)((*(u32 *)((u8 *)var_s5 + 4) >> 1) & 0xFF)) - 3) * (D_80145248 / 0x10)) / D_80145CD8);
-                var_s0->tag = (var_s0->tag & tag_mask) | (var_s4->tag & address_mask);
-                var_s4->tag = (var_s4->tag & tag_mask) | ((s32)var_s0 & address_mask);
+                addPrim(var_s4, var_s0);
                 var_s0 = (ShopGpuPacket *)((u8 *)var_s0 + 0x10);
 
                 {
@@ -105,8 +100,7 @@ void func_80140E00(ShopDrawState *arg0, ShopPrimState *arg1)
             }
 
             func_8001A5D4((s32)draw_cursor, sp20);
-            var_s0->tag = (var_s0->tag & tag_mask) | (var_s4->tag & address_mask);
-            var_s4->tag = (s32)((var_s4->tag & tag_mask) | ((s32)var_s0 & address_mask));
+            addPrim(var_s4, var_s0);
 
             temp_a0_2 = *var_s5;
             temp_v1_2 = temp_a0_2 & 7;

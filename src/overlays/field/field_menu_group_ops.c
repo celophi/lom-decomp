@@ -360,138 +360,131 @@ void func_800C5E08(void)
     }
 }
 
-/** @brief Repairs group display order and publishes selection state.
- * @note Initial nonmatching C recovered from the original assembly.
+/**
+ * @brief Repair the group display order and publish the current selection state.
  */
 void func_800C5E28(void)
 {
-    s32 inverse[3];
     s32 order[3];
-    s16 var_a1_3;
-    s32 *temp_a0;
-    s32 *var_a0_4;
-    s32 *var_a2;
-    s32 *var_a3;
-    s32 *var_v1_3;
-    s32 temp_a1;
-    s32 var_a0;
-    s32 var_a0_2;
-    s32 var_a0_3;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_v0;
-    s32 var_v1;
-    s32 var_v1_2;
+    s32 inverse[3];
+    s16* slot_status;
+    s32* inverse_entry;
+    u8* layout;
+    s32 packed_order;
+    s32 clamped_order_0;
+    s32 clamped_order_1;
+    s32 clamped_order_2;
+    s32 i;
+    s32 active_index;
+    s8 selected_index;
+    s32 j;
 
-    D_80122C06 = 3;
-    D_80122C08 = 3;
-    D_80122C0A = 3;
-    if (g_menuLayoutBuffer[0x29D8] != (*(s8 *)&g_menuLayoutBuffer[0x29D7]))
+    slot_status = &D_80122C06;
+    slot_status[0] = 3;
+    slot_status[1] = 3;
+    slot_status[2] = 3;
+    if (g_menuLayoutBuffer[0x29D8] != *(s8*)&g_menuLayoutBuffer[0x29D7])
     {
-        D_80122C06 = (s16) g_menuLayoutBuffer[0x29D8];
+        slot_status[0] = (s16)g_menuLayoutBuffer[0x29D8];
     }
-    if (g_menuLayoutBuffer[0x29D9] != (*(s8 *)&g_menuLayoutBuffer[0x29D7]))
+    if (g_menuLayoutBuffer[0x29D9] != *(s8*)&g_menuLayoutBuffer[0x29D7])
     {
-        D_80122C08 = (s16) g_menuLayoutBuffer[0x29D9];
+        slot_status[1] = (s16)g_menuLayoutBuffer[0x29D9];
     }
-    if (g_menuLayoutBuffer[0x29DA] != (*(s8 *)&g_menuLayoutBuffer[0x29D7]))
+    if (g_menuLayoutBuffer[0x29DA] != *(s8*)&g_menuLayoutBuffer[0x29D7])
     {
-        D_80122C0A = (s16) g_menuLayoutBuffer[0x29DA];
+        slot_status[2] = (s16)g_menuLayoutBuffer[0x29DA];
     }
-    temp_a1 = g_menuLayoutBuffer[0x29DB] & 3;
-    order[1] = ((s32) g_menuLayoutBuffer[0x29DB] >> 2) & 3;
-    order[0] = temp_a1;
-    order[2] = ((s32) g_menuLayoutBuffer[0x29DB] >> 4) & 3;
-    if (temp_a1 >= 0)
+    packed_order = g_menuLayoutBuffer[0x29DB];
+    i = packed_order & 3;
+    order[1] = (packed_order >> 2) & 3;
+    order[0] = i;
+    order[2] = (packed_order >> 4) & 3;
+    if (i >= 0)
     {
-        var_a0 = 2;
-        if (temp_a1 < 3)
+        clamped_order_0 = 2;
+        if (i < 3)
         {
-            var_a0 = temp_a1;
+            clamped_order_0 = i;
         }
-    } else
-    {
-        var_a0 = 0;
     }
-    order[0] = var_a0;
+    else
+    {
+        clamped_order_0 = 0;
+    }
+    order[0] = clamped_order_0;
     if (order[1] >= 0)
     {
-        var_a0_2 = 2;
+        clamped_order_1 = 2;
         if (order[1] < 3)
         {
-            var_a0_2 = order[1];
+            clamped_order_1 = order[1];
         }
-    } else
-    {
-        var_a0_2 = 0;
     }
-    order[1] = var_a0_2;
+    else
+    {
+        clamped_order_1 = 0;
+    }
+    order[1] = clamped_order_1;
     if (order[2] >= 0)
     {
-        var_a0_3 = 2;
+        clamped_order_2 = 2;
         if (order[2] < 3)
         {
-            var_a0_3 = order[2];
+            clamped_order_2 = order[2];
         }
-    } else
-    {
-        var_a0_3 = 0;
     }
-    var_a1 = 0;
-    var_a3 = order;
-    order[2] = var_a0_3;
+    else
+    {
+        clamped_order_2 = 0;
+    }
+    order[2] = clamped_order_2;
     inverse[0] = 3;
     inverse[1] = 3;
     inverse[2] = 3;
+    i = 0;
     do
     {
-        var_v1 = 0;
-        var_a0_4 = inverse;
-        loop_20:
-        if (*var_a3 == var_v1)
+        j = 0;
+        do
         {
-            if (*var_a0_4 == 3)
+            if (order[i] == j)
             {
-                *var_a0_4 = var_a1;
-            } else
-            {
-                *var_a3 = 3;
+                if (inverse[j] == 3)
+                {
+                    inverse[j] = i;
+                }
+                else
+                {
+                    order[i] = 3;
+                }
             }
-        }
-        var_v1 += 1;
-        var_a0_4 += 1;
-        if (var_v1 < 3)
-        {
-            goto loop_20;
-        }
-        var_a1 += 1;
-        var_a3 += 1;
-    } while (var_a1 < 3);
-    var_a1_2 = 0;
-    var_a2 = order;
+            j += 1;
+        } while (j < 3);
+        i += 1;
+    } while (i < 3);
+    i = 0;
     do
     {
-        if (*var_a2 == 3)
+        if (order[i] == 3)
         {
-            var_v1_2 = 0;
-            var_v0 = 0 * 4;
+            j = 0;
             do
             {
-                temp_a0 = (s32 *)((u8 *)inverse + var_v0);
-                if (*temp_a0 == 3)
+                inverse_entry = &inverse[j];
+                if (*inverse_entry == 3)
                 {
-                    *var_a2 = var_v1_2;
-                    var_v1_2 = 3;
-                    *temp_a0 = var_a1_2;
+                    order[i] = j;
+                    j = 3;
+                    *inverse_entry = i;
                 }
-                var_v1_2 += 1;
-                var_v0 = var_v1_2 * 4;
-            } while (var_v1_2 < 3);
+                j += 1;
+            } while (j < 3);
         }
-        var_a1_2 += 1;
-        var_a2 += 1;
-    } while (var_a1_2 < 3);
-    D_800459B3 = order[0] + (order[1] * 4) + (order[2] * 0x10);
+        i += 1;
+    } while (i < 3);
+    packed_order = order[0] + (order[1] * 4) + (order[2] * 0x10);
+    D_800459B3 = packed_order;
     if (D_80122C06 == 3)
     {
         if (order[0] == 0)
@@ -537,31 +530,32 @@ void func_800C5E28(void)
             D_80122C0A = 6;
         }
     }
-    if ((*(s8 *)&g_menuLayoutBuffer[0x29D7]) < 3)
+    layout = g_menuLayoutBuffer;
+    selected_index = *(s8*)&layout[0x29D7];
+    if (selected_index < 3)
     {
-        if (g_menuLayoutBuffer[0x29D8] == (*(s8 *)&g_menuLayoutBuffer[0x29D7]))
+        if (layout[0x29D8] == selected_index)
         {
             D_80122C06 = 3;
         }
-        if (g_menuLayoutBuffer[0x29D9] == (*(s8 *)&g_menuLayoutBuffer[0x29D7]))
+        if (layout[0x29D9] == selected_index)
         {
             D_80122C08 = 3;
         }
-        if (g_menuLayoutBuffer[0x29DA] == (*(s8 *)&g_menuLayoutBuffer[0x29D7]))
+        if (layout[0x29DA] == selected_index)
         {
             D_80122C0A = 3;
         }
     }
-    var_a1_3 = 0;
-    var_v1_3 = order;
+    active_index = D_80122C00;
+    i = 0;
     do
     {
-        if (*var_v1_3 == D_80122C00)
+        if (order[i] == active_index)
         {
-            D_80122C1C = var_a1_3;
+            D_80122C1C = i;
         }
-        var_a1_3 += 1;
-        var_v1_3 += 1;
-    } while (var_a1_3 < 3);
-    D_80122C1E = (s16) (s8) D_800459AF;
+        i += 1;
+    } while (i < 3);
+    D_80122C1E = (s16)(s8)D_800459AF;
 }
