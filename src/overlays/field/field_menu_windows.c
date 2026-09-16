@@ -366,6 +366,7 @@ FieldADF84Rec *func_800ADF84(void)
  * blinking, or closing border. The updated packet cursor returns to the context.
  *
  * @param context Ordering-table and primitive-buffer state for the current frame.
+ * @see decomp.me (100%)
  */
 void func_800AE008(FieldMenuRenderContext *context)
 {
@@ -390,7 +391,6 @@ void func_800AE008(FieldMenuRenderContext *context)
     u32 opening_draw_attr;
     u32 opening_draw_geometry;
     u32 active_geometry;
-    s32 active_inset;
     u32 active_attr;
     u32 active_blink_attr;
     u32 closing_geometry;
@@ -412,7 +412,7 @@ void func_800AE008(FieldMenuRenderContext *context)
     s32 visible_height, animated_width, animated_height;
     u16 scroll_target;
     s16 next_scroll_target;
-    s32 movement;
+    s32 clamped_target;
     cursor = context->cursor;
     ordering = context;
     if (context->buffer)
@@ -456,10 +456,8 @@ void func_800AE008(FieldMenuRenderContext *context)
                 scroll_ticks = element->scroll_ticks;
                 if (scroll_ticks != 0)
                 {
-                    movement = (element->scroll_target - element->scroll) / scroll_ticks;
-                    /* Retain the original fresh halfword read after division. */
-                    element->scroll_ticks = *(volatile u16 *)&element->scroll_ticks - 1;
-                    element->scroll = (u16)element->scroll + movement;
+                    element->scroll += (element->scroll_target - element->scroll) / scroll_ticks;
+                    element->scroll_ticks--;
                 }
                 else
                 {
@@ -474,11 +472,11 @@ void func_800AE008(FieldMenuRenderContext *context)
                         {
                             func_800A3938(0x7D, 0x80);
                             next_scroll_target = (u16)element->scroll_target + 16;
-                            /* Keep the scroll-target write observable before clamping. */
-                            *(volatile s16 *)&element->scroll_target = next_scroll_target;
+                            element->scroll_target = next_scroll_target;
+                            clamped_target = next_scroll_target;
                             clamp_height = (element->size.word >> 1) & 255;
                             if (element->size.fields.content_height - clamp_height <
-                                next_scroll_target)
+                                clamped_target)
                             {
                                 element->scroll_target =
                                     element->size.fields.content_height - clamp_height;
@@ -489,8 +487,7 @@ void func_800AE008(FieldMenuRenderContext *context)
                         {
                             func_800A3938(0x7D, 0x80);
                             next_scroll_target = (u16)element->scroll_target - 16;
-                            /* Keep the scroll-target write observable before clamping. */
-                            *(volatile s16 *)&element->scroll_target = next_scroll_target;
+                            element->scroll_target = next_scroll_target;
                             if (next_scroll_target < 0)
                             {
                                 element->scroll_target = 0;
@@ -541,8 +538,8 @@ void func_800AE008(FieldMenuRenderContext *context)
                         (s32)(((opening_draw_geometry >> 1) & 255) - animated_height) / 2,
                     animated_width, animated_height, context->buffer, 0);
                 opening_previous_attr = element->attr;
-                opening_updated_attr = (opening_previous_attr & ~0x78) |
-                                       (((((opening_previous_attr >> 3) & 15) + 1) & 15) * 8);
+                opening_updated_attr = opening_previous_attr & ~0x78;
+                opening_updated_attr |= (((((opening_previous_attr >> 3) & 15) + 1) & 15) * 8);
                 element->attr = opening_updated_attr;
                 if (((opening_updated_attr >> 3) & 15) == 8)
                 {
@@ -553,21 +550,21 @@ void func_800AE008(FieldMenuRenderContext *context)
                 active_geometry = element->size.word;
                 if ((active_geometry >> 9) & 1)
                 {
-                    active_inset = 0;
+                    animated_width = 0;
                     if (!(g_frame_counter & 4))
                     {
-                        active_inset = -2;
+                        animated_width = -2;
                     }
-                    cursor = element->draw(ordering, cursor, active_inset,
-                                           active_inset + element->scroll,
+                    cursor = element->draw(ordering, cursor, animated_width,
+                                           animated_width + element->scroll,
                                            (active_geometry >> 1) & 255, element);
                     active_blink_attr = element->attr;
                     active_width_low = active_blink_attr >> 24;
                     cursor = func_800AD850(
-                        cursor, ordering, ((active_blink_attr >> 7) & 0x1ff) + active_inset,
-                        ((u8 *)element)[2] + active_inset,
-                        (((element->size.word & 1) << 8) | active_width_low) - active_inset * 2,
-                        ((element->size.word >> 1) & 255) - active_inset * 2, context->buffer, 0);
+                        cursor, ordering, ((active_blink_attr >> 7) & 0x1ff) + animated_width,
+                        ((u8 *)element)[2] + animated_width,
+                        (((element->size.word & 1) << 8) | active_width_low) - animated_width * 2,
+                        ((element->size.word >> 1) & 255) - animated_width * 2, context->buffer, 0);
                 }
                 else
                 {
