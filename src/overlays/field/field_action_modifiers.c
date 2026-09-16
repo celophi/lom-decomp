@@ -1066,85 +1066,95 @@ void func_800B729C(s32 arg0, s32 arg1, s32 *arg2, s32 *arg3)
     }
 }
 
-/** @brief Calculate and apply an action value to the current target. */
+/**
+ * @brief Calculate and apply an action value to the current target.
+ * @param arg0 Primary input value.
+ * @param arg1 Secondary input value.
+ * @return Calculated action value, or zero when processing is blocked.
+ */
 s32 func_800B742C(u32 arg0, u32 arg1)
 {
-    s32 temp_s1;
-    s32 temp_s1_2;
-    s32 temp_v0;
-    s32 var_a0_2;
-    s32 var_a1;
-    s32 var_s1_2;
-    s32 var_v0;
-    s32 var_v0_3;
-    u32 var_a0;
-    u32 var_s1;
-    u32 var_v0_2;
+    s32 adjusted;
+    u32 half_value;
+    s32 bonus;
+    s32 rounded;
+    s32 counter_record;
+    u32 value;
 
-    var_v0 = 0;
-    if (func_800B4CE4(D_80123FB0->unk24, 0xB) == 0)
+    if (func_800B4CE4(D_80123FB0->unk24, 0xB) != 0)
     {
-        if (*((u8 *)D_80123FB0->unk1C + 2) == 0)
+        return 0;
+    }
+    if (*((u8 *)D_80123FB0->unk1C + 2) == 0)
+    {
+        return 0;
+    }
+
+    if ((arg1 < arg0) || (D_80123FB0->unk14 & 1))
+    {
+        arg0 -= arg1 >> 1;
+        adjusted = arg0;
+        if ((s32)arg0 < 0)
         {
-            return 0;
+            adjusted = 0;
         }
-        var_v0_2 = arg1 >> 1;
-        if ((arg1 < arg0) || (var_v0_2 = arg1 >> 1, ((D_80123FB0->unk14 & 1) != 0)))
+        arg0 = adjusted;
+    }
+    else
+    {
+        value = arg1 >> 1;
+        if (value == 0)
         {
-            temp_s1 = arg0 - var_v0_2;
-            var_v0_3 = temp_s1;
-            if (temp_s1 < 0)
-            {
-                var_v0_3 = 0;
-            }
-            var_s1 = (u32) var_v0_3;
+            value = 1;
+        }
+        half_value = (arg0 >> 1) & 0xFFFF;
+        arg0 = (half_value * half_value) / value;
+    }
+
+    bonus = 0;
+    if ((*(u32 *)((u8 *)D_80123FB0->unk20 + 4) & 0xFC00) == 0x1000)
+    {
+        bonus = func_800BD414(2, 0xD038) * 4;
+    }
+
+    arg0 = (u32)((*((u8 *)D_80123FB0->unk1C + 2) + bonus) * arg0) >> 4;
+    arg0 = func_800B76F8(arg0 * *(s32 *)((u8 *)D_80123FB0->unk18 + 0x18));
+
+    if ((func_800B4CE4(D_80123FB0->unk20, 0xA) != 0) && ((*(u32 *)D_80123FB0->unk1C & 0xF) < 2U))
+    {
+        counter_record = D_80123FB0->unk20;
+        if ((s32)arg0 < 0)
+        {
+            rounded = arg0 + 3;
+            value = *(s32 *)((u8 *)counter_record + 0x10);
         }
         else
         {
-            var_a0 = arg1 >> 1;
-            if (var_a0 == 0)
-            {
-                var_a0 = 1;
-            }
-            temp_v0 = (arg0 >> 1) & 0xFFFF;
-            var_s1 = (u32) (temp_v0 * temp_v0) / var_a0;
+            rounded = arg0;
+            value = *(s32 *)((u8 *)counter_record + 0x10);
         }
-        var_a0_2 = 0;
-        if ((*(u32 *)((u8 *)D_80123FB0->unk20 + 0x4) & 0xFC00) == 0x1000)
-        {
-            var_a0_2 = func_800BD414(2, 0xD038) * 4;
-        }
-        temp_s1_2 = func_800B76F8(((u32) ((*((u8 *)D_80123FB0->unk1C + 2) + var_a0_2) * var_s1) >> 4) * *(s32 *)((u8 *)D_80123FB0->unk18 + 0x18));
-        if ((func_800B4CE4(D_80123FB0->unk20, 0xA) != 0) && ((u32) (*(u32 *)D_80123FB0->unk1C & 0xF) < 2U))
-        {
-            var_a1 = temp_s1_2;
-            if (temp_s1_2 < 0)
-            {
-                var_a1 = temp_s1_2 + 3;
-            }
-            saturating_counter_add(*(s32 *)((u8 *)D_80123FB0->unk20 + 0x10), var_a1 >> 2);
-        }
-        var_s1_2 = func_800B788C(temp_s1_2);
-        if (!(D_80123FB0->unk14 & 1))
-        {
-            if (var_s1_2 <= 0)
-            {
-                var_s1_2 = 1;
-            }
-        }
-        if (func_800BD414(0, 0xFFC) != 0)
-        {
-            akao_set_song_params(0x8002, *(u8 *)((u8 *)D_80123FB0->unk20 + 4), *(u8 *)((u8 *)D_80123FB0->unk24 + 4), var_s1_2);
-        }
-        if (((func_800BD414(0, 0xFFA) == 0) || (var_v0 = var_s1_2, ((*(u8 *)((u8 *)D_80123FB0->unk24 + 4) < 3U) != 0))) && ((func_800BD414(0, 0xFFB) == 0) || (var_v0 = var_s1_2, ((*(u8 *)((u8 *)D_80123FB0->unk24 + 4) < 3U) == 0))))
-        {
-            field_clear_record_state(D_80123FB0->unk24, 6);
-            func_800B30B8(*(s32 *)((u8 *)D_80123FB0->unk24 + 0x10), var_s1_2);
-            var_v0 = var_s1_2;
-        }
-        return var_v0;
+        saturating_counter_add((s32)value, rounded >> 2);
     }
-    return var_v0;
+
+    arg0 = func_800B788C(arg0);
+    if (!(D_80123FB0->unk14 & 1) && ((s32)arg0 <= 0))
+    {
+        arg0 = 1;
+    }
+
+    if (func_800BD414(0, 0xFFC) != 0)
+    {
+        akao_set_song_params(0x8002, *(u8 *)((u8 *)D_80123FB0->unk20 + 4), *(u8 *)((u8 *)D_80123FB0->unk24 + 4), arg0);
+    }
+
+    if (((func_800BD414(0, 0xFFA) == 0) || (*(u8 *)((u8 *)D_80123FB0->unk24 + 4) < 3U)) &&
+        ((func_800BD414(0, 0xFFB) == 0) || (*(u8 *)((u8 *)D_80123FB0->unk24 + 4) >= 3U)))
+    {
+        field_clear_record_state(D_80123FB0->unk24, 6);
+        func_800B30B8(*(s32 *)((u8 *)D_80123FB0->unk24 + 0x10), arg0);
+    }
+
+    return arg0;
 }
 
 /**

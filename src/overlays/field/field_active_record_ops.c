@@ -119,6 +119,83 @@ s32 func_800C2B14(s32 record_id)
 #define ACTIVE_U8(p, o) (*(u8 *)((u8 *)(p) + (o)))
 #define ACTIVE_U16(p, o) (*(u16 *)((u8 *)(p) + (o)))
 #define ACTIVE_U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
+
+typedef struct
+{
+    unsigned short low : 9;
+    unsigned short high : 7;
+} ActivePacked16;
+
+typedef struct
+{
+    unsigned int low : 8;
+    unsigned int high : 24;
+} ActivePacked32;
+
+typedef struct
+{
+    u8 pad0[0x24];
+    u16 values24[4];
+    u8 bytes2C[0x14];
+} ActiveSlot;
+
+typedef struct
+{
+    u8 head[0x15];
+    u8 pad15[3];
+    u32 flags18;
+    u8 pad1C[4];
+    ActivePacked32 packed20;
+    u16 value24;
+    u16 value26;
+    u16 values28[4];
+    ActivePacked16 packed30[8];
+    u8 bytes40[4];
+    u8 pad44[4];
+    u8 init48[8];
+    u8 data50[0x24];
+    u16 value74;
+    u8 pad76[0x1A];
+    ActiveSlot slots90[3];
+} ActiveRecordFull;
+
+typedef struct
+{
+    u8 head[0x15];
+    u8 byte15;
+    u8 pad16[2];
+    ActivePacked32 packed18;
+    u16 value1C;
+    u16 value1E;
+    u16 values20[4];
+    ActivePacked16 packed28[8];
+    u8 bytes38[4];
+    u8 resource3C;
+    u8 resources3D[3];
+    u8 pad40[0x20];
+} SavedRecordFull;
+
+typedef struct
+{
+    u8 pad0[0xA90];
+    ActiveRecordFull active;
+    u8 padBE0[0x2EF4 - 0xBE0];
+    SavedRecordFull saved[5];
+} FieldRecordBufferFull;
+
+typedef struct
+{
+    u8 bytes[0x60];
+} SavedRecordRaw;
+
+typedef struct
+{
+    u8 pad0[0xA90];
+    u8 active_head[0x15];
+    u8 padAA5[0x244F];
+    SavedRecordRaw saved[5];
+} FieldRecordBuffer;
+
 void func_800C3B50(void);
 void func_800C3A00(s32);
 void func_800C32C8(void);
@@ -194,124 +271,102 @@ s32 func_800C2DC0(void)
     return ret;
 }
 
-/** @brief Restores a saved secondary record and its equipment tables.
- * @note Initial nonmatching C recovered from assembly.
+/**
+ * @brief Restore a saved secondary record and its equipment tables.
+ * @param arg0 Saved record index to restore.
  */
 void func_800C2E30(s32 arg0)
 {
     s32 temp_s1;
     u8 *temp_v0_4;
-    u8 *temp_v0_5;
-    s32 temp_v0_7;
-    s32 temp_v1;
     s32 temp_v1_2;
-    s32 var_a0;
     s32 var_a0_2;
     s32 var_a2;
     s32 var_s0;
-    s32 var_s0_2;
-    s32 var_s0_3;
-    s32 var_s0_5;
-    s32 var_s0_6;
     s32 var_s1;
-    s8 var_s0_4;
-    u16 temp_v0_3;
-    u8 temp_v0;
     u8 *temp_a0;
     u8 *temp_a0_2;
     u8 *temp_a1;
     u8 *temp_a2;
     u8 *temp_v0_2;
     u8 *temp_v0_6;
-    u8 *var_a1;
-    u8 *var_v1;
     u8 *var_v1_2;
+    u8 **record_global;
 
     var_s0 = 0;
     do
     {
-        temp_a0 = D_80122B74 + var_s0;
-        temp_v0 = ACTIVE_U8(D_80122B74, var_s0 + arg0 * 0x60 + 0x2EF4);
+        ((FieldRecordBuffer *)D_80122B74)->active_head[var_s0] = ((FieldRecordBuffer *)D_80122B74)->saved[arg0].bytes[var_s0];
         var_s0 += 1;
-        ACTIVE_U8(temp_a0, 0xA90) = temp_v0;
     } while (var_s0 < 0x15);
-    var_a0 = arg0 * 0x60;
     ACTIVE_U32(D_80122B74, 0xAA8) = (s32) (((ACTIVE_U32(D_80122B74, 0xAA8) & ~0x7F) | 3) & ~0x80);
-    ACTIVE_U8(D_80122B74, 0xAA9) = (u8) ACTIVE_U8(D_80122B74 + var_a0, 0x2F09);
-    ACTIVE_U8(D_80122B74, 0xAB0) = ACTIVE_U8(D_80122B74 + var_a0, 0x2F0C);
-    temp_a2 = D_80122B74 + var_a0;
-    ACTIVE_U32(D_80122B74, 0xAB0) = (s32) (ACTIVE_U8(D_80122B74, 0xAB0) | (((u32) ACTIVE_U32(temp_a2, 0x2F0C) >> 8) << 8));
-    var_s0_2 = 0;
-    ACTIVE_U16(D_80122B74, 0xAB4) = (u16) ACTIVE_U16(temp_a2, 0x2F10);
-    var_v1 = D_80122B74;
-    ACTIVE_U16(D_80122B74, 0xAB6) = (u16) ACTIVE_U16(temp_a2, 0x2F12);
+    ACTIVE_U8(D_80122B74, 0xAA9) = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].byte15;
+    ((FieldRecordBufferFull *)D_80122B74)->active.packed20.low = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].packed18.low;
+    ((FieldRecordBufferFull *)D_80122B74)->active.packed20.high = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].packed18.high;
+    var_s0 = 0;
+    ((FieldRecordBufferFull *)D_80122B74)->active.value24 = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].value1C;
+    ((FieldRecordBufferFull *)D_80122B74)->active.value26 = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].value1E;
     do
     {
-        temp_v0_2 = D_80122B74 + var_a0;
-        var_a0 += 2;
-        var_s0_2 += 1;
-        ACTIVE_U16(var_v1, 0xAB8) = (u16) ACTIVE_U16(temp_v0_2, 0x2F14);
-        var_v1 += 2;
-    } while (var_s0_2 < 4);
-    var_s0_3 = 0;
+        ((FieldRecordBufferFull *)D_80122B74)->active.values28[var_s0] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].values20[var_s0];
+        var_s0 += 1;
+    } while (var_s0 < 4);
+    var_s0 = 0;
+    temp_a2 = D_80122B74;
     var_a2 = arg0 * 0x60;
-    var_a1 = D_80122B74;
     do
     {
-        temp_a0_2 = D_80122B74 + var_a2;
+        temp_a0_2 = temp_a2 + var_a2;
         var_a2 += 2;
-        var_s0_3 += 1;
-        temp_v0_3 = (ACTIVE_U16(var_a1, 0xAC0) & 0xFE00) | (ACTIVE_U16(temp_a0_2, 0x2F1C) & 0x1FF);
-        ACTIVE_U16(var_a1, 0xAC0) = temp_v0_3;
-        ACTIVE_U16(var_a1, 0xAC0) = (u16) ((temp_v0_3 & 0x1FF) | (ACTIVE_U16(temp_a0_2, 0x2F1C) & 0xFE00));
-        var_a1 += 2;
-    } while (var_s0_3 < 8);
-    temp_v1 = arg0 * 0x60;
-    ACTIVE_U8(D_80122B74, 0xAD0) = (u8) ACTIVE_U8(D_80122B74 + temp_v1, 0x2F2C);
-    ACTIVE_U8(D_80122B74, 0xAD1) = (u8) ACTIVE_U8(D_80122B74 + temp_v1, 0x2F2D);
-    ACTIVE_U8(D_80122B74, 0xAD2) = (u8) ACTIVE_U8(D_80122B74 + temp_v1, 0x2F2E);
-    var_s0_4 = 0;
-    ACTIVE_U8(D_80122B74, 0xAD3) = (u8) ACTIVE_U8(D_80122B74 + temp_v1, 0x2F2F);
+        ((ActivePacked16 *)(temp_a2 + var_s0 * 2 + 0xAC0))->low = ((ActivePacked16 *)(temp_a0_2 + 0x2F1C))->low;
+        ((ActivePacked16 *)(temp_a2 + var_s0 * 2 + 0xAC0))->high = ((ActivePacked16 *)(temp_a0_2 + 0x2F1C))->high;
+        var_s0 += 1;
+    } while (var_s0 < 8);
+    ((FieldRecordBufferFull *)D_80122B74)->active.bytes40[0] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[0];
+    ((FieldRecordBufferFull *)D_80122B74)->active.bytes40[1] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[1];
+    ((FieldRecordBufferFull *)D_80122B74)->active.bytes40[2] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[2];
+    var_s0 = 0;
+    ((FieldRecordBufferFull *)D_80122B74)->active.bytes40[3] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[3];
     do
     {
-        ACTIVE_U8(D_80122B74 + var_s0_4, 0xAD8) = var_s0_4;
-        var_s0_4 += 1;
-    } while (var_s0_4 < 8);
+        ((FieldRecordBufferFull *)D_80122B74)->active.init48[var_s0] = var_s0;
+        var_s0 += 1;
+    } while (var_s0 < 8);
     temp_v0_4 = func_800C1E40(0xD);
     if (temp_v0_4 != 0)
     {
-        func_800C1EC8(temp_v0_4 + ((ACTIVE_U8(D_80122B74, arg0 * 0x60 + 0x2F30) << 6) + 4), D_80122B74 + 0xAE0, 0x40);
+        temp_a0 = D_80122B74 + arg0 * 0x60;
+        func_800C1EC8(temp_v0_4 + ((ACTIVE_U8(temp_a0, 0x2F30) << 6) + 4), D_80122B74 + 0xAE0, 0x40);
     }
-    temp_s1 = arg0 * 0x60;
-    ACTIVE_U16(D_80122B74, 0xB04) = (u16) ACTIVE_U16(D_80122B74 + temp_s1, 0x2F12);
-    temp_v0_5 = func_800C1E40(0xE);
-    var_s0_5 = 0;
-    if (temp_v0_5 != 0)
+    record_global = &D_80122B74;
+    var_s1 = arg0 * 0x60;
+    ACTIVE_U16(*record_global, 0xB04) = (u16) ACTIVE_U16(*record_global + var_s1, 0x2F12);
+    temp_v0_4 = func_800C1E40(0xE);
+    if (temp_v0_4 != 0)
     {
-        var_s1 = 0xB20;
-        do
+        for (var_s0 = 0; var_s0 < 3; var_s0 += 1)
         {
-            temp_v1_2 = var_s0_5 + temp_s1;
-            var_s0_5 += 1;
-            temp_a1 = D_80122B74 + var_s1;
-            var_s1 += 0x40;
-            func_800C1EC8(temp_v0_5 + ((ACTIVE_U8(D_80122B74 + temp_v1_2, 0x2F31) << 6) + 4), temp_a1, 0x40);
-        } while (var_s0_5 < 3);
+            temp_v0_2 = D_80122B74;
+            temp_s1 = arg0 * 0x60;
+            var_s1 = 0xB20 + var_s0 * 0x40;
+            temp_v1_2 = var_s0 + temp_s1;
+            func_800C1EC8(temp_v0_4 + ((ACTIVE_U8(temp_v0_2 + temp_v1_2, 0x2F31) << 6) + 4), temp_v0_2 + var_s1, 0x40);
+        }
     }
-    var_s0_6 = 0;
+    var_s0 = 0;
+    temp_a1 = D_80122B74;
+    var_v1_2 = temp_a1 + 0xB20;
     var_a0_2 = arg0 * 0x60;
-    var_v1_2 = D_80122B74 + 0xB20;
     do
     {
-        temp_v0_6 = D_80122B74 + var_a0_2;
+        temp_v0_6 = temp_a1 + var_a0_2;
         var_a0_2 += 2;
-        var_s0_6 += 1;
+        var_s0 += 1;
         ACTIVE_U16(var_v1_2, 0x24) = (u16) ACTIVE_U16(temp_v0_6, 0x2F14);
         var_v1_2 += 2;
-    } while (var_s0_6 < 4);
-    temp_v0_7 = arg0 * 0x60;
-    ACTIVE_U8(D_80122B74, 0xB4C) = (u8) ACTIVE_U8(D_80122B74 + temp_v0_7, 0x2F2C);
-    ACTIVE_U8(D_80122B74, 0xB4D) = (u8) ACTIVE_U8(D_80122B74 + temp_v0_7, 0x2F2E);
+    } while (var_s0 < 4);
+    ((FieldRecordBufferFull *)D_80122B74)->active.slots90[0].bytes2C[0] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[0];
+    ((FieldRecordBufferFull *)D_80122B74)->active.slots90[0].bytes2C[1] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[2];
     func_800B7C58(2);
 }
 
