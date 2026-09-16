@@ -349,8 +349,6 @@ extern s32 D_8010A030;
  * @brief Dispatch one changed actor control flag and refresh its displayed colors.
  * @param index Object, runtime-state and animation-actor slot index.
  * @note Action values below 0x100 name animations; larger values are callbacks.
- * @note Separate flag masks and explicit table bases preserve target code generation.
- * @note WIP: approximately 94.16% GCC 2.7.2 CDK, with allocation and scheduling residue.
  */
 void func_80086494(s32 index)
 {
@@ -364,21 +362,19 @@ void func_80086494(s32 index)
     u32 changed_flags;
     s32 flags_current;
     s32 old_flags;
+    s32 scan_flags;
     s32 bit_index;
     s32 clear_mask;
     s32 animation_bit;
     s32 highest_bit;
     s32 bit_mask;
-    s32 stop_mask;
     u16 animation_kind;
     u32 *action;
+    u32 *action_base;
     u32 action_value;
     FieldControlActor *actor;
     FieldControlRecord *record;
     FieldControlState *runtime;
-    FieldControlRecord *reset_record;
-    FieldControlVisual *visual;
-    FieldControlRecord *color_record;
 
     record_offset = index * 0x54;
     record = (FieldControlRecord *)(record_offset + (u8 *)D_800FDF58);
@@ -397,12 +393,14 @@ void func_80086494(s32 index)
     {
         if (actor->unk24 == 0)
         {
-            bit_mask = 0x8000;
-            bit_index = 0xF;
-            animation_slot = index + 0x40;
-            action = D_800EB00C;
-            action += bit_index;
-        find_action:
+            do
+            {
+                bit_mask = 0x8000;
+                bit_index = 0xF;
+                animation_slot = index + 0x40;
+                action_base = D_800EB00C;
+                action = action_base + bit_index;
+            find_action:
             if ((changed_or_current & bit_mask) && (action_value = *action, (action_value != 0xFF)))
             {
                 if (action_value < 0x100U)
@@ -411,35 +409,27 @@ void func_80086494(s32 index)
                     {
                         func_80083EEC(index, animation_slot, action_value);
                         field_start_actor_animation(animation_slot, 0, 0);
-                        clear_mask = ~bit_mask;
-                    }
-                    else
-                    {
-                        goto update_flags;
                     }
                 }
                 else
                 {
                     ((void (*)(FieldControlRecord *, s32))action_value)(
                         (FieldControlRecord *)(record_offset + (u8 *)D_800FDF58), runtime->unkc & bit_mask);
-                update_flags:
-                    clear_mask = ~bit_mask;
                 }
+                clear_mask = ~bit_mask;
                 runtime->unk17c = (s32)((runtime->unk17c & clear_mask) | (runtime->unkc & bit_mask));
             }
             else
             {
                 action--;
-                bit_index -= 1;
-                bit_mask = bit_mask >> 1;
-                if (bit_index < 0)
-                {
-                }
-                else
+                bit_index--;
+                bit_mask >>= 1;
+                if (bit_index >= 0)
                 {
                     goto find_action;
                 }
             }
+            } while (0);
         }
         else
         {
@@ -448,27 +438,27 @@ void func_80086494(s32 index)
                 actor->unk24 = 0U;
                 actor->unk23a = 0;
                 func_8006D21C(actor);
-                stop_mask = 0xFFFF7FFF;
-                goto clear_stopped;
+                runtime->unk17c &= 0xFFFF7FFF;
             }
-            if (!(runtime->unkc & 0x4000) && (runtime->unk17c & 0x4000))
+            else if (!(runtime->unkc & 0x4000) && (runtime->unk17c & 0x4000))
             {
                 actor->unk24 = 0U;
                 actor->unk23a = 0;
                 func_8006D21C(actor);
-                stop_mask = -0x4001;
-            clear_stopped:
-                runtime->unk17c = (s32)(runtime->unk17c & stop_mask);
+                runtime->unk17c &= -0x4001;
             }
             else
             {
+                changed_flags = runtime->unkc;
                 old_flags = runtime->unk17c;
-                changed_flags = (runtime->unkc ^ old_flags) & old_flags;
+                changed_flags = (changed_flags ^ old_flags) & old_flags;
                 if (changed_flags != 0)
                 {
+                    scan_flags = (s32)changed_flags;
                     highest_bit = 0xF;
+                    animation_bit = 1;
                 find_highest:
-                    if ((changed_flags & (1 << highest_bit)) == 0)
+                    if ((scan_flags & (animation_bit << highest_bit)) == 0)
                     {
                         highest_bit -= 1;
                         goto find_highest;
@@ -519,20 +509,16 @@ void func_80086494(s32 index)
     }
     if (runtime->unkc & 0x10000000)
     {
-        reset_record = D_800FDF58;
-        reset_record += index;
-        reset_record->unk1a = 0x20;
-        reset_record->unk19 = 0x20;
+        D_800FDF58[index].unk1a = 0x20;
+        D_800FDF58[index].unk19 = 0x20;
         runtime->unkc = (s32)(runtime->unkc & 0xEFFFFFFF);
-        return;
     }
-    visual = D_800FE3A0;
-    visual += index;
-    color_record = D_800FDF58;
-    color_record += index;
-    color_record->unk18 = (u8)visual->unke;
-    color_record->unk19 = (u8)visual->unkf;
-    color_record->unk1a = (u8)visual->unk10;
+    else
+    {
+        D_800FDF58[index].unk18 = D_800FE3A0[index].unke;
+        D_800FDF58[index].unk19 = D_800FE3A0[index].unkf;
+        D_800FDF58[index].unk1a = D_800FE3A0[index].unk10;
+    }
 }
 
 /**
