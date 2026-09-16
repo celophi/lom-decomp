@@ -3058,8 +3058,6 @@ void cload_erase_fixed_card_files(void)
 /**
  * @brief Inlined copy of cload_erase_fixed_card_files used by load-sequence case 6.
  */
-extern void *jtbl_80140040[];
-
 static inline void cload_erase_fixed_card_files_inline(void)
 {
     CloadCardPathScratch card_path;
@@ -3098,7 +3096,7 @@ s32 cload_advance_load_sequence(void)
     s32 rank_index;
     s32 rank_value;
     s32 dispatch;
-    static void *const keep[] = {
+    static void *const dispatch_table[] = {
         &&cl_case_0, &&cl_case_1, &&cl_case_2, &&cl_case_3,
         &&cl_case_4, &&cl_case_5, &&cl_case_6, &&block_81,
         &&cl_case_8, &&cl_case_9, &&block_81, &&block_81,
@@ -3126,7 +3124,7 @@ s32 cload_advance_load_sequence(void)
             {
                 goto block_81;
             }
-            goto *jtbl_80140040[dispatch];
+            goto *dispatch_table[dispatch];
 
         cl_case_1:
             phase_result = 3;
