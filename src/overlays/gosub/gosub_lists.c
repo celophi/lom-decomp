@@ -2,7 +2,6 @@
 
 /**
  * @brief Build screen 15's rows from nonempty inventory slots 0x60-0x84.
- * @see decomp.me (100%)
  */
 void gosub_build_screen_15_item_list(void)
 {
@@ -33,7 +32,6 @@ void gosub_build_screen_15_item_list(void)
 
 /**
  * @brief Build screen 19's rows from nonempty inventory slots 0x60-0x8F.
- * @see decomp.me (100%)
  */
 void gosub_build_screen_19_item_list(void)
 {
@@ -64,7 +62,6 @@ void gosub_build_screen_19_item_list(void)
 
 /**
  * @brief Build screen 16's rows from nonempty inventory slots 0x40-0x4F.
- * @see decomp.me (100%)
  */
 void gosub_build_screen_16_item_list(void)
 {
@@ -94,7 +91,6 @@ void gosub_build_screen_16_item_list(void)
 
 /**
  * @brief Build screen 1's rows from nonempty inventory slots 0x40-0xFE.
- * @see decomp.me (100%)
  */
 void gosub_build_screen_1_item_list(void)
 {
@@ -125,7 +121,6 @@ void gosub_build_screen_1_item_list(void)
 
 /**
  * @brief Build screen 0's rows from nonempty inventory slots 0x00-0x3F.
- * @see decomp.me (100%)
  */
 void gosub_build_screen_0_item_list(void)
 {
@@ -158,7 +153,6 @@ void gosub_build_screen_0_item_list(void)
  * @brief Build the packed-record list for the gosub screen entered by arm 11.
  * @note Bit 2 of the flag word is cleared only for records that are both unflagged at
  *       bit 16 and have both low bits set; every other record sets it.
- * @see decomp.me (100%)
  */
 void gosub_build_packed_record_list(void)
 {
@@ -205,7 +199,6 @@ void gosub_build_packed_record_list(void)
  * @brief Build a roster list for gosub screens 12-14 and 17-18.
  * @param mode Which blocks to emit: 1 = second only, 2 = first only, otherwise
  *             both. Also picks the screen's title message.
- * @see decomp.me (100%)
  */
 void gosub_build_roster_list(s32 mode)
 {

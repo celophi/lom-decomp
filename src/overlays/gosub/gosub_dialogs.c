@@ -12,7 +12,6 @@
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return Always 0.
- * @see decomp.me (100%)
  */
 s32 gosub_handle_row_action_dialog(s32 dialog_result)
 {
@@ -41,9 +40,9 @@ s32 gosub_handle_row_action_dialog(s32 dialog_result)
         element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
         element->attr.f.transition_step = 1;
         element->attr.f.x = 0x20;
-        element->attr.f.width_low = 0x70;
-        element->width_high = 1;
-        element->y = 0x24;
+        element->attr.f.y = 0x70;
+        element->geometry.f.width_high = 1;
+        element->geometry.f.height = 0x24;
         SET_ELEMENT_WIDTH_LOW(element, 0);
     }
     else
@@ -66,7 +65,6 @@ s32 gosub_handle_row_action_dialog(s32 dialog_result)
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return 1 when no rows remain, otherwise 0.
- * @see decomp.me (100%)
  */
 s32 gosub_handle_delete_dialog(s32 dialog_result)
 {
@@ -117,7 +115,6 @@ s32 gosub_handle_delete_dialog(s32 dialog_result)
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return 1 when the confirm path is taken, otherwise 0.
  *
- * @see decomp.me (100%)
  */
 s32 gosub_handle_backtrack_dialog(s32 dialog_result)
 {
@@ -156,14 +153,12 @@ s32 gosub_handle_backtrack_dialog(s32 dialog_result)
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return Always 0.
- * @see decomp.me (100%)
  */
 s32 gosub_handle_sort_dialog(s32 dialog_result)
 {
     if (dialog_result == 0)
     {
-        gosub_sort_rows((g_gosub_sort_ascending << GOSUB_SORT_ASCENDING_SHIFT) +
-                        (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT));
+        gosub_sort_rows((g_gosub_sort_ascending << GOSUB_SORT_ASCENDING_SHIFT) + (g_gosub_dialog_choice % GOSUB_SORT_KEY_COUNT));
         g_gosub_selection_count = 0;
         g_gosub_sort_ascending ^= 1;
     }
@@ -183,7 +178,6 @@ s32 gosub_handle_sort_dialog(s32 dialog_result)
  * dialog's result handler, clears the pending choice, then starts the element
  * entering at x 0x80 / y 0x24 with code 0x80. func_800AA02C runs last.
  *
- * @see decomp.me (100%)
  */
 void gosub_open_row_action_dialog(void)
 {
@@ -196,16 +190,15 @@ void gosub_open_row_action_dialog(void)
     element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x80;
-    element->attr.f.width_low = 0x70;
-    element->width_high = 0;
-    element->y = 0x24;
+    element->attr.f.y = 0x70;
+    element->geometry.f.width_high = 0;
+    element->geometry.f.height = 0x24;
     SET_ELEMENT_WIDTH_LOW(element, 0x80);
     func_800AA02C();
 }
 
 /**
  * @brief Open the three-option row sorting dialog.
- * @see decomp.me (100%)
  */
 void gosub_open_sort_dialog(void)
 {
@@ -218,9 +211,9 @@ void gosub_open_sort_dialog(void)
     element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x80;
-    element->attr.f.width_low = 0x70;
-    element->width_high = 0;
-    element->y = 0x34;
+    element->attr.f.y = 0x70;
+    element->geometry.f.width_high = 0;
+    element->geometry.f.height = 0x34;
     SET_ELEMENT_WIDTH_LOW(element, 0x80);
     func_800AA02C();
 }
@@ -232,7 +225,6 @@ void gosub_open_sort_dialog(void)
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both actions.
- * @see decomp.me (100%)
  */
 s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
@@ -255,10 +247,8 @@ s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_
     {
         sort_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, sort_text, sort_color,
-                                  GOSUB_ROW_ACTION_DIALOG_X - x_offset,
-                                  GOSUB_ROW_ACTION_SORT_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, sort_text, sort_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
+                                  GOSUB_ROW_ACTION_SORT_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     delete_text = GOSUB_MSG_ABS(archive_base, GOSUB_ROW_ACTION_DELETE_MESSAGE_OFFSET);
     delete_color = GOSUB_TEXT_COLOR_DISABLED;
@@ -266,10 +256,8 @@ s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_
     {
         delete_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, delete_text, delete_color,
-                                  GOSUB_ROW_ACTION_DIALOG_X - x_offset,
-                                  GOSUB_ROW_ACTION_DELETE_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, delete_text, delete_color, GOSUB_ROW_ACTION_DIALOG_X - x_offset,
+                                  GOSUB_ROW_ACTION_DELETE_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
 }
@@ -281,7 +269,6 @@ s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after all three choices.
- * @see decomp.me (100%)
  */
 s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
@@ -308,9 +295,7 @@ s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 
     {
         type_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, type_text, type_color,
-                                  GOSUB_SORT_DIALOG_X - x_offset,
-                                  GOSUB_SORT_DIALOG_TYPE_Y - y_offset,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, type_text, type_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_TYPE_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_CENTER);
 
     power_text = GOSUB_MSG_ABS(archive_base, GOSUB_SORT_DIALOG_POWER_MESSAGE_OFFSET);
@@ -319,9 +304,7 @@ s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 
     {
         text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, power_text, text_color,
-                                  GOSUB_SORT_DIALOG_X - x_offset,
-                                  GOSUB_SORT_DIALOG_POWER_Y - y_offset,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, power_text, text_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_POWER_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_CENTER);
 
     shape_text = GOSUB_MSG_ABS(archive_base, GOSUB_SORT_DIALOG_SHAPE_MESSAGE_OFFSET);
@@ -330,9 +313,7 @@ s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 
     {
         text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, shape_text, text_color,
-                                  GOSUB_SORT_DIALOG_X - x_offset,
-                                  GOSUB_SORT_DIALOG_SHAPE_Y - y_offset,
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, shape_text, text_color, GOSUB_SORT_DIALOG_X - x_offset, GOSUB_SORT_DIALOG_SHAPE_Y - y_offset,
                                   GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
@@ -341,7 +322,6 @@ s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 
 /**
  * @brief Open a modal dialog containing caller-provided text.
  * @param message_text Pointer to the encoded dialog text.
- * @see decomp.me (100%)
  */
 void gosub_open_message_dialog(u8* message_text)
 {
@@ -356,9 +336,9 @@ void gosub_open_message_dialog(u8* message_text)
     element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x20;
-    element->attr.f.width_low = 0x70;
-    element->width_high = 1;
-    element->y = 0x14;
+    element->attr.f.y = 0x70;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x14;
     SET_ELEMENT_WIDTH_LOW(element, 0);
     func_800AA02C();
     g_gosub_result_count = 0;
@@ -371,18 +351,13 @@ void gosub_open_message_dialog(u8* message_text)
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the dialog text.
- * @see decomp.me (100%)
  */
 s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 stack_padding[14];
 
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table,
-                                  g_gosub_dialog_text,
-                                  GOSUB_TEXT_COLOR_NORMAL,
-                                  GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
-                                  GOSUB_MESSAGE_DIALOG_TEXT_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, g_gosub_dialog_text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_MESSAGE_DIALOG_TEXT_X - x_offset,
+                                  GOSUB_MESSAGE_DIALOG_TEXT_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
     return packet_cursor;
 }
 
@@ -393,7 +368,6 @@ s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offs
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the header and optional details.
- * @see decomp.me (100%)
  */
 s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -406,15 +380,11 @@ s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offse
     archive_base = (s32)archive_offset_word - 0x20;
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_DETAIL_HEADER_MESSAGE_OFFSET);
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
-                                  GOSUB_TEXT_COLOR_NORMAL,
-                                  GOSUB_DETAIL_HEADER_X - x_offset,
-                                  GOSUB_DETAIL_HEADER_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_DETAIL_HEADER_X - x_offset,
+                                  GOSUB_DETAIL_HEADER_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
-        packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table,
-                                                     x_offset, y_offset);
+        packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table, x_offset, y_offset);
     }
     return packet_cursor;
 }
@@ -426,7 +396,6 @@ s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offse
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both lines.
- * @see decomp.me (100%)
  */
 s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -439,18 +408,12 @@ s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_off
     archive_base = (s32)archive_offset_word - 0x20;
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_TWO_LINE_HEADER_FIRST_MESSAGE_OFFSET);
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
-                                  GOSUB_TEXT_COLOR_NORMAL,
-                                  GOSUB_TWO_LINE_HEADER_X - x_offset,
-                                  GOSUB_TWO_LINE_HEADER_FIRST_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
+                                  GOSUB_TWO_LINE_HEADER_FIRST_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_TWO_LINE_HEADER_SECOND_MESSAGE_OFFSET);
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
-                                  GOSUB_TEXT_COLOR_NORMAL,
-                                  GOSUB_TWO_LINE_HEADER_X - x_offset,
-                                  GOSUB_TWO_LINE_HEADER_SECOND_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_TWO_LINE_HEADER_X - x_offset,
+                                  GOSUB_TWO_LINE_HEADER_SECOND_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     return packet_cursor;
 }
@@ -462,7 +425,6 @@ s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_off
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the title and both choices.
- * @see decomp.me (100%)
  */
 s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -476,11 +438,8 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
     archive_base = (s32)archive_offset_word - 0x20;
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_TITLE_MESSAGE_OFFSET);
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text,
-                                  GOSUB_TEXT_COLOR_NORMAL,
-                                  GOSUB_CONFIRMATION_TITLE_X - x_offset,
-                                  GOSUB_CONFIRMATION_TITLE_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, GOSUB_TEXT_COLOR_NORMAL, GOSUB_CONFIRMATION_TITLE_X - x_offset,
+                                  GOSUB_CONFIRMATION_TITLE_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_FIRST_CHOICE_MESSAGE_OFFSET);
     text_color = GOSUB_TEXT_COLOR_DISABLED;
@@ -488,10 +447,8 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
     {
         text_color = GOSUB_TEXT_COLOR_NORMAL;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color,
-                                  GOSUB_CONFIRMATION_FIRST_CHOICE_X - x_offset,
-                                  GOSUB_CONFIRMATION_CHOICE_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_RIGHT);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_FIRST_CHOICE_X - x_offset,
+                                  GOSUB_CONFIRMATION_CHOICE_Y - y_offset, GOSUB_TEXT_ALIGN_RIGHT);
 
     text = GOSUB_MSG_ABS(archive_base, GOSUB_CONFIRMATION_SECOND_CHOICE_MESSAGE_OFFSET);
     text_color = GOSUB_TEXT_COLOR_NORMAL;
@@ -499,10 +456,8 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
     {
         text_color = GOSUB_TEXT_COLOR_DISABLED;
     }
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color,
-                                  GOSUB_CONFIRMATION_SECOND_CHOICE_X - x_offset,
-                                  GOSUB_CONFIRMATION_CHOICE_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_LEFT);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, text, text_color, GOSUB_CONFIRMATION_SECOND_CHOICE_X - x_offset,
+                                  GOSUB_CONFIRMATION_CHOICE_Y - y_offset, GOSUB_TEXT_ALIGN_LEFT);
 
     return packet_cursor;
 }
@@ -514,22 +469,16 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the description and optional details.
- * @see decomp.me (100%)
  */
 s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
     s32 stack_padding[12];
 
-    packet_cursor = func_800A88A0(packet_cursor, ordering_table,
-                                  g_gosub_rows[g_gosub_cursor_row].desc,
-                                  GOSUB_TEXT_COLOR_NORMAL,
-                                  GOSUB_ROW_DESCRIPTION_X - x_offset,
-                                  GOSUB_ROW_DESCRIPTION_Y - y_offset,
-                                  GOSUB_TEXT_ALIGN_CENTER);
+    packet_cursor = func_800A88A0(packet_cursor, ordering_table, g_gosub_rows[g_gosub_cursor_row].desc, GOSUB_TEXT_COLOR_NORMAL,
+                                  GOSUB_ROW_DESCRIPTION_X - x_offset, GOSUB_ROW_DESCRIPTION_Y - y_offset, GOSUB_TEXT_ALIGN_CENTER);
     if (g_gosub_show_row_details != 0)
     {
-        packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table,
-                                                     x_offset, y_offset);
+        packet_cursor = gosub_draw_equipment_details(packet_cursor, ordering_table, x_offset, y_offset);
     }
     return packet_cursor;
 }
@@ -541,7 +490,6 @@ s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_off
  * @param x_offset Horizontal dialog animation offset.
  * @param y_offset Vertical dialog animation offset.
  * @return Packet cursor after the equipment detail line.
- * @see decomp.me (100%)
  */
 s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset)
 {
@@ -556,58 +504,39 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
     switch (equipment_kind)
     {
     case GOSUB_EQUIPMENT_KIND_WEAPON:
-        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
-                                      (void*)((u8*)&D_800EC3EE - 0x2A + D_800EC3EE.low + (D_800EC3EE.high << 8)),
-                                      GOSUB_TEXT_COLOR_NORMAL,
-                                      GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
-                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table, (void*)((u8*)&D_800EC3EE - 0x2A + D_800EC3EE.low + (D_800EC3EE.high << 8)),
+                                      GOSUB_TEXT_COLOR_NORMAL, GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_WEAPON_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = func_800A8A78(ordering_table, packet_cursor,
-                                      g_gosub_rows[g_gosub_cursor_row].primary_value,
-                                      GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
+        packet_cursor = func_800A8A78(ordering_table, packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, GOSUB_TEXT_COLOR_NORMAL, &number_position,
+                                      GOSUB_TEXT_ALIGN_LEFT);
         break;
 
     case GOSUB_EQUIPMENT_KIND_ARMOR:
-        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
-                                      (void*)((u8*)&D_800EC3F0 - 0x2C + D_800EC3F0.low + (D_800EC3F0.high << 8)),
-                                      GOSUB_TEXT_COLOR_NORMAL,
-                                      GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
-                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table, (void*)((u8*)&D_800EC3F0 - 0x2C + D_800EC3F0.low + (D_800EC3F0.high << 8)),
+                                      GOSUB_TEXT_COLOR_NORMAL, GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_ARMOR_DEFENSE_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
         packet_cursor = func_800A8A78(ordering_table, packet_cursor,
-                                      g_gosub_rows[g_gosub_cursor_row].stats[0] +
-                                          g_gosub_rows[g_gosub_cursor_row].stats[1] +
-                                          g_gosub_rows[g_gosub_cursor_row].stats[2] +
-                                          g_gosub_rows[g_gosub_cursor_row].stats[3],
+                                      g_gosub_rows[g_gosub_cursor_row].stats[0] + g_gosub_rows[g_gosub_cursor_row].stats[1] +
+                                          g_gosub_rows[g_gosub_cursor_row].stats[2] + g_gosub_rows[g_gosub_cursor_row].stats[3],
                                       GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
         break;
 
     /* Instruments and the reserved fourth kind use the same detail layout. */
     default:
         archive_block = &g_gosub_text_archive_offsets_6;
-        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
-                                      (void*)((u8*)&D_800EC3F2 - 0x2E + D_800EC3F2.low + (D_800EC3F2.high << 8)),
-                                      GOSUB_TEXT_COLOR_NORMAL,
-                                      GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset,
-                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table, (void*)((u8*)&D_800EC3F2 - 0x2E + D_800EC3F2.low + (D_800EC3F2.high << 8)),
+                                      GOSUB_TEXT_COLOR_NORMAL, GOSUB_EQUIPMENT_DETAIL_LABEL_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, 0);
         number_position.x = GOSUB_INSTRUMENT_POWER_X - x_offset;
         number_position.y = (s16)(GOSUB_EQUIPMENT_DETAIL_Y - y_offset);
-        packet_cursor = func_800A8A78(ordering_table, packet_cursor,
-                                      g_gosub_rows[g_gosub_cursor_row].primary_value,
-                                      GOSUB_TEXT_COLOR_NORMAL, &number_position, GOSUB_TEXT_ALIGN_LEFT);
+        packet_cursor = func_800A8A78(ordering_table, packet_cursor, g_gosub_rows[g_gosub_cursor_row].primary_value, GOSUB_TEXT_COLOR_NORMAL, &number_position,
+                                      GOSUB_TEXT_ALIGN_LEFT);
         archive_base = (u8*)archive_block;
         archive_base -= 0x2C;
-        effect_text_offset = (s32)archive_base +
-                             *(u16*)(g_gosub_rows[g_gosub_cursor_row].stats[0] * 2 +
-                                     g_gosub_text_archive_offsets_6 + archive_base);
-        packet_cursor = func_800A88A0(packet_cursor, ordering_table,
-                                      (void*)(g_gosub_text_archive_offsets_6 + effect_text_offset),
-                                      GOSUB_TEXT_COLOR_NORMAL,
-                                      GOSUB_INSTRUMENT_EFFECT_X - x_offset,
-                                      GOSUB_EQUIPMENT_DETAIL_Y - y_offset,
-                                      GOSUB_TEXT_ALIGN_LEFT);
+        effect_text_offset = (s32)archive_base + *(u16*)(g_gosub_rows[g_gosub_cursor_row].stats[0] * 2 + g_gosub_text_archive_offsets_6 + archive_base);
+        packet_cursor = func_800A88A0(packet_cursor, ordering_table, (void*)(g_gosub_text_archive_offsets_6 + effect_text_offset), GOSUB_TEXT_COLOR_NORMAL,
+                                      GOSUB_INSTRUMENT_EFFECT_X - x_offset, GOSUB_EQUIPMENT_DETAIL_Y - y_offset, GOSUB_TEXT_ALIGN_LEFT);
         break;
     }
     return packet_cursor;
@@ -620,7 +549,6 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
  * @param x_off Horizontal dialog animation offset.
  * @param y_off Vertical dialog animation offset.
  * @return Packet cursor after the title.
- * @see decomp.me (100%)
  */
 s32 gosub_draw_title(s32* ot, s32 prim, s32 x_off, s32 y_off)
 {
@@ -634,7 +562,6 @@ s32 gosub_draw_title(s32* ot, s32 prim, s32 x_off, s32 y_off)
  * @brief Append one encoded string to another.
  * @param dst Null-terminated destination buffer.
  * @param src Null-terminated source string.
- * @see decomp.me (100%)
  */
 void gosub_append_encoded_string(u8* dst, u8* src)
 {
@@ -657,7 +584,6 @@ void gosub_append_encoded_string(u8* dst, u8* src)
  * @brief Count bytes in a null-terminated encoded string.
  * @param text Encoded string to measure.
  * @return Byte count excluding the terminator.
- * @see decomp.me (100%)
  */
 s32 gosub_encoded_string_length(const u8* text)
 {
@@ -688,7 +614,6 @@ s32 gosub_encoded_string_length(const u8* text)
  * @brief Copy a null-terminated encoded string.
  * @param dst Destination buffer.
  * @param src Source string.
- * @see decomp.me (100%)
  */
 void gosub_copy_encoded_string(u8* dst, u8* src)
 {
