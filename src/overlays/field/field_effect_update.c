@@ -2286,9 +2286,7 @@ typedef enum
  * Attached effects rebuild their world position; free effects integrate a rotated
  * step, resolve collision, and optionally steer toward a position source.
  * @note Some work scalars serve disjoint phases to preserve original allocation.
- * @see working/func_80071D40/target.s
- * @see docs/decompilation/func_80071D40-semantics.md
- * @note WIP - 99.988310% assembly match; placement registers remain.
+ * @see decomp.me (100%) https://decomp.me/scratch/i1ZHZ
  */
 void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part, FieldActorState *actor)
 {
@@ -2313,6 +2311,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
     s32 dx, dy;
     void *initial_surface;
     s32 state_or_delta;
+    s32 flags_byte;
     s32 slot;
     s32 recipient_index;
     u8 reference_state;
@@ -2469,20 +2468,24 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
                 }
                 owner_base = D_80105AE0;
                 owner = &owner_base[actor->owner_object_index];
-                offset_y = 0;
-                state_or_delta = *(u8 *) &owner->state_flags;
-                if ((state_or_delta & 1) && ((u8) actor->actor_index >= 0x40U))
+                flags_byte = *(u8 *) &owner->state_flags;
+                if ((flags_byte & 1) && ((u8) actor->actor_index >= 0x40U))
                 {
-                    offset_or_angle = offset_y;
                     if (!(((u32) owner->state_flags >> 5) & 1))
                     {
                         offset_y = 0x800000;
                         offset_or_angle = offset_y;
                         selector = -1;
                     }
+                    else
+                    {
+                        offset_y = 0;
+                        offset_or_angle = offset_y;
+                    }
                 }
                 else
                 {
+                    offset_y = 0;
                     offset_or_angle = offset_y;
                 }
                 switch (selector)
