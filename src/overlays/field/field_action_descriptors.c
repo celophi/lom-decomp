@@ -22,10 +22,9 @@ void *func_800B50B8(void)
 {
     s32 temp_a0_3;
     s32 temp_a3;
-    s32 temp_a3_2;
     s32 temp_v1;
     u32 temp_a0_2;
-    u8 temp_a1;
+    s32 temp_a1;
     u8 *temp_a0;
     u8 *temp_a2;
     u8 *temp_t0;
@@ -33,9 +32,12 @@ void *func_800B50B8(void)
     u8 *temp_v1_3;
     u8 *temp_v1_4;
     u8 *var_a1;
+    DescriptorContext *temp_ctx;
+    u8 *temp_base;
+    s32 temp_offset;
 
-    D_80123FB0->unk4A2 = 0U;
     D_80123FB0->unk4A0 = *(u16 *)(D_80123FB0->unk20 + 0x18);
+    D_80123FB0->unk4A2 = 0U;
     temp_a0 = D_80123FB0->unk20;
     temp_v1 = *(u32 *)(temp_a0 + 0x4) & 0xFC00;
     if (temp_v1 == 0x1400)
@@ -47,14 +49,14 @@ void *func_800B50B8(void)
         {
             var_a1 = temp_v1_2 + ((temp_a3 * 8) + 0x54);
         }
+        else if ((u32) (temp_a3 - 0x17) >= 2U)
+        {
+            akao_set_song_params(0x8001, 0x69, *(s32 *)(temp_a2 + 0x0), temp_a3);
+            var_a1 = NULL;
+        }
         else
         {
             var_a1 = NULL;
-            if ((u32) (temp_a3 - 0x17) >= 2U)
-            {
-                akao_set_song_params(0x8001, 0x69, *(s32 *)(temp_a2 + 0x0), temp_a3);
-                var_a1 = NULL;
-            }
         }
     }
     else if ((temp_v1 == 0xC00) || (temp_v1 == 0x1000))
@@ -63,17 +65,22 @@ void *func_800B50B8(void)
     }
     else
     {
-        temp_t0 = (temp_a0[4] * 0x250) + D_80122B74 + 0x640;
+        s32 descriptor_base;
+        descriptor_base = (s32) D_80122B74;
+        temp_t0 = (u8 *) ((temp_a0[4] * 0x250) + descriptor_base + 0x640);
         D_80123FB0->unk4A2 = (u8) *(u8 *)(temp_t0 + 0x2C);
         temp_a0_2 = *(s32 *)(D_80123FB0->unk18 + 0x4);
         switch (temp_a0_2)
         {
         case 0:
         case 1:
-            var_a1 = func_800B543C(D_80122B74[*(s32 *)(D_80123FB0->unk18 + 4) + D_80123FB0->unk20[4] * 0x250 + 0x60A]);
+            var_a1 = func_800B543C(*(D_80122B74 - (-(*(s32 *)(D_80123FB0->unk18 + 4) + D_80123FB0->unk20[4] * 0x250)) + 0x60A));
             break;
         case 2:
-            var_a1 = D_80123FAC + *(s32 *)(D_80123FAC + 0x0) + (*(u8 *)(temp_t0 + 0x26) * 8) + (*(s32 *)(D_80123FB0->unk18 + 0x8) * 8);
+            temp_a0 = D_80123FAC;
+            temp_a0 += *(s32 *)(temp_a0 + 0x0);
+            var_a1 = temp_a0 + (*(u8 *)(temp_t0 + 0x26) * 8);
+            var_a1 += *(s32 *)(D_80123FB0->unk18 + 0x8) * 8;
             break;
         case 3:
             var_a1 = D_80123FAC + *(s32 *)(D_80123FAC + 0x0) + (temp_t0[*(s32 *)(D_80123FB0->unk18 + 4) + 0x24] * 8);
@@ -82,17 +89,25 @@ void *func_800B50B8(void)
         case 5:
         case 6:
         case 7:
-            temp_a3_2 = D_80123FB0->unk20[4] * 0x250;
-            temp_a1 = D_80122B74[*(s32 *)(D_80123FB0->unk18 + 4) + (temp_a3_2 - 4) + 0x60C];
+            temp_ctx = D_80123FB0;
+            temp_base = D_80122B74;
+            temp_a3 = temp_ctx->unk20[4] * 0x250;
+            temp_offset = temp_a3 - 4;
+            temp_a1 = *(temp_base + (*(s32 *)(temp_ctx->unk18 + 4) + temp_offset) + 0x60C);
             if (temp_a1 < 0x80U)
             {
-                var_a1 = D_80123FAC + *(s32 *)(D_80123FAC + 0x4) + ((((((u32) *(u32 *)(temp_t0 + 0x14) >> 0xA) & 0x3F) * 0x18) + temp_a1) * 8);
+                {
+                    s32 low_index;
+                    low_index = ((((u32) *(u32 *)(temp_t0 + 0x14) >> 0xA) & 0x3F) * 0x18) + temp_a1;
+                    var_a1 = D_80123FAC + *(s32 *)(D_80123FAC + 0x4) + (low_index << 3);
+                }
             }
             else
             {
-                temp_v1_3 = D_80122B74 + (temp_a3_2 + 0x5F0) + ((((temp_a1 + 4) & 0x7F) << 6) + 0x50);
-                D_80123FB0->unk4A2 = 0U;
-                D_80123FB0->unk4A0 = (u16) *(u8 *)(temp_v1_3 + 0x26);
+                temp_v1_3 = temp_base + (temp_a3 + 0x5F0) + ((((temp_a1 + 4) & 0x7F) << 6) + 0x50);
+                temp_a1 = *(u8 *)(temp_v1_3 + 0x26);
+                temp_ctx->unk4A2 = 0U;
+                temp_ctx->unk4A0 = (u16) temp_a1;
                 var_a1 = D_80123FAC + *(s32 *)(D_80123FAC + 0x8) + (*(u8 *)(temp_v1_3 + 0x24) * 0x70) + (*(u8 *)(temp_v1_3 + 0x25) * 8);
             }
             break;
