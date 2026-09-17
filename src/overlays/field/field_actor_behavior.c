@@ -2256,7 +2256,6 @@ s32 func_80090F80(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
  * @param targets Animation target identifiers.
  * @param flags Layer-selection flags; other bit meanings are unknown.
  * @return One when the request was applied, or zero when it was not ready.
- * @note GCC 2.7.2 CDK currently matches 98.983406 percent of the target.
  */
 s32 func_8009104C(s32 actor_id, s32 target_count, u8 *targets, s32 flags)
 {
@@ -2316,9 +2315,7 @@ s32 func_8009104C(s32 actor_id, s32 target_count, u8 *targets, s32 flags)
     extern ActorSlot g_field_actor_slots[];
 
     u16 frame_value;
-    ActorSlot *slot_base;
     s32 remaining_layers;
-    s32 layer_offset;
     s32 result;
     s32 request_index;
     s32 new_slot_id;
@@ -2366,21 +2363,19 @@ s32 func_8009104C(s32 actor_id, s32 target_count, u8 *targets, s32 flags)
                 g_field_actor_slots[request->unk18].unk2a = 1;
                 if (remaining_layers != 0)
                 {
-                    slot_base = g_field_actor_slots;
-                    layer_offset = 0x1C;
                     do
                     {
                         new_slot_id = func_800839F8(actor_id, 0);
                         if (new_slot_id != -1)
                         {
-                            slot = &slot_base[new_slot_id];
-                            bcopy(&slot_base[request->unk18], slot, 0x244);
+                            slot = &g_field_actor_slots[new_slot_id];
+                            bcopy(&g_field_actor_slots[request->unk18], slot, 0x244);
                             animation = slot->unk10;
                             slot->unk233 = new_slot_id;
                             slot->unk29 = layer_index;
                             frame_value = animation->unk12;
-                            slot->unkc = (AnimationDef *)((u8 *)animation + layer_offset);
                             slot->unk238 = 0;
+                            slot->unkc = (AnimationDef *)((u8 *)animation + (layer_index * 0x1C));
                             result = 1;
                             slot->unk2a = result;
                             slot->unk24 = result;
@@ -2388,7 +2383,6 @@ s32 func_8009104C(s32 actor_id, s32 target_count, u8 *targets, s32 flags)
                             field_start_actor_animation(new_slot_id, target_count, targets);
                         }
                         remaining_layers -= 1;
-                        layer_offset += 0x1C;
                         layer_index += 1;
                     } while (remaining_layers != 0);
                 }
