@@ -144,12 +144,20 @@ typedef struct
             u32 state : 3;
             u32 transition_step : 4;
             u32 x : 9;
+            u32 y : 8;
             u32 width_low : 8;
         } f;
     } attr;
-    u32 width_high : 1;
-    u32 y : 8;
-    u32 reserved_9 : 23;
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 width_high : 1;
+            u32 height : 8;
+            u32 reserved_9 : 23;
+        } f;
+    } geometry;
     void* draw_handler;
 } GosubElement;
 
@@ -223,7 +231,7 @@ typedef struct
     s16 y;
 } GosubTextPosition;
 
-/** @brief GPU tile-shaped packet with a volatile height field. */
+/** @brief GPU tile-shaped packet used by the gosub renderer. */
 typedef struct
 {
     s32 tag;
@@ -261,16 +269,16 @@ typedef GosubGpuPacket* (*GosubElementDrawHandler)();
 /** @brief Unconnected flat-line GPU packet. */
 typedef struct
 {
-    u_long tag;  /* 0x00 P_TAG */
-    u_char r0;   /* 0x04 */
-    u_char g0;   /* 0x05 */
-    u_char b0;   /* 0x06 */
-    u_char code; /* 0x07 */
-    s16 x0;      /* 0x08 */
-    s16 y0;      /* 0x0A */
-    s16 x1;      /* 0x0C */
-    s16 y1;      /* 0x0E */
-} GosubLinePacket; /* 0x10 */
+    u_long tag;
+    u_char r0;
+    u_char g0;
+    u_char b0;
+    u_char code;
+    s16 x0;
+    s16 y0;
+    s16 x1;
+    s16 y1;
+} GosubLinePacket;
 
 /** @brief Packed four-byte record stored in the combination table. */
 typedef struct
@@ -284,7 +292,7 @@ typedef struct
     u8 row_order[GOSUB_SORT_ORDER_CAPACITY];
     GosubPackedRecord packed_records[GOSUB_SORT_ROW_CAPACITY];
     GosubListRow rows[GOSUB_SORT_ROW_CAPACITY];
-} GosubSortWorkspace; /* 0x6A0 */
+} GosubSortWorkspace;
 
 /** @brief One 0x40-byte equipment record in the table at g_pad_ctx + 0xCE0. */
 typedef struct
@@ -344,22 +352,22 @@ typedef struct
  */
 typedef struct
 {
-    u8 addr[3]; /* 0x00 P_TAG addr (24-bit, set via addPrim) */
-    u8 len;     /* 0x03 P_TAG len */
-    u8 r;       /* 0x04 */
-    u8 g;       /* 0x05 */
-    u8 b;       /* 0x06 */
-    u8 code;    /* 0x07 */
-    s16 x0;     /* 0x08 */
-    s16 y0;     /* 0x0A */
-    s16 x1;     /* 0x0C */
-    s16 y1;     /* 0x0E */
-    s16 x2;     /* 0x10 */
-    s16 y2;     /* 0x12 */
-    s16 x3;     /* 0x14 */
-    s16 y3;     /* 0x16 */
-    u32 mask;   /* 0x18 LINE_F4 pad word (0x55555555) */
-} GosubScrollMarkerPacket; /* 0x1C */
+    u8 addr[3];
+    u8 len;
+    u8 r;
+    u8 g;
+    u8 b;
+    u8 code;
+    s16 x0;
+    s16 y0;
+    s16 x1;
+    s16 y1;
+    s16 x2;
+    s16 y2;
+    s16 x3;
+    s16 y3;
+    u32 mask;
+} GosubScrollMarkerPacket;
 
 /** @brief Offset tables at the head of the message archive. */
 typedef struct
@@ -387,36 +395,36 @@ typedef struct
 /** @brief Glyph cell descriptor in the 8-byte g_gosub_glyph_metrics table. */
 typedef struct
 {
-    u8 u0;    /* 0x00 texture u */
+    u8 u0;
     u8 reserved_1;
-    u8 v0;    /* 0x02 texture v */
+    u8 v0;
     u8 reserved_3;
-    u16 w;    /* 0x04 */
-    u16 h;    /* 0x06 */
-} GosubGlyphMetric; /* 0x08 */
+    u16 w;
+    u16 h;
+} GosubGlyphMetric;
 
 /** @brief One positioned glyph in a composite icon layout. */
 typedef struct
 {
-    s8 x;        /* 0x00, in 16-pixel cells */
-    s8 y;        /* 0x01, in 16-pixel cells */
-    s16 glyph_id; /* 0x02 */
-} GosubCompositeIconPart; /* 0x04 */
+    s8 x;
+    s8 y;
+    s16 glyph_id;
+} GosubCompositeIconPart;
 
 /** @brief One 88-byte composite icon layout in D_800F1CD0. */
 typedef struct
 {
-    u8 part_count; /* 0x00 */
+    u8 part_count;
     u8 reserved_01;
-    u8 grid_width;  /* 0x02 */
-    u8 grid_height; /* 0x03 */
-    s16 origin_x;   /* 0x04, in 8-pixel cells */
-    s16 origin_y;   /* 0x06, in 8-pixel cells */
-    s8 base_x;      /* 0x08, in 8-pixel cells */
-    s8 base_y;      /* 0x09, in 8-pixel cells */
+    u8 grid_width;
+    u8 grid_height;
+    s16 origin_x;
+    s16 origin_y;
+    s8 base_x;
+    s8 base_y;
     u8 reserved_0a[2];
-    GosubCompositeIconPart parts[GOSUB_COMPOSITE_ICON_PART_CAPACITY]; /* 0x0C */
-} GosubCompositeIconLayout; /* 0x58 */
+    GosubCompositeIconPart parts[GOSUB_COMPOSITE_ICON_PART_CAPACITY];
+} GosubCompositeIconLayout;
 
 /** @brief Byte and structured views of a composite icon table cursor. */
 typedef union
@@ -478,7 +486,9 @@ extern u8 D_800F1CD0[];
  * @param off Byte offset of the u16 entry index within the resolved block.
  * @return Pointer to the entry.
  */
-#define GOSUB_MSG_PTR(off) ((u8*)&g_gosub_message_archive_offset - 0x20 + g_gosub_message_archive_offset + *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset + (off)))
+#define GOSUB_MSG_PTR(off)                                                                                                                                     \
+    ((u8*)&g_gosub_message_archive_offset - 0x20 + g_gosub_message_archive_offset +                                                                            \
+     *(u16*)((u8*)&g_gosub_message_archive_offset + g_gosub_message_archive_offset + (off)))
 
 /**
  * @brief Resolve the message-archive entry at @p off and open its dialog.
@@ -504,7 +514,8 @@ extern u8 D_800F1CD0[];
 #define GOSUB_EQUIPMENT_CATEGORY(attributes) (((attributes) >> 10) & 0x3F)
 #define GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) (((attributes) >> 9) & 0x7E)
 #define GOSUB_KIND2_ARCHIVE_ENTRY(attributes)                                                                                                                  \
-    ((u8*)&g_gosub_text_archive_offsets_0 + g_gosub_text_archive_offsets_2[0] + *(u16*)((u8*)g_gosub_text_archive_offsets_2 + g_gosub_text_archive_offsets_2[0] + GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) + 0x22))
+    ((u8*)&g_gosub_text_archive_offsets_0 + g_gosub_text_archive_offsets_2[0] +                                                                                \
+     *(u16*)((u8*)g_gosub_text_archive_offsets_2 + g_gosub_text_archive_offsets_2[0] + GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) + 0x22))
 
 /**
  * @brief Resolve a message pointer against a caller-held archive base.
@@ -536,65 +547,68 @@ void func_800A8B90();
 void func_800AA02C();
 s32 func_800A88A0(s32 prim, s32* ot, void* text, s32 color, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32* ot, s32 prim, s32 value, s32 color, GosubTextPosition* position, s32 mode);
-void gosub_load_screen_sequence(s32*);
-void gosub_build_screen_9_elements();
-void gosub_build_screen_10_elements();
-void gosub_build_category_screen_elements();
-void gosub_build_list_screen_elements();
-void gosub_build_screen_11_elements();
-void gosub_build_compact_list_elements();
-void gosub_build_screen_15_item_list();
-void gosub_build_screen_19_item_list();
-void gosub_build_screen_16_item_list();
-void gosub_build_screen_1_item_list();
-void gosub_build_screen_0_item_list();
-void gosub_build_packed_record_list();
-void gosub_build_roster_list();
-s32 gosub_select_row_with_validation();
-s32 gosub_select_row();
-s32 gosub_validate_pending_pair_selection();
-s32 gosub_commit_row_reorder();
-s32 gosub_update_group_selection();
-s32 gosub_publish_two_row_selection();
+void gosub_load_screen_sequence(s32* screen_sequence);
+void gosub_build_screen_9_elements(void);
+void gosub_build_screen_10_elements(void);
+void gosub_initialize_fixed_element(void);
+void gosub_build_category_screen_elements(void);
+void gosub_build_list_screen_elements(s32 include_middle);
+void gosub_build_screen_11_elements(void);
+void gosub_build_compact_list_elements(void);
+void gosub_build_screen_15_item_list(void);
+void gosub_build_screen_19_item_list(void);
+void gosub_build_screen_16_item_list(void);
+void gosub_build_screen_1_item_list(void);
+void gosub_build_screen_0_item_list(void);
+void gosub_build_packed_record_list(void);
+void gosub_build_roster_list(s32 mode);
+s32 gosub_select_row_with_validation(void);
+s32 gosub_select_row(void);
+s32 gosub_validate_pending_pair_selection(void);
+s32 gosub_commit_row_reorder(void);
+s32 gosub_update_group_selection(void);
+s32 gosub_publish_two_row_selection(void);
 s32 gosub_handle_combination_dialog(s32 dialog_result);
 s32 gosub_publish_group_selection(void);
 s32 gosub_publish_selection(void);
 s32 gosub_is_row_unselected(s32 row);
 void gosub_build_equipment_list(u32 item_kind);
 void gosub_build_grouped_option_list(s32 group);
-void gosub_update_screen(s32 render_ctx);
-void gosub_enter_screen();
-s32 gosub_handle_input(s32 unused);
+void gosub_update_screen(GosubRenderContext* render_context);
+void gosub_enter_screen(s32 screen_id);
+s32 gosub_handle_input(void);
 void gosub_scroll_to_cursor(void);
 s32 gosub_toggle_cursor_selection(void);
 s32 gosub_advance_screen_sequence(void);
 s32 gosub_are_elements_idle(void);
-void gosub_start_element_exit();
+void gosub_start_element_exit(void);
 void gosub_clear_elements(void);
-void gosub_render_elements();
-void gosub_update_and_render_elements();
+void gosub_render_elements(GosubRenderContext* render_context);
+void gosub_update_and_render_elements(GosubRenderContext* render_context);
 void gosub_open_message_dialog(u8* message_text);
 s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
 s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
 s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
 s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
 s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset);
-void gosub_append_encoded_string();
-void gosub_copy_encoded_string();
+void gosub_append_encoded_string(u8* dst, u8* src);
+void gosub_copy_encoded_string(u8* dst, u8* src);
 s32 gosub_encoded_string_length(const u8* text);
-GosubElement* gosub_allocate_element();
-void* gosub_emit_scroll_marker();
-GosubGpuPacket* gosub_emit_panel();
-GosubLinePacket* gosub_emit_panel_outline();
-GosubGpuPacket* gosub_emit_panel_corners(SPRT*, s32*, s32, s32, s32, s32);
-GosubTilePacket* gosub_draw_item_list();
+GosubElement* gosub_allocate_element(void);
+void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s32 y, s32 flag);
+GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag);
+GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 color);
+GosubGpuPacket* gosub_emit_panel_corners(SPRT* prim, s32* ot, s32 x, s32 y, s32 w, s32 h);
+GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 y_off);
 s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count);
 s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset);
 s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s32 y, s32 icon_id, s32 layout_index);
-s32 gosub_draw_combination_preview();
-s32 gosub_handle_backtrack_dialog();
+s32 gosub_draw_combination_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_off);
+s32 gosub_handle_row_action_dialog(s32 dialog_result);
+s32 gosub_handle_sort_dialog(s32 dialog_result);
+s32 gosub_handle_backtrack_dialog(s32 dialog_result);
 s32 gosub_handle_delete_dialog(s32 dialog_result);
-s32 gosub_draw_title();
+s32 gosub_draw_title(s32* ot, s32 prim, s32 x_off, s32 y_off);
 s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset);
 s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset);
 void gosub_open_row_action_dialog(void);
@@ -607,7 +621,6 @@ void gosub_delete_packed_record(s32 record_index);
 void gosub_delete_list_row(s32 row);
 s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index);
 void gosub_upload_font_texture(void);
-
 
 /* Overlay state shared across the recovered translation units. */
 extern s32 g_gosub_frame_parity;
@@ -622,7 +635,7 @@ extern s32 g_gosub_dialog_choice;
 extern s32 g_gosub_combination_quantity;
 extern s32 g_gosub_allow_duplicate_selection;
 extern u8* g_gosub_dialog_text;
-extern s32 (*g_gosub_finish_handler)();
+extern s32 (*g_gosub_finish_handler)(void);
 extern u8 g_gosub_selection_mode;
 extern u8 g_gosub_required_selection_count;
 extern s32 g_gosub_show_row_details;
@@ -630,7 +643,7 @@ extern s32 g_gosub_result_rows[16];
 extern s32 g_gosub_dialog_accepting_input;
 extern u8 g_gosub_selected_rows[4];
 extern s32 g_gosub_window_height;
-extern s32 (*g_gosub_select_handler)();
+extern s32 (*g_gosub_select_handler)(void);
 extern s32 g_gosub_window_width;
 extern s32 g_gosub_suppress_dialog_sound;
 extern u8 g_gosub_text_buffers[0x5000];

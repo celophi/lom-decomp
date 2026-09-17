@@ -33,8 +33,7 @@ void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* t
 
     if (flags & GOSUB_TIM_HAS_CLUT)
     {
-        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y,
-                CLUT_ENTRY_COUNT, 1);
+        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, CLUT_ENTRY_COUNT, 1);
         LoadImage(&upload_rect, (u_long*)tim->clut_data);
         pixel_dimensions = &((TimBlock*)(clut_block_size + (s32)tim + TIM_HEADER_SIZE))->dimensions;
     }
@@ -43,10 +42,8 @@ void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* t
         pixel_dimensions = &tim->clut_block.dimensions;
     }
 
-    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y,
-            pixel_dimensions->width, pixel_dimensions->height);
-    LoadImage(&upload_rect,
-              (u_long*)(((TimBlock*)(clut_block_size + (s32)tim + TIM_HEADER_SIZE)) + 1));
+    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y, pixel_dimensions->width, pixel_dimensions->height);
+    LoadImage(&upload_rect, (u_long*)(((TimBlock*)(clut_block_size + (s32)tim + TIM_HEADER_SIZE)) + 1));
 }
 
 /**
@@ -77,18 +74,15 @@ s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s3
 
     clut = D_800F2180[icon_id];
     table_bytes = D_800F1CD0;
-    layout_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) +
-                              (s32)table_bytes);
+    layout_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) + (s32)table_bytes);
     layout_x = layout_view.layout->origin_x;
     layout_y = layout_view.layout->origin_y;
     base_glyph_x = layout_view.layout->base_x;
     base_glyph_y = layout_view.layout->base_y;
     icon_x = x + layout_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
     icon_y = y + layout_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE;
-    packet_cursor = gosub_emit_glyph(initial_packet, ordering_table,
-                                     icon_id + GOSUB_COMPOSITE_ICON_BASE_GLYPH_OFFSET,
-                                     base_glyph_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_x,
-                                     base_glyph_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_y,
+    packet_cursor = gosub_emit_glyph(initial_packet, ordering_table, icon_id + GOSUB_COMPOSITE_ICON_BASE_GLYPH_OFFSET,
+                                     base_glyph_x * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_x, base_glyph_y * GOSUB_COMPOSITE_ICON_BASE_CELL_SIZE + icon_y,
                                      GOSUB_COMPOSITE_ICON_BASE_CLUT);
 
     /* The part count is byte zero of the packed layout. */
@@ -97,15 +91,11 @@ s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s3
     {
         u8* loop_base = &D_800F1CD0[layout_y];
 
-        part_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) +
-                                part_index * (s32)sizeof(GosubCompositeIconPart) +
-                                (s32)loop_base);
+        part_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) + part_index * (s32)sizeof(GosubCompositeIconPart) + (s32)loop_base);
         /* The shifted layout view exposes the current tuple as parts[0]. */
-        packet_cursor = gosub_emit_glyph(packet_cursor, ordering_table,
-                                         part_view.layout->parts[0].glyph_id,
+        packet_cursor = gosub_emit_glyph(packet_cursor, ordering_table, part_view.layout->parts[0].glyph_id,
                                          part_view.layout->parts[0].x * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_x,
-                                         part_view.layout->parts[0].y * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_y,
-                                         clut);
+                                         part_view.layout->parts[0].y * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_y, clut);
     }
     return gosub_finish_glyph_run(packet_cursor, ordering_table);
 }
@@ -167,8 +157,7 @@ void gosub_delete_packed_record(s32 record_index)
 
     for (shift_index = record_index; shift_index < GOSUB_LOGIC_BLOCK_COUNT - 1; shift_index++)
     {
-        gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[shift_index],
-                                 &GOSUB_LOGIC_BLOCK_RECORDS[shift_index + 1]);
+        gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[shift_index], &GOSUB_LOGIC_BLOCK_RECORDS[shift_index + 1]);
     }
     GOSUB_LOGIC_BLOCK_COUNT--;
 }
@@ -291,8 +280,7 @@ void gosub_sort_rows(s32 sort_mode)
 
     for (row_index = 0; row_index < g_gosub_row_count; row_index++)
     {
-        gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[row_index],
-                                 &workspace.packed_records[workspace.row_order[row_index]]);
+        gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[row_index], &workspace.packed_records[workspace.row_order[row_index]]);
         gosub_copy_list_row(&g_gosub_rows[row_index], &workspace.rows[workspace.row_order[row_index]]);
     }
 
@@ -353,12 +341,10 @@ void gosub_upload_font_texture(void)
 {
     RECT upload_rect;
 
-    setRECT(&upload_rect, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y,
-            GOSUB_FONT_CLUT_WIDTH, GOSUB_FONT_CLUT_HEIGHT);
+    setRECT(&upload_rect, GOSUB_FONT_CLUT_X, GOSUB_FONT_CLUT_Y, GOSUB_FONT_CLUT_WIDTH, GOSUB_FONT_CLUT_HEIGHT);
     LoadImage(&upload_rect, (u_long*)g_gosub_font_texture);
 
-    setRECT(&upload_rect, GOSUB_FONT_TEXTURE_X, GOSUB_FONT_TEXTURE_Y,
-            GOSUB_FONT_TEXTURE_WIDTH, GOSUB_FONT_TEXTURE_HEIGHT);
+    setRECT(&upload_rect, GOSUB_FONT_TEXTURE_X, GOSUB_FONT_TEXTURE_Y, GOSUB_FONT_TEXTURE_WIDTH, GOSUB_FONT_TEXTURE_HEIGHT);
     LoadImage(&upload_rect, (u_long*)(g_gosub_font_texture + GOSUB_FONT_TEXTURE_DATA_OFFSET));
     DrawSync(0);
 }

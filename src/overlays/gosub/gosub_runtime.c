@@ -3,12 +3,12 @@
 /**
  * @brief Process input, advance scroll interpolation, and draw the active screen.
  *
- * @param render_ctx Rendering context forwarded to the input and draw handlers.
+ * @param render_context Rendering context forwarded to the draw handler.
  * @see decomp.me (100%)
  */
-void gosub_update_screen(s32 render_ctx)
+void gosub_update_screen(GosubRenderContext* render_context)
 {
-    gosub_handle_input(render_ctx);
+    gosub_handle_input();
 
     if (g_gosub_finished == 0)
     {
@@ -22,18 +22,16 @@ void gosub_update_screen(s32 render_ctx)
             g_gosub_scroll_y = g_gosub_scroll_target_y;
         }
 
-        gosub_render_elements(render_ctx);
+        gosub_render_elements(render_context);
     }
 }
 
 /**
  * @brief Handle dialog, navigation, selection, completion, and cancellation input.
- *
- * @param unused Unused rendering context.
  * @return Undefined; callers ignore the value.
  * @see decomp.me (100%)
  */
-s32 gosub_handle_input(s32 unused)
+s32 gosub_handle_input(void)
 {
     GosubElement* elements;
     s32 steps_remaining;
@@ -404,9 +402,9 @@ s32 gosub_advance_screen_sequence(void)
         element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
         element->attr.f.transition_step = 1;
         element->attr.f.x = 0x20;
-        element->attr.f.width_low = 0x70;
-        element->width_high = 1;
-        element->y = 0x24;
+        element->attr.f.y = 0x70;
+        element->geometry.f.width_high = 1;
+        element->geometry.f.height = 0x24;
         SET_ELEMENT_WIDTH_LOW(element, 0);
     }
     else

@@ -102,7 +102,7 @@ s32 gosub_commit_row_reorder(void)
     {
         gosub_copy_packed_record(&rec_tmp, g_pad_ctx + (g_gosub_rows[g_gosub_selected_rows[0]].index * 4 + 0x29DC));
         gosub_copy_packed_record(g_pad_ctx + (g_gosub_rows[g_gosub_selected_rows[0]].index * 4 + 0x29DC),
-                      g_pad_ctx + (g_gosub_rows[g_gosub_selected_rows[1]].index * 4 + 0x29DC));
+                                 g_pad_ctx + (g_gosub_rows[g_gosub_selected_rows[1]].index * 4 + 0x29DC));
         gosub_copy_packed_record(g_pad_ctx + (g_gosub_rows[g_gosub_selected_rows[1]].index * 4 + 0x29DC), &rec_tmp);
         gosub_copy_list_row(&entry_tmp, &g_gosub_rows[g_gosub_selected_rows[0]]);
         gosub_copy_list_row(&g_gosub_rows[g_gosub_selected_rows[0]], &g_gosub_rows[g_gosub_selected_rows[1]]);
@@ -388,10 +388,11 @@ void gosub_build_equipment_list(u32 item_kind)
 
                 g_gosub_rows[row_count].name = GOSUB_EQUIPMENT_AT(item_index)->name;
 
-                gosub_copy_encoded_string(GOSUB_TEXT_BUFFER(row_count),
-                              ARCHIVE_ENTRY(g_gosub_text_archive_offsets_1[0], GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(item_index)->attributes.half.material & 0x3F));
+                gosub_copy_encoded_string(
+                    GOSUB_TEXT_BUFFER(row_count),
+                    ARCHIVE_ENTRY(g_gosub_text_archive_offsets_1[0], GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(item_index)->attributes.half.material & 0x3F));
                 separator_offset = (s32)(D_800EC3E2 - 0x1E) + (D_800EC3E2[1] << 8);
-                gosub_append_encoded_string(GOSUB_TEXT_BUFFER(row_count), D_800EC3E2[0] + separator_offset);
+                gosub_append_encoded_string(GOSUB_TEXT_BUFFER(row_count), (u8*)(D_800EC3E2[0] + separator_offset));
 
                 item_base = GOSUB_EQUIPMENT_BASE_FROM_INDEX(item_index);
                 g_gosub_rows[row_count].equipment_kind = GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(item_base)->attributes.word);
@@ -400,12 +401,13 @@ void gosub_build_equipment_list(u32 item_kind)
                 switch (GOSUB_EQUIPMENT_KIND(attributes))
                 {
                 case 0:
-                    gosub_append_encoded_string(GOSUB_TEXT_BUFFER(row_count), ARCHIVE_ENTRY(GOSUB_TEXT_ARCHIVE->block_offsets[3], GOSUB_EQUIPMENT_CATEGORY(attributes)));
+                    gosub_append_encoded_string(GOSUB_TEXT_BUFFER(row_count),
+                                                ARCHIVE_ENTRY(GOSUB_TEXT_ARCHIVE->block_offsets[3], GOSUB_EQUIPMENT_CATEGORY(attributes)));
                     g_gosub_rows[row_count].primary_value = GOSUB_EQUIPMENT_AT(item_index)->data.kind0_value;
                     break;
                 case 1:
                     gosub_append_encoded_string(GOSUB_TEXT_BUFFER(row_count),
-                                  ARCHIVE_ENTRY(GOSUB_TEXT_ARCHIVE->block_offsets[3], GOSUB_EQUIPMENT_CATEGORY(attributes) + 0xB));
+                                                ARCHIVE_ENTRY(GOSUB_TEXT_ARCHIVE->block_offsets[3], GOSUB_EQUIPMENT_CATEGORY(attributes) + 0xB));
                     record = GOSUB_EQUIPMENT_FROM_INDEX(item_index);
                     for (stat_index = 0; stat_index < 4; stat_index++)
                     {

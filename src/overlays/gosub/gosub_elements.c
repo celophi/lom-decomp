@@ -12,9 +12,9 @@ void gosub_build_screen_9_elements(void)
     element->draw_handler = (void*)gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0xA0 - g_gosub_window_width / 2;
-    element->attr.f.width_low = 0x38;
-    element->width_high = 0;
-    element->y = g_gosub_row_height * g_gosub_visible_row_count + 4;
+    element->attr.f.y = 0x38;
+    element->geometry.f.width_high = 0;
+    element->geometry.f.height = g_gosub_row_height * g_gosub_visible_row_count + 4;
     SET_ELEMENT_WIDTH_LOW(element, 0xE8);
     g_gosub_selection_count = 0;
 
@@ -22,18 +22,18 @@ void gosub_build_screen_9_elements(void)
     element->draw_handler = (void*)&gosub_draw_two_line_header;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0x10;
-    element->width_high = 1;
-    element->y = 0x24;
+    element->attr.f.y = 0x10;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x24;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 
     element = gosub_allocate_element();
     element->draw_handler = (void*)&gosub_draw_row_description;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0xB0;
-    element->width_high = 1;
-    element->y = 0x24;
+    element->attr.f.y = 0xB0;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x24;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 }
 
@@ -49,9 +49,9 @@ void gosub_build_screen_10_elements(void)
     element->draw_handler = (void*)gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0xA0 - g_gosub_window_width / 2;
-    element->attr.f.width_low = 0x48;
-    element->width_high = 0;
-    element->y = g_gosub_row_height * g_gosub_visible_row_count + 4;
+    element->attr.f.y = 0x48;
+    element->geometry.f.width_high = 0;
+    element->geometry.f.height = g_gosub_row_height * g_gosub_visible_row_count + 4;
     SET_ELEMENT_WIDTH_LOW(element, 0xE8);
     g_gosub_selection_count = 0;
 
@@ -59,18 +59,18 @@ void gosub_build_screen_10_elements(void)
     element->draw_handler = (void*)&gosub_draw_detail_header;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0xB0;
-    element->width_high = 1;
-    element->y = 0x24;
+    element->attr.f.y = 0xB0;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x24;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 
     element = gosub_allocate_element();
     element->draw_handler = (void*)gosub_draw_combination_preview;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0x20;
-    element->width_high = 1;
-    element->y = 0x24;
+    element->attr.f.y = 0x20;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x24;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 }
 
@@ -88,9 +88,9 @@ void gosub_initialize_fixed_element(void)
     element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x20;
-    element->attr.f.width_low = 0x70;
-    element->width_high = 1;
-    element->y = 0x24;
+    element->attr.f.y = 0x70;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x24;
     SET_ELEMENT_WIDTH_LOW(element, 0);
 }
 
@@ -106,9 +106,9 @@ void gosub_build_category_screen_elements(void)
     element->draw_handler = (void*)gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0xA0 - g_gosub_window_width / 2;
-    element->attr.f.width_low = 0x28;
-    element->width_high = 0;
-    element->y = g_gosub_row_height * g_gosub_visible_row_count + 4;
+    element->attr.f.y = 0x28;
+    element->geometry.f.width_high = 0;
+    element->geometry.f.height = g_gosub_row_height * g_gosub_visible_row_count + 4;
     SET_ELEMENT_WIDTH_LOW(element, 0xE8);
     g_gosub_selection_count = 0;
 
@@ -116,18 +116,18 @@ void gosub_build_category_screen_elements(void)
     element->draw_handler = (void*)&gosub_draw_row_description;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0xB0;
-    element->width_high = 1;
-    element->y = 0x24;
+    element->attr.f.y = 0xB0;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x24;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 
     element = gosub_allocate_element();
     element->draw_handler = (void*)gosub_draw_title;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0x10;
-    element->width_high = 1;
-    element->y = 0x14;
+    element->attr.f.y = 0x10;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x14;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 }
 
@@ -145,9 +145,9 @@ void gosub_build_list_screen_elements(s32 include_middle)
     element->draw_handler = (void*)gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0xA0 - g_gosub_window_width / 2;
-    element->attr.f.width_low = 0x28;
-    element->width_high = 0;
-    element->y = g_gosub_row_height * g_gosub_visible_row_count + 4;
+    element->attr.f.y = 0x28;
+    element->geometry.f.width_high = 0;
+    element->geometry.f.height = g_gosub_row_height * g_gosub_visible_row_count + 4;
     SET_ELEMENT_WIDTH_LOW(element, 0xE8);
     g_gosub_selection_count = 0;
 
@@ -157,9 +157,9 @@ void gosub_build_list_screen_elements(s32 include_middle)
         element->draw_handler = (void*)&gosub_draw_row_description;
         element->attr.f.transition_step = 1;
         element->attr.f.x = 0x1C;
-        element->attr.f.width_low = 0xB0;
-        element->width_high = 1;
-        element->y = 0x14;
+        element->attr.f.y = 0xB0;
+        element->geometry.f.width_high = 1;
+        element->geometry.f.height = 0x14;
         SET_ELEMENT_WIDTH_LOW(element, 8);
     }
 
@@ -167,9 +167,9 @@ void gosub_build_list_screen_elements(s32 include_middle)
     element->draw_handler = (void*)gosub_draw_title;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0x10;
-    element->width_high = 1;
-    element->y = 0x14;
+    element->attr.f.y = 0x10;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x14;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 }
 
@@ -185,9 +185,9 @@ void gosub_build_screen_11_elements(void)
     element->draw_handler = (void*)gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0xA0 - g_gosub_window_width / 2;
-    element->attr.f.width_low = 0x28;
-    element->width_high = 1;
-    element->y = g_gosub_row_height * g_gosub_visible_row_count + 4;
+    element->attr.f.y = 0x28;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = g_gosub_row_height * g_gosub_visible_row_count + 4;
     SET_ELEMENT_WIDTH_LOW(element, 0x20);
     g_gosub_selection_count = 0;
 
@@ -195,18 +195,18 @@ void gosub_build_screen_11_elements(void)
     element->draw_handler = (void*)&gosub_draw_row_description;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0xB0;
-    element->width_high = 1;
-    element->y = 0x14;
+    element->attr.f.y = 0xB0;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x14;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 
     element = gosub_allocate_element();
     element->draw_handler = (void*)gosub_draw_title;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0x10;
-    element->width_high = 1;
-    element->y = 0x14;
+    element->attr.f.y = 0x10;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x14;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 }
 
@@ -223,9 +223,9 @@ void gosub_build_compact_list_elements(void)
     element->draw_handler = (void*)gosub_draw_item_list;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0xA0 - g_gosub_window_width / 2;
-    element->attr.f.width_low = 0x30;
-    element->width_high = 1;
-    element->y = g_gosub_row_height * g_gosub_visible_row_count + 4;
+    element->attr.f.y = 0x30;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = g_gosub_row_height * g_gosub_visible_row_count + 4;
     SET_ELEMENT_WIDTH_LOW(element, 0x18);
     g_gosub_selection_count = 0;
 
@@ -233,8 +233,8 @@ void gosub_build_compact_list_elements(void)
     element->draw_handler = (void*)gosub_draw_title;
     element->attr.f.transition_step = 1;
     element->attr.f.x = 0x1C;
-    element->attr.f.width_low = 0x10;
-    element->width_high = 1;
-    element->y = 0x14;
+    element->attr.f.y = 0x10;
+    element->geometry.f.width_high = 1;
+    element->geometry.f.height = 0x14;
     SET_ELEMENT_WIDTH_LOW(element, 8);
 }
