@@ -58,7 +58,7 @@ s32 (*g_gosub_dialog_handler)(s32);
  * @param screen_sequence s32 array terminated by
  *        @c GOSUB_SCREEN_SEQUENCE_END.
  *
- * @see https://decomp.me/scratch/qM81L
+ * @see decomp.me (100%) https://decomp.me/scratch/qM81L
  */
 void gosub_open_screen_sequence(void* unused, s32* screen_sequence)
 {
@@ -73,7 +73,7 @@ void gosub_open_screen_sequence(void* unused, s32* screen_sequence)
  * @brief Run one frame of the gosub overlay and return its completion state.
  * @param render_context Active field rendering context.
  * @return Nonzero after the current gosub sequence finishes.
- * @see https://decomp.me/scratch/ykfW4
+ * @see decomp.me (100%) https://decomp.me/scratch/ykfW4
  */
 s32 gosub_update_frame(GosubRenderContext* render_context)
 {
@@ -91,7 +91,7 @@ s32 gosub_update_frame(GosubRenderContext* render_context)
 /**
  * @brief Copy and enter a GOSUB_SCREEN_SEQUENCE_END-terminated screen sequence.
  * @param screen_sequence Sequence of screen ids stored as s32 values.
- * @see https://decomp.me/scratch/weBhP
+ * @see decomp.me (100%) https://decomp.me/scratch/weBhP
  */
 void gosub_load_screen_sequence(s32* screen_sequence)
 {
@@ -133,7 +133,7 @@ void gosub_load_screen_sequence(s32* screen_sequence)
 /**
  * @brief Initialize a gosub sub-screen and install its selection callbacks.
  * @param screen_id Screen id, 0..19; anything else returns without touching state.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 void gosub_enter_screen(s32 screen_id)
 {

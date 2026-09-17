@@ -2,7 +2,7 @@
 
 /**
  * @brief Build the list, header, and detail elements for screen 9.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_9_elements(void)
 {
@@ -39,7 +39,7 @@ void gosub_build_screen_9_elements(void)
 
 /**
  * @brief Build the list, detail header, and preview elements for screen 10.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_10_elements(void)
 {
@@ -76,7 +76,7 @@ void gosub_build_screen_10_elements(void)
 
 /**
  * @brief Configure reserved element 0 and reset the dialog choice.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 void gosub_initialize_fixed_element(void)
 {
@@ -96,7 +96,7 @@ void gosub_initialize_fixed_element(void)
 
 /**
  * @brief Build the three elements of the gosub screens entered by arms 2 to 5.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 void gosub_build_category_screen_elements(void)
 {
@@ -135,7 +135,7 @@ void gosub_build_category_screen_elements(void)
  * @brief Build the elements of the gosub screens entered by arms 0, 1, 6-8,
  *        15, 16 and 19.
  * @param include_middle Non-zero to include the middle element, zero to skip it.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 void gosub_build_list_screen_elements(s32 include_middle)
 {
@@ -175,7 +175,7 @@ void gosub_build_list_screen_elements(s32 include_middle)
 
 /**
  * @brief Build the three elements of the gosub screen entered by arm 11.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 void gosub_build_screen_11_elements(void)
 {
@@ -213,7 +213,7 @@ void gosub_build_screen_11_elements(void)
 /**
  * @brief Build the two elements of the gosub screens entered by arms 12-14 and
  *        17-18.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 void gosub_build_compact_list_elements(void)
 {

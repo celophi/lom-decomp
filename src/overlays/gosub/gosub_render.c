@@ -2,7 +2,7 @@
 
 /**
  * @brief Start the exit transition for every allocated element.
- * @see https://decomp.me/scratch/RsBVl
+ * @see decomp.me (100%) https://decomp.me/scratch/RsBVl
  */
 void gosub_start_element_exit(void)
 {
@@ -29,7 +29,7 @@ void gosub_start_element_exit(void)
 /**
  * @brief Render and animate all allocated gosub elements.
  * @param render_context Field render context and packet cursor.
- * @see https://decomp.me/scratch/nVefu
+ * @see decomp.me (100%) https://decomp.me/scratch/nVefu
  */
 void gosub_render_elements(GosubRenderContext* render_context)
 {
@@ -38,7 +38,7 @@ void gosub_render_elements(GosubRenderContext* render_context)
 
 /**
  * @brief Mark every gosub element slot inactive.
- * @see https://decomp.me/scratch/dib6Q
+ * @see decomp.me (100%) https://decomp.me/scratch/dib6Q
  */
 void gosub_clear_elements(void)
 {
@@ -58,7 +58,7 @@ void gosub_clear_elements(void)
 /**
  * @brief Allocate the first inactive dynamic element slot.
  * @return Allocated element, or element 0 when the pool is full.
- * @see https://decomp.me/scratch/X1pXK
+ * @see decomp.me (100%) https://decomp.me/scratch/X1pXK
  */
 GosubElement* gosub_allocate_element(void)
 {
@@ -84,7 +84,7 @@ GosubElement* gosub_allocate_element(void)
 /**
  * @brief Animate, draw, frame, and link every allocated gosub element.
  * @param render_context Field render context and packet cursor.
- * @see https://decomp.me/scratch/t79hi
+ * @see decomp.me (100%) https://decomp.me/scratch/t79hi
  */
 void gosub_update_and_render_elements(GosubRenderContext* render_context)
 {
@@ -349,7 +349,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
  * @param y    Center Y coordinate.
  * @param flag Selects the up vs down vertex arrangement.
  * @return Pointer to the next free packet slot.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s32 y, s32 flag)
 {
@@ -438,7 +438,7 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
  * @param h    Panel height.
  * @param flag Non-zero selects the lower frame-buffer half.
  * @return Pointer to the next free packet slot.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag)
 {
@@ -497,7 +497,7 @@ GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s3
  * @param h     Rectangle height.
  * @param color Packed 0x00BBGGRR colour written to every line.
  * @return Pointer to the next free packet slot.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 color)
 {
@@ -556,7 +556,7 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
  * @param x_off    Horizontal offset subtracted from every column position.
  * @param y_off    Vertical scroll offset subtracted from every row position.
  * @return Packet cursor just past the last highlight tile.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 y_off)
 {
@@ -766,7 +766,7 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
  * @param count How many portraits were already emitted this frame.
  * @return Packet cursor past the sprite (gosub_finish_glyph_run's return), or prim
  *         when count is 5 or more.
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
 {
@@ -836,7 +836,7 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
  * @return Packet cursor past the last packet, or the incoming cursor when
  *         there is no combination to show.
  *
- * @see decomp.me
+ * @see decomp.me (100%)
  */
 s32 gosub_draw_combination_preview(s32* ot, s32 initial_prim, s32 x_off, s32 y_off)
 {
