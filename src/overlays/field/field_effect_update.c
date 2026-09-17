@@ -2286,9 +2286,7 @@ typedef enum
  * Attached effects rebuild their world position; free effects integrate a rotated
  * step, resolve collision, and optionally steer toward a position source.
  * @note Some work scalars serve disjoint phases to preserve original allocation.
- * @see working/func_80071D40/target.s
- * @see docs/decompilation/func_80071D40-semantics.md
- * @note WIP - 99.988310% assembly match; placement registers remain.
+ * @see decomp.me (100%) https://decomp.me/scratch/i1ZHZ
  */
 void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part, FieldActorState *actor)
 {
