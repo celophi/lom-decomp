@@ -2,6 +2,7 @@
 
 /**
  * @brief Upload the gosub interface image and CLUT to their fixed VRAM slots.
+ * @see decomp.me
  */
 void gosub_upload_ui_image(void)
 {
@@ -18,6 +19,7 @@ void gosub_upload_ui_image(void)
  * @brief Upload a TIM's optional CLUT and pixel data to selected VRAM positions.
  * @param destinations VRAM destinations for the pixel and CLUT blocks.
  * @param tim TIM resource to upload.
+ * @see decomp.me
  */
 void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* tim)
 {
@@ -53,6 +55,7 @@ void gosub_upload_image_archive(GosubImageVramLayout* destinations, TimPrefix* t
  * @param icon_id Icon identifier used for the base glyph and part CLUT.
  * @param layout_index Composite layout index.
  * @return Packet cursor after closing the glyph run.
+ * @see decomp.me
  */
 s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s32 y, s32 icon_id, s32 layout_index)
 {
@@ -89,6 +92,7 @@ s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s3
         u8* loop_base = &D_800F1CD0[layout_y];
 
         part_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) + part_index * (s32)sizeof(GosubCompositeIconPart) + (s32)loop_base);
+ * @see decomp.me
         /* The shifted layout view exposes the current tuple as parts[0]. */
         packet_cursor = gosub_emit_glyph(packet_cursor, ordering_table, part_view.layout->parts[0].glyph_id,
                                          part_view.layout->parts[0].x * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_x,
@@ -124,6 +128,7 @@ s32 gosub_finish_glyph_run(s32 packet_cursor, s32* ordering_table)
  * @param y Sprite top edge.
  * @param clut_index CLUT slot on the glyph palette row.
  * @return Packet cursor past the 0x14-byte sprite.
+ * @see decomp.me
  */
 s32 gosub_emit_glyph(s32 packet_cursor, s32* ordering_table, s32 glyph_id, s32 x, s32 y, s32 clut_index)
 {
@@ -144,6 +149,7 @@ s32 gosub_emit_glyph(s32 packet_cursor, s32* ordering_table, s32 glyph_id, s32 x
  * @brief Delete one packed logic-block record and close the gap.
  *
  * @param record_index Index of the record to remove.
+ * @see decomp.me
  */
 void gosub_delete_packed_record(s32 record_index)
 {
@@ -164,6 +170,7 @@ void gosub_delete_packed_record(s32 record_index)
  * that index pulled down by one so it keeps naming the same record.
  *
  * @param row Index of the row to remove.
+ * @see decomp.me
  */
 void gosub_delete_list_row(s32 row)
 {
@@ -188,6 +195,7 @@ void gosub_delete_list_row(s32 row)
  *
  * @param dst Destination record.
  * @param src Source record.
+ * @see decomp.me
  */
 inline void gosub_copy_packed_record(void* dst, void* src)
 {
@@ -211,6 +219,7 @@ inline void gosub_copy_packed_record(void* dst, void* src)
  *
  * @param dst Destination row.
  * @param src Source row.
+ * @see decomp.me
  */
 inline void gosub_copy_list_row(void* dst, void* src)
 {
@@ -238,6 +247,7 @@ inline void gosub_copy_list_row(void* dst, void* src)
  *
  * @param sort_mode Encoded type, power, or shape key and sort direction.
  *
+ * @see decomp.me
  */
 void gosub_sort_rows(s32 sort_mode)
 {
@@ -284,6 +294,7 @@ void gosub_sort_rows(s32 sort_mode)
  * @param left_row_index  First row index before the optional direction swap.
  * @param right_row_index Second row index before the optional direction swap.
  * @return 1 when the left operand sorts before the right, otherwise 0.
+ * @see decomp.me
  */
 s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index)
 {
@@ -324,6 +335,7 @@ s32 gosub_compare_rows(s32 mode, s32 left_row_index, s32 right_row_index)
  *
  * @note The 0x200-byte texture transfer continues through the first 0x5C bytes
  *       of g_gosub_item_metadata; its live metadata begins at index 0x60.
+ * @see decomp.me
  */
 void gosub_upload_font_texture(void)
 {
@@ -351,6 +363,7 @@ void gosub_upload_font_texture(void)
  * @param w    Panel width.
  * @param h    Panel height.
  * @return Packet cursor past the draw-mode packet.
+ * @see decomp.me
  */
 GosubGpuPacket* gosub_emit_panel_corners(SPRT* prim, s32* ot, s32 x, s32 y, s32 w, s32 h)
 {

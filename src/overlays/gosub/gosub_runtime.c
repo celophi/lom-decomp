@@ -4,6 +4,7 @@
  * @brief Process input, advance scroll interpolation, and draw the active screen.
  *
  * @param render_context Rendering context forwarded to the draw handler.
+ * @see decomp.me
  */
 void gosub_update_screen(GosubRenderContext* render_context)
 {
@@ -28,6 +29,7 @@ void gosub_update_screen(GosubRenderContext* render_context)
 /**
  * @brief Handle dialog, navigation, selection, completion, and cancellation input.
  * @return Undefined; callers ignore the value.
+ * @see decomp.me
  */
 s32 gosub_handle_input(void)
 {
@@ -320,6 +322,7 @@ s32 gosub_handle_input(void)
 /**
  * @brief Scroll the list viewport toward the cursor when it leaves view.
  *
+ * @see decomp.me
  */
 void gosub_scroll_to_cursor(void)
 {
@@ -346,6 +349,7 @@ void gosub_scroll_to_cursor(void)
  * @brief Remove the cursor row if selected, or permit the caller to add it.
  *
  * @return 0 if the row was removed, otherwise 1.
+ * @see decomp.me
  */
 s32 gosub_toggle_cursor_selection(void)
 {
@@ -377,6 +381,7 @@ s32 gosub_toggle_cursor_selection(void)
  * @brief Advance to the next screen or open the sequence's final dialog.
  *
  * @return 1 at the sequence terminator, otherwise 0.
+ * @see decomp.me
  */
 s32 gosub_advance_screen_sequence(void)
 {
@@ -414,6 +419,7 @@ s32 gosub_advance_screen_sequence(void)
  * @brief Test whether all fixed elements have finished transitioning.
  *
  * @return 1 when all elements are idle, otherwise 0.
+ * @see decomp.me
  */
 s32 gosub_are_elements_idle(void)
 {

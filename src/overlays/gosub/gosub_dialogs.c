@@ -12,6 +12,7 @@
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return Always 0.
+ * @see decomp.me
  */
 s32 gosub_handle_row_action_dialog(s32 dialog_result)
 {
@@ -65,6 +66,7 @@ s32 gosub_handle_row_action_dialog(s32 dialog_result)
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return 1 when no rows remain, otherwise 0.
+ * @see decomp.me
  */
 s32 gosub_handle_delete_dialog(s32 dialog_result)
 {
@@ -115,6 +117,7 @@ s32 gosub_handle_delete_dialog(s32 dialog_result)
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return 1 when the confirm path is taken, otherwise 0.
  *
+ * @see decomp.me
  */
 s32 gosub_handle_backtrack_dialog(s32 dialog_result)
 {
@@ -153,6 +156,7 @@ s32 gosub_handle_backtrack_dialog(s32 dialog_result)
  *
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return Always 0.
+ * @see decomp.me
  */
 s32 gosub_handle_sort_dialog(s32 dialog_result)
 {
@@ -178,6 +182,7 @@ s32 gosub_handle_sort_dialog(s32 dialog_result)
  * dialog's result handler, clears the pending choice, then starts the element
  * entering at x 0x80 / y 0x24 with code 0x80. func_800AA02C runs last.
  *
+ * @see decomp.me
  */
 void gosub_open_row_action_dialog(void)
 {
@@ -199,6 +204,7 @@ void gosub_open_row_action_dialog(void)
 
 /**
  * @brief Open the three-option row sorting dialog.
+ * @see decomp.me
  */
 void gosub_open_sort_dialog(void)
 {
@@ -225,6 +231,7 @@ void gosub_open_sort_dialog(void)
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both actions.
+ * @see decomp.me
  */
 s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
@@ -269,6 +276,7 @@ s32 gosub_draw_two_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after all three choices.
+ * @see decomp.me
  */
 s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 x_offset, s32 y_offset)
 {
@@ -322,6 +330,7 @@ s32 gosub_draw_three_option_dialog(s32* ordering_table, s32 initial_packet, s32 
 /**
  * @brief Open a modal dialog containing caller-provided text.
  * @param message_text Pointer to the encoded dialog text.
+ * @see decomp.me
  */
 void gosub_open_message_dialog(u8* message_text)
 {
@@ -351,6 +360,7 @@ void gosub_open_message_dialog(u8* message_text)
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the dialog text.
+ * @see decomp.me
  */
 s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -368,6 +378,7 @@ s32 gosub_draw_message_dialog(s32* ordering_table, s32 packet_cursor, s32 x_offs
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the header and optional details.
+ * @see decomp.me
  */
 s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -396,6 +407,7 @@ s32 gosub_draw_detail_header(s32* ordering_table, s32 packet_cursor, s32 x_offse
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after both lines.
+ * @see decomp.me
  */
 s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -425,6 +437,7 @@ s32 gosub_draw_two_line_header(s32* ordering_table, s32 packet_cursor, s32 x_off
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the title and both choices.
+ * @see decomp.me
  */
 s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -469,6 +482,7 @@ s32 gosub_draw_confirmation_prompt(s32* ordering_table, s32 packet_cursor, s32 x
  * @param x_offset Horizontal element animation offset.
  * @param y_offset Vertical element animation offset.
  * @return Packet cursor after the description and optional details.
+ * @see decomp.me
  */
 s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_offset, s32 y_offset)
 {
@@ -490,6 +504,7 @@ s32 gosub_draw_row_description(s32* ordering_table, s32 packet_cursor, s32 x_off
  * @param x_offset Horizontal dialog animation offset.
  * @param y_offset Vertical dialog animation offset.
  * @return Packet cursor after the equipment detail line.
+ * @see decomp.me
  */
 s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_offset, s32 y_offset)
 {
@@ -549,6 +564,7 @@ s32 gosub_draw_equipment_details(s32 packet_cursor, s32* ordering_table, s32 x_o
  * @param x_off Horizontal dialog animation offset.
  * @param y_off Vertical dialog animation offset.
  * @return Packet cursor after the title.
+ * @see decomp.me
  */
 s32 gosub_draw_title(s32* ot, s32 prim, s32 x_off, s32 y_off)
 {
@@ -562,6 +578,7 @@ s32 gosub_draw_title(s32* ot, s32 prim, s32 x_off, s32 y_off)
  * @brief Append one encoded string to another.
  * @param dst Null-terminated destination buffer.
  * @param src Null-terminated source string.
+ * @see decomp.me
  */
 void gosub_append_encoded_string(u8* dst, u8* src)
 {
@@ -584,6 +601,7 @@ void gosub_append_encoded_string(u8* dst, u8* src)
  * @brief Count bytes in a null-terminated encoded string.
  * @param text Encoded string to measure.
  * @return Byte count excluding the terminator.
+ * @see decomp.me
  */
 s32 gosub_encoded_string_length(const u8* text)
 {
@@ -614,6 +632,7 @@ s32 gosub_encoded_string_length(const u8* text)
  * @brief Copy a null-terminated encoded string.
  * @param dst Destination buffer.
  * @param src Source string.
+ * @see decomp.me
  */
 void gosub_copy_encoded_string(u8* dst, u8* src)
 {
