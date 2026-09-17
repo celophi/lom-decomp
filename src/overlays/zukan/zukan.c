@@ -656,19 +656,14 @@ void func_80141C08(u8 *arg0)
 /* ============================ 0x80141DF4 ============================ */
 
 /**
- * @brief Draw the encyclopedia screen: either the entry-list view (title, scroll
- *        arrows, per-entry glyphs and the selection highlight) or the detail
- *        view (backdrop, name, and the "current/total" counter).
- *
- * @param ctx Encyclopedia draw state; the primitive cursor is advanced in place.
- * @note WIP - not yet byte-matching. Currently 98.5% (gcc272_cdk); residual is a
- *       handful of argdiff rows near the per-entry glyph loop (two instructions
- *       short). An exact-size gcc272 variant matches at 97.02%.
+ * @brief Draw the encyclopedia entry-list or detail view.
+ * @param ctx Encyclopedia draw state whose primitive cursor is advanced in place.
+ * @see decomp.me (100%)
  */
 void func_80141DF4(ZukanDrawState *ctx)
 {
     extern u8 D_8014471C;
-    volatile s32 unused_pad[2];
+    volatile s32 stack_pad[2];
     u8 draw_env[0x60];
     ZukanPos pos;
     u8 *prim;
@@ -681,21 +676,26 @@ void func_80141DF4(ZukanDrawState *ctx)
     ZukanResourceEntry *entry;
 
     prim = ctx->prim_cursor;
-    ot = &ctx->ot30;
 
     if (D_80157D58 != 0)
     {
-        s32 table_off;
-        u16 glyph_off;
         ZukanPolyF3 *tri;
         TILE *tile;
         u8 *env_prim;
 
+        ot = &ctx->ot30;
+
         {
+            s32 table_off;
+            u16 glyph_off;
+            u8 *glyph_ptr;
+            u8 *final_ptr;
             u8 *title_base = &D_8014471C;
             table_off = *(s32 *)(title_base + 0x10);
             glyph_off = *(u16 *)(D_80157D38 * 2 + table_off + title_base);
-            prim = (u8 *)func_800A88A0(prim, ot, title_base + glyph_off + table_off, 0xA, 0xA0, 0x22, 2);
+            glyph_ptr = title_base + glyph_off;
+            final_ptr = (u8 *)(table_off + (s32)glyph_ptr);
+            prim = (u8 *)func_800A88A0(prim, ot, final_ptr, 0xA, 0xA0, 0x22, 2);
         }
 
         if (D_80157D70 != 0)
@@ -739,18 +739,29 @@ void func_80141DF4(ZukanDrawState *ctx)
         i = 0;
         if (D_80157D3C > 0)
         {
-            while (1)
+            do
             {
-                base = &D_8014471C;
-                break;
-            }
-            fallback_sym = &D_800EC3E0;
-            fallback_base = fallback_sym - 0x1C;
+                do
+                {
+                    base = &D_8014471C;
+                } while (0);
+            } while (0);
+            do
+            {
+                fallback_sym = &D_800EC3E0;
+                fallback_base = fallback_sym - 0x1C;
+            } while (0);
             entry = D_80157530;
+            entry++;
+            entry--;
 loop_head:
             row_y = (i * 0x10) - D_80157D70;
+            row_y++;
+            row_y--;
+            row_y++;
+            row_y--;
             if ((u32)(row_y + 0xF) >= 0x8F)
-                goto loop_inc;
+                goto loop_inc_cull;
 
             pos.x = 0;
             pos.y = row_y;
@@ -760,24 +771,67 @@ loop_head:
             goto glyph_false;
 
 glyph_true:
-            table_off = *(s32 *)(base + 0xC);
-            glyph_off = *(u16 *)(table_off + (entry->field_0 * 2 + base));
-            prim = (u8 *)func_800A88A0(prim, ot, base + glyph_off + table_off, 0, 0x66, row_y, 2);
-            goto loop_inc;
+            {
+                s32 table_off;
+                s32 glyph_index_offset;
+                s32 glyph_record_addr;
+                s32 glyph_addr;
+                s32 final_addr;
+                u16 glyph_off;
+                table_off = *(s32 *)(base + 0xC);
+                glyph_index_offset = entry->field_0 * 2;
+                glyph_index_offset += table_off;
+                glyph_record_addr = glyph_index_offset + (s32)base;
+                glyph_off = *(u16 *)glyph_record_addr;
+                glyph_addr = glyph_off + (s32)base;
+                final_addr = table_off + glyph_addr;
+                prim = (u8 *)func_800A88A0(prim, ot, (u8 *)final_addr, 0, 0x66, row_y, 2);
+            }
+            goto loop_inc_visible;
 
 glyph_false:
-            prim = (u8 *)func_800A88A0(prim, ot,
-                fallback_base + fallback_sym[0] + (fallback_sym[1] << 8),
-                0, 0x66, row_y, 2);
+            {
+                u8 high_byte;
+                u8 low_byte;
+                s32 shifted_offset;
+                s32 based_offset;
+                s32 final_offset;
+                high_byte = fallback_sym[1];
+                low_byte = D_800EC3E0;
+                shifted_offset = high_byte << 8;
+                based_offset = shifted_offset + (s32)fallback_base;
+                final_offset = low_byte + based_offset;
+                prim = (u8 *)func_800A88A0(prim, ot, (u8 *)final_offset,
+                    0, 0x66, row_y, 2);
+            }
 
-loop_inc:
-            do { do {
-                if (++i < D_80157D3C)
+loop_inc_visible:
+            do
+            {
+                do
                 {
-                    entry++;
-                    goto loop_head;
-                }
-            } while (0); } while (0);
+                    if (++i < D_80157D3C)
+                    {
+                        entry++;
+                        goto loop_head;
+                    }
+                } while (0);
+            } while (0);
+            goto loop_done;
+loop_inc_cull:
+            do
+            {
+                do
+                {
+                    if (++i < D_80157D3C)
+                    {
+                        entry++;
+                        goto loop_head;
+                    }
+                } while (0);
+            } while (0);
+loop_done:
+            ;
         }
 
         row_y = (D_80157D60 * 0x10) - D_80157D70;
