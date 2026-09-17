@@ -92,7 +92,6 @@ s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s3
         u8* loop_base = &D_800F1CD0[layout_y];
 
         part_view.bytes = (u8*)(layout_index * (s32)sizeof(GosubCompositeIconLayout) + part_index * (s32)sizeof(GosubCompositeIconPart) + (s32)loop_base);
- * @see decomp.me (100%)
         /* The shifted layout view exposes the current tuple as parts[0]. */
         packet_cursor = gosub_emit_glyph(packet_cursor, ordering_table, part_view.layout->parts[0].glyph_id,
                                          part_view.layout->parts[0].x * GOSUB_COMPOSITE_ICON_PART_CELL_SIZE + icon_x,
@@ -107,6 +106,7 @@ s32 gosub_draw_composite_icon(s32 initial_packet, s32* ordering_table, s32 x, s3
  * @param packet_cursor Packet cursor.
  * @param ordering_table Ordering-table tag to link the packet into.
  * @return Packet cursor past the 8-byte draw-mode packet.
+ * @see decomp.me (100%)
  */
 s32 gosub_finish_glyph_run(s32 packet_cursor, s32* ordering_table)
 {

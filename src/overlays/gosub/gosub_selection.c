@@ -61,7 +61,6 @@ s32 gosub_select_row(void)
  * @brief Validate a pending two-row selection before publishing it.
  * @return gosub_publish_two_row_selection's result while g_gosub_combination_result_id is set, 0 on every other path.
  * @see decomp.me (100%)
- * @see decomp.me (100%)
  */
 s32 gosub_validate_pending_pair_selection(void)
 {
@@ -184,6 +183,7 @@ s32 gosub_update_group_selection(void)
 /**
  * @brief Publish the picked rows' indices as the screen's result.
  * @return 1 if the result was published, 0 if the picker was not in state 2.
+ * @see decomp.me (100%)
  */
 s32 gosub_publish_two_row_selection(void)
 {
