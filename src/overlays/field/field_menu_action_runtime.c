@@ -856,119 +856,116 @@ void func_800C8260(void)
 
 /**
  * @brief Advance the eight byte counters in active menu action slots.
- * @note Nonmatching m2c translation. Preserve the repeated byte increments
- * and their ordering; the target updates four records of eight slots.
  */
 void func_800C83DC(void)
 {
-    s32 var_a2;
-    s32 var_a3;
-    s32 var_t0;
-    s32 var_v0;
-    u32 temp_v0;
-    u8 temp_a1;
-    u8 *temp_a0;
+    s32 slot_index;
+    s32 record_offset;
+    s32 record_index;
+    s32 slot_offset;
+    u32 counter_value;
+    u8 first_counter;
+    u8 *slot;
+    u8 *menu_base;
 
-    var_t0 = 0;
-    var_a3 = 0;
+    record_index = 0;
+    menu_base = g_menuLayoutBuffer;
+    record_offset = record_index;
     do
     {
-        var_a2 = 0;
-        var_v0 = 0 * 0x10;
-loop_2:
-        temp_a0 = var_v0 + var_a3 + g_menuLayoutBuffer;
-        if (temp_a0[0x26F4] != 0xFF)
+        slot_index = 0;
+        do
         {
-            temp_a1 = temp_a0[0x26F8];
-            temp_v0 = temp_a1 & 0xFF;
-            if (temp_v0 == 0)
+            slot_offset = slot_index * 0x10;
+            slot = (u8 *)(slot_offset + record_offset + (s32)menu_base);
+            if (slot[0x26F4] != 0xFF)
             {
-                temp_a0[0x26F8] = (u8) (temp_a1 + 1);
-            } else if (temp_v0 < 0xF0U)
-            {
-                temp_a0[0x26F8] = (u8) (temp_a1 + 1);
-                temp_a0[0x26F9] = (u8) (temp_a0[0x26F9] + 1);
-                temp_a0[0x26FA] = (u8) (temp_a0[0x26FA] + 1);
-                temp_a0[0x26FB] = (u8) (temp_a0[0x26FB] + 1);
-                temp_a0[0x26FC] = (u8) (temp_a0[0x26FC] + 1);
-                temp_a0[0x26FD] = (u8) (temp_a0[0x26FD] + 1);
-                temp_a0[0x26FE] = (u8) (temp_a0[0x26FE] + 1);
-                temp_a0[0x26FF] = (u8) (temp_a0[0x26FF] + 1);
-                temp_a0[0x26F8] = (u8) (temp_a0[0x26F8] + 1);
-                temp_a0[0x26F9] = (u8) (temp_a0[0x26F9] + 1);
-                temp_a0[0x26FA] = (u8) (temp_a0[0x26FA] + 1);
-                temp_a0[0x26FB] = (u8) (temp_a0[0x26FB] + 1);
-                temp_a0[0x26FC] = (u8) (temp_a0[0x26FC] + 1);
-                temp_a0[0x26FD] = (u8) (temp_a0[0x26FD] + 1);
-                temp_a0[0x26FE] = (u8) (temp_a0[0x26FE] + 1);
-                temp_a0[0x26FF] = (u8) (temp_a0[0x26FF] + 1);
-                temp_a0[0x26F8] = (u8) (temp_a0[0x26F8] + 1);
-                temp_a0[0x26F9] = (u8) (temp_a0[0x26F9] + 1);
-                temp_a0[0x26FA] = (u8) (temp_a0[0x26FA] + 1);
-                temp_a0[0x26FC] = (u8) (temp_a0[0x26FC] + 1);
-                temp_a0[0x26FB] = (u8) (temp_a0[0x26FB] + 1);
-                temp_a0[0x26FE] = (u8) (temp_a0[0x26FE] + 1);
-                temp_a0[0x26FD] = (u8) (temp_a0[0x26FD] + 1);
-                temp_a0[0x26F8] = (u8) (temp_a0[0x26F8] + 1);
-                temp_a0[0x26FF] = (u8) (temp_a0[0x26FF] + 1);
-                temp_a0[0x26FA] = (u8) (temp_a0[0x26FA] + 1);
-                temp_a0[0x26F9] = (u8) (temp_a0[0x26F9] + 1);
-                temp_a0[0x26FC] = (u8) (temp_a0[0x26FC] + 1);
-                temp_a0[0x26FB] = (u8) (temp_a0[0x26FB] + 1);
-                temp_a0[0x26FE] = (u8) (temp_a0[0x26FE] + 1);
-                temp_a0[0x26FD] = (u8) (temp_a0[0x26FD] + 1);
-                temp_a0[0x26F8] = (u8) (temp_a0[0x26F8] + 1);
-                temp_a0[0x26FF] = (u8) (temp_a0[0x26FF] + 1);
-                temp_a0[0x26F9] = (u8) (temp_a0[0x26F9] + 1);
-                temp_a0[0x26FA] = (u8) (temp_a0[0x26FA] + 1);
-                temp_a0[0x26FB] = (u8) (temp_a0[0x26FB] + 1);
-                temp_a0[0x26FD] = (u8) (temp_a0[0x26FD] + 1);
-                temp_a0[0x26FC] = (u8) (temp_a0[0x26FC] + 1);
-                temp_a0[0x26FF] = (u8) (temp_a0[0x26FF] + 1);
-                temp_a0[0x26FE] = (u8) (temp_a0[0x26FE] + 1);
-                temp_a0[0x26F9] = (u8) (temp_a0[0x26F9] + 1);
-                temp_a0[0x26F8] = (u8) (temp_a0[0x26F8] + 1);
-                temp_a0[0x26FB] = (u8) (temp_a0[0x26FB] + 1);
-                temp_a0[0x26FA] = (u8) (temp_a0[0x26FA] + 1);
-                temp_a0[0x26FD] = (u8) (temp_a0[0x26FD] + 1);
-                temp_a0[0x26FC] = (u8) (temp_a0[0x26FC] + 1);
-                temp_a0[0x26FF] = (u8) (temp_a0[0x26FF] + 1);
-                temp_a0[0x26FE] = (u8) (temp_a0[0x26FE] + 1);
-                temp_a0[0x26F9] = (u8) (temp_a0[0x26F9] + 1);
-                temp_a0[0x26F8] = (u8) (temp_a0[0x26F8] + 1);
-                temp_a0[0x26FA] = (u8) (temp_a0[0x26FA] + 1);
-                temp_a0[0x26FB] = (u8) (temp_a0[0x26FB] + 1);
-                temp_a0[0x26FC] = (u8) (temp_a0[0x26FC] + 1);
-                temp_a0[0x26FE] = (u8) (temp_a0[0x26FE] + 1);
-                temp_a0[0x26FD] = (u8) (temp_a0[0x26FD] + 1);
-                temp_a0[0x26F8] = (u8) (temp_a0[0x26F8] + 1);
-                temp_a0[0x26FF] = (u8) (temp_a0[0x26FF] + 1);
-                temp_a0[0x26FA] = (u8) (temp_a0[0x26FA] + 1);
-                temp_a0[0x26F9] = (u8) (temp_a0[0x26F9] + 1);
-                temp_a0[0x26FC] = (u8) (temp_a0[0x26FC] + 1);
-                temp_a0[0x26FB] = (u8) (temp_a0[0x26FB] + 1);
-                temp_a0[0x26FE] = (u8) (temp_a0[0x26FE] + 1);
-                temp_a0[0x26FD] = (u8) (temp_a0[0x26FD] + 1);
-                temp_a0[0x26F8] = (u8) (temp_a0[0x26F8] + 1);
-                temp_a0[0x26FF] = (u8) (temp_a0[0x26FF] + 1);
-                temp_a0[0x26FA] = (u8) (temp_a0[0x26FA] + 1);
-                temp_a0[0x26F9] = (u8) (temp_a0[0x26F9] + 1);
-                temp_a0[0x26FB] = (u8) (temp_a0[0x26FB] + 1);
-                temp_a0[0x26FC] = (u8) (temp_a0[0x26FC] + 1);
-                temp_a0[0x26FD] = (u8) (temp_a0[0x26FD] + 1);
-                temp_a0[0x26FF] = (u8) (temp_a0[0x26FF] + 1);
-                temp_a0[0x26FE] = (u8) (temp_a0[0x26FE] + 1);
+                first_counter = slot[0x26F8];
+                counter_value = first_counter & 0xFF;
+                if (counter_value == 0)
+                {
+                    slot[0x26F8] = (u8) (first_counter + 1);
+                } else if (counter_value < 0xF0U)
+                {
+                    slot[0x26F8] = (u8) (first_counter + 1);
+                    slot[0x26F9] = (u8) (slot[0x26F9] + 1);
+                    slot[0x26FA] = (u8) (slot[0x26FA] + 1);
+                    slot[0x26FB] = (u8) (slot[0x26FB] + 1);
+                    slot[0x26FC] = (u8) (slot[0x26FC] + 1);
+                    slot[0x26FD] = (u8) (slot[0x26FD] + 1);
+                    slot[0x26FE] = (u8) (slot[0x26FE] + 1);
+                    slot[0x26FF] = (u8) (slot[0x26FF] + 1);
+                    slot[0x26F8] = (u8) (slot[0x26F8] + 1);
+                    slot[0x26F9] = (u8) (slot[0x26F9] + 1);
+                    slot[0x26FA] = (u8) (slot[0x26FA] + 1);
+                    slot[0x26FB] = (u8) (slot[0x26FB] + 1);
+                    slot[0x26FC] = (u8) (slot[0x26FC] + 1);
+                    slot[0x26FD] = (u8) (slot[0x26FD] + 1);
+                    slot[0x26FE] = (u8) (slot[0x26FE] + 1);
+                    slot[0x26FF] = (u8) (slot[0x26FF] + 1);
+                    slot[0x26F8] = (u8) (slot[0x26F8] + 1);
+                    slot[0x26F9] = (u8) (slot[0x26F9] + 1);
+                    slot[0x26FA] = (u8) (slot[0x26FA] + 1);
+                    slot[0x26FB] = (u8) (slot[0x26FB] + 1);
+                    slot[0x26FC] = (u8) (slot[0x26FC] + 1);
+                    slot[0x26FD] = (u8) (slot[0x26FD] + 1);
+                    slot[0x26FE] = (u8) (slot[0x26FE] + 1);
+                    slot[0x26FF] = (u8) (slot[0x26FF] + 1);
+                    slot[0x26F8] = (u8) (slot[0x26F8] + 1);
+                    slot[0x26F9] = (u8) (slot[0x26F9] + 1);
+                    slot[0x26FA] = (u8) (slot[0x26FA] + 1);
+                    slot[0x26FB] = (u8) (slot[0x26FB] + 1);
+                    slot[0x26FC] = (u8) (slot[0x26FC] + 1);
+                    slot[0x26FD] = (u8) (slot[0x26FD] + 1);
+                    slot[0x26FE] = (u8) (slot[0x26FE] + 1);
+                    slot[0x26FF] = (u8) (slot[0x26FF] + 1);
+                    slot[0x26F8] = (u8) (slot[0x26F8] + 1);
+                    slot[0x26F9] = (u8) (slot[0x26F9] + 1);
+                    slot[0x26FA] = (u8) (slot[0x26FA] + 1);
+                    slot[0x26FB] = (u8) (slot[0x26FB] + 1);
+                    slot[0x26FC] = (u8) (slot[0x26FC] + 1);
+                    slot[0x26FD] = (u8) (slot[0x26FD] + 1);
+                    slot[0x26FE] = (u8) (slot[0x26FE] + 1);
+                    slot[0x26FF] = (u8) (slot[0x26FF] + 1);
+                    slot[0x26F8] = (u8) (slot[0x26F8] + 1);
+                    slot[0x26F9] = (u8) (slot[0x26F9] + 1);
+                    slot[0x26FA] = (u8) (slot[0x26FA] + 1);
+                    slot[0x26FB] = (u8) (slot[0x26FB] + 1);
+                    slot[0x26FC] = (u8) (slot[0x26FC] + 1);
+                    slot[0x26FD] = (u8) (slot[0x26FD] + 1);
+                    slot[0x26FE] = (u8) (slot[0x26FE] + 1);
+                    slot[0x26FF] = (u8) (slot[0x26FF] + 1);
+                    slot[0x26F8] = (u8) (slot[0x26F8] + 1);
+                    slot[0x26F9] = (u8) (slot[0x26F9] + 1);
+                    slot[0x26FA] = (u8) (slot[0x26FA] + 1);
+                    slot[0x26FB] = (u8) (slot[0x26FB] + 1);
+                    slot[0x26FC] = (u8) (slot[0x26FC] + 1);
+                    slot[0x26FD] = (u8) (slot[0x26FD] + 1);
+                    slot[0x26FE] = (u8) (slot[0x26FE] + 1);
+                    slot[0x26FF] = (u8) (slot[0x26FF] + 1);
+                    slot[0x26F8] = (u8) (slot[0x26F8] + 1);
+                    slot[0x26F9] = (u8) (slot[0x26F9] + 1);
+                    slot[0x26FA] = (u8) (slot[0x26FA] + 1);
+                    slot[0x26FB] = (u8) (slot[0x26FB] + 1);
+                    slot[0x26FC] = (u8) (slot[0x26FC] + 1);
+                    slot[0x26FD] = (u8) (slot[0x26FD] + 1);
+                    slot[0x26FE] = (u8) (slot[0x26FE] + 1);
+                    slot[0x26FF] = (u8) (slot[0x26FF] + 1);
+                    slot[0x26F8] = (u8) (slot[0x26F8] + 1);
+                    slot[0x26F9] = (u8) (slot[0x26F9] + 1);
+                    slot[0x26FA] = (u8) (slot[0x26FA] + 1);
+                    slot[0x26FB] = (u8) (slot[0x26FB] + 1);
+                    slot[0x26FC] = (u8) (slot[0x26FC] + 1);
+                    slot[0x26FD] = (u8) (slot[0x26FD] + 1);
+                    slot[0x26FE] = (u8) (slot[0x26FE] + 1);
+                    slot[0x26FF] = (u8) (slot[0x26FF] + 1);
+                }
             }
-        }
-        var_a2 += 1;
-        var_v0 = var_a2 * 0x10;
-        if (var_a2 < 8)
-        {
-            goto loop_2;
-        }
-        var_t0 += 1;
-        var_a3 += 0x8C;
-    } while (var_t0 < 4);
+            slot_index += 1;
+        } while (slot_index < 8);
+        record_index += 1;
+        record_offset += 0x8C;
+    } while (record_index < 4);
 }
 
 typedef struct
