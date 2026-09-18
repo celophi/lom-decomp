@@ -1337,7 +1337,8 @@ s32 func_800987DC(ReactRecord *record, ReactRecord *position, s32 filter_group)
     void field_start_actor_animation(s32,s32,s32 *);
 
     ScanWorkspace scratch;
-    u8 *request_base;
+    s32 request_base;
+    u8 *matched_request_base;
     s32 record_offset;
     State *scan_state;
     u8 *scan_position;
@@ -1352,6 +1353,7 @@ s32 func_800987DC(ReactRecord *record, ReactRecord *position, s32 filter_group)
     s32 unused_result;
     s32 request_offset;
     s32 matched_request_offset;
+    Request *request_entry;
     s8 record_height;
     s8 scan_height;
     State *record_state;
@@ -1390,12 +1392,20 @@ scan_all:
 scan_to_last:
         candidate_end = 0xD;
     }
-    candidate_index = actor_index;
-    if (record->unk37 >= 9)
+    do
+        {
+            do
     {
-
-        return 0;
+        candidate_index = actor_index;
+    } while (0);
+        } while (0);
+    if (record->unk37 < 9)
+    {
+        goto collision_scan;
     }
+return_zero:
+    return 0;
+collision_scan:
     record_state = &D_80105AE0[record->unk3a];
     record_offset = record_state->collision.h.offset << 8;
     if (candidate_index < candidate_end)
@@ -1404,39 +1414,55 @@ scan_to_last:
         scan_dimensions = (u8 *)scan_state + 0x12E;
         scan_position = (u8 *)scan_record + 8;
 scan_next:
-        if ((READ_U8(scan_position, 0x1D) == 0xFF) ||
-        (READ_U32(scan_dimensions, -0x122) & 0x23E4) ||
-        (scan_record == record) ||
-        (scan_flags = READ_U32(scan_dimensions, 0x4A), ((scan_flags & 0x20) != 0)) ||
-        (scan_flags & 1) ||
-        (READ_S32(scan_dimensions, -2) == 0) ||
-        (scan_height = READ_S8(scan_position, 0x2F), scan_y = READ_S32(scan_position, -4), record_height = record->unk37, record_y = position->unk4, (((scan_y + ((READ_S16(scan_dimensions, 0x14) + scan_height) << 8)) > (record_y + ((record_state->unk146 + record_height) << 8))) != 0)) ||
-        ((scan_y + ((READ_S16(scan_dimensions, 0x18) + scan_height) << 8)) < (record_y + ((record_state->unk142 + record_height) << 8))))
+        do
         {
+            if ((READ_U8(scan_position, 0x1D) == 0xFF) ||
+                (READ_U32(scan_dimensions, -0x122) & 0x23E4) ||
+                (scan_record == record) ||
+                (scan_flags = READ_U32(scan_dimensions, 0x4A), ((scan_flags & 0x20) != 0)) ||
+                (scan_flags & 1) ||
+                (READ_S32(scan_dimensions, -2) == 0))
+            {
+                break;
+            }
+            scan_height = READ_S8(scan_position, 0x2F);
+            record_height = record->unk37;
+            record_y = position->unk4;
+            if (((READ_S32(scan_position, -4) + ((READ_S16(scan_dimensions, 0x14) + scan_height) << 8)) > (record_y + ((record_state->unk146 + record_height) << 8))) ||
+                ((READ_S32(scan_position, -4) + ((READ_S16(scan_dimensions, 0x18) + scan_height) << 8)) < (record_y + ((record_state->unk142 + record_height) << 8))))
+            {
+                break;
+            }
+            scratch.delta.vx = (READ_S32(scan_position, 0) - position->unk8) >> 8;
+            scratch.delta.vy = ((scan_record->unk0 + (READ_S16(scan_dimensions, -2) << 8)) - (position->unk0 + record_offset)) >> 8;
+            scratch.delta.vz = 0;
+            gte_ldlvl(&scratch.delta);
+            gte_sqr0();
+            gte_stlvnl(&scratch.squared);
+            if (SquareRoot0(scratch.squared.vx + scratch.squared.vy) <
+                (((s32)(record_state->collision.h.diameter << 16) >> 17) + ((s32)(READ_U16(scan_dimensions, 0) << 16) >> 17)))
+            {
+                goto candidate_found;
+            }
+        } while (0);
 
-            goto advance_candidate;
-        }
-        scratch.delta.vx = (READ_S32(scan_position, 0) - position->unk8) >> 8;
-        scratch.delta.vz = 0;
-        scratch.delta.vy = ((scan_record->unk0 + (READ_S16(scan_dimensions, -2) << 8)) - (position->unk0 + record_offset)) >> 8;
-        gte_ldlvl(&scratch.delta);
-        gte_sqr0();
-        gte_stlvnl(&scratch.squared);
-        if (SquareRoot0(scratch.squared.vx + scratch.squared.vy) >= (((s32)(record_state->collision.h.diameter << 16) >> 17) + ((s32)(READ_U16(scan_dimensions, 0) << 16) >> 17)))
+        do
         {
-
-advance_candidate:
             candidate_index += 1;
-            scan_position += 0x54;
-            scan_record += 1;
-            scan_dimensions += 0x23C;
-            scan_state += 1;
+        } while (0);
+        scan_position += 0x54;
+        scan_record += 1;
+        scan_dimensions += 0x23C;
+        scan_state += 1;
+        do
+        {
             if (candidate_index < candidate_end)
             {
-
                 goto scan_next;
             }
-        }
+        } while (0);
+candidate_found:
+        ;
     }
     if (candidate_index == candidate_end)
     {
@@ -1463,7 +1489,7 @@ advance_candidate:
                         if (!(((u32) (&D_80105AE0[actor_index])->unk178 >> 6) & 1))
                         {
 
-                            request_base = (u8 *)D_80105880;
+                            request_base = (s32)D_80105880;
                             if (actor_index < 2U)
                             {
 
@@ -1473,11 +1499,13 @@ advance_candidate:
                             {
                                 request_offset = 0x38;
                             }
-                            actor_index = ((Request *)(request_base + request_offset))->unkc;
-                            if (actor_index == scan_record->unk3a)
+                            request_entry = (Request *)(request_base + request_offset);
+                            request_base = scan_record->unk3a;
+                            actor_index = request_entry->unkc;
+                            if (actor_index == request_base)
                             {
 
-                                request_base = (u8 *)D_80105880;
+                                matched_request_base = (u8 *)D_80105880;
                                 if ((u32) (actor_index & 0xFF) < 2U)
                                 {
 
@@ -1488,12 +1516,12 @@ advance_candidate:
                                     matched_request_offset = 0x38;
                                 }
 
-                                if (((Request *)(request_base + matched_request_offset))->unk0 == 0)
+                                if (((Request *)(matched_request_base + matched_request_offset))->unk0 == 0)
                                 {
 
                                     goto start_reaction;
                                 }
-                                return 0;
+                                goto return_zero;
                             }
                             goto start_reaction;
                         }
@@ -1517,18 +1545,17 @@ start_reaction:
                                         func_800A2DD8(scan_record->unk3a);
                                     }
                                     field_start_actor_animation(animation_slot, 1, &scratch.targets[0]);
-                                    return 0;
+                                    goto return_zero;
                                 }
-                                return 0;
+                                goto return_zero;
                             }
-return_zero:
-                            return 0;
+                            goto return_zero;
                         }
-                        return 0;
+                        goto return_zero;
                     }
                 }
             }
-            return 0;
+            goto return_zero;
         }
         goto report_candidate;
     }
