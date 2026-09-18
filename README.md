@@ -38,7 +38,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 |---|:---:|---|
 | SLUS_010.13 | 🪲 | Non-matching |
 | ADDHERO.BIN | 🔒 | Fully linked |
-| CARDA.BIN | ☑️ | Matching |
+| CARDA.BIN | 🔒 | Fully linked |
 | CHECKPS.BIN | 🔒 | Fully linked |
 | CLOAD.BIN | 🔒 | Fully linked |
 | FIELD.BIN | 🪲 | Non-matching |
@@ -51,9 +51,10 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | NIKI.BIN | 🔒 | Fully linked |
 | SHOP.BIN | 🌱 | In progress |
 | TITLE.BIN | 🔒 | Fully linked |
-| WMAP.BIN | 💤 | Not started |
 | WSEL.BIN | 🪲 | Non-matching |
 | ZUKAN.BIN | 🔒 | Fully linked |
+
+* WMAP.BIN is all data, I will figure out a way to represent that as extractable data, but there is no code in it *
 
 ## Supported game version
 

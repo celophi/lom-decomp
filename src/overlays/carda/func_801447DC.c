@@ -33,7 +33,7 @@ void func_801447DC(u32 arg0)
 {
     s32 state;
     CardaElement *p;
-    static void *const keep[] = { &&case0, &&case1, &&case2, &&case3, &&case4, &&case5 };
+    static void *const keep[] __attribute__((section(".discard"))) = { &&case0, &&case1, &&case2, &&case3, &&case4, &&case5 };
 
     if (D_80165FE4 != arg0 || !(D_80165F80.attr & 7) ||
         D_80165F80.draw_handler != (void *)func_80144A24) {
