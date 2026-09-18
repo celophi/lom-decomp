@@ -298,64 +298,53 @@ void func_800A2990(s32 row, s32 start)
  * @param unused Unused caller argument.
  * @param peek Nonzero to inspect the history without consuming it.
  * @return Command identifier, or 0xFF when no complete command was found.
- * @note Direction patterns use six eight-byte strings and an external result table.
  */
 s32 func_800A29F8(s32 player, s32 unused, s32 peek)
 {
-    extern u8 D_80117E98[];
-    s32 buffer_offset;
-    s32 *counts;
-    s32 *temp_v1_2;
-    s32 *temp_v1_3;
-    s32 *temp_v1_4;
-    s32 temp_a2;
-    s32 temp_a2_2;
-    s32 temp_a2_3;
-    s32 temp_t3;
-    s32 temp_v0_2;
-    s32 temp_v0_3;
-    s32 temp_v1;
-    s32 var_a0_2;
-    s32 var_a0_3;
-    s32 var_a0_4;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_a1_3;
-    s32 peek_only;
+    extern u8 D_80117E98[][0x10];
+    s32 saved_history_offset;
+    s32 counts_address;
+    s32 consume_count;
+    s32 consume_count_50;
+    s32 consume_count_60;
+    s32 history_offset;
+    s32 pattern_length;
+    s32 match_value;
+    s32 source_index;
+    s32 source_index_50;
+    s32 source_index_60;
+    s32 dest_index;
+    s32 dest_index_50;
+    s32 dest_index_60;
     s32 match_start;
     s32 direction_end;
-    s32 var_s1_2;
     s32 pattern_offset;
+    s32 pattern_retry_offset;
     s32 scan_index;
     s32 pattern_index;
-    s32 player_index;
     s32 count_offset;
-    u8 *buffer;
-    u8 *temp_v0_4;
-    u8 *temp_v0_5;
-    u8 *temp_v0_6;
-    u8 *scan_pointer;
-    u8 temp_v0;
-    u8 result;
-    void *pattern_pointer;
-    u8 *patterns;
+    u8 *history_row;
+    u8 *history_table_base;
+    u8 *source_ptr;
+    u8 *source_ptr_50;
+    u8 *source_ptr_60;
+    u8 command_byte;
+    u8 command_id;
+    u8 *pattern_table;
 
-    player_index = player;
-    peek_only = peek;
     scan_index = 0;
-    if ((player_index < 2) &&
-        (temp_v1 = player_index * 4, temp_t3 = player_index * 0x10, (*(s32 *)(temp_v1 + (u8 *)D_80117E88) != 0)))
+    if ((player < 2) && (D_80117E88[player] != 0))
     {
-        buffer_offset = temp_t3;
-        buffer = temp_t3 + D_80117E98;
-        counts = D_80117E88;
-        count_offset = temp_v1;
-        scan_pointer = buffer + scan_index;
-        do
+        history_offset = player * 0x10;
+        saved_history_offset = history_offset;
+        history_table_base = (u8 *)D_80117E98;
+        history_row = history_offset + history_table_base;
+        counts_address = (s32)D_80117E88;
+        count_offset = player * 4;
+    scan_loop:
+        command_byte = *(history_row + scan_index);
+        switch (command_byte)
         {
-            temp_v0 = *scan_pointer;
-            switch (temp_v0)
-            {
             case 0x1:
             case 0x2:
             case 0x3:
@@ -364,67 +353,79 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
             case 0x8:
             case 0x9:
             case 0xC:
-                direction_end = scan_index;
-                if ((u8) * (buffer + scan_index) < 0x10U)
+                direction_end = (scan_index + scan_index) - scan_index;
+                if ((u8) * (history_row + scan_index) < 0x10U)
                 {
+                    s32 direction_count = *(s32 *)(count_offset + counts_address);
+                    u8 *direction_base = (u8 *)D_80117E98;
+                    u8 *direction_row = direction_base + player * 0x10;
+
                     direction_end++;
                     do
                     {
-                        if (direction_end == *(s32 *)(count_offset + (u8 *)counts))
+                        if (direction_end == direction_count)
                         {
                             goto block_48;
                         }
-                    } while (D_80117E98[player_index * 0x10 + direction_end++] < 0x10);
+                    } while (direction_row[direction_end++] < 0x10);
                     direction_end--;
                 }
             block_10:
                 pattern_index = 0;
-                if (*(buffer + direction_end) == 0x50)
+                if (*(history_row + direction_end) == 0x50)
                 {
-                    patterns = D_800EC304;
+                    do { do { do { do { pattern_table = D_800EC304; } while (0); } while (0); } while (0); } while (0);
                     pattern_offset = pattern_index;
                     do
                     {
-                        temp_v0_2 = strlen(pattern_offset + patterns);
-                        if ((direction_end - scan_index) >= temp_v0_2)
+                        pattern_length = strlen((char *)(pattern_offset + (s32)pattern_table));
+                        if ((direction_end - scan_index) >= pattern_length)
                         {
-                            match_start = direction_end - temp_v0_2;
-                            pattern_pointer = pattern_offset + patterns;
+                            match_start = direction_end - pattern_length;
                             if (match_start >= scan_index)
                             {
-                                do
+                                u8 *match_ptr;
+
+                                pattern_retry_offset = pattern_offset;
+                            retry_loop:
+                                match_ptr = (u8 *)match_start;
+                                match_ptr += (s32)history_table_base;
                                 {
-                                    temp_v0_3 =
-                                        strncmp(pattern_pointer, buffer_offset + (match_start + D_80117E98), temp_v0_2);
-                                    if (temp_v0_3 == 0)
-                                    {
-                                        if (peek_only == 0)
+                                    s32 pattern_address = pattern_retry_offset + (s32)pattern_table;
+                                    s32 match_address = saved_history_offset + (s32)match_ptr;
+                                    match_value = strncmp((char *)pattern_address, (char *)match_address, pattern_length);
+                                }
+                                if (match_value == 0)
+                                {
+                                        if (peek == 0)
                                         {
-                                            temp_a2 = direction_end + 1;
-                                            var_a1 = 0;
-                                            if (temp_a2 < 0x10)
+                                            consume_count = direction_end + 1;
+                                            dest_index = 0;
+                                            if (consume_count < 0x10)
                                             {
-                                                var_a0_2 = temp_a2;
+                                                source_index = consume_count;
                                                 do
                                                 {
-                                                    temp_v0_4 = buffer + var_a0_2;
-                                                    var_a0_2 += 1;
-                                                    *(buffer + var_a1) = *temp_v0_4;
-                                                    var_a1 += 1;
-                                                } while (var_a0_2 < 0x10);
+                                                    source_ptr = history_row + source_index;
+                                                    source_index += 1;
+                                                    *(history_row + dest_index) = *source_ptr;
+                                                    dest_index += 1;
+                                                } while (source_index < 0x10);
                                             }
-                                            temp_v1_2 = (s32 *)(count_offset + (u8 *)counts);
-                                            *temp_v1_2 -= temp_a2;
+                                            *(s32 *)((count_offset + pattern_offset) + counts_address - pattern_offset) -= consume_count;
                                         }
-                                        return *(pattern_index + D_800EC334);
+                                        match_value = (s32)D_800EC334;
+                                        return *((u8 *)match_value + pattern_index);
                                     }
-                                    match_start -= 1;
-                                    pattern_pointer = pattern_offset + patterns;
-                                } while (match_start >= scan_index);
+                                match_start -= 1;
+                                if (match_start >= scan_index)
+                                {
+                                    goto retry_loop;
+                                }
                             }
                         }
                     block_23:
-                        pattern_index += 1;
+                        do { pattern_index += 1; } while (0);
                         pattern_offset += 8;
                     } while (pattern_index < 6);
                 }
@@ -432,110 +433,136 @@ s32 func_800A29F8(s32 player, s32 unused, s32 peek)
                 scan_index = direction_end - 1;
                 break;
             case 0x50:
-                result = 3;
-                if (peek_only == 0)
+                command_id = 3;
+                if (peek == 0)
                 {
-                    temp_a2_2 = scan_index + 1;
-                    var_a1_2 = 0;
-                    if (temp_a2_2 < 0x10)
+                    consume_count_50 = scan_index + 1;
+                    dest_index_50 = 0;
+                    if (consume_count_50 < 0x10)
                     {
-                        var_a0_3 = temp_a2_2;
+                        source_index_50 = consume_count_50;
                         do
                         {
-                            temp_v0_5 = buffer + var_a0_3;
-                            var_a0_3 += 1;
-                            *(buffer + var_a1_2) = *temp_v0_5;
-                            var_a1_2 += 1;
-                        } while (var_a0_3 < 0x10);
+                            source_ptr_50 = history_row + source_index_50;
+                            source_index_50 += 1;
+                            *(history_row + dest_index_50) = *source_ptr_50;
+                            dest_index_50 += 1;
+                        } while (source_index_50 < 0x10);
                     }
-                    temp_v1_3 = (s32 *)(count_offset + (u8 *)counts);
-                    *temp_v1_3 -= temp_a2_2;
+                    do
+                    {
+                        *(s32 *)(count_offset + counts_address) -= consume_count_50;
+                    } while (0);
                     return 3U;
                 }
-                return result;
+                return command_id;
             case 0x60:
-                result = 2;
-                if (peek_only == 0)
+                command_id = 2;
+                if (peek == 0)
                 {
-                    temp_a2_3 = scan_index + 1;
-                    var_a1_3 = 0;
-                    if (temp_a2_3 < 0x10)
+                    consume_count_60 = scan_index + 1;
+                    dest_index_60 = 0;
+                    if (consume_count_60 < 0x10)
                     {
-                        var_a0_4 = temp_a2_3;
+                        source_index_60 = consume_count_60;
                         do
                         {
-                            temp_v0_6 = buffer + var_a0_4;
-                            var_a0_4 += 1;
-                            *(buffer + var_a1_3) = *temp_v0_6;
-                            var_a1_3 += 1;
-                        } while (var_a0_4 < 0x10);
+                            source_ptr_60 = history_row + source_index_60;
+                            source_index_60 += 1;
+                            *(history_row + dest_index_60) = *source_ptr_60;
+                            dest_index_60 += 1;
+                        } while (source_index_60 < 0x10);
                     }
-                    temp_v1_4 = (s32 *)(count_offset + (u8 *)counts);
-                    *temp_v1_4 -= temp_a2_3;
+                    do
+                    {
+                        *(s32 *)(count_offset + counts_address) -= consume_count_60;
+                    } while (0);
                     return 2U;
                 }
-                return result;
+                return command_id;
             case 0x70:
-                result = 1;
-                if (peek_only == 0)
+                command_id = 1;
+                do
                 {
-                    func_800A2DD8(player_index);
-                    return 1U;
-                }
-                return result;
+                    if (peek != 0)
+                    {
+                        goto case70_done;
+                    }
+                } while (0);
+                do { func_800A2DD8(player); } while (0);
+                return 1U;
+            case70_done:
+                return command_id;
             case 0x80:
-                result = 0;
-                if (peek_only == 0)
+                command_id = 0;
+                do
                 {
-                    func_800A2DD8(player_index);
-                    return 0U;
-                }
-                return result;
+                    if (peek != 0)
+                    {
+                        goto case80_done;
+                    }
+                } while (0);
+                do { func_800A2DD8(player); } while (0);
+                return 0U;
+            case80_done:
+                return command_id;
             case 0x40:
-                result = 4;
-                if (peek_only == 0)
+                command_id = 4;
+                do
                 {
-                    func_800A2DD8(player_index);
-                    return 4U;
-                }
-                return result;
+                    if (peek != 0)
+                    {
+                        goto case40_done;
+                    }
+                } while (0);
+                do { func_800A2DD8(player); } while (0);
+                return 4U;
+            case40_done:
+                return command_id;
             case 0x20:
-                result = 6;
-                if (peek_only == 0)
+                command_id = 6;
+                do
                 {
-                    func_800A2DD8(player_index);
-                    return 6U;
-                }
-                return result;
+                    if (peek != 0)
+                    {
+                        goto case20_done;
+                    }
+                } while (0);
+                do { func_800A2DD8(player); } while (0);
+                return 6U;
+            case20_done:
+                return command_id;
             case 0x30:
-                result = 5;
-                if (peek_only == 0)
+                command_id = 5;
+                if (peek == 0)
                 {
-                    func_800A2DD8(player_index);
+                    func_800A2DD8(player);
                     return 5U;
                 }
-                return result;
+                return command_id;
             case 0x10:
-                result = 7;
-                if (peek_only == 0)
+                command_id = 7;
+                if (peek == 0)
                 {
-                    func_800A2DD8(player_index);
+                    func_800A2DD8(player);
                     return 7U;
                 }
-                return result;
+                return command_id;
             default:
                 break;
             }
             scan_index++;
-            scan_pointer = buffer + scan_index;
-        } while (scan_index != *(s32 *)(count_offset + (u8 *)counts));
+            if (scan_index != *(s32 *)(count_offset + counts_address))
+            {
+                goto scan_loop;
+            }
         goto block_48;
     }
     else
     {
     block_48:
-        result = 0xFF;
-        return result;
+        command_id = 0xFF;
+        return command_id;
     }
 }
 
