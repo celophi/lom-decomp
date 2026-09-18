@@ -506,7 +506,7 @@ void func_8008E690(E690Actor *actor)
     s32 field_count_free_actor_slots(s32);
     s32 func_8008404C(s32, s32);
     void func_800A3938(s32, s32);
-    void func_8006C3FC(E690Actor *);
+    void field_restart_actor_animation(E690Actor *);
     s32 func_800839F8(s32, s32);
     s32 func_80083EEC(s32, s32, s32);
     void field_start_actor_animation(s32, s32, u8 *);
@@ -599,7 +599,7 @@ void func_8008E690(E690Actor *actor)
                         actor->unk21 = (u8)((actor->unk21 & 0x80) + 0x10);
                         D_80105AE0[actor->unk3A].unk174 =
                             (s32)(D_80105AE0[actor->unk3A].unk174 & ~0x1800);
-                        func_8006C3FC(actor);
+                        field_restart_actor_animation(actor);
                         if (action->unk4 != 0)
                         {
                             D_80105AE0[actor->unk3A].unk3C = (s32)action->unk4;
@@ -682,7 +682,7 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
     extern s32 D_800EB0C4[];
     extern s32 D_800EB0E4[];
     extern s32 rand(void);
-    extern void func_8006C3FC(FieldMotionRecord *record);
+    extern void field_restart_actor_animation(FieldMotionRecord *record);
 
     s32 *vertical_entry;
     s32 *direction_entry;
@@ -736,7 +736,7 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
                     record->active = 1;
                     direction_or_animation |= old_animation & 0x80;
                     record->animation = direction_or_animation;
-                    func_8006C3FC(record);
+                    field_restart_actor_animation(record);
                 }
             }
             else
@@ -757,7 +757,7 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
                     }
                     record->animation_frame = 0;
                     record->active = 1;
-                    func_8006C3FC(record);
+                    field_restart_actor_animation(record);
                 }
             }
             goto keep_moving;
@@ -783,7 +783,7 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
             refresh_record->animation_frame = 0;
             refresh_record->idle_mode = 1U;
             refresh_record->active = 1;
-            func_8006C3FC(refresh_record);
+            field_restart_actor_animation(refresh_record);
         }
     }
     else
@@ -815,7 +815,7 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
                 direction_or_animation += (sector_or_flags & 1) * 5;
                 direction_or_animation += 5;
                 record->animation = (u8)direction_or_animation;
-                func_8006C3FC(record);
+                field_restart_actor_animation(record);
             }
         keep_moving:
             record->stop_delay = 3U;
@@ -836,7 +836,7 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
             refresh_record->active = 1;
             refresh_record->animation_frame = 0;
             refresh_record->animation = (u8)((low_state % 5) | (previous_animation & 0x80));
-            func_8006C3FC(refresh_record);
+            field_restart_actor_animation(refresh_record);
         }
     }
 }
@@ -1194,7 +1194,7 @@ s32 func_8008EF0C(void* arg0)
         M2C_FIELD(arg0, s16*, 0x2E) = 1;
         M2C_FIELD(arg0, s8*, 0x27) = 0;
         M2C_FIELD(arg0, s8*, 0x24) = 1;
-        func_8006C3FC(arg0);
+        field_restart_actor_animation(arg0);
         return;
     case 0x19:
         func_80092550(arg0);
@@ -1599,7 +1599,7 @@ s32 func_8008EF0C(void* arg0)
                 M2C_FIELD(arg0, s8*, 0x24) = 1;
                 temp_v0_26 = (M2C_FIELD(arg0, u8*, 0x3A) * 0x23C) + slot_base1;
                 M2C_FIELD(temp_v0_26, s32*, 0x174) = (s32)(M2C_FIELD(temp_v0_26, s32*, 0x174) & ~0x1800);
-                func_8006C3FC(arg0);
+                field_restart_actor_animation(arg0);
                 return;
             }
             goto block_229;
@@ -1612,7 +1612,7 @@ s32 func_8008EF0C(void* arg0)
             M2C_FIELD(arg0, u16*, 0x2E) = 1U;
             M2C_FIELD(arg0, s8*, 0x24) = 1;
             M2C_FIELD(arg0, u8*, 0x21) = (u8)(M2C_FIELD(arg0, u8*, 0x21) & 0x80);
-            func_8006C3FC(arg0);
+            field_restart_actor_animation(arg0);
             return;
         }
         break;
@@ -1698,7 +1698,7 @@ s32 func_8008EF0C(void* arg0)
                     M2C_FIELD(arg0, u8*, 0x21) = (u8)((M2C_FIELD(arg0, u8*, 0x21) & 0x80) + 0xE);
                     temp_v0_29 = (M2C_FIELD(arg0, u8*, 0x3A) * 0x23C) + (void*)temp_s0_9;
                     M2C_FIELD(temp_v0_29, s32*, 0x174) = (s32)(M2C_FIELD(temp_v0_29, s32*, 0x174) & ~0x1800);
-                    func_8006C3FC(arg0);
+                    field_restart_actor_animation(arg0);
                 }
                 temp_s2 = &D_80105AE0;
                 temp_a0_11 = (M2C_FIELD(arg0, u8*, 0x3A) * 0x23C) + temp_s2;
@@ -1747,7 +1747,7 @@ s32 func_8008EF0C(void* arg0)
                     M2C_FIELD(arg0, u8*, 0x21) = (u8)((M2C_FIELD(arg0, u8*, 0x21) & 0x80) + 0xF);
                     temp_v0_32 = (M2C_FIELD(arg0, u8*, 0x3A) * 0x23C) + slot_base2;
                     M2C_FIELD(temp_v0_32, s32*, 0x174) = (s32)(M2C_FIELD(temp_v0_32, s32*, 0x174) & ~0x1800);
-                    func_8006C3FC(arg0);
+                    field_restart_actor_animation(arg0);
                     M2C_FIELD(arg0, u16*, 0x2A) = 0xBDU;
                     return;
                 }
@@ -1846,7 +1846,7 @@ s32 func_8008EF0C(void* arg0)
                 M2C_FIELD(arg0, u8*, 0x21) = (u8)((M2C_FIELD(arg0, u8*, 0x21) & 0x80) + 0xF);
                 temp_v0_38 = (M2C_FIELD(arg0, u8*, 0x3A) * 0x23C) + slot_base3;
                 M2C_FIELD(temp_v0_38, s32*, 0x174) = (s32)(M2C_FIELD(temp_v0_38, s32*, 0x174) & ~0x1800);
-                func_8006C3FC(arg0);
+                field_restart_actor_animation(arg0);
                 M2C_FIELD(arg0, s32*, 0x1C) |= 0x800;
                 return;
             }
@@ -1867,7 +1867,7 @@ s32 func_8008EF0C(void* arg0)
                 func_800954F0(arg0, M2C_FIELD(var_s3, u16*, 0) & 0x7FFF);
                 M2C_FIELD(temp_s2, u16*, 0x172) = (u16)(M2C_FIELD(var_s3, u16*, 0) & 0x7FFF);
                 M2C_FIELD(arg0, u16*, 0x2A) = 0x91U;
-                func_8006C3FC(arg0);
+                field_restart_actor_animation(arg0);
                 M2C_FIELD(arg0, s32*, 0x1C) = (s32)(M2C_FIELD(arg0, s32*, 0x1C) | 0x800);
                 return;
             }
@@ -2126,7 +2126,7 @@ s32 func_80090D48(D48Entry *arg0, D48Actor *arg1, D48Command *arg2)
 
     extern ActorData D_800FD818[];
     extern u8 D_800EB1B8[];
-    extern void func_8006C3FC(D48Entry *);
+    extern void field_restart_actor_animation(D48Entry *);
     extern void func_800A3938(s32, s32);
     extern void func_800B61C4(s32);
 
@@ -2156,7 +2156,7 @@ s32 func_80090D48(D48Entry *arg0, D48Actor *arg1, D48Command *arg2)
     arg0->unk27 = 0;
     arg0->unk24 = 1;
     arg1->unk174 = (s32)(arg1->unk174 & ~0x1800);
-    func_8006C3FC(arg0);
+    field_restart_actor_animation(arg0);
     animation_id = arg0->unk21 & 0x7F;
     switch (animation_id)
     {

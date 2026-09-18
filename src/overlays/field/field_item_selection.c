@@ -8,8 +8,8 @@ extern s32 D_80122714, D_80122734, D_801227BC, D_801227C0;
 extern s32 D_801227D8, D_801227E4, D_80122828, D_801229F8, D_80122A00;
 extern s32 g_menu_element_counter, g_pad_input, g_pad_input_inject;
 void field_start_actor_animation(s32, s32, s32);
-void func_8006B4D0(s32, s32);
-void func_8006C3FC(u8 *);
+void field_initialize_actor_record(s32, s32);
+void field_restart_actor_animation(u8 *);
 s32 func_800839F8(s32, s32);
 s32 func_80083EEC(s32, s32, s32);
 void func_8009C2E0(u8 *, s32 *);
@@ -354,7 +354,7 @@ void func_800AF350(u8 *arg0)
 loop_6:
             if ((*(u8 *)(var_s0 + 0x25)) == 0xFF)
             {
-                func_8006B4D0(var_s1, 4);
+                field_initialize_actor_record(var_s1, 4);
                 (*(s32 *)(var_s0 + 0x0)) = (s32) (*(s32 *)(D_800FDF58 + 0x0));
                 (*(s32 *)(var_s0 + 0x4)) = (s32) (*(s32 *)(D_800FDF58 + 0x4));
                 (*(s32 *)(var_s0 + 0x8)) = (s32) (*(s32 *)(D_800FDF58 + 0x8));
@@ -379,7 +379,7 @@ loop_6:
                 (*(s32 *)(temp_s0 + 0x14)) = (s32) (var_s1 + 0x14);
                 (*(u8 *)(temp_s0 + 0x18E)) = 1;
                 (*(s16 *)(temp_s0 + 0x18)) = 0;
-                func_8006C3FC(var_s0);
+                field_restart_actor_animation(var_s0);
                 func_800C2640((*(s32 *)(temp_s0 + 0x14)), D_80122738[D_80122A00 * 2]);
                 temp_v0_2 = func_800839F8(var_s1, 0);
                 if ((temp_v0_2 != -1) && (func_80083EEC(var_s1, temp_v0_2, 0xAF) != 0))

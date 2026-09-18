@@ -8,7 +8,7 @@ void field_clear_actor_slots(void);                        /* extern */
 void field_initialize_actor_slots(void);                   /* extern */
 void field_reset_fade_state(void);                         /* extern */
 void func_80067AA4(void);                                  /* extern */
-void func_8006A324(void);                                  /* extern */
+void field_reset_actor_resource_slots(void);                                  /* extern */
 void func_80083948(void);                                  /* extern */
 void func_8008396C(void);                                  /* extern */
 void func_80084240(void);                                  /* extern */
@@ -49,7 +49,7 @@ extern s32 D_80122710[];
 extern s32 D_801227DC[];
 extern s32 D_801227E8[];
 extern s32 D_8011F3AC[];
-extern s32 D_800F22C0[];
+extern s32 g_field_gover_load_countdown[];
 extern s32 D_801227F0[];
 extern s32 g_field_return_to_title_prompt_delay[];
 extern s32 g_field_return_to_title_prompt_state[];
@@ -60,7 +60,7 @@ extern u8 g_music_track_table[];
 extern s32 g_field_action_context[];
 extern s32 D_800F2288[];
 extern s32 D_800F2298[];
-extern s32 D_800F22C0[];
+extern s32 g_field_gover_load_countdown[];
 extern s32 D_800FE754[];
 extern s32 g_field_pickup_sound_played[];
 extern s32 D_8010AE48[];
@@ -89,7 +89,7 @@ void field_initialize_subsystems(s32 arg0)
     D_801227E8[0] = 0;
     func_800B0094(base);
     func_800A8CFC();
-    func_8006A324();
+    field_reset_actor_resource_slots();
     D_800F22B0[0] = arg0;
     D_801158A0[0] = 0;
     D_801178C8[0] = 0;
@@ -112,7 +112,7 @@ void field_initialize_subsystems(s32 arg0)
     D_801227DC[0] = 0;
     func_800A6204();
     D_8011F3AC[0] = 0;
-    D_800F22C0[0] = 0;
+    g_field_gover_load_countdown[0] = 0;
     D_800F229C[0] = 0;
     g_field_return_to_title_prompt_state[0] = 0;
     g_field_return_to_title_prompt_delay[0] = 0;

@@ -1316,14 +1316,14 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                 if (temp_v1_33 == 0)
                                 {
 
-                                    func_800A3938(g_field_resource_entries[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A));
+                                    func_800A3938(g_field_resource_entries[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A));
                                 }
                             }
                         }
                         else
                         {
 
-                            func_800A39A8(g_field_resource_entries[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A), rec->unk3B - 3, rec->unk3A);
+                            func_800A39A8(g_field_resource_entries[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A), rec->unk3B - 3, rec->unk3A);
                         }
                     }
                     else
@@ -2314,13 +2314,13 @@ block_183:
                                 {
                                     if (temp_v1_25 == 0)
                                     {
-                                        func_800A3938(resources[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A));
+                                        func_800A3938(resources[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A));
                                     }
                                 }
                             }
                             else
                             {
-                                func_800A39A8(resources[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A), rec->unk3B - 3, rec->unk3A);
+                                func_800A39A8(resources[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A), rec->unk3B - 3, rec->unk3A);
                             }
                         }
                         break;

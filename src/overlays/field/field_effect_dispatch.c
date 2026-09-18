@@ -308,7 +308,7 @@ void func_80074D7C(FieldRenderContext *ctx)
                     slot->unk16D = (s8) (rec - D_800FF658);
                     if (item != 0)
                     {
-                        item = func_8006C854(rec, (u8 *) item);
+                        item = field_advance_actor_part_animation_frame(rec, (u8 *) item);
                         if (item != 0)
                         {
                             if (item >= 0)
@@ -324,7 +324,7 @@ void func_80074D7C(FieldRenderContext *ctx)
                     break;
 
                 case 0:
-                    item = func_8006C854(rec, D_801058D4);
+                    item = field_advance_actor_part_animation_frame(rec, D_801058D4);
                     if (item != 0)
                     {
                         cursor = func_800754B4(rec, cursor, base, item);
@@ -335,7 +335,7 @@ void func_80074D7C(FieldRenderContext *ctx)
                     item = (s32) g_field_actor_slots[rec->unk22].unk14;
                     if (item != 0)
                     {
-                        item = func_8006C854(rec, (u8 *) item);
+                        item = field_advance_actor_part_animation_frame(rec, (u8 *) item);
                         if (item != 0)
                         {
                             cursor = func_800754B4(rec, cursor, base, item);
@@ -362,7 +362,7 @@ void func_80074D7C(FieldRenderContext *ctx)
                     slot->unk16D = (s8) (rec - D_800FF658);
                     if (item != 0)
                     {
-                        item = func_8006C854(rec, (u8 *) item);
+                        item = field_advance_actor_part_animation_frame(rec, (u8 *) item);
                         if (item != 0)
                         {
                             if (item >= 0)
@@ -396,7 +396,7 @@ void func_80074D7C(FieldRenderContext *ctx)
                     slot->unk16D = (s8) (rec - D_800FF658);
                     if (item != 0)
                     {
-                        item = func_8006C854(rec, (u8 *) item);
+                        item = field_advance_actor_part_animation_frame(rec, (u8 *) item);
                         if (item != 0)
                         {
                             if (item >= 0)

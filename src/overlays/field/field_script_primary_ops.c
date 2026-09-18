@@ -529,7 +529,7 @@ extern u8* D_80122B78;
 void func_800B4410(s32 arg0);
 void func_800B4584(void);
 void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-void func_8006AB38(s32 arg0);
+void field_release_actor_resource_slot(s32 arg0);
 void func_800A43E8(s32 arg0, s32 arg1, u16 arg2, s32 arg3);
 void func_800B286C(s32 arg0, s32 arg1, s32 arg2);
 s32 func_800A4744(void);
@@ -658,7 +658,7 @@ s32 field_script_op_26(void)
 }
 
 /**
- * @brief Opcode 0x27: reset one of two D_80122B74 slots chosen by the byte operand, then call func_8006AB38.
+ * @brief Opcode 0x27: reset one of two D_80122B74 slots chosen by the byte operand, then call field_release_actor_resource_slot.
  * @note Operand 0 selects the slot at 0x840 and also issues the 0xF87-based command; any other value selects 0xA90.
  */
 void field_script_op_27(void)
@@ -679,7 +679,7 @@ void field_script_op_27(void)
         *(s32*)(D_80122B74 + 0xAA8) |= 0x7F;
         func_800BD520(0, 0x2F00, 0xFF);
     }
-    func_8006AB38(state);
+    field_release_actor_resource_slot(state);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 2;
 }
 

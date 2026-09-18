@@ -591,7 +591,7 @@ bit23_done:
         if (res != 0)
         {
         call_res:
-            func_8006C460(rec, res);
+            field_begin_actor_animation_forward(rec, res);
             goto after_source;
         }
     }
@@ -626,7 +626,7 @@ bit23_done:
         res = g_field_resource_entries[D_800FDF58[actor->owner_object_index].unk3B].start;
         if (res != 0)
         {
-            func_8006C3FC(rec, res);
+            field_restart_actor_animation(rec, res);
         }
         goto after_source;
     }
@@ -705,7 +705,7 @@ bit23_done:
         res = g_field_resource_entries[D_800FDF58[actor->unk229[g_field_track_index]].unk3B].start;
         if (res != 0)
         {
-            func_8006C3FC(rec, res);
+            field_restart_actor_animation(rec, res);
         }
     }
 
@@ -883,7 +883,7 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
                     res = g_field_resource_entries[src->unk3B].start;
                     if (res != 0)
                     {
-                        func_8006C3FC(rec, res);
+                        field_restart_actor_animation(rec, res);
                     }
                 }
             }
@@ -972,7 +972,7 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
                                       .start;
                         if (res != 0)
                         {
-                            func_8006C460(rec, res);
+                            field_begin_actor_animation_forward(rec, res);
                         }
                     }
                     break;
@@ -1117,7 +1117,7 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
             res = g_field_resource_entries[src->unk3B].start;
             if (res != 0)
             {
-                func_8006C3FC(rec, res);
+                field_restart_actor_animation(rec, res);
             }
             break;
         }
@@ -1169,7 +1169,7 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
             res = g_field_resource_entries[src->unk3B].start;
             if (res != 0)
             {
-                func_8006C3FC(rec, res);
+                field_restart_actor_animation(rec, res);
             }
             break;
         }
@@ -1236,7 +1236,7 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
             maybe_attach:
                 if (res != 0)
                 {
-                    func_8006C3FC(rec, res);
+                    field_restart_actor_animation(rec, res);
                 }
                 break;
             }
@@ -1369,7 +1369,7 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
                                       .start;
                         if (res != 0)
                         {
-                            func_8006C460(rec, res);
+                            field_begin_actor_animation_forward(rec, res);
                         }
                     }
                     break;
@@ -3128,7 +3128,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
 
                         if (g_field_pickup_sound_played == 0)
                         {
-                            func_800A3938(FIELD_PICKUP_SOUND, func_8006CE70(rec->source_object_index));
+                            func_800A3938(FIELD_PICKUP_SOUND, field_get_actor_sound_pan(rec->source_object_index));
                         }
                         g_field_pickup_sound_played = 1;
                         rec->state = FIELD_EFFECT_RETIRED;
@@ -3156,7 +3156,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
 
                         if (g_field_pickup_sound_played == 0)
                         {
-                            func_800A3938(FIELD_PICKUP_SOUND, func_8006CE70(rec->source_object_index));
+                            func_800A3938(FIELD_PICKUP_SOUND, field_get_actor_sound_pan(rec->source_object_index));
                         }
                         g_field_pickup_sound_played = 1;
                         rec->state = FIELD_EFFECT_RETIRED;
@@ -3181,7 +3181,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
 
                         if (g_field_pickup_sound_played == 0)
                         {
-                            func_800A3938(FIELD_PICKUP_SOUND, func_8006CE70(rec->source_object_index));
+                            func_800A3938(FIELD_PICKUP_SOUND, field_get_actor_sound_pan(rec->source_object_index));
                         }
                         g_field_pickup_sound_played = 1;
                         rec->state = FIELD_EFFECT_RETIRED;
@@ -3207,7 +3207,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
 
                         if (g_field_pickup_sound_played == 0)
                         {
-                            func_800A3938(FIELD_PICKUP_SOUND, func_8006CE70(rec->source_object_index));
+                            func_800A3938(FIELD_PICKUP_SOUND, field_get_actor_sound_pan(rec->source_object_index));
                         }
                         g_field_pickup_sound_played = 1;
                         rec->state = FIELD_EFFECT_RETIRED;

@@ -135,7 +135,7 @@ extern s32 D_800FE754;
 void func_800B0A08(s32);
 s32 func_800B0888(void);
 void func_800B08FC(s32, s32);
-void func_8006C3FC(u8 *);
+void field_restart_actor_animation(u8 *);
 s32 func_800839F8(s32, s32);
 s32 func_80083EEC(s32, s32, s32);
 void field_start_actor_animation(s32, s32, s32);
@@ -226,7 +226,7 @@ state_3:
                     object->unk24 = 1;
                     object->unk1C &= ~0x800;
                     object->unk2C += 3;
-                    func_8006C3FC((u8 *)object);
+                    field_restart_actor_animation((u8 *)object);
                 }
                 if (D_80122B28[i].unk4 != none)
                 {
@@ -343,7 +343,7 @@ block_44:
                                 ((Struct_D800FDF58 *)D_800FDF58)[i].unk21 = (((Struct_D800FDF58 *)D_800FDF58)[i].unk21 & 0x80) + 0x11;
                                 ((Struct_D800FDF58 *)D_800FDF58)[i].unk1C &= ~0x800;
                                 ((FieldActorState *)D_80105AE0)[i].unk174 &= ~0x1800;
-                                func_8006C3FC((u8 *)&((Struct_D800FDF58 *)D_800FDF58)[i]);
+                                field_restart_actor_animation((u8 *)&((Struct_D800FDF58 *)D_800FDF58)[i]);
                             }
                             i += 1;
                         } while (i < 2);
@@ -495,8 +495,8 @@ extern u8 *D_8010D038;
 extern s32 D_80122B18[];
 extern s32 g_field_resource_cursor;
 extern FieldResourceEntry g_field_resource_entries[];
-void func_8006B354(s32);
-void func_8006CB6C(u8 *, s32, s32, s32);
+void field_release_resource_entry(s32);
+void field_unpack_resource_package(u8 *, s32, s32, s32);
 void func_8009C434(void);
 
 /**
@@ -512,7 +512,7 @@ void func_800B08FC(s32 arg0, s32 arg1)
 
     if (D_80122B68[arg1] != 0)
     {
-        func_8006B354(arg1);
+        field_release_resource_entry(arg1);
         base = g_field_resource_entries;
         entry = base + arg1;
         entry->slot_index = (u8)arg1;
@@ -524,7 +524,7 @@ void func_800B08FC(s32 arg0, s32 arg1)
         flags |= arg0 & 1;
         entry->flags = flags;
         entry->start = (u8*)g_field_resource_cursor;
-        func_8006CB6C(D_8010D038 + (0x8000 + arg1 * 0x18000), D_80122B18[arg1], arg1, arg1);
+        field_unpack_resource_package(D_8010D038 + (0x8000 + arg1 * 0x18000), D_80122B18[arg1], arg1, arg1);
         entry->end = (u8*)g_field_resource_cursor;
         entry->flags |= 2;
         D_80122B68[arg1] = 0;
@@ -540,11 +540,11 @@ extern s32 D_80122B68[];
 extern s32 D_80122B18[];
 extern u8* D_8010D038;
 
-s32 func_8006A88C(s32 slot_index, FieldResourceSlot* slot, s32 mode);
+s32 field_get_actor_resource_id(s32 slot_index, FieldResourceSlot* slot, s32 mode);
 
 /**
  * @brief Queue CD reads for each active field resource slot.
- * @param arg0 Resource-selection mode forwarded to func_8006A88C.
+ * @param arg0 Resource-selection mode forwarded to field_get_actor_resource_id.
  */
 void func_800B0A08(s32 arg0)
 {
@@ -555,7 +555,7 @@ void func_800B0A08(s32 arg0)
     {
         if (D_800FD818[i].flags & 1)
         {
-            D_80122B68[i] = func_8006A88C(i, &D_800FD818[i], arg0);
+            D_80122B68[i] = field_get_actor_resource_id(i, &D_800FD818[i], arg0);
             buffer = D_8010D038 + 0x8000 + i * 0x18000;
             D_800FD818[i].resource_index = (u16)D_80122B68[i];
             D_80122B18[i] = cdrom_queue_read((u16)D_80122B68[i], buffer);
