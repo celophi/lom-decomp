@@ -20,6 +20,22 @@ typedef struct
 
 typedef struct
 {
+    u8 _pad00[0x34];
+    u32 unk34;
+    u8 _pad38[0x10];
+} FieldActorPartDef;
+
+typedef struct
+{
+    u8 _pad000[0x174];
+    s32 unk174;
+    u8 _pad178[0x33];
+    u8 unk1AB;
+    u8 _pad1AC[0x90];
+} FieldActorState;
+
+typedef struct
+{
     s32 unk0;
     s32 unk4;
     s32 unk8;
@@ -120,7 +136,7 @@ void func_800B0A08(s32);
 s32 func_800B0888(void);
 void func_800B08FC(s32, s32);
 void func_8006C3FC(u8 *);
-s8 func_800839F8(s32, s32);
+s32 func_800839F8(s32, s32);
 s32 func_80083EEC(s32, s32, s32);
 void field_start_actor_animation(s32, s32, s32);
 void func_800A3938(s32, s32);
@@ -134,224 +150,213 @@ void func_800B34D0(s32);
 /** @brief Advance pending actor changes through resource loading and installation. */
 void func_800B0244(void)
 {
-    u8 *temp_s0;
-    u8 *var_a0_2;
-    u8 *var_s0_2;
-    u8 *var_s1;
-    u8 *var_v1_3;
-    u8 *var_v1_4;
-    s16 *var_s0;
-    u8 *var_s3;
-    s16 temp_a0;
-    s16 temp_v0_3;
-    s32 *var_s3_2;
-    s32 var_s2;
-    s32 var_s2_2;
-    s32 var_s2_3;
-    s32 var_s2_4;
-    s32 var_s2_5;
-    s32 var_s2_6;
-    s32 var_s2_7;
-    s8 temp_v0_2;
-    u8 *var_a0_3;
-    u8 *var_v1_2;
-    u8 temp_v0;
-    u8 *var_a0;
-    u8 *var_v1;
+    s32 state;
+    s32 i;
 
-    switch (D_80122B20)
-
+    state = D_80122B20;
+    if (state == 0)
     {
-    case 1:
-        if (((*(s32 *)(D_80105880 + 0x0)) | (*(s32 *)(D_80105880 + 0x1C)) | (*(s32 *)(D_80105880 + 0x38))) == 0)
+        goto end;
+    }
+    if (state == 2)
+    {
+        goto state_2;
+    }
+    if (state < 3)
+    {
+        if (state == 1)
         {
-            D_80122B20 = 2;
-            return;
+            goto state_1;
         }
-    case 0:
-        return;
-    case 2:
-        func_800B0A08(1);
-        D_80122B20 = 3;
-        return;
-    case 3:
-        var_s2 = 0;
+        goto end;
+    }
+    if (state == 3)
+    {
+        goto state_3;
+    }
+    if (state == 4)
+    {
+        goto state_4;
+    }
+    goto end;
+
+state_1:
+    if (((*(s32 *)(D_80105880 + 0x0)) | (*(s32 *)(D_80105880 + 0x1C)) | (*(s32 *)(D_80105880 + 0x38))) == 0)
+    {
+        D_80122B20 = 2;
+    }
+    goto end;
+
+state_2:
+    func_800B0A08(1);
+    D_80122B20 = 3;
+    goto end;
+
+state_3:
+    {
+        Struct_D800FDF58 *object;
+        s32 actor_track;
+        s32 none;
+        u8 flags;
+        u8 *actor_base;
+
+        i = 0;
         if (D_80122B10 > 0)
         {
-            var_s3 = (u8 *)D_80122B28;
+            none = -1;
+            actor_base = D_80105AE0;
             do
             {
-                temp_s0 = ((*(s16 *)(var_s3 + 0x0)) * 0x54) + (u8 *)D_800FDF58;
-                if ((*(s16 *)(var_s3 + 0x2)) != -1)
+                object = (Struct_D800FDF58 *)D_800FDF58 + D_80122B28[i].unk0;
+                if (D_80122B28[i].unk2 != none)
                 {
-                    (*(u8 *)(temp_s0 + 0x25)) = 0;
-                    (*(s16 *)(temp_s0 + 0x2A)) = 0x8D;
-                    temp_v0 = (u8) (*(s16 *)(var_s3 + 0x2)) | ((*(u8 *)(temp_s0 + 0x21)) & 0x80);
-                    (*(u8 *)(temp_s0 + 0x21)) = temp_v0;
-                    if (temp_v0 & 0x80)
+                    object->unk25 = 0;
+                    object->unk2A = 0x8D;
+                    flags = (u8)D_80122B28[i].unk2 | (object->unk21 & 0x80);
+                    object->unk21 = flags;
+                    if (flags & 0x80)
                     {
-                        (*(u8 *)(temp_s0 + 0x1B)) = 0;
+                        object->unk1B = 0;
                     }
                     else
                     {
-                        (*(u8 *)(temp_s0 + 0x1B)) = 0x80;
+                        object->unk1B = 0x80;
                     }
-                    (*(u16 *)(temp_s0 + 0x2E)) = 1;
-                    (*(u8 *)(temp_s0 + 0x24)) = 1;
-                    (*(s32 *)(temp_s0 + 0x1C)) = (s32) ((*(s32 *)(temp_s0 + 0x1C)) & ~0x800);
-                    (*(u16 *)(temp_s0 + 0x2C)) = (u16) ((*(u16 *)(temp_s0 + 0x2C)) + 3);
-                    func_8006C3FC(temp_s0);
+                    object->unk2E = 1;
+                    object->unk24 = 1;
+                    object->unk1C &= ~0x800;
+                    object->unk2C += 3;
+                    func_8006C3FC((u8 *)object);
                 }
-                if ((*(s16 *)(var_s3 + 0x4)) != -1)
+                if (D_80122B28[i].unk4 != none)
                 {
-                    temp_v0_2 = func_800839F8((*(u8 *)(temp_s0 + 0x3A)), 0);
-                    if ((temp_v0_2 != -1) && (func_80083EEC((*(u8 *)(temp_s0 + 0x3A)), temp_v0_2, (*(s16 *)(var_s3 + 0x4))) != 0))
+                    actor_track = func_800839F8(object->unk3A, 0);
+                    if ((actor_track != none) && (func_80083EEC(object->unk3A, actor_track, D_80122B28[i].unk4) != 0))
                     {
-                        field_start_actor_animation(temp_v0_2, 0, 0);
-                        D_80105AE0[(*(u8 *)(temp_s0 + 0x3A)) * 0x23C + 0x179] = temp_v0_2;
+                        field_start_actor_animation(actor_track, 0, 0);
+                        actor_base[object->unk3A * 0x23C + 0x179] = (u8)actor_track;
                     }
                 }
-                temp_a0 = (*(s16 *)(var_s3 + 0x6));
-                if (temp_a0 != -1)
+                if (D_80122B28[i].unk6 != none)
                 {
-                    func_800A3938(temp_a0, 0x80);
+                    func_800A3938(D_80122B28[i].unk6, 0x80);
                     VSync(0);
                 }
-                var_s2 += 1;
-                var_s3 += 8;
-            } while (var_s2 < D_80122B10);
+                i += 1;
+            } while (i < D_80122B10);
         }
         D_80122B20 = 4;
-        return;
-    case 4:
+        goto end;
+    }
+
+state_4:
+    {
+        s16 scan_object_type;
+        u8 *resource_slot_scan;
+        u8 *object_scan_3;
+        u8 *object_scan_13;
+        u8 *object_records;
+        s32 empty_slot;
+        s32 object_type;
+        u8 *resource_slots;
+        s32 scan_type_a;
+        s32 scan_type_b;
+        s32 part_mask;
+
         if (func_800B0888() == 0)
         {
-            var_s2_2 = 0;
+            i = 0;
             if (D_80122B10 > 0)
             {
-                var_s0 = (s16 *)D_80122B28;
-loop_29:
-                if (field_object_has_active_actor_tracks(*var_s0) == 0)
+                do
                 {
-                    var_s2_2 += 1;
-                    var_s0 += 4;
-                    if (var_s2_2 >= D_80122B10)
+                    if (field_object_has_active_actor_tracks(D_80122B28[i].unk0) != 0)
                     {
-
+                        break;
                     }
-
-                    else
-
-                    {
-                        goto loop_29;
-                    }
-                }
+                } while (++i < D_80122B10);
             }
-            var_s2_3 = 3;
-            if (var_s2_2 == D_80122B10)
+            if (i == D_80122B10)
             {
-                var_v1 = (u8 *)D_800FDF58 + 0xFC;
+                i = 3;
+                empty_slot = 0xFF;
+                object_type = 0x8D;
+                object_records = (u8 *)D_800FDF58;
+                object_scan_13 = object_records + 0xFC;
 loop_34:
-                if (((*(u8 *)(var_v1 + 0x25)) == 0xFF) || ((*(s16 *)(var_v1 + 0x2A)) != 0x8D))
+                if (((*(u8 *)(object_scan_13 + 0x25)) == empty_slot) || ((*(s16 *)(object_scan_13 + 0x2A)) != object_type))
                 {
-                    var_s2_3 += 1;
-                    var_v1 += 0x54;
-                    if (var_s2_3 >= 0xD)
-                    {
-
-                    }
-
-                    else
-
+                    i += 1;
+                    object_scan_13 += 0x54;
+                    if (i < 0xD)
                     {
                         goto loop_34;
                     }
                 }
-                var_s2_4 = 1;
-                if (var_s2_3 == 0xD)
+                if (i == 0xD)
                 {
-                    var_a0 = (u8 *)D_800FDF58 + 0x54;
-                    var_v1_2 = (u8 *)D_800FD818 + 0x268;
+                    i = 1;
+                    scan_type_a = 0xAF;
+                    scan_type_b = 0xB1;
+                    object_records = (u8 *)D_800FDF58;
+                    object_scan_3 = object_records + 0x54;
+                    resource_slots = (u8 *)D_800FD818;
+                    resource_slot_scan = resource_slots + 0x268;
 loop_40:
-                    if (*var_v1_2 & 1)
+                    if (*resource_slot_scan & 1)
                     {
-                        temp_v0_3 = (*(s16 *)(var_a0 + 0x2A));
-                        if (temp_v0_3 != 0xAF)
+                        scan_object_type = (*(s16 *)(object_scan_3 + 0x2A));
+                        if ((scan_object_type == scan_type_a) || (scan_object_type == scan_type_b))
                         {
-                            if (temp_v0_3 != 0xB1)
-                            {
-                                goto block_43;
-                            }
+                            goto block_44;
                         }
                     }
-                    else
+                    object_scan_3 += 0x54;
+                    i += 1;
+                    resource_slot_scan += 0x268;
+                    if (i < 3)
                     {
-block_43:
-                        var_a0 += 0x54;
-                        var_s2_4 += 1;
-                        var_v1_2 += 0x268;
-                        if (var_s2_4 >= 3)
-                        {
-
-                        }
-
-                        else
-
-                        {
-                            goto loop_40;
-                        }
+                        goto loop_40;
                     }
-                    var_s2_5 = 0;
-                    if (var_s2_4 == 3)
+block_44:
+                    if (i == 3)
                     {
-                        var_a0_2 = (u8 *)D_800FDF58;
-                        var_v1_3 = (u8 *)D_800FE3A0;
+                        i = 0;
+                        part_mask = 0xFF7FFFFF;
                         do
                         {
-                            var_s2_5 += 1;
-                            (*(s32 *)(var_v1_3 + 0x34)) = (s32) ((*(s32 *)(var_v1_3 + 0x34)) & 0xFF7FFFFF);
-                            (*(s16 *)(var_a0_2 + 0x2A)) = 0;
-                            var_a0_2 += 0x54;
-                            var_v1_3 += 0x48;
-                        } while (var_s2_5 < 3);
+                            ((FieldActorPartDef *)D_800FE3A0)[i].unk34 &= part_mask;
+                            ((Struct_D800FDF58 *)D_800FDF58)[i].unk2A = 0;
+                            i += 1;
+                        } while (i < 3);
                         func_800A3938(0x79, 0x80);
-                        var_s2_6 = 0;
-                        var_s1 = (u8 *)D_80105AE0;
-                        var_s0_2 = (u8 *)D_800FDF58;
-                        var_s3_2 = D_80122B68;
+                        i = 0;
                         do
                         {
-                            if (*var_s3_2 != 0)
+                            if (D_80122B68[i] != 0)
                             {
-                                func_800B08FC(1, var_s2_6);
-                                (*(s16 *)(var_s0_2 + 0x2A)) = 0x99;
-                                (*(u16 *)(var_s0_2 + 0x2E)) = 1;
-                                (*(u8 *)(var_s0_2 + 0x27)) = 0;
-                                (*(u8 *)(var_s0_2 + 0x24)) = 1;
-                                (*(u8 *)(var_s0_2 + 0x21)) = (u8) (((*(u8 *)(var_s0_2 + 0x21)) & 0x80) + 0x11);
-                                (*(s32 *)(var_s0_2 + 0x1C)) = (s32) ((*(s32 *)(var_s0_2 + 0x1C)) & ~0x800);
-                                (*(s32 *)(var_s1 + 0x174)) = (s32) ((*(s32 *)(var_s1 + 0x174)) & ~0x1800);
-                                func_8006C3FC(var_s0_2);
+                                func_800B08FC(1, i);
+                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk2A = 0x99;
+                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk2E = 1;
+                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk27 = 0;
+                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk24 = 1;
+                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk21 = (((Struct_D800FDF58 *)D_800FDF58)[i].unk21 & 0x80) + 0x11;
+                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk1C &= ~0x800;
+                                ((FieldActorState *)D_80105AE0)[i].unk174 &= ~0x1800;
+                                func_8006C3FC((u8 *)&((Struct_D800FDF58 *)D_800FDF58)[i]);
                             }
-                            var_s1 += 0x23C;
-                            var_s0_2 += 0x54;
-                            var_s2_6 += 1;
-                            var_s3_2++;
-                        } while (var_s2_6 < 2);
-                        var_s2_7 = 0;
-                        var_v1_4 = (u8 *)D_80105AE0;
-                        var_a0_3 = (u8 *)D_800FD818;
+                            i += 1;
+                        } while (i < 2);
+                        i = 0;
                         do
                         {
-                            if (*var_a0_3 & 1)
+                            if (D_800FD818[i].flags & 1)
                             {
-                                (*(u8 *)(var_v1_4 + 0x1AB)) = 0x3C;
-                                (*(s32 *)(var_v1_4 + 0x174)) = (s32) ((*(s32 *)(var_v1_4 + 0x174)) | 0x8000);
+                                ((FieldActorState *)D_80105AE0)[i].unk1AB = 0x3C;
+                                ((FieldActorState *)D_80105AE0)[i].unk174 |= 0x8000;
                             }
-                            var_v1_4 += 0x23C;
-                            var_s2_7 += 1;
-                            var_a0_3 += 0x268;
-                        } while (var_s2_7 < 3);
+                            i += 1;
+                        } while (i < 3);
                         DrawSync(0);
                         func_80084240();
                         field_restore_default_action_animation_mappings(1);
@@ -361,8 +366,10 @@ block_43:
                 }
             }
         }
-        break;
     }
+
+end:
+    return;
 }
 
 /**
