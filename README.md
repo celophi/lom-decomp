@@ -32,12 +32,13 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
   2. Running the project's compressor on that ELF (stripped to a raw binary) **reproduces an exact replica of the `.BIN` file as it appears on the disc**.
 
   In other words, the round-trip `original .BIN -> decompress -> C source -> compile -> ELF -> compress -> .BIN` is bit-identical.
+  *(Check out the compressor! It's honestly really amazing that it is **bit identical** and kind of extraneous, but cool nonetheless!)*
 
 | Module | | Status |
 |---|:---:|---|
 | SLUS_010.13 | 🪲 | Non-matching |
 | ADDHERO.BIN | 🔒 | Fully linked |
-| CARDA.BIN | 🪲 | Non-matching |
+| CARDA.BIN | ☑️ | Matching |
 | CHECKPS.BIN | 🔒 | Fully linked |
 | CLOAD.BIN | 🔒 | Fully linked |
 | FIELD.BIN | 🪲 | Non-matching |
