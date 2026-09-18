@@ -81,17 +81,17 @@ extern void func_800B5D60(s32);
 extern void func_800B5E5C(void);
 extern s32 func_800B6334(u8 *);
 extern void func_800B65CC(s32);
-/* The target forwards the source actor in a0 to the no-argument dispatcher. */
 extern s32 func_800B6808();
 
-/** @brief Execute the selected action and process its outcome and actor state. */
+/**
+ * @brief Execute the selected action and process its outcome and actor state.
+ * @param arg0 Action parameters to process.
+ * @return Action result code.
+ */
 s32 func_800B5534(ArgB800B5948 *arg0)
 {
     s32 temp_v0;
-    s32 temp_v0_2;
     s32 temp_v0_5;
-    s32 var_v0;
-    s32 var_v1;
     ActionActor5534 *temp_a0;
     ActionActor5534 *temp_a0_2;
     ActionActor5534 *temp_a0_3;
@@ -103,121 +103,120 @@ s32 func_800B5534(ArgB800B5948 *arg0)
     ActionActor5534 *temp_v0_4;
     ActionActor5534 *var_a1;
 
-    if ((((ActionContext5534 *)D_80123FB0) != NULL) && (((ActionContext5534 *)D_80123FB0)->unk0 >= 0))
-
+    if (((ActionContext5534 *)D_80123FB0) == NULL)
     {
-        func_800B5948(arg0, -1);
-        var_v0 = 1;
-        if (((ActionContext5534 *)D_80123FB0)->unk1C != 0)
-        {
-            temp_v0 = func_800B5C54();
-            if (temp_v0 != 0)
-            {
-                if (temp_v0 == 1)
-                {
-                    func_800B28E0(arg0->unkC, 0xC, 0);
-                }
-                var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
-                var_v1 = var_a1->unkC;
-                var_v0 = temp_v0;
-                goto block_36;
-            }
-            temp_v0_2 = func_800B5A88();
-            if (temp_v0_2 != 0)
-            {
-                if (temp_v0_2 == 3)
-                {
-                    func_8008B500(arg0->unkC, 0x90);
-                    goto block_10;
-                }
-                var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
-                var_v1 = var_a1->unkC;
-                var_v0 = temp_v0_2;
-                goto block_36;
-            }
-            temp_a0 = ((ActionContext5534 *)D_80123FB0)->unk20;
-            if (!(temp_a0->unk10->unkC & 0x8000))
-            {
-                temp_a0->unkC = (s32) (temp_a0->unkC & 0xFFFF00FF);
-            }
-            if (func_800B6808(temp_a0) != 0)
-            {
-                func_800B5E5C();
-                if (((ActionContext5534 *)D_80123FB0)->unk24->unk10->unk4 == 0)
-                {
-                    if (!(((u32) ((ActionContext5534 *)D_80123FB0)->unk14 >> 2) & 1))
-                    {
-                        func_800B28E0(arg0->unk0, 0xC, 5);
-                    }
-                    func_800B28E0(arg0->unkC, 0xC, 2);
-                    if (func_800B4CE4(((ActionContext5534 *)D_80123FB0)->unk20, 3) != 0)
-                    {
-                        temp_a0_2 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                        temp_a0_2->unkC = (s32) (temp_a0_2->unkC | 0x20000000);
-                    }
-                    if (func_800B4CE4(((ActionContext5534 *)D_80123FB0)->unk20, 0xD) != 0)
-                    {
-                        temp_a0_3 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                        temp_a0_3->unkC = (s32) (temp_a0_3->unkC | 0x02000000);
-                    }
-                    if (func_800B4CE4(((ActionContext5534 *)D_80123FB0)->unk20, 9) != 0)
-                    {
-                        temp_a0_4 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                        temp_a0_4->unkC = (s32) (temp_a0_4->unkC | 0x0C000000);
-                    }
-                    if (func_800B2FF8(((ActionContext5534 *)D_80123FB0)->unk20) != 0)
-                    {
-                        temp_a0_5 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                        temp_a0_5->unkC = (s32) (temp_a0_5->unkC | 0x08000000);
-                    }
-                    if (((ActionContext5534 *)D_80123FB0)->unk20->unkA & 0x100)
-                    {
-                        temp_v0_3 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                        temp_v0_3->unkC = (s32) (temp_v0_3->unkC | 0x10000000);
-                    }
-                    if (((ActionContext5534 *)D_80123FB0)->unk20->unkA & 0x80)
-                    {
-                        temp_v0_4 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                        temp_v0_4->unkC = (s32) (temp_v0_4->unkC | 0x01000000);
-                    }
-                    temp_v0_5 = func_800B6334((u8 *)((ActionContext5534 *)D_80123FB0)->unk24);
-                    if (temp_v0_5 != 0)
-                    {
-                        func_800B65CC(temp_v0_5);
-                    }
-                }
-                else
-                {
-                    func_800B5D60(1);
-                    func_800B28E0(arg0->unk0, 0xC, 4);
-                    func_800B28E0(arg0->unkC, 0xC, 1);
-                    temp_a0_6 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                    temp_a0_6->unkC = (s32) (temp_a0_6->unkC & 0xFFFFFF);
-                    func_8008AB2C(arg0->unkC, 0);
-                }
-                var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
-                var_v1 = var_a1->unkC;
-                var_v0 = 0;
-            }
-            else
-            {
-                func_800B5D60(0);
-                func_800B28E0(arg0->unkC, 0xC, 0);
-                temp_a0_7 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                temp_a0_7->unkC = (s32) (temp_a0_7->unkC & 0xFFFFFF);
-                var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
-                var_v0 = 0;
-                var_v1 = var_a1->unkC;
-            }
-block_36:
-            var_a1->unkC = (s32) (var_v1 & ~0xFF);
-
-            return var_v0;
-        }
-        return var_v0;
+        return 1;
     }
-block_10:
-    return 1;
+    if (((ActionContext5534 *)D_80123FB0)->unk0 < 0)
+    {
+        return 1;
+    }
+
+    func_800B5948(arg0, -1);
+    if (((ActionContext5534 *)D_80123FB0)->unk1C == 0)
+    {
+        return 1;
+    }
+
+    temp_v0 = func_800B5C54();
+    if (temp_v0 != 0)
+    {
+        if (temp_v0 == 1)
+        {
+            func_800B28E0(arg0->unkC, 0xC, 0);
+        }
+        var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
+        var_a1->unkC = (s32)(var_a1->unkC & ~0xFF);
+        return temp_v0;
+    }
+
+    temp_v0 = func_800B5A88();
+    if (temp_v0 != 0)
+    {
+        if (temp_v0 == 3)
+        {
+            func_8008B500(arg0->unkC, 0x90);
+            return 1;
+        }
+        var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
+        var_a1->unkC = (s32)(var_a1->unkC & ~0xFF);
+        return temp_v0;
+    }
+
+    temp_a0 = ((ActionContext5534 *)D_80123FB0)->unk20;
+    if (!(temp_a0->unk10->unkC & 0x8000))
+    {
+        temp_a0->unkC = (s32)(temp_a0->unkC & 0xFFFF00FF);
+    }
+    if (func_800B6808(temp_a0) != 0)
+    {
+        func_800B5E5C();
+        if (((ActionContext5534 *)D_80123FB0)->unk24->unk10->unk4 == 0)
+        {
+            if (!(((u32)((ActionContext5534 *)D_80123FB0)->unk14 >> 2) & 1))
+            {
+                func_800B28E0(arg0->unk0, 0xC, 5);
+            }
+            func_800B28E0(arg0->unkC, 0xC, 2);
+            if (func_800B4CE4(((ActionContext5534 *)D_80123FB0)->unk20, 3) != 0)
+            {
+                temp_a0_2 = ((ActionContext5534 *)D_80123FB0)->unk24;
+                temp_a0_2->unkC = (s32)(temp_a0_2->unkC | 0x20000000);
+            }
+            if (func_800B4CE4(((ActionContext5534 *)D_80123FB0)->unk20, 0xD) != 0)
+            {
+                temp_a0_3 = ((ActionContext5534 *)D_80123FB0)->unk24;
+                temp_a0_3->unkC = (s32)(temp_a0_3->unkC | 0x02000000);
+            }
+            if (func_800B4CE4(((ActionContext5534 *)D_80123FB0)->unk20, 9) != 0)
+            {
+                temp_a0_4 = ((ActionContext5534 *)D_80123FB0)->unk24;
+                temp_a0_4->unkC = (s32)(temp_a0_4->unkC | 0x0C000000);
+            }
+            if (func_800B2FF8(((ActionContext5534 *)D_80123FB0)->unk20) != 0)
+            {
+                temp_a0_5 = ((ActionContext5534 *)D_80123FB0)->unk24;
+                temp_a0_5->unkC = (s32)(temp_a0_5->unkC | 0x08000000);
+            }
+            if (((ActionContext5534 *)D_80123FB0)->unk20->unkA & 0x100)
+            {
+                temp_v0_3 = ((ActionContext5534 *)D_80123FB0)->unk24;
+                temp_v0_3->unkC = (s32)(temp_v0_3->unkC | 0x10000000);
+            }
+            if (((ActionContext5534 *)D_80123FB0)->unk20->unkA & 0x80)
+            {
+                temp_v0_4 = ((ActionContext5534 *)D_80123FB0)->unk24;
+                temp_v0_4->unkC = (s32)(temp_v0_4->unkC | 0x01000000);
+            }
+            temp_v0_5 = func_800B6334((u8 *)((ActionContext5534 *)D_80123FB0)->unk24);
+            if (temp_v0_5 != 0)
+            {
+                func_800B65CC(temp_v0_5);
+            }
+        }
+        else
+        {
+            func_800B5D60(1);
+            func_800B28E0(arg0->unk0, 0xC, 4);
+            func_800B28E0(arg0->unkC, 0xC, 1);
+            temp_a0_6 = ((ActionContext5534 *)D_80123FB0)->unk24;
+            temp_a0_6->unkC = (s32)(temp_a0_6->unkC & 0xFFFFFF);
+            func_8008AB2C(arg0->unkC, 0);
+        }
+        var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
+        var_a1->unkC = (s32)(var_a1->unkC & ~0xFF);
+        return 0;
+    }
+    else
+    {
+        func_800B5D60(0);
+        func_800B28E0(arg0->unkC, 0xC, 0);
+        temp_a0_7 = ((ActionContext5534 *)D_80123FB0)->unk24;
+        temp_a0_7->unkC = (s32)(temp_a0_7->unkC & 0xFFFFFF);
+        var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
+        var_a1->unkC = (s32)(var_a1->unkC & ~0xFF);
+        return 0;
+    }
 }
 
 /**
