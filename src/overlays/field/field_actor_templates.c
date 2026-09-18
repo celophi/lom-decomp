@@ -38,6 +38,28 @@ typedef struct
     FieldActorTemplateEntry entries[1];
 } FieldActorTemplateTable;
 
+/** @brief Packed actor state word split into the bit ranges updated during template initialization. */
+typedef union
+{
+    s32 w;
+    struct
+    {
+        u32 low24 : 24;
+        u32 mid7 : 7;
+        u32 top1 : 1;
+    } b;
+} FieldActorPackedWord;
+
+/** @brief Actor state fields updated while applying a resource template. */
+typedef struct
+{
+    FieldActorPackedWord unk0;
+    FieldActorPackedWord unk4;
+    FieldActorPackedWord unk8;
+    u8 padC[0x68 - 0xC];
+    u16 unk68;
+} FieldActorSlotState;
+
 extern u8 *D_80122B78;
 
 void akao_set_song_params(s32, s32, s32, s32);
@@ -84,55 +106,63 @@ s32 func_800B3DF4(s32 arg0)
     return count;
 }
 
-/** @brief Initialize an actor and its counters from a resource template. */
+/**
+ * @brief Initialize an actor and its counters from a resource template.
+ * @param arg0 Actor identifier stored in the runtime record.
+ * @param arg1 Runtime actor record to initialize.
+ * @param arg2 Actor state record to initialize.
+ */
 void func_800B3F1C(s32 arg0, u8 *arg1, u8 *arg2)
 {
     s32 temp_lo;
     s32 temp_lo_2;
-    s32 temp_v1_4;
-    s32 var_v0;
-    u16 temp_s0;
+    s32 flags;
     u16 temp_v1_3;
-    u32 temp_v0_2;
-    u32 temp_v0_3;
     u32 temp_v0_5;
     u32 temp_v0_6;
     u32 var_s0;
-    u32 var_s0_2;
-    u32 var_s0_3;
     u32 var_s2;
     u32 var_v1;
     u8 temp_v0_4;
+    u8 five;
     u8 *temp_v0;
     u8 *temp_v1;
     u8 *temp_v1_2;
     u8 *var_a0;
     u8 *var_a0_2;
     u8 *var_a1;
+    StructB3580 *ctx;
+    FieldActorSlotState *actor_slot;
 
     arg1[4] = arg0;
     *(u8 *)(arg1 + 0x0) = 0x40;
     *(u8 * *)(arg1 + 0x10) = arg2;
-    *(s32 *)(arg1 + 0x4) = (s32) ((((s32) *(s32 *)(arg1 + 0x4) | 0x100) & ~0x200 & 0xFFFF03FF) | 0x1400);
+    flags = *(s32 *)(arg1 + 0x4);
+    flags |= 0x100;
+    flags &= ~0x200;
+    flags &= 0xFFFF03FF;
+    ctx = D_80123FB0;
+    flags |= 0x1400;
+    *(s32 *)(arg1 + 0x4) = flags;
     *(u16 *)(arg1 + 0x6) = 0;
-    temp_v0 = func_800B4844((u32 *)D_80123FB0->unk4, *(u8 *)(arg2 + 0x11));
+    temp_v0 = func_800B4844((u32 *)ctx->unk4, *(u8 *)(arg2 + 0x11));
     *(u8 * *)(arg1 + 0x14) = temp_v0;
     *(u8 *)(arg1 + 0x3) = (u8) *(u8 *)(temp_v0 + 0x1A);
     *(u8 *)(arg1 + 0x8) = (u8) *(u8 *)(temp_v0 + 0x1B);
+    *(u8 *)(arg1 + 0x9) = (u8) *(u8 *)(temp_v0 + 0x1B);
     *(u16 *)(arg1 + 0xA) = 0;
     *(s32 *)(arg1 + 0xC) = 0;
-    *(u8 *)(arg1 + 0x9) = (u8) *(u8 *)(temp_v0 + 0x1B);
-    temp_v0_2 = func_800B42B4(temp_v0);
+    var_s2 = func_800B42B4(temp_v0);
     var_v1 = 0x63;
-    if (temp_v0_2 < 0x64U)
+    if (var_s2 < 0x64U)
     {
-        var_v1 = temp_v0_2;
+        var_v1 = var_s2;
     }
     var_s2 = var_v1;
-    temp_v0_3 = func_800BD414(0, 0x2F78);
-    if (temp_v0_3 != 0)
+    var_s0 = func_800BD414(0, 0x2F78);
+    if (var_s0 != 0)
     {
-        var_s2 = temp_v0_3;
+        var_s2 = var_s0;
     }
     var_s0 = 0;
     var_a0 = temp_v0;
@@ -145,24 +175,27 @@ void func_800B3F1C(s32 arg0, u8 *arg1, u8 *arg2)
         temp_v1 = arg1 + var_s0;
         var_s0 += 1;
         temp_v0_4 = *(u8 *)(var_a0 + 0x24);
-        var_a0 += 2;
+        var_a0++;
+        var_a0++;
         *(u16 *)(var_a1 + 0x1C) = (s16) ((u32) ((temp_v0_4 * 0x10) + temp_lo) >> 4);
         var_a1 += 2;
         *(u8 *)(temp_v1 + 0x24) = 0;
     } while (var_s0 < 4U);
-    var_s0_2 = 0;
+    var_s0 = 0;
+    five = 5;
     var_a0_2 = temp_v0;
     do
     {
-        temp_v1_2 = arg1 + var_s0_2;
-        var_s0_2 += 1;
-        *(u8 *)(temp_v1_2 + 0x3C) = 5;
-        *(u8 *)(temp_v1_2 + 0x44) = 5;
+        temp_v1_2 = arg1 + var_s0;
+        var_s0 += 1;
         temp_v0_5 = (u32) ((*(u8 *)(var_a0_2 + 0x2C) * 4) + (*(u8 *)(var_a0_2 + 0x2D) * var_s2)) >> 2;
+        *(u8 *)(temp_v1_2 + 0x3C) = five;
+        *(u8 *)(temp_v1_2 + 0x44) = five;
         *(u8 *)(temp_v1_2 + 0x30) = (s8) temp_v0_5;
         *(u8 *)(temp_v1_2 + 0x28) = (s8) temp_v0_5;
-        var_a0_2 += 2;
-    } while (var_s0_2 < 8U);
+        var_a0_2++;
+        var_a0_2++;
+    } while (var_s0 < 8U);
     *(u8 *)(arg1 + 0x38) = (u8) *(u8 *)(temp_v0 + 0x3C);
     *(u8 *)(arg1 + 0x39) = (u8) *(u8 *)(temp_v0 + 0x3D);
     *(u8 *)(arg1 + 0x3A) = (u8) *(u8 *)(temp_v0 + 0x3E);
@@ -178,32 +211,31 @@ void func_800B3F1C(s32 arg0, u8 *arg1, u8 *arg2)
     temp_v1_3 = *(u16 *)(temp_v0 + 0x1E);
     if (temp_v1_3 != 0xFFFF)
     {
-        *(s32 *)(arg2 + 0x0) = (s32) (*(u16 *)(temp_v0 + 0x1C) + (temp_v1_3 * var_s2));
+        *(s32 *)(arg2 + 0x0) = (s32) (*(u16 *)(temp_v0 + 0x1C) + (*(u16 *)(temp_v0 + 0x1E) * var_s2));
     }
     else
     {
-        var_s0_3 = 1;
+        var_s0 = 1;
         *(s32 *)(arg2 + 0x0) = (s32) *(u16 *)(temp_v0 + 0x1C);
         if (var_s2 != 0)
         {
             do
             {
-                temp_lo_2 = *(u8 *)(temp_v0 + 0x35) * var_s0_3;
-                var_s0_3 += 1;
+                temp_lo_2 = *(u8 *)(temp_v0 + 0x35) * var_s0;
+                var_s0 += 1;
                 *(s32 *)(arg2 + 0x0) = func_800C19D0(*(s32 *)(arg2 + 0x0), (u32) ((*(u8 *)(temp_v0 + 0x34) * 4) + temp_lo_2) >> 2, 1);
-            } while (var_s2 >= var_s0_3);
+            } while (var_s2 >= var_s0);
         }
     }
     temp_v0_6 = func_800BD414(0, 0x2938);
-    switch (temp_v0_6) {                            /* irregular */
+    switch (temp_v0_6)
+    {
     case 1:
-        var_v0 = *(s32 *)(arg2 + 0x0) * 2;
-block_20:
-        *(s32 *)(arg2 + 0x0) = var_v0;
+        *(s32 *)(arg2 + 0x0) *= 2;
         break;
     case 2:
-        var_v0 = *(s32 *)(arg2 + 0x0) * 3;
-        goto block_20;
+        *(s32 *)(arg2 + 0x0) *= 3;
+        break;
     }
     if (func_800BD414(0, 0xFFE) == 0)
     {
@@ -217,17 +249,18 @@ block_20:
 block_24:
         *(s32 *)(arg2 + 0x0) = 1;
     }
-    temp_v1_4 = ((*(s32 *)(arg2 + 0x8) & 0xFF000000) | (*(s32 *)(arg2 + 0x0) & 0xFFFFFF)) & 0x80FFFFFF;
-    *(s32 *)(arg2 + 0x8) = temp_v1_4;
-    *(s32 *)(arg2 + 0x4) = (s32) *(s32 *)(arg2 + 0x0);
-    *(s32 *)(arg2 + 0x8) = (s32) ((temp_v1_4 & 0x7FFFFFFF) | (((u8) *(u8 *)(temp_v0 + 0x3F) >> 7) << 0x1F));
-    temp_s0 = *(u8 *)(arg1 + 0x33) * 2;
-    if (temp_s0 < 0x100U)
+    actor_slot = (FieldActorSlotState *)arg2;
+    actor_slot->unk4 = actor_slot->unk0;
+    actor_slot->unk8.b.low24 = actor_slot->unk0.b.low24;
+    actor_slot->unk8.b.mid7 = 0;
+    actor_slot->unk8.b.top1 = (u8) *(u8 *)(temp_v0 + 0x3F) >> 7;
+    var_s0 = *(u8 *)(arg1 + 0x33) * 2;
+    if (var_s0 < 0x100U)
     {
-        *(u16 *)(arg2 + 0x68) = temp_s0;
+        actor_slot->unk68 = var_s0;
         return;
     }
-    *(u16 *)(arg2 + 0x68) = 0xFFU;
+    actor_slot->unk68 = 0xFFU;
 }
 
 /**
