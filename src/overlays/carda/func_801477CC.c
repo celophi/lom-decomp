@@ -1,28 +1,36 @@
 #include "common.h"
 
-/**
- * WIP matching reconstruction of func_801477CC.
- * Best exact-size verified checkpoint: 99.250000% (GCC 2.7.2 CDK).
- * A 99.42% weighted experimental basin exists but emits one extra instruction,
- * so this exact-size checkpoint is the version wired into the overlay.
- */
+typedef struct
+{
+    char name[20];
+    s32 attr;
+    s32 size;
+    void* next;
+    s32 head;
+    char system[4];
+} CardaDirEntry;
+
 extern s32 D_80165FEC;
 extern s32 D_801660A0;
 extern s32 D_801663A8[];
 extern s32 D_80166438;
-extern char D_80166440[];
+extern CardaDirEntry D_80166440[][20];
 extern s32 D_80166A80[];
 extern s32 D_80166AD8;
 extern s32 D_80166AE8[];
 extern char D_800ECF7C[];
 extern char D_800ECFC4[];
 
-s32 func_8001714C();
-s32 func_80147490();
-s32 func_80147588();
-void func_80147C5C();
-void func_8014A1C4();
+s32 func_8001714C(void*, void*, s32);
+s32 func_80147490(u8 *);
+s32 func_80147588(void);
+void func_80147C5C(void);
+void func_8014A1C4(void);
 
+/**
+ * @brief Rebuild card directory ranking and slot metadata.
+ * @return Index associated with the highest directory field value.
+ */
 s32 func_801477CC(void)
 {
     s32 used[10];
@@ -41,7 +49,6 @@ s32 func_801477CC(void)
     s32 slot;
     s32 count;
     s32 max_count;
-    s32 loop_count;
     s32 final_count;
     s32 less_count;
     s32 j;
@@ -51,21 +58,18 @@ s32 func_801477CC(void)
     s32 shared4;
     s32 shared1;
     s32 shared2;
-    s32 entry_off;
-    s32 *fields;
-    char *entries;
-    u8 *parse_base;
-    u8 *call_ptr;
+    u8 *suffix;
     u8 *p;
     s32 n;
     s32 acc;
-    u32 tmp0, tmp1, tmp2;
+    u32 decimal_base, uppercase_base, lowercase_base;
 
     func_80147588();
     i = 9;
     func_8014A1C4();
     zero_ptr = &used[9];
-    do {
+    do
+    {
         *zero_ptr = 0;
         i--;
         zero_ptr--;
@@ -73,57 +77,66 @@ s32 func_801477CC(void)
 
     shared4 = 0;
     i = shared4;
-    if (D_80165FEC > 0) {
-        entries = D_80166440;
-        parse_base = (u8 *)entries + 0xC;
-        fields = D_80166AE8;
-        shared1 = (s32)D_80166A80;
-        shared3 = (s32)entries;
-        entry_off = i;
-        shared2 = i;
-        do {
-            if (func_8001714C(D_800ECF7C,
-                    (void *)(D_801660A0 * 0x320 + shared3), 0xC) == 0) {
-                n = 5;
-                p = (u8 *)(D_801660A0 * 0x320 + entry_off + (s32)parse_base);
-                acc = 0;
-                while (((u8)(*p - '0') < 10) || ((u8)(*p - 'a') < 6) || ((u8)(*p - 'A') < 6)) {
-                    if (n == 0)
-                        break;
-                    acc <<= 4;
-                    if ((u8)(*p - '0') < 10) {
-                        tmp0 = acc - 0x30;
-                        acc = tmp0 + *p;
-                    } else if ((u8)(*p - 'A') < 6) {
-                        tmp1 = acc - 0x37;
-                        acc = tmp1 + *p;
-                    } else if ((u8)(*p - 'a') < 6) {
-                        tmp2 = acc - 0x57;
-                        acc = tmp2 + *p;
-                    }
-                    p++;
-                    n--;
+    while (i < D_80165FEC)
+    {
+        u8 *pattern;
+
+        pattern = (u8 *)&D_800ECF7C;
+        if (func_8001714C(pattern, (u8 *)&D_80166440[D_801660A0][i], 0xC) == 0)
+        {
+            n = 5;
+            p = (u8 *)(D_801660A0 * 0x320 + i * 0x28 + (s32)D_80166440 + 0xC);
+            acc = 0;
+            while (((u8)(*p - '0') < 10) || ((u8)(*p - 'a') < 6) || ((u8)(*p - 'A') < 6))
+            {
+                if (n == 0)
+                {
+                    break;
                 }
-                call_ptr = (u8 *)(D_801660A0 * 0x320 + shared3 + 0xC);
-                *(s32 *)(shared2 + (D_801660A0 * 0x50 + (s32)fields)) = acc;
-                *(s32 *)shared1 = func_80147490(call_ptr, acc, n);
-                used[*(s32 *)shared1] = 1;
-                if (shared4 < *(s32 *)shared1)
-                    shared4 = *(s32 *)shared1;
-            } else {
-                *(s32 *)(shared2 + (D_801660A0 * 0x50 + (s32)fields)) = -1;
-                *(s32 *)shared1 = 0;
+                acc <<= 4;
+                if ((u8)(*p - '0') < 10)
+                {
+                    decimal_base = acc - '0';
+                    acc = decimal_base + *p;
+                }
+                else if ((u8)(*p - 'A') < 6)
+                {
+                    uppercase_base = acc - ('A' - 10);
+                    acc = uppercase_base + *p;
+                }
+                else if ((u8)(*p - 'a') < 6)
+                {
+                    lowercase_base = acc - ('a' - 10);
+                    acc = lowercase_base + *p;
+                }
+                p++;
+                n--;
             }
-            do { shared1 += 4; } while (0);
-            shared3 += 0x28;
-            do { entry_off += 0x28; } while (0);
-            loop_count = D_80165FEC;
-            i++;
-            do { shared2 += 4; } while (0);
-        } while (i < loop_count);
+            suffix = &D_80166440[D_801660A0][i].name[0xC];
+            {
+                s32 *loop_fields = &D_80166AE8[D_801660A0 * 20];
+                loop_fields[i] = acc;
+            }
+            D_80166A80[i] = func_80147490(suffix);
+            used[D_80166A80[i]] = 1;
+            if (shared4 < D_80166A80[i])
+            {
+                shared4 = D_80166A80[i];
+            }
+        }
+        else
+        {
+            s32 *loop_fields = &D_80166AE8[D_801660A0 * 20];
+            loop_fields[i] = -1;
+            D_80166A80[i] = 0;
+        }
+        i++;
     }
 
-    shared3 = -1;
+    do
+    {
+        shared3 = -1;
+    } while (0);
     func_80147C5C();
     t0v = 1;
     i = 0;
@@ -143,7 +156,8 @@ s32 func_801477CC(void)
                 j = 0;
                 if (i > 0)
                 {
-                    j += 1; j -= 1;
+                    j++;
+                    j--;
                 }
                 if (*elem >= shared3)
                 {
@@ -173,7 +187,16 @@ s32 func_801477CC(void)
                     }
                     {
                         s32 rank_value;
-                        do { do { do { rank_value = t0v - less_count; } while (0); } while (0); } while (0);
+                        do
+                        {
+                            do
+                            {
+                                do
+                                {
+                                    rank_value = t0v - less_count;
+                                } while (0);
+                            } while (0);
+                        } while (0);
                         *rank_ptr = rank_value;
                     }
                     t0v += 1;
@@ -212,28 +235,39 @@ s32 func_801477CC(void)
     shared4 = 1;
     scan_ptr = &used[1];
 scan_used:
-    if (*scan_ptr != 0) {
-        do { do { shared4++; } while (0); } while (0);
+    if (*scan_ptr != 0)
+    {
+        shared4++;
         scan_ptr++;
         if (shared4 < 9)
+        {
             goto scan_used;
+        }
     }
 
     i = 0;
-    if (D_80165FEC > 0) {
+    if (D_80165FEC > 0)
+    {
         shared2 = (s32)D_80166A80;
         shared1 = (s32)D_80166440;
 loop_prefix:
-        if (func_8001714C(D_800ECFC4,
-                (void *)(D_801660A0 * 0x320 + shared1), 8) == 0) {
+        if (func_8001714C(D_800ECFC4, (void *)(D_801660A0 * 0x320 + shared1), 8) == 0)
+        {
             *(s32 *)shared2 = shared4;
-        } else {
-            do { shared2 += 4; } while (0);
+        }
+        else
+        {
+            shared2 += 4;
             final_count = D_80165FEC;
             i++;
-            do { shared1 += 0x28; } while (0);
+            do
+            {
+                shared1 += 0x28;
+            } while (0);
             if (i < final_count)
+            {
                 goto loop_prefix;
+            }
         }
     }
     return shared3;
