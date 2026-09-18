@@ -477,97 +477,121 @@ void func_800C15AC(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_off
     *(u16 *)(arg0 + 0x24) = func_800C19D0(*(u16 *)(arg0 + 0x24), ((u32)(*(u16 *)(arg0 + 0x38) & 0x1FF)) >> 2, 3);
 }
 
-/** @brief Applies saved-slot growth to an active record and saves derived values.
- * @note Initial nonmatching C; extra arguments preserve the existing caller ABI.
+/**
+ * @brief Apply saved-slot growth deltas and persist the resulting record values.
+ * @param arg0 Record whose growth and derived fields are updated.
+ * @param unused_base Unused caller context pointer.
+ * @param unused_current Unused caller record pointer.
+ * @param unused_offset Unused caller record offset.
  */
 void func_800C1658(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_offset)
 {
-    s32 temp_a0_5;
-    s32 temp_v0_2;
-    s32 temp_v0_6;
-    s32 temp_v0_7;
-    s32 var_a3;
-    s32 var_a3_2;
-    s32 var_a3_3;
-    u16 temp_a0;
-    u16 temp_a0_2;
-    u16 temp_a0_4;
-    u16 temp_a1_2;
-    u32 temp_a2;
-    u32 temp_v0_4;
-    u8 temp_v0;
-    u8 temp_v0_5;
-    u8 *temp_a0_3;
-    u8 *temp_a0_6;
-    u8 *temp_a1;
-    u8 *temp_a2_2;
-    u8 *temp_v0_3;
-    u8 *temp_v1;
-    u8 *var_a1;
-    u8 *var_t0;
+    s32 value_offset;
+    s32 extra_mask;
+    s32 stat_growth_nibble;
+    s32 growth_sum;
+    s32 clear_offset;
+    s32 index;
+    u16 packed_value;
+    u16 low_value;
+    u16 carried_value;
+    u16 saved_value;
+    u16 post_result;
+    u32 slot;
+    u32 extra_word;
+    u8 stat_growth_byte;
+    u8 value_growth_byte;
+    u8 *stat_growth_record;
+    u8 *value_growth_record;
+    u8 *active_record;
+    u8 *growth_flags_record;
+    u8 *slot_record;
+    u8 *state_record;
+    u8 *post_base;
+    u8 *saved_value_cursor;
+    u32 work_value;
 
-    temp_a2 = GROW_U32(D_80122B74, 0x2EF0);
-    if (temp_a2 >= 5U)
+    slot = GROW_U32(D_80122B74, 0x2EF0);
+    if (slot >= 5U)
     {
-        akao_set_song_params(0x8001, 0x79, temp_a2, 0);
+        akao_set_song_params(0x8001, 0x79, slot, 0);
     }
-    var_a3 = 0;
-    var_a1 = arg0;
+    index = 0;
     do
     {
-        temp_a0 = GROW_U16(var_a1, 0x30);
-        temp_a0_2 = (temp_a0 & 0xFE00) | ((((u8) GROW_U8((D_80122B74 + (var_a3 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60))), 0x2F40) >> 4) + (temp_a0 & 0x1FF)) & 0x1FF);
-        GROW_U16(var_a1, 0x30) = temp_a0_2;
-        if ((u32) (temp_a0_2 & 0x1FF) >= 0x18DU)
+        packed_value = GROW_U16(arg0 + index * 2, 0x30);
+        low_value = ((u8) GROW_U8((D_80122B74 + (index - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60))), 0x2F40) >> 4) + (packed_value & 0x1FF);
+        low_value &= 0x1FF;
+        packed_value &= 0xFE00;
+        packed_value |= low_value;
+        GROW_U16(arg0 + index * 2, 0x30) = packed_value;
+        if ((u32) (packed_value & 0x1FF) >= 0x18DU)
         {
-            GROW_U16(var_a1, 0x30) = (u16) ((temp_a0_2 & 0xFE00) | 0x18C);
+            GROW_U16(arg0 + index * 2, 0x30) = (u16) ((packed_value & 0xFE00) | 0x18C);
         }
-        temp_a0_3 = D_80122B74 + (var_a3 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60));
-        temp_v0 = GROW_U8(temp_a0_3, 0x2F40);
-        var_a3 += 1;
-        temp_v0_2 = temp_v0 & 0xF;
-        GROW_U8(temp_a0_3, 0x2F40) = (s8) (temp_v0_2 | (temp_v0_2 * 0x10));
-        var_a1 += 2;
-    } while (var_a3 < 8);
-    temp_a0_4 = GROW_U16(arg0, 0x26) + (GROW_U8((D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60)), 0x2F4C) >> 7);
-    GROW_U16(arg0, 0x26) = temp_a0_4;
-    var_a3_2 = 0;
-    GROW_U16((D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60)), 0x2F12) = temp_a0_4;
+        stat_growth_record = D_80122B74 + (index + (GROW_U32(D_80122B74, 0x2EF0) * 0x60));
+        stat_growth_byte = GROW_U8(stat_growth_record, 0x2F40);
+        index += 1;
+        stat_growth_nibble = stat_growth_byte & 0xF;
+        GROW_U8(stat_growth_record, 0x2F40) = (s8) (stat_growth_nibble | (stat_growth_nibble * 0x10));
+    } while (index < 8);
+    carried_value = GROW_U16(arg0, 0x26) + (GROW_U8((u8 *)((s32)D_80122B74 - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60)), 0x2F4C) >> 7);
+    GROW_U16(arg0, 0x26) = carried_value;
+    index = 0;
+    GROW_U16((u8 *)((s32)D_80122B74 - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60)), 0x2F12) = carried_value;
     GROW_U16(arg0, 0x74) = (u16) GROW_U16(arg0, 0x26);
-    temp_v0_3 = D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
-    GROW_U32(temp_v0_3, 0x2F4C) = (s32) ((-0xF1 | 0x70) & GROW_U32(temp_v0_3, 0x2F4C));
-    var_t0 = arg0;
-    temp_a1 = D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
-    temp_v0_4 = GROW_U32(temp_a1, 0x2F4C);
-    GROW_U32(temp_a1, 0x2F4C) = (u32) ((temp_v0_4 & ~0xF0) | (((((temp_v0_4 >> 4) & 0xF) + (GROW_U8(temp_a1, 0x2F4C) & 0xF)) & 0xF) * 0x10));
+    slot_record = D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
+    extra_mask = -0xF1 + (((s32)slot_record) & ~((s32)slot_record));
+    work_value = (u32) extra_mask | 0x70;
+    work_value &= GROW_U32(slot_record, 0x2F4C);
+    GROW_U32(slot_record, 0x2F4C) = work_value;
+    work_value = (u32) arg0;
+    active_record = D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
+    extra_word = GROW_U32(active_record, 0x2F4C);
+    GROW_U32(active_record, 0x2F4C) = (u32) ((extra_word & extra_mask) | (((((extra_word >> 4) & 0xF) + (GROW_U8(active_record, 0x2F4C) & 0xF)) & 0xF) * 0x10));
     do
     {
-        temp_a1_2 = GROW_U16(var_t0, 0x28) + ((u8) GROW_U8((D_80122B74 + (var_a3_2 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60))), 0x2F48) >> 7);
-        GROW_U16(var_t0, 0x28) = temp_a1_2;
-        temp_a0_5 = var_a3_2 * 2;
-        GROW_U16((D_80122B74 + (temp_a0_5 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60))), 0x2F14) = temp_a1_2;
-        GROW_U16((arg0 + temp_a0_5), 0xB4) = (u16) GROW_U16(var_t0, 0x28);
-        temp_a2_2 = D_80122B74 + (var_a3_2 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60));
-        GROW_U8(temp_a2_2, 0x2F48) = (u8) (GROW_U8(temp_a2_2, 0x2F48) & 0x7F);
-        temp_a0_6 = D_80122B74 + (var_a3_2 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60));
-        temp_v0_5 = GROW_U8(temp_a0_6, 0x2F48);
-        var_a3_2 += 1;
-        temp_v0_6 = temp_v0_5 & 0xF;
-        GROW_U8(temp_a0_6, 0x2F48) = (s8) (temp_v0_6 | (((temp_v0_5 >> 4) + temp_v0_6) * 0x10));
-        var_t0 += 2;
-    } while (var_a3_2 < 4);
-    GROW_U16(arg0, 0x24) = func_800C19D0(GROW_U16(arg0, 0x24), (u32) (GROW_U16(arg0, 0x38) & 0x1FF) >> 2, 3);
-    GROW_U8((D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60)), 0x2F0C) = (u8) GROW_U8(arg0, 0x20);
-    GROW_U16((D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60)), 0x2F10) = (u16) GROW_U16(arg0, 0x24);
-    var_a3_3 = 0;
-    temp_v1 = D_80122B74 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
-    GROW_U32(temp_v1, 0x2F38) = (s32) (GROW_U32(temp_v1, 0x2F38) & 0xF8FFFFFF);
+        work_value++;
+        work_value--;
+        index++;
+        index--;
+        saved_value = GROW_U16((u8 *)work_value, 0x28) + ((u8) GROW_U8((D_80122B74 + (index - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60))), 0x2F48) >> 7);
+        GROW_U16((u8 *)work_value, 0x28) = saved_value;
+        value_offset = index * 2;
+        GROW_U16((D_80122B74 + (value_offset - -(s32)(GROW_U32(D_80122B74, 0x2EF0) * 0x60))), 0x2F14) = saved_value;
+        saved_value_cursor = arg0;
+        saved_value_cursor += value_offset;
+        GROW_U16(saved_value_cursor, 0xB4) = (u16) GROW_U16((u8 *)work_value, 0x28);
+        growth_flags_record = D_80122B74 + (index + (GROW_U32(D_80122B74, 0x2EF0) * 0x60));
+        GROW_U8(growth_flags_record, 0x2F48) = (u8) (GROW_U8(growth_flags_record, 0x2F48) & 0x7F);
+        value_growth_record = D_80122B74 + (index + (GROW_U32(D_80122B74, 0x2EF0) * 0x60));
+        value_growth_byte = GROW_U8(value_growth_record, 0x2F48);
+        index += 1;
+        growth_sum = value_growth_byte >> 4;
+        value_growth_byte &= 0xF;
+        growth_sum += value_growth_byte;
+        growth_sum *= 0x10;
+        value_growth_byte |= growth_sum;
+        GROW_U8(value_growth_record, 0x2F48) = value_growth_byte;
+        work_value += 2;
+    } while (index < 4);
+    post_result = func_800C19D0(GROW_U16(arg0, 0x24), (u32) (GROW_U16(arg0, 0x38) & 0x1FF) >> 2, 3);
+    post_base = D_80122B74;
+    GROW_U16(arg0, 0x24) = post_result;
+    post_base += GROW_U32(post_base, 0x2EF0) * 0x60;
+    GROW_U8(post_base, 0x2F0C) = (u8) GROW_U8(arg0, 0x20);
+    state_record = D_80122B74;
+    GROW_U16((u8 *)((s32)state_record - -(s32)(GROW_U32(state_record, 0x2EF0) * 0x60)), 0x2F10) = (u16) GROW_U16(arg0, 0x24);
+    state_record = (u8 *)((s32)state_record - -(s32)(GROW_U32(state_record, 0x2EF0) * 0x60));
+    GROW_U32(state_record, 0x2F38) = (s32) (GROW_U32(state_record, 0x2F38) & 0xF8FFFFFF);
+    index = 0;
+    work_value = 0xFF;
     do
     {
-        temp_v0_7 = var_a3_3 + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
-        var_a3_3 += 1;
-        GROW_U8((D_80122B74 + temp_v0_7), 0x2F38) = 0xFF;
-    } while (var_a3_3 < 3);
+        clear_offset = index + (GROW_U32(D_80122B74, 0x2EF0) * 0x60);
+        index += 1;
+        GROW_U8((D_80122B74 + clear_offset), 0x2F38) = (u8)work_value;
+    } while (index < 3);
 }
 
 
