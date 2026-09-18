@@ -46,13 +46,12 @@ void func_800A2E40(u8 *buffer)
     s32 *counter;
     s32 *second_entry;
     s32 *first_entry;
-    s32 *next_entry;
+    s32 *entry_cursor;
     s32 first_actor;
 
     s32 active_count;
     s32 pair_index;
-    s32 var_v0;
-    s32 actor_index;
+    s32 index;
     s32 absent;
     s32 first_absent;
     Slot *slot_base;
@@ -60,29 +59,31 @@ void func_800A2E40(u8 *buffer)
     Actor *actor_base;
     s32 *counter_base;
     s32 index_or_distance;
+    s32 pair_offset;
+    s32 next_offset;
 
     D_80117EC0 = 0;
     D_80117EC8[0] = 0xFFU;
     if ((D_80117EC4 == 0) && (D_801158A0 != 0))
     {
-        actor_index = 0;
+        index = 0;
         if (D_800FE754 != 0)
         {
-            active_count = actor_index;
+            active_count = index;
             first_absent = 0xFF;
             actor = D_800FDF58;
-            next_entry = entries;
+            entry_cursor = entries;
             do
             {
                 if (actor->unk25 != first_absent)
                 {
-                    *next_entry = actor_index;
-                    next_entry++;
+                    *entry_cursor = index;
+                    entry_cursor++;
                     active_count += 1;
                 }
-                actor_index += 1;
+                index += 1;
                 actor++;
-            } while (actor_index < 3);
+            } while (index < 3);
             if (active_count >= 2)
             {
                 pair_index = 0;
@@ -129,50 +130,58 @@ void func_800A2E40(u8 *buffer)
                     absent = 0xFF;
                     counter_base = D_80117ED0;
                 pair_loop:
-                {
-                    first_actor = order[pair_index];
-                    index_or_distance = 0x20;
-                    if (!(slot_base[first_actor].flags & 0x23E4))
                     {
-                        index_or_distance = order[(pair_index + 1) % 3];
-                        if (slot_base[index_or_distance].flags & 0x23E4)
+                        first_actor = order[pair_index];
+                        index_or_distance = 0x20;
+                        if (!(slot_base[first_actor].flags & 0x23E4))
                         {
-                            index_or_distance = 0x20;
+                            entry_cursor = (s32 *)((((pair_index + 1) % 3) * sizeof(*order)) + (u32)order);
+                            index_or_distance = *entry_cursor;
+                            if (slot_base[index_or_distance].flags & 0x23E4)
+                            {
+                                index_or_distance = 0x20;
+                            }
+                            else
+                            {
+                                Actor *first_actor_ptr;
+                                Actor *second_actor_ptr;
+
+                                first_actor_ptr = (Actor *)(first_actor * sizeof(*actor_base) + (u32)actor_base);
+                                second_actor_ptr = (Actor *)(index_or_distance * sizeof(*actor_base) + (u32)actor_base);
+                                index_or_distance = func_8009A204(first_actor_ptr, second_actor_ptr);
+                            }
+                        }
+                        if ((index_or_distance < 0x20) &&
+                            (pair_offset = pair_index * sizeof(*order), first_entry = (s32 *)(pair_offset + (u32)order),
+                             (actor_base[*first_entry].unk25 != absent)) &&
+                            (next_offset = ((pair_index + 1) % 3) * sizeof(*order), second_entry = (s32 *)(next_offset + (u32)order),
+                             counter = (s32 *)(pair_offset + (u32)counter_base), (actor_base[*second_entry].unk25 != absent)))
+                        {
+                            if (*counter == -2)
+                            {
+                                *counter = 0;
+                            }
+                            if (*counter != -1)
+                            {
+                                D_80117EC8[D_80117EC0 * 2] = (u8)*first_entry;
+                                D_80117EC8[D_80117EC0 * 2 + 1] = (u8)*second_entry;
+                                D_80117EC0 += 1;
+                            }
                         }
                         else
                         {
-                            index_or_distance = func_8009A204(&actor_base[first_actor], &actor_base[index_or_distance]);
+                            counter_base[pair_index] = -2;
                         }
+                        pair_index += 1;
+                        func_800A32A8(pair_index, buffer);
                     }
-                    if ((index_or_distance < 0x20) &&
-                        (first_entry = &order[pair_index], (actor_base[*first_entry].unk25 != absent)) &&
-                        (second_entry = &order[(pair_index + 1) % 3], counter = &counter_base[pair_index],
-                         (actor_base[*second_entry].unk25 != absent)))
-                    {
-                        if (*counter == -2)
-                        {
-                            *counter = 0;
-                        }
-                        if (*counter != -1)
-                        {
-                            D_80117EC8[D_80117EC0 * 2] = (u8)*first_entry;
-                            D_80117EC8[D_80117EC0 * 2 + 1] = (u8)*second_entry;
-                            D_80117EC0 += 1;
-                        }
-                    }
-                    else
-                    {
-                        counter_base[pair_index] = -2;
-                    }
-                    pair_index += 1;
-                    func_800A32A8(pair_index, buffer);
-                }
                     if (pair_index < 3)
                     {
                         goto pair_loop;
                     }
                 }
-                D_80117EC8[D_80117EC0 * 2] = 0xFF;
+                index = D_80117EC0;
+                D_80117EC8[index * 2] = 0xFF;
             }
         }
     }
