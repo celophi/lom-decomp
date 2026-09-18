@@ -667,16 +667,6 @@ extern SVECTOR *D_80105870;
  * @param cursor Current write position in the primitive buffer.
  * @param arg3_base Base of the ordering-table link array.
  * @return Advanced primitive-buffer cursor.
- *
- * @note NOT YET MATCHED - 95.87% (840/1155 exact, gcc272_cdk). Frame is
- *       -0x108 vs the target's -0xF8 (two extra spill slots) and the
- *       light-loop register allocation differs; the residue analysis and
- *       retired shapes are in working/func_80081098/STATUS.md. The
- *       `volatile s32 pad[2]` alias base and the do-while(0) wrappers are
- *       required to match - the target provably addresses the same sp+0x18
- *       block.
- * @note THIS FUNCTION IS NOT BYTE-MATCHED YET; treat its source shape as
- *       scaffolding, not recovered structure.
  */
 s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3_base)
 {
@@ -694,10 +684,8 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     SVECTOR *rotation_table;
     SVECTOR *rotation_base;
     s32 opz;
-    s32 no_light_index;
     FieldActorState *actor;
     FieldActorPartDef *part;
-    u8 *part_iter;
     Struct_D800FDF58 *scan;
     s32 light_index;
     s32 scan_off;
@@ -710,10 +698,14 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     s32 mesh_bytes;
     s32 count;
     s32 kind;
+    FieldActorState *actor_base;
 
     prim_cursor = cursor;
     mp = &mtx;
-    { FieldActorState *actor_base = g_field_actor_slots; part = &actor_base[rec->unk22].unk0[rec->unk23]; actor = &actor_base[rec->unk22]; }
+    actor_base = g_field_actor_slots;
+    part = &actor_base[rec->unk22].unk0[rec->unk23];
+    actor = &actor_base[rec->unk22];
+
     func_80082C90(actor, rec, part, mp, &tmp);
     mtx.t[2] = 0;
     mtx.t[1] = 0;
@@ -725,57 +717,54 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     func_800822A4(actor, rec, part, part_index);
     func_800829A0(actor, rec, part, part_index, &tmp);
 
-    no_light_index = 0x100;
     light_index = 0;
     rotation_base = &D_800FF668;
-    part_iter = (u8 *)part;
+
     do {
         count = 0;
         rotation_table = rotation_base;
-        if (part_iter[0x23] < 8) {
+        if (((u8 *)part)[light_index + 0x23] < 8) {
             do {
-                scan = &D_800FF658[count];
-                scan_off = count * 0x54;
-                if(part_iter[0x23] == scan->unk23 && rec->unk22 == scan->unk22) goto found_light;
+                {
+                    scan = &D_800FF658[count];
+                    scan_off = count * 0x54;
+                }
+                if (((u8 *)part)[light_index + 0x23] == scan->unk23 && rec->unk22 == scan->unk22) {
+                    rotation_matrix = &tmp;
+                    RotMatrix_gte((SVECTOR *)(scan_off + (s32)rotation_table), rotation_matrix);
+                    RotMatrixZ(rec->unk32 * 0x10, rotation_matrix);
+                    RotMatrixY(rec->unk33 * 0x10, rotation_matrix);
+                    dir.vz = 0;
+                    dir.vx = 0;
+                    dir.vy = -0x1000;
+                    gte_SetRotMatrix(rotation_matrix);
+                    gte_ldv0(&dir);
+                    gte_rtv0();
+                    gte_stsv(&out);
+                    light_mtx.m[light_index][0] = out.vx;
+                    light_mtx.m[light_index][1] = out.vy;
+                    light_mtx.m[light_index][2] = out.vz;
+                    color_mtx.m[0][light_index] = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkE * 0x10;
+                    color_mtx.m[1][light_index] = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
+                    color_mtx.m[2][light_index] = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
+                    break;
+                }
                 count++;
-            } while(count<no_light_index);
-checked_light:
-            if(count!=no_light_index) goto next_light;
-            goto zero_light;
-found_light:
-            {
-                rotation_matrix = &tmp;
-                RotMatrix_gte((SVECTOR *)(scan_off + (s32)rotation_table), rotation_matrix);
-                RotMatrixZ(rec->unk32 * 0x10, rotation_matrix);
-                RotMatrixY(rec->unk33 * 0x10, rotation_matrix);
-                dir.vz = 0;
-                dir.vx = 0;
-                dir.vy = -0x1000;
-                gte_SetRotMatrix(rotation_matrix);
-                gte_ldv0(&dir);
-                gte_rtv0();
-                gte_stsv(&out);
-                light_mtx.m[light_index][0] = out.vx;
-                light_mtx.m[light_index][1] = out.vy;
-                light_mtx.m[light_index][2] = out.vz;
-                color_mtx.m[0][light_index] = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkE * 0x10;
-                color_mtx.m[1][light_index] = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unkF * 0x10;
-                color_mtx.m[2][light_index] = g_field_actor_slots[rec->unk22].unk0[scan->unk23].unk10 * 0x10;
+            } while (count < 0x100);
+            if (count == 0x100) {
+                color_mtx.m[2][light_index] = 0;
+                color_mtx.m[1][light_index] = 0;
+                color_mtx.m[0][light_index] = 0;
+                light_mtx.m[light_index][0] = 0;
             }
-            goto checked_light;
         } else {
-zero_light:
-            do {
             color_mtx.m[2][light_index] = 0;
             color_mtx.m[1][light_index] = 0;
             color_mtx.m[0][light_index] = 0;
             light_mtx.m[light_index][0] = 0;
-            } while(0);
         }
-next_light:
         light_index++;
-        part_iter++;
-    } while((s32)part_iter < (s32)((u8 *)part + 3));
+    } while (light_index < 3);
 
     gte_SetLightMatrix(&light_mtx);
     gte_SetColorMatrix(&color_mtx);
