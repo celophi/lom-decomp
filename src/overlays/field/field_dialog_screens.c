@@ -789,39 +789,46 @@ s32 func_800A7B54(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 
     FieldRankWork work;
     Vec2s *position;
-    s32 count = 0;
-    s32 i = count;
+    s32 count;
+    s32 i;
     s32 result;
     s32 *score;
     s32 *end;
+    s32 *work_base;
     FieldRankStats *stats;
+    FieldRankStats *active_stats;
     FieldRankStats *base;
     s32 *scores;
     s32 pos;
+    s32 byte_offset;
+    s32 stats_addr;
     s32 j;
     s32 id;
     s32 *dst;
     s32 *src;
-    s32 *current;
     s32 row;
     s16 y;
     u8 *text;
+    u8 *text_base;
 
-    result = func_800A88A0(arg1, arg0, D_800EC3C6[0] + ((D_800EC3C6[1] << 8) + (D_800EC3C6 - 2)), 4, 0x10 - arg2, -arg3, 0);
+    result = func_800A88A0(arg1, arg0, (D_800EC3C6[1] << 8) + ((D_800EC3C6 - 2) + D_800EC3C6[0]), 4, 0x10 - arg2, -arg3, 0);
+    count = 0;
+    i = count;
     scores = D_801229A0;
-    score = scores;
-    end = (s32 *)&work;
     base = (FieldRankStats *)g_pad_ctx;
-    stats = base;
+    work_base = (s32 *)((u8 *)&work + ((u8 *)scores - (u8 *)D_801229A0));
+    score = scores;
+    end = work_base;
     do
     {
         stats = (FieldRankStats *)((u8 *)base + i * 0x250);
         if (stats->active != 0)
         {
             pos = 0;
-            while (pos < count && (s32)((((FieldRankStats *)((u8 *)base + work.indices[pos] * 0x250))->score >> 8) - scores[work.indices[pos]]) >= (s32)((stats->score >> 8) - *score))
+            while (pos < count && (s32)((((FieldRankStats *)(stats_addr = (s32)base + work_base[pos + 2] * 0x250, (u8 *)stats_addr))->score >> 8) - scores[work_base[pos + 2]]) >= (s32)((stats->score >> 8) - *score))
             {
-                pos++;
+                pos += 2;
+                pos--;
             }
             if (pos == count)
             {
@@ -832,8 +839,9 @@ s32 func_800A7B54(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
                 j = count - 1;
                 if (j >= pos)
                 {
-                    dst = &work.indices[j + 1];
-                    src = (s32 *)&work + j;
+src = &work.indices[1];
+                    dst = (s32 *)(j * 4 + (s32)src);
+                    src = (s32 *)(j * 4 + (s32)work_base);
                     do
                     {
                         *dst = src[2];
@@ -842,7 +850,7 @@ s32 func_800A7B54(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
                         dst--;
                     } while (j >= pos);
                 }
-                work.indices[pos] = i;
+                work_base[pos + 2] = i;
             }
             end++;
             count++;
@@ -851,38 +859,42 @@ s32 func_800A7B54(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         i++;
 
     } while (i < 3);
-    i = 0;
+    do
+        {
+            i = 0;
+        } while (0);
     if (count > 0)
     {
-        text = D_800EC3DA - 0x16;
+        text_base = D_800EC3DA;
+        text = text_base - 0x16;
         row = i;
         position = &work.position;
-        current = (s32 *)position;
         do
         {
-            current = (s32 *)((s32)&work + i * 4);
-            if (((FieldRankStats *)((u8 *)g_pad_ctx + current[2] * 0x250))->active != 0)
+            active_stats = (FieldRankStats *)((u8 *)g_pad_ctx + ((FieldRankWork *)((u8 *)position + i * 4))->indices[0] * 0x250);
+            if (active_stats->active != 0)
             {
                 work.position.x = 0x18 - arg2;
                 y = arg3 - 0x10;
                 y = row - y;
                 work.position.y = y;
-                result = func_80086184(result, arg0, current[2], position);
+                result = func_80086184(result, arg0, ((FieldRankWork *)((u8 *)position + i * 4))->indices[0], position);
                 y += 8;
                 work.position.y = y;
                 result = func_800A838C(arg0, result, 0x38 - arg2, y - 8, 1);
                 work.position.x = 0x48 - arg2;
-                result = func_800A8A78(arg0, result, D_800FD818[current[2]].first, 4, position, 0);
-                result = func_800A88A0(result, arg0, D_800EC3DA[0] + ((D_800EC3DA[1] << 8) + text), 4, 0x68 - arg2, work.position.y, 0);
+                result = func_800A8A78(arg0, result, D_800FD818[((FieldRankWork *)((u8 *)position + i * 4))->indices[0]].first, 4, position, 0);
+                result = func_800A88A0(result, arg0, D_800EC3DA[0] + ((text_base[1] << 8) + (s32)text), 4, 0x68 - arg2, work.position.y, 0);
                 result = func_800A838C(arg0, result, 0x78 - arg2, work.position.y, 0);
                 work.position.x = 0x88 - arg2;
                 work.position.y = y;
-                result = func_800A8A78(arg0, result, D_800FD818[current[2]].second, 4, position, 0);
-                result = func_800A88A0(result, arg0, text[0x1A] + ((text[0x1B] << 8) + text), 4, 0xA8 - arg2, work.position.y, 0);
+                result = func_800A8A78(arg0, result, D_800FD818[((FieldRankWork *)((u8 *)position + i * 4))->indices[0]].second, 4, position, 0);
+                result = func_800A88A0(result, arg0, text[0x1A] + ((text[0x1B] << 8) + (s32)text), 4, 0xA8 - arg2, work.position.y, 0);
                 work.position.x = 0xE0 - arg2;
                 work.position.y = y;
-                id = current[2];
-                result = func_800A8A78(arg0, result, (((FieldRankStats *)((u8 *)g_pad_ctx + id * 0x250))->score >> 8) - D_801229A0[id], 4, position, 1);
+                id = ((FieldRankWork *)((u8 *)position + i * 4))->indices[0];
+                stats = (FieldRankStats *)((u8 *)g_pad_ctx + id * 0x250);
+                result = func_800A8A78(arg0, result, (stats->score >> 8) - D_801229A0[id], 4, position, 1);
             }
             row += 0x1C;
             i++;
