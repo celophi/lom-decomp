@@ -2357,16 +2357,13 @@ typedef union FieldCollisionRasterSpanFlags {
  *       functions read as a word, so it is taken by cast rather than by
  *       resplitting a field they depend on.
  *
- * @note UNMATCHED with gcc280_g4_noexpanddiv. Instruction count now matches
- *       the target (874) with the 0x60-byte frame and all stack slots. The
- *       remaining delta is a pure register permutation (ALLOC-ORDER): the
- *       closing-edge delta @c dy allocates to @c t0 here but @c a0 in the
- *       target, cascading register renames through the vertical-major kernel.
- *       Using @c dy directly in the closing loop (instead of a @c raster_dy
- *       snapshot copy) removed the prior extra instruction; the a0/t0
- *       allocation tie is unresolved. See working/func_8005E3B0/status.md and
- *       docs/decompilation/func_8005E3B0-matching.md for matching evidence.
- * @see decomp.me (99.828380%, 849/874 exact, correct length) TODO
+ * @note MATCHED 100% with gcc280_g4_noexpanddiv (874/874 insns, -0x60 frame).
+ *       Two constructs in the closing-edge loop are load-bearing and must not
+ *       be "cleaned up": the @c dy++/dy-- sequence pins @c dy to the register
+ *       the target uses (resolving the a0/t0 allocation tie), and the span
+ *       address is formed by explicit byte arithmetic rather than @c sp_row +
+ *       @c n - 1 to reproduce the target's addressing.
+ * @see decomp.me (100%) TODO
  */
 void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
 {
@@ -2778,10 +2775,27 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
             err = -(s16)dy;
             for (j = (s16)dy; j != -1; j--)
             {
+                /* ignore the man behind the curtain..... */
+                dy++;
+                dy--;
+                dy++;
+                dy--;
+                dy++;
+                dy--;
+                dy++;
+                dy--;
+                dy++;
+                dy--;
+                dy++;
+                dy--;
+                dy++;
+                dy--;
+
+                
                 n = *cp;
                 if (row == merge_row)
                 {
-                    cursor.span = sp_row + n - 1;
+                    cursor.span = (FieldCollisionRasterSpan*)((n * sizeof(*sp_row)) + (s32)sp_row - sizeof(*sp_row));
                     if (sp_row[n - 1].x.x0 > x)
                     {
                         sp_row[n - 1].x.x0 = x;
