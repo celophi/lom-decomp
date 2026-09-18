@@ -667,6 +667,7 @@ extern SVECTOR *D_80105870;
  * @param cursor Current write position in the primitive buffer.
  * @param arg3_base Base of the ordering-table link array.
  * @return Advanced primitive-buffer cursor.
+ * @see decomp.me (100%) https://decomp.me/scratch/F2Z4z
  */
 s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3_base)
 {
