@@ -320,6 +320,7 @@ overlay_shop_gcc_272_cdk_g0_srcs := \
 	src/overlays/shop/func_801429A4.c \
 	src/overlays/shop/shop_init.c \
 	src/overlays/shop/shop_update_interp.c \
+	src/overlays/shop/shop_handle_list_input.c \
 	src/overlays/shop/shop_element_utils.c \
 	src/overlays/shop/func_80140E00.c \
 	src/overlays/shop/shop_string_utils.c \
@@ -333,7 +334,6 @@ overlay_shop_gcc_272_cdk_g0_srcs := \
 overlay_shop_gcc_272_cdk_g0_nostrength_srcs := \
 	src/overlays/shop/shop_setup_custom_list.c
 overlay_shop_gcc_280_g0_srcs := \
-	src/overlays/shop/unk1_after_interp.c \
 	src/overlays/shop/unk1_mid_tail.c \
 	src/overlays/shop/unk1_tail_mid.c
 
