@@ -3,7 +3,7 @@ extern s32 D_80145248;
 extern s32 D_8014524C;
 extern s32 D_80145CE0;
 extern void func_80140D4C(void);
-extern void func_80140838(void);
+extern s32 func_80140838(void);
 void func_80140798(void)
 {
     s32 count;
