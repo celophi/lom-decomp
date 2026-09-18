@@ -23,160 +23,245 @@ typedef struct FieldMenuRecordLayout
     u32 unk3198, unk319C;
 } FieldMenuRecordLayout;
 
+/** @brief Shared 64-byte record used by the menu record transfer path. */
+typedef struct FieldSharedRecord
+{
+    u8 unk0;
+    u8 pad1[0x13];
+    union
+    {
+        u32 word;
+        u16 halves[2];
+    } packed_metadata;
+    u32 unk18;
+    u32 unk1C;
+    u8 pad20[4];
+    u16 unk24;
+    u16 unk26;
+    u16 unk28;
+    u16 unk2A;
+    u8 pad2C[8];
+    u32 unk34;
+    u32 unk38;
+    u32 unk3C;
+} FieldSharedRecord;
+
 extern u8 g_menuLayoutBuffer[], D_80122A08[], D_800F0E98[];
 extern u8 D_80122C02, D_80122C03, D_80122C04, D_80122C0C;
 void func_800B2844();
 
 /**
- * @brief Validate a shared equipment record and prepare its display parameters.
- * @note Nonmatching m2c translation; retains byte, halfword, and word views
- * of the packed record, and the extra fourth argument at two dispatch sites.
+ * @brief Validate the selected shared record and prepare its menu display state.
  */
 void func_800C8A2C(void)
 {
-    u8 *var_a0;
-    u8 *var_a0_2;
-    u8 *var_a0_3;
-    s32 temp_s5;
-    s32 temp_v0_2;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_a1_3;
-    s32 var_s0;
-    s32 var_t0;
-    s8 temp_s2;
-    s8 var_s3;
-    s8 var_v1;
-    u16 var_s1;
-    u32 temp_a0;
-    u32 temp_a1;
-    u32 temp_v0;
-    u8 var_s4;
-    u8 *temp_a2;
-    u8 *temp_a2_2;
-    u8 *temp_a2_3;
-    u8 *temp_v1;
-    u8 *temp_v1_2;
+    s32 work_index;
+    s32 duplicate_found;
+    s32 selected_index;
+    u8 *initial_record;
+    u8 *selected_record;
+    u8 *detail_record;
+    u8 *search_record;
+    u8 *scan;
+    u32 packed_metadata;
+    s32 record_type;
+    s32 lookup_row;
+    s32 metadata_index;
+    s32 display_value;
+    u32 low_word;
+    u32 high_word;
+    s32 nibble_sum;
+    s32 special_flag;
+    u32 amount;
+    s32 digits;
+    u8 *lookup_base;
+    s32 lookup_offset;
+    u8 *display;
+    u8 *status;
+    u8 *initial_base;
 
-    (&D_80122C02)[1] = 0;
-    temp_v1 = (D_80122C02 << 6) + D_80122A08;
-    var_t0 = 0;
-    if (*(u8 *)(temp_v1 + 0x0) == 0)
+    status = &D_80122C02;
+    status[1] = 0;
+    selected_index = D_80122C02;
+    initial_base = D_80122A08;
+    initial_record = (selected_index << 6) + initial_base;
+    if (initial_record[0] == 0)
     {
-        (&D_80122C02)[1] = 1;
+        status[1] = 1;
         return;
     }
-    var_a1 = 0;
-    var_a0 = g_menuLayoutBuffer;
-loop_6:
-    if ((*(u8 *)(var_a0 + 0xCE0) == 0) || (*(u32 *)(var_a0 + 0xD18) != *(u32 *)(temp_v1 + 0x38)) || (*(u32 *)(var_a0 + 0xD1C) != *(u32 *)(temp_v1 + 0x3C)))
+
+    duplicate_found = 0;
+
+    goto search_first;
+
+found_first:
+    duplicate_found = 1;
+    goto search_second;
+
+found_second:
+    duplicate_found = 1;
+    goto search_third;
+
+found_third:
+    duplicate_found = 1;
+    goto searches_done;
+
+search_first:
+    work_index = duplicate_found;
+    search_record = initial_record;
+    scan = g_menuLayoutBuffer;
+first_loop:
+    if (((FieldMenuRecordLayout *)scan)->unkCE0 != 0 &&
+        ((FieldMenuRecordLayout *)scan)->unkD18 == *(u32 *)(search_record + 0x38) &&
+        ((FieldMenuRecordLayout *)scan)->unkD1C == *(u32 *)(search_record + 0x3C))
     {
-        var_a1 += 1;
-        var_a0 += 0x40;
-        if (var_a1 < 0x64)
-        {
-            goto loop_6;
-        }
+        goto found_first;
     }
-    else
+    work_index++;
+    scan += 0x40;
+    if (work_index < 100)
     {
-        var_t0 = 1;
+        goto first_loop;
     }
-    var_a1_2 = 0;
-    temp_a2 = (D_80122C02 << 6) + D_80122A08;
-    var_a0_2 = g_menuLayoutBuffer;
-loop_11:
-    if ((*(u8 *)(var_a0_2 + 0x640) == 0) || (*(u32 *)(var_a0_2 + 0x678) != *(u32 *)(temp_a2 + 0x38)) || (*(u32 *)(var_a0_2 + 0x67C) != *(u32 *)(temp_a2 + 0x3C)))
+
+search_second:
+    work_index = 0;
     {
-        var_a1_2 += 1;
-        var_a0_2 += 0x40;
-        if (var_a1_2 < 8)
-        {
-            goto loop_11;
-        }
+        u8 *record_base;
+        record_base = D_80122A08;
+        search_record = record_base + (selected_index << 6);
     }
-    else
+    scan = g_menuLayoutBuffer;
+second_loop:
+    if (((FieldMenuRecordLayout *)scan)->unk640 != 0 &&
+        ((FieldMenuRecordLayout *)scan)->unk678 == *(u32 *)(search_record + 0x38) &&
+        ((FieldMenuRecordLayout *)scan)->unk67C == *(u32 *)(search_record + 0x3C))
     {
-        var_t0 = 1;
+        goto found_second;
     }
-    var_a1_3 = 0;
-    temp_a2_2 = (D_80122C02 << 6) + D_80122A08;
-    var_a0_3 = g_menuLayoutBuffer;
-loop_16:
-    if ((*(u8 *)(var_a0_3 + 0x3160) == 0) || (*(u32 *)(var_a0_3 + 0x3198) != *(u32 *)(temp_a2_2 + 0x38)) || (*(u32 *)(var_a0_3 + 0x319C) != *(u32 *)(temp_a2_2 + 0x3C)))
+    work_index++;
+    scan += 0x40;
+    if (work_index < 8)
     {
-        var_a1_3 += 1;
-        var_a0_3 += 0x40;
-        if (var_a1_3 < 4)
-        {
-            goto loop_16;
-        }
+        goto second_loop;
     }
-    else
+
+search_third:
+    work_index = 0;
     {
-        var_t0 = 1;
+        u8 *record_base;
+        record_base = D_80122A08;
+        search_record = record_base + (selected_index << 6);
     }
-    if (var_t0 == 0)
+    scan = g_menuLayoutBuffer;
+third_loop:
+    if (((FieldMenuRecordLayout *)scan)->unk3160 != 0 &&
+        ((FieldMenuRecordLayout *)scan)->unk3198 == *(u32 *)(search_record + 0x38) &&
+        ((FieldMenuRecordLayout *)scan)->unk319C == *(u32 *)(search_record + 0x3C))
     {
-        temp_v0 = *(u32 *)((D_80122C02 << 6) + D_80122A08 + 0x14);
-        temp_s2 = (temp_v0 >> 8) & 3;
-        var_s3 = (temp_v0 >> 0xA) & 0x3F;
-        if (temp_s2 == 1)
-        {
-            var_s3 += 0xB;
-        }
-    else if (temp_s2 == 2)
+        goto found_third;
+    }
+    work_index++;
+    scan += 0x40;
+    if (work_index < 4)
     {
-            var_s3 += 0x17;
-        }
-        temp_v1_2 = (D_80122C02 << 6) + D_80122A08;
-        temp_s5 = *(u16 *)(temp_v1_2 + 0x16) & 0x3F;
-        if (temp_s2 == 0)
-        {
-            var_s1 = *(u16 *)(temp_v1_2 + 0x24);
-        }
-    else if (temp_s2 == 1)
+        goto third_loop;
+    }
+
+searches_done:
+    if (duplicate_found == 0)
     {
-            var_s1 = *(u16 *)(temp_v1_2 + 0x24) + *(u16 *)(temp_v1_2 + 0x26) + *(u16 *)(temp_v1_2 + 0x28) + *(u16 *)(temp_v1_2 + 0x2A);
-        }
-    else
-    {
-            var_s1 = (u16) temp_v1_2[0x26];
-        }
-        temp_a2_3 = (D_80122C02 << 6) + D_80122A08;
-        temp_a0 = *(u32 *)(temp_a2_3 + 0x18);
-        temp_a1 = *(u32 *)(temp_a2_3 + 0x1C);
-        var_s4 = ((temp_a0 & 0xF) + ((temp_a0 >> 4) & 0xF) + ((temp_a0 >> 8) & 0xF) + ((temp_a0 >> 0xC) & 0xF) + ((temp_a0 >> 0x10) & 0xF) + ((temp_a0 >> 0x14) & 0xF) + ((temp_a0 >> 0x18) & 0xF) + (temp_a0 >> 0x1C) + (temp_a1 & 0xF) + ((temp_a1 >> 4) & 0xF) + ((temp_a1 >> 8) & 0xF) + ((temp_a1 >> 0xC) & 0xF) + ((temp_a1 >> 0x10) & 0xF) + ((temp_a1 >> 0x14) & 0xF) + ((temp_a1 >> 0x18) & 0xF) + (temp_a1 >> 0x1C)) >= 0x29;
-        if (temp_s2 == 2)
+        packed_metadata = ((FieldSharedRecord *)D_80122A08)[selected_index].packed_metadata.word;
+        record_type = (packed_metadata >> 8) & 3;
+        lookup_row = (packed_metadata >> 10) & 0x3F;
+        if (record_type == 1)
         {
-            var_s4 = temp_a2_3[0x24];
+            lookup_row += 0xB;
         }
-        var_s0 = *(s32 *)(temp_a2_3 + 0x34);
-        func_800B2844(0, temp_a2_3, 0xFF, D_80122C02);
-        *(u8 *)((u8 *)&D_80122C04 + 0) = temp_s2;
-        temp_v0_2 = temp_s5 * 2;
-        *(u8 *)((u8 *)&D_80122C04 + 1) = var_s3;
-        func_800B2844(1, *(temp_v0_2 + D_800F0E98) + (*(temp_v0_2 + 1 + D_800F0E98) << 8) + D_800F0E98, 0xFF);
-        *(u16 *)((u8 *)&D_80122C04 + 2) = var_s1;
-        if (var_s4 != 0)
+        else if (record_type == 2)
         {
-            *(u16 *)((u8 *)&D_80122C04 + 2) = (u16) (var_s1 - 0x8000);
+            lookup_row += 0x17;
         }
-        *(s32 *)((u8 *)&D_80122C04 + 4) = var_s0;
-        var_v1 = 0;
+
+        {
+            u8 *detail_base;
+            detail_base = D_80122A08;
+            detail_record = (selected_index << 6) + detail_base;
+        }
+        metadata_index = *(u16 *)(detail_record + 0x16) & 0x3F;
+        if (record_type == 0)
+        {
+            do
+            {
+                display_value = *(u16 *)(detail_record + 0x24);
+            } while (0);
+        }
+        else if (record_type == 1)
+        {
+            do
+            {
+                display_value = *(u16 *)(detail_record + 0x24);
+                display_value += *(u16 *)(detail_record + 0x26);
+                display_value += *(u16 *)(detail_record + 0x28);
+                display_value += *(u16 *)(detail_record + 0x2A);
+            } while (0);
+        }
+        else
+        {
+            do
+            {
+                display_value = detail_record[0x26];
+            } while (0);
+        }
+
+        {
+            u8 *final_base;
+            final_base = D_80122A08;
+            selected_record = (selected_index << 6) + final_base;
+        }
+        low_word = *(u32 *)(selected_record + 0x18);
+        high_word = *(u32 *)(selected_record + 0x1C);
+        nibble_sum = (low_word & 0xF) + ((low_word >> 4) & 0xF) + ((low_word >> 8) & 0xF) + ((low_word >> 12) & 0xF) +
+                     ((low_word >> 16) & 0xF) + ((low_word >> 20) & 0xF) + ((low_word >> 24) & 0xF) + (low_word >> 28) +
+                     (high_word & 0xF) + ((high_word >> 4) & 0xF) + ((high_word >> 8) & 0xF) + ((high_word >> 12) & 0xF) +
+                     ((high_word >> 16) & 0xF) + ((high_word >> 20) & 0xF) + ((high_word >> 24) & 0xF) + (high_word >> 28);
+        special_flag = nibble_sum >= 0x29;
+        if (record_type == 2)
+        {
+            special_flag = selected_record[0x24];
+        }
+
+        amount = *(u32 *)(selected_record + 0x34);
+        func_800B2844(0, selected_record, 0xFF);
+        D_80122C04 = record_type;
+        display = &D_80122C04;
+        lookup_base = D_800F0E98;
+        lookup_offset = metadata_index * 2;
+        display[1] = lookup_row;
+        func_800B2844(1, lookup_base[lookup_offset] + (D_800F0E98[lookup_offset + 1] << 8) + D_800F0E98, 0xFF);
+        *(u16 *)(display + 2) = display_value;
+        if (special_flag != 0)
+        {
+            *(u16 *)(display + 2) = display_value - 0x8000;
+        }
+        *(u32 *)(display + 4) = amount;
+        digits = 0;
         do
-
-{
-            var_s0 /= 0xA;
-            var_v1 += 1;
-        } while (var_s0 != 0);
-        D_80122C0C = var_v1;
+        {
+            do
+            {
+                amount /= 10;
+            } while (0);
+            digits++;
+        } while (amount != 0);
+        D_80122C0C = digits;
         return;
     }
-    D_80122C03 = 2;
-    func_800B2844(0, (D_80122C02 << 6) + D_80122A08, 0xFF, D_80122C02);
-}
 
+    D_80122C03 = 2;
+    func_800B2844(0, (selected_index << 6) + D_80122A08, 0xFF);
+}
 
 void func_800A8F8C(void *, void *);
 extern u8 g_menuLayoutBuffer[];
