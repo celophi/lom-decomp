@@ -3,3 +3,14 @@ field_text_reset_windows             = 0x800643E0;
 field_text_reset_scratch             = 0x8006441C;
 g_carda_overlay_id = 0x80140000;
 g_menu_element_counter                     = 0x8012298C;
+
+// Jump-table addresses emitted by matched C rodata.
+jtbl_80140094 = 0x80140094;
+jtbl_801400AC = 0x801400AC;
+jtbl_8014018C = 0x8014018C;
+
+// Interior byte-addressed data symbols inside aligned databin spans.
+D_80165B89 = 0x80165B89;
+D_80165B91 = 0x80165B91;
+D_80165BBD = 0x80165BBD;
+D_8016636F = 0x8016636F;
