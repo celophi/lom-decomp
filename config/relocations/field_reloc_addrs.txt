@@ -69,3 +69,14 @@ rom:0x13A71 reloc:MIPS_NONE symbol:D_801E26E0
 rom:0x13A81 reloc:MIPS_NONE symbol:D_801E26E0
 rom:0x13D11 reloc:MIPS_NONE symbol:D_801E26E0
 rom:0x13D21 reloc:MIPS_NONE symbol:D_801E26E0
+
+// func_8008343C: these are literal +2 scratchpad-pointer increments. Splat
+// otherwise misidentifies them as low-half references to D_1F800002.
+rom:0x338B1 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x33909 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x33971 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x339C9 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x33A15 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x33A55 reloc:MIPS_NONE symbol:D_1F800002
+rom:0x33ACD reloc:MIPS_NONE symbol:D_1F800002
+rom:0x33B0D reloc:MIPS_NONE symbol:D_1F800002

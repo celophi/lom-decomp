@@ -103,232 +103,235 @@ typedef struct
 } FieldCtx;
 
 /**
- * @brief Blit each part of an actor sprite into the PSX scratchpad with one of
- *        four rotation/flip modes, then LoadImage it into VRAM.
- * @param arg0 Actor index into arg2->unk18[].
- * @param arg1 Rotation mode selector (0..3).
- * @param arg2 Field context; unk18 is the actor array, unk228 selects the VRAM
- *             destination page.
- * @param arg3 Split offset (rows/columns rotated to the far edge).
- * @note WIP 96.58%. The residual is register-allocation only (no structural
- *       diff): (1) a saved-register swap - the target puts arg0 in s5 and arg2
- *       in s6, this compile has them exchanged, cascading through var_s2/arg3*2
- *       and the case 2/3 scratchpad-walker temps; (2) eight `addiu ..., +2`
- *       scratchpad-pointer increments that splat over-symbolizes as
- *       %lo(D_1F800002). Those eight are byte-identical to the retail bytes and
- *       clear once field_reloc_addrs.txt gains MIPS_NONE entries at rom offsets
- *       0x338B1, 0x33909, 0x33971, 0x339C9, 0x33A15, 0x33A55, 0x33ACD, 0x33B0D
- *       and the overlay is re-splatted; real match is ~99%.
- * @see decomp.me (96.58%) local match - no scratch link created.
+ * @brief Rotate or shift each mesh part and upload the updated pixels to VRAM.
+ * @param actor_index Actor index in the field actor array.
+ * @param mode Pixel rotation/shift mode in the range 0 through 3.
+ * @param field_ctx Field context containing the actor array and VRAM page selector.
+ * @param shift_count Number of rows or columns moved to the opposite edge.
+ * @return Zero after all parts have been processed.
  */
-void func_8008343C(s32 arg0, s32 arg1, FieldCtx *arg2, s32 arg3)
+s32 func_8008343C(s32 actor_index, s32 mode, FieldCtx *field_ctx, s32 shift_count)
 {
     RECT rect;
     ActorEntry *actor;
     PartEntry *part;
     u16 *scratch;
-    u16 *sp_w;
-    u16 *src;
-    u16 *dst;
-    s32 n;
-    u16 temp;
+    u16 *cursor_a;
+    u16 *cursor_b;
+    u16 *cursor_c;
+    s32 count;
+    u16 pixel;
     u8 width;
-    u8 rows;
-    s32 var_s2;
+    s32 row_count;
+    s32 row_stride;
+    s32 part_index;
+    ActorEntry *actors;
+    s32 actor_index_x2;
+    s32 actor_index_x3;
+    s32 result;
 
     scratch = (u16 *)0x1F800000;
-    var_s2 = 0;
-    actor = &arg2->unk18[arg0];
-    if (actor->unk2 != 0)
+    actor_index_x2 = actor_index * 2;
+    actor_index_x3 = actor_index_x2 + actor_index;
+    do
     {
+        part_index = 0;
+    } while (0);
+    actors = field_ctx->unk18;
+    actor = (ActorEntry *)((actor_index_x3 * 8) + (s32)actors);
+    result = actor->unk2;
+    if (result != 0)
+    {
+        row_stride = shift_count * 2;
         do
         {
-            part = &actor->unk4[var_s2];
-            switch (arg1)
+            actor = (ActorEntry *)((((actor_index_x2 + actor_index) * 8) + (s32)actors));
+            part = &actor->unk4[part_index];
+            switch (mode)
             {
             case 0:
-                src = part->unk4;
-                n = part->unk2 * arg3;
-                dst = src;
-                if (n != 0)
+                cursor_a = part->unk4;
+                count = part->unk2 * shift_count;
+                cursor_b = cursor_a;
+                if (count != 0)
                 {
                     do
                     {
-                        n -= 1;
-                        temp = *src;
-                        src += 1;
-                        *scratch = temp;
+                        count -= 1;
+                        pixel = *cursor_a;
+                        cursor_a += 1;
+                        *scratch = pixel;
                         scratch += 1;
-                    } while (n != 0);
+                    } while (count != 0);
                 }
-                n = part->unk2 * (part->unk3 - arg3);
-                if (n != 0)
+                count = part->unk2 * (part->unk3 - shift_count);
+                if (count != 0)
                 {
                     do
                     {
-                        n -= 1;
-                        temp = *src;
-                        src += 1;
-                        *dst = temp;
-                        dst += 1;
-                    } while (n != 0);
+                        count -= 1;
+                        pixel = *cursor_a;
+                        cursor_a += 1;
+                        *cursor_b = pixel;
+                        cursor_b += 1;
+                    } while (count != 0);
                 }
-                n = part->unk2 * arg3;
+                count = part->unk2 * shift_count;
                 scratch = (u16 *)0x1F800000;
-                if (n != 0)
+                if (count != 0)
                 {
                     do
                     {
-                        n -= 1;
-                        temp = *scratch;
+                        count -= 1;
+                        pixel = *scratch;
                         scratch += 1;
-                        *dst = temp;
-                        dst += 1;
-                    } while (n != 0);
+                        *cursor_b = pixel;
+                        cursor_b += 1;
+                    } while (count != 0);
                 }
                 break;
             case 1:
                 width = part->unk2;
-                src = &part->unk4[width * part->unk3] - 1;
-                n = width * arg3;
-                dst = src;
-                if (n != 0)
+                cursor_a = &part->unk4[width * part->unk3] - 1;
+                count = width * shift_count;
+                cursor_b = cursor_a;
+                if (count != 0)
                 {
                     do
                     {
-                        n -= 1;
-                        temp = *src;
-                        src -= 1;
-                        *scratch = temp;
+                        count -= 1;
+                        pixel = *cursor_a;
+                        cursor_a -= 1;
+                        *scratch = pixel;
                         scratch += 1;
-                    } while (n != 0);
+                    } while (count != 0);
                 }
-                n = part->unk2 * (part->unk3 - arg3);
-                if (n != 0)
+                count = part->unk2 * (part->unk3 - shift_count);
+                if (count != 0)
                 {
                     do
                     {
-                        n -= 1;
-                        temp = *src;
-                        src -= 1;
-                        *dst = temp;
-                        dst -= 1;
-                    } while (n != 0);
+                        count -= 1;
+                        pixel = *cursor_a;
+                        cursor_a -= 1;
+                        *cursor_b = pixel;
+                        cursor_b -= 1;
+                    } while (count != 0);
                 }
-                n = part->unk2 * arg3;
+                count = part->unk2 * shift_count;
                 scratch = (u16 *)0x1F800000;
-                if (n != 0)
+                if (count != 0)
                 {
                     do
                     {
-                        n -= 1;
-                        temp = *scratch;
+                        count -= 1;
+                        pixel = *scratch;
                         scratch += 1;
-                        *dst = temp;
-                        dst -= 1;
-                    } while (n != 0);
+                        *cursor_b = pixel;
+                        cursor_b -= 1;
+                    } while (count != 0);
                 }
                 break;
             case 2:
-                rows = part->unk3;
-                dst = part->unk4;
-                if (rows != 0)
+                row_count = part->unk3;
+                cursor_a = part->unk4;
+                if (row_count != 0)
                 {
                     do
                     {
-                        n = 0;
-                        if (arg3 != 0)
+                        count = 0;
+                        if (shift_count != 0)
                         {
-                            sp_w = scratch;
-                            src = dst;
+                            cursor_b = scratch;
+                            cursor_c = cursor_a;
                             do
                             {
-                                temp = *src;
-                                src += 1;
-                                n += 1;
-                                *sp_w = temp;
-                                sp_w += 1;
-                            } while (n != arg3);
+                                pixel = *cursor_c;
+                                cursor_c += 1;
+                                count += 1;
+                                *cursor_b = pixel;
+                                cursor_b += 1;
+                            } while (count != shift_count);
                         }
-                        n = part->unk2 - arg3;
-                        if (n != 0)
+                        count = part->unk2 - shift_count;
+                        if (count != 0)
                         {
                             do
                             {
-                                n -= 1;
-                                *dst = dst[arg3];
-                                dst += 1;
-                            } while (n != 0);
+                                count -= 1;
+                                *cursor_a = *(u16 *)(row_stride + (s32)cursor_a);
+                                cursor_a += 1;
+                            } while (count != 0);
                         }
-                        n = 0;
-                        if (arg3 != 0)
+                        count = 0;
+                        if (shift_count != 0)
                         {
-                            sp_w = scratch;
+                            cursor_c = scratch;
                             do
                             {
-                                temp = *sp_w;
-                                sp_w += 1;
-                                n += 1;
-                                *dst = temp;
-                                dst += 1;
-                            } while (n != arg3);
+                                pixel = *cursor_c;
+                                cursor_c += 1;
+                                count += 1;
+                                *cursor_a = pixel;
+                                cursor_a += 1;
+                            } while (count != shift_count);
                         }
-                        rows -= 1;
-                    } while (rows != 0);
+                        row_count -= 1;
+                    } while (row_count != 0);
                 }
                 break;
             case 3:
-                dst = &part->unk4[part->unk2 * part->unk3] - 1;
-                rows = part->unk3;
-                if (rows != 0)
+                cursor_a = &part->unk4[part->unk2 * part->unk3] - 1;
+                row_count = part->unk3;
+                if (row_count != 0)
                 {
                     do
                     {
-                        n = 0;
-                        if (arg3 != 0)
+                        count = 0;
+                        if (shift_count != 0)
                         {
-                            sp_w = scratch;
-                            src = dst;
+                            cursor_b = scratch;
+                            cursor_c = cursor_a;
                             do
                             {
-                                temp = *src;
-                                src -= 1;
-                                n += 1;
-                                *sp_w = temp;
-                                sp_w += 1;
-                            } while (n != arg3);
+                                pixel = *cursor_c;
+                                cursor_c -= 1;
+                                count += 1;
+                                *cursor_b = pixel;
+                                cursor_b += 1;
+                            } while (count != shift_count);
                         }
-                        n = part->unk2 - arg3;
-                        if (n != 0)
+                        count = part->unk2 - shift_count;
+                        if (count != 0)
                         {
                             do
                             {
-                                n -= 1;
-                                *dst = *(dst - arg3);
-                                dst -= 1;
-                            } while (n != 0);
+                                count -= 1;
+                                *cursor_a = *(u16 *)((u8 *)cursor_a - row_stride);
+                                cursor_a -= 1;
+                            } while (count != 0);
                         }
-                        n = 0;
-                        if (arg3 != 0)
+                        count = 0;
+                        if (shift_count != 0)
                         {
-                            sp_w = scratch;
+                            cursor_c = scratch;
                             do
                             {
-                                temp = *sp_w;
-                                sp_w += 1;
-                                n += 1;
-                                *dst = temp;
-                                dst -= 1;
-                            } while (n != arg3);
+                                pixel = *cursor_c;
+                                cursor_c += 1;
+                                count += 1;
+                                *cursor_a = pixel;
+                                cursor_a -= 1;
+                            } while (count != shift_count);
                         }
-                        rows -= 1;
-                    } while (rows != 0);
+                        row_count -= 1;
+                    } while (row_count != 0);
                 }
                 break;
             }
-            if ((u8) arg2->unk228 < 2U)
+            if ((u8) field_ctx->unk228 < 2U)
             {
-                rect.x = (arg2->unk228 << 6) + (part->unk0 + 0x340);
+                rect.x = (field_ctx->unk228 << 6) + (part->unk0 + 0x340);
                 rect.y = part->unk1 + 0x100;
             }
             else
@@ -339,10 +342,14 @@ void func_8008343C(s32 arg0, s32 arg1, FieldCtx *arg2, s32 arg3)
             rect.w = part->unk2;
             rect.h = part->unk3;
             LoadImage(&rect, part->unk4);
-            actor = &arg2->unk18[arg0];
-            var_s2 += 1;
-        } while (var_s2 < (s32) actor->unk2);
+            actor_index_x2 = actor_index * 2;
+            actors = field_ctx->unk18;
+            part_index += 1;
+            actor = (ActorEntry *)((((actor_index_x2 + actor_index) * 8) + (s32)actors));
+            result = part_index < (s32)actor->unk2;
+        } while (result != 0);
     }
+    return result;
 }
 
 /**
