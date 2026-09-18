@@ -57,7 +57,7 @@ void func_8014697C(s32 arg0)
 
     if ((u32)(D_80166078 - 2) < 2)
     {
-        static void *const keep[] = {
+        static void *const keep[] __attribute__((section(".discard"))) = {
             &&case0, &&case1, &&case2, &&case3, &&case4, &&case5
         };
         switch (0)

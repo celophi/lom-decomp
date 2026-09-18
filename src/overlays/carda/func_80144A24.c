@@ -30,7 +30,7 @@ s32 func_80144A24(s32 *ot, s32 prim, s32 x, s32 y)
     u8 *base;
     s32 frame_scratch[2];
     s32 state = D_80165FE4;
-    static void *const keep[] = { &&case0, &&case1, &&case2, &&case3, &&case4, &&case5 };
+    static void *const keep[] __attribute__((section(".discard"))) = { &&case0, &&case1, &&case2, &&case3, &&case4, &&case5 };
 
     if ((u32)state >= 6)
         goto after_switch;
