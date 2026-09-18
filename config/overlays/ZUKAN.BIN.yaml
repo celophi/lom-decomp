@@ -39,11 +39,115 @@ segments:
     type: decompress_overlay
     start: 0x1
     vram: 0x80140000
+    align: 4
     subsegments:
       - [auto, c, overlay_header]
       - [0x1, .rodata, overlay_header]
-      - [0x5, rodata, rodata]
+      - [0x5, .rodata, zukan]
+      - start: 0x1D
+        type: rodatabin
+        name: D_8014001C
+        dir: zukan
+      - start: 0x51
+        type: rodatabin
+        name: D_80140050
+        dir: zukan
+      - start: 0x6D
+        type: rodatabin
+        name: D_8014006C
+        dir: zukan
+      - start: 0x861
+        type: rodatabin
+        name: D_80140860
+        dir: zukan
       - [0x1095, c, zukan] # gcc272_cdk, func_80141094..func_80142CA0
       - [0x2D09, c, func_80142D08] # gcc280_g0_o0, func_80142D08, 100% (only -O0 func)
-      - [0x471D, data, data]
+      - start: 0x471D
+        type: databin
+        name: D_8014471C
+        dir: zukan
+      - start: 0x17421
+        type: databin
+        name: D_80157420
+        dir: zukan
+      - start: 0x17521
+        type: databin
+        name: D_80157520
+        dir: zukan
+      - start: 0x17529
+        type: databin
+        name: D_80157528
+        dir: zukan
+      - start: 0x17531
+        type: databin
+        name: D_80157530
+        dir: zukan
+      - start: 0x17D31
+        type: databin
+        name: D_80157D30
+        dir: zukan
+      - start: 0x17D37
+        type: databin
+        name: D_80157D36
+        dir: zukan
+      - start: 0x17D39
+        type: databin
+        name: D_80157D38
+        dir: zukan
+      - start: 0x17D3D
+        type: databin
+        name: D_80157D3C
+        dir: zukan
+      - start: 0x17D41
+        type: databin
+        name: D_80157D40
+        dir: zukan
+      - start: 0x17D49
+        type: databin
+        name: D_80157D48
+        dir: zukan
+      - start: 0x17D51
+        type: databin
+        name: D_80157D50
+        dir: zukan
+      - start: 0x17D55
+        type: databin
+        name: D_80157D54
+        dir: zukan
+      - start: 0x17D59
+        type: databin
+        name: D_80157D58
+        dir: zukan
+      - start: 0x17D5D
+        type: databin
+        name: D_80157D5C
+        dir: zukan
+      - start: 0x17D61
+        type: databin
+        name: D_80157D60
+        dir: zukan
+      - start: 0x17D65
+        type: databin
+        name: D_80157D64
+        dir: zukan
+      - start: 0x17D69
+        type: databin
+        name: D_80157D68
+        dir: zukan
+      - start: 0x17D6D
+        type: databin
+        name: D_80157D6C
+        dir: zukan
+      - start: 0x17D71
+        type: databin
+        name: D_80157D70
+        dir: zukan
+      - start: 0x17D75
+        type: databin
+        name: D_80157D74
+        dir: zukan
+      - start: 0x17D79
+        type: databin
+        name: D_80157D78
+        dir: zukan
   - [0x17D7D]
