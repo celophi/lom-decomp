@@ -10,142 +10,158 @@ void func_800C37A8(u32, void *);
 #define INIT_U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
 #define INIT_PTR(p, o) (*(u8 **)((u8 *)(p) + (o)))
 
-/** @brief Initializes a generated record name, key and packed attributes.
- * @note Initial nonmatching C recovered from assembly.
+/** @brief Two-byte staged entry whose value byte feeds a packed record nibble. */
+typedef struct
+{
+    u8 unk0;
+    u8 value;
+} StagedNibbleEntry;
+
+/**
+ * @brief Initialize a generated record's text and packed attribute fields.
  */
 void func_800BFA34(void)
 {
-    s32 var_a2;
-    u8 temp_v0;
-    u8 var_v1;
-    u8 var_v1_2;
-    u8 var_v1_3;
-    u8 var_v1_4;
-    u8 var_v1_5;
-    u8 var_v1_6;
-    u8 var_v1_7;
-    u8 var_v1_8;
-    u8 *temp_a0;
-    u8 *temp_a0_10;
-    u8 *temp_a0_11;
-    u8 *temp_a0_12;
-    u8 *temp_a0_13;
-    u8 *temp_a0_14;
-    u8 *temp_a0_15;
-    u8 *temp_a0_16;
-    u8 *temp_a0_17;
-    u8 *temp_a0_18;
-    u8 *temp_a0_2;
-    u8 *temp_a0_3;
-    u8 *temp_a0_4;
-    u8 *temp_a0_5;
-    u8 *temp_a0_6;
-    u8 *temp_a0_7;
-    u8 *temp_a0_8;
-    u8 *temp_a0_9;
-    u8 *temp_a1;
-    u8 *temp_a1_2;
-    u8 *temp_v1;
+    s32 copy_index;
+    u8 copy_value;
+    u8 nibble_0;
+    u8 nibble_1;
+    u8 nibble_2;
+    u8 nibble_3;
+    u8 nibble_4;
+    u8 nibble_5;
+    u8 nibble_6;
+    u8 nibble_7;
+    u8 *record_14_1;
+    u8 *record_18_7;
+    u8 *record_1c_0;
+    u8 *record_1c_1;
+    u8 *record_1c_2;
+    u8 *record_1c_3;
+    u8 *record_1c_4;
+    u8 *record_1c_5;
+    u8 *record_1c_6;
+    u8 *record_1c_7;
+    u8 *record_14_2;
+    u8 *record_18_0;
+    u8 *record_18_1;
+    u8 *record_18_2;
+    u8 *record_18_3;
+    u8 *record_18_4;
+    u8 *record_18_5;
+    u8 *record_18_6;
+    u8 *record;
+    u8 *record_14_0;
+    u8 *copy_destination;
+    StagedNibbleEntry *staged_nibbles;
 
-    temp_a1 = INIT_PTR(D_80123FC4, 0);
-    if (INIT_U8(temp_a1, 0x0) == 0)
+    record = INIT_PTR(D_80123FC4, 0);
+    if (INIT_U8(record, 0x0) == 0)
     {
-        func_800C37A8(INIT_U16(D_80122B74, 0xD8), temp_a1 + 0x38);
+        func_800C37A8(INIT_U16(D_80122B74, 0xD8), record + 0x38);
         func_800BFE70((INIT_U8(D_80123FC4, 0x4) * 0x10) + INIT_U8(D_80123FC4, 0x5), INIT_U8(D_80123FC4, 0x6) + 0x24, INIT_PTR(D_80123FC4, 0));
     }
-    else if (INIT_U32(temp_a1, 0x38) == 0)
+    else if (INIT_U32(record, 0x38) == 0)
     {
-        if (INIT_U32(temp_a1, 0x3C) == 0)
+        if (INIT_U32(record, 0x3C) == 0)
         {
-            func_800C37A8(INIT_U16(D_80122B74, 0xD8), temp_a1 + 0x38);
+            func_800C37A8(INIT_U16(D_80122B74, 0xD8), record + 0x38);
         }
     }
-    temp_a1_2 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a1_2, 0x14) = (s32) ((INIT_U32(temp_a1_2, 0x14) & ~0x300) | ((INIT_U8(D_80123FC4, 0x4) & 3) << 8));
-    temp_a0 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a0, 0x14) = (s32) ((INIT_U32(temp_a0, 0x14) & 0xFFFF03FF) | ((INIT_U8(D_80123FC4, 0x5) & 0x3F) << 0xA));
-    temp_a0_2 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a0_2, 0x14) = (s32) ((INIT_U32(temp_a0_2, 0x14) & 0xFFC0FFFF) | ((INIT_U8(D_80123FC4, 0x6) & 0x3F) << 0x10));
-    temp_a0_3 = INIT_PTR(D_80123FC4, 0);
-    var_v1 = 0xF;
-    if ((u8) INIT_U8(D_80123FC4, 0xD) < 0x10U)
+    record_14_0 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_14_0, 0x14) = (s32) ((INIT_U32(record_14_0, 0x14) & ~0x300) | ((INIT_U8(D_80123FC4, 0x4) & 3) << 8));
+    record_14_1 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_14_1, 0x14) = (s32) ((INIT_U32(record_14_1, 0x14) & 0xFFFF03FF) | ((INIT_U8(D_80123FC4, 0x5) & 0x3F) << 0xA));
+    record_14_2 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_14_2, 0x14) = (s32) ((INIT_U32(record_14_2, 0x14) & 0xFFC0FFFF) | ((INIT_U8(D_80123FC4, 0x6) & 0x3F) << 0x10));
+    record_18_0 = INIT_PTR(D_80123FC4, 0);
+    nibble_0 = 0xF;
+    if ((u8)INIT_U8(D_80123FC4, 0xD) < 0x10U)
     {
-        var_v1 = INIT_U8(D_80123FC4, 0xD);
+        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
+        nibble_0 = staged_nibbles[0].value;
     }
-    INIT_U32(temp_a0_3, 0x18) = (s32) ((INIT_U32(temp_a0_3, 0x18) & ~0xF) | (var_v1 & 0xF));
-    temp_a0_4 = INIT_PTR(D_80123FC4, 0);
-    var_v1_2 = 0xF;
-    if ((u8) INIT_U8(D_80123FC4, 0xF) < 0x10U)
+    INIT_U32(record_18_0, 0x18) = (s32) ((INIT_U32(record_18_0, 0x18) & ~0xF) | (nibble_0 & 0xF));
+    record_18_1 = INIT_PTR(D_80123FC4, 0);
+    nibble_1 = 0xF;
+    if ((u8)INIT_U8(D_80123FC4, 0xF) < 0x10U)
     {
-        var_v1_2 = INIT_U8(D_80123FC4, 0xF);
+        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
+        nibble_1 = staged_nibbles[1].value;
     }
-    INIT_U32(temp_a0_4, 0x18) = (s32) ((INIT_U32(temp_a0_4, 0x18) & ~0xF0) | ((var_v1_2 & 0xF) * 0x10));
-    temp_a0_5 = INIT_PTR(D_80123FC4, 0);
-    var_v1_3 = 0xF;
-    if ((u8) INIT_U8(D_80123FC4, 0x11) < 0x10U)
+    INIT_U32(record_18_1, 0x18) = (s32) ((INIT_U32(record_18_1, 0x18) & ~0xF0) | ((nibble_1 & 0xF) * 0x10));
+    record_18_2 = INIT_PTR(D_80123FC4, 0);
+    nibble_2 = 0xF;
+    if ((u8)INIT_U8(D_80123FC4, 0x11) < 0x10U)
     {
-        var_v1_3 = INIT_U8(D_80123FC4, 0x11);
+        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
+        nibble_2 = staged_nibbles[2].value;
     }
-    INIT_U32(temp_a0_5, 0x18) = (s32) ((INIT_U32(temp_a0_5, 0x18) & ~0xF00) | ((var_v1_3 & 0xF) << 8));
-    temp_a0_6 = INIT_PTR(D_80123FC4, 0);
-    var_v1_4 = 0xF;
-    if ((u8) INIT_U8(D_80123FC4, 0x13) < 0x10U)
+    INIT_U32(record_18_2, 0x18) = (s32) ((INIT_U32(record_18_2, 0x18) & ~0xF00) | ((nibble_2 & 0xF) << 8));
+    record_18_3 = INIT_PTR(D_80123FC4, 0);
+    nibble_3 = 0xF;
+    if ((u8)INIT_U8(D_80123FC4, 0x13) < 0x10U)
     {
-        var_v1_4 = INIT_U8(D_80123FC4, 0x13);
+        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
+        nibble_3 = staged_nibbles[3].value;
     }
-    INIT_U32(temp_a0_6, 0x18) = (s32) ((INIT_U32(temp_a0_6, 0x18) & 0xFFFF0FFF) | ((var_v1_4 & 0xF) << 0xC));
-    temp_a0_7 = INIT_PTR(D_80123FC4, 0);
-    var_v1_5 = 0xF;
-    if ((u8) INIT_U8(D_80123FC4, 0x15) < 0x10U)
+    INIT_U32(record_18_3, 0x18) = (s32) ((INIT_U32(record_18_3, 0x18) & 0xFFFF0FFF) | ((nibble_3 & 0xF) << 0xC));
+    record_18_4 = INIT_PTR(D_80123FC4, 0);
+    nibble_4 = 0xF;
+    if ((u8)INIT_U8(D_80123FC4, 0x15) < 0x10U)
     {
-        var_v1_5 = INIT_U8(D_80123FC4, 0x15);
+        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
+        nibble_4 = staged_nibbles[4].value;
     }
-    INIT_U32(temp_a0_7, 0x18) = (s32) ((INIT_U32(temp_a0_7, 0x18) & 0xFFF0FFFF) | ((var_v1_5 & 0xF) << 0x10));
-    temp_a0_8 = INIT_PTR(D_80123FC4, 0);
-    var_v1_6 = 0xF;
-    if ((u8) INIT_U8(D_80123FC4, 0x17) < 0x10U)
+    INIT_U32(record_18_4, 0x18) = (s32) ((INIT_U32(record_18_4, 0x18) & 0xFFF0FFFF) | ((nibble_4 & 0xF) << 0x10));
+    record_18_5 = INIT_PTR(D_80123FC4, 0);
+    nibble_5 = 0xF;
+    if ((u8)INIT_U8(D_80123FC4, 0x17) < 0x10U)
     {
-        var_v1_6 = INIT_U8(D_80123FC4, 0x17);
+        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
+        nibble_5 = staged_nibbles[5].value;
     }
-    INIT_U32(temp_a0_8, 0x18) = (s32) ((INIT_U32(temp_a0_8, 0x18) & 0xFF0FFFFF) | ((var_v1_6 & 0xF) << 0x14));
-    temp_a0_9 = INIT_PTR(D_80123FC4, 0);
-    var_v1_7 = 0xF;
-    if ((u8) INIT_U8(D_80123FC4, 0x19) < 0x10U)
+    INIT_U32(record_18_5, 0x18) = (s32) ((INIT_U32(record_18_5, 0x18) & 0xFF0FFFFF) | ((nibble_5 & 0xF) << 0x14));
+    record_18_6 = INIT_PTR(D_80123FC4, 0);
+    nibble_6 = 0xF;
+    if ((u8)INIT_U8(D_80123FC4, 0x19) < 0x10U)
     {
-        var_v1_7 = INIT_U8(D_80123FC4, 0x19);
+        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
+        nibble_6 = staged_nibbles[6].value;
     }
-    INIT_U32(temp_a0_9, 0x18) = (s32) ((INIT_U32(temp_a0_9, 0x18) & 0xF0FFFFFF) | ((var_v1_7 & 0xF) << 0x18));
-    temp_a0_10 = INIT_PTR(D_80123FC4, 0);
-    var_v1_8 = 0xF;
-    if ((u8) INIT_U8(D_80123FC4, 0x1B) < 0x10U)
+    INIT_U32(record_18_6, 0x18) = (s32) ((INIT_U32(record_18_6, 0x18) & 0xF0FFFFFF) | ((nibble_6 & 0xF) << 0x18));
+    record_18_7 = INIT_PTR(D_80123FC4, 0);
+    nibble_7 = 0xF;
+    if ((u8)INIT_U8(D_80123FC4, 0x1B) < 0x10U)
     {
-        var_v1_8 = INIT_U8(D_80123FC4, 0x1B);
+        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
+        nibble_7 = staged_nibbles[7].value;
     }
-    INIT_U32(temp_a0_10, 0x18) = (s32) ((INIT_U32(temp_a0_10, 0x18) & 0x0FFFFFFF) | (var_v1_8 << 0x1C));
-    temp_a0_11 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a0_11, 0x1C) = (s32) ((INIT_U32(temp_a0_11, 0x1C) & ~0xF) | (INIT_U8(D_80123FC4, 0x20) & 0xF));
-    temp_a0_12 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a0_12, 0x1C) = (s32) ((INIT_U32(temp_a0_12, 0x1C) & ~0xF0) | (((u32) INIT_U32(D_80123FC4, 0x20) >> 4) & 0xF0));
-    temp_a0_13 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a0_13, 0x1C) = (s32) ((INIT_U32(temp_a0_13, 0x1C) & ~0xF00) | ((INIT_U16(D_80123FC4, 0x22) & 0xF) << 8));
-    temp_a0_14 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a0_14, 0x1C) = (s32) ((INIT_U32(temp_a0_14, 0x1C) & 0xFFFF0FFF) | ((INIT_U8(D_80123FC4, 0x23) & 0xF) << 0xC));
-    temp_a0_15 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a0_15, 0x1C) = (s32) ((INIT_U32(temp_a0_15, 0x1C) & 0xFFF0FFFF) | ((INIT_U8(D_80123FC4, 0x24) & 0xF) << 0x10));
-    temp_a0_16 = INIT_PTR(D_80123FC4, 0);
-    var_a2 = 0;
-    INIT_U32(temp_a0_16, 0x1C) = (s32) ((INIT_U32(temp_a0_16, 0x1C) & 0xFF0FFFFF) | ((((u32) INIT_U32(D_80123FC4, 0x24) >> 8) & 0xF) << 0x14));
-    temp_a0_17 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a0_17, 0x1C) = (s32) ((INIT_U32(temp_a0_17, 0x1C) & 0xF0FFFFFF) | ((INIT_U16(D_80123FC4, 0x26) & 0xF) << 0x18));
-    temp_a0_18 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(temp_a0_18, 0x1C) = (s32) ((INIT_U32(temp_a0_18, 0x1C) & 0x0FFFFFFF) | (INIT_U8(D_80123FC4, 0x27) << 0x1C));
+    INIT_U32(record_18_7, 0x18) = (s32) ((INIT_U32(record_18_7, 0x18) & 0x0FFFFFFF) | (nibble_7 << 0x1C));
+    record_1c_0 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_1c_0, 0x1C) = (s32) ((INIT_U32(record_1c_0, 0x1C) & ~0xF) | (INIT_U8(D_80123FC4, 0x20) & 0xF));
+    record_1c_1 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_1c_1, 0x1C) = (s32) ((INIT_U32(record_1c_1, 0x1C) & ~0xF0) | (((u32) INIT_U32(D_80123FC4, 0x20) >> 4) & 0xF0));
+    record_1c_2 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_1c_2, 0x1C) = (s32) ((INIT_U32(record_1c_2, 0x1C) & ~0xF00) | ((INIT_U16(D_80123FC4, 0x22) & 0xF) << 8));
+    record_1c_3 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_1c_3, 0x1C) = (s32) ((INIT_U32(record_1c_3, 0x1C) & 0xFFFF0FFF) | ((INIT_U8(D_80123FC4, 0x23) & 0xF) << 0xC));
+    record_1c_4 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_1c_4, 0x1C) = (s32) ((INIT_U32(record_1c_4, 0x1C) & 0xFFF0FFFF) | ((INIT_U8(D_80123FC4, 0x24) & 0xF) << 0x10));
+    record_1c_5 = INIT_PTR(D_80123FC4, 0);
+    copy_index = 0;
+    INIT_U32(record_1c_5, 0x1C) = (s32) ((INIT_U32(record_1c_5, 0x1C) & 0xFF0FFFFF) | ((((u32) INIT_U32(D_80123FC4, 0x24) >> 8) & 0xF) << 0x14));
+    record_1c_6 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_1c_6, 0x1C) = (s32) ((INIT_U32(record_1c_6, 0x1C) & 0xF0FFFFFF) | ((INIT_U16(D_80123FC4, 0x26) & 0xF) << 0x18));
+    record_1c_7 = INIT_PTR(D_80123FC4, 0);
+    INIT_U32(record_1c_7, 0x1C) = (s32) ((INIT_U32(record_1c_7, 0x1C) & 0x0FFFFFFF) | (INIT_U8(D_80123FC4, 0x27) << 0x1C));
     do
     {
-        temp_v0 = INIT_U8(D_80123FC4 + var_a2, 0x2A);
-        temp_v1 = INIT_PTR(D_80123FC4, 0) + var_a2;
-        var_a2 += 1;
-        INIT_U8(temp_v1, 0x20) = temp_v0;
-    } while (var_a2 < 3);
+        copy_value = INIT_U8((u8 *)((s32)copy_index + (s32)D_80123FC4), 0x2A);
+        copy_destination = INIT_PTR(D_80123FC4, 0) + copy_index;
+        copy_index += 1;
+        INIT_U8(copy_destination, 0x20) = copy_value;
+    } while (copy_index < 3);
     INIT_U8(INIT_PTR(D_80123FC4, 0), 0x23) = (u8) INIT_U8(D_80123FC4, 0x29);
     INIT_U32(INIT_PTR(D_80123FC4, 0), 0x34) = 0;
 }
