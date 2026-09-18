@@ -48,12 +48,12 @@ segments:
       - [0x65, .rodata, func_80141250]
       - [0x8D, rodatabin, D_8014008C]
       - [0x91, rodatabin, D_80140090]
-      - [0x95, .rodata, func_801447DC]
-      - [0xAD, .rodata, func_80144A24]
+      - [0x95, rodatabin, jtbl_80140094] # off-alignment switch table; func_801447DC uses extern jtbl goto-trick
+      - [0xAD, rodatabin, jtbl_801400AC] # off-alignment switch table; func_80144A24 uses extern jtbl goto-trick
       - [0xC5, rodatabin, D_801400C4]
       - [0xCD, .rodata, func_80145050]
       - [0x189, rodatabin, rodata_padding_80140188]
-      - [0x18D, .rodata, carda_choice_init]
+      - [0x18D, rodatabin, jtbl_8014018C] # off-alignment switch table; carda_choice_init (func_8014697C) uses extern jtbl goto-trick
       - [0x1A5, .rodata, carda_choice_cancel]
       - [0x1B9, rodatabin, D_801401B8]
       - [0x1C1, rodatabin, D_801401C0]
