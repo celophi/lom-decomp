@@ -2357,11 +2357,16 @@ typedef union FieldCollisionRasterSpanFlags {
  *       functions read as a word, so it is taken by cast rather than by
  *       resplitting a field they depend on.
  *
- * @note UNMATCHED with gcc280_g4_noexpanddiv. The target has 874
- *       instructions; this source has 875. The 0x60-byte frame and stack
- *       slots match. Register and instruction differences remain.
- *       See working/func_8005E3B0/status.md for prior matching evidence.
- * @see decomp.me (99.776886%, 858/874 exact) TODO
+ * @note UNMATCHED with gcc280_g4_noexpanddiv. Instruction count now matches
+ *       the target (874) with the 0x60-byte frame and all stack slots. The
+ *       remaining delta is a pure register permutation (ALLOC-ORDER): the
+ *       closing-edge delta @c dy allocates to @c t0 here but @c a0 in the
+ *       target, cascading register renames through the vertical-major kernel.
+ *       Using @c dy directly in the closing loop (instead of a @c raster_dy
+ *       snapshot copy) removed the prior extra instruction; the a0/t0
+ *       allocation tie is unresolved. See working/func_8005E3B0/status.md and
+ *       docs/decompilation/func_8005E3B0-matching.md for matching evidence.
+ * @see decomp.me (99.828380%, 849/874 exact, correct length) TODO
  */
 void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
 {
@@ -2413,7 +2418,6 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
     s16 x;
     s16 sgn;
     s16 main_sgn;
-    s32 raster_dy;
     s16 ystep;
     s16 row;
     s16 err;
@@ -2771,7 +2775,6 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
         }
         else
         {
-            raster_dy = dy;
             err = -(s16)dy;
             for (j = (s16)dy; j != -1; j--)
             {
@@ -2819,7 +2822,7 @@ void func_8005E3B0(FieldCollisionNode* node, u8** alloc)
                 if (err >= 0)
                 {
                     x++;
-                    err -= (s16)raster_dy * 2;
+                    err -= (s16)dy * 2;
                 }
             }
         }
