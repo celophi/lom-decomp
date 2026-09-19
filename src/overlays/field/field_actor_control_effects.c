@@ -916,7 +916,7 @@ void func_80086FB8(u8 *buffer)
  *       footprint-projection arms and the OT-link tail.
  * @see decomp.me WIP
  */
-Prim871A0 *func_800871A0(Rec871A0 *arg0, Prim871A0 *arg1, s32 *arg2, Off871A0 *arg3)
+Prim871A0 *field_render_actor_ground_shadow(Rec871A0 *arg0, Prim871A0 *arg1, s32 *arg2, Off871A0 *arg3)
 {
     extern State871A0 D_80105AE0[];
     extern Res871A0 g_field_resource_entries[];

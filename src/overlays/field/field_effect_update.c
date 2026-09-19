@@ -249,7 +249,7 @@ extern s32 g_field_track_index;
 /**
  * @brief Spawn one field effect record for a part of an actor.
  *
- * Claims the first free slot in D_800FF658 (marked by unk25 == 0xFF), seeds it
+ * Claims the first free slot in g_field_effect_records (marked by unk25 == 0xFF), seeds it
  * from actor->unk0[part_index], derives its orientation through the GTE, and
  * then dispatches on the part's 6-bit placement opcode
  * ((part->unk28 >> 18) & 0x3F) to position it relative to the owner object, the
@@ -258,7 +258,7 @@ extern s32 g_field_track_index;
  *
  * @param actor Actor whose script is spawning the effect.
  * @param part_index Index of the part definition within actor->unk0.
- * @param start First D_800FF658 slot to consider when an opcode has to search
+ * @param start First g_field_effect_records slot to consider when an opcode has to search
  *              for a previously spawned sibling effect; 0 on the outermost call.
  * @return Index of the slot that was filled, or -1 if no slot was free or the
  *         placement opcode rejected the spawn.
@@ -271,7 +271,7 @@ s32 func_8006D79C(FieldSpawnActorView* actor, s32 part_index, s32 start)
      * private to this function so field8/field9 can use the effect-typed
      * views of the same symbols at file scope. */
     extern Struct_D800FDF58 D_800FDF58[];
-    extern Struct_D800FDF58 D_800FF658[];
+    extern Struct_D800FDF58 g_field_effect_records[];
     extern Struct_D80105AE0 D_80105AE0[];
     extern FieldSpawnActorView g_field_actor_slots[];
     s32 half_turn;
@@ -325,7 +325,7 @@ s32 func_8006D79C(FieldSpawnActorView* actor, s32 part_index, s32 start)
 
     i = 0;
     count = 0xFF;
-    source_actor = D_800FF658;
+    source_actor = g_field_effect_records;
     scanA = source_actor;
 find_slot:
     if (scanA->unk25 != count)
@@ -409,7 +409,7 @@ bit23_done:
         val = n;
         scan_ff = 0xFF;
         count = actor->unk3B[g_field_track_index][part_index];
-        scan = D_800FF658;
+        scan = g_field_effect_records;
     scan_slots:
         if (scan->unk25 != scan_ff && scan->unk23 == part->unk46 && scan->unk22 == actor->unk233)
         {
@@ -917,14 +917,14 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
         goto scanA_init;
 
     scanA_copy:
-        rec->unk21 = D_800FF658[nA].unk21;
-        rec->unk27 = D_800FF658[nA].unk27;
-        rec->unk34 = D_800FF658[nA].unk34;
-        rec->unk35 = D_800FF658[nA].unk35;
-        rec->unk29 = D_800FF658[nA].unk29;
-        rec->unk36 = D_800FF658[nA].unk36;
-        rec->unk37 = D_800FF658[nA].unk37;
-        rec->unk38 = D_800FF658[nA].unk38;
+        rec->unk21 = g_field_effect_records[nA].unk21;
+        rec->unk27 = g_field_effect_records[nA].unk27;
+        rec->unk34 = g_field_effect_records[nA].unk34;
+        rec->unk35 = g_field_effect_records[nA].unk35;
+        rec->unk29 = g_field_effect_records[nA].unk29;
+        rec->unk36 = g_field_effect_records[nA].unk36;
+        rec->unk37 = g_field_effect_records[nA].unk37;
+        rec->unk38 = g_field_effect_records[nA].unk38;
         goto scanA_done;
 
     scanA_high:
@@ -935,38 +935,38 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
         {
             do
             {
-                if (D_800FF658[nA].unk25 != 0xFF && D_800FF658[nA].unk23 == subA && D_800FF658[nA].unk22 == actor->unk233 &&
-                    ((actor->unk0[subA].unk14 & 4) || D_800FF658[nA].unk29 == g_field_track_index))
+                if (g_field_effect_records[nA].unk25 != 0xFF && g_field_effect_records[nA].unk23 == subA && g_field_effect_records[nA].unk22 == actor->unk233 &&
+                    ((actor->unk0[subA].unk14 & 4) || g_field_effect_records[nA].unk29 == g_field_track_index))
                 {
-                    rec->unk0 += D_800FF658[nA].unk0;
-                    rec->unk4 += D_800FF658[nA].unk4;
-                    rec->unk8 += D_800FF658[nA].unk8;
-                    rec->flags.word = (rec->flags.word & ~0x1000) | (D_800FF658[nA].flags.word & 0x1000);
+                    rec->unk0 += g_field_effect_records[nA].unk0;
+                    rec->unk4 += g_field_effect_records[nA].unk4;
+                    rec->unk8 += g_field_effect_records[nA].unk8;
+                    rec->flags.word = (rec->flags.word & ~0x1000) | (g_field_effect_records[nA].flags.word & 0x1000);
                     if (part->unk1C & 0x08000000)
                     {
-                        rec->unk10 = ((FieldSpawnSVector*)&D_800FF658[nA].unk10)->unk0;
-                        rec->unk12 = ((FieldSpawnSVector*)&D_800FF658[nA].unk10)->unk2;
-                        rec->unk14 = ((FieldSpawnSVector*)&D_800FF658[nA].unk10)->unk4;
+                        rec->unk10 = ((FieldSpawnSVector*)&g_field_effect_records[nA].unk10)->unk0;
+                        rec->unk12 = ((FieldSpawnSVector*)&g_field_effect_records[nA].unk10)->unk2;
+                        rec->unk14 = ((FieldSpawnSVector*)&g_field_effect_records[nA].unk10)->unk4;
                     }
                     rec->unk30 = nA;
                     if (rec->unk25 == 0xFD)
                     {
-                        rec->unk3B = D_800FF658[nA].unk3B;
-                        rec->unkC = D_800FF658[nA].unkC;
-                        rec->unk25 = D_800FF658[nA].unk25;
-                        rec->unk3A = D_800FF658[nA].unk3A;
-                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)D_800FF658[nA].flags.word >> 19 & 15) << 19);
-                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)D_800FF658[nA].flags.word >> 16) & 3) << 16);
+                        rec->unk3B = g_field_effect_records[nA].unk3B;
+                        rec->unkC = g_field_effect_records[nA].unkC;
+                        rec->unk25 = g_field_effect_records[nA].unk25;
+                        rec->unk3A = g_field_effect_records[nA].unk3A;
+                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)g_field_effect_records[nA].flags.word >> 19 & 15) << 19);
+                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)g_field_effect_records[nA].flags.word >> 16) & 3) << 16);
                         if (rec->unk21 == 0xFF)
                         {
                             goto scanA_copy;
                         }
-                        rec->unk3A = D_800FF658[nA].unk3A;
-                        rec->unk25 = D_800FF658[nA].unk25;
-                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)D_800FF658[nA].flags.word >> 19 & 15) << 19);
-                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)D_800FF658[nA].flags.word >> 16) & 3) << 16);
-                        rec->unk27 = D_800FF658[nA].unk27;
-                        rec->unk21 = D_800FF658[nA].unk21;
+                        rec->unk3A = g_field_effect_records[nA].unk3A;
+                        rec->unk25 = g_field_effect_records[nA].unk25;
+                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)g_field_effect_records[nA].flags.word >> 19 & 15) << 19);
+                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)g_field_effect_records[nA].flags.word >> 16) & 3) << 16);
+                        rec->unk27 = g_field_effect_records[nA].unk27;
+                        rec->unk21 = g_field_effect_records[nA].unk21;
                         res = g_field_resource_entries
                                   [D_800FDF58[g_field_actor_slots[rec->unk22].owner_object_index].unk3B]
                                       .start;
@@ -1294,14 +1294,14 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
         break;
 
     scanB_copy:
-        rec->unk21 = D_800FF658[nB].unk21;
-        rec->unk27 = D_800FF658[nB].unk27;
-        rec->unk34 = D_800FF658[nB].unk34;
-        rec->unk35 = D_800FF658[nB].unk35;
-        rec->unk29 = D_800FF658[nB].unk29;
-        rec->unk36 = D_800FF658[nB].unk36;
-        rec->unk37 = D_800FF658[nB].unk37;
-        rec->unk38 = D_800FF658[nB].unk38;
+        rec->unk21 = g_field_effect_records[nB].unk21;
+        rec->unk27 = g_field_effect_records[nB].unk27;
+        rec->unk34 = g_field_effect_records[nB].unk34;
+        rec->unk35 = g_field_effect_records[nB].unk35;
+        rec->unk29 = g_field_effect_records[nB].unk29;
+        rec->unk36 = g_field_effect_records[nB].unk36;
+        rec->unk37 = g_field_effect_records[nB].unk37;
+        rec->unk38 = g_field_effect_records[nB].unk38;
         goto scanB_done;
 
     case 0x37:
@@ -1318,17 +1318,17 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
         {
             do
             {
-                if (D_800FF658[nB].unk25 != 0xFF && D_800FF658[nB].unk23 == count && D_800FF658[nB].unk22 == actor->unk233 &&
-                    ((actor->unk0[count].unk14 & 4) || D_800FF658[nB].unk29 == g_field_track_index))
+                if (g_field_effect_records[nB].unk25 != 0xFF && g_field_effect_records[nB].unk23 == count && g_field_effect_records[nB].unk22 == actor->unk233 &&
+                    ((actor->unk0[count].unk14 & 4) || g_field_effect_records[nB].unk29 == g_field_track_index))
                 {
-                    rec->unk0 += D_800FF658[nB].unk0;
-                    rec->unk4 += D_800FF658[nB].unk4;
-                    rec->unk8 += D_800FF658[nB].unk8;
+                    rec->unk0 += g_field_effect_records[nB].unk0;
+                    rec->unk4 += g_field_effect_records[nB].unk4;
+                    rec->unk8 += g_field_effect_records[nB].unk8;
                     if ((part->unk34 & 0x08000000) && !(D_800FDF58[actor->owner_object_index].unk21 & 0x80))
                     {
                         rec->unk0 -= part->unk38 << 8;
                     }
-                    else if (((part->unk28 >> 10) & 1) && !(D_800FF658[nB].unk21 & 0x80))
+                    else if (((part->unk28 >> 10) & 1) && !(g_field_effect_records[nB].unk21 & 0x80))
                     {
                         rec->unk0 -= part->unk38 << 8;
                     }
@@ -1338,32 +1338,32 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
                     }
                     rec->unk4 += part->unk3A << 8;
                     rec->unk8 += part->unk3C << 8;
-                    rec->flags.word = (rec->flags.word & ~0x1000) | (D_800FF658[nB].flags.word & 0x1000);
+                    rec->flags.word = (rec->flags.word & ~0x1000) | (g_field_effect_records[nB].flags.word & 0x1000);
                     if (part->unk1C & 0x08000000)
                     {
-                        rec->unk10 = ((FieldSpawnSVector*)&D_800FF658[nB].unk10)->unk0;
-                        rec->unk12 = ((FieldSpawnSVector*)&D_800FF658[nB].unk10)->unk2;
-                        rec->unk14 = ((FieldSpawnSVector*)&D_800FF658[nB].unk10)->unk4;
+                        rec->unk10 = ((FieldSpawnSVector*)&g_field_effect_records[nB].unk10)->unk0;
+                        rec->unk12 = ((FieldSpawnSVector*)&g_field_effect_records[nB].unk10)->unk2;
+                        rec->unk14 = ((FieldSpawnSVector*)&g_field_effect_records[nB].unk10)->unk4;
                     }
                     rec->unk30 = nB;
                     if (rec->unk25 == 0xFD)
                     {
-                        rec->unk3B = D_800FF658[nB].unk3B;
-                        rec->unkC = D_800FF658[nB].unkC;
-                        rec->unk25 = D_800FF658[nB].unk25;
-                        rec->unk3A = D_800FF658[nB].unk3A;
-                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)D_800FF658[nB].flags.word >> 19 & 15) << 19);
-                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)D_800FF658[nB].flags.word >> 16) & 3) << 16);
+                        rec->unk3B = g_field_effect_records[nB].unk3B;
+                        rec->unkC = g_field_effect_records[nB].unkC;
+                        rec->unk25 = g_field_effect_records[nB].unk25;
+                        rec->unk3A = g_field_effect_records[nB].unk3A;
+                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)g_field_effect_records[nB].flags.word >> 19 & 15) << 19);
+                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)g_field_effect_records[nB].flags.word >> 16) & 3) << 16);
                         if (rec->unk21 == 0xFF)
                         {
                             goto scanB_copy;
                         }
-                        rec->unk3A = D_800FF658[nB].unk3A;
-                        rec->unk25 = D_800FF658[nB].unk25;
-                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)D_800FF658[nB].flags.word >> 19 & 15) << 19);
-                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)D_800FF658[nB].flags.word >> 16) & 3) << 16);
-                        rec->unk27 = D_800FF658[nB].unk27;
-                        rec->unk21 = D_800FF658[nB].unk21;
+                        rec->unk3A = g_field_effect_records[nB].unk3A;
+                        rec->unk25 = g_field_effect_records[nB].unk25;
+                        rec->flags.word = (rec->flags.word & 0xFF87FFFF) | (((u32)g_field_effect_records[nB].flags.word >> 19 & 15) << 19);
+                        rec->flags.word = (rec->flags.word & 0xFFFCFFFF) | ((((u32)g_field_effect_records[nB].flags.word >> 16) & 3) << 16);
+                        rec->unk27 = g_field_effect_records[nB].unk27;
+                        rec->unk21 = g_field_effect_records[nB].unk21;
                         res = g_field_resource_entries
                                   [D_800FDF58[g_field_actor_slots[rec->unk22].owner_object_index].unk3B]
                                       .start;
@@ -1809,8 +1809,8 @@ typedef struct
     u8 pad8[0x54 - 8];
 } FieldEffectRotationEntry;
 
-extern FieldMotionRecord D_800FF658[];
-/** @brief Alias of D_800FF658 + 0x10; preserves the original rotation-base relocation. */
+extern FieldMotionRecord g_field_effect_records[];
+/** @brief Alias of g_field_effect_records + 0x10; preserves the original rotation-base relocation. */
 extern FieldEffectRotationEntry D_800FF668[];
 extern u8 D_80104B58[];
 extern u8 D_80105358[];
@@ -1825,7 +1825,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
  * @see decomp.me (80.28%) TODO
  * @note WIP - 80.28% (212/312 rows). Two residues, both investigated at
  *       length without a clean fix:
- *       (1) the D_800FF658[rec->previous_effect_index] "previous record" address is
+ *       (1) the g_field_effect_records[rec->previous_effect_index] "previous record" address is
  *       recomputed from scratch by the target FOUR separate times (once per
  *       field read/write) in straight-line code with no intervening call or
  *       branch; plain C (even with freshly-named index locals each time)
@@ -1860,7 +1860,7 @@ void func_8007100C(FieldActorState *arg0_param)
     s32 out_vec[3];
 
     arg0 = arg0_param;
-    for (rec = D_800FF658; rec != &D_800FF658[256]; rec++)
+    for (rec = g_field_effect_records; rec != &g_field_effect_records[256]; rec++)
     {
         if (rec->actor_index == arg0->actor_index && rec->state != 0xFF)
         {
@@ -1924,20 +1924,20 @@ void func_8007100C(FieldActorState *arg0_param)
                 newslot = func_8006D79C(arg0, part->unknown_0x23 & 0xF, 0);
                 if (newslot != -1)
                 {
-                    newrec = &D_800FF658[newslot];
+                    newrec = &g_field_effect_records[newslot];
                     newrec->x = rec->x;
                     newrec->y = rec->y;
                     newrec->z = rec->z;
-                    pv = &D_800FF658[rec->previous_effect_index];
+                    pv = &g_field_effect_records[rec->previous_effect_index];
                     dx = rec->x - pv->x;
                     sp20 = dx;
-                    pv = &D_800FF658[rec->previous_effect_index];
+                    pv = &g_field_effect_records[rec->previous_effect_index];
                     dy = rec->y - pv->y;
                     sp24 = dy;
-                    pv = &D_800FF658[rec->previous_effect_index];
+                    pv = &g_field_effect_records[rec->previous_effect_index];
                     dz = rec->z - pv->z;
                     sp28 = dz;
-                    pv = &D_800FF658[rec->previous_effect_index];
+                    pv = &g_field_effect_records[rec->previous_effect_index];
                     pv->next_effect_index = newslot;
                     sp28 = 0;
                     sx = (s16) (dx >> 8);
@@ -2055,7 +2055,7 @@ void func_80071500(FieldMotionRecord* rec, FieldActorPartDef* part)
             rec->state = rec->height_or_retired_state;
         }
 
-        pool = D_800FF658;
+        pool = g_field_effect_records;
         for (bit = 0, mask = 1; bit < 4; bit++, mask <<= 1)
         {
             if ((*(u32*)&part->unknown_0x2c >> 0x1C) & mask)
@@ -2197,7 +2197,7 @@ void func_80071500(FieldMotionRecord* rec, FieldActorPartDef* part)
         t = rec->next_effect_index;
         if (t != 0xFF)
         {
-            FieldMotionRecord* records = D_800FF658;
+            FieldMotionRecord* records = g_field_effect_records;
             s32 next_index = rec->next_effect_index;
             records[next_index].previous_effect_index = 0xFF;
         }
@@ -2343,7 +2343,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
     /* Linked segment records update their projected work vector and return early. */
     if (rec->state == 5)
     {
-        func_8007D078(rec, part, rotation, actor);
+        field_build_effect_part_matrix(rec, part, rotation, actor);
         gte_SetRotMatrix(rotation);
         {
             u16 segment_x = rec->heading;
@@ -2541,17 +2541,17 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
             {
                 FieldMotionRecord *effect;
                 FieldMotionRecord *effect_base;
-                effect_base = D_800FF658;
+                effect_base = g_field_effect_records;
                 effect = &effect_base[(u16) rec->reference_index];
                 reference_state = effect->state;
                 if (reference_state != FIELD_EFFECT_RETIRED)
                 {
                     placement_origin->vx = effect->x;
-                    placement_origin->vy = D_800FF658[((u16) rec->reference_index)].y;
-                    placement_origin->vz = D_800FF658[((u16) rec->reference_index)].z;
+                    placement_origin->vy = g_field_effect_records[((u16) rec->reference_index)].y;
+                    placement_origin->vz = g_field_effect_records[((u16) rec->reference_index)].z;
                     if (!(part->orientation_flags & FIELD_EFFECT_ORIENTATION_LOCK))
                     {
-                        RotMatrix_gte((FieldSVector *) &D_800FF658[((u16) rec->reference_index)].rotation_x, rotation);
+                        RotMatrix_gte((FieldSVector *) &g_field_effect_records[((u16) rec->reference_index)].rotation_x, rotation);
                         gte_SetRotMatrix(rotation);
                         gte_ldv0(rotated_vector);
                         gte_rtv0();
@@ -2693,7 +2693,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
             {
                 FieldMotionRecord *effect;
                 FieldMotionRecord *effect_base;
-                effect_base = D_800FF658;
+                effect_base = g_field_effect_records;
                 effect = &effect_base[(u16) rec->reference_index];
                 reference_state = effect->state;
                 if (reference_state == FIELD_EFFECT_RETIRED)
@@ -2702,13 +2702,13 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
                     return;
                 }
                 placement_origin->vx = effect->x;
-                placement_origin->vy = D_800FF658[(u16) rec->reference_index].y;
-                placement_origin->vz = D_800FF658[(u16) rec->reference_index].z;
+                placement_origin->vy = g_field_effect_records[(u16) rec->reference_index].y;
+                placement_origin->vz = g_field_effect_records[(u16) rec->reference_index].z;
                 if ((part->spawn_flags.word & 0x08000000) && !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80))
                 {
                     placement_origin->vx -= part->offset_x << 8;
                 }
-                else if ((((u32) part->placement_flags >> 0xA) & 1) && !(D_800FF658[(u16) rec->reference_index].facing_or_reward_kind & 0x80))
+                else if ((((u32) part->placement_flags >> 0xA) & 1) && !(g_field_effect_records[(u16) rec->reference_index].facing_or_reward_kind & 0x80))
                 {
                     placement_origin->vx -= part->offset_x << 8;
                 }
@@ -3255,7 +3255,7 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
 
 extern FieldActorState g_field_actor_slots[80];
 extern FieldMotionRecord D_800FDF58[];
-extern FieldMotionRecord D_800FF658[];
+extern FieldMotionRecord g_field_effect_records[];
 extern FieldObjectPlacement D_80105AE0[];
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
@@ -3299,7 +3299,7 @@ s32 field_actor_has_live_effects(s32 actor_index)
 
     effect_index = 0;
     retired_state = FIELD_EFFECT_RETIRED;
-    effect = D_800FF658;
+    effect = g_field_effect_records;
     for (; effect_index < FIELD_EFFECT_POOL_COUNT; effect_index++)
     {
         if (effect->state != retired_state && effect->actor_index == actor_index)
@@ -3396,11 +3396,11 @@ saved:
     out->vz = rec->work_z - D_800F22A8;
     return;
 reference_effect:
-    if (D_800FF658[(u16) rec->reference_index].state != FIELD_EFFECT_RETIRED)
+    if (g_field_effect_records[(u16) rec->reference_index].state != FIELD_EFFECT_RETIRED)
     {
-        out->vx = D_800FF658[(u16) rec->reference_index].x;
-        out->vy = D_800FF658[(u16) rec->reference_index].y;
-        out->vz = D_800FF658[(u16) rec->reference_index].z;
+        out->vx = g_field_effect_records[(u16) rec->reference_index].x;
+        out->vy = g_field_effect_records[(u16) rec->reference_index].y;
+        out->vz = g_field_effect_records[(u16) rec->reference_index].z;
         return;
     }
     out->vx = rec->x;
@@ -3454,9 +3454,9 @@ track_stored_xz:
     out->vy = 0;
     return;
 linked_effect:
-    out->vx = D_800FF658[rec->position_data.linked_effect_index].x;
-    out->vy = D_800FF658[rec->position_data.linked_effect_index].y;
-    linked_record = &D_800FF658[rec->position_data.linked_effect_index];
+    out->vx = g_field_effect_records[rec->position_data.linked_effect_index].x;
+    out->vy = g_field_effect_records[rec->position_data.linked_effect_index].y;
+    linked_record = &g_field_effect_records[rec->position_data.linked_effect_index];
     out->vz = linked_record->z;
     return;
 relative_side_offset:
@@ -3534,8 +3534,8 @@ extend_track_xz:
     out->vz = (D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].z * 2) - D_800FDF58[g_field_actor_slots[rec->actor_index].owner_object_index].z;
     return;
 extend_link_xz:
-    out->vx = (D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].x * 2) - D_800FF658[rec->position_data.linked_effect_index].x;
+    out->vx = (D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_effect_records[rec->position_data.linked_effect_index].x;
     out->vy = D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].y;
-    out->vz = (D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].z * 2) - D_800FF658[rec->position_data.linked_effect_index].z;
+    out->vz = (D_800FDF58[g_field_actor_slots[rec->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_effect_records[rec->position_data.linked_effect_index].z;
     return;
 }

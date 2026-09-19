@@ -5,6 +5,7 @@
 #include "common.h"
 #include "field_types.h"
 #include "field_actor_runtime.h"
+#include "field_effect_dispatch.h"
 #include "cd_resources.h"
 #include "sdk/libgpu.h"
 
@@ -389,14 +390,6 @@ typedef struct
     u8 unk23B;
 } FieldActorTrackMaskState;
 
-typedef struct
-{
-    u8 pad[0x40];
-    u32 unk40;
-    u8 pad44[0x40B8 - 0x44];
-    void* unk40B8;
-} FieldRenderContext;
-
 typedef union
 {
     struct
@@ -511,7 +504,7 @@ extern s32 D_800FE754;
 extern s32 D_80122710;
 extern s32 D_80122714;
 extern s32 D_80122B20;
-extern FieldActorObjectRecord D_800FF658[];
+extern FieldActorObjectRecord g_field_effect_records[];
 extern s32 D_80105770;
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
@@ -1650,7 +1643,7 @@ void field_reset_actor_track_mask(FieldActorTrackMaskState* actor)
  */
 void field_prepare_actor_render_commands(s32 render_context, s32 unused)
 {
-    func_80074D7C();
+    field_render_effects((FieldRenderContext *) render_context);
     field_build_actor_render_commands(render_context, unused);
 }
 
@@ -1662,10 +1655,10 @@ void field_prepare_actor_render_commands(s32 render_context, s32 unused)
 void field_build_actor_render_commands(void* render_context)
 {
     u32 packed_color;
-    FieldRenderContext* render_ctx = (FieldRenderContext*)render_context;
+    FieldRenderContext* render_ctx = (FieldRenderContext *) render_context;
     s32 target_index_copy;
-    u32* ordering_table = &render_ctx->unk40;
-    u32* packet = (u32*)render_ctx->unk40B8;
+    u32* ordering_table = &render_ctx->ordering_table;
+    u32* packet = (u32*)render_ctx->packet_cursor;
     FieldActorState* actor = g_field_actor_slots;
     s32 actor_index = 0;
     u32 color_word;
@@ -1872,7 +1865,7 @@ void field_build_actor_render_commands(void* render_context)
         actor++;
     } while (actor_index < 0x50);
     field_apply_global_color_scale();
-    render_ctx->unk40B8 = packet;
+    render_ctx->packet_cursor = packet;
 }
 
 /**
@@ -3124,10 +3117,10 @@ void field_render_actor_objects(FieldRenderContext *render_context)
     s32 i;
 
     record = &D_800FDF58[0];
-    ordering_table = &render_context->unk40;
+    ordering_table = &render_context->ordering_table;
     i = 0;
     actor_state = &D_80105AE0[0];
-    packet_cursor = render_context->unk40B8;
+    packet_cursor = render_context->packet_cursor;
 
     do
     {
@@ -3160,7 +3153,7 @@ void field_render_actor_objects(FieldRenderContext *render_context)
         actor_state++;
     } while (i < 13);
 
-    render_context->unk40B8 = packet_cursor;
+    render_context->packet_cursor = packet_cursor;
 }
 
 /**
@@ -3894,7 +3887,7 @@ void field_reset_effect_pool(void)
     unused_state = 0xFF;
     for (i = 0x102; i >= 0; i--)
     {
-        D_800FF658[i].unk25 = unused_state;
+        g_field_effect_records[i].unk25 = unused_state;
     }
 
     D_80105770 = 0;
@@ -3916,7 +3909,7 @@ void field_clear_actor_effects(FieldActorState *actor)
     owner_index = actor->unk233;
     i = 0;
     unused_state = 0xFF;
-    effects = D_800FF658;
+    effects = g_field_effect_records;
     p = (u8 *)effects + 0x25;
     while (i < 0x103)
     {
