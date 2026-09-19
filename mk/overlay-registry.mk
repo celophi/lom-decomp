@@ -331,12 +331,12 @@ overlay_shop_gcc_272_cdk_g0_srcs := \
 	src/overlays/shop/shop_draw_mode_glyph.c \
 	src/overlays/shop/shop_draw_money_value.c \
 	src/overlays/shop/shop_setup_default_list.c \
-	src/overlays/shop/func_801415F4.c
+	src/overlays/shop/func_801415F4.c \
+	src/overlays/shop/func_801419D4.c \
+	src/overlays/shop/func_80142400.c
 overlay_shop_gcc_272_cdk_g0_nostrength_srcs := \
 	src/overlays/shop/shop_setup_custom_list.c
-overlay_shop_gcc_280_g0_srcs := \
-	src/overlays/shop/unk1_mid_tail.c \
-	src/overlays/shop/unk1_tail_mid.c
+overlay_shop_gcc_280_g0_srcs :=
 
 OVERLAYS += title
 overlay_title_gcc_272_cdk_g0_srcs := \

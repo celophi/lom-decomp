@@ -641,7 +641,6 @@ next_actor:
  */
 s32 func_800978AC(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec2s* second_end)
 {
-    s32 distance_to_start;
     s32 first_start_x_bound, first_end_x_bound;
     s32 first_start_y_bound, first_end_y_bound;
     s32 second_start_x_bound, second_end_x_bound;
@@ -667,6 +666,7 @@ s32 func_800978AC(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec
     s32 first_start_x;
     s32 intersection_x;
     s32 intersection_y;
+    s32 second_end_x_general;
     s32 first_start_y;
     s32 first_end_x;
     s32 first_start_x_a;
@@ -681,9 +681,8 @@ s32 func_800978AC(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec
     s32 second_x_delta_vertical;
     s32 first_dx;
     s32 first_dy;
-    s32 second_y_delta;
     s32 second_y_delta_vertical;
-    s32 second_dy;
+    s32 second_y_delta;
     s32 work_value;
     u32 packed_x_or_distance_sum;
 
@@ -760,26 +759,26 @@ s32 func_800978AC(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec
     }
     second_end_coordinate = second_end->y;
     intersection_x = second_start->y;
-    second_dy = second_end_coordinate - intersection_x;
+    second_y_delta = second_end_coordinate - intersection_x;
     intersection_y = intersection_x;
-    if (second_dy == 0)
+    if (second_y_delta == 0)
     {
         intersection_x = ((s32) ((intersection_y - first_start_y) * first_dx) / first_dy) + first_start_x;
         goto check_bounds;
     }
-    intersection_y = second_end->x;
+    second_end_x_general = second_end->x;
     second_start_x_value_general = second_start->x;
-    second_dx = intersection_y - second_start_x_value_general;
+    second_dx = second_end_x_general - second_start_x_value_general;
     if (second_dx == 0)
     {
         intersection_x = second_start_x_value_general;
         goto calculate_y;
     }
     first_dy_times_second_dx = first_dy * second_dx;
-    first_dx_times_second_dy = first_dx * second_dy;
+    first_dx_times_second_dy = first_dx * second_y_delta;
     if (first_dy_times_second_dx == first_dx_times_second_dy)
     {
-        if ((intersection_x == (((s32) ((second_start_x_value_general - first_start_x) * first_dy) / first_dx) + first_start_y)) && ((second_start_x_value_general >= first_start_x) || (intersection_y >= first_start_x) || (second_start_x_value_general >= first_end_x) || (intersection_y >= first_end_x)))
+        if ((intersection_x == (((s32) ((second_start_x_value_general - first_start_x) * first_dy) / first_dx) + first_start_y)) && ((second_start_x_value_general >= first_start_x) || (second_end_x_general >= first_start_x) || (second_start_x_value_general >= first_end_x) || (second_end_x_general >= first_end_x)))
         {
             second_start_x_collinear = second_start->x;
             first_start_x_collinear = first_start->x;
@@ -793,7 +792,7 @@ s32 func_800978AC(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec
         }
         goto no_intersection;
     }
-    intersection_x = ((s32) ((((intersection_x - ((s32) (second_dy * second_start_x_value_general) / second_dx)) - first_start_y) + ((s32) (first_dy * first_start_x) / first_dx)) * (first_dx * second_dx)) / (s32) (first_dy_times_second_dx - first_dx_times_second_dy));
+    intersection_x = ((s32) ((((intersection_x - ((s32) (second_y_delta * second_start_x_value_general) / second_dx)) - first_start_y) + ((s32) (first_dy * first_start_x) / first_dx)) * (first_dx * second_dx)) / (s32) (first_dy_times_second_dx - first_dx_times_second_dy));
 calculate_y:
     intersection_y = ((s32) ((intersection_x - first_start_x) * first_dy) / first_dx) + first_start_y;
 check_bounds:
@@ -801,22 +800,15 @@ check_bounds:
     first_start_x_bound = first_start->x;
     first_end_x_bound = first_end->x;
     work_value = intersection_x - first_start_x_bound;
-    distance_to_start = work_value;
-    if (work_value < 0)
-    {
-        distance_to_start = -distance_to_start;
-    }
+    second_dx = abs(work_value);
     work_value = intersection_x - first_end_x_bound;
-    if (work_value < 0)
-    {
-        work_value = -work_value;
-    }
-    packed_x_or_distance_sum = distance_to_start + work_value;
+    work_value = abs(work_value);
+    packed_x_or_distance_sum = second_dx + work_value;
     if (packed_x_or_distance_sum != 0)
     {
         work_value *= first_start_x_bound;
-        distance_to_start *= first_end_x_bound;
-        work_value += distance_to_start;
+        second_dx *= first_end_x_bound;
+        work_value += second_dx;
         if ((u32)work_value / packed_x_or_distance_sum != intersection_x)
         {
             goto no_intersection;
@@ -825,22 +817,15 @@ check_bounds:
     first_start_y_bound = first_start->y;
     first_end_y_bound = first_end->y;
     work_value = intersection_y - first_start_y_bound;
-    distance_to_start = work_value;
-    if (work_value < 0)
-    {
-        distance_to_start = -distance_to_start;
-    }
+    second_dx = abs(work_value);
     work_value = intersection_y - first_end_y_bound;
-    if (work_value < 0)
-    {
-        work_value = -work_value;
-    }
-    packed_x_or_distance_sum = distance_to_start + work_value;
+    work_value = abs(work_value);
+    packed_x_or_distance_sum = second_dx + work_value;
     if (packed_x_or_distance_sum != 0)
     {
         work_value *= first_start_y_bound;
-        distance_to_start *= first_end_y_bound;
-        work_value += distance_to_start;
+        second_dx *= first_end_y_bound;
+        work_value += second_dx;
         if ((u32)work_value / packed_x_or_distance_sum != intersection_y)
         {
             goto no_intersection;
@@ -849,22 +834,15 @@ check_bounds:
     second_start_x_bound = second_start->x;
     second_end_x_bound = second_end->x;
     work_value = intersection_x - second_start_x_bound;
-    distance_to_start = work_value;
-    if (work_value < 0)
-    {
-        distance_to_start = -distance_to_start;
-    }
+    second_dx = abs(work_value);
     work_value = intersection_x - second_end_x_bound;
-    if (work_value < 0)
-    {
-        work_value = -work_value;
-    }
-    packed_x_or_distance_sum = distance_to_start + work_value;
+    work_value = abs(work_value);
+    packed_x_or_distance_sum = second_dx + work_value;
     if (packed_x_or_distance_sum != 0)
     {
         work_value *= second_start_x_bound;
-        distance_to_start *= second_end_x_bound;
-        work_value += distance_to_start;
+        second_dx *= second_end_x_bound;
+        work_value += second_dx;
         if ((u32)work_value / packed_x_or_distance_sum != intersection_x)
         {
             goto no_intersection;
@@ -873,22 +851,15 @@ check_bounds:
     second_start_y_bound = second_start->y;
     second_end_y_bound = second_end->y;
     work_value = intersection_y - second_start_y_bound;
-    distance_to_start = work_value;
-    if (work_value < 0)
-    {
-        distance_to_start = -distance_to_start;
-    }
+    second_dx = abs(work_value);
     work_value = intersection_y - second_end_y_bound;
-    if (work_value < 0)
-    {
-        work_value = -work_value;
-    }
-    packed_x_or_distance_sum = distance_to_start + work_value;
+    work_value = abs(work_value);
+    packed_x_or_distance_sum = second_dx + work_value;
     if (packed_x_or_distance_sum != 0)
     {
         work_value *= second_start_y_bound;
-        distance_to_start *= second_end_y_bound;
-        work_value += distance_to_start;
+        second_dx *= second_end_y_bound;
+        work_value += second_dx;
         if ((u32)work_value / packed_x_or_distance_sum != intersection_y)
         {
             goto no_intersection;
