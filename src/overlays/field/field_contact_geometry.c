@@ -1636,7 +1636,7 @@ void func_80098C7C(Struct_D800FDF58 *arg0, s32 arg1)
     arg0->unk27 = 0;
     arg0->unk24 = 1;
     res = g_field_resource_entries[arg0->unk3B].start;
-    func_8006C3FC(arg0, res);
+    field_restart_actor_animation(arg0, res);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1721,7 +1721,7 @@ void func_80098DD4(Entry *entry)
             }
             entry->unk27 = 0;
             entry->unk24 = 1;
-            func_8006C3FC(entry, g_field_resource_entries[entry->unk3B].start);
+            field_restart_actor_animation(entry, g_field_resource_entries[entry->unk3B].start);
         }
     }
 }

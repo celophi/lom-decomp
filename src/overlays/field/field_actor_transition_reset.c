@@ -93,7 +93,7 @@ void func_800966F0(s32 mode, void *actor_data)
         u8 pad38[0x10];
     } FieldTransitionPart;
 
-    extern void func_8006C3FC(FieldTransitionEntry *);
+    extern void field_restart_actor_animation(FieldTransitionEntry *);
     extern void func_80083BC0(FieldTransitionEntry *, void *, s32);
     extern void func_80086494(s32);
     extern void func_8008A0B0(FieldTransitionEntry *, s32, s32);
@@ -205,7 +205,7 @@ void func_800966F0(s32 mode, void *actor_data)
     animation %= 5;
     animation_flags += animation;
     D_800FDF58.unk21 = animation_flags;
-    func_8006C3FC(&D_800FDF58);
+    field_restart_actor_animation(&D_800FDF58);
 
     index = 1;
     if (D_8010D020 == 0)
@@ -390,7 +390,7 @@ void func_80096B54(void)
     extern s32 D_800F2278, D_800F227C, D_800F2280;
     s32 func_8005B218(void);
     void func_800A3B78(s32);
-    void func_8006D21C(FieldCleanupActor *);
+    void field_clear_actor_effects(FieldCleanupActor *);
     void field_set_global_color_scale(s32, s32, s32);
 
     u8 *render = (u8 *)0x801ED600;
@@ -433,7 +433,7 @@ void func_80096B54(void)
                     actor->unk222 = 0;
                     records[index].unk2a = 0;
                     func_800A3B78(actor->slot);
-                    func_8006D21C(actor);
+                    field_clear_actor_effects(actor);
                     owner = actor->slot;
                     actor->active = 0;
                     actor->mask = 0;
@@ -535,7 +535,7 @@ void func_80096E60(void)
     s32 func_8005B218();                          /* extern */
     void func_80067AA4(void);                     /* extern */
     void func_80068028(void);                     /* extern */
-    void func_8006C3FC(u8 *);                     /* extern */
+    void field_restart_actor_animation(u8 *);                     /* extern */
     void func_80084240(void);                     /* extern */
     s32 func_80096A00();                          /* extern */
     s32 func_80096A90();                          /* extern */
@@ -616,7 +616,7 @@ void func_80096E60(void)
                 entry->unk27 = 0;
                 entry->flags = (s32)(entry->flags & ~0x800);
                 actor->flags174 = (s32)(actor->flags174 & ~0x1800);
-                func_8006C3FC((u8 *)entry);
+                field_restart_actor_animation((u8 *)entry);
             }
             actor++;
             slot_cursor += 0x268;

@@ -360,8 +360,8 @@ extern s32 D_8010D020;
 void func_8008BC5C();
 void func_8008C620();
 
-extern void func_8006C3FC();
-extern void func_8006C5FC();
+extern void field_restart_actor_animation();
+extern void field_restart_actor_animation_reverse();
 extern void func_800952DC();
 extern void field_stop_actor_animations_for_object();
 extern void func_800A2DD8();
@@ -438,7 +438,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
                 actor->unknown27 = 0;
                 actor->active = 1;
                 actor->state &= 0x80;
-                func_8006C3FC(actor);
+                field_restart_actor_animation(actor);
                 actor->value = 0x82;
                 return;
             }
@@ -464,7 +464,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
                 actor->active = 1;
                 actor->unknown27 = 0;
                 D_80105AE0[actor->slot].unk174 &= ~0x1800;
-                func_8006C3FC(actor);
+                field_restart_actor_animation(actor);
                 actor->y += actor->height << 8;
                 if (actor->y > 0)
                 {
@@ -598,7 +598,7 @@ void func_8008BE38(fBE38_FieldActorRecord *record, s32 clear_slot)
     animation = &animation_base[record->unk3A];
     animation_mask = -0x1801;
     animation->unk174 &= animation_mask;
-    func_8006C3FC(record);
+    field_restart_actor_animation(record);
 
     field_stop_actor_animations_for_object(record, 1);
     func_80083BC0(record, &D_800FB3C8[record->unk3A * 0x244], 1);
@@ -627,7 +627,7 @@ void func_8008BF88(f364_ArgStruct *arg0, s8 arg1, s32 arg2, s8 arg3)
     arg0->unk21 = (arg0->unk21 & 0x80) + arg2;
     temp_v0 = &base[arg0->unk3A];
     temp_v0->unk174 = temp_v0->unk174 & ~0x1800;
-    func_8006C3FC(arg0);
+    field_restart_actor_animation(arg0);
     arg0->unk20 = arg3;
 }
 
@@ -672,7 +672,7 @@ s32 func_8008C104(fC104_Actor *actor)
     records = D_80105AE0;
     record = &records[actor->selector];
     record->flags174 &= ~0x1800;
-    func_8006C3FC(actor);
+    field_restart_actor_animation(actor);
     field_stop_actor_animations_for_object(actor, 1);
     func_80083BC0(actor, D_800FB3C8 + actor->selector * 0x244, 1);
     actor->flags |= 0x800;
@@ -900,5 +900,5 @@ void func_8008C620(fC620_FieldActorState *rec)
     rec->unk21 = (rec->unk21 & 0x80) + 0x13;
     rec->unk24 = 1;
     D_80105AE0[rec->unk3A].unk174 &= ~0x1800;
-    func_8006C5FC(rec);
+    field_restart_actor_animation_reverse(rec);
 }

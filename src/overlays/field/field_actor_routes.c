@@ -755,7 +755,7 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     extern Appearance D_800FE3A0[];
     extern u8 D_800EB20C[], D_8010CFE0[], D_8010AE84;
     void func_8008EF0C(Actor *);
-    void func_8006C3FC(Actor *);
+    void field_restart_actor_animation(Actor *);
     s32 func_8005B6AC(Mover *);
 
     VECTOR square;
@@ -1019,7 +1019,7 @@ apply_collision_state:
             actor->unk21 = animation;
             actor->unk27 = 0;
             actor->unk24 = 1;
-            func_8006C3FC(actor);
+            field_restart_actor_animation(actor);
         }
     }
     else
@@ -1040,7 +1040,7 @@ apply_collision_state:
         restart_animation:
             actor->unk27 = 0;
             actor->unk24 = 1;
-            func_8006C3FC(actor);
+            field_restart_actor_animation(actor);
         }
     }
     if ((dx | dz) != 0)

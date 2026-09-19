@@ -155,8 +155,8 @@ extern s32 g_field_track_index;
 s32 field_evaluate_parameter_track(FieldActorState *actor, s32 track);
 s32 field_evaluate_parameter_track_at_time(FieldActorState *actor, u32 track, u16 time);
 void field_resolve_effect_position(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldVector *out);
-s32 func_8007D078(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldMatrix *mtx, FieldActorState *actor);
-void func_8007D8D8(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
+s32 field_build_effect_part_matrix(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldMatrix *mtx, FieldActorState *actor);
+void field_resolve_effect_part_color(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
 u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s32 *base);
 
 #include "sdk/inline_c.h"
@@ -177,7 +177,7 @@ u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s
  *       and packet-store scheduling. Frame and spill assignments match.
  * @see decomp.me (99.94%) WIP
  */
-u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+u8 *field_render_effect_ribbon(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldActorPartDef *part;
     FieldActorState *state;
@@ -205,7 +205,7 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 
     part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
     state = &g_field_actor_slots[rec->unk22];
-    func_8007D078(rec, part, (FieldMatrix *) 0x1F800058, state);
+    field_build_effect_part_matrix(rec, part, (FieldMatrix *) 0x1F800058, state);
 
     cur = (FieldMatrix *) 0x1F800058;
     uvflags = D_800EC37C[((u16) rec->unk2C) % 12];
@@ -256,7 +256,7 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         *(s16 *) (primbuf + 0xA) = (s16) (0x70 + (raw_d4 >> 8) + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512);
     }
 
-    func_8007D8D8(state, rec, part, primbuf + 4);
+    field_resolve_effect_part_color(state, rec, part, primbuf + 4);
     *(s8 *) (primbuf + 3) = 9;
     *(s8 *) (primbuf + 7) = 0x2C;
     ((rec->unk1C & 0x800000) ? (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) | 2) : (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) & ~2));
@@ -514,7 +514,7 @@ u8 *func_8007C3F8(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
  * @return Unspecified; the assembly leaves v0 undefined and no caller uses it.
  * @see decomp.me (100%)
  */
-s32 func_8007D078(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldMatrix *mtx, FieldActorState *actor)
+s32 field_build_effect_part_matrix(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldMatrix *mtx, FieldActorState *actor)
 {
     FieldSVector *dir = (FieldSVector *) 0x1F8000C0;
     FieldVector *scale = (FieldVector *) 0x1F8000C8;
@@ -762,7 +762,7 @@ after_track_rotation:
  * @param out Destination for the three colour bytes (r, g, b).
  * @see decomp.me (100%)
  */
-void func_8007D8D8(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out)
+void field_resolve_effect_part_color(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out)
 {
     s32 flags;
     u8 value;
@@ -889,7 +889,7 @@ u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s
  * @param mtx Caller-supplied rotation matrix applied to every corner.
  * @see decomp.me (100%)
  */
-void func_8007DB98(Struct_D800FDF58 *rec, u16 *origin, u8 *packet, s32 width, s32 height, s32 x, s32 y, u8 *item, FieldMatrix *mtx)
+void field_project_effect_sprite_quad(Struct_D800FDF58 *rec, u16 *origin, u8 *packet, s32 width, s32 height, s32 x, s32 y, u8 *item, FieldMatrix *mtx)
 {
     FieldSVector *tmp = (FieldSVector *) 0x1F800100;
     FieldSVector *vec = (FieldSVector *) 0x1F800108;

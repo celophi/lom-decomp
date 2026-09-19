@@ -155,7 +155,7 @@ typedef struct
 } FieldActorState;
 
 extern Struct_D800FDF58 D_800FDF58[];
-extern Struct_D800FDF58 D_800FF658[];
+extern Struct_D800FDF58 g_field_effect_records[];
 extern Struct_D80105AE0 D_80105AE0[];
 extern s32 g_field_track_index;
 extern s32 D_800F22A0;
@@ -170,10 +170,10 @@ extern s32 *D_80105878;
 
 void func_8007E5FC(s16 *out, s32 mirror, u8 *item);
 void func_800801F8(u16 *buf, s32 count, s32 flag);
-void func_8007D8D8(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
+void field_resolve_effect_part_color(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
 void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, s32 part_index);
 s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, MATRIX *mtx, MATRIX *tmp);
-s32 *func_80080274(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *base);
+s32 *field_render_effect_mesh(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *base);
 
 /**
  * @brief Resolve the world-space anchor point for an actor part.
@@ -290,11 +290,11 @@ void func_8007ECEC(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, 
         i = 0;
         do
         {
-            if (D_800FF658[i].unk25 != 0xFF && D_800FF658[i].unk23 == sub && D_800FF658[i].unk22 == actor->unk233 && D_800FF658[i].unk29 == 0)
+            if (g_field_effect_records[i].unk25 != 0xFF && g_field_effect_records[i].unk23 == sub && g_field_effect_records[i].unk22 == actor->unk233 && g_field_effect_records[i].unk29 == 0)
             {
-                out->x = D_800FF658[i].unk0;
-                out->y = D_800FF658[i].unk4;
-                out->z = D_800FF658[i].unk8;
+                out->x = g_field_effect_records[i].unk0;
+                out->y = g_field_effect_records[i].unk4;
+                out->z = g_field_effect_records[i].unk8;
                 return;
             }
             i++;
@@ -445,11 +445,11 @@ void func_8007ECEC(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, 
         i = 0;
         do
         {
-            if (D_800FF658[i].unk25 != 0xFF && D_800FF658[i].unk23 == sub && D_800FF658[i].unk22 == actor->unk233 && D_800FF658[i].unk29 == 0)
+            if (g_field_effect_records[i].unk25 != 0xFF && g_field_effect_records[i].unk23 == sub && g_field_effect_records[i].unk22 == actor->unk233 && g_field_effect_records[i].unk29 == 0)
             {
-                out->x = D_800FF658[i].unk0;
-                out->y = D_800FF658[i].unk4;
-                out->z = D_800FF658[i].unk8;
+                out->x = g_field_effect_records[i].unk0;
+                out->y = g_field_effect_records[i].unk4;
+                out->z = g_field_effect_records[i].unk8;
             }
             i++;
         } while (i < 0x100);

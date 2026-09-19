@@ -982,8 +982,8 @@ void func_800AB214(s32 context_or_delay)
     extern void field_text_reset_scratch(void);
     extern void field_text_reset_windows(void);
     extern void func_80063194(void);
-    extern void func_8006AB38(s32);
-    extern s32 func_8006AD04(s32, s32, s32);
+    extern void field_release_actor_resource_slot(s32);
+    extern s32 field_activate_actor_resource_slot(s32, s32, s32);
     extern void func_80084240(void);
     extern void func_800A39A8(s32, s32, s32, s32);
     extern void func_800A7384(void);
@@ -1113,7 +1113,7 @@ void func_800AB214(s32 context_or_delay)
                 D_800FD818[1].status.bits.active = 0;
                 D_800FD818[1].status.bits.selected = g_pad_ctx->unk858 & 1;
                 D_800FD818[1].unk3 = 0;
-                func_8006AD04(-2, 0, 0);
+                field_activate_actor_resource_slot(-2, 0, 0);
                 func_80084240();
                 D_80122994 = 0;
                 D_8012269C = 0;
@@ -1124,7 +1124,7 @@ void func_800AB214(s32 context_or_delay)
                 D_8012269C = 0;
                 return;
             case 2:
-                func_8006AB38(0);
+                field_release_actor_resource_slot(0);
                 func_80084240();
                 D_80122994 = 0;
                 D_8012269C = 0;

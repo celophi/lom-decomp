@@ -268,9 +268,9 @@ extern PadCtxB80087FC0 *g_pad_ctx;
 long ratan2(long, long);
 extern int abs(int);
 
-void func_8006B240(s32, s32, s32);
-void func_8006B4D0(u8, s32);
-void func_8006B7A0(u8, s32);
+void field_load_resource_entry(s32, s32, s32);
+void field_initialize_actor_record(u8, s32);
+void field_initialize_actor_part(u8, s32);
 void func_8008C7A8(void);
 
 /* ------------------------------------------------------------------ *
@@ -318,14 +318,14 @@ void func_80087680(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
     if (rec != (Rec80087680 *)-1)
     {
         flags = rec->unk1C.h.hi & 3;
-        func_8006B4D0(rec->unk3A, arg1);
+        field_initialize_actor_record(rec->unk3A, arg1);
         rec->unk25 = 0;
         rec->unk0 = arg3 << 8;
         rec->unk1C.w = (rec->unk1C.w & 0xFFFCFFFF) | (flags << 0x10);
         rec->unk4 = arg4 << 8;
         rec->unk8 = arg5 << 8;
         D_80105AE0[rec->unk3A].flags = (D_80105AE0[rec->unk3A].flags & ~0xF) | arg2;
-        func_8006C3FC(rec);
+        field_restart_actor_animation(rec);
     }
 }
 
@@ -484,7 +484,7 @@ s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_
                   s32 y, s32 z, s32 direction, s32 resource_flag)
 {
     extern ActorA9C D_80105AE0[];
-    extern s32 func_8006C3FC(Entry *);
+    extern s32 field_restart_actor_animation(Entry *);
     s32 position[3];
     s32 saved_state;
     Entry *entry;
@@ -503,9 +503,9 @@ s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_
     position[1] = entry->unk4;
     position[2] = entry->unk8;
     saved_state = entry->state.half[0] & 0x1FF;
-    func_8006B240(parameter_a, parameter_b, resource_id);
-    func_8006B4D0(entry->unk3A, resource_id);
-    func_8006B7A0(entry->unk3A, 0);
+    field_load_resource_entry(parameter_a, parameter_b, resource_id);
+    field_initialize_actor_record(entry->unk3A, resource_id);
+    field_initialize_actor_part(entry->unk3A, 0);
     resource_base = g_field_resource_entries;
     resource = &resource_base[resource_id];
     resource->unk10 = (s32)((resource->unk10 & ~1) | (resource_flag & 1));
@@ -529,7 +529,7 @@ s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_
     actor->unk10 = (s32)((actor->unk10 & ~0xF) | group);
     entry->unk21 = (s8)direction;
     entry->state.word = (s32)(((s32)entry->state.word & ~0x1FF) | saved_state);
-    return func_8006C3FC(entry);
+    return field_restart_actor_animation(entry);
 }
 
 /**

@@ -199,7 +199,7 @@ typedef struct
 void func_800C3B50(void);
 void func_800C3A00(s32);
 void func_800C32C8(void);
-void func_8006AB38(s32);
+void field_release_actor_resource_slot(s32);
 
 
 extern s32 g_gosub_result_count;
@@ -381,7 +381,7 @@ s32 func_800C318C(void)
 }
 
 /**
- * @brief Close either the primary (arg0 == 0) or secondary record and notify func_8006AB38.
+ * @brief Close either the primary (arg0 == 0) or secondary record and notify field_release_actor_resource_slot.
  * @param arg0 Zero selects the record at 0x840, nonzero the record at 0xA90.
  */
 void func_800C31BC(s32 arg0)
@@ -411,7 +411,7 @@ void func_800C31BC(s32 arg0)
         *(s32 *)(D_80122B74 + 0xAA8) |= 0x7F;
         func_800BD520(0, 0x2F00, 0xFF);
     }
-    func_8006AB38(arg0);
+    field_release_actor_resource_slot(arg0);
 }
 
 /**

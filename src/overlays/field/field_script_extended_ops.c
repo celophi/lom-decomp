@@ -25,7 +25,7 @@ u8 *func_800C1E40(s32 arg0);
 void func_800B2844(s32 arg0, void *arg1, s32 arg2);
 void func_800B28E0(s32, s32, s32);
 void func_800B286C(s32, s32, s32);
-void func_800681E4(s32 arg0, s32 arg1, s32 arg2);
+void field_begin_gover_transition(s32 arg0, s32 arg1, s32 arg2);
 void akao_cmd_a9(s32 arg0, s32 arg1);
 void func_80089D44(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void field_script_op_00(void);
@@ -34,7 +34,7 @@ extern u8 *D_80122B78;
 extern s32 g_layout_option;
 extern s32 g_layout_sub_mode;
 
-void func_8006B8DC(s32, s32, s32, s32, s32);
+void field_set_all_actor_render_state(s32, s32, s32, s32, s32);
 void func_800C28B8(s32);
 void func_80087A9C(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 void func_800B0710(s32, s32, s32, s32);
@@ -52,7 +52,7 @@ void func_800BCB68(s32 flags, s32 duration, s32 field_id, s32 sub_id)
 }
 
 /**
- * @brief Split bit 7 of arg0 into a flag and forward the rest to func_8006B8DC.
+ * @brief Split bit 7 of arg0 into a flag and forward the rest to field_set_all_actor_render_state.
  * @param arg0 Id with an optional 0x80 flag bit.
  * @param arg1 Forwarded as the first argument.
  * @param arg2 Forwarded as the second argument.
@@ -71,7 +71,7 @@ void func_800BCB88(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     {
         flag = 0;
     }
-    func_8006B8DC(arg1, arg2, arg3, flag, arg0);
+    field_set_all_actor_render_state(arg1, arg2, arg3, flag, arg0);
 }
 
 /**
@@ -286,7 +286,7 @@ void field_script_op_87(s32 selector, s32 actor_id, s32 operand_2, s32 operand_3
 }
 
 /**
- * @brief Opcode 0x88: reset the layout option globals and start the func_800681E4 transition.
+ * @brief Opcode 0x88: reset the layout option globals and start the field_begin_gover_transition transition.
  * @param operand_0 Forwarded unchanged.
  * @param operand_1 0xFF becomes -1.
  * @param operand_2 0xFF becomes -1.
@@ -315,7 +315,7 @@ void field_script_op_88(s32 operand_0, s32 operand_1, s32 operand_2)
 
     g_layout_sub_mode = -1;
 
-    func_800681E4(operand_0, operand_1, operand_2);
+    field_begin_gover_transition(operand_0, operand_1, operand_2);
 }
 
 /**

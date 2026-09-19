@@ -309,10 +309,10 @@ typedef struct FieldA4D0Rect88198
 M2C_UNK field_start_actor_animation();
 s32 func_80060F58();
 void func_8006304C();
-M2C_UNK func_8006B4D0();
-M2C_UNK func_8006C3FC();
-M2C_UNK func_8006C5FC();
-s32 func_8006C7D8();
+M2C_UNK field_initialize_actor_record();
+M2C_UNK field_restart_actor_animation();
+M2C_UNK field_restart_actor_animation_reverse();
+s32 field_get_next_animation_frame_count();
 s32 func_800839F8();
 s32 field_object_has_active_actor_tracks();
 s32 field_count_free_actor_slots();
@@ -556,7 +556,7 @@ void func_80088198(Struct_D800FDF58* arg0)
                 temp_s5 = var_s0->unk25;
                 if (temp_s5 == 0xFF)
                 {
-                    func_8006B4D0(var_s2, 3, temp_a2);
+                    field_initialize_actor_record(var_s2, 3, temp_a2);
                     temp_a1_2 = var_s0->unk1C & ~0x1FF;
                     var_s0->unk0 = arg0->unk0;
                     var_s0->unk4 = arg0->unk4;
@@ -582,7 +582,7 @@ void func_80088198(Struct_D800FDF58* arg0)
                     temp_v1_5 &= ~0x80;
                     temp_v1_5 &= ~1;
                     var_s1->u.unk178 = temp_v1_5;
-                    func_8006C3FC(var_s0, temp_a1_2);
+                    field_restart_actor_animation(var_s0, temp_a1_2);
                     temp_v0 = func_800839F8(var_s2, 0);
                     if (temp_v0 != -1)
                     {
@@ -621,7 +621,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         }
         arg0->unk24 = 1;
         arg0->unk2C += 2;
-        func_8006C3FC(arg0);
+        field_restart_actor_animation(arg0);
         return;
     case 0x83:
     case 0x84:
@@ -646,14 +646,14 @@ void func_80088198(Struct_D800FDF58* arg0)
         if ((D_80105AE0[temp_a0].unk16F == 2) && ((u16)arg0->unk30 != 0) && (temp_a0 < 2U))
         {
             arg0->unk21 = (arg0->unk21 & 0x80) + (u16)((u8)M2C_FIELD(arg0, s16*, 0x30) + 0x1F);
-            if ((func_8006C7D8(arg0) == 0) || ((u16)arg0->unk30 >= 5U))
+            if ((field_get_next_animation_frame_count(arg0) == 0) || ((u16)arg0->unk30 >= 5U))
             {
                 D_80105AE0[arg0->unk3A].pad17C[0x11] = 0;
                 arg0->unk30 = 0;
                 temp_v0_4 = &D_80105AE0[arg0->unk3A];
                 temp_v0_4->unkC &= 0xFFFF7FFF;
                 arg0->unk21 &= 0x80;
-                func_8006C5FC(arg0);
+                field_restart_actor_animation_reverse(arg0);
                 arg0->unk2A = 0x95;
                 arg0->pad20[0] = 0x14;
                 return;
@@ -813,7 +813,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         offset_88 += 3;
         arg0->unk2E = (u16)var_a1;
         call_actor->unk2C = offset_88;
-        func_8006C3FC(call_actor);
+        field_restart_actor_animation(call_actor);
         return;
     case 0x8D:
         arg0->unk2A = (s16)M2C_FIELD(temp_s3, u8*, 0);
@@ -834,7 +834,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         offset_8d += 3;
         arg0->unk2E = (u16)var_a1;
         call_actor->unk2C = offset_8d;
-        func_8006C3FC(call_actor);
+        field_restart_actor_animation(call_actor);
         return;
     case 0x8F:
         func_8008BF88(arg0, M2C_FIELD(temp_s3, u8*, 1), M2C_FIELD(temp_s3, u8*, 2), M2C_FIELD(temp_s3, u8*, 3));
@@ -862,7 +862,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             offset_query = (u16)call_actor->unk2C + 1;
             call_actor->unk2A = temp_a2;
             call_actor->unk2C = offset_query;
-            func_8006C3FC(call_actor);
+            field_restart_actor_animation(call_actor);
             return;
         }
         else
@@ -908,7 +908,7 @@ void func_80088198(Struct_D800FDF58* arg0)
                 queryoff2 += 1;
                 call_actor->unk2A = temp_a2;
                 call_actor->unk2C = queryoff2;
-                func_8006C3FC(call_actor);
+                field_restart_actor_animation(call_actor);
                 return;
             }
             else
@@ -922,7 +922,7 @@ void func_80088198(Struct_D800FDF58* arg0)
                 queryoff3 = (u16)call_actor->unk2C + 1;
                 call_actor->unk2A = (s16)var_a1;
                 call_actor->unk2C = queryoff3;
-                func_8006C3FC(call_actor);
+                field_restart_actor_animation(call_actor);
                 return;
             }
         }
@@ -936,7 +936,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         arg0->unk2E = (u16)M2C_FIELD(temp_s3, u8*, 1);
         arg0->unk2C = (u16)arg0->unk2C + 2;
         arg0->unk24 = 1;
-        func_8006C3FC(arg0);
+        field_restart_actor_animation(arg0);
         return;
     case 0x9C:
     case 0x9D:
@@ -947,7 +947,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         arg0->pad26[0] = M2C_FIELD(temp_s3, u8*, 3);
         arg0->unk2C = (u16)arg0->unk2C + 4;
         arg0->unk24 = 1;
-        func_8006C3FC(arg0);
+        field_restart_actor_animation(arg0);
         return;
     case 0x9E:
         case9e_entries = D_80105880;
@@ -1131,7 +1131,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         actor->unk2C = off;
         actor->unk24 = 1;
         actor->pad20[0] = value;
-        func_8006C3FC(actor);
+        field_restart_actor_animation(actor);
         return;
     }
     case 0xA7:
@@ -1159,7 +1159,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         actor->unk21 = var_a1;
         call_actor = actor;
         call_actor->unk2C = var_v1;
-        func_8006C3FC(call_actor);
+        field_restart_actor_animation(call_actor);
         return;
     }
     case 0x82:
@@ -1221,7 +1221,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             a4_command_flags = M2C_FIELD(temp_s3, u8*, 1);
             arg0->unk24 = temp_a1;
             arg0->unk21 = a4_command_flags | (a4_old_flags & 0x80);
-            func_8006C3FC(arg0);
+            field_restart_actor_animation(arg0);
         }
         arg0->unk2C = (u16)arg0->unk2C + 2;
         return;
@@ -1252,7 +1252,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         actor->unk27 = 0;
         actor->unk24 = 1;
         actor->unk21 = value;
-        func_8006C3FC(actor);
+        field_restart_actor_animation(actor);
         return;
     }
     case 0xB7:
@@ -1272,7 +1272,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         actor->unk27 = 0;
         actor->unk24 = 1;
         actor->pad20[0] = value;
-        func_8006C5FC(actor);
+        field_restart_actor_animation_reverse(actor);
         return;
     }
     case 0xB2:

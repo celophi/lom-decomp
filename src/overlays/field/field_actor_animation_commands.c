@@ -352,7 +352,7 @@ typedef struct
 
 extern Resource g_field_resource_entries[];
 extern s32 ratan2(s32 y, s32 x);
-void func_8006C3FC();
+void field_restart_actor_animation();
 /**
  * @brief Turn the source actor toward the target and reset its movement state.
  * @param source_id Source actor identifier.
@@ -480,7 +480,7 @@ second_check:
     first->unk24 = 1;
     slot = &base[first->unk3A];
     slot->unk174 &= ~0x1800;
-    func_8006C3FC(first);
+    field_restart_actor_animation(first);
     return 0;
 }
 
@@ -516,7 +516,7 @@ typedef struct {
 
 
 
-void func_8006C3FC();
+void field_restart_actor_animation();
 
 s32 func_8008B1C8(s32 arg0, u8 arg1)
 {
@@ -549,7 +549,7 @@ check:
     found->unk24 = 1;
     slot = &base[found->unk3A];
     slot->unk174 &= ~0x1800;
-    func_8006C3FC(found);
+    field_restart_actor_animation(found);
     return 0;
 found_it:
     found = rb;
