@@ -1,6 +1,7 @@
 #include "common.h"
 #include "field_types.h"
 #include "field_effect_types.h"
+#include "field_effect_geometry.h"
 #include "vector.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
@@ -2265,7 +2266,6 @@ s32 func_8009980C(s32 *arg0, s32 arg1, u8 *arg2, s32 arg3)
 void func_80099A48(void* actor, void* part)
 {
     s32 func_8007E754(void*, void*);
-    void func_8007ECEC(void*, void*, void*, s32);
     s32 func_8008A840(s32, s32);
     s32 func_8008A9D8(s32, s32, s32);
     void func_8008BC5C(void*);
@@ -2332,11 +2332,11 @@ void func_80099A48(void* actor, void* part)
 
     sphere_base = 0x1F8000A0;
     attack_radius = func_8007E754(actor, part);
-    func_8007ECEC(actor, part, (void*)0x1F8000A0, 0);
+    field_resolve_actor_part_anchor(actor, part, (void*)0x1F8000A0, 0);
     if ((S32_AT(actor, 0x224) & 0x1E) == 8)
     {
-        func_8007ECEC(actor, part, (void*)0x1F8000B0, 1);
-        func_8007ECEC(actor, part, (void*)0x1F8000C0, 2);
+        field_resolve_actor_part_anchor(actor, part, (void*)0x1F8000B0, 1);
+        field_resolve_actor_part_anchor(actor, part, (void*)0x1F8000C0, 2);
         sphere_count = 3;
     }
     else
