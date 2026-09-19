@@ -192,7 +192,7 @@ typedef struct FieldMotionRecord
     u8 facing_or_reward_kind;
     u8 actor_index;
     u8 part_index;
-    u8 unknown_0x24;
+    u8 animation_active;
     u8 state;
     s8 height_or_retired_state;
     u8 saved_state;
@@ -207,11 +207,11 @@ typedef struct FieldMotionRecord
     u8 unknown_0x34;
     u8 unknown_0x35;
     u8 unknown_0x36;
-    u8 unknown_0x37;
+    u8 vertical_offset;
     u8 unknown_0x38;
     u8 path_group;
     u8 source_object_index;
-    u8 unknown_0x3b;
+    u8 resource_index;
     u8 sprite_height_minus_one;
     u8 previous_effect_index;
     u8 next_effect_index;
