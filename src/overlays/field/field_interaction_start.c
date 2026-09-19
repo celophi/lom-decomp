@@ -445,8 +445,15 @@ void func_800C0490(u8);
 
 /**
  * @brief Install a conditional field action and initialize its event scripts.
- * @note Base translation. Case 3 reads the prior stack slot before replacing
- * it, as the target does; unsupported action kinds also leave that slot unset.
+ * @param arg0 Field action request record (raw byte view; kind is arg0[0] >> 4).
+ * @param arg1 Installation slot/priority; also gates the one-shot func_800B0AF8 reset.
+ * @note WIP: 80.72% match. Control flow is now correct - the eight action kinds
+ * share three tails (mask+store, slot rewrite, unk90 OR) that must be owned by
+ * cases 7, 4 and 4 respectively so the shared blocks land where the target
+ * places them. Case 3 reads the prior stack slot before replacing it, as the
+ * target does. Residual is register-coloring/scheduling around the D_80122B78
+ * base and the spill of the slot pointer, still to be closed before it matches.
+ * @see decomp.me (80.72%) TODO: no scratch link yet
  */
 void func_800B118C(u8 *arg0, s32 arg1)
 {
@@ -496,9 +503,7 @@ void func_800B118C(u8 *arg0, s32 arg1)
             (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & ~0xF);
             (*(s32 *)((u8 *)sp10 + 0x90)) = (s32) (((*(s32 *)((u8 *)sp10 + 0x90)) & ~0x3FF0) | (((*(u16 *)((u8 *)arg0 + 0xC)) * 2) & 0x3FF0));
             sp14 = 0;
-block_10:
-            (*(u16 *)((u8 *)arg0 + 0xC)) = (u16) ((*(u16 *)((u8 *)arg0 + 0xC)) & 7);
-            break;
+            goto block_10;
         case 7:
             (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) | 0x80000000);
             temp_v1_3 = (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400));
@@ -517,7 +522,9 @@ block_10:
             {
                 (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((temp_v0_2 & 0xCFFFFFFF) | (((((u8) (*(u8 *)((u8 *)D_80122B74 + 0x29D4)) >> 4) + 1) & 3) << 0x1C));
             }
-            goto block_10;
+block_10:
+            (*(u16 *)((u8 *)arg0 + 0xC)) = (u16) ((*(u16 *)((u8 *)arg0 + 0xC)) & 7);
+            break;
         case 6:
             (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF);
             temp_v1_5 = (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400));
@@ -532,20 +539,12 @@ block_10:
             (*(s32 *)((u8 *)var_a0 + 0x90)) = temp_v1_6;
             var_v0 = temp_v1_6;
             var_v1 = 0x40000000;
-block_17:
-            (*(s32 *)((u8 *)var_a0 + 0x90)) = (s32) (var_v0 | var_v1);
-            break;
+            goto block_17;
         case 2:
             sp14 = 0;
             var_v0_2 = (s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF;
             var_a0 = (u8 *)D_80122B78 + 0x430;
-block_15:
-            (*(s32 *)((u8 *)arg0 + 0x0)) = var_v0_2;
-            sp10 = var_a0;
-block_16:
-            var_v0 = (*(s32 *)((u8 *)var_a0 + 0x90));
-            var_v1 = 0x80000000;
-            goto block_17;
+            goto block_15;
         case 3:
             sp14 = 0;
             (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF);
@@ -556,7 +555,15 @@ block_16:
             sp14 = 0;
             var_v0_2 = (s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF;
             var_a0 = (u8 *)D_80122B78 + 0x558;
-            goto block_15;
+block_15:
+            (*(s32 *)((u8 *)arg0 + 0x0)) = var_v0_2;
+            sp10 = var_a0;
+block_16:
+            var_v0 = (*(s32 *)((u8 *)var_a0 + 0x90));
+            var_v1 = 0x80000000;
+block_17:
+            (*(s32 *)((u8 *)var_a0 + 0x90)) = (s32) (var_v0 | var_v1);
+            break;
         case 1:
             (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF);
             if ((u8) (*(u8 *)((u8 *)arg0 + 0x1)) < 2U)

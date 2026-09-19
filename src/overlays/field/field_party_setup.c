@@ -228,7 +228,7 @@ s32 func_800B37D4(void)
     s32 var_t6;
     s32 var_v0_2;
     s8 temp_v0_2;
-    s8 var_s7;
+    s32 var_s7;
     s8 var_v0;
     u16 var_a0;
     u32 var_s1;
@@ -306,9 +306,9 @@ s32 func_800B37D4(void)
             var_t1 = 0;
             var_t3 = var_s2;
             var_t6 = 0;
-            var_t5 = var_s2;
             temp_a0_2 = ((u8 *)D_80123FB0) + var_s2;
             *(u8 * *)((u8 *)(temp_a0_2) + 0x38) = func_80087F0C(var_s7);
+            var_t5 = var_s2;
             *(u8 *)((u8 *)(temp_a0_2) + 0x42) = 0x19;
             *(u16 *)((u8 *)(temp_a0_2) + 0x40) = (u16) *(u16 *)((u8 *)((var_s4 + D_80122B74)) + 0x664);
             do
