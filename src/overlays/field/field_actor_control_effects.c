@@ -901,8 +901,7 @@ void func_80086FB8(u8 *buffer)
  * @param ordering_table Depth ordering table with 4096 entries.
  * @param footprint First two footprint corners supplying the horizontal bounds.
  * @return Next free primitive, unchanged if the shadow has collapsed.
- * @note WIP - 97.80% (190/241 exact rows); remaining differences are
- *       primarily register allocation. Primitive setup uses SDK macros.
+ * @see decomp.me (100%)
  */
 POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primitives, s32 *ordering_table, ShadowFootprint *footprint)
 {
@@ -920,7 +919,6 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
     s32 projection_value;
     s32 camera_offset;
     s32 horizontal_offset;
-    s32 left_x;
     s32 left_inset;
     s32 right_inset;
     s32 diameter;
@@ -946,9 +944,9 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
     scratch->y = 0;
     scratch->x = world_x;
     world_z = actor->z;
-    scratch->z = world_z;
-    shadow_height = camera_offset < 0;
-    if (shadow_height)
+    ground_height_fixed = world_z;
+    scratch->z = ground_height_fixed;
+    if (camera_offset < 0)
     {
         camera_offset += 0xFF;
     }
@@ -996,7 +994,7 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
         left_inset = (left_inset - ground_height_fixed) >> 11;
         left_inset += horizontal_offset;
         edge_work = left_inset << 2;
-        left_inset += edge_work;
+        left_inset = edge_work - -left_inset;
         edge_work = screen_x + scale_work;
         if (left_inset < 0)
         {
@@ -1013,7 +1011,7 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
         right_inset -= horizontal_offset;
         scale_work = right_inset << 2;
         horizontal_offset = screen->x;
-        right_inset += scale_work;
+        right_inset = scale_work - -right_inset;
         horizontal_offset += edge_work;
         if (right_inset < 0)
         {
@@ -1024,47 +1022,60 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
     }
     else
     {
-        ground_height_fixed = shadow_height << 8;
-        horizontal_offset = bias_bits >> 26;
+        s32 height_delta;
+        s32 ground_height_fixed_local;
+        s32 horizontal_offset_local;
+        s32 left_inset_local;
+        s32 right_inset_local;
+        s32 scale_work_local;
+
+        ground_height_fixed_local = shadow_height << 8;
+        horizontal_offset_local = bias_bits >> 26;
         edge_work = (u16)footprint->left_x;
-        left_inset = actor->y;
-        edge_work += screen_x;
-        left_inset = (left_inset - ground_height_fixed) >> 11;
-        edge_work -= left_inset;
-        edge_work += horizontal_offset;
+        left_inset_local = actor->y;
+        edge_work = screen_x - -edge_work;
+        left_inset_local = (left_inset_local - ground_height_fixed_local) >> 11;
+        edge_work -= left_inset_local;
+        edge_work += horizontal_offset_local;
         primitives->x0 = edge_work;
         primitives->x2 = edge_work;
 
-        right_inset = screen->x;
-        scale_work = (u16)footprint->right_x;
-        edge_work = actor->y;
-        right_inset += scale_work;
-        edge_work -= ground_height_fixed;
-        edge_work >>= 11;
-        right_inset += edge_work;
-        right_x = right_inset - horizontal_offset;
+        do
+        {
+            right_inset_local = screen->x;
+        } while (0);
+        scale_work_local = (u16)footprint->right_x;
+        do
+        {
+            height_delta = actor->y;
+            right_inset_local += scale_work_local;
+        } while (0);
+        height_delta -= ground_height_fixed_local;
+        height_delta >>= 11;
+        right_inset_local += height_delta;
+        right_x = right_inset_local - horizontal_offset_local;
     }
-    primitives->x1 = right_x;
-    primitives->x3 = right_x;
+    do
+    {
+        primitives->x1 = right_x;
+        primitives->x3 = right_x;
+    } while (0);
 
     /* Reject inverted horizontal bounds or a vertical diameter below two pixels. */
     projection_value = shadow_height << 8;
     diameter = (s16)footprint->left_x;
     left_inset = (s16)footprint->right_x;
-    left_x = primitives->x0;
+    camera_offset = primitives->x0;
     diameter -= left_inset;
     diameter >>= 1;
     left_inset = actor->y;
-    if (diameter < 0)
-    {
-        diameter = -diameter;
-    }
+    diameter = abs(diameter);
     left_inset -= projection_value;
     left_inset >>= 11;
     diameter += left_inset;
     projection_value = shadow_bias >> 2;
     diameter -= projection_value;
-    if (primitives->x1 >= left_x && diameter >= 2)
+    if (primitives->x1 >= camera_offset && diameter >= 2)
     {
         if (shadow_height != 0)
         {
@@ -1091,8 +1102,6 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
         SET_BGR0_PACKED(primitives, GPU_TINT_NEUTRAL);
         setPolyFT4(primitives);
         setSemiTrans(primitives, 1);
-
-        // setUV4 ?
         primitives->u3 = 0x40;
         primitives->u1 = 0x40;
         primitives->v1 = 0x50;
