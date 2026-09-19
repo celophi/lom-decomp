@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_actor_palette.h"
 #include "sdk/memory.h"
 #include "sdk/libgpu.h"
 
@@ -82,8 +83,6 @@ extern s32 D_8010D080;
 extern u8 D_80105798[];
 extern u8 D_8011BF00[];
 extern s16 g_field_texture_slot_flags[];
-extern u8 D_80104B58[];
-extern u8 D_80105358[];
 
 s32 func_8005B368(Query *q);
 void func_800B22F0(s32 value, s32 entry);
@@ -685,7 +684,7 @@ void func_8009AE38(u8 *resource, s32 slot)
                 rect.w = 0x100;
                 rect.h = 1;
             } while (0);
-            palette_base = D_80104B58;
+            palette_base = g_field_actor_clut_buffers;
             palette_dst = palette_base + (original_slot << 10);
 
             slot = block_size - 0xC;
@@ -704,7 +703,7 @@ void func_8009AE38(u8 *resource, s32 slot)
                 rect.w = 0x100;
                 rect.h = 1;
             } while (0);
-            palette_dst = D_80105358;
+            palette_dst = g_field_shared_clut_buffer;
             rect.x = 0;
             if (block_size - 0xC < 0x201)
             {

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_mesh.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
@@ -711,9 +712,6 @@ void func_80084240(void)
     } FieldInitState;
 
     extern FieldInitState D_80105880;
-    extern s32 D_80105790;
-    extern s32 D_80105870;
-    extern s32 D_80105878;
     extern s32 D_8010D034;
 
     void func_8008B724(void);
@@ -730,9 +728,9 @@ void func_80084240(void)
     D_80105880.unk4 = 0;
     func_8009A384();
     func_8009CA08(D_8010D034, 0x20000);
-    D_80105870 = func_8009CA54(D_8010D034, 0x1800, 4);
-    D_80105790 = func_8009CA54(D_8010D034, 0xC00, 4);
-    D_80105878 = func_8009CA54(D_8010D034, 0xC00, 4);
+    g_field_mesh_transformed_normals = func_8009CA54(D_8010D034, 0x1800, 4);
+    g_field_mesh_screen_vertices = func_8009CA54(D_8010D034, 0xC00, 4);
+    g_field_mesh_depth_offsets = func_8009CA54(D_8010D034, 0xC00, 4);
 }
 
 /**
