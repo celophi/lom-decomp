@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_interaction_start.h"
 #include "sdk/libgpu.h"
 #include "sdk/libetc.h"
 #include "sdk/libgte.h"
@@ -995,35 +996,17 @@ void func_8009BE1C(s32 *data)
         u8 red, green, blue;
         u8 tail[0x37];
     } FieldLoadedActorVisual;
-    /** @brief Packed flags, position, and parameters in a 0x30-byte input record. */
-    typedef struct
-    {
-        s32 flags;
-        s32 unknown4;
-        union
-        {
-            u32 word;
-            struct
-            {
-                u16 x, z;
-            } halves;
-        } position;
-        u16 source;
-        u16 id;
-        u16 params[16];
-    } FieldActorLoadEntry;
     extern FieldLoadedActor D_800FE054[];
     extern FieldLoadedActorSlot D_80106194[];
     extern FieldLoadedActorVisual D_800FE3A0[];
     extern s32 D_800FE774;
     extern s32 D_801178B0;
-    extern void func_800B118C(FieldActorLoadEntry *, s32);
     extern void field_initialize_actor_record(s32, s32);
     extern void field_restart_actor_animation(FieldLoadedActor *);
 
     FieldLoadedActor *actor = D_800FE054;
     FieldLoadedActorSlot *slot = D_80106194;
-    FieldActorLoadEntry *entry = (FieldActorLoadEntry *)(data + 1);
+    FieldActionRequest *entry = (FieldActionRequest *)(data + 1);
     s32 active = 0;
     s32 index = active;
     s32 count = *data;
@@ -1038,11 +1021,11 @@ void func_8009BE1C(s32 *data)
         do
         {
             slot->tag &= 0x7FFFFFFF;
-            func_800B118C(entry, index);
-            if (entry->flags < 0)
+            field_install_actor_action(entry, index);
+            if (entry->control.flags < 0)
             {
-                field_initialize_actor_record(active + 3, entry->source + 3);
-                if (((u32)entry->flags >> 30) & 1)
+                field_initialize_actor_record(active + 3, entry->source.actor + 3);
+                if (((u32)entry->control.flags >> 30) & 1)
                 {
                     actor->presence = 0xFE;
                 }
@@ -1050,12 +1033,12 @@ void func_8009BE1C(s32 *data)
                 {
                     actor->presence = 0;
                 }
-                actor->mode.bits.group = (u32)entry->flags >> 28;
+                actor->mode.bits.group = (u32)entry->control.flags >> 28;
                 if ((D_801178B0 & 0x7FFF) == 0x13D)
                 {
                     actor->mode.bits.group = 0;
                 }
-                actor->mode.bits.render = (u32)entry->flags >> 24;
+                actor->mode.bits.render = (u32)entry->control.flags >> 24;
                 actor->x = entry->position.halves.x << 8;
                 actor->z = (entry->position.halves.z & 0x7FF) << 8;
                 actor->y = (entry->position.word >> 30) << 8;
@@ -1079,11 +1062,11 @@ void func_8009BE1C(s32 *data)
                     slot->index = index + 3;
                 } while (0);
                 slot->link = slot_base & 0xFFFFFF;
-                slot->id = entry->id;
-                slot->flags = entry->flags;
+                slot->id = entry->enabled_events;
+                slot->flags = entry->control.flags;
                 do
                 {
-                    slot->params[i] = entry->params[i];
+                    slot->params[i] = entry->scripts[i];
                     i++;
                 } while (i < 16);
                 field_restart_actor_animation(actor);
