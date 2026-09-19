@@ -330,7 +330,8 @@ overlay_shop_gcc_272_cdk_g0_srcs := \
 	src/overlays/shop/shop_draw_indexed_glyph.c \
 	src/overlays/shop/shop_draw_mode_glyph.c \
 	src/overlays/shop/shop_draw_money_value.c \
-	src/overlays/shop/shop_setup_default_list.c
+	src/overlays/shop/shop_setup_default_list.c \
+	src/overlays/shop/func_801415F4.c
 overlay_shop_gcc_272_cdk_g0_nostrength_srcs := \
 	src/overlays/shop/shop_setup_custom_list.c
 overlay_shop_gcc_280_g0_srcs := \
