@@ -2173,6 +2173,7 @@ void func_80071500(FieldMotionRecord* effect, FieldActorPartDef* part)
  * @param record Active effect record.
  * @param part Part definition selecting parameter tracks and placement behavior.
  * @param actor Actor that owns the effect.
+ * @see decomp.me (100%) https://decomp.me/scratch/i1ZHZ
  */
 void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *part, FieldActorState *actor)
 {

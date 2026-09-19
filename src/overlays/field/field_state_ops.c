@@ -1,53 +1,32 @@
-#include "common.h"
+#include "field_state_ops.h"
+#include "field_types.h"
+#include "sdk/rand.h"
 
-/** @brief Record with a counter word at 0x4 and an id at 0x14 (func_800B30B8). */
-typedef struct
+enum
 {
-    char pad0[4];
-    s32 unk4;   /* 0x4 */
-    char pad4[0x14 - 8];
-    s32 unk14;  /* 0x14 */
-} SomeStruct;
+    FIELD_STATUS_PRIMARY_RECORD_COUNT = 3,
+    FIELD_STATUS_RECORD_COUNT = 11,
+    FIELD_STATUS_EFFECT_COUNT = 15,
+    FIELD_STATUS_RESULT_ROW_COUNT = 36,
+    FIELD_STATUS_MAX_DURATION = 240
+};
 
-typedef struct
+enum
 {
-    u32 cap;
-    u32 value;
-} SaturatingCounter;
+    FIELD_STATUS_APPLY_IGNORE_IMMUNITY = 1 << 0,
+    FIELD_STATUS_APPLY_ALLOW_ACTIVE = 1 << 1
+};
 
-typedef struct
+enum
 {
-    u8 pad0[4];
-    u8 unk4;
-} UnkStruct800B313C;
+    FIELD_STATUS_RECORD_ACTIVE = 1 << 0
+};
 
-/** @brief Flag word owned by a field record. */
-typedef struct StateB3160
-{
-    u8 pad0[0xC];
-    u32 flags;
-} StateB3160;
+#define FIELD_STATUS_SLOT_ID_BASE 0x60
+#define FIELD_STATUS_SLOT_ID_COUNT 16
+#define FIELD_STATUS_TIMED_EFFECT_FLAGS_MASK 0xFFFF
 
-/** @brief Field record containing a flag owner and indexed halfword states. */
-typedef struct RecordB3160
-{
-    u8 pad0[0x10];
-    StateB3160 *state;
-} RecordB3160;
-
-/** @brief Sub-record of func_800B2A9C's result; unk48 is kept in 0..0xFF by func_800B3420. */
-typedef struct
-{
-    u8 pad[0x48];
-    u16 unk48;
-} RecordB2A9CSub;
-
-typedef struct
-{
-    u8 pad[0x10];
-    RecordB2A9CSub *unk10;
-} RecordB2A9C;
-
+/** @brief Header preceding the status-record array in the field runtime context. */
 typedef struct
 {
     u8 unk0;
@@ -57,308 +36,269 @@ typedef struct
     u8 unkC[8];
     s32 unk14;
     s32 unk18;
-} StructB3580;
+    u8 pad1C[0x28 - 0x1C];
+} FieldStatusContextHeader;
 
-/** @brief View of the D_80122B74 block: a byte at 0x2E5 and 0xC-byte rows at 0x2F4. */
+#define FIELD_STATUS_RECORDS_OFFSET sizeof(FieldStatusContextHeader)
+
+/** @brief Field configuration values used to generate script results. */
 typedef struct
 {
-    u8 pad[0x2E5];
-    u8 unk2E5;
-    u8 pad2E6[0x2F4 - 0x2E6];
-    u8 unk2F4[1][0xC];
-} StructB74;
+    u8 pad0[0xC04];
+    u8 count_flags;
+    u8 padC05;
+    u8 chance_percent;
+    u8 padC07[0x2A7C - 0xC07];
+    u8 result_rows[FIELD_STATUS_RESULT_ROW_COUNT][4];
+} FieldStateConfig;
 
-#define FIELD_B74 ((StructB74 *)D_80122B74)
+#define FIELD_STATE_CONFIG D_80122B74
 
-s32 func_800B2D34(u8 *arg0, s32 arg1);
-s32 func_8008B288(void *arg0);
-s32 func_80087F44(void *arg0, s32 *out);
-void func_80089D44(u8 arg0);
+s32 func_8008B288(s32 actor_id);
+s32 func_80087F44(s32 actor_id, FieldVector *out);
+s32 func_80089D44();
 void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
-RecordB2A9C *func_800B2A9C(s32 value);
-void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-u32 func_800C9ED4(s32 arg0);
-s32 func_800B37D4(void);
-s32 func_800B3DF4(s32 arg0);
-void func_800B4390(void);
-void func_800C1EC8(s32 arg0, void *arg1, s32 arg2);
-u8 *func_800C1E40(s32 arg0);
-u32 func_800BD414(s32 arg0, s32 arg1);
-s32 func_800C3688(s32 arg0);
-void func_800B3580(void);
-s32 func_800B3670(s32 arg0);
+void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
+u32 func_800C9ED4(s32 actor_id);
+s32 func_8008B500(s32 record_id, s32 signal_id);
 
-extern u8 *D_80122B74;
-extern s32 D_8010D020;
-extern u8 D_800EF8C0[];
-extern u8 D_800F0B48[];
-extern u8 D_800F0AE8[];
-extern StructB3580 D_80123B08;
-extern u8 *D_80123FAC;
-extern StructB3580 *D_80123FB0;
-extern u16 g_music_track_index;
-
-
-
-
-void akao_set_song_params(s32, s32, s32, s32);
+extern FieldStateConfig *D_80122B74;
+extern u8 *D_80123FB0;
+extern u8 D_800F0B28[];
+extern u8 D_800F0B38[];
+extern u8 D_800F0B50[];
 
 /**
- * @brief Finds a field-state record with the requested byte identifier.
- *
- * Searches eleven 0x68-byte records using the identifier at offset 0x2C and
- * returns the corresponding payload at offset 0x28. A failed search issues an
- * AKAO diagnostic command and returns null.
- *
- * @param value Identifier to find.
- * @return Pointer to the matching record payload, or null when absent.
- * @note 100% match. Loading the base before initializing the offset
- *       reproduces the target load/copy allocation.
+ * @brief Find a status record by its identifier.
+ * @param record_id Identifier to find.
+ * @return Matching status record, or null when no record has the identifier.
  */
-RecordB2A9C *func_800B2A9C(s32 value)
+FieldStatusRecord *func_800B2A9C(s32 record_id)
 {
-    s32 offset;
-    s32 index;
-    u8 *record;
-    u8 *base;
+    s32 record_offset;
+    s32 record_index;
+    u8 *scan_base;
+    u8 *context_base;
 
-    index = 0;
-    base = (u8 *)D_80123FB0;
-    offset = 0x28;
-    record = base;
+    record_index = 0;
+    context_base = (u8 *)D_80123FB0;
+    record_offset = FIELD_STATUS_RECORDS_OFFSET;
+    scan_base = context_base;
     do
     {
-        index++;
-        if (value != record[0x2C])
+        record_index++;
+        if (record_id != ((FieldStatusRecord *)(scan_base + FIELD_STATUS_RECORDS_OFFSET))->meta.bytes.id)
         {
-            offset += 0x68;
-            record += 0x68;
+            record_offset += sizeof(FieldStatusRecord);
+            scan_base += sizeof(FieldStatusRecord);
         }
         else
         {
-            return (RecordB2A9C *)(base + offset);
+            return (FieldStatusRecord *)(context_base + record_offset);
         }
-    } while (index < 0xB);
-    akao_set_song_params(0x8001, 0x68, value, -1);
+    } while (record_index < FIELD_STATUS_RECORD_COUNT);
+    akao_set_song_params(0x8001, 0x68, record_id, -1);
     return 0;
 }
 
-
-void *func_800B2B08(void)
+/**
+ * @brief Find the first available secondary status record.
+ * @return First secondary record whose active flag is clear, or null when none is available.
+ */
+FieldStatusRecord *func_800B2B08(void)
 {
-    s32 offset;
-    s32 i;
-    u8 *p;
-    u8 *base;
-    i = 3;
-    base = (u8 *)D_80123FB0;
-    offset = 0x160;
-    p = base + 0x138;
-    do {
-        i++;
-        if ((*(u32 *)(p + 0x2C) >> 8) & 1) {
-            offset += 0x68;
-            p += 0x68;
-        } else {
-            return base + offset;
+    s32 record_offset;
+    s32 record_index;
+    u8 *scan_base;
+    u8 *context_base;
+    record_index = FIELD_STATUS_PRIMARY_RECORD_COUNT;
+    context_base = (u8 *)D_80123FB0;
+    record_offset = FIELD_STATUS_RECORDS_OFFSET + (FIELD_STATUS_PRIMARY_RECORD_COUNT * sizeof(FieldStatusRecord));
+    scan_base = context_base + (FIELD_STATUS_PRIMARY_RECORD_COUNT * sizeof(FieldStatusRecord));
+    do
+    {
+        record_index++;
+        if ((((FieldStatusRecord *)(scan_base + FIELD_STATUS_RECORDS_OFFSET))->meta.packed >> 8) & FIELD_STATUS_RECORD_ACTIVE)
+        {
+            record_offset += sizeof(FieldStatusRecord);
+            scan_base += sizeof(FieldStatusRecord);
         }
-    } while (i < 0xB);
+        else
+        {
+            return (FieldStatusRecord *)(context_base + record_offset);
+        }
+    } while (record_index < FIELD_STATUS_RECORD_COUNT);
     return 0;
 }
-
-
-/** @brief Active-state word and applied-effect flags. */
-typedef struct
-{
-    u32 pad;
-    u32 active;
-    u32 pad8;
-    u32 flags;
-} State;
-/** @brief Actor fields used to validate and scale an effect. */
-typedef struct
-{
-    u8 pad[0x10];
-    State *state;
-    u8 pad14[0x24];
-    u8 immunity;
-    u8 pad39[0x14];
-    volatile u8 slots[3];
-    u16 values[15];
-} Actor;
-extern u8 D_800F0B28[], D_800F0B38[];
-extern s32 rand(void);
 
 /**
  * @brief Apply a permitted effect with a chance check and scaled duration.
  * @param source Actor providing the offensive scale.
  * @param target Actor receiving the effect.
- * @param flags Bit 0 bypasses immunity; bit 1 permits an already active effect.
- * @param type Effect index, accepted when below 15.
- * @param chance Threshold compared against an eight-bit random value.
+ * @param apply_flags Controls immunity checks and whether an active effect may be replaced.
+ * @param effect_index Effect to apply.
+ * @param chance_threshold Threshold compared against an eight-bit random value.
  * @param duration Base duration scaled by the actors and capped at 240.
  */
-void func_800B2B54(Actor *source, Actor *target, s32 flags, s32 type, s32 chance, s32 duration)
+void func_800B2B54(FieldStatusRecord *source, FieldStatusRecord *target, s32 apply_flags, s32 effect_index, s32 chance_threshold, s32 duration)
 {
-    s32 mask, i, attack, defense, value;
-    u8 *table, *scales;
-    Actor *slot;
-    if (type >= 15)
+    s32 effect_mask, slot_index, attack, defense, scaled_duration;
+    u8 *immunity_masks, *stat_pair;
+    FieldStatusRecord *timer_cursor;
+
+    if (effect_index >= FIELD_STATUS_EFFECT_COUNT)
     {
         return;
     }
-    if (target->state->active == 0)
+    if (target->state->current == 0)
     {
         return;
     }
-    if (!(flags & 1))
+    if (!(apply_flags & FIELD_STATUS_APPLY_IGNORE_IMMUNITY))
     {
-        table = D_800F0B28;
-        if (target->immunity & table[type])
+        immunity_masks = D_800F0B28;
+        if (target->immunity_flags & immunity_masks[effect_index])
         {
             return;
         }
-        mask = 0;
-        i = mask;
-        do
+        effect_mask = 0;
+        for (slot_index = 0; slot_index < FIELD_STATUS_SLOT_COUNT; slot_index++)
         {
             do
             {
-                if ((u32)(target->slots[i] - 0x60) < 0x10)
+                if ((u32)(target->status_slots[slot_index] - FIELD_STATUS_SLOT_ID_BASE) < FIELD_STATUS_SLOT_ID_COUNT)
                 {
-                    mask |= table[target->slots[i] - 0x60];
+                    effect_mask |= immunity_masks[target->status_slots[slot_index] - FIELD_STATUS_SLOT_ID_BASE];
                 }
             } while (0);
-            i++;
-        } while (i < 3);
-        if (mask & D_800F0B28[type])
+        }
+        if (effect_mask & D_800F0B28[effect_index])
         {
             return;
         }
     }
-    mask = 1 << type;
-    if (!(flags & 2) && (target->state->flags & mask))
+    effect_mask = 1 << effect_index;
+    if (!(apply_flags & FIELD_STATUS_APPLY_ALLOW_ACTIVE) && (target->state->effect_flags & effect_mask))
     {
         return;
     }
-    if ((rand() & 0xFF) >= chance)
+    if ((rand() & 0xFF) >= chance_threshold)
     {
         return;
     }
-    target->state->flags |= mask;
-    scales = &D_800F0B38[type];
-    attack = func_800B2D34((u8 *)source, *scales >> 4);
-    defense = func_800B2D34((u8 *)target, *scales & 0xF);
-    value = duration * attack / defense;
-    slot = (Actor *)((u8 *)target + type * 2);
-    if (value > 0xF0)
+    target->state->effect_flags |= effect_mask;
+    stat_pair = &D_800F0B38[effect_index];
+    attack = func_800B2D34(source, *stat_pair >> 4);
+    defense = func_800B2D34(target, *stat_pair & 0xF);
+    scaled_duration = duration * attack / defense;
+    timer_cursor = (FieldStatusRecord *)((u8 *)target + effect_index * sizeof(u16));
+    if (scaled_duration > FIELD_STATUS_MAX_DURATION)
     {
-        value = 0xF0;
+        scaled_duration = FIELD_STATUS_MAX_DURATION;
     }
-    slot->values[0] = value;
+    timer_cursor->status_timers[0] = scaled_duration;
 }
 
 /**
- * @see decomp.me (100%)
+ * @brief Read a status stat with a minimum value of one.
+ * @param record Status record to read.
+ * @param stat_index Stat index.
+ * @return Selected stat, or one when the stat is zero or the index is out of range.
  */
-s32 func_800B2D34(u8 *arg0, s32 arg1)
+s32 func_800B2D34(FieldStatusRecord *record, s32 stat_index)
 {
-    u32 result;
+    u32 value;
 
-    if (arg1 < 8)
+    if (stat_index < FIELD_STATUS_STAT_COUNT)
     {
-        arg0 += arg1;
-        if (arg0[0x28] == 0)
+        if (record->stats[stat_index] == 0)
         {
-            result = 1;
+            value = 1;
         }
         else
         {
-            result = arg0[0x28];
+            value = record->stats[stat_index];
         }
-        return result;
+        return value;
     }
 
     return 1;
 }
 
-extern u8 D_800F0B50[];
-extern s32 func_8008B500(s32, s32);
-
 /**
- * @brief Update record values selected by a selector and optionally signal the associated actor.
- * @param record Record containing the values and actor-state pointer used by the operation.
- * @param selector Value or grouped-operation selector.
- * @param scale Scale factor and signal selector used by the selected operation.
- * @param signal Nonzero to emit the associated actor signal when applicable.
- * @return Result produced by the selected operation or signaling helper.
+ * @brief Scale one or more status stats and optionally notify the associated actor.
+ * @param record Status record to update.
+ * @param stat_selector Stat index, all-stats selector, or predefined grouped-stat selector.
+ * @param scale Scale factor centered around eight.
+ * @param emit_signal Nonzero to notify the associated actor when applicable.
+ * @return Result produced by the selected stat operation or actor notification.
  */
-s32 func_800B2D64(u8 *record, u32 selector, u32 scale, s32 signal)
+s32 func_800B2D64(FieldStatusRecord *record, u32 stat_selector, u32 scale, s32 emit_signal)
 {
-    s32 recursive_selector;
-    s32 index;
+    s32 grouped_selector;
+    s32 stat_index;
     u32 scaled_value;
-    u32 maximum_value;
-    u8 minimum_value;
+    u32 current_word;
+    u8 current_byte;
     u32 result;
-    u8 *record_ptr;
+    FieldStatusRecord *stat_cursor;
 
-    if (*(s32 *)(*(u8 **)(record + 0x10) + 4) == 0)
+    if (record->state->current == 0)
     {
         return 0;
     }
-    record_ptr = record + selector;
-    if (selector < 8U)
+    stat_cursor = (FieldStatusRecord *)((u8 *)record + stat_selector);
+    if (stat_selector < FIELD_STATUS_STAT_COUNT)
     {
-        scaled_value = (u32)(record_ptr[0x30] * scale) >> 3;
+        scaled_value = (u32)(stat_cursor->base_stats[0] * scale) >> 3;
         if (scale >= 9U)
         {
-            minimum_value = record_ptr[0x28];
-            result = scaled_value < minimum_value;
+            current_byte = stat_cursor->stats[0];
+            result = scaled_value < current_byte;
             if (result != 0)
             {
-                scaled_value = (u32)minimum_value;
+                scaled_value = (u32)current_byte;
             }
-            record_ptr[0x28] = (u8)scaled_value;
-            if (signal != 0)
+            stat_cursor->stats[0] = (u8)scaled_value;
+            if (emit_signal != 0)
             {
-                (*(u8 **)(record + 0x10))[0x60] = (u8)D_800F0B50[scale - 8];
-                result = (*(u8 **)(record + 0x10))[0x60];
+                record->state->status_signal = (u8)D_800F0B50[scale - 8];
+                result = record->state->status_signal;
                 if (result != 0)
                 {
-                    return func_8008B500(record[4], selector + 0x9E);
+                    return func_8008B500(record->meta.bytes.id, stat_selector + 0x9E);
                 }
             }
             return result;
         }
-        maximum_value = record_ptr[0x28];
-        result = maximum_value < scaled_value;
+        current_word = stat_cursor->stats[0];
+        result = current_word < scaled_value;
         if (result != 0)
         {
-            scaled_value = (u32)maximum_value;
+            scaled_value = (u32)current_word;
         }
-        record_ptr[0x28] = (u8)scaled_value;
-        if (signal != 0)
+        stat_cursor->stats[0] = (u8)scaled_value;
+        if (emit_signal != 0)
         {
-            (*(u8 **)(record + 0x10))[0x60] = (u8)D_800F0B50[8 - scale];
-            result = (*(u8 **)(record + 0x10))[0x60];
+            record->state->status_signal = (u8)D_800F0B50[8 - scale];
+            result = record->state->status_signal;
             if (result != 0)
             {
-                return func_8008B500(record[4], selector + 0xA7);
+                return func_8008B500(record->meta.bytes.id, stat_selector + 0xA7);
             }
         }
         return result;
     }
-    if (selector != 9)
+    if (stat_selector != 9)
     {
-        result = selector < 9U;
+        result = stat_selector < 9U;
         if (result == 0)
         {
-            if (selector == 10)
+            if (stat_selector == 10)
             {
                 goto case_10;
             }
-            if (selector == 11)
+            if (stat_selector == 11)
             {
                 goto case_11;
             }
@@ -367,74 +307,74 @@ s32 func_800B2D64(u8 *record, u32 selector, u32 scale, s32 signal)
         return result;
     }
 
-    index = 0;
+    stat_index = 0;
     do
     {
-        func_800B2D64(record, index, scale, 0);
-        index += 1;
-        result = index < 8;
+        func_800B2D64(record, stat_index, scale, 0);
+        stat_index += 1;
+        result = stat_index < FIELD_STATUS_STAT_COUNT;
     } while (result != 0);
-    if (signal != 0)
+    if (emit_signal != 0)
     {
         if (scale >= 9U)
         {
-            (*(u8 **)(record + 0x10))[0x60] = (u8)D_800F0B50[scale - 8];
-            return func_8008B500(record[4], 0x9D);
+            record->state->status_signal = (u8)D_800F0B50[scale - 8];
+            return func_8008B500(record->meta.bytes.id, 0x9D);
         }
-        (*(u8 **)(record + 0x10))[0x60] = (u8)D_800F0B50[8 - scale];
-        return func_8008B500(record[4], 0xA6);
+        record->state->status_signal = (u8)D_800F0B50[8 - scale];
+        return func_8008B500(record->meta.bytes.id, 0xA6);
     }
     return result;
 
 case_10:
     func_800B2D64(record, 0, scale, 0);
     func_800B2D64(record, 1, scale, 0);
-    record_ptr = record;
-    recursive_selector = 2;
+    stat_cursor = record;
+    grouped_selector = 2;
     goto recursive_tail;
 
 case_11:
     func_800B2D64(record, 3, scale, 0);
     func_800B2D64(record, 5, scale, 0);
-    record_ptr = record;
-    recursive_selector = 6;
+    stat_cursor = record;
+    grouped_selector = 6;
 
 recursive_tail:
-    result = func_800B2D64(record_ptr, recursive_selector, scale, 0);
+    result = func_800B2D64(stat_cursor, grouped_selector, scale, 0);
     return result;
 }
 
 /**
- * @brief Roll a random byte against the record's eighth func_800B2D34 value.
- * @param arg0 Record passed to func_800B2D34; the value read is its byte at 0x2F.
- * @return 1 when the random byte is below the value, else 0.
+ * @brief Roll a random byte against the record's final status stat.
+ * @param record Status record supplying the threshold.
+ * @return 1 when the random byte is below the threshold, otherwise 0.
  */
-s32 func_800B2FF8(u8 *arg0)
+s32 func_800B2FF8(FieldStatusRecord *record)
 {
-    s32 chance;
+    s32 threshold;
 
-    chance = func_800B2D34(arg0, 7);
-    return (u32) (rand() & 0xFF) < (u32) chance;
+    threshold = func_800B2D34(record, FIELD_STATUS_STAT_COUNT - 1);
+    return (u32)(rand() & 0xFF) < (u32)threshold;
 }
 
 /**
- * @brief Compare two objects' X positions, with the result inverted when the second object's func_8008B288 value is in 0x40..0xC0.
- * @param arg0 First object id, resolved through func_80087F44.
- * @param arg1 Second object id; also passed to func_8008B288.
- * @return -1 when the first object is to the left (or to the right with an inverting kind), else 0.
+ * @brief Compare two actors' horizontal positions using the second actor's facing range.
+ * @param first_actor_id First actor to compare.
+ * @param second_actor_id Second actor to compare and query for facing.
+ * @return -1 for the selected side of the second actor, otherwise 0.
  */
-s32 func_800B302C(void *arg0, void *arg1)
+s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
 {
-    s32 kind;
-    s32 a[4];
-    s32 b[4];
+    s32 direction;
+    FieldVector first_position;
+    FieldVector second_position;
 
-    kind = func_8008B288(arg1);
-    func_80087F44(arg0, a);
-    func_80087F44(arg1, b);
-    if (a[0] - b[0] < 0)
+    direction = func_8008B288(second_actor_id);
+    func_80087F44(first_actor_id, &first_position);
+    func_80087F44(second_actor_id, &second_position);
+    if (first_position.vx - second_position.vx < 0)
     {
-        if ((u32)(kind - 0x40) >= 0x81)
+        if ((u32)(direction - 0x40) >= 0x81)
         {
             return 0;
         }
@@ -442,7 +382,7 @@ s32 func_800B302C(void *arg0, void *arg1)
     }
     else
     {
-        if ((u32)(kind - 0x40) >= 0x81)
+        if ((u32)(direction - 0x40) >= 0x81)
         {
             return -1;
         }
@@ -451,193 +391,176 @@ s32 func_800B302C(void *arg0, void *arg1)
 }
 
 /**
- * @brief Subtract from the record's word at 0x4, clamping at zero; a negative amount is reported to the audio driver with the id at 0x14.
- * @param arg0 Record.
- * @param arg1 Amount to subtract.
+ * @brief Subtract from a status value while clamping it at zero.
+ * @param state Status state to update.
+ * @param amount Amount to subtract; negative values are reported to the audio driver instead.
  */
-void func_800B30B8(SomeStruct *arg0, s32 arg1)
+void func_800B30B8(FieldStatusState *state, s32 amount)
 {
-    s32 v0;
+    s32 remaining;
 
-    if (arg1 < 0)
+    if (amount < 0)
     {
-        akao_set_song_params(0x8001, 0x7A, arg0->unk14, arg1);
+        akao_set_song_params(0x8001, 0x7A, state->actor_id, amount);
     }
     else
     {
-        v0 = arg0->unk4 - arg1;
-        if (v0 >= 0)
+        remaining = state->current - amount;
+        if (remaining >= 0)
         {
-            arg0->unk4 = v0;
+            state->current = remaining;
         }
         else
         {
-            arg0->unk4 = 0;
+            state->current = 0;
         }
     }
 }
 
 /**
  * @brief Add to a counter and clamp it to its cap on overflow.
- * @param counter Counter to update.
+ * @param state Status state containing the counter and its maximum.
  * @param delta Amount to add to the counter's value.
  */
-void saturating_counter_add(SaturatingCounter *counter, s32 delta)
+void saturating_counter_add(FieldStatusState *state, s32 delta)
 {
-    u32 cap;
+    u32 maximum;
     u32 sum;
 
-    cap = counter->cap;
-    sum = counter->value + delta;
-    counter->value = sum;
-    if (cap < sum)
+    maximum = state->maximum;
+    sum = state->current + delta;
+    state->current = sum;
+    if (maximum < sum)
     {
-        counter->value = cap;
+        state->current = maximum;
     }
 }
 
 /**
- * @brief Forward a record's byte at 0x4 to func_80089D44.
- * @param arg0 Record.
+ * @brief Forward a status record identifier to the actor-state helper.
+ * @param record Status record whose identifier is forwarded.
  */
-void func_800B313C(UnkStruct800B313C *arg0)
+void func_800B313C(FieldStatusRecord *record)
 {
-    func_80089D44(arg0->unk4);
+    func_80089D44(record->meta.bytes.id);
 }
 
 /**
- * @brief Clears one indexed record state or all twelve states.
- *
- * Indices zero through eleven clear the corresponding low flag bit and the
- * halfword timer at record offset 0x50. Any other index clears all twelve
- * timers and the low sixteen bits of the flag word. func_800B4DF0 ticks the
- * timers and calls this when one expires; func_800B4D1C maps script flags
- * 0x60..0x6B onto indices 0..11.
- *
- * @param record Record whose states are cleared.
- * @param index State index, or an out-of-range value to clear all states.
+ * @brief Clear one timed status effect or all timed status effects.
+ * @param record Status record to update.
+ * @param index Effect index, or an out-of-range value to clear every timed effect.
  */
-void field_clear_record_state(RecordB3160 *record, u32 index)
+void field_clear_record_state(FieldStatusRecord *record, u32 index)
 {
-    s32 count;
-    u8 *cursor;
+    s32 timer_index;
 
-    if (index < 0xC)
+    if (index < FIELD_STATUS_TIMER_COUNT)
     {
-        record->state->flags &= ~(1 << index);
-        *(u16 *)((u8 *)record + (index << 1) + 0x50) = 0;
+        record->state->effect_flags &= ~(1 << index);
+        record->status_timers[index] = 0;
         return;
     }
-    count = 0xB;
-    record->state->flags &= 0xFFFF0000;
-    cursor = (u8 *)record + 0x16;
-    do
+    record->state->effect_flags &= ~FIELD_STATUS_TIMED_EFFECT_FLAGS_MASK;
+    for (timer_index = FIELD_STATUS_TIMER_COUNT - 1; timer_index >= 0; timer_index--)
     {
-        *(u16 *)(cursor + 0x50) = 0;
-        count--;
-        cursor -= 2;
-    } while (count >= 0);
+        record->status_timers[timer_index] = 0;
+    }
 }
 
 /**
- * @brief Write script variable 0xD028 from a percentage roll against the byte at 0xC06, or from the 0xC04 count, the record gauge and a func_800C9ED4 index.
- * @param arg0 Forwarded to func_800C9ED4.
- * @see decomp.me (100%)
+ * @brief Choose and write the field script result derived from chance, actor distance, and status intensity.
+ * @param actor_id Actor used for the distance-weighted selection.
  */
-void func_800B31CC(s32 arg0)
+void func_800B31CC(s32 actor_id)
 {
     u32 chance;
-    u8 pad[0x20]; /* unreferenced; reserves the original's stack slot */
+    u8 scratch[32];
     u32 count;
     u32 index;
 
-    chance = D_80122B74[0xC06];
+    chance = FIELD_STATE_CONFIG->chance_percent;
     if ((u32)(rand() % 100) < chance)
     {
-        func_800BD520(2, 0xD028, 0x64);
+        func_800BD520(2, 0xD028, 100);
     }
     else
     {
-        count = D_80122B74[0xC04] >> 4;
+        count = FIELD_STATE_CONFIG->count_flags >> 4;
         if ((count < 4) || (count >= 8))
         {
             akao_set_song_params(0x74, count, 0, 0);
-            func_800BD520(2, 0xD028, 0x63);
+            func_800BD520(2, 0xD028, 99);
         }
-        index = func_800C9ED4(arg0);
+        index = func_800C9ED4(actor_id);
         if (index >= count)
         {
             index = count - 1;
         }
-        func_800BD520(2, 0xD028, (((func_800B2A9C(2)->unk10->unk48 * count) >> 8) * 6) + index);
+        func_800BD520(2, 0xD028, (((func_800B2A9C(2)->state->status_intensity * count) >> 8) * 6) + index);
     }
 }
 
 /**
- * @brief Write script variables 0xD030, 0xD038 and 0xD040 from a percentage roll against the byte at 0xC06, or from the 4-byte table row at 0x2A7C.
- * @param arg0 Table row, valid below 0x24; other rows write the fixed fallback.
- * @see decomp.me (100%)
+ * @brief Write a three-value field script result from chance or a configured result row.
+ * @param row_index Result-table row; out-of-range rows use the fixed fallback values.
  */
-void func_800B32FC(s32 arg0)
+void func_800B32FC(s32 row_index)
 {
     s32 chance;
-    s32 offset;
 
-    chance = D_80122B74[0xC06];
-    if (((rand() * 100) / 0x8000) < chance)
+    chance = FIELD_STATE_CONFIG->chance_percent;
+    if (((rand() * 100) / (RAND_MAX + 1)) < chance)
     {
-        func_800BD520(2, 0xD030, 0x81);
+        func_800BD520(2, 0xD030, 129);
         func_800BD520(2, 0xD038, 0);
-        func_800BD520(2, 0xD040, 0x64);
+        func_800BD520(2, 0xD040, 100);
     }
-    else if (arg0 < 0x24)
+    else if (row_index < FIELD_STATUS_RESULT_ROW_COUNT)
     {
-        offset = arg0 * 4;
-        func_800BD520(2, 0xD030, *(D_80122B74 + offset + 0x2A7C));
-        func_800BD520(2, 0xD038, *(D_80122B74 + offset + 0x2A7D));
-        func_800BD520(2, 0xD040, *(D_80122B74 + offset + 0x2A7E));
+        func_800BD520(2, 0xD030, FIELD_STATE_CONFIG->result_rows[row_index][0]);
+        func_800BD520(2, 0xD038, FIELD_STATE_CONFIG->result_rows[row_index][1]);
+        func_800BD520(2, 0xD040, FIELD_STATE_CONFIG->result_rows[row_index][2]);
     }
     else
     {
-        func_800BD520(2, 0xD030, 0x81);
+        func_800BD520(2, 0xD030, 129);
         func_800BD520(2, 0xD038, 0);
-        func_800BD520(2, 0xD040, 0x63);
+        func_800BD520(2, 0xD040, 99);
     }
 }
 
 /**
- * @brief Advance the kind-2 record's 8-bit value at 0x48 by arg0 scaled 4x, 3x, 2x or 1x by its current quarter, wrapping to 0.
- * @param arg0 Base increment.
- * @see decomp.me (100%)
+ * @brief Advance status intensity with a multiplier that decreases each quarter.
+ * @param amount Base increment applied to status record 2.
  */
-void func_800B3420(s32 arg0)
+void func_800B3420(s32 amount)
 {
-    RecordB2A9C *rec;
-    RecordB2A9CSub *sub;
+    FieldStatusRecord *record;
+    FieldStatusState *state;
     u32 value;
 
-    rec = func_800B2A9C(2);
-    sub = rec->unk10;
-    value = sub->unk48;
+    record = func_800B2A9C(2);
+    state = record->state;
+    value = state->status_intensity;
 
     switch (value >> 6)
     {
-        case 0:
-            sub->unk48 = value + (arg0 * 4);
-            break;
-        case 1:
-            sub->unk48 = value + (arg0 * 3);
-            break;
-        case 2:
-            sub->unk48 = value + (arg0 * 2);
-            break;
-        case 3:
-            sub->unk48 = value + arg0;
-            break;
+    case 0:
+        state->status_intensity = value + (amount * 4);
+        break;
+    case 1:
+        state->status_intensity = value + (amount * 3);
+        break;
+    case 2:
+        state->status_intensity = value + (amount * 2);
+        break;
+    case 3:
+        state->status_intensity = value + amount;
+        break;
     }
 
-    if (rec->unk10->unk48 >= 0x100)
+    if (record->state->status_intensity >= 256)
     {
-        rec->unk10->unk48 = 0;
+        record->state->status_intensity = 0;
     }
 }
