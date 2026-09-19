@@ -6,6 +6,7 @@
 #include "common.h"
 #include "field_types.h"
 #include "field_effect_types.h"
+#include "field_mesh_render.h"
 #include "field_effect_dispatch.h"
 #include "sdk/libgpu.h"
 #include "sdk/inline_c.h"

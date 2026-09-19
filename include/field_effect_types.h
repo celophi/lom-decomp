@@ -108,7 +108,9 @@ typedef struct FieldActorPartDef
 /** @brief Hit-test selection and packed owner/track synchronization selectors. */
 typedef struct FieldActorAnimationDef
 {
-    u8 pad0[0x14];
+    u8 pad0[0x10];
+    u16 palette_animation;
+    u16 unknown_0x12;
     u8 hit_test_mode;
     u8 hit_test_part;
     u8 pad16;
@@ -129,7 +131,8 @@ typedef struct FieldActorState
     FieldActorAnimationDef *animation;
     u8 pad10[0x14 - 0x10];
     u8 *track_data;
-    u8 pad18[0x24 - 0x18];
+    u8 *mesh_data;
+    u8 pad1C[0x24 - 0x1C];
     u8 is_active;
     u8 part_count;
     u8 hit_reaction; /* reaction selector applied to collected targets */
