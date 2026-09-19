@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "field_mesh.h"
 #include "sdk/libgte.h"
 
 typedef struct
@@ -67,8 +68,6 @@ typedef struct
 
 /** @brief FieldActorPartDef descriptor flags controlling vertex interpolation and offsets. */
 
-extern s16 *D_80105790;
-extern s32 *D_80105878;
 s32 field_evaluate_parameter_track_at_time(FieldActorState *, u32, u16);
 /**
  * @brief Transform an actor part's triangle vertices into screen-coordinate buffers.
@@ -88,8 +87,8 @@ void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorP
     s32 flags; /* GTE status destination retained by the original transform sequence. */
     VECTOR *transformed = (VECTOR *)0x1F800040;
     SVECTOR *work = (SVECTOR *)0x1F800000;
-    s16 *out = D_80105790;
-    s32 *depth = D_80105878;
+    s16 *out = g_field_mesh_screen_vertices;
+    s32 *depth = g_field_mesh_depth_offsets;
     SVECTOR *src = actor->meshes[index].triangles;
     SVECTOR *other;
     s32 count;
@@ -235,7 +234,6 @@ void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorP
 
 /** @brief Animation-time field at offset 0x2C in an actor instance record. */
 
-extern SVECTOR *D_80105870;
 extern s32 field_evaluate_parameter_track_at_time(FieldActorState *actor, u32 track, u16 time);
 
 /**
@@ -257,7 +255,7 @@ void func_800829A0(FieldActorState *actor, Struct_D800FDF58 *record, u32 *part, 
     s32 selected;
     s32 count;
 
-    output = D_80105870;
+    output = g_field_mesh_transformed_normals;
     source = actor->meshes[index].normals;
     if ((*part >> 18) & 1)
     {
@@ -276,7 +274,7 @@ void func_800829A0(FieldActorState *actor, Struct_D800FDF58 *record, u32 *part, 
                 gte_SetRotMatrix(matrix);
                 gte_ldv0(scratch);
                 gte_rtv0();
-                gte_stsv(&D_80105870[count]);
+                gte_stsv(&g_field_mesh_transformed_normals[count]);
                 count--;
                 source++;
                 output++;

@@ -1560,6 +1560,8 @@ src = &D_800FDF58[placement_index]; slot = &D_80105AE0[placement_index];
 }
 
 #include "field_effect_types.h"
+#include "field_actor_palette.h"
+#include "field_mesh_render.h"
 
 
 typedef struct
@@ -1812,8 +1814,6 @@ typedef struct
 extern FieldMotionRecord g_field_effect_records[];
 /** @brief Alias of g_field_effect_records + 0x10; preserves the original rotation-base relocation. */
 extern FieldEffectRotationEntry D_800FF668[];
-extern u8 D_80104B58[];
-extern u8 D_80105358[];
 
 void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part, FieldActorState *actor);
 
@@ -1925,11 +1925,11 @@ void func_8007100C(FieldActorState *arg0_param)
 
     if (arg0->owner_object_index < 2)
     {
-        buf = &D_80104B58[arg0->owner_object_index << 0xA];
+        buf = &g_field_actor_clut_buffers[arg0->owner_object_index << 0xA];
     }
     else
     {
-        buf = D_80105358;
+        buf = g_field_shared_clut_buffer;
     }
     count = 0;
     changed = 0;
@@ -1970,7 +1970,7 @@ void func_8007100C(FieldActorState *arg0_param)
         }
         LoadImage(&rect, (u8 *) buf + 0x200);
     }
-    func_8007FFC8(arg0);
+    field_update_actor_palette_animation(arg0);
     func_8008332C(arg0, arg0->parts, arg0->part_count);
 }
 
