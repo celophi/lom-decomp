@@ -12,6 +12,7 @@
 
 #include "common.h"
 #include "field_types.h"
+#include "field_effect_geometry.h"
 
 
 
@@ -432,11 +433,11 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
     {
         sp74 = 0;
     }
-    func_8007F5D8(rec, item, sp64);
+    field_extract_effect_quad_corners8(rec, item, sp64);
     temp_v1_3 = part->unk34;
     if (temp_v1_3 & 0x100000)
     {
-        func_8007F864(rec, sxy, sp64, mtx, (temp_v1_3 >> 0x14) & 1);
+        field_apply_effect_quad_center_offset(rec, sxy, sp64, mtx, (temp_v1_3 >> 0x14) & 1);
     }
     slot->unk140 = (u16)sp64[0];
     slot->unk142 = (u16)sp64[1];
@@ -820,11 +821,11 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                 {
                 case 0:
                     var_a3 = 0;
-                    func_8007F938(rec, slot, item, var_a3, sxy, dir, gte_out);
+                    field_transform_effect_quad_vertices8(rec, slot, item, var_a3, sxy, dir, gte_out);
 
                     break;
                 case 3:
-                    func_8007F938(rec, slot, item, 4, sxy, dir, gte_out);
+                    field_transform_effect_quad_vertices8(rec, slot, item, 4, sxy, dir, gte_out);
                     break;
                 case 6:
                     temp_v1_19 = slot->unk3C;
@@ -1701,11 +1702,11 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     {
         sp70 = 0;
     }
-    func_8007F7A0(rec, item, sp60);
+    field_extract_effect_quad_corners16(rec, item, sp60);
     temp_v1_3 = part->unk34;
     if (temp_v1_3 & 0x100000)
     {
-        func_8007F864(rec, sxy, sp60, mtx, (temp_v1_3 >> 0x14) & 1);
+        field_apply_effect_quad_center_offset(rec, sxy, sp60, mtx, (temp_v1_3 >> 0x14) & 1);
     }
     slot->unk140 = (u16) sp60[0];
     slot->unk142 = (u16) sp60[1];
@@ -1955,10 +1956,10 @@ block_48:
                     switch (temp_v1_16)
                     {
                     case 0:
-                        func_8007FC74(rec, slot, item, 0, sxy, dir, gte_out);
+                        field_transform_effect_quad_vertices16(rec, slot, item, 0, sxy, dir, gte_out);
                         break;
                     case 3:
-                        func_8007FC74(rec, slot, item, 4, sxy, dir, gte_out);
+                        field_transform_effect_quad_vertices16(rec, slot, item, 4, sxy, dir, gte_out);
                         break;
                     case 1:
                         if (part->unk24 & 0x100000)
