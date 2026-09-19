@@ -495,7 +495,7 @@ void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjec
     if (vertex_index == 0)
     {
         object->bounds_left = (u16)gte_out->vx;
-        object->bounds_top = (u16)gte_out->vy - (s8)effect->unknown_0x37;
+        object->bounds_top = (u16)gte_out->vy - (s8)effect->vertical_offset;
     }
     object->effect_vertices[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
     object->effect_vertices[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
@@ -538,7 +538,7 @@ void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjec
     if (vertex_index == 0)
     {
         object->bounds_right = (u16)gte_out->vx;
-        object->bounds_bottom = (u16)gte_out->vy - (s8)effect->unknown_0x37;
+        object->bounds_bottom = (u16)gte_out->vy - (s8)effect->vertical_offset;
     }
     object->effect_vertices[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
     object->effect_vertices[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
