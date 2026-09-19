@@ -215,7 +215,7 @@ extern s32 D_80122714, D_80122734, D_80122A00;
 extern u8 D_80122738[];
 extern u8 *func_800A88A0(u8 *, u32 *, u8 *, s32, s32, s32, s32);
 extern void func_800A8B90(u8 *, s32, s32);
-extern void func_800AF350(u8 *);
+extern s32 func_800AF350(u8 *);
 /**
  * @brief Format and draw one numeric value using a temporary text buffer.
  * @param cursor Primitive buffer cursor.
@@ -298,33 +298,33 @@ u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, W
 /**
  * @brief Process item selection, cancellation, scrolling, and actor creation.
  * @param arg0 Window state with packed flags, clipping height, and scroll state.
+ * @see decomp.me (100%)
  */
-void func_800AF350(u8 *arg0)
+s32 func_800AF350(u8 *arg0)
 {
     s32 offset[3];
-    s16 temp_a0;
-    s16 temp_v1_2;
-    s32 *var_a0_2;
-    s32 *var_v1;
-    s32 temp_a1;
-    s32 temp_a1_2;
-    s32 temp_a2;
-    s32 temp_a2_2;
-    s32 temp_v0_2;
-    s32 temp_v0_3;
-    s32 temp_v0_4;
-    s32 var_a0;
-    s32 var_a0_3;
-    s32 var_a1;
-    s32 var_s1;
-    s32 var_s4;
-    u8 *temp_s0;
-    u8 *temp_v0;
-    u8 *temp_v1;
-    u8 *var_s0;
+    s32 scroll_target;
+    s32 *cancel_flags;
+    s32 *window_flags;
+    s32 actor_flags;
+    u16 window_height;
+    s32 actor_direction;
+    s32 selected_item;
+    s32 animation_actor;
+    s32 next_selection;
+    s32 previous_selection;
+    s32 window_index;
+    s32 scroll_step;
+    s32 cancel_index;
+    s32 actor_index;
+    s32 slot_offset;
+    u8 *direction_entry;
+    u8 *entry;
+    u8 *record;
+    u8 *direction_table;
+    u8 *items;
 
     if ((((*(s32 *)(arg0 + 0x0)) & 7) == 2) && ((*(s16 *)(arg0 + 0xC)) == 0))
-
     {
         if (D_801229F8 & 0x220)
         {
@@ -336,68 +336,69 @@ void func_800AF350(u8 *arg0)
             D_801227E4 = 0xF;
             D_801229F8 = 0;
             func_800A3938(0x7E, 0x80);
-            var_v1 = &D_80122828;
-            var_a0 = 0;
+            window_flags = &D_80122828;
+            window_index = 0;
             g_menu_element_counter = 0;
             do
             {
-                var_a0 += 1;
-                *var_v1 &= ~7;
-                var_v1 += 5;
-            } while (var_a0 < 8);
-            var_s1 = 0xC;
-            var_s4 = 0x1AD0;
+                window_index += 1;
+                *window_flags &= ~7;
+                window_flags += 5;
+            } while (window_index < 8);
+            actor_index = 0xC;
+            direction_table = D_800EB254;
             D_80122714 = 0;
-            temp_v1 = g_pad_ctx + D_80122738[D_80122A00 * 2];
-            var_s0 = D_800FDF58 + 0x3F0;
-            (*(u8 *)(temp_v1 + 0x25E0)) = (u8) ((*(u8 *)(temp_v1 + 0x25E0)) - 1);
-loop_6:
-            if ((*(u8 *)(var_s0 + 0x25)) == 0xFF)
+            entry = g_pad_ctx + D_80122738[D_80122A00 * 2];
+            (*(u8 *)(entry + 0x25E0)) = (u8) ((*(u8 *)(entry + 0x25E0)) - 1);
+            do
             {
-                field_initialize_actor_record(var_s1, 4);
-                (*(s32 *)(var_s0 + 0x0)) = (s32) (*(s32 *)(D_800FDF58 + 0x0));
-                (*(s32 *)(var_s0 + 0x4)) = (s32) (*(s32 *)(D_800FDF58 + 0x4));
-                (*(s32 *)(var_s0 + 0x8)) = (s32) (*(s32 *)(D_800FDF58 + 0x8));
-                temp_v0 = (((u8) (*(u8 *)(D_800FDF58 + 0x1B)) >> 5) * 4) + D_800EB254;
-                offset[1] = 0;
-                offset[0] = (s32) -(*(s16 *)(temp_v0 + 0x0));
-                offset[2] = (s32) -(*(s16 *)(temp_v0 + 0x2));
-                func_8009C2E0(var_s0, offset);
-                temp_s0 = var_s4 + D_80105AE0;
-                (*(u8 *)(var_s0 + 0x25)) = 0xFEU;
-                temp_a1 = ((*(s32 *)(var_s0 + 0x1C)) & ~0x1FF) | 2;
-                (*(s16 *)(var_s0 + 0x2A)) = 0xBA;
-                (*(u8 *)(var_s0 + 0x3D)) = 2;
-                temp_a2 = (*(u8 *)(D_800FDF58 + 0x21)) & 0x80;
-                (*(u16 *)(var_s0 + 0x2E)) = 0xFE;
-                (*(u8 *)(var_s0 + 0x27)) = 0;
-                (*(u8 *)(var_s0 + 0x24)) = 1;
-                (*(s32 *)(var_s0 + 0x1C)) = temp_a1;
-                (*(u8 *)(var_s0 + 0x28)) = 0;
-                (*(s16 *)(var_s0 + 0x10)) = 1;
-                (*(u8 *)(var_s0 + 0x21)) = (s8) ((D_80122738[D_80122A00 * 2] - 0x60) | temp_a2);
-                (*(s32 *)(temp_s0 + 0x14)) = (s32) (var_s1 + 0x14);
-                (*(u8 *)(temp_s0 + 0x18E)) = 1;
-                (*(s16 *)(temp_s0 + 0x18)) = 0;
-                field_restart_actor_animation(var_s0);
-                func_800C2640((*(s32 *)(temp_s0 + 0x14)), D_80122738[D_80122A00 * 2]);
-                temp_v0_2 = func_800839F8(var_s1, 0);
-                if ((temp_v0_2 != -1) && (func_80083EEC(var_s1, temp_v0_2, 0xAF) != 0))
+                entry = D_800FDF58 + actor_index * 0x54;
+                record = entry;
+                items = D_80122738;
+                if ((*(u8 *)(record + 0x25)) == 0xFF)
                 {
-                    field_start_actor_animation(temp_v0_2, 0, 0);
+                    field_initialize_actor_record(actor_index, 4);
+                    (*(s32 *)(record + 0x0)) = (s32) (*(s32 *)(D_800FDF58 + 0x0));
+                    (*(s32 *)(record + 0x4)) = (s32) (*(s32 *)(D_800FDF58 + 0x4));
+                    (*(s32 *)(record + 0x8)) = (s32) (*(s32 *)(D_800FDF58 + 0x8));
+                    direction_entry = (u8 *)(s32)(((u8) (*(u8 *)(D_800FDF58 + 0x1B)) >> 5) * 4);
+                    direction_entry = (s32)direction_entry + direction_table;
+                    offset[0] = (s32) -(*(s16 *)(direction_entry + 0x0));
+                    offset[1] = 0;
+                    offset[2] = (s32) -(*(s16 *)(direction_entry + 0x2));
+                    func_8009C2E0(record, offset);
+                    entry = record;
+                    actor_flags = *(s32 *)(entry + 0x1C);
+                    slot_offset = actor_index * 0x23C;
+                    record = D_80105AE0 + slot_offset;
+                    entry[0x25] = 0xFE;
+                    selected_item = items[D_80122A00 * 2];
+                    actor_direction = D_800FDF58[0x21];
+                    actor_flags &= ~0x1FF;
+                    actor_flags |= 2;
+                    entry[0x27] = 0;
+                    entry[0x24] = 1;
+                    *(s16 *)(entry + 0x2A) = 0xBA;
+                    entry[0x3D] = 2;
+                    *(u16 *)(entry + 0x2E) = 0xFE;
+                    *(s32 *)(entry + 0x1C) = actor_flags;
+                    entry[0x28] = 0;
+                    *(s16 *)(entry + 0x10) = 1;
+                    entry[0x21] = (selected_item - 0x60) | (actor_direction & 0x80);
+                    *(s32 *)(record + 0x14) = actor_index + 0x14;
+                    record[0x18E] = 1;
+                    *(s16 *)(record + 0x18) = 0;
+                    field_restart_actor_animation(entry);
+                    func_800C2640((*(s32 *)(record + 0x14)), items[D_80122A00 * 2]);
+                    animation_actor = func_800839F8(actor_index, 0);
+                    if ((animation_actor != -1) && (func_80083EEC(actor_index, animation_actor, 0xAF) != 0))
+                    {
+                        field_start_actor_animation(animation_actor, 0, 0);
+                    }
+                    break;
                 }
-            }
-            else
-            {
-                var_s4 -= 0x23C;
-                var_s1 -= 1;
-                var_s0 -= 0x54;
-                if (var_s1 < 3)
-                {
-                    return;
-                }
-                goto loop_6;
-            }
+                actor_index -= 1;
+            } while (actor_index >= 3);
         }
         else
         {
@@ -407,18 +408,18 @@ loop_6:
                 D_801227BC = func_800A9D70(0);
                 D_801227C0 = 0xF;
                 g_pad_input_inject = 0;
-                var_a0_2 = &D_80122828;
-                var_a1 = 0;
                 D_801227D8 = func_800A9D70(1);
+                cancel_flags = &D_80122828;
+                cancel_index = 0;
                 D_801227E4 = 0xF;
                 D_801229F8 = 0;
                 g_menu_element_counter = 0;
                 do
                 {
-                    var_a1 += 1;
-                    *var_a0_2 &= ~7;
-                    var_a0_2 += 5;
-                } while (var_a1 < 8);
+                    cancel_index += 1;
+                    *cancel_flags &= ~7;
+                    cancel_flags += 5;
+                } while (cancel_index < 8);
                 func_800A3938(0x7F, 0x80);
                 D_80122714 = 0;
                 return;
@@ -426,58 +427,58 @@ loop_6:
             if (D_801229F8 & 0xF00C)
             {
                 func_800A3938(0x7D, 0x80);
-                var_a0_3 = 1;
+                scroll_step = 1;
                 if (D_801229F8 & 8)
                 {
-                    var_a0_3 = 0xA;
+                    scroll_step = 0xA;
                     D_801229F8 = 0x4000;
                 }
                 if (D_801229F8 & 4)
                 {
-                    var_a0_3 = 0xA;
+                    scroll_step = 0xA;
                     D_801229F8 = 0x1000;
                 }
-                if (var_a0_3 != 0)
+                if (scroll_step != 0)
                 {
-                    temp_a2_2 = D_80122734 - 1;
                     do
                     {
                         if (D_801229F8 & 0x6000)
                         {
-                            temp_v0_3 = D_80122A00 + 1;
-                            D_80122A00 = temp_v0_3;
-                            if (temp_v0_3 >= D_80122734)
+                            next_selection = D_80122A00 + 1;
+                            D_80122A00 = next_selection;
+                            if (next_selection >= D_80122734)
                             {
                                 D_80122A00 = 0;
                             }
                         }
                         if (D_801229F8 & 0x9000)
                         {
-                            temp_v0_4 = D_80122A00 - 1;
-                            D_80122A00 = temp_v0_4;
-                            if (temp_v0_4 < 0)
+                            previous_selection = D_80122A00 - 1;
+                            D_80122A00 = previous_selection;
+                            if (previous_selection < 0)
                             {
-                                D_80122A00 = temp_a2_2;
+                                D_80122A00 = D_80122734 - 1;
                             }
                         }
-                        if ((D_80122A00 == temp_a2_2) || (var_a0_3 -= 1, (D_80122A00 == 0)))
+                        if ((D_80122A00 == D_80122734 - 1) || (D_80122A00 == 0))
                         {
-                            var_a0_3 = 0;
+                            scroll_step = 1;
                         }
-                    } while (var_a0_3 != 0);
+                        scroll_step--;
+                    } while (scroll_step != 0);
                 }
-                temp_v1_2 = (*(s16 *)(arg0 + 0xA));
-                temp_a0 = D_80122A00 * 0x10;
-                if (temp_a0 < temp_v1_2)
+                scroll_target = (*(s16 *)(arg0 + 0xA));
+                scroll_step = D_80122A00 * 0x10;
+                if (scroll_step < scroll_target)
                 {
-                    (*(s16 *)(arg0 + 0xA)) = temp_a0;
-                    goto block_37;
+                    (*(s16 *)(arg0 + 0xA)) = scroll_step;
+                    (*(s16 *)(arg0 + 0xC)) = 4;
+                    return;
                 }
-                temp_a1_2 = ((u32) (*(s32 *)(arg0 + 0x4)) >> 1) & 0xFF;
-                if ((temp_a1_2 - 0x10) < (temp_a0 - temp_v1_2))
+                window_height = ((u32) (*(s32 *)(arg0 + 0x4)) >> 1) & 0xFF;
+                if ((window_height - 0x10) < (scroll_step - scroll_target))
                 {
-                    (*(s16 *)(arg0 + 0xA)) = (s16) (temp_a0 - (temp_a1_2 - 0x10));
-block_37:
+                    (*(s16 *)(arg0 + 0xA)) = (s16) (scroll_step - (window_height - 0x10));
                     (*(s16 *)(arg0 + 0xC)) = 4;
                 }
             }
