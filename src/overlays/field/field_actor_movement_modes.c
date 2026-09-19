@@ -37,6 +37,7 @@ extern s32 D_800F22A8;
 extern Slot D_80105AE0[];
 
 /**
+ * @see decomp.me (100%)
  * @brief Set an actor's movement mode and initialize its destination offsets.
  * @param actor Actor whose runtime movement fields are changed (index in unk3A).
  * @param mode Movement mode selector; mode 4 generates three separated random points.

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_animation.h"
 #include "cd_resources.h"
 #include "scene_state.h"
 
@@ -98,7 +99,6 @@ typedef struct
 } FieldScenePage;
 
 extern FieldSceneGlobals g_field_scene;
-extern void field_update_scene_animations(void); /* extern */
 
 /**
  * @brief Initialize a field render context for a scene (no-FMV variant).

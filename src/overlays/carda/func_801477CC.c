@@ -28,6 +28,7 @@ void func_80147C5C(void);
 void func_8014A1C4(void);
 
 /**
+ * @see decomp.me (100%)
  * @brief Rebuild card directory ranking and slot metadata.
  * @return Index associated with the highest directory field value.
  */

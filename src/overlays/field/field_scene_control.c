@@ -3,8 +3,7 @@
  */
 
 #include "field_scene_internal.h"
-
-u8* field_find_count_table_span(u8*, s32, volatile s8*);
+#include "field_animation.h"
 
 /** @brief Movie/streaming control block at 0x801ED500. */
 #define FIELD_MOVIE_STATE ((volatile FieldMovieState*)0x801ED500)
@@ -28,17 +27,6 @@ void cdrom_stream(s32, void*);
 void cdrom_queue_seek(s32);
 void cdrom_queue_read(s32, void*);
 s32 cdrom_can_queue_resource(s32);
-void field_update_part_sweep(FieldPart*);
-void field_blit_animation_frame(FieldAnimDef*, FieldAnim*, s32);
-void field_apply_animation_tween(FieldAnimDef*, FieldAnim*, s32);
-void field_update_animation_sfx(FieldAnimDef*, FieldAnim*);
-void field_retarget_cel_cluts(FieldAnimDef*, FieldAnimCel*, s32);
-u_long* field_blend_animation_frames(FieldAnimDef*, FieldAnim*);
-void field_tint_animation_cel(FieldAnimDef*, FieldAnimCel*, FieldTintSrc*, s32);
-void field_tint_animation_cel_list(FieldAnimDef*, FieldTintSrc*, s32);
-void field_advance_animation_keyframe(FieldAnimDef*, FieldAnim*);
-void field_retarget_cel_list_cluts(FieldAnimDef*, FieldTintSrc*, s32);
-void field_queue_vram_upload(FieldImageReq*);
 void func_80059F18(void);
 void func_8005A744(FieldSeq*, u8);
 s32 func_8005A84C(s32, s32);

@@ -427,7 +427,8 @@ struct FieldImageReq
 };
 
 /** @brief Definition record shared by the animation and sequence lists. */
-typedef struct
+typedef struct FieldAnimDef FieldAnimDef;
+struct FieldAnimDef
 {
     u8 unk0; /* 0x00 */
     u8 unk1; /* 0x01 */
@@ -448,7 +449,7 @@ typedef struct
     u8 _pad2;
     u16 unk12; /* 0x12 */
     u8* data;  /* 0x14 handler-specific data */
-} FieldAnimDef;
+};
 
 /**
  * @brief Tile grid referenced by a tile-blit animation definition.
@@ -513,6 +514,8 @@ typedef struct
     /** 0x03 primitive code. */
     u8 code;
 } FieldTintColor;
+
+#define FIELD_TINT_COLORS ((FieldTintColor*)FIELD_TILE_COLOR_WORDS)
 
 /**
  * @brief Colour bytes embedded in a rendered cell record.
@@ -592,6 +595,18 @@ struct FieldAnimCel
  * The word is tested and rewritten as a whole while byte 0x25 is read and
  * written separately as the node's frame index, so the two views share storage.
  */
+#define FIELD_ANIM_FLAG_PING_PONG 0x01
+#define FIELD_ANIM_FLAG_STOP_AT_KEYFRAME 0x02
+#define FIELD_ANIM_FLAG_REVERSE 0x04
+#define FIELD_ANIM_FLAG_START_PENDING 0x08
+#define FIELD_ANIM_FLAG_SECOND_BUFFER 0x10
+#define FIELD_ANIM_FLAG_UPLOAD_PENDING 0x20
+#define FIELD_ANIM_FLAG_ACTIVE 0x40
+
+#define FIELD_ANIM_KIND_MASK 0x07
+#define FIELD_ANIM_DEF_IGNORE_REPEAT_COUNT 0x10
+#define FIELD_ANIM_DEF_SPAN_INDEXED 0x40
+
 typedef union
 {
     s32 word;
@@ -630,10 +645,9 @@ struct FieldAnim
     /** 0x2C tile records per frame, i.e. the stride from one frame to the next. */
     u16 frame_tile_count;
     u8 _pad3[0x30 - 0x2E];
-    FieldImageReq req; /* 0x30 */
-    u16 buf40[0x10];   /* 0x40 */
-    u16 buf60[0xF0];   /* 0x60 */
-    u16 buf240[1];     /* 0x240 */
+    FieldImageReq upload; /* 0x30 */
+    /** Scratch pixels used by strip copies and frame blending. */
+    u16 scratch_pixels[257]; /* 0x40 */
 };
 
 /** @brief Element of the scene's sequence list (0x14). */

@@ -2969,6 +2969,8 @@ typedef struct
     s16 seen;
 } FieldGroupEntry;
 
+void func_8005F5BC();
+
 /**
  * @brief Collect the scene's distinct node groups and size their tile budget.
  *
@@ -2996,10 +2998,7 @@ typedef struct
  *       The empty-scene path leaves @c unk41 = 0 instead, which is how callers
  *       tell "no nodes" from "too many groups".
  *
- * @see decomp.me (99.181496%, 244/281 exact) TODO
- * @note UNMATCHED with gcc280_g4_noexpanddiv. The 281-instruction size,
- *       0x68-byte frame and stack layout match; register allocation and
- *       preheader instruction ordering still differ from the target.
+ * @see decomp.me (100%) TODO
  */
 void func_8005F158(s32* alloc)
 {
@@ -3007,12 +3006,9 @@ void func_8005F158(s32* alloc)
     FieldScene* scene;
     FieldNode* node;
     FieldNodeDef* def;
-    FieldGroupEntry* out;
-    FieldGroupEntry* p;
     FieldSceneHeader* header;
     s32 i;
     s32 j;
-    s32 fresh;
     s32 has_pair;
     s32 kind;
     s32 kind2;
@@ -3039,7 +3035,6 @@ void func_8005F158(s32* alloc)
     }
 
     has_pair = 0;
-    out = list;
     do
     {
         def = node->def;
@@ -3049,22 +3044,20 @@ void func_8005F158(s32* alloc)
             switch ((u8)def->flags & 3)
             {
             case 0:
-                fresh = 1;
+                width = 1;
                 for (; i != -1; i--)
                 {
                     if (list[i].id == def->base_x)
                     {
-                        fresh = 0;
+                        width = 0;
                         list[i].seen |= 1;
                         break;
                     }
                 }
-                if (fresh != 0)
+                if (width != 0)
                 {
-                    kind = 2;
-                    out->id = def->base_x;
-                    out->seen = 1;
-                    out++;
+                    list[count].id = def->base_x;
+                    list[count].seen = 1;
                     if (count >= 20)
                     {
                         goto overflow;
@@ -3075,30 +3068,29 @@ void func_8005F158(s32* alloc)
 
             case 1:
                 has_pair = 1;
-                fresh = 1;
+                width = 1;
                 for (; i != -1; i--)
                 {
                     if (list[i].id == def->base_x)
                     {
-                        fresh = 0;
+                        width = 0;
                         list[i].seen |= 2;
                         break;
                     }
                 }
-                if (fresh != 0)
+                if (width != 0)
                 {
                     if (def->base_x != 0)
                     {
                         kind = 2;
-                        out->id = def->base_x;
+                        list[count].id = def->base_x;
                     }
                     else
                     {
                         kind = 3;
-                        out->id = 0;
+                        list[count].id = 0;
                     }
-                    out->seen = kind;
-                    out++;
+                    list[count].seen = kind;
                     if (count >= 20)
                     {
                         goto overflow;
@@ -3106,30 +3098,29 @@ void func_8005F158(s32* alloc)
                     count++;
                 }
 
-                fresh = 1;
+                width = 1;
                 for (i = count - 1; i != -1; i--)
                 {
                     if (list[i].id == def->base_y)
                     {
-                        fresh = 0;
+                        width = 0;
                         list[i].seen |= 2;
                         break;
                     }
                 }
-                if (fresh != 0)
+                if (width != 0)
                 {
                     if (def->base_y != 0)
                     {
                         kind2 = 2;
-                        out->id = def->base_y;
+                        list[count].id = def->base_y;
                     }
                     else
                     {
                         kind2 = 3;
-                        out->id = 0;
+                        list[count].id = 0;
                     }
-                    out->seen = kind2;
-                    out++;
+                    list[count].seen = kind2;
                     if (count >= 20)
                     {
                         goto overflow;
@@ -3150,22 +3141,18 @@ void func_8005F158(s32* alloc)
         i--;
         if (i != -1)
         {
-            p = list;
-            out = list;
             do
             {
-                if (p->seen == 3)
+                if (list[j].seen == 3)
                 {
                     if (j != count)
                     {
-                        out->id = p->id;
+                        list[count].id = list[j].id;
                     }
-                    out++;
                     count++;
                 }
-                p++;
-                i--;
                 j++;
+                i--;
             } while (i != -1);
         }
     }
@@ -3186,7 +3173,7 @@ void func_8005F158(s32* alloc)
         do
         {
             key = list[k].id;
-            for (j = k - 1; j != -1; j--)
+            for (j = k; --j != -1;)
             {
                 if ((s16)key < list[j].id)
                 {
@@ -3217,7 +3204,7 @@ void func_8005F158(s32* alloc)
     height = header->unk32;
     j = 4;
     shift = 2;
-    i = ((width + 3) >> 2) * ((height + 7) >> 3) * (s32)count;
+    i = ((width + j - 1) >> shift) * ((height + j * 2 - 1) >> (shift + 1)) * (s32)count;
     if (i >= 0x4001)
     {
         j = 8;
@@ -3227,7 +3214,8 @@ void func_8005F158(s32* alloc)
     width = tw + 4;
     th = ((height + (j * 2)) - 1) >> (shift + 1);
     rows = th + 4;
-    i = width * rows;
+    i = width;
+    i *= rows;
     scene->unk44 = i;
     i = i * count;
     scene->unk40 = j;
@@ -3235,23 +3223,23 @@ void func_8005F158(s32* alloc)
     scene->unk46 = width;
     scene->unk48 = rows;
     scene->unk2C = *alloc;
-    height = ((u32)(tw + 0x23) >> 5) * th;
     i = (i + 3) & ~3;
     *alloc += i;
-    i = height * 2;
+    i = (((u32)(tw + 0x23) >> 5) * th) * 2;
     scene->unk42 = i;
     scene->unk28 = *alloc;
     count4 = count * 4;
     j = i * count4;
     *alloc += j;
     scene->unk30 = *alloc;
-    func_8005F5BC(alloc, 0, i, j);
+    func_8005F5BC(alloc, 0, i);
     return;
 
 overflow:
     scene->unk28 = 0;
     scene->unk41 = 1;
 }
+
 
 /**
  * @brief One entry of func_8005F5BC's scratch list of active nodes.
