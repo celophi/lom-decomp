@@ -9,10 +9,12 @@
 #include "field_types.h"
 
 #define FIELD_EFFECT_POOL_COUNT 0x103
+#define FIELD_EFFECT_ACTIVE_RECORD_COUNT 256
 #define FIELD_EFFECT_DISABLED 0xFE
 #define FIELD_EFFECT_RETIRED 0xFF
 #define FIELD_EFFECT_SCREEN_SPACE 0x00001000U
 #define FIELD_EFFECT_SEMITRANSPARENT 0x00800000U
+#define FIELD_EFFECT_FACING_FLIPPED 0x80
 #define FIELD_EFFECT_RETIRE_ON_HIT 0x08000000
 
 /** @brief Hit-test paths observed in actor animation resources. */
@@ -47,7 +49,7 @@ typedef enum
  * @brief Packed part definition controlling tracks, placement, and effect motion.
  * @note Some selectors span adjacent members. Keep explicit word reads where used.
  */
-typedef struct
+typedef struct FieldActorPartDef
 {
     u32 track_flags;
     u32 behavior_flags;
@@ -104,7 +106,7 @@ typedef struct
 
 
 /** @brief Hit-test selection and packed owner/track synchronization selectors. */
-typedef struct
+typedef struct FieldActorAnimationDef
 {
     u8 pad0[0x14];
     u8 hit_test_mode;
@@ -120,7 +122,7 @@ typedef struct
  * @note actor_index identifies this actor in g_field_actor_slots; object indices
  * refer to the separate D_800FDF58 / D_80105AE0 arrays.
  */
-typedef struct
+typedef struct FieldActorState
 {
     FieldActorPartDef *parts;
     u8 pad4[0xC - 4];
@@ -164,7 +166,7 @@ typedef struct
  * reuse some fields for animation state, so this is not a universal effect schema.
  * work_x/work_y/work_z also hold different data for linked segment effects.
  */
-typedef struct
+typedef struct FieldMotionRecord
 {
     s32 x;
     s32 y;
@@ -223,7 +225,7 @@ typedef struct
  * @note state_flags has both byte and word consumers. record_id is the word-wide
  * identifier consumed by the action/reward record lookup functions.
  */
-typedef struct
+typedef struct FieldObjectPlacement
 {
     u8 pad0[0xC];
     u32 object_flags;
@@ -238,7 +240,8 @@ typedef struct
     s16 bounds_top;
     s16 bounds_right;
     s16 bounds_bottom;
-    u8 pad148[0x16D - 0x148];
+    Vec2s effect_vertices[8];
+    u8 pad168[0x16D - 0x168];
     s8 linked_effect_index;
     u8 pad16E[0x174 - 0x16E];
     u16 scale_percent;

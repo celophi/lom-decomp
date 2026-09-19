@@ -4,277 +4,128 @@
 
 #include "common.h"
 #include "field_types.h"
+#include "field_effect_types.h"
+#include "field_effect_geometry.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-    s16 unk4;
-    s16 unk6;
-} FieldSVector;
+#define FIELD_PART_ANCHOR_MODE_SHIFT 18
+#define FIELD_PART_ANCHOR_MODE_MASK 0x3F
+#define FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT 9
+#define FIELD_PART_SCALE_Y_FROM_BOUNDS_SHIFT 1
+#define FIELD_PART_MIRROR_X_WITH_FACING_SHIFT 10
+#define FIELD_PART_ATTACHMENT_INDEX_SHIFT 21
+#define FIELD_PART_ATTACHMENT_INDEX_MASK 3
+#define FIELD_PART_MIRROR_X_WITH_OWNER 0x08000000
 
-/** @brief Effect/actor position record; array element stride 0x54. */
-typedef struct
-{
-    s32 unk0;  /* 0x00 */
-    s32 unk4;  /* 0x04 */
-    s32 unk8;  /* 0x08 */
-    u32 unkC;  /* 0x0C */
-    s16 unk10; /* 0x10 */
-    s16 unk12; /* 0x12 */
-    s16 unk14; /* 0x14 */
-    s16 unk16; /* 0x16 */
-    u8 unk18;  /* 0x18 */
-    u8 unk19;  /* 0x19 */
-    u8 unk1A;  /* 0x1A */
-    u8 unk1B;  /* 0x1B */
-    s32 unk1C; /* 0x1C */
-    u8 unk20;  /* 0x20 */
-    u8 unk21;  /* 0x21 */
-    u8 unk22;  /* 0x22 */
-    u8 unk23;  /* 0x23 */
-    u8 unk24;  /* 0x24 */
-    u8 unk25;  /* 0x25 */
-    s8 unk26;  /* 0x26 */
-    u8 unk27;  /* 0x27 */
-    u8 unk28;  /* 0x28 */
-    u8 unk29;  /* 0x29 */
-    s16 unk2A; /* 0x2A */
-    u16 unk2C; /* 0x2C */
-    u16 unk2E; /* 0x2E */
-    s16 unk30; /* 0x30 */
-    u8 unk32;  /* 0x32 */
-    u8 unk33;  /* 0x33 */
-    u8 unk34;  /* 0x34 */
-    u8 unk35;  /* 0x35 */
-    u8 unk36;  /* 0x36 */
-    u8 unk37;  /* 0x37 */
-    u8 unk38;  /* 0x38 */
-    u8 unk39;  /* 0x39 */
-    u8 unk3A;  /* 0x3A */
-    u8 unk3B;  /* 0x3B */
-    u8 unk3C;  /* 0x3C */
-    u8 unk3D;  /* 0x3D */
-    u8 unk3E;  /* 0x3E */
-    u8 pad3F;
-    s32 unk40; /* 0x40 */
-    u32 unk44; /* 0x44 */
-    u32 unk48; /* 0x48 */
-    u32 unk4C; /* 0x4C */
-    u8 pad50[0x54 - 0x50];
-} Struct_D800FDF58;
-
-/** @brief Per-actor animation/geometry slot; array element stride 0x23C. */
-typedef struct
-{
-    u8 pad0[0x130];
-    Vec2s unk130[4]; /* 0x130 */
-    s16 unk140;      /* 0x140 */
-    s16 unk142;      /* 0x142 */
-    s16 unk144;      /* 0x144 */
-    s16 unk146;      /* 0x146 */
-    Vec2s unk148[12]; /* 0x148 */
-    u8 pad178[0x190 - 0x178];
-    Vec2s unk190[3]; /* 0x190 */
-    u8 pad19C[0x23C - 0x19C];
-} Struct_D80105AE0;
-
-/** @brief Actor part definition record. */
-typedef struct
-{
-    u32 unk0;  /* 0x00 */
-    u32 unk4;  /* 0x04 */
-    u8 unk8;   /* 0x08 */
-    u8 unk9;   /* 0x09 */
-    u8 unkA;   /* 0x0A */
-    u8 unkB;   /* 0x0B */
-    u8 unkC;   /* 0x0C */
-    u8 unkD;   /* 0x0D */
-    u8 unkE;   /* 0x0E */
-    u8 unkF;   /* 0x0F */
-    u8 unk10;  /* 0x10 */
-    u8 unk11;  /* 0x11 */
-    u8 pad12[0x14 - 0x12];
-    u32 unk14; /* 0x14 */
-    s16 unk18; /* 0x18 */
-    u8 unk1A;  /* 0x1A */
-    u8 pad1B;
-    u32 unk1C; /* 0x1C */
-    u8 unk20;  /* 0x20 */
-    u8 unk21;  /* 0x21 */
-    u8 unk22;  /* 0x22 */
-    u8 unk23;  /* 0x23 */
-    u32 unk24; /* 0x24 */
-    u32 unk28; /* 0x28 */
-    u8 unk2C;  /* 0x2C */
-    u8 unk2D;  /* 0x2D */
-    u8 unk2E;  /* 0x2E */
-    u8 unk2F;  /* 0x2F */
-    u8 pad30;
-    u8 unk31;  /* 0x31 */
-    u8 pad32;
-    u8 unk33;  /* 0x33 */
-    u32 unk34; /* 0x34 */
-    s16 unk38; /* 0x38 */
-    s16 unk3A; /* 0x3A */
-    s16 unk3C; /* 0x3C */
-    s16 pad3E;
-    s16 unk40; /* 0x40 */
-    s16 unk42; /* 0x42 */
-    s16 unk44; /* 0x44 */
-    s16 unk46; /* 0x46 */
-} FieldActorPartDef;
-
-/** @brief Actor animation table entry referenced through FieldActorState. */
-typedef struct
-{
-    u8 pad0[0x10];
-    u16 unk10; /* 0x10 */
-    u16 unk12; /* 0x12 */
-    u16 unk14; /* 0x14 */
-} FieldActorAnimationDef;
-
-/** @brief Field actor runtime state. */
-typedef struct
-{
-    FieldActorPartDef *unk0;      /* 0x000 */
-    u8 pad4[0xC - 0x4];
-    FieldActorAnimationDef *unkC; /* 0x00C */
-    u8 pad10[0x18 - 0x10];
-    u8 *unk18;                    /* 0x018 */
-    u8 pad1C[0x1EC - 0x1C];
-    u16 unk1EC[9];                /* 0x1EC */
-    u8 pad1FE[0x228 - 0x1FE];
-    u8 owner_object_index;        /* 0x228 */
-    u8 unk229[9];                 /* 0x229 */
-    u8 pad232;                    /* 0x232 */
-    u8 unk233;                    /* 0x233 */
-    u8 pad234[0x244 - 0x234];
-} FieldActorState;
-
-extern Struct_D800FDF58 D_800FDF58[];
-extern Struct_D800FDF58 g_field_effect_records[];
-extern Struct_D80105AE0 D_80105AE0[];
+extern FieldMotionRecord D_800FDF58[];
+extern FieldMotionRecord g_field_effect_records[];
+extern FieldObjectPlacement D_80105AE0[];
 extern s32 g_field_track_index;
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
-extern u8 D_80104B58[];
-extern u8 D_80105358[];
 
-extern FieldActorState g_field_actor_slots[80];
-extern s32 *D_80105790;
-extern s32 *D_80105878;
 
 void func_8007E5FC(s16 *out, s32 mirror, u8 *item);
-void func_800801F8(u16 *buf, s32 count, s32 flag);
-void field_resolve_effect_part_color(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
-void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, s32 part_index);
-s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, MATRIX *mtx, MATRIX *tmp);
-s32 *field_render_effect_mesh(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *base);
 
 /**
  * @brief Resolve the world-space anchor point for an actor part.
  * @param actor Owning actor state.
  * @param part Actor part definition selecting the anchor mode.
  * @param out Receives the resolved x/y/z anchor.
- * @param arg3 Secondary index used by the slot-relative anchor modes.
+ * @param attachment_index Attachment point index used by ground-relative anchor modes.
  * @see decomp.me (100.00%)
  */
-void func_8007ECEC(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, s32 arg3)
+void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, s32 attachment_index)
 {
-    s32 kind;
-    s32 n;
-    Struct_D800FDF58 *rec;
-    Struct_D80105AE0 *slot;
-    s32 xoff;
-    s32 yoff;
-    s32 sub;
-    s32 i;
-    Struct_D800FDF58 *scan;
+    s32 anchor_mode;
+    s32 object_index;
+    FieldMotionRecord *object_record;
+    FieldObjectPlacement *object;
+    s32 value;
+    s32 index;
 
-    kind = part->unk28 >> 18;
-    kind &= 0x3F;
-    switch (kind)
+    anchor_mode = part->placement_flags >> FIELD_PART_ANCHOR_MODE_SHIFT;
+    anchor_mode &= FIELD_PART_ANCHOR_MODE_MASK;
+    switch (anchor_mode)
     {
     case 0x00: case 0x01: case 0x02: case 0x03: case 0x04:
     case 0x05: case 0x06: case 0x07: case 0x08: case 0x09:
     case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E:
     case 0x0F: case 0x10: case 0x11: case 0x12: case 0x13:
     {
-        if (kind >= 0xA)
+        if (anchor_mode >= 0xA)
         {
-            n = actor->unk229[g_field_track_index];
-            kind -= 0xA;
-            rec = &D_800FDF58[n];
-            slot = &D_80105AE0[n];
+            object_index = actor->track_object_indices[g_field_track_index];
+            anchor_mode -= 0xA;
+            object_record = &D_800FDF58[object_index];
+            object = &D_80105AE0[object_index];
         }
         else
         {
-            n = actor->owner_object_index;
-            rec = &D_800FDF58[n];
-            slot = &D_80105AE0[n];
+            object_index = actor->owner_object_index;
+            object_record = &D_800FDF58[object_index];
+            object = &D_80105AE0[object_index];
         }
-        if ((part->unk28 >> 9) & 1)
+        if ((part->placement_flags >> FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT) & 1)
         {
-            part->unk2E = (((u8 *)slot)[0x144] - ((u8 *)slot)[0x140]) * 2;
+            part->footprint_scale_x = (*(u8 *)&object->bounds_right - *(u8 *)&object->bounds_left) * 2;
         }
-        if ((part->unk28 >> 1) & 1)
+        if ((part->placement_flags >> FIELD_PART_SCALE_Y_FROM_BOUNDS_SHIFT) & 1)
         {
-            i = 0;
-            part->unk33 = (((u8 *)slot)[0x146] - ((u8 *)slot)[0x142]) * 2;
+            index = 0;
+            part->footprint_scale_y = (*(u8 *)&object->bounds_bottom - *(u8 *)&object->bounds_top) * 2;
         }
         else
         {
-            i = 0;
+            index = 0;
         }
-        sub = i;
-        switch (kind)
+        value = index;
+        switch (anchor_mode)
         {
         case 1:
-            sub = (slot->unk144 + slot->unk140) >> 1;
-            i = (slot->unk146 + slot->unk142) >> 1;
+            value = (object->bounds_right + object->bounds_left) >> 1;
+            index = (object->bounds_bottom + object->bounds_top) >> 1;
             break;
         case 2:
-            sub = (slot->unk144 + slot->unk140) >> 1;
-            i = 0;
+            value = (object->bounds_right + object->bounds_left) >> 1;
+            index = 0;
             break;
         case 3:
-            sub = (slot->unk144 + slot->unk140) >> 1;
-            i = slot->unk142;
+            value = (object->bounds_right + object->bounds_left) >> 1;
+            index = object->bounds_top;
             break;
         case 4:
-            sub = slot->unk140;
-            i = (slot->unk146 + slot->unk142) >> 1;
+            value = object->bounds_left;
+            index = (object->bounds_bottom + object->bounds_top) >> 1;
             break;
         case 5:
-            sub = slot->unk144;
-            i = (slot->unk146 + slot->unk142) >> 1;
+            value = object->bounds_right;
+            index = (object->bounds_bottom + object->bounds_top) >> 1;
             break;
         case 6:
-            sub = slot->unk140;
-            i = slot->unk142;
+            value = object->bounds_left;
+            index = object->bounds_top;
             break;
         case 7:
-            sub = slot->unk144;
-            i = slot->unk142;
+            value = object->bounds_right;
+            index = object->bounds_top;
             break;
         case 8:
-            sub = slot->unk140;
-            i = slot->unk146;
+            value = object->bounds_left;
+            index = object->bounds_bottom;
             break;
         case 9:
-            sub = slot->unk144;
-            i = slot->unk146;
+            value = object->bounds_right;
+            index = object->bounds_bottom;
             break;
         }
-        sub <<= 8;
-        out->x = rec->unk0 + sub;
-        i <<= 8;
-        out->y = rec->unk4 + i;
-        out->z = rec->unk8;
+        value <<= 8;
+        out->x = object_record->x + value;
+        index <<= 8;
+        out->y = object_record->y + index;
+        out->z = object_record->z;
         return;
     }
 
@@ -282,29 +133,30 @@ void func_8007ECEC(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, 
     case 0x18: case 0x19: case 0x1A: case 0x1B:
     case 0x2A: case 0x2B: case 0x2C: case 0x2D:
     case 0x2E: case 0x2F: case 0x30: case 0x31:
-        sub = kind - 0x14;
-        if (kind >= 0x2A)
+        value = anchor_mode - 0x14;
+        if (anchor_mode >= 0x2A)
         {
-            sub = kind - 0x22;
+            value = anchor_mode - 0x22;
         }
-        i = 0;
+        index = 0;
         do
         {
-            if (g_field_effect_records[i].unk25 != 0xFF && g_field_effect_records[i].unk23 == sub && g_field_effect_records[i].unk22 == actor->unk233 && g_field_effect_records[i].unk29 == 0)
+            if (g_field_effect_records[index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[index].part_index == value &&
+                g_field_effect_records[index].actor_index == actor->actor_index && g_field_effect_records[index].track_index == 0)
             {
-                out->x = g_field_effect_records[i].unk0;
-                out->y = g_field_effect_records[i].unk4;
-                out->z = g_field_effect_records[i].unk8;
+                out->x = g_field_effect_records[index].x;
+                out->y = g_field_effect_records[index].y;
+                out->z = g_field_effect_records[index].z;
                 return;
             }
-            i++;
-        } while (i < 0x100);
+            index++;
+        } while (index < FIELD_EFFECT_ACTIVE_RECORD_COUNT);
         return;
 
     case 0x25:
-        out->x = (part->unk38 << 8) - D_800F22A0;
-        out->y = (part->unk3A << 8) - D_800F22A4;
-        out->z = (part->unk3C << 8) - D_800F22A8;
+        out->x = (part->offset_x << 8) - D_800F22A0;
+        out->y = (part->offset_y << 8) - D_800F22A4;
+        out->z = (part->offset_z << 8) - D_800F22A8;
         return;
     case 0x1C:
         out->x = -D_800F22A0;
@@ -367,92 +219,100 @@ void func_8007ECEC(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, 
         return;
 
     case 0x27:
-        rec = &D_800FDF58[actor->owner_object_index];
-        if ((((part->unk28 >> 10) & 1) || (part->unk34 & 0x08000000)) && !(rec->unk21 & 0x80))
+        object_record = &D_800FDF58[actor->owner_object_index];
+        if ((((part->placement_flags >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) ||
+             (part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER)) &&
+            !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
-            out->x = rec->unk0 - (part->unk38 << 8);
+            out->x = object_record->x - (part->offset_x << 8);
         }
         else
         {
-            out->x = rec->unk0 + (part->unk38 << 8);
+            out->x = object_record->x + (part->offset_x << 8);
         }
-        out->y = rec->unk4 + (part->unk3A << 8);
-        out->z = rec->unk8 + (part->unk3C << 8);
+        out->y = object_record->y + (part->offset_y << 8);
+        out->z = object_record->z + (part->offset_z << 8);
         return;
 
     case 0x28:
-        rec = &D_800FDF58[actor->unk229[g_field_track_index]];
-        if ((part->unk34 & 0x08000000) && !(D_800FDF58[actor->owner_object_index].unk21 & 0x80))
+        object_record = &D_800FDF58[actor->track_object_indices[g_field_track_index]];
+        if ((part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER) &&
+            !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
-            out->x = rec->unk0 - (part->unk38 << 8);
+            out->x = object_record->x - (part->offset_x << 8);
         }
-        else if (((part->unk28 >> 10) & 1) && !(rec->unk21 & 0x80))
+        else if (((part->placement_flags >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) &&
+                 !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
-            out->x = rec->unk0 - (part->unk38 << 8);
+            out->x = object_record->x - (part->offset_x << 8);
         }
         else
         {
-            out->x = rec->unk0 + (part->unk38 << 8);
+            out->x = object_record->x + (part->offset_x << 8);
         }
-        out->y = rec->unk4 + (part->unk3A << 8);
-        out->z = rec->unk8 + (part->unk3C << 8);
+        out->y = object_record->y + (part->offset_y << 8);
+        out->z = object_record->z + (part->offset_z << 8);
         return;
 
     case 0x29:
-        n = actor->owner_object_index;
-        rec = &D_800FDF58[n];
-        slot = &D_80105AE0[n];
-        out->x = rec->unk0 + (slot->unk130[(part->unk24 >> 21) & 3].x << 8);
-        out->y = rec->unk4 + (slot->unk130[(part->unk24 >> 21) & 3].y << 8);
-        out->z = rec->unk8;
+        object_index = actor->owner_object_index;
+        object_record = &D_800FDF58[object_index];
+        object = &D_80105AE0[object_index];
+        out->x = object_record->x +
+                 (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+        out->y = object_record->y +
+                 (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].y << 8);
+        out->z = object_record->z;
         return;
 
     case 0x32:
-        n = actor->owner_object_index;
-        rec = &D_800FDF58[n];
-        slot = &D_80105AE0[n];
-        out->x = rec->unk0 + (slot->unk130[(part->unk24 >> 21) & 3].x << 8);
-        out->y = rec->unk4;
-        out->z = rec->unk8 + (part->unk3C << 8);
-        if (((part->unk28 >> 10) & 1) && !(rec->unk21 & 0x80))
+        object_index = actor->owner_object_index;
+        object_record = &D_800FDF58[object_index];
+        object = &D_80105AE0[object_index];
+        out->x = object_record->x +
+                 (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
+        out->y = object_record->y;
+        out->z = object_record->z + (part->offset_z << 8);
+        if (((part->placement_flags >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) && !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
-            out->x -= part->unk38 << 8;
+            out->x -= part->offset_x << 8;
         }
         else
         {
-            out->x += part->unk38 << 8;
+            out->x += part->offset_x << 8;
         }
         return;
 
     case 0x33:
-        n = actor->owner_object_index;
-        rec = &D_800FDF58[n];
-        slot = &D_80105AE0[n];
-        out->x = rec->unk0 + (slot->unk190[arg3].x << 8);
-        out->y = rec->unk4;
-        out->z = rec->unk8 + (slot->unk190[arg3].y << 8);
+        object_index = actor->owner_object_index;
+        object_record = &D_800FDF58[object_index];
+        object = &D_80105AE0[object_index];
+        out->x = object_record->x + (object->ground_attachment_points[attachment_index].x << 8);
+        out->y = object_record->y;
+        out->z = object_record->z + (object->ground_attachment_points[attachment_index].y << 8);
         return;
 
     case 0x36:
-        out->x = part->unk38 << 8;
-        out->y = part->unk3A << 8;
-        out->z = part->unk3C << 8;
+        out->x = part->offset_x << 8;
+        out->y = part->offset_y << 8;
+        out->z = part->offset_z << 8;
         return;
 
     case 0x37: case 0x38: case 0x39: case 0x3A:
     case 0x3B: case 0x3C: case 0x3D: case 0x3E:
-        sub = kind - 0x37;
-        i = 0;
+        value = anchor_mode - 0x37;
+        index = 0;
         do
         {
-            if (g_field_effect_records[i].unk25 != 0xFF && g_field_effect_records[i].unk23 == sub && g_field_effect_records[i].unk22 == actor->unk233 && g_field_effect_records[i].unk29 == 0)
+            if (g_field_effect_records[index].state != FIELD_EFFECT_RETIRED && g_field_effect_records[index].part_index == value &&
+                g_field_effect_records[index].actor_index == actor->actor_index && g_field_effect_records[index].track_index == 0)
             {
-                out->x = g_field_effect_records[i].unk0;
-                out->y = g_field_effect_records[i].unk4;
-                out->z = g_field_effect_records[i].unk8;
+                out->x = g_field_effect_records[index].x;
+                out->y = g_field_effect_records[index].y;
+                out->z = g_field_effect_records[index].z;
             }
-            i++;
-        } while (i < 0x100);
+            index++;
+        } while (index < FIELD_EFFECT_ACTIVE_RECORD_COUNT);
         return;
 
     default:
@@ -464,92 +324,92 @@ void func_8007ECEC(FieldActorState *actor, FieldActorPartDef *part, Vec3i *out, 
 }
 
 /**
- * @brief Decode a 9-byte-per-entry mirrored offset table into an 8-slot output.
- * @param rec Effect record whose unk21 mirror flag selects the layout.
- * @param data Encoded entry list; first byte is the entry count.
- * @param out 8 halfword output slots.
+ * @brief Extract four signed-byte quad corners from an effect frame.
+ * @param effect Effect record whose facing flag selects the mirrored layout.
+ * @param frame_data Encoded frame entry list; the first byte is the entry count.
+ * @param corners Receives four x/y corner pairs.
  * @see decomp.me (100.00%)
  */
-void func_8007F5D8(Struct_D800FDF58 *rec, u8 *data, s16 *out)
+void field_extract_effect_quad_corners8(FieldMotionRecord *effect, u8 *frame_data, s16 *corners)
 {
     s32 count;
 
-    out[0] = out[1] = 0;
-    out[2] = out[3] = 0;
-    out[4] = out[5] = 0;
-    out[6] = out[7] = 0;
+    corners[0] = corners[1] = 0;
+    corners[2] = corners[3] = 0;
+    corners[4] = corners[5] = 0;
+    corners[6] = corners[7] = 0;
 
-    count = *data++;
+    count = *frame_data++;
     if (count != 0)
     {
         do
         {
-            if (data[7] & 0x20)
+            if (frame_data[7] & 0x20)
             {
-                if ((data[7] & 0xF) == 2)
+                if ((frame_data[7] & 0xF) == 2)
                 {
-                    if (rec->unk21 & 0x80)
+                    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
                     {
-                        out[0] = -(s8)data[2];
-                        out[1] = (s8)data[3];
-                        out[2] = -(s8)data[0];
-                        out[3] = (s8)data[1];
-                        out[4] = -(s8)data[6];
-                        out[5] = (s8)data[8];
-                        out[6] = -(s8)data[4];
-                        out[7] = (s8)data[5];
+                        corners[0] = -(s8)frame_data[2];
+                        corners[1] = (s8)frame_data[3];
+                        corners[2] = -(s8)frame_data[0];
+                        corners[3] = (s8)frame_data[1];
+                        corners[4] = -(s8)frame_data[6];
+                        corners[5] = (s8)frame_data[8];
+                        corners[6] = -(s8)frame_data[4];
+                        corners[7] = (s8)frame_data[5];
                     }
                     else
                     {
-                        out[0] = (s8)data[0];
-                        out[1] = (s8)data[1];
-                        out[2] = (s8)data[2];
-                        out[3] = (s8)data[3];
-                        out[4] = (s8)data[4];
-                        out[5] = (s8)data[5];
-                        out[6] = (s8)data[6];
-                        out[7] = (s8)data[8];
+                        corners[0] = (s8)frame_data[0];
+                        corners[1] = (s8)frame_data[1];
+                        corners[2] = (s8)frame_data[2];
+                        corners[3] = (s8)frame_data[3];
+                        corners[4] = (s8)frame_data[4];
+                        corners[5] = (s8)frame_data[5];
+                        corners[6] = (s8)frame_data[6];
+                        corners[7] = (s8)frame_data[8];
                     }
                 }
             }
-            data += 9;
+            frame_data += 9;
             count--;
         } while (count != 0);
     }
 }
 
 /**
- * @brief Variable-stride variant that delegates matching entries to func_8007E5FC.
- * @param rec Effect record whose unk21 mirror flag is passed through.
- * @param data Encoded entry list; first byte is the entry count.
- * @param out 8 halfword output slots.
+ * @brief Extract four 16-bit quad corners from a variable-stride effect frame.
+ * @param effect Effect record whose facing flag selects the mirrored layout.
+ * @param frame_data Encoded frame entry list; the first byte is the entry count.
+ * @param corners Receives four x/y corner pairs.
  * @see decomp.me (100.00%)
  */
-void func_8007F7A0(Struct_D800FDF58 *rec, u8 *data, s16 *out)
+void field_extract_effect_quad_corners16(FieldMotionRecord *effect, u8 *frame_data, s16 *corners)
 {
     s32 count;
 
-    out[0] = out[1] = 0;
-    out[2] = out[3] = 0;
-    out[4] = out[5] = 0;
-    out[6] = out[7] = 0;
+    corners[0] = corners[1] = 0;
+    corners[2] = corners[3] = 0;
+    corners[4] = corners[5] = 0;
+    corners[6] = corners[7] = 0;
 
-    count = *data++;
+    count = *frame_data++;
     if (count != 0)
     {
         do
         {
-            if (data[7] & 0x20)
+            if (frame_data[7] & 0x20)
             {
-                if ((data[7] & 0xF) == 2)
+                if ((frame_data[7] & 0xF) == 2)
                 {
-                    func_8007E5FC(out, rec->unk21 & 0x80, data);
+                    func_8007E5FC(corners, effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, frame_data);
                 }
-                data += 0x11;
+                frame_data += 0x11;
             }
             else
             {
-                data += 0xB;
+                frame_data += 0xB;
             }
             count--;
         } while (count != 0);
@@ -562,240 +422,240 @@ void func_8007F7A0(Struct_D800FDF58 *rec, u8 *data, s16 *out)
 /**
  * @brief Apply the actor rotation to a bounding-box centre and accumulate it
  *        into the screen-space position.
- * @param rec Effect record whose unk21 mirror flag negates the depth offset.
- * @param sxy Screen-space position accumulator.
- * @param bounds Bounding-box extents (indices 0/1/2/5 used in mode 1).
- * @param base Depth offset used in the default mode.
- * @param mode 0 skips, 1 derives the offset from bounds, other uses base.
+ * @param effect Effect record whose facing flag mirrors the horizontal center offset.
+ * @param screen_origin Screen-space position accumulator.
+ * @param quad_bounds Bounding-box extents (indices 0/1/2/5 used in mode 1).
+ * @param fallback_depth Horizontal offset used when mode does not derive it from the quad.
+ * @param mode Zero skips adjustment; one derives the center from the quad; other values use fallback_depth.
  * @see decomp.me (100.00%)
  */
-void func_8007F864(Struct_D800FDF58 *rec, DVECTOR *sxy, s16 *bounds, s32 base, s32 mode)
+void field_apply_effect_quad_center_offset(FieldMotionRecord *effect, DVECTOR *screen_origin, s16 *quad_bounds, s32 fallback_depth, s32 mode)
 {
-    SVECTOR v;
-    VECTOR out;
-    s32 xoff;
-    s32 zoff = base;
+    SVECTOR offset;
+    VECTOR rotated;
+    s32 center_y;
+    s32 center_x = fallback_depth;
 
     if (mode != 0)
     {
         if (mode == 1)
         {
-            zoff = (bounds[2] + bounds[0]) / 2;
-            xoff = (bounds[5] + bounds[1]) / 2;
+            center_x = (quad_bounds[2] + quad_bounds[0]) / 2;
+            center_y = (quad_bounds[5] + quad_bounds[1]) / 2;
         }
 
-        v.vx = -xoff;
-        v.vy = 0;
-        v.vz = -zoff;
-        gte_ldv0(&v);
+        offset.vx = -center_y;
+        offset.vy = 0;
+        offset.vz = -center_x;
+        gte_ldv0(&offset);
         gte_rtv0();
-        gte_stlvnl(&out);
+        gte_stlvnl(&rotated);
 
-        if (rec->unk21 & 0x80)
+        if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
         {
-            zoff = -zoff;
+            center_x = -center_x;
         }
-        sxy->vx += (s16)out.vx + zoff;
-        sxy->vy += (s16)out.vy + xoff;
+        screen_origin->vx += (s16)rotated.vx + center_x;
+        screen_origin->vy += (s16)rotated.vy + center_y;
     }
 }
 
 /**
- * @brief Rotate four single-byte direction vectors and store the transformed
- *        screen positions into the actor slot's vertex ring.
- * @param rec Effect record whose unk21 mirror flag negates the depth component.
- * @param slot Actor slot receiving the transformed vertices.
- * @param item Encoded direction bytes (pairs consumed three at a time).
- * @param n Base vertex index into slot->unk148.
- * @param sxy Screen-space origin added to every transformed vertex.
- * @param dir Scratch direction vector fed to the GTE.
+ * @brief Transform four signed-byte quad vertices into screen space.
+ * @param effect Effect record whose facing flag mirrors the horizontal component.
+ * @param object Object placement receiving the transformed vertices.
+ * @param quad_data Encoded signed-byte corner pairs.
+ * @param vertex_index Base vertex index into object->effect_vertices.
+ * @param screen_origin Screen-space origin added to every transformed vertex.
+ * @param direction Scratch direction vector fed to the GTE.
  * @param gte_out Scratch GTE output vector.
  * @see decomp.me (100.00%)
  */
-void func_8007F938(Struct_D800FDF58 *rec, Struct_D80105AE0 *slot, u8 *item, s32 n, Vec2s *sxy, FieldSVector *dir, FieldVector *gte_out)
+void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjectPlacement *object, u8 *quad_data, s32 vertex_index,
+                                           Vec2s *screen_origin, SVECTOR *direction, FieldVector *gte_out)
 {
-    s16 v;
+    s16 depth_component;
 
-    if (rec->unk21 & 0x80)
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
-        dir->unk0 = (s8)item[1];
-        dir->unk2 = 0;
-        v = -(s8)item[0];
+        direction->vx = (s8)quad_data[1];
+        direction->vy = 0;
+        depth_component = -(s8)quad_data[0];
     }
     else
     {
-        dir->unk0 = (s8)item[1];
-        dir->unk2 = 0;
-        v = (s8)item[0];
+        direction->vx = (s8)quad_data[1];
+        direction->vy = 0;
+        depth_component = (s8)quad_data[0];
     }
-    dir->unk4 = v;
-    gte_ldv0(dir);
+    direction->vz = depth_component;
+    gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    if (n == 0)
+    if (vertex_index == 0)
     {
-        slot->unk140 = (u16)gte_out->vx;
-        slot->unk142 = (u16)gte_out->vy - (s8)rec->unk37;
+        object->bounds_left = (u16)gte_out->vx;
+        object->bounds_top = (u16)gte_out->vy - (s8)effect->unknown_0x37;
     }
-    slot->unk148[n].x = (u16)gte_out->vx + (u16)sxy->x;
-    slot->unk148[n].y = (u16)gte_out->vy + (u16)sxy->y;
+    object->effect_vertices[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
-    if (rec->unk21 & 0x80)
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
-        dir->unk0 = (s8)item[3];
-        dir->unk2 = 0;
-        v = -(s8)item[2];
+        direction->vx = (s8)quad_data[3];
+        direction->vy = 0;
+        depth_component = -(s8)quad_data[2];
     }
     else
     {
-        dir->unk0 = (s8)item[3];
-        dir->unk2 = 0;
-        v = (s8)item[2];
+        direction->vx = (s8)quad_data[3];
+        direction->vy = 0;
+        depth_component = (s8)quad_data[2];
     }
-    dir->unk4 = v;
-    gte_ldv0(dir);
+    direction->vz = depth_component;
+    gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    slot->unk148[n + 1].x = (u16)gte_out->vx + (u16)sxy->x;
-    slot->unk148[n + 1].y = (u16)gte_out->vy + (u16)sxy->y;
+    object->effect_vertices[vertex_index + 1].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices[vertex_index + 1].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
-    if (rec->unk21 & 0x80)
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
-        dir->unk0 = (s8)item[5];
-        dir->unk2 = 0;
-        v = -(s8)item[4];
+        direction->vx = (s8)quad_data[5];
+        direction->vy = 0;
+        depth_component = -(s8)quad_data[4];
     }
     else
     {
-        dir->unk0 = (s8)item[5];
-        dir->unk2 = 0;
-        v = (s8)item[4];
+        direction->vx = (s8)quad_data[5];
+        direction->vy = 0;
+        depth_component = (s8)quad_data[4];
     }
-    dir->unk4 = v;
-    gte_ldv0(dir);
+    direction->vz = depth_component;
+    gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    if (n == 0)
+    if (vertex_index == 0)
     {
-        slot->unk144 = (u16)gte_out->vx;
-        slot->unk146 = (u16)gte_out->vy - (s8)rec->unk37;
+        object->bounds_right = (u16)gte_out->vx;
+        object->bounds_bottom = (u16)gte_out->vy - (s8)effect->unknown_0x37;
     }
-    slot->unk148[n + 2].x = (u16)gte_out->vx + (u16)sxy->x;
-    slot->unk148[n + 2].y = (u16)gte_out->vy + (u16)sxy->y;
+    object->effect_vertices[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
-    if (rec->unk21 & 0x80)
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
-        dir->unk0 = (s8)item[8];
-        dir->unk2 = 0;
-        v = -(s8)item[6];
+        direction->vx = (s8)quad_data[8];
+        direction->vy = 0;
+        depth_component = -(s8)quad_data[6];
     }
     else
     {
-        dir->unk0 = (s8)item[8];
-        dir->unk2 = 0;
-        v = (s8)item[6];
+        direction->vx = (s8)quad_data[8];
+        direction->vy = 0;
+        depth_component = (s8)quad_data[6];
     }
-    dir->unk4 = v;
-    gte_ldv0(dir);
+    direction->vz = depth_component;
+    gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    slot->unk148[n + 3].x = (u16)gte_out->vx + (u16)sxy->x;
-    slot->unk148[n + 3].y = (u16)gte_out->vy + (u16)sxy->y;
+    object->effect_vertices[vertex_index + 3].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices[vertex_index + 3].y = (u16)gte_out->vy + (u16)screen_origin->y;
 }
 
 /**
- * @brief Rotate four little-endian halfword direction vectors and store the
- *        transformed screen positions into the actor slot's vertex ring.
- * @param rec Effect record whose unk21 mirror flag negates the depth component.
- * @param slot Actor slot receiving the transformed vertices.
- * @param item Encoded direction halfwords.
- * @param n Base vertex index into slot->unk148.
- * @param sxy Screen-space origin added to every transformed vertex.
- * @param dir Scratch direction vector fed to the GTE.
+ * @brief Transform four little-endian 16-bit quad vertices into screen space.
+ * @param effect Effect record whose facing flag mirrors the horizontal component.
+ * @param object Object placement receiving the transformed vertices.
+ * @param quad_data Encoded little-endian 16-bit corner pairs.
+ * @param vertex_index Base vertex index into object->effect_vertices.
+ * @param screen_origin Screen-space origin added to every transformed vertex.
+ * @param direction Scratch direction vector fed to the GTE.
  * @param gte_out Scratch GTE output vector.
  * @see decomp.me (100.00%)
  */
-void func_8007FC74(Struct_D800FDF58 *rec, Struct_D80105AE0 *slot, u8 *item, s32 n, Vec2s *sxy, FieldSVector *dir, FieldVector *gte_out)
+void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObjectPlacement *object, u8 *quad_data, s32 vertex_index,
+                                            Vec2s *screen_origin, SVECTOR *direction, FieldVector *gte_out)
 {
-    if (rec->unk21 & 0x80)
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
-        dir->unk0 = item[2] + (item[3] << 8);
-        dir->unk2 = 0;
-        dir->unk4 = -(item[0] + (item[1] << 8));
+        direction->vx = quad_data[2] + (quad_data[3] << 8);
+        direction->vy = 0;
+        direction->vz = -(quad_data[0] + (quad_data[1] << 8));
     }
     else
     {
-        dir->unk0 = item[2] + (item[3] << 8);
-        dir->unk2 = 0;
-        dir->unk4 = item[0] + (item[1] << 8);
+        direction->vx = quad_data[2] + (quad_data[3] << 8);
+        direction->vy = 0;
+        direction->vz = quad_data[0] + (quad_data[1] << 8);
     }
-    gte_ldv0(dir);
+    gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    if (n == 0)
+    if (vertex_index == 0)
     {
-        slot->unk140 = (u16)gte_out->vx;
-        slot->unk142 = (u16)gte_out->vy;
+        object->bounds_left = (u16)gte_out->vx;
+        object->bounds_top = (u16)gte_out->vy;
     }
-    slot->unk148[n].x = (u16)gte_out->vx + (u16)sxy->x;
-    slot->unk148[n].y = (u16)gte_out->vy + (u16)sxy->y;
+    object->effect_vertices[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
-    if (rec->unk21 & 0x80)
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
-        dir->unk0 = item[6] + (item[8] << 8);
-        dir->unk2 = 0;
-        dir->unk4 = -(item[4] + (item[5] << 8));
+        direction->vx = quad_data[6] + (quad_data[8] << 8);
+        direction->vy = 0;
+        direction->vz = -(quad_data[4] + (quad_data[5] << 8));
     }
     else
     {
-        dir->unk0 = item[6] + (item[8] << 8);
-        dir->unk2 = 0;
-        dir->unk4 = item[4] + (item[5] << 8);
+        direction->vx = quad_data[6] + (quad_data[8] << 8);
+        direction->vy = 0;
+        direction->vz = quad_data[4] + (quad_data[5] << 8);
     }
-    gte_ldv0(dir);
+    gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    slot->unk148[n + 1].x = (u16)gte_out->vx + (u16)sxy->x;
-    slot->unk148[n + 1].y = (u16)gte_out->vy + (u16)sxy->y;
+    object->effect_vertices[vertex_index + 1].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices[vertex_index + 1].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
-    if (rec->unk21 & 0x80)
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
-        dir->unk0 = item[0xB] + (item[0xC] << 8);
-        dir->unk2 = 0;
-        dir->unk4 = -(item[9] + (item[0xA] << 8));
+        direction->vx = quad_data[0xB] + (quad_data[0xC] << 8);
+        direction->vy = 0;
+        direction->vz = -(quad_data[9] + (quad_data[0xA] << 8));
     }
     else
     {
-        dir->unk0 = item[0xB] + (item[0xC] << 8);
-        dir->unk2 = 0;
-        dir->unk4 = item[9] + (item[0xA] << 8);
+        direction->vx = quad_data[0xB] + (quad_data[0xC] << 8);
+        direction->vy = 0;
+        direction->vz = quad_data[9] + (quad_data[0xA] << 8);
     }
-    gte_ldv0(dir);
+    gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    if (n == 0)
+    if (vertex_index == 0)
     {
-        slot->unk144 = (u16)gte_out->vx;
-        slot->unk146 = (u16)gte_out->vy;
+        object->bounds_right = (u16)gte_out->vx;
+        object->bounds_bottom = (u16)gte_out->vy;
     }
-    slot->unk148[n + 2].x = (u16)gte_out->vx + (u16)sxy->x;
-    slot->unk148[n + 2].y = (u16)gte_out->vy + (u16)sxy->y;
+    object->effect_vertices[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
-    if (rec->unk21 & 0x80)
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
-        dir->unk0 = item[0xF] + (item[0x10] << 8);
-        dir->unk2 = 0;
-        dir->unk4 = -(item[0xD] + (item[0xE] << 8));
+        direction->vx = quad_data[0xF] + (quad_data[0x10] << 8);
+        direction->vy = 0;
+        direction->vz = -(quad_data[0xD] + (quad_data[0xE] << 8));
     }
     else
     {
-        dir->unk0 = item[0xF] + (item[0x10] << 8);
-        dir->unk2 = 0;
-        dir->unk4 = item[0xD] + (item[0xE] << 8);
+        direction->vx = quad_data[0xF] + (quad_data[0x10] << 8);
+        direction->vy = 0;
+        direction->vz = quad_data[0xD] + (quad_data[0xE] << 8);
     }
-    gte_ldv0(dir);
+    gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    slot->unk148[n + 3].x = (u16)gte_out->vx + (u16)sxy->x;
-    slot->unk148[n + 3].y = (u16)gte_out->vy + (u16)sxy->y;
+    object->effect_vertices[vertex_index + 3].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices[vertex_index + 3].y = (u16)gte_out->vy + (u16)screen_origin->y;
 }
