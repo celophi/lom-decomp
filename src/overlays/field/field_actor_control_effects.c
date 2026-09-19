@@ -1,4 +1,5 @@
 #include "common.h"
+#include "gpu_packet.h"
 #include "sdk/libgpu.h"
 
 /**
@@ -21,75 +22,69 @@
  *       implicit here to preserve the original codegen.
  */
 
-/* ---- field29.c types ------------------------------------------------------ */
+/* ---- Ground-shadow renderer types --------------------------------------- */
 
-typedef struct {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    u8 padC[0x37 - 0xC];
-    u8 unk37;
-    u8 pad38[0x3A - 0x38];
-    u8 unk3A;
-} Rec871A0;
+/** @brief Actor position and shadow parameters used by the ground-shadow renderer. */
+typedef struct
+{
+    s32 x;
+    s32 y;
+    s32 z;
+    u8 pad_0x0c[0x37 - 0xC];
+    u8 shadow_bias;
+    u8 pad_0x38[0x3A - 0x38];
+    u8 resource_index;
+} ShadowActor;
 
-typedef struct {
-    u32 unk0;
-    u32 unk4;
-    s16 unk8;
-    s16 unkA;
-    u8 unkC;
-    u8 unkD;
-    u16 unkE;
-    s16 unk10;
-    s16 unk12;
-    u8 unk14;
-    u8 unk15;
-    u16 unk16;
-    s16 unk18;
-    s16 unk1A;
-    u8 unk1C;
-    u8 unk1D;
-    u16 unk1E;
-    s16 unk20;
-    s16 unk22;
-    u8 unk24;
-    u8 unk25;
-    u16 unk26;
-} Prim871A0;
+/** @brief First two footprint corners; only their horizontal coordinates are used. */
+typedef struct
+{
+    s16 left_x;
+    s16 first_y;
+    s16 right_x;
+} ShadowFootprint;
 
-typedef struct {
-    u16 unk0;
-    u16 unk2;
-    u16 unk4;
-} Off871A0;
+/** @brief Projected ground position in the field renderer scratchpad. */
+typedef struct
+{
+    u16 x;
+    u16 y;
+} ShadowScreenPosition;
 
-typedef struct {
-    u16 unk0;
-    u16 unk2;
-} Screen871A0;
+/** @brief World position copied to the field renderer scratchpad. */
+typedef struct
+{
+    s32 x;
+    s32 y;
+    s32 z;
+} ShadowWorldPosition;
 
-typedef struct {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-} Scratch871A0;
+/** @brief Ground-shadow height in the 0x23C-byte actor slot. */
+typedef struct
+{
+    u8 pad_0x000[0x176];
+    s16 shadow_height;
+    u8 pad_0x178[0x23C - 0x178];
+} ShadowActorSlot;
 
-typedef struct {
-    u8 pad0[0x176];
-    s16 unk176;
-    u8 pad178[0x23C - 0x178];
-} State871A0;
-
-typedef struct {
+/** @brief Resource entry view used to select the shadow inset scale. */
+typedef struct
+{
     u8 *start;
     u8 *end;
-    u8 unk8;
+    u8 shadow_scale_mode;
     u8 slot_index;
-    u8 padA[4];
-    s16 unkE;
+    u8 pad_0x0a[4];
+    s16 unknown_0x0e;
     u32 flags;
-} Res871A0;
+} ShadowResourceEntry;
+
+#define SHADOW_SCREEN_POSITION ((ShadowScreenPosition *)0x1F8000C0)
+#define SHADOW_WORLD_POSITION ((ShadowWorldPosition *)0x1F8000C4)
+#define SHADOW_SCREEN_CENTER_X 160
+#define SHADOW_SCREEN_CENTER_Y 112
+#define SHADOW_OT_SIZE 4096
+#define SHADOW_DEPTH_SHIFT 7
 
 typedef struct
 {
@@ -341,7 +336,7 @@ extern FieldEffectMotion D_801077FC;
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
-extern Res871A0 g_field_resource_entries[];
+extern ShadowResourceEntry g_field_resource_entries[];
 extern Rec87564 *D_8010A01C;
 extern s32 D_8010A030;
 
@@ -900,242 +895,233 @@ void func_80086FB8(u8 *buffer)
 }
 
 /**
- * @brief Compute an actor's screen-space ground shadow and emit its POLY_FT4
- *        primitive into the ordering table.
- * @param arg0 Effect record supplying world x/z and the shadow selectors at
- *             @c unk37 / @c unk3A.
- * @param arg1 Primitive cursor to fill; returned advanced past the emitted
- *             primitive when one is produced.
- * @param arg2 Ordering-table base array (0x1000 entries) linked into.
- * @param arg3 Shadow footprint half-extents (x at @c unk0, y at @c unk4).
- * @return The (possibly advanced) primitive cursor.
- * @note WIP - 90.73% (101/241 exact rows). Body is raw m2c output kept
- *       verbatim to preserve the verified match; brace style will be
- *       normalised to Allman when the function reaches 100%. Residue is
- *       concentrated in argdiff rows (register coloring) around the two
- *       footprint-projection arms and the OT-link tail.
- * @see decomp.me WIP
+ * @brief Project an actor's ground shadow and append its textured quad.
+ * @param actor World position, shadow bias and resource slot.
+ * @param primitives Next free POLY_FT4 in the primitive buffer.
+ * @param ordering_table Depth ordering table with 4096 entries.
+ * @param footprint First two footprint corners supplying the horizontal bounds.
+ * @return Next free primitive, unchanged if the shadow has collapsed.
+ * @note WIP - 97.80% (190/241 exact rows); remaining differences are
+ *       primarily register allocation. Primitive setup uses SDK macros.
  */
-Prim871A0 *field_render_actor_ground_shadow(Rec871A0 *arg0, Prim871A0 *arg1, s32 *arg2, Off871A0 *arg3)
+POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primitives, s32 *ordering_table, ShadowFootprint *footprint)
 {
-    extern State871A0 D_80105AE0[];
-    extern Res871A0 g_field_resource_entries[];
-    s32 temp_t3;
-    s16 temp_v0_3;
-    s16 temp_v0_4;
-    s16 temp_v0_5;
-    s16 temp_v1;
-    s16 var_v0_3;
-    s16 var_v0_4;
-    s32 *temp_v0_6;
-    s32 temp_a0;
-    s32 temp_a0_2;
-    s32 temp_a0_3;
-    s32 temp_a2_2;
-    s32 temp_t1;
-    s32 temp_v0;
-    s32 temp_v1_2;
-    s32 temp_v1_3;
-    s32 temp_v1_4;
-    s32 temp_v1_5;
-    s32 var_a0;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_v0;
-    s32 var_v0_2;
-    s32 var_v1;
-    s32 var_v1_2;
-    s32 temp_t4;
-    u8 temp_a1;
-    s32 temp_v0_2;
-    s32 cam_x_q;
-    s32 rec_x_q;
-    s32 cam_y_q;
-    s32 rec_z_q;
-    s32 screen_y_base;
-    s32 work_v1;
-    s32 work_a0;
-    s32 temp_t7;
-    Screen871A0 *screen;
-    Scratch871A0 *scratch;
-    Prim871A0 *var_t0;
-    s32 *var_t6;
+    extern ShadowActorSlot D_80105AE0[];
+    extern ShadowResourceEntry g_field_resource_entries[];
+    s16 edge_y;
+    s32 shadow_height;
+    s16 right_x;
+    s32 ground_y;
+    s32 ground_height_fixed;
+    s32 world_z;
+    s32 bias_bits;
+    s32 world_x;
+    s32 depth;
+    s32 projection_value;
+    s32 camera_offset;
+    s32 horizontal_offset;
+    s32 left_x;
+    s32 left_inset;
+    s32 right_inset;
+    s32 diameter;
+    s32 camera_z;
+    s32 screen_x;
+    u8 resource_index;
+    s32 camera_x;
+    s32 actor_screen_x;
+    s32 camera_y;
+    s32 actor_depth_y;
+    s32 camera_screen_y;
+    s32 edge_work;
+    s32 scale_work;
+    s32 shadow_bias;
+    ShadowScreenPosition *screen;
+    ShadowWorldPosition *scratch;
 
-    var_t0 = arg1;
-    var_t6 = arg2;
-    screen = (Screen871A0 *)0x1F8000C0;
-    scratch = (Scratch871A0 *)0x1F8000C4;
-    var_a1 = D_800F22A0;
-    temp_v0 = arg0->unk0;
-    scratch->unk4 = 0;
-    scratch->unk0 = temp_v0;
-    temp_a2_2 = arg0->unk8;
-    scratch->unk8 = temp_a2_2;
-    if (var_a1 < 0) {
-        var_a1 += 0xFF;
+    /* Project the ground point; negative fixed-point values round toward zero. */
+    screen = SHADOW_SCREEN_POSITION;
+    scratch = SHADOW_WORLD_POSITION;
+    camera_offset = D_800F22A0;
+    world_x = actor->x;
+    scratch->y = 0;
+    scratch->x = world_x;
+    world_z = actor->z;
+    scratch->z = world_z;
+    shadow_height = camera_offset < 0;
+    if (shadow_height)
+    {
+        camera_offset += 0xFF;
     }
-    var_a0 = temp_v0;
-    cam_x_q = var_a1 >> 8;
-    if (var_a0 < 0) {
-        var_a0 += 0xFF;
+    projection_value = world_x;
+    camera_x = camera_offset >> 8;
+    if (projection_value < 0)
+    {
+        projection_value += 0xFF;
     }
-    var_a1_2 = D_800F22A4;
-    rec_x_q = var_a0 >> 8;
-    rec_x_q += 0xA0;
-    temp_t4 = cam_x_q + rec_x_q;
-    screen->unk0 = temp_t4;
-    if (var_a1_2 < 0) {
-        var_a1_2 += 0xFF;
+    camera_offset = D_800F22A4;
+    actor_screen_x = (projection_value >> 8) + SHADOW_SCREEN_CENTER_X;
+    screen_x = camera_x + actor_screen_x;
+    screen->x = screen_x;
+    if (camera_offset < 0)
+    {
+        camera_offset += 0xFF;
     }
-    var_a0 = temp_a2_2;
-    cam_y_q = var_a1_2 >> 8;
-    screen_y_base = cam_y_q + 0x70;
-    if (var_a0 < 0) {
-        var_a0 += 0x1FF;
+    projection_value = world_z;
+    camera_y = camera_offset >> 8;
+    camera_screen_y = camera_y + SHADOW_SCREEN_CENTER_Y;
+    if (projection_value < 0)
+    {
+        projection_value += 0x1FF;
     }
-    var_v1 = D_800F22A8;
-    rec_z_q = var_a0 >> 9;
-    screen_y_base -= rec_z_q;
-    if (var_v1 < 0) {
-        var_v1 += 0x1FF;
+    camera_z = D_800F22A8;
+    actor_depth_y = projection_value >> 9;
+    ground_y = camera_screen_y - actor_depth_y;
+    if (camera_z < 0)
+    {
+        camera_z += 0x1FF;
     }
-    screen->unk2 = (u16)(screen_y_base - (var_v1 >> 9));
-    temp_v0_2 = arg0->unk37;
-    temp_a1 = arg0->unk3A;
-    temp_t1 = temp_v0_2 << 0x18;
-    temp_t3 = D_80105AE0[temp_a1].unk176;
-    temp_t7 = temp_t1 >> 24;
-    if (g_field_resource_entries[temp_a1].unk8 != 0) {
-        temp_a2_2 = temp_t3 << 8;
-        var_a1 = temp_t1 >> 0x1A;
-        var_v0 = arg0->unk4;
-        work_a0 = (u16)arg3->unk0;
-        var_v0 -= temp_a2_2;
-        var_v0 >>= 0xB;
-        var_v0 += var_a1;
-        work_v1 = var_v0 << 2;
-        var_v0 += work_v1;
-        work_v1 = temp_t4 + work_a0;
-        if (var_v0 < 0) {
-            var_v0 += 3;
+    screen->y = (u16)(ground_y - (camera_z >> 9));
+
+    /* The resource profile widens the height-dependent inset by 5/4. */
+    resource_index = actor->resource_index;
+    bias_bits = actor->shadow_bias << 24;
+    shadow_height = D_80105AE0[resource_index].shadow_height;
+    shadow_bias = bias_bits >> 24;
+    if (g_field_resource_entries[resource_index].shadow_scale_mode != 0)
+    {
+        ground_height_fixed = shadow_height << 8;
+        horizontal_offset = bias_bits >> 26;
+        left_inset = actor->y;
+        scale_work = (u16)footprint->left_x;
+        left_inset = (left_inset - ground_height_fixed) >> 11;
+        left_inset += horizontal_offset;
+        edge_work = left_inset << 2;
+        left_inset += edge_work;
+        edge_work = screen_x + scale_work;
+        if (left_inset < 0)
+        {
+            left_inset += 3;
         }
-        var_v0 >>= 2;
-        var_v0 = work_v1 - var_v0;
-        var_t0->unk8 = var_v0;
-        var_t0->unk18 = var_v0;
+        left_inset >>= 2;
+        left_inset = edge_work - left_inset;
+        primitives->x0 = left_inset;
+        primitives->x2 = left_inset;
 
-        var_v0_2 = arg0->unk4;
-        work_v1 = (u16)arg3->unk4;
-        var_v0_2 -= temp_a2_2;
-        var_v0_2 >>= 0xB;
-        var_v0_2 -= var_a1;
-        work_a0 = var_v0_2 << 2;
-        var_a1 = screen->unk0;
-        var_v0_2 += work_a0;
-        var_a1 += work_v1;
-        if (var_v0_2 < 0) {
-            var_v0_2 += 3;
+        right_inset = actor->y;
+        edge_work = (u16)footprint->right_x;
+        right_inset = (right_inset - ground_height_fixed) >> 11;
+        right_inset -= horizontal_offset;
+        scale_work = right_inset << 2;
+        horizontal_offset = screen->x;
+        right_inset += scale_work;
+        horizontal_offset += edge_work;
+        if (right_inset < 0)
+        {
+            right_inset += 3;
         }
-        var_v0_2 >>= 2;
-        var_v0_3 = var_a1 + var_v0_2;
-    } else {
-        temp_a2_2 = temp_t3 << 8;
-        var_a1 = temp_t1 >> 0x1A;
-        work_v1 = (u16)arg3->unk0;
-        var_v0 = arg0->unk4;
-        work_v1 += temp_t4;
-        var_v0 -= temp_a2_2;
-        var_v0 >>= 0xB;
-        work_v1 -= var_v0;
-        work_v1 += var_a1;
-        var_t0->unk8 = work_v1;
-        var_t0->unk18 = work_v1;
+        right_inset >>= 2;
+        right_x = horizontal_offset + right_inset;
+    }
+    else
+    {
+        ground_height_fixed = shadow_height << 8;
+        horizontal_offset = bias_bits >> 26;
+        edge_work = (u16)footprint->left_x;
+        left_inset = actor->y;
+        edge_work += screen_x;
+        left_inset = (left_inset - ground_height_fixed) >> 11;
+        edge_work -= left_inset;
+        edge_work += horizontal_offset;
+        primitives->x0 = edge_work;
+        primitives->x2 = edge_work;
 
-        var_v0_2 = screen->unk0;
-        work_a0 = (u16)arg3->unk4;
-        work_v1 = arg0->unk4;
-        var_v0_2 += work_a0;
-        work_v1 -= temp_a2_2;
-        work_v1 >>= 0xB;
-        var_v0_2 += work_v1;
-        var_v0_3 = var_v0_2 - var_a1;
+        right_inset = screen->x;
+        scale_work = (u16)footprint->right_x;
+        edge_work = actor->y;
+        right_inset += scale_work;
+        edge_work -= ground_height_fixed;
+        edge_work >>= 11;
+        right_inset += edge_work;
+        right_x = right_inset - horizontal_offset;
     }
-    var_t0->unk10 = var_v0_3;
-    var_t0->unk20 = var_v0_3;
-    var_a0 = temp_t3 << 8;
-    var_v1 = (s16)arg3->unk0;
-    var_v0 = (s16)arg3->unk4;
-    var_a1 = var_t0->unk8;
-    var_v1 -= var_v0;
-    var_v1 >>= 1;
-    var_v0 = arg0->unk4;
-    if (var_v1 < 0) {
-        var_v1 = -var_v1;
+    primitives->x1 = right_x;
+    primitives->x3 = right_x;
+
+    /* Reject inverted horizontal bounds or a vertical diameter below two pixels. */
+    projection_value = shadow_height << 8;
+    diameter = (s16)footprint->left_x;
+    left_inset = (s16)footprint->right_x;
+    left_x = primitives->x0;
+    diameter -= left_inset;
+    diameter >>= 1;
+    left_inset = actor->y;
+    if (diameter < 0)
+    {
+        diameter = -diameter;
     }
-    var_v0 -= var_a0;
-    var_v0 >>= 0xB;
-    var_v1 += var_v0;
-    var_a0 = temp_t7 >> 2;
-    var_v0 = var_t0->unk10;
-    var_v0 = var_v0 < var_a1;
-    var_v1 -= var_a0;
-    if (var_v0 == 0) {
-        var_v0 = var_v1 < 2;
-        if (var_v0 == 0) {
-            if (temp_t3 != 0) {
-                var_v0 = screen->unk2;
-                var_v1 >>= 1;
-                var_v0 -= var_v1;
-                var_v0 += temp_t3;
-                var_t0->unk12 = var_v0;
-                var_t0->unkA = var_v0;
-                var_v0 = screen->unk2;
-                var_v0 += var_v1;
-                var_v0 += temp_t3;
-            } else {
-                var_v0 = screen->unk2;
-                var_v1 >>= 1;
-                var_v0 -= var_v1;
-                var_t0->unk12 = var_v0;
-                var_t0->unkA = var_v0;
-                var_v0 = screen->unk2;
-                var_v0 += var_v1;
-            }
-            var_t0->unk22 = var_v0;
-            var_t0->unk1A = var_v0;
-            var_t0->unk4 = 0x808080;
-            ((u8 *)var_t0)[3] = 9;
-            ((u8 *)var_t0)[7] = 0x2E;
-            var_t0->unk24 = 0x40;
-            var_t0->unk14 = 0x40;
-            var_t0->unk15 = 0x50;
-            var_t0->unkD = 0x50;
-            var_t0->unk25 = 0x70;
-            var_t0->unk1D = 0x70;
-            var_t0->unk16 = 0x5F;
-            var_t0->unk1C = 0;
-            var_t0->unkC = 0;
-            var_t0->unkE = 0x7850;
-            temp_v1_5 = (s32)arg0->unk8 >> 7;
-            {
-                typedef struct { unsigned addr:24; unsigned len:8; } LocalTag;
-                if (temp_v1_5 < 0) {
-                    ((LocalTag *)var_t0)->addr = ((LocalTag *)&var_t6[0])->addr;
-                    ((LocalTag *)&var_t6[0])->addr = (u32)var_t0;
-                    var_t0 = (Prim871A0 *)((u8 *)var_t0 + 0x28);
-                } else if (temp_v1_5 >= 0x1000) {
-                    ((LocalTag *)var_t0)->addr = ((LocalTag *)&var_t6[0xFFF])->addr;
-                    ((LocalTag *)&var_t6[0xFFF])->addr = (u32)var_t0;
-                    var_t0 = (Prim871A0 *)((u8 *)var_t0 + 0x28);
-                } else {
-                    ((LocalTag *)var_t0)->addr = ((LocalTag *)&var_t6[temp_v1_5])->addr;
-                    ((LocalTag *)&var_t6[(s32)arg0->unk8 >> 7])->addr = (u32)var_t0;
-                    var_t0 = (Prim871A0 *)((u8 *)var_t0 + 0x28);
-                }
-            }
+    left_inset -= projection_value;
+    left_inset >>= 11;
+    diameter += left_inset;
+    projection_value = shadow_bias >> 2;
+    diameter -= projection_value;
+    if (primitives->x1 >= left_x && diameter >= 2)
+    {
+        if (shadow_height != 0)
+        {
+            diameter >>= 1;
+            edge_y = screen->y - diameter + shadow_height;
+            primitives->y1 = edge_y;
+            primitives->y0 = edge_y;
+            edge_y = screen->y + diameter + shadow_height;
+            primitives->y3 = edge_y;
+            primitives->y2 = edge_y;
+        }
+        else
+        {
+            diameter >>= 1;
+            edge_y = screen->y - diameter;
+            primitives->y1 = edge_y;
+            primitives->y0 = edge_y;
+            edge_y = screen->y + diameter;
+            primitives->y3 = edge_y;
+            primitives->y2 = edge_y;
+        }
+
+        /* Neutral modulation with subtractive blending for the shadow texture. */
+        SET_BGR0_PACKED(primitives, GPU_TINT_NEUTRAL);
+        setPolyFT4(primitives);
+        setSemiTrans(primitives, 1);
+
+        // setUV4 ?
+        primitives->u3 = 0x40;
+        primitives->u1 = 0x40;
+        primitives->v1 = 0x50;
+        primitives->v0 = 0x50;
+        primitives->v3 = 0x70;
+        primitives->v2 = 0x70;
+        setTPage(primitives, 0, 2, 960, 256);
+        primitives->u2 = 0;
+        primitives->u0 = 0;
+        setClut(primitives, 256, 481);
+
+        depth = actor->z >> SHADOW_DEPTH_SHIFT;
+        if (depth < 0)
+        {
+            addPrim(&ordering_table[0], primitives);
+            primitives++;
+        }
+        else if (depth >= SHADOW_OT_SIZE)
+        {
+            addPrim(&ordering_table[SHADOW_OT_SIZE - 1], primitives);
+            primitives++;
+        }
+        else
+        {
+            addPrim(&ordering_table[actor->z >> SHADOW_DEPTH_SHIFT], primitives);
+            primitives++;
         }
     }
-    return var_t0;
+    return primitives;
 }
 
 /**

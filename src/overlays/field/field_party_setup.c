@@ -203,233 +203,313 @@ extern void func_800B3D84(void);
 extern void func_800B4934(u8 *);
 extern s32 func_800B7EE8(u8 *, s32);
 
-/** @brief Initialize the three party actor records and their derived attributes. */
+typedef struct
+{
+    u8 pad0[0xC];
+    u8 base_attributes[8];
+    u8 pad14[0x14];
+    u8 flags;
+    u8 pad29[2];
+    u8 unk2B;
+    union
+    {
+        u32 word;
+        struct
+        {
+            u8 index;
+            u8 flags;
+            u16 upper;
+        } parts;
+    } config;
+    u8 unk30;
+    u8 unk31;
+    u16 unk32;
+    u32 unk34;
+    u8 *actor;
+    u32 unk3C;
+    u16 unk40;
+    u8 unk42;
+    u8 pad43;
+    u16 equipment_stats[4];
+    u8 equipment_attributes[4];
+    u8 attributes[8];
+    u8 base_values[8];
+    u8 flags60;
+    u8 flags61;
+    u8 flags62;
+    u8 pad63;
+    u8 modifiers[8];
+    u8 bonuses[8];
+    u8 unk74;
+} PartyActorView;
+typedef struct
+{
+    u8 pad0[0x5F0];
+    u8 active;
+    u8 pad5F1[0x17];
+    u8 type;
+    u8 pad609[0xB];
+    u16 hp;
+    u8 pad616[0x1D];
+    u8 unk633;
+    u8 pad634[0xC];
+    u8 equipment_active;
+    u8 pad641[0x13];
+    u32 equipment_config;
+    u32 equipment_modifiers;
+    u8 pad65C[8];
+    u16 equipment_stat;
+    u8 pad666[6];
+    u8 flags66C;
+    u8 flags66D;
+    u8 pad66E[2];
+    u8 equipment_attribute;
+} PartySaveView;
+typedef struct
+{
+    u8 pad0[0x24];
+    u16 stat;
+    u8 pad26[0xA];
+    u8 attribute;
+} PartyEquipmentView;
+typedef struct
+{
+    s32 hp;
+    s32 max_hp;
+    u32 flags;
+    u8 padC[0x5C];
+    u16 capacity;
+} PartyLiveActorView;
+
+/**
+ * @brief Initialize the three party actor records and their derived attributes.
+ * @see decomp.me (100%)
+ */
 s32 func_800B37D4(void)
 {
-    s32 sp14;
-    s32 sp10;
-    s32 temp_a0_3;
-    s32 temp_a0_4;
-    s32 temp_a1;
-    s32 temp_v1;
-    s32 var_a1;
-    s32 var_a3;
-    s32 var_fp;
-    s32 var_s0;
-    s32 var_s0_2;
-    s32 var_s0_3;
-    s32 var_s2;
-    s32 var_s4;
-    s32 var_t0;
-    s32 var_t1;
-    s32 var_t1_2;
-    s32 var_t3;
-    s32 var_t5;
-    s32 var_t6;
-    s32 var_v0_2;
-    s8 temp_v0_2;
-    s8 var_s7;
-    s8 var_v0;
-    u16 var_a0;
-    u32 var_s1;
-    u32 var_s1_2;
-    u8 temp_v0_3;
-    u8 temp_v0_4;
-    u8 *temp_a0;
-    u8 *temp_a0_2;
-    u8 *temp_a0_5;
-    u8 *temp_a0_6;
-    u8 *temp_a0_7;
-    u8 *temp_a0_8;
-    u8 *temp_a1_2;
-    u8 *temp_a1_3;
-    u8 *temp_a1_4;
-    u8 *temp_a1_5;
-    u8 *temp_a2;
-    u8 *temp_a2_2;
-    u8 *temp_a3;
-    u8 *temp_v0;
-    u8 *temp_v1_2;
-    u8 *temp_v1_3;
-    u8 *temp_v1_4;
-    u8 *temp_v1_5;
-    u8 *var_v1;
-
-    var_s7 = 0;
-    var_s4 = 0;
-    var_s2 = 0;
-    var_fp = 0x28;
-    sp10 = 0;
-    sp14 = 0x5F0;
+    s32 active_count;
+    s32 equipment_address;
+    s32 attribute_offset;
+    s32 active_flags;
+    s32 config_flags;
+    u32 actor_type;
+    s32 index;
+    s32 stat_index;
+    s32 equipment_index;
+    s32 player_control;
+    s8 attribute_value;
+    s32 party_index;
+    s8 actor_flags;
+    u32 capacity;
+    u32 packed_modifiers;
+    u8 *config_record;
+    u8 *linked_record;
+    u8 *modifier_record;
+    u8 *flags60_record;
+    u8 *flags62_record;
+    u8 *live_flags;
+    u8 *setup_record;
+    u8 *stat_record;
+    u8 *hp_source;
+    u8 *capacity_record;
+    u8 *attribute_record;
+    u8 *hp_record;
+    u8 *live_hp;
+    u8 *actor;
+    u8 *value_record;
+    u8 *final_record;
+    u8 *live_capacity;
+    u8 *flags_record;
+    party_index = 0;
+    active_count = 0;
     do
     {
-        if (*(u8 *)((u8 *)((D_80122B74 + var_s4)) + 0x5F0) != 0)
+        if (((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->active != 0)
         {
-            if ((D_8010D020 != 0) && (var_s7 == 0))
+            if ((D_8010D020 != 0) && (party_index == 0))
             {
-                var_v1 = ((u8 *)D_80123FB0);
-                var_v0 = *(u8 *)((u8 *)(var_v1) + 0x28) | 0x40;
+                flags_record = (u8 *)D_80123FB0;
+                actor_flags = ((PartyActorView *)flags_record)->flags | 0x40;
             }
             else
             {
-                var_v1 = ((u8 *)D_80123FB0) + var_s2;
-                var_v0 = *(u8 *)((u8 *)(var_v1) + 0x28) | 0x80;
+                flags_record = (u8 *)D_80123FB0;
+                flags_record += party_index * 0x68;
+                actor_flags = ((PartyActorView *)flags_record)->flags | 0x80;
             }
-            *(u8 *)((u8 *)(var_v1) + 0x28) = var_v0;
-            *(u8 *)((u8 *)((((u8 *)D_80123FB0) + var_s2)) + 0x2B) = 0xF;
-            *(u8 *)(((u8 *)D_80123FB0) + var_s2 + 0x2C) = var_s7;
-            temp_a0 = ((u8 *)D_80123FB0) + var_s2;
-            temp_v1 = *(u32 *)((u8 *)(temp_a0) + 0x2C);
-            temp_a1 = temp_v1 | 0x100;
-            *(u32 *)((u8 *)(temp_a0) + 0x2C) = temp_a1;
+            ((PartyActorView *)flags_record)->flags = actor_flags;
+            ((PartyActorView *)(((u8 *)D_80123FB0) + ((party_index * 0xD) << 3)))->unk2B = 0xF;
+            ((PartyActorView *)(((u8 *)D_80123FB0) + ((party_index * 0xD) << 3)))->config.parts.index =
+                party_index;
+            config_record = ((u8 *)D_80123FB0) + (party_index * 0x68);
+            config_flags = ((PartyActorView *)config_record)->config.word;
+            active_flags = config_flags | 0x100;
+            ((PartyActorView *)config_record)->config.word = active_flags;
             if (D_8010D020 != 0)
             {
-                var_v0_2 = 0;
-                if (var_s7 == 0)
+                player_control = 0;
+                if (party_index == 0)
                 {
-                    var_v0_2 = 0xFF;
+                    player_control = 0xFF;
                 }
-                *(u32 *)((u8 *)(temp_a0) + 0x2C) = (s32) ((temp_a1 & ~0x200) | ((var_v0_2 & 1) << 9));
+                ((PartyActorView *)config_record)->config.word =
+                    (s32)((active_flags & (~0x200)) | ((player_control & 1) << 9));
             }
             else
             {
-                *(u32 *)((u8 *)(temp_a0) + 0x2C) = (s32) (temp_v1 | 0x300);
+                ((PartyActorView *)config_record)->config.word = (s32)(config_flags | 0x300);
             }
-            temp_a1_2 = ((u8 *)D_80123FB0) + var_s2;
-            *(u8 *)((u8 *)(temp_a1_2) + 0x30) = 5;
-            *(u32 *)((u8 *)(temp_a1_2) + 0x2C) = (s32) ((*(u32 *)((u8 *)(temp_a1_2) + 0x2C) & 0xFFFF03FF) | ((*(u8 *)((u8 *)((D_80122B74 + var_s4)) + 0x608) & 0x3F) << 0xA));
-            *(u16 *)((u8 *)(temp_a1_2) + 0x2E) = 0;
-            *(u8 *)((u8 *)((((u8 *)D_80123FB0) + var_s2)) + 0x31) = 5;
-            temp_v0 = ((u8 *)D_80123FB0) + var_s2;
-            *(u16 *)((u8 *)(temp_v0) + 0x32) = 0;
-            *(u32 *)((u8 *)(temp_v0) + 0x34) = 0;
-            var_t1 = 0;
-            var_t3 = var_s2;
-            var_t6 = 0;
-            var_t5 = var_s2;
-            temp_a0_2 = ((u8 *)D_80123FB0) + var_s2;
-            *(u8 * *)((u8 *)(temp_a0_2) + 0x38) = func_80087F0C(var_s7);
-            *(u8 *)((u8 *)(temp_a0_2) + 0x42) = 0x19;
-            *(u16 *)((u8 *)(temp_a0_2) + 0x40) = (u16) *(u16 *)((u8 *)((var_s4 + D_80122B74)) + 0x664);
+            setup_record = ((u8 *)D_80123FB0) + (party_index * 0x68);
+            actor_type = ((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->type;
+            ((PartyActorView *)setup_record)->config.word =
+                (s32)((((PartyActorView *)setup_record)->config.word & 0xFFFF03FF) |
+                      ((actor_type & 0x3F) << 10));
+            ((PartyActorView *)setup_record)->unk30 = 5;
+            ((PartyActorView *)setup_record)->config.parts.upper = 0;
+            ((PartyActorView *)(((u8 *)D_80123FB0) + ((party_index * 0xD) << 3)))->unk31 = 5;
+            actor = ((u8 *)D_80123FB0) + (party_index * 0x68);
+            ((PartyActorView *)actor)->unk32 = 0;
+            ((PartyActorView *)actor)->unk34 = 0;
+            actor = func_80087F0C(party_index);
+            stat_index = 0;
+            linked_record = ((u8 *)D_80123FB0) + (party_index * 0x68);
+            ((PartyActorView *)linked_record)->actor = actor;
+            ((PartyActorView *)linked_record)->unk40 =
+                (u16)((PartySaveView *)(((party_index * 0x25) << 4) + ((s32)D_80122B74)))->equipment_stat;
+            ((PartyActorView *)linked_record)->unk42 = 0x19;
             do
             {
-                var_s0 = 1;
-                var_t0 = var_s4 + 0x40;
-                *(u16 *)((u8 *)((((u8 *)D_80123FB0) + var_t5)) + 0x44) = 0;
-                *(u8 *)((u8 *)((((u8 *)D_80123FB0) + var_t3)) + 0x4C) = (u8) *(u8 *)((u8 *)((var_s4 + D_80122B74 + var_t1)) + 0x670);
-loop_13:
-                if (*(u8 *)((u8 *)((D_80122B74 + var_t0)) + 0x640) != 0)
+                index = 1;
+                ((PartyActorView *)(((u8 *)D_80123FB0) + (((party_index * 0xD) << 3) + (stat_index << 1))))
+                    ->equipment_stats[0] = 0;
+                ((PartyActorView *)(((u8 *)D_80123FB0) + (((party_index * 0xD) << 3) + stat_index)))
+                    ->equipment_attributes[0] =
+                    (u8)((PartySaveView *)((((party_index * 0x25) << 4) + ((s32)D_80122B74)) + stat_index))
+                        ->equipment_attribute;
+                do
                 {
-                    temp_a0_3 = (s32)(var_s4 + D_80122B74 + (var_s0 << 6) + 0x640);
-                    temp_a1_3 = ((u8 *)D_80123FB0) + (var_t6 + var_s2);
-                    temp_a2 = ((u8 *)D_80123FB0) + var_t3;
-                    *(u16 *)((u8 *)(temp_a1_3) + 0x44) = (u16) (*(u16 *)((u8 *)(temp_a1_3) + 0x44) + *(u16 *)((u8 *)((temp_a0_3 + var_t6)) + 0x24));
-                    *(u8 *)((u8 *)(temp_a2) + 0x4C) = (u8) (*(u8 *)((u8 *)(temp_a2) + 0x4C) + *(u8 *)((u8 *)((temp_a0_3 + var_t1)) + 0x30));
-                }
-                var_s0 += 1;
-                var_t0 += 0x40;
-                if (var_s0 < 4)
-                {
-                    goto loop_13;
-                }
-                var_t3 += 1;
-                var_t6 += 2;
-                var_t1 += 1;
-                var_t5 += 2;
-            } while (var_t1 < 4);
-            var_s0_2 = 0;
-            func_800B4934(((u8 *)D_80123FB0) + var_fp);
-            var_s1 = *(u32 *)((u8 *)((var_s4 + D_80122B74)) + 0x658);
-            do
-            {
-                temp_v0_2 = func_800B7EE8(D_80122B74 + sp14, var_s0_2);
-                temp_a0_4 = var_s0_2 + var_s2;
-                temp_v1_2 = ((u8 *)D_80123FB0) + temp_a0_4;
-                *(u8 *)((u8 *)(temp_v1_2) + 0x58) = temp_v0_2;
-                *(u8 *)((u8 *)(temp_v1_2) + 0x50) = temp_v0_2;
-                *(u8 *)((u8 *)((((u8 *)D_80123FB0) + temp_a0_4)) + 0x64) = (s8) (var_s1 & 0xF);
-                var_s1 = var_s1 >> 4;
-                temp_a0_5 = ((u8 *)D_80123FB0) + temp_a0_4;
-                temp_v0_3 = *(u8 *)((u8 *)((((u8 *)D_80123FB0) + var_s0_2)) + 0xC);
-                var_s0_2 += 1;
-                *(u8 *)((u8 *)(temp_a0_5) + 0x64) = (u8) (*(u8 *)((u8 *)(temp_a0_5) + 0x64) + temp_v0_3);
-            } while (var_s0_2 < 8);
-            var_t1_2 = 1;
-            *(u8 *)((u8 *)((((u8 *)D_80123FB0) + (var_s0_2 + var_s2))) + 0x6C) = 0;
-            *(u8 *)((u8 *)((((u8 *)D_80123FB0) + var_s2)) + 0x60) = 0;
-            var_a1 = 0x40;
-            *(u8 *)((u8 *)((((u8 *)D_80123FB0) + var_s2)) + 0x61) = 0;
-            var_a3 = var_s4 + 0x40;
-            *(u8 *)((u8 *)((((u8 *)D_80123FB0) + var_s2)) + 0x62) = 0;
-            do
-            {
-                if (*(u8 *)((u8 *)((D_80122B74 + var_a3)) + 0x640) != 0)
-                {
-                    var_s1_2 = *(u32 *)((u8 *)((var_s4 + D_80122B74 + var_a1)) + 0x658);
-                    var_s0_3 = 0;
-                    do
+                    if (((PartySaveView *)(D_80122B74 + (((party_index * 0x25) << 4) + (index * 0x40))))
+                            ->equipment_active != 0)
                     {
-                        temp_v1_3 = ((u8 *)D_80123FB0) + (var_s0_3 + var_s2);
-                        temp_v0_4 = *(u8 *)((u8 *)(temp_v1_3) + 0x6C);
-                        var_s0_3 += 1;
-                        *(u8 *)((u8 *)(temp_v1_3) + 0x6C) = (s8) (temp_v0_4 + (var_s1_2 & 0xF));
-                        var_s1_2 = var_s1_2 >> 4;
-                    } while (var_s0_3 < 8);
-                    temp_a0_6 = ((u8 *)D_80123FB0) + var_s2;
-                    *(u8 *)((u8 *)(temp_a0_6) + 0x60) = (u8) (*(u8 *)((u8 *)(temp_a0_6) + 0x60) | *(u8 *)((u8 *)((var_s4 + D_80122B74 + var_a1)) + 0x66C));
-                    temp_a0_7 = ((u8 *)D_80123FB0) + var_s2;
-                    *(u8 *)((u8 *)(temp_a0_7) + 0x62) = (u8) (*(u8 *)((u8 *)(temp_a0_7) + 0x62) | *(u8 *)((u8 *)((var_s4 + D_80122B74 + var_a1)) + 0x66D));
+                        stat_record = ((u8 *)D_80123FB0) + ((stat_index << 1) + (party_index * 0x68));
+                        attribute_record = ((u8 *)D_80123FB0) + ((party_index * 0x68) + stat_index);
+                        equipment_address =
+                            (s32)(((((party_index * 0x25) << 4) + ((s32)D_80122B74)) + (index << 6)) + 0x640);
+                        ((PartyActorView *)stat_record)->equipment_stats[0] =
+                            (u16)(((PartyActorView *)stat_record)->equipment_stats[0] +
+                                  ((PartyEquipmentView *)(equipment_address + (stat_index << 1)))->stat);
+                        ((PartyActorView *)attribute_record)->equipment_attributes[0] =
+                            (u8)(((PartyActorView *)attribute_record)->equipment_attributes[0] +
+                                 ((PartyEquipmentView *)(equipment_address + stat_index))->attribute);
+                    }
+                    index += 1;
+                } while (index < 4);
+                stat_index += 1;
+            } while (stat_index < 4);
+            index = 0;
+            func_800B4934(((u8 *)D_80123FB0) + ((party_index * 0x68) + 0x28));
+            packed_modifiers =
+                ((PartySaveView *)(((party_index * 0x25) << 4) + ((s32)D_80122B74)))->equipment_modifiers;
+            do
+            {
+                attribute_value = func_800B7EE8(D_80122B74 + (((party_index * 0x25) << 4) + 0x5F0), index);
+                attribute_offset = index + ((party_index * 0xD) << 3);
+                value_record = ((u8 *)D_80123FB0) + attribute_offset;
+                ((PartyActorView *)value_record)->base_values[0] = attribute_value;
+                ((PartyActorView *)value_record)->attributes[0] = attribute_value;
+                ((PartyActorView *)(((u8 *)D_80123FB0) + attribute_offset))->modifiers[0] =
+                    (s8)(packed_modifiers & 0xF);
+                packed_modifiers = packed_modifiers >> 4;
+                modifier_record = ((u8 *)D_80123FB0) + attribute_offset;
+                ((PartyActorView *)modifier_record)->modifiers[0] +=
+                    ((PartyActorView *)(((u8 *)D_80123FB0) + index))->base_attributes[0];
+                index += 1;
+            } while (index < 8);
+            equipment_index = 1;
+            ((PartyActorView *)(((u8 *)D_80123FB0) + (index + ((party_index * 0xD) << 3))))->bonuses[0] = 0;
+            ((PartyActorView *)(((u8 *)D_80123FB0) + ((party_index * 0xD) << 3)))->flags60 = 0;
+            ((PartyActorView *)(((u8 *)D_80123FB0) + ((party_index * 0xD) << 3)))->flags61 = 0;
+            ((PartyActorView *)(((u8 *)D_80123FB0) + ((party_index * 0xD) << 3)))->flags62 = 0;
+            do
+            {
+                if (((PartySaveView *)(D_80122B74 + (((party_index * 0x25) << 4) + (equipment_index << 6))))
+                        ->equipment_active != 0)
+                {
+                    packed_modifiers = ((PartySaveView *)((((party_index * 0x25) << 4) + ((s32)D_80122B74)) +
+                                                          (equipment_index << 6)))
+                                           ->equipment_modifiers;
+                    for (index = 0; index < 8; index++)
+                    {
+                        ((PartyActorView *)(((u8 *)D_80123FB0) - (-(index + (party_index * 0x68)))))
+                            ->bonuses[0] += packed_modifiers & 0xF;
+                        packed_modifiers >>= 4;
+                    }
+
+                    flags60_record = ((u8 *)D_80123FB0) + (party_index * 0x68);
+                    ((PartyActorView *)flags60_record)->flags60 =
+                        (u8)(((PartyActorView *)flags60_record)->flags60 |
+                             ((PartySaveView *)((((party_index * 0x25) << 4) + ((s32)D_80122B74)) +
+                                                (equipment_index << 6)))
+                                 ->flags66C);
+                    flags62_record = ((u8 *)D_80123FB0) + (party_index * 0x68);
+                    ((PartyActorView *)flags62_record)->flags62 =
+                        (u8)(((PartyActorView *)flags62_record)->flags62 |
+                             ((PartySaveView *)((((party_index * 0x25) << 4) + ((s32)D_80122B74)) +
+                                                (equipment_index << 6)))
+                                 ->flags66D);
                 }
-                var_a1 += 0x40;
-                var_t1_2 += 1;
-                var_a3 += 0x40;
-            } while (var_t1_2 < 4);
-            temp_v1_4 = ((u8 *)D_80123FB0) + var_s2;
-            *(u32 *)((u8 *)(temp_v1_4) + 0x3C) = 0;
-            *(u8 *)((u8 *)(temp_v1_4) + 0x74) = (u8) *(u8 *)((u8 *)((D_80122B74 + var_s4)) + 0x633);
+                equipment_index += 1;
+            } while (equipment_index < 4);
+            final_record = ((u8 *)D_80123FB0) + (party_index * 0x68);
+            ((PartyActorView *)final_record)->unk3C = 0;
+            ((PartyActorView *)final_record)->unk74 =
+                (u8)((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->unk633;
             if (D_8010D020 != 0)
             {
-                temp_a1_4 = D_80122B74 + var_s4;
-                temp_a2_2 = ((u8 *)D_80123FB0) + var_s2;
-                *(s32 *)(*(u8 **)(temp_a2_2 + 0x38)) = (s32) (*(u16 *)((u8 *)(temp_a1_4) + 0x614) * 3);
-                *(s32 *)(*(u8 **)(temp_a2_2 + 0x38) + 4) = (s32) (*(u16 *)((u8 *)(temp_a1_4) + 0x614) * 3);
-                temp_a3 = *(u8 * *)((u8 *)(temp_a2_2) + 0x38);
-                *(s32 *)((u8 *)(temp_a3) + 0x8) = (s32) ((*(s32 *)((u8 *)(temp_a3) + 0x8) & 0xFF000000) | (*(u16 *)((u8 *)(temp_a1_4) + 0x614) * 3));
-                temp_a0_8 = *(u8 * *)((u8 *)(temp_a2_2) + 0x38);
-                *(s32 *)((u8 *)(temp_a0_8) + 0x8) = (s32) (*(s32 *)((u8 *)(temp_a0_8) + 0x8) & 0x80FFFFFF);
+                hp_source = D_80122B74 + ((party_index * 0x25) << 4);
+                hp_record = ((u8 *)D_80123FB0) + (party_index * 0x68);
+                *((s32 *)((PartyActorView *)hp_record)->actor) = (s32)(((PartySaveView *)hp_source)->hp * 3);
+                ((PartyLiveActorView *)((PartyActorView *)hp_record)->actor)->max_hp =
+                    (s32)(((PartySaveView *)hp_source)->hp * 3);
+                live_hp = ((PartyActorView *)hp_record)->actor;
+                ((PartyLiveActorView *)live_hp)->flags =
+                    (s32)((((PartyLiveActorView *)live_hp)->flags & 0xFF000000) |
+                          (((PartySaveView *)hp_source)->hp * 3));
+                live_flags = ((PartyActorView *)hp_record)->actor;
+                ((PartyLiveActorView *)live_flags)->flags =
+                    (s32)(((PartyLiveActorView *)live_flags)->flags & 0x80FFFFFF);
             }
             else
             {
-                *(s32 *)(*(u8 **)(((u8 *)D_80123FB0) + var_s2 + 0x38)) = (s32) *(u16 *)((u8 *)((D_80122B74 + var_s4)) + 0x614);
+                *((s32 *)((PartyActorView *)(((u8 *)D_80123FB0) + ((party_index * 0xD) << 3)))->actor) =
+                    (s32)((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->hp;
             }
-            temp_a1_5 = ((u8 *)D_80123FB0) + var_s2;
-            var_a0 = *(u8 *)((u8 *)(temp_a1_5) + 0x53) * 2;
-            if ((((u32) *(u32 *)((u8 *)((D_80122B74 + var_s4)) + 0x654) >> 0xA) & 0x3F) == 7)
+            capacity_record = ((u8 *)D_80123FB0) + (party_index * 0x68);
+            capacity = ((PartyActorView *)capacity_record)->attributes[3] * 2;
+            if (((((u32)((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->equipment_config) >>
+                  0xA) &
+                 0x3F) == 7)
             {
-                var_a0 += 0x80;
+                capacity += 0x80;
             }
-            temp_v1_5 = *(u8 * *)((u8 *)(temp_a1_5) + 0x38);
-            if (var_a0 < 0x100U)
+            live_capacity = ((PartyActorView *)capacity_record)->actor;
+            if (capacity < 0x100U)
             {
-                *(u16 *)((u8 *)(temp_v1_5) + 0x68) = var_a0;
+                ((PartyLiveActorView *)live_capacity)->capacity = capacity;
             }
             else
             {
-                *(u16 *)((u8 *)(temp_v1_5) + 0x68) = 0xFFU;
+                ((PartyLiveActorView *)live_capacity)->capacity = 0xFFU;
             }
-            if ((*(u8 *)((u8 *)((D_80122B74 + var_s4)) + 0x608) & 0x7F) == 3)
+            if ((((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->type & 0x7F) == 3)
             {
                 func_800B3D84();
             }
-            sp10 += 1;
+            active_count += 1;
         }
-        var_s4 += 0x250;
-        var_s2 += 0x68;
-        var_fp += 0x68;
-        var_s7 += 1;
-        sp14 += 0x250;
-    } while (var_s7 < 3);
-    return sp10;
+        party_index += 1;
+    } while (party_index < 3);
+    return active_count;
 }
 
 
