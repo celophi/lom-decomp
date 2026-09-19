@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_animation.h"
 #include "vector.h"
 
 /** @brief Byte view of a field text flags word. */
@@ -250,7 +251,6 @@ typedef struct
 void func_800640B4(FieldTextState* state);
 void func_800632E0(FieldTextState* state, s32 budget);
 s32 func_80064210(FieldTextState* state);
-void field_queue_vram_upload(FieldImageReq* req);
 
 void field_text_apply_config(FieldTextState* state);
 void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
