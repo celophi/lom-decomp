@@ -40,7 +40,7 @@ extern FieldActorState g_field_actor_slots[80];
 #define FIELD_OT_ADDRESS_MASK 0x00FFFFFF
 #define FIELD_OT_TAG_MASK 0xFF000000
 
-static void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right);
+void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right);
 void field_resolve_effect_part_color(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, u8 *out);
 void func_800822A4(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, s32 part_index);
 s32 func_80082C90(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, MATRIX *mtx, MATRIX *tmp);
@@ -142,7 +142,7 @@ done:
  * @param rotate_right Nonzero to rotate right; zero to rotate left.
  * @see decomp.me (100%) https://decomp.me/scratch (func_800801F8)
  */
-static void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right)
+void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right)
 {
     u16 temp;
     s32 i;

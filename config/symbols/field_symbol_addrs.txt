@@ -365,6 +365,7 @@ field_apply_effect_quad_center_offset         = 0x8007F864;
 field_transform_effect_quad_vertices8         = 0x8007F938;
 field_transform_effect_quad_vertices16        = 0x8007FC74;
 field_update_actor_palette_animation           = 0x8007FFC8;
+field_rotate_palette_row                     = 0x800801F8;
 field_render_effect_mesh                     = 0x80080274;
 field_render_lit_effect_mesh                 = 0x80081098;
 field_render_actor_ground_shadow             = 0x800871A0;
