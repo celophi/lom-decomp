@@ -928,7 +928,7 @@ store_and_return:
  * @param code  character code to draw; the font table is indexed from 0x20.
  * @param width advance width of this glyph, in quarter-pixel units.
  *
- * @see decomp.me (95.46%) scratch not yet published
+ * @see decomp.me (100%) scratch not yet published
  */
 void func_80063B6C(FieldTextState* st, s32 code, u16 width)
 {
@@ -941,16 +941,11 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
     u16* row_dst;
     u8* px;
     s32 rows;
-    s32 y;
     s32 shift;
     s32 i;
     s32 j;
     s32 r;
-    s32 f;
-    s32 m;
-    s32 count;
     s32 col;
-    s32 x;
     s32 words;
     s32 lo_fill;
     s32 hi_fill;
@@ -970,33 +965,33 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
 
     scratch = (u16*) 0x1F800000;
     carry = st->row_carry;
-    rows = st->line_height;
+    i = st->line_height;
+    rows = i;
     shift = st->width - st->remaining_width;
-    f = rows - 1;
-    for (m = f; m != -1; m--)
+    for (i = rows - 1; i != -1; i--)
     {
-        count = 4;
+        j = 4;
         if (shift != 0)
         {
             *scratch++ = *carry++;
         }
         else
         {
-            count = 5;
+            j = 5;
         }
-        for (j = count - 1; j != -1; j--)
+        for (j = j - 1; j != -1; j--)
         {
             *scratch++ = 0;
         }
     }
 
-    lo_fill = 6;
     if ((st->flags.word & 0xC0) == 0x40)
     {
+        lo_fill = 6;
         hi_fill = 0x60;
         lo_shadow = 7;
         hi_shadow = 0x70;
-        nibbles = (u16) width + 2;
+        nibbles = width + 2;
     }
     else
     {
@@ -1045,7 +1040,7 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
             hi_shadow = 0xF0;
             break;
         }
-        nibbles = (u16) width + 1;
+        nibbles = width + 1;
     }
 
     glyph = (u16*) (0x801E1200 + (((u16) code - 0x20) * 0x18));
@@ -1061,7 +1056,6 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
         mask = 0x8000;
         if ((st->flags.word & 0xC0) == 0x40)
         {
-            cur = 0;
             if (i != 0)
             {
                 next = *glyph;
@@ -1073,7 +1067,7 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
             }
             else
             {
-                next = cur;
+                next = cur = 0;
             }
             for (j = nibbles - 1; j != -1; j--)
             {
@@ -1148,12 +1142,12 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
         px += 10;
     }
 
-    y = st->cursor_v;
-    x = st->cursor_u + shift;
-    while (x >= 0x100)
+    i = st->cursor_v;
+    j = st->cursor_u + shift;
+    while (j >= 0x100)
     {
-        x -= 0x100;
-        y += rows;
+        j -= 0x100;
+        i += rows;
     }
 
     if ((st->flags.word & 0xC0) == 0x40)
@@ -1172,28 +1166,25 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
     {
         span = nibbles + (shift & 3);
     }
-    left = (span + 3) >> 2;
-
     scratch = (u16*) 0x1F800000;
+    left = (span + 3) >> 2;
     if (left != 0)
     {
-        line = (u8*) 0x801DE000 - (-(y << 7));
         do
         {
-            col = x >> 2;
-            dst = (u16*) (line + col * 2);
+            line = (u8*) 0x801DE000 + (i << 7);
+            col = j >> 2;
+            dst = (u16*) (col * 2 + (s32) line);
             if ((u32) (col + left) >= 0x41U)
             {
                 words = 0x40 - col;
                 left -= words;
-                x = 0;
-                m = rows << 7;
-                line += m;
-                y += rows;
+                j = 0;
+                i += rows;
             }
             else
             {
-                x += left * 4;
+                j += left * 4;
                 words = left;
                 left = 0;
             }
@@ -1203,7 +1194,7 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
                 u16* s = row_src;
 
                 row_dst = dst;
-                for (j = words - 1; j != -1; j--)
+                for (col = words - 1; col != -1; col--)
                 {
                     *row_dst++ = *s++;
                 }
@@ -1214,11 +1205,12 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
         } while (left != 0);
     }
 
-    st->dirty_end_u = x;
-    scratch = (u16*) 0x1F800000 + (((shift & 3) + (u16) width) >> 2);
+    st->dirty_end_u = j;
+    j = (shift & 3) + width;
+    scratch = (u16*) 0x1F800000 + (j >> 2);
     carry = st->row_carry;
-    st->dirty_end_v = y;
-    for (f = rows - 1; f != -1; f--)
+    st->dirty_end_v = i;
+    for (i = rows - 1; i != -1; i--)
     {
         *carry++ = *scratch;
         scratch += 5;

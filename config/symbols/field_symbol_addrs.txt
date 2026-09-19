@@ -346,6 +346,7 @@ D_1F800001 = 0x1F800001; // ignore:true
 D_1F800002 = 0x1F800002; // ignore:true
 D_1F800004 = 0x1F800004; // ignore:true
 D_1F800008 = 0x1F800008; // ignore:true
+D_1F80000A = 0x1F80000A; // ignore:true
 D_1F800010 = 0x1F800010; // ignore:true
 field_update_effect_record               = 0x80071D40;
 field_render_effects                      = 0x80074D7C;
