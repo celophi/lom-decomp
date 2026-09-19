@@ -347,25 +347,7 @@ overlay_title_gcc_272_cdk_g0_srcs := \
 OVERLAYS += wsel
 overlay_wsel_gcc_272_cdk_g0_srcs := \
 	src/overlays/wsel/overlay_header.c \
-	src/overlays/wsel/wsel_main_loop.c \
-	src/overlays/wsel/wsel_init_display.c \
-	src/overlays/wsel/func_800503F0.c \
-	src/overlays/wsel/func_800520A8.c \
-	src/overlays/wsel/func_80052154.c \
-	src/overlays/wsel/func_800521D0.c \
-	src/overlays/wsel/wsel_audio_fade.c \
-	src/overlays/wsel/wsel_read_pad_state.c \
-	src/overlays/wsel/func_80052384.c \
-	src/overlays/wsel/wsel_read_pad_input.c \
-	src/overlays/wsel/func_800514D8.c \
-	src/overlays/wsel/func_800517BC.c
-overlay_wsel_gcc_280_g0_srcs := \
-	src/overlays/wsel/func_80050944.c \
-	src/overlays/wsel/func_80050B40.c \
-	src/overlays/wsel/func_80050DB0.c \
-	src/overlays/wsel/func_80050F0C.c \
-	src/overlays/wsel/func_800513D0.c \
-	src/overlays/wsel/func_80051D78.c
+	src/overlays/wsel/wsel.c
 
 OVERLAYS += zukan
 # The overlay header is linked first. The category builder is compiled at -O0;
