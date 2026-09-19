@@ -1821,43 +1821,44 @@ void field_update_effect_record(FieldMotionRecord *rec, FieldActorPartDef *part,
  * @brief Per-frame actor tick: advances every active effect record owned by
  *        this actor (culling off-screen ones, spawning chained effects on
  *        expiry), then refreshes the actor's palette-track texture pages.
- * @param arg0 Actor being ticked.
- * @see decomp.me (80.28%) TODO
- * @note WIP - 80.28% (212/312 rows). Two residues, both investigated at
- *       length without a clean fix:
- *       (1) the g_field_effect_records[rec->previous_effect_index] "previous record" address is
- *       recomputed from scratch by the target FOUR separate times (once per
- *       field read/write) in straight-line code with no intervening call or
- *       branch; plain C (even with freshly-named index locals each time)
- *       always lets gcc 2.7.2's cse.c merge these into one computation. The
- *       `FieldMotionRecord * volatile pv` reassigned before each use forces
- *       the recompute (pv is `volatile`, but the round-trip through its own
- *       stack home does not exactly match the target's register-only
- *       rederivation) - this closed most but not all of the gap.
- *       (2) the D_800F22A0/A4/A8 sign-fixup chain (building sx/sy) has a
- *       handful of residual sched1/regalloc-order rows that did not respond
- *       to reassociating the sums or reordering the fixups.
- *       A fresh source-model attempt, or sched_oracle on the sign-fixup
- *       block, would be the next lever - not attempted this session.
+ * @param arg0_param Actor being ticked.
+ * @see decomp.me (99.84%) TODO
+ * @note WIP - 99.84% (312/317 rows, exact instruction count and frame). Two
+ *       residues remain, both cosmetic-or-ordering, neither structural:
+ *       (1) the three `sra` shifts that build the spawn direction emit in the
+ *       order vz,vx,vy instead of the target's vx,vy,vz. The pre-sched1 RTL
+ *       emit order is already the target's; sched1 reorders it and every
+ *       source-level lever measured inert (statement order, temps, do/while(0)
+ *       wrappers, expression shape, VECTOR-array aliasing, permuter at 90k
+ *       iterations). Not a register problem - same registers, rotated order.
+ *       (2) `&g_field_effect_records[256]` relocates as
+ *       g_field_effect_records+0x5400; the target labels the same address
+ *       g_field_effect_records_end. Identical bytes - objdiff symbol naming
+ *       only. Using the end symbol instead costs a real instruction at the
+ *       loop preheader (the target derives the bound as s3+0x5400), so the
+ *       indexed form is the byte-correct one.
+ * @note The `do { ... } while (0)` wrappers in the palette loop are load-bearing
+ *       (idiom ALLOC-23): they raise REG_N_REFS for `changed` and the loop's
+ *       induction giv so global.c hands out s0/s1/s2 in the target's order.
+ *       Removing either wrapper costs 4-7 exact rows.
  */
 void func_8007100C(FieldActorState *arg0_param)
 {
     FieldActorState *arg0;
     FieldMotionRecord *rec;
     FieldActorPartDef *part;
+    FieldActorPartDef *palette_part;
     void *buf;
-    s32 i;
     s32 count;
     s32 newslot;
+    s32 changed;
     FieldMotionRecord *newrec;
-    s32 v0, v1, a0, v0_2, a0_2, v1_2;
-    s16 sx, sy;
+    s32 pitch_shift;
     u8 t;
-    s32 dx, dy, dz;
-    FieldMotionRecord * volatile pv;
-    s32 unused_pad[2];
-    s32 sp20, sp24, sp28;
-    s32 out_vec[3];
+    RECT rect;
+    FieldSVector screen;
+    FieldVector delta;
+    FieldVector angles;
 
     arg0 = arg0_param;
     for (rec = g_field_effect_records; rec != &g_field_effect_records[256]; rec++)
@@ -1872,47 +1873,17 @@ void func_8007100C(FieldActorState *arg0_param)
             {
                 t = rec->state;
                 rec->state = 0xFF;
-                rec->saved_state = t;
+                rec->height_or_retired_state = t;
             }
             if (((part->behavior_flags >> 4) & 3) == 3)
             {
-                v0 = D_800F22A0;
-                if (v0 < 0)
-                {
-                    v0 += 0xFF;
-                }
-                v1 = rec->x;
-                if (v1 < 0)
-                {
-                    v1 += 0xFF;
-                }
-                a0 = D_800F22A4;
-                sx = (v0 >> 8) + (v1 >> 8) + 0xA0;
-                if (a0 < 0)
-                {
-                    a0 += 0xFF;
-                }
-                v0_2 = rec->y;
-                if (v0_2 < 0)
-                {
-                    v0_2 += 0xFF;
-                }
-                a0_2 = rec->z;
-                if (a0_2 < 0)
-                {
-                    a0_2 += 0x1FF;
-                }
-                v1_2 = D_800F22A8;
-                if (v1_2 < 0)
-                {
-                    v1_2 += 0x1FF;
-                }
-                sy = ((a0 >> 8) + (v0_2 >> 8) + 0x70) - (a0_2 >> 9) - (v1_2 >> 9);
-                if ((u32) ((sx + 0x140) & 0xFFFF) >= 0x3C1 || sy >= 0x1E1 || sy < -0xF0)
+                screen.x = (D_800F22A0 / 256) + (u32) (rec->x / 256 + 0xA0);
+                screen.y = 0x70 + D_800F22A4 / 256 + rec->y / 256 - rec->z / 512 - D_800F22A8 / 512;
+                if ((u16) (screen.x + 0x140) >= 0x3C1 || screen.y >= 0x1E1 || screen.y < -0xF0)
                 {
                     t = rec->state;
                     rec->state = 0xFF;
-                    rec->saved_state = t;
+                    rec->height_or_retired_state = t;
                 }
             }
             if (rec->state == 0xFF)
@@ -1928,31 +1899,24 @@ void func_8007100C(FieldActorState *arg0_param)
                     newrec->x = rec->x;
                     newrec->y = rec->y;
                     newrec->z = rec->z;
-                    pv = &g_field_effect_records[rec->previous_effect_index];
-                    dx = rec->x - pv->x;
-                    sp20 = dx;
-                    pv = &g_field_effect_records[rec->previous_effect_index];
-                    dy = rec->y - pv->y;
-                    sp24 = dy;
-                    pv = &g_field_effect_records[rec->previous_effect_index];
-                    dz = rec->z - pv->z;
-                    sp28 = dz;
-                    pv = &g_field_effect_records[rec->previous_effect_index];
-                    pv->next_effect_index = newslot;
-                    sp28 = 0;
-                    sx = (s16) (dx >> 8);
-                    v0_2 = dz >> 9;
-                    sy = (s16) ((dy >> 8) - v0_2);
-                    sp20 = sy;
-                    sp24 = -(s32) sx;
-                    func_8001CDAC(&sp20, out_vec, v0_2);
-                    newrec->rotation_x = (s16) (out_vec[0] >> 6);
-                    newrec->heading = (s16) (out_vec[1] >> 6);
+                    delta.vx = rec->x - g_field_effect_records[rec->previous_effect_index].x;
+                    delta.vy = rec->y - g_field_effect_records[rec->previous_effect_index].y;
+                    delta.vz = rec->z - g_field_effect_records[rec->previous_effect_index].z;
+                    g_field_effect_records[rec->previous_effect_index].next_effect_index = newslot;
+                    screen.x = delta.vx >> 8;
+                    pitch_shift = delta.vz >> 9;
+                    screen.y = (delta.vy >> 8) - pitch_shift;
+                    delta.vz = 0;
+                    delta.vx = screen.y;
+                    delta.vy = -screen.x;
+                    func_8001CDAC(&delta, &angles, pitch_shift);
+                    newrec->rotation_x = angles.vx >> 6;
+                    newrec->heading = angles.vy >> 6;
+                    newrec->pitch = angles.vz >> 6;
                     newrec->work_x = 0;
                     newrec->work_y = 0;
-                    newrec->pitch = (s16) (out_vec[2] >> 6);
-                    newrec->next_effect_index = 0xFF;
                     newrec->previous_effect_index = rec->previous_effect_index;
+                    newrec->next_effect_index = 0xFF;
                     rec->previous_effect_index = newslot;
                 }
             }
@@ -1968,32 +1932,34 @@ void func_8007100C(FieldActorState *arg0_param)
         buf = D_80105358;
     }
     count = 0;
-    newslot = 0;
+    changed = 0;
     if (arg0->part_count != 0)
     {
-        i = 0;
         do
         {
-            part = &arg0->parts[i];
-            if ((part->track_flags >> 0x15) & 1)
+            do
             {
-                newslot++;
-                field_interpolate_palette_track(arg0, part->unknown_0x1c, buf, (u8 *) buf + 0x200);
+                palette_part = (FieldActorPartDef *) (count * 0x48 + (s32) arg0->parts);
+            } while (0);
+            if ((palette_part->track_flags >> 0x15) & 1)
+            {
+                do
+                {
+                    field_interpolate_palette_track(arg0, palette_part->unknown_0x1c, buf, (u8 *) buf + 0x200);
+                    changed++;
+                } while (0);
             }
             count++;
-            i++;
         } while (count < arg0->part_count);
     }
-    if (newslot != 0)
+    if (changed != 0)
     {
-        RECT rect;
-
         if (arg0->owner_object_index < 2)
         {
             rect.x = 0;
+            rect.y = (arg0->owner_object_index * 2) + 0x1EF;
             rect.w = 0x10;
             rect.h = 1;
-            rect.y = (arg0->owner_object_index * 2) + 0x1EF;
         }
         else
         {
