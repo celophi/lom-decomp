@@ -17,9 +17,9 @@ void field_update_audio_timer(void);                       /* extern */
 void field_update_gover_load(void);                        /* extern */
 void field_update_return_to_title_prompt(s32);         /* extern */
 void field_update_and_render_fade(s32);                               /* extern */
-void func_80067FB0(s32);                               /* extern */
-void func_8006BC50(void);                                  /* extern */
-void func_8006BFE8(s32);                               /* extern */
+void field_update_dialog_runtime(s32);                               /* extern */
+void field_update_actor_objects(void);                                  /* extern */
+void field_render_actor_objects(s32);                               /* extern */
 void func_800842E0(void);                                  /* extern */
 void func_80084700(s32);                               /* extern */
 void func_80086FB8(s32);                               /* extern */
@@ -42,7 +42,7 @@ void func_800B19FC(void);                                  /* extern */
 extern s32 g_field_action_context[];
 extern s32 D_800F2288[];
 extern s32 D_800F2298[];
-extern s32 D_800F22C0[];
+extern s32 g_field_gover_load_countdown[];
 extern s32 D_800FE754[];
 extern s32 g_field_pickup_sound_played[];
 extern s32 D_8010AE48[];
@@ -82,7 +82,7 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
             func_80084700(arg0);
         }
     }
-    if ((D_800F2298[0] == 0) && (D_800F22C0[0] == 0) && (D_8012269C[0] == 0) && (D_801227C8[0] == 0))
+    if ((D_800F2298[0] == 0) && (g_field_gover_load_countdown[0] == 0) && (D_8012269C[0] == 0) && (D_801227C8[0] == 0))
     {
         func_800B19FC();
         if (g_field_scene_request_pending[0] != 0)
@@ -91,24 +91,24 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
         }
         if (D_8011F3AC[0] == 0)
         {
-            func_8006BC50();
+            field_update_actor_objects();
         }
     }
     func_800A4798(arg0);
     func_80096B54();
-    if ((D_800F2298[0] == 0) && (D_800F22C0[0] == 0) && (D_8012269C[0] == 0) && (D_8011F3AC[0] == 0) && (D_801227C8[0] == 0))
+    if ((D_800F2298[0] == 0) && (g_field_gover_load_countdown[0] == 0) && (D_8012269C[0] == 0) && (D_8011F3AC[0] == 0) && (D_801227C8[0] == 0))
     {
         field_update_actor_animations();
     }
     field_prepare_actor_render_commands(arg0, arg1);
-    func_8006BFE8(arg0);
+    field_render_actor_objects(arg0);
     func_80086FB8(arg0);
     func_800A2E40(arg0);
     func_800A2E34();
     func_800842E0();
     g_frame_counter[0] += 1;
     func_8008B73C();
-    func_80067FB0(arg0);
+    field_update_dialog_runtime(arg0);
     field_update_return_to_title_prompt(arg0);
     func_80096E60();
     func_800A64D0(arg0);

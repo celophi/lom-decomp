@@ -308,7 +308,7 @@ void func_80083BC0(void *record, ActorState *actor, s32 force)
     extern ObjectState D_80105AE0[];
     extern s32 D_800F2278, D_800F227C, D_800F2280;
     void field_set_global_color_scale(s32, s32, s32);
-    void func_8006D21C(ActorState *);
+    void field_clear_actor_effects(ActorState *);
 
     s16 object_state;
     s32 target_index;
@@ -343,7 +343,7 @@ void func_80083BC0(void *record, ActorState *actor, s32 force)
     clear_tracks:
         actor->unk23A = 0;
         actor->unk23B = 0;
-        func_8006D21C(actor);
+        field_clear_actor_effects(actor);
         if (actor->unk24 != 0)
         {
             if (actor->unkC->unkC & 0x1000)

@@ -78,16 +78,16 @@ void func_800BB9F4(s32 arg0, s32 arg1)
     field_control_animation(0, arg0, arg1, 1);
 }
 
-extern void func_8006B1A0(s32 arg0, s32 arg1);
+extern void field_find_or_load_resource_entry(s32 arg0, s32 arg1);
 
 /**
- * @param arg0 Passed through to func_8006B1A0.
- * @param arg1 Passed through to func_8006B1A0.
+ * @param arg0 Passed through to field_find_or_load_resource_entry.
+ * @param arg1 Passed through to field_find_or_load_resource_entry.
  * @see decomp.me (100%) N/A -- trivial 8-instruction wrapper function, no scratch needed.
  */
 void func_800BBA24(s32 arg0, s32 arg1)
 {
-    func_8006B1A0(arg0, arg1);
+    field_find_or_load_resource_entry(arg0, arg1);
 }
 
 
@@ -448,7 +448,7 @@ void func_800BBAC8(u32 command, s32 operand)
  */
 
 s32 func_8008C2EC(s32 arg0, s32 arg1);
-void func_8006AD04(s32 arg0, s32 arg1, s32 arg2);
+void field_activate_actor_resource_slot(s32 arg0, s32 arg1, s32 arg2);
 void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 s32 func_800C2DC0(void);
 s32 func_800C2D08(void);
@@ -520,7 +520,7 @@ void func_800BC2A0(s32 arg0, s32 arg1)
  * @brief Dispatch a resolved sequence action and latch a scene-state flag.
  *
  * Runs func_800C2B14 for @p arg1, resolves @p arg0 (0xFF is the script
- * owner), and forwards the pair to func_8006AD04. When @c D_8010AE78 is set
+ * owner), and forwards the pair to field_activate_actor_resource_slot. When @c D_8010AE78 is set
  * it triggers func_80087FC0 and rewrites bits 17-19 of the word at
  * @c D_80122B78 + 0x400 to 0x20000. Always finishes by writing @p arg1 to
  * script variable 0x2F08.
@@ -542,7 +542,7 @@ void func_800BC328(s32 arg0, s32 arg1)
     {
         var_a0 = arg0;
     }
-    func_8006AD04(var_a0, arg1, 0);
+    field_activate_actor_resource_slot(var_a0, arg1, 0);
     if (D_8010AE78 != 0)
     {
         func_80087FC0(1, 2);
@@ -579,13 +579,13 @@ void func_800BC3DC(s32 arg0, s32 arg1)
     }
     if (var_s0 != 0xFF)
     {
-        func_8006AD04(var_s1, var_s0, 1);
+        field_activate_actor_resource_slot(var_s1, var_s0, 1);
     }
     func_800BD520(0, 0x2F00, var_s0);
 }
 
 /**
- * @brief Apply func_800C318C's value to the actor through func_8006AD04 and write it to script variable 0x2F00.
+ * @brief Apply func_800C318C's value to the actor through field_activate_actor_resource_slot and write it to script variable 0x2F00.
  * @param arg0 Actor id, or 0xFF for the script owner.
  * @param arg1 Value passed to func_800C318C.
  */
@@ -597,11 +597,11 @@ void func_800BC474(s32 arg0, s32 arg1)
     if (arg0 == 0xFF)
     {
         arg0 = g_field_script->status.owner_id;
-        func_8006AD04(arg0, value, 1);
+        field_activate_actor_resource_slot(arg0, value, 1);
     }
     else
     {
-        func_8006AD04(arg0, value, 1);
+        field_activate_actor_resource_slot(arg0, value, 1);
     }
     func_800BD520(0, 0x2F00, value);
 }
@@ -813,7 +813,7 @@ void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
 void func_800A3938();
 s32 func_800878B4(s32 arg0);
-void func_8006B8DC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
+void field_set_all_actor_render_state(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
 void func_800C28B8(s32 arg0);
 void func_80087A9C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5,
                    s32 arg6, s32 arg7, s32 arg8, s32 arg9);

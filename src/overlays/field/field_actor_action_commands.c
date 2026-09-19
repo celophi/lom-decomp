@@ -317,7 +317,7 @@ typedef struct
 
 
 void field_start_actor_animation(s32, s32, s32);
-void func_8006C3FC();
+void field_restart_actor_animation();
 s32 func_800839F8();
 s32 func_80083EEC();
 void func_800A3938(s32, s32);
@@ -387,7 +387,7 @@ body:
     record->unk27 = 0;
     record->unk24 = 1;
     record->unk21 = (u8) ((record->unk21 & 0x80) | state);
-    func_8006C3FC(record);
+    field_restart_actor_animation(record);
     if (animation != -1)
     {
         animation_slot = func_800839F8(record->unk3A, 0);
@@ -516,7 +516,7 @@ extern PartDef D_800FE3A0[];
 extern StatePosition D_80105B30[];
 s32 func_80060F58(CollisionQuery *, CollisionQuery *, void *, s32);
 void func_8006304C(CollisionQuery *);
-void func_8006C3FC();
+void field_restart_actor_animation();
 
 /**
  * @brief Compute a path from an actor to another record, with direct fallback.
@@ -602,7 +602,7 @@ void func_8008A0B0(CommandView5_FieldRecord *record, s32 source_index, s32 updat
         record->unk2a = 0xB5;
         record->unk2e = 0xFF;
         record->unk24 = 1;
-        func_8006C3FC(record);
+        field_restart_actor_animation(record);
     }
 }
 

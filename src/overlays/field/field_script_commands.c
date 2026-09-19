@@ -828,7 +828,7 @@ typedef struct {
 } SomeStruct;
 
 extern u8 *g_field_script;
-extern void func_8006B984(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
+extern void field_set_actor_render_state(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
 
 /**
  * @brief Dispatch a command record, decoding its priority flag.
@@ -837,7 +837,7 @@ extern void func_8006B984(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 
  * sentinel), decodes @c unk2: when bit 7 is set the priority flag is 1 and the
  * value is the low 7 bits, otherwise the flag is 0 and the value is @c unk2 in
  * full. Forwards the record's three payload words plus flag, value, and target
- * index to func_8006B984.
+ * index to field_set_actor_render_state.
  *
  * @param arg0 Unused.
  * @param arg1 CameraCommand record.
@@ -869,7 +869,7 @@ void func_800BE37C(s32 arg0, SomeStruct *arg1)
         var_a3 = 0;
         var_v0 = arg1->unk2;
     }
-    func_8006B984(arg1->unk4, arg1->unk8, arg1->unkC, var_a3, var_v0, var_a0);
+    field_set_actor_render_state(arg1->unk4, arg1->unk8, arg1->unkC, var_a3, var_v0, var_a0);
 }
 
 

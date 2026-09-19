@@ -148,7 +148,7 @@ typedef struct
  */
 void func_80084700(u8 *render_context)
 {
-    extern FieldPanelActor D_800FDF58[], D_800FF658[];
+    extern FieldPanelActor D_800FDF58[], g_field_effect_records[];
     extern FieldPanelSlot D_80105AE0[];
     extern FieldPanelPlayer D_800FD818[];
     extern s32 D_800EB04C[];
@@ -287,12 +287,12 @@ void func_80084700(u8 *render_context)
                         if (enemy_slot->previous.bytes[3] & 0x7F)
                         {
                             if (!(enemy_slot->flags & 0x100) && (*(u8 *)&enemy_slot->state & 1) &&
-                                (D_800FF658[enemy_slot->linked].state & 0x7F) != 0x2F)
+                                (g_field_effect_records[enemy_slot->linked].state & 0x7F) != 0x2F)
                             {
-                                linked = &D_800FF658[enemy_slot->linked];
+                                linked = &g_field_effect_records[enemy_slot->linked];
                                 position.x = (D_800F22A0 / 256) + (u32)(linked->x / 256 + 0xA0);
-                                y = D_800F22A4 / 256 + (D_800FF658[enemy_slot->linked].y / 256 + 0x70);
-                                z = D_800FF658[enemy_slot->linked].z;
+                                y = D_800F22A4 / 256 + (g_field_effect_records[enemy_slot->linked].y / 256 + 0x70);
+                                z = g_field_effect_records[enemy_slot->linked].z;
                             }
                             else
                             {

@@ -4,7 +4,7 @@
 
 #include "common.h"
 
-void func_8006D1EC(void);
+void field_reset_effect_pool(void);
 void field_reset_global_color_scale(void);
 
 extern s32 D_800F2278[];
@@ -20,7 +20,7 @@ void func_80067AA4(void)
     D_800F2280[0] = 0;
     D_800F227C[0] = 0;
     D_800F2278[0] = 0;
-    func_8006D1EC();
+    field_reset_effect_pool();
     field_reset_global_color_scale();
 }
 

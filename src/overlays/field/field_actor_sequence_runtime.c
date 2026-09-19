@@ -786,7 +786,7 @@ typedef struct
 
 
 
-void func_8006C3FC(Struct_D800FDF58 *rec);
+void field_restart_actor_animation(Struct_D800FDF58 *rec);
 
 void func_80096334(Struct_D800FDF58 *a0)
 {
@@ -796,7 +796,7 @@ void func_80096334(Struct_D800FDF58 *a0)
 
     ((Struct_D80105AE0 *)D_80105AE0)[a0->unk3A].unk174 &= ~0x1800;
 
-    func_8006C3FC(a0);
+    field_restart_actor_animation(a0);
 }
 
 

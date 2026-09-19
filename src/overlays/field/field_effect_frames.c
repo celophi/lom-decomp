@@ -7,7 +7,7 @@
  * @file field11.c
  * @brief Field animation-frame audio/visual processor, carved from the top
  *        of the unk2 segment (the single-function slot right after
- *        field10.c's func_80074D7C).
+ *        field_effect_dispatch.c's field_render_effects).
  */
 
 #include "common.h"
@@ -414,7 +414,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
         *(s32*)&slot->unk140 = 0;
     }
     actor = &g_field_actor_slots[rec->unk22];
-    func_8007D078(rec, part, mtx, actor);
+    field_build_effect_part_matrix(rec, part, mtx, actor);
     gte_SetRotMatrix(mtx);
 
     sxy->x = 0xA0 + D_800F22A0 / 256 + rec->unk0 / 256;
@@ -469,7 +469,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                 {
                 block_28:
                 block_29:
-                    func_8007D8D8(actor, rec, part, (s32*)((u8*)cursor + 4));
+                    field_resolve_effect_part_color(actor, rec, part, (s32*)((u8*)cursor + 4));
                     {
                         ((u8*)&poly->tag)[3] = 9;
                         poly->code = 0x2CU;
@@ -495,7 +495,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                         var_s0 = -(s8)*item - var_s2;
                         var_s2 -= 1;
                     }
-                    func_8007DB98(rec, sxy, cursor, var_s2, temp_s7, (s32)var_s0, var_s1, item, mtx);
+                    field_project_effect_sprite_quad(rec, sxy, cursor, var_s2, temp_s7, (s32)var_s0, var_s1, item, mtx);
 
                     {
                         if ((item[7] ^ ((u8)rec->unk21 >> 1)) & 0x40)
@@ -1316,14 +1316,14 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                 if (temp_v1_33 == 0)
                                 {
 
-                                    func_800A3938(g_field_resource_entries[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A));
+                                    func_800A3938(g_field_resource_entries[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A));
                                 }
                             }
                         }
                         else
                         {
 
-                            func_800A39A8(g_field_resource_entries[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A), rec->unk3B - 3, rec->unk3A);
+                            func_800A39A8(g_field_resource_entries[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A), rec->unk3B - 3, rec->unk3A);
                         }
                     }
                     else
@@ -1469,7 +1469,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
             slot->unk12E = abs((s16)sp64[4] - sp64[0]);
             slot->unk12C = (s16)((s32)((s16)sp64[4] + sp64[0]) >> 1);
         }
-        cursor = func_800871A0(rec, cursor, base, sp64);
+        cursor = field_render_actor_ground_shadow(rec, cursor, base, sp64);
     }
     return cursor;
 }
@@ -1645,7 +1645,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     }
     *(s32 *) &slot->unk144 = 0;
     *(s32 *) &slot->unk140 = 0;
-    func_8007D078(rec, part, mtx, actor);
+    field_build_effect_part_matrix(rec, part, mtx, actor);
     gte_SetRotMatrix(mtx);
 
     var_v0_2 = D_800F22A0;
@@ -1723,7 +1723,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
             temp_v1_4 = var_s1[-0xA];
             if (!(temp_v1_4 & 0x20))
             {
-                func_8007D8D8(actor, rec, part, (s32 *) ((u8 *) cursor + 4));
+                field_resolve_effect_part_color(actor, rec, part, (s32 *) ((u8 *) cursor + 4));
                 do
                 {
                     ((u8 *)&poly->tag)[3] = 9;
@@ -1747,7 +1747,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
                     var_s0 = -var_s0 - temp_s4;
                 }
                 temp_s4 -= 1;
-                func_8007DB98(rec, sxy, cursor, temp_s4, temp_s6, (s32) var_s0, temp_t0_call, item, mtx);
+                field_project_effect_sprite_quad(rec, sxy, cursor, temp_s4, temp_s6, (s32) var_s0, temp_t0_call, item, mtx);
                 if ((var_s1[-0xA] ^ ((u8) rec->unk21 >> 1)) & 0x40)
                 {
                     temp_v0 = var_s1[-0xF];
@@ -2314,13 +2314,13 @@ block_183:
                                 {
                                     if (temp_v1_25 == 0)
                                     {
-                                        func_800A3938(resources[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A));
+                                        func_800A3938(resources[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A));
                                     }
                                 }
                             }
                             else
                             {
-                                func_800A39A8(resources[rec->unk3B].unkA & 0xFFF, func_8006CE70(rec->unk3A), rec->unk3B - 3, rec->unk3A);
+                                func_800A39A8(resources[rec->unk3B].unkA & 0xFFF, field_get_actor_sound_pan(rec->unk3A), rec->unk3B - 3, rec->unk3A);
                             }
                         }
                         break;
@@ -2445,7 +2445,7 @@ block_183:
         var_v0_9 = abs(sp60[2] - sp60[0]);
         slot->unk12E = (s16) ((var_v0_9 * 7) / 10);
         slot->unk12C = (s16) ((s32) (sp60[2] + sp60[0]) >> 1);
-        cursor = func_800871A0(rec, cursor, base, sp60);
+        cursor = field_render_actor_ground_shadow(rec, cursor, base, sp60);
     }
     return cursor;
 }

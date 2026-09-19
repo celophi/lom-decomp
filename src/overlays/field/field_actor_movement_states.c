@@ -18,7 +18,7 @@ typedef struct
     u8 pad22[0x54 - 0x22];
 } FieldStateRecord;
 
-void func_8006C3FC();
+void field_restart_actor_animation();
 void func_80092C24(u8 *rec, s32 arg1);
 void func_80097FA0(void *arg0, void *arg1, s32 arg2);
 
@@ -50,7 +50,7 @@ s32 func_80092AD8(FieldStateRecord *entry)
     {
         case 0: /* state 8 */
             entry->state_flags = (entry->state_flags & 0x80) | 9;
-            func_8006C3FC(entry);
+            field_restart_actor_animation(entry);
             return 0;
         case 53: /* state 61 */
             state_value = entry->state_value;
@@ -63,7 +63,7 @@ s32 func_80092AD8(FieldStateRecord *entry)
             {
                 entry->state_value = 0;
                 entry->state_flags = (entry->state_flags & 0x80) | 9;
-                func_8006C3FC(entry);
+                field_restart_actor_animation(entry);
                 return 0;
             }
         case 64: /* state 72 */
@@ -222,7 +222,7 @@ extern Entry268 D_800FD818[];
 extern Anim190 D_8010A038[];
 
 void field_start_actor_animation();
-void func_8006C3FC();
+void field_restart_actor_animation();
 s32 func_800839F8(s32 arg0, s32 arg1);
 s32 func_80083EEC();
 void func_8008A9D8(s32 arg0, s32 arg1, s32 arg2);
@@ -346,7 +346,7 @@ s32 func_80092C98(FieldRec *rec)
             }
             rec->unk21 = (rec->unk21 & 0x80) | 0x49;
             rec->unk4 -= STEP_OFFSET(rec);
-            func_8006C3FC(rec);
+            field_restart_actor_animation(rec);
             func_800A2DD8(rec->unk3A);
             rec->unk2A = 0x96;
             rec->unk16 = 1;

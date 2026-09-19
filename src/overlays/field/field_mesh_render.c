@@ -155,7 +155,7 @@ typedef struct
 } FieldActorState;
 
 extern Struct_D800FDF58 D_800FDF58[];
-extern Struct_D800FDF58 D_800FF658[];
+extern Struct_D800FDF58 g_field_effect_records[];
 extern Struct_D80105AE0 D_80105AE0[];
 extern s32 g_field_track_index;
 extern s32 D_800F22A0;
@@ -170,10 +170,10 @@ extern s32 *D_80105878;
 
 void func_8007E5FC(s16 *out, s32 mirror, u8 *item);
 void func_800801F8(u16 *buf, s32 count, s32 flag);
-void func_8007D8D8(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
+void field_resolve_effect_part_color(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
 void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, s32 part_index);
 s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, MATRIX *mtx, MATRIX *tmp);
-s32 *func_80080274(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *base);
+s32 *field_render_effect_mesh(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *base);
 
 
 #include "sdk/inline_c.h"
@@ -319,9 +319,9 @@ void func_800801F8(u16 *buf, s32 count, s32 flag)
  * @param cursor Current write position in the primitive buffer.
  * @param arg3_base Base of the ordering-table link array.
  * @return Advanced primitive-buffer cursor.
- * @see decomp.me (100%) https://decomp.me/scratch (func_80080274)
+ * @see decomp.me (100%) https://decomp.me/scratch (field_render_effect_mesh)
  */
-s32 *func_80080274(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3_base)
+s32 *field_render_effect_mesh(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3_base)
 {
     volatile s32 pad[2];
     MATRIX mtx;
@@ -350,7 +350,7 @@ s32 *func_80080274(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     mtx.t[2] = 0;
     mtx.t[1] = 0;
     mtx.t[0] = 0;
-    func_8007D8D8(actor, rec, part, color);
+    field_resolve_effect_part_color(actor, rec, part, color);
     screen = (s16 *)0x1F800000;
     gte_SetRotMatrix(mp);
     gte_SetTransMatrix(mp);
@@ -655,8 +655,8 @@ extern SVECTOR *D_80105870;
 /**
  * @brief Emit lit ordering-table primitives for one mesh of an actor part.
  *
- * Sibling of func_80080274 that additionally builds a 3-source light and
- * color matrix pair from the part's light ids (searching D_800FF658 for the
+ * Sibling of field_render_effect_mesh that additionally builds a 3-source light and
+ * color matrix pair from the part's light ids (searching g_field_effect_records for the
  * owning record of each light), then emits per-face prims in three variants:
  * case 0 = textured tri with normal-driven shading (ncs), case 2 = gouraud
  * tri with clamped per-vertex colors, case 1 = flat tri plus a DR_TPAGE
@@ -669,7 +669,7 @@ extern SVECTOR *D_80105870;
  * @return Advanced primitive-buffer cursor.
  * @see decomp.me (100%) https://decomp.me/scratch/F2Z4z
  */
-s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3_base)
+s32 *field_render_lit_effect_mesh(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3_base)
 {
     s32 pad[2];
     s32 *prim_cursor;
@@ -711,7 +711,7 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
     mtx.t[2] = 0;
     mtx.t[1] = 0;
     mtx.t[0] = 0;
-    func_8007D8D8(actor, rec, part, color);
+    field_resolve_effect_part_color(actor, rec, part, color);
     screen = (s16 *)0x1F800000;
     gte_SetRotMatrix(mp);
     gte_SetTransMatrix(mp);
@@ -727,7 +727,7 @@ s32 *func_80081098(Struct_D800FDF58 *rec, s32 part_index, s32 *cursor, s32 *arg3
         if (((u8 *)part)[light_index + 0x23] < 8) {
             do {
                 {
-                    scan = &D_800FF658[count];
+                    scan = &g_field_effect_records[count];
                     scan_off = count * 0x54;
                 }
                 if (((u8 *)part)[light_index + 0x23] == scan->unk23 && rec->unk22 == scan->unk22) {

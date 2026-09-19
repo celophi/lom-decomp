@@ -151,8 +151,8 @@ void field_update_scene(void)
     void field_text_reset_windows();
     u8 *func_800630BC(u16);
     void func_80067AA4();
-    void func_8006A958();
-    void func_8006C3FC();
+    void field_initialize_actor_parts();
+    void field_restart_actor_animation();
     void func_80084240();
     void func_80084630();
     void func_80086F20();
@@ -487,7 +487,7 @@ void field_update_scene(void)
         scene_cursor += 4;
         func_8009C434();
         actor_index = 3;
-        func_8006A958((u16)U16_AT(scene_cursor, 0) >> 0xF);
+        field_initialize_actor_parts((u16)U16_AT(scene_cursor, 0) >> 0xF);
         D_8010AE48 = 0;
         func_8009C4B4();
         unused_actors = D_800FE054;
@@ -760,7 +760,7 @@ void field_update_scene(void)
                 direction_flag = U8_AT(direction_entry, 0) & 0x80;
                 actor_mode = ((S32_AT(direction_entry, 0) & ~0x80) % 5) | direction_flag;
                 U8_AT(actor_flags, -0x3) = actor_mode;
-                func_8006C3FC(actor_position);
+                field_restart_actor_animation(actor_position);
             }
             actor_index += 1;
             actor_position += 0x54;
@@ -1018,8 +1018,8 @@ void func_8009BE1C(s32 *data)
     extern s32 D_800FE774;
     extern s32 D_801178B0;
     extern void func_800B118C(FieldActorLoadEntry *, s32);
-    extern void func_8006B4D0(s32, s32);
-    extern void func_8006C3FC(FieldLoadedActor *);
+    extern void field_initialize_actor_record(s32, s32);
+    extern void field_restart_actor_animation(FieldLoadedActor *);
 
     FieldLoadedActor *actor = D_800FE054;
     FieldLoadedActorSlot *slot = D_80106194;
@@ -1041,7 +1041,7 @@ void func_8009BE1C(s32 *data)
             func_800B118C(entry, index);
             if (entry->flags < 0)
             {
-                func_8006B4D0(active + 3, entry->source + 3);
+                field_initialize_actor_record(active + 3, entry->source + 3);
                 if (((u32)entry->flags >> 30) & 1)
                 {
                     actor->presence = 0xFE;
@@ -1086,7 +1086,7 @@ void func_8009BE1C(s32 *data)
                     slot->params[i] = entry->params[i];
                     i++;
                 } while (i < 16);
-                func_8006C3FC(actor);
+                field_restart_actor_animation(actor);
                 slot++;
                 actor++;
                 active++;

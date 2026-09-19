@@ -81,7 +81,7 @@ extern s32 D_8010D040[];
 extern s32 D_8010D080;
 extern u8 D_80105798[];
 extern u8 D_8011BF00[];
-extern s16 D_80105758[];
+extern s16 g_field_texture_slot_flags[];
 extern u8 D_80104B58[];
 extern u8 D_80105358[];
 
@@ -665,14 +665,14 @@ void func_8009AE38(u8 *resource, s32 slot)
     {
         slot = 2;
     }
-    D_80105758[slot] = *cursor;
+    g_field_texture_slot_flags[slot] = *cursor;
     cursor += 4;
     flags_slot = original_slot;
     if (original_slot >= 3)
     {
         flags_slot = 2;
     }
-    if (D_80105758[flags_slot] & 8)
+    if (g_field_texture_slot_flags[flags_slot] & 8)
     {
         block_size = *(s32 *)cursor;
         cursor += 0xC;

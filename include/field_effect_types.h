@@ -9,7 +9,9 @@
 #include "field_types.h"
 
 #define FIELD_EFFECT_POOL_COUNT 0x103
+#define FIELD_EFFECT_DISABLED 0xFE
 #define FIELD_EFFECT_RETIRED 0xFF
+#define FIELD_EFFECT_SCREEN_SPACE 0x00001000U
 #define FIELD_EFFECT_SEMITRANSPARENT 0x00800000U
 #define FIELD_EFFECT_RETIRE_ON_HIT 0x08000000
 
@@ -47,25 +49,25 @@ typedef enum
  */
 typedef struct
 {
-    u32 track_flags;  /* 0x00 */
-    u32 behavior_flags;  /* 0x04 */
-    u8 unknown_0x8;   /* 0x08 */
-    u8 unknown_0x9;   /* 0x09 */
-    u8 unknown_0xa;   /* 0x0A */
-    u8 unknown_0xb;   /* 0x0B */
-    u8 unknown_0xc;   /* 0x0C */
-    u8 unknown_0xd;   /* 0x0D */
-    u8 unknown_0xe;   /* 0x0E */
-    u8 unknown_0xf;   /* 0x0F */
-    u8 unknown_0x10;  /* 0x10 */
-    u8 turn_end_age;  /* 0x11 */
+    u32 track_flags;
+    u32 behavior_flags;
+    u8 unknown_0x8;
+    u8 unknown_0x9;
+    u8 unknown_0xa;
+    u8 unknown_0xb;
+    u8 unknown_0xc;
+    u8 unknown_0xd;
+    u8 unknown_0xe;
+    u8 unknown_0xf;
+    u8 unknown_0x10;
+    u8 turn_end_age;
     u8 pad12[0x14 - 0x12];
-    u32 orientation_flags; /* 0x14 (halfword view at 0x16) */
-    s16 unknown_0x18; /* 0x18 */
-    u8 unknown_0x1a;  /* 0x1A */
+    u32 orientation_flags; /* Also read through its upper halfword. */
+    s16 unknown_0x18;
+    u8 unknown_0x1a;
     u8 pad1B;
-    u16 unknown_0x1c; /* 0x1C */
-    u8 unknown_0x1e; /* 0x1E */
+    u16 unknown_0x1c;
+    u8 unknown_0x1e;
     u8 pad1F;
     u8 unknown_0x20;
     u8 rotation_z_track;
@@ -74,13 +76,13 @@ typedef struct
     s32 effect_flags;
     u32 placement_flags;
     u8 unknown_0x2c;
-    u8 pad2D;
-    u8 unknown_0x2e;
+    u8 palette_selector;
+    u8 footprint_scale_x;
     u8 unknown_0x2f;
     u8 pitch_acceleration;
     u8 unknown_0x31;
     u8 unknown_0x32;
-    u8 unknown_0x33;
+    u8 footprint_scale_y;
     union
     {
         u32 word;
@@ -89,7 +91,7 @@ typedef struct
             u16 part_selectors;
             u16 motion_flags;
         } halves;
-    } spawn_flags; /* 0x34: halfword selectors and packed word flags */
+    } spawn_flags; /* halfword selectors and packed word flags */
     s16 offset_x;
     s16 offset_y;
     s16 offset_z;
@@ -105,12 +107,12 @@ typedef struct
 typedef struct
 {
     u8 pad0[0x14];
-    u8 hit_test_mode; /* 0x14 */
-    u8 hit_test_part; /* 0x15 */
+    u8 hit_test_mode;
+    u8 hit_test_part;
     u8 pad16;
-    u8 hit_radius; /* 0x17 */
-    u16 sync_flags; /* 0x18 */
-    u16 sync_parts; /* 0x1A */
+    u8 hit_radius;
+    u16 sync_flags;
+    u16 sync_parts;
 } FieldActorAnimationDef;
 
 /**
@@ -120,15 +122,15 @@ typedef struct
  */
 typedef struct
 {
-    FieldActorPartDef* parts;
+    FieldActorPartDef *parts;
     u8 pad4[0xC - 4];
-    FieldActorAnimationDef* animation;
+    FieldActorAnimationDef *animation;
     u8 pad10[0x14 - 0x10];
-    u8* track_data;
+    u8 *track_data;
     u8 pad18[0x24 - 0x18];
     u8 is_active;
     u8 part_count;
-    u8 hit_reaction; /* 0x26: reaction selector applied to collected targets */
+    u8 hit_reaction; /* reaction selector applied to collected targets */
     u8 unknown_0x27;
     u8 unknown_0x28;
     u8 unknown_0x29;
@@ -151,7 +153,7 @@ typedef struct
     u8 active_track_mask;
     u8 unknown_0x23b;
     u8 pad23C[0x240 - 0x23C];
-    u16* unknown_0x240;
+    u16 *unknown_0x240;
 } FieldActorState;
 
 /**
@@ -164,55 +166,55 @@ typedef struct
  */
 typedef struct
 {
-    s32 x;  /* 0x00 */
-    s32 y;  /* 0x04 */
-    s32 z;  /* 0x08 */
-    u32 unknown_0xc;  /* 0x0C */
-    s16 rotation_x; /* 0x10 */
-    s16 heading; /* 0x12 */
-    s16 pitch; /* 0x14 */
-    s16 unknown_0x16; /* 0x16 */
-    u8 unknown_0x18;  /* 0x18 */
-    u8 unknown_0x19;  /* 0x19 */
-    u8 unknown_0x1a;  /* 0x1A */
-    u8 position_source;  /* 0x1B */
-    s32 flags; /* 0x1C */
+    s32 x;
+    s32 y;
+    s32 z;
+    u32 unknown_0xc;
+    s16 rotation_x;
+    s16 heading;
+    s16 pitch;
+    s16 unknown_0x16;
+    u8 unknown_0x18;
+    u8 unknown_0x19;
+    u8 unknown_0x1a;
+    u8 position_source;
+    s32 flags;
     union
     {
         u8 path_time; /* Interpolated path progress. */
         u8 linked_effect_index; /* Position sources 8 and 15. */
-    } position_data; /* 0x20 */
-    u8 facing_or_reward_kind;  /* 0x21 */
-    u8 actor_index;  /* 0x22 */
-    u8 part_index;  /* 0x23 */
-    u8 unknown_0x24;  /* 0x24 */
-    u8 state;  /* 0x25 */
-    s8 height_or_retired_state;  /* 0x26 */
-    u8 saved_state;  /* 0x27 */
-    u8 lifetime;  /* 0x28 */
-    u8 track_index;  /* 0x29 */
-    s16 motion_parameter; /* 0x2A */
-    s16 age; /* 0x2C */
-    u16 motion_scale; /* 0x2E */
-    s16 reference_index; /* 0x30 */
-    u8 rotation_z_16;  /* 0x32 */
-    u8 rotation_y_16;  /* 0x33 */
-    u8 unknown_0x34;  /* 0x34 */
-    u8 unknown_0x35;  /* 0x35 */
-    u8 unknown_0x36;  /* 0x36 */
-    u8 unknown_0x37;  /* 0x37 */
-    u8 unknown_0x38;  /* 0x38 */
-    u8 path_group;  /* 0x39 */
-    u8 source_object_index;  /* 0x3A */
-    u8 unknown_0x3b;  /* 0x3B */
-    u8 unknown_0x3c;  /* 0x3C */
-    u8 previous_effect_index;  /* 0x3D */
-    u8 next_effect_index;  /* 0x3E */
+    } position_data;
+    u8 facing_or_reward_kind;
+    u8 actor_index;
+    u8 part_index;
+    u8 unknown_0x24;
+    u8 state;
+    s8 height_or_retired_state;
+    u8 saved_state;
+    u8 lifetime;
+    u8 track_index;
+    s16 motion_parameter;
+    s16 age;
+    u16 motion_scale;
+    s16 reference_index;
+    u8 rotation_z_16;
+    u8 rotation_y_16;
+    u8 unknown_0x34;
+    u8 unknown_0x35;
+    u8 unknown_0x36;
+    u8 unknown_0x37;
+    u8 unknown_0x38;
+    u8 path_group;
+    u8 source_object_index;
+    u8 unknown_0x3b;
+    u8 sprite_height_minus_one;
+    u8 previous_effect_index;
+    u8 next_effect_index;
     u8 pad3F;
-    s32 unknown_0x40; /* 0x40 */
-    u32 work_x; /* 0x44 */
-    u32 work_y; /* 0x48 */
-    u32 work_z; /* 0x4C */
+    s32 unknown_0x40;
+    u32 work_x;
+    u32 work_y;
+    u32 work_z;
     u8 pad50[0x54 - 0x50];
 } FieldMotionRecord;
 
@@ -224,32 +226,34 @@ typedef struct
 typedef struct
 {
     u8 pad0[0xC];
-    u32 object_flags;    /* 0x0C */
+    u32 object_flags;
     u8 pad10[0x14 - 0x10];
-    s32 record_id; /* 0x14: identifier passed to action/reward helpers */
+    s32 record_id; /* identifier passed to action/reward helpers */
     u8 pad18[0x6C - 0x18];
     s16 unknown_0x6c; /* Whole-unit X used by position source 7. */
     s16 unknown_0x6e; /* Whole-unit Z used by position source 7. */
     u8 pad70[0x130 - 0x70];
-    Vec2s attachment_points[4]; /* 0x130 */
-    s16 bounds_left;  /* 0x140 */
-    s16 bounds_top;  /* 0x142 */
-    s16 bounds_right;  /* 0x144 */
-    s16 bounds_bottom;  /* 0x146 */
-    u8 pad148[0x174 - 0x148];
-    u16 scale_percent;  /* 0x174 */
+    Vec2s attachment_points[4];
+    s16 bounds_left;
+    s16 bounds_top;
+    s16 bounds_right;
+    s16 bounds_bottom;
+    u8 pad148[0x16D - 0x148];
+    s8 linked_effect_index;
+    u8 pad16E[0x174 - 0x16E];
+    u16 scale_percent;
     u8 pad176[0x178 - 0x176];
-    u32 state_flags;  /* 0x178 (byte view at 0x17A) */
+    u32 state_flags; /* Also read through its third byte. */
     u8 pad17C[0x18E - 0x17C];
-    u8 unknown_0x18e;   /* 0x18E */
+    u8 unknown_0x18e;
     u8 pad18F[0x190 - 0x18F];
-    Vec2s ground_attachment_points[3]; /* 0x190 */
-    s32 unknown_0x19c;  /* 0x19C */
-    s32 unknown_0x1a0;  /* 0x1A0 */
+    Vec2s ground_attachment_points[3];
+    s32 unknown_0x19c;
+    s32 unknown_0x1a0;
     u8 pad1A4[0x1A8 - 0x1A4];
-    u8 unknown_0x1a8;   /* 0x1A8 */
-    u8 unknown_0x1a9;   /* 0x1A9 */
-    u8 unknown_0x1aa;   /* 0x1AA */
+    u8 unknown_0x1a8;
+    u8 unknown_0x1a9;
+    u8 unknown_0x1aa;
     u8 pad1AB[0x23C - 0x1AB];
 } FieldObjectPlacement;
 

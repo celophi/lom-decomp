@@ -17,7 +17,7 @@
  *       user's original type. bcopy has two different prototypes across members
  *       and is likewise declared per-function. Callees left implicitly declared
  *       in their original files (func_80083EEC, field_start_actor_animation,
- *       func_8006C3FC, func_80086C00 in field337 / func_80086494) are kept
+ *       field_restart_actor_animation, func_80086C00 in field337 / func_80086494) are kept
  *       implicit here to preserve the original codegen.
  */
 
@@ -437,14 +437,14 @@ void func_80086494(s32 index)
             {
                 actor->unk24 = 0U;
                 actor->unk23a = 0;
-                func_8006D21C(actor);
+                field_clear_actor_effects(actor);
                 runtime->unk17c &= 0xFFFF7FFF;
             }
             else if (!(runtime->unkc & 0x4000) && (runtime->unk17c & 0x4000))
             {
                 actor->unk24 = 0U;
                 actor->unk23a = 0;
-                func_8006D21C(actor);
+                field_clear_actor_effects(actor);
                 runtime->unk17c &= -0x4001;
             }
             else
@@ -496,7 +496,7 @@ void func_80086494(s32 index)
                     {
                         actor->unk24 = 0U;
                         actor->unk23a = 0;
-                        func_8006D21C(actor);
+                        field_clear_actor_effects(actor);
                         if ((runtime->status.word & 1) && (runtime->status.bytes.owner == (record->unk3a + 0x40)))
                         {
                             record->unk25 = 0;
@@ -538,7 +538,7 @@ void func_80086850(Actor *arg0, s32 arg1)
         arg0->unk21 &= 0x80;
         arg0->unk24 = 1;
         D_80105AE0[arg0->unk3A].unk174 &= ~0x1800;
-        func_8006C3FC(arg0);
+        field_restart_actor_animation(arg0);
         func_80083EEC(arg0->unk3A, arg0->unk3A + 0x40, 0x7);
         field_start_actor_animation(arg0->unk3A + 0x40, 0, 0);
         func_80086C00(arg0->unk3A);
@@ -562,7 +562,7 @@ void func_800868FC(Actor *arg0, s32 arg1)
         arg0->unk21 &= 0x80;
         arg0->unk24 = 1;
         D_80105AE0[arg0->unk3A].unk174 &= ~0x1800;
-        func_8006C3FC(arg0);
+        field_restart_actor_animation(arg0);
         func_80083EEC(arg0->unk3A, arg0->unk3A + 0x40, 0xA);
         field_start_actor_animation(arg0->unk3A + 0x40, 0, 0);
     }
@@ -598,7 +598,7 @@ void func_800869FC(FieldObjectRecord* object, s32 is_set)
 {
     s32 func_80083EEC(u8 object_index, s32 actor_index, s32 animation_id);
     void field_start_actor_animation(s32 actor_index, s32 arg1, s32 arg2);
-    void func_8006C3FC(FieldObjectRecord* object);
+    void field_restart_actor_animation(FieldObjectRecord* object);
     void func_80086C00(u8 object_index);
     extern FieldActorSlot D_80105AE0[];
     u8 animation_sequence;
@@ -615,7 +615,7 @@ void func_800869FC(FieldObjectRecord* object, s32 is_set)
             object->frame_index = 0;
             object->frame_duration_scale = 1;
             D_80105AE0[object->object_index].state &= ~0x1800;
-            func_8006C3FC(object);
+            field_restart_actor_animation(object);
             object->state_flags |= FIELD_ANIMATION_HOLD_LAST_FRAME;
         }
         func_80086C00(object->object_index);
@@ -635,7 +635,7 @@ void func_800869FC(FieldObjectRecord* object, s32 is_set)
  */
 void func_80086ACC(FieldActorState *rec, s32 flag)
 {
-    void func_8006C3FC(FieldActorState *);
+    void field_restart_actor_animation(FieldActorState *);
     s32 func_80083EEC(u8, s32, s32);
     void field_start_actor_animation(s32, s32, s32);
     void func_80086C00(s32 idx);
@@ -648,7 +648,7 @@ void func_80086ACC(FieldActorState *rec, s32 flag)
         rec->unk27 = 0;
         rec->unk21 = (rec->unk21 & 0x80) + 0x14;
         D_80105AE0[rec->unk3A].unk174 &= ~0x1800;
-        func_8006C3FC(rec);
+        field_restart_actor_animation(rec);
         rec->unk1C |= 0x40800;
         func_80086C00(rec->unk3A);
     }
@@ -659,7 +659,7 @@ void func_80086ACC(FieldActorState *rec, s32 flag)
         rec->unk24 = 1;
         rec->unk21 &= 0x80;
         D_80105AE0[rec->unk3A].unk174 &= ~0x1800;
-        func_8006C3FC(rec);
+        field_restart_actor_animation(rec);
         func_80083EEC(rec->unk3A, rec->unk3A + 0x40, 0x91);
         field_start_actor_animation(rec->unk3A + 0x40, 0, 0);
         rec->unk1C &= 0xFFFBFFFF;
@@ -916,7 +916,7 @@ void func_80086FB8(u8 *buffer)
  *       footprint-projection arms and the OT-link tail.
  * @see decomp.me WIP
  */
-Prim871A0 *func_800871A0(Rec871A0 *arg0, Prim871A0 *arg1, s32 *arg2, Off871A0 *arg3)
+Prim871A0 *field_render_actor_ground_shadow(Rec871A0 *arg0, Prim871A0 *arg1, s32 *arg2, Off871A0 *arg3)
 {
     extern State871A0 D_80105AE0[];
     extern Res871A0 g_field_resource_entries[];

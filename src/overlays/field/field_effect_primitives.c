@@ -150,7 +150,7 @@ extern FieldActorState g_field_actor_slots[80];
  * @param base Ordering-table / primitive base array.
  * @see decomp.me (100%)
  */
-void func_800799C4(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+void field_render_effect_ring(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldScreenPair sp10;
     FieldSVector sp18;
@@ -200,13 +200,13 @@ void func_800799C4(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     var_s1 = primbuf;
     sp50 = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
     temp_s2 = &g_field_actor_slots[rec->unk22];
-    func_8007D078(rec, sp50, &sp30, temp_s2);
+    field_build_effect_part_matrix(rec, sp50, &sp30, temp_s2);
     gte_SetRotMatrix(&sp30);
 
     var_a1 = D_800F22A0 / 256;
     sp10.x = (u16) (var_a1 + (rec->unk0 / 256 + 0xA0));
     sp10.y = (u16) (0x70 + D_800F22A4 / 256 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512);
-    func_8007D8D8(temp_s2, rec, sp50, var_s1 + 4);
+    field_resolve_effect_part_color(temp_s2, rec, sp50, var_s1 + 4);
     setPolyG3(var_s1);
     setSemiTrans(var_s1, rec->unk1C & 0x800000);
     var_fp = 0;
@@ -384,7 +384,7 @@ void func_800799C4(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
  * @param base Ordering-table / primitive base array.
  * @see decomp.me (100%)
  */
-void func_8007A104(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+void field_render_effect_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldSVector sp10;
     FieldSVector sp18;
@@ -449,12 +449,12 @@ void func_8007A104(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     temp_s2 = &slots[rec->unk22];
     temp_v1 = &temp_s2->unk0[rec->unk23];
     sp50 = temp_v1;
-    func_8007D078(rec, sp50, &sp30, temp_s2);
+    field_build_effect_part_matrix(rec, sp50, &sp30, temp_s2);
     gte_SetRotMatrix(&sp30);
 
     sp10.unk0 = (u16) ((D_800F22A0 / 0x100) + ((rec->unk0 / 0x100) + 0xA0));
     sp10.unk2 = (u16) (((((D_800F22A4 / 0x100) + 0x70) + (rec->unk4 / 0x100)) - (rec->unk8 / 0x200)) - (D_800F22A8 / 0x200));
-    func_8007D8D8(temp_s2, rec, sp50, var_s1 + 4);
+    field_resolve_effect_part_color(temp_s2, rec, sp50, var_s1 + 4);
     *(s8 *) (var_s1 + 3) = 6;
     *(s8 *) (var_s1 + 7) = 0x30;
     temp_v1_15 = 0x800000;
@@ -744,7 +744,7 @@ extern s32 D_800F22A8_B __asm__("D_800F22A8");
  * @param base Ordering-table / primitive base array.
  * @see decomp.me (100%)
  */
-void func_8007AA2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+void field_render_effect_marker(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldSVector pan;
     FieldSVector offset;
@@ -756,13 +756,13 @@ void func_8007AA2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 
     part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
     actor = &g_field_actor_slots[rec->unk22];
-    func_8007D078(rec, part, &matrix, actor);
+    field_build_effect_part_matrix(rec, part, &matrix, actor);
     gte_SetRotMatrix(&matrix);
 
     pan.unk0 = (s16)(0xA0 + D_800F22A0_A / 256 + rec->unk0 / 256);
     pan.unk2 = (s16)(0x70 + D_800F22A4_A / 256 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8_A / 512);
 
-    func_8007D8D8(actor, rec, part, primbuf + 4);
+    field_resolve_effect_part_color(actor, rec, part, primbuf + 4);
     setLineG2((LINE_G2 *)primbuf);
     setSemiTrans((LINE_G2 *)primbuf, rec->unk1C & 0x800000);
     *(s32 *)(primbuf + 0xC) = 0;
@@ -839,7 +839,7 @@ void func_8007AA2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
-extern Struct_D800FDF58 D_800FF658[256];
+extern Struct_D800FDF58 g_field_effect_records[256];
 extern FieldActorState g_field_actor_slots[80];
 
 /**
@@ -856,7 +856,7 @@ extern FieldActorState g_field_actor_slots[80];
  *         link).
  * @see decomp.me (100%)
  */
-u8 *func_8007AE2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+u8 *field_render_effect_trail(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldActorState *state;
     FieldActorPartDef *part;
@@ -868,7 +868,7 @@ u8 *func_8007AE2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
     state = &g_field_actor_slots[rec->unk22];
 
-    if (rec->unk3D != 0xFF && D_800FF658[rec->unk3D].unk25 != 0xFF)
+    if (rec->unk3D != 0xFF && g_field_effect_records[rec->unk3D].unk25 != 0xFF)
     {
         first_d0 = D_800F22A0 / 256;
         temp_x = rec->unk0 / 256 + 0xA0;
@@ -883,17 +883,17 @@ u8 *func_8007AE2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         *(u16 *) (primbuf + 0x10) = (u16) (*(u16 *) (primbuf + 0x10) + (u16) rec->unk44);
         *(u16 *) (primbuf + 0x12) = (u16) (*(u16 *) (primbuf + 0x12) + (u16) rec->unk48);
 
-        *(u16 *) (primbuf + 0xC) = (u16) (D_800F22A0 / 256 + (D_800FF658[rec->unk3D].unk0 / 256 + 0xA0));
+        *(u16 *) (primbuf + 0xC) = (u16) (D_800F22A0 / 256 + (g_field_effect_records[rec->unk3D].unk0 / 256 + 0xA0));
 
-        *(u16 *) (primbuf + 0xE) = (u16) (0x70 + raw_d4 / 256 + D_800FF658[rec->unk3D].unk4 / 256 - D_800FF658[rec->unk3D].unk8 / 512 - D_800F22A8 / 512);
+        *(u16 *) (primbuf + 0xE) = (u16) (0x70 + raw_d4 / 256 + g_field_effect_records[rec->unk3D].unk4 / 256 - g_field_effect_records[rec->unk3D].unk8 / 512 - D_800F22A8 / 512);
 
         *(s32 *) (primbuf + 0x14) = *(s32 *) (primbuf + 0xC);
-        *(u16 *) (primbuf + 0xC) = (u16) (*(u16 *) (primbuf + 0xC) - (u16) D_800FF658[rec->unk3D].unk44);
-        *(u16 *) (primbuf + 0xE) = (u16) (*(u16 *) (primbuf + 0xE) - (u16) D_800FF658[rec->unk3D].unk48);
-        *(u16 *) (primbuf + 0x14) = (u16) (*(u16 *) (primbuf + 0x14) + (u16) D_800FF658[rec->unk3D].unk44);
-        *(u16 *) (primbuf + 0x16) = (u16) (*(u16 *) (primbuf + 0x16) + (u16) D_800FF658[rec->unk3D].unk48);
+        *(u16 *) (primbuf + 0xC) = (u16) (*(u16 *) (primbuf + 0xC) - (u16) g_field_effect_records[rec->unk3D].unk44);
+        *(u16 *) (primbuf + 0xE) = (u16) (*(u16 *) (primbuf + 0xE) - (u16) g_field_effect_records[rec->unk3D].unk48);
+        *(u16 *) (primbuf + 0x14) = (u16) (*(u16 *) (primbuf + 0x14) + (u16) g_field_effect_records[rec->unk3D].unk44);
+        *(u16 *) (primbuf + 0x16) = (u16) (*(u16 *) (primbuf + 0x16) + (u16) g_field_effect_records[rec->unk3D].unk48);
 
-        func_8007D8D8(state, rec, part, primbuf + 4);
+        field_resolve_effect_part_color(state, rec, part, primbuf + 4);
 
         setPolyF4((POLY_F4 *) primbuf);
         setSemiTrans((POLY_F4 *) primbuf, rec->unk1C & 0x800000);
@@ -938,7 +938,7 @@ u8 *func_8007AE2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
  * @return The advanced primbuf cursor.
  * @see decomp.me (100%)
  */
-u8 *func_8007B29C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldMatrix *mtx;
     FieldSVector *dir;
@@ -972,7 +972,7 @@ u8 *func_8007B29C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     base_screen->x = (s16) (0xA0 + D_800F22A0 / 0x100 + rec->unk0 / 0x100);
     base_screen->y = (s16) (0x70 + D_800F22A4 / 0x100 + rec->unk4 / 0x100 - rec->unk8 / 0x200 - D_800F22A8 / 0x200);
 
-    func_8007D078(rec, part, mtx, state);
+    field_build_effect_part_matrix(rec, part, mtx, state);
     gte_SetRotMatrix(mtx);
 
     var_v0 = 0xA0 + D_800F22A0 / 0x100 + rec->unk0 / 0x100;
@@ -984,7 +984,7 @@ u8 *func_8007B29C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     }
     *(s16 *) (primbuf + 0xA) = (s16) (0x70 + (var_v1 >> 8) + rec->unk4 / 0x100 - rec->unk8 / 0x200 - D_800F22A8 / 0x200);
 
-    func_8007D8D8(state, rec, part, primbuf + 4);
+    field_resolve_effect_part_color(state, rec, part, primbuf + 4);
 
     segments = 1;
     if (rec->unk24 != 0)
@@ -1152,10 +1152,10 @@ extern FieldActorState g_field_actor_slots[80];
  *       final scratchpad Z value. The long-lived origin pointer preserves
  *       the six independent scratchpad loads. Packet address bitfields and
  *       the initial cur uses recover the target saved-register allocation.
- *       Current evidence and rejected probes are in working/func_8007B9FC/.
+ *       Current evidence and rejected probes are in working/field_render_effect_radial_lines/.
  * @see decomp.me (99.95%) WIP
  */
-u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldActorPartDef *part;
     FieldActorState *state;
@@ -1183,7 +1183,7 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     state = &g_field_actor_slots[rec->unk22];
 
     cur = (FieldMatrix *)0x1F800058;
-    func_8007D078(rec, part, cur, state);
+    field_build_effect_part_matrix(rec, part, cur, state);
     gte_SetRotMatrix(cur);
 
     {
@@ -1201,7 +1201,7 @@ u8 *func_8007B9FC(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         *(s16 *) (primbuf + 0xA) = 0x70 + (raw_d4 >> 8) + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512;
     }
 
-    func_8007D8D8(state, rec, part, primbuf + 4);
+    field_resolve_effect_part_color(state, rec, part, primbuf + 4);
 
     *(s8 *) (primbuf + 3) = 3;
     *(s8 *) (primbuf + 7) = 0x40;
