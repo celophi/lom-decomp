@@ -28,14 +28,14 @@ typedef struct
     u8 unk3A;
 } Struct_D800FDF58;
 
-extern Struct_D80105880 D_80105880[];
+extern Struct_D80105880 g_field_actor_bindings[];
 extern FieldActorState g_field_actor_slots[];
 extern void func_80095074(Struct_D800FDF58 *rec);
 
 /**
  * @brief Resets a field record when its selected actor slot is free.
  *
- * The record's selector at 0x3A chooses one of three D_80105880 entries, with
+ * The record's selector at 0x3A chooses one of three g_field_actor_bindings entries, with
  * values >= 2 clamped to the third entry. If that entry's actor slot is free,
  * clears the record timer, writes the 0xFF sentinel, and calls func_80095074.
  *
@@ -51,7 +51,7 @@ s32 func_80094FDC(Struct_D800FDF58 *rec)
     FieldActorState *actor;
 
     actors = g_field_actor_slots;
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (rec->unk3A < 2)
         offset = rec->unk3A * 0x1C;
     else
@@ -81,7 +81,7 @@ typedef struct
     u8 pad16D[0x23C - 0x16D];
 } Struct_D80105AE0;
 
-extern Struct_D80105AE0 D_80105AE0[];
+extern Struct_D80105AE0 g_field_object_states[];
 extern s32 func_800839F8(s32 arg0, s32 arg1);
 extern s32 func_80083EEC(s32 arg0, s32 arg1, s32 arg2);
 extern void field_start_actor_animation(s32 slot_index, int target_count, u8 *targets);
@@ -95,17 +95,17 @@ void func_80095074(Struct_D800FDF58 *rec)
     s32 anim;
     s32 anim_id;
 
-    if (D_80105AE0[rec->unk3A].unk16C == 0xFF)
+    if (g_field_object_states[rec->unk3A].unk16C == 0xFF)
     {
         return;
     }
-    if (D_80105AE0[rec->unk3A].unk16C == 0x1F)
+    if (g_field_object_states[rec->unk3A].unk16C == 0x1F)
     {
         for (i = 0; i < 4; i++)
         {
-            if (D_80105AE0[rec->unk3A].unk60[i] != 0)
+            if (g_field_object_states[rec->unk3A].unk60[i] != 0)
             {
-                anim_id = D_80105AE0[rec->unk3A].unk16C;
+                anim_id = g_field_object_states[rec->unk3A].unk16C;
                 anim = func_800839F8(rec->unk3A, 0);
                 if (anim != -1)
                 {
@@ -119,7 +119,7 @@ void func_80095074(Struct_D800FDF58 *rec)
         }
         return;
     }
-    anim_id = D_80105AE0[rec->unk3A].unk16C;
+    anim_id = g_field_object_states[rec->unk3A].unk16C;
     anim = func_800839F8(rec->unk3A, 0);
     if (anim != -1)
     {

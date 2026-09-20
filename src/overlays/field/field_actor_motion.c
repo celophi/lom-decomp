@@ -4,6 +4,7 @@
 
 /* func_800925EC */
 #include "common.h"
+#include "field_effect_render_state.h"
 #include "vector.h"
 /** @brief State, timing, and movement fields in a 0x54-byte actor record. */
 typedef struct
@@ -52,16 +53,16 @@ typedef struct
     u8 state;
     u8 tail[0xB];
 } FieldMotionResource;
-extern FieldMotionSlot D_80105AE0[];
-extern FieldMotionVisual D_800FE3A0[];
+extern FieldMotionSlot g_field_object_states[];
+extern FieldMotionVisual g_field_object_parts[];
 extern FieldMotionResource g_field_resource_entries[];
 extern void func_80092C98(FieldMotionActor *);
 extern s32 func_80091728(s32, s32, FieldMotionActor *);
 extern s32 field_object_has_active_actor_tracks(s32);
-extern void func_800952DC(FieldMotionActor *, s32);
+extern void field_update_sequence_actor_binding(FieldMotionActor *, s32);
 extern s32 func_80093AB8(FieldMotionActor *);
 extern s32 func_80092AD8(FieldMotionActor *);
-extern void func_80096334(FieldMotionActor *);
+extern void field_restart_sequence_animation(FieldMotionActor *);
 extern void func_8008BC5C(FieldMotionActor *);
 extern s32 func_80097FA0(FieldMotionActor *, Vec3i *, s32);
 
@@ -90,25 +91,25 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
         state = actor->state & 0x7F;
         if (state == 0xA || state == 0x31)
         {
-            if (D_80105AE0[actor->slot].track < 12U)
+            if (g_field_object_states[actor->slot].track < 12U)
             {
-                if (func_80091728(actor->slot, D_80105AE0[actor->slot].track, actor) != 0)
+                if (func_80091728(actor->slot, g_field_object_states[actor->slot].track, actor) != 0)
                 {
                     return;
                 }
             }
         }
-        if ((D_80105AE0[actor->slot].state >> 1) & 1)
+        if ((g_field_object_states[actor->slot].state >> 1) & 1)
         {
             if (field_object_has_active_actor_tracks(actor->slot) != 0)
             {
                 return;
             }
-            D_80105AE0[D_80105AE0[actor->slot].parent].flags &= ~0x2000;
+            g_field_object_states[g_field_object_states[actor->slot].parent].flags &= ~0x2000;
         }
-        D_80105AE0[actor->slot].flags &= ~0x4000;
-        func_800952DC(actor, 1);
-        D_80105AE0[actor->slot].options &= ~0x1800;
+        g_field_object_states[actor->slot].flags &= ~0x4000;
+        field_update_sequence_actor_binding(actor, 1);
+        g_field_object_states[actor->slot].options &= ~0x1800;
         state = actor->state & 0x7F;
         if (state == 0x37 || state == 0x3B)
         {
@@ -122,11 +123,11 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
         {
             actor->value = 0;
             actor->state &= 0x80;
-            func_80096334(actor);
+            field_restart_sequence_animation(actor);
         }
         if (actor->value == 0)
         {
-            D_80105AE0[actor->slot].value = 0xFFFF;
+            g_field_object_states[actor->slot].value = 0xFFFF;
             func_8008BC5C(actor);
         }
     }
@@ -134,7 +135,7 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
     {
         step = actor->movement / actor->divisor;
         actor->movement = (u8)actor->movement - step;
-        visual = &D_800FE3A0[actor->slot];
+        visual = &g_field_object_parts[actor->slot];
         if (actor->state & 0x80)
         {
             scratch->x = ((step << 8) * visual->scale) >> 6;
@@ -148,7 +149,7 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
         func_80097FA0(actor, scratch, 1);
         if (g_field_resource_entries[actor->resource].state == 0)
         {
-            D_80105AE0[actor->slot].options &= ~0x4000;
+            g_field_object_states[actor->slot].options &= ~0x4000;
         }
     }
 }
@@ -164,10 +165,6 @@ typedef struct
     Vec2s screen;
 } FieldBoundsProjection;
 
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
-
 /**
  * @brief Test whether a proposed displacement crosses a screen boundary.
  * @param position Current fixed-point field position.
@@ -182,8 +179,8 @@ s32 func_80092988(Vec3i *position, Vec3i *delta)
     local.position.vx = position->x + delta->x;
     local.position.vy = position->y;
     local.position.vz = position->z + delta->z;
-    local.screen.x = D_800F22A0 / 256 + (s16)(local.position.vx / 256 + 160);
-    local.screen.y = D_800F22A4 / 256 + (s16)(local.position.vy / 256 + 112) - local.position.vz / 512 - D_800F22A8 / 512;
+    local.screen.x = g_field_view_offset_x / 256 + (s16)(local.position.vx / 256 + 160);
+    local.screen.y = g_field_view_offset_y / 256 + (s16)(local.position.vy / 256 + 112) - local.position.vz / 512 - g_field_view_offset_z / 512;
     if (delta->x < 0)
     {
         if (local.screen.x < 6)

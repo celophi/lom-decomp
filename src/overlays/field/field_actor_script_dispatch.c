@@ -228,9 +228,9 @@ typedef struct
     s32 unk1A0; /* 0x1A0 */
     s16 unk1A4;
     s16 unk1A6;
-    u8 unk1A8; /* 0x1A8 */
-    u8 unk1A9; /* 0x1A9 */
-    u8 unk1AA; /* 0x1AA */
+    u8 tint_red; /* 0x1A8 */
+    u8 tint_green; /* 0x1A9 */
+    u8 tint_blue; /* 0x1AA */
     u8 pad1AB;
     s32 unk1AC;
     s32 unk1B0;
@@ -266,14 +266,14 @@ typedef struct
 } FieldResourceEntry;
 
 extern Struct_D800FDF58 g_field_actors[];
-extern Struct_D80105AE0 D_80105AE0[];
-extern D_800FD818_type D_800FD818[];
-extern FieldActorPartDef D_800FE3A0[];
+extern Struct_D80105AE0 g_field_object_states[];
+extern D_800FD818_type g_field_player_records[];
+extern FieldActorPartDef g_field_object_parts[];
 extern FieldActorState g_field_actor_slots[];
 extern FieldResourceEntry g_field_resource_entries[];
 extern s32 g_field_direction_animation_modes[];
 extern s32 D_800EB0C4[];
-extern u8 D_80105880[];
+extern u8 g_field_actor_bindings[];
 extern s32 D_8010A020[];
 extern u16* g_field_actor_scripts;
 extern u8 g_field_resource_actions[];
@@ -358,7 +358,7 @@ u8 *field_get_object_script_command(Struct_D800FDF58 *object)
 
     if (object->unk28 == 0xFE)
     {
-        script_base = D_80105AE0[object->unk3A].unk168;
+        script_base = g_field_object_states[object->unk3A].unk168;
     }
     else
     {
@@ -496,7 +496,7 @@ void func_80088198(Struct_D800FDF58* arg0)
     {
         if (arg0->unk28 == 0xFE)
         {
-            temp_s3 = D_80105AE0[arg0->unk3A].unk168;
+            temp_s3 = g_field_object_states[arg0->unk3A].unk168;
         }
         else
         {
@@ -548,7 +548,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             {
                 var_s2 = 0xC;
                 var_s6 = 1;
-                b9_state_base = D_80105AE0;
+                b9_state_base = g_field_object_states;
                 var_s1 = b9_state_base + 12;
                 b9_actor_base = g_field_actors;
                 var_s0 = b9_actor_base + 12;
@@ -626,7 +626,7 @@ void func_80088198(Struct_D800FDF58* arg0)
     case 0x83:
     case 0x84:
     case 0x85:
-        case83_base = D_80105AE0;
+        case83_base = g_field_object_states;
         temp_v0_3 = &case83_base[arg0->unk3A];
         temp_v0_3->u.unk178 &= ~0x1C;
         arg0->unk2A = (s16)M2C_FIELD(temp_s3, u8*, 0);
@@ -643,14 +643,14 @@ void func_80088198(Struct_D800FDF58* arg0)
         }
         arg0->unk2C = var_v0_2;
         temp_a0 = arg0->unk3A;
-        if ((D_80105AE0[temp_a0].unk16F == 2) && ((u16)arg0->unk30 != 0) && (temp_a0 < 2U))
+        if ((g_field_object_states[temp_a0].unk16F == 2) && ((u16)arg0->unk30 != 0) && (temp_a0 < 2U))
         {
             arg0->unk21 = (arg0->unk21 & 0x80) + (u16)((u8)M2C_FIELD(arg0, s16*, 0x30) + 0x1F);
             if ((field_get_next_animation_frame_count(arg0) == 0) || ((u16)arg0->unk30 >= 5U))
             {
-                D_80105AE0[arg0->unk3A].pad17C[0x11] = 0;
+                g_field_object_states[arg0->unk3A].pad17C[0x11] = 0;
                 arg0->unk30 = 0;
-                temp_v0_4 = &D_80105AE0[arg0->unk3A];
+                temp_v0_4 = &g_field_object_states[arg0->unk3A];
                 temp_v0_4->unkC &= 0xFFFF7FFF;
                 arg0->unk21 &= 0x80;
                 field_restart_actor_animation_reverse(arg0);
@@ -659,14 +659,14 @@ void func_80088198(Struct_D800FDF58* arg0)
                 return;
             }
             arg0->unk21 = (arg0->unk21 & 0x80) + 0x1F;
-            temp_v0_5 = &D_80105AE0[arg0->unk3A];
+            temp_v0_5 = &g_field_object_states[arg0->unk3A];
             temp_v0_5->unkC |= 0x8000;
             goto block_36;
         }
-        D_80105AE0[arg0->unk3A].pad17C[0x11] = 0;
+        g_field_object_states[arg0->unk3A].pad17C[0x11] = 0;
         arg0->unk30 = 0;
     block_36:
-        precheck_states = D_80105AE0;
+        precheck_states = g_field_object_states;
         temp_v1_2 = &precheck_states[arg0->unk3A];
         if (temp_v1_2->unkC & 0x400)
         {
@@ -683,7 +683,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             do
             {
                 resource_offset = arg0->unk3B * 0x190;
-                action_row = g_field_resource_actions + D_80105AE0[arg0->unk3A].unk16F * 8;
+                action_row = g_field_resource_actions + g_field_object_states[arg0->unk3A].unk16F * 8;
                 temp_s0 = (void*)(resource_offset + (s32)action_row);
                 if (!(M2C_FIELD(temp_s0, u16*, 2) & 0x400))
                 {
@@ -707,12 +707,12 @@ void func_80088198(Struct_D800FDF58* arg0)
                             (field_count_free_actor_slots(arg0->unk3A) >= 3))
                         {
                             temp_a0_2 = arg0->unk3A;
-                            if ((D_80105AE0[temp_a0_2].unk48 == 0xFF) &&
-                                (func_8008404C(temp_a0_2, (M2C_FIELD(temp_s0, u16*, 0) & 0x7FFF) + (u16)((D_800FD818[temp_a0_2].u0.b.unk1 * 0x18) + 0x88)) !=
+                            if ((g_field_object_states[temp_a0_2].unk48 == 0xFF) &&
+                                (func_8008404C(temp_a0_2, (M2C_FIELD(temp_s0, u16*, 0) & 0x7FFF) + (u16)((g_field_player_records[temp_a0_2].u0.b.unk1 * 0x18) + 0x88)) !=
                                  0))
                             {
                                 case83_slots = g_field_actor_slots;
-                                case83_entries = D_80105880;
+                                case83_entries = g_field_actor_bindings;
                                 if ((u8)arg0->unk3A >= 2U)
                                 {
                                     var_v0_3 = 0x38;
@@ -736,7 +736,7 @@ void func_80088198(Struct_D800FDF58* arg0)
                             return;
                         }
                         case83_slots = g_field_actor_slots;
-                        case83_entries = D_80105880;
+                        case83_entries = g_field_actor_bindings;
                         if ((u8)arg0->unk3A < 2U)
                         {
                         block_59:
@@ -748,26 +748,26 @@ void func_80088198(Struct_D800FDF58* arg0)
                         }
                     block_61:
                         slot_offset_83 = (M2C_FIELD(&case83_entries[var_v0_3], s32*, 0x18)) * (s32)sizeof(FieldActorState);
-                        ((FieldActorState*)((s32)case83_slots + slot_offset_83))->unk26 = D_80105AE0[arg0->unk3A].unk16F;
+                        ((FieldActorState*)((s32)case83_slots + slot_offset_83))->unk26 = g_field_object_states[arg0->unk3A].unk16F;
                         goto block_62;
                     }
                 block_62:
                     if (M2C_FIELD(temp_s0, u16*, 2) & 0x400)
                     {
-                        update_states = D_80105AE0;
+                        update_states = g_field_object_states;
                         temp_v0_6 = &update_states[arg0->unk3A];
                         temp_v0_6->u.unk178 |= 0x40;
-                        temp_v0_7 = &D_80105AE0[arg0->unk3A];
+                        temp_v0_7 = &g_field_object_states[arg0->unk3A];
                         action_mask = ~0x400;
                         temp_v0_7->unk174 = temp_v0_7->unk174 & action_mask;
-                        D_80105AE0[arg0->unk3A].unk4A = 0;
-                        temp_v0_8 = &D_80105AE0[arg0->unk3A];
+                        g_field_object_states[arg0->unk3A].unk4A = 0;
+                        temp_v0_8 = &g_field_object_states[arg0->unk3A];
                         action_mask = ~1;
                         temp_v0_8->unk4C = temp_v0_8->unk4C & action_mask;
                         temp_v1_3 = M2C_FIELD(temp_s0, u16*, 4);
                         if ((temp_v1_3 != 0xFFFF) && (temp_v1_3 != 0))
                         {
-                            D_80105AE0[arg0->unk3A].unk3C = (s32)M2C_FIELD(temp_s0, u16*, 4);
+                            g_field_object_states[arg0->unk3A].unk3C = (s32)M2C_FIELD(temp_s0, u16*, 4);
                         }
                     }
                     else if (!(M2C_FIELD(temp_s0, u16*, 0) & 0x8000))
@@ -779,7 +779,7 @@ void func_80088198(Struct_D800FDF58* arg0)
                             if ((shared_s1 != -1) && (func_80083EEC((s32)arg0->unk3A, shared_s1, M2C_FIELD(temp_s0, u16*, 4)) != 0))
                             {
                                 temp_a3_2 = arg0->unk3A;
-                                g_field_actor_slots[shared_s1].unk26 = D_80105AE0[temp_a3_2].unk16F;
+                                g_field_actor_slots[shared_s1].unk26 = g_field_object_states[temp_a3_2].unk16F;
                                 field_start_actor_animation(shared_s1, 0, 0);
                             }
                         }
@@ -845,17 +845,17 @@ void func_80088198(Struct_D800FDF58* arg0)
         temp_a1_5 = arg0->unk0;
         if ((temp_a1_5 < 0) || (temp_a3_3 = M2C_FIELD((void*)temp_a2, s16*, 0) << 8, ((temp_a1_5 < temp_a3_3) == 0)) ||
             (temp_v1_5 = arg0->unk8, (temp_v1_5 < 0)) || (temp_a2 = (s32)(M2C_FIELD((void*)temp_a2, u16*, 2) << 0x10) >> 7, ((temp_v1_5 < temp_a2) == 0)) ||
-            (query_base = D_80105AE0, temp_v1_6 = &query_base[arg0->unk3A], temp_v0_11 = M2C_FIELD(temp_v1_6, s32*, 0x50), (temp_v0_11 < 0)) ||
+            (query_base = g_field_object_states, temp_v1_6 = &query_base[arg0->unk3A], temp_v0_11 = M2C_FIELD(temp_v1_6, s32*, 0x50), (temp_v0_11 < 0)) ||
             (temp_v0_11 >= temp_a3_3) || (temp_v0_12 = M2C_FIELD(temp_v1_6, s32*, 0x58), (temp_v0_12 < 0)) || (temp_v0_12 >= temp_a2))
         {
             call_actor = arg0;
-            D_80105AE0[arg0->unk3A].unk1A6 = 0;
-            temp_v0_13 = &D_80105AE0[arg0->unk3A];
+            g_field_object_states[arg0->unk3A].unk1A6 = 0;
+            temp_v0_13 = &g_field_object_states[arg0->unk3A];
             temp_v0_13->unk1AC = (s32)temp_v0_13->unk50;
-            temp_v0_14 = &D_80105AE0[arg0->unk3A];
+            temp_v0_14 = &g_field_object_states[arg0->unk3A];
             temp_v0_14->unk1B0 = (s32)temp_v0_14->unk58;
             var_a1 = 1;
-            D_80105AE0[arg0->unk3A].unk1A4 = 1;
+            g_field_object_states[arg0->unk3A].unk1A4 = 1;
             temp_a2 = M2C_FIELD(temp_s3, u8*, 0);
             call_actor->unk2E = 0xFF;
             call_actor->unk24 = 1;
@@ -870,7 +870,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             sp18.x = temp_a1_5;
             sp18.y = arg0->unk4;
             sp18.z = arg0->unk8;
-            if (D_800FE3A0[arg0->unk3A].unk2E == 0x40)
+            if (g_field_object_parts[arg0->unk3A].unk2E == 0x40)
             {
                 sp18.unkC = 0xC;
                 sp18.unk10 = 8;
@@ -887,20 +887,20 @@ void func_80088198(Struct_D800FDF58* arg0)
             sp18.unkE = 0x10;
             sp30.unkE = 0x10;
             func_8006304C(&sp18);
-            sp30.x = D_80105AE0[arg0->unk3A].unk50;
-            sp30.y = D_80105AE0[arg0->unk3A].unk54;
-            sp30.z = D_80105AE0[arg0->unk3A].unk58;
-            var_s2 = func_80060F58(&sp18, &sp30, (OutPair88198*)((u8*)&D_80105AE0[arg0->unk3A] + 0x1AC), 0);
+            sp30.x = g_field_object_states[arg0->unk3A].unk50;
+            sp30.y = g_field_object_states[arg0->unk3A].unk54;
+            sp30.z = g_field_object_states[arg0->unk3A].unk58;
+            var_s2 = func_80060F58(&sp18, &sp30, (OutPair88198*)((u8*)&g_field_object_states[arg0->unk3A] + 0x1AC), 0);
             call_actor = arg0;
             if (var_s2 <= 0)
             {
-                D_80105AE0[arg0->unk3A].unk1A6 = 0;
-                temp_v0_16 = &D_80105AE0[arg0->unk3A];
+                g_field_object_states[arg0->unk3A].unk1A6 = 0;
+                temp_v0_16 = &g_field_object_states[arg0->unk3A];
                 temp_v0_16->unk1AC = (s32)temp_v0_16->unk50;
-                temp_v0_17 = &D_80105AE0[arg0->unk3A];
+                temp_v0_17 = &g_field_object_states[arg0->unk3A];
                 temp_v0_17->unk1B0 = (s32)temp_v0_17->unk58;
                 var_a1 = 1;
-                D_80105AE0[arg0->unk3A].unk1A4 = 1;
+                g_field_object_states[arg0->unk3A].unk1A4 = 1;
                 temp_a2 = M2C_FIELD(temp_s3, u8*, 0);
                 call_actor->unk2E = 0xFF;
                 call_actor->unk24 = 1;
@@ -913,8 +913,8 @@ void func_80088198(Struct_D800FDF58* arg0)
             }
             else
             {
-                D_80105AE0[arg0->unk3A].unk1A4 = var_s2;
-                D_80105AE0[arg0->unk3A].unk1A6 = 0;
+                g_field_object_states[arg0->unk3A].unk1A4 = var_s2;
+                g_field_object_states[arg0->unk3A].unk1A6 = 0;
                 var_a1 = M2C_FIELD(temp_s3, u8*, 0);
                 temp_a2 = M2C_FIELD(temp_s3, u8*, 0);
                 call_actor->unk2E = 0xFF;
@@ -950,7 +950,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         field_restart_actor_animation(arg0);
         return;
     case 0x9E:
-        case9e_entries = D_80105880;
+        case9e_entries = g_field_actor_bindings;
         if ((u8)arg0->unk3A < 2U)
         {
             var_v0_5 = arg0->unk3A * 0x1C;
@@ -964,7 +964,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             shared_s1 = M2C_FIELD(temp_s3, u8*, 1) + (M2C_FIELD(temp_s3, u8*, 2) << 8);
             temp_a1_6 = arg0->unk3A;
             arg0->unk2C = (u16)arg0->unk2C + 3;
-            case9e_states = D_80105AE0;
+            case9e_states = g_field_object_states;
             if (case9e_states[temp_a1_6].unkC & 0x400)
             {
                 goto block_154;
@@ -982,7 +982,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         }
         break;
     case 0xA9:
-        casea9_check_entries = D_80105880;
+        casea9_check_entries = g_field_actor_bindings;
         if ((u8)arg0->unk3A < 2U)
         {
             var_v0_6 = arg0->unk3A * 0x1C;
@@ -996,7 +996,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             temp_s0_2 = M2C_FIELD(temp_s3, u8*, 3);
             shared_s1 = M2C_FIELD(temp_s3, u8*, 1) + (M2C_FIELD(temp_s3, u8*, 2) << 8);
             arg0->unk2C = (u16)arg0->unk2C + 4;
-            casea9_states = D_80105AE0;
+            casea9_states = g_field_object_states;
             casea9_states[arg0->unk3A].unk3C = 0xFFFF;
             if (D_8010AE54 != 0)
             {
@@ -1009,7 +1009,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             temp_v1_8 = arg0->unk3A;
             casea9_state = &casea9_states[temp_v1_8];
             casea9_slots = g_field_actor_slots;
-            casea9_entries = D_80105880;
+            casea9_entries = g_field_actor_bindings;
             if (temp_v1_8 < 2U)
             {
                 var_v0_7 = temp_v1_8 * 0x1C;
@@ -1021,7 +1021,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             slot_offset_a9 = (M2C_FIELD(&casea9_entries[var_v0_7], s32*, 0x18)) * (s32)sizeof(FieldActorState);
             ((FieldActorState*)((s32)casea9_slots + slot_offset_a9))->unk26 = temp_s0_2;
             casea9_state->unk16F = temp_s0_2;
-            D_80105AE0[arg0->unk3A].unk174 |= 0x8000;
+            g_field_object_states[arg0->unk3A].unk174 |= 0x8000;
             return;
         }
         break;
@@ -1031,7 +1031,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         {
             shared_s1 = arg0->unk3A;
         }
-        bc_entries = D_80105880;
+        bc_entries = g_field_actor_bindings;
         temp_s2 = (shared_s1 * 0x1C) + bc_entries;
         temp_a0_3 = M2C_FIELD(temp_s2, s32*, 0);
         if (((u32)(temp_a0_3 - 1) < 2U) && (M2C_FIELD(temp_s2, s32*, 0xC) == arg0->unk3A))
@@ -1044,9 +1044,9 @@ void func_80088198(Struct_D800FDF58* arg0)
                 if (temp_v1_9->unk23A == 0)
                 {
                     temp_v1_9->unkC = M2C_FIELD(temp_v1_9, FieldActorAnimationDef**, 0x10);
-                    D_80105AE0[arg0->unk3A].u.b.pad2 = 0;
+                    g_field_object_states[arg0->unk3A].u.b.pad2 = 0;
                     field_start_actor_animation(M2C_FIELD(temp_s2, s32*, 0x18), 0, 0);
-                    D_80105AE0[shared_s1].u.b.pad[1] = (u8)M2C_FIELD(temp_s2, s32*, 0x18);
+                    g_field_object_states[shared_s1].u.b.pad[1] = (u8)M2C_FIELD(temp_s2, s32*, 0x18);
                     g_field_actor_slots[M2C_FIELD(temp_s2, s32*, 0x18)].unk2A = var_s6;
                     arg0->unk2A = 0xBC;
                 }
@@ -1064,7 +1064,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         {
             shared_s1 = arg0->unk3A;
         }
-        track_entries = D_80105880;
+        track_entries = g_field_actor_bindings;
         temp_v1_10 = (shared_s1 * 0x1C) + track_entries;
         temp_a0_4 = M2C_FIELD(temp_v1_10, s32*, 0);
         if (((u32)(temp_a0_4 - 1) < 2U) && (track_owner = arg0->unk3A, temp_a1_7 = M2C_FIELD(temp_v1_10, s32*, 0xC), (temp_a1_7 == track_owner)))
@@ -1102,7 +1102,7 @@ void func_80088198(Struct_D800FDF58* arg0)
                     if (track_result != 0)
                     {
                         arg0->unk2A = 0xBC;
-                        D_80105AE0[arg0->unk3A].u.b.pad2 = 0;
+                        g_field_object_states[arg0->unk3A].u.b.pad2 = 0;
                     }
                 }
                 goto block_140;
@@ -1147,7 +1147,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         actor->unk2A = value;
         value = M2C_FIELD(temp_s3, u8*, 1);
         actor->unk1B = value;
-        states = D_80105AE0;
+        states = g_field_object_states;
         value = M2C_FIELD(temp_s3, u8*, 2);
         actor->pad20[0] = value;
         states[actor->unk3A].unk171 = M2C_FIELD(temp_s3, u8*, 3);
@@ -1226,13 +1226,13 @@ void func_80088198(Struct_D800FDF58* arg0)
         arg0->unk2C = (u16)arg0->unk2C + 2;
         return;
     case 0xA5:
-        casea5_base = D_800FE3A0;
+        casea5_base = g_field_object_parts;
         temp_v0_19 = &casea5_base[arg0->unk3A];
         temp_v0_19->unk34 |= 0x800000;
         goto block_167;
     case 0xA6:
         casea6_mask = 0xFF7FFFFF;
-        casea6_base = D_800FE3A0;
+        casea6_base = g_field_object_parts;
         temp_v0_20 = &casea6_base[arg0->unk3A];
         temp_v0_20->unk34 &= casea6_mask;
         goto block_167;
@@ -1316,7 +1316,7 @@ s32 func_80089980(s32 key)
     u8 state;
 
     scan = g_field_actors;
-    e = D_80105AE0;
+    e = g_field_object_states;
     i = 0;
 loop:
     i++;

@@ -137,7 +137,7 @@ typedef struct
     u8 disabled[11];
     u8 pad;
 } ActionMap;
-extern Slot D_80105AE0[];
+extern Slot g_field_object_states[];
 extern u8 g_field_action_animation_maps[];
 extern s32 g_field_action_context;
 extern s32 D_8010AE54;
@@ -169,10 +169,10 @@ u16 func_80091914(Actor *actor, s32 map_index)
     else if ((actor->mode & 0x7F) != 0x3D)
     {
         actor->counter = 0;
-        D_80105AE0[actor->slot].flags &= 0xFFFF7FFF;
-        D_80105AE0[actor->slot].active = 0;
+        g_field_object_states[actor->slot].flags &= 0xFFFF7FFF;
+        g_field_object_states[actor->slot].active = 0;
     }
-    if (D_80105AE0[actor->slot].flags & 0x400)
+    if (g_field_object_states[actor->slot].flags & 0x400)
     {
         if ((u32)(action - 2) >= 2)
         {

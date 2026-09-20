@@ -3,7 +3,7 @@
 #include "sdk/libgpu.h"
 extern u8 g_field_direction_offsets[];
 extern u8 g_field_actors[];
-extern u8 D_80105AE0[];
+extern u8 g_field_object_states[];
 extern u8 D_80122738[];
 extern u8 *g_pad_ctx;
 extern s32 D_80122714, D_80122734, D_801227BC, D_801227C0;
@@ -370,7 +370,7 @@ s32 func_800AF350(u8 *arg0)
                     entry = record;
                     actor_flags = *(s32 *)(entry + 0x1C);
                     slot_offset = actor_index * 0x23C;
-                    record = D_80105AE0 + slot_offset;
+                    record = g_field_object_states + slot_offset;
                     entry[0x25] = 0xFE;
                     selected_item = items[D_80122A00 * 2];
                     actor_direction = g_field_actors[0x21];
@@ -508,7 +508,7 @@ void func_800AF824(s32 arg0)
     s1 = base + arg0 * 0x54;
     v1 = pc + (s1[0x21] & 0x7F);
     v1[0x2640] = v1[0x2640] + 1;
-    s0 = D_80105AE0 + arg0 * 0x23C;
+    s0 = g_field_object_states + arg0 * 0x23C;
     func_800C2640(*(s32 *)(s0 + 0x14), 0xFF);
     s1[0x25] = 0xFF;
     s0[0x18E] = 0;

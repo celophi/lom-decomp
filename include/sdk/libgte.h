@@ -27,6 +27,11 @@ typedef struct {
     short vy;
 } DVECTOR;
 
+/** @brief Psy-Q color vector, including its primitive command byte. */
+typedef struct {
+    unsigned char r, g, b, cd;
+} CVECTOR;
+
 extern void InitGeom();
 extern VECTOR *ApplyMatrixLV(MATRIX *m, VECTOR *v0, VECTOR *v1);
 extern MATRIX *RotMatrix(SVECTOR *r, MATRIX *m);

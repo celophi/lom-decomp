@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "field_object_state.h"
 #include "field_mesh.h"
 #include "sdk/libgte.h"
 
@@ -48,12 +49,6 @@ typedef struct
     u8 pad2f[4];
     u8 unk33;
 } FieldActorPartDef;
-typedef struct
-{
-    u8 pad0[0x68];
-    u16 unk68;
-    u8 pad6a[0x23C - 0x6A];
-} FieldTransformSlot;
 
 /* func_800822A4 */
 #include "common.h"
@@ -325,7 +320,6 @@ void func_800829A0(FieldActorState *actor, Struct_D800FDF58 *record, u32 *part, 
 
 /** @brief Actor-slot layout exposing the 0x68 transform attenuation value. */
 
-extern FieldTransformSlot D_80105AE0[];
 extern s32 g_field_track_index;
 s32 field_evaluate_parameter_track_at_time(FieldActorState *, u32, u16);
 void field_resolve_effect_position(Struct_D800FDF58 *, FieldActorPartDef *, VECTOR *);
@@ -486,7 +480,7 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
     {
         scale_xz = part->unk2E;
         horizontal_scale =
-            (scale_xz - ((scale_xz * ((s32)(0x100 - D_80105AE0[actor->unk228].unk68) >> 6)) / 10))
+            (scale_xz - ((scale_xz * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->unk228].effect_footprint_strength) >> 6)) / 10))
             << 6;
         scale->vz = horizontal_scale;
         scale->vx = horizontal_scale;
@@ -501,7 +495,7 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
     {
         scale_y = part->unk33;
         scale->vy =
-            (scale_y - ((scale_y * ((s32)(0x100 - D_80105AE0[actor->unk228].unk68) >> 6)) / 10))
+            (scale_y - ((scale_y * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->unk228].effect_footprint_strength) >> 6)) / 10))
             << 6;
     }
     else

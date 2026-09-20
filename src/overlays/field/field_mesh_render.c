@@ -3,6 +3,8 @@
  */
 
 #include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
 #include "field_actor_palette.h"
 #include "field_effect_types.h"
 #include "field_mesh_render.h"
@@ -21,10 +23,6 @@ typedef struct
     u8 *faces;
 } FieldMeshResource;
 
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
-
 extern FieldMotionRecord g_field_effect_records[];
 
 extern FieldActorState g_field_actor_slots[80];
@@ -41,7 +39,7 @@ extern FieldActorState g_field_actor_slots[80];
 #define FIELD_OT_TAG_MASK 0xFF000000
 
 void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right);
-void field_resolve_effect_part_color(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, u8 *out);
+
 void func_800822A4(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, s32 part_index);
 s32 func_80082C90(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, MATRIX *mtx, MATRIX *tmp);
 
@@ -197,7 +195,7 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
     MATRIX transform;
     MATRIX base_matrix;
     MATRIX *transform_matrix;
-    u8 base_color[4];
+    CVECTOR base_color;
     s32 triangle_area;
     FieldActorState *actor;
     FieldActorPartDef *part;
@@ -222,7 +220,7 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
     transform.t[2] = 0;
     transform.t[1] = 0;
     transform.t[0] = 0;
-    field_resolve_effect_part_color(actor, effect, part, base_color);
+    field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&base_color);
     screen_origin = FIELD_MESH_SCREEN_ORIGIN;
     gte_SetRotMatrix(transform_matrix);
     gte_SetTransMatrix(transform_matrix);
@@ -231,8 +229,8 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
     screen_vertices = (s32 *)g_field_mesh_screen_vertices;
     depth_offsets = g_field_mesh_depth_offsets;
     face_data = ((FieldMeshResource *)actor->mesh_data)[mesh_index].faces;
-    screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + D_800F22A0 / 256 + effect->x / 256;
-    screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + D_800F22A4 / 256 + effect->y / 256 - effect->z / 512 - D_800F22A8 / 512;
+    screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+    screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
     primitive_kind = (face_data[6] >> 1) & 0xF;
 
     switch (primitive_kind)
@@ -270,7 +268,7 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
                 gte_stopz(&triangle_area);
                 if (triangle_area > 0)
                 {
-                    packed_color = *(s32 *)base_color;
+                    packed_color = *(s32*)&base_color;
                     packet[-11] = 7;
                     *(volatile s32 *)(packet - 10) = packed_color;
                     packet[-7] = primitive_code;
@@ -299,19 +297,19 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
                             s32 owner_index;
                             s32 palette_index;
                             owner_index = actor->owner_object_index;
-                            palette_index = part->palette_selector;
+                            palette_index = part->appearance.fields.palette_selector;
                             *(volatile u16 *)(packet + 0) = ((owner_index << 7) + 0x7B80) | (palette_index & 0x3F);
                         }
                         *(s16 *)((u8 *)packet_cursor + (packet - (volatile u8 *)packet_cursor) + 8) =
-                            ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags >> 17) & 0x60) | 0x10 |
+                            ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags.word >> 17) & 0x60) | 0x10 |
                             ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
                     }
                     else
                     {
-                        *(volatile u16 *)(packet + 0) = (part->palette_selector & 0x3F) | 0x7C80;
-                        *(volatile s16 *)(packet + 8) = ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags >> 17) & 0x60) | 5;
+                        *(volatile u16 *)(packet + 0) = (part->appearance.fields.palette_selector & 0x3F) | 0x7C80;
+                        *(volatile s16 *)(packet + 8) = ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags.word >> 17) & 0x60) | 5;
                     }
-                    if ((part->track_flags >> 21) & 1)
+                    if ((part->track_flags.word >> 21) & 1)
                     {
                         *(volatile u16 *)packet = (*(volatile u16 *)packet & 0xFFC0) + 0x40;
                     }
@@ -390,9 +388,9 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
                 if (triangle_area > 0)
                 {
                     face_color = face_data + 2;
-                    ((u8 *)packet)[4] = face_data[0] + base_color[0] - 0x80;
-                    ((u8 *)packet)[5] = face_color[-1] + base_color[1] - 0x80;
-                    ((u8 *)packet)[6] = face_color[0] + base_color[2] - 0x80;
+                    ((u8 *)packet)[4] = face_data[0] + base_color.r - 0x80;
+                    ((u8 *)packet)[5] = face_color[-1] + base_color.g - 0x80;
+                    ((u8 *)packet)[6] = face_color[0] + base_color.b - 0x80;
                     *(s32 *)((u8 *)packet + 8) = screen_vertices[0];
                     *(s32 *)((u8 *)packet + 12) = screen_vertices[1];
                     *(s32 *)((u8 *)packet + 16) = screen_vertices[2];
@@ -439,7 +437,7 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
                     ((u8 *)packet)[3] = 1;
                     {
                         s32 draw_mode_bits = part->spawn_flags.word >> 15;
-                        s32 texture_mode_bits = part->behavior_flags >> 17;
+                        s32 texture_mode_bits = part->behavior_flags.word >> 17;
                         texture_mode_bits &= 0x60;
                         draw_mode_bits &= 0x80;
                         draw_mode_bits |= texture_mode_bits;
@@ -553,15 +551,15 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
                 gte_stopz(&triangle_area);
                 if (triangle_area > 0)
                 {
-                    CLAMP_COLOR_CHANNEL(packet_bytes[4], face_data[7] + base_color[0] - 0x80);
-                    CLAMP_COLOR_CHANNEL(packet_bytes[5], face_data[8] + base_color[1] - 0x80);
-                    CLAMP_COLOR_CHANNEL(packet_bytes[6], face_data[9] + base_color[2] - 0x80);
-                    CLAMP_COLOR_CHANNEL(packet_bytes[16], face_data[10] + base_color[0] - 0x80);
-                    CLAMP_COLOR_CHANNEL(packet_bytes[17], face_data[11] + base_color[1] - 0x80);
-                    CLAMP_COLOR_CHANNEL(packet_bytes[18], face_data[12] + base_color[2] - 0x80);
-                    CLAMP_COLOR_CHANNEL(packet_bytes[28], face_data[13] + base_color[0] - 0x80);
-                    CLAMP_COLOR_CHANNEL(packet_bytes[29], face_data[14] + base_color[1] - 0x80);
-                    CLAMP_COLOR_CHANNEL(packet_bytes[(packet_bytes[3] = 9, primitive_code = 0x34, 30)], face_data[15] + base_color[2] - 0x80);
+                    CLAMP_COLOR_CHANNEL(packet_bytes[4], face_data[7] + base_color.r - 0x80);
+                    CLAMP_COLOR_CHANNEL(packet_bytes[5], face_data[8] + base_color.g - 0x80);
+                    CLAMP_COLOR_CHANNEL(packet_bytes[6], face_data[9] + base_color.b - 0x80);
+                    CLAMP_COLOR_CHANNEL(packet_bytes[16], face_data[10] + base_color.r - 0x80);
+                    CLAMP_COLOR_CHANNEL(packet_bytes[17], face_data[11] + base_color.g - 0x80);
+                    CLAMP_COLOR_CHANNEL(packet_bytes[18], face_data[12] + base_color.b - 0x80);
+                    CLAMP_COLOR_CHANNEL(packet_bytes[28], face_data[13] + base_color.r - 0x80);
+                    CLAMP_COLOR_CHANNEL(packet_bytes[29], face_data[14] + base_color.g - 0x80);
+                    CLAMP_COLOR_CHANNEL(packet_bytes[(packet_bytes[3] = 9, primitive_code = 0x34, 30)], face_data[15] + base_color.b - 0x80);
                     packet_bytes[7] = primitive_code;
                     setSemiTrans(packet_bytes, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
                     do
@@ -585,19 +583,19 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
                             s32 owner_index;
                             s32 palette_index;
                             owner_index = actor->owner_object_index;
-                            palette_index = part->palette_selector;
+                            palette_index = part->appearance.fields.palette_selector;
                             *(u16 *)(packet_bytes + 14) = ((owner_index << 7) + 0x7B80) | (palette_index & 0x3F);
                         }
-                        *(s16 *)(packet_bytes + 26) = ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags >> 17) & 0x60) | 0x10 |
+                        *(s16 *)(packet_bytes + 26) = ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags.word >> 17) & 0x60) | 0x10 |
                                                         ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
                     }
                     else
                     {
-                        *(u16 *)(packet_bytes + 14) = (part->palette_selector & 0x3F) | 0x7C80;
+                        *(u16 *)(packet_bytes + 14) = (part->appearance.fields.palette_selector & 0x3F) | 0x7C80;
                         *(s16 *)(packet_bytes + 26) = ((part->spawn_flags.word >> 15) & 0x80) |
-                                                        ((part->behavior_flags >> 17) & 0x60) | 5;
+                                                        ((part->behavior_flags.word >> 17) & 0x60) | 5;
                     }
-                    if ((part->track_flags >> 21) & 1)
+                    if ((part->track_flags.word >> 21) & 1)
                     {
                         *(u16 *)(packet_bytes + 14) = (*(u16 *)(packet_bytes + 14) & 0xFFC0) + 0x40;
                     }
@@ -701,7 +699,7 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     MATRIX base_matrix;
     MATRIX *transform_matrix;
     MATRIX *rotation_matrix;
-    u8 base_color[4];
+    CVECTOR base_color;
     MATRIX light_matrix;
     MATRIX color_matrix;
     SVECTOR light_direction;
@@ -733,7 +731,7 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     transform.t[2] = 0;
     transform.t[1] = 0;
     transform.t[0] = 0;
-    field_resolve_effect_part_color(actor, effect, part, base_color);
+    field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&base_color);
     screen_origin = FIELD_MESH_SCREEN_ORIGIN;
     gte_SetRotMatrix(transform_matrix);
     gte_SetTransMatrix(transform_matrix);
@@ -771,9 +769,9 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                     light_matrix.m[light_index][0] = transformed_light.vx;
                     light_matrix.m[light_index][1] = transformed_light.vy;
                     light_matrix.m[light_index][2] = transformed_light.vz;
-                    color_matrix.m[0][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].unknown_0xe * 0x10;
-                    color_matrix.m[1][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].unknown_0xf * 0x10;
-                    color_matrix.m[2][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].unknown_0x10 * 0x10;
+                    color_matrix.m[0][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].red_or_track * 0x10;
+                    color_matrix.m[1][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].green_or_track * 0x10;
+                    color_matrix.m[2][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].blue_or_track * 0x10;
                     break;
                 }
                 count++;
@@ -802,8 +800,8 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     transformed_normals = g_field_mesh_transformed_normals;
     depth_offsets = g_field_mesh_depth_offsets;
     face_data = ((FieldMeshResource *)actor->mesh_data)[mesh_index].faces;
-    screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + D_800F22A0 / 256 + effect->x / 256;
-    screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + D_800F22A4 / 256 + effect->y / 256 - effect->z / 512 - D_800F22A8 / 512;
+    screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+    screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
     primitive_kind = (face_data[6] >> 1) & 0xF;
 
     switch (primitive_kind)
@@ -816,7 +814,7 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
         s32 primitive_code;
         s32 base_depth, depth_offset, depth_index;
 
-        gte_SetBackColor(base_color[0], base_color[1], base_color[2]);
+        gte_SetBackColor(base_color.r, base_color.g, base_color.b);
         if (actor->owner_object_index < 2)
         {
             {
@@ -824,19 +822,19 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                 s32 palette;
                 address_mask = actor->owner_object_index;
                 actor_index = address_mask;
-                palette = part->palette_selector;
+                palette = part->appearance.fields.palette_selector;
                 *(u16 *)((u8 *)write_cursor + 0xE) = ((actor_index << 7) + 0x7B80) | (palette & 0x3F);
             }
             *(s16 *)((u8 *)write_cursor + 0x16) =
-                ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags >> 17) & 0x60) | 0x10 |
+                ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags.word >> 17) & 0x60) | 0x10 |
                 ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
         }
         else
         {
-            *(u16 *)((u8 *)write_cursor + 0xE) = (part->palette_selector & 0x3F) | 0x7C80;
-            *(s16 *)((u8 *)write_cursor + 0x16) = ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags >> 17) & 0x60) | 5;
+            *(u16 *)((u8 *)write_cursor + 0xE) = (part->appearance.fields.palette_selector & 0x3F) | 0x7C80;
+            *(s16 *)((u8 *)write_cursor + 0x16) = ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags.word >> 17) & 0x60) | 5;
         }
-        if ((part->track_flags >> 21) & 1)
+        if ((part->track_flags.word >> 21) & 1)
         {
             *(u16 *)((u8 *)write_cursor + 0xE) = (*(u16 *)((u8 *)write_cursor + 0xE) & 0xFFC0) + 0x40;
         }
@@ -935,17 +933,17 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                 gte_stopz(&triangle_area);
                 if (triangle_area > 0)
                 {
-                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[4], face_data[7] + base_color[0] - 0x80);
-                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[5], face_data[8] + base_color[1] - 0x80);
-                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[6], face_data[9] + base_color[2] - 0x80);
-                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[16], face_data[10] + base_color[0] - 0x80);
-                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[17], face_data[11] + base_color[1] - 0x80);
-                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[18], face_data[12] + base_color[2] - 0x80);
-                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[28], face_data[13] + base_color[0] - 0x80);
-                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[29], face_data[14] + base_color[1] - 0x80);
+                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[4], face_data[7] + base_color.r - 0x80);
+                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[5], face_data[8] + base_color.g - 0x80);
+                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[6], face_data[9] + base_color.b - 0x80);
+                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[16], face_data[10] + base_color.r - 0x80);
+                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[17], face_data[11] + base_color.g - 0x80);
+                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[18], face_data[12] + base_color.b - 0x80);
+                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[28], face_data[13] + base_color.r - 0x80);
+                    CLAMP_LIT_COLOR_CHANNEL(packet_bytes[29], face_data[14] + base_color.g - 0x80);
                     {
                         s32 blue_channel;
-                        CLAMP_LIT_COLOR_CHANNEL(blue_channel, face_data[15] + base_color[2] - 0x80);
+                        CLAMP_LIT_COLOR_CHANNEL(blue_channel, face_data[15] + base_color.b - 0x80);
                         setlen(packet_bytes, 9);
                         packet_bytes[30] = blue_channel;
                     }
@@ -969,19 +967,19 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                             s32 owner_index;
                             s32 palette_index;
                             owner_index = actor->owner_object_index;
-                            palette_index = part->palette_selector;
+                            palette_index = part->appearance.fields.palette_selector;
                             *(u16 *)(packet_bytes + 14) = ((owner_index << 7) + 0x7B80) | (palette_index & 0x3F);
                         }
-                        *(s16 *)(packet_bytes + 26) = ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags >> 17) & 0x60) | 0x10 |
+                        *(s16 *)(packet_bytes + 26) = ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags.word >> 17) & 0x60) | 0x10 |
                                                         ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
                     }
                     else
                     {
-                        *(u16 *)(packet_bytes + 14) = (part->palette_selector & 0x3F) | 0x7C80;
+                        *(u16 *)(packet_bytes + 14) = (part->appearance.fields.palette_selector & 0x3F) | 0x7C80;
                         *(s16 *)(packet_bytes + 26) = ((part->spawn_flags.word >> 15) & 0x80) |
-                                                        ((part->behavior_flags >> 17) & 0x60) | 5;
+                                                        ((part->behavior_flags.word >> 17) & 0x60) | 5;
                     }
-                    if ((part->track_flags >> 21) & 1)
+                    if ((part->track_flags.word >> 21) & 1)
                     {
                         *(u16 *)(packet_bytes + 14) = (*(u16 *)(packet_bytes + 14) & 0xFFC0) + 0x40;
                     }
@@ -1046,9 +1044,9 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                 if (triangle_area > 0)
                 {
                     face_color = face_data + 2;
-                    gte_SetBackColor(face_data[0] + base_color[0] - 0x80,
-                                     face_color[-1] + base_color[1] - 0x80,
-                                     face_color[0] + base_color[2] - 0x80);
+                    gte_SetBackColor(face_data[0] + base_color.r - 0x80,
+                                     face_color[-1] + base_color.g - 0x80,
+                                     face_color[0] + base_color.b - 0x80);
                     gte_ldv0(transformed_normals);
                     gte_ncs();
                     gte_strgb((u8 *)packet + 4);
@@ -1102,7 +1100,7 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                     ((u8 *)packet)[3] = 1;
                     {
                         s32 draw_mode_bits = part->spawn_flags.word >> 15;
-                        s32 texture_mode_bits = part->behavior_flags >> 17;
+                        s32 texture_mode_bits = part->behavior_flags.word >> 17;
                         texture_mode_bits &= 0x60;
                         draw_mode_bits &= 0x80;
                         draw_mode_bits |= texture_mode_bits;

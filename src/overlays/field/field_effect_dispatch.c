@@ -4,6 +4,8 @@
  */
 
 #include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
 #include "field_types.h"
 #include "field_effect_types.h"
 #include "field_mesh_render.h"
@@ -58,14 +60,11 @@ typedef struct
 extern FieldActorState g_field_actor_slots[80];
 extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[256];
-extern FieldObjectPlacement D_80105AE0[];
 extern FieldResourceEntry g_field_resource_entries[];
 extern FieldMotionRecord g_field_effect_records_end;
 extern s32 g_field_track_index;
 extern u8 *D_801058D4;
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
+
 extern u16 g_field_texture_slot_flags[];
 
 static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *packet_cursor, s32 *ordering_table, u8 *frame_data);
@@ -78,7 +77,7 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
 void field_render_effects(FieldRenderContext *render_context)
 {
     FieldMotionRecord *effect;
-    FieldObjectPlacement *object_state;
+    FieldObjectRuntime *object_state;
     FieldActorPartDef *part;
     u32 *ordering_table;
     FieldResourceEntry *resources;
@@ -112,7 +111,7 @@ void field_render_effects(FieldRenderContext *render_context)
                 case FIELD_EFFECT_RENDER_MESH_2:
                 case FIELD_EFFECT_RENDER_MESH_1:
                 case FIELD_EFFECT_RENDER_MESH_0:
-                    if (g_field_actor_slots[effect->actor_index].parts[effect->part_index].unknown_0x23 < 8)
+                    if (g_field_actor_slots[effect->actor_index].parts[effect->part_index].rotation_extent.fields.unknown_0x23 < 8)
                     {
                         packet_cursor = field_render_lit_effect_mesh(effect, FIELD_EFFECT_RENDER_MESH_0 - effect->state, packet_cursor, ordering_table);
                     }
@@ -137,7 +136,7 @@ void field_render_effects(FieldRenderContext *render_context)
                 case FIELD_EFFECT_RENDER_LINKED_SPRITE:
                     actor_or_object_index = (s32) &g_field_actor_slots[effect->actor_index];
                     part = &((FieldActorState *) actor_or_object_index)->parts[effect->part_index];
-                    value = ((u32) part->placement_flags >> 0x12) & 0x3F;
+                    value = ((u32) part->placement_flags.word >> 0x12) & 0x3F;
                     if (((u32) (value - 0xA) < 0xA) || value == 0x28)
                     {
                         actor_or_object_index = ((FieldActorState *) actor_or_object_index)->track_object_indices[effect->track_index];
@@ -147,7 +146,7 @@ void field_render_effects(FieldRenderContext *render_context)
                         value += actor_or_object_index;
                         value <<= 2;
                         value += (s32) g_field_actors;
-                        object_state = &D_80105AE0[actor_or_object_index];
+                        object_state = &g_field_object_states[actor_or_object_index];
                         value = *(u8 *) (value + 0x3B);
                         frame_result = (s32) resources[value].start;
                     }
@@ -160,7 +159,7 @@ void field_render_effects(FieldRenderContext *render_context)
                         value += actor_or_object_index;
                         value <<= 2;
                         value += (s32) g_field_actors;
-                        object_state = &D_80105AE0[actor_or_object_index];
+                        object_state = &g_field_object_states[actor_or_object_index];
                         value = *(u8 *) (value + 0x3B);
                         frame_result = (s32) resources[value].start;
                     }
@@ -172,11 +171,11 @@ void field_render_effects(FieldRenderContext *render_context)
                         {
                             if (frame_result >= 0)
                             {
-                                packet_cursor = func_80077FB4(effect, packet_cursor, ordering_table, frame_result, (*(u8 *) &object_state->state_flags & 1) ^ 1, part);
+                                packet_cursor = func_80077FB4(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
                             }
                             else
                             {
-                                packet_cursor = func_80075C88(effect, packet_cursor, ordering_table, frame_result, (*(u8 *) &object_state->state_flags & 1) ^ 1, part);
+                                packet_cursor = func_80075C88(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
                             }
                         }
                     }
@@ -215,7 +214,7 @@ void field_render_effects(FieldRenderContext *render_context)
                     value += object_index;
                     value <<= 2;
                     value += (s32) g_field_actors;
-                    object_state = &D_80105AE0[object_index];
+                    object_state = &g_field_object_states[object_index];
                     value = *(u8 *) (value + 0x3B);
                     frame_result = (s32) resources[value].start;
                     object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
@@ -226,11 +225,11 @@ void field_render_effects(FieldRenderContext *render_context)
                         {
                             if (frame_result >= 0)
                             {
-                                packet_cursor = func_80077FB4(effect, packet_cursor, ordering_table, frame_result, (*(u8 *) &object_state->state_flags & 1) ^ 1, part);
+                                packet_cursor = func_80077FB4(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
                             }
                             else
                             {
-                                packet_cursor = func_80075C88(effect, packet_cursor, ordering_table, frame_result, (*(u8 *) &object_state->state_flags & 1) ^ 1, part);
+                                packet_cursor = func_80075C88(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
                             }
                         }
                     }
@@ -249,7 +248,7 @@ void field_render_effects(FieldRenderContext *render_context)
                     value += object_index;
                     value <<= 2;
                     value += (s32) g_field_actors;
-                    object_state = &D_80105AE0[object_index];
+                    object_state = &g_field_object_states[object_index];
                     value = *(u8 *) (value + 0x3B);
                     frame_result = (s32) resources[value].start;
                     object_state->linked_effect_index = (s8) (effect - g_field_effect_records);
@@ -260,11 +259,11 @@ void field_render_effects(FieldRenderContext *render_context)
                         {
                             if (frame_result >= 0)
                             {
-                                packet_cursor = func_80077FB4(effect, packet_cursor, ordering_table, frame_result, (*(u8 *) &object_state->state_flags & 1) ^ 1, part);
+                                packet_cursor = func_80077FB4(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
                             }
                             else
                             {
-                                packet_cursor = func_80075C88(effect, packet_cursor, ordering_table, frame_result, (*(u8 *) &object_state->state_flags & 1) ^ 1, part);
+                                packet_cursor = func_80075C88(effect, packet_cursor, ordering_table, frame_result, (object_state->contact.bytes.flags_low & 1) ^ 1, part);
                             }
                         }
                     }
@@ -303,11 +302,11 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
 {
     Vec2s *screen_origin = FIELD_EFFECT_SCRATCH_SCREEN_ORIGIN;
     s16 *shadow_footprint = FIELD_EFFECT_SCRATCH_FOOTPRINT;
-    s32 matrix_address = (s32) FIELD_EFFECT_SCRATCH_MATRIX;
+    MATRIX* matrix = FIELD_EFFECT_SCRATCH_MATRIX;
     s32 frame_count;
     s32 shadow_count;
     s32 texture_slot;
-    s32 packed_color;
+    FieldPrimitiveColor packed_color;
     FieldActorState *actor;
     FieldActorPartDef *part;
     FieldActorState *actors;
@@ -333,8 +332,8 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
     field_build_effect_part_matrix(effect, part, FIELD_EFFECT_SCRATCH_MATRIX, actor);
     gte_SetRotMatrix(FIELD_EFFECT_SCRATCH_MATRIX);
 
-    screen_origin->x = FIELD_EFFECT_SCREEN_CENTER_X + D_800F22A0 / 256 + effect->x / 256;
-    screen_origin->y = FIELD_EFFECT_SCREEN_CENTER_Y + D_800F22A4 / 256 + effect->y / 256 - effect->z / 512 - D_800F22A8 / 512;
+    screen_origin->x = FIELD_EFFECT_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+    screen_origin->y = FIELD_EFFECT_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
 
     frame_count = *frame_data++;
     field_resolve_effect_part_color(actor, effect, part, &packed_color);
@@ -347,7 +346,7 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
             u8 flags = frame_data[7];
             if (!(flags & FIELD_SPRITE_FRAME_FOOTPRINT))
             {
-                value1 = packed_color;
+                value1 = packed_color.signed_word;
                 setlen(packet_cursor, 9);
                 *(s32 *) &((POLY_FT4 *) packet_cursor)->r0 = value1;
                 setcode(packet_cursor, 0x2C);
@@ -372,7 +371,7 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
                 {
                     frame_y_or_clut -= FIELD_EFFECT_SCREEN_CENTER_Y;
                 }
-                field_project_effect_sprite_quad(effect, screen_origin, packet_cursor, width_or_mode, height_minus_one, frame_x, frame_y_or_clut, frame_data, matrix_address);
+                field_project_effect_sprite_quad(effect, screen_origin, (POLY_FT4*)packet_cursor, width_or_mode, height_minus_one, frame_x, frame_y_or_clut, (FieldSpriteFrame*)frame_data, matrix);
 
                 if ((frame_data[7] ^ (effect->facing_or_reward_kind >> 1)) & FIELD_SPRITE_FRAME_FLIP_X)
                 {
@@ -416,38 +415,38 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
                     frame_y_or_clut = 0x1F2;
                     if (actor->owner_object_index < 2)
                     {
-                        *(s16 *) &((POLY_FT4 *) packet_cursor)->tpage = ((texture_slot_flags[texture_slot] & 3) << 7) | (((u32) part->behavior_flags >> 0x11) & 0x60) | 0x10 | ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
+                        *(s16 *) &((POLY_FT4 *) packet_cursor)->tpage = ((texture_slot_flags[texture_slot] & 3) << 7) | (((u32) part->behavior_flags.word >> 0x11) & 0x60) | 0x10 | ((((actor->owner_object_index << 6) + 0x340) & 0x3FF) >> 6);
                         frame_y_or_clut = (actor->owner_object_index * 2) + 0x1EE;
                         goto mode_done;
                     }
                     value0 = texture_slot;
                     value0 <<= 1;
                     value0 += (s32) texture_slot_flags;
-                    value1 = ((*(u16 *) value0 & 3) << 7) | (((u32) part->behavior_flags >> 0x11) & 0x60);
+                    value1 = ((*(u16 *) value0 & 3) << 7) | (((u32) part->behavior_flags.word >> 0x11) & 0x60);
                     value1 |= 5;
                 }
                 else
                 {
                     frame_y_or_clut = (width_or_mode * 2) + 0x1EA;
                     value0 = (((width_or_mode << 6) + 0x180) & 0x3FF) >> 6;
-                    value1 = ((u32) part->behavior_flags >> 0x11) & 0x60;
+                    value1 = ((u32) part->behavior_flags.word >> 0x11) & 0x60;
                     value1 |= value0;
                 }
                 *(s16 *) &((POLY_FT4 *) packet_cursor)->tpage = value1;
 mode_done:
 
-                if (((u32) part->track_flags >> 0x15) & 1)
+                if (((u32) part->track_flags.word >> 0x15) & 1)
                 {
                     *(s16 *) &((POLY_FT4 *) packet_cursor)->clut = (frame_y_or_clut + 1) << 6;
                 }
                 else
                 {
-                    value0 = part->placement_flags >> 0xC;
+                    value0 = part->placement_flags.word >> 0xC;
                     switch (value0 & 3)
                     {
                     case 1:
                     {
-                        u8 uv = part->palette_selector;
+                        u8 uv = part->appearance.fields.palette_selector;
                         clut_x = uv & 0xF;
                         if (uv >= 0x10)
                         {
@@ -465,7 +464,7 @@ mode_done:
                         clut = frame_y_or_clut << 6;
                         if (actor->owner_object_index >= 3)
                         {
-                            value0 = part->palette_selector & 0x3F;
+                            value0 = part->appearance.fields.palette_selector & 0x3F;
                         }
                         else
                         {
@@ -500,13 +499,13 @@ mode_done:
             }
             else if (((flags & 0xF) == 2) && (part->effect_flags & FIELD_PART_EFFECT_FOOTPRINT))
             {
-                shadow_footprint[0] = (*(s8 *) frame_data * part->footprint_scale_x) >> 6;
+                shadow_footprint[0] = (*(s8 *) frame_data * part->appearance.fields.footprint_scale_x) >> 6;
                 shadow_footprint[1] = ((s8) frame_data[1] * part->footprint_scale_y) >> 6;
-                shadow_footprint[2] = ((s8) frame_data[2] * part->footprint_scale_x) >> 6;
+                shadow_footprint[2] = ((s8) frame_data[2] * part->appearance.fields.footprint_scale_x) >> 6;
                 shadow_footprint[3] = ((s8) frame_data[3] * part->footprint_scale_y) >> 6;
-                shadow_footprint[4] = ((s8) frame_data[4] * part->footprint_scale_x) >> 6;
+                shadow_footprint[4] = ((s8) frame_data[4] * part->appearance.fields.footprint_scale_x) >> 6;
                 shadow_footprint[5] = ((s8) frame_data[5] * part->footprint_scale_y) >> 6;
-                shadow_footprint[6] = ((s8) frame_data[6] * part->footprint_scale_x) >> 6;
+                shadow_footprint[6] = ((s8) frame_data[6] * part->appearance.fields.footprint_scale_x) >> 6;
                 shadow_count += 1;
                 shadow_footprint[7] = ((s8) frame_data[8] * part->footprint_scale_y) >> 6;
             }

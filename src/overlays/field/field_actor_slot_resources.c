@@ -13,7 +13,7 @@
  *   func_80083BC0.c, func_80083EEC.c, func_8008404C.c, func_80084240.c,
  *   func_800842E0.c, field22.c, func_80084630.c
  *
- * Several extern records (g_field_actor_slots, D_80105880, D_80105AE0, D_801058D8)
+ * Several extern records (g_field_actor_slots, g_field_actor_bindings, g_field_object_states, D_801058D8)
  * are viewed through incompatible struct/pointer types by different functions, so
  * those externs (and the local record typedefs they use) are declared at BLOCK
  * scope inside each using function with that function's ORIGINAL type. GCC 2.7.2
@@ -139,7 +139,7 @@ void func_8008396C(void)
  * @brief Find a free field actor slot not already claimed by one of the three
  *        active tracks.
  * @param arg0 Track index (clamped to 2 when >= 3).
- * @param arg1 When non-zero, require the (clamped) track's D_80105880 entry to
+ * @param arg1 When non-zero, require the (clamped) track's g_field_actor_bindings entry to
  *             be idle; otherwise fail early.
  * @return Index of the first free, unclaimed actor slot, or -1 if none.
  */
@@ -159,7 +159,7 @@ s32 func_800839F8(s32 arg0, s32 arg1)
         u8 pad25[0x244 - 0x25];
     } FieldActorState;
 
-    extern Struct_D80105880 D_80105880[];
+    extern Struct_D80105880 g_field_actor_bindings[];
     extern FieldActorState g_field_actor_slots[];
 
     s32 i;
@@ -168,7 +168,7 @@ s32 func_800839F8(s32 arg0, s32 arg1)
 
     if (arg1 != 0)
     {
-        entry = D_80105880;
+        entry = g_field_actor_bindings;
         if (arg0 >= 3)
         {
             arg0 = 2;
@@ -185,7 +185,7 @@ s32 func_800839F8(s32 arg0, s32 arg1)
         {
             for (j = 0; j < 3; j++)
             {
-                if (D_80105880[j].unk0 != 0 && D_80105880[j].unk18 == i)
+                if (g_field_actor_bindings[j].unk0 != 0 && g_field_actor_bindings[j].unk18 == i)
                 {
                     break;
                 }
@@ -307,7 +307,7 @@ void field_stop_actor_animations_for_object(FieldActorRecord *record, s32 force)
 void func_80083BC0(void *record, ActorState *actor, s32 force)
 {
     extern Object g_field_actors[];
-    extern ObjectState D_80105AE0[];
+    extern ObjectState g_field_object_states[];
     extern s32 D_800F2278, D_800F227C, D_800F2280;
     void field_set_global_color_scale(s32, s32, s32);
     void field_clear_actor_effects(ActorState *);
@@ -359,11 +359,11 @@ void func_80083BC0(void *record, ActorState *actor, s32 force)
                 owner_index = actor->unk228;
                 object_state = g_field_actors[owner_index].unk2A;
                 if (((object_state != 0x90) && (object_state != 0x94)) ||
-                    (D_80105AE0[owner_index].unkC & 0x200))
+                    (g_field_object_states[owner_index].unkC & 0x200))
                 {
                     g_field_actors[actor->unk228].unk25 = 0;
                 }
-                D_80105AE0[actor->unk228].unk178 &= ~1;
+                g_field_object_states[actor->unk228].unk178 &= ~1;
             }
             if (actor->unkC->unk18 & 4)
             {
@@ -374,7 +374,7 @@ void func_80083BC0(void *record, ActorState *actor, s32 force)
                     if (actor->unk229[target_index] != 0xFF)
                     {
                         g_field_actors[actor->unk229[target_index]].unk25 = 0;
-                        target_state = &D_80105AE0[actor->unk229[target_index]];
+                        target_state = &g_field_object_states[actor->unk229[target_index]];
                         target_state->unk178 = (s32)(target_state->unk178 & ~1);
                     }
                 }
@@ -481,7 +481,7 @@ s32 func_80083EEC(s32 object_index, s32 slot_index, s32 resource_index)
     } FieldActorState;
 
     extern u8* D_801058D8;
-    extern FieldActorMetadata D_80105AE0[];
+    extern FieldActorMetadata g_field_object_states[];
     extern FieldActorState g_field_actor_slots[];
 
     u8* header_base;
@@ -540,7 +540,7 @@ s32 func_80083EEC(s32 object_index, s32 slot_index, s32 resource_index)
     actor->unk29 = 0;
     actor->unk2A = 0;
     actor->owner_object_index = object_index;
-    actor->actor_type = D_80105AE0[object_index].actor_type;
+    actor->actor_type = g_field_object_states[object_index].actor_type;
     return 1;
 }
 
@@ -583,9 +583,9 @@ s32 func_8008404C(s32 actor_id, s32 resource_id)
         u8 pad170[0x23C - 0x170];
     } Actor;
 
-    extern Binding D_80105880[];
+    extern Binding g_field_actor_bindings[];
     extern Slot g_field_actor_slots[];
-    extern Actor D_80105AE0[];
+    extern Actor g_field_object_states[];
     extern s32 func_800B0850(void);
     extern s32 func_8009A364(s32);
 
@@ -607,7 +607,7 @@ s32 func_8008404C(s32 actor_id, s32 resource_id)
     if (func_800B0850() == 0)
     {
         first_index = actor_id;
-        binding_base = D_80105880;
+        binding_base = g_field_actor_bindings;
 
         if (actor_id >= 3)
         {
@@ -666,7 +666,7 @@ s32 func_8008404C(s32 actor_id, s32 resource_id)
                 {
                     owner_index = 2;
                 }
-                binding = &D_80105880[owner_index];
+                binding = &g_field_actor_bindings[owner_index];
                 load_id = resource_id + 0x2DC;
                 binding->unk4 = load_id;
                 if (func_8009A364(load_id) == 0)
@@ -679,7 +679,7 @@ s32 func_8008404C(s32 actor_id, s32 resource_id)
                     slot->unk23A = 0;
                     slot->unk23B = 0;
                     slot->state.flags = (s32)(slot->state.flags | 0x1E);
-                    slot->unk26 = (u8)D_80105AE0[actor_id].unk16F;
+                    slot->unk26 = (u8)g_field_object_states[actor_id].unk16F;
                     binding->unk18 = free_slot;
                     binding->unk0 = 1;
                     binding->unk8 = resource_id;
@@ -712,7 +712,7 @@ void func_80084240(void)
         s32 unk3C;
     } FieldInitState;
 
-    extern FieldInitState D_80105880;
+    extern FieldInitState g_field_actor_bindings;
     extern s32 D_8010D034;
 
     void func_8008B724(void);
@@ -721,12 +721,12 @@ void func_80084240(void)
     s32 func_8009CA54(s32 arg0, s32 arg1, s32 arg2);
 
     func_8008B724();
-    D_80105880.unk38 = 0;
-    D_80105880.unk1C = 0;
-    D_80105880.unk0 = 0;
-    D_80105880.unk3C = 0;
-    D_80105880.unk20 = 0;
-    D_80105880.unk4 = 0;
+    g_field_actor_bindings.unk38 = 0;
+    g_field_actor_bindings.unk1C = 0;
+    g_field_actor_bindings.unk0 = 0;
+    g_field_actor_bindings.unk3C = 0;
+    g_field_actor_bindings.unk20 = 0;
+    g_field_actor_bindings.unk4 = 0;
     func_8009A384();
     func_8009CA08(D_8010D034, 0x20000);
     g_field_mesh_transformed_normals = func_8009CA54(D_8010D034, 0x1800, 4);
@@ -760,7 +760,7 @@ void func_800842E0(void)
         u8 pad229[0x244 - 0x229];
     } FieldActorState;
 
-    extern Struct_D80105880 D_80105880[];
+    extern Struct_D80105880 g_field_actor_bindings[];
     extern FieldActorState g_field_actor_slots[];
 
     s32 func_8009A390(void);
@@ -772,7 +772,7 @@ void func_800842E0(void)
     Struct_D80105880 *entry;
     FieldActorState *actor;
 
-    entry = D_80105880;
+    entry = g_field_actor_bindings;
     i = 0;
     idle_count = 0;
     do
@@ -797,7 +797,7 @@ void func_800842E0(void)
             else
             {
                 actor->unk24 = 0;
-                func_80084424(D_80105880[0].unkC);
+                func_80084424(g_field_actor_bindings[0].unkC);
             }
             goto done;
         }
@@ -818,7 +818,7 @@ done:
 
 /**
  * @brief Tear down the actor bound to a track once its slot has gone idle.
- * @param arg0 Track index (clamped to 2 when >= 3 for the D_80105880 lookup).
+ * @param arg0 Track index (clamped to 2 when >= 3 for the g_field_actor_bindings lookup).
  * @note Only acts when the track's stored value matches arg0 and the bound
  *       actor slot is free; then it releases the actor, clears the track and
  *       D_8010CFD4, and notifies func_8009A4A0.
@@ -841,7 +841,7 @@ void func_80084424(s32 arg0)
         u8 pad25[0x244 - 0x25];
     } FieldActorState;
 
-    extern Struct_D80105880 D_80105880[];
+    extern Struct_D80105880 g_field_actor_bindings[];
     extern FieldActorState g_field_actor_slots[];
     extern s32 D_8010CFD4;
 
@@ -856,7 +856,7 @@ void func_80084424(s32 arg0)
     FieldActorState *actors;
 
     value = arg0;
-    base = D_80105880;
+    base = g_field_actor_bindings;
     small = value < 3;
     index = value;
     if (small == 0)
@@ -975,7 +975,7 @@ void func_80084524(void)
         u8 pad18F[0x23C - 0x18F];
     } Slot;
 
-    extern Slot D_80105AE0[];
+    extern Slot g_field_object_states[];
     void field_load_vram_resource(s32 id, s16 *rect, s32 arg2);
 
     s16 rect[4];
@@ -984,22 +984,22 @@ void func_80084524(void)
     i = 0;
     do
     {
-        D_80105AE0[i].unk4A = 0;
-        D_80105AE0[i].unk48 = 0;
-        D_80105AE0[i].unk14 = i;
-        D_80105AE0[i].unk18 = 0;
-        D_80105AE0[i].unkC = 0;
-        D_80105AE0[i].unk18E = 0;
-        D_80105AE0[i].unk8.b.low24 = D_80105AE0[i].unk4.b.low24;
-        D_80105AE0[i].unk8.b.mid7 = 0;
-        D_80105AE0[i].unk8.b.top1 = 0;
-        D_80105AE0[i].unk4C.w |= 1;
-        D_80105AE0[i].unk174.b.low10 = 0x32;
-        D_80105AE0[i].unk174.h.hi = 0;
-        D_80105AE0[i].unk178.b.b0 = 0;
-        D_80105AE0[i].unk4C.b.b1 = (s8)i;
-        D_80105AE0[i].unk178.b.b5 = 0;
-        D_80105AE0[i].unk178.b.b6 = 0;
+        g_field_object_states[i].unk4A = 0;
+        g_field_object_states[i].unk48 = 0;
+        g_field_object_states[i].unk14 = i;
+        g_field_object_states[i].unk18 = 0;
+        g_field_object_states[i].unkC = 0;
+        g_field_object_states[i].unk18E = 0;
+        g_field_object_states[i].unk8.b.low24 = g_field_object_states[i].unk4.b.low24;
+        g_field_object_states[i].unk8.b.mid7 = 0;
+        g_field_object_states[i].unk8.b.top1 = 0;
+        g_field_object_states[i].unk4C.w |= 1;
+        g_field_object_states[i].unk174.b.low10 = 0x32;
+        g_field_object_states[i].unk174.h.hi = 0;
+        g_field_object_states[i].unk178.b.b0 = 0;
+        g_field_object_states[i].unk4C.b.b1 = (s8)i;
+        g_field_object_states[i].unk178.b.b5 = 0;
+        g_field_object_states[i].unk178.b.b6 = 0;
         i++;
     } while (i < 13);
 
@@ -1022,36 +1022,36 @@ void func_80084630(void)
     typedef struct {
      u8 pad0[0xC]; s32 unkC; u8 pad10[0x3C - 0x10]; s32 unk3C; u8 pad40[0x64 - 0x40]; s32 unk64;
      u8 pad68[0x16F - 0x68]; u8 unk16F; u8 pad170[0x174 - 0x170]; W174 unk174; W178 unk178; s32 unk17C;
-     u8 pad180[0x18E - 0x180]; u8 unk18E; u8 pad18F[0x1A8 - 0x18F]; u8 unk1A8,unk1A9,unk1AA,unk1AB;
+     u8 pad180[0x18E - 0x180]; u8 unk18E; u8 pad18F[0x1A8 - 0x18F]; u8 tint_red,tint_green,tint_blue,unk1AB;
      u8 pad1AC[0x23C - 0x1AC];
     } Slot;
     typedef struct {u8 pad0[0xE]; u8 unkE,unkF,unk10; u8 pad11[0x48 - 0x11];} Part;
     typedef struct {u8 pad0[0x259]; u8 unk259; u8 pad25A[0x268 - 0x25A];} FD;
-    extern Slot D_80105AE0[]; extern Part D_800FE3A0[]; extern FD D_800FD818[]; extern s32 D_8010A000;
+    extern Slot g_field_object_states[]; extern Part g_field_object_parts[]; extern FD g_field_player_records[]; extern s32 D_8010A000;
 
     s32 i; u8 v; u8 ff;
     i=0;
     do {
-      D_80105AE0[i].unk1A8 = D_800FE3A0[i].unkE;
-      D_80105AE0[i].unk1A9 = D_800FE3A0[i].unkF;
-      v = D_800FE3A0[i].unk10;
-      D_80105AE0[i].unk1AB = 0;
-      D_80105AE0[i].unkC = 0;
-      D_80105AE0[i].unk17C = 0;
-      D_80105AE0[i].unk3C = 0;
-      D_80105AE0[i].unk64 = 0;
-      D_80105AE0[i].unk16F = 0;
-      D_80105AE0[i].unk18E = 0;
-      D_80105AE0[i].unk174.b.b15 = 0;
-      D_80105AE0[i].unk178.b.b7 = 0;
-      D_80105AE0[i].unk178.b.b0 = 0;
-      D_80105AE0[i].unk1AA = v;
-      D_80105AE0[i].unk178.b.b5 = 0;
-      D_80105AE0[i].unk178.b.b6 = 0;
+      g_field_object_states[i].tint_red = g_field_object_parts[i].unkE;
+      g_field_object_states[i].tint_green = g_field_object_parts[i].unkF;
+      v = g_field_object_parts[i].unk10;
+      g_field_object_states[i].unk1AB = 0;
+      g_field_object_states[i].unkC = 0;
+      g_field_object_states[i].unk17C = 0;
+      g_field_object_states[i].unk3C = 0;
+      g_field_object_states[i].unk64 = 0;
+      g_field_object_states[i].unk16F = 0;
+      g_field_object_states[i].unk18E = 0;
+      g_field_object_states[i].unk174.b.b15 = 0;
+      g_field_object_states[i].unk178.b.b7 = 0;
+      g_field_object_states[i].unk178.b.b0 = 0;
+      g_field_object_states[i].tint_blue = v;
+      g_field_object_states[i].unk178.b.b5 = 0;
+      g_field_object_states[i].unk178.b.b6 = 0;
       i++;
     } while (i<13);
     ff=0xFF;
     i=2;
-    do { D_800FD818[i].unk259=ff; i--; } while(i>=0);
+    do { g_field_player_records[i].unk259=ff; i--; } while(i>=0);
     D_8010A000=0xFF;
 }

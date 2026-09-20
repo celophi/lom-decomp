@@ -71,8 +71,8 @@ extern u8 D_80105C70[];
 extern ActorFilter D_800EC2D8[];
 extern u8 g_field_actors[];
 extern s32 g_field_active_group;
-extern Binding D_80105880[];
-extern FieldState D_80105AE0[];
+extern Binding g_field_actor_bindings[];
+extern FieldState g_field_object_states[];
 extern s32 D_8010D020;
 
 /**
@@ -82,10 +82,10 @@ extern s32 D_8010D020;
  * @param max_dist Maximum distance for a positive result.
  * @return 1 if the GTE-computed distance is below @p max_dist, else 0.
  */
-s32 func_8009CC60(FieldVector *a, FieldEntity *b, s32 max_dist)
+s32 func_8009CC60(VECTOR *a, FieldEntity *b, s32 max_dist)
 {
-    FieldVector *delta = (FieldVector *)0x1F800000;
-    FieldVector *sqr = (FieldVector *)0x1F800010;
+    VECTOR *delta = (VECTOR *)0x1F800000;
+    VECTOR *sqr = (VECTOR *)0x1F800010;
     s32 dist;
 
     if (b->unk25 != 0xFF)
@@ -112,10 +112,10 @@ s32 func_8009CC60(FieldVector *a, FieldEntity *b, s32 max_dist)
  * @param max_dist Outer band is @p max_dist + 0x40; inner band is 0x40.
  * @return 1 if 0x40 < distance < @p max_dist + 0x40, else 0.
  */
-s32 func_8009CD30(FieldVector *a, FieldEntity *b, s32 max_dist)
+s32 func_8009CD30(VECTOR *a, FieldEntity *b, s32 max_dist)
 {
-    FieldVector *delta = (FieldVector *)0x1F800000;
-    FieldVector *sqr = (FieldVector *)0x1F800010;
+    VECTOR *delta = (VECTOR *)0x1F800000;
+    VECTOR *sqr = (VECTOR *)0x1F800010;
     s32 dist;
 
     if (b->unk25 != 0xFF)
@@ -230,8 +230,8 @@ s32 func_8009CF1C(Struct8009CF1C *a0, Struct8009CF1C *a1, s32 t)
  */
 s32 func_8009CF84(RefEntity *a, FieldEntity *b, s32 max_dist)
 {
-    FieldVector *delta = (FieldVector *)0x1F800000;
-    FieldVector *sqr = (FieldVector *)0x1F800010;
+    VECTOR *delta = (VECTOR *)0x1F800000;
+    VECTOR *sqr = (VECTOR *)0x1F800010;
     s16 *corr;
     s32 i;
     s32 dist;
@@ -274,8 +274,8 @@ success:
  */
 s32 func_8009D0D8(RefEntity *a, FieldEntity *b, s32 max_dist)
 {
-    FieldVector *delta = (FieldVector *)0x1F800000;
-    FieldVector *sqr = (FieldVector *)0x1F800010;
+    VECTOR *delta = (VECTOR *)0x1F800000;
+    VECTOR *sqr = (VECTOR *)0x1F800010;
     s16 *corr;
     s32 dist;
 
@@ -371,10 +371,10 @@ s32 func_8009D1E4(s32 source_index, FilterSpec *spec, s32 group_mode, s32 filter
     count = 0;
     index = start;
     actor_start = (index * 0x54) + g_field_actors;
-    state_start = &D_80105AE0[index];
+    state_start = &g_field_object_states[index];
     if (index < end)
     {
-        bindings = D_80105880;
+        bindings = g_field_actor_bindings;
         state_fields = &state_start->flags178;
         actor_state_ptr = actor_start + 0x2A;
         actor = actor_start;

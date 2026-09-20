@@ -3,6 +3,8 @@
  */
 
 #include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
 #include "field_types.h"
 #include "field_effect_types.h"
 #include "field_effect_geometry.h"
@@ -20,14 +22,7 @@
 
 extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[];
-extern FieldObjectPlacement D_80105AE0[];
 extern s32 g_field_track_index;
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
-
-
-void func_8007E5FC(s16 *out, s32 mirror, u8 *item);
 
 /**
  * @brief Resolve the world-space anchor point for an actor part.
@@ -42,11 +37,11 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
     s32 anchor_mode;
     s32 object_index;
     FieldMotionRecord *object_record;
-    FieldObjectPlacement *object;
+    FieldObjectRuntime *object;
     s32 value;
     s32 index;
 
-    anchor_mode = part->placement_flags >> FIELD_PART_ANCHOR_MODE_SHIFT;
+    anchor_mode = part->placement_flags.word >> FIELD_PART_ANCHOR_MODE_SHIFT;
     anchor_mode &= FIELD_PART_ANCHOR_MODE_MASK;
     switch (anchor_mode)
     {
@@ -60,22 +55,22 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
             object_index = actor->track_object_indices[g_field_track_index];
             anchor_mode -= 0xA;
             object_record = &g_field_actors[object_index];
-            object = &D_80105AE0[object_index];
+            object = &g_field_object_states[object_index];
         }
         else
         {
             object_index = actor->owner_object_index;
             object_record = &g_field_actors[object_index];
-            object = &D_80105AE0[object_index];
+            object = &g_field_object_states[object_index];
         }
-        if ((part->placement_flags >> FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT) & 1)
+        if ((part->placement_flags.word >> FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT) & 1)
         {
-            part->footprint_scale_x = (*(u8 *)&object->bounds_right - *(u8 *)&object->bounds_left) * 2;
+            part->appearance.fields.footprint_scale_x = (*(u8 *)&object->bounds.half.right - *(u8 *)&object->bounds.half.left) * 2;
         }
-        if ((part->placement_flags >> FIELD_PART_SCALE_Y_FROM_BOUNDS_SHIFT) & 1)
+        if ((part->placement_flags.word >> FIELD_PART_SCALE_Y_FROM_BOUNDS_SHIFT) & 1)
         {
             index = 0;
-            part->footprint_scale_y = (*(u8 *)&object->bounds_bottom - *(u8 *)&object->bounds_top) * 2;
+            part->footprint_scale_y = (*(u8 *)&object->bounds.half.bottom - *(u8 *)&object->bounds.half.top) * 2;
         }
         else
         {
@@ -85,40 +80,40 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         switch (anchor_mode)
         {
         case 1:
-            value = (object->bounds_right + object->bounds_left) >> 1;
-            index = (object->bounds_bottom + object->bounds_top) >> 1;
+            value = (object->bounds.half.right + object->bounds.half.left) >> 1;
+            index = (object->bounds.half.bottom + object->bounds.half.top) >> 1;
             break;
         case 2:
-            value = (object->bounds_right + object->bounds_left) >> 1;
+            value = (object->bounds.half.right + object->bounds.half.left) >> 1;
             index = 0;
             break;
         case 3:
-            value = (object->bounds_right + object->bounds_left) >> 1;
-            index = object->bounds_top;
+            value = (object->bounds.half.right + object->bounds.half.left) >> 1;
+            index = object->bounds.half.top;
             break;
         case 4:
-            value = object->bounds_left;
-            index = (object->bounds_bottom + object->bounds_top) >> 1;
+            value = object->bounds.half.left;
+            index = (object->bounds.half.bottom + object->bounds.half.top) >> 1;
             break;
         case 5:
-            value = object->bounds_right;
-            index = (object->bounds_bottom + object->bounds_top) >> 1;
+            value = object->bounds.half.right;
+            index = (object->bounds.half.bottom + object->bounds.half.top) >> 1;
             break;
         case 6:
-            value = object->bounds_left;
-            index = object->bounds_top;
+            value = object->bounds.half.left;
+            index = object->bounds.half.top;
             break;
         case 7:
-            value = object->bounds_right;
-            index = object->bounds_top;
+            value = object->bounds.half.right;
+            index = object->bounds.half.top;
             break;
         case 8:
-            value = object->bounds_left;
-            index = object->bounds_bottom;
+            value = object->bounds.half.left;
+            index = object->bounds.half.bottom;
             break;
         case 9:
-            value = object->bounds_right;
-            index = object->bounds_bottom;
+            value = object->bounds.half.right;
+            index = object->bounds.half.bottom;
             break;
         }
         value <<= 8;
@@ -154,73 +149,73 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         return;
 
     case 0x25:
-        out->x = (part->offset_x << 8) - D_800F22A0;
-        out->y = (part->offset_y << 8) - D_800F22A4;
-        out->z = (part->offset_z << 8) - D_800F22A8;
+        out->x = (part->offset_x << 8) - g_field_view_offset_x;
+        out->y = (part->offset_y << 8) - g_field_view_offset_y;
+        out->z = (part->offset_z << 8) - g_field_view_offset_z;
         return;
     case 0x1C:
-        out->x = -D_800F22A0;
-        out->y = -D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x = -g_field_view_offset_x;
+        out->y = -g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x1D:
         out->y = -0x7000;
-        out->x = -D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x = -g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x1E:
         out->y = 0x7000;
-        out->x = -D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x = -g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x1F:
         out->x = 0xFFFF6000;
-        out->x -= D_800F22A0;
-        out->y = -D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y = -g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x20:
         out->x = 0xA000;
-        out->x -= D_800F22A0;
-        out->y = -D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y = -g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x21:
         out->x = 0xFFFF6000;
         out->y = -0x7000;
-        out->x -= D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x22:
         out->x = 0xA000;
         out->y = -0x7000;
-        out->x -= D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x23:
         out->x = 0xFFFF6000;
         out->y = 0x7000;
-        out->x -= D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x24:
         out->x = 0xA000;
         out->y = 0x7000;
-        out->x -= D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x26:
         return;
 
     case 0x27:
         object_record = &g_field_actors[actor->owner_object_index];
-        if ((((part->placement_flags >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) ||
+        if ((((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) ||
              (part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER)) &&
             !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
@@ -241,7 +236,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         {
             out->x = object_record->x - (part->offset_x << 8);
         }
-        else if (((part->placement_flags >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) &&
+        else if (((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) &&
                  !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
             out->x = object_record->x - (part->offset_x << 8);
@@ -257,7 +252,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
     case 0x29:
         object_index = actor->owner_object_index;
         object_record = &g_field_actors[object_index];
-        object = &D_80105AE0[object_index];
+        object = &g_field_object_states[object_index];
         out->x = object_record->x +
                  (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
         out->y = object_record->y +
@@ -268,12 +263,12 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
     case 0x32:
         object_index = actor->owner_object_index;
         object_record = &g_field_actors[object_index];
-        object = &D_80105AE0[object_index];
+        object = &g_field_object_states[object_index];
         out->x = object_record->x +
                  (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
         out->y = object_record->y;
         out->z = object_record->z + (part->offset_z << 8);
-        if (((part->placement_flags >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) && !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
+        if (((part->placement_flags.word >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) && !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
             out->x -= part->offset_x << 8;
         }
@@ -286,7 +281,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
     case 0x33:
         object_index = actor->owner_object_index;
         object_record = &g_field_actors[object_index];
-        object = &D_80105AE0[object_index];
+        object = &g_field_object_states[object_index];
         out->x = object_record->x + (object->ground_attachment_points[attachment_index].x << 8);
         out->y = object_record->y;
         out->z = object_record->z + (object->ground_attachment_points[attachment_index].y << 8);
@@ -403,7 +398,7 @@ void field_extract_effect_quad_corners16(FieldMotionRecord *effect, u8 *frame_da
             {
                 if ((frame_data[7] & 0xF) == 2)
                 {
-                    func_8007E5FC(corners, effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, frame_data);
+                    field_unpack_effect_quad_corners16(corners, effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, frame_data);
                 }
                 frame_data += 0x11;
             }
@@ -471,8 +466,8 @@ void field_apply_effect_quad_center_offset(FieldMotionRecord *effect, DVECTOR *s
  * @param gte_out Scratch GTE output vector.
  * @see decomp.me (100.00%)
  */
-void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjectPlacement *object, u8 *quad_data, s32 vertex_index,
-                                           Vec2s *screen_origin, SVECTOR *direction, FieldVector *gte_out)
+void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjectRuntime *object, u8 *quad_data, s32 vertex_index,
+                                           Vec2s *screen_origin, SVECTOR *direction, VECTOR *gte_out)
 {
     s16 depth_component;
 
@@ -494,11 +489,11 @@ void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjec
     gte_stlvnl(gte_out);
     if (vertex_index == 0)
     {
-        object->bounds_left = (u16)gte_out->vx;
-        object->bounds_top = (u16)gte_out->vy - (s8)effect->vertical_offset;
+        object->bounds.half.left = (u16)gte_out->vx;
+        object->bounds.half.top = (u16)gte_out->vy - (s8)effect->vertical_offset;
     }
-    object->effect_vertices[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -516,8 +511,8 @@ void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjec
     gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    object->effect_vertices[vertex_index + 1].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices[vertex_index + 1].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index + 1].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 1].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -537,11 +532,11 @@ void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjec
     gte_stlvnl(gte_out);
     if (vertex_index == 0)
     {
-        object->bounds_right = (u16)gte_out->vx;
-        object->bounds_bottom = (u16)gte_out->vy - (s8)effect->vertical_offset;
+        object->bounds.half.right = (u16)gte_out->vx;
+        object->bounds.half.bottom = (u16)gte_out->vy - (s8)effect->vertical_offset;
     }
-    object->effect_vertices[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -559,8 +554,8 @@ void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjec
     gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    object->effect_vertices[vertex_index + 3].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices[vertex_index + 3].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index + 3].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 3].y = (u16)gte_out->vy + (u16)screen_origin->y;
 }
 
 /**
@@ -574,8 +569,8 @@ void field_transform_effect_quad_vertices8(FieldMotionRecord *effect, FieldObjec
  * @param gte_out Scratch GTE output vector.
  * @see decomp.me (100.00%)
  */
-void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObjectPlacement *object, u8 *quad_data, s32 vertex_index,
-                                            Vec2s *screen_origin, SVECTOR *direction, FieldVector *gte_out)
+void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObjectRuntime *object, u8 *quad_data, s32 vertex_index,
+                                            Vec2s *screen_origin, SVECTOR *direction, VECTOR *gte_out)
 {
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -594,11 +589,11 @@ void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObje
     gte_stlvnl(gte_out);
     if (vertex_index == 0)
     {
-        object->bounds_left = (u16)gte_out->vx;
-        object->bounds_top = (u16)gte_out->vy;
+        object->bounds.half.left = (u16)gte_out->vx;
+        object->bounds.half.top = (u16)gte_out->vy;
     }
-    object->effect_vertices[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -615,8 +610,8 @@ void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObje
     gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    object->effect_vertices[vertex_index + 1].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices[vertex_index + 1].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index + 1].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 1].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -635,11 +630,11 @@ void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObje
     gte_stlvnl(gte_out);
     if (vertex_index == 0)
     {
-        object->bounds_right = (u16)gte_out->vx;
-        object->bounds_bottom = (u16)gte_out->vy;
+        object->bounds.half.right = (u16)gte_out->vx;
+        object->bounds.half.bottom = (u16)gte_out->vy;
     }
-    object->effect_vertices[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index + 2].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 2].y = (u16)gte_out->vy + (u16)screen_origin->y;
 
     if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
@@ -656,6 +651,6 @@ void field_transform_effect_quad_vertices16(FieldMotionRecord *effect, FieldObje
     gte_ldv0(direction);
     gte_rtv0();
     gte_stlvnl(gte_out);
-    object->effect_vertices[vertex_index + 3].x = (u16)gte_out->vx + (u16)screen_origin->x;
-    object->effect_vertices[vertex_index + 3].y = (u16)gte_out->vy + (u16)screen_origin->y;
+    object->effect_vertices.points[vertex_index + 3].x = (u16)gte_out->vx + (u16)screen_origin->x;
+    object->effect_vertices.points[vertex_index + 3].y = (u16)gte_out->vy + (u16)screen_origin->y;
 }

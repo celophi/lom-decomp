@@ -2,6 +2,30 @@
 #include "gpu_packet.h"
 
 /*
+ * TODO: Get community consensus on the origin of both functions in this TU
+ *       (field_draw_glyph, field_draw_hex_byte_masked) before treating either
+ *       as a compiled C match.
+ *
+ *       Working conclusion (2026-09-20): both are hand-written or hand-edited
+ *       assembly, and the C below is a wrapper that forces the bytes rather
+ *       than a source reconstruction. The community has already agreed that
+ *       GCC will not emit the trapping addi in field_draw_glyph; the current
+ *       100% is only reached by pasting those two instructions in via inline
+ *       __asm__ (FIELD_SET_GLYPH_UV) and by allocator-steering operands. A
+ *       clean C version compiles to 92.86% (reachable colouring, but the addi
+ *       pair and the redundant g_field_primitive_cursor reload need levers).
+ *       field_draw_hex_byte_masked has never matched under any probed
+ *       compiler; the per-function docblocks list the binary evidence.
+ *
+ *       Open questions for the community:
+ *       - Confirm hand-written vs hand-edited compiler output for each.
+ *       - Decide how the tree should represent them: INCLUDE_ASM with a
+ *         readable non-matching C reference, or keep the lever-driven C.
+ *       - Whether inline __asm__ pins are acceptable for a "100%" claim.
+ *       Until decided, do not read either function's C as original source.
+ */
+
+/*
  * The two glyph helpers below only match at -O1, unlike the rest of
  * field_runtime_text.c (GCC 2.6.0 -O2). They are split out here so the build
  * can compile just this object at -O1 via a target-specific flag override; the
@@ -184,6 +208,36 @@ void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset)
  *       match. These probes neither identify a different original compiler nor
  *       establish that this entire function was handwritten. The target's two
  *       trapping ADD address calculations also remain unmatched by this C.
+ * @note Conclusion (2026-09-20): the target is hand-written assembly, most
+ *       likely GCC 2.6.0 -O1 output for field_draw_hex_byte_clamped edited by
+ *       hand, so no compiler can reproduce it. Evidence from the target binary:
+ *       - The only 4 trapping add/addi instructions in the entire binary
+ *         (main executable plus all overlays) are in this translation unit,
+ *         two here and two in field_draw_glyph. GCC only emits addu/addiu.
+ *       - The first instruction reads the fifth argument from 0x10($sp)
+ *         before the prologue adjusts sp. GCC always adjusts sp first; this
+ *         is the only function in the binary with that pattern.
+ *       - Callee saves are stored in ascending order (s0, s1, s2, s3, ra).
+ *         In the 100%-matched siblings the GCC 2.6.0 scheduler interleaves
+ *         them (s4, s3, s1, ra, s2, s0 in field_draw_hex_byte_clamped).
+ *         GCC's own emission order is descending (ra first), and every GCC
+ *         used by this game (2.6.0, 2.7.2 CDK/GNU, 2.8.0, -O0 to -O2) either
+ *         keeps that or lets the scheduler scramble it. A survey of all 985
+ *         functions in the binary with 3+ saves found an ascending,
+ *         uninterrupted save block only here and in the SN Systems SNMAIN
+ *         startup stubs (__main, __do_global_dtors), which are vendor asm.
+ *       - The delay-slot move addu s1, a1, zero copies a1 after a1 was set
+ *         from a3; a compiler would move a3 into s1 directly.
+ *       - The 0x40 frame is a fossil of the sibling. field_draw_hex_byte_clamped
+ *         and field_draw_hex_word (both 100% under GCC 2.6.0 -O1) use 0x40 with
+ *         a 17-byte digit-table copy at 0x10..0x20, s0..s4 at 0x28..0x38 and
+ *         ra at 0x3c. This function keeps the same frame and the same s0..s3
+ *         and ra slots but never touches 0x10..0x27 or the s4 slot at 0x38,
+ *         and reads g_hex_digit_table directly through s3. The table copy,
+ *         the clamp and the s4 use were removed and the frame left as-is; no
+ *         compiler leaves an unused save slot between s3 and ra.
+ *       The same conclusion applies to field_draw_glyph above: its 100% is
+ *       only reached via the inline __asm__ addi pins in FIELD_SET_GLYPH_UV.
  *
  * The target asm passes ot_depth to both field_draw_glyph calls
  * (addu s1,a1 / addu a1,s1 around the calls), so the second call below

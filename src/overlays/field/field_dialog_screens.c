@@ -8,8 +8,8 @@
  * Consolidated FIELD dialog-screen translation unit.
  *
  * Merges the per-function sources for the vram range 0x800A6EEC .. 0x800A88A0
- * into one TU. Symbols whose type varies between functions (D_800FD818,
- * D_80105AE0, D_8010D038, g_pad_ctx, bcopy, func_800ADF84, func_800A88A0,
+ * into one TU. Symbols whose type varies between functions (g_field_player_records,
+ * g_field_object_states, D_8010D038, g_pad_ctx, bcopy, func_800ADF84, func_800A88A0,
  * func_800A8A78, func_800A838C) are declared at BLOCK scope inside each user
  * with that function's original type; GCC 2.7.2 emits identical code and only
  * warns. Do not hoist any of them to file scope.
@@ -276,8 +276,8 @@ void func_800A6F1C(void)
 {
     extern void bcopy(void *, void *, s32);
     extern Pad *g_pad_ctx;
-    extern u8 D_800FD818[];
-    extern Actor D_80105AE0[];
+    extern u8 g_field_player_records[];
+    extern Actor g_field_object_states[];
 
     volatile Actor *actor;
     s32 prompt_state;
@@ -319,8 +319,8 @@ void func_800A6F1C(void)
             low_mask = 0xFFFFFF;
             high_mask = 0xFF000000;
             sentinel = 0xFF;
-            actor_flags = D_800FD818;
-            actor = D_80105AE0;
+            actor_flags = g_field_player_records;
+            actor = g_field_object_states;
             do
             {
                 /* Preserve both address reads before updating the packed fields. */
@@ -482,15 +482,15 @@ void func_800A71CC(void)
  */
 void func_800A7384(void)
 {
-    extern Entry268 D_800FD818[];
-    extern State23C D_80105AE0[];
+    extern Entry268 g_field_player_records[];
+    extern State23C g_field_object_states[];
 
     s32 i;
 
     D_801227C8 = 0;
     i = 0;
     do {
-        if ((D_800FD818[i].u0.b.unk0 & 1) && g_field_actors[i].unk2A == 0x8E) {
+        if ((g_field_player_records[i].u0.b.unk0 & 1) && g_field_actors[i].unk2A == 0x8E) {
             g_field_actors[i].unk2A = 0;
         }
         i++;
@@ -500,8 +500,8 @@ void func_800A7384(void)
 
     i = 0;
     do {
-        D_80105AE0[i].unkC = 0;
-        D_80105AE0[i].unk178 &= ~0x20;
+        g_field_object_states[i].unkC = 0;
+        g_field_object_states[i].unk178 &= ~0x20;
         i++;
     } while (i < 3);
     g_field_dialog_item_count = 0;
@@ -556,7 +556,7 @@ void func_800A74B8(void)
 void func_800A74E8(void)
 {
     extern FieldADF84Rec *func_800ADF84(void);
-    extern RecFD818 D_800FD818[];
+    extern RecFD818 g_field_player_records[];
 
     FieldADF84Rec *rec;
     u32 state;
@@ -599,7 +599,7 @@ void func_800A74E8(void)
 
     for (i = 2; i >= 0; i--)
     {
-        D_800FD818[i].unk260 = 0;
+        g_field_player_records[i].unk260 = 0;
     }
 }
 
@@ -637,7 +637,7 @@ void func_800A764C(void)
 void func_800A7724(void)
 {
     extern FieldADF84Rec *func_800ADF84(void);
-    extern FieldActorEntry D_800FD818[];
+    extern FieldActorEntry g_field_player_records[];
 
     FieldADF84Rec *record;
     s32 actor_index;
@@ -660,7 +660,7 @@ void func_800A7724(void)
 
     for (actor_index = 0; actor_index < 3; actor_index++)
     {
-        if (D_800FD818[actor_index].active & 1)
+        if (g_field_player_records[actor_index].active & 1)
         {
             active_count++;
         }
@@ -686,7 +686,7 @@ void func_800A7724(void)
 void func_800A788C(void *ot, void *cursor, s32 x_offset, s32 y_offset)
 {
     extern u8 *g_pad_ctx;
-    extern FieldEntry268 D_800FD818[];
+    extern FieldEntry268 g_field_player_records[];
     void *func_800A88A0(void *sprite_cursor, void *ot, u8 *text, s32 color, s32 x, s32 y, s32 flags);
     void *func_800A8A78(void *ot, void *cursor, s32 value, s32 color, s16 *position, s32 flags);
 
@@ -724,7 +724,7 @@ loop_setup:
     i = 0;
     total_x = i;
     total_y = i;
-    entry = (u8 *)D_800FD818;
+    entry = (u8 *)g_field_player_records;
     pad = g_pad_ctx;
     do
     {
@@ -782,7 +782,7 @@ loop_setup:
 s32 func_800A7B54(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     extern PadContext *g_pad_ctx;
-    extern FieldRankPlayer D_800FD818[];
+    extern FieldRankPlayer g_field_player_records[];
     extern s32 func_800A88A0(s32, s32, u8 *, s32, s32, s32, s32);
     extern s32 func_800A838C(s32, s32, s32, s32, s32);
     extern s32 func_800A8A78(s32, s32, s32, s32, Vec2s *, s32);
@@ -883,12 +883,12 @@ src = &work.indices[1];
                 work.position.y = y;
                 result = func_800A838C(arg0, result, 0x38 - arg2, y - 8, 1);
                 work.position.x = 0x48 - arg2;
-                result = func_800A8A78(arg0, result, D_800FD818[((FieldRankWork *)((u8 *)position + i * 4))->indices[0]].first, 4, position, 0);
+                result = func_800A8A78(arg0, result, g_field_player_records[((FieldRankWork *)((u8 *)position + i * 4))->indices[0]].first, 4, position, 0);
                 result = func_800A88A0(result, arg0, D_800EC3DA[0] + ((text_base[1] << 8) + (s32)text), 4, 0x68 - arg2, work.position.y, 0);
                 result = func_800A838C(arg0, result, 0x78 - arg2, work.position.y, 0);
                 work.position.x = 0x88 - arg2;
                 work.position.y = y;
-                result = func_800A8A78(arg0, result, D_800FD818[((FieldRankWork *)((u8 *)position + i * 4))->indices[0]].second, 4, position, 0);
+                result = func_800A8A78(arg0, result, g_field_player_records[((FieldRankWork *)((u8 *)position + i * 4))->indices[0]].second, 4, position, 0);
                 result = func_800A88A0(result, arg0, text[0x1A] + ((text[0x1B] << 8) + (s32)text), 4, 0xA8 - arg2, work.position.y, 0);
                 work.position.x = 0xE0 - arg2;
                 work.position.y = y;

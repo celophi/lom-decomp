@@ -58,7 +58,7 @@ typedef struct
     FieldActorPackedWord unk4;
     FieldActorPackedWord unk8;
     u8 padC[0x68 - 0xC];
-    u16 unk68;
+    u16 effect_footprint_strength;
 } FieldActorSlotState;
 
 extern u8 *D_80122B78;
@@ -257,10 +257,10 @@ block_24:
     var_s0 = *(u8 *)(arg1 + 0x33) * 2;
     if (var_s0 < 0x100U)
     {
-        actor_slot->unk68 = var_s0;
+        actor_slot->effect_footprint_strength = var_s0;
         return;
     }
-    actor_slot->unk68 = 0xFFU;
+    actor_slot->effect_footprint_strength = 0xFFU;
 }
 
 /**

@@ -3,8 +3,9 @@
 
 #include "common.h"
 #include "vector.h"
+#include "sdk/libgte.h"
 
-/** @brief Three-component signed field vector with a trailing pad word. */
+/** @brief Integer-coordinate work vector used by actor movement calculations. */
 typedef struct
 {
     s32 vx;
@@ -12,13 +13,6 @@ typedef struct
     s32 vz;
     s32 pad;
 } FieldVector;
-
-/** @brief Field-space 3x3 transform matrix with translation vector. */
-typedef struct
-{
-    s16 m[3][3];
-    s32 t[3];
-} FieldMatrix;
 
 /** @brief Compact field entity position/state record. */
 typedef struct

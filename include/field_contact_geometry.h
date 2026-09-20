@@ -27,6 +27,6 @@ void func_80098C7C(FieldMotionRecord* record, s32 actor_index);
 void func_80098DD4(FieldMotionRecord* entry);
 s32 func_8009980C(s32* reference_position, s32 distance_limit, FieldActorState* source_actor, s32 opposing_group);
 void func_80099A48(FieldActorState* actor, FieldActorPartDef* part);
-s32 func_8009A204(FieldVector* a, FieldVector* b);
+s32 func_8009A204(VECTOR* a, VECTOR* b);
 
 #endif

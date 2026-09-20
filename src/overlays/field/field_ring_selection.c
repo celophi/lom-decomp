@@ -1,4 +1,5 @@
 #include "cdrom.h"
+#include "field_effect_render_state.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
@@ -74,9 +75,7 @@ typedef struct
  * D_8011F3AC (s32 vs s32[]) and D_8011F388 (s8[] vs u8[]) carry type
  * conflicts across functions and are declared at block scope instead.
  */
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
+
 extern FieldSelectionPosition g_field_actors;
 extern FieldSelectionState D_801077FC;
 extern u8 D_800EDED8[];
@@ -208,15 +207,15 @@ void func_800A43E8(s32 position_mode, s32 resource_index, u16 excluded_mask, s32
             D_8011F344 = 0x70;
             break;
         case 1:
-            camera_x = D_800F22A0 / 256;
+            camera_x = g_field_view_offset_x / 256;
             screen_x = g_field_actors.x / 256 + 160;
             screen_x = camera_x - (-screen_x);
             load_params[4] = screen_x;
-            camera_y = D_800F22A4 / 256;
+            camera_y = g_field_view_offset_y / 256;
             screen_y = g_field_actors.y / 256 + 112;
             screen_y = camera_y - (-screen_y);
             screen_y -= g_field_actors.z / 512;
-            screen_y -= D_800F22A8 / 512;
+            screen_y -= g_field_view_offset_z / 512;
             load_params[5] = screen_y;
             D_8011F340 = load_params[4];
             D_8011F344 = load_params[5];

@@ -453,3 +453,21 @@ D_80190018 = 0x80190018; // ignore:true
 D_8019001C = 0x8019001C; // ignore:true
 D_80190020 = 0x80190020; // ignore:true
 D_80190024 = 0x80190024; // ignore:true
+
+field_emit_effect_texture_page = 0x8007DA80;
+field_unpack_effect_quad_corners8 = 0x8007E4A8;
+field_unpack_effect_quad_corners16 = 0x8007E5FC;
+field_resolve_effect_extent = 0x8007E754;
+g_field_ribbon_frame_flags = 0x800EC37C;
+g_field_ribbon_uv_corners = 0x800EC388;
+g_field_effect_track_scale = 0x80105768;
+g_field_view_offset_x = 0x800F22A0;
+g_field_view_offset_y = 0x800F22A4;
+g_field_view_offset_z = 0x800F22A8;
+
+field_apply_sequence_displacement = 0x800951CC;
+field_update_sequence_actor_binding = 0x800952DC;
+field_execute_actor_sequence = 0x800954F0;
+field_allocate_sequence_actor = 0x8009615C;
+field_restart_sequence_animation = 0x80096334;
+field_update_object_tints = 0x80096394;

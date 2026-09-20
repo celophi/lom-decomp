@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_effect_render_state.h"
 
 /*
  * Consolidated FIELD actor-effect translation unit.
@@ -21,9 +22,6 @@
  */
 
 /* Shared camera globals, same type (s32) in every member that uses them. */
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
 
 /**
  * @brief Look up a width/height pair for a field text-box style.
@@ -101,7 +99,7 @@ typedef struct
     s16 offsets[3][2];
     u8 pad19C[0xA0];
 } EffectRecord;
-extern EffectRecord D_80105AE0[];
+extern EffectRecord g_field_object_states[];
 extern void *g_pad_ctx;
 
 /** @brief Actor fields used by the effect dispatcher. */
@@ -247,14 +245,14 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
             break;
         }
     }
-    temp_s3 = ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.bits.radius;
+    temp_s3 = ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.bits.radius;
     ratio = ((temp_s3 - limits[0]) << 8) / (limits[1] - limits[0]);
     facing = arg0->flags & 0x80;
-    D_80105AE0[arg0->slot].intensity = ratio;
+    g_field_object_states[arg0->slot].intensity = ratio;
     position = arg0->position;
-    if ((u16) ((EffectRecord *)((&D_80105AE0[arg0->slot])))->intensity >= 0x100U)
+    if ((u16) ((EffectRecord *)((&g_field_object_states[arg0->slot])))->intensity >= 0x100U)
     {
-        ((EffectRecord *)((&D_80105AE0[arg0->slot])))->intensity = 0xFFU;
+        ((EffectRecord *)((&g_field_object_states[arg0->slot])))->intensity = 0xFFU;
     }
     var_s2 = 1;
     if (arg0->slot == 2)
@@ -264,7 +262,7 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
             var_s2 = 0;
         }
     }
-    D_801178D8 = ((EffectRecord *)(((void *)&D_80105AE0[arg0->slot])))->angle;
+    D_801178D8 = ((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->angle;
     switch (arg1)
     {
     case 0:
@@ -272,8 +270,8 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
         {
             var_s6 = func_8009E66C(temp_s4, var_s6, position, temp_s3);
         }
-        D_80105AE0[arg0->slot].angle -= 0x80;
-        record_0 = (void *)&D_80105AE0[arg0->slot];
+        g_field_object_states[arg0->slot].angle -= 0x80;
+        record_0 = (void *)&g_field_object_states[arg0->slot];
         count_0 = ((EffectRecord *)(record_0))->state.bits.radius;
         if (count_0 < limits[1])
         {
@@ -287,8 +285,8 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
         {
             var_s6 = func_8009FE54(temp_s4, var_s6, position, temp_s3);
         }
-        D_80105AE0[arg0->slot].angle -= 0x80;
-        record_1 = (void *)&D_80105AE0[arg0->slot];
+        g_field_object_states[arg0->slot].angle -= 0x80;
+        record_1 = (void *)&g_field_object_states[arg0->slot];
         count_1 = ((EffectRecord *)(record_1))->state.bits.radius;
         if (count_1 < limits[1])
         {
@@ -300,12 +298,12 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
         {
             var_s6 = func_800A1344(temp_s4, var_s6, position, temp_s3, facing);
         }
-        D_80105AE0[arg0->slot].angle += 4;
-        if (((EffectRecord *)((&D_80105AE0[arg0->slot])))->angle >= 0x50)
+        g_field_object_states[arg0->slot].angle += 4;
+        if (((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle >= 0x50)
         {
-            ((EffectRecord *)((&D_80105AE0[arg0->slot])))->angle = 0;
+            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle = 0;
         }
-        record_2 = (void *)&D_80105AE0[arg0->slot];
+        record_2 = (void *)&g_field_object_states[arg0->slot];
         temp_a1_2 = ((EffectRecord *)(record_2))->state.bits.radius;
         if (temp_a1_2 < limits[1])
         {
@@ -315,20 +313,20 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
         }
         break;
     case 3:
-        if (((EffectRecord *)((&D_80105AE0[arg0->slot])))->angle < 0)
+        if (((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle < 0)
         {
-            ((EffectRecord *)((&D_80105AE0[arg0->slot])))->angle = 0;
+            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle = 0;
         }
         if (var_s2 != 0)
         {
             var_s6 = func_800A0B0C(temp_s4, func_800A0B0C(temp_s4, var_s6, position, temp_s3, 0), position, temp_s3, 1);
         }
-        D_80105AE0[arg0->slot].angle += 4;
-        if (((EffectRecord *)((&D_80105AE0[arg0->slot])))->angle >= 0x50)
+        g_field_object_states[arg0->slot].angle += 4;
+        if (((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle >= 0x50)
         {
-            ((EffectRecord *)((&D_80105AE0[arg0->slot])))->angle = 0;
+            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle = 0;
         }
-        record_3 = (void *)&D_80105AE0[arg0->slot];
+        record_3 = (void *)&g_field_object_states[arg0->slot];
         count_3 = ((EffectRecord *)(record_3))->state.bits.radius;
         if (count_3 < limits[1])
         {
@@ -340,58 +338,58 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
         do
         {
             temp_a0 = var_s0 * 4;
-            vec[0] = arg0->position[0] + (D_80105AE0[arg0->slot].offsets[var_s0][0] << 8);
+            vec[0] = arg0->position[0] + (g_field_object_states[arg0->slot].offsets[var_s0][0] << 8);
             vec[1] = arg0->position[1];
-            vec[2] = arg0->position[2] + (D_80105AE0[arg0->slot].offsets[var_s0][1] << 8);
+            vec[2] = arg0->position[2] + (g_field_object_states[arg0->slot].offsets[var_s0][1] << 8);
             if (var_s2 != 0)
             {
                 var_s6 = func_8009E66C(temp_s4, var_s6, &vec[0], temp_s3);
             }
             var_s0 += 1;
         } while (var_s0 < 3);
-        temp_a1_3 = ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.bits.radius;
+        temp_a1_3 = ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.bits.radius;
         if (temp_a1_3 < limits[1])
         {
-            ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.word = (s32) (((s32) ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.word & ~0x3FF) | ((temp_a1_3 + 2) & 0x3FF));
+            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word = (s32) (((s32) ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word & ~0x3FF) | ((temp_a1_3 + 2) & 0x3FF));
         }
-        ((EffectRecord *)(&D_80105AE0[arg0->slot]))->angle -= 0x80;
+        ((EffectRecord *)(&g_field_object_states[arg0->slot]))->angle -= 0x80;
         break;
     case 5:
-        vec[0] = arg0->position[0] + (((EffectRecord *)(((void *)&D_80105AE0[arg0->slot])))->offsets[0][0] << 8);
+        vec[0] = arg0->position[0] + (((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->offsets[0][0] << 8);
         vec[1] = arg0->position[1];
-        vec[2] = arg0->position[2] + (((EffectRecord *)(((void *)&D_80105AE0[arg0->slot])))->offsets[0][1] << 8);
+        vec[2] = arg0->position[2] + (((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->offsets[0][1] << 8);
         if (var_s2 != 0)
         {
             var_s6 = func_8009E66C(temp_s4, var_s6, &vec[0], temp_s3);
         }
-        D_80105AE0[arg0->slot].angle -= 0x80;
-        temp_a1_4 = ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.bits.radius;
+        g_field_object_states[arg0->slot].angle -= 0x80;
+        temp_a1_4 = ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.bits.radius;
         if (temp_a1_4 < limits[1])
         {
-            ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.word = (s32) (((s32) ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.word & ~0x3FF) | ((temp_a1_4 + 2) & 0x3FF));
+            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word = (s32) (((s32) ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word & ~0x3FF) | ((temp_a1_4 + 2) & 0x3FF));
             if (arg0->flags & 0x80)
             {
-                ((EffectRecord *)((&D_80105AE0[arg0->slot])))->offsets[0][0] = (u16) (((EffectRecord *)((&D_80105AE0[arg0->slot])))->offsets[0][0] + 2);
+                ((EffectRecord *)((&g_field_object_states[arg0->slot])))->offsets[0][0] = (u16) (((EffectRecord *)((&g_field_object_states[arg0->slot])))->offsets[0][0] + 2);
             }
             else
             {
-                ((EffectRecord *)((&D_80105AE0[arg0->slot])))->offsets[0][0] = (u16) (((EffectRecord *)((&D_80105AE0[arg0->slot])))->offsets[0][0] - 2);
+                ((EffectRecord *)((&g_field_object_states[arg0->slot])))->offsets[0][0] = (u16) (((EffectRecord *)((&g_field_object_states[arg0->slot])))->offsets[0][0] - 2);
             }
         }
         break;
     case 6:
-        vec[0] = arg0->position[0] + (((EffectRecord *)(((void *)&D_80105AE0[arg0->slot])))->offsets[0][0] << 8);
+        vec[0] = arg0->position[0] + (((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->offsets[0][0] << 8);
         vec[1] = arg0->position[1];
-        vec[2] = arg0->position[2] + (((EffectRecord *)(((void *)&D_80105AE0[arg0->slot])))->offsets[0][1] << 8);
+        vec[2] = arg0->position[2] + (((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->offsets[0][1] << 8);
         if (var_s2 != 0)
         {
             var_s6 = func_8009E66C(temp_s4, var_s6, &vec[0], temp_s3);
         }
-        D_80105AE0[arg0->slot].angle -= 0x80;
-        temp_a1_5 = ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.bits.radius;
+        g_field_object_states[arg0->slot].angle -= 0x80;
+        temp_a1_5 = ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.bits.radius;
         if (temp_a1_5 < limits[1])
         {
-            ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.word = (s32) (((s32) ((EffectRecord *)((&D_80105AE0[arg0->slot])))->state.word & ~0x3FF) | ((temp_a1_5 + 1) & 0x3FF));
+            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word = (s32) (((s32) ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word & ~0x3FF) | ((temp_a1_5 + 1) & 0x3FF));
         }
         if ((u8) arg0->slot < 2U)
         {
@@ -435,19 +433,19 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
             if ((vec[0] | vec[1]) != 0)
             {
                 func_8001CDAC(&vec[0], &vec[4]);
-                vec[8] = arg0->position[0] + ((((EffectRecord *)(&D_80105AE0[arg0->slot]))->offsets[0][0] + (vec[4] >> 10)) << 8);
+                vec[8] = arg0->position[0] + ((((EffectRecord *)(&g_field_object_states[arg0->slot]))->offsets[0][0] + (vec[4] >> 10)) << 8);
                 vec[9] = arg0->position[1];
-                vec[10] = arg0->position[2] + ((((EffectRecord *)(&D_80105AE0[arg0->slot]))->offsets[0][1] + (vec[5] >> 10)) << 8);
-                screen[0] = 0xA0 + D_800F22A0 / 256 + vec[8] / 256;
-                screen[1] = 0x70 + D_800F22A4 / 256 + vec[9] / 256 - vec[10] / 512 - D_800F22A8 / 512;
+                vec[10] = arg0->position[2] + ((((EffectRecord *)(&g_field_object_states[arg0->slot]))->offsets[0][1] + (vec[5] >> 10)) << 8);
+                screen[0] = 0xA0 + g_field_view_offset_x / 256 + vec[8] / 256;
+                screen[1] = 0x70 + g_field_view_offset_y / 256 + vec[9] / 256 - vec[10] / 512 - g_field_view_offset_z / 512;
                 if ((screen[0] > 0 || vec[4] > 0) &&
                     (screen[1] > 0 || vec[5] < 0) &&
                     (screen[0] < 320 || vec[4] < 0) &&
                     (screen[1] < 224 || vec[5] > 0))
                 {
-                    temp_v0_8 = (void *)&D_80105AE0[arg0->slot];
+                    temp_v0_8 = (void *)&g_field_object_states[arg0->slot];
                     ((EffectRecord *)(temp_v0_8))->offsets[0][0] = (u16) (((EffectRecord *)(temp_v0_8))->offsets[0][0] + (vec[4] >> 0xA));
-                    temp_v0_9 = (void *)&D_80105AE0[arg0->slot];
+                    temp_v0_9 = (void *)&g_field_object_states[arg0->slot];
                     ((EffectRecord *)(temp_v0_9))->offsets[0][1] = (u16) (((EffectRecord *)(temp_v0_9))->offsets[0][1] + (vec[5] >> 0xA));
                 }
             }
@@ -465,8 +463,8 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
 #include "sdk/libgpu.h"
 
 #define PROJECT_POINT(_poly, _vert, _tmp) \
-    (_poly)->x##_vert = (s16)(0xA0 + D_800F22A0 / 0x100 + (_tmp).vx / 0x100); \
-    (_poly)->y##_vert = (s16)(0x70 + D_800F22A4 / 0x100 + (_tmp).vy / 0x100 - (_tmp).vz / 0x200 - D_800F22A8 / 0x200)
+    (_poly)->x##_vert = (s16)(0xA0 + g_field_view_offset_x / 0x100 + (_tmp).vx / 0x100); \
+    (_poly)->y##_vert = (s16)(0x70 + g_field_view_offset_y / 0x100 + (_tmp).vy / 0x100 - (_tmp).vz / 0x200 - g_field_view_offset_z / 0x200)
 
 #define POLY_AT(_off) ((POLY_G4 *)(primbuf + (_off)))
 
@@ -707,8 +705,8 @@ u8 *func_8009E66C(s32 *base, u8 *arg1, VECTOR *pos, s32 radius)
 /* ---- func_8009FE54 ---- */
 
 #define PROJECT_POINT(_poly, _vert, _tmp) \
-    (_poly)->x##_vert = (s16)(0xA0 + D_800F22A0 / 0x100 + (_tmp).vx / 0x100); \
-    (_poly)->y##_vert = (s16)(0x70 + D_800F22A4 / 0x100 + (_tmp).vy / 0x100 - (_tmp).vz / 0x200 - D_800F22A8 / 0x200)
+    (_poly)->x##_vert = (s16)(0xA0 + g_field_view_offset_x / 0x100 + (_tmp).vx / 0x100); \
+    (_poly)->y##_vert = (s16)(0x70 + g_field_view_offset_y / 0x100 + (_tmp).vy / 0x100 - (_tmp).vz / 0x200 - g_field_view_offset_z / 0x200)
 
 #define POLY_AT(_off) ((POLY_G4 *)(primbuf + (_off)))
 
@@ -947,15 +945,15 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
             work.world.vy = position->vy;
             work.world.vz = position->vz + 0x2000;
         } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = D_800F22A4;
+        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = g_field_view_offset_y;
         *(s16*)(outer_code + 8) = screen_x;
         if (camera_y < 0)
         {
             camera_y += 255;
         }
         *(s16*)(outer_code + 10) =
-            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
         first_xy = (s32) * (s32*)(outer_code + 8);
         if (forward != 0)
         {
@@ -971,15 +969,15 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
             work.world.vy = position->vy;
             work.world.vz = position->vz + 0x2000;
         } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = D_800F22A4;
+        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = g_field_view_offset_y;
         *(s16*)(outer_code + 16) = screen_x;
         if (camera_y < 0)
         {
             camera_y += 255;
         }
         *(s16*)(outer_code + 18) =
-            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
         step = 1;
         angle = 0x100;
         strip_code = primitive;
@@ -1005,15 +1003,15 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
                         work.world.vy = position->vy - (rsin(trig_angle) * 2);
                         work.world.vz = position->vz + (rcos(angle) * 2);
                     } while (0);
-                    screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-                    camera_y = D_800F22A4;
+                    screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+                    camera_y = g_field_view_offset_y;
                     *(s16*)(strip_code + 24) = screen_x;
                     if (camera_y < 0)
                     {
                         camera_y += 255;
                     }
                     *(s16*)(strip_code + 26) =
-                        112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                        112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
                     do
                     {
                         *(s32*)(strip_code + 44) = (s32) * (s32*)(strip_code + 24);
@@ -1032,15 +1030,15 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
                             work.world.vy = position->vy - (rsin(trig_angle) * 2);
                             work.world.vz = position->vz + (rcos(angle) * 2);
                         } while (0);
-                        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-                        camera_y = D_800F22A4;
+                        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+                        camera_y = g_field_view_offset_y;
                         *(s16*)(strip_code + 32) = screen_x;
                         if (camera_y < 0)
                         {
                             camera_y += 255;
                         }
                         *(s16*)(strip_code + 34) =
-                            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
                         /* Fade the curved strip from black to blue. */
                         *(s32*)(strip_code + 4) = 0;
                         *(s32*)(strip_code + 12) = 0xA00000;
@@ -1240,14 +1238,14 @@ next_strip:
             work.world.vy = position->vy + (work.rotated.vy << 8);
             work.world.vz = position->vz + (work.rotated.vz << 8);
         } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = D_800F22A4;
+        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = g_field_view_offset_y;
         *(s16*)(strip_code + 1) = screen_x;
         if (camera_y < 0)
         {
             camera_y += 255;
         }
-        *(s16*)(strip_code + 3) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+        *(s16*)(strip_code + 3) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
         first_xy = *(s32*)(strip_code + 0x1);
         work.input.vx = radius + 0x14;
         work.input.vy = 0;
@@ -1270,14 +1268,14 @@ next_strip:
             work.world.vy = position->vy + (work.rotated.vy << 8);
             work.world.vz = position->vz + (work.rotated.vz << 8);
         } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = D_800F22A4;
+        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = g_field_view_offset_y;
         *(s16*)(strip_code + 9) = screen_x;
         if (camera_y < 0)
         {
             camera_y += 255;
         }
-        *(s16*)(strip_code + 11) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+        *(s16*)(strip_code + 11) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
         segment_index = 1;
         radius_sum = radius;
         segment_packet = current_packet;
@@ -1306,15 +1304,15 @@ next_strip:
                 work.world.vy = position->vy + (work.rotated.vy << 8);
                 work.world.vz = position->vz + (work.rotated.vz << 8);
             } while (0);
-            screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-            camera_y = D_800F22A4;
+            screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+            camera_y = g_field_view_offset_y;
             *(s16*)(segment_packet + 24) = screen_x;
             if (camera_y < 0)
             {
                 camera_y += 255;
             }
             *(s16*)(segment_packet + 26) =
-                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
             *(s32*)(segment_packet + 44) = *(s32*)(segment_packet + 24);
             work.input.vx = radius + (radius_sum >> 5) + 0x14;
             work.input.vy = 0;
@@ -1337,15 +1335,15 @@ next_strip:
                 work.world.vy = position->vy + (work.rotated.vy << 8);
                 work.world.vz = position->vz + (work.rotated.vz << 8);
             } while (0);
-            screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-            camera_y = D_800F22A4;
+            screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+            camera_y = g_field_view_offset_y;
             *(s16*)(segment_packet + 32) = screen_x;
             if (camera_y < 0)
             {
                 camera_y += 255;
             }
             *(s16*)(segment_packet + 34) =
-                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
             *(s32*)(segment_packet + 4) = 0;
             *(s32*)(segment_packet + 12) = 0xA00000;
             *(s32*)(segment_packet + 20) = 0;

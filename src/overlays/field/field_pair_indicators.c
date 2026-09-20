@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_effect_render_state.h"
 #include "sdk/libgpu.h"
 
 /** @brief Actor presence byte within the original 0x54-byte record. */
@@ -21,11 +22,10 @@ void func_800A32A8(s32, u8 *);     /* forward */
 
 extern s32 D_800EB04C[];
 extern u8 D_800EC33C[];
-extern u8 D_800EC37C[];
-extern u8 D_800EC388[];
+
 extern Actor g_field_actors[];
 extern s32 g_field_active_group;
-extern Slot D_80105AE0[];
+extern Slot g_field_object_states[];
 extern s32 g_field_scene_mode_bit;
 extern s32 D_80117EC0;
 extern s32 D_80117EC4;
@@ -91,10 +91,10 @@ void func_800A2E40(u8 *buffer)
                 if (active_count == 2)
                 {
                     index_or_distance = 0x20;
-                    if (!(D_80105AE0[entries[0]].flags & 0x23E4))
+                    if (!(g_field_object_states[entries[0]].flags & 0x23E4))
                     {
                         index_or_distance = entries[1];
-                        if (D_80105AE0[index_or_distance].flags & 0x23E4)
+                        if (g_field_object_states[index_or_distance].flags & 0x23E4)
                         {
                             index_or_distance = 0x20;
                         }
@@ -125,7 +125,7 @@ void func_800A2E40(u8 *buffer)
                 }
                 else
                 {
-                    slot_base = D_80105AE0;
+                    slot_base = g_field_object_states;
                     order = D_800EB04C;
                     actor_base = g_field_actors;
                     absent = 0xFF;
@@ -274,12 +274,12 @@ void func_800A32A8(s32 slot, u8 *buffer)
         *(u32 *)(primitive + 0x18) = *(s32 *)(D_800EC33C + slot * 0x10 + 0x8);
         *(u32 *)(primitive + 0x20) = *(s32 *)(D_800EC33C + slot * 0x10 + 0xC);
         /* Each animation frame selects UV coordinates and optional flips. */
-        uv_flags = *((frame % 12) + D_800EC37C);
-        uv_offset = (uv_flags & 1) * 8;
-        *(u16 *)(primitive + 0xC) = *(u16 *)(uv_offset + D_800EC388);
-        *(u16 *)(primitive + 0x14) = *(u16 *)(uv_offset + (D_800EC388 + 2));
-        *(u16 *)(primitive + 0x1C) = *(u16 *)(uv_offset + (D_800EC388 + 4));
-        *(u16 *)(primitive + 0x24) = *(u16 *)(uv_offset + (D_800EC388 + 6));
+        uv_flags = *((frame % 12) + g_field_ribbon_frame_flags);
+        uv_offset = (uv_flags & 1) * 4;
+        *(u16 *)(primitive + 0xC) = g_field_ribbon_uv_corners[uv_offset];
+        *(u16 *)(primitive + 0x14) = g_field_ribbon_uv_corners[uv_offset + 1];
+        *(u16 *)(primitive + 0x1C) = g_field_ribbon_uv_corners[uv_offset + 2];
+        *(u16 *)(primitive + 0x24) = g_field_ribbon_uv_corners[uv_offset + 3];
         if (uv_flags & 0x80)
         {
             swap_value = *(u8 *)(primitive + 0xC);

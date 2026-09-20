@@ -4,9 +4,9 @@
  * Consolidated FIELD actor-key operations TU (vram 0x80087614 .. 0x800880EC).
  *
  * Each of these functions looks up a field actor by key/selector (most via
- * func_80087C9C) and reads or mutates the parallel D_80105AE0 / g_field_actors
+ * func_80087C9C) and reads or mutates the parallel g_field_object_states / g_field_actors
  * actor tables. Every member viewed those shared arrays through its own partial
- * struct layout, so D_80105AE0 and g_field_actors are declared at BLOCK scope inside
+ * struct layout, so g_field_object_states and g_field_actors are declared at BLOCK scope inside
  * each function with that function's original record type; there is deliberately
  * no file-scope declaration of either symbol.
  */
@@ -15,7 +15,7 @@
  * File-scope record types (kept distinct per originating function).  *
  * ------------------------------------------------------------------ */
 
-/** @brief D_80105AE0 slot as seen by func_80087C9C / func_80087F44. */
+/** @brief g_field_object_states slot as seen by func_80087C9C / func_80087F44. */
 typedef struct
 {
     u8 pad0[0x14];
@@ -46,7 +46,7 @@ typedef struct
     u8 data[0x54];
 } RecB800FDF58_F32;
 
-/** @brief D_80105AE0 slot as seen by func_80087F0C. */
+/** @brief g_field_object_states slot as seen by func_80087F0C. */
 typedef struct
 {
     u8 pad0[0x14];
@@ -61,7 +61,7 @@ typedef struct Record87614
     u8 index;
 } Record87614;
 
-/** @brief D_80105AE0 slot with low flags at 0x10 (func_80087614). */
+/** @brief g_field_object_states slot with low flags at 0x10 (func_80087614). */
 typedef struct State87614
 {
     u8 pad0[0x10];
@@ -91,7 +91,7 @@ typedef struct
     u8 unk3A;
 } Rec80087680;
 
-/** @brief D_80105AE0 slot with low flags at 0x10 (func_80087680). */
+/** @brief g_field_object_states slot with low flags at 0x10 (func_80087680). */
 typedef struct
 {
     u8 pad0[0x10];
@@ -215,7 +215,7 @@ typedef struct
     u8 pad3B[0x54 - 0x3B];
 } FieldActorRecordE00;
 
-/** @brief Partial D_80105AE0 slot layout used by func_80087FC0. */
+/** @brief Partial g_field_object_states slot layout used by func_80087FC0. */
 typedef struct
 {
     u8 pad0[0x14];
@@ -259,7 +259,7 @@ typedef struct
  * pointer through their own record types (pointer-type warnings are benign). */
 RecB800FDF58_F32 *func_80087C9C(s32);
 
-extern Binding D_80105880[];
+extern Binding g_field_actor_bindings[];
 extern Actor878B4 g_field_actor_slots[];
 extern Resource g_field_resource_entries[];
 extern s32 g_field_event_scripts;
@@ -288,14 +288,14 @@ void func_8008C7A8(void);
  */
 void func_80087614(s32 arg0, s32 arg1)
 {
-    extern State87614 D_80105AE0[];
+    extern State87614 g_field_object_states[];
     Record87614 *record;
 
     record = (Record87614 *)func_80087C9C(arg0);
     if (record != (Record87614 *)-1)
     {
-        D_80105AE0[record->index].flags =
-            (D_80105AE0[record->index].flags & ~0xF) | arg1;
+        g_field_object_states[record->index].flags =
+            (g_field_object_states[record->index].flags & ~0xF) | arg1;
     }
 }
 
@@ -310,7 +310,7 @@ void func_80087614(s32 arg0, s32 arg1)
  */
 void func_80087680(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
 {
-    extern State80087680 D_80105AE0[];
+    extern State80087680 g_field_object_states[];
     Rec80087680 *rec;
     s32 flags;
 
@@ -324,7 +324,7 @@ void func_80087680(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
         rec->unk1C.w = (rec->unk1C.w & 0xFFFCFFFF) | (flags << 0x10);
         rec->unk4 = arg4 << 8;
         rec->unk8 = arg5 << 8;
-        D_80105AE0[rec->unk3A].flags = (D_80105AE0[rec->unk3A].flags & ~0xF) | arg2;
+        g_field_object_states[rec->unk3A].flags = (g_field_object_states[rec->unk3A].flags & ~0xF) | arg2;
         field_restart_actor_animation(rec);
     }
 }
@@ -390,7 +390,7 @@ s32 func_800878B4(s32 index)
     {
         return -1;
     }
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (record->selector < 2)
     {
         offset = record->selector * 28;
@@ -403,7 +403,7 @@ s32 func_800878B4(s32 index)
     {
         return 0;
     }
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (record->selector < 2)
     {
         offset = record->selector * 28;
@@ -417,7 +417,7 @@ s32 func_800878B4(s32 index)
         return 1;
     }
     owner = ((Binding *)(base + offset))->owner;
-    owner_base = (u8 *)D_80105880;
+    owner_base = (u8 *)g_field_actor_bindings;
     if ((u8)owner < 2)
     {
         offset = owner * 28;
@@ -431,7 +431,7 @@ s32 func_800878B4(s32 index)
         return 2;
     }
     actors = g_field_actor_slots;
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (record->selector < 2)
     {
         offset = record->selector * 28;
@@ -446,7 +446,7 @@ s32 func_800878B4(s32 index)
         goto return_three;
     }
     actors = g_field_actor_slots;
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (record->selector < 2)
     {
         offset = record->selector * 28;
@@ -483,7 +483,7 @@ return_four:
 s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_b, s32 group, s32 x,
                   s32 y, s32 z, s32 direction, s32 resource_flag)
 {
-    extern ActorA9C D_80105AE0[];
+    extern ActorA9C g_field_object_states[];
     extern s32 field_restart_actor_animation(Entry *);
     s32 position[3];
     s32 saved_state;
@@ -509,7 +509,7 @@ s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_
     resource_base = g_field_resource_entries;
     resource = &resource_base[resource_id];
     resource->unk10 = (s32)((resource->unk10 & ~1) | (resource_flag & 1));
-    actor_base = D_80105AE0;
+    actor_base = g_field_object_states;
     actor_base[entry->unk3A].unk14 = owner_id;
     entry->unk25 = 0;
     if (x == -1 && y == x && z == y)
@@ -524,7 +524,7 @@ s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_
         entry->unk4 = y << 8;
         entry->unk8 = z << 8;
     }
-    final_base = D_80105AE0;
+    final_base = g_field_object_states;
     actor = &final_base[entry->unk3A];
     actor->unk10 = (s32)((actor->unk10 & ~0xF) | group);
     entry->unk21 = (s8)direction;
@@ -539,14 +539,14 @@ s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_
  */
 RecB800FDF58_F32 *func_80087C9C(s32 arg0)
 {
-    extern RecA80105AE0 D_80105AE0[];
+    extern RecA80105AE0 g_field_object_states[];
     extern RecB800FDF58_F32 g_field_actors[];
     RecA80105AE0 *ra;
     RecB800FDF58_F32 *rb;
     s32 i;
 
     rb = g_field_actors;
-    ra = D_80105AE0;
+    ra = g_field_object_states;
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
         if (ra->unk14 == arg0)
@@ -565,7 +565,7 @@ RecB800FDF58_F32 *func_80087C9C(s32 arg0)
  */
 s32 func_80087CE0(s32 key, u8 value)
 {
-    extern FieldActorSlotCE0 D_80105AE0[];
+    extern FieldActorSlotCE0 g_field_object_states[];
     extern FieldActorRecordCE0 g_field_actors[];
     FieldActorRecordCE0 *scan;
     FieldActorRecordCE0 *found;
@@ -575,7 +575,7 @@ s32 func_80087CE0(s32 key, u8 value)
     s16 state;
 
     scan = g_field_actors;
-    e = D_80105AE0;
+    e = g_field_object_states;
     i = 0;
 loop:
     i++;
@@ -623,7 +623,7 @@ done:
 /**
  * @brief Stores a scaled position into the actor record matching @p key.
  *
- * Scans the first 13 D_80105AE0 slots for one whose 0x14 field equals @p key.
+ * Scans the first 13 g_field_object_states slots for one whose 0x14 field equals @p key.
  * On a hit, writes @p x, @p y and @p z (each shifted left 8) into the parallel
  * g_field_actors record's first three words and returns 0; otherwise returns -1.
  *
@@ -635,10 +635,10 @@ done:
  */
 s32 func_80087D8C(s32 key, s32 x, s32 y, s32 z)
 {
-    extern FieldActorSlotCE0 D_80105AE0[];
+    extern FieldActorSlotCE0 g_field_object_states[];
     extern FieldActorRecordCE0 g_field_actors[];
     FieldActorRecordCE0 *p = g_field_actors;
-    FieldActorSlotCE0 *e = D_80105AE0;
+    FieldActorSlotCE0 *e = g_field_object_states;
     FieldActorRecordCE0 *result;
     s32 i;
 
@@ -674,7 +674,7 @@ found:
  */
 s32 func_80087E00(s32 key, s32 value)
 {
-    extern FieldActorSlotE00 D_80105AE0[];
+    extern FieldActorSlotE00 g_field_object_states[];
     extern FieldActorRecordE00 g_field_actors[];
     FieldActorRecordE00 *scan;
     FieldActorRecordE00 *found;
@@ -684,7 +684,7 @@ s32 func_80087E00(s32 key, s32 value)
     s16 state;
 
     scan = g_field_actors;
-    e = D_80105AE0;
+    e = g_field_object_states;
     i = 0;
 loop:
     i++;
@@ -722,7 +722,7 @@ body:
         goto done;
     }
     found->unk28 = 0xFE;
-    D_80105AE0[found->unk3A].unk168 = value;
+    g_field_object_states[found->unk3A].unk168 = value;
     found->unk2C = 0;
     if (found->unk2A != 0x8B && found->unk2A != 0x99)
     {
@@ -745,17 +745,17 @@ s32 func_80087EF0(s32 arg0)
 }
 
 /**
- * @brief Find the D_80105AE0 slot whose 0x14 field matches @p arg0.
+ * @brief Find the g_field_object_states slot whose 0x14 field matches @p arg0.
  * @param arg0 Actor-slot lookup key.
  * @return Pointer to the matching slot, or (Struct_D80105AE0 *)-1.
  */
 Struct_D80105AE0 *func_80087F0C(s32 arg0)
 {
-    extern Struct_D80105AE0 D_80105AE0[];
+    extern Struct_D80105AE0 g_field_object_states[];
     Struct_D80105AE0 *rec;
     s32 i;
 
-    rec = D_80105AE0;
+    rec = g_field_object_states;
     for (i = 0; i < 0xD; i++)
     {
         if (rec->unk14 == arg0)
@@ -776,7 +776,7 @@ Struct_D80105AE0 *func_80087F0C(s32 arg0)
  */
 s32 func_80087F44(s32 arg0, OutRec *arg1)
 {
-    extern RecA80105AE0 D_80105AE0[];
+    extern RecA80105AE0 g_field_object_states[];
     extern RecB800FDF58_F307 g_field_actors[];
     RecA80105AE0 *ra;
     RecB800FDF58_F307 *rb;
@@ -784,7 +784,7 @@ s32 func_80087F44(s32 arg0, OutRec *arg1)
     s32 i;
 
     rb = g_field_actors;
-    ra = D_80105AE0;
+    ra = g_field_object_states;
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
         if (ra->unk14 == arg0)
@@ -815,7 +815,7 @@ found_it:
  */
 s32 func_80087FC0(s32 arg0, s32 arg1)
 {
-    extern StateB80087FC0 D_80105AE0[];
+    extern StateB80087FC0 g_field_object_states[];
     extern RecordB80087FC0 g_field_actors[];
     StateB80087FC0 *ra;
     RecordB80087FC0 *rb;
@@ -826,7 +826,7 @@ s32 func_80087FC0(s32 arg0, s32 arg1)
     FixedB80087FC0 *fixed = (FixedB80087FC0 *) 0x801ED600;
 
     rb = g_field_actors;
-    ra = D_80105AE0;
+    ra = g_field_object_states;
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
         if (ra->unk14 == arg0)

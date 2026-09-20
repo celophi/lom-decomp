@@ -23,21 +23,21 @@ typedef struct
     u8 data[0x54];
 } Struct_D800FDF58;
 
-extern Struct_D80105AE0 D_80105AE0[];
+extern Struct_D80105AE0 g_field_object_states[];
 extern Struct_D800FDF58 g_field_actors[];
 void func_8008BE38(Struct_D800FDF58 *, s32);
 
 /**
  * @brief Finds the actor slot matching @p key and activates its record.
  *
- * Scans the first 13 D_80105AE0 slots for one whose 0x14 field equals @p key.
+ * Scans the first 13 g_field_object_states slots for one whose 0x14 field equals @p key.
  * On a hit, activates the parallel g_field_actors record (func_8008BE38 with 1) and
  * returns 0; if no slot matches, returns -1.
  */
 s32 func_8008AD44(s32 key)
 {
     Struct_D800FDF58 *p = g_field_actors;
-    Struct_D80105AE0 *e = D_80105AE0;
+    Struct_D80105AE0 *e = g_field_object_states;
     s32 i;
 
     i = 0;
@@ -90,7 +90,7 @@ s32 func_8008ADB4(s32 arg0)
     s32 i;
 
     rb = ((RecB800FDF58 *)g_field_actors);
-    ra = ((RecA80105AE0 *)D_80105AE0);
+    ra = ((RecA80105AE0 *)g_field_object_states);
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
         if (ra->unk14 == arg0)
@@ -162,7 +162,7 @@ s32 func_8008AE14(s32 actor_handle, s32 animation_id)
     s32 actor_index;
 
     object = ((FieldObjectRecord *)g_field_actors);
-    actor_slot = ((FieldActorSlot *)D_80105AE0);
+    actor_slot = ((FieldActorSlot *)g_field_object_states);
     actor_index = 0;
 scan_actor:
     if (actor_slot->handle != actor_handle)
@@ -216,7 +216,7 @@ s32 func_8008AEB0(s32 id)
     ActorAEB0 *actor;
 
     rec = ((RecAEB0 *)g_field_actors);
-    actor = ((ActorAEB0 *)D_80105AE0);
+    actor = ((ActorAEB0 *)g_field_object_states);
     v = 0;
     while (v < 13) {
         if (actor->unk14 == id) {
@@ -276,7 +276,7 @@ void func_8008BF88();
 /**
  * @brief Finds the actor slot matching @p key and notifies its record.
  *
- * Scans the first 13 ((CommandView5_Struct_D80105AE0 *)D_80105AE0) slots for one whose 0x14 field equals @p key;
+ * Scans the first 13 ((CommandView5_Struct_D80105AE0 *)g_field_object_states) slots for one whose 0x14 field equals @p key;
  * on a hit, forwards the parallel ((CommandView5_Struct_D800FDF58 *)g_field_actors) record and the remaining caller
  * arguments to func_8008BF88 and returns 0, otherwise returns -1.
  *
@@ -286,7 +286,7 @@ void func_8008BF88();
 s32 func_8008AF68(s32 key, s32 arg1, s32 arg2, s32 arg3)
 {
     CommandView5_Struct_D800FDF58 *p = ((CommandView5_Struct_D800FDF58 *)g_field_actors);
-    CommandView5_Struct_D80105AE0 *e = ((CommandView5_Struct_D80105AE0 *)D_80105AE0);
+    CommandView5_Struct_D80105AE0 *e = ((CommandView5_Struct_D80105AE0 *)g_field_object_states);
     s32 i;
 
     i = 0;
@@ -373,7 +373,7 @@ s32 func_8008AFD8(s32 source_id, s32 target_id)
     s32 angle;
 
     entry = ((Entry *)g_field_actors);
-    actor = ((Actor *)D_80105AE0);
+    actor = ((Actor *)g_field_object_states);
     for (i = 0; i < 13; i++, actor++, entry++)
     {
         if (actor->unk14 == source_id)
@@ -396,7 +396,7 @@ second_found:
     goto second_check;
 second_start:
     entry2 = ((Entry *)g_field_actors);
-    actor2 = ((Actor *)D_80105AE0);
+    actor2 = ((Actor *)g_field_object_states);
     for (i = 0; i < 13; i++, actor2++, entry2++)
     {
         if (actor2->unk14 == target_id)
@@ -474,7 +474,7 @@ second_check:
         }
     }
 
-    base = ((Actor *)D_80105AE0);
+    base = ((Actor *)g_field_object_states);
     first->unk2E = 1;
     first->unk27 = 0;
     first->unk24 = 1;
@@ -528,7 +528,7 @@ s32 func_8008B1C8(s32 arg0, u8 arg1)
     ActorRecord *slot;
 
     rb = ((CommandView7_Entry *)g_field_actors);
-    ra = ((ActorSlot *)D_80105AE0);
+    ra = ((ActorSlot *)g_field_object_states);
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
         if (ra->unk14 == arg0)
@@ -542,7 +542,7 @@ check:
     {
         goto fail;
     }
-    base = (ActorRecord *)((ActorSlot *)D_80105AE0);
+    base = (ActorRecord *)((ActorSlot *)g_field_object_states);
     found->unk21 = arg1;
     found->unk2E = 1;
     found->unk27 = 0;
@@ -562,7 +562,7 @@ fail:
 /* func_8008B288 */
 #include "common.h"
 
-/** @brief Per-actor slot in ((SlotA *)D_80105AE0); stride 0x23C. */
+/** @brief Per-actor slot in ((SlotA *)g_field_object_states); stride 0x23C. */
 typedef struct
 {
     u8 pad0[0x14];
@@ -610,7 +610,7 @@ s32 func_8008B288(s32 arg0)
     s32 state;
 
     scan = ((EntryB *)g_field_actors);
-    e = ((SlotA *)D_80105AE0);
+    e = ((SlotA *)g_field_object_states);
     i = 0;
 loop:
     i++;
@@ -714,12 +714,12 @@ special:
 #include "common.h"
 
 /*
- * Actor slot lookups keyed by the word at 0x14 of ((CommandView9_SlotA *)D_80105AE0). The first 13
+ * Actor slot lookups keyed by the word at 0x14 of ((CommandView9_SlotA *)g_field_object_states). The first 13
  * slots are scanned in parallel with the ((CommandView9_EntryB *)g_field_actors) records, so a hit in one
  * array selects the same index in the other.
  */
 
-/** @brief Per-actor slot in ((CommandView9_SlotA *)D_80105AE0); stride 0x23C. */
+/** @brief Per-actor slot in ((CommandView9_SlotA *)g_field_object_states); stride 0x23C. */
 typedef struct
 {
     u8 pad0[0x14];
@@ -741,17 +741,17 @@ void field_start_actor_animation();
 
 
 
-extern s32 D_80105880[];
+extern s32 g_field_actor_bindings[];
 
 /**
  * @brief Finds the track value associated with the actor slot matching @p key.
  *
  * Scans the first 13 actor slots in parallel with ((CommandView9_EntryB *)g_field_actors). On a hit, the
  * record's track selector at 0x3A chooses one of the three 0x1C-byte entries
- * in D_80105880; selectors >= 2 clamp to the third entry.
+ * in g_field_actor_bindings; selectors >= 2 clamp to the third entry.
  *
  * @param key Value compared against each slot's unk14.
- * @return The selected D_80105880 word, or -1 when no slot matches.
+ * @return The selected g_field_actor_bindings word, or -1 when no slot matches.
  */
 s32 func_8008B398(s32 key)
 {
@@ -764,7 +764,7 @@ s32 func_8008B398(s32 key)
     u8 *base;
 
     scan = ((CommandView9_EntryB *)g_field_actors);
-    e = ((CommandView9_SlotA *)D_80105AE0);
+    e = ((CommandView9_SlotA *)g_field_object_states);
     i = 0;
 loop:
     i++;
@@ -790,7 +790,7 @@ found_label:
     found = scan;
     goto check;
 lookup:
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (found->unk3A < 2)
     {
         offset = found->unk3A * 0x1C;
@@ -819,7 +819,7 @@ s32 func_8008B42C(s32 arg0, s32 arg1)
     s32 anim;
 
     rb = ((CommandView9_EntryB *)g_field_actors);
-    ra = ((CommandView9_SlotA *)D_80105AE0);
+    ra = ((CommandView9_SlotA *)g_field_object_states);
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
         if (ra->unk14 == arg0)
@@ -862,7 +862,7 @@ s32 func_8008B500(s32 arg0, s32 arg1)
     s32 anim;
 
     rb = ((CommandView9_EntryB *)g_field_actors);
-    ra = ((CommandView9_SlotA *)D_80105AE0);
+    ra = ((CommandView9_SlotA *)g_field_object_states);
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
         if (ra->unk14 == arg0)
@@ -894,7 +894,7 @@ body:
 /* func_8008B5D0 */
 #include "common.h"
 
-/** @brief Actor-slot lookup entry from ((FieldActorSlotEntry *)D_80105AE0). */
+/** @brief Actor-slot lookup entry from ((FieldActorSlotEntry *)g_field_object_states). */
 typedef struct
 {
     u8 pad0[0x14];
@@ -942,7 +942,7 @@ s32 func_8008B5D0(s32 lookup_key, s32 animation_param, s32 repeat_count, s32 *un
     for (; repeat_index < repeat_count; repeat_index++)
     {
         scan_record = ((FieldActorRecord *)g_field_actors);
-        slot = ((FieldActorSlotEntry *)D_80105AE0);
+        slot = ((FieldActorSlotEntry *)g_field_object_states);
         for (i = 0; i < 13; i++, slot++, scan_record++)
         {
             if (slot->lookup_key == lookup_key)
@@ -961,7 +961,7 @@ s32 func_8008B5D0(s32 lookup_key, s32 animation_param, s32 repeat_count, s32 *un
     }
 
     final_record = ((FieldActorRecord *)g_field_actors);
-    slot = ((FieldActorSlotEntry *)D_80105AE0);
+    slot = ((FieldActorSlotEntry *)g_field_object_states);
     for (i = 0; i < 13; i++, slot++, final_record++)
     {
         if (slot->lookup_key == lookup_key)
@@ -1038,9 +1038,9 @@ void func_8008B73C(void)
 
     i = 0;
     actor_base = g_field_actor_slots;
-    ae0_base = ((u8 *)D_80105AE0);
+    ae0_base = ((u8 *)g_field_object_states);
     flag = D_8010A020;
-    rec = ((u8 *)D_80105880);
+    rec = ((u8 *)g_field_actor_bindings);
 restart_slots:
     {
         if (*flag != 0 && *(s32 *)(rec + 0x0) == 2)

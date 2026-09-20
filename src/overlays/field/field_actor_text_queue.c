@@ -1,4 +1,5 @@
 #include "field_text.h"
+#include "field_effect_render_state.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 
@@ -35,7 +36,7 @@ typedef struct
 extern Position g_field_actors[];
 extern u8 D_800ED064[];
 extern u8 *g_pad_ctx;
-extern s32 D_800F22A0, D_800F22A4, D_800F22A8;
+
 extern s32 D_801227C8;
 extern s32 D_801227DC;
 
@@ -121,7 +122,7 @@ void func_800A623C(s32 arg0, s32 arg1)
                     } while (0);
                 }
             } while (0);
-            xoff = D_800F22A0;
+            xoff = g_field_view_offset_x;
             base = D_801226A0;
             offset = arg0 * 8;
             slot = (Slot *)(offset + (u8 *)base);
@@ -138,7 +139,7 @@ void func_800A623C(s32 arg0, s32 arg1)
                 x += 255;
             }
             arg0 = xoff >> 8;
-            xoff = D_800F22A4;
+            xoff = g_field_view_offset_y;
             actor_screen_x = (x >> 8) + 160;
             point[0] = arg0 + actor_screen_x;
             if (xoff < 0)
@@ -158,7 +159,7 @@ void func_800A623C(s32 arg0, s32 arg1)
             {
                 xoff += 511;
             }
-            x = D_800F22A8;
+            x = g_field_view_offset_z;
             xoff = screen_y - (xoff >> 9);
             if (x < 0)
             {
