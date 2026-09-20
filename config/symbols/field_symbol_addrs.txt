@@ -487,3 +487,10 @@ field_collect_attack_sphere_hits             = 0x80099A48;
 field_get_position_distance                  = 0x8009A204;
 g_field_last_actor_contact                   = 0x8010D024;
 g_field_scene_object_states                  = 0x80106194;
+
+// Ability and technique progression.
+field_advance_ability_progression = 0x800A68B4;
+g_field_ability_unlock_rules = 0x800EC55C;
+g_field_technique_unlock_rules = 0x800EC5B8;
+g_field_progression_unlocks = 0x80122920;
+g_field_progression_unlock_count = 0x80122998;

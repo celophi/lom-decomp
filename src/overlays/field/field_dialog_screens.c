@@ -1,3 +1,4 @@
+#include "field_ability_progression.h"
 #include "field_scene_transition.h"
 #include "cdrom.h"
 #include "common.h"
@@ -216,8 +217,6 @@ extern FieldQuadAnimationTable D_800513E8, D_80051408, D_80051428, D_80051448;
 extern s32 D_801227EC;
 extern s32 g_field_text_session_active;
 extern s32 g_field_dialog_item_count;
-extern u16 D_80122998;
-extern u16 D_80122920[];
 extern s32 D_800F229C;
 extern s32 D_801226D8;
 extern s32 D_80122828;
@@ -427,11 +426,11 @@ void func_800A71CC(void)
     saw_special = 0;
     index = 0;
     padding = 0;
-    entry_count = D_80122998;
+    entry_count = g_field_progression_unlock_count;
     if (entry_count != 0)
     {
         entry_limit = entry_count;
-        entry = D_80122920;
+        entry = g_field_progression_unlocks;
         do
         {
             if (*entry & 0x8000)
@@ -457,7 +456,7 @@ void func_800A71CC(void)
     state = record->state.word;
     state |= 1;
     record->state.word = state;
-    raw_height = (D_80122998 * 0x10) + padding;
+    raw_height = (g_field_progression_unlock_count * 0x10) + padding;
     record->state.word = state | 0x200;
     record->state.fields.height = raw_height;
     height = raw_height;
@@ -512,7 +511,7 @@ void func_800A7384(void)
  *
  * Runs the shared reset (func_800ADEB0, then latches @c D_801227EC to 4 and
  * calls field_reset_input_repeat), then selects a handler by state: func_800A71CC when
- * @c D_80122998 is set, else func_800A764C when @c g_field_dialog_item_count is set, else
+ * @c g_field_progression_unlock_count is set, else func_800A764C when @c g_field_dialog_item_count is set, else
  * func_800A7724. Finishes with func_800B0A08(0).
  *
  * @see decomp.me (100%) TODO
@@ -524,7 +523,7 @@ void func_800A7434(void)
     func_800ADEB0();
     D_801227EC = 4;
     field_reset_input_repeat();
-    if (D_80122998 != 0)
+    if (g_field_progression_unlock_count != 0)
     {
         func_800A71CC();
     }
@@ -989,11 +988,11 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
     index = 0;
     normal_names = (unsigned char *)D_8010D038 + D_8010D038->normal;
     special_names = (unsigned char *)D_8010D038 + D_8010D038->special;
-    if (D_80122998 != 0)
+    if (g_field_progression_unlock_count != 0)
     {
         header_x = 0x20 - scroll_x;
         item_x = 0x80 - scroll_x;
-        entry = D_80122920;
+        entry = g_field_progression_unlocks;
         do
         {
             if (*entry & 0x8000)
@@ -1064,7 +1063,7 @@ s32 func_800A8128(s32 ordering_table, s32 cursor, s32 scroll_x, s32 scroll_y, s3
             entry += 1;
             do
             {
-                entry_count = D_80122998;
+                entry_count = g_field_progression_unlock_count;
                 index += 1;
             } while (0);
         } while (index < entry_count);
