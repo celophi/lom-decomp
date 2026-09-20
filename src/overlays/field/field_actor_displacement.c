@@ -168,7 +168,7 @@ typedef struct
 } FieldFollowResource;
 
 extern FieldFollowRecord g_field_actors[];
-extern FieldFollowSlot D_80105AE0[];
+extern FieldFollowSlot g_field_object_states[];
 extern FieldFollowResource g_field_resource_entries[];
 void func_8008EBA4();
 extern void func_80096334(FieldFollowRecord *);
@@ -181,8 +181,8 @@ s32 func_80097FA0();
  */
 void func_800946FC(FieldFollowRecord *record)
 {
-    FieldVector *delta = (FieldVector *)0x1F800010;
-    FieldVector *squares = (FieldVector *)0x1F800000;
+    VECTOR *delta = (VECTOR *)0x1F800010;
+    VECTOR *squares = (VECTOR *)0x1F800000;
     FieldFollowSlot *slots;
     FieldFollowSlot *slot;
     s32 distance;
@@ -199,7 +199,7 @@ void func_800946FC(FieldFollowRecord *record)
     index = record->slot;
     distance = squares->vx + squares->vz;
     if (((index + 1) * 2000 < distance) &&
-        (slots = D_80105AE0, slot = &slots[index], next = slot->history_index, next < 47))
+        (slots = g_field_object_states, slot = &slots[index], next = slot->history_index, next < 47))
     {
         slot->history_index = next + 1;
         /* Fold the slot and point indices together before the four-byte stride. */
@@ -549,17 +549,17 @@ void func_80094C00(FieldMovingActor *actor, s32 dx, s32 dz)
         /* Separate bitfield clears preserve the two target mask operations. */
         mover->mode.bits.bit17 = 0;
         mover->mode.bits.bit16 = 0;
-        mover->contact = ((FieldActorCollisionResult *)D_80105AE0)[actor->slot].contact;
-        mover->surface = ((FieldActorCollisionResult *)D_80105AE0)[actor->slot].surface;
+        mover->contact = ((FieldActorCollisionResult *)g_field_object_states)[actor->slot].contact;
+        mover->surface = ((FieldActorCollisionResult *)g_field_object_states)[actor->slot].surface;
         func_8005B6AC(mover);
-        ((FieldActorCollisionResult *)D_80105AE0)[actor->slot].contact = mover->contact;
-        ((FieldActorCollisionResult *)D_80105AE0)[actor->slot].surface = mover->surface;
-        ((FieldActorCollisionResult *)D_80105AE0)[actor->slot].height = mover->height / 256;
+        ((FieldActorCollisionResult *)g_field_object_states)[actor->slot].contact = mover->contact;
+        ((FieldActorCollisionResult *)g_field_object_states)[actor->slot].surface = mover->surface;
+        ((FieldActorCollisionResult *)g_field_object_states)[actor->slot].height = mover->height / 256;
     }
     else
     {
-        ((FieldActorCollisionResult *)D_80105AE0)[actor->slot].contact = -1;
-        ((FieldActorCollisionResult *)D_80105AE0)[actor->slot].surface = 0;
-        ((FieldActorCollisionResult *)D_80105AE0)[actor->slot].height = 0;
+        ((FieldActorCollisionResult *)g_field_object_states)[actor->slot].contact = -1;
+        ((FieldActorCollisionResult *)g_field_object_states)[actor->slot].surface = 0;
+        ((FieldActorCollisionResult *)g_field_object_states)[actor->slot].height = 0;
     }
 }

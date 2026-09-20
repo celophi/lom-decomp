@@ -1,6 +1,6 @@
 #include "common.h"
 
-/** @brief Actor state record; the object index at 0x3A selects a D_80105AE0 slot. */
+/** @brief Actor state record; the object index at 0x3A selects a g_field_object_states slot. */
 typedef struct
 {
     u8 pad0[4];
@@ -16,7 +16,7 @@ typedef struct
     u8 unk3A;   /* 0x3A object index */
 } FieldRecord;
 
-/** @brief Per-actor slot in D_80105AE0; stride 0x23C. */
+/** @brief Per-actor slot in g_field_object_states; stride 0x23C. */
 typedef struct
 {
     u8 pad0[0x174];
@@ -30,7 +30,7 @@ void func_800952DC(FieldRecord *record, s32 value);
 void func_80096334(FieldRecord *record);
 void func_800A2DD8(u8 index);
 
-extern FieldState D_80105AE0[];
+extern FieldState g_field_object_states[];
 extern s32 D_8010AE58;
 extern s32 D_8010AE60;
 extern s32 D_8010AE68;
@@ -70,7 +70,7 @@ void func_800923F0(FieldRecord *arg0)
         arg0->unk4 = 0;
         arg0->unk2A = 0;
         func_800952DC(arg0, 1);
-        base = D_80105AE0;
+        base = g_field_object_states;
         slot = &base[arg0->unk3A];
         slot->unk174 &= ~0x1800;
         func_80096334(arg0);
@@ -93,7 +93,7 @@ void func_800924D8(FieldRecord *record)
     {
         record->unk2A = 0;
         func_800952DC(record, 1);
-        D_80105AE0[record->unk3A].unk174 &= ~0x1800;
+        g_field_object_states[record->unk3A].unk174 &= ~0x1800;
         func_80096334(record);
     }
 }
@@ -115,7 +115,7 @@ void func_80092550(FieldRecord *arg0)
         func_8006AA7C(arg0->unk3A);
         arg0->unk2A = 0;
         func_800952DC(arg0, 1);
-        D_80105AE0[arg0->unk3A].unk174 = D_80105AE0[arg0->unk3A].unk174 & ~0x1800;
+        g_field_object_states[arg0->unk3A].unk174 = g_field_object_states[arg0->unk3A].unk174 & ~0x1800;
         arg0->unk21 = (u8)((arg0->unk21 & 0x80) + 2);
         func_80096334(arg0);
     }

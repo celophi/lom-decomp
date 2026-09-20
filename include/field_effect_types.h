@@ -7,6 +7,7 @@
 #define FIELD_EFFECT_TYPES_H
 
 #include "field_types.h"
+#include "field_object_state.h"
 
 #define FIELD_EFFECT_POOL_COUNT 0x103
 #define FIELD_EFFECT_ACTIVE_RECORD_COUNT 256
@@ -45,18 +46,36 @@ typedef enum
     FIELD_POSITION_EXTEND_LINK_XZ = 15
 } FieldPositionSource;
 
+/** @brief Packed part flags accessed as words, halfwords, or individual bytes. */
+typedef union
+{
+    u32 word;
+    struct
+    {
+        u16 low;
+        u16 high;
+    } halves;
+    struct
+    {
+        u8 low;
+        u8 middle_low;
+        u8 middle_high;
+        u8 high;
+    } bytes;
+} FieldPartFlags;
+
 /**
  * @brief Packed part definition controlling tracks, placement, and effect motion.
- * @note Some selectors span adjacent members. Keep explicit word reads where used.
+ * @note Packed selector words have byte/halfword views for resource fields.
  */
 typedef struct FieldActorPartDef
 {
-    u32 track_flags;
-    u32 behavior_flags;
+    FieldPartFlags track_flags;
+    FieldPartFlags behavior_flags;
     u8 unknown_0x8;
     u8 unknown_0x9;
     u8 unknown_0xa;
-    u8 unknown_0xb;
+    u8 effect_kind;
     u8 unknown_0xc;
     u8 unknown_0xd;
     u8 red_or_track;
@@ -65,23 +84,47 @@ typedef struct FieldActorPartDef
     u8 turn_end_age;
     u8 unknown_0x12;
     u8 rotation_y_16;
-    u32 orientation_flags; /* Also read through its upper halfword. */
+    FieldPartFlags orientation_flags; /* Also read through its upper halfword. */
     s16 unknown_0x18;
     u8 unknown_0x1a;
     u8 pad1B;
-    u16 unknown_0x1c;
-    u8 unknown_0x1e;
-    u8 pad1F;
-    u8 unknown_0x20;
-    u8 rotation_z_track;
-    u8 rotation_y_track;
-    u8 unknown_0x23;
+    /** @brief Palette track, angular divisions, footprint flags, and extent low bits. */
+    union
+    {
+        u32 word;
+        struct
+        {
+            u16 palette_track;
+            u8 angular_divisions;
+            u8 scale_extent_flags;
+        } fields;
+    } palette_extent;
+    /** @brief Extent high bits/mode followed by rotation and effect selectors. */
+    union
+    {
+        u32 word;
+        struct
+        {
+            u8 extent_value_mode;
+            u8 rotation_z_track;
+            u8 rotation_y_track;
+            u8 unknown_0x23;
+        } fields;
+    } rotation_extent;
     s32 effect_flags;
-    u32 placement_flags;
-    u8 unknown_0x2c;
-    u8 palette_selector;
-    u8 footprint_scale_x;
-    u8 unknown_0x2f;
+    FieldPartFlags placement_flags;
+    /** @brief Color-track flags, palette selector, footprint width, and spawn controls. */
+    union
+    {
+        u32 word;
+        struct
+        {
+            u8 color_track_flags;
+            u8 palette_selector;
+            u8 footprint_scale_x;
+            u8 spawn_flags;
+        } fields;
+    } appearance;
     u8 pitch_acceleration;
     u8 unknown_0x31;
     u8 unknown_0x32;
@@ -105,7 +148,6 @@ typedef struct FieldActorPartDef
     s16 unknown_0x46;
 } FieldActorPartDef;
 
-
 /** @brief Hit-test selection and packed owner/track synchronization selectors. */
 typedef struct FieldActorAnimationDef
 {
@@ -123,16 +165,16 @@ typedef struct FieldActorAnimationDef
 /**
  * @brief Actor-local part definitions, per-track counters, and object bindings.
  * @note actor_index identifies this actor in g_field_actor_slots; object indices
- * refer to the separate g_field_actors / D_80105AE0 arrays.
+ * refer to the separate g_field_actors / g_field_object_states arrays.
  */
 typedef struct FieldActorState
 {
-    FieldActorPartDef *parts;
+    FieldActorPartDef* parts;
     u8 pad4[0xC - 4];
-    FieldActorAnimationDef *animation;
+    FieldActorAnimationDef* animation;
     u8 pad10[0x14 - 0x10];
-    u8 *track_data;
-    u8 *mesh_data;
+    u8* track_data;
+    u8* mesh_data;
     u8 pad1C[0x24 - 0x1C];
     u8 is_active;
     u8 part_count;
@@ -151,7 +193,7 @@ typedef struct FieldActorState
     u32 action_flags;
     u8 owner_object_index;
     u8 track_object_indices[9]; /* Also receives dynamically collected hit targets. */
-    u8 track_count; /* Includes tracks activated by new hit contacts. */
+    u8 track_count;             /* Includes tracks activated by new hit contacts. */
     u8 actor_index;
     u16 unknown_0x234;
     u16 unknown_0x236;
@@ -159,7 +201,7 @@ typedef struct FieldActorState
     u8 active_track_mask;
     u8 unknown_0x23b;
     u8 pad23C[0x240 - 0x23C];
-    u16 *unknown_0x240;
+    u16* unknown_0x240;
 } FieldActorState;
 
 /**
@@ -180,14 +222,22 @@ typedef struct FieldMotionRecord
     s16 heading;
     s16 pitch;
     s16 unknown_0x16;
-    u8 unknown_0x18;
-    u8 unknown_0x19;
-    u8 unknown_0x1a;
-    u8 position_source;
+    /** @brief Literal effect color; the fourth byte also selects the position source. */
+    union
+    {
+        u32 word;
+        struct
+        {
+            u8 red;
+            u8 green;
+            u8 blue;
+            u8 position_source;
+        } fields;
+    } color_position;
     s32 flags;
     union
     {
-        u8 path_time; /* Interpolated path progress. */
+        u8 path_time;           /* Interpolated path progress. */
         u8 linked_effect_index; /* Position sources 8 and 15. */
     } position_data;
     u8 facing_or_reward_kind;
@@ -224,52 +274,10 @@ typedef struct FieldMotionRecord
     u8 pad50[0x54 - 0x50];
 } FieldMotionRecord;
 
-/**
- * @brief 0x23C-byte object view supplying bounds, anchors, scale, and action identity.
- * @note state_flags has both byte and word consumers. record_id is the word-wide
- * identifier consumed by the action/reward record lookup functions.
- */
-typedef struct FieldObjectPlacement
-{
-    u8 pad0[0xC];
-    u32 object_flags;
-    u8 pad10[0x14 - 0x10];
-    s32 record_id; /* identifier passed to action/reward helpers */
-    u8 pad18[0x68 - 0x18];
-    u16 unknown_0x68;
-    u8 pad6A[2];
-    s16 unknown_0x6c; /* Whole-unit X used by position source 7. */
-    s16 unknown_0x6e; /* Whole-unit Z used by position source 7. */
-    u8 pad70[0x130 - 0x70];
-    Vec2s attachment_points[4];
-    s16 bounds_left;
-    s16 bounds_top;
-    s16 bounds_right;
-    s16 bounds_bottom;
-    Vec2s effect_vertices[8];
-    u8 pad168[0x16D - 0x168];
-    s8 linked_effect_index;
-    u8 pad16E[0x174 - 0x16E];
-    u16 scale_percent;
-    u8 pad176[0x178 - 0x176];
-    u32 state_flags; /* Also read through its third byte. */
-    u8 pad17C[0x18E - 0x17C];
-    u8 unknown_0x18e;
-    u8 pad18F[0x190 - 0x18F];
-    Vec2s ground_attachment_points[3];
-    s32 unknown_0x19c;
-    s32 unknown_0x1a0;
-    u8 pad1A4[0x1A8 - 0x1A4];
-    u8 unknown_0x1a8;
-    u8 unknown_0x1a9;
-    u8 unknown_0x1aa;
-    u8 pad1AB[0x23C - 0x1AB];
-} FieldObjectPlacement;
-
-void field_collect_effect_hits(FieldMotionRecord *effect, s32 radius, FieldActorState *actor);
-void field_release_actor_if_no_effects(FieldMotionRecord *effect);
+void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActorState* actor);
+void field_release_actor_if_no_effects(FieldMotionRecord* effect);
 s32 field_actor_has_live_effects(s32 actor_index);
-void field_swap_effect_position_source(FieldMotionRecord *rec, FieldActorPartDef *part);
-void field_resolve_effect_position(FieldMotionRecord *rec, FieldActorPartDef *part, FieldVector *out);
+void field_swap_effect_position_source(FieldMotionRecord* rec, FieldActorPartDef* part);
+void field_resolve_effect_position(FieldMotionRecord* rec, FieldActorPartDef* part, VECTOR* out);
 
 #endif

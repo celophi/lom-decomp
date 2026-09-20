@@ -56,7 +56,7 @@ typedef struct
 #define FIELD_STATE_CONFIG D_80122B74
 
 s32 func_8008B288(s32 actor_id);
-s32 func_80087F44(s32 actor_id, FieldVector *out);
+s32 func_80087F44(s32 actor_id, VECTOR *out);
 s32 func_80089D44();
 
 void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
@@ -367,8 +367,8 @@ s32 func_800B2FF8(FieldStatusRecord *record)
 s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
 {
     s32 direction;
-    FieldVector first_position;
-    FieldVector second_position;
+    VECTOR first_position;
+    VECTOR second_position;
 
     direction = func_8008B288(second_actor_id);
     func_80087F44(first_actor_id, &first_position);

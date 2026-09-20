@@ -6,7 +6,7 @@
  *
  * Merged translation unit for the field actor transition/reset group.
  * Each member function keeps its original declaration environment at block
- * scope: several externs (g_field_actors, g_field_actor_slots, D_80105AE0,
+ * scope: several externs (g_field_actors, g_field_actor_slots, g_field_object_states,
  * D_800FD818) and the local Entry/Actor typedefs are viewed with different,
  * conflicting types by different functions, so they must stay isolated per
  * function to reproduce the original per-file codegen exactly.
@@ -109,7 +109,7 @@ void func_800966F0(s32 mode, void *actor_data)
     extern FieldTransitionEntry g_field_actors;
     extern FieldTransitionPart D_800FE3A0;
     extern s32 g_field_active_group;
-    extern FieldTransitionActor D_80105AE0;
+    extern FieldTransitionActor g_field_object_states;
     extern s32 D_8010AE54, D_8010AE5C, D_8010CFD0, D_8010D020, D_8011F420, D_8012291C;
     extern u32 D_801229A0;
     extern u8 g_field_actor_slots[];
@@ -142,7 +142,7 @@ void func_800966F0(s32 mode, void *actor_data)
         template_offset = index;
         entry = &g_field_actors;
         actor_offset = 0x9100;
-        actor = &D_80105AE0;
+        actor = &g_field_object_states;
         D_8010AE54 = 1;
     reset_actor:
         {
@@ -384,7 +384,7 @@ void func_80096B54(void)
     } FieldCleanupTrack;
 
     extern FieldCleanupRecord g_field_actors[];
-    extern FieldCleanupSlot D_80105AE0[];
+    extern FieldCleanupSlot g_field_object_states[];
     extern FieldCleanupActor g_field_actor_slots[];
     extern FieldCleanupTrack D_80105880[];
     extern s32 D_800F2278, D_800F227C, D_800F2280;
@@ -418,7 +418,7 @@ void func_80096B54(void)
     {
         if (track->pending != 0)
         {
-            slots = D_80105AE0;
+            slots = g_field_object_states;
             track->pending = 0;
             records[track->slot].unk25 = 0;
             actor = actors;
@@ -547,7 +547,7 @@ void func_80096E60(void)
     extern u8 D_800FD818[];
     extern u8 g_field_actors[];
     extern s32 g_field_active_group;
-    extern u8 D_80105AE0[];
+    extern u8 g_field_object_states[];
     extern s32 D_8010AE54;
     extern s32 D_8010AE5C;
     extern s32 D_8010CFD0;
@@ -586,7 +586,7 @@ void func_80096E60(void)
             func_8005A0D0(-1, 0x100, 0x100, 0x100);
             func_800A6204();
             func_800A3938(0x24, 0x80);
-            actor = (Actor *)D_80105AE0;
+            actor = (Actor *)g_field_object_states;
             entry = (Entry *)g_field_actors;
             slot_base = D_800FD818;
             slot_cursor = slot_base;

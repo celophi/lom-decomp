@@ -274,7 +274,7 @@ extern ScriptPlayer D_800FD818[];
 extern u8 D_800FD81C[];
 extern u8 D_800FDCEC[];
 
-extern ScriptSlot D_80105AE0[];
+extern ScriptSlot g_field_object_states[];
 extern u8 D_8010AED0[];
 
 
@@ -345,9 +345,9 @@ s32 func_800954F0(ScriptObject *object, s32 script_index)
     u8 *actor_base;
     ScriptSlot *var_v1_2;
 
-    D_80105AE0[object->slot].delay = 0;
+    g_field_object_states[object->slot].delay = 0;
     temp_a2 = object->slot;
-    temp_a1 = (u8 *)&D_80105AE0[temp_a2];
+    temp_a1 = (u8 *)&g_field_object_states[temp_a2];
     temp_v1 = temp_a1->command;
     if (temp_v1 != 0xFFFF)
     {
@@ -362,12 +362,12 @@ s32 func_800954F0(ScriptObject *object, s32 script_index)
                     temp_v1_2->active = 0U;
                 }
             }
-            D_80105AE0[object->slot].command = 0xFFFF;
+            g_field_object_states[object->slot].command = 0xFFFF;
         }
     }
     initial_program_base = D_8010AED0;
     temp_a2_2 = object->slot;
-    cursor = D_80105AE0[temp_a2_2].cursor;
+    cursor = g_field_object_states[temp_a2_2].cursor;
     initial_program = (script_index << 5) + (D_800FD818[temp_a2_2].program * 0x300) + initial_program_base + cursor;
     var_v0 = 1;
     if (*initial_program != 0xFF)
@@ -425,7 +425,7 @@ s32 func_800954F0(ScriptObject *object, s32 script_index)
         goto begin_commands;
 sequence_finished:
 
-        D_80105AE0[command_slot].cursor = cursor;
+        g_field_object_states[command_slot].cursor = cursor;
         object->delay = 1;
         object->progress = 0;
         object->active = 1;
@@ -439,7 +439,7 @@ release_restored_actor:
 begin_commands:
         programs = D_8010AED0;
         players = D_800FD818;
-        slots = D_80105AE0;
+        slots = g_field_object_states;
         script_offset = script_index << 5;
         command_slot = object->slot;
         opcode_ptr = script_offset + players[command_slot].program * 0x300 + programs + cursor;
@@ -635,7 +635,7 @@ apply_frame:
                 frame_address += (s32)frame_programs;
                 frame_address += cursor;
                 cursor++;
-                frame_slots = D_80105AE0;
+                frame_slots = g_field_object_states;
                 object->state = *(u8 *)frame_address + (object->state & 0x80);
                 frame_slots[object->slot].cursor = cursor;
             }
@@ -743,7 +743,7 @@ s32 func_8009615C(s32 index, s32 flags)
         binding = index;
         updated->mode = updated->animations[updated->animation].mode;
         updated->current = &updated->animations[updated->animation];
-        ((Record *)D_80105AE0)[binding].slot = slot;
+        ((Record *)g_field_object_states)[binding].slot = slot;
         bindings = ((Binding *)D_80105880);
         if (binding >= 3)
         {
@@ -753,7 +753,7 @@ s32 func_8009615C(s32 index, s32 flags)
     }
     else
     {
-        ((Record *)D_80105AE0)[index].slot = 0xFF;
+        ((Record *)g_field_object_states)[index].slot = 0xFF;
     }
     return slot;
 }
@@ -794,7 +794,7 @@ void func_80096334(Struct_D800FDF58 *a0)
     a0->unk27 = 0;
     a0->unk24 = 1;
 
-    ((Struct_D80105AE0 *)D_80105AE0)[a0->unk3A].unk174 &= ~0x1800;
+    ((Struct_D80105AE0 *)g_field_object_states)[a0->unk3A].unk174 &= ~0x1800;
 
     field_restart_actor_animation(a0);
 }
@@ -866,7 +866,7 @@ void func_80096394(void)
     s32 i = 0;
     FieldColorVisual *visual = ((FieldColorVisual *)D_800FE3A0);
     FieldColorActor *actor = g_field_actors;
-    FieldColorActorSlot *slot = ((FieldColorActorSlot *)D_80105AE0);
+    FieldColorActorSlot *slot = ((FieldColorActorSlot *)g_field_object_states);
     s32 selected;
     u32 flags;
     u32 options;
@@ -874,7 +874,7 @@ void func_80096394(void)
 
     do
     {
-        slot = &((FieldColorActorSlot *)D_80105AE0)[i];
+        slot = &((FieldColorActorSlot *)g_field_object_states)[i];
         visual = &((FieldColorVisual *)D_800FE3A0)[i];
         if (g_field_actors[i].presence != 0xFF)
         {

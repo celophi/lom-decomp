@@ -151,7 +151,7 @@ typedef struct
 void func_80084700(u8 *render_context)
 {
     extern FieldPanelActor g_field_actors[], g_field_effect_records[];
-    extern FieldPanelSlot D_80105AE0[];
+    extern FieldPanelSlot g_field_object_states[];
     extern FieldPanelPlayer D_800FD818[];
     extern s32 D_800EB04C[];
 
@@ -163,7 +163,7 @@ void func_80084700(u8 *render_context)
     s32 count = i;
     s32 j;
     s32 absent = 0xFF;
-    FieldPanelSlot *slot = D_80105AE0;
+    FieldPanelSlot *slot = g_field_object_states;
     FieldPanelPlayer *player = D_800FD818;
     FieldPanelActor *actor = g_field_actors;
     FieldPanelActor *actor_one;
@@ -188,7 +188,7 @@ void func_80084700(u8 *render_context)
 
     do
     {
-        slot = &D_80105AE0[i];
+        slot = &g_field_object_states[i];
         actor = &g_field_actors[i];
         if (actor->presence != absent && (player->flags & 1))
         {
@@ -262,7 +262,7 @@ void func_80084700(u8 *render_context)
         j = 3;
         if (D_80122B20 == 0)
         {
-            enemy_slot = &D_80105AE0[3];
+            enemy_slot = &g_field_object_states[3];
             enemy = &g_field_actors[3];
             do
             {
@@ -365,7 +365,7 @@ void func_80084D08(s32 x, s32 y, s32 slot, u8 *render_context, u32 value_per_bar
     extern Entry268 D_800FD818[];
     extern u8 D_800FDCEA;
     extern Rec54 g_field_actors[];
-    extern State23C D_80105AE0[];
+    extern State23C g_field_object_states[];
     extern s32 D_801077F0[];
     extern s32 D_8010A000;
     extern s32 D_8010A004;
@@ -455,7 +455,7 @@ void func_80084D08(s32 x, s32 y, s32 slot, u8 *render_context, u32 value_per_bar
             }
         }
     }
-    state = &D_80105AE0[slot];
+    state = &g_field_object_states[slot];
     shake_flag = (u32)state->unk8 >> 0x1F;
     alternate_layout = shake_flag;
     if ((shake_flag != 0) && (D_8010A000 < 6))

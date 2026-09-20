@@ -132,7 +132,7 @@ extern FieldResourceSlot D_800FD818[];
 extern u8 g_field_actors[];
 extern u8 D_800FE3A0[];
 extern u8 D_80105880[];
-extern u8 D_80105AE0[];
+extern u8 g_field_object_states[];
 extern s32 g_field_active_group;
 void func_800B0A08(s32);
 s32 func_800B0888(void);
@@ -206,7 +206,7 @@ state_3:
         if (D_80122B10 > 0)
         {
             none = -1;
-            actor_base = D_80105AE0;
+            actor_base = g_field_object_states;
             do
             {
                 object = (Struct_D800FDF58 *)g_field_actors + D_80122B28[i].unk0;
@@ -344,7 +344,7 @@ block_44:
                                 ((Struct_D800FDF58 *)g_field_actors)[i].unk24 = 1;
                                 ((Struct_D800FDF58 *)g_field_actors)[i].unk21 = (((Struct_D800FDF58 *)g_field_actors)[i].unk21 & 0x80) + 0x11;
                                 ((Struct_D800FDF58 *)g_field_actors)[i].unk1C &= ~0x800;
-                                ((FieldActorState *)D_80105AE0)[i].unk174 &= ~0x1800;
+                                ((FieldActorState *)g_field_object_states)[i].unk174 &= ~0x1800;
                                 field_restart_actor_animation((u8 *)&((Struct_D800FDF58 *)g_field_actors)[i]);
                             }
                             i += 1;
@@ -354,8 +354,8 @@ block_44:
                         {
                             if (D_800FD818[i].flags & 1)
                             {
-                                ((FieldActorState *)D_80105AE0)[i].unk1AB = 0x3C;
-                                ((FieldActorState *)D_80105AE0)[i].unk174 |= 0x8000;
+                                ((FieldActorState *)g_field_object_states)[i].unk1AB = 0x3C;
+                                ((FieldActorState *)g_field_object_states)[i].unk174 |= 0x8000;
                             }
                             i += 1;
                         } while (i < 3);

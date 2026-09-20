@@ -53,7 +53,7 @@ typedef struct
     u8 state;
     u8 tail[0xB];
 } FieldMotionResource;
-extern FieldMotionSlot D_80105AE0[];
+extern FieldMotionSlot g_field_object_states[];
 extern FieldMotionVisual D_800FE3A0[];
 extern FieldMotionResource g_field_resource_entries[];
 extern void func_80092C98(FieldMotionActor *);
@@ -91,25 +91,25 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
         state = actor->state & 0x7F;
         if (state == 0xA || state == 0x31)
         {
-            if (D_80105AE0[actor->slot].track < 12U)
+            if (g_field_object_states[actor->slot].track < 12U)
             {
-                if (func_80091728(actor->slot, D_80105AE0[actor->slot].track, actor) != 0)
+                if (func_80091728(actor->slot, g_field_object_states[actor->slot].track, actor) != 0)
                 {
                     return;
                 }
             }
         }
-        if ((D_80105AE0[actor->slot].state >> 1) & 1)
+        if ((g_field_object_states[actor->slot].state >> 1) & 1)
         {
             if (field_object_has_active_actor_tracks(actor->slot) != 0)
             {
                 return;
             }
-            D_80105AE0[D_80105AE0[actor->slot].parent].flags &= ~0x2000;
+            g_field_object_states[g_field_object_states[actor->slot].parent].flags &= ~0x2000;
         }
-        D_80105AE0[actor->slot].flags &= ~0x4000;
+        g_field_object_states[actor->slot].flags &= ~0x4000;
         func_800952DC(actor, 1);
-        D_80105AE0[actor->slot].options &= ~0x1800;
+        g_field_object_states[actor->slot].options &= ~0x1800;
         state = actor->state & 0x7F;
         if (state == 0x37 || state == 0x3B)
         {
@@ -127,7 +127,7 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
         }
         if (actor->value == 0)
         {
-            D_80105AE0[actor->slot].value = 0xFFFF;
+            g_field_object_states[actor->slot].value = 0xFFFF;
             func_8008BC5C(actor);
         }
     }
@@ -149,7 +149,7 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
         func_80097FA0(actor, scratch, 1);
         if (g_field_resource_entries[actor->resource].state == 0)
         {
-            D_80105AE0[actor->slot].options &= ~0x4000;
+            g_field_object_states[actor->slot].options &= ~0x4000;
         }
     }
 }

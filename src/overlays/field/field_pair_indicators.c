@@ -25,7 +25,7 @@ extern u8 D_800EC33C[];
 
 extern Actor g_field_actors[];
 extern s32 g_field_active_group;
-extern Slot D_80105AE0[];
+extern Slot g_field_object_states[];
 extern s32 g_field_scene_mode_bit;
 extern s32 D_80117EC0;
 extern s32 D_80117EC4;
@@ -91,10 +91,10 @@ void func_800A2E40(u8 *buffer)
                 if (active_count == 2)
                 {
                     index_or_distance = 0x20;
-                    if (!(D_80105AE0[entries[0]].flags & 0x23E4))
+                    if (!(g_field_object_states[entries[0]].flags & 0x23E4))
                     {
                         index_or_distance = entries[1];
-                        if (D_80105AE0[index_or_distance].flags & 0x23E4)
+                        if (g_field_object_states[index_or_distance].flags & 0x23E4)
                         {
                             index_or_distance = 0x20;
                         }
@@ -125,7 +125,7 @@ void func_800A2E40(u8 *buffer)
                 }
                 else
                 {
-                    slot_base = D_80105AE0;
+                    slot_base = g_field_object_states;
                     order = D_800EB04C;
                     actor_base = g_field_actors;
                     absent = 0xFF;

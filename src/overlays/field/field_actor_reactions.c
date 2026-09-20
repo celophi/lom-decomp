@@ -6,15 +6,15 @@
  *        draw-flag clears, animation re-arming, and depth-overlap eligibility.
  *
  * Groups the eleven reaction routines in 8008B870..8008C728. They share the
- * actor-slot table D_80105AE0 (0x23C stride), the owner table D_800FD818
+ * actor-slot table g_field_object_states (0x23C stride), the owner table D_800FD818
  * (0x268 stride), the actor record table g_field_actors (0x54 stride), and the
  * animation-resource block D_800FB3C8 (0x244 stride).
  */
 
 /**
- * @brief Unified view of a D_80105AE0 actor-slot record (0x23C stride).
+ * @brief Unified view of a g_field_object_states actor-slot record (0x23C stride).
  *
- * Only the fields accessed directly through @c D_80105AE0[i] are modelled;
+ * Only the fields accessed directly through @c g_field_object_states[i] are modelled;
  * functions that walk the table through a local pointer keep their own view.
  */
 typedef struct
@@ -342,7 +342,7 @@ typedef struct
 } fC620_FieldActorState;
 
 /* ----- shared globals ----- */
-extern ReactionSlot D_80105AE0[];
+extern ReactionSlot g_field_object_states[];
 extern FieldReactionOwner D_800FD818[];
 extern ActorSlot54 g_field_actors[];
 extern u8 D_800FB3C8[];
@@ -392,11 +392,11 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
     {
         D_800FD818[actor->slot].state = 5;
     }
-    else if (D_80105AE0[actor->slot].value < 0)
+    else if (g_field_object_states[actor->slot].value < 0)
     {
         D_8010A000 = 5;
     }
-    if (!((D_80105AE0[actor->slot].unk178 >> 6) & 1))
+    if (!((g_field_object_states[actor->slot].unk178 >> 6) & 1))
     {
         selection = D_80105880;
         if (actor->slot < 2U)
@@ -427,7 +427,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
     value = actor->value;
     if ((u32)(value - 0x93) >= 2U && (s16)value != 0x90)
     {
-        slots = D_80105AE0;
+        slots = g_field_object_states;
         slot = &slots[actor->slot];
         flags = slot->unkC;
         if (!(flags & 0x200))
@@ -448,7 +448,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
                 func_800952DC(actor, 0);
                 actor->value = 0x82;
                 actor->y -= actor->height << 8;
-                D_80105AE0[actor->slot].unk18D = 0;
+                g_field_object_states[actor->slot].unk18D = 0;
                 actor->counter = 0;
                 if (alternate != 0)
                 {
@@ -463,20 +463,20 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
                 actor->timer = 1;
                 actor->active = 1;
                 actor->unknown27 = 0;
-                D_80105AE0[actor->slot].unk174 &= ~0x1800;
+                g_field_object_states[actor->slot].unk174 &= ~0x1800;
                 field_restart_actor_animation(actor);
                 actor->y += actor->height << 8;
                 if (actor->y > 0)
                 {
                     actor->y = 0;
                 }
-                D_80105AE0[actor->slot].unkC &= ~0x4000;
-                D_80105AE0[actor->slot].unkC &= 0xFFFF7FFF;
+                g_field_object_states[actor->slot].unkC &= ~0x4000;
+                g_field_object_states[actor->slot].unkC &= 0xFFFF7FFF;
                 field_stop_actor_animations_for_object(actor, 0);
                 if (actor->slot < 2U)
                 {
                     func_800A2DD8(actor->slot);
-                    D_80105AE0[actor->slot].unk18D = 0;
+                    g_field_object_states[actor->slot].unk18D = 0;
                     actor->counter = 0;
                 }
             }
@@ -491,7 +491,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
 void func_8008BC5C(arg0)
 f363_ArgStruct *arg0;
 {
-    f363_Record *base = D_80105AE0;
+    f363_Record *base = g_field_object_states;
     f363_Record *temp_a1;
     u32 temp_v1;
     f363_Record *temp_v0;
@@ -516,12 +516,12 @@ void func_8008BCF8(f297_Rec *rec)
 
     for (i = 0; i < 13; i++)
     {
-        if ((D_80105AE0[i].unk178 >> 1) & 1)
+        if ((g_field_object_states[i].unk178 >> 1) & 1)
         {
-            if (D_80105AE0[i].unk170 == rec->unk3A)
+            if (g_field_object_states[i].unk170 == rec->unk3A)
             {
-                D_80105AE0[i].unk178 = D_80105AE0[i].unk178 & ~2;
-                D_80105AE0[rec->unk3A].unkC &= ~0x2000;
+                g_field_object_states[i].unk178 = g_field_object_states[i].unk178 & ~2;
+                g_field_object_states[rec->unk3A].unkC &= ~0x2000;
             }
         }
     }
@@ -540,7 +540,7 @@ s32 func_8008BD88(s32 key)
     s32 i;
 
     scan = g_field_actors;
-    e = D_80105AE0;
+    e = g_field_object_states;
     i = 0;
 loop:
     i++;
@@ -588,7 +588,7 @@ void func_8008BE38(fBE38_FieldActorRecord *record, s32 clear_slot)
     }
 
     record->unk28 = 0xFF;
-    animation_base = D_80105AE0;
+    animation_base = g_field_object_states;
     record->unk2E = 1;
     record->unk24 = 1;
     record->unk4 = 0;
@@ -616,7 +616,7 @@ void func_8008BE38(fBE38_FieldActorRecord *record, s32 clear_slot)
  */
 void func_8008BF88(f364_ArgStruct *arg0, s8 arg1, s32 arg2, s8 arg3)
 {
-    f364_Record *base = D_80105AE0;
+    f364_Record *base = g_field_object_states;
     f364_Record *temp_v0;
 
     arg0->unk2A = 0x8F;
@@ -643,9 +643,9 @@ void func_8008C024(fC024_EntryA0 *arg0, s8 arg1)
         D_800FD818[arg0->unk3A].unk260 = 0;
     }
 
-    D_80105AE0[arg0->unk3A].unkC &= 0x200;
-    D_80105AE0[arg0->unk3A].unk178 |= 0x20;
-    D_80105AE0[arg0->unk3A].unk16C = arg1;
+    g_field_object_states[arg0->unk3A].unkC &= 0x200;
+    g_field_object_states[arg0->unk3A].unk178 |= 0x20;
+    g_field_object_states[arg0->unk3A].unk16C = arg1;
     arg0->unk2A = 0xAE;
     arg0->unk20 = 0xA;
 }
@@ -669,7 +669,7 @@ s32 func_8008C104(fC104_Actor *actor)
     actor->word4 = 0;
     actor->byte27 = 0;
     actor->state = (actor->state & 0x80) + 0x1D;
-    records = D_80105AE0;
+    records = g_field_object_states;
     record = &records[actor->selector];
     record->flags174 &= ~0x1800;
     field_restart_actor_animation(actor);
@@ -693,7 +693,7 @@ s32 func_8008C104(fC104_Actor *actor)
             field_start_actor_animation(actor->selector + 0x40, 0, 0);
         }
     }
-    final_records = D_80105AE0;
+    final_records = g_field_object_states;
     if (!(final_records[actor->selector].flags & 0x200))
     {
         if (actor->animation == 0x92)
@@ -733,7 +733,7 @@ s32 func_8008C2EC(s32 first_id, s32 second_id)
     fC2EC_Slot *slot;
 
     first_scan = g_field_actors;
-    first_slot_scan = D_80105AE0;
+    first_slot_scan = g_field_object_states;
     index = 0;
 loop_1:
     index++;
@@ -763,7 +763,7 @@ found_second:
 search_second:
     index = 0;
     second_scan = g_field_actors;
-    second_slot_scan = D_80105AE0;
+    second_slot_scan = g_field_object_states;
 loop_9:
     index++;
     if (second_slot_scan->id == second_id)
@@ -783,7 +783,7 @@ check_second:
         return -1;
     }
     second_slot = second->slot_index;
-    slot = &D_80105AE0[second_slot];
+    slot = &g_field_object_states[second_slot];
     if (second->presence == 0xFF)
     {
         return -1;
@@ -818,7 +818,7 @@ check_second:
     }
     first_z = first->z;
     second_z = second->z;
-    first_extent = ((s32)(D_80105AE0[first->slot_index].extent << 16) >> 17) << 8;
+    first_extent = ((s32)(g_field_object_states[first->slot_index].extent << 16) >> 17) << 8;
     second_extent = (s16)slot->extent;
     if (second_z < first_z - first_extent - (second_extent << 7))
     {
@@ -848,7 +848,7 @@ void func_8008C4A8(s32 slot_index)
     s32 i;
     s32 animation_slot;
 
-    slots = D_80105AE0;
+    slots = g_field_object_states;
     slot = &slots[slot_index];
     if (slot->unkC & 0x8000)
     {
@@ -888,9 +888,9 @@ void func_8008C4A8(s32 slot_index)
  */
 void func_8008C620(fC620_FieldActorState *rec)
 {
-    D_80105AE0[rec->unk3A].unk18D = 0;
-    D_80105AE0[rec->unk3A].unkC &= ~0x8000;
-    D_80105AE0[rec->unk3A].unkC &= ~0x4000;
+    g_field_object_states[rec->unk3A].unk18D = 0;
+    g_field_object_states[rec->unk3A].unkC &= ~0x8000;
+    g_field_object_states[rec->unk3A].unkC &= ~0x4000;
     rec->unk2A = 0xB7;
     rec->unk20 = 0x1E;
     rec->unk2E = 1;
@@ -899,6 +899,6 @@ void func_8008C620(fC620_FieldActorState *rec)
     rec->unk27 = 0;
     rec->unk21 = (rec->unk21 & 0x80) + 0x13;
     rec->unk24 = 1;
-    D_80105AE0[rec->unk3A].unk174 &= ~0x1800;
+    g_field_object_states[rec->unk3A].unk174 &= ~0x1800;
     field_restart_actor_animation_reverse(rec);
 }

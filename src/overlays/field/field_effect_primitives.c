@@ -153,11 +153,11 @@ void field_render_effect_ring(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldScreenPair sp10;
     FieldSVector sp18;
-    FieldVector sp20;
-    FieldMatrix sp30;
+    VECTOR sp20;
+    MATRIX sp30;
     FieldActorPartDef *sp50;
     FieldSVector *sp54;
-    FieldVector *sp58;
+    VECTOR *sp58;
     s32 sp5C;
     s16 temp_v0;
     s16 temp_v1_2;
@@ -205,7 +205,7 @@ void field_render_effect_ring(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     var_a1 = g_field_view_offset_x / 256;
     sp10.x = (u16) (var_a1 + (rec->unk0 / 256 + 0xA0));
     sp10.y = (u16) (0x70 + g_field_view_offset_y / 256 + rec->unk4 / 256 - rec->unk8 / 512 - g_field_view_offset_z / 512);
-    field_resolve_effect_part_color(temp_s2, rec, sp50, var_s1 + 4);
+    field_resolve_effect_part_color(temp_s2, rec, sp50, (FieldPrimitiveColor*)&((P_TAG*)var_s1)->r0);
     setPolyG3(var_s1);
     setSemiTrans(var_s1, rec->unk1C & 0x800000);
     var_fp = 0;
@@ -387,12 +387,12 @@ void field_render_effect_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldSVector sp10;
     FieldSVector sp18;
-    FieldVector sp20;
-    FieldMatrix sp30;
+    VECTOR sp20;
+    MATRIX sp30;
     FieldActorPartDef *sp50;
     s32 sp54;
     FieldSVector *sp58;
-    FieldVector *sp5C;
+    VECTOR *sp5C;
     s32 sp60;
     s32 sp64;
     s32 sp68;
@@ -453,7 +453,7 @@ void field_render_effect_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 
     sp10.unk0 = (u16) ((g_field_view_offset_x / 0x100) + ((rec->unk0 / 0x100) + 0xA0));
     sp10.unk2 = (u16) (((((g_field_view_offset_y / 0x100) + 0x70) + (rec->unk4 / 0x100)) - (rec->unk8 / 0x200)) - (g_field_view_offset_z / 0x200));
-    field_resolve_effect_part_color(temp_s2, rec, sp50, var_s1 + 4);
+    field_resolve_effect_part_color(temp_s2, rec, sp50, (FieldPrimitiveColor*)&((P_TAG*)var_s1)->r0);
     *(s8 *) (var_s1 + 3) = 6;
     *(s8 *) (var_s1 + 7) = 0x30;
     temp_v1_15 = 0x800000;
@@ -747,9 +747,9 @@ void field_render_effect_marker(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldSVector pan;
     FieldSVector offset;
-    FieldVector gte_out;
-    FieldVector point;
-    FieldMatrix matrix;
+    VECTOR gte_out;
+    VECTOR point;
+    MATRIX matrix;
     FieldActorState *actor;
     FieldActorPartDef *part;
 
@@ -761,7 +761,7 @@ void field_render_effect_marker(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     pan.unk0 = (s16)(0xA0 + D_800F22A0_A / 256 + rec->unk0 / 256);
     pan.unk2 = (s16)(0x70 + D_800F22A4_A / 256 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8_A / 512);
 
-    field_resolve_effect_part_color(actor, rec, part, primbuf + 4);
+    field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)primbuf)->r0);
     setLineG2((LINE_G2 *)primbuf);
     setSemiTrans((LINE_G2 *)primbuf, rec->unk1C & 0x800000);
     *(s32 *)(primbuf + 0xC) = 0;
@@ -879,7 +879,7 @@ u8 *field_render_effect_trail(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         *(u16 *) (primbuf + 0x14) = (u16) (*(u16 *) (primbuf + 0x14) + (u16) g_field_effect_records[rec->unk3D].unk44);
         *(u16 *) (primbuf + 0x16) = (u16) (*(u16 *) (primbuf + 0x16) + (u16) g_field_effect_records[rec->unk3D].unk48);
 
-        field_resolve_effect_part_color(state, rec, part, primbuf + 4);
+        field_resolve_effect_part_color(state, rec, part, (FieldPrimitiveColor*)&((P_TAG*)primbuf)->r0);
 
         setPolyF4((POLY_F4 *) primbuf);
         setSemiTrans((POLY_F4 *) primbuf, rec->unk1C & 0x800000);
@@ -926,10 +926,10 @@ u8 *field_render_effect_trail(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
  */
 u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
-    FieldMatrix *mtx;
+    MATRIX *mtx;
     FieldSVector *dir;
     FieldActorPartDef *part;
-    FieldVector *gte_out;
+    VECTOR *gte_out;
     s32 radius;
     Vec2s *base_screen;
     FieldActorState *state;
@@ -947,10 +947,10 @@ u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base
     s8 var_v0_6;
     s8 var_v0_7;
 
-    gte_out = (FieldVector *) 0x1F800010;
+    gte_out = (VECTOR *) 0x1F800010;
     base_screen = (Vec2s *) 0x1F800020;
     dir = (FieldSVector *) 0x1F800050;
-    mtx = (FieldMatrix *) 0x1F800058;
+    mtx = (MATRIX *) 0x1F800058;
 
     part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
     state = &g_field_actor_slots[rec->unk22];
@@ -970,7 +970,7 @@ u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base
     }
     *(s16 *) (primbuf + 0xA) = (s16) (0x70 + (var_v1 >> 8) + rec->unk4 / 0x100 - rec->unk8 / 0x200 - g_field_view_offset_z / 0x200);
 
-    field_resolve_effect_part_color(state, rec, part, primbuf + 4);
+    field_resolve_effect_part_color(state, rec, part, (FieldPrimitiveColor*)&((P_TAG*)primbuf)->r0);
 
     segments = 1;
     if (rec->unk24 != 0)
@@ -1134,30 +1134,30 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
 {
     FieldActorPartDef *part;
     FieldActorState *state;
-    FieldVector *gte_out;
-    FieldVector *ptr_a;
-    FieldVector *ptr_b;
-    FieldVector *ptr_c;
+    VECTOR *gte_out;
+    VECTOR *ptr_a;
+    VECTOR *ptr_b;
+    VECTOR *ptr_c;
     FieldSVector *dir;
-    FieldMatrix *cur;
+    MATRIX *cur;
     u8 *p2;
     s32 segments;
     s32 i;
     s32 amp;
     s32 step;
     s32 temp_v1;
-    FieldVector *origin;
+    VECTOR *origin;
 
-    gte_out = (FieldVector *) 0x1F800010;
-    ptr_a = (FieldVector *) 0x1F800020;
-    ptr_b = (FieldVector *) 0x1F800030;
-    ptr_c = (FieldVector *) 0x1F800040;
+    gte_out = (VECTOR *) 0x1F800010;
+    ptr_a = (VECTOR *) 0x1F800020;
+    ptr_b = (VECTOR *) 0x1F800030;
+    ptr_c = (VECTOR *) 0x1F800040;
     dir = (FieldSVector *) 0x1F800050;
 
     part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
     state = &g_field_actor_slots[rec->unk22];
 
-    cur = (FieldMatrix *)0x1F800058;
+    cur = (MATRIX *)0x1F800058;
     field_build_effect_part_matrix(rec, part, cur, state);
     gte_SetRotMatrix(cur);
 
@@ -1176,13 +1176,13 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
         *(s16 *) (primbuf + 0xA) = 0x70 + (raw_d4 >> 8) + rec->unk4 / 256 - rec->unk8 / 512 - g_field_view_offset_z / 512;
     }
 
-    field_resolve_effect_part_color(state, rec, part, primbuf + 4);
+    field_resolve_effect_part_color(state, rec, part, (FieldPrimitiveColor*)&((P_TAG*)primbuf)->r0);
 
     *(s8 *) (primbuf + 3) = 3;
     *(s8 *) (primbuf + 7) = 0x40;
     ((rec->unk1C & 0x800000) ? (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) | 2) : (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) & ~2));
 
-    cur = (FieldMatrix *) 0x1F800058;
+    cur = (MATRIX *) 0x1F800058;
 
     segments = 0x14;
     if (rec->unk24 < 0x14)
@@ -1199,7 +1199,7 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
 
     i = segments - 1;
 
-    origin = (FieldVector *)0x1F800000;
+    origin = (VECTOR *)0x1F800000;
     ptr_a->vx = (origin->vx + rec->unk0) >> 1;
     ptr_a->vy = origin->vy;
     ptr_a->vz = (origin->vz + rec->unk8) >> 1;
@@ -1220,7 +1220,7 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
         } while (i > 0);
     }
 
-    cur = (FieldMatrix *) 0x1F800058;
+    cur = (MATRIX *) 0x1F800058;
 
     if ((*(u8 *) &part->unk4) >> 7)
     {

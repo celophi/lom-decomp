@@ -59,8 +59,8 @@ rom:0x53AE9 reloc:MIPS_NONE symbol:D_80180000
 // Retail words: 0x3C178010 (lui s7,0x8010), 0x26E55AE0 (addiu a1,s7,0x5AE0).
 // Splat inferred a symbol pair across the actor scan; preserve the literal
 // operands used by the matching C page-base access. No instruction bytes change.
-rom:0x46F1D reloc:MIPS_NONE symbol:D_80105AE0
-rom:0x4715D reloc:MIPS_NONE symbol:D_80105AE0
+rom:0x46F1D reloc:MIPS_NONE symbol:g_field_object_states
+rom:0x4715D reloc:MIPS_NONE symbol:g_field_object_states
 
 // func_800632E0: glyph widths use the fixed RAM table at 0x801E26E0.
 // The low halves remain load displacements after adding the glyph index.

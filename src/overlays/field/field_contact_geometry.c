@@ -74,85 +74,6 @@ void func_80098FC4(FieldMotionRecord* object, s32 entry_index);
 #define FIELD_GTE_DELTA_ADDRESS 0x1F800080
 #define FIELD_GTE_SQUARE_ADDRESS 0x1F800090
 
-typedef union
-{
-    u32 word;
-    struct
-    {
-        s16 center_offset;
-        u16 diameter;
-    } half;
-    struct
-    {
-        s16 center_offset;
-        s16 extent;
-    } signed_half;
-} FieldCollisionSize;
-
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u16 flags;
-        s16 height;
-    } half;
-} FieldMovementStatus;
-
-typedef union
-{
-    u32 flags;
-    struct
-    {
-        u8 byte0;
-        u8 byte1;
-        u8 controller_index;
-        u8 target_count;
-    } bytes;
-} FieldContactStatus;
-
-/** @brief Shared collision and interaction state for a field object. */
-typedef struct
-{
-    u8 pad0[4];
-    s32 active;
-    u8 pad8[4];
-    u32 object_flags;
-    u32 group_flags;
-    s32 state_value;
-    u16 interaction_flags;
-    u16 state_entries[2];
-    u8 pad1E[0x12C - 0x1E];
-    FieldCollisionSize collision;
-    Vec2s attachment_points[4];
-    union
-    {
-        struct
-        {
-            s16 left;
-            s16 top;
-            s16 right;
-            s16 bottom;
-        } half;
-        s32 words[2];
-    } bounds;
-    union
-    {
-        Vec2s points[8];
-        s32 words[8];
-    } effect_vertices;
-    u8 pad168[0x174 - 0x168];
-    FieldMovementStatus movement;
-    FieldContactStatus contact;
-    u8 pad17C[4];
-    u8 targets[0xE];
-    u8 interaction_kind;
-    u8 pad18F[0x19C - 0x18F];
-    s32 contact_index;
-    s32 surface;
-    u8 pad1A4[0x23C - 0x1A4];
-} FieldContactState;
-
 /** @brief Actor binding state and its owning field object. */
 typedef struct
 {
@@ -259,7 +180,7 @@ extern FieldMoveObject D_800FE3A0[];
 extern s32 g_field_active_group;
 extern FieldThreshold g_field_group_bounds[];
 extern FieldActorState g_field_actor_slots[];
-extern FieldContactState D_80106194[];
+extern FieldObjectRuntime D_80106194[];
 extern FieldResourceEntry g_field_resource_entries[];
 extern s32 D_8010D020;
 extern s32 D_8010D024;
@@ -309,7 +230,6 @@ void func_800970B0(void)
 s32 func_80097150(FieldContactPoint* quad, FieldMotionRecord* record, FieldContactResult* contact)
 {
     extern FieldMotionRecord g_field_actors[];
-    extern FieldContactState D_80105AE0[];
     extern FieldActorBinding D_80105880[];
     void func_8008E690(FieldMotionRecord*);
 
@@ -317,7 +237,7 @@ s32 func_80097150(FieldContactPoint* quad, FieldMotionRecord* record, FieldConta
     FieldMotionRecord* scan_record;
     FieldMotionRecord* owner_record;
     u8* scan_state;
-    FieldContactState* owner_state;
+    FieldObjectRuntime* owner_state;
     /** @brief Contact centroid and temporary collision workspace. */
     union
     {
@@ -349,12 +269,12 @@ s32 func_80097150(FieldContactPoint* quad, FieldMotionRecord* record, FieldConta
     u8 target_count;
     FieldContactPoint* candidate_quad;
     FieldMotionRecord* initial_owner;
-    FieldContactState* target_state;
-    FieldContactState* reaction_state_40;
-    FieldContactState* reaction_state_3f;
-    FieldContactState* reaction_base_3f;
-    FieldContactState* reaction_base_40;
-    FieldContactState* target_base;
+    FieldObjectRuntime* target_state;
+    FieldObjectRuntime* reaction_state_40;
+    FieldObjectRuntime* reaction_state_3f;
+    FieldObjectRuntime* reaction_base_3f;
+    FieldObjectRuntime* reaction_base_40;
+    FieldObjectRuntime* target_base;
     FieldActorBinding* request_base;
     FieldActorBinding* request;
     FieldActorState* slot_base;
@@ -374,40 +294,40 @@ s32 func_80097150(FieldContactPoint* quad, FieldMotionRecord* record, FieldConta
 special_3f:
     scan_record->motion_parameter = 0x285;
     func_8008E690(scan_record);
-    reaction_base_3f = D_80105AE0;
+    reaction_base_3f = g_field_object_states;
     reaction_state_3f = &reaction_base_3f[scan_record->source_object_index];
     reaction_state_3f->contact.flags = (s32)((reaction_state_3f->contact.flags & ~(FIELD_CONTACT_REACTION_BIT_04 | FIELD_CONTACT_REACTION_BIT_08 | FIELD_CONTACT_REACTION_BIT_10)) | FIELD_CONTACT_REACTION_BIT_08);
     return 3;
 special_40:
     scan_record->motion_parameter = 0x385;
     func_8008E690(scan_record);
-    reaction_base_40 = D_80105AE0;
+    reaction_base_40 = g_field_object_states;
     reaction_state_40 = &reaction_base_40[scan_record->source_object_index];
     reaction_state_40->contact.flags = (s32)((reaction_state_40->contact.flags & ~(FIELD_CONTACT_REACTION_BIT_04 | FIELD_CONTACT_REACTION_BIT_08 | FIELD_CONTACT_REACTION_BIT_10)) | FIELD_CONTACT_REACTION_BIT_10);
     return 3;
 initialize:
-    scan_state = (u8*)D_80105AE0;
-    owner_state = (FieldContactState*)(scan_state + owner_index * sizeof(FieldContactState));
+    scan_state = (u8*)g_field_object_states;
+    owner_state = (FieldObjectRuntime*)(scan_state + owner_index * sizeof(FieldObjectRuntime));
     actor_index = 0;
     scan_record = g_field_actors;
     scan_mode = (u8*)&g_field_actors[0].facing_or_reward_kind;
-    scan_extent = (u8*)&((FieldContactState*)scan_state)->collision.half.diameter;
-    target_base = D_80105AE0;
+    scan_extent = (u8*)&((FieldObjectRuntime*)scan_state)->collision.half.diameter;
+    target_base = g_field_object_states;
     request_base = D_80105880;
     slot_base = g_field_actor_slots;
 scan_actor:
-    if ((FIELD_CONTAINER(scan_mode, FieldMotionRecord, facing_or_reward_kind)->state != 0xFF) && !(FIELD_CONTAINER(scan_extent, FieldContactState, collision.half.diameter)->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)) &&
-        ((actor_index < FIELD_PARTY_ACTOR_COUNT) || ((FIELD_CONTAINER(scan_extent, FieldContactState, collision.half.diameter)->group_flags & FIELD_OBJECT_GROUP_MASK) == g_field_active_group)) && (FIELD_CONTAINER(scan_extent, FieldContactState, collision.half.diameter)->active != 0) &&
+    if ((FIELD_CONTAINER(scan_mode, FieldMotionRecord, facing_or_reward_kind)->state != 0xFF) && !(FIELD_CONTAINER(scan_extent, FieldObjectRuntime, collision.half.diameter)->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)) &&
+        ((actor_index < FIELD_PARTY_ACTOR_COUNT) || ((FIELD_CONTAINER(scan_extent, FieldObjectRuntime, collision.half.diameter)->group_flags & FIELD_OBJECT_GROUP_MASK) == g_field_active_group)) && (FIELD_CONTAINER(scan_extent, FieldObjectRuntime, collision.half.diameter)->current_hp != 0) &&
         ((u32)((FIELD_CONTAINER(scan_mode, FieldMotionRecord, facing_or_reward_kind)->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) - 0x38) >= 2U) && (FIELD_CONTAINER(scan_mode, FieldMotionRecord, facing_or_reward_kind)->source_object_index != record->source_object_index))
     {
-        if (FIELD_CONTAINER(scan_extent, FieldContactState, collision.half.diameter)->contact.flags & FIELD_CONTACT_FLAG_TARGETED)
+        if (FIELD_CONTAINER(scan_extent, FieldObjectRuntime, collision.half.diameter)->contact.flags & FIELD_CONTACT_FLAG_TARGETED)
         {
             eligible = 0;
             if (owner_record->motion_parameter == 0x91)
             {
-                target_address = owner_record->source_object_index * sizeof(FieldContactState);
+                target_address = owner_record->source_object_index * sizeof(FieldObjectRuntime);
                 target_address += (s32)target_base;
-                target_state = (FieldContactState*)target_address;
+                target_state = (FieldObjectRuntime*)target_address;
                 target_count = target_state->contact.bytes.target_count;
                 list_index_or_layer = 0;
                 if (target_count != 0)
@@ -415,7 +335,7 @@ scan_actor:
                     target_list_base = (u8*)target_state;
                     do
                     {
-                        if (((FieldContactState*)(target_list_base + list_index_or_layer))->targets[0] == actor_index)
+                        if (((FieldObjectRuntime*)(target_list_base + list_index_or_layer))->targets[0] == actor_index)
                         {
                             goto eligible_candidate;
                         }
@@ -429,10 +349,10 @@ scan_actor:
         eligible_candidate:
             eligible = 1;
         }
-        if ((eligible != 0) && !(FIELD_CONTAINER(scan_extent, FieldContactState, collision.half.diameter)->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
+        if ((eligible != 0) && !(FIELD_CONTAINER(scan_extent, FieldObjectRuntime, collision.half.diameter)->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
         {
-            flags_or_extent = FIELD_CONTAINER(scan_extent, FieldContactState, collision.half.diameter)->contact.flags;
-            if (!(flags_or_extent & FIELD_CONTACT_FLAG_NO_HIT_TEST) && (!(flags_or_extent & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) || (slot_base[FIELD_CONTAINER(scan_extent, FieldContactState, collision.half.diameter)->contact.bytes.controller_index].owner_object_index == record->source_object_index)) &&
+            flags_or_extent = FIELD_CONTAINER(scan_extent, FieldObjectRuntime, collision.half.diameter)->contact.flags;
+            if (!(flags_or_extent & FIELD_CONTACT_FLAG_NO_HIT_TEST) && (!(flags_or_extent & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) || (slot_base[FIELD_CONTAINER(scan_extent, FieldObjectRuntime, collision.half.diameter)->contact.bytes.controller_index].owner_object_index == record->source_object_index)) &&
                 !(flags_or_extent & FIELD_CONTACT_FLAG_DISABLED))
             {
                 if (!(flags_or_extent & FIELD_CONTACT_FLAG_IGNORE_BINDING))
@@ -492,7 +412,7 @@ scan_actor:
                     {
                         vertical_distance = -vertical_distance;
                     }
-                    candidate_extent = FIELD_CONTAINER(scan_extent, FieldContactState, collision.half.diameter)->collision.signed_half.extent;
+                    candidate_extent = FIELD_CONTAINER(scan_extent, FieldObjectRuntime, collision.half.diameter)->collision.signed_half.extent;
                     flags_or_extent = owner_state->collision.signed_half.extent;
                     if (candidate_extent < 0)
                     {
@@ -510,7 +430,7 @@ scan_actor:
                         input_quad = quad;
 
                     scan_layer:
-                        candidate_quad = (FieldContactPoint*)&((FieldContactState*)scan_state)->effect_vertices.points[list_index_or_layer];
+                        candidate_quad = (FieldContactPoint*)&((FieldObjectRuntime*)scan_state)->effect_vertices.points[list_index_or_layer];
                         candidate_edge = 0;
                         do
                         {
@@ -620,9 +540,9 @@ scan_actor:
 next_actor:
     actor_index += 1;
     scan_mode += sizeof(FieldMotionRecord);
-    scan_extent += sizeof(FieldContactState);
+    scan_extent += sizeof(FieldObjectRuntime);
     scan_record++;
-    scan_state += sizeof(FieldContactState);
+    scan_state += sizeof(FieldObjectRuntime);
     if (actor_index >= FIELD_RUNTIME_ACTOR_COUNT)
     {
         return 0;
@@ -891,11 +811,10 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
     s32 func_8005B368(FieldMoveQuery*);
     s32 func_8005B6AC(FieldMoveRequest*);
     s32 func_80092988(FieldMotionRecord*, Vec3i*);
-    extern FieldContactState D_80105AE0[];
 
     Vec3i delta;
-    FieldContactState* height_state;
-    FieldContactState* states;
+    FieldObjectRuntime* height_state;
+    FieldObjectRuntime* states;
     s32 hit;
     FieldMoveBounds* bounds = (FieldMoveBounds*)FIELD_MAP_BOUNDS_ADDRESS;
     FieldMoveRequest* mover = (FieldMoveRequest*)FIELD_MOVE_REQUEST_ADDRESS;
@@ -909,12 +828,12 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
     u16 actor_motion;
     u16 resolved_motion;
     u16 collision_motion;
-    FieldContactState*  movement_state;
-    FieldContactState*  candidate_movement_state;
-    FieldContactState*  collision_state;
-    FieldContactState*  blocked_movement_state;
-    FieldContactState*  resolved_collision_state;
-    FieldContactState*  blocked_collision_state;
+    FieldObjectRuntime*  movement_state;
+    FieldObjectRuntime*  candidate_movement_state;
+    FieldObjectRuntime*  collision_state;
+    FieldObjectRuntime*  blocked_movement_state;
+    FieldObjectRuntime*  resolved_collision_state;
+    FieldObjectRuntime*  blocked_collision_state;
 
     if (((u32)D_800FE3A0[actor->source_object_index].flags >> 0x17) & 1)
     {
@@ -967,11 +886,11 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
                 mover->height_tolerance = 0x10;
                 mover->packed.bits.bit17 = 0;
                 mover->packed.bits.bit16 = 0;
-                mover->contact = (s32)D_80105AE0[actor->source_object_index].contact_index;
-                mover->surface = (s32)D_80105AE0[actor->source_object_index].surface;
+                mover->contact = (s32)g_field_object_states[actor->source_object_index].contact_index;
+                mover->surface = (s32)g_field_object_states[actor->source_object_index].surface;
                 func_8005B6AC(mover);
-                D_80105AE0[actor->source_object_index].contact_index = (s32)mover->contact;
-                D_80105AE0[actor->source_object_index].surface = (s32)mover->surface;
+                g_field_object_states[actor->source_object_index].contact_index = (s32)mover->contact;
+                g_field_object_states[actor->source_object_index].surface = (s32)mover->surface;
                 resolved_motion = actor->motion_parameter;
                 if (((u32)(resolved_motion - 0xB0) < 2U) || ((s16)resolved_motion == 0xB5))
                 {
@@ -1005,7 +924,7 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
                     {
                         position[1] = mover->y;
                     }
-                    states = D_80105AE0;
+                    states = g_field_object_states;
                     position[2] = (s32)mover->z;
                     height_state = &states[actor->source_object_index];
                     height = mover->height_offset;
@@ -1033,20 +952,20 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
     else
     {
     reset_collision_state:
-        D_80105AE0[actor->source_object_index].movement.half.height = 0;
-        D_80105AE0[actor->source_object_index].contact_index = -1;
-        D_80105AE0[actor->source_object_index].surface = 0;
+        g_field_object_states[actor->source_object_index].movement.half.height = 0;
+        g_field_object_states[actor->source_object_index].contact_index = -1;
+        g_field_object_states[actor->source_object_index].surface = 0;
     restore_position:
         position[0] = actor->x;
         position[1] = (s32)actor->y;
         position[2] = (s32)actor->z;
     }
     D_8010D024 = 0;
-    if (((u32)D_80105AE0[actor->source_object_index].movement.word >> FIELD_MOVEMENT_THRESHOLD_BLOCKED_BIT) & 1)
+    if (((u32)g_field_object_states[actor->source_object_index].movement.word >> FIELD_MOVEMENT_THRESHOLD_BLOCKED_BIT) & 1)
     {
         if (func_80098748(actor, actor) == 0)
         {
-            movement_state = &D_80105AE0[actor->source_object_index];
+            movement_state = &g_field_object_states[actor->source_object_index];
             movement_state->movement.word = (s32)(movement_state->movement.word & ~FIELD_MOVEMENT_FLAG_THRESHOLD_BLOCKED);
         }
         can_move = 1;
@@ -1054,7 +973,7 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
     else if (func_80098748(actor, position) == 0)
     {
         can_move = 1;
-        candidate_movement_state = &D_80105AE0[actor->source_object_index];
+        candidate_movement_state = &g_field_object_states[actor->source_object_index];
         candidate_movement_state->movement.word = (s32)(candidate_movement_state->movement.word & ~FIELD_MOVEMENT_FLAG_THRESHOLD_BLOCKED);
     }
     else
@@ -1063,7 +982,7 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
         can_move = 0;
         if (hit != 0)
         {
-            blocked_movement_state = &D_80105AE0[actor->source_object_index];
+            blocked_movement_state = &g_field_object_states[actor->source_object_index];
             blocked_movement_state->movement.word = (s32)(blocked_movement_state->movement.word | FIELD_MOVEMENT_FLAG_THRESHOLD_BLOCKED);
         }
     }
@@ -1071,14 +990,14 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
     {
         return 0;
     }
-    if (((u32)D_80105AE0[actor->source_object_index].movement.word >> FIELD_MOVEMENT_ACTOR_BLOCKED_BIT) & 1)
+    if (((u32)g_field_object_states[actor->source_object_index].movement.word >> FIELD_MOVEMENT_ACTOR_BLOCKED_BIT) & 1)
     {
         actor->x = position[0];
         actor->y = (s32)position[1];
         actor->z = (s32)position[2];
         if (func_800987DC(actor, (s32*)actor, mode) == 0)
         {
-            collision_state = &D_80105AE0[actor->source_object_index];
+            collision_state = &g_field_object_states[actor->source_object_index];
             collision_state->movement.word = (s32)(collision_state->movement.word & ~FIELD_MOVEMENT_FLAG_ACTOR_BLOCKED);
         }
         return 1;
@@ -1088,13 +1007,13 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
         actor->x = position[0];
         actor->y = (s32)position[1];
         actor->z = (s32)position[2];
-        resolved_collision_state = &D_80105AE0[actor->source_object_index];
+        resolved_collision_state = &g_field_object_states[actor->source_object_index];
         resolved_collision_state->movement.word = (s32)(resolved_collision_state->movement.word & ~FIELD_MOVEMENT_FLAG_ACTOR_BLOCKED);
         return 1;
     }
     if (func_800987DC(actor, (s32*)actor, mode) != 0)
     {
-        blocked_collision_state = &D_80105AE0[actor->source_object_index];
+        blocked_collision_state = &g_field_object_states[actor->source_object_index];
         blocked_collision_state->movement.word = (s32)(blocked_collision_state->movement.word | FIELD_MOVEMENT_FLAG_ACTOR_BLOCKED);
     }
     return 0;
@@ -1115,7 +1034,6 @@ s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode)
  */
 s32 func_80098748(FieldMotionRecord* actor, void* value_source)
 {
-    extern FieldContactState D_80105AE0[];
 
     FieldThreshold* threshold;
     FieldThreshold* thresholds;
@@ -1124,7 +1042,7 @@ s32 func_80098748(FieldMotionRecord* actor, void* value_source)
     s32 minimum_value;
     s32 value;
 
-    if ((D_80105AE0[actor->source_object_index].group_flags & FIELD_OBJECT_GROUP_MASK) == 0)
+    if ((g_field_object_states[actor->source_object_index].group_flags & FIELD_OBJECT_GROUP_MASK) == 0)
     {
         return 0;
     }
@@ -1150,7 +1068,6 @@ s32 func_80098748(FieldMotionRecord* actor, void* value_source)
 s32 func_800987DC(FieldMotionRecord* record, s32* position, s32 filter_group)
 {
     extern FieldMotionRecord g_field_actors[];
-    extern FieldContactState D_80105AE0[];
     extern FieldActorBinding D_80105880[];
     s32 func_800839F8(s32, s32);
     s32 func_80083EEC(s32, s32, s32);
@@ -1160,7 +1077,7 @@ s32 func_800987DC(FieldMotionRecord* record, s32* position, s32 filter_group)
     s32 binding_base_or_owner_index;
     u8* binding_bytes;
     s32 record_center_offset;
-    FieldContactState* scan_state;
+    FieldObjectRuntime* scan_state;
     u8* scan_z_cursor;
     FieldMotionRecord* scan_record;
     s32 test_y;
@@ -1174,7 +1091,7 @@ s32 func_800987DC(FieldMotionRecord* record, s32* position, s32 filter_group)
     FieldActorBinding* binding;
     s8 record_vertical_offset;
     s8 candidate_vertical_offset;
-    FieldContactState* record_state;
+    FieldObjectRuntime* record_state;
     u8* scan_collision_cursor;
 
     if (filter_group != 0)
@@ -1192,7 +1109,7 @@ s32 func_800987DC(FieldMotionRecord* record, s32* position, s32 filter_group)
                 goto scan_to_last;
             }
             scan_record = g_field_actors;
-            scan_state = D_80105AE0;
+            scan_state = g_field_object_states;
             actor_index = 0;
             candidate_end = FIELD_PARTY_ACTOR_COUNT;
         }
@@ -1205,7 +1122,7 @@ s32 func_800987DC(FieldMotionRecord* record, s32* position, s32 filter_group)
     {
 scan_all:
         scan_record = g_field_actors;
-        scan_state = D_80105AE0;
+        scan_state = g_field_object_states;
         actor_index = 0;
 scan_to_last:
         candidate_end = FIELD_RUNTIME_ACTOR_COUNT;
@@ -1224,7 +1141,7 @@ scan_to_last:
 return_zero:
     return 0;
 collision_scan:
-    record_state = &D_80105AE0[record->source_object_index];
+    record_state = &g_field_object_states[record->source_object_index];
     record_center_offset = record_state->collision.half.center_offset << 8;
     if (candidate_index < candidate_end)
     {
@@ -1235,30 +1152,30 @@ scan_next:
         do
         {
             if ((FIELD_CONTAINER(scan_z_cursor, FieldMotionRecord, z)->state == 0xFF) ||
-                (FIELD_CONTAINER(scan_collision_cursor, FieldContactState, collision.half.diameter)->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0004 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0020 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0040 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0100 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)) ||
+                (FIELD_CONTAINER(scan_collision_cursor, FieldObjectRuntime, collision.half.diameter)->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0004 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0020 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0040 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0100 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)) ||
                 (scan_record == record) ||
-                (candidate_contact_flags = FIELD_CONTAINER(scan_collision_cursor, FieldContactState, collision.half.diameter)->contact.flags, ((candidate_contact_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) != 0)) ||
+                (candidate_contact_flags = FIELD_CONTAINER(scan_collision_cursor, FieldObjectRuntime, collision.half.diameter)->contact.flags, ((candidate_contact_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) != 0)) ||
                 (candidate_contact_flags & 1) ||
-                (FIELD_CONTAINER(scan_collision_cursor, FieldContactState, collision.half.diameter)->collision.word == 0))
+                (FIELD_CONTAINER(scan_collision_cursor, FieldObjectRuntime, collision.half.diameter)->collision.word == 0))
             {
                 break;
             }
             candidate_vertical_offset = (s8)FIELD_CONTAINER(scan_z_cursor, FieldMotionRecord, z)->vertical_offset;
             record_vertical_offset = (s8)record->vertical_offset;
             test_y = position[1];
-            if (((FIELD_CONTAINER(scan_z_cursor, FieldMotionRecord, z)->y + ((FIELD_CONTAINER(scan_collision_cursor, FieldContactState, collision.half.diameter)->bounds.half.top + candidate_vertical_offset) << 8)) > (test_y + ((record_state->bounds.half.bottom + record_vertical_offset) << 8))) ||
-                ((FIELD_CONTAINER(scan_z_cursor, FieldMotionRecord, z)->y + ((FIELD_CONTAINER(scan_collision_cursor, FieldContactState, collision.half.diameter)->bounds.half.bottom + candidate_vertical_offset) << 8)) < (test_y + ((record_state->bounds.half.top + record_vertical_offset) << 8))))
+            if (((FIELD_CONTAINER(scan_z_cursor, FieldMotionRecord, z)->y + ((FIELD_CONTAINER(scan_collision_cursor, FieldObjectRuntime, collision.half.diameter)->bounds.half.top + candidate_vertical_offset) << 8)) > (test_y + ((record_state->bounds.half.bottom + record_vertical_offset) << 8))) ||
+                ((FIELD_CONTAINER(scan_z_cursor, FieldMotionRecord, z)->y + ((FIELD_CONTAINER(scan_collision_cursor, FieldObjectRuntime, collision.half.diameter)->bounds.half.bottom + candidate_vertical_offset) << 8)) < (test_y + ((record_state->bounds.half.top + record_vertical_offset) << 8))))
             {
                 break;
             }
             scratch.delta.vx = (FIELD_CONTAINER(scan_z_cursor, FieldMotionRecord, z)->z - position[2]) >> 8;
-            scratch.delta.vy = ((scan_record->x + (FIELD_CONTAINER(scan_collision_cursor, FieldContactState, collision.half.diameter)->collision.half.center_offset << 8)) - (position[0] + record_center_offset)) >> 8;
+            scratch.delta.vy = ((scan_record->x + (FIELD_CONTAINER(scan_collision_cursor, FieldObjectRuntime, collision.half.diameter)->collision.half.center_offset << 8)) - (position[0] + record_center_offset)) >> 8;
             scratch.delta.vz = 0;
             gte_ldlvl(&scratch.delta);
             gte_sqr0();
             gte_stlvnl(&scratch.squared);
             if (SquareRoot0(scratch.squared.vx + scratch.squared.vy) <
-                (((s32)(record_state->collision.half.diameter << 16) >> 17) + ((s32)(FIELD_CONTAINER(scan_collision_cursor, FieldContactState, collision.half.diameter)->collision.half.diameter << 16) >> 17)))
+                (((s32)(record_state->collision.half.diameter << 16) >> 17) + ((s32)(FIELD_CONTAINER(scan_collision_cursor, FieldObjectRuntime, collision.half.diameter)->collision.half.diameter << 16) >> 17)))
             {
                 goto candidate_found;
             }
@@ -1270,7 +1187,7 @@ scan_next:
         } while (0);
         scan_z_cursor += sizeof(FieldMotionRecord);
         scan_record += 1;
-        scan_collision_cursor += sizeof(FieldContactState);
+        scan_collision_cursor += sizeof(FieldObjectRuntime);
         scan_state += 1;
         do
         {
@@ -1294,7 +1211,7 @@ candidate_found:
         if (g_field_resource_entries[scan_record->resource_index].flags & 1)
         {
 
-            if (scan_state->active != 0)
+            if (scan_state->current_hp != 0)
             {
 
                 if (!(scan_state->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200)))
@@ -1304,7 +1221,7 @@ candidate_found:
                     {
 
                         actor_index = scan_record->source_object_index;
-                        if (!(((u32) D_80105AE0[actor_index].contact.flags >> 6) & 1))
+                        if (!(((u32) g_field_object_states[actor_index].contact.flags >> 6) & 1))
                         {
 
                             binding_base_or_owner_index = (s32)D_80105880;
@@ -1389,13 +1306,12 @@ report_candidate:
  */
 void func_80098C7C(FieldMotionRecord* record, s32 actor_index)
 {
-    extern FieldContactState D_80105AE0[];
     extern FieldMotionRecord g_field_actors[];
 
     u8* resource_data;
     s32 actor_index_x8;
-    FieldContactState* slot_base;
-    FieldContactState* slot;
+    FieldObjectRuntime* slot_base;
+    FieldObjectRuntime* slot;
 
     if (record->source_object_index != 0)
     {
@@ -1406,8 +1322,8 @@ void func_80098C7C(FieldMotionRecord* record, s32 actor_index)
     {
         return;
     }
-    slot_base = D_80105AE0;
-    slot = (FieldContactState*)((u8*)slot_base + ((((actor_index_x8 + actor_index) << 4) - actor_index) << 2));
+    slot_base = g_field_object_states;
+    slot = (FieldObjectRuntime*)((u8*)slot_base + ((((actor_index_x8 + actor_index) << 4) - actor_index) << 2));
     if ((slot->interaction_flags & FIELD_INTERACTION_FLAG_ENABLED) == 0)
     {
         return;
@@ -1441,7 +1357,6 @@ void func_80098C7C(FieldMotionRecord* record, s32 actor_index)
 void func_80098DD4(FieldMotionRecord* entry)
 {
     extern FieldMotionRecord g_field_actors[];
-    extern FieldContactState D_80105AE0[];
     extern void func_800A3938(s32, s32);
     extern void func_800AF824(s32);
 
@@ -1450,8 +1365,8 @@ void func_80098DD4(FieldMotionRecord* entry)
     s32 result_or_address;
     u8 direction;
     s32 masked;
-    FieldContactState* actor;
-    FieldContactState* actor_base;
+    FieldObjectRuntime* actor;
+    FieldObjectRuntime* actor_base;
 
     if (entry->motion_parameter != 0)
     {
@@ -1460,15 +1375,15 @@ void func_80098DD4(FieldMotionRecord* entry)
     position[0] = entry->x;
     position[1] = entry->y;
     position[2] = entry->z;
-    position[0] += rcos(entry->position_source * 0x10);
-    position[2] -= rsin(entry->position_source * 0x10);
+    position[0] += rcos(entry->color_position.fields.position_source * 0x10);
+    position[2] -= rsin(entry->color_position.fields.position_source * 0x10);
     result_or_address = func_800987DC(entry, position, 1);
     actor_index = result_or_address & FIELD_CONTACT_RESULT_ACTOR_MASK;
     if (result_or_address != 0)
     {
-        actor_base = D_80105AE0;
+        actor_base = g_field_object_states;
         result_or_address = (s32)&actor_base[actor_index];
-        actor = (FieldContactState*)result_or_address;
+        actor = (FieldObjectRuntime*)result_or_address;
         if (actor->interaction_kind != 0)
         {
             func_800A3938(0x7D, 0x80);
@@ -1506,13 +1421,12 @@ void func_80098DD4(FieldMotionRecord* entry)
  */
 void func_80098FC4(FieldMotionRecord* object, s32 entry_index)
 {
-    extern FieldContactState D_80105AE0[];
-    extern void func_800B22F0(s32 value, u16 entry, FieldContactState* states);
+    extern void func_800B22F0(s32 value, u16 entry, FieldObjectRuntime* states);
 
-    FieldContactState* state;
+    FieldObjectRuntime* state;
 
-    state = &D_80105AE0[object->source_object_index];
-    func_800B22F0(state->state_value, state->state_entries[entry_index], D_80105AE0);
+    state = &g_field_object_states[object->source_object_index];
+    func_800B22F0(state->record_id, state->state_entries[entry_index], g_field_object_states);
 }
 
 /**
@@ -1531,7 +1445,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
     void func_8008BC5C(FieldMotionRecord*);
     void func_800A2DD8(s32);
     extern FieldMotionRecord g_field_actors[];
-    extern u8 D_80105880[], D_80105AE0[];
+    extern u8 D_80105880[];
 
     FieldMotionRecord* motion_records;
     u8* contact_state_bytes;
@@ -1609,25 +1523,25 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
         candidate_end = FIELD_PARTY_ACTOR_COUNT;
     }
     candidate_position_words = (s32*)((u8*)g_field_actors + candidate_index * sizeof(FieldMotionRecord));
-    candidate_state_base = (candidate_index * sizeof(FieldContactState)) + D_80105AE0;
+    candidate_state_base = (candidate_index * sizeof(FieldObjectRuntime)) + ((u8*)g_field_object_states);
     if (candidate_index < candidate_end)
     {
-        candidate_flags_cursor = (u8*)&((FieldContactState*)candidate_state_base)->object_flags;
+        candidate_flags_cursor = (u8*)&((FieldObjectRuntime*)candidate_state_base)->object_flags;
         candidate_z_cursor = (u8*)&((FieldMotionRecord*)candidate_position_words)->z;
         candidate_record_words = candidate_position_words;
         motion_records = g_field_actors;
-        contact_state_bytes = D_80105AE0;
+        contact_state_bytes = ((u8*)g_field_object_states);
         controller_slots = D_80105880;
     next_candidate:
     {
-        if (FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->contact.flags & FIELD_CONTACT_FLAG_TARGETED)
+        if (FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->contact.flags & FIELD_CONTACT_FLAG_TARGETED)
         {
             source_object_index = effect->source_object_index;
             eligible_for_contact = 0;
             if (motion_records[source_object_index].motion_parameter == 0x91)
             {
-                source_state_bytes = (u8*)((source_object_index * sizeof(FieldContactState)) + (s32)contact_state_bytes);
-                prior_target_count = ((FieldContactState*)source_state_bytes)->contact.bytes.target_count;
+                source_state_bytes = (u8*)((source_object_index * sizeof(FieldObjectRuntime)) + (s32)contact_state_bytes);
+                prior_target_count = ((FieldObjectRuntime*)source_state_bytes)->contact.bytes.target_count;
                 prior_target_index = 0;
                 if (prior_target_count != 0)
                 {
@@ -1635,7 +1549,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 find_prior_hit:
                     prior_target_cursor = prior_target_base + prior_target_index;
                     prior_target_index += 1;
-                    if (((FieldContactState*)prior_target_cursor)->targets[0] != candidate_index)
+                    if (((FieldObjectRuntime*)prior_target_cursor)->targets[0] != candidate_index)
                     {
                         if (prior_target_index >= (s32)prior_target_count)
                         {
@@ -1658,13 +1572,13 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
             eligible_for_contact = 1;
         }
         owner_index = actor->owner_object_index;
-        if ((candidate_index != owner_index) && ((FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->effect_vertices.words[0] != 0) || (FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->effect_vertices.words[2] != 0)) &&
-            ((FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->bounds.words[0] != 0) || (FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->bounds.words[1] != 0)) &&
-            (FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->collision.word != 0) && (candidate_kind = FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->motion_parameter, (candidate_kind != 0x91)) &&
+        if ((candidate_index != owner_index) && ((FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->effect_vertices.words[0] != 0) || (FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->effect_vertices.words[2] != 0)) &&
+            ((FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->bounds.words[0] != 0) || (FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->bounds.words[1] != 0)) &&
+            (FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->collision.word != 0) && (candidate_kind = FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->motion_parameter, (candidate_kind != 0x91)) &&
             (candidate_kind != 0xAE) && (candidate_kind != 0x87) && (FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->state != 0xFF) && (owner_index != candidate_index) &&
-            (FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->active != 0) && (candidate_flags = FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->contact.flags, ((candidate_flags & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) == 0)) &&
-            ((candidate_index < FIELD_PARTY_ACTOR_COUNT) || ((FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->group_flags & FIELD_OBJECT_GROUP_MASK) == g_field_active_group)) && ((candidate_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) == 0) &&
-            (eligible_for_contact != 0) && !(FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
+            (FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->current_hp != 0) && (candidate_flags = FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->contact.flags, ((candidate_flags & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) == 0)) &&
+            ((candidate_index < FIELD_PARTY_ACTOR_COUNT) || ((FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->group_flags & FIELD_OBJECT_GROUP_MASK) == g_field_active_group)) && ((candidate_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) == 0) &&
+            (eligible_for_contact != 0) && !(FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
         {
             if (!(candidate_flags & FIELD_CONTACT_FLAG_IGNORE_BINDING))
             {
@@ -1701,7 +1615,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                 goto check_unique_contact;
             }
         check_unique_contact:
-            if (!(FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)))
+            if (!(FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)))
             {
                 track_count = actor->track_count;
                 existing_track_index = 0;
@@ -1724,7 +1638,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                     origin_z = effect->z;
                     delta_z = candidate_z_value - origin_z;
                     depth_distance = (candidate_z_value - origin_z) / 384;
-                    depth_radius = FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->collision.half.diameter;
+                    depth_radius = FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->collision.half.diameter;
                     if (depth_distance < 0)
                     {
                         depth_distance = -depth_distance;
@@ -1732,8 +1646,8 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                     depth_distance = depth_distance < (radius + ((s32)(depth_radius << 0x10) >> 0x11));
                     if (depth_distance)
                     {
-                        bound_x_a = FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->bounds.half.left;
-                        bound_x_b = FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->bounds.half.right;
+                        bound_x_a = FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->bounds.half.left;
+                        bound_x_b = FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->bounds.half.right;
                         if (bound_x_a < bound_x_b)
                         {
                             min_x = bound_x_a;
@@ -1744,8 +1658,8 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                             min_x = bound_x_b;
                             max_x = bound_x_a;
                         }
-                        bound_y_a = FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->bounds.half.top;
-                        bound_y_b = FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->bounds.half.bottom;
+                        bound_y_a = FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->bounds.half.top;
+                        bound_y_b = FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->bounds.half.bottom;
                         if (bound_y_a < bound_y_b)
                         {
                             min_y = bound_y_a;
@@ -1776,14 +1690,14 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
                         origin_x = effect->x;
                         if (((candidate_x + (min_x << 8)) < origin_x) && (origin_x < (candidate_x + (max_x << 8))) &&
                             (candidate_x = FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->y, origin_x = effect->y, (((candidate_x + (min_y << 8)) < origin_x) != 0)) &&
-                            (origin_x < (candidate_x + (max_y << 8))) && (((FieldContactState*)(contact_state_bytes + actor->owner_object_index * sizeof(FieldContactState)))->contact.bytes.target_count < FIELD_MAX_CONTACT_TARGETS))
+                            (origin_x < (candidate_x + (max_y << 8))) && (((FieldObjectRuntime*)(contact_state_bytes + actor->owner_object_index * sizeof(FieldObjectRuntime)))->contact.bytes.target_count < FIELD_MAX_CONTACT_TARGETS))
                         {
-                            FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->contact.flags = (s32)(FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->contact.flags | FIELD_CONTACT_FLAG_TARGETED);
-                            FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->object_flags = (s32)(FIELD_CONTAINER(candidate_flags_cursor, FieldContactState, object_flags)->object_flags & ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT);
-                            owner_state_for_append = (u8*)((actor->owner_object_index * sizeof(FieldContactState)) + (s32)contact_state_bytes);
-                            ((FieldContactState*)owner_state_for_append)->targets[((FieldContactState*)owner_state_for_append)->contact.bytes.target_count] = candidate_index;
-                            owner_state_for_count = (u8*)((actor->owner_object_index * sizeof(FieldContactState)) + (s32)contact_state_bytes);
-                            ((FieldContactState*)owner_state_for_count)->contact.bytes.target_count = (u8)(((FieldContactState*)owner_state_for_count)->contact.bytes.target_count + 1);
+                            FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->contact.flags = (s32)(FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->contact.flags | FIELD_CONTACT_FLAG_TARGETED);
+                            FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->object_flags = (s32)(FIELD_CONTAINER(candidate_flags_cursor, FieldObjectRuntime, object_flags)->object_flags & ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT);
+                            owner_state_for_append = (u8*)((actor->owner_object_index * sizeof(FieldObjectRuntime)) + (s32)contact_state_bytes);
+                            ((FieldObjectRuntime*)owner_state_for_append)->targets[((FieldObjectRuntime*)owner_state_for_append)->contact.bytes.target_count] = candidate_index;
+                            owner_state_for_count = (u8*)((actor->owner_object_index * sizeof(FieldObjectRuntime)) + (s32)contact_state_bytes);
+                            ((FieldObjectRuntime*)owner_state_for_count)->contact.bytes.target_count = (u8)(((FieldObjectRuntime*)owner_state_for_count)->contact.bytes.target_count + 1);
                             /* Each new contact becomes an active target track. */
                             actor->active_track_mask = (u8)(actor->active_track_mask | (1 << actor->track_count));
                             actor->track_object_indices[actor->track_count] = candidate_index;
@@ -1877,7 +1791,7 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
         candidate_index += 1;
         candidate_z_cursor += sizeof(FieldMotionRecord);
         candidate_position_words += sizeof(FieldMotionRecord) / sizeof(*candidate_position_words);
-        candidate_flags_cursor += sizeof(FieldContactState);
+        candidate_flags_cursor += sizeof(FieldObjectRuntime);
     }
         if (candidate_index < candidate_end)
         {
@@ -1897,7 +1811,6 @@ void field_collect_effect_hits(FieldMotionRecord* effect, s32 radius, FieldActor
 s32 func_8009980C(s32* reference_position, s32 distance_limit, FieldActorState* source_actor, s32 opposing_group)
 {
     extern u8 g_field_actors[];
-    extern u8 D_80105AE0[];
 
     s32* delta = (s32*)FIELD_GTE_DELTA_ADDRESS;
     s32* squared = (s32*)FIELD_GTE_SQUARE_ADDRESS;
@@ -1939,14 +1852,14 @@ s32 func_8009980C(s32* reference_position, s32 distance_limit, FieldActorState* 
         candidate_end = FIELD_PARTY_ACTOR_COUNT;
     }
     candidate_record = candidate_index * sizeof(FieldMotionRecord) + g_field_actors;
-    candidate_state_base = candidate_index * sizeof(FieldContactState) + D_80105AE0;
+    candidate_state_base = candidate_index * sizeof(FieldObjectRuntime) + ((u8*)g_field_object_states);
     if (candidate_index < candidate_end)
     {
-        candidate_diameter = (u8*)&((FieldContactState*)candidate_state_base)->collision.half.diameter;
+        candidate_diameter = (u8*)&((FieldObjectRuntime*)candidate_state_base)->collision.half.diameter;
         candidate_z = (u8*)&((FieldMotionRecord*)candidate_record)->z;
     scan_candidates:
         candidate_state = FIELD_CONTAINER(candidate_z, FieldMotionRecord, z)->state;
-        if (candidate_state == 0xFF || FIELD_CONTAINER(candidate_diameter, FieldContactState, collision.half.diameter)->active == 0 || candidate_state == 0xFE ||
+        if (candidate_state == 0xFF || FIELD_CONTAINER(candidate_diameter, FieldObjectRuntime, collision.half.diameter)->current_hp == 0 || candidate_state == 0xFE ||
             (opposing_group != 0 && source_actor->owner_object_index == candidate_index))
         {
             goto next_candidate;
@@ -1965,7 +1878,7 @@ s32 func_8009980C(s32* reference_position, s32 distance_limit, FieldActorState* 
         gte_ldlvl(delta);
         gte_sqr0();
         gte_stlvnl(squared);
-        if (SquareRoot0(squared[0] + squared[1] + squared[2]) < distance_limit + ((s32)(FIELD_CONTAINER(candidate_diameter, FieldContactState, collision.half.diameter)->collision.half.diameter << 16) >> 17))
+        if (SquareRoot0(squared[0] + squared[1] + squared[2]) < distance_limit + ((s32)(FIELD_CONTAINER(candidate_diameter, FieldObjectRuntime, collision.half.diameter)->collision.half.diameter << 16) >> 17))
         {
             return candidate_index;
         }
@@ -1973,7 +1886,7 @@ s32 func_8009980C(s32* reference_position, s32 distance_limit, FieldActorState* 
         candidate_index++;
         candidate_z += sizeof(FieldMotionRecord);
         candidate_record += sizeof(FieldMotionRecord);
-        candidate_diameter += sizeof(FieldContactState);
+        candidate_diameter += sizeof(FieldObjectRuntime);
         if (candidate_index < candidate_end)
         {
             goto scan_candidates;
@@ -1995,7 +1908,7 @@ void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
     s32 func_8008A9D8(s32, s32, s32);
     void func_8008BC5C(void*);
     void func_800A2DD8(s32);
-    extern u8 g_field_actors[], D_80105880[], D_80105AE0[];
+    extern u8 g_field_actors[], D_80105880[];
 
     u8* binding_bytes;
     u8* motion_record_bytes;
@@ -2078,25 +1991,25 @@ void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
     }
     initial_target_offset = target_index * sizeof(FieldMotionRecord);
     target_position = (s32*)(initial_target_offset + (s32)g_field_actors);
-    target_state_base = (void*)((target_index * sizeof(FieldContactState)) + (s32)D_80105AE0);
+    target_state_base = (void*)((target_index * sizeof(FieldObjectRuntime)) + (s32)g_field_object_states);
     if (target_index < target_end)
     {
-        void* target_flags_cursor = &((FieldContactState*)target_state_base)->object_flags;
+        void* target_flags_cursor = &((FieldObjectRuntime*)target_state_base)->object_flags;
         target_z_cursor = (u8*)&((FieldMotionRecord*)target_position)->z;
         target_record_words = target_position;
         target_record_offset = initial_target_offset;
         binding_bytes = D_80105880;
         motion_record_bytes = g_field_actors;
-        contact_state_bytes = D_80105AE0;
+        contact_state_bytes = ((u8*)g_field_object_states);
     next_target:
-        if (FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->contact.flags & FIELD_CONTACT_FLAG_TARGETED)
+        if (FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->contact.flags & FIELD_CONTACT_FLAG_TARGETED)
         {
             source_index = actor->owner_object_index;
             eligible_for_hit = 0;
             if (((FieldMotionRecord*)(motion_record_bytes + source_index * sizeof(FieldMotionRecord)))->motion_parameter == 0x91)
             {
-                source_state = (void*)((source_index * sizeof(FieldContactState)) + (s32)contact_state_bytes);
-                prior_target_count = ((FieldContactState*)source_state)->contact.bytes.target_count;
+                source_state = (void*)((source_index * sizeof(FieldObjectRuntime)) + (s32)contact_state_bytes);
+                prior_target_count = ((FieldObjectRuntime*)source_state)->contact.bytes.target_count;
                 prior_target_index = 0;
                 if (prior_target_count != 0)
                 {
@@ -2104,7 +2017,7 @@ void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
                 scan_existing_targets:
                     prior_target_cursor = prior_target_base + prior_target_index;
                     prior_target_index += 1;
-                    if (((FieldContactState*)prior_target_cursor)->targets[0] != target_index)
+                    if (((FieldObjectRuntime*)prior_target_cursor)->targets[0] != target_index)
                     {
                         if (prior_target_index >= (s32)prior_target_count)
                         {
@@ -2126,16 +2039,16 @@ void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
         mark_eligible:
             eligible_for_hit = 1;
         }
-        if ((target_index != actor->owner_object_index) && (FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->collision.word != 0))
+        if ((target_index != actor->owner_object_index) && (FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->collision.word != 0))
         {
             target_state = FIELD_CONTAINER(target_z_cursor, FieldMotionRecord, z)->motion_parameter;
             if ((target_state != 0x91) && (target_state != 0xAE) && (target_state != 0x87) &&
                 ((target_index >= 2) || ((FIELD_CONTAINER(target_z_cursor, FieldMotionRecord, z)->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) != 0x3C)) && (FIELD_CONTAINER(target_z_cursor, FieldMotionRecord, z)->state != 0xFF) &&
-                (actor->owner_object_index != target_index) && (FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->active != 0))
+                (actor->owner_object_index != target_index) && (FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->current_hp != 0))
             {
-                target_flags = FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->contact.flags;
-                if (!(target_flags & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) && ((((target_index < FIELD_PARTY_ACTOR_COUNT) != 0)) || (((FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->group_flags & FIELD_OBJECT_GROUP_MASK) == g_field_active_group))) &&
-                    ((target_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) == 0) && (eligible_for_hit != 0) && !(FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
+                target_flags = FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->contact.flags;
+                if (!(target_flags & FIELD_CONTACT_FLAG_REQUIRE_CONTROLLER) && ((((target_index < FIELD_PARTY_ACTOR_COUNT) != 0)) || (((FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->group_flags & FIELD_OBJECT_GROUP_MASK) == g_field_active_group))) &&
+                    ((target_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) == 0) && (eligible_for_hit != 0) && !(FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->movement.word & FIELD_MOVEMENT_FLAG_NO_CONTACT))
                 {
                     if (!(target_flags & FIELD_CONTACT_FLAG_IGNORE_BINDING))
                     {
@@ -2175,7 +2088,7 @@ void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
                     else
                     {
                     check_target_list:
-                        if (!(FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)))
+                        if (!(FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 | FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)))
                         {
                             track_count = actor->track_count;
                             existing_track_index = 0;
@@ -2201,22 +2114,22 @@ void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
                                     checked_record_words = target_record_words;
                                     do
                                     {
-                                        delta[0] = (s32)((s32)(*target_position - ((FieldVector*)sphere_cursor_address)->vx) >> 8);
-                                        delta[1] = (s32)((s32)(FIELD_CONTAINER(target_z_cursor, FieldMotionRecord, z)->y - *(s32*)((s32)sphere_cursor_address + (s32)&((FieldVector*)0)->vy)) >> 8);
-                                        delta[2] = (s32)((s32)(FIELD_CONTAINER(target_z_cursor, FieldMotionRecord, z)->z - ((FieldVector*)sphere_cursor_address)->vz) >> 8);
+                                        delta[0] = (s32)((s32)(*target_position - ((VECTOR*)sphere_cursor_address)->vx) >> 8);
+                                        delta[1] = (s32)((s32)(FIELD_CONTAINER(target_z_cursor, FieldMotionRecord, z)->y - *(s32*)((s32)sphere_cursor_address + (s32)&((VECTOR*)0)->vy)) >> 8);
+                                        delta[2] = (s32)((s32)(FIELD_CONTAINER(target_z_cursor, FieldMotionRecord, z)->z - ((VECTOR*)sphere_cursor_address)->vz) >> 8);
                                         gte_ldlvl(delta);
                                         gte_sqr0();
                                         gte_stlvnl(squares);
                                         if ((SquareRoot0(squares[0] + squares[1] + squares[2]) <
-                                             (attack_radius + ((s16)FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->collision.half.diameter >> 1))) &&
-                                            ((u8)((FieldContactState*)(D_80105AE0 + actor->owner_object_index * sizeof(FieldContactState)))->contact.bytes.target_count < FIELD_MAX_CONTACT_TARGETS))
+                                             (attack_radius + ((s16)FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->collision.half.diameter >> 1))) &&
+                                            ((u8)((FieldObjectRuntime*)(((u8*)g_field_object_states) + actor->owner_object_index * sizeof(FieldObjectRuntime)))->contact.bytes.target_count < FIELD_MAX_CONTACT_TARGETS))
                                         {
-                                            FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->contact.flags = (s32)(FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->contact.flags | FIELD_CONTACT_FLAG_TARGETED);
-                                            FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->object_flags = (s32)(FIELD_CONTAINER(target_flags_cursor, FieldContactState, object_flags)->object_flags & ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT);
-                                            owner_state_for_append = (void*)((actor->owner_object_index * sizeof(FieldContactState)) + (s32)D_80105AE0);
-                                            ((FieldContactState*)owner_state_for_append)->targets[((FieldContactState*)owner_state_for_append)->contact.bytes.target_count] = target_index;
-                                            owner_state_for_count = (void*)((actor->owner_object_index * sizeof(FieldContactState)) + (s32)D_80105AE0);
-                                            ((FieldContactState*)owner_state_for_count)->contact.bytes.target_count = (u8)(((FieldContactState*)owner_state_for_count)->contact.bytes.target_count + 1);
+                                            FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->contact.flags = (s32)(FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->contact.flags | FIELD_CONTACT_FLAG_TARGETED);
+                                            FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->object_flags = (s32)(FIELD_CONTAINER(target_flags_cursor, FieldObjectRuntime, object_flags)->object_flags & ~FIELD_OBJECT_FLAG_CLEAR_ON_HIT);
+                                            owner_state_for_append = (void*)((actor->owner_object_index * sizeof(FieldObjectRuntime)) + (s32)g_field_object_states);
+                                            ((FieldObjectRuntime*)owner_state_for_append)->targets[((FieldObjectRuntime*)owner_state_for_append)->contact.bytes.target_count] = target_index;
+                                            owner_state_for_count = (void*)((actor->owner_object_index * sizeof(FieldObjectRuntime)) + (s32)g_field_object_states);
+                                            ((FieldObjectRuntime*)owner_state_for_count)->contact.bytes.target_count = (u8)(((FieldObjectRuntime*)owner_state_for_count)->contact.bytes.target_count + 1);
                                             actor->active_track_mask = (u8)(actor->active_track_mask | (1 << actor->track_count));
                                             actor->track_object_indices[actor->track_count] = target_index;
                                             actor->track_count = (u8)(actor->track_count + 1);
@@ -2271,7 +2184,7 @@ void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
         target_index += 1;
         target_z_cursor += sizeof(FieldMotionRecord);
         target_position = (s32*)((u8*)target_position + sizeof(FieldMotionRecord));
-        target_flags_cursor += sizeof(FieldContactState);
+        target_flags_cursor += sizeof(FieldObjectRuntime);
         target_record_words = (s32*)((u8*)target_record_words + sizeof(FieldMotionRecord));
         target_record_offset += sizeof(FieldMotionRecord);
         if (target_index < target_end)
@@ -2287,10 +2200,10 @@ void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
  * @param b Second position (vx/vy/vz).
  * @return sqrt(sum of squared per-axis deltas), each delta scaled by >> 8.
  */
-s32 func_8009A204(FieldVector* a, FieldVector* b)
+s32 func_8009A204(VECTOR* a, VECTOR* b)
 {
-    FieldVector* delta = (FieldVector*)FIELD_GTE_DELTA_ADDRESS;
-    FieldVector* sqr = (FieldVector*)FIELD_GTE_SQUARE_ADDRESS;
+    VECTOR* delta = (VECTOR*)FIELD_GTE_DELTA_ADDRESS;
+    VECTOR* sqr = (VECTOR*)FIELD_GTE_SQUARE_ADDRESS;
 
     delta->vx = (a->vx - b->vx) >> 8;
     delta->vy = (a->vy - b->vy) >> 8;

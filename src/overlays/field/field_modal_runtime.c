@@ -538,7 +538,7 @@ void func_800AA90C(s32 refresh_only)
     extern u8 D_800EB24C[];
     extern Party D_800FD818[];
     extern Actor g_field_actors[];
-    extern State D_80105AE0[];
+    extern State g_field_object_states[];
     extern Record g_field_resource_actions[];
     extern s32 g_field_scene_mode_bit;
     extern u8 *g_pad_ctx;
@@ -689,7 +689,7 @@ party_loop:
             }
             if (refresh_only == 0)
             {
-                temp_v1_2 = (State *)(state_stride + (u8 *)D_80105AE0);
+                temp_v1_2 = (State *)(state_stride + (u8 *)g_field_object_states);
                 temp_a0_2 = ((Context *)((*context_pointer) + context_stride))->unk614;
                 temp_v1_2->unk8 = (s32)((temp_v1_2->unk8 & 0xFF000000) | temp_a0_2);
                 temp_v1_2->unk0 = (s32)temp_a0_2;

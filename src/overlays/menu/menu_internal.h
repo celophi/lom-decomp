@@ -1,6 +1,7 @@
 #ifndef LOM_MENU_INTERNAL_H
 #define LOM_MENU_INTERNAL_H
 
+#include "field_object_state.h"
 #include "menu.h"
 #include "display.h"
 #include "controller.h"
@@ -677,7 +678,6 @@ extern s32 menu_stage_stack_shape(s32, s32, s32, s32, s32, s32) __attribute__((c
 
 extern s32 D_80042FB4;
 extern u16 D_800F0C1C;
-extern s32 D_80105AE0;
 /** @brief Default scene content count encoded as count - 1 (value 3). */
 extern u8 g_menu_default_content_count_minus_one;
 extern u8 g_menu_content_item_counts[];

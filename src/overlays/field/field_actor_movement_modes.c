@@ -34,7 +34,7 @@ typedef struct
 
 s32 rand(void); /* extern */
 
-extern Slot D_80105AE0[];
+extern Slot g_field_object_states[];
 
 /**
  * @see decomp.me (100%)
@@ -69,13 +69,13 @@ void func_8009D4D8(Actor *actor, u32 mode)
     Slot *slot_4;
     Slot *slot_5;
 
-    D_80105AE0[actor->unk3A].unk5C = 0;
+    g_field_object_states[actor->unk3A].unk5C = 0;
     switch (mode)
     {
     case 1:
     {
         Slot *base;
-        base = D_80105AE0;
+        base = g_field_object_states;
         slot = &base[actor->unk3A];
         slot->unk174 = (s32)((slot->unk174 & ~0x3FF) | 0x40);
         return;
@@ -83,7 +83,7 @@ void func_8009D4D8(Actor *actor, u32 mode)
     case 2:
     {
         Slot *base;
-        base = D_80105AE0;
+        base = g_field_object_states;
         slot_2 = &base[actor->unk3A];
         slot_2->unk174 = (s32)((slot_2->unk174 & ~0x3FF) | 0x10);
         return;
@@ -92,7 +92,7 @@ void func_8009D4D8(Actor *actor, u32 mode)
     case 3:
     {
         Slot *base;
-        base = D_80105AE0;
+        base = g_field_object_states;
         slot_3 = &base[actor->unk3A];
         slot_3->unk174 = (s32)((slot_3->unk174 & ~0x3FF) | 0x1E);
         return;
@@ -101,7 +101,7 @@ void func_8009D4D8(Actor *actor, u32 mode)
     {
         Slot *base;
         point_index = 0;
-        slot_5 = D_80105AE0;
+        slot_5 = g_field_object_states;
         base = slot_5;
         slot_4 = &base[actor->unk3A];
         slot_4->unk174 = (s32)((slot_4->unk174 & ~0x3FF) | 0x1E);
@@ -207,7 +207,7 @@ void func_8009D4D8(Actor *actor, u32 mode)
     }
     case 5:
     {
-        Slot *clear_base = D_80105AE0;
+        Slot *clear_base = g_field_object_states;
         s32 clear_flags = clear_base[actor->unk3A].unk174;
         s32 clear_mask = ~0x3FF;
         clear_flags &= clear_mask;
@@ -219,7 +219,7 @@ void func_8009D4D8(Actor *actor, u32 mode)
     }
     case 6:
     {
-        Slot *clear_base = D_80105AE0;
+        Slot *clear_base = g_field_object_states;
         Slot *clear_slot = &clear_base[actor->unk3A];
         s32 clear_flags = clear_slot->unk174;
         s32 clear_mask = ~0x3FF;

@@ -177,7 +177,7 @@ void func_8008C7A8(void)
     extern FieldActors g_field_actors;
     extern u8 D_800FDFAC[];
     extern u8 D_800FE000[];
-    extern FieldHistory D_80105AE0;
+    extern FieldHistory g_field_object_states;
     extern u8 D_80105B4C[];
 
     s32 primary_x;
@@ -203,7 +203,7 @@ void func_8008C7A8(void)
             {
                 primary_x += 0xFF;
             }
-            primary_history = (FieldHistory *)((D_80105AE0.primary_index * 4) + (u8 *)&D_80105AE0);
+            primary_history = (FieldHistory *)((g_field_object_states.primary_index * 4) + (u8 *)&g_field_object_states);
             if ((primary_x >> 8) == primary_history->x)
             {
                 primary_z = g_field_actors.primary_z;
@@ -218,7 +218,7 @@ void func_8008C7A8(void)
                     {
                         secondary_x += 0xFF;
                     }
-                    secondary_history = (FieldHistory *)((D_80105AE0.secondary_index * 4) + (u8 *)&D_80105AE0);
+                    secondary_history = (FieldHistory *)((g_field_object_states.secondary_index * 4) + (u8 *)&g_field_object_states);
                     if ((secondary_x >> 8) == secondary_history->x)
                     {
                         secondary_z = g_field_actors.secondary_z;
@@ -259,7 +259,7 @@ refresh_both:
             {
                 primary_only_x += 0xFF;
             }
-            primary_only_history = (FieldHistory *)((D_80105AE0.primary_index * 4) + (u8 *)&D_80105AE0);
+            primary_only_history = (FieldHistory *)((g_field_object_states.primary_index * 4) + (u8 *)&g_field_object_states);
             if ((primary_only_x >> 8) == primary_only_history->x)
             {
                 primary_only_z = g_field_actors.primary_z;
@@ -288,7 +288,7 @@ refresh_primary:
         {
             secondary_only_x += 0xFF;
         }
-        secondary_only_history = (FieldHistory *)((D_80105AE0.secondary_index * 4) + (u8 *)&D_80105AE0);
+        secondary_only_history = (FieldHistory *)((g_field_object_states.secondary_index * 4) + (u8 *)&g_field_object_states);
         if ((secondary_only_x >> 8) == secondary_only_history->x)
         {
             secondary_only_z = g_field_actors.secondary_z;
@@ -335,7 +335,7 @@ void func_8008CAA4(FieldRoutePoint *points, s32 remaining, FieldRouteActor *acto
         u8 pad_1b4[0x88];
     } FieldRouteState;
 
-    extern FieldRouteState D_80105AE0[];
+    extern FieldRouteState g_field_object_states[];
     extern s8 D_8010CFE0[];
 
     s32 work[12];
@@ -378,18 +378,18 @@ void func_8008CAA4(FieldRoutePoint *points, s32 remaining, FieldRouteActor *acto
     work[2] = actor->z;
     path_index = 0;
     actor_index = actor->index;
-    if (D_80105AE0[actor_index].count != 0)
+    if (g_field_object_states[actor_index].count != 0)
     {
         do
         {
             waypoint_offset = path_index * 8;
-            var_v0 = ((FieldRouteState *)(waypoint_offset + (actor_index * 0x23C) + (u8 *)D_80105AE0))->x - work[0];
+            var_v0 = ((FieldRouteState *)(waypoint_offset + (actor_index * 0x23C) + (u8 *)g_field_object_states))->x - work[0];
             if (var_v0 < 0)
             {
                 var_v0 += 0xFF;
             }
             work[4] = var_v0 >> 8;
-            var_v0_2 = ((FieldRouteState *)(waypoint_offset + (actor->index * 0x23C) + (u8 *)D_80105AE0))->z - work[2];
+            var_v0_2 = ((FieldRouteState *)(waypoint_offset + (actor->index * 0x23C) + (u8 *)g_field_object_states))->z - work[2];
             if (var_v0_2 < 0)
             {
                 var_v0_2 += 0xFF;
@@ -400,12 +400,12 @@ void func_8008CAA4(FieldRoutePoint *points, s32 remaining, FieldRouteActor *acto
             gte_sqr0();
             gte_stlvnl(&work[8]);
             temp_v0 = SquareRoot0(work[8] + work[10]);
-            work[0] = ((FieldRouteState *)(waypoint_offset + (actor->index * 0x23C) + (u8 *)D_80105AE0))->x;
-            work[2] = ((FieldRouteState *)(waypoint_offset + (actor->index * 0x23C) + (u8 *)D_80105AE0))->z;
+            work[0] = ((FieldRouteState *)(waypoint_offset + (actor->index * 0x23C) + (u8 *)g_field_object_states))->x;
+            work[2] = ((FieldRouteState *)(waypoint_offset + (actor->index * 0x23C) + (u8 *)g_field_object_states))->z;
             path_index += 1;
             total_distance += temp_v0;
             actor_index = actor->index;
-        } while (path_index < (s32)D_80105AE0[actor_index].count);
+        } while (path_index < (s32)g_field_object_states[actor_index].count);
     }
     temp_a1 = func_8008D104(actor, target);
     var_v1 = actor->x;
@@ -459,7 +459,7 @@ void func_8008CAA4(FieldRoutePoint *points, s32 remaining, FieldRouteActor *acto
         work[2] = actor->z;
         spacing = total_distance / remaining;
         sample_path_index = 0;
-        states = D_80105AE0;
+        states = g_field_object_states;
         if (states[actor->index].count != 0)
         {
             path_offset = 0 * 8;
@@ -610,7 +610,7 @@ void func_8008D174(FieldPositionRecord* record)
         u8 pad[0x23C - FIELD_POSITION_HISTORY_LENGTH * sizeof(FieldPosition16)];
     } FieldPositionHistory;
 
-    extern FieldActorState D_80105AE0[];
+    extern FieldActorState g_field_object_states[];
     extern FieldPositionHistory D_80105B4C[];
     extern u8 D_8010CFE0[];
 
@@ -626,14 +626,14 @@ void func_8008D174(FieldPositionRecord* record)
     {
         x += FIELD_FIXED_POINT_ROUND_BIAS;
     }
-    if ((x >> FIELD_FIXED_POINT_SHIFT) == D_80105AE0[record->actor_index].position.x)
+    if ((x >> FIELD_FIXED_POINT_SHIFT) == g_field_object_states[record->actor_index].position.x)
     {
         y = record->y;
         if (y < 0)
         {
             y += FIELD_FIXED_POINT_ROUND_BIAS;
         }
-        if ((y >> FIELD_FIXED_POINT_SHIFT) == D_80105AE0[record->actor_index].position.y)
+        if ((y >> FIELD_FIXED_POINT_SHIFT) == g_field_object_states[record->actor_index].position.y)
         {
             return;
         }
@@ -750,7 +750,7 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     } Mover;
 
     extern Actor g_field_actors[];
-    extern Slot D_80105AE0[];
+    extern Slot g_field_object_states[];
     extern Resource g_field_resource_entries[];
     extern Appearance D_800FE3A0[];
     extern u8 D_800EB20C[], D_8010CFE0[], D_8010AE84;
@@ -826,9 +826,9 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     }
     actor_x = actor->unk0;
     {
-        Slot *base = D_80105AE0;
+        Slot *base = g_field_object_states;
         Slot *slot = &base[actor->unk3A];
-        sample_base = (Slot *)((s32)D_80105AE0 + (leader->unk3A * 0x8F + slot->unk16E) * 4);
+        sample_base = (Slot *)((s32)g_field_object_states + (leader->unk3A * 0x8F + slot->unk16E) * 4);
     }
     if (sample_base->points[0].x != actor_x / 256 || sample_base->points[0].z != actor->unk8 / 256)
     {
@@ -838,7 +838,7 @@ void func_8008D29C(Actor *actor, s32 follower_index)
             limit = 0;
         }
         {
-            Slot *base = D_80105AE0;
+            Slot *base = g_field_object_states;
             retreat_slot = &base[actor->unk3A];
         }
         sample_index = retreat_slot->unk16E;
@@ -853,10 +853,10 @@ void func_8008D29C(Actor *actor, s32 follower_index)
         }
         else
         {
-            retreat_dx = (D_80105AE0[leader->unk3A].points[sample_index].x << 8) - actor->unk0;
+            retreat_dx = (g_field_object_states[leader->unk3A].points[sample_index].x << 8) - actor->unk0;
             delta.vx = retreat_dx;
             dx = retreat_dx;
-            delta.vz = (D_80105AE0[leader->unk3A].points[D_80105AE0[actor->unk3A].unk16E].z << 8) -
+            delta.vz = (g_field_object_states[leader->unk3A].points[g_field_object_states[actor->unk3A].unk16E].z << 8) -
                        actor->unk8;
             dz = delta.vz;
             gte_ldlvl(&delta);
@@ -899,18 +899,18 @@ void func_8008D29C(Actor *actor, s32 follower_index)
         dx = 0;
         if ((square.vx + square.vz) > ((follower_index + 1) * 0xBB8))
         {
-            advance_slot = &D_80105AE0[actor->unk3A];
+            advance_slot = &g_field_object_states[actor->unk3A];
             advance_index = advance_slot->unk16E;
             if (advance_index < 0x2FU)
             {
                 advance_slot->unk16E = (u8)(advance_index + 1);
                 advance_dx =
-                    (D_80105AE0[leader->unk3A].points[D_80105AE0[actor->unk3A].unk16E].x << 8) -
+                    (g_field_object_states[leader->unk3A].points[g_field_object_states[actor->unk3A].unk16E].x << 8) -
                     actor->unk0;
                 delta.vx = advance_dx;
                 dx = advance_dx;
                 delta.vz =
-                    (D_80105AE0[leader->unk3A].points[D_80105AE0[actor->unk3A].unk16E].z << 8) -
+                    (g_field_object_states[leader->unk3A].points[g_field_object_states[actor->unk3A].unk16E].z << 8) -
                     actor->unk8;
                 dz = delta.vz;
                 gte_ldlvl(&delta);
@@ -976,13 +976,13 @@ apply_collision_state:
                     /* Clear the two collision flags without disturbing the radius. */
                     mover->flags.parts.flag1 = 0;
                     mover->flags.parts.flag0 = 0;
-                    mover->surface = D_80105AE0[actor->unk3A].unk19C;
-                    mover->state = D_80105AE0[actor->unk3A].unk1A0;
+                    mover->surface = g_field_object_states[actor->unk3A].unk19C;
+                    mover->state = g_field_object_states[actor->unk3A].unk1A0;
                     func_8005B6AC(mover);
-                    D_80105AE0[actor->unk3A].unk19C = (s32)mover->surface;
-                    D_80105AE0[actor->unk3A].unk1A0 = (s32)mover->state;
+                    g_field_object_states[actor->unk3A].unk19C = (s32)mover->surface;
+                    g_field_object_states[actor->unk3A].unk1A0 = (s32)mover->state;
                     actor->unk4 = (s32)mover->y;
-                    D_80105AE0[actor->unk3A].unk176 = mover->ground / 256;
+                    g_field_object_states[actor->unk3A].unk176 = mover->ground / 256;
                 }
                 else
                 {
@@ -997,22 +997,22 @@ apply_collision_state:
         else
         {
         clear_collision:
-            D_80105AE0[actor->unk3A].unk19C = -1;
-            D_80105AE0[actor->unk3A].unk1A0 = 0;
-            D_80105AE0[actor->unk3A].unk176 = 0;
+            g_field_object_states[actor->unk3A].unk19C = -1;
+            g_field_object_states[actor->unk3A].unk1A0 = 0;
+            g_field_object_states[actor->unk3A].unk176 = 0;
         }
     }
     if ((dx | dz) != 0)
     {
         if (g_field_resource_entries[actor->unk3B].flags & 1)
         {
-            recorded_animation = D_8010CFE0[D_80105AE0[actor->unk3A].unk16E];
+            recorded_animation = D_8010CFE0[g_field_object_states[actor->unk3A].unk16E];
             animation = D_800EB20C[recorded_animation & 0x7F];
             animation |= recorded_animation & 0x80;
         }
         else
         {
-            animation = D_8010CFE0[D_80105AE0[actor->unk3A].unk16E];
+            animation = D_8010CFE0[g_field_object_states[actor->unk3A].unk16E];
         }
         if (actor->unk21 != animation)
         {

@@ -39,7 +39,7 @@ typedef struct
     u8 unk0, unk1;
     u8 pad2[0x268 - 2];
 } Party;
-extern Slot D_80105AE0[];
+extern Slot g_field_object_states[];
 extern Party D_800FD818[];
 void field_restart_actor_animation_reverse(Actor *);
 s32 field_get_next_animation_frame_count(Actor *);
@@ -66,12 +66,12 @@ s32 func_80093AB8(Actor *input)
 
     if (actor->unk1C & 0x1FF)
     {
-        D_80105AE0[actor->unk3A].unkC &= 0xFFFF7FFF;
+        g_field_object_states[actor->unk3A].unkC &= 0xFFFF7FFF;
         actor->unk30 = (u16)(actor->unk30 + 1);
         return 0;
     }
     selection = func_800A29F8(actor->unk3A, ((u8)actor->unk21 >> 7) ^ 1, 1);
-    base = D_80105AE0;
+    base = g_field_object_states;
     slot = &base[actor->unk3A];
     if (((slot->unk16F == 2) || (actor->unk30 != 0)) && (actor->unk4 == 0))
     {
@@ -118,20 +118,20 @@ s32 func_80093AB8(Actor *input)
                     func_800A2DD8(actor->unk3A);
                     clear_mask = 0xFFFF7FFF;
                     actor->unk30 = 0U;
-                    D_80105AE0[actor->unk3A].unk18D = 0;
-                    reset_slot = &D_80105AE0[actor->unk3A];
+                    g_field_object_states[actor->unk3A].unk18D = 0;
+                    reset_slot = &g_field_object_states[actor->unk3A];
                     goto reset_actor;
                 }
                 goto clear_pending_counter;
             }
         }
     clear_pending_counter:
-        D_80105AE0[actor->unk3A].unk18D = 0;
+        g_field_object_states[actor->unk3A].unk18D = 0;
         actor->unk30 = 0U;
     }
 check_mode:
     object_index = actor->unk3A;
-    mode = D_80105AE0[object_index].unk16F;
+    mode = g_field_object_states[object_index].unk16F;
     if (mode == 3)
     {
         if (selection != 4 && selection != 6 && selection != 5 && selection != 7 &&
@@ -139,9 +139,9 @@ check_mode:
         {
             func_800A2DD8(object_index);
             clear_mask = 0xFFFF7FFF;
-            D_80105AE0[actor->unk3A].unk18D = 0;
+            g_field_object_states[actor->unk3A].unk18D = 0;
             actor->unk30 = 0;
-            reset_slot = &D_80105AE0[actor->unk3A];
+            reset_slot = &g_field_object_states[actor->unk3A];
         reset_actor:
             flags = reset_slot->unkC;
             flags &= clear_mask;
@@ -164,9 +164,9 @@ check_mode:
                     {
                         func_800A2DD8(object_index);
 
-                        D_80105AE0[actor->unk3A].unk18D = 0;
+                        g_field_object_states[actor->unk3A].unk18D = 0;
                         actor->unk30 = 0;
-                        D_80105AE0[actor->unk3A].unkC &= 0xFFFF7FFF;
+                        g_field_object_states[actor->unk3A].unkC &= 0xFFFF7FFF;
                     }
                 }
             }
@@ -192,7 +192,7 @@ void func_80093EB4(FieldRecord *arg0)
 {
     ActorSlot *slot;
     FieldState *state;
-    FieldState *states = (FieldState *)D_80105AE0;
+    FieldState *states = (FieldState *)g_field_object_states;
     u8 index;
     u8 slotIndex;
     s32 gate;
@@ -354,7 +354,7 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
     {
         goto apply_motion;
     }
-    slot_base = ((FieldSequenceSlot *)D_80105AE0);
+    slot_base = ((FieldSequenceSlot *)g_field_object_states);
     timer_slot = &slot_base[record->object_id];
     delay = timer_slot->command_delay;
     if (delay != 0)
@@ -474,7 +474,7 @@ apply_motion:
     func_80097FA0(record, scratch, 1);
     if (g_field_resource_entries[record->resource_id].mode == 0)
     {
-        final_base = ((FieldSequenceSlot *)D_80105AE0);
+        final_base = ((FieldSequenceSlot *)g_field_object_states);
         final_slot = &final_base[record->object_id];
         final_slot->track_flags &= ~0x4000;
     }

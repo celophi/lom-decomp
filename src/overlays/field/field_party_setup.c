@@ -278,7 +278,7 @@ typedef struct
     s32 max_hp;
     u32 flags;
     u8 padC[0x5C];
-    u16 capacity;
+    u16 effect_footprint_strength;
 } PartyLiveActorView;
 
 /**
@@ -495,11 +495,11 @@ s32 func_800B37D4(void)
             live_capacity = ((PartyActorView *)capacity_record)->actor;
             if (capacity < 0x100U)
             {
-                ((PartyLiveActorView *)live_capacity)->capacity = capacity;
+                ((PartyLiveActorView *)live_capacity)->effect_footprint_strength = capacity;
             }
             else
             {
-                ((PartyLiveActorView *)live_capacity)->capacity = 0xFFU;
+                ((PartyLiveActorView *)live_capacity)->effect_footprint_strength = 0xFFU;
             }
             if ((((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->type & 0x7F) == 3)
             {

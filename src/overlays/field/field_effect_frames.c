@@ -19,19 +19,7 @@
 
 
 
-typedef struct
-{
-    u32 tag;
-    u8 r0, g0, b0, code;
-    s16 x0, y0;
-    u8 u0, v0; u16 clut;
-    s16 x1, y1;
-    u8 u1, v1; u16 tpage;
-    s16 x2, y2;
-    u8 u2, v2; u16 pad1;
-    s16 x3, y3;
-    u8 u3, v3; u16 pad2;
-} FieldPolyFT4;
+
 
 typedef struct
 {
@@ -260,7 +248,7 @@ typedef struct
 
 extern Struct_D800FD818 D_800FD818[];
 extern Struct_D800FDF58 g_field_actors[];
-extern Struct_D80105AE0 D_80105AE0[];
+extern Struct_D80105AE0 g_field_object_states[];
 extern Struct_D80105880 D_80105880[];
 
 extern FieldActorState g_field_actor_slots[80];
@@ -290,10 +278,10 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
         unsigned len : 8;
     } PrimitiveTag;
     extern int abs(int);
-    FieldMatrix* mtx = (FieldMatrix*)0x1F800000;
+    MATRIX* mtx = (MATRIX*)0x1F800000;
     Vec2s* sxy = (Vec2s*)0x1F800040;
     s32 item_count;
-    FieldVector* gte_out = (FieldVector*)0x1F800044;
+    VECTOR* gte_out = (VECTOR*)0x1F800044;
     FieldSVector* dir = (FieldSVector*)0x1F800054;
     s16* sp64 = (s16*)0x1F800064;
     Vec2s* sp68;
@@ -309,7 +297,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
         u8 pad34[0x24];
     } scratch;
 
-    FieldPolyFT4* poly;
+    POLY_FT4* poly;
     s32 var_a3;
     u8* var_a1;
     s16 temp_a0_4;
@@ -391,7 +379,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
     sp78 = 0;
     sp68 = (Vec2s*)0x1F800080;
     sp6C = (Vec2s*)0x1F800094;
-    slot = &D_80105AE0[rec->unk3A];
+    slot = &g_field_object_states[rec->unk3A];
     *(s32*)&slot->unk12C = 0;
     if (flag == 0)
     {
@@ -439,7 +427,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
     item_count = *item++;
     if (item_count != 0)
     {
-        poly = (FieldPolyFT4*)cursor;
+        poly = (POLY_FT4*)cursor;
         do
         {
             temp_v1_4 = item[7];
@@ -463,7 +451,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                 {
                 block_28:
                 block_29:
-                    field_resolve_effect_part_color(actor, rec, part, (s32*)((u8*)cursor + 4));
+                    field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)cursor)->r0);
                     {
                         ((u8*)&poly->tag)[3] = 9;
                         poly->code = 0x2CU;
@@ -489,7 +477,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                         var_s0 = -(s8)*item - var_s2;
                         var_s2 -= 1;
                     }
-                    field_project_effect_sprite_quad(rec, sxy, cursor, var_s2, temp_s7, (s32)var_s0, var_s1, item, mtx);
+                    field_project_effect_sprite_quad(rec, sxy, (POLY_FT4*)cursor, var_s2, temp_s7, (s32)var_s0, var_s1, (FieldSpriteFrame*)item, mtx);
 
                     {
                         if ((item[7] ^ ((u8)rec->unk21 >> 1)) & 0x40)
@@ -988,7 +976,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                         if (temp_v0_12 == 1)
                         {
                             temp_v0_12 = sp28.index;
-                            temp_v0_13 = &D_80105AE0[temp_v0_12];
+                            temp_v0_13 = &g_field_object_states[temp_v0_12];
                             temp_v0_13->unkC = (s32)(temp_v0_13->unkC & ~0x400);
                             *(((u8*)&slot->unk178)[3] + (u8*)slot + 0x180) = (u8)sp28.index;
                             temp_v1_21 = ((u8*)&slot->unk178)[3];
@@ -1061,7 +1049,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                 }
                                 actor->unk1FE[actor->unk232].y = (s16)(sp28.y - sp6C->y);
                                 actor->unk232 = (u8)(actor->unk232 + 1);
-                                temp_v0_14 = &D_80105AE0[sp28.index];
+                                temp_v0_14 = &g_field_object_states[sp28.index];
                                 temp_v0_14->unk178 = (s32)(temp_v0_14->unk178 | 0x80);
 
                                 func_8008A840(actor->unk228, sp28.index);
@@ -1089,7 +1077,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                     {
                                         slot->unk178 = (u32)(slot->unk178 | 2);
                                         slot->unk170 = (u8)sp28.index;
-                                        temp_v0_17 = &D_80105AE0[sp28.index];
+                                        temp_v0_17 = &g_field_object_states[sp28.index];
                                         temp_v0_17->unkC = (s32)(temp_v0_17->unkC | 0x2000);
                                         goto block_236;
                                     }
@@ -1098,7 +1086,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                 {
                                     if ((temp_v1_23 == 0x59) || (temp_v1_23 == 0x66) || (temp_v1_23 == 0x2B))
                                     {
-                                        if (!(((u32)D_80105AE0[sp28.index].unk178 >> 6) & 1))
+                                        if (!(((u32)g_field_object_states[sp28.index].unk178 >> 6) & 1))
                                         {
                                             clamp_base = D_80105880;
                                             var_v1_10 = sp28.index < 3 ? sp28.index : 2;
@@ -1115,7 +1103,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                             goto block_208;
                                         }
                                     block_208:
-                                        if ((var_a1 = (u8*)&D_80105AE0[sp28.index], var_a1[0x178] & 1))
+                                        if ((var_a1 = (u8*)&g_field_object_states[sp28.index], var_a1[0x178] & 1))
                                         {
                                         block_209:
                                             slot->unk3C = 0;
@@ -1127,13 +1115,13 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                             if (sp28.index < 2)
                                             {
                                                 func_800A2DD8(sp28.index);
-                                                D_80105AE0[sp28.index].unk18D = 0;
+                                                g_field_object_states[sp28.index].unk18D = 0;
                                                 g_field_actors[sp28.index].unk30 = 0;
                                             }
                                         }
                                         goto block_236;
                                     }
-                                    temp_v1_24 = &D_80105AE0[sp28.index];
+                                    temp_v1_24 = &g_field_object_states[sp28.index];
                                     var_s1 = 1;
                                     if (!(*(u8*)&temp_v1_24->unk178 & 1) ||
                                         ((actor_base = g_field_actor_slots, temp_v1_25 = &actor_base[((u8*)&temp_v1_24->unk178)[2]],
@@ -1185,7 +1173,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                         {
                                             if (((u8*)&slot->unk178)[1] != 0xFF)
                                             {
-                                                temp_v0_20 = &D_80105AE0[sp28.index];
+                                                temp_v0_20 = &g_field_object_states[sp28.index];
                                                 temp_v0_20->unk178 = (s32)(temp_v0_20->unk178 | 0x80);
                                                 field_start_actor_animation(((u8*)&slot->unk178)[1], 1, &scratch.sp30);
                                             }
@@ -1328,7 +1316,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                 case 2:
                     if (part->unk24 & 0x100000)
                     {
-                        field_unpack_effect_quad_corners8(sp64, rec->unk21 & 0x80, item);
+                        field_unpack_effect_quad_corners8(sp64, rec->unk21 & 0x80, (s8*)item);
                         sp78 += 1;
                     }
                     else
@@ -1518,7 +1506,7 @@ typedef struct
 #include "sdk/gte_dmpsx_compat.h"
 
 extern Struct_D800FDF58 g_field_actors[];
-extern Struct_D80105AE0 D_80105AE0[];
+extern Struct_D80105AE0 g_field_object_states[];
 
 extern FieldActorState g_field_actor_slots[80];
 extern FieldResourceEntry g_field_resource_entries[];
@@ -1545,10 +1533,10 @@ extern FieldResourceEntry g_field_resource_entries[];
  */
 s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 flag, FieldActorPartDef *part)
 {
-    FieldMatrix *mtx = (FieldMatrix *) 0x1F800000;
+    MATRIX *mtx = (MATRIX *) 0x1F800000;
     Vec2s *sxy = (Vec2s *) 0x1F800040;
     s32 sp5C;
-    FieldVector *gte_out = (FieldVector *) 0x1F800044;
+    VECTOR *gte_out = (VECTOR *) 0x1F800044;
     FieldSVector *dir = (FieldSVector *) 0x1F800054;
     s16 *sp60 = (s16 *) 0x1F800064;
     Vec2s *sp64;
@@ -1559,7 +1547,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     TrackPlacement sp28;
     struct { s32 sp30; u8 pad34[0x24]; } scratch;
     u8 *var_s1;
-    FieldPolyFT4 *poly;
+    POLY_FT4 *poly;
     s16 temp_v1_24;
     s32 var_s0;
     s32 *var_a2;
@@ -1621,7 +1609,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     sp74 = 0;
     sp64 = (Vec2s *) 0x1F800080;
     sp68 = (Vec2s *) 0x1F800094;
-    slot = &D_80105AE0[rec->unk3A];
+    slot = &g_field_object_states[rec->unk3A];
     actor = &g_field_actor_slots[rec->unk22];
     *(s32 *) &slot->unk12C = 0;
     {
@@ -1708,13 +1696,13 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     if (temp_t1 != 0)
     {
         var_s1 = item + 0x11;
-        poly = (FieldPolyFT4 *) cursor;
+        poly = (POLY_FT4 *) cursor;
         do
         {
             temp_v1_4 = var_s1[-0xA];
             if (!(temp_v1_4 & 0x20))
             {
-                field_resolve_effect_part_color(actor, rec, part, (s32 *) ((u8 *) cursor + 4));
+                field_resolve_effect_part_color(actor, rec, part, (FieldPrimitiveColor*)&((P_TAG*)cursor)->r0);
                 do
                 {
                     ((u8 *)&poly->tag)[3] = 9;
@@ -1738,7 +1726,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
                     var_s0 = -var_s0 - temp_s4;
                 }
                 temp_s4 -= 1;
-                field_project_effect_sprite_quad(rec, sxy, cursor, temp_s4, temp_s6, (s32) var_s0, temp_t0_call, item, mtx);
+                field_project_effect_sprite_quad(rec, sxy, (POLY_FT4*)cursor, temp_s4, temp_s6, (s32) var_s0, temp_t0_call, (FieldSpriteFrame*)item, mtx);
                 if ((var_s1[-0xA] ^ ((u8) rec->unk21 >> 1)) & 0x40)
                 {
                     temp_v0 = var_s1[-0xF];
@@ -2028,7 +2016,7 @@ block_48:
                                 if (var_s0 == 1)
                                 {
                                     {
-                                        Struct_D80105AE0 *slots_base = D_80105AE0;
+                                        Struct_D80105AE0 *slots_base = g_field_object_states;
                                         temp_v0_6 = &slots_base[sp28.index];
                                     }
                                     temp_v0_6->unkC = (s32) (temp_v0_6->unkC & ~0x400);

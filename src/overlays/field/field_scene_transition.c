@@ -1180,7 +1180,7 @@ static void field_refresh_actor_collisions(void)
 {
 
     extern FieldCollisionActor g_field_actors[];
-    extern FieldCollisionSlot D_80105AE0[];
+    extern FieldCollisionSlot g_field_object_states[];
     extern s32 func_8005B6AC(FieldCollisionRequest*);
 
     FieldCollisionActor* actor;
@@ -1189,7 +1189,7 @@ static void field_refresh_actor_collisions(void)
     FieldCollisionRequest* mover = (FieldCollisionRequest*)0x1F800000;
     s32 i, x, z;
     actor = g_field_actors;
-    slot = D_80105AE0;
+    slot = g_field_object_states;
     for (i = 0; i < 13; i++, slot++, actor++)
     {
         if (actor->presence != 0xFF)

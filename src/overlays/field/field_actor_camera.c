@@ -81,7 +81,7 @@ extern void func_80092200(void);
 extern void func_800922B8(void);
 
 extern Actor g_field_actors[];
-extern Slot D_80105AE0[];
+extern Slot g_field_object_states[];
 extern Point D_801077FC;
 extern FieldThreshold g_field_group_bounds[];
 
@@ -123,7 +123,7 @@ void func_80091BC8(void)
     do
     {
         actor = &g_field_actors[index];
-        slot = &D_80105AE0[index];
+        slot = &g_field_object_states[index];
         if ((actor->presence != 0xFF) && !(slot->flags & 0x23E4))
         {
             target_x -= actor->x;

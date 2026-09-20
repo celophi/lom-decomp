@@ -9,7 +9,7 @@
  *
  * Consolidated translation unit merged from the per-function FIELD sources.
  * Symbols whose declared type differs between the original files (g_pad_ctx,
- * D_800FE3A0, D_8011F3D2, g_field_actors, D_80105AE0) are declared at block scope
+ * D_800FE3A0, D_8011F3D2, g_field_actors, g_field_object_states) are declared at block scope
  * inside each user with that function's original type, and are deliberately
  * kept out of file scope: GCC 2.7.2 accepts the incompatible block-scope
  * externs (warning only) and emits identical code, whereas a file-scope copy
@@ -694,7 +694,7 @@ void func_800A939C(void *context)
     extern s32 g_pad_ctx;
     extern u8 g_field_actors[];
     extern u8 D_800FE3A0[];
-    extern u8 D_80105AE0[];
+    extern u8 g_field_object_states[];
     extern u8 D_8011F3D2;
     s32 custom_text_offset;
     s32 pad_offset;
@@ -890,7 +890,7 @@ void func_800A939C(void *context)
         {
             actor_id = D_801226E0[index];
             camera_x = g_field_view_offset_x;
-            text_address = (s32)((actor_id * 0x23C) + (s32)D_80105AE0);
+            text_address = (s32)((actor_id * 0x23C) + (s32)g_field_object_states);
             actor_position = (void *)((actor_id * 0x54) + (s32)g_field_actors);
             if (camera_x < 0)
             {
@@ -1266,7 +1266,7 @@ void func_800AA098(s32 arg0)
 {
     extern PadContext *g_pad_ctx;
     extern FieldInputActor g_field_actors[];
-    extern FieldInputSlot D_80105AE0[];
+    extern FieldInputSlot g_field_object_states[];
     FieldInputHardware *pad = (FieldInputHardware *)0x801ED600;
     u32 buttons;
     FieldInputActor *actor;
@@ -1395,7 +1395,7 @@ open_menu:
                 {
                     index = i;
                     absent = 0xFF;
-                    slot = D_80105AE0;
+                    slot = g_field_object_states;
                     actor2 = g_field_actors;
                     do
                     {
@@ -1426,20 +1426,20 @@ open_menu:
  */
 s32 func_800AA498(void)
 {
-    extern Struct_D80105AE0 D_80105AE0[];
+    extern Struct_D80105AE0 g_field_object_states[];
 
     if (g_field_active_group != 0)
     {
         if (!(g_frame_counter & 0x1F))
         {
-            if ((D_80105AE0[0].unk4 != 0) && ((u32) (D_80105AE0[0].unk4 * 4) < (u32) D_80105AE0[0].unk0))
+            if ((g_field_object_states[0].unk4 != 0) && ((u32) (g_field_object_states[0].unk4 * 4) < (u32) g_field_object_states[0].unk0))
             {
                 func_800A3938(0xA6, 0x80);
             }
         }
 
         if (!((g_frame_counter + 0x10) & 0x1F) && !(D_800FDFC8 & 0x1FF) &&
-            (D_80105AE0[1].unk4 != 0) && ((u32) (D_80105AE0[1].unk4 * 4) < (u32) D_80105AE0[1].unk0))
+            (g_field_object_states[1].unk4 != 0) && ((u32) (g_field_object_states[1].unk4 * 4) < (u32) g_field_object_states[1].unk0))
         {
             func_800A3938(0xA6, 0x80);
         }

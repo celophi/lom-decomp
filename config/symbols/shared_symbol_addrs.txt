@@ -1201,3 +1201,6 @@ field_text_set_position                  = 0x800674A8;
 field_text_close_window                  = 0x800674D8;
 field_text_get_status                    = 0x8006751C;
 field_text_get_choice                    = 0x80067598;
+
+// Field object runtime state, also read by MENU.
+g_field_object_states               = 0x80105AE0;

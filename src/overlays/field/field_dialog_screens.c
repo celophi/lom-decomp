@@ -9,7 +9,7 @@
  *
  * Merges the per-function sources for the vram range 0x800A6EEC .. 0x800A88A0
  * into one TU. Symbols whose type varies between functions (D_800FD818,
- * D_80105AE0, D_8010D038, g_pad_ctx, bcopy, func_800ADF84, func_800A88A0,
+ * g_field_object_states, D_8010D038, g_pad_ctx, bcopy, func_800ADF84, func_800A88A0,
  * func_800A8A78, func_800A838C) are declared at BLOCK scope inside each user
  * with that function's original type; GCC 2.7.2 emits identical code and only
  * warns. Do not hoist any of them to file scope.
@@ -277,7 +277,7 @@ void func_800A6F1C(void)
     extern void bcopy(void *, void *, s32);
     extern Pad *g_pad_ctx;
     extern u8 D_800FD818[];
-    extern Actor D_80105AE0[];
+    extern Actor g_field_object_states[];
 
     volatile Actor *actor;
     s32 prompt_state;
@@ -320,7 +320,7 @@ void func_800A6F1C(void)
             high_mask = 0xFF000000;
             sentinel = 0xFF;
             actor_flags = D_800FD818;
-            actor = D_80105AE0;
+            actor = g_field_object_states;
             do
             {
                 /* Preserve both address reads before updating the packed fields. */
@@ -483,7 +483,7 @@ void func_800A71CC(void)
 void func_800A7384(void)
 {
     extern Entry268 D_800FD818[];
-    extern State23C D_80105AE0[];
+    extern State23C g_field_object_states[];
 
     s32 i;
 
@@ -500,8 +500,8 @@ void func_800A7384(void)
 
     i = 0;
     do {
-        D_80105AE0[i].unkC = 0;
-        D_80105AE0[i].unk178 &= ~0x20;
+        g_field_object_states[i].unkC = 0;
+        g_field_object_states[i].unk178 &= ~0x20;
         i++;
     } while (i < 3);
     g_field_dialog_item_count = 0;

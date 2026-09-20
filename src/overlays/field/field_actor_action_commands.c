@@ -19,7 +19,7 @@ typedef struct
     u8 pad26[0x54 - 0x26];
 } RecB800FDF58;
 
-extern RecA80105AE0 D_80105AE0[];
+extern RecA80105AE0 g_field_object_states[];
 extern RecB800FDF58 g_field_actors[];
 
 /**
@@ -33,7 +33,7 @@ s32 func_80089A68(s32 arg0)
     s32 i;
 
     rb = g_field_actors;
-    ra = D_80105AE0;
+    ra = g_field_object_states;
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
         if (ra->unk14 == arg0)
@@ -113,7 +113,7 @@ s32 func_80089AE4(s32 arg0, s32 arg1)
     s32 i;
 
     rb = ((RecordB80089AE4 *)g_field_actors);
-    ra = ((StateB80089AE4 *)D_80105AE0);
+    ra = ((StateB80089AE4 *)g_field_object_states);
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
         if (ra->unk14 == arg0)
@@ -156,7 +156,7 @@ body:
 /* func_80089BE8 */
 #include "common.h"
 
-/** @brief Per-actor slot in ((SlotA *)D_80105AE0); stride 0x23C. */
+/** @brief Per-actor slot in ((SlotA *)g_field_object_states); stride 0x23C. */
 typedef struct
 {
     u8 pad0[0x14];
@@ -204,7 +204,7 @@ s32 func_80089BE8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     s32 i;
 
     scan = ((EntryB *)g_field_actors);
-    e = ((SlotA *)D_80105AE0);
+    e = ((SlotA *)g_field_object_states);
     i = 0;
 loop:
     i++;
@@ -354,7 +354,7 @@ s32 func_80089D44(s32 key, s32 requested_state, s32 animation, s32 event_id)
     camera = (CameraPosition *)0x801ED480;
     state = requested_state;
     scan_record = ((FieldRecord *)g_field_actors);
-    lookup_state = ((FieldState *)D_80105AE0);
+    lookup_state = ((FieldState *)g_field_object_states);
     for (i = 0; i < 0xD; i++, lookup_state++, scan_record++)
 
     {
@@ -394,22 +394,22 @@ body:
         if ((animation_slot != -1) && (func_80083EEC(record->unk3A, animation_slot, animation) != 0))
         {
             field_start_actor_animation(animation_slot, 0, 0);
-            ((FieldState *)D_80105AE0)[record->unk3A].flags.bytes.animation = animation_slot;
+            ((FieldState *)g_field_object_states)[record->unk3A].flags.bytes.animation = animation_slot;
         }
     }
     if (event_id != -1)
     {
         func_800A3938(event_id, 0x80);
     }
-    func_800B48B8(((FieldState *)D_80105AE0)[record->unk3A].unk14);
-    ((FieldState *)D_80105AE0)[record->unk3A].unkC = 0;
-    runtime_flags = &((FieldState *)D_80105AE0)[record->unk3A];
+    func_800B48B8(((FieldState *)g_field_object_states)[record->unk3A].unk14);
+    ((FieldState *)g_field_object_states)[record->unk3A].unkC = 0;
+    runtime_flags = &((FieldState *)g_field_object_states)[record->unk3A];
     runtime_flags->flags.word = (s32) (runtime_flags->flags.word & ~0x20);
-    resources = &((FieldState *)D_80105AE0)[record->unk3A];
+    resources = &((FieldState *)g_field_object_states)[record->unk3A];
     resources->unk8 = (s32) ((resources->unk8 & 0xFF000000) | (resources->unk0 & 0xFFFFFF));
     resources->unk4 = (s32) (resources->unk0 & 0xFFFFFF);
-    ((FieldState *)D_80105AE0)[record->unk3A].unk1AB = 0x3C;
-    runtime_mode = &((FieldState *)D_80105AE0)[record->unk3A];
+    ((FieldState *)g_field_object_states)[record->unk3A].unk1AB = 0x3C;
+    runtime_mode = &((FieldState *)g_field_object_states)[record->unk3A];
     runtime_mode->unk174 = (s32) (runtime_mode->unk174 | 0x8000);
     if (record->unk3A < 3U &&
         (record->unk0 <= -camera->x + 0xA00 ||
@@ -419,7 +419,7 @@ body:
          {
         slot = 0;
         unavailable = 0xFF;
-        scan_state = ((FieldState *)D_80105AE0);
+        scan_state = ((FieldState *)g_field_object_states);
         candidate = ((FieldRecord *)g_field_actors);
         for (; slot < 3; scan_state++, slot++, candidate++)
 
@@ -544,15 +544,15 @@ void func_8008A0B0(CommandView5_FieldRecord *record, s32 source_index, s32 updat
         (map_width = bounds->unk0 << 8, ((x < map_width) == 0)) ||
         (z = record->unk8, (z < 0)) ||
         (map_depth = (s32) (bounds->unk2 << 0x10) >> 7, ((z < map_depth) == 0)) ||
-        (state_x = ((CommandView5_FieldState *)D_80105AE0)[record->unk3a].unk50, (state_x < 0)) ||
+        (state_x = ((CommandView5_FieldState *)g_field_object_states)[record->unk3a].unk50, (state_x < 0)) ||
         (state_x >= map_width) ||
-        (state_z = ((CommandView5_FieldState *)D_80105AE0)[record->unk3a].unk58, (state_z < 0)) ||
+        (state_z = ((CommandView5_FieldState *)g_field_object_states)[record->unk3a].unk58, (state_z < 0)) ||
         (state_z >= map_depth))
     {
-        (&((CommandView5_FieldState *)D_80105AE0)[record->unk3a])->unk1a6 = 0;
-        (&((CommandView5_FieldState *)D_80105AE0)[record->unk3a])->unk1ac = ((CommandView5_FieldRecord *)g_field_actors)[source_index].unk0;
-        (&((CommandView5_FieldState *)D_80105AE0)[record->unk3a])->unk1b0 = ((CommandView5_FieldRecord *)g_field_actors)[source_index].unk8;
-        ((CommandView5_FieldState *)D_80105AE0)[record->unk3a].unk1a4 = 1;
+        (&((CommandView5_FieldState *)g_field_object_states)[record->unk3a])->unk1a6 = 0;
+        (&((CommandView5_FieldState *)g_field_object_states)[record->unk3a])->unk1ac = ((CommandView5_FieldRecord *)g_field_actors)[source_index].unk0;
+        (&((CommandView5_FieldState *)g_field_object_states)[record->unk3a])->unk1b0 = ((CommandView5_FieldRecord *)g_field_actors)[source_index].unk8;
+        ((CommandView5_FieldState *)g_field_object_states)[record->unk3a].unk1a4 = 1;
     }
     else
     {
@@ -700,7 +700,7 @@ s32 func_8008A580(s32 key, s32 arg1)
     s32 *table;
 
     scan = ((FieldActorRecord *)g_field_actors);
-    e = ((FieldActorSlot *)D_80105AE0);
+    e = ((FieldActorSlot *)g_field_object_states);
     i = 0;
 loop:
     i++;
@@ -737,7 +737,7 @@ body:
             slot = table + 2;
         }
         *slot = 1;
-        ((FieldActorSlot *)D_80105AE0)[found->unk3A].unk3C = 0xFFFF;
+        ((FieldActorSlot *)g_field_object_states)[found->unk3A].unk3C = 0xFFFF;
     }
     else
     {
@@ -806,7 +806,7 @@ void func_8008A678(s32 index)
     s32 i;
     s32 stride8;
 
-    base = ((CommandView8_FieldState *)D_80105AE0);
+    base = ((CommandView8_FieldState *)g_field_object_states);
     stride8 = index * 8;
     source = (CommandView8_FieldState *)((u8 *)base + ((stride8 + index) * 16 - index) * 4);
     i = 0;
@@ -854,7 +854,7 @@ stride_update:
             i++;
         } while (i < ((CommandView8_FieldState *)((u8 *)loop_base + (((stride8 + index) * 16 - index) * 4)))->state.bytes.count);
     }
-    ((CommandView8_FieldState *)D_80105AE0)[index].state.bytes.count = 0;
+    ((CommandView8_FieldState *)g_field_object_states)[index].state.bytes.count = 0;
 }
 
 
@@ -918,7 +918,7 @@ s32 func_8008A840(s32 arg0, s32 arg1)
     {
         return 0;
     }
-    base = ((State23C *)D_80105AE0);
+    base = ((State23C *)g_field_object_states);
     other = &base[arg1];
     other->unk178 = other->unk178 & ~0x80;
     if (other->unk4 == 0)
@@ -935,7 +935,7 @@ s32 func_8008A840(s32 arg0, s32 arg1)
     {
         arg_block.unk4 = 0;
     }
-    arg_block.unkC = ((State23C *)D_80105AE0)[arg1].unk14;
+    arg_block.unkC = ((State23C *)g_field_object_states)[arg1].unk14;
     if (arg0 < 2)
     {
         arg_block.unk8 = (s32)((Rec54 *)g_field_actors)[arg0].unk30;
@@ -946,7 +946,7 @@ s32 func_8008A840(s32 arg0, s32 arg1)
     }
     arg_block.unk10 = 0;
     arg_block.unk14 = 0;
-    mask = ((u32)((State23C *)D_80105AE0)[arg0].unk178 >> 2) & 7;
+    mask = ((u32)((State23C *)g_field_object_states)[arg0].unk178 >> 2) & 7;
     if (mask == 0)
     {
         mask = 1;
@@ -1007,7 +1007,7 @@ s32 func_8008A9D8(s32 arg0, s32 arg1, s32 arg2)
 
     if ((((CommandView10_Rec54 *)g_field_actors)[arg0].unk2A != 0x91) && (((CommandView10_Rec54 *)g_field_actors)[arg0].unk2A != 0x87))
     {
-        base = ((CommandView10_State23C *)D_80105AE0);
+        base = ((CommandView10_State23C *)g_field_object_states);
         slot = &base[arg1];
         slot->unk178 = slot->unk178 & ~0x80;
         if (slot->unk4 != 0)
@@ -1068,8 +1068,8 @@ void func_8008AABC(s32 a, s32 b)
 {
     ArgB5F60 s;
 
-    s.unk0 = ((Struct_D80105AE0 *)D_80105AE0)[a].unk14;
-    s.unkC = ((Struct_D80105AE0 *)D_80105AE0)[b].unk14;
+    s.unk0 = ((Struct_D80105AE0 *)g_field_object_states)[a].unk14;
+    s.unkC = ((Struct_D80105AE0 *)g_field_object_states)[b].unk14;
     s.unk18 = 1;
     func_800B5F60(&s);
 }
@@ -1134,7 +1134,7 @@ s32 func_8008AB2C(s32 arg0, s32 arg1)
     u8 *actor_base;
 
     entry_cursor = ((Entry *)g_field_actors);
-    actor_cursor = ((Actor *)D_80105AE0);
+    actor_cursor = ((Actor *)g_field_object_states);
     entry_count = 0;
 loop_1:
     entry_count += 1;
@@ -1173,7 +1173,7 @@ body:
             g_pad_ctx->unk3154 = (s32)(pad_counter + 1);
         }
     }
-    actor_base = (u8 *)((Actor *)D_80105AE0);
+    actor_base = (u8 *)((Actor *)g_field_object_states);
     actor = (Actor *)(actor_base + entry->unk3A * 0x23C);
     actor->unkC = (s32)(actor->unkC | 0x10000000);
     if ((u8)entry->unk3A < 3U)
@@ -1199,7 +1199,7 @@ body:
     }
     if (action >= 0x85)
     {
-        switch (((Actor *)((u8 *)((Actor *)D_80105AE0) + entry->unk3A * 0x23C))->unk16F)
+        switch (((Actor *)((u8 *)((Actor *)g_field_object_states) + entry->unk3A * 0x23C))->unk16F)
         {
         case 0:
         case 1:
@@ -1210,7 +1210,7 @@ body:
         case 10:
             break;
         default:
-            if (!(((u32)((Actor *)((u8 *)((Actor *)D_80105AE0) + entry->unk3A * 0x23C))->unk178 >> 6) & 1))
+            if (!(((u32)((Actor *)((u8 *)((Actor *)g_field_object_states) + entry->unk3A * 0x23C))->unk178 >> 6) & 1))
             {
                 return 0;
             }

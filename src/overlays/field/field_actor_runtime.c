@@ -349,9 +349,9 @@ typedef struct
     s32 unk19C;
     s32 unk1A0;
     u8 pad1A4[0x1A8 - 0x1A4];
-    u8 unk1A8;
-    u8 unk1A9;
-    u8 unk1AA;
+    u8 tint_red;
+    u8 tint_green;
+    u8 tint_blue;
     u8 pad1AB[0x23C - 0x1AB];
 } FieldActorObjectState;
 
@@ -486,7 +486,7 @@ extern s32 D_800F227C;
 extern s32 D_800F2280;
 extern FieldActorState g_field_actor_slots[80];
 extern FieldActorObjectRecord g_field_actors[];
-extern FieldActorObjectState D_80105AE0[];
+extern FieldActorObjectState g_field_object_states[];
 extern u8 D_800FF59C;
 
 extern void* bcopy(const void*, void*, int);
@@ -611,7 +611,7 @@ void func_8006809C(void)
             g_field_actors[i].unk24 = 1;
             g_field_actors[i].unk1C &= ~0x1FF;
             g_field_actors[i].unk21 = (g_field_actors[i].unk21 & 0x80) + 0x12;
-            D_80105AE0[i].unk174 &= ~0x1800;
+            g_field_object_states[i].unk174 &= ~0x1800;
             field_restart_actor_animation(&g_field_actors[i], (void*)~0x1FF);
         }
     }
@@ -969,14 +969,14 @@ s32 field_finalize_actor_animation(FieldActorState* actor)
         actor->unk23B = 0;
         if (actor->unkC->unk18 & 2)
         {
-            if (D_80105AE0[actor->owner_object_index].u.b.unk17A == actor->unk233)
+            if (g_field_object_states[actor->owner_object_index].u.b.unk17A == actor->unk233)
             {
                 object_state = g_field_actors[actor->owner_object_index].unk2A;
-                if (((object_state != 0x90) && (object_state != 0x94)) || (D_80105AE0[actor->owner_object_index].unkC & 0x200))
+                if (((object_state != 0x90) && (object_state != 0x94)) || (g_field_object_states[actor->owner_object_index].unkC & 0x200))
                 {
                     g_field_actors[actor->owner_object_index].unk25 = 0;
                 }
-                D_80105AE0[actor->owner_object_index].u.unk178 &= ~1;
+                g_field_object_states[actor->owner_object_index].u.unk178 &= ~1;
             }
         }
         if (actor->unkC->unk18 & 4)
@@ -985,11 +985,11 @@ s32 field_finalize_actor_animation(FieldActorState* actor)
             {
                 if (actor->unk229[found] != 0xFF)
                 {
-                    state_value = D_80105AE0[actor->unk229[found]].u.unk178;
-                    if ((state_value & 1) && (D_80105AE0[actor->unk229[found]].u.b.unk17A == actor->unk233))
+                    state_value = g_field_object_states[actor->unk229[found]].u.unk178;
+                    if ((state_value & 1) && (g_field_object_states[actor->unk229[found]].u.b.unk17A == actor->unk233))
                     {
                         g_field_actors[actor->unk229[found]].unk25 = 0;
-                        D_80105AE0[actor->unk229[found]].u.unk178 &= ~1;
+                        g_field_object_states[actor->unk229[found]].u.unk178 &= ~1;
                     }
                 }
             }
@@ -1215,7 +1215,7 @@ void field_initialize_actor_slots(void)
     object_index = 0;
     do
     {
-        D_80105AE0[object_index].u.unk178 &= ~1;
+        g_field_object_states[object_index].u.unk178 &= ~1;
         object_index++;
     } while (object_index < 0xD);
     actor_index = 0;
@@ -1685,8 +1685,8 @@ void field_build_actor_render_commands(void* render_context)
                 if (object_state_value != 0)
                 {
                     g_field_actors[actor->owner_object_index].unk25 = object_state_value;
-                    D_80105AE0[actor->owner_object_index].u.unk178 |= 1;
-                    D_80105AE0[actor->owner_object_index].u.b.unk17A = actor->unk233;
+                    g_field_object_states[actor->owner_object_index].u.unk178 |= 1;
+                    g_field_object_states[actor->owner_object_index].u.b.unk17A = actor->unk233;
                 }
                 else
                 {
@@ -1694,7 +1694,7 @@ void field_build_actor_render_commands(void* render_context)
                     s16 owner_state = g_field_actors[owner_index].unk2A;
                     if ((owner_state == 0x90) || (owner_state == 0x94))
                     {
-                        if (D_80105AE0[owner_index].unkC & 0x200)
+                        if (g_field_object_states[owner_index].unkC & 0x200)
                         {
                             g_field_actors[actor->owner_object_index].unk25 = object_state_value;
                         }
@@ -1729,8 +1729,8 @@ void field_build_actor_render_commands(void* render_context)
                                 g_field_actors[actor->unk229[target_index]].unk25 = target_state_value;
                                 do
                                 {
-                                    D_80105AE0[actor->unk229[target_index]].u.unk178 |= 1;
-                                    D_80105AE0[actor->unk229[target_index]].u.b.unk17A = actor->unk233;
+                                    g_field_object_states[actor->unk229[target_index]].u.unk178 |= 1;
+                                    g_field_object_states[actor->unk229[target_index]].u.b.unk17A = actor->unk233;
                                 } while (0);
                                 ((u8*)actor)[0x225] = 1;
                             }
@@ -2695,11 +2695,11 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     mask_b = 0xEFFFFFFF;
     mask_c = 0xFFFBFFFF;
 
-    D_80105AE0[actor_index].unk19C = -1;
-    D_80105AE0[actor_index].unk1A0 = 0;
-    D_80105AE0[actor_index].unk18E = 0;
-    D_80105AE0[actor_index].u.unk178 &= ~0x80;
-    D_80105AE0[actor_index].u.unk178 &= ~0x40;
+    g_field_object_states[actor_index].unk19C = -1;
+    g_field_object_states[actor_index].unk1A0 = 0;
+    g_field_object_states[actor_index].unk18E = 0;
+    g_field_object_states[actor_index].u.unk178 &= ~0x80;
+    g_field_object_states[actor_index].u.unk178 &= ~0x40;
 
     g_field_actors[actor_index].unk22 = (s8)(actor_index + 0x30);
     g_field_actors[actor_index].unk28 = 0xFF;
@@ -2834,9 +2834,9 @@ void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_fl
     mode_bits = (render_mode & 3) << 22;
     for (i = 0; i < 13; i++)
     {
-        D_80105AE0[i].unk1A8 = red;
-        D_80105AE0[i].unk1A9 = green;
-        D_80105AE0[i].unk1AA = blue;
+        g_field_object_states[i].tint_red = red;
+        g_field_object_states[i].tint_green = green;
+        g_field_object_states[i].tint_blue = blue;
         D_800FE3A0[i].unkE = red;
         D_800FE3A0[i].unkF = green;
         D_800FE3A0[i].unk10 = blue;
@@ -2872,9 +2872,9 @@ s32 field_set_actor_render_state(s32 red, s32 green, s32 blue, s32 color_flag, s
         return -1;
     }
 
-    D_80105AE0[rec->unk3A].unk1A8 = red;
-    D_80105AE0[rec->unk3A].unk1A9 = green;
-    D_80105AE0[rec->unk3A].unk1AA = blue;
+    g_field_object_states[rec->unk3A].tint_red = red;
+    g_field_object_states[rec->unk3A].tint_green = green;
+    g_field_object_states[rec->unk3A].tint_blue = blue;
     D_800FE3A0[rec->unk3A].unkE = red;
     D_800FE3A0[rec->unk3A].unkF = green;
     D_800FE3A0[rec->unk3A].unk10 = blue;
@@ -2965,7 +2965,7 @@ void field_update_actor_objects(void)
     s32 index;
 
     record = &g_field_actors[0];
-    actor_state = &D_80105AE0[0];
+    actor_state = &g_field_object_states[0];
 
     if (D_80122714 == 0)
     {
@@ -3113,7 +3113,7 @@ void field_render_actor_objects(FieldRenderContext *render_context)
     record = &g_field_actors[0];
     ordering_table = &render_context->ordering_table;
     i = 0;
-    actor_state = &D_80105AE0[0];
+    actor_state = &g_field_object_states[0];
     packet_cursor = render_context->packet_cursor;
 
     do

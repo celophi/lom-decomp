@@ -1929,10 +1929,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             break;
                             case 0x4:
                             {
-                                u8* rec_base = (u8*)&D_80105AE0;
-                                s32 rec_off = g_menu_char_slot * 0x23C;
                                 packet_cursor =
-                                    func_800A8A78(ot_entry, packet_cursor, *(s32*)(rec_base + rec_off + 4), 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    func_800A8A78(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x5:

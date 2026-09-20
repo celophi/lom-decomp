@@ -21,7 +21,7 @@ typedef struct {
     u8 pad10[0x14 - 0x10];
 } ResEntry;
 
-extern ActorRec D_80105AE0[];
+extern ActorRec g_field_object_states[];
 extern ResEntry g_field_resource_entries[];
 
 
@@ -36,7 +36,7 @@ s32 func_80094EA4(ActorRec *arg0)
 {
     s32 result;
 
-    result = D_80105AE0[arg0->unk3A].unk178 & 1;
+    result = g_field_object_states[arg0->unk3A].unk178 & 1;
     if (result == 0)
     {
         result = func_8009104C(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE);
@@ -59,7 +59,7 @@ s32 func_80094F40(ActorRec *arg0)
 {
     s32 result;
 
-    result = D_80105AE0[arg0->unk3A].unk178 & 1;
+    result = g_field_object_states[arg0->unk3A].unk178 & 1;
     if (result == 0)
     {
         result = func_8009104C(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE);
