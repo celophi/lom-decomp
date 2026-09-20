@@ -1527,7 +1527,7 @@ void field_update_actor_animations(void)
                                 ((&actor->unk28)->unk1C4[track_index] < ((&actor->unk0[actor->unkC->unk15])->unk31 + (&actor->unk0[actor->unkC->unk15])->unkD)))
                             {
                                 g_field_track_index = track_index;
-                                func_80099A48(actor, &actor->unk0[actor->unkC->unk15]);
+                                field_collect_attack_sphere_hits(actor, &actor->unk0[actor->unkC->unk15]);
                             }
                         }
                     }
@@ -1538,7 +1538,7 @@ void field_update_actor_animations(void)
                             if ((&actor->unk0[actor->unkC->unk15])->unkD > (&actor->unk28)->unk1C4[track_index])
                             {
                                 g_field_track_index = track_index;
-                                func_80099A48(actor, &actor->unk0[actor->unkC->unk15]);
+                                field_collect_attack_sphere_hits(actor, &actor->unk0[actor->unkC->unk15]);
                             }
                         }
                     }
@@ -1546,7 +1546,7 @@ void field_update_actor_animations(void)
                              ((&actor->unk28)->unk1C4[0] < ((&actor->unk0[actor->unkC->unk15])->unk31 + (&actor->unk0[actor->unkC->unk15])->unkD)))
                     {
                         g_field_track_index = 0;
-                        func_80099A48(actor, &actor->unk0[actor->unkC->unk15]);
+                        field_collect_attack_sphere_hits(actor, &actor->unk0[actor->unkC->unk15]);
                     }
                 }
                 animation = actor->unkC;

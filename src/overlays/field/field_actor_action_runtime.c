@@ -317,7 +317,7 @@ void field_restart_actor_animation(FieldSequenceRecord *);
 void func_8008A678(s32);
 void field_update_sequence_actor_binding();
 s32 field_execute_actor_sequence(FieldSequenceRecord *, s32);
-s32 func_80097FA0(FieldSequenceRecord *, Vec3i *, s32);
+s32 field_resolve_actor_movement(FieldSequenceRecord *, Vec3i *, s32);
 void func_800A2DD8(s32);
 
 /**
@@ -471,7 +471,7 @@ apply_motion:
     }
     scratch->z = 0;
     scratch->y = 0;
-    func_80097FA0(record, scratch, 1);
+    field_resolve_actor_movement(record, scratch, 1);
     if (g_field_resource_entries[record->resource_id].mode == 0)
     {
         final_base = ((FieldSequenceSlot *)g_field_object_states);

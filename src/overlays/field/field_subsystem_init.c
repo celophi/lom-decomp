@@ -16,7 +16,7 @@ void func_80084240(void);                                  /* extern */
 void func_80084524(void);                                  /* extern */
 void func_80086F20(void);                                  /* extern */
 void func_80091410(void);                                  /* extern */
-void func_800970B0(void);                                  /* extern */
+void field_load_actor_sequence_data(void);                                  /* extern */
 void func_800A255C(void);                                  /* extern */
 void func_800A2DFC(void);                                  /* extern */
 void func_800A3EBC(void);                                  /* extern */
@@ -108,7 +108,7 @@ void field_initialize_subsystems(s32 arg0)
     func_800A2DFC();
     func_800AA824();
     field_reset_fade_state();
-    func_800970B0();
+    field_load_actor_sequence_data();
     D_801227DC[0] = 0;
     func_800A6204();
     D_8011F3AC[0] = 0;

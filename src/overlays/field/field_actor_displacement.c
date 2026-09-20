@@ -33,7 +33,7 @@ typedef struct
 extern FieldActorPartDef g_field_object_parts[];
 
 void func_8008EBA4();
-s32 func_80097FA0();
+s32 field_resolve_actor_movement();
 
 /**
  * @brief Update actor movement and clear selected states when the transform fails.
@@ -64,7 +64,7 @@ s32 func_80094508(FieldActorState *arg0, s32 arg1, s32 arg2, s32 arg3)
         out[0] = (temp_lo * arg1 * part->unk2E) >> 6;
         out[1] = (arg2 * part->unk33) >> 6;
         out[2] = (temp_lo * arg3 * part->unk2E) >> 6;
-        if (func_80097FA0(arg0, out, 0) == 0)
+        if (field_resolve_actor_movement(arg0, out, 0) == 0)
         {
             state = arg0->unk2A;
             if (state == 0x8B || state == 0xAC || state == 0x8C || state == 0xB0 || state == 0xB1)
@@ -91,7 +91,7 @@ typedef struct Record94690
     s16 value;
 } Record94690;
 
-s32 func_80097FA0();
+s32 field_resolve_actor_movement();
 
 /**
  * @brief Tests a scaled X/Z displacement for a field record.
@@ -117,7 +117,7 @@ void func_80094690(Record94690 *record, s32 x, s32 z)
     vector->x = scaled;
     scaled = z * record->scale;
     vector->z = scaled;
-    if (func_80097FA0(record, vector, 0, scaled) == 0)
+    if (field_resolve_actor_movement(record, vector, 0, scaled) == 0)
     {
         record->value = 0;
     }
@@ -172,7 +172,7 @@ extern FieldFollowSlot g_field_object_states[];
 extern FieldFollowResource g_field_resource_entries[];
 void func_8008EBA4();
 extern void field_restart_sequence_animation(FieldFollowRecord *);
-s32 func_80097FA0();
+s32 field_resolve_actor_movement();
 
 /**
  * @brief Follow stored leader positions or restore the record's idle behavior.
@@ -244,7 +244,7 @@ void func_800946FC(FieldFollowRecord *record)
         goto clear_state;
     }
     func_8008EBA4(record, delta->vx, delta->vz);
-    if (func_80097FA0(record, delta, 0) == 0)
+    if (field_resolve_actor_movement(record, delta, 0) == 0)
     {
         record->unk33 = 0;
     clear_state:
@@ -288,7 +288,7 @@ typedef struct
 extern FieldTrackEntry g_field_actor_bindings[];
 extern FieldTrackActor g_field_actor_slots[];
 
-s32 func_80097FA0();
+s32 field_resolve_actor_movement();
 
 /**
  * @brief Validate an actor's active track state or submit a scaled scratchpad vector.
@@ -369,7 +369,7 @@ void func_800949CC(FieldActorRecord *record, s32 x, s32 y, s32 z)
         scratch[0] = x * record->scale;
         scratch[1] = y * record->scale;
         scratch[2] = z * record->scale;
-        func_80097FA0(record, scratch, 0);
+        field_resolve_actor_movement(record, scratch, 0);
     }
 }
 

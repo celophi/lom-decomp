@@ -18,15 +18,15 @@ typedef struct
     s32 point;
 } FieldContactResult;
 
-void func_800970B0(void);
-s32 func_80097150(FieldContactPoint* quad, FieldMotionRecord* record, FieldContactResult* contact);
-s32 func_800978AC(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec2s* second_end);
-s32 func_80097FA0(FieldMotionRecord* actor, s32* position, s32 mode);
-s32 func_800987DC(FieldMotionRecord* record, s32* position, s32 filter_group);
-void func_80098C7C(FieldMotionRecord* record, s32 actor_index);
-void func_80098DD4(FieldMotionRecord* entry);
-s32 func_8009980C(s32* reference_position, s32 distance_limit, FieldActorState* source_actor, s32 opposing_group);
-void func_80099A48(FieldActorState* actor, FieldActorPartDef* part);
-s32 func_8009A204(VECTOR* a, VECTOR* b);
+void field_load_actor_sequence_data(void);
+s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* record, FieldContactResult* contact);
+s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s* second_start, Vec2s* second_end);
+s32 field_resolve_actor_movement(FieldMotionRecord* actor, s32* position, s32 mode);
+s32 field_find_actor_overlap(FieldMotionRecord* record, s32* position, s32 filter_group);
+void field_start_actor_contact_interaction(FieldMotionRecord* record, s32 actor_index);
+void field_probe_actor_interaction(FieldMotionRecord* entry);
+s32 field_find_actor_in_range(s32* reference_position, s32 distance_limit, FieldActorState* source_actor, s32 opposing_group);
+void field_collect_attack_sphere_hits(FieldActorState* actor, FieldActorPartDef* part);
+s32 field_get_position_distance(VECTOR* a, VECTOR* b);
 
 #endif

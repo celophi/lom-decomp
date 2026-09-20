@@ -228,7 +228,7 @@ extern u8 D_801228E0[];
 
 /* Field / actor tables. */
 extern StructFE054 g_field_scene_actors[];
-extern Struct106194 D_80106194[];
+extern Struct106194 g_field_scene_object_states[];
 extern s32 g_field_active_group;
 extern s32 D_800FDFC8;
 
@@ -626,7 +626,7 @@ void func_800A9198(void)
     akao_stop_sfx_by_id(0x7E);
     t0 = g_field_scene_actors;
     a2 = 3;
-    base0 = (u8 *)D_80106194;
+    base0 = (u8 *)g_field_scene_object_states;
     a0 = (Struct106194 *)base0;
     D_801227D0 = 0;
     D_8011F3D2 = 0;

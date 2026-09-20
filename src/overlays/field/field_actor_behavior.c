@@ -122,8 +122,8 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
     s16 func_80091914(void *, s32);
     void func_80091AC8(void *, s32);
     s32 func_80092988(void *, s32 *);
-    s32 func_800987DC(void *, void *, s32);
-    void func_80098C7C(void *, s32);
+    s32 field_find_actor_overlap(void *, void *, s32);
+    void field_start_actor_contact_interaction(void *, s32);
     void func_800A2594(s32, s32);
     s32 func_800A6490(void);
     s32 func_800B0850(void);
@@ -393,7 +393,7 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
         {
             S32_AT(movement_actor, 0x0) = work.motion.vx;
             S32_AT(movement_actor, 0x8) = work.motion.vz;
-            if (func_800987DC(movement_actor, movement_actor, 0) == 0)
+            if (field_find_actor_overlap(movement_actor, movement_actor, 0) == 0)
             {
                 old_slot = (U8_AT(movement_actor, 0x3A) * 0x23C) + (s32)g_field_object_states;
                 S32_AT(old_slot, 0x174) = (s32)(S32_AT(old_slot, 0x174) & ~0x4000);
@@ -401,7 +401,7 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
         }
         else
         {
-            sentinel_or_reaction = func_800987DC(movement_actor, &work.motion.vx, 0) & 0x7FFF;
+            sentinel_or_reaction = field_find_actor_overlap(movement_actor, &work.motion.vx, 0) & 0x7FFF;
             if (sentinel_or_reaction < 3)
             {
                 S32_AT(movement_actor, 0x0) = work.motion.vx;
@@ -409,13 +409,13 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
             }
             else
             {
-                if (func_800987DC(movement_actor, movement_actor, 0) != 0)
+                if (field_find_actor_overlap(movement_actor, movement_actor, 0) != 0)
                 {
                     new_slot = (U8_AT(movement_actor, 0x3A) * 0x23C) + (s32)g_field_object_states;
                     S32_AT(new_slot, 0x174) = (s32)(S32_AT(new_slot, 0x174) | 0x4000);
                 }
                 ((MovementFlags *)movement_actor)->flags = (u32)(((MovementFlags *)movement_actor)->flags & ~0x600);
-                func_80098C7C(movement_actor, sentinel_or_reaction);
+                field_start_actor_contact_interaction(movement_actor, sentinel_or_reaction);
             }
         }
     }
@@ -1040,7 +1040,7 @@ s32 func_8008EF0C(void* arg0)
         scratch.sp50 = 0;
         scratch.sp54 = 0;
         scratch.sp58 = 0;
-        func_80097FA0(arg0, &scratch.sp50, 0);
+        field_resolve_actor_movement(arg0, &scratch.sp50, 0);
         return;
     case 0x36:
         if (M2C_FIELD(arg0, u16*, 0x2E) == 0)
@@ -1889,7 +1889,7 @@ s32 func_8008EF0C(void* arg0)
         scratch.sp50 = 0;
         scratch.sp54 = 0;
         scratch.sp58 = 0;
-        func_80097FA0(arg0, &scratch.sp50, 0);
+        field_resolve_actor_movement(arg0, &scratch.sp50, 0);
         M2C_FIELD(arg0, u16*, 0x2A) = 0U;
         return;
     }

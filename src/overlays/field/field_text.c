@@ -2610,13 +2610,11 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
     FieldTextVertex* mesh;
     FieldTextVertex* bottom_vertices;
     FieldTextPacket* poly;
-    FieldTextPacket* portrait_packet;
     u8* first;
     s32 content_width;
     s32 pixels_remaining;
     s32 mesh_x;
     s32 mesh_y;
-    s32 tile_width;
     s32 packet_height;
     s32 chunk;
     s32 edge;
@@ -2627,7 +2625,6 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
     s32 text_vertex_count;
     s32 u;
     s32 avail;
-    s32 frame_columns;
     s32 mesh_width;
     u32 tpage;
     s32 mesh_height;
@@ -2638,7 +2635,6 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
     s32 texture_uv;
     s32 dx;
     s32 dy;
-    u32 tag_len;
     s32 previous_y;
     s32 row_v;
     s32 sel;
@@ -2910,13 +2906,10 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
     vertex = (FieldTextVertex*)0x1F800000;
     packet_height = 8;
     rows_remaining = 1;
-    frame_columns = ((content_width + 0x3F) >> 6) + 3;
     first = *cursor;
     packet_cursor = first;
-    tag_len = 0x09000000;
     clut = text_system->window_clut;
     clut <<= 16;
-    tile_width = 0x40;
     do
     {
         if (rows_remaining == 0)
@@ -2930,7 +2923,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
         sel = (u32)packet_cursor & 0xFFFFFF;
-        poly->quad_words.tag = sel | tag_len;
+        poly->quad_words.tag = sel | 0x09000000;
         poly->quad_words.uv0 = clut | texture_uv;
         poly->quad_words.uv1 = tpage | (texture_uv + 8);
         poly->quad_words.uv2 = texture_uv + (packet_height << 8);
@@ -2950,12 +2943,12 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
             {
                 poly = (FieldTextPacket*)packet_cursor;
                 packet_cursor += sizeof(POLY_FT4);
-                poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | tag_len;
+                poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
                 poly->quad_words.rgbc = texture_command;
                 if (pixels_remaining >= 0x41)
                 {
                     chunk = 0x3F;
-                    pixels_remaining -= tile_width;
+                    pixels_remaining -= 0x40;
                 }
                 else
                 {
@@ -2974,10 +2967,10 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
                 bottom_vertices += 1;
             } while (pixels_remaining > 0);
         }
-        texture_uv += tile_width;
+        texture_uv += 0x40;
         poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
-        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | tag_len;
+        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
         poly->quad_words.uv0 = clut | texture_uv;
         poly->quad_words.uv1 = tpage | (texture_uv + 7);
         poly->quad_words.rgbc = texture_command;
@@ -2988,7 +2981,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         poly->quad_words.xy2 = bottom_vertices[0].word;
         poly->quad_words.xy3 = bottom_vertices[1].word;
         rows_remaining -= 1;
-        vertex = (FieldTextVertex*)0x1F800000 + ((((state->height + 0x1F) >> 5) + 1) * frame_columns);
+        vertex = (FieldTextVertex*)0x1F800000 + ((((state->height + 0x1F) >> 5) + 1) * (((content_width + 0x3F) >> 6) + 3));
         packet_height = 7;
     } while (rows_remaining != -1);
 
@@ -3016,7 +3009,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
                 poly->quad_words.uv2 = texture_uv + packet_height;
                 poly->quad_words.rgbc = texture_command;
                 poly->quad_words.uv3 = texture_uv + (packet_height | 8);
-                texture_uv = texture_uv - tile_width;
+                texture_uv = texture_uv - 0x40;
                 poly->quad_words.xy0 = vertex[0].word;
                 pixels_remaining = content_width;
                 poly->quad_words.xy1 = vertex[1].word;
@@ -3034,7 +3027,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
                         poly->quad_words.rgbc = texture_command;
                         if (pixels_remaining >= 0x41)
                         {
-                            chunk = tile_width;
+                            chunk = 0x40;
                             pixels_remaining -= 0x40;
                         }
                         else
@@ -3088,11 +3081,11 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         do
         {
             pixels_remaining = state->line_advance;
-            glyph_v = texture_v_origin + row_v;
             if (pixels_remaining > 0)
             {
                 do
                 {
+                    glyph_v = texture_v_origin + row_v;
                     glyph_u = texture_u_origin + u;
                     glyph_v <<= 8;
                     texture_uv = glyph_v | glyph_u;
@@ -3127,7 +3120,6 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
                         poly->quad.u3 = edge;
                         poly->quad.u1 = edge;
                     }
-                    glyph_v = texture_v_origin + row_v;
                 } while (pixels_remaining > 0);
             }
             rows_remaining -= 1;
@@ -3140,7 +3132,7 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
     mesh = (FieldTextVertex*)0x1F800000;
     if (state->portrait != 0)
     {
-        portrait_packet = (FieldTextPacket*)packet_cursor;
+        poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
         frame_rows = state->height;
         frame_rows += 0x1F;
@@ -3148,38 +3140,37 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
         frame_rows += 3;
         sel = (state->flags.word >> 3) & 1;
         clut = text_system->text_clut;
-        portrait_packet->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
-        portrait_packet->quad_words.rgbc = FIELD_TEXT_QUAD_SHADOW;
+        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+        poly->quad_words.rgbc = FIELD_TEXT_QUAD_SHADOW;
         texture_uv = (((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0);
-        portrait_packet->quad_words.uv0 = (clut << 16) | texture_uv;
-        portrait_packet->quad_words.uv2 = texture_uv + 0x3000;
-        portrait_packet->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
+        poly->quad_words.uv0 = (clut << 16) | texture_uv;
+        poly->quad_words.uv2 = texture_uv + 0x3000;
+        poly->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
         clut = content_width + 0x3F;
         clut = clut >> 6;
         vertex = mesh + text_vertex_count + (frame_rows * (clut + 3));
-        portrait_packet->quad_words.uv3 = texture_uv + 0x302F;
-        portrait_packet->quad_words.xy0 = vertex[0].word;
-        portrait_packet->quad_words.xy1 = vertex[1].word;
-        portrait_packet->quad_words.xy2 = vertex[2].word;
-        portrait_packet->quad_words.xy3 = vertex[3].word;
+        poly->quad_words.uv3 = texture_uv + 0x302F;
+        poly->quad_words.xy0 = vertex[0].word;
+        poly->quad_words.xy1 = vertex[1].word;
+        poly->quad_words.xy2 = vertex[2].word;
+        poly->quad_words.xy3 = vertex[3].word;
         vertex += 4;
-        portrait_packet = (FieldTextPacket*)packet_cursor;
+        poly = (FieldTextPacket*)packet_cursor;
         packet_cursor += sizeof(POLY_FT4);
         sel = (state->flags.word >> 3) & 1;
         clut = text_system->portrait_clut[sel];
         texture_uv = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        portrait_packet->quad_words.uv2 = texture_uv + 0x3000;
-        portrait_packet->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
+        poly->quad_words.uv2 = texture_uv + 0x3000;
+        poly->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
         dy = (u32)packet_cursor & 0xFFFFFF;
-        portrait_packet->quad_words.tag = dy | 0x09000000;
-        portrait_packet->quad_words.rgbc = texture_command;
-        portrait_packet->quad_words.uv3 = texture_uv + 0x302F;
-        portrait_packet->quad_words.uv0 = (clut << 16) | texture_uv;
-        portrait_packet->quad_words.xy0 = vertex[0].word;
-        portrait_packet->quad_words.xy1 = vertex[1].word;
-        portrait_packet->quad_words.xy2 = vertex[2].word;
-        portrait_packet->quad_words.xy3 = vertex[3].word;
-        poly = portrait_packet;
+        poly->quad_words.tag = dy | 0x09000000;
+        poly->quad_words.rgbc = texture_command;
+        poly->quad_words.uv3 = texture_uv + 0x302F;
+        poly->quad_words.uv0 = (clut << 16) | texture_uv;
+        poly->quad_words.xy0 = vertex[0].word;
+        poly->quad_words.xy1 = vertex[1].word;
+        poly->quad_words.xy2 = vertex[2].word;
+        poly->quad_words.xy3 = vertex[3].word;
     }
     addPrims(&ot->tag1, first, poly);
     *cursor = packet_cursor;

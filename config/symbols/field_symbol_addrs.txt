@@ -471,3 +471,19 @@ field_execute_actor_sequence = 0x800954F0;
 field_allocate_sequence_actor = 0x8009615C;
 field_restart_sequence_animation = 0x80096334;
 field_update_object_tints = 0x80096394;
+
+// Field contact geometry.
+field_load_actor_sequence_data               = 0x800970B0;
+field_test_quad_actor_contacts               = 0x80097150;
+field_intersect_screen_segments              = 0x800978AC;
+field_resolve_actor_movement                 = 0x80097FA0;
+field_is_outside_group_bounds                = 0x80098748;
+field_find_actor_overlap                     = 0x800987DC;
+field_start_actor_contact_interaction        = 0x80098C7C;
+field_probe_actor_interaction                = 0x80098DD4;
+field_dispatch_object_state_entry            = 0x80098FC4;
+field_find_actor_in_range                    = 0x8009980C;
+field_collect_attack_sphere_hits             = 0x80099A48;
+field_get_position_distance                  = 0x8009A204;
+g_field_last_actor_contact                   = 0x8010D024;
+g_field_scene_object_states                  = 0x80106194;

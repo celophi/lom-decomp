@@ -20,7 +20,7 @@ typedef struct
 
 void field_restart_actor_animation();
 void func_80092C24(u8 *rec, s32 arg1);
-void func_80097FA0(void *arg0, void *arg1, s32 arg2);
+void field_resolve_actor_movement(void *arg0, void *arg1, s32 arg2);
 
 /**
  * @brief Advance selected FIELD movement states and request animation 0x1A.
@@ -82,7 +82,7 @@ s32 func_80092AD8(FieldStateRecord *entry)
                 scratch->z = 0;
                 scratch->y = 0;
                 timer = entry->state_value;
-                func_80097FA0(entry, scratch, 1);
+                field_resolve_actor_movement(entry, scratch, 1);
                 timer += 0xC00;
                 entry->state_value = timer;
                 return 0;
