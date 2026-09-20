@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
@@ -114,8 +115,6 @@ extern s32 g_frame_counter;
 u32 field_load_vram_resource(s32, s16 *, s32);
 void func_800AA02C(void);
 void func_80086F48(POLY_FT4 *, s32);
-void cdrom_queue_read(s32 id, void *dest);
-void cdrom_wait_queue_empty(void);
 
 /* Forward declarations for members called before their definition. */
 void func_800A4838(void);

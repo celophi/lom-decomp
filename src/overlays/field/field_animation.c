@@ -1,3 +1,4 @@
+#include "movie.h"
 #include "field_animation.h"
 #include "field_scene_internal.h"
 #include "cd_resources.h"
@@ -21,7 +22,6 @@ s32 func_8005A84C(s32, s32);
 void func_80084240(void);
 void func_80140358(s32, s32, s32, s32);
 void func_801406E4(void);
-void func_80140D48(void);
 void func_8005A984(FieldPart*, s32, s32);
 void func_8005AA68(FieldObj*, s32, s32);
 void akao_play_sfx(s32, s32, s32, s32);
@@ -121,7 +121,7 @@ void field_update_scene_animations(void)
                     case 0:
                         if (cdrom_process_state() == 0)
                         {
-                            cdrom_stream(CD_RES_MOVIE_BIN, 0x80140000);
+                            cdrom_stream(CD_RES_MOVIE_BIN, (void*)0x80140000);
                             cdrom_queue_seek(definition->unk1 * 2 + 0x16A6);
                             anim->flags.b.state = 1;
                             (*(volatile s32*)((u32)anim ^ ((u32)anim ^ FIELD_CD_FLAGS_ADDRESS))) |= FIELD_CD_FLAG_MOVIE_STREAM;
@@ -213,7 +213,7 @@ void field_update_scene_animations(void)
                                 set_controller_vsync_interval(2);
                             }
                             func_801406E4();
-                            func_80140D48();
+                            movie_service_video_ops();
                             if (FIELD_MOVIE_STATE->frame_ready == 1)
                             {
                                 cel = anim->cels;

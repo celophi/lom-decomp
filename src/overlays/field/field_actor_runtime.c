@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "game_audio.h"
 /** @file field_actor_runtime.c
  * @brief Coordinate actor resources, animation tracks, and actor slot runtime state.
@@ -10,8 +11,6 @@
 #include "cd_resources.h"
 #include "sdk/libgpu.h"
 
-s32 cdrom_stream(s32 resourceIndex, u32 destination);
-void cdrom_wait_queue_empty(void);
 extern void func_80084240(void);
 void func_80140004(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex);
 void func_800A74E8();
@@ -537,7 +536,6 @@ void func_800A7434(void);
 void func_800A74B8(void);
 void field_text_reset_windows(void);
 void func_80092124(void);
-void cdrom_queue_seek(s32);
 void akao_cmd_c1(s32, s32, s32);
 void akao_cmd_a9(s32, s32);
 
@@ -686,7 +684,7 @@ void field_update_gover_load(void)
         ptr->unk92 = 0;
         ptr->unk13F = 0;
         ptr->unk91 = 0;
-        cdrom_stream(CD_RES_GOVER_BIN, 0x80140000);
+        cdrom_stream(CD_RES_GOVER_BIN, (void*)0x80140000);
         cdrom_wait_queue_empty();
         func_80140004(0x80160000, g_field_gover_image_resource_id, g_field_gover_music_resource_id, g_field_gover_audio_clip_id);
         func_80084240();
@@ -3154,13 +3152,14 @@ void field_render_actor_objects(FieldRenderContext *render_context)
 /**
  * @brief Stream one CD resource into the current field resource cursor.
  * @param resource_id CD resource id to queue.
+ * @param destination Buffer receiving the queued data.
  * @see decomp.me (100%) TODO
  */
-static void field_stream_resource_to_buffer(u16 resource_id)
+static void field_stream_resource_to_buffer(u16 resource_id, void* destination)
 {
     s32 size;
 
-    size = cdrom_queue_read(resource_id);
+    size = cdrom_queue_read(resource_id, destination);
     cdrom_wait_queue_empty();
     g_field_resource_cursor += (size + 3) & ~3;
 }

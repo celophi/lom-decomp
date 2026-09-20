@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "common.h"
 #include "cd_resources.h"
 
@@ -357,9 +358,6 @@ extern s32 D_80122820;
  */
 void func_800AA570(s32 render_buffer_addr)
 {
-    extern void cdrom_stream(s32, u32), cdrom_wait_queue_empty(void), field_text_reset_windows(void),
-        func_80084240(void), func_800A3938(s32, s32), func_800AA7A4(void), func_800AA90C(s32),
-        func_800C3BB0(void);
     extern void func_80140004(u32, void *, s32, s32, s32, void *, s32), func_80140024(u32, s32);
     extern s32 func_801405B0(s32);
     extern s32 D_80105880[];
@@ -398,7 +396,7 @@ start:
 
     for (;;)
     {
-        cdrom_stream(6, 0x80140000);
+        cdrom_stream(6, (void*)0x80140000);
         cdrom_wait_queue_empty();
         temp_v0 = func_801405B0(render_buffer_addr);
         if (temp_v0 == 0)
@@ -409,7 +407,7 @@ start:
             if (temp_v0 == 0xA)
             {
                 func_800AA90C(1);
-                cdrom_stream(9, 0x80140000);
+                cdrom_stream(9, (void*)0x80140000);
                 cdrom_wait_queue_empty();
                 func_80140024(0x80150000, 1);
                 func_800C3BB0();
@@ -421,7 +419,7 @@ start:
             else
             {
                 func_800AA90C(1);
-                cdrom_stream(5, 0x80140000);
+                cdrom_stream(5, (void*)0x80140000);
                 cdrom_wait_queue_empty();
                 if ((u32)(temp_v0 - 0xB) < 2U)
                 {
@@ -529,7 +527,6 @@ void func_800AA858(s32 arg0)
 void func_800AA90C(s32 refresh_only)
 {
     extern void akao_set_paused(s32);
-    extern void cdrom_set_audio_volume(u8, s32);
     extern void func_8008C7A8(void);
     extern void func_80091438(s32);
     extern void func_800A3D44(s32, u8);

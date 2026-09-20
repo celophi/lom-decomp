@@ -157,7 +157,7 @@ void movie_play(s32 movie_index)
             buttons = (SCD_REGS)->pressed_buttons;
             if (((movie_index_value != MOVIE_INDEX_INTRO) ? ((buttons & MOVIE_ATTRACT_1_SKIP_MASK) != 0) : ((buttons & MOVIE_INTRO_SKIP_MASK) != 0)) != 0)
             {
-                if (g_cd_audio_ready == 0)
+                if (g_movie_use_cd_audio == 0)
                 {
                     break;
                 }
@@ -170,7 +170,7 @@ void movie_play(s32 movie_index)
         }
 
         /* Fade XA audio after a skip request. */
-        if ((g_cd_audio_ready != 0) && (audio_fade_vol != AUDIO_FADE_DISARMED))
+        if ((g_movie_use_cd_audio != 0) && (audio_fade_vol != AUDIO_FADE_DISARMED))
         {
             akao_cmd_e4_set_cd_volume(audio_fade_vol);
 
@@ -453,7 +453,7 @@ void movie_update(void)
 
     /* Advance XA playback and retire consumed audio sectors. */
     movie_state = MOVIE_STATE;
-    if (g_cd_audio_ready != 0)
+    if (g_movie_use_cd_audio != 0)
     {
         if (get_next_audio_entry(&stream_entry.audio_sector) != 0)
         {

@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "common.h"
 #include "field_mesh.h"
 #include "sdk/libgte.h"
@@ -765,7 +766,6 @@ void func_800842E0(void)
     s32 func_8009A390(void);
     void func_8009A3E8(void);
     void func_8009A4CC(s32 arg0, void *arg1);
-    s32 cdrom_can_queue_resource(s32 resource_index);
 
     s32 i;
     s32 idle_count;

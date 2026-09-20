@@ -1,3 +1,5 @@
+#include "movie.h"
+#include "cdrom.h"
 #include "common.h"
 #include "field_animation.h"
 #include "cd_resources.h"
@@ -145,7 +147,7 @@ void field_scene_reset(void)
  * @brief Build and draw one field frame, servicing streamed video when active.
  *
  * Runs the field draw helpers against the render context and pumps
- * movie_service_video_ops (func_80140D48) whenever CD audio is playing.
+ * movie_service_video_ops whenever CD audio is playing.
  *
  * @param unused Unused first parameter.
  * @param base   Field render context base address.
@@ -170,12 +172,12 @@ void field_draw_frame(s32 unused, s32 base, s32 arg2, s32 arg3)
     if (g_cd_audio_enabled != 0)
     {
 
-        func_80140D48();
+        movie_service_video_ops();
     }
     func_80064C28(base + 0x40B8, base, arg2);
     if (struct_ptr[4] != 0)
     {
-        func_80140D48();
+        movie_service_video_ops();
     }
 }
 
@@ -329,7 +331,7 @@ void field_load_map(s32 arg0)
     }
     else
     {
-        cdrom_stream((arg0 + 0xB4) & 0xFFFF, 0x80180000);
+        cdrom_stream((arg0 + 0xB4) & 0xFFFF, (void*)0x80180000);
     }
     globals = (FieldSceneGlobals*)0x80180000;
     var_s1 = (u32)globals->scene;

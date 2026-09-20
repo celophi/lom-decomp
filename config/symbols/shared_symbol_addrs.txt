@@ -1090,12 +1090,12 @@ g_field_current_render_half         = 0x800473F4;
 // Globals
 g_pending_game_state                = 0x8010D018;
 g_gpu_mode                          = 0x801ED590;
-g_cd_audio_ready                    = 0x801ED591;
+g_movie_use_cd_audio                    = 0x801ED591;
 g_cd_system                         = 0x801ED800;
 g_cd_defer_data_ready               = 0x801ED801;
-g_cd_status_byte_3                  = 0x801ED802;
+g_cd_data_ready_pending                  = 0x801ED802;
 g_cd_audio_enabled                  = 0x801ED804;
-g_playback_state                    = 0x801ED805;
+g_cd_playback_state                    = 0x801ED805;
 g_cd_pending_queue_count            = 0x801ED806;
 g_cd_init_state                     = 0x801ED815;
 g_cd_read_remaining_bytes           = 0x801ED828;
@@ -1106,7 +1106,7 @@ g_cd_sync_callback_result           = 0x801ED968;
 g_cd_ready_callback_result          = 0x801ED96C;
 g_default_cd_resource               = 0x801ED990;
 g_SKCDPOSE_DAT                      = 0x801ED998;
-g_cd_resource_176                   = 0x801EDF18;
+g_cd_disc_validation_location                   = 0x801EDF18;
 
 
 // --- LIBPAD split (unk8 psyq region): TMP_ names pending QA of real member codes ---

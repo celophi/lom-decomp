@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "common.h"
 #include "field_actor_palette.h"
 #include "sdk/memory.h"
@@ -86,7 +87,6 @@ extern s16 g_field_texture_slot_flags[];
 
 s32 func_8005B368(Query *q);
 void func_800B22F0(s32 value, s32 entry);
-s32 cdrom_queue_read(u16 id, s32 dest);
 void *func_8009CA54(u8 *, s32, s32);
 void func_8009AE38(u8 *, s32);
 

@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "saved_game.h"
 /**
  * @file field_input_text_session.c
@@ -1056,7 +1057,6 @@ void func_800A9B88(void)
     extern void *g_pad_ctx;
     extern u8 D_800FE3A0[];
     extern u8 D_8011F3D2;
-    extern s32 cdrom_get_error_status(void);
     s32 actor_index;
     u8 *part;
     if ((D_80122984 && !cdrom_get_error_status()) ||
@@ -1269,7 +1269,6 @@ void func_800AA098(s32 arg0)
     extern PadContext *g_pad_ctx;
     extern FieldInputActor D_800FDF58[];
     extern FieldInputSlot D_80105AE0[];
-    extern s32 cdrom_get_error_status(void);
     FieldInputHardware *pad = (FieldInputHardware *)0x801ED600;
     u32 buttons;
     FieldInputActor *actor;

@@ -1,3 +1,4 @@
+#include "cdrom.h"
 /**
  * @file field_actor_hud.c
  * @brief Field actor HUD renderer: participant panels, per-track gauge/bar
@@ -1137,8 +1138,6 @@ void *func_80086184(SPRT *sprt, u32 *ot, s32 index, u32 *xy)
 void field_load_vram_resource(s32 id, s16 *rect, s32 arg2)
 {
     extern u8 *D_8010D038;
-    void cdrom_queue_read(s32 resource_index, void *dst_buffer);
-    void cdrom_wait_queue_empty(void);
     s32 func_80086374(RECT *rect, u8 *data, s32 mode);
 
     u8 *buf = D_8010D038;

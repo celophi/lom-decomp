@@ -4,7 +4,7 @@
 #include "common.h"
 
 /** @brief Destination used for the primary overlay image. */
-extern u32 g_overlay_load_address;
+extern void* g_overlay_load_address;
 
 s32* get_overlay_load_base(void);
 u32* get_field_render_buffers(void);

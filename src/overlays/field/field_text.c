@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "common.h"
 #include "field_animation.h"
 #include "vector.h"
@@ -1342,7 +1343,7 @@ void func_800642D4(void)
     s32 limit;
     FieldTextSystem* text_sys = (FieldTextSystem*)0x801ED000;
 
-    cdrom_stream(0xB1, 0x801DE000);
+    cdrom_stream(0xB1, (void*)0x801DE000);
 
     rect.x = 0x130;
     rect.y = 0x1FC;

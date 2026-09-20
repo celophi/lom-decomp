@@ -389,3 +389,5 @@ field_resolve_effect_position                = 0x80073F7C;
 field_swap_effect_position_source            = 0x80070E4C;
 field_collect_effect_hits                    = 0x80099018;
 field_install_actor_action                  = 0x800B118C;
+
+movie_service_video_ops             = 0x80140D48;

@@ -1,3 +1,4 @@
+#include "cdrom.h"
 /**
  * @file field_audio_runtime.c
  * @brief FIELD overlay CD-audio / music / SFX runtime subsystem.
@@ -89,8 +90,6 @@ extern u8 *D_8010D038;
 extern u8 D_800EC398[];
 
 /* External callees (declared here with the signature every user shares). */
-void cdrom_queue_read(s32 resource_index, void *dst_buffer);
-void cdrom_wait_queue_empty(void);
 void akao_cmd_f1(void);
 void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void akao_cmd_21(s32, s32);

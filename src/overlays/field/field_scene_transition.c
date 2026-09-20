@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "game_audio.h"
 #include "common.h"
 #include "field_interaction_start.h"
@@ -61,7 +62,6 @@ typedef struct
  */
 void func_8009AFBC(s32 arg0)
 {
-    void cdrom_queue_seek(s32);
 
     cdrom_queue_seek((arg0 & 0x7FFF) + 0x60C);
 }
@@ -142,8 +142,6 @@ void field_update_scene(void)
     void akao_cmd_c1();
     void akao_cmd_f1();
 
-    void cdrom_queue_read();
-    void cdrom_wait_queue_empty();
     void field_clear_actor_slots();
     void field_init_ctx();
     void field_initialize_actor_slots();

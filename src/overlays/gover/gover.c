@@ -1,3 +1,4 @@
+#include "cdrom.h"
 /* Use the Game Over overlay's scene-state declarations. */
 #define GOVER_C
 #include "gover.h"
@@ -70,7 +71,6 @@ extern s32 g_akao_music_volume;
 extern u32 g_scene_mode;
 extern s32 g_pending_game_state;
 extern SfxTableBuffer g_sfx_table_buffer;
-extern void cdrom_queue_read(s32 resource_index, void* destination);
 
 /** Byte offset of vram_rect within a Game Over frame. */
 #define GOVER_FRAME_VRAM_RECT_OFFSET (sizeof(u_long[GOVER_OTAG_LENGTH]) + sizeof(DISPENV) + sizeof(DRAWENV))

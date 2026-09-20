@@ -62,6 +62,7 @@ segments:
       - [0x800, rodata, rodata_data0]        # D_80010000 boot-path string (referenced by unk8)
       - [0x818, .rodata, main]               # jtbl -> main
       - [0x844, .rodata, cdrom]              # jtbl -> cdrom
+      - [0xA50, .rodata, cdrom_decompress]
       - [0xA90, .rodata, controller]         # jtbl -> controller
       - [0xAAC, rodata, rodata_data1]        # g_overlayLoadAddress + data
       - [0xB44, .rodata, psyq/libc2/PRNT]    # jtbl -> PRNT
@@ -78,6 +79,7 @@ segments:
       - [0x1B58, c, screen_transition]
       - [0x1E0C, c, game_audio]
       - [0x1F10, c, cdrom]
+      - [0x4C48, c, cdrom_decompress]
       - [0x52DC, c, controller]
       - [0x6418, c, overlay_memory]
       - [0x6458, c, field_runtime]

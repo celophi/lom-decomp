@@ -2,6 +2,8 @@
 #define LOM_MOVIE_INTERNAL_H
 
 #include "movie.h"
+#include "cdrom.h"
+#include "movie_state.h"
 #include "pad.h"
 #include "controller.h"
 #include "sdk/libgte.h"
@@ -12,13 +14,6 @@
 /* The block at 0x801ED600 is the merged-controller SCDRegs (see pad.h).
  * Skip-cinematic checks read the merged controller type, held buttons, and
  * newly pressed buttons from SCDRegs. */
-
-/** @brief Saved callback represented as either an SDK return value or handler. */
-typedef union
-{
-    u32 address;
-    void (*handler)(void);
-} MovieCallback;
 
 /** @brief Integer and pointer views of a GPU transfer result. */
 typedef union
@@ -34,89 +29,6 @@ typedef union
     u16 raw;
     s16 signed_value;
 } MovieHalfword;
-
-/** @brief Rectangle layout within MovieState. */
-#define MOVIE_DISPLAY_RECT_COUNT 2
-#define MDEC_OUTPUT_RECT_INDEX MOVIE_DISPLAY_RECT_COUNT
-#define MOVIE_RECT_COUNT (MDEC_OUTPUT_RECT_INDEX + 1)
-
-/**
- * @brief Movie playback control block; lives at fixed RAM address 0x801ED500.
- *
- * Aliases the AudioSystem block defined in cdrom.c. The CD subsystem uses that
- * block to save the DecDCT and DrawSync callbacks that were active before XA
- * audio playback began so `cdrom_reset` can restore them. Movie playback
- * temporarily re-uses the same memory as scratch, which is why the
- * `dec_dct_out_callback` / `draw_sync_callback` fields (offsets 0x38 / 0x3C)
- * here hold the *previous* handlers - `movie_init` captures them via
- * `DecDCToutCallback(&movie_mdec_out_callback)` etc.
- */
-typedef struct
-{
-    // ---- stream buffers ----
-    union VideoSectorEntry* video_table_base; // array of 32-byte video sector headers
-    union VideoVlcPayload* video_data_base;   // parallel array of 2016-byte VLC payloads
-    struct AudioSector* audio_data_base;      // array of 2048-byte CD sectors
-    void* vlc_table;                          // opaque VLC decode table
-    void* vlc_input_buf[2];
-    u_long* mdec_output_buf[2];
-
-    // ---- VRAM destination rectangles ----
-    // rects[0..1]: display areas; rects[MDEC_OUTPUT_RECT_INDEX]: current upload slice
-    RECT rects[MOVIE_RECT_COUNT]; // offsets 32..55
-
-    // ---- callback handles ----
-    MovieCallback dec_dct_out_callback;
-    MovieCallback draw_sync_callback;
-
-    u8 pad_40[4]; // unreferenced bytes retained for the fixed layout
-
-    // ---- stream metadata ----
-    u32 resource_index;      // CD resource index
-    u32 current_frame;       // current frame counter (starts at 0)
-    u32 total_frames;        // total frames in movie stream
-    s32 video_ring_capacity; // 0x50 - video ring buffer capacity
-    s32 audio_ring_capacity; // 0x54 - audio ring buffer capacity
-
-    // ---- ring buffer indices ----
-    s32 video_write_idx;      // 0x58 - next slot to write into video ring
-    s32 video_read_idx;       // 0x5C - next slot to read from video ring
-    s32 video_ring_size;      // 0x60 - video ring wrap point (set to old write_idx on ring wrap)
-    s32 audio_write_idx;      // 0x64
-    s32 audio_read_idx;       // 0x68
-    s32 audio_ring_size;      // 0x6C - audio ring wrap point
-    s32 audio_buffered_count; // 0x70 - buffered audio sector count
-    u32 frame_number;         // 0x74 - frame number of sector currently being read
-    u32 continuation_type;    // 0x78 - 0=video continuation, non-zero=audio continuation
-
-    // ---- chunk-sector tracking (offsets 0x7C..0x7F) ----
-    u16 chunk_sector_idx;          // 0x7C - sector index within current multi-sector frame
-    u16 sectors_remaining;         // 0x7E - sectors left to read for the current frame chunk
-    u32 last_video_frame;          // 0x80 - frame number of last video sector written
-    u32 last_consumed_video_frame; // 0x84
-
-    // ---- audio frame tracking (both structs) ----
-    u32 last_audio_frame;          // offset 136..139
-    u32 last_consumed_audio_frame; // offset 140..143
-
-    // ---- status bytes (offsets 0x90..0x9F) ----
-    u8 gpu_mode;            // 0 = DrawSync/LoadImage, non-zero = BreakDraw/LoadImage2 path
-    u8 use_cd_audio;        // bit 7 of movie_init flags; selects XA streaming when set
-    u8 audio_stream_state;  // shared alias of g_audioStreamState
-    u8 input_buf_idx;       // which vlc_input_buf[] holds current VLC-decoded input (toggled each frame)
-    u8 vlc_retry_count;     // countdown for DecDCTvlc2 retries
-    u8 mdec_retry_pending;  // MDEC was busy; retry on the next tick
-    u8 busy;                // non-zero while DMA/GPU operation is in flight
-    u8 draw_sync_target;    // 0x97 - DrawSync target value (set by mdec_out_callback / service_video_ops)
-    u8 chunk_idx;           // initial active chunk index (0 or 1)
-    u8 out_buf_idx;         // which mdec_output_buf[] receives the next DecDCTout output (0 or 1)
-    u8 pending_vram_upload; // 0x9A - decoded frame is ready, needs LoadImage to VRAM
-    u8 pending_mdec_decode; // 0x9B - bitstream staged, needs DecDCTout kicked
-    s8 mdec_busy;           // MDEC_STATE_* output pipeline state
-    u8 frame_ready;         // a complete frame can be displayed
-    u8 end_of_stream;       // 0x9E - set when frame_number >= total_frames
-    u8 end_state;           // 1 = near end, 2 = stream fully ended (END_STATE_*)
-} MovieState;
 
 /** @brief MovieState::end_state sentinel values. */
 #define END_STATE_RUNNING 0
@@ -242,7 +154,6 @@ typedef enum
  * wrapping that cast in MOVIE_STATE would silently drop the volatile
  * qualifier.
  */
-#define MOVIE_STATE ((MovieState*)0x801ED500)
 #define VOL_MOVIE_STATE ((volatile MovieState*)0x801ED500)
 
 /**
@@ -366,12 +277,7 @@ struct AlternateMovieDecodeBuffers
     u_long mdec_output_buf[2][ALTERNATE_MDEC_OUTPUT_BYTES / sizeof(u_long)];
 };
 
-/* Shared CD subsystem state referenced directly by the movie overlay. */
-extern u8 g_cd_audio_ready;
-extern u8 g_cd_status_byte_3;
-
 extern AllocInfo* g_allocInfo; /* allocation descriptor used by movie_init's alternate buffer layout */
-extern u8 g_gpu_mode;          /* 0=DrawSync/LoadImage path; non-zero=BreakDraw/LoadImage2 path (at 0x801ED590) */
 extern u8 g_busy;              /* non-zero while a DMA/GPU operation is in flight (at 0x801ED596) */
 extern u8 g_mdecRetryPending;  /* MDEC decode ready but MDEC was busy; retry on next tick (at 0x801ED595) */
 extern u8 g_audioStreamState;  /* CD audio state: 0=idle, 1=sector arrived, 2=pipeline primed (at 0x801ED592) */
@@ -404,7 +310,6 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
 void movie_update(void);
 void movie_mdec_out_callback(void);
 void movie_schedule_next_decode(void);
-void movie_service_video_ops(void);
 s32 cd_sector_callback(void);
 s32 get_next_audio_entry(AudioSector** out_entry);
 void draw_sync_callback(void);

@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "common.h"
 
 extern s32 D_8012269C;
@@ -61,14 +62,13 @@ void func_800AD118(void)
 void func_800AD120(s32 arg0)
 {
     void func_80084240(void);
-    s32 cdrom_stream(s32 resource_index, u32 destination);
-    void cdrom_wait_queue_empty(void);
+
     void func_8014011C(s32 arg0, s32 arg1);
 
     if (D_8012269C == 0)
     {
         func_80084240();
-        cdrom_stream(0x11, 0x80140000);
+        cdrom_stream(0x11, (void*)0x80140000);
         cdrom_wait_queue_empty();
         D_80122994 = 1;
         D_8012269C = 4;
@@ -88,14 +88,13 @@ void func_800AD120(s32 arg0)
 void func_800AD194(s32 arg0)
 {
     void func_80084240(void);
-    s32 cdrom_stream(s32 resource_index, u32 destination);
-    void cdrom_wait_queue_empty(void);
+
     void func_8014011C(s32 arg0, s32 arg1);
 
     if (D_8012269C == 0)
     {
         func_80084240();
-        cdrom_stream(0x12, 0x80140000);
+        cdrom_stream(0x12, (void*)0x80140000);
         cdrom_wait_queue_empty();
         D_80122994 = 1;
         D_8012269C = 5;

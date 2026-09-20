@@ -1,3 +1,5 @@
+#include "movie.h"
+#include "cdrom.h"
 /** @file field_scene_control.c
  * @brief Object and part transforms, animation controls, scene state, and scene queries.
  */
@@ -21,19 +23,13 @@ extern u16 g_field_movie_frame_width;
 extern u16 g_field_movie_frame_height;
 
 void func_800157B0(s32);
-s32 cdrom_process_state(void);
-void cdrom_reset(void);
-void cdrom_stream(s32, void*);
-void cdrom_queue_seek(s32);
-void cdrom_queue_read(s32, void*);
-s32 cdrom_can_queue_resource(s32);
+
 void func_80059F18(void);
 void func_8005A744(FieldSeq*, u8);
 s32 func_8005A84C(s32, s32);
 void func_80084240(void);
 void func_80140358(s32, s32, s32, s32);
 void func_801406E4(void);
-void func_80140D48(void);
 
 /**
  * @brief World position of a field object or part, in whole pixels.

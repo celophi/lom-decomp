@@ -168,6 +168,7 @@ SRCS_G0 := \
 
 SRCS_G4 := \
 	src/cdrom.c \
+	src/cdrom_decompress.c \
 	src/overlay_memory.c \
 	src/akao_sequencer.c \
 	src/akao_driver.c \
