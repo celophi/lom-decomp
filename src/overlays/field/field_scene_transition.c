@@ -401,7 +401,7 @@ void field_update_scene(void)
     void func_800A54D0();
     void func_800A6204();
     void func_800A6EEC();
-    void func_800A8D10();
+    void field_store_entry_settings();
     void func_800AF8C4();
     void func_800B0094(void);
     void func_800B01FC();
@@ -972,7 +972,7 @@ void field_update_scene(void)
         {
             saved_scene_id += 0x8000;
         }
-        func_800A8D10(saved_scene_id, object_id, g_layout_flag, spawn_id, g_layout_option, g_layout_sub_mode);
+        field_store_entry_settings(saved_scene_id, object_id, g_layout_flag, spawn_id, g_layout_option, g_layout_sub_mode);
         func_800A54D0();
         func_8008C7A8();
         func_800A2DFC();

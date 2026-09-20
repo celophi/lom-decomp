@@ -130,15 +130,15 @@ void func_800C6A30(void)
 
 extern u8 D_80043CB8[];
 
-extern u8 *func_800A9060(void);
-extern void func_800A8F8C(u8 *dst, u8 *src);
+extern u8 *field_find_free_inventory_record(void);
+extern void field_copy_inventory_record(u8 *dst, u8 *src);
 
 /** @brief Fill available record destinations and advance the layout counter. */
 void func_800C6A90(void)
 {
-    while (func_800A9060() != 0)
+    while (field_find_free_inventory_record() != 0)
     {
-        func_800A8F8C(func_800A9060(), D_80043CB8);
+        field_copy_inventory_record(field_find_free_inventory_record(), D_80043CB8);
     }
 
     g_saved_game.bytes[0x29D5] += 9;

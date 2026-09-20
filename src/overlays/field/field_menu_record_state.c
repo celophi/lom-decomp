@@ -87,7 +87,7 @@ extern u8 D_80122C1E;
 extern s32 D_8011F428;
 extern u8 D_80122C19[];
 
-void func_800A8F8C();
+void field_copy_inventory_record();
 
 /**
  * @brief Apply the pending field mode transition to the four shared records.
@@ -111,9 +111,9 @@ void func_800C94F4(void)
                 {
                     D_80122A08[i].unk0 = D_80122A08[i].unk20;
                     D_80122A08[i].unk20 = *entry;
-                    if (func_800A9060(entry) != 0)
+                    if (field_find_free_inventory_record(entry) != 0)
                     {
-                        func_800A8F8C(func_800A9060(), &D_80122A08[i]);
+                        field_copy_inventory_record(field_find_free_inventory_record(), &D_80122A08[i]);
                     }
                 }
             }

@@ -245,7 +245,7 @@ static void gover_run(void)
     u8 stack_padding[8];
 
     // Prime both ordering tables before enabling display output.
-    func_800AA02C();
+    field_reset_input_repeat();
     current_frame = g_gover_frames;
     ClearOTagR(current_frame->ordering_table, GOVER_OTAG_LENGTH);
     ClearOTagR(current_frame[1].ordering_table, GOVER_OTAG_LENGTH);
@@ -260,7 +260,7 @@ static void gover_run(void)
         drawing_frame = current_frame;
         ClearOTagR(drawing_frame->ordering_table, GOVER_OTAG_LENGTH);
         drawing_frame->allocation_cursor = drawing_frame->primitive_buffer;
-        func_800A9E78();
+        field_update_input_repeat();
         gover_build_otag((u8*)drawing_frame);
         DrawSync(0);
         set_controller_vsync_interval(2);
@@ -302,7 +302,7 @@ static void gover_run(void)
     akao_cmd_f1();
     SetDispMask(0);
     g_scene_mode = 0;
-    func_800AA02C();
+    field_reset_input_repeat();
     g_pending_game_state = 1;
 }
 

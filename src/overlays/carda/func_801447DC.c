@@ -23,7 +23,7 @@ void func_80144A24(void);
 void func_80147C5C(void);
 void func_8001729C(s32);
 void func_800A3938(s32, s32);
-void func_800AA02C(void);
+void field_reset_input_repeat(void);
 
 /**
  * @brief Select and initialize the CARDA status dialog for the requested state.
@@ -84,7 +84,7 @@ after_switch:
             ((u8 *)p)[2] = 0x70;
         }
         p->draw_handler = (void *)func_80144A24;
-        func_800AA02C();
+        field_reset_input_repeat();
         D_80166118 = 0;
         D_80166070 = 0;
         D_801660FC = 0;

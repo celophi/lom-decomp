@@ -86,7 +86,7 @@ extern Entry g_field_actors[];
 extern s32 g_field_active_group;
 extern s32 D_800F229C;
 extern s32 D_8010AE78;
-extern s32 D_801229F8;
+extern s32 g_field_buffered_input;
 
 void field_probe_actor_interaction(Entry *arg0);
 
@@ -96,7 +96,7 @@ void func_8009184C(void)
     s32 b;
 
     if ((g_field_active_group == 0) && (g_field_actors[0].unk2A == 0) &&
-        (D_800F229C == 0) && (D_8010AE78 == 0) && (D_801229F8 & 0x220))
+        (D_800F229C == 0) && (D_8010AE78 == 0) && (g_field_buffered_input & 0x220))
     {
         a = field_text_get_status(0);
         b = field_text_get_status(1);

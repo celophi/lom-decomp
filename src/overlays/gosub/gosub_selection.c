@@ -239,7 +239,7 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
             *(g_pad_ctx + 0x29D6) = *(g_pad_ctx + 0x29D6) + 1;
             GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(g_gosub_result_values[0])->name[0] = 0;
             GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(g_gosub_result_values[1])->name[0] = 0;
-            func_800A8FB4();
+            field_compact_inventory();
         }
         if (*(g_pad_ctx + 0x29D6) >= 0x28)
         {

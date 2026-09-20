@@ -544,7 +544,7 @@ extern u8 D_800F1CD0[];
 void bcopy();
 void field_set_default_fade_target();
 void func_800A8B90();
-void func_800AA02C();
+void field_reset_input_repeat();
 s32 func_800A88A0(s32 prim, s32* ot, void* text, s32 color, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32* ot, s32 prim, s32 value, s32 color, GosubTextPosition* position, s32 mode);
 void gosub_load_screen_sequence(s32* screen_sequence);

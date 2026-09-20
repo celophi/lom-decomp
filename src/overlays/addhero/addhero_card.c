@@ -166,7 +166,7 @@ s32 addhero_scan_next_entry(s32 page)
         return 1;
     }
 
-    func_800AA02C();
+    field_reset_input_repeat();
     if ((g_addhero_mode == 0) && (addhero_has_known_entry_type() == 0))
     {
         g_addhero_entry_state = 0xF8;

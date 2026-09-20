@@ -131,7 +131,7 @@ s32 addhero_poll_software_card_events(void);
 s32 addhero_poll_hardware_card_events(void);
 void addhero_sort_entries_by_type(void);
 s32 strncmp(void* a, void* b, s32 n);
-void func_800AA02C(void);
+void field_reset_input_repeat(void);
 s32 VSync(s32 arg0);
 void bcopy(void* dst, void* src, s32 len);
 void addhero_shutdown_card_events(void);

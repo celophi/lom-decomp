@@ -648,9 +648,9 @@ void scroll_list_update_target(ScrollListState*, u32*);
 
 s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
 s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-void func_800A8F8C();
-void func_800A8FB4();
-s32 func_800A9060();
+void field_copy_inventory_record();
+void field_compact_inventory();
+s32 field_find_free_inventory_record();
 s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, s32 active);
 void menu_swap_item_records(MenuItemEntry*, MenuItemEntry*);
 
@@ -1035,14 +1035,14 @@ static inline void menu_copy_sign_label(u8* buffer, s32 value)
     if (value >= 0)
     {
         source = menu_shared_text_entry(&g_menu_label_key_a, 11);
-        func_800A8E28(write_cursor, source);
+        field_copy_name(write_cursor, source);
     }
     else
     {
         source = menu_shared_text_entry(&g_menu_label_key_b, 16);
-        func_800A8E28(write_cursor, source);
+        field_copy_name(write_cursor, source);
     }
-    write_cursor += func_800A8DDC(source);
+    write_cursor += field_name_byte_length(source);
     *write_cursor = 0;
 }
 

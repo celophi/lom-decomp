@@ -33,12 +33,12 @@ s32 func_80143F90(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     {
         func_800A3938(0x7D, 0x80);
         D_80165F80.attr.f.state = 0;
-        func_800AA02C();
+        field_reset_input_repeat();
     }
     else if (D_80165FEC == 0xFD)
     {
         D_80165F80.attr.f.state = 0;
-        func_800AA02C();
+        field_reset_input_repeat();
     }
     return result;
 }

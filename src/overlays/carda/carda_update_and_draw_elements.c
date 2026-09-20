@@ -151,7 +151,7 @@ void func_80142668(CardaDrawState *arg0)
                     *(u32 *)var_s3 = new_word;
                     if (((new_word >> 3) & 0xF) == 8)
                     {
-                        func_800AA02C();
+                        field_reset_input_repeat();
                         *(u32 *)var_s3 = (*var_s3 & ~7) | 2;
                     }
                 }

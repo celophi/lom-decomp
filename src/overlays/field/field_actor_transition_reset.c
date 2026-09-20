@@ -552,7 +552,7 @@ void func_80096E60(void)
     extern s32 D_8010AE5C;
     extern s32 D_8010CFD0;
     extern s32 D_8010D020;
-    extern s32 D_801227C8;
+    extern s32 g_field_text_session_active;
 
     Entry *entry;
     Actor *actor;
@@ -562,7 +562,7 @@ void func_80096E60(void)
     if (D_8010AE54 != 0)
     {
         if ((field_find_active_special_attack_actor() == 0) && (func_80096A00() == 0) &&
-            (D_801227C8 == 0) && (func_8005B218() == 0) && (func_80096A90() == 0))
+            (g_field_text_session_active == 0) && (func_8005B218() == 0) && (func_80096A90() == 0))
         {
             D_8010CFD0 += 1;
         }

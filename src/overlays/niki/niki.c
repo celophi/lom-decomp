@@ -29,7 +29,7 @@ void niki_init(s32 context_value, s32 mode)
     g_niki_io_busy = 0;
     g_niki_frame_parity = 0;
     g_niki_exit_requested = 0;
-    func_800AA02C();
+    field_reset_input_repeat();
     niki_build_ui_elements();
     D_80164AE4 = context_value;
 }
@@ -1121,7 +1121,7 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
                     element->attr.word = new_word;
                     if (((new_word >> 3) & 0xF) == 8)
                     {
-                        func_800AA02C();
+                        field_reset_input_repeat();
                         element->attr.word = (element->attr.read_word & ~7) | 2;
                     }
                 }
@@ -1341,7 +1341,7 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     if ((u32)(niki_poll_and_rewind_primary_handles() - 1) < 2U)
     {
         g_niki_element_pool[0].attr.f.state = 0;
-        func_800AA02C();
+        field_reset_input_repeat();
         func_800A3938(0x78, 0x80);
         g_niki_entry_state = 0xFF;
         niki_reset_entry_ranks();
@@ -1353,7 +1353,7 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         if (status & NIKI_CANCEL_INPUT_MASK)
         {
             g_niki_element_pool[0].attr.f.state = 0;
-            func_800AA02C();
+            field_reset_input_repeat();
             func_800A3938(0x78, 0x80);
             g_niki_load_step = g_niki_card_info_sequence;
         }
@@ -1362,7 +1362,7 @@ s32 niki_draw_confirm_prompt(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             if (g_niki_choice_toggle != 0)
             {
                 g_niki_element_pool[0].attr.f.state = 0;
-                func_800AA02C();
+                field_reset_input_repeat();
                 func_800A3938(0x78, 0x80);
                 g_niki_load_step = g_niki_card_info_sequence;
             }
@@ -1518,7 +1518,7 @@ void niki_open_status_dialog(s32 dialog_state)
     g_niki_element_pool[0].dimensions.f.width_high = 1;
     g_niki_element_pool[0].dimensions.f.height = 0x14;
     NIKI_SET_ELEMENT_WIDTH_LOW(&g_niki_element_pool[0], 0);
-    func_800AA02C();
+    field_reset_input_repeat();
     g_niki_progress_active = 0;
     g_niki_confirm_latch = 0;
     g_niki_selection_status = 0;
@@ -1548,7 +1548,7 @@ void niki_open_secondary_status_dialog(s32 dialog_state)
     element->dimensions.f.width_high = 1;
     element->dimensions.f.height = 0x14;
     NIKI_SET_ELEMENT_WIDTH_LOW(element, 0);
-    func_800AA02C();
+    field_reset_input_repeat();
     D_8011F428 = 2;
     g_niki_progress_active = 0;
     g_niki_confirm_latch = 0;
@@ -1591,7 +1591,7 @@ s32 niki_draw_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
     {
         g_niki_element_pool[0].attr.f.state = 0;
-        func_800AA02C();
+        field_reset_input_repeat();
     }
     return prim;
 }
@@ -1637,7 +1637,7 @@ s32 niki_draw_secondary_status_dialog(s32* ot, s32 prim, s32 x_offset, s32 y_off
             element++;
         }
         func_80067F5C(8);
-        func_800AA02C();
+        field_reset_input_repeat();
     }
     return prim;
 }
@@ -1896,7 +1896,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 g_niki_element_pool[0].dimensions.f.width_high = 1;
                 g_niki_element_pool[0].dimensions.f.height = 0x14;
                 NIKI_SET_ELEMENT_WIDTH_LOW(&g_niki_element_pool[0], 0);
-                func_800AA02C();
+                field_reset_input_repeat();
                 g_niki_progress_active = 0;
                 g_niki_selection_status = 0;
                 g_niki_io_busy = 0;
@@ -1911,7 +1911,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             func_800A3938(0x7B, 0x80);
             g_niki_entry_state = 0xF4;
             g_niki_choice_toggle = 1;
-            func_800AA02C();
+            field_reset_input_repeat();
         }
     }
     break;
@@ -1963,7 +1963,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             func_800A3938(0x78, 0x80);
             g_niki_choice_toggle = 1;
             g_niki_entry_state = 0xF4;
-            func_800AA02C();
+            field_reset_input_repeat();
         }
         else if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
         {
@@ -1972,7 +1972,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 func_800A3938(0x78, 0x80);
                 g_niki_choice_toggle = 1;
                 g_niki_entry_state = 0xF4;
-                func_800AA02C();
+                field_reset_input_repeat();
             }
             else
             {
@@ -1985,7 +1985,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                     packet->attr.f.state = 0;
                 }
                 func_80067F5C(8);
-                func_800AA02C();
+                field_reset_input_repeat();
             }
         }
     }
@@ -2047,7 +2047,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             g_niki_choice_toggle = one;
             g_niki_entry_state = 0xF3;
             func_800A3938(0x78, 0x80);
-            func_800AA02C();
+            field_reset_input_repeat();
         }
         else if (g_pad_input & NIKI_CONFIRM_INPUT_MASK)
         {

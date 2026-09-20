@@ -540,7 +540,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                     if (sub == 2)
                     {
                         menu_swap_item_records((MenuItemEntry*)g_menu_item_ptr, (MenuItemEntry*)g_menu_active_equipped_item);
-                        func_800A8FB4();
+                        field_compact_inventory();
                         {
                             s32 char_slot = g_menu_char_slot;
                             u8* ctx = (u8*)g_pad_ctx + (char_slot * 0x250);
@@ -580,7 +580,7 @@ void* menu_inventory_list_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         }
                         else
                         {
-                            func_800A8F8C(g_menu_active_equipped_item, g_menu_item_ptr);
+                            field_copy_inventory_record(g_menu_active_equipped_item, g_menu_item_ptr);
                             ((MenuItemEntry*)g_menu_item_ptr)->active = 0;
                             g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 0;
                             g_item_slot_flags[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 1;
@@ -1153,14 +1153,14 @@ s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, 
             }
             if (flag & 0x80)
             {
-                handle = func_800A9060(g_menu_active_subtype);
+                handle = field_find_free_inventory_record(g_menu_active_subtype);
                 if (handle != 0)
                 {
-                    func_800A8F8C(handle, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) + 0x90)));
+                    field_copy_inventory_record(handle, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) + 0x90)));
                     off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250);
                     flag_ptr = (u8*)g_pad_ctx + off;
                     flag_ptr[0x640] = 0;
-                    func_800A8FB4(off);
+                    field_compact_inventory(off);
                 }
                 else
                 {
@@ -1306,7 +1306,7 @@ s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, V
         {
             list->active = MENU_SLOT_STATE_CLOSING;
             *(u8*)g_menu_item_ptr = 0;
-            func_800A8FB4();
+            field_compact_inventory();
             g_menu_pending_item_row = 0xFF;
         }
         else

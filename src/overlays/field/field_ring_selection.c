@@ -112,7 +112,7 @@ extern s32 g_frame_counter;
 
 /* External callees (not members of this TU). */
 u32 field_load_vram_resource(s32, s16 *, s32);
-void func_800AA02C(void);
+void field_reset_input_repeat(void);
 void func_80086F48(POLY_FT4 *, s32);
 
 /* Forward declarations for members called before their definition. */
@@ -154,7 +154,7 @@ void func_800A43E8(s32 position_mode, s32 resource_index, u16 excluded_mask, s32
 
     if (D_8011F3AC == 0)
     {
-        func_800AA02C();
+        field_reset_input_repeat();
         D_8011F37C = cancel_index;
         D_8011F330 = excluded_mask;
         load_params[0] = 0x140;

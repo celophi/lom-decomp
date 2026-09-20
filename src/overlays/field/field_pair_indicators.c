@@ -30,7 +30,7 @@ extern s32 g_field_scene_mode_bit;
 extern s32 D_80117EC0;
 extern s32 D_80117EC4;
 extern u8 D_80117EC8[];
-extern s32 D_801227C8;
+extern s32 g_field_text_session_active;
 
 /**
  * @brief Select nearby active actor pairs and draw their animated indicators.
@@ -232,7 +232,7 @@ void func_800A32A8(s32 slot, u8 *buffer)
             *reset_counter = -1;
             return;
         }
-        if (D_801227C8 == 0)
+        if (g_field_text_session_active == 0)
         {
             write_counter = counters;
             if (slot != 0)

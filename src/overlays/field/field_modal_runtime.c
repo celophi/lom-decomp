@@ -13,7 +13,7 @@
  * launchers, the modal-state pump, the fade transitions and the modal
  * coordinate panels into one TU.
  *
- * D_8012269C is the field's modal-state code shared across the launchers, the
+ * g_field_modal_state is the field's modal-state code shared across the launchers, the
  * fade starters and the modal pump (1 shop, 2 gosub, 6/7/8 fade transitions).
  */
 
@@ -167,22 +167,22 @@ typedef struct
 /* groups (session ops, launchers, fade ops, coord panels).            */
 /* ------------------------------------------------------------------ */
 
-s32 func_800A9D70(s32);
+s32 field_read_controller_buttons(s32);
 void akao_cmd_98_9a_9c_9e(s32 arg0);
 
 
 
 void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
-void func_800A92CC(s32 arg0);
-void func_800A939C(s32 arg0);
-void func_800A9B88(void);
+void field_draw_cd_error_text(s32 arg0);
+void field_draw_actor_labels(s32 arg0);
+void field_update_text_session(void);
 
 void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration);
 void func_800A3938(s32 sound_id, s32 pan);
 void func_800AE9E0(void);
 s32 func_800A88A0(void *arg0, void *arg1, void *arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6);
-s32 func_800A8DDC(u8 *arg0);
-void func_800A8E28(u8 *dest, u8 *src);
+s32 field_name_byte_length(u8 *arg0);
+void field_copy_name(u8 *dest, u8 *src);
 s32 func_800AEAC0(s32 handle, void *arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5);
 s32 func_800AF950(s32 handle, void *arg1, u8 *str, s32 arg3, s32 x, s32 y, s32 arg6, s32 arg7, s32 arg8, s32 arg9, s32 arg10, s32 arg11);
 
@@ -194,14 +194,14 @@ s32 func_800AB86C(ArgA *arg0);
 s32 func_800AC768(ArgA *arg0);
 
 extern D_801227B8_t D_801227B8;
-extern s32 D_801227BC;
-extern s32 D_801227C0;
-extern s32 D_801227C8;
-extern s32 D_801227D8;
-extern s32 D_801227E4;
+extern s32 g_field_primary_held_buttons;
+extern s32 g_field_primary_repeat_delay;
+extern s32 g_field_text_session_active;
+extern s32 g_field_secondary_held_buttons;
+extern s32 g_field_secondary_repeat_delay;
 extern s32 D_8012291C;
-extern s32 D_80122984;
-extern s32 D_801229F8;
+extern s32 g_field_text_session_cd_error;
+extern s32 g_field_buffered_input;
 extern s32 g_pad_input;
 extern s32 g_pad_input_inject;
 
@@ -211,8 +211,8 @@ extern s32 D_801229AC;
 extern s32 g_gosub_result_count;
 
 /*
- * D_8012269C and g_pad_ctx are read with conflicting types across functions
- * (D_8012269C: s32 vs u32; g_pad_ctx: u8 * vs PadContext *). They are declared
+ * g_field_modal_state and g_pad_ctx are read with conflicting types across functions
+ * (g_field_modal_state: s32 vs u32; g_pad_ctx: u8 * vs PadContext *). They are declared
  * at block scope inside each using function with that function's original type;
  * GCC 2.7.2 accepts the incompatible block-scope externs (warning only) and
  * emits identical code. A file-scope copy would turn those warnings into
@@ -261,8 +261,8 @@ extern s32 D_80122820;
         low = D_800EC3E4.unk0;                                        \
         offset = (D_800EC3E4.unk1 << 8) + (s32)((u8 *)&D_800EC3E4 - 0x20); \
         minus = (u8 *)(low + offset);                                 \
-        func_800A8E28(dst, minus);                                    \
-        dst += func_800A8DDC(minus);                                  \
+        field_copy_name(dst, minus);                                    \
+        dst += field_name_byte_length(minus);                                  \
     }                                                                 \
     div = 10000000;                                                   \
     started = 0;                                                      \
@@ -364,7 +364,7 @@ void func_800AA570(s32 render_buffer_addr)
     extern s32 func_801405B0(s32);
     extern s32 g_field_actor_bindings[];
     extern u8 D_801226B8[], D_801226F0[];
-    extern s32 D_8011F424, D_801227D4, D_8012291C, D_80122984, D_801229F4, g_active_script,
+    extern s32 D_8011F424, D_801227D4, D_8012291C, g_field_text_session_cd_error, D_801229F4, g_active_script,
         g_script_repeat_count;
 
     s32 var_a0;
@@ -376,7 +376,7 @@ void func_800AA570(s32 render_buffer_addr)
 
     screen = (u8 *)0x801ED600;
     var_a0 = D_8012291C;
-    D_80122984 = 0;
+    g_field_text_session_cd_error = 0;
     screen[0x91] = 0;
     screen[0x92] = 0;
     screen[0x13F] = 0;
@@ -453,21 +453,21 @@ cleanup:
 }
 
 /**
- * @brief Open the text session: set the active flag, start the CD-error fade, clear pad input, seed the two func_800A9D70 handles with 0xF counters, and run func_800A9198.
+ * @brief Open the text session: set the active flag, start the CD-error fade, clear pad input, seed the two field_read_controller_buttons handles with 0xF counters, and run field_init_actor_labels.
  * @see decomp.me (100%) TODO
  */
 void func_800AA7A4(void)
 {
-    D_801227C8 = 1;
+    g_field_text_session_active = 1;
     field_set_cd_error_fade_target();
     g_pad_input = 0;
-    D_801227BC = func_800A9D70(0);
-    D_801227C0 = 0xF;
+    g_field_primary_held_buttons = field_read_controller_buttons(0);
+    g_field_primary_repeat_delay = 0xF;
     g_pad_input_inject = 0;
-    D_801227D8 = func_800A9D70(1);
-    D_801227E4 = 0xF;
-    D_801229F8 = 0;
-    func_800A9198();
+    g_field_secondary_held_buttons = field_read_controller_buttons(1);
+    g_field_secondary_repeat_delay = 0xF;
+    g_field_buffered_input = 0;
+    field_init_actor_labels();
 }
 
 /**
@@ -477,7 +477,7 @@ void func_800AA824(void)
 {
     Struct_801ED600_2 *ptr = (Struct_801ED600_2 *)0x801ED600;
 
-    D_801227C8 = 0;
+    g_field_text_session_active = 0;
     D_8012291C = 0;
     D_801227B8.unk0 = ptr->unk0;
     D_801227B8.unk1 = ptr->unkAE;
@@ -486,9 +486,9 @@ void func_800AA824(void)
 /**
  * @brief Tear down or advance the active field text window on a gated event.
  *
- * When the text subsystem is active (@c D_801227C8), runs func_800A9B88 and, if
+ * When the text subsystem is active (@c g_field_text_session_active), runs field_update_text_session and, if
  * still active, resets the scratch buffer and dispatches the per-mode advance
- * (@c func_800A92CC / @c func_800A939C selected by @c D_80122984). If the pass
+ * (@c field_draw_cd_error_text / @c field_draw_actor_labels selected by @c g_field_text_session_cd_error). If the pass
  * cleared the active flag it instead resets the windows, stops the sequence
  * (@c akao_cmd_98_9a_9c_9e), and kicks off the close fade.
  *
@@ -497,19 +497,19 @@ void func_800AA824(void)
  */
 void func_800AA858(s32 arg0)
 {
-    if (D_801227C8 != 0)
+    if (g_field_text_session_active != 0)
     {
-        func_800A9B88();
-        if (D_801227C8 != 0)
+        field_update_text_session();
+        if (g_field_text_session_active != 0)
         {
             field_text_reset_scratch();
-            if (D_80122984 != 0)
+            if (g_field_text_session_cd_error != 0)
             {
-                func_800A92CC(arg0);
+                field_draw_cd_error_text(arg0);
             }
             else
             {
-                func_800A939C(arg0);
+                field_draw_actor_labels(arg0);
             }
             field_text_upload_immediate_cache();
             return;
@@ -869,23 +869,23 @@ void field_run_zukan(s32 arg0)
 /**
  * @brief Load GOSUB.BIN and open a screen sequence, unless a sub-overlay is already active.
  *
- * Sets D_8012269C to 2 for the duration and clears the gosub result count.
+ * Sets g_field_modal_state to 2 for the duration and clears the gosub result count.
  *
  * @param screen_sequence Terminated s32 array passed to gosub_open_screen_sequence.
  * @see decomp.me (100%) TODO
  */
 void field_open_gosub_screen_sequence(void *screen_sequence)
 {
-    extern s32 D_8012269C;
+    extern s32 g_field_modal_state;
 
-    if (D_8012269C == 0)
+    if (g_field_modal_state == 0)
     {
         D_801227F0 = 1;
         g_gosub_result_count = 0;
         func_80084240();
         cdrom_stream(CD_RES_GOSUB_BIN, (void *)0x80140000);
         cdrom_wait_queue_empty();
-        D_8012269C = 2;
+        g_field_modal_state = 2;
         D_8011F41C = 2;
         func_80140080((void *)0x80175000, screen_sequence);
     }
@@ -903,12 +903,12 @@ void field_open_gosub_screen_sequence(void *screen_sequence)
  */
 void field_open_shop_mode_0(s32 arg0)
 {
-    extern s32 D_8012269C;
+    extern s32 g_field_modal_state;
     extern u8 *g_pad_ctx;
     s32 count;
     s32 i;
 
-    if (D_8012269C == 0)
+    if (g_field_modal_state == 0)
     {
         count = 0;
         for (i = 0; i < 0x64; i++)
@@ -937,7 +937,7 @@ void field_open_shop_mode_0(s32 arg0)
             cdrom_stream(CD_RES_SHOP_BIN, (void *)0x80140000);
             cdrom_wait_queue_empty();
             D_801229AC = 1;
-            D_8012269C = 1;
+            g_field_modal_state = 1;
             func_80140004((void *)0x80150000, 0, 0, 0, 0, arg0);
         }
     }
@@ -953,15 +953,15 @@ void field_open_shop_mode_0(s32 arg0)
  */
 void field_open_shop_mode_1(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
-    extern s32 D_8012269C;
+    extern s32 g_field_modal_state;
 
-    if (D_8012269C == 0)
+    if (g_field_modal_state == 0)
     {
         func_80084240();
         cdrom_stream(CD_RES_SHOP_BIN, (void *)0x80140000);
         cdrom_wait_queue_empty();
         D_801229AC = 1;
-        D_8012269C = 1;
+        g_field_modal_state = 1;
         func_80140004((void *)0x80150000, 1, arg0, arg1, arg2, arg3);
     }
 }
@@ -986,7 +986,7 @@ void func_800AB214(s32 context_or_delay)
     extern void func_80084240(void);
     extern void func_800A39A8(s32, s32, s32, s32);
     extern void func_800A7384(void);
-    extern s32 func_800A9D70(s32);
+    extern s32 field_read_controller_buttons(s32);
     extern void func_800AA90C(s32);
     extern s32 func_800B0888(void);
     extern s32 func_801400C4(s32);
@@ -996,16 +996,16 @@ void func_800AB214(s32 context_or_delay)
     extern s32 func_80140370(s32);
     extern Slot g_field_player_records[];
     extern s32 D_8011F41C;
-    extern u32 D_8012269C;
-    extern s32 D_801227BC;
-    extern s32 D_801227C0;
-    extern s32 D_801227D8;
-    extern s32 D_801227E4;
+    extern u32 g_field_modal_state;
+    extern s32 g_field_primary_held_buttons;
+    extern s32 g_field_primary_repeat_delay;
+    extern s32 g_field_secondary_held_buttons;
+    extern s32 g_field_secondary_repeat_delay;
     extern s32 D_801227F0;
     extern s32 D_80122994;
     extern s32 D_8012299C;
     extern s32 D_801229AC;
-    extern s32 D_801229F8;
+    extern s32 g_field_buffered_input;
     extern s32 g_gosub_result_count;
     extern s32 g_gosub_result_values;
     extern s16 g_music_track_index;
@@ -1018,13 +1018,13 @@ void func_800AB214(s32 context_or_delay)
     s32 index_or_zero;
     u16 temp_v1;
 
-    switch (D_8012269C)
+    switch (g_field_modal_state)
     {
     case 1:
         if ((D_801229AC != 0) && (func_801400D4(context_or_delay) != 0))
         {
             D_801229AC = 0;
-            D_8012269C = 0;
+            g_field_modal_state = 0;
             func_80084240();
             return;
         }
@@ -1048,7 +1048,7 @@ void func_800AB214(s32 context_or_delay)
                 DrawSync(0);
                 field_text_reset_windows();
                 D_801227F0 = 2;
-                D_8012269C = 0;
+                g_field_modal_state = 0;
                 D_8011F41C = 0;
                 return;
             }
@@ -1089,7 +1089,7 @@ void func_800AB214(s32 context_or_delay)
             g_gosub_result_count = 1;
             D_801227F0 = 2;
             D_8012299C = 0;
-            D_8012269C = 0;
+            g_field_modal_state = 0;
             return;
         }
         break;
@@ -1098,7 +1098,7 @@ void func_800AB214(s32 context_or_delay)
         {
             func_80084240();
             D_80122994 = 0;
-            D_8012269C = 0;
+            g_field_modal_state = 0;
             return;
         }
         break;
@@ -1115,18 +1115,18 @@ void func_800AB214(s32 context_or_delay)
                 field_activate_actor_resource_slot(-2, 0, 0);
                 func_80084240();
                 D_80122994 = 0;
-                D_8012269C = 0;
+                g_field_modal_state = 0;
                 return;
             case 3:
                 func_80084240();
                 D_80122994 = 0;
-                D_8012269C = 0;
+                g_field_modal_state = 0;
                 return;
             case 2:
                 field_release_actor_resource_slot(0);
                 func_80084240();
                 D_80122994 = 0;
-                D_8012269C = 0;
+                g_field_modal_state = 0;
                 return;
             }
         }
@@ -1136,7 +1136,7 @@ void func_800AB214(s32 context_or_delay)
         {
             field_text_reset_windows();
             index_or_zero = 0;
-            D_8012269C = 0;
+            g_field_modal_state = 0;
             g_pad_input = 0;
             goto block_42;
         }
@@ -1162,16 +1162,16 @@ void func_800AB214(s32 context_or_delay)
         block_41:
             field_text_reset_windows();
             index_or_zero = 0;
-            D_8012269C = 0;
+            g_field_modal_state = 0;
             g_pad_input = 0;
         block_42:
-            D_801227BC = func_800A9D70(index_or_zero);
+            g_field_primary_held_buttons = field_read_controller_buttons(index_or_zero);
             context_or_delay = 0xF;
-            D_801227C0 = context_or_delay;
+            g_field_primary_repeat_delay = context_or_delay;
             g_pad_input_inject = 0;
-            D_801227D8 = func_800A9D70(1);
-            D_801227E4 = context_or_delay;
-            D_801229F8 = 0;
+            g_field_secondary_held_buttons = field_read_controller_buttons(1);
+            g_field_secondary_repeat_delay = context_or_delay;
+            g_field_buffered_input = 0;
             field_restore_fade_target();
         }
         break;
@@ -1184,9 +1184,9 @@ void func_800AB214(s32 context_or_delay)
  */
 void func_800AB638(s32 arg0)
 {
-    extern s32 D_8012269C;
+    extern s32 g_field_modal_state;
 
-    D_8012269C = 6;
+    g_field_modal_state = 6;
     field_set_fade_target_only(0xC0, 0x80, 0x80, 8);
     func_800A3938(0xC7, 0x80);
     D_801227E0 = arg0;
@@ -1229,9 +1229,9 @@ void func_800AB690(ArgA *arg0)
  */
 void func_800AB710(void)
 {
-    extern s32 D_8012269C;
+    extern s32 g_field_modal_state;
 
-    D_8012269C = 7;
+    g_field_modal_state = 7;
     field_set_fade_target_only(0xC0, 0xC0, 0xC0, 8);
     func_800AE9E0();
     func_800A3938(0x125, 0x80);
@@ -1260,11 +1260,11 @@ void func_800AB774(void)
     extern s32 D_80122820;
     extern s32 D_80122990;
     extern s32 D_80122B08;
-    extern s32 D_8012269C;
+    extern s32 g_field_modal_state;
     extern u8 D_800FDF79;
     extern u8 *g_pad_ctx;
 
-    D_8012269C = 8;
+    g_field_modal_state = 8;
     field_set_fade_target_only(0xC0, 0xC0, 0xC0, 8);
     func_800AE9E0();
     func_800A3938(0x126, 0x80);

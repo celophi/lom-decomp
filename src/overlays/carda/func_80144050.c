@@ -77,7 +77,7 @@ s32 func_80144050(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     {
         func_800A3938(0x7D, 0x80);
         D_80165F80.attr.f.state = 0;
-        func_800AA02C();
+        field_reset_input_repeat();
         D_80165FEC = 0xFF;
         func_80147C5C();
         if ((u32)(D_80166078 - 2) < 2U)
@@ -108,7 +108,7 @@ s32 func_80144050(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         D_801660F8 = 1;
         func_800A3938(0x7D, 0x80);
         D_80165F80.attr.f.state = 0;
-        func_800AA02C();
+        field_reset_input_repeat();
         D_80165FEC = 0xFF;
         func_80147C5C();
         D_80165FEC = 0xF9;

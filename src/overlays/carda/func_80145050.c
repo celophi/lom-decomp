@@ -78,7 +78,7 @@ s32 func_8002054C(s32);
 void func_80067F5C(s32);
 void func_800A3938(s32, s32);
 s32 func_800A88A0(s32, s32*, void*, s32, s32, s32, s32);
-void func_800AA02C(void);
+void field_reset_input_repeat(void);
 s32 func_8014385C(s32, s32*);
 void func_80146694(void);
 void func_801466F8(void);
@@ -342,7 +342,7 @@ s32 func_80145050(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             func_800A3938(0x7D, 0x80);
             D_80165FF8 = D_801660A0;
             D_80165FEC = 0xF1;
-            func_800AA02C();
+            field_reset_input_repeat();
             goto return_prim;
         }
         if (D_80122988 & 0x220)
@@ -352,7 +352,7 @@ s32 func_80145050(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 func_800A3938(0x7D, 0x80);
                 D_80165FF8 = D_801660A0;
                 D_80165FEC = 0xF1;
-                func_800AA02C();
+                field_reset_input_repeat();
                 goto return_prim;
             }
             func_800A3938(0x7E, 0x80);
@@ -477,7 +477,7 @@ s32 func_80145050(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             goto return_prim;
         }
         D_80165FF8 = 1;
-        func_800AA02C();
+        field_reset_input_repeat();
         goto return_prim;
     }
 
@@ -591,7 +591,7 @@ s32 func_80145050(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         func_800A3938(0x7D, 0x80);
         D_80165FEC = 0xF1;
         D_80165FF8 = D_801660A0;
-        func_800AA02C();
+        field_reset_input_repeat();
         goto return_prim;
 
     accept_f2:
@@ -699,7 +699,7 @@ s32 func_80145050(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                     func_80146694();
                     D_80165FEC = 0xF2;
                     D_80165FF8 = 1;
-                    func_800AA02C();
+                    field_reset_input_repeat();
                     goto return_prim;
                 }
                 func_80149DF4();

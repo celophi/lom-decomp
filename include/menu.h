@@ -11,7 +11,7 @@
 #include "sdk/libgpu.h"
 #include "sdk/strings.h"
 
-extern void func_800AA02C(void);
+extern void field_reset_input_repeat(void);
 extern void menu_init_prim_rects(void);
 extern void menu_upload_graphics(void);
 extern void menu_state_init(void);

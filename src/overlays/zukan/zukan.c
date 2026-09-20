@@ -220,7 +220,7 @@ s32 zukan_initialize_state(s32 work_buffer, s32 category)
     g_zukan_category = category;
     g_zukan_work_buffer = (u8*)((work_buffer + 3) & ~3);
     zukan_upload_ui_images((next_buffer = work_buffer + 0x8000, work_buffer));
-    func_800AA02C();
+    field_reset_input_repeat();
     zukan_set_fade_target(0x100, 0x100, 0x100, ZUKAN_FADE_STEPS);
     g_zukan_transition_state = ZUKAN_TRANSITION_IDLE;
     g_zukan_view_mode = ZUKAN_VIEW_LIST;

@@ -661,7 +661,7 @@ extern u8 D_80122C1F;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 
-void func_800A8F8C(void *arg0, u8 *arg1);
+void field_copy_inventory_record(void *arg0, u8 *arg1);
 void func_800C2A88(s32 arg0);
 
 /**
@@ -721,7 +721,7 @@ void func_800C80BC(void)
         u8 *record = (u8 *)((s32)g_saved_game.bytes + record_index * 0x40);
         if (record[0x3160] == 0)
         {
-            func_800A8F8C(g_saved_game.bytes + record_index * 0x40 + 0x3160, g_saved_game.bytes + 0xCE0 + selected_index * 0x40);
+            field_copy_inventory_record(g_saved_game.bytes + record_index * 0x40 + 0x3160, g_saved_game.bytes + 0xCE0 + selected_index * 0x40);
             func_800C2A88(selected_index);
             count = *(s32 *)(record + 0x3194);
             if (count == 0)

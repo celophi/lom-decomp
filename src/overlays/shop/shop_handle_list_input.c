@@ -51,8 +51,8 @@ extern s32 D_80145CE0;
 
 extern void func_80067F28(void);
 extern void func_800A3938();
-extern void func_800A8FB4(void);
-extern s32 func_800A9060(void);
+extern void field_compact_inventory(void);
+extern s32 field_find_free_inventory_record(void);
 extern void func_80140CA4(s32 arg0);
 extern void func_8014234C(void);
 extern void func_801428F0(void);
@@ -214,7 +214,7 @@ s32 func_80140838(void)
                 }
                 if (entry->id & 0x8000)
                 {
-                    if (func_800A9060() == 0)
+                    if (field_find_free_inventory_record() == 0)
                     {
                         goto invalid_purchase;
                     }
@@ -249,7 +249,7 @@ check_cancel:
         func_800A3938(0x7F, 0x80);
         if (D_801451C4 == 0)
         {
-            func_800A8FB4();
+            field_compact_inventory();
         }
         func_80067F28();
         element = D_801451D8;

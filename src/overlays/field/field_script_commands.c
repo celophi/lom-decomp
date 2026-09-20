@@ -358,7 +358,7 @@ typedef struct Command
     s32 arg4, arg8;
     u32 argC;
 } Command;
-extern u8 *func_800A9060(void);
+extern u8 *field_find_free_inventory_record(void);
 extern void func_800BD520(s32, s32, s32);
 extern void func_800BE888(u8 *, s32, s32, u32);
 extern void func_800BEC44(u8 *, s32);
@@ -399,7 +399,7 @@ void func_800BDCA4(s32 arg0, Command *arg1)
         func_800C1EC8(0, temp_a1, 0x60);
         return;
     case 1:
-        temp_s1 = func_800A9060();
+        temp_s1 = field_find_free_inventory_record();
         if (temp_s1 != 0)
         {
             context = &D_80122B74;

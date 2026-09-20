@@ -6,8 +6,8 @@ extern u8 g_field_actors[];
 extern u8 g_field_object_states[];
 extern u8 D_80122738[];
 extern u8 *g_pad_ctx;
-extern s32 D_80122714, D_80122734, D_801227BC, D_801227C0;
-extern s32 D_801227D8, D_801227E4, D_80122828, D_801229F8, D_80122A00;
+extern s32 D_80122714, D_80122734, g_field_primary_held_buttons, g_field_primary_repeat_delay;
+extern s32 g_field_secondary_held_buttons, g_field_secondary_repeat_delay, D_80122828, g_field_buffered_input, D_80122A00;
 extern s32 g_menu_element_counter, g_pad_input, g_pad_input_inject;
 void field_start_actor_animation(s32, s32, s32);
 void field_initialize_actor_record(s32, s32);
@@ -16,7 +16,7 @@ s32 func_800839F8(s32, s32);
 s32 func_80083EEC(s32, s32, s32);
 
 void func_800A3938(s32, s32);
-s32 func_800A9D70(s32);
+s32 field_read_controller_buttons(s32);
 void func_800C2640(s32, s32);
 
 struct Window;
@@ -179,12 +179,12 @@ setup_slot:
     }
     slot->scroll_ticks = 0;
     g_pad_input = 0;
-    D_801227BC = func_800A9D70(0);
-    D_801227C0 = 0xF;
+    g_field_primary_held_buttons = field_read_controller_buttons(0);
+    g_field_primary_repeat_delay = 0xF;
     g_pad_input_inject = 0;
-    D_801227D8 = func_800A9D70(1);
-    D_801227E4 = 0xF;
-    D_801229F8 = 0;
+    g_field_secondary_held_buttons = field_read_controller_buttons(1);
+    g_field_secondary_repeat_delay = 0xF;
+    g_field_buffered_input = 0;
 }
 
 
@@ -326,15 +326,15 @@ s32 func_800AF350(u8 *arg0)
 
     if ((((*(s32 *)(arg0 + 0x0)) & 7) == 2) && ((*(s16 *)(arg0 + 0xC)) == 0))
     {
-        if (D_801229F8 & 0x220)
+        if (g_field_buffered_input & 0x220)
         {
             g_pad_input = 0;
-            D_801227BC = func_800A9D70(0);
-            D_801227C0 = 0xF;
+            g_field_primary_held_buttons = field_read_controller_buttons(0);
+            g_field_primary_repeat_delay = 0xF;
             g_pad_input_inject = 0;
-            D_801227D8 = func_800A9D70(1);
-            D_801227E4 = 0xF;
-            D_801229F8 = 0;
+            g_field_secondary_held_buttons = field_read_controller_buttons(1);
+            g_field_secondary_repeat_delay = 0xF;
+            g_field_buffered_input = 0;
             func_800A3938(0x7E, 0x80);
             window_flags = &D_80122828;
             window_index = 0;
@@ -402,17 +402,17 @@ s32 func_800AF350(u8 *arg0)
         }
         else
         {
-            if (D_801229F8 & 0x40)
+            if (g_field_buffered_input & 0x40)
             {
                 g_pad_input = 0;
-                D_801227BC = func_800A9D70(0);
-                D_801227C0 = 0xF;
+                g_field_primary_held_buttons = field_read_controller_buttons(0);
+                g_field_primary_repeat_delay = 0xF;
                 g_pad_input_inject = 0;
-                D_801227D8 = func_800A9D70(1);
+                g_field_secondary_held_buttons = field_read_controller_buttons(1);
                 cancel_flags = &D_80122828;
                 cancel_index = 0;
-                D_801227E4 = 0xF;
-                D_801229F8 = 0;
+                g_field_secondary_repeat_delay = 0xF;
+                g_field_buffered_input = 0;
                 g_menu_element_counter = 0;
                 do
                 {
@@ -424,25 +424,25 @@ s32 func_800AF350(u8 *arg0)
                 D_80122714 = 0;
                 return;
             }
-            if (D_801229F8 & 0xF00C)
+            if (g_field_buffered_input & 0xF00C)
             {
                 func_800A3938(0x7D, 0x80);
                 scroll_step = 1;
-                if (D_801229F8 & 8)
+                if (g_field_buffered_input & 8)
                 {
                     scroll_step = 0xA;
-                    D_801229F8 = 0x4000;
+                    g_field_buffered_input = 0x4000;
                 }
-                if (D_801229F8 & 4)
+                if (g_field_buffered_input & 4)
                 {
                     scroll_step = 0xA;
-                    D_801229F8 = 0x1000;
+                    g_field_buffered_input = 0x1000;
                 }
                 if (scroll_step != 0)
                 {
                     do
                     {
-                        if (D_801229F8 & 0x6000)
+                        if (g_field_buffered_input & 0x6000)
                         {
                             next_selection = D_80122A00 + 1;
                             D_80122A00 = next_selection;
@@ -451,7 +451,7 @@ s32 func_800AF350(u8 *arg0)
                                 D_80122A00 = 0;
                             }
                         }
-                        if (D_801229F8 & 0x9000)
+                        if (g_field_buffered_input & 0x9000)
                         {
                             previous_selection = D_80122A00 - 1;
                             D_80122A00 = previous_selection;

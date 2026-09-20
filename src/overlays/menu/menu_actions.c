@@ -233,12 +233,12 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
             {
                 break;
             }
-            handle = func_800A9060();
+            handle = field_find_free_inventory_record();
             if (handle != 0)
             {
                 if (menu_item_is_nondefault((const MenuItemEntry*)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) - 0x170))) != 0)
                 {
-                    func_800A8F8C(handle, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) - 0x170)));
+                    field_copy_inventory_record(handle, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((g_menu_active_subtype << 6) - 0x170)));
                     switch (g_menu_active_subtype)
                     {
                     case 7:
@@ -250,10 +250,10 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                         cmp_shift = ((MenuItemEntry*)(cmp_tbl = D_800F0BF8))->attributes.packed >> 10;
                         if ((lhs_shift & 0x3F) == (cmp_shift & 0x3F))
                         {
-                            func_800A8F8C(&menu_character_record((PadContext*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
+                            field_copy_inventory_record(&menu_character_record((PadContext*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
                             break;
                         }
-                        func_800A8F8C(&menu_character_record((PadContext*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
+                        field_copy_inventory_record(&menu_character_record((PadContext*)ctx, g_menu_char_slot)->items[0], cmp_tbl);
 
                         i9 = 1;
                         do
@@ -264,15 +264,15 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                             {
                                 if ((((*(u32*)(pad_item + 0x654)) >> 10) & 0x3F) == 0)
                                 {
-                                    handle2 = func_800A9060();
+                                    handle2 = field_find_free_inventory_record();
                                     if (handle2 != 0)
                                     {
-                                        func_800A8F8C(handle2, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + (off + 0x50)));
+                                        field_copy_inventory_record(handle2, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + (off + 0x50)));
                                         menu_equipped_item(g_pad_ctx, i9)->active = 0;
-                                        func_800A8FB4();
+                                        field_compact_inventory();
                                         break;
                                     }
-                                    func_800A8F8C(((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, handle);
+                                    field_copy_inventory_record(((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, handle);
                                     *(u8*)handle = 0;
                                     g_menu_message_line1 = (void*)menu_text_entry(menu_text_table_base(MENU_TEXT_MESSAGES), 86);
                                     menu_clear_slots();
@@ -303,7 +303,7 @@ s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf
                             equipment_ctx = (u8*)g_pad_ctx;
                             equipment_offset = ((equipment_subtype - MENU_EQUIPMENT_SUBTYPE_BASE) << 6) + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE);
                             *(equipment_ctx + equipment_offset + 0x640) = 0;
-                            func_800A8FB4();
+                            field_compact_inventory();
                         }
                         break;
                     }
@@ -369,12 +369,12 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
                     }
                     else if (i == 0)
                     {
-                        func_800A8F8C(func_800A9060(), (s32)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx + 0x640));
-                        func_800A8F8C((s32)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx + 0x640), D_800F0BF8);
+                        field_copy_inventory_record(field_find_free_inventory_record(), (s32)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx + 0x640));
+                        field_copy_inventory_record((s32)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx + 0x640), D_800F0BF8);
                     }
                     else
                     {
-                        func_800A8F8C(func_800A9060(), (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((i << 6) + 0x50)));
+                        field_copy_inventory_record(field_find_free_inventory_record(), (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0)) + ((i << 6) + 0x50)));
                         slot_off = g_menu_char_slot * 0x250;
                         *((u8*)g_pad_ctx + ((i << 6) + slot_off) + 0x640) = 0;
                     }
@@ -410,7 +410,7 @@ s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_bu
             }
         }
 
-        func_800A8FB4();
+        field_compact_inventory();
         g_item_slot_flags[0] = 0;
         g_item_slot_flags[1] = 0;
         g_item_slot_flags[2] = 0;
@@ -459,9 +459,9 @@ inline void menu_swap_item_records(MenuItemEntry* first_item, MenuItemEntry* sec
 {
     u8 swap_buffer[MENU_ITEM_RECORD_SIZE];
 
-    func_800A8F8C(swap_buffer, first_item);
-    func_800A8F8C(first_item, second_item);
-    func_800A8F8C(second_item, swap_buffer);
+    field_copy_inventory_record(swap_buffer, first_item);
+    field_copy_inventory_record(first_item, second_item);
+    field_copy_inventory_record(second_item, swap_buffer);
 }
 
 /**
@@ -553,15 +553,15 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state_arg, s3
             {
                 if (assignment_flag & 0x80)
                 {
-                    item_handle = func_800A9060();
+                    item_handle = field_find_free_inventory_record();
                     if (item_handle != 0)
                     {
                         s32 slot_offset;
 
-                        func_800A8F8C(item_handle, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
+                        field_copy_inventory_record(item_handle, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
                         slot_offset = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250);
                         *((u8*)g_pad_ctx + slot_offset + 0x640) = 0;
-                        func_800A8FB4();
+                        field_compact_inventory();
                     }
                     else
                     {
@@ -1064,7 +1064,7 @@ s32 menu_stage_best_equipment_for_slot0(void)
         records_differ = menu_item_is_nondefault(slot_record);
         if (records_differ == 0)
         {
-            func_800A8F8C(&menu_character_record(g_pad_ctx, g_menu_char_slot)->items[0], candidate);
+            field_copy_inventory_record(&menu_character_record(g_pad_ctx, g_menu_char_slot)->items[0], candidate);
             candidate->active = 0;
             g_item_slot_data[0] = 0;
         }
@@ -1136,7 +1136,7 @@ s32 menu_stage_best_equipment_for_active_slot(void)
     s32 slot_index;
     if (0)
     {
-        func_800A8F8C(0, 0, 0, 0, 0, 0);
+        field_copy_inventory_record(0, 0, 0, 0, 0, 0);
     }
     candidate = menu_find_best_equipment_for_active_slot();
     if (candidate != 0)
@@ -1155,7 +1155,7 @@ s32 menu_stage_best_equipment_for_active_slot(void)
                     break;
                 }
             }
-            func_800A8F8C((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), candidate);
+            field_copy_inventory_record((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), candidate);
             candidate->active = 0;
             g_item_slot_data[g_menu_active_subtype - MENU_EQUIPMENT_SUBTYPE_BASE] = 0;
         }

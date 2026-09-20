@@ -16,7 +16,7 @@ extern u8 D_800EC3F8[];
 
 extern void func_800A3938();
 extern s32 func_800A88A0(s32, s32 *, void *, s32, s32, s32, s32);
-extern void func_800AA02C(void);
+extern void field_reset_input_repeat(void);
 
 /**
  * @see (100%)
@@ -94,7 +94,7 @@ s32 func_801429A4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             func_800A3938(0x7F, 0x80);
             D_801451D4 = 0;
 input_done:
-            func_800AA02C();
+            field_reset_input_repeat();
         }
     }
 

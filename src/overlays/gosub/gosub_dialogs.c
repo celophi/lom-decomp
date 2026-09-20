@@ -180,7 +180,7 @@ s32 gosub_handle_sort_dialog(s32 dialog_result)
  *
  * Installs gosub_draw_two_option_dialog as element 0's draw handler and gosub_handle_row_action_dialog as the
  * dialog's result handler, clears the pending choice, then starts the element
- * entering at x 0x80 / y 0x24 with code 0x80. func_800AA02C runs last.
+ * entering at x 0x80 / y 0x24 with code 0x80. field_reset_input_repeat runs last.
  *
  * @see decomp.me (100%)
  */
@@ -199,7 +199,7 @@ void gosub_open_row_action_dialog(void)
     element->geometry.f.width_high = 0;
     element->geometry.f.height = 0x24;
     SET_ELEMENT_WIDTH_LOW(element, 0x80);
-    func_800AA02C();
+    field_reset_input_repeat();
 }
 
 /**
@@ -221,7 +221,7 @@ void gosub_open_sort_dialog(void)
     element->geometry.f.width_high = 0;
     element->geometry.f.height = 0x34;
     SET_ELEMENT_WIDTH_LOW(element, 0x80);
-    func_800AA02C();
+    field_reset_input_repeat();
 }
 
 /**
@@ -349,7 +349,7 @@ void gosub_open_message_dialog(u8* message_text)
     element->geometry.f.width_high = 1;
     element->geometry.f.height = 0x14;
     SET_ELEMENT_WIDTH_LOW(element, 0);
-    func_800AA02C();
+    field_reset_input_repeat();
     g_gosub_result_count = 0;
 }
 
