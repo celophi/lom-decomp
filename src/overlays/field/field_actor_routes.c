@@ -324,6 +324,7 @@ void field_refresh_party_routes(void)
  * @param unused_limit Unused sixth argument retained to agree with the caller.
  * @note Coordinates are fixed point with eight fractional bits; interpolated
  *       normalized directions use twelve fractional bits.
+ * @see decomp.me (100%)
  */
 void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRouteActor* actor, FieldRouteActor* target, s32 heading_offset, s32 unused_limit)
 {
@@ -337,21 +338,19 @@ void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRoute
     } work;
     s32 actor_index;
     FieldRouteState* states;
+    FieldRouteState* waypoint_state;
     s32 heading;
     s16* z_cursor;
-    FieldRoutePoint* cursor;
     s16 sample_x;
     s16 sample_z;
-    s32 waypoint_index;
     s32 spacing;
     s32 segment_length;
     s32 waypoint_heading_index;
     s32 sample_heading_index;
     s32 point_index;
     s32 total_distance;
-    s32 sample_waypoint_index;
+    s32 waypoint_offset;
     s32 path_index;
-    s32 sample_path_index;
     s32 segment_dx;
     s32 step_x;
     s32 step_z;
@@ -379,14 +378,13 @@ void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRoute
     {
         do
         {
-            waypoint_index = path_index;
-            segment_dx = g_field_object_states[actor_index].waypoints[waypoint_index].x - work.position.vx;
+            segment_dx = g_field_object_states[actor_index].waypoints[path_index].x - work.position.vx;
             if (segment_dx < 0)
             {
                 segment_dx += FIELD_FIXED_POINT_ROUND_BIAS;
             }
             work.delta.vx = segment_dx >> FIELD_FIXED_POINT_SHIFT;
-            segment_dz = g_field_object_states[actor->object_index].waypoints[waypoint_index].z - work.position.vz;
+            segment_dz = g_field_object_states[actor->object_index].waypoints[path_index].z - work.position.vz;
             if (segment_dz < 0)
             {
                 segment_dz += FIELD_FIXED_POINT_ROUND_BIAS;
@@ -397,8 +395,8 @@ void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRoute
             gte_sqr0();
             gte_stlvnl(&work.direction);
             segment_length = SquareRoot0(work.direction.vx + work.direction.vz);
-            work.position.vx = g_field_object_states[actor->object_index].waypoints[waypoint_index].x;
-            work.position.vz = g_field_object_states[actor->object_index].waypoints[waypoint_index].z;
+            work.position.vx = g_field_object_states[actor->object_index].waypoints[path_index].x;
+            work.position.vz = g_field_object_states[actor->object_index].waypoints[path_index].z;
             path_index += 1;
             total_distance += segment_length;
             actor_index = actor->object_index;
@@ -418,7 +416,7 @@ void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRoute
     }
     remaining -= 1;
     points->z = (s16)(initial_z >> FIELD_FIXED_POINT_SHIFT);
-    cursor = points + 1;
+    points++;
     g_field_route_animation_history[heading_offset] = initial_heading;
     point_index = 1;
     /* Short paths begin with repeated origin samples to keep the remaining steps useful. */
@@ -430,14 +428,14 @@ void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRoute
         {
             padding_x += FIELD_FIXED_POINT_ROUND_BIAS;
         }
-        cursor->x = (s16)(padding_x >> FIELD_FIXED_POINT_SHIFT);
+        points->x = (s16)(padding_x >> FIELD_FIXED_POINT_SHIFT);
         padding_z = actor->z;
         if (padding_z < 0)
         {
             padding_z += FIELD_FIXED_POINT_ROUND_BIAS;
         }
-        cursor->z = (s16)(padding_z >> FIELD_FIXED_POINT_SHIFT);
-        cursor++;
+        points->z = (s16)(padding_z >> FIELD_FIXED_POINT_SHIFT);
+        points++;
         remaining -= 1;
         point_index += 1;
         if (remaining == 0)
@@ -448,23 +446,27 @@ void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRoute
     work.position.vx = actor->x;
     work.position.vz = actor->z;
     spacing = total_distance / remaining;
-    sample_path_index = 0;
-    states = g_field_object_states;
-    if (states[actor->object_index].waypoint_count != 0)
+    path_index = 0;
+    if (g_field_object_states[actor->object_index].waypoint_count != 0)
     {
-        sample_waypoint_index = 0;
+        states = g_field_object_states;
         do
         {
-            z_cursor = &cursor->z;
+            waypoint_offset = path_index * sizeof(FieldRouteWaypoint);
+            z_cursor = &points->z;
             do
             {
-                waypoint_dx = states[actor->object_index].waypoints[sample_waypoint_index].x - work.position.vx;
+                waypoint_state =
+                    (FieldRouteState*)((waypoint_offset + ((actor->object_index * (s32)(sizeof(FieldRouteState) / sizeof(s32))) << 2)) + (s32)states);
+                waypoint_dx = waypoint_state->waypoints[0].x - work.position.vx;
                 if (waypoint_dx < 0)
                 {
                     waypoint_dx += FIELD_FIXED_POINT_ROUND_BIAS;
                 }
                 work.delta.vx = waypoint_dx >> FIELD_FIXED_POINT_SHIFT;
-                waypoint_dz = states[actor->object_index].waypoints[sample_waypoint_index].z - work.position.vz;
+                waypoint_state =
+                    (FieldRouteState*)((waypoint_offset + ((actor->object_index * (s32)(sizeof(FieldRouteState) / sizeof(s32))) << 2)) + (s32)states);
+                waypoint_dz = waypoint_state->waypoints[0].z - work.position.vz;
                 if (waypoint_dz < 0)
                 {
                     waypoint_dz += FIELD_FIXED_POINT_ROUND_BIAS;
@@ -473,20 +475,24 @@ void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRoute
                 work.delta.vy = 0;
                 if (spacing >= SquareRoot0(func_8001CDAC((s32*)&work.delta, (s32*)&work.direction)))
                 {
-                    waypoint_x = states[actor->object_index].waypoints[sample_waypoint_index].x;
+                    waypoint_state =
+                        (FieldRouteState*)((waypoint_offset + ((actor->object_index * (s32)(sizeof(FieldRouteState) / sizeof(s32))) << 2)) + (s32)states);
+                    waypoint_x = waypoint_state->waypoints[0].x;
                     if (waypoint_x < 0)
                     {
                         waypoint_x += FIELD_FIXED_POINT_ROUND_BIAS;
                     }
-                    cursor->x = (s16)(waypoint_x >> FIELD_FIXED_POINT_SHIFT);
-                    waypoint_z = states[actor->object_index].waypoints[sample_waypoint_index].z;
+                    points->x = (s16)(waypoint_x >> FIELD_FIXED_POINT_SHIFT);
+                    waypoint_state =
+                        (FieldRouteState*)((waypoint_offset + ((actor->object_index * (s32)(sizeof(FieldRouteState) / sizeof(s32))) << 2)) + (s32)states);
+                    waypoint_z = waypoint_state->waypoints[0].z;
                     if (waypoint_z < 0)
                     {
                         waypoint_z += FIELD_FIXED_POINT_ROUND_BIAS;
                     }
                     *z_cursor = (s16)(waypoint_z >> FIELD_FIXED_POINT_SHIFT);
-                    work.position.vx = cursor->x << FIELD_FIXED_POINT_SHIFT;
-                    cursor++;
+                    work.position.vx = points->x << FIELD_FIXED_POINT_SHIFT;
+                    points++;
                     work.position.vz = *z_cursor << FIELD_FIXED_POINT_SHIFT;
                     heading = field_get_route_heading_animation(actor, target);
                     remaining -= 1;
@@ -501,28 +507,30 @@ void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRoute
                     {
                         sample_origin_x += FIELD_FIXED_POINT_ROUND_BIAS;
                     }
+                    sample_origin_x >>= FIELD_FIXED_POINT_SHIFT;
                     step_x = work.direction.vx * spacing;
                     if (step_x < 0)
                     {
                         step_x += FIELD_ROUTE_DIRECTION_ROUND_BIAS;
                     }
-                    sample_x = (sample_origin_x >> FIELD_FIXED_POINT_SHIFT) + (step_x >> FIELD_ROUTE_DIRECTION_SHIFT);
-                    cursor->x = sample_x;
+                    sample_x = sample_origin_x + (step_x >> FIELD_ROUTE_DIRECTION_SHIFT);
+                    points->x = sample_x;
                     sample_origin_z = work.position.vz;
                     work.position.vx = (s32)(sample_x << 0x10) >> FIELD_FIXED_POINT_SHIFT;
                     if (sample_origin_z < 0)
                     {
                         sample_origin_z += FIELD_FIXED_POINT_ROUND_BIAS;
                     }
+                    sample_origin_z >>= FIELD_FIXED_POINT_SHIFT;
                     step_z = work.direction.vz * spacing;
                     if (step_z < 0)
                     {
                         step_z += FIELD_ROUTE_DIRECTION_ROUND_BIAS;
                     }
-                    sample_z = (sample_origin_z >> FIELD_FIXED_POINT_SHIFT) + (step_z >> FIELD_ROUTE_DIRECTION_SHIFT);
+                    sample_z = sample_origin_z + (step_z >> FIELD_ROUTE_DIRECTION_SHIFT);
                     *z_cursor = sample_z;
                     z_cursor += 2;
-                    cursor++;
+                    points++;
                     work.position.vz = (s32)(sample_z << 0x10) >> FIELD_FIXED_POINT_SHIFT;
                     heading = field_get_route_heading_animation(actor, target);
                     remaining -= 1;
@@ -533,13 +541,12 @@ void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRoute
                 }
                 break;
             } while (remaining != 0);
-            sample_path_index += 1;
+            path_index += 1;
             if (remaining == 0)
             {
                 break;
             }
-            sample_waypoint_index = sample_path_index;
-        } while (sample_path_index < (s32)states[actor->object_index].waypoint_count);
+        } while (path_index < (s32)states[actor->object_index].waypoint_count);
     }
 }
 
