@@ -234,7 +234,7 @@ typedef struct
     u32 flags;
 } FieldResourceEntry;
 
-/* Output of func_80097150: resolved track/actor index plus the screen-space
+/* Output of field_test_quad_actor_contacts: resolved track/actor index plus the screen-space
  * x/y it computed for it. */
 typedef struct
 {
@@ -972,7 +972,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                         gte_stlvnl(gte_out);
                         sp68[3].x = (s16)(sxy->x + gte_out->vx);
                         sp68[3].y = (s16)(sxy->y + gte_out->vy);
-                        temp_v0_12 = func_80097150(sp68, rec, &sp28);
+                        temp_v0_12 = field_test_quad_actor_contacts(sp68, rec, &sp28);
                         if (temp_v0_12 == 1)
                         {
                             temp_v0_12 = sp28.index;
@@ -1498,7 +1498,7 @@ typedef struct
 
 
 
-/* Output of func_80097150: resolved track/actor index plus the screen-space
+/* Output of field_test_quad_actor_contacts: resolved track/actor index plus the screen-space
  * x/y it computed for it. */
 
 
@@ -2012,7 +2012,7 @@ block_48:
                             sp64[3].y = (s16) (sxy->y + gte_out->vy);
                             if (!(slot->unk174 & 0x1800) && (((temp_v1_17 = slot->unk3C, (temp_v1_17 != 0xFFFF)) && (temp_v1_17 != 0)) || (actor->unkC->unk14 == 3)))
                             {
-                                var_s0 = func_80097150(sp64, rec, &sp28);
+                                var_s0 = field_test_quad_actor_contacts(sp64, rec, &sp28);
                                 if (var_s0 == 1)
                                 {
                                     {

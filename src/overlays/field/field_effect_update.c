@@ -2993,7 +2993,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
             case FIELD_PICKUP_EXPERIENCE_OR_CURRENCY:
                 if ((u16) actor->track_ages[0] >= FIELD_PICKUP_DELAY)
                 {
-                    recipient_index = func_8009980C(record, FIELD_PICKUP_DISTANCE, actor, 0);
+                    recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
                     if (recipient_index != -1)
                     {
                         FieldObjectRuntime *recipient_object;
@@ -3024,7 +3024,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
             case FIELD_PICKUP_ITEM:
                 if ((u16) actor->track_ages[0] >= FIELD_PICKUP_DELAY)
                 {
-                    recipient_index = func_8009980C(record, FIELD_PICKUP_DISTANCE, actor, 0);
+                    recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
                     if (recipient_index != -1)
                     {
                         FieldObjectRuntime *recipient_object;
@@ -3049,7 +3049,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
             case FIELD_PICKUP_RESTORE_QUARTER:
                 if ((u16) actor->track_ages[0] >= FIELD_PICKUP_DELAY)
                 {
-                    recipient_index = func_8009980C(record, FIELD_PICKUP_DISTANCE, actor, 0);
+                    recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
                     if (recipient_index != -1)
                     {
                         FieldObjectRuntime *recipient_object;
@@ -3075,7 +3075,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
             case FIELD_PICKUP_RESTORE_HALF:
                 if ((u16) actor->track_ages[0] >= FIELD_PICKUP_DELAY)
                 {
-                    recipient_index = func_8009980C(record, FIELD_PICKUP_DISTANCE, actor, 0);
+                    recipient_index = field_find_actor_in_range(record, FIELD_PICKUP_DISTANCE, actor, 0);
                     if (recipient_index != -1)
                     {
                         FieldObjectRuntime *recipient_object;

@@ -3,6 +3,18 @@
 
 #include "field_effect_types.h"
 
+/** @brief Binding of an object owner to a temporary animation actor. */
+typedef struct
+{
+    s32 state;
+    u8 pad_0x4[8];
+    s32 owner_object_index;
+    u8 pad_0x10[8];
+    s32 actor_index;
+} FieldSequenceBinding;
+
+extern FieldSequenceBinding g_field_actor_bindings[];
+
 void field_apply_sequence_displacement(FieldMotionRecord* object, s32 direction_x, s32 vertical_step, s32 direction_z);
 void field_update_sequence_actor_binding(FieldMotionRecord* object, s32 release_actor);
 s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index);

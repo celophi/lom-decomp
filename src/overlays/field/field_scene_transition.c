@@ -1083,7 +1083,7 @@ static void field_load_scene_actors(s32* data)
 {
 
     extern FieldLoadedActor g_field_scene_actors[];
-    extern FieldLoadedActorSlot D_80106194[];
+    extern FieldLoadedActorSlot g_field_scene_object_states[];
     extern FieldLoadedActorVisual g_field_object_parts[];
     extern s32 D_800FE774;
     extern s32 g_field_pending_scene_id;
@@ -1091,7 +1091,7 @@ static void field_load_scene_actors(s32* data)
     extern void field_restart_actor_animation(FieldLoadedActor*);
 
     FieldLoadedActor* actor = g_field_scene_actors;
-    FieldLoadedActorSlot* slot = D_80106194;
+    FieldLoadedActorSlot* slot = g_field_scene_object_states;
     FieldActionRequest* entry = (FieldActionRequest*)(data + 1);
     s32 active = 0;
     s32 index = active;

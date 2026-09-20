@@ -54,16 +54,6 @@ typedef enum
     FIELD_SEQUENCE_END = 0xFF
 } FieldSequenceOpcode;
 
-/** @brief Binding of an object owner to a temporary animation actor. */
-typedef struct
-{
-    s32 state;
-    u8 pad4[8];
-    s32 owner_object_index;
-    u8 pad10[8];
-    s32 actor_index;
-} FieldSequenceBinding;
-
 /** @brief Player metadata selecting the bank of actor sequence rows. */
 typedef struct
 {
@@ -80,7 +70,6 @@ typedef struct
 } FieldSequenceTemplate;
 
 extern FieldActorPartDef g_field_object_parts[];
-extern FieldSequenceBinding g_field_actor_bindings[];
 extern FieldSequencePlayer g_field_player_records[];
 extern FieldSequenceTemplate g_field_actor_templates[];
 extern FieldActorState g_field_shared_actor_template;
@@ -121,7 +110,7 @@ void field_apply_sequence_displacement(FieldMotionRecord* object, s32 direction_
     out[0] = (step * direction_x * part->appearance.fields.footprint_scale_x) >> FIELD_SEQUENCE_MOTION_SCALE_SHIFT;
     out[1] = (vertical_step * part->footprint_scale_y) >> FIELD_SEQUENCE_MOTION_SCALE_SHIFT;
     out[2] = (step * direction_z * part->appearance.fields.footprint_scale_x) >> FIELD_SEQUENCE_MOTION_SCALE_SHIFT;
-    func_80097FA0(object, out, 0);
+    field_resolve_actor_movement(object, out, 0);
 }
 
 /**

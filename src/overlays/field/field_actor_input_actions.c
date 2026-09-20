@@ -88,7 +88,7 @@ extern s32 D_800F229C;
 extern s32 D_8010AE78;
 extern s32 D_801229F8;
 
-void func_80098DD4(Entry *arg0);
+void field_probe_actor_interaction(Entry *arg0);
 
 void func_8009184C(void)
 {
@@ -102,7 +102,7 @@ void func_8009184C(void)
         b = field_text_get_status(1);
         if ((g_field_active_group == 0) && (a == -1) && (b == a))
         {
-            func_80098DD4(g_field_actors);
+            field_probe_actor_interaction(g_field_actors);
         }
     }
 }

@@ -17,7 +17,7 @@ typedef struct
     u8 pad10[0x23C - 0x10];
 } Slot;
 
-s32 func_8009A204(void *, void *); /* extern */
+s32 field_get_position_distance(void *, void *); /* extern */
 void func_800A32A8(s32, u8 *);     /* forward */
 
 extern s32 D_800EB04C[];
@@ -100,7 +100,7 @@ void func_800A2E40(u8 *buffer)
                         }
                         else
                         {
-                            index_or_distance = func_8009A204(&g_field_actors[entries[0]], &g_field_actors[index_or_distance]);
+                            index_or_distance = field_get_position_distance(&g_field_actors[entries[0]], &g_field_actors[index_or_distance]);
                         }
                     }
                     if (index_or_distance < 0x20)
@@ -149,7 +149,7 @@ void func_800A2E40(u8 *buffer)
 
                                 first_actor_ptr = (Actor *)(first_actor * sizeof(*actor_base) + (u32)actor_base);
                                 second_actor_ptr = (Actor *)(index_or_distance * sizeof(*actor_base) + (u32)actor_base);
-                                index_or_distance = func_8009A204(first_actor_ptr, second_actor_ptr);
+                                index_or_distance = field_get_position_distance(first_actor_ptr, second_actor_ptr);
                             }
                         }
                         if ((index_or_distance < 0x20) &&

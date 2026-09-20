@@ -64,7 +64,7 @@ extern s32 func_80093AB8(FieldMotionActor *);
 extern s32 func_80092AD8(FieldMotionActor *);
 extern void field_restart_sequence_animation(FieldMotionActor *);
 extern void func_8008BC5C(FieldMotionActor *);
-extern s32 func_80097FA0(FieldMotionActor *, Vec3i *, s32);
+extern s32 field_resolve_actor_movement(FieldMotionActor *, Vec3i *, s32);
 
 /**
  * @brief Advance actor motion state or apply its remaining scaled displacement.
@@ -146,7 +146,7 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
         }
         scratch->y = 0;
         scratch->z = 0;
-        func_80097FA0(actor, scratch, 1);
+        field_resolve_actor_movement(actor, scratch, 1);
         if (g_field_resource_entries[actor->resource].state == 0)
         {
             g_field_object_states[actor->slot].options &= ~0x4000;
