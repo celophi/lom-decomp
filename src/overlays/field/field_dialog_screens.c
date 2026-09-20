@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "cdrom.h"
 #include "common.h"
 #include "vector.h"
@@ -207,14 +208,14 @@ extern u8 D_80122910[];
 extern unsigned char D_800EC3C4[];
 extern void *D_801227F8[];
 extern s32 D_801229A0[];
-extern Rec54 D_800FDF58[];
+extern Rec54 g_field_actors[];
 extern StructEC D_800EC3D8;
 extern PackedOffset D_800EC3CC;
 extern PackedOffset D_800EC3CE;
 extern FieldQuadAnimationTable D_800513E8, D_80051408, D_80051428, D_80051448;
 extern s32 D_801227EC;
 extern s32 D_801227C8;
-extern s32 D_80122908;
+extern s32 g_field_dialog_item_count;
 extern u16 D_80122998;
 extern u16 D_80122920[];
 extern s32 D_800F229C;
@@ -226,7 +227,7 @@ extern s32 g_pending_game_state;
 extern s32 g_field_return_to_title_prompt_state;
 extern s32 g_field_return_to_title_prompt_delay;
 extern s32 g_frame_counter;
-extern s32 D_80115888, D_80115898, D_8011589C, D_801178B0, D_801178BC, D_801178C0;
+extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_secondary_music_id, g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_sound_bank_id;
 
 /* --- Shared (non-conflicting) extern function prototypes --- */
 extern void func_800ADEB0(void);
@@ -235,7 +236,7 @@ extern s32 func_800ADEEC(void);
 extern void func_800ADF34(void);
 extern void func_800A3938(s32 sound_id, s32 pan);
 extern void func_800AA90C(s32);
-extern void field_set_scene_parameters(s32, s32, s32, s32, s32, s32);
+
 extern void field_begin_return_to_title_prompt_close(void);
 extern void func_8006809C(void);
 extern void func_800AE8A8(void);
@@ -312,8 +313,8 @@ void func_800A6F1C(void)
             state[0x140] = 0;
             state[0x92] = 0;
             func_800AA90C(0);
-            field_set_scene_parameters(D_801178B0, D_801178BC, D_80115888, D_80115898, D_801178C0,
-                                       D_8011589C);
+            field_set_scene_parameters(g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_sound_bank_id,
+                                       g_field_pending_secondary_music_id);
             actor_index = 0;
             low_mask = 0xFFFFFF;
             high_mask = 0xFF000000;
@@ -361,7 +362,7 @@ void func_800A6F1C(void)
  * When no modal is blocking (func_800ADEEC returns 0) and a confirm or cancel
  * button is held (@c g_pad_input & 0x220), dispatches on the current dialog
  * mode @c D_800F229C: mode 1 advances via func_800A7384 (gated by
- * @c D_801227EC); mode 3 backs out via func_800A764C when @c D_80122908 is set,
+ * @c D_801227EC); mode 3 backs out via func_800A764C when @c g_field_dialog_item_count is set,
  * else falls through to the mode-2 handler func_800A7724.
  *
  * @see decomp.me (100%) TODO
@@ -380,7 +381,7 @@ void func_800A710C(void)
             }
             break;
         case 3:
-            if (D_80122908 != 0)
+            if (g_field_dialog_item_count != 0)
             {
                 func_800A764C();
                 return;
@@ -489,8 +490,8 @@ void func_800A7384(void)
     D_801227C8 = 0;
     i = 0;
     do {
-        if ((D_800FD818[i].u0.b.unk0 & 1) && D_800FDF58[i].unk2A == 0x8E) {
-            D_800FDF58[i].unk2A = 0;
+        if ((D_800FD818[i].u0.b.unk0 & 1) && g_field_actors[i].unk2A == 0x8E) {
+            g_field_actors[i].unk2A = 0;
         }
         i++;
     } while (i < 3);
@@ -503,7 +504,7 @@ void func_800A7384(void)
         D_80105AE0[i].unk178 &= ~0x20;
         i++;
     } while (i < 3);
-    D_80122908 = 0;
+    g_field_dialog_item_count = 0;
 }
 
 /**
@@ -511,7 +512,7 @@ void func_800A7384(void)
  *
  * Runs the shared reset (func_800ADEB0, then latches @c D_801227EC to 4 and
  * calls func_800AA02C), then selects a handler by state: func_800A71CC when
- * @c D_80122998 is set, else func_800A764C when @c D_80122908 is set, else
+ * @c D_80122998 is set, else func_800A764C when @c g_field_dialog_item_count is set, else
  * func_800A7724. Finishes with func_800B0A08(0).
  *
  * @see decomp.me (100%) TODO
@@ -527,7 +528,7 @@ void func_800A7434(void)
     {
         func_800A71CC();
     }
-    else if (D_80122908 != 0)
+    else if (g_field_dialog_item_count != 0)
     {
         func_800A764C();
     }
@@ -621,7 +622,7 @@ void func_800A764C(void)
     rec->flags.bits.priority = 0x40;
 
     state = rec->state.word & ~0x1FE;
-    state |= (((D_80122908 << 4) + 0x10) & 0xFF) << 1;
+    state |= (((g_field_dialog_item_count << 4) + 0x10) & 0xFF) << 1;
     rec->flags.bits.value = 0x70 - ((state >> 2) & 0x78);
 
     rec->callback = func_800A7FB4;
@@ -929,7 +930,7 @@ s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     tex = (u8 *)(low + offset);
     prim = func_800A88A0(prim, ot, tex, 4, 0x20 - arg2, -arg3, 0);
     i = 0;
-    if (D_80122908 > 0)
+    if (g_field_dialog_item_count > 0)
     {
         do
         {
@@ -942,7 +943,7 @@ s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                 prim = func_800A8A78(ot, prim, D_80122910[i], 4, &pos, 1);
             }
             i += 1;
-        } while (i < D_80122908);
+        } while (i < g_field_dialog_item_count);
     }
     return prim;
 }

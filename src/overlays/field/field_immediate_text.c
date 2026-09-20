@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "common.h"
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
@@ -15,7 +16,6 @@ typedef struct
 
 extern StructEC D_800EC3E4;
 
-s32 field_text_build_sprites(SPRT* prim, u8* text, s32 style);
 SPRT* func_800AD658(s32* ot, SPRT* sprite_cursor, s32 count);
 s32 func_800A8DDC(u8 *arg0);
 void func_800A8E28(u8 *dest, u8 *src);

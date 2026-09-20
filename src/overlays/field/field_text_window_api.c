@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "common.h"
 
 /** @brief Byte view of a field text flags word. */
@@ -59,14 +60,13 @@ typedef struct
     u8 *text;                   /* 0x14 */
 } FieldTextConfig;
 
-extern u8 *D_801178D0;
-extern s32 D_801178D4;
+extern u8 *g_field_scene_portraits;
+extern s32 g_field_scene_strings;
 extern u8 g_prim_rect_buf[];
 
-void field_text_open_packed_window();
-void field_text_open_fixed_window();
-void field_text_start_timed_window(u8 *text);
-void func_800674D8(s32 arg0);
+
+
+
 
 /**
  * @brief Configure and open a field text window.
@@ -97,7 +97,7 @@ void func_8009C620(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     }
     else
     {
-        cfg->portrait = D_801178D0 + (arg3 & 0x3F) * 0x4A0;
+        cfg->portrait = g_field_scene_portraits + (arg3 & 0x3F) * 0x4A0;
     }
 
     cfg->flags.b.low = 0;
@@ -139,7 +139,7 @@ void func_8009C620(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
  */
 void func_8009C77C(s32 slot, s32 idx, s32 options)
 {
-    field_text_set_string(slot, (u8 *)(D_801178D4 + *(u16 *)((idx * 2) + D_801178D4)), options);
+    field_text_set_string(slot, (u8 *)(g_field_scene_strings + *(u16 *)((idx * 2) + g_field_scene_strings)), options);
 }
 
 /**
@@ -172,7 +172,7 @@ void func_8009C7B0(s32 string_index, s32 window_slot, s32 layout_index, s32 unus
     }
     else
     {
-        cfg->portrait = D_801178D0 + portrait_selector * 0x12360;
+        cfg->portrait = g_field_scene_portraits + portrait_selector * 0x12360;
     }
 
     cfg->flags.b.low = 0;
@@ -207,16 +207,16 @@ void func_8009C7B0(s32 string_index, s32 window_slot, s32 layout_index, s32 unus
         field_text_open_fixed_window(window_slot);
     }
 
-    field_text_set_string(window_slot, (u8*)(D_801178D4 + *(u16*)((string_index * 2) + D_801178D4)), 1);
+    field_text_set_string(window_slot, (u8*)(g_field_scene_strings + *(u16*)((string_index * 2) + g_field_scene_strings)), 1);
 }
 
 /**
- * @brief Thin wrapper forwarding to func_800674D8.
+ * @brief Thin wrapper forwarding to field_text_close_window.
  * @param arg0 Argument passed through unchanged.
  */
 void func_8009C954(s32 arg0)
 {
-    func_800674D8(arg0);
+    field_text_close_window(arg0);
 }
 
 /**
@@ -225,7 +225,7 @@ void func_8009C954(s32 arg0)
  * Clears the config block at 0x801ED408 (portrait, anchor, flag low byte),
  * strips the style/transition flag bits (0x300, 0xC00, 0x7000), copies the
  * window geometry from @c D_800EF64C, then opens a timed text window whose
- * string is selected by @p arg0 through the @c D_801178D4 offset table.
+ * string is selected by @p arg0 through the @c g_field_scene_strings offset table.
  *
  * @param arg0 String-table index used to pick the window text.
  *
@@ -247,5 +247,5 @@ void func_8009C974(s32 arg0)
     cfg->y = D_800EF64C.y;
     cfg->width = D_800EF64C.width;
     cfg->height = D_800EF64C.height;
-    field_text_start_timed_window((u8 *)(D_801178D4 + *(u16 *)((arg0 * 2) + D_801178D4)));
+    field_text_start_timed_window((u8 *)(g_field_scene_strings + *(u16 *)((arg0 * 2) + g_field_scene_strings)));
 }

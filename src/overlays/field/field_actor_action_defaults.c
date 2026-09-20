@@ -64,7 +64,7 @@ typedef struct
     Half f56;
     u8 pad58[0x190 - 0x58];
 } Record;
-extern Record D_8010A038[];
+extern Record g_field_resource_actions[];
 extern u8 g_field_action_animation_maps[];
 /**
  * @brief Reset the selected action map and restore shared animation command defaults.
@@ -131,7 +131,7 @@ void func_80091518(s32 arg0)
     reset_byte_value = 0xFF;
     one_value = 1;
     sixteen_value = 0x10;
-    record = D_8010A038;
+    record = g_field_resource_actions;
     do
     {
         record->f10.half = 0x1F;

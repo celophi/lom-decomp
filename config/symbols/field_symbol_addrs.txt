@@ -391,3 +391,65 @@ field_collect_effect_hits                    = 0x80099018;
 field_install_actor_action                  = 0x800B118C;
 
 movie_service_video_ops             = 0x80140D48;
+
+g_field_text_macros = 0x80122B80;
+g_field_text_saved_configs = 0x801ED004;
+
+field_seek_scene_resource = 0x8009AFBC;
+field_reset_fallback_resource = 0x8009BCAC;
+field_upload_actor_image = 0x8009BCF8;
+field_copy_scene_geometry = 0x8009BDD4;
+field_load_scene_actors = 0x8009BE1C;
+field_refresh_actor_collisions = 0x8009C12C;
+field_move_actor_position = 0x8009C2E0;
+field_set_party_palettes = 0x8009C434;
+field_upload_transition_tiles = 0x8009C4B4;
+field_prepare_transition_tiles = 0x8009C56C;
+g_field_scene_data_size = 0x800473F0;
+g_field_direction_animation_modes = 0x800EB0A4;
+g_field_direction_offsets = 0x800EB254;
+g_field_render_context = 0x800F22B0;
+g_field_actors = 0x800FDF58;
+g_field_scene_actors = 0x800FE054;
+g_field_active_group = 0x800FE754;
+g_field_group_bounds = 0x800FF610;
+g_field_group_bounds_count = 0x800FF650;
+g_field_event_scripts = 0x8010A018;
+g_field_actor_scripts = 0x8010A02C;
+g_field_scene_record_table = 0x8010A030;
+g_field_resource_actions = 0x8010A038;
+g_field_hide_actor_panels = 0x8010AE48;
+g_field_camera_target_x = 0x8010AE4C;
+g_field_camera_target_z = 0x8010AE50;
+g_field_camera_follow_x = 0x8010D010;
+g_field_camera_follow_z = 0x8010D014;
+g_field_scene_contact_latched = 0x8010D028;
+g_field_scene_data_buffer = 0x8010D088;
+g_field_pending_spawn_id = 0x80115888;
+g_field_song_volume = 0x8011588C;
+g_field_preserve_entry_music = 0x80115894;
+g_field_pending_music_id = 0x80115898;
+g_field_pending_secondary_music_id = 0x8011589C;
+g_field_scene_mode_bit = 0x801158A0;
+g_field_previous_song_volume = 0x801158A8;
+g_field_pending_scene_id = 0x801178B0;
+g_field_party_palette_index = 0x801178B4;
+g_field_pending_object_id = 0x801178BC;
+g_field_pending_sound_bank_id = 0x801178C0;
+g_field_scene_portrait_count = 0x801178CC;
+g_field_scene_portraits = 0x801178D0;
+g_field_scene_strings = 0x801178D4;
+g_field_dialog_item_count = 0x80122908;
+
+// Scene resource header and pointer offsets within the 0x80190000 CD-read
+// scratch buffer. These are numeric offsets, not independent data symbols.
+D_80190000 = 0x80190000; // ignore:true
+D_80190004 = 0x80190004; // ignore:true
+D_80190008 = 0x80190008; // ignore:true
+D_8019000C = 0x8019000C; // ignore:true
+D_80190010 = 0x80190010; // ignore:true
+D_80190014 = 0x80190014; // ignore:true
+D_80190018 = 0x80190018; // ignore:true
+D_8019001C = 0x8019001C; // ignore:true
+D_80190020 = 0x80190020; // ignore:true
+D_80190024 = 0x80190024; // ignore:true

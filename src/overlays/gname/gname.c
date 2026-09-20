@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "gname.h"
 
 #include "cdrom.h"
@@ -476,15 +477,15 @@ extern u32 g_random_names_off;
 
 /* Cross-module helpers without shared headers. */
 void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
-s32 field_text_build_sprites(SPRT* sprites, u8* text, u16 style);
+
 /**
  * @brief Play a one-shot menu sound effect.
  * @param sfx_id Sound-effect identifier.
  * @param volume Playback volume.
  */
 void play_menu_sfx(s32 sfx_id, s32 volume);
-void func_80063194(void);
-void field_text_reset_scratch(void);
+
+
 void field_update_audio_timer(void);
 void func_800A9E78(void);
 void func_800AA02C(void);
@@ -592,7 +593,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
         func_800A9E78();
         render_fade_overlay(draw_buffer);
         gname_tick(draw_buffer);
-        func_80063194();
+        field_text_upload_immediate_cache();
 
         if (g_overlay_result != GNAME_RESULT_PENDING)
         {
@@ -796,7 +797,7 @@ void gname_init(void)
     g_startup_delay = GNAME_STARTUP_DELAY_FRAMES;
     field_text_reset_scratch();
     reset_run_state();
-    func_80063194();
+    field_text_upload_immediate_cache();
 }
 
 /**

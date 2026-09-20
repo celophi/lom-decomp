@@ -248,7 +248,7 @@ extern s32 g_field_track_index;
  */
 s32 func_8006D79C(FieldSpawnActorState* actor, s32 part_index, s32 start)
 {
-    extern FieldSpawnMotionRecord D_800FDF58[];
+    extern FieldSpawnMotionRecord g_field_actors[];
     extern FieldSpawnMotionRecord g_field_effect_records[];
     extern FieldSpawnObjectPlacement D_80105AE0[];
     extern FieldSpawnActorState g_field_actor_slots[];
@@ -477,7 +477,7 @@ bit23_done:
         break;
     }
     if ((((part->placement_flags >> 10) & 1) || (part->spawn_flags & 0x08000000)) && effect->position_source == 0 &&
-        !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80))
+        !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x80))
     {
         u8 angle;
         u8 original_angle;
@@ -574,7 +574,7 @@ bit23_done:
                 goto kill_rec;
             }
         }
-        record_base = &D_800FDF58[*(u8*)&actor->owner_object_index];
+        record_base = &g_field_actors[*(u8*)&actor->owner_object_index];
         if (!((part->behavior_flags >> 11) & 1) && !((part->placement_flags >> 25) & 1) && (part->unknown_0x2c >> 5) == 0 &&
             (*(u32*)&part->unknown_0xc & 0xFFFF0000) == 0x80800000 && part->unknown_0x10 == 0x80)
         {
@@ -583,14 +583,14 @@ bit23_done:
             effect->unknown_0x19 = D_800FE3A0[record_base->source_object_index].unknown_0xf;
             effect->unknown_0x1a = D_800FE3A0[record_base->source_object_index].unknown_0x10;
         }
-        effect->source_object_index = D_800FDF58[actor->owner_object_index].source_object_index;
-        effect->unknown_0x3b = D_800FDF58[actor->owner_object_index].unknown_0x3b;
-        effect->unknown_0xc = D_800FDF58[actor->owner_object_index].unknown_0xc;
-        effect->facing_or_reward_kind |= D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80;
+        effect->source_object_index = g_field_actors[actor->owner_object_index].source_object_index;
+        effect->unknown_0x3b = g_field_actors[actor->owner_object_index].unknown_0x3b;
+        effect->unknown_0xc = g_field_actors[actor->owner_object_index].unknown_0xc;
+        effect->facing_or_reward_kind |= g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x80;
         effect->flags.word = (effect->flags.word & 0xFFFCFFFF) |
-                     ((D_800FDF58[actor->owner_object_index].flags.half[1] & 3) << 16);
-        effect->flags.word = (effect->flags.word & 0xFF87FFFF) | (D_800FDF58[actor->owner_object_index].flags.word & 0x780000);
-        resource = g_field_resource_entries[D_800FDF58[actor->owner_object_index].unknown_0x3b].start;
+                     ((g_field_actors[actor->owner_object_index].flags.half[1] & 3) << 16);
+        effect->flags.word = (effect->flags.word & 0xFF87FFFF) | (g_field_actors[actor->owner_object_index].flags.word & 0x780000);
+        resource = g_field_resource_entries[g_field_actors[actor->owner_object_index].unknown_0x3b].start;
         if (resource != 0)
         {
             field_restart_actor_animation(effect, resource);
@@ -652,7 +652,7 @@ bit23_done:
                 goto after_source;
             }
         }
-        record_base = &D_800FDF58[actor->track_object_indices[g_field_track_index]];
+        record_base = &g_field_actors[actor->track_object_indices[g_field_track_index]];
         if (!((part->behavior_flags >> 11) & 1) && !((part->placement_flags >> 25) & 1) && (part->unknown_0x2c >> 5) == 0 &&
             (*(u32*)&part->unknown_0xc & 0xFFFF0000) == 0x80800000 && part->unknown_0x10 == 0x80)
         {
@@ -661,15 +661,15 @@ bit23_done:
             effect->unknown_0x19 = D_800FE3A0[record_base->source_object_index].unknown_0xf;
             effect->unknown_0x1a = D_800FE3A0[record_base->source_object_index].unknown_0x10;
         }
-        effect->source_object_index = D_800FDF58[actor->track_object_indices[g_field_track_index]].source_object_index;
-        effect->unknown_0x3b = D_800FDF58[actor->track_object_indices[g_field_track_index]].unknown_0x3b;
-        effect->unknown_0xc = D_800FDF58[actor->track_object_indices[g_field_track_index]].unknown_0xc;
-        effect->facing_or_reward_kind |= D_800FDF58[actor->track_object_indices[g_field_track_index]].facing_or_reward_kind & 0x80;
+        effect->source_object_index = g_field_actors[actor->track_object_indices[g_field_track_index]].source_object_index;
+        effect->unknown_0x3b = g_field_actors[actor->track_object_indices[g_field_track_index]].unknown_0x3b;
+        effect->unknown_0xc = g_field_actors[actor->track_object_indices[g_field_track_index]].unknown_0xc;
+        effect->facing_or_reward_kind |= g_field_actors[actor->track_object_indices[g_field_track_index]].facing_or_reward_kind & 0x80;
         effect->flags.word = (effect->flags.word & 0xFFFCFFFF) |
-                     ((D_800FDF58[actor->track_object_indices[g_field_track_index]].flags.half[1] & 3) << 16);
+                     ((g_field_actors[actor->track_object_indices[g_field_track_index]].flags.half[1] & 3) << 16);
         effect->flags.word =
-            (effect->flags.word & 0xFF87FFFF) | (D_800FDF58[actor->track_object_indices[g_field_track_index]].flags.word & 0x780000);
-        resource = g_field_resource_entries[D_800FDF58[actor->track_object_indices[g_field_track_index]].unknown_0x3b].start;
+            (effect->flags.word & 0xFF87FFFF) | (g_field_actors[actor->track_object_indices[g_field_track_index]].flags.word & 0x780000);
+        resource = g_field_resource_entries[g_field_actors[actor->track_object_indices[g_field_track_index]].unknown_0x3b].start;
         if (resource != 0)
         {
             field_restart_actor_animation(effect, resource);
@@ -682,7 +682,7 @@ after_source:
         effect->motion_scale = field_evaluate_parameter_track(actor, part->unknown_0x18 & 0xF);
     }
     if ((((part->placement_flags >> 10) & 1) || (part->spawn_flags & 0x08000000)) && effect->position_source != 0 &&
-        !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80))
+        !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x80))
     {
         rotated_x = -rotated_x;
         effect->x = -effect->x;
@@ -736,7 +736,7 @@ after_source:
             }
             object_index = actor->track_object_indices[g_field_track_index];
             placement_kind -= 0xA;
-source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object_index];
+source_record = &g_field_actors[object_index]; placement_object = &D_80105AE0[object_index];
         }
         else
         {
@@ -750,7 +750,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
                 goto fail_slot;
             }
             object_index = actor->owner_object_index;
-source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object_index];
+source_record = &g_field_actors[object_index]; placement_object = &D_80105AE0[object_index];
         }
 
         if ((part->placement_flags >> 9) & 1)
@@ -935,7 +935,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
                         effect->saved_state = g_field_effect_records[work_a].saved_state;
                         effect->facing_or_reward_kind = g_field_effect_records[work_a].facing_or_reward_kind;
                         resource = g_field_resource_entries
-                                  [D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].unknown_0x3b]
+                                  [g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].unknown_0x3b]
                                       .start;
                         if (resource != 0)
                         {
@@ -1050,7 +1050,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
         {
             goto fail_slot;
         }
-        source_record = &D_800FDF58[actor->owner_object_index];
+        source_record = &g_field_actors[actor->owner_object_index];
         if (((part->placement_flags >> 10) & 1) && !(source_record->facing_or_reward_kind & 0x80))
         {
             effect->x += source_record->x - (part->offset_x << 8);
@@ -1098,8 +1098,8 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
             actor->track_counters[g_field_track_index][part_index]--;
             return -1;
         }
-        source_record = &D_800FDF58[actor->track_object_indices[g_field_track_index]];
-        if ((part->spawn_flags & 0x08000000) && !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80))
+        source_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
+        if ((part->spawn_flags & 0x08000000) && !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x80))
         {
             effect->x += source_record->x - (part->offset_x << 8);
         }
@@ -1145,7 +1145,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
     }
     case 0x29:
         placement_object = &D_80105AE0[actor->owner_object_index];
-        source_record = &D_800FDF58[actor->owner_object_index];
+        source_record = &g_field_actors[actor->owner_object_index];
         effect->x += source_record->x + (placement_object->attachment_points[(part->effect_flags >> 21) & 3].x << 8);
         effect->y += source_record->y + (placement_object->attachment_points[(part->effect_flags >> 21) & 3].y << 8);
         effect->z += source_record->z;
@@ -1167,7 +1167,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
             FieldSpawnObjectPlacement *table_base = D_80105AE0;
             placement_object = &table_base[actor->owner_object_index];
         }
-        source_record = &D_800FDF58[actor->owner_object_index];
+        source_record = &g_field_actors[actor->owner_object_index];
         effect->x += source_record->x + (placement_object->attachment_points[(part->effect_flags >> 21) & 3].x << 8);
         effect->y += source_record->y;
         effect->z += source_record->z + (part->offset_z << 8);
@@ -1213,7 +1213,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
 
     case 0x33:
         placement_object = &D_80105AE0[actor->owner_object_index];
-        source_record = &D_800FDF58[actor->owner_object_index];
+        source_record = &g_field_actors[actor->owner_object_index];
         effect->x += source_record->x + (placement_object->ground_attachment_points[D_80105760].x << 8);
         effect->y += source_record->y;
         effect->z += source_record->z + (placement_object->ground_attachment_points[D_80105760].y << 8);
@@ -1228,7 +1228,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
             actor->track_counters[g_field_track_index][part_index]--;
             return -1;
         }
-        source_record = &D_800FDF58[actor->track_object_indices[g_field_track_index]];
+        source_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
         if (!(source_record->facing_or_reward_kind & 0x80))
         {
             effect->x += source_record->x + (actor->track_offsets[g_field_track_index].x << 8);
@@ -1291,7 +1291,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
                     effect->x += g_field_effect_records[sibling_index].x;
                     effect->y += g_field_effect_records[sibling_index].y;
                     effect->z += g_field_effect_records[sibling_index].z;
-                    if ((part->spawn_flags & 0x08000000) && !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80))
+                    if ((part->spawn_flags & 0x08000000) && !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x80))
                     {
                         effect->x -= part->offset_x << 8;
                     }
@@ -1332,7 +1332,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
                         effect->saved_state = g_field_effect_records[sibling_index].saved_state;
                         effect->facing_or_reward_kind = g_field_effect_records[sibling_index].facing_or_reward_kind;
                         resource = g_field_resource_entries
-                                  [D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].unknown_0x3b]
+                                  [g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].unknown_0x3b]
                                       .start;
                         if (resource != 0)
                         {
@@ -1363,23 +1363,23 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
         switch ((part->effect_flags >> 29) & 3)
         {
         case 1:
-            direction_vector->vx = (D_800FDF58[actor->owner_object_index].x - effect->x) >> 8;
-            direction_vector->vy = (D_800FDF58[actor->owner_object_index].y - effect->y) >> 8;
-            direction_z = (direction_vector->vz = (D_800FDF58[actor->owner_object_index].z - effect->z) >> 8);
+            direction_vector->vx = (g_field_actors[actor->owner_object_index].x - effect->x) >> 8;
+            direction_vector->vy = (g_field_actors[actor->owner_object_index].y - effect->y) >> 8;
+            direction_z = (direction_vector->vz = (g_field_actors[actor->owner_object_index].z - effect->z) >> 8);
             effect->heading = ratan2(-direction_z, direction_vector->vx);
             gte_ldlvl(direction_vector);
             gte_sqr0();
             gte_stlvnl(squared_vector);
             effect->pitch = ratan2(SquareRoot0(squared_vector->vx + squared_vector->vz), -direction_vector->vy);
             effect->rotation_x = 0;
-            effect->x = D_800FDF58[actor->owner_object_index].x;
-            effect->y = D_800FDF58[actor->owner_object_index].y;
-            effect->z = D_800FDF58[actor->owner_object_index].z;
+            effect->x = g_field_actors[actor->owner_object_index].x;
+            effect->y = g_field_actors[actor->owner_object_index].y;
+            effect->z = g_field_actors[actor->owner_object_index].z;
             break;
         case 2:
-            direction_vector->vx = (D_800FDF58[actor->track_object_indices[g_field_track_index]].x - effect->x) >> 8;
-            direction_vector->vy = (D_800FDF58[actor->track_object_indices[g_field_track_index]].y - effect->y) >> 8;
-            direction_z = (D_800FDF58[actor->track_object_indices[g_field_track_index]].z - effect->z) >> 8;
+            direction_vector->vx = (g_field_actors[actor->track_object_indices[g_field_track_index]].x - effect->x) >> 8;
+            direction_vector->vy = (g_field_actors[actor->track_object_indices[g_field_track_index]].y - effect->y) >> 8;
+            direction_z = (g_field_actors[actor->track_object_indices[g_field_track_index]].z - effect->z) >> 8;
             direction_vector->vz = direction_z;
             effect->heading = ratan2(-direction_z, direction_vector->vx);
             gte_ldlvl(direction_vector);
@@ -1387,9 +1387,9 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
             gte_stlvnl(squared_vector);
             effect->pitch = ratan2(SquareRoot0(squared_vector->vx + squared_vector->vz), -direction_vector->vy);
             effect->rotation_x = 0;
-            effect->x = D_800FDF58[actor->track_object_indices[g_field_track_index]].x;
-            effect->y = D_800FDF58[actor->track_object_indices[g_field_track_index]].y;
-            effect->z = D_800FDF58[actor->track_object_indices[g_field_track_index]].z;
+            effect->x = g_field_actors[actor->track_object_indices[g_field_track_index]].x;
+            effect->y = g_field_actors[actor->track_object_indices[g_field_track_index]].y;
+            effect->z = g_field_actors[actor->track_object_indices[g_field_track_index]].z;
             break;
         }
         if ((effect->flags.word & 0x07000000) == 0x05000000)
@@ -1464,7 +1464,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
             effect->facing_or_reward_kind &= 0x7F;
         }
         if ((((part->placement_flags >> 10) & 1) || (part->spawn_flags & 0x08000000)) &&
-            !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80))
+            !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x80))
         {
             effect->facing_or_reward_kind ^= 0x80;
         }
@@ -1476,7 +1476,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
             }
             if (part->unknown_0x9 == 0)
             {
-                effect->facing_or_reward_kind = (effect->facing_or_reward_kind & 0x7F) | (D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80);
+                effect->facing_or_reward_kind = (effect->facing_or_reward_kind & 0x7F) | (g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x80);
             }
         }
         if (part->spawn_flags & 0x200000)
@@ -1503,7 +1503,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
             {
                 if ((actor->animation->sync_flags & 0x14) == 0x14 && (actor->animation->sync_flags >> 12) == part_index)
                 {
-                    D_800FDF58[actor->track_object_indices[g_field_track_index]].state = 0xFE;
+                    g_field_actors[actor->track_object_indices[g_field_track_index]].state = 0xFE;
                     D_80105AE0[actor->track_object_indices[g_field_track_index]].state_flags.word |= 1;
                     D_80105AE0[actor->track_object_indices[g_field_track_index]].state_flags.bytes[2] = actor->actor_index;
                     ((u8*)&actor->action_flags)[1] = 1;
@@ -1513,7 +1513,7 @@ source_record = &D_800FDF58[object_index]; placement_object = &D_80105AE0[object
             {
                 if (((actor->animation->sync_flags >> 8) & 0xF) == part_index)
                 {
-                    D_800FDF58[actor->owner_object_index].state = 0xFE;
+                    g_field_actors[actor->owner_object_index].state = 0xFE;
                     D_80105AE0[actor->owner_object_index].state_flags.word |= 1;
                     D_80105AE0[actor->owner_object_index].state_flags.bytes[2] = actor->actor_index;
                 }
@@ -1698,7 +1698,7 @@ extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
 extern FieldActorState g_field_actor_slots[80];
-extern FieldMotionRecord D_800FDF58[];
+extern FieldMotionRecord g_field_actors[];
 extern FieldObjectPlacement D_80105AE0[];
 extern FieldVector D_80105778;
 extern s32 D_80105760;
@@ -1709,7 +1709,7 @@ extern s32 D_80105760;
  */
 extern s32 g_field_action_context;
 void field_set_action_context(s32 recipient_id, s32 source_id, s32 action);
-extern s32 D_800FE754;
+extern s32 g_field_active_group;
 /** @brief Suppress repeated pickup audio until the next frame-command build. */
 extern s32 g_field_pickup_sound_played;
 extern FieldRewardCounterView D_800FD818[];
@@ -2098,14 +2098,14 @@ void func_80071500(FieldMotionRecord* effect, FieldActorPartDef* part)
             object = &object_table[actor->track_object_indices[effect->track_index]];
             if (((u8*)&object->state_flags)[2] == actor->actor_index)
             {
-                animation_state = D_800FDF58[actor->track_object_indices[effect->track_index]].motion_parameter;
+                animation_state = g_field_actors[actor->track_object_indices[effect->track_index]].motion_parameter;
                 if ((animation_state != 0x90 && animation_state != 0x94) || (object->object_flags & 0x200))
                 {
-                    D_800FDF58[actor->track_object_indices[effect->track_index]].state = 0;
+                    g_field_actors[actor->track_object_indices[effect->track_index]].state = 0;
                 }
                 else
                 {
-                    D_800FDF58[actor->track_object_indices[effect->track_index]].state = 0xFE;
+                    g_field_actors[actor->track_object_indices[effect->track_index]].state = 0xFE;
                 }
                 D_80105AE0[actor->track_object_indices[effect->track_index]].state_flags &= ~1;
             }
@@ -2118,14 +2118,14 @@ void func_80071500(FieldMotionRecord* effect, FieldActorPartDef* part)
         object = &D_80105AE0[actor->owner_object_index];
         if (((u8*)&object->state_flags)[2] == actor->actor_index)
         {
-            animation_state = D_800FDF58[actor->owner_object_index].motion_parameter;
+            animation_state = g_field_actors[actor->owner_object_index].motion_parameter;
             if ((animation_state != 0x90 && animation_state != 0x94) || (object->object_flags & 0x200))
             {
-                D_800FDF58[actor->owner_object_index].state = 0;
+                g_field_actors[actor->owner_object_index].state = 0;
             }
             else
             {
-                D_800FDF58[actor->owner_object_index].state = 0xFE;
+                g_field_actors[actor->owner_object_index].state = 0xFE;
             }
             D_80105AE0[actor->owner_object_index].state_flags &= ~1;
         }
@@ -2133,24 +2133,24 @@ void func_80071500(FieldMotionRecord* effect, FieldActorPartDef* part)
 
     if (effect->part_index == ((actor->animation->sync_parts & 0x1F) - 1))
     {
-        D_800FDF58[actor->owner_object_index].x = effect->x;
-        D_800FDF58[actor->owner_object_index].y = effect->y;
-        D_800FDF58[actor->owner_object_index].z = effect->z;
-        D_800FDF58[actor->owner_object_index].y = 0;
-        D_800FDF58[actor->owner_object_index].facing_or_reward_kind =
-            (D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x7F) | (effect->facing_or_reward_kind & 0x80);
+        g_field_actors[actor->owner_object_index].x = effect->x;
+        g_field_actors[actor->owner_object_index].y = effect->y;
+        g_field_actors[actor->owner_object_index].z = effect->z;
+        g_field_actors[actor->owner_object_index].y = 0;
+        g_field_actors[actor->owner_object_index].facing_or_reward_kind =
+            (g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x7F) | (effect->facing_or_reward_kind & 0x80);
     }
 
     if (effect->part_index == (((actor->animation->sync_parts >> 5) & 0x1F) - 1))
     {
         if (actor->track_object_indices[effect->track_index] != 0xFF)
         {
-            D_800FDF58[actor->track_object_indices[effect->track_index]].x = effect->x;
-            D_800FDF58[actor->track_object_indices[effect->track_index]].y = effect->y;
-            D_800FDF58[actor->track_object_indices[effect->track_index]].z = effect->z;
-            D_800FDF58[actor->track_object_indices[effect->track_index]].y = 0;
-            D_800FDF58[actor->track_object_indices[effect->track_index]].facing_or_reward_kind =
-                (D_800FDF58[actor->track_object_indices[effect->track_index]].facing_or_reward_kind & 0x7F) |
+            g_field_actors[actor->track_object_indices[effect->track_index]].x = effect->x;
+            g_field_actors[actor->track_object_indices[effect->track_index]].y = effect->y;
+            g_field_actors[actor->track_object_indices[effect->track_index]].z = effect->z;
+            g_field_actors[actor->track_object_indices[effect->track_index]].y = 0;
+            g_field_actors[actor->track_object_indices[effect->track_index]].facing_or_reward_kind =
+                (g_field_actors[actor->track_object_indices[effect->track_index]].facing_or_reward_kind & 0x7F) |
                 (effect->facing_or_reward_kind & 0x80);
         }
     }
@@ -2344,13 +2344,13 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                 {
                     slot = actor->track_object_indices[g_field_track_index];
                     selector -= 0xA;
-                    reference_record = &D_800FDF58[slot];
+                    reference_record = &g_field_actors[slot];
                     reference_object = &D_80105AE0[slot];
                 }
                 else
                 {
                     slot = actor->owner_object_index;
-                    reference_record = &D_800FDF58[slot];
+                    reference_record = &g_field_actors[slot];
                     reference_object = &D_80105AE0[slot];
                 }
                 owner_base = D_80105AE0;
@@ -2498,7 +2498,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                 placement_origin->vz = 0;
                 break;
             case 0x27:
-                reference_record = &D_800FDF58[actor->owner_object_index];
+                reference_record = &g_field_actors[actor->owner_object_index];
                 if ((((u32) part->placement_flags >> 0xA) & 1) && !(reference_record->facing_or_reward_kind & 0x80))
                 {
                     placement_origin->vx = reference_record->x - (part->offset_x << 8);
@@ -2511,8 +2511,8 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                 placement_origin->vz = reference_record->z + (part->offset_z << 8);
                 break;
             case 0x28:
-                reference_record = &D_800FDF58[actor->track_object_indices[g_field_track_index]];
-                if ((part->spawn_flags.word & 0x08000000) && !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80))
+                reference_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
+                if ((part->spawn_flags.word & 0x08000000) && !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x80))
                 {
                     placement_origin->vx = reference_record->x - (part->offset_x << 8);
                 }
@@ -2528,7 +2528,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                 placement_origin->vz = reference_record->z + (part->offset_z << 8);
                 break;
             case 0x29:
-                reference_record = &D_800FDF58[actor->owner_object_index];
+                reference_record = &g_field_actors[actor->owner_object_index];
                 reference_object = &D_80105AE0[actor->owner_object_index];
                 placement_origin->vx = reference_record->x;
                 placement_origin->vy = reference_record->y + (reference_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].y << 8);
@@ -2536,7 +2536,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                 placement_origin->vx += reference_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].x << 8;
                 break;
             case 0x32:
-                reference_record = &D_800FDF58[actor->owner_object_index];
+                reference_record = &g_field_actors[actor->owner_object_index];
                 reference_object = &D_80105AE0[actor->owner_object_index];
                 placement_origin->vx = reference_record->x + (reference_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].x << 8);
                 placement_origin->vy = reference_record->y;
@@ -2551,14 +2551,14 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                 }
                 break;
             case 0x33:
-                reference_record = &D_800FDF58[actor->owner_object_index];
+                reference_record = &g_field_actors[actor->owner_object_index];
                 reference_object = &D_80105AE0[actor->owner_object_index];
                 placement_origin->vx = reference_record->x + (reference_object->ground_attachment_points[((u32) record->flags >> 0xD) & 3].x << 8);
                 placement_origin->vy = reference_record->y;
                 placement_origin->vz = reference_record->z + (reference_object->ground_attachment_points[((u32) record->flags >> 0xD) & 3].y << 8);
                 break;
             case 0x34:
-                reference_record = &D_800FDF58[actor->track_object_indices[g_field_track_index]];
+                reference_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
                 if (!(reference_record->facing_or_reward_kind & 0x80))
                 {
                     placement_origin->vx = reference_record->x + (actor->track_offsets[g_field_track_index].x << 8);
@@ -2591,7 +2591,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                 placement_origin->vx = effect->x;
                 placement_origin->vy = g_field_effect_records[(u16) record->reference_index].y;
                 placement_origin->vz = g_field_effect_records[(u16) record->reference_index].z;
-                if ((part->spawn_flags.word & 0x08000000) && !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & 0x80))
+                if ((part->spawn_flags.word & 0x08000000) && !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & 0x80))
                 {
                     placement_origin->vx -= part->offset_x << 8;
                 }
@@ -2765,7 +2765,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                         query->z = position_z;
                         query->y = query_y;
                     }
-                    if ((D_800FE754 != 0) && (func_8005B368(query) != -1))
+                    if ((g_field_active_group != 0) && (func_8005B368(query) != -1))
                     {
                         rotated_vector->z = 0;
                         rotated_vector->x = 0;
@@ -3075,7 +3075,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 5);
                         func_800C0B40(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 5);
-                        func_80092C24(&D_800FDF58[recipient_index], 0x2C);
+                        func_80092C24(&g_field_actors[recipient_index], 0x2C);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
@@ -3101,7 +3101,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 6);
                         func_800C0B40(recipient_object->record_id, object_base[actor->owner_object_index].record_id, 6);
-                        func_80092C24(&D_800FDF58[recipient_index], 0x2D);
+                        func_80092C24(&g_field_actors[recipient_index], 0x2D);
                         field_release_actor_if_no_effects(record);
                         return;
                     }
@@ -3140,7 +3140,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
 
 
 extern FieldActorState g_field_actor_slots[80];
-extern FieldMotionRecord D_800FDF58[];
+extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[];
 extern FieldObjectPlacement D_80105AE0[];
 extern s32 D_800F22A0;
@@ -3252,23 +3252,23 @@ void field_resolve_effect_position(FieldMotionRecord *effect, FieldActorPartDef 
 
 track_object:
     actors = g_field_actor_slots;
-    position->vx = D_800FDF58[actors[effect->actor_index].track_object_indices[g_field_track_index]].x;
-    position->vy = D_800FDF58[actors[effect->actor_index].track_object_indices[g_field_track_index]].y;
+    position->vx = g_field_actors[actors[effect->actor_index].track_object_indices[g_field_track_index]].x;
+    position->vy = g_field_actors[actors[effect->actor_index].track_object_indices[g_field_track_index]].y;
     object_index = actors[effect->actor_index].track_object_indices[g_field_track_index];
     do
     {
-        track_record = &D_800FDF58[object_index];
+        track_record = &g_field_actors[object_index];
     } while (0);
     position->vz = track_record->z;
     return;
 owner_object:
     owner_actors = g_field_actor_slots;
-    position->vx = D_800FDF58[owner_actors[effect->actor_index].owner_object_index].x;
-    position->vy = D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].y;
+    position->vx = g_field_actors[owner_actors[effect->actor_index].owner_object_index].x;
+    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y;
     owner_index = owner_actors[effect->actor_index].owner_object_index;
     do
     {
-        owner_record = &D_800FDF58[owner_index];
+        owner_record = &g_field_actors[owner_index];
     } while (0);
     position->vz = owner_record->z;
     return;
@@ -3290,7 +3290,7 @@ reference_effect:
     position->vz = effect->z;
     return;
 owner_attachment:
-    source_record = &D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index];
+    source_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
     source_object = &D_80105AE0[g_field_actor_slots[effect->actor_index].owner_object_index];
     position->vx = source_record->x + (source_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].x << 8);
     position->vy = source_record->y + (source_object->attachment_points[((u32) part->effect_flags >> 0x15) & 3].y << 8);
@@ -3313,7 +3313,7 @@ facing_offset:
     {
         source_index = g_field_actor_slots[effect->actor_index].owner_object_index;
     }
-    source_record = &D_800FDF58[source_index];
+    source_record = &g_field_actors[source_index];
     if (source_record->facing_or_reward_kind & 0x80)
     {
         position_x = effect->work_x;
@@ -3345,22 +3345,22 @@ relative_side_offset:
     placement = ((u32) part->placement_flags >> 0x12) & 0x3F;
     if (placement < 0xA)
     {
-        source_record = &D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index];
-        opposite_record = &D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
+        source_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
+        opposite_record = &g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
     }
     else
     {
         if (placement < 0x26)
         {
             object_index = g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index];
-            source_record = &D_800FDF58[object_index];
+            source_record = &g_field_actors[object_index];
         }
         else
         {
             object_index = g_field_actor_slots[effect->actor_index].owner_object_index;
-            source_record = &D_800FDF58[object_index];
+            source_record = &g_field_actors[object_index];
         }
-        opposite_record = &D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index];
+        opposite_record = &g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index];
     }
     if (source_record->x > opposite_record->x)
     {
@@ -3387,37 +3387,37 @@ relative_side_offset:
     return;
 owner_bounds_center:
     source_object = &D_80105AE0[g_field_actor_slots[effect->actor_index].owner_object_index];
-    position->vx = D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].x + ((source_object->bounds_right + source_object->bounds_left) << 7);
-    position->vy = D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].y + ((source_object->bounds_bottom + source_object->bounds_top) << 7);
-    position->vz = D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].z;
+    position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x + ((source_object->bounds_right + source_object->bounds_left) << 7);
+    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y + ((source_object->bounds_bottom + source_object->bounds_top) << 7);
+    position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
     return;
 track_bounds_center:
     source_object = &D_80105AE0[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]];
-    position->vx = D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + ((source_object->bounds_right + source_object->bounds_left) << 7);
-    position->vy = D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y + ((source_object->bounds_bottom + source_object->bounds_top) << 7);
-    position->vz = D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z;
+    position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + ((source_object->bounds_right + source_object->bounds_left) << 7);
+    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y + ((source_object->bounds_bottom + source_object->bounds_top) << 7);
+    position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z;
     return;
 reflect_track_x:
-    delta_x = D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x - D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].x;
+    delta_x = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
     if (effect->position_source == FIELD_POSITION_REFLECT_TRACK_X)
     {
-        position->vx = D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].x - delta_x;
+        position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x - delta_x;
     }
     else
     {
-        position->vx = D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + delta_x;
+        position->vx = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x + delta_x;
     }
-    position->vy = D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].y;
-    position->vz = D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].z;
+    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].y;
+    position->vz = g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
     return;
 extend_track_xz:
-    position->vx = (D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].x;
-    position->vy = D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
-    position->vz = (D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - D_800FDF58[g_field_actor_slots[effect->actor_index].owner_object_index].z;
+    position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].x;
+    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
+    position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_actors[g_field_actor_slots[effect->actor_index].owner_object_index].z;
     return;
 extend_link_xz:
-    position->vx = (D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_effect_records[effect->position_data.linked_effect_index].x;
-    position->vy = D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
-    position->vz = (D_800FDF58[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_effect_records[effect->position_data.linked_effect_index].z;
+    position->vx = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].x * 2) - g_field_effect_records[effect->position_data.linked_effect_index].x;
+    position->vy = g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].y;
+    position->vz = (g_field_actors[g_field_actor_slots[effect->actor_index].track_object_indices[g_field_track_index]].z * 2) - g_field_effect_records[effect->position_data.linked_effect_index].z;
     return;
 }

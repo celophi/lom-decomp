@@ -2,6 +2,7 @@
 #define FIELD_SCENE_INTERNAL_H
 
 #include "common.h"
+#include "field_animation.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
@@ -412,19 +413,7 @@ struct FieldMarker
     u16 y3;
 };
 
-/**
- * @brief Element of the scene's pending VRAM upload list.
- *
- * Each node carries a ready-made LoadImage argument pair: the destination
- * rectangle sits inline at 0x04 so its address can be taken directly.
- */
-typedef struct FieldImageReq FieldImageReq;
-struct FieldImageReq
-{
-    FieldImageReq* next; /* 0x00 */
-    RECT rect;           /* 0x04 destination rectangle in VRAM */
-    u_long* data;        /* 0x0C source pixel data */
-};
+
 
 /** @brief Definition record shared by the animation and sequence lists. */
 typedef struct FieldAnimDef FieldAnimDef;

@@ -1,7 +1,8 @@
+#include "field_scene_transition.h"
 #include "common.h"
 #include "sdk/libgpu.h"
-extern u8 D_800EB254[];
-extern u8 D_800FDF58[];
+extern u8 g_field_direction_offsets[];
+extern u8 g_field_actors[];
 extern u8 D_80105AE0[];
 extern u8 D_80122738[];
 extern u8 *g_pad_ctx;
@@ -13,7 +14,7 @@ void field_initialize_actor_record(s32, s32);
 void field_restart_actor_animation(u8 *);
 s32 func_800839F8(s32, s32);
 s32 func_80083EEC(s32, s32, s32);
-void func_8009C2E0(u8 *, s32 *);
+
 void func_800A3938(s32, s32);
 s32 func_800A9D70(s32);
 void func_800C2640(s32, s32);
@@ -345,34 +346,34 @@ s32 func_800AF350(u8 *arg0)
                 window_flags += 5;
             } while (window_index < 8);
             actor_index = 0xC;
-            direction_table = D_800EB254;
+            direction_table = g_field_direction_offsets;
             D_80122714 = 0;
             entry = g_pad_ctx + D_80122738[D_80122A00 * 2];
             (*(u8 *)(entry + 0x25E0)) = (u8) ((*(u8 *)(entry + 0x25E0)) - 1);
             do
             {
-                entry = D_800FDF58 + actor_index * 0x54;
+                entry = g_field_actors + actor_index * 0x54;
                 record = entry;
                 items = D_80122738;
                 if ((*(u8 *)(record + 0x25)) == 0xFF)
                 {
                     field_initialize_actor_record(actor_index, 4);
-                    (*(s32 *)(record + 0x0)) = (s32) (*(s32 *)(D_800FDF58 + 0x0));
-                    (*(s32 *)(record + 0x4)) = (s32) (*(s32 *)(D_800FDF58 + 0x4));
-                    (*(s32 *)(record + 0x8)) = (s32) (*(s32 *)(D_800FDF58 + 0x8));
-                    direction_entry = (u8 *)(s32)(((u8) (*(u8 *)(D_800FDF58 + 0x1B)) >> 5) * 4);
+                    (*(s32 *)(record + 0x0)) = (s32) (*(s32 *)(g_field_actors + 0x0));
+                    (*(s32 *)(record + 0x4)) = (s32) (*(s32 *)(g_field_actors + 0x4));
+                    (*(s32 *)(record + 0x8)) = (s32) (*(s32 *)(g_field_actors + 0x8));
+                    direction_entry = (u8 *)(s32)(((u8) (*(u8 *)(g_field_actors + 0x1B)) >> 5) * 4);
                     direction_entry = (s32)direction_entry + direction_table;
                     offset[0] = (s32) -(*(s16 *)(direction_entry + 0x0));
                     offset[1] = 0;
                     offset[2] = (s32) -(*(s16 *)(direction_entry + 0x2));
-                    func_8009C2E0(record, offset);
+                    field_move_actor_position(record, offset);
                     entry = record;
                     actor_flags = *(s32 *)(entry + 0x1C);
                     slot_offset = actor_index * 0x23C;
                     record = D_80105AE0 + slot_offset;
                     entry[0x25] = 0xFE;
                     selected_item = items[D_80122A00 * 2];
-                    actor_direction = D_800FDF58[0x21];
+                    actor_direction = g_field_actors[0x21];
                     actor_flags &= ~0x1FF;
                     actor_flags |= 2;
                     entry[0x27] = 0;
@@ -488,7 +489,7 @@ s32 func_800AF350(u8 *arg0)
 /**
  * @brief Bump a pad-slot counter and clear an actor slot's animation bits.
  *
- * Uses the D_800FDF58 entry for @p arg0 (stride 0x54) to index into the pad
+ * Uses the g_field_actors entry for @p arg0 (stride 0x54) to index into the pad
  * context and increment a per-controller counter, dispatches func_800C2640 for
  * the actor slot's @c unk14 handle, marks the pad entry served (0xFF), and
  * clears the actor slot's @c unk18E byte.
@@ -502,7 +503,7 @@ void func_800AF824(s32 arg0)
     u8 *v1;
     u8 *s0;
     u8 *pc = g_pad_ctx;
-    u8 *base = D_800FDF58;
+    u8 *base = g_field_actors;
 
     s1 = base + arg0 * 0x54;
     v1 = pc + (s1[0x21] & 0x7F);

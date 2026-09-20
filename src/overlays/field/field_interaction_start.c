@@ -1,3 +1,5 @@
+#include "field_scene_transition.h"
+#include "field_text.h"
 #include "game_audio.h"
 #include "saved_game.h"
 #include "common.h"
@@ -193,14 +195,6 @@ void func_800B0C10(void)
 }
 
 
-typedef struct
-{
-    u8 unk0;
-    u8 _pad1[3];
-    u8* unk4;
-} FieldTextMacro;
-
-extern FieldTextMacro D_80122B80[];
 extern u8* D_80122B74;
 extern s16 D_800EF600;
 
@@ -218,18 +212,18 @@ void func_800B0C54(void)
     FieldTextMacro* macro;
 
     slot = 0;
-    macros = D_80122B80;
+    macros = g_field_text_macros;
     last_slot = 0xF;
     do
     {
         macro = (FieldTextMacro*)(((last_slot - slot) * sizeof(*macro)) + (u32)macros);
-        macro->unk0 = 0x15;
-        macro->unk4 = D_80122B74 + 0x5F0 + slot * 0x250;
+        macro->character_limit = 0x15;
+        macro->text = D_80122B74 + 0x5F0 + slot * 0x250;
         slot++;
     } while (slot < 3);
 
-    D_80122B80[0xC].unk0 = 0xFF;
-    D_80122B80[0xC].unk4 = (u8*)&D_800EF600 + *(s16*)((u8*)&D_800EF600 + ((*(u16*)(D_80122B74 + 0x2E6) & 0x7F) * 2));
+    g_field_text_macros[0xC].character_limit = 0xFF;
+    g_field_text_macros[0xC].text = (u8*)&D_800EF600 + *(s16*)((u8*)&D_800EF600 + ((*(u16*)(D_80122B74 + 0x2E6) & 0x7F) * 2));
 
     if ((func_800BD414(0, 0xA02) != 0) || ((*(s32*)(D_80122B74 + 0x858) & 0x80) != 0))
     {
@@ -932,7 +926,7 @@ typedef struct
 
 void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
 s32 func_800BD414(s32 arg0, s32 arg1);
-void field_set_scene_parameters(s32 arg0, s32 arg1, u32 arg2, s32 arg3, s32 arg4, s32 arg5);
+
 
 
 extern s32 g_pending_game_state;
@@ -980,7 +974,7 @@ void func_800B1AA8(void)
 extern s32 g_layout_option;
 
 void func_80087FC0(s32 arg0, s32 arg1);
-void func_8009AFBC(s32 arg0);
+
 s32 akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
 
 /**
@@ -1013,7 +1007,7 @@ void func_800B1BBC(void)
         half = *(u16 *)(((u8 *)D_80122B78) + 0x418);
         if ((u16)(half + 2) >= 2)
         {
-            func_8009AFBC(half & 0x7FFF);
+            field_seek_scene_resource(half & 0x7FFF);
         }
 
         packed = *(u32 *)(((u8 *)D_80122B78) + 0x410);
@@ -1184,7 +1178,7 @@ extern void field_script_run(void *ctx);
 extern s32 func_800B286C(s32, s32, s32);
 extern s32 func_800BD414(s32 arg0, s32 arg1);
 extern void func_800B177C(void);
-extern s32 func_8006751C(s32 arg0);
+
 
 /**
  * @brief Advance the active field script state and dispatch pending actor commands.
@@ -1220,7 +1214,7 @@ void func_800B1F10(void)
             func_800B177C();
         }
     }
-    else if ((((FieldState1F10 *)D_80122B78)->actors.flags & 0x80000) && (func_8006751C(0) == -1))
+    else if ((((FieldState1F10 *)D_80122B78)->actors.flags & 0x80000) && (field_text_get_status(0) == -1))
     {
         i = 0;
         if (((FieldState1F10 *)D_80122B78)->actors.count != 0)
@@ -1592,16 +1586,16 @@ void func_800B2654(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector)
 }
 
 /**
- * @brief Set a field text macro's type and backing record.
+ * @brief Set a field text macro's replacement string and character budget.
  * @param arg0 Macro slot index, checked against the upper bound only.
- * @param arg1 Backing record pointer.
- * @param arg2 Macro type.
+ * @param arg1 Replacement text.
+ * @param arg2 Unsigned character budget.
  */
 void func_800B2844(s32 arg0, u8* arg1, u8 arg2)
 {
     if (arg0 < 0x10)
     {
-        D_80122B80[arg0].unk0 = arg2;
-        D_80122B80[arg0].unk4 = arg1;
+        g_field_text_macros[arg0].character_limit = arg2;
+        g_field_text_macros[arg0].text = arg1;
     }
 }

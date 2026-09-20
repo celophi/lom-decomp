@@ -1,3 +1,4 @@
+#include "field_text.h"
 /** @file field_frame_commands.c
  * @brief Construct per-frame field command buffers.
  */
@@ -43,9 +44,9 @@ extern s32 g_field_action_context[];
 extern s32 D_800F2288[];
 extern s32 D_800F2298[];
 extern s32 g_field_gover_load_countdown[];
-extern s32 D_800FE754[];
+extern s32 g_field_active_group[];
 extern s32 g_field_pickup_sound_played[];
-extern s32 D_8010AE48[];
+extern s32 g_field_hide_actor_panels[];
 extern s32 D_8011F3AC[];
 extern s32 D_8012269C[];
 extern s32 D_801227C8[];
@@ -75,9 +76,9 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
     func_800AA098(arg0);
     field_update_and_render_fade(arg0);
     func_800B0244();
-    if (D_800FE754[0] != 0)
+    if (g_field_active_group[0] != 0)
     {
-        if (D_8010AE48[0] == 0)
+        if (g_field_hide_actor_panels[0] == 0)
         {
             func_80084700(arg0);
         }

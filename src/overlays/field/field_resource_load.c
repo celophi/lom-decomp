@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "cdrom.h"
 #include "common.h"
 typedef struct
@@ -128,11 +129,11 @@ s32 func_800B0234(void)
 
 
 extern FieldResourceSlot D_800FD818[];
-extern u8 D_800FDF58[];
+extern u8 g_field_actors[];
 extern u8 D_800FE3A0[];
 extern u8 D_80105880[];
 extern u8 D_80105AE0[];
-extern s32 D_800FE754;
+extern s32 g_field_active_group;
 void func_800B0A08(s32);
 s32 func_800B0888(void);
 void func_800B08FC(s32, s32);
@@ -208,7 +209,7 @@ state_3:
             actor_base = D_80105AE0;
             do
             {
-                object = (Struct_D800FDF58 *)D_800FDF58 + D_80122B28[i].unk0;
+                object = (Struct_D800FDF58 *)g_field_actors + D_80122B28[i].unk0;
                 if (D_80122B28[i].unk2 != none)
                 {
                     object->unk25 = 0;
@@ -282,7 +283,7 @@ state_4:
                 i = 3;
                 empty_slot = 0xFF;
                 object_type = 0x8D;
-                object_records = (u8 *)D_800FDF58;
+                object_records = (u8 *)g_field_actors;
                 object_scan_13 = object_records + 0xFC;
 loop_34:
                 if (((*(u8 *)(object_scan_13 + 0x25)) == empty_slot) || ((*(s16 *)(object_scan_13 + 0x2A)) != object_type))
@@ -299,7 +300,7 @@ loop_34:
                     i = 1;
                     scan_type_a = 0xAF;
                     scan_type_b = 0xB1;
-                    object_records = (u8 *)D_800FDF58;
+                    object_records = (u8 *)g_field_actors;
                     object_scan_3 = object_records + 0x54;
                     resource_slots = (u8 *)D_800FD818;
                     resource_slot_scan = resource_slots + 0x268;
@@ -327,7 +328,7 @@ block_44:
                         do
                         {
                             ((FieldActorPartDef *)D_800FE3A0)[i].unk34 &= part_mask;
-                            ((Struct_D800FDF58 *)D_800FDF58)[i].unk2A = 0;
+                            ((Struct_D800FDF58 *)g_field_actors)[i].unk2A = 0;
                             i += 1;
                         } while (i < 3);
                         func_800A3938(0x79, 0x80);
@@ -337,14 +338,14 @@ block_44:
                             if (D_80122B68[i] != 0)
                             {
                                 func_800B08FC(1, i);
-                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk2A = 0x99;
-                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk2E = 1;
-                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk27 = 0;
-                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk24 = 1;
-                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk21 = (((Struct_D800FDF58 *)D_800FDF58)[i].unk21 & 0x80) + 0x11;
-                                ((Struct_D800FDF58 *)D_800FDF58)[i].unk1C &= ~0x800;
+                                ((Struct_D800FDF58 *)g_field_actors)[i].unk2A = 0x99;
+                                ((Struct_D800FDF58 *)g_field_actors)[i].unk2E = 1;
+                                ((Struct_D800FDF58 *)g_field_actors)[i].unk27 = 0;
+                                ((Struct_D800FDF58 *)g_field_actors)[i].unk24 = 1;
+                                ((Struct_D800FDF58 *)g_field_actors)[i].unk21 = (((Struct_D800FDF58 *)g_field_actors)[i].unk21 & 0x80) + 0x11;
+                                ((Struct_D800FDF58 *)g_field_actors)[i].unk1C &= ~0x800;
                                 ((FieldActorState *)D_80105AE0)[i].unk174 &= ~0x1800;
-                                field_restart_actor_animation((u8 *)&((Struct_D800FDF58 *)D_800FDF58)[i]);
+                                field_restart_actor_animation((u8 *)&((Struct_D800FDF58 *)g_field_actors)[i]);
                             }
                             i += 1;
                         } while (i < 2);
@@ -361,7 +362,7 @@ block_44:
                         DrawSync(0);
                         func_80084240();
                         field_restore_default_action_animation_mappings(1);
-                        func_800B34D0(D_800FE754);
+                        func_800B34D0(g_field_active_group);
                         D_80122B20 = 0;
                     }
                 }
@@ -497,7 +498,7 @@ extern s32 g_field_resource_cursor;
 extern FieldResourceEntry g_field_resource_entries[];
 void field_release_resource_entry(s32);
 void field_unpack_resource_package(u8 *, s32, s32, s32);
-void func_8009C434(void);
+
 
 /**
  * @brief Install a queued resource and record its allocated memory range.
@@ -517,7 +518,7 @@ void func_800B08FC(s32 arg0, s32 arg1)
         entry = base + arg1;
         entry->slot_index = (u8)arg1;
         entry->unk8 = 0;
-        func_8009C434();
+        field_set_party_palettes();
         entry->unkE = 0x2F;
         flags = entry->flags;
         flags &= ~1;

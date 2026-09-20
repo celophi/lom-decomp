@@ -3,3 +3,5 @@ field_text_reset_windows             = 0x800643E0;
 field_text_reset_scratch             = 0x8006441C;
 g_shop_overlay_id = 0x80140000;
 g_menu_element_counter                     = 0x8012298C;
+
+field_text_upload_immediate_cache = 0x80063194;

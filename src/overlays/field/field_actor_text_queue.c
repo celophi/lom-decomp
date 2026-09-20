@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 
@@ -31,7 +32,7 @@ typedef struct
     s32 unk40B8; /* 0x40B8 */
 } ArgA;
 
-extern Position D_800FDF58[];
+extern Position g_field_actors[];
 extern u8 D_800ED064[];
 extern u8 *g_pad_ctx;
 extern s32 D_800F22A0, D_800F22A4, D_800F22A8;
@@ -39,12 +40,11 @@ extern s32 D_801227C8;
 extern s32 D_801227DC;
 
 extern s32 func_800AE864(u8 *);
-void field_text_reset_scratch(void);
-void field_text_reset_windows(void);
-void func_80063194(void);
+
+
+
 void func_800A6634(ArgA *arg0, ArgB *arg1);
 
-s32 field_text_build_sprites(SPRT *prim, u8 *text, s32 style);
 SPRT *func_800AD658(s32 *ordering_table, SPRT *sprite_cursor, s32 count);
 
 /**
@@ -130,7 +130,7 @@ void func_800A623C(s32 arg0, s32 arg1)
             {
                 xoff += 255;
             }
-            actor_base = (u8 *)D_800FDF58;
+            actor_base = (u8 *)g_field_actors;
             actor = (Position *)(arg0 * 0x54 + actor_base);
             x = actor->x;
             if (x < 0)
@@ -271,7 +271,7 @@ void func_800A64D0(ArgA *arg0)
                 D_801226A0[i].count--;
             }
         }
-        func_80063194();
+        field_text_upload_immediate_cache();
     }
     else if (D_801227DC != 0)
     {

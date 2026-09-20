@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "menu_internal.h"
 
 /* ----- Initialization and Core Frame Processing ----- */
@@ -60,7 +61,7 @@ s32 func_801405B0(RenderContext* render_buffers)
         draw_buffer->prim_cursor = &draw_buffer->ot[MENU_OT_ENTRY_COUNT];
         func_8006441C();
         menu_tick(draw_buffer);
-        func_80063194();
+        field_text_upload_immediate_cache();
         func_80068440();
         DrawSync(0);
         set_controller_vsync_interval(2);

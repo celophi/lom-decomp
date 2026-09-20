@@ -330,7 +330,7 @@ typedef struct
 
 extern u32 D_800EB00C[];
 extern FieldControlActor D_800FB3C8[];
-extern FieldControlRecord D_800FDF58[];
+extern FieldControlRecord g_field_actors[];
 extern ActorSlot g_field_actor_slots[];
 extern FieldEffectMotion D_801077FC;
 extern s32 D_800F22A0;
@@ -338,7 +338,7 @@ extern s32 D_800F22A4;
 extern s32 D_800F22A8;
 extern ShadowResourceEntry g_field_resource_entries[];
 extern Rec87564 *D_8010A01C;
-extern s32 D_8010A030;
+extern s32 g_field_scene_record_table;
 
 /**
  * @brief Dispatch one changed actor control flag and refresh its displayed colors.
@@ -372,7 +372,7 @@ void func_80086494(s32 index)
     FieldControlState *runtime;
 
     record_offset = index * 0x54;
-    record = (FieldControlRecord *)(record_offset + (u8 *)D_800FDF58);
+    record = (FieldControlRecord *)(record_offset + (u8 *)g_field_actors);
     runtime = &D_80105AE0[index];
     flags_before = runtime->unkc;
     actor = &D_800FB3C8[index];
@@ -409,7 +409,7 @@ void func_80086494(s32 index)
                 else
                 {
                     ((void (*)(FieldControlRecord *, s32))action_value)(
-                        (FieldControlRecord *)(record_offset + (u8 *)D_800FDF58), runtime->unkc & bit_mask);
+                        (FieldControlRecord *)(record_offset + (u8 *)g_field_actors), runtime->unkc & bit_mask);
                 }
                 clear_mask = ~bit_mask;
                 runtime->unk17c = (s32)((runtime->unk17c & clear_mask) | (runtime->unkc & bit_mask));
@@ -504,15 +504,15 @@ void func_80086494(s32 index)
     }
     if (runtime->unkc & 0x10000000)
     {
-        D_800FDF58[index].unk1a = 0x20;
-        D_800FDF58[index].unk19 = 0x20;
+        g_field_actors[index].unk1a = 0x20;
+        g_field_actors[index].unk19 = 0x20;
         runtime->unkc = (s32)(runtime->unkc & 0xEFFFFFFF);
     }
     else
     {
-        D_800FDF58[index].unk18 = D_800FE3A0[index].unke;
-        D_800FDF58[index].unk19 = D_800FE3A0[index].unkf;
-        D_800FDF58[index].unk1a = D_800FE3A0[index].unk10;
+        g_field_actors[index].unk18 = D_800FE3A0[index].unke;
+        g_field_actors[index].unk19 = D_800FE3A0[index].unkf;
+        g_field_actors[index].unk1a = D_800FE3A0[index].unk10;
     }
 }
 
@@ -1146,12 +1146,12 @@ void func_80087564(Rec87564 *arg0)
 }
 
 /**
- * @return Value of D_8010A030.
+ * @return Value of g_field_scene_record_table.
  * @see decomp.me (100%) N/A -- trivial 4-instruction leaf function, no scratch needed.
  */
 s32 func_800875B4(void)
 {
-    return D_8010A030;
+    return g_field_scene_record_table;
 }
 
 /**

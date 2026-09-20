@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "field_runtime.h"
 #include "cdrom.h"
 #include "controller.h"
@@ -34,9 +35,9 @@ typedef struct
 #define SCENE_STATE ((SceneState*)0x801ED480)
 
 extern void field_set_fade_target(s16, s16, s16, s16);
-extern void field_set_scene_parameters(s32, s32, u32, s32, s32, s32);
+
 extern void field_stop_song(void);
-extern void field_update_scene(void);
+
 extern void field_build_frame_commands(FieldRenderHalf*, s32);
 extern void field_initialize_subsystems(FieldRenderHalf*);
 extern void field_flush_vram_uploads(void);

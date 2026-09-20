@@ -23,10 +23,10 @@ extern s32 D_800EB04C[];
 extern u8 D_800EC33C[];
 extern u8 D_800EC37C[];
 extern u8 D_800EC388[];
-extern Actor D_800FDF58[];
-extern s32 D_800FE754;
+extern Actor g_field_actors[];
+extern s32 g_field_active_group;
 extern Slot D_80105AE0[];
-extern s32 D_801158A0;
+extern s32 g_field_scene_mode_bit;
 extern s32 D_80117EC0;
 extern s32 D_80117EC4;
 extern u8 D_80117EC8[];
@@ -65,14 +65,14 @@ void func_800A2E40(u8 *buffer)
 
     D_80117EC0 = 0;
     D_80117EC8[0] = 0xFFU;
-    if ((D_80117EC4 == 0) && (D_801158A0 != 0))
+    if ((D_80117EC4 == 0) && (g_field_scene_mode_bit != 0))
     {
         index = 0;
-        if (D_800FE754 != 0)
+        if (g_field_active_group != 0)
         {
             active_count = index;
             first_absent = 0xFF;
-            actor = D_800FDF58;
+            actor = g_field_actors;
             entry_cursor = entries;
             do
             {
@@ -100,7 +100,7 @@ void func_800A2E40(u8 *buffer)
                         }
                         else
                         {
-                            index_or_distance = func_8009A204(&D_800FDF58[entries[0]], &D_800FDF58[index_or_distance]);
+                            index_or_distance = func_8009A204(&g_field_actors[entries[0]], &g_field_actors[index_or_distance]);
                         }
                     }
                     if (index_or_distance < 0x20)
@@ -127,7 +127,7 @@ void func_800A2E40(u8 *buffer)
                 {
                     slot_base = D_80105AE0;
                     order = D_800EB04C;
-                    actor_base = D_800FDF58;
+                    actor_base = g_field_actors;
                     absent = 0xFF;
                     counter_base = D_80117ED0;
                 pair_loop:

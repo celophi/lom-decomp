@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "niki_internal.h"
 
 /**
@@ -51,7 +52,7 @@ s32 niki_update_frame(NikiFrameState* frame)
     niki_begin_glyph_cache_frame();
     niki_update_menu(frame);
     niki_evict_unused_glyphs();
-    func_80063194();
+    field_text_upload_immediate_cache();
     g_niki_frame_parity ^= 1;
     return 0;
 }
