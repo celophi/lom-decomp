@@ -324,7 +324,10 @@ void field_refresh_party_routes(void)
  * @param unused_limit Unused sixth argument retained to agree with the caller.
  * @note Coordinates are fixed point with eight fractional bits; interpolated
  *       normalized directions use twelve fractional bits.
- * @see decomp.me (100%)
+ * @see decomp.me (99.754906%) with the pinned assembler.
+ * @see decomp.me (100%) with the experimental maspsx operand fix, now removed.
+ * @note The pinned assembler inserts one extra nop; see
+ *       docs/decompilation/maspsx-division-register-hazard.md.
  */
 void field_sample_actor_route(FieldRoutePoint* points, s32 remaining, FieldRouteActor* actor, FieldRouteActor* target, s32 heading_offset, s32 unused_limit)
 {

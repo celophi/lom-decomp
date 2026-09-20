@@ -52,9 +52,7 @@ STAGE_TEXT_FIND_EXPR := \
 # than recursively expanding one Make wildcard per directory. Directories are
 # included so adding or deleting a staged file invalidates the sentinel.
 # Changes to this file also invalidate the sentinel.
-MASPSX_REGISTER_PATCH := tools/patches/maspsx-register-operands.patch
-
-STAGE_INPUTS := Makefile mk/staging.mk $(MASPSX_REGISTER_PATCH) $(STAGE_PATHS) \
+STAGE_INPUTS := Makefile mk/staging.mk $(STAGE_PATHS) \
 	$(shell find $(STAGE_PATHS) -print 2>/dev/null)
 
 .PHONY: recopy
@@ -92,7 +90,5 @@ $(COPY_SENTINEL): $(STAGE_INPUTS)
 	@find $(addprefix $(STAGING)/,$(STAGE_MANAGED_PATHS)) -type f \
 		\( $(STAGE_TEXT_FIND_EXPR) \) \
 		-exec dos2unix -q {} +
-	# Match complete division operands: $$20 must not trigger a $$2 load hazard.
-	@patch -s -d "$(STAGING)/tools/maspsx" -p1 < $(MASPSX_REGISTER_PATCH)
 	@touch $@
 	@echo "Staging complete."
