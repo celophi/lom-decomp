@@ -1,3 +1,4 @@
+#include "field_ability_progression.h"
 #include "field_scene_transition.h"
 #include "field_effect_render_state.h"
 #include "field_text.h"
@@ -532,7 +533,6 @@ void func_800A710C(void);
 void func_800A8880(s32);
 
 void field_merge_dialog_items(void);
-void func_800A68B4(void);
 void func_800A7434(void);
 void func_800A74B8(void);
 
@@ -576,7 +576,7 @@ void func_80068028(void)
     if (D_8010D020[0] == 0)
     {
         field_merge_dialog_items();
-        func_800A68B4();
+        field_advance_ability_progression();
         func_800A7434();
     }
     else

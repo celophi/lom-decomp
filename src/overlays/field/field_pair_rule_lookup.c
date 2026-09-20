@@ -2,42 +2,32 @@
  * @brief Find an unordered pair in the shared packed rule table.
  */
 
-#include "common.h"
+#include "field_ability_progression.h"
 
 /**
- * @brief Ordered-pair lookup entry; table stride is 5 bytes.
- */
-typedef struct
-{
-    u8 f0;
-    u8 f1;
-    u8 f2;
-    u8 f3;
-    u8 f4;
-} PairEntry;
-
-extern PairEntry D_800EC55C[];
-
-/**
- * @brief Looks up the result byte for an unordered pair (@p a, @p b).
+ * @brief Looks up the result byte for an unordered pair (@p first_ability, @p second_ability).
  *
- * Scans 18 table entries for one whose f0/f2 fields hold @p a and @p b in
- * either order; returns that entry's f4 result, or 0xFF when none match.
+ * Scans 18 table entries for one whose prerequisite abilities hold @p first_ability and @p second_ability in
+ * either order.
+ * @param first_ability First prerequisite ability.
+ * @param second_ability Second prerequisite ability.
+ * @return The resulting ability, or 0xFF when no rule matches.
  */
-s32 func_800AD7DC(s32 a, s32 b)
+s32 func_800AD7DC(s32 first_ability, s32 second_ability)
 {
-    PairEntry *e = D_800EC55C;
-    s32 i;
+    FieldAbilityUnlockRule* rule = g_field_ability_unlock_rules;
+    s32 rule_index;
 
-    i = 0;
-    while (i < 18)
+    rule_index = 0;
+    while (rule_index < FIELD_ABILITY_UNLOCK_RULE_COUNT)
     {
-        if ((e->f0 == a && e->f2 == b) || (e->f0 == b && e->f2 == a))
+        if ((rule->prerequisites[0].ability == first_ability && rule->prerequisites[1].ability == second_ability) ||
+            (rule->prerequisites[0].ability == second_ability && rule->prerequisites[1].ability == first_ability))
         {
-            return e->f4;
+            return rule->result;
         }
-        i++;
-        e++;
+        rule_index++;
+        rule++;
     }
     return 0xFF;
 }
