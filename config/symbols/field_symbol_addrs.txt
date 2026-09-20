@@ -440,3 +440,16 @@ g_field_scene_portrait_count = 0x801178CC;
 g_field_scene_portraits = 0x801178D0;
 g_field_scene_strings = 0x801178D4;
 g_field_dialog_item_count = 0x80122908;
+
+// Scene resource header and pointer offsets within the 0x80190000 CD-read
+// scratch buffer. These are numeric offsets, not independent data symbols.
+D_80190000 = 0x80190000; // ignore:true
+D_80190004 = 0x80190004; // ignore:true
+D_80190008 = 0x80190008; // ignore:true
+D_8019000C = 0x8019000C; // ignore:true
+D_80190010 = 0x80190010; // ignore:true
+D_80190014 = 0x80190014; // ignore:true
+D_80190018 = 0x80190018; // ignore:true
+D_8019001C = 0x8019001C; // ignore:true
+D_80190020 = 0x80190020; // ignore:true
+D_80190024 = 0x80190024; // ignore:true
