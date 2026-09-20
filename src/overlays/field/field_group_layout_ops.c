@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 
 void func_800C3BD8(s32 arg0);
@@ -15,7 +16,7 @@ typedef struct
     s8 unk29D7;
 } Rec29D7;
 
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 D_80122C00;
 extern s16 D_80122C06;
 extern s16 D_80122C1A;
@@ -44,7 +45,7 @@ void func_800C3A00(s32 arg0)
         idx = D_80122C00;
         if ((u32)idx < 3)
         {
-            p = g_menuLayoutBuffer;
+            p = g_saved_game.bytes;
             ref = p[0x29D7];
             do
             {
@@ -55,7 +56,7 @@ void func_800C3A00(s32 arg0)
                 i++;
             } while (i < 3);
 
-            q = g_menuLayoutBuffer;
+            q = g_saved_game.bytes;
             slot_d = idx + q;
             v = slot_d[0x29D8];
             slot_found = found + q;
@@ -76,19 +77,19 @@ void func_800C3A00(s32 arg0)
     {
         for (; i < 0x15; i++)
         {
-            g_menuLayoutBuffer[i + ((Rec29D7*)g_menuLayoutBuffer)->unk29D7 * 0x14C + 0x2B0C] = g_menuLayoutBuffer[i + 0xA90];
+            g_saved_game.bytes[i + ((Rec29D7*)g_saved_game.bytes)->unk29D7 * 0x14C + 0x2B0C] = g_saved_game.bytes[i + 0xA90];
         }
-        refv = ((Rec29D7*)g_menuLayoutBuffer)->unk29D7;
+        refv = ((Rec29D7*)g_saved_game.bytes)->unk29D7;
         if (refv != 3)
         {
-            ((Rec29D4*)g_menuLayoutBuffer)->unk29D4 = (((Rec29D4*)g_menuLayoutBuffer)->unk29D4 & ~0xF0) | ((refv & 0xF) * 0x10);
+            ((Rec29D4*)g_saved_game.bytes)->unk29D4 = (((Rec29D4*)g_saved_game.bytes)->unk29D4 & ~0xF0) | ((refv & 0xF) * 0x10);
         }
-        g_menuLayoutBuffer[0x29D7] = 3;
+        g_saved_game.bytes[0x29D7] = 3;
     }
 }
 
 
-extern u8 g_menuLayoutBuffer[];
+
 extern s8 D_800459AF;
 
 extern void func_800C3BB0(void);
@@ -98,7 +99,7 @@ void func_800C3B50(s32 arg0)
 {
     if (arg0 == 3)
     {
-        g_menuLayoutBuffer[0x29D7] = g_menuLayoutBuffer[0x29D4] >> 4;
+        g_saved_game.bytes[0x29D7] = g_saved_game.bytes[0x29D4] >> 4;
     }
     else
     {
@@ -106,7 +107,7 @@ void func_800C3B50(s32 arg0)
     }
 
     func_800C3BB0();
-    func_800C3F18((s8) g_menuLayoutBuffer[0x29D7], &g_menuLayoutBuffer[0xA90]);
+    func_800C3F18((s8) g_saved_game.bytes[0x29D7], &g_saved_game.bytes[0xA90]);
 }
 
 void func_800C3BB0(void)
@@ -127,7 +128,7 @@ typedef union
     } bits;
 } MenuWord;
 
-extern u8 g_menuLayoutBuffer[];
+
 
 void func_800C3CB4(void);
 void func_800C3D38(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
@@ -148,7 +149,7 @@ void func_800C3BD8(s32 arg0)
     i = 0;
     do
     {
-        v1 = g_menuLayoutBuffer + i * 4;
+        v1 = g_saved_game.bytes + i * 4;
         v1[0x2A7C] = 0;
         v1[0x2A7D] = 0;
         i += 1;
@@ -157,9 +158,9 @@ void func_800C3BD8(s32 arg0)
     if (arg0 != 3)
     {
         i = 0;
-        if (g_menuLayoutBuffer[0x29D6] != 0)
+        if (g_saved_game.bytes[0x29D6] != 0)
         {
-            s2 = g_menuLayoutBuffer;
+            s2 = g_saved_game.bytes;
             s1 = s2;
         loop:
             a3 = *(u32 *)(s1 + 0x29DC);
@@ -180,7 +181,7 @@ void func_800C3BD8(s32 arg0)
 }
 
 /** @brief Marks grid cells whose lower neighbor belongs to another block. */
-extern u8 g_menuLayoutBuffer[];
+
 void func_800C3CB4(void)
 {
     s32 i;
@@ -195,7 +196,7 @@ void func_800C3CB4(void)
 
     value = 0x63;
     i = 0x23;
-    initial_base = g_menuLayoutBuffer;
+    initial_base = g_saved_game.bytes;
 
     do
 
@@ -209,7 +210,7 @@ void func_800C3CB4(void)
     i = 0;
     sentinel = 0x63;
     offset = 0x18;
-    base = g_menuLayoutBuffer;
+    base = g_saved_game.bytes;
     do
     {
         p = base + i * 4;
@@ -247,7 +248,7 @@ typedef struct
     Shape shapes[11];
 } ShapeTable;
 extern ShapeTable D_80051888;
-extern u8 g_menuLayoutBuffer[];
+
 /**
  * @brief Populate layout cells for the selected shape and rotation.
  * @param index Menu entry whose packed flags select the shape and cell metadata.
@@ -264,7 +265,7 @@ void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y)
 
     table = D_80051888;
     offset = index * 4;
-    layout = g_menuLayoutBuffer;
+    layout = g_saved_game.bytes;
     do
     {
         i = 0;

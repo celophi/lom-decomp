@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 /** @brief Partial Rec layout used by func_800C0A38. */
@@ -127,7 +128,7 @@ void func_800C0B40(s32 recipient, void *context, u32 selector)
         return;
     default:
         argument_value = (s32)context;
-        akao_set_song_params(0x8001, 300, argument_value, selector);
+        record_game_diagnostic(0x8001, 300, argument_value, selector);
         return;
     }
 }

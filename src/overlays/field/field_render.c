@@ -427,14 +427,11 @@ void field_draw_marker_overlay(u32* cursor, u32* ot)
             setLineF4(prim);
             setRGB0(prim, 0xFF, 0, 0);
             base_y = sy + depth;
-            prim->x0 = def->x0 + sx;
-            prim->y0 = base_y - HALF_TOWARD_ZERO((s16)def->y0);
-            prim->x1 = def->x1 + sx;
-            prim->y1 = base_y - HALF_TOWARD_ZERO((s16)def->y1);
-            prim->x2 = marker->x3 + sx;
-            prim->y2 = base_y - HALF_TOWARD_ZERO((s16)marker->y3);
-            prim->x3 = marker->x2 + sx;
-            prim->y3 = base_y - HALF_TOWARD_ZERO((s16)marker->y2);
+            setXY4(prim,
+                   def->x0 + sx, base_y - HALF_TOWARD_ZERO((s16)def->y0),
+                   def->x1 + sx, base_y - HALF_TOWARD_ZERO((s16)def->y1),
+                   marker->x3 + sx, base_y - HALF_TOWARD_ZERO((s16)marker->y3),
+                   marker->x2 + sx, base_y - HALF_TOWARD_ZERO((s16)marker->y2));
             if (prev != NULL)
             {
                 setaddr(prev, prim);
@@ -443,8 +440,7 @@ void field_draw_marker_overlay(u32* cursor, u32* ot)
             prim = prim + 1;
             setLineF2((LINE_F2*)prim);
             setRGB0(prim, 0xFF, 0, 0);
-            prim->x0 = def->x0 + sx;
-            prim->y0 = base_y - HALF_TOWARD_ZERO((s16)def->y0);
+            setXY0(prim, def->x0 + sx, base_y - HALF_TOWARD_ZERO((s16)def->y0));
             prim->x1 = marker->x2 + sx;
             prim->y1 = base_y - HALF_TOWARD_ZERO((s16)marker->y2);
             setaddr(prev, prim);

@@ -13,7 +13,7 @@ void movie_mdec_out_callback(void)
     /* Queue a standard GPU upload or defer it while drawing is busy. */
     if (g_gpu_mode == MOVIE_GPU_MODE_STANDARD)
     {
-        if (g_cd_status_byte_3 == CD_STATUS_RECOVERY_PENDING)
+        if (g_cd_data_ready_pending == CD_STATUS_RECOVERY_PENDING)
         {
             cdrom_verify_recovery();
         }

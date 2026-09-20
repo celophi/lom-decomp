@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 #include "field_script.h"
 
@@ -40,15 +41,15 @@ void func_80087A9C(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 void func_800B0710(s32, s32, s32, s32);
 
 /**
- * @brief Forward four values to akao_set_song_params.
- * @param flags AKAO flags word.
- * @param duration Duration.
- * @param field_id Field id.
- * @param sub_id Sub id.
+ * @brief Record a diagnostic supplied by a field script.
+ * @param status Diagnostic status.
+ * @param code Diagnostic code.
+ * @param arg0 First diagnostic value.
+ * @param arg1 Second diagnostic value.
  */
-void func_800BCB68(s32 flags, s32 duration, s32 field_id, s32 sub_id)
+void func_800BCB68(s32 status, s32 code, s32 arg0, s32 arg1)
 {
-    akao_set_song_params(flags, duration, field_id, sub_id);
+    record_game_diagnostic(status, code, arg0, arg1);
 }
 
 /**

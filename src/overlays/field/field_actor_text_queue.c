@@ -376,8 +376,7 @@ void* func_800A66B4(SPRT* sprite_cursor, s32* ordering_table, u8* text, s32 text
             {
                 setRGB0(sprite_cursor, 0x80, 0x80, 0x80);
             }
-            sprite_cursor->x0 = x + acc;
-            sprite_cursor->y0 = y;
+            setXY0(sprite_cursor, x + acc, y);
             acc += sprite_cursor->w;
 
             addPrim(ordering_table, sprite_cursor);

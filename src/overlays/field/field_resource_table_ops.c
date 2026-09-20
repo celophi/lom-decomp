@@ -1,6 +1,6 @@
+#include "game_audio.h"
 #include "common.h"
 
-void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
 u8 *func_800C1E40(s32 arg0);
 void *func_800A9060(void);
 s32 func_800B2844(s32 arg0, u8 *arg1, s32 arg2);
@@ -91,12 +91,12 @@ s32 func_800C29CC(s32 index)
     table = func_800C1E40(5);
     if (table == NULL)
     {
-        akao_set_song_params(0x8001, 0x6C, index, 0);
+        record_game_diagnostic(0x8001, 0x6C, index, 0);
         return -1;
     }
     if (index >= *(u16 *)(table + 2))
     {
-        akao_set_song_params(0x8001, 0x6C, index, 1);
+        record_game_diagnostic(0x8001, 0x6C, index, 1);
         return -1;
     }
 

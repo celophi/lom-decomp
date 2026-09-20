@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "common.h"
 #include "vector.h"
 #include "sdk/libgpu.h"
@@ -236,8 +237,6 @@ extern void func_800A3938(s32 sound_id, s32 pan);
 extern void func_800AA90C(s32);
 extern void field_set_scene_parameters(s32, s32, s32, s32, s32, s32);
 extern void field_begin_return_to_title_prompt_close(void);
-extern void cdrom_queue_read(s32, s32);
-extern void cdrom_wait_queue_empty(void);
 extern void func_8006809C(void);
 extern void func_800AE8A8(void);
 extern void func_800AED20(void);
@@ -1089,8 +1088,7 @@ POLY_FT4* func_800A838C(u32* ordering_table, POLY_FT4* prim, s16 x, s16 y, s32 w
     phase = phase_table[((g_frame_counter >> 2) + 1) & 7];
 
     *(u32*)&prim->r0 = 0x808080;
-    setlen(prim, 9);
-    setcode(prim, 0x2C);
+    setPolyFT4(prim);
     prim->x2 = x;
     prim->x0 = x;
     prim->y1 = y;
@@ -1158,8 +1156,7 @@ void *func_800A8524(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
     phase = table.words[phase_index];
 
     *(u32 *)&prim->r0 = color;
-    setlen(prim, 9);
-    setcode(prim, 0x2C);
+    setPolyFT4(prim);
     prim->x2 = x;
     prim->x0 = x;
     prim->x3 = x + 8;
@@ -1183,8 +1180,7 @@ void *func_800A8524(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
     prim->u2 = left_u;
     prim->u0 = left_u;
 
-    prim->tag = (prim->tag & 0xFF000000) | (*ordering_table & 0xFFFFFF);
-    *ordering_table = (*ordering_table & 0xFF000000) | ((s32)prim & 0xFFFFFF);
+    addPrim(ordering_table, prim);
     return (u8 *)prim + 0x28;
 }
 
@@ -1214,8 +1210,7 @@ void *func_800A8660(s32 *ordering_table, POLY_FT4 *prim, s32 x, s32 y)
     color = 0x808080;
     frame = g_frame_counter;
     *(u32 *)&prim->r0 = color;
-    setlen(prim, 9);
-    setcode(prim, 0x2C);
+    setPolyFT4(prim);
     phase_index = ((frame >> 2) + 3) & 7;
     left_x = *(u16 *)&tables[1].words[phase_index] + x;
     prim->x2 = left_x;

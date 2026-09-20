@@ -1,140 +1,128 @@
 #include "screen_transition.h"
 #include "cdrom.h"
 #include "controller.h"
+#include "display.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
-typedef struct {
-    u_long ot[4];
-    u32 packetBuffer[64];
-    DISPENV dispenv;
-    DRAWENV drawenv;
-} GfxBuffer;
+#define TRANSITION_OT_SIZE 4
+#define TRANSITION_PACKET_WORDS 64
+#define TRANSITION_FRAME_COUNT 16
+#define TRANSITION_FADE_LEVEL 32
+#define TRANSITION_BLEND_SUBTRACT 2
+#define TRANSITION_SUBTRACT_TPAGE getTPage(0, TRANSITION_BLEND_SUBTRACT, 0, 0)
 
-typedef struct {
-    GfxBuffer buf;
-    RECT frame;
-} FrameBuffer;
+/** @brief GPU command space used to darken one frame. */
+typedef union
+{
+    u32 words[TRANSITION_PACKET_WORDS];
+    struct
+    {
+        TILE tile;
+        DR_TPAGE draw_page;
+    } fade;
+} TransitionPackets;
 
-typedef struct {
-    RECT frameA;
-    GfxBuffer bufB;
-    RECT frameB;
-} FrameBufferOverlap;
+/** @brief Rendering workspace for one half of the screen transition. */
+typedef struct
+{
+    u_long ot[TRANSITION_OT_SIZE];
+    TransitionPackets packets;
+    DISPENV display;
+    DRAWENV draw;
+    RECT display_rect;
+} TransitionFrame;
 
-typedef union {
-    FrameBuffer fb;
-    FrameBufferOverlap overlap;
-} FrameBufferUnion;
-
-extern FrameBufferUnion g_GfxDoubleBuffer;
-extern FrameBufferUnion g_GfxPrimaryFrame;
+static TransitionFrame g_transition_frames[2];
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/clAOi
+ * @brief Fade out the screen while continuing controller and CD processing.
+ * @param skip_fade Nonzero waits without fading or disabling the display.
+ * @see decomp.me (100%) https://decomp.me/scratch/clAOi
  */
-void GFX_Transition(s32 skipScreenClear)
+void screen_transition(s32 skip_fade)
 {
-    FrameBufferUnion* primary_fb;
-    FrameBufferUnion* overlap_fb;
-    FrameBufferUnion* cur_fb;
-    FrameBufferUnion* swap;
+    TransitionFrame* frames;
+    TransitionFrame* current;
+    TransitionFrame* next;
     RECT rect;
-    RECT* frame_b;
-    s32 count;
+    RECT* front_rect;
+    RECT* back_rect;
+    s32 frame;
     TILE* tile;
-    u32* packet;
-    DISPENV* dispenv;
+    void* packet;
+    DISPENV* display;
     u_long* ot;
 
     DrawSync(0);
     VSync(0);
 
-    if (skipScreenClear == 0)
+    if (skip_fade == 0)
     {
-        rect.y = 240;
-        rect.w = 320;
+        rect.y = SCREEN_HEIGHT;
+        rect.w = SCREEN_WIDTH;
         rect.x = 0;
-        rect.h = 224;
-
-        MoveImage(&rect, 0, 8);
+        rect.h = VRAM_DRAW_HEIGHT;
+        MoveImage(&rect, 0, VRAM_BACK_DRAW_Y);
         DrawSync(0);
     }
 
-    primary_fb = &g_GfxPrimaryFrame;
-    overlap_fb = primary_fb;
+    front_rect = &g_transition_frames[0].display_rect;
+    display = &g_transition_frames[0].display;
+    front_rect->x = 0;
+    back_rect = &g_transition_frames[1].display_rect;
+    front_rect->y = 0;
+    setWH(front_rect, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(back_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    dispenv = (DISPENV*)(((u8*)overlap_fb) - 0x70);
+    SetDefDispEnv(display, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&g_transition_frames[1].display, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&g_transition_frames[0].draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&g_transition_frames[1].draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
-    overlap_fb->overlap.frameA.x = 0;
-    frame_b = &overlap_fb->overlap.frameB;
+    ot = g_transition_frames[1].ot;
+    frames = g_transition_frames;
+    frames[1].draw.dtd = 0;
+    frames[0].draw.dtd = 0;
+    ClearOTagR(ot, TRANSITION_OT_SIZE);
+    PutDispEnv(display);
+    current = frames;
 
-    overlap_fb->overlap.frameA.y = 0;
-    overlap_fb->overlap.frameA.w = 320;
-    overlap_fb->overlap.frameA.h = 240;
-    overlap_fb->overlap.frameB.x = 0;
-
-    frame_b->y = 232;
-    frame_b->w = 320;
-    frame_b->h = 240;
-
-    SetDefDispEnv(dispenv, 0, 0, 320, 240);
-    SetDefDispEnv(&overlap_fb->overlap.bufB.dispenv, 0, 232, 320, 240);
-    SetDefDrawEnv((DRAWENV*)(((u8*)overlap_fb) - 0x5C), 0, 240, 320, 224);
-    SetDefDrawEnv(&overlap_fb->overlap.bufB.drawenv, 0, 8, 320, 224);
-
-    ot = &overlap_fb->overlap.bufB.ot[0];
-    overlap_fb = (FrameBufferUnion*)(((u8*)overlap_fb) - 0x180);
-    ((&overlap_fb->fb) + 1)->buf.drawenv.dtd = 0;
-    overlap_fb->fb.buf.drawenv.dtd = 0;
-
-    ClearOTagR(ot, 4);
-    PutDispEnv(dispenv);
-
-    cur_fb = overlap_fb;
-
-    for (count = 0; count < 16; count++)
+    for (frame = 0; frame < TRANSITION_FRAME_COUNT; frame++)
     {
-        ClearOTagR(cur_fb->fb.buf.ot, (double)4);
+        ClearOTagR(current->ot, TRANSITION_OT_SIZE);
 
-        packet = &cur_fb->fb.buf.packetBuffer[0];
+        packet = &current->packets.fade.tile;
 
-        if (skipScreenClear == 0)
+        if (skip_fade == 0)
         {
-            tile = (TILE*)(packet);
+            tile = packet;
             setTile(tile);
-
-            // setRGB0(tile, 32, 32, 32); //(but reversed?)
-            tile->b0 = 32;
-            tile->g0 = 32;
-            tile->r0 = 32;
-
+            tile->b0 = TRANSITION_FADE_LEVEL;
+            tile->g0 = TRANSITION_FADE_LEVEL;
+            tile->r0 = TRANSITION_FADE_LEVEL;
             setXY0(tile, 0, 0);
-            setWH(tile, 320, 224);
+            setWH(tile, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
             setSemiTrans(tile, 1);
-            addPrim(&cur_fb->fb.buf.ot[0], tile);
+            addPrim(&current->ot[0], tile);
 
-            packet = &cur_fb->fb.buf.packetBuffer[4];
-
-            setDrawTPage(packet, 0, 0, 0x40);
-            addPrim(&cur_fb->fb.buf.ot[0], packet);
+            packet = &current->packets.fade.draw_page;
+            setDrawTPage(packet, 0, 0, TRANSITION_SUBTRACT_TPAGE);
+            addPrim(&current->ot[0], packet);
         }
 
         DrawSync(0);
         VSync(0);
-
-        swap = &g_GfxDoubleBuffer;
-
-        if (cur_fb == (&g_GfxDoubleBuffer))
+        next = &g_transition_frames[0];
+        if (current == &g_transition_frames[0])
         {
-            swap = (FrameBufferUnion*)(&cur_fb->fb + 1);
+            next = &current[1];
         }
+        current = next;
 
-        cur_fb = swap;
-
-        PutDispEnv(&cur_fb->fb.buf.dispenv);
-        PutDrawEnv(&cur_fb->fb.buf.drawenv);
-        DrawOTag(&cur_fb->fb.buf.ot[3]);
+        PutDispEnv(&current->display);
+        PutDrawEnv(&current->draw);
+        DrawOTag(&current->ot[TRANSITION_OT_SIZE - 1]);
         update_controllers();
         cdrom_process_state();
     }
@@ -142,8 +130,7 @@ void GFX_Transition(s32 skipScreenClear)
     reset_controller_vsync_state();
     DrawSync(0);
     VSync(0);
-
-    if (skipScreenClear == 0)
+    if (skip_fade == 0)
     {
         SetDispMask(0);
     }

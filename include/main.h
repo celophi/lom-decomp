@@ -3,48 +3,31 @@
 
 #include "common.h"
 #include "game_state.h"
+#include "saved_game.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/libapi.h"
 #include "sdk/libetc.h"
-extern u32 g_gameDataBasePtr;
+
+/** @brief Value set by field pair opcode 0x49 and cleared at boot. */
+extern s32 g_script_pair_value_49;
 
 extern u32 g_field_scene_config;    /**< Packed field-entry configuration passed to field_set_scene_parameters. */
 /** @brief Current scene/mode identifier (0, 0xD for default menu template). */
 #ifndef GOVER_C
 extern u16 g_scene_mode;
 #endif
-/** @brief Option/parameter word from MenuLayout; -1 = unset. */
+/** @brief Option/parameter word from SavedGameLayout; -1 = unset. */
 extern s32 g_layout_option;
 /** @brief Countdown timer for delayed music/SFX trigger on field entry. */
 extern s32 g_field_audio_timer;
 /** @brief Selected save slot index (7 = init, 0xFF = no save selected). */
 extern s32 g_save_slot_index;
-/** @brief Menu layout configuration flag byte (from MenuLayout.layout_flags). */
+/** @brief Menu layout configuration flag byte (from SavedGameLayout.layout_flags). */
 extern s32 g_layout_flag;
-/** @brief Field-entry behavior flag (from MenuLayout.field_flags). Cleared in field-entry states. */
+/** @brief Field-entry behavior flag (from SavedGameLayout.field_flags). Cleared in field-entry states. */
 extern s32 g_field_entry_flag;
-/**
- * @brief Working buffer for the active menu/save layout (main executable .bss).
- *
- * Storage for a MenuLayout/game-state record. load_menu_layout copies a full
- * 0xC9A-word state template into this buffer; load_sub_menu_layout overwrites a 0x94-word
- * sub-region whose base is the separately-named g_gameDataBasePtr (offset
- * 0x5F0 within this same buffer). Fields accessed so far by the title overlay:
- *   +0x0D4  s16  rng_seed - composed random value (seed) written from rand()
- *   +0x2E0  s32  mode_flags - bit 0 = "continue mode"
- *   +0x608  s32  slot_flags - low 7 bits cleared, bit 0 set for continue
- *
- * Companion globals shadow several MenuLayout fields for use by the main loop
- * and field overlay: g_scene_mode, g_layout_option, g_field_audio_timer,
- * g_save_slot_index, g_layout_flag, g_field_entry_flag, g_layout_sub_mode,
- * g_music_track_index.
- *
- * @note Kept as @c u8[] so existing byte-granular pointer arithmetic compiles
- *       to unchanged codegen; cast to @c MenuLayout* per converted call site.
- */
-extern u8 g_menuLayoutBuffer[];
-/** @brief Signed sub-mode byte from MenuLayout.sub_mode; -1 = unset. */
+/** @brief Signed sub-mode byte from SavedGameLayout.sub_mode; -1 = unset. */
 extern s32 g_layout_sub_mode;
 /** @brief Index into g_music_track_table[] selecting the current music track. */
 extern u16 g_music_track_index;
@@ -124,40 +107,8 @@ extern s32 g_pad_input;
 /** @brief Extra button bits OR'd into @c g_pad_input when the pad context requests it. */
 extern s32 g_pad_input_inject;
 
-/**
- * @brief Active menu/save layout record stored in g_menuLayoutBuffer.
- *
- * Bulk-initialised by load_menu_layout (title overlay), which copies a full
- * 0xC9A-word layout template over it. The main executable also accesses this
- * record directly as @c (MenuLayout*)g_menuLayoutBuffer (which equals
- * @c &g_gameDataBasePtr - 0x5F0); see main.c game state 7, where several
- * header fields are copied verbatim into companion globals.
- *
- * Only mapped fields are named; unmapped spans are kept as padding arrays.
- *
- * @note Partial layout (covers 0x000..0x60C; the buffer itself is larger).
- */
-typedef struct
-{
-    u8  _unk000[0x18];          /**< 0x000: not yet mapped. */
-    s32 unk018;                 /**< 0x018: main.c masks 0xFE000000 and ORs in 6. */
-    s16 option_id;                 /**< 0x01C: copied to companion global g_layout_option. */
-    s8  sub_mode;                 /**< 0x01E: copied to companion global g_layout_sub_mode. */
-    u8  unk01F;                 /**< 0x01F: not yet mapped. */
-    u32 music_track;                 /**< 0x020: -> g_music_track_index; index into g_music_track_table[]. */
-    u16 scene_mode;                 /**< 0x024: -> g_scene_mode; mode/scene id. */
-    u8  field_flags;                 /**< 0x026: copied to companion global g_field_entry_flag. */
-    u8  layout_flags;                 /**< 0x027: copied to companion global g_layout_flag. */
-    u32 unk028;                 /**< 0x028: flag word; bits 0xC tested together. */
-    u8  _unk02C[0x34 - 0x2C];   /**< 0x02C: not yet mapped. */
-    u32 weapon_category_masks[0xB]; /**< 0x034: 11 weapon-category masks; non-selected entries are cleared. */
-    u8  _unk060[0xD4 - 0x60];   /**< 0x060: not yet mapped. */
-    s16 rng_seed;               /**< 0x0D4: composed random value (rand() based). */
-    u8  _unk0D6[0x2E0 - 0xD6];  /**< 0x0D6: not yet mapped. */
-    s32 mode_flags;             /**< 0x2E0: state bitfield; bit 0 = "continue mode". */
-    u8  _unk2E4[0x608 - 0x2E4]; /**< 0x2E4: not yet mapped. */
-    s32 slot_flags;             /**< 0x608: low 7 bits + bit 0 (continue). */
-} MenuLayout;                   /* partial; sizeof so far == 0x60C */
+/** @brief Initialize the game and dispatch overlays forever. */
+void main_game_loop(void);
 
 void field_scene_reset(u32);
 void field_draw_frame(s32, s32, s32, s32);

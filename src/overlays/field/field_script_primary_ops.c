@@ -334,13 +334,13 @@ void func_80087FC0(s32 arg0, u8 arg1, u8* arg2);
 s32 func_800BE5C8(s32 arg0, s32 arg1, s32 arg2);
 
 /**
- * @brief Opcode 0x17: queue audio sub-command 0x17 for the owner and end the step loop.
+ * @brief Opcode 0x17: report unsupported opcode 0x17 for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_17(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x17);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x17);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
@@ -577,58 +577,58 @@ void field_script_op_1f(void)
 }
 
 /**
- * @brief Opcode 0x20: queue audio sub-command 0x20 for the owner and end the step loop.
+ * @brief Opcode 0x20: report unsupported opcode 0x20 for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_20(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x20);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x20);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x21: queue audio sub-command 0x21 for the owner and end the step loop.
+ * @brief Opcode 0x21: report unsupported opcode 0x21 for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_21(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x21);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x21);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x22: queue audio sub-command 0x23 for the owner and end the step loop.
+ * @brief Opcode 0x22: report unsupported opcode 0x23 for the owner and end the step loop.
  * @return The updated context status word.
- * @note Does not advance the program counter. Shares sub-command 0x23 with opcode 0x23.
+ * @note Does not advance the program counter. Reports opcode 0x23 with opcode 0x23.
  */
 s32 field_script_op_22(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x23);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x23);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x23: queue audio sub-command 0x23 for the owner and end the step loop.
+ * @brief Opcode 0x23: report unsupported opcode 0x23 for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_23(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x23);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x23);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x24: queue audio sub-command 0x24 for the owner and step past the opcode.
+ * @brief Opcode 0x24: report unsupported opcode 0x24 for the owner and step past the opcode.
  */
 void field_script_op_24(void)
 {
     FieldScriptContext* ctx = g_field_script;
     FieldScriptRecord* rec;
 
-    akao_set_song_params(0x8001, 1, ctx->status.owner_id, 0x24);
+    record_game_diagnostic(0x8001, 1, ctx->status.owner_id, 0x24);
 
     rec = (FieldScriptRecord*)g_field_script;
     rec += g_field_script->active_record;
@@ -636,24 +636,24 @@ void field_script_op_24(void)
 }
 
 /**
- * @brief Opcode 0x25: queue audio sub-command 0x25 for the owner and end the step loop.
+ * @brief Opcode 0x25: report unsupported opcode 0x25 for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_25(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x25);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x25);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x26: queue audio sub-command 0x26 for the owner and end the step loop.
+ * @brief Opcode 0x26: report unsupported opcode 0x26 for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_26(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x26);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x26);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
@@ -870,13 +870,13 @@ void field_script_op_2f(void)
 }
 
 /**
- * @brief Opcode 0x30: queue audio sub-command 0x30 for the owner and end the step loop.
+ * @brief Opcode 0x30: report unsupported opcode 0x30 for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_30(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x30);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x30);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
@@ -1008,13 +1008,13 @@ void field_script_op_35(void)
 }
 
 /**
- * @brief Opcode 0x36: queue audio sub-command 0x36 for the owner and end the step loop.
+ * @brief Opcode 0x36: report unsupported opcode 0x36 for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_36(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x36);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x36);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
@@ -1091,79 +1091,79 @@ void field_script_op_38(void)
 }
 
 /**
- * @brief Opcode 0x39: queue audio sub-command 0x39 for the owner and end the step loop.
+ * @brief Opcode 0x39: report unsupported opcode 0x39 for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_39(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x39);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x39);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x3A: queue audio sub-command 0x3A for the owner and end the step loop.
+ * @brief Opcode 0x3A: report unsupported opcode 0x3A for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_3a(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x3A);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x3A);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x3B: queue audio sub-command 0x3B for the owner and end the step loop.
+ * @brief Opcode 0x3B: report unsupported opcode 0x3B for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_3b(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x3B);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x3B);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x3C: queue audio sub-command 0x3C for the owner and end the step loop.
+ * @brief Opcode 0x3C: report unsupported opcode 0x3C for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_3c(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x3C);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x3C);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x3D: queue audio sub-command 0x3D for the owner and end the step loop.
+ * @brief Opcode 0x3D: report unsupported opcode 0x3D for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_3d(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x3D);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x3D);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x3E: queue audio sub-command 0x3E for the owner and end the step loop.
+ * @brief Opcode 0x3E: report unsupported opcode 0x3E for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_3e(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x3E);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x3E);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
 /**
- * @brief Opcode 0x3F: queue audio sub-command 0x3F for the owner and end the step loop.
+ * @brief Opcode 0x3F: report unsupported opcode 0x3F for the owner and end the step loop.
  * @return The updated context status word.
  * @note Does not advance the program counter.
  */
 s32 field_script_op_3f(void)
 {
-    akao_set_song_params(0x8001, 1, g_field_script->status.owner_id, 0x3F);
+    record_game_diagnostic(0x8001, 1, g_field_script->status.owner_id, 0x3F);
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 

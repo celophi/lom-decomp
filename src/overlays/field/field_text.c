@@ -1,6 +1,8 @@
+#include "cdrom.h"
 #include "common.h"
 #include "field_animation.h"
 #include "vector.h"
+#include "sdk/libgpu.h"
 
 /** @brief Byte view of a field text flags word. */
 typedef struct
@@ -108,14 +110,6 @@ typedef struct
     FieldTextState windows[4];  // 0x34
 } FieldTextSystem;
 
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} RECT;
-
 /**
  * @brief One queued VRAM upload.
  * @note Mirrors FieldImageReq in field_scene_internal.h; the destination
@@ -128,23 +122,6 @@ struct FieldImageReq
     RECT rect;              // 0x04 destination rectangle in VRAM
     u_long* data;           // 0x0C source pixel data
 };
-
-/** @brief libgpu free-size sprite primitive (20 bytes). */
-typedef struct
-{
-    u32 tag;
-    u8 r0;
-    u8 g0;
-    u8 b0;
-    u8 code;
-    s16 x0;
-    s16 y0;
-    u8 u0;
-    u8 v0;
-    u16 clut;
-    s16 w;
-    s16 h;
-} SPRT;
 
 /** @brief Four screen-space corners of a quad, in POLY vertex order. */
 typedef struct
@@ -1366,19 +1343,19 @@ void func_800642D4(void)
     s32 limit;
     FieldTextSystem* text_sys = (FieldTextSystem*)0x801ED000;
 
-    cdrom_stream(0xB1, 0x801DE000);
+    cdrom_stream(0xB1, (void*)0x801DE000);
 
     rect.x = 0x130;
     rect.y = 0x1FC;
     rect.w = 0x10;
     rect.h = 4;
-    LoadImage(&rect, (u32*)0x801DE000);
+    LoadImage(&rect, (u_long*)0x801DE000);
 
     rect.x = 0x3C0;
     rect.y = 0x1E0;
     rect.w = 0x40;
     rect.h = 0x20;
-    LoadImage(&rect, (u32*)0x801DE080);
+    LoadImage(&rect, (u_long*)0x801DE080);
 
     draw_mode = 0xE100041F;
     slot = 3;
@@ -2615,8 +2592,7 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
             }
         }
     }
-    prim->tag = (prim->tag & 0xFF000000) | (ot->tag1 & 0xFFFFFF);
-    ot->tag1 = (ot->tag1 & 0xFF000000) | ((u32)first & 0xFFFFFF);
+    addPrims(&ot->tag1, first, prim);
     *cursor = cur;
 }
 
@@ -2626,7 +2602,7 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
  * @param quad Transition quad.
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
- * @note WIP - 98.10% assembly match with gcc280_g4_noexpanddiv.
+ * @note WIP - 98.55% assembly match with gcc280_g4_noexpanddiv.
  */
 
 void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cursor, FieldOrderingTags* ot)
@@ -2934,7 +2910,7 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
     }
 
     /* Emit the packet chain. */
-    tpage = 0x1F0000;
+    tpage = getTPage(0, 0, 960, 256) << 16;
     u_org = 0;
     vbase = 0xE0;
     rgbc = 0x2D808080;
@@ -3144,8 +3120,8 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                     {
                         span -= avail;
                         edge = (glyph_u + avail) - 1;
-                        *(u8*)&poly->uv3 = edge;
-                        *(u8*)&poly->uv1 = edge;
+                        ((POLY_FT4*)poly)->u3 = edge;
+                        ((POLY_FT4*)poly)->u1 = edge;
                         u = 0;
                         row_v += st->line_height;
                     }
@@ -3154,8 +3130,8 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                         u += span;
                         edge = glyph_u + span;
                         span = 0;
-                        *(u8*)&poly->uv3 = edge;
-                        *(u8*)&poly->uv1 = edge;
+                        ((POLY_FT4*)poly)->u3 = edge;
+                        ((POLY_FT4*)poly)->u1 = edge;
                     }
                     glyph_v = vbase + row_v;
                 } while (span > 0);
@@ -3165,7 +3141,7 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
         } while (grows != -1);
     }
 
-    tpage = 0x1F0000;
+    tpage = getTPage(0, 0, 960, 256) << 16;
     mesh = (Vec2s*)0x1F800000;
     if (st->portrait != 0)
     {
@@ -3183,7 +3159,9 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
         phase_poly->uv0 = (clut << 16) | base_y;
         phase_poly->uv2 = base_y + 0x3000;
         phase_poly->uv1 = (base_y + 0x2F) | tpage;
-        build = (FieldTextVertex*)((u32*)mesh + count + (prows * (((w + 0x3F) >> 6) + 3)));
+        clut = w + 0x3F;
+        clut = clut >> 6;
+        build = (FieldTextVertex*)((u32*)mesh + count + (prows * (clut + 3)));
         phase_poly->uv3 = base_y + 0x302F;
         phase_poly->xy0 = build[0].word;
         phase_poly->xy1 = build[1].word;
@@ -3208,8 +3186,7 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
         phase_poly->xy3 = build[3].word;
         poly = phase_poly;
     }
-    poly->tag = (poly->tag & 0xFF000000) | (ot->tag1 & 0xFFFFFF);
-    ot->tag1 = (ot->tag1 & 0xFF000000) | ((u32)first & 0xFFFFFF);
+    addPrims(&ot->tag1, first, poly);
     *cursor = packet_cursor;
 }
 

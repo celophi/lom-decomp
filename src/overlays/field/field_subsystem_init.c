@@ -1,3 +1,4 @@
+#include "game_audio.h"
 /** @file field_subsystem_init.c
  * @brief Initialize the field subsystems and their persistent state.
  */
@@ -53,10 +54,9 @@ extern s32 g_field_gover_load_countdown[];
 extern s32 D_801227F0[];
 extern s32 g_field_return_to_title_prompt_delay[];
 extern s32 g_field_return_to_title_prompt_state[];
-extern s32 g_previousGameState[];
+extern s32 g_previous_game_state[];
 extern s32 g_field_audio_timer[];
 extern u16 g_music_track_index[];
-extern u8 g_music_track_table[];
 extern s32 g_field_action_context[];
 extern s32 D_800F2288[];
 extern s32 D_800F2298[];
@@ -123,7 +123,7 @@ void field_initialize_subsystems(s32 arg0)
     D_8011F428[0] = 0;
     D_801227F0[0] = 0;
     g_field_audio_timer[0] = 0;
-    prev = g_previousGameState[0];
+    prev = g_previous_game_state[0];
     if ((prev == 1) && (({ u16 *ip = g_music_track_index; u8 *tp = g_music_track_table; g_music_track_table[*ip]; }) != 0xFF))
     {
         D_80115894[0] = prev;

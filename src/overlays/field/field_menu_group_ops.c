@@ -1,7 +1,9 @@
+#include "game_audio.h"
+#include "saved_game.h"
 #include "common.h"
 
 extern s32 D_80122C00;
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 g_gosub_result_values[];
 extern s32 g_gosub_result_count;
 extern s16 D_80122C06, D_80122C08, D_80122C0A, D_80122C1C, D_80122C1E;
@@ -22,7 +24,7 @@ void func_800C5704(s32 arg0)
         D_800F19D8[arg0](arg0);
         return;
     }
-    akao_set_song_params(0x8002, arg0, 0, 0);
+    record_game_diagnostic(0x8002, arg0, 0, 0);
 }
 
 
@@ -33,7 +35,7 @@ typedef struct
 } GroupStateView;
 
 
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Selects a menu state from the active record and history index.
@@ -47,7 +49,7 @@ void func_800C5760(void)
     u8 *menu;
     u8 *record;
 
-    menu = g_menuLayoutBuffer;
+    menu = g_saved_game.bytes;
     record = menu + ((GroupStateView *)&D_80122C00)->unk0;
     if (record[0x29D8] == 3)
     {
@@ -108,7 +110,7 @@ void func_800C5804(void)
         scan_index = 0;
         do
         {
-            if (g_menuLayoutBuffer[scan_index + 0x29D8] == index)
+            if (g_saved_game.bytes[scan_index + 0x29D8] == index)
             {
                 candidate_index = 3;
             }
@@ -123,34 +125,34 @@ void func_800C5804(void)
     if (unused_index != 3)
     {
         func_800C4364(unused_index);
-        count = g_menuLayoutBuffer[0x29D5] + 1;
-        g_menuLayoutBuffer[0x29D5] = count;
+        count = g_saved_game.bytes[0x29D5] + 1;
+        g_saved_game.bytes[0x29D5] = count;
         if ((u32) (count & 0xFF) >= 0xC9U)
         {
-            g_menuLayoutBuffer[0x29D5] = 0xC8U;
+            g_saved_game.bytes[0x29D5] = 0xC8U;
         }
-        record_index = g_menuLayoutBuffer[D_80122C00 + 0x29D8];
+        record_index = g_saved_game.bytes[D_80122C00 + 0x29D8];
         if (record_index != 3)
         {
-            if (g_menuLayoutBuffer[0x29D8] == 3)
+            if (g_saved_game.bytes[0x29D8] == 3)
             {
-                g_menuLayoutBuffer[0x29D8] = record_index;
+                g_saved_game.bytes[0x29D8] = record_index;
             }
-            else if (g_menuLayoutBuffer[0x29D9] == 3)
+            else if (g_saved_game.bytes[0x29D9] == 3)
             {
-                g_menuLayoutBuffer[0x29D9] = record_index;
+                g_saved_game.bytes[0x29D9] = record_index;
             }
-            else if (g_menuLayoutBuffer[0x29DA] == 3)
+            else if (g_saved_game.bytes[0x29DA] == 3)
             {
-                g_menuLayoutBuffer[0x29DA] = record_index;
+                g_saved_game.bytes[0x29DA] = record_index;
             }
         }
-        g_menuLayoutBuffer[D_80122C00 + 0x29D8] = unused_index;
-        packed_flags = ((*(s32 *)&g_menuLayoutBuffer[0x29D4]) & ~0xF) | (((g_menuLayoutBuffer[0x29D4] & 0xF) + 1) & 0xF);
-        (*(s32 *)&g_menuLayoutBuffer[0x29D4]) = packed_flags;
-        if ((u32) (g_menuLayoutBuffer[0x29D4] & 0xF) >= 4U)
+        g_saved_game.bytes[D_80122C00 + 0x29D8] = unused_index;
+        packed_flags = ((*(s32 *)&g_saved_game.bytes[0x29D4]) & ~0xF) | (((g_saved_game.bytes[0x29D4] & 0xF) + 1) & 0xF);
+        (*(s32 *)&g_saved_game.bytes[0x29D4]) = packed_flags;
+        if ((u32) (g_saved_game.bytes[0x29D4] & 0xF) >= 4U)
         {
-            (*(s32 *)&g_menuLayoutBuffer[0x29D4]) = (s32) ((packed_flags & ~0xF) | 3);
+            (*(s32 *)&g_saved_game.bytes[0x29D4]) = (s32) ((packed_flags & ~0xF) | 3);
         }
         index = 0;
         if (g_gosub_result_count > 0)
@@ -159,10 +161,10 @@ void func_800C5804(void)
             {
                 u8 *destination;
 
-                destination = (g_menuLayoutBuffer[D_80122C00 + 0x29D8] * 0x14C) + (g_menuLayoutBuffer + 0x2B58);
+                destination = (g_saved_game.bytes[D_80122C00 + 0x29D8] * 0x14C) + (g_saved_game.bytes + 0x2B58);
                 destination += index << 6;
-                func_800A8F8C(destination, (g_gosub_result_values[index] << 6) + (g_menuLayoutBuffer + 0xCE0));
-                g_menuLayoutBuffer[(g_gosub_result_values[index] << 6) + 0xCE0] = 0;
+                func_800A8F8C(destination, (g_gosub_result_values[index] << 6) + (g_saved_game.bytes + 0xCE0));
+                g_saved_game.bytes[(g_gosub_result_values[index] << 6) + 0xCE0] = 0;
                 index += 1;
             } while (index < g_gosub_result_count);
         }
@@ -174,7 +176,7 @@ void func_800C5804(void)
             {
                 entry_offset = index << 6;
                 index += 1;
-                g_menuLayoutBuffer[entry_offset + g_menuLayoutBuffer[D_80122C00 + 0x29D8] * 0x14C + 0x2B58] = 0;
+                g_saved_game.bytes[entry_offset + g_saved_game.bytes[D_80122C00 + 0x29D8] * 0x14C + 0x2B58] = 0;
             } while (index < 4);
         }
         func_800A54D0();
@@ -227,7 +229,7 @@ typedef struct
 } Rec2B50;
 
 
-extern u8 g_menuLayoutBuffer[];
+
 
 void func_800C5B10(void)
 {
@@ -235,7 +237,7 @@ void func_800C5B10(void)
     Rec2B50 *p;
     u8 *menu;
 
-    menu = g_menuLayoutBuffer;
+    menu = g_saved_game.bytes;
     temp_v1 = ((Rec29D8 *)(((GroupClassView *)&D_80122C00)->unk0 + menu))->unk29D8;
     p = (Rec2B50 *)((temp_v1 * 0x14C) + menu);
     ((GroupClassView *)&D_80122C00)->unk6 = temp_v1;
@@ -243,7 +245,7 @@ void func_800C5B10(void)
 }
 
 
-extern u8 g_menuLayoutBuffer[];
+
 extern s16 D_80122C10;
 
 /**
@@ -255,15 +257,15 @@ extern s16 D_80122C10;
  */
 void func_800C5B64(void)
 {
-    if (g_menuLayoutBuffer[0x29D7] >= 4U)
+    if (g_saved_game.bytes[0x29D7] >= 4U)
     {
-        g_menuLayoutBuffer[0x29D7] = 3;
+        g_saved_game.bytes[0x29D7] = 3;
     }
-    if ((*(u32 *)&g_menuLayoutBuffer[0xAA8] & 0x7F) == 3)
+    if ((*(u32 *)&g_saved_game.bytes[0xAA8] & 0x7F) == 3)
     {
         D_80122C10 = 2;
     }
-    else if (*(s8 *)&g_menuLayoutBuffer[0x29D7] == 3)
+    else if (*(s8 *)&g_saved_game.bytes[0x29D7] == 3)
     {
         D_80122C10 = 0;
     }
@@ -274,7 +276,7 @@ void func_800C5B64(void)
 }
 
 
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 D_80122C00;
 extern void *func_800A9060(void);
 extern void func_800A8F8C(void *, void *);
@@ -288,7 +290,7 @@ void func_800C5BCC(void)
     u8 *layout, *scan, *entries, *final_layout, *first_layout, *loop_base;
     u32 flags;
     void *item;
-    first_layout = g_menuLayoutBuffer;
+    first_layout = g_saved_game.bytes;
     i = 0;
     if (first_layout[0x29D6] != 0)
     {
@@ -308,8 +310,8 @@ void func_800C5BCC(void)
     i = 0;
     do
     {
-        group_offset = g_menuLayoutBuffer[D_80122C00 + 0x29D8] * 0x14C;
-        layout = g_menuLayoutBuffer;
+        group_offset = g_saved_game.bytes[D_80122C00 + 0x29D8] * 0x14C;
+        layout = g_saved_game.bytes;
         entries = layout + 0x2B58;
         offset = i * 0x40;
         if (layout[offset + group_offset + 0x2B58] != 0)
@@ -323,7 +325,7 @@ void func_800C5BCC(void)
         }
         i++;
     } while (i < 4);
-    final_layout = g_menuLayoutBuffer;
+    final_layout = g_saved_game.bytes;
     final_layout[final_layout[D_80122C00 + 0x29D8] * 0x14C + 0x2B0C] = 0;
     final_layout[D_80122C00 + 0x29D8] = 3;
     flags = *(u32 *)(final_layout + 0x29D4);
@@ -335,7 +337,7 @@ void func_800C5BCC(void)
 }
 
 
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 D_80122C00;
 extern s16 D_80122C10;
 extern s32 g_gosub_result_count;
@@ -344,9 +346,9 @@ extern void func_800B2844(s32 arg0, u8 *arg1, u8 arg2);
 
 void func_800C5DA8(void)
 {
-    u8 idx = g_menuLayoutBuffer[D_80122C00 + 0x29D8];
+    u8 idx = g_saved_game.bytes[D_80122C00 + 0x29D8];
 
-    func_800B2844(0, &g_menuLayoutBuffer[idx * 332 + 0x2B0C], 0xFF);
+    func_800B2844(0, &g_saved_game.bytes[idx * 332 + 0x2B0C], 0xFF);
 }
 
 /**
@@ -383,19 +385,19 @@ void func_800C5E28(void)
     slot_status[0] = 3;
     slot_status[1] = 3;
     slot_status[2] = 3;
-    if (g_menuLayoutBuffer[0x29D8] != *(s8*)&g_menuLayoutBuffer[0x29D7])
+    if (g_saved_game.bytes[0x29D8] != *(s8*)&g_saved_game.bytes[0x29D7])
     {
-        slot_status[0] = (s16)g_menuLayoutBuffer[0x29D8];
+        slot_status[0] = (s16)g_saved_game.bytes[0x29D8];
     }
-    if (g_menuLayoutBuffer[0x29D9] != *(s8*)&g_menuLayoutBuffer[0x29D7])
+    if (g_saved_game.bytes[0x29D9] != *(s8*)&g_saved_game.bytes[0x29D7])
     {
-        slot_status[1] = (s16)g_menuLayoutBuffer[0x29D9];
+        slot_status[1] = (s16)g_saved_game.bytes[0x29D9];
     }
-    if (g_menuLayoutBuffer[0x29DA] != *(s8*)&g_menuLayoutBuffer[0x29D7])
+    if (g_saved_game.bytes[0x29DA] != *(s8*)&g_saved_game.bytes[0x29D7])
     {
-        slot_status[2] = (s16)g_menuLayoutBuffer[0x29DA];
+        slot_status[2] = (s16)g_saved_game.bytes[0x29DA];
     }
-    packed_order = g_menuLayoutBuffer[0x29DB];
+    packed_order = g_saved_game.bytes[0x29DB];
     i = packed_order & 3;
     order[1] = (packed_order >> 2) & 3;
     order[0] = i;
@@ -530,7 +532,7 @@ void func_800C5E28(void)
             D_80122C0A = 6;
         }
     }
-    layout = g_menuLayoutBuffer;
+    layout = g_saved_game.bytes;
     selected_index = *(s8*)&layout[0x29D7];
     if (selected_index < 3)
     {

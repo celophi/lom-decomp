@@ -250,22 +250,19 @@ s32 func_8014ACF0(GlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette)
 
     D_80166BE8[cache_slot].raw |= 0x10000;
 
-    setlen(sprite, 3);
-    setcode(sprite, 0x7C);
+    setSprt16(sprite);
     sprite->packet.g0 = 0x80;
     sprite->packet.b0 = 0x80;
     sprite->packet.r0 = 0x80;
     normalized_slot = cache_slot;
-    sprite->packet.x0 = D_80166FE8;
-    sprite->packet.y0 = D_80166FEC;
+    setXY0(&sprite->packet, D_80166FE8, D_80166FEC);
 
     if (cache_slot < 0)
     {
         normalized_slot = cache_slot + 15;
     }
 
-    sprite->packet.u0 = (cache_slot - ((normalized_slot >> 4) * 16)) * 16;
-    sprite->packet.v0 = cache_slot & GLYPH_CACHE_ROW_MASK;
+    setUV0(&sprite->packet, (cache_slot - ((normalized_slot >> 4) * 16)) * 16, cache_slot & GLYPH_CACHE_ROW_MASK);
     sprite->packet.clut = 0x7FD3;
     sprite->packet.tag = (sprite->packet.tag & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
 

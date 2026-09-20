@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 
 /*
@@ -36,7 +37,7 @@ typedef struct
     u16 value;
 } GolemLogicBlockValidationResult;
 
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Append a new, unassigned logic block to the golem logic-block table.
@@ -46,15 +47,15 @@ extern u8 g_menuLayoutBuffer[];
  */
 void golem_logic_block_append(u32 block_id, u32 detail, u32 shape)
 {
-    ((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_block_count] =
-        (((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_block_count] & ~LOGIC_BLOCK_ID_MASK) | ((block_id & 0x3F) << LOGIC_BLOCK_ID_SHIFT);
-    ((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_block_count] =
-        (((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_block_count] & ~LOGIC_BLOCK_DETAIL_MASK) | ((detail & 0xF) << LOGIC_BLOCK_DETAIL_SHIFT);
-    ((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_block_count] =
-        (((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_block_count] & ~LOGIC_BLOCK_SHAPE_MASK) | ((shape & 0xF) << LOGIC_BLOCK_SHAPE_SHIFT);
-    ((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_block_count] |= LOGIC_BLOCK_TYPE_UNASSIGNED;
-    ((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_block_count] &= ~LOGIC_BLOCK_FLAG_UNK16;
-    ((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_block_count++;
+    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] =
+        (((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_ID_MASK) | ((block_id & 0x3F) << LOGIC_BLOCK_ID_SHIFT);
+    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] =
+        (((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_DETAIL_MASK) | ((detail & 0xF) << LOGIC_BLOCK_DETAIL_SHIFT);
+    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] =
+        (((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_SHAPE_MASK) | ((shape & 0xF) << LOGIC_BLOCK_SHAPE_SHIFT);
+    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] |= LOGIC_BLOCK_TYPE_UNASSIGNED;
+    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] &= ~LOGIC_BLOCK_FLAG_UNK16;
+    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count++;
 }
 
 /** @brief Packed layout entry, including its active bit at bit sixteen. */
@@ -84,21 +85,21 @@ u32 func_800CB758(void)
     Packed bits;
     u8 *entry, *shape;
     index = 35;
-    clear_base = (s32)g_menuLayoutBuffer;
+    clear_base = (s32)g_saved_game.bytes;
     do
     {
         ((u8 *)(index * 4 + clear_base))[0x2A7F] = empty;
         index--;
     } while (index >= 0);
     index = 0;
-    count = g_menuLayoutBuffer[0x29D6];
+    count = g_saved_game.bytes[0x29D6];
     if (count != 0)
     {
         table = (s32)D_800F1CD0;
-        base = (s32)g_menuLayoutBuffer;
+        base = (s32)g_saved_game.bytes;
         do
         {
-            entry = (u8 *)((s32)g_menuLayoutBuffer + index * 4);
+            entry = (u8 *)((s32)g_saved_game.bytes + index * 4);
             packed = *(u32 *)(entry + 0x29DC);
             bits.word = packed;
             if (bits.bits.active == 1 && (packed & 3) == ((u8 *)(D_80122C00 + base))[0x29D8])
@@ -123,7 +124,7 @@ u32 func_800CB758(void)
             index++;
         } while (index < count);
     }
-    return_base = (s32)g_menuLayoutBuffer;
+    return_base = (s32)g_saved_game.bytes;
     return ((u8 *)(((u8 *)(D_80122C00 + return_base))[0x29D8] * 0x14C + return_base))[0x2B50] >> 4;
 }
 
@@ -158,7 +159,7 @@ void func_800CB918(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     mask1 = 0xFFF9FFFF;
     mask2 = 0xFF07FFFF;
     mask3 = 0xE0FFFFFF;
-    base = (s32)g_menuLayoutBuffer;
+    base = (s32)g_saved_game.bytes;
     layout_index = D_80122C00;
     packed = (((((((*(u32 *)(cell_offset + base + 0x29DC) & ~3)
                         | (((u8 *)base)[layout_index + 0x29D8] & 3) | 0x10000)
@@ -188,7 +189,7 @@ void func_800CB918(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         }
         else
         {
-            grid = g_menuLayoutBuffer;
+            grid = g_saved_game.bytes;
         }
         cursor = arg1 * 0x14;
         do
@@ -238,15 +239,15 @@ s32 func_800CBA9C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     valid = 1;
     logic_block_offset = arg0 * 4;
     part_index = 0;
-    if (D_800F1CD0[((((((((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF) << valid)
-                       + ((((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) * 4
-                      - ((((GolemLogicBlockTable *)g_menuLayoutBuffer)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) * 8)] != 0)
+    if (D_800F1CD0[((((((((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF) << valid)
+                       + ((((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) * 4
+                      - ((((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) * 8)] != 0)
     {
         u8 *shape_table;
         u8 *layout;
 
         shape_table = D_800F1CD0;
-        layout = g_menuLayoutBuffer;
+        layout = g_saved_game.bytes;
         part_offset = arg1 * 0x14;
 loop:
         part_index++;
@@ -289,7 +290,7 @@ loop:
         s32 logic_class;
 
         class_lookup_table = D_800F2098;
-        layout_base = g_menuLayoutBuffer;
+        layout_base = g_saved_game.bytes;
         logic_class = *(s32 *)(class_lookup_table + (layout_base[arg0 * 4 + 0x29DC] & LOGIC_BLOCK_ID_MASK));
         if (logic_class != 0)
         {
@@ -322,7 +323,7 @@ s32 func_800CBC0C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 cursor;
     u8 *table;
 
-    cursor = (s32)g_menuLayoutBuffer;
+    cursor = (s32)g_saved_game.bytes;
     limit = ((u8 *)cursor)[((u8 *)cursor)[D_80122C00 + 0x29D8] * 0x14C + 0x2B50] & 0xF0;
     limit >>= 4;
     saved_arg0 = arg0;
@@ -385,9 +386,9 @@ u8 func_800CBD70(void *arg0)
 
     out = (GolemLogicBlockValidationResult *)arg0;
     i = 0;
-    if (g_menuLayoutBuffer[0x29D6] != 0)
+    if (g_saved_game.bytes[0x29D6] != 0)
     {
-        buf = g_menuLayoutBuffer;
+        buf = g_saved_game.bytes;
         do
         {
             word = *(s32 *)(buf + 0x29DC + i * 4);
@@ -417,7 +418,7 @@ u8 func_800CBD70(void *arg0)
  * @brief Clears a record's logic-block flag and reactivates matching entries.
  *
  * Clears bit 0x10000 of the packed 32-bit logic-block word at
- * @c g_menuLayoutBuffer[arg0*4 + 0x29DC], then scans all 0x24 records (stride
+ * @c g_saved_game.bytes[arg0*4 + 0x29DC], then scans all 0x24 records (stride
  * 4) and sets the byte flag at +0x2A7F to 0x63 for every record whose flag
  * currently equals @p arg0.
  *
@@ -428,7 +429,7 @@ void func_800CBE64(s32 arg0)
 {
     s32 i;
     u8 *p;
-    u8 *base = g_menuLayoutBuffer;
+    u8 *base = g_saved_game.bytes;
     u8 *rec = base + arg0 * 4;
     /* Reserves the target's unused 8-byte stack frame slot (FRAME-03). */
     volatile s32 pad;
@@ -480,7 +481,7 @@ void func_800CBEC4(void *arg0)
     } while (count >= 0);
 
     count = 0;
-    base = g_menuLayoutBuffer;
+    base = g_saved_game.bytes;
     sentinel = 0x63;
     marker = 0x4F;
     offset = 0x18;

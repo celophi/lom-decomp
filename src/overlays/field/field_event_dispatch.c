@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 /** @brief Owner header and script-record fields addressed at a 12-byte stride. */
 typedef struct
@@ -14,7 +15,7 @@ typedef struct
     u8 pad[0x400];
     s32 flags;
 } State;
-void akao_set_song_params(s32, s32, s32, s32);
+
 void field_script_run(void *);
 s32 func_80087EF0(s32);
 /* Some callers forward a live owner ID without explicit argument setup. */
@@ -97,7 +98,7 @@ s32 func_800B28E0(s32 owner_id, s32 event_id, s32 mode)
                 if (next_depth >= 8)
                 {
                     owner->depth = 7;
-                    akao_set_song_params(0x8001, 2, owner->id, event_index);
+                    record_game_diagnostic(0x8001, 2, owner->id, event_index);
                     return -1;
                 }
                 goto select_script;

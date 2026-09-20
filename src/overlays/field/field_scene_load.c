@@ -1,7 +1,10 @@
+#include "movie.h"
+#include "cdrom.h"
 #include "common.h"
 #include "field_animation.h"
 #include "cd_resources.h"
 #include "scene_state.h"
+#include "overlay_memory.h"
 
 extern void DrawSync(s32);
 extern void ClearOTagR(void*, s32);
@@ -10,7 +13,6 @@ extern void field_build_render_records(void*, unsigned short);
 extern void field_size_work_buffer(void);
 extern void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode);
 extern void field_update_scene_fade(void);
-extern u32* get_field_render_buffers(void);
 
 extern u8 g_cd_audio_enabled;
 extern unsigned int D_801ED02C;
@@ -133,10 +135,10 @@ void field_init_ctx(void* arg0, unsigned short arg1)
  */
 void field_scene_reset(void)
 {
-    S_801ED480* ptr = (S_801ED480*)0x801ED480;
+    SceneState* ptr = (SceneState*)0x801ED480;
     ptr->map_id = 0;
     ptr->object_index = 0;
-    ptr->unk10 = 0;
+    ptr->pixel_lookup_selector = 0;
     D_801ED02C = 0;
     func_800642D4();
 }
@@ -145,7 +147,7 @@ void field_scene_reset(void)
  * @brief Build and draw one field frame, servicing streamed video when active.
  *
  * Runs the field draw helpers against the render context and pumps
- * movie_service_video_ops (func_80140D48) whenever CD audio is playing.
+ * movie_service_video_ops whenever CD audio is playing.
  *
  * @param unused Unused first parameter.
  * @param base   Field render context base address.
@@ -170,12 +172,12 @@ void field_draw_frame(s32 unused, s32 base, s32 arg2, s32 arg3)
     if (g_cd_audio_enabled != 0)
     {
 
-        func_80140D48();
+        movie_service_video_ops();
     }
     func_80064C28(base + 0x40B8, base, arg2);
     if (struct_ptr[4] != 0)
     {
-        func_80140D48();
+        movie_service_video_ops();
     }
 }
 
@@ -329,7 +331,7 @@ void field_load_map(s32 arg0)
     }
     else
     {
-        cdrom_stream((arg0 + 0xB4) & 0xFFFF, 0x80180000);
+        cdrom_stream((arg0 + 0xB4) & 0xFFFF, (void*)0x80180000);
     }
     globals = (FieldSceneGlobals*)0x80180000;
     var_s1 = (u32)globals->scene;

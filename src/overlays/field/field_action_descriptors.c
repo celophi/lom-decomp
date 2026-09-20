@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 typedef struct
 {
@@ -13,7 +14,7 @@ typedef struct
 extern DescriptorContext *D_80123FB0;
 extern u8 *D_80123FAC;
 extern u8 *D_80122B74;
-extern void akao_set_song_params(s32, s32, s32, s32);
+
 extern void *func_800B543C(s32);
 extern void *func_800C2958(s32, u16);
 
@@ -51,7 +52,7 @@ void *func_800B50B8(void)
         }
         else if ((u32) (temp_a3 - 0x17) >= 2U)
         {
-            akao_set_song_params(0x8001, 0x69, *(s32 *)(temp_a2 + 0x0), temp_a3);
+            record_game_diagnostic(0x8001, 0x69, *(s32 *)(temp_a2 + 0x0), temp_a3);
             var_a1 = NULL;
         }
         else
@@ -155,8 +156,8 @@ typedef struct
 
 
 /**
- * @brief Compute the next command-stream pointer for a field audio opcode.
- * @param arg0 Audio command opcode.
+ * @brief Compute the next command-stream pointer for a field command opcode.
+ * @param arg0 Field command opcode.
  * @return Pointer to the next command, or NULL when processing does not continue.
  */
 void* func_800B543C(s32 arg0)
@@ -195,7 +196,7 @@ void* func_800B543C(s32 arg0)
         result = (u8*)result + 0x70;
         break;
     default:
-        akao_set_song_params(0x8001, 0x66, arg0, -1);
+        record_game_diagnostic(0x8001, 0x66, arg0, -1);
         return NULL;
     }
     return result;

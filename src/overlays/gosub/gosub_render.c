@@ -189,8 +189,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                 if (g_gosub_row_count != 0)
                 {
                     packet_cursor->color = 0xFFFF00;
-                    ((u8*)packet_cursor)[3] = 3;
-                    ((u8*)packet_cursor)[7] = 0x60;
+                    setTile(packet_cursor);
                     packet_cursor->w = 6;
                     element_height_calc = (element->geometry.word >> 1) & 0xFF;
                     packet_cursor->h = (u16)((s32)(element_height_calc * (element_height_calc / g_gosub_row_height)) / g_gosub_row_count);
@@ -360,8 +359,8 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
     u8* source_bytes;
     GosubScrollMarkerPacket* fill_packet;
 
-    prim->len = 6;
-    prim->code = 0x4C;
+    setlen(prim, 6);
+    setcode(prim, 0x4C);
     prim->mask = 0x55555555;
     if (g_frame_counter & 0x10)
     {
@@ -409,9 +408,9 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
     source_bytes = (u8*)prim;
     fill_packet = (GosubScrollMarkerPacket*)(source_bytes + 0x1C);
     prim = fill_packet;
-    *(u32*)source_bytes = (*(u32*)source_bytes & 0xFF000000) | (*ot & addr_mask);
+    setaddr(source_bytes, *ot & addr_mask);
     i = 0;
-    *ot = (*ot & 0xFF000000) | ((u32)source_bytes & addr_mask);
+    setaddr(ot, (u32)source_bytes & addr_mask);
     do
     {
         i += 1;
@@ -420,11 +419,10 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
         prim = (GosubScrollMarkerPacket*)((u8*)prim + 1);
     } while (i < 0x14U);
 
-    fill_packet->len = 4;
+    setlen(fill_packet, 4);
     *(u32*)&fill_packet->r = 0;
-    fill_packet->code = 0x20;
-    *(u32*)fill_packet = (*(u32*)fill_packet & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((u32)fill_packet & 0xFFFFFF);
+    setcode(fill_packet, 0x20);
+    addPrim(ot, fill_packet);
     return (u8*)fill_packet + 0x14;
 }
 
@@ -461,8 +459,7 @@ GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s3
     }
     SetDrawEnv((DR_ENV*)draw_env_packet, (DRAWENV*)draw_env);
 
-    draw_env_packet->tag = (draw_env_packet->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)draw_env_packet & 0xFFFFFF);
+    addPrim(ot, draw_env_packet);
 
     draw_env_packet = (GosubGpuPacket*)((u8*)draw_env_packet + 0x40);
     packet_cursor = gosub_emit_panel_corners((SPRT*)draw_env_packet, ot, x, y, w, h);
@@ -503,8 +500,7 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
 {
     *(u32*)&line->r0 = color;
     setLineF2(line);
-    line->x0 = x + 4;
-    line->y0 = y;
+    setXY0(line, x + 4, y);
     line->x1 = (x + w) - 4;
     line->y1 = y;
     addPrim(ot, line);
@@ -512,8 +508,7 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
 
     *(u32*)&line->r0 = color;
     setLineF2(line);
-    line->x0 = x + w;
-    line->y0 = y + 4;
+    setXY0(line, x + w, y + 4);
     line->x1 = x + w;
     line->y1 = (y + h) - 4;
     addPrim(ot, line);
@@ -521,8 +516,7 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
 
     *(u32*)&line->r0 = color;
     setLineF2(line);
-    line->x0 = (x + w) - 4;
-    line->y0 = y + h;
+    setXY0(line, (x + w) - 4, y + h);
     line->x1 = x + 4;
     line->y1 = y + h;
     addPrim(ot, line);
@@ -530,8 +524,7 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
 
     *(u32*)&line->r0 = color;
     setLineF2(line);
-    line->x0 = x;
-    line->y0 = y + 4;
+    setXY0(line, x, y + 4);
     line->x1 = x;
     line->y1 = (y + h) - 4;
     addPrim(ot, line);
@@ -720,9 +713,9 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
     status_pad = *cursor_p * *height_p;
     y_top2 = y_off - 2;
     y = (status_pad - y_top2) - *scroll_p;
-    ((u8*)tile)[3] = 3;
+    setlen(tile, 3);
     tile->color = cursor_color;
-    ((u8*)tile)[7] = 0x62;
+    setcode(tile, 0x62);
     row = 0;
     tile->w = g_gosub_window_width;
     tile->y = y - 2;
@@ -735,8 +728,8 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
         {
             mark->x = (row | 1) & 1;
             mark->color = 0x808080;
-            ((u8*)mark)[3] = 3;
-            ((u8*)mark)[7] = 0x62;
+            setlen(mark, 3);
+            setcode(mark, 0x62);
             sel_mul = g_gosub_selected_rows[row] * g_gosub_row_height;
             y_top3 = y_off - 2;
             y = (sel_mul - y_top3) - g_gosub_scroll_y;
@@ -812,9 +805,8 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     sprt->x0 = x;
     sprt->v0 = g_gosub_frame_parity * 0x30;
     sprt->y0 = y;
-    sprt->w = 0x30;
-    sprt->h = 0x30;
-    sprt->clut = (((n + g_gosub_frame_parity * 0x50) >> 4) & 0x3F) | 0x7C80;
+    setWH(sprt, 0x30, 0x30);
+    setClut(sprt, n + g_gosub_frame_parity * 0x50, 0x1F2);
     addPrim(ot, sprt);
     return gosub_finish_glyph_run(prim + 0x14, ot);
 }

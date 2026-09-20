@@ -1,4 +1,89 @@
+#include "game_audio.h"
+#include "saved_game.h"
 #include "common.h"
+#include "field_interaction_start.h"
+
+#define FIELD_ACTION_ENTRY_FLAG_MASK 0xF
+#define FIELD_ACTION_ACTIVE 0x80000000
+#define FIELD_ACTION_INACTIVE_MASK 0x7FFFFFFF
+#define FIELD_ACTION_SCRIPT_ONLY 0x40000000
+#define FIELD_ACTION_SOURCE_MASK 0x3FF0
+#define FIELD_ACTION_GROUP_CLEAR_MASK 0xCFFFFFFF
+#define FIELD_ACTION_EVENT_MODE 0x60000
+#define FIELD_SCRIPT_LOCAL_BASE_CLEAR_MASK 0xFFFF01FF
+#define FIELD_ACTION_NO_EVENT 0xFF
+#define FIELD_ACTION_NO_SCRIPT 0xFFFFU
+
+#define FIELD_ACTION_KIND_SHIFT 4
+#define FIELD_ACTION_GROUP_SHIFT 28
+#define FIELD_ACTION_GROUP_MASK 3
+#define FIELD_ACTION_SOURCE_ACTOR_MASK 7
+#define FIELD_ACTION_DYNAMIC_ID_BASE 3
+#define FIELD_ACTION_EVENT_OWNER 0x80
+#define FIELD_ACTION_START_EVENT 15
+#define FIELD_SCRIPT_LOCAL_BASE_MASK 0x7F
+#define FIELD_SCRIPT_LOCAL_BASE_SHIFT 9
+
+/** @brief Destination and activation policy encoded in an action request. */
+typedef enum
+{
+    FIELD_ACTION_ACTOR = 0,
+    FIELD_ACTION_EVENT = 1,
+    FIELD_ACTION_ACTOR_0 = 2,
+    FIELD_ACTION_ACTOR_1 = 3,
+    FIELD_ACTION_ACTOR_2 = 4,
+    FIELD_ACTION_MENU = 5,
+    FIELD_ACTION_SCRIPT = 6,
+    FIELD_ACTION_GROUP_ACTOR = 7
+} FieldActionKind;
+
+/** @brief Runtime actor or event entry and its script dispatch table. */
+typedef struct
+{
+    s8 id;
+    u8 selector;
+    u8 padding_02[2];
+    u8 event;
+    u8 event_argument;
+    u16 enabled_events;
+    u16 scripts[FIELD_ACTION_SCRIPT_COUNT];
+    s32 script_state;
+    u8 padding_2c[0x90 - 0x2C];
+    union
+    {
+        s32 word;
+        struct
+        {
+            unsigned options : 4;
+            unsigned source : 10;
+            unsigned reserved : 16;
+            unsigned script_only : 1;
+            unsigned active : 1;
+        } bits;
+    } flags;
+} FieldActionEntry;
+
+/** @brief Field action allocation state and actor/event records. */
+typedef struct
+{
+    s32 local_variable_base;
+    u8 padding_04[0x400 - 4];
+    union
+    {
+        u16 count;
+        s32 flags;
+    } actors;
+    u8 padding_404[0x430 - 0x404];
+    FieldActionEntry entries[16];
+    FieldActionEntry event_entries[2];
+} FieldActionTable;
+
+/** @brief Layout setting supplying the default actor group. */
+typedef struct
+{
+    u8 padding_00[0x29D4];
+    u8 default_group;
+} FieldActionLayout;
 
 /** @brief Field context state used by interaction and trigger processing. */
 typedef struct
@@ -52,7 +137,7 @@ void func_800B0AF8(void)
     {
         if (func_800BD414(0, 0x2F08) == 0xFF)
         {
-            akao_set_song_params(0x8001, 0x320, 1, 0);
+            record_game_diagnostic(0x8001, 0x320, 1, 0);
         }
     }
 
@@ -60,7 +145,7 @@ void func_800B0AF8(void)
     {
         if (func_800BD414(0, 0x2F00) == 0xFF)
         {
-            akao_set_song_params(0x8001, 0x320, 2, 0);
+            record_game_diagnostic(0x8001, 0x320, 2, 0);
         }
     }
 }
@@ -75,7 +160,7 @@ typedef struct
     u32 unk414; /* 0x414 */
 } StructB78;
 
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 D_80122C00;
 extern u8* D_80122B74;
 
@@ -83,7 +168,7 @@ extern u8* D_80122B74;
 /** @brief Bind the shared layout, context, and position buffers. */
 void func_800B0BDC(void)
 {
-    D_80122B74 = g_menuLayoutBuffer;
+    D_80122B74 = g_saved_game.bytes;
     D_80122B78 = (Context *)&D_80122C00;
     D_80122B70 = (Position *)0x801ED480;
 }
@@ -400,7 +485,6 @@ extern s32 D_8010AE78;
 #define FIELD_MENU_SLOT_UNUSED 0xFF
 #define FIELD_MENU_SLOT_STRIDE 0x10
 #define FIELD_MENU_RECORD_STRIDE 0x8C
-#define FIELD_ACTION_ENTRY_FLAG_MASK 0xF
 
 typedef struct
 {
@@ -410,27 +494,6 @@ typedef struct
     u8 entry_state[3];
 } FieldMenuActionSlot;
 
-typedef struct
-{
-    s8 id;
-    u8 pad1[0x8F];
-    s32 flags;
-} FieldActionEntry;
-
-typedef struct
-{
-    u8 pad0[0x400];
-    u16 count;
-    u8 pad1[0x2E];
-    FieldActionEntry entries[1];
-} FieldActionTable;
-
-typedef struct
-{
-    s32 flags;
-    u8 pad4[8];
-    s16 result_type;
-} FieldActionRequest;
 
 extern u8 *D_80122B74;
 
@@ -444,172 +507,179 @@ s32 func_800BD3B0(s32, s32);
 void func_800C0490(u8);
 
 /**
- * @brief Install a conditional field action and initialize its event scripts.
- * @param arg0 Field action request record (raw byte view; kind is arg0[0] >> 4).
- * @param arg1 Installation slot/priority; also gates the one-shot func_800B0AF8 reset.
- * @note WIP: 80.72% match. Control flow is now correct - the eight action kinds
- * share three tails (mask+store, slot rewrite, unk90 OR) that must be owned by
- * cases 7, 4 and 4 respectively so the shared blocks land where the target
- * places them. Case 3 reads the prior stack slot before replacing it, as the
- * target does. Residual is register-coloring/scheduling around the D_80122B78
- * base and the spill of the slot pointer, still to be closed before it matches.
- * @see decomp.me (80.72%) TODO: no scratch link yet
+ * @brief Install a conditional actor action and initialize its event scripts.
+ * @param request Packed action definition, updated with activation and source state.
+ * @param request_index Index in the load list; zero resets the action subsystem.
+ * @note Action kind 3 uses the previous, uninitialized entry pointer before selecting
+ * actor 1. This unresolved behavior is present in the original code.
+ * @note Packed-word accesses and shared switch tails preserve the current reconstruction.
+ * @see decomp.me (99.765625%) TODO: no scratch link yet
  */
-void func_800B118C(u8 *arg0, s32 arg1)
+void field_install_actor_action(FieldActionRequest* request, s32 request_index)
 {
-    s32 sp14;
-    u8 *sp10;
-    s32 temp_v0;
-    s32 temp_v1_4;
-    s32 temp_v1_6;
-    s32 var_a2;
-    s32 var_v0;
-    s32 var_v0_2;
-    s32 var_v1;
-    u16 temp_v0_3;
-    u16 temp_v1_2;
-    u16 temp_v1_3;
-    u16 temp_v1_5;
-    u32 temp_v0_2;
-    u32 temp_v1;
-    u8 *temp_a0;
-    u8 *temp_a0_2;
-    u8 *temp_a0_3;
-    u8 *temp_a2;
-    u8 *var_a0;
-    u8 *var_a0_2;
-    u8 *var_a1;
+    s32 masked_request_flags;
+    s32 flags_mask;
+    s32 action_index;
+    FieldActionEntry* entry;
+    s32 value;
+    s32 source_actor;
+    s32 request_flags;
+    s32 interaction_id;
+    s32 entry_flags;
+    s32 script_index;
+    s32 flags;
+    s32 flags_to_set;
+    u16 actor_count;
+    u16 group_actor_count;
+    u16 script_actor_count;
+    u32 action_kind;
+    FieldActionEntry* actor_entry;
+    FieldActionEntry* group_entry;
+    FieldActionEntry* script_entry;
+    FieldActionEntry* event_entry;
+    FieldActionEntry* flag_entry;
 
-    if (arg1 == 0)
-
+    if (request_index == 0)
     {
         func_800B0AF8();
     }
-    temp_v0 = func_800BD3B0(0, (*(u16 *)((u8 *)arg0 + 0x4)) << 0x10);
-    if ((temp_v0 >= (s32) (*(u8 *)((u8 *)arg0 + 0x6))) && ((s32) (*(u8 *)((u8 *)arg0 + 0x7)) >= temp_v0))
+    value = func_800BD3B0(0, request->condition.variable << 0x10);
+    if ((value >= (s32)request->condition.minimum) && ((s32)request->condition.maximum >= value))
     {
-        temp_v1 = arg0[0] >> 4;
-        switch (temp_v1)
+        action_kind = request->control.bytes.kind_flags >> FIELD_ACTION_KIND_SHIFT;
+        /* Access packed entry flags as words so stores may alias the request data. */
+        switch (action_kind)
         {
-        case 0:
-            (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) | 0x80000000);
-            temp_v1_2 = (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400));
-            (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400)) = (u16) (temp_v1_2 + 1);
-            temp_a0 = (u8 *)D_80122B78 + (((temp_v1_2 & 0xFFFF) * 0x94) + 0x430);
-            sp10 = temp_a0;
-            (*(u8 *)((u8 *)temp_a0 + 0x0)) = (s8) (arg1 + 3);
-            (*(s32 *)((u8 *)temp_a0 + 0x90)) = (s32) ((*(s32 *)((u8 *)temp_a0 + 0x90)) | 0x80000000);
-            (*(s32 *)((u8 *)sp10 + 0x90)) = (s32) (((*(s32 *)((u8 *)sp10 + 0x90)) & ~0xF) | ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0xF));
-            (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & ~0xF);
-            (*(s32 *)((u8 *)sp10 + 0x90)) = (s32) (((*(s32 *)((u8 *)sp10 + 0x90)) & ~0x3FF0) | (((*(u16 *)((u8 *)arg0 + 0xC)) * 2) & 0x3FF0));
-            sp14 = 0;
-            goto block_10;
-        case 7:
-            (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) | 0x80000000);
-            temp_v1_3 = (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400));
-            (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400)) = (u16) (temp_v1_3 + 1);
-            temp_a0_2 = (u8 *)D_80122B78 + (((temp_v1_3 & 0xFFFF) * 0x94) + 0x430);
-            sp10 = temp_a0_2;
-            (*(u8 *)((u8 *)temp_a0_2 + 0x0)) = (s8) (arg1 + 3);
-            (*(s32 *)((u8 *)temp_a0_2 + 0x90)) = (s32) ((*(s32 *)((u8 *)temp_a0_2 + 0x90)) | 0x80000000);
-            temp_v1_4 = ((*(s32 *)((u8 *)sp10 + 0x90)) & ~0xF) | ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0xF);
-            (*(s32 *)((u8 *)sp10 + 0x90)) = temp_v1_4;
-            (*(s32 *)((u8 *)sp10 + 0x90)) = (s32) ((temp_v1_4 & ~0x3FF0) | (((*(u16 *)((u8 *)arg0 + 0xC)) * 2) & 0x3FF0));
-            temp_v0_2 = (s32) (*(s32 *)((u8 *)arg0 + 0x0)) & ~0xF;
-            (*(s32 *)((u8 *)arg0 + 0x0)) = temp_v0_2;
-            sp14 = 0;
-            if (!((temp_v0_2 >> 0x1C) & 3))
+        case FIELD_ACTION_ACTOR:
+            request->control.flags = request->control.flags | FIELD_ACTION_ACTIVE;
+            actor_count = ((FieldActionTable*)D_80122B78)->actors.count;
+            ((FieldActionTable*)D_80122B78)->actors.count = (u16)(actor_count + 1);
+            actor_entry = &((FieldActionTable*)D_80122B78)->entries[actor_count & 0xFFFF];
+            entry = actor_entry;
+            actor_entry->id = (s8)(request_index + FIELD_ACTION_DYNAMIC_ID_BASE);
+            *(s32*)&actor_entry->flags = *(s32*)&actor_entry->flags | FIELD_ACTION_ACTIVE;
+            *(s32*)&entry->flags = (*(s32*)&entry->flags & ~FIELD_ACTION_ENTRY_FLAG_MASK) | (request->control.flags & FIELD_ACTION_ENTRY_FLAG_MASK);
+            request->control.flags = request->control.flags & ~FIELD_ACTION_ENTRY_FLAG_MASK;
+            *(s32*)&entry->flags = (*(s32*)&entry->flags & ~FIELD_ACTION_SOURCE_MASK) | ((request->source.actor * 2) & FIELD_ACTION_SOURCE_MASK);
+            source_actor = *(u16*)&request->source;
+            action_index = 0;
+            request->source.actor = source_actor & FIELD_ACTION_SOURCE_ACTOR_MASK;
+            break;
+        case FIELD_ACTION_GROUP_ACTOR:
+            request->control.flags = request->control.flags | FIELD_ACTION_ACTIVE;
+            group_actor_count = ((FieldActionTable*)D_80122B78)->actors.count;
+            ((FieldActionTable*)D_80122B78)->actors.count = (u16)(group_actor_count + 1);
+            group_entry = &((FieldActionTable*)D_80122B78)->entries[group_actor_count & 0xFFFF];
+            entry = group_entry;
+            group_entry->id = (s8)(request_index + FIELD_ACTION_DYNAMIC_ID_BASE);
+            *(s32*)&group_entry->flags = *(s32*)&group_entry->flags | FIELD_ACTION_ACTIVE;
+            entry_flags = (*(s32*)&entry->flags & ~FIELD_ACTION_ENTRY_FLAG_MASK) | (request->control.flags & FIELD_ACTION_ENTRY_FLAG_MASK);
+            *(s32*)&entry->flags = entry_flags;
+            *(s32*)&entry->flags = (entry_flags & ~FIELD_ACTION_SOURCE_MASK) | ((request->source.actor * 2) & FIELD_ACTION_SOURCE_MASK);
+            request->control.flags &= ~FIELD_ACTION_ENTRY_FLAG_MASK;
+            action_index = 0;
+            value = request->control.flags;
+            if (!(((u32)value >> FIELD_ACTION_GROUP_SHIFT) & FIELD_ACTION_GROUP_MASK))
             {
-                (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((temp_v0_2 & 0xCFFFFFFF) | (((((u8) (*(u8 *)((u8 *)D_80122B74 + 0x29D4)) >> 4) + 1) & 3) << 0x1C));
+                request->control.flags = (value & FIELD_ACTION_GROUP_CLEAR_MASK) |
+                                         ((((((FieldActionLayout*)D_80122B74)->default_group >> 4) + 1) & FIELD_ACTION_GROUP_MASK) << FIELD_ACTION_GROUP_SHIFT);
             }
-block_10:
-            (*(u16 *)((u8 *)arg0 + 0xC)) = (u16) ((*(u16 *)((u8 *)arg0 + 0xC)) & 7);
+            source_actor = request->source.actor;
+            request->source.actor = source_actor & FIELD_ACTION_SOURCE_ACTOR_MASK;
             break;
-        case 6:
-            (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF);
-            temp_v1_5 = (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400));
-            (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400)) = (u16) (temp_v1_5 + 1);
-            temp_a0_3 = (u8 *)D_80122B78 + (((temp_v1_5 & 0xFFFF) * 0x94) + 0x430);
-            sp10 = temp_a0_3;
-            (*(u8 *)((u8 *)temp_a0_3 + 0x0)) = (s8) (arg1 + 3);
-            sp14 = 0;
-            (*(s32 *)((u8 *)temp_a0_3 + 0x90)) = (s32) ((*(s32 *)((u8 *)temp_a0_3 + 0x90)) | 0x80000000);
-            var_a0 = temp_a0_3;
-            temp_v1_6 = ((*(s32 *)((u8 *)var_a0 + 0x90)) & ~0xF) | ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0xF);
-            (*(s32 *)((u8 *)var_a0 + 0x90)) = temp_v1_6;
-            var_v0 = temp_v1_6;
-            var_v1 = 0x40000000;
-            goto block_17;
-        case 2:
-            sp14 = 0;
-            var_v0_2 = (s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF;
-            var_a0 = (u8 *)D_80122B78 + 0x430;
-            goto block_15;
-        case 3:
-            sp14 = 0;
-            (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF);
-            var_a0 = sp10;
-            sp10 = (u8 *)D_80122B78 + 0x4C4;
-            goto block_16;
-        case 4:
-            sp14 = 0;
-            var_v0_2 = (s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF;
-            var_a0 = (u8 *)D_80122B78 + 0x558;
-block_15:
-            (*(s32 *)((u8 *)arg0 + 0x0)) = var_v0_2;
-            sp10 = var_a0;
-block_16:
-            var_v0 = (*(s32 *)((u8 *)var_a0 + 0x90));
-            var_v1 = 0x80000000;
-block_17:
-            (*(s32 *)((u8 *)var_a0 + 0x90)) = (s32) (var_v0 | var_v1);
-            break;
-        case 1:
-            (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF);
-            if ((u8) (*(u8 *)((u8 *)arg0 + 0x1)) < 2U)
-            {
-                func_800C0490((*(u8 *)((u8 *)arg0 + 0x1)));
-            }
-            temp_a2 = (u8 *)D_80122B78 + 0xD70;
-            (*(s32 *)((u8 *)temp_a2 + 0x90)) = (s32) ((*(s32 *)((u8 *)temp_a2 + 0x90)) | 0x80000000);
-            *(s32 *)((u8 *)(u8 *)D_80122B78 + 0x400) = *(s32 *)((u8 *)(u8 *)D_80122B78 + 0x400) | 0x60000;
-            sp14 = 0;
-            sp10 = temp_a2;
-            func_800B22F0(0x80, (*(u16 *)((u8 *)arg0 + 0x2E)));
-            (*(u16 *)((u8 *)arg0 + 0x2E)) = 0xFFFFU;
-            func_800B168C(3);
-            break;
-        case 5:
-            (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) (((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF) | (func_800B1894((FieldActionRequest *)arg0, (FieldActionEntry **)&sp10, arg1, &sp14) << 0x1F));
-            break;
-        }
-        var_a2 = 0;
-        if (sp10 != NULL)
-        {
-            var_a1 = arg0;
-            (*(u8 *)((u8 *)sp10 + 0x1)) = (u8) (*(u8 *)((u8 *)arg0 + 0x1));
-            (*(u8 *)((u8 *)sp10 + 0x4)) = 0xFF;
-            var_a0_2 = sp10;
-            (*(u16 *)((u8 *)var_a0_2 + 0x6)) = (u16) (*(u16 *)((u8 *)arg0 + 0xE));
+        case FIELD_ACTION_SCRIPT:
+            request->control.flags = request->control.flags & FIELD_ACTION_INACTIVE_MASK;
+            script_actor_count = ((FieldActionTable*)D_80122B78)->actors.count;
+            ((FieldActionTable*)D_80122B78)->actors.count = (u16)(script_actor_count + 1);
+            script_entry = &((FieldActionTable*)D_80122B78)->entries[script_actor_count & 0xFFFF];
+            entry = script_entry;
+            script_entry->id = (s8)(request_index + FIELD_ACTION_DYNAMIC_ID_BASE);
+            action_index = 0;
+            *(s32*)&script_entry->flags = *(s32*)&script_entry->flags | FIELD_ACTION_ACTIVE;
+            flags_mask = ~FIELD_ACTION_ENTRY_FLAG_MASK;
+            flag_entry = entry;
+            flags_to_set = (*(s32*)&flag_entry->flags & flags_mask) | (request->control.flags & FIELD_ACTION_ENTRY_FLAG_MASK);
             do
             {
-                temp_v0_3 = (*(u16 *)((u8 *)var_a1 + 0x10));
-                var_a1 += 2;
-                var_a2 += 1;
-                (*(u16 *)((u8 *)var_a0_2 + 0x8)) = temp_v0_3;
-                var_a0_2 += 2;
-            } while (var_a2 < 0x10);
-            (*(s32 *)((u8 *)sp10 + 0x28)) = (s32) (((*(s32 *)((u8 *)sp10 + 0x28)) & 0xFFFF01FF) | (((*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x0)) & 0x7F) << 9));
-            (*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x0)) = (s32) ((*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x0)) + (*(u8 *)((u8 *)arg0 + 0x2)));
-            func_800B286C((*(u8 *)((u8 *)sp10 + 0x0)), 0xF, (u8) sp14);
+                *(s32*)&flag_entry->flags = flags_to_set;
+            } while (0);
+            flags = flags_to_set;
+            flags_to_set = FIELD_ACTION_SCRIPT_ONLY;
+            goto set_entry_flags;
+        case FIELD_ACTION_ACTOR_0:
+            action_index = 0;
+            flags_mask = FIELD_ACTION_INACTIVE_MASK;
+            masked_request_flags = request->control.flags & flags_mask;
+            flag_entry = &((FieldActionTable*)D_80122B78)->entries[0];
+            request->control.flags = masked_request_flags;
+            entry = flag_entry;
+            flags = *(s32*)&flag_entry->flags;
+            flags_to_set = FIELD_ACTION_ACTIVE;
+            *(s32*)&flag_entry->flags = flags | flags_to_set;
+            break;
+        case FIELD_ACTION_ACTOR_1:
+            /* The original path reads entry before assigning actor 1. */
+            request_flags = *(s32*)&request->control;
+            action_index = 0;
+            *(s32*)&request->control = request_flags & FIELD_ACTION_INACTIVE_MASK;
+            flag_entry = entry;
+            entry = &((FieldActionTable*)D_80122B78)->entries[1];
+            goto activate_entry;
+        case FIELD_ACTION_ACTOR_2:
+            action_index = 0;
+            flags_mask = FIELD_ACTION_INACTIVE_MASK;
+            masked_request_flags = request->control.flags & flags_mask;
+            flag_entry = &((FieldActionTable*)D_80122B78)->entries[2];
+            request->control.flags = masked_request_flags;
+            entry = flag_entry;
+        activate_entry:
+            flags = *(s32*)&flag_entry->flags;
+            flags_to_set = FIELD_ACTION_ACTIVE;
+        set_entry_flags:
+            *(s32*)&flag_entry->flags = flags | flags_to_set;
+            break;
+        case FIELD_ACTION_EVENT:
+            request->control.flags = request->control.flags & FIELD_ACTION_INACTIVE_MASK;
+            if (request->control.bytes.selector < 2U)
+            {
+                func_800C0490(request->control.bytes.selector);
+            }
+            event_entry = &((FieldActionTable*)D_80122B78)->event_entries[0];
+            *(s32*)&event_entry->flags = *(s32*)&event_entry->flags | FIELD_ACTION_ACTIVE;
+            ((FieldActionTable*)D_80122B78)->actors.flags = ((FieldActionTable*)D_80122B78)->actors.flags | FIELD_ACTION_EVENT_MODE;
+            interaction_id = request->scripts[FIELD_ACTION_START_EVENT];
+            action_index = 0;
+            entry = event_entry;
+            func_800B22F0(FIELD_ACTION_EVENT_OWNER, interaction_id);
+            request->scripts[FIELD_ACTION_START_EVENT] = FIELD_ACTION_NO_SCRIPT;
+            func_800B168C(3);
+            break;
+        case FIELD_ACTION_MENU:
+            request->control.flags =
+                (request->control.flags & FIELD_ACTION_INACTIVE_MASK) | (func_800B1894(request, &entry, request_index, &action_index) << 0x1F);
+            break;
+        }
+        /* Install the event table and reserve this owner's local variables. */
+        if (entry != NULL)
+        {
+            entry->selector = request->control.bytes.selector;
+            entry->event = FIELD_ACTION_NO_EVENT;
+            entry->enabled_events = request->enabled_events;
+            for (script_index = 0; script_index < FIELD_ACTION_SCRIPT_COUNT; script_index++)
+            {
+                entry->scripts[script_index] = request->scripts[script_index];
+            }
+            entry->script_state = (entry->script_state & FIELD_SCRIPT_LOCAL_BASE_CLEAR_MASK) |
+                                  ((((FieldActionTable*)D_80122B78)->local_variable_base & FIELD_SCRIPT_LOCAL_BASE_MASK) << FIELD_SCRIPT_LOCAL_BASE_SHIFT);
+            ((FieldActionTable*)D_80122B78)->local_variable_base += request->control.bytes.local_variable_count;
+            func_800B286C((u8)entry->id, FIELD_ACTION_START_EVENT, (u8)action_index);
         }
     }
     else
     {
-        (*(s32 *)((u8 *)arg0 + 0x0)) = (s32) ((s32) (*(s32 *)((u8 *)arg0 + 0x0)) & 0x7FFFFFFF);
+        request->control.flags = request->control.flags & FIELD_ACTION_INACTIVE_MASK;
     }
 }
-
 
 typedef struct FieldStateB168C
 {
@@ -756,34 +826,34 @@ s32 func_800B1894(FieldActionRequest *arg0, FieldActionEntry **arg1, s32 arg2, s
 
         case 1:
             *arg3 = 0;
-            request->result_type = 2;
+            request->source.result_type = 2;
             break;
 
         case 2:
             *arg3 = slot->entry_index - 0x30;
             result_type = (s16)((*(u32 *)&((FieldMenuActionSlot *)(D_80122B74 + offset))->entry_index >> 8) & 3);
-            request->result_type = result_type;
+            request->source.result_type = result_type;
             break;
 
         case 3:
             *arg3 = slot->entry_index;
             result_type = (s16)((*(u32 *)&((FieldMenuActionSlot *)(D_80122B74 + offset))->entry_index >> 8) & 3);
-            request->result_type = result_type;
+            request->source.result_type = result_type;
             break;
 
         default:
             break;
         }
 
-        count = ((FieldActionTable *)D_80122B78)->count;
-        ((FieldActionTable *)D_80122B78)->count = (u16)(count + 1);
+        count = ((FieldActionTable *)D_80122B78)->actors.count;
+        ((FieldActionTable *)D_80122B78)->actors.count = (u16)(count + 1);
         index = count & 0xFFFF;
         entry = &((FieldActionTable *)D_80122B78)->entries[index];
         *arg1 = entry;
-        entry->flags |= 0x80000000;
+        entry->flags.word |= 0x80000000;
         (*arg1)->id = (s8)(arg2 + 3);
-        (*arg1)->flags = ((*arg1)->flags & ~FIELD_ACTION_ENTRY_FLAG_MASK) | (request->flags & FIELD_ACTION_ENTRY_FLAG_MASK);
-        request->flags &= ~FIELD_ACTION_ENTRY_FLAG_MASK;
+        (*arg1)->flags.word = ((*arg1)->flags.word & ~FIELD_ACTION_ENTRY_FLAG_MASK) | (request->control.flags & FIELD_ACTION_ENTRY_FLAG_MASK);
+        request->control.flags &= ~FIELD_ACTION_ENTRY_FLAG_MASK;
         return -1;
     }
 

@@ -292,10 +292,7 @@ void addhero_init(s32 work_base, s32 mode)
     g_addhero_icon_phase = 0;
     field_set_default_fade_target();
 
-    rect.x = OVERLAY_INIT_CLEAR_VRAM_X;
-    rect.y = OVERLAY_INIT_CLEAR_VRAM_Y;
-    rect.w = OVERLAY_INIT_CLEAR_VRAM_W;
-    rect.h = OVERLAY_INIT_CLEAR_VRAM_H;
+    setRECT(&rect, OVERLAY_INIT_CLEAR_VRAM_X, OVERLAY_INIT_CLEAR_VRAM_Y, OVERLAY_INIT_CLEAR_VRAM_W, OVERLAY_INIT_CLEAR_VRAM_H);
 
     ClearImage(&rect, 0, 0, 0);
     addhero_reset_glyph_cache();
@@ -893,8 +890,7 @@ s32 addhero_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
             setlen(tile, 3);
             setcode(tile, 0x62);
             tile->w = 0x108;
-            tile->x0 = 0;
-            tile->y0 = row_y;
+            setXY0(tile, 0, row_y);
             tile->h = ADDHERO_ENTRY_ROW_HEIGHT;
             addPrim(ot, tile);
             prim += sizeof(TILE);
@@ -950,10 +946,8 @@ s32 addhero_draw_card_slot0_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         *(u32*)&tile->r0 = 0x101010;
         setlen(tile, 3);
         tile->code = 0x62;
-        tile->x0 = 0;
-        tile->y0 = 0;
-        tile->w = 0x80;
-        tile->h = 0x10;
+        setXY0(tile, 0, 0);
+        setWH(tile, 0x80, 0x10);
         addPrim(ot, tile);
         prim += sizeof(TILE);
     }
@@ -981,10 +975,8 @@ s32 addhero_draw_card_slot1_label(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         *(u32*)&tile->r0 = 0x101010;
         setlen(tile, 3);
         tile->code = 0x62;
-        tile->x0 = 0;
-        tile->y0 = 0;
-        tile->w = 0x80;
-        tile->h = 0x10;
+        setXY0(tile, 0, 0);
+        setWH(tile, 0x80, 0x10);
         addPrim(ot, tile);
         prim += sizeof(TILE);
     }
@@ -2343,10 +2335,7 @@ s32 addhero_draw_icon_highlight(s32 result, s32* ot, s32 x, s32 y, s32 adjust, s
     {
         return result;
     }
-    rect.x = visible_index * 0x10;
-    rect.y = VRAM_CLUT_Y;
-    rect.w = 0x10;
-    rect.h = 1;
+    setRECT(&rect, visible_index * 0x10, VRAM_CLUT_Y, 0x10, 1);
     if ((party_index == 1) && (slot < 2))
     {
         func_800A5638(g_addhero_icon_context, slot);
@@ -2364,15 +2353,11 @@ s32 addhero_draw_icon_highlight(s32 result, s32* ot, s32 x, s32 y, s32 adjust, s
         LoadImage(&rect, (u_long*)((u8*)&g_addhero_icon_image_table - 4 + g_addhero_icon_image_table[slot]));
     }
     icon_column = visible_index * 3;
-    rect.x = icon_column * 4 + SCREEN_WIDTH;
-    rect.y = 0xD0;
-    rect.w = 0xC;
-    rect.h = 0x30;
+    setRECT(&rect, icon_column * 4 + SCREEN_WIDTH, 0xD0, 0xC, 0x30);
     LoadImage(&rect, (u_long*)((u8*)&g_addhero_icon_image_table + 0x1C + g_addhero_icon_image_table[slot]));
     icon = (POLY_FT4*)result;
     SET_BGR0_PACKED(icon, GPU_TINT_NEUTRAL);
-    setlen(icon, 9);
-    icon->code = 0x2C;
+    setPolyFT4(icon);
     icon->x2 = x;
     icon->x0 = x;
     icon->y1 = y;
@@ -2392,7 +2377,7 @@ s32 addhero_draw_icon_highlight(s32 result, s32* ot, s32 x, s32 y, s32 adjust, s
     icon->v3 = 0xFF;
     icon->v2 = 0xFF;
     icon->clut = (visible_index & 0x3F) | 0x7C80;
-    icon->tpage = 5;
+    icon->tpage = getTPage(0, 0, 320, 0);
     addPrim(ot, result);
     return result + sizeof(POLY_FT4);
 }

@@ -1,6 +1,7 @@
+#include "saved_game.h"
 #include "common.h"
 
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Calculate the quantity contribution for a pair of equipment records.
@@ -23,7 +24,7 @@ s32 equipment_combination_quantity(s32* record_indices)
 
     record_cursor = (s32)record_indices;
     total_quantity = 0;
-    menu_base = (s32)g_menuLayoutBuffer;
+    menu_base = (s32)g_saved_game.bytes;
     quantity_base = menu_base + 0xCE0;
     class_one = 1;
     record_end = record_cursor + 8;
@@ -77,7 +78,7 @@ next_record:
     return result;
 }
 
-extern u8 g_menuLayoutBuffer[];
+
 /** @brief Equipment record view exposing the packed class word. */
 typedef struct
 {
@@ -104,13 +105,13 @@ s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32 *record_indices)
     i = 0;
     do
     {
-        j = (((EquipmentView *)(g_menuLayoutBuffer + (*record_indices << 6)))->flags >> 10) & 0x3F;
+        j = (((EquipmentView *)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 10) & 0x3F;
         classes[i] = j;
-        if (((((EquipmentView *)(g_menuLayoutBuffer + (*record_indices << 6)))->flags >> 8) & 3) == 1)
+        if (((((EquipmentView *)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 8) & 3) == 1)
         {
             classes[i] = j + 11;
         }
-        if (((((EquipmentView *)(g_menuLayoutBuffer + (*record_indices << 6)))->flags >> 8) & 3) == 2)
+        if (((((EquipmentView *)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 8) & 3) == 2)
         {
             classes[i] += 23;
         }
@@ -207,7 +208,7 @@ s32 equipment_combination_find(s32 *record_indices, s32 *quantity, s32 *variant)
 #define EQUIP_CLASS_ARMOR(category) ((category) + EQUIP_CLASS_ARMOR_BASE)
 #define EQUIP_CLASS_INSTRUMENT(category) ((category) + EQUIP_CLASS_INSTRUMENT_BASE)
 
-extern u8 g_menuLayoutBuffer[];
+
 
 /** @brief View of one save-data equipment record exposing its material halfword. */
 typedef struct
@@ -240,7 +241,7 @@ s32 equipment_combination_variant(s32* record_indices)
     EquipmentMaterialView* first;
     EquipmentMaterialView* second;
 
-    base = g_menuLayoutBuffer;
+    base = g_saved_game.bytes;
     first = (EquipmentMaterialView*)&base[record_indices[0] << 6];
     second = (EquipmentMaterialView*)&base[record_indices[1] << 6];
     return ((first->material & 0x3F) + (second->material & 0x3F)) % 11;

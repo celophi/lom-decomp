@@ -3,26 +3,15 @@
 
 #include "common.h"
 
-/**
- * @brief Persistent scene-selection / mode state at fixed address 0x801ED480.
- *
- * Lives in the global RAM region (outside every overlay's address range), so it
- * survives overlay swaps. Reset on mode entry by both the TITLE overlay
- * (run_title) and the FIELD overlay (field_scene_reset). FIELD reads @c map_id and
- * @c object_index back when initializing a scene.
- *
- * @note The first two fields are also reached field-by-field through the
- *       standalone symbols @c D_801ED480 (== @c map_id) and @c D_801ED482
- *       (== @c object_index) elsewhere in the FIELD overlay.
- */
+/** @brief Scene selection, camera position, and pixel lookup retained across overlays. */
 typedef struct
 {
-    u16 map_id;       /**< 0x00 map id (standalone symbol D_801ED480) */
-    u16 object_index; /**< 0x02 object index (standalone symbol D_801ED482) */
-    u32 unk4;  /**< 0x04 TODO: unknown; zeroed on TITLE entry */
-    u32 unk8;  /**< 0x08 TODO: unknown; zeroed on TITLE entry */
-    u32 unkC;  /**< 0x0C TODO: unknown; zeroed on TITLE entry */
-    u32 unk10; /**< 0x10 TODO: unknown; zeroed on FIELD entry */
-} S_801ED480;
+    u16 map_id;
+    u16 object_index;
+    s32 camera_x;
+    s32 camera_y;
+    s32 camera_z;
+    u32 pixel_lookup_selector;
+} SceneState;
 
 #endif

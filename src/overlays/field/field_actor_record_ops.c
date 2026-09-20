@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 
@@ -48,7 +49,6 @@ typedef struct
     FieldDistanceEntry entries[16];
 } FieldDistanceList;
 
-void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
 RecC1B98 *func_800C1C50(s32 id);
 RecC1B98 *func_800C1B60();
 void func_800B28E0(s32, s32, s32);
@@ -60,7 +60,7 @@ s32 func_800C1FBC(FieldPosition *arg0, FieldPosition *arg1);
 extern u8 *D_80122B78;
 
 /**
- * @brief Update or clear the selected field audio record.
+ * @brief Update or clear the selected field record.
  * @param arg0 Record identifier.
  * @param arg1 Update value, or 0xFF to clear the active flags.
  */
@@ -74,7 +74,7 @@ void func_800C2640(s32 arg0, s32 arg1)
         rec = func_800C1C50(arg0);
         if (rec == NULL)
         {
-            akao_set_song_params(0x8001, 1, 1, 1);
+            record_game_diagnostic(0x8001, 1, 1, 1);
             return;
         }
         rec->unk90 |= 0x20000000;

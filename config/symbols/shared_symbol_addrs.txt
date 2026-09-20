@@ -1,12 +1,12 @@
 // Globals
-g_overlayLoadAddress                = 0x800102AC;
+g_overlay_load_address                = 0x800102AC;
 g_hex_digit_table                   = 0x800102B0;
 
-Main                                = 0x80010D58;
-GFX_Transition                      = 0x80011358;
-akao_song_cmd_12c                   = 0x8001160C;
+main_game_loop                      = 0x80010D58;
+screen_transition                      = 0x80011358;
+fade_out_current_song               = 0x8001160C;
 load_and_play_song                  = 0x80011638;
-akao_set_song_params                = 0x800116D8;
+record_game_diagnostic              = 0x800116D8;
 
 // cdrom.c
 cdrom_init                          = 0x80011710;
@@ -989,7 +989,7 @@ McxStartCom                         = 0x800319D8;
 
 // Globals
 g_music_track_table                = 0x800351A0;
-g_gameState                         = 0x8003522C;
+g_game_state                         = 0x8003522C;
 g_disc_validation_id                = 0x80035230;
 g_akao_spu_zero_primer              = 0x8003D170;
 g_akao_opcode_len_table             = 0x8003D1B0;
@@ -1031,24 +1031,22 @@ g_scene_mode                        = 0x8003EC90;
 g_layout_option                     = 0x8003EC94;
 g_field_audio_timer                 = 0x8003EC98;
 g_save_slot_index                   = 0x8003EC9C;
-g_GfxDoubleBuffer                   = 0x80042CA0;
-g_GfxPrimaryFrame                   = 0x80042E20;
-g_previousGameState                 = 0x80042FB0;
+g_transition_frames                = 0x80042CA0; // size:0x310 allow_addend:True
+g_previous_game_state                 = 0x80042FB0;
 g_current_song_handle               = 0x80042FB8;
-g_akao_song_cmd_arg0                = 0x80042FBC;
-g_akao_song_cmd_arg1                = 0x80042FBE;
-g_akao_song_cmd_arg2                = 0x80042FC0;
-g_akao_song_cmd_arg3                = 0x80042FC2;
+g_game_diagnostic_status            = 0x80042FBC;
+g_game_diagnostic_code              = 0x80042FBE;
+g_game_diagnostic_arg0              = 0x80042FC0;
+g_game_diagnostic_arg1              = 0x80042FC2;
 g_layout_flag                       = 0x80042FC4;
 g_field_entry_flag                  = 0x80042FCC;
 D_80042FD0                          = 0x80042FD0;
-g_menuLayoutBuffer                  = 0x80042FD8;
-g_gameDataBasePtr                   = 0x800435C8;
+g_saved_game                        = 0x80042FD8; // size:0x4000 allow_addend:True
 g_layout_sub_mode                   = 0x80046FD8;
-g_akao_song_cmd_neg_arg0            = 0x80046FDC;
+g_last_error_status                 = 0x80046FDC;
 g_music_track_index                 = 0x80046FDE;
-g_music_data_buffer                 = 0x80046FE0;
-D_800473E0                          = 0x800473E0;
+g_music_sequence                    = 0x80046FE0;
+g_script_pair_value_49                          = 0x800473E0;
 g_text_clut_base                    = 0x80047400;
 g_text_cursor_x                     = 0x80047404;
 g_text_cursor_y                     = 0x80047408;
@@ -1092,12 +1090,12 @@ g_field_current_render_half         = 0x800473F4;
 // Globals
 g_pending_game_state                = 0x8010D018;
 g_gpu_mode                          = 0x801ED590;
-g_cd_audio_ready                    = 0x801ED591;
+g_movie_use_cd_audio                    = 0x801ED591;
 g_cd_system                         = 0x801ED800;
 g_cd_defer_data_ready               = 0x801ED801;
-g_cd_status_byte_3                  = 0x801ED802;
+g_cd_data_ready_pending                  = 0x801ED802;
 g_cd_audio_enabled                  = 0x801ED804;
-g_playback_state                    = 0x801ED805;
+g_cd_playback_state                    = 0x801ED805;
 g_cd_pending_queue_count            = 0x801ED806;
 g_cd_init_state                     = 0x801ED815;
 g_cd_read_remaining_bytes           = 0x801ED828;
@@ -1108,7 +1106,7 @@ g_cd_sync_callback_result           = 0x801ED968;
 g_cd_ready_callback_result          = 0x801ED96C;
 g_default_cd_resource               = 0x801ED990;
 g_SKCDPOSE_DAT                      = 0x801ED998;
-g_cd_resource_176                   = 0x801EDF18;
+g_cd_disc_validation_location                   = 0x801EDF18;
 
 
 // --- LIBPAD split (unk8 psyq region): TMP_ names pending QA of real member codes ---

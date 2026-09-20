@@ -104,9 +104,8 @@ void field_update_and_render_fade(RenderHalf* ctx)
     {
         if (g_field_fade_current.red >= FIELD_FADE_ADDITIVE_THRESHOLD)
         {
-            primitive->tile.r0 = g_field_fade_current.red - 1;
-            primitive->tile.g0 = g_field_fade_current.green - 1;
-            primitive->tile.b0 = g_field_fade_current.blue - 1;
+            setRGB0(&primitive->tile, g_field_fade_current.red - 1, g_field_fade_current.green - 1,
+                    g_field_fade_current.blue - 1);
         }
         else
         {

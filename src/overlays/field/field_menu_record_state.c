@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 
 typedef struct
@@ -12,17 +13,17 @@ typedef struct
 
 extern Rec800C9684 D_80122A08[];
 
-extern u8 g_menuLayoutBuffer[];
+
 extern u8 D_80122C00;
 extern void func_800B2844(s32 arg0, u8 *arg1, u8 arg2);
 
 /** @brief Dispatch the nonempty menu record at buffer offset 0x840. */
 void func_800C9404(void)
 {
-    D_80122C00 = g_menuLayoutBuffer[0x840];
+    D_80122C00 = g_saved_game.bytes[0x840];
     if (D_80122C00 != 0)
     {
-        func_800B2844(0, &g_menuLayoutBuffer[0x840], 0xFF);
+        func_800B2844(0, &g_saved_game.bytes[0x840], 0xFF);
     }
 }
 
@@ -38,7 +39,7 @@ void func_800C9448(void)
     count = 0;
     for (i = 0; i < 4; i++)
     {
-        p = &g_menuLayoutBuffer[i * 0x40];
+        p = &g_saved_game.bytes[i * 0x40];
         if (p[0x3160] == 0)
         {
             count++;
@@ -58,7 +59,7 @@ void func_800C9488(void)
     count = 0;
     for (i = 0; i < 0x64; i++)
     {
-        p = &g_menuLayoutBuffer[i * 0x40];
+        p = &g_saved_game.bytes[i * 0x40];
         if (p[0xCE0] == 0)
         {
             count++;

@@ -1,3 +1,4 @@
+#include "cdrom.h"
 /**
  * @file field_audio_runtime.c
  * @brief FIELD overlay CD-audio / music / SFX runtime subsystem.
@@ -89,8 +90,6 @@ extern u8 *D_8010D038;
 extern u8 D_800EC398[];
 
 /* External callees (declared here with the signature every user shares). */
-void cdrom_queue_read(s32 resource_index, void *dst_buffer);
-void cdrom_wait_queue_empty(void);
 void akao_cmd_f1(void);
 void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void akao_cmd_21(s32, s32);
@@ -110,8 +109,8 @@ void field_restore_entry_music(void)
     u8 *base;
     u32 *off;
 
-    if (((u32)(g_previousGameState - 2) >= 2U) && (g_previousGameState != 0) &&
-        (g_previousGameState != 6) && (g_previousGameState != 7) && (g_previousGameState != 5))
+    if (((u32)(g_previous_game_state - 2) >= 2U) && (g_previous_game_state != 0) &&
+        (g_previous_game_state != 6) && (g_previous_game_state != 7) && (g_previous_game_state != 5))
     {
         D_8011F304 = (AkaoHeader *)0x8013C000;
         cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void *)EFFECT_BLOB_BASE);

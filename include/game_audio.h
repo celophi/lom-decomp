@@ -3,8 +3,12 @@
 
 #include "common.h"
 
-void akao_song_cmd_12c(void);
+/** @brief Music resource selected by each field music index. */
+extern u8 g_music_track_table[];
+extern s16 g_game_diagnostic_status;
+
+void fade_out_current_song(void);
 void load_and_play_song(s32 song_index);
-void akao_set_song_params(int flags, s16 duration, s16 field_id, s16 sub_id);
+void record_game_diagnostic(s32 status, s32 code, s32 arg0, s32 arg1);
 
 #endif

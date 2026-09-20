@@ -472,14 +472,14 @@ u8 *field_render_effect_ribbon(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     if (temp_v1 < 0)
     {
         s32 addr = (s32) primbuf & 0xFFFFFF;
-        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (base[0] & 0xFFFFFF);
+        setaddr(primbuf, getaddr(&base[0]));
         primbuf += 0x28;
         base[0] = (base[0] & 0xFF000000) | addr;
     }
     else if (temp_v1 >= 0x1000)
     {
         s32 addr = (s32) primbuf & 0xFFFFFF;
-        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
+        setaddr(primbuf, getaddr(&base[0xFFF]));
         primbuf += 0x28;
         base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
     }
@@ -490,7 +490,7 @@ u8 *field_render_effect_ribbon(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         s32 srcval;
         addr = (s32) primbuf & 0xFFFFFF;
         srcval = base[temp_v1];
-        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (srcval & 0xFFFFFF);
+        setaddr(primbuf, srcval);
         entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
         primbuf += 0x28;
         *entry = (*entry & 0xFF000000) | addr;
@@ -848,22 +848,20 @@ u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s
     index = rec->unk8 >> 7;
     if (index < 0)
     {
-        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (base[0] & 0xFFFFFF);
-        base[0] = (base[0] & 0xFF000000) | ((s32) primbuf & 0xFFFFFF);
+        addPrim(&base[0], primbuf);
         primbuf += 8;
     }
     else if (index >= 0x1000)
     {
-        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
-        base[0xFFF] = (base[0xFFF] & 0xFF000000) | ((s32) primbuf & 0xFFFFFF);
+        addPrim(&base[0xFFF], primbuf);
         primbuf += 8;
     }
     else
     {
         srcval = base[index];
-        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (srcval & 0xFFFFFF);
+        setaddr(primbuf, srcval);
         entry = (s32 *) (((rec->unk8 >> 7) << 2) + (s32) base);
-        *entry = (*entry & 0xFF000000) | ((s32) primbuf & 0xFFFFFF);
+        setaddr(entry, primbuf);
         primbuf += 8;
     }
     return primbuf;

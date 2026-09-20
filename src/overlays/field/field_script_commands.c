@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 void func_800C1EC8(s32, void *, s32);
@@ -5,10 +6,10 @@ void func_800C1EC8(s32, void *, s32);
 typedef void (*FieldCommandHandler)(s32 value, u8 *params);
 
 extern FieldCommandHandler D_800F0E10[];
-extern void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
+
 
 /**
- * @brief Dispatches a small field command or forwards it to the audio system.
+ * @brief Dispatches a small field command or reports an unsupported command.
  *
  * @param value Command value or function-table index.
  * @param params Parameter block forwarded to table-dispatched commands.
@@ -22,7 +23,7 @@ void func_800BD6F4(s32 value, u8 *params)
         D_800F0E10[value](value, params);
         return;
     }
-    akao_set_song_params(0x8001, 3, value, 0);
+    record_game_diagnostic(0x8001, 3, value, 0);
 }
 
 /**

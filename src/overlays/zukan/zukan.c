@@ -282,10 +282,7 @@ s32 zukan_upload_tim(ZukanImageDestination* destinations, u8* tim)
 
     if (flags & 8)
     {
-        upload_rect.x = destinations->clut_x;
-        upload_rect.y = destinations->clut_y;
-        upload_rect.w = 0x100;
-        upload_rect.h = 1;
+        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, 0x100, 1);
         LoadImage(&upload_rect, tim + 0x14);
         pixel_dimensions = (u16*)(clut_block_size - (-(s32)tim) + 0x10);
     }
@@ -294,10 +291,7 @@ s32 zukan_upload_tim(ZukanImageDestination* destinations, u8* tim)
         pixel_dimensions = (u16*)(tim + 0x10);
     }
 
-    upload_rect.x = destinations->x;
-    upload_rect.y = destinations->y;
-    upload_rect.w = pixel_dimensions[0];
-    upload_rect.h = pixel_dimensions[1];
+    setRECT(&upload_rect, destinations->x, destinations->y, pixel_dimensions[0], pixel_dimensions[1]);
     LoadImage(&upload_rect, clut_block_size - (-(s32)tim) + 0x14);
     return mode;
 }
@@ -616,13 +610,13 @@ s32 zukan_emit_ui_sprite(s32 packet_cursor, s32* ordering_table, u32 sprite_inde
     ZukanUiSpriteRecord* sprite_record;
     DR_TPAGE* draw_mode;
 
-    SET_BGR0_PACKED(((SPRT*)packet_cursor), GPU_TINT_NEUTRAL);
+    SET_BGR0_PACKED((SPRT*)packet_cursor, GPU_TINT_NEUTRAL);
 
     if (g_zukan_view_mode != 0)
     {
         if (sprite_index < 4)
         {
-            SET_BGR0_PACKED(((SPRT*)packet_cursor), 0x303030);
+            SET_BGR0_PACKED((SPRT*)packet_cursor, 0x303030);
         }
     }
     else if ((sprite_index == 0) || (sprite_index == 3) || (sprite_index == 5))
@@ -632,34 +626,30 @@ s32 zukan_emit_ui_sprite(s32 packet_cursor, s32* ordering_table, u32 sprite_inde
         case 1:
             if (sprite_index == 3)
             {
-                SET_BGR0_PACKED(((SPRT*)packet_cursor), 0xE0E0FF);
+                SET_BGR0_PACKED((SPRT*)packet_cursor, 0xE0E0FF);
             }
             break;
         case ZUKAN_TRANSITION_PREVIOUS_FADE_OUT:
             if (sprite_index == 0)
             {
-                SET_BGR0_PACKED(((SPRT*)packet_cursor), 0xE0E0FF);
+                SET_BGR0_PACKED((SPRT*)packet_cursor, 0xE0E0FF);
             }
             break;
         case ZUKAN_TRANSITION_RETURN_TO_LIST:
             if (sprite_index == 5)
             {
-                SET_BGR0_PACKED(((SPRT*)packet_cursor), 0xE0E0FF);
+                SET_BGR0_PACKED((SPRT*)packet_cursor, 0xE0E0FF);
             }
             break;
         }
     }
 
-    setlen(((SPRT*)packet_cursor), 4);
-    ((SPRT*)packet_cursor)->code = 0x64;
-    ((SPRT*)packet_cursor)->x0 = x + 8;
-    ((SPRT*)packet_cursor)->y0 = y;
+    setSprt((SPRT*)packet_cursor);
+    setXY0((SPRT*)packet_cursor, x + 8, y);
 
     sprite_record = &g_zukan_ui_sprites[sprite_index];
-    ((SPRT*)packet_cursor)->w = (sprite_record->texture >> 14) & 0x1FF;
-    ((SPRT*)packet_cursor)->h = sprite_record->texture >> 23;
-    ((SPRT*)packet_cursor)->u0 = sprite_record->attributes >> 8;
-    ((SPRT*)packet_cursor)->v0 = sprite_record->texture;
+    setWH((SPRT*)packet_cursor, (sprite_record->texture >> 14) & 0x1FF, sprite_record->texture >> 23);
+    setUV0((SPRT*)packet_cursor, sprite_record->attributes >> 8, sprite_record->texture);
     ((SPRT*)packet_cursor)->clut = ((sprite_record->texture >> 8) & 0x3F) | 0x7C80;
 
     addPrim(ordering_table, ((SPRT*)packet_cursor));
@@ -980,10 +970,8 @@ loop_done:
         *(u32*)&tile->r0 = 0xF080F0;
         setlen(tile, 3);
         tile->code = 0x62;
-        tile->x0 = 0;
-        tile->y0 = row_y;
-        tile->w = 0xB8;
-        tile->h = 0xF;
+        setXY0(tile, 0, row_y);
+        setWH(tile, 0xB8, 0xF);
         addPrim(ordering_table, tile);
         packet_cursor += sizeof(TILE);
 
@@ -1036,46 +1024,37 @@ loop_done:
  */
 static ZukanLinePacket* zukan_emit_panel_outline(ZukanLinePacket* packet, s32* ordering_table, s32 x, s32 y, s32 width, s32 height, s32 color)
 {
-    s32 tag_mask;
+    s32 bottom_y;
 
     packet->color_and_code = color;
-    setlen(packet, 3);
-    setcode(packet, 0x40);
-    packet->x0 = x;
-    packet->y0 = y;
+    setLineF2(packet);
+    setXY0(packet, x, y);
     packet->x1 = x + width;
     packet->y1 = y;
-    tag_mask = ZUKAN_GPU_TAG_HIGH_MASK;
-    packet->tag = (packet->tag & ZUKAN_GPU_TAG_HIGH_MASK) | (*ordering_table & ZUKAN_GPU_ADDRESS_MASK);
-    *ordering_table = (*ordering_table & tag_mask) | ((s32)packet & ZUKAN_GPU_ADDRESS_MASK);
+    addPrim(ordering_table, packet);
     packet++;
 
     packet->color_and_code = color;
-    setlen(packet, 3);
-    setcode(packet, 0x40);
-    packet->x0 = x + width;
-    packet->y0 = y;
+    setLineF2(packet);
+    setXY0(packet, x + width, y);
     packet->x1 = x + width;
     packet->y1 = y + height;
     addPrim(ordering_table, packet);
     packet++;
 
     packet->color_and_code = color;
-    setlen(packet, 3);
-    setcode(packet, 0x40);
+    setLineF2(packet);
     packet->x0 = x + width;
-    tag_mask = y + height;
-    packet->y0 = tag_mask;
+    bottom_y = y + height;
+    packet->y0 = bottom_y;
     packet->x1 = x;
     packet->y1 = y + height;
     addPrim(ordering_table, packet);
     packet++;
 
     packet->color_and_code = color;
-    setlen(packet, 3);
-    setcode(packet, 0x40);
-    packet->x0 = x;
-    packet->y0 = y;
+    setLineF2(packet);
+    setXY0(packet, x, y);
     packet->x1 = x;
     packet->y1 = y + height;
     addPrim(ordering_table, packet);
@@ -1134,9 +1113,7 @@ ZukanFadePrimitive* zukan_render_fade(ZukanFadePrimitive* primitive, u_long* ord
     {
         if (g_zukan_fade_current.red >= ZUKAN_FADE_ADDITIVE_THRESHOLD)
         {
-            primitive->tile.r0 = g_zukan_fade_current.red - 1;
-            primitive->tile.g0 = g_zukan_fade_current.green - 1;
-            primitive->tile.b0 = g_zukan_fade_current.blue - 1;
+            setRGB0(&primitive->tile, g_zukan_fade_current.red - 1, g_zukan_fade_current.green - 1, g_zukan_fade_current.blue - 1);
         }
         else
         {
@@ -1317,7 +1294,7 @@ void* zukan_render_detail_sprites(SPRT* sprite, s32* ordering_table)
             sprite->h = *(u16*)sprite_data; sprite_data += 2;
             if (g_zukan_image_mode != 0)
             {
-                sprite->clut = 0x7B80;
+                sprite->clut = getClut(0, 494);
             }
             else
             {
@@ -1388,8 +1365,7 @@ void zukan_commit_loaded_entry(void)
     {
         upload_rect.x = layout->clut_x;
         upload_rect.y = layout->clut_y;
-        rect->w = 0x100;
-        rect->h = 1;
+        setWH(rect, 0x100, 1);
         LoadImage(rect, tim + 0x14);
         pixel_dimensions = (u16*)(clut_block_size + (s32)tim + 0x10);
     }
@@ -1398,10 +1374,7 @@ void zukan_commit_loaded_entry(void)
         pixel_dimensions = (u16*)(tim + 0x10);
     }
 
-    upload_rect.x = layout->x;
-    upload_rect.y = layout->y;
-    upload_rect.w = pixel_dimensions[0];
-    upload_rect.h = pixel_dimensions[1];
+    setRECT(&upload_rect, layout->x, layout->y, pixel_dimensions[0], pixel_dimensions[1]);
     LoadImage(&upload_rect, clut_block_size + (s32)tim + 0x14);
 
     {

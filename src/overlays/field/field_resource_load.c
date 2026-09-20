@@ -1,3 +1,4 @@
+#include "cdrom.h"
 #include "common.h"
 typedef struct
 {
@@ -459,7 +460,6 @@ s32 func_800B0850(void)
     return 0;
 }
 
-extern s32 cdrom_can_queue_resource(s32);
 
 extern s32 D_80122B68[];
 
@@ -531,7 +531,6 @@ void func_800B08FC(s32 arg0, s32 arg1)
     }
 }
 
-extern s32 cdrom_queue_read(s32, void *);
 
 
 

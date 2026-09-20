@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 #define GROW_U8(p, o) (*(u8 *)((u8 *)(p) + (o)))
@@ -195,7 +196,6 @@ void func_800C11F0(s32 arg0, s32 arg1)
     } while (func_800C14A4(arg0, arg1) != 0);
 }
 
-void akao_set_song_params(s32, s32, s32, s32); /* extern */
 s32 func_800C19D0(s32, s32, s32);              /* extern */
 /** Packed state accessed at byte, halfword, and word widths by the game. */
 typedef union PackedWord
@@ -258,7 +258,7 @@ void func_800C1230(s32 slot)
 
     if (slot >= 5)
     {
-        akao_set_song_params(0x8001, 0x1F3, slot, 0);
+        record_game_diagnostic(0x8001, 0x1F3, slot, 0);
         return;
     }
     record = D_80122B74 + ((slot * 0x60) + 0x2EF4);
@@ -514,7 +514,7 @@ void func_800C1658(u8 *arg0, u8 *unused_base, u8 *unused_current, s32 unused_off
     slot = GROW_U32(D_80122B74, 0x2EF0);
     if (slot >= 5U)
     {
-        akao_set_song_params(0x8001, 0x79, slot, 0);
+        record_game_diagnostic(0x8001, 0x79, slot, 0);
     }
     index = 0;
     do

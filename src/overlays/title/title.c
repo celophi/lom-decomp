@@ -1,4 +1,6 @@
+#include "saved_game.h"
 #include "title_internal.h"
+#include "screen_transition.h"
 
 /* Title-menu selection values dispatched by run_title. */
 #define TITLE_MENU_ITEM_NEW_GAME 0
@@ -17,7 +19,7 @@
 #define TITLE_MENU_EXIT_STATE_WORD_INDEX 0x990
 #define TITLE_SCENE_STATE_ADDRESS 0x801ED480
 
-/* High rand() value placement in MenuLayout::rng_seed. */
+/* High rand() value placement in SavedGameLayout::rng_seed. */
 #define TITLE_RNG_HIGH_SHIFT 15
 
 /* AKAO sound command used before the fallback field-entry path. */
@@ -52,39 +54,28 @@ typedef union
 #define TITLE_NEXT_FADE_PRIMITIVE(primitive, type) \
     ((TitleFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
+void init_title_display(TitleMenuContext* context);
+void render_menu(TitleMenuContext* context);
+s32 run_save_slot_menu(TitleMenuContext* context);
+
 /**
- * @brief Top-level entry point and main loop of the TITLE.BIN overlay.
- *
- * @details Boots the title audio (instrument bank, SEQ, then music), then
- * repeatedly initializes the title display, runs the menu render/input loop,
- * and dispatches the selected item. New Game opens the save-slot picker;
- * canceling that picker restarts the title menu, while confirming continues to
- * name entry. The main state machine calls this fixed address through its
- * temporary @c func_8004FC74 declaration.
- *
- * @param menu_context_address Address of the double-buffered MenuContext
- *        returned by get_title_menu_buffers; forwarded unchanged to the title
- *        display and menu routines.
- * @return Next game-state code consumed by the main state machine:
- *         - GAME_STATE_GNAME after New Game is confirmed.
- *         - GAME_STATE_MENU_LOAD when Continue is selected.
- *         - GAME_STATE_INTRO_MOVIE after the title idle timeout.
- *         - GAME_STATE_FIELD for the fallback field-entry path.
- *
+ * @brief Run the title menu and choose the next game state.
+ * @param menu_context Title display buffers.
+ * @return Next game-state code selected by the title screen.
  * @see decomp.me (100%) https://decomp.me/scratch/mEAXF
  */
-s32 run_title(s32 menu_context_address)
+s32 run_title(TitleMenuContext* menu_context)
 {
-    s32 context_address;
-    S_801ED480* persistent_scene_state = (S_801ED480*)TITLE_SCENE_STATE_ADDRESS;
+    TitleMenuContext* context;
+    SceneState* persistent_scene_state = (SceneState*)TITLE_SCENE_STATE_ADDRESS;
     s32* global_ram_base;
-    MenuLayout* menu_layout;
+    SavedGameLayout* menu_layout;
     u32 selection_sentinel;
     s32 random_low;
     s32 random_high;
     u8 selection;
 
-    context_address = menu_context_address;
+    context = menu_context;
 
     load_title_audio_bank();
     load_title_seq(0);
@@ -94,20 +85,20 @@ s32 run_title(s32 menu_context_address)
      * the configured MIPS_NONE relocation sites remain unchanged. */
     global_ram_base = (s32*)TITLE_GLOBAL_RAM_BASE;
     selection_sentinel = TITLE_SELECTION_SENTINEL;
-    menu_layout = (MenuLayout*)g_menuLayoutBuffer;
+    menu_layout = &g_saved_game.layout;
 
     while (1)
     {
-        init_title_display(context_address);
+        init_title_display(context);
         persistent_scene_state->map_id = 0;
         persistent_scene_state->object_index = 0;
-        persistent_scene_state->unk4 = 0;
-        persistent_scene_state->unk8 = 0;
-        persistent_scene_state->unkC = 0;
+        persistent_scene_state->camera_x = 0;
+        persistent_scene_state->camera_y = 0;
+        persistent_scene_state->camera_z = 0;
 
         do
         {
-            render_menu(context_address);
+            render_menu(context);
         } while (global_ram_base[TITLE_MENU_EXIT_STATE_WORD_INDEX] == 0);
 
         D_80042FB4 = VSync(-1);
@@ -117,9 +108,9 @@ s32 run_title(s32 menu_context_address)
         {
             load_menu_layout(0);
             global_ram_base[TITLE_MENU_EXIT_STATE_WORD_INDEX] = 0;
-            if (run_save_slot_menu(context_address) == SAVE_SLOT_MENU_EXIT_CANCEL)
+            if (run_save_slot_menu(context) == SAVE_SLOT_MENU_EXIT_CANCEL)
             {
-                GFX_Transition(0);
+                screen_transition(0);
                 continue;
             }
             return GAME_STATE_GNAME;
@@ -149,20 +140,17 @@ s32 run_title(s32 menu_context_address)
 /**
  * decomp.me (100%) https://decomp.me/scratch/bMLDn
  */
-void render_menu(MenuContext* context)
+void render_menu(TitleMenuContext* context)
 {
     RECT rect;
-    MenuContext* base = context;
-    MenuContext* s0;
+    TitleMenuContext* base = context;
+    TitleMenuContext* s0;
     u_long* s1;
     void* tmp;
 
     DrawSync(0);
     VSync(0);
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = 320;
-    rect.h = 472;
+    setRECT(&rect, 0, 0, 320, 472);
     ClearImage(&rect, 0, 0, 0);
 
     s0 = base;
@@ -223,32 +211,29 @@ void render_menu(MenuContext* context)
  * g_titleMenuExitState becomes non-zero (set by handle_save_slot_input),
  * then resets the frame-queue state and returns.
  *
- * @param ctx_base Base address of the double-buffered MenuContext render
+ * @param ctx_base Base address of the double-buffered TitleMenuContext render
  *        buffer, forwarded as-is from run_title.
  * @return The final value of g_titleMenuExitState: 1 after confirmation or
  *         SAVE_SLOT_MENU_EXIT_CANCEL when returning to the title menu.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/AKk7x
  */
-s32 run_save_slot_menu(MenuContext* ctx_base)
+s32 run_save_slot_menu(TitleMenuContext* ctx_base)
 {
     RECT rect;
-    MenuContext* base;
-    MenuContext* current;
+    TitleMenuContext* base;
+    TitleMenuContext* current;
     void* tmp;
     u_long* ot;
 
     base = ctx_base;
 
     InitSaveSlotMenu();
-    GFX_Transition(0);
+    screen_transition(0);
     set_fade_target(0x100, 0x100, 0x100, 0x14);
     DrawSync(0);
     VSync(0);
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = SCREEN_WIDTH;
-    rect.h = 0x1D8;
+    setRECT(&rect, 0, 0, SCREEN_WIDTH, 0x1D8);
     ClearImage(&rect, 0, 0, 0);
     current = base;
     ClearOTagR(current->otag_buffer, 0x1000);
@@ -294,12 +279,12 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
  * (front at ctx_base->disp_env/draw_env, back at ctx_base->disp_env2/draw_env2).
  * Called once per title-menu iteration from run_title.
  *
- * @param ctx_base Base address of the double-buffered MenuContext render
+ * @param ctx_base Base address of the double-buffered TitleMenuContext render
  *        buffer, forwarded as-is from run_title.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/evJur
  */
-void init_title_display(MenuContext* ctx_base)
+void init_title_display(TitleMenuContext* ctx_base)
 {
     RECT rect;
     u8* base = (u8*)ctx_base;
@@ -331,10 +316,7 @@ void init_title_display(MenuContext* ctx_base)
     VSync(0);
 
     /* Clear the full VRAM extent */
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = VRAM_WIDTH;
-    rect.h = VRAM_HEIGHT;
+    setRECT(&rect, 0, 0, VRAM_WIDTH, VRAM_HEIGHT);
     ClearImage(&rect, 0, 0, 0);
 
     /* Set display environments */
@@ -359,7 +341,7 @@ void init_title_display(MenuContext* ctx_base)
 /**
  * @brief Load and register the title overlay's AKAO instrument/sample bank.
  *
- * @details Counterpart of CHECKPS func_800500FC. Skipped if g_previousGameState
+ * @details Counterpart of CHECKPS func_800500FC. Skipped if g_previous_game_state
  * indicates the bank is already resident (values 2, 3, 5, 6, 7). Otherwise
  * loads SOUND/EFFECT.SET from CD-ROM into the 0x80180000 scratch buffer,
  * splits the blob via its self-referential offset table, copies the
@@ -374,7 +356,7 @@ void load_title_audio_bank(void)
     u8* base;
     u32* off;
 
-    if (((u32)(g_previousGameState - 2) >= 2U) && (g_previousGameState != 6) && (g_previousGameState != 7) && (g_previousGameState != 5))
+    if (((u32)(g_previous_game_state - 2) >= 2U) && (g_previous_game_state != 6) && (g_previous_game_state != 7) && (g_previous_game_state != 5))
     {
 
         g_titleAudioBankBase = 0x8013C000;
@@ -489,13 +471,13 @@ void reset_fade_state(void)
  * toward g_fadeTarget and emits the fade-overlay primitive into the active
  * prim buffer.
  *
- * @param ctx Active MenuContext render buffer.
+ * @param ctx Active TitleMenuContext render buffer.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/fBro2
  */
-void render_fade_overlay(MenuContext* ctx)
+void render_fade_overlay(TitleMenuContext* ctx)
 {
-    MenuContext* base = ctx;
+    TitleMenuContext* base = ctx;
     TitleFadePrimitive* primitive = (TitleFadePrimitive*)base->next_prim_ptr;
     u_long* ordering_table_tag = base->otag_buffer;
     s32 red_step;
@@ -524,9 +506,7 @@ void render_fade_overlay(MenuContext* ctx)
     {
         if (g_fadeCurrent.red >= TITLE_FADE_ADDITIVE_THRESHOLD)
         {
-            primitive->tile.r0 = g_fadeCurrent.red - 1;
-            primitive->tile.g0 = g_fadeCurrent.green - 1;
-            primitive->tile.b0 = g_fadeCurrent.blue - 1;
+            setRGB0(&primitive->tile, g_fadeCurrent.red - 1, g_fadeCurrent.green - 1, g_fadeCurrent.blue - 1);
         }
         else
         {
@@ -603,11 +583,11 @@ void set_fade_target(s32 red, s32 green, s32 blue, s32 steps)
  * @details Emits 5 POLY_FT4 quads stepping 0x40 px, each linked into the
  * active OT's tail entry.
  *
- * @param ctx Active MenuContext render buffer.
+ * @param ctx Active TitleMenuContext render buffer.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/aKAFU
  */
-void render_title_backdrop(MenuContext* ctx)
+void render_title_backdrop(TitleMenuContext* ctx)
 {
     u_long* ot;
     POLY_FT4* prim;
@@ -632,8 +612,7 @@ void render_title_backdrop(MenuContext* ctx)
         t0++;
         prim->x2 = (short)temp_v0;
         prim->x0 = (short)temp_v0;
-        setlen(prim, 9);
-        setcode(prim, 0x2C);
+        setPolyFT4(prim);
         prim->b0 = 0x80;
         prim->g0 = 0x80;
         prim->r0 = 0x80;
@@ -650,7 +629,7 @@ void render_title_backdrop(MenuContext* ctx)
         prim->v3 = 0xE8;
         prim->v2 = 0xE8;
         prim->tpage = (u_short)((temp_v1 >> 6) | 0x110);
-        prim->clut = 0x7840;
+        prim->clut = getClut(0, 481);
         /* addPrim((P_TAG *)(ot + 4095), prim) */
         ((P_TAG*)prim)->addr = (u_long)(((P_TAG*)(ot + 4095))->addr);
         ((P_TAG*)(ot + 4095))->addr = (u_long)prim;
@@ -819,9 +798,9 @@ void menu_cursor_up(void)
  * cursor quad last; the cursor's U coordinate cycles through
  * g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & 3] for a 4-frame blink, and
  * its Y tracks the selected rank. The advanced prim cursor is written back to
- * MenuContext::next_prim_ptr.
+ * TitleMenuContext::next_prim_ptr.
  *
- * @param ctx Active MenuContext render buffer.
+ * @param ctx Active TitleMenuContext render buffer.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/qegw7
  */
@@ -956,7 +935,7 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
  * enables the first 4 slots, resets cursor/input/animation globals, arms the
  * idle countdown to TITLE_IDLE_COUNTDOWN_FRAMES, and uploads the two menu TIMs
  * from g_titleMenuTimTable[1..2] to VRAM. When re-entering from the attract
- * loop (g_previousGameState == 0) it advances the cursor to the first enabled
+ * loop (g_previous_game_state == 0) it advances the cursor to the first enabled
  * slot (same forward scan as menu_cursor_down).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/HW23j
@@ -991,7 +970,7 @@ void init_title_menu_state(void)
     g_titleIdleCountdown = TITLE_IDLE_COUNTDOWN_FRAMES;
     upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[1]), 0x140, 0, 0, 0x1E0);
     upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[2]), 0x140, 0x100, 0, 0x1E1);
-    if (g_previousGameState == 0)
+    if (g_previous_game_state == 0)
     {
         next_item = g_titleSelectedItem + 1;
         if (next_item < TITLE_MENU_SLOT_COUNT)
@@ -1065,10 +1044,7 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
         clut_height = *((u16*)(p + 0x12));
         clut_block_len = *((s32*)(p + tim_header_size));
         clut_skip_base = 8;
-        rect.x = clut_x;
-        rect.y = (s16)clut_y;
-        rect.w = clut_width * clut_height;
-        rect.h = clut_rows;
+        setRECT(&rect, clut_x, (s16)clut_y, clut_width * clut_height, clut_rows);
         LoadImage(&rect, (u_long*)(p + 0x14));
         p = (p + clut_skip_base) + clut_block_len;
     }
@@ -1076,10 +1052,7 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
     {
         p = p + 8;
     }
-    rect.x = x;
-    rect.y = y;
-    rect.w = *((u16*)(p + 8));
-    rect.h = *((u16*)(p + 0xA));
+    setRECT(&rect, x, y, *((u16*)(p + 8)), *((u16*)(p + 0xA)));
     LoadImage(&rect, (u_long*)(p + 0xC));
 }
 

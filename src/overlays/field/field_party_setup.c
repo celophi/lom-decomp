@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 typedef struct
@@ -22,7 +23,6 @@ typedef struct
 
 #define FIELD_B74 ((StructB74 *)D_80122B74)
 
-void akao_set_song_params(s32, s32, s32, s32);
 void func_800BD520(s32, s32, s32);
 s32 func_800B37D4(void);
 s32 func_800B3DF4(s32);
@@ -514,16 +514,14 @@ s32 func_800B37D4(void)
 
 
 extern u8 *D_80122B74;
-/* No prototype is in scope at the original call site, so the arguments pass as
- * plain int (the target does not truncate the field to s16). */
-void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
+
 
 
 /**
- * @brief Restarts field music when the active scene index is out of range.
+ * @brief Report an invalid scene index, then forward the selected scene value.
  *
  * Reads the active scene index at offset 0x2EF0 of the D_80122B74 buffer; if it
- * is 5 or greater it re-arms akao_set_song_params, then forwards the scene
+ * is 5 or greater it records a diagnostic, then forwards the scene
  * entry's 0x2F3C word (stride 0x60) to func_800BD520.
  *
  * Matches under GCC 2.8.0. The pre-diagnostic scene index and the index
@@ -539,7 +537,7 @@ void func_800B3D84(void)
     idx1 = *(s32 *)(D_80122B74 + 0x2EF0);
     if ((u32)idx1 >= 5)
     {
-        akao_set_song_params(0x8001, 0x75, idx1, 0);
+        record_game_diagnostic(0x8001, 0x75, idx1, 0);
     }
 
     idx2 = *(s32 *)(D_80122B74 + 0x2EF0);

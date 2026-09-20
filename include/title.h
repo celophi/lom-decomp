@@ -3,11 +3,13 @@
 
 #include "common.h"
 
+typedef struct TitleMenuContext TitleMenuContext;
+
 /**
  * @brief Run the title screen and select the next game state.
- * @param menu_context_address Address of the title display buffers.
+ * @param menu_context Title display buffers.
  * @return Next game-state code selected by the title screen.
  */
-s32 run_title(s32 menu_context_address);
+s32 run_title(TitleMenuContext* menu_context);
 
 #endif

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "sdk/libgpu.h"
 
 typedef struct { s32 unk0; s32 unk4; s16 unk8; s16 unkA; s16 unkC; u16 unkE; } CardaGpuPacket;
 typedef struct { s32 unk0; u8 pad4[0x40AE]; s16 unk40B2; u8 pad40B4[4]; CardaGpuPacket *unk40B8; } CardaDrawState;
@@ -98,8 +99,7 @@ void func_80142668(CardaDrawState *arg0)
         {
             func_8001A5D4((s32)var_s0, sp20);
 
-            var_s0->unk0 = (var_s0->unk0 & 0xFF000000) | (var_s5->unk0 & 0x00FFFFFF);
-            var_s5->unk0 = (s32)((var_s5->unk0 & 0xFF000000) | ((s32)var_s0 & 0x00FFFFFF));
+            addPrim(var_s5, var_s0);
 
             temp_a0_2 = *var_s3;
             temp_v1_2 = temp_a0_2 & 7;

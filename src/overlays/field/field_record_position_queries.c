@@ -1,3 +1,4 @@
+#include "game_audio.h"
 /** @file field_record_position_queries.c
  * @brief Measure X/Z distance and compare stored object positions with live bounds.
  */
@@ -30,7 +31,7 @@ typedef struct
 
 Obj80087F0C *func_80087F0C(s32 arg0);
 s32 func_80087F44(s32 arg0, s32 *out);
-void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
+
 void func_800B2844(s32, void *, s32);
 void func_800C2228(s32 idx);
 

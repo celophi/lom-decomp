@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 /**
@@ -204,10 +205,9 @@ void func_800C35AC(s32 arg0)
  * For an in-range @p arg0 (< 0x40), reads the record's status byte. When its
  * "valid" bit (0x08) is set, returns a code from the low bits: 1 if bit 0 is
  * clear, 2 if bit 1 is clear, 4 if bit 2 is set, otherwise 3. Returns 0 when
- * the record is not valid; for out-of-range @p arg0 it instead notifies the
- * audio driver and returns 0.
+ * the record is not valid; for out-of-range @p arg0 it instead records a diagnostic and returns 0.
  *
- * @param arg0 Record index; >= 0x40 triggers the audio notification path.
+ * @param arg0 Record index; >= 0x40 records a diagnostic.
  * @return Status code 1-4, or 0.
  * @see decomp.me (100%) TODO
  */
@@ -241,7 +241,7 @@ s32 func_800C35E4(s32 arg0)
     }
     else
     {
-        akao_set_song_params(0x8001, 0x73, arg0, 0);
+        record_game_diagnostic(0x8001, 0x73, arg0, 0);
     }
     return 0;
 }

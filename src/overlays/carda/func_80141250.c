@@ -1,16 +1,6 @@
 #include "common.h"
 #include "vector.h"
-
-/**
- * @brief Flat rectangle GPU primitive (code 0x62) used for the selection bar.
- */
-typedef struct
-{
-    u32 tag;
-    u8 r0, g0, b0, code;
-    s16 x0, y0;
-    s16 w, h;
-} TILE;
+#include "sdk/libgpu.h"
 
 extern s32 D_80165F80;
 extern s32 D_80165FEC;
@@ -240,14 +230,12 @@ s32 func_80141250(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             TILE* tile = (TILE*)prim;
             *(u32*)&tile->r0 = 0xF080F0;
-            *((u8*)tile + 3) = 3;
-            tile->code = 0x62;
+            setlen(tile, 3);
+            setcode(tile, 0x62);
             tile->w = 0x12C;
-            tile->x0 = 0;
-            tile->y0 = row_y;
+            setXY0(tile, 0, row_y);
             tile->h = 0xE;
-            tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-            *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+            addPrim(ot, tile);
             prim += sizeof(TILE);
         }
         break;

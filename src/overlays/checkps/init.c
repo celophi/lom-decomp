@@ -259,14 +259,8 @@ void init_checkps_display(CheckPSRenderState* render_state)
     RECT rect;
     SetGeomScreen(CHECKPS_GEOMETRY_SCREEN_DISTANCE);
     SetGeomOffset(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-    render_state->frames[0].display.clear_rect.x = 0;
-    render_state->frames[0].display.clear_rect.y = 0;
-    render_state->frames[0].display.clear_rect.w = SCREEN_WIDTH;
-    render_state->frames[0].display.clear_rect.h = SCREEN_HEIGHT;
-    render_state->frames[1].display.clear_rect.x = 0;
-    render_state->frames[1].display.clear_rect.y = VRAM_BACK_DISP_Y;
-    render_state->frames[1].display.clear_rect.w = SCREEN_WIDTH;
-    render_state->frames[1].display.clear_rect.h = SCREEN_HEIGHT;
+    setRECT(&render_state->frames[0].display.clear_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&render_state->frames[1].display.clear_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     DrawSync(0);
     VSync(0);
 
@@ -308,8 +302,8 @@ void load_embedded_checkps_audio(void)
     AkaoHeader** bank_slot;
     u32* section_offsets;
 
-    if (((((g_previousGameState == GAME_STATE_TITLE) || (g_previousGameState == GAME_STATE_GNAME)) || (g_previousGameState == GAME_STATE_FIELD)) || (g_previousGameState == CHECKPS_AUDIO_BANK_RESIDENT_STATE)) ||
-        (g_previousGameState == GAME_STATE_MENU_LOAD) || (g_previousGameState == GAME_STATE_WORLD_SELECT))
+    if (((((g_previous_game_state == GAME_STATE_TITLE) || (g_previous_game_state == GAME_STATE_GNAME)) || (g_previous_game_state == GAME_STATE_FIELD)) || (g_previous_game_state == CHECKPS_AUDIO_BANK_RESIDENT_STATE)) ||
+        (g_previous_game_state == GAME_STATE_MENU_LOAD) || (g_previous_game_state == GAME_STATE_WORLD_SELECT))
     {
         return;
     }
@@ -431,9 +425,7 @@ void update_and_draw_fade(CheckPSFrame* frame)
     {
         if (g_fade_current.red >= CHECKPS_FADE_ADDITIVE_THRESHOLD)
         {
-            primitive->tile.r0 = g_fade_current.red - 1;
-            primitive->tile.g0 = g_fade_current.green - 1;
-            primitive->tile.b0 = g_fade_current.blue - 1;
+            setRGB0(&primitive->tile, g_fade_current.red - 1, g_fade_current.green - 1, g_fade_current.blue - 1);
         }
         else
         {
@@ -577,15 +569,9 @@ void load_checkps_image(void)
     image_asset = &g_checkps_image_asset;
 
     g_checkps_image_frames_remaining = CHECKPS_IMAGE_DISPLAY_FRAMES;
-    image_destination.x = SCREEN_WIDTH;
-    image_destination.y = 0;
-    image_destination.w = 0;
-    image_destination.h = CHECKPS_IMAGE_CLUT_Y;
+    setRECT(&image_destination, SCREEN_WIDTH, 0, 0, CHECKPS_IMAGE_CLUT_Y);
 
-    upload_rect.x = 0;
-    upload_rect.y = CHECKPS_IMAGE_CLUT_Y;
-    upload_rect.w = image_asset->clut_block.dimensions.width * image_asset->clut_block.dimensions.height;
-    upload_rect.h = 1;
+    setRECT(&upload_rect, 0, CHECKPS_IMAGE_CLUT_Y, image_asset->clut_block.dimensions.width * image_asset->clut_block.dimensions.height, 1);
 
     clut_block_size = image_asset->clut_block.bnum;
     LoadImage(upload_rect_ptr, image_asset->clut_data);
@@ -596,10 +582,7 @@ void load_checkps_image(void)
     pixel_block = TIM_PIXEL_BLOCK(image_asset, clut_block_size);
 
     pixel_dimensions = &pixel_block->dimensions;
-    upload_rect.x = image_x;
-    upload_rect.y = image_y;
-    upload_rect.w = pixel_dimensions->width;
-    upload_rect.h = pixel_dimensions->height;
+    setRECT(&upload_rect, image_x, image_y, pixel_dimensions->width, pixel_dimensions->height);
 
     g_checkps_image_width_words = pixel_dimensions->width;
     g_checkps_image_height = pixel_dimensions->height;

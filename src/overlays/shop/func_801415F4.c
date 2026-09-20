@@ -165,11 +165,9 @@ s32 func_801415F4(s32 *ot, s32 prim, s32 xoff, s32 yoff)
         TILE *tile = (TILE *)prim;
         *(u32 *)&tile->r0 = 0xF080F0;
         setlen(tile, 3);
-        tile->code = 0x62;
-        tile->x0 = 0;
-        tile->y0 = y - 1;
-        tile->w = 0x126;
-        tile->h = 0xE;
+        setcode(tile, 0x62);
+        setXY0(tile, 0, y - 1);
+        setWH(tile, 0x126, 0xE);
         {
             s32 tag = (*(s32 *)prim & 0xFF000000) | (*ot & 0xFFFFFF);
             s32 next = prim + 0x10;

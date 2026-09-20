@@ -402,8 +402,7 @@ void* render_cached_glyph(void* primitive, u_long* ot_tag, s32 character_code, s
     g_glyph_upload_x = (slot % CHECKPS_GLYPH_WIDTH) * CHECKPS_GLYPH_VRAM_WORD_WIDTH;
     g_glyph_upload_y = slot & CHECKPS_GLYPH_V_COORD_MASK;
 
-    rect.w = CHECKPS_GLYPH_VRAM_WORD_WIDTH;
-    rect.h = CHECKPS_GLYPH_BITMAP_ROWS;
+    setWH(&rect, CHECKPS_GLYPH_VRAM_WORD_WIDTH, CHECKPS_GLYPH_BITMAP_ROWS);
     rect.x = g_glyph_upload_x + CHECKPS_GLYPH_VRAM_X;
     rect.y = g_glyph_upload_y;
 
@@ -438,19 +437,17 @@ CheckPSGlyphPacket* emit_glyph_sprite(CheckPSGlyphPacket* packet, u_long* ot_tag
     sprite->b0 = CHECKPS_GLYPH_NEUTRAL_COLOR;
     sprite->r0 = CHECKPS_GLYPH_NEUTRAL_COLOR;
     normalized_slot = cache_slot;
-    sprite->x0 = g_glyph_cursor_x;
-    sprite->y0 = g_glyph_cursor_y;
+    setXY0(sprite, g_glyph_cursor_x, g_glyph_cursor_y);
 
     if (cache_slot < 0)
     {
         normalized_slot = cache_slot + (CHECKPS_GLYPH_WIDTH - 1);
     }
 
-    sprite->u0 = (cache_slot - ((normalized_slot >> 4) * CHECKPS_GLYPH_WIDTH)) * CHECKPS_GLYPH_WIDTH;
-    sprite->v0 = cache_slot & CHECKPS_GLYPH_V_COORD_MASK;
+    setUV0(sprite, (cache_slot - ((normalized_slot >> 4) * CHECKPS_GLYPH_WIDTH)) * CHECKPS_GLYPH_WIDTH, cache_slot & CHECKPS_GLYPH_V_COORD_MASK);
     sprite->clut = getClut(0, CHECKPS_GLYPH_CLUT_Y);
     /* Preserve the packet length while linking its 24-bit address into the OT. */
-    sprite->tag = (sprite->tag & CHECKPS_GPU_TAG_LENGTH_MASK) | (*ot_tag & CHECKPS_GPU_TAG_ADDRESS_MASK);
+    setaddr(sprite, getaddr(ot_tag));
 
     packet_address = ((u32)packet) & CHECKPS_GPU_TAG_ADDRESS_MASK;
     ot_tag_high_byte = *ot_tag & CHECKPS_GPU_TAG_LENGTH_MASK;

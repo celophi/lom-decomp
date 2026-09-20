@@ -13,6 +13,7 @@
 #include "common.h"
 #include "field_types.h"
 #include "field_effect_geometry.h"
+#include "sdk/libgpu.h"
 
 
 
@@ -476,11 +477,11 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                         poly->code = 0x2CU;
                         if (rec->unk1C & 0x800000)
                         {
-                            poly->code |= 2;
+                            setSemiTrans(poly, 1);
                         }
                         else
                         {
-                            poly->code &= ~2;
+                            setSemiTrans(poly, 0);
                         }
                     }
                     var_s2 = item[4];
@@ -644,7 +645,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                 switch (temp_v0_6)
                                 {
                                 case 1:
-                                    poly->clut = (var_s1 << 6) | ((((part->unk2D & 0xF) << 4) >> 4) & 0x3F);
+                                    poly->clut = getClut((part->unk2D & 0xF) << 4, var_s1);
                                     break;
                                 case 2:
                                     poly->clut = (s16)(((rec->unk3B + 0x1F4) << 6) | 9);
@@ -672,7 +673,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                             switch (temp_v0_7)
                             {
                             case 1:
-                                poly->clut = (var_s1 << 6) | ((((part->unk2D & 0xF) << 4) >> 4) & 0x3F);
+                                poly->clut = getClut((part->unk2D & 0xF) << 4, var_s1);
                                 goto clut_done;
                             case 2:
                                 poly->clut = ((rec->unk3B + 0x1F4) << 6) | (((u32)rec->unk1C >> 0x13) & 0xF);
@@ -700,7 +701,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                 switch (temp_v0_8)
                                 {
                                 case 1:
-                                    poly->clut = (var_s1 << 6) | ((((part->unk2D & 0xF) << 4) >> 4) & 0x3F);
+                                    poly->clut = getClut((part->unk2D & 0xF) << 4, var_s1);
                                     goto clut_done;
                                 case 2:
                                     poly->clut = ((((*(u16*)((u8*)rec + 0x1E)) & 3) + 0x1EF) << 6) | 0x10;
@@ -721,21 +722,21 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                 }
                                 else
                                 {
-                                    var_v0_10 = ((rec->unk3B + 0x1F4) << 6) | (((item[6] << 4) >> 4) & 0x3F);
+                                    var_v0_10 = getClut(item[6] << 4, rec->unk3B + 0x1F4);
                                 }
                                 poly->clut = var_v0_10;
                                 if (item[6] == 0xB)
                                 {
-                                    poly->code = (u8)(poly->code | 2);
+                                    setSemiTrans(poly, 1);
                                 }
                             }
                             else
                             {
                                 if (item[6] == 1)
                                 {
-                                    poly->code = (u8)(poly->code | 2);
+                                    setSemiTrans(poly, 1);
                                 }
-                                poly->clut = ((rec->unk3B + 0x1F4) << 6) | (((s32)((item[6] * 0x10) + 0xC0) >> 4) & 0x3F);
+                                poly->clut = getClut((s32)((item[6] * 0x10) + 0xC0), rec->unk3B + 0x1F4);
                                 goto clut_done;
                             }
                         } while (0);
@@ -759,7 +760,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                         switch (temp_v0_9)
                         {
                         case 1:
-                            poly->clut = (var_s1 << 6) | ((((part->unk2D & 0xF) << 4) >> 4) & 0x3F);
+                            poly->clut = getClut((part->unk2D & 0xF) << 4, var_s1);
                             break;
                         case 2:
                             if ((u8)actor->unk228 >= 3U)
@@ -781,9 +782,9 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                             {
                                 if (item[6] == 1)
                                 {
-                                    poly->code = (u8)(poly->code | 2);
+                                    setSemiTrans(poly, 1);
                                 }
-                                poly->clut = ((rec->unk3B + 0x1F4) << 6) | (((s32)((item[6] * 0x10) + 0xC0) >> 4) & 0x3F);
+                                poly->clut = getClut((s32)((item[6] * 0x10) + 0xC0), rec->unk3B + 0x1F4);
                                 goto clut_done;
                             }
                             break;
@@ -793,21 +794,21 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                     temp_v1_13 = (s32)rec->unk8 >> 7;
                     if (temp_v1_13 < 0)
                     {
-                        ((PrimitiveTag*)cursor)->addr = ((PrimitiveTag*)base)->addr, ((PrimitiveTag*)base)->addr = (u32)cursor;
+                        addPrim(base, cursor);
                         poly++;
                         cursor = (s32*)((u8*)cursor + 0x28);
                     }
                     else if (temp_v1_13 >= 0x1000)
                     {
-                        ((PrimitiveTag*)cursor)->addr = ((PrimitiveTag*)&base[0xFFF])->addr, ((PrimitiveTag*)&base[0xFFF])->addr = (u32)cursor;
+                        addPrim(&base[0xFFF], cursor);
                         poly++;
                         cursor = (s32*)((u8*)cursor + 0x28);
                     }
                     else
                     {
                         poly++;
-                        ((PrimitiveTag*)cursor)->addr = ((PrimitiveTag*)&base[temp_v1_13])->addr,
-                        ((PrimitiveTag*)&base[(s32)rec->unk8 >> 7])->addr = (u32)cursor;
+                        setaddr(cursor, getaddr(&base[temp_v1_13])),
+                        setaddr(&base[(s32)rec->unk8 >> 7], cursor);
                         cursor = (s32*)((u8*)cursor + 0x28);
                     }
                 }
@@ -1731,12 +1732,12 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
                     poly->code = 0x2CU;
                     if (rec->unk1C & 0x800000)
                     {
-                        poly->code |= 2;
+                        setSemiTrans(poly, 1);
                         do {} while (0);
                     }
                     else
                     {
-                        poly->code &= ~2;
+                        setSemiTrans(poly, 0);
                     }
                 } while (0);
                 temp_s4 = var_s1[-0xD];
@@ -1865,7 +1866,7 @@ block_48:
                 {
                     if (var_s1[-0xB] == 0xB)
                     {
-                        poly->code = (u8)(poly->code | 2);
+                        setSemiTrans(poly, 1);
                     }
                     temp_v0_5 = rec->unk3B;
                     temp_v1_10 = var_s1[-0xB];
@@ -1912,7 +1913,7 @@ block_48:
                         {
                             if (var_s1[-0xB] == 0xB)
                             {
-                                poly->code = (u8)(poly->code | 2);
+                                setSemiTrans(poly, 1);
                             }
                             temp_v0_5 = rec->unk3B;
                             temp_v1_10 = var_s1[-0xB];
@@ -1927,21 +1928,21 @@ block_48:
                 temp_v1_11 = (s32) rec->unk8 >> 7;
                 if (temp_v1_11 < 0)
                 {
-                    ((PrimitiveTag*)cursor)->addr = ((PrimitiveTag*)base)->addr, ((PrimitiveTag*)base)->addr = (u32)cursor;
+                    addPrim(base, cursor);
                     poly++;
                     cursor = (s32*)((u8*)cursor + 0x28);
                 }
                 else if (temp_v1_11 >= 0x1000)
                 {
-                    ((PrimitiveTag*)cursor)->addr = ((PrimitiveTag*)&base[0xFFF])->addr, ((PrimitiveTag*)&base[0xFFF])->addr = (u32)cursor;
+                    addPrim(&base[0xFFF], cursor);
                     poly++;
                     cursor = (s32*)((u8*)cursor + 0x28);
                 }
                 else
                 {
                     poly++;
-                    ((PrimitiveTag*)cursor)->addr = ((PrimitiveTag*)&base[temp_v1_11])->addr,
-                    ((PrimitiveTag*)&base[(s32)rec->unk8 >> 7])->addr = (u32)cursor;
+                    setaddr(cursor, getaddr(&base[temp_v1_11])),
+                    setaddr(&base[(s32)rec->unk8 >> 7], cursor);
                     cursor = (s32*)((u8*)cursor + 0x28);
                 }
                 var_s1 += 0xB;

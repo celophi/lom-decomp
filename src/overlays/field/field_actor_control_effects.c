@@ -872,7 +872,7 @@ void func_80086FB8(u8 *buffer)
             source->b0 = color;
             source->g0 = color;
             source->r0 = color;
-            source->code |= 2;
+            setSemiTrans(source, 1);
             source->x0 += D_801077FC.x;
             source->x1 += D_801077FC.x;
             source->x2 += D_801077FC.x;

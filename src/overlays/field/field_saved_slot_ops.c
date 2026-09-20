@@ -1,6 +1,6 @@
+#include "game_audio.h"
 #include "common.h"
 
-extern s32 akao_set_song_params(s32, s32, s32, s32);
 extern void func_800B2844(s32, void *, s32);
 
 #define FIELD_SLOT_COUNT 5
@@ -40,7 +40,7 @@ s32 func_800C2264(s32 arg0)
     if (resource == NULL)
     {
         mode = 0x8001;
-        akao_set_song_params(mode, 0x78, arg0, g_scene_mode);
+        record_game_diagnostic(mode, 0x78, arg0, g_scene_mode);
         return 0xFF;
     }
 
@@ -116,7 +116,7 @@ s32 func_800C23F4(void)
             }
             return 5;
         }
-        akao_set_song_params(0x8001, 0x6E, index, 0);
+        record_game_diagnostic(0x8001, 0x6E, index, 0);
     }
     return 0xFF;
 }
@@ -125,60 +125,61 @@ s32 func_800C23F4(void)
 extern u8 *D_80122B74;
 
 /**
- * @brief Process the indexed field audio entry and report its state.
- * @param index Field audio entry index.
- * @return Entry state code, or the audio command result for indices outside the table.
+ * @brief Process the indexed field entry and report its state.
+ * @param index Field entry index.
+ * @return Entry state code; unspecified for an out-of-range index.
  */
 s32 func_800C24BC(s32 index)
 {
     s32 offset;
     s32 value;
-    u8 *base;
+    u8* base;
 
     if (index >= 5)
     {
-        return akao_set_song_params(0x8001, 0x76, index, 0);
+        record_game_diagnostic(0x8001, 0x76, index, 0);
     }
-
-    base = D_80122B74;
-    offset = index * 0x60;
-    if ((base + offset)[0x2EF4] != 0)
+    else
     {
-        u8 *entry;
+        base = D_80122B74;
+        offset = index * 0x60;
+        if ((base + offset)[0x2EF4] != 0)
+        {
+            u8* entry;
 
-        func_800B2844(0, D_80122B74 + (offset + 0x2EF4), 0x15);
-        entry = D_80122B74 + offset;
-        value = *(s32 *)(entry + 0x2F38);
-        if (value < 0)
-        {
-            if (*(u16 *)(entry + 0x2F36) != 0)
+            func_800B2844(0, D_80122B74 + (offset + 0x2EF4), 0x15);
+            entry = D_80122B74 + offset;
+            value = *(s32*)(entry + 0x2F38);
+            if (value < 0)
             {
-                return 0;
+                if (*(u16*)(entry + 0x2F36) != 0)
+                {
+                    return 0;
+                }
+                *(s32*)(entry + 0x2F38) = value & 0x7FFFFFFF;
+                return 1;
             }
-            *(s32 *)(entry + 0x2F38) = value & 0x7FFFFFFF;
-            return 1;
+            if (((u32)value >> 30) & 1)
+            {
+                return 2;
+            }
+            return 3;
         }
-        if (((u32) value >> 30) & 1)
-        {
-            return 2;
-        }
-        return 3;
+        return 0xFF;
     }
-    return 0xFF;
 }
 
 
 extern u8 *D_80122B74;
 
 /**
- * @brief Re-arm the pending-input record for a field object, or notify audio.
+ * @brief Re-arm the pending-input record for a field object, or report an invalid index.
  *
  * For an in-range @p arg0 (< 5), resolves the object's 0x60-stride record at
  * @c D_80122B74 + 0x2EF4 and hands it to func_800B2844 and field_run_name_entry (using
- * the record's @c 0x2F09 count byte). Out-of-range indices notify the audio
- * driver instead.
+ * the record's @c 0x2F09 count byte). Out-of-range indices record a diagnostic instead.
  *
- * @param arg0 Field-object index; >= 5 takes the audio-notification path.
+ * @param arg0 Field-object index; >= 5 records a diagnostic.
  * @see decomp.me (100%) TODO
  */
 void func_800C25A0(s32 arg0)
@@ -189,7 +190,7 @@ void func_800C25A0(s32 arg0)
 
     if (arg0 >= 5)
     {
-        akao_set_song_params(0x8001, 0x77, arg0, 0);
+        record_game_diagnostic(0x8001, 0x77, arg0, 0);
         return;
     }
     /* Force the D_80122B74 base high-half to materialize before the index. */

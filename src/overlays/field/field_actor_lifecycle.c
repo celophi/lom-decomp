@@ -1,3 +1,4 @@
+#include "game_audio.h"
 /* field_actor_lifecycle */
 #include "common.h"
 
@@ -235,13 +236,12 @@ void func_800B4684(void)
 /* func_800B4844 */
 #include "common.h"
 
-void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
 
 /**
  * @brief Finds an offset-table record with the requested byte identifier.
  *
  * Searches the records referenced by the table following its count word. A
- * failed search issues an AKAO diagnostic command and returns null.
+ * failed search records a diagnostic and returns null.
  *
  * @param base Base of the count and record-offset table.
  * @param value Byte identifier to find at record offset 0x18.
@@ -278,6 +278,6 @@ u8 *func_800B4844(u32 *base, s32 value)
         } while (index < count);
     }
 
-    akao_set_song_params(0x8001, 0x67, target, -1);
+    record_game_diagnostic(0x8001, 0x67, target, -1);
     return 0;
 }

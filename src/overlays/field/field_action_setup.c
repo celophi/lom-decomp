@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 extern u8 *D_80123FB0;
@@ -36,9 +37,6 @@ typedef struct
     s32 unkC;
 } ArgB800B5948;
 
-
-
-extern void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
 s32 func_800B2A9C(s32 arg0);
 s32 func_800B302C(s32 arg0, s32 arg1);
 EntryB800B5948 *func_800B50B8(s32 arg0, void *arg1);
@@ -232,7 +230,7 @@ void func_800B5948(ArgB800B5948 *arg0, s32 arg1)
     ((FieldStateB800B5948 *)D_80123FB0)->unk18 = (SubState *) arg0;
     if (arg0 == NULL)
     {
-        akao_set_song_params(0x8001, (s32) func_800B5948, 0, 0);
+        record_game_diagnostic(0x8001, (s32) func_800B5948, 0, 0);
         return;
     }
     ((FieldStateB800B5948 *)D_80123FB0)->unk20 = func_800B2A9C(arg0->unk0);

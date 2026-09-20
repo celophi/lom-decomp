@@ -1,3 +1,5 @@
+#include "cload.h"
+#include "saved_game.h"
 #include "common.h"
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
@@ -303,7 +305,7 @@ extern u16 g_cload_text_number_prefix;
 extern u16 g_cload_text_load_prompt;
 extern u16 g_cload_text_loading;
 extern u8 g_cload_save_blob[];
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 g_playtime_vsync_origin;
 extern s32 g_cload_progress_bar_active;
 extern s32 g_cload_progress_start_tick;
@@ -411,10 +413,7 @@ s32 cload_main(void)
     g_cload_result = 0;
     cload_init_stream_handles();
     g_cload_icon_phase = 0;
-    rect.x = 0x140;
-    rect.y = 0;
-    rect.w = 0x40;
-    rect.h = 0x100;
+    setRECT(&rect, 0x140, 0, 0x40, 0x100);
     ClearImage(&rect, 0, 0, 0);
     cload_reset_glyph_cache();
     D_80162370 = 0;
@@ -443,10 +442,7 @@ void cload_run_menu_loop(void)
 
     DrawSync(0);
     VSync(0);
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = 0x140;
-    rect.h = 0x1D8;
+    setRECT(&rect, 0, 0, 0x140, 0x1D8);
     ClearImage(&rect, 0, 0, 0);
     frame = &g_cload_render_buffers[0];
     buffer_index = 0;
@@ -1876,12 +1872,9 @@ CloadGpuPacket *cload_emit_window_frame(CloadGpuPacket *prim, s32 *ot, s32 x, s3
  * @param h Height.
  * @param color Packed RGB color.
  * @return Advanced GPU-packet cursor.
- * @note `tmp` is deliberately reused for the packet-1 OT-link mask and then for
- *       the bottom edge's y coordinate. Both the mask binding and the reuse are
- *       required to match: with one basic block this function is allocated by
- *       local-alloc, and the reassignment truncates the constant's live range
- *       so it wins the lower temporary register ([ALLOC-23] style ref bumps do
- *       nothing here). Separate variables score 98.74%.
+ * @note `tmp` holds the bottom edge's y coordinate for packet 3. It used to
+ *       double as the packet-1 OT-link mask before that link became addPrim();
+ *       the macro form compiles to the same bytes without the extra binding.
  * @see decomp.me (100.00%)
  */
 CloadGpuPacket *cload_emit_rect_outline(CloadGpuPacket *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 color)
@@ -1889,30 +1882,23 @@ CloadGpuPacket *cload_emit_rect_outline(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
     s32 tmp;
 
     p->word4 = color;
-    setlen(p, 3);
-    setcode(p, 0x40);
-    p->x0 = x;
-    p->y0 = y;
+    setLineF2(p);
+    setXY0(p, x, y);
     p->unkC = x + w;
     p->unkE = y;
-    tmp = CLOAD_GPU_TAG_HIGH_MASK;
-    p->tag = (p->tag & CLOAD_GPU_TAG_HIGH_MASK) | (*ot & CLOAD_GPU_ADDR_MASK);
-    *ot = (*ot & tmp) | ((s32)p & CLOAD_GPU_ADDR_MASK);
+    addPrim(ot, p);
     p++;
 
     p->word4 = color;
-    setlen(p, 3);
-    setcode(p, 0x40);
-    p->x0 = x + w;
-    p->y0 = y;
+    setLineF2(p);
+    setXY0(p, x + w, y);
     p->unkC = x + w;
     p->unkE = y + h;
     addPrim(ot, p);
     p++;
 
     p->word4 = color;
-    setlen(p, 3);
-    setcode(p, 0x40);
+    setLineF2(p);
     p->x0 = x + w;
     tmp = y + h;
     p->y0 = tmp;
@@ -1922,10 +1908,8 @@ CloadGpuPacket *cload_emit_rect_outline(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
     p++;
 
     p->word4 = color;
-    setlen(p, 3);
-    setcode(p, 0x40);
-    p->x0 = x;
-    p->y0 = y;
+    setLineF2(p);
+    setXY0(p, x, y);
     p->unkC = x;
     p->unkE = y + h;
     addPrim(ot, p);
@@ -1950,10 +1934,8 @@ CloadGpuPacket *cload_emit_scroll_arrow(CloadGpuPacket *p, s32 *ot, s32 x, s32 y
     /* GCC 2.7.2 scheduling boundary; removing this wrapper changes packet-store order. */
     do
     {
-        setlen(p, 4);
-        setcode(p, 0x64);
-        p->x0 = x;
-        p->y0 = y;
+        setSprt(p);
+        setXY0(p, x, y);
     } while (0);
     if (flag != 0)
     {
@@ -2091,8 +2073,8 @@ s32 cload_draw_load_progress(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             play_menu_sfx(0x7B, vol);
             g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
-            bcopy(base + 0x180, g_menuLayoutBuffer, 0x3268);
-            g_save_slot_index = g_menuLayoutBuffer[0xCF];
+            bcopy(base + 0x180, g_saved_game.bytes, 0x3268);
+            g_save_slot_index = g_saved_game.bytes[0xCF];
             g_playtime_vsync_origin = VSync(-1);
             g_cload_exit_requested = 1;
         }
@@ -2273,10 +2255,7 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
         return prim;
     }
 
-    rect.x = index * 0x10;
-    rect.y = 0x1F2;
-    rect.w = 0x10;
-    rect.h = 1;
+    setRECT(&rect, index * 0x10, 0x1F2, 0x10, 1);
     if ((row == 1) && (icon < 2))
     {
         func_800A5638(&g_cload_icon_context, icon);
@@ -2295,15 +2274,11 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
     }
 
     base = index * 3;
-    rect.x = base * 4 + 0x140;
-    rect.y = 0xD0;
-    rect.w = 0xC;
-    rect.h = 0x30;
+    setRECT(&rect, base * 4 + 0x140, 0xD0, 0xC, 0x30);
     LoadImage(&rect, g_cload_icon_resource + *(s32 *)(g_cload_icon_resource + icon * 4 + 4) + 0x20);
 
     ((CloadPolyFT4Packet *)prim)->color0 = 0x808080;
-    setlen(prim, 9);
-    setcode(prim, 0x2C);
+    setPolyFT4(prim);
     ((CloadPolyFT4Packet *)prim)->x2 = x;
     ((CloadPolyFT4Packet *)prim)->x0 = x;
     ((CloadPolyFT4Packet *)prim)->y1 = y;
@@ -2323,7 +2298,7 @@ s32 cload_draw_icon_highlight(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s3
     ((CloadPolyFT4Packet *)prim)->v3 = 0xFF;
     ((CloadPolyFT4Packet *)prim)->v2 = 0xFF;
     ((CloadPolyFT4Packet *)prim)->clut = (index & 0x3F) | 0x7C80;
-    ((CloadPolyFT4Packet *)prim)->tpage = 5;
+    ((CloadPolyFT4Packet *)prim)->tpage = getTPage(0, 0, 320, 0);
     addPrim(ot, prim);
 
     return prim + 0x28;
@@ -2404,10 +2379,8 @@ CloadGpuPacket *cload_emit_icon_highlight_strip(CloadGpuPacket *p, CloadOrdering
     for (i = 0; i < 3; i++)
     {
         p->word4 = 0x808080;
-        setlen(p, 4);
-        setcode(p, 0x64);
-        p->x0 = (i * 0x80) + 8;
-        p->y0 = 0;
+        setSprt(p);
+        setXY0(p, (i * 0x80) + 8, 0);
         ((u8 *)p)[0xC] = 0;
         ((u8 *)p)[0xD] = 0;
         if (i == 2)
@@ -4173,8 +4146,7 @@ s32 cload_render_cached_glyph(s32 prim, s32 *ot, s32 character_code, s32 palette
     g_cload_glyph_upload_x = (slot % CLOAD_GLYPH_CACHE_COLUMNS) * 4;
     g_cload_glyph_upload_y = slot & CLOAD_GLYPH_CACHE_ROW_MASK;
 
-    rect.w = 4;
-    rect.h = 15;
+    setWH(&rect, 4, 15);
     rect.x = g_cload_glyph_upload_x + 0x140;
     rect.y = g_cload_glyph_upload_y;
 
@@ -4206,23 +4178,20 @@ s32 cload_emit_glyph_sprite(CloadGlyphSprite *sprite, s32 *ot, s32 cache_slot, s
 
     g_cload_glyph_cache[cache_slot].raw |= 0x10000;
 
-    setlen(sprite, 3);
-    setcode(sprite, 0x7C);
+    setSprt16(sprite);
     sprite->packet.g0 = 0x80;
     sprite->packet.b0 = 0x80;
     sprite->packet.r0 = 0x80;
     normalized_slot = cache_slot;
-    sprite->packet.x0 = g_cload_glyph_cursor_x;
-    sprite->packet.y0 = g_cload_glyph_cursor_y;
+    setXY0(&sprite->packet, g_cload_glyph_cursor_x, g_cload_glyph_cursor_y);
 
     if (cache_slot < 0)
     {
         normalized_slot = cache_slot + 15;
     }
 
-    sprite->packet.u0 = (cache_slot - ((normalized_slot >> 4) * 16)) * 16;
-    sprite->packet.v0 = cache_slot & CLOAD_GLYPH_CACHE_ROW_MASK;
-    sprite->packet.clut = 0x7FD3;
+    setUV0(&sprite->packet, (cache_slot - ((normalized_slot >> 4) * 16)) * 16, cache_slot & CLOAD_GLYPH_CACHE_ROW_MASK);
+    sprite->packet.clut = getClut(304, 511);
     sprite->packet.tag = (sprite->packet.tag & CLOAD_GPU_TAG_HIGH_MASK) | (*ot & CLOAD_GPU_ADDR_MASK);
 
     packet_address = ((u32)sprite) & CLOAD_GPU_ADDR_MASK;

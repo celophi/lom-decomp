@@ -3,7 +3,7 @@
 extern s32 g_overlay_load_base;
 extern u32 g_field_render_buffers;
 extern u32 g_world_map_overlay_end;
-extern u32 g_title_menu_buffers;
+extern u8 g_title_overlay_end;
 
 /**
  * @brief Return the common base address used for loading overlays.
@@ -19,7 +19,7 @@ s32* get_overlay_load_base(void)
  * @return Base of the two field render buffers at 0x80123FD8.
  * @see decomp.me (100%) https://decomp.me/scratch/rgamP
  */
-u32* get_field_render_buffers(void)
+void* get_field_render_buffers(void)
 {
     return &g_field_render_buffers;
 }
@@ -39,7 +39,7 @@ u32* get_world_map_overlay_end(void)
  * @return Base of the title menu buffers at 0x801026D0.
  * @see decomp.me (100%) https://decomp.me/scratch/fl1lB
  */
-u32* get_title_menu_buffers(void)
+void* get_title_menu_buffers(void)
 {
-    return &g_title_menu_buffers;
+    return &g_title_overlay_end;
 }

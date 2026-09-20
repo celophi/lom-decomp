@@ -1,4 +1,4 @@
-#include "common.h"
+#include "wsel.h"
 #include "display.h"
 #include "gpu_packet.h"
 #include "pad.h"
@@ -200,7 +200,6 @@ extern void func_8002216C(s32, s32, s32, s32);
 extern void func_8002279C(s32, s32);
 extern void func_80022AE8(void*, s32);
 
-s32 func_8004FC8C();
 void func_8004FD24();
 void func_8004FE78();
 void func_8004FFBC();
@@ -231,9 +230,9 @@ void func_80052510();
  * @param arg Context forwarded to the WSEL initialization and frame loop.
  * @return Selected WSEL exit state.
  */
-s32 func_8004FC8C(void* arg)
+s32 wsel_main(void* arg)
 {
-    S_801ED480* scene_state = (S_801ED480*)WSEL_SCENE_STATE_ADDRESS;
+    SceneState* scene_state = (SceneState*)WSEL_SCENE_STATE_ADDRESS;
     void* initial_context = arg;
     void* context;
 
@@ -243,9 +242,9 @@ s32 func_8004FC8C(void* arg)
 
     scene_state->map_id = 0;
     scene_state->object_index = 0;
-    scene_state->unk4 = 0;
-    scene_state->unk8 = 0;
-    scene_state->unkC = 0;
+    scene_state->camera_x = 0;
+    scene_state->camera_y = 0;
+    scene_state->camera_z = 0;
 
     do
     {
@@ -320,10 +319,7 @@ void func_8004FE78(void* arg)
     layout->back_display_width = 0x140;
     layout->back_display_height = 0xF0;
 
-    vram_rect.x = 0;
-    vram_rect.y = 0;
-    vram_rect.w = 0x400;
-    vram_rect.h = 0x200;
+    setRECT(&vram_rect, 0, 0, 0x400, 0x200);
     func_8001990C(&vram_rect, 0, 0, 0);
 
     func_800500A8();
@@ -905,8 +901,7 @@ void *func_800514D8(void *arg0, s32 *arg1, s32 arg2)
                 temp_s0 = (s32)(var_a2 & 0x100) >> 4;
                 temp_a1 = (var_a2 & 0x200) * 4;
                 do {
-                    M2C_FIELD(var_a0, s8 *, 3) = 4;
-                    M2C_FIELD(var_a0, u8 *, 7) = 0x64U;
+                    setSprt(var_a0);
                     M2C_FIELD(var_a0, u8 *, 6) = var_s1;
                     M2C_FIELD(var_a0, u8 *, 5) = var_s1;
                     M2C_FIELD(var_a0, u8 *, 4) = var_s1;
@@ -923,7 +918,7 @@ void *func_800514D8(void *arg0, s32 *arg1, s32 arg2)
                     M2C_FIELD(var_a0, u16 *, 0x10) = var_t3;
                     M2C_FIELD(var_a0, u16 *, 0x12) = var_t8;
                     do {
-                        M2C_FIELD(var_a0, s16 *, 0xE) = (s16)((M2C_FIELD(temp_t1, u16 *, 0xA) << 6) | (((u16)M2C_FIELD(temp_t1, u16 *, 8) >> 4) & 0x3F));
+                        M2C_FIELD(var_a0, s16 *, 0xE) = (s16)getClut((u16)M2C_FIELD(temp_t1, u16 *, 8), M2C_FIELD(temp_t1, u16 *, 0xA));
                     } while (0);
                     M2C_FIELD(var_a0, s32 *, 0) = (s32)((M2C_FIELD(var_a0, s32 *, 0) & 0xFF000000) | (*arg1 & mask24));
                     *arg1 = (*arg1 & 0xFF000000) | ((s32)var_a0 & mask24);
@@ -1251,7 +1246,7 @@ void func_800521D0(u8* res, s32 index)
     {
         res = res + 8;
     }
-    rect.x = x1; rect.y = y1; rect.w = *(u16*)(res + 8); rect.h = *(u16*)(res + 0xA);
+    setRECT(&rect, x1, y1, *(u16*)(res + 8), *(u16*)(res + 0xA));
     func_80019A34(&rect, (u_long*)(res + 0xC));
 }
 

@@ -1,3 +1,5 @@
+#include "cdrom.h"
+#include "game_audio.h"
 /** @file field_actor_runtime.c
  * @brief Coordinate actor resources, animation tracks, and actor slot runtime state.
  */
@@ -9,8 +11,6 @@
 #include "cd_resources.h"
 #include "sdk/libgpu.h"
 
-s32 cdrom_stream(s32 resourceIndex, u32 destination);
-void cdrom_wait_queue_empty(void);
 extern void func_80084240(void);
 void func_80140004(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex);
 void func_800A74E8();
@@ -536,7 +536,6 @@ void func_800A7434(void);
 void func_800A74B8(void);
 void field_text_reset_windows(void);
 void func_80092124(void);
-void cdrom_queue_seek(s32);
 void akao_cmd_c1(s32, s32, s32);
 void akao_cmd_a9(s32, s32);
 
@@ -685,7 +684,7 @@ void field_update_gover_load(void)
         ptr->unk92 = 0;
         ptr->unk13F = 0;
         ptr->unk91 = 0;
-        cdrom_stream(CD_RES_GOVER_BIN, 0x80140000);
+        cdrom_stream(CD_RES_GOVER_BIN, (void*)0x80140000);
         cdrom_wait_queue_empty();
         func_80140004(0x80160000, g_field_gover_image_resource_id, g_field_gover_music_resource_id, g_field_gover_audio_clip_id);
         func_80084240();
@@ -771,7 +770,7 @@ void field_update_audio_timer(void)
         g_field_audio_timer = remaining_frames;
         if (remaining_frames == 0)
         {
-            akao_song_cmd_12c();
+            fade_out_current_song();
             func_800A380C();
             func_800A3904(0, 1, D_8011588C);
         }
@@ -2911,10 +2910,7 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
     {
         if (narrow_layout != 0)
         {
-            rect.x = 0xC0;
-            rect.y = palette_row + 0x1F4;
-            rect.w = 0x40;
-            rect.h = 1;
+            setRECT(&rect, 0xC0, palette_row + 0x1F4, 0x40, 1);
         }
         else
         {
@@ -2938,10 +2934,7 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
     else if (narrow_layout != 0)
     {
         s32 base = (texture_column << 6) + 0x380;
-        rect.x = base - (slot_index << 7);
-        rect.y = 0x80;
-        rect.w = 0x40;
-        rect.h = 0x80;
+        setRECT(&rect, base - (slot_index << 7), 0x80, 0x40, 0x80);
     }
     else
     {
@@ -3159,13 +3152,14 @@ void field_render_actor_objects(FieldRenderContext *render_context)
 /**
  * @brief Stream one CD resource into the current field resource cursor.
  * @param resource_id CD resource id to queue.
+ * @param destination Buffer receiving the queued data.
  * @see decomp.me (100%) TODO
  */
-static void field_stream_resource_to_buffer(u16 resource_id)
+static void field_stream_resource_to_buffer(u16 resource_id, void* destination)
 {
     s32 size;
 
-    size = cdrom_queue_read(resource_id);
+    size = cdrom_queue_read(resource_id, destination);
     cdrom_wait_queue_empty();
     g_field_resource_cursor += (size + 3) & ~3;
 }
@@ -3686,10 +3680,7 @@ void field_upload_resource_texture(FieldCdBuffer *buf, s32 slot_index, s32 textu
 
     if (texture_index == 2)
     {
-        rect.x = 0xC0;
-        rect.y = palette_row + 0x1F4;
-        rect.w = 0x40;
-        rect.h = 1;
+        setRECT(&rect, 0xC0, palette_row + 0x1F4, 0x40, 1);
     }
     else
     {
@@ -3721,17 +3712,11 @@ void field_upload_resource_texture(FieldCdBuffer *buf, s32 slot_index, s32 textu
 
         if (texture_index == 2)
         {
-            rect.x = 0x3C0 - (slot_index << 7);
-            rect.y = 0x80;
-            rect.w = 0x40;
-            rect.h = 0x80;
+            setRECT(&rect, 0x3C0 - (slot_index << 7), 0x80, 0x40, 0x80);
         }
         else if (texture_index == 1)
         {
-            rect.x = 0x3C0 - (slot_index << 7);
-            rect.y = 0;
-            rect.w = w;
-            rect.h = h;
+            setRECT(&rect, 0x3C0 - (slot_index << 7), 0, w, h);
         }
         else
         {

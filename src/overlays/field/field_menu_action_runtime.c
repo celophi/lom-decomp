@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 
 void func_800B2844();
@@ -20,7 +21,7 @@ typedef struct
     u8 pad26ED[7];
     u8 unk26F4;
 } FieldActionGroupView;
-extern u8 D_80122C00[], D_80122C0F, D_80122C1F, g_menuLayoutBuffer[], D_800F0E98[];
+extern u8 D_80122C00[], D_80122C0F, D_80122C1F, D_800F0E98[];
 extern u8 D_80122C08[];
 extern void func_800C7C88(void);
 /**
@@ -38,7 +39,7 @@ void func_800C766C(void)
     record = D_80122C1F;
     count = 0;
     i = count;
-    layout = g_menuLayoutBuffer;
+    layout = g_saved_game.bytes;
     cursor = values;
     do
     {
@@ -79,14 +80,14 @@ void func_800C766C(void)
     ((Selection *)D_80122C08)->mask = mask;
     ((Selection *)D_80122C08)->count = limit;
     record_offset = record * 0x8C;
-    record_base = g_menuLayoutBuffer;
+    record_base = g_saved_game.bytes;
     flags = ((FieldActionGroupView *)(record_base + record_offset))->unk26E4;
     kind = flags >> 8;
     kind &= 0xF;
     limit = flags & 0xF;
     do
     {
-        if ((u32)((FieldActionGroupView *)(g_menuLayoutBuffer + record_offset + i * 0x10))->unk26F4 < 0xFF)
+        if ((u32)((FieldActionGroupView *)(g_saved_game.bytes + record_offset + i * 0x10))->unk26F4 < 0xFF)
         {
             count++;
         }
@@ -134,7 +135,7 @@ typedef struct
     s16 mask;
     s8 count;
 } Availability;
-extern u8 g_menuLayoutBuffer[], D_80122C0B[], D_800F0E98[];
+extern u8 D_80122C0B[], D_800F0E98[];
 extern u8 D_80122C08[];
 extern u8 D_80122C1F;
 /**
@@ -172,8 +173,8 @@ void func_800C7840(void)
     slot_index = occupied_count;
     group = D_80122C1F;
     initial_offset = group * 0x8C;
-    group_flags = ((FieldActionGroupView *)(g_menuLayoutBuffer + initial_offset))->unk26E4;
-    layout_base = (s32)g_menuLayoutBuffer;
+    group_flags = ((FieldActionGroupView *)(g_saved_game.bytes + initial_offset))->unk26E4;
+    layout_base = (s32)g_saved_game.bytes;
     group_offset = initial_offset;
     slot_limit = group_flags >> 8;
     slot_limit &= 0xF;
@@ -191,7 +192,7 @@ void func_800C7840(void)
     slot_index = 0;
     if (slot_limit != 0)
     {
-        second_base = (s32)g_menuLayoutBuffer;
+        second_base = (s32)g_saved_game.bytes;
         second_offset = group * 0x8C;
         empty_slot = 0xFF;
 loop_6:
@@ -206,7 +207,7 @@ loop_6:
     }
     flag_mask = 0xFFFF0FFF;
     new_count = slot_index + 1;
-    post_layout_base = (s32)g_menuLayoutBuffer;
+    post_layout_base = (s32)g_saved_game.bytes;
     group_offset = group * 0x8C;
     group_view = (FieldActionGroupView *)(post_layout_base + group_offset);
     D_80122C0B[0] = new_count;
@@ -258,7 +259,7 @@ typedef struct Layout
     u8 slots[8];
     u8 entry;
 } Layout;
-extern u8 g_menuLayoutBuffer[];
+
 /**
  * @brief Fill free record entries up to the clamped capacity and update linked counters.
  * @note Random slot selection retries at most 1000 times before scanning for a free slot.
@@ -288,7 +289,7 @@ void func_800C7A3C(void)
     var_s1 = var_s0;
     temp_s2 = D_80122C1F;
     temp_v0 = temp_s2 * 0x8C;
-    temp_v1 = ((Layout *)((u8 *)g_menuLayoutBuffer + temp_v0))->packed;
+    temp_v1 = ((Layout *)((u8 *)g_saved_game.bytes + temp_v0))->packed;
     var_a1 = temp_v1 & 0xF;
     var_a0 = var_s1 * 16 + temp_v0;
     temp_s7 = temp_v1 >> 8;
@@ -299,7 +300,7 @@ void func_800C7A3C(void)
     do
    
    {
-        if (((Layout *)((u8 *)g_menuLayoutBuffer + (var_a0)))->entry != 0xFF)
+        if (((Layout *)((u8 *)g_saved_game.bytes + (var_a0)))->entry != 0xFF)
        
        {
             var_s0 += 1;
@@ -337,14 +338,14 @@ void func_800C7A3C(void)
            
            {
                 var_a1 = rand() / 4096;
-                if (((Layout *)((u8 *)g_menuLayoutBuffer + var_a1 * 16 + temp_s2 * 0x8C))->entry ==
+                if (((Layout *)((u8 *)g_saved_game.bytes + var_a1 * 16 + temp_s2 * 0x8C))->entry ==
                     0xFF)
                
                {
                     break;
                 }
             }
-            if (((Layout *)((u8 *)g_menuLayoutBuffer + var_a1 * 16 + temp_s2 * 0x8C))->entry ==
+            if (((Layout *)((u8 *)g_saved_game.bytes + var_a1 * 16 + temp_s2 * 0x8C))->entry ==
                 0xFF)
            
            {
@@ -356,7 +357,7 @@ void func_800C7A3C(void)
                 for (var_s0 = 0; var_s0 < 8; var_s0++)
                
                {
-                    if (((Layout *)((u8 *)g_menuLayoutBuffer + var_s0 * 16 + temp_s2 * 0x8C))
+                    if (((Layout *)((u8 *)g_saved_game.bytes + var_s0 * 16 + temp_s2 * 0x8C))
                             ->entry == 0xFF)
                    
                    {
@@ -372,7 +373,7 @@ void func_800C7A3C(void)
     if (temp_s7 != 0)
    
    {
-        temp_v1_4 = (u8 *)g_menuLayoutBuffer;
+        temp_v1_4 = (u8 *)g_saved_game.bytes;
         var_a1 = temp_s2 * 0x8C;
         do
        
@@ -394,18 +395,18 @@ void func_800C7A3C(void)
 extern u8 D_800F0E98[];
 extern s16 D_80122C14;
 extern u8 D_80122C1F;
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Clears the active menu entry's high flag nibble and status bytes.
  *
- * For the entry selected by D_80122C1F (stride 0x8C in g_menuLayoutBuffer),
+ * For the entry selected by D_80122C1F (stride 0x8C in g_saved_game.bytes),
  * masks off bits 12-15 of its 0x26E4 word and writes 0xFF to the four status
  * bytes at 0x26EC.
  */
 void func_800C7C88(void)
 {
-    u8 *base = g_menuLayoutBuffer;
+    u8 *base = g_saved_game.bytes;
     u8 *base2;
     s32 offset = D_80122C1F * 0x8C;
     s32 offset2;
@@ -425,13 +426,13 @@ void func_800C7C88(void)
 /**
  * @brief Resets the eight menu action slots and clears a nibble of the flags.
  *
- * Reads the flags word at @c g_menuLayoutBuffer + 0x26E4, zeroes the eight
+ * Reads the flags word at @c g_saved_game.bytes + 0x26E4, zeroes the eight
  * slots at stride 0x10 from +0x26F0 (each slot's word set to 0 and its status
  * byte at +4 set to 0xFF), then clears bits 12-15 of the flags word.
  */
 void func_800C7CF8(void)
 {
-    u8 *base = g_menuLayoutBuffer;
+    u8 *base = g_saved_game.bytes;
     s32 flags = *(s32 *)(base + 0x26E4);
 
     *(s32 *)(base + 0x26F0) = 0;
@@ -562,7 +563,7 @@ void func_800C7DB8(void)
 
 typedef struct { u8 unk0; u8 pad[0x11]; u8 unk12; } FieldActionViewC7F44;
 extern u8 D_80122C0D;
-extern u8 g_menuLayoutBuffer[];
+
 /** @brief Release the selected action slot and replenish its entry count. */
 void func_800C7F44(void)
 {
@@ -577,11 +578,11 @@ void func_800C7F44(void)
     vb = ((FieldActionViewC7F44 *)&D_80122C0D)->unk12;
    
    {
-        u8 *buf = g_menuLayoutBuffer;
+        u8 *buf = g_saved_game.bytes;
         u8 *base = buf + (va * 0x10 + vb * 0x8C);
         idx = base[0x26F4];
     }
-    value = g_menuLayoutBuffer[idx + 0x25E0];
+    value = g_saved_game.bytes[idx + 0x25E0];
     value += 1;
     if (value >= 0)
     {
@@ -596,7 +597,7 @@ void func_800C7F44(void)
     }
    
    {
-        u8 *buf = g_menuLayoutBuffer;
+        u8 *buf = g_saved_game.bytes;
         u8 *base;
         buf[idx + 0x25E0] = out;
         base = buf + (va * 0x10 + vb * 0x8C);
@@ -623,7 +624,7 @@ typedef struct
     u8 unk12;
 } FieldActionViewC8014;
 extern u8 D_80122C0D;
-extern u8 g_menuLayoutBuffer[];
+
 extern u8 D_800F0E98[];
 
 /** @brief Read the selected action slot and dispatch its entry description. */
@@ -641,7 +642,7 @@ void func_800C8014(void)
     u8 idx;
 
     va = ((FieldActionViewC8014 *)&D_80122C0D)->unk0 - 4;
-    menu = g_menuLayoutBuffer;
+    menu = g_saved_game.bytes;
     table = D_800F0E98;
     base = menu + (va * 0x10 + ((FieldActionViewC8014 *)&D_80122C0D)->unk12 * 0x8C);
     value = *(volatile s32 *)(base + 0x26F0);
@@ -655,7 +656,7 @@ void func_800C8014(void)
     ((FieldActionViewC8014 *)&D_80122C0D)->unkF = idx;
 }
 
-extern u8 g_menuLayoutBuffer[];
+
 extern u8 D_80122C1F;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
@@ -682,7 +683,7 @@ void func_800C80BC(void)
     }
 
     selected_index = g_gosub_result_values[0];
-    initial_base = g_menuLayoutBuffer;
+    initial_base = g_saved_game.bytes;
     {
         u8 *check_record = initial_base + selected_index * 0x40;
         if (*(s32 *)(check_record + 0xD18) == 0)
@@ -696,11 +697,11 @@ void func_800C80BC(void)
     }
 
     record_index = 0;
-    scan_base = g_menuLayoutBuffer;
+    scan_base = g_saved_game.bytes;
     selected_record = scan_base + selected_index * 0x40;
     while (record_index < 4)
     {
-        u8 *record = (u8 *)((s32)g_menuLayoutBuffer + record_index * 0x40);
+        u8 *record = (u8 *)((s32)g_saved_game.bytes + record_index * 0x40);
         if (record[0x3160] != 0)
         {
             if (*(s32 *)(selected_record + 0xD18) == *(s32 *)(record + 0x3198))
@@ -717,10 +718,10 @@ void func_800C80BC(void)
 
     for (record_index = 0; record_index < 4; record_index++)
     {
-        u8 *record = (u8 *)((s32)g_menuLayoutBuffer + record_index * 0x40);
+        u8 *record = (u8 *)((s32)g_saved_game.bytes + record_index * 0x40);
         if (record[0x3160] == 0)
         {
-            func_800A8F8C(g_menuLayoutBuffer + record_index * 0x40 + 0x3160, g_menuLayoutBuffer + 0xCE0 + selected_index * 0x40);
+            func_800A8F8C(g_saved_game.bytes + record_index * 0x40 + 0x3160, g_saved_game.bytes + 0xCE0 + selected_index * 0x40);
             func_800C2A88(selected_index);
             count = *(s32 *)(record + 0x3194);
             if (count == 0)
@@ -869,7 +870,7 @@ void func_800C83DC(void)
     u8 *menu_base;
 
     record_index = 0;
-    menu_base = g_menuLayoutBuffer;
+    menu_base = g_saved_game.bytes;
     record_offset = record_index;
     do
     {
@@ -985,7 +986,7 @@ typedef struct
 } FieldMenuActionSlotView;
 
 extern u8 D_80122C0D;
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Reset the selected menu action slot to its inactive state.
@@ -1001,7 +1002,7 @@ void field_reset_menu_action_slot(void)
     s32 slot_index;
 
     slot_index = ((FieldMenuCommandState *)&D_80122C0D)->action_slot_id - 4;
-    menu = g_menuLayoutBuffer;
+    menu = g_saved_game.bytes;
     slot = (FieldMenuActionSlotView *)(menu + (slot_index * 0x10 + ((FieldMenuCommandState *)&D_80122C0D)->record_index * 0x8C));
     slot->entry_index = 0xFF;
     slot->handle = 0;

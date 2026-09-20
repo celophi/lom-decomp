@@ -352,10 +352,7 @@ s32 menu_handle_input(s32 process_actions)
                 case 2:
                     if (g_menu_char_slot == 0)
                     {
-                        rect.x = 0x40;
-                        rect.y = 0x60;
-                        rect.w = 0xF0;
-                        rect.h = 0x60;
+                        setRECT(&rect, 0x40, 0x60, 0xF0, 0x60);
                         submenu_slot = menu_slot_alloc(3, &rect);
                         submenu_slot->content_cb = (s32 * (*)()) & menu_spell_list_callback;
                         submenu_slot->navigation.packed =
@@ -374,17 +371,11 @@ s32 menu_handle_input(s32 process_actions)
                         { u8* pad_base0 = (u8*)g_pad_ctx; item_flag = *(pad_base0 + content_type + 0x609); }
                         if ((item_flag != MENU_NONE) && (item_flag & 0x80))
                         {
-                            rect.x = 0xB0;
-                            rect.y = 0x60;
-                            rect.w = 0x70;
-                            rect.h = 0x50;
+                            setRECT(&rect, 0xB0, 0x60, 0x70, 0x50);
                         }
                         else
                         {
-                            rect.x = 0xB0;
-                            rect.y = 0x60;
-                            rect.w = 0x70;
-                            rect.h = 0x40;
+                            setRECT(&rect, 0xB0, 0x60, 0x70, 0x40);
                         }
                         submenu_slot = menu_slot_alloc(3, &rect);
                         submenu_slot->content_cb = (s32 * (*)()) & menu_subtype_action_callback;
@@ -425,10 +416,7 @@ s32 menu_handle_input(s32 process_actions)
                 case 10:
                     if (g_menu_char_slot == 0)
                     {
-                        rect.x = 0xB0;
-                        rect.y = 0x30;
-                        rect.w = 0x70;
-                        rect.h = 0x60;
+                        setRECT(&rect, 0xB0, 0x30, 0x70, 0x60);
                         submenu_slot = menu_slot_alloc(3, &rect);
                         submenu_slot->content_cb = (s32 * (*)()) & menu_equipment_action_callback;
                         submenu_slot->navigation.packed = (submenu_slot->navigation.packed & 0xFE00FFFF) | 0x50000;
@@ -1882,8 +1870,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 u8 v_val;
                                 SET_BGR0_PACKED(packet_cursor, GPU_TINT_NEUTRAL);
                                 setSprt(packet_cursor);
-                                ((SPRT*)packet_cursor)->x0 = content_item->packed_x & MENU_CONTENT_X_MASK;
-                                ((SPRT*)packet_cursor)->y0 = content_item->y - MENU_CONTENT_VIEW_Y_OFFSET;
+                                setXY0((SPRT*)packet_cursor, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET);
                                 u_val = 0xD0;
                                 if (g_menu_char_slot == 2)
                                 {
@@ -1903,8 +1890,7 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 SET_BGR0_PACKED(packet_cursor, 0);
                                 setSprt(packet_cursor);
                                 setSemiTrans(packet_cursor, 1);
-                                ((SPRT*)packet_cursor)->x0 = (content_item->packed_x & MENU_CONTENT_X_MASK) + 2;
-                                ((SPRT*)packet_cursor)->y0 = content_item->y - 6;
+                                setXY0((SPRT*)packet_cursor, (content_item->packed_x & MENU_CONTENT_X_MASK) + 2, content_item->y - 6);
                                 u_val = 0xD0;
                                 if (g_menu_char_slot == 2)
                                 {
@@ -2844,8 +2830,7 @@ void* menu_emit_slot_scroll_arrows(SPRT* sprite, u_long* ot_entry, MenuSlot* slo
     {
         SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
         setSprt(sprite);
-        sprite->x0 = slot->x + slot->w - MENU_SCROLL_ARROW_SIZE;
-        sprite->y0 = slot->y;
+        setXY0(sprite, slot->x + slot->w - MENU_SCROLL_ARROW_SIZE, slot->y);
         SET_SPRT_UV0_PACKED(sprite, MENU_SCROLL_ARROW_UV_UP);
         SET_SPRT_CLUT(sprite, MENU_SCROLL_ARROW_CLUT);
         SET_SPRT_WH_PACKED(sprite, MENU_SCROLL_ARROW_SIZE, MENU_SCROLL_ARROW_SIZE);
@@ -2859,8 +2844,7 @@ void* menu_emit_slot_scroll_arrows(SPRT* sprite, u_long* ot_entry, MenuSlot* slo
     {
         SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
         setSprt(sprite);
-        sprite->x0 = slot->x + slot->w - MENU_SCROLL_ARROW_SIZE;
-        sprite->y0 = slot->y + slot->h - 8;
+        setXY0(sprite, slot->x + slot->w - MENU_SCROLL_ARROW_SIZE, slot->y + slot->h - 8);
         SET_SPRT_UV0_PACKED(sprite, MENU_SCROLL_ARROW_UV_DOWN);
         SET_SPRT_WH_PACKED(sprite, MENU_SCROLL_ARROW_SIZE, MENU_SCROLL_ARROW_SIZE);
         SET_SPRT_CLUT(sprite, MENU_SCROLL_ARROW_CLUT);
@@ -3473,12 +3457,9 @@ void* menu_emit_icon_sprite(void* prim_buf, s32* ot, s32 icon_id, s32 x, s32 y, 
     SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
     setSprt(sprite);
     sprite_x = x - secondary_offset;
-    sprite->x0 = (s16)(sprite_x + animation_offset);
-    sprite->y0 = (s16)((y - secondary_offset) + animation_offset);
-    sprite->u0 = g_menu_icon_sprite_defs[icon_id].u_coord;
-    sprite->v0 = g_menu_icon_sprite_defs[icon_id].v_coord;
-    sprite->w = (s16)g_menu_icon_sprite_defs[icon_id].w;
-    sprite->h = (s16)g_menu_icon_sprite_defs[icon_id].h;
+    setXY0(sprite, (s16)(sprite_x + animation_offset), (s16)((y - secondary_offset) + animation_offset));
+    setUV0(sprite, g_menu_icon_sprite_defs[icon_id].u_coord, g_menu_icon_sprite_defs[icon_id].v_coord);
+    setWH(sprite, (s16)g_menu_icon_sprite_defs[icon_id].w, (s16)g_menu_icon_sprite_defs[icon_id].h);
     SET_SPRT_CLUT(sprite, menu_icon_clut(g_menu_icon_clut_codes[icon_id]));
     addPrim((u_long*)ot, sprite);
     sprite += 1;
@@ -3498,12 +3479,9 @@ void* menu_emit_icon_sprite(void* prim_buf, s32* ot, s32 icon_id, s32 x, s32 y, 
         {
             setSemiTrans(sprite, 1);
         }
-        sprite->x0 = (s16)(x + (secondary_offset - animation_offset) * 2);
-        sprite->y0 = (s16)(y + (secondary_offset - animation_offset) * 2);
-        sprite->u0 = g_menu_icon_sprite_defs[icon_id].u_coord;
-        sprite->v0 = g_menu_icon_sprite_defs[icon_id].v_coord;
-        sprite->w = (s16)g_menu_icon_sprite_defs[icon_id].w;
-        sprite->h = (s16)g_menu_icon_sprite_defs[icon_id].h;
+        setXY0(sprite, (s16)(x + (secondary_offset - animation_offset) * 2), (s16)(y + (secondary_offset - animation_offset) * 2));
+        setUV0(sprite, g_menu_icon_sprite_defs[icon_id].u_coord, g_menu_icon_sprite_defs[icon_id].v_coord);
+        setWH(sprite, (s16)g_menu_icon_sprite_defs[icon_id].w, (s16)g_menu_icon_sprite_defs[icon_id].h);
         SET_SPRT_CLUT(sprite, menu_icon_clut(g_menu_icon_clut_codes[icon_id]));
         addPrim((u_long*)ot, sprite);
         sprite += 1;
@@ -3528,8 +3506,7 @@ void* menu_emit_sort_marker(void* prim_buf, s32* ot, s16 x, s16 y)
     setSprt(sprite);
     SET_SPRT_WH_PACKED(sprite, 16, 16);
     SET_SPRT_UV0_PACKED(sprite, 0x80);
-    sprite->x0 = x;
-    sprite->y0 = y;
+    setXY0(sprite, x, y);
     SET_SPRT_CLUT(sprite, getClut(0x60, MENU_ICON_CLUT_Y_BASE));
     addPrim((u_long*)ot, sprite);
     return sprite + 1;
