@@ -734,7 +734,7 @@ extern s32 g_menu_active_node;
 extern s32 g_menu_saved_equipment_item;
 extern u8 g_menu_init_content_id;
 
-extern Struct_D_800FD818 D_800FD818;
+extern Struct_D_800FD818 g_field_player_records;
 extern u16 D_800FDA80;
 extern u16 D_800FDCE8;
 /** @brief Ability-compatibility mask rebuilt before item content is loaded. */

@@ -1204,3 +1204,10 @@ field_text_get_choice                    = 0x80067598;
 
 // Field object runtime state, also read by MENU.
 g_field_object_states               = 0x80105AE0;
+
+g_field_object_parts = 0x800FE3A0;
+g_field_actor_bindings = 0x80105880;
+g_field_player_records = 0x800FD818;
+g_field_actor_templates = 0x800FD81C;
+g_field_shared_actor_template = 0x800FDCEC;
+g_field_actor_sequence_data = 0x8010AED0;

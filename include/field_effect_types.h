@@ -156,7 +156,7 @@ typedef struct FieldActorAnimationDef
     u16 unknown_0x12;
     u8 hit_test_mode;
     u8 hit_test_part;
-    u8 pad16;
+    u8 animation_mode;
     u8 hit_radius;
     u16 sync_flags;
     u16 sync_parts;
@@ -172,7 +172,7 @@ typedef struct FieldActorState
     FieldActorPartDef* parts;
     u8 pad4[0xC - 4];
     FieldActorAnimationDef* animation;
-    u8 pad10[0x14 - 0x10];
+    FieldActorAnimationDef* animations;
     u8* track_data;
     u8* mesh_data;
     u8 pad1C[0x24 - 0x1C];
@@ -181,8 +181,8 @@ typedef struct FieldActorState
     u8 hit_reaction; /* reaction selector applied to collected targets */
     u8 unknown_0x27;
     u8 unknown_0x28;
-    u8 unknown_0x29;
-    u8 unknown_0x2a;
+    u8 animation_index;
+    u8 sequence_active;
     u8 unknown_0x2b[16];
     u8 active_counts[9][16];
     u8 padCB;
@@ -197,7 +197,7 @@ typedef struct FieldActorState
     u8 actor_index;
     u16 unknown_0x234;
     u16 unknown_0x236;
-    u8 pad238[2];
+    u16 animation_mode;
     u8 active_track_mask;
     u8 unknown_0x23b;
     u8 pad23C[0x240 - 0x23C];
@@ -221,7 +221,7 @@ typedef struct FieldMotionRecord
     s16 rotation_x;
     s16 heading;
     s16 pitch;
-    s16 unknown_0x16;
+    s16 motion_divisor;
     /** @brief Literal effect color; the fourth byte also selects the position source. */
     union
     {
@@ -257,7 +257,7 @@ typedef struct FieldMotionRecord
     u8 rotation_y_16;
     u8 unknown_0x34;
     u8 unknown_0x35;
-    u8 unknown_0x36;
+    u8 motion_remainder;
     u8 vertical_offset;
     u8 unknown_0x38;
     u8 path_group;

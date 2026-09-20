@@ -752,7 +752,7 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     extern Actor g_field_actors[];
     extern Slot g_field_object_states[];
     extern Resource g_field_resource_entries[];
-    extern Appearance D_800FE3A0[];
+    extern Appearance g_field_object_parts[];
     extern u8 D_800EB20C[], D_8010CFE0[], D_8010AE84;
     void func_8008EF0C(Actor *);
     void field_restart_actor_animation(Actor *);
@@ -962,7 +962,7 @@ apply_collision_state:
                     mover->dx = dx;
                     mover->dy = 0;
                     mover->dz = dz;
-                    if (D_800FE3A0[actor->unk3A].unk2E == 0x40)
+                    if (g_field_object_parts[actor->unk3A].unk2E == 0x40)
                     {
                         mover->radius = 0xC;
                         mover->flags.parts.radius_z = 8;

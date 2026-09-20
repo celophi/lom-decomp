@@ -246,10 +246,10 @@ typedef struct
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-extern Struct_D800FD818 D_800FD818[];
+extern Struct_D800FD818 g_field_player_records[];
 extern Struct_D800FDF58 g_field_actors[];
 extern Struct_D80105AE0 g_field_object_states[];
-extern Struct_D80105880 D_80105880[];
+extern Struct_D80105880 g_field_actor_bindings[];
 
 extern FieldActorState g_field_actor_slots[80];
 extern FieldResourceEntry g_field_resource_entries[];
@@ -437,7 +437,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                 {
                     if (((temp_v1_4 & 3) == 2) && (item[6] == 2))
                     {
-                        if (D_800FD818[rec->unk3A].unk258 == 0)
+                        if (g_field_player_records[rec->unk3A].unk258 == 0)
                         {
                             goto block_28;
                         }
@@ -1088,7 +1088,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                     {
                                         if (!(((u32)g_field_object_states[sp28.index].unk178 >> 6) & 1))
                                         {
-                                            clamp_base = D_80105880;
+                                            clamp_base = g_field_actor_bindings;
                                             var_v1_10 = sp28.index < 3 ? sp28.index : 2;
                                             temp_v0_18 = clamp_base[var_v1_10].unkC;
                                             if (temp_v0_18 == sp28.index)

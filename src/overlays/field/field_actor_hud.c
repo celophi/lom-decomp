@@ -152,7 +152,7 @@ void func_80084700(u8 *render_context)
 {
     extern FieldPanelActor g_field_actors[], g_field_effect_records[];
     extern FieldPanelSlot g_field_object_states[];
-    extern FieldPanelPlayer D_800FD818[];
+    extern FieldPanelPlayer g_field_player_records[];
     extern s32 D_800EB04C[];
 
     extern s32 g_field_active_group, g_field_scene_mode_bit, D_80122B20;
@@ -164,7 +164,7 @@ void func_80084700(u8 *render_context)
     s32 j;
     s32 absent = 0xFF;
     FieldPanelSlot *slot = g_field_object_states;
-    FieldPanelPlayer *player = D_800FD818;
+    FieldPanelPlayer *player = g_field_player_records;
     FieldPanelActor *actor = g_field_actors;
     FieldPanelActor *actor_one;
     FieldPanelPlayer *player_one;
@@ -205,12 +205,12 @@ void func_80084700(u8 *render_context)
     {
         case 1:
             i = 0;
-            player_one = D_800FD818;
+            player_one = g_field_player_records;
             actor_one = g_field_actors;
             do
             {
                 actor_one = &g_field_actors[i];
-                player_one = &D_800FD818[i];
+                player_one = &g_field_player_records[i];
                 if (actor_one->presence != 0xFF && (player_one->flags & 1))
                 {
                     func_80084D08(0x70, 0x10, i, render_context, 0x64);
@@ -220,13 +220,13 @@ void func_80084700(u8 *render_context)
             break;
         case 2:
             i = 0;
-            player_two = D_800FD818;
+            player_two = g_field_player_records;
             actor_two = g_field_actors;
             x_two = 0x38;
             do
             {
                 actor_two = &g_field_actors[i];
-                player_two = &D_800FD818[i];
+                player_two = &g_field_player_records[i];
                 if (actor_two->presence != 0xFF && (player_two->flags & 1))
                 {
                     func_80084D08(x_two, 0x10, i, render_context, 0x64);
@@ -241,7 +241,7 @@ void func_80084700(u8 *render_context)
             x_three = 8;
             do
             {
-                if (g_field_actors[*order].presence != 0xFF && (D_800FD818[*order].flags & 1))
+                if (g_field_actors[*order].presence != 0xFF && (g_field_player_records[*order].flags & 1))
                 {
                     y_three = 0x1C;
                     if (i & 1)
@@ -362,7 +362,7 @@ void func_80084D08(s32 x, s32 y, s32 slot, u8 *render_context, u32 value_per_bar
     extern u32 D_800EAFFC[];
     extern u32 D_800EB004[];
     extern s16 D_800EB058[];
-    extern Entry268 D_800FD818[];
+    extern Entry268 g_field_player_records[];
     extern u8 D_800FDCEA;
     extern Rec54 g_field_actors[];
     extern State23C g_field_object_states[];
@@ -442,16 +442,16 @@ void func_80084D08(s32 x, s32 y, s32 slot, u8 *render_context, u32 value_per_bar
 
     if (slot < 3)
     {
-        if (D_800FD818[slot].unk259 < 6U)
+        if (g_field_player_records[slot].unk259 < 6U)
         {
-            y += D_800EB058[D_800FD818[slot].unk259];
-            if (D_800FD818[slot].unk259 != 0)
+            y += D_800EB058[g_field_player_records[slot].unk259];
+            if (g_field_player_records[slot].unk259 != 0)
             {
-                D_800FD818[slot].unk259--;
+                g_field_player_records[slot].unk259--;
             }
             else
             {
-                D_800FD818[slot].unk259 = 0xFF;
+                g_field_player_records[slot].unk259 = 0xFF;
             }
         }
     }
@@ -601,7 +601,7 @@ void func_80084D08(s32 x, s32 y, s32 slot, u8 *render_context, u32 value_per_bar
     gauge_cursor = helper_cursor;
     if (slot < 3)
     {
-        entry_base = D_800FD818;
+        entry_base = g_field_player_records;
         actor_entry = &entry_base[slot];
         if ((actor_entry->unk260 != 0) && (g_field_actors[slot].unk2a == 0x8E))
         {

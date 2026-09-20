@@ -187,7 +187,7 @@ typedef struct
     u8 pad17C[0x23C - 0x17C];
 } Slot23C;
 
-/** @brief D_800FD818 object entry (stride 0x268). */
+/** @brief g_field_player_records object entry (stride 0x268). */
 typedef struct
 {
     u8 unk0;
@@ -218,7 +218,7 @@ typedef struct
 } Anim190;
 
 extern Slot23C g_field_object_states[];
-extern Entry268 D_800FD818[];
+extern Entry268 g_field_player_records[];
 extern Anim190 g_field_resource_actions[];
 
 void field_start_actor_animation();
@@ -231,7 +231,7 @@ void func_8008BC5C(FieldRec *rec);
 void func_8008E690(FieldRec *rec);
 s32 func_80091728(u8 index, s32 kind, FieldRec *rec);
 s32 func_80091914(FieldRec *rec, u8 index);
-void func_80096334(FieldRec *rec);
+void field_restart_sequence_animation(FieldRec *rec);
 void func_800A2DD8(u8 index);
 
 /** @brief Program the animation record for object @p idx (fields 0x58..0x5E). */
@@ -358,13 +358,13 @@ s32 func_80092C98(FieldRec *rec)
             {
                 g_field_object_states[g_field_object_states[rec->unk3A].unk170].unkC &= ~0x2000;
                 rec->unk2A = 0;
-                func_80096334(rec);
+                field_restart_sequence_animation(rec);
                 tmp = func_800839F8(rec->unk3A, 0);
                 if (tmp != -1)
                 {
                     if (func_8008AABC(rec->unk3A, g_field_object_states[rec->unk3A].unk170) != 0)
                     {
-                        if (D_800FD818[rec->unk3A].unk1 == 8)
+                        if (g_field_player_records[rec->unk3A].unk1 == 8)
                         {
                             func_8008A9D8(rec->unk3A, g_field_object_states[rec->unk3A].unk170, 0xD);
                         }
@@ -374,14 +374,14 @@ s32 func_80092C98(FieldRec *rec)
                         }
                         index = rec->unk3A;
                         anim_id = 0x64;
-                        if (D_800FD818[index].unk1 == 8)
+                        if (g_field_player_records[index].unk1 == 8)
                         {
                             anim_id = 0x61;
                         }
                     }
                     else
                     {
-                        if (D_800FD818[rec->unk3A].unk1 == 8)
+                        if (g_field_player_records[rec->unk3A].unk1 == 8)
                         {
                             func_8008A9D8(g_field_object_states[rec->unk3A].unk170, rec->unk3A, 0x18);
                         }
@@ -391,7 +391,7 @@ s32 func_80092C98(FieldRec *rec)
                         }
                         index = rec->unk3A;
                         anim_id = 0x65;
-                        if (D_800FD818[index].unk1 == 8)
+                        if (g_field_player_records[index].unk1 == 8)
                         {
                             anim_id = 0x63;
                         }
@@ -469,13 +469,13 @@ s32 func_80092C98(FieldRec *rec)
             {
                 g_field_object_states[g_field_object_states[rec->unk3A].unk170].unkC &= ~0x2000;
                 rec->unk2A = 0;
-                func_80096334(rec);
+                field_restart_sequence_animation(rec);
                 tmp = func_800839F8(rec->unk3A, 0);
                 if (tmp != -1)
                 {
                     if (func_8008AABC(rec->unk3A, g_field_object_states[rec->unk3A].unk170) != 0)
                     {
-                        if (D_800FD818[rec->unk3A].unk1 == 8)
+                        if (g_field_player_records[rec->unk3A].unk1 == 8)
                         {
                             func_8008A9D8(rec->unk3A, g_field_object_states[rec->unk3A].unk170, 0xD);
                         }
@@ -485,14 +485,14 @@ s32 func_80092C98(FieldRec *rec)
                         }
                         index = rec->unk3A;
                         anim_id = 0x64;
-                        if (D_800FD818[index].unk1 == 8)
+                        if (g_field_player_records[index].unk1 == 8)
                         {
                             anim_id = 0x61;
                         }
                     }
                     else
                     {
-                        if (D_800FD818[rec->unk3A].unk1 == 8)
+                        if (g_field_player_records[rec->unk3A].unk1 == 8)
                         {
                             func_8008A9D8(g_field_object_states[rec->unk3A].unk170, rec->unk3A, 0x18);
                         }
@@ -502,7 +502,7 @@ s32 func_80092C98(FieldRec *rec)
                         }
                         index = rec->unk3A;
                         anim_id = 0x65;
-                        if (D_800FD818[index].unk1 == 8)
+                        if (g_field_player_records[index].unk1 == 8)
                         {
                             anim_id = 0x63;
                         }

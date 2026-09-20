@@ -1111,7 +1111,7 @@ void menu_node_tree_init(void)
     *(volatile u16*)&g_menu_nodes[0].u2.unk2 = node0_flags_step2;
     g_menu_nodes[0].u2.unk2 = node0_flags_step2 | MENU_NODE_FLAG_ACTIVE;
     g_menu_nodes[0].u2.s.parent_idx = MENU_NONE;
-    if (D_800FD818.unk0 & 2)
+    if (g_field_player_records.unk0 & 2)
     {
         g_menu_nodes[0].icon_id = 2;
     }
@@ -1349,9 +1349,9 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x20].icon_id = 0x16;
     g_menu_nodes[0x20].u2.unk2 = (u16)(node32_flags | MENU_NODE_FLAG_ACTIVE);
     g_menu_nodes[0x20].u2.s.parent_idx = MENU_NONE;
-    if (D_800FD818.unk268 & 1)
+    if (g_field_player_records.unk268 & 1)
     {
-        if (D_800FD818.unk26B)
+        if (g_field_player_records.unk26B)
         {
             g_menu_nodes[6].u2.unk2 = (u16)(g_menu_nodes[6].u2.unk2 | MENU_NODE_FLAG_ACTIVE);
         }

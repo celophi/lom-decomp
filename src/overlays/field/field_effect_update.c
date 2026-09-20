@@ -44,7 +44,7 @@ typedef struct
     s16 rotation_x;
     s16 heading;
     s16 pitch;
-    s16 unknown_0x16;
+    s16 motion_divisor;
     u8 unknown_0x18;
     u8 unknown_0x19;
     u8 unknown_0x1a;
@@ -68,7 +68,7 @@ typedef struct
     u8 rotation_y_16;
     u8 unknown_0x34;
     u8 unknown_0x35;
-    u8 unknown_0x36;
+    u8 motion_remainder;
     u8 unknown_0x37;
     u8 unknown_0x38;
     u8 path_group;
@@ -228,8 +228,8 @@ typedef struct
     u8 pad10[0x1C - 0x10];
 } FieldSpawnTrackBinding;
 
-extern FieldSpawnPartDef D_800FE3A0[];
-extern FieldSpawnTrackBinding D_80105880[];
+extern FieldSpawnPartDef g_field_object_parts[];
+extern FieldSpawnTrackBinding g_field_actor_bindings[];
 extern VECTOR D_80105778;
 extern s32 g_field_action_context;
 
@@ -579,9 +579,9 @@ bit23_done:
             (*(u32*)&part->unknown_0xc & 0xFFFF0000) == 0x80800000 && part->unknown_0x10 == 0x80)
         {
             effect->flags.word |= 0x10008000;
-            effect->unknown_0x18 = D_800FE3A0[record_base->source_object_index].unknown_0xe;
-            effect->unknown_0x19 = D_800FE3A0[record_base->source_object_index].unknown_0xf;
-            effect->unknown_0x1a = D_800FE3A0[record_base->source_object_index].unknown_0x10;
+            effect->unknown_0x18 = g_field_object_parts[record_base->source_object_index].unknown_0xe;
+            effect->unknown_0x19 = g_field_object_parts[record_base->source_object_index].unknown_0xf;
+            effect->unknown_0x1a = g_field_object_parts[record_base->source_object_index].unknown_0x10;
         }
         effect->source_object_index = g_field_actors[actor->owner_object_index].source_object_index;
         effect->unknown_0x3b = g_field_actors[actor->owner_object_index].unknown_0x3b;
@@ -612,7 +612,7 @@ bit23_done:
             s32 offset;
             s32 offset2;
             s32 metadata_index;
-            FieldSpawnTrackBinding *bindings = D_80105880;
+            FieldSpawnTrackBinding *bindings = g_field_actor_bindings;
             if (actor->track_object_indices[g_field_track_index] < 2U)
             {
                 offset = actor->track_object_indices[g_field_track_index] * 0x1C;
@@ -624,7 +624,7 @@ bit23_done:
             metadata_index = ((FieldSpawnTrackBinding*)((u8*)bindings + offset))->track_index;
             if (metadata_index == actor->track_object_indices[g_field_track_index])
             {
-                FieldSpawnTrackBinding *next_bindings = D_80105880;
+                FieldSpawnTrackBinding *next_bindings = g_field_actor_bindings;
                 if ((u32)(metadata_index & 0xFF) < 2U)
                 {
                     offset2 = metadata_index * 0x1C;
@@ -657,9 +657,9 @@ bit23_done:
             (*(u32*)&part->unknown_0xc & 0xFFFF0000) == 0x80800000 && part->unknown_0x10 == 0x80)
         {
             effect->flags.word |= 0x10008000;
-            effect->unknown_0x18 = D_800FE3A0[record_base->source_object_index].unknown_0xe;
-            effect->unknown_0x19 = D_800FE3A0[record_base->source_object_index].unknown_0xf;
-            effect->unknown_0x1a = D_800FE3A0[record_base->source_object_index].unknown_0x10;
+            effect->unknown_0x18 = g_field_object_parts[record_base->source_object_index].unknown_0xe;
+            effect->unknown_0x19 = g_field_object_parts[record_base->source_object_index].unknown_0xf;
+            effect->unknown_0x1a = g_field_object_parts[record_base->source_object_index].unknown_0x10;
         }
         effect->source_object_index = g_field_actors[actor->track_object_indices[g_field_track_index]].source_object_index;
         effect->unknown_0x3b = g_field_actors[actor->track_object_indices[g_field_track_index]].unknown_0x3b;
@@ -826,23 +826,23 @@ source_record = &g_field_actors[object_index]; placement_object = &g_field_objec
                     (*(u32*)&part->unknown_0xc & 0xFFFF0000) == 0x80800000 && part->unknown_0x10 == 0x80)
                 {
                     effect->flags.word |= 0x10008000;
-                    effect->unknown_0x18 = D_800FE3A0[source_record->source_object_index].unknown_0xe;
-                    effect->unknown_0x19 = D_800FE3A0[source_record->source_object_index].unknown_0xf;
-                    effect->unknown_0x1a = D_800FE3A0[source_record->source_object_index].unknown_0x10;
+                    effect->unknown_0x18 = g_field_object_parts[source_record->source_object_index].unknown_0xe;
+                    effect->unknown_0x19 = g_field_object_parts[source_record->source_object_index].unknown_0xf;
+                    effect->unknown_0x1a = g_field_object_parts[source_record->source_object_index].unknown_0x10;
                 }
                 if (effect->facing_or_reward_kind == 0xFF)
                 {
                     effect->facing_or_reward_kind = source_record->facing_or_reward_kind;
                     effect->saved_state = source_record->saved_state;
-                    part->footprint_scale_x = D_800FE3A0[source_record->source_object_index].footprint_scale_x;
-                    part->footprint_scale_y = D_800FE3A0[source_record->source_object_index].footprint_scale_y;
+                    part->footprint_scale_x = g_field_object_parts[source_record->source_object_index].footprint_scale_x;
+                    part->footprint_scale_y = g_field_object_parts[source_record->source_object_index].footprint_scale_y;
                     effect->unknown_0x34 = source_record->unknown_0x34;
                     effect->unknown_0x35 = source_record->unknown_0x35;
                     effect->track_index = source_record->track_index;
-                    effect->unknown_0x36 = source_record->unknown_0x36;
+                    effect->motion_remainder = source_record->motion_remainder;
                     effect->unknown_0x37 = source_record->unknown_0x37;
                     effect->unknown_0x38 = source_record->unknown_0x38;
-                    effect->unknown_0x16 = source_record->unknown_0x16;
+                    effect->motion_divisor = source_record->motion_divisor;
                 }
                 else
                 {
@@ -889,7 +889,7 @@ source_record = &g_field_actors[object_index]; placement_object = &g_field_objec
         effect->unknown_0x34 = g_field_effect_records[work_a].unknown_0x34;
         effect->unknown_0x35 = g_field_effect_records[work_a].unknown_0x35;
         effect->track_index = g_field_effect_records[work_a].track_index;
-        effect->unknown_0x36 = g_field_effect_records[work_a].unknown_0x36;
+        effect->motion_remainder = g_field_effect_records[work_a].motion_remainder;
         effect->unknown_0x37 = g_field_effect_records[work_a].unknown_0x37;
         effect->unknown_0x38 = g_field_effect_records[work_a].unknown_0x38;
         goto scanA_done;
@@ -1266,7 +1266,7 @@ source_record = &g_field_actors[object_index]; placement_object = &g_field_objec
         effect->unknown_0x34 = g_field_effect_records[sibling_index].unknown_0x34;
         effect->unknown_0x35 = g_field_effect_records[sibling_index].unknown_0x35;
         effect->track_index = g_field_effect_records[sibling_index].track_index;
-        effect->unknown_0x36 = g_field_effect_records[sibling_index].unknown_0x36;
+        effect->motion_remainder = g_field_effect_records[sibling_index].motion_remainder;
         effect->unknown_0x37 = g_field_effect_records[sibling_index].unknown_0x37;
         effect->unknown_0x38 = g_field_effect_records[sibling_index].unknown_0x38;
         goto scanB_done;
@@ -1702,7 +1702,7 @@ void field_set_action_context(s32 recipient_id, s32 source_id, s32 action);
 extern s32 g_field_active_group;
 /** @brief Suppress repeated pickup audio until the next frame-command build. */
 extern s32 g_field_pickup_sound_played;
-extern FieldRewardCounterView D_800FD818[];
+extern FieldRewardCounterView g_field_player_records[];
 
 /**
  * @brief Roll one particle spawn record's scale and rotation fields from a
@@ -3011,7 +3011,7 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                         object_base = g_field_object_states;
                         recipient_object = &object_base[recipient_index];
                         field_set_action_context(recipient_object->record_id, object_base[actor->owner_object_index].record_id, record->facing_or_reward_kind - 0x16);
-                        counter_base = D_800FD818;
+                        counter_base = g_field_player_records;
                         counter_index = record->facing_or_reward_kind;
                         counter_slot = recipient_index < 3 ? recipient_index : 2;
                         counter_base[counter_slot].counters[counter_index] = counter_base[recipient_index < 3 ? recipient_index : 2].counters[counter_index] + 1;

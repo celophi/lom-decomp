@@ -26,8 +26,8 @@ typedef struct
     u8 pad18E[0x23C - 0x18E];
 } FieldState;
 
-void func_800952DC(FieldRecord *record, s32 value);
-void func_80096334(FieldRecord *record);
+void field_update_sequence_actor_binding(FieldRecord *record, s32 value);
+void field_restart_sequence_animation(FieldRecord *record);
 void func_800A2DD8(u8 index);
 
 extern FieldState g_field_object_states[];
@@ -45,8 +45,8 @@ extern s32 D_8010CFDC;
 /**
  * @brief Decay a negative unk4 toward zero by 0x800, then idle the record when its gate flag is clear.
  *
- * Idling zeroes unk4 and unk2A, runs func_800952DC, clears the slot's 0x1800
- * flags, runs func_80096334, and for object indices below 2 also calls
+ * Idling zeroes unk4 and unk2A, runs field_update_sequence_actor_binding, clears the slot's 0x1800
+ * flags, runs field_restart_sequence_animation, and for object indices below 2 also calls
  * func_800A2DD8 and clears unk30 and the slot byte at 0x18D.
  *
  * @param arg0 Actor state record.
@@ -69,11 +69,11 @@ void func_800923F0(FieldRecord *arg0)
     if (arg0->unk2E == 0) {
         arg0->unk4 = 0;
         arg0->unk2A = 0;
-        func_800952DC(arg0, 1);
+        field_update_sequence_actor_binding(arg0, 1);
         base = g_field_object_states;
         slot = &base[arg0->unk3A];
         slot->unk174 &= ~0x1800;
-        func_80096334(arg0);
+        field_restart_sequence_animation(arg0);
         if (arg0->unk3A < 2) {
             func_800A2DD8(arg0->unk3A);
             arg0->unk30 = 0;
@@ -92,9 +92,9 @@ void func_800924D8(FieldRecord *record)
     if (record->unk2E == 0)
     {
         record->unk2A = 0;
-        func_800952DC(record, 1);
+        field_update_sequence_actor_binding(record, 1);
         g_field_object_states[record->unk3A].unk174 &= ~0x1800;
-        func_80096334(record);
+        field_restart_sequence_animation(record);
     }
 }
 
@@ -102,8 +102,8 @@ void func_800924D8(FieldRecord *record)
  * @brief Idle an actor's animation when its gate flag is clear.
  *
  * When @c unk2E is 0, stops the actor's sound, zeroes @c unk2A, runs
- * func_800952DC, clears the 0x1800 bits of the slot's @c unk174, sets the
- * control state in @c unk21 to 2 (keeping bit 7), and notifies func_80096334.
+ * field_update_sequence_actor_binding, clears the 0x1800 bits of the slot's @c unk174, sets the
+ * control state in @c unk21 to 2 (keeping bit 7), and notifies field_restart_sequence_animation.
  *
  * @param arg0 Actor state record.
  * @see decomp.me (100%) TODO
@@ -114,9 +114,9 @@ void func_80092550(FieldRecord *arg0)
     {
         func_8006AA7C(arg0->unk3A);
         arg0->unk2A = 0;
-        func_800952DC(arg0, 1);
+        field_update_sequence_actor_binding(arg0, 1);
         g_field_object_states[arg0->unk3A].unk174 = g_field_object_states[arg0->unk3A].unk174 & ~0x1800;
         arg0->unk21 = (u8)((arg0->unk21 & 0x80) + 2);
-        func_80096334(arg0);
+        field_restart_sequence_animation(arg0);
     }
 }

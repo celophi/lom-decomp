@@ -128,10 +128,10 @@ s32 func_800B0234(void)
 }
 
 
-extern FieldResourceSlot D_800FD818[];
+extern FieldResourceSlot g_field_player_records[];
 extern u8 g_field_actors[];
-extern u8 D_800FE3A0[];
-extern u8 D_80105880[];
+extern u8 g_field_object_parts[];
+extern u8 g_field_actor_bindings[];
 extern u8 g_field_object_states[];
 extern s32 g_field_active_group;
 void func_800B0A08(s32);
@@ -183,7 +183,7 @@ void func_800B0244(void)
     goto end;
 
 state_1:
-    if (((*(s32 *)(D_80105880 + 0x0)) | (*(s32 *)(D_80105880 + 0x1C)) | (*(s32 *)(D_80105880 + 0x38))) == 0)
+    if (((*(s32 *)(g_field_actor_bindings + 0x0)) | (*(s32 *)(g_field_actor_bindings + 0x1C)) | (*(s32 *)(g_field_actor_bindings + 0x38))) == 0)
     {
         D_80122B20 = 2;
     }
@@ -302,7 +302,7 @@ loop_34:
                     scan_type_b = 0xB1;
                     object_records = (u8 *)g_field_actors;
                     object_scan_3 = object_records + 0x54;
-                    resource_slots = (u8 *)D_800FD818;
+                    resource_slots = (u8 *)g_field_player_records;
                     resource_slot_scan = resource_slots + 0x268;
 loop_40:
                     if (*resource_slot_scan & 1)
@@ -327,7 +327,7 @@ block_44:
                         part_mask = 0xFF7FFFFF;
                         do
                         {
-                            ((FieldActorPartDef *)D_800FE3A0)[i].unk34 &= part_mask;
+                            ((FieldActorPartDef *)g_field_object_parts)[i].unk34 &= part_mask;
                             ((Struct_D800FDF58 *)g_field_actors)[i].unk2A = 0;
                             i += 1;
                         } while (i < 3);
@@ -352,7 +352,7 @@ block_44:
                         i = 0;
                         do
                         {
-                            if (D_800FD818[i].flags & 1)
+                            if (g_field_player_records[i].flags & 1)
                             {
                                 ((FieldActorState *)g_field_object_states)[i].unk1AB = 0x3C;
                                 ((FieldActorState *)g_field_object_states)[i].unk174 |= 0x8000;
@@ -535,7 +535,7 @@ void func_800B08FC(s32 arg0, s32 arg1)
 
 
 
-extern FieldResourceSlot D_800FD818[];
+extern FieldResourceSlot g_field_player_records[];
 extern s32 D_80122B68[];
 extern s32 D_80122B18[];
 extern u8* D_8010D038;
@@ -553,11 +553,11 @@ void func_800B0A08(s32 arg0)
 
     for (i = 0; i < 2; i++)
     {
-        if (D_800FD818[i].flags & 1)
+        if (g_field_player_records[i].flags & 1)
         {
-            D_80122B68[i] = field_get_actor_resource_id(i, &D_800FD818[i], arg0);
+            D_80122B68[i] = field_get_actor_resource_id(i, &g_field_player_records[i], arg0);
             buffer = D_8010D038 + 0x8000 + i * 0x18000;
-            D_800FD818[i].resource_index = (u16)D_80122B68[i];
+            g_field_player_records[i].resource_index = (u16)D_80122B68[i];
             D_80122B18[i] = cdrom_queue_read((u16)D_80122B68[i], buffer);
         }
         else

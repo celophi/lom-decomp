@@ -464,3 +464,10 @@ g_field_effect_track_scale = 0x80105768;
 g_field_view_offset_x = 0x800F22A0;
 g_field_view_offset_y = 0x800F22A4;
 g_field_view_offset_z = 0x800F22A8;
+
+field_apply_sequence_displacement = 0x800951CC;
+field_update_sequence_actor_binding = 0x800952DC;
+field_execute_actor_sequence = 0x800954F0;
+field_allocate_sequence_actor = 0x8009615C;
+field_restart_sequence_animation = 0x80096334;
+field_update_object_tints = 0x80096394;

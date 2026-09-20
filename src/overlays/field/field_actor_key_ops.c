@@ -259,7 +259,7 @@ typedef struct
  * pointer through their own record types (pointer-type warnings are benign). */
 RecB800FDF58_F32 *func_80087C9C(s32);
 
-extern Binding D_80105880[];
+extern Binding g_field_actor_bindings[];
 extern Actor878B4 g_field_actor_slots[];
 extern Resource g_field_resource_entries[];
 extern s32 g_field_event_scripts;
@@ -390,7 +390,7 @@ s32 func_800878B4(s32 index)
     {
         return -1;
     }
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (record->selector < 2)
     {
         offset = record->selector * 28;
@@ -403,7 +403,7 @@ s32 func_800878B4(s32 index)
     {
         return 0;
     }
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (record->selector < 2)
     {
         offset = record->selector * 28;
@@ -417,7 +417,7 @@ s32 func_800878B4(s32 index)
         return 1;
     }
     owner = ((Binding *)(base + offset))->owner;
-    owner_base = (u8 *)D_80105880;
+    owner_base = (u8 *)g_field_actor_bindings;
     if ((u8)owner < 2)
     {
         offset = owner * 28;
@@ -431,7 +431,7 @@ s32 func_800878B4(s32 index)
         return 2;
     }
     actors = g_field_actor_slots;
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (record->selector < 2)
     {
         offset = record->selector * 28;
@@ -446,7 +446,7 @@ s32 func_800878B4(s32 index)
         goto return_three;
     }
     actors = g_field_actor_slots;
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (record->selector < 2)
     {
         offset = record->selector * 28;

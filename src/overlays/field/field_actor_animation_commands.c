@@ -741,17 +741,17 @@ void field_start_actor_animation();
 
 
 
-extern s32 D_80105880[];
+extern s32 g_field_actor_bindings[];
 
 /**
  * @brief Finds the track value associated with the actor slot matching @p key.
  *
  * Scans the first 13 actor slots in parallel with ((CommandView9_EntryB *)g_field_actors). On a hit, the
  * record's track selector at 0x3A chooses one of the three 0x1C-byte entries
- * in D_80105880; selectors >= 2 clamp to the third entry.
+ * in g_field_actor_bindings; selectors >= 2 clamp to the third entry.
  *
  * @param key Value compared against each slot's unk14.
- * @return The selected D_80105880 word, or -1 when no slot matches.
+ * @return The selected g_field_actor_bindings word, or -1 when no slot matches.
  */
 s32 func_8008B398(s32 key)
 {
@@ -790,7 +790,7 @@ found_label:
     found = scan;
     goto check;
 lookup:
-    base = (u8 *)D_80105880;
+    base = (u8 *)g_field_actor_bindings;
     if (found->unk3A < 2)
     {
         offset = found->unk3A * 0x1C;
@@ -1040,7 +1040,7 @@ void func_8008B73C(void)
     actor_base = g_field_actor_slots;
     ae0_base = ((u8 *)g_field_object_states);
     flag = D_8010A020;
-    rec = ((u8 *)D_80105880);
+    rec = ((u8 *)g_field_actor_bindings);
 restart_slots:
     {
         if (*flag != 0 && *(s32 *)(rec + 0x0) == 2)

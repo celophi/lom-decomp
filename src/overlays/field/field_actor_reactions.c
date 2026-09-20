@@ -6,7 +6,7 @@
  *        draw-flag clears, animation re-arming, and depth-overlap eligibility.
  *
  * Groups the eleven reaction routines in 8008B870..8008C728. They share the
- * actor-slot table g_field_object_states (0x23C stride), the owner table D_800FD818
+ * actor-slot table g_field_object_states (0x23C stride), the owner table g_field_player_records
  * (0x268 stride), the actor record table g_field_actors (0x54 stride), and the
  * animation-resource block D_800FB3C8 (0x244 stride).
  */
@@ -36,7 +36,7 @@ typedef struct
     u8 pad18E[0x23C - 0x18E];
 } ReactionSlot;
 
-/** @brief Unified view of a D_800FD818 owner record (0x268 stride). */
+/** @brief Unified view of a g_field_player_records owner record (0x268 stride). */
 typedef struct
 {
     u8 pad0;
@@ -343,10 +343,10 @@ typedef struct
 
 /* ----- shared globals ----- */
 extern ReactionSlot g_field_object_states[];
-extern FieldReactionOwner D_800FD818[];
+extern FieldReactionOwner g_field_player_records[];
 extern ActorSlot54 g_field_actors[];
 extern u8 D_800FB3C8[];
-extern f870_FieldReactionSelection D_80105880[];
+extern f870_FieldReactionSelection g_field_actor_bindings[];
 extern fC104_Resource g_field_resource_entries[];
 extern u8 D_800EB068[];
 extern s32 D_8010A000;
@@ -362,7 +362,7 @@ void func_8008C620();
 
 extern void field_restart_actor_animation();
 extern void field_restart_actor_animation_reverse();
-extern void func_800952DC();
+extern void field_update_sequence_actor_binding();
 extern void field_stop_actor_animations_for_object();
 extern void func_800A2DD8();
 extern void func_80084424();
@@ -390,7 +390,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
 
     if (actor->slot < 3U)
     {
-        D_800FD818[actor->slot].state = 5;
+        g_field_player_records[actor->slot].state = 5;
     }
     else if (g_field_object_states[actor->slot].value < 0)
     {
@@ -398,7 +398,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
     }
     if (!((g_field_object_states[actor->slot].unk178 >> 6) & 1))
     {
-        selection = D_80105880;
+        selection = g_field_actor_bindings;
         if (actor->slot < 2U)
         {
             offset = actor->slot * 0x1C;
@@ -409,7 +409,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
         }
         if (((f870_FieldReactionSelection *)((u8 *)selection + offset))->active != 0)
         {
-            actor_selection = D_80105880;
+            actor_selection = g_field_actor_bindings;
             if (actor->slot < 2U)
             {
                 offset = actor->slot * 0x1C;
@@ -445,7 +445,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
             if ((actor->state & 0x7F) != 0x44)
             {
                 slot->unk178 &= ~0x40;
-                func_800952DC(actor, 0);
+                field_update_sequence_actor_binding(actor, 0);
                 actor->value = 0x82;
                 actor->y -= actor->height << 8;
                 g_field_object_states[actor->slot].unk18D = 0;
@@ -558,7 +558,7 @@ check:
     found->unk28 = 0xFF;
     found->unk10 = 0;
     found->unk2C++;
-    func_800952DC(found, 0);
+    field_update_sequence_actor_binding(found, 0);
     field_stop_actor_animations_for_object(found, 1);
     func_80084424(found->unk3A);
     return 0;
@@ -571,7 +571,7 @@ found_label:
 /**
  * @brief Reset an actor record and reinitialize its associated animation state.
  * @param record Actor record to reset.
- * @param clear_slot Nonzero to clear the associated D_800FD818 entry when its index is below three.
+ * @param clear_slot Nonzero to clear the associated g_field_player_records entry when its index is below three.
  */
 void func_8008BE38(fBE38_FieldActorRecord *record, s32 clear_slot)
 {
@@ -584,7 +584,7 @@ void func_8008BE38(fBE38_FieldActorRecord *record, s32 clear_slot)
     record->unk2A = 0x8E;
     if (clear_slot != 0 && record->unk3A < 3)
     {
-        D_800FD818[record->unk3A].unk260 = 0;
+        g_field_player_records[record->unk3A].unk260 = 0;
     }
 
     record->unk28 = 0xFF;
@@ -603,7 +603,7 @@ void func_8008BE38(fBE38_FieldActorRecord *record, s32 clear_slot)
     field_stop_actor_animations_for_object(record, 1);
     func_80083BC0(record, &D_800FB3C8[record->unk3A * 0x244], 1);
     record->unk1C |= 0x800;
-    func_800952DC(record, 0);
+    field_update_sequence_actor_binding(record, 0);
     func_80084424(record->unk3A);
 }
 
@@ -640,7 +640,7 @@ void func_8008C024(fC024_EntryA0 *arg0, s8 arg1)
 {
     if (arg0->unk3A < 3)
     {
-        D_800FD818[arg0->unk3A].unk260 = 0;
+        g_field_player_records[arg0->unk3A].unk260 = 0;
     }
 
     g_field_object_states[arg0->unk3A].unkC &= 0x200;
@@ -676,7 +676,7 @@ s32 func_8008C104(fC104_Actor *actor)
     field_stop_actor_animations_for_object(actor, 1);
     func_80083BC0(actor, D_800FB3C8 + actor->selector * 0x244, 1);
     actor->flags |= 0x800;
-    func_800952DC(actor, 0);
+    field_update_sequence_actor_binding(actor, 0);
     func_80084424(actor->selector);
     selector = actor->selector;
     if (!(records[selector].flags178 & 1))
@@ -854,7 +854,7 @@ void func_8008C4A8(s32 slot_index)
     {
         retry_count = slot->unk18D + 1;
         slot->unk18D = retry_count;
-        if ((slot_index < 2) && ((u32)(retry_count & 0xFF) >= (u8)D_800EB068[D_800FD818[slot_index].unk1]))
+        if ((slot_index < 2) && ((u32)(retry_count & 0xFF) >= (u8)D_800EB068[g_field_player_records[slot_index].unk1]))
         {
             key = slot->unk14;
             scan_actor = g_field_actors;

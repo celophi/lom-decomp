@@ -521,7 +521,7 @@ s32 menu_handle_input(s32 process_actions)
                                 func_800A8E28(&D_801226F0, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
                                 count = 0;
                                 idx = 0;
-                                rec = (u8*)&D_800FD818;
+                                rec = (u8*)&g_field_player_records;
                                 D_801227D4 = (void*)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
                                 for (; idx < 3; idx++)
                                 {

@@ -42,14 +42,14 @@ typedef union
     } half;
 } FieldMovementStatus;
 
-/** @brief Contact flags, bound effect controller, and collected target count. */
+/** @brief Contact flags, animation/effect actor bindings, and collected target count. */
 typedef union
 {
     u32 flags;
     struct
     {
         u8 flags_low;
-        u8 flags_high;
+        u8 animation_actor_index;
         u8 controller_index;
         u8 target_count;
     } bytes;
@@ -71,7 +71,10 @@ typedef struct FieldObjectRuntime
     s32 record_id;
     u16 interaction_flags;
     u16 state_entries[2];
-    u8 pad_0x1e[0x48 - 0x1E];
+    u8 pad_0x1e[0x3C - 0x1E];
+    s32 sequence_command;
+    s32 current_sequence_animation;
+    s32 sequence_cursor;
     u16 status_intensity;
     u16 effect_intensity;
     u8 pad_0x4c[0x5C - 0x4C];
@@ -104,7 +107,9 @@ typedef struct FieldObjectRuntime
     u8 pad_0x168[5];
     s8 linked_effect_index;
     u8 history_index;
-    u8 pad_0x16f[5];
+    u8 pad_0x16f[2];
+    u8 sequence_delay;
+    u8 pad_0x172[2];
     /** @brief The low ten flag bits also supply effect radius or percentage scale. */
     FieldMovementStatus movement;
     FieldContactStatus contact;
@@ -119,7 +124,8 @@ typedef struct FieldObjectRuntime
     u8 tint_red;
     u8 tint_green;
     u8 tint_blue;
-    u8 pad_0x1ab[0x23C - 0x1AB];
+    u8 tint_flash_timer;
+    u8 pad_0x1ac[0x23C - 0x1AC];
 } FieldObjectRuntime;
 
 extern FieldObjectRuntime g_field_object_states[FIELD_OBJECT_COUNT];

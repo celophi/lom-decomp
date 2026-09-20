@@ -362,7 +362,7 @@ void func_800AA570(s32 render_buffer_addr)
 {
     extern void func_80140004(u32, void *, s32, s32, s32, void *, s32), func_80140024(u32, s32);
     extern s32 func_801405B0(s32);
-    extern s32 D_80105880[];
+    extern s32 g_field_actor_bindings[];
     extern u8 D_801226B8[], D_801226F0[];
     extern s32 D_8011F424, D_801227D4, D_8012291C, D_80122984, D_801229F4, g_active_script,
         g_script_repeat_count;
@@ -381,7 +381,7 @@ void func_800AA570(s32 render_buffer_addr)
     screen[0x92] = 0;
     screen[0x13F] = 0;
     screen[0x140] = 0;
-    if (var_a0 != 0 || D_80105880[0] != 0 || D_80105880[7] != 0 || D_80105880[14] != 0)
+    if (var_a0 != 0 || g_field_actor_bindings[0] != 0 || g_field_actor_bindings[7] != 0 || g_field_actor_bindings[14] != 0)
     {
         func_800AA7A4();
         return;
@@ -536,7 +536,7 @@ void func_800AA90C(s32 refresh_only)
     extern void func_800A54D0(void);
     extern u8 D_800EB114[];
     extern u8 D_800EB24C[];
-    extern Party D_800FD818[];
+    extern Party g_field_player_records[];
     extern Actor g_field_actors[];
     extern State g_field_object_states[];
     extern Record g_field_resource_actions[];
@@ -609,7 +609,7 @@ void func_800AA90C(s32 refresh_only)
     {
         first_two = 2;
         first_one = 1;
-        initial_party = D_800FD818;
+        initial_party = g_field_player_records;
         var_a3 = player_index;
     first_party:
     {
@@ -666,7 +666,7 @@ void func_800AA90C(s32 refresh_only)
     }
     context_pointer = &g_pad_ctx;
     record_base = g_field_resource_actions;
-    party = D_800FD818;
+    party = g_field_player_records;
     actor_stride_words = player_index;
     record_stride = player_index;
     context_stride = player_index;
@@ -724,9 +724,9 @@ party_loop:
         if (player_index == 2)
         {
             button_index = 0;
-            if (D_800FD818[2].unk3 == player_index)
+            if (g_field_player_records[2].unk3 == player_index)
             {
-                func_800A5174(2, D_800FD818[2].unk2 + 0xA9B);
+                func_800A5174(2, g_field_player_records[2].unk2 + 0xA9B);
                 party++;
             }
             else
@@ -994,7 +994,7 @@ void func_800AB214(s32 context_or_delay)
     extern s32 func_801401F0(s32);
     extern s32 func_801401F8(s32);
     extern s32 func_80140370(s32);
-    extern Slot D_800FD818[];
+    extern Slot g_field_player_records[];
     extern s32 D_8011F41C;
     extern u32 D_8012269C;
     extern s32 D_801227BC;
@@ -1063,10 +1063,10 @@ void func_800AB214(s32 context_or_delay)
             case 2:
                 func_800AA90C(0);
                 index_or_zero = 0;
-                slot_address = (s32)D_800FD818;
+                slot_address = (s32)g_field_player_records;
                 do
                 {
-                    slot_address = (s32)&D_800FD818[index_or_zero];
+                    slot_address = (s32)&g_field_player_records[index_or_zero];
                     *(u16 *)(slot_address + 0x254) = 0;
                     *(u8 *)(slot_address + 0x256) = 0xFF;
                     index_or_zero += 1;
@@ -1109,9 +1109,9 @@ void func_800AB214(s32 context_or_delay)
             switch (result)
             {
             case 1:
-                D_800FD818[1].status.bits.active = 0;
-                D_800FD818[1].status.bits.selected = g_pad_ctx->unk858 & 1;
-                D_800FD818[1].unk3 = 0;
+                g_field_player_records[1].status.bits.active = 0;
+                g_field_player_records[1].status.bits.selected = g_pad_ctx->unk858 & 1;
+                g_field_player_records[1].unk3 = 0;
                 field_activate_actor_resource_slot(-2, 0, 0);
                 func_80084240();
                 D_80122994 = 0;

@@ -267,13 +267,13 @@ typedef struct
 
 extern Struct_D800FDF58 g_field_actors[];
 extern Struct_D80105AE0 g_field_object_states[];
-extern D_800FD818_type D_800FD818[];
-extern FieldActorPartDef D_800FE3A0[];
+extern D_800FD818_type g_field_player_records[];
+extern FieldActorPartDef g_field_object_parts[];
 extern FieldActorState g_field_actor_slots[];
 extern FieldResourceEntry g_field_resource_entries[];
 extern s32 g_field_direction_animation_modes[];
 extern s32 D_800EB0C4[];
-extern u8 D_80105880[];
+extern u8 g_field_actor_bindings[];
 extern s32 D_8010A020[];
 extern u16* g_field_actor_scripts;
 extern u8 g_field_resource_actions[];
@@ -708,11 +708,11 @@ void func_80088198(Struct_D800FDF58* arg0)
                         {
                             temp_a0_2 = arg0->unk3A;
                             if ((g_field_object_states[temp_a0_2].unk48 == 0xFF) &&
-                                (func_8008404C(temp_a0_2, (M2C_FIELD(temp_s0, u16*, 0) & 0x7FFF) + (u16)((D_800FD818[temp_a0_2].u0.b.unk1 * 0x18) + 0x88)) !=
+                                (func_8008404C(temp_a0_2, (M2C_FIELD(temp_s0, u16*, 0) & 0x7FFF) + (u16)((g_field_player_records[temp_a0_2].u0.b.unk1 * 0x18) + 0x88)) !=
                                  0))
                             {
                                 case83_slots = g_field_actor_slots;
-                                case83_entries = D_80105880;
+                                case83_entries = g_field_actor_bindings;
                                 if ((u8)arg0->unk3A >= 2U)
                                 {
                                     var_v0_3 = 0x38;
@@ -736,7 +736,7 @@ void func_80088198(Struct_D800FDF58* arg0)
                             return;
                         }
                         case83_slots = g_field_actor_slots;
-                        case83_entries = D_80105880;
+                        case83_entries = g_field_actor_bindings;
                         if ((u8)arg0->unk3A < 2U)
                         {
                         block_59:
@@ -870,7 +870,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             sp18.x = temp_a1_5;
             sp18.y = arg0->unk4;
             sp18.z = arg0->unk8;
-            if (D_800FE3A0[arg0->unk3A].unk2E == 0x40)
+            if (g_field_object_parts[arg0->unk3A].unk2E == 0x40)
             {
                 sp18.unkC = 0xC;
                 sp18.unk10 = 8;
@@ -950,7 +950,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         field_restart_actor_animation(arg0);
         return;
     case 0x9E:
-        case9e_entries = D_80105880;
+        case9e_entries = g_field_actor_bindings;
         if ((u8)arg0->unk3A < 2U)
         {
             var_v0_5 = arg0->unk3A * 0x1C;
@@ -982,7 +982,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         }
         break;
     case 0xA9:
-        casea9_check_entries = D_80105880;
+        casea9_check_entries = g_field_actor_bindings;
         if ((u8)arg0->unk3A < 2U)
         {
             var_v0_6 = arg0->unk3A * 0x1C;
@@ -1009,7 +1009,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             temp_v1_8 = arg0->unk3A;
             casea9_state = &casea9_states[temp_v1_8];
             casea9_slots = g_field_actor_slots;
-            casea9_entries = D_80105880;
+            casea9_entries = g_field_actor_bindings;
             if (temp_v1_8 < 2U)
             {
                 var_v0_7 = temp_v1_8 * 0x1C;
@@ -1031,7 +1031,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         {
             shared_s1 = arg0->unk3A;
         }
-        bc_entries = D_80105880;
+        bc_entries = g_field_actor_bindings;
         temp_s2 = (shared_s1 * 0x1C) + bc_entries;
         temp_a0_3 = M2C_FIELD(temp_s2, s32*, 0);
         if (((u32)(temp_a0_3 - 1) < 2U) && (M2C_FIELD(temp_s2, s32*, 0xC) == arg0->unk3A))
@@ -1064,7 +1064,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         {
             shared_s1 = arg0->unk3A;
         }
-        track_entries = D_80105880;
+        track_entries = g_field_actor_bindings;
         temp_v1_10 = (shared_s1 * 0x1C) + track_entries;
         temp_a0_4 = M2C_FIELD(temp_v1_10, s32*, 0);
         if (((u32)(temp_a0_4 - 1) < 2U) && (track_owner = arg0->unk3A, temp_a1_7 = M2C_FIELD(temp_v1_10, s32*, 0xC), (temp_a1_7 == track_owner)))
@@ -1226,13 +1226,13 @@ void func_80088198(Struct_D800FDF58* arg0)
         arg0->unk2C = (u16)arg0->unk2C + 2;
         return;
     case 0xA5:
-        casea5_base = D_800FE3A0;
+        casea5_base = g_field_object_parts;
         temp_v0_19 = &casea5_base[arg0->unk3A];
         temp_v0_19->unk34 |= 0x800000;
         goto block_167;
     case 0xA6:
         casea6_mask = 0xFF7FFFFF;
-        casea6_base = D_800FE3A0;
+        casea6_base = g_field_object_parts;
         temp_v0_20 = &casea6_base[arg0->unk3A];
         temp_v0_20->unk34 &= casea6_mask;
         goto block_167;

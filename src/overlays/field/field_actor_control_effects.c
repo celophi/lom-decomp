@@ -13,7 +13,7 @@
  * field_set_actor_horizontal_scale.c, field_handle_actor_control_flag_40.c,
  * field_actor_flag_ops.c, func_80086FB8.c and field29.c into a single TU.
  *
- * @note g_field_object_states, D_800FE3A0, D_80107800 and D_801058E0 are each viewed as a
+ * @note g_field_object_states, g_field_object_parts, D_80107800 and D_801058E0 are each viewed as a
  *       different record type (or element width) by different members, so their
  *       extern declarations are kept at BLOCK scope inside each user with that
  *       user's original type. bcopy has two different prototypes across members
@@ -347,7 +347,7 @@ extern s32 g_field_scene_record_table;
 void func_80086494(s32 index)
 {
     extern FieldControlState g_field_object_states[];
-    extern FieldControlVisual D_800FE3A0[];
+    extern FieldControlVisual g_field_object_parts[];
     s32 flags_before;
     s32 changed_or_current;
     s32 previous_flags;
@@ -509,9 +509,9 @@ void func_80086494(s32 index)
     }
     else
     {
-        g_field_actors[index].unk18 = D_800FE3A0[index].unke;
-        g_field_actors[index].unk19 = D_800FE3A0[index].unkf;
-        g_field_actors[index].unk1a = D_800FE3A0[index].unk10;
+        g_field_actors[index].unk18 = g_field_object_parts[index].unke;
+        g_field_actors[index].unk19 = g_field_object_parts[index].unkf;
+        g_field_actors[index].unk1a = g_field_object_parts[index].unk10;
     }
 }
 
@@ -569,17 +569,17 @@ void func_800868FC(Actor *arg0, s32 arg1)
  */
 void field_set_actor_horizontal_scale(FieldObjectState *object, s32 half_scale)
 {
-    extern FieldActorPartDef D_800FE3A0[];
+    extern FieldActorPartDef g_field_object_parts[];
 
     if (half_scale != 0)
     {
-        D_800FE3A0[object->object_index].scale_z = 0x20;
-        D_800FE3A0[object->object_index].scale_x = 0x20;
+        g_field_object_parts[object->object_index].scale_z = 0x20;
+        g_field_object_parts[object->object_index].scale_x = 0x20;
     }
     else
     {
-        D_800FE3A0[object->object_index].scale_z = 0x40;
-        D_800FE3A0[object->object_index].scale_x = 0x40;
+        g_field_object_parts[object->object_index].scale_z = 0x40;
+        g_field_object_parts[object->object_index].scale_x = 0x40;
     }
 }
 

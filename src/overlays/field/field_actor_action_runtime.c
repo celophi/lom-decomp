@@ -40,7 +40,7 @@ typedef struct
     u8 pad2[0x268 - 2];
 } Party;
 extern Slot g_field_object_states[];
-extern Party D_800FD818[];
+extern Party g_field_player_records[];
 void field_restart_actor_animation_reverse(Actor *);
 s32 field_get_next_animation_frame_count(Actor *);
 s32 func_800A29F8(s32, s32, s32);
@@ -101,7 +101,7 @@ s32 func_80093AB8(Actor *input)
                         {
                             if ((u8)actor->unk3A < 2U)
                             {
-                                if (D_800FD818[actor->unk3A].unk1 == 0xA)
+                                if (g_field_player_records[actor->unk3A].unk1 == 0xA)
                                 {
                                     if (retry_count >= 3U)
                                     {
@@ -181,7 +181,7 @@ check_mode:
 typedef struct { u8 pad0[0x1C]; s32 unk1C; u8 pad20[0xA]; s16 unk2A; u8 pad2C[2]; u16 unk2E; u8 pad30[0xA]; u8 unk3A; } FieldRecord;
 typedef struct { u8 pad0[0x4A]; s16 unk4A; u8 pad4C[0x128]; s32 unk174; u8 pad178[1]; u8 unk179; u8 pad17A[0xC2]; } FieldState;
 typedef struct { u8 pad0[0x228]; u8 unk228; u8 pad229[0x11]; u8 unk23A; u8 pad23B[9]; } ActorSlot;
-void func_8008A678(); void func_800952DC(); void func_800A2DD8(s32);
+void func_8008A678(); void field_update_sequence_actor_binding(); void func_800A2DD8(s32);
  extern ActorSlot g_field_actor_slots[];
 
 /**
@@ -230,7 +230,7 @@ void func_80093EB4(FieldRecord *arg0)
         states[arg0->unk3A].unk174 &= gate;
         if (slot->unk228 == arg0->unk3A)
         {
-            func_800952DC(arg0, 1);
+            field_update_sequence_actor_binding(arg0, 1);
         }
         arg0->unk1C &= ~0x800;
         states[arg0->unk3A].unk4A = 0;
@@ -308,15 +308,15 @@ typedef struct
 
 
 
-extern FieldSequenceMotion D_800FE3A0[];
+extern FieldSequenceMotion g_field_object_parts[];
 extern FieldSequenceResource g_field_resource_entries[];
-extern u8 D_8010AED0[];
+extern u8 g_field_actor_sequence_data[];
 s32 field_object_has_active_actor_tracks(u8);
 void field_stop_actor_animations_for_object(FieldSequenceRecord *, s32);
 void field_restart_actor_animation(FieldSequenceRecord *);
 void func_8008A678(s32);
-void func_800952DC();
-s32 func_800954F0(FieldSequenceRecord *, s32);
+void field_update_sequence_actor_binding();
+s32 field_execute_actor_sequence(FieldSequenceRecord *, s32);
 s32 func_80097FA0(FieldSequenceRecord *, Vec3i *, s32);
 void func_800A2DD8(s32);
 
@@ -373,12 +373,12 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
         {
             goto apply_motion;
         }
-        active_scripts = D_8010AED0;
+        active_scripts = g_field_actor_sequence_data;
         do
         {
-            active_scripts = D_8010AED0;
+            active_scripts = g_field_actor_sequence_data;
         } while (0);
-        active_banks = ((FieldSequenceBank *)D_800FD818);
+        active_banks = ((FieldSequenceBank *)g_field_player_records);
         active_address = (sequence_index << 5) + active_banks[object].bank * 0x300;
         active_address += (s32)active_scripts;
         command = *(u8 *)(active_address + active_position);
@@ -393,8 +393,8 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
         reset_slot->track_flags &= ~0x1800;
         slot_base[record->object_id].repeat_state = 0;
     }
-    scripts = D_8010AED0;
-    banks = ((FieldSequenceBank *)D_800FD818);
+    scripts = g_field_actor_sequence_data;
+    banks = ((FieldSequenceBank *)g_field_player_records);
     object = record->object_id;
 
     do
@@ -440,12 +440,12 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
         slot->script_position = position + 1;
         return;
     }
-    if (func_800954F0(record, sequence_index) != 0)
+    if (field_execute_actor_sequence(record, sequence_index) != 0)
     {
         func_8008A678(record->object_id);
     stop_sequence:
         record->sequence_state = 0;
-        func_800952DC(record, 1);
+        field_update_sequence_actor_binding(record, 1);
         record->sequence_flags &= ~0x800;
         if (record->object_id < 2U)
         {
@@ -459,7 +459,7 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
     record->sequence_flags |= 0x800;
 apply_motion:
     amount = (s8)record->motion_remainder / (s16)record->motion_divisor;
-    motion = &D_800FE3A0[record->object_id];
+    motion = &g_field_object_parts[record->object_id];
     record->motion_remainder = (u8)record->motion_remainder - amount;
     if (record->facing_flags & 0x80)
     {

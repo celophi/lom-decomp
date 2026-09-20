@@ -71,7 +71,7 @@ extern u8 D_80105C70[];
 extern ActorFilter D_800EC2D8[];
 extern u8 g_field_actors[];
 extern s32 g_field_active_group;
-extern Binding D_80105880[];
+extern Binding g_field_actor_bindings[];
 extern FieldState g_field_object_states[];
 extern s32 D_8010D020;
 
@@ -374,7 +374,7 @@ s32 func_8009D1E4(s32 source_index, FilterSpec *spec, s32 group_mode, s32 filter
     state_start = &g_field_object_states[index];
     if (index < end)
     {
-        bindings = D_80105880;
+        bindings = g_field_actor_bindings;
         state_fields = &state_start->flags178;
         actor_state_ptr = actor_start + 0x2A;
         actor = actor_start;

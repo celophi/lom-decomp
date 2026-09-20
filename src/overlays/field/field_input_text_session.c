@@ -9,7 +9,7 @@
  *
  * Consolidated translation unit merged from the per-function FIELD sources.
  * Symbols whose declared type differs between the original files (g_pad_ctx,
- * D_800FE3A0, D_8011F3D2, g_field_actors, g_field_object_states) are declared at block scope
+ * g_field_object_parts, D_8011F3D2, g_field_actors, g_field_object_states) are declared at block scope
  * inside each user with that function's original type, and are deliberately
  * kept out of file scope: GCC 2.7.2 accepts the incompatible block-scope
  * externs (warning only) and emits identical code, whereas a file-scope copy
@@ -240,7 +240,7 @@ extern u8 D_800EC3E6[];
 extern u8 D_800EC3E8[];
 extern u8 D_800ED064[];
 extern u8 D_800EDBE4[];
-extern u8 D_800FD818[];
+extern u8 g_field_player_records[];
 extern u8 D_8010A028[];
 extern u8 g_field_resource_actions[];
 
@@ -595,14 +595,14 @@ void func_800A909C(void *arg0)
  */
 void func_800A90F8(void)
 {
-    extern u8 D_800FE3A0[];
+    extern u8 g_field_object_parts[];
     s32 i;
     u8 *rec;
 
     akao_stop_sfx_by_id(0x7E);
     for (i = 0; i < D_801227D0; i++)
     {
-        rec = D_800FE3A0 + D_801226E0[i] * 0x48;
+        rec = g_field_object_parts + D_801226E0[i] * 0x48;
         rec[0x2E] = D_801228D0[i];
         rec[0x33] = D_801228E0[i];
     }
@@ -613,7 +613,7 @@ void func_800A90F8(void)
  */
 void func_800A9198(void)
 {
-    extern RecFE3A0 D_800FE3A0[];
+    extern RecFE3A0 g_field_object_parts[];
     extern s8 D_8011F3D2;
     StructFE054 *t0;
     Struct106194 *a0;
@@ -635,8 +635,8 @@ void func_800A9198(void)
         if (t0->unk25 != 0xFF && a0->unk4 != 0 && g_field_active_group == (a0->unk10 & 0xF) && a0->unk64 != 0)
         {
             D_801226E0[D_801227D0] = a2;
-            D_801228D0[D_801227D0] = D_800FE3A0[a2].unk2E;
-            D_801228E0[D_801227D0] = D_800FE3A0[a2].unk33;
+            D_801228D0[D_801227D0] = g_field_object_parts[a2].unk2E;
+            D_801228E0[D_801227D0] = g_field_object_parts[a2].unk33;
             D_801227D0 += 1;
         }
         a2 += 1;
@@ -693,7 +693,7 @@ void func_800A939C(void *context)
     extern s32 func_800A88A0(s32, s32, void *, s32, s32, s32, s32);
     extern s32 g_pad_ctx;
     extern u8 g_field_actors[];
-    extern u8 D_800FE3A0[];
+    extern u8 g_field_object_parts[];
     extern u8 g_field_object_states[];
     extern u8 D_8011F3D2;
     s32 custom_text_offset;
@@ -751,7 +751,7 @@ void func_800A939C(void *context)
     index = 0;
     default_label_offset = D_800EC3E0;
                 label_low = D_800EC3E0;
-    object_record = D_800FD818;
+    object_record = g_field_player_records;
     action_offset = index;
     primitive = S32_AT(*context_slot, 0x40B8);
     custom_text_offset = 0x5F0;
@@ -990,13 +990,13 @@ void func_800A939C(void *context)
                                            D_8011F3D2 == index ? 0x81 : 0x82);
             if ((D_8011F3D2 == index) && (S32_AT(text_address, 0x8) >= 0))
             {
-                highlight_motion = (void *)((actor_id * 0x48) + (s32)D_800FE3A0);
+                highlight_motion = (void *)((actor_id * 0x48) + (s32)g_field_object_parts);
                 U8_AT(highlight_motion, 0x2E) = 0x80;
                 U8_AT(highlight_motion, 0x33) = 0x80;
             }
             else
             {
-                normal_motion = (void *)((actor_id * 0x48) + (s32)D_800FE3A0);
+                normal_motion = (void *)((actor_id * 0x48) + (s32)g_field_object_parts);
                 U8_AT(normal_motion, 0x2E) = (u8)D_801228D0[index];
                 U8_AT(normal_motion, 0x33) = (u8)D_801228E0[index];
             }
@@ -1053,7 +1053,7 @@ void func_800A9A5C(void)
 void func_800A9B88(void)
 {
     extern void *g_pad_ctx;
-    extern u8 D_800FE3A0[];
+    extern u8 g_field_object_parts[];
     extern u8 D_8011F3D2;
     s32 actor_index;
     u8 *part;
@@ -1068,7 +1068,7 @@ void func_800A9B88(void)
         akao_stop_sfx_by_id(0x7E);
         for (actor_index = 0; actor_index < D_801227D0; actor_index++)
         {
-            part = D_800FE3A0 + D_801226E0[actor_index] * 0x48;
+            part = g_field_object_parts + D_801226E0[actor_index] * 0x48;
             part[0x2E] = D_801228D0[actor_index];
             part[0x33] = D_801228E0[actor_index];
         }

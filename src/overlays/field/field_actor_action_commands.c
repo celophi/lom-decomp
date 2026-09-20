@@ -172,7 +172,7 @@ typedef struct
     u8 pad3B[0x19];
 } EntryB;
 
-/** @brief Record in the D_800FD818 table indexed by EntryB::unk3A; stride 0x268. */
+/** @brief Record in the g_field_player_records table indexed by EntryB::unk3A; stride 0x268. */
 typedef struct
 {
     u8 pad0[0x25E];
@@ -185,7 +185,7 @@ typedef struct
 
 
 
-extern RecFD818 D_800FD818[];
+extern RecFD818 g_field_player_records[];
 
 /**
  * @brief Update the indexed field record associated with an actor lookup key.
@@ -235,11 +235,11 @@ success:
     {
         return -1;
     }
-    D_800FD818[found->unk3A].unk260 = arg4;
-    D_800FD818[found->unk3A].unk25E = 0;
-    D_800FD818[found->unk3A].unk262 = arg1;
-    D_800FD818[found->unk3A].unk264 = arg2;
-    D_800FD818[found->unk3A].unk266 = arg3;
+    g_field_player_records[found->unk3A].unk260 = arg4;
+    g_field_player_records[found->unk3A].unk25E = 0;
+    g_field_player_records[found->unk3A].unk262 = arg1;
+    g_field_player_records[found->unk3A].unk264 = arg2;
+    g_field_player_records[found->unk3A].unk266 = arg3;
     return 0;
 }
 
@@ -511,7 +511,7 @@ typedef struct
 } CollisionQuery;
 
 
-extern PartDef D_800FE3A0[];
+extern PartDef g_field_object_parts[];
 
 extern StatePosition D_80105B30[];
 s32 func_80060F58(CollisionQuery *, CollisionQuery *, void *, s32);
@@ -559,7 +559,7 @@ void func_8008A0B0(CommandView5_FieldRecord *record, s32 source_index, s32 updat
         start.x = x;
         start.y = record->unk4;
         start.z = record->unk8;
-        if ((&D_800FE3A0[record->unk3a])->unk2e == 0x40)
+        if ((&g_field_object_parts[record->unk3a])->unk2e == 0x40)
         {
             start.width = 0xC;
             start.depth = 8;
@@ -1178,7 +1178,7 @@ body:
     actor->unkC = (s32)(actor->unkC | 0x10000000);
     if ((u8)entry->unk3A < 3U)
     {
-        ((Data *)D_800FD818)[entry->unk3A].unk259 = 5;
+        ((Data *)g_field_player_records)[entry->unk3A].unk259 = 5;
     }
     else if (((Actor *)(actor_base + entry->unk3A * 0x23C))->unk8 < 0)
     {

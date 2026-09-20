@@ -1084,7 +1084,7 @@ static void field_load_scene_actors(s32* data)
 
     extern FieldLoadedActor g_field_scene_actors[];
     extern FieldLoadedActorSlot D_80106194[];
-    extern FieldLoadedActorVisual D_800FE3A0[];
+    extern FieldLoadedActorVisual g_field_object_parts[];
     extern s32 D_800FE774;
     extern s32 g_field_pending_scene_id;
     extern void field_initialize_actor_record(s32, s32);
@@ -1131,9 +1131,9 @@ static void field_load_scene_actors(s32* data)
                 slot->state.bits.bit6 = 0;
                 slot->state.bits.bit7 = 0;
                 slot->options &= 0xFFFF7FFF;
-                slot->red = D_800FE3A0[actor->slot].red;
-                slot->green = D_800FE3A0[actor->slot].green;
-                blue = D_800FE3A0[actor->slot].blue;
+                slot->red = g_field_object_parts[actor->slot].red;
+                slot->green = g_field_object_parts[actor->slot].green;
+                blue = g_field_object_parts[actor->slot].blue;
                 slot->alpha = 0;
                 slot->unknown18e = 0;
                 tag = slot->tag & 0x80FFFFFF;
@@ -1305,7 +1305,7 @@ void field_set_party_palettes(void)
 {
 
     extern FieldPaletteResource g_field_resource_entries[];
-    extern FieldPartyResource D_800FD818[];
+    extern FieldPartyResource g_field_player_records[];
     extern u16 D_800EB2B4[];
     extern s32 g_field_party_palette_index;
 
@@ -1318,7 +1318,7 @@ void field_set_party_palettes(void)
     i = 0;
     do
     {
-        if (D_800FD818[i].resource_kind == 0)
+        if (g_field_player_records[i].resource_kind == 0)
         {
             g_field_resource_entries[i].palette = D_800EB2B4[g_field_party_palette_index];
         }

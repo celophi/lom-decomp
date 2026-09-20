@@ -15,7 +15,7 @@ void func_80091410(void)
 /* func_80091438 */
 #include "common.h"
 
-/** @brief D_800FD818 object entry (stride 0x268). */
+/** @brief g_field_player_records object entry (stride 0x268). */
 typedef struct
 {
     u8 unk0;
@@ -34,7 +34,7 @@ extern u8 D_800EB21C[];
 extern u8 D_800EB224[];
 extern u8 D_800EB22C[];
 extern u8 D_800EB234[];
-extern Entry268 D_800FD818[];
+extern Entry268 g_field_player_records[];
 extern Slot8 g_field_resource_actions[][50];
 
 /**
@@ -47,7 +47,7 @@ void func_80091438(s32 arg0)
 
     for (i = 0; i < 5; i++)
     {
-        switch (D_800FD818[arg0].unk1)
+        switch (g_field_player_records[arg0].unk1)
         {
         case 5:
         case 7:

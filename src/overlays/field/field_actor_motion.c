@@ -54,15 +54,15 @@ typedef struct
     u8 tail[0xB];
 } FieldMotionResource;
 extern FieldMotionSlot g_field_object_states[];
-extern FieldMotionVisual D_800FE3A0[];
+extern FieldMotionVisual g_field_object_parts[];
 extern FieldMotionResource g_field_resource_entries[];
 extern void func_80092C98(FieldMotionActor *);
 extern s32 func_80091728(s32, s32, FieldMotionActor *);
 extern s32 field_object_has_active_actor_tracks(s32);
-extern void func_800952DC(FieldMotionActor *, s32);
+extern void field_update_sequence_actor_binding(FieldMotionActor *, s32);
 extern s32 func_80093AB8(FieldMotionActor *);
 extern s32 func_80092AD8(FieldMotionActor *);
-extern void func_80096334(FieldMotionActor *);
+extern void field_restart_sequence_animation(FieldMotionActor *);
 extern void func_8008BC5C(FieldMotionActor *);
 extern s32 func_80097FA0(FieldMotionActor *, Vec3i *, s32);
 
@@ -108,7 +108,7 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
             g_field_object_states[g_field_object_states[actor->slot].parent].flags &= ~0x2000;
         }
         g_field_object_states[actor->slot].flags &= ~0x4000;
-        func_800952DC(actor, 1);
+        field_update_sequence_actor_binding(actor, 1);
         g_field_object_states[actor->slot].options &= ~0x1800;
         state = actor->state & 0x7F;
         if (state == 0x37 || state == 0x3B)
@@ -123,7 +123,7 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
         {
             actor->value = 0;
             actor->state &= 0x80;
-            func_80096334(actor);
+            field_restart_sequence_animation(actor);
         }
         if (actor->value == 0)
         {
@@ -135,7 +135,7 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
     {
         step = actor->movement / actor->divisor;
         actor->movement = (u8)actor->movement - step;
-        visual = &D_800FE3A0[actor->slot];
+        visual = &g_field_object_parts[actor->slot];
         if (actor->state & 0x80)
         {
             scratch->x = ((step << 8) * visual->scale) >> 6;

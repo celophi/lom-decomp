@@ -31,7 +31,7 @@ typedef struct
     u8 level;
 } TechniqueRule;
 extern TechniqueRule D_800EC5B8[];
-extern u8 D_800FD818[];
+extern u8 g_field_player_records[];
 extern s32 D_80115890;
 extern u16 D_80122920[];
 extern u16 D_80122998;
@@ -106,7 +106,7 @@ void func_800A68B4(void)
 
     party_index = 0;
     party_byte_offset = 0;
-    party_flags = D_800FD818;
+    party_flags = g_field_player_records;
     do
     {
         if (*party_flags & 1)
@@ -288,7 +288,7 @@ check_party_equipment:
                             active_rule = technique_rule;
                             technique_party_index = 0;
                             party_context = context;
-                            technique_party_flags = D_800FD818;
+                            technique_party_flags = g_field_player_records;
                             temp_a2_10 = technique_rule->result & 0x7F;
                             do
                             {
