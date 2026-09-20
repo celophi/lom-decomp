@@ -24,7 +24,7 @@ typedef struct
 extern s32 D_80117E88[];
 extern s32 D_80117EB8[];
 extern u8 D_800EC2F4[];
-extern u8 D_800EC2FC[];
+extern u8 g_field_hint_button_map[];
 extern u8 D_800EC304[];
 extern u8 D_800EC334[];
 extern u8 *g_pad_ctx;
@@ -197,7 +197,7 @@ button_loop:
                 do
                 {
                     button_count = (s32 *)((s32)D_80117E88 + player_word_offset);
-                    mapping = (u8 *)((s32)g_pad_ctx + player * 0x250 + D_800EC2FC[button_index]);
+                    mapping = (u8 *)((s32)g_pad_ctx + player * 0x250 + g_field_hint_button_map[button_index]);
                     history[*button_count] = D_800EC2F4[mapping[0x638]];
                     button_length = *button_count;
                     if (button_length < 0xF)

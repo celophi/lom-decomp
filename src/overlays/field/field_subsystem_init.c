@@ -22,8 +22,8 @@ void func_800A2DFC(void);                                  /* extern */
 void func_800A3EBC(void);                                  /* extern */
 void func_800A43C0(void);                                  /* extern */
 void func_800A6204(void);                                  /* extern */
-void func_800A8CFC(void);                                  /* extern */
-void func_800AA02C(void);                                  /* extern */
+void field_bind_saved_game_context(void);                                  /* extern */
+void field_reset_input_repeat(void);                                  /* extern */
 void func_800AA824(void);                                  /* extern */
 void func_800AA90C(s32);                                 /* extern */
 void func_800ADE2C(void);                                  /* extern */
@@ -65,8 +65,8 @@ extern s32 g_field_active_group[];
 extern s32 g_field_pickup_sound_played[];
 extern s32 g_field_hide_actor_panels[];
 extern s32 D_8011F3AC[];
-extern s32 D_8012269C[];
-extern s32 D_801227C8[];
+extern s32 g_field_modal_state[];
+extern s32 g_field_text_session_active[];
 
 /**
  * @brief Reset every field subsystem for a freshly entered scene.
@@ -88,7 +88,7 @@ void field_initialize_subsystems(s32 arg0)
     D_8010D034[0] = base;
     D_801227E8[0] = 0;
     func_800B0094(base);
-    func_800A8CFC();
+    field_bind_saved_game_context();
     field_reset_actor_resource_slots();
     g_field_render_context[0] = arg0;
     g_field_scene_mode_bit[0] = 0;
@@ -118,7 +118,7 @@ void field_initialize_subsystems(s32 arg0)
     g_field_return_to_title_prompt_delay[0] = 0;
     g_field_hide_actor_panels[0] = 0;
     D_8010AE54[0] = 0;
-    D_8012269C[0] = 0;
+    g_field_modal_state[0] = 0;
     D_800F2298[0] = 0;
     D_8011F428[0] = 0;
     D_801227F0[0] = 0;
@@ -133,7 +133,7 @@ void field_initialize_subsystems(s32 arg0)
         g_field_preserve_entry_music[0] = 0;
     }
     func_800B01FC(prev);
-    func_800AA02C();
+    field_reset_input_repeat();
     func_80086F20();
     func_800A3EBC();
     func_800A43C0();

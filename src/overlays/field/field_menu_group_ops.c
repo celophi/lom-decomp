@@ -11,8 +11,8 @@ extern u8 D_800459AF;
 extern s8 D_800459B3;
 extern void func_800C4364(s32);
 extern void func_800A54D0(void);
-extern void func_800A8FB4(void);
-extern void func_800A8F8C(void *, void *);
+extern void field_compact_inventory(void);
+extern void field_copy_inventory_record(void *, void *);
 
 
 extern void (*D_800F19D8[])(s32 arg0);
@@ -163,12 +163,12 @@ void func_800C5804(void)
 
                 destination = (g_saved_game.bytes[D_80122C00 + 0x29D8] * 0x14C) + (g_saved_game.bytes + 0x2B58);
                 destination += index << 6;
-                func_800A8F8C(destination, (g_gosub_result_values[index] << 6) + (g_saved_game.bytes + 0xCE0));
+                field_copy_inventory_record(destination, (g_gosub_result_values[index] << 6) + (g_saved_game.bytes + 0xCE0));
                 g_saved_game.bytes[(g_gosub_result_values[index] << 6) + 0xCE0] = 0;
                 index += 1;
             } while (index < g_gosub_result_count);
         }
-        func_800A8FB4();
+        field_compact_inventory();
         index = g_gosub_result_count;
         if (index < 4)
         {
@@ -278,8 +278,8 @@ void func_800C5B64(void)
 
 
 extern s32 D_80122C00;
-extern void *func_800A9060(void);
-extern void func_800A8F8C(void *, void *);
+extern void *field_find_free_inventory_record(void);
+extern void field_copy_inventory_record(void *, void *);
 /**
  * @brief Clear the selected menu group and release its four active records.
  * @note Refresh the selection after each allocation call and preserve the packed count.
@@ -316,11 +316,11 @@ void func_800C5BCC(void)
         offset = i * 0x40;
         if (layout[offset + group_offset + 0x2B58] != 0)
         {
-            if (func_800A9060() != 0)
+            if (field_find_free_inventory_record() != 0)
             {
-                item = func_800A9060();
+                item = field_find_free_inventory_record();
                 group_offset = layout[D_80122C00 + 0x29D8] * 0x14C;
-                func_800A8F8C(item, group_offset + entries + offset);
+                field_copy_inventory_record(item, group_offset + entries + offset);
             }
         }
         i++;

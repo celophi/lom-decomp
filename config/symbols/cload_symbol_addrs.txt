@@ -251,3 +251,7 @@ g_cload_selected_card_path              = 0x80162C90;
 g_cload_overlay_id = 0x80140000;
 
 field_text_upload_immediate_cache = 0x80063194;
+
+// FIELD exports used by this overlay.
+field_update_input_repeat = 0x800A9E78;
+field_reset_input_repeat = 0x800AA02C;

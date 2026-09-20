@@ -55,7 +55,7 @@ extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern u8 *D_80122B74;
 
-extern u8 *func_800A9060(void);
+extern u8 *field_find_free_inventory_record(void);
 extern void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 extern void func_800BE888(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 extern void func_800BEA10(u8 *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
@@ -81,7 +81,7 @@ void func_800BE710(s32 arg0)
     switch (arg0)
     {
         case 2:
-            handle = func_800A9060();
+            handle = field_find_free_inventory_record();
             if (handle != NULL)
             {
                 func_800BEA10(handle, 2, g_gosub_result_values[0], g_gosub_result_values[1],
@@ -104,7 +104,7 @@ void func_800BE710(s32 arg0)
             break;
         }
         default:
-            handle = func_800A9060();
+            handle = field_find_free_inventory_record();
             if (handle != NULL)
             {
                 func_800BE888((s32)handle, arg0, g_gosub_result_values[0], g_gosub_result_values[1]);

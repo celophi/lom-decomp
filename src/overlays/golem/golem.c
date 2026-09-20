@@ -337,7 +337,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
         ClearOTagR(draw_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);
         draw_buffer->packet_cursor = draw_buffer->packets;
         field_text_reset_scratch();
-        func_800A9E78();
+        field_update_input_repeat();
         golem_update_frame(draw_buffer);
         field_text_upload_immediate_cache();
         DrawSync(0);
@@ -364,7 +364,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
         cdrom_process_state();
     }
 
-    func_800AA02C();
+    field_reset_input_repeat();
     field_text_reset_windows();
 }
 
@@ -421,7 +421,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     g_golem_scroll_target_y = 0;
     g_golem_selected_block = 0;
     golem_upload_ui_image();
-    func_800AA02C();
+    field_reset_input_repeat();
     golem_set_fade_target(0x100, 0x100, 0x100, 6);
     D_8014C26C = 0;
     g_golem_interpolation_target = 0;

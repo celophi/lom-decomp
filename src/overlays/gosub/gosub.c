@@ -66,7 +66,7 @@ void gosub_open_screen_sequence(void* unused, s32* screen_sequence)
     field_set_default_fade_target();
     g_gosub_frame_parity = 0;
     g_gosub_finished = 0;
-    func_800AA02C();
+    field_reset_input_repeat();
     gosub_load_screen_sequence(screen_sequence);
 }
 

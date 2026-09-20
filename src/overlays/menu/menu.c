@@ -103,7 +103,7 @@ s32 func_801405B0(RenderContext* render_buffers)
     actuator_state->ports[0].large_motor_command = 0;
     DrawSync(0);
     VSync(0);
-    func_800AA02C();
+    field_reset_input_repeat();
     func_800643E0();
     return g_menu_transition_code;
 }
@@ -118,7 +118,7 @@ void menu_init(void)
     menu_state_init();
     menu_reset_slots();
     g_active_slot = -1;
-    func_800AA02C();
+    field_reset_input_repeat();
     g_menu_compare_window_active = 0;
     menu_init_prim_rects();
     g_menu_frame = 0;
@@ -174,7 +174,7 @@ void menu_tick(RenderContext* render_ctx)
     saved_prim_cursor = render_ctx->prim_cursor;
     g_menu_frame = menu_frame + 1;
     g_frame_counter = frame_counter + 1;
-    func_800A9E78();
+    field_update_input_repeat();
 
     /* Merge externally injected input when enabled by the pad context. */
     if ((g_pad_ctx->inject_flags & MENU_PAD_INJECT_ENABLED) && g_pad_ctx->inject_enable)

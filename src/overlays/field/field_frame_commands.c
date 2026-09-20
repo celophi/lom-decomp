@@ -33,8 +33,8 @@ void func_800A3FB0(void);                                  /* extern */
 void func_800A4798(s32);                               /* extern */
 void func_800A5794(s32);                               /* extern */
 void func_800A64D0(s32);                               /* extern */
-void func_800A9E78(u8);                                /* extern */
-void func_800AA098(s32);                               /* extern */
+void field_update_input_repeat(u8);                                /* extern */
+void field_process_input(s32);                               /* extern */
 void func_800AB214(s32);                               /* extern */
 void func_800AD118(s32);                               /* extern */
 void func_800AF8E8(s32);                               /* extern */
@@ -48,8 +48,8 @@ extern s32 g_field_active_group[];
 extern s32 g_field_pickup_sound_played[];
 extern s32 g_field_hide_actor_panels[];
 extern s32 D_8011F3AC[];
-extern s32 D_8012269C[];
-extern s32 D_801227C8[];
+extern s32 g_field_modal_state[];
+extern s32 g_field_text_session_active[];
 extern s32 g_field_scene_request_pending[];
 extern s32 g_frame_counter[];
 
@@ -72,8 +72,8 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
     g_field_pickup_sound_played[0] = 0;
     temp = *(u8*)&g_field_action_context[0];
     g_field_action_context[0] = temp;
-    func_800A9E78(temp);
-    func_800AA098(arg0);
+    field_update_input_repeat(temp);
+    field_process_input(arg0);
     field_update_and_render_fade(arg0);
     func_800B0244();
     if (g_field_active_group[0] != 0)
@@ -83,7 +83,7 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
             func_80084700(arg0);
         }
     }
-    if ((D_800F2298[0] == 0) && (g_field_gover_load_countdown[0] == 0) && (D_8012269C[0] == 0) && (D_801227C8[0] == 0))
+    if ((D_800F2298[0] == 0) && (g_field_gover_load_countdown[0] == 0) && (g_field_modal_state[0] == 0) && (g_field_text_session_active[0] == 0))
     {
         func_800B19FC();
         if (g_field_scene_request_pending[0] != 0)
@@ -97,7 +97,7 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
     }
     func_800A4798(arg0);
     func_80096B54();
-    if ((D_800F2298[0] == 0) && (g_field_gover_load_countdown[0] == 0) && (D_8012269C[0] == 0) && (D_8011F3AC[0] == 0) && (D_801227C8[0] == 0))
+    if ((D_800F2298[0] == 0) && (g_field_gover_load_countdown[0] == 0) && (g_field_modal_state[0] == 0) && (D_8011F3AC[0] == 0) && (g_field_text_session_active[0] == 0))
     {
         field_update_actor_animations();
     }

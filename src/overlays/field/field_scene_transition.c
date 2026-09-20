@@ -386,8 +386,8 @@ void field_update_scene(void)
     void func_80084240();
     void func_80084630();
     void func_80086F20();
-    void func_8008C730();
-    void func_8008C7A8();
+    void field_reset_leader_position_history();
+    void field_refresh_party_routes();
     void func_80091BC8();
     void func_80092394();
     void func_800A255C();
@@ -401,7 +401,7 @@ void field_update_scene(void)
     void func_800A54D0();
     void func_800A6204();
     void func_800A6EEC();
-    void func_800A8D10();
+    void field_store_entry_settings();
     void func_800AF8C4();
     void func_800B0094(void);
     void func_800B01FC();
@@ -953,7 +953,7 @@ void field_update_scene(void)
             actor_position++;
         } while (actor_index < 3);
         field_refresh_actor_collisions();
-        func_8008C730();
+        field_reset_leader_position_history();
         func_80091BC8();
         g_field_camera_follow_x = g_field_camera_target_x;
         g_field_camera_follow_z = g_field_camera_target_z;
@@ -972,9 +972,9 @@ void field_update_scene(void)
         {
             saved_scene_id += 0x8000;
         }
-        func_800A8D10(saved_scene_id, object_id, g_layout_flag, spawn_id, g_layout_option, g_layout_sub_mode);
+        field_store_entry_settings(saved_scene_id, object_id, g_layout_flag, spawn_id, g_layout_option, g_layout_sub_mode);
         func_800A54D0();
-        func_8008C7A8();
+        field_refresh_party_routes();
         func_800A2DFC();
         func_800AF8C4();
         field_upload_transition_tiles();

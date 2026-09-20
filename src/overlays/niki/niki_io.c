@@ -662,7 +662,7 @@ s32 niki_scan_next_entry(s32 page)
         return 1;
     }
 
-    func_800AA02C();
+    field_reset_input_repeat();
     if ((g_niki_mode == 0) && (niki_has_known_entry_type() == 0))
     {
         g_niki_entry_state = 0xF8;

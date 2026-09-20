@@ -9,7 +9,7 @@ extern s32 D_801451C8;
 extern s32 D_801451CC;
 
 extern void func_80067F8C(void);
-extern void func_800AA02C(void);
+extern void field_reset_input_repeat(void);
 
 
 
@@ -26,7 +26,7 @@ void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
     D_801451C8 = 0;
     D_801451C4 = arg1;
     D_801451B8 = arg5;
-    func_800AA02C();
+    field_reset_input_repeat();
     if (D_801451C4 != 0)
     {
         arg0 = func_801404A8(arg0, arg2, arg3, arg4);

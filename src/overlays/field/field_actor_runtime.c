@@ -17,7 +17,7 @@
 extern void func_80084240(void);
 void func_80140004(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex);
 void func_800A74E8();
-void func_800AA02C();
+void field_reset_input_repeat();
 
 typedef struct
 {
@@ -468,7 +468,7 @@ extern FieldActorResourceSlot g_field_player_records[];
 extern FieldColorScale g_field_color_scale;
 extern s8 g_field_color_scale_active;
 
-extern s32 D_801227C8;
+extern s32 g_field_text_session_active;
 extern s32 g_field_gover_image_resource_id;
 extern s32 g_field_gover_music_resource_id;
 extern s32 g_field_gover_load_countdown;
@@ -511,7 +511,7 @@ extern FieldActorObjectRecord g_field_effect_records[];
 extern s32 D_80105770;
 
 extern s32 D_800F2298;
-extern s32 D_8012269C;
+extern s32 g_field_modal_state;
 extern s32 D_80105760;
 extern FieldCdBuffer* D_8010D038;
 extern u8 g_prim_rect_buf[];
@@ -531,7 +531,7 @@ void func_800A710C(void);
 
 void func_800A8880(s32);
 
-void func_800A9A5C(void);
+void field_merge_dialog_items(void);
 void func_800A68B4(void);
 void func_800A7434(void);
 void func_800A74B8(void);
@@ -568,14 +568,14 @@ void field_update_dialog_runtime(s32 update_mode)
  */
 void func_80068028(void)
 {
-    func_800AA02C();
+    field_reset_input_repeat();
     g_field_fade_target.red = 0xC0;
     g_field_fade_target.green = 0xC0;
     g_field_fade_target.blue = 0xC0;
     g_field_fade_target.duration = 5;
     if (D_8010D020[0] == 0)
     {
-        func_800A9A5C();
+        field_merge_dialog_items();
         func_800A68B4();
         func_800A7434();
     }
@@ -736,7 +736,7 @@ void field_update_return_to_title_prompt(s32 render_ctx)
  */
 void field_open_return_to_title_prompt(void)
 {
-    func_800AA02C();
+    field_reset_input_repeat();
     func_800A74E8();
 }
 
@@ -921,7 +921,7 @@ s32 field_evaluate_parameter_track(FieldAnimationData* animation_data, s32 curve
     {
         return curve->start_value;
     }
-    if (((*((u16*)curve)) & 0x80) && (D_801227C8 == 0))
+    if (((*((u16*)curve)) & 0x80) && (g_field_text_session_active == 0))
     {
         rand_val = rand();
         return curve->start_value +
@@ -1121,7 +1121,7 @@ unsigned int field_evaluate_parameter_track_at_time(FieldAnimationData* animatio
         return entry->start_value;
     }
 
-    if (((*((u16*)entry)) & 0x80) && (D_801227C8 == 0))
+    if (((*((u16*)entry)) & 0x80) && (g_field_text_session_active == 0))
     {
         s32 rand_val = rand();
         segment_word = *segment;
@@ -1971,7 +1971,7 @@ void field_initialize_actor_system(void)
     u8* actor_base_alias;
     u32 dest_addr;
 
-    D_801227C8 = 0;
+    g_field_text_session_active = 0;
     D_8012291C = 0;
 
     for (i = 0; i < 0xD; i++)
@@ -2296,7 +2296,7 @@ void func_8006AA7C(s32 actor_slot)
                 }
             }
 
-            func_8008C7A8();
+            field_refresh_party_routes();
             func_800B4684();
             func_80084240();
             func_800B01FC();
@@ -2514,7 +2514,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
         func_800A3D44(1, D_800FDA81);
     }
 
-    func_8008C7A8();
+    field_refresh_party_routes();
     field_set_party_palettes();
 
     switch (g_field_player_records[slot].unk3)
@@ -3031,7 +3031,7 @@ void field_update_actor_objects(void)
                         {
                             if (!(actor_state->unkC & 0x21E4))
                             {
-                                func_8008D29C(record, index, 0x600 + (index * 0x400));
+                                field_follow_leader_route(record, index, 0x600 + (index * 0x400));
                                 record->unk1C &= ~0x800;
                             }
                             else
@@ -3066,7 +3066,7 @@ void field_update_actor_objects(void)
                         }
                     }
 
-                    func_8008D174(record);
+                    field_record_actor_position(record);
                 }
             }
         }
@@ -3554,7 +3554,7 @@ u8 *field_advance_actor_part_animation_frame(FieldActorObjectRecord *record, u8 
     record->unk3C |= 0x1000000;
     shift = (hi >> 7) + 1;
 
-    if (D_800F2298 == 0 && D_8012269C == 0 && D_801227C8 == 0 && record->unk24 != 0)
+    if (D_800F2298 == 0 && g_field_modal_state == 0 && g_field_text_session_active == 0 && record->unk24 != 0)
     {
         record->unk16--;
         record->unk34++;

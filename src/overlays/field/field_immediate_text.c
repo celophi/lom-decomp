@@ -17,8 +17,8 @@ typedef struct
 extern StructEC D_800EC3E4;
 
 SPRT* func_800AD658(s32* ot, SPRT* sprite_cursor, s32 count);
-s32 func_800A8DDC(u8 *arg0);
-void func_800A8E28(u8 *dest, u8 *src);
+s32 field_name_byte_length(u8 *arg0);
+void field_copy_name(u8 *dest, u8 *src);
 
 /**
  * @brief Build and enqueue text-glyph sprites for a line of immediate text.
@@ -158,8 +158,8 @@ void func_800A8B90(u8 *buf, s32 val)
         low = D_800EC3E4.unk0;
         offset = (D_800EC3E4.unk1 << 8) + (s32)((u8 *)&D_800EC3E4 - 0x20);
         minus = (u8 *)(low + offset);
-        func_800A8E28(dst, minus);
-        dst += func_800A8DDC(minus);
+        field_copy_name(dst, minus);
+        dst += field_name_byte_length(minus);
     }
     div = 10000000;
     started = 0;

@@ -144,7 +144,7 @@ void func_80140E00(ShopDrawState *arg0, ShopPrimState *arg1)
                     if (((new_word >> 3) & 0xF) == 8)
                     {
                         *var_s5 = (new_word & ~7) | 2;
-                        func_800AA02C();
+                        field_reset_input_repeat();
                     }
                 }
                 break;

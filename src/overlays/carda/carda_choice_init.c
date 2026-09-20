@@ -46,7 +46,7 @@ void func_80147C5C(void);
 void func_8014697C(s32 arg0)
 {
     func_800A3938(0x78, 0x80);
-    func_800AA02C();
+    field_reset_input_repeat();
     D_80166118 = 0;
     D_80166070 = 0;
     D_801660FC = 0;

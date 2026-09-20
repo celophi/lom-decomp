@@ -264,7 +264,7 @@ searches_done:
     func_800B2844(0, (selected_index << 6) + D_80122A08, 0xFF);
 }
 
-void func_800A8F8C(void *, void *);
+void field_copy_inventory_record(void *, void *);
 
 
 /** @brief Remove spent records and compact the four-entry pending table. */
@@ -320,7 +320,7 @@ compact_records:
                 {
                     do
                     {
-                        func_800A8F8C((void *)((u32)dest_off + (u32)dest_base), a1);
+                        field_copy_inventory_record((void *)((u32)dest_off + (u32)dest_base), a1);
                     } while (0);
                     s0[0x3160] = 0;
                     *(s32 *)(s0 + 0x3194) = 0;
@@ -359,7 +359,7 @@ extern u8 D_80122C02;
 extern u8 D_80046138[];
 
 
-extern u8 *func_800A9060(void);
+extern u8 *field_find_free_inventory_record(void);
 extern /** @brief Remove spent records and compact the four-entry pending table. */
 void func_800C8E2C(void);
 
@@ -372,9 +372,9 @@ void func_800C8F4C(void)
     BigStruct *rec;
 
     idx = D_80122C02;
-    handle = func_800A9060();
+    handle = field_find_free_inventory_record();
     offset = idx << 6;
-    func_800A8F8C(handle, &D_80046138[offset]);
+    field_copy_inventory_record(handle, &D_80046138[offset]);
     rec = (BigStruct *) (D_80046138 - 0x3160 + offset);
     rec->unk3160 = 0;
     rec->unk3194 = 0;

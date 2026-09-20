@@ -82,9 +82,9 @@ typedef struct
 } FieldStateB;
 
 void func_800C2138();
-u8 *func_800A9060(void);
-void func_800A8F8C(u8 *dst, u8 *src);
-void func_800A8D8C(u8 *arg0, u8 arg1);
+u8 *field_find_free_inventory_record(void);
+void field_copy_inventory_record(u8 *dst, u8 *src);
+void field_append_dialog_item(u8 *arg0, u8 arg1);
 
 extern FieldStateB *D_80123FB0;
 extern u16 D_800F0E98[];
@@ -164,15 +164,15 @@ void func_800C1A18(void *arg0, void *arg1)
         {
             return;
         }
-        handle = func_800A9060();
+        handle = field_find_free_inventory_record();
         if (handle == NULL)
         {
             return;
         }
-        func_800A8F8C(handle, found);
+        field_copy_inventory_record(handle, found);
         arg0_2 = handle;
         arg1_2 = 0;
-        func_800A8D8C(arg0_2, arg1_2);
+        field_append_dialog_item(arg0_2, arg1_2);
         return;
     }
     else
@@ -181,7 +181,7 @@ void func_800C1A18(void *arg0, void *arg1)
         arg0_2 = (u8 *)D_800F0E98 + D_800F0E98[code];
         arg1_2 = 1;
     }
-    func_800A8D8C(arg0_2, arg1_2);
+    field_append_dialog_item(arg0_2, arg1_2);
 }
 
 /**

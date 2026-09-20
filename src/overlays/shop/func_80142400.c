@@ -17,11 +17,11 @@ extern s32 D_80145CDC;
 extern u8 D_800EC3F8[];
 extern void func_80142284();
 
-extern s32 func_800A9060(s32);
-extern void func_800A8F8C(s32, s32);
+extern s32 field_find_free_inventory_record(s32);
+extern void field_copy_inventory_record(s32, s32);
 extern void func_800A3938();
 extern s32 func_800A88A0(s32 prim, s32 *ot, void *text, s32 color, s32 x, s32 y, s32 mode);
-extern void func_800AA02C();
+extern void field_reset_input_repeat();
 
 /**
  * @brief Apply a pending shop quantity confirmation and draw the amount prompt.
@@ -29,10 +29,10 @@ extern void func_800AA02C();
  * When the shop is in the quantity-select sub-state ((D_801451D8 & 7) == 2) and
  * a confirm/cancel button is pending in @ref D_80122988, this commits the
  * purchase or sale: for item-slot entries it clamps the quantity, runs the
- * per-unit slot loop (@ref func_800A8F8C), and for both entry kinds deducts the
+ * per-unit slot loop (@ref field_copy_inventory_record), and for both entry kinds deducts the
  * money and decrements the remaining count, retiring the entry when it reaches
  * zero. A successful change (var_s7) rearms the confirmation widget and refreshes
- * it via @ref func_800AA02C. Always draws the three quantity-prompt glyphs.
+ * it via @ref field_reset_input_repeat. Always draws the three quantity-prompt glyphs.
  *
  * @param ot   Ordering-table pointer used for emitted primitives.
  * @param prim Primitive-buffer write cursor.
@@ -77,7 +77,7 @@ s32 func_80142400(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         }
         if ((status & 0x220) && (D_801451D0 == 0))
         {
-            var_s1 = func_800A9060(0x7D);
+            var_s1 = field_find_free_inventory_record(0x7D);
             entry = (u16 *)((D_80145CDC * 8) + D_80145250);
             if (*entry & 0x8000)
             {
@@ -94,7 +94,7 @@ s32 func_80142400(s32 *ot, s32 prim, s32 arg2, s32 arg3)
                     do
                     {
                         var_s0++;
-                        func_800A8F8C(var_s1, D_80145244 + ((*(u16 *)((D_80145CDC * 8) + D_80145250) & 0x7FFF) << 6));
+                        field_copy_inventory_record(var_s1, D_80145244 + ((*(u16 *)((D_80145CDC * 8) + D_80145250) & 0x7FFF) << 6));
                         var_s1 += 0x40;
                     } while (var_s0 < D_80145240);
                 }
@@ -145,7 +145,7 @@ set_count:
                 D_80145238 = 1;
                 *(s32 *)((u8 *)&D_801451D8 + 4) = ((*(s32 *)((u8 *)&D_801451D8 + 4) | 1) & ~0x1FE) | 0x20;
                 D_801451D8 &= 0xFFFFFF;
-                func_800AA02C(1, 0xFFFFFF);
+                field_reset_input_repeat(1, 0xFFFFFF);
             }
             goto call_finish;
         }
@@ -156,7 +156,7 @@ set_count:
             func_800A3938(0x7F, 0x80);
             D_801451D4 = 0;
 call_finish:
-            func_800AA02C();
+            field_reset_input_repeat();
         }
     }
 

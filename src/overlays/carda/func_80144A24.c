@@ -14,7 +14,7 @@ extern s32 D_80165FEC;
 extern s32 D_80166078;
 extern void *jtbl_801400AC[];
 extern s32 func_800A88A0(s32, s32 *, void *, s32, s32, s32, s32);
-extern void func_800AA02C();
+extern void field_reset_input_repeat();
 
 /**
  * @brief Draw the active CARDA status dialog and handle dismissal input.
@@ -79,7 +79,7 @@ check_pad:
         }
 clear_state:
         D_80165F80 &= ~7;
-        func_800AA02C();
+        field_reset_input_repeat();
     }
     return prim;
 }

@@ -22,7 +22,7 @@ extern char D_800ECFD0[];
 s32 func_8001684C();
 void func_800170BC();
 void func_8001729C();
-void func_800AA02C();
+void field_reset_input_repeat();
 void func_800B0170();
 void func_801411CC();
 s32 func_801477CC();
@@ -50,7 +50,7 @@ s32 func_80149A4C(s32 page)
         scan_i++;
     } while (scan_i < 20);
 
-    func_800AA02C();
+    field_reset_input_repeat();
     if (D_80166078 == 1 && func_80147C94() == 0) {
         D_80165FEC = 0xF8;
     } else {

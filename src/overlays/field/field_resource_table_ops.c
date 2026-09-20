@@ -2,10 +2,10 @@
 #include "common.h"
 
 u8 *func_800C1E40(s32 arg0);
-void *func_800A9060(void);
+void *field_find_free_inventory_record(void);
 s32 func_800B2844(s32 arg0, u8 *arg1, s32 arg2);
-void func_800A8F8C(void *arg0, u8 *arg1);
-void func_800A8FB4(void);
+void field_copy_inventory_record(void *arg0, u8 *arg1);
+void field_compact_inventory(void);
 s32 func_800C2AD0(void);
 
 extern u8 D_801148B0[];
@@ -100,12 +100,12 @@ s32 func_800C29CC(s32 index)
         return -1;
     }
 
-    object = func_800A9060();
+    object = field_find_free_inventory_record();
     entry = table + ((index * 0x40) + 4);
     func_800B2844(0, entry, 0x15);
     if (object != NULL)
     {
-        func_800A8F8C(object, entry);
+        field_copy_inventory_record(object, entry);
         return 0;
     }
     return -1;
@@ -123,7 +123,7 @@ void func_800C2A88(s32 arg0)
     {
         p = &D_80122B74[arg0 * 0x40];
         p[0xCE0] = 0;
-        func_800A8FB4();
+        field_compact_inventory();
     }
     else
     {
@@ -132,7 +132,7 @@ void func_800C2A88(s32 arg0)
 }
 
 /**
- * @brief Deactivate all 100 records at 0xCE0 and notify func_800A8FB4.
+ * @brief Deactivate all 100 records at 0xCE0 and notify field_compact_inventory.
  * @return Always -1.
  */
 s32 func_800C2AD0(void)
@@ -145,6 +145,6 @@ s32 func_800C2AD0(void)
         p = &D_80122B74[i * 0x40];
         p[0xCE0] = 0;
     }
-    func_800A8FB4();
+    field_compact_inventory();
     return -1;
 }

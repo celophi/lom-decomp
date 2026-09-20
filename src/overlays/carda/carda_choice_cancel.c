@@ -61,7 +61,7 @@ s32 func_80146AF0(s32 *ot, s32 prim, s32 arg2, s32 arg3)
             p++;
         }
         func_80067F5C(8);
-        func_800AA02C();
+        field_reset_input_repeat();
     }
     return prim;
 }

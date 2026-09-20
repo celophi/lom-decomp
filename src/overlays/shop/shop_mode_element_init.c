@@ -31,7 +31,7 @@ extern ShopElementState D_801451D8;
 extern s32 D_80145238;
 extern s32 D_8014523C;
 extern void func_80142284(void);
-extern void func_800AA02C(void);
+extern void field_reset_input_repeat(void);
 
 void func_80140CA4(s32 arg0)
 {
@@ -45,5 +45,5 @@ void func_80140CA4(s32 arg0)
     D_801451D8.size.bits.flag = 1;
     D_801451D8.size.bits.size = 0x10;
     D_801451D8.state.word &= 0xFFFFFF;
-    func_800AA02C();
+    field_reset_input_repeat();
 }

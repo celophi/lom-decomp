@@ -487,8 +487,8 @@ void play_menu_sfx(s32 sfx_id, s32 volume);
 
 
 void field_update_audio_timer(void);
-void func_800A9E78(void);
-void func_800AA02C(void);
+void field_update_input_repeat(void);
+void field_reset_input_repeat(void);
 
 /* Static forward declarations retain the original function order. */
 static void reset_fade_state(void);
@@ -581,7 +581,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     PutDispEnv(&next_buffer->disp_env);
     update_controllers();
     SetDispMask(TRUE);
-    func_800AA02C();
+    field_reset_input_repeat();
 
     /* Render and submit frames until the overlay reports a final result. */
     while (TRUE)
@@ -590,7 +590,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
         ClearOTagR(draw_buffer->ot, GNAME_OT_ENTRY_COUNT);
         draw_buffer->prim_cursor = &draw_buffer->ot[GNAME_OT_ENTRY_COUNT];
         field_text_reset_scratch();
-        func_800A9E78();
+        field_update_input_repeat();
         render_fade_overlay(draw_buffer);
         gname_tick(draw_buffer);
         field_text_upload_immediate_cache();
@@ -631,7 +631,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
 
     DrawSync(0);
     VSync(0);
-    func_800AA02C();
+    field_reset_input_repeat();
 
     /* Persist edits only when this run targeted the pad context's history name. */
     if ((source_mode == GNAME_SRC_HISTORY) && (active_name == g_pad_ctx->gname_name))
@@ -793,7 +793,7 @@ void gname_init(void)
     s32 frame_padding[GNAME_INIT_STACK_PAD_WORDS];
 
     load_name_entry_tim();
-    func_800AA02C();
+    field_reset_input_repeat();
     g_startup_delay = GNAME_STARTUP_DELAY_FRAMES;
     field_text_reset_scratch();
     reset_run_state();

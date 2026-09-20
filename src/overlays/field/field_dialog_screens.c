@@ -204,9 +204,9 @@ typedef struct
 extern u8 D_8011F430[];
 extern u8 D_800EC3D6[];
 extern u8 D_800EC3C6[], D_800EC3DA[];
-extern u8 D_80122910[];
+extern u8 g_field_dialog_item_quantities[];
 extern unsigned char D_800EC3C4[];
-extern void *D_801227F8[];
+extern void *g_field_dialog_item_texts[];
 extern s32 D_801229A0[];
 extern Rec54 g_field_actors[];
 extern StructEC D_800EC3D8;
@@ -214,7 +214,7 @@ extern PackedOffset D_800EC3CC;
 extern PackedOffset D_800EC3CE;
 extern FieldQuadAnimationTable D_800513E8, D_80051408, D_80051428, D_80051448;
 extern s32 D_801227EC;
-extern s32 D_801227C8;
+extern s32 g_field_text_session_active;
 extern s32 g_field_dialog_item_count;
 extern u16 D_80122998;
 extern u16 D_80122920[];
@@ -231,7 +231,7 @@ extern s32 g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_s
 
 /* --- Shared (non-conflicting) extern function prototypes --- */
 extern void func_800ADEB0(void);
-extern void func_800AA02C(void);
+extern void field_reset_input_repeat(void);
 extern s32 func_800ADEEC(void);
 extern void func_800ADF34(void);
 extern void func_800A3938(s32 sound_id, s32 pan);
@@ -487,7 +487,7 @@ void func_800A7384(void)
 
     s32 i;
 
-    D_801227C8 = 0;
+    g_field_text_session_active = 0;
     i = 0;
     do {
         if ((g_field_player_records[i].u0.b.unk0 & 1) && g_field_actors[i].unk2A == 0x8E) {
@@ -511,7 +511,7 @@ void func_800A7384(void)
  * @brief Reset field sub-state and dispatch to one of three handlers.
  *
  * Runs the shared reset (func_800ADEB0, then latches @c D_801227EC to 4 and
- * calls func_800AA02C), then selects a handler by state: func_800A71CC when
+ * calls field_reset_input_repeat), then selects a handler by state: func_800A71CC when
  * @c D_80122998 is set, else func_800A764C when @c g_field_dialog_item_count is set, else
  * func_800A7724. Finishes with func_800B0A08(0).
  *
@@ -523,7 +523,7 @@ void func_800A7434(void)
 
     func_800ADEB0();
     D_801227EC = 4;
-    func_800AA02C();
+    field_reset_input_repeat();
     if (D_80122998 != 0)
     {
         func_800A71CC();
@@ -544,7 +544,7 @@ void func_800A7434(void)
  */
 void func_800A74B8(void)
 {
-    func_800AA02C();
+    field_reset_input_repeat();
     func_800B0A08(0);
     func_800AB774();
 }
@@ -935,12 +935,12 @@ s32 func_800A7FB4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         do
         {
             row = i * 0x10;
-            prim = func_800A88A0(prim, ot, D_801227F8[i], 4, 0x10 - arg2, (row + 0x10) - arg3, 0);
+            prim = func_800A88A0(prim, ot, g_field_dialog_item_texts[i], 4, 0x10 - arg2, (row + 0x10) - arg3, 0);
             pos.x = 0xB0 - arg2;
             pos.y = (row + 0x10) - arg2;
-            if (D_80122910[i] != 0)
+            if (g_field_dialog_item_quantities[i] != 0)
             {
-                prim = func_800A8A78(ot, prim, D_80122910[i], 4, &pos, 1);
+                prim = func_800A8A78(ot, prim, g_field_dialog_item_quantities[i], 4, &pos, 1);
             }
             i += 1;
         } while (i < g_field_dialog_item_count);

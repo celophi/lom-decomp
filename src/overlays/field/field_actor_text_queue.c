@@ -37,7 +37,7 @@ extern Position g_field_actors[];
 extern u8 D_800ED064[];
 extern u8 *g_pad_ctx;
 
-extern s32 D_801227C8;
+extern s32 g_field_text_session_active;
 extern s32 D_801227DC;
 
 extern s32 func_800AE864(u8 *);
@@ -242,7 +242,7 @@ void func_800A64D0(ArgA *arg0)
     s32 active_count;
 
     active_count = 0;
-    if (D_801227C8 != 0)
+    if (g_field_text_session_active != 0)
     {
         i = 0;
         for (; i < 3; i++)

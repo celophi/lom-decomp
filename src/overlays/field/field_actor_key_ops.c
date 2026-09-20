@@ -271,7 +271,7 @@ extern int abs(int);
 void field_load_resource_entry(s32, s32, s32);
 void field_initialize_actor_record(u8, s32);
 void field_initialize_actor_part(u8, s32);
-void func_8008C7A8(void);
+void field_refresh_party_routes(void);
 
 /* ------------------------------------------------------------------ *
  * Member functions (ascending address order).                        *
@@ -871,7 +871,7 @@ body:
     {
         found->unk28 = 0xFF;
         found->unk10 = 0;
-        func_8008C7A8();
+        field_refresh_party_routes();
         if (found->unk3A == masked)
         {
         zero_flag:

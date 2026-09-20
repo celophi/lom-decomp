@@ -441,7 +441,7 @@ s32 menu_handle_input(s32 process_actions)
                         if (((void*)g_menu_item_ptr != NULL) && (*((u8*)g_menu_item_ptr) != 0))
                         {
                             D_8011F424 = (((u32)((MenuItemEntry*)g_menu_item_ptr)->attributes.packed) >> 8) & 3;
-                            func_800A8E28(&D_801226F0, g_menu_item_ptr);
+                            field_copy_name(&D_801226F0, g_menu_item_ptr);
                             text_buffer[0] = 0;
                             D_801226B8 = 0;
                             D_801227D4 = (void*)g_menu_item_ptr;
@@ -449,7 +449,7 @@ s32 menu_handle_input(s32 process_actions)
                                 {
                                 text_cursor = text_buffer;
                                 label_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
-                                func_800A8E28(text_cursor, (s8*)(label_table + (*((u16*)(label_table + (((((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high) & 0x3F) * 2) + 0x48)))));
+                                field_copy_name(text_cursor, (s8*)(label_table + (*((u16*)(label_table + (((((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high) & 0x3F) * 2) + 0x48)))));
                                 item_word = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
                                 text_variant = (item_word >> 8) & 3;
                                 switch (text_variant)
@@ -518,7 +518,7 @@ s32 menu_handle_input(s32 process_actions)
                                 {
                                     D_801229F4 = slot_base[0x609];
                                 }
-                                func_800A8E28(&D_801226F0, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
+                                field_copy_name(&D_801226F0, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
                                 count = 0;
                                 idx = 0;
                                 rec = (u8*)&g_field_player_records;

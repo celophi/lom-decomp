@@ -423,7 +423,7 @@ s32 cload_main(void)
     g_cload_io_busy = 0;
     g_cload_frame_parity = 0;
     g_cload_exit_requested = 0;
-    func_800AA02C();
+    field_reset_input_repeat();
     cload_build_ui_elements();
     cload_run_menu_loop();
     return g_cload_result;
@@ -457,7 +457,7 @@ void cload_run_menu_loop(void)
         ordering_table = frame->ordering_table;
         ClearOTagR(ordering_table, 0x1000);
         frame->prim_cursor = (CloadGpuPacket *)g_cload_primitive_buffers[buffer_index];
-        func_800A9E78();
+        field_update_input_repeat();
         dpad_input = g_pad_input & 0xF000;
         if (dpad_input != 0)
         {
@@ -1614,7 +1614,7 @@ void cload_update_and_draw_elements(CloadFrameState *frame)
                     *element_state = new_word;
                     if (((new_word >> 3) & 0xF) == 8)
                     {
-                        func_800AA02C();
+                        field_reset_input_repeat();
                         *element_state = (*element_state & ~CLOAD_ELEMENT_STATE_MASK) | 2;
                     }
                 }
@@ -1989,7 +1989,7 @@ s32 cload_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     if ((u32)(cload_poll_and_rewind_primary_handles() - 1) < 2U)
     {
         ((CloadPromptElement *)&g_cload_element_pool)->attr.f.state = 0;
-        func_800AA02C();
+        field_reset_input_repeat();
         play_menu_sfx(0x78, 0x80);
         g_cload_entry_state = 0xFF;
         cload_reset_entry_ranks();
@@ -2001,7 +2001,7 @@ s32 cload_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
         if (status & 0x40)
         {
             ((CloadPromptElement *)&g_cload_element_pool)->attr.f.state = 0;
-            func_800AA02C();
+            field_reset_input_repeat();
             play_menu_sfx(0x78, 0x80);
             g_cload_load_step = g_cload_steps_card_reset;
         }
@@ -2010,7 +2010,7 @@ s32 cload_draw_load_prompt(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
             if (g_cload_choice_toggle != 0)
             {
                 ((CloadPromptElement *)&g_cload_element_pool)->attr.f.state = 0;
-                func_800AA02C();
+                field_reset_input_repeat();
                 play_menu_sfx(0x78, 0x80);
                 g_cload_load_step = g_cload_steps_card_reset;
             }
@@ -2163,7 +2163,7 @@ void cload_open_status_dialog(s32 dialog_state)
     }
     ((u8 *)p)[2] = state;
     p->draw = cload_draw_status_dialog;
-    func_800AA02C();
+    field_reset_input_repeat();
     D_80162370 = 0;
     g_cload_progress_active = 0;
     g_cload_selection_status = 0;
@@ -2219,7 +2219,7 @@ s32 cload_draw_status_dialog(s32 *ot, s32 prim, s32 x_offset, s32 y_offset)
     if (g_pad_input & 0x220)
     {
         g_cload_element_pool.first_state &= ~CLOAD_ELEMENT_STATE_MASK;
-        func_800AA02C();
+        field_reset_input_repeat();
     }
 
     return prim;
@@ -3577,7 +3577,7 @@ s32 cload_scan_next_entry(s32 page)
         g_cload_entry_state += 1;
         return 1;
     }
-    func_800AA02C();
+    field_reset_input_repeat();
     if (cload_has_known_entry_type() == 0)
     {
         g_cload_entry_state = 0xF8;
