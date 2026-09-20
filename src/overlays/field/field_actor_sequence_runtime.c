@@ -433,7 +433,7 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
                     field_start_actor_animation(actor_index, slots[object->source_object_index].contact.bytes.target_count, (u8*)parameters);
                     cursor += 1;
                     slots[object->source_object_index].sequence_command = FIELD_SEQUENCE_COMMAND_NONE;
-                    goto next_command;
+                    break;
                 case FIELD_SEQUENCE_START_CURRENT_TARGETS:
                     current_target_state = (FieldObjectRuntime*)(object->source_object_index * sizeof(*slots));
                     current_target_state = (FieldObjectRuntime*)((s32)current_target_state + (u8*)slots);
@@ -447,7 +447,7 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
                     }
                     cursor += 1;
                     field_start_actor_animation(actor_index, slots[object->source_object_index].contact.bytes.target_count, (u8*)parameters);
-                    goto next_command;
+                    break;
                 case FIELD_SEQUENCE_DELAY:
                     result = 0;
                     delay_owner = object->source_object_index;
@@ -473,16 +473,15 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
                     flag_state = (FieldObjectRuntime*)(object->source_object_index * sizeof(*slots));
                     flag_state = (FieldObjectRuntime*)((s32)flag_state + (u8*)slots);
                     updated_flags = flag_state->object_flags ^ 0x8000;
-                    goto refresh_actor_flags;
                 refresh_actor_flags:
                     flag_state->object_flags = updated_flags;
                     cursor += 1;
                     func_80086494(object->source_object_index);
-                    goto next_command;
+                    break;
                 case FIELD_SEQUENCE_TOGGLE_FACING:
                     cursor += 1;
                     object->facing_or_reward_kind = (u8)(object->facing_or_reward_kind ^ FIELD_SEQUENCE_FACING);
-                    goto next_command;
+                    break;
                 case FIELD_SEQUENCE_START_RESOURCE:
                     actor_index = func_800839F8(object->source_object_index, 0);
                     if (actor_index != -1)
@@ -553,7 +552,6 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
                     current_allocation_state->sequence_command = current_allocation_state->current_sequence_animation;
                     allocation_owner = object->source_object_index;
                     animation_command = slots[allocation_owner].current_sequence_animation;
-                    goto allocate_actor;
                 allocate_actor:
                     field_allocate_sequence_actor(allocation_owner, animation_command);
                 advance_actor_command:
@@ -563,7 +561,6 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
                     cleared_state = &slots[clear_slot];
                     cleared_state->movement.word = (s32)(cleared_state->movement.word & ~FIELD_SEQUENCE_MOVEMENT_MASK);
                 }
-            next_command:
                 command_slot = object->source_object_index;
                 bank_offset = script_offset + players[command_slot].sequence_bank * FIELD_SEQUENCE_BANK_SIZE;
                 opcode_ptr = bank_offset + programs + cursor;
