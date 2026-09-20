@@ -67,7 +67,7 @@ s32 run_save_slot_menu(TitleMenuContext* context);
 s32 run_title(TitleMenuContext* menu_context)
 {
     TitleMenuContext* context;
-    S_801ED480* persistent_scene_state = (S_801ED480*)TITLE_SCENE_STATE_ADDRESS;
+    SceneState* persistent_scene_state = (SceneState*)TITLE_SCENE_STATE_ADDRESS;
     s32* global_ram_base;
     SavedGameLayout* menu_layout;
     u32 selection_sentinel;
@@ -92,9 +92,9 @@ s32 run_title(TitleMenuContext* menu_context)
         init_title_display(context);
         persistent_scene_state->map_id = 0;
         persistent_scene_state->object_index = 0;
-        persistent_scene_state->unk4 = 0;
-        persistent_scene_state->unk8 = 0;
-        persistent_scene_state->unkC = 0;
+        persistent_scene_state->camera_x = 0;
+        persistent_scene_state->camera_y = 0;
+        persistent_scene_state->camera_z = 0;
 
         do
         {

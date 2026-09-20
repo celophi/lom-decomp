@@ -232,7 +232,7 @@ void func_80052510();
  */
 s32 wsel_main(void* arg)
 {
-    S_801ED480* scene_state = (S_801ED480*)WSEL_SCENE_STATE_ADDRESS;
+    SceneState* scene_state = (SceneState*)WSEL_SCENE_STATE_ADDRESS;
     void* initial_context = arg;
     void* context;
 
@@ -242,9 +242,9 @@ s32 wsel_main(void* arg)
 
     scene_state->map_id = 0;
     scene_state->object_index = 0;
-    scene_state->unk4 = 0;
-    scene_state->unk8 = 0;
-    scene_state->unkC = 0;
+    scene_state->camera_x = 0;
+    scene_state->camera_y = 0;
+    scene_state->camera_z = 0;
 
     do
     {

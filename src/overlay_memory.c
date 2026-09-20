@@ -19,7 +19,7 @@ s32* get_overlay_load_base(void)
  * @return Base of the two field render buffers at 0x80123FD8.
  * @see decomp.me (100%) https://decomp.me/scratch/rgamP
  */
-u32* get_field_render_buffers(void)
+void* get_field_render_buffers(void)
 {
     return &g_field_render_buffers;
 }

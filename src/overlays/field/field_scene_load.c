@@ -4,6 +4,7 @@
 #include "field_animation.h"
 #include "cd_resources.h"
 #include "scene_state.h"
+#include "overlay_memory.h"
 
 extern void DrawSync(s32);
 extern void ClearOTagR(void*, s32);
@@ -12,7 +13,6 @@ extern void field_build_render_records(void*, unsigned short);
 extern void field_size_work_buffer(void);
 extern void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode);
 extern void field_update_scene_fade(void);
-extern u32* get_field_render_buffers(void);
 
 extern u8 g_cd_audio_enabled;
 extern unsigned int D_801ED02C;
@@ -135,10 +135,10 @@ void field_init_ctx(void* arg0, unsigned short arg1)
  */
 void field_scene_reset(void)
 {
-    S_801ED480* ptr = (S_801ED480*)0x801ED480;
+    SceneState* ptr = (SceneState*)0x801ED480;
     ptr->map_id = 0;
     ptr->object_index = 0;
-    ptr->unk10 = 0;
+    ptr->pixel_lookup_selector = 0;
     D_801ED02C = 0;
     func_800642D4();
 }

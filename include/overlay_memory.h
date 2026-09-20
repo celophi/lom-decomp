@@ -7,7 +7,7 @@
 extern void* g_overlay_load_address;
 
 s32* get_overlay_load_base(void);
-u32* get_field_render_buffers(void);
+void* get_field_render_buffers(void);
 u32* get_world_map_overlay_end(void);
 void* get_title_menu_buffers(void);
 
