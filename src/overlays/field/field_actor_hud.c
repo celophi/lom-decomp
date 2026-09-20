@@ -149,30 +149,30 @@ void field_draw_actor_hud(u8 *render_context)
 
     Vec2s position;
     s32 i = 0;
-    s32 count = i;
-    s32 j;
-    s32 absent = 0xFF;
+    s32 panel_count = i;
+    s32 absent_actor = 0xFF;
     s32 excluded_action;
-    FieldPanelActor *actor_one;
-    FieldPanelPlayer *player_one;
-    FieldPanelActor *actor_two;
-    FieldPanelPlayer *player_two;
-    s16 y_three;
+    FieldPanelActor *single_actor;
+    FieldPanelPlayer *single_player;
+    FieldPanelActor *paired_actor;
+    FieldPanelPlayer *paired_player;
+    s16 panel_y;
     s32 boss_drawn;
-    FieldPanelActor *linked;
+    FieldPanelActor *anchor_actor;
     s32 group;
-    s32 value;
-    u32 current;
-    u32 previous;
-    s32 y;
-    s32 view_y;
+    s32 hp_display;
+    u32 current_hp;
+    u32 displayed_hp;
+    s32 world_y;
+    s32 projected_y;
+    s32 coordinate;
     s32 camera_y;
-    s32 ticks;
-    u32 display;
+    s32 hud_ticks;
+    u32 updated_hp_display;
 
     do
     {
-        if (g_field_actors[i].presence != absent && (g_field_player_records[i].flags & 1))
+        if (g_field_actors[i].presence != absent_actor && (g_field_player_records[i].flags & 1))
         {
             excluded_action = 0x85;
             if (g_field_actors[i].action_id != excluded_action)
@@ -183,55 +183,54 @@ void field_draw_actor_hud(u8 *render_context)
                     g_field_object_states[i].hud_options |= 1;
                 }
             }
-            count++;
+            panel_count++;
         }
         i++;
     } while (i < 3);
-    switch (count)
+    switch (panel_count)
     {
         case 1:
-            j = 0;
-            player_one = g_field_player_records;
+            i = 0;
             do
             {
-                actor_one = &g_field_actors[j];
-                if (actor_one->presence != 0xFF && (player_one->flags & 1))
+                single_actor = &g_field_actors[i];
+                single_player = &g_field_player_records[i];
+                if (single_actor->presence != 0xFF && (single_player->flags & 1))
                 {
-                    field_draw_actor_hud_panel(0x70, 0x10, j, render_context, 0x64);
+                    field_draw_actor_hud_panel(0x70, 0x10, i, render_context, 0x64);
                 }
-                j++;
-                player_one++;
-            } while (j < 3);
+                i++;
+            } while (i < 3);
             break;
         case 2:
             i = 0;
-            count = 0;
+            panel_count = 0;
             do
             {
-                actor_two = &g_field_actors[i];
-                player_two = &g_field_player_records[i];
-                if (actor_two->presence != 0xFF && (player_two->flags & 1))
+                paired_actor = &g_field_actors[i];
+                paired_player = &g_field_player_records[i];
+                if (paired_actor->presence != 0xFF && (paired_player->flags & 1))
                 {
-                    field_draw_actor_hud_panel(0x38 + count * 0x6C, 0x10, i, render_context, 0x64);
-                    count++;
+                    field_draw_actor_hud_panel(0x38 + panel_count * 0x6C, 0x10, i, render_context, 0x64);
+                    panel_count++;
                 }
                 i++;
             } while (i < 3);
             break;
         case 3:
             i = 0;
-            count = 0;
+            panel_count = 0;
             do
             {
                 if (g_field_actors[g_field_party_hud_order[i]].presence != 0xFF && (g_field_player_records[g_field_party_hud_order[i]].flags & 1))
                 {
-                    y_three = 0x1C;
+                    panel_y = 0x1C;
                     if (i & 1)
                     {
-                        y_three = 4;
+                        panel_y = 4;
                     }
-                    field_draw_actor_hud_panel(8 + count * 0x68, y_three, g_field_party_hud_order[i], render_context, 0x64);
-                    count++;
+                    field_draw_actor_hud_panel(8 + panel_count * 0x68, panel_y, g_field_party_hud_order[i], render_context, 0x64);
+                    panel_count++;
                 }
                 i++;
             } while (i < 3);
@@ -249,10 +248,10 @@ void field_draw_actor_hud(u8 *render_context)
                 group = g_field_object_states[i].group & 0xF;
                 if (group == g_field_active_group && group != 0)
                 {
-                    value = g_field_object_states[i].hp_display.word;
-                    if (value < 0)
+                    hp_display = g_field_object_states[i].hp_display.word;
+                    if (hp_display < 0)
                     {
-                        if (g_field_actors[i].presence != 0xFF && (value & FIELD_HUD_HP_MASK) && boss_drawn == 0)
+                        if (g_field_actors[i].presence != 0xFF && (hp_display & FIELD_HUD_HP_MASK) && boss_drawn == 0)
                         {
                             field_draw_actor_hud_panel(0x20, 0xC0, i, render_context, 0x190);
                             boss_drawn = 1;
@@ -260,56 +259,98 @@ void field_draw_actor_hud(u8 *render_context)
                     }
                     else if (g_field_actors[i].presence != 0xFF)
                     {
-                        current = g_field_object_states[i].current_hp;
-                        previous = value & FIELD_HUD_HP_MASK;
-                        if (current < previous || previous != current)
+                        current_hp = g_field_object_states[i].current_hp;
+                        displayed_hp = hp_display & FIELD_HUD_HP_MASK;
+                        if (current_hp < displayed_hp)
                         {
-                            g_field_object_states[i].hp_display.word = (value & 0x80FFFFFF) | 0x14000000;
+                            g_field_object_states[i].hp_display.word = (hp_display & 0x80FFFFFF) | 0x14000000;
+                        }
+                        else if (displayed_hp != current_hp)
+                        {
+                            g_field_object_states[i].hp_display.word = (hp_display & 0x80FFFFFF) | 0x14000000;
                         }
                         if (g_field_object_states[i].hp_display.bytes[3] & 0x7F)
                         {
                             if (!(g_field_object_states[i].flags & 0x100) && (g_field_object_states[i].contact.bytes[0] & 1) &&
                                 (g_field_effect_records[g_field_object_states[i].linked_effect_index].state & 0x7F) != 0x2F)
                             {
-                                linked = &g_field_effect_records[g_field_object_states[i].linked_effect_index];
-                                position.x = (g_field_view_offset_x / 256) + (u32)(linked->x / 256 + 0xA0);
-                                view_y = g_field_view_offset_y / 256;
-                                y = g_field_effect_records[g_field_object_states[i].linked_effect_index].y / 256 + 0x70;
-                                view_y = view_y + y;
-                                position.y = view_y - g_field_effect_records[g_field_object_states[i].linked_effect_index].z / 512 - g_field_view_offset_z / 512;
+                                anchor_actor = &g_field_effect_records[g_field_object_states[i].linked_effect_index];
+                                {
+                                    s32 camera_x = g_field_view_offset_x / 256;
+                                    s32 world_x = anchor_actor->x / 256 + 0xA0;
+                                    coordinate = camera_x + world_x;
+                                    position.x = coordinate;
+                                }
+                                projected_y = g_field_view_offset_y / 256;
+                                world_y = g_field_effect_records[g_field_object_states[i].linked_effect_index].y / 256 + 0x70;
+                                projected_y = projected_y + world_y;
+                                coordinate = projected_y - g_field_effect_records[g_field_object_states[i].linked_effect_index].z / 512 - g_field_view_offset_z / 512;
+                                position.y = coordinate;
+
+                                coordinate = position.x;
+                                if (coordinate + 0x20 >= 0x141)
+                                {
+                                    position.x = 0x120;
+                                }
+                                coordinate = position.x;
+                                if (coordinate < 0x20)
+                                {
+                                    position.x = 0x20;
+                                }
+                                coordinate = position.y;
+                                if (coordinate >= 0xD1)
+                                {
+                                    position.y = 0xD0;
+                                }
+                                coordinate = position.y;
+                                if (coordinate < 0x10)
+                                {
+                                    position.y = 0x10;
+                                }
                             }
                             else
                             {
-                                position.x = (g_field_view_offset_x / 256) + (u32)(g_field_actors[i].x / 256 + 0xA0);
+                                {
+                                    s32 camera_x = g_field_view_offset_x / 256;
+                                    s32 world_x = g_field_actors[i].x / 256 + 0xA0;
+                                    coordinate = camera_x + world_x;
+                                    position.x = coordinate;
+                                }
                                 camera_y = g_field_view_offset_y / 256;
                                 {
                                     s32 actor_y = g_field_actors[i].y / 256 + 0x70;
-                                    view_y = camera_y + actor_y;
+                                    projected_y = camera_y + actor_y;
                                 }
-                                position.y = view_y - g_field_actors[i].z / 512 - g_field_view_offset_z / 512;
-                            }
-                            if (position.x + 0x20 >= 0x141)
-                            {
-                                position.x = 0x120;
-                            }
-                            if (position.x < 0x20)
-                            {
-                                position.x = 0x20;
-                            }
-                            if (position.y >= 0xD1)
-                            {
-                                position.y = 0xD0;
-                            }
-                            if (position.y < 0x10)
-                            {
-                                position.y = 0x10;
+                                coordinate = projected_y - g_field_actors[i].z / 512 - g_field_view_offset_z / 512;
+                                position.y = coordinate;
+
+                                coordinate = position.x;
+                                if (coordinate + 0x20 >= 0x141)
+                                {
+                                    position.x = 0x120;
+                                }
+                                coordinate = position.x;
+                                if (coordinate < 0x20)
+                                {
+                                    position.x = 0x20;
+                                }
+                                coordinate = position.y;
+                                if (coordinate >= 0xD1)
+                                {
+                                    position.y = 0xD0;
+                                }
+                                coordinate = position.y;
+                                if (coordinate < 0x10)
+                                {
+                                    position.y = 0x10;
+                                }
                             }
                             field_draw_actor_hud_panel(position.x - 0x1C, position.y, i, render_context, 0x64);
-                            display = g_field_object_states[i].hp_display.word;
-                            ticks = ((u32)display >> 24) & 0x7F;
-                            if (ticks != 0)
+                            updated_hp_display = g_field_object_states[i].hp_display.word;
+                            hud_ticks = ((u32)updated_hp_display >> 24) & 0x7F;
+                            if (hud_ticks != 0)
                             {
-                                g_field_object_states[i].hp_display.word = (display & 0x80FFFFFF) | (((ticks - 1) & 0x7F) << 24);
+                                g_field_object_states[i].hp_display.word = (updated_hp_display & 0x80FFFFFF) | (((hud_ticks - 1) & 0x7F) << 24);
                             }
                         }
                     }
