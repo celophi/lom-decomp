@@ -1044,7 +1044,8 @@ u8* field_render_effect_radial_fan(FieldMotionRecord* effect, u8* packet_cursor,
  * @param packet_cursor Destination GPU packet buffer.
  * @param ordering_table Depth-indexed ordering table.
  * @return Packet cursor after the geometry and texture-page command.
- * @see decomp.me (99.95%) WIP
+ * @see decomp.me (100%)
+ * @see decomp.me (99.95%) Previous WIP
  */
 u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
@@ -1064,6 +1065,7 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
     s32 depth;
     VECTOR* origin;
 
+    origin = &FIELD_RADIAL_SCRATCH->origin;
     position = &FIELD_RADIAL_SCRATCH->transformed;
     center = &FIELD_RADIAL_SCRATCH->center.vector;
     delta = &FIELD_RADIAL_SCRATCH->delta;
@@ -1108,16 +1110,14 @@ u8* field_render_effect_radial_lines(FieldMotionRecord* effect, u8* packet_curso
     }
     if (segment_count <= 0)
     {
-        /* Line effects reuse animation_active as their segment count. */
         segment_count = 1;
     }
     angle_step = (ONE / 2) / segment_count;
 
-    field_resolve_effect_position(effect, part, &FIELD_RADIAL_SCRATCH->origin);
+    field_resolve_effect_position(effect, part, origin);
 
     segment = segment_count - 1;
 
-    origin = &FIELD_RADIAL_SCRATCH->origin;
     center->vx = (origin->vx + effect->x) >> 1;
     center->vy = origin->vy;
     center->vz = (origin->vz + effect->z) >> 1;
