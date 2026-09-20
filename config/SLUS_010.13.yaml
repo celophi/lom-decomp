@@ -248,6 +248,14 @@ segments:
     vram: 0x8003EC14
     subsegments:
       - [0x2F420]
+  - name: transition_frames
+    type: code
+    start: 0x2F800
+    vram: 0x80042CA0
+    bss_size: 0x310
+    bss_contains_common: True
+    subsegments:
+      - [0x2F800, .bss, screen_transition]
   - name: saved_game
     type: code
     start: 0x2F800

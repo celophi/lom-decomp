@@ -3119,8 +3119,8 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                     {
                         span -= avail;
                         edge = (glyph_u + avail) - 1;
-                        *(u8*)&poly->uv3 = edge;
-                        *(u8*)&poly->uv1 = edge;
+                        ((POLY_FT4*)poly)->u3 = edge;
+                        ((POLY_FT4*)poly)->u1 = edge;
                         u = 0;
                         row_v += st->line_height;
                     }
@@ -3129,8 +3129,8 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
                         u += span;
                         edge = glyph_u + span;
                         span = 0;
-                        *(u8*)&poly->uv3 = edge;
-                        *(u8*)&poly->uv1 = edge;
+                        ((POLY_FT4*)poly)->u3 = edge;
+                        ((POLY_FT4*)poly)->u1 = edge;
                     }
                     glyph_v = vbase + row_v;
                 } while (span > 0);

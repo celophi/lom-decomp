@@ -55,3 +55,9 @@ rom:0x13988 reloc:MIPS_LO16 symbol:g_akao_xa_program_staging addend:0x20
 // The name buffer belongs to the saved-game object, not a separate global.
 rom:0x16EC reloc:MIPS_HI16 symbol:g_saved_game addend:0x5F0
 rom:0x16F0 reloc:MIPS_LO16 symbol:g_saved_game addend:0x5F0
+
+// Front display rectangle within the screen-transition frame array.
+rom:0x1B90 reloc:MIPS_HI16 symbol:g_transition_frames addend:0x180
+rom:0x1BC8 reloc:MIPS_HI16 symbol:g_transition_frames addend:0x180
+rom:0x1BCC reloc:MIPS_LO16 symbol:g_transition_frames addend:0x180
+rom:0x1BEC reloc:MIPS_LO16 symbol:g_transition_frames addend:0x180

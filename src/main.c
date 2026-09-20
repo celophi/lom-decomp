@@ -144,7 +144,7 @@ void main_game_loop(void)
         case GAME_STATE_WORLD_MAP:
             get_world_map_overlay_end();
             cdrom_stream(CD_RES_WMAP_BIN, g_overlay_load_address);
-            GFX_Transition(0);
+            screen_transition(0);
             rect.x = 0;
             rect.y = 0;
             rect.w = SCREEN_WIDTH;
@@ -171,7 +171,7 @@ void main_game_loop(void)
             title_menu_buffers = get_title_menu_buffers();
             cdrom_stop();
             cdrom_stream(CD_RES_TITLE_BIN, g_overlay_load_address);
-            GFX_Transition(0);
+            screen_transition(0);
             cdrom_wait_queue_empty();
             g_game_state = run_title(title_menu_buffers);
             DrawSync(0);
@@ -184,7 +184,7 @@ void main_game_loop(void)
             get_field_render_buffers();
             cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);
             cdrom_stream(CD_RES_GNAME_BIN, SECONDARY_OVERLAY_LOAD_ADDR);
-            GFX_Transition(0);
+            screen_transition(0);
             cdrom_wait_queue_empty();
             field_restore_entry_music();
             field_scene_reset(0);
@@ -201,7 +201,7 @@ void main_game_loop(void)
         case GAME_STATE_WORLD_SELECT:
             get_field_render_buffers();
             cdrom_stream(CD_RES_WSEL_BIN, g_overlay_load_address);
-            GFX_Transition(0);
+            screen_transition(0);
             cdrom_wait_queue_empty();
             g_game_state = wsel_main((void*)WSEL_RENDER_ADDRESS);
             DrawSync(0);
@@ -213,7 +213,7 @@ void main_game_loop(void)
             get_field_render_buffers();
             cdrom_stream(CD_RES_FIELD_BIN, g_overlay_load_address);
             cdrom_stream(CD_RES_CLOAD_BIN, SECONDARY_OVERLAY_LOAD_ADDR);
-            GFX_Transition(0);
+            screen_transition(0);
             cdrom_wait_queue_empty();
             field_scene_reset(0);
             entry_config = &g_field_scene_config;
@@ -241,7 +241,7 @@ void main_game_loop(void)
                 }
                 else
                 {
-                    GFX_Transition(0);
+                    screen_transition(0);
                     g_game_state = run_field_scene();
                 }
             }
@@ -253,7 +253,7 @@ void main_game_loop(void)
         case GAME_STATE_INTRO_MOVIE:
             get_title_menu_buffers();
             cdrom_stream(CD_RES_MOVIE_BIN, SECONDARY_OVERLAY_LOAD_ADDR);
-            GFX_Transition(0);
+            screen_transition(0);
             cdrom_wait_queue_empty();
             movie_play(0);
             g_game_state = GAME_STATE_TITLE;

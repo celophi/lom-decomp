@@ -1,5 +1,6 @@
 #include "saved_game.h"
 #include "title_internal.h"
+#include "screen_transition.h"
 
 /* Title-menu selection values dispatched by run_title. */
 #define TITLE_MENU_ITEM_NEW_GAME 0
@@ -109,7 +110,7 @@ s32 run_title(TitleMenuContext* menu_context)
             global_ram_base[TITLE_MENU_EXIT_STATE_WORD_INDEX] = 0;
             if (run_save_slot_menu(context) == SAVE_SLOT_MENU_EXIT_CANCEL)
             {
-                GFX_Transition(0);
+                screen_transition(0);
                 continue;
             }
             return GAME_STATE_GNAME;
@@ -231,7 +232,7 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
     base = ctx_base;
 
     InitSaveSlotMenu();
-    GFX_Transition(0);
+    screen_transition(0);
     set_fade_target(0x100, 0x100, 0x100, 0x14);
     DrawSync(0);
     VSync(0);
