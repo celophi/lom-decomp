@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "saved_game.h"
 #include "common.h"
 
@@ -359,17 +360,16 @@ void func_800C66DC(void)
 
 
 extern s16 D_80122C06;
-extern s16 g_akao_song_cmd_arg0;
 extern u8 D_800459AF;
 
 /**
- * @brief Copy the selected command parameter to the audio and layout state.
+ * @brief Copy the selected status to the diagnostic and layout state.
  * @see decomp.me (100%) N/A -- trivial 7-instruction leaf function, no scratch needed.
  */
 void func_800C6834(void)
 {
     s32 temp = D_80122C06;
-    g_akao_song_cmd_arg0 = temp;
+    g_game_diagnostic_status = temp;
     D_800459AF = temp;
 }
 

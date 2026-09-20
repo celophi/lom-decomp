@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 /** @brief Context level, preserved flag byte, and packed value updated by the record load. */
@@ -25,9 +26,9 @@ extern void func_800C1EC8(void *, void *, s32);
 extern void func_800C11F0(s32, s32);
 extern void func_800B7C58(s32);
 extern void func_800BD520(s32, s32, s32);
-extern void akao_set_song_params(s32, s32, s32, s32);
+
 /**
- * @brief Load a matching level-dependent record or issue the fallback audio command.
+ * @brief Load a matching level-dependent record or report a lookup failure.
  * @param record_id Record identifier to find.
  * @return -1 after applying a matching record, or zero after the fallback.
  */
@@ -108,11 +109,11 @@ s32 func_800C2B14(s32 record_id)
                 record_index++;
             } while (record_index < (s32)*(u16 *)(table + 2));
         }
-        akao_set_song_params(0x8001, 0x6D, record_id, 0);
+        record_game_diagnostic(0x8001, 0x6D, record_id, 0);
     }
     else
     {
-        akao_set_song_params(0x8001, 0x6D, record_id, 1);
+        record_game_diagnostic(0x8001, 0x6D, record_id, 1);
     }
     return 0;
 }
@@ -206,13 +207,13 @@ extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern u8 *D_80122B74;
 extern s32 D_801227F0;
-extern void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
+
 extern void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 extern s32 func_800BD414(s32 arg0, s32 arg1);
 extern void func_800C2E30(s32 arg0);
 
 /**
- * @brief Dispatch a queued gosub result, or fall back to a default song cue.
+ * @brief Dispatch a queued gosub result, or report an invalid index.
  *
  * @note 100% match with the FIELD GCC 2.8.0 G0 toolchain.
  *
@@ -238,17 +239,17 @@ s32 func_800C2D08(void)
                 return D_80122B74[0xAA9];
             }
         }
-        akao_set_song_params(0x8001, 0x6E, index, 0);
+        record_game_diagnostic(0x8001, 0x6E, index, 0);
     }
     return 0xFF;
 }
 
 /**
- * @brief Selects a scene entry or restarts music based on a rolled index.
+ * @brief Select a scene entry or report an invalid rolled index.
  *
  * Rolls func_800BD414; an index below 5 is stored to the buffer's 0x2EF0 slot,
  * handed to func_800C2E30, and the buffer's 0xAA9 byte is returned. Otherwise
- * akao_set_song_params is re-armed and 0xFF is returned.
+ * a diagnostic is recorded and 0xFF is returned.
  *
  * 100% match with the FIELD GCC 2.8.0 G0 toolchain.
  */
@@ -265,7 +266,7 @@ s32 func_800C2DC0(void)
     }
     else
     {
-        akao_set_song_params(0x8001, 0x6E, v, 1);
+        record_game_diagnostic(0x8001, 0x6E, v, 1);
         ret = 0xFF;
     }
     return ret;

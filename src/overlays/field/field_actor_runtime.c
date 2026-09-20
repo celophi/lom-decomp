@@ -1,3 +1,4 @@
+#include "game_audio.h"
 /** @file field_actor_runtime.c
  * @brief Coordinate actor resources, animation tracks, and actor slot runtime state.
  */
@@ -771,7 +772,7 @@ void field_update_audio_timer(void)
         g_field_audio_timer = remaining_frames;
         if (remaining_frames == 0)
         {
-            akao_song_cmd_12c();
+            fade_out_current_song();
             func_800A380C();
             func_800A3904(0, 1, D_8011588C);
         }
@@ -2911,10 +2912,7 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
     {
         if (narrow_layout != 0)
         {
-            rect.x = 0xC0;
-            rect.y = palette_row + 0x1F4;
-            rect.w = 0x40;
-            rect.h = 1;
+            setRECT(&rect, 0xC0, palette_row + 0x1F4, 0x40, 1);
         }
         else
         {
@@ -2938,10 +2936,7 @@ static void field_load_actor_texture_set(s32 resource_id, s32 slot_index, s32 te
     else if (narrow_layout != 0)
     {
         s32 base = (texture_column << 6) + 0x380;
-        rect.x = base - (slot_index << 7);
-        rect.y = 0x80;
-        rect.w = 0x40;
-        rect.h = 0x80;
+        setRECT(&rect, base - (slot_index << 7), 0x80, 0x40, 0x80);
     }
     else
     {
@@ -3686,10 +3681,7 @@ void field_upload_resource_texture(FieldCdBuffer *buf, s32 slot_index, s32 textu
 
     if (texture_index == 2)
     {
-        rect.x = 0xC0;
-        rect.y = palette_row + 0x1F4;
-        rect.w = 0x40;
-        rect.h = 1;
+        setRECT(&rect, 0xC0, palette_row + 0x1F4, 0x40, 1);
     }
     else
     {
@@ -3721,17 +3713,11 @@ void field_upload_resource_texture(FieldCdBuffer *buf, s32 slot_index, s32 textu
 
         if (texture_index == 2)
         {
-            rect.x = 0x3C0 - (slot_index << 7);
-            rect.y = 0x80;
-            rect.w = 0x40;
-            rect.h = 0x80;
+            setRECT(&rect, 0x3C0 - (slot_index << 7), 0x80, 0x40, 0x80);
         }
         else if (texture_index == 1)
         {
-            rect.x = 0x3C0 - (slot_index << 7);
-            rect.y = 0;
-            rect.w = w;
-            rect.h = h;
+            setRECT(&rect, 0x3C0 - (slot_index << 7), 0, w, h);
         }
         else
         {

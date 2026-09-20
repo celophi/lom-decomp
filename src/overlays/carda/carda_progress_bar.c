@@ -1,4 +1,5 @@
 #include "common.h"
+#include "sdk/libgpu.h"
 
 typedef struct
 {
@@ -58,8 +59,8 @@ s32 func_8014385C(s32 arg0, s32 *arg1)
         ((CardaPolyG4Words *)arg0)->unk4 = 0xFF;
         ((CardaPolyG4Words *)arg0)->unkC = 0xFFFF;
         ((CardaPolyG4Words *)arg0)->unk1C = 0xFF0000;
-        ((u8 *)arg0)[3] = 8;
-        ((u8 *)arg0)[7] = 0x38;
+        setlen(arg0, 8);
+        setcode(arg0, 0x38);
         ((CardaPolyG4Words *)arg0)->unk14 = color;
         /*
          * These single-iteration scopes preserve GCC 2.7.2's reference
@@ -87,8 +88,7 @@ s32 func_8014385C(s32 arg0, s32 *arg1)
         g->unkA = 0;
         g->unk22 = 0x48;
         g->unk1A = 0x48;
-        g->unk0 = (g->unk0 & 0xFF000000) | (*arg1 & 0xFFFFFF);
-        *arg1 = (*arg1 & 0xFF000000) | ((s32)g & 0xFFFFFF);
+        addPrim(arg1, g);
     }
     return arg0;
 }

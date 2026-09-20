@@ -1,6 +1,6 @@
 #include "common.h"
+#include "sdk/libgpu.h"
 
-typedef struct { s16 x; s16 y; s16 w; s16 h; } RECT;
 typedef struct {
     s32 unk0; s32 unk4; s16 unk8; s16 unkA; u8 unkC; u8 unkD; s16 unkE;
     s16 unk10; s16 unk12; u8 unk14; u8 unk15; s16 unk16; s16 unk18;
@@ -22,10 +22,7 @@ s32 func_80144CD0(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s32 slot, s32 i
     s8 shade;
 
     if (slot == 0x7F) return result;
-    rect.x = i * 0x10;
-    rect.y = 0x1F2;
-    rect.w = 0x10;
-    rect.h = 1;
+    setRECT(&rect, i * 0x10, 0x1F2, 0x10, 1);
     if ((j == 1) && (slot < 2)) {
         func_800A5638(D_80166080, slot);
         func_80019A34(&rect, D_80166080);
@@ -38,14 +35,10 @@ s32 func_80144CD0(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s32 slot, s32 i
         func_80019A34(&rect, (void *)((u8 *)&D_8014CC54 - 4 + D_8014CC54[slot]));
     }
     temp = i * 3;
-    rect.x = temp * 4 + 0x140;
-    rect.y = 0xD0;
-    rect.w = 0xC;
-    rect.h = 0x30;
+    setRECT(&rect, temp * 4 + 0x140, 0xD0, 0xC, 0x30);
     func_80019A34(&rect, (void *)((u8 *)&D_8014CC54 + 0x1C + D_8014CC54[slot]));
     ((GlyphPrim *)result)->unk4 = 0x808080;
-    ((u8 *)result)[3] = 9;
-    ((u8 *)result)[7] = 0x2C;
+    setPolyFT4(result);
     ((GlyphPrim *)result)->unk18 = x;
     ((GlyphPrim *)result)->unk8 = x;
     ((GlyphPrim *)result)->unk12 = y;
@@ -66,7 +59,6 @@ s32 func_80144CD0(s32 result, s32 *ot, s32 x, s32 y, s32 adjust, s32 slot, s32 i
     ((GlyphPrim *)result)->unk1D = 0xFF;
     ((GlyphPrim *)result)->unkE = (i & 0x3F) | 0x7C80;
     ((GlyphPrim *)result)->unk16 = 5;
-    ((GlyphPrim *)result)->unk0 = (((GlyphPrim *)result)->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | (result & 0xFFFFFF);
+    addPrim(ot, result);
     return result + 0x28;
 }

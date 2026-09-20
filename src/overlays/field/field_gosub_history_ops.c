@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "saved_game.h"
 #include "main.h"
 
@@ -13,7 +14,7 @@ extern s32 g_gosub_result_values[];
 extern s16 D_80122C10;
 extern u16 D_80122C16;
 extern s32 D_80045EC8;
-extern void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
+
 
 /**
  * @brief Decode the gosub-selected record flags into its display id and mode.
@@ -52,7 +53,7 @@ void func_800C7090(void)
         }
         else
         {
-            akao_set_song_params(0x8002, 0x27, idx, 0);
+            record_game_diagnostic(0x8002, 0x27, idx, 0);
         }
     }
     D_80122C16 = (u16) *(s32 *)&g_gosub_result_count;
@@ -133,9 +134,7 @@ void func_800C7168(void)
 }
 
 /**
- * @brief Flag the current gosub result's menu layout entry, or trigger a song-select cue.
- * @note Calls akao_set_song_params with no prototype in scope, matching the field116.c
- *       convention; this is required to match.
+ * @brief Flag the current gosub result's menu layout entry, or trigger a diagnostic for an invalid index.
  */
 void func_800C71D4(void)
 {
@@ -152,7 +151,7 @@ void func_800C71D4(void)
     }
     else
     {
-        akao_set_song_params(0x8002, 0x29, idx, 0);
+        record_game_diagnostic(0x8002, 0x29, idx, 0);
     }
 }
 
@@ -204,7 +203,7 @@ void func_800C72E4(void)
 }
 
 void func_800B2844();
-void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
+
 
 extern u8 D_800F0E98[];
 extern u8 D_80045ECC[];
@@ -215,7 +214,7 @@ extern u16 D_80122C16;
 /**
  * @brief Dispatch the selected menu record's extra slots and fixed trailing slot.
  * @note Skip 0xFE/0xFF entries and record the count of dispatched extra slots.
- * @note Selections of five or greater issue an AKAO command instead.
+ * @note Selections of five or greater record a diagnostic instead.
  * @note WIP: instruction ordering and temporary-register differences remain.
  */
 void func_800C7340(void)
@@ -255,7 +254,7 @@ void func_800C7340(void)
         D_80122C16 = (u16)dispatch_count;
         return;
     }
-    akao_set_song_params(0x8002, 0x2E, selection, 0);
+    record_game_diagnostic(0x8002, 0x2E, selection, 0);
 }
 
 /** @brief Clear the selected large-history record status. */
@@ -275,9 +274,8 @@ typedef struct
 
 extern s16 D_80122C10;
 
-extern void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
 
-/** @brief Write an available extra history slot or issue audio command 0x30. */
+/** @brief Write an available extra history slot or report an invalid history index. */
 void func_800C7494(void)
 {
     s32 idx;
@@ -306,7 +304,7 @@ void func_800C7494(void)
         } while (count < 3);
         return;
     }
-    akao_set_song_params(0x8002, 0x30, idx, 0);
+    record_game_diagnostic(0x8002, 0x30, idx, 0);
 }
 
 extern s16 D_80122C10;
@@ -324,11 +322,8 @@ extern s32 g_gosub_result_values[];
  * @brief Clears the active flag for the selected small history slot.
  *
  * Uses the small-history index at offset 0x2EF0 to select a 0x60-byte record
- * and clears bit 30 of its word at offset 0x2F38. Out-of-range indices trigger
- * the corresponding song-parameter command instead.
+ * and clears bit 30 of its word at offset 0x2F38. Out-of-range indices record a diagnostic.
  *
- * @note The implicit akao_set_song_params declaration is required for the
- *       matching call convention used by this field code.
  */
 void func_800C7558(void)
 {
@@ -345,7 +340,7 @@ void func_800C7558(void)
     }
     else
     {
-        akao_set_song_params(0x8002, 0x32, index, 0);
+        record_game_diagnostic(0x8002, 0x32, index, 0);
     }
 }
 
@@ -353,11 +348,8 @@ void func_800C7558(void)
  * @brief Clears the active flag for the gosub-selected small history slot.
  *
  * Uses the first gosub result to select a 0x60-byte record and clears bit 30
- * of its word at offset 0x2F38. Out-of-range indices trigger the corresponding
- * song-parameter command instead.
+ * of its word at offset 0x2F38. Out-of-range indices record a diagnostic.
  *
- * @note The implicit akao_set_song_params declaration is required for the
- *       matching call convention used by this field code.
  */
 void func_800C75C0(void)
 {
@@ -374,7 +366,7 @@ void func_800C75C0(void)
     }
     else
     {
-        akao_set_song_params(0x8002, 0x32, index, 0);
+        record_game_diagnostic(0x8002, 0x32, index, 0);
     }
 }
 

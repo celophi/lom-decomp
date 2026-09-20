@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 typedef struct
 {
@@ -9,7 +10,7 @@ typedef struct
     s32 unk24;
 } FieldB78C0State;
 extern FieldB78C0State *D_80123FB0;
-extern void akao_set_song_params(s32, s32, s32, s32);
+
 extern void field_clear_record_state(s32, s32);
 extern void func_800B30B8(s32, s32);
 extern s32 func_800B4CE4(s32, s32);
@@ -480,7 +481,7 @@ void func_800B6744(ActorB4934 *arg0)
  * @brief Dispatch the active entry's byte 3 through the D_800F0B98 handler table.
  *
  * Values below 8 run the table entry and return its result; higher values are
- * reported to akao_set_song_params with the sub-state's word at 0x4. Returns 0
+ * reported to record_game_diagnostic with the sub-state's word at 0x4. Returns 0
  * when there is no entry or after the report.
  *
  * @return The dispatched handler's result, or 0.
@@ -497,7 +498,7 @@ s32 func_800B6808(void)
         {
             return D_800F0B98[e->unk3]();
         }
-        akao_set_song_params(0x8001, 0x65, e->unk3, ((FieldStateBlockView *)D_80123FB0)->unk18->unk4);
+        record_game_diagnostic(0x8001, 0x65, e->unk3, ((FieldStateBlockView *)D_80123FB0)->unk18->unk4);
         return 0;
     }
     return 0;
@@ -736,7 +737,7 @@ s32 func_800B6D3C(void)
 
     if (selector == packed_selector)
     {
-        akao_set_song_params(0x8003, selector, selector, 1);
+        record_game_diagnostic(0x8003, selector, selector, 1);
 
         packed++;
         packed--;
@@ -758,7 +759,7 @@ s32 func_800B6D3C(void)
     else
     {
         packed_tail = ((FieldStateB6D3C *)D_80123FB0)->command->packed;
-        akao_set_song_params(0x8003, packed_selector, selector, 0);
+        record_game_diagnostic(0x8003, packed_selector, selector, 0);
 
         func_800B70F4(packed_tail & 0xF, &first_value);
         func_800B7164((packed_tail >> 4) & 0xF, &second_value);
@@ -1144,7 +1145,7 @@ s32 func_800B742C(u32 arg0, u32 arg1)
 
     if (func_800BD414(0, 0xFFC) != 0)
     {
-        akao_set_song_params(0x8002, *(u8 *)((u8 *)D_80123FB0->unk20 + 4), *(u8 *)((u8 *)D_80123FB0->unk24 + 4), arg0);
+        record_game_diagnostic(0x8002, *(u8 *)((u8 *)D_80123FB0->unk20 + 4), *(u8 *)((u8 *)D_80123FB0->unk24 + 4), arg0);
     }
 
     if (((func_800BD414(0, 0xFFA) == 0) || (*(u8 *)((u8 *)D_80123FB0->unk24 + 4) < 3U)) &&

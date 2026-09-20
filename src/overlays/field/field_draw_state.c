@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "sdk/libgpu.h"
 
 void field_reset_effect_pool(void);
 void field_reset_global_color_scale(void);
@@ -82,14 +83,12 @@ void func_80067AE0(RenderHalf* ctx, s32 arg1)
     {
         prim->rgbc.word = prim->rgbc.word >> 8;
     }
-    prim->tag.f.len = 3;
-    prim->rgbc.f.code = 0x40;
+    setLineF2(prim);
     prim->h = 0x10;
     prim->y0 = 0x10;
     prim->x0 = 0;
     prim->w = arg1 >> 2;
-    prim->tag.word = (prim->tag.word & 0xFF000000) | (ctx->otag[0] & 0xFFFFFF);
-    ctx->otag[0] = (ctx->otag[0] & 0xFF000000) | ((u32)prim & 0xFFFFFF);
+    addPrim(&ctx->otag[0], prim);
     prim += 1;
     ctx->cursor = prim;
 }

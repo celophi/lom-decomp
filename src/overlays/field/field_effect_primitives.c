@@ -801,20 +801,18 @@ void field_render_effect_marker(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         index = rec->unk8 >> 7;
         if (index < 0)
         {
-            *(s32 *)primbuf = (*(s32 *)primbuf & 0xFF000000) | (base[0] & 0xFFFFFF);
-            base[0] = (base[0] & 0xFF000000) | ((s32)primbuf & 0xFFFFFF);
+            addPrim(&base[0], primbuf);
             primbuf += 0x14;
         }
         else if (index >= 0x1000)
         {
-            *(s32 *)primbuf = (*(s32 *)primbuf & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
-            base[0xFFF] = (base[0xFFF] & 0xFF000000) | ((s32)primbuf & 0xFFFFFF);
+            addPrim(&base[0xFFF], primbuf);
             primbuf += 0x14;
         }
         else
         {
-            { s32 otval = base[index]; *(s32 *)primbuf = (*(s32 *)primbuf & 0xFF000000) | (otval & 0xFFFFFF); }
-            base[rec->unk8 >> 7] = (base[rec->unk8 >> 7] & 0xFF000000) | ((s32)primbuf & 0xFFFFFF);
+            { s32 otval = base[index]; setaddr(primbuf, otval); }
+            setaddr(&base[rec->unk8 >> 7], primbuf);
             primbuf += 0x14;
         }
     }
@@ -1048,7 +1046,7 @@ u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base
             {
                 s32 addr;
                 addr = (s32) primbuf & 0xFFFFFF;
-                *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0] & 0xFFFFFF);
+                setaddr(primbuf + 0, getaddr(&base[0]));
                 primbuf += 0x10;
                 base[0] = (base[0] & 0xFF000000) | addr;
             }
@@ -1056,7 +1054,7 @@ u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base
             {
                 s32 addr;
                 addr = (s32) primbuf & 0xFFFFFF;
-                *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
+                setaddr(primbuf + 0, getaddr(&base[0xFFF]));
                 primbuf += 0x10;
                 base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
             }
@@ -1065,7 +1063,7 @@ u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base
                 s32 addr;
                 s32 *entry;
                 addr = (s32) primbuf & 0xFFFFFF;
-                *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[temp_v1] & 0xFFFFFF);
+                setaddr(primbuf + 0, getaddr(&base[temp_v1]));
                 entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
                 primbuf += 0x10;
                 *entry = (*entry & 0xFF000000) | addr;
@@ -1084,7 +1082,7 @@ u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base
     {
         s32 addr;
         addr = (s32) primbuf & 0xFFFFFF;
-        *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0] & 0xFFFFFF);
+        setaddr(primbuf + 0, getaddr(&base[0]));
         primbuf += 0x10;
         base[0] = (base[0] & 0xFF000000) | addr;
     }
@@ -1092,7 +1090,7 @@ u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base
     {
         s32 addr;
         addr = (s32) primbuf & 0xFFFFFF;
-        *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
+        setaddr(primbuf + 0, getaddr(&base[0xFFF]));
         primbuf += 0x10;
         base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
     }
@@ -1101,7 +1099,7 @@ u8 *field_render_effect_radial_fan(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base
         s32 addr; s32 *entry; s32 srcval;
         addr = (s32) primbuf & 0xFFFFFF;
         srcval = base[temp_v1];
-        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (srcval & 0xFFFFFF);
+        setaddr(primbuf, srcval);
         entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
         primbuf += 0x10;
         *entry = (*entry & 0xFF000000) | addr;
@@ -1318,7 +1316,7 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
                 s32 addr;
                 p2 += 0x10;
                 addr = (s32) primbuf & 0xFFFFFF;
-                ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[0])->addr;
+                setaddr(primbuf, getaddr(&base[0]));
                 primbuf += 0x10;
                 base[0] = (base[0] & 0xFF000000) | addr;
             }
@@ -1327,7 +1325,7 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
                 s32 addr;
                 p2 += 0x10;
                 addr = (s32) primbuf & 0xFFFFFF;
-                ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[0xFFF])->addr;
+                setaddr(primbuf, getaddr(&base[0xFFF]));
                 primbuf += 0x10;
                 base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
             }
@@ -1337,7 +1335,7 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
                 s32 *entry;
                 p2 += 0x10;
                 addr = (s32) primbuf & 0xFFFFFF;
-                ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[temp_v1])->addr;
+                setaddr(primbuf, getaddr(&base[temp_v1]));
                 entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
                 primbuf += 0x10;
                 *entry = (*entry & 0xFF000000) | addr;
@@ -1374,7 +1372,7 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
     {
         s32 addr;
         addr = (s32) primbuf & 0xFFFFFF;
-        ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[0])->addr;
+        setaddr(primbuf, getaddr(&base[0]));
         primbuf += 0x10;
         base[0] = (base[0] & 0xFF000000) | addr;
     }
@@ -1382,7 +1380,7 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
     {
         s32 addr;
         addr = (s32) primbuf & 0xFFFFFF;
-        ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[0xFFF])->addr;
+        setaddr(primbuf, getaddr(&base[0xFFF]));
         primbuf += 0x10;
         base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
     }
@@ -1391,7 +1389,7 @@ u8 *field_render_effect_radial_lines(Struct_D800FDF58 *rec, u8 *primbuf, s32 *ba
         s32 addr;
         s32 *entry;
         addr = (s32) primbuf & 0xFFFFFF;
-        ((P_TAG *)primbuf)->addr = ((P_TAG *)&base[temp_v1])->addr;
+        setaddr(primbuf, getaddr(&base[temp_v1]));
         entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
         primbuf += 0x10;
         *entry = (*entry & 0xFF000000) | addr;

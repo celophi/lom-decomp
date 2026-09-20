@@ -2601,7 +2601,7 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
  * @param quad Transition quad.
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
- * @note WIP - 98.10% assembly match with gcc280_g4_noexpanddiv.
+ * @note WIP - 98.55% assembly match with gcc280_g4_noexpanddiv.
  */
 
 void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cursor, FieldOrderingTags* ot)
@@ -3158,7 +3158,9 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
         phase_poly->uv0 = (clut << 16) | base_y;
         phase_poly->uv2 = base_y + 0x3000;
         phase_poly->uv1 = (base_y + 0x2F) | tpage;
-        build = (FieldTextVertex*)((u32*)mesh + count + (prows * (((w + 0x3F) >> 6) + 3)));
+        clut = w + 0x3F;
+        clut = clut >> 6;
+        build = (FieldTextVertex*)((u32*)mesh + count + (prows * (clut + 3)));
         phase_poly->uv3 = base_y + 0x302F;
         phase_poly->xy0 = build[0].word;
         phase_poly->xy1 = build[1].word;

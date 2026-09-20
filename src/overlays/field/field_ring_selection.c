@@ -692,22 +692,8 @@ void func_800A5224(RenderContext *context, s32 layout)
                 split_quad->color.word = 0x808080;
                 split_quad->tag.bytes.length = 9;
                 split_quad->color.bytes.code = 0x2C;
-                split_quad->x0 = split_left_x;
-                split_quad->y0 = 0;
-                split_quad->x1 = ((strip_index * 0x10) + 0x10);
-                split_quad->y1 = 0;
-                split_quad->x2 = split_left_x;
-                split_quad->y2 = 4;
-                split_quad->x3 = ((strip_index * 0x10) + 0x10);
-                split_quad->y3 = 4;
-                split_quad->u0 = 0;
-                split_quad->v0 = 0xF0;
-                split_quad->u1 = 0x40;
-                split_quad->v1 = 0xF0;
-                split_quad->u2 = 0;
-                split_quad->v2 = 0xFF;
-                split_quad->u3 = 0x40;
-                split_quad->v3 = 0xFF;
+                setXY4(split_quad, split_left_x, 0, ((strip_index * 0x10) + 0x10), 0, split_left_x, 4, ((strip_index * 0x10) + 0x10), 4);
+                setUV4(split_quad, 0, 0xF0, 0x40, 0xF0, 0, 0xFF, 0x40, 0xFF);
                 split_quad->clut = 0;
                 split_quad->tpage = (s16) (split_page | 0x120);
                 split_quad++;
@@ -721,14 +707,7 @@ void func_800A5224(RenderContext *context, s32 layout)
                 split_quad->color.bytes.code = 0x2C;
                 setXY4(split_quad, split_left_x, 4, ((strip_index * 0x10) + 0x10), 4, split_left_x, 0x38, ((strip_index * 0x10) + 0x10), 0x38);
                 strip_index += 1;
-                split_quad->u0 = 0;
-                split_quad->v0 = 0;
-                split_quad->u1 = 0x40;
-                split_quad->v1 = 0;
-                split_quad->u2 = 0;
-                split_quad->v2 = 0xD0;
-                split_quad->u3 = 0x40;
-                split_quad->v3 = 0xD0;
+                setUV4(split_quad, 0, 0, 0x40, 0, 0, 0xD0, 0x40, 0xD0);
                 split_quad->clut = 0;
                 split_quad->tpage = (s16) (split_page | 0x130);
                 split_quad += 2;
@@ -769,14 +748,7 @@ void func_800A5224(RenderContext *context, s32 layout)
             full_quad->x2 = full_left_x;
             full_quad->y2 = full_height;
             full_quad->y3 = full_height;
-            full_quad->u0 = 0;
-            full_quad->v0 = full_v_top;
-            full_quad->u1 = full_u_right;
-            full_quad->v1 = full_v_top;
-            full_quad->u2 = 0;
-            full_quad->v2 = full_v_bottom;
-            full_quad->u3 = full_u_right;
-            full_quad->v3 = full_v_bottom;
+            setUV4(full_quad, 0, full_v_top, full_u_right, full_v_top, 0, full_v_bottom, full_u_right, full_v_bottom);
             full_quad->clut = 0;
             full_quad->tpage = (s16) (full_page | 0x120);
             full_quad += 2;
@@ -807,18 +779,12 @@ void func_800A54D0(void)
         {
             if ((u32) p->unk2B54 < 0x10)
             {
-                rect.x = 0x100;
-                rect.y = i + 0x1F0;
-                rect.w = 0x10;
-                rect.h = 1;
+                setRECT(&rect, 0x100, i + 0x1F0, 0x10, 1);
                 LoadImage(&rect, (u_long *)(D_800EDED8 + (p->unk2B54 << 5)));
             }
             else
             {
-                rect.x = 0x100;
-                rect.y = i + 0x1F0;
-                rect.w = 0x10;
-                rect.h = 1;
+                setRECT(&rect, 0x100, i + 0x1F0, 0x10, 1);
                 LoadImage(&rect, (u_long *)((D_800EDED8 + 0x200) + ((p->unk2B54 - 0x10) << 5)));
             }
         }

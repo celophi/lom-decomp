@@ -620,7 +620,7 @@ void func_80084D08(s32 x, s32 y, s32 slot, u8 *render_context, u32 value_per_bar
             ((POLY_G4 *)gauge_cursor)->y2 = ((POLY_G4 *)gauge_cursor)->y3;
             ((POLY_G4 *)gauge_cursor)->x3 = ((u16)D_8010A00C + x) + special_width - 3;
             special_prim_addr = (s32)gauge_cursor & 0xFFFFFF;
-            ((P_TAG *)gauge_cursor)->addr = ((P_TAG *)(ctx + 0xC))->addr;
+            setaddr(gauge_cursor, getaddr(ctx + 0xC));
             gauge_cursor += 0x24;
             gauge_ot_tag = (W(ctx, 0xC) & 0xFF000000) | special_prim_addr;
             goto link_gauge;
@@ -1039,15 +1039,14 @@ POLY_F4 *func_80086030(POLY_F4 *prim, s32 y, u32 *ot)
     extern s32 D_8010A010;
 
     *((u32 *)&prim->r0) = 0xFF;
-    ((P_TAG *)prim)->len = 5, ((P_TAG *)prim)->code = 0x28;
+    setPolyF4(prim);
     prim->x3 = prim->x1 - 3;
     prim->y1 = ((u16)D_8010A010) + y;
     prim->x2 = prim->x0 - 3;
     prim->y0 = ((u16)D_8010A010) + y;
     prim->y3 = prim->y1 + ((u16)D_8010A004);
     prim->y2 = prim->y3;
-    ((P_TAG *)prim)->addr = (u32)((P_TAG *)ot)->addr,
-        ((P_TAG *)ot)->addr = (u32)prim;
+    addPrim(ot, prim);
     return prim + 1;
 }
 
@@ -1067,15 +1066,14 @@ POLY_F4 *func_800860CC(POLY_F4 *prim, s32 y, u32 *ot)
         prim->x1 = prim->x0 + 1;
     }
     *((u32 *)&prim->r0) = 0xFFFFFF;
-    ((P_TAG *)prim)->len = 5, ((P_TAG *)prim)->code = 0x28;
+    setPolyF4(prim);
     prim->x3 = prim->x1 - 3;
     prim->y1 = ((u16)D_8010A010) + y;
     prim->x2 = prim->x0 - 3;
     prim->y0 = ((u16)D_8010A010) + y;
     prim->y3 = prim->y1 + ((u16)D_8010A004);
     prim->y2 = prim->y3;
-    ((P_TAG *)prim)->addr = (u32)((P_TAG *)ot)->addr,
-        ((P_TAG *)ot)->addr = (u32)prim;
+    addPrim(ot, prim);
     return prim + 1;
 }
 
@@ -1181,10 +1179,7 @@ s32 func_80086374(RECT *rect, u8 *data, s32 mode)
     do { do { do { do { offset = *(s32 *)(data + 8); } while (0); } while (0); } while (0); } while (0);
     if (mode != 0)
     {
-        load_rect.x = rect->w;
-        load_rect.y = rect->h;
-        load_rect.w = *(u16 *)dims * *(u16 *)(dims + 2);
-        load_rect.h = 1;
+        setRECT(&load_rect, rect->w, rect->h, *(u16 *)dims * *(u16 *)(dims + 2), 1);
     }
     else
     {

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "sdk/libgpu.h"
 
 /** @brief Actor presence byte within the original 0x54-byte record. */
 typedef struct
@@ -300,9 +301,7 @@ void func_800A32A8(s32 slot, u8 *buffer)
         /* Texture page, CLUT and ordering-table linkage. */
         *(u16 *)(primitive + 0x16) = 0x27;
         *(u16 *)(primitive + 0xE) = 0x7B05;
-        *(u32 *)(primitive + 0x0) =
-            (s32)((*(u32 *)(primitive + 0x0) & 0xFF000000) | (ordering_table[3] & 0xFFFFFF));
-        ordering_table[3] = (s32)((ordering_table[3] & 0xFF000000) | ((s32)primitive & 0xFFFFFF));
+        addPrim(&ordering_table[3], primitive);
         primitive += 0x28;
         *(u8 **)(buffer + 0x40B8) = primitive;
     }

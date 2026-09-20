@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "field_state_ops.h"
 #include "field_types.h"
 #include "sdk/rand.h"
@@ -57,7 +58,7 @@ typedef struct
 s32 func_8008B288(s32 actor_id);
 s32 func_80087F44(s32 actor_id, FieldVector *out);
 s32 func_80089D44();
-void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
+
 void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
 u32 func_800C9ED4(s32 actor_id);
 s32 func_8008B500(s32 record_id, s32 signal_id);
@@ -97,7 +98,7 @@ FieldStatusRecord *func_800B2A9C(s32 record_id)
             return (FieldStatusRecord *)(context_base + record_offset);
         }
     } while (record_index < FIELD_STATUS_RECORD_COUNT);
-    akao_set_song_params(0x8001, 0x68, record_id, -1);
+    record_game_diagnostic(0x8001, 0x68, record_id, -1);
     return 0;
 }
 
@@ -393,7 +394,7 @@ s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
 /**
  * @brief Subtract from a status value while clamping it at zero.
  * @param state Status state to update.
- * @param amount Amount to subtract; negative values are reported to the audio driver instead.
+ * @param amount Amount to subtract; negative values are reported as diagnostics.
  */
 void func_800B30B8(FieldStatusState *state, s32 amount)
 {
@@ -401,7 +402,7 @@ void func_800B30B8(FieldStatusState *state, s32 amount)
 
     if (amount < 0)
     {
-        akao_set_song_params(0x8001, 0x7A, state->actor_id, amount);
+        record_game_diagnostic(0x8001, 0x7A, state->actor_id, amount);
     }
     else
     {
@@ -488,7 +489,7 @@ void func_800B31CC(s32 actor_id)
         count = FIELD_STATE_CONFIG->count_flags >> 4;
         if ((count < 4) || (count >= 8))
         {
-            akao_set_song_params(0x74, count, 0, 0);
+            record_game_diagnostic(0x74, count, 0, 0);
             func_800BD520(2, 0xD028, 99);
         }
         index = func_800C9ED4(actor_id);

@@ -20,19 +20,10 @@ s32 func_801405B0(RenderContext* render_buffers)
     DrawSync(0);
     VSync(0);
     SetDispMask(0);
-    clear_rect.x = 0;
-    clear_rect.y = 0;
-    clear_rect.w = SCREEN_WIDTH;
-    clear_rect.h = (SCREEN_HEIGHT + VRAM_DRAW_HEIGHT);
+    setRECT(&clear_rect, 0, 0, SCREEN_WIDTH, (SCREEN_HEIGHT + VRAM_DRAW_HEIGHT));
     ClearImage(&clear_rect, 0, 0, 0);
-    g_menu_draw_buf_base[0].clear_rect.x = 0;
-    g_menu_draw_buf_base[0].clear_rect.y = VRAM_BACK_DRAW_Y;
-    g_menu_draw_buf_base[0].clear_rect.w = SCREEN_WIDTH;
-    g_menu_draw_buf_base[0].clear_rect.h = VRAM_DRAW_HEIGHT;
-    g_menu_draw_buf_base[1].clear_rect.x = 0;
-    g_menu_draw_buf_base[1].clear_rect.y = SCREEN_HEIGHT;
-    g_menu_draw_buf_base[1].clear_rect.w = SCREEN_WIDTH;
-    g_menu_draw_buf_base[1].clear_rect.h = VRAM_DRAW_HEIGHT;
+    setRECT(&g_menu_draw_buf_base[0].clear_rect, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    setRECT(&g_menu_draw_buf_base[1].clear_rect, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     SetDefDispEnv(&g_menu_draw_buf_base[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&g_menu_draw_buf_base[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDrawEnv(&g_menu_draw_buf_base[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
@@ -149,17 +140,11 @@ void menu_init_prim_rects(void)
     for (; slot < PRIM_SLOT_COUNT; slot++)
     {
         /* Upload the slot's cursor-highlight strip. */
-        rect.x = PRIM_CURSOR_STRIP_VRAM_X;
-        rect.y = slot + PRIM_CURSOR_STRIP_VRAM_Y0;
-        rect.w = PRIM_CURSOR_STRIP_W;
-        rect.h = PRIM_CURSOR_STRIP_H;
+        setRECT(&rect, PRIM_CURSOR_STRIP_VRAM_X, slot + PRIM_CURSOR_STRIP_VRAM_Y0, PRIM_CURSOR_STRIP_W, PRIM_CURSOR_STRIP_H);
         LoadImage(&rect, menu_image_upload_source(upload_buffer, strip_byte_offset));
 
         /* Upload the slot's content texture block. */
-        rect.x = (slot == PRIM_SLOT_COUNT - 1) ? PRIM_CONTENT_VRAM_X2 : PRIM_CONTENT_VRAM_X;
-        rect.y = (slot == 0) ? PRIM_CONTENT_VRAM_Y0 : PRIM_CONTENT_VRAM_Y1;
-        rect.w = PRIM_CONTENT_W;
-        rect.h = PRIM_CONTENT_H;
+        setRECT(&rect, (slot == PRIM_SLOT_COUNT - 1) ? PRIM_CONTENT_VRAM_X2 : PRIM_CONTENT_VRAM_X, (slot == 0) ? PRIM_CONTENT_VRAM_Y0 : PRIM_CONTENT_VRAM_Y1, PRIM_CONTENT_W, PRIM_CONTENT_H);
         LoadImage(&rect, menu_image_upload_source(upload_buffer, content_byte_offset));
 
         content_byte_offset += PRIM_SLOT_BYTE_SIZE;
@@ -391,8 +376,7 @@ void menu_build_grid(RenderContext* render_ctx)
     packet_cursor = (u_long*)sprite;
 
     /* Close the batch with texture-window and texture-page state packets. */
-    texture_window.w = MENU_GRID_TEXTURE_WINDOW_SIZE;
-    texture_window.h = MENU_GRID_TEXTURE_WINDOW_SIZE;
+    setWH(&texture_window, MENU_GRID_TEXTURE_WINDOW_SIZE, MENU_GRID_TEXTURE_WINDOW_SIZE);
     texture_window.x = 0;
     texture_window.y = 0;
 
@@ -446,10 +430,7 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
     g_menu_initial_clut_pair = *(u32*)tim->clut_data;
 
     /* Enable STP on nonzero colors, then upload the first CLUT. */
-    vram_rect.x = layout->clut_x;
-    vram_rect.y = layout->clut_y;
-    vram_rect.w = CLUT_ENTRY_COUNT;
-    vram_rect.h = 1;
+    setRECT(&vram_rect, layout->clut_x, layout->clut_y, CLUT_ENTRY_COUNT, 1);
 
     clut_color = asset->tim.clut_data;
     for (color_index = 0; color_index < CLUT_ENTRY_COUNT; color_index++)
@@ -468,16 +449,12 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
     vram_rect.y = layout->texture_y;
     {
         TimBlock* image_block = TIM_PIXEL_BLOCK(tim, clut_block_size);
-        vram_rect.w = image_block->dimensions.width;
-        vram_rect.h = image_block->dimensions.height;
+        setWH(&vram_rect, image_block->dimensions.width, image_block->dimensions.height);
         LoadImage(&vram_rect, (u_long*)(image_block + 1));
     }
 
     /* Apply the same STP treatment to the second CLUT. */
-    vram_rect.x = layout->clut_x;
-    vram_rect.y = layout->clut_y + 1;
-    vram_rect.w = CLUT_ENTRY_COUNT;
-    vram_rect.h = 1;
+    setRECT(&vram_rect, layout->clut_x, layout->clut_y + 1, CLUT_ENTRY_COUNT, 1);
 
     clut_color = asset->second_clut;
     for (color_index = 0; color_index < CLUT_ENTRY_COUNT; color_index++)
@@ -542,10 +519,7 @@ MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect)
     slot_flags = slot_flags & ot_index_clear_mask;
     slot_flags = slot_flags | (((u32)ot_index) << MENU_SLOT_OT_INDEX_SHIFT);
     slot->navigation.packed = slot_flags;
-    slot->x = rect->x;
-    slot->y = rect->y;
-    slot->w = rect->w;
-    slot->h = rect->h;
+    setRECT(slot, rect->x, rect->y, rect->w, rect->h);
     slot->lerp_cur_a = 0;
     slot->lerp_cur_b = 0;
     slot->lerp_target_a = 0;
@@ -716,10 +690,7 @@ void menu_draw_window_transition(RenderContext* render_ctx, MenuSlot* slot, s32 
                 height = MENU_WINDOW_MIN_HEIGHT;
             }
 
-            rect.x = slot->x + inset_x;
-            rect.y = slot->y + inset_y;
-            rect.w = width;
-            rect.h = height;
+            setRECT(&rect, slot->x + inset_x, slot->y + inset_y, width, height);
 
             menu_draw_window(slot, render_ctx, &rect, &view_origin, cursor_enable);
         }
@@ -827,8 +798,7 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
             packet_cursor = menu_emit_slot_scroll_arrows((SPRT*)packet_cursor, ot_entry, slot);
         }
     }
-    window_rect.w = 0xFF;
-    window_rect.h = 0xFF;
+    setWH(&window_rect, 0xFF, 0xFF);
     window_rect.x = 0;
     window_rect.y = 0;
     setTexWindow((DR_TWIN*)packet_cursor, &window_rect);
@@ -836,40 +806,25 @@ void menu_draw_window(MenuSlot* slot, RenderContext* render_ctx, MenuRect* rect,
     window_cursor = packet_cursor + PRIM_WORDS(DR_TWIN);
     if (rect->h >= MENU_WINDOW_MIN_HEIGHT)
     {
-        window_rect.x = (u16)rect->x + 8;
-        window_rect.y = (u16)rect->y;
-        window_rect.w = (u16)rect->w - MENU_WINDOW_MIN_HEIGHT;
-        window_rect.h = 8;
+        setRECT(&window_rect, (u16)rect->x + 8, (u16)rect->y, (u16)rect->w - MENU_WINDOW_MIN_HEIGHT, 8);
         window_cursor = menu_build_h_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_TOP);
         if (rect->h >= MENU_WINDOW_MIN_HEIGHT)
         {
-            window_rect.x = (u16)rect->x + 8;
-            window_rect.y = ((u16)rect->y + (u16)rect->h) - 8;
-            window_rect.w = (u16)rect->w - MENU_WINDOW_MIN_HEIGHT;
-            window_rect.h = 8;
+            setRECT(&window_rect, (u16)rect->x + 8, ((u16)rect->y + (u16)rect->h) - 8, (u16)rect->w - MENU_WINDOW_MIN_HEIGHT, 8);
             window_cursor = menu_build_h_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_BOT);
         }
     }
     if (rect->w >= MENU_WINDOW_MIN_WIDTH)
     {
-        window_rect.x = (u16)rect->x;
-        window_rect.y = (u16)rect->y + 8;
-        window_rect.w = 8;
-        window_rect.h = (u16)rect->h - MENU_WINDOW_MIN_HEIGHT;
+        setRECT(&window_rect, (u16)rect->x, (u16)rect->y + 8, 8, (u16)rect->h - MENU_WINDOW_MIN_HEIGHT);
         window_cursor = menu_build_v_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_LEFT);
         if (rect->w >= MENU_WINDOW_MIN_WIDTH)
         {
-            window_rect.x = ((u16)rect->x + (u16)rect->w) - 8;
-            window_rect.y = (u16)rect->y + 8;
-            window_rect.w = 8;
-            window_rect.h = (u16)rect->h - MENU_WINDOW_MIN_HEIGHT;
+            setRECT(&window_rect, ((u16)rect->x + (u16)rect->w) - 8, (u16)rect->y + 8, 8, (u16)rect->h - MENU_WINDOW_MIN_HEIGHT);
             window_cursor = menu_build_v_edge(window_cursor, ot_entry, &window_rect, MENU_TW_EDGE_RIGHT);
         }
     }
-    window_rect.x = (u16)rect->x + 8;
-    window_rect.y = (u16)rect->y + 8;
-    window_rect.w = (u16)rect->w - MENU_WINDOW_MIN_HEIGHT;
-    window_rect.h = (u16)rect->h - MENU_WINDOW_MIN_HEIGHT;
+    setRECT(&window_rect, (u16)rect->x + 8, (u16)rect->y + 8, (u16)rect->w - MENU_WINDOW_MIN_HEIGHT, (u16)rect->h - MENU_WINDOW_MIN_HEIGHT);
     sprite_cursor = menu_fill_window_interior((SPRT*)window_cursor, ot_entry, &window_rect, MENU_TW_FILL);
     sprite_cursor = menu_emit_corner(sprite_cursor, ot_entry, rect->x, rect->y, MENU_TW_CORNER_TL);
     sprite_cursor = menu_emit_corner(sprite_cursor, ot_entry, rect->x + rect->w - 8, rect->y, MENU_TW_CORNER_TR);
@@ -990,20 +945,15 @@ u_long* menu_build_h_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRec
         SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
         setSprt(sprite);
         SET_SPRT_UV0_PACKED(sprite, 0);
-        sprite->w = rect->w;
-        sprite->h = rect->h;
-        sprite->x0 = rect->x;
-        sprite->y0 = rect->y;
+        setWH(sprite, rect->w, rect->h);
+        setXY0(sprite, rect->x, rect->y);
         sprite->clut = MENU_CLUT_CORNER;
         addPrim(ot_entry, sprite);
         packet_cursor += PRIM_WORDS(SPRT);
 
         /* Repeat the 16x8 edge texture across the sprite. */
         texture_window_primitive = (DR_TWIN*)packet_cursor;
-        texture_window.x = texture_origin & 0xFF;
-        texture_window.y = texture_origin >> 8;
-        texture_window.w = MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE;
-        texture_window.h = MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE;
+        setRECT(&texture_window, texture_origin & 0xFF, texture_origin >> 8, MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE, MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE);
         setTexWindow(texture_window_primitive, &texture_window);
         addPrim(ot_entry, texture_window_primitive);
         packet_cursor += PRIM_WORDS(DR_TWIN);
@@ -1037,20 +987,15 @@ u_long* menu_build_v_edge(u_long* packet_cursor, u_long* ot_entry, const MenuRec
         SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
         setSprt(sprite);
         SET_SPRT_UV0_PACKED(sprite, 0);
-        sprite->w = rect->w;
-        sprite->h = rect->h;
-        sprite->x0 = rect->x;
-        sprite->y0 = rect->y;
+        setWH(sprite, rect->w, rect->h);
+        setXY0(sprite, rect->x, rect->y);
         sprite->clut = MENU_CLUT_CORNER;
         addPrim(ot_entry, sprite);
         packet_cursor += PRIM_WORDS(SPRT);
 
         /* Repeat the 8x16 edge texture across the sprite. */
         texture_window_primitive = (DR_TWIN*)packet_cursor;
-        texture_window.x = texture_origin & 0xFF;
-        texture_window.y = texture_origin >> 8;
-        texture_window.w = MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE;
-        texture_window.h = MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE;
+        setRECT(&texture_window, texture_origin & 0xFF, texture_origin >> 8, MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE, MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE);
         setTexWindow(texture_window_primitive, &texture_window);
         addPrim(ot_entry, texture_window_primitive);
         packet_cursor += PRIM_WORDS(DR_TWIN);

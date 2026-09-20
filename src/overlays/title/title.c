@@ -150,10 +150,7 @@ void render_menu(TitleMenuContext* context)
 
     DrawSync(0);
     VSync(0);
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = 320;
-    rect.h = 472;
+    setRECT(&rect, 0, 0, 320, 472);
     ClearImage(&rect, 0, 0, 0);
 
     s0 = base;
@@ -236,10 +233,7 @@ s32 run_save_slot_menu(TitleMenuContext* ctx_base)
     set_fade_target(0x100, 0x100, 0x100, 0x14);
     DrawSync(0);
     VSync(0);
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = SCREEN_WIDTH;
-    rect.h = 0x1D8;
+    setRECT(&rect, 0, 0, SCREEN_WIDTH, 0x1D8);
     ClearImage(&rect, 0, 0, 0);
     current = base;
     ClearOTagR(current->otag_buffer, 0x1000);
@@ -322,10 +316,7 @@ void init_title_display(TitleMenuContext* ctx_base)
     VSync(0);
 
     /* Clear the full VRAM extent */
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = VRAM_WIDTH;
-    rect.h = VRAM_HEIGHT;
+    setRECT(&rect, 0, 0, VRAM_WIDTH, VRAM_HEIGHT);
     ClearImage(&rect, 0, 0, 0);
 
     /* Set display environments */
@@ -515,9 +506,7 @@ void render_fade_overlay(TitleMenuContext* ctx)
     {
         if (g_fadeCurrent.red >= TITLE_FADE_ADDITIVE_THRESHOLD)
         {
-            primitive->tile.r0 = g_fadeCurrent.red - 1;
-            primitive->tile.g0 = g_fadeCurrent.green - 1;
-            primitive->tile.b0 = g_fadeCurrent.blue - 1;
+            setRGB0(&primitive->tile, g_fadeCurrent.red - 1, g_fadeCurrent.green - 1, g_fadeCurrent.blue - 1);
         }
         else
         {
@@ -623,8 +612,7 @@ void render_title_backdrop(TitleMenuContext* ctx)
         t0++;
         prim->x2 = (short)temp_v0;
         prim->x0 = (short)temp_v0;
-        setlen(prim, 9);
-        setcode(prim, 0x2C);
+        setPolyFT4(prim);
         prim->b0 = 0x80;
         prim->g0 = 0x80;
         prim->r0 = 0x80;
@@ -641,7 +629,7 @@ void render_title_backdrop(TitleMenuContext* ctx)
         prim->v3 = 0xE8;
         prim->v2 = 0xE8;
         prim->tpage = (u_short)((temp_v1 >> 6) | 0x110);
-        prim->clut = 0x7840;
+        prim->clut = getClut(0, 481);
         /* addPrim((P_TAG *)(ot + 4095), prim) */
         ((P_TAG*)prim)->addr = (u_long)(((P_TAG*)(ot + 4095))->addr);
         ((P_TAG*)(ot + 4095))->addr = (u_long)prim;
@@ -1056,10 +1044,7 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
         clut_height = *((u16*)(p + 0x12));
         clut_block_len = *((s32*)(p + tim_header_size));
         clut_skip_base = 8;
-        rect.x = clut_x;
-        rect.y = (s16)clut_y;
-        rect.w = clut_width * clut_height;
-        rect.h = clut_rows;
+        setRECT(&rect, clut_x, (s16)clut_y, clut_width * clut_height, clut_rows);
         LoadImage(&rect, (u_long*)(p + 0x14));
         p = (p + clut_skip_base) + clut_block_len;
     }
@@ -1067,10 +1052,7 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
     {
         p = p + 8;
     }
-    rect.x = x;
-    rect.y = y;
-    rect.w = *((u16*)(p + 8));
-    rect.h = *((u16*)(p + 0xA));
+    setRECT(&rect, x, y, *((u16*)(p + 8)), *((u16*)(p + 0xA)));
     LoadImage(&rect, (u_long*)(p + 0xC));
 }
 

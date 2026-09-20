@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "saved_game.h"
 #include "common.h"
 
@@ -267,7 +268,7 @@ typedef struct
 void func_800C9ED4();
 void field_open_gosub_screen_sequence(UnkStruct80051EB4 *arg0);
 void func_800AD030(s32 arg0);
-void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
+
 u8 *func_800C1E40(s32 arg0);
 
 
@@ -340,12 +341,12 @@ void func_800C6E08(void)
 }
 
 /**
- * @brief Resolve the current menu record's song slot and latch it.
+ * @brief Resolve the current menu record's slot and latch it.
  *
  * Reads the packed field @c unkCF4 of the record selected by @c D_80122C10,
  * decoding a base index (@c bits 10-15) offset by mode (@c bits 8-9): +0 for
  * mode 0, +0xB for mode 1, +0x17 otherwise. When the result is the 0xFF
- * sentinel it triggers akao_set_song_params and stores 0; otherwise the resolved
+ * sentinel it triggers record_game_diagnostic and stores 0; otherwise the resolved
  * slot is written back to @c D_80122C10.
  *
  * @see decomp.me (100%) TODO
@@ -372,7 +373,7 @@ void func_800C6E28(void)
     }
     if (v == 0xFF)
     {
-        akao_set_song_params(0x8002, 0x22, 0, 0);
+        record_game_diagnostic(0x8002, 0x22, 0, 0);
         v = 0;
     }
     D_80122C10 = v;

@@ -72,12 +72,8 @@ void screen_transition(s32 skip_fade)
     front_rect->x = 0;
     back_rect = &g_transition_frames[1].display_rect;
     front_rect->y = 0;
-    front_rect->w = SCREEN_WIDTH;
-    front_rect->h = SCREEN_HEIGHT;
-    back_rect->x = 0;
-    back_rect->y = VRAM_BACK_DISP_Y;
-    back_rect->w = SCREEN_WIDTH;
-    back_rect->h = SCREEN_HEIGHT;
+    setWH(front_rect, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(back_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     SetDefDispEnv(display, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&g_transition_frames[1].display, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);

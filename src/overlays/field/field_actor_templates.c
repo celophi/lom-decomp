@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 typedef struct
@@ -62,7 +63,6 @@ typedef struct
 
 extern u8 *D_80122B78;
 
-void akao_set_song_params(s32, s32, s32, s32);
 
 s32 func_80087F0C(s32 arg0);
 void func_800B3F1C(s32, u8 *, u8 *);
@@ -89,15 +89,15 @@ s32 func_800B3DF4(s32 arg0)
         result = func_80087F0C(((FieldActorTemplateTable *)D_80122B78)->entries[i].actor_id);
         if (result == 0)
         {
-            goto play_audio;
+            goto report_error;
         }
         if (result != -1)
         {
             goto build_record;
         }
 
-    play_audio:
-        akao_set_song_params(0x8001, 0x64, arg0, ((FieldActorTemplateTable *)D_80122B78)->entries[i].actor_id);
+    report_error:
+        record_game_diagnostic(0x8001, 0x64, arg0, ((FieldActorTemplateTable *)D_80122B78)->entries[i].actor_id);
 
     build_record:
         func_800B3F1C(((FieldActorTemplateTable *)D_80122B78)->entries[i].actor_id, (u8 *)D_80123FB0 + 0x160 + count * 0x68, (u8 *)result);

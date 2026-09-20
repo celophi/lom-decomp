@@ -76,17 +76,11 @@ void func_800AE9E0(void)
 
     for (; slot < PRIM_SLOT_COUNT; slot++)
     {
-        rect.x = PRIM_STRIP_VRAM_X;
-        rect.y = slot + PRIM_STRIP_VRAM_Y0;
-        rect.w = PRIM_STRIP_W;
-        rect.h = PRIM_STRIP_H;
+        setRECT(&rect, PRIM_STRIP_VRAM_X, slot + PRIM_STRIP_VRAM_Y0, PRIM_STRIP_W, PRIM_STRIP_H);
         upload_src = PRIM_UPLOAD_PTR(scratch, strip_byte_offset);
         LoadImage(&rect, upload_src);
 
-        rect.x = (slot == PRIM_SLOT_COUNT - 1) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X;
-        rect.y = (slot == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1;
-        rect.w = PRIM_BLOCK_W;
-        rect.h = PRIM_BLOCK_H;
+        setRECT(&rect, (slot == PRIM_SLOT_COUNT - 1) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X, (slot == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1, PRIM_BLOCK_W, PRIM_BLOCK_H);
         upload_src = PRIM_UPLOAD_PTR(scratch, block_byte_offset);
         LoadImage(&rect, upload_src);
 

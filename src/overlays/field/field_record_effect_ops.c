@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 extern u8 *func_800C1E40(s32);
@@ -127,12 +128,12 @@ typedef struct
 extern u8 *D_80122B74;
 
 extern s32 func_800C0560(s32 arg0, s32 arg1, u8 *arg2);
-extern void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
+
 
 /**
- * @brief Populate the eight sub-slot handles for a field record, or fail audio.
+ * @brief Populate the eight sub-slot handles for a field record, or report a lookup failure.
  *
- * If func_800C1E40 reports no free channel, notifies the audio driver and
+ * If func_800C1E40 finds no matching record, records a diagnostic and
  * returns. Otherwise walks the eight 0x10-byte sub-slots of the @p arg0 record
  * (0x8C stride); each one still flagged 0xFF is resolved via func_800C0560 and
  * its handle stored into @c unk26F0.
@@ -150,7 +151,7 @@ void func_800C0490(s32 arg0)
     temp_v0 = (s32)func_800C1E40(0x10);
     if (temp_v0 == 0)
     {
-        akao_set_song_params(0x8001, 0x3E7, 0, 0);
+        record_game_diagnostic(0x8001, 0x3E7, 0, 0);
         return;
     }
     var_s1 = 0;

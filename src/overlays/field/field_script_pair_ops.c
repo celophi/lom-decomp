@@ -1,7 +1,8 @@
+#include "game_audio.h"
 #include "main.h"
 #include "field_script.h"
 void akao_cmd_f1(void);
-void akao_set_song_params(s32, s32, s32, s32);
+
 void akao_stop_song(s32);
 void field_control_animation(s32, s32, s32, s32);
 void field_open_gosub_screen_sequence(void *);
@@ -332,7 +333,7 @@ void func_800BBAC8(u32 command, s32 operand)
     case 0x3B:
         if ((s32)operand >= 0x40)
         {
-            akao_set_song_params(0x8001, 1, 0x2C, (s32)operand);
+            record_game_diagnostic(0x8001, 1, 0x2C, (s32)operand);
             return;
         }
         g_music_track_index = (s16)operand;

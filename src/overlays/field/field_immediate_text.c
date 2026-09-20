@@ -75,8 +75,7 @@ void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 
             sprite = sprite_cursor;
             SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
             setSprt(sprite);
-            sprite->x0 = x + acc;
-            sprite->y0 = y;
+            setXY0(sprite, x + acc, y);
             acc += sprite->w;
 
             addPrim(ot, sprite);

@@ -1,6 +1,7 @@
+#include "game_audio.h"
 /* field_script_flow_ops */
 #include "field_script.h"
-void akao_set_song_params(s32, s32, s32, s32);
+
 void func_800B820C();
 void func_800B8308();
 void func_800BD520(s32, s32, s32);
@@ -27,7 +28,7 @@ void field_script_run(FieldScriptContext *context)
     void (**op_table)();
     s32 pc_advance;
     s32 owner_id;
-    s32 song_param;
+    s32 invalid_opcode;
 
     previous_context = g_field_script;
     g_field_script = context;
@@ -45,18 +46,18 @@ void field_script_run(FieldScriptContext *context)
 stop_script_primary:
     pc_advance = 1;
     owner_id = current_context->status.owner_id;
-    song_param = *pc;
+    invalid_opcode = *pc;
     active_record->pc = pc + pc_advance;
-    akao_set_song_params(0x8001, pc_advance, owner_id, song_param);
+    record_game_diagnostic(0x8001, pc_advance, owner_id, invalid_opcode);
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
     goto restore_context;
 
 stop_script_extended:
     pc_advance = 1;
     owner_id = current_context->status.owner_id;
-    song_param = *pc;
+    invalid_opcode = *pc;
     active_record->pc = pc + pc_advance;
-    akao_set_song_params(0x8001, pc_advance, owner_id, song_param);
+    record_game_diagnostic(0x8001, pc_advance, owner_id, invalid_opcode);
     g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
     goto restore_context;
 
@@ -104,9 +105,9 @@ start_interpreter:
             {
                 pc_advance = 1;
                 owner_id = current_context->status.owner_id;
-                song_param = *pc;
+                invalid_opcode = *pc;
                 active_record->pc = pc + pc_advance;
-                akao_set_song_params(0x8001, pc_advance, owner_id, song_param);
+                record_game_diagnostic(0x8001, pc_advance, owner_id, invalid_opcode);
                 stop_context = g_field_script;
                 stop_context->status.word &= ~FIELD_SCRIPT_RUNNING;
             }
@@ -120,7 +121,6 @@ restore_context:
     }
 }
 
-void akao_set_song_params(s32, s32, s32, s32);
 
 typedef struct
 {
@@ -301,7 +301,7 @@ void func_800B8684(void)
     {
         FieldScriptRecord* rec;
 
-        akao_set_song_params(0x8001, 2, g_field_script->status.owner_id, 0);
+        record_game_diagnostic(0x8001, 2, g_field_script->status.owner_id, 0);
         g_field_script->active_record = 7;
         rec = FIELD_SCRIPT_RECORD(7);
         rec->pc += 3;
@@ -677,12 +677,11 @@ void field_script_op_0e(void)
     field_script_branch(0, rec, depth);
 }
 
-extern void akao_set_song_params(s32, s32, s32, s32);
 extern u8 *func_80087EF0(s32);
 
 /**
  * @brief Push a script record and resolve its new program counter.
- * @note Clamp the depth at seven and report overflow through AKAO.
+ * @note Clamp the depth at seven and record a diagnostic on overflow.
  * @note Keep both wait-word mask updates and the header's shifted record stride;
  * the target reloads the active depth between stores.
  * @note GCC 2.8.0 G0: 100% match, 105 instructions (420 bytes).
@@ -697,7 +696,7 @@ void func_800B9278(void)
     if (depth >= 8)
     {
         g_field_script->active_record = 7;
-        akao_set_song_params(0x8001, 2, g_field_script->status.owner_id, 0x4B);
+        record_game_diagnostic(0x8001, 2, g_field_script->status.owner_id, 0x4B);
     }
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->flags = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->flags;

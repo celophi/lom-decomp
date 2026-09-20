@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 typedef struct
@@ -26,7 +27,7 @@ typedef struct
 
 Obj80087F0C *func_80087F0C(s32 arg0);
 s32 func_80087F44(s32 arg0, s32 *out);
-void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
+
 void func_800B2844(s32, void *, s32);
 void func_800C2228(s32 idx);
 
@@ -53,7 +54,7 @@ s32 func_800C2094(s32 arg0)
 
 /**
  * @brief Refresh a party member's entry and return its counter byte.
- * @param arg0 Party member index, or >= 0xFF to take the song fallback.
+ * @param arg0 Party member index, or >= 0xFF to report an invalid index.
  * @return The counter at 0x25E0 + arg0, or 0 for an invalid index.
  */
 u8 func_800C20D8(s32 arg0)
@@ -66,13 +67,13 @@ u8 func_800C20D8(s32 arg0)
         p = D_80122B74 + arg0;
         return p[0x25E0];
     }
-    akao_set_song_params(0x8001, 0x70, arg0, 0);
+    record_game_diagnostic(0x8001, 0x70, arg0, 0);
     return 0;
 }
 
 /**
  * @brief Increment a party member's counter, saturating at 0x63, then refresh its entry.
- * @param arg0 Party member index, or >= 0xFF to take the song fallback.
+ * @param arg0 Party member index, or >= 0xFF to report an invalid index.
  */
 void func_800C2138(s32 arg0)
 {
@@ -92,18 +93,18 @@ void func_800C2138(s32 arg0)
     }
     else
     {
-        akao_set_song_params(0x8001, 0x71, arg0, 0);
+        record_game_diagnostic(0x8001, 0x71, arg0, 0);
     }
 }
 
 /**
- * @brief Ticks down a party member's counter, or triggers a fallback song.
+ * @brief Ticks down a party member's counter, or reports an invalid index.
  *
  * For a valid member index (@p arg0 < 0xFF), decrements the counter byte at
  * @c D_80122B74[arg0 + 0x25E0] when nonzero and runs func_800C2228; for an
- * out-of-range index, issues akao_set_song_params(0x8001, 0x72, arg0, 0).
+ * out-of-range index, issues record_game_diagnostic(0x8001, 0x72, arg0, 0).
  *
- * @param arg0 Party member index, or >= 0xFF to take the song fallback.
+ * @param arg0 Party member index, or >= 0xFF to report an invalid index.
  */
 void func_800C21C0(s32 arg0)
 {
@@ -122,7 +123,7 @@ void func_800C21C0(s32 arg0)
     }
     else
     {
-        akao_set_song_params(0x8001, 0x72, arg0, 0);
+        record_game_diagnostic(0x8001, 0x72, arg0, 0);
     }
 }
 

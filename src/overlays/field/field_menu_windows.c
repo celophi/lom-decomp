@@ -211,12 +211,9 @@ void *func_800ADCD0(void *packet_cursor, u32 *ordering_table, RECT *destination,
                     *(u32 *)&((SPRT *)packet_cursor)->r0 = color_word;
                     setlen((SPRT *)packet_cursor, tag_length);
                     setcode((SPRT *)packet_cursor, command);
-                    ((SPRT *)packet_cursor)->x0 = (s16)((u16)destination->x + x_offset);
-                    ((SPRT *)packet_cursor)->y0 = (s16)((u16)destination->y + y_offset);
-                    ((SPRT *)packet_cursor)->u0 = (u8)texture->x;
-                    ((SPRT *)packet_cursor)->v0 = (u8)texture->y;
-                    ((SPRT *)packet_cursor)->w = tile_width;
-                    ((SPRT *)packet_cursor)->h = tile_height;
+                    setXY0((SPRT *)packet_cursor, (s16)((u16)destination->x + x_offset), (s16)((u16)destination->y + y_offset));
+                    setUV0((SPRT *)packet_cursor, (u8)texture->x, (u8)texture->y);
+                    setWH((SPRT *)packet_cursor, tile_width, tile_height);
                     clut = 0x7CD0;
                     if (g_menu_element_counter != 0)
                     {
@@ -254,15 +251,9 @@ void func_800ADE2C(void)
 {
     RECT rect;
 
-    rect.x = 0x100;
-    rect.y = 0x1F3;
-    rect.w = 0x10;
-    rect.h = 2;
+    setRECT(&rect, 0x100, 0x1F3, 0x10, 2);
     LoadImage(&rect, (u_long *)D_800EF1BC);
-    rect.x = 0x110;
-    rect.y = 0x1E0;
-    rect.w = 0x10;
-    rect.h = 0x20;
+    setRECT(&rect, 0x110, 0x1E0, 0x10, 0x20);
     LoadImage(&rect, (u_long *)(D_800EF1BC + 0x40));
 }
 
@@ -498,8 +489,7 @@ void func_800AE008(FieldMenuRenderContext *context)
                 }
             }
             SetDrawEnv((DR_ENV *)cursor, &env);
-            *cursor = (*cursor & 0xFF000000) | (ordering->tag & 0xFFFFFF);
-            ordering->tag = (ordering->tag & 0xFF000000) | ((s32)cursor & 0xFFFFFF);
+            addPrim(&ordering->tag, cursor);
             state_attr = element->attr;
             mode = state_attr & 7;
             cursor = (s32 *)((u8 *)cursor + 0x40);

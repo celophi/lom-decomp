@@ -551,14 +551,8 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
     g_history_name_idx = history_index;
 
     /* Configure the two overlapping VRAM display/draw pages. */
-    g_render_buf_base[GNAME_RENDER_BUFFER_A].clear_rect.x = 0;
-    g_render_buf_base[GNAME_RENDER_BUFFER_A].clear_rect.y = VRAM_BACK_DRAW_Y;
-    g_render_buf_base[GNAME_RENDER_BUFFER_A].clear_rect.w = SCREEN_WIDTH;
-    g_render_buf_base[GNAME_RENDER_BUFFER_A].clear_rect.h = VRAM_DRAW_HEIGHT;
-    g_render_buf_base[GNAME_RENDER_BUFFER_B].clear_rect.x = 0;
-    g_render_buf_base[GNAME_RENDER_BUFFER_B].clear_rect.y = SCREEN_HEIGHT;
-    g_render_buf_base[GNAME_RENDER_BUFFER_B].clear_rect.w = SCREEN_WIDTH;
-    g_render_buf_base[GNAME_RENDER_BUFFER_B].clear_rect.h = VRAM_DRAW_HEIGHT;
+    setRECT(&g_render_buf_base[GNAME_RENDER_BUFFER_A].clear_rect, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    setRECT(&g_render_buf_base[GNAME_RENDER_BUFFER_B].clear_rect, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     VSync(0);
     DrawSync(0);
@@ -724,9 +718,7 @@ static void render_fade_overlay(RenderContext* render_ctx)
     if (g_fade_current.red >= FADE_CHAN_ADDITIVE)
     {
         /* Decode additive channels with FADE_CHAN_ADDITIVE as zero intensity. */
-        fade_packet->tile.r0 = g_fade_current.red - FADE_ADDITIVE_BIAS;
-        fade_packet->tile.g0 = g_fade_current.green - FADE_ADDITIVE_BIAS;
-        fade_packet->tile.b0 = g_fade_current.blue - FADE_ADDITIVE_BIAS;
+        setRGB0(&fade_packet->tile, g_fade_current.red - FADE_ADDITIVE_BIAS, g_fade_current.green - FADE_ADDITIVE_BIAS, g_fade_current.blue - FADE_ADDITIVE_BIAS);
     }
     else
     {
@@ -837,10 +829,7 @@ static void load_tim_to_vram(const TimUploadCoords* upload_coords)
     s32 clut_block_size = name_tim->clut_block.bnum;
     u16* clut_entry = name_tim->clut_data;
 
-    upload_rect.x = upload_coords->clut_x;
-    upload_rect.y = upload_coords->clut_y;
-    upload_rect.w = CLUT_ENTRY_COUNT;
-    upload_rect.h = 1;
+    setRECT(&upload_rect, upload_coords->clut_x, upload_coords->clut_y, CLUT_ENTRY_COUNT, 1);
 
     /* Mark every non-zero CLUT entry semi-transparent. */
     for (clut_index = 0; clut_index < CLUT_ENTRY_COUNT; clut_index++)
@@ -855,18 +844,12 @@ static void load_tim_to_vram(const TimUploadCoords* upload_coords)
     LoadImage(&upload_rect, (u_long*)name_tim->clut_data);
     pixel_block = TIM_PIXEL_BLOCK(name_tim, clut_block_size);
 
-    upload_rect.x = upload_coords->pixel_x;
-    upload_rect.y = upload_coords->pixel_y;
-    upload_rect.w = pixel_block->dimensions.width;
-    upload_rect.h = pixel_block->dimensions.height;
+    setRECT(&upload_rect, upload_coords->pixel_x, upload_coords->pixel_y, pixel_block->dimensions.width, pixel_block->dimensions.height);
 
     LoadImage(&upload_rect, (u_long*)(pixel_block + 1));
 
     /* Leave the rectangle positioned below the uploaded CLUT. */
-    upload_rect.x = upload_coords->clut_x;
-    upload_rect.y = upload_coords->clut_y + 1;
-    upload_rect.w = CLUT_ENTRY_COUNT;
-    upload_rect.h = 1;
+    setRECT(&upload_rect, upload_coords->clut_x, upload_coords->clut_y + 1, CLUT_ENTRY_COUNT, 1);
 }
 
 /**
@@ -1875,8 +1858,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
         glyph_info = (const GlyphInfo*)((glyph_id * sizeof(*glyph_table)) + (u32)glyph_table);
         SET_SPRT_XY0_WORD(sprite, packed_xy);
 
-        sprite->u0 = glyph_info->u;
-        sprite->v0 = glyph_info->v;
+        setUV0(sprite, glyph_info->u, glyph_info->v);
         sprite->w = glyph_info->width;
         glyph_height = glyph_info->height;
         sprite_count++;
@@ -1891,8 +1873,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
     packet_cursor = (u8*)sprite_cursor;
 
     /* Restore the full-size texture window after the sprite batch. */
-    texture_window_rect.w = GNAME_FULL_TEX_WINDOW_SIZE;
-    texture_window_rect.h = GNAME_FULL_TEX_WINDOW_SIZE;
+    setWH(&texture_window_rect, GNAME_FULL_TEX_WINDOW_SIZE, GNAME_FULL_TEX_WINDOW_SIZE);
     texture_window_rect.x = 0;
     texture_window_rect.y = 0;
     texture_window_packet = (DR_TWIN*)packet_cursor;

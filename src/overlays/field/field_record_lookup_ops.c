@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 /**
@@ -44,7 +45,7 @@ FieldActorCapacity *func_80087F0C(s32 arg0);
 void saturating_counter_add(FieldActorCapacity *counter, s32 delta);
 void func_8008BD88(s32 arg0);
 u32 *func_800875B4(void);
-void akao_set_song_params(s32 command, s32 arg1, s32 arg2, s32 arg3);
+
 
 /*
  * Declared without a prototype: func_800C1B60 forwards its caller's a0 to
@@ -346,7 +347,7 @@ void func_800C1E08(void)
 /**
  * @brief Find the resource record whose leading halfword equals arg0.
  * @param arg0 Resource id to look for.
- * @return The record, or NULL after reporting the miss to the audio driver.
+ * @return The record, or NULL after reporting the failed lookup.
  */
 u16 *func_800C1E40(s32 arg0)
 {
@@ -365,6 +366,6 @@ u16 *func_800C1E40(s32 arg0)
             return record;
         }
     }
-    akao_set_song_params(0x8001, 0x6B, arg0, 0);
+    record_game_diagnostic(0x8001, 0x6B, arg0, 0);
     return NULL;
 }

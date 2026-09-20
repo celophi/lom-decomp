@@ -329,8 +329,7 @@ s32 addhero_render_cached_glyph(s32 prim, s32* ot, s32 character_code, s32 palet
     g_addhero_glyph_upload_x = (slot % GLYPH_CACHE_COLUMNS) * 4;
     g_addhero_glyph_upload_y = slot & GLYPH_CACHE_ROW_MASK;
 
-    rect.w = 4;
-    rect.h = 15;
+    setWH(&rect, 4, 15);
     rect.x = g_addhero_glyph_upload_x + 0x140;
     rect.y = g_addhero_glyph_upload_y;
 
@@ -375,8 +374,8 @@ s32 addhero_emit_glyph_sprite(AddheroGlyphSprite* sprite, s32* ot, s32 cache_slo
     }
 
     setUV0(&sprite->packet, (cache_slot - ((normalized_slot >> 4) * 16)) * 16, cache_slot & GLYPH_CACHE_ROW_MASK);
-    sprite->packet.clut = 0x7FD3;
-    sprite->packet.tag = (sprite->packet.tag & GPU_TAG_HIGH_MASK) | (*ot & GPU_ADDR_MASK);
+    sprite->packet.clut = getClut(304, 511);
+    setaddr(&sprite->packet, getaddr(ot));
 
     packet_address = ((u32)sprite) & GPU_ADDR_MASK;
     ot_tag_high_byte = *ot & GPU_TAG_HIGH_MASK;

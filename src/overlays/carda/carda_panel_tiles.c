@@ -1,4 +1,5 @@
 #include "common.h"
+#include "sdk/libgpu.h"
 
 typedef struct
 {
@@ -37,14 +38,11 @@ s32 func_80141C3C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     {
         tile = (CardaTile *)prim;
         *(u32 *)&tile->r0 = 0x101010;
-        *((u8 *)tile + 3) = 3;
-        tile->code = 0x62;
-        tile->x0 = 0;
-        tile->y0 = 0;
-        tile->w = 0x80;
-        tile->h = 0x10;
-        tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+        setlen(tile, 3);
+        setcode(tile, 0x62);
+        setXY0(tile, 0, 0);
+        setWH(tile, 0x80, 0x10);
+        addPrim(ot, tile);
         prim += 0x10;
     }
     return func_800A88A0(prim, ot, GLYPH_SYM(D_8014B044, 0xC), 4, -arg2 + 0x40, -arg3, 2);
@@ -59,14 +57,11 @@ s32 func_80141D18(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     {
         tile = (CardaTile *)prim;
         *(u32 *)&tile->r0 = 0x101010;
-        *((u8 *)tile + 3) = 3;
-        tile->code = 0x62;
-        tile->x0 = 0;
-        tile->y0 = 0;
-        tile->w = 0x80;
-        tile->h = 0x10;
-        tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+        setlen(tile, 3);
+        setcode(tile, 0x62);
+        setXY0(tile, 0, 0);
+        setWH(tile, 0x80, 0x10);
+        addPrim(ot, tile);
         prim += 0x10;
     }
     return func_800A88A0(prim, ot, GLYPH_SYM(D_8014B046, 0xE), 4, -arg2 + 0x40, -arg3, 2);

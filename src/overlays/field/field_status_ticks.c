@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "common.h"
 
 extern u8 *D_80123FB0;
@@ -184,7 +185,7 @@ void func_800B49C0(void)
 u8 *func_800A2E34(void);
 u32 func_800B4CE4();
 void func_800B28E0(s32 arg0, s32 arg1, s32 arg2);
-void akao_set_song_params();
+
 
 /**
  * @brief Rebuild indexed field-state byte mappings and trigger dependent handlers.
@@ -271,7 +272,7 @@ void func_800B4B44(void)
     }
     if (i >= 4)
     {
-        akao_set_song_params(0x8001, 0x6F, i, 0);
+        record_game_diagnostic(0x8001, 0x6F, i, 0);
     }
 }
 

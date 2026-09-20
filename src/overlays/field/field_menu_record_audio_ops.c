@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "saved_game.h"
 #include "main.h"
 
@@ -17,7 +18,7 @@ extern s32 func_800BD414(s32 arg0, s32 arg1);
 extern void func_800AD194(s32 arg0);
 
 /**
- * @brief Clear the selected record flag or send audio command 0x4B.
+ * @brief Clear the selected record flag or report an invalid index.
  * @see decomp.me (100%)
  */
 void func_800C92B8(void)
@@ -35,12 +36,12 @@ void func_800C92B8(void)
     }
     else
     {
-        akao_set_song_params(0x8002, 0x4B, index, 0);
+        record_game_diagnostic(0x8002, 0x4B, index, 0);
     }
 }
 
 /**
- * @brief Update the selected record value or send audio command 0x4C.
+ * @brief Update the selected record value or report an invalid index.
  * @see decomp.me (100%)
  */
 void func_800C9330(void)
@@ -65,7 +66,7 @@ void func_800C9330(void)
     }
     else
     {
-        akao_set_song_params(0x8002, 0x4C, index, 0);
+        record_game_diagnostic(0x8002, 0x4C, index, 0);
     }
 }
 

@@ -75,6 +75,9 @@ typedef enum CdResourceId
     /* SOUND/MUSIC002.SET */
     CD_RES_MUSIC002_SET = 24,
 
+    /* SND_SOTO/SNDSOTO.SET, followed by MUSICS01.SET through MUSICS19.SET. */
+    CD_RES_SND_SOTO_SET = 147,
+
     /* Twelve-row bitmap font used by the FIELD text renderer. */
     CD_RES_FIELD_FONT = 178,
 } CdResourceId;

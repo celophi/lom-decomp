@@ -1,4 +1,5 @@
 #include "common.h"
+#include "sdk/libgpu.h"
 extern u8 D_800EB254[];
 extern u8 D_800FDF58[];
 extern u8 D_80105AE0[];
@@ -279,19 +280,17 @@ u8 *func_800AF0E8(u32 *ot, u8 *cursor, s32 scroll_x, s32 scroll_y, s32 unused, W
     }
     tile = (Tile *)cursor;
     tile->color = 0xF080F0;
-    cursor[3] = 3;
-    cursor[7] = 0x62;
+    setlen(cursor, 3);
+    setcode(cursor, 0x62);
     tile->w = 0xE8;
     mode = cursor + 16;
     tile->x = 0;
     tile->h = 14;
     tile->y = D_80122A00 * 16 - scroll_y;
-    tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((u32)cursor & 0xFFFFFF);
+    addPrim(ot, tile);
     mode[3] = 1;
     *(u32 *)(mode + 4) = 0xE1000005;
-    *(u32 *)(cursor + 16) = (*(u32 *)(cursor + 16) & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((u32)mode & 0xFFFFFF);
+    addPrims(ot, mode, cursor + 16);
     return cursor + 24;
 }
 

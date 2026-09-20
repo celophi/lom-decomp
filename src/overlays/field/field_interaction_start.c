@@ -1,3 +1,4 @@
+#include "game_audio.h"
 #include "saved_game.h"
 #include "common.h"
 #include "field_interaction_start.h"
@@ -136,7 +137,7 @@ void func_800B0AF8(void)
     {
         if (func_800BD414(0, 0x2F08) == 0xFF)
         {
-            akao_set_song_params(0x8001, 0x320, 1, 0);
+            record_game_diagnostic(0x8001, 0x320, 1, 0);
         }
     }
 
@@ -144,7 +145,7 @@ void func_800B0AF8(void)
     {
         if (func_800BD414(0, 0x2F00) == 0xFF)
         {
-            akao_set_song_params(0x8001, 0x320, 2, 0);
+            record_game_diagnostic(0x8001, 0x320, 2, 0);
         }
     }
 }

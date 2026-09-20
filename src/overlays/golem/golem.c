@@ -306,14 +306,8 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     g_golem_render_buffers = render_buffers;
     render_buffers += 2;
 
-    g_golem_render_buffers[0].clear_rect.x = 0;
-    g_golem_render_buffers[0].clear_rect.y = VRAM_BACK_DRAW_Y;
-    g_golem_render_buffers[0].clear_rect.w = SCREEN_WIDTH;
-    g_golem_render_buffers[0].clear_rect.h = VRAM_DRAW_HEIGHT;
-    g_golem_render_buffers[1].clear_rect.x = 0;
-    g_golem_render_buffers[1].clear_rect.y = SCREEN_HEIGHT;
-    g_golem_render_buffers[1].clear_rect.w = SCREEN_WIDTH;
-    g_golem_render_buffers[1].clear_rect.h = VRAM_DRAW_HEIGHT;
+    setRECT(&g_golem_render_buffers[0].clear_rect, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    setRECT(&g_golem_render_buffers[1].clear_rect, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     SetDefDispEnv(&g_golem_render_buffers[0].display_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&g_golem_render_buffers[1].display_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -469,10 +463,7 @@ void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim)
 
     if (flags & TIM_FLAG_HAS_CLUT)
     {
-        upload_rect.x = destinations->clut_x;
-        upload_rect.y = destinations->clut_y;
-        upload_rect.w = CLUT_ENTRY_COUNT;
-        upload_rect.h = 1;
+        setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, CLUT_ENTRY_COUNT, 1);
         LoadImage(&upload_rect, (u_long*)tim->clut_data);
         pixel_dimensions = &TIM_PIXEL_BLOCK(tim, clut_block_size)->dimensions;
     }
@@ -481,10 +472,7 @@ void golem_upload_image_archive(GolemImageClutPos* destinations, TimPrefix* tim)
         pixel_dimensions = &tim->clut_block.dimensions;
     }
 
-    upload_rect.x = destinations->x;
-    upload_rect.y = destinations->y;
-    upload_rect.w = pixel_dimensions->width;
-    upload_rect.h = pixel_dimensions->height;
+    setRECT(&upload_rect, destinations->x, destinations->y, pixel_dimensions->width, pixel_dimensions->height);
     LoadImage(&upload_rect, (u_long*)(TIM_PIXEL_BLOCK(tim, clut_block_size) + 1));
 }
 
@@ -921,7 +909,7 @@ u8* golem_emit_grid_marker(u8* packet_cursor, u_long* ordering_table, s32 x, s32
     setWH(sprite, 8, 8);
     setUV0(sprite, glyph * 8 - 0x70, 0x58);
     setXY0(sprite, x, y);
-    sprite->clut = 0x7C87;
+    sprite->clut = getClut(112, 498);
     addPrim(ordering_table, sprite);
     return packet_cursor + sizeof(SPRT);
 }
@@ -976,7 +964,7 @@ u8* golem_draw_cursor(u8* packet_cursor, GolemRenderContext* render_context)
     cursor_y = g_golem_cursor_y;
     setWH(sprite, 0x10, 0x10);
     setUV0(sprite, 0xB0, 0xF0);
-    sprite->clut = 0x7C87;
+    sprite->clut = getClut(112, 498);
     setXY0(sprite, cursor_x + 8, cursor_y);
     addPrim(&render_context->ordering_table[GOLEM_LAYER_CURSOR], sprite);
 
@@ -1356,12 +1344,9 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
                 {
                     setcode(sprite, 0x66);
                 }
-                sprite->x0 = (x + 8) + x_offset;
-                sprite->y0 = y + y_offset;
-                sprite->w = segment_width;
-                sprite->h = row_height;
-                sprite->u0 = g_golem_panel_records[panel_index].attributes >> 11;
-                sprite->v0 = g_golem_panel_records[panel_index].texture >> 3;
+                setXY0(sprite, (x + 8) + x_offset, y + y_offset);
+                setWH(sprite, segment_width, row_height);
+                setUV0(sprite, g_golem_panel_records[panel_index].attributes >> 11, g_golem_panel_records[panel_index].texture >> 3);
                 sprite->clut = ((g_golem_panel_records[panel_index].texture >> 11) & 0x3F) | getClut(0, VRAM_CLUT_Y);
                 addPrim(ordering_table, sprite);
                 x_offset += (g_golem_panel_records[panel_index].texture >> 17) & 0x1FF;
@@ -1490,23 +1475,22 @@ u8* golem_emit_glyph(u8* packet_cursor, u_long* ordering_table, s32 glyph_id, s3
     if (style & 0x80)
     {
         setRGB0(sprite, 0x38, 0x38, 0x38);
-        sprite->code |= 2;
+        setSemiTrans(sprite, 1);
     }
     if (clut == 0xF)
     {
         setRGB0(sprite, 0x40, 0x40, 0x40);
-        sprite->code |= 2;
+        setSemiTrans(sprite, 1);
     }
     if (clut != 9)
     {
-        sprite->code |= 2;
+        setSemiTrans(sprite, 1);
     }
     sprite_metrics = g_golem_glyph_metrics;
     sprite_metric = &sprite_metrics[glyph_id];
     setXY0(sprite, x, y);
     setWH(sprite, sprite_metric->width, sprite_metric->height);
-    sprite->u0 = sprite_metric->u0;
-    sprite->v0 = sprite_metric->v0;
+    setUV0(sprite, sprite_metric->u0, sprite_metric->v0);
     sprite->clut = (clut & 0x3F) | getClut(0, VRAM_CLUT_Y);
     addPrim(ordering_table, sprite);
     return packet_cursor + sizeof(SPRT);
@@ -1529,8 +1513,7 @@ LINE_F2* golem_emit_panel_outline(LINE_F2* packet, u_long* ordering_table, s32 x
 {
     SET_BGR0_PACKED(packet, color);
     setLineF2(packet);
-    packet->x0 = x;
-    packet->y0 = y;
+    setXY0(packet, x, y);
     packet->x1 = x + width;
     packet->y1 = y;
     addPrim(ordering_table, packet);
@@ -1538,8 +1521,7 @@ LINE_F2* golem_emit_panel_outline(LINE_F2* packet, u_long* ordering_table, s32 x
 
     SET_BGR0_PACKED(packet, color);
     setLineF2(packet);
-    packet->x0 = x + width;
-    packet->y0 = y;
+    setXY0(packet, x + width, y);
     packet->x1 = x + width;
     packet->y1 = y + height;
     addPrim(ordering_table, packet);
@@ -1547,8 +1529,7 @@ LINE_F2* golem_emit_panel_outline(LINE_F2* packet, u_long* ordering_table, s32 x
 
     SET_BGR0_PACKED(packet, color);
     setLineF2(packet);
-    packet->x0 = x + width;
-    packet->y0 = y + height;
+    setXY0(packet, x + width, y + height);
     packet->x1 = x;
     packet->y1 = y + height;
     addPrim(ordering_table, packet);
@@ -1556,8 +1537,7 @@ LINE_F2* golem_emit_panel_outline(LINE_F2* packet, u_long* ordering_table, s32 x
 
     SET_BGR0_PACKED(packet, color);
     setLineF2(packet);
-    packet->x0 = x;
-    packet->y0 = y;
+    setXY0(packet, x, y);
     packet->x1 = x;
     packet->y1 = y + height;
     addPrim(ordering_table, packet);
@@ -1617,9 +1597,7 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
     {
         if (g_golem_fade_current.red >= GOLEM_FADE_ADDITIVE_THRESHOLD)
         {
-            ((TILE*)packet_cursor)->r0 = g_golem_fade_current.red - 1;
-            ((TILE*)packet_cursor)->g0 = g_golem_fade_current.green - 1;
-            ((TILE*)packet_cursor)->b0 = g_golem_fade_current.blue - 1;
+            setRGB0((TILE*)packet_cursor, g_golem_fade_current.red - 1, g_golem_fade_current.green - 1, g_golem_fade_current.blue - 1);
         }
         else
         {
@@ -1650,10 +1628,10 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
         }
 
         setTile(((TILE*)packet_cursor));
-        setSemiTrans(((TILE*)packet_cursor), 1);
+        setSemiTrans((TILE*)packet_cursor, 1);
         ((TILE*)packet_cursor)->w = SCREEN_WIDTH;
         draw_mode = GOLEM_FADE_ADDITIVE_DRAW_MODE;
-        SET_YX0(((TILE*)packet_cursor), 0, 0);
+        SET_YX0((TILE*)packet_cursor, 0, 0);
         ((TILE*)packet_cursor)->h = SCREEN_HEIGHT;
         addPrim(ordering_table_tag, ((TILE*)packet_cursor));
 
@@ -1662,7 +1640,7 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
         {
             draw_mode = GOLEM_FADE_SUBTRACTIVE_DRAW_MODE;
         }
-        setDrawTPage(((DR_TPAGE*)packet_cursor), 0, 0, draw_mode);
+        setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, draw_mode);
         addPrim(ordering_table_tag, ((DR_TPAGE*)packet_cursor));
 
         packet_cursor += sizeof(DR_TPAGE);

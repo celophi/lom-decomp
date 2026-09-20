@@ -4,9 +4,9 @@ g_hex_digit_table                   = 0x800102B0;
 
 main_game_loop                      = 0x80010D58;
 screen_transition                      = 0x80011358;
-akao_song_cmd_12c                   = 0x8001160C;
+fade_out_current_song               = 0x8001160C;
 load_and_play_song                  = 0x80011638;
-akao_set_song_params                = 0x800116D8;
+record_game_diagnostic              = 0x800116D8;
 
 // cdrom.c
 cdrom_init                          = 0x80011710;
@@ -1034,18 +1034,18 @@ g_save_slot_index                   = 0x8003EC9C;
 g_transition_frames                = 0x80042CA0; // size:0x310 allow_addend:True
 g_previous_game_state                 = 0x80042FB0;
 g_current_song_handle               = 0x80042FB8;
-g_akao_song_cmd_arg0                = 0x80042FBC;
-g_akao_song_cmd_arg1                = 0x80042FBE;
-g_akao_song_cmd_arg2                = 0x80042FC0;
-g_akao_song_cmd_arg3                = 0x80042FC2;
+g_game_diagnostic_status            = 0x80042FBC;
+g_game_diagnostic_code              = 0x80042FBE;
+g_game_diagnostic_arg0              = 0x80042FC0;
+g_game_diagnostic_arg1              = 0x80042FC2;
 g_layout_flag                       = 0x80042FC4;
 g_field_entry_flag                  = 0x80042FCC;
 D_80042FD0                          = 0x80042FD0;
 g_saved_game                        = 0x80042FD8; // size:0x4000 allow_addend:True
 g_layout_sub_mode                   = 0x80046FD8;
-g_akao_song_cmd_neg_arg0            = 0x80046FDC;
+g_last_error_status                 = 0x80046FDC;
 g_music_track_index                 = 0x80046FDE;
-g_music_data_buffer                 = 0x80046FE0;
+g_music_sequence                    = 0x80046FE0;
 g_script_pair_value_49                          = 0x800473E0;
 g_text_clut_base                    = 0x80047400;
 g_text_cursor_x                     = 0x80047404;
