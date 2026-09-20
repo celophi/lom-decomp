@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "main.h"
 
 /**
@@ -11,7 +12,7 @@ void field_reset_music_track_index(void)
 
 extern u8 D_80122C19;
 extern u8 D_80122C11;
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 func_800BD414(s32 arg0, s32 arg1);
 extern void func_800AD194(s32 arg0);
 
@@ -28,7 +29,7 @@ void func_800C92B8(void)
     index = (&D_80122C19)[D_80122C19 + 4];
     if (index < 5)
     {
-        base = g_menuLayoutBuffer;
+        base = g_saved_game.bytes;
         record = base + index * 0x60;
         *(u32 *)(record + 0x2F38) &= 0xBFFFFFFF;
     }
@@ -53,7 +54,7 @@ void func_800C9330(void)
     index = (&D_80122C11)[1];
     if (index < 5)
     {
-        base = g_menuLayoutBuffer;
+        base = g_saved_game.bytes;
         record = base + index * 0x60;
         record[0x2F09] = val;
         *(u32 *)(record + 0x2F38) &= 0x7FFFFFFF;

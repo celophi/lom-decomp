@@ -1,9 +1,10 @@
+#include "saved_game.h"
 #include "common.h"
 #include "sdk/rand.h"
 
 extern int abs(int);
 
-extern u8 g_menuLayoutBuffer[];
+
 s32 func_80087F44(s32 arg0, void *arg1);
 
 /**
@@ -34,7 +35,7 @@ s32 func_800C9ED4(s32 arg0)
     u8 *layout;
 
     selected_index = -1;
-    layout = g_menuLayoutBuffer;
+    layout = g_saved_game.bytes;
     if (((s8 *)layout)[0x29D7] != 3)
     {
         slot_count = layout[((s8 *)layout)[0x29D7] * 0x14C + 0x2B50] >> 4;

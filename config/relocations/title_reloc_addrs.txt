@@ -2,3 +2,7 @@
 rom:0x3D reloc:MIPS_NONE symbol:g_titleMenuExitState
 rom:0x71 reloc:MIPS_NONE symbol:g_titleMenuExitState
 rom:0xA5 reloc:MIPS_NONE symbol:g_titleMenuExitState
+
+// The default character record is embedded in the saved-game object.
+rom:0x264D reloc:MIPS_HI16 symbol:g_saved_game addend:0x5F0
+rom:0x2651 reloc:MIPS_LO16 symbol:g_saved_game addend:0x5F0

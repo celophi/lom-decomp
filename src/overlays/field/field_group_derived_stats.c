@@ -1,3 +1,4 @@
+#include "saved_game.h"
 /** @file field_group_derived_stats.c
  * @brief Recompute derived party-member statistics from the selected gosub results.
  */
@@ -9,7 +10,7 @@ extern u32 D_80051C50[];
 extern s8 D_800F0C38[];
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern u8 g_menuLayoutBuffer[];
+
 
 typedef struct
 {
@@ -107,7 +108,7 @@ void func_800C4364(s32 arg0)
     *(LocalTableCopy *)local_table = *(LocalTableCopy *)D_80051C50;
 
     count = 0;
-    base = g_menuLayoutBuffer;
+    base = g_saved_game.bytes;
     accum[15] = (s32)base[0x29D5];
     digit = accum[15] / 50;
     digit += 11;
@@ -177,7 +178,7 @@ void func_800C4364(s32 arg0)
                 i = accum[0];
                 if (i < accum[1])
                 {
-                    out_base = g_menuLayoutBuffer;
+                    out_base = g_saved_game.bytes;
                     record_offset = arg0 * 0x14C;
                     do
                     {
@@ -217,7 +218,7 @@ void func_800C4364(s32 arg0)
             i = accum[0];
             if (i < accum[1])
             {
-                out_base = g_menuLayoutBuffer;
+                out_base = g_saved_game.bytes;
                 record_offset = arg0 * 0x14C;
                 do
                 {
@@ -252,7 +253,7 @@ void func_800C4364(s32 arg0)
         i = accum[0];
         if (i < accum[1])
         {
-            out_base = g_menuLayoutBuffer;
+            out_base = g_saved_game.bytes;
             record_offset = arg0 * 0x14C;
             do
             {
@@ -270,7 +271,7 @@ void func_800C4364(s32 arg0)
         i = accum[0];
         if (i < accum[1])
         {
-            out_base = g_menuLayoutBuffer;
+            out_base = g_saved_game.bytes;
             record_offset = arg0 * 0x14C;
             do
             {
@@ -286,7 +287,7 @@ void func_800C4364(s32 arg0)
     }
     if (count < 21)
     {
-        u8 *end_base = g_menuLayoutBuffer;
+        u8 *end_base = g_saved_game.bytes;
         s32 end_offset = arg0 * 0x14C;
         ((NameView *)(end_base + (count + end_offset)))->unk2B0C = 0;
     }
@@ -295,7 +296,7 @@ void func_800C4364(s32 arg0)
     accum[0] = 0;
     if (g_gosub_result_count > 0)
     {
-        u8 *scan_base = g_menuLayoutBuffer;
+        u8 *scan_base = g_saved_game.bytes;
         u8 *record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
         s32 *results;
@@ -312,7 +313,7 @@ void func_800C4364(s32 arg0)
         } while (i < result_count);
     }
     accum[0] = accum[0] < 10 ? 10 : accum[0] > 200 ? 200 : accum[0];
-    ((OutputStats *)(g_menuLayoutBuffer + arg0 * 0x14C))->stat0 = (u16)accum[0];
+    ((OutputStats *)(g_saved_game.bytes + arg0 * 0x14C))->stat0 = (u16)accum[0];
 
     i = 0;
     accum[0] = 0;
@@ -322,7 +323,7 @@ void func_800C4364(s32 arg0)
     if (g_gosub_result_count > 0)
     {
         s32 selected_type = 1;
-        u8 *scan_base = g_menuLayoutBuffer;
+        u8 *scan_base = g_saved_game.bytes;
         u8 *record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
         s32 *results;
@@ -344,7 +345,7 @@ void func_800C4364(s32 arg0)
     {
         u8 *stat_base;
         i = 0;
-        stat_base = g_menuLayoutBuffer;
+        stat_base = g_saved_game.bytes;
         for (; i < 4; i++)
         {
             s32 output_offset;
@@ -373,7 +374,7 @@ void func_800C4364(s32 arg0)
     i = 0;
     if (g_gosub_result_count > i)
     {
-        u8 *item_base = g_menuLayoutBuffer;
+        u8 *item_base = g_saved_game.bytes;
         s32 result_count = g_gosub_result_count;
         s32 *results = g_gosub_result_values;
         do
@@ -408,29 +409,29 @@ void func_800C4364(s32 arg0)
     }
     for (i = 0; i < 16; i++)
     {
-        if (g_menuLayoutBuffer[0x29D5] >= 200)
+        if (g_saved_game.bytes[0x29D5] >= 200)
         {
             accum[i] += 2;
         }
         accum[i] = accum[i] < 0 ? 0 : accum[i] > 9 ? 9 : accum[i];
     }
 
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a0 = accum[0];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a1 = accum[1];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a2 = accum[2];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a3 = accum[3];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a4 = accum[4];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a5 = accum[5];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a6 = accum[6];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a7 = accum[7];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a8 = accum[8];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a9 = accum[9];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a10 = accum[10];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a11 = accum[11];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a12 = accum[12];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a13 = accum[13];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a14 = accum[14];
-    ((StatNibbles *)(g_menuLayoutBuffer + arg0 * 0x14C))->a15 = accum[15];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a0 = accum[0];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a1 = accum[1];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a2 = accum[2];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a3 = accum[3];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a4 = accum[4];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a5 = accum[5];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a6 = accum[6];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a7 = accum[7];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a8 = accum[8];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a9 = accum[9];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a10 = accum[10];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a11 = accum[11];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a12 = accum[12];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a13 = accum[13];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a14 = accum[14];
+    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a15 = accum[15];
 
     accum[0] = 0;
     accum[1] = 0;
@@ -443,7 +444,7 @@ void func_800C4364(s32 arg0)
     for (i = 0; i < g_gosub_result_count; i++)
     {
         s8 *resistance_table = D_800F0C38;
-        u8 *item = g_menuLayoutBuffer + (work_value = g_gosub_result_values[i] << 6);
+        u8 *item = g_saved_game.bytes + (work_value = g_gosub_result_values[i] << 6);
         accum[0] += resistance_table[U32(item, 0xCFC) & 0xF];
         accum[1] += resistance_table[U8(item, 0xCFC) >> 4];
         accum[2] += resistance_table[(U32(item, 0xCFC) >> 8) & 0xF];
@@ -457,8 +458,8 @@ void func_800C4364(s32 arg0)
     {
         accum[i] = (accum[i] * 5) + 20;
         accum[i] = accum[i] < 20 ? 20 : accum[i] > 99 ? 99 : accum[i];
-        ((ResistanceView *)(g_menuLayoutBuffer + arg0 * 0x14C + i * 2))->resistance &= 0xFE00;
-        ((ResistanceView *)(g_menuLayoutBuffer + arg0 * 0x14C + i * 2))->resistance = (u16)accum[i]
+        ((ResistanceView *)(g_saved_game.bytes + arg0 * 0x14C + i * 2))->resistance &= 0xFE00;
+        ((ResistanceView *)(g_saved_game.bytes + arg0 * 0x14C + i * 2))->resistance = (u16)accum[i]
                                                                                       << 9;
     }
 
@@ -467,7 +468,7 @@ void func_800C4364(s32 arg0)
     if (g_gosub_result_count > i)
     {
         s32 selected_type = 1;
-        u8 *scan_base = g_menuLayoutBuffer;
+        u8 *scan_base = g_saved_game.bytes;
         u8 *record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
         s32 *results;
@@ -483,12 +484,12 @@ void func_800C4364(s32 arg0)
             results++;
         } while (i < result_count);
     }
-    g_menuLayoutBuffer[arg0 * 0x14C + 0x2B48] = (u8)accum[0];
+    g_saved_game.bytes[arg0 * 0x14C + 0x2B48] = (u8)accum[0];
     accum[0] = 0;
     i = 0;
     if (g_gosub_result_count > 0)
     {
-        u8 *scan_base = g_menuLayoutBuffer;
+        u8 *scan_base = g_saved_game.bytes;
         u8 *record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
         s32 *results;
@@ -504,13 +505,13 @@ void func_800C4364(s32 arg0)
             results++;
         } while (i < result_count);
     }
-    g_menuLayoutBuffer[arg0 * 0x14C + 0x2B49] = (u8)accum[0];
+    g_saved_game.bytes[arg0 * 0x14C + 0x2B49] = (u8)accum[0];
     accum[0] = 0;
     i = 0;
     if (g_gosub_result_count > 0)
     {
         s32 selected_type = 1;
-        u8 *scan_base = g_menuLayoutBuffer;
+        u8 *scan_base = g_saved_game.bytes;
         u8 *record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
         s32 *results;
@@ -527,31 +528,31 @@ void func_800C4364(s32 arg0)
         } while (i < result_count);
     }
 
-    tb0 = g_menuLayoutBuffer;
+    tb0 = g_saved_game.bytes;
     (tb0 + arg0 * 0x14C)[0x2B4A] = (u8)accum[0];
     (tb0 + arg0 * 0x14C)[0x2B4B] = 1;
     U32((tb0 + arg0 * 0x14C), 0x2B4C) = 0;
     ((GroupOutput *)(tb0 + arg0 * 0x14C))->low = 0;
     for (i = 0; i < g_gosub_result_count; i++)
     {
-        if (((ItemHeader *)(g_menuLayoutBuffer + (g_gosub_result_values[i] << 6)))->type == 0)
+        if (((ItemHeader *)(g_saved_game.bytes + (g_gosub_result_values[i] << 6)))->type == 0)
         {
             ((GroupOutput *)(tb0 + arg0 * 0x14C))->low = (u8)
-                local_table[((ItemHeader *)(g_menuLayoutBuffer + (g_gosub_result_values[i] << 6)))
+                local_table[((ItemHeader *)(g_saved_game.bytes + (g_gosub_result_values[i] << 6)))
                                 ->category];
         }
     }
 
     i = 0;
     accum[0] = 0;
-    tb1 = g_menuLayoutBuffer;
+    tb1 = g_saved_game.bytes;
     ((GroupOutput *)(tb1 + arg0 * 0x14C))->high = 4;
     {
         s32 result_count = g_gosub_result_count;
         s32 *results;
         if (result_count > 0)
         {
-            u8 *scan_base = g_menuLayoutBuffer;
+            u8 *scan_base = g_saved_game.bytes;
             s32 selected_type = 1;
             results = g_gosub_result_values;
             do
@@ -567,19 +568,19 @@ void func_800C4364(s32 arg0)
     }
     if (accum[0] == 2)
     {
-        tb2 = g_menuLayoutBuffer;
+        tb2 = g_saved_game.bytes;
         ((GroupOutput *)(tb2 + arg0 * 0x14C))->high = 5;
     }
     if (accum[0] == 3)
     {
-        tb3 = g_menuLayoutBuffer;
+        tb3 = g_saved_game.bytes;
         ((GroupOutput *)(tb3 + arg0 * 0x14C))->high = 6;
     }
-    tb4 = g_menuLayoutBuffer;
+    tb4 = g_saved_game.bytes;
     (tb4 + arg0 * 0x14C)[0x2B51] = 0;
     accum[0] = 75 - (((tb4 + arg0 * 0x14C)[0x2B50] >> 4) * 10);
     accum[0] = accum[0] < 0 ? 0 : accum[0] > 50 ? 50 : accum[0];
-    tb5 = g_menuLayoutBuffer;
+    tb5 = g_saved_game.bytes;
     (tb5 + arg0 * 0x14C)[0x2B52] = (u8)accum[0];
     (tb5 + arg0 * 0x14C)[0x2B53] = 0;
     U32((tb5 + arg0 * 0x14C), 0x2B54) = 0;
@@ -604,7 +605,7 @@ void func_800C4364(s32 arg0)
     }
     {
         u8 *hp_base;
-        hp_base = g_menuLayoutBuffer;
+        hp_base = g_saved_game.bytes;
         U16((hp_base + arg0 * 0x14C), 0x2B22) = (s16)work_value;
     }
 }

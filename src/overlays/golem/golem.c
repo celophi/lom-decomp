@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 #include "cdrom.h"
 #include "controller.h"
@@ -23,7 +24,7 @@
 #define GOLEM_SOUND_REJECT 0x78
 #define GOLEM_SOUND_PICK_UP 0x7E
 #define GOLEM_SOUND_PLACE 0x120
-#define GOLEM_LOGIC_BLOCK(index) (((GolemMenuData*)g_menuLayoutBuffer)->logic_blocks[(index)])
+#define GOLEM_LOGIC_BLOCK(index) (((GolemMenuData*)g_saved_game.bytes)->logic_blocks[(index)])
 #define GOLEM_PANEL_BEHAVIOR_SHIFT 3
 #define GOLEM_PANEL_FLASH_SHIFT 7
 #define GOLEM_PANEL_FLASH_MASK (0xF << GOLEM_PANEL_FLASH_SHIFT)
@@ -215,7 +216,7 @@ typedef struct
     GolemTextSections sections;
 } GolemTextArchive;
 
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 g_pad_input;
 extern s32 g_frame_counter;
 extern s32 D_80122C00;
@@ -392,7 +393,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     if (restore_slot_on_cancel != 0)
     {
         slot_index = 0;
-        menu_data = (GolemMenuData*)g_menuLayoutBuffer;
+        menu_data = (GolemMenuData*)g_saved_game.bytes;
         selected_logic_type = menu_data->selected_logic_type;
         g_golem_saved_logic_type_slot = D_80122C00;
         D_80122C00 = 0;
@@ -407,7 +408,7 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     }
 
     g_golem_grid_size_class = func_800CB758() - 4;
-    active_menu = (GolemMenuData*)g_menuLayoutBuffer;
+    active_menu = (GolemMenuData*)g_saved_game.bytes;
     logic_type = active_menu->logic_types[D_80122C00];
     g_golem_block_rotation = 0;
     g_golem_block_y = 0;
@@ -682,7 +683,7 @@ void golem_handle_input(void)
             if (g_golem_logic_block_count > 0)
             {
                 limit = g_golem_logic_block_count;
-                menu_data = (GolemMenuData*)g_menuLayoutBuffer;
+                menu_data = (GolemMenuData*)g_saved_game.bytes;
                 logic_type = g_golem_active_logic_type;
                 do
                 {
@@ -720,7 +721,7 @@ void golem_handle_input(void)
             if (input > 0)
             {
                 limit = input;
-                menu_data = (GolemMenuData*)g_menuLayoutBuffer;
+                menu_data = (GolemMenuData*)g_saved_game.bytes;
                 logic_type = g_golem_active_logic_type;
                 block_index--;
             backward_loop:

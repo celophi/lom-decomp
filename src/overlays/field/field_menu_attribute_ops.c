@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 
 /** @brief Eight selection-index adjustments copied to the stack. */
@@ -19,7 +20,7 @@ typedef union
     s32 selected;
 } LayoutSelection;
 extern Choices D_80051ED8;
-extern u8 g_menuLayoutBuffer[];
+
 extern u16 g_music_track_index;
 extern u8 D_80122C00, D_80122C05, D_80122C06;
 extern s32 rand(void);
@@ -35,7 +36,7 @@ void func_800C96C4(void)
     s32 mode;
     total = 0;
     i = total;
-    selection.layout = (AttributeLayout *)g_menuLayoutBuffer;
+    selection.layout = (AttributeLayout *)g_saved_game.bytes;
     mode = D_80122C00;
     track = g_music_track_index;
     choices = D_80051ED8;
@@ -162,7 +163,7 @@ extern u8 D_80122C01;
  * @brief Pack the current gosub result's color/attribute bytes into D_80122C01.
  *
  * If there are gosub results, reads the selected result's 0x40-byte layout record
- * (at @c g_menuLayoutBuffer + 0xCE0) for its 0x24 and 0x26 fields and a 6-bit
+ * (at @c g_saved_game.bytes + 0xCE0) for its 0x24 and 0x26 fields and a 6-bit
  * attribute from the 0xCF4 word; otherwise defaults to 0xFF. The 0x26 field is
  * clamped to 0..0x63 and all four bytes are written to @c D_80122C01.
  *
@@ -183,7 +184,7 @@ void func_800C98D4(void)
     clamp_src = 0;
     if (g_gosub_result_count != 0)
     {
-        u8 *buf = g_menuLayoutBuffer;
+        u8 *buf = g_saved_game.bytes;
         u8 *base;
         u8 *recbase;
         result_value = g_gosub_result_values;

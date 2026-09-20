@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 
 /**
@@ -22,7 +23,7 @@ extern u8 D_800459AE;
 extern s32 D_80122C00;
 extern UnkStruct80122C0C D_80122C0C;
 extern s16 D_80122C10;
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Set D_80122C10 to 1 when D_800459AE is at least 0x28, else 0.
@@ -61,7 +62,7 @@ void func_800C6228(void)
 
     count = 0;
     i = 0;
-    menu = g_menuLayoutBuffer;
+    menu = g_saved_game.bytes;
     base = menu + 0x2B58;
 loop:
     row_offset = i << 6;
@@ -94,7 +95,7 @@ void func_800C62E8(void)
     count = 0;
     for (i = 0; i < 0x64; i++)
     {
-        p = &g_menuLayoutBuffer[i * 0x40];
+        p = &g_saved_game.bytes[i * 0x40];
         if (p[0xCE0] == 0)
         {
             count++;
@@ -305,7 +306,7 @@ typedef struct
 } CopyBuf;
 
 extern CopyBuf D_80051CBC;
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 D_80122C00;
 extern s32 g_gosub_result_values[];
 extern s32 D_80122C08;
@@ -350,7 +351,7 @@ void func_800C66DC(void)
         clamped = 0;
     }
 
-    base = g_menuLayoutBuffer;
+    base = g_saved_game.bytes;
     idx = base[D_80122C00 + 0x29D8];
     *(s32 *)(base + idx * 332 + 0x2B54) = clamped;
     func_800A54D0();

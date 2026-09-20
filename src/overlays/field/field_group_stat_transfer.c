@@ -1,6 +1,7 @@
+#include "saved_game.h"
 #include "common.h"
 
-extern u8 g_menuLayoutBuffer[];
+
 
 typedef struct
 {
@@ -66,7 +67,7 @@ void func_800C3F18(s32 group_index, void *destination)
     u8 *final_table;
 
     index = 0;
-    name_table = g_menuLayoutBuffer;
+    name_table = g_saved_game.bytes;
     group_offset = group_index * 0x14C;
     U8(record, 0x50) = 1;
     U8(record, 0x90) = 1;
@@ -82,7 +83,7 @@ void func_800C3F18(s32 group_index, void *destination)
     index = 1;
     U32(record, 0x18) = (s32) (((U32(record, 0x18) & ~0x7F) | 4) & ~0x80);
     clear_cursor = record + 1;
-    group_table = g_menuLayoutBuffer;
+    group_table = g_saved_game.bytes;
     U8(record, 0x19) = (s8) (U8(group_table, group_index * 0x14C + 0x2B50) & 0xF);
     do
     {
@@ -100,8 +101,8 @@ void func_800C3F18(s32 group_index, void *destination)
     } while (index >= 0);
     index = 0;
     stat_record_offset = group_index * 0x14C;
-    stat_record = (u8 *)(stat_record_offset + (s32) g_menuLayoutBuffer);
-    stat_table_address = (s32) g_menuLayoutBuffer;
+    stat_record = (u8 *)(stat_record_offset + (s32) g_saved_game.bytes);
+    stat_table_address = (s32) g_saved_game.bytes;
     ((ActivePacked32 *)(record + 0x20))->low = 0x63;
     ((ActivePacked32 *)(record + 0x20))->high = 0;
     slot_cursor = record + 0x90;
@@ -123,7 +124,7 @@ void func_800C3F18(s32 group_index, void *destination)
         record_stat_cursor += 2;
     } while (index < 4);
     index = 0;
-    stat_table_address = (s32) g_menuLayoutBuffer;
+    stat_table_address = (s32) g_saved_game.bytes;
     resistance_offset = group_index * 0x14C;
     resistance_cursor = record;
     do
@@ -137,7 +138,7 @@ void func_800C3F18(s32 group_index, void *destination)
         ((ActivePacked16 *)(resistance_cursor + 0x30))->high = ((ActivePacked16 *)(resistance_source + 0x2B38))->high;
         resistance_cursor += 2;
     } while (index < 8);
-    final_table = g_menuLayoutBuffer;
+    final_table = g_saved_game.bytes;
     source_record = (group_index * 0x14C) + final_table;
     flags0 = U8(source_record, 0x2B48);
     U8(record, 0x40) = flags0;

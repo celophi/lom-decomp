@@ -79,7 +79,7 @@ extern s32 g_text_cursor_y;
 /**
  * @brief Run the field overlay's top-level scene loop until a state
  *        transition is requested, then return the next game state.
- * @return Next g_gameState value: the raw g_pending_game_state exit code if it is
+ * @return Next g_game_state value: the raw g_pending_game_state exit code if it is
  *         a valid state (< 5), otherwise clamped to GAME_STATE_WORLD_MAP.
  * @see decomp.me (100%) https://decomp.me/scratch/CPx5C
  */

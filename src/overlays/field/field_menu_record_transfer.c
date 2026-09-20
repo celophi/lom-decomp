@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 
 /** @brief Layout buffer view for active records, identity words, and packed metadata. */
@@ -46,7 +47,7 @@ typedef struct FieldSharedRecord
     u32 unk3C;
 } FieldSharedRecord;
 
-extern u8 g_menuLayoutBuffer[], D_80122A08[], D_800F0E98[];
+extern u8 D_80122A08[], D_800F0E98[];
 extern u8 D_80122C02, D_80122C03, D_80122C04, D_80122C0C;
 void func_800B2844();
 
@@ -110,7 +111,7 @@ found_third:
 search_first:
     work_index = duplicate_found;
     search_record = initial_record;
-    scan = g_menuLayoutBuffer;
+    scan = g_saved_game.bytes;
 first_loop:
     if (((FieldMenuRecordLayout *)scan)->unkCE0 != 0 &&
         ((FieldMenuRecordLayout *)scan)->unkD18 == *(u32 *)(search_record + 0x38) &&
@@ -132,7 +133,7 @@ search_second:
         record_base = D_80122A08;
         search_record = record_base + (selected_index << 6);
     }
-    scan = g_menuLayoutBuffer;
+    scan = g_saved_game.bytes;
 second_loop:
     if (((FieldMenuRecordLayout *)scan)->unk640 != 0 &&
         ((FieldMenuRecordLayout *)scan)->unk678 == *(u32 *)(search_record + 0x38) &&
@@ -154,7 +155,7 @@ search_third:
         record_base = D_80122A08;
         search_record = record_base + (selected_index << 6);
     }
-    scan = g_menuLayoutBuffer;
+    scan = g_saved_game.bytes;
 third_loop:
     if (((FieldMenuRecordLayout *)scan)->unk3160 != 0 &&
         ((FieldMenuRecordLayout *)scan)->unk3198 == *(u32 *)(search_record + 0x38) &&
@@ -264,7 +265,7 @@ searches_done:
 }
 
 void func_800A8F8C(void *, void *);
-extern u8 g_menuLayoutBuffer[];
+
 
 /** @brief Remove spent records and compact the four-entry pending table. */
 void func_800C8E2C(void)
@@ -282,7 +283,7 @@ void func_800C8E2C(void)
     s32 dest_off;
 
     outer_i = 0;
-    rec = g_menuLayoutBuffer;
+    rec = g_saved_game.bytes;
 clear_records:
     {
         if (rec[0x3160] != 0 && *(s32 *)(rec + 0x3194) == 0)
@@ -298,7 +299,7 @@ clear_records:
     }
 
     outer_i = 0;
-    base = g_menuLayoutBuffer;
+    base = g_saved_game.bytes;
     dest_base = base + 0x3160;
     src_off = outer_i;
     scan = base;
@@ -381,7 +382,7 @@ void func_800C8F4C(void)
 }
 
 
-extern u8 g_menuLayoutBuffer[];
+
 extern u8 D_80122C02;
 extern s32 D_80122C08;
 
@@ -400,7 +401,7 @@ void func_800C8FA8(void)
     result = 0;
     D_80122C02 = 0xFF;
     i = 0;
-    p = g_menuLayoutBuffer;
+    p = g_saved_game.bytes;
     arg = p + 0x3160;
     base = p;
 
@@ -433,7 +434,7 @@ loop:
 
 extern void func_800B2844(s32, u8 *, s32);
 
-extern u8 D_80046138[], D_800F0E98[], g_menuLayoutBuffer[];
+extern u8 D_80046138[], D_800F0E98[];
 extern u8 D_80122C02, D_80122C03, D_80122C04, D_80122C06;
 /**
  * @brief Count available records, detect duplicate identities, and prepare the selected record display.
@@ -461,7 +462,7 @@ void func_800C905C(void)
     selected_index = D_80122C02;
     work_value = 0;
     work_index = work_value;
-    layout_base = (s32)g_menuLayoutBuffer + work_index * 0x40;
+    layout_base = (s32)g_saved_game.bytes + work_index * 0x40;
     do
     {
         if (((FieldMenuRecordLayout *)layout_base)->unk3160 != 0)
@@ -469,13 +470,13 @@ void func_800C905C(void)
             work_value += 1;
         }
         work_index += 1;
-        layout_base = (s32)g_menuLayoutBuffer + work_index * 0x40;
+        layout_base = (s32)g_saved_game.bytes + work_index * 0x40;
     } while (work_index < 4);
 
     work_index = (s32)&D_80122C06;
     *(u8 *)work_index = work_value;
-    work_value = (s32)g_menuLayoutBuffer;
-    selected_record = (selected_index << 6) + g_menuLayoutBuffer;
+    work_value = (s32)g_saved_game.bytes;
+    selected_record = (selected_index << 6) + g_saved_game.bytes;
     ((u8 *)work_index)[-3] = 0;
     if (((FieldMenuRecordLayout *)selected_record)->unk3160 == 0)
     {
@@ -513,7 +514,7 @@ first_loop:
 
 search_second:
     work_index = 0;
-    second_search_base = (s32)g_menuLayoutBuffer;
+    second_search_base = (s32)g_saved_game.bytes;
     search_record = (u8 *)((selected_index << 6) + second_search_base);
     work_value = second_search_base;
 second_loop:
@@ -535,7 +536,7 @@ searches_done:
     {
         s32 row_offset = selected_index << 6;
 
-        layout_base = (s32)g_menuLayoutBuffer;
+        layout_base = (s32)g_saved_game.bytes;
         packed_metadata = ((FieldMenuRecordLayout *)(row_offset + layout_base))->packed.word;
         record_type = (packed_metadata >> 8) & 3;
         lookup_row = (packed_metadata >> 0xA) & 0x3F;
@@ -554,7 +555,7 @@ searches_done:
             work_value = 0;
         }
 
-        display_base = (s32)g_menuLayoutBuffer;
+        display_base = (s32)g_saved_game.bytes;
         selected_offset = selected_index << 6;
         metadata_index = ((FieldMenuRecordLayout *)(selected_offset + display_base))->packed.halves[1] & 0x3F;
         record_base = (u8 *)display_base + 0x3160;

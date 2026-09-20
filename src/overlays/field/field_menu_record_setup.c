@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 
 void func_800CA1E0(void);
@@ -49,7 +50,7 @@ void func_800C8938(void)
 }
 
 extern u8 D_80122C00[];
-extern u8 g_menuLayoutBuffer[];
+
 extern void func_800B2844(s32 arg0, u8 *arg1, u8 arg2);
 
 /**
@@ -74,11 +75,11 @@ void func_800C8964(void)
     i = count;
     ids = D_80122C00;
     slots = ids + 0x1D;
-    record = g_menuLayoutBuffer;
+    record = g_saved_game.bytes;
     arg = record + 0x2EF4;
     do
     {
-        record = &g_menuLayoutBuffer[i * 0x60];
+        record = &g_saved_game.bytes[i * 0x60];
         if (record[0x2EF4] != 0)
         {
             bit = (*(u32 *)(record + 0x2F38) >> 30) & 1;

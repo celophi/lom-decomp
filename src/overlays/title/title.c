@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "title_internal.h"
 
 /* Title-menu selection values dispatched by run_title. */
@@ -17,7 +18,7 @@
 #define TITLE_MENU_EXIT_STATE_WORD_INDEX 0x990
 #define TITLE_SCENE_STATE_ADDRESS 0x801ED480
 
-/* High rand() value placement in MenuLayout::rng_seed. */
+/* High rand() value placement in SavedGameLayout::rng_seed. */
 #define TITLE_RNG_HIGH_SHIFT 15
 
 /* AKAO sound command used before the fallback field-entry path. */
@@ -52,39 +53,28 @@ typedef union
 #define TITLE_NEXT_FADE_PRIMITIVE(primitive, type) \
     ((TitleFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
+void init_title_display(TitleMenuContext* context);
+void render_menu(TitleMenuContext* context);
+s32 run_save_slot_menu(TitleMenuContext* context);
+
 /**
- * @brief Top-level entry point and main loop of the TITLE.BIN overlay.
- *
- * @details Boots the title audio (instrument bank, SEQ, then music), then
- * repeatedly initializes the title display, runs the menu render/input loop,
- * and dispatches the selected item. New Game opens the save-slot picker;
- * canceling that picker restarts the title menu, while confirming continues to
- * name entry. The main state machine calls this fixed address through its
- * temporary @c func_8004FC74 declaration.
- *
- * @param menu_context_address Address of the double-buffered MenuContext
- *        returned by get_title_menu_buffers; forwarded unchanged to the title
- *        display and menu routines.
- * @return Next game-state code consumed by the main state machine:
- *         - GAME_STATE_GNAME after New Game is confirmed.
- *         - GAME_STATE_MENU_LOAD when Continue is selected.
- *         - GAME_STATE_INTRO_MOVIE after the title idle timeout.
- *         - GAME_STATE_FIELD for the fallback field-entry path.
- *
+ * @brief Run the title menu and choose the next game state.
+ * @param menu_context Title display buffers.
+ * @return Next game-state code selected by the title screen.
  * @see decomp.me (100%) https://decomp.me/scratch/mEAXF
  */
-s32 run_title(s32 menu_context_address)
+s32 run_title(TitleMenuContext* menu_context)
 {
-    s32 context_address;
+    TitleMenuContext* context;
     S_801ED480* persistent_scene_state = (S_801ED480*)TITLE_SCENE_STATE_ADDRESS;
     s32* global_ram_base;
-    MenuLayout* menu_layout;
+    SavedGameLayout* menu_layout;
     u32 selection_sentinel;
     s32 random_low;
     s32 random_high;
     u8 selection;
 
-    context_address = menu_context_address;
+    context = menu_context;
 
     load_title_audio_bank();
     load_title_seq(0);
@@ -94,11 +84,11 @@ s32 run_title(s32 menu_context_address)
      * the configured MIPS_NONE relocation sites remain unchanged. */
     global_ram_base = (s32*)TITLE_GLOBAL_RAM_BASE;
     selection_sentinel = TITLE_SELECTION_SENTINEL;
-    menu_layout = (MenuLayout*)g_menuLayoutBuffer;
+    menu_layout = &g_saved_game.layout;
 
     while (1)
     {
-        init_title_display(context_address);
+        init_title_display(context);
         persistent_scene_state->map_id = 0;
         persistent_scene_state->object_index = 0;
         persistent_scene_state->unk4 = 0;
@@ -107,7 +97,7 @@ s32 run_title(s32 menu_context_address)
 
         do
         {
-            render_menu(context_address);
+            render_menu(context);
         } while (global_ram_base[TITLE_MENU_EXIT_STATE_WORD_INDEX] == 0);
 
         D_80042FB4 = VSync(-1);
@@ -117,7 +107,7 @@ s32 run_title(s32 menu_context_address)
         {
             load_menu_layout(0);
             global_ram_base[TITLE_MENU_EXIT_STATE_WORD_INDEX] = 0;
-            if (run_save_slot_menu(context_address) == SAVE_SLOT_MENU_EXIT_CANCEL)
+            if (run_save_slot_menu(context) == SAVE_SLOT_MENU_EXIT_CANCEL)
             {
                 GFX_Transition(0);
                 continue;
@@ -149,11 +139,11 @@ s32 run_title(s32 menu_context_address)
 /**
  * decomp.me (100%) https://decomp.me/scratch/bMLDn
  */
-void render_menu(MenuContext* context)
+void render_menu(TitleMenuContext* context)
 {
     RECT rect;
-    MenuContext* base = context;
-    MenuContext* s0;
+    TitleMenuContext* base = context;
+    TitleMenuContext* s0;
     u_long* s1;
     void* tmp;
 
@@ -223,18 +213,18 @@ void render_menu(MenuContext* context)
  * g_titleMenuExitState becomes non-zero (set by handle_save_slot_input),
  * then resets the frame-queue state and returns.
  *
- * @param ctx_base Base address of the double-buffered MenuContext render
+ * @param ctx_base Base address of the double-buffered TitleMenuContext render
  *        buffer, forwarded as-is from run_title.
  * @return The final value of g_titleMenuExitState: 1 after confirmation or
  *         SAVE_SLOT_MENU_EXIT_CANCEL when returning to the title menu.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/AKk7x
  */
-s32 run_save_slot_menu(MenuContext* ctx_base)
+s32 run_save_slot_menu(TitleMenuContext* ctx_base)
 {
     RECT rect;
-    MenuContext* base;
-    MenuContext* current;
+    TitleMenuContext* base;
+    TitleMenuContext* current;
     void* tmp;
     u_long* ot;
 
@@ -294,12 +284,12 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
  * (front at ctx_base->disp_env/draw_env, back at ctx_base->disp_env2/draw_env2).
  * Called once per title-menu iteration from run_title.
  *
- * @param ctx_base Base address of the double-buffered MenuContext render
+ * @param ctx_base Base address of the double-buffered TitleMenuContext render
  *        buffer, forwarded as-is from run_title.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/evJur
  */
-void init_title_display(MenuContext* ctx_base)
+void init_title_display(TitleMenuContext* ctx_base)
 {
     RECT rect;
     u8* base = (u8*)ctx_base;
@@ -359,7 +349,7 @@ void init_title_display(MenuContext* ctx_base)
 /**
  * @brief Load and register the title overlay's AKAO instrument/sample bank.
  *
- * @details Counterpart of CHECKPS func_800500FC. Skipped if g_previousGameState
+ * @details Counterpart of CHECKPS func_800500FC. Skipped if g_previous_game_state
  * indicates the bank is already resident (values 2, 3, 5, 6, 7). Otherwise
  * loads SOUND/EFFECT.SET from CD-ROM into the 0x80180000 scratch buffer,
  * splits the blob via its self-referential offset table, copies the
@@ -374,7 +364,7 @@ void load_title_audio_bank(void)
     u8* base;
     u32* off;
 
-    if (((u32)(g_previousGameState - 2) >= 2U) && (g_previousGameState != 6) && (g_previousGameState != 7) && (g_previousGameState != 5))
+    if (((u32)(g_previous_game_state - 2) >= 2U) && (g_previous_game_state != 6) && (g_previous_game_state != 7) && (g_previous_game_state != 5))
     {
 
         g_titleAudioBankBase = 0x8013C000;
@@ -489,13 +479,13 @@ void reset_fade_state(void)
  * toward g_fadeTarget and emits the fade-overlay primitive into the active
  * prim buffer.
  *
- * @param ctx Active MenuContext render buffer.
+ * @param ctx Active TitleMenuContext render buffer.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/fBro2
  */
-void render_fade_overlay(MenuContext* ctx)
+void render_fade_overlay(TitleMenuContext* ctx)
 {
-    MenuContext* base = ctx;
+    TitleMenuContext* base = ctx;
     TitleFadePrimitive* primitive = (TitleFadePrimitive*)base->next_prim_ptr;
     u_long* ordering_table_tag = base->otag_buffer;
     s32 red_step;
@@ -603,11 +593,11 @@ void set_fade_target(s32 red, s32 green, s32 blue, s32 steps)
  * @details Emits 5 POLY_FT4 quads stepping 0x40 px, each linked into the
  * active OT's tail entry.
  *
- * @param ctx Active MenuContext render buffer.
+ * @param ctx Active TitleMenuContext render buffer.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/aKAFU
  */
-void render_title_backdrop(MenuContext* ctx)
+void render_title_backdrop(TitleMenuContext* ctx)
 {
     u_long* ot;
     POLY_FT4* prim;
@@ -819,9 +809,9 @@ void menu_cursor_up(void)
  * cursor quad last; the cursor's U coordinate cycles through
  * g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & 3] for a 4-frame blink, and
  * its Y tracks the selected rank. The advanced prim cursor is written back to
- * MenuContext::next_prim_ptr.
+ * TitleMenuContext::next_prim_ptr.
  *
- * @param ctx Active MenuContext render buffer.
+ * @param ctx Active TitleMenuContext render buffer.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/qegw7
  */
@@ -956,7 +946,7 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
  * enables the first 4 slots, resets cursor/input/animation globals, arms the
  * idle countdown to TITLE_IDLE_COUNTDOWN_FRAMES, and uploads the two menu TIMs
  * from g_titleMenuTimTable[1..2] to VRAM. When re-entering from the attract
- * loop (g_previousGameState == 0) it advances the cursor to the first enabled
+ * loop (g_previous_game_state == 0) it advances the cursor to the first enabled
  * slot (same forward scan as menu_cursor_down).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/HW23j
@@ -991,7 +981,7 @@ void init_title_menu_state(void)
     g_titleIdleCountdown = TITLE_IDLE_COUNTDOWN_FRAMES;
     upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[1]), 0x140, 0, 0, 0x1E0);
     upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[2]), 0x140, 0x100, 0, 0x1E1);
-    if (g_previousGameState == 0)
+    if (g_previous_game_state == 0)
     {
         next_item = g_titleSelectedItem + 1;
         if (next_item < TITLE_MENU_SLOT_COUNT)

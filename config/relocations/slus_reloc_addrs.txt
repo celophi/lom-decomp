@@ -6,36 +6,37 @@ rom:0x13914 reloc:MIPS_NONE symbol:g_akao_seq_channel0
 rom:0x13A28 reloc:MIPS_NONE symbol:g_akao_seq_channel0
 rom:0x13A2C reloc:MIPS_NONE symbol:g_akao_seq_channel0
 
-// Force %lo(g_gameState) form for in-switch accesses in Main. Splat's
-// disassembler loses track of the `s1 = %hi(g_gameState)` invariant across
+// Force %lo(g_game_state) form for in-switch accesses in Main. Splat's
+// disassembler loses track of the `s1 = %hi(g_game_state)` invariant across
 // the rodata-interleaving markers (.rodata+0x4, .rodata+0x10,0x18) it inserts
 // into the function body, so it falls back to printing the raw 0x522c offset.
 // The compiler naturally emits R_MIPS_LO16 relocs here, so forcing the
 // symbolic form on the target side restores the match.
-rom:0x1874 reloc:MIPS_LO16 symbol:g_gameState
-rom:0x1880 reloc:MIPS_LO16 symbol:g_gameState
-rom:0x1914 reloc:MIPS_LO16 symbol:g_gameState
-rom:0x19A4 reloc:MIPS_LO16 symbol:g_gameState
-rom:0x19EC reloc:MIPS_LO16 symbol:g_gameState
-rom:0x1A54 reloc:MIPS_LO16 symbol:g_gameState
-rom:0x1ADC reloc:MIPS_LO16 symbol:g_gameState
-rom:0x1B2C reloc:MIPS_LO16 symbol:g_gameState
+rom:0x1874 reloc:MIPS_LO16 symbol:g_game_state
+rom:0x1880 reloc:MIPS_LO16 symbol:g_game_state
+rom:0x1914 reloc:MIPS_LO16 symbol:g_game_state
+rom:0x19A4 reloc:MIPS_LO16 symbol:g_game_state
+rom:0x19EC reloc:MIPS_LO16 symbol:g_game_state
+rom:0x1A54 reloc:MIPS_LO16 symbol:g_game_state
+rom:0x1ADC reloc:MIPS_LO16 symbol:g_game_state
+rom:0x1B2C reloc:MIPS_LO16 symbol:g_game_state
 
-// Same splat tracking loss for g_previousGameState (s3 holds %hi) in Main.
-rom:0x1924 reloc:MIPS_LO16 symbol:g_previousGameState
-rom:0x1AF4 reloc:MIPS_LO16 symbol:g_previousGameState
-rom:0x1B3C reloc:MIPS_LO16 symbol:g_previousGameState
+// Same splat tracking loss for g_previous_game_state (s3 holds %hi) in Main.
+rom:0x1924 reloc:MIPS_LO16 symbol:g_previous_game_state
+rom:0x1AF4 reloc:MIPS_LO16 symbol:g_previous_game_state
+rom:0x1B3C reloc:MIPS_LO16 symbol:g_previous_game_state
 
-// Same splat tracking loss for g_overlayLoadAddress (s4 holds %hi) in Main.
-rom:0x1800 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
-rom:0x18E8 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
-rom:0x1930 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
-rom:0x19C0 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
-rom:0x1A08 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
+// Same splat tracking loss for g_overlay_load_address (s4 holds %hi) in Main.
+rom:0x1800 reloc:MIPS_LO16 symbol:g_overlay_load_address
+rom:0x18E8 reloc:MIPS_LO16 symbol:g_overlay_load_address
+rom:0x1930 reloc:MIPS_LO16 symbol:g_overlay_load_address
+rom:0x19C0 reloc:MIPS_LO16 symbol:g_overlay_load_address
+rom:0x1A08 reloc:MIPS_LO16 symbol:g_overlay_load_address
 
-// Prevent assigning a symbol in main
-rom:0x15D4 reloc:MIPS_NONE symbol:g_field_scene_config
-rom:0x17D0 reloc:MIPS_NONE symbol:g_field_scene_config
+// Shared field configuration address retained across main_game_loop.
+rom:0x15D4 reloc:MIPS_HI16 symbol:g_field_scene_config
+rom:0x17D0 reloc:MIPS_LO16 symbol:g_field_scene_config
+rom:0x1A58 reloc:MIPS_LO16 symbol:g_field_scene_config
 
 // Preserve array and struct references within the AKAO bank objects.
 rom:0x1362c reloc:MIPS_HI16 symbol:g_akao_bank_slot_keys addend:0x4
@@ -50,3 +51,7 @@ rom:0x1369c reloc:MIPS_HI16 symbol:g_akao_bank_slot_keys addend:0x14
 rom:0x136a4 reloc:MIPS_LO16 symbol:g_akao_bank_slot_keys addend:0x14
 rom:0x138F4 reloc:MIPS_HI16 symbol:g_akao_xa_program_staging addend:0x20
 rom:0x13988 reloc:MIPS_LO16 symbol:g_akao_xa_program_staging addend:0x20
+
+// The name buffer belongs to the saved-game object, not a separate global.
+rom:0x16EC reloc:MIPS_HI16 symbol:g_saved_game addend:0x5F0
+rom:0x16F0 reloc:MIPS_LO16 symbol:g_saved_game addend:0x5F0

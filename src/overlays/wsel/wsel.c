@@ -1,4 +1,4 @@
-#include "common.h"
+#include "wsel.h"
 #include "display.h"
 #include "gpu_packet.h"
 #include "pad.h"
@@ -200,7 +200,6 @@ extern void func_8002216C(s32, s32, s32, s32);
 extern void func_8002279C(s32, s32);
 extern void func_80022AE8(void*, s32);
 
-s32 func_8004FC8C();
 void func_8004FD24();
 void func_8004FE78();
 void func_8004FFBC();
@@ -231,7 +230,7 @@ void func_80052510();
  * @param arg Context forwarded to the WSEL initialization and frame loop.
  * @return Selected WSEL exit state.
  */
-s32 func_8004FC8C(void* arg)
+s32 wsel_main(void* arg)
 {
     S_801ED480* scene_state = (S_801ED480*)WSEL_SCENE_STATE_ADDRESS;
     void* initial_context = arg;

@@ -37,7 +37,8 @@ typedef struct
     s32 steps;
 } FadeTarget;
 
-typedef struct
+/** @brief Display environments and GPU command buffers used by TITLE. */
+struct TitleMenuContext
 {
     char _pad[0x40];
     u_long otag_buffer[0x1000]; /* 0x0040 */
@@ -54,9 +55,9 @@ typedef struct
     DRAWENV draw_env2;           /* 0xFD20 */
     char _pad5[8];               /* 0xFD7C */
 
-} MenuContext; /* 0xFD84 total */
+}; /* 0xFD84 total */
 
-/* MenuLayout and g_menuLayoutBuffer are declared in main.h (shared). */
+/* SavedGameLayout and g_saved_game.bytes are declared in main.h (shared). */
 extern s32 D_80042FB4;
 extern u8 g_titleSelectedItem;
 extern s32 g_titleMenuExitState;
@@ -172,15 +173,15 @@ extern SaveLayoutTex g_saveLayoutTexTable[];
 extern u8 g_saveSlotPanelUvTable[];
 /** UV rectangles used by the save-slot free-size sprites. */
 extern u8 g_saveSlotSpriteUvTable[];
-/** New-game state template copied into g_menuLayoutBuffer. */
+/** New-game state template copied into g_saved_game.bytes. */
 extern u32 g_newGameStateTemplate[];
-/** Menu-layout template copied into g_menuLayoutBuffer for the alternate menu. */
+/** Menu-layout template copied into g_saved_game.bytes for the alternate menu. */
 extern u32 g_menuLayoutTemplateAlt[];
 /** Sub-menu layout table copied by load_sub_menu_layout for a new game. */
 extern s32 g_subMenuLayoutDefault[0x94];
 /** Sub-menu layout table copied by load_sub_menu_layout when resuming a save. */
 extern s32 g_subMenuLayoutContinue[0x94];
-/* g_scene_mode, g_music_track_index, g_layout_flag, g_gameDataBasePtr are declared in main.h. */
+/* g_scene_mode, g_music_track_index, g_layout_flag, g_saved_game.layout.player are declared in main.h. */
 
 extern FadeCurrent g_fadeCurrent;
 extern FadeTarget g_fadeTarget;
@@ -189,7 +190,7 @@ extern void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 
 /* Private calls that cross the title/title_save translation-unit boundary. */
 void InitSaveSlotMenu(void);
-void RenderSaveSlotMenu(MenuContext* context);
+void RenderSaveSlotMenu(TitleMenuContext* context);
 void load_menu_layout(s32 use_alt);
 void play_title_sfx(s32 sound_id, s32 pan);
 void update_menu_input(void);

@@ -1,4 +1,4 @@
-#include "common.h"
+#include "main.h"
 #include "field_script.h"
 void akao_cmd_f1(void);
 void akao_set_song_params(s32, s32, s32, s32);
@@ -58,9 +58,8 @@ s32 func_800C3894(s32);
 void func_800C396C(void);
 void func_800C5704(s32);
 extern u8 *D_80122B74, *D_80122B78;
-extern s32 D_800473E0, D_8010AE48, D_8010D020, D_80117EC4, D_80122980;
+extern s32 D_8010AE48, D_8010D020, D_80117EC4, D_80122980;
 extern s32 g_gosub_result_count, g_gosub_result_values;
-extern s16 g_music_track_index;
 
 
 
@@ -389,7 +388,7 @@ void func_800BBAC8(u32 command, s32 operand)
         func_800C1230((s32)operand);
         return;
     case 0x49:
-        D_800473E0 = (s32)operand;
+        g_script_pair_value_49 = (s32)operand;
         return;
     case 0x4A:
         script_record = (u8*)g_field_script + (g_field_script->active_record * 0xC);

@@ -16,6 +16,8 @@ options:
   ld_script_path: linker/SLUS_010.13.ld
   ld_dependencies: True
   ld_bss_is_noload: True
+  # BSS allocations have explicit VRAM regions below.
+  auto_link_sections: [".data", ".rodata"]
 
   find_file_boundaries: False
   gp_value: 0x8003EC14
@@ -246,4 +248,12 @@ segments:
     vram: 0x8003EC14
     subsegments:
       - [0x2F420]
+  - name: saved_game
+    type: code
+    start: 0x2F800
+    vram: 0x80042FD8
+    bss_size: 0x4000
+    bss_contains_common: True
+    subsegments:
+      - [0x2F800, .bss, main]
   - [0x2F800]

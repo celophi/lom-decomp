@@ -1,6 +1,7 @@
+#include "saved_game.h"
 #include "common.h"
 
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Activate a layout slot and assign its insertion sequence number.
@@ -10,17 +11,17 @@ void func_800CA1A0(s32 arg0)
 {
     u8 *rec;
 
-    rec = &g_menuLayoutBuffer[arg0 * 0xC];
-    g_menuLayoutBuffer[0x2E4]++;
+    rec = &g_saved_game.bytes[arg0 * 0xC];
+    g_saved_game.bytes[0x2E4]++;
     rec[0x2F0] |= 1;
-    rec[0x2F3] = g_menuLayoutBuffer[0x2E4];
+    rec[0x2F3] = g_saved_game.bytes[0x2E4];
 }
 
 
 
 
 /**
- * @brief Reset the 0x40 per-slot layout records in g_menuLayoutBuffer.
+ * @brief Reset the 0x40 per-slot layout records in g_saved_game.bytes.
  *
  * Clears the two header bytes at 0x2E4/0x2E5, then walks 0x40 records of 0xC
  * bytes each (base offset 0x2F0): sets the first field to 0xFF, zeroes the
@@ -38,9 +39,9 @@ void func_800CA1E0(void)
     u8 *r;
 
     i = 0;
-    g_menuLayoutBuffer[0x2E4] = 0;
-    g_menuLayoutBuffer[0x2E5] = 0;
-    p = g_menuLayoutBuffer;
+    g_saved_game.bytes[0x2E4] = 0;
+    g_saved_game.bytes[0x2E5] = 0;
+    p = g_saved_game.bytes;
 reset_slots:
     i += 1;
     p[0x2F1] = 0xFF;
@@ -61,7 +62,7 @@ reset_slots:
         goto reset_slots;
     }
     i = 0;
-    q = g_menuLayoutBuffer;
+    q = g_saved_game.bytes;
 enable_slots:
     i += 1;
     q[0x2F0] |= 4;
@@ -70,6 +71,6 @@ enable_slots:
     {
         goto enable_slots;
     }
-    r = g_menuLayoutBuffer;
+    r = g_saved_game.bytes;
     *((s32 *) (r + 0x410)) &= ~4;
 }

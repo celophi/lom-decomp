@@ -8,7 +8,7 @@ run_checkps                              = 0x8004FD14;
 // Main-only alias for the common overlay load base. This must not be shared,
 // because each overlay defines its own code symbols in the same address range.
 g_overlay_load_base                 = 0x8004FC70;
-g_title_menu_buffers                = 0x801026D0;
+g_title_overlay_end                = 0x801026D0;
 g_field_render_buffers              = 0x80123FD8;
 g_world_map_overlay_end             = 0x801B32D8;
 
@@ -25,7 +25,7 @@ reset_glyph_renderer                     = 0x8005239C;
 g_hardware_pattern_size_table            = 0x8005CFF0;
 
 // Uncategorized
-FUN_80060814                        = 0x80060814;
+run_world_map                        = 0x80060814;
 
 // CHECKPS.BIN
 g_checkps_unused_word1                   = 0x8006108C;
@@ -54,6 +54,24 @@ field_clear_node_accumulators       = 0x800520A0;
 field_restore_entry_music           = 0x800A3534;
 
 // Uncategorized
-run_overlay                         = 0x80140004;
+gname_run                           = 0x80140004;
 movie_play                          = 0x80140018;
 FUN_80140d48                        = 0x80140D48;
+
+// TITLE entry point used while TITLE.BIN occupies the primary overlay slot.
+run_title = 0x8004FC74;
+
+// Overlay entry points called by the main state dispatcher.
+wsel_main = 0x8004FC8C;
+cload_main = 0x801400C4;
+
+// FIELD interfaces imported by the main executable's runtime dispatcher.
+field_flush_vram_uploads = 0x80056998;
+field_build_frame_commands = 0x800676B4;
+field_initialize_subsystems = 0x800678D4;
+field_set_fade_target = 0x80067EB4;
+field_load_vram_resource = 0x80086310;
+field_set_scene_parameters = 0x8009AFE0;
+field_update_scene = 0x8009B028;
+field_stop_song = 0x800A379C;
+g_field_scene_request_pending = 0x801158A4;

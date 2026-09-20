@@ -53,7 +53,7 @@ SetGeomScreen                       = 0x8001D5AC;
 VSync                               = 0x8002054C;
 McxCardType                         = 0x800342CC;
 g_save_slot_index                   = 0x8003EC9C;
-g_menuLayoutBuffer                  = 0x80042FD8;
+g_saved_game                        = 0x80042FD8; // size:0x4000 allow_addend:True
 play_menu_sfx                       = 0x800A3938;
 
 // Icon-resource header fields inside the 0x80180000 scratch buffer. It is a raw

@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 
 s32 func_800A9060(void);
@@ -22,7 +23,7 @@ extern u16 D_80122C16;
 extern u8 D_80122C1C;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values;
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Dispatch the current menu record for the active cursor slot.
@@ -46,7 +47,7 @@ void func_800C9BC4(void)
 /**
  * @brief Latch the current menu selection as the pending gosub result.
  *
- * Reads the active menu record's selection index from @c g_menuLayoutBuffer; if
+ * Reads the active menu record's selection index from @c g_saved_game.bytes; if
  * it is in range (< 5), records it into the @c D_80122C1C cursor slot and the
  * pending-result globals, sets the record's 0x40000000 flag, and dispatches
  * func_800B2844 for it.
@@ -73,7 +74,7 @@ void func_800C9C3C(void)
     ptr = d0 + dp1;
     val = *ptr;
     g_gosub_result_count = 1;
-    mlb = g_menuLayoutBuffer;
+    mlb = g_saved_game.bytes;
     sel = *(s32 *)(mlb + 0x2EF0);
     g_gosub_result_values = val;
     if (sel < 5)
@@ -98,7 +99,7 @@ void func_800C9CE4(void)
     s32 idx;
 
     idx = ((u8 *)&D_80122C1C)[D_80122C1C + 1] * 0x60;
-    base = g_menuLayoutBuffer;
+    base = g_saved_game.bytes;
     rec = idx + base;
     D_80122C1C = rec[0x2F3C];
     base = base + 0x2EF4;
@@ -117,7 +118,7 @@ void func_800C9D44(void)
     count = 0;
     for (i = 0; i < 5; i++)
     {
-        p = &g_menuLayoutBuffer[i * 0x60];
+        p = &g_saved_game.bytes[i * 0x60];
         if (p[0x2EF4] != 0)
         {
             count++;

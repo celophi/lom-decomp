@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "common.h"
 #include "field_interaction_start.h"
 
@@ -158,7 +159,7 @@ typedef struct
     u32 unk414; /* 0x414 */
 } StructB78;
 
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 D_80122C00;
 extern u8* D_80122B74;
 
@@ -166,7 +167,7 @@ extern u8* D_80122B74;
 /** @brief Bind the shared layout, context, and position buffers. */
 void func_800B0BDC(void)
 {
-    D_80122B74 = g_menuLayoutBuffer;
+    D_80122B74 = g_saved_game.bytes;
     D_80122B78 = (Context *)&D_80122C00;
     D_80122B70 = (Position *)0x801ED480;
 }
@@ -511,10 +512,11 @@ void func_800C0490(u8);
  * @note Action kind 3 uses the previous, uninitialized entry pointer before selecting
  * actor 1. This unresolved behavior is present in the original code.
  * @note Packed-word accesses and shared switch tails preserve the current reconstruction.
- * @see decomp.me (99.71875%) TODO: no scratch link yet
+ * @see decomp.me (99.765625%) TODO: no scratch link yet
  */
 void field_install_actor_action(FieldActionRequest* request, s32 request_index)
 {
+    s32 masked_request_flags;
     s32 flags_mask;
     s32 action_index;
     FieldActionEntry* entry;
@@ -560,7 +562,8 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
             *(s32*)&entry->flags = (*(s32*)&entry->flags & ~FIELD_ACTION_SOURCE_MASK) | ((request->source.actor * 2) & FIELD_ACTION_SOURCE_MASK);
             source_actor = *(u16*)&request->source;
             action_index = 0;
-            goto set_source_actor;
+            request->source.actor = source_actor & FIELD_ACTION_SOURCE_ACTOR_MASK;
+            break;
         case FIELD_ACTION_GROUP_ACTOR:
             request->control.flags = request->control.flags | FIELD_ACTION_ACTIVE;
             group_actor_count = ((FieldActionTable*)D_80122B78)->actors.count;
@@ -581,7 +584,6 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
                                          ((((((FieldActionLayout*)D_80122B74)->default_group >> 4) + 1) & FIELD_ACTION_GROUP_MASK) << FIELD_ACTION_GROUP_SHIFT);
             }
             source_actor = request->source.actor;
-        set_source_actor:
             request->source.actor = source_actor & FIELD_ACTION_SOURCE_ACTOR_MASK;
             break;
         case FIELD_ACTION_SCRIPT:
@@ -606,9 +608,14 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
         case FIELD_ACTION_ACTOR_0:
             action_index = 0;
             flags_mask = FIELD_ACTION_INACTIVE_MASK;
-            flags = request->control.flags & flags_mask;
+            masked_request_flags = request->control.flags & flags_mask;
             flag_entry = &((FieldActionTable*)D_80122B78)->entries[0];
-            goto select_entry;
+            request->control.flags = masked_request_flags;
+            entry = flag_entry;
+            flags = *(s32*)&flag_entry->flags;
+            flags_to_set = FIELD_ACTION_ACTIVE;
+            *(s32*)&flag_entry->flags = flags | flags_to_set;
+            break;
         case FIELD_ACTION_ACTOR_1:
             /* The original path reads entry before assigning actor 1. */
             request_flags = *(s32*)&request->control;
@@ -620,10 +627,9 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
         case FIELD_ACTION_ACTOR_2:
             action_index = 0;
             flags_mask = FIELD_ACTION_INACTIVE_MASK;
-            flags = request->control.flags & flags_mask;
+            masked_request_flags = request->control.flags & flags_mask;
             flag_entry = &((FieldActionTable*)D_80122B78)->entries[2];
-        select_entry:
-            request->control.flags = flags;
+            request->control.flags = masked_request_flags;
             entry = flag_entry;
         activate_entry:
             flags = *(s32*)&flag_entry->flags;

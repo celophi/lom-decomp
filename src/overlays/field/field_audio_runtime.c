@@ -110,8 +110,8 @@ void field_restore_entry_music(void)
     u8 *base;
     u32 *off;
 
-    if (((u32)(g_previousGameState - 2) >= 2U) && (g_previousGameState != 0) &&
-        (g_previousGameState != 6) && (g_previousGameState != 7) && (g_previousGameState != 5))
+    if (((u32)(g_previous_game_state - 2) >= 2U) && (g_previous_game_state != 0) &&
+        (g_previous_game_state != 6) && (g_previous_game_state != 7) && (g_previous_game_state != 5))
     {
         D_8011F304 = (AkaoHeader *)0x8013C000;
         cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void *)EFFECT_BLOB_BASE);

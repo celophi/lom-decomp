@@ -1,3 +1,5 @@
+#include "cload.h"
+#include "saved_game.h"
 #include "common.h"
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
@@ -303,7 +305,7 @@ extern u16 g_cload_text_number_prefix;
 extern u16 g_cload_text_load_prompt;
 extern u16 g_cload_text_loading;
 extern u8 g_cload_save_blob[];
-extern u8 g_menuLayoutBuffer[];
+
 extern s32 g_playtime_vsync_origin;
 extern s32 g_cload_progress_bar_active;
 extern s32 g_cload_progress_start_tick;
@@ -2091,8 +2093,8 @@ s32 cload_draw_load_progress(s32 ot, s32 prim, s32 x_offset, s32 y_offset)
         {
             play_menu_sfx(0x7B, vol);
             g_cload_element_pool.first_state = g_cload_element_pool.first_state & ~CLOAD_ELEMENT_STATE_MASK;
-            bcopy(base + 0x180, g_menuLayoutBuffer, 0x3268);
-            g_save_slot_index = g_menuLayoutBuffer[0xCF];
+            bcopy(base + 0x180, g_saved_game.bytes, 0x3268);
+            g_save_slot_index = g_saved_game.bytes[0xCF];
             g_playtime_vsync_origin = VSync(-1);
             g_cload_exit_requested = 1;
         }

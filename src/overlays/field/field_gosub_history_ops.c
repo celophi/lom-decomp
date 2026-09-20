@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "main.h"
 
 typedef struct
@@ -8,7 +9,7 @@ typedef struct
 
 extern u16 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern u8 g_menuLayoutBuffer[];
+
 extern s16 D_80122C10;
 extern u16 D_80122C16;
 extern s32 D_80045EC8;
@@ -30,7 +31,7 @@ void func_800C7090(void)
         idx = g_gosub_result_values[0];
         if (idx < 5)
         {
-            base = g_menuLayoutBuffer;
+            base = g_saved_game.bytes;
             rec = base + idx * 0x60;
             flags = *(s32 *)(rec + 0x2F38);
             if (flags < 0)
@@ -95,13 +96,13 @@ extern UnkStruct80122C12 D_80122C12;
 extern u16 D_80122C16;
 extern u16 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Counts active gosub-result entries whose bit 30 flag is set.
  *
  * When there are gosub results, walks the five 0x60-byte entries starting at
- * g_menuLayoutBuffer[0x2EF4]; for each entry whose leading byte is nonzero and
+ * g_saved_game.bytes[0x2EF4]; for each entry whose leading byte is nonzero and
  * whose word at +0x44 has bit 30 set, increments the tally stored to
  * D_80122C16.
  *
@@ -120,7 +121,7 @@ void func_800C7168(void)
         count = 0;
         for (i = 0; i < 5; i++)
         {
-            p = &g_menuLayoutBuffer[i * 0x60];
+            p = &g_saved_game.bytes[i * 0x60];
             if (p[0x2EF4] != 0 &&
                 (((*(u32 *)(p + 0x2F38) >> 30) & 1) == one))
             {
@@ -145,7 +146,7 @@ void func_800C71D4(void)
     idx = g_gosub_result_values[0];
     if (idx < 5)
     {
-        base = g_menuLayoutBuffer;
+        base = g_saved_game.bytes;
         rec = &base[idx * 0x60];
         *(u32 *)(rec + 0x2F38) |= 0x40000000;
     }
@@ -209,7 +210,7 @@ extern u8 D_800F0E98[];
 extern u8 D_80045ECC[];
 extern s16 D_80122C10;
 extern u16 D_80122C16;
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Dispatch the selected menu record's extra slots and fixed trailing slot.
@@ -233,7 +234,7 @@ void func_800C7340(void)
     {
         dispatch_count = 0;
         slot_index = 0;
-        menu_base = g_menuLayoutBuffer;
+        menu_base = g_saved_game.bytes;
         record_offset = selection * 0x60;
         do
         {
@@ -260,7 +261,7 @@ void func_800C7340(void)
 /** @brief Clear the selected large-history record status. */
 void func_800C745C(void)
 {
-    PadContext* ctx = (PadContext*)g_menuLayoutBuffer;
+    PadContext* ctx = (PadContext*)g_saved_game.bytes;
     s32 idx = ctx->large_history_index;
     ((u8*)ctx)[0xC06] = 0;
     ctx->large_history_records[idx].unknown_0x46 = 0;
@@ -273,7 +274,7 @@ typedef struct
 } FieldC7494State;
 
 extern s16 D_80122C10;
-extern u8 g_menuLayoutBuffer[];
+
 extern void akao_set_song_params(s32 flags, s32 duration, s32 field_id, s32 sub_id);
 
 /** @brief Write an available extra history slot or issue audio command 0x30. */
@@ -291,7 +292,7 @@ void func_800C7494(void)
     if (idx < 5)
     {
         count = 0;
-        base = g_menuLayoutBuffer;
+        base = g_saved_game.bytes;
         row = idx * 0x60;
         do
         {
@@ -313,11 +314,11 @@ extern s16 D_80122C10;
 /** @brief Replace the selected history index with its entry id. */
 void func_800C752C(void)
 {
-    D_80122C10 = g_menuLayoutBuffer[(D_80122C10 * 0x60) + 0x2F09];
+    D_80122C10 = g_saved_game.bytes[(D_80122C10 * 0x60) + 0x2F09];
 }
 
 extern s32 g_gosub_result_values[];
-extern u8 g_menuLayoutBuffer[];
+
 
 /**
  * @brief Clears the active flag for the selected small history slot.
@@ -335,7 +336,7 @@ void func_800C7558(void)
     u8 *base;
     u8 *record;
 
-    base = g_menuLayoutBuffer;
+    base = g_saved_game.bytes;
     index = *(s32 *)(base + 0x2EF0);
     if (index < 5)
     {
@@ -367,7 +368,7 @@ void func_800C75C0(void)
     index = g_gosub_result_values[0];
     if (index < 5)
     {
-        base = g_menuLayoutBuffer;
+        base = g_saved_game.bytes;
         record = base + index * 0x60;
         *(u32 *)(record + 0x2F38) &= 0xBFFFFFFF;
     }
@@ -392,7 +393,7 @@ typedef struct
 
 extern u16 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
-extern u8 g_menuLayoutBuffer[];
+
 extern u32 D_80122C00;
 
 /**
@@ -409,7 +410,7 @@ void func_800C7628(void)
     if (*(s32 *)&g_gosub_result_count != 0)
     {
         history_index = g_gosub_result_values[0];
-        history_data = (FieldMenuHistoryData*)g_menuLayoutBuffer;
+        history_data = (FieldMenuHistoryData*)g_saved_game.bytes;
         D_80122C00 = history_data->small_history_records[history_index].unk5A;
     }
 }

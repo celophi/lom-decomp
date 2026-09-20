@@ -308,8 +308,8 @@ void load_embedded_checkps_audio(void)
     AkaoHeader** bank_slot;
     u32* section_offsets;
 
-    if (((((g_previousGameState == GAME_STATE_TITLE) || (g_previousGameState == GAME_STATE_GNAME)) || (g_previousGameState == GAME_STATE_FIELD)) || (g_previousGameState == CHECKPS_AUDIO_BANK_RESIDENT_STATE)) ||
-        (g_previousGameState == GAME_STATE_MENU_LOAD) || (g_previousGameState == GAME_STATE_WORLD_SELECT))
+    if (((((g_previous_game_state == GAME_STATE_TITLE) || (g_previous_game_state == GAME_STATE_GNAME)) || (g_previous_game_state == GAME_STATE_FIELD)) || (g_previous_game_state == CHECKPS_AUDIO_BANK_RESIDENT_STATE)) ||
+        (g_previous_game_state == GAME_STATE_MENU_LOAD) || (g_previous_game_state == GAME_STATE_WORLD_SELECT))
     {
         return;
     }

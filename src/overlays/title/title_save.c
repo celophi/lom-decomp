@@ -1,3 +1,4 @@
+#include "saved_game.h"
 #include "title_internal.h"
 
 /* Width in pixels of a single save-slot panel; one horizontal slide moves the
@@ -89,7 +90,7 @@ void InitSaveSlotMenu(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/so5cY
  */
-void RenderSaveSlotMenu(MenuContext* arg0)
+void RenderSaveSlotMenu(TitleMenuContext* arg0)
 {
     arg0->next_prim_ptr = (u_long*)RenderSaveLayoutPrims(arg0->next_prim_ptr, (u_long*)((char*)arg0 + 0x40));
     handle_save_slot_input();
@@ -184,7 +185,7 @@ void handle_save_slot_input(void)
 
                 load_sub_menu_layout(0);
                 flag_mask = ~0x7F;
-                layout = g_menuLayoutBuffer;
+                layout = g_saved_game.bytes;
                 new_flags = *(s32*)(layout + 0x608) & flag_mask;
                 *(s32*)(layout + 0x608) = new_flags;
                 rng_lo = rand();
@@ -200,7 +201,7 @@ void handle_save_slot_input(void)
 
                 load_sub_menu_layout(1);
                 flag_mask = ~0x7F;
-                layout = g_menuLayoutBuffer;
+                layout = g_saved_game.bytes;
                 new_flags = (*(s32*)(layout + 0x608) & flag_mask) | 1;
                 *(s32*)(layout + 0x608) = new_flags;
                 rng_lo = rand();
@@ -230,7 +231,7 @@ void handle_save_slot_input(void)
 
                 slot_idx = 0;
                 selected_slot = g_slotSelectedIndex;
-                src_ptr = g_menuLayoutBuffer;
+                src_ptr = g_saved_game.bytes;
                 slot_idx = 0;
                 do
                 {
@@ -857,17 +858,17 @@ unsigned short upload_save_layout_textures(void)
 }
 
 /**
- * @brief Load one of the two full game-state templates into g_menuLayoutBuffer.
+ * @brief Load one of the two full game-state templates into g_saved_game.bytes.
  *
  * Copies a MENU_LAYOUT_WORDS-word (~13 KB) game-state template over the working
- * g_menuLayoutBuffer and sets the companion mode field g_scene_mode.
+ * g_saved_game.bytes and sets the companion mode field g_scene_mode.
  *
  * @param use_alt Zero selects the new-game template (g_newGameStateTemplate,
  *                g_scene_mode = 0xD); non-zero selects the alternate template
  *                (g_menuLayoutTemplateAlt, g_scene_mode = 0).
  *
  * @note The copy is an explicit word loop, not a struct assignment, so it
- *       reproduces the original codegen; MenuLayout is only partially mapped.
+ *       reproduces the original codegen; SavedGameLayout is only partially mapped.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/aPcbW
  */
@@ -891,7 +892,7 @@ void load_menu_layout(s32 use_alt)
         g_layout_flag = 0;
     }
     i = 0;
-    dst = (s32*)g_menuLayoutBuffer;
+    dst = g_saved_game.words;
 
     while (i < MENU_LAYOUT_WORDS)
     {
@@ -904,9 +905,9 @@ void load_menu_layout(s32 use_alt)
  * @brief Load one of the two sub-menu layout tables for the save-slot screen.
  *
  * Copies a SUB_MENU_LAYOUT_WORDS-word (0x250-byte) layout table into the
- * game-data buffer at g_gameDataBasePtr. The default table is used when
+ * game-data buffer at g_saved_game.layout.player. The default table is used when
  * starting a new game; the continue table is used when resuming a saved game,
- * in which case bit 0 of MenuLayout::mode_flags is also set to flag the slot
+ * in which case bit 0 of SavedGameLayout::mode_flags is also set to flag the slot
  * as "continue mode".
  *
  * @param is_continue Zero selects the default layout (g_subMenuLayoutDefault);
@@ -924,14 +925,14 @@ void load_sub_menu_layout(s32 is_continue)
     if (is_continue != 0)
     {
         src = g_subMenuLayoutContinue;
-        ((MenuLayout*)g_menuLayoutBuffer)->mode_flags |= 1;
+        g_saved_game.layout.mode_flags |= 1;
     }
     else
     {
         src = g_subMenuLayoutDefault;
     }
 
-    dst = (s32*)&g_gameDataBasePtr;
+    dst = (s32*)&g_saved_game.layout.player;
 
     for (i = 0; i < SUB_MENU_LAYOUT_WORDS; i++)
     {

@@ -1,3 +1,4 @@
+#include "saved_game.h"
 /**
  * @file field_input_text_session.c
  * @brief Field controller/pad context, actor-selection text session, and input
@@ -276,7 +277,7 @@ extern s32 g_frame_counter;
 
 /* Shared main-executable globals (from main.h). g_pad_ctx is intentionally
    omitted here - it is type-conflicted and declared per-function. */
-extern u8 g_menuLayoutBuffer[];
+
 extern u16 g_music_track_index;
 extern s32 g_save_slot_index;
 extern s32 g_pad_input;
@@ -324,7 +325,7 @@ void func_800A8CFC(void)
 {
     extern PadContext *g_pad_ctx;
 
-    g_pad_ctx = (PadContext *)g_menuLayoutBuffer;
+    g_pad_ctx = (PadContext *)g_saved_game.bytes;
 }
 
 /**
