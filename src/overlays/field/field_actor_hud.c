@@ -149,12 +149,12 @@ typedef struct
  */
 void func_80084700(u8 *render_context)
 {
-    extern FieldPanelActor D_800FDF58[], g_field_effect_records[];
+    extern FieldPanelActor g_field_actors[], g_field_effect_records[];
     extern FieldPanelSlot D_80105AE0[];
     extern FieldPanelPlayer D_800FD818[];
     extern s32 D_800EB04C[];
     extern s32 D_800F22A0, D_800F22A4, D_800F22A8;
-    extern s32 D_800FE754, D_801158A0, D_80122B20;
+    extern s32 g_field_active_group, g_field_scene_mode_bit, D_80122B20;
     extern void func_80084D08(s32, s32, s32, u8 *, u32);
 
     Vec2s position;
@@ -164,7 +164,7 @@ void func_80084700(u8 *render_context)
     s32 absent = 0xFF;
     FieldPanelSlot *slot = D_80105AE0;
     FieldPanelPlayer *player = D_800FD818;
-    FieldPanelActor *actor = D_800FDF58;
+    FieldPanelActor *actor = g_field_actors;
     FieldPanelActor *actor_one;
     FieldPanelPlayer *player_one;
     FieldPanelActor *actor_two;
@@ -188,7 +188,7 @@ void func_80084700(u8 *render_context)
     do
     {
         slot = &D_80105AE0[i];
-        actor = &D_800FDF58[i];
+        actor = &g_field_actors[i];
         if (actor->presence != absent && (player->flags & 1))
         {
             if (actor->value != 0x85 && actor->value != 0x87)
@@ -205,10 +205,10 @@ void func_80084700(u8 *render_context)
         case 1:
             i = 0;
             player_one = D_800FD818;
-            actor_one = D_800FDF58;
+            actor_one = g_field_actors;
             do
             {
-                actor_one = &D_800FDF58[i];
+                actor_one = &g_field_actors[i];
                 player_one = &D_800FD818[i];
                 if (actor_one->presence != 0xFF && (player_one->flags & 1))
                 {
@@ -220,11 +220,11 @@ void func_80084700(u8 *render_context)
         case 2:
             i = 0;
             player_two = D_800FD818;
-            actor_two = D_800FDF58;
+            actor_two = g_field_actors;
             x_two = 0x38;
             do
             {
-                actor_two = &D_800FDF58[i];
+                actor_two = &g_field_actors[i];
                 player_two = &D_800FD818[i];
                 if (actor_two->presence != 0xFF && (player_two->flags & 1))
                 {
@@ -240,7 +240,7 @@ void func_80084700(u8 *render_context)
             x_three = 8;
             do
             {
-                if (D_800FDF58[*order].presence != 0xFF && (D_800FD818[*order].flags & 1))
+                if (g_field_actors[*order].presence != 0xFF && (D_800FD818[*order].flags & 1))
                 {
                     y_three = 0x1C;
                     if (i & 1)
@@ -256,17 +256,17 @@ void func_80084700(u8 *render_context)
             break;
     }
     boss_drawn = 0;
-    if (D_801158A0 != 0)
+    if (g_field_scene_mode_bit != 0)
     {
         j = 3;
         if (D_80122B20 == 0)
         {
             enemy_slot = &D_80105AE0[3];
-            enemy = &D_800FDF58[3];
+            enemy = &g_field_actors[3];
             do
             {
                 group = enemy_slot->group & 0xF;
-                if (group == D_800FE754 && group != 0)
+                if (group == g_field_active_group && group != 0)
                 {
                     value = enemy_slot->previous.word;
                     if (value < 0)
@@ -363,7 +363,7 @@ void func_80084D08(s32 x, s32 y, s32 slot, u8 *render_context, u32 value_per_bar
     extern s16 D_800EB058[];
     extern Entry268 D_800FD818[];
     extern u8 D_800FDCEA;
-    extern Rec54 D_800FDF58[];
+    extern Rec54 g_field_actors[];
     extern State23C D_80105AE0[];
     extern s32 D_801077F0[];
     extern s32 D_8010A000;
@@ -602,7 +602,7 @@ void func_80084D08(s32 x, s32 y, s32 slot, u8 *render_context, u32 value_per_bar
     {
         entry_base = D_800FD818;
         actor_entry = &entry_base[slot];
-        if ((actor_entry->unk260 != 0) && (D_800FDF58[slot].unk2a == 0x8E))
+        if ((actor_entry->unk260 != 0) && (g_field_actors[slot].unk2a == 0x8E))
         {
             W(gauge_cursor, 0x4) = 0x202020;
             W(gauge_cursor, 0x14) = 0x202020;
@@ -1090,7 +1090,7 @@ void *func_80086184(SPRT *sprt, u32 *ot, s32 index, u32 *xy)
 {
     extern u8 D_800FDCEA;
     extern u16 D_800FE01E;
-    extern FieldObjRec86184 D_800FDF58[];
+    extern FieldObjRec86184 g_field_actors[];
 
     DR_TPAGE *mode;
 
@@ -1106,7 +1106,7 @@ void *func_80086184(SPRT *sprt, u32 *ot, s32 index, u32 *xy)
     }
     else
     {
-        sprt->clut = ((index + 0x1F4) << 6) | ((D_800FDF58[index].unk1C >> 19) & 0xF);
+        sprt->clut = ((index + 0x1F4) << 6) | ((g_field_actors[index].unk1C >> 19) & 0xF);
     }
 
     addPrim(ot, sprt);

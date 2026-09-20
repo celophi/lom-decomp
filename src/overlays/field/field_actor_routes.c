@@ -104,7 +104,7 @@ void func_8008C730(void)
         s16 y;
     } FieldPosition16;
 
-    extern FieldPositionRecord D_800FDF58;
+    extern FieldPositionRecord g_field_actors;
     extern FieldPosition16 D_80105B4C[];
     extern u8 D_8010CFE0[];
 
@@ -116,20 +116,20 @@ void func_8008C730(void)
     index = 0;
     do
     {
-        value = D_800FDF58.unk0;
+        value = g_field_actors.unk0;
         if (value < 0)
         {
             value += 0xFF;
         }
         dest->x = value >> 8;
 
-        value = D_800FDF58.unk8;
+        value = g_field_actors.unk8;
         if (value < 0)
         {
             value += 0xFF;
         }
         dest->y = value >> 8;
-        D_8010CFE0[index] = D_800FDF58.unk21;
+        D_8010CFE0[index] = g_field_actors.unk21;
         index++;
         dest++;
     } while (index < 0x30);
@@ -174,7 +174,7 @@ void func_8008C7A8(void)
         u8 secondary_index;
     } FieldHistory;
 
-    extern FieldActors D_800FDF58;
+    extern FieldActors g_field_actors;
     extern u8 D_800FDFAC[];
     extern u8 D_800FE000[];
     extern FieldHistory D_80105AE0;
@@ -194,11 +194,11 @@ void func_8008C7A8(void)
     FieldHistory *secondary_only_history;
     FieldHistory *history_base;
 
-    if ((D_800FDF58.primary_actor != 0xFF) && (D_800FDF58.primary_flags & 0x1FF))
+    if ((g_field_actors.primary_actor != 0xFF) && (g_field_actors.primary_flags & 0x1FF))
     {
-        if (D_800FDF58.secondary_actor != 0xFF)
+        if (g_field_actors.secondary_actor != 0xFF)
         {
-            primary_x = D_800FDF58.primary_x;
+            primary_x = g_field_actors.primary_x;
             if (primary_x < 0)
             {
                 primary_x += 0xFF;
@@ -206,14 +206,14 @@ void func_8008C7A8(void)
             primary_history = (FieldHistory *)((D_80105AE0.primary_index * 4) + (u8 *)&D_80105AE0);
             if ((primary_x >> 8) == primary_history->x)
             {
-                primary_z = D_800FDF58.primary_z;
+                primary_z = g_field_actors.primary_z;
                 if (primary_z < 0)
                 {
                     primary_z += 0xFF;
                 }
                 if ((primary_z >> 8) == primary_history->z)
                 {
-                    secondary_x = D_800FDF58.secondary_x;
+                    secondary_x = g_field_actors.secondary_x;
                     if (secondary_x < 0)
                     {
                         secondary_x += 0xFF;
@@ -221,7 +221,7 @@ void func_8008C7A8(void)
                     secondary_history = (FieldHistory *)((D_80105AE0.secondary_index * 4) + (u8 *)&D_80105AE0);
                     if ((secondary_x >> 8) == secondary_history->x)
                     {
-                        secondary_z = D_800FDF58.secondary_z;
+                        secondary_z = g_field_actors.secondary_z;
                         if (secondary_z < 0)
                         {
                             secondary_z += 0xFF;
@@ -254,7 +254,7 @@ refresh_both:
         }
         else
         {
-            primary_only_x = D_800FDF58.primary_x;
+            primary_only_x = g_field_actors.primary_x;
             if (primary_only_x < 0)
             {
                 primary_only_x += 0xFF;
@@ -262,7 +262,7 @@ refresh_both:
             primary_only_history = (FieldHistory *)((D_80105AE0.primary_index * 4) + (u8 *)&D_80105AE0);
             if ((primary_only_x >> 8) == primary_only_history->x)
             {
-                primary_only_z = D_800FDF58.primary_z;
+                primary_only_z = g_field_actors.primary_z;
                 if (primary_only_z < 0)
                 {
                     primary_only_z += 0xFF;
@@ -281,9 +281,9 @@ refresh_primary:
             }
         }
     }
-    else if (D_800FDF58.secondary_actor != 0xFF)
+    else if (g_field_actors.secondary_actor != 0xFF)
     {
-        secondary_only_x = D_800FDF58.secondary_x;
+        secondary_only_x = g_field_actors.secondary_x;
         if (secondary_only_x < 0)
         {
             secondary_only_x += 0xFF;
@@ -291,7 +291,7 @@ refresh_primary:
         secondary_only_history = (FieldHistory *)((D_80105AE0.secondary_index * 4) + (u8 *)&D_80105AE0);
         if ((secondary_only_x >> 8) == secondary_only_history->x)
         {
-            secondary_only_z = D_800FDF58.secondary_z;
+            secondary_only_z = g_field_actors.secondary_z;
             if (secondary_only_z < 0)
             {
                 secondary_only_z += 0xFF;
@@ -559,7 +559,7 @@ void func_8008CAA4(FieldRoutePoint *points, s32 remaining, FieldRouteActor *acto
  * @brief Maps the heading from @p b to @p a onto a direction-table entry.
  *
  * Computes the ratan2 angle between the two points, quantizes it to a 256-step
- * heading wrapped into [0, 0x100), and returns D_800EB0A4[heading >> 5] plus 10.
+ * heading wrapped into [0, 0x100), and returns g_field_direction_animation_modes[heading >> 5] plus 10.
  *
  * @param a Destination point whose heading is measured.
  * @param b Source point.
@@ -567,7 +567,7 @@ void func_8008CAA4(FieldRoutePoint *points, s32 remaining, FieldRouteActor *acto
  */
 s32 func_8008D104(PointD104 *a, PointD104 *b)
 {
-    extern s32 D_800EB0A4[];
+    extern s32 g_field_direction_animation_modes[];
 
     s32 angle;
     s32 idx;
@@ -582,7 +582,7 @@ s32 func_8008D104(PointD104 *a, PointD104 *b)
     {
         idx -= 0x100;
     }
-    return D_800EB0A4[idx >> 5] + 0xA;
+    return g_field_direction_animation_modes[idx >> 5] + 0xA;
 }
 
 /**
@@ -749,7 +749,7 @@ void func_8008D29C(Actor *actor, s32 follower_index)
         } flags;
     } Mover;
 
-    extern Actor D_800FDF58[];
+    extern Actor g_field_actors[];
     extern Slot D_80105AE0[];
     extern Resource g_field_resource_entries[];
     extern Appearance D_800FE3A0[];
@@ -792,7 +792,7 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     /* The leader search inspects only the low half of the actor flags. */
     for (leader_index = 0; leader_index < 13; leader_index++)
     {
-        scan = &D_800FDF58[leader_index];
+        scan = &g_field_actors[leader_index];
         if (scan->unk25 != 255 && !(*(u16 *)&scan->unk1C & 0x1FF))
         {
             break;
@@ -806,7 +806,7 @@ void func_8008D29C(Actor *actor, s32 follower_index)
     delta.vz = 0;
     delta.vx = 0;
     decay_period = actor->unk16;
-    leader = &D_800FDF58[leader_index];
+    leader = &g_field_actors[leader_index];
     if (decay_period != 0)
     {
         decay = (s8)actor->unk36 / decay_period;

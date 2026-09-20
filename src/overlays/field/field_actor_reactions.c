@@ -7,7 +7,7 @@
  *
  * Groups the eleven reaction routines in 8008B870..8008C728. They share the
  * actor-slot table D_80105AE0 (0x23C stride), the owner table D_800FD818
- * (0x268 stride), the actor record table D_800FDF58 (0x54 stride), and the
+ * (0x268 stride), the actor record table g_field_actors (0x54 stride), and the
  * animation-resource block D_800FB3C8 (0x244 stride).
  */
 
@@ -48,7 +48,7 @@ typedef struct
     u8 pad262[0x268 - 0x262];
 } FieldReactionOwner;
 
-/** @brief Opaque D_800FDF58 actor record (0x54 stride); walked via local views. */
+/** @brief Opaque g_field_actors actor record (0x54 stride); walked via local views. */
 typedef struct
 {
     u8 pad[0x54];
@@ -344,13 +344,13 @@ typedef struct
 /* ----- shared globals ----- */
 extern ReactionSlot D_80105AE0[];
 extern FieldReactionOwner D_800FD818[];
-extern ActorSlot54 D_800FDF58[];
+extern ActorSlot54 g_field_actors[];
 extern u8 D_800FB3C8[];
 extern f870_FieldReactionSelection D_80105880[];
 extern fC104_Resource g_field_resource_entries[];
 extern u8 D_800EB068[];
 extern s32 D_8010A000;
-extern s32 D_800FE754;
+extern s32 g_field_active_group;
 extern s32 D_8010D020;
 
 /* ----- forward declarations (only functions called before their definition) -----
@@ -539,7 +539,7 @@ s32 func_8008BD88(s32 key)
     fBD88_Struct_D80105AE0 *e;
     s32 i;
 
-    scan = D_800FDF58;
+    scan = g_field_actors;
     e = D_80105AE0;
     i = 0;
 loop:
@@ -732,7 +732,7 @@ s32 func_8008C2EC(s32 first_id, s32 second_id)
     u8 second_index;
     fC2EC_Slot *slot;
 
-    first_scan = D_800FDF58;
+    first_scan = g_field_actors;
     first_slot_scan = D_80105AE0;
     index = 0;
 loop_1:
@@ -762,7 +762,7 @@ found_second:
     goto check_second;
 search_second:
     index = 0;
-    second_scan = D_800FDF58;
+    second_scan = g_field_actors;
     second_slot_scan = D_80105AE0;
 loop_9:
     index++;
@@ -788,7 +788,7 @@ check_second:
     {
         return -1;
     }
-    if (second_slot >= 3U && (slot->group_flags & 15) != D_800FE754)
+    if (second_slot >= 3U && (slot->group_flags & 15) != g_field_active_group)
     {
         return 0;
     }
@@ -857,7 +857,7 @@ void func_8008C4A8(s32 slot_index)
         if ((slot_index < 2) && ((u32)(retry_count & 0xFF) >= (u8)D_800EB068[D_800FD818[slot_index].unk1]))
         {
             key = slot->unk14;
-            scan_actor = D_800FDF58;
+            scan_actor = g_field_actors;
             scan_slot = slots;
             for (i = 0; i < 0xD; i++, scan_slot++, scan_actor++)
             {
@@ -877,7 +877,7 @@ void func_8008C4A8(s32 slot_index)
                     field_start_actor_animation(animation_slot, 0, 0);
                 }
             }
-            func_8008C620(&D_800FDF58[slot_index]);
+            func_8008C620(&g_field_actors[slot_index]);
         }
     }
 }

@@ -267,7 +267,7 @@ extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
 extern Struct_D800FD818 D_800FD818[];
-extern Struct_D800FDF58 D_800FDF58[];
+extern Struct_D800FDF58 g_field_actors[];
 extern Struct_D80105AE0 D_80105AE0[];
 extern Struct_D80105880 D_80105880[];
 extern Struct_D80105768 D_80105768;
@@ -1017,7 +1017,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                     {
                                         temp_a0_2 += 0xFF;
                                     }
-                                    temp_v0_12 = D_800FDF58[sp28.index].unk0;
+                                    temp_v0_12 = g_field_actors[sp28.index].unk0;
                                     a1 = temp_a0_2 >> 8;
                                     if (temp_v0_12 < 0)
                                     {
@@ -1034,7 +1034,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                     {
                                         temp_a0_2 += 0xFF;
                                     }
-                                    entry = &D_800FDF58[sp28.index];
+                                    entry = &g_field_actors[sp28.index];
                                     var_v0_27 = entry->unk4;
                                     a1 = temp_a0_2 >> 8;
                                     if (var_v0_27 < 0)
@@ -1059,7 +1059,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                     var_v0_27 = temp_v0_12 >> 9;
                                     sp6C->y = (u16)(temp_a0_2 - var_v0_27);
                                 }
-                                if (D_800FDF58[sp28.index].unk21 & 0x80)
+                                if (g_field_actors[sp28.index].unk21 & 0x80)
                                 {
                                     actor->unk1FE[actor->unk232].x = sp6C->x - sp28.x;
                                 }
@@ -1093,7 +1093,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                 temp_v1_23 = slot->unk3C;
                                 if (temp_v1_23 == 0x24)
                                 {
-                                    if (D_800FDF58[sp28.index].unk25 == 0)
+                                    if (g_field_actors[sp28.index].unk25 == 0)
                                     {
                                         slot->unk178 = (u32)(slot->unk178 | 2);
                                         slot->unk170 = (u8)sp28.index;
@@ -1130,13 +1130,13 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                         }
                                         else
                                         {
-                                            temp_v0_19 = &D_800FDF58[sp28.index];
+                                            temp_v0_19 = &g_field_actors[sp28.index];
                                             temp_v0_19->unk21 = (u8)(temp_v0_19->unk21 & 0x7F);
                                             if (sp28.index < 2)
                                             {
                                                 func_800A2DD8(sp28.index);
                                                 D_80105AE0[sp28.index].unk18D = 0;
-                                                D_800FDF58[sp28.index].unk30 = 0;
+                                                g_field_actors[sp28.index].unk30 = 0;
                                             }
                                         }
                                         goto block_236;
@@ -1171,7 +1171,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                     if (sp28.index < 2)
                                     {
                                         Struct_D800FDF58* entry;
-                                        entry = &D_800FDF58[sp28.index];
+                                        entry = &g_field_actors[sp28.index];
                                         if (!((*(u16*)&entry->unk1C) & 0x1FF))
                                         {
                                             func_800A2DD8(sp28.index);
@@ -1528,7 +1528,7 @@ typedef struct
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
-extern Struct_D800FDF58 D_800FDF58[];
+extern Struct_D800FDF58 g_field_actors[];
 extern Struct_D80105AE0 D_80105AE0[];
 extern Struct_D80105768 D_80105768;
 extern FieldActorState g_field_actor_slots[80];
@@ -2066,7 +2066,7 @@ block_48:
                                             {
                                                 a0 += 0xFF;
                                             }
-                                            var_v1_3 = D_800FDF58[sp28.index].unk0;
+                                            var_v1_3 = g_field_actors[sp28.index].unk0;
                                             a1 = a0 >> 8;
                                             if (var_v1_3 < 0)
                                             {
@@ -2083,7 +2083,7 @@ block_48:
                                             {
                                                 a0 += 0xFF;
                                             }
-                                            entry = &D_800FDF58[sp28.index];
+                                            entry = &g_field_actors[sp28.index];
                                             var_v0_5 = entry->unk4;
                                             a1 = a0 >> 8;
                                             if (var_v0_5 < 0)
@@ -2108,7 +2108,7 @@ block_48:
                                             var_v0_5 = var_v1_3 >> 9;
                                             sp68->y = (u16) (a0 - var_v0_5);
                                         }
-                                        if (D_800FDF58[sp28.index].unk21 & 0x80)
+                                        if (g_field_actors[sp28.index].unk21 & 0x80)
                                         {
                                             actor->unk1FE[actor->unk232].x = sp68->x - sp28.x;
                                         }

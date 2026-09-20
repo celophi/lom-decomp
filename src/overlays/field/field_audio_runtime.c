@@ -82,7 +82,7 @@ extern s32 D_8011F300;
 extern s32 D_8011F320;
 extern s32 D_8011F328;
 extern u8 D_8011F358[];
-extern s32 D_8011588C;
+extern s32 g_field_song_volume;
 extern s32 D_8011F310;
 extern s32 D_8011F314;
 extern AkaoHeader *D_8011F304;
@@ -275,7 +275,7 @@ void func_800A380C(void)
 
     play_result = akao_play_song((AkaoHeader*)&D_8003ECA0);
     D_8011F310 = play_result;
-    akao_set_song_volume(play_result, D_8011588C);
+    akao_set_song_volume(play_result, g_field_song_volume);
     akao_cmd_d4(0);
     akao_cmd_d0(0);
 }
@@ -302,7 +302,7 @@ void func_800A3858(s32 arg0)
     }
     else
     {
-        akao_set_song_volume(0, D_8011588C);
+        akao_set_song_volume(0, g_field_song_volume);
         akao_cmd_d4(0);
     }
     akao_cmd_d0(0);
@@ -315,7 +315,7 @@ void func_800A38D4(void)
 {
     s32 temp_v0;
 
-    temp_v0 = akao_cmd_19_c0((s32) &D_80117EF8, D_8011588C);
+    temp_v0 = akao_cmd_19_c0((s32) &D_80117EF8, g_field_song_volume);
     D_8011F314 = temp_v0;
 }
 
@@ -803,7 +803,7 @@ void func_800A3FB0(void)
                 D_80117EE0 = 0;
                 song_handle = akao_play_song((AkaoHeader *)D_8003ECA0);
                 D_8011F310 = song_handle;
-                akao_set_song_volume(song_handle, D_8011588C);
+                akao_set_song_volume(song_handle, g_field_song_volume);
                 akao_cmd_d4(0);
                 akao_cmd_d0(0);
                 D_80117EE4 = 0;

@@ -4,9 +4,9 @@
  * Consolidated FIELD actor-key operations TU (vram 0x80087614 .. 0x800880EC).
  *
  * Each of these functions looks up a field actor by key/selector (most via
- * func_80087C9C) and reads or mutates the parallel D_80105AE0 / D_800FDF58
+ * func_80087C9C) and reads or mutates the parallel D_80105AE0 / g_field_actors
  * actor tables. Every member viewed those shared arrays through its own partial
- * struct layout, so D_80105AE0 and D_800FDF58 are declared at BLOCK scope inside
+ * struct layout, so D_80105AE0 and g_field_actors are declared at BLOCK scope inside
  * each function with that function's original record type; there is deliberately
  * no file-scope declaration of either symbol.
  */
@@ -23,7 +23,7 @@ typedef struct
     u8 pad18[0x23C - 0x18];
 } RecA80105AE0;
 
-/** @brief D_800FDF58 record with three leading words (func_80087F44). */
+/** @brief g_field_actors record with three leading words (func_80087F44). */
 typedef struct
 {
     s32 unk0; /* 0x0 */
@@ -40,7 +40,7 @@ typedef struct
     s32 unk8;
 } OutRec;
 
-/** @brief D_800FDF58 record as an opaque 0x54-byte blob (func_80087C9C). */
+/** @brief g_field_actors record as an opaque 0x54-byte blob (func_80087C9C). */
 typedef struct
 {
     u8 data[0x54];
@@ -223,7 +223,7 @@ typedef struct
     u8 pad18[0x23C - 0x18];
 } StateB80087FC0;
 
-/** @brief Partial D_800FDF58 record layout used by func_80087FC0. */
+/** @brief Partial g_field_actors record layout used by func_80087FC0. */
 typedef struct
 {
     u8 pad0[0x10];
@@ -262,7 +262,7 @@ RecB800FDF58_F32 *func_80087C9C(s32);
 extern Binding D_80105880[];
 extern Actor878B4 g_field_actor_slots[];
 extern Resource g_field_resource_entries[];
-extern s32 D_8010A018;
+extern s32 g_field_event_scripts;
 extern PadCtxB80087FC0 *g_pad_ctx;
 
 long ratan2(long, long);
@@ -535,17 +535,17 @@ s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_
 /**
  * @brief Find an actor slot whose 0x14 field matches @p arg0.
  * @param arg0 Actor-slot lookup key.
- * @return Pointer to the matching D_800FDF58 record, or (RecB800FDF58_F32 *)-1.
+ * @return Pointer to the matching g_field_actors record, or (RecB800FDF58_F32 *)-1.
  */
 RecB800FDF58_F32 *func_80087C9C(s32 arg0)
 {
     extern RecA80105AE0 D_80105AE0[];
-    extern RecB800FDF58_F32 D_800FDF58[];
+    extern RecB800FDF58_F32 g_field_actors[];
     RecA80105AE0 *ra;
     RecB800FDF58_F32 *rb;
     s32 i;
 
-    rb = D_800FDF58;
+    rb = g_field_actors;
     ra = D_80105AE0;
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
@@ -566,7 +566,7 @@ RecB800FDF58_F32 *func_80087C9C(s32 arg0)
 s32 func_80087CE0(s32 key, u8 value)
 {
     extern FieldActorSlotCE0 D_80105AE0[];
-    extern FieldActorRecordCE0 D_800FDF58[];
+    extern FieldActorRecordCE0 g_field_actors[];
     FieldActorRecordCE0 *scan;
     FieldActorRecordCE0 *found;
     FieldActorSlotCE0 *e;
@@ -574,7 +574,7 @@ s32 func_80087CE0(s32 key, u8 value)
     s32 result;
     s16 state;
 
-    scan = D_800FDF58;
+    scan = g_field_actors;
     e = D_80105AE0;
     i = 0;
 loop:
@@ -625,7 +625,7 @@ done:
  *
  * Scans the first 13 D_80105AE0 slots for one whose 0x14 field equals @p key.
  * On a hit, writes @p x, @p y and @p z (each shifted left 8) into the parallel
- * D_800FDF58 record's first three words and returns 0; otherwise returns -1.
+ * g_field_actors record's first three words and returns 0; otherwise returns -1.
  *
  * @param key Actor-slot lookup key.
  * @param x X coordinate; stored shifted left 8.
@@ -636,8 +636,8 @@ done:
 s32 func_80087D8C(s32 key, s32 x, s32 y, s32 z)
 {
     extern FieldActorSlotCE0 D_80105AE0[];
-    extern FieldActorRecordCE0 D_800FDF58[];
-    FieldActorRecordCE0 *p = D_800FDF58;
+    extern FieldActorRecordCE0 g_field_actors[];
+    FieldActorRecordCE0 *p = g_field_actors;
     FieldActorSlotCE0 *e = D_80105AE0;
     FieldActorRecordCE0 *result;
     s32 i;
@@ -675,7 +675,7 @@ found:
 s32 func_80087E00(s32 key, s32 value)
 {
     extern FieldActorSlotE00 D_80105AE0[];
-    extern FieldActorRecordE00 D_800FDF58[];
+    extern FieldActorRecordE00 g_field_actors[];
     FieldActorRecordE00 *scan;
     FieldActorRecordE00 *found;
     FieldActorSlotE00 *e;
@@ -683,7 +683,7 @@ s32 func_80087E00(s32 key, s32 value)
     s32 result;
     s16 state;
 
-    scan = D_800FDF58;
+    scan = g_field_actors;
     e = D_80105AE0;
     i = 0;
 loop:
@@ -735,13 +735,13 @@ done:
 
 /**
  * @brief Look up a value from a self-relative offset table anchored at
- *        D_8010A018.
+ *        g_field_event_scripts.
  * @param arg0 Index into the u16 offset table.
- * @return D_8010A018 plus the u16 offset at index arg0.
+ * @return g_field_event_scripts plus the u16 offset at index arg0.
  */
 s32 func_80087EF0(s32 arg0)
 {
-    return D_8010A018 + *(u16*)((arg0 * 2) + D_8010A018);
+    return g_field_event_scripts + *(u16*)((arg0 * 2) + g_field_event_scripts);
 }
 
 /**
@@ -777,13 +777,13 @@ Struct_D80105AE0 *func_80087F0C(s32 arg0)
 s32 func_80087F44(s32 arg0, OutRec *arg1)
 {
     extern RecA80105AE0 D_80105AE0[];
-    extern RecB800FDF58_F307 D_800FDF58[];
+    extern RecB800FDF58_F307 g_field_actors[];
     RecA80105AE0 *ra;
     RecB800FDF58_F307 *rb;
     RecB800FDF58_F307 *found;
     s32 i;
 
-    rb = D_800FDF58;
+    rb = g_field_actors;
     ra = D_80105AE0;
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
@@ -816,7 +816,7 @@ found_it:
 s32 func_80087FC0(s32 arg0, s32 arg1)
 {
     extern StateB80087FC0 D_80105AE0[];
-    extern RecordB80087FC0 D_800FDF58[];
+    extern RecordB80087FC0 g_field_actors[];
     StateB80087FC0 *ra;
     RecordB80087FC0 *rb;
     RecordB80087FC0 *found;
@@ -825,7 +825,7 @@ s32 func_80087FC0(s32 arg0, s32 arg1)
     u8 unk3a;
     FixedB80087FC0 *fixed = (FixedB80087FC0 *) 0x801ED600;
 
-    rb = D_800FDF58;
+    rb = g_field_actors;
     ra = D_80105AE0;
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {

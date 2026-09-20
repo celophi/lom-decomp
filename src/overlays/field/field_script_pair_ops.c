@@ -59,7 +59,7 @@ s32 func_800C3894(s32);
 void func_800C396C(void);
 void func_800C5704(s32);
 extern u8 *D_80122B74, *D_80122B78;
-extern s32 D_8010AE48, D_8010D020, D_80117EC4, D_80122980;
+extern s32 g_field_hide_actor_panels, D_8010D020, D_80117EC4, D_80122980;
 extern s32 g_gosub_result_count, g_gosub_result_values;
 
 
@@ -352,7 +352,7 @@ void func_800BBAC8(u32 command, s32 operand)
         return;
     }
     case 0x3D:
-        D_8010AE48 = (s32)operand;
+        g_field_hide_actor_panels = (s32)operand;
         return;
     case 0x3E:
         field_open_shop_mode_0((s32)operand);

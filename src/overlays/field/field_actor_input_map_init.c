@@ -23,7 +23,7 @@ typedef struct
     u8 pad2[0x268 - 0x2];
 } Entry268;
 
-/** @brief D_8010A038 animation record 8-byte sub-slot; unk6 is the value this function writes. */
+/** @brief g_field_resource_actions animation record 8-byte sub-slot; unk6 is the value this function writes. */
 typedef struct
 {
     u8 pad0[0x6];
@@ -35,7 +35,7 @@ extern u8 D_800EB224[];
 extern u8 D_800EB22C[];
 extern u8 D_800EB234[];
 extern Entry268 D_800FD818[];
-extern Slot8 D_8010A038[][50];
+extern Slot8 g_field_resource_actions[][50];
 
 /**
  * @brief Set five animation slot values using the object's kind-specific table.
@@ -53,13 +53,13 @@ void func_80091438(s32 arg0)
         case 7:
         case 8:
         case 9:
-            D_8010A038[arg0][D_800EB21C[i]].unk6 = D_800EB22C[i];
+            g_field_resource_actions[arg0][D_800EB21C[i]].unk6 = D_800EB22C[i];
             break;
         case 10:
-            D_8010A038[arg0][D_800EB21C[i]].unk6 = D_800EB234[i];
+            g_field_resource_actions[arg0][D_800EB21C[i]].unk6 = D_800EB234[i];
             break;
         default:
-            D_8010A038[arg0][D_800EB21C[i]].unk6 = D_800EB224[i];
+            g_field_resource_actions[arg0][D_800EB21C[i]].unk6 = D_800EB224[i];
             break;
         }
     }

@@ -6,7 +6,7 @@
  *
  * Merged translation unit for the field actor transition/reset group.
  * Each member function keeps its original declaration environment at block
- * scope: several externs (D_800FDF58, g_field_actor_slots, D_80105AE0,
+ * scope: several externs (g_field_actors, g_field_actor_slots, D_80105AE0,
  * D_800FD818) and the local Entry/Actor typedefs are viewed with different,
  * conflicting types by different functions, so they must stay isolated per
  * function to reproduce the original per-file codegen exactly.
@@ -106,9 +106,9 @@ void func_800966F0(s32 mode, void *actor_data)
     extern void func_800B34D0(s32);
     extern u8 D_800FB3C8[];
     extern FieldTransitionSlot D_800FD818;
-    extern FieldTransitionEntry D_800FDF58;
+    extern FieldTransitionEntry g_field_actors;
     extern FieldTransitionPart D_800FE3A0;
-    extern s32 D_800FE754;
+    extern s32 g_field_active_group;
     extern FieldTransitionActor D_80105AE0;
     extern s32 D_8010AE54, D_8010AE5C, D_8010CFD0, D_8010D020, D_8011F420, D_8012291C;
     extern u32 D_801229A0;
@@ -140,7 +140,7 @@ void func_800966F0(s32 mode, void *actor_data)
         index = 0;
         actor_base = g_field_actor_slots;
         template_offset = index;
-        entry = &D_800FDF58;
+        entry = &g_field_actors;
         actor_offset = 0x9100;
         actor = &D_80105AE0;
         D_8010AE54 = 1;
@@ -176,7 +176,7 @@ void func_800966F0(s32 mode, void *actor_data)
     {
         func_800AB710();
     }
-    D_800FE754 = mode;
+    g_field_active_group = mode;
     func_80092124();
 
     index = 0;
@@ -197,15 +197,15 @@ void func_800966F0(s32 mode, void *actor_data)
     D_8011F420 = *(s32 *)(*pad_base + 0x2C);
     func_800B0234();
 
-    D_800FDF58.unk24 = D_800FDF58.unk2e = 1;
-    D_800FDF58.unk27 = 0;
-    D_800FDF58.unk1c = (s32)(D_800FDF58.unk1c & ~0x800);
-    animation = D_800FDF58.unk21 & 0x7F;
-    animation_flags = *(volatile u8 *)&D_800FDF58.unk21 & 0x80;
+    g_field_actors.unk24 = g_field_actors.unk2e = 1;
+    g_field_actors.unk27 = 0;
+    g_field_actors.unk1c = (s32)(g_field_actors.unk1c & ~0x800);
+    animation = g_field_actors.unk21 & 0x7F;
+    animation_flags = *(volatile u8 *)&g_field_actors.unk21 & 0x80;
     animation %= 5;
     animation_flags += animation;
-    D_800FDF58.unk21 = animation_flags;
-    field_restart_actor_animation(&D_800FDF58);
+    g_field_actors.unk21 = animation_flags;
+    field_restart_actor_animation(&g_field_actors);
 
     index = 1;
     if (D_8010D020 == 0)
@@ -214,7 +214,7 @@ void func_800966F0(s32 mode, void *actor_data)
         {
             part = &((FieldTransitionPart *)&D_800FE3A0)[index];
         } while (0);
-        companion = (FieldTransitionEntry *)((u32)&D_800FDF58 + 0x54);
+        companion = (FieldTransitionEntry *)((u32)&g_field_actors + 0x54);
         slot_bytes = (u8 *)&((FieldTransitionSlot *)&D_800FD818)[index];
     reset_companion:
         {
@@ -263,17 +263,17 @@ s32 func_80096A00(void)
         u8 pad2C[0x54 - 0x2C];
     } Entry;
 
-    extern Entry D_800FDF58[];
+    extern Entry g_field_actors[];
 
     s32 i;
 
     for (i = 0; i < 13; i++)
     {
-        if (D_800FDF58[i].unk25 != 0xFF)
+        if (g_field_actors[i].unk25 != 0xFF)
         {
-            if (D_800FDF58[i].unk2A == 0x90 || D_800FDF58[i].unk2A == 0x94 ||
-                D_800FDF58[i].unk2A == 0x93 || D_800FDF58[i].unk2A == 0xAE ||
-                D_800FDF58[i].unk2A == 0x94 || D_800FDF58[i].unk2A == 0x92)
+            if (g_field_actors[i].unk2A == 0x90 || g_field_actors[i].unk2A == 0x94 ||
+                g_field_actors[i].unk2A == 0x93 || g_field_actors[i].unk2A == 0xAE ||
+                g_field_actors[i].unk2A == 0x94 || g_field_actors[i].unk2A == 0x92)
             {
                 return i + 0x100;
             }
@@ -302,7 +302,7 @@ s32 func_80096A90(void)
         u8 pad23B[0x244 - 0x23B];
     } Actor;
 
-    extern Entry D_800FDF58[];
+    extern Entry g_field_actors[];
     extern Actor g_field_actor_slots[];
     extern s32 D_8010D020;
 
@@ -315,12 +315,12 @@ s32 func_80096A90(void)
 
     for (i = 0; i < 2; i++)
     {
-        if (D_800FDF58[i].unk25 != 0xFF)
+        if (g_field_actors[i].unk25 != 0xFF)
         {
-            if (D_800FDF58[i].unk2A == 0x90 || D_800FDF58[i].unk2A == 0x94 ||
-                D_800FDF58[i].unk2A == 0x93 || D_800FDF58[i].unk2A == 0xAE ||
-                D_800FDF58[i].unk2A == 0x94 || D_800FDF58[i].unk2A == 0x8E ||
-                D_800FDF58[i].unk2A == 0x92)
+            if (g_field_actors[i].unk2A == 0x90 || g_field_actors[i].unk2A == 0x94 ||
+                g_field_actors[i].unk2A == 0x93 || g_field_actors[i].unk2A == 0xAE ||
+                g_field_actors[i].unk2A == 0x94 || g_field_actors[i].unk2A == 0x8E ||
+                g_field_actors[i].unk2A == 0x92)
             {
                 if (g_field_actor_slots[i + 64].unk23A != 0)
                 {
@@ -383,7 +383,7 @@ void func_80096B54(void)
         u8 pad10[0x1C - 0x10];
     } FieldCleanupTrack;
 
-    extern FieldCleanupRecord D_800FDF58[];
+    extern FieldCleanupRecord g_field_actors[];
     extern FieldCleanupSlot D_80105AE0[];
     extern FieldCleanupActor g_field_actor_slots[];
     extern FieldCleanupTrack D_80105880[];
@@ -410,7 +410,7 @@ void func_80096B54(void)
     if (func_8005B218() != 0)
     {
         slot_page = (u8 *)0x80100000;
-        records = D_800FDF58;
+        records = g_field_actors;
         tracks = D_80105880;
         actors = g_field_actor_slots;
         track = tracks;
@@ -545,8 +545,8 @@ void func_80096E60(void)
     extern s32 D_800F227C;
     extern s32 D_800F2280;
     extern u8 D_800FD818[];
-    extern u8 D_800FDF58[];
-    extern s32 D_800FE754;
+    extern u8 g_field_actors[];
+    extern s32 g_field_active_group;
     extern u8 D_80105AE0[];
     extern s32 D_8010AE54;
     extern s32 D_8010AE5C;
@@ -579,7 +579,7 @@ void func_80096E60(void)
             D_800F2280 = 0;
             D_800F227C = 0;
             D_800F2278 = 0;
-            D_800FE754 = D_8010AE5C;
+            g_field_active_group = D_8010AE5C;
             func_80068028();
             akao_cmd_f1();
             field_reset_global_color_scale();
@@ -587,7 +587,7 @@ void func_80096E60(void)
             func_800A6204();
             func_800A3938(0x24, 0x80);
             actor = (Actor *)D_80105AE0;
-            entry = (Entry *)D_800FDF58;
+            entry = (Entry *)g_field_actors;
             slot_base = D_800FD818;
             slot_cursor = slot_base;
         loop:

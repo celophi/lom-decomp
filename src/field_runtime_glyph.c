@@ -163,9 +163,27 @@ void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset)
  * @param y           Starting Y coordinate of the text cursor.
  * @param ot_depth    Ordering-table depth used for both glyphs.
  * @param clut_offset Offset added to the base font CLUT identifier.
- * @see decomp.me (63%) https://decomp.me/scratch/7XlDl
+ * @see decomp.me (67.69%) https://decomp.me/scratch/7XlDl
  * @note WIP under GCC 2.6.0 -O1 (maspsx 2.34). The unusual temporaries
  *       and empty conditionals are retained for the current partial match.
+ *       The percentage above is the in-tree result; the linked scratch is older.
+ * @note Source/assembly comparison supports functional equivalence for normal
+ *       game execution: all 256 low-byte values select the same two entries in
+ *       the original "0123456789ABCDEF" table, with unchanged depth and CLUT
+ *       arguments for both calls. The cursor finishes at (x + 16, y).
+ *       This was checked against the assembly, not tested in-game.
+ * @note Toolchain probes also tried GCC 2.6.3, GCC 2.7.2 (GNU/CDK), GCC 2.8.0,
+ *       and original Psy-Q 4.1/4.4/4.5 WIN/4.6 compilers (respectively GCC
+ *       2.7.2, 2.8.1, egcs-2.91.66, and GCC 2.95.2) at -O1. PlayStation
+ *       CodeWarrior Release 4 (2.44.14) was tested at -O0 through -O4 after
+ *       correcting wrapper detection so its optimization settings took effect.
+ *       None of these probes reproduced the target's stack layout: s0-s3 are
+ *       saved at sp+0x28..0x34, but ra is at sp+0x3c, leaving sp+0x38 unused.
+ *       The tested compilers instead saved registers in contiguous slots.
+ *       GCC 2.6.0 -O1 remains the primary hypothesis given the adjacent glyph
+ *       match. These probes neither identify a different original compiler nor
+ *       establish that this entire function was handwritten. The target's two
+ *       trapping ADD address calculations also remain unmatched by this C.
  *
  * The target asm passes ot_depth to both field_draw_glyph calls
  * (addu s1,a1 / addu a1,s1 around the calls), so the second call below

@@ -37,13 +37,13 @@ void func_800B01FC(s32);                               /* extern */
  * set and sequence are required to match - do not sort, dedup, or prune.
  */
 extern s32 D_800F229C[];
-extern s32 D_800F22B0[];
+extern s32 g_field_render_context[];
 extern s32 D_8010AE54[];
 extern s32 D_8010AE78[];
 extern s32 D_8010D034[];
 extern s32 D_8010D038[];
-extern s32 D_80115894[];
-extern s32 D_801158A0[];
+extern s32 g_field_preserve_entry_music[];
+extern s32 g_field_scene_mode_bit[];
 extern s32 D_801178C8[];
 extern s32 D_8011F428[];
 extern s32 D_80122710[];
@@ -61,9 +61,9 @@ extern s32 g_field_action_context[];
 extern s32 D_800F2288[];
 extern s32 D_800F2298[];
 extern s32 g_field_gover_load_countdown[];
-extern s32 D_800FE754[];
+extern s32 g_field_active_group[];
 extern s32 g_field_pickup_sound_played[];
-extern s32 D_8010AE48[];
+extern s32 g_field_hide_actor_panels[];
 extern s32 D_8011F3AC[];
 extern s32 D_8012269C[];
 extern s32 D_801227C8[];
@@ -90,8 +90,8 @@ void field_initialize_subsystems(s32 arg0)
     func_800B0094(base);
     func_800A8CFC();
     field_reset_actor_resource_slots();
-    D_800F22B0[0] = arg0;
-    D_801158A0[0] = 0;
+    g_field_render_context[0] = arg0;
+    g_field_scene_mode_bit[0] = 0;
     D_801178C8[0] = 0;
     func_80083948();
     func_8008396C();
@@ -116,7 +116,7 @@ void field_initialize_subsystems(s32 arg0)
     D_800F229C[0] = 0;
     g_field_return_to_title_prompt_state[0] = 0;
     g_field_return_to_title_prompt_delay[0] = 0;
-    D_8010AE48[0] = 0;
+    g_field_hide_actor_panels[0] = 0;
     D_8010AE54[0] = 0;
     D_8012269C[0] = 0;
     D_800F2298[0] = 0;
@@ -126,11 +126,11 @@ void field_initialize_subsystems(s32 arg0)
     prev = g_previous_game_state[0];
     if ((prev == 1) && (({ u16 *ip = g_music_track_index; u8 *tp = g_music_track_table; g_music_track_table[*ip]; }) != 0xFF))
     {
-        D_80115894[0] = prev;
+        g_field_preserve_entry_music[0] = prev;
     }
     else
     {
-        D_80115894[0] = 0;
+        g_field_preserve_entry_music[0] = 0;
     }
     func_800B01FC(prev);
     func_800AA02C();

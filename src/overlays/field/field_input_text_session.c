@@ -8,7 +8,7 @@
  *
  * Consolidated translation unit merged from the per-function FIELD sources.
  * Symbols whose declared type differs between the original files (g_pad_ctx,
- * D_800FE3A0, D_8011F3D2, D_800FDF58, D_80105AE0) are declared at block scope
+ * D_800FE3A0, D_8011F3D2, g_field_actors, D_80105AE0) are declared at block scope
  * inside each user with that function's original type, and are deliberately
  * kept out of file scope: GCC 2.7.2 accepts the incompatible block-scope
  * externs (warning only) and emits identical code, whereas a file-scope copy
@@ -216,7 +216,7 @@ typedef struct
 
 /* Field word/amount accumulator list. */
 extern s32 D_801227F8[];
-extern s32 D_80122908;
+extern s32 g_field_dialog_item_count;
 extern u8 D_80122910[];
 
 /* Selected-actor bookkeeping. */
@@ -226,9 +226,9 @@ extern u8 D_801228D0[];
 extern u8 D_801228E0[];
 
 /* Field / actor tables. */
-extern StructFE054 D_800FE054[];
+extern StructFE054 g_field_scene_actors[];
 extern Struct106194 D_80106194[];
-extern s32 D_800FE754;
+extern s32 g_field_active_group;
 extern s32 D_800FDFC8;
 
 /* Text/label offset tables (byte views). */
@@ -241,7 +241,7 @@ extern u8 D_800ED064[];
 extern u8 D_800EDBE4[];
 extern u8 D_800FD818[];
 extern u8 D_8010A028[];
-extern u8 D_8010A038[];
+extern u8 g_field_resource_actions[];
 
 /* CD-error status string descriptors (func_800A92CC). */
 extern StructEC D_800EC3D2;
@@ -360,13 +360,13 @@ void func_800A8D10(s16 arg0, s8 arg1, s8 arg2, s32 arg3, s32 arg4, s32 arg5)
  */
 void func_800A8D8C(s32 arg0, u8 arg1)
 {
-    s32 index = D_80122908;
+    s32 index = g_field_dialog_item_count;
 
     if (index < 10)
     {
         D_801227F8[index] = arg0;
         D_80122910[index] = arg1;
-        D_80122908++;
+        g_field_dialog_item_count++;
     }
 }
 
@@ -626,7 +626,7 @@ void func_800A9198(void)
     akao_cmd_99_9b_9d_9f(2);
     func_800A3904(0, 0x3C, 0);
     akao_stop_sfx_by_id(0x7E);
-    t0 = D_800FE054;
+    t0 = g_field_scene_actors;
     a2 = 3;
     base0 = (u8 *)D_80106194;
     a0 = (Struct106194 *)base0;
@@ -634,7 +634,7 @@ void func_800A9198(void)
     D_8011F3D2 = 0;
     do
     {
-        if (t0->unk25 != 0xFF && a0->unk4 != 0 && D_800FE754 == (a0->unk10 & 0xF) && a0->unk64 != 0)
+        if (t0->unk25 != 0xFF && a0->unk4 != 0 && g_field_active_group == (a0->unk10 & 0xF) && a0->unk64 != 0)
         {
             D_801226E0[D_801227D0] = a2;
             D_801228D0[D_801227D0] = D_800FE3A0[a2].unk2E;
@@ -694,7 +694,7 @@ void func_800A939C(void *context)
 {
     extern s32 func_800A88A0(s32, s32, void *, s32, s32, s32, s32);
     extern s32 g_pad_ctx;
-    extern u8 D_800FDF58[];
+    extern u8 g_field_actors[];
     extern u8 D_800FE3A0[];
     extern u8 D_80105AE0[];
     extern u8 D_8011F3D2;
@@ -845,7 +845,7 @@ void func_800A939C(void *context)
                         else
                         {
                             actor_id = action_slot * 8;
-                            text_x = (s32)D_8010A038;
+                            text_x = (s32)g_field_resource_actions;
                             text_base = text_x;
                             swapped_buttons =
                                 (U16_AT(text_base, action_offset + actor_id) & 0x7FFF) +
@@ -893,7 +893,7 @@ void func_800A939C(void *context)
             actor_id = D_801226E0[index];
             camera_x = D_800F22A0;
             text_address = (s32)((actor_id * 0x23C) + (s32)D_80105AE0);
-            actor_position = (void *)((actor_id * 0x54) + (s32)D_800FDF58);
+            actor_position = (void *)((actor_id * 0x54) + (s32)g_field_actors);
             if (camera_x < 0)
             {
                 camera_x += 0xFF;
@@ -1019,7 +1019,7 @@ void func_800A9A5C(void)
     s32 k;
 
     i = 0;
-    if (D_80122908 > 0)
+    if (g_field_dialog_item_count > 0)
     {
         do
         {
@@ -1032,20 +1032,20 @@ void func_800A9A5C(void)
                     {
                         k = i;
                         D_80122910[j] = amount + D_80122910[i];
-                        while (k < (D_80122908 - 1))
+                        while (k < (g_field_dialog_item_count - 1))
                         {
                             D_80122910[k] = D_80122910[k + 1];
                             D_801227F8[k] = D_801227F8[k + 1];
                             k += 1;
                         }
                         i -= 1;
-                        D_80122908 -= 1;
+                        g_field_dialog_item_count -= 1;
                         break;
                     }
                 }
             }
             i += 1;
-        } while (i < D_80122908);
+        } while (i < g_field_dialog_item_count);
     }
 }
 
@@ -1267,7 +1267,7 @@ void func_800AA02C(void)
 void func_800AA098(s32 arg0)
 {
     extern PadContext *g_pad_ctx;
-    extern FieldInputActor D_800FDF58[];
+    extern FieldInputActor g_field_actors[];
     extern FieldInputSlot D_80105AE0[];
     FieldInputHardware *pad = (FieldInputHardware *)0x801ED600;
     u32 buttons;
@@ -1315,13 +1315,13 @@ void func_800AA098(s32 arg0)
         func_800AA858(arg0);
         return;
     }
-    actor = D_800FDF58;
+    actor = g_field_actors;
     i = 0;
     if (!(actor->flags & 0x1FF))
     {
         do
         {
-            if (D_800FDF58[i].presence != 0xFF && D_800FDF58[i].state == 0x9A)
+            if (g_field_actors[i].presence != 0xFF && g_field_actors[i].state == 0x9A)
             {
                 return;
             }
@@ -1398,7 +1398,7 @@ open_menu:
                     index = i;
                     absent = 0xFF;
                     slot = D_80105AE0;
-                    actor2 = D_800FDF58;
+                    actor2 = g_field_actors;
                     do
                     {
                         if (actor2->presence != absent && slot->value >= 0x14)
@@ -1430,7 +1430,7 @@ s32 func_800AA498(void)
 {
     extern Struct_D80105AE0 D_80105AE0[];
 
-    if (D_800FE754 != 0)
+    if (g_field_active_group != 0)
     {
         if (!(g_frame_counter & 0x1F))
         {

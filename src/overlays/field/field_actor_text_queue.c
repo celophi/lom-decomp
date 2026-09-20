@@ -32,7 +32,7 @@ typedef struct
     s32 unk40B8; /* 0x40B8 */
 } ArgA;
 
-extern Position D_800FDF58[];
+extern Position g_field_actors[];
 extern u8 D_800ED064[];
 extern u8 *g_pad_ctx;
 extern s32 D_800F22A0, D_800F22A4, D_800F22A8;
@@ -130,7 +130,7 @@ void func_800A623C(s32 arg0, s32 arg1)
             {
                 xoff += 255;
             }
-            actor_base = (u8 *)D_800FDF58;
+            actor_base = (u8 *)g_field_actors;
             actor = (Position *)(arg0 * 0x54 + actor_base);
             x = actor->x;
             if (x < 0)

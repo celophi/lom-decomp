@@ -537,10 +537,10 @@ void func_800AA90C(s32 refresh_only)
     extern u8 D_800EB114[];
     extern u8 D_800EB24C[];
     extern Party D_800FD818[];
-    extern Actor D_800FDF58[];
+    extern Actor g_field_actors[];
     extern State D_80105AE0[];
-    extern Record D_8010A038[];
-    extern s32 D_801158A0;
+    extern Record g_field_resource_actions[];
+    extern s32 g_field_scene_mode_bit;
     extern u8 *g_pad_ctx;
 
     Party *initial_party;
@@ -665,7 +665,7 @@ void func_800AA90C(s32 refresh_only)
         func_800A54D0();
     }
     context_pointer = &g_pad_ctx;
-    record_base = D_8010A038;
+    record_base = g_field_resource_actions;
     party = D_800FD818;
     actor_stride_words = player_index;
     record_stride = player_index;
@@ -675,7 +675,7 @@ party_loop:
 {
     if (party->head.bytes.flags & 1)
     {
-        temp_a0 = (Actor *)((actor_stride_words + player_index) * 4 + (u8 *)D_800FDF58);
+        temp_a0 = (Actor *)((actor_stride_words + player_index) * 4 + (u8 *)g_field_actors);
         temp_a1_2 = (Context *)((*context_pointer) + context_stride);
         temp_a0->unk1C = (s32)((temp_a0->unk1C & ~0x1FF) | (((u8)temp_a1_2->unk608 >> 7) ^ 1));
         temp_v0 = ((u32)temp_a1_2->unk654 >> 0xA) & 0x3F;
@@ -695,7 +695,7 @@ party_loop:
                 temp_v1_2->unk0 = (s32)temp_a0_2;
                 temp_v1_2->unk4 = (s32)temp_a0_2;
             }
-            if ((D_801158A0 != 0) && (refresh_only != 0) && (controller_or_player_test != 0))
+            if ((g_field_scene_mode_bit != 0) && (refresh_only != 0) && (controller_or_player_test != 0))
             {
                 func_800A3D44(player_index, party->head.bytes.kind);
             }

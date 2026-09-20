@@ -122,7 +122,7 @@ typedef struct FieldActorAnimationDef
 /**
  * @brief Actor-local part definitions, per-track counters, and object bindings.
  * @note actor_index identifies this actor in g_field_actor_slots; object indices
- * refer to the separate D_800FDF58 / D_80105AE0 arrays.
+ * refer to the separate g_field_actors / D_80105AE0 arrays.
  */
 typedef struct FieldActorState
 {

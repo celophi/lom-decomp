@@ -56,7 +56,7 @@ typedef struct
 } FieldResourceEntry;
 
 extern FieldActorState g_field_actor_slots[80];
-extern FieldMotionRecord D_800FDF58[];
+extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[256];
 extern FieldObjectPlacement D_80105AE0[];
 extern FieldResourceEntry g_field_resource_entries[];
@@ -146,7 +146,7 @@ void field_render_effects(FieldRenderContext *render_context)
                         value <<= 2;
                         value += actor_or_object_index;
                         value <<= 2;
-                        value += (s32) D_800FDF58;
+                        value += (s32) g_field_actors;
                         object_state = &D_80105AE0[actor_or_object_index];
                         value = *(u8 *) (value + 0x3B);
                         frame_result = (s32) resources[value].start;
@@ -159,7 +159,7 @@ void field_render_effects(FieldRenderContext *render_context)
                         value <<= 2;
                         value += actor_or_object_index;
                         value <<= 2;
-                        value += (s32) D_800FDF58;
+                        value += (s32) g_field_actors;
                         object_state = &D_80105AE0[actor_or_object_index];
                         value = *(u8 *) (value + 0x3B);
                         frame_result = (s32) resources[value].start;
@@ -214,7 +214,7 @@ void field_render_effects(FieldRenderContext *render_context)
                     value <<= 2;
                     value += object_index;
                     value <<= 2;
-                    value += (s32) D_800FDF58;
+                    value += (s32) g_field_actors;
                     object_state = &D_80105AE0[object_index];
                     value = *(u8 *) (value + 0x3B);
                     frame_result = (s32) resources[value].start;
@@ -248,7 +248,7 @@ void field_render_effects(FieldRenderContext *render_context)
                     value <<= 2;
                     value += object_index;
                     value <<= 2;
-                    value += (s32) D_800FDF58;
+                    value += (s32) g_field_actors;
                     object_state = &D_80105AE0[object_index];
                     value = *(u8 *) (value + 0x3B);
                     frame_result = (s32) resources[value].start;

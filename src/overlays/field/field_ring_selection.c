@@ -77,12 +77,12 @@ typedef struct
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
-extern FieldSelectionPosition D_800FDF58;
+extern FieldSelectionPosition g_field_actors;
 extern FieldSelectionState D_801077FC;
 extern u8 D_800EDED8[];
 extern u8 D_800EE2D8;
 extern u8 D_800EE4D8;
-extern u8 D_8010A038[];
+extern u8 g_field_resource_actions[];
 extern u8 *D_8010D038;
 extern u8 D_801148B0[];
 extern s16 D_8011F330;
@@ -209,13 +209,13 @@ void func_800A43E8(s32 position_mode, s32 resource_index, u16 excluded_mask, s32
             break;
         case 1:
             camera_x = D_800F22A0 / 256;
-            screen_x = D_800FDF58.x / 256 + 160;
+            screen_x = g_field_actors.x / 256 + 160;
             screen_x = camera_x - (-screen_x);
             load_params[4] = screen_x;
             camera_y = D_800F22A4 / 256;
-            screen_y = D_800FDF58.y / 256 + 112;
+            screen_y = g_field_actors.y / 256 + 112;
             screen_y = camera_y - (-screen_y);
-            screen_y -= D_800FDF58.z / 512;
+            screen_y -= g_field_actors.z / 512;
             screen_y -= D_800F22A8 / 512;
             load_params[5] = screen_y;
             D_8011F340 = load_params[4];
@@ -631,7 +631,7 @@ void func_800A5174(s32 arg0, s32 arg1)
     temp_a0 = (u8 *)temp_v0 + 4;
     count = *temp_v0;
     if (arg0 == 2) {
-        u8 *dst = D_8010A038;
+        u8 *dst = g_field_resource_actions;
         dst += 0x320;
         bcopy(temp_a0, dst, count * 8);
     }

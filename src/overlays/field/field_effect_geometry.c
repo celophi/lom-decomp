@@ -18,7 +18,7 @@
 #define FIELD_PART_ATTACHMENT_INDEX_MASK 3
 #define FIELD_PART_MIRROR_X_WITH_OWNER 0x08000000
 
-extern FieldMotionRecord D_800FDF58[];
+extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[];
 extern FieldObjectPlacement D_80105AE0[];
 extern s32 g_field_track_index;
@@ -59,13 +59,13 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         {
             object_index = actor->track_object_indices[g_field_track_index];
             anchor_mode -= 0xA;
-            object_record = &D_800FDF58[object_index];
+            object_record = &g_field_actors[object_index];
             object = &D_80105AE0[object_index];
         }
         else
         {
             object_index = actor->owner_object_index;
-            object_record = &D_800FDF58[object_index];
+            object_record = &g_field_actors[object_index];
             object = &D_80105AE0[object_index];
         }
         if ((part->placement_flags >> FIELD_PART_SCALE_X_FROM_BOUNDS_SHIFT) & 1)
@@ -219,7 +219,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         return;
 
     case 0x27:
-        object_record = &D_800FDF58[actor->owner_object_index];
+        object_record = &g_field_actors[actor->owner_object_index];
         if ((((part->placement_flags >> FIELD_PART_MIRROR_X_WITH_FACING_SHIFT) & 1) ||
              (part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER)) &&
             !(object_record->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
@@ -235,9 +235,9 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         return;
 
     case 0x28:
-        object_record = &D_800FDF58[actor->track_object_indices[g_field_track_index]];
+        object_record = &g_field_actors[actor->track_object_indices[g_field_track_index]];
         if ((part->spawn_flags.word & FIELD_PART_MIRROR_X_WITH_OWNER) &&
-            !(D_800FDF58[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
+            !(g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
         {
             out->x = object_record->x - (part->offset_x << 8);
         }
@@ -256,7 +256,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
 
     case 0x29:
         object_index = actor->owner_object_index;
-        object_record = &D_800FDF58[object_index];
+        object_record = &g_field_actors[object_index];
         object = &D_80105AE0[object_index];
         out->x = object_record->x +
                  (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
@@ -267,7 +267,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
 
     case 0x32:
         object_index = actor->owner_object_index;
-        object_record = &D_800FDF58[object_index];
+        object_record = &g_field_actors[object_index];
         object = &D_80105AE0[object_index];
         out->x = object_record->x +
                  (object->attachment_points[((u32)part->effect_flags >> FIELD_PART_ATTACHMENT_INDEX_SHIFT) & FIELD_PART_ATTACHMENT_INDEX_MASK].x << 8);
@@ -285,7 +285,7 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
 
     case 0x33:
         object_index = actor->owner_object_index;
-        object_record = &D_800FDF58[object_index];
+        object_record = &g_field_actors[object_index];
         object = &D_80105AE0[object_index];
         out->x = object_record->x + (object->ground_attachment_points[attachment_index].x << 8);
         out->y = object_record->y;

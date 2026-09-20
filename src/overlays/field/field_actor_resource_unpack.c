@@ -76,7 +76,7 @@ typedef struct
 #define PTR_AT(p, o) (*(u8 **)((u8 *)(p) + (o)))
 
 extern s16 D_800FDF82;
-extern s32 D_8010D028;
+extern s32 g_field_scene_contact_latched;
 extern s32 g_field_scene_request_pending;
 extern s32 D_8010D030;
 extern s32 D_8010D040[];
@@ -109,16 +109,16 @@ void func_8009A2A4(Pos *arg0)
         hit = func_8005B368(&q);
         if (hit != -1) {
             if (g_field_scene_request_pending == 0) {
-                if (D_8010D028 == 0) {
+                if (g_field_scene_contact_latched == 0) {
                     func_800B22F0(0, hit | 0x8000);
                 }
-                D_8010D028 = 1;
+                g_field_scene_contact_latched = 1;
                 return;
             }
-            D_8010D028 = 0;
+            g_field_scene_contact_latched = 0;
             return;
         }
-        D_8010D028 = 0;
+        g_field_scene_contact_latched = 0;
     }
 }
 

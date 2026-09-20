@@ -849,11 +849,11 @@ typedef struct
     s32 actor_index;
     u8 tail[0xC];
 } FieldColorSelection;
-extern FieldColorActor D_800FDF58[];
+extern FieldColorActor g_field_actors[];
 
 
 
-extern s32 D_800FE754;
+extern s32 g_field_active_group;
 extern s32 g_frame_counter;
 
 /**
@@ -865,7 +865,7 @@ void func_80096394(void)
 {
     s32 i = 0;
     FieldColorVisual *visual = ((FieldColorVisual *)D_800FE3A0);
-    FieldColorActor *actor = D_800FDF58;
+    FieldColorActor *actor = g_field_actors;
     FieldColorActorSlot *slot = ((FieldColorActorSlot *)D_80105AE0);
     s32 selected;
     u32 flags;
@@ -876,7 +876,7 @@ void func_80096394(void)
     {
         slot = &((FieldColorActorSlot *)D_80105AE0)[i];
         visual = &((FieldColorVisual *)D_800FE3A0)[i];
-        if (D_800FDF58[i].presence != 0xFF)
+        if (g_field_actors[i].presence != 0xFF)
         {
             timer = slot->timer;
             if (timer != 0)
@@ -935,10 +935,10 @@ void func_80096394(void)
 check_blink:
                 options = slot->options & 0xFFFF7FFF;
                 slot->options = options;
-                if (D_800FDF58[i].presence != 0xFF && slot->link != 0 && !(*(u8 *)&slot->state.word & 1))
+                if (g_field_actors[i].presence != 0xFF && slot->link != 0 && !(*(u8 *)&slot->state.word & 1))
                 {
                     flags = slot->state.word;
-                    if (!((flags >> 5) & 1) && !((flags >> 7) & 1) && D_800FE754 != 0)
+                    if (!((flags >> 5) & 1) && !((flags >> 7) & 1) && g_field_active_group != 0)
                     {
                         slot->options = options | 0x8000;
                         if (g_frame_counter & 4)

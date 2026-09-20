@@ -167,7 +167,7 @@ typedef struct
     u32 flags;
 } FieldFollowResource;
 
-extern FieldFollowRecord D_800FDF58[];
+extern FieldFollowRecord g_field_actors[];
 extern FieldFollowSlot D_80105AE0[];
 extern FieldFollowResource g_field_resource_entries[];
 void func_8008EBA4();
@@ -191,8 +191,8 @@ void func_800946FC(FieldFollowRecord *record)
     s32 state;
 
     delta->vy = 0;
-    delta->vx = (D_800FDF58[0].x - record->x) / 256;
-    delta->vz = (D_800FDF58[0].z - record->z) / 256;
+    delta->vx = (g_field_actors[0].x - record->x) / 256;
+    delta->vz = (g_field_actors[0].z - record->z) / 256;
     gte_ldlvl(delta);
     gte_sqr0();
     gte_stlvnl(squares);
@@ -205,12 +205,12 @@ void func_800946FC(FieldFollowRecord *record)
         /* Fold the slot and point indices together before the four-byte stride. */
         delta->vx =
             (*(s16 *)((u8 *)slots +
-                      (D_800FDF58[0].slot * 0x8F + slots[record->slot].history_index) * 4 + 0x6C)
+                      (g_field_actors[0].slot * 0x8F + slots[record->slot].history_index) * 4 + 0x6C)
              << 8) -
             record->x;
         delta->vz =
             (*(s16 *)((u8 *)slots +
-                      (D_800FDF58[0].slot * 0x8F + slots[record->slot].history_index) * 4 + 0x6E)
+                      (g_field_actors[0].slot * 0x8F + slots[record->slot].history_index) * 4 + 0x6E)
              << 8) -
             record->z;
         gte_ldlvl(delta);

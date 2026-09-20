@@ -477,14 +477,14 @@ extern s32 g_field_return_to_title_prompt_state;
 extern s32 D_8012291C;
 extern s32 g_field_audio_timer;
 extern s32 g_field_track_index;
-extern s32 D_8011588C;
+extern s32 g_field_song_volume;
 extern FieldFadeTarget g_field_fade_target;
 extern FieldFadeRestoreColor g_field_fade_restore_color;
 extern s32 D_800F2278;
 extern s32 D_800F227C;
 extern s32 D_800F2280;
 extern FieldActorState g_field_actor_slots[80];
-extern FieldActorObjectRecord D_800FDF58[];
+extern FieldActorObjectRecord g_field_actors[];
 extern FieldActorObjectState D_80105AE0[];
 extern u8 D_800FF59C;
 
@@ -497,12 +497,12 @@ extern FieldActorAnimationDef D_800FE758;
 extern s32 D_800FE774;
 extern FieldResourceEntry g_field_resource_entries[];
 extern void* g_field_resource_cursor;
-extern s32 D_801158A0;
-extern Struct_D800EB254 D_800EB254[];
+extern s32 g_field_scene_mode_bit;
+extern Struct_D800EB254 g_field_direction_offsets[];
 extern u8 D_800FDA81;
 extern u8 D_800FDA83;
 extern u8 D_800FDCEA;
-extern s32 D_800FE754;
+extern s32 g_field_active_group;
 extern s32 D_80122710;
 extern s32 D_80122714;
 extern s32 D_80122B20;
@@ -606,14 +606,14 @@ void func_8006809C(void)
     {
         if (D_800FD818[i].u0.b.unk0 & 1)
         {
-            D_800FDF58[i].unk2A = 0x9A;
-            D_800FDF58[i].unk2E = 1;
-            D_800FDF58[i].unk27 = 0;
-            D_800FDF58[i].unk24 = 1;
-            D_800FDF58[i].unk1C &= ~0x1FF;
-            D_800FDF58[i].unk21 = (D_800FDF58[i].unk21 & 0x80) + 0x12;
+            g_field_actors[i].unk2A = 0x9A;
+            g_field_actors[i].unk2E = 1;
+            g_field_actors[i].unk27 = 0;
+            g_field_actors[i].unk24 = 1;
+            g_field_actors[i].unk1C &= ~0x1FF;
+            g_field_actors[i].unk21 = (g_field_actors[i].unk21 & 0x80) + 0x12;
             D_80105AE0[i].unk174 &= ~0x1800;
-            field_restart_actor_animation(&D_800FDF58[i], (void*)~0x1FF);
+            field_restart_actor_animation(&g_field_actors[i], (void*)~0x1FF);
         }
     }
 
@@ -774,7 +774,7 @@ void field_update_audio_timer(void)
         {
             fade_out_current_song();
             func_800A380C();
-            func_800A3904(0, 1, D_8011588C);
+            func_800A3904(0, 1, g_field_song_volume);
         }
     }
 }
@@ -972,10 +972,10 @@ s32 field_finalize_actor_animation(FieldActorState* actor)
         {
             if (D_80105AE0[actor->owner_object_index].u.b.unk17A == actor->unk233)
             {
-                object_state = D_800FDF58[actor->owner_object_index].unk2A;
+                object_state = g_field_actors[actor->owner_object_index].unk2A;
                 if (((object_state != 0x90) && (object_state != 0x94)) || (D_80105AE0[actor->owner_object_index].unkC & 0x200))
                 {
-                    D_800FDF58[actor->owner_object_index].unk25 = 0;
+                    g_field_actors[actor->owner_object_index].unk25 = 0;
                 }
                 D_80105AE0[actor->owner_object_index].u.unk178 &= ~1;
             }
@@ -989,7 +989,7 @@ s32 field_finalize_actor_animation(FieldActorState* actor)
                     state_value = D_80105AE0[actor->unk229[found]].u.unk178;
                     if ((state_value & 1) && (D_80105AE0[actor->unk229[found]].u.b.unk17A == actor->unk233))
                     {
-                        D_800FDF58[actor->unk229[found]].unk25 = 0;
+                        g_field_actors[actor->unk229[found]].unk25 = 0;
                         D_80105AE0[actor->unk229[found]].u.unk178 &= ~1;
                     }
                 }
@@ -1395,7 +1395,7 @@ void field_dispatch_actor_audio_event(void* actor, s32 event_type, s32 event_sub
                     }
                     else
                     {
-                        actor_records = D_800FDF58;
+                        actor_records = g_field_actors;
                         actor_record = &actor_records[((u8*)actor)[0x228]];
                         resource_slot = actor_record->unk3B;
                         if (((u32)(resource_slot - 3)) < 3)
@@ -1685,24 +1685,24 @@ void field_build_actor_render_commands(void* render_context)
                 }
                 if (object_state_value != 0)
                 {
-                    D_800FDF58[actor->owner_object_index].unk25 = object_state_value;
+                    g_field_actors[actor->owner_object_index].unk25 = object_state_value;
                     D_80105AE0[actor->owner_object_index].u.unk178 |= 1;
                     D_80105AE0[actor->owner_object_index].u.b.unk17A = actor->unk233;
                 }
                 else
                 {
                     u8 owner_index = actor->owner_object_index;
-                    s16 owner_state = D_800FDF58[owner_index].unk2A;
+                    s16 owner_state = g_field_actors[owner_index].unk2A;
                     if ((owner_state == 0x90) || (owner_state == 0x94))
                     {
                         if (D_80105AE0[owner_index].unkC & 0x200)
                         {
-                            D_800FDF58[actor->owner_object_index].unk25 = object_state_value;
+                            g_field_actors[actor->owner_object_index].unk25 = object_state_value;
                         }
                     }
                     else
                     {
-                        D_800FDF58[actor->owner_object_index].unk25 = object_state_value;
+                        g_field_actors[actor->owner_object_index].unk25 = object_state_value;
                     }
                 }
             }
@@ -1727,7 +1727,7 @@ void field_build_actor_render_commands(void* render_context)
                         {
                             if (target_state_value != 0)
                             {
-                                D_800FDF58[actor->unk229[target_index]].unk25 = target_state_value;
+                                g_field_actors[actor->unk229[target_index]].unk25 = target_state_value;
                                 do
                                 {
                                     D_80105AE0[actor->unk229[target_index]].u.unk178 |= 1;
@@ -1738,7 +1738,7 @@ void field_build_actor_render_commands(void* render_context)
                             else
                             {
                                 target_index_copy = target_index;
-                                D_800FDF58[actor->unk229[target_index_copy]].unk25 = 0;
+                                g_field_actors[actor->unk229[target_index_copy]].unk25 = 0;
                             }
                         }
                         target_index++;
@@ -1977,10 +1977,10 @@ void field_initialize_actor_system(void)
 
     for (i = 0; i < 0xD; i++)
     {
-        D_800FDF58[i].unk25 = 0xFF;
-        D_800FDF58[i].unk0 = 0xFFFB0000;
-        D_800FDF58[i].unk4 = 0;
-        D_800FDF58[i].unk8 = 0;
+        g_field_actors[i].unk25 = 0xFF;
+        g_field_actors[i].unk0 = 0xFFFB0000;
+        g_field_actors[i].unk4 = 0;
+        g_field_actors[i].unk8 = 0;
     }
 
     bcopy(g_field_resource_buffer, (void*)0x80180000, 0x10000);
@@ -1992,7 +1992,7 @@ void field_initialize_actor_system(void)
         g_field_resource_entries[i].flags &= ~2;
     }
 
-    if (D_801158A0 != 0)
+    if (g_field_scene_mode_bit != 0)
     {
         for (j = 0; j < 3; j++)
         {
@@ -2032,9 +2032,9 @@ void field_initialize_actor_system(void)
                 field_initialize_actor_record(j, j);
 
                 pad_base = (u8*)g_pad_ctx;
-                input_flags = D_800FDF58[j].unk1C & (~0x1FF);
+                input_flags = g_field_actors[j].unk1C & (~0x1FF);
                 pad_ptr = pad_base + (j * 0x250);
-                D_800FDF58[j].unk1C = input_flags | ((pad_ptr[0x608] >> 7) ^ 1);
+                g_field_actors[j].unk1C = input_flags | ((pad_ptr[0x608] >> 7) ^ 1);
 
                 if (j < 2)
                 {
@@ -2063,9 +2063,9 @@ void field_initialize_actor_system(void)
                 field_initialize_actor_record(j, j);
 
                 pad_base = (u8*)g_pad_ctx;
-                input_flags_alt = D_800FDF58[j].unk1C & (~0x1FF);
+                input_flags_alt = g_field_actors[j].unk1C & (~0x1FF);
                 pad_ptr = pad_base + (j * 0x250);
-                D_800FDF58[j].unk1C = input_flags_alt | ((pad_ptr[0x608] >> 7) ^ 1);
+                g_field_actors[j].unk1C = input_flags_alt | ((pad_ptr[0x608] >> 7) ^ 1);
             }
         }
     }
@@ -2156,7 +2156,7 @@ void field_relocate_resource_buffer(s32 resource_index)
     g_field_resource_entries[resource_index].slot_index = resource_index;
     g_field_resource_entries[resource_index].flags |= 2;
     g_field_resource_cursor = g_field_resource_entries[resource_index].end;
-    actor_record = &D_800FDF58[resource_index];
+    actor_record = &g_field_actors[resource_index];
     field_restart_actor_animation(actor_record, old_start);
 }
 
@@ -2259,8 +2259,8 @@ void field_load_actor_resource_slot(s32 resource_index, s32 slot_index, s32 reso
         (g_field_resource_entries[resource_index].flags & ~1) | (alternate_layout & 1);
     g_field_resource_entries[resource_index].start = g_field_resource_cursor;
     field_load_resource_package(resource_id, slot_index, resource_index, alternate_layout & 1);
-    D_800FDF58[slot_index].unk21 &= 0x80;
-    field_restart_actor_animation(&D_800FDF58[slot_index]);
+    g_field_actors[slot_index].unk21 &= 0x80;
+    field_restart_actor_animation(&g_field_actors[slot_index]);
     g_field_resource_entries[resource_index].end = g_field_resource_cursor;
     g_field_resource_entries[resource_index].flags |= 2;
 }
@@ -2290,10 +2290,10 @@ void func_8006AA7C(s32 actor_slot)
                 if (D_800FD818[i].u0.b.unk0 & 1)
                 {
                     work_value = ~0x1FF;
-                    state_flags = D_800FDF58[i].unk1C & work_value;
+                    state_flags = g_field_actors[i].unk1C & work_value;
                     work_value = i * 0x250;
                     pad_ptr = pad_base + work_value;
-                    D_800FDF58[i].unk1C = state_flags | ((pad_ptr[0x608] >> 7) ^ 1);
+                    g_field_actors[i].unk1C = state_flags | ((pad_ptr[0x608] >> 7) ^ 1);
                 }
             }
 
@@ -2332,7 +2332,7 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
 
         while (D_800FD818[slot_index].u0.b.unk0 & 1)
         {
-            records = D_800FDF58;
+            records = g_field_actors;
             actor_record = &records[slot_index];
             break;
         }
@@ -2363,7 +2363,7 @@ void field_release_actor_resource_slot(s32 slot_index_minus_one)
         }
 
         i = 0;
-        record = D_800FDF58;
+        record = g_field_actors;
         do
         {
             if ((record->unk25 != 0xFF) && (record->unk3B != 8))
@@ -2449,27 +2449,27 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     field_load_actor_resource_slot(slot, slot, resource_id, 0);
     field_initialize_actor_record(slot, slot);
 
-    flags = D_800FDF58[slot].unk1C;
+    flags = g_field_actors[slot].unk1C;
     pad_context = g_pad_ctx;
     slot_input = pad_context + slot * 0x250;
-    D_800FDF58[slot].unk1C = (flags & ~0x1FF) | ((slot_input[0x608] >> 7) ^ 1);
+    g_field_actors[slot].unk1C = (flags & ~0x1FF) | ((slot_input[0x608] >> 7) ^ 1);
 
     if ((slot == 2) && (resource_variant >= 0x41))
     {
-        FieldActorObjectRecord* slot_two = &D_800FDF58[2];
+        FieldActorObjectRecord* slot_two = &g_field_actors[2];
         slot_two->unk1C = (slot_two->unk1C & 0xFFFCFFFF) | (((pad_context[0x29D7] + 1) & 3) << 16);
     }
     else
     {
-        D_800FDF58[slot].unk1C &= 0xFFFCFFFF;
+        g_field_actors[slot].unk1C &= 0xFFFCFFFF;
     }
 
     if (source_selector == -1)
     {
-        D_800FDF58[slot].unk0 = 0;
-        D_800FDF58[slot].unk4 = 0;
-        D_800FDF58[slot].unk8 = 0;
-        D_800FDF58[slot].unk21 = 0;
+        g_field_actors[slot].unk0 = 0;
+        g_field_actors[slot].unk4 = 0;
+        g_field_actors[slot].unk8 = 0;
+        g_field_actors[slot].unk21 = 0;
     }
     else if (source_selector == -2)
     {
@@ -2479,12 +2479,12 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
         Struct_D800EB254* definitions;
         s32 args[3];
 
-        template = D_800FDF58;
-        entry = &D_800FDF58[slot];
+        template = g_field_actors;
+        entry = &g_field_actors[slot];
         entry->unk0 = template->unk0;
         entry->unk4 = template->unk4;
         entry->unk8 = template->unk8;
-        definitions = D_800EB254;
+        definitions = g_field_direction_offsets;
         definition = &definitions[template->unk1B >> 5];
         args[0] = definition->unk0;
         args[1] = 0;
@@ -2494,23 +2494,23 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     }
     else
     {
-        D_800FDF58[slot].unk0 = source_record->unk0;
-        D_800FDF58[slot].unk4 = source_record->unk4;
-        D_800FDF58[slot].unk8 = source_record->unk8;
-        D_800FDF58[slot].unk21 = 0;
+        g_field_actors[slot].unk0 = source_record->unk0;
+        g_field_actors[slot].unk4 = source_record->unk4;
+        g_field_actors[slot].unk8 = source_record->unk8;
+        g_field_actors[slot].unk21 = 0;
         source_record->unk25 = 0xFF;
         D_800FE774--;
     }
 
-    D_800FDF58[slot].unk25 = 0;
-    D_800FDF58[slot].unk2A = 0;
-    D_800FDF58[slot].unk10 = 0;
-    D_800FDF58[slot].unk28 = 0xFF;
-    field_restart_actor_animation(&D_800FDF58[slot]);
+    g_field_actors[slot].unk25 = 0;
+    g_field_actors[slot].unk2A = 0;
+    g_field_actors[slot].unk10 = 0;
+    g_field_actors[slot].unk28 = 0xFF;
+    field_restart_actor_animation(&g_field_actors[slot]);
     func_800AA90C(0);
     field_refresh_actor_portraits();
 
-    if ((D_801158A0 != 0) && (slot == 1))
+    if ((g_field_scene_mode_bit != 0) && (slot == 1))
     {
         func_800A3D44(1, D_800FDA81);
     }
@@ -2597,8 +2597,8 @@ void field_load_resource_entry(s32 resource_slot_id, u8 *resource_base, s32 entr
         FieldActorObjectRecord *rec;
         u8 *record_data;
 
-        rec = D_800FDF58;
-        record_data = (u8*)D_800FDF58 + 0x3B;
+        rec = g_field_actors;
+        record_data = (u8*)g_field_actors + 0x3B;
         i = 0;
         while (i < 0xD)
         {
@@ -2648,7 +2648,7 @@ void field_release_resource_entry(s32 entry_index)
             }
         }
 
-        record = D_800FDF58;
+        record = g_field_actors;
         for (i = 0; i < 0xD; i++)
         {
             if ((record->unk25 != 0xFF) && (record->unk3B != 8))
@@ -2683,7 +2683,7 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     s16* q16;
     u32* q32;
 
-    bytes = (u8*)&D_800FDF58[actor_index];
+    bytes = (u8*)&g_field_actors[actor_index];
     i = 0;
     do
     {
@@ -2702,67 +2702,67 @@ void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index)
     D_80105AE0[actor_index].u.unk178 &= ~0x80;
     D_80105AE0[actor_index].u.unk178 &= ~0x40;
 
-    D_800FDF58[actor_index].unk22 = (s8)(actor_index + 0x30);
-    D_800FDF58[actor_index].unk28 = 0xFF;
+    g_field_actors[actor_index].unk22 = (s8)(actor_index + 0x30);
+    g_field_actors[actor_index].unk28 = 0xFF;
 
-    D_800FDF58[actor_index].unk3A = actor_index;
-    D_800FDF58[actor_index].unk24 = 0;
-    D_800FDF58[actor_index].unk25 = 0;
-    D_800FDF58[actor_index].unk27 = 0;
-    D_800FDF58[actor_index].unk2A = 0;
-    D_800FDF58[actor_index].unk2C = 0;
-    D_800FDF58[actor_index].unk2E = 0;
-    D_800FDF58[actor_index].unk30 = 0;
-    D_800FDF58[actor_index].unk32 = 0;
-    D_800FDF58[actor_index].unk33 = 0;
-    D_800FDF58[actor_index].unk4 = 0;
-    D_800FDF58[actor_index].unk8 = 0;
-    initial_flags = (D_800FDF58[actor_index].unk1C & ~0x1FF) | 2;
-    D_800FDF58[actor_index].unk1C = initial_flags;
-    D_800FDF58[actor_index].unk0 = 0xFFFB0000;
-    flags = D_800FDF58[actor_index].unk1C;
+    g_field_actors[actor_index].unk3A = actor_index;
+    g_field_actors[actor_index].unk24 = 0;
+    g_field_actors[actor_index].unk25 = 0;
+    g_field_actors[actor_index].unk27 = 0;
+    g_field_actors[actor_index].unk2A = 0;
+    g_field_actors[actor_index].unk2C = 0;
+    g_field_actors[actor_index].unk2E = 0;
+    g_field_actors[actor_index].unk30 = 0;
+    g_field_actors[actor_index].unk32 = 0;
+    g_field_actors[actor_index].unk33 = 0;
+    g_field_actors[actor_index].unk4 = 0;
+    g_field_actors[actor_index].unk8 = 0;
+    initial_flags = (g_field_actors[actor_index].unk1C & ~0x1FF) | 2;
+    g_field_actors[actor_index].unk1C = initial_flags;
+    g_field_actors[actor_index].unk0 = 0xFFFB0000;
+    flags = g_field_actors[actor_index].unk1C;
     flags &= mask_a;
     flags &= mask_b;
     flags &= mask_c;
-    D_800FDF58[actor_index].unk1C = flags;
-    D_800FDF58[actor_index].unk0 = 0xFFFB0000;
+    g_field_actors[actor_index].unk1C = flags;
+    g_field_actors[actor_index].unk0 = 0xFFFB0000;
 
     if (actor_index == 1 && D_800FDA83 == 0)
     {
-        FieldActorObjectRecord* entry1 = &D_800FDF58[1];
+        FieldActorObjectRecord* entry1 = &g_field_actors[1];
         entry1->unk1C = (entry1->unk1C & 0xFF87FFFF) | 0x500000;
     }
     else
     {
-        D_800FDF58[actor_index].unk1C &= 0xFF87FFFF;
+        g_field_actors[actor_index].unk1C &= 0xFF87FFFF;
     }
 
-    D_800FDF58[actor_index].unk1C &= ~0x800;
-    D_800FDF58[actor_index].unkC = g_field_resource_entries[resource_entry_index].slot_index;
-    D_800FDF58[actor_index].unk3B = resource_entry_index;
-    D_800FDF58[actor_index].unk21 = 0;
-    q16 = &D_800FDF58[actor_index].unk10;
+    g_field_actors[actor_index].unk1C &= ~0x800;
+    g_field_actors[actor_index].unkC = g_field_resource_entries[resource_entry_index].slot_index;
+    g_field_actors[actor_index].unk3B = resource_entry_index;
+    g_field_actors[actor_index].unk21 = 0;
+    q16 = &g_field_actors[actor_index].unk10;
     q16[0] = 0;
     q16[1] = 0;
     q16[2] = 0;
-    D_800FDF58[actor_index].unk16 = 1;
-    D_800FDF58[actor_index].unk34 = 0;
-    q32 = &D_800FDF58[actor_index].unk44;
+    g_field_actors[actor_index].unk16 = 1;
+    g_field_actors[actor_index].unk34 = 0;
+    q32 = &g_field_actors[actor_index].unk44;
     q32[0] = 0;
     q32[1] = 0;
     q32[2] = 0;
-    D_800FDF58[actor_index].unk1A = 0x80;
-    D_800FDF58[actor_index].unk19 = 0x80;
-    D_800FDF58[actor_index].unk18 = 0x80;
+    g_field_actors[actor_index].unk1A = 0x80;
+    g_field_actors[actor_index].unk19 = 0x80;
+    g_field_actors[actor_index].unk18 = 0x80;
 
     if (actor_index == 2 && D_800FDCEA >= 0x41)
     {
-        FieldActorObjectRecord* entry2 = &D_800FDF58[2];
+        FieldActorObjectRecord* entry2 = &g_field_actors[2];
         entry2->unk1C = (entry2->unk1C & 0xFFFCFFFF) | (((g_pad_ctx[0x29D7] + 1) & 3) << 16);
         return;
     }
 
-    D_800FDF58[actor_index].unk1C &= 0xFFFCFFFF;
+    g_field_actors[actor_index].unk1C &= 0xFFFCFFFF;
 }
 
 
@@ -2847,7 +2847,7 @@ void field_set_all_actor_render_state(s32 red, s32 green, s32 blue, s32 color_fl
     for (i = 0; i < 13; i++)
     {
         color_flag_bits = (color_flag & 1) << 23;
-        D_800FDF58[i].unk1C = (D_800FDF58[i].unk1C & 0xFF7FFFFF) | color_flag_bits;
+        g_field_actors[i].unk1C = (g_field_actors[i].unk1C & 0xFF7FFFFF) | color_flag_bits;
     }
 }
 
@@ -2965,15 +2965,15 @@ void field_update_actor_objects(void)
     s32 count;
     s32 index;
 
-    record = &D_800FDF58[0];
+    record = &g_field_actors[0];
     actor_state = &D_80105AE0[0];
 
     if (D_80122714 == 0)
     {
         func_8009184C();
-        if (D_80122714 == 0 && D_800FE754 == 0)
+        if (D_80122714 == 0 && g_field_active_group == 0)
         {
-            func_8009A2A4(D_800FDF58);
+            func_8009A2A4(g_field_actors);
         }
     }
 
@@ -3001,7 +3001,7 @@ void field_update_actor_objects(void)
             }
 
             mode = actor_state->unk10 & 0xF;
-            if (D_800FE754 == mode || mode == 0)
+            if (g_field_active_group == mode || mode == 0)
             {
                 func_80086494(i);
                 if (!(actor_state->u.unk178 & 0x81))
@@ -3111,7 +3111,7 @@ void field_render_actor_objects(FieldRenderContext *render_context)
     s32 packet_cursor;
     s32 i;
 
-    record = &D_800FDF58[0];
+    record = &g_field_actors[0];
     ordering_table = &render_context->ordering_table;
     i = 0;
     actor_state = &D_80105AE0[0];
@@ -3771,8 +3771,8 @@ s32 field_get_actor_sound_pan(s32 actor_index)
     Vec2s pos;
     s32 screen_x;
 
-    pos.x = 0xA0 + D_800F22A0 / 256 + D_800FDF58[actor_index].unk0 / 256;
-    pos.y = 0x70 + D_800F22A4 / 256 + D_800FDF58[actor_index].unk4 / 256 - D_800FDF58[actor_index].unk8 / 512 - D_800F22A8 / 512;
+    pos.x = 0xA0 + D_800F22A0 / 256 + g_field_actors[actor_index].unk0 / 256;
+    pos.y = 0x70 + D_800F22A4 / 256 + g_field_actors[actor_index].unk4 / 256 - g_field_actors[actor_index].unk8 / 512 - D_800F22A8 / 512;
 
     screen_x = pos.x;
     if (screen_x >= 0x10)

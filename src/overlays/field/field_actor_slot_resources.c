@@ -306,7 +306,7 @@ void field_stop_actor_animations_for_object(FieldActorRecord *record, s32 force)
  */
 void func_80083BC0(void *record, ActorState *actor, s32 force)
 {
-    extern Object D_800FDF58[];
+    extern Object g_field_actors[];
     extern ObjectState D_80105AE0[];
     extern s32 D_800F2278, D_800F227C, D_800F2280;
     void field_set_global_color_scale(s32, s32, s32);
@@ -357,11 +357,11 @@ void func_80083BC0(void *record, ActorState *actor, s32 force)
             if (actor->unkC->unk18 & 2)
             {
                 owner_index = actor->unk228;
-                object_state = D_800FDF58[owner_index].unk2A;
+                object_state = g_field_actors[owner_index].unk2A;
                 if (((object_state != 0x90) && (object_state != 0x94)) ||
                     (D_80105AE0[owner_index].unkC & 0x200))
                 {
-                    D_800FDF58[actor->unk228].unk25 = 0;
+                    g_field_actors[actor->unk228].unk25 = 0;
                 }
                 D_80105AE0[actor->unk228].unk178 &= ~1;
             }
@@ -373,7 +373,7 @@ void func_80083BC0(void *record, ActorState *actor, s32 force)
                     target_slot = actor->unk229[target_index];
                     if (actor->unk229[target_index] != 0xFF)
                     {
-                        D_800FDF58[actor->unk229[target_index]].unk25 = 0;
+                        g_field_actors[actor->unk229[target_index]].unk25 = 0;
                         target_state = &D_80105AE0[actor->unk229[target_index]];
                         target_state->unk178 = (s32)(target_state->unk178 & ~1);
                     }

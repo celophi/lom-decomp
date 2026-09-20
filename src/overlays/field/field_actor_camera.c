@@ -79,10 +79,10 @@ extern int abs(int);
 extern void func_80092200(void);
 extern void func_800922B8(void);
 
-extern Actor D_800FDF58[];
+extern Actor g_field_actors[];
 extern Slot D_80105AE0[];
 extern Point D_801077FC;
-extern FieldThreshold D_800FF610[];
+extern FieldThreshold g_field_group_bounds[];
 
 extern s32 D_800F2278;
 extern s32 D_800F227C;
@@ -90,10 +90,10 @@ extern s32 D_800F2280;
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
-extern s32 D_800FE754;
-extern s32 D_800FF650;
-extern s32 D_8010AE4C;
-extern s32 D_8010AE50;
+extern s32 g_field_active_group;
+extern s32 g_field_group_bounds_count;
+extern s32 g_field_camera_target_x;
+extern s32 g_field_camera_target_z;
 extern s32 D_8010AE58;
 extern s32 D_8010AE60;
 extern s32 D_8010AE68;
@@ -101,8 +101,8 @@ extern s32 D_8010AE6C;
 extern s32 D_8010AE70;
 extern s32 D_8010AE7C;
 extern s32 D_8010AE80;
-extern s32 D_8010D010;
-extern s32 D_8010D014;
+extern s32 g_field_camera_follow_x;
+extern s32 g_field_camera_follow_z;
 
 /**
  * @brief Update the actor-derived target and approach each coordinate by at most 0x800.
@@ -123,7 +123,7 @@ void func_80091BC8(void)
     index = 1;
     do
     {
-        actor = &D_800FDF58[index];
+        actor = &g_field_actors[index];
         slot = &D_80105AE0[index];
         if ((actor->presence != 0xFF) && !(slot->flags & 0x23E4))
         {
@@ -142,13 +142,13 @@ void func_80091BC8(void)
     } while (index >= 0);
     if (count != 0)
     {
-        D_8010AE4C = target_x;
-        D_8010AE50 = target_z;
+        g_field_camera_target_x = target_x;
+        g_field_camera_target_z = target_z;
     }
 
     {
-        s32 target = D_8010AE4C;
-        s32 current = D_8010D010;
+        s32 target = g_field_camera_target_x;
+        s32 current = g_field_camera_follow_x;
 
         if (target != current)
         {
@@ -157,12 +157,12 @@ void func_80091BC8(void)
 
             if (magnitude < 0x800)
             {
-                D_8010D010 = target;
+                g_field_camera_follow_x = target;
             }
             else
             {
                 s32 value;
-                s32 *write_position = &D_8010D010;
+                s32 *write_position = &g_field_camera_follow_x;
 
                 if (delta < 0)
                 {
@@ -178,8 +178,8 @@ void func_80091BC8(void)
     }
 
     {
-        s32 target = D_8010AE50;
-        s32 current = D_8010D014;
+        s32 target = g_field_camera_target_z;
+        s32 current = g_field_camera_follow_z;
 
         if (target != current)
         {
@@ -188,12 +188,12 @@ void func_80091BC8(void)
 
             if (magnitude < 0x800)
             {
-                D_8010D014 = target;
+                g_field_camera_follow_z = target;
             }
             else
             {
                 s32 value;
-                s32 *write_position = &D_8010D014;
+                s32 *write_position = &g_field_camera_follow_z;
 
                 if (delta < 0)
                 {
@@ -231,8 +231,8 @@ void func_80091D7C(void)
     s32 clamp_z;
 
     func_80091BC8();
-    follow_x = D_8010D010;
-    follow_z = D_8010D014;
+    follow_x = g_field_camera_follow_x;
+    follow_z = g_field_camera_follow_z;
     func_800922B8();
     func_80092200();
     offset.x = 0;
@@ -325,7 +325,7 @@ void func_80092124(void)
     s32 lower_bound;
 
     camera = (FieldCamera*)0x801ED480;
-    camera_mode = D_800FE754;
+    camera_mode = g_field_active_group;
     if (camera_mode == 0)
     {
         D_8010AE6C = 0;
@@ -334,12 +334,12 @@ void func_80092124(void)
         return;
     }
 
-    if (D_800FF650 < camera_mode)
+    if (g_field_group_bounds_count < camera_mode)
     {
         goto camera_bounds;
     }
 
-    camera_thresholds = D_800FF610;
+    camera_thresholds = g_field_group_bounds;
     threshold_index = camera_mode - 1;
     threshold = &camera_thresholds[threshold_index];
     if (threshold->span < SCREEN_WIDTH)

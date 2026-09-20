@@ -28,7 +28,7 @@ typedef struct
     s32 flags;
 } FieldSceneResource;
 
-/** @brief Tile attributes copied from an actor description. */
+/** @brief Eight-byte action descriptor copied from an actor description. */
 typedef struct
 {
     u16 id;
@@ -41,11 +41,11 @@ typedef struct
             u8 high;
         } bytes;
     } flags;
-    u16 x;
-    u16 y;
-} FieldSceneTile;
+    u16 animation;
+    u16 requirement;
+} FieldSceneAction;
 
-/** @brief Actor image list and variable-length tile records in a scene file. */
+/** @brief Actor image list and variable-length action records in a scene file. */
 typedef struct
 {
     u8 unknown_0x00;
@@ -53,9 +53,9 @@ typedef struct
     u8 images[6];
     u16 palette;
     u16 unknown_0x0a;
-    u16 tile_count;
+    u16 action_count;
     u16 unknown_0x0e;
-    FieldSceneTile tiles[1];
+    FieldSceneAction actions[1];
 } FieldSceneActorDescription;
 
 /** @brief TIM block containing its length, VRAM rectangle, and pixel words. */
@@ -329,29 +329,29 @@ void field_seek_scene_resource(s32 scene_selector)
 /**
  * @brief Record the parameters for a pending scene change.
  * @param scene_id Scene id (with the high-bit mode flag preserved).
- * @param context_id Field context id.
+ * @param object_id Field object selected for the render context.
  * @param spawn_id Spawn id.
- * @param primary_layout Primary layout selector.
- * @param layout_option Layout option.
- * @param secondary_layout Secondary layout selector.
+ * @param music_id Primary music resource; -1 retains music, -2 loads the fixed sequence.
+ * @param sound_bank_id Sound-bank resource; -1 clears its header, -2 retains it.
+ * @param secondary_music_id Secondary music resource, or -1 to retain it.
  */
-void field_set_scene_parameters(s32 scene_id, s32 context_id, u32 spawn_id, s32 primary_layout, s32 layout_option, s32 secondary_layout)
+void field_set_scene_parameters(s32 scene_id, s32 object_id, u32 spawn_id, s32 music_id, s32 sound_bank_id, s32 secondary_music_id)
 {
-    extern s32 D_80115888;
-    extern s32 D_80115898;
-    extern s32 D_8011589C;
-    extern s32 D_801178B0;
-    extern s32 D_801178BC;
-    extern s32 D_801178C0;
+    extern s32 g_field_pending_spawn_id;
+    extern s32 g_field_pending_music_id;
+    extern s32 g_field_pending_secondary_music_id;
+    extern s32 g_field_pending_scene_id;
+    extern s32 g_field_pending_object_id;
+    extern s32 g_field_pending_sound_bank_id;
     extern s32 g_field_scene_request_pending;
 
-    D_801178B0 = scene_id;
-    D_801178BC = context_id;
-    D_80115888 = spawn_id;
-    D_80115898 = primary_layout;
+    g_field_pending_scene_id = scene_id;
+    g_field_pending_object_id = object_id;
+    g_field_pending_spawn_id = spawn_id;
+    g_field_pending_music_id = music_id;
     g_field_scene_request_pending = 1;
-    D_801178C0 = layout_option;
-    D_8011589C = secondary_layout;
+    g_field_pending_sound_bank_id = sound_bank_id;
+    g_field_pending_secondary_music_id = secondary_music_id;
 }
 
 /**
@@ -399,43 +399,45 @@ void field_update_scene(void)
     void func_800B0094();
     void func_800B01FC();
     void func_800B34D0();
-    extern s32 D_800473F0;
-    extern u8 D_800EB0A4[];
-    extern u8 D_800EB254[];
-    extern s32 D_800F22B0;
-    extern u8 D_800FDF58[];
-    extern u8 D_800FE054[];
-    extern s32 D_800FE754;
-    extern u8 D_800FF610[];
-    extern s32 D_800FF650;
-    extern s32 D_8010A018;
-    extern s32 D_8010A02C;
-    extern s32 D_8010A030;
-    extern u8 D_8010A038[];
-    extern s32 D_8010AE48;
-    extern s32 D_8010AE4C;
-    extern s32 D_8010AE50;
-    extern s32 D_8010D010;
-    extern s32 D_8010D014;
+    extern s32 g_field_scene_data_size;
+    extern u8 g_field_direction_animation_modes[];
+    extern u8 g_field_direction_offsets[];
+    extern s32 g_field_render_context;
+    extern u8 g_field_actors[];
+    extern u8 g_field_scene_actors[];
+    extern s32 g_field_active_group;
+    extern u8 g_field_group_bounds[];
+    extern s32 g_field_group_bounds_count;
+    extern s32 g_field_event_scripts;
+    extern s32 g_field_actor_scripts;
+    extern s32 g_field_scene_record_table;
+    extern u8 g_field_resource_actions[];
+    extern s32 g_field_hide_actor_panels;
+    extern s32 g_field_camera_target_x;
+    extern s32 g_field_camera_target_z;
+    extern s32 g_field_camera_follow_x;
+    extern s32 g_field_camera_follow_z;
+    /* TODO: Script command 0x44 selects alternate party control and triple HP. */
     extern s32 D_8010D020;
-    extern s32 D_8010D028;
-    extern u8 D_8010D088[];
-    extern s32 D_80115888;
-    extern s32 D_8011588C;
+    extern s32 g_field_scene_contact_latched;
+    extern u8 g_field_scene_data_buffer[];
+    extern s32 g_field_pending_spawn_id;
+    extern s32 g_field_song_volume;
+    /* TODO: Multiple-image resource flag also raises ability growth from 1 to 4. */
     extern s32 D_80115890;
-    extern s32 D_80115894;
-    extern s32 D_80115898;
-    extern s32 D_8011589C;
-    extern s32 D_801158A0;
-    extern s32 D_801158A8;
-    extern s32 D_801178B0;
-    extern s32 D_801178B4;
-    extern s32 D_801178BC;
-    extern s32 D_801178C0;
-    extern u32 D_801178CC;
-    extern s32 D_801178D0;
-    extern u8* D_801178D4;
-    extern s32 D_80122908;
+    extern s32 g_field_preserve_entry_music;
+    extern s32 g_field_pending_music_id;
+    extern s32 g_field_pending_secondary_music_id;
+    extern s32 g_field_scene_mode_bit;
+    extern s32 g_field_previous_song_volume;
+    extern s32 g_field_pending_scene_id;
+    extern s32 g_field_party_palette_index;
+    extern s32 g_field_pending_object_id;
+    extern s32 g_field_pending_sound_bank_id;
+    extern u32 g_field_scene_portrait_count;
+    extern s32 g_field_scene_portraits;
+    extern u8* g_field_scene_strings;
+    extern s32 g_field_dialog_item_count;
 
     extern s32 g_field_audio_timer;
     extern s32 g_field_resource_cursor;
@@ -455,10 +457,10 @@ void field_update_scene(void)
     u8* layout_base;
     u16* persistent_map;
     s32 actor_end;
-    s32 context_id;
+    s32 object_id;
     s32 spawn_id;
-    s32 layout_option;
-    s32 tile_offset;
+    s32 sound_bank_id;
+    s32 action_offset;
     u8* scene_buffer;
     volatile FieldTransitionController* controller;
     u8* unused_actors;
@@ -474,33 +476,33 @@ void field_update_scene(void)
     s32 direction_flag;
     s32 first_image;
     s32 scene_id;
-    s32 tile_count;
-    s32 inherited_tile_count;
+    s32 action_count;
+    s32 inherited_action_count;
     s32 previous_mode;
     s32 resource_id;
     s32 initial_x;
     s32 saved_scene_id;
     s32 image_palette;
-    s32 tile_index;
-    s32 inherited_tile_index;
+    s32 action_index;
+    s32 inherited_action_index;
     s32 resource_offset;
     s32 image_index;
     s32 copy_index;
     s32 image_count;
     s32 actor_index;
-    s32 tile_destination_offset;
+    s32 action_destination_offset;
     u8* resource_base;
-    u8* tile_base;
+    u8* action_base;
     u8* spacing_base;
     u8* direction_base;
-    s32 inherited_tile_destination_offset;
+    s32 inherited_action_destination_offset;
     s8 actor_mode;
     s32 palette_index;
-    FieldSceneTile* tile_ids;
-    FieldSceneTile* inherited_tile_ids;
+    FieldSceneAction* action_ids;
+    FieldSceneAction* inherited_action_ids;
     u8* section_20;
     u8* section_04;
-    u32 animation_count;
+    u32 portrait_count;
     u8* section_08;
     u8* section_0c;
     u8* section_10;
@@ -508,7 +510,7 @@ void field_update_scene(void)
     u8* second_section_source;
     u8* third_section_source;
     u8* fourth_section_source;
-    u8* animation_source;
+    u8* portrait_source;
     u8* resource_output;
     u8* image_scan;
     u8* image_cursor;
@@ -516,17 +518,17 @@ void field_update_scene(void)
     u8 second_section_byte;
     u8 third_section_byte;
     u8 fourth_section_byte;
-    u8 animation_byte;
+    u8 portrait_byte;
     u8 image_id;
     FieldSceneResource* resource_fields;
-    FieldSceneTile* tile;
-    FieldSceneTile* inherited_tile;
+    FieldSceneAction* action;
+    FieldSceneAction* inherited_action;
     FieldSceneResource* resource;
     FieldSceneResource* inherited_resource;
     FieldSceneActorDescription* description;
     FieldSceneResource* previous_resource;
-    FieldSceneTile* tile_fields;
-    FieldSceneTile* inherited_tile_fields;
+    FieldSceneAction* action_fields;
+    FieldSceneAction* inherited_action_fields;
     s32* geometry_offsets;
 
     controller = (volatile FieldTransitionController*)0x801ED600;
@@ -540,27 +542,27 @@ void field_update_scene(void)
         if (g_field_audio_timer != 0)
         {
             fade_out_current_song();
-            if (D_80115898 == -1)
+            if (g_field_pending_music_id == -1)
             {
                 func_800A380C();
-                akao_cmd_c1(0, 1, D_8011588C);
+                akao_cmd_c1(0, 1, g_field_song_volume);
             }
             g_field_audio_timer = 0;
         }
         field_prepare_transition_tiles();
         field_upload_transition_tiles();
-        scene_id = D_801178B0;
+        scene_id = g_field_pending_scene_id;
         g_field_scene_request_pending = 0;
-        context_id = D_801178BC;
-        spawn_id = D_80115888;
-        layout_option = D_801178C0;
+        object_id = g_field_pending_object_id;
+        spawn_id = g_field_pending_spawn_id;
+        sound_bank_id = g_field_pending_sound_bank_id;
         DrawSync(0);
-        previous_mode = D_801158A0;
-        D_801158A0 = scene_id & 0x8000;
+        previous_mode = g_field_scene_mode_bit;
+        g_field_scene_mode_bit = scene_id & 0x8000;
         scene_id = scene_id & 0x7FFF;
-        if (D_80115898 != -1)
+        if (g_field_pending_music_id != -1)
         {
-            if (D_80115894 == 0)
+            if (g_field_preserve_entry_music == 0)
             {
                 akao_cmd_c1(0, 0x3C, 0);
             }
@@ -571,14 +573,14 @@ void field_update_scene(void)
         cdrom_wait_queue_empty();
         field_upload_transition_tiles();
         g_scene_mode = scene_id;
-        D_800FE754 = 0;
+        g_field_active_group = 0;
         D_8010D020 = 0;
         func_800B01FC();
         func_800A6204();
         akao_cmd_f1();
         field_initialize_actor_system();
         field_upload_transition_tiles();
-        initial_position = (FieldSceneActorPosition*)D_800FDF58;
+        initial_position = (FieldSceneActorPosition*)g_field_actors;
         initial_x = 0xA000;
         do
         {
@@ -589,19 +591,19 @@ void field_update_scene(void)
             actor_index += 1;
             initial_x += 0x2800;
         } while (actor_index < 3);
-        if (previous_mode != D_801158A0)
+        if (previous_mode != g_field_scene_mode_bit)
         {
-            func_800A35F4(D_801158A0 == 0);
+            func_800A35F4(g_field_scene_mode_bit == 0);
         }
         field_upload_transition_tiles();
-        list_output = D_800FF610;
-        D_80122908 = 0;
+        list_output = g_field_group_bounds;
+        g_field_dialog_item_count = 0;
         scene_cursor = scene_buffer + S32_AT(scene_buffer, 0x14);
         list_header = scene_buffer + S32_AT(scene_buffer, 0x24);
         list_source = list_header + 4;
         actor_index = S32_AT(list_header, 0);
         actor_description_base = scene_cursor;
-        D_800FF650 = actor_index;
+        g_field_group_bounds_count = actor_index;
         geometry_base = scene_buffer + S32_AT(scene_buffer, 0x18);
         image_base = scene_buffer + S32_AT(scene_buffer, 0x1C);
         layout_base = scene_buffer + S32_AT(scene_buffer, 0x00);
@@ -621,9 +623,9 @@ void field_update_scene(void)
                 list_output += 4;
             } while (actor_index != 0);
         }
-        resource_output = D_8010D088;
+        resource_output = g_field_scene_data_buffer;
         section_source = section_08;
-        D_801178D4 = D_8010D088;
+        g_field_scene_strings = g_field_scene_data_buffer;
         if (section_source != section_0c)
         {
             do
@@ -635,7 +637,7 @@ void field_update_scene(void)
             } while (section_source != section_0c);
         }
         second_section_source = section_04;
-        D_8010A018 = (s32)(resource_output + 3) & ~3;
+        g_field_event_scripts = (s32)(resource_output + 3) & ~3;
         if (second_section_source != section_08)
         {
             do
@@ -647,7 +649,7 @@ void field_update_scene(void)
             } while (second_section_source != section_08);
         }
         third_section_source = section_0c;
-        D_8010A02C = (s32)(resource_output + 3) & ~3;
+        g_field_actor_scripts = (s32)(resource_output + 3) & ~3;
         if (third_section_source != section_10)
         {
             do
@@ -659,7 +661,7 @@ void field_update_scene(void)
             } while (third_section_source != section_10);
         }
         fourth_section_source = section_10;
-        D_8010A030 = (s32)(resource_output + 3) & ~3;
+        g_field_scene_record_table = (s32)(resource_output + 3) & ~3;
         if (fourth_section_source != scene_cursor)
         {
             do
@@ -670,12 +672,12 @@ void field_update_scene(void)
                 resource_output += 1;
             } while (fourth_section_source != scene_cursor);
         }
-        animation_source = section_20 + 4;
+        portrait_source = section_20 + 4;
         actor_index = 0;
-        animation_count = U32_AT(section_20, 0);
-        D_801178D0 = (s32)(resource_output + 3) & ~3;
-        D_801178CC = animation_count;
-        if (animation_count != 0)
+        portrait_count = U32_AT(section_20, 0);
+        g_field_scene_portraits = (s32)(resource_output + 3) & ~3;
+        g_field_scene_portrait_count = portrait_count;
+        if (portrait_count != 0)
         {
             do
             {
@@ -683,25 +685,25 @@ void field_update_scene(void)
                 do
                 {
                     copy_index += 1;
-                    animation_byte = *animation_source;
-                    animation_source += 1;
-                    *resource_output = animation_byte;
+                    portrait_byte = *portrait_source;
+                    portrait_source += 1;
+                    *resource_output = portrait_byte;
                     resource_output += 1;
                 } while (copy_index < 0x4A0);
                 actor_index += 1;
-            } while ((u32)actor_index < (u32)D_801178CC);
+            } while ((u32)actor_index < (u32)g_field_scene_portrait_count);
         }
-        D_800473F0 = resource_output - D_8010D088;
-        D_801158A8 = D_8011588C;
-        D_8011588C = (s32)U16_AT(scene_cursor, 0x0);
-        D_801178B4 = (s32)U16_AT(scene_cursor, 0x2);
+        g_field_scene_data_size = resource_output - g_field_scene_data_buffer;
+        g_field_previous_song_volume = g_field_song_volume;
+        g_field_song_volume = (s32)U16_AT(scene_cursor, 0x0);
+        g_field_party_palette_index = (s32)U16_AT(scene_cursor, 0x2);
         scene_cursor += 4;
         field_set_party_palettes();
         actor_index = 3;
         field_initialize_actor_parts((u16)U16_AT(scene_cursor, 0) >> 0xF);
-        D_8010AE48 = 0;
+        g_field_hide_actor_panels = 0;
         field_upload_transition_tiles();
-        unused_actors = D_800FE054;
+        unused_actors = g_field_scene_actors;
         *persistent_map = U16_AT(scene_cursor, 0) & 0x7FFF;
         scene_cursor += 2;
         actor_end = U16_AT(scene_cursor, 0) + 3;
@@ -720,7 +722,7 @@ void field_update_scene(void)
         {
             geometry_offsets = (s32*)geometry_base;
             resource_offset = 0x3C;
-            tile_offset = 0x4B0;
+            action_offset = 0x4B0;
             do
             {
                 image_count = 0;
@@ -771,29 +773,29 @@ void field_update_scene(void)
                     field_copy_scene_geometry((s32*)(geometry_base + geometry_offsets[0]), (s32*)(geometry_base + geometry_offsets[1]));
                     resource->geometry_end = (s32)g_field_resource_cursor;
                     resource->flags = (s32)(resource->flags | 2);
-                    tile_ids = description->tiles;
+                    action_ids = description->actions;
                     resource->unknown_0x0e = (u16)description->unknown_0x0a;
-                    tile_count = description->tile_count;
-                    tile_index = 0;
-                    if (tile_count > 0)
+                    action_count = description->action_count;
+                    action_index = 0;
+                    if (action_count > 0)
                     {
-                        tile_fields = description->tiles;
-                        tile_destination_offset = tile_offset;
+                        action_fields = description->actions;
+                        action_destination_offset = action_offset;
                         do
                         {
-                            tile_base = D_8010A038;
-                            tile = (FieldSceneTile*)(tile_destination_offset + tile_base);
-                            tile->flags.word = (u16)((tile->flags.word & 0xFBFF) | (tile_fields->flags.word & 0x400));
-                            tile->id = (u16)tile_ids->id;
-                            tile_destination_offset += 8;
-                            tile->flags.bytes.low = (u8)tile_fields->flags.word;
-                            tile_index += 1;
-                            tile->x = (u16)tile_fields->x;
-                            tile_ids++;
-                            tile->y = (u16)tile_fields->y;
-                            tile->flags.word = (u16)((tile->flags.word & 0xFCFF) | (tile_fields->flags.word & 0x300));
-                            tile_fields++;
-                        } while (tile_index < tile_count);
+                            action_base = g_field_resource_actions;
+                            action = (FieldSceneAction*)(action_destination_offset + action_base);
+                            action->flags.word = (u16)((action->flags.word & 0xFBFF) | (action_fields->flags.word & 0x400));
+                            action->id = (u16)action_ids->id;
+                            action_destination_offset += 8;
+                            action->flags.bytes.low = (u8)action_fields->flags.word;
+                            action_index += 1;
+                            action->animation = (u16)action_fields->animation;
+                            action_ids++;
+                            action->requirement = (u16)action_fields->requirement;
+                            action->flags.word = (u16)((action->flags.word & 0xFCFF) | (action_fields->flags.word & 0x300));
+                            action_fields++;
+                        } while (action_index < action_count);
                         image_index = 0;
                     }
                     else
@@ -819,29 +821,29 @@ void field_update_scene(void)
                     field_copy_scene_geometry((s32*)(geometry_base + geometry_offsets[0]), (s32*)(geometry_base + geometry_offsets[1]));
                     inherited_resource->geometry_end = (s32)g_field_resource_cursor;
                     inherited_resource->flags = (s32)(inherited_resource->flags | 2);
-                    inherited_tile_ids = description->tiles;
+                    inherited_action_ids = description->actions;
                     inherited_resource->unknown_0x0e = (u16)description->unknown_0x0a;
-                    inherited_tile_count = description->tile_count;
-                    inherited_tile_index = 0;
-                    if (image_count < inherited_tile_count)
+                    inherited_action_count = description->action_count;
+                    inherited_action_index = 0;
+                    if (image_count < inherited_action_count)
                     {
-                        inherited_tile_fields = description->tiles;
-                        inherited_tile_destination_offset = tile_offset;
+                        inherited_action_fields = description->actions;
+                        inherited_action_destination_offset = action_offset;
                         do
                         {
-                            tile_base = D_8010A038;
-                            inherited_tile = (FieldSceneTile*)((FieldSceneTile*)(inherited_tile_destination_offset + tile_base));
-                            inherited_tile->flags.word = (u16)((inherited_tile->flags.word & 0xFBFF) | (inherited_tile_fields->flags.word & 0x400));
-                            inherited_tile->id = (u16)inherited_tile_ids->id;
-                            inherited_tile_destination_offset += 8;
-                            inherited_tile->flags.bytes.low = (u8)inherited_tile_fields->flags.word;
-                            inherited_tile_index += 1;
-                            inherited_tile->x = (u16)inherited_tile_fields->x;
-                            inherited_tile_ids++;
-                            inherited_tile->y = (u16)inherited_tile_fields->y;
-                            inherited_tile->flags.word = (u16)((inherited_tile->flags.word & 0xFCFF) | (inherited_tile_fields->flags.word & 0x300));
-                            inherited_tile_fields++;
-                        } while (inherited_tile_index < inherited_tile_count);
+                            action_base = g_field_resource_actions;
+                            inherited_action = (FieldSceneAction*)((FieldSceneAction*)(inherited_action_destination_offset + action_base));
+                            inherited_action->flags.word = (u16)((inherited_action->flags.word & 0xFBFF) | (inherited_action_fields->flags.word & 0x400));
+                            inherited_action->id = (u16)inherited_action_ids->id;
+                            inherited_action_destination_offset += 8;
+                            inherited_action->flags.bytes.low = (u8)inherited_action_fields->flags.word;
+                            inherited_action_index += 1;
+                            inherited_action->animation = (u16)inherited_action_fields->animation;
+                            inherited_action_ids++;
+                            inherited_action->requirement = (u16)inherited_action_fields->requirement;
+                            inherited_action->flags.word = (u16)((inherited_action->flags.word & 0xFCFF) | (inherited_action_fields->flags.word & 0x300));
+                            inherited_action_fields++;
+                        } while (inherited_action_index < inherited_action_count);
                     }
                     DrawSync(0);
                     image_index = 0;
@@ -864,45 +866,45 @@ void field_update_scene(void)
                 geometry_offsets++;
                 resource_offset += 0x14;
                 actor_index += 1;
-                tile_offset += 0x190;
+                action_offset += 0x190;
                 scene_cursor += 4;
             } while (actor_index < (actor_end - 3));
         }
         field_upload_transition_tiles();
         func_80084630();
         field_load_scene_actors((s32*)layout_base);
-        if (D_80115898 != -1)
+        if (g_field_pending_music_id != -1)
         {
             func_800B0094(0);
-            if (D_80115894 == 0)
+            if (g_field_preserve_entry_music == 0)
             {
                 field_stop_song();
             }
-            if (D_80115898 != -2)
+            if (g_field_pending_music_id != -2)
             {
-                func_800A368C(D_80115898, 0);
-                if ((D_80115894 == 0) && (D_80115898 != -2))
+                func_800A368C(g_field_pending_music_id, 0);
+                if ((g_field_preserve_entry_music == 0) && (g_field_pending_music_id != -2))
                 {
                     func_800A380C();
                 }
             }
             else
             {
-                func_800A3728(D_80115898);
+                func_800A3728(g_field_pending_music_id);
             }
-            g_layout_flag = D_80115898;
+            g_layout_flag = g_field_pending_music_id;
         }
         else
         {
-            akao_cmd_c1(0, 0x3C, D_8011588C);
+            akao_cmd_c1(0, 0x3C, g_field_song_volume);
         }
-        if (D_8011589C != -1)
+        if (g_field_pending_secondary_music_id != -1)
         {
-            func_800A368C(D_8011589C, 1);
-            g_layout_sub_mode = D_8011589C;
+            func_800A368C(g_field_pending_secondary_music_id, 1);
+            g_layout_sub_mode = g_field_pending_secondary_music_id;
         }
         field_upload_transition_tiles();
-        if (D_80115894 != 0)
+        if (g_field_preserve_entry_music != 0)
         {
             g_field_audio_timer = 0xF;
         }
@@ -910,8 +912,8 @@ void field_update_scene(void)
         {
             g_field_audio_timer = 0;
         }
-        D_80115894 = 0;
-        if (D_801158A0 != 0)
+        g_field_preserve_entry_music = 0;
+        if (g_field_scene_mode_bit != 0)
         {
             func_800A3654();
         }
@@ -921,11 +923,11 @@ void field_update_scene(void)
         field_upload_transition_tiles();
         field_load_map(*persistent_map);
         field_upload_transition_tiles();
-        field_init_ctx(D_800F22B0, (u16)context_id);
+        field_init_ctx(g_field_render_context, (u16)object_id);
         field_upload_transition_tiles();
         field_text_reset_windows();
         func_80092394();
-        if (D_801158A0 != 0)
+        if (g_field_scene_mode_bit != 0)
         {
             func_800B34D0(0);
         }
@@ -938,9 +940,9 @@ void field_update_scene(void)
             spawn.h.y = 0;
             spawn.bits.direction = 0;
         }
-        spacing_base = D_800EB254;
-        direction_base = D_800EB0A4;
-        actor_position = (FieldSceneActorPosition*)D_800FDF58;
+        spacing_base = g_field_direction_offsets;
+        direction_base = g_field_direction_animation_modes;
+        actor_position = (FieldSceneActorPosition*)g_field_actors;
         actor_index = 0;
         do
         {
@@ -969,12 +971,12 @@ void field_update_scene(void)
         field_refresh_actor_collisions();
         func_8008C730();
         func_80091BC8();
-        D_8010D010 = D_8010AE4C;
-        D_8010D014 = D_8010AE50;
-        func_800A3BE8(layout_option);
-        g_layout_option = layout_option;
+        g_field_camera_follow_x = g_field_camera_target_x;
+        g_field_camera_follow_z = g_field_camera_target_z;
+        func_800A3BE8(sound_bank_id);
+        g_layout_option = sound_bank_id;
         field_upload_transition_tiles();
-        D_8010D028 = 0;
+        g_field_scene_contact_latched = 0;
         field_initialize_actor_slots();
         field_clear_actor_slots();
         func_80067AA4();
@@ -982,11 +984,11 @@ void field_update_scene(void)
         func_800A255C();
         func_80086F20();
         saved_scene_id = g_scene_mode;
-        if (D_801158A0 != 0)
+        if (g_field_scene_mode_bit != 0)
         {
             saved_scene_id += 0x8000;
         }
-        func_800A8D10(saved_scene_id, context_id, g_layout_flag, spawn_id, g_layout_option, g_layout_sub_mode);
+        func_800A8D10(saved_scene_id, object_id, g_layout_flag, spawn_id, g_layout_option, g_layout_sub_mode);
         func_800A54D0();
         func_8008C7A8();
         func_800A2DFC();
@@ -1096,15 +1098,15 @@ static void field_copy_scene_geometry(s32* src, s32* end)
 static void field_load_scene_actors(s32* data)
 {
 
-    extern FieldLoadedActor D_800FE054[];
+    extern FieldLoadedActor g_field_scene_actors[];
     extern FieldLoadedActorSlot D_80106194[];
     extern FieldLoadedActorVisual D_800FE3A0[];
     extern s32 D_800FE774;
-    extern s32 D_801178B0;
+    extern s32 g_field_pending_scene_id;
     extern void field_initialize_actor_record(s32, s32);
     extern void field_restart_actor_animation(FieldLoadedActor*);
 
-    FieldLoadedActor* actor = D_800FE054;
+    FieldLoadedActor* actor = g_field_scene_actors;
     FieldLoadedActorSlot* slot = D_80106194;
     FieldActionRequest* entry = (FieldActionRequest*)(data + 1);
     s32 active = 0;
@@ -1134,7 +1136,7 @@ static void field_load_scene_actors(s32* data)
                     actor->presence = 0;
                 }
                 actor->mode.bits.group = (u32)entry->control.flags >> 28;
-                if ((D_801178B0 & 0x7FFF) == 0x13D)
+                if ((g_field_pending_scene_id & 0x7FFF) == 0x13D)
                 {
                     actor->mode.bits.group = 0;
                 }
@@ -1193,7 +1195,7 @@ static void field_load_scene_actors(s32* data)
 static void field_refresh_actor_collisions(void)
 {
 
-    extern FieldCollisionActor D_800FDF58[];
+    extern FieldCollisionActor g_field_actors[];
     extern FieldCollisionSlot D_80105AE0[];
     extern s32 func_8005B6AC(FieldCollisionRequest*);
 
@@ -1202,7 +1204,7 @@ static void field_refresh_actor_collisions(void)
     FieldCollisionBounds* bounds = (FieldCollisionBounds*)0x801ED400;
     FieldCollisionRequest* mover = (FieldCollisionRequest*)0x1F800000;
     s32 i, x, z;
-    actor = D_800FDF58;
+    actor = g_field_actors;
     slot = D_80105AE0;
     for (i = 0; i < 13; i++, slot++, actor++)
     {
@@ -1321,20 +1323,20 @@ void field_set_party_palettes(void)
     extern FieldPaletteResource g_field_resource_entries[];
     extern FieldPartyResource D_800FD818[];
     extern u16 D_800EB2B4[];
-    extern s32 D_801178B4;
+    extern s32 g_field_party_palette_index;
 
     s32 i;
 
-    if (D_801178B4 >= 6)
+    if (g_field_party_palette_index >= 6)
     {
-        D_801178B4 = 5;
+        g_field_party_palette_index = 5;
     }
     i = 0;
     do
     {
         if (D_800FD818[i].resource_kind == 0)
         {
-            g_field_resource_entries[i].palette = D_800EB2B4[D_801178B4];
+            g_field_resource_entries[i].palette = D_800EB2B4[g_field_party_palette_index];
         }
         else
         {
@@ -1345,7 +1347,7 @@ void field_set_party_palettes(void)
 }
 
 /**
- * @brief Refresh the two field fade tiles in VRAM and flip the source bank.
+ * @brief Refresh the two field fade actions in VRAM and flip the source bank.
  */
 static void field_upload_transition_tiles(void)
 {
@@ -1383,7 +1385,7 @@ static void field_upload_transition_tiles(void)
 }
 
 /**
- * @brief Replace black pixels in the transition tiles for a white fade target.
+ * @brief Replace black pixels in the transition actions for a white fade target.
  */
 static void field_prepare_transition_tiles(void)
 {

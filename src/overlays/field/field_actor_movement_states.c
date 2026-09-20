@@ -195,7 +195,7 @@ typedef struct
     u8 pad2[0x268 - 0x2];
 } Entry268;
 
-/** @brief D_8010A038 animation record (stride 0x190); unk5A is written as both a u16 and its low byte. */
+/** @brief g_field_resource_actions animation record (stride 0x190); unk5A is written as both a u16 and its low byte. */
 typedef struct
 {
     u16 unk0;
@@ -219,7 +219,7 @@ typedef struct
 
 extern Slot23C D_80105AE0[];
 extern Entry268 D_800FD818[];
-extern Anim190 D_8010A038[];
+extern Anim190 g_field_resource_actions[];
 
 void field_start_actor_animation();
 void field_restart_actor_animation();
@@ -236,12 +236,12 @@ void func_800A2DD8(u8 index);
 
 /** @brief Program the animation record for object @p idx (fields 0x58..0x5E). */
 #define SET_ANIM(idx, v58, v5C, v5E)                                  \
-    D_8010A038[idx].unk5A.h &= 0xFBFF;                                \
-    D_8010A038[idx].unk58 = v58;                                      \
-    D_8010A038[idx].unk5A.b.lo = 0xFF;                                \
-    D_8010A038[idx].unk5C = v5C;                                      \
-    D_8010A038[idx].unk5E = v5E;                                      \
-    D_8010A038[idx].unk5A.h &= 0xFCFF;
+    g_field_resource_actions[idx].unk5A.h &= 0xFBFF;                                \
+    g_field_resource_actions[idx].unk58 = v58;                                      \
+    g_field_resource_actions[idx].unk5A.b.lo = 0xFF;                                \
+    g_field_resource_actions[idx].unk5C = v5C;                                      \
+    g_field_resource_actions[idx].unk5E = v5E;                                      \
+    g_field_resource_actions[idx].unk5A.h &= 0xFCFF;
 
 /** @brief Interpolated step offset (unk37..unk38 scaled by unk34/unk35), in 1/256 units. */
 #define STEP_OFFSET(rec) \
@@ -252,7 +252,7 @@ void func_800A2DD8(u8 index);
  *
  * With no pending flags in unk1C, first resolves the 0x3D transition when the
  * current animation matches, then dispatches on the opcode (unk21 & 0x7F) by
- * trigger kind (func_80091728 kinds 3, 1/0, 2), programming the D_8010A038
+ * trigger kind (func_80091728 kinds 3, 1/0, 2), programming the g_field_resource_actions
  * animation record and queueing the follow-up state via func_8008E690.
  *
  * @param rec Field actor record.
@@ -278,7 +278,7 @@ s32 func_80092C98(FieldRec *rec)
         if (tmp == 0x3D)
         {
             anim = func_80091914(rec, rec->unk3A);
-            if (D_8010A038[rec->unk3A].unk8 == tmp && anim == 0x185)
+            if (g_field_resource_actions[rec->unk3A].unk8 == tmp && anim == 0x185)
             {
                 rec->unk2A = anim;
                 rec->unk4 -= STEP_OFFSET(rec);
@@ -287,7 +287,7 @@ s32 func_80092C98(FieldRec *rec)
                 rec->unk2A = 0x9B;
                 return;
             }
-            else if (D_8010A038[rec->unk3A].unk0 == 0x3D && anim == 0x85)
+            else if (g_field_resource_actions[rec->unk3A].unk0 == 0x3D && anim == 0x85)
             {
                 rec->unk2A = anim;
                 rec->unk4 -= STEP_OFFSET(rec);
@@ -421,7 +421,7 @@ s32 func_80092C98(FieldRec *rec)
             s32 actor_offset;
             s32 track_offset;
             s32 offset;
-            base = (s32)D_8010A038;
+            base = (s32)g_field_resource_actions;
             track_offset = tmp * 8;
             actor_offset = rec->unk3A * 0x190;
             offset = track_offset + actor_offset + base;
@@ -439,7 +439,7 @@ s32 func_80092C98(FieldRec *rec)
             s32 track_offset;
             s32 actor_offset;
             s32 offset;
-            base = (s32)D_8010A038;
+            base = (s32)g_field_resource_actions;
             track_offset = tmp * 8;
             actor_offset = rec->unk3A * 0x190;
             offset = track_offset + actor_offset + base;

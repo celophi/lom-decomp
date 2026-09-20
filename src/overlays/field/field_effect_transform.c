@@ -146,7 +146,7 @@ extern s32 D_800F22A4;
 extern s32 D_800F22A8;
 extern u8 D_800EC37C[];
 extern u16 D_800EC388[];
-extern Struct_D800FDF58 D_800FDF58[];
+extern Struct_D800FDF58 g_field_actors[];
 extern Struct_D80105AE0 D_80105AE0[];
 extern Struct_D80105768 D_80105768;
 extern FieldActorState g_field_actor_slots[80];
@@ -565,7 +565,7 @@ s32 field_build_effect_part_matrix(Struct_D800FDF58 *rec, FieldActorPartDef *par
 
     if (part->unk34 & 0x20000)
     {
-        if (!(D_800FDF58[actor->unk228].unk21 & 0x80))
+        if (!(g_field_actors[actor->unk228].unk21 & 0x80))
         {
             angle = -angle;
         }
@@ -1205,9 +1205,9 @@ s32 func_8007E754(FieldActorState *actor, FieldActorPartDef *part)
 
     if (part->unk24 & 0x01000000)
     {
-        delta.vx = (D_800FDF58[actor2->unk229[g_field_track_index]].unk0 - D_800FDF58[actor2->unk228].unk0) >> 8;
-        delta.vy = (D_800FDF58[actor2->unk229[g_field_track_index]].unk4 - D_800FDF58[actor2->unk228].unk4) >> 8;
-        delta.vz = (D_800FDF58[actor2->unk229[g_field_track_index]].unk8 - D_800FDF58[actor2->unk228].unk8) >> 8;
+        delta.vx = (g_field_actors[actor2->unk229[g_field_track_index]].unk0 - g_field_actors[actor2->unk228].unk0) >> 8;
+        delta.vy = (g_field_actors[actor2->unk229[g_field_track_index]].unk4 - g_field_actors[actor2->unk228].unk4) >> 8;
+        delta.vz = (g_field_actors[actor2->unk229[g_field_track_index]].unk8 - g_field_actors[actor2->unk228].unk8) >> 8;
         gte_ldlvl(&delta);
         gte_sqr0();
         gte_stlvnl(&sqr);

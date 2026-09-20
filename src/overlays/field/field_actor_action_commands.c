@@ -20,7 +20,7 @@ typedef struct
 } RecB800FDF58;
 
 extern RecA80105AE0 D_80105AE0[];
-extern RecB800FDF58 D_800FDF58[];
+extern RecB800FDF58 g_field_actors[];
 
 /**
  * @see decomp.me (100%)
@@ -32,7 +32,7 @@ s32 func_80089A68(s32 arg0)
     RecB800FDF58 *found;
     s32 i;
 
-    rb = D_800FDF58;
+    rb = g_field_actors;
     ra = D_80105AE0;
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
@@ -112,7 +112,7 @@ s32 func_80089AE4(s32 arg0, s32 arg1)
     RecordB80089AE4 *found;
     s32 i;
 
-    rb = ((RecordB80089AE4 *)D_800FDF58);
+    rb = ((RecordB80089AE4 *)g_field_actors);
     ra = ((StateB80089AE4 *)D_80105AE0);
     for (i = 0; i < 0xD; i++, ra++, rb++)
     {
@@ -164,7 +164,7 @@ typedef struct
     u8 pad18[0x224];
 } SlotA;
 
-/** @brief Per-actor record in ((EntryB *)D_800FDF58); stride 0x54. */
+/** @brief Per-actor record in ((EntryB *)g_field_actors); stride 0x54. */
 typedef struct
 {
     u8 pad0[0x3A];
@@ -203,7 +203,7 @@ s32 func_80089BE8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     SlotA *e;
     s32 i;
 
-    scan = ((EntryB *)D_800FDF58);
+    scan = ((EntryB *)g_field_actors);
     e = ((SlotA *)D_80105AE0);
     i = 0;
 loop:
@@ -353,7 +353,7 @@ s32 func_80089D44(s32 key, s32 requested_state, s32 animation, s32 event_id)
 
     camera = (CameraPosition *)0x801ED480;
     state = requested_state;
-    scan_record = ((FieldRecord *)D_800FDF58);
+    scan_record = ((FieldRecord *)g_field_actors);
     lookup_state = ((FieldState *)D_80105AE0);
     for (i = 0; i < 0xD; i++, lookup_state++, scan_record++)
 
@@ -420,7 +420,7 @@ body:
         slot = 0;
         unavailable = 0xFF;
         scan_state = ((FieldState *)D_80105AE0);
-        candidate = ((FieldRecord *)D_800FDF58);
+        candidate = ((FieldRecord *)g_field_actors);
         for (; slot < 3; scan_state++, slot++, candidate++)
 
         {
@@ -550,8 +550,8 @@ void func_8008A0B0(CommandView5_FieldRecord *record, s32 source_index, s32 updat
         (state_z >= map_depth))
     {
         (&((CommandView5_FieldState *)D_80105AE0)[record->unk3a])->unk1a6 = 0;
-        (&((CommandView5_FieldState *)D_80105AE0)[record->unk3a])->unk1ac = ((CommandView5_FieldRecord *)D_800FDF58)[source_index].unk0;
-        (&((CommandView5_FieldState *)D_80105AE0)[record->unk3a])->unk1b0 = ((CommandView5_FieldRecord *)D_800FDF58)[source_index].unk8;
+        (&((CommandView5_FieldState *)D_80105AE0)[record->unk3a])->unk1ac = ((CommandView5_FieldRecord *)g_field_actors)[source_index].unk0;
+        (&((CommandView5_FieldState *)D_80105AE0)[record->unk3a])->unk1b0 = ((CommandView5_FieldRecord *)g_field_actors)[source_index].unk8;
         ((CommandView5_FieldState *)D_80105AE0)[record->unk3a].unk1a4 = 1;
     }
     else
@@ -576,8 +576,8 @@ void func_8008A0B0(CommandView5_FieldRecord *record, s32 source_index, s32 updat
         start.height = 0x10;
         goal.height = 0x10;
         func_8006304C(&start);
-        D_80105B30[record->unk3a].unk0 = ((CommandView5_FieldRecord *)D_800FDF58)[source_index].unk0;
-        source = &((CommandView5_FieldRecord *)D_800FDF58)[source_index];
+        D_80105B30[record->unk3a].unk0 = ((CommandView5_FieldRecord *)g_field_actors)[source_index].unk0;
+        source = &((CommandView5_FieldRecord *)g_field_actors)[source_index];
         (&D_80105B30[record->unk3a])->unk4 = (s32) source->unk4;
         (&D_80105B30[record->unk3a])->unk8 = (s32) source->unk8;
         goal.x = source->unk0;
@@ -699,7 +699,7 @@ s32 func_8008A580(s32 key, s32 arg1)
     s32 *slot;
     s32 *table;
 
-    scan = ((FieldActorRecord *)D_800FDF58);
+    scan = ((FieldActorRecord *)g_field_actors);
     e = ((FieldActorSlot *)D_80105AE0);
     i = 0;
 loop:
@@ -914,7 +914,7 @@ s32 func_8008A840(s32 arg0, s32 arg1)
     State23C *base;
     s32 mask;
 
-    if ((((Rec54 *)D_800FDF58)[arg0].unk2A == 0x91) || (((Rec54 *)D_800FDF58)[arg0].unk2A == 0x87))
+    if ((((Rec54 *)g_field_actors)[arg0].unk2A == 0x91) || (((Rec54 *)g_field_actors)[arg0].unk2A == 0x87))
     {
         return 0;
     }
@@ -938,7 +938,7 @@ s32 func_8008A840(s32 arg0, s32 arg1)
     arg_block.unkC = ((State23C *)D_80105AE0)[arg1].unk14;
     if (arg0 < 2)
     {
-        arg_block.unk8 = (s32)((Rec54 *)D_800FDF58)[arg0].unk30;
+        arg_block.unk8 = (s32)((Rec54 *)g_field_actors)[arg0].unk30;
     }
     else
     {
@@ -1005,7 +1005,7 @@ s32 func_8008A9D8(s32 arg0, s32 arg1, s32 arg2)
     CommandView10_State23C *slot;
     CommandView10_ArgBlock arg_block;
 
-    if ((((CommandView10_Rec54 *)D_800FDF58)[arg0].unk2A != 0x91) && (((CommandView10_Rec54 *)D_800FDF58)[arg0].unk2A != 0x87))
+    if ((((CommandView10_Rec54 *)g_field_actors)[arg0].unk2A != 0x91) && (((CommandView10_Rec54 *)g_field_actors)[arg0].unk2A != 0x87))
     {
         base = ((CommandView10_State23C *)D_80105AE0);
         slot = &base[arg1];
@@ -1133,7 +1133,7 @@ s32 func_8008AB2C(s32 arg0, s32 arg1)
     Actor *actor;
     u8 *actor_base;
 
-    entry_cursor = ((Entry *)D_800FDF58);
+    entry_cursor = ((Entry *)g_field_actors);
     actor_cursor = ((Actor *)D_80105AE0);
     entry_count = 0;
 loop_1:

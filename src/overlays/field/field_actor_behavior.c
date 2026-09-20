@@ -107,7 +107,7 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
         s16 screen_x, screen_y;
     } MovementWork;
 
-    extern s32 D_800F22A0, D_800F22A4, D_800F22A8, D_800FE754, D_8010AE64, D_80122B20;
+    extern s32 D_800F22A0, D_800F22A4, D_800F22A8, g_field_active_group, D_8010AE64, D_80122B20;
     extern u8 D_8010AE84;
     extern MovementScale D_800FE3A0[];
     extern MovementSlot D_80105AE0[];
@@ -356,7 +356,7 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
             S32_AT(probe, 0x0) = (s32)collision->x;
             S32_AT(probe, 0x4) = (s32)S32_AT(movement_actor, 0x4);
             S32_AT(probe, 0x8) = (s32)collision->z;
-            if ((D_800FE754 != 0) && (func_8005B368(probe) != -1))
+            if ((g_field_active_group != 0) && (func_8005B368(probe) != -1))
             {
                 goto cancel_movement;
             }
@@ -498,7 +498,7 @@ void func_8008E690(E690Actor *actor)
     } Party;
 
     extern Slot D_80105AE0[];
-    extern Action D_8010A038[];
+    extern Action g_field_resource_actions[];
     extern Party D_800FD818[];
     extern Resource g_field_resource_entries[];
     extern s32 D_8010AE58;
@@ -535,7 +535,7 @@ void func_8008E690(E690Actor *actor)
             actor->state.word = actor->state.bytes[0];
             slot = &D_80105AE0[actor->unk3A];
             mode = slot->unk16F;
-            action = (Action *)(resource_offset + (s32)&D_8010A038[mode]);
+            action = (Action *)(resource_offset + (s32)&g_field_resource_actions[mode]);
             if (mode == 0xB)
             {
                 slot->unk16F = *(u8 *)&action->unk0;
@@ -679,7 +679,7 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
     } FieldMotionResource;
 
     extern FieldMotionResource g_field_resource_entries[];
-    extern s32 D_800EB0A4[];
+    extern s32 g_field_direction_animation_modes[];
     extern s32 D_800EB0C4[];
     extern s32 D_800EB0E4[];
     extern s32 rand(void);
@@ -803,7 +803,7 @@ void func_8008EBA4(FieldMotionRecord *record, s32 delta_x, s32 delta_z)
                 movement_direction -= 0x100;
             }
             direction_offset = movement_direction >> 5;
-            direction_table_address = (s32)D_800EB0A4;
+            direction_table_address = (s32)g_field_direction_animation_modes;
             direction_offset *= 4;
             direction_entry = (s32 *)(direction_table_address + direction_offset);
             if (record->animation != (*direction_entry + ((record->movement_flags & 1) * 5) + 5))
@@ -915,10 +915,10 @@ s32 func_8008EF0C(void* arg0)
     extern u8 D_800EB074;
     extern u8 D_800EB114;
     extern u8 D_800FD818;
-    extern u8 D_800FDF58;
+    extern u8 g_field_actors;
     extern u8 D_80105880;
     extern u8 D_80105AE0;
-    extern u8 D_8010A038;
+    extern u8 g_field_resource_actions;
     extern u8 D_8010A090;
     extern s32 D_8010AE54;
     extern u8 g_field_actor_slots;
@@ -1074,7 +1074,7 @@ s32 func_8008EF0C(void* arg0)
             goto block_37_cleanup;
         }
     block_37_record:
-        base37 = &D_800FDF58;
+        base37 = &g_field_actors;
         temp_a0 = (M2C_FIELD(arg0, u8*, 0x20) * 0x54) + base37;
         if (M2C_FIELD(temp_a0, u8*, 0x25) == 0xFF)
         {
@@ -1097,7 +1097,7 @@ s32 func_8008EF0C(void* arg0)
             {
                 if ((func_80091728(M2C_FIELD(arg0, u8*, 0x3A), 0U, arg0) != 0) && (func_80091728(M2C_FIELD(arg0, u8*, 0x3A), 1U, arg0) != 0))
                 {
-                    temp_a0_4 = &D_8010A038;
+                    temp_a0_4 = &g_field_resource_actions;
                     temp_v0_7 = (M2C_FIELD(arg0, u8*, 0x3B) * 0x190) + temp_a0_4;
                     var_s0 = func_800AD7DC(M2C_FIELD(temp_v0_7, u16*, 0), M2C_FIELD(temp_v0_7, u16*, 8));
                     temp_a0_3 = var_s0 * 2;
@@ -1644,7 +1644,7 @@ s32 func_8008EF0C(void* arg0)
         if (M2C_FIELD(arg0, s32*, 0x1C) & 0x1FF)
         {
             s32 row4 = M2C_FIELD(arg0, u8*, 0x3B) * 0x190;
-            var_s3 = (void*)(row4 - -(s32)((M2C_FIELD(((M2C_FIELD(arg0, u8*, 0x3A) * 0x23C) + base4), u8*, 0x16F) * 8) + &D_8010A038));
+            var_s3 = (void*)(row4 - -(s32)((M2C_FIELD(((M2C_FIELD(arg0, u8*, 0x3A) * 0x23C) + base4), u8*, 0x16F) * 8) + &g_field_resource_actions));
         }
         else
         {
@@ -1653,7 +1653,7 @@ s32 func_8008EF0C(void* arg0)
             {
                 {
                     s32 row4 = M2C_FIELD(arg0, u8*, 0x3B) * 0x190;
-                    var_s3 = (void*)(row4 - -(s32)((M2C_FIELD(temp_a0_9, u8*, 0x16F) * 8) + &D_8010A038));
+                    var_s3 = (void*)(row4 - -(s32)((M2C_FIELD(temp_a0_9, u8*, 0x16F) * 8) + &g_field_resource_actions));
                 }
             }
             else
@@ -1930,9 +1930,9 @@ s32 func_80090B38(s32 arg0, s32 *arg1)
         u8 pad17C[0x23C - 0x17C];
     } Actor;
 
-    extern Entry D_800FDF58[];
+    extern Entry g_field_actors[];
     extern Actor D_80105AE0[];
-    extern s32 D_800FE754;
+    extern s32 g_field_active_group;
     extern u8 D_80105880[];
 
     Entry *entry_base;
@@ -1966,9 +1966,9 @@ s32 func_80090B38(s32 arg0, s32 *arg1)
     if (arg0 > 0)
     {
         sentinel = 0xFF;
-        entry_base = D_800FDF58;
+        entry_base = g_field_actors;
         actor_base = D_80105AE0;
-        group = D_800FE754;
+        group = g_field_active_group;
         slot_base = D_80105880;
         var_t2 = var_a1;
         var_t4 = scratch;

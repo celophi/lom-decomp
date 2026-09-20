@@ -265,18 +265,18 @@ typedef struct
     u32 flags; /* 0x10 */
 } FieldResourceEntry;
 
-extern Struct_D800FDF58 D_800FDF58[];
+extern Struct_D800FDF58 g_field_actors[];
 extern Struct_D80105AE0 D_80105AE0[];
 extern D_800FD818_type D_800FD818[];
 extern FieldActorPartDef D_800FE3A0[];
 extern FieldActorState g_field_actor_slots[];
 extern FieldResourceEntry g_field_resource_entries[];
-extern s32 D_800EB0A4[];
+extern s32 g_field_direction_animation_modes[];
 extern s32 D_800EB0C4[];
 extern u8 D_80105880[];
 extern s32 D_8010A020[];
-extern u16* D_8010A02C;
-extern u8 D_8010A038[];
+extern u16* g_field_actor_scripts;
+extern u8 g_field_resource_actions[];
 extern s32 D_8010AE54;
 extern s32 D_8010AE58;
 
@@ -362,7 +362,7 @@ u8 *field_get_object_script_command(Struct_D800FDF58 *object)
     }
     else
     {
-        script_base = (u8 *)D_8010A02C + D_8010A02C[object->unk28];
+        script_base = (u8 *)g_field_actor_scripts + g_field_actor_scripts[object->unk28];
     }
     return script_base + object->unk2C;
 }
@@ -500,7 +500,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         }
         else
         {
-            temp_s3 = (u8*)D_8010A02C + D_8010A02C[arg0->unk28];
+            temp_s3 = (u8*)g_field_actor_scripts + g_field_actor_scripts[arg0->unk28];
         }
         temp_s3 += arg0->unk2C;
     } while (0);
@@ -550,7 +550,7 @@ void func_80088198(Struct_D800FDF58* arg0)
                 var_s6 = 1;
                 b9_state_base = D_80105AE0;
                 var_s1 = b9_state_base + 12;
-                b9_actor_base = D_800FDF58;
+                b9_actor_base = g_field_actors;
                 var_s0 = b9_actor_base + 12;
             loop_15:
                 temp_s5 = var_s0->unk25;
@@ -683,7 +683,7 @@ void func_80088198(Struct_D800FDF58* arg0)
             do
             {
                 resource_offset = arg0->unk3B * 0x190;
-                action_row = D_8010A038 + D_80105AE0[arg0->unk3A].unk16F * 8;
+                action_row = g_field_resource_actions + D_80105AE0[arg0->unk3A].unk16F * 8;
                 temp_s0 = (void*)(resource_offset + (s32)action_row);
                 if (!(M2C_FIELD(temp_s0, u16*, 2) & 0x400))
                 {
@@ -804,7 +804,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         }
         else
         {
-            arg0->unk21 = D_800EB0A4[temp_a1_4 >> 5] + ((arg0->unk33 & 1) * 5) + 5;
+            arg0->unk21 = g_field_direction_animation_modes[temp_a1_4 >> 5] + ((arg0->unk33 & 1) * 5) + 5;
         }
         call_actor = arg0;
         var_a1 = M2C_FIELD(temp_s3, u8*, 2);
@@ -1315,7 +1315,7 @@ s32 func_80089980(s32 key)
     s32 result;
     u8 state;
 
-    scan = D_800FDF58;
+    scan = g_field_actors;
     e = D_80105AE0;
     i = 0;
 loop:

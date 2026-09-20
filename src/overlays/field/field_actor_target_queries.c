@@ -69,8 +69,8 @@ typedef struct
 
 extern u8 D_80105C70[];
 extern ActorFilter D_800EC2D8[];
-extern u8 D_800FDF58[];
-extern s32 D_800FE754;
+extern u8 g_field_actors[];
+extern s32 g_field_active_group;
 extern Binding D_80105880[];
 extern FieldState D_80105AE0[];
 extern s32 D_8010D020;
@@ -370,7 +370,7 @@ s32 func_8009D1E4(s32 source_index, FilterSpec *spec, s32 group_mode, s32 filter
     }
     count = 0;
     index = start;
-    actor_start = (index * 0x54) + D_800FDF58;
+    actor_start = (index * 0x54) + g_field_actors;
     state_start = &D_80105AE0[index];
     if (index < end)
     {
@@ -386,7 +386,7 @@ s32 func_8009D1E4(s32 source_index, FilterSpec *spec, s32 group_mode, s32 filter
             {
                 flags_or_offset = *((s32 *)state_fields);
                 if (!(flags_or_offset & 1) &&
-                    ((D_800FE754 == (state_fields[STATE_CATEGORY_WORD] & 0xF)) || (index < 3)) &&
+                    ((g_field_active_group == (state_fields[STATE_CATEGORY_WORD] & 0xF)) || (index < 3)) &&
                     !(flags_or_offset & 0x20))
                 {
                     actor_state = ACCESS(s16, actor_state_ptr, 0);
@@ -425,7 +425,7 @@ s32 func_8009D1E4(s32 source_index, FilterSpec *spec, s32 group_mode, s32 filter
                             flags_or_offset <<= 2;
                             flags_or_offset += source_index;
                             flags_or_offset <<= 2;
-                            actor_base = D_800FDF58;
+                            actor_base = g_field_actors;
                             if (D_800EC2D8[spec->filter](actor_base + flags_or_offset, actor_start,
                                                          filter_arg) != 0)
                             {
