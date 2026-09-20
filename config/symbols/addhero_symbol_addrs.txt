@@ -243,3 +243,6 @@ ClearImage = 0x8001990C;
 LoadImage = 0x80019A34;
 
 field_text_upload_immediate_cache = 0x80063194;
+
+// FIELD exports used by this overlay.
+field_reset_input_repeat = 0x800AA02C;

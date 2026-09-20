@@ -194,3 +194,6 @@ g_niki_overlay_id                            = 0x80140000;
 g_menu_element_counter                     = 0x8012298C;
 
 field_text_upload_immediate_cache = 0x80063194;
+
+// FIELD exports used by this overlay.
+field_reset_input_repeat = 0x800AA02C;

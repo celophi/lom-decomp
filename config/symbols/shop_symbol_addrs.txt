@@ -5,3 +5,9 @@ g_shop_overlay_id = 0x80140000;
 g_menu_element_counter                     = 0x8012298C;
 
 field_text_upload_immediate_cache = 0x80063194;
+
+// FIELD exports used by this overlay.
+field_copy_inventory_record = 0x800A8F8C;
+field_compact_inventory = 0x800A8FB4;
+field_find_free_inventory_record = 0x800A9060;
+field_reset_input_repeat = 0x800AA02C;

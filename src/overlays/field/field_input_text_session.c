@@ -1,11 +1,12 @@
-#include "field_text.h"
-#include "field_effect_render_state.h"
-#include "cdrom.h"
-#include "saved_game.h"
 /**
  * @file field_input_text_session.c
  * @brief Controller repeat, saved names and inventory, and field actor labels.
  */
+
+#include "field_text.h"
+#include "field_effect_render_state.h"
+#include "cdrom.h"
+#include "saved_game.h"
 
 #include "common.h"
 #include "vector.h"
@@ -28,7 +29,6 @@
 #define FIELD_LABEL_SCREEN_WIDTH 320
 #define FIELD_LABEL_MIN_Y 50
 #define FIELD_LABEL_MAX_Y 176
-#define FIELD_LABEL_CHARACTER_WIDTH 12
 #define FIELD_LABEL_SELECTED_STYLE 4
 #define FIELD_LABEL_NORMAL_STYLE 5
 #define FIELD_LOW_HP_SOUND 0xA6
@@ -185,7 +185,7 @@ extern FieldInputActor g_field_actors[];
 extern FieldLabelActorState g_field_object_states[];
 extern u8 g_field_selected_actor_label;
 
-/* Field word/amount accumulator list. */
+/* Text and quantity pairs displayed by the field dialog. */
 extern s32 g_field_dialog_item_texts[];
 extern s32 g_field_dialog_item_count;
 extern u8 g_field_dialog_item_quantities[];
@@ -974,8 +974,9 @@ void field_update_text_session(void)
 {
     s32 actor_index;
     FieldLabelPart* part;
-    if ((g_field_text_session_cd_error && !cdrom_get_error_status()) || (!g_field_text_session_cd_error && (g_pad_input == PADh || ((g_pad_ctx->inject_flags & FIELD_SECONDARY_INPUT_ENABLED) &&
-                                                                                              g_pad_ctx->inject_enable && g_pad_input_inject == PADh))))
+    if ((g_field_text_session_cd_error && !cdrom_get_error_status()) ||
+        (!g_field_text_session_cd_error &&
+         (g_pad_input == PADh || ((g_pad_ctx->inject_flags & FIELD_SECONDARY_INPUT_ENABLED) && g_pad_ctx->inject_enable && g_pad_input_inject == PADh))))
     {
         g_field_draw_count = 0;
         g_field_text_session_active = 0;
@@ -1076,7 +1077,8 @@ void field_update_input_repeat(void)
     buttons = field_read_controller_buttons(0);
     g_pad_input = 0;
     g_field_buffered_input = 0;
-    if (((buttons == g_field_primary_held_buttons) || ((g_field_primary_held_buttons != 0) && (buttons & (g_field_primary_held_buttons | 0xB6F)))) && buttons != 0)
+    if (((buttons == g_field_primary_held_buttons) || ((g_field_primary_held_buttons != 0) && (buttons & (g_field_primary_held_buttons | 0xB6F)))) &&
+        buttons != 0)
     {
         directions = buttons & FIELD_PAD_DIRECTIONS;
 
@@ -1108,7 +1110,8 @@ void field_update_input_repeat(void)
     }
     buttons = field_read_controller_buttons(1);
     g_pad_input_inject = 0;
-    if (((buttons == g_field_secondary_held_buttons) || ((g_field_secondary_held_buttons != 0) && (buttons & (g_field_secondary_held_buttons | 0xB6F)))) && buttons != 0)
+    if (((buttons == g_field_secondary_held_buttons) || ((g_field_secondary_held_buttons != 0) && (buttons & (g_field_secondary_held_buttons | 0xB6F)))) &&
+        buttons != 0)
     {
         directions = buttons & FIELD_PAD_DIRECTIONS;
 
