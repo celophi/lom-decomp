@@ -1,4 +1,5 @@
 #include "field_scene_transition.h"
+#include "field_effect_render_state.h"
 #include "field_text.h"
 #include "cdrom.h"
 #include "game_audio.h"
@@ -508,9 +509,7 @@ extern s32 D_80122714;
 extern s32 D_80122B20;
 extern FieldActorObjectRecord g_field_effect_records[];
 extern s32 D_80105770;
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
+
 extern s32 D_800F2298;
 extern s32 D_8012269C;
 extern s32 D_80105760;
@@ -3771,8 +3770,8 @@ s32 field_get_actor_sound_pan(s32 actor_index)
     Vec2s pos;
     s32 screen_x;
 
-    pos.x = 0xA0 + D_800F22A0 / 256 + g_field_actors[actor_index].unk0 / 256;
-    pos.y = 0x70 + D_800F22A4 / 256 + g_field_actors[actor_index].unk4 / 256 - g_field_actors[actor_index].unk8 / 512 - D_800F22A8 / 512;
+    pos.x = 0xA0 + g_field_view_offset_x / 256 + g_field_actors[actor_index].unk0 / 256;
+    pos.y = 0x70 + g_field_view_offset_y / 256 + g_field_actors[actor_index].unk4 / 256 - g_field_actors[actor_index].unk8 / 512 - g_field_view_offset_z / 512;
 
     screen_x = pos.x;
     if (screen_x >= 0x10)

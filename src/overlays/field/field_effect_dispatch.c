@@ -4,6 +4,8 @@
  */
 
 #include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
 #include "field_types.h"
 #include "field_effect_types.h"
 #include "field_mesh_render.h"
@@ -63,9 +65,7 @@ extern FieldResourceEntry g_field_resource_entries[];
 extern FieldMotionRecord g_field_effect_records_end;
 extern s32 g_field_track_index;
 extern u8 *D_801058D4;
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
+
 extern u16 g_field_texture_slot_flags[];
 
 static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *packet_cursor, s32 *ordering_table, u8 *frame_data);
@@ -333,8 +333,8 @@ static s32 *field_render_effect_sprite_frames(FieldMotionRecord *effect, s32 *pa
     field_build_effect_part_matrix(effect, part, FIELD_EFFECT_SCRATCH_MATRIX, actor);
     gte_SetRotMatrix(FIELD_EFFECT_SCRATCH_MATRIX);
 
-    screen_origin->x = FIELD_EFFECT_SCREEN_CENTER_X + D_800F22A0 / 256 + effect->x / 256;
-    screen_origin->y = FIELD_EFFECT_SCREEN_CENTER_Y + D_800F22A4 / 256 + effect->y / 256 - effect->z / 512 - D_800F22A8 / 512;
+    screen_origin->x = FIELD_EFFECT_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+    screen_origin->y = FIELD_EFFECT_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
 
     frame_count = *frame_data++;
     field_resolve_effect_part_color(actor, effect, part, &packed_color);

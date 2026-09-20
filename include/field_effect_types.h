@@ -59,11 +59,12 @@ typedef struct FieldActorPartDef
     u8 unknown_0xb;
     u8 unknown_0xc;
     u8 unknown_0xd;
-    u8 unknown_0xe;
-    u8 unknown_0xf;
-    u8 unknown_0x10;
+    u8 red_or_track;
+    u8 green_or_track;
+    u8 blue_or_track;
     u8 turn_end_age;
-    u8 pad12[0x14 - 0x12];
+    u8 unknown_0x12;
+    u8 rotation_y_16;
     u32 orientation_flags; /* Also read through its upper halfword. */
     s16 unknown_0x18;
     u8 unknown_0x1a;
@@ -234,7 +235,9 @@ typedef struct FieldObjectPlacement
     u32 object_flags;
     u8 pad10[0x14 - 0x10];
     s32 record_id; /* identifier passed to action/reward helpers */
-    u8 pad18[0x6C - 0x18];
+    u8 pad18[0x68 - 0x18];
+    u16 unknown_0x68;
+    u8 pad6A[2];
     s16 unknown_0x6c; /* Whole-unit X used by position source 7. */
     s16 unknown_0x6e; /* Whole-unit Z used by position source 7. */
     u8 pad70[0x130 - 0x70];

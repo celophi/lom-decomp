@@ -4,6 +4,8 @@
  */
 
 #include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
 #include "field_types.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
@@ -230,9 +232,7 @@ extern FieldSpawnPartDef D_800FE3A0[];
 extern FieldSpawnTrackBinding D_80105880[];
 extern FieldVector D_80105778;
 extern s32 g_field_action_context;
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
+
 extern s32 D_80105760;
 extern s32 D_80105770;
 extern u8 *D_801058D4;
@@ -540,7 +540,7 @@ bit23_done:
         }
     }
     rotated_x = direction_vector->vx;
-    work_index = func_8007E754(actor, part);
+    work_index = field_resolve_effect_extent(actor, part);
     effect->flags.word = (effect->flags.word & ~0x1FF) | (work_index & 0x1FF);
     effect->x = (work_index * direction_vector->vx) >> 4;
     effect->y = (work_index * direction_vector->vy) >> 4;
@@ -956,9 +956,9 @@ source_record = &g_field_actors[object_index]; placement_object = &D_80105AE0[ob
         break;
 
     case 0x25:
-        effect->x += (part->offset_x << 8) - D_800F22A0;
-        effect->y += (part->offset_y << 8) - D_800F22A4;
-        effect->z += (part->offset_z << 8) - D_800F22A8;
+        effect->x += (part->offset_x << 8) - g_field_view_offset_x;
+        effect->y += (part->offset_y << 8) - g_field_view_offset_y;
+        effect->z += (part->offset_z << 8) - g_field_view_offset_z;
         if (effect->state == 0xFD)
         {
             effect->state = 0xFE;
@@ -966,78 +966,78 @@ source_record = &g_field_actors[object_index]; placement_object = &D_80105AE0[ob
         break;
 
     case 0x1C:
-        effect->x -= D_800F22A0;
-        effect->y -= D_800F22A4;
-        effect->z -= D_800F22A8;
+        effect->x -= g_field_view_offset_x;
+        effect->y -= g_field_view_offset_y;
+        effect->z -= g_field_view_offset_z;
         effect->flags.word |= 0x1000;
         break;
 
     case 0x1D:
         effect->y -= 0x7000;
-        effect->x -= D_800F22A0;
-        effect->z -= D_800F22A8;
+        effect->x -= g_field_view_offset_x;
+        effect->z -= g_field_view_offset_z;
         effect->flags.word |= 0x1000;
-        effect->y -= D_800F22A4;
+        effect->y -= g_field_view_offset_y;
         break;
 
     case 0x1E:
         effect->y += 0x7000;
-        effect->x -= D_800F22A0;
-        effect->z -= D_800F22A8;
+        effect->x -= g_field_view_offset_x;
+        effect->z -= g_field_view_offset_z;
         effect->flags.word |= 0x1000;
-        effect->y -= D_800F22A4;
+        effect->y -= g_field_view_offset_y;
         break;
 
     case 0x1F:
         effect->x += 0xFFFF6000;
-        effect->x -= D_800F22A0;
-        effect->y -= D_800F22A4;
-        effect->z -= D_800F22A8;
+        effect->x -= g_field_view_offset_x;
+        effect->y -= g_field_view_offset_y;
+        effect->z -= g_field_view_offset_z;
         effect->flags.word |= 0x1000;
         break;
 
     case 0x20:
         effect->x += 0xA000;
-        effect->x -= D_800F22A0;
-        effect->y -= D_800F22A4;
-        effect->z -= D_800F22A8;
+        effect->x -= g_field_view_offset_x;
+        effect->y -= g_field_view_offset_y;
+        effect->z -= g_field_view_offset_z;
         effect->flags.word |= 0x1000;
         break;
 
     case 0x21:
         effect->x += 0xFFFF6000;
         effect->y -= 0x7000;
-        effect->x -= D_800F22A0;
-        effect->z -= D_800F22A8;
+        effect->x -= g_field_view_offset_x;
+        effect->z -= g_field_view_offset_z;
         effect->flags.word |= 0x1000;
-        effect->y -= D_800F22A4;
+        effect->y -= g_field_view_offset_y;
         break;
 
     case 0x22:
         effect->x += 0xA000;
         effect->y -= 0x7000;
-        effect->x -= D_800F22A0;
-        effect->z -= D_800F22A8;
+        effect->x -= g_field_view_offset_x;
+        effect->z -= g_field_view_offset_z;
         effect->flags.word |= 0x1000;
-        effect->y -= D_800F22A4;
+        effect->y -= g_field_view_offset_y;
         break;
 
     case 0x23:
         effect->x += 0xFFFF6000;
         effect->y += 0x7000;
-        effect->x -= D_800F22A0;
-        effect->z -= D_800F22A8;
+        effect->x -= g_field_view_offset_x;
+        effect->z -= g_field_view_offset_z;
         effect->flags.word |= 0x1000;
-        effect->y -= D_800F22A4;
+        effect->y -= g_field_view_offset_y;
         break;
 
     case 0x24:
         effect->x += 0xA000;
         effect->y += 0x7000;
-        effect->x -= D_800F22A0;
-        effect->z -= D_800F22A8;
+        effect->x -= g_field_view_offset_x;
+        effect->z -= g_field_view_offset_z;
         effect->flags.word |= 0x1000;
-        effect->y -= D_800F22A4;
+        effect->y -= g_field_view_offset_y;
         break;
 
     case 0x27:
@@ -1394,7 +1394,7 @@ source_record = &g_field_actors[object_index]; placement_object = &D_80105AE0[ob
         }
         if ((effect->flags.word & 0x07000000) == 0x05000000)
         {
-            func_800A1D98(effect, func_8007E754(actor, part), (part->placement_flags >> 15) & 1, D_80105770);
+            func_800A1D98(effect, field_resolve_effect_extent(actor, part), (part->placement_flags >> 15) & 1, D_80105770);
             effect->position_data = 0;
             effect->path_group = D_80105770;
             func_800A1D48(&effect->position_data, effect, D_80105770);
@@ -1694,9 +1694,7 @@ typedef enum
 #define FIELD_EFFECT_CAMERA_ADDRESS 0x801ED480
 
 extern s32 g_field_track_index;
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
+
 extern FieldActorState g_field_actor_slots[80];
 extern FieldMotionRecord g_field_actors[];
 extern FieldObjectPlacement D_80105AE0[];
@@ -1781,9 +1779,9 @@ void field_swap_effect_position_source(FieldMotionRecord *effect, FieldActorPart
     {
         field_resolve_effect_position(effect, part, &source_position);
         effect->position_source = FIELD_POSITION_SAVED;
-        effect->work_x = effect->x + D_800F22A0;
-        effect->work_y = effect->y + D_800F22A4;
-        effect->work_z = effect->z + D_800F22A8;
+        effect->work_x = effect->x + g_field_view_offset_x;
+        effect->work_y = effect->y + g_field_view_offset_y;
+        effect->work_z = effect->z + g_field_view_offset_z;
         effect->x = source_position.vx;
         effect->y = source_position.vy;
         effect->z = source_position.vz;
@@ -1881,8 +1879,8 @@ void func_8007100C(FieldActorState *actor_state)
             }
             if (((part->behavior_flags >> 4) & 3) == 3)
             {
-                screen_position.x = (D_800F22A0 / 256) + (u32) (effect->x / 256 + 0xA0);
-                screen_position.y = 0x70 + D_800F22A4 / 256 + effect->y / 256 - effect->z / 512 - D_800F22A8 / 512;
+                screen_position.x = (g_field_view_offset_x / 256) + (u32) (effect->x / 256 + 0xA0);
+                screen_position.y = 0x70 + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
                 if ((u16) (screen_position.x + 0x140) >= 0x3C1 || screen_position.y >= 0x1E1 || screen_position.y < -0xF0)
                 {
                     previous_state = effect->state;
@@ -2453,9 +2451,9 @@ void field_update_effect_record(FieldMotionRecord *record, FieldActorPartDef *pa
                 return;
             }
             case 0x25:
-                placement_origin->vx = (part->offset_x << 8) - D_800F22A0;
-                placement_origin->vy = (part->offset_y << 8) - D_800F22A4;
-                placement_origin->vz = (part->offset_z << 8) - D_800F22A8;
+                placement_origin->vx = (part->offset_x << 8) - g_field_view_offset_x;
+                placement_origin->vy = (part->offset_y << 8) - g_field_view_offset_y;
+                placement_origin->vz = (part->offset_z << 8) - g_field_view_offset_z;
                 break;
             case 0x1D:
                 placement_origin->vx = 0;
@@ -3143,9 +3141,7 @@ extern FieldActorState g_field_actor_slots[80];
 extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[];
 extern FieldObjectPlacement D_80105AE0[];
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
+
 extern s32 g_field_track_index;
 extern s32 g_field_action_context;
 
@@ -3273,9 +3269,9 @@ owner_object:
     position->vz = owner_record->z;
     return;
 saved:
-    position->vx = effect->work_x - D_800F22A0;
-    position->vy = effect->work_y - D_800F22A4;
-    position->vz = effect->work_z - D_800F22A8;
+    position->vx = effect->work_x - g_field_view_offset_x;
+    position->vy = effect->work_y - g_field_view_offset_y;
+    position->vz = effect->work_z - g_field_view_offset_z;
     return;
 reference_effect:
     if (g_field_effect_records[(u16) effect->reference_index].state != FIELD_EFFECT_RETIRED)

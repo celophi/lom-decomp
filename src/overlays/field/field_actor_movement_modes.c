@@ -3,6 +3,7 @@
  */
 
 #include "common.h"
+#include "field_effect_render_state.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
@@ -32,8 +33,7 @@ typedef struct
 } Slot;
 
 s32 rand(void); /* extern */
-extern s32 D_800F22A0;
-extern s32 D_800F22A8;
+
 extern Slot D_80105AE0[];
 
 /**
@@ -128,7 +128,7 @@ void func_8009D4D8(Actor *actor, u32 mode)
                 point = (Slot *)(offset + (s32)base);
                 point->unk192 = (s16)random_value;
             }
-            base_dx = D_800F22A0;
+            base_dx = g_field_view_offset_x;
             {
                 s32 offset;
                 offset = point_offset + (actor->unk3A * 0x23C);
@@ -136,7 +136,7 @@ void func_8009D4D8(Actor *actor, u32 mode)
             }
 
             point->unk190 = (u16)(((u16)point->unk190 - (base_dx / 256)) - (actor->unk0 / 256));
-            base_dy = D_800F22A8;
+            base_dy = g_field_view_offset_z;
             {
                 s32 offset;
                 offset = point_offset + (actor->unk3A * 0x23C);

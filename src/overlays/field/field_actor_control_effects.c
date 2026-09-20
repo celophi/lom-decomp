@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_effect_render_state.h"
 #include "gpu_packet.h"
 #include "sdk/libgpu.h"
 
@@ -333,9 +334,7 @@ extern FieldControlActor D_800FB3C8[];
 extern FieldControlRecord g_field_actors[];
 extern ActorSlot g_field_actor_slots[];
 extern FieldEffectMotion D_801077FC;
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
+
 extern ShadowResourceEntry g_field_resource_entries[];
 extern Rec87564 *D_8010A01C;
 extern s32 g_field_scene_record_table;
@@ -939,7 +938,7 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
     /* Project the ground point; negative fixed-point values round toward zero. */
     screen = SHADOW_SCREEN_POSITION;
     scratch = SHADOW_WORLD_POSITION;
-    camera_offset = D_800F22A0;
+    camera_offset = g_field_view_offset_x;
     world_x = actor->x;
     scratch->y = 0;
     scratch->x = world_x;
@@ -956,7 +955,7 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
     {
         projection_value += 0xFF;
     }
-    camera_offset = D_800F22A4;
+    camera_offset = g_field_view_offset_y;
     actor_screen_x = (projection_value >> 8) + SHADOW_SCREEN_CENTER_X;
     screen_x = camera_x + actor_screen_x;
     screen->x = screen_x;
@@ -971,7 +970,7 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
     {
         projection_value += 0x1FF;
     }
-    camera_z = D_800F22A8;
+    camera_z = g_field_view_offset_z;
     actor_depth_y = projection_value >> 9;
     ground_y = camera_screen_y - actor_depth_y;
     if (camera_z < 0)

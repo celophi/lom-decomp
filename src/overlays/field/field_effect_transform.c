@@ -3,1128 +3,1042 @@
  */
 
 #include "common.h"
-#include "field_types.h"
+#include "field_effect_transform.h"
+#include "field_effect_types.h"
+#include "field_effect_render_state.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "sdk/rand.h"
-
-typedef struct
-{
-    s16 vx;
-    s16 vy;
-    s16 vz;
-    s16 pad;
-} FieldSVector;
-
-typedef struct
-{
-    s32 unk0;  /* 0x00 */
-    s32 unk4;  /* 0x04 */
-    s32 unk8;  /* 0x08 */
-    u32 unkC;  /* 0x0C */
-    s16 unk10; /* 0x10 */
-    s16 unk12; /* 0x12 */
-    s16 unk14; /* 0x14 */
-    s16 unk16; /* 0x16 */
-    u8 unk18;  /* 0x18 */
-    u8 unk19;  /* 0x19 */
-    u8 unk1A;  /* 0x1A */
-    u8 unk1B;  /* 0x1B */
-    s32 unk1C; /* 0x1C */
-    u8 unk20;  /* 0x20 */
-    u8 unk21;  /* 0x21 */
-    u8 unk22;  /* 0x22 */
-    u8 unk23;  /* 0x23 */
-    u8 unk24;  /* 0x24 */
-    u8 unk25;  /* 0x25 */
-    s8 unk26;  /* 0x26 */
-    u8 unk27;  /* 0x27 */
-    u8 unk28;  /* 0x28 */
-    u8 unk29;  /* 0x29 */
-    s16 unk2A; /* 0x2A */
-    u16 unk2C; /* 0x2C */
-    u16 unk2E; /* 0x2E */
-    s16 unk30; /* 0x30 */
-    u8 unk32;  /* 0x32 */
-    u8 unk33;  /* 0x33 */
-    u8 unk34;  /* 0x34 */
-    u8 unk35;  /* 0x35 */
-    u8 unk36;  /* 0x36 */
-    u8 unk37;  /* 0x37 */
-    u8 unk38;  /* 0x38 */
-    u8 unk39;  /* 0x39 */
-    u8 unk3A;  /* 0x3A */
-    u8 unk3B;  /* 0x3B */
-    u8 unk3C;  /* 0x3C */
-    u8 unk3D;  /* 0x3D */
-    u8 unk3E;  /* 0x3E */
-    u8 pad3F;
-    s32 unk40; /* 0x40 */
-    u32 unk44; /* 0x44 */
-    u32 unk48; /* 0x48 */
-    u32 unk4C; /* 0x4C */
-    u8 pad50[0x54 - 0x50];
-} Struct_D800FDF58;
-
-typedef struct
-{
-    u32 unk0;  /* 0x00 */
-    u32 unk4;  /* 0x04 */
-    u8 unk8;   /* 0x08 */
-    u8 unk9;   /* 0x09 */
-    u8 unkA;   /* 0x0A */
-    u8 unkB;   /* 0x0B */
-    u8 unkC;   /* 0x0C */
-    u8 unkD;   /* 0x0D */
-    u8 unkE;   /* 0x0E */
-    u8 unkF;   /* 0x0F */
-    u8 unk10;  /* 0x10 */
-    u8 unk11;  /* 0x11 */
-    u8 pad12[0x14 - 0x12];
-    u32 unk14; /* 0x14 */
-    s16 unk18; /* 0x18 */
-    u8 unk1A;  /* 0x1A */
-    u8 pad1B;
-    u32 unk1C; /* 0x1C */
-    u8 unk20;  /* 0x20 */
-    u8 unk21;  /* 0x21 */
-    u8 unk22;  /* 0x22 */
-    u8 unk23;  /* 0x23 */
-    u32 unk24; /* 0x24 */
-    u32 unk28; /* 0x28 */
-    u8 unk2C;  /* 0x2C (also read as a whole word) */
-    u8 unk2D;  /* 0x2D */
-    u8 unk2E;  /* 0x2E */
-    u8 unk2F;  /* 0x2F */
-    u8 pad30;
-    u8 unk31;  /* 0x31 */
-    u8 pad32;
-    u8 unk33;  /* 0x33 */
-    u32 unk34; /* 0x34 */
-    s16 unk38; /* 0x38 */
-    s16 unk3A; /* 0x3A */
-    s16 unk3C; /* 0x3C */
-    s16 pad3E;
-    s16 unk40; /* 0x40 */
-    s16 unk42; /* 0x42 */
-    s16 unk44; /* 0x44 */
-    s16 unk46; /* 0x46 */
-} FieldActorPartDef;
-
-typedef struct
-{
-    FieldActorPartDef *unk0; /* 0x000 */
-    u8 pad4[0x228 - 0x004];
-    u8 unk228;               /* 0x228 */
-    u8 unk229[9];            /* 0x229 */
-    u8 pad232[0x244 - 0x232];
-} FieldActorState;
-
-typedef struct
-{
-    u8 pad0[0x68];
-    u16 unk68; /* 0x68 */
-    u8 pad6A[0x140 - 0x6A];
-    s16 unk140; /* 0x140 */
-    s16 unk142; /* 0x142 */
-    s16 unk144; /* 0x144 */
-    s16 unk146; /* 0x146 */
-    u8 pad148[0x174 - 0x148];
-    u16 unk174; /* 0x174 */
-    u8 pad176[0x23C - 0x176];
-} Struct_D80105AE0;
-
-typedef struct
-{
-    s16 unk0;
-    s16 unk2;
-    s16 unk4;
-} Struct_D80105768;
-
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
-extern u8 D_800EC37C[];
-extern u16 D_800EC388[];
-extern Struct_D800FDF58 g_field_actors[];
-extern Struct_D80105AE0 D_80105AE0[];
-extern Struct_D80105768 D_80105768;
-extern FieldActorState g_field_actor_slots[80];
-extern s32 g_field_track_index;
-
-s32 field_evaluate_parameter_track(FieldActorState *actor, s32 track);
-s32 field_evaluate_parameter_track_at_time(FieldActorState *actor, u32 track, u16 time);
-void field_resolve_effect_position(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldVector *out);
-s32 field_build_effect_part_matrix(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldMatrix *mtx, FieldActorState *actor);
-void field_resolve_effect_part_color(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out);
-u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s32 *base);
-
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 
+#define FIELD_RIBBON_MAX_SEGMENTS 20
+#define FIELD_RIBBON_FRAME_COUNT 12
+#define FIELD_RIBBON_UV_VARIANT 0x01
+#define FIELD_RIBBON_FLIP_U 0x80
+#define FIELD_RIBBON_FLIP_V 0x40
+#define FIELD_EFFECT_OT_SIZE 4096
+#define FIELD_EFFECT_OT_DEPTH_SHIFT 7
+#define FIELD_EFFECT_CENTER_X 160
+#define FIELD_EFFECT_CENTER_Y 112
+#define FIELD_ANGLE_QUARTER_TURN (ONE / 4)
+#define FIELD_ANGLE_HALF_TURN (ONE / 2)
+#define FIELD_ANGLE_MASK (ONE - 1)
+#define FIELD_TRACK_INDEX_MASK 0xF
+#define FIELD_EFFECT_TRACK_COLOR 0x00008000
+#define FIELD_EFFECT_LITERAL_COLOR 0x10000000
+#define FIELD_PART_REVERSE_ROTATION_WITH_FACING 0x00020000
+#define FIELD_PART_SCALE_DISTANCE_BY_TARGET 0x01000000
+#define FIELD_PART_SCALE_DISTANCE_BY_OWNER 0x01000000
+#define FIELD_PART_SCALE_Z_BY_OWNER 0x02000000
+#define FIELD_PART_SCALE_X_BY_OWNER 0x04000000
+#define FIELD_RIBBON_SCRATCH ((FieldRibbonScratch*)0x1F800000)
+#define FIELD_MATRIX_SCRATCH ((FieldMatrixScratch*)0x1F8000C0)
+#define FIELD_SPRITE_SCRATCH ((FieldSpriteScratch*)0x1F800100)
+
+#define FIELD_GPU_ADDRESS_MASK 0x00FFFFFF
+#define FIELD_GPU_LENGTH_MASK 0xFF000000
+#define FIELD_TRACK_COUNT 16
+#define FIELD_EFFECT_TARGET_PITCH (ONE / 12)
+#define FIELD_EFFECT_DEFAULT_PITCH (ONE / 16)
+#define FIELD_PART_SCALE_TRACK_SHIFT 7
+#define FIELD_PART_ROTATION_MODE_SHIFT 6
+#define FIELD_PART_ROTATION_TRACK_SHIFT 26
+#define FIELD_PART_ROTATE_QUARTER_X_SHIFT 17
+#define FIELD_PART_PROJECT_SCALE_SHIFT 23
+#define FIELD_PART_ORIENTED_SHIFT 3
+#define FIELD_PART_AIM_AT_TARGET_SHIFT 11
+#define FIELD_PART_STRETCH_TO_TARGET_SHIFT 2
+#define FIELD_PART_RGB_TRACKS_SHIFT 12
+#define FIELD_PART_RANDOM_EXTENT_SHIFT 15
+#define FIELD_PART_ADD_HALF_WIDTH_SHIFT 16
+#define FIELD_PART_ADD_HALF_HEIGHT_SHIFT 17
+#define FIELD_PART_ATTACHMENT_SHIFT 18
+#define FIELD_PART_COLOR_TRACK_SHIFT 5
+#define FIELD_PART_RED_TRACK 0x4
+#define FIELD_PART_GREEN_TRACK 0x2
+#define FIELD_PART_BLUE_TRACK 0x1
+#define FIELD_SPRITE_TILT_BYTE 8
+#define FIELD_ATTACHMENT_MASK 0x3F
+#define FIELD_ATTACHMENT_GROUP_COUNT 8
+#define FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT 28
+#define FIELD_PART_OWNER_BOUNDS 2
+
+/** @brief Attachment category boundaries encoded in part placement flags. */
+typedef enum
+{
+    FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST = 10,
+    FIELD_ATTACHMENT_POINT_FIRST = 20,
+    FIELD_ATTACHMENT_POINT_SECOND_BIAS = 34,
+    FIELD_ATTACHMENT_POINT_SECOND = 42,
+    FIELD_ATTACHMENT_UNRESOLVED_FIRST = 55
+} FieldEffectAttachmentCategory;
+
+/** @brief Ribbon path vectors followed by one rotation matrix per segment. */
+typedef struct
+{
+    FieldVector endpoint;
+    FieldVector position;
+    FieldVector midpoint;
+    FieldVector half_delta;
+    FieldVector delta;
+    SVECTOR direction;
+    FieldMatrix rotations[FIELD_RIBBON_MAX_SEGMENTS];
+} FieldRibbonScratch;
+
+/** @brief Temporary rotation and distance calculations for a part matrix. */
+typedef struct
+{
+    SVECTOR direction;
+    FieldVector scale;
+    FieldVector delta;
+    FieldVector squared_delta;
+} FieldMatrixScratch;
+
+/** @brief GTE output with unsigned low halfwords for GPU vertex additions. */
+typedef union
+{
+    FieldVector vector;
+    struct
+    {
+        u16 x;
+        u16 x_high;
+        u16 y;
+        u16 y_high;
+        u16 z;
+        u16 z_high;
+        u16 pad[2];
+    } low;
+} FieldSpriteProjection;
+
+/** @brief Scratchpad vectors and local tilt matrix for sprite projection. */
+typedef struct
+{
+    SVECTOR rotated_vertex;
+    SVECTOR vertex;
+    FieldSpriteProjection projected;
+    MATRIX rotation;
+} FieldSpriteScratch;
+
+extern FieldMotionRecord g_field_actors[];
+extern FieldObjectPlacement D_80105AE0[];
+extern FieldActorState g_field_actor_slots[80];
+extern s32 g_field_track_index;
+
+s32 field_evaluate_parameter_track(FieldActorState* actor, s32 track);
+s32 field_evaluate_parameter_track_at_time(FieldActorState* actor, u32 track, u16 time);
+
 /**
- * @brief Field ribbon/trail primitive builder: derives the orientation matrix
- *        for the actor part, seeds a chain of randomly rotated matrices in the
- *        scratchpad, then walks the chain emitting textured quads that sweep
- *        from the effect origin out to the target point returned by
- *        field_resolve_effect_position, threading each quad into the depth-indexed ordering
- *        table in base[].
- * @param rec Effect record supplying position, flags and segment count (unk24).
- * @param primbuf Output primitive buffer; advanced 0x28 bytes per emitted quad.
- * @param base Depth-indexed ordering-table / primitive base array.
- * @return The advanced primbuf cursor.
- * @note WIP - remaining differences are final projection register allocation
- *       and packet-store scheduling. Frame and spill assignments match.
+ * @brief Render a textured ribbon from an effect to its resolved target.
+ * @param effect Position, facing, color, age, and segment count source.
+ * @param packet_cursor Receives consecutive POLY_FT4 packets.
+ * @param ordering_table Depth-indexed GPU ordering table.
+ * @return Cursor after the last emitted quad.
+ * @note animation_active supplies the segment count for this effect kind.
  * @see decomp.me (99.94%) WIP
  */
-u8 *field_render_effect_ribbon(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+u8* field_render_effect_ribbon(FieldMotionRecord* effect, u8* packet_cursor, s32* ordering_table)
 {
-    FieldActorPartDef *part;
-    FieldActorState *state;
-    FieldVector *gte_out;
-    FieldVector *ptr_a;
-    FieldVector *ptr_b;
-    FieldVector *ptr_c;
-    FieldMatrix *cur;
-    s32 *endpoint;
-    s32 segments;
+    POLY_FT4* quad = (POLY_FT4*)packet_cursor;
+    FieldActorPartDef* part;
+    FieldActorState* state;
+    FieldVector* position;
+    FieldVector* midpoint;
+    FieldVector* half_delta;
+    FieldVector* delta;
+    FieldMatrix* rotation;
+    FieldVector* endpoint;
+    s32 segment_count;
     s32 i;
-    s32 amp;
+    s32 arc_height;
     s32 step;
     s32 angle;
-    s32 off_x;
-    FieldSVector *dir;
-    s32 temp_v1;
-    u8 uvflags;
+    s32 edge_x;
+    SVECTOR* direction;
+    s32 depth;
+    u8 uv_flags;
 
-    gte_out = (FieldVector *) 0x1F800010;
-    ptr_a = (FieldVector *) 0x1F800020;
-    ptr_b = (FieldVector *) 0x1F800030;
-    ptr_c = (FieldVector *) 0x1F800040;
-    dir = (FieldSVector *) 0x1F800050;
+    position = &FIELD_RIBBON_SCRATCH->position;
+    midpoint = &FIELD_RIBBON_SCRATCH->midpoint;
+    half_delta = &FIELD_RIBBON_SCRATCH->half_delta;
+    delta = &FIELD_RIBBON_SCRATCH->delta;
+    direction = &FIELD_RIBBON_SCRATCH->direction;
 
-    part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
-    state = &g_field_actor_slots[rec->unk22];
-    field_build_effect_part_matrix(rec, part, (FieldMatrix *) 0x1F800058, state);
+    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
+    state = &g_field_actor_slots[effect->actor_index];
+    field_build_effect_part_matrix(effect, part, FIELD_RIBBON_SCRATCH->rotations, state);
 
-    cur = (FieldMatrix *) 0x1F800058;
-    uvflags = D_800EC37C[((u16) rec->unk2C) % 12];
-    *(u16 *) (primbuf + 0xC) = D_800EC388[(uvflags & 1) * 4 + 0];
-    *(u16 *) (primbuf + 0x14) = D_800EC388[(uvflags & 1) * 4 + 1];
-    *(u16 *) (primbuf + 0x1C) = D_800EC388[(uvflags & 1) * 4 + 2];
-    *(u16 *) (primbuf + 0x24) = D_800EC388[(uvflags & 1) * 4 + 3];
+    rotation = FIELD_RIBBON_SCRATCH->rotations;
+    uv_flags = g_field_ribbon_frame_flags[((u16)effect->age) % FIELD_RIBBON_FRAME_COUNT];
+    *(u16*)&quad->u0 = g_field_ribbon_uv_corners[(uv_flags & FIELD_RIBBON_UV_VARIANT) * 4 + 0];
+    *(u16*)&quad->u1 = g_field_ribbon_uv_corners[(uv_flags & FIELD_RIBBON_UV_VARIANT) * 4 + 1];
+    *(u16*)&quad->u2 = g_field_ribbon_uv_corners[(uv_flags & FIELD_RIBBON_UV_VARIANT) * 4 + 2];
+    *(u16*)&quad->u3 = g_field_ribbon_uv_corners[(uv_flags & FIELD_RIBBON_UV_VARIANT) * 4 + 3];
 
-    if (uvflags & 0x80)
+    if (uv_flags & FIELD_RIBBON_FLIP_U)
     {
-        i = *(u8 *) (primbuf + 0xC);
-        *(u8 *) (primbuf + 0xC) = *(u8 *) (primbuf + 0x14);
-        *(u8 *) (primbuf + 0x14) = i;
-        i = *(u8 *) (primbuf + 0x1C);
-        *(u8 *) (primbuf + 0x1C) = *(u8 *) (primbuf + 0x24);
-        *(u8 *) (primbuf + 0x24) = i;
+        i = quad->u0;
+        quad->u0 = quad->u1;
+        quad->u1 = i;
+        i = quad->u2;
+        quad->u2 = quad->u3;
+        quad->u3 = i;
     }
-    if (uvflags & 0x40)
+    if (uv_flags & FIELD_RIBBON_FLIP_V)
     {
-        i = *(u8 *) (primbuf + 0xD);
-        *(u8 *) (primbuf + 0xD) = *(u8 *) (primbuf + 0x1D);
-        *(u8 *) (primbuf + 0x1D) = i;
-        i = *(u8 *) (primbuf + 0x15);
-        *(u8 *) (primbuf + 0x15) = *(u8 *) (primbuf + 0x25);
-        *(u8 *) (primbuf + 0x25) = i;
-    }
-
-    {
-        u32 part_unk4 = part->unk4;
-        *(u16 *) (primbuf + 0xE) = 0x7B05;
-        *(u16 *) (primbuf + 0x16) = (u16) (((part_unk4 >> 17) & 0x60) | 7);
+        i = quad->v0;
+        quad->v0 = quad->v2;
+        quad->v2 = i;
+        i = quad->v1;
+        quad->v1 = quad->v3;
+        quad->v3 = i;
     }
 
-    gte_SetRotMatrix(cur);
+    {
+        u32 behavior_flags = part->behavior_flags;
+        quad->clut = getClut(80, 492);
+        quad->tpage = (u16)(((behavior_flags >> 17) & 0x60) | getTPage(0, 0, 448, 0));
+    }
+
+    gte_SetRotMatrix(rotation);
 
     {
-        s32 first_d0;
-        s32 temp_x;
-        s32 raw_d4;
-        first_d0 = D_800F22A0 / 256;
-        temp_x = rec->unk0 / 256 + 0xA0;
-        raw_d4 = D_800F22A4;
-        *(s16 *) (primbuf + 8) = (s16) (first_d0 + temp_x);
-        if (raw_d4 < 0)
+        s32 view_x;
+        s32 screen_x;
+        s32 view_y;
+        view_x = g_field_view_offset_x / 256;
+        screen_x = effect->x / 256 + FIELD_EFFECT_CENTER_X;
+        view_y = g_field_view_offset_y;
+        quad->x0 = (s16)(view_x + screen_x);
+        if (view_y < 0)
         {
-            raw_d4 += 0xFF;
+            view_y += 255;
         }
-        *(s16 *) (primbuf + 0xA) = (s16) (0x70 + (raw_d4 >> 8) + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512);
+        quad->y0 = (s16)(FIELD_EFFECT_CENTER_Y + (view_y >> 8) + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512);
     }
 
-    field_resolve_effect_part_color(state, rec, part, primbuf + 4);
-    *(s8 *) (primbuf + 3) = 9;
-    *(s8 *) (primbuf + 7) = 0x2C;
-    ((rec->unk1C & 0x800000) ? (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) | 2) : (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) & ~2));
+    field_resolve_effect_part_color(state, effect, part, &quad->r0);
+    setPolyFT4(quad);
+    setSemiTrans(quad, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
 
-    cur = (FieldMatrix *) 0x1F800058;
-    segments = 0x14;
-    if (rec->unk24 < 0x14)
+    rotation = FIELD_RIBBON_SCRATCH->rotations;
+    segment_count = FIELD_RIBBON_MAX_SEGMENTS;
+    if (effect->animation_active < FIELD_RIBBON_MAX_SEGMENTS)
     {
-        segments = rec->unk24;
+        segment_count = effect->animation_active;
     }
-    endpoint = (s32 *) 0x1F800000;
-    if (segments <= 0)
+    endpoint = &FIELD_RIBBON_SCRATCH->endpoint;
+    if (segment_count <= 0)
     {
-        segments = 1;
+        segment_count = 1;
     }
-    step = 0x800 / segments;
+    step = FIELD_ANGLE_HALF_TURN / segment_count;
 
-    field_resolve_effect_position(rec, part, (FieldVector *) 0x1F800000);
+    field_resolve_effect_position(effect, part, &FIELD_RIBBON_SCRATCH->endpoint);
     {
-        ptr_a->vx = (((FieldVector *) 0x1F800000)->vx + rec->unk0) >> 1;
-        ptr_a->vy = ((FieldVector *) 0x1F800000)->vy;
-        ptr_a->vz = (((FieldVector *) 0x1F800000)->vz + rec->unk8) >> 1;
-        ptr_c->vx = *endpoint - rec->unk0;
-        ptr_b->vx = ptr_c->vx >> 1;
-        ptr_c->vy = rec->unk4 - *(s32 *) 0x1F800004;
-        ptr_b->vy = ptr_c->vy;
-        i = segments - 1;
-        ptr_c->vz = *(s32 *) 0x1F800008 - rec->unk8;
-        ptr_b->vz = ptr_c->vz >> 1;
+        midpoint->vx = (FIELD_RIBBON_SCRATCH->endpoint.vx + effect->x) >> 1;
+        midpoint->vy = FIELD_RIBBON_SCRATCH->endpoint.vy;
+        midpoint->vz = (FIELD_RIBBON_SCRATCH->endpoint.vz + effect->z) >> 1;
+        delta->vx = endpoint->vx - effect->x;
+        half_delta->vx = delta->vx >> 1;
+        delta->vy = effect->y - FIELD_RIBBON_SCRATCH->endpoint.vy;
+        half_delta->vy = delta->vy;
+        i = segment_count - 1;
+        delta->vz = FIELD_RIBBON_SCRATCH->endpoint.vz - effect->z;
+        half_delta->vz = delta->vz >> 1;
     }
 
     if (i > 0)
     {
         do
         {
-            dir->vx = 0;
-            dir->vy = (s16) ((rand() << 12) >> 15);
-            dir->vz = (s16) ((rand() << 12) >> 16);
-            RotMatrix_gte(dir, cur);
+            direction->vx = 0;
+            direction->vy = (s16)((rand() << 12) >> 15);
+            direction->vz = (s16)((rand() << 12) >> 16);
+            RotMatrix_gte(direction, (MATRIX*)rotation);
             i--;
-            cur++;
+            rotation++;
         } while (i > 0);
     }
 
-    cur = (FieldMatrix *) 0x1F800058;
+    rotation = FIELD_RIBBON_SCRATCH->rotations;
 
-    if ((*(u8 *) &part->unk4) >> 7)
+    if ((*(u8*)&part->behavior_flags) >> FIELD_PART_SCALE_TRACK_SHIFT)
     {
-        dir->vx = 0;
-        dir->vy = (s16) ((part->unk4 >> 28) << 8);
-        dir->vz = 0;
+        direction->vx = 0;
+        direction->vy = (s16)((part->behavior_flags >> 28) << 8);
+        direction->vz = 0;
     }
     else
     {
-        *(s32 *) &dir->vz = 0;
-        *(s32 *) &dir->vx = 0;
+        *(s32*)&direction->vz = 0;
+        *(s32*)&direction->vx = 0;
     }
 
-    if (((part->unk0 >> 6) & 3) != 0)
+    if (((part->track_flags >> FIELD_PART_ROTATION_MODE_SHIFT) & 3) != 0)
     {
-        amp = (part->unk0 >> 26) << 10;
+        arc_height = (part->track_flags >> FIELD_PART_ROTATION_TRACK_SHIFT) << 10;
     }
     else
     {
-        amp = 0;
+        arc_height = 0;
     }
-    amp = (amp * rand()) >> 15;
+    arc_height = (arc_height * rand()) >> 15;
     if (rand() & 1)
     {
-        amp = -amp;
+        arc_height = -arc_height;
     }
 
-    angle = ratan2(ptr_c->vx, ptr_c->vy + (ptr_c->vz >> 1));
-    off_x = (rcos(angle) * part->unk33) >> 12;
-    angle = (rsin(angle) * part->unk33) >> 12;
-    if (uvflags & 1)
+    angle = ratan2(delta->vx, delta->vy + (delta->vz >> 1));
+    edge_x = (rcos(angle) * part->footprint_scale_y) >> 12;
+    angle = (rsin(angle) * part->footprint_scale_y) >> 12;
+    if (uv_flags & FIELD_RIBBON_UV_VARIANT)
     {
         angle *= 2;
-        off_x *= 2;
+        edge_x *= 2;
     }
 
-    i = segments - 1;
-    *(s16 *) (primbuf + 0x18) = *(s16 *) (primbuf + 8) + off_x;
-    *(s16 *) (primbuf + 0x1A) = *(s16 *) (primbuf + 0xA) + angle;
-    *(s16 *) (primbuf + 0xA) -= angle;
-    *(s16 *) (primbuf + 8) -= off_x;
+    i = segment_count - 1;
+    quad->x2 = quad->x0 + edge_x;
+    quad->y2 = quad->y0 + angle;
+    quad->y0 -= angle;
+    quad->x0 -= edge_x;
 
     if (i > 0)
     {
         s32 angle_step;
-        s32 addr_mask = 0xFFFFFF;
-        s32 tag_mask = 0xFF000000;
+        s32 addr_mask = FIELD_GPU_ADDRESS_MASK;
+        s32 tag_mask = FIELD_GPU_LENGTH_MASK;
         angle_step = i * step;
         do
         {
-            temp_v1 = *(s32 *) (primbuf + 0x4);
-            *(s32 *) (primbuf + 0x2C) = temp_v1;
-            *(s8 *) (primbuf + 0x3) = 9;
-            *(s8 *) (primbuf + 0x7) = 0x2C;
-            ((rec->unk1C & 0x800000) ? (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) | 2) : (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) & ~2));
+            depth = *(s32*)&quad->r0;
+            *(s32*)&quad[1].r0 = depth;
+            setPolyFT4(quad);
+            setSemiTrans(quad, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
 
-            gte_SetRotMatrix(cur);
-            gte_ldv0(dir);
+            gte_SetRotMatrix(rotation);
+            gte_ldv0(direction);
             gte_rtv0();
-            gte_stlvnl(ptr_c);
+            gte_stlvnl(delta);
 
-            if (amp != 0)
+            if (arc_height != 0)
             {
-                gte_out->vy = ptr_a->vy + (ptr_b->vy * i) / segments - ((amp * rsin(angle_step)) >> 12) + ptr_c->vy;
+                position->vy = midpoint->vy + (half_delta->vy * i) / segment_count - ((arc_height * rsin(angle_step)) >> 12) + delta->vy;
             }
             else
             {
-                gte_out->vy = ptr_a->vy + (ptr_b->vy * i) / segments + ptr_c->vy;
+                position->vy = midpoint->vy + (half_delta->vy * i) / segment_count + delta->vy;
             }
-            gte_out->vx = ((ptr_b->vx * rcos(angle_step)) >> 12) + ptr_a->vx + ptr_c->vx;
-            gte_out->vz = ((ptr_b->vz * rcos(angle_step)) >> 12) + ptr_a->vz + ptr_c->vz;
+            position->vx = ((half_delta->vx * rcos(angle_step)) >> 12) + midpoint->vx + delta->vx;
+            position->vz = ((half_delta->vz * rcos(angle_step)) >> 12) + midpoint->vz + delta->vz;
 
             {
-                s32 first_d0;
-                s32 temp_x;
-                s32 raw_d4;
-                first_d0 = D_800F22A0 / 256;
-                temp_x = gte_out->vx / 256 + 0xA0;
-                raw_d4 = D_800F22A4;
-                *(s16 *) (primbuf + 0x10) = (s16) (first_d0 + temp_x);
-                if (raw_d4 < 0)
+                s32 view_x;
+                s32 screen_x;
+                s32 view_y;
+                view_x = g_field_view_offset_x / 256;
+                screen_x = position->vx / 256 + FIELD_EFFECT_CENTER_X;
+                view_y = g_field_view_offset_y;
+                quad->x1 = (s16)(view_x + screen_x);
+                if (view_y < 0)
                 {
-                    raw_d4 += 0xFF;
+                    view_y += 255;
                 }
-                *(s16 *) (primbuf + 0x12) = (s16) (0x70 + (raw_d4 >> 8) + gte_out->vy / 256 - gte_out->vz / 512 - D_800F22A8 / 512);
+                quad->y1 = (s16)(FIELD_EFFECT_CENTER_Y + (view_y >> 8) + position->vy / 256 - position->vz / 512 - g_field_view_offset_z / 512);
             }
-            *(s16 *) (primbuf + 0x20) = *(s16 *) (primbuf + 0x10) + off_x;
-            *(s16 *) (primbuf + 0x22) = *(s16 *) (primbuf + 0x12) + angle;
-            *(s16 *) (primbuf + 0x12) -= angle;
-            *(s16 *) (primbuf + 0x10) -= off_x;
+            quad->x3 = quad->x1 + edge_x;
+            quad->y3 = quad->y1 + angle;
+            quad->y1 -= angle;
+            quad->x1 -= edge_x;
 
             {
-                u16 copy_a;
-                u16 copy_e;
-                copy_a = *(u16 *) (primbuf + 0xC);
-                *(u16 *) (primbuf + 0x4C) = *(u16 *) (primbuf + 0x24);
-                *(u16 *) (primbuf + 0x34) = copy_a;
-                *(u16 *) (primbuf + 0x3E) = *(u16 *) (primbuf + 0x16);
-                *(s32 *) (primbuf + 0x40) = *(s32 *) (primbuf + 0x20);
-                *(s32 *) (primbuf + 0x30) = *(s32 *) (primbuf + 0x10);
-                copy_e = *(u16 *) (primbuf + 0xE);
-                *(u16 *) (primbuf + 0x3C) = *(u16 *) (primbuf + 0x14);
-                *(u16 *) (primbuf + 0x44) = *(u16 *) (primbuf + 0x1C);
-                *(u16 *) (primbuf + 0x36) = copy_e;
+                u16 first_uv;
+                u16 clut;
+                first_uv = *(u16*)&quad->u0;
+                *(u16*)&quad[1].u3 = *(u16*)&quad->u3;
+                *(u16*)&quad[1].u0 = first_uv;
+                quad[1].tpage = quad->tpage;
+                *(s32*)&quad[1].x2 = *(s32*)&quad->x3;
+                *(s32*)&quad[1].x0 = *(s32*)&quad->x1;
+                clut = quad->clut;
+                *(u16*)&quad[1].u1 = *(u16*)&quad->u1;
+                *(u16*)&quad[1].u2 = *(u16*)&quad->u2;
+                quad[1].clut = clut;
             }
 
-            temp_v1 = (s32) rec->unk8 >> 7;
-            if (temp_v1 < 0)
+            depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+            if (depth < 0)
             {
-                s32 addr = (s32) primbuf & addr_mask;
-                *(s32 *) primbuf = (*(s32 *) primbuf & tag_mask) | (base[0] & addr_mask);
-                primbuf += 0x28;
-                base[0] = (base[0] & tag_mask) | addr;
+                s32 addr = (s32)quad & addr_mask;
+                *(s32*)&quad->tag = (*(s32*)&quad->tag & tag_mask) | (ordering_table[0] & addr_mask);
+                quad++;
+                ordering_table[0] = (ordering_table[0] & tag_mask) | addr;
             }
-            else if (temp_v1 >= 0x1000)
+            else if (depth >= FIELD_EFFECT_OT_SIZE)
             {
-                s32 addr = (s32) primbuf & addr_mask;
-                *(s32 *) primbuf = (*(s32 *) primbuf & tag_mask) | (base[0xFFF] & addr_mask);
-                primbuf += 0x28;
-                base[0xFFF] = (base[0xFFF] & tag_mask) | addr;
+                s32 addr = (s32)quad & addr_mask;
+                *(s32*)&quad->tag = (*(s32*)&quad->tag & tag_mask) | (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & addr_mask);
+                quad++;
+                ordering_table[FIELD_EFFECT_OT_SIZE - 1] = (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & tag_mask) | addr;
             }
             else
             {
                 s32 addr;
-                s32 *entry;
-                addr = (s32) primbuf & addr_mask;
-                *(s32 *) primbuf = (*(s32 *) primbuf & tag_mask) | (base[temp_v1] & addr_mask);
-                entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
-                primbuf += 0x28;
+                s32* entry;
+                addr = (s32)quad & addr_mask;
+                *(s32*)&quad->tag = (*(s32*)&quad->tag & tag_mask) | (ordering_table[depth] & addr_mask);
+                entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+                quad++;
                 *entry = (*entry & tag_mask) | addr;
             }
             angle_step -= step;
             i--;
-            cur++;
+            rotation++;
         } while (i > 0);
     }
 
-    *(s8 *) (primbuf + 3) = 9;
-    *(s8 *) (primbuf + 7) = 0x2C;
-    ((rec->unk1C & 0x800000) ? (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) | 2) : (*(u8 *) (primbuf + 7) = *(u8 *) (primbuf + 7) & ~2));
+    setPolyFT4(quad);
+    setSemiTrans(quad, effect->flags & FIELD_EFFECT_SEMITRANSPARENT);
 
     {
-        s32 first_d0;
-        s32 temp_x;
-        s32 raw_d4;
-        first_d0 = D_800F22A0 / 256;
-        temp_x = *endpoint / 256 + 0xA0;
-        raw_d4 = D_800F22A4;
-        *(s16 *) (primbuf + 0x10) = (s16) (first_d0 + temp_x);
-        if (raw_d4 < 0)
+        s32 view_x;
+        s32 screen_x;
+        s32 view_y;
+        view_x = g_field_view_offset_x / 256;
+        screen_x = endpoint->vx / 256 + FIELD_EFFECT_CENTER_X;
+        view_y = g_field_view_offset_y;
+        quad->x1 = (s16)(view_x + screen_x);
+        if (view_y < 0)
         {
-            raw_d4 += 0xFF;
+            view_y += 255;
         }
         {
             s32 depth;
-            raw_d4 = 0x70 + (raw_d4 >> 8) + *(s32 *) 0x1F800004 / 256;
-            depth = *(s32 *) 0x1F800008;
-            raw_d4 -= depth / 512;
-            *(s16 *) (primbuf + 0x12) = raw_d4 - D_800F22A8 / 512;
+            view_y = FIELD_EFFECT_CENTER_Y + (view_y >> 8) + endpoint->vy / 256;
+            depth = endpoint->vz;
+            view_y -= depth / 512;
+            quad->y1 = view_y - g_field_view_offset_z / 512;
         }
     }
-    *(s16 *) (primbuf + 0x20) = *(s16 *) (primbuf + 0x10) + off_x;
-    *(s16 *) (primbuf + 0x22) = *(s16 *) (primbuf + 0x12) + angle;
-    *(s16 *) (primbuf + 0x12) -= angle;
-    *(s16 *) (primbuf + 0x10) -= off_x;
+    quad->x3 = quad->x1 + edge_x;
+    quad->y3 = quad->y1 + angle;
+    quad->y1 -= angle;
+    quad->x1 -= edge_x;
 
-    temp_v1 = (s32) rec->unk8 >> 7;
-    if (temp_v1 < 0)
+    depth = (s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
+    if (depth < 0)
     {
-        s32 addr = (s32) primbuf & 0xFFFFFF;
-        setaddr(primbuf, getaddr(&base[0]));
-        primbuf += 0x28;
-        base[0] = (base[0] & 0xFF000000) | addr;
+        s32 addr = (s32)quad & FIELD_GPU_ADDRESS_MASK;
+        setaddr(quad, getaddr(&ordering_table[0]));
+        quad++;
+        ordering_table[0] = (ordering_table[0] & FIELD_GPU_LENGTH_MASK) | addr;
     }
-    else if (temp_v1 >= 0x1000)
+    else if (depth >= FIELD_EFFECT_OT_SIZE)
     {
-        s32 addr = (s32) primbuf & 0xFFFFFF;
-        setaddr(primbuf, getaddr(&base[0xFFF]));
-        primbuf += 0x28;
-        base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
+        s32 addr = (s32)quad & FIELD_GPU_ADDRESS_MASK;
+        setaddr(quad, getaddr(&ordering_table[FIELD_EFFECT_OT_SIZE - 1]));
+        quad++;
+        ordering_table[FIELD_EFFECT_OT_SIZE - 1] = (ordering_table[FIELD_EFFECT_OT_SIZE - 1] & FIELD_GPU_LENGTH_MASK) | addr;
     }
     else
     {
         s32 addr;
-        s32 *entry;
+        s32* entry;
         s32 srcval;
-        addr = (s32) primbuf & 0xFFFFFF;
-        srcval = base[temp_v1];
-        setaddr(primbuf, srcval);
-        entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
-        primbuf += 0x28;
-        *entry = (*entry & 0xFF000000) | addr;
+        addr = (s32)quad & FIELD_GPU_ADDRESS_MASK;
+        srcval = ordering_table[depth];
+        setaddr(quad, srcval);
+        entry = (s32*)(((s32)effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        quad++;
+        *entry = (*entry & FIELD_GPU_LENGTH_MASK) | addr;
     }
-    return primbuf;
+    return (u8*)quad;
 }
 
 /**
- * @brief Build the full orientation/scale matrix for one animated actor part.
- *
- * Starts from identity, applies the track-driven rotation selected by the
- * two-bit mode in part->unk0, then the fixed billboard corrections, the
- * optional aim-at-target orientation, the stretch-to-target scale and finally
- * the per-part and track-driven scales.
- *
- * @param rec Effect record supplying position, angles and the animation time
- *            (unk2C) used to sample parameter tracks.
- * @param part Part definition holding the rotation/scale mode bitfields.
- * @param mtx Destination matrix (scratchpad); overwritten with identity first.
- * @param actor Owning actor state, used as the parameter-track source.
- * @return Unspecified; the assembly leaves v0 undefined and no caller uses it.
+ * @brief Build an effect part's rotation, target alignment, and animated scale.
+ * @param effect Position, orientation, and track sampling age.
+ * @param part Rotation, alignment, and scale selectors.
+ * @param matrix Receives the resulting transform.
+ * @param actor Owner supplying parameter tracks and object bindings.
+ * @return Unspecified; callers use only the matrix output.
  * @see decomp.me (100%)
  */
-s32 field_build_effect_part_matrix(Struct_D800FDF58 *rec, FieldActorPartDef *part, FieldMatrix *mtx, FieldActorState *actor)
+s32 field_build_effect_part_matrix(FieldMotionRecord* effect, FieldActorPartDef* part, FieldMatrix* matrix, FieldActorState* actor)
 {
-    FieldSVector *dir = (FieldSVector *) 0x1F8000C0;
-    FieldVector *scale = (FieldVector *) 0x1F8000C8;
-    FieldVector *delta = (FieldVector *) 0x1F8000D8;
-    FieldVector *sqr = (FieldVector *) 0x1F8000E8;
+    SVECTOR* direction = &FIELD_MATRIX_SCRATCH->direction;
+    FieldVector* scale = &FIELD_MATRIX_SCRATCH->scale;
+    FieldVector* delta = &FIELD_MATRIX_SCRATCH->delta;
+    FieldVector* squared_delta = &FIELD_MATRIX_SCRATCH->squared_delta;
     s32 angle;
     s32 final_angle;
     s32 axis;
-    s32 mode;
-    u32 dist;
-    s32 temp;
+    s32 scale_mode;
+    u32 distance;
+    s32 rotation_mode;
+    s32 target_component;
+    s32 next_scale_track;
     u32 flags;
 
-    ((u32 *) mtx)[4] = 0x1000;
-    ((u32 *) mtx)[2] = 0x1000;
-    ((u32 *) mtx)[0] = 0x1000;
-    ((u32 *) mtx)[7] = 0;
-    ((u32 *) mtx)[6] = 0;
-    ((u32 *) mtx)[5] = 0;
-    ((u32 *) mtx)[3] = 0;
-    ((u32 *) mtx)[1] = 0;
+    /* FieldMatrix and FieldVector share the SDK layout; packed stores include the matrix pad. */
+    *(u32*)&matrix->m[2][2] = ONE;
+    *(u32*)&matrix->m[1][1] = ONE;
+    *(u32*)&matrix->m[0][0] = ONE;
+    matrix->t[2] = 0;
+    matrix->t[1] = 0;
+    matrix->t[0] = 0;
+    *(u32*)&matrix->m[2][0] = 0;
+    *(u32*)&matrix->m[0][2] = 0;
 
-    flags = part->unk0;
-    temp = (flags >> 6) & 3;
-    if (temp == 0)
+    flags = part->track_flags;
+    rotation_mode = (flags >> FIELD_PART_ROTATION_MODE_SHIFT) & 3;
+    if (rotation_mode != 0)
     {
-        goto after_track_rotation;
-    }
-    switch (temp)
-    {
-    case 1:
-        angle = field_evaluate_parameter_track_at_time(actor, flags >> 26, rec->unk2C) << 4;
-        axis = ((u8 *) part)[3];
-        axis &= 3;
-        break;
-    case 2:
-        angle = rec->unk12;
-        axis = 1;
-        break;
-    case 3:
-        angle = (((flags >> 26) * rec->unk2C) << 4) & 0xFFF;
-        axis = flags >> 24;
-        axis &= 3;
-        break;
-    default:
-        break;
-    }
-
-    if (part->unk34 & 0x20000)
-    {
-        if (!(g_field_actors[actor->unk228].unk21 & 0x80))
+        switch (rotation_mode)
         {
-            angle = -angle;
+        case 1:
+            angle = field_evaluate_parameter_track_at_time(actor, flags >> 26, (u16)effect->age) << 4;
+            axis = ((u8*)&part->track_flags)[3];
+            axis &= 3;
+            break;
+        case 2:
+            angle = effect->heading;
+            axis = 1;
+            break;
+        case 3:
+            angle = (((flags >> FIELD_PART_ROTATION_TRACK_SHIFT) * (u16)effect->age) << 4) & FIELD_ANGLE_MASK;
+            axis = flags >> 24;
+            axis &= 3;
+            break;
+        default:
+            break;
         }
-    }
 
-    switch (axis)
-    {
-    case 0:
-        RotMatrixX(angle, (MATRIX *) mtx);
-        break;
-    case 1:
-        RotMatrixY(angle, (MATRIX *) mtx);
-        break;
-    case 2:
-        RotMatrixZ(angle, (MATRIX *) mtx);
-        break;
-    case 3:
-        RotMatrixZ(angle, (MATRIX *) mtx);
-        RotMatrixY(angle, (MATRIX *) mtx);
-        RotMatrixX(angle, (MATRIX *) mtx);
-        break;
-    }
-
-after_track_rotation:
-    if ((part->unk0 >> 17) & 1)
-    {
-        RotMatrixX(0x400, (MATRIX *) mtx);
-    }
-    if (((u8 *) part)[0x13] != 0)
-    {
-        RotMatrixY(((u8 *) part)[0x13] << 4, (MATRIX *) mtx);
-    }
-
-    if ((part->unk4 >> 3) & 1)
-    {
-        RotMatrixZ(0x400, (MATRIX *) mtx);
-        RotMatrixY(0x400, (MATRIX *) mtx);
-        if ((part->unk28 >> 11) & 1)
+        if (part->spawn_flags.word & FIELD_PART_REVERSE_ROTATION_WITH_FACING)
         {
-            field_resolve_effect_position(rec, part, scale);
-            temp = scale->vz;
-            angle = ratan2(rec->unk8 - temp, scale->vx - rec->unk0);
-            delta->vx = (scale->vx - rec->unk0) >> 8;
-            delta->vy = (scale->vy - rec->unk4) >> 8;
-            delta->vz = (scale->vz - rec->unk8) >> 8;
-            gte_ldlvl(delta);
-            gte_sqr0();
-            gte_stlvnl(sqr);
-            dist = SquareRoot0(sqr->vx + sqr->vz + sqr->vy);
-            temp = scale->vy;
-            RotMatrixZ(ratan2(dist << 8, rec->unk4 - temp), (MATRIX *) mtx);
-            RotMatrixY(angle, (MATRIX *) mtx);
-            final_angle = 0x155;
+            if (!(g_field_actors[actor->owner_object_index].facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED))
+            {
+                angle = -angle;
+            }
         }
-        else
-        {
-            RotMatrixZ(rec->unk14, (MATRIX *) mtx);
-            RotMatrixY(rec->unk12, (MATRIX *) mtx);
-            RotMatrixZ(rec->unk32 << 4, (MATRIX *) mtx);
-            RotMatrixY(rec->unk33 << 4, (MATRIX *) mtx);
-            final_angle = 0x100;
-        }
-    }
-    else
-    {
-        RotMatrixY(0x400, (MATRIX *) mtx);
-        final_angle = 0x400;
-    }
-    RotMatrixX(final_angle, (MATRIX *) mtx);
 
-    if ((part->unk28 >> 2) & 1)
-    {
-        field_resolve_effect_position(rec, part, scale);
-        delta->vx = (scale->vx - rec->unk0) >> 8;
-        delta->vy = (scale->vy - rec->unk4) >> 8;
-        delta->vz = (scale->vz - rec->unk8) >> 8;
-        gte_ldlvl(delta);
-        gte_sqr0();
-        gte_stlvnl(sqr);
-        dist = SquareRoot0(sqr->vx + sqr->vy + sqr->vz);
-        if (dist == 0)
-        {
-            dist = 1;
-        }
-        scale->vy = 0x1000;
-        scale->vz = 0x1000;
-        if (rec->unk3C != 0)
-        {
-            scale->vx = (dist << 12) / rec->unk3C;
-        }
-        else
-        {
-            scale->vx = (dist << 12) >> 6;
-        }
-        ScaleMatrix((MATRIX *) mtx, (VECTOR *) scale);
-    }
-
-    if ((part->unk0 >> 23) & 1)
-    {
-        if ((part->unk4 >> 3) & 1)
-        {
-            dir->vx = -0x1000;
-            dir->vy = 0;
-            dir->vz = 0;
-            gte_SetRotMatrix(mtx);
-            gte_ldv0(dir);
-            gte_rtv0();
-            gte_stlvnl(scale);
-            dir->vx = 0;
-            dir->vy = 0x400;
-            dir->vz = 0x400;
-            RotMatrix_gte((SVECTOR *) dir, (MATRIX *) mtx);
-            RotMatrixZ(ratan2(scale->vy, scale->vx) + 0x400, (MATRIX *) mtx);
-            gte_ldlvl(scale);
-            gte_sqr0();
-            gte_stlvnl(sqr);
-            scale->vx = SquareRoot0(sqr->vx + sqr->vy);
-            scale->vz = 0x1000;
-            scale->vy = 0x1000;
-            ScaleMatrix((MATRIX *) mtx, (VECTOR *) scale);
-        }
-    }
-
-    scale->vy = 0x1000;
-    if (part->unk1C & 0x02000000)
-    {
-        scale->vz = (part->unk2E - ((part->unk2E * ((s32) (0x100 - D_80105AE0[actor->unk228].unk68) >> 6)) / 10)) << 6;
-    }
-    else
-    {
-        scale->vz = part->unk2E << 6;
-    }
-    if (part->unk1C & 0x04000000)
-    {
-        scale->vx = (part->unk33 - ((part->unk33 * ((s32) (0x100 - D_80105AE0[actor->unk228].unk68) >> 6)) / 10)) << 6;
-    }
-    else
-    {
-        scale->vx = part->unk33 << 6;
-    }
-    ScaleMatrix((MATRIX *) mtx, (VECTOR *) scale);
-
-    D_80105768.unk0 = 0x1000;
-    D_80105768.unk2 = 0x1000;
-    D_80105768.unk4 = 0x1000;
-
-    if ((part->unk4 >> 7) & 1)
-    {
-        scale->vz = 0x1000;
-        scale->vy = 0x1000;
-        scale->vx = 0x1000;
-        flags = part->unk4;
-        mode = (flags >> 20) & 3;
-        switch (mode)
+        switch (axis)
         {
         case 0:
-            scale->vz = field_evaluate_parameter_track_at_time(actor, flags >> 28, rec->unk2C) << 4;
+            RotMatrixX(angle, (MATRIX*)matrix);
             break;
         case 1:
-            scale->vx = field_evaluate_parameter_track_at_time(actor, flags >> 28, rec->unk2C) << 4;
+            RotMatrixY(angle, (MATRIX*)matrix);
+            break;
+        case 2:
+            RotMatrixZ(angle, (MATRIX*)matrix);
+            break;
+        case 3:
+            RotMatrixZ(angle, (MATRIX*)matrix);
+            RotMatrixY(angle, (MATRIX*)matrix);
+            RotMatrixX(angle, (MATRIX*)matrix);
+            break;
+        }
+    }
+
+    if ((part->track_flags >> FIELD_PART_ROTATE_QUARTER_X_SHIFT) & 1)
+    {
+        RotMatrixX(FIELD_ANGLE_QUARTER_TURN, (MATRIX*)matrix);
+    }
+    if (part->rotation_y_16 != 0)
+    {
+        RotMatrixY(part->rotation_y_16 << 4, (MATRIX*)matrix);
+    }
+
+    if ((part->behavior_flags >> FIELD_PART_ORIENTED_SHIFT) & 1)
+    {
+        RotMatrixZ(FIELD_ANGLE_QUARTER_TURN, (MATRIX*)matrix);
+        RotMatrixY(FIELD_ANGLE_QUARTER_TURN, (MATRIX*)matrix);
+        if ((part->placement_flags >> FIELD_PART_AIM_AT_TARGET_SHIFT) & 1)
+        {
+            field_resolve_effect_position(effect, part, scale);
+            target_component = scale->vz;
+            angle = ratan2(effect->z - target_component, scale->vx - effect->x);
+            delta->vx = (scale->vx - effect->x) >> 8;
+            delta->vy = (scale->vy - effect->y) >> 8;
+            delta->vz = (scale->vz - effect->z) >> 8;
+            gte_ldlvl(delta);
+            gte_sqr0();
+            gte_stlvnl(squared_delta);
+            distance = SquareRoot0(squared_delta->vx + squared_delta->vz + squared_delta->vy);
+            target_component = scale->vy;
+            RotMatrixZ(ratan2(distance << 8, effect->y - target_component), (MATRIX*)matrix);
+            RotMatrixY(angle, (MATRIX*)matrix);
+            final_angle = FIELD_EFFECT_TARGET_PITCH;
+        }
+        else
+        {
+            RotMatrixZ(effect->pitch, (MATRIX*)matrix);
+            RotMatrixY(effect->heading, (MATRIX*)matrix);
+            RotMatrixZ(effect->rotation_z_16 << 4, (MATRIX*)matrix);
+            RotMatrixY(effect->rotation_y_16 << 4, (MATRIX*)matrix);
+            final_angle = FIELD_EFFECT_DEFAULT_PITCH;
+        }
+    }
+    else
+    {
+        RotMatrixY(FIELD_ANGLE_QUARTER_TURN, (MATRIX*)matrix);
+        final_angle = FIELD_ANGLE_QUARTER_TURN;
+    }
+    RotMatrixX(final_angle, (MATRIX*)matrix);
+
+    if ((part->placement_flags >> FIELD_PART_STRETCH_TO_TARGET_SHIFT) & 1)
+    {
+        field_resolve_effect_position(effect, part, scale);
+        delta->vx = (scale->vx - effect->x) >> 8;
+        delta->vy = (scale->vy - effect->y) >> 8;
+        delta->vz = (scale->vz - effect->z) >> 8;
+        gte_ldlvl(delta);
+        gte_sqr0();
+        gte_stlvnl(squared_delta);
+        distance = SquareRoot0(squared_delta->vx + squared_delta->vy + squared_delta->vz);
+        if (distance == 0)
+        {
+            distance = 1;
+        }
+        scale->vy = ONE;
+        scale->vz = ONE;
+        if (effect->sprite_height_minus_one != 0)
+        {
+            scale->vx = (distance << 12) / effect->sprite_height_minus_one;
+        }
+        else
+        {
+            scale->vx = (distance << 12) >> 6;
+        }
+        ScaleMatrix((MATRIX*)matrix, (VECTOR*)scale);
+    }
+
+    if ((part->track_flags >> FIELD_PART_PROJECT_SCALE_SHIFT) & 1)
+    {
+        if ((part->behavior_flags >> FIELD_PART_ORIENTED_SHIFT) & 1)
+        {
+            direction->vx = -ONE;
+            direction->vy = 0;
+            direction->vz = 0;
+            gte_SetRotMatrix(matrix);
+            gte_ldv0(direction);
+            gte_rtv0();
+            gte_stlvnl(scale);
+            direction->vx = 0;
+            direction->vy = FIELD_ANGLE_QUARTER_TURN;
+            direction->vz = FIELD_ANGLE_QUARTER_TURN;
+            RotMatrix_gte(direction, (MATRIX*)matrix);
+            RotMatrixZ(ratan2(scale->vy, scale->vx) + FIELD_ANGLE_QUARTER_TURN, (MATRIX*)matrix);
+            gte_ldlvl(scale);
+            gte_sqr0();
+            gte_stlvnl(squared_delta);
+            scale->vx = SquareRoot0(squared_delta->vx + squared_delta->vy);
+            scale->vz = ONE;
+            scale->vy = ONE;
+            ScaleMatrix((MATRIX*)matrix, (VECTOR*)scale);
+        }
+    }
+
+    scale->vy = ONE;
+    if ((*(u32*)&part->unknown_0x1c) & FIELD_PART_SCALE_Z_BY_OWNER)
+    {
+        scale->vz = (part->footprint_scale_x - ((part->footprint_scale_x * ((s32)(256 - D_80105AE0[actor->owner_object_index].unknown_0x68) >> 6)) / 10)) << 6;
+    }
+    else
+    {
+        scale->vz = part->footprint_scale_x << 6;
+    }
+    if ((*(u32*)&part->unknown_0x1c) & FIELD_PART_SCALE_X_BY_OWNER)
+    {
+        scale->vx = (part->footprint_scale_y - ((part->footprint_scale_y * ((s32)(256 - D_80105AE0[actor->owner_object_index].unknown_0x68) >> 6)) / 10)) << 6;
+    }
+    else
+    {
+        scale->vx = part->footprint_scale_y << 6;
+    }
+    ScaleMatrix((MATRIX*)matrix, (VECTOR*)scale);
+
+    g_field_effect_track_scale.x = ONE;
+    g_field_effect_track_scale.y = ONE;
+    g_field_effect_track_scale.z = ONE;
+
+    if ((part->behavior_flags >> FIELD_PART_SCALE_TRACK_SHIFT) & 1)
+    {
+        scale->vz = ONE;
+        scale->vy = ONE;
+        scale->vx = ONE;
+        flags = part->behavior_flags;
+        scale_mode = (flags >> 20) & 3;
+        switch (scale_mode)
+        {
+        case 0:
+            scale->vz = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
+            break;
+        case 1:
+            scale->vx = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
             break;
         case 2:
         {
-            u32 value = field_evaluate_parameter_track_at_time(actor, flags >> 28, rec->unk2C) << 4;
+            u32 value = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
             scale->vz = value;
             scale->vy = value;
             scale->vx = value;
             break;
         }
         case 3:
-            scale->vz = field_evaluate_parameter_track_at_time(actor, flags >> 28, rec->unk2C) << 4;
-            temp = (part->unk4 >> 28) + 1;
-            scale->vx = field_evaluate_parameter_track_at_time(actor, temp % 16, rec->unk2C) << 4;
+            scale->vz = field_evaluate_parameter_track_at_time(actor, flags >> 28, (u16)effect->age) << 4;
+            next_scale_track = (part->behavior_flags >> 28) + 1;
+            scale->vx = field_evaluate_parameter_track_at_time(actor, next_scale_track % FIELD_TRACK_COUNT, (u16)effect->age) << 4;
             break;
         }
-        D_80105768.unk0 = (u16) scale->vx;
-        D_80105768.unk2 = (u16) scale->vy;
-        D_80105768.unk4 = (u16) scale->vz;
-        ScaleMatrix((MATRIX *) mtx, (VECTOR *) scale);
+        g_field_effect_track_scale.x = (u16)scale->vx;
+        g_field_effect_track_scale.y = (u16)scale->vy;
+        g_field_effect_track_scale.z = (u16)scale->vz;
+        ScaleMatrix((MATRIX*)matrix, (VECTOR*)scale);
     }
 }
 
 /**
- * @brief Resolve the RGB triple for one part into the primitive colour bytes.
- *
- * Depending on the record flags the colour is taken from the parameter tracks
- * named by the part definition, copied verbatim from the record, or broadcast
- * from a single track sample to all three channels.
- *
- * @param actor Owning actor state, used as the parameter-track source.
- * @param rec Effect record supplying the flag word (unk1C), the literal colour
- *            at unk18 and the animation time (unk2C).
- * @param part Part definition naming the per-channel parameter tracks.
- * @param out Destination for the three colour bytes (r, g, b).
+ * @brief Resolve a part's literal or animated primitive color.
+ * @param actor Owner supplying parameter tracks.
+ * @param effect Color flags, packed literal color, and track sampling age.
+ * @param part Literal channel values and track selectors.
+ * @param out Four-byte color storage; the literal path also copies its fourth byte.
  * @see decomp.me (100%)
  */
-void field_resolve_effect_part_color(FieldActorState *actor, Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *out)
+void field_resolve_effect_part_color(FieldActorState* actor, FieldMotionRecord* effect, FieldActorPartDef* part, u8* out)
 {
     s32 flags;
     u8 value;
 
-    flags = rec->unk1C;
-    if (!(flags & 0x8000))
+    /* Packed reads include selectors spanning the adjacent byte fields. */
+    flags = effect->flags;
+    if (!(flags & FIELD_EFFECT_TRACK_COLOR))
     {
-        if ((*(u32 *) &part->unk2C >> 5) & 4)
-        {
-            u32 eval_temp;
-            do
-            {
-                eval_temp = field_evaluate_parameter_track_at_time(actor, part->unkE & 0xF, rec->unk2C);
-            } while (0);
-            out[0] = eval_temp;
-        }
-        else
-        {
-            out[0] = part->unkE;
-        }
-        if ((*(u32 *) &part->unk2C >> 5) & 2)
-        {
-            u32 eval_temp;
-            do
-            {
-                eval_temp = field_evaluate_parameter_track_at_time(actor, part->unkF & 0xF, rec->unk2C);
-            } while (0);
-            out[1] = eval_temp;
-        }
-        else
-        {
-            out[1] = part->unkF;
-        }
-        if ((*(u32 *) &part->unk2C >> 5) & 1)
-        {
-            out[2] = field_evaluate_parameter_track_at_time(actor, part->unk10 & 0xF, rec->unk2C);
-            return;
-        }
-        out[2] = part->unk10;
+        out[0] = ((*(u32*)&part->unknown_0x2c >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_RED_TRACK)
+                     ? field_evaluate_parameter_track_at_time(actor, part->red_or_track & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
+                     : part->red_or_track;
+        out[1] = ((*(u32*)&part->unknown_0x2c >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_GREEN_TRACK)
+                     ? field_evaluate_parameter_track_at_time(actor, part->green_or_track & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
+                     : part->green_or_track;
+        out[2] = ((*(u32*)&part->unknown_0x2c >> FIELD_PART_COLOR_TRACK_SHIFT) & FIELD_PART_BLUE_TRACK)
+                     ? field_evaluate_parameter_track_at_time(actor, part->blue_or_track & FIELD_TRACK_INDEX_MASK, (u16)effect->age)
+                     : part->blue_or_track;
         return;
     }
 
-    if (flags & 0x10000000)
+    if (flags & FIELD_EFFECT_LITERAL_COLOR)
     {
-        *(u32 *) out = *(u32 *) &rec->unk18;
+        /* The fourth byte travels with RGB and is overwritten by the packet builder. */
+        *(u32*)out = *(u32*)&effect->unknown_0x18;
         return;
     }
 
     {
-        u32 part_flags = part->unk4;
-        if ((part_flags >> 12) & 1)
+        u32 part_flags = part->behavior_flags;
+        if ((part_flags >> FIELD_PART_RGB_TRACKS_SHIFT) & 1)
         {
-            out[0] = field_evaluate_parameter_track_at_time(actor, (part_flags >> 16) & 0xF, rec->unk2C);
-            out[1] = field_evaluate_parameter_track_at_time(actor, (((u16 *) &part->unk4)[1] & 0xF) + 1, rec->unk2C);
-            out[2] = field_evaluate_parameter_track_at_time(actor, (((u16 *) &part->unk4)[1] & 0xF) + 2, rec->unk2C);
+            out[0] = field_evaluate_parameter_track_at_time(actor, (part_flags >> FIELD_PART_ADD_HALF_WIDTH_SHIFT) & FIELD_TRACK_INDEX_MASK, (u16)effect->age);
+            out[1] = field_evaluate_parameter_track_at_time(actor, (((u16*)&part->behavior_flags)[1] & FIELD_TRACK_INDEX_MASK) + 1, (u16)effect->age);
+            out[2] = field_evaluate_parameter_track_at_time(actor, (((u16*)&part->behavior_flags)[1] & FIELD_TRACK_INDEX_MASK) + 2, (u16)effect->age);
             return;
         }
 
-        value = field_evaluate_parameter_track_at_time(actor, (part_flags >> 16) & 0xF, rec->unk2C);
+        value = field_evaluate_parameter_track_at_time(actor, (part_flags >> FIELD_PART_ADD_HALF_WIDTH_SHIFT) & FIELD_TRACK_INDEX_MASK, (u16)effect->age);
         out[0] = out[1] = out[2] = value;
     }
 }
 
 /**
- * @brief Emit the trailing DR_MODE packet that restores the texture page and
- *        thread it into the depth-indexed ordering table.
- * @param rec Effect record supplying the depth key (unk8 >> 7).
- * @param part Part definition supplying the semi-transparency bits (unk4).
- * @param primbuf Output primitive buffer.
- * @param base Depth-indexed ordering-table / primitive base array.
- * @return The primbuf cursor advanced past the 8-byte packet.
+ * @brief Append the effect's texture-page command at its clamped depth.
+ * @param effect Supplies the ordering-table depth.
+ * @param part Supplies the semi-transparency blend mode.
+ * @param packet_cursor Receives one DR_TPAGE packet.
+ * @param ordering_table Depth-indexed GPU ordering table.
+ * @return Cursor immediately after the texture-page packet.
  * @see decomp.me (100%)
  */
-u8 *func_8007DA80(Struct_D800FDF58 *rec, FieldActorPartDef *part, u8 *primbuf, s32 *base)
+u8* field_emit_effect_texture_page(FieldMotionRecord* effect, FieldActorPartDef* part, u8* packet_cursor, s32* ordering_table)
 {
     s32 index;
-    s32 *entry;
+    s32* entry;
     s32 srcval;
 
-    primbuf[3] = 1;
-    *(s32 *) (primbuf + 4) = (((part->unk4 >> 17) & 0x60) | 0xE1000005);
+    setDrawTPage(packet_cursor, 0, 0, getTPage(0, (part->behavior_flags >> 22), 320, 0));
 
-    index = rec->unk8 >> 7;
+    index = effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT;
     if (index < 0)
     {
-        addPrim(&base[0], primbuf);
-        primbuf += 8;
+        addPrim(&ordering_table[0], packet_cursor);
+        packet_cursor += sizeof(DR_TPAGE);
     }
-    else if (index >= 0x1000)
+    else if (index >= FIELD_EFFECT_OT_SIZE)
     {
-        addPrim(&base[0xFFF], primbuf);
-        primbuf += 8;
+        addPrim(&ordering_table[FIELD_EFFECT_OT_SIZE - 1], packet_cursor);
+        packet_cursor += sizeof(DR_TPAGE);
     }
     else
     {
-        srcval = base[index];
-        setaddr(primbuf, srcval);
-        entry = (s32 *) (((rec->unk8 >> 7) << 2) + (s32) base);
-        setaddr(entry, primbuf);
-        primbuf += 8;
+        srcval = ordering_table[index];
+        setaddr(packet_cursor, srcval);
+        entry = (s32*)((effect->z >> FIELD_EFFECT_OT_DEPTH_SHIFT) * sizeof(*ordering_table) + (u32)ordering_table);
+        setaddr(entry, packet_cursor);
+        packet_cursor += sizeof(DR_TPAGE);
     }
-    return primbuf;
+    return packet_cursor;
 }
 
 /**
- * @brief Project the four corners of a billboarded sprite quad into screen
- *        space and write them into the primitive packet.
- *
- * With no tilt (item[8] == 0) each corner is rotated straight through the
- * caller matrix. Otherwise a second matrix is built from the tilt angle and
- * the corners are chained as origin plus rotated edge vectors, with the corner
- * order mirrored when the record is facing the other way.
- *
- * @param rec Effect record; only the facing flag in unk21 is read.
- * @param origin Screen-space origin (x, y) the quad is anchored to.
- * @param packet Primitive packet receiving the four vertex pairs.
- * @param width Quad width in world units.
- * @param height Quad height in world units.
- * @param x World-space x offset of the quad from the anchor.
- * @param y World-space y offset of the quad from the anchor.
- * @param item Sprite item record; item[8] holds the tilt angle (0 = untilted).
- * @param mtx Caller-supplied rotation matrix applied to every corner.
+ * @brief Project sprite corners, applying optional tilt and facing reversal.
+ * @param effect Supplies the horizontal facing flag.
+ * @param origin Unsigned screen-space origin components.
+ * @param packet POLY_FT4 packet receiving projected coordinates.
+ * @param width Sprite width.
+ * @param height Sprite height.
+ * @param x Horizontal offset from the anchor.
+ * @param y Vertical offset from the anchor.
+ * @param item Packed sprite record; byte 8 is the tilt in 16 GTE angle units per step.
+ * @param matrix Caller rotation matrix, already loaded into the GTE on entry.
  * @see decomp.me (100%)
  */
-void field_project_effect_sprite_quad(Struct_D800FDF58 *rec, u16 *origin, u8 *packet, s32 width, s32 height, s32 x, s32 y, u8 *item, FieldMatrix *mtx)
+void field_project_effect_sprite_quad(FieldMotionRecord* effect, u16* origin, u8* packet, s32 width, s32 height, s32 x, s32 y, u8* item, FieldMatrix* matrix)
 {
-    FieldSVector *tmp = (FieldSVector *) 0x1F800100;
-    FieldSVector *vec = (FieldSVector *) 0x1F800108;
-    FieldVector *out = (FieldVector *) 0x1F800110;
-    FieldMatrix *rot = (FieldMatrix *) 0x1F800120;
-    u16 *p = (u16 *) packet;
-    u16 *o = (u16 *) out;
+    SVECTOR* rotated_vertex = &FIELD_SPRITE_SCRATCH->rotated_vertex;
+    SVECTOR* vertex = &FIELD_SPRITE_SCRATCH->vertex;
+    FieldSpriteProjection* out = &FIELD_SPRITE_SCRATCH->projected;
+    MATRIX* tilt_matrix = &FIELD_SPRITE_SCRATCH->rotation;
+    POLY_FT4* quad = (POLY_FT4*)packet;
 
-    if (item[8] == 0)
+    /* The output uses unsigned low halves, including wrapped negative coordinates. */
+    if (item[FIELD_SPRITE_TILT_BYTE] == 0)
     {
-        tmp->vx = y;
-        tmp->vy = 0;
-        tmp->vz = x;
-        gte_ldv0(tmp);
+        rotated_vertex->vx = y;
+        rotated_vertex->vy = 0;
+        rotated_vertex->vz = x;
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[4] = origin[0] + o[0];
-        p[5] = origin[1] + o[2];
+        quad->x0 = origin[0] + out->low.x;
+        quad->y0 = origin[1] + out->low.y;
 
-        tmp->vx = y;
-        tmp->vy = 0;
-        tmp->vz = x + width;
-        gte_ldv0(tmp);
+        rotated_vertex->vx = y;
+        rotated_vertex->vy = 0;
+        rotated_vertex->vz = x + width;
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[8] = origin[0] + o[0];
-        p[9] = origin[1] + o[2];
+        quad->x1 = origin[0] + out->low.x;
+        quad->y1 = origin[1] + out->low.y;
 
-        tmp->vx = y + height;
-        tmp->vy = 0;
-        tmp->vz = x;
-        gte_ldv0(tmp);
+        rotated_vertex->vx = y + height;
+        rotated_vertex->vy = 0;
+        rotated_vertex->vz = x;
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[12] = origin[0] + o[0];
-        p[13] = origin[1] + o[2];
+        quad->x2 = origin[0] + out->low.x;
+        quad->y2 = origin[1] + out->low.y;
 
-        tmp->vx = y + height;
-        tmp->vy = 0;
-        tmp->vz = x + width;
-        gte_ldv0(tmp);
+        rotated_vertex->vx = y + height;
+        rotated_vertex->vy = 0;
+        rotated_vertex->vz = x + width;
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[16] = origin[0] + o[0];
-        p[17] = origin[1] + o[2];
+        quad->x3 = origin[0] + out->low.x;
+        quad->y3 = origin[1] + out->low.y;
         return;
     }
 
-    if (rec->unk21 & 0x80)
+    if (effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED)
     {
-        ((u32 *) rot)[4] = 0x1000;
-        ((u32 *) rot)[2] = 0x1000;
-        ((u32 *) rot)[0] = 0x1000;
-        ((u32 *) rot)[7] = 0;
-        ((u32 *) rot)[6] = 0;
-        ((u32 *) rot)[5] = 0;
-        ((u32 *) rot)[3] = 0;
-        ((u32 *) rot)[1] = 0;
+        *(u32*)&tilt_matrix->m[2][2] = ONE;
+        *(u32*)&tilt_matrix->m[1][1] = ONE;
+        *(u32*)&tilt_matrix->m[0][0] = ONE;
+        tilt_matrix->t[2] = 0;
+        tilt_matrix->t[1] = 0;
+        tilt_matrix->t[0] = 0;
+        *(u32*)&tilt_matrix->m[2][0] = 0;
+        *(u32*)&tilt_matrix->m[0][2] = 0;
 
-        vec->vx = y;
-        vec->vy = 0;
-        vec->vz = x + width;
-        gte_SetRotMatrix(rot);
-        gte_ldv0(vec);
+        vertex->vx = y;
+        vertex->vy = 0;
+        vertex->vz = x + width;
+        gte_SetRotMatrix(tilt_matrix);
+        gte_ldv0(vertex);
         gte_rtv0();
-        gte_stsv(tmp);
-        gte_SetRotMatrix(mtx);
-        gte_ldv0(tmp);
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[8] = origin[0] + o[0];
-        p[9] = origin[1] + o[2];
+        quad->x1 = origin[0] + out->low.x;
+        quad->y1 = origin[1] + out->low.y;
 
-        vec->vx = 0;
-        vec->vy = -(item[8] << 4);
-        vec->vz = 0;
-        RotMatrix_gte((SVECTOR *) vec, (MATRIX *) rot);
+        vertex->vx = 0;
+        vertex->vy = -(item[FIELD_SPRITE_TILT_BYTE] << 4);
+        vertex->vz = 0;
+        RotMatrix_gte(vertex, tilt_matrix);
 
-        vec->vx = 0;
-        vec->vy = 0;
-        vec->vz = -width;
-        gte_SetRotMatrix(rot);
-        gte_ldv0(vec);
+        vertex->vx = 0;
+        vertex->vy = 0;
+        vertex->vz = -width;
+        gte_SetRotMatrix(tilt_matrix);
+        gte_ldv0(vertex);
         gte_rtv0();
-        gte_stsv(tmp);
-        gte_SetRotMatrix(mtx);
-        gte_ldv0(tmp);
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[4] = p[8] + o[0];
-        p[5] = p[9] + o[2];
+        quad->x0 = (u16)quad->x1 + out->low.x;
+        quad->y0 = (u16)quad->y1 + out->low.y;
 
-        vec->vx = height;
-        vec->vy = 0;
-        vec->vz = 0;
-        gte_SetRotMatrix(rot);
-        gte_ldv0(vec);
+        vertex->vx = height;
+        vertex->vy = 0;
+        vertex->vz = 0;
+        gte_SetRotMatrix(tilt_matrix);
+        gte_ldv0(vertex);
         gte_rtv0();
-        gte_stsv(tmp);
-        gte_SetRotMatrix(mtx);
-        gte_ldv0(tmp);
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[16] = p[8] + o[0];
-        p[17] = p[9] + o[2];
+        quad->x3 = (u16)quad->x1 + out->low.x;
+        quad->y3 = (u16)quad->y1 + out->low.y;
 
-        vec->vx = height;
-        vec->vy = 0;
-        vec->vz = -width;
-        gte_SetRotMatrix(rot);
-        gte_ldv0(vec);
+        vertex->vx = height;
+        vertex->vy = 0;
+        vertex->vz = -width;
+        gte_SetRotMatrix(tilt_matrix);
+        gte_ldv0(vertex);
         gte_rtv0();
-        gte_stsv(tmp);
-        gte_SetRotMatrix(mtx);
-        gte_ldv0(tmp);
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[12] = p[8] + o[0];
-        p[13] = p[9] + o[2];
+        quad->x2 = (u16)quad->x1 + out->low.x;
+        quad->y2 = (u16)quad->y1 + out->low.y;
     }
     else
     {
-        ((u32 *) rot)[4] = 0x1000;
-        ((u32 *) rot)[2] = 0x1000;
-        ((u32 *) rot)[0] = 0x1000;
-        ((u32 *) rot)[7] = 0;
-        ((u32 *) rot)[6] = 0;
-        ((u32 *) rot)[5] = 0;
-        ((u32 *) rot)[3] = 0;
-        ((u32 *) rot)[1] = 0;
+        *(u32*)&tilt_matrix->m[2][2] = ONE;
+        *(u32*)&tilt_matrix->m[1][1] = ONE;
+        *(u32*)&tilt_matrix->m[0][0] = ONE;
+        tilt_matrix->t[2] = 0;
+        tilt_matrix->t[1] = 0;
+        tilt_matrix->t[0] = 0;
+        *(u32*)&tilt_matrix->m[2][0] = 0;
+        *(u32*)&tilt_matrix->m[0][2] = 0;
 
-        vec->vx = y;
-        vec->vy = 0;
-        vec->vz = x;
-        gte_SetRotMatrix(rot);
-        gte_ldv0(vec);
+        vertex->vx = y;
+        vertex->vy = 0;
+        vertex->vz = x;
+        gte_SetRotMatrix(tilt_matrix);
+        gte_ldv0(vertex);
         gte_rtv0();
-        gte_stsv(tmp);
-        gte_SetRotMatrix(mtx);
-        gte_ldv0(tmp);
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[4] = origin[0] + o[0];
-        p[5] = origin[1] + o[2];
+        quad->x0 = origin[0] + out->low.x;
+        quad->y0 = origin[1] + out->low.y;
 
-        vec->vx = 0;
-        vec->vy = item[8] << 4;
-        vec->vz = 0;
-        RotMatrix_gte((SVECTOR *) vec, (MATRIX *) rot);
+        vertex->vx = 0;
+        vertex->vy = item[FIELD_SPRITE_TILT_BYTE] << 4;
+        vertex->vz = 0;
+        RotMatrix_gte(vertex, tilt_matrix);
 
-        vec->vx = 0;
-        vec->vy = 0;
-        vec->vz = width;
-        gte_SetRotMatrix(rot);
-        gte_ldv0(vec);
+        vertex->vx = 0;
+        vertex->vy = 0;
+        vertex->vz = width;
+        gte_SetRotMatrix(tilt_matrix);
+        gte_ldv0(vertex);
         gte_rtv0();
-        gte_stsv(tmp);
-        gte_SetRotMatrix(mtx);
-        gte_ldv0(tmp);
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[8] = p[4] + o[0];
-        p[9] = p[5] + o[2];
+        quad->x1 = (u16)quad->x0 + out->low.x;
+        quad->y1 = (u16)quad->y0 + out->low.y;
 
-        vec->vx = height;
-        vec->vy = 0;
-        vec->vz = 0;
-        gte_SetRotMatrix(rot);
-        gte_ldv0(vec);
+        vertex->vx = height;
+        vertex->vy = 0;
+        vertex->vz = 0;
+        gte_SetRotMatrix(tilt_matrix);
+        gte_ldv0(vertex);
         gte_rtv0();
-        gte_stsv(tmp);
-        gte_SetRotMatrix(mtx);
-        gte_ldv0(tmp);
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[12] = p[4] + o[0];
-        p[13] = p[5] + o[2];
+        quad->x2 = (u16)quad->x0 + out->low.x;
+        quad->y2 = (u16)quad->y0 + out->low.y;
 
-        vec->vx = height;
-        vec->vy = 0;
-        vec->vz = width;
-        gte_SetRotMatrix(rot);
-        gte_ldv0(vec);
+        vertex->vx = height;
+        vertex->vy = 0;
+        vertex->vz = width;
+        gte_SetRotMatrix(tilt_matrix);
+        gte_ldv0(vertex);
         gte_rtv0();
-        gte_stsv(tmp);
-        gte_SetRotMatrix(mtx);
-        gte_ldv0(tmp);
+        gte_stsv(rotated_vertex);
+        gte_SetRotMatrix(matrix);
+        gte_ldv0(rotated_vertex);
         gte_rtv0();
         gte_stlvnl(out);
-        p[16] = p[4] + o[0];
-        p[17] = p[5] + o[2];
+        quad->x3 = (u16)quad->x0 + out->low.x;
+        quad->y3 = (u16)quad->y0 + out->low.y;
     }
 }
 
 /**
- * @brief Unpack the four signed byte-pair UV corners of a sprite item,
- *        optionally mirrored horizontally.
- * @param out Destination for the eight signed UV components.
- * @param flip Non-zero to mirror the quad horizontally.
- * @param item Sprite item record holding the packed signed byte corners.
+ * @brief Decode signed byte geometry corners and optionally mirror them.
+ * @param out Receives four interleaved x/y pairs.
+ * @param flip Nonzero to reverse corner order and negate x coordinates.
+ * @param item Packed corner record; byte 7 is not a coordinate.
  * @see decomp.me (100%)
  */
-void func_8007E4A8(s16 *out, s32 flip, u8 *item)
+void field_unpack_effect_quad_corners8(s16* out, s32 flip, u8* item)
 {
     if (flip)
     {
-        out[0] = -(s8) item[2];
-        out[1] = (s8) item[3];
-        out[2] = -(s8) item[0];
-        out[3] = (s8) item[1];
-        out[4] = -(s8) item[6];
-        out[5] = (s8) item[8];
-        out[6] = -(s8) item[4];
-        out[7] = (s8) item[5];
+        out[0] = -(s8)item[2];
+        out[1] = (s8)item[3];
+        out[2] = -(s8)item[0];
+        out[3] = (s8)item[1];
+        out[4] = -(s8)item[6];
+        out[5] = (s8)item[8];
+        out[6] = -(s8)item[4];
+        out[7] = (s8)item[5];
     }
     else
     {
-        out[0] = (s8) item[0];
-        out[1] = (s8) item[1];
-        out[2] = (s8) item[2];
-        out[3] = (s8) item[3];
-        out[4] = (s8) item[4];
-        out[5] = (s8) item[5];
-        out[6] = (s8) item[6];
-        out[7] = (s8) item[8];
+        out[0] = (s8)item[0];
+        out[1] = (s8)item[1];
+        out[2] = (s8)item[2];
+        out[3] = (s8)item[3];
+        out[4] = (s8)item[4];
+        out[5] = (s8)item[5];
+        out[6] = (s8)item[6];
+        out[7] = (s8)item[8];
     }
 }
 
 /**
- * @brief Wide variant of func_8007E4A8: unpack the four 16-bit little-endian
- *        corners of a sprite item, optionally mirrored horizontally.
- * @param out Destination for the eight 16-bit UV components.
- * @param mirror Non-zero to mirror the quad horizontally.
- * @param item Sprite item record holding the packed 16-bit corners.
+ * @brief Decode little-endian geometry corners and optionally mirror them.
+ * @param out Receives four interleaved x/y pairs.
+ * @param mirror Nonzero to reverse corner order and negate x coordinates.
+ * @param item Packed corner record; byte 7 interrupts the second y component.
  * @see decomp.me (100%)
  */
-void func_8007E5FC(s16 *out, s32 mirror, u8 *item)
+void field_unpack_effect_quad_corners16(s16* out, s32 mirror, u8* item)
 {
     if (mirror != 0)
     {
@@ -1132,10 +1046,10 @@ void func_8007E5FC(s16 *out, s32 mirror, u8 *item)
         out[1] = item[6] + (item[8] << 8);
         out[2] = -(item[0] + (item[1] << 8));
         out[3] = item[2] + (item[3] << 8);
-        out[4] = -(item[0xD] + (item[0xE] << 8));
-        out[5] = item[0xF] + (item[0x10] << 8);
-        out[6] = -(item[9] + (item[0xA] << 8));
-        out[7] = item[0xB] + (item[0xC] << 8);
+        out[4] = -(item[13] + (item[14] << 8));
+        out[5] = item[15] + (item[16] << 8);
+        out[6] = -(item[9] + (item[10] << 8));
+        out[7] = item[11] + (item[12] << 8);
     }
     else
     {
@@ -1143,176 +1057,179 @@ void func_8007E5FC(s16 *out, s32 mirror, u8 *item)
         out[1] = item[2] + (item[3] << 8);
         out[2] = item[4] + (item[5] << 8);
         out[3] = item[6] + (item[8] << 8);
-        out[4] = item[9] + (item[0xA] << 8);
-        out[5] = item[0xB] + (item[0xC] << 8);
-        out[6] = item[0xD] + (item[0xE] << 8);
-        out[7] = item[0xF] + (item[0x10] << 8);
+        out[4] = item[9] + (item[10] << 8);
+        out[5] = item[11] + (item[12] << 8);
+        out[6] = item[13] + (item[14] << 8);
+        out[7] = item[15] + (item[16] << 8);
     }
 }
 
 /**
- * @brief Resolve the effective distance/extent value for one animated part.
- *
- * The base value comes from the 9-bit field split across part->unk20 and the
- * top of part->unk1C, either literally or sampled from a parameter track. It is
- * then optionally scaled by the distance to the linked actor, by a random
- * factor, and by the owning actor stat, and finally has the half-extents of one
- * or two bounding boxes added in, chosen per the category in part->unk28.
- *
- * @param actor Owning actor state; unk228 is its own record index and
- *              unk229[] the linked record indices.
- * @param part Part definition holding the value, mode and category bitfields.
- * @return The resolved value.
+ * @brief Resolve a part's extent from tracks, distance, randomness, and bounds.
+ * @param actor Owner supplying tracks and linked object indices.
+ * @param part Packed extent value, modifiers, and attachment category.
+ * @return Extent after scaling and optional bounding-box half-extents.
+ * @note TODO: categories 55-62 do not initialize the part index on this path.
  * @see decomp.me (100%)
  */
-s32 func_8007E754(FieldActorState *actor, FieldActorPartDef *part)
+s32 field_resolve_effect_extent(FieldActorState* actor, FieldActorPartDef* part)
 {
     FieldVector delta;
-    FieldVector sqr;
-    s32 speed;
+    FieldVector squared_delta;
+    s32 extent;
     s32 part_index;
-    s32 temp;
+    s32 half_extent;
     u32 flags;
-    FieldActorState *actor2;
-    s32 track;
+    FieldActorState* owner;
 
     {
-        u32 init_flags = *(u32 *) &part->unk20;
-        s32 init_mode = (init_flags >> 6) & 3;
-        actor2 = actor;
-        switch (init_mode)
+        u32 value_flags = *(u32*)&part->unknown_0x20;
+        s32 value_mode = (value_flags >> FIELD_PART_ROTATION_MODE_SHIFT) & 3;
+        owner = actor;
+        switch (value_mode)
         {
         case 0:
         {
-            s32 hi = (u32) part->unk1C >> 29;
-            speed = ((init_flags & 0x3F) << 3) | hi;
+            s32 value_low_bits = (u32)(*(u32*)&part->unknown_0x1c) >> 29;
+            extent = ((value_flags & 0x3F) << 3) | value_low_bits;
             break;
         }
         case 1:
         {
-            u32 hi = part->unk1C >> 29;
-            speed = field_evaluate_parameter_track(actor2, (((init_flags & 0x3F) << 3) | hi) & 0xF);
+            u32 value_low_bits = (*(u32*)&part->unknown_0x1c) >> 29;
+            extent = field_evaluate_parameter_track(owner, (((value_flags & 0x3F) << 3) | value_low_bits) & FIELD_TRACK_INDEX_MASK);
             break;
         }
         case 2:
         {
-            u32 hi = part->unk1C;
-            speed = field_evaluate_parameter_track_at_time(actor2, (((init_flags & 0x3F) << 3) | (hi >> 29)) & 0xF, 0);
+            u32 value_low_bits = (*(u32*)&part->unknown_0x1c);
+            extent = field_evaluate_parameter_track_at_time(owner, (((value_flags & 0x3F) << 3) | (value_low_bits >> 29)) & FIELD_TRACK_INDEX_MASK, 0);
             break;
         }
         }
     }
 
-    if (part->unk24 & 0x01000000)
+    if (part->effect_flags & FIELD_PART_SCALE_DISTANCE_BY_TARGET)
     {
-        delta.vx = (g_field_actors[actor2->unk229[g_field_track_index]].unk0 - g_field_actors[actor2->unk228].unk0) >> 8;
-        delta.vy = (g_field_actors[actor2->unk229[g_field_track_index]].unk4 - g_field_actors[actor2->unk228].unk4) >> 8;
-        delta.vz = (g_field_actors[actor2->unk229[g_field_track_index]].unk8 - g_field_actors[actor2->unk228].unk8) >> 8;
+        delta.vx = (g_field_actors[owner->track_object_indices[g_field_track_index]].x - g_field_actors[owner->owner_object_index].x) >> 8;
+        delta.vy = (g_field_actors[owner->track_object_indices[g_field_track_index]].y - g_field_actors[owner->owner_object_index].y) >> 8;
+        delta.vz = (g_field_actors[owner->track_object_indices[g_field_track_index]].z - g_field_actors[owner->owner_object_index].z) >> 8;
         gte_ldlvl(&delta);
         gte_sqr0();
-        gte_stlvnl(&sqr);
-        speed = (SquareRoot0(sqr.vx + sqr.vy + sqr.vz) * speed) / 100;
+        gte_stlvnl(&squared_delta);
+        extent = (SquareRoot0(squared_delta.vx + squared_delta.vy + squared_delta.vz) * extent) / 100;
     }
 
-    if ((part->unk28 >> 15) & 1)
+    if ((part->placement_flags >> FIELD_PART_RANDOM_EXTENT_SHIFT) & 1)
     {
-        speed = (speed * rand()) >> 15;
+        extent = (extent * rand()) >> 15;
     }
 
-    if (part->unk1C & 0x01000000)
+    if ((*(u32*)&part->unknown_0x1c) & FIELD_PART_SCALE_DISTANCE_BY_OWNER)
     {
-        speed = ((D_80105AE0[actor2->unk228].unk174 & 0x3FF) * speed) / 100;
+        extent = ((D_80105AE0[owner->owner_object_index].scale_percent & 0x3FF) * extent) / 100;
     }
 
-    flags = part->unk28;
+    flags = part->placement_flags;
     {
-        s32 category = (flags >> 18) & 0x3F;
-        if (category < 0x14)
+        s32 category = (flags >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK;
+        if (category < FIELD_ATTACHMENT_POINT_FIRST)
         {
-            if ((flags >> 16) & 1)
+            if ((flags >> FIELD_PART_ADD_HALF_WIDTH_SHIFT) & 1)
             {
-                if ((u32) (category - 0xA) >= 0x1C)
+                if ((u32)(category - FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST) >= FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
                 {
-                    temp = (D_80105AE0[actor2->unk228].unk144 - D_80105AE0[actor2->unk228].unk140) >> 1;
+                    half_extent = (D_80105AE0[owner->owner_object_index].bounds_right - D_80105AE0[owner->owner_object_index].bounds_left) >> 1;
                 }
                 else
                 {
-                    temp = (D_80105AE0[actor2->unk229[g_field_track_index]].unk144 - D_80105AE0[actor2->unk229[g_field_track_index]].unk140) >> 1;
+                    half_extent = (D_80105AE0[owner->track_object_indices[g_field_track_index]].bounds_right -
+                                   D_80105AE0[owner->track_object_indices[g_field_track_index]].bounds_left) >>
+                                  1;
                 }
-                if (temp < 0)
+                if (half_extent < 0)
                 {
-                    temp = -temp;
+                    half_extent = -half_extent;
                 }
-                speed += temp;
+                extent += half_extent;
             }
-            if ((part->unk28 >> 17) & 1)
+            if ((part->placement_flags >> FIELD_PART_ADD_HALF_HEIGHT_SHIFT) & 1)
             {
-                if ((u32) (((part->unk28 >> 18) & 0x3F) - 0xA) >= 0x1C)
+                if ((u32)(((part->placement_flags >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK) - FIELD_ATTACHMENT_LINKED_BOUNDS_FIRST) >=
+                    FIELD_ATTACHMENT_LINKED_BOUNDS_COUNT)
                 {
-                    temp = (D_80105AE0[actor2->unk228].unk146 - D_80105AE0[actor2->unk228].unk142) >> 1;
+                    half_extent = (D_80105AE0[owner->owner_object_index].bounds_bottom - D_80105AE0[owner->owner_object_index].bounds_top) >> 1;
                 }
                 else
                 {
-                    temp = (D_80105AE0[actor2->unk229[g_field_track_index]].unk146 - D_80105AE0[actor2->unk229[g_field_track_index]].unk142) >> 1;
+                    half_extent = (D_80105AE0[owner->track_object_indices[g_field_track_index]].bounds_bottom -
+                                   D_80105AE0[owner->track_object_indices[g_field_track_index]].bounds_top) >>
+                                  1;
                 }
-                if (temp < 0)
+                if (half_extent < 0)
                 {
-                    temp = -temp;
+                    half_extent = -half_extent;
                 }
-                speed += temp;
+                extent += half_extent;
             }
         }
     }
 
     {
-        s32 category = (part->unk28 >> 18) & 0x3F;
-        if ((u32) (category - 0x2A) < 8 || (u32) (category - 0x14) < 8 || (u32) (category - 0x37) < 8)
+        s32 category = (part->placement_flags >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK;
+        if ((u32)(category - FIELD_ATTACHMENT_POINT_SECOND) < FIELD_ATTACHMENT_GROUP_COUNT ||
+            (u32)(category - FIELD_ATTACHMENT_POINT_FIRST) < FIELD_ATTACHMENT_GROUP_COUNT ||
+            (u32)(category - FIELD_ATTACHMENT_UNRESOLVED_FIRST) < FIELD_ATTACHMENT_GROUP_COUNT)
         {
-            s32 category2 = (part->unk28 >> 18) & 0x3F;
-            if (category2 < 0x37)
+            s32 attachment_category = (part->placement_flags >> FIELD_PART_ATTACHMENT_SHIFT) & FIELD_ATTACHMENT_MASK;
+            if (attachment_category < FIELD_ATTACHMENT_UNRESOLVED_FIRST)
             {
-                part_index = category2 - 0x14;
-                if (category2 >= 0x2A)
+                part_index = attachment_category - FIELD_ATTACHMENT_POINT_FIRST;
+                if (attachment_category >= FIELD_ATTACHMENT_POINT_SECOND)
                 {
-                    part_index = category2 - 0x22;
+                    part_index = attachment_category - FIELD_ATTACHMENT_POINT_SECOND_BIAS;
                 }
             }
 
-            if ((((u16 *) &part->unk28)[1]) & 1)
+            if ((((u16*)&part->placement_flags)[1]) & 1)
             {
-                if (((u8 *) actor2->unk0)[(part_index * 0x48) + 0xB] == 2)
+                if (owner->parts[part_index].unknown_0xb == FIELD_PART_OWNER_BOUNDS)
                 {
-                    temp = (D_80105AE0[actor2->unk228].unk144 - D_80105AE0[actor2->unk228].unk140) >> 1;
+                    half_extent = (D_80105AE0[owner->owner_object_index].bounds_right - D_80105AE0[owner->owner_object_index].bounds_left) >> 1;
                 }
                 else
                 {
-                    temp = (D_80105AE0[actor2->unk229[g_field_track_index]].unk144 - D_80105AE0[actor2->unk229[g_field_track_index]].unk140) >> 1;
+                    half_extent = (D_80105AE0[owner->track_object_indices[g_field_track_index]].bounds_right -
+                                   D_80105AE0[owner->track_object_indices[g_field_track_index]].bounds_left) >>
+                                  1;
                 }
-                if (temp < 0)
+                if (half_extent < 0)
                 {
-                    temp = -temp;
+                    half_extent = -half_extent;
                 }
-                speed += temp;
+                extent += half_extent;
             }
 
-            if ((part->unk28 >> 17) & 1)
+            if ((part->placement_flags >> FIELD_PART_ADD_HALF_HEIGHT_SHIFT) & 1)
             {
-                if (((u8 *) actor2->unk0)[(part_index * 0x48) + 0xB] == 2)
+                if (owner->parts[part_index].unknown_0xb == FIELD_PART_OWNER_BOUNDS)
                 {
-                    temp = (D_80105AE0[actor2->unk228].unk146 - D_80105AE0[actor2->unk228].unk142) >> 1;
+                    half_extent = (D_80105AE0[owner->owner_object_index].bounds_bottom - D_80105AE0[owner->owner_object_index].bounds_top) >> 1;
                 }
                 else
                 {
-                    temp = (D_80105AE0[actor2->unk229[g_field_track_index]].unk146 - D_80105AE0[actor2->unk229[g_field_track_index]].unk142) >> 1;
+                    half_extent = (D_80105AE0[owner->track_object_indices[g_field_track_index]].bounds_bottom -
+                                   D_80105AE0[owner->track_object_indices[g_field_track_index]].bounds_top) >>
+                                  1;
                 }
-                if (temp < 0)
+                if (half_extent < 0)
                 {
-                    temp = -temp;
+                    half_extent = -half_extent;
                 }
-                speed += temp;
+                extent += half_extent;
             }
         }
     }
 
-    return speed;
+    return extent;
 }

@@ -4,6 +4,7 @@
 
 /* func_800925EC */
 #include "common.h"
+#include "field_effect_render_state.h"
 #include "vector.h"
 /** @brief State, timing, and movement fields in a 0x54-byte actor record. */
 typedef struct
@@ -164,10 +165,6 @@ typedef struct
     Vec2s screen;
 } FieldBoundsProjection;
 
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
-
 /**
  * @brief Test whether a proposed displacement crosses a screen boundary.
  * @param position Current fixed-point field position.
@@ -182,8 +179,8 @@ s32 func_80092988(Vec3i *position, Vec3i *delta)
     local.position.vx = position->x + delta->x;
     local.position.vy = position->y;
     local.position.vz = position->z + delta->z;
-    local.screen.x = D_800F22A0 / 256 + (s16)(local.position.vx / 256 + 160);
-    local.screen.y = D_800F22A4 / 256 + (s16)(local.position.vy / 256 + 112) - local.position.vz / 512 - D_800F22A8 / 512;
+    local.screen.x = g_field_view_offset_x / 256 + (s16)(local.position.vx / 256 + 160);
+    local.screen.y = g_field_view_offset_y / 256 + (s16)(local.position.vy / 256 + 112) - local.position.vz / 512 - g_field_view_offset_z / 512;
     if (delta->x < 0)
     {
         if (local.screen.x < 6)

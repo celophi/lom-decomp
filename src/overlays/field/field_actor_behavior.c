@@ -1,4 +1,5 @@
 #include "field_text.h"
+#include "field_effect_render_state.h"
 #include "common.h"
 #include "field_types.h"
 #include "sdk/libgte.h"
@@ -107,7 +108,7 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
         s16 screen_x, screen_y;
     } MovementWork;
 
-    extern s32 D_800F22A0, D_800F22A4, D_800F22A8, g_field_active_group, D_8010AE64, D_80122B20;
+    extern s32 g_field_view_offset_x, g_field_view_offset_y, g_field_view_offset_z, g_field_active_group, D_8010AE64, D_80122B20;
     extern u8 D_8010AE84;
     extern MovementScale D_800FE3A0[];
     extern MovementSlot D_80105AE0[];
@@ -383,9 +384,9 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
     {
         func_8008E690(movement_actor);
     }
-    work.screen_x = D_800F22A0 / 256 + (s16)(work.motion.vx / 256 + 160);
-    work.screen_y = D_800F22A4 / 256 + (s16)(work.motion.vy / 256 + 112) - work.motion.vz / 512 -
-                    D_800F22A8 / 512;
+    work.screen_x = g_field_view_offset_x / 256 + (s16)(work.motion.vx / 256 + 160);
+    work.screen_y = g_field_view_offset_y / 256 + (s16)(work.motion.vy / 256 + 112) - work.motion.vz / 512 -
+                    g_field_view_offset_z / 512;
     if (S16_AT(movement_actor, 0x2A) == 0)
     {
         if (((u32)D_80105AE0[U8_AT(movement_actor, 0x3A)].state.flags >> 0xE) & 1)

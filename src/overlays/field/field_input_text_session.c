@@ -1,4 +1,5 @@
 #include "field_text.h"
+#include "field_effect_render_state.h"
 #include "cdrom.h"
 #include "saved_game.h"
 /**
@@ -248,9 +249,6 @@ extern StructEC D_800EC3D2;
 extern StructEC D_800EC3D4;
 
 /* Camera offsets. */
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
 
 /* Input repeat state. */
 extern s32 D_8012269C;
@@ -891,7 +889,7 @@ void func_800A939C(void *context)
         do
         {
             actor_id = D_801226E0[index];
-            camera_x = D_800F22A0;
+            camera_x = g_field_view_offset_x;
             text_address = (s32)((actor_id * 0x23C) + (s32)D_80105AE0);
             actor_position = (void *)((actor_id * 0x54) + (s32)g_field_actors);
             if (camera_x < 0)
@@ -904,7 +902,7 @@ void func_800A939C(void *context)
             {
                 actor_x += 0xFF;
             }
-            camera_y = D_800F22A4;
+            camera_y = g_field_view_offset_y;
             actor_screen_x = (actor_x >> 8) + 0xA0;
             point.x = camera_x_pixels + actor_screen_x;
             if (camera_y < 0)
@@ -924,7 +922,7 @@ void func_800A939C(void *context)
             {
                 actor_height += 0x1FF;
             }
-            camera_height = D_800F22A8;
+            camera_height = g_field_view_offset_z;
             projected_y = screen_y - (actor_height >> 9);
             if (camera_height < 0)
             {

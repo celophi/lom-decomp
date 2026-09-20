@@ -1,4 +1,5 @@
 #include "cdrom.h"
+#include "field_effect_render_state.h"
 /**
  * @file field_actor_hud.c
  * @brief Field actor HUD renderer: participant panels, per-track gauge/bar
@@ -153,7 +154,7 @@ void func_80084700(u8 *render_context)
     extern FieldPanelSlot D_80105AE0[];
     extern FieldPanelPlayer D_800FD818[];
     extern s32 D_800EB04C[];
-    extern s32 D_800F22A0, D_800F22A4, D_800F22A8;
+
     extern s32 g_field_active_group, g_field_scene_mode_bit, D_80122B20;
     extern void func_80084D08(s32, s32, s32, u8 *, u32);
 
@@ -291,17 +292,17 @@ void func_80084700(u8 *render_context)
                                 (g_field_effect_records[enemy_slot->linked].state & 0x7F) != 0x2F)
                             {
                                 linked = &g_field_effect_records[enemy_slot->linked];
-                                position.x = (D_800F22A0 / 256) + (u32)(linked->x / 256 + 0xA0);
-                                y = D_800F22A4 / 256 + (g_field_effect_records[enemy_slot->linked].y / 256 + 0x70);
+                                position.x = (g_field_view_offset_x / 256) + (u32)(linked->x / 256 + 0xA0);
+                                y = g_field_view_offset_y / 256 + (g_field_effect_records[enemy_slot->linked].y / 256 + 0x70);
                                 z = g_field_effect_records[enemy_slot->linked].z;
                             }
                             else
                             {
-                                position.x = (D_800F22A0 / 256) + (u32)(enemy->x / 256 + 0xA0);
-                                y = D_800F22A4 / 256 + (enemy->y / 256 + 0x70);
+                                position.x = (g_field_view_offset_x / 256) + (u32)(enemy->x / 256 + 0xA0);
+                                y = g_field_view_offset_y / 256 + (enemy->y / 256 + 0x70);
                                 z = enemy->z;
                             }
-                            position.y = y - z / 512 - D_800F22A8 / 512;
+                            position.y = y - z / 512 - g_field_view_offset_z / 512;
                             if (position.x + 0x20 >= 0x141)
                             {
                                 position.x = 0x120;

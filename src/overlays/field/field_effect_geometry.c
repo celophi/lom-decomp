@@ -3,6 +3,8 @@
  */
 
 #include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
 #include "field_types.h"
 #include "field_effect_types.h"
 #include "field_effect_geometry.h"
@@ -22,12 +24,6 @@ extern FieldMotionRecord g_field_actors[];
 extern FieldMotionRecord g_field_effect_records[];
 extern FieldObjectPlacement D_80105AE0[];
 extern s32 g_field_track_index;
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
-
-
-void func_8007E5FC(s16 *out, s32 mirror, u8 *item);
 
 /**
  * @brief Resolve the world-space anchor point for an actor part.
@@ -154,66 +150,66 @@ void field_resolve_actor_part_anchor(FieldActorState *actor, FieldActorPartDef *
         return;
 
     case 0x25:
-        out->x = (part->offset_x << 8) - D_800F22A0;
-        out->y = (part->offset_y << 8) - D_800F22A4;
-        out->z = (part->offset_z << 8) - D_800F22A8;
+        out->x = (part->offset_x << 8) - g_field_view_offset_x;
+        out->y = (part->offset_y << 8) - g_field_view_offset_y;
+        out->z = (part->offset_z << 8) - g_field_view_offset_z;
         return;
     case 0x1C:
-        out->x = -D_800F22A0;
-        out->y = -D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x = -g_field_view_offset_x;
+        out->y = -g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x1D:
         out->y = -0x7000;
-        out->x = -D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x = -g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x1E:
         out->y = 0x7000;
-        out->x = -D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x = -g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x1F:
         out->x = 0xFFFF6000;
-        out->x -= D_800F22A0;
-        out->y = -D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y = -g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x20:
         out->x = 0xA000;
-        out->x -= D_800F22A0;
-        out->y = -D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y = -g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x21:
         out->x = 0xFFFF6000;
         out->y = -0x7000;
-        out->x -= D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x22:
         out->x = 0xA000;
         out->y = -0x7000;
-        out->x -= D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x23:
         out->x = 0xFFFF6000;
         out->y = 0x7000;
-        out->x -= D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x24:
         out->x = 0xA000;
         out->y = 0x7000;
-        out->x -= D_800F22A0;
-        out->y -= D_800F22A4;
-        out->z = -D_800F22A8;
+        out->x -= g_field_view_offset_x;
+        out->y -= g_field_view_offset_y;
+        out->z = -g_field_view_offset_z;
         return;
     case 0x26:
         return;
@@ -403,7 +399,7 @@ void field_extract_effect_quad_corners16(FieldMotionRecord *effect, u8 *frame_da
             {
                 if ((frame_data[7] & 0xF) == 2)
                 {
-                    func_8007E5FC(corners, effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, frame_data);
+                    field_unpack_effect_quad_corners16(corners, effect->facing_or_reward_kind & FIELD_EFFECT_FACING_FLIPPED, frame_data);
                 }
                 frame_data += 0x11;
             }

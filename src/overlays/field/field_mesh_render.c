@@ -3,6 +3,8 @@
  */
 
 #include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
 #include "field_actor_palette.h"
 #include "field_effect_types.h"
 #include "field_mesh_render.h"
@@ -21,10 +23,6 @@ typedef struct
     u8 *faces;
 } FieldMeshResource;
 
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
-
 extern FieldMotionRecord g_field_effect_records[];
 
 extern FieldActorState g_field_actor_slots[80];
@@ -41,7 +39,7 @@ extern FieldActorState g_field_actor_slots[80];
 #define FIELD_OT_TAG_MASK 0xFF000000
 
 void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right);
-void field_resolve_effect_part_color(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, u8 *out);
+
 void func_800822A4(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, s32 part_index);
 s32 func_80082C90(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, MATRIX *mtx, MATRIX *tmp);
 
@@ -231,8 +229,8 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
     screen_vertices = (s32 *)g_field_mesh_screen_vertices;
     depth_offsets = g_field_mesh_depth_offsets;
     face_data = ((FieldMeshResource *)actor->mesh_data)[mesh_index].faces;
-    screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + D_800F22A0 / 256 + effect->x / 256;
-    screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + D_800F22A4 / 256 + effect->y / 256 - effect->z / 512 - D_800F22A8 / 512;
+    screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+    screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
     primitive_kind = (face_data[6] >> 1) & 0xF;
 
     switch (primitive_kind)
@@ -771,9 +769,9 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                     light_matrix.m[light_index][0] = transformed_light.vx;
                     light_matrix.m[light_index][1] = transformed_light.vy;
                     light_matrix.m[light_index][2] = transformed_light.vz;
-                    color_matrix.m[0][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].unknown_0xe * 0x10;
-                    color_matrix.m[1][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].unknown_0xf * 0x10;
-                    color_matrix.m[2][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].unknown_0x10 * 0x10;
+                    color_matrix.m[0][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].red_or_track * 0x10;
+                    color_matrix.m[1][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].green_or_track * 0x10;
+                    color_matrix.m[2][light_index] = g_field_actor_slots[effect->actor_index].parts[light_effect->part_index].blue_or_track * 0x10;
                     break;
                 }
                 count++;
@@ -802,8 +800,8 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     transformed_normals = g_field_mesh_transformed_normals;
     depth_offsets = g_field_mesh_depth_offsets;
     face_data = ((FieldMeshResource *)actor->mesh_data)[mesh_index].faces;
-    screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + D_800F22A0 / 256 + effect->x / 256;
-    screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + D_800F22A4 / 256 + effect->y / 256 - effect->z / 512 - D_800F22A8 / 512;
+    screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
+    screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
     primitive_kind = (face_data[6] >> 1) & 0xF;
 
     switch (primitive_kind)

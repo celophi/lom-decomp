@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_effect_transform.h"
 #include "cdrom.h"
 #include "field_types.h"
 #include "field_actor_runtime.h"
@@ -1989,7 +1990,7 @@ s32 func_8009980C(s32* reference_position, s32 distance_limit, FieldActorState* 
  */
 void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
 {
-    s32 func_8007E754(FieldActorState*, FieldActorPartDef*);
+
     s32 func_8008A840(s32, s32);
     s32 func_8008A9D8(s32, s32, s32);
     void func_8008BC5C(void*);
@@ -2035,7 +2036,7 @@ void func_80099A48(FieldActorState* actor, FieldActorPartDef* part)
     void* target_z_cursor;
 
     sphere_base_address = FIELD_ATTACK_SPHERE_0_ADDRESS;
-    attack_radius = func_8007E754(actor, part);
+    attack_radius = field_resolve_effect_extent(actor, part);
     field_resolve_actor_part_anchor(actor, part, (Vec3i*)FIELD_ATTACK_SPHERE_0_ADDRESS, 0);
     if ((actor->action_flags & FIELD_ACTOR_ACTION_KIND_MASK) == FIELD_ACTOR_ACTION_KIND_ATTACK)
     {

@@ -11,6 +11,8 @@
  */
 
 #include "common.h"
+#include "field_effect_transform.h"
+#include "field_effect_render_state.h"
 #include "field_types.h"
 #include "field_effect_geometry.h"
 #include "sdk/libgpu.h"
@@ -234,13 +236,6 @@ typedef struct
 
 typedef struct
 {
-    s16 unk0;
-    u8 pad2[2];
-    s16 unk4;
-} Struct_D80105768;
-
-typedef struct
-{
     u8 *start;
     u8 *end;
     u8 unk8;
@@ -263,14 +258,11 @@ typedef struct
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
 extern Struct_D800FD818 D_800FD818[];
 extern Struct_D800FDF58 g_field_actors[];
 extern Struct_D80105AE0 D_80105AE0[];
 extern Struct_D80105880 D_80105880[];
-extern Struct_D80105768 D_80105768;
+
 extern FieldActorState g_field_actor_slots[80];
 extern FieldResourceEntry g_field_resource_entries[];
 
@@ -419,8 +411,8 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
     field_build_effect_part_matrix(rec, part, mtx, actor);
     gte_SetRotMatrix(mtx);
 
-    sxy->x = 0xA0 + D_800F22A0 / 256 + rec->unk0 / 256;
-    temp_a1 = 0x70 + D_800F22A4 / 256 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512;
+    sxy->x = 0xA0 + g_field_view_offset_x / 256 + rec->unk0 / 256;
+    temp_a1 = 0x70 + g_field_view_offset_y / 256 + rec->unk4 / 256 - rec->unk8 / 512 - g_field_view_offset_z / 512;
     sxy->y = temp_a1;
     temp_v1 = rec->unk37;
     temp_a0 = rec->unk38;
@@ -1012,7 +1004,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                     s32 a1;
                                     Struct_D800FDF58* entry;
 
-                                    temp_a0_2 = D_800F22A0;
+                                    temp_a0_2 = g_field_view_offset_x;
                                     if (temp_a0_2 < 0)
                                     {
                                         temp_a0_2 += 0xFF;
@@ -1023,7 +1015,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                     {
                                         temp_v0_12 += 0xFF;
                                     }
-                                    temp_a0_2 = D_800F22A4;
+                                    temp_a0_2 = g_field_view_offset_y;
                                     do
                                     {
                                         var_v0_27 = temp_v0_12 >> 8;
@@ -1049,7 +1041,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                     {
                                         temp_a0_2 += 0x1FF;
                                     }
-                                    temp_v0_12 = D_800F22A8;
+                                    temp_v0_12 = g_field_view_offset_z;
                                     var_v0_27 = temp_a0_2 >> 9;
                                     temp_a0_2 = a1 - var_v0_27;
                                     if (temp_v0_12 < 0)
@@ -1336,7 +1328,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                 case 2:
                     if (part->unk24 & 0x100000)
                     {
-                        func_8007E4A8(sp64, rec->unk21 & 0x80, item);
+                        field_unpack_effect_quad_corners8(sp64, rec->unk21 & 0x80, item);
                         sp78 += 1;
                     }
                     else
@@ -1459,8 +1451,8 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
         s16* p = sp64;
         while (p != sp64 + 8)
         {
-            p[0] = ((p[0] * part->unk2E >> 6) * D_80105768.unk0) >> 12;
-            p[1] = ((p[1] * part->unk33 >> 6) * D_80105768.unk4) >> 12;
+            p[0] = ((p[0] * part->unk2E >> 6) * g_field_effect_track_scale.x) >> 12;
+            p[1] = ((p[1] * part->unk33 >> 6) * g_field_effect_track_scale.z) >> 12;
             p += 2;
         }
         slot->unk12C = (s16)((s32)(sp64[2] + sp64[0]) >> 1);
@@ -1525,12 +1517,9 @@ typedef struct
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
 extern Struct_D800FDF58 g_field_actors[];
 extern Struct_D80105AE0 D_80105AE0[];
-extern Struct_D80105768 D_80105768;
+
 extern FieldActorState g_field_actor_slots[80];
 extern FieldResourceEntry g_field_resource_entries[];
 
@@ -1650,7 +1639,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     field_build_effect_part_matrix(rec, part, mtx, actor);
     gte_SetRotMatrix(mtx);
 
-    var_v0_2 = D_800F22A0;
+    var_v0_2 = g_field_view_offset_x;
     if (var_v0_2 < 0)
     {
         var_v0_2 += 0xFF;
@@ -1661,7 +1650,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     {
         var_v1 += 0xFF;
     }
-    var_a0 = D_800F22A4;
+    var_a0 = g_field_view_offset_y;
     sxy->x = (u16) ((var_v0_2 >> 8) + ((var_v1 >> 8) + 0xA0));
     if (var_a0 < 0)
     {
@@ -1681,7 +1670,7 @@ s32 *func_80077FB4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item, s32 
     {
         var_a0_2 += 0x1FF;
     }
-    var_v1_3 = D_800F22A8;
+    var_v1_3 = g_field_view_offset_z;
     var_v0_5 = var_a0_2 >> 9;
     var_a0_2 = var_a1_2 - var_v0_5;
     if (var_v1_3 < 0)
@@ -2061,7 +2050,7 @@ block_48:
                                             s32 a1;
                                             Struct_D800FDF58 *entry;
 
-                                            a0 = D_800F22A0;
+                                            a0 = g_field_view_offset_x;
                                             if (a0 < 0)
                                             {
                                                 a0 += 0xFF;
@@ -2072,7 +2061,7 @@ block_48:
                                             {
                                                 var_v1_3 += 0xFF;
                                             }
-                                            a0 = D_800F22A4;
+                                            a0 = g_field_view_offset_y;
                                             do
                                             {
                                                 var_v0_5 = var_v1_3 >> 8;
@@ -2098,7 +2087,7 @@ block_48:
                                             {
                                                 a0 += 0x1FF;
                                             }
-                                            var_v1_3 = D_800F22A8;
+                                            var_v1_3 = g_field_view_offset_z;
                                             var_v0_5 = a0 >> 9;
                                             a0 = a1 - var_v0_5;
                                             if (var_v1_3 < 0)
@@ -2329,7 +2318,7 @@ block_183:
                     case 2:
                         if (part->unk24 & 0x100000)
                         {
-                            func_8007E5FC(sp60, rec->unk21 & 0x80, item);
+                            field_unpack_effect_quad_corners16(sp60, rec->unk21 & 0x80, item);
                             sp74 += 1;
                         }
                         break;
@@ -2440,8 +2429,8 @@ block_183:
         s16 *p = sp60;
         while (p != sp60 + 8)
         {
-            p[0] = ((p[0] * part->unk2E >> 6) * D_80105768.unk0) >> 12;
-            p[1] = ((p[1] * part->unk33 >> 6) * D_80105768.unk4) >> 12;
+            p[0] = ((p[0] * part->unk2E >> 6) * g_field_effect_track_scale.x) >> 12;
+            p[1] = ((p[1] * part->unk33 >> 6) * g_field_effect_track_scale.z) >> 12;
             p += 2;
         }
         var_v0_9 = abs(sp60[2] - sp60[0]);

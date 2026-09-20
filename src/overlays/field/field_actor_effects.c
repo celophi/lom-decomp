@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_effect_render_state.h"
 
 /*
  * Consolidated FIELD actor-effect translation unit.
@@ -21,9 +22,6 @@
  */
 
 /* Shared camera globals, same type (s32) in every member that uses them. */
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
 
 /**
  * @brief Look up a width/height pair for a field text-box style.
@@ -438,8 +436,8 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
                 vec[8] = arg0->position[0] + ((((EffectRecord *)(&D_80105AE0[arg0->slot]))->offsets[0][0] + (vec[4] >> 10)) << 8);
                 vec[9] = arg0->position[1];
                 vec[10] = arg0->position[2] + ((((EffectRecord *)(&D_80105AE0[arg0->slot]))->offsets[0][1] + (vec[5] >> 10)) << 8);
-                screen[0] = 0xA0 + D_800F22A0 / 256 + vec[8] / 256;
-                screen[1] = 0x70 + D_800F22A4 / 256 + vec[9] / 256 - vec[10] / 512 - D_800F22A8 / 512;
+                screen[0] = 0xA0 + g_field_view_offset_x / 256 + vec[8] / 256;
+                screen[1] = 0x70 + g_field_view_offset_y / 256 + vec[9] / 256 - vec[10] / 512 - g_field_view_offset_z / 512;
                 if ((screen[0] > 0 || vec[4] > 0) &&
                     (screen[1] > 0 || vec[5] < 0) &&
                     (screen[0] < 320 || vec[4] < 0) &&
@@ -465,8 +463,8 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
 #include "sdk/libgpu.h"
 
 #define PROJECT_POINT(_poly, _vert, _tmp) \
-    (_poly)->x##_vert = (s16)(0xA0 + D_800F22A0 / 0x100 + (_tmp).vx / 0x100); \
-    (_poly)->y##_vert = (s16)(0x70 + D_800F22A4 / 0x100 + (_tmp).vy / 0x100 - (_tmp).vz / 0x200 - D_800F22A8 / 0x200)
+    (_poly)->x##_vert = (s16)(0xA0 + g_field_view_offset_x / 0x100 + (_tmp).vx / 0x100); \
+    (_poly)->y##_vert = (s16)(0x70 + g_field_view_offset_y / 0x100 + (_tmp).vy / 0x100 - (_tmp).vz / 0x200 - g_field_view_offset_z / 0x200)
 
 #define POLY_AT(_off) ((POLY_G4 *)(primbuf + (_off)))
 
@@ -707,8 +705,8 @@ u8 *func_8009E66C(s32 *base, u8 *arg1, VECTOR *pos, s32 radius)
 /* ---- func_8009FE54 ---- */
 
 #define PROJECT_POINT(_poly, _vert, _tmp) \
-    (_poly)->x##_vert = (s16)(0xA0 + D_800F22A0 / 0x100 + (_tmp).vx / 0x100); \
-    (_poly)->y##_vert = (s16)(0x70 + D_800F22A4 / 0x100 + (_tmp).vy / 0x100 - (_tmp).vz / 0x200 - D_800F22A8 / 0x200)
+    (_poly)->x##_vert = (s16)(0xA0 + g_field_view_offset_x / 0x100 + (_tmp).vx / 0x100); \
+    (_poly)->y##_vert = (s16)(0x70 + g_field_view_offset_y / 0x100 + (_tmp).vy / 0x100 - (_tmp).vz / 0x200 - g_field_view_offset_z / 0x200)
 
 #define POLY_AT(_off) ((POLY_G4 *)(primbuf + (_off)))
 
@@ -947,15 +945,15 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
             work.world.vy = position->vy;
             work.world.vz = position->vz + 0x2000;
         } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = D_800F22A4;
+        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = g_field_view_offset_y;
         *(s16*)(outer_code + 8) = screen_x;
         if (camera_y < 0)
         {
             camera_y += 255;
         }
         *(s16*)(outer_code + 10) =
-            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
         first_xy = (s32) * (s32*)(outer_code + 8);
         if (forward != 0)
         {
@@ -971,15 +969,15 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
             work.world.vy = position->vy;
             work.world.vz = position->vz + 0x2000;
         } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = D_800F22A4;
+        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = g_field_view_offset_y;
         *(s16*)(outer_code + 16) = screen_x;
         if (camera_y < 0)
         {
             camera_y += 255;
         }
         *(s16*)(outer_code + 18) =
-            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
         step = 1;
         angle = 0x100;
         strip_code = primitive;
@@ -1005,15 +1003,15 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
                         work.world.vy = position->vy - (rsin(trig_angle) * 2);
                         work.world.vz = position->vz + (rcos(angle) * 2);
                     } while (0);
-                    screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-                    camera_y = D_800F22A4;
+                    screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+                    camera_y = g_field_view_offset_y;
                     *(s16*)(strip_code + 24) = screen_x;
                     if (camera_y < 0)
                     {
                         camera_y += 255;
                     }
                     *(s16*)(strip_code + 26) =
-                        112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                        112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
                     do
                     {
                         *(s32*)(strip_code + 44) = (s32) * (s32*)(strip_code + 24);
@@ -1032,15 +1030,15 @@ u8* func_800A0B0C(s32* ordering_table, u8* primitive_buffer, VECTOR* position, s
                             work.world.vy = position->vy - (rsin(trig_angle) * 2);
                             work.world.vz = position->vz + (rcos(angle) * 2);
                         } while (0);
-                        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-                        camera_y = D_800F22A4;
+                        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+                        camera_y = g_field_view_offset_y;
                         *(s16*)(strip_code + 32) = screen_x;
                         if (camera_y < 0)
                         {
                             camera_y += 255;
                         }
                         *(s16*)(strip_code + 34) =
-                            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                            112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
                         /* Fade the curved strip from black to blue. */
                         *(s32*)(strip_code + 4) = 0;
                         *(s32*)(strip_code + 12) = 0xA00000;
@@ -1240,14 +1238,14 @@ next_strip:
             work.world.vy = position->vy + (work.rotated.vy << 8);
             work.world.vz = position->vz + (work.rotated.vz << 8);
         } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = D_800F22A4;
+        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = g_field_view_offset_y;
         *(s16*)(strip_code + 1) = screen_x;
         if (camera_y < 0)
         {
             camera_y += 255;
         }
-        *(s16*)(strip_code + 3) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+        *(s16*)(strip_code + 3) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
         first_xy = *(s32*)(strip_code + 0x1);
         work.input.vx = radius + 0x14;
         work.input.vy = 0;
@@ -1270,14 +1268,14 @@ next_strip:
             work.world.vy = position->vy + (work.rotated.vy << 8);
             work.world.vz = position->vz + (work.rotated.vz << 8);
         } while (0);
-        screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-        camera_y = D_800F22A4;
+        screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+        camera_y = g_field_view_offset_y;
         *(s16*)(strip_code + 9) = screen_x;
         if (camera_y < 0)
         {
             camera_y += 255;
         }
-        *(s16*)(strip_code + 11) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+        *(s16*)(strip_code + 11) = 112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
         segment_index = 1;
         radius_sum = radius;
         segment_packet = current_packet;
@@ -1306,15 +1304,15 @@ next_strip:
                 work.world.vy = position->vy + (work.rotated.vy << 8);
                 work.world.vz = position->vz + (work.rotated.vz << 8);
             } while (0);
-            screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-            camera_y = D_800F22A4;
+            screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+            camera_y = g_field_view_offset_y;
             *(s16*)(segment_packet + 24) = screen_x;
             if (camera_y < 0)
             {
                 camera_y += 255;
             }
             *(s16*)(segment_packet + 26) =
-                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
             *(s32*)(segment_packet + 44) = *(s32*)(segment_packet + 24);
             work.input.vx = radius + (radius_sum >> 5) + 0x14;
             work.input.vy = 0;
@@ -1337,15 +1335,15 @@ next_strip:
                 work.world.vy = position->vy + (work.rotated.vy << 8);
                 work.world.vz = position->vz + (work.rotated.vz << 8);
             } while (0);
-            screen_x = 160 + D_800F22A0 / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
-            camera_y = D_800F22A4;
+            screen_x = 160 + g_field_view_offset_x / 256 + ((volatile VECTOR*)&work.world)->vx / 256;
+            camera_y = g_field_view_offset_y;
             *(s16*)(segment_packet + 32) = screen_x;
             if (camera_y < 0)
             {
                 camera_y += 255;
             }
             *(s16*)(segment_packet + 34) =
-                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - D_800F22A8 / 512;
+                112 + (camera_y >> 8) + ((volatile VECTOR*)&work.world)->vy / 256 - ((volatile VECTOR*)&work.world)->vz / 512 - g_field_view_offset_z / 512;
             *(s32*)(segment_packet + 4) = 0;
             *(s32*)(segment_packet + 12) = 0xA00000;
             *(s32*)(segment_packet + 20) = 0;

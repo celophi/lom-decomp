@@ -1,4 +1,5 @@
 #include "common.h"
+#include "field_effect_render_state.h"
 #include "display.h"
 
 /**
@@ -87,9 +88,7 @@ extern FieldThreshold g_field_group_bounds[];
 extern s32 D_800F2278;
 extern s32 D_800F227C;
 extern s32 D_800F2280;
-extern s32 D_800F22A0;
-extern s32 D_800F22A4;
-extern s32 D_800F22A8;
+
 extern s32 g_field_active_group;
 extern s32 g_field_group_bounds_count;
 extern s32 g_field_camera_target_x;
@@ -238,65 +237,65 @@ void func_80091D7C(void)
     offset.x = 0;
     offset.y = 0;
     offset.z = 0;
-    before.x = D_800F22A0 / 256 + 160;
-    before.y = D_800F22A4 / 256 + 112 - D_800F22A8 / 512;
-    if (follow_x < (D_800F22A0 - 0x2000))
+    before.x = g_field_view_offset_x / 256 + 160;
+    before.y = g_field_view_offset_y / 256 + 112 - g_field_view_offset_z / 512;
+    if (follow_x < (g_field_view_offset_x - 0x2000))
     {
-        D_800F22A0 = follow_x + 0x2000;
+        g_field_view_offset_x = follow_x + 0x2000;
     }
-    if ((D_800F22A0 + 0x2000) < follow_x)
+    if ((g_field_view_offset_x + 0x2000) < follow_x)
     {
-        D_800F22A0 = follow_x - 0x2000;
+        g_field_view_offset_x = follow_x - 0x2000;
     }
-    if (follow_z < (D_800F22A8 - 0x2000))
+    if (follow_z < (g_field_view_offset_z - 0x2000))
     {
-        D_800F22A8 = follow_z + 0x2000;
+        g_field_view_offset_z = follow_z + 0x2000;
     }
-    if ((D_800F22A8 + 0x2000) < follow_z)
+    if ((g_field_view_offset_z + 0x2000) < follow_z)
     {
-        D_800F22A8 = follow_z - 0x2000;
+        g_field_view_offset_z = follow_z - 0x2000;
     }
-    camera->x = D_800F22A0 + (D_800F2278 << 8) + 0xA000;
-    D_800F22A4 = camera->y = D_800F227C << 8;
-    camera->z = D_800F22A8 + (D_800F2280 << 9) + 0xE000;
+    camera->x = g_field_view_offset_x + (D_800F2278 << 8) + 0xA000;
+    g_field_view_offset_y = camera->y = D_800F227C << 8;
+    camera->z = g_field_view_offset_z + (D_800F2280 << 9) + 0xE000;
     if (camera->x > -(D_8010AE60 << 8))
     {
         camera->x = -(D_800F2278 << 8) - (D_8010AE60 << 8);
-        D_800F22A0 = camera->x - (D_800F2278 << 8) - 0xA000;
+        g_field_view_offset_x = camera->x - (D_800F2278 << 8) - 0xA000;
     }
     if (camera->x < -(D_8010AE68 << 8) + 0x14000)
     {
         clamp_x = (D_800F2278 << 8) - 0x14000;
         clamp_x = -(D_8010AE68 << 8) - clamp_x;
         camera->x = clamp_x;
-        D_800F22A0 = camera->x - (D_800F2278 << 8) - 0xA000;
+        g_field_view_offset_x = camera->x - (D_800F2278 << 8) - 0xA000;
     }
     if (camera->z > 0)
     {
         camera->z = -(D_800F2280 << 9);
-        D_800F22A8 = camera->z - (D_800F2280 << 9) - 0xE000;
+        g_field_view_offset_z = camera->z - (D_800F2280 << 9) - 0xE000;
     }
     if (camera->z < -((s32)(bounds->height << 16) >> 8) + 0x1C000)
     {
         clamp_z = (D_800F2280 << 9) - 0x1C000;
         clamp_z = -((s32)(bounds->height << 16) >> 8) - clamp_z;
         camera->z = clamp_z;
-        D_800F22A8 = camera->z - (D_800F2280 << 9) - 0xE000;
+        g_field_view_offset_z = camera->z - (D_800F2280 << 9) - 0xE000;
     }
     if (D_8010AE7C != 0 || D_8010AE80 != 0)
     {
         camera->x = -(D_8010AE7C << 8);
-        D_800F22A0 = -(D_8010AE7C + 0xA0) << 8;
+        g_field_view_offset_x = -(D_8010AE7C + 0xA0) << 8;
         camera->z = -(D_8010AE80 << 9);
-        D_800F22A8 = -(D_8010AE80 + 0x70) << 9;
+        g_field_view_offset_z = -(D_8010AE80 + 0x70) << 9;
     }
-    camera_screen_x = D_800F22A0 / 256;
+    camera_screen_x = g_field_view_offset_x / 256;
     offset_screen_x = offset.x / 256 + 160;
     screen_x = camera_screen_x + offset_screen_x;
     after.x = screen_x;
-    camera_screen_y = D_800F22A4 / 256;
+    camera_screen_y = g_field_view_offset_y / 256;
     offset_screen_y = offset.y / 256 + 112;
-    screen_y = camera_screen_y + offset_screen_y - offset.z / 512 - D_800F22A8 / 512;
+    screen_y = camera_screen_y + offset_screen_y - offset.z / 512 - g_field_view_offset_z / 512;
     after.y = screen_y;
     D_801077FC.x = screen_x - before.x;
     D_801077FC.y = screen_y - before.y;
