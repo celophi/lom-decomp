@@ -21,6 +21,8 @@
 #define FIELD_TEXT_REOPEN_FIXED 0x4000
 #define FIELD_TEXT_REOPEN_MASK (FIELD_TEXT_REOPEN_PACKED | FIELD_TEXT_REOPEN_FIXED)
 #define FIELD_TEXT_CACHE_WIDTH 256
+#define FIELD_TEXT_PIXELS_PER_WORD 4
+#define FIELD_TEXT_CACHE_ROW_WORDS (FIELD_TEXT_CACHE_WIDTH / FIELD_TEXT_PIXELS_PER_WORD)
 #define FIELD_TEXT_LINE_HEIGHT 12
 #define FIELD_TEXT_LINE_SPACING 16
 #define FIELD_TEXT_PORTRAIT_SIZE 48
@@ -1203,65 +1205,65 @@ void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width)
  */
 void field_text_clear_cache(FieldTextState* state)
 {
-    u16* row;
-    u16* p;
-    s32 span;
-    s32 half;
-    s32 x;
-    s32 y;
-    s32 rows;
-    s32 i;
-    s32 j;
+    u16* cache_row;
+    u16* pixel_word;
+    s32 pixel_span;
+    s32 byte_span;
+    s32 cache_u;
+    s32 cache_v;
+    s32 glyph_rows;
+    s32 rows_remaining;
+    s32 words_remaining;
 
-    y = state->region_start_v;
-    x = state->region_start_u;
-    if (y == state->region_end_v)
+    cache_v = state->region_start_v;
+    cache_u = state->region_start_u;
+    if (cache_v == state->region_end_v)
     {
-        span = state->region_end_u - x;
-        half = span >> 1;
+        pixel_span = state->region_end_u - cache_u;
+        byte_span = pixel_span >> 1;
     }
     else
     {
-        span = FIELD_TEXT_CACHE_WIDTH - x;
-        half = span >> 1;
+        pixel_span = FIELD_TEXT_CACHE_WIDTH - cache_u;
+        byte_span = pixel_span >> 1;
     }
-    rows = state->line_height;
-    row = ((u16*)0x801DE000 + (x >> 2)) + (y << 6);
-    for (i = rows - 1; i != -1; i--)
+    glyph_rows = state->line_height;
+    cache_row = ((u16*)0x801DE000 + (cache_u >> 2)) + (cache_v << 6);
+    for (rows_remaining = glyph_rows - 1; rows_remaining != -1; rows_remaining--)
     {
-        p = row;
-        j = half >> 1;
-        while (--j != -1)
+        pixel_word = cache_row;
+        words_remaining = byte_span >> 1;
+        while (--words_remaining != -1)
         {
-            *p++ = 0;
+            *pixel_word++ = 0;
         }
-        row += 0x40;
+        cache_row += FIELD_TEXT_CACHE_ROW_WORDS;
     }
 
-    if (y != state->region_end_v)
+    if (cache_v != state->region_end_v)
     {
-        y += rows;
-        if (y != state->region_end_v)
+        cache_v += glyph_rows;
+        if (cache_v != state->region_end_v)
         {
-            row = (u16*)0x801DE000 + (y << 6);
-            i = (state->region_end_v - y) << 6;
-            while (--i != -1)
+            cache_row = (u16*)0x801DE000 + (cache_v << 6);
+            rows_remaining = (state->region_end_v - cache_v) << 6;
+            while (--rows_remaining != -1)
             {
-                *row++ = 0;
+                *cache_row++ = 0;
             }
         }
         if (state->region_end_u != 0)
         {
-            row = (u16*)0x801DE000 + (state->region_end_v << 6);
-            for (i = rows - 1; i != -1; i--)
+            cache_row = (u16*)0x801DE000 + (state->region_end_v << 6);
+            for (rows_remaining = glyph_rows - 1; rows_remaining != -1; rows_remaining--)
             {
-                p = row;
-                j = state->region_end_u >> 2;
-                while (--j != -1)
+                pixel_word = cache_row;
+                words_remaining = state->region_end_u >> 2;
+                while (--words_remaining != -1)
                 {
-                    *p++ = 0;
+                    *pixel_word++ = 0;
                 }
-                row += 0x40;
+                cache_row += FIELD_TEXT_CACHE_ROW_WORDS;
             }
         }
     }
@@ -3191,169 +3193,169 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
 
 void field_text_scroll_cache(FieldTextState* state)
 {
-    u16* dst;
-    u16* src;
-    u16* d;
-    u16* s;
-    s32 u;
-    s32 v;
-    s32 du;
-    s32 dv;
-    s32 su;
-    s32 sv;
-    s32 left;
-    s32 rows;
+    u16* destination_row;
+    u16* source_row;
+    u16* destination;
+    u16* source;
+    s32 next_u;
+    s32 next_v;
+    s32 destination_u;
+    s32 destination_v;
+    s32 source_u;
+    s32 source_v;
+    s32 pixels_remaining;
+    s32 scroll_rows;
     s32 avail;
-    s32 span;
-    s32 cap;
-    s32 lines;
+    s32 pixel_span;
+    s32 copy_count;
+    s32 glyph_rows;
     s32 count;
-    u16 pix;
+    u16 pixel_word;
 
-    u = state->region_start_u;
-    v = state->region_start_v;
-    rows = state->height - 0x10;
-    if (rows > 0)
+    next_u = state->region_start_u;
+    next_v = state->region_start_v;
+    scroll_rows = state->height - FIELD_TEXT_LINE_SPACING;
+    if (scroll_rows > 0)
     {
         do
         {
-            du = u;
-            left = state->line_advance;
-            dv = v;
-            if (left > 0)
+            destination_u = next_u;
+            pixels_remaining = state->line_advance;
+            destination_v = next_v;
+            if (pixels_remaining > 0)
             {
-                span = FIELD_TEXT_CACHE_WIDTH - u;
+                pixel_span = FIELD_TEXT_CACHE_WIDTH - next_u;
                 do
                 {
-                    u += left;
-                    if (left >= span)
+                    next_u += pixels_remaining;
+                    if (pixels_remaining >= pixel_span)
                     {
-                        left -= span;
-                        u = 0;
-                        v += state->line_height;
+                        pixels_remaining -= pixel_span;
+                        next_u = 0;
+                        next_v += state->line_height;
                     }
                     else
                     {
-                        left = 0;
+                        pixels_remaining = 0;
                     }
-                    span = FIELD_TEXT_CACHE_WIDTH - u;
-                } while (left > 0);
+                    pixel_span = FIELD_TEXT_CACHE_WIDTH - next_u;
+                } while (pixels_remaining > 0);
             }
-            su = u;
-            left = state->line_advance;
-            sv = v;
-            if (left > 0)
+            source_u = next_u;
+            pixels_remaining = state->line_advance;
+            source_v = next_v;
+            if (pixels_remaining > 0)
             {
                 do
                 {
-                    dst = ((u16*)0x801DE000 + (du >> 2)) + (dv << 6);
-                    src = ((u16*)0x801DE000 + (su >> 2)) + (sv << 6);
-                    span = FIELD_TEXT_CACHE_WIDTH - su;
-                    cap = FIELD_TEXT_CACHE_WIDTH - du;
-                    if (cap < span)
+                    destination_row = ((u16*)0x801DE000 + (destination_u >> 2)) + (destination_v << 6);
+                    source_row = ((u16*)0x801DE000 + (source_u >> 2)) + (source_v << 6);
+                    pixel_span = FIELD_TEXT_CACHE_WIDTH - source_u;
+                    copy_count = FIELD_TEXT_CACHE_WIDTH - destination_u;
+                    if (copy_count < pixel_span)
                     {
-                        span = cap;
+                        pixel_span = copy_count;
                     }
-                    if (left < span)
+                    if (pixels_remaining < pixel_span)
                     {
-                        span = left;
+                        pixel_span = pixels_remaining;
                     }
-                    du += span;
-                    left -= span;
-                    if (du >= FIELD_TEXT_CACHE_WIDTH)
+                    destination_u += pixel_span;
+                    pixels_remaining -= pixel_span;
+                    if (destination_u >= FIELD_TEXT_CACHE_WIDTH)
                     {
                         do
                         {
-                            du -= FIELD_TEXT_CACHE_WIDTH;
-                            dv += state->line_height;
-                        } while (du >= FIELD_TEXT_CACHE_WIDTH);
+                            destination_u -= FIELD_TEXT_CACHE_WIDTH;
+                            destination_v += state->line_height;
+                        } while (destination_u >= FIELD_TEXT_CACHE_WIDTH);
                     }
-                    su += span;
-                    if (su >= FIELD_TEXT_CACHE_WIDTH)
+                    source_u += pixel_span;
+                    if (source_u >= FIELD_TEXT_CACHE_WIDTH)
                     {
                         do
                         {
-                            su -= FIELD_TEXT_CACHE_WIDTH;
-                            sv += state->line_height;
-                        } while (su >= FIELD_TEXT_CACHE_WIDTH);
+                            source_u -= FIELD_TEXT_CACHE_WIDTH;
+                            source_v += state->line_height;
+                        } while (source_u >= FIELD_TEXT_CACHE_WIDTH);
                     }
-                    lines = state->line_height;
-                    lines -= 1;
-                    if (lines != -1)
+                    glyph_rows = state->line_height;
+                    glyph_rows -= 1;
+                    if (glyph_rows != -1)
                     {
                         do
                         {
-                            d = dst;
-                            cap = span >> 2;
-                            cap -= 1;
-                            s = src;
-                            if (cap != -1)
+                            destination = destination_row;
+                            copy_count = pixel_span >> 2;
+                            copy_count -= 1;
+                            source = source_row;
+                            if (copy_count != -1)
                             {
                                 s32 end = -1;
                                 do
                                 {
-                                    pix = *s;
-                                    s += 1;
-                                    cap -= 1;
-                                    *d = pix;
-                                    d += 1;
-                                } while (cap != end);
+                                    pixel_word = *source;
+                                    source += 1;
+                                    copy_count -= 1;
+                                    *destination = pixel_word;
+                                    destination += 1;
+                                } while (copy_count != end);
                             }
-                            dst += 0x40;
-                            lines -= 1;
-                            src += 0x40;
-                        } while (lines != -1);
+                            destination_row += FIELD_TEXT_CACHE_ROW_WORDS;
+                            glyph_rows -= 1;
+                            source_row += FIELD_TEXT_CACHE_ROW_WORDS;
+                        } while (glyph_rows != -1);
                     }
-                } while (left > 0);
+                } while (pixels_remaining > 0);
             }
-            rows -= 0x10;
-        } while (rows > 0);
+            scroll_rows -= FIELD_TEXT_LINE_SPACING;
+        } while (scroll_rows > 0);
     }
-    left = state->line_advance;
-    if (left > 0)
+    pixels_remaining = state->line_advance;
+    if (pixels_remaining > 0)
     {
         do
         {
-            dst = ((u16*)0x801DE000 + (u >> 2)) + (v << 6);
-            span = FIELD_TEXT_CACHE_WIDTH - u;
-            if (left < span)
+            destination_row = ((u16*)0x801DE000 + (next_u >> 2)) + (next_v << 6);
+            pixel_span = FIELD_TEXT_CACHE_WIDTH - next_u;
+            if (pixels_remaining < pixel_span)
             {
-                span = left;
+                pixel_span = pixels_remaining;
             }
-            u += span;
-            left -= span;
-            if (u >= FIELD_TEXT_CACHE_WIDTH)
+            next_u += pixel_span;
+            pixels_remaining -= pixel_span;
+            if (next_u >= FIELD_TEXT_CACHE_WIDTH)
             {
                 do
                 {
-                    u -= FIELD_TEXT_CACHE_WIDTH;
-                    v += state->line_height;
-                } while (u >= FIELD_TEXT_CACHE_WIDTH);
+                    next_u -= FIELD_TEXT_CACHE_WIDTH;
+                    next_v += state->line_height;
+                } while (next_u >= FIELD_TEXT_CACHE_WIDTH);
             }
-            lines = state->line_height;
-            lines -= 1;
-            if (lines != -1)
+            glyph_rows = state->line_height;
+            glyph_rows -= 1;
+            if (glyph_rows != -1)
             {
                 do
                 {
-                    cap = span >> 2;
-                    cap -= 1;
-                    d = dst;
-                    if (cap != -1)
+                    copy_count = pixel_span >> 2;
+                    copy_count -= 1;
+                    destination = destination_row;
+                    if (copy_count != -1)
                     {
                         s32 end = -1;
                         do
                         {
-                            *d = 0;
-                            cap -= 1;
-                            d += 1;
-                        } while (cap != end);
+                            *destination = 0;
+                            copy_count -= 1;
+                            destination += 1;
+                        } while (copy_count != end);
                     }
-                    lines -= 1;
-                    dst += 0x40;
-                } while (lines != -1);
+                    glyph_rows -= 1;
+                    destination_row += FIELD_TEXT_CACHE_ROW_WORDS;
+                } while (glyph_rows != -1);
             }
-        } while (left > 0);
+        } while (pixels_remaining > 0);
     }
     state->dirty_start_u = state->region_start_u;
     state->dirty_start_v = state->region_start_v;

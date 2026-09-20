@@ -394,3 +394,14 @@ movie_service_video_ops             = 0x80140D48;
 
 g_field_text_macros = 0x80122B80;
 g_field_text_saved_configs = 0x801ED004;
+
+field_seek_scene_resource = 0x8009AFBC;
+field_reset_fallback_resource = 0x8009BCAC;
+field_upload_actor_image = 0x8009BCF8;
+field_copy_scene_geometry = 0x8009BDD4;
+field_load_scene_actors = 0x8009BE1C;
+field_refresh_actor_collisions = 0x8009C12C;
+field_move_actor_position = 0x8009C2E0;
+field_set_party_palettes = 0x8009C434;
+field_upload_transition_tiles = 0x8009C4B4;
+field_prepare_transition_tiles = 0x8009C56C;

@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "cdrom.h"
 #include "common.h"
 #include "vector.h"
@@ -235,7 +236,7 @@ extern s32 func_800ADEEC(void);
 extern void func_800ADF34(void);
 extern void func_800A3938(s32 sound_id, s32 pan);
 extern void func_800AA90C(s32);
-extern void field_set_scene_parameters(s32, s32, s32, s32, s32, s32);
+
 extern void field_begin_return_to_title_prompt_close(void);
 extern void func_8006809C(void);
 extern void func_800AE8A8(void);

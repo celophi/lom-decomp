@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "field_text.h"
 #include "cdrom.h"
 #include "game_audio.h"
@@ -516,7 +517,7 @@ extern s32 D_80105760;
 extern FieldCdBuffer* D_8010D038;
 extern u8 g_prim_rect_buf[];
 FieldActorObjectRecord* func_80087C9C(s32);
-void func_8009C2E0(FieldActorObjectRecord* entry, s32* args);
+
 void field_relocate_resource_buffer(s32);
 s32 field_get_actor_resource_id(s32, FieldActorResourceSlot*, s32);
 void field_load_actor_resource_slot(s32, s32, s32, s32);
@@ -2488,7 +2489,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
         args[0] = definition->unk0;
         args[1] = 0;
         args[2] = definition->unk0;
-        func_8009C2E0(entry, args);
+        field_move_actor_position(entry, args);
         entry->unk21 = 0;
     }
     else
@@ -2515,7 +2516,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     }
 
     func_8008C7A8();
-    func_8009C434();
+    field_set_party_palettes();
 
     switch (D_800FD818[slot].unk3)
     {
@@ -2584,7 +2585,7 @@ void field_load_resource_entry(s32 resource_slot_id, u8 *resource_base, s32 entr
     entry = &base[entry_index];
     entry->slot_index = resource_slot_id;
     entry->unk8 = 0;
-    func_8009C434();
+    field_set_party_palettes();
     entry->unkE = 0;
     entry->flags &= ~1;
     entry->start = g_field_resource_cursor;

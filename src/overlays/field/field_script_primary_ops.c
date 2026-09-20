@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "field_text.h"
 #include "field_script.h"
 #include "game_audio.h"
@@ -328,7 +329,6 @@ void func_800B9AC4(void)
 
 /* Field script opcode handlers 0x17 through 0x1C (see field_script.h). */
 
-void func_8009AFBC(s32 arg0);
 void func_800A3938(s32 sound_id, s32 pan);
 void func_80087FC0(s32 arg0, u8 arg1, u8* arg2);
 s32 func_800BE5C8(s32 arg0, s32 arg1, s32 arg2);
@@ -356,7 +356,7 @@ void field_script_op_18(void)
     depth = g_field_script->active_record;
     rec = (FieldScriptRecord*)((u8*)g_field_script + depth * 0xC);
     entry = rec->pc[1] + (rec->pc[2] << 8);
-    func_8009AFBC(entry & 0x7FFF);
+    field_seek_scene_resource(entry & 0x7FFF);
     depth = g_field_script->active_record;
     rec = (FieldScriptRecord*)((u8*)g_field_script + depth * 0xC);
     rec->pc += 3;

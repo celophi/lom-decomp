@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "field_text.h"
 #include "cdrom.h"
 #include "common.h"
@@ -976,7 +977,7 @@ void func_800AB214(s32 context_or_delay)
     extern s32 DrawSync(s32);
     extern void field_restore_fade_target(void);
     extern void field_set_fade_target_only(s16, s16, s16, s16);
-    extern void field_set_scene_parameters(s32, s32, u32, s32, s32, s32);
+
 
 
 

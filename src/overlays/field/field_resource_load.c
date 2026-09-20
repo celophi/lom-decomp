@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "cdrom.h"
 #include "common.h"
 typedef struct
@@ -497,7 +498,7 @@ extern s32 g_field_resource_cursor;
 extern FieldResourceEntry g_field_resource_entries[];
 void field_release_resource_entry(s32);
 void field_unpack_resource_package(u8 *, s32, s32, s32);
-void func_8009C434(void);
+
 
 /**
  * @brief Install a queued resource and record its allocated memory range.
@@ -517,7 +518,7 @@ void func_800B08FC(s32 arg0, s32 arg1)
         entry = base + arg1;
         entry->slot_index = (u8)arg1;
         entry->unk8 = 0;
-        func_8009C434();
+        field_set_party_palettes();
         entry->unkE = 0x2F;
         flags = entry->flags;
         flags &= ~1;

@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 extern u8 D_800EB254[];
@@ -13,7 +14,7 @@ void field_initialize_actor_record(s32, s32);
 void field_restart_actor_animation(u8 *);
 s32 func_800839F8(s32, s32);
 s32 func_80083EEC(s32, s32, s32);
-void func_8009C2E0(u8 *, s32 *);
+
 void func_800A3938(s32, s32);
 s32 func_800A9D70(s32);
 void func_800C2640(s32, s32);
@@ -365,7 +366,7 @@ s32 func_800AF350(u8 *arg0)
                     offset[0] = (s32) -(*(s16 *)(direction_entry + 0x0));
                     offset[1] = 0;
                     offset[2] = (s32) -(*(s16 *)(direction_entry + 0x2));
-                    func_8009C2E0(record, offset);
+                    field_move_actor_position(record, offset);
                     entry = record;
                     actor_flags = *(s32 *)(entry + 0x1C);
                     slot_offset = actor_index * 0x23C;

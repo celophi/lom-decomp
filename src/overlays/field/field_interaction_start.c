@@ -1,3 +1,4 @@
+#include "field_scene_transition.h"
 #include "field_text.h"
 #include "game_audio.h"
 #include "saved_game.h"
@@ -925,7 +926,7 @@ typedef struct
 
 void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
 s32 func_800BD414(s32 arg0, s32 arg1);
-void field_set_scene_parameters(s32 arg0, s32 arg1, u32 arg2, s32 arg3, s32 arg4, s32 arg5);
+
 
 
 extern s32 g_pending_game_state;
@@ -973,7 +974,7 @@ void func_800B1AA8(void)
 extern s32 g_layout_option;
 
 void func_80087FC0(s32 arg0, s32 arg1);
-void func_8009AFBC(s32 arg0);
+
 s32 akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
 
 /**
@@ -1006,7 +1007,7 @@ void func_800B1BBC(void)
         half = *(u16 *)(((u8 *)D_80122B78) + 0x418);
         if ((u16)(half + 2) >= 2)
         {
-            func_8009AFBC(half & 0x7FFF);
+            field_seek_scene_resource(half & 0x7FFF);
         }
 
         packed = *(u32 *)(((u8 *)D_80122B78) + 0x410);
