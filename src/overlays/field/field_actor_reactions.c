@@ -349,7 +349,7 @@ extern u8 D_800FB3C8[];
 extern f870_FieldReactionSelection g_field_actor_bindings[];
 extern fC104_Resource g_field_resource_entries[];
 extern u8 D_800EB068[];
-extern s32 D_8010A000;
+extern s32 g_field_boss_hud_shake_frame;
 extern s32 g_field_active_group;
 extern s32 D_8010D020;
 
@@ -394,7 +394,7 @@ void func_8008B870(f870_FieldReactionActor *actor, s32 alternate)
     }
     else if (g_field_object_states[actor->slot].value < 0)
     {
-        D_8010A000 = 5;
+        g_field_boss_hud_shake_frame = 5;
     }
     if (!((g_field_object_states[actor->slot].unk178 >> 6) & 1))
     {

@@ -1114,7 +1114,7 @@ typedef struct
 
 
 extern Pad *g_pad_ctx;
-extern s32 D_8010A000;
+extern s32 g_field_boss_hud_shake_frame;
 extern void func_8008B870(Entry *, s32);
 /**
  * @brief Mark an actor for an action and dispatch its state-dependent update.
@@ -1182,7 +1182,7 @@ body:
     }
     else if (((Actor *)(actor_base + entry->unk3A * 0x23C))->unk8 < 0)
     {
-        D_8010A000 = 5;
+        g_field_boss_hud_shake_frame = 5;
     }
     action = entry->unk2A;
     if (action == 0x87)

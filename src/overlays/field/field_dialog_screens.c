@@ -244,7 +244,7 @@ extern void func_800B661C(s32 arg0, FieldADF84Rec *arg1);
 extern void akao_cmd_f1(void);
 extern void func_800AE9E0(void);
 extern s32 func_800B0888(void *arg0);
-extern s32 func_80086184(s32, s32, s32, Vec2s *);
+extern s32 field_emit_actor_portrait(s32, s32, s32, Vec2s *);
 
 /* --- Forward prototypes for members defined later (real signatures) --- */
 void func_800A7384(void);
@@ -877,7 +877,7 @@ src = &work.indices[1];
                 y = arg3 - 0x10;
                 y = row - y;
                 work.position.y = y;
-                result = func_80086184(result, arg0, ((FieldRankWork *)((u8 *)position + i * 4))->indices[0], position);
+                result = field_emit_actor_portrait(result, arg0, ((FieldRankWork *)((u8 *)position + i * 4))->indices[0], position);
                 y += 8;
                 work.position.y = y;
                 result = func_800A838C(arg0, result, 0x38 - arg2, y - 8, 1);

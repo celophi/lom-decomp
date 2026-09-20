@@ -22,7 +22,7 @@ void field_update_dialog_runtime(s32);                               /* extern *
 void field_update_actor_objects(void);                                  /* extern */
 void field_render_actor_objects(s32);                               /* extern */
 void func_800842E0(void);                                  /* extern */
-void func_80084700(s32);                               /* extern */
+void field_draw_actor_hud(s32);                               /* extern */
 void func_80086FB8(s32);                               /* extern */
 void func_8008B73C(void);                                  /* extern */
 void func_80096B54(void);                                  /* extern */
@@ -80,7 +80,7 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
     {
         if (g_field_hide_actor_panels[0] == 0)
         {
-            func_80084700(arg0);
+            field_draw_actor_hud(arg0);
         }
     }
     if ((D_800F2298[0] == 0) && (g_field_gover_load_countdown[0] == 0) && (g_field_modal_state[0] == 0) && (g_field_text_session_active[0] == 0))

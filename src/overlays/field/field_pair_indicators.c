@@ -20,7 +20,7 @@ typedef struct
 s32 field_get_position_distance(void *, void *); /* extern */
 void func_800A32A8(s32, u8 *);     /* forward */
 
-extern s32 D_800EB04C[];
+extern s32 g_field_party_hud_order[];
 extern u8 D_800EC33C[];
 
 extern Actor g_field_actors[];
@@ -126,7 +126,7 @@ void func_800A2E40(u8 *buffer)
                 else
                 {
                     slot_base = g_field_object_states;
-                    order = D_800EB04C;
+                    order = g_field_party_hud_order;
                     actor_base = g_field_actors;
                     absent = 0xFF;
                     counter_base = D_80117ED0;
