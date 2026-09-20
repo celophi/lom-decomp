@@ -627,7 +627,7 @@ void func_80050944(void)
  * @param tile Storage for four tiles and a draw-mode packet.
  * @param ot Ordering-table entry receiving the mask primitives.
  * @return Packet cursor immediately after the draw-mode packet.
- * @see decomp.me (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/f3i65
  */
 void* func_80050B40(TILE* tile, u_long* ot)
 {
