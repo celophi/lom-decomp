@@ -152,96 +152,88 @@ void field_draw_actor_hud(u8 *render_context)
     s32 count = i;
     s32 j;
     s32 absent = 0xFF;
-    FieldPanelSlot *slot = g_field_object_states;
-    FieldPanelPlayer *player = g_field_player_records;
-    FieldPanelActor *actor = g_field_actors;
+    s32 excluded_action;
     FieldPanelActor *actor_one;
     FieldPanelPlayer *player_one;
     FieldPanelActor *actor_two;
     FieldPanelPlayer *player_two;
-    s32 x_two;
-    s32 *order;
-    s32 x_three;
     s16 y_three;
     s32 boss_drawn;
-    FieldPanelActor *enemy;
-    FieldPanelSlot *enemy_slot;
     FieldPanelActor *linked;
     s32 group;
     s32 value;
     u32 current;
     u32 previous;
     s32 y;
-    s32 z;
+    s32 view_y;
+    s32 camera_y;
     s32 ticks;
+    u32 display;
 
     do
     {
-        slot = &g_field_object_states[i];
-        actor = &g_field_actors[i];
-        if (actor->presence != absent && (player->flags & 1))
+        if (g_field_actors[i].presence != absent && (g_field_player_records[i].flags & 1))
         {
-            if (actor->action_id != 0x85 && actor->action_id != 0x87)
+            excluded_action = 0x85;
+            if (g_field_actors[i].action_id != excluded_action)
             {
-                slot->hud_options |= 1;
+                excluded_action = 0x87;
+                if (g_field_actors[i].action_id != excluded_action)
+                {
+                    g_field_object_states[i].hud_options |= 1;
+                }
             }
             count++;
         }
-        player++;
         i++;
     } while (i < 3);
     switch (count)
     {
         case 1:
-            i = 0;
+            j = 0;
             player_one = g_field_player_records;
-            actor_one = g_field_actors;
             do
             {
-                actor_one = &g_field_actors[i];
-                player_one = &g_field_player_records[i];
+                actor_one = &g_field_actors[j];
                 if (actor_one->presence != 0xFF && (player_one->flags & 1))
                 {
-                    field_draw_actor_hud_panel(0x70, 0x10, i, render_context, 0x64);
+                    field_draw_actor_hud_panel(0x70, 0x10, j, render_context, 0x64);
                 }
-                i++;
-            } while (i < 3);
+                j++;
+                player_one++;
+            } while (j < 3);
             break;
         case 2:
             i = 0;
-            player_two = g_field_player_records;
-            actor_two = g_field_actors;
-            x_two = 0x38;
+            count = 0;
             do
             {
                 actor_two = &g_field_actors[i];
                 player_two = &g_field_player_records[i];
                 if (actor_two->presence != 0xFF && (player_two->flags & 1))
                 {
-                    field_draw_actor_hud_panel(x_two, 0x10, i, render_context, 0x64);
-                    x_two += 0x6C;
+                    field_draw_actor_hud_panel(0x38 + count * 0x6C, 0x10, i, render_context, 0x64);
+                    count++;
                 }
                 i++;
             } while (i < 3);
             break;
         case 3:
             i = 0;
-            order = g_field_party_hud_order;
-            x_three = 8;
+            count = 0;
             do
             {
-                if (g_field_actors[*order].presence != 0xFF && (g_field_player_records[*order].flags & 1))
+                if (g_field_actors[g_field_party_hud_order[i]].presence != 0xFF && (g_field_player_records[g_field_party_hud_order[i]].flags & 1))
                 {
                     y_three = 0x1C;
                     if (i & 1)
                     {
                         y_three = 4;
                     }
-                    field_draw_actor_hud_panel(x_three, y_three, *order, render_context, 0x64);
-                    x_three += 0x68;
+                    field_draw_actor_hud_panel(8 + count * 0x68, y_three, g_field_party_hud_order[i], render_context, 0x64);
+                    count++;
                 }
                 i++;
-                order++;
             } while (i < 3);
             break;
     }
@@ -249,50 +241,53 @@ void field_draw_actor_hud(u8 *render_context)
     /* Enemy panels are transient; the boss uses a fixed panel at the bottom. */
     if (g_field_scene_mode_bit != 0)
     {
-        j = 3;
+        i = 3;
         if (D_80122B20 == 0)
         {
-            enemy_slot = &g_field_object_states[3];
-            enemy = &g_field_actors[3];
             do
             {
-                group = enemy_slot->group & 0xF;
+                group = g_field_object_states[i].group & 0xF;
                 if (group == g_field_active_group && group != 0)
                 {
-                    value = enemy_slot->hp_display.word;
+                    value = g_field_object_states[i].hp_display.word;
                     if (value < 0)
                     {
-                        if (enemy->presence != 0xFF && (value & FIELD_HUD_HP_MASK) && boss_drawn == 0)
+                        if (g_field_actors[i].presence != 0xFF && (value & FIELD_HUD_HP_MASK) && boss_drawn == 0)
                         {
-                            field_draw_actor_hud_panel(0x20, 0xC0, j, render_context, 0x190);
+                            field_draw_actor_hud_panel(0x20, 0xC0, i, render_context, 0x190);
                             boss_drawn = 1;
                         }
                     }
-                    else if (enemy->presence != 0xFF)
+                    else if (g_field_actors[i].presence != 0xFF)
                     {
-                        current = enemy_slot->current_hp;
+                        current = g_field_object_states[i].current_hp;
                         previous = value & FIELD_HUD_HP_MASK;
                         if (current < previous || previous != current)
                         {
-                            enemy_slot->hp_display.word = (value & 0x80FFFFFF) | 0x14000000;
+                            g_field_object_states[i].hp_display.word = (value & 0x80FFFFFF) | 0x14000000;
                         }
-                        if (enemy_slot->hp_display.bytes[3] & 0x7F)
+                        if (g_field_object_states[i].hp_display.bytes[3] & 0x7F)
                         {
-                            if (!(enemy_slot->flags & 0x100) && (enemy_slot->contact.bytes[0] & 1) &&
-                                (g_field_effect_records[enemy_slot->linked_effect_index].state & 0x7F) != 0x2F)
+                            if (!(g_field_object_states[i].flags & 0x100) && (g_field_object_states[i].contact.bytes[0] & 1) &&
+                                (g_field_effect_records[g_field_object_states[i].linked_effect_index].state & 0x7F) != 0x2F)
                             {
-                                linked = &g_field_effect_records[enemy_slot->linked_effect_index];
+                                linked = &g_field_effect_records[g_field_object_states[i].linked_effect_index];
                                 position.x = (g_field_view_offset_x / 256) + (u32)(linked->x / 256 + 0xA0);
-                                y = g_field_view_offset_y / 256 + (g_field_effect_records[enemy_slot->linked_effect_index].y / 256 + 0x70);
-                                z = g_field_effect_records[enemy_slot->linked_effect_index].z;
+                                view_y = g_field_view_offset_y / 256;
+                                y = g_field_effect_records[g_field_object_states[i].linked_effect_index].y / 256 + 0x70;
+                                view_y = view_y + y;
+                                position.y = view_y - g_field_effect_records[g_field_object_states[i].linked_effect_index].z / 512 - g_field_view_offset_z / 512;
                             }
                             else
                             {
-                                position.x = (g_field_view_offset_x / 256) + (u32)(enemy->x / 256 + 0xA0);
-                                y = g_field_view_offset_y / 256 + (enemy->y / 256 + 0x70);
-                                z = enemy->z;
+                                position.x = (g_field_view_offset_x / 256) + (u32)(g_field_actors[i].x / 256 + 0xA0);
+                                camera_y = g_field_view_offset_y / 256;
+                                {
+                                    s32 actor_y = g_field_actors[i].y / 256 + 0x70;
+                                    view_y = camera_y + actor_y;
+                                }
+                                position.y = view_y - g_field_actors[i].z / 512 - g_field_view_offset_z / 512;
                             }
-                            position.y = y - z / 512 - g_field_view_offset_z / 512;
                             if (position.x + 0x20 >= 0x141)
                             {
                                 position.x = 0x120;
@@ -309,20 +304,18 @@ void field_draw_actor_hud(u8 *render_context)
                             {
                                 position.y = 0x10;
                             }
-                            field_draw_actor_hud_panel(position.x - 0x1C, position.y, j, render_context, 0x64);
-                            value = enemy_slot->hp_display.word;
-                            ticks = ((u32)value >> 24) & 0x7F;
+                            field_draw_actor_hud_panel(position.x - 0x1C, position.y, i, render_context, 0x64);
+                            display = g_field_object_states[i].hp_display.word;
+                            ticks = ((u32)display >> 24) & 0x7F;
                             if (ticks != 0)
                             {
-                                enemy_slot->hp_display.word = (value & 0x80FFFFFF) | (((ticks - 1) & 0x7F) << 24);
+                                g_field_object_states[i].hp_display.word = (display & 0x80FFFFFF) | (((ticks - 1) & 0x7F) << 24);
                             }
                         }
                     }
                 }
-                enemy_slot++;
-                j++;
-                enemy++;
-            } while (j < 13);
+                i++;
+            } while (i < 13);
         }
     }
 }
