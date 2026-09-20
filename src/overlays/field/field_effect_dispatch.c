@@ -10,6 +10,7 @@
 #include "field_effect_types.h"
 #include "field_mesh_render.h"
 #include "field_effect_dispatch.h"
+#include "field_effect_primitives.h"
 #include "sdk/libgpu.h"
 #include "sdk/inline_c.h"
 
@@ -105,7 +106,7 @@ void field_render_effects(FieldRenderContext *render_context)
                 switch (effect->state)
                 {
                 case FIELD_EFFECT_RENDER_RADIAL_LINES:
-                    packet_cursor = field_render_effect_radial_lines(effect, packet_cursor, ordering_table);
+                    packet_cursor = (s32*)field_render_effect_radial_lines(effect, (u8*)packet_cursor, (s32*)ordering_table);
                     break;
 
                 case FIELD_EFFECT_RENDER_MESH_2:
@@ -122,15 +123,15 @@ void field_render_effects(FieldRenderContext *render_context)
                     break;
 
                 case FIELD_EFFECT_RENDER_RING:
-                    packet_cursor = field_render_effect_ring(effect, packet_cursor, ordering_table);
+                    packet_cursor = (s32*)field_render_effect_ring(effect, (u8*)packet_cursor, (s32*)ordering_table);
                     break;
 
                 case FIELD_EFFECT_RENDER_FAN:
-                    packet_cursor = field_render_effect_fan(effect, packet_cursor, ordering_table);
+                    packet_cursor = (s32*)field_render_effect_fan(effect, (u8*)packet_cursor, (s32*)ordering_table);
                     break;
 
                 case FIELD_EFFECT_RENDER_MARKER:
-                    packet_cursor = field_render_effect_marker(effect, packet_cursor, ordering_table);
+                    packet_cursor = (s32*)field_render_effect_marker(effect, (u8*)packet_cursor, (s32*)ordering_table);
                     break;
 
                 case FIELD_EFFECT_RENDER_LINKED_SPRITE:
@@ -270,11 +271,11 @@ void field_render_effects(FieldRenderContext *render_context)
                     break;
 
                 case FIELD_EFFECT_RENDER_RADIAL_FAN:
-                    packet_cursor = field_render_effect_radial_fan(effect, packet_cursor, ordering_table);
+                    packet_cursor = (s32*)field_render_effect_radial_fan(effect, (u8*)packet_cursor, (s32*)ordering_table);
                     break;
 
                 case FIELD_EFFECT_RENDER_TRAIL:
-                    packet_cursor = field_render_effect_trail(effect, packet_cursor, ordering_table);
+                    packet_cursor = (s32*)field_render_effect_trail(effect, (u8*)packet_cursor, (s32*)ordering_table);
                     break;
 
                 case FIELD_EFFECT_RENDER_RIBBON:
