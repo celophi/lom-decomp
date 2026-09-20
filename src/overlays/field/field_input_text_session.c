@@ -631,7 +631,7 @@ void field_draw_actor_labels(void* context)
     u8* label_low;
     u8* label_descriptor;
     s32 text_style;
-    s32 text_x;
+    u16 text_offset;
     s32 swapped_buttons;
     s32 text_address;
     void** context_slot;
@@ -667,7 +667,7 @@ void field_draw_actor_labels(void* context)
     s32 action_slot;
     s32 secondary_action;
     s32 secondary_action_alt;
-    s32 text_low_or_base;
+    s32 label_value;
     FieldLabelPart* highlight_part;
     FieldInputActor* actor_position;
     FieldLabelPart* normal_part;
@@ -709,32 +709,31 @@ void field_draw_actor_labels(void* context)
                     {
                     case 2:
                     case 3:
-                        text_low_or_base = (s32)D_800EDBE4;
-                        swapped_buttons = (s32)D_8010A028 + action_offset;
-                        actor_id = action_slot * sizeof(FieldLabelAction);
-                        swapped_buttons = ((FieldLabelAction*)(swapped_buttons + actor_id))->text_index & 0x7FFF;
-                        text_high_or_offset = ((u16*)text_low_or_base)[swapped_buttons];
-                        text_address = text_high_or_offset + text_low_or_base;
+                        text_high_or_offset = (s32)D_8010A028 + action_offset;
+                        action_slot *= sizeof(FieldLabelAction);
+                        swapped_buttons = ((FieldLabelAction*)(text_high_or_offset + action_slot))->text_index & 0x7FFF;
+                        label_value = (s32)D_800EDBE4;
+                        text_high_or_offset = ((u16*)label_value)[swapped_buttons];
+                        text_address = text_high_or_offset + label_value;
                         break;
 
                     case 0:
                         if (((((FieldSavedInputMap*)swapped_buttons)->actions[0] & 0x7F) == 2) &&
                             ((secondary_action = ((FieldSavedInputMap*)swapped_buttons)->actions[1], (secondary_action == 5)) || (secondary_action == 8)))
                         {
-                            text_high_or_offset = (default_label_offset[1] << 8) + label_base;
-                            text_low_or_base = *label_low;
-                            text_address = text_high_or_offset + text_low_or_base;
+                            text_offset = default_label_offset[1] << 8;
+                            text_high_or_offset = text_offset + label_base;
+                            label_value = *label_low;
+                            text_address = text_high_or_offset + label_value;
                         }
                         else
                         {
                             label_descriptor = D_800EC3E6;
                             text_high_or_offset = label_descriptor[1];
-                            do
-                            {
-                                text_low_or_base = D_800EC3E6[0];
-                                text_high_or_offset = (text_high_or_offset << 8) + label_base;
-                            } while (0);
-                            text_address = text_high_or_offset + text_low_or_base;
+                            label_value = D_800EC3E6[0];
+                            text_high_or_offset <<= 8;
+                            text_high_or_offset += label_base;
+                            text_address = text_high_or_offset + label_value;
                         }
 
                         break;
@@ -743,46 +742,51 @@ void field_draw_actor_labels(void* context)
                             ((secondary_action_alt = ((FieldSavedInputMap*)swapped_buttons)->actions[1], (secondary_action_alt == 5)) ||
                              (secondary_action_alt == 8)))
                         {
-                            text_high_or_offset = (default_label_offset[1] << 8) + label_base;
-                            text_low_or_base = *label_low;
-                            text_address = text_high_or_offset + text_low_or_base;
+                            text_offset = default_label_offset[1] << 8;
+                            text_high_or_offset = text_offset + label_base;
+                            label_value = *label_low;
+                            text_address = text_high_or_offset + label_value;
                         }
                         else
                         {
                             text_high_or_offset = D_800EC3E8[1];
                             text_high_or_offset <<= 8;
                             text_high_or_offset += label_base;
-                            text_low_or_base = D_800EC3E8[0];
-                            text_address = text_high_or_offset + text_low_or_base;
+                            label_value = D_800EC3E8[0];
+                            text_address = text_high_or_offset + label_value;
                         }
                         break;
                     default:
                         swapped_buttons = ((FieldSavedInputMap*)((u8*)g_pad_ctx + local_pad_offset))->actions[action_slot];
                         if (swapped_buttons == 0xFF)
                         {
-                            text_high_or_offset = (default_label_offset[1] << 8) + label_base;
-                            text_low_or_base = *label_low;
-                            text_address = text_high_or_offset + text_low_or_base;
-                        }
-                        else if (swapped_buttons & 0x80)
-                        {
-                            text_low_or_base = (s32)g_pad_ctx + local_text_offset;
-                            text_high_or_offset = ((swapped_buttons & 0xFF7F) << 6) + 0x150;
-                            text_address = text_high_or_offset + text_low_or_base;
+                            text_offset = default_label_offset[1] << 8;
+                            text_high_or_offset = text_offset + label_base;
+                            label_value = *label_low;
+                            text_address = text_high_or_offset + label_value;
                         }
                         else
                         {
-                            actor_id = action_slot * sizeof(FieldLabelAction);
-                            text_x = (s32)g_field_resource_actions;
-                            text_base = text_x;
-                            swapped_buttons =
-                                (((FieldLabelAction*)(text_base + (action_offset + actor_id)))->text_index & 0x7FFF) + (object_record->kind * 0x18);
-                            do
+                            if (swapped_buttons & 0x80)
                             {
-                                text_low_or_base = (s32)D_800ED064;
-                            } while (0);
-                            text_high_or_offset = ((u16*)text_low_or_base)[swapped_buttons];
-                            text_address = text_high_or_offset + text_low_or_base;
+                                text_offset = swapped_buttons & 0xFF7F;
+                                label_value = (s32)g_pad_ctx + local_text_offset;
+                                text_high_or_offset = (text_offset << 6) + 0x150;
+                                text_address = text_high_or_offset + label_value;
+                            }
+                            else
+                            {
+                                actor_id = action_slot * sizeof(FieldLabelAction);
+                                label_value = (s32)g_field_resource_actions + action_offset;
+                                swapped_buttons = ((FieldLabelAction*)(actor_id + label_value))->text_index;
+                                swapped_buttons &= 0x7FFF;
+                                label_value = object_record->kind;
+                                swapped_buttons += label_value * 0x18;
+
+                                label_value = (s32)D_800ED064;
+                                text_high_or_offset = ((u16*)label_value)[swapped_buttons];
+                                text_address = text_high_or_offset + label_value;
+                            }
                         }
 
                         break;
@@ -862,8 +866,7 @@ void field_draw_actor_labels(void* context)
             }
             if (((point.vx - label_half_width) - 8) < 0)
             {
-                local_pad_offset = label_half_width + 8;
-                point.vx = local_pad_offset;
+                point.vx = label_half_width + 8;
             }
             if (point.vy > FIELD_LABEL_MAX_Y)
             {
