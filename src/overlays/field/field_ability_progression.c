@@ -75,205 +75,188 @@ extern s32 D_80115890;
  * @brief Advance active player proficiency and queue newly learned abilities and techniques.
  * @note Proficiency saturates at 100, advancing by four when D_80115890 is set, or one otherwise.
  * @note A technique rule can unlock silently, without adding a dialog entry.
+ * @see decomp.me (100%) TODO
  */
 void field_advance_ability_progression(void)
 {
+    s32 ability_index;
     FieldAbilityUnlockRule* ability_base;
+    s32 technique_index;
     FieldTechniqueUnlockRule* technique_base;
     FieldTechniqueUnlockRule* active_rule;
     FieldProgressionContext* context;
     FieldAbilityUnlockRule* ability_rule;
     FieldTechniqueUnlockRule* technique_rule;
     s32 technique_mask;
-    s32 unlocked_technique;
-    s32 technique;
     s32 ability_word;
     s32 unlocked_ability_word;
     s32 equipped_weapon;
-    s32 equipped_index;
     s32 party_index;
     s32 technique_party_index;
     u32 weapon_category;
     u32 technique_group;
-    FieldProgressionPartyRecord* party_record;
-    FieldProgressionPartyRecord* technique_party_record;
     u8 ability_proficiency;
     u8 weapon_requirement;
     s32 ability;
-    s32 first_ability;
-    s32 second_ability;
-    s32 unlocked_ability;
-    s32 first_required;
-    s32 second_required;
-    s32 third_required;
-    s32 fourth_required;
     u8 weapon_proficiency;
-    u8* weapon_proficiency_ptr;
-    FieldProgressionCharacter* character;
-    u8* weapon_clamp;
-    u8* ability_proficiency_ptr;
-    u8* ability_clamp;
-    FieldProgressionCharacter* party_character;
 
     /* Advance the equipped weapon and both abilities for each active player. */
-    party_record = g_field_player_records;
-    for (party_index = 0; party_index < FIELD_PROGRESSION_PARTY_SIZE; party_index++)
+    party_index = 0;
+    do
     {
-        if (party_record->flags & FIELD_PROGRESSION_ACTIVE_FLAG)
+        if (g_field_player_records[party_index].flags & FIELD_PROGRESSION_ACTIVE_FLAG)
         {
-            character = &g_pad_ctx->characters[party_index];
-            if ((u32)(character->character & FIELD_PROGRESSION_CHARACTER_MASK) < FIELD_PROGRESSION_PLAYER_COUNT)
+            if ((u32)(g_pad_ctx->characters[party_index].character & FIELD_PROGRESSION_CHARACTER_MASK) < FIELD_PROGRESSION_PLAYER_COUNT)
             {
-                weapon_category = (character->equipment >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
+                weapon_category = (g_pad_ctx->characters[party_index].equipment >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
                 if (weapon_category < FIELD_WEAPON_CATEGORY_COUNT)
                 {
-                    weapon_proficiency_ptr = &g_pad_ctx->weapon_proficiency[weapon_category];
-                    weapon_proficiency = *weapon_proficiency_ptr;
+                    weapon_proficiency = g_pad_ctx->weapon_proficiency[weapon_category];
                     if (weapon_proficiency < FIELD_PROFICIENCY_MAX)
                     {
                         if (D_80115890 != 0)
                         {
-                            *weapon_proficiency_ptr = (u8)(weapon_proficiency + FIELD_PROFICIENCY_BONUS);
-                            weapon_clamp = &g_pad_ctx->weapon_proficiency[(((u32)g_pad_ctx->characters[party_index].equipment >> FIELD_WEAPON_CATEGORY_SHIFT) &
-                                                                           FIELD_WEAPON_CATEGORY_MASK)];
-                            if ((u8)*weapon_clamp > FIELD_PROFICIENCY_MAX)
+                            g_pad_ctx->weapon_proficiency[weapon_category] = weapon_proficiency + FIELD_PROFICIENCY_BONUS;
+
+                            if (g_pad_ctx->weapon_proficiency[((g_pad_ctx->characters[party_index].equipment >> FIELD_WEAPON_CATEGORY_SHIFT) &
+                                                               FIELD_WEAPON_CATEGORY_MASK)] > FIELD_PROFICIENCY_MAX)
                             {
-                                *weapon_clamp = FIELD_PROFICIENCY_MAX;
+                                g_pad_ctx->weapon_proficiency[((g_pad_ctx->characters[party_index].equipment >> FIELD_WEAPON_CATEGORY_SHIFT) &
+                                                               FIELD_WEAPON_CATEGORY_MASK)] = FIELD_PROFICIENCY_MAX;
                             }
                         }
                         else
                         {
-                            *weapon_proficiency_ptr = (u8)(weapon_proficiency + 1);
+                            g_pad_ctx->weapon_proficiency[weapon_category] = weapon_proficiency + 1;
                         }
                     }
                 }
-                for (equipped_index = 0; equipped_index < FIELD_EQUIPPED_ABILITY_COUNT; equipped_index++)
+                for (ability = 0; ability < FIELD_EQUIPPED_ABILITY_COUNT; ability++)
                 {
-                    ability_proficiency_ptr = &g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[equipped_index]];
-                    ability_proficiency = *ability_proficiency_ptr;
+                    ability_proficiency = g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]];
                     if (ability_proficiency < FIELD_PROFICIENCY_MAX)
                     {
                         if (D_80115890 != 0)
                         {
-                            *ability_proficiency_ptr = (u8)(ability_proficiency + FIELD_PROFICIENCY_BONUS);
-                            ability_clamp = &g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[equipped_index]];
-                            if ((u8)*ability_clamp > FIELD_PROFICIENCY_MAX)
+                            g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]] =
+                                ability_proficiency + FIELD_PROFICIENCY_BONUS;
+
+                            if (g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]] > FIELD_PROFICIENCY_MAX)
                             {
-                                *ability_clamp = FIELD_PROFICIENCY_MAX;
+                                g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]] = FIELD_PROFICIENCY_MAX;
                             }
                         }
                         else
                         {
-                            *ability_proficiency_ptr = (u8)(ability_proficiency + 1);
+                            g_pad_ctx->ability_proficiency[g_pad_ctx->characters[party_index].abilities[ability]] = ability_proficiency + 1;
                         }
                     }
                 }
             }
         }
-        party_record++;
-    }
+        party_index++;
+    } while (party_index < FIELD_PROGRESSION_PARTY_SIZE);
     context = g_pad_ctx;
     /* Ability rules require each nonempty prerequisite to be learned and trained. */
+    ability_index = 0;
     ability_base = g_field_ability_unlock_rules;
-    ability_rule = ability_base;
     g_field_progression_unlock_count = 0;
     do
     {
+        ability_rule = &ability_base[ability_index];
         ability = ability_rule->result;
         ability_word = ability / FIELD_UNLOCK_BITS_PER_WORD;
         if (!(context->abilities[ability_word] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
         {
-            first_ability = ability_rule->prerequisites[0].ability;
-            if (first_ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                ((context->abilities[first_ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (first_ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                 (context->ability_proficiency[first_ability] >= ability_rule->prerequisites[0].proficiency)))
+            ability = ability_rule->prerequisites[0].ability;
+            if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
+                ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                 (context->ability_proficiency[ability] >= ability_rule->prerequisites[0].proficiency)))
             {
-                second_ability = ability_rule->prerequisites[1].ability;
-                if (second_ability == FIELD_ABILITY_PREREQUISITE_NONE ||
-                    ((context->abilities[second_ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (second_ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                     (context->ability_proficiency[second_ability] >= ability_rule->prerequisites[1].proficiency)))
+                ability = ability_rule->prerequisites[1].ability;
+                if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
+                    ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                     (context->ability_proficiency[ability] >= ability_rule->prerequisites[1].proficiency)))
                 {
-                    unlocked_ability = ability_rule->result;
-                    unlocked_ability_word = unlocked_ability / FIELD_UNLOCK_BITS_PER_WORD;
+                    ability = ability_rule->result;
+                    unlocked_ability_word = ability / FIELD_UNLOCK_BITS_PER_WORD;
                     context->abilities[unlocked_ability_word] =
-                        (s32)(context->abilities[unlocked_ability_word] | (1 << (unlocked_ability % FIELD_UNLOCK_BITS_PER_WORD)));
-                    g_field_progression_unlocks[g_field_progression_unlock_count] = (s16)unlocked_ability;
+                        (s32)(context->abilities[unlocked_ability_word] | (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD)));
+                    g_field_progression_unlocks[g_field_progression_unlock_count] = (s16)ability;
                     g_field_progression_unlock_count += 1;
                 }
             }
         }
-        ability_rule++;
-    } while (ability_rule < ability_base + FIELD_ABILITY_UNLOCK_RULE_COUNT);
+        ability_index++;
+    } while ((s32)&ability_base[ability_index] < (s32)&ability_base[FIELD_ABILITY_UNLOCK_RULE_COUNT]);
     context = g_pad_ctx;
     /* Techniques additionally require an active player with the matching weapon. */
+    technique_index = 0;
     technique_base = g_field_technique_unlock_rules;
-    technique_rule = technique_base;
     do
     {
+        technique_rule = &technique_base[technique_index];
         technique_group = technique_rule->weapon >> FIELD_TECHNIQUE_GROUP_SHIFT;
-        technique = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
-        if (!(context->techniques[technique_group] & (1 << (technique % FIELD_UNLOCK_BITS_PER_WORD))))
+        ability = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
+        if (!(context->techniques[technique_group] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
         {
-            first_required = technique_rule->prerequisites[0].ability;
-            if (first_required == FIELD_ABILITY_PREREQUISITE_NONE ||
-                ((context->abilities[first_required / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (first_required % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                 (context->ability_proficiency[first_required] >= technique_rule->prerequisites[0].proficiency)))
+            ability = technique_rule->prerequisites[0].ability;
+            if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
+                ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                 (context->ability_proficiency[ability] >= technique_rule->prerequisites[0].proficiency)))
             {
-                second_required = technique_rule->prerequisites[1].ability;
-                if (second_required == FIELD_ABILITY_PREREQUISITE_NONE ||
-                    ((context->abilities[second_required / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (second_required % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                     (context->ability_proficiency[second_required] >= technique_rule->prerequisites[1].proficiency)))
+                ability = technique_rule->prerequisites[1].ability;
+                if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
+                    ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                     (context->ability_proficiency[ability] >= technique_rule->prerequisites[1].proficiency)))
                 {
-                    third_required = technique_rule->prerequisites[2].ability;
-                    if (third_required == FIELD_ABILITY_PREREQUISITE_NONE ||
-                        ((context->abilities[third_required / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (third_required % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                         (context->ability_proficiency[third_required] >= technique_rule->prerequisites[2].proficiency)))
+                    ability = technique_rule->prerequisites[2].ability;
+                    if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
+                        ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                         (context->ability_proficiency[ability] >= technique_rule->prerequisites[2].proficiency)))
                     {
-                        fourth_required = technique_rule->prerequisites[3].ability;
-                        if (fourth_required == FIELD_ABILITY_PREREQUISITE_NONE ||
-                            ((context->abilities[fourth_required / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (fourth_required % FIELD_UNLOCK_BITS_PER_WORD))) &&
-                             (context->ability_proficiency[fourth_required] >= technique_rule->prerequisites[3].proficiency)))
+                        ability = technique_rule->prerequisites[3].ability;
+                        if (ability == FIELD_ABILITY_PREREQUISITE_NONE ||
+                            ((context->abilities[ability / FIELD_UNLOCK_BITS_PER_WORD] & (1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))) &&
+                             (context->ability_proficiency[ability] >= technique_rule->prerequisites[3].proficiency)))
                         {
-                            active_rule = technique_rule;
                             technique_party_index = 0;
-                            party_character = context->characters;
-                            technique_party_record = g_field_player_records;
-                            unlocked_technique = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
+                            active_rule = technique_rule;
+                            ability = technique_rule->result & FIELD_TECHNIQUE_INDEX_MASK;
                             do
                             {
-                                if ((technique_party_record->flags & FIELD_PROGRESSION_ACTIVE_FLAG) &&
-                                    ((u32)(party_character->character & FIELD_PROGRESSION_CHARACTER_MASK) < FIELD_PROGRESSION_PLAYER_COUNT))
+                                if ((g_field_player_records[technique_party_index].flags & FIELD_PROGRESSION_ACTIVE_FLAG) &&
+                                    ((u32)(context->characters[technique_party_index].character & FIELD_PROGRESSION_CHARACTER_MASK) <
+                                     FIELD_PROGRESSION_PLAYER_COUNT))
                                 {
                                     weapon_requirement = active_rule->weapon;
-                                    equipped_weapon = (party_character->equipment >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
+                                    equipped_weapon =
+                                        (context->characters[technique_party_index].equipment >> FIELD_WEAPON_CATEGORY_SHIFT) & FIELD_WEAPON_CATEGORY_MASK;
                                     if (equipped_weapon == (weapon_requirement & FIELD_TECHNIQUE_WEAPON_MASK))
                                     {
                                         if (context->weapon_proficiency[equipped_weapon] >= active_rule->weapon_proficiency)
                                         {
-                                            technique_mask = 1 << (unlocked_technique % FIELD_UNLOCK_BITS_PER_WORD);
-                                            if (!(context->techniques[technique_group] & technique_mask))
+                                            if (!(context->techniques[technique_group] & (technique_mask = 1 << (ability % FIELD_UNLOCK_BITS_PER_WORD))))
                                             {
                                                 technique_group = weapon_requirement >> FIELD_TECHNIQUE_GROUP_SHIFT;
                                                 context->techniques[technique_group] = (s32)(context->techniques[technique_group] | technique_mask);
                                                 if (!(active_rule->result & FIELD_TECHNIQUE_SILENT_FLAG))
                                                 {
                                                     g_field_progression_unlocks[g_field_progression_unlock_count] =
-                                                        ((technique_group * FIELD_TECHNIQUES_PER_GROUP) + unlocked_technique) | FIELD_TECHNIQUE_UNLOCK_FLAG;
+                                                        ((technique_group * FIELD_TECHNIQUES_PER_GROUP) + ability) | FIELD_TECHNIQUE_UNLOCK_FLAG;
                                                     g_field_progression_unlock_count += 1;
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                party_character++;
                                 technique_party_index += 1;
-                                technique_party_record++;
                             } while (technique_party_index < FIELD_PROGRESSION_PARTY_SIZE);
                         }
                     }
                 }
             }
         }
-        technique_rule++;
-    } while (technique_rule < technique_base + FIELD_TECHNIQUE_UNLOCK_RULE_COUNT);
+        technique_index++;
+    } while ((s32)&technique_base[technique_index] < (s32)&technique_base[FIELD_TECHNIQUE_UNLOCK_RULE_COUNT]);
 }
