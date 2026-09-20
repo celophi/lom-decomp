@@ -12,9 +12,11 @@
 #define WSEL_SCENE_STATE_ADDRESS 0x801ED480
 #define WSEL_NEXT_FADE_PRIMITIVE(primitive, type) ((WselFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 #define M2C_FIELD(base, type, off) (*(type)((u8*)(base) + (off)))
-#define W32(p, o) (*(u32*)((p) + (o)))
-#define H16(p, o) (*(s16*)((p) + (o)))
-#define U16(p, o) (*(u16*)((p) + (o)))
+#define WSEL_MASK_SIZE 96
+#define WSEL_MASK_MARGIN 11
+#define WSEL_MASK_END (WSEL_MASK_MARGIN + WSEL_MASK_SIZE)
+#define WSEL_MASK_MAX_SHADE 64
+#define WSEL_MASK_FADE_STEP 4
 #define WSEL_STATE_BYTES ((u8*)D_800C6720)
 #define WSEL_RECT_POINTS(rect) ((WselPoint*)&(rect))
 
@@ -58,6 +60,7 @@ typedef struct
     u16 y;
 } WselSpriteEntry;
 
+/** @brief Texture coordinates and screen position of a selection sprite. */
 typedef struct
 {
     u8 _pad0[4];
@@ -65,7 +68,9 @@ typedef struct
     u16 y1;
     u16 x2;
     u16 y2;
-    u8 _pad1[0x18 - 0xC];
+    u8 _pad1[8];
+    u16 x;
+    u16 y;
 } WselTexEntry;
 
 typedef struct
@@ -211,7 +216,7 @@ void func_800500D8();
 void func_800503D4();
 void func_800503F0();
 void func_80050944();
-void* func_80050B40();
+void* func_80050B40(TILE* tile, u_long* ot);
 void* func_80050DB0();
 void* func_80050F0C();
 void* func_800513D0();
@@ -546,7 +551,7 @@ case2:
 case3:
         prim = func_800514D8(prim, ot, 2);
         prim = func_80050F0C(prim, (u_long *)ot);
-        prim = func_80050B40(prim, ot);
+        prim = func_80050B40((TILE*)prim, (u_long*)ot);
         prim = func_800514D8(prim, ot, 0);
         func_80050944();
         goto finish;
@@ -617,26 +622,63 @@ void func_80050944(void)
     { u8 *table = WSEL_STATE_BYTES; *(s16 *)(table + 0x44) = D_800CA8BC.x - 0xB; *(s16 *)(table + 0x46) = D_800CA8BC.y - 0xB; *(u16 *)(table + 0x14) = D_800CA8B8.x; *(u16 *)(table + 0x16) = D_800CA8B8.y; }
 }
 
-void *func_80050B40(u8 *p, s32 *arg1)
+/**
+ * @brief Fade a subtractive mask around the selected 96-pixel square.
+ * @param tile Storage for four tiles and a draw-mode packet.
+ * @param ot Ordering-table entry receiving the mask primitives.
+ * @return Packet cursor immediately after the draw-mode packet.
+ * @see decomp.me (100%)
+ */
+void* func_80050B40(TILE* tile, u_long* ot)
 {
-    u8 *state;
-    if (D_800CA8D0 < 0x40) D_800CA8D0 += 4;
-    state = WSEL_STATE_BYTES;
-    p[3]=3; p[7]=0x60; { u8 shade; shade=D_800CA8D0; H16(p,0xC)=0x140; H16(p,0xA)=0; H16(p,8)=0; p[6]=shade; p[5]=shade; p[4]=shade; p[7]|=2; }
-    H16(p,0xE)=U16(state,0x46)+0xB;
-    addPrim(arg1, p); p+=0x10;
-    p[7]=0x60; p[3]=3; {u8 shade=D_800CA8D0; p[6]=shade; p[5]=shade; p[4]=shade;} H16(p,8)=0; p[7]|=2;
-    H16(p,0xA)=U16(state,0x46)+0x6B; H16(p,0xC)=0x140; H16(p,0xE)=0xE0-H16(p,0xA);
-    addPrim(arg1, p); p+=0x10;
-    p[7]=0x60; p[3]=3; {u8 shade=D_800CA8D0; p[6]=shade; p[5]=shade; p[4]=shade;} H16(p,8)=0; p[7]|=2;
-    H16(p,0xA)=U16(state,0x46)+0xB; H16(p,0xC)=U16(state,0x44)+0xB; H16(p,0xE)=0x60;
-    addPrim(arg1, p); p+=0x10;
-    p[7]=0x60; p[3]=3; {u8 shade=D_800CA8D0; p[6]=shade; p[5]=shade; p[4]=shade;}  p[7]|=2;
-    H16(p,8)=U16(state,0x44)+0x6B; H16(p,0xA)=U16(state,0x46)+0xB; H16(p,0xC)=0x140-U16(p,8); H16(p,0xE)=0x60;
-    addPrim(arg1, p); p+=0x10;
-    p[3]=1; W32(p,4)=0xE1000040;
-    addPrim(arg1, p);
-    return p+8;
+    WselTexEntry* state;
+    DR_TPAGE* draw_mode;
+
+    if (D_800CA8D0 < WSEL_MASK_MAX_SHADE)
+    {
+        D_800CA8D0 += WSEL_MASK_FADE_STEP;
+    }
+    state = D_800C6720;
+
+    setTile(tile);
+    tile->r0 = tile->g0 = tile->b0 = D_800CA8D0;
+    setSemiTrans(tile, 1);
+    setXY0((volatile TILE*)tile, 0, 0);
+    ((volatile TILE*)tile)->w = SCREEN_WIDTH;
+    tile->h = state[2].y + WSEL_MASK_MARGIN;
+    addPrim(ot, tile);
+    tile++;
+
+    setTile(tile);
+    tile->r0 = tile->g0 = tile->b0 = D_800CA8D0;
+    tile->x0 = 0;
+    setSemiTrans(tile, 1);
+    tile->y0 = state[2].y + WSEL_MASK_END;
+    setWH(tile, SCREEN_WIDTH, VRAM_DRAW_HEIGHT - tile->y0);
+    addPrim(ot, tile);
+    tile++;
+
+    setTile(tile);
+    tile->r0 = tile->g0 = tile->b0 = D_800CA8D0;
+    tile->x0 = 0;
+    setSemiTrans(tile, 1);
+    tile->y0 = state[2].y + WSEL_MASK_MARGIN;
+    setWH(tile, state[2].x + WSEL_MASK_MARGIN, WSEL_MASK_SIZE);
+    addPrim(ot, tile);
+    tile++;
+
+    setTile(tile);
+    tile->r0 = tile->g0 = tile->b0 = D_800CA8D0;
+    setSemiTrans(tile, 1);
+    setXY0(tile, state[2].x + WSEL_MASK_END, state[2].y + WSEL_MASK_MARGIN);
+    setWH(tile, SCREEN_WIDTH - (u16)tile->x0, WSEL_MASK_SIZE);
+    addPrim(ot, tile);
+    tile++;
+
+    draw_mode = (DR_TPAGE*)tile;
+    setDrawTPage(draw_mode, 0, 0, getTPage(0, 2, 0, 0));
+    addPrim(ot, draw_mode);
+    return draw_mode + 1;
 }
 
 void *func_80050DB0(POLY_FT4 *poly, u_long *ot, WselQuadCoords *coords, s32 semi, s32 color)
