@@ -1027,7 +1027,7 @@ void func_80084630(void)
     } Slot;
     typedef struct {u8 pad0[0xE]; u8 unkE,unkF,unk10; u8 pad11[0x48 - 0x11];} Part;
     typedef struct {u8 pad0[0x259]; u8 unk259; u8 pad25A[0x268 - 0x25A];} FD;
-    extern Slot g_field_object_states[]; extern Part g_field_object_parts[]; extern FD g_field_player_records[]; extern s32 D_8010A000;
+    extern Slot g_field_object_states[]; extern Part g_field_object_parts[]; extern FD g_field_player_records[]; extern s32 g_field_boss_hud_shake_frame;
 
     s32 i; u8 v; u8 ff;
     i=0;
@@ -1053,5 +1053,5 @@ void func_80084630(void)
     ff=0xFF;
     i=2;
     do { g_field_player_records[i].unk259=ff; i--; } while(i>=0);
-    D_8010A000=0xFF;
+    g_field_boss_hud_shake_frame=0xFF;
 }

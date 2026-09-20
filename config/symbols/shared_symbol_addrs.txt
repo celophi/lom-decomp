@@ -1262,3 +1262,4 @@ g_field_route_animation_history = 0x8010CFE0;
 g_field_follower_animation_map = 0x800EB20C;
 g_field_primary_party_actor = 0x800FDFAC;
 g_field_secondary_party_actor = 0x800FE000;
+field_upload_image_resource              = 0x80086374;

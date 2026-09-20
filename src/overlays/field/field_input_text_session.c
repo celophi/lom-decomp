@@ -263,7 +263,7 @@ void func_800AA7A4(void);
 s32 func_8005B218(void);
 void func_800AEE28(void);
 void* func_800A88A0(SPRT* cursor, s32* ordering_table, u8* text, s32 color, s32 x, s32 y, s32 flags);
-void* func_80086184(SPRT*, u32*, s32, u32*);
+void* field_emit_actor_portrait(SPRT*, u32*, s32, u32*);
 void* func_800AD208(s32*, void*, s32, s32, u16*, s32);
 void* func_800AD524(u8*, s32*, s32, s32*, s32);
 s32 func_800AE864(u8*);
@@ -795,7 +795,7 @@ void field_draw_actor_labels(void* context)
                     point.vx = 0x60;
                     point.vy = button_mask_or_y_offset + 0x3C;
 
-                    primitive = (s32)func_800A88A0(func_80086184((SPRT*)primitive, (u32*)label_ot, index, (u32*)&point), (s32*)label_ot, (u8*)text_address, 4,
+                    primitive = (s32)func_800A88A0(field_emit_actor_portrait((SPRT*)primitive, (u32*)label_ot, index, (u32*)&point), (s32*)label_ot, (u8*)text_address, 4,
                                                    0x80, button_mask_or_y_offset + 0x40, 0x80);
                     break;
                 }

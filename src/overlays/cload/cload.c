@@ -2317,7 +2317,7 @@ void cload_deactivate_primary_element(void)
 /**
  * @brief Load the CD icon-set resource into the 0x80180000 scratch buffer and
  *        register its three icon glyphs (codes 0x200/0x240/0x280) with ids
- *        0x1F4/0x1F5/0x1F6 via func_80086374, also pointing g_cload_icon_resource (the
+ *        0x1F4/0x1F5/0x1F6 via field_upload_image_resource, also pointing g_cload_icon_resource (the
  *        icon UV table used by cload_draw_icon_highlight) at the resource's first offset
  *        field.
  * @note The four header reads use raw offsets off (u8 *)0x80180000 so gcc shares a
@@ -2343,19 +2343,19 @@ void cload_load_icon_resources(void)
     buf[1] = 0;
     buf[2] = 0;
     buf[3] = 0x1F4;
-    func_80086374(buf, *(s32 *)(base + 8) + (s32)base, 1);
+    field_upload_image_resource(buf, *(s32 *)(base + 8) + (s32)base, 1);
 
     buf[0] = 0x240;
     buf[1] = 0;
     buf[2] = 0;
     buf[3] = 0x1F5;
-    func_80086374(buf, *(s32 *)(base + 0xC) + (s32)base, 1);
+    field_upload_image_resource(buf, *(s32 *)(base + 0xC) + (s32)base, 1);
 
     buf[0] = 0x280;
     buf[1] = 0;
     buf[2] = 0;
     buf[3] = 0x1F6;
-    func_80086374(buf, *(s32 *)(base + 0x10) + (s32)base, 1);
+    field_upload_image_resource(buf, *(s32 *)(base + 0x10) + (s32)base, 1);
 }
 
 /**
