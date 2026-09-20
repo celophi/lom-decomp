@@ -254,7 +254,7 @@ void akao_cmd_98_9a_9c_9e(s32 arg0);
 void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
 void func_800A3938(s32 arg0, s32 arg1);
 void field_restore_fade_target(void);
-void func_8008C7A8(void);
+void field_refresh_party_routes(void);
 void func_800AA858(s32 arg0);
 
 s32 func_800B0850(void);
@@ -1202,7 +1202,7 @@ void field_process_input(s32 context)
     if (D_80122710 != 0)
     {
         D_80122710 = 0;
-        func_8008C7A8();
+        field_refresh_party_routes();
     }
     if (g_field_text_session_active != 0)
     {

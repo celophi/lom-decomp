@@ -529,7 +529,7 @@ void func_800AA858(s32 arg0)
 void func_800AA90C(s32 refresh_only)
 {
     extern void akao_set_paused(s32);
-    extern void func_8008C7A8(void);
+    extern void field_refresh_party_routes(void);
     extern void func_80091438(s32);
     extern void func_800A3D44(s32, u8);
     extern void func_800A5174(s32, s32);
@@ -827,7 +827,7 @@ party_loop:
     {
         goto party_loop;
     }
-    func_8008C7A8();
+    field_refresh_party_routes();
 }
 
 /**

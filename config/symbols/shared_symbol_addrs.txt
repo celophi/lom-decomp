@@ -1250,3 +1250,15 @@ g_field_buffered_input = 0x801229F8;
 g_field_text_session_cd_error = 0x80122984;
 g_field_text_session_active = 0x801227C8;
 g_field_hint_button_map = 0x800EC2FC;
+
+field_reset_leader_position_history = 0x8008C730;
+field_refresh_party_routes = 0x8008C7A8;
+field_sample_actor_route = 0x8008CAA4;
+field_get_route_heading_animation = 0x8008D104;
+field_record_actor_position = 0x8008D174;
+field_follow_leader_route = 0x8008D29C;
+g_field_route_position_histories = 0x80105B4C;
+g_field_route_animation_history = 0x8010CFE0;
+g_field_follower_animation_map = 0x800EB20C;
+g_field_primary_party_actor = 0x800FDFAC;
+g_field_secondary_party_actor = 0x800FE000;

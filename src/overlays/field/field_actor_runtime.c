@@ -2296,7 +2296,7 @@ void func_8006AA7C(s32 actor_slot)
                 }
             }
 
-            func_8008C7A8();
+            field_refresh_party_routes();
             func_800B4684();
             func_80084240();
             func_800B01FC();
@@ -2514,7 +2514,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
         func_800A3D44(1, D_800FDA81);
     }
 
-    func_8008C7A8();
+    field_refresh_party_routes();
     field_set_party_palettes();
 
     switch (g_field_player_records[slot].unk3)
@@ -3031,7 +3031,7 @@ void field_update_actor_objects(void)
                         {
                             if (!(actor_state->unkC & 0x21E4))
                             {
-                                func_8008D29C(record, index, 0x600 + (index * 0x400));
+                                field_follow_leader_route(record, index, 0x600 + (index * 0x400));
                                 record->unk1C &= ~0x800;
                             }
                             else
@@ -3066,7 +3066,7 @@ void field_update_actor_objects(void)
                         }
                     }
 
-                    func_8008D174(record);
+                    field_record_actor_position(record);
                 }
             }
         }
