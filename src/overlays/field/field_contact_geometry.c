@@ -1115,7 +1115,6 @@ s32 field_find_actor_overlap(FieldMotionRecord* record, s32* position, s32 filte
     u8* bindings;
     s32 record_center_offset;
     FieldObjectRuntime* scan_state;
-    u8* candidate_z_cursor;
     FieldMotionRecord* scan_record;
     s32 test_y;
     s32 animation_slot;
@@ -1129,7 +1128,6 @@ s32 field_find_actor_overlap(FieldMotionRecord* record, s32* position, s32 filte
     s8 record_vertical_offset;
     s8 candidate_vertical_offset;
     FieldObjectRuntime* record_state;
-    u8* candidate_object_cursor;
 
     if (filter_group != 0 && D_8010D020 == 0)
     {
@@ -1155,84 +1153,47 @@ s32 field_find_actor_overlap(FieldMotionRecord* record, s32* position, s32 filte
         actor_index = 0;
         candidate_end = FIELD_RUNTIME_ACTOR_COUNT;
     }
-    do
-    {
-        do
-        {
-            candidate_index = actor_index;
-        } while (0);
-    } while (0);
     if ((s8)record->vertical_offset >= 9)
     {
     return_zero:
         return 0;
     }
+    candidate_index = actor_index;
     record_state = &g_field_object_states[record->source_object_index];
     record_center_offset = record_state->collision.half.center_offset << 8;
-    if (candidate_index < candidate_end)
+    for (; candidate_index < candidate_end; candidate_index++, scan_record++, scan_state++)
     {
-        candidate_object_cursor = (u8*)&scan_state->collision.half.diameter;
-        candidate_z_cursor = (u8*)&scan_record->z;
-    scan_next:
-        do
+        if ((scan_record->state == FIELD_ACTOR_STATE_UNUSED) ||
+            (scan_state->object_flags & (FIELD_OBJECT_FLAG_CONTACT_FILTER_0004 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0020 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0040 |
+                                         FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0100 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 |
+                                         FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)) ||
+            (scan_record == record) ||
+            (candidate_contact_flags = scan_state->contact.flags, ((candidate_contact_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) != 0)) ||
+            (candidate_contact_flags & 1) || (scan_state->collision.word == 0))
         {
-            if ((FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->state == FIELD_ACTOR_STATE_UNUSED) ||
-                (FIELD_CONTAINER(candidate_object_cursor, FieldObjectRuntime, collision.half.diameter)->object_flags &
-                 (FIELD_OBJECT_FLAG_CONTACT_FILTER_0004 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0020 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0040 |
-                  FIELD_OBJECT_FLAG_CONTACT_FILTER_0080 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0100 | FIELD_OBJECT_FLAG_CONTACT_FILTER_0200 |
-                  FIELD_OBJECT_FLAG_CONTACT_FILTER_2000)) ||
-                (scan_record == record) ||
-                (candidate_contact_flags = FIELD_CONTAINER(candidate_object_cursor, FieldObjectRuntime, collision.half.diameter)->contact.flags,
-                 ((candidate_contact_flags & FIELD_CONTACT_FLAG_NO_HIT_TEST) != 0)) ||
-                (candidate_contact_flags & 1) || (FIELD_CONTAINER(candidate_object_cursor, FieldObjectRuntime, collision.half.diameter)->collision.word == 0))
-            {
-                break;
-            }
-            candidate_vertical_offset = (s8)FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->vertical_offset;
-            record_vertical_offset = (s8)record->vertical_offset;
-            test_y = position[1];
-            if (((FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->y +
-                  ((FIELD_CONTAINER(candidate_object_cursor, FieldObjectRuntime, collision.half.diameter)->bounds.half.top + candidate_vertical_offset) << 8)) >
-                 (test_y + ((record_state->bounds.half.bottom + record_vertical_offset) << 8))) ||
-                ((FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->y +
-                  ((FIELD_CONTAINER(candidate_object_cursor, FieldObjectRuntime, collision.half.diameter)->bounds.half.bottom + candidate_vertical_offset)
-                   << 8)) < (test_y + ((record_state->bounds.half.top + record_vertical_offset) << 8))))
-            {
-                break;
-            }
-            scratch.delta.vx = (FIELD_CONTAINER(candidate_z_cursor, FieldMotionRecord, z)->z - position[2]) >> 8;
-            scratch.delta.vy =
-                ((scan_record->x + (FIELD_CONTAINER(candidate_object_cursor, FieldObjectRuntime, collision.half.diameter)->collision.half.center_offset << 8)) -
-                 (position[0] + record_center_offset)) >>
-                8;
-            scratch.delta.vz = 0;
-            gte_ldlvl(&scratch.delta);
-            gte_sqr0();
-            gte_stlvnl(&scratch.squared);
-            if (SquareRoot0(scratch.squared.vx + scratch.squared.vy) <
-                (((s32)(record_state->collision.half.diameter << 16) >> 17) +
-                 ((s32)(FIELD_CONTAINER(candidate_object_cursor, FieldObjectRuntime, collision.half.diameter)->collision.half.diameter << 16) >> 17)))
-            {
-                goto candidate_found;
-            }
-        } while (0);
-
-        do
+            continue;
+        }
+        candidate_vertical_offset = (s8)scan_record->vertical_offset;
+        record_vertical_offset = (s8)record->vertical_offset;
+        test_y = position[1];
+        if (((scan_record->y + ((scan_state->bounds.half.top + candidate_vertical_offset) << 8)) >
+             (test_y + ((record_state->bounds.half.bottom + record_vertical_offset) << 8))) ||
+            ((scan_record->y + ((scan_state->bounds.half.bottom + candidate_vertical_offset) << 8)) <
+             (test_y + ((record_state->bounds.half.top + record_vertical_offset) << 8))))
         {
-            candidate_index += 1;
-        } while (0);
-        candidate_z_cursor += sizeof(FieldMotionRecord);
-        scan_record += 1;
-        candidate_object_cursor += sizeof(FieldObjectRuntime);
-        scan_state += 1;
-        do
+            continue;
+        }
+        scratch.delta.vx = (scan_record->z - position[2]) >> 8;
+        scratch.delta.vy = ((scan_record->x + (scan_state->collision.half.center_offset << 8)) - (position[0] + record_center_offset)) >> 8;
+        scratch.delta.vz = 0;
+        gte_ldlvl(&scratch.delta);
+        gte_sqr0();
+        gte_stlvnl(&scratch.squared);
+        if (SquareRoot0(scratch.squared.vx + scratch.squared.vy) <
+            (((s32)(record_state->collision.half.diameter << 16) >> 17) + ((s32)(scan_state->collision.half.diameter << 16) >> 17)))
         {
-            if (candidate_index < candidate_end)
-            {
-                goto scan_next;
-            }
-        } while (0);
-    candidate_found:;
+            break;
+        }
     }
     if (candidate_index == candidate_end)
     {
@@ -1297,13 +1258,9 @@ s32 field_find_actor_overlap(FieldMotionRecord* record, s32* position, s32 filte
                                         func_800A2DD8(scan_record->source_object_index);
                                     }
                                     field_start_actor_animation(animation_slot, 1, scratch.targets.actor_indices);
-                                    goto return_zero;
                                 }
-                                goto return_zero;
                             }
-                            goto return_zero;
                         }
-                        goto return_zero;
                     }
                 }
             }
