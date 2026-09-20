@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "cdrom.h"
 #include "saved_game.h"
 /**
@@ -288,8 +289,7 @@ extern s32 g_pad_input_inject;
 /* File-scope function prototypes (non-conflicting)                          */
 /* ------------------------------------------------------------------------- */
 
-void field_text_reset_scratch(void);
-void func_80063194(void);
+
 void akao_stop_sfx_by_id(s32 id);
 void akao_cmd_99_9b_9d_9f(s32 arg0);
 void akao_cmd_98_9a_9c_9e(s32 arg0);
@@ -298,7 +298,7 @@ void func_800A3938(s32 arg0, s32 arg1);
 void field_restore_fade_target(void);
 void func_8008C7A8(void);
 void func_800AA858(s32 arg0);
-s32 func_8006751C(s32 arg0);
+
 s32 func_800B0850(void);
 void func_800AA570(void *arg0, s32 arg1);
 void func_800AA7A4(void);
@@ -570,7 +570,7 @@ u8 *func_800A9060(void)
 }
 
 /**
- * @brief Reset text scratch, run one of two handlers on arg0 by D_80122984, then call func_80063194.
+ * @brief Reset text scratch, run one of two handlers on arg0 by D_80122984, then call field_text_upload_immediate_cache.
  * @param arg0 Forwarded to func_800A92CC or func_800A939C.
  */
 void func_800A909C(void *arg0)
@@ -586,7 +586,7 @@ void func_800A909C(void *arg0)
         func_800A939C(arg0);
     }
 
-    func_80063194();
+    field_text_upload_immediate_cache();
 }
 
 /**
@@ -1328,7 +1328,7 @@ void func_800AA098(s32 arg0)
             i++;
             actor++;
         } while (i < 3);
-        if (func_8006751C(0) == -1 && D_800F2298 == 0 && D_800F229C == 0 &&
+        if (field_text_get_status(0) == -1 && D_800F2298 == 0 && D_800F229C == 0 &&
             g_field_return_to_title_prompt_state == 0 && D_80122714 == 0 && func_800B0850() == 0)
         {
             if (D_801227B8[0] != 0xFF && pad->connected == 0xFF)

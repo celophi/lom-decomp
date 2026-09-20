@@ -1,69 +1,163 @@
+#include "field_text.h"
 #include "cdrom.h"
+#include "cd_resources.h"
 #include "common.h"
+#include "gpu_packet.h"
 #include "field_animation.h"
-#include "vector.h"
+#include "sdk/libgte.h"
 #include "sdk/libgpu.h"
+
+#define FIELD_TEXT_STATE_MASK 7
+#define FIELD_TEXT_PORTRAIT_SLOT 0x08
+#define FIELD_TEXT_PORTRAIT_RIGHT 0x10
+#define FIELD_TEXT_PORTRAIT_OUTSIDE 0x20
+#define FIELD_TEXT_PORTRAIT_MASK (FIELD_TEXT_PORTRAIT_RIGHT | FIELD_TEXT_PORTRAIT_OUTSIDE)
+#define FIELD_TEXT_STYLE_BOLD 0x40
+#define FIELD_TEXT_STYLE_PLAIN 0x80
+#define FIELD_TEXT_STYLE_MASK (FIELD_TEXT_STYLE_BOLD | FIELD_TEXT_STYLE_PLAIN)
+#define FIELD_TEXT_INSTANT 0x800
+#define FIELD_TEXT_AUTO_CLOSE 0x1000
+#define FIELD_TEXT_REOPEN_PACKED 0x2000
+#define FIELD_TEXT_REOPEN_FIXED 0x4000
+#define FIELD_TEXT_REOPEN_MASK (FIELD_TEXT_REOPEN_PACKED | FIELD_TEXT_REOPEN_FIXED)
+#define FIELD_TEXT_CACHE_WIDTH 256
+#define FIELD_TEXT_LINE_HEIGHT 12
+#define FIELD_TEXT_LINE_SPACING 16
+#define FIELD_TEXT_PORTRAIT_SIZE 48
+#define FIELD_TEXT_PORTRAIT_MARGIN 56
+#define FIELD_TEXT_TRANSITION_FRAMES 4
+
+#define FIELD_TEXT_FRAME_TILE_WIDTH 64
+#define FIELD_TEXT_FRAME_TILE_HEIGHT 32
+#define FIELD_TEXT_BORDER_WIDTH 8
+#define FIELD_TEXT_SPRITE_COLOR (0x65000000 | GPU_TINT_NEUTRAL)
+#define FIELD_TEXT_QUAD_COLOR (0x2D000000 | GPU_TINT_NEUTRAL)
+#define FIELD_TEXT_CHOICE_COLOR (0x7D000000 | GPU_TINT_NEUTRAL)
+#define FIELD_TEXT_SPRITE_SHADOW 0x66000000
+#define FIELD_TEXT_QUAD_SHADOW 0x2E000000
+
+/** @brief Modes in the low three bits of a runtime window's flags. */
+typedef enum
+{
+    FIELD_TEXT_CLOSED,
+    FIELD_TEXT_OPENING,
+    FIELD_TEXT_ACTIVE,
+    FIELD_TEXT_CLOSING,
+    FIELD_TEXT_TIMED,
+    FIELD_TEXT_MODE_UNKNOWN_5,
+    FIELD_TEXT_IMMEDIATE
+} FieldTextMode;
+
+/** @brief Pending actions completed by the dialogue prompt. */
+typedef enum
+{
+    FIELD_TEXT_FLOW_NONE,
+    FIELD_TEXT_FLOW_END,
+    FIELD_TEXT_FLOW_CLEAR,
+    FIELD_TEXT_FLOW_NEWLINE,
+    FIELD_TEXT_FLOW_WAIT,
+    FIELD_TEXT_FLOW_CHOICE = 0x10
+} FieldTextFlow;
+
+/** @brief Control bytes below the first printable text character. */
+typedef enum
+{
+    FIELD_TEXT_CMD_END = 0,
+    FIELD_TEXT_CMD_NEWLINE = 1,
+    FIELD_TEXT_CMD_WAIT_NEWLINE = 2,
+    FIELD_TEXT_CMD_WAIT_CLEAR = 3,
+    FIELD_TEXT_CMD_CLEAR = 4,
+    FIELD_TEXT_CMD_WAIT = 5,
+    FIELD_TEXT_CMD_FINISH = 6,
+    FIELD_TEXT_CMD_CHOICE = 7,
+    FIELD_TEXT_CMD_TWO_SPACES = 8,
+    FIELD_TEXT_CMD_THREE_SPACES = 9,
+    FIELD_TEXT_CMD_FOUR_SPACES = 10,
+    FIELD_TEXT_CMD_SPACES = 11,
+    FIELD_TEXT_CMD_SHORT_DELAY = 12,
+    FIELD_TEXT_CMD_DELAY = 13,
+    FIELD_TEXT_CMD_MACRO = 14,
+    FIELD_TEXT_CMD_INLINE_TEXT = 15,
+    FIELD_TEXT_CMD_COLOR = 16,
+    FIELD_TEXT_CMD_DEFAULT_COLOR = 17,
+    FIELD_TEXT_CMD_PREFIXED_GLYPH_RUN = 18,
+    FIELD_TEXT_CMD_INDENT = 19,
+    FIELD_TEXT_CMD_WIDE_CHARACTER = 25,
+    FIELD_TEXT_CMD_EXTENDED_GLYPH_RUN = 31,
+} FieldTextCommand;
+
+/** @brief A 16-color palette followed by a 48-by-48, 4bpp portrait. */
+typedef struct
+{
+    u16 palette[16];
+    u8 pixels[FIELD_TEXT_PORTRAIT_SIZE][FIELD_TEXT_PORTRAIT_SIZE / 2];
+} FieldTextPortrait;
 
 /** @brief Byte view of a field text flags word. */
 typedef struct
 {
-    u8 low;                 // 0x10 state/style byte
-    u8 byte1;               // 0x11
-    u8 byte2;               // 0x12 transition/text option byte
-    u8 byte3;               // 0x13 copied config byte
+    u8 low;
+    u8 byte1;
+    u8 byte2;
+    u8 byte3;
 } FieldTextFlagBytes;
 
+/** @brief Text flags accessed as a word or individual control bytes. */
 typedef union
 {
     u32 word;
     FieldTextFlagBytes b;
 } FieldTextFlags;
 
-/** @brief Runtime state for one field dialogue/text window. */
+/**
+ * @brief Runtime state for one dialogue window.
+ * @note Cache U coordinates count 4bpp pixels; each 256-pixel span wraps by line_height rows.
+ *       Screen text lines are spaced 16 pixels apart. Inline macros use a budget of -1.
+ */
 typedef struct
 {
-    u8* text_cursor;        // 0x00 script cursor
-    u8* macro_cursor;       // 0x04 macro-expansion cursor
-    u8* glyph_cursor;       // 0x08 nested glyph-run cursor
-    u8* portrait;           // 0x0C portrait image, or NULL
-    FieldTextFlags flags;   // 0x10
-    u8 flow_code;           // 0x14 pending page/prompt action
-    u8 line_count;          // 0x15 emitted text-line count
-    u8 choice_start_line;   // 0x16 first line of a choice list
-    u8 choice_index;        // 0x17 selected choice
-    u8 choice_count;        // 0x18 number of choices / choice nesting depth
-    u8 pending_spaces;      // 0x19 spaces still to emit
-    u8 char_delay;          // 0x1A typewriter delay
-    u8 text_color;          // 0x1B text palette/style index
-    u8 scroll_timer;        // 0x1C scroll countdown after filling the window
-    u8 needs_init;          // 0x1D one-time window/portrait initialization
-    u8 prompt_frame;        // 0x1E prompt animation frame
-    u8 prompt_timer;        // 0x1F prompt animation timer
-    u8 inline_text[0x49 - 0x20]; // 0x20 inline expansion buffer
-    u8 last_was_break;      // 0x49 last glyph was a word-break opportunity
-    u16 transition_frame;   // 0x4A open/close animation step
-    s16 macro_remaining;    // 0x4C active macro character budget; -1 = unlimited
-    u16 x;                  // 0x4E window x
-    u16 y;                  // 0x50 window y
-    u16 width;              // 0x52 text/window width
-    u16 height;             // 0x54 text/window height
-    u16 line_advance;       // 0x56 staging-buffer advance to the next text row
-    u16 line_height;        // 0x58 staging-buffer row height
-    u16 remaining_width;    // 0x5A remaining width on the current line
-    u16 cursor_u;           // 0x5C staging-buffer text cursor u
-    u16 cursor_v;           // 0x5E staging-buffer text cursor v
-    u16 region_start_u;     // 0x60 live text-region start u
-    u16 region_start_v;     // 0x62 live text-region start v
-    u16 region_end_u;       // 0x64 live text-region end u
-    u16 region_end_v;       // 0x66 live text-region end v
-    u16 dirty_start_u;      // 0x68 dirty upload start u
-    u16 dirty_start_v;      // 0x6A dirty upload start v
-    u16 dirty_end_u;        // 0x6C dirty upload end u
-    u16 dirty_end_v;        // 0x6E dirty upload end v
-    u16 row_carry[14];      // 0x70 wrapped glyph-row carry data
-    s32 transition_anchor_x;// 0x8C opening-animation anchor x
-    u32 reserved90;         // 0x90
-    s32 transition_anchor_y;// 0x94 opening-animation y measured from screen bottom
+    u8* text_cursor;
+    u8* macro_cursor;
+    u8* glyph_cursor;
+    FieldTextPortrait* portrait;
+    FieldTextFlags flags;
+    u8 flow_code;
+    u8 line_count;
+    u8 choice_start_line;
+    u8 choice_index;
+    u8 choice_count;
+    u8 pending_spaces;
+    u8 char_delay;
+    u8 text_color;
+    u8 scroll_timer;
+    u8 needs_init;
+    u8 prompt_frame;
+    u8 prompt_timer;
+    u8 inline_text[41];
+    u8 last_was_break;
+    u16 transition_frame;
+    s16 macro_remaining;
+    u16 x;
+    u16 y;
+    u16 width;
+    u16 height;
+    u16 line_advance;
+    u16 line_height;
+    u16 remaining_width;
+    u16 cursor_u;
+    u16 cursor_v;
+    u16 region_start_u;
+    u16 region_start_v;
+    u16 region_end_u;
+    u16 region_end_v;
+    u16 dirty_start_u;
+    u16 dirty_start_v;
+    u16 dirty_end_u;
+    u16 dirty_end_v;
+    u16 row_carry[14];
+    s32 transition_anchor_x;
+    u32 unknown_0x90;
+    s32 transition_anchor_y;
 } FieldTextState;
 
 typedef struct
@@ -79,194 +173,130 @@ typedef union
 } FieldTextAnchorWord;
 
 /** @brief Pending configuration copied into a field text-window state. */
-typedef struct
+struct FieldTextConfig
 {
-    u8* portrait;               // 0x00
-    u16 x;                      // 0x04
-    u16 y;                      // 0x06
-    u16 width;                  // 0x08
-    u16 height;                 // 0x0A
-    FieldTextAnchorWord anchor; // 0x0C
-    FieldTextFlags flags;       // 0x10
-    u8* text;                   // 0x14 deferred text pointer
-} FieldTextConfig;
+    FieldTextPortrait* portrait;
+    u16 x;
+    u16 y;
+    u16 width;
+    u16 height;
+    FieldTextAnchorWord anchor;
+    FieldTextFlags flags;
+    u8* text;
+};
 
 /** @brief Field text renderer globals and four runtime window slots. */
 typedef struct
 {
     u8 _pad00[4];
-    FieldTextConfig* configs;   // 0x04
+    FieldTextConfig* configs;
     u8 _pad08[0x14 - 8];
-    u32 draw_mode0;             // 0x14
-    u32 draw_mode1;             // 0x18
-    u16 text_clut;              // 0x1C
-    u16 text_alt_clut;          // 0x1E
-    u16 window_clut;            // 0x20
-    u16 prompt_clut;            // 0x22
-    u16 portrait_clut0;         // 0x24
-    u16 portrait_clut1;         // 0x26
-    u16 portrait_slots;         // 0x28 bitmask of occupied portrait VRAM slots
+    u32 draw_mode0;
+    u32 draw_mode1;
+    u16 text_clut;
+    u16 text_alt_clut;
+    u16 window_clut;
+    u16 prompt_clut;
+    u16 portrait_clut[2];
+    u16 portrait_slots;
     u16 _pad2A[(0x34 - 0x2A) / 2];
-    FieldTextState windows[4];  // 0x34
+    FieldTextState windows[4];
 } FieldTextSystem;
-
-/**
- * @brief One queued VRAM upload.
- * @note Mirrors FieldImageReq in field_scene_internal.h; the destination
- *       rectangle sits inline at 0x04 so its address can be taken directly.
- */
-typedef struct FieldImageReq FieldImageReq;
-struct FieldImageReq
-{
-    FieldImageReq* next;    // 0x00
-    RECT rect;              // 0x04 destination rectangle in VRAM
-    u_long* data;           // 0x0C source pixel data
-};
 
 /** @brief Four screen-space corners of a quad, in POLY vertex order. */
 typedef struct
 {
-    s16 x0;                 // 0x00
-    s16 y0;                 // 0x02
-    s16 x1;                 // 0x04
-    s16 y1;                 // 0x06
-    s16 x2;                 // 0x08
-    s16 y2;                 // 0x0A
-    s16 x3;                 // 0x0C
-    s16 y3;                 // 0x0E
-} Quad;
+    s16 x0;
+    s16 y0;
+    s16 x1;
+    s16 y1;
+    s16 x2;
+    s16 y2;
+    s16 x3;
+    s16 y3;
+} FieldTextQuad;
 
-/** @brief Two-word GPU primitive (mode / tpage), packet length 1. */
+/** @brief Packet buffer viewed as SDK primitives or packed GPU words. */
+typedef union
+{
+    DR_TPAGE draw_mode;
+    SPRT sprite;
+    SPRT_16 sprite16;
+    POLY_FT4 quad;
+    struct
+    {
+        u32 tag;
+        u32 rgbc;
+        u32 xy;
+        u32 uv;
+        u32 wh;
+    } sprite_words;
+    struct
+    {
+        u32 tag;
+        u32 rgbc;
+        u32 xy0;
+        u32 uv0;
+        u32 xy1;
+        u32 uv1;
+        u32 xy2;
+        u32 uv2;
+        u32 xy3;
+        u32 uv3;
+    } quad_words;
+} FieldTextPacket;
+
+/** @brief Ordering-table pair; text packets join the second chain. */
+struct FieldOrderingTags
+{
+    u32 tag0;
+    u32 tag1;
+};
+
+/** @brief Scratchpad vertex, also copied as a packed GPU coordinate word. */
+typedef union
+{
+    DVECTOR pos;
+    u32 word;
+} FieldTextVertex;
+
+/** @brief Controller sample used by dialogue navigation. */
 typedef struct
 {
-    u32 tag;                // 0x00
-    u32 code;               // 0x04
-} PrimMode;
-
-/** @brief 20-byte sprite primitive addressed a word at a time, packet length 4. */
-typedef struct
-{
-    u32 tag;                // 0x00
-    u32 rgbc;               // 0x04
-    u32 xy;                 // 0x08
-    u32 uv;                 // 0x0C
-    u32 wh;                 // 0x10
-} PrimSprt;
-
-/** @brief 20-byte sprite primitive with the uv/size fields addressed singly. */
-typedef struct
-{
-    u32 tag;                // 0x00
-    u32 rgbc;               // 0x04
-    u32 xy;                 // 0x08
-    u8  u0;                 // 0x0C
-    u8  v0;                 // 0x0D
-    u16 clut;               // 0x0E
-    s16 w;                  // 0x10
-    s16 h;                  // 0x12
-} PrimGlyph;
-
-/** @brief 16-byte fixed-size sprite primitive, packet length 3. */
-typedef struct
-{
-    u32 tag;                // 0x00
-    u32 rgbc;               // 0x04
-    s16 x0;                 // 0x08
-    s16 y0;                 // 0x0A
-    u8  u0;                 // 0x0C
-    u8  v0;                 // 0x0D
-    u16 clut;               // 0x0E
-} PrimSprt16;
-
-/** @brief 20-byte sprite primitive with separate position/uv/size fields. */
-typedef struct
-{
-    u32 tag;                // 0x00
-    u32 rgbc;               // 0x04
-    s16 x0;                 // 0x08
-    s16 y0;                 // 0x0A
-    u8  u0;                 // 0x0C
-    u8  v0;                 // 0x0D
-    u16 clut;               // 0x0E
-    u32 wh;                 // 0x10
-} PrimIcon;
-
-/** @brief Ordering-table slot a built packet chain is spliced into. */
-/** @brief Pair of ordering-table tags; field text chains into the second tag. */
-typedef struct
-{
-    u32 tag0;               // 0x00
-    u32 tag1;               // 0x04
-} FieldOrderingTags;
-
-/** @brief 40-byte textured quad primitive, packet length 9. */
-typedef struct
-{
-    u32 tag;                // 0x00
-    u32 rgbc;               // 0x04
-    u32 xy0;                // 0x08
-    u32 uv0;                // 0x0C
-    u32 xy1;                // 0x10
-    u32 uv1;                // 0x14
-    u32 xy2;                // 0x18
-    u32 uv2;                // 0x1C
-    u32 xy3;                // 0x20
-    u32 uv3;                // 0x24
-} PrimQuad;
-
-typedef struct
-{
-    u8 mode;                 // 0x00 input-repeat mode
-    u8 repeat_dir;           // 0x01 repeated direction
-    u8 _pad2[2];             // 0x02
-    u16 pressed;             // 0x04 newly pressed buttons
-    u16 repeat;              // 0x06 repeat/held buttons
-    u8 _pad8[4];             // 0x08
-    u32 repeat_active;       // 0x0C
+    u8 device_type;
+    u8 analog_direction_bits;
+    u16 held_buttons;
+    u16 pressed_buttons;
+    u16 repeat_buttons;
+    DVECTOR right_stick;
+    u32 left_stick_axes;
 } FieldInputState;
 
-void func_800640B4(FieldTextState* state);
-void func_800632E0(FieldTextState* state, s32 budget);
-s32 func_80064210(FieldTextState* state);
-
+void field_text_typeset(FieldTextState* state, s32 budget);
+void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width);
+void field_text_clear_cache(FieldTextState* state);
+s32 field_text_advance_line(FieldTextState* state);
+void field_text_clear_window(FieldTextState* state);
 void field_text_apply_config(FieldTextState* state);
+void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out, s32 frame);
 void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
-void field_text_queue_portrait_upload(u8* image, u8** cursor, s32 slot, s32 mirror);
-void field_text_queue_uploads(FieldTextState* state, u16** cursor);
-void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
-void field_text_save_config(u16 slot);
+void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8** cursor, FieldOrderingTags* ot);
 void field_text_scroll_cache(FieldTextState* state);
-void field_text_set_string(u16 slot, u8* text, u8 options);
-
-extern FieldTextConfig* D_801ED004;
+void field_text_queue_uploads(FieldTextState* state, u16** cursor);
+void field_text_save_config(u16 slot);
+void field_text_close(FieldTextState* state, s32 animate);
+void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
+void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror);
+void field_text_restore_window(u16 slot, s32 placement_mode);
 
 extern u8* g_field_timed_text;
 extern s16 g_field_text_portrait_slots;
 extern s32 g_field_text_window0_flags;
 
 /**
- * @brief Reset a text window staging cursor to the start of its live region.
- * @param state Text-window state.
- * @see decomp.me (100%)
+ * @brief Upload the immediate text cache to VRAM.
  */
-
-
-/* --- text-engine helpers folded in from the field_collision.c tail --- */
-/** @brief One entry of the macro table at D_80122B80. */
-typedef struct
-{
-    u8 unk0;        /* 0x00 character budget; -1 = unlimited */
-    u8 _pad1[3];
-    u8* unk4;       /* 0x04 replacement string */
-} FieldTextMacro;
-
-extern FieldTextMacro D_80122B80[];
-void func_8006429C(FieldTextState*);
-void func_80063B6C(FieldTextState*, s32, u16);
-
-/* ==== text-window TU: collision-tail glyph/staging helpers ==== */
-
-void func_80063194(void)
+void field_text_upload_immediate_cache(void)
 {
     RECT rect;
     u16* buf;
@@ -280,9 +310,9 @@ void func_80063194(void)
 
     rect.x = 0x3C0;
     rect.y = 0x180;
-    diff = ((FieldTextState*) 0x801ED0CC)->width - ((FieldTextState*) 0x801ED0CC)->remaining_width;
+    diff = ((FieldTextState*)0x801ED0CC)->width - ((FieldTextState*)0x801ED0CC)->remaining_width;
     count = ((diff & 3) + diff + 5) >> 2;
-    buf = (u16*) 0x801DE000;
+    buf = (u16*)0x801DE000;
     if (count >= 0x40)
     {
         rect.w = 0x40;
@@ -292,7 +322,7 @@ void func_80063194(void)
             adj = count + 0x3F;
         }
         rect.h = (adj >> 6) * 12;
-        LoadImage(&rect, (u_long*) 0x801DE000);
+        LoadImage(&rect, (u_long*)0x801DE000);
         buf += rect.w * rect.h;
         count -= (adj >> 6) * 64;
         rect.y = rect.y + rect.h;
@@ -313,541 +343,532 @@ void func_80063194(void)
         }
         rect.w = count;
         rect.h = 0xC;
-        LoadImage(&rect, (u_long*) buf);
+        LoadImage(&rect, (u_long*)buf);
     }
 }
 
 /**
- * @brief Typeset one step of the field text window.
- *
- * Walks the innermost active cursor interpreting control codes below 0x20 and
- * emitting each glyph through func_80063B6C. Codes 0x20 and above are literal
- * characters; 0x19 introduces a two-byte code. Control codes push and pop the
- * cursor stack (14 pushes a macro from D_80122B80, 15 pushes the inline buffer
- * at unk20, 0 and 6 pop), set pending delays, or end the step.
- *
- * Before emitting a character the routine word-wraps: if the character is a
- * break opportunity it runs a LOOKAHEAD that re-walks the same control-code
- * alphabet over a private copy of the cursor stack, accumulating the width of
- * the next word, and asks func_80064210 for a new line when that word will not
- * fit on the current one.
- *
- * @param st Text-window state; its cursor stack is advanced in place.
- * @param arg1 Budget of characters to emit before returning.
- *
+ * @brief Decode text commands and draw glyphs until the character budget or a prompt stops the step.
+ * @param state Window and nested text cursors to advance.
+ * @param budget Character budget; zero draws without a limit.
  * @see decomp.me (100%)
  */
-void func_800632E0(FieldTextState* st, s32 arg1)
+void field_text_typeset(FieldTextState* state, s32 budget)
 {
-    u8* selected;
-    u8* cur;
-    u8* look;
-    u8* look_str;
-    u8* look_exp;
-    u8* look_run;
+    u8* glyph_run;
+    u8* cursor;
+    u8* look_cursor;
+    u8* look_text;
+    u8* look_macro;
+    u8* look_glyph_run;
     s32 remaining;
     signed char advance;
-    s32 fresh;
-    s32 first;
-    s32 look_adv;
-    s32 emit_w;
+    s32 new_line;
+    s32 first_character;
+    s32 look_advance;
+    s32 glyph_width;
     u16 code;
     u16 width;
     u16 look_code;
     u16 look_width;
-    s16 look_count;
-    u32 v1;
+    s16 look_budget;
+    u32 character;
     u16 y;
     u32 x;
-    s16 tmp;
-    u8 c;
-    u8 flag;
-    FieldTextMacro* rec;
-    FieldTextMacro* look_rec;
-    u16 nc2;
+    s16 aligned_u;
+    u8 opcode;
+    u8 word_continues;
+    FieldTextMacro* macro;
+    FieldTextMacro* look_macro_entry;
+    u16 macro_budget;
 
-    remaining = arg1;
+    remaining = budget;
     width = 0;
     advance = 0;
-    first = 1;
-    y = st->cursor_v;
-    x = (st->cursor_u + st->width) - st->remaining_width;
-    while (x >= 0x100)
+    first_character = 1;
+    y = state->cursor_v;
+    x = (state->cursor_u + state->width) - state->remaining_width;
+    while (x >= FIELD_TEXT_CACHE_WIDTH)
     {
-        x -= 0x100;
-        y += st->line_height;
+        x -= FIELD_TEXT_CACHE_WIDTH;
+        y += state->line_height;
     }
-    tmp = x & 0xFFFC;
-    st->dirty_end_u = tmp;
-    st->dirty_start_u = tmp;
-    st->dirty_end_v = y;
-    st->dirty_start_v = y;
-    if (st->width == st->remaining_width)
+    aligned_u = x & 0xFFFC;
+    state->dirty_end_u = aligned_u;
+    state->dirty_start_u = aligned_u;
+    state->dirty_end_v = y;
+    state->dirty_start_v = y;
+    if (state->width == state->remaining_width)
     {
-        st->last_was_break = 0;
-        fresh = 1;
+        state->last_was_break = 0;
+        new_line = 1;
     }
     else
     {
-        fresh = 0;
+        new_line = 0;
     }
 
     while (1)
     {
-        selected = st->glyph_cursor;
-        if (selected != NULL)
+        glyph_run = state->glyph_cursor;
+        if (glyph_run != NULL)
         {
-            cur = selected;
+            cursor = glyph_run;
             code = 0;
-            goto decode_character;
         }
-        cur = st->macro_cursor;
-        if (cur == NULL)
+        else
         {
-            cur = st->text_cursor;
+            cursor = state->macro_cursor;
+            if (cursor == NULL)
+            {
+                cursor = state->text_cursor;
+            }
+            code = 0;
         }
-        code = 0;
-    decode_character:
 
         do
         {
-            if (st->pending_spaces != 0)
+            if (state->pending_spaces != 0)
             {
                 code = 0x20;
                 width = 5;
                 advance = 0;
-                st->pending_spaces = st->pending_spaces - 1;
+                state->pending_spaces = state->pending_spaces - 1;
             }
             else
             {
-                c = *cur;
-                cur++;
-                if ((c < 0x20) && (c != 0x19))
+                opcode = *cursor;
+                cursor++;
+                if ((opcode < 0x20) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
                 {
-                    switch (c)
+                    switch (opcode)
                     {
-                    case 0:
-                        if (st->glyph_cursor != NULL)
+                    case FIELD_TEXT_CMD_END:
+                        if (state->glyph_cursor != NULL)
                         {
-                            goto pop_run;
-                        }
-                        if (st->macro_cursor != NULL)
-                        {
-                            goto pop_expand;
-                        }
-                        if (st->choice_count != 0)
-                        {
-                            goto set_wide;
-                        }
-                        st->flow_code = 1;
-                        goto set_break;
-                    case 6:
-                        if (st->glyph_cursor != NULL)
-                        {
-                        pop_run:
-                            cur = st->macro_cursor;
-                            st->glyph_cursor = NULL;
-                            if (cur == NULL)
+                            cursor = state->macro_cursor;
+                            state->glyph_cursor = NULL;
+                            if (cursor == NULL)
                             {
-                                cur = st->text_cursor;
-                                v1 = code;
-                                goto have_v1;
+                                cursor = state->text_cursor;
                             }
                             break;
                         }
-                        if (st->macro_cursor != NULL)
+                        if (state->macro_cursor != NULL)
                         {
-                        pop_expand:
-                            cur = st->text_cursor;
-                            st->macro_cursor = NULL;
+                            cursor = state->text_cursor;
+                            state->macro_cursor = NULL;
                             break;
                         }
-                        st->text_cursor = NULL;
-                        if (st->flags.word & 0x1000)
+                        if (state->choice_count != 0)
                         {
-                            func_8006700C(st, 1);
+                            goto set_wide;
+                        }
+                        state->flow_code = FIELD_TEXT_FLOW_END;
+                        goto set_break;
+                    case FIELD_TEXT_CMD_FINISH:
+                        if (state->glyph_cursor != NULL)
+                        {
+                            cursor = state->macro_cursor;
+                            state->glyph_cursor = NULL;
+                            if (cursor == NULL)
+                            {
+                                cursor = state->text_cursor;
+                                break;
+                            }
+                            break;
+                        }
+                        if (state->macro_cursor != NULL)
+                        {
+                            cursor = state->text_cursor;
+                            state->macro_cursor = NULL;
+                            break;
+                        }
+                        state->text_cursor = NULL;
+                        if (state->flags.word & FIELD_TEXT_AUTO_CLOSE)
+                        {
+                            field_text_close(state, 1);
                         }
                         return;
-                    case 1:
-                        if (func_80064210(st) == 1)
+                    case FIELD_TEXT_CMD_NEWLINE:
+                        if (field_text_advance_line(state) == 1)
                         {
                             goto store_and_return;
                         }
-                        fresh = 1;
-                        st->last_was_break = 0;
+                        new_line = 1;
+                        state->last_was_break = 0;
                         break;
-                    case 2:
-                        st->flow_code = 3;
+                    case FIELD_TEXT_CMD_WAIT_NEWLINE:
+                        state->flow_code = FIELD_TEXT_FLOW_NEWLINE;
                         goto set_break;
-                    case 3:
-                        st->flow_code = 2;
+                    case FIELD_TEXT_CMD_WAIT_CLEAR:
+                        state->flow_code = FIELD_TEXT_FLOW_CLEAR;
                         goto set_break;
-                    case 4:
-                        if (first == 0)
+                    case FIELD_TEXT_CMD_CLEAR:
+                        if (first_character == 0)
                         {
                             return;
                         }
-                        func_8006429C(st);
+                        field_text_clear_window(state);
                         goto store_and_return;
-                    case 5:
-                        st->flow_code = 4;
+                    case FIELD_TEXT_CMD_WAIT:
+                        state->flow_code = FIELD_TEXT_FLOW_WAIT;
                         goto set_break;
-                    case 7:
-                        if (st->choice_count == 0)
+                    case FIELD_TEXT_CMD_CHOICE:
+                        if (state->choice_count == 0)
                         {
-                            st->choice_start_line = st->line_count;
+                            state->choice_start_line = state->line_count;
                         }
-                        st->choice_count = st->choice_count + 1;
+                        state->choice_count = state->choice_count + 1;
                         break;
-                    case 8:
-                        st->pending_spaces = 2;
+                    case FIELD_TEXT_CMD_TWO_SPACES:
+                        state->pending_spaces = 2;
                         break;
-                    case 9:
-                        st->pending_spaces = 3;
+                    case FIELD_TEXT_CMD_THREE_SPACES:
+                        state->pending_spaces = 3;
                         break;
-                    case 10:
-                        st->pending_spaces = 4;
+                    case FIELD_TEXT_CMD_FOUR_SPACES:
+                        state->pending_spaces = 4;
                         break;
-                    case 11:
-                        st->pending_spaces = *cur;
-                        cur++;
+                    case FIELD_TEXT_CMD_SPACES:
+                        state->pending_spaces = *cursor;
+                        cursor++;
                         break;
-                    case 12:
-                        st->char_delay = 4;
+                    case FIELD_TEXT_CMD_SHORT_DELAY:
+                        state->char_delay = 4;
                         goto store_and_return;
-                    case 13:
-                        st->char_delay = *cur;
-                        cur++;
+                    case FIELD_TEXT_CMD_DELAY:
+                        state->char_delay = *cursor;
+                        cursor++;
                         goto store_and_return;
-                    case 14:
-                        c = *cur;
-                        cur++;
-                        st->text_cursor = cur;
-                        rec = &D_80122B80[c];
-                        st->macro_cursor = rec->unk4;
-                        cur = st->macro_cursor;
-                        st->macro_remaining = rec->unk0;
+                    case FIELD_TEXT_CMD_MACRO:
+                        opcode = *cursor;
+                        cursor++;
+                        state->text_cursor = cursor;
+                        macro = &g_field_text_macros[opcode];
+                        state->macro_cursor = macro->text;
+                        cursor = state->macro_cursor;
+                        state->macro_remaining = macro->character_limit;
                         break;
-                    case 15:
-                        st->text_cursor = cur;
-                        st->macro_cursor = st->inline_text;
-                        cur = st->inline_text;
-                        st->macro_remaining = -1;
+                    case FIELD_TEXT_CMD_INLINE_TEXT:
+                        state->text_cursor = cursor;
+                        state->macro_cursor = state->inline_text;
+                        cursor = state->inline_text;
+                        state->macro_remaining = -1;
                         break;
-                    case 16:
-                        st->text_color = *cur;
-                        cur++;
+                    case FIELD_TEXT_CMD_COLOR:
+                        state->text_color = *cursor;
+                        cursor++;
                         break;
-                    case 17:
-                        st->text_color = 0;
+                    case FIELD_TEXT_CMD_DEFAULT_COLOR:
+                        state->text_color = 0;
                         break;
-                    case 19:
-                        v1 = code;
-                        if (fresh != 0)
+                    case FIELD_TEXT_CMD_INDENT:
+                        character = code;
+                        if (new_line != 0)
                         {
                             code = 0xFFFF;
                             width = 0xC;
                             advance = 1;
                             break;
                         }
-                        goto have_v1;
-                    case 18:
-                        c = *cur;
-                        cur++;
-                        if (c == 0)
+                        break;
+                    case FIELD_TEXT_CMD_PREFIXED_GLYPH_RUN:
+                        opcode = *cursor;
+                        cursor++;
+                        if (opcode == 0)
                         {
                             code = 0x20;
                             width = 5;
                             advance = 2;
                         }
                         /* fallthrough */
-                    case 31:
-                        c = *cur + 0x1F;
-                        cur++;
+                    case FIELD_TEXT_CMD_EXTENDED_GLYPH_RUN:
+                        opcode = *cursor + 0x1F;
+                        cursor++;
                         /* fallthrough */
                     default:
-                        if (st->macro_cursor != NULL)
+                        if (state->macro_cursor != NULL)
                         {
-                            st->macro_cursor = cur;
+                            state->macro_cursor = cursor;
                         }
                         else
                         {
-                            st->text_cursor = cur;
+                            state->text_cursor = cursor;
                         }
-                        st->glyph_cursor = (u8*)0x801E2780 + ((u16*)0x801E2758)[c];
-                        cur = st->glyph_cursor;
+                        state->glyph_cursor = (u8*)0x801E2780 + ((u16*)0x801E2758)[opcode];
+                        cursor = state->glyph_cursor;
                         break;
                     }
                 }
                 else
                 {
-                    if (c >= 0x20)
+                    if (opcode >= 0x20)
                     {
-                        code = c;
+                        code = opcode;
                         advance = 1;
                     }
                     else
                     {
-                        code = *cur | ((c + 0xFFE8) << 8);
-                        cur++;
+                        code = *cursor | ((opcode + 0xFFE8) << 8);
+                        cursor++;
                         advance = 2;
                     }
 
-                    v1 = code;
-                    if (v1 == 0x80)
+                    character = code;
+                    if (character == 0x80)
                     {
                         width = 0xC;
                     }
-                    else if (v1 >= 0x80)
+                    else if (character >= 0x80)
                     {
                         width = 9;
                     }
                     else
                     {
-                        width = ((u8*)0x801E26E0)[v1];
+                        width = ((u8*)0x801E26E0)[character];
                     }
                 }
             }
 
-            v1 = code;
+            character = code;
 
-        have_v1:
-            if ((v1 == 0x20) || (v1 == 0x80))
+            if ((character == 0x20) || (character == 0x80))
             {
-                if (st->remaining_width < width)
+                if (state->remaining_width < width)
                 {
-                    st->last_was_break = 1;
+                    state->last_was_break = 1;
                     code = 0;
                 }
             }
         } while (code == 0);
-        if (st->remaining_width < width)
+        if (state->remaining_width < width)
         {
-            if (func_80064210(st) == 1)
+            if (field_text_advance_line(state) == 1)
             {
                 return;
             }
-            fresh = 1;
-            st->last_was_break = 0;
+            new_line = 1;
+            state->last_was_break = 0;
         }
-        flag = st->last_was_break;
+        word_continues = state->last_was_break;
         if ((code == 0x20) || (code == 0x80) || (code == 0xFFFF))
         {
-            st->last_was_break = 1;
-            goto emit_glyph;
-        }
-        look_width = width;
-        if (flag != 0)
-        {
-            look_adv = advance;
-            look = cur;
-            look_str = st->text_cursor;
-            look_exp = st->macro_cursor;
-            look_run = st->glyph_cursor;
-            look_count = st->macro_remaining;
-            do
-            {
-                if (look_run != NULL)
-                {
-                    look_run = look;
-                }
-                else if (look_exp != NULL)
-                {
-                    if ((s16)look_count != -1)
-                    {
-                        if ((s16)(look_count -= look_adv) <= 0)
-                        {
-                            look = NULL;
-                        }
-                    }
-                    look_exp = look;
-                }
-                else
-                {
-                    look_str = look;
-                }
-                look = look_run;
-                if (look == NULL)
-                {
-                    look = look_str;
-                    if (look_exp != NULL)
-                    {
-                        look = look_exp;
-                    }
-                }
-                look_code = 0;
-                do
-                {
-                    c = *look;
-                    look++;
-                    if ((c < 0x20) && (c != 0x19))
-                    {
-                        switch (c)
-                        {
-                        case 1:
-                        case 2:
-                        case 3:
-                        case 4:
-                        case 5:
-                        case 7:
-                        case 8:
-                        case 9:
-                        case 10:
-                        case 11:
-                        case 19:
-                            goto stop_lookahead;
-                        case 12:
-                        case 13:
-                        case 16:
-                        case 17:
-                            break;
-                        case 0:
-                        case 6:
-                            if (look_run != NULL)
-                            {
-                                look_run = NULL;
-                                look = look_str;
-                                if (look_exp != NULL)
-                                {
-                                    look = look_exp;
-                                }
-                            }
-                            else if (look_exp != NULL)
-                            {
-                                look_exp = NULL;
-                                look = look_str;
-                            }
-                            else
-                            {
-                                flag = 0;
-                            }
-                            break;
-                        case 14:
-                            c = *look;
-                            look_str = ++look;
-                            look_rec = &D_80122B80[c];
-                            look = look_rec->unk4;
-                            look_count = look_rec->unk0;
-                            look_exp = look;
-                            break;
-                        case 15:
-                            look_str = look;
-                            look = st->inline_text;
-                            look_exp = look;
-                            look_count = -1;
-                            break;
-                        case 18:
-                            c = *look;
-                            look++;
-                            if (c == 0)
-                            {
-                                flag = 0;
-                            }
-                            /* fallthrough */
-                        case 31:
-                            c = *look + 0x1F;
-                            look++;
-                            /* fallthrough */
-                        default:
-                            if (look_exp != NULL)
-                            {
-                                look_exp = look;
-                            }
-                            else
-                            {
-                                look_str = look;
-                            }
-                            look = (u8*)0x801E2780 + ((u16*)0x801E2758)[c];
-                            look_run = look;
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        if (c >= 0x20)
-                        {
-                            look_code = c;
-                            look_adv = 1;
-                        }
-                        else
-                        {
-                            look_code = *look | ((c + 0xFFE8) << 8);
-                            look++;
-                            look_adv = 2;
-                        }
-                        if (look_code != 0)
-                        {
-                            if ((look_code == 0x20) || (look_code == 0x80) || (look_code == 0xFFFF))
-                            {
-                            stop_lookahead:
-                                flag = 0;
-                            }
-                            else if (look_code >= 0x80)
-                            {
-                                look_width += 9;
-                            }
-                            else
-                            {
-                                look_width += ((u8*)0x801E26E0)[look_code];
-                            }
-                        }
-                    }
-                } while (look_code == 0 && flag != 0);
-            } while (flag != 0);
-
-            if (st->remaining_width < look_width)
-            {
-                if (func_80064210(st) == 1)
-                {
-                    return;
-                }
-                fresh = 1;
-            }
-            st->last_was_break = 0;
-        }
-
-    emit_glyph:
-        if (st->glyph_cursor != NULL)
-        {
-            st->glyph_cursor = cur;
-        }
-        else if (st->macro_cursor != NULL)
-        {
-            if ((s16)st->macro_remaining != -1)
-            {
-                nc2 = st->macro_remaining - advance;
-                st->macro_remaining = nc2;
-                if ((nc2 << 16) <= 0)
-                {
-                    cur = NULL;
-                }
-            }
-            st->macro_cursor = cur;
+            state->last_was_break = 1;
         }
         else
         {
-            st->text_cursor = cur;
+            look_width = width;
+            if (word_continues != 0)
+            {
+                look_advance = advance;
+                look_cursor = cursor;
+                look_text = state->text_cursor;
+                look_macro = state->macro_cursor;
+                look_glyph_run = state->glyph_cursor;
+                look_budget = state->macro_remaining;
+                do
+                {
+                    if (look_glyph_run != NULL)
+                    {
+                        look_glyph_run = look_cursor;
+                    }
+                    else if (look_macro != NULL)
+                    {
+                        if (look_budget != -1)
+                        {
+                            if ((s16)(look_budget -= look_advance) <= 0)
+                            {
+                                look_cursor = NULL;
+                            }
+                        }
+                        look_macro = look_cursor;
+                    }
+                    else
+                    {
+                        look_text = look_cursor;
+                    }
+                    look_cursor = look_glyph_run;
+                    if (look_cursor == NULL)
+                    {
+                        look_cursor = look_text;
+                        if (look_macro != NULL)
+                        {
+                            look_cursor = look_macro;
+                        }
+                    }
+                    look_code = 0;
+                    do
+                    {
+                        opcode = *look_cursor;
+                        look_cursor++;
+                        if ((opcode < 0x20) && (opcode != FIELD_TEXT_CMD_WIDE_CHARACTER))
+                        {
+                            switch (opcode)
+                            {
+                            case FIELD_TEXT_CMD_NEWLINE:
+                            case FIELD_TEXT_CMD_WAIT_NEWLINE:
+                            case FIELD_TEXT_CMD_WAIT_CLEAR:
+                            case FIELD_TEXT_CMD_CLEAR:
+                            case FIELD_TEXT_CMD_WAIT:
+                            case FIELD_TEXT_CMD_CHOICE:
+                            case FIELD_TEXT_CMD_TWO_SPACES:
+                            case FIELD_TEXT_CMD_THREE_SPACES:
+                            case FIELD_TEXT_CMD_FOUR_SPACES:
+                            case FIELD_TEXT_CMD_SPACES:
+                            case FIELD_TEXT_CMD_INDENT:
+                                goto stop_lookahead;
+                            case FIELD_TEXT_CMD_SHORT_DELAY:
+                            case FIELD_TEXT_CMD_DELAY:
+                            case FIELD_TEXT_CMD_COLOR:
+                            case FIELD_TEXT_CMD_DEFAULT_COLOR:
+                                break;
+                            case FIELD_TEXT_CMD_END:
+                            case FIELD_TEXT_CMD_FINISH:
+                                if (look_glyph_run != NULL)
+                                {
+                                    look_glyph_run = NULL;
+                                    look_cursor = look_text;
+                                    if (look_macro != NULL)
+                                    {
+                                        look_cursor = look_macro;
+                                    }
+                                }
+                                else if (look_macro != NULL)
+                                {
+                                    look_macro = NULL;
+                                    look_cursor = look_text;
+                                }
+                                else
+                                {
+                                    word_continues = 0;
+                                }
+                                break;
+                            case FIELD_TEXT_CMD_MACRO:
+                                opcode = *look_cursor;
+                                look_text = ++look_cursor;
+                                look_macro_entry = &g_field_text_macros[opcode];
+                                look_cursor = look_macro_entry->text;
+                                look_budget = look_macro_entry->character_limit;
+                                look_macro = look_cursor;
+                                break;
+                            case FIELD_TEXT_CMD_INLINE_TEXT:
+                                look_text = look_cursor;
+                                look_cursor = state->inline_text;
+                                look_macro = look_cursor;
+                                look_budget = -1;
+                                break;
+                            case FIELD_TEXT_CMD_PREFIXED_GLYPH_RUN:
+                                opcode = *look_cursor;
+                                look_cursor++;
+                                if (opcode == 0)
+                                {
+                                    word_continues = 0;
+                                }
+                                /* fallthrough */
+                            case FIELD_TEXT_CMD_EXTENDED_GLYPH_RUN:
+                                opcode = *look_cursor + 0x1F;
+                                look_cursor++;
+                                /* fallthrough */
+                            default:
+                                if (look_macro != NULL)
+                                {
+                                    look_macro = look_cursor;
+                                }
+                                else
+                                {
+                                    look_text = look_cursor;
+                                }
+                                look_cursor = (u8*)0x801E2780 + ((u16*)0x801E2758)[opcode];
+                                look_glyph_run = look_cursor;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            if (opcode >= 0x20)
+                            {
+                                look_code = opcode;
+                                look_advance = 1;
+                            }
+                            else
+                            {
+                                look_code = *look_cursor | ((opcode + 0xFFE8) << 8);
+                                look_cursor++;
+                                look_advance = 2;
+                            }
+                            if (look_code != 0)
+                            {
+                                if ((look_code == 0x20) || (look_code == 0x80) || (look_code == 0xFFFF))
+                                {
+                                stop_lookahead:
+                                    word_continues = 0;
+                                }
+                                else if (look_code >= 0x80)
+                                {
+                                    look_width += 9;
+                                }
+                                else
+                                {
+                                    look_width += ((u8*)0x801E26E0)[look_code];
+                                }
+                            }
+                        }
+                    } while (look_code == 0 && word_continues != 0);
+                } while (word_continues != 0);
+
+                if (state->remaining_width < look_width)
+                {
+                    if (field_text_advance_line(state) == 1)
+                    {
+                        return;
+                    }
+                    new_line = 1;
+                }
+                state->last_was_break = 0;
+            }
         }
-        emit_w = width;
+        if (state->glyph_cursor != NULL)
+        {
+            state->glyph_cursor = cursor;
+        }
+        else if (state->macro_cursor != NULL)
+        {
+            if (state->macro_remaining != -1)
+            {
+                macro_budget = state->macro_remaining - advance;
+                state->macro_remaining = macro_budget;
+                if ((macro_budget << 16) <= 0)
+                {
+                    cursor = NULL;
+                }
+            }
+            state->macro_cursor = cursor;
+        }
+        else
+        {
+            state->text_cursor = cursor;
+        }
+        glyph_width = width;
         if (code == 0xFFFF)
         {
             code = 0x20;
             width = 0xC;
-            if ((st->portrait == 0) || (st->flags.word & 0x30))
+            if ((state->portrait == 0) || (state->flags.word & FIELD_TEXT_PORTRAIT_MASK))
             {
-                func_80063B6C(st, 0x20, 0xC);
+                field_text_blit_glyph(state, 0x20, 0xC);
             }
-            emit_w = width;
+            glyph_width = width;
         }
-        if (emit_w != 0)
+        if (glyph_width != 0)
         {
-            func_80063B6C(st, code, emit_w);
+            field_text_blit_glyph(state, code, glyph_width);
         }
-        if ((remaining != 0) && !(st->flags.word & 0x800) && ((fresh == 0) || (code != 0x20)))
+        if ((remaining != 0) && !(state->flags.word & FIELD_TEXT_INSTANT) && ((new_line == 0) || (code != 0x20)))
         {
-            first = 0;
+            first_character = 0;
             remaining--;
-            fresh = 0;
+            new_line = 0;
             if (remaining == 0)
             {
                 break;
@@ -857,57 +878,38 @@ void func_800632E0(FieldTextState* st, s32 arg1)
     return;
 
 set_wide:
-    st->flow_code = 0x10;
-    st->prompt_frame = 0;
-    st->prompt_timer = 4;
-    st->choice_index = 0;
+    state->flow_code = FIELD_TEXT_FLOW_CHOICE;
+    state->prompt_frame = 0;
+    state->prompt_timer = 4;
+    state->choice_index = 0;
     goto store_and_return;
 
 set_break:
-    st->prompt_frame = 0;
-    st->prompt_timer = 8;
+    state->prompt_frame = 0;
+    state->prompt_timer = 8;
 
 store_and_return:
-    if (st->glyph_cursor != NULL)
+    if (state->glyph_cursor != NULL)
     {
-        st->glyph_cursor = cur;
+        state->glyph_cursor = cursor;
         return;
     }
-    if (st->macro_cursor != NULL)
+    if (state->macro_cursor != NULL)
     {
-        st->macro_cursor = cur;
+        state->macro_cursor = cursor;
         return;
     }
-    st->text_cursor = cur;
+    state->text_cursor = cursor;
 }
 
 /**
- * @brief Blit one glyph into the text window's 4bpp staging buffer.
- *
- * Expands the 1bpp font bitmap for @p code (0x18 bytes per character at
- * 0x801E1200, one halfword per row) into 4bpp pixels, applying a drop shadow,
- * and merges the result into the 64-halfword-wide staging image at 0x801DE000
- * that func_80063194 later uploads to VRAM.
- *
- * The expansion runs through a small staging area in the PSX scratchpad at
- * 0x1F800000, laid out as one 10-byte (5 halfword) row per glyph row. Each row
- * is primed from FieldTextState::unk70, the carry left over from the previous
- * glyph, then filled nibble by nibble; @c st->width - @c st->remaining_width gives the
- * sub-block pixel offset, so a glyph may straddle two 64-wide blocks. What
- * runs past the right edge is written back to unk70 for the next call.
- *
- * Two colour indices are used per glyph: an even "fill" index and the odd
- * index above it for the shadow, selected from @c st->text_color (or forced to 6/7
- * when @c st->flags.word has the 0xC0 field equal to 0x40, which also widens the
- * glyph by one nibble and takes a heavier two-tap shadow).
- *
- * @param st    text-window state block (live at 0x801ED0CC).
- * @param code  character code to draw; the font table is indexed from 0x20.
- * @param width advance width of this glyph, in quarter-pixel units.
- *
+ * @brief Expand a font glyph into the 4bpp text cache with a drop shadow.
+ * @param state Destination window and text style.
+ * @param code Character code; the font starts at the space character.
+ * @param width Glyph advance in pixels.
  * @see decomp.me (100%) scratch not yet published
  */
-void func_80063B6C(FieldTextState* st, s32 code, u16 width)
+void field_text_blit_glyph(FieldTextState* state, s32 code, u16 width)
 {
     u16* scratch;
     u16* carry;
@@ -940,11 +942,11 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
     u32 span;
     s32 nib;
 
-    scratch = (u16*) 0x1F800000;
-    carry = st->row_carry;
-    i = st->line_height;
+    scratch = (u16*)0x1F800000;
+    carry = state->row_carry;
+    i = state->line_height;
     rows = i;
-    shift = st->width - st->remaining_width;
+    shift = state->width - state->remaining_width;
     for (i = rows - 1; i != -1; i--)
     {
         j = 4;
@@ -962,7 +964,7 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
         }
     }
 
-    if ((st->flags.word & 0xC0) == 0x40)
+    if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
     {
         lo_fill = 6;
         hi_fill = 0x60;
@@ -972,7 +974,7 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
     }
     else
     {
-        switch (st->text_color)
+        switch (state->text_color)
         {
         case 0:
             lo_fill = 2;
@@ -1020,8 +1022,8 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
         nibbles = width + 1;
     }
 
-    glyph = (u16*) (0x801E1200 + (((u16) code - 0x20) * 0x18));
-    px = (u8*) (0x1F800000 + (((u32) shift & 3) >> 1));
+    glyph = (u16*)(0x801E1200 + (((u16)code - 0x20) * 0x18));
+    px = (u8*)(0x1F800000 + (((u32)shift & 3) >> 1));
     fill = 0;
     shade = fill;
     acc = fill;
@@ -1031,7 +1033,7 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
 
         nib = shift & 1;
         mask = 0x8000;
-        if ((st->flags.word & 0xC0) == 0x40)
+        if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
         {
             if (i != 0)
             {
@@ -1119,21 +1121,21 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
         px += 10;
     }
 
-    i = st->cursor_v;
-    j = st->cursor_u + shift;
-    while (j >= 0x100)
+    i = state->cursor_v;
+    j = state->cursor_u + shift;
+    while (j >= FIELD_TEXT_CACHE_WIDTH)
     {
-        j -= 0x100;
+        j -= FIELD_TEXT_CACHE_WIDTH;
         i += rows;
     }
 
-    if ((st->flags.word & 0xC0) == 0x40)
+    if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
     {
-        avail = st->remaining_width + 4;
+        avail = state->remaining_width + 4;
     }
     else
     {
-        avail = st->remaining_width;
+        avail = state->remaining_width;
     }
     if (avail < nibbles)
     {
@@ -1143,16 +1145,16 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
     {
         span = nibbles + (shift & 3);
     }
-    scratch = (u16*) 0x1F800000;
+    scratch = (u16*)0x1F800000;
     left = (span + 3) >> 2;
     if (left != 0)
     {
         do
         {
-            line = (u8*) 0x801DE000 + (i << 7);
+            line = (u8*)0x801DE000 + (i << 7);
             col = j >> 2;
-            dst = (u16*) (col * 2 + (s32) line);
-            if ((u32) (col + left) >= 0x41U)
+            dst = (u16*)(col * 2 + (s32)line);
+            if ((u32)(col + left) >= 0x41U)
             {
                 words = 0x40 - col;
                 left -= words;
@@ -1182,32 +1184,24 @@ void func_80063B6C(FieldTextState* st, s32 code, u16 width)
         } while (left != 0);
     }
 
-    st->dirty_end_u = j;
+    state->dirty_end_u = j;
     j = (shift & 3) + width;
-    scratch = (u16*) 0x1F800000 + (j >> 2);
-    carry = st->row_carry;
-    st->dirty_end_v = i;
+    scratch = (u16*)0x1F800000 + (j >> 2);
+    carry = state->row_carry;
+    state->dirty_end_v = i;
     for (i = rows - 1; i != -1; i--)
     {
         *carry++ = *scratch;
         scratch += 5;
     }
-    st->remaining_width = st->remaining_width - width;
+    state->remaining_width = state->remaining_width - width;
 }
 
 /**
- * @brief Erase the region the previous text step occupied in the staging buffer.
- *
- * The live text region is described by unk60/unk62 (left edge and top row) and
- * unk64/unk66 (last-row width and bottom row); the staging image at 0x801DE000
- * is 64 halfwords wide, so one row is 0x40 halfwords. Three passes clear it:
- * the rows of the current block from the left edge across, then any whole rows
- * between the block and the bottom, then the partial last row at the bottom.
- * The current rectangle is then snapshotted into unk68..dirty_end_v.
- *
- * @param st text-window state block (live at 0x801ED0CC).
+ * @brief Clear the window cache region and mark it for upload.
+ * @param state Window whose cached text is erased.
  */
-void func_800640B4(FieldTextState* st)
+void field_text_clear_cache(FieldTextState* state)
 {
     u16* row;
     u16* p;
@@ -1219,20 +1213,20 @@ void func_800640B4(FieldTextState* st)
     s32 i;
     s32 j;
 
-    y = st->region_start_v;
-    x = st->region_start_u;
-    if (y == st->region_end_v)
+    y = state->region_start_v;
+    x = state->region_start_u;
+    if (y == state->region_end_v)
     {
-        span = st->region_end_u - x;
+        span = state->region_end_u - x;
         half = span >> 1;
     }
     else
     {
-        span = 0x100 - x;
+        span = FIELD_TEXT_CACHE_WIDTH - x;
         half = span >> 1;
     }
-    rows = st->line_height;
-    row = ((u16*) 0x801DE000 + (x >> 2)) + (y << 6);
+    rows = state->line_height;
+    row = ((u16*)0x801DE000 + (x >> 2)) + (y << 6);
     for (i = rows - 1; i != -1; i--)
     {
         p = row;
@@ -1244,25 +1238,25 @@ void func_800640B4(FieldTextState* st)
         row += 0x40;
     }
 
-    if (y != st->region_end_v)
+    if (y != state->region_end_v)
     {
         y += rows;
-        if (y != st->region_end_v)
+        if (y != state->region_end_v)
         {
-            row = (u16*) 0x801DE000 + (y << 6);
-            i = (st->region_end_v - y) << 6;
+            row = (u16*)0x801DE000 + (y << 6);
+            i = (state->region_end_v - y) << 6;
             while (--i != -1)
             {
                 *row++ = 0;
             }
         }
-        if (st->region_end_u != 0)
+        if (state->region_end_u != 0)
         {
-            row = (u16*) 0x801DE000 + (st->region_end_v << 6);
+            row = (u16*)0x801DE000 + (state->region_end_v << 6);
             for (i = rows - 1; i != -1; i--)
             {
                 p = row;
-                j = st->region_end_u >> 2;
+                j = state->region_end_u >> 2;
                 while (--j != -1)
                 {
                     *p++ = 0;
@@ -1271,61 +1265,57 @@ void func_800640B4(FieldTextState* st)
             }
         }
     }
-    st->dirty_start_u = st->region_start_u;
-    st->dirty_start_v = st->region_start_v;
-    st->dirty_end_u = st->region_end_u;
-    st->dirty_end_v = st->region_end_v;
+    state->dirty_start_u = state->region_start_u;
+    state->dirty_start_v = state->region_start_v;
+    state->dirty_end_u = state->region_end_u;
+    state->dirty_end_v = state->region_end_v;
 }
 
 /**
- * @brief Advance the text cursor to the next line, or report the window full.
- *
- * Adds the line advance (unk56) to the horizontal cursor (unk5C) and carries
- * every whole 0x100 into the vertical cursor (unk5E), one text row (unk58) per
- * carry. If the cursor lands exactly on the end of the live region
- * (unk64/unk66) there is no room left: unk1C is set to 0x10 and the caller is
- * told to stop. Otherwise the new cursor is committed, the remaining width on
- * the line is reset from unk52, and the line counter unk15 is bumped.
- *
- * @param st text-window state block (live at 0x801ED0CC).
- * @return 1 when the window is full and the step must end, 0 to keep going.
+ * @brief Advance to the next text line or start scrolling when the window is full.
+ * @param state Window cursor to advance.
+ * @return 1 when the window is full; 0 when the next line is available.
  */
-s32 func_80064210(FieldTextState* st)
+s32 field_text_advance_line(FieldTextState* state)
 {
     u16 x;
     u16 y;
 
-    y = st->cursor_v;
-    x = st->cursor_u + st->line_advance;
-    while (x >= 0x100)
+    y = state->cursor_v;
+    x = state->cursor_u + state->line_advance;
+    while (x >= FIELD_TEXT_CACHE_WIDTH)
     {
-        x -= 0x100;
-        y += st->line_height;
+        x -= FIELD_TEXT_CACHE_WIDTH;
+        y += state->line_height;
     }
-    if ((y == st->region_end_v) && (x == st->region_end_u))
+    if ((y == state->region_end_v) && (x == state->region_end_u))
     {
-        st->scroll_timer = 0x10;
+        state->scroll_timer = 0x10;
         return 1;
     }
-    st->cursor_u = x;
-    st->cursor_v = y;
-    st->remaining_width = st->width;
-    st->line_count = st->line_count + 1;
+    state->cursor_u = x;
+    state->cursor_v = y;
+    state->remaining_width = state->width;
+    state->line_count = state->line_count + 1;
     return 0;
 }
 
-/* ==== field1: window/config/render helpers ==== */
-void func_8006429C(FieldTextState* state)
+/**
+ * @brief Clear the window and return its cursor to the first line.
+ * @param state Window to clear.
+ * @see decomp.me (100%)
+ */
+void field_text_clear_window(FieldTextState* state)
 {
-    u16 start_u = (u16)state->region_start_u;
-    u16 start_v = (u16)state->region_start_v;
+    u16 start_u = state->region_start_u;
+    u16 start_v = state->region_start_v;
     u16 width = state->width;
 
     state->line_count = 0;
     state->cursor_u = start_u;
     state->cursor_v = start_v;
     state->remaining_width = width;
-    func_800640B4(state);
+    field_text_clear_cache(state);
 }
 
 /**
@@ -1333,7 +1323,7 @@ void func_8006429C(FieldTextState* state)
  * @see decomp.me (100%)
  */
 
-void func_800642D4(void)
+void field_text_init(void)
 {
     RECT rect;
     s32 slot;
@@ -1343,21 +1333,15 @@ void func_800642D4(void)
     s32 limit;
     FieldTextSystem* text_sys = (FieldTextSystem*)0x801ED000;
 
-    cdrom_stream(0xB1, (void*)0x801DE000);
+    cdrom_stream(CD_RES_FIELD_WINDOW_TEXTURES, (void*)0x801DE000);
 
-    rect.x = 0x130;
-    rect.y = 0x1FC;
-    rect.w = 0x10;
-    rect.h = 4;
+    setRECT(&rect, 0x130, 0x1FC, 0x10, 4);
     LoadImage(&rect, (u_long*)0x801DE000);
 
-    rect.x = 0x3C0;
-    rect.y = 0x1E0;
-    rect.w = 0x40;
-    rect.h = 0x20;
+    setRECT(&rect, 0x3C0, 0x1E0, 0x40, 0x20);
     LoadImage(&rect, (u_long*)0x801DE080);
 
-    draw_mode = 0xE100041F;
+    draw_mode = _get_mode(1, 0, getTPage(0, 0, 960, 256));
     slot = 3;
     mask = -8;
     limit = -1;
@@ -1365,12 +1349,12 @@ void func_800642D4(void)
 
     text_sys->draw_mode0 = draw_mode;
     text_sys->draw_mode1 = draw_mode;
-    text_sys->text_clut = 0x7F13;
-    text_sys->text_alt_clut = 0x7FD3;
-    text_sys->window_clut = 0x7F53;
-    text_sys->prompt_clut = 0x7F93;
-    text_sys->portrait_clut0 = 0x7E93;
-    text_sys->portrait_clut1 = 0x7ED3;
+    text_sys->text_clut = getClut(304, 508);
+    text_sys->text_alt_clut = getClut(304, 511);
+    text_sys->window_clut = getClut(304, 509);
+    text_sys->prompt_clut = getClut(304, 510);
+    text_sys->portrait_clut[0] = getClut(304, 506);
+    text_sys->portrait_clut[1] = getClut(304, 507);
     text_sys->portrait_slots = 0;
 
     while (slot != limit)
@@ -1419,41 +1403,41 @@ void field_text_reset_windows(void)
 
 void field_text_reset_scratch(void)
 {
-    if ((g_field_text_window0_flags & 7) == 4)
+    if ((g_field_text_window0_flags & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_TIMED)
     {
-        func_8006700C((void*)0x801ED034, 0);
+        field_text_close((void*)0x801ED034, 0);
     }
+    /* TODO: remove the one-pass scope without changing the initialization registers. */
     do
     {
+        FieldTextState* state = (FieldTextState*)0x801ED0CC;
+        state->dirty_end_u = FIELD_TEXT_CACHE_WIDTH;
+        state->region_end_u = FIELD_TEXT_CACHE_WIDTH;
+        state->dirty_end_v = 0x60;
+        state->region_end_v = 0x60;
+        state->line_advance = 0xFF0;
+        state->width = 0xFF0;
+        state->remaining_width = 0xFF0;
+        state->line_height = 0xC;
+        state->dirty_start_u = 0;
+        state->cursor_u = 0;
+        state->region_start_u = 0;
+        state->dirty_start_v = 0;
+        state->cursor_v = 0;
+        state->region_start_v = 0;
+        state->line_count = 0;
+        state->portrait = 0;
+        state->text_cursor = 0;
+        state->macro_cursor = 0;
+        state->glyph_cursor = 0;
+        state->flow_code = FIELD_TEXT_FLOW_NONE;
+        state->pending_spaces = 0;
+        state->choice_count = 0;
+        state->text_color = 0;
+        state->scroll_timer = 0;
+        state->needs_init = 0;
 
-        FieldTextState* st = (FieldTextState*)0x801ED0CC;
-        st->dirty_end_u = 0x100;
-        st->region_end_u = 0x100;
-        st->dirty_end_v = 0x60;
-        st->region_end_v = 0x60;
-        st->line_advance = 0xFF0;
-        st->width = 0xFF0;
-        st->remaining_width = 0xFF0;
-        st->line_height = 0xC;
-        st->dirty_start_u = 0;
-        st->cursor_u = 0;
-        st->region_start_u = 0;
-        st->dirty_start_v = 0;
-        st->cursor_v = 0;
-        st->region_start_v = 0;
-        st->line_count = 0;
-        st->portrait = 0;
-        st->text_cursor = 0;
-        st->macro_cursor = 0;
-        st->glyph_cursor = 0;
-        st->flow_code = 0;
-        st->pending_spaces = 0;
-        st->choice_count = 0;
-        st->text_color = 0;
-        st->scroll_timer = 0;
-        st->needs_init = 0;
-
-        st->flags.word = ((((st->flags.word & ~7) | 6) & ~0xC0) | 0x800) & ~0x1000;
+        state->flags.word = ((((state->flags.word & ~FIELD_TEXT_STATE_MASK) | 6) & ~FIELD_TEXT_STYLE_MASK) | 0x800) & ~FIELD_TEXT_AUTO_CLOSE;
     } while (0);
 }
 
@@ -1461,15 +1445,16 @@ void field_text_reset_scratch(void)
  * @brief Typeset a string and describe its cached spans as sprite primitives.
  * @param prim Output sprite array.
  * @param text Text to typeset.
- * @param style Text palette/style selector.
+ * @param text_style Text palette/style selector; only the low 16 bits are used.
  * @return Number of sprite spans written.
  * @see decomp.me (100%)
  */
 
-s32 field_text_build_sprites(SPRT* prim, u8* text, u16 style)
+s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
 {
+    u16 style = text_style;
     s32 count = 0;
-    FieldTextState* st = (FieldTextState*)0x801ED0CC;
+    FieldTextState* state = (FieldTextState*)0x801ED0CC;
     u16* carry;
     s32 remaining;
     s32 start_x;
@@ -1479,29 +1464,29 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, u16 style)
     s32 col;
     s32 cols;
 
-    st->last_was_break = 1;
-    st->text_color = style & 7;
+    state->last_was_break = 1;
+    state->text_color = style & 7;
     carry = (u16*)0x801ED13C;
-    st->macro_cursor = 0;
-    st->glyph_cursor = 0;
-    st->pending_spaces = 0;
-    st->flow_code = 0;
-    remaining = st->line_height;
-    start_x = st->width - st->remaining_width;
-    st->text_cursor = text;
+    state->macro_cursor = 0;
+    state->glyph_cursor = 0;
+    state->pending_spaces = 0;
+    state->flow_code = FIELD_TEXT_FLOW_NONE;
+    remaining = state->line_height;
+    start_x = state->width - state->remaining_width;
+    state->text_cursor = text;
     while (--remaining != -1)
     {
         *carry = 0;
         carry += 1;
     }
-    func_800632E0(st, 0);
+    field_text_typeset(state, 0);
     tex_u = start_x;
-    st->remaining_width = st->remaining_width & 0xFFFC;
-    end_x = st->width - st->remaining_width;
+    state->remaining_width = state->remaining_width & 0xFFFC;
+    end_x = state->width - state->remaining_width;
     tex_v = 0;
-    while (tex_u >= 0x100)
+    while (tex_u >= FIELD_TEXT_CACHE_WIDTH)
     {
-        tex_u -= 0x100;
+        tex_u -= FIELD_TEXT_CACHE_WIDTH;
         tex_v += 0xC;
     }
     remaining = ((end_x - start_x) + 3) >> 2;
@@ -1524,15 +1509,14 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, u16 style)
                 cols = remaining;
                 remaining = 0;
             }
-            prim->w = cols * 4;
-            prim->h = 0xC;
+            setWH(prim, cols * 4, 0xC);
             if (style >= 8)
             {
-                prim->clut = 0x7F13;
+                prim->clut = getClut(304, 508);
             }
             else
             {
-                prim->clut = 0x7FD3;
+                prim->clut = getClut(304, 511);
             }
             prim += 1;
             count += 1;
@@ -1547,10 +1531,10 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, u16 style)
  * @see decomp.me (100%)
  */
 
-void field_text_open_packed_window(u16 slot)
+void field_text_open_packed_window(slot) u16 slot;
 {
     FieldTextSystem* system = (FieldTextSystem*)0x801ED000;
-    FieldTextState* st;
+    FieldTextState* state;
     FieldTextState* prev;
     u32 flags;
     s32 n;
@@ -1559,33 +1543,33 @@ void field_text_open_packed_window(u16 slot)
     s32 y;
     u16 wrap;
 
-    if ((g_field_text_window0_flags & 7) == 4)
+    if ((g_field_text_window0_flags & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_TIMED)
     {
-        func_8006700C((void*)0x801ED034, 0);
+        field_text_close((void*)0x801ED034, 0);
     }
-    st = &system->windows[slot];
-    if ((st->flags.word & 7) == 2)
+    state = &system->windows[slot];
+    if ((state->flags.word & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_ACTIVE)
     {
-        func_8006700C(st, 0);
+        field_text_close(state, 0);
     }
-    flags = st->flags.word;
-    if ((flags & 7) != 0)
+    flags = state->flags.word;
+    if ((flags & FIELD_TEXT_STATE_MASK) != 0)
     {
-        st->flags.word = (flags & ~0x6000) | 0x2000;
+        state->flags.word = (flags & ~FIELD_TEXT_REOPEN_MASK) | 0x2000;
         field_text_save_config(slot);
         return;
     }
-    field_text_apply_config(st);
-    if (st->portrait != 0)
+    field_text_apply_config(state);
+    if (state->portrait != 0)
     {
         if ((system->portrait_slots & 1) == 0)
         {
-            st->flags.word &= ~8;
+            state->flags.word &= ~8;
             system->portrait_slots |= 1;
         }
         else
         {
-            st->flags.word |= 8;
+            state->flags.word |= 8;
             system->portrait_slots |= 2;
         }
     }
@@ -1595,31 +1579,31 @@ void field_text_open_packed_window(u16 slot)
     prev = &system->windows[0];
     while (--n != -1)
     {
-        if ((prev->flags.word & 7) != 0)
+        if ((prev->flags.word & FIELD_TEXT_STATE_MASK) != 0)
         {
             x = prev->region_end_u;
             y = prev->region_end_v;
         }
         prev += 1;
     }
-    n = st->height;
-    st->dirty_start_u = x;
-    st->cursor_u = x;
-    st->region_start_u = x;
-    st->dirty_start_v = y;
-    st->cursor_v = y;
-    st->region_start_v = y;
+    n = state->height;
+    state->dirty_start_u = x;
+    state->cursor_u = x;
+    state->region_start_u = x;
+    state->dirty_start_v = y;
+    state->cursor_v = y;
+    state->region_start_v = y;
     while (n > 0)
     {
-        w = st->line_advance;
+        w = state->line_advance;
         while (w > 0)
         {
-            wrap = 0x100 - x;
+            wrap = FIELD_TEXT_CACHE_WIDTH - x;
             if (w >= wrap)
             {
                 w -= wrap;
                 x = 0;
-                y += st->line_height;
+                y += state->line_height;
             }
             else
             {
@@ -1629,10 +1613,10 @@ void field_text_open_packed_window(u16 slot)
         }
         n -= 0x10;
     }
-    st->dirty_end_u = x;
-    st->region_end_u = x;
-    st->dirty_end_v = y;
-    st->region_end_v = y;
+    state->dirty_end_u = x;
+    state->region_end_u = x;
+    state->dirty_end_v = y;
+    state->region_end_v = y;
 }
 
 /**
@@ -1641,10 +1625,10 @@ void field_text_open_packed_window(u16 slot)
  * @see decomp.me (100%)
  */
 
-void field_text_open_fixed_window(u16 slot)
+void field_text_open_fixed_window(slot) u16 slot;
 {
     FieldTextSystem* system = (FieldTextSystem*)0x801ED000;
-    FieldTextState* st;
+    FieldTextState* state;
     u32 flags;
     s32 h;
     s32 w;
@@ -1652,33 +1636,33 @@ void field_text_open_fixed_window(u16 slot)
     s32 y;
     u16 wrap;
 
-    if ((g_field_text_window0_flags & 7) == 4)
+    if ((g_field_text_window0_flags & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_TIMED)
     {
-        func_8006700C((void*)0x801ED034, 0);
+        field_text_close((void*)0x801ED034, 0);
     }
-    st = &system->windows[slot];
-    if ((st->flags.word & 7) == 2)
+    state = &system->windows[slot];
+    if ((state->flags.word & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_ACTIVE)
     {
-        func_8006700C(st, 0);
+        field_text_close(state, 0);
     }
-    flags = st->flags.word;
-    if ((flags & 7) != 0)
+    flags = state->flags.word;
+    if ((flags & FIELD_TEXT_STATE_MASK) != 0)
     {
-        st->flags.word = (flags & ~0x6000) | 0x4000;
+        state->flags.word = (flags & ~FIELD_TEXT_REOPEN_MASK) | 0x4000;
         field_text_save_config(slot);
         return;
     }
-    field_text_apply_config(st);
-    if (st->portrait != 0)
+    field_text_apply_config(state);
+    if (state->portrait != 0)
     {
         if (slot == 0)
         {
-            st->flags.word &= ~8;
+            state->flags.word &= ~8;
             system->portrait_slots |= 1;
         }
         else
         {
-            st->flags.word |= 8;
+            state->flags.word |= 8;
             system->portrait_slots |= 2;
         }
     }
@@ -1692,24 +1676,24 @@ void field_text_open_fixed_window(u16 slot)
         x = 0;
         y = 0x30;
     }
-    h = st->height;
-    st->dirty_start_u = x;
-    st->cursor_u = x;
-    st->region_start_u = x;
-    st->dirty_start_v = y;
-    st->cursor_v = y;
-    st->region_start_v = y;
+    h = state->height;
+    state->dirty_start_u = x;
+    state->cursor_u = x;
+    state->region_start_u = x;
+    state->dirty_start_v = y;
+    state->cursor_v = y;
+    state->region_start_v = y;
     while (h > 0)
     {
-        w = st->line_advance;
+        w = state->line_advance;
         while (w > 0)
         {
-            wrap = 0x100 - x;
+            wrap = FIELD_TEXT_CACHE_WIDTH - x;
             if (w >= wrap)
             {
                 w -= wrap;
                 x = 0;
-                y += st->line_height;
+                y += state->line_height;
             }
             else
             {
@@ -1719,10 +1703,10 @@ void field_text_open_fixed_window(u16 slot)
         }
         h -= 0x10;
     }
-    st->dirty_end_u = x;
-    st->region_end_u = x;
-    st->dirty_end_v = y;
-    st->region_end_v = y;
+    state->dirty_end_u = x;
+    state->region_end_u = x;
+    state->dirty_end_v = y;
+    state->region_end_v = y;
 }
 
 /**
@@ -1733,59 +1717,59 @@ void field_text_open_fixed_window(u16 slot)
 
 void field_text_apply_config(FieldTextState* state)
 {
-    FieldTextConfig* cfg = (FieldTextConfig*)0x801ED408;
+    FieldTextConfig* config = (FieldTextConfig*)0x801ED408;
     u32 flags;
     u32 state_flags;
-    u32 config_flags;
+    u32 config_value;
     s32 width;
 
-    state->portrait = cfg->portrait;
-    state->x = cfg->x;
-    state->y = cfg->y;
-    state->transition_anchor_x = cfg->anchor.pos.x;
-    state->reserved90 = 0;
-    state->transition_anchor_y = cfg->anchor.pos.y;
-    state->flags.b.byte3 = (u8)cfg->flags.word;
-    flags = (state->flags.word & ~0xC0) | ((cfg->flags.word >> 2) & 0xC0);
+    state->portrait = config->portrait;
+    state->x = config->x;
+    state->y = config->y;
+    state->transition_anchor_x = config->anchor.pos.x;
+    state->unknown_0x90 = 0;
+    state->transition_anchor_y = config->anchor.pos.y;
+    state->flags.b.byte3 = (u8)config->flags.word;
+    flags = (state->flags.word & ~FIELD_TEXT_STYLE_MASK) | ((config->flags.word >> 2) & 0xC0);
     state->flags.word = flags;
     state_flags = flags & ~0x700;
-    state_flags |= (cfg->flags.word >> 4) & 0x700;
+    state_flags |= (config->flags.word >> 4) & 0x700;
     state->flags.word = state_flags;
-    config_flags = cfg->flags.word;
-    if ((config_flags & 0xC00) == 0xC00)
+    config_value = config->flags.word;
+    if ((config_value & 0xC00) == 0xC00)
     {
-        state->flags.word = state_flags & ~0x30;
+        state->flags.word = state_flags & ~FIELD_TEXT_PORTRAIT_MASK;
     }
     else
     {
-        state->flags.word = (state_flags & ~0x30) | ((config_flags >> 6) & 0x30);
+        state->flags.word = (state_flags & ~FIELD_TEXT_PORTRAIT_MASK) | ((config_value >> 6) & 0x30);
     }
-    config_flags = cfg->height;
-    width = cfg->width;
-    if ((state->portrait != 0) && ((state->flags.word & 0x30) != 0x20) && ((s32)config_flags < 0x30))
+    config_value = config->height;
+    width = config->width;
+    if ((state->portrait != 0) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) != 0x20) && ((s32)config_value < 0x30))
     {
-        config_flags = 0x30;
+        config_value = 0x30;
     }
     state->remaining_width = width;
     state->width = width;
-    state->height = config_flags;
-    if ((state->flags.word & 0xC0) == 0x40)
+    state->height = config_value;
+    if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
     {
         state->line_advance = width + 4;
         state->line_height = 0xD;
-        state->flags.word = (state->flags.word & ~7) | 2;
+        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 2;
     }
     else
     {
         state->line_height = 0xC;
         state->line_advance = width;
-        state->flags.word = (state->flags.word & ~7) | 1;
+        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 1;
     }
     state->text_cursor = 0;
     state->macro_cursor = 0;
     state->glyph_cursor = 0;
     state->last_was_break = 1;
-    if ((cfg->anchor.word == 0) && ((cfg->flags.word & 0x70FF) == 0))
+    if ((config->anchor.word == 0) && ((config->flags.word & 0x70FF) == 0))
     {
         state->flags.b.byte2 = 0;
     }
@@ -1800,13 +1784,13 @@ void field_text_apply_config(FieldTextState* state)
     state->text_color = 0;
     state->scroll_timer = 0;
     state->pending_spaces = 0;
-    state->flow_code = 0;
+    state->flow_code = FIELD_TEXT_FLOW_NONE;
     state->prompt_frame = 0;
     state->transition_frame = 0;
     state->choice_count = 0;
     state->flags.word &= ~0x800;
-    state->flags.word &= ~0x1000;
-    state->flags.word &= ~0x6000;
+    state->flags.word &= ~FIELD_TEXT_AUTO_CLOSE;
+    state->flags.word &= ~FIELD_TEXT_REOPEN_MASK;
 }
 
 /**
@@ -1817,11 +1801,11 @@ void field_text_apply_config(FieldTextState* state)
  * @see decomp.me (100%)
  */
 
-void func_80064C28(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
+void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
 {
     FieldInputState* input = (FieldInputState*)0x801ED600;
-    FieldTextState* st = (FieldTextState*)0x801ED034;
-    FieldTextConfig* rec;
+    FieldTextState* state = (FieldTextState*)0x801ED034;
+    FieldTextConfig* config;
     u8* src;
     u8* dst;
     s32 i;
@@ -1834,49 +1818,50 @@ void func_80064C28(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
     i = 3;
     do
     {
-        switch ((u8)st->flags.word & 7)
+        switch ((u8)state->flags.word & FIELD_TEXT_STATE_MASK)
         {
         case 1:
         case 2:
         case 3:
-            if (st->needs_init == 1)
+            if (state->needs_init == 1)
             {
-                if (st->portrait != 0)
+                if (state->portrait != 0)
                 {
-                    field_text_queue_portrait_upload(st->portrait, packet_cursor, (st->flags.word >> 3) & 1, (st->flags.word & 0x30) != 0x10);
+                    field_text_queue_portrait_upload(state->portrait, packet_cursor, (state->flags.word >> 3) & 1,
+                                                     (state->flags.word & FIELD_TEXT_PORTRAIT_MASK) != 0x10);
                 }
-                func_8006429C(st);
-                field_text_queue_uploads(st, (u16**)packet_cursor);
-                st->needs_init = 0;
+                field_text_clear_window(state);
+                field_text_queue_uploads(state, (u16**)packet_cursor);
+                state->needs_init = 0;
             }
             else if (draw_count == 1)
             {
-                field_text_render_window(st, packet_cursor, ot);
+                field_text_render_window(state, packet_cursor, ot);
                 break;
             }
             else
             {
-                if (st->flow_code != 0)
+                if (state->flow_code != FIELD_TEXT_FLOW_NONE)
                 {
-                    if (input->mode < 3)
+                    if (input->device_type < 3)
                     {
-                        if (st->flow_code == 0x10)
+                        if (state->flow_code == FIELD_TEXT_FLOW_CHOICE)
                         {
-                            switch (input->mode)
+                            switch (input->device_type)
                             {
                             case 1:
                             case 2:
-                                if (input->repeat_active != 0)
+                                if (input->left_stick_axes != 0)
                                 {
-                                    keys = input->repeat_dir;
+                                    keys = input->analog_direction_bits;
                                 }
                                 else
                                 {
-                                    keys = input->repeat;
+                                    keys = input->repeat_buttons;
                                 }
                                 break;
                             case 0:
-                                keys = input->repeat;
+                                keys = input->repeat_buttons;
                                 break;
                             default:
                                 keys = 0;
@@ -1884,36 +1869,36 @@ void func_80064C28(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
                             }
                             if ((keys & 0x10) != 0)
                             {
-                                tmp = st->choice_index;
+                                tmp = state->choice_index;
                                 if (tmp == 0)
                                 {
-                                    tmp = st->choice_count;
+                                    tmp = state->choice_count;
                                 }
-                                st->choice_index = tmp - 1;
+                                state->choice_index = tmp - 1;
                                 akao_play_sfx(0x7D, 0, 0x80, 0x7F);
                             }
                             if ((keys & 0x40) != 0)
                             {
-                                if (st->choice_index < (st->choice_count - 1))
+                                if (state->choice_index < (state->choice_count - 1))
                                 {
-                                    st->choice_index = st->choice_index + 1;
+                                    state->choice_index = state->choice_index + 1;
                                 }
                                 else
                                 {
-                                    st->choice_index = 0;
+                                    state->choice_index = 0;
                                 }
                                 akao_play_sfx(0x7D, 0, 0x80, 0x7F);
                             }
-                            if ((input->pressed & 0x4002) != 0)
+                            if ((input->pressed_buttons & 0x4002) != 0)
                             {
-                                st->flow_code = 0;
-                                st->choice_count = 0;
-                                st->text_cursor = 0;
-                                if ((st->flags.word & 0x1000) != 0)
+                                state->flow_code = FIELD_TEXT_FLOW_NONE;
+                                state->choice_count = 0;
+                                state->text_cursor = 0;
+                                if ((state->flags.word & FIELD_TEXT_AUTO_CLOSE) != 0)
                                 {
-                                    if (st->portrait != 0)
+                                    if (state->portrait != 0)
                                     {
-                                        if ((st->flags.word & 8) == 0)
+                                        if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
                                         {
                                             g_field_text_portrait_slots &= 0xFFFE;
                                         }
@@ -1922,80 +1907,80 @@ void func_80064C28(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
                                             g_field_text_portrait_slots &= 0xFFFD;
                                         }
                                     }
-                                    if ((st->flags.word & 0xC0) == 0x40)
+                                    if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
                                     {
-                                        st->flags.word = st->flags.word & ~7;
+                                        state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
                                     }
                                     else
                                     {
-                                        st->flags.word = (st->flags.word & ~7) | 3;
-                                        st->transition_frame = 0;
+                                        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 3;
+                                        state->transition_frame = 0;
                                     }
                                 }
                                 akao_play_sfx(0x7E, 0, 0x80, 0x7F);
                             }
                         }
-                        else if (((input->pressed & 0x4002) != 0) && (st->prompt_frame != 2))
+                        else if (((input->pressed_buttons & 0x4002) != 0) && (state->prompt_frame != 2))
                         {
-                            st->prompt_frame = 2;
-                            st->prompt_timer = 3;
+                            state->prompt_frame = 2;
+                            state->prompt_timer = 3;
                         }
                     }
                 }
-                else if ((st->flags.word & 7) == 2)
+                else if ((state->flags.word & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_ACTIVE)
                 {
-                    if (st->char_delay != 0)
+                    if (state->char_delay != 0)
                     {
-                        st->char_delay = st->char_delay - 1;
+                        state->char_delay = state->char_delay - 1;
                     }
-                    else if (st->scroll_timer != 0)
+                    else if (state->scroll_timer != 0)
                     {
-                        st->scroll_timer = st->scroll_timer - 4;
-                        if (st->scroll_timer == 0)
+                        state->scroll_timer = state->scroll_timer - 4;
+                        if (state->scroll_timer == 0)
                         {
-                            field_text_scroll_cache(st);
-                            field_text_queue_uploads(st, (u16**)packet_cursor);
+                            field_text_scroll_cache(state);
+                            field_text_queue_uploads(state, (u16**)packet_cursor);
                         }
                     }
-                    else if (st->text_cursor != 0)
+                    else if (state->text_cursor != 0)
                     {
-                        func_800632E0(st, 4);
-                        field_text_queue_uploads(st, (u16**)packet_cursor);
+                        field_text_typeset(state, 4);
+                        field_text_queue_uploads(state, (u16**)packet_cursor);
                     }
                 }
             }
-            field_text_render_window(st, packet_cursor, ot);
-            if (st->flow_code != 0)
+            field_text_render_window(state, packet_cursor, ot);
+            if (state->flow_code != FIELD_TEXT_FLOW_NONE)
             {
-                if (st->flow_code == 0x10)
+                if (state->flow_code == FIELD_TEXT_FLOW_CHOICE)
                 {
-                    st->prompt_timer = st->prompt_timer - 1;
-                    if (st->prompt_timer == 0)
+                    state->prompt_timer = state->prompt_timer - 1;
+                    if (state->prompt_timer == 0)
                     {
-                        st->prompt_frame = st->prompt_frame + 1;
-                        if (st->prompt_frame == 4)
+                        state->prompt_frame = state->prompt_frame + 1;
+                        if (state->prompt_frame == 4)
                         {
-                            st->prompt_frame = 0;
+                            state->prompt_frame = 0;
                         }
-                        st->prompt_timer = 4;
+                        state->prompt_timer = 4;
                     }
                 }
                 else
                 {
-                    st->prompt_timer = st->prompt_timer - 1;
-                    if (st->prompt_timer == 0)
+                    state->prompt_timer = state->prompt_timer - 1;
+                    if (state->prompt_timer == 0)
                     {
-                        if (st->prompt_frame == 2)
+                        if (state->prompt_frame == 2)
                         {
-                            switch (st->flow_code)
+                            switch (state->flow_code)
                             {
                             case 1:
-                                st->text_cursor = 0;
-                                if ((st->flags.word & 0x1000) != 0)
+                                state->text_cursor = 0;
+                                if ((state->flags.word & FIELD_TEXT_AUTO_CLOSE) != 0)
                                 {
-                                    if (st->portrait != 0)
+                                    if (state->portrait != 0)
                                     {
-                                        if ((st->flags.word & 8) == 0)
+                                        if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
                                         {
                                             g_field_text_portrait_slots &= 0xFFFE;
                                         }
@@ -2004,53 +1989,58 @@ void func_80064C28(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
                                             g_field_text_portrait_slots &= 0xFFFD;
                                         }
                                     }
-                                    if ((st->flags.word & 0xC0) == 0x40)
+                                    if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD)
                                     {
-                                        st->flags.word = st->flags.word & ~7;
+                                        state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
                                     }
                                     else
                                     {
-                                        st->flags.word = (st->flags.word & ~7) | 3;
-                                        st->transition_frame = 0;
+                                        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 3;
+                                        state->transition_frame = 0;
                                     }
                                 }
-                                st->flow_code = 0;
+                                state->flow_code = FIELD_TEXT_FLOW_NONE;
                                 break;
                             case 2:
-                                func_8006429C(st);
-                                field_text_queue_uploads(st, (u16**)packet_cursor);
-                                st->flow_code = 0;
+                                field_text_clear_window(state);
+                                field_text_queue_uploads(state, (u16**)packet_cursor);
+                                state->flow_code = FIELD_TEXT_FLOW_NONE;
                                 {
-                                    /* Matching: prevents GCC 2.8.0 cross-jumping this tail. */
-                                    union { struct { } e; } crossjump = {};
+                                    /* TODO: recover the source construct that keeps this switch tail separate. */
+                                    union
+                                    {
+                                        struct
+                                        {
+                                        } e;
+                                    } crossjump = {};
                                     (void)crossjump;
                                 }
                                 break;
                             case 3:
-                                func_80064210(st);
-                                st->flow_code = 0;
+                                field_text_advance_line(state);
+                                state->flow_code = FIELD_TEXT_FLOW_NONE;
                                 break;
                             default:
-                                st->flow_code = 0;
+                                state->flow_code = FIELD_TEXT_FLOW_NONE;
                                 break;
                             }
                         }
                         else
                         {
-                            st->prompt_frame = 1 - st->prompt_frame;
-                            st->prompt_timer = 8;
+                            state->prompt_frame = 1 - state->prompt_frame;
+                            state->prompt_timer = 8;
                         }
                     }
                 }
             }
-            if (((st->flags.word & 7) == 0) && ((st->flags.word & 0x6000) != 0))
+            if (((state->flags.word & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_CLOSED) && ((state->flags.word & FIELD_TEXT_REOPEN_MASK) != 0))
             {
                 idx = 3 - i;
-                mode = (st->flags.word >> 13) & 3;
+                mode = (state->flags.word >> 13) & 3;
                 dst = (u8*)0x801ED408;
                 n = 0x17;
-                rec = &D_801ED004[idx];
-                src = (u8*)rec;
+                config = &g_field_text_saved_configs[idx];
+                src = (u8*)config;
                 do
                 {
                     *dst = *src;
@@ -2066,37 +2056,37 @@ void func_80064C28(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
                 {
                     field_text_open_fixed_window(idx);
                 }
-                if (rec->text != 0)
+                if (config->text != 0)
                 {
-                    field_text_set_string(idx, rec->text, rec->flags.b.byte2);
+                    field_text_set_string(idx, config->text, config->flags.b.byte2);
                 }
             }
             break;
         case 4:
-            if (st->needs_init == 1)
+            if (state->needs_init == 1)
             {
-                st->transition_frame = 0x32;
-                st->needs_init = 0;
+                state->transition_frame = 0x32;
+                state->needs_init = 0;
             }
-            if (st->text_cursor != 0)
+            if (state->text_cursor != 0)
             {
-                func_8006429C(st);
-                func_800632E0(st, 0);
-                st->text_cursor = 0;
-                st->flow_code = 0;
-                st->dirty_start_u = st->region_start_u;
-                st->dirty_start_v = st->region_start_v;
-                st->dirty_end_u = st->region_end_u;
-                st->dirty_end_v = st->region_end_v;
-                field_text_queue_uploads(st, (u16**)packet_cursor);
+                field_text_clear_window(state);
+                field_text_typeset(state, 0);
+                state->text_cursor = 0;
+                state->flow_code = FIELD_TEXT_FLOW_NONE;
+                state->dirty_start_u = state->region_start_u;
+                state->dirty_start_v = state->region_start_v;
+                state->dirty_end_u = state->region_end_u;
+                state->dirty_end_v = state->region_end_v;
+                field_text_queue_uploads(state, (u16**)packet_cursor);
             }
-            field_text_build_window_packets(st, packet_cursor, ot);
-            st->transition_frame = st->transition_frame - 1;
-            if (st->transition_frame == 0)
+            field_text_build_window_packets(state, packet_cursor, ot);
+            state->transition_frame = state->transition_frame - 1;
+            if (state->transition_frame == 0)
             {
-                if (st->portrait != 0)
+                if (state->portrait != 0)
                 {
-                    if ((st->flags.word & 8) == 0)
+                    if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
                     {
                         g_field_text_portrait_slots &= 0xFFFE;
                     }
@@ -2105,7 +2095,7 @@ void func_80064C28(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
                         g_field_text_portrait_slots &= 0xFFFD;
                     }
                 }
-                st->flags.word = st->flags.word & ~7;
+                state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
             }
             break;
         case 5:
@@ -2114,7 +2104,7 @@ void func_80064C28(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
         default:
             break;
         }
-        st = (FieldTextState*)((u8*)st + 0x98);
+        state += 1;
     } while (--i != -1);
 }
 
@@ -2126,7 +2116,7 @@ void func_80064C28(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
  * @see decomp.me (100%)
  */
 
-void field_text_build_transition_quad(FieldTextState* state, Quad* out, s32 frame)
+void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out, s32 frame)
 {
     s32 half_w;
     s32 half_h;
@@ -2147,7 +2137,7 @@ void field_text_build_transition_quad(FieldTextState* state, Quad* out, s32 fram
 
     if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
     {
-        half_w = state->width + 0x38;
+        half_w = state->width + FIELD_TEXT_PORTRAIT_MARGIN;
     }
     else
     {
@@ -2191,6 +2181,12 @@ void field_text_build_transition_quad(FieldTextState* state, Quad* out, s32 fram
     out->y3 = cy + y3;
 }
 
+/**
+ * @brief Center a portrait vertically and pack its screen Y coordinate.
+ * @param y Top of the window.
+ * @param h Height of the text area.
+ * @return Screen Y coordinate in the upper halfword.
+ */
 static inline s32 field_text_portrait_y_word(s32 y, s32 h)
 {
     h -= 0x30;
@@ -2208,276 +2204,276 @@ static inline s32 field_text_portrait_y_word(s32 y, s32 h)
  * @see decomp.me (100%)
  */
 
-void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrderingTags* ot)
+void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
-    FieldTextSystem* hw = (FieldTextSystem*)0x801ED000;
-    PrimSprt* prim;
+    FieldTextSystem* text_system = (FieldTextSystem*)0x801ED000;
+    FieldTextPacket* prim;
     u8* first;
-    u8* cur;
+    u8* packet_cursor;
     s32 y;
     s32 uv;
     s32 xy;
-    s32 w;
+    s32 pixels_remaining;
     s32 rows;
-    s32 size;
-    s32 u_org;
+    s32 row_height;
+    s32 texture_u_origin;
     s32 uv_base;
-    s32 col;
-    s32 row_v;
-    s32 skip;
-    s32 avail;
-    s32 over;
-    u32 rgbc;
-    s32 uv_bottom;
+    s32 cache_u;
+    s32 cache_v;
+    s32 scroll_pixels;
+    s32 available_pixels;
+    s32 border_height_word;
+    u32 sprite_color;
+    s32 bottom_border_v;
     u32 tag_mask;
     u32 tag_len;
-    u32 wh8;
-    u32 wh40;
-    s32 clip;
+    u32 corner_size;
+    u32 border_tile_size;
+    s32 top_border_v;
 
-    rgbc = 0x65808080;
-    cur = *cursor;
-    prim = (PrimSprt*)cur;
-    first = cur;
-    cur += 8;
-    prim->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
-    prim->rgbc = hw->draw_mode0;
-    u_org = 0;
+    sprite_color = FIELD_TEXT_SPRITE_COLOR;
+    packet_cursor = *cursor;
+    prim = (FieldTextPacket*)packet_cursor;
+    first = packet_cursor;
+    packet_cursor += sizeof(DR_TPAGE);
+    prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x01000000;
+    prim->sprite_words.rgbc = text_system->draw_mode0;
+    texture_u_origin = 0;
     uv_base = 0xE0;
-    if ((st->flags.word & 0xC0) == 0)
+    if ((state->flags.word & FIELD_TEXT_STYLE_MASK) == 0)
     {
-        y = st->y;
+        y = state->y;
         rows = 1;
-        clip = 0xF000;
-        uv_bottom = 0xF800;
+        top_border_v = 0xF000;
+        bottom_border_v = 0xF800;
         tag_mask = 0xFFFFFF;
         tag_len = 0x04000000;
-        wh8 = 0x80008;
-        wh40 = 0x80040;
-        over = 0x80000;
+        corner_size = 0x80008;
+        border_tile_size = 0x80040;
+        border_height_word = 0x80000;
         do
         {
             {
                 s32 uv_hi;
-                uv_hi = hw->window_clut << 16;
+                uv_hi = text_system->window_clut << 16;
                 if (rows != 0)
                 {
-                    uv = (uv_hi | clip) | u_org;
+                    uv = (uv_hi | top_border_v) | texture_u_origin;
                 }
                 else
                 {
-                    uv = (uv_hi | uv_bottom) | u_org;
+                    uv = (uv_hi | bottom_border_v) | texture_u_origin;
                 }
             }
-            prim = (PrimSprt*)cur;
-            cur += 0x14;
-            xy = st->x | (y << 16);
-            prim->uv = uv;
+            prim = (FieldTextPacket*)packet_cursor;
+            packet_cursor += sizeof(SPRT);
+            xy = state->x | (y << 16);
+            prim->sprite_words.uv = uv;
             uv += 8;
-            prim->tag = ((u32)cur & tag_mask) | tag_len;
-            prim->rgbc = rgbc;
-            prim->wh = wh8;
-            prim->xy = xy;
+            prim->sprite_words.tag = ((u32)packet_cursor & tag_mask) | tag_len;
+            prim->sprite_words.rgbc = sprite_color;
+            prim->sprite_words.wh = corner_size;
+            prim->sprite_words.xy = xy;
             xy += 8;
-            if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
+            if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
             {
-                w = st->width + 0x38;
+                pixels_remaining = state->width + FIELD_TEXT_PORTRAIT_MARGIN;
             }
             else
             {
-                w = st->width;
+                pixels_remaining = state->width;
             }
-            if (w > 0)
+            if (pixels_remaining > 0)
             {
                 do
                 {
-                    prim = (PrimSprt*)cur;
-                    cur += 0x14;
-                    prim->tag = ((u32)cur & tag_mask) | tag_len;
-                    prim->rgbc = rgbc;
-                    prim->xy = xy;
-                    prim->uv = uv;
-                    if (w >= 0x41)
+                    prim = (FieldTextPacket*)packet_cursor;
+                    packet_cursor += sizeof(SPRT);
+                    prim->sprite_words.tag = ((u32)packet_cursor & tag_mask) | tag_len;
+                    prim->sprite_words.rgbc = sprite_color;
+                    prim->sprite_words.xy = xy;
+                    prim->sprite_words.uv = uv;
+                    if (pixels_remaining >= 0x41)
                     {
-                        prim->wh = wh40;
+                        prim->sprite_words.wh = border_tile_size;
                         xy += 0x40;
-                        w -= 0x40;
+                        pixels_remaining -= 0x40;
                     }
                     else
                     {
-                        prim->wh = w | over;
-                        xy += w;
-                        w = 0;
+                        prim->sprite_words.wh = pixels_remaining | border_height_word;
+                        xy += pixels_remaining;
+                        pixels_remaining = 0;
                     }
-                } while (w > 0);
+                } while (pixels_remaining > 0);
             }
             uv += 0x40;
-            prim = (PrimSprt*)cur;
-            cur += 0x14;
+            prim = (FieldTextPacket*)packet_cursor;
+            packet_cursor += sizeof(SPRT);
             rows -= 1;
-            prim->tag = ((u32)cur & tag_mask) | tag_len;
-            prim->rgbc = rgbc;
-            prim->xy = xy;
-            prim->uv = uv;
-            prim->wh = wh8;
+            prim->sprite_words.tag = ((u32)packet_cursor & tag_mask) | tag_len;
+            prim->sprite_words.rgbc = sprite_color;
+            prim->sprite_words.xy = xy;
+            prim->sprite_words.uv = uv;
+            prim->sprite_words.wh = corner_size;
             {
                 s32 next_y;
                 next_y = y + 8;
-                y = next_y + st->height;
+                y = next_y + state->height;
             }
         } while (rows != -1);
-        rows = st->height;
-        y = st->y + 8;
+        rows = state->height;
+        y = state->y + 8;
         if (rows > 0)
         {
             do
             {
-                uv = (hw->window_clut << 16) | (uv_base << 8) | (u_org + 0xE0);
-                xy = st->x | (y << 16);
-                size = 0x200000;
+                uv = (text_system->window_clut << 16) | (uv_base << 8) | (texture_u_origin + 0xE0);
+                xy = state->x | (y << 16);
+                row_height = 0x200000;
                 if (rows < 0x21)
                 {
-                    size = rows << 16;
+                    row_height = rows << 16;
                 }
-                prim = (PrimSprt*)cur;
-                cur += 0x14;
-                prim->xy = xy;
+                prim = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(SPRT);
+                prim->sprite_words.xy = xy;
                 xy += 8;
-                prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                prim->rgbc = rgbc;
-                prim->uv = uv;
-                prim->wh = size | 8;
+                prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                prim->sprite_words.rgbc = sprite_color;
+                prim->sprite_words.uv = uv;
+                prim->sprite_words.wh = row_height | 8;
                 uv -= 0x40;
-                if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
+                if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
                 {
-                    w = st->width + 0x38;
+                    pixels_remaining = state->width + FIELD_TEXT_PORTRAIT_MARGIN;
                 }
                 else
                 {
-                    w = st->width;
+                    pixels_remaining = state->width;
                 }
-                if (w > 0)
+                if (pixels_remaining > 0)
                 {
                     do
                     {
-                        prim = (PrimSprt*)cur;
-                        cur += 0x14;
-                        prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                        prim->rgbc = rgbc;
-                        prim->xy = xy;
-                        prim->uv = uv;
-                        if (w >= 0x41)
+                        prim = (FieldTextPacket*)packet_cursor;
+                        packet_cursor += sizeof(SPRT);
+                        prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                        prim->sprite_words.rgbc = sprite_color;
+                        prim->sprite_words.xy = xy;
+                        prim->sprite_words.uv = uv;
+                        if (pixels_remaining >= 0x41)
                         {
-                            prim->wh = size | 0x40;
+                            prim->sprite_words.wh = row_height | 0x40;
                             xy += 0x40;
-                            w -= 0x40;
+                            pixels_remaining -= 0x40;
                         }
                         else
                         {
-                            prim->wh = w | size;
-                            xy += w;
-                            w = 0;
+                            prim->sprite_words.wh = pixels_remaining | row_height;
+                            xy += pixels_remaining;
+                            pixels_remaining = 0;
                         }
-                    } while (w > 0);
+                    } while (pixels_remaining > 0);
                 }
                 uv += 0x48;
-                prim = (PrimSprt*)cur;
-                cur += 0x14;
+                prim = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(SPRT);
                 y += 0x20;
                 rows -= 0x20;
-                prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                prim->rgbc = rgbc;
-                prim->xy = xy;
-                prim->uv = uv;
-                prim->wh = size | 8;
+                prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                prim->sprite_words.rgbc = sprite_color;
+                prim->sprite_words.xy = xy;
+                prim->sprite_words.uv = uv;
+                prim->sprite_words.wh = row_height | 8;
             } while (rows > 0);
         }
-        u_org = 0;
+        texture_u_origin = 0;
     }
     uv_base = 0x80;
-    size = st->line_height;
-    col = st->region_start_u;
-    row_v = st->region_start_v;
-    skip = st->scroll_timer;
-    y = st->y + 8;
-    rows = st->height >> 4;
+    row_height = state->line_height;
+    cache_u = state->region_start_u;
+    cache_v = state->region_start_v;
+    scroll_pixels = state->scroll_timer;
+    y = state->y + 8;
+    rows = state->height >> 4;
     rows -= 1;
     if (rows != -1)
     {
         s32 neg16;
         do
         {
-            if ((st->portrait != 0) && ((st->flags.word & 0x30) == 0))
+            if ((state->portrait != 0) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
             {
-                xy = ((st->x + 0x40) & 0xFFFF) | (y << 16);
+                xy = ((state->x + 0x40) & 0xFFFF) | (y << 16);
             }
             else
             {
-                xy = ((st->x + 8) & 0xFFFF) | (y << 16);
+                xy = ((state->x + 8) & 0xFFFF) | (y << 16);
             }
-            w = st->line_advance;
-            if (w > 0)
+            pixels_remaining = state->line_advance;
+            if (pixels_remaining > 0)
             {
                 do
                 {
-                    if ((skip != 0) && ((u32)(0x10 - skip) >= (u32)size))
+                    if ((scroll_pixels != 0) && ((u32)(0x10 - scroll_pixels) >= (u32)row_height))
                     {
-                        avail = 0x100 - col;
-                        col += w;
-                        if ((u32)w >= (u32)avail)
+                        available_pixels = FIELD_TEXT_CACHE_WIDTH - cache_u;
+                        cache_u += pixels_remaining;
+                        if ((u32)pixels_remaining >= (u32)available_pixels)
                         {
-                            xy += avail;
-                            w -= avail;
-                            row_v += size;
-                            col = 0;
+                            xy += available_pixels;
+                            pixels_remaining -= available_pixels;
+                            cache_v += row_height;
+                            cache_u = 0;
                         }
                         else
                         {
-                            w = 0;
+                            pixels_remaining = 0;
                         }
                     }
                     else
                     {
-                        prim = (PrimSprt*)cur;
-                        cur += 0x14;
-                        ((PrimGlyph*)prim)->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                        ((PrimGlyph*)prim)->rgbc = rgbc;
-                        ((PrimGlyph*)prim)->xy = xy;
-                        ((PrimGlyph*)prim)->u0 = u_org + col;
-                        ((PrimGlyph*)prim)->clut = hw->text_clut;
-                        if (skip != 0)
+                        prim = (FieldTextPacket*)packet_cursor;
+                        packet_cursor += sizeof(SPRT);
+                        prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                        prim->sprite_words.rgbc = sprite_color;
+                        prim->sprite_words.xy = xy;
+                        prim->sprite.u0 = texture_u_origin + cache_u;
+                        prim->sprite.clut = text_system->text_clut;
+                        if (scroll_pixels != 0)
                         {
                             neg16 = 0xFFF0;
-                            ((PrimGlyph*)prim)->v0 = (uv_base + row_v + 0x10) - skip;
-                            ((PrimGlyph*)prim)->h = size + (skip + neg16);
+                            prim->sprite.v0 = (uv_base + cache_v + 0x10) - scroll_pixels;
+                            prim->sprite.h = row_height + (scroll_pixels + neg16);
                         }
                         else
                         {
-                            ((PrimGlyph*)prim)->v0 = uv_base + row_v;
-                            ((PrimGlyph*)prim)->h = size;
+                            prim->sprite.v0 = uv_base + cache_v;
+                            prim->sprite.h = row_height;
                         }
-                        avail = 0x100 - col;
-                        col += w;
-                        if ((u32)w >= (u32)avail)
+                        available_pixels = FIELD_TEXT_CACHE_WIDTH - cache_u;
+                        cache_u += pixels_remaining;
+                        if ((u32)pixels_remaining >= (u32)available_pixels)
                         {
-                            ((PrimGlyph*)prim)->w = avail;
-                            xy += avail;
-                            w -= avail;
-                            row_v += size;
-                            col = 0;
+                            prim->sprite.w = available_pixels;
+                            xy += available_pixels;
+                            pixels_remaining -= available_pixels;
+                            cache_v += row_height;
+                            cache_u = 0;
                         }
                         else
                         {
-                            ((PrimGlyph*)prim)->w = w;
-                            w = 0;
+                            prim->sprite.w = pixels_remaining;
+                            pixels_remaining = 0;
                         }
                     }
-                } while (w > 0);
+                } while (pixels_remaining > 0);
             }
-            if (skip != 0)
+            if (scroll_pixels != 0)
             {
-                y += skip;
-                skip = 0;
+                y += scroll_pixels;
+                scroll_pixels = 0;
             }
             else
             {
@@ -2487,22 +2483,22 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
 
         } while (rows != -1);
     }
-    if (st->portrait != 0)
+    if (state->portrait != 0)
     {
-        prim = (PrimSprt*)cur;
-        cur += 8;
-        prim->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
-        prim->rgbc = hw->draw_mode1;
-        if ((st->flags.word & 0x30) == 0)
+        prim = (FieldTextPacket*)packet_cursor;
+        packet_cursor += sizeof(DR_TPAGE);
+        prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x01000000;
+        prim->sprite_words.rgbc = text_system->draw_mode1;
+        if ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0)
         {
-            xy = (st->x + 8) & 0xFFFF;
+            xy = (state->x + 8) & 0xFFFF;
         }
         else
         {
             s32 px;
             s32 pw;
-            px = st->x;
-            pw = st->width;
+            px = state->x;
+            pw = state->width;
             pw += 0x10;
             px += pw;
             xy = px & 0xFFFF;
@@ -2511,89 +2507,88 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
             s32 py;
             s32 ph;
             u32 pflags;
-            prim = (PrimSprt*)cur;
-            cur += 0x14;
-            py = st->y;
-            ph = st->height;
-            pflags = st->flags.word;
-            prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-            prim->rgbc = 0x66000000;
+            prim = (FieldTextPacket*)packet_cursor;
+            packet_cursor += sizeof(SPRT);
+            py = state->y;
+            ph = state->height;
+            pflags = state->flags.word;
+            prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+            prim->sprite_words.rgbc = FIELD_TEXT_SPRITE_SHADOW;
             py = field_text_portrait_y_word(py, ph);
             xy |= py;
-            prim->xy = xy + 0x20002;
+            prim->sprite_words.xy = xy + 0x20002;
             uv = ((((((pflags >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-            prim->uv = (hw->text_clut << 16) | uv;
-            prim->wh = 0x300030;
-            prim = (PrimSprt*)cur;
-            cur += 0x14;
-            prim->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-            prim->rgbc = rgbc;
-            prim->xy = xy;
-            prim->uv =
-                (((FieldTextSystem*)((u8*)hw + ((st->flags.word >> 2) & 2)))->portrait_clut0 << 16) | uv;
-            prim->wh = 0x300030;
+            prim->sprite_words.uv = (text_system->text_clut << 16) | uv;
+            prim->sprite_words.wh = 0x300030;
+            prim = (FieldTextPacket*)packet_cursor;
+            packet_cursor += sizeof(SPRT);
+            prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+            prim->sprite_words.rgbc = sprite_color;
+            prim->sprite_words.xy = xy;
+            prim->sprite_words.uv = (text_system->portrait_clut[(state->flags.word >> 3) & 1] << 16) | uv;
+            prim->sprite_words.wh = 0x300030;
         }
     }
-    if (st->flow_code != 0)
+    if (state->flow_code != FIELD_TEXT_FLOW_NONE)
     {
-        if (((st->flags.word & 0xC0) == 0) || (((st->flags.word & 0xC0) == 0x40) && (st->flow_code == 0x10)))
+        if (((state->flags.word & FIELD_TEXT_STYLE_MASK) == 0) ||
+            (((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD) && (state->flow_code == FIELD_TEXT_FLOW_CHOICE)))
         {
-            prim = (PrimSprt*)cur;
-            cur += 8;
-            prim->tag = ((u32)cur & 0xFFFFFF) | 0x01000000;
-            prim->rgbc = hw->draw_mode0;
-            if (st->flow_code == 0x10)
+            prim = (FieldTextPacket*)packet_cursor;
+            packet_cursor += sizeof(DR_TPAGE);
+            prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x01000000;
+            prim->sprite_words.rgbc = text_system->draw_mode0;
+            if (state->flow_code == FIELD_TEXT_FLOW_CHOICE)
             {
-                prim = (PrimSprt*)cur;
-                cur += 0x10;
-                ((PrimSprt16*)prim)->tag = ((u32)cur & 0xFFFFFF) | 0x03000000;
-                ((PrimSprt16*)prim)->rgbc = 0x7D808080;
-                if ((st->portrait != 0) && ((st->flags.word & 0x30) == 0))
+                prim = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(SPRT_16);
+                prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x03000000;
+                prim->sprite_words.rgbc = FIELD_TEXT_CHOICE_COLOR;
+                if ((state->portrait != 0) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
                 {
-                    ((PrimSprt16*)prim)->x0 = st->x + 0x38;
+                    prim->sprite16.x0 = state->x + FIELD_TEXT_PORTRAIT_MARGIN;
                 }
                 else
                 {
-                    ((PrimSprt16*)prim)->x0 = st->x + 0xE;
+                    prim->sprite16.x0 = state->x + 0xE;
                 }
-                ((PrimSprt16*)prim)->y0 = st->y + ((st->choice_start_line + st->choice_index) * 0x10);
-                rows = st->prompt_frame;
+                prim->sprite16.y0 = state->y + ((state->choice_start_line + state->choice_index) * 0x10);
+                rows = state->prompt_frame;
                 if (rows == 3)
                 {
                     rows = 1;
                 }
-                ((PrimSprt16*)prim)->u0 = (rows << 4) + 0x60;
-                ((PrimSprt16*)prim)->v0 = 0xE0;
-                ((PrimSprt16*)prim)->clut = hw->prompt_clut;
+                setUV0(&prim->sprite16, (rows << 4) + 0x60, 0xE0);
+                prim->sprite16.clut = text_system->prompt_clut;
             }
             else
             {
-                prim = (PrimSprt*)cur;
-                cur += 0x14;
-                ((PrimIcon*)prim)->tag = ((u32)cur & 0xFFFFFF) | 0x04000000;
-                ((PrimIcon*)prim)->rgbc = rgbc;
-                if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
+                prim = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(SPRT);
+                prim->sprite_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x04000000;
+                prim->sprite_words.rgbc = sprite_color;
+                if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
                 {
-                    ((PrimIcon*)prim)->x0 = st->x + ((st->width + 0x38) >> 1);
+                    prim->sprite.x0 = state->x + ((state->width + FIELD_TEXT_PORTRAIT_MARGIN) >> 1);
                 }
                 else
                 {
-                    ((PrimIcon*)prim)->x0 = st->x + (st->width >> 1);
+                    prim->sprite.x0 = state->x + (state->width >> 1);
                 }
-                ((PrimIcon*)prim)->y0 = st->y + st->height + 6;
-                ((PrimIcon*)prim)->clut = hw->prompt_clut;
-                ((PrimIcon*)prim)->u0 = 0xF0;
+                prim->sprite.y0 = state->y + state->height + 6;
+                prim->sprite.clut = text_system->prompt_clut;
+                prim->sprite.u0 = 0xF0;
                 {
                     s32 frame;
-                    frame = st->prompt_frame;
-                    ((PrimIcon*)prim)->wh = 0x80010;
-                    ((PrimIcon*)prim)->v0 = (frame * 8) - 0x20;
+                    frame = state->prompt_frame;
+                    prim->sprite_words.wh = 0x80010;
+                    prim->sprite.v0 = (frame * 8) - 0x20;
                 }
             }
         }
     }
     addPrims(&ot->tag1, first, prim);
-    *cursor = cur;
+    *cursor = packet_cursor;
 }
 
 /**
@@ -2602,589 +2597,587 @@ void field_text_build_window_packets(FieldTextState* st, u8** cursor, FieldOrder
  * @param quad Transition quad.
  * @param cursor In/out render-packet cursor.
  * @param ot Ordering-table slot.
- * @note WIP - 98.55% assembly match with gcc280_g4_noexpanddiv.
+ * @note The frame, cached text spans, and portrait share a scratchpad mesh.
+ *       Its vertices are mapped into the transition quad with integer bilinear interpolation.
  */
 
-void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cursor, FieldOrderingTags* ot)
+void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8** cursor, FieldOrderingTags* ot)
 {
-    typedef union
-    {
-        Vec2s pos;
-        u32 word;
-    } FieldTextVertex;
-
-    FieldTextSystem* hw = (FieldTextSystem*)0x801ED000;
-    FieldTextVertex* build;
-    Vec2s* mesh;
-    u32* hvp2;
-    PrimQuad* poly;
-    PrimQuad* phase_poly;
+    FieldTextSystem* text_system = (FieldTextSystem*)0x801ED000;
+    FieldTextVertex* vertex;
+    FieldTextVertex* mesh;
+    FieldTextVertex* bottom_vertices;
+    FieldTextPacket* poly;
+    FieldTextPacket* portrait_packet;
     u8* first;
-    s32 w;
-    s32 span;
-    s32 v;
-    s32 y;
+    s32 content_width;
+    s32 pixels_remaining;
+    s32 mesh_x;
+    s32 mesh_y;
     s32 tile_width;
     s32 packet_height;
     s32 chunk;
     s32 edge;
     s32 glyph_u;
     s32 glyph_v;
-    s32 prows;
-    u16 glyph_height;
-    s32 count;
+    s32 frame_rows;
+    u16 text_area_height;
+    s32 text_vertex_count;
     s32 u;
     s32 avail;
-    s32 stride;
-    s32 den_x;
+    s32 frame_columns;
+    s32 mesh_width;
     u32 tpage;
-    s32 den_y;
+    s32 mesh_height;
     s32 clut;
     s32 base_x;
     u8* packet_cursor;
     s32 base_y;
+    s32 texture_uv;
     s32 dx;
     s32 dy;
     u32 tag_len;
-    s32 prev;
+    s32 previous_y;
     s32 row_v;
     s32 sel;
-    s32 u_org;
-    u32 rgbc;
-    s32 grows;
-    s32 vbase;
+    s32 texture_u_origin;
+    u32 texture_command;
+    s32 rows_remaining;
+    s32 texture_v_origin;
 
     base_x = 0;
     base_y = 0;
     dx = 0;
     dy = 0;
-    if ((st->portrait != 0) && (((st->flags.word >> 4) & 3) < 2))
+    if ((state->portrait != 0) && (((state->flags.word >> 4) & 3) < 2))
     {
-        w = st->width + 0x38;
+        content_width = state->width + FIELD_TEXT_PORTRAIT_MARGIN;
     }
     else
     {
-        w = st->width;
+        content_width = state->width;
     }
 
     /* Build the unwarped mesh in scratchpad RAM. */
-    build = (FieldTextVertex*)0x1F800000;
-    y = 0;
-    build->pos.x = 0;
-    build->pos.y = y;
-    build += 1;
-    v = 8;
-    span = w;
-    if (w > 0)
+    vertex = (FieldTextVertex*)0x1F800000;
+    mesh_y = 0;
+    vertex->pos.vx = 0;
+    vertex->pos.vy = mesh_y;
+    vertex += 1;
+    mesh_x = 8;
+    pixels_remaining = content_width;
+    if (content_width > 0)
     {
         do
         {
-            build->pos.x = v;
-            build->pos.y = y;
-            build += 1;
-            if (span >= 0x41)
+            vertex->pos.vx = mesh_x;
+            vertex->pos.vy = mesh_y;
+            vertex += 1;
+            if (pixels_remaining >= 0x41)
             {
-                v += 0x40;
-                span -= 0x40;
+                mesh_x += 0x40;
+                pixels_remaining -= 0x40;
             }
             else
             {
-                v += span;
-                span = 0;
+                mesh_x += pixels_remaining;
+                pixels_remaining = 0;
             }
-        } while (span > 0);
+        } while (pixels_remaining > 0);
     }
-    build->pos.x = v;
-    build->pos.y = y;
-    build[1].pos.x = v + 8;
-    build[1].pos.y = y;
-    build += 2;
+    vertex->pos.vx = mesh_x;
+    vertex->pos.vy = mesh_y;
+    vertex[1].pos.vx = mesh_x + 8;
+    vertex[1].pos.vy = mesh_y;
+    vertex += 2;
 
-    grows = st->height;
-    grows -= 1;
-    y += 8;
-    if (grows != -1)
+    rows_remaining = state->height;
+    rows_remaining -= 1;
+    mesh_y += 8;
+    if (rows_remaining != -1)
     {
         do
         {
-            build->pos.x = 0;
-            build->pos.y = y;
-            build += 1;
-            v = 8;
-            span = w;
-            if (w > 0)
+            vertex->pos.vx = 0;
+            vertex->pos.vy = mesh_y;
+            vertex += 1;
+            mesh_x = 8;
+            pixels_remaining = content_width;
+            if (content_width > 0)
             {
                 do
                 {
-                    build->pos.x = v;
-                    build->pos.y = y;
-                    build += 1;
-                    if (span >= 0x41)
+                    vertex->pos.vx = mesh_x;
+                    vertex->pos.vy = mesh_y;
+                    vertex += 1;
+                    if (pixels_remaining >= 0x41)
                     {
-                        v += 0x40;
-                        span -= 0x40;
+                        mesh_x += 0x40;
+                        pixels_remaining -= 0x40;
                     }
                     else
                     {
-                        v += span;
-                        span = 0;
+                        mesh_x += pixels_remaining;
+                        pixels_remaining = 0;
                     }
-                } while (span > 0);
+                } while (pixels_remaining > 0);
             }
-            build->pos.x = v;
-            build->pos.y = y;
-            build[1].pos.x = v + 8;
-            build[1].pos.y = y;
-            build += 2;
-            if (grows >= 0x21)
+            vertex->pos.vx = mesh_x;
+            vertex->pos.vy = mesh_y;
+            vertex[1].pos.vx = mesh_x + 8;
+            vertex[1].pos.vy = mesh_y;
+            vertex += 2;
+            if (rows_remaining >= 0x21)
             {
-                y += 0x20;
-                grows -= 0x20;
+                mesh_y += 0x20;
+                rows_remaining -= 0x20;
             }
             else
             {
-                y += grows;
-                grows = 0;
+                mesh_y += rows_remaining;
+                rows_remaining = 0;
             }
-            grows -= 1;
-        } while (grows != -1);
+            rows_remaining -= 1;
+        } while (rows_remaining != -1);
     }
 
-    grows = 1;
+    rows_remaining = 1;
     do
     {
-        build->pos.x = 0;
-        build->pos.y = y;
-        build += 1;
-        v = 8;
-        span = w;
-        if (w > 0)
+        vertex->pos.vx = 0;
+        vertex->pos.vy = mesh_y;
+        vertex += 1;
+        mesh_x = 8;
+        pixels_remaining = content_width;
+        if (content_width > 0)
         {
             do
             {
-                build->pos.x = v;
-                build->pos.y = y;
-                build += 1;
-                if (span >= 0x41)
+                vertex->pos.vx = mesh_x;
+                vertex->pos.vy = mesh_y;
+                vertex += 1;
+                if (pixels_remaining >= 0x41)
                 {
-                    v += 0x40;
-                    span -= 0x40;
+                    mesh_x += 0x40;
+                    pixels_remaining -= 0x40;
                 }
                 else
                 {
-                    v += span;
-                    span = 0;
+                    mesh_x += pixels_remaining;
+                    pixels_remaining = 0;
                 }
-            } while (span > 0);
+            } while (pixels_remaining > 0);
         }
-        build->pos.x = v;
-        build->pos.y = y;
-        build[1].pos.x = v + 8;
-        build[1].pos.y = y;
-        build += 2;
-        grows -= 1;
-        y += 8;
-    } while (grows != -1);
+        vertex->pos.vx = mesh_x;
+        vertex->pos.vy = mesh_y;
+        vertex[1].pos.vx = mesh_x + 8;
+        vertex[1].pos.vy = mesh_y;
+        vertex += 2;
+        rows_remaining -= 1;
+        mesh_y += 8;
+    } while (rows_remaining != -1);
 
-    y = 8;
-    u = st->region_start_u;
-    grows = st->height >> 4;
-    grows -= 1;
-    count = 0;
-    if (grows != -1)
+    mesh_y = 8;
+    u = state->region_start_u;
+    rows_remaining = state->height >> 4;
+    rows_remaining -= 1;
+    text_vertex_count = 0;
+    if (rows_remaining != -1)
     {
         do
         {
-            v = 8;
-            if ((st->portrait != 0) && ((st->flags.word & 0x30) == 0))
+            mesh_x = 8;
+            if ((state->portrait != 0) && ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0))
             {
-                v = 0x40;
+                mesh_x = 0x40;
             }
-            span = st->line_advance;
-            if (span > 0)
+            pixels_remaining = state->line_advance;
+            if (pixels_remaining > 0)
             {
                 do
                 {
-                    build->pos.x = v;
-                    build->pos.y = y;
-                    build[1].pos.x = v;
-                    build[1].pos.y = st->line_height + y;
-                    build += 2;
-                    count += 2;
-                    avail = 0x100 - u;
-                    if (span >= avail)
+                    vertex->pos.vx = mesh_x;
+                    vertex->pos.vy = mesh_y;
+                    vertex[1].pos.vx = mesh_x;
+                    vertex[1].pos.vy = state->line_height + mesh_y;
+                    vertex += 2;
+                    text_vertex_count += 2;
+                    avail = FIELD_TEXT_CACHE_WIDTH - u;
+                    if (pixels_remaining >= avail)
                     {
-                        v += avail;
-                        span -= avail;
+                        mesh_x += avail;
+                        pixels_remaining -= avail;
                         u = 0;
                     }
                     else
                     {
-                        v += span;
-                        u += span;
-                        span = 0;
+                        mesh_x += pixels_remaining;
+                        u += pixels_remaining;
+                        pixels_remaining = 0;
                     }
-                } while (span > 0);
+                } while (pixels_remaining > 0);
             }
-            build->pos.x = v;
-            build->pos.y = y;
-            build[1].pos.x = v;
-            build[1].pos.y = st->line_height + y;
-            build += 2;
-            count += 2;
-            grows -= 1;
-            y += 0x10;
-        } while (grows != -1);
+            vertex->pos.vx = mesh_x;
+            vertex->pos.vy = mesh_y;
+            vertex[1].pos.vx = mesh_x;
+            vertex[1].pos.vy = state->line_height + mesh_y;
+            vertex += 2;
+            text_vertex_count += 2;
+            rows_remaining -= 1;
+            mesh_y += 0x10;
+        } while (rows_remaining != -1);
     }
 
-    grows = 1;
-    y = ((s32)(st->height - 0x30) >> 1) + 0xA;
+    rows_remaining = 1;
+    mesh_y = ((state->height - 0x30) >> 1) + 0xA;
     do
     {
-        if ((st->flags.word & 0x30) == 0)
+        if ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0)
         {
-            v = 0xA;
+            mesh_x = 0xA;
         }
         else
         {
-            v = st->width + 0x12;
+            mesh_x = state->width + 0x12;
         }
-        for (span = 1; span != -1; span--)
+        for (pixels_remaining = 1; pixels_remaining != -1; pixels_remaining--)
         {
-            build->pos.x = v;
-            build->pos.y = y;
-            build += 1;
-            v += 0x30;
+            vertex->pos.vx = mesh_x;
+            vertex->pos.vy = mesh_y;
+            vertex += 1;
+            mesh_x += 0x30;
         }
-        grows -= 1;
-        y += 0x30;
-    } while (grows != -1);
+        rows_remaining -= 1;
+        mesh_y += 0x30;
+    } while (rows_remaining != -1);
 
-    grows = 1;
-    y = ((s32)(st->height - 0x30) >> 1) + 8;
+    rows_remaining = 1;
+    mesh_y = ((state->height - 0x30) >> 1) + 8;
     do
     {
-        if ((st->flags.word & 0x30) == 0)
+        if ((state->flags.word & FIELD_TEXT_PORTRAIT_MASK) == 0)
         {
-            v = 8;
+            mesh_x = 8;
         }
         else
         {
-            v = st->width + 0x10;
+            mesh_x = state->width + 0x10;
         }
-        for (span = 1; span != -1; span--)
+        for (pixels_remaining = 1; pixels_remaining != -1; pixels_remaining--)
         {
-            build->pos.x = v;
-            build->pos.y = y;
-            build += 1;
-            v += 0x30;
+            vertex->pos.vx = mesh_x;
+            vertex->pos.vy = mesh_y;
+            vertex += 1;
+            mesh_x += 0x30;
         }
-        grows -= 1;
-        y += 0x30;
-    } while (grows != -1);
+        rows_remaining -= 1;
+        mesh_y += 0x30;
+    } while (rows_remaining != -1);
 
-    /* Warp every mesh vertex into the quad. */
-    build = (FieldTextVertex*)0x1F800000;
-    prev = -1;
-    den_x = w + 0x10;
-    grows = ((((st->height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3)) + count + 7;
-    den_y = st->height + 0x10;
-    if (grows != -1)
+    /* Interpolate the two side edges once per row, then interpolate across each row. */
+    vertex = (FieldTextVertex*)0x1F800000;
+    previous_y = -1;
+    mesh_width = content_width + 0x10;
+    rows_remaining = ((((state->height + 0x1F) >> 5) + 3) * (((content_width + 0x3F) >> 6) + 3)) + text_vertex_count + 7;
+    mesh_height = state->height + 0x10;
+    if (rows_remaining != -1)
     {
         do
         {
-            u = build->pos.y;
-            if (prev != u)
+            u = vertex->pos.vy;
+            if (previous_y != u)
             {
-                prev = u;
-                base_x = (((quad->x2 - quad->x0) * u) / den_y) + quad->x0;
-                base_y = (((quad->y2 - quad->y0) * u) / den_y) + quad->y0;
-                dx = ((((quad->x3 - quad->x1) * u) / den_y) + quad->x1) - base_x;
-                dy = ((((quad->y3 - quad->y1) * u) / den_y) + quad->y1) - base_y;
+                previous_y = u;
+                base_x = (((quad->x2 - quad->x0) * u) / mesh_height) + quad->x0;
+                base_y = (((quad->y2 - quad->y0) * u) / mesh_height) + quad->y0;
+                dx = ((((quad->x3 - quad->x1) * u) / mesh_height) + quad->x1) - base_x;
+                dy = ((((quad->y3 - quad->y1) * u) / mesh_height) + quad->y1) - base_y;
             }
-            build->pos.y = ((dy * build->pos.x) / den_x) + base_y;
-            grows -= 1;
-            build->pos.x = ((dx * build->pos.x) / den_x) + base_x;
-            build += 1;
-        } while (grows != -1);
+            vertex->pos.vy = ((dy * vertex->pos.vx) / mesh_width) + base_y;
+            rows_remaining -= 1;
+            vertex->pos.vx = ((dx * vertex->pos.vx) / mesh_width) + base_x;
+            vertex += 1;
+        } while (rows_remaining != -1);
     }
 
-    /* Emit the packet chain. */
+    /* Draw the top and bottom borders, followed by the tiled window interior. */
     tpage = getTPage(0, 0, 960, 256) << 16;
-    u_org = 0;
-    vbase = 0xE0;
-    rgbc = 0x2D808080;
-    build = (FieldTextVertex*)((u32*)0x1F800000);
+    texture_u_origin = 0;
+    texture_v_origin = 0xE0;
+    texture_command = FIELD_TEXT_QUAD_COLOR;
+    vertex = (FieldTextVertex*)0x1F800000;
     packet_height = 8;
-    grows = 1;
-    stride = ((w + 0x3F) >> 6) + 3;
+    rows_remaining = 1;
+    frame_columns = ((content_width + 0x3F) >> 6) + 3;
     first = *cursor;
     packet_cursor = first;
     tag_len = 0x09000000;
-    clut = hw->window_clut;
+    clut = text_system->window_clut;
     clut <<= 16;
     tile_width = 0x40;
     do
     {
-        if (grows == 0)
+        if (rows_remaining == 0)
         {
-            base_y = u_org | 0xF800;
+            texture_uv = texture_u_origin | 0xF800;
         }
         else
         {
-            base_y = u_org | 0xF000;
+            texture_uv = texture_u_origin | 0xF000;
         }
-        poly = (PrimQuad*)packet_cursor;
-        packet_cursor += sizeof(PrimQuad);
+        poly = (FieldTextPacket*)packet_cursor;
+        packet_cursor += sizeof(POLY_FT4);
         sel = (u32)packet_cursor & 0xFFFFFF;
-        poly->tag = sel | tag_len;
-        poly->uv0 = clut | base_y;
-        poly->uv1 = tpage | (base_y + 8);
-        poly->uv2 = base_y + (packet_height << 8);
-        poly->rgbc = rgbc;
-        poly->uv3 = base_y + ((packet_height << 8) | 8);
-        base_y += 8;
-        poly->xy0 = build[0].word;
-        span = w;
-        poly->xy1 = build[1].word;
-        hvp2 = ((u32*)build) + ((w + 0x3F) >> 6) + 4;
-        poly->xy2 = hvp2[-1];
-        poly->xy3 = hvp2[0];
-        build += 1;
-        if (w > 0)
+        poly->quad_words.tag = sel | tag_len;
+        poly->quad_words.uv0 = clut | texture_uv;
+        poly->quad_words.uv1 = tpage | (texture_uv + 8);
+        poly->quad_words.uv2 = texture_uv + (packet_height << 8);
+        poly->quad_words.rgbc = texture_command;
+        poly->quad_words.uv3 = texture_uv + ((packet_height << 8) | 8);
+        texture_uv += 8;
+        poly->quad_words.xy0 = vertex[0].word;
+        pixels_remaining = content_width;
+        poly->quad_words.xy1 = vertex[1].word;
+        bottom_vertices = vertex + ((content_width + 0x3F) >> 6) + 4;
+        poly->quad_words.xy2 = bottom_vertices[-1].word;
+        poly->quad_words.xy3 = bottom_vertices[0].word;
+        vertex += 1;
+        if (content_width > 0)
         {
             do
             {
-                poly = (PrimQuad*)packet_cursor;
-                packet_cursor += sizeof(PrimQuad);
-                poly->tag = ((u32)packet_cursor & 0xFFFFFF) | tag_len;
-                poly->rgbc = rgbc;
-                if (span >= 0x41)
+                poly = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(POLY_FT4);
+                poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | tag_len;
+                poly->quad_words.rgbc = texture_command;
+                if (pixels_remaining >= 0x41)
                 {
                     chunk = 0x3F;
-                    span -= tile_width;
+                    pixels_remaining -= tile_width;
                 }
                 else
                 {
-                    chunk = span - 1;
-                    span = 0;
+                    chunk = pixels_remaining - 1;
+                    pixels_remaining = 0;
                 }
-                poly->uv1 = tpage | (base_y + chunk);
-                poly->uv0 = clut | base_y;
-                poly->uv2 = base_y + (packet_height << 8);
-                poly->uv3 = base_y + ((packet_height << 8) | chunk);
-                poly->xy0 = build[0].word;
-                poly->xy1 = build[1].word;
-                build += 1;
-                poly->xy2 = hvp2[0];
-                poly->xy3 = hvp2[1];
-                hvp2 += 1;
-            } while (span > 0);
+                poly->quad_words.uv1 = tpage | (texture_uv + chunk);
+                poly->quad_words.uv0 = clut | texture_uv;
+                poly->quad_words.uv2 = texture_uv + (packet_height << 8);
+                poly->quad_words.uv3 = texture_uv + ((packet_height << 8) | chunk);
+                poly->quad_words.xy0 = vertex[0].word;
+                poly->quad_words.xy1 = vertex[1].word;
+                vertex += 1;
+                poly->quad_words.xy2 = bottom_vertices[0].word;
+                poly->quad_words.xy3 = bottom_vertices[1].word;
+                bottom_vertices += 1;
+            } while (pixels_remaining > 0);
         }
-        base_y += tile_width;
-        poly = (PrimQuad*)packet_cursor;
-        packet_cursor += sizeof(PrimQuad);
-        poly->tag = ((u32)packet_cursor & 0xFFFFFF) | tag_len;
-        poly->uv0 = clut | base_y;
-        poly->uv1 = tpage | (base_y + 7);
-        poly->rgbc = rgbc;
-        poly->uv2 = base_y + (packet_height << 8);
-        poly->uv3 = base_y + ((packet_height << 8) | 7);
-        poly->xy0 = build[0].word;
-        poly->xy1 = build[1].word;
-        poly->xy2 = hvp2[0];
-        poly->xy3 = hvp2[1];
-        grows -= 1;
-        build = (FieldTextVertex*)((u32*)0x1F800000 + ((((st->height + 0x1F) >> 5) + 1) * stride));
+        texture_uv += tile_width;
+        poly = (FieldTextPacket*)packet_cursor;
+        packet_cursor += sizeof(POLY_FT4);
+        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | tag_len;
+        poly->quad_words.uv0 = clut | texture_uv;
+        poly->quad_words.uv1 = tpage | (texture_uv + 7);
+        poly->quad_words.rgbc = texture_command;
+        poly->quad_words.uv2 = texture_uv + (packet_height << 8);
+        poly->quad_words.uv3 = texture_uv + ((packet_height << 8) | 7);
+        poly->quad_words.xy0 = vertex[0].word;
+        poly->quad_words.xy1 = vertex[1].word;
+        poly->quad_words.xy2 = bottom_vertices[0].word;
+        poly->quad_words.xy3 = bottom_vertices[1].word;
+        rows_remaining -= 1;
+        vertex = (FieldTextVertex*)0x1F800000 + ((((state->height + 0x1F) >> 5) + 1) * frame_columns);
         packet_height = 7;
-    } while (grows != -1);
+    } while (rows_remaining != -1);
 
     {
-        u32* vp2;
+        FieldTextVertex* bottom_vertices;
 
-        build = (FieldTextVertex*)((u32*)0x1F80000C + ((w + 0x3F) >> 6));
-        vp2 = ((u32*)build) + ((w + 0x3F) >> 6) + 3;
-        grows = st->height;
-        if (grows > 0)
+        vertex = (FieldTextVertex*)0x1F800000 + 3 + ((content_width + 0x3F) >> 6);
+        bottom_vertices = vertex + ((content_width + 0x3F) >> 6) + 3;
+        rows_remaining = state->height;
+        if (rows_remaining > 0)
         {
             do
             {
-                base_y = (vbase << 8) | (u_org + 0xE0);
+                texture_uv = (texture_v_origin << 8) | (texture_u_origin + 0xE0);
                 packet_height = 0x1F00;
-                if (grows < 0x20)
+                if (rows_remaining < 0x20)
                 {
-                    packet_height = grows << 8;
+                    packet_height = rows_remaining << 8;
                 }
-                poly = (PrimQuad*)packet_cursor;
-                packet_cursor += sizeof(PrimQuad);
-                poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
-                poly->uv0 = clut | base_y;
-                poly->uv1 = tpage | (base_y + 8);
-                poly->uv2 = base_y + packet_height;
-                poly->rgbc = rgbc;
-                poly->uv3 = base_y + (packet_height | 8);
-                base_y = base_y - tile_width;
-                poly->xy0 = build[0].word;
-                span = w;
-                poly->xy1 = build[1].word;
-                poly->xy2 = vp2[0];
-                poly->xy3 = vp2[1];
-                build += 1;
-                vp2 += 1;
-                if (w > 0)
+                poly = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(POLY_FT4);
+                poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                poly->quad_words.uv0 = clut | texture_uv;
+                poly->quad_words.uv1 = tpage | (texture_uv + 8);
+                poly->quad_words.uv2 = texture_uv + packet_height;
+                poly->quad_words.rgbc = texture_command;
+                poly->quad_words.uv3 = texture_uv + (packet_height | 8);
+                texture_uv = texture_uv - tile_width;
+                poly->quad_words.xy0 = vertex[0].word;
+                pixels_remaining = content_width;
+                poly->quad_words.xy1 = vertex[1].word;
+                poly->quad_words.xy2 = bottom_vertices[0].word;
+                poly->quad_words.xy3 = bottom_vertices[1].word;
+                vertex += 1;
+                bottom_vertices += 1;
+                if (content_width > 0)
                 {
                     do
                     {
-                        poly = (PrimQuad*)packet_cursor;
-                        packet_cursor += sizeof(PrimQuad);
-                        poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
-                        poly->rgbc = rgbc;
-                        if (span >= 0x41)
+                        poly = (FieldTextPacket*)packet_cursor;
+                        packet_cursor += sizeof(POLY_FT4);
+                        poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                        poly->quad_words.rgbc = texture_command;
+                        if (pixels_remaining >= 0x41)
                         {
                             chunk = tile_width;
-                            span -= 0x40;
+                            pixels_remaining -= 0x40;
                         }
                         else
                         {
-                            chunk = span;
-                            span = 0;
+                            chunk = pixels_remaining;
+                            pixels_remaining = 0;
                         }
-                        poly->uv1 = tpage | (base_y + chunk);
-                        poly->uv0 = clut | base_y;
-                        poly->uv2 = base_y + packet_height;
-                        poly->uv3 = base_y + (packet_height | chunk);
-                        poly->xy0 = build[0].word;
-                        poly->xy1 = build[1].word;
-                        poly->xy2 = vp2[0];
-                        poly->xy3 = vp2[1];
-                        build += 1;
-                        vp2 += 1;
-                    } while (span > 0);
+                        poly->quad_words.uv1 = tpage | (texture_uv + chunk);
+                        poly->quad_words.uv0 = clut | texture_uv;
+                        poly->quad_words.uv2 = texture_uv + packet_height;
+                        poly->quad_words.uv3 = texture_uv + (packet_height | chunk);
+                        poly->quad_words.xy0 = vertex[0].word;
+                        poly->quad_words.xy1 = vertex[1].word;
+                        poly->quad_words.xy2 = bottom_vertices[0].word;
+                        poly->quad_words.xy3 = bottom_vertices[1].word;
+                        vertex += 1;
+                        bottom_vertices += 1;
+                    } while (pixels_remaining > 0);
                 }
-                base_y += 0x48;
-                poly = (PrimQuad*)packet_cursor;
-                packet_cursor += sizeof(PrimQuad);
-                poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
-                poly->uv0 = clut | base_y;
-                poly->uv1 = tpage | (base_y + 8);
-                poly->uv2 = base_y + packet_height;
-                poly->rgbc = rgbc;
-                poly->uv3 = base_y + (packet_height | 8);
-                poly->xy0 = build[0].word;
-                grows -= 0x20;
-                poly->xy1 = build[1].word;
-                poly->xy2 = vp2[0];
-                poly->xy3 = vp2[1];
-                build += 2;
-                vp2 += 2;
-            } while (grows > 0);
+                texture_uv += 0x48;
+                poly = (FieldTextPacket*)packet_cursor;
+                packet_cursor += sizeof(POLY_FT4);
+                poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                poly->quad_words.uv0 = clut | texture_uv;
+                poly->quad_words.uv1 = tpage | (texture_uv + 8);
+                poly->quad_words.uv2 = texture_uv + packet_height;
+                poly->quad_words.rgbc = texture_command;
+                poly->quad_words.uv3 = texture_uv + (packet_height | 8);
+                poly->quad_words.xy0 = vertex[0].word;
+                rows_remaining -= 0x20;
+                poly->quad_words.xy1 = vertex[1].word;
+                poly->quad_words.xy2 = bottom_vertices[0].word;
+                poly->quad_words.xy3 = bottom_vertices[1].word;
+                vertex += 2;
+                bottom_vertices += 2;
+            } while (rows_remaining > 0);
         }
     }
 
-    u_org = 0;
-    vbase = 0x80;
-    u = st->region_start_u;
-    row_v = st->region_start_v;
-    glyph_height = st->height;
-    grows = glyph_height >> 4;
-    grows -= 1;
-    build = (FieldTextVertex*)((u32*)0x1F800000 + ((((glyph_height + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3)));
-    if (grows != -1)
+    /* Text vertices are pairs of upper/lower endpoints split at cache page boundaries. */
+    texture_u_origin = 0;
+    texture_v_origin = 0x80;
+    u = state->region_start_u;
+    row_v = state->region_start_v;
+    text_area_height = state->height;
+    rows_remaining = text_area_height >> 4;
+    rows_remaining -= 1;
+    vertex = (FieldTextVertex*)0x1F800000 + ((((text_area_height + 0x1F) >> 5) + 3) * (((content_width + 0x3F) >> 6) + 3));
+    if (rows_remaining != -1)
     {
         do
         {
-            span = st->line_advance;
-            glyph_v = vbase + row_v;
-            if (span > 0)
+            pixels_remaining = state->line_advance;
+            glyph_v = texture_v_origin + row_v;
+            if (pixels_remaining > 0)
             {
                 do
                 {
-                    glyph_u = u_org + u;
+                    glyph_u = texture_u_origin + u;
                     glyph_v <<= 8;
-                    base_y = glyph_v | glyph_u;
-                    poly = (PrimQuad*)packet_cursor;
-                    packet_cursor += sizeof(PrimQuad);
-                    poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
-                    poly->rgbc = rgbc;
-                    poly->uv0 = (hw->text_clut << 16) | base_y;
-                    poly->uv1 = tpage | base_y;
-                    poly->uv2 = base_y + (st->line_height << 8);
-                    poly->uv3 = base_y + (st->line_height << 8);
-                    poly->xy0 = build[0].word;
-                    avail = 0x100 - u;
-                    poly->xy1 = build[2].word;
-                    poly->xy2 = build[1].word;
-                    poly->xy3 = build[3].word;
-                    build += 2;
-                    if (span >= avail)
+                    texture_uv = glyph_v | glyph_u;
+                    poly = (FieldTextPacket*)packet_cursor;
+                    packet_cursor += sizeof(POLY_FT4);
+                    poly->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+                    poly->quad_words.rgbc = texture_command;
+                    poly->quad_words.uv0 = (text_system->text_clut << 16) | texture_uv;
+                    poly->quad_words.uv1 = tpage | texture_uv;
+                    poly->quad_words.uv2 = texture_uv + (state->line_height << 8);
+                    poly->quad_words.uv3 = texture_uv + (state->line_height << 8);
+                    poly->quad_words.xy0 = vertex[0].word;
+                    avail = FIELD_TEXT_CACHE_WIDTH - u;
+                    poly->quad_words.xy1 = vertex[2].word;
+                    poly->quad_words.xy2 = vertex[1].word;
+                    poly->quad_words.xy3 = vertex[3].word;
+                    vertex += 2;
+                    if (pixels_remaining >= avail)
                     {
-                        span -= avail;
+                        pixels_remaining -= avail;
                         edge = (glyph_u + avail) - 1;
-                        ((POLY_FT4*)poly)->u3 = edge;
-                        ((POLY_FT4*)poly)->u1 = edge;
+                        poly->quad.u3 = edge;
+                        poly->quad.u1 = edge;
                         u = 0;
-                        row_v += st->line_height;
+                        row_v += state->line_height;
                     }
                     else
                     {
-                        u += span;
-                        edge = glyph_u + span;
-                        span = 0;
-                        ((POLY_FT4*)poly)->u3 = edge;
-                        ((POLY_FT4*)poly)->u1 = edge;
+                        u += pixels_remaining;
+                        edge = glyph_u + pixels_remaining;
+                        pixels_remaining = 0;
+                        poly->quad.u3 = edge;
+                        poly->quad.u1 = edge;
                     }
-                    glyph_v = vbase + row_v;
-                } while (span > 0);
+                    glyph_v = texture_v_origin + row_v;
+                } while (pixels_remaining > 0);
             }
-            grows -= 1;
-            build += 2;
-        } while (grows != -1);
+            rows_remaining -= 1;
+            vertex += 2;
+        } while (rows_remaining != -1);
     }
 
     tpage = getTPage(0, 0, 960, 256) << 16;
-    mesh = (Vec2s*)0x1F800000;
-    if (st->portrait != 0)
+    /* The final eight mesh vertices hold the portrait shadow and image quads. */
+    mesh = (FieldTextVertex*)0x1F800000;
+    if (state->portrait != 0)
     {
-        phase_poly = (PrimQuad*)packet_cursor;
-        packet_cursor += sizeof(PrimQuad);
-        prows = st->height;
-        prows += 0x1F;
-        prows >>= 5;
-        prows += 3;
-        sel = (st->flags.word >> 3) & 1;
-        clut = hw->text_clut;
-        phase_poly->tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
-        phase_poly->rgbc = 0x2E000000;
-        base_y = (((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0);
-        phase_poly->uv0 = (clut << 16) | base_y;
-        phase_poly->uv2 = base_y + 0x3000;
-        phase_poly->uv1 = (base_y + 0x2F) | tpage;
-        clut = w + 0x3F;
+        portrait_packet = (FieldTextPacket*)packet_cursor;
+        packet_cursor += sizeof(POLY_FT4);
+        frame_rows = state->height;
+        frame_rows += 0x1F;
+        frame_rows >>= 5;
+        frame_rows += 3;
+        sel = (state->flags.word >> 3) & 1;
+        clut = text_system->text_clut;
+        portrait_packet->quad_words.tag = ((u32)packet_cursor & 0xFFFFFF) | 0x09000000;
+        portrait_packet->quad_words.rgbc = FIELD_TEXT_QUAD_SHADOW;
+        texture_uv = (((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0);
+        portrait_packet->quad_words.uv0 = (clut << 16) | texture_uv;
+        portrait_packet->quad_words.uv2 = texture_uv + 0x3000;
+        portrait_packet->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
+        clut = content_width + 0x3F;
         clut = clut >> 6;
-        build = (FieldTextVertex*)((u32*)mesh + count + (prows * (clut + 3)));
-        phase_poly->uv3 = base_y + 0x302F;
-        phase_poly->xy0 = build[0].word;
-        phase_poly->xy1 = build[1].word;
-        phase_poly->xy2 = build[2].word;
-        phase_poly->xy3 = build[3].word;
-        build += 4;
-        phase_poly = (PrimQuad*)packet_cursor;
-        packet_cursor += sizeof(PrimQuad);
-        sel = (st->flags.word >> 3) & 1;
-        clut = (&hw->portrait_clut0)[sel];
-        base_y = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
-        phase_poly->uv2 = base_y + 0x3000;
-        phase_poly->uv1 = (base_y + 0x2F) | tpage;
+        vertex = mesh + text_vertex_count + (frame_rows * (clut + 3));
+        portrait_packet->quad_words.uv3 = texture_uv + 0x302F;
+        portrait_packet->quad_words.xy0 = vertex[0].word;
+        portrait_packet->quad_words.xy1 = vertex[1].word;
+        portrait_packet->quad_words.xy2 = vertex[2].word;
+        portrait_packet->quad_words.xy3 = vertex[3].word;
+        vertex += 4;
+        portrait_packet = (FieldTextPacket*)packet_cursor;
+        packet_cursor += sizeof(POLY_FT4);
+        sel = (state->flags.word >> 3) & 1;
+        clut = text_system->portrait_clut[sel];
+        texture_uv = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        portrait_packet->quad_words.uv2 = texture_uv + 0x3000;
+        portrait_packet->quad_words.uv1 = (texture_uv + 0x2F) | tpage;
         dy = (u32)packet_cursor & 0xFFFFFF;
-        phase_poly->tag = dy | 0x09000000;
-        phase_poly->rgbc = rgbc;
-        phase_poly->uv3 = base_y + 0x302F;
-        phase_poly->uv0 = (clut << 16) | base_y;
-        phase_poly->xy0 = build[0].word;
-        phase_poly->xy1 = build[1].word;
-        phase_poly->xy2 = build[2].word;
-        phase_poly->xy3 = build[3].word;
-        poly = phase_poly;
+        portrait_packet->quad_words.tag = dy | 0x09000000;
+        portrait_packet->quad_words.rgbc = texture_command;
+        portrait_packet->quad_words.uv3 = texture_uv + 0x302F;
+        portrait_packet->quad_words.uv0 = (clut << 16) | texture_uv;
+        portrait_packet->quad_words.xy0 = vertex[0].word;
+        portrait_packet->quad_words.xy1 = vertex[1].word;
+        portrait_packet->quad_words.xy2 = vertex[2].word;
+        portrait_packet->quad_words.xy3 = vertex[3].word;
+        poly = portrait_packet;
     }
     addPrims(&ot->tag1, first, poly);
     *cursor = packet_cursor;
@@ -3196,7 +3189,7 @@ void field_text_build_transition_packets(FieldTextState* st, Quad* quad, u8** cu
  * @see decomp.me (100%)
  */
 
-void field_text_scroll_cache(FieldTextState* st)
+void field_text_scroll_cache(FieldTextState* state)
 {
     u16* dst;
     u16* src;
@@ -3217,19 +3210,19 @@ void field_text_scroll_cache(FieldTextState* st)
     s32 count;
     u16 pix;
 
-    u = st->region_start_u;
-    v = st->region_start_v;
-    rows = st->height - 0x10;
+    u = state->region_start_u;
+    v = state->region_start_v;
+    rows = state->height - 0x10;
     if (rows > 0)
     {
         do
         {
             du = u;
-            left = st->line_advance;
+            left = state->line_advance;
             dv = v;
             if (left > 0)
             {
-                span = 0x100 - u;
+                span = FIELD_TEXT_CACHE_WIDTH - u;
                 do
                 {
                     u += left;
@@ -3237,17 +3230,17 @@ void field_text_scroll_cache(FieldTextState* st)
                     {
                         left -= span;
                         u = 0;
-                        v += st->line_height;
+                        v += state->line_height;
                     }
                     else
                     {
                         left = 0;
                     }
-                    span = 0x100 - u;
+                    span = FIELD_TEXT_CACHE_WIDTH - u;
                 } while (left > 0);
             }
             su = u;
-            left = st->line_advance;
+            left = state->line_advance;
             sv = v;
             if (left > 0)
             {
@@ -3255,8 +3248,8 @@ void field_text_scroll_cache(FieldTextState* st)
                 {
                     dst = ((u16*)0x801DE000 + (du >> 2)) + (dv << 6);
                     src = ((u16*)0x801DE000 + (su >> 2)) + (sv << 6);
-                    span = 0x100 - su;
-                    cap = 0x100 - du;
+                    span = FIELD_TEXT_CACHE_WIDTH - su;
+                    cap = FIELD_TEXT_CACHE_WIDTH - du;
                     if (cap < span)
                     {
                         span = cap;
@@ -3267,24 +3260,24 @@ void field_text_scroll_cache(FieldTextState* st)
                     }
                     du += span;
                     left -= span;
-                    if (du >= 0x100)
+                    if (du >= FIELD_TEXT_CACHE_WIDTH)
                     {
                         do
                         {
-                            du -= 0x100;
-                            dv += st->line_height;
-                        } while (du >= 0x100);
+                            du -= FIELD_TEXT_CACHE_WIDTH;
+                            dv += state->line_height;
+                        } while (du >= FIELD_TEXT_CACHE_WIDTH);
                     }
                     su += span;
-                    if (su >= 0x100)
+                    if (su >= FIELD_TEXT_CACHE_WIDTH)
                     {
                         do
                         {
-                            su -= 0x100;
-                            sv += st->line_height;
-                        } while (su >= 0x100);
+                            su -= FIELD_TEXT_CACHE_WIDTH;
+                            sv += state->line_height;
+                        } while (su >= FIELD_TEXT_CACHE_WIDTH);
                     }
-                    lines = st->line_height;
+                    lines = state->line_height;
                     lines -= 1;
                     if (lines != -1)
                     {
@@ -3316,28 +3309,28 @@ void field_text_scroll_cache(FieldTextState* st)
             rows -= 0x10;
         } while (rows > 0);
     }
-    left = st->line_advance;
+    left = state->line_advance;
     if (left > 0)
     {
         do
         {
             dst = ((u16*)0x801DE000 + (u >> 2)) + (v << 6);
-            span = 0x100 - u;
+            span = FIELD_TEXT_CACHE_WIDTH - u;
             if (left < span)
             {
                 span = left;
             }
             u += span;
             left -= span;
-            if (u >= 0x100)
+            if (u >= FIELD_TEXT_CACHE_WIDTH)
             {
                 do
                 {
-                    u -= 0x100;
-                    v += st->line_height;
-                } while (u >= 0x100);
+                    u -= FIELD_TEXT_CACHE_WIDTH;
+                    v += state->line_height;
+                } while (u >= FIELD_TEXT_CACHE_WIDTH);
             }
-            lines = st->line_height;
+            lines = state->line_height;
             lines -= 1;
             if (lines != -1)
             {
@@ -3362,13 +3355,12 @@ void field_text_scroll_cache(FieldTextState* st)
             }
         } while (left > 0);
     }
-    st->dirty_start_u = st->region_start_u;
-    st->dirty_start_v = st->region_start_v;
-    st->dirty_end_u = st->region_end_u;
-    st->dirty_end_v = st->region_end_v;
-    st->remaining_width = st->width;
+    state->dirty_start_u = state->region_start_u;
+    state->dirty_start_v = state->region_start_v;
+    state->dirty_end_u = state->region_end_u;
+    state->dirty_end_v = state->region_end_v;
+    state->remaining_width = state->width;
 }
-
 
 /**
  * @brief Queue dirty text-cache rows for VRAM upload.
@@ -3399,14 +3391,14 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
     req = (FieldImageReq*)cur;
     y = state->dirty_start_v;
     x = state->dirty_start_u;
-    cur += 8;
+    cur += sizeof(FieldImageReq) / sizeof(*cur);
     if (y == state->dirty_end_v)
     {
         span = (state->dirty_end_u - x) >> 1;
     }
     else
     {
-        span = (0x100 - x) >> 1;
+        span = (FIELD_TEXT_CACHE_WIDTH - x) >> 1;
     }
     dst = (u16*)0x801DE000;
     addr = x >> 2;
@@ -3454,7 +3446,7 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
         req = (FieldImageReq*)cur;
         if (y != state->dirty_end_v)
         {
-            cur += 8;
+            cur += sizeof(FieldImageReq) / sizeof(*cur);
             src = (u16*)((y << 7) + 0x801DE000);
             req->rect.x = 0x3C0;
             req->rect.y = y + 0x180;
@@ -3466,7 +3458,7 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
         req = (FieldImageReq*)cur;
         if (state->dirty_end_u != 0)
         {
-            cur += 8;
+            cur += sizeof(FieldImageReq) / sizeof(*cur);
             req->rect.x = 0x3C0;
             req->rect.y = state->dirty_end_v + 0x180;
             req->rect.w = state->dirty_end_u >> 2;
@@ -3499,35 +3491,36 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
     *cursor = cur;
 }
 
-
 /**
  * @brief Attach a text string to a window, or defer it while the slot reopens.
- * @param slot Window slot index.
+ * @param window_index Window slot; only the low 16 bits are used.
  * @param text Text pointer.
- * @param options Text options; bit 0 enables automatic close.
+ * @param text_options Text options; bit 0 enables automatic close.
  * @see decomp.me (100%)
  */
 
-void field_text_set_string(u16 slot, u8* text, u8 options)
+void field_text_set_string(s32 window_index, u8* text, s32 text_options)
 {
-    FieldTextSystem* hw = (FieldTextSystem*)0x801ED000;
-    FieldTextState* st = &hw->windows[slot];
-    FieldTextConfig* rec;
+    u16 slot = window_index;
+    u8 options = text_options;
+    FieldTextSystem* text_system = (FieldTextSystem*)0x801ED000;
+    FieldTextState* state = &text_system->windows[slot];
+    FieldTextConfig* config;
 
-    if ((st->flags.word & 0x6000) != 0)
+    if ((state->flags.word & FIELD_TEXT_REOPEN_MASK) != 0)
     {
-        rec = &hw->configs[slot];
-        rec->text = text;
-        rec->flags.b.byte2 = options;
+        config = &text_system->configs[slot];
+        config->text = text;
+        config->flags.b.byte2 = options;
         return;
     }
-    st->last_was_break = 1;
-    st->text_cursor = (u8*)text;
-    st->macro_cursor = 0;
-    st->glyph_cursor = 0;
-    st->pending_spaces = 0;
-    st->flow_code = 0;
-    st->flags.word = (st->flags.word & ~0x1000) | ((options & 1) << 12);
+    state->last_was_break = 1;
+    state->text_cursor = text;
+    state->macro_cursor = 0;
+    state->glyph_cursor = 0;
+    state->pending_spaces = 0;
+    state->flow_code = FIELD_TEXT_FLOW_NONE;
+    state->flags.word = (state->flags.word & ~FIELD_TEXT_AUTO_CLOSE) | ((options & 1) << 12);
 }
 
 /**
@@ -3540,21 +3533,21 @@ void field_text_save_config(u16 slot)
 {
     u8* src;
     u8* dst;
-    s32 n;
-    FieldTextConfig* rec;
+    s32 bytes_remaining;
+    FieldTextConfig* config;
 
     src = (u8*)0x801ED408;
-    n = 0x17;
-    rec = &D_801ED004[slot];
-    rec->text = 0;
-    dst = (u8*)rec;
+    bytes_remaining = 0x17;
+    config = &g_field_text_saved_configs[slot];
+    config->text = 0;
+    dst = (u8*)config;
     do
     {
         *dst = *src;
         src += 1;
-        n -= 1;
+        bytes_remaining -= 1;
         dst += 1;
-    } while (n != -1);
+    } while (bytes_remaining != -1);
 }
 
 /**
@@ -3564,11 +3557,11 @@ void field_text_save_config(u16 slot)
  * @see decomp.me (100%)
  */
 
-void func_8006700C(FieldTextState* state, s32 animate)
+void field_text_close(FieldTextState* state, s32 animate)
 {
     if (state->portrait != 0)
     {
-        if ((state->flags.word & 8) == 0)
+        if ((state->flags.word & FIELD_TEXT_PORTRAIT_SLOT) == 0)
         {
             ((FieldTextSystem*)0x801ED000)->portrait_slots &= 0xFFFE;
         }
@@ -3577,13 +3570,13 @@ void func_8006700C(FieldTextState* state, s32 animate)
             ((FieldTextSystem*)0x801ED000)->portrait_slots &= 0xFFFD;
         }
     }
-    if ((animate == 0) || ((state->flags.word & 0xC0) == 0x40))
+    if ((animate == 0) || ((state->flags.word & FIELD_TEXT_STYLE_MASK) == FIELD_TEXT_STYLE_BOLD))
     {
-        state->flags.word = state->flags.word & ~7;
+        state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
     }
     else
     {
-        state->flags.word = (state->flags.word & ~7) | 3;
+        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 3;
         state->transition_frame = 0;
     }
 }
@@ -3598,9 +3591,9 @@ void func_8006700C(FieldTextState* state, s32 animate)
 
 void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
-    Quad quad;
+    FieldTextQuad quad;
 
-    switch (state->flags.b.low & 7)
+    switch (state->flags.b.low & FIELD_TEXT_STATE_MASK)
     {
     case 1:
         field_text_build_transition_quad(state, &quad, state->transition_frame);
@@ -3608,7 +3601,7 @@ void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingT
         state->transition_frame = state->transition_frame + 1;
         if (state->transition_frame == 4)
         {
-            state->flags.word = (state->flags.word & ~7) | 2;
+            state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 2;
         }
         break;
     case 2:
@@ -3620,7 +3613,7 @@ void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingT
         field_text_build_transition_packets(state, &quad, cursor, ot);
         if (state->transition_frame == 4)
         {
-            state->flags.word = state->flags.word & ~7;
+            state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
         }
         break;
     default:
@@ -3637,61 +3630,62 @@ void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingT
  * @see decomp.me (100%)
  */
 
-void field_text_queue_portrait_upload(u8* image, u8** cursor, s32 slot, s32 mirror)
+void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror)
 {
     FieldImageReq* req;
-    u8* cur;
+    u8* packet_cursor;
     u8* src;
     u8* dst;
-    u8* d;
+    u8* row_end;
     s32 rows;
-    s32 n;
-    u32 b;
+    s32 columns_remaining;
+    u32 pixels;
 
-    cur = *cursor;
-    req = (FieldImageReq*)cur;
-    cur += 0x20;
-    req->rect.x = 0x130;
-    req->rect.y = slot + 0x1FA;
-    req->rect.w = 0x10;
+    packet_cursor = *cursor;
+    req = (FieldImageReq*)packet_cursor;
+    packet_cursor += 2 * sizeof(FieldImageReq);
+    req->rect.x = 304;
+    req->rect.y = slot + 506;
+    req->rect.w = 16;
     req->rect.h = 1;
-    req->data = (u_long*)image;
+    req->data = (u_long*)image->palette;
     field_queue_vram_upload(req);
     req += 1;
-    req->rect.x = 0x3F4;
-    req->rect.y = (slot * 48) + 0x110;
-    req->rect.w = 0xC;
-    req->rect.h = 0x30;
+    req->rect.x = 1012;
+    req->rect.y = (slot * FIELD_TEXT_PORTRAIT_SIZE) + 272;
+    req->rect.w = FIELD_TEXT_PORTRAIT_SIZE / 4;
+    req->rect.h = FIELD_TEXT_PORTRAIT_SIZE;
+    /* Reverse the byte order and the two pixels within each byte. */
     if (mirror != 0)
     {
-        src = image + 0x20;
-        dst = cur;
-        cur += 0x480;
+        src = image->pixels[0];
+        dst = packet_cursor;
+        packet_cursor += sizeof(image->pixels);
         req->data = (u_long*)dst;
-        dst += 0x17;
-        rows = 0x2F;
+        dst += FIELD_TEXT_PORTRAIT_SIZE / 2 - 1;
+        rows = FIELD_TEXT_PORTRAIT_SIZE - 1;
         do
         {
-            d = dst;
-            n = 0x17;
+            row_end = dst;
+            columns_remaining = FIELD_TEXT_PORTRAIT_SIZE / 2 - 1;
             do
             {
-                b = *src;
+                pixels = *src;
                 src += 1;
-                n -= 1;
-                *d = ((b & 0xF) << 4) | (b >> 4);
-                d -= 1;
-            } while (n != -1);
+                columns_remaining -= 1;
+                *row_end = ((pixels & 0xF) << 4) | (pixels >> 4);
+                row_end -= 1;
+            } while (columns_remaining != -1);
             rows -= 1;
-            dst += 0x18;
+            dst += FIELD_TEXT_PORTRAIT_SIZE / 2;
         } while (rows != -1);
     }
     else
     {
-        req->data = (u_long*)(image + 0x20);
+        req->data = (u_long*)image->pixels;
     }
     field_queue_vram_upload(req);
-    *cursor = cur;
+    *cursor = packet_cursor;
 }
 
 /**
@@ -3702,7 +3696,7 @@ void field_text_queue_portrait_upload(u8* image, u8** cursor, s32 slot, s32 mirr
 
 void field_text_start_timed_window(u8* text)
 {
-    FieldTextState* st = (FieldTextState*)0x801ED034;
+    FieldTextState* state = (FieldTextState*)0x801ED034;
     s32 u;
     s32 v;
     s32 rows;
@@ -3711,34 +3705,34 @@ void field_text_start_timed_window(u8* text)
 
     field_text_apply_config((FieldTextState*)0x801ED034);
     u = 0;
-    rows = st->height;
+    rows = state->height;
     v = u;
-    /* Alias-qualified stores preserve the original GCC memory scheduling. */
-    *(u8**)&st->text_cursor = text;
+    /* TODO: direct member stores change the original initialization scheduling. */
+    *(u8**)&state->text_cursor = text;
     g_field_timed_text = text;
-    st->dirty_start_u = 0;
-    st->cursor_u = 0;
-    st->region_start_u = 0;
-    st->dirty_start_v = 0;
-    st->cursor_v = 0;
-    st->region_start_v = 0;
-    st->flags.word = ((*(u32*)&st->flags.word & ~7) | 0x804) & ~0x1000;
+    state->dirty_start_u = 0;
+    state->cursor_u = 0;
+    state->region_start_u = 0;
+    state->dirty_start_v = 0;
+    state->cursor_v = 0;
+    state->region_start_v = 0;
+    state->flags.word = ((*(u32*)&state->flags.word & ~FIELD_TEXT_STATE_MASK) | 0x804) & ~FIELD_TEXT_AUTO_CLOSE;
     if (rows > 0)
     {
         do
         {
-            span = st->line_advance;
+            span = state->line_advance;
             if (span > 0)
             {
                 do
                 {
-                    avail = 0x100 - u;
+                    avail = FIELD_TEXT_CACHE_WIDTH - u;
                     if (span >= avail)
                     {
                         u += span;
                         span -= avail;
                         u = 0;
-                        v += st->line_height;
+                        v += state->line_height;
                     }
                     else
                     {
@@ -3750,10 +3744,10 @@ void field_text_start_timed_window(u8* text)
             rows -= 0x10;
         } while (rows > 0);
     }
-    st->dirty_end_u = u;
-    st->region_end_u = u;
-    st->dirty_end_v = v;
-    st->region_end_v = v;
+    state->dirty_end_u = u;
+    state->region_end_u = u;
+    state->dirty_end_v = v;
+    state->region_end_v = v;
 }
 
 /**
@@ -3767,20 +3761,20 @@ void field_text_restore_window(u16 slot, s32 placement_mode)
 {
     u8* dst;
     u8* src;
-    s32 n;
-    FieldTextConfig* rec;
+    s32 bytes_remaining;
+    FieldTextConfig* config;
 
     dst = (u8*)0x801ED408;
-    n = 0x17;
-    rec = &D_801ED004[slot];
-    src = (u8*)rec;
+    bytes_remaining = 0x17;
+    config = &g_field_text_saved_configs[slot];
+    src = (u8*)config;
     do
     {
         *dst = *src;
         src += 1;
-        n -= 1;
+        bytes_remaining -= 1;
         dst += 1;
-    } while (n != -1);
+    } while (bytes_remaining != -1);
     if (placement_mode == 1)
     {
         field_text_open_packed_window(slot);
@@ -3789,113 +3783,74 @@ void field_text_restore_window(u16 slot, s32 placement_mode)
     {
         field_text_open_fixed_window(slot);
     }
-    if (rec->text != 0)
+    if (config->text != 0)
     {
-        field_text_set_string(slot, rec->text, rec->flags.b.byte2);
+        field_text_set_string(slot, config->text, config->flags.b.byte2);
     }
 }
 
-
-/* ==== folded from func_800674a8.c (text-window record accessors) ==== */
-
-/** @brief Bytes of the 32-bit flags word at 0x10. */
-typedef struct
-{
-    u8 unk10;               // 0x10
-    u8 unk11;               // 0x11
-    u8 unk12;               // 0x12
-    u8 unk13;               // 0x13
-} FlagBytes;
-
-/** @brief The flags word at 0x10, addressed either whole or by byte. */
-typedef union
-{
-    u32 flags;              // 0x10
-    FlagBytes b;
-} FlagWord;
-
-typedef struct {
-    u32 unk0;               // 0x00
-    u8 _pad4[0x10 - 4];     // 0x04
-    FlagWord unk10;         // 0x10
-    u8 unk14;               // 0x14
-    u8 _pad15[0x4E - 0x15]; // 0x15
-    s16 unk4E;              // 0x4E
-    s16 unk50;              // 0x50
-} ArrEntry;
-
-
 /**
- * @brief Write two s16 values into the entry at index arg0 of the array at 0x801ED034
- *        (element stride 0x98 bytes).
- * @param arg0 Array index (low 16 bits used).
- * @param arg1 Value written to entry->unk4E.
- * @param arg2 Value written to entry->unk50.
+ * @brief Set the screen position of a text window.
+ * @param slot Window slot; only the low 16 bits are used.
+ * @param x Left screen coordinate.
+ * @param y Top screen coordinate.
  * @see decomp.me (100%) TODO
  */
-void func_800674A8(s32 arg0, s16 arg1, s16 arg2) {
-    ArrEntry *entry = (ArrEntry *)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED034);
-    entry->unk4E = arg1;
-    entry->unk50 = arg2;
+void field_text_set_position(s32 slot, s16 x, s16 y)
+{
+    FieldTextState* state = &((FieldTextSystem*)0x801ED000)->windows[slot & 0xFFFF];
+    state->x = x;
+    state->y = y;
 }
 
 /**
+ * @brief Start closing a text window.
+ * @param slot Window slot; only the low 16 bits are used.
  * @see decomp.me (100%) TODO
  */
-void func_800674D8(s32 arg0)
+void field_text_close_window(s32 slot)
 {
-    ArrEntry* entry = (ArrEntry*)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED034);
-    func_8006700C(entry, 1);
+    FieldTextState* state = &((FieldTextSystem*)0x801ED000)->windows[slot & 0xFFFF];
+    field_text_close(state, 1);
 }
 
 /**
+ * @brief Read the progress of an active dialogue window.
+ * @param slot Window slot; only the low 16 bits are used.
+ * @return -1 outside dialogue mode, 2 at a prompt, 1 while text remains, or 0 when finished.
  * @see decomp.me (100%) TODO
  */
-s32 func_8006751C(s32 arg0)
+s32 field_text_get_status(s32 slot)
 {
-    ArrEntry* entry = (ArrEntry*)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED034);
+    FieldTextState* state = &((FieldTextSystem*)0x801ED000)->windows[slot & 0xFFFF];
 
-    if (((entry->unk10.flags & 7) != 0) && ((entry->unk10.b.unk10 & 7) < 4))
+    if (((state->flags.word & FIELD_TEXT_STATE_MASK) != 0) && ((state->flags.b.low & FIELD_TEXT_STATE_MASK) < 4))
     {
-        if (entry->unk14 != 0)
+        if (state->flow_code != FIELD_TEXT_FLOW_NONE)
         {
             return 2;
         }
-        return entry->unk0 != 0;
+        return state->text_cursor != 0;
     }
     return -1;
 }
 
-/* ==== folded from func_80067598.c ==== */
-
-typedef struct {
-    u8 _pad[0x4B];
-    u8 unk4B;
-} ArrEntry2;
-
 /**
- * @brief Read byte at offset 0x4B of the array entry at index arg0 in the
- *        array at 0x801ED000 (element stride 0x98 bytes).
- * @param arg0 Array index (low 16 bits used).
- * @return The u8 value at entry->unk4B.
+ * @brief Read the last selected choice in a text window.
+ * @param slot Window slot; only the low 16 bits are used.
+ * @return Zero-based choice index.
  * @see decomp.me (100%) TODO
  */
-u8 func_80067598(s32 arg0) {
-    ArrEntry2 *entry = (ArrEntry2 *)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED000);
-    return entry->unk4B;
+s32 field_text_get_choice(s32 slot)
+{
+    return ((FieldTextSystem*)0x801ED000)->windows[slot & 0xFFFF].choice_index;
 }
 
-
-
-#define FIELD_TEXT_WINDOW_STRIDE 0x98
-#define FIELD_TEXT_INLINE_TEXT_BASE 0x801ED054
-
 /**
- * @brief Format an unsigned value into a field text window's inline text buffer.
- * @param window_index Text-window slot; only the low 16 bits are used.
+ * @brief Format an unsigned value into a window's inline text buffer.
+ * @param window_index Window slot; only the low 16 bits are used.
  * @param value Value to format as decimal text.
- * @param digits Number of character columns to emit; leading zero columns become spaces.
- * @note @p digits must be at least 1.
+ * @param digits Number of columns; leading zeroes become spaces. Must be positive.
  */
 void field_text_format_number(s32 window_index, u32 value, u8 digits)
 {
@@ -3906,7 +3861,7 @@ void field_text_format_number(s32 window_index, u32 value, u8 digits)
     u32 space;
 
     leading_zero = 1;
-    text = (u8*)((u32)(window_index & 0xFFFF) * FIELD_TEXT_WINDOW_STRIDE + FIELD_TEXT_INLINE_TEXT_BASE);
+    text = ((FieldTextSystem*)0x801ED000)->windows[window_index & 0xFFFF].inline_text;
     place_value = 1;
     while (--digits != 0)
     {

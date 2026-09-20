@@ -1186,3 +1186,18 @@ _mcxStartFastDsr                    = 0x80034DD8;
 _mcxStopFastDsr                     = 0x80034ECC;
 _mcxVecDsr                          = 0x80034F44;
 g_field_action_context                       = 0x800473F8;
+
+// Resident FIELD text engine.
+field_text_upload_immediate_cache        = 0x80063194;
+field_text_typeset                       = 0x800632E0;
+field_text_blit_glyph                    = 0x80063B6C;
+field_text_clear_cache                   = 0x800640B4;
+field_text_advance_line                  = 0x80064210;
+field_text_clear_window                  = 0x8006429C;
+field_text_init                          = 0x800642D4;
+field_text_update                        = 0x80064C28;
+field_text_close                         = 0x8006700C;
+field_text_set_position                  = 0x800674A8;
+field_text_close_window                  = 0x800674D8;
+field_text_get_status                    = 0x8006751C;
+field_text_get_choice                    = 0x80067598;

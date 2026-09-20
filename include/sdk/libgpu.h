@@ -163,7 +163,7 @@ typedef struct {
     u_long pad;
 } LINE_F4;
 
-typedef struct {
+typedef struct SPRT {
     u_long tag;
     u_char r0, g0, b0, code;
     short x0, y0;

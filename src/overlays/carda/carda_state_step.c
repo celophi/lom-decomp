@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "common.h"
 
 extern s32 D_80165FE0;
@@ -16,7 +17,7 @@ s32 func_80140370(s32 arg0)
     func_8014ADF8();
     func_80140830(arg0);
     func_8014AE34();
-    func_80063194();
+    field_text_upload_immediate_cache();
     D_80166004 ^= 1;
     return 0;
 }

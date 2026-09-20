@@ -192,3 +192,5 @@ g_niki_preserve_old_save                                   = 0x80164FD4;
 g_niki_temporary_save_path                                   = 0x80164FD8;
 g_niki_overlay_id                            = 0x80140000;
 g_menu_element_counter                     = 0x8012298C;
+
+field_text_upload_immediate_cache = 0x80063194;

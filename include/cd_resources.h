@@ -78,6 +78,9 @@ typedef enum CdResourceId
     /* SND_SOTO/SNDSOTO.SET, followed by MUSICS01.SET through MUSICS19.SET. */
     CD_RES_SND_SOTO_SET = 147,
 
+    /* Palettes and frame textures used by field dialogue windows. */
+    CD_RES_FIELD_WINDOW_TEXTURES = 177,
+
     /* Twelve-row bitmap font used by the FIELD text renderer. */
     CD_RES_FIELD_FONT = 178,
 } CdResourceId;

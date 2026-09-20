@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "cload.h"
 #include "saved_game.h"
 #include "common.h"
@@ -545,7 +546,7 @@ s32 cload_update_frame(s32 frame_state)
     cload_begin_glyph_cache_frame();
     cload_update_menu(frame_state);
     cload_evict_unused_glyphs();
-    func_80063194();
+    field_text_upload_immediate_cache();
     g_cload_frame_parity ^= 1;
     return 0;
 }

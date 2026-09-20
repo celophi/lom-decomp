@@ -1,11 +1,11 @@
+#include "field_text.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 
 extern void bcopy(void *, void *, s32);
 
-s32 field_text_build_sprites(SPRT *, u8 *, s32);
-void field_text_reset_scratch(void);
-void func_80063194(void);
+
+
 void func_80086F48(POLY_FT4 *, s32);
 POLY_FT4 *func_800AFC50(u32 *, POLY_FT4 *);
 
@@ -47,7 +47,7 @@ POLY_FT4 *func_800AF950(POLY_FT4 *output, u32 *ot, u8 *text, s32 style, s32 x, s
 
     field_text_reset_scratch();
     glyph_count = field_text_build_sprites(sprites, text, style);
-    func_80063194();
+    field_text_upload_immediate_cache();
     if (glyph_count < 2)
     {
         rect.x = 0x140;

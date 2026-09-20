@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "common.h"
 #include "field_types.h"
 #include "sdk/libgte.h"
@@ -115,7 +116,7 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
     void func_8001CDAC(s32 *, s32 *);
     s32 func_8005B368(void *);
     s32 func_8005B6AC(void *);
-    s32 func_8006751C(s32);
+
     void func_8008EF0C(void *);
     s16 func_80091914(void *, s32);
     void func_80091AC8(void *, s32);
@@ -199,13 +200,13 @@ s32 func_8008DC54(s32 *actor, s32 pad_index)
     }
     if (func_800A6490() == 0)
     {
-        controller_state = func_8006751C(0);
+        controller_state = field_text_get_status(0);
         sentinel_or_reaction = -1;
         if (controller_state != sentinel_or_reaction)
         {
             return 0;
         }
-        if (func_8006751C(1) != sentinel_or_reaction)
+        if (field_text_get_status(1) != sentinel_or_reaction)
         {
             return 0;
         }

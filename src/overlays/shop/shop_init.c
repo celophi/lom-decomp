@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "common.h"
 
 extern s32 D_801451B8;
@@ -9,9 +10,9 @@ extern s32 D_801451CC;
 
 extern void func_80067F8C(void);
 extern void func_800AA02C(void);
-extern void field_text_reset_scratch(void);
-extern void field_text_reset_windows(void);
-extern void func_80063194(void);
+
+
+
 extern s32 func_80140164(s32);
 extern s32 func_801404A8(s32, s32, s32, s32);
 extern void func_80140798();
@@ -45,7 +46,7 @@ s32 func_801400D4(s32 arg0)
     *(void **)(p + 0x4000) = p;
     field_text_reset_scratch();
     func_80140798(arg0, p);
-    func_80063194();
+    field_text_upload_immediate_cache();
     D_801451BC ^= 1;
     if (D_801451C8 != 0)
     {

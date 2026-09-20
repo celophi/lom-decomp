@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "common.h"
 
 /** @brief Byte view of a field text flags word. */
@@ -63,10 +64,9 @@ extern u8 *D_801178D0;
 extern s32 D_801178D4;
 extern u8 g_prim_rect_buf[];
 
-void field_text_open_packed_window();
-void field_text_open_fixed_window();
-void field_text_start_timed_window(u8 *text);
-void func_800674D8(s32 arg0);
+
+
+
 
 /**
  * @brief Configure and open a field text window.
@@ -211,12 +211,12 @@ void func_8009C7B0(s32 string_index, s32 window_slot, s32 layout_index, s32 unus
 }
 
 /**
- * @brief Thin wrapper forwarding to func_800674D8.
+ * @brief Thin wrapper forwarding to field_text_close_window.
  * @param arg0 Argument passed through unchanged.
  */
 void func_8009C954(s32 arg0)
 {
-    func_800674D8(arg0);
+    field_text_close_window(arg0);
 }
 
 /**

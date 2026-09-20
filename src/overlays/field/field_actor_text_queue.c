@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 
@@ -39,12 +40,11 @@ extern s32 D_801227C8;
 extern s32 D_801227DC;
 
 extern s32 func_800AE864(u8 *);
-void field_text_reset_scratch(void);
-void field_text_reset_windows(void);
-void func_80063194(void);
+
+
+
 void func_800A6634(ArgA *arg0, ArgB *arg1);
 
-s32 field_text_build_sprites(SPRT *prim, u8 *text, s32 style);
 SPRT *func_800AD658(s32 *ordering_table, SPRT *sprite_cursor, s32 count);
 
 /**
@@ -271,7 +271,7 @@ void func_800A64D0(ArgA *arg0)
                 D_801226A0[i].count--;
             }
         }
-        func_80063194();
+        field_text_upload_immediate_cache();
     }
     else if (D_801227DC != 0)
     {

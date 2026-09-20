@@ -249,3 +249,5 @@ g_cload_selected_file_title             = 0x80162A14;
 g_cload_selected_save_slot_id           = 0x80162C5F;
 g_cload_selected_card_path              = 0x80162C90;
 g_cload_overlay_id = 0x80140000;
+
+field_text_upload_immediate_cache = 0x80063194;

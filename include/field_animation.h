@@ -2,11 +2,19 @@
 #define FIELD_ANIMATION_H
 
 #include "common.h"
+#include "sdk/libgpu.h"
 
 struct FieldAnim;
 struct FieldAnimCel;
 struct FieldAnimDef;
-struct FieldImageReq;
+/** @brief Pending image upload and its inline VRAM destination rectangle. */
+typedef struct FieldImageReq FieldImageReq;
+struct FieldImageReq
+{
+    FieldImageReq* next;
+    RECT rect;
+    u_long* data;
+};
 struct FieldPart;
 struct FieldTintSrc;
 

@@ -1,9 +1,10 @@
+#include "field_text.h"
 #include "field_script.h"
 #include "game_audio.h"
 
 s32 func_8005A84C(s32 arg0, s32 arg1);
 s32 func_8008B398(s32 key);
-s32 func_8006751C(s32 arg0);
+
 
 typedef struct
 {
@@ -81,11 +82,11 @@ void func_800B95EC(s32 unused0, s32 unused1, s32 wait)
         break;
     }
     case 5:
-        result = func_8006751C(operand & 3) ^ 1;
+        result = field_text_get_status(operand & 3) ^ 1;
         wait = 0 < (u32)result;
         break;
     case 6:
-        result = func_8006751C(operand & 3);
+        result = field_text_get_status(operand & 3);
         wait = 0 < (u32)result;
         break;
     }
@@ -214,7 +215,6 @@ typedef struct
 extern FieldScriptContext *g_field_script;
 extern u8 *D_80122B78;
 
-s32 func_8006751C(s32 arg0);
 void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 
 /**
@@ -246,12 +246,12 @@ void func_800B99A8(void)
     }
     mode = resolved;
     selector = mode & 3;
-    result = func_8006751C(selector);
+    result = field_text_get_status(selector);
     if (!(mode & 0x80))
     {
         if (result == -1)
         {
-            func_800BD520(0, 0x7100, func_80067598(selector));
+            func_800BD520(0, 0x7100, field_text_get_choice(selector));
             goto advance_pc;
         }
         goto clear_flag;
@@ -534,8 +534,8 @@ void func_800A43E8(s32 arg0, s32 arg1, u16 arg2, s32 arg3);
 void func_800B286C(s32 arg0, s32 arg1, s32 arg2);
 s32 func_800A4744(void);
 u8 func_800A4778(void);
-void field_text_format_number(s32 window_index, u32 value, u8 digits);
-void func_800674D8(s32 arg0);
+
+
 void func_8008AFD8(s32 arg0, s32 arg1, FieldScriptRecord* record, s32 record_index);
 void func_80087614(s32 arg0, s32 arg1);
 s32 func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
@@ -791,7 +791,7 @@ void field_script_op_2b(void)
 }
 
 /**
- * @brief Opcode 0x2C: call func_800674D8 with one operand, or with 0 through 3 when the operand has bit 7 set.
+ * @brief Opcode 0x2C: call field_text_close_window with one operand, or with 0 through 3 when the operand has bit 7 set.
  */
 void field_script_op_2c(void)
 {
@@ -805,13 +805,13 @@ void field_script_op_2c(void)
         value = 0;
         do
         {
-            func_800674D8((u16)value);
+            field_text_close_window((u16)value);
             value++;
         } while ((u32)value < 4);
     }
     else
     {
-        func_800674D8((u16)value);
+        field_text_close_window((u16)value);
     }
 }
 

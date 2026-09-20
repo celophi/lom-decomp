@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "movie.h"
 #include "cdrom.h"
 #include "common.h"
@@ -17,7 +18,6 @@ extern void field_update_scene_fade(void);
 extern u8 g_cd_audio_enabled;
 extern unsigned int D_801ED02C;
 extern s32 D_801ED000;
-extern s32 D_801ED004;
 extern s32 D_801ED010;
 extern s32 D_801ED00C;
 extern u16 D_801ED480;
@@ -140,7 +140,7 @@ void field_scene_reset(void)
     ptr->object_index = 0;
     ptr->pixel_lookup_selector = 0;
     D_801ED02C = 0;
-    func_800642D4();
+    field_text_init();
 }
 
 /**
@@ -174,7 +174,7 @@ void field_draw_frame(s32 unused, s32 base, s32 arg2, s32 arg3)
 
         movie_service_video_ops();
     }
-    func_80064C28(base + 0x40B8, base, arg2);
+    field_text_update(base + 0x40B8, base, arg2);
     if (struct_ptr[4] != 0)
     {
         movie_service_video_ops();
@@ -244,7 +244,7 @@ void field_init_with_fmv(void* unused, void* arg1)
     ClearOTagR((void*)((char*)arg1 + 0x7CC4), 0x1010);
     field_select_object(temp_s1 & 0xFFFF, arg1);
 
-    D_801ED004 = D_801ED000;
+    g_field_text_saved_configs = (FieldTextConfig*)D_801ED000;
     D_801ED000 += 0x60;
 
     field_size_work_buffer();
@@ -279,7 +279,7 @@ void field_init_with_fmv_alloc(void)
     ClearOTagR(render_buffers, 0x1010);
     ClearOTagR((void*)((char*)render_buffers + 0x7CC4), 0x1010);
     field_select_object(map_id & 0xFFFF, render_buffers);
-    D_801ED004 = D_801ED000;
+    g_field_text_saved_configs = (FieldTextConfig*)D_801ED000;
     D_801ED000 += 0x60;
     field_size_work_buffer();
 

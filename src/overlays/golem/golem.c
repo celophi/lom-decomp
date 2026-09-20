@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "saved_game.h"
 #include "common.h"
 #include "cdrom.h"
@@ -338,7 +339,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
         field_text_reset_scratch();
         func_800A9E78();
         golem_update_frame(draw_buffer);
-        func_80063194();
+        field_text_upload_immediate_cache();
         DrawSync(0);
         set_controller_vsync_interval(2);
         VSync(2);

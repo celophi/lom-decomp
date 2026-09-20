@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "addhero_internal.h"
 
 /* UI states and memory-card limits. */
@@ -262,13 +263,13 @@ void play_menu_sfx();
 void field_restore_fade_target(void);
 void field_set_default_fade_target(void);
 void field_restore_fade_target_with_duration(s32 arg0);
-void func_80063194(void);
+
 void func_800A55E4(void* buf, s32 arg1);
 void func_800A5638(void* buf, s32 arg1);
 s32 func_800AD850();
 s32 func_800AE76C();
-void field_text_reset_scratch(void);
-void field_text_reset_windows(void);
+
+
 void addhero_reset_entry_ranks(void);
 void addhero_enable_choice_toggle(void);
 
@@ -330,7 +331,7 @@ s32 addhero_state_step(AddheroDrawState* draw_state)
     addhero_begin_glyph_cache_frame();
     addhero_update_state(draw_state);
     addhero_evict_unused_glyphs();
-    func_80063194();
+    field_text_upload_immediate_cache();
     g_addhero_frame_parity ^= 1;
     return 0;
 }

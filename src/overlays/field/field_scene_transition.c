@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "cdrom.h"
 #include "game_audio.h"
 #include "common.h"
@@ -148,7 +149,7 @@ void field_update_scene(void)
     void field_initialize_actor_system();
     void field_load_map();
     void field_stop_song();
-    void field_text_reset_windows();
+
     u8 *func_800630BC(u16);
     void func_80067AA4();
     void field_initialize_actor_parts();

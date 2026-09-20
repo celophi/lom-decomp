@@ -1,3 +1,4 @@
+#include "field_text.h"
 /** @file field_frame_commands.c
  * @brief Construct per-frame field command buffers.
  */

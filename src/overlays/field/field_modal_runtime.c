@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "cdrom.h"
 #include "common.h"
 #include "cd_resources.h"
@@ -167,9 +168,9 @@ typedef struct
 
 s32 func_800A9D70(s32);
 void akao_cmd_98_9a_9c_9e(s32 arg0);
-void field_text_reset_scratch(void);
-void field_text_reset_windows(void);
-void func_80063194(void);
+
+
+
 void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
 void func_800A92CC(s32 arg0);
 void func_800A939C(s32 arg0);
@@ -509,7 +510,7 @@ void func_800AA858(s32 arg0)
             {
                 func_800A939C(arg0);
             }
-            func_80063194();
+            field_text_upload_immediate_cache();
             return;
         }
         field_text_reset_windows();
@@ -976,9 +977,9 @@ void func_800AB214(s32 context_or_delay)
     extern void field_restore_fade_target(void);
     extern void field_set_fade_target_only(s16, s16, s16, s16);
     extern void field_set_scene_parameters(s32, s32, u32, s32, s32, s32);
-    extern void field_text_reset_scratch(void);
-    extern void field_text_reset_windows(void);
-    extern void func_80063194(void);
+
+
+
     extern void field_release_actor_resource_slot(s32);
     extern s32 field_activate_actor_resource_slot(s32, s32, s32);
     extern void func_80084240(void);
@@ -1142,7 +1143,7 @@ void func_800AB214(s32 context_or_delay)
         {
             field_text_reset_scratch();
             func_800AB690((void *)context_or_delay);
-            func_80063194();
+            field_text_upload_immediate_cache();
             return;
         }
         break;

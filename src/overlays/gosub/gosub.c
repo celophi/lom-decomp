@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "gosub_internal.h"
 
 /* Overlay BSS layout is address-sensitive; do not reorder these definitions. */
@@ -81,7 +82,7 @@ s32 gosub_update_frame(GosubRenderContext* render_context)
     s32 finished;
     field_text_reset_scratch();
     gosub_update_screen(render_context);
-    func_80063194();
+    field_text_upload_immediate_cache();
     frame_parity = &g_gosub_frame_parity;
     finished = g_gosub_finished;
     *frame_parity ^= 1;

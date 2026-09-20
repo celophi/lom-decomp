@@ -1,3 +1,4 @@
+#include "field_text.h"
 #include "cdrom.h"
 #include "game_audio.h"
 /** @file field_actor_runtime.c
@@ -527,14 +528,14 @@ void func_800A3D44(s32, u8);
 extern s32 D_800F229C;
 extern s32 D_8010D020[];
 void func_800A710C(void);
-void field_text_reset_scratch(void);
+
 void func_800A8880(s32);
-void func_80063194(void);
+
 void func_800A9A5C(void);
 void func_800A68B4(void);
 void func_800A7434(void);
 void func_800A74B8(void);
-void field_text_reset_windows(void);
+
 void func_80092124(void);
 void akao_cmd_c1(s32, s32, s32);
 void akao_cmd_a9(s32, s32);
@@ -556,7 +557,7 @@ void field_update_dialog_runtime(s32 update_mode)
             {
                 func_800A8880(update_mode);
             }
-            func_80063194();
+            field_text_upload_immediate_cache();
         }
     }
 }
@@ -723,7 +724,7 @@ void field_update_return_to_title_prompt(s32 render_ctx)
                 {
                     func_800A8880(render_ctx);
                 }
-                func_80063194();
+                field_text_upload_immediate_cache();
             }
         }
     }
