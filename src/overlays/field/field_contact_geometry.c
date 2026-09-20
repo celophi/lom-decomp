@@ -598,8 +598,10 @@ s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s*
     s32 intersection_x;
     s32 intersection_y;
     s32 second_end_x_general;
+    s32 second_start_y_general;
     s32 first_start_y;
     s32 first_end_x;
+    s32 first_end_y;
     s32 first_start_x_a;
     s32 first_end_x_a;
     s32 first_start_x_b;
@@ -610,6 +612,7 @@ s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s*
     s32 first_dx_times_second_dy;
     s32 second_dx;
     s32 second_x_delta_vertical;
+    s32 packed_y_shift;
     s32 first_dx;
     s32 first_dy;
     s32 second_y_delta_vertical;
@@ -618,9 +621,10 @@ s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s*
     u32 packed_x_or_distance_sum;
 
     /* Coordinate locals also retain endpoint values before interpolation. */
-    intersection_y = first_end->y;
+    first_end_y = first_end->y;
     first_start_y = first_start->y;
-    first_dy = intersection_y - first_start_y;
+    first_dy = first_end_y;
+    first_dy -= first_start_y;
     if (first_dy == 0)
     {
         second_end_coordinate = second_end->y;
@@ -664,13 +668,14 @@ s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s*
         {
             second_end_coordinate = second_end->x;
             second_start_x_value_vertical = second_start->x;
+            packed_y_shift = 16;
             second_x_delta_vertical = second_end_coordinate - second_start_x_value_vertical;
             intersection_x = first_start_x;
             if (second_x_delta_vertical == 0)
             {
                 if ((intersection_x == second_start_x_value_vertical) && ((second_start_y_a = second_start->y, ((second_start_y_a < first_start_y) == 0)) ||
                                                                           (second_end_y_a = second_end->y, ((second_end_y_a < first_start_y) == 0)) ||
-                                                                          (second_start_y_a >= intersection_y) || (second_end_y_a >= intersection_y)))
+                                                                          (second_start_y_a >= first_end_y) || (second_end_y_a >= first_end_y)))
                 {
                     second_start_y_b = second_start->y;
                     first_start_y_b = first_start->y;
@@ -678,7 +683,7 @@ s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s*
                         (first_end_y_b = first_end->y, ((first_end_y_b < second_start_y_b) == 0)) || (first_end_y_b >= second_end_y_b))
                     {
                         packed_x_or_distance_sum = intersection_x & 0xFFFF;
-                        work_value = first_start->y << 0x10;
+                        work_value = first_start->y << packed_y_shift;
                         return packed_x_or_distance_sum | work_value;
                     }
                     return FIELD_NO_SEGMENT_INTERSECTION;
@@ -701,11 +706,11 @@ s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s*
         else
         {
             second_end_coordinate = second_end->y;
-            intersection_x = second_start->y;
-            second_y_delta = second_end_coordinate - intersection_x;
-            intersection_y = intersection_x;
+            second_start_y_general = second_start->y;
+            second_y_delta = second_end_coordinate - second_start_y_general;
             if (second_y_delta == 0)
             {
+                intersection_y = second_start_y_general;
                 intersection_x = ((s32)((intersection_y - first_start_y) * first_dx) / first_dy) + first_start_x;
             }
             else
@@ -723,7 +728,7 @@ s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s*
                     first_dx_times_second_dy = first_dx * second_y_delta;
                     if (first_dy_times_second_dx == first_dx_times_second_dy)
                     {
-                        if ((intersection_x == (((s32)((second_start_x_value_general - first_start_x) * first_dy) / first_dx) + first_start_y)) &&
+                        if ((second_start_y_general == (((s32)((second_start_x_value_general - first_start_x) * first_dy) / first_dx) + first_start_y)) &&
                             ((second_start_x_value_general >= first_start_x) || (second_end_x_general >= first_start_x) ||
                              (second_start_x_value_general >= first_end_x) || (second_end_x_general >= first_end_x)))
                         {
@@ -742,7 +747,7 @@ s32 field_intersect_screen_segments(Vec2s* first_start, Vec2s* first_end, Vec2s*
                         }
                         return FIELD_NO_SEGMENT_INTERSECTION;
                     }
-                    intersection_x = ((s32)((((intersection_x - ((s32)(second_y_delta * second_start_x_value_general) / second_dx)) - first_start_y) +
+                    intersection_x = ((s32)((((second_start_y_general - ((s32)(second_y_delta * second_start_x_value_general) / second_dx)) - first_start_y) +
                                              ((s32)(first_dy * first_start_x) / first_dx)) *
                                             (first_dx * second_dx)) /
                                       (s32)(first_dy_times_second_dx - first_dx_times_second_dy));
