@@ -35,19 +35,31 @@ typedef struct
 
 typedef void (*WmapHandler)(void);
 
+extern WmapHandler D_800D7C4C[];
+extern WmapHandler D_800D7C5C[];
 extern WmapHandler D_800D7C6C[];
 extern WmapHandler D_800D7C7C[];
 extern WmapHandler D_800D7C8C[];
 extern WmapHandler D_800D7CA4[];
+extern WmapConfigA D_800D94D0;
+extern WmapConfigA D_800D94FC;
 extern WmapConfigA D_800D9528;
 extern WmapConfigA D_800D9554;
 extern u8 D_8011D538;
 extern WmapState* D_80139280;
+extern void* D_801399FC;
+extern void* D_80139A04;
 extern void* D_80139A0C;
 extern void* D_80139A14;
+extern WmapConfigB D_801AFCE8;
+extern WmapConfigB D_801AFCFC;
 extern WmapConfigB D_801AFD10;
 extern WmapConfigB D_801AFD24;
+extern s32 D_801B32A0;
+extern s32 D_801B32A8;
+extern s32 D_801B32AC;
 extern s32 D_801B32B0;
+extern s32 D_801B32B4;
 extern s32 D_801B32B8;
 extern s32 D_801B32BC;
 extern s32 D_801B32C0;
@@ -57,12 +69,136 @@ extern s32 D_801B32CC;
 extern s32 D_801B32D0;
 extern s32 D_801B32D4;
 
+extern void func_800C1AA0(void);
+extern void func_800C1C00(void);
 extern void func_800C1D60(void);
 extern void func_800C1EC0(void);
 extern void func_800C0CA4(void*);
 
 void func_800C4388(void);
 void func_800C451C(void);
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_800C3CF8(void)
+{
+    D_801B32A0++;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_800C3D10(s32 reset)
+{
+    if (reset != 0)
+    {
+        D_801B32A8 = 1;
+        D_801B32AC = 1;
+        return 1;
+    }
+
+    if ((u32)D_801B32A8 >= 4)
+    {
+        return 0;
+    }
+
+    D_800D7C4C[D_801B32A8]();
+    return 1;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_800C3D88(void)
+{
+    D_801B32A8 = 1;
+    D_801B32AC = 1;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_800C3DA0(void)
+{
+    D_801399FC = &D_8011D538;
+    D_800D94D0.field_06 = 0xF;
+    D_800D94D0.field_0E = 2;
+    D_800D94D0.field_10 = -1;
+    D_800D94D0.field_26 = 0x10;
+    D_800D94D0.field_02 = 0;
+    D_800D94D0.field_22 = 0x80;
+    D_800D94D0.field_24 = 0;
+    D_801AFCE8.field_08 = 0x2710;
+    D_801AFCE8.field_02 = 0x50;
+    D_801AFCE8.field_04 = 0x64;
+    D_801AFCE8.field_0E = 0;
+    D_801AFCE8.field_0C = 0x26;
+    D_801B32AC = 0xBF;
+    D_801B32A8++;
+    func_800C1AA0();
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_800C3E4C(void)
+{
+    D_801B32A8++;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_800C3E64(s32 reset)
+{
+    if (reset != 0)
+    {
+        D_801B32B0 = 1;
+        D_801B32B4 = 1;
+        return 1;
+    }
+
+    if ((u32)D_801B32B0 >= 4)
+    {
+        return 0;
+    }
+
+    D_800D7C5C[D_801B32B0]();
+    return 1;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_800C3EDC(void)
+{
+    D_801B32B0 = 1;
+    D_801B32B4 = 1;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_800C3EF4(void)
+{
+    D_80139A04 = &D_8011D538;
+    D_800D94FC.field_06 = 0xF;
+    D_800D94FC.field_0E = 2;
+    D_800D94FC.field_10 = -1;
+    D_800D94FC.field_26 = 0x10;
+    D_800D94FC.field_02 = 0;
+    D_800D94FC.field_22 = 0x80;
+    D_800D94FC.field_24 = 0;
+    D_801AFCFC.field_08 = 0x1388;
+    D_801AFCFC.field_02 = 0x6D6;
+    D_801AFCFC.field_04 = 0x64;
+    D_801AFCFC.field_0E = 0;
+    D_801AFCFC.field_0C = 0x26;
+    D_801B32B4 = 0xBF;
+    D_801B32B0++;
+    func_800C1C00();
+}
 
 /**
  * @see decomp.me (100%)
