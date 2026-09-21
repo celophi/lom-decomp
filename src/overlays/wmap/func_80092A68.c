@@ -1,8 +1,17 @@
 #include "common.h"
 
+typedef struct { unsigned char b[8]; } WmapBlk8;
+typedef struct { int w[4]; } WmapBlk16;
+
 extern u32 D_801B2B00;
 extern s32 D_801B2B04;
 extern void (*D_800D60D8[])(void);
+extern WmapBlk8 D_80139258;
+extern WmapBlk8 D_801B24A8;
+extern WmapBlk16 D_80182DC0;
+extern WmapBlk16 D_801B2478;
+extern s32 D_80182DEC;
+extern void func_80091750(void);
 
 /**
  * @brief Dispatch the current world-map sequence step, or reset it.
@@ -39,4 +48,18 @@ void func_80092A68(void)
 {
     D_801B2B00 = 1;
     D_801B2B04 = 1;
+}
+
+/**
+ * @brief Seed two sequence data blocks and one field, arm the timer, advance, and run the handler.
+ */
+void func_80092A80(void)
+{
+    D_801B24A8 = D_80139258;
+    D_801B2478 = D_80182DC0;
+    D_80182DEC = 0x80;
+    D_801B2478.w[2] = 0xAFC8;
+    D_801B2B04 = 0x40;
+    D_801B2B00 += 1;
+    func_80091750();
 }
