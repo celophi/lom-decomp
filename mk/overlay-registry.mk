@@ -346,6 +346,36 @@ overlay_title_gcc_272_cdk_g0_srcs := \
 
 OVERLAYS += wmap
 overlay_wmap_gcc_280_g0_srcs := \
+	src/overlays/wmap/func_800A75C0.c \
+	src/overlays/wmap/func_800785E4.c \
+	src/overlays/wmap/func_800AF20C.c \
+	src/overlays/wmap/func_8005D5D8.c \
+	src/overlays/wmap/func_80077DE8.c \
+	src/overlays/wmap/func_800B2150.c \
+	src/overlays/wmap/func_80058110.c \
+	src/overlays/wmap/func_8006D420.c \
+	src/overlays/wmap/func_8007A3D0.c \
+	src/overlays/wmap/func_800829E0.c \
+	src/overlays/wmap/func_8005DA50.c \
+	src/overlays/wmap/func_80079BC4.c \
+	src/overlays/wmap/func_800961F4.c \
+	src/overlays/wmap/func_800718CC.c \
+	src/overlays/wmap/func_800742C4.c \
+	src/overlays/wmap/func_80077CBC.c \
+	src/overlays/wmap/func_8005D4A4.c \
+	src/overlays/wmap/func_8005D554.c \
+	src/overlays/wmap/func_8005DAD8.c \
+	src/overlays/wmap/func_8009A7D0.c \
+	src/overlays/wmap/func_800A2B10.c \
+	src/overlays/wmap/func_800A7AF4.c \
+	src/overlays/wmap/func_80058400.c \
+	src/overlays/wmap/func_8006CD18.c \
+	src/overlays/wmap/func_8006D870.c \
+	src/overlays/wmap/func_800788B4.c \
+	src/overlays/wmap/func_80080D2C.c \
+	src/overlays/wmap/func_80092BD8.c \
+	src/overlays/wmap/func_80098D34.c \
+	src/overlays/wmap/func_800AEFFC.c \
 	src/overlays/wmap/func_8006CBD8.c \
 	src/overlays/wmap/func_800734B8.c \
 	src/overlays/wmap/func_80078CB4.c \
@@ -2010,6 +2040,7 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_800B2E38.c \
 	src/overlays/wmap/func_800C0294.c
 overlay_wmap_gcc_280_g0_o0_builtin_srcs := \
+	src/overlays/wmap/func_800AA898.c \
 	src/overlays/wmap/wmap_pathfinding.c \
 	src/overlays/wmap/func_800A8AA8.c \
 	src/overlays/wmap/func_800A8AF0.c \
