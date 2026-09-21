@@ -355,22 +355,23 @@ void func_800C1588(void)
     }
 }
 
-/**
- * @brief Project, draw, and update the world-map entry backed by D_801AFC70.
- */
 void func_800C1680(void)
 {
     SVECTOR position;
     s32 screen_position;
     WmapConfigA* display = &D_800D93C8;
+    register WmapConfigA* draw_arg __asm__("$4");
     u8* screen_entry;
     position.vx = (D_801AFC70.field_08 * (ccos(D_801AFC70.field_02) >> 5)) >> 0xC;
     position.vy = (D_801AFC70.field_08 * (csin(D_801AFC70.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFC70.field_0E;
     gte_ldv0(&position);
     gte_rtps();
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
-    func_8006CC4C(display, screen_entry + 0x40);
+    screen_entry += 0x40;
+    func_8006CC4C(draw_arg, screen_entry);
     gte_stsxy(&screen_position);
     func_80066F9C(display, screen_position, 0x16, 8, 0);
     if (D_801AFC70.field_0C != 0)
@@ -396,22 +397,23 @@ void func_800C1680(void)
 }
 
 
-/**
- * @brief Project, draw, and update the world-map entry backed by D_801AFC84.
- */
 void func_800C17E0(void)
 {
     SVECTOR position;
     s32 screen_position;
     WmapConfigA* display = &D_800D93F4;
+    register WmapConfigA* draw_arg __asm__("$4");
     u8* screen_entry;
     position.vx = (D_801AFC84.field_08 * (ccos(D_801AFC84.field_02) >> 5)) >> 0xC;
     position.vy = (D_801AFC84.field_08 * (csin(D_801AFC84.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFC84.field_0E;
     gte_ldv0(&position);
     gte_rtps();
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
-    func_8006CC4C(display, screen_entry + 0x48);
+    screen_entry += 0x48;
+    func_8006CC4C(draw_arg, screen_entry);
     gte_stsxy(&screen_position);
     func_80066F9C(display, screen_position, 0x16, 8, 0);
     if (D_801AFC84.field_0C != 0)
@@ -436,22 +438,23 @@ void func_800C17E0(void)
     }
 }
 
-/**
- * @brief Project, draw, and update the world-map entry backed by D_801AFC98.
- */
 void func_800C1940(void)
 {
     SVECTOR position;
     s32 screen_position;
     WmapConfigA* display = &D_800D9420;
+    register WmapConfigA* draw_arg __asm__("$4");
     u8* screen_entry;
     position.vx = (D_801AFC98.field_08 * (ccos(D_801AFC98.field_02) >> 5)) >> 0xC;
     position.vy = (D_801AFC98.field_08 * (csin(D_801AFC98.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFC98.field_0E;
     gte_ldv0(&position);
     gte_rtps();
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
-    func_8006CC4C(display, screen_entry + 0x50);
+    screen_entry += 0x50;
+    func_8006CC4C(draw_arg, screen_entry);
     gte_stsxy(&screen_position);
     func_80066F9C(display, screen_position, 0x16, 8, 0);
     if (D_801AFC98.field_0C != 0)
@@ -476,22 +479,23 @@ void func_800C1940(void)
     }
 }
 
-/**
- * @brief Project, draw, and update the world-map entry backed by D_801AFCE8.
- */
 void func_800C1AA0(void)
 {
     SVECTOR position;
     s32 screen_position;
     WmapConfigA* display = &D_800D94D0;
+    register WmapConfigA* draw_arg __asm__("$4");
     u8* screen_entry;
     position.vx = (D_801AFCE8.field_08 * (ccos(D_801AFCE8.field_02) >> 5)) >> 0xC;
     position.vy = (D_801AFCE8.field_08 * (csin(D_801AFCE8.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFCE8.field_0E;
     gte_ldv0(&position);
     gte_rtps();
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
-    func_8006CC4C(display, screen_entry + 0x70);
+    screen_entry += 0x70;
+    func_8006CC4C(draw_arg, screen_entry);
     gte_stsxy(&screen_position);
     func_80066F9C(display, screen_position, 0x16, 8, 0);
     if (D_801AFCE8.field_0C != 0)
@@ -516,22 +520,23 @@ void func_800C1AA0(void)
     }
 }
 
-/**
- * @brief Project, draw, and update the world-map entry backed by D_801AFCFC.
- */
 void func_800C1C00(void)
 {
     SVECTOR position;
     s32 screen_position;
     WmapConfigA* display = &D_800D94FC;
+    register WmapConfigA* draw_arg __asm__("$4");
     u8* screen_entry;
     position.vx = (D_801AFCFC.field_08 * (ccos(D_801AFCFC.field_02) >> 5)) >> 0xC;
     position.vy = (D_801AFCFC.field_08 * (csin(D_801AFCFC.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFCFC.field_0E;
     gte_ldv0(&position);
     gte_rtps();
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
-    func_8006CC4C(display, screen_entry + 0x78);
+    screen_entry += 0x78;
+    func_8006CC4C(draw_arg, screen_entry);
     gte_stsxy(&screen_position);
     func_80066F9C(display, screen_position, 0x16, 8, 0);
     if (D_801AFCFC.field_0C != 0)
@@ -556,9 +561,6 @@ void func_800C1C00(void)
     }
 }
 
-/**
- * @brief Project, draw, and update the world-map entry backed by D_801AFD10.
- */
 void func_800C1D60(void)
 {
     SVECTOR position;
@@ -570,8 +572,8 @@ void func_800C1D60(void)
     position.vz = D_801AFD10.field_0E;
     gte_ldv0(&position);
     gte_rtps();
-    screen_entry = D_80139988;
-    func_8006CC4C(display, screen_entry + 0x80);
+    screen_entry = D_80139988 + 0x80;
+    func_8006CC4C(display, screen_entry);
     gte_stsxy(&screen_position);
     func_80066F9C(display, screen_position, 0x16, 8, 0);
     if (D_801AFD10.field_0C != 0)
@@ -596,14 +598,12 @@ void func_800C1D60(void)
     }
 }
 
-/**
- * @brief Project, draw, and update the world-map entry backed by D_801AFD24.
- */
 void func_800C1EC0(void)
 {
     SVECTOR position;
     s32 screen_position;
     WmapConfigA* display = &D_800D9554;
+    register WmapConfigA* draw_arg __asm__("$4");
     u8* screen_entry;
 
     position.vx = (D_801AFD24.field_08 * (ccos(D_801AFD24.field_02) >> 5)) >> 0xC;
@@ -611,8 +611,11 @@ void func_800C1EC0(void)
     position.vz = D_801AFD24.field_0E;
     gte_ldv0(&position);
     gte_rtps();
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
-    func_8006CC4C(display, screen_entry + 0x88);
+    screen_entry += 0x88;
+    func_8006CC4C(draw_arg, screen_entry);
     gte_stsxy(&screen_position);
     func_80066F9C(display, screen_position, 0x16, 8, 0);
     if (D_801AFD24.field_0C != 0)
