@@ -3,6 +3,10 @@
 extern u32 D_801B27B0;
 extern s32 D_801B27B4;
 extern void (*D_800D5670[])(void);
+extern void func_80080194(void);
+extern u8 D_80121538[];
+extern u8* D_801399B4;
+extern u8 D_800D9344[];
 
 /**
  * @brief Dispatch the current world-map sequence step, or reset it.
@@ -39,4 +43,22 @@ void func_80080100(void)
 {
     D_801B27B0 = 1;
     D_801B27B4 = 1;
+}
+
+/**
+ * @brief Populate a world-map actor control block and schedule its spawn step.
+ */
+void func_80080118(void)
+{
+    D_801399B4 = D_80121538;
+    D_800D9344[0x6] = 0xF;
+    *(s16*)&D_800D9344[0x10] = -1;
+    *(s16*)&D_800D9344[0x26] = 8;
+    *(s16*)&D_800D9344[0x2] = 0;
+    *(s16*)&D_800D9344[0xE] = 0;
+    *(s16*)&D_800D9344[0x22] = 0x80;
+    *(s16*)&D_800D9344[0x24] = 0;
+    D_801B27B4 = 0x88;
+    D_801B27B0 += 1;
+    func_80080194();
 }

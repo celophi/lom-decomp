@@ -169,7 +169,7 @@ segments:
       - [0x2210D, asm, wmap_2210D]
       - [0x2220D, c, func_80071E7C] # gcc280_g0, 100%
       - [0x22225, c, func_80071F0C] # gcc280_g0, 100%
-      - [0x222B5, asm, wmap_222B5]
+      - [0x22331, asm, wmap_22331]
       - [0x223AD, c, func_8007201C] # gcc280_g0, 100%
       - [0x223C5, c, func_800720AC] # gcc280_g0, 100%
       - [0x22455, asm, wmap_22455]
@@ -341,6 +341,8 @@ segments:
       - [0x28BA5, c, func_80078814] # gcc280_g0, 100%
       - [0x28BBD, c, func_8007889C] # gcc280_g0, 100%
       - [0x28C45, asm, wmap_28C45]
+      - [0x28D41, c, func_800789B0] # gcc280_g0, 100%
+      - [0x28D8D, asm, wmap_28D8D]
       - [0x28E09, c, func_80078A78] # gcc280_g0, 100%
       - [0x28E21, c, func_80078B00] # gcc280_g0, 100%
       - [0x28EA9, asm, wmap_28EA9]
@@ -387,7 +389,7 @@ segments:
       - [0x2ADF1, c, func_8007AAD0] # gcc280_g0, 100%
       - [0x2AF29, c, func_8007AB98] # gcc280_g0, 100%
       - [0x2AF41, c, func_8007AC20] # gcc280_g0, 100%
-      - [0x2AFC9, asm, wmap_2AFC9]
+      - [0x2B045, asm, wmap_2B045]
       - [0x2B0C1, c, func_8007AD30] # gcc280_g0, 100%
       - [0x2B0D9, c, func_8007ADB8] # gcc280_g0, 100%
       - [0x2B161, asm, wmap_2B161]
@@ -425,14 +427,18 @@ segments:
       - [0x2C61D, asm, wmap_2C61D]
       - [0x2C711, c, func_8007C380] # gcc280_g0, 100%
       - [0x2C729, c, func_8007C408] # gcc280_g0, 100%
-      - [0x2C7B1, asm, wmap_2C7B1]
+      - [0x2C82D, asm, wmap_2C82D]
+      - [0x2C8A9, c, func_8007C518] # gcc280_g0, 100%
+      - [0x2C8F5, asm, wmap_2C8F5]
       - [0x2C971, c, func_8007C5E0] # gcc280_g0, 100%
       - [0x2C989, c, func_8007C668] # gcc280_g0, 100%
       - [0x2CAC1, c, func_8007C730] # gcc280_g0, 100%
       - [0x2CAD9, c, func_8007C7B8] # gcc280_g0, 100%
       - [0x2CC11, c, func_8007C880] # gcc280_g0, 100%
       - [0x2CC29, c, func_8007C910] # gcc280_g0, 100%
-      - [0x2CCB9, asm, wmap_2CCB9]
+      - [0x2CD35, asm, wmap_2CD35]
+      - [0x2CDB1, c, func_8007CA20] # gcc280_g0, 100%
+      - [0x2CDFD, asm, wmap_2CDFD]
       - [0x2CE79, c, func_8007CAE8] # gcc280_g0, 100%
       - [0x2CE91, c, func_8007CB78] # gcc280_g0, 100%
       - [0x2CF21, asm, wmap_2CF21]
@@ -440,7 +446,9 @@ segments:
       - [0x2CFD5, asm, wmap_2CFD5]
       - [0x2D051, c, func_8007CCC0] # gcc280_g0, 100%
       - [0x2D069, c, func_8007CD48] # gcc280_g0, 100%
-      - [0x2D0F1, asm, wmap_2D0F1]
+      - [0x2D16D, asm, wmap_2D16D]
+      - [0x2D1E9, c, func_8007CE58] # gcc280_g0, 100%
+      - [0x2D235, asm, wmap_2D235]
       - [0x2D2B1, c, func_8007CF20] # gcc280_g0, 100%
       - [0x2D2C9, c, func_8007CFB0] # gcc280_g0, 100%
       - [0x2D359, asm, wmap_2D359]
@@ -449,6 +457,8 @@ segments:
       - [0x2D531, c, func_8007D1A0] # gcc280_g0, 100%
       - [0x2D549, c, func_8007D230] # gcc280_g0, 100%
       - [0x2D5D9, asm, wmap_2D5D9]
+      - [0x2D6D9, c, func_8007D348] # gcc280_g0, 100%
+      - [0x2D725, asm, wmap_2D725]
       - [0x2D7A1, c, func_8007D428] # gcc280_g0, 100%
       - [0x2D935, asm, wmap_2D935]
       - [0x2DFA5, c, func_8007DC8C] # gcc280_g0, 100%
@@ -511,10 +521,10 @@ segments:
       - [0x30121, c, func_8007FE08] # gcc280_g0, 100%
       - [0x30261, c, func_8007FED0] # gcc280_g0, 100%
       - [0x30279, c, func_8007FF60] # gcc280_g0, 100%
-      - [0x30309, asm, wmap_30309]
+      - [0x30385, asm, wmap_30385]
       - [0x30401, c, func_80080070] # gcc280_g0, 100%
       - [0x30419, c, func_80080100] # gcc280_g0, 100%
-      - [0x304A9, asm, wmap_304A9]
+      - [0x30525, asm, wmap_30525]
       - [0x305A1, c, func_80080210] # gcc280_g0, 100%
       - [0x305B9, c, func_800802A0] # gcc280_g0, 100%
       - [0x30649, asm, wmap_30649]
@@ -556,10 +566,10 @@ segments:
       - [0x32659, c, func_800822C8] # gcc280_g0, 100%
       - [0x3268D, asm, wmap_3268D]
       - [0x326F1, c, func_800823D8] # gcc280_g0, 100%
-      - [0x32781, asm, wmap_32781]
+      - [0x327FD, asm, wmap_327FD]
       - [0x32879, c, func_800824E8] # gcc280_g0, 100%
       - [0x32891, c, func_80082578] # gcc280_g0, 100%
-      - [0x32921, asm, wmap_32921]
+      - [0x3299D, asm, wmap_3299D]
       - [0x32A19, c, func_80082688] # gcc280_g0, 100%
       - [0x32A31, c, func_80082718] # gcc280_g0, 100%
       - [0x32B71, c, func_800827E0] # gcc280_g0, 100%
@@ -570,15 +580,23 @@ segments:
       - [0x32E7D, c, func_80082AEC] # gcc280_g0, 100%
       - [0x32E95, c, func_80082B7C] # gcc280_g0, 100%
       - [0x32F25, asm, wmap_32F25]
+      - [0x33021, c, func_80082C90] # gcc280_g0, 100%
+      - [0x3306D, asm, wmap_3306D]
       - [0x330E9, c, func_80082D58] # gcc280_g0, 100%
       - [0x33101, c, func_80082DE8] # gcc280_g0, 100%
       - [0x33191, asm, wmap_33191]
+      - [0x3328D, c, func_80082EFC] # gcc280_g0, 100%
+      - [0x332D9, asm, wmap_332D9]
       - [0x33355, c, func_80082FC4] # gcc280_g0, 100%
       - [0x3336D, c, func_80083054] # gcc280_g0, 100%
       - [0x333FD, asm, wmap_333FD]
+      - [0x334F9, c, func_80083168] # gcc280_g0, 100%
+      - [0x33545, asm, wmap_33545]
       - [0x335C1, c, func_80083230] # gcc280_g0, 100%
       - [0x335D9, c, func_800832C0] # gcc280_g0, 100%
       - [0x33669, asm, wmap_33669]
+      - [0x33769, c, func_800833D8] # gcc280_g0, 100%
+      - [0x337B5, asm, wmap_337B5]
       - [0x33831, c, func_800834A0] # gcc280_g0, 100%
       - [0x33849, c, func_80083530] # gcc280_g0, 100%
       - [0x338D9, asm, wmap_338D9]
@@ -609,10 +627,10 @@ segments:
       - [0x34B95, c, func_80084804] # gcc280_g0, 100%
       - [0x34BC9, asm, wmap_34BC9]
       - [0x34C2D, c, func_80084914] # gcc280_g0, 100%
-      - [0x34CBD, asm, wmap_34CBD]
+      - [0x34D39, asm, wmap_34D39]
       - [0x34DB5, c, func_80084A24] # gcc280_g0, 100%
       - [0x34DCD, c, func_80084AB4] # gcc280_g0, 100%
-      - [0x34E5D, asm, wmap_34E5D]
+      - [0x34ED9, asm, wmap_34ED9]
       - [0x34F55, c, func_80084BC4] # gcc280_g0, 100%
       - [0x34F6D, c, func_80084C54] # gcc280_g0, 100%
       - [0x34FFD, asm, wmap_34FFD]
@@ -674,6 +692,8 @@ segments:
       - [0x3701D, c, func_80086CC4] # gcc280_g0, 100%
       - [0x3706D, c, func_80086D54] # gcc280_g0, 100%
       - [0x370FD, asm, wmap_370FD]
+      - [0x371F9, c, func_80086E68] # gcc280_g0, 100%
+      - [0x37245, asm, wmap_37245]
       - [0x372C1, c, func_80086F30] # gcc280_g0, 100%
       - [0x372D9, asm, wmap_372D9]
       - [0x3792D, c, func_80087614] # gcc280_g0, 100%
@@ -691,10 +711,10 @@ segments:
       - [0x37E89, c, func_80087AF8] # gcc280_g0, 100%
       - [0x37EBD, asm, wmap_37EBD]
       - [0x37F21, c, func_80087C08] # gcc280_g0, 100%
-      - [0x37FB1, asm, wmap_37FB1]
+      - [0x3802D, asm, wmap_3802D]
       - [0x380A9, c, func_80087D18] # gcc280_g0, 100%
       - [0x380C1, c, func_80087DA8] # gcc280_g0, 100%
-      - [0x38151, asm, wmap_38151]
+      - [0x381CD, asm, wmap_381CD]
       - [0x38249, c, func_80087EB8] # gcc280_g0, 100%
       - [0x38261, c, func_80087F48] # gcc280_g0, 100%
       - [0x382F1, asm, wmap_382F1]
@@ -739,9 +759,11 @@ segments:
       - [0x39A59, asm, wmap_39A59]
       - [0x39ABD, c, func_800897A4] # gcc280_g0, 100%
       - [0x39B4D, asm, wmap_39B4D]
+      - [0x39DC9, c, func_80089A38] # gcc280_g0, 100%
+      - [0x39E15, asm, wmap_39E15]
       - [0x39E91, c, func_80089B00] # gcc280_g0, 100%
       - [0x39EA9, c, func_80089B90] # gcc280_g0, 100%
-      - [0x39F39, asm, wmap_39F39]
+      - [0x39FB5, asm, wmap_39FB5]
       - [0x3A031, c, func_80089CA0] # gcc280_g0, 100%
       - [0x3A049, c, func_80089D30] # gcc280_g0, 100%
       - [0x3A189, c, func_80089DF8] # gcc280_g0, 100%
@@ -755,6 +777,8 @@ segments:
       - [0x3A551, c, func_8008A1F8] # gcc280_g0, 100%
       - [0x3A5A1, c, func_8008A288] # gcc280_g0, 100%
       - [0x3A631, asm, wmap_3A631]
+      - [0x3A7F1, c, func_8008A460] # gcc280_g0, 100%
+      - [0x3A83D, asm, wmap_3A83D]
       - [0x3A8B9, c, func_8008A528] # gcc280_g0, 100%
       - [0x3A8D1, c, func_8008A5B8] # gcc280_g0, 100%
       - [0x3A961, asm, wmap_3A961]
@@ -787,7 +811,7 @@ segments:
       - [0x3BDAD, asm, wmap_3BDAD]
       - [0x3BEA1, c, func_8008BB10] # gcc280_g0, 100%
       - [0x3BEB9, c, func_8008BBA0] # gcc280_g0, 100%
-      - [0x3BF49, asm, wmap_3BF49]
+      - [0x3BFC5, asm, wmap_3BFC5]
       - [0x3C041, c, func_8008BCB0] # gcc280_g0, 100%
       - [0x3C059, c, func_8008BD40] # gcc280_g0, 100%
       - [0x3C199, c, func_8008BE08] # gcc280_g0, 100%
@@ -835,7 +859,7 @@ segments:
       - [0x3E01D, asm, wmap_3E01D]
       - [0x3E119, c, func_8008DD88] # gcc280_g0, 100%
       - [0x3E131, c, func_8008DE18] # gcc280_g0, 100%
-      - [0x3E1C1, asm, wmap_3E1C1]
+      - [0x3E23D, asm, wmap_3E23D]
       - [0x3E2B9, c, func_8008DF28] # gcc280_g0, 100%
       - [0x3E2D1, c, func_8008DFB8] # gcc280_g0, 100%
       - [0x3E361, asm, wmap_3E361]
@@ -888,9 +912,13 @@ segments:
       - [0x40995, c, func_80090604] # gcc280_g0, 100%
       - [0x409AD, c, func_80090694] # gcc280_g0, 100%
       - [0x40A3D, asm, wmap_40A3D]
+      - [0x40B39, c, func_800907A8] # gcc280_g0, 100%
+      - [0x40B85, asm, wmap_40B85]
       - [0x40C01, c, func_80090870] # gcc280_g0, 100%
       - [0x40C19, c, func_80090900] # gcc280_g0, 100%
       - [0x40CA9, asm, wmap_40CA9]
+      - [0x40DA5, c, func_80090A14] # gcc280_g0, 100%
+      - [0x40DF1, asm, wmap_40DF1]
       - [0x40E6D, c, func_80090ADC] # gcc280_g0, 100%
       - [0x40E85, c, func_80090B6C] # gcc280_g0, 100%
       - [0x40F15, asm, wmap_40F15]
@@ -940,10 +968,12 @@ segments:
       - [0x42715, asm, wmap_42715]
       - [0x42809, c, func_80092478] # gcc280_g0, 100%
       - [0x42821, c, func_80092508] # gcc280_g0, 100%
-      - [0x428B1, asm, wmap_428B1]
+      - [0x4292D, asm, wmap_4292D]
+      - [0x429A9, c, func_80092618] # gcc280_g0, 100%
+      - [0x429F5, asm, wmap_429F5]
       - [0x42A71, c, func_800926E0] # gcc280_g0, 100%
       - [0x42A89, c, func_80092770] # gcc280_g0, 100%
-      - [0x42B19, asm, wmap_42B19]
+      - [0x42B95, asm, wmap_42B95]
       - [0x42C11, c, func_80092880] # gcc280_g0, 100%
       - [0x42C29, c, func_80092910] # gcc280_g0, 100%
       - [0x42D69, c, func_800929D8] # gcc280_g0, 100%
@@ -966,6 +996,8 @@ segments:
       - [0x43555, c, func_800931C4] # gcc280_g0, 100%
       - [0x4356D, c, func_80093254] # gcc280_g0, 100%
       - [0x435FD, asm, wmap_435FD]
+      - [0x436F9, c, func_80093368] # gcc280_g0, 100%
+      - [0x43745, asm, wmap_43745]
       - [0x437C1, c, func_80093430] # gcc280_g0, 100%
       - [0x437D9, asm, wmap_437D9]
       - [0x44229, c, func_80093F10] # gcc280_g0, 100%
@@ -989,9 +1021,11 @@ segments:
       - [0x449A1, asm, wmap_449A1]
       - [0x44A05, c, func_800946EC] # gcc280_g0, 100%
       - [0x44A95, asm, wmap_44A95]
+      - [0x44B91, c, func_80094800] # gcc280_g0, 100%
+      - [0x44BDD, asm, wmap_44BDD]
       - [0x44C59, c, func_800948C8] # gcc280_g0, 100%
       - [0x44C71, c, func_80094958] # gcc280_g0, 100%
-      - [0x44D01, asm, wmap_44D01]
+      - [0x44D7D, asm, wmap_44D7D]
       - [0x44DF9, c, func_80094A68] # gcc280_g0, 100%
       - [0x44E11, c, func_80094AF8] # gcc280_g0, 100%
       - [0x44F51, c, func_80094BC0] # gcc280_g0, 100%
@@ -1043,7 +1077,7 @@ segments:
       - [0x46975, asm, wmap_46975]
       - [0x46A69, c, func_800966D8] # gcc280_g0, 100%
       - [0x46A81, c, func_80096768] # gcc280_g0, 100%
-      - [0x46B11, asm, wmap_46B11]
+      - [0x46B8D, asm, wmap_46B8D]
       - [0x46C09, c, func_80096878] # gcc280_g0, 100%
       - [0x46C21, c, func_80096908] # gcc280_g0, 100%
       - [0x46D61, c, func_800969D0] # gcc280_g0, 100%
@@ -1099,9 +1133,11 @@ segments:
       - [0x48905, c, func_80098574] # gcc280_g0, 100%
       - [0x4891D, c, func_80098604] # gcc280_g0, 100%
       - [0x489AD, asm, wmap_489AD]
+      - [0x48AA9, c, func_80098718] # gcc280_g0, 100%
+      - [0x48AF5, asm, wmap_48AF5]
       - [0x48B71, c, func_800987E0] # gcc280_g0, 100%
       - [0x48B89, c, func_80098870] # gcc280_g0, 100%
-      - [0x48C19, asm, wmap_48C19]
+      - [0x48C95, asm, wmap_48C95]
       - [0x48D11, c, func_80098980] # gcc280_g0, 100%
       - [0x48D29, c, func_80098A10] # gcc280_g0, 100%
       - [0x48E69, c, func_80098AD8] # gcc280_g0, 100%
@@ -1121,6 +1157,8 @@ segments:
       - [0x4963D, c, func_800992AC] # gcc280_g0, 100%
       - [0x49655, c, func_8009933C] # gcc280_g0, 100%
       - [0x496E5, asm, wmap_496E5]
+      - [0x497FD, c, func_8009946C] # gcc280_g0, 100%
+      - [0x49849, asm, wmap_49849]
       - [0x498C5, c, func_80099534] # gcc280_g0, 100%
       - [0x498DD, c, func_800995C4] # gcc280_g0, 100%
       - [0x4996D, asm, wmap_4996D]
@@ -1187,6 +1225,8 @@ segments:
       - [0x4CD71, c, func_8009C9E0] # gcc280_g0, 100%
       - [0x4CD89, c, func_8009CA70] # gcc280_g0, 100%
       - [0x4CE19, asm, wmap_4CE19]
+      - [0x4CF15, c, func_8009CB84] # gcc280_g0, 100%
+      - [0x4CF61, asm, wmap_4CF61]
       - [0x4CFDD, c, func_8009CC4C] # gcc280_g0, 100%
       - [0x4CFF5, c, func_8009CCDC] # gcc280_g0, 100%
       - [0x4D085, asm, wmap_4D085]
@@ -1244,7 +1284,7 @@ segments:
       - [0x4EFBD, c, func_8009EC2C] # gcc280_g0, 100%
       - [0x4EFF1, asm, wmap_4EFF1]
       - [0x4F00D, c, func_8009ECF4] # gcc280_g0, 100%
-      - [0x4F09D, asm, wmap_4F09D]
+      - [0x4F119, asm, wmap_4F119]
       - [0x4F195, c, func_8009EE04] # gcc280_g0, 100%
       - [0x4F1AD, c, func_8009EE94] # gcc280_g0, 100%
       - [0x4F2ED, c, func_8009EF5C] # gcc280_g0, 100%
@@ -1271,6 +1311,8 @@ segments:
       - [0x4FC21, c, func_8009F8C8] # gcc280_g0, 100%
       - [0x4FC71, c, func_8009F958] # gcc280_g0, 100%
       - [0x4FD01, asm, wmap_4FD01]
+      - [0x4FE4D, c, func_8009FABC] # gcc280_g0, 100%
+      - [0x4FE99, asm, wmap_4FE99]
       - [0x4FF49, c, func_8009FBB8] # gcc280_g0, 100%
       - [0x4FF61, c, func_8009FC48] # gcc280_g0, 100%
       - [0x4FFF1, asm, wmap_4FFF1]
@@ -1279,9 +1321,13 @@ segments:
       - [0x50151, c, func_8009FDC0] # gcc280_g0, 100%
       - [0x50169, c, func_8009FE50] # gcc280_g0, 100%
       - [0x501F9, asm, wmap_501F9]
+      - [0x50341, c, func_8009FFB0] # gcc280_g0, 100%
+      - [0x5038D, asm, wmap_5038D]
       - [0x5043D, c, func_800A00AC] # gcc280_g0, 100%
       - [0x50455, c, func_800A013C] # gcc280_g0, 100%
       - [0x504E5, asm, wmap_504E5]
+      - [0x50631, c, func_800A02A0] # gcc280_g0, 100%
+      - [0x5067D, asm, wmap_5067D]
       - [0x5072D, c, func_800A039C] # gcc280_g0, 100%
       - [0x50745, c, func_800A042C] # gcc280_g0, 100%
       - [0x507D5, asm, wmap_507D5]
@@ -1323,16 +1369,16 @@ segments:
       - [0x52541, c, func_800A2228] # gcc280_g0, 100%
       - [0x52681, c, func_800A22F0] # gcc280_g0, 100%
       - [0x52699, c, func_800A2380] # gcc280_g0, 100%
-      - [0x52729, asm, wmap_52729]
+      - [0x527A5, asm, wmap_527A5]
       - [0x52821, c, func_800A2490] # gcc280_g0, 100%
       - [0x52839, c, func_800A2520] # gcc280_g0, 100%
       - [0x52909, c, func_800A2578] # gcc280_g0, 100%
       - [0x52941, asm, wmap_52941]
       - [0x52975, c, func_800A265C] # gcc280_g0, 100%
-      - [0x52A05, asm, wmap_52A05]
+      - [0x52A81, asm, wmap_52A81]
       - [0x52AFD, c, func_800A276C] # gcc280_g0, 100%
       - [0x52B15, c, func_800A27FC] # gcc280_g0, 100%
-      - [0x52BA5, asm, wmap_52BA5]
+      - [0x52C21, asm, wmap_52C21]
       - [0x52C9D, c, func_800A290C] # gcc280_g0, 100%
       - [0x52CB5, c, func_800A299C] # gcc280_g0, 100%
       - [0x52D45, asm, wmap_52D45]
@@ -1382,7 +1428,7 @@ segments:
       - [0x548ED, asm, wmap_548ED]
       - [0x549E9, c, func_800A4658] # gcc280_g0, 100%
       - [0x54A01, c, func_800A46E8] # gcc280_g0, 100%
-      - [0x54A91, asm, wmap_54A91]
+      - [0x54B0D, asm, wmap_54B0D]
       - [0x54B89, c, func_800A47F8] # gcc280_g0, 100%
       - [0x54BA1, c, func_800A4888] # gcc280_g0, 100%
       - [0x54CE1, c, func_800A4950] # gcc280_g0, 100%
@@ -1594,9 +1640,11 @@ segments:
       - [0x5F929, asm, wmap_5F929]
       - [0x5F945, c, func_800AF62C] # gcc280_g0, 100%
       - [0x5F9D5, asm, wmap_5F9D5]
+      - [0x5FAD5, c, func_800AF744] # gcc280_g0, 100%
+      - [0x5FB21, asm, wmap_5FB21]
       - [0x5FB9D, c, func_800AF80C] # gcc280_g0, 100%
       - [0x5FBB5, c, func_800AF89C] # gcc280_g0, 100%
-      - [0x5FC45, asm, wmap_5FC45]
+      - [0x5FCC1, asm, wmap_5FCC1]
       - [0x5FD3D, c, func_800AF9AC] # gcc280_g0, 100%
       - [0x5FD55, c, func_800AFA3C] # gcc280_g0, 100%
       - [0x5FE95, c, func_800AFB04] # gcc280_g0, 100%
@@ -1621,6 +1669,8 @@ segments:
       - [0x60849, c, func_800B04B8] # gcc280_g0, 100%
       - [0x60861, c, func_800B0548] # gcc280_g0, 100%
       - [0x608F1, asm, wmap_608F1]
+      - [0x609ED, c, func_800B065C] # gcc280_g0, 100%
+      - [0x60A39, asm, wmap_60A39]
       - [0x60AB5, c, func_800B0724] # gcc280_g0, 100%
       - [0x60ACD, c, func_800B07B4] # gcc280_g0, 100%
       - [0x60B5D, asm, wmap_60B5D]
@@ -1638,6 +1688,8 @@ segments:
       - [0x6129D, c, func_800B0F0C] # gcc280_g0, 100%
       - [0x612B5, c, func_800B0F9C] # gcc280_g0, 100%
       - [0x61345, asm, wmap_61345]
+      - [0x61441, c, func_800B10B0] # gcc280_g0, 100%
+      - [0x6148D, asm, wmap_6148D]
       - [0x61509, c, func_800B1178] # gcc280_g0, 100%
       - [0x61521, c, func_800B1208] # gcc280_g0, 100%
       - [0x615B1, asm, wmap_615B1]
@@ -1648,6 +1700,8 @@ segments:
       - [0x61851, c, func_800B14C0] # gcc280_g0, 100%
       - [0x61869, c, func_800B1550] # gcc280_g0, 100%
       - [0x618F9, asm, wmap_618F9]
+      - [0x619F5, c, func_800B1664] # gcc280_g0, 100%
+      - [0x61A41, asm, wmap_61A41]
       - [0x61ABD, c, func_800B172C] # gcc280_g0, 100%
       - [0x61AD5, asm, wmap_61AD5]
       - [0x62411, c, func_800B20F8] # gcc280_g0, 100%
