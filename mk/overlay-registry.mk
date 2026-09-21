@@ -345,7 +345,9 @@ overlay_title_gcc_272_cdk_g0_srcs := \
 	src/overlays/title/title_save.c
 
 OVERLAYS += wmap
-overlay_wmap_gcc_280_g0_srcs := src/overlays/wmap/func_8005536C.c
+overlay_wmap_gcc_280_g0_srcs := \
+	src/overlays/wmap/func_800551A8.c \
+	src/overlays/wmap/func_8005536C.c
 
 OVERLAYS += wsel
 overlay_wsel_gcc_272_cdk_g0_srcs := \
