@@ -498,11 +498,14 @@ void field_rebuild_party_actions(s32 refresh_only)
 {
     FieldModalPartySlot* initial_party;
     FieldModalPartySlot* party;
+    FieldModalPartySlot* equipment_owner;
     s16 texture_value;
+    s16 technique_action_id;
     u8* item_context;
     s32 context_offset;
     s32 record_offset;
     s32 absent;
+    s32 ability_empty;
     u8 selected;
     s32 npc_type;
     s32 companion_type;
@@ -531,6 +534,7 @@ void field_rebuild_party_actions(s32 refresh_only)
     u8 weapon_type;
     u8 ability_id;
     FieldModalActor* actor;
+    FieldModalActor* actor_base;
     FieldModalAction* button_action;
     FieldModalInstrument* instrument;
     FieldModalAction* technique_action;
@@ -559,225 +563,212 @@ void field_rebuild_party_actions(s32 refresh_only)
     player_index = 0;
     if (refresh_only == 0)
     {
-        companion_type = 2;
-        npc_type = 1;
-        initial_party = g_field_player_records;
-        saved_offset = player_index;
-    initialize_party_member:
+        do
+        {
+            saved_offset = player_index * FIELD_SAVED_CHARACTER_STRIDE;
+            initial_party = &g_field_player_records[player_index];
 
-        if (((FieldModalSaveView*)(g_pad_ctx + saved_offset))->name[0] != 0)
-        {
-            initial_party->head.bytes.weapon_type = 0xFF;
-            party_flags = initial_party->head.word | 1;
-            saved_member = (FieldModalSaveView*)(g_pad_ctx + saved_offset);
-            initial_party->head.word = party_flags;
-            character_kind = saved_member->character_kind & 0x7F;
-            if (character_kind < 2)
+            if (((FieldModalSaveView*)(g_pad_ctx + saved_offset))->name[0] != 0)
             {
-                initial_party->head.word = (u16)((party_flags & 0xFFFD) | ((character_kind & 1) * 2));
-                initial_party->companion_type = 0;
+                initial_party->head.bytes.weapon_type = 0xFF;
+                party_flags = initial_party->head.word | 1;
+                saved_member = (FieldModalSaveView*)(g_pad_ctx + saved_offset);
+                initial_party->head.word = party_flags;
+                character_kind = saved_member->character_kind & 0x7F;
+                if (character_kind < 2)
+                {
+                    initial_party->head.bits.selected = character_kind;
+                    initial_party->companion_type = 0;
+                }
+                else if (character_kind == 2)
+                {
+                    initial_party->head.word = (u16)(party_flags & 0xFFFD);
+                    selected = saved_member->character_id;
+                    initial_party->companion_type = 1;
+                    initial_party->companion_id = selected;
+                }
+                else if (character_kind == 3)
+                {
+                    initial_party->head.word = (u16)(party_flags & 0xFFFD);
+                    selected = saved_member->character_id;
+                    initial_party->companion_type = 2;
+                    initial_party->companion_id = selected;
+                }
+                else if (character_kind == 4)
+                {
+                    initial_party->head.word = (u16)(party_flags & 0xFFFD);
+                    selected = saved_member->character_id;
+                    initial_party->companion_type = 2;
+                    initial_party->companion_id = selected + 0x41;
+                }
             }
-            else if (character_kind == companion_type)
+            else
             {
-                initial_party->head.word = (u16)(party_flags & 0xFFFD);
-                selected = saved_member->character_id;
-                initial_party->companion_type = npc_type;
-                initial_party->companion_id = selected;
+                initial_party->companion_type = 1;
+                initial_party->companion_id = 0U;
+                initial_party->head.word = (u16)(initial_party->head.word & 0xFFFE);
             }
-            else if (character_kind == 3)
-            {
-                initial_party->head.word = (u16)(party_flags & 0xFFFD);
-                selected = saved_member->character_id;
-                initial_party->companion_type = companion_type;
-                initial_party->companion_id = selected;
-            }
-            else if (character_kind == 4)
-            {
-                initial_party->head.word = (u16)(party_flags & 0xFFFD);
-                selected = saved_member->character_id;
-                initial_party->companion_type = companion_type;
-                initial_party->companion_id = selected + 0x41;
-            }
-        }
-        else
-        {
-            initial_party->companion_type = npc_type;
-            initial_party->companion_id = 0U;
-            initial_party->head.word = (u16)(initial_party->head.word & 0xFFFE);
-        }
-        initial_party++;
-        player_index += 1;
-        saved_offset += FIELD_SAVED_CHARACTER_STRIDE;
+            player_index += 1;
 
-        if (player_index < 3)
-        {
-            goto initialize_party_member;
-        }
+        } while (player_index < 3);
         player_index = 0;
         func_800A54D0();
     }
-    context_pointer = &g_pad_ctx;
+    player_index = 0;
     record_base = g_field_resource_actions;
-    party = g_field_player_records;
+    context_pointer = &g_pad_ctx;
     actor_stride_words = player_index;
     record_stride = player_index;
     context_stride = player_index;
     state_stride = player_index;
-rebuild_party_member:
-
-    if (party->head.bytes.flags & 1)
+    do
     {
-        actor = (FieldModalActor*)((actor_stride_words + player_index) * 4 + (u8*)g_field_actors);
-        saved_player = (FieldModalSaveView*)((*context_pointer) + context_stride);
-        actor->flags = (s32)((actor->flags & ~0x1FF) | (((u8)saved_player->character_kind >> 7) ^ 1));
-        weapon_type = ((u32)saved_player->equipment_flags >> 0xA) & 0x3F;
-        controller_or_player_test = player_index < 2;
-        if (party->head.bytes.weapon_type != weapon_type)
+        party = &g_field_player_records[player_index];
+
+        if (party->head.bytes.flags & 1)
         {
-            party->head.bytes.weapon_type = weapon_type;
-            if (controller_or_player_test != 0)
+            actor_base = g_field_actors;
+            actor = (FieldModalActor*)((actor_stride_words + player_index) * 4 + (u8*)actor_base);
+            saved_player = (FieldModalSaveView*)((*context_pointer) + context_stride);
+            actor->flags = (s32)((actor->flags & ~0x1FF) | (((u8)saved_player->character_kind >> 7) ^ 1));
+            weapon_type = ((u32)saved_player->equipment_flags >> 0xA) & 0x3F;
+            controller_or_player_test = player_index < 2;
+            if (party->head.bytes.weapon_type != weapon_type)
             {
-                func_80091438(player_index);
-            }
-            if (refresh_only == 0)
-            {
-                health = (FieldModalActorHealth*)(state_stride + (u8*)g_field_object_states);
-                max_hp = ((FieldModalSaveView*)((*context_pointer) + context_stride))->max_hp;
-                health->display_hp = (s32)((health->display_hp & 0xFF000000) | max_hp);
-                health->max_hp = (s32)max_hp;
-                health->hp = (s32)max_hp;
-            }
-            if ((g_field_scene_mode_bit != 0) && (refresh_only != 0) && (controller_or_player_test != 0))
-            {
-                func_800A3D44(player_index, party->head.bytes.weapon_type);
-            }
-        }
-        party->weapon_flag = 0;
-        if ((u32)(party->head.bytes.weapon_type - 1) < 2U)
-        {
-            party->weapon_flag = 1;
-            equipment_index = 1;
-            equipment_offset = context_stride + 0x40;
-            do
-            {
-                equipment = (FieldModalSaveView*)((*context_pointer) + equipment_offset);
-                if (equipment->equipment_present_at_slot != 0)
+                party->head.bytes.weapon_type = weapon_type;
+                if (controller_or_player_test != 0)
                 {
-                    equipment_flags = equipment->equipment_flags;
-                    if ((((equipment_flags >> 8) & 3) == 1) && !((equipment_flags >> 0xA) & 0x3F))
-                    {
-                        party->weapon_flag = 0;
-                    }
+                    func_80091438(player_index);
                 }
-                equipment_index += 1;
-                equipment_offset += 0x40;
-            } while (equipment_index < 4);
-        }
-        if (player_index == 2)
-        {
-            button_index = 0;
-            if (g_field_player_records[2].companion_type == player_index)
+                if (refresh_only == 0)
+                {
+                    health = (FieldModalActorHealth*)(state_stride + (u8*)g_field_object_states);
+                    max_hp = ((FieldModalSaveView*)((*context_pointer) + context_stride))->max_hp;
+                    health->display_hp = (s32)((health->display_hp & 0xFF000000) | max_hp);
+                    health->max_hp = (s32)max_hp;
+                    health->hp = (s32)max_hp;
+                }
+                if ((g_field_scene_mode_bit != 0) && (refresh_only != 0) && (controller_or_player_test != 0))
+                {
+                    func_800A3D44(player_index, party->head.bytes.weapon_type);
+                }
+            }
+            party->weapon_flag = 0;
+            if ((u32)(party->head.bytes.weapon_type - 1) < 2U)
+            {
+                party->weapon_flag = 1;
+                equipment_index = 1;
+                equipment_owner = party;
+                equipment_offset = context_stride + 0x40;
+                do
+                {
+                    equipment = (FieldModalSaveView*)((*context_pointer) + equipment_offset);
+                    if (equipment->equipment_present_at_slot != 0)
+                    {
+                        equipment_flags = equipment->equipment_flags;
+                        if ((((equipment_flags >> 8) & 3) == 1) && !((equipment_flags >> 0xA) & 0x3F))
+                        {
+                            equipment_owner->weapon_flag = 0;
+                        }
+                    }
+                    equipment_index += 1;
+                    equipment_offset += 0x40;
+                } while (equipment_index < 4);
+            }
+            if (player_index == 2 && g_field_player_records[2].companion_type == player_index)
             {
                 func_800A5174(2, g_field_player_records[2].companion_id + 0xA9B);
-                party++;
             }
             else
             {
-                goto rebuild_player_bindings;
-            }
-        }
-        else
-        {
-            button_index = 0;
-        rebuild_player_bindings:
-            pair_first = D_800EB114;
-            pair_second = D_800EB114 + 1;
-            input_base = (FieldModalSaveView*)((*context_pointer) + context_stride);
-            action_offset = record_stride;
-            do
-            {
-                button = (FieldModalSaveView*)((u8*)input_base + button_index);
-                button_action = (FieldModalAction*)(action_offset + (u8*)record_base);
-                button_action->action_id = (s16)button->bound_actions[0];
-                button_action->icon_id = (s16) * ((button->bound_actions[0] * 2) + pair_first);
-                button_index += 1;
-                button_action->texture_id = (s16) * ((button->bound_actions[0] * 2) + pair_second);
-                action_offset += 8;
-            } while (button_index < 2);
-            context_offset = context_stride;
-            absent = 0xFF;
-            record_offset = record_stride;
-            item_context = *context_pointer;
-            item_record_offset = 0x20;
-            ability_start = (FieldModalSaveView*)(item_context + context_offset);
-            item_cursor = ability_start;
-        rebuild_equipped_ability:
-
-            if (item_cursor->equipped_abilities[0] == absent)
-            {
-                empty_action = (FieldModalAction*)(item_record_offset + record_offset + (u8*)record_base);
-                empty_action->bits.word = (u16)(empty_action->bits.word & 0xFBFF);
-                empty_action->bits.byte.low = absent;
-                empty_action->action_id = 0;
-                empty_action->icon_id = 0;
-                empty_action->texture_id = 0;
-                empty_action->bits.word = (u16)(empty_action->bits.word & 0xFCFF);
-            }
-            else
-            {
-                ability_id = item_cursor->equipped_abilities[0];
-                if (ability_id & 0x80)
+                button_index = 0;
+                pair_first = D_800EB114;
+                pair_second = D_800EB114 + 1;
+                input_base = (FieldModalSaveView*)((*context_pointer) + context_stride);
+                action_offset = record_stride;
+                do
                 {
-                    instrument_action = (FieldModalAction*)(item_record_offset + record_offset + (u8*)record_base);
-                    instrument_action->action_id = 0;
-                    instrument_action->bits.word = (u16)(instrument_action->bits.word | 0x400);
-                    instrument = (FieldModalInstrument*)(item_context + (context_offset + 0x5F0) + (((ability_id & 0x7F) << 6) + 0x150));
-                    instrument_action->bits.byte.low = (s8)((u8)instrument->spell >> 1);
-                    instrument_action->icon_id = (s16) * (instrument->instrument_type + D_800EB24C);
-                    spell = instrument->spell;
-                    texture_value = spell + 0x8018 + (instrument->instrument_type * 0xE);
-                    if (!(spell & 1))
-                    {
-                        texture_value += 0x800;
-                    }
-                    instrument_action->texture_id = texture_value;
-                    instrument_action->bits.word = (u16)(instrument_action->bits.word & 0xFCFF);
+                    button = (FieldModalSaveView*)((u8*)input_base + button_index);
+                    button_action = (FieldModalAction*)(action_offset + (u8*)record_base);
+                    button_action->action_id = (s16)button->bound_actions[0];
+                    button_action->icon_id = (s16) * ((button->bound_actions[0] * 2) + pair_first);
+                    button_action->texture_id = (s16) * ((button->bound_actions[0] * 2) + pair_second);
+                    action_offset += 8;
+                    button_index += 1;
+                } while (button_index < 2);
+                context_offset = context_stride;
+                absent = 0xFF;
+                record_offset = record_stride;
+                item_context = *context_pointer;
+                item_record_offset = 0x20;
+                ability_start = (FieldModalSaveView*)(item_context + context_offset);
+                item_cursor = ability_start;
+            rebuild_equipped_ability:
+
+                ability_empty = item_cursor->equipped_abilities[0] == absent;
+                if (ability_empty)
+                {
+                    empty_action = (FieldModalAction*)(item_record_offset + record_offset + (u8*)record_base);
+                    empty_action->bits.word = (u16)(empty_action->bits.word & 0xFBFF);
+                    empty_action->bits.byte.low = absent;
+                    empty_action->action_id = 0;
+                    empty_action->icon_id = 0;
+                    empty_action->texture_id = 0;
+                    empty_action->bits.word = (u16)(empty_action->bits.word & 0xFCFF);
                 }
                 else
                 {
-                    technique_action = (FieldModalAction*)(item_record_offset + record_offset + (u8*)record_base);
-                    technique_action->bits.word = (u16)(technique_action->bits.word & 0xFBFF);
-                    technique_action->bits.byte.low = absent;
-                    technique_action->icon_id = 2;
-                    technique_action->action_id = (s16)(item_cursor->equipped_abilities[0] | 0x8000);
-                    technique_action->bits.word = (u16)(technique_action->bits.word & 0xFCFF);
-                    technique_action->texture_id = (s16)(((item_cursor->equipped_abilities[0] + 0x88) | ~0x7FFF) + (party->head.bytes.weapon_type * 0x18));
+                    ability_id = item_cursor->equipped_abilities[0];
+                    if (ability_id & 0x80)
+                    {
+                        instrument_action = (FieldModalAction*)(item_record_offset + record_offset + (u8*)record_base);
+                        instrument_action->action_id = 0;
+                        instrument_action->bits.word = (u16)(instrument_action->bits.word | 0x400);
+                        instrument = (FieldModalInstrument*)(item_context + (context_offset + 0x5F0) + (((ability_id & 0x7F) << 6) + 0x150));
+                        instrument_action->bits.byte.low = (s8)((u8)instrument->spell >> 1);
+                        instrument_action->icon_id = (s16) * (instrument->instrument_type + D_800EB24C);
+                        spell = instrument->spell;
+                        texture_value = spell + 0x8018 + (instrument->instrument_type * 0xE);
+                        if (spell & 1)
+                        {
+                            instrument_action->texture_id = texture_value;
+                        }
+                        else
+                        {
+                            instrument_action->texture_id = texture_value + 0x800;
+                        }
+                        instrument_action->bits.word = (u16)(instrument_action->bits.word & 0xFCFF);
+                    }
+                    else
+                    {
+                        technique_action = (FieldModalAction*)(item_record_offset + record_offset + (u8*)record_base);
+                        technique_action->bits.word = (u16)(technique_action->bits.word & 0xFBFF);
+                        ability_id = item_cursor->equipped_abilities[0];
+                        technique_action_id = (s16)(ability_id | 0x8000);
+                        technique_action->bits.byte.low = absent;
+                        technique_action->icon_id = 2;
+                        technique_action->action_id = technique_action_id;
+                        ability_id = item_cursor->equipped_abilities[0];
+                        technique_action->bits.word = (u16)(technique_action->bits.word & 0xFCFF);
+                        technique_action->texture_id = (s16)(((ability_id + 0x88) | ~0x7FFF) + (party->head.bytes.weapon_type * 0x18));
+                    }
+                }
+                item_cursor = (FieldModalSaveView*)((u8*)item_cursor + 1);
+                item_record_offset += 8;
+
+                if ((s32)item_cursor < (s32)((u8*)ability_start + 4))
+                {
+                    goto rebuild_equipped_ability;
                 }
             }
-            item_cursor = (FieldModalSaveView*)((u8*)item_cursor + 1);
-            item_record_offset += 8;
-
-            if ((s32)item_cursor < (s32)((u8*)ability_start + 4))
-            {
-                goto rebuild_equipped_ability;
-            }
-            party++;
         }
-    }
-    else
-    {
-        party++;
-    }
-    actor_stride_words += 0x14;
-    record_stride += 0x190;
-    context_stride += FIELD_SAVED_CHARACTER_STRIDE;
-    player_index += 1;
-    state_stride += 0x23C;
+        actor_stride_words += 0x14;
+        record_stride += 0x190;
+        context_stride += FIELD_SAVED_CHARACTER_STRIDE;
+        player_index += 1;
+        state_stride += 0x23C;
 
-    if (player_index < 3)
-    {
-        goto rebuild_party_member;
-    }
+    } while (player_index < 3);
     field_refresh_party_routes();
 }
 
