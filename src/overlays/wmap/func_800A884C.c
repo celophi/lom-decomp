@@ -3,6 +3,8 @@
 extern u32 D_801B2E60;
 extern s32 D_801B2E64;
 extern void (*D_800D6D14[])(void);
+extern s32 D_801398D0;
+extern void func_800A88A4(void);
 
 /**
  * @brief Dispatch the current world-map sequence step, or reset it.
@@ -39,4 +41,16 @@ void func_800A884C(void)
 {
     D_801B2E60 = 1;
     D_801B2E64 = 1;
+}
+
+/**
+ * @brief Advance this sequence one step unless its gate flag hit the stop value.
+ */
+void func_800A8864(void)
+{
+    if (D_801398D0 != 2)
+    {
+        D_801B2E60 += 1;
+        func_800A88A4();
+    }
 }
