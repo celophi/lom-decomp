@@ -3,6 +3,8 @@
 extern u32 D_801B10A0;
 extern s32 D_801B10A4;
 extern void (*D_800D0FAC[])(void);
+extern s32 D_8013B20C;
+extern void func_8006D310(void);
 
 /**
  * @brief Dispatch the current world-map sequence step, or reset it.
@@ -39,4 +41,16 @@ void func_8006D2BC(void)
 {
     D_801B10A0 = 1;
     D_801B10A4 = 1;
+}
+
+/**
+ * @brief Advance this sequence one step while its gate flag is clear.
+ */
+void func_8006D2D4(void)
+{
+    if (D_8013B20C == 0)
+    {
+        D_801B10A0 += 1;
+        func_8006D310();
+    }
 }
