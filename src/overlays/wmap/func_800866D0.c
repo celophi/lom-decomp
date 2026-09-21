@@ -1,6 +1,25 @@
 #include "common.h"
 
 extern s32 D_801B28D8;
+extern void func_8006CC4C(u8* obj, u8* a1);
+extern void func_80066F9C(u8* obj, s32 a1, s32 a2, s32 a3, s32 a4);
+extern u8 D_800D9370[];
+extern u8 D_801399B8[];
+extern s32 D_8011CF4C;
+extern s32 D_801B28DC;
+
+/**
+ * @brief Draw the world-map sprite this frame, then advance after the wait expires.
+ */
+void func_80086654(void)
+{
+    func_8006CC4C(D_800D9370, D_801399B8);
+    func_80066F9C(D_800D9370, D_8011CF4C, 0xD, 0x3, 0);
+    if (--D_801B28DC == 0)
+    {
+        D_801B28D8 += 1;
+    }
+}
 
 /**
  * @brief Increment a world-map state counter.

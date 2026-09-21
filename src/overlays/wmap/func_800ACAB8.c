@@ -3,6 +3,11 @@
 extern u32 D_801B2E90;
 extern s32 D_801B2E94;
 extern void (*D_800D6F0C[])(void);
+extern void func_8006CC4C(u8* obj, u8* a1);
+extern void func_80066F9C(u8* obj, s32 a1, s32 a2, s32 a3, s32 a4);
+extern u8 D_800D9344[];
+extern u8 D_801399B0[];
+extern s32 D_80182D60;
 
 /**
  * @brief Dispatch the current world-map sequence step, or reset it.
@@ -39,4 +44,17 @@ void func_800ACAB8(void)
 {
     D_801B2E90 = 1;
     D_801B2E94 = 1;
+}
+
+/**
+ * @brief Draw the world-map sprite this frame, then advance after the wait expires.
+ */
+void func_800ACAD0(void)
+{
+    func_8006CC4C(D_800D9344, D_801399B0);
+    func_80066F9C(D_800D9344, D_80182D60, 0x20, 0x2, 0);
+    if (--D_801B2E94 == 0)
+    {
+        D_801B2E90 += 1;
+    }
 }
