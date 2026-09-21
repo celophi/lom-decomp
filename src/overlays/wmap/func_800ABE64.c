@@ -2,6 +2,10 @@
 
 extern s32 D_801B2E84;
 extern s32 D_801B2E80;
+extern void func_8006CAC0(void (*step)(void));
+extern void func_800AD610(void);
+extern void func_800AD118(void);
+extern void func_800ACC88(void);
 
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
@@ -12,4 +16,16 @@ void func_800ABE64(void)
     {
         D_801B2E80 += 1;
     }
+}
+
+/**
+ * @brief Register three sequence steps, arm the frame timer, and advance the counter.
+ */
+void func_800ABE98(void)
+{
+    func_8006CAC0(func_800AD610);
+    func_8006CAC0(func_800AD118);
+    func_8006CAC0(func_800ACC88);
+    D_801B2E84 = 0x18;
+    D_801B2E80 += 1;
 }

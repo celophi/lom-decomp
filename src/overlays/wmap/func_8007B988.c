@@ -3,6 +3,10 @@
 extern u32 D_801B26E0;
 extern s32 D_801B26E4;
 extern void (*D_800D53B0[])(void);
+extern void func_8006CAC0(void (*step)(void));
+extern void func_8006C81C(void);
+extern void func_8007B9E4(void);
+extern s32 D_8013B20C;
 
 /**
  * @brief Dispatch the current world-map sequence step, or reset it.
@@ -39,4 +43,15 @@ void func_8007B988(void)
 {
     D_801B26E0 = 1;
     D_801B26E4 = 1;
+}
+
+/**
+ * @brief Register the dispatch step, raise the run flag, advance the counter, and continue.
+ */
+void func_8007B9A0(void)
+{
+    func_8006CAC0(func_8006C81C);
+    D_8013B20C = 1;
+    D_801B26E0 += 1;
+    func_8007B9E4();
 }
