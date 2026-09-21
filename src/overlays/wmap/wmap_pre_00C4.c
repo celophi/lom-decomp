@@ -677,6 +677,217 @@ void func_800B341C(void)
     D_801B2FD8++;
 }
 
+/**
+ * @see decomp.me (100%)
+ */
+void func_800B35F0(void)
+{
+    s32 value;
+    s32 timer;
+    s32 next_timer;
+
+    func_8006CFA8(&D_80182DC0, &D_801B2490);
+    func_800675F0(D_8011CF1C, (D_80139234 / 0x10) & 3, 5, 0x37, 0x7800, 1, D_801B24B4, -0x5A, -0xA, -1);
+    D_80139234 += 4;
+    value = D_801B24B4 + 2;
+    D_801B24B4 = value;
+    if (value >= 0x82)
+    {
+        D_801B24B4 = 0x81;
+    }
+    timer = D_801B3004;
+    ((WmapShort4*)&D_801B2490)->field_04 += 0;
+    next_timer = timer - 1;
+    D_801B3004 = next_timer;
+    if (next_timer == 0)
+    {
+        D_801B3000++;
+    }
+}
+
+void func_800B36F0(void)
+{
+    s32 value;
+    s32 timer;
+    s32 next_timer;
+    s32* timer_ptr;
+
+    func_8006CFA8(&D_80182DC0, &D_801B2490);
+    func_800675F0(D_8011CF1C, (D_80139234 / 0x10) & 3, 5, 0x37, 0x7800, 1, D_801B24B4, -0x5A, -0xA, -1);
+    value = D_801B24B4 - 4;
+    D_801B24B4 = value;
+    if (value < 0)
+    {
+        D_801B24B4 = 0;
+    }
+    timer_ptr = &D_801B3004;
+    D_80139234 += 4;
+    ((WmapShort4*)&D_801B2490)->field_04 += 0;
+    timer = *timer_ptr;
+    next_timer = timer - 1;
+    *timer_ptr = next_timer;
+    if (next_timer == 0)
+    {
+        D_801B3000++;
+    }
+}
+
+void func_800B37EC(void)
+{
+    s32 value;
+    s32 timer;
+    s32 next_timer;
+
+    func_8006CFA8(&D_80182DC0, &D_801B2498);
+    func_800675F0(D_8011CF24, (D_8013923C / 0x10) & 3, 5, 0x37, 0x7800, 1, D_80182DE4, 0x5F, -0x14, -1);
+    D_8013923C += 4;
+    value = D_80182DE4 + 4;
+    D_80182DE4 = value;
+    if (value >= 0x72)
+    {
+        D_80182DE4 = 0x71;
+    }
+    timer = D_801B300C;
+    ((WmapShort4*)&D_801B2498)->field_04 += 0;
+    next_timer = timer - 1;
+    D_801B300C = next_timer;
+    if (next_timer == 0)
+    {
+        D_801B3008++;
+    }
+}
+
+void func_800B38EC(void)
+{
+    s32 value;
+    s32 timer;
+    s32 next_timer;
+    s32* timer_ptr;
+
+    func_8006CFA8(&D_80182DC0, &D_801B2498);
+    func_800675F0(D_8011CF24, (D_8013923C / 0x10) & 3, 5, 0x37, 0x7800, 1, D_80182DE4, 0x5F, -0x14, -1);
+    value = D_80182DE4 - 4;
+    D_80182DE4 = value;
+    if (value < 0)
+    {
+        D_80182DE4 = 0;
+    }
+    timer_ptr = &D_801B300C;
+    D_8013923C += 4;
+    ((WmapShort4*)&D_801B2498)->field_04 += 0;
+    timer = *timer_ptr;
+    next_timer = timer - 1;
+    *timer_ptr = next_timer;
+    if (next_timer == 0)
+    {
+        D_801B3008++;
+    }
+}
+
+void func_800B39E8(void)
+{
+    s32 value;
+    s32 timer;
+    s32 next_timer;
+
+    func_8006CFA8(&D_80182DC0, &D_801B24A0);
+    func_800675F0(D_8011CF28, (D_80139240 / 0x10) & 3, 5, 0x37, 0x7800, 1, D_80182DE8, 0x14, 0xA, -1);
+    D_80139240 += 4;
+    value = D_80182DE8 + 2;
+    D_80182DE8 = value;
+    if (value >= 0x82)
+    {
+        D_80182DE8 = 0x81;
+    }
+    timer = D_801B3014;
+    ((WmapShort4*)&D_801B24A0)->field_04 += 0;
+    next_timer = timer - 1;
+    D_801B3014 = next_timer;
+    if (next_timer == 0)
+    {
+        D_801B3010++;
+    }
+}
+
+void func_800B3AE8(void)
+{
+    s32 value;
+    s32 timer;
+    s32 next_timer;
+    s32* timer_ptr;
+
+    func_8006CFA8(&D_80182DC0, &D_801B24A0);
+    func_800675F0(D_8011CF28, (D_80139240 / 0x10) & 3, 5, 0x37, 0x7800, 1, D_80182DE8, 0x14, 0xA, -1);
+    value = D_80182DE8 - 4;
+    D_80182DE8 = value;
+    if (value < 0)
+    {
+        D_80182DE8 = 0;
+    }
+    timer_ptr = &D_801B3014;
+    D_80139240 += 4;
+    ((WmapShort4*)&D_801B24A0)->field_04 += 0;
+    timer = *timer_ptr;
+    next_timer = timer - 1;
+    *timer_ptr = next_timer;
+    if (next_timer == 0)
+    {
+        D_801B3010++;
+    }
+}
+
+void func_800B3BE4(void)
+{
+    s32 timer;
+    s32 next_timer;
+    s32 value;
+
+    func_8006CFA8(&D_80182DC0, &D_801B24A8);
+    func_800675F0(D_8011CF2C, (D_8013924C / 0x10) & 3, 0xA, 0x37, 0x7800, 1, D_80182DEC, 0, 0x14, -1);
+    D_8013924C += 4;
+    value = D_80182DEC + 8;
+    D_80182DEC = value;
+    if (value >= 0x82)
+    {
+        D_80182DEC = 0x81;
+    }
+    timer = D_801B301C;
+    ((WmapShort4*)&D_801B24A8)->field_04 += 0;
+    next_timer = timer - 1;
+    D_801B301C = next_timer;
+    if (next_timer == 0)
+    {
+        D_801B3018++;
+    }
+}
+
+void func_800B3CE0(void)
+{
+    s32 timer;
+    s32 next_timer;
+    s32 value;
+    s32* timer_ptr;
+
+    func_8006CFA8(&D_80182DC0, &D_801B24A8);
+    func_800675F0(D_8011CF2C, (D_8013924C / 0x10) & 3, 0xA, 0x37, 0x7800, 1, D_80182DEC, 0, 0x14, -1);
+    value = D_80182DEC - 2;
+    D_80182DEC = value;
+    if (value < 0)
+    {
+        D_80182DEC = 0;
+    }
+    timer_ptr = &D_801B301C;
+    D_8013924C += 4;
+    ((WmapShort4*)&D_801B24A8)->field_04 += 0;
+    timer = *timer_ptr;
+    next_timer = timer - 1;
+    *timer_ptr = next_timer;
+    if (next_timer == 0)
+    {
+        D_801B3018++;
+    }
+}
+
 void func_800B3DD8(void)
 {
     s32 value;

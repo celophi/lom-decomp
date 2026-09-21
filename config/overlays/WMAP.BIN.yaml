@@ -66,7 +66,7 @@ segments:
       - [0x2D935, asm, wmap_2D935]
       - [0x636F9, c, wmap_pre_00C4] # gcc280_g0, 100%
       - [0x637C5, asm, wmap_637C5]
-      - [0x64169, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x63981, c, wmap_pre_00C4] # gcc280_g0, 100%
       - [0x6487D, asm, wmap_6487D]
       - [0x64949, c, wmap_pre_00C4] # gcc280_g0, 100%
       - [0x6643D, asm, wmap_6643D]
