@@ -49,12 +49,11 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | MENU.BIN | 🔒 | Fully linked |
 | MOVIE.BIN | 🔒 | Fully linked |
 | NIKI.BIN | 🔒 | Fully linked |
-| SHOP.BIN | 🌱 | In progress |
+| SHOP.BIN | 🪲 | Non-matching |
 | TITLE.BIN | 🔒 | Fully linked |
+| WMAP.BIN | 🌱 | In progress |
 | WSEL.BIN | 🪲 | Non-matching |
 | ZUKAN.BIN | 🔒 | Fully linked |
-
-* WMAP.BIN is all data, I will figure out a way to represent that as extractable data, but there is no code in it *
 
 ## Supported game version
 
