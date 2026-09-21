@@ -46,5 +46,7 @@ segments:
     subsegments:
       - [0x1, rodata, wmap]       # 0x8004FC70: header and pre-code tables
       - [0x4DBD, asm, wmap]       # 0x80054A2C: first executable instructions
+      - [0x56FD, c, func_8005536C] # gcc280_g0, 100%
+      - [0x58FD, asm, wmap_58FD]
       - [0x74919, data, data]     # 0x800C4588: post-code packets/assets
   - [0x163669]
