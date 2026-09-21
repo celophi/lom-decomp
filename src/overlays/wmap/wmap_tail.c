@@ -85,6 +85,7 @@ typedef void (*WmapHandler)(void);
 extern s32 D_800DBE70;
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
+extern s32 D_800DCF18[];
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
 extern WmapHandler D_800D7BA4[];
@@ -116,6 +117,7 @@ extern WmapConfigA D_800D9528;
 extern WmapConfigA D_800D9554;
 extern s32 D_8011CF4C;
 extern s32 D_8011D500;
+extern s32 D_8011CF1C;
 extern s32 D_8011CF24;
 extern s32 D_8011CF28;
 extern u8 D_8011D538;
@@ -219,6 +221,7 @@ extern void func_8006D190(void);
 extern void func_800A89DC(s32);
 extern void func_8006CC4C(void*, void*);
 extern void func_8006CFA8(void*, void*);
+extern void func_8006D150(void*);
 extern void func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 extern void func_800C1290(void);
 extern void func_800C1390(void);
@@ -231,8 +234,6 @@ extern void func_800C1AA0(void);
 extern void func_800C1C00(void);
 extern void func_800C1D60(void);
 extern void func_800C0CA4(void*);
-extern void func_800C10B8(void);
-extern void func_800C11A4(void);
 
 void func_800C4388(void);
 void func_800C42F0(void);
@@ -262,6 +263,70 @@ void func_800C2548(void);
 void func_800C2588(void);
 void func_800C2390(void);
 void func_800C23CC(void);
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_800C10B8(void)
+{
+    s32 value = D_801B2650.vz - 0xDAC;
+
+    D_801B2650.vz = value;
+    if (value < 0x2710)
+    {
+        D_801B2650.vz = 0x2710;
+    }
+    PushMatrix();
+    func_8006D150(&D_80139258);
+    if (D_80182DE8 != 0)
+    {
+        func_800675F0(D_8011CF1C, 0, 4, 0x35, 0x7800, 1,
+                      D_80182DE8, 0, 0, -1);
+        value = D_80182DE8 - 4;
+        D_80182DE8 = value;
+        if (value < 0)
+        {
+            D_80182DE8 = 0;
+        }
+    }
+    PopMatrix();
+    if (--D_801B325C == 0)
+    {
+        D_801B3258++;
+    }
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_800C11A4(void)
+{
+    s32 value = D_801B2478.vz - 0xDAC;
+
+    D_801B2478.vz = value;
+    if (value < 0x2710)
+    {
+        D_801B2478.vz = 0x2710;
+    }
+    PushMatrix();
+    func_8006D150(&D_80139258);
+    if (D_80182DEC != 0)
+    {
+        func_800675F0(D_800DCF18, 0, 4, 0x35, 0x7800, 1,
+                      D_80182DEC, 0, 0, -1);
+        value = D_80182DEC - 1;
+        D_80182DEC = value;
+        if (value < 0)
+        {
+            D_80182DEC = 0;
+        }
+    }
+    PopMatrix();
+    if (--D_801B3264 == 0)
+    {
+        D_801B3260++;
+    }
+}
 
 void func_800C1290(void)
 {
