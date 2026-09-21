@@ -32,7 +32,7 @@ typedef struct
 
 extern FieldActorPartDef g_field_object_parts[];
 
-void func_8008EBA4();
+void field_update_actor_movement_animation();
 s32 field_resolve_actor_movement();
 
 /**
@@ -57,7 +57,7 @@ s32 func_80094508(FieldActorState *arg0, s32 arg1, s32 arg2, s32 arg3)
     }
     else
     {
-        func_8008EBA4(arg0, arg1, arg3);
+        field_update_actor_movement_animation(arg0, arg1, arg3);
         temp_lo = (s8)arg0->unk36 / arg0->unk16;
         arg0->unk36 = (u8)arg0->unk36 - temp_lo;
         part = &g_field_object_parts[arg0->unk3A];
@@ -170,7 +170,7 @@ typedef struct
 extern FieldFollowRecord g_field_actors[];
 extern FieldFollowSlot g_field_object_states[];
 extern FieldFollowResource g_field_resource_entries[];
-void func_8008EBA4();
+void field_update_actor_movement_animation();
 extern void field_restart_sequence_animation(FieldFollowRecord *);
 s32 field_resolve_actor_movement();
 
@@ -243,7 +243,7 @@ void func_800946FC(FieldFollowRecord *record)
         record->unk33 = 0;
         goto clear_state;
     }
-    func_8008EBA4(record, delta->vx, delta->vz);
+    field_update_actor_movement_animation(record, delta->vx, delta->vz);
     if (field_resolve_actor_movement(record, delta, 0) == 0)
     {
         record->unk33 = 0;

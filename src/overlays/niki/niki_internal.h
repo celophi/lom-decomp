@@ -449,7 +449,7 @@ extern u8 g_niki_card_info_sequence[];
 extern NikiElement g_niki_element_pool[NIKI_ELEMENT_COUNT];
 extern s32 g_niki_entry_scan_active;
 extern u8* g_niki_load_step;
-extern s32 D_80122994;
+extern s32 g_field_niki_addhero_state;
 extern char D_800ECF7C[];
 extern NikiDirEntry g_niki_entries[][NIKI_DIRECTORY_ENTRY_COUNT];
 extern NikiEntryMetadata* D_8012271C;

@@ -2,7 +2,7 @@
 #define GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
 #define GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
 extern s32 D_80122988;
-extern s32 D_8012299C;
+extern s32 g_field_card_overlay_mode;
 extern u16 D_8014B074;
 extern u16 D_8014B076;
 extern u16 D_8014B078;
@@ -68,13 +68,13 @@ check_pad:
     if (D_80122988 & 0x220) {
         switch (D_80166078) {
         case 2:
-            D_8012299C = 6;
+            g_field_card_overlay_mode = 6;
             break;
         case 3:
-            D_8012299C = 7;
+            g_field_card_overlay_mode = 7;
             break;
         default:
-            D_8012299C = 3;
+            g_field_card_overlay_mode = 3;
             break;
         }
 clear_state:

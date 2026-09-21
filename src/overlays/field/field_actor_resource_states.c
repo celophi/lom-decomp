@@ -39,7 +39,7 @@ s32 func_80094EA4(ActorRec *arg0)
     result = g_field_object_states[arg0->unk3A].unk178 & 1;
     if (result == 0)
     {
-        result = func_8009104C(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE);
+        result = field_start_bound_action_animation(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE);
         if (result != 0)
         {
             result = 0x8E;
@@ -62,7 +62,7 @@ s32 func_80094F40(ActorRec *arg0)
     result = g_field_object_states[arg0->unk3A].unk178 & 1;
     if (result == 0)
     {
-        result = func_8009104C(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE);
+        result = field_start_bound_action_animation(arg0->unk3A, 0, 0, g_field_resource_entries[arg0->unk3B].unkE);
         if (result != 0)
         {
             result = 0x94;

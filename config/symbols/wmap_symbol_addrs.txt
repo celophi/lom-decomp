@@ -1,0 +1,2 @@
+// WMAP.BIN world-map entry called by the resident state machine.
+run_world_map = 0x80060814; // type:func

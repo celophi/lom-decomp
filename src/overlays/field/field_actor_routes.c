@@ -672,7 +672,7 @@ void field_follow_leader_route(FieldRouteActor* actor, s32 follower_index)
     extern FieldRouteResource g_field_resource_entries[];
     extern FieldRouteAppearance g_field_object_parts[];
     extern u8 g_field_follower_animation_map[], g_field_route_animation_history[], D_8010AE84;
-    void func_8008EF0C(FieldRouteActor*);
+    void field_update_actor_command(FieldRouteActor*);
     void field_restart_actor_animation(FieldRouteActor*);
     s32 func_8005B6AC(FieldRouteMover*);
 
@@ -739,7 +739,7 @@ void field_follow_leader_route(FieldRouteActor* actor, s32 follower_index)
     }
     if (actor->action_id != 0)
     {
-        func_8008EF0C(actor);
+        field_update_actor_command(actor);
         return;
     }
     actor_x = actor->x;

@@ -272,7 +272,7 @@ extern FieldActorPartDef g_field_object_parts[];
 extern FieldActorState g_field_actor_slots[];
 extern FieldResourceEntry g_field_resource_entries[];
 extern s32 g_field_direction_animation_modes[];
-extern s32 D_800EB0C4[];
+extern s32 g_field_actor_walk_animations[];
 extern u8 g_field_actor_bindings[];
 extern s32 D_8010A020[];
 extern u16* g_field_actor_scripts;
@@ -323,7 +323,7 @@ M2C_UNK func_8008B870();
 M2C_UNK func_8008BE38();
 M2C_UNK func_8008BF88();
 M2C_UNK func_8008C024();
-s32 func_8009104C();
+s32 field_start_bound_action_animation();
 M2C_UNK func_8009D4D8();
 M2C_UNK func_800A3938();
 M2C_UNK func_800A39A8();
@@ -800,7 +800,7 @@ void func_80088198(Struct_D800FDF58* arg0)
         arg0->unk1B = temp_a1_4;
         if (g_field_resource_entries[arg0->unk3B].flags & 1)
         {
-            arg0->unk21 = D_800EB0C4[temp_a1_4 >> 5];
+            arg0->unk21 = g_field_actor_walk_animations[temp_a1_4 >> 5];
         }
         else
         {
@@ -1093,11 +1093,11 @@ void func_80088198(Struct_D800FDF58* arg0)
                             goto loop_count_tracks;
                         }
                     }
-                        track_result = func_8009104C(arg0->unk3A, 0, 0, ((var_s2 - 1) << 0xC) | 0x4400);
+                        track_result = field_start_bound_action_animation(arg0->unk3A, 0, 0, ((var_s2 - 1) << 0xC) | 0x4400);
                     }
                     else
                     {
-                        track_result = func_8009104C(temp_a1_7, 0, 0, 0);
+                        track_result = field_start_bound_action_animation(temp_a1_7, 0, 0, 0);
                     }
                     if (track_result != 0)
                     {

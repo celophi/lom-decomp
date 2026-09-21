@@ -60,7 +60,7 @@ segments:
       - [0x6B1, .rodata, field_actor_script_dispatch]
       - [0xCED, rodata, unk2_rodata_1]
       - [0xCF1, .rodata, field_actor_animation_commands]
-      - [0xF2D, .rodata, field_actor_behavior] # func_8008EF0C + func_80090D48 (58-entry) jump tables
+      - [0xF2D, .rodata, field_actor_behavior] # field_update_actor_command + field_apply_action_animation (58-entry) jump tables
       - [0x1185, .rodata, field_actor_movement_states] # 72-entry movement-state jump table
       - [0x139D, .rodata, field_actor_sequence_runtime] # twenty-entry actor sequence switch
       - [0x13ED, .rodata, field_contact_geometry] # func_80099018 (30-entry) + func_80099A48 (20-entry) reaction switches
@@ -72,7 +72,7 @@ segments:
       - [0x1745, .rodata, field_timed_panel] # func_800A5960 five-entry effect switch
       - [0x1759, .rodata, field_dialog_screens] # func_800A838C phase table
       - [0x1779, rodata, unk2_rodata_2_after_a838c]
-      - [0x17FD, .rodata, field_modal_runtime] # func_800AB214 nine-entry and six-entry modal-state tables
+      - [0x17FD, .rodata, field_modal_runtime] # field_update_modal nine-entry and six-entry modal-state tables
       - [0x183D, .rodata, field_interaction_start] # eight-entry action installation table
       - [0x185D, .rodata, field_actor_lifecycle] # 45-entry layout jump table
       - [0x1911, .rodata, field_action_descriptors] # descriptor-selection tables

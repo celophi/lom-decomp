@@ -1,3 +1,4 @@
+#include "field_modal_runtime.h"
 #include "common.h"
 
 /**
@@ -101,7 +102,7 @@ void func_800966F0(s32 mode, void *actor_data)
     extern void func_80096B54(void);
     extern void func_800A2DD8(s32);
     extern void func_800A6204(void);
-    extern void func_800AB710(void);
+
     extern void func_800B0234(void);
     extern void func_800B34D0(s32);
     extern u8 D_800FB3C8[];
@@ -174,7 +175,7 @@ void func_800966F0(s32 mode, void *actor_data)
 
     if (D_8010D020 != 0)
     {
-        func_800AB710();
+        field_begin_duel_intro();
     }
     g_field_active_group = mode;
     func_80092124();

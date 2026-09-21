@@ -1,3 +1,4 @@
+#include "field_modal_runtime.h"
 #include "field_ability_progression.h"
 #include "field_scene_transition.h"
 #include "field_effect_render_state.h"
@@ -2506,7 +2507,7 @@ s32 field_activate_actor_resource_slot(s32 source_selector, s32 resource_variant
     g_field_actors[slot].unk10 = 0;
     g_field_actors[slot].unk28 = 0xFF;
     field_restart_actor_animation(&g_field_actors[slot]);
-    func_800AA90C(0);
+    field_rebuild_party_actions(0);
     field_refresh_actor_portraits();
 
     if ((g_field_scene_mode_bit != 0) && (slot == 1))
@@ -3017,7 +3018,7 @@ void field_update_actor_objects(void)
                         {
                             if (!(actor_state->unkC & 0x21E4))
                             {
-                                func_8008DC54(record, count);
+                                field_update_actor_input(record, count);
                             }
                             else
                             {
@@ -3054,7 +3055,7 @@ void field_update_actor_objects(void)
 
                         if (!(actor_state->unkC & 0x21E4))
                         {
-                            func_8008EF0C(record);
+                            field_update_actor_command(record);
                             if (g_field_return_to_title_prompt_state == 0 && D_800F229C == 0)
                             {
                                 record->unk1C |= 0x800;

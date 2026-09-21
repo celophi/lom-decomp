@@ -228,7 +228,7 @@ s32 func_80083EEC();
 void func_8008A9D8(s32 arg0, s32 arg1, s32 arg2);
 s32 func_8008AABC(s32 a, s32 b);
 void func_8008BC5C(FieldRec *rec);
-void func_8008E690(FieldRec *rec);
+void field_prepare_actor_action(FieldRec *rec);
 s32 func_80091728(u8 index, s32 kind, FieldRec *rec);
 s32 func_80091914(FieldRec *rec, u8 index);
 void field_restart_sequence_animation(FieldRec *rec);
@@ -253,7 +253,7 @@ void func_800A2DD8(u8 index);
  * With no pending flags in unk1C, first resolves the 0x3D transition when the
  * current animation matches, then dispatches on the opcode (unk21 & 0x7F) by
  * trigger kind (func_80091728 kinds 3, 1/0, 2), programming the g_field_resource_actions
- * animation record and queueing the follow-up state via func_8008E690.
+ * animation record and queueing the follow-up state via field_prepare_actor_action.
  *
  * @param rec Field actor record.
  * @return Never set; the declared non-void return keeps v0 live at the epilogue,
@@ -282,7 +282,7 @@ s32 func_80092C98(FieldRec *rec)
             {
                 rec->unk2A = anim;
                 rec->unk4 -= STEP_OFFSET(rec);
-                func_8008E690(rec);
+                field_prepare_actor_action(rec);
                 func_800A2DD8(rec->unk3A);
                 rec->unk2A = 0x9B;
                 return;
@@ -291,7 +291,7 @@ s32 func_80092C98(FieldRec *rec)
             {
                 rec->unk2A = anim;
                 rec->unk4 -= STEP_OFFSET(rec);
-                func_8008E690(rec);
+                field_prepare_actor_action(rec);
                 func_800A2DD8(rec->unk3A);
                 rec->unk2A = 0x9B;
                 return;
@@ -305,35 +305,35 @@ s32 func_80092C98(FieldRec *rec)
         case 0x2F:
         case 0x44:
             rec->unk2A = 0x885;
-            func_8008E690(rec);
+            field_prepare_actor_action(rec);
             func_800A2DD8(rec->unk3A);
             break;
         case 0x3E:
             rec->unk2A = 0xA85;
-            func_8008E690(rec);
+            field_prepare_actor_action(rec);
             func_800A2DD8(rec->unk3A);
             break;
         case 0x38:
             rec->unk2A = 0xA85;
-            func_8008E690(rec);
+            field_prepare_actor_action(rec);
             func_800A2DD8(rec->unk3A);
             break;
         case 0x3A:
             SET_ANIM(rec->unk3A, 0x4F, 0x25, 0);
             rec->unk2A = 0xB85;
-            func_8008E690(rec);
+            field_prepare_actor_action(rec);
             func_800A2DD8(rec->unk3A);
             break;
         case 0x39:
             SET_ANIM(rec->unk3A, 0x4F, 0x25, 0);
             rec->unk2A = 0xB85;
-            func_8008E690(rec);
+            field_prepare_actor_action(rec);
             func_800A2DD8(rec->unk3A);
             break;
         case 0x34:
             SET_ANIM(rec->unk3A, 0x51, 0x27, 0);
             rec->unk2A = 0xB85;
-            func_8008E690(rec);
+            field_prepare_actor_action(rec);
             func_800A2DD8(rec->unk3A);
             break;
         case 0x8:
@@ -428,7 +428,7 @@ s32 func_80092C98(FieldRec *rec)
             if (*(u16 *)offset == 8 || *(u16 *)offset == 0x3C)
             {
                 rec->unk2A = 0x985;
-                func_8008E690(rec);
+                field_prepare_actor_action(rec);
                 func_800A2DD8(rec->unk3A);
             }
             break;
@@ -447,7 +447,7 @@ s32 func_80092C98(FieldRec *rec)
             {
                 SET_ANIM(rec->unk3A, 0x3C, 0, 1);
                 rec->unk2A = 0xB85;
-                func_8008E690(rec);
+                field_prepare_actor_action(rec);
                 func_800A2DD8(rec->unk3A);
             }
             break;
@@ -460,7 +460,7 @@ s32 func_80092C98(FieldRec *rec)
         {
             SET_ANIM(rec->unk3A, 0x50, 0x26, 0);
             rec->unk2A = 0xB85;
-            func_8008E690(rec);
+            field_prepare_actor_action(rec);
             func_800A2DD8(rec->unk3A);
         }
         if ((rec->unk21 & ~0x80) == 0x35)

@@ -29,7 +29,7 @@ extern u8 *D_801663A0;
 extern u8 D_8016636F;
 extern u8 D_80166440[];
 extern s32 D_80122988;
-extern s32 D_8012299C;
+extern s32 g_field_card_overlay_mode;
 extern s32 D_8003EC9C;
 extern char D_800ECF7C[];
 extern char D_800ECFC4[];
@@ -86,7 +86,7 @@ s32 func_80140BAC(void)
 
     status = D_80122988;
     if (status & 0x40) {
-        D_8012299C = 3;
+        g_field_card_overlay_mode = 3;
         func_800A3938(0x78, 0x80);
         func_80141164();
         return;

@@ -1,3 +1,4 @@
+#include "field_modal_runtime.h"
 #include "game_audio.h"
 /** @file field_subsystem_init.c
  * @brief Initialize the field subsystems and their persistent state.
@@ -24,8 +25,8 @@ void func_800A43C0(void);                                  /* extern */
 void func_800A6204(void);                                  /* extern */
 void field_bind_saved_game_context(void);                                  /* extern */
 void field_reset_input_repeat(void);                                  /* extern */
-void func_800AA824(void);                                  /* extern */
-void func_800AA90C(s32);                                 /* extern */
+void field_reset_text_session(void);                                  /* extern */
+void field_rebuild_party_actions(s32);                                 /* extern */
 void func_800ADE2C(void);                                  /* extern */
 void func_800B0094(s32);                                 /* extern */
 void func_800B01FC(s32);                               /* extern */
@@ -98,7 +99,7 @@ void field_initialize_subsystems(s32 arg0)
     field_initialize_actor_slots();
     D_8010AE78[0] = 0;
     D_80122710[0] = 0;
-    func_800AA90C(0);
+    field_rebuild_party_actions(0);
     field_clear_actor_slots();
     func_80067AA4();
     func_80084240();
@@ -106,7 +107,7 @@ void field_initialize_subsystems(s32 arg0)
     func_800A255C();
     func_80091410();
     func_800A2DFC();
-    func_800AA824();
+    field_reset_text_session();
     field_reset_fade_state();
     field_load_actor_sequence_data();
     D_801227DC[0] = 0;
