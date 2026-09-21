@@ -1178,7 +1178,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                                                 field_start_actor_animation(((u8*)&slot->unk178)[1], 1, &scratch.sp30);
                                             }
                                         }
-                                        else if (func_8009104C(rec->unk3A, 1, &scratch.sp30, slot->unk3C) != 0)
+                                        else if (field_start_bound_action_animation(rec->unk3A, 1, &scratch.sp30, slot->unk3C) != 0)
                                         {
                                             slot->unk174 = (s32)((slot->unk174 & ~0x1800) | 0x1000);
                                         }
@@ -1401,7 +1401,7 @@ s32* func_80075C88(Struct_D800FDF58* rec, s32* cursor, s32* base, u8* item, s32 
                             slot->unk13E = (u16)(gte_out->vy - sp74);
                             if (temp_a3_2 & 0x8000)
                             {
-                                if (func_8009104C(rec->unk3A, 0, NULL, temp_a3_2) != 0)
+                                if (field_start_bound_action_animation(rec->unk3A, 0, NULL, temp_a3_2) != 0)
                                 {
                                     slot->unk174 = (s32)((slot->unk174 & ~0x1800) | 0x1000);
                                 }
@@ -2132,7 +2132,7 @@ block_48:
                                             scratch.sp30 = sp28.index;
                                             var_a2 = &scratch.sp30;
 block_176:
-                                            if (func_8009104C(rec->unk3A, var_a1_2, var_a2, slot->unk3C) != 0)
+                                            if (field_start_bound_action_animation(rec->unk3A, var_a1_2, var_a2, slot->unk3C) != 0)
                                             {
                                                 slot->unk174 = (s32) ((slot->unk174 & ~0x1800) | 0x1000);
                                             }
@@ -2383,7 +2383,7 @@ block_183:
                             slot->unk13E = (u16) (gte_out->vy - sp70);
                             if (slot->unk3C & 0x8000)
                             {
-                                if (func_8009104C(rec->unk3A, 0, NULL, slot->unk3C) != 0)
+                                if (field_start_bound_action_animation(rec->unk3A, 0, NULL, slot->unk3C) != 0)
                                 {
                                     slot->unk174 = (s32) ((slot->unk174 & ~0x1800) | 0x1000);
                                 }

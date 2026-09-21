@@ -535,3 +535,19 @@ g_field_duel_winner                          = 0x80122820;
 g_field_shop_notice_hidden                   = 0x801227E0;
 g_field_shop_active                          = 0x801229AC;
 g_field_gosub_phase                          = 0x8011F41C;
+
+// Actor input, command dispatch, and action animations.
+field_update_actor_input = 0x8008DC54;
+field_prepare_actor_action = 0x8008E690;
+field_update_actor_movement_animation = 0x8008EBA4;
+field_update_actor_command = 0x8008EF0C;
+field_filter_action_targets = 0x80090B38;
+field_apply_action_animation = 0x80090D48;
+field_actor_action_is_charging = 0x80090F50;
+field_start_action_animation = 0x80090F80;
+field_start_bound_action_animation = 0x8009104C;
+g_field_actor_turn_animations = 0x800EB074;
+g_field_actor_walk_animations = 0x800EB0C4;
+g_field_actor_diagonal_walk_animations = 0x800EB0E4;
+g_field_action_animation_parameters = 0x800EB114;
+g_field_action_sound_ids = 0x800EB1B8;

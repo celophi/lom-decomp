@@ -187,7 +187,7 @@ extern s32 D_8010D020;
 /** @brief Last overlap result: zero, or actor index with FIELD_CONTACT_RESULT_PRESENT. */
 extern s32 g_field_last_actor_contact;
 
-void func_8008E690(FieldMotionRecord*);
+void field_prepare_actor_action(FieldMotionRecord*);
 s32 func_8005B368(FieldMoveQuery*);
 s32 func_8005B6AC(FieldMoveRequest*);
 s32 func_80092988(FieldMotionRecord*, Vec3i*);
@@ -307,7 +307,7 @@ s32 field_test_quad_actor_contacts(FieldContactPoint* quad, FieldMotionRecord* r
     goto initialize;
 special_3f:
     scan_record->motion_parameter = 0x285;
-    func_8008E690(scan_record);
+    field_prepare_actor_action(scan_record);
     reaction_base_3f = g_field_object_states;
     reaction_state_3f = &reaction_base_3f[scan_record->source_object_index];
     reaction_state_3f->contact.flags =
@@ -316,7 +316,7 @@ special_3f:
     return 3;
 special_40:
     scan_record->motion_parameter = 0x385;
-    func_8008E690(scan_record);
+    field_prepare_actor_action(scan_record);
     reaction_base_40 = g_field_object_states;
     reaction_state_40 = &reaction_base_40[scan_record->source_object_index];
     reaction_state_40->contact.flags =

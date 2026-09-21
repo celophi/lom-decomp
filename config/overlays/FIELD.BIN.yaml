@@ -60,7 +60,7 @@ segments:
       - [0x6B1, .rodata, field_actor_script_dispatch]
       - [0xCED, rodata, unk2_rodata_1]
       - [0xCF1, .rodata, field_actor_animation_commands]
-      - [0xF2D, .rodata, field_actor_behavior] # func_8008EF0C + func_80090D48 (58-entry) jump tables
+      - [0xF2D, .rodata, field_actor_behavior] # field_update_actor_command + field_apply_action_animation (58-entry) jump tables
       - [0x1185, .rodata, field_actor_movement_states] # 72-entry movement-state jump table
       - [0x139D, .rodata, field_actor_sequence_runtime] # twenty-entry actor sequence switch
       - [0x13ED, .rodata, field_contact_geometry] # func_80099018 (30-entry) + func_80099A48 (20-entry) reaction switches

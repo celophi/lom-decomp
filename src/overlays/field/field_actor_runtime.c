@@ -3018,7 +3018,7 @@ void field_update_actor_objects(void)
                         {
                             if (!(actor_state->unkC & 0x21E4))
                             {
-                                func_8008DC54(record, count);
+                                field_update_actor_input(record, count);
                             }
                             else
                             {
@@ -3055,7 +3055,7 @@ void field_update_actor_objects(void)
 
                         if (!(actor_state->unkC & 0x21E4))
                         {
-                            func_8008EF0C(record);
+                            field_update_actor_command(record);
                             if (g_field_return_to_title_prompt_state == 0 && D_800F229C == 0)
                             {
                                 record->unk1C |= 0x800;

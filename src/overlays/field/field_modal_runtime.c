@@ -205,7 +205,7 @@ extern void func_80091438(s32);
 extern void func_800A3D44(s32, u8);
 extern void func_800A5174(s32, s32);
 extern void func_800A54D0(void);
-extern u8 D_800EB114[];
+extern u8 g_field_action_animation_parameters[];
 extern u8 D_800EB24C[];
 extern FieldModalPartySlot g_field_player_records[];
 extern FieldModalActor g_field_actors[];
@@ -675,8 +675,8 @@ void field_rebuild_party_actions(s32 refresh_only)
             else
             {
                 button_index = 0;
-                pair_first = D_800EB114;
-                pair_second = D_800EB114 + 1;
+                pair_first = g_field_action_animation_parameters;
+                pair_second = g_field_action_animation_parameters + 1;
                 input_base = (FieldModalSaveView*)((*context_pointer) + context_stride);
                 action_offset = record_stride;
                 do
