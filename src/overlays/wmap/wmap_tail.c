@@ -1,4 +1,5 @@
 #include "common.h"
+#include "cdrom.h"
 #include "sdk/libgte.h"
 
 typedef struct
@@ -40,9 +41,17 @@ typedef struct
     s32 field_04;
 } __attribute__((packed)) WmapPair;
 
+typedef struct
+{
+    s32 field_00;
+    s32 field_04;
+} WmapAlignedPair;
+
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
+extern s32 D_800DCEF8;
+extern s32 D_800DCF00;
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
 extern WmapHandler D_800D7BA4[];
@@ -59,6 +68,7 @@ extern WmapHandler D_800D7C6C[];
 extern WmapHandler D_800D7C7C[];
 extern WmapHandler D_800D7C8C[];
 extern WmapHandler D_800D7CA4[];
+extern WmapHandler D_800D7AEC[];
 extern WmapConfigA D_800D9344;
 extern WmapConfigA D_800D9370;
 extern WmapConfigA D_800D939C;
@@ -74,12 +84,15 @@ extern s32 D_8011D500;
 extern u8 D_8011D538;
 extern u8 D_8011F538;
 extern u8 D_80121538;
+extern s32 D_80139228;
 extern s32 D_80139244;
 extern s32 D_8013923C;
 extern WmapPair D_80139258;
 extern s32 D_80139260;
 extern WmapState* D_80139280;
 extern s32 D_8013986C;
+extern s32 D_801398D0;
+extern WmapAlignedPair D_80139950;
 extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
@@ -94,7 +107,9 @@ extern s32 D_80139978;
 extern void* D_80139A04;
 extern void* D_80139A0C;
 extern void* D_80139A14;
+extern s32 D_8013B208;
 extern s32 D_8013B20C;
+extern s32 D_8013B294;
 extern WmapPair D_8013B238;
 extern WmapPair D_8013B240;
 extern WmapConfigB D_801AFC70;
@@ -104,14 +119,21 @@ extern WmapConfigB D_801AFCE8;
 extern WmapConfigB D_801AFCFC;
 extern WmapConfigB D_801AFD10;
 extern WmapConfigB D_801AFD24;
+extern s32 D_801ADAE0;
 extern s32 D_801ADAF4;
 extern VECTOR D_80182DC0;
+extern s32 D_80182D68;
+extern s32 D_80182D78;
+extern u8 D_80182E40;
 extern s32 D_80182DE8;
 extern s32 D_80182DEC;
 extern s32 D_80182DF0;
 extern s32 D_80182DF4;
+extern u8 D_8018B240;
+extern u8 D_80193640;
 extern VECTOR D_801B2478;
 extern VECTOR D_801B2650;
+extern s32 D_801B3248;
 extern s32 D_801B3250;
 extern s32 D_801B3254;
 extern s32 D_801B3258;
@@ -149,7 +171,12 @@ extern s32 D_801B32D4;
 
 extern void func_80066F9C(void*, s32, s32, s32, s32);
 extern void func_8006683C(s32);
+extern void func_800651B4(void*);
+extern void func_800652A8(s32, s32);
 extern void func_8006CAC0(s32 (*callback)(s32));
+extern void func_8006D0F0(s32, s32*, s32*);
+extern void func_8006D190(void);
+extern void func_800A89DC(s32);
 extern void func_8006CC4C(void*, void*);
 extern void func_800C1290(void);
 extern void func_800C1390(void);
@@ -180,12 +207,117 @@ s32 func_800C43F4(s32);
 s32 func_800C37BC(s32);
 s32 func_800C2CD0(s32);
 s32 func_800C2DF8(s32);
+s32 func_800C2F1C(s32);
+s32 func_800C23F8(s32);
 void func_800C302C(void);
 void func_800C30F4(void);
 void func_800C3298(void);
 void func_800C3360(void);
 void func_800C3504(void);
 void func_800C35CC(void);
+void func_800C2548(void);
+void func_800C2588(void);
+void func_800C2390(void);
+void func_800C23CC(void);
+
+void func_800C2304(void)
+{
+    D_80139978 = 0x1F;
+    func_800A89DC(0x23);
+    cdrom_wait_queue_empty();
+    func_800651B4(&D_80182E40);
+    func_800651B4(&D_8018B240);
+    func_800651B4(&D_80193640);
+    func_8006D190();
+    func_8006CAC0(func_800C23F8);
+    D_8013B20C = 1;
+    D_801B3248++;
+    func_800C2390();
+}
+
+void func_800C2390(void)
+{
+    if (D_8013B20C == 0)
+    {
+        D_801B3248++;
+        func_800C23CC();
+    }
+}
+
+void func_800C23CC(void)
+{
+    D_8013B294 = 1;
+    D_80139228 = 2;
+    D_801B3248++;
+}
+
+s32 func_800C23F8(s32 reset)
+{
+    if (reset != 0)
+    {
+        D_801B3250 = 1;
+        D_801B3254 = 1;
+        return 1;
+    }
+
+    if ((u32)D_801B3250 >= 0x26)
+    {
+        return 0;
+    }
+
+    D_800D7AEC[D_801B3250]();
+    return 1;
+}
+
+void func_800C2470(void)
+{
+    D_801B3250 = 1;
+    D_801B3254 = 1;
+}
+
+void func_800C2488(void)
+{
+    D_8013B208 = 1;
+    D_801ADAE0 = 1;
+    func_8006D0F0(0x1F, &D_800DCEF8, &D_800DCF00);
+    D_801398D0 = 2;
+    D_80182D68 = ((D_800DCEF8 - 1) * 0x30) - D_80139950.field_00;
+    D_80182D78 = ((D_800DCF00 - 1) * 0x30) - D_80139950.field_04;
+    D_801B3250++;
+    func_800C2548();
+}
+
+void func_800C2548(void)
+{
+    if (D_801398D0 != 2)
+    {
+        D_801B3250++;
+        func_800C2588();
+    }
+}
+
+void func_800C2588(void)
+{
+    func_800652A8(0x3A, 0x80);
+    func_8006CAC0(func_800C2F1C);
+    D_801B3254 = 0x14;
+    D_801B3250++;
+}
+
+void func_800C25D0(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2604(void)
+{
+    D_800DBE70 = 1;
+    D_801B3254 = 0x2D;
+    D_801B3250++;
+}
 
 void func_800C2630(void)
 {
