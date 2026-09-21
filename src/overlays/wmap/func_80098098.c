@@ -2,6 +2,8 @@
 
 extern s32 D_801B2BEC;
 extern s32 D_801B2BE8;
+extern void func_8006CAC0(void (*step)(void));
+extern void func_80099120(void);
 
 /**
  * @brief Tick the sequence wait timer; advance the step counter when it expires.
@@ -12,4 +14,14 @@ void func_80098098(void)
     {
         D_801B2BE8 += 1;
     }
+}
+
+/**
+ * @brief Register the next sequence step, arm its frame timer, and advance the counter.
+ */
+void func_800980CC(void)
+{
+    func_8006CAC0(func_80099120);
+    D_801B2BEC = 0x14;
+    D_801B2BE8 += 1;
 }
