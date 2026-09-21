@@ -1,4 +1,5 @@
 #include "common.h"
+#include "sdk/libgte.h"
 
 typedef struct
 {
@@ -56,6 +57,14 @@ extern s32 D_801B2764;
 
 extern void func_8007E510(void);
 extern s32 D_801B2738;
+extern void func_8006CD98(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6);
+extern s32 D_80139888[];
+extern SVECTOR D_8013B240;
+extern VECTOR D_8011CF60;
+extern s32 D_80182DE8;
+extern u8 D_800DCF18[];
+extern s32 D_801B276C;
+extern s32 D_801B2768;
 
 /**
  * @brief Increment a world-map state counter.
@@ -114,4 +123,42 @@ void func_8007D428(void)
     D_801B2764 = 0x3C;
     D_801B2760++;
     func_8007E510();
+}
+
+/**
+ * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
+ */
+void func_8007D5A4(void)
+{
+    MATRIX m;
+    s32 x;
+
+    x = D_80139888[2] - 0xDAC;
+    D_80139888[2] = x;
+    if (x < 0x2710)
+    {
+        D_80139888[2] = 0x2710;
+    }
+
+    PushMatrix();
+    RotMatrix(&D_8013B240, &m);
+    TransMatrix(&m, &D_8011CF60);
+    SetRotMatrix(&m);
+    SetTransMatrix(&m);
+
+    if (D_80182DE8 != 0)
+    {
+        func_8006CD98((s32)D_800DCF18, 0, 0x4, 0x35, 0x7800, 0x1, D_80182DE8);
+        D_80182DE8 -= 0x2;
+        if (D_80182DE8 < 0)
+        {
+            D_80182DE8 = 0;
+        }
+    }
+
+    PopMatrix();
+    if (--D_801B276C == 0)
+    {
+        D_801B2768 += 1;
+    }
 }
