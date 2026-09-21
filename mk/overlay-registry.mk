@@ -1533,6 +1533,8 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/wmap_pre_00C4.c \
 	src/overlays/wmap/wmap_pre_0CA4.c \
 	src/overlays/wmap/wmap_tail.c
+overlay_wmap_gcc_280_g0_o0_builtin_srcs := \
+	src/overlays/wmap/func_8005EB68.c
 
 OVERLAYS += wsel
 overlay_wsel_gcc_272_cdk_g0_srcs := \

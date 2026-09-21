@@ -28,6 +28,7 @@ INCLUDE_FLAGS := -Iinclude -Iinclude/sdk
 CFLAGS_G0 := -O2 -G0 -gcoff -fsigned-char -fno-builtin
 CFLAGS_G0_BUILTIN := -O2 -G0 -gcoff -fsigned-char
 CFLAGS_G0_O0 := -O0 -G0 -gcoff -fsigned-char -fno-builtin
+CFLAGS_G0_O0_BUILTIN := -O0 -G0 -gcoff -fsigned-char
 CFLAGS_G4 := -O2 -G4 -gcoff -fsigned-char
 
 # Alternate compiler and assembler flags.
