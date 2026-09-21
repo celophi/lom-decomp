@@ -9,7 +9,7 @@ typedef struct {
 } CardaPacket;
 
 extern s32 D_80122988;
-extern s32 D_8012299C;
+extern s32 g_field_card_overlay_mode;
 extern u16 D_8014B0D2;
 extern u8 D_80165B70[];
 extern CardaPacket D_80165F80;
@@ -50,13 +50,13 @@ s32 func_80146794(s32 prim, s32 *ot, s32 arg2, s32 arg3)
     if (D_80122988 & 0x40) {
         switch (D_80166078) {
         case 2:
-            D_8012299C = 6;
+            g_field_card_overlay_mode = 6;
             break;
         case 3:
-            D_8012299C = 7;
+            g_field_card_overlay_mode = 7;
             break;
         default:
-            D_8012299C = 3;
+            g_field_card_overlay_mode = 3;
             break;
         }
         func_800A3938(0x78, 0x80);

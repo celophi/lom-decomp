@@ -286,7 +286,7 @@ s32 niki_handle_input(void)
     status = g_pad_input;
     if (status & NIKI_CANCEL_INPUT_MASK)
     {
-        D_80122994 = 3;
+        g_field_niki_addhero_state = 3;
         func_800A3938(0x78, 0x80);
         niki_close_all_elements();
         return;
@@ -2235,7 +2235,7 @@ s32 niki_draw_state_page(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         NikiElement* element;
         s32 i;
         s32 word;
-        D_80122994 = 3;
+        g_field_niki_addhero_state = 3;
         func_800A3938(0x78, 0x80);
         func_80067F28();
         element = g_niki_element_pool;

@@ -1,3 +1,4 @@
+#include "field_modal_runtime.h"
 /**
  * @file field_input_text_session.c
  * @brief Controller repeat, saved names and inventory, and field actor labels.
@@ -237,7 +238,7 @@ extern s32 D_800F229C;
 extern s32 g_field_return_to_title_prompt_state;
 extern s32 D_8012291C;
 extern s32 D_80122980;
-extern u8 D_801227B8[2];
+extern u8 g_field_menu_controller_types[2];
 extern u8 D_801227B9;
 extern s32 g_pending_game_state;
 extern s32 g_field_draw_count;
@@ -255,11 +256,10 @@ void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
 void func_800A3938(s32 arg0, s32 arg1);
 void field_restore_fade_target(void);
 void field_refresh_party_routes(void);
-void func_800AA858(s32 arg0);
+
 
 s32 func_800B0850(void);
-void func_800AA570(void* arg0, s32 arg1);
-void func_800AA7A4(void);
+
 s32 func_8005B218(void);
 void func_800AEE28(void);
 void* func_800A88A0(SPRT* cursor, s32* ordering_table, u8* text, s32 color, s32 x, s32 y, s32 flags);
@@ -1206,7 +1206,7 @@ void field_process_input(s32 context)
     }
     if (g_field_text_session_active != 0)
     {
-        func_800AA858(context);
+        field_update_modal_text_session(context);
         return;
     }
     actor = g_field_actors;
@@ -1225,13 +1225,13 @@ void field_process_input(s32 context)
         if (field_text_get_status(0) == -1 && D_800F2298 == 0 && D_800F229C == 0 && g_field_return_to_title_prompt_state == 0 && D_80122714 == 0 &&
             func_800B0850() == 0)
         {
-            if (D_801227B8[0] != 0xFF && pad[0].device_type == 0xFF)
+            if (g_field_menu_controller_types[0] != 0xFF && pad[0].device_type == 0xFF)
             {
-                func_800AA570(FIELD_MODAL_WORK_BUFFER, 0);
+                field_run_menu(FIELD_MODAL_WORK_BUFFER, 0);
             }
             if (D_801227B9 != 0xFF && pad[1].device_type == 0xFF)
             {
-                func_800AA570(FIELD_MODAL_WORK_BUFFER, 1);
+                field_run_menu(FIELD_MODAL_WORK_BUFFER, 1);
             }
             if (cdrom_get_error_status() != 0)
             {
@@ -1240,11 +1240,11 @@ void field_process_input(s32 context)
                 pad[0].feedback[1] = 0;
                 pad[1].feedback[0] = 0;
                 pad[1].feedback[1] = 0;
-                func_800AA7A4();
+                field_begin_text_session();
                 return;
             }
-            D_801227B8[0] = pad[0].device_type;
-            D_801227B8[1] = pad[1].device_type;
+            g_field_menu_controller_types[0] = pad[0].device_type;
+            g_field_menu_controller_types[1] = pad[1].device_type;
             if (D_8012291C != 0)
             {
                 if (func_8005B218() == 0)
@@ -1252,7 +1252,7 @@ void field_process_input(s32 context)
                     if (g_pad_input == PADh ||
                         ((g_pad_ctx->inject_flags & FIELD_SECONDARY_INPUT_ENABLED) && g_pad_ctx->inject_enable && g_pad_input_inject == PADh))
                     {
-                        func_800AA570(FIELD_MODAL_WORK_BUFFER, 0);
+                        field_run_menu(FIELD_MODAL_WORK_BUFFER, 0);
                     }
                 }
             }
@@ -1262,7 +1262,7 @@ void field_process_input(s32 context)
                     ((g_pad_ctx->inject_flags & FIELD_SECONDARY_INPUT_ENABLED) && g_pad_ctx->inject_enable &&
                      (g_pad_input_inject == PADh || g_pad_input_inject == PADRup)))
                 {
-                    func_800AA570(FIELD_MODAL_WORK_BUFFER, 0);
+                    field_run_menu(FIELD_MODAL_WORK_BUFFER, 0);
                 }
             }
             field_play_low_hp_warning();

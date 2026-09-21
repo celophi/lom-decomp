@@ -44,7 +44,7 @@ extern u8* D_8012271C;
 extern s32 D_801227C4;
 extern s32 D_80122988;
 extern s32 g_menu_element_counter;
-extern s32 D_8012299C;
+extern s32 g_field_card_overlay_mode;
 extern s32 D_801229B0;
 
 extern u8 D_800EC3FA;
@@ -433,11 +433,11 @@ s32 func_80145050(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
                 }
                 (D_801227C4)++;
             }
-            D_8012299C = 5;
+            g_field_card_overlay_mode = 5;
             if (D_801227C4 == 5)
             {
                 s32* element;
-                D_8012299C = 7;
+                g_field_card_overlay_mode = 7;
                 g_menu_element_counter = 0x20;
                 element = &D_80165F80;
                 i = 0;
@@ -627,7 +627,7 @@ s32 func_80145050(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         prim = func_8014385C(prim, ot);
         if (D_80166118 == 0)
         {
-            D_8012299C = 4;
+            g_field_card_overlay_mode = 4;
             func_800A3938(0x7A, 0x80);
             if (D_801229B0 == 5)
             {

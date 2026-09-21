@@ -1,3 +1,4 @@
+#include "field_modal_runtime.h"
 #include "field_text.h"
 /** @file field_frame_commands.c
  * @brief Construct per-frame field command buffers.
@@ -35,7 +36,7 @@ void func_800A5794(s32);                               /* extern */
 void func_800A64D0(s32);                               /* extern */
 void field_update_input_repeat(u8);                                /* extern */
 void field_process_input(s32);                               /* extern */
-void func_800AB214(s32);                               /* extern */
+void field_update_modal(s32);                               /* extern */
 void func_800AD118(s32);                               /* extern */
 void func_800AF8E8(s32);                               /* extern */
 void func_800B0244(void);                                  /* extern */
@@ -113,7 +114,7 @@ void field_build_frame_commands(s32 arg0, s32 arg1)
     field_update_return_to_title_prompt(arg0);
     func_80096E60();
     func_800A64D0(arg0);
-    func_800AB214(arg0);
+    field_update_modal(arg0);
     func_800AD118(arg0);
     func_800A5794(arg0);
     func_800AF8E8(arg0);

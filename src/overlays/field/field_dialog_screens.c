@@ -1,3 +1,4 @@
+#include "field_modal_runtime.h"
 #include "field_ability_progression.h"
 #include "field_scene_transition.h"
 #include "cdrom.h"
@@ -234,7 +235,7 @@ extern void field_reset_input_repeat(void);
 extern s32 func_800ADEEC(void);
 extern void func_800ADF34(void);
 extern void func_800A3938(s32 sound_id, s32 pan);
-extern void func_800AA90C(s32);
+
 
 extern void field_begin_return_to_title_prompt_close(void);
 extern void func_8006809C(void);
@@ -311,7 +312,7 @@ void func_800A6F1C(void)
             state[0x91] = 0;
             state[0x140] = 0;
             state[0x92] = 0;
-            func_800AA90C(0);
+            field_rebuild_party_actions(0);
             field_set_scene_parameters(g_field_pending_scene_id, g_field_pending_object_id, g_field_pending_spawn_id, g_field_pending_music_id, g_field_pending_sound_bank_id,
                                        g_field_pending_secondary_music_id);
             actor_index = 0;
@@ -545,7 +546,7 @@ void func_800A74B8(void)
 {
     field_reset_input_repeat();
     func_800B0A08(0);
-    func_800AB774();
+    field_begin_duel_result();
 }
 
 /**
