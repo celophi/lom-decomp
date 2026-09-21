@@ -2,6 +2,7 @@
 #include "cdrom.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
 
 typedef struct
 {
@@ -365,7 +366,7 @@ void func_800C1680(void)
     position.vy = (D_801AFC70.field_08 * (csin(D_801AFC70.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFC70.field_0E;
     gte_ldv0(&position);
-    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    gte_rtps();
     draw_arg = display;
     __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
@@ -407,7 +408,7 @@ void func_800C17E0(void)
     position.vy = (D_801AFC84.field_08 * (csin(D_801AFC84.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFC84.field_0E;
     gte_ldv0(&position);
-    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    gte_rtps();
     draw_arg = display;
     __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
@@ -448,7 +449,7 @@ void func_800C1940(void)
     position.vy = (D_801AFC98.field_08 * (csin(D_801AFC98.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFC98.field_0E;
     gte_ldv0(&position);
-    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    gte_rtps();
     draw_arg = display;
     __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
@@ -489,7 +490,7 @@ void func_800C1AA0(void)
     position.vy = (D_801AFCE8.field_08 * (csin(D_801AFCE8.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFCE8.field_0E;
     gte_ldv0(&position);
-    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    gte_rtps();
     draw_arg = display;
     __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
@@ -530,7 +531,7 @@ void func_800C1C00(void)
     position.vy = (D_801AFCFC.field_08 * (csin(D_801AFCFC.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFCFC.field_0E;
     gte_ldv0(&position);
-    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    gte_rtps();
     draw_arg = display;
     __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
@@ -571,7 +572,7 @@ void func_800C1D60(void)
     position.vy = (D_801AFD10.field_08 * (csin(D_801AFD10.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFD10.field_0E;
     gte_ldv0(&position);
-    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    gte_rtps();
     draw_arg = display;
     __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
@@ -613,7 +614,7 @@ void func_800C1EC0(void)
     position.vy = (D_801AFD24.field_08 * (csin(D_801AFD24.field_02) >> 5)) >> 0xC;
     position.vz = D_801AFD24.field_0E;
     gte_ldv0(&position);
-    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    gte_rtps();
     draw_arg = display;
     __asm__ volatile("" : "+r"(draw_arg));
     screen_entry = D_80139988;
