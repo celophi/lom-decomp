@@ -52,5 +52,6 @@ segments:
       - [0x5BC1, c, func_80055830] # gcc280_g0, 100%
       - [0x5E85, c, func_80055AF4] # gcc280_g0, 100%
       - [0x5F41, asm, wmap_5F41]
+      - [0x74901, c, func_800C4570] # gcc280_g0, 100%
       - [0x74919, data, data]     # 0x800C4588: post-code packets/assets
   - [0x163669]
