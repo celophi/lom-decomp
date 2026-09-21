@@ -1,7 +1,36 @@
 #include "common.h"
 
-extern s32 D_801B2CD0;
+extern u32 D_801B2CD0;
 extern s32 D_801B2CD4;
+extern void (*D_800D672C[])(void);
+
+/**
+ * @brief Dispatch the current world-map sequence step, or reset it.
+ * @param arg0 Non-zero forces a reset of the step counters.
+ * @return 1 if a step ran or reset, 0 if the step index was out of range.
+ */
+s32 func_8009E250(s32 arg0)
+{
+    s32 result;
+
+    if (arg0 != 0)
+    {
+        D_801B2CD0 = 1;
+        D_801B2CD4 = 1;
+        return 1;
+    }
+
+    if (D_801B2CD0 < 0x4)
+    {
+        D_800D672C[D_801B2CD0]();
+        result = 1;
+    }
+    else
+    {
+        result = 0;
+    }
+    return result;
+}
 
 /**
  * @brief Set two adjacent world-map state flags.
