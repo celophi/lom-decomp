@@ -347,7 +347,8 @@ overlay_title_gcc_272_cdk_g0_srcs := \
 OVERLAYS += wmap
 overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_800551A8.c \
-	src/overlays/wmap/func_8005536C.c
+	src/overlays/wmap/func_8005536C.c \
+	src/overlays/wmap/func_8005556C.c
 
 OVERLAYS += wsel
 overlay_wsel_gcc_272_cdk_g0_srcs := \

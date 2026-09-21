@@ -48,6 +48,7 @@ segments:
       - [0x4DBD, asm, wmap]       # 0x80054A2C: first executable instructions
       - [0x5539, c, func_800551A8] # gcc280_g0, 100%
       - [0x56FD, c, func_8005536C] # gcc280_g0, 100%
-      - [0x58FD, asm, wmap_58FD]
+      - [0x58FD, c, func_8005556C] # gcc280_g0, 100%
+      - [0x5BC1, asm, wmap_5BC1]
       - [0x74919, data, data]     # 0x800C4588: post-code packets/assets
   - [0x163669]
