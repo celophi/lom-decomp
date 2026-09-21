@@ -11,3 +11,11 @@ void func_80091508(void)
     D_801B2AC0 = 1;
     D_801B2AC4 = 1;
 }
+
+/**
+ * @brief Increment a world-map state counter.
+ */
+void func_80091520(void)
+{
+    D_801B2AC0 += 1;
+}

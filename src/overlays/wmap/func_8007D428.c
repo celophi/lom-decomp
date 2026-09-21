@@ -55,6 +55,15 @@ extern s32 D_801B2760;
 extern s32 D_801B2764;
 
 extern void func_8007E510(void);
+extern s32 D_801B2738;
+
+/**
+ * @brief Increment a world-map state counter.
+ */
+void func_8007D410(void)
+{
+    D_801B2738 += 1;
+}
 
 /**
  * @brief Initialize world-map globals and four per-entry state records.
