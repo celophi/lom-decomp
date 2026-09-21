@@ -42,6 +42,7 @@ typedef struct
 
 typedef void (*WmapHandler)(void);
 
+extern s32 D_800DBE70;
 extern WmapHandler D_800D7B84[];
 extern WmapHandler D_800D7B94[];
 extern WmapHandler D_800D7BA4[];
@@ -103,6 +104,7 @@ extern WmapConfigB D_801AFCE8;
 extern WmapConfigB D_801AFCFC;
 extern WmapConfigB D_801AFD10;
 extern WmapConfigB D_801AFD24;
+extern s32 D_801ADAF4;
 extern VECTOR D_80182DC0;
 extern s32 D_80182DE8;
 extern s32 D_80182DEC;
@@ -146,6 +148,7 @@ extern s32 D_801B32D0;
 extern s32 D_801B32D4;
 
 extern void func_80066F9C(void*, s32, s32, s32, s32);
+extern void func_8006683C(s32);
 extern void func_8006CAC0(s32 (*callback)(s32));
 extern void func_8006CC4C(void*, void*);
 extern void func_800C1290(void);
@@ -165,8 +168,17 @@ extern void func_800C11A4(void);
 
 void func_800C4388(void);
 void func_800C451C(void);
+s32 func_800C410C(s32);
+s32 func_800C4260(s32);
+s32 func_800C3A68(s32);
+s32 func_800C3BBC(s32);
+s32 func_800C3D10(s32);
+s32 func_800C3E64(s32);
+s32 func_800C3FB8(s32);
+s32 func_800C3918(s32);
 s32 func_800C43F4(s32);
 s32 func_800C37BC(s32);
+s32 func_800C2CD0(s32);
 s32 func_800C2DF8(s32);
 void func_800C302C(void);
 void func_800C30F4(void);
@@ -174,6 +186,161 @@ void func_800C3298(void);
 void func_800C3360(void);
 void func_800C3504(void);
 void func_800C35CC(void);
+
+void func_800C2630(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2664(void)
+{
+    func_8006CAC0(func_800C2CD0);
+    D_800DBE70 = 0;
+    D_801ADAF4 = 3;
+    func_8006683C(0x801530);
+    D_801B3254 = 0x64;
+    D_801B3250++;
+}
+
+void func_800C26C0(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C26F4(void)
+{
+    func_8006CAC0(func_800C3918);
+    D_801B3254 = 0x64;
+    D_801B3250++;
+}
+
+void func_800C2730(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2764(void)
+{
+    func_8006CAC0(func_800C3A68);
+    D_801B3254 = 0x14;
+    D_801B3250++;
+}
+
+void func_800C27A0(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C27D4(void)
+{
+    func_8006CAC0(func_800C3BBC);
+    D_801B3254 = 0xF;
+    D_801B3250++;
+}
+
+void func_800C2810(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2844(void)
+{
+    func_8006CAC0(func_800C3D10);
+    D_801B3254 = 0xF;
+    D_801B3250++;
+}
+
+void func_800C2880(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C28B4(void)
+{
+    func_8006CAC0(func_800C3E64);
+    D_801B3254 = 0xA;
+    D_801B3250++;
+}
+
+void func_800C28F0(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2924(void)
+{
+    func_8006CAC0(func_800C3FB8);
+    D_801B3254 = 5;
+    D_801B3250++;
+}
+
+void func_800C2960(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2994(void)
+{
+    func_8006CAC0(func_800C410C);
+    D_801ADAF4 = 0;
+    D_801B3254 = 8;
+    D_801B3250++;
+}
+
+void func_800C29D8(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2A0C(void)
+{
+    func_8006CAC0(func_800C4260);
+    D_801B3254 = 0x90;
+    D_801B3250++;
+}
+
+void func_800C2A48(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2A7C(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
 
 void func_800C2AB0(void)
 {
