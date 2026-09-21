@@ -1551,6 +1551,7 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_800B0260.c \
 	src/overlays/wmap/func_800B30B0.c \
 	src/overlays/wmap/func_800B320C.c \
+	src/overlays/wmap/func_800BA9E4.c \
 	src/overlays/wmap/func_800BBDE4.c \
 	src/overlays/wmap/func_8007BD50.c \
 	src/overlays/wmap/func_8008B628.c \

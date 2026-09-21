@@ -1711,7 +1711,7 @@ segments:
       - [0x6A911, c, wmap_pre_00C4] # gcc280_g0, 100%
       - [0x6ABD5, asm, wmap_6ABD5]
       - [0x6ACA1, c, wmap_pre_00C4] # gcc280_g0, 100%
-      - [0x6AD75, asm, wmap_6AD75]
+      - [0x6AD75, c, func_800BA9E4] # gcc280_g0, 100%
       - [0x6AE41, c, wmap_pre_00C4] # gcc280_g0, 100%
       - [0x6C175, c, func_800BBDE4] # gcc280_g0, 100%
       - [0x6C22D, c, wmap_pre_00C4] # gcc280_g0, 100%

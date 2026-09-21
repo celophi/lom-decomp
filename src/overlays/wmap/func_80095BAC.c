@@ -34,43 +34,43 @@ typedef struct
 } WmapAfcEntry;
 
 extern WmapD94Entry D_800D9268[];
-extern s32 D_8011D538[];
+extern s32 D_80121538[];
 extern WmapPair D_80139988[];
 extern WmapAfcEntry D_801AFBD0[];
 extern s32 D_800D9150;
 extern s32 D_800DCEA8;
-extern s32 D_801B25D8;
-extern s32 D_801B2778;
-extern s32 D_801B277C;
+extern s32 D_80182DF0;
+extern s32 D_801B2BC0;
+extern s32 D_801B2BC4;
 
-extern void func_8007E9C4(void);
+extern void func_80096DC8(void);
 
 /**
  * @brief Initialize a range of world-map per-entry records and schedule the next step.
  */
-void func_8007DB50(void)
+void func_80095BAC(void)
 {
     s32 i;
     WmapD94Entry *entry;
 
-    i = 100;
-    D_801B25D8 = 1;
+    i = 150;
+    D_80182DF0 = 1;
     D_800DCEA8 = 1;
 
     do
     {
         D_801AFBD0[i].unk0 = 0;
-        D_80139988[i].unk4 = D_8011D538;
+        D_80139988[i].unk4 = D_80121538;
         entry = &D_800D9268[i];
         entry->unk2 = 0;
         entry->unk6 = 0xF;
-        entry->unkE = 2;
+        entry->unkE = 1;
         entry->unk10 = -1;
         i++;
-    } while (i < 200);
+    } while (i < 158);
 
-    D_800D9150 = 2;
-    D_801B277C = 0x10;
-    D_801B2778 += 1;
-    func_8007E9C4();
+    D_800D9150 = 3;
+    D_801B2BC4 = 0x10;
+    D_801B2BC0 += 1;
+    func_80096DC8();
 }
