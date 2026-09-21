@@ -3,6 +3,8 @@
 extern u32 D_801B2448;
 extern s32 D_801B244C;
 extern void (*D_800D4D7C[])(void);
+extern void func_800701DC(void);
+extern s32 D_801B248C;
 
 /**
  * @brief Dispatch the current world-map sequence step, seeding it first if requested.
@@ -38,4 +40,15 @@ void func_80070184(void)
 {
     D_801B2448 = 1;
     D_801B244C = 1;
+}
+
+/**
+ * @brief Clear the sub-flag, set the sequence parameter, advance the counter, and run the handler.
+ */
+void func_8007019C(void)
+{
+    D_801B248C = 0;
+    D_801B244C = 0x3D;
+    D_801B2448 += 1;
+    func_800701DC();
 }

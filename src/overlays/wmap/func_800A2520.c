@@ -3,6 +3,8 @@
 extern u32 D_801B2D88;
 extern s32 D_801B2D8C;
 extern void (*D_800D69BC[])(void);
+extern void func_800A0B38(void);
+extern s32 D_80139268;
 
 /**
  * @brief Dispatch the current world-map sequence step, or reset it.
@@ -39,4 +41,15 @@ void func_800A2520(void)
 {
     D_801B2D88 = 1;
     D_801B2D8C = 1;
+}
+
+/**
+ * @brief Clear the sub-flag, set the sequence parameter, advance the counter, and run the handler.
+ */
+void func_800A2538(void)
+{
+    D_80139268 = 0;
+    D_801B2D8C = 0xFA;
+    D_801B2D88 += 1;
+    func_800A0B38();
 }
