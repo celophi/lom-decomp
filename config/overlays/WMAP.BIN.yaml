@@ -78,6 +78,8 @@ segments:
       - [0x1D749, asm, wmap_1D749]
       - [0x1D775, c, func_8006D3E4] # gcc280_g0, 100%
       - [0x1D7B1, asm, wmap_1D7B1]
+      - [0x1D841, c, func_8006D4B0] # gcc280_g0, 100%
+      - [0x1D881, asm, wmap_1D881]
       - [0x1F2B1, c, func_8006EF90] # gcc280_g0, 100%
       - [0x1F339, asm, wmap_1F339]
       - [0x1F3E5, c, func_8006F054] # gcc280_g0, 100%

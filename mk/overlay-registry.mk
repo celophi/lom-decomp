@@ -370,6 +370,7 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_8006D310.c \
 	src/overlays/wmap/func_8006D3A0.c \
 	src/overlays/wmap/func_8006D3E4.c \
+	src/overlays/wmap/func_8006D4B0.c \
 	src/overlays/wmap/func_8006EF90.c \
 	src/overlays/wmap/func_8006F054.c \
 	src/overlays/wmap/func_8006F0E4.c \
