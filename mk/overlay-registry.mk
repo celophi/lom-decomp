@@ -346,6 +346,36 @@ overlay_title_gcc_272_cdk_g0_srcs := \
 
 OVERLAYS += wmap
 overlay_wmap_gcc_280_g0_srcs := \
+	src/overlays/wmap/func_8006CBD8.c \
+	src/overlays/wmap/func_800734B8.c \
+	src/overlays/wmap/func_80078CB4.c \
+	src/overlays/wmap/func_80099058.c \
+	src/overlays/wmap/func_800A3FA0.c \
+	src/overlays/wmap/func_800AEDEC.c \
+	src/overlays/wmap/func_80058FF4.c \
+	src/overlays/wmap/func_8007AF6C.c \
+	src/overlays/wmap/func_80098EB8.c \
+	src/overlays/wmap/func_8009A854.c \
+	src/overlays/wmap/func_8009ABF0.c \
+	src/overlays/wmap/func_8005D7A0.c \
+	src/overlays/wmap/func_8006F0FC.c \
+	src/overlays/wmap/func_8007421C.c \
+	src/overlays/wmap/func_80078DF0.c \
+	src/overlays/wmap/func_800915C8.c \
+	src/overlays/wmap/func_8009E43C.c \
+	src/overlays/wmap/func_8006EFA8.c \
+	src/overlays/wmap/func_800ABA8C.c \
+	src/overlays/wmap/func_8006CB60.c \
+	src/overlays/wmap/func_8007C180.c \
+	src/overlays/wmap/func_8008C684.c \
+	src/overlays/wmap/func_8006CF40.c \
+	src/overlays/wmap/func_8007C0E0.c \
+	src/overlays/wmap/func_80094250.c \
+	src/overlays/wmap/func_800A1B80.c \
+	src/overlays/wmap/func_8007166C.c \
+	src/overlays/wmap/func_80081DD8.c \
+	src/overlays/wmap/func_80086C20.c \
+	src/overlays/wmap/func_8008D7D8.c \
 	src/overlays/wmap/func_800A79E4.c \
 	src/overlays/wmap/func_8006D0F0.c \
 	src/overlays/wmap/func_8006FC80.c \
