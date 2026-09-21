@@ -1,4 +1,5 @@
 #include "common.h"
+#include "sdk/libgte.h"
 
 typedef struct
 {
@@ -41,6 +42,10 @@ typedef struct
 
 typedef void (*WmapHandler)(void);
 
+extern WmapHandler D_800D7B84[];
+extern WmapHandler D_800D7B94[];
+extern WmapHandler D_800D7BA4[];
+extern WmapHandler D_800D7BBC[];
 extern WmapHandler D_800D7BD4[];
 extern WmapHandler D_800D7BEC[];
 extern WmapHandler D_800D7C04[];
@@ -53,6 +58,7 @@ extern WmapHandler D_800D7C6C[];
 extern WmapHandler D_800D7C7C[];
 extern WmapHandler D_800D7C8C[];
 extern WmapHandler D_800D7CA4[];
+extern WmapConfigA D_800D9344;
 extern WmapConfigA D_800D9370;
 extern WmapConfigA D_800D939C;
 extern WmapConfigA D_800D93C8;
@@ -63,22 +69,31 @@ extern WmapConfigA D_800D94FC;
 extern WmapConfigA D_800D9528;
 extern WmapConfigA D_800D9554;
 extern s32 D_8011CF4C;
+extern s32 D_8011D500;
 extern u8 D_8011D538;
 extern u8 D_8011F538;
+extern u8 D_80121538;
+extern s32 D_80139244;
 extern s32 D_8013923C;
 extern WmapPair D_80139258;
 extern s32 D_80139260;
 extern WmapState* D_80139280;
+extern s32 D_8013986C;
+extern u8 D_801399B0;
+extern void* D_801399B4;
 extern u8 D_801399B8;
+extern void* D_801399BC;
 extern u8 D_801399C0;
 extern void* D_801399C4;
 extern void* D_801399CC;
 extern void* D_801399D4;
 extern void* D_801399DC;
 extern void* D_801399FC;
+extern s32 D_80139978;
 extern void* D_80139A04;
 extern void* D_80139A0C;
 extern void* D_80139A14;
+extern s32 D_8013B20C;
 extern WmapPair D_8013B238;
 extern WmapPair D_8013B240;
 extern WmapConfigB D_801AFC70;
@@ -88,8 +103,21 @@ extern WmapConfigB D_801AFCE8;
 extern WmapConfigB D_801AFCFC;
 extern WmapConfigB D_801AFD10;
 extern WmapConfigB D_801AFD24;
+extern VECTOR D_80182DC0;
+extern s32 D_80182DE8;
+extern s32 D_80182DEC;
 extern s32 D_80182DF0;
 extern s32 D_80182DF4;
+extern VECTOR D_801B2478;
+extern VECTOR D_801B2650;
+extern s32 D_801B3250;
+extern s32 D_801B3254;
+extern s32 D_801B3258;
+extern s32 D_801B325C;
+extern s32 D_801B3260;
+extern s32 D_801B3264;
+extern s32 D_801B3268;
+extern s32 D_801B326C;
 extern s32 D_801B3270;
 extern s32 D_801B3274;
 extern s32 D_801B3278;
@@ -118,6 +146,7 @@ extern s32 D_801B32D0;
 extern s32 D_801B32D4;
 
 extern void func_80066F9C(void*, s32, s32, s32, s32);
+extern void func_8006CAC0(s32 (*callback)(s32));
 extern void func_8006CC4C(void*, void*);
 extern void func_800C1290(void);
 extern void func_800C1390(void);
@@ -131,11 +160,308 @@ extern void func_800C1C00(void);
 extern void func_800C1D60(void);
 extern void func_800C1EC0(void);
 extern void func_800C0CA4(void*);
+extern void func_800C10B8(void);
+extern void func_800C11A4(void);
 
 void func_800C4388(void);
 void func_800C451C(void);
+s32 func_800C43F4(s32);
+s32 func_800C37BC(s32);
+s32 func_800C2DF8(s32);
+void func_800C302C(void);
+void func_800C30F4(void);
+void func_800C3298(void);
+void func_800C3360(void);
 void func_800C3504(void);
 void func_800C35CC(void);
+
+void func_800C2AB0(void)
+{
+    func_8006CAC0(func_800C2DF8);
+    D_80139244 = 1;
+    D_80139978 = -1;
+    D_8013986C = -1;
+    D_801B3254 = 2;
+    D_801B3250++;
+}
+
+void func_800C2B0C(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2B40(void)
+{
+    func_8006CAC0(func_800C43F4);
+    D_801B3254 = 0xD;
+    D_801B3250++;
+}
+
+void func_800C2B7C(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2BB0(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2BE4(void)
+{
+    func_8006CAC0(func_800C37BC);
+    D_801B3254 = 0x7C;
+    D_801B3250++;
+}
+
+void func_800C2C20(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2C54(void)
+{
+    D_8011D500 = 0xFE;
+    D_801B3254 = 0x80;
+    D_801B3250++;
+}
+
+void func_800C2C80(void)
+{
+    if (--D_801B3254 == 0)
+    {
+        D_801B3250++;
+    }
+}
+
+void func_800C2CB4(void)
+{
+    D_8013B20C = 0;
+    D_801B3250++;
+}
+
+s32 func_800C2CD0(s32 reset)
+{
+    if (reset != 0)
+    {
+        D_801B3258 = 1;
+        D_801B325C = 1;
+        return 1;
+    }
+
+    if ((u32)D_801B3258 >= 4)
+    {
+        return 0;
+    }
+
+    D_800D7B84[D_801B3258]();
+    return 1;
+}
+
+void func_800C2D48(void)
+{
+    D_801B3258 = 1;
+    D_801B325C = 1;
+}
+
+void func_800C2D60(void)
+{
+    D_801B2650 = D_80182DC0;
+    D_80182DE8 = 0x80;
+    D_801B2650.vz = 0xAFC8;
+    D_801B325C = 0x20;
+    D_801B3258++;
+    func_800C10B8();
+}
+
+void func_800C2DE0(void)
+{
+    D_801B3258++;
+}
+
+s32 func_800C2DF8(s32 reset)
+{
+    if (reset != 0)
+    {
+        D_801B3260 = 1;
+        D_801B3264 = 1;
+        return 1;
+    }
+
+    if ((u32)D_801B3260 >= 4)
+    {
+        return 0;
+    }
+
+    D_800D7B94[D_801B3260]();
+    return 1;
+}
+
+void func_800C2E70(void)
+{
+    D_801B3260 = 1;
+    D_801B3264 = 1;
+}
+
+void func_800C2E88(void)
+{
+    D_801B2478 = D_80182DC0;
+    D_80182DEC = 0x80;
+    D_801B2478.vz = 0xAFC8;
+    D_801B3264 = 0x80;
+    D_801B3260++;
+    func_800C11A4();
+}
+
+void func_800C2F04(void)
+{
+    D_801B3260++;
+}
+
+s32 func_800C2F1C(s32 reset)
+{
+    if (reset != 0)
+    {
+        D_801B3268 = 1;
+        D_801B326C = 1;
+        return 1;
+    }
+
+    if ((u32)D_801B3268 >= 6)
+    {
+        return 0;
+    }
+
+    D_800D7BA4[D_801B3268]();
+    return 1;
+}
+
+void func_800C2F94(void)
+{
+    D_801B3268 = 1;
+    D_801B326C = 1;
+}
+
+void func_800C2FAC(void)
+{
+    D_801399B4 = &D_80121538;
+    D_800D9344.field_06 = 0xF;
+    D_800D9344.field_10 = -1;
+    D_800D9344.field_26 = 2;
+    D_800D9344.field_22 = 0x81;
+    D_800D9344.field_02 = 0;
+    D_800D9344.field_0E = 0;
+    D_800D9344.field_24 = 1;
+    D_801B326C = 0x1F6;
+    D_801B3268++;
+    func_800C302C();
+}
+
+void func_800C302C(void)
+{
+    func_8006CC4C(&D_800D9344, &D_801399B0);
+    func_80066F9C(&D_800D9344, D_8011CF4C, 8, 2, 0);
+    if (--D_801B326C == 0)
+    {
+        D_801B3268++;
+    }
+}
+
+void func_800C30A8(void)
+{
+    D_800D9344.field_26 = 8;
+    D_800D9344.field_22 = 0;
+    D_801B326C = 0x10;
+    D_801B3268++;
+    func_800C30F4();
+}
+
+void func_800C30F4(void)
+{
+    func_8006CC4C(&D_800D9344, &D_801399B0);
+    func_80066F9C(&D_800D9344, D_8011CF4C, 8, 2, 0);
+    if (--D_801B326C == 0)
+    {
+        D_801B3268++;
+    }
+}
+
+void func_800C3170(void)
+{
+    D_801B3268++;
+}
+
+s32 func_800C3188(s32 reset)
+{
+    if (reset != 0)
+    {
+        D_801B3270 = 1;
+        D_801B3274 = 1;
+        return 1;
+    }
+
+    if ((u32)D_801B3270 >= 6)
+    {
+        return 0;
+    }
+
+    D_800D7BBC[D_801B3270]();
+    return 1;
+}
+
+void func_800C3200(void)
+{
+    D_801B3270 = 1;
+    D_801B3274 = 1;
+}
+
+void func_800C3218(void)
+{
+    s32 value;
+
+    D_801399BC = &D_8011F538;
+    D_800D9370.field_06 = 0xF;
+    D_800D9370.field_0E = value = 1;
+    D_800D9370.field_10 = -value;
+    D_800D9370.field_26 = 0x80;
+    D_800D9370.field_24 = value;
+    D_800D9370.field_02 = 0;
+    D_800D9370.field_22 = 0x81;
+    D_801B3274 = 0x118;
+    D_801B3270++;
+    func_800C3298();
+}
+
+void func_800C3298(void)
+{
+    func_8006CC4C(&D_800D9370, &D_801399B8);
+    func_80066F9C(&D_800D9370, D_8011CF4C, 0x19, 7, 0);
+    if (--D_801B3274 == 0)
+    {
+        D_801B3270++;
+    }
+}
+
+void func_800C3314(void)
+{
+    D_800D9370.field_26 = 0x80;
+    D_800D9370.field_22 = 0;
+    D_801B3274 = 1;
+    D_801B3270++;
+    func_800C3360();
+}
 
 /**
  * @see decomp.me (100%)
