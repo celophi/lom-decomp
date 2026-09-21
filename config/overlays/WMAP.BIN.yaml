@@ -45,6 +45,12 @@ segments:
     vram: 0x8004FC70
     subsegments:
       - [0x1, rodata, wmap] # 0x8004FC70: header and pre-code tables
+      - [0x1839, .rodata, func_8005A318] # compiler-generated switch table
+      - [0x1851, rodata, wmap_1851]
+      - [0x1E69, .rodata, func_800623CC] # compiler-generated switch table
+      - [0x1EDD, rodata, wmap_1EDD]
+      - [0x4CFD, .rodata, func_800675F0] # compiler-generated switch table
+      - [0x4D75, rodata, wmap_4D75]
       - [0x4DBD, c, func_80054A2C] # gcc280_g0, 100%
       - [0x5539, c, func_800551A8] # gcc280_g0, 100%
       - [0x56FD, c, func_8005536C] # gcc280_g0, 100%
@@ -64,6 +70,9 @@ segments:
       - [0x8631, asm, wmap_8631]
       - [0x8821, c, func_80058490] # gcc280_g0, 100%
       - [0x8829, asm, wmap_8829]
+      - [0x9869, c, func_800594D8] # gcc280_g0, WIP 99.938520%
+      - [0xA009, asm, wmap_A009]
+      - [0xA6A9, c, func_8005A318] # gcc280_g0, WIP 90.633390%
       - [0xB8D1, c, func_8005B540] # gcc280_g0, 100%
       - [0xB8D9, asm, wmap_B8D9]
       - [0xD7FD, c, func_8005D46C] # gcc280_g0, 100%
@@ -74,6 +83,8 @@ segments:
       - [0xD825, asm, wmap_D825]
       - [0xDF49, c, wmap_pathfinding] # gcc280_g0_o0_builtin, 100%
       - [0xFD4D, asm, wmap_FD4D]
+      - [0x1275D, c, func_800623CC] # gcc280_g0, WIP 91.866320%
+      - [0x13F71, asm, wmap_13F71]
       - [0x146BD, c, func_8006432C] # gcc280_g0, 100%
       - [0x148DD, asm, wmap_148DD]
       - [0x152A5, c, func_80064F14] # gcc280_g0, 100%
@@ -82,6 +93,8 @@ segments:
       - [0x152F5, asm, wmap_152F5]
       - [0x157DD, c, func_800654BC] # gcc280_g0, 100%
       - [0x1587D, asm, wmap_1587D]
+      - [0x17981, c, func_800675F0] # gcc280_g0, WIP 97.330210%
+      - [0x1A68D, asm, wmap_1A68D]
       - [0x1CBAD, c, func_8006C894] # gcc280_g0, 100%
       - [0x1CC71, asm, wmap_1CC71]
       - [0x1CCC1, c, func_8006C930] # gcc280_g0, 100%

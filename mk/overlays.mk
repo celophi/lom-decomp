@@ -130,6 +130,17 @@ $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 $(1)_DATA_ASM  := $$(call rwildcard,$$($(1)_ASM_DIR)/data,*.s)
 $(1)_DATA_OBJS := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o,$$($(1)_DATA_ASM))
 
+# Splat's dependency file identifies the standalone assembly segments still
+# used by the linker. Do not glob all assembly: old splits remain on disk.
+$(1)_LINK_ASM_OBJS := $$(addprefix $(STAGING)/,$$(sort $$(filter-out $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/data/%,\
+	$$(filter $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o,$$(file <$$($(1)_LINK_DIR)/$(1).d)))))
+
+$$($(1)_LINK_ASM_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
+	@mkdir -p $$(@D)
+	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
+		$(MASPSX) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) $$(overlay_$(1)_target_as_extra_flags_$$*) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o
+
 $$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
@@ -193,7 +204,7 @@ endif
 # Rule: link the overlay ELF
 # Track every object and linker script consumed by the link command.
 # The standalone asset object is included only when asset_src is configured.
-$$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $$($(1)_LINKER_SCRIPTS) | $(1)-validate validate-assets
+$$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$($(1)_LINK_ASM_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $$($(1)_LINKER_SCRIPTS) | $(1)-validate validate-assets
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(LD) -o $$($(1)_BUILD_DIR)/$(1).elf \
 		-T $$($(1)_LINK_DIR)/$(1).ld \
