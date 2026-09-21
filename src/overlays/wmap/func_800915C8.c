@@ -7,7 +7,7 @@ extern s32 D_80139280;
 extern s32 D_801B2AC8;
 extern s32 D_801B2ACC;
 
-/** @brief Draw the effect, play sound 37, and update the sequence countdown. */
+/** @brief Draw the effect, select texture page 37, and update the sequence countdown. */
 void func_800915C8(void)
 {
     s32 value;
