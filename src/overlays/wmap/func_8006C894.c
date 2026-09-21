@@ -40,3 +40,14 @@ void func_8006C894(void)
     D_801B1098 = 1;
     D_801B109C = 1;
 }
+
+/**
+ * @brief Tick the sequence wait timer; advance the step counter when it expires.
+ */
+void func_8006C8AC(void)
+{
+    if (--D_801B109C == 0)
+    {
+        D_801B1098 += 1;
+    }
+}

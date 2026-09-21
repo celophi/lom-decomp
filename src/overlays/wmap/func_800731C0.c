@@ -1,0 +1,15 @@
+#include "common.h"
+
+extern s32 D_801B2514;
+extern s32 D_801B2510;
+
+/**
+ * @brief Tick the sequence wait timer; advance the step counter when it expires.
+ */
+void func_800731C0(void)
+{
+    if (--D_801B2514 == 0)
+    {
+        D_801B2510 += 1;
+    }
+}
