@@ -354,11 +354,16 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_80055AF4.c \
 	src/overlays/wmap/func_80055BB0.c \
 	src/overlays/wmap/func_80055E5C.c \
+	src/overlays/wmap/func_800561F8.c \
 	src/overlays/wmap/func_80056824.c \
 	src/overlays/wmap/func_80056C30.c \
 	src/overlays/wmap/func_800571A4.c \
 	src/overlays/wmap/func_80057274.c \
 	src/overlays/wmap/func_800574D0.c \
+	src/overlays/wmap/func_8006432C.c \
+	src/overlays/wmap/func_8007D428.c \
+	src/overlays/wmap/wmap_pre_00C4.c \
+	src/overlays/wmap/wmap_pre_0CA4.c \
 	src/overlays/wmap/wmap_tail.c
 
 OVERLAYS += wsel

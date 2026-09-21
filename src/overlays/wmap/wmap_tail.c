@@ -1,18 +1,35 @@
 #include "common.h"
 #include "cdrom.h"
 #include "sdk/libgte.h"
+#include "sdk/inline_c.h"
 
 typedef struct
 {
-    u8 pad00[0x24];
+    s32 field_00;
+    s32 field_04;
+    s32 field_08;
+    s32 field_0C;
+    s32 field_10;
+    s32 field_14;
+    s32 field_18;
+    s32 field_1C;
+    s32 field_20;
     s32 state_24;
-    u8 pad28[0x24];
+    s32 field_28;
+    s32 field_2C;
+    s32 field_30;
+    s32 field_34;
+    s32 field_38;
+    s32 field_3C;
+    s32 field_40;
+    s32 field_44;
+    s32 field_48;
     s32 tail_state;
 } WmapState;
 
 typedef struct
 {
-    u8 pad00[2];
+    s16 field_00;
     s16 field_02;
     u8 pad04[2];
     u8 field_06;
@@ -23,23 +40,38 @@ typedef struct
     s16 field_22;
     s16 field_24;
     s16 field_26;
+    u8 pad28[4];
 } WmapConfigA;
 
 typedef struct
 {
-    u8 pad00[2];
+    s16 field_00;
     s16 field_02;
     s32 field_04;
     s32 field_08;
     s16 field_0C;
     s16 field_0E;
+    u8 pad10[4];
 } WmapConfigB;
+
+typedef struct
+{
+    s32 field_00;
+    void* field_04;
+} WmapPointerPair;
 
 typedef struct
 {
     s32 field_00;
     s32 field_04;
 } __attribute__((packed)) WmapPair;
+
+typedef struct
+{
+    s32 field_00;
+    u16 field_04;
+    u16 pad06;
+} WmapPair16;
 
 typedef struct
 {
@@ -69,6 +101,8 @@ extern WmapHandler D_800D7C7C[];
 extern WmapHandler D_800D7C8C[];
 extern WmapHandler D_800D7CA4[];
 extern WmapHandler D_800D7AEC[];
+extern WmapHandler D_800D7ADC[];
+extern WmapConfigA D_800D9268[];
 extern WmapConfigA D_800D9344;
 extern WmapConfigA D_800D9370;
 extern WmapConfigA D_800D939C;
@@ -81,6 +115,8 @@ extern WmapConfigA D_800D9528;
 extern WmapConfigA D_800D9554;
 extern s32 D_8011CF4C;
 extern s32 D_8011D500;
+extern s32 D_8011CF24;
+extern s32 D_8011CF28;
 extern u8 D_8011D538;
 extern u8 D_8011F538;
 extern u8 D_80121538;
@@ -93,6 +129,7 @@ extern WmapState* D_80139280;
 extern s32 D_8013986C;
 extern s32 D_801398D0;
 extern WmapAlignedPair D_80139950;
+extern u8 D_80139988[];
 extern u8 D_801399B0;
 extern void* D_801399B4;
 extern u8 D_801399B8;
@@ -119,6 +156,7 @@ extern WmapConfigB D_801AFCE8;
 extern WmapConfigB D_801AFCFC;
 extern WmapConfigB D_801AFD10;
 extern WmapConfigB D_801AFD24;
+extern WmapConfigB D_801AFBD0[];
 extern s32 D_801ADAE0;
 extern s32 D_801ADAF4;
 extern VECTOR D_80182DC0;
@@ -134,6 +172,7 @@ extern u8 D_80193640;
 extern VECTOR D_801B2478;
 extern VECTOR D_801B2650;
 extern s32 D_801B3248;
+extern s32 D_801B324C;
 extern s32 D_801B3250;
 extern s32 D_801B3254;
 extern s32 D_801B3258;
@@ -178,6 +217,8 @@ extern void func_8006D0F0(s32, s32*, s32*);
 extern void func_8006D190(void);
 extern void func_800A89DC(s32);
 extern void func_8006CC4C(void*, void*);
+extern void func_8006CFA8(void*, void*);
+extern void func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 extern void func_800C1290(void);
 extern void func_800C1390(void);
 extern void func_800C1488(void);
@@ -188,12 +229,13 @@ extern void func_800C1940(void);
 extern void func_800C1AA0(void);
 extern void func_800C1C00(void);
 extern void func_800C1D60(void);
-extern void func_800C1EC0(void);
 extern void func_800C0CA4(void*);
 extern void func_800C10B8(void);
 extern void func_800C11A4(void);
 
 void func_800C4388(void);
+void func_800C42F0(void);
+void func_800C4484(void);
 void func_800C451C(void);
 s32 func_800C410C(s32);
 s32 func_800C4260(s32);
@@ -219,6 +261,504 @@ void func_800C2548(void);
 void func_800C2588(void);
 void func_800C2390(void);
 void func_800C23CC(void);
+
+void func_800C1290(void)
+{
+    s32 value;
+
+    PushMatrix();
+    func_8006CFA8(&D_80182DC0, &D_8013B238);
+    func_800675F0(D_8011CF24, (D_8013923C >> 4) & 3, 0xA, 0x35,
+                  0x7800, 0x1001, D_80182DF0, 0, 0, -1);
+    value = D_80182DF0 + 2;
+    D_80182DF0 = value;
+    if (value >= 0x82)
+    {
+        D_80182DF0 = 0x81;
+    }
+    D_8013923C += 8;
+    ((WmapPair16*)&D_8013B238)->field_04 += 0xA;
+    PopMatrix();
+    if (--D_801B3284 == 0)
+    {
+        D_801B3280++;
+    }
+}
+
+void func_800C1390(void)
+{
+    s32 value;
+
+    PushMatrix();
+    func_8006CFA8(&D_80182DC0, &D_8013B238);
+    func_800675F0(D_8011CF24, (D_8013923C >> 4) & 3, 0xA, 0x35,
+                  0x7800, 0x1001, D_80182DF0, 0, 0, -1);
+    value = D_80182DF0 - 4;
+    D_80182DF0 = value;
+    if (value < 0)
+    {
+        D_80182DF0 = 0;
+    }
+    D_8013923C += 8;
+    ((WmapPair16*)&D_8013B238)->field_04 += 0xA;
+    PopMatrix();
+    if (--D_801B3284 == 0)
+    {
+        D_801B3280++;
+    }
+}
+
+void func_800C1488(void)
+{
+    s32 value;
+
+    PushMatrix();
+    func_8006CFA8(&D_80182DC0, &D_8013B240);
+    func_800675F0(D_8011CF28, (D_80139260 >> 4) & 7, 0xA, 0x36,
+                  0x7880, 0x1001, D_80182DF4, 0, 0, -1);
+    value = D_80182DF4 + 2;
+    D_80182DF4 = value;
+    if (value >= 0x62)
+    {
+        D_80182DF4 = 0x61;
+    }
+    D_80139260 -= 0x10;
+    ((WmapPair16*)&D_8013B240)->field_04 += 4;
+    PopMatrix();
+    if (--D_801B328C == 0)
+    {
+        D_801B3288++;
+    }
+}
+
+void func_800C1588(void)
+{
+    s32 value;
+
+    PushMatrix();
+    func_8006CFA8(&D_80182DC0, &D_8013B240);
+    func_800675F0(D_8011CF28, (D_80139260 >> 4) & 7, 0xA, 0x36,
+                  0x7880, 0x1001, D_80182DF4, 0, 0, -1);
+    value = D_80182DF4 - 8;
+    D_80182DF4 = value;
+    if (value < 0)
+    {
+        D_80182DF4 = 0;
+    }
+    D_80139260 -= 0x10;
+    ((WmapPair16*)&D_8013B240)->field_04 += 4;
+    PopMatrix();
+    if (--D_801B328C == 0)
+    {
+        D_801B3288++;
+    }
+}
+
+void func_800C1680(void)
+{
+    SVECTOR position;
+    s32 screen_position;
+    WmapConfigA* display = &D_800D93C8;
+    register WmapConfigA* draw_arg __asm__("$4");
+    u8* screen_entry;
+    position.vx = (D_801AFC70.field_08 * (ccos(D_801AFC70.field_02) >> 5)) >> 0xC;
+    position.vy = (D_801AFC70.field_08 * (csin(D_801AFC70.field_02) >> 5)) >> 0xC;
+    position.vz = D_801AFC70.field_0E;
+    gte_ldv0(&position);
+    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
+    screen_entry = D_80139988;
+    screen_entry += 0x40;
+    func_8006CC4C(draw_arg, screen_entry);
+    gte_stsxy(&screen_position);
+    func_80066F9C(display, screen_position, 0x16, 8, 0);
+    if (D_801AFC70.field_0C != 0)
+    {
+        D_801AFC70.field_0C--;
+    }
+    else if (D_801AFC70.field_08 >= 0x579)
+    {
+        D_801AFC70.field_08 -= D_801AFC70.field_04;
+    }
+    else if (display->field_24 >= 5)
+    {
+        display->field_22 = 0;
+    }
+    else
+    {
+        D_801AFC70.field_00 = 0;
+    }
+    if (--D_801B3294 == 0)
+    {
+        D_801B3290++;
+    }
+}
+
+
+void func_800C17E0(void)
+{
+    SVECTOR position;
+    s32 screen_position;
+    WmapConfigA* display = &D_800D93F4;
+    register WmapConfigA* draw_arg __asm__("$4");
+    u8* screen_entry;
+    position.vx = (D_801AFC84.field_08 * (ccos(D_801AFC84.field_02) >> 5)) >> 0xC;
+    position.vy = (D_801AFC84.field_08 * (csin(D_801AFC84.field_02) >> 5)) >> 0xC;
+    position.vz = D_801AFC84.field_0E;
+    gte_ldv0(&position);
+    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
+    screen_entry = D_80139988;
+    screen_entry += 0x48;
+    func_8006CC4C(draw_arg, screen_entry);
+    gte_stsxy(&screen_position);
+    func_80066F9C(display, screen_position, 0x16, 8, 0);
+    if (D_801AFC84.field_0C != 0)
+    {
+        D_801AFC84.field_0C--;
+    }
+    else if (D_801AFC84.field_08 >= 0x579)
+    {
+        D_801AFC84.field_08 -= D_801AFC84.field_04;
+    }
+    else if (display->field_24 >= 5)
+    {
+        display->field_22 = 0;
+    }
+    else
+    {
+        D_801AFC84.field_00 = 0;
+    }
+    if (--D_801B329C == 0)
+    {
+        D_801B3298++;
+    }
+}
+
+void func_800C1940(void)
+{
+    SVECTOR position;
+    s32 screen_position;
+    WmapConfigA* display = &D_800D9420;
+    register WmapConfigA* draw_arg __asm__("$4");
+    u8* screen_entry;
+    position.vx = (D_801AFC98.field_08 * (ccos(D_801AFC98.field_02) >> 5)) >> 0xC;
+    position.vy = (D_801AFC98.field_08 * (csin(D_801AFC98.field_02) >> 5)) >> 0xC;
+    position.vz = D_801AFC98.field_0E;
+    gte_ldv0(&position);
+    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
+    screen_entry = D_80139988;
+    screen_entry += 0x50;
+    func_8006CC4C(draw_arg, screen_entry);
+    gte_stsxy(&screen_position);
+    func_80066F9C(display, screen_position, 0x16, 8, 0);
+    if (D_801AFC98.field_0C != 0)
+    {
+        D_801AFC98.field_0C--;
+    }
+    else if (D_801AFC98.field_08 >= 0x579)
+    {
+        D_801AFC98.field_08 -= D_801AFC98.field_04;
+    }
+    else if (display->field_24 >= 5)
+    {
+        display->field_22 = 0;
+    }
+    else
+    {
+        D_801AFC98.field_00 = 0;
+    }
+    if (--D_801B32A4 == 0)
+    {
+        D_801B32A0++;
+    }
+}
+
+void func_800C1AA0(void)
+{
+    SVECTOR position;
+    s32 screen_position;
+    WmapConfigA* display = &D_800D94D0;
+    register WmapConfigA* draw_arg __asm__("$4");
+    u8* screen_entry;
+    position.vx = (D_801AFCE8.field_08 * (ccos(D_801AFCE8.field_02) >> 5)) >> 0xC;
+    position.vy = (D_801AFCE8.field_08 * (csin(D_801AFCE8.field_02) >> 5)) >> 0xC;
+    position.vz = D_801AFCE8.field_0E;
+    gte_ldv0(&position);
+    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
+    screen_entry = D_80139988;
+    screen_entry += 0x70;
+    func_8006CC4C(draw_arg, screen_entry);
+    gte_stsxy(&screen_position);
+    func_80066F9C(display, screen_position, 0x16, 8, 0);
+    if (D_801AFCE8.field_0C != 0)
+    {
+        D_801AFCE8.field_0C--;
+    }
+    else if (D_801AFCE8.field_08 >= 0x579)
+    {
+        D_801AFCE8.field_08 -= D_801AFCE8.field_04;
+    }
+    else if (display->field_24 >= 5)
+    {
+        display->field_22 = 0;
+    }
+    else
+    {
+        D_801AFCE8.field_00 = 0;
+    }
+    if (--D_801B32AC == 0)
+    {
+        D_801B32A8++;
+    }
+}
+
+void func_800C1C00(void)
+{
+    SVECTOR position;
+    s32 screen_position;
+    WmapConfigA* display = &D_800D94FC;
+    register WmapConfigA* draw_arg __asm__("$4");
+    u8* screen_entry;
+    position.vx = (D_801AFCFC.field_08 * (ccos(D_801AFCFC.field_02) >> 5)) >> 0xC;
+    position.vy = (D_801AFCFC.field_08 * (csin(D_801AFCFC.field_02) >> 5)) >> 0xC;
+    position.vz = D_801AFCFC.field_0E;
+    gte_ldv0(&position);
+    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
+    screen_entry = D_80139988;
+    screen_entry += 0x78;
+    func_8006CC4C(draw_arg, screen_entry);
+    gte_stsxy(&screen_position);
+    func_80066F9C(display, screen_position, 0x16, 8, 0);
+    if (D_801AFCFC.field_0C != 0)
+    {
+        D_801AFCFC.field_0C--;
+    }
+    else if (D_801AFCFC.field_08 >= 0x579)
+    {
+        D_801AFCFC.field_08 -= D_801AFCFC.field_04;
+    }
+    else if (display->field_24 >= 5)
+    {
+        display->field_22 = 0;
+    }
+    else
+    {
+        D_801AFCFC.field_00 = 0;
+    }
+    if (--D_801B32B4 == 0)
+    {
+        D_801B32B0++;
+    }
+}
+
+void func_800C1D60(void)
+{
+    SVECTOR position;
+    s32 screen_position;
+    WmapConfigA* display = &D_800D9528;
+    register WmapConfigA* draw_arg __asm__("$4");
+    u8* screen_entry;
+    position.vx = (D_801AFD10.field_08 * (ccos(D_801AFD10.field_02) >> 5)) >> 0xC;
+    position.vy = (D_801AFD10.field_08 * (csin(D_801AFD10.field_02) >> 5)) >> 0xC;
+    position.vz = D_801AFD10.field_0E;
+    gte_ldv0(&position);
+    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
+    screen_entry = D_80139988;
+    screen_entry += 0x80;
+    func_8006CC4C(draw_arg, screen_entry);
+    gte_stsxy(&screen_position);
+    func_80066F9C(display, screen_position, 0x16, 8, 0);
+    if (D_801AFD10.field_0C != 0)
+    {
+        D_801AFD10.field_0C--;
+    }
+    else if (D_801AFD10.field_08 >= 0x579)
+    {
+        D_801AFD10.field_08 -= D_801AFD10.field_04;
+    }
+    else if (display->field_24 >= 5)
+    {
+        display->field_22 = 0;
+    }
+    else
+    {
+        D_801AFD10.field_00 = 0;
+    }
+    if (--D_801B32BC == 0)
+    {
+        D_801B32B8++;
+    }
+}
+
+void func_800C1EC0(void)
+{
+    SVECTOR position;
+    s32 screen_position;
+    WmapConfigA* display = &D_800D9554;
+    register WmapConfigA* draw_arg __asm__("$4");
+    u8* screen_entry;
+
+    position.vx = (D_801AFD24.field_08 * (ccos(D_801AFD24.field_02) >> 5)) >> 0xC;
+    position.vy = (D_801AFD24.field_08 * (csin(D_801AFD24.field_02) >> 5)) >> 0xC;
+    position.vz = D_801AFD24.field_0E;
+    gte_ldv0(&position);
+    __asm__ volatile("nop\n\tnop\n\t.word 0x4A180001");
+    draw_arg = display;
+    __asm__ volatile("" : "+r"(draw_arg));
+    screen_entry = D_80139988;
+    screen_entry += 0x88;
+    func_8006CC4C(draw_arg, screen_entry);
+    gte_stsxy(&screen_position);
+    func_80066F9C(display, screen_position, 0x16, 8, 0);
+    if (D_801AFD24.field_0C != 0)
+    {
+        D_801AFD24.field_0C--;
+    }
+    else if (D_801AFD24.field_08 >= 0x579)
+    {
+        D_801AFD24.field_08 -= D_801AFD24.field_04;
+    }
+    else if (display->field_24 >= 5)
+    {
+        display->field_22 = 0;
+    }
+    else
+    {
+        D_801AFD24.field_00 = 0;
+    }
+    if (--D_801B32C4 == 0)
+    {
+        D_801B32C0++;
+    }
+}
+
+void func_800C2020(void)
+{
+    s32 index = 0x14;
+    u8* resource = &D_8011D538;
+    u8* base;
+    WmapConfigB* config;
+    WmapPointerPair* entry;
+    WmapState* state;
+    s32 next_state;
+    register s32 one __asm__("$6");
+
+    base = (u8*)D_801AFBD0;
+    config = (WmapConfigB*)(base + 0x190);
+    base = D_80139988;
+    entry = (WmapPointerPair*)(base + 0xA0);
+    do
+    {
+        entry->field_04 = resource;
+        config->field_00 = 0;
+        config++;
+        index++;
+        entry++;
+    } while (index < 0x32);
+    *(s32*)((u8*)D_80139280 + 0x00) = 0x14;
+    one = 1;
+    D_801B32CC = 0x90;
+    state = D_80139280;
+    state->field_04 = 0x32;
+    state->field_08 = 0x10;
+    state->field_0C = 0x81;
+    state->field_14 = 0x2EE0;
+    state->field_18 = 0x64;
+    state->field_1C = 0x64;
+    next_state = D_801B32C8 + one;
+    state->field_10 = one;
+    state->field_20 = 2;
+    state->state_24 = one;
+    D_801B32C8 = next_state;
+    func_800C42F0();
+}
+
+void func_800C20EC(void)
+{
+    s32 index = 0x78;
+    u8* resource = &D_8011F538;
+    u8* base;
+    WmapConfigB* config;
+    WmapPointerPair* entry;
+    s32 next_state;
+
+    base = (u8*)D_801AFBD0;
+    config = (WmapConfigB*)(base + 0x960);
+    base = D_80139988;
+    entry = (WmapPointerPair*)(base + 0x3C0);
+    do
+    {
+        entry->field_04 = resource;
+        config->field_00 = 0;
+        config++;
+        index++;
+        entry++;
+    } while (index < 0xDC);
+    index = 0x78;
+    do
+    {
+        D_800D9268[index].field_06 = 0xF;
+        D_800D9268[index].field_0E = 2;
+        D_800D9268[index].field_10 = -1;
+        D_800D9268[index].field_26 = 0x10;
+        D_800D9268[index].field_22 = 0x81;
+        D_800D9268[index].field_02 = 0;
+        D_800D9268[index].field_24 = 1;
+        D_801AFBD0[index].field_08 = 0x2710;
+        D_801AFBD0[index].field_02 = rand() & 0xFFF;
+        D_801AFBD0[index].field_04 = ((rand() * 0x32) >> 0xF) + 0x32;
+        D_801AFBD0[index].field_0E = 0;
+        D_801AFBD0[index].field_0C = 0x26;
+        index++;
+    } while (index < 0x82);
+    D_801B32D4 = 0xF0;
+    D_80139280->field_28 = 0x78;
+    D_80139280->field_2C = 0xDC;
+    D_80139280->field_30 = 0x10;
+    D_80139280->field_34 = 0x81;
+    D_80139280->field_40 = 0x32;
+    D_80139280->field_44 = 0x32;
+    next_state = D_801B32D0 + 1;
+    D_80139280->field_38 = 1;
+    D_80139280->field_3C = 0x2710;
+    D_80139280->field_48 = 2;
+    D_80139280->tail_state = 1;
+    D_801B32D0 = next_state;
+    func_800C4484();
+}
+
+s32 func_800C2274(s32 reset)
+{
+    if (reset != 0)
+    {
+        D_801B3248 = 1;
+        D_801B324C = 1;
+        return 1;
+    }
+    if ((u32)D_801B3248 >= 4)
+    {
+        return 0;
+    }
+    D_800D7ADC[D_801B3248]();
+    return 1;
+}
+
+void func_800C22EC(void)
+{
+    D_801B3248 = 1;
+    D_801B324C = 1;
+}
 
 void func_800C2304(void)
 {

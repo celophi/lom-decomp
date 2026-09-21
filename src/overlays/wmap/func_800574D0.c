@@ -3,28 +3,28 @@
 
 typedef struct
 {
-    u8 pad_000[0x70];
-    u_long ordering_table[179];
-    void* prim_cursor;
-} WmapRenderState;
-
-typedef struct
-{
     s32 x;
     s32 y;
     s32 scale;
-} WmapProjectionState;
+} WmapProjection;
 
 typedef struct
 {
-    s16 x;
-    s16 y;
-    u8 pad_004[16];
+    u32 packed_xy;
+    u8 pad04[0x10];
 } WmapSpritePosition;
 
-extern WmapSpritePosition D_8004FD9C[];
-extern SPRT D_8004FE34[];
-extern SPRT D_8004FF74[];
+typedef struct
+{
+    u8 pad000[0x74];
+    u_long ot_entry;
+    u8 pad078[0x2C4];
+    SPRT* prim_cursor;
+} WmapRenderState;
+
+extern WmapSpritePosition D_8004FD9C[8];
+extern SPRT D_8004FE34[16];
+extern SPRT D_8004FF74[16];
 extern s32 D_800D921C;
 extern s32 D_800DCEEC;
 extern s32 D_800DCEF0;
@@ -33,112 +33,109 @@ extern s32 D_8011CF74;
 extern s32 D_8011D4FC;
 extern s32 D_80129550;
 extern WmapRenderState* D_801398EC;
-extern WmapProjectionState D_80139950;
+extern WmapProjection D_80139950;
 extern s32 D_8013B268;
 
+void func_8005C404(s32 x, s32 y, s32 mode, s32 map_x, s32 map_y, s32* indices);
+void func_8005D6B8(s32 x, s32 y, s32* indices);
+void func_8005D7A0(s32 value, s32* indices);
 s32 func_8005D8FC(void);
-void func_8005D7A0(s32 value, s32* tile_indices);
-void func_8005C404(s32 map_x, s32 map_y, s32 value, s32 map_x_copy, s32 map_y_copy, s32* tile_indices);
-void func_8005D6B8(s32 map_x, s32 map_y, s32* tile_indices);
-void func_8006534C(s32 type, s32 depth);
+void func_8006534C(s32 id, s32 mode);
 
 /**
- * @brief Build and queue two sprite layers for each of eight world-map entries.
+ * @brief Render the current world-map sprite set.
  */
 void func_800574D0(void)
 {
-    s32 tile_indices[8];
-    s32 map_x;
-    s32 map_y;
-    s32 intensity;
+    s32 sprite_indices[8];
+    s32 x;
+    s32 y;
     s32 i;
+    s32 color;
 
     if (D_8013B268 == 0)
     {
         return;
     }
 
-    map_x = D_80139950.x / 48 + D_800DCEEC;
-    map_y = D_80139950.y / 48 + D_800DCEF0;
+    x = D_80139950.x / 48 + D_800DCEEC;
+    y = D_80139950.y / 48 + D_800DCEF0;
 
-    if (map_x < 0)
+    if (x < 0)
     {
-        map_x = 0;
+        x = 0;
     }
-    if (map_y < 0)
+    if (y < 0)
     {
-        map_y = 0;
+        y = 0;
     }
-    if (map_x >= 6)
+    if (x >= 6)
     {
-        map_x = 5;
+        x = 5;
     }
-    if (map_y >= 6)
+    if (y >= 6)
     {
-        map_y = 5;
+        y = 5;
     }
 
-    intensity = D_8013B268 + (D_8011CF74 & 8);
-    if (intensity < 0)
+    color = D_8013B268 + (D_8011CF74 & 8);
+    if (color < 0)
     {
-        intensity = 0;
+        color = 0;
     }
 
     if (D_8011CF18 == 2)
     {
-        func_8005D7A0(func_8005D8FC(), tile_indices);
+        func_8005D7A0(func_8005D8FC(), sprite_indices);
     }
     else if (D_80129550 == 1)
     {
-        func_8005C404(map_x, map_y, D_8011D4FC, map_x, map_y, tile_indices);
+        func_8005C404(x, y, D_8011D4FC, x, y, sprite_indices);
     }
     else
     {
-        func_8005D6B8(map_x, map_y, tile_indices);
+        func_8005D6B8(x, y, sprite_indices);
     }
 
-    for (i = 0; i < 8; i++)
+    i = 0;
+    do
     {
-        SPRT* first_sprite;
-        SPRT* second_sprite;
-        s32 first_prim_count;
-        s32 second_prim_count;
+        SPRT* primary_sprite;
+        SPRT* secondary_sprite;
 
-        first_sprite = D_801398EC->prim_cursor;
-        *first_sprite = D_8004FF74[tile_indices[i]];
-        first_sprite->r0 = first_sprite->g0 = first_sprite->b0 = intensity;
-        *(u32*)&first_sprite->x0 = *(u32*)&D_8004FD9C[i].x;
-        first_sprite->clut = (0x6A00 + i * 0x40) | 0x2E;
-        setSemiTrans(first_sprite, 1);
-        addPrim(&D_801398EC->ordering_table[1], first_sprite);
-        first_prim_count = D_800D921C;
-
-        if (first_prim_count < 0x7D00)
+        primary_sprite = D_801398EC->prim_cursor;
+        *primary_sprite = D_8004FF74[sprite_indices[i]];
+        primary_sprite->r0 = primary_sprite->g0 = primary_sprite->b0 = color;
+        *(u32*)&primary_sprite->x0 = D_8004FD9C[i].packed_xy;
+        primary_sprite->clut = getClut(0x2E0, i + 0x1A8);
+        setSemiTrans(primary_sprite, 1);
+        addPrim(&D_801398EC->ot_entry, primary_sprite);
+        if (D_800D921C < 0x7D00)
         {
-            D_800D921C = first_prim_count + sizeof(SPRT);
-            D_801398EC->prim_cursor = (u8*)D_801398EC->prim_cursor + sizeof(SPRT);
+            D_800D921C += sizeof(SPRT);
+            D_801398EC->prim_cursor++;
         }
 
-        second_sprite = D_801398EC->prim_cursor;
-        *second_sprite = D_8004FE34[tile_indices[i]];
-        second_sprite->r0 = second_sprite->g0 = second_sprite->b0 = D_8013B268;
-        *(u32*)&second_sprite->x0 = *(u32*)&D_8004FD9C[i].x;
-        second_sprite->x0 += 4;
-        second_sprite->y0 += 20;
-        second_sprite->clut = (0x6800 + i * 0x40) | 0x2E;
+        secondary_sprite = D_801398EC->prim_cursor;
+        *secondary_sprite = D_8004FE34[sprite_indices[i]];
+        secondary_sprite->r0 = secondary_sprite->g0 = secondary_sprite->b0 = D_8013B268;
+        *(u32*)&secondary_sprite->x0 = D_8004FD9C[i].packed_xy;
+        secondary_sprite->clut = getClut(0x2E0, i + 0x1A0);
+        secondary_sprite->x0 += 4;
+        secondary_sprite->y0 += 0x14;
         if (D_8013B268 < 0x40)
         {
-            setSemiTrans(second_sprite, 1);
+            setSemiTrans(secondary_sprite, 1);
         }
-        addPrim(&D_801398EC->ordering_table[1], second_sprite);
-        second_prim_count = D_800D921C;
-
-        if (second_prim_count < 0x7D00)
+        addPrim(&D_801398EC->ot_entry, secondary_sprite);
+        if (D_800D921C < 0x7D00)
         {
-            D_800D921C = second_prim_count + sizeof(SPRT);
-            D_801398EC->prim_cursor = (u8*)D_801398EC->prim_cursor + sizeof(SPRT);
+            D_800D921C += sizeof(SPRT);
+            D_801398EC->prim_cursor++;
         }
-    }
+
+        i++;
+    } while (i < 8);
 
     func_8006534C(0x3D, 1);
 }

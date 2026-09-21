@@ -53,13 +53,43 @@ segments:
       - [0x5E85, c, func_80055AF4] # gcc280_g0, 100%
       - [0x5F41, c, func_80055BB0] # gcc280_g0, 100%
       - [0x61ED, c, func_80055E5C] # gcc280_g0, 100%
-      - [0x6589, asm, wmap_6589]
+      - [0x6589, c, func_800561F8] # gcc280_g0, 100%
       - [0x6BB5, c, func_80056824] # gcc280_g0, 100%
       - [0x6FC1, c, func_80056C30] # gcc280_g0, 100%
       - [0x7535, c, func_800571A4] # gcc280_g0, 100%
       - [0x7605, c, func_80057274] # gcc280_g0, 100%
       - [0x7861, c, func_800574D0] # gcc280_g0, 100%
       - [0x7BDD, asm, wmap_7BDD]
-      - [0x72695, c, wmap_tail] # gcc280_g0, 100%
+      - [0x146BD, c, func_8006432C] # gcc280_g0, 100%
+      - [0x148DD, asm, wmap_148DD]
+      - [0x2D7B9, c, func_8007D428] # gcc280_g0, 100%
+      - [0x2D935, asm, wmap_2D935]
+      - [0x636F9, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x637C5, asm, wmap_637C5]
+      - [0x64169, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x6487D, asm, wmap_6487D]
+      - [0x64949, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x6643D, asm, wmap_6643D]
+      - [0x6652D, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x666F9, asm, wmap_666F9]
+      - [0x668E9, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x6737D, asm, wmap_6737D]
+      - [0x67539, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x69FBD, asm, wmap_69FBD]
+      - [0x6A03D, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x6A799, asm, wmap_6A799]
+      - [0x6A911, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x6ABD5, asm, wmap_6ABD5]
+      - [0x6ACA1, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x6AD75, asm, wmap_6AD75]
+      - [0x6AE41, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x6C175, asm, wmap_6C175]
+      - [0x6C22D, c, wmap_pre_00C4] # gcc280_g0, 100%
+      - [0x6D7AD, asm, wmap_6D7AD]
+      - [0x6D949, c, wmap_pre_00C4]
+      - [0x70455, asm, wmap_70455]
+      - [0x70651, c, wmap_pre_0CA4] # gcc280_g0, 100%
+      - [0x71035, asm, wmap_71035]
+      - [0x71621, c, wmap_tail] # gcc280_g0, 100%
       - [0x74919, data, data]     # 0x800C4588: post-code packets/assets
   - [0x163669]
