@@ -21,13 +21,17 @@ options:
   undefined_syms_auto_path: linker/overlays/wmap/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/overlays/wmap_symbol_addrs.txt
+    - config/symbols/shared_symbol_addrs.txt
+    - config/symbols/wmap_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
   use_legacy_include_asm: False
   o_as_suffix: True
   subalign: 2
+  # Retail section boundaries are four-byte aligned, not 16-byte padded.
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
 
   section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
 
@@ -40,5 +44,7 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x1, data, data]
+      - [0x1, rodata, wmap]       # 0x8004FC70: header and pre-code tables
+      - [0x4DBD, asm, wmap]       # 0x80054A2C: first executable instructions
+      - [0x74919, data, data]     # 0x800C4588: post-code packets/assets
   - [0x163669]
