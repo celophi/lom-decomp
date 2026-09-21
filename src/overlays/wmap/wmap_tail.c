@@ -80,6 +80,13 @@ typedef struct
     s32 field_04;
 } WmapAlignedPair;
 
+typedef struct
+{
+    u8 field_00;
+    u8 field_01;
+    u8 field_02;
+} WmapColor3;
+
 typedef void (*WmapHandler)(void);
 
 extern s32 D_800DBE70;
@@ -162,6 +169,10 @@ extern WmapConfigB D_801AFD24;
 extern WmapConfigB D_801AFBD0[];
 extern s32 D_801ADAE0;
 extern s32 D_801ADAF4;
+extern WmapColor3 D_80182D74;
+extern WmapColor3 D_80182D80;
+extern WmapColor3 D_80182D8C;
+extern WmapColor3 D_80182D94;
 extern VECTOR D_80182DC0;
 extern s32 D_80182D68;
 extern s32 D_80182D78;
@@ -253,6 +264,9 @@ s32 func_800C2CD0(s32);
 s32 func_800C2DF8(s32);
 s32 func_800C2F1C(s32);
 s32 func_800C23F8(s32);
+s32 func_800C3188(s32);
+s32 func_800C33F4(s32);
+s32 func_800C3660(s32);
 void func_800C302C(void);
 void func_800C30F4(void);
 void func_800C3298(void);
@@ -264,9 +278,47 @@ void func_800C2588(void);
 void func_800C2390(void);
 void func_800C23CC(void);
 
-/**
- * @see decomp.me (100%)
- */
+void func_800C0F84(void)
+{
+    D_801ADAF4 = 0;
+    D_80182D74.field_00 = 0xC8;
+    D_80182D74.field_01 = 0xC8;
+    D_80182D74.field_02 = 0xC8;
+    D_80182D80.field_00 = 0xC8;
+    D_80182D80.field_01 = 0xC8;
+    D_80182D80.field_02 = 0xC8;
+    D_80182D8C.field_00 = 0xC8;
+    D_80182D8C.field_01 = 0xC8;
+    D_80182D8C.field_02 = 0xC8;
+    D_80182D94.field_00 = 0xC8;
+    D_80182D94.field_01 = 0xC8;
+    D_80182D94.field_02 = 0xC8;
+    D_801B3254 = 8;
+    D_801B3250++;
+}
+
+void func_800C1000(void)
+{
+    func_8006CAC0(func_800C3188);
+    func_8006CAC0(func_800C3660);
+    func_8006CAC0(func_800C33F4);
+    D_801ADAF4 = 0;
+    D_80182D74.field_00 = 0x40;
+    D_80182D74.field_01 = 0x10;
+    D_80182D74.field_02 = 0x20;
+    D_80182D80.field_00 = 0x40;
+    D_80182D80.field_01 = 0x10;
+    D_80182D80.field_02 = 0x20;
+    D_80182D8C.field_00 = 0x40;
+    D_80182D8C.field_01 = 0x10;
+    D_80182D8C.field_02 = 0x20;
+    D_80182D94.field_00 = 0x40;
+    D_80182D94.field_01 = 0x10;
+    D_80182D94.field_02 = 0x20;
+    D_801B3254 = 0x18;
+    D_801B3250++;
+}
+
 void func_800C10B8(void)
 {
     s32 value = D_801B2650.vz - 0xDAC;
@@ -296,9 +348,6 @@ void func_800C10B8(void)
     }
 }
 
-/**
- * @see decomp.me (100%)
- */
 void func_800C11A4(void)
 {
     s32 value = D_801B2478.vz - 0xDAC;
