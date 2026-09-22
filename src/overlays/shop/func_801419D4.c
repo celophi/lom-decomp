@@ -44,9 +44,7 @@ extern void func_80142200(u8 *dst, u8 *src);
  * @param yoff Vertical layout offset (subtracted from every row y).
  * @return Advanced primitive-buffer write cursor.
  *
- * @note Two instruction-order differences remain: the initial archive-table
- *       address setup and the separator append destination setup.
- * @see decomp.me (99.09%) TODO: no scratch link yet
+ * @see decomp.me (100%) TODO: no scratch link yet
  */
 s32 func_801419D4(s32 *ot, s32 prim, s32 xoff, s32 yoff)
 {
@@ -67,16 +65,25 @@ s32 func_801419D4(s32 *ot, s32 prim, s32 xoff, s32 yoff)
         if (id & 0x8000)
         {
             u8 *tbl_c = (u8 *)&D_80142D0C;
-            s32 base_c = (s32)tbl_c - 8;
+            s32 base_c;
             u8 *firstrec = (u8 *)(((id & 0x7FFF) << 6) + D_80145244);
-            u8 *glyph = D_800EC3E2;
-            u8 *s3base = glyph - 0x1E;
+            u8 *glyph;
+            u8 *s3base;
             u32 disc14;
 
-            func_80142200(name_buffer,
-                (u8 *)(D_80142D0C + (*(u16 *)(((*(u16 *)(firstrec + 0x16) & 0x3F) * 2) + D_80142D0C + base_c) + base_c)));
-            func_80142130(sp28buf,
-                (u8 *)(D_800EC3E2[0] + ((glyph[1] << 8) + (s32)s3base)));
+            {
+                u32 material_index = *(u16 *)(firstrec + 0x16) & 0x3F;
+                base_c = (s32)tbl_c - 8;
+                func_80142200(name_buffer,
+                    (u8 *)(D_80142D0C + (*(u16 *)(material_index * 2 + D_80142D0C + base_c) + base_c)));
+            }
+            glyph = D_800EC3E2;
+            s3base = glyph - 0x1E;
+            {
+                s32 low = *glyph++;
+                s32 high = *glyph;
+                func_80142130(sp28buf, (u8 *)(low + ((high << 8) + (s32)s3base)));
+            }
 
             disc14 = *(u32 *)(SEL_REC + 0x14);
             switch ((disc14 >> 8) & 3)
@@ -169,7 +176,6 @@ s32 func_801419D4(s32 *ot, s32 prim, s32 xoff, s32 yoff)
         {
             u8 *tbl_d = (u8 *)&D_80142D08;
             s32 base_d = (s32)tbl_d - 4;
-
             s32 temp_a1;
 
             temp_a1 = func_800A88A0(
@@ -180,11 +186,11 @@ s32 func_801419D4(s32 *ot, s32 prim, s32 xoff, s32 yoff)
                 (void *)((D_800EC3F4[1] << 8) + (((u8 *)&D_800EC3F4 - 0x30) + D_800EC3F4[0])),
                 4, 0x10 - xoff, 0x12 - yoff, 0);
             {
-            u8 *inventory = D_8012271C;
-            pos.x = 0x70 - xoff;
-            pos.y = 0x12 - yoff;
-            prim = func_800A8A78(ot, temp_a1,
-                *(u8 *)(inventory + *(u16 *)SEL_ENTRY + 0x25E0), 4, &pos, 0);
+                u8 *inventory = D_8012271C;
+                pos.x = 0x70 - xoff;
+                pos.y = 0x12 - yoff;
+                prim = func_800A8A78(ot, temp_a1,
+                    *(u8 *)(inventory + *(u16 *)SEL_ENTRY + 0x25E0), 4, &pos, 0);
             }
         }
     }
