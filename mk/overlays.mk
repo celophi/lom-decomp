@@ -235,7 +235,7 @@ $(1): $(1)-validate $$($(1)_TARGET)
 
 $(1)-target-objects: $(1)-validate $(COPY_SENTINEL) $$($(1)_TGT_OBJS)
 	@mkdir -p $$($(1)_BUILD_DIR)/target
-	@if [ -n "$$(strip $$($(1)_TGT_OBJS))" ]; then \
+	@if [ -n "$$(firstword $$($(1)_TGT_OBJS))" ]; then \
 		cp -a "$(STAGING)/$$($(1)_BUILD_DIR)/target/." "$$($(1)_BUILD_DIR)/target/"; \
 	fi
 
