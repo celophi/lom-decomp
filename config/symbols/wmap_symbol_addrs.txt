@@ -122,3 +122,19 @@ g_wmap_party_visible = 0x8013B27C;
 g_wmap_scripted_travel_active = 0x80182DF8;
 g_wmap_travel_day = 0x8013B274;
 g_wmap_travel_sound_active = 0x801ADB00;
+
+// Artifact selection and carousel.
+wmap_begin_land_placement = 0x800593D4; // type:func
+wmap_update_artifact_selection = 0x800594D8; // type:func
+wmap_draw_artifact_carousel = 0x80059C78; // type:func
+g_wmap_carousel_turn_frames = 0x800CC128;
+g_wmap_carousel_turn_step = 0x800CC12C;
+g_wmap_carousel_frame = 0x800CC130;
+g_wmap_carousel_angles = 0x80051198;
+g_wmap_carousel_rotation = 0x800CC774;
+g_wmap_carousel_translation = 0x800CC764;
+g_wmap_artifact_positions = 0x800CC134;
+g_wmap_artifact_images = 0x800CC164;
+g_wmap_carousel_textures = 0x80050170;
+g_wmap_carousel_vertices = 0x80050AA0;
+g_wmap_carousel_faces = 0x80050DA8;

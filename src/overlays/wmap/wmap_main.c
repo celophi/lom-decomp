@@ -1,3 +1,4 @@
+#include "wmap_land_transition.h"
 #include "wmap_party_travel.h"
 #include "wmap_map_display.h"
 #include "wmap_view_effects.h"
@@ -2193,7 +2194,7 @@ loop_1:
                 }
                 if ((D_8013986C == 0) && (g_wmap_game_start_delay != 0))
                 {
-                    func_800594D8();
+                    wmap_update_artifact_selection();
                 }
                 func_800664B8();
                 func_8006CB60();
@@ -2219,7 +2220,7 @@ loop_1:
                 wmap_update_party_travel();
                 wmap_update_map_display();
                 func_8005A318();
-                func_80059C78();
+                wmap_draw_artifact_carousel();
                 func_8006D674();
                 var_sp = 0;
             block_168:

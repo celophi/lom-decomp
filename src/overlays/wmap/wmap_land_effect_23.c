@@ -240,69 +240,61 @@ extern void func_8009F4B0__for_func_8009D9F0(void) __asm__("func_8009F4B0");
 }
 
 /**
- * @brief World-map animated element: draw and tick two refcounts.
- * @note Best match ~92.21% (gcc280_g0); residual is a delay-slot scheduling
- *       tie (target hoists the %hi(D_801B2D14) lui into the clamp branch slot).
+ * @brief Draw the first animated element, ramp its intensity up, rotate it, and advance after its timer expires.
  */
 void func_8009DABC(void)
 {
-/* Partial WMAP decompilation: 92.213110% (gcc280_g0). */
+    extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+    extern VECTOR D_80182DC0;
+    extern SVECTOR D_8013B238;
+    extern s32* D_8011CF2C;
+    extern s32 D_80139234;
+    extern s32 D_801B25D8;
+    extern s32 D_801B2D10;
+    extern s32 D_801B2D14;
 
-extern u16 D_8013B238;
-extern u8 D_80182DC0;
-extern s32 D_8011CF2C;
-extern s32 D_80139234;
-extern s32 D_801B25D8;
-extern s32 D_801B2D10;
-extern s32 D_801B2D14;
-extern void func_800675F0(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5,
-                          s32 a6, s32 a7, s32 a8, s32 a9);
+    s32 value;
+    s32 timer;
+    s32 next_timer;
 
-    u16 *s2 = &D_8013B238;
-    s32 t;
-    s32 c;
-
-    func_8006CFA8(&D_80182DC0, s2);
-    func_800675F0(D_8011CF2C, D_80139234 & 3, 0xA, 0x36, 0x7900, 0x1001,
-                  D_801B25D8, 0, 0xF, -1);
-    t = D_801B25D8 + 2;
-    D_801B25D8 = t;
-    if (t >= 0x82)
+    func_8006CFA8(&D_80182DC0, &D_8013B238);
+    func_800675F0(D_8011CF2C, D_80139234 & 3, 0xA, 0x36, 0x7900, 0x1001, D_801B25D8, 0, 0xF, -1);
+    value = D_801B25D8 + 2;
+    D_801B25D8 = value;
+    if (value >= 0x82)
     {
         D_801B25D8 = 0x81;
     }
-    *(u16 *)((u8 *)s2 + 4) += 0x14;
-    c = D_801B2D14 - 1;
-    D_801B2D14 = c;
+    timer = D_801B2D14;
+    D_8013B238.vz += 0x14;
+    next_timer = timer - 1;
+    D_801B2D14 = next_timer;
     D_80139234 += 1;
-    if (c == 0)
+    if (next_timer == 0)
     {
         D_801B2D10 += 1;
     }
 }
 
 /**
- * @brief World-map step handler: render the animated actor, fade it out, scroll the
- *        shadow field, then advance when the frame counter expires.
+ * @brief Draw an animated element, ramp its intensity down, rotate it, and advance after its timer expires.
  */
 void func_8009DBB0(void)
 {
-/* Partial WMAP decompilation: 91.949150% (gcc280_g0). */
-
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
-extern u8 D_80182DC0[];
-extern u8 D_8013B238[];
-extern s32* D_8011CF2C;
-extern s32 D_80139234;
-extern s32 D_801B25D8;
-extern s32 D_801B2D10;
-extern s32 D_801B2D14;
+    extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+    extern VECTOR D_80182DC0;
+    extern SVECTOR D_8013B238;
+    extern s32* D_8011CF2C;
+    extern s32 D_80139234;
+    extern s32 D_801B25D8;
+    extern s32 D_801B2D10;
+    extern s32 D_801B2D14;
 
     s32 value;
     s32 timer;
+    s32 next_timer;
 
-
-    func_8006CFA8(D_80182DC0, D_8013B238);
+    func_8006CFA8(&D_80182DC0, &D_8013B238);
     func_800675F0(D_8011CF2C, D_80139234 & 3, 0xA, 0x36, 0x7900, 0x1001, D_801B25D8, 0, 0xF, -1);
     value = D_801B25D8 - 4;
     D_801B25D8 = value;
@@ -310,79 +302,73 @@ extern s32 D_801B2D14;
     {
         D_801B25D8 = 0;
     }
-    timer = D_801B2D14 - 1;
-    *(u16*)((u8*)D_8013B238 + 4) += 0x14;
-    D_801B2D14 = timer;
+    timer = D_801B2D14;
+    D_8013B238.vz += 0x14;
+    next_timer = timer - 1;
+    D_801B2D14 = next_timer;
     D_80139234 += 1;
-    if (timer == 0)
+    if (next_timer == 0)
     {
         D_801B2D10 += 1;
     }
 }
 
 /**
- * @brief World-map animated element: draw and tick two refcounts.
- * @note Best match ~92.21% (gcc280_g0); residual is a delay-slot scheduling
- *       tie (target hoists the %hi(D_801B2D1C) lui into the clamp branch slot).
+ * @brief Draw the second animated element, ramp its intensity up, rotate it, and advance after its timer expires.
  */
 void func_8009DC9C(void)
 {
-/* Partial WMAP decompilation: 92.213110% (gcc280_g0). */
+    extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+    extern VECTOR D_80182DC0;
+    extern SVECTOR D_801B24A8;
+    extern s32* D_8011CF28;
+    extern s32 D_8013923C;
+    extern s32 D_80182DEC;
+    extern s32 D_801B2D18;
+    extern s32 D_801B2D1C;
 
-extern u16 D_801B24A8;
-extern u8 D_80182DC0;
-extern s32 D_8011CF28;
-extern s32 D_8013923C;
-extern s32 D_80182DEC;
-extern s32 D_801B2D18;
-extern s32 D_801B2D1C;
-extern void func_800675F0(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5,
-                          s32 a6, s32 a7, s32 a8, s32 a9);
+    s32 value;
+    s32 timer;
+    s32 next_timer;
 
-    u16 *s2 = &D_801B24A8;
-    s32 t;
-    s32 c;
-
-    func_8006CFA8(&D_80182DC0, s2);
-    func_800675F0(D_8011CF28, D_8013923C & 3, 0x4, 0x35, 0x7800, 0x1001,
-                  D_80182DEC, 0, 0xA, -1);
-    t = D_80182DEC + 8;
-    D_80182DEC = t;
-    if (t >= 0x82)
+    func_8006CFA8(&D_80182DC0, &D_801B24A8);
+    func_800675F0(D_8011CF28, D_8013923C & 3, 0x4, 0x35, 0x7800, 0x1001, D_80182DEC, 0, 0xA, -1);
+    value = D_80182DEC + 8;
+    D_80182DEC = value;
+    if (value >= 0x82)
     {
         D_80182DEC = 0x81;
     }
-    *(u16 *)((u8 *)s2 + 4) += 0x38;
-    c = D_801B2D1C - 1;
-    D_801B2D1C = c;
+    timer = D_801B2D1C;
+    D_801B24A8.vz += 0x38;
+    next_timer = timer - 1;
+    D_801B2D1C = next_timer;
     D_8013923C += 1;
-    if (c == 0)
+    if (next_timer == 0)
     {
         D_801B2D18 += 1;
     }
 }
 
 /**
- * @brief World-map step handler: render the animated actor, fade it out, scroll the
- *        shadow field, then advance when the frame counter expires.
+ * @brief Draw the second animated element, ramp its intensity down, rotate it, and advance after its timer expires.
  */
 void func_8009DD90(void)
 {
-/* Partial WMAP decompilation: 91.949150% (gcc280_g0). */
-
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
-extern u8 D_80182DC0[];
-extern u8 D_801B24A8[];
-extern s32* D_8011CF28;
-extern s32 D_8013923C;
-extern s32 D_80182DEC;
-extern s32 D_801B2D18;
-extern s32 D_801B2D1C;
+    extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+    extern VECTOR D_80182DC0;
+    extern SVECTOR D_801B24A8;
+    extern s32* D_8011CF28;
+    extern s32 D_8013923C;
+    extern s32 D_80182DEC;
+    extern s32 D_801B2D18;
+    extern s32 D_801B2D1C;
 
     s32 value;
     s32 timer;
+    s32 next_timer;
 
-    func_8006CFA8(D_80182DC0, D_801B24A8);
+    func_8006CFA8(&D_80182DC0, &D_801B24A8);
     func_800675F0(D_8011CF28, D_8013923C & 3, 0x4, 0x35, 0x7800, 0x1001, D_80182DEC, 0, 0xA, -1);
     value = D_80182DEC - 8;
     D_80182DEC = value;
@@ -390,11 +376,12 @@ extern s32 D_801B2D1C;
     {
         D_80182DEC = 0;
     }
-    timer = D_801B2D1C - 1;
-    *(u16*)((u8*)D_801B24A8 + 4) += 0x38;
-    D_801B2D1C = timer;
+    timer = D_801B2D1C;
+    D_801B24A8.vz += 0x38;
+    next_timer = timer - 1;
+    D_801B2D1C = next_timer;
     D_8013923C += 1;
-    if (timer == 0)
+    if (next_timer == 0)
     {
         D_801B2D18 += 1;
     }
@@ -2897,26 +2884,17 @@ extern s32 D_801B2D48;
 }
 
 /**
- * @brief Reset the world-map cursor state and bump the transition counter.
- * @note Best match ~68.46% (gcc280_g0); residual is a sched2 lui-ordering tie
- *       (permuter territory).
+ * @brief Clear the world-map translation and rotation offsets, then advance the transition counter.
  */
 void func_800A0804(void)
 {
-/* Partial WMAP decompilation: 68.461540% (gcc280_g0). */
+    extern VECTOR D_80182D48;
+    extern SVECTOR D_801398C8;
+    extern s32 D_801B2D48;
 
-extern s32 D_80182D48;
-extern s16 D_801398C8;
-extern s32 D_801B2D48;
-
-    s32 *a;
-    s16 *b;
-
-    a = &D_80182D48;
-    a[1] = 0;
-    a[0] = 0;
-    b = &D_801398C8;
-    b[1] = 0;
-    b[0] = 0;
+    D_80182D48.vy = 0;
+    D_80182D48.vx = 0;
+    D_801398C8.vy = 0;
+    D_801398C8.vx = 0;
     D_801B2D48 += 1;
 }
