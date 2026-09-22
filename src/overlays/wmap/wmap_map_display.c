@@ -191,6 +191,12 @@ typedef struct
     u8 y, glyph;
 } WmapGlyphPlacement;
 
+/** @brief Sprite indices for the eight spirits at one map cell. */
+typedef struct
+{
+    s32 sprite_indices[WMAP_SPIRIT_COUNT];
+} WmapSpiritIndices;
+
 /** @brief Position word and remaining bytes in a spirit sprite packet. */
 typedef struct
 {
@@ -271,7 +277,7 @@ extern u8 g_wmap_spirit_frames[];
 extern SPRT g_wmap_spirit_level_sprites[16];
 extern SPRT g_wmap_spirit_accent_sprites[16];
 extern s32 D_80129550;
-extern s32 D_8004FC74[];
+extern const s32 D_8004FC74[];
 extern WmapDisplayProjection D_800DCEC8;
 extern s32 D_800DCF04;
 extern s32 D_80139218;
@@ -1671,14 +1677,13 @@ void wmap_draw_spirit_levels(void)
  */
 void wmap_draw_spirit_grid(s32 spirit_index)
 {
-    /* Partial WMAP decompilation: 86.301650% (gcc280_g0). */
-
-    s32 sprite_indices[WMAP_SPIRIT_COUNT];
+    WmapSpiritIndices cell_spirits;
     s32 target_x;
     s32 target_y;
     s32 cur_x;
     s32 cur_y;
     s32 base_index;
+    WmapSpiritIndices* spirits;
     SPRT* sprite;
 
     if (g_wmap_spirit_brightness == 0)
@@ -1690,29 +1695,30 @@ void wmap_draw_spirit_grid(s32 spirit_index)
     target_y = D_800DCEC8.y / WMAP_CELL_SPACING + D_800DCEF0;
 
     cur_y = 0;
-    base_index = 0;
     do
     {
+        base_index = cur_y * WMAP_GRID_SIZE;
         cur_x = 0;
+        spirits = &cell_spirits;
         do
         {
             if (D_80129550 == 1 && D_80139290[target_x][target_y].effect_enabled != 0)
             {
-                func_8005C404(cur_x, cur_y, D_8011D4FC, target_x, target_y, sprite_indices);
+                func_8005C404(cur_x, cur_y, D_8011D4FC, target_x, target_y, cell_spirits.sprite_indices);
             }
             else
             {
-                func_8005D6B8(cur_x, cur_y, sprite_indices);
+                func_8005D6B8(cur_x, cur_y, cell_spirits.sprite_indices);
             }
 
             if (cur_x == target_x && cur_y == target_y && (D_8011CF74 & 4))
             {
                 sprite = D_801398EC->packet_cursor;
-                *sprite = g_wmap_spirit_level_sprites[sprite_indices[spirit_index]];
+                *sprite = g_wmap_spirit_level_sprites[spirits->sprite_indices[spirit_index]];
                 *(u32*)&sprite->x0 = D_8004FC74[base_index + cur_x];
+                sprite->r0 = sprite->g0 = sprite->b0 = (u8)g_wmap_spirit_brightness;
                 sprite->u0 = 0xD0;
                 sprite->v0 = 0;
-                sprite->r0 = sprite->g0 = sprite->b0 = (u8)g_wmap_spirit_brightness;
                 sprite->clut = 0x6AAE;
                 if (g_wmap_spirit_brightness < WMAP_BLEND_THRESHOLD)
                 {
@@ -1727,7 +1733,7 @@ void wmap_draw_spirit_grid(s32 spirit_index)
             }
 
             sprite = D_801398EC->packet_cursor;
-            *sprite = g_wmap_spirit_level_sprites[sprite_indices[spirit_index]];
+            *sprite = g_wmap_spirit_level_sprites[spirits->sprite_indices[spirit_index]];
             *(u32*)&sprite->x0 = D_8004FC74[base_index + cur_x];
             sprite->r0 = sprite->g0 = sprite->b0 = (u8)g_wmap_spirit_brightness;
             sprite->clut = getClut(WMAP_SPIRIT_CLUT_X, spirit_index + WMAP_SPIRIT_CLUT_Y);
@@ -1746,7 +1752,6 @@ void wmap_draw_spirit_grid(s32 spirit_index)
         } while (cur_x < WMAP_GRID_SIZE);
 
         cur_y++;
-        base_index += WMAP_GRID_SIZE;
     } while (cur_y < WMAP_GRID_SIZE);
 
     func_8006534C(0x3D, 1);
@@ -1796,8 +1801,6 @@ void wmap_update_map_display(void)
 /** @brief Draw the enabled map information labels and substitute dynamic glyphs. */
 void wmap_draw_information_labels(void)
 {
-    /* Partial WMAP decompilation: 98.924730% (gcc280_g0). */
-
     s32 dynamic_index;
     s32 group;
     s32 i;
@@ -1825,11 +1828,12 @@ void wmap_draw_information_labels(void)
                       &g_wmap_information_groups, g_wmap_information_values, D_8011D4FC);
     }
     dynamic_index = 0;
-    for (group = 0, next_offset = 4; group < 10; next_offset += 4, group++)
+    for (group = 0; group < 10; group++)
     {
         if ((g_wmap_information_groups >> group) & 1)
         {
             i = g_wmap_information_group_starts[group];
+            next_offset = group * sizeof(s32) + sizeof(s32);
             end = *(s32*)((u8*)g_wmap_information_group_starts + next_offset);
             for (; i < end; i++)
             {
