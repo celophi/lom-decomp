@@ -167,15 +167,12 @@ segments:
       # Existing named unit: reachability and route search
 
       - [0xDF49, c, wmap_pathfinding] # gcc280_g0_o0_builtin, 100%
-      # TU candidate: wmap_map_labels.c (medium confidence)
+      # TU: wmap_map_labels.c (map labels and selection fades consolidated)
       # VRAM 0x8005F9BC..0x80060720 (end exclusive).
       # Label/display packets and the outgoing/current label fade, using D_801391E8, D_8011D518, and
       # D_80182E08.
 
-      - [0xFD4D, c, func_8005F9BC] # gcc280_g0, partial 38.630726%
-      - [0x10319, c, func_8005FF88] # gcc280_g0, 100%
-      - [0x105C1, c, func_80060230] # gcc280_g0, partial 56.248890%
-      - [0x10945, c, func_800605B4] # gcc280_g0, 100%
+      - [0xFD4D, c, wmap_map_labels] # gcc280_g0
       # TU candidate: wmap_main.c (medium confidence)
       # VRAM 0x80060720..0x800641DC (end exclusive).
       # Display setup, resident entry, initialization, input/wait/event handling, main resource/render loop,

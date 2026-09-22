@@ -1,7 +1,7 @@
+#include "wmap_map_labels.h"
 #include "common.h"
 #include "cdrom.h"
 
-extern void func_8005FF88(s32);
 extern void func_8006683C(s32);
 extern u8 D_800DCF18[];
 extern u8 *D_8011CF1C;

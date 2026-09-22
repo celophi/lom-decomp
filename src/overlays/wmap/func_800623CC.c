@@ -1,3 +1,4 @@
+#include "wmap_map_labels.h"
 #include "wmap_frame_render.h"
 #include "wmap_sequence_runtime.h"
 #include "wmap_effect_backdrop.h"

@@ -1,6 +1,6 @@
+#include "wmap_map_labels.h"
 #include "common.h"
 
-extern void func_8005FF88(s32);
 extern void func_800A78B0(void);
 extern s32 D_8018222C;
 extern s32 D_801B2E40;

@@ -1,3 +1,4 @@
+#include "wmap_map_labels.h"
 #include "wmap_sequence_runtime.h"
 #include "wmap_effect_resources.h"
 #include "common.h"
@@ -20,7 +21,6 @@ extern s32 D_8011CF50;
 extern s32 D_800DCEC0;
 extern s32 D_801B2C48;
 extern u8 D_8011D538[];
-extern void func_8005FF88(s32);
 extern s32 D_801398D0;
 extern s32 D_8013B208;
 extern s32 D_8013B288;
