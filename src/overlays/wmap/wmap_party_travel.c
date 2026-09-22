@@ -419,7 +419,7 @@ void wmap_init_party_travel(void)
         sprite->shade = WMAP_TRAVEL_SHADE;
         D_80139988[i].data = resource + i * WMAP_TRAVEL_ANIMATION_BYTES;
     }
-    D_80182D5C = func_8005D850(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+    D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
     wmap_set_traveler_position(0, g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
     if (D_80139290[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
     {
@@ -488,6 +488,6 @@ void wmap_set_traveler_position(s32 index, s32 x, s32 y)
 /** @brief Apply the travel-day update and refresh the day shown on the map. */
 void wmap_advance_travel_day(void)
 {
-    func_8005B58C();
-    g_wmap_travel_day = func_8005D494();
+    wmap_update_travel_growth();
+    g_wmap_travel_day = wmap_get_day();
 }
