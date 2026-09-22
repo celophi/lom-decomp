@@ -1,3 +1,4 @@
+#include "wmap_map_display.h"
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
@@ -27,31 +28,6 @@ typedef struct
     s16 w;
     s16 h;
 } WmapRect;
-
-/** @brief World-map resource cache entry. */
-typedef struct
-{
-    s32 unk0;
-    s32 resource_id;
-    u32 age;
-    s32 busy;
-    u8* image;
-} WmapCacheEntry;
-
-/** @brief World-map resource state and cache slot. */
-typedef struct
-{
-    u8 pad0[2];
-    s16 resource_id;
-    u8 pad4;
-    u8 state;
-    u8 pad6[8];
-    s16 unkE;
-    s16 slot;
-    u8 pad12[2];
-    s32 busy;
-    u8 pad18[0x14];
-} WmapResource;
 
 /** @brief Partially identified world-map drawing environment. */
 typedef struct
@@ -120,16 +96,11 @@ extern s32 D_800D0550;
 extern s32 D_80182228;
 extern s32 D_80182240;
 extern u8 D_80139258;
-M2C_UNK func_800571A4();
-M2C_UNK func_80058260();
-M2C_UNK func_80058298();
-M2C_UNK func_800582E8();
 extern void func_8005909C(void);
 M2C_UNK func_8005B548();
 s32 func_8005D494(void);
 extern s32 D_8005136C;
 extern s32 D_800D06BC;
-extern s32 D_800D9160;
 extern s32 D_800D9168;
 extern s32 D_800D916C;
 extern POLY_FT4 D_800D9170;
@@ -201,9 +172,7 @@ extern s32 D_8013B208;
 extern s32 D_8013B230;
 extern s32 D_8013B254;
 extern s32 D_8013B258;
-extern s32 D_8013B25C;
 extern u8 D_8013B260;
-extern s32 D_8013B268;
 extern s32 D_8013B26C;
 extern s32 D_8013B274;
 extern s32 D_8013B27C;
@@ -225,7 +194,6 @@ extern s32 D_80182E3C;
 extern s32 D_8019D6D8;
 extern s32 D_801ADAE0;
 extern s32 D_801ADAE8;
-extern s32 D_801ADAEC;
 extern s32 D_801ADAF0;
 extern s32 D_801ADAF4;
 extern s32 D_801ADAFC;
@@ -275,7 +243,6 @@ extern s32 D_800DBE68;
 extern s32 D_800DBE7C;
 extern u8 D_800DCF18[];
 extern u16 D_800DCF2C[];
-extern WmapCacheEntry D_8011CF88[];
 extern s32 D_8011D0E0;
 extern s32 D_8011D0E4;
 extern s32 D_8011D500;
@@ -295,7 +262,6 @@ extern M2C_UNK D_8013B240;
 extern s32 D_8013B24C;
 extern u16 D_8013B2A0;
 extern u16 D_8013C628;
-extern WmapResource D_80182248[];
 extern s32 D_80182D5C;
 extern s32 D_80182DD4;
 extern s32 D_80182E38;
@@ -442,7 +408,7 @@ void func_80060918(void)
     D_80182E00 = 0xFF;
     D_800DCEC0 = 1;
     D_800D9224 = 0;
-    D_800D9160 = 0;
+    g_wmap_information_groups = 0;
     D_80139280 = 0x1F800000;
     D_8013B27C = 1;
     D_801ADAFC = 1;
@@ -453,7 +419,7 @@ void func_80060918(void)
     D_801398B4 = 1;
     D_800D9220 = -1;
     D_80139868 = -1;
-    D_8013B25C = 0x3C;
+    g_wmap_game_start_delay = 0x3C;
     D_801398BC = 0;
     D_8013B28C = 0;
     D_8013B258 = 0;
@@ -468,19 +434,19 @@ void func_80060918(void)
     D_80182D88 = 0;
     func_8006D8F0(0, var_a1, var_a2, temp_a3);
     func_800653EC();
-    func_800582E8();
+    wmap_init_spirit_animation();
     func_800654F8();
     D_8011CF74 = 0;
     D_80139218 = 0;
     D_800DCEE8 = -1;
     D_8013B290 = -1;
-    func_80058260();
+    wmap_init_land_image_cache();
     func_80058298();
-    func_800571A4();
+    wmap_init_land_display();
     func_8006CD18();
     func_8005909C();
-    D_8013B268 = 0;
-    D_801ADAEC = 0x80;
+    g_wmap_spirit_brightness = 0;
+    g_wmap_spirit_target_brightness = 0x80;
     D_801398D4 = 1;
     D_800D916C = 0;
     D_800D9210 = 1;
@@ -1619,10 +1585,10 @@ loop_1:
                     D_80182E34 = three;
                     D_800DBE78 = three;
                     D_8013B254 = three;
-                    D_801ADAEC = 0;
+                    g_wmap_spirit_target_brightness = 0;
                     *(s32*)(base_801b - 0x2470) = 0;
                     *(s32*)(base_8014a - 0x4D84) = 0;
-                    D_8013B268 = 0;
+                    g_wmap_spirit_brightness = 0;
                     *(s32*)(base_8014b - 0x4DF8) = one;
                     *(s32*)(base_801b - 0x2470) = 0;
                     D_80182D5C = func_8005D850(D_8019D248, D_8019D248 + 4);
@@ -1636,10 +1602,10 @@ loop_1:
                     D_80182E34 = three;
                     D_800DBE78 = three;
                     D_8013B254 = three;
-                    D_801ADAEC = 0;
+                    g_wmap_spirit_target_brightness = 0;
                     *(s32*)(base_801b - 0x2470) = 0;
                     *(s32*)(base_8014a - 0x4D84) = 0;
-                    D_8013B268 = 0;
+                    g_wmap_spirit_brightness = 0;
                     *(s32*)(base_8014b - 0x4DF8) = one;
                     D_80182D5C = func_8005D850(D_8019D248, D_8019D248 + 4);
                     D_80139238 = one;
@@ -1658,8 +1624,8 @@ loop_1:
                     D_80139244 = one;
                     D_800DBE78 = three;
                     D_80182E34 = three;
-                    D_801ADAEC = 0;
-                    D_8013B268 = 0;
+                    g_wmap_spirit_target_brightness = 0;
+                    g_wmap_spirit_brightness = 0;
                     D_8013B254 = three;
                     *(s32*)(base_8014b - 0x4DF8) = one;
                     *(s32*)(base_8014a - 0x4D84) = 0;
@@ -1680,8 +1646,8 @@ loop_1:
                     D_80139244 = one;
                     D_80182E34 = three;
                     D_800DBE78 = three;
-                    D_801ADAEC = 0;
-                    D_8013B268 = 0;
+                    g_wmap_spirit_target_brightness = 0;
+                    g_wmap_spirit_brightness = 0;
                     D_8013B254 = three;
                     D_801ADAF0 = one;
                     break;
@@ -1692,8 +1658,8 @@ loop_1:
                     D_80182E34 = three;
                     D_800DBE78 = three;
                     D_8013B254 = three;
-                    D_801ADAEC = 0;
-                    D_8013B268 = 0;
+                    g_wmap_spirit_target_brightness = 0;
+                    g_wmap_spirit_brightness = 0;
                     *(s32*)(base_801b - 0x2470) = 0;
                     *(s32*)(base_8014a - 0x4D84) = 0;
                     *(s32*)(base_8014b - 0x4DF8) = one;
@@ -1710,8 +1676,8 @@ loop_1:
                     D_80182E34 = three;
                     D_800DBE78 = three;
                     D_8013B254 = three;
-                    D_801ADAEC = 0;
-                    D_8013B268 = 0;
+                    g_wmap_spirit_target_brightness = 0;
+                    g_wmap_spirit_brightness = 0;
                     *(s32*)(base_801b - 0x2470) = 0;
                     *(s32*)(base_8014a - 0x4D84) = 0;
                     *(s32*)(base_8014b - 0x4DF8) = one;
@@ -1899,11 +1865,11 @@ loop_1:
         }
     }
     cdrom_queue_read(0x10C7, &D_801ADBA0);
-    D_8011CF88[16].resource_id = 0x1F;
-    D_8011CF88[16].image = (u8*)&D_801ADBA0;
-    D_8011CF88[16].unk0 = 0x10;
-    D_8011CF88[16].age = 0xFFFF;
-    D_8011CF88[16].busy = 0;
+    g_wmap_land_image_cache[16].resource_id = 0x1F;
+    g_wmap_land_image_cache[16].animation_data = (u8*)&D_801ADBA0;
+    g_wmap_land_image_cache[16].slot_index = 0x10;
+    g_wmap_land_image_cache[16].loaded_frame = 0xFFFF;
+    g_wmap_land_image_cache[16].busy = 0;
     var_s2 = D_800DCF18;
     cdrom_queue_read(0x10C8, var_s2, 0x10);
     cdrom_wait_queue_empty();
@@ -1922,8 +1888,8 @@ loop_1:
         DrawSync(0);
         D_801ADAFC = 1;
     }
-    D_80182248[31].slot = -1;
-    D_80182248[31].unkE = 0;
+    g_wmap_land_display[31].previous_animation_index = -1;
+    g_wmap_land_display[31].animation_index = 0;
     func_80058D9C();
     var_t0 = M2C_FIELD(&D_8019D248, s32*, 0) - 1;
     var_t1 = M2C_FIELD(&D_8019D248, s32*, 4) - 1;
@@ -2229,17 +2195,17 @@ loop_1:
                 {
                     D_801398BC = 1;
                 }
-                if ((D_8013986C == 0) && (D_8013B25C != 0))
+                if ((D_8013986C == 0) && (g_wmap_game_start_delay != 0))
                 {
                     func_800594D8();
                 }
                 func_800664B8();
                 func_8006CB60();
                 func_8006CA28();
-                func_80054A2C();
-                if (D_8013B25C != 0)
+                wmap_update_map_game();
+                if (g_wmap_game_start_delay != 0)
                 {
-                    func_80056824();
+                    wmap_draw_lands();
                 }
                 if (D_800D9224 != 0)
                 {
@@ -2255,7 +2221,7 @@ loop_1:
                 }
                 func_8005F9BC();
                 func_8005880C();
-                func_80057C14();
+                wmap_update_map_display();
                 func_8005A318();
                 func_80059C78();
                 func_8006D674();
@@ -2535,7 +2501,7 @@ void func_80064094(void)
     func_8006D870(0);
     D_800DBE70 = 2;
     D_801ADAE0 = 0;
-    D_801ADAEC = 0x80;
+    g_wmap_spirit_target_brightness = 0x80;
     D_801ADAF4 = 0x10;
     D_80182DE0 = 0;
     D_801398FC = 0;

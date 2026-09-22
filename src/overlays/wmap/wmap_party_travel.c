@@ -1,3 +1,4 @@
+#include "wmap_map_display.h"
 #include "wmap_party_travel.h"
 #include "wmap_resource_support.h"
 #include "wmap_sprite_render.h"
@@ -214,7 +215,6 @@ typedef s32 M2C_UNK32;
 #define M2C_UNALIGNED32(expr) (expr)
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
-s32 func_800582A0(s32, s32, s32);                   /* extern */
 M2C_UNK func_8005EB68(s32, s32, s32, s32, void *, void *); /* extern */
 M2C_UNK func_800584B4__for_func_8005880C() __asm__("func_800584B4");                            /* static */
 extern u8 D_8004FD04;
@@ -290,7 +290,7 @@ extern u8 func_8009A420;
                     {
                         var_s1 = 0x1F;
                     }
-                    if (func_800582A0((((s16) M2C_FIELD(var_s0, u16 *, 0xC) * 0x30) / 160) + 0x30, (((s16) M2C_FIELD(var_s0, u16 *, 0xE) * 0x30) / 160) + 0x30, M2C_FIELD(&D_80139950, s32 *, 8)) != 0)
+                    if (wmap_get_point_display_mode((((s16) M2C_FIELD(var_s0, u16 *, 0xC) * 0x30) / 160) + 0x30, (((s16) M2C_FIELD(var_s0, u16 *, 0xE) * 0x30) / 160) + 0x30, M2C_FIELD(&D_80139950, s32 *, 8)) != 0)
                     {
                         func_80066F9C(temp_s2, sp20, var_s3, var_s1, var_s4);
                     }

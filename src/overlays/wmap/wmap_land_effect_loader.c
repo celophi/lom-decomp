@@ -1,3 +1,4 @@
+#include "wmap_map_display.h"
 #include "wmap_land_effect_loader.h"
 #include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
@@ -6,26 +7,12 @@
 /** @brief Upload the selected effect resources and register its callback. */
 void func_800591A8(u32 selection)
 {
-typedef struct
-{
-    u8 pad0[2];
-    s16 resource_id;
-    u8 pad4;
-    u8 state;
-    u8 pad6[0xA];
-    s16 slot;
-    u8 pad12[2];
-    s32 busy;
-    u8 pad18[0x14];
-} WmapResource;
 
-extern WmapResource D_80182248[];
-extern WmapResource D_80182508;
+extern WmapLandDisplay D_80182508;
 extern s32 D_801ADAF8;
 extern u8 D_80182E40[];
 extern u8 D_8018B240[];
 extern u8 D_80193640[];
-extern s32 func_80055BB0(WmapResource *);
 extern s32 func_800706B0(s32);
 extern s32 func_800712C0(s32);
 extern s32 func_8007369C(s32);
@@ -56,7 +43,6 @@ extern s32 func_800B7290(s32);
 extern s32 func_800BAE24(s32);
 extern s32 func_800BD83C(s32);
 
-
     D_801ADAF8 = 0;
     cdrom_wait_queue_empty();
     func_800651B4(D_80182E40);
@@ -67,11 +53,11 @@ extern s32 func_800BD83C(s32);
     }
     if (selection == 0x16)
     {
-        func_80055BB0(&D_80182508);
+        wmap_resolve_land_image(&D_80182508);
     }
     else
     {
-        func_80055BB0(&D_80182248[selection]);
+        wmap_resolve_land_image(&g_wmap_land_display[selection]);
     }
     switch (selection)
     {

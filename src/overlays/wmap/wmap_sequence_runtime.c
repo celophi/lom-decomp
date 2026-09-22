@@ -1,3 +1,4 @@
+#include "wmap_map_display.h"
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
 #include "wmap_effect_primitives.h"
@@ -73,7 +74,6 @@ extern void (*D_800D0A44[])(void);
 extern s32 D_8011D4FC;
 extern s32 D_8013B254;
 extern s32 D_80182E34;
-extern s32 D_801ADAEC;
 extern s32 D_800DBE70;
 extern s32 D_800DBE78;
 extern s32 D_8013B208;
@@ -200,7 +200,7 @@ void func_8006C8E0(void)
         D_8013B254 = 2;
     }
     D_80182E34 = 3;
-    D_801ADAEC = 0;
+    g_wmap_spirit_target_brightness = 0;
     D_801B109C = 2;
     D_801B1098 += 1;
 }
