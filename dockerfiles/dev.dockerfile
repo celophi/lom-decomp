@@ -17,7 +17,7 @@
 FROM old-gcc/gcc-2.8.0-psx AS psx-gcc-2.8.0
 FROM old-gcc/gcc-2.6.0-psx AS psx-gcc-2.6.0
 FROM old-gcc/gcc-2.7.2-cdk AS psx-gcc-2.7.2-cdk
-FROM ghcr.io/celophi/gcc-2.7.2-psx-gnu:v1.1 AS psx-gcc-2.7.2-gnuas
+FROM old-gcc/gcc-2.7.2-psx-gnu AS psx-gcc-2.7.2-gnuas
 
 # Use Ubuntu LTS for stability and wide package availability
 FROM ubuntu:22.04

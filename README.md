@@ -49,10 +49,10 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | MENU.BIN | 🔒 | Fully linked |
 | MOVIE.BIN | 🔒 | Fully linked |
 | NIKI.BIN | 🔒 | Fully linked |
-| SHOP.BIN | 🪲 | Non-matching |
+| SHOP.BIN | ☑️ | Matching |
 | TITLE.BIN | 🔒 | Fully linked |
-| WMAP.BIN | 🌱 | In progress |
-| WSEL.BIN | 🪲 | Non-matching |
+| WMAP.BIN | 🪲 | Non-matching |
+| WSEL.BIN | ☑️ | Matching |
 | ZUKAN.BIN | 🔒 | Fully linked |
 
 ## Supported game version
@@ -139,15 +139,16 @@ The splat configs also contain expected SHA-1 hashes for the overlay files.
 
 ### 3. Build the historical compiler images
 
-The project uses multiple historical GCC variants. Build the three local compiler images from the `old-gcc` submodule:
+The project uses multiple historical GCC variants. Build the four local compiler images using the `old-gcc` submodule:
 
 ```bash
 docker build -t old-gcc/gcc-2.8.0-psx -f tools/old-gcc/gcc-2.8.0-psx.Dockerfile tools/old-gcc
 docker build -t old-gcc/gcc-2.7.2-cdk -f tools/old-gcc/gcc-2.7.2-cdk.Dockerfile tools/old-gcc
 docker build -t old-gcc/gcc-2.6.0-psx -f tools/old-gcc/gcc-2.6.0-psx.Dockerfile tools/old-gcc
+docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools/old-gcc
 ```
 
-This is normally a one-time setup step. The GCC 2.7.2 GNU-as toolchain used by a small number of sources is pulled by the development Dockerfile.
+This is normally a one-time setup step. The development Dockerfile uses these local images; no access to a private compiler image is required.
 
 ### 4. Build the development container
 
@@ -425,22 +426,6 @@ Check its routing in `mk/main.mk` or `mk/overlay-registry.mk`. The configured hi
 **objdiff reports 100%, but whole-overlay verification fails**
 
 Check data/rodata, relocations, linker section order, alignment, and generated assets. Function-level matching does not prove whole-file identity.
-
-## Contributing
-
-Contributions are welcome, including:
-
-- matching or improving functions;
-- identifying and renaming functions, globals, structures, and fields;
-- documenting subsystems and data formats;
-- creating byte-exact asset extractors/builders;
-- improving build, diffing, and analysis tools;
-- investigating compiler and Psy-Q provenance;
-- improving documentation and setup instructions.
-
-Before opening a pull request, build the affected target and run the most relevant objdiff and/or whole-overlay verification available.
-
-If you are new to matching decompilation, starting with a small function or a naming/documentation improvement around understood code is usually much easier than starting with a large unmatched routine.
 
 ## Tools and acknowledgements
 

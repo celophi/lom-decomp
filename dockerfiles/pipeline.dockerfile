@@ -1,14 +1,15 @@
 # This dockerfile is for running the github pipeline for object diffing.
 # It expects an archive to exist at the local path ROM/ containing a .7z file with the game files. 
 # The .7z should contain a .bin and .cue pair, which will be converted to an ISO and unpacked into /rom.
-# To build this run the following from the repo root (replace the version string):
+# First build the four local compiler images listed in the README.
+# Then run the following from the repo root (replace the version string):
 # docker build -t ghcr.io/celophi/slus-01013:v5.0 -f dockerfiles/pipeline.dockerfile dockerfiles
 
 # Stage 1: grab compiler artifacts
 FROM old-gcc/gcc-2.8.0-psx AS psx-gcc-2.8.0
 FROM old-gcc/gcc-2.6.0-psx AS psx-gcc-2.6.0
 FROM old-gcc/gcc-2.7.2-cdk AS psx-gcc-2.7.2-cdk
-FROM ghcr.io/celophi/gcc-2.7.2-psx-gnu:v1.1 AS psx-gcc-2.7.2-gnuas
+FROM old-gcc/gcc-2.7.2-psx-gnu AS psx-gcc-2.7.2-gnuas
 
 # Use Ubuntu LTS for stability and wide package availability
 FROM ubuntu:22.04
