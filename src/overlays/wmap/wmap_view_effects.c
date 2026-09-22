@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_view_effects.h"
 #include "common.h"
 #include "sdk/libgpu.h"
@@ -161,7 +162,6 @@ extern WmapResource D_801399B8[];
 extern s32 D_801AFBC8;
 extern s32 D_801B0FD0;
 extern u32 rand(void);
-extern void func_80066F9C(void*, s32, s32, s32, s32);
 extern u8 D_8011D538[];
 extern u8 D_80139988[];
 extern WmapPoint D_80054944[];

@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -24,7 +25,6 @@ extern u16 D_8011CF4C[2];
 extern s32 D_801B25DC;
 extern s32 D_801B25A8;
 extern s32 D_801B25AC;
-extern void func_80066F9C(WmapConfigA *, s32, s32, s32, s32);
 
 /** @brief Draw the actor, reduce its scale, and advance when its timer expires. */
 void func_80074820(void)

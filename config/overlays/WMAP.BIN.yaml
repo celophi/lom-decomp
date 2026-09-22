@@ -192,11 +192,11 @@ segments:
       # View-state dispatch, map tint and grid projection/UV updates, camera motion, and small view effects.
 
       - [0x157DD, c, wmap_view_effects] # gcc280_g0
-      # TU candidate: wmap_sprite_render.c (medium confidence)
+      # TU: wmap_sprite_render.c (animated sprite-part renderer)
       # VRAM 0x80066F9C..0x800675F0 (end exclusive).
       # Shared animated sprite-part renderer
 
-      - [0x1732D, c, func_80066F9C] # gcc280_g0, partial 75.209880%
+      - [0x1732D, c, wmap_sprite_render] # gcc280_g0, partial 75.209880%
       # TU candidate: wmap_model_render.c (medium confidence)
       # VRAM 0x800675F0..0x8006A2FC (end exclusive).
       # Shared model face renderer with projected vertices, clipping, color scaling, and packet emission.

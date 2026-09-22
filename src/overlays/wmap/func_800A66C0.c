@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -44,7 +45,6 @@ typedef struct
 extern WmapConfigA D_800D95D8[];
 extern WmapResource D_80139A28[];
 extern WmapMotion D_801AFD60[];
-extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Project four rotating effect actors and update their draw depths. */
 void func_800A66C0(void)

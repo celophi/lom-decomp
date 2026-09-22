@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -43,7 +44,6 @@ extern WmapResource D_80139988[];
 extern s32 D_8018222C;
 extern s32 D_8011CF74;
 extern s32 D_80139234;
-extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Draw active trail actors and periodically copy four new trail samples. */
 void func_800A6800(void)

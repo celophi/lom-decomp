@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -49,7 +50,6 @@ extern s32 D_80139234;
 extern s32 D_801B2AC0;
 extern s32 D_801B2AC4;
 extern s32 rand(void);
-extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Spawn and draw spiraling particles until the effect finishes. */
 void func_8008FA40(void)

@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -18,7 +19,6 @@ typedef struct
     u8 pad_28[4];
 } WmapConfigA;
 
-extern void func_80066F9C(void *, s32, s32, s32, s32);
 extern WmapConfigA D_800D9420;
 extern s32 D_8011CF4C;
 extern u8 D_801399D8[];

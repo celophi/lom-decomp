@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 94.260000% (gcc280_g0). */
 #include "common.h"
@@ -9,7 +10,6 @@ extern s32 D_8011CF4C;
 extern s32 D_80182DEC;
 extern s32 D_801B25A0;
 extern s32 D_801B25A4;
-extern void func_80066F9C(u8* obj, s32 a1, s32 a2, s32 a3, s32 a4);
 
 /**
  * @brief Draw a world-map actor at a nudged copy of the cursor, then decay a timer.

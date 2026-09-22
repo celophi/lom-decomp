@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 86.000000% (gcc280_g0). */
 #include "common.h"
@@ -53,7 +54,6 @@ extern WmapMotion D_801AFBD0[];
 extern WmapResource D_80139988[];
 extern s8 D_80051B4C[];
 extern u16 D_80182DF4;
-extern void func_80066F9C(WmapConfigA *, s32, s32, s32, s32);
 
 /** @brief Advance oscillating actors and draw their sprites.
  * @param start First actor index.

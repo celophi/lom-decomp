@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 88.561400% (gcc280_g0). */
 #include "common.h"
@@ -7,7 +8,6 @@ extern u8 D_801399E8[];
 extern s32 D_8011CF4C;
 extern s32 D_801B27D0;
 extern s32 D_801B27D4;
-extern void func_80066F9C(u8* obj, s32 a1, s32 a2, s32 a3, s32 a4);
 
 /**
  * @brief Draw a world-map actor pair at an offset copy of the cursor position.

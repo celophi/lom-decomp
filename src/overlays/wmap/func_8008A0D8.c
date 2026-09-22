@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -14,7 +15,6 @@ extern WmapPosition D_801AFBE0[];
 extern s32 D_80139234;
 extern s32 D_801B2988;
 extern s32 D_801B298C;
-extern void func_80066F9C(WmapActor *, s32, s32, s32, s32);
 
 /** @brief Animate and draw the active actor range, then advance its countdown. */
 void func_8008A0D8(void)

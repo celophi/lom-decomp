@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -7,7 +8,6 @@ extern s32 D_80182D58;
 extern s32 D_80139250;
 extern s32 D_801B2D30;
 extern s32 D_801B2D34;
-extern void func_80066F9C(u8* obj, s32 a1, s32 a2, s32 a3, s32 a4);
 
 /** @brief Draw a world-map actor, then wind down a scrolling scalar. */
 void func_8009FF00(void)

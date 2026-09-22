@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 89.764046% (gcc280_g0). */
 #include "common.h"
@@ -30,7 +31,6 @@ extern WmapDraw D_800D9268[];
 extern u8 D_80139988[];
 extern s32 D_801B2B70;
 extern s32 D_801B2B74;
-extern void func_80066F9C(WmapDraw* obj, s32 a1, s32 a2, s32 a3, s32 a4);
 
 /** @brief Project and draw the world-map star field, spinning each entry each frame. */
 void func_80093C48(void)

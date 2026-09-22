@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/inline_c.h"
@@ -7,7 +8,6 @@ extern u8 D_800D9344[];
 extern u8 D_801399B0[];
 extern s32 D_801B2440;
 extern s32 D_801B2444;
-extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Draw the projected effect and advance after its countdown. */
 void func_8006FAC8(void)

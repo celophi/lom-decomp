@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
@@ -80,7 +81,6 @@ extern s32 D_80139968;
 extern s32 D_8013996C;
 extern s32 D_8013B29C;
 
-extern void func_80066F9C(void*, s32, s32, s32, s32);
 s32 rand(void);
 
 /**

@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 /* Partial WMAP decompilation: 91.659580% (gcc280_g0). */
 #include "common.h"
 
@@ -33,7 +34,6 @@ extern s32 D_8011CF4C;
 extern s32 D_8011CF74;
 extern u8 D_80139988[];
 
-extern void func_80066F9C(void*, s32, s32, s32, s32);
 
 void func_800BA408(void)
 {

@@ -367,7 +367,7 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_8005D018.c \
 	src/overlays/wmap/func_8005D6B8.c \
 	src/overlays/wmap/wmap_map_labels.c \
-	src/overlays/wmap/func_80066F9C.c \
+	src/overlays/wmap/wmap_sprite_render.c \
 	src/overlays/wmap/func_800675F0.c \
 	src/overlays/wmap/wmap_effect_primitives.c \
 	src/overlays/wmap/func_8006E6B8.c \

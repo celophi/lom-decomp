@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -7,7 +8,6 @@ extern u8 D_801399D8[];
 extern s32 D_8011CF4C;
 extern s32 D_801B25CC;
 extern s32 D_801B25C8;
-extern void func_80066F9C(u8* obj, s32 a1, s32 a2, s32 a3, s32 a4);
 
 /**
  * @brief Draw a scrolling world-map element and advance its slide/hold state.

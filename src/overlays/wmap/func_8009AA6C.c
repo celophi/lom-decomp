@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 89.027020% (gcc280_g0). */
 #include "common.h"
@@ -9,7 +10,6 @@ extern s16 D_801AFBE0;
 extern s32 D_801B2C4C;
 extern s32 D_801B2C50;
 extern void func_80099754(s32 arg);
-extern void func_80066F9C(void *a, s32 b, s32 c, s32 d, s32 e);
 
 /**
  * @brief World-map step: build a sprite, decrement a shared budget, expire the timer.

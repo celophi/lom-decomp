@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 92.546150% (gcc280_g0). */
 #include "common.h"
@@ -50,7 +51,6 @@ extern VECTOR D_80139870;
 extern SVECTOR D_80139278;
 extern SVECTOR D_801B24A0;
 extern u16 D_80139980;
-extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Compose the effect transform and project its twenty actors. */
 void func_80072D30(void)

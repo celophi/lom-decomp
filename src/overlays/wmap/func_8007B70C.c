@@ -1,3 +1,4 @@
+#include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 79.604650% (gcc280_g0). */
 #include "common.h"
@@ -40,7 +41,6 @@ extern WmapDraw D_800DA448[];
 extern u8 D_80139CC8[];
 extern s32 D_80139980;
 extern s32 D_801B0FD0;
-extern void func_80066F9C(WmapDraw* obj, s32 a1, s32 a2, s32 a3, s32 a4);
 
 /**
  * @brief Project and draw active world-map sparks, then respawn empty slots.
