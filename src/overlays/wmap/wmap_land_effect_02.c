@@ -228,8 +228,6 @@ extern s32 D_801B2768;
 /** @brief Initialize four equally spaced actors and start the effect. */
 void func_8007D6A4(void)
 {
-/* Partial WMAP decompilation: 94.976746% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -285,6 +283,7 @@ extern s32 D_801B2774;
 extern void func_8007D7FC__for_func_8007D6A4(void) __asm__("func_8007D7FC");
 
     s32 i;
+    WmapConfigA *actor;
 
     D_801B2490 = D_80139258;
     D_80139234 = 1;
@@ -296,14 +295,15 @@ extern void func_8007D7FC__for_func_8007D6A4(void) __asm__("func_8007D7FC");
     }
     for (i = 20; i < 80; i += 15)
     {
+        actor = &D_800D9268[i];
         D_80139988[i].resource = D_8011D538;
-        D_800D9268[i].field_06 = 15;
-        D_800D9268[i].field_10 = -1;
-        D_800D9268[i].field_26 = 2;
-        D_800D9268[i].field_02 = 0;
-        D_800D9268[i].field_0E = 0;
-        D_800D9268[i].field_22 = 1;
-        D_800D9268[i].field_24 = 129;
+        actor->field_06 = 15;
+        actor->field_10 = -1;
+        actor->field_26 = 2;
+        actor->field_02 = 0;
+        actor->field_0E = 0;
+        actor->field_22 = 1;
+        actor->field_24 = 129;
         D_801AFBD0[i].state = 1;
         D_801AFBD0[i].z = 150000;
         D_801AFBD0[i].field_0E = 0;
@@ -315,130 +315,131 @@ extern void func_8007D7FC__for_func_8007D6A4(void) __asm__("func_8007D7FC");
     func_8007D7FC__for_func_8007D6A4();
 }
 
+/**
+ * @brief Advance the orbiting effect records, duplicate active state, render active slots, and tick the sequence timer.
+ */
 void func_8007D7FC(void)
 {
-/* Partial WMAP decompilation: 67.098595% (gcc280_g0). */
+typedef union
+{
+    struct
+    {
+        s16 field_00;
+        s16 field_02;
+        u8 pad_04[2];
+        u8 field_06;
+        u8 pad_07[7];
+        s16 field_0E;
+        s16 field_10;
+        u8 pad_12[0x10];
+        s16 field_22;
+        s16 field_24;
+        s16 field_26;
+        u8 pad_28[4];
+    } f;
+    s32 words[11];
+} WmapEffect02Config;
 
-typedef s32 M2C_UNK;
-typedef s8 M2C_UNK8;
-typedef s16 M2C_UNK16;
-typedef s32 M2C_UNK32;
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8 *)(expr) + (offset)))
-#define M2C_UNALIGNED32(expr) (expr)
-#define M2C_BITWISE(type, expr) ((type)(expr))
+typedef struct
+{
+    s16 state;
+    s16 angle;
+    s32 x;
+    s32 z;
+    s16 scale;
+    s16 field_0E;
+    union
+    {
+        s32 packed;
+        struct
+        {
+            s16 x;
+            s16 y;
+        } half;
+    } screen;
+} WmapEffect02Motion;
 
+typedef struct
+{
+    s32 field_00;
+    void *resource;
+} WmapEffect02Resource;
 
-extern u8 D_800D9268;
+extern WmapEffect02Config D_800D9268[];
+extern WmapEffect02Motion D_801AFBD0[];
+extern WmapEffect02Resource D_80139988[];
 extern s32 D_80139234;
 extern s32 D_8013923C;
-extern u8 D_80139988;
-extern u8 D_801AFBD0;
 extern s32 D_801B2770;
 extern s32 D_801B2774;
 
     SVECTOR position;
-    u32 sp20;
-    s32 temp_v0_3;
-    s32 temp_v0_4;
-    s32 var_s2;
-    s32 var_s2_2;
-    void *temp_v0;
-    void *temp_v0_2;
-    void *temp_v1;
-    void *var_a0;
-    void *var_s0;
-    void *var_s0_2;
-    void *var_s1;
-    void *var_s1_2;
-    void *var_s3;
-    void *var_s3_2;
-    void *var_v0;
+    u32 screen_position;
+    s32 i;
+    s32 value;
 
-    var_s2 = 0x14;
-    var_s3 = (u8 *)&D_80139988 + 0xA0;
-    var_s0 = (u8 *)&D_801AFBD0 + 0x190;
-    var_s1 = (u8 *)&D_800D9268 + 0x370;
     D_8013923C -= 1;
-    do
+    for (i = 20; i < 80; i += 15)
     {
-        position.vx = (s16) ((s32) (((s32) M2C_FIELD(var_s0, s32 *, 8) >> 3) * (ccos(M2C_FIELD(var_s0, s16 *, 2)) >> 6)) >> 0xC);
-        position.vy = (s16) ((s32) (((s32) M2C_FIELD(var_s0, s32 *, 8) >> 3) * (csin(M2C_FIELD(var_s0, s16 *, 2)) >> 6)) >> 0xC);
-        position.vz = M2C_FIELD(var_s0, u16 *, 0xE);
+        position.vx = ((D_801AFBD0[i].z >> 3) * (ccos(D_801AFBD0[i].angle) >> 6)) >> 12;
+        position.vy = ((D_801AFBD0[i].z >> 3) * (csin(D_801AFBD0[i].angle) >> 6)) >> 12;
+        position.vz = D_801AFBD0[i].field_0E;
         gte_ldv0(&position);
-                gte_rtps();
-        M2C_FIELD(var_s0, s16 *, 2) = (s16) ((u16) M2C_FIELD(var_s0, s16 *, 2) + 0x60);
-        M2C_FIELD(var_s0, s32 *, 8) = (s32) (M2C_FIELD(var_s0, s32 *, 8) - 0xBB8);
-        gte_stsxy(&sp20);
-        M2C_FIELD(var_s0, u16 *, 0x10) = sp20;
-        M2C_FIELD(var_s0, u16 *, 0x12) = (u16) M2C_FIELD(&sp20, u16 *, 2);
+        gte_rtps();
+        D_801AFBD0[i].z -= 3000;
+        D_801AFBD0[i].angle += 96;
+        gte_stsxy(&screen_position);
+        D_801AFBD0[i].screen.half.x = ((u16 *)&screen_position)[0];
+        D_801AFBD0[i].screen.half.y = ((u16 *)&screen_position)[1];
+
         if (D_8013923C == 0)
         {
-            var_a0 = var_s1;
-            var_v0 = ((var_s2 + D_80139234) * 0x2C) + (u8 *)&D_800D9268;
-            do
-            {
-                M2C_FIELD(var_v0, s32 *, 0) = (s32) M2C_FIELD(var_a0, s32 *, 0);
-                M2C_FIELD(var_v0, s32 *, 4) = (s32) M2C_FIELD(var_a0, s32 *, 4);
-                M2C_FIELD(var_v0, s32 *, 8) = (s32) M2C_FIELD(var_a0, s32 *, 8);
-                M2C_FIELD(var_v0, s32 *, 0xC) = (s32) M2C_FIELD(var_a0, s32 *, 0xC);
-                var_a0 += 0x10;
-                var_v0 += 0x10;
-            } while (var_a0 != (var_s1 + 0x20));
-            M2C_FIELD(var_v0, s32 *, 0) = (s32) M2C_FIELD(var_a0, s32 *, 0);
-            M2C_FIELD(var_v0, s32 *, 4) = (s32) M2C_FIELD(var_a0, s32 *, 4);
-            M2C_FIELD(var_v0, s32 *, 8) = (s32) M2C_FIELD(var_a0, s32 *, 8);
-            temp_v0 = ((var_s2 + D_80139234) * 0x14) + (u8 *)&D_801AFBD0;
-            M2C_FIELD(temp_v0, s32 *, 0) = (s32) M2C_FIELD(var_s0, s32 *, 0);
-            M2C_FIELD(temp_v0, s32 *, 4) = (s32) M2C_FIELD(var_s0, s32 *, 4);
-            M2C_FIELD(temp_v0, s32 *, 8) = (s32) M2C_FIELD(var_s0, s32 *, 8);
-            M2C_FIELD(temp_v0, s32 *, 0xC) = (s32) M2C_FIELD(var_s0, s32 *, 0xC);
-            M2C_FIELD(temp_v0, s32 *, 0x10) = (s32) M2C_FIELD(var_s0, s32 *, 0x10);
-            temp_v0_2 = ((var_s2 + D_80139234) * 0x2C) + (u8 *)&D_800D9268;
-            temp_v1 = ((var_s2 + D_80139234) * 8) + (u8 *)&D_80139988;
-            M2C_FIELD(temp_v1, s32 *, 0) = (s32) M2C_FIELD(var_s3, s32 *, 0);
-            M2C_FIELD(temp_v1, s32 *, 4) = (s32) M2C_FIELD(var_s3, s32 *, 4);
-            M2C_FIELD(temp_v0_2, s16 *, 0x26) = 8;
-            M2C_FIELD(temp_v0_2, s16 *, 0x22) = 1;
+            D_800D9268[i + D_80139234] = D_800D9268[i];
+            D_801AFBD0[i + D_80139234] = D_801AFBD0[i];
+            D_80139988[i + D_80139234] = D_80139988[i];
+            D_800D9268[i + D_80139234].f.field_26 = 8;
+            D_800D9268[i + D_80139234].f.field_22 = 1;
         }
-        var_s3 += 0x78;
-        var_s0 += 0x12C;
-        var_s2 += 0xF;
-        var_s1 += 0x294;
-    } while (var_s2 < 0x50);
-    var_s2_2 = 0x14;
+    }
+
     if (D_8013923C == 0)
     {
         D_8013923C = 2;
-        temp_v0_3 = D_80139234 + 1;
-        D_80139234 = temp_v0_3;
-        if (temp_v0_3 >= 0xF)
+        D_80139234 += 1;
+        if (D_80139234 >= 15)
         {
             D_80139234 = 1;
-            var_s2_2 = 0x14;
+            i = 20;
         }
     }
-    var_s1_2 = (u8 *)&D_801AFBD0 + 0x190;
-    var_s3_2 = (u8 *)&D_80139988 + 0xA0;
-    var_s0_2 = (u8 *)&D_800D9268 + 0x370;
-    do
+
+    i = 20;
     {
-        if (M2C_FIELD(var_s1_2, s16 *, 0) != 0)
+        WmapEffect02Motion *motion = &D_801AFBD0[i];
+        WmapEffect02Resource *resource = &D_80139988[i];
+        WmapEffect02Config *actor = &D_800D9268[i];
+
+        do
         {
-            func_8006CC4C(var_s0_2, var_s3_2);
-            func_80066F9C(var_s0_2, M2C_FIELD(var_s1_2, s32 *, 0x10), 8, 8, 0);
-            if (M2C_FIELD(var_s0_2, s16 *, 0x24) < 5)
+            if (motion->state != 0)
             {
-                M2C_FIELD(var_s1_2, s16 *, 0) = 0;
+                func_8006CC4C(actor, resource);
+                func_80066F9C(actor, motion->screen.packed, 8, 8, 0);
+                if (actor->f.field_24 < 5)
+                {
+                    motion->state = 0;
+                }
             }
-        }
-        var_s1_2 += 0x14;
-        var_s3_2 += 8;
-        var_s2_2 += 1;
-        var_s0_2 += 0x2C;
-    } while (var_s2_2 < 0x50);
-    temp_v0_4 = D_801B2774 - 1;
-    D_801B2774 = temp_v0_4;
-    if (temp_v0_4 == 0)
+            motion++;
+            resource++;
+            i++;
+            actor++;
+        } while (i < 80);
+    }
+
+    value = D_801B2774 - 1;
+    D_801B2774 = value;
+    if (value == 0)
     {
         D_801B2770 += 1;
     }
@@ -851,19 +852,26 @@ extern s32 D_801B2748;
     }
 }
 
+/**
+ * @brief Store the selected world-map effect value, clear the sequence gate, and advance the step counter.
+ */
 void func_8007E0DC(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
+typedef struct
+{
+    s32 value;
+    u8 unknown_04[36];
+} WmapValueRecord;
 
+extern WmapValueRecord D_80139290[][6];
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
-extern u32 D_8011D4FC;
+extern s32 D_8011D4FC;
 extern s32 D_801B2748;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2748 += 1;
 }
 
@@ -1186,34 +1194,27 @@ extern s32 D_801B2764;
 /** @brief World-map step handler: clear a small entry table, set the timer, advance the step. */
 void func_8007E640(void)
 {
-/* Partial WMAP decompilation: 87.208336% (gcc280_g0). */
-
 typedef struct
 {
     u8 pad0[0x22];
     s16 f22;
-    u8 pad1[0x2];
+    u8 pad1[2];
     s16 f26;
-    u8 pad2[0x4];
+    u8 pad2[4];
 } WmapEntry;
 
-extern u8 D_800D94D0;
+extern WmapEntry D_800D94D0[];
 extern s32 D_801B2760;
 extern s32 D_801B2764;
 extern void func_8007E6A0__for_func_8007E640(void) __asm__("func_8007E6A0");
 
-    WmapEntry *p;
     s32 i;
 
-    i = 0;
-    p = (WmapEntry *)&D_800D94D0;
-    do
+    for (i = 0; i < 4; i++)
     {
-        p->f22 = 0;
-        p->f26 = 8;
-        i += 1;
-        p += 1;
-    } while (i < 4);
+        D_800D94D0[i].f22 = 0;
+        D_800D94D0[i].f26 = 8;
+    }
 
     D_801B2764 = 0x10;
     D_801B2760 += 1;

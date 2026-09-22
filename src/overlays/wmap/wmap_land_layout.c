@@ -435,12 +435,18 @@ s32 wmap_can_place_land(u32 x, s32 y, s32 land)
  */
 void wmap_place_land(s32 x, s32 y, s32 index)
 {
+    /* The original routine reserves an unused eight-byte local. */
+    u8 unused_spirits[WMAP_SPIRIT_COUNT];
     s32 record;
     s32 field;
+    s32 row_bits;
     WmapSave* entry;
+    u8* save_data;
 
-    entry = (WmapSave*)(g_saved_game.bytes + index * (s32)sizeof(WmapSavedLand));
-    entry->lands[0].status.data.position = (x & WMAP_COORD_MASK) | (y * 16);
+    save_data = g_saved_game.bytes;
+    entry = (WmapSave*)(save_data + index * (s32)sizeof(WmapSavedLand));
+    row_bits = y * 16;
+    entry->lands[0].status.data.position = (x & WMAP_COORD_MASK) | row_bits;
     entry->lands[0].status.data.flags |= WMAP_LAND_PLACED;
     WMAP_SAVED_GAME.calendar.data.placed_land_count++;
     entry->lands[0].status.data.placement_order = WMAP_SAVED_GAME.calendar.data.placed_land_count;
@@ -844,7 +850,6 @@ void wmap_apply_land_influence(s32 land, u32 x, s32 y, s32 (*spirits)[8])
  * @param proposed_x Placement column.
  * @param proposed_y Placement row.
  * @param output Destination for eight sprite indices.
- * @note TODO: This reconstruction still differs from the original assembly.
  */
 void wmap_get_proposed_spirit_sprites(u32 x, s32 y, u32 land, u32 proposed_x, s32 proposed_y, s32* output)
 {
@@ -854,7 +859,6 @@ void wmap_get_proposed_spirit_sprites(u32 x, s32 y, u32 land, u32 proposed_x, s3
     s32 j;
     s32 component;
     s32 level;
-    s32 row_offset;
     s32 value;
     s32 fallback;
 
@@ -884,23 +888,28 @@ void wmap_get_proposed_spirit_sprites(u32 x, s32 y, u32 land, u32 proposed_x, s3
                     if (proposed_x == x && proposed_y == y)
                     {
                         component = g_wmap_land_attributes[land].data.spirits[i];
-                        row_offset = land * (s32)sizeof(g_wmap_proposed_spirits[0]);
-                        goto selected_land;
+                        level = g_wmap_proposed_spirits[land][i];
+                        if (component >= 0 && level >= 0)
+                        {
+                            value = g_wmap_spirit_sprites[component * WMAP_SPIRIT_SPRITE_COLUMNS + level];
+                        }
+                        output[i] = value;
                     }
-                    component = g_wmap_layout->cells[cell].spirits[i];
-                    fallback = 0;
-                    if (component >= 0)
+                    else
                     {
-                        fallback = g_wmap_spirit_sprites[component * WMAP_SPIRIT_SPRITE_DIAGONAL];
+                        component = g_wmap_layout->cells[cell].spirits[i];
+                        fallback = 0;
+                        if (component >= 0)
+                        {
+                            fallback = g_wmap_spirit_sprites[component * WMAP_SPIRIT_SPRITE_DIAGONAL];
                     }
                     output[i] = fallback;
+                    }
                 }
                 else
                 {
                     component = WMAP_SAVED_GAME.lands[current_land].spirits[i];
-                    row_offset = current_land * (s32)sizeof(g_wmap_proposed_spirits[0]);
-                selected_land:
-                    level = *(s32*)((u8*)g_wmap_proposed_spirits + (i * (s32)sizeof(s32) + row_offset));
+                    level = g_wmap_proposed_spirits[current_land][i];
                     if (component >= 0 && level >= 0)
                     {
                         value = g_wmap_spirit_sprites[component * WMAP_SPIRIT_SPRITE_COLUMNS + level];
@@ -927,8 +936,10 @@ s32 wmap_load_land_layout(void)
     WmapSaveHeader* header;
     s32 index;
     u8* cell;
+    s32 empty;
     u8 saved_second;
     u8 saved_first;
+    u32 status;
 
     g_wmap_event_cursor = -1;
     cdrom_wait_queue_empty();
@@ -945,11 +956,12 @@ s32 wmap_load_land_layout(void)
     if ((WMAP_SAVED_GAME.lands[WMAP_REPLACED_LAND].status.word & WMAP_LAND_ACTIVE) &&
         !(WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].status.word & WMAP_LAND_ACTIVE))
     {
-        WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].status.word =
-            (s32)(((((WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].status.word | 7) & ~WMAP_STATUS_X_MASK) |
-                    (WMAP_SAVED_GAME.lands[WMAP_REPLACED_LAND].status.word & WMAP_STATUS_X_MASK)) &
-                   ~WMAP_STATUS_Y_MASK) |
-                  (WMAP_SAVED_GAME.lands[WMAP_REPLACED_LAND].status.word & WMAP_STATUS_Y_MASK));
+        status = WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].status.word | 7;
+        status &= ~WMAP_STATUS_X_MASK;
+        status |= WMAP_SAVED_GAME.lands[WMAP_REPLACED_LAND].status.word & WMAP_STATUS_X_MASK;
+        status &= ~WMAP_STATUS_Y_MASK;
+        status |= WMAP_SAVED_GAME.lands[WMAP_REPLACED_LAND].status.word & WMAP_STATUS_Y_MASK;
+        WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].status.word = status;
         WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].spirits[0] = 3;
         WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].spirits[1] = 3;
         WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].spirits[2] = 3;
@@ -976,11 +988,12 @@ s32 wmap_load_land_layout(void)
         WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].status.data.placement_order = saved_first;
         WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].status.data.artifact_order = saved_second;
     }
+    empty = WMAP_NO_LAND;
     index = 0x23;
     cell = g_wmap_land_lookup + index;
     do
     {
-        *cell = WMAP_NO_LAND;
+        *cell = empty;
         index -= 1;
         cell -= 1;
     } while (index >= 0);
@@ -1031,39 +1044,36 @@ void wmap_rebuild_land_lookup(void)
 {
     s32 index;
     WmapSave* record;
-    s32 row;
-    u32 column;
-    s32 doubled_column;
+    s32 x;
+    u32 y;
     u8 position;
+    u32 placed;
 
     index = 0;
-    record = (WmapSave*)&g_saved_game;
     do
     {
-        if ((((u32)record->lands[0].status.data.flags >> 1) & 1) == 1)
+        record = (WmapSave*)(g_saved_game.bytes + index * (s32)sizeof(WmapSavedLand));
+        placed = ((u32)record->lands[0].status.data.flags >> 1) & 1;
+        if (placed == 1)
         {
             if (index == WMAP_REPLACED_LAND)
             {
-                doubled_column = column * 2;
                 if (!(WMAP_SAVED_GAME.lands[WMAP_REPLACEMENT_LAND].status.word & WMAP_LAND_ACTIVE))
                 {
-                    position = WMAP_SAVED_GAME.lands[WMAP_REPLACED_LAND].status.data.position;
-                    row = position & 0xF;
-                    goto decode_column;
+                    position = ((WmapSave*)(g_saved_game.bytes + WMAP_REPLACED_LAND * (s32)sizeof(WmapSavedLand)))->lands[0].status.data.position;
+                    x = position & WMAP_COORD_MASK;
+                    y = position >> WMAP_COORD_Y_SHIFT;
                 }
             }
             else
             {
                 position = record->lands[0].status.data.position;
-                row = position & 0xF;
-            decode_column:
-                column = position >> WMAP_COORD_Y_SHIFT;
-                doubled_column = column * 2;
+                x = position & WMAP_COORD_MASK;
+                y = position >> WMAP_COORD_Y_SHIFT;
             }
-            g_wmap_land_lookup[row + ((doubled_column + column) * 2)] = index;
+            g_wmap_land_lookup[x + y * WMAP_GRID_SIZE] = index;
         }
         index++;
-        record = (WmapSave*)((u8*)record + (s32)sizeof(WmapSavedLand));
     } while (index < WMAP_LAND_COUNT);
 }
 
@@ -1593,32 +1603,29 @@ s32 wmap_get_land_at_cell(u32 column, s32 row)
 
 /**
  * @brief Resolve the eight spirit icons for an occupied or empty map cell.
+ * @return Unspecified; callers use only the output buffer.
  * @param column Map column.
  * @param row Map row.
  * @param output Destination for eight words.
  */
-void wmap_get_cell_spirit_sprites(u32 column, s32 row, s32* output)
+s32 wmap_get_cell_spirit_sprites(u32 column, s32 row, s32* output)
 {
-    s32* entry;
     s32 record;
     s32 i;
     s32 index;
     s32 value;
     s32 cell;
-    WmapLayout* map_data;
 
     if (column < (u32)WMAP_GRID_SIZE && row >= 0 && row < WMAP_GRID_SIZE)
     {
         cell = column + row * WMAP_GRID_SIZE;
         record = wmap_get_land_at_cell(column, row);
         i = 0;
-        map_data = g_wmap_layout;
-        entry = output;
         do
         {
             if (record == WMAP_NO_LAND)
             {
-                index = map_data->cells[cell].spirits[i] + 3;
+                index = g_wmap_layout->cells[cell].spirits[i] + 3;
             }
             else
             {
@@ -1629,9 +1636,8 @@ void wmap_get_cell_spirit_sprites(u32 column, s32 row, s32* output)
             {
                 value = g_wmap_spirit_sprites[index * WMAP_SPIRIT_SPRITE_DIAGONAL];
             }
-            *entry = value;
+            output[i] = value;
             i++;
-            entry++;
         } while (i < WMAP_SPIRIT_COUNT);
     }
 }

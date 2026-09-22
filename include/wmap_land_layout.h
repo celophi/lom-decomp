@@ -25,7 +25,7 @@ s32 wmap_is_land_active(s32 record_index);
 s32 wmap_is_other_land_cell(u32 x, s32 y);
 s32 wmap_get_remaining_land_count(void);
 s32 wmap_get_land_at_cell(u32 column, s32 row);
-void wmap_get_cell_spirit_sprites(u32 column, s32 row, s32* output);
+s32 wmap_get_cell_spirit_sprites(u32 column, s32 row, s32* output);
 void wmap_get_artifact_spirit_sprites(s32 table_index, s32* output);
 s32 wmap_is_artifact_unplaced(s32 record_index);
 s32 wmap_get_starting_cell(s32* x, s32* y);
