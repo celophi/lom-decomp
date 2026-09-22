@@ -1,3 +1,4 @@
+#include "wmap_effect_primitives.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
@@ -9,7 +10,6 @@ extern VECTOR D_80139968;
 extern s32 D_8013B29C;
 extern s32 D_801B2EF8;
 extern s32 D_801B2EFC;
-extern void func_8006C0EC(void);
 
 /** @brief Initialize the sequence transforms and start a forty-tick countdown. */
 void func_800AEE98(void)

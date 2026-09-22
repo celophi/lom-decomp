@@ -1,3 +1,4 @@
+#include "wmap_effect_primitives.h"
 /* Partial WMAP decompilation: 91.988010% (gcc280_g0). */
 #include "common.h"
 
@@ -10,7 +11,6 @@ typedef s32 M2C_UNK32;
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
 void func_800652A8(s32, s32);
-M2C_UNK func_8006AEE0();                            /* extern */
 M2C_UNK func_80065E20();                            /* static */
 M2C_UNK func_800660BC();                            /* static */
 extern u8 D_80054934;

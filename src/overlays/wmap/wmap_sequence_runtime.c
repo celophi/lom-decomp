@@ -1,3 +1,4 @@
+#include "wmap_effect_primitives.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
@@ -83,10 +84,8 @@ extern void func_800675F0(u8*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 extern s32 D_8011D510;
 extern s32 D_8011D530;
 extern WmapTransform D_80139950;
-extern void func_8006ADD0(VECTOR*, SVECTOR*);
 extern s32 D_800D923C;
 extern s32* D_80139280;
-extern void func_8006A2FC(void*, void*, s32, s32, s32, s32, s32, s32*);
 extern s32 D_80139234;
 extern s32 D_8013923C;
 extern s32 D_80139240;

@@ -1,3 +1,4 @@
+#include "wmap_effect_primitives.h"
 /* Partial WMAP decompilation: 91.246750% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgte.h"
@@ -25,7 +26,6 @@ typedef struct
 extern WmapVertex D_80051D4C[];
 extern s16 D_80053414[];
 extern u8 *D_801398EC;
-extern void func_8006AEE0(void);
 extern void func_80065F54(void);
 
 /** @brief Project grid vertices into the four adjacent textured quads. */

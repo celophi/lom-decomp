@@ -1,10 +1,10 @@
+#include "wmap_effect_primitives.h"
 #include "common.h"
 
 extern s32 D_8011CF2C;
 extern s32 D_80139280;
 extern s32 D_801B2FB8;
 extern s32 D_801B2FBC;
-extern void func_8006AEE0(void);
 extern void func_8008ECF8(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 extern void func_8006534C(s32 arg0, s32 arg1);
 

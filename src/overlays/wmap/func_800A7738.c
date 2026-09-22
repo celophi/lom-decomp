@@ -1,8 +1,8 @@
+#include "wmap_effect_primitives.h"
 #include "common.h"
 
 extern s32 D_801B2E40;
 extern s32 D_801B2E44;
-extern void func_8006AEE0(void);
 extern void func_800A66C0(void);
 
 /** @brief World-map step: run the two sub-steps, then advance after the timer. */

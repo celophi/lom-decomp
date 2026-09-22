@@ -1,6 +1,6 @@
+#include "wmap_effect_primitives.h"
 #include "common.h"
 
-extern void func_8006AFAC(s32, s32, s32, s32, s32, s32, s32, s32);
 extern s32 D_8011CF74;
 extern s32 D_801B0FD0;
 extern s32 D_801B2848;

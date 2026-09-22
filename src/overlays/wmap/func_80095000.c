@@ -1,7 +1,7 @@
+#include "wmap_effect_primitives.h"
 /* Partial WMAP decompilation: 99.488370% (gcc280_g0). */
 #include "common.h"
 
-extern void func_8006B328(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 extern s32 D_801B2B60;
 extern s32 D_801B2B64;
 

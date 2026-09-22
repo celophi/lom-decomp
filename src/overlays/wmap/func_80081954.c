@@ -1,3 +1,4 @@
+#include "wmap_effect_primitives.h"
 #include "common.h"
 
 /** @brief World-map actor configuration. */
@@ -45,7 +46,6 @@ extern s32 D_8011CF74;
 extern s32 *D_80139280;
 extern s32 D_801B2860;
 extern s32 D_801B2864;
-extern void func_8006A2FC(void *, void *, s32, s32, s32, s32, s32, s32 *);
 
 /** @brief Advance spaced effect actors and copy their trailing samples. */
 void func_80081954(void)

@@ -57,7 +57,7 @@ segments:
       - [0x1E69, .rodata, func_800623CC] # compiler-generated switch table
       - [0x1EDD, rodata, wmap_1EDD]
       - [0x4CFD, .rodata, func_800675F0] # compiler-generated switch table
-      - [0x4D75, .rodata, func_8006A2FC] # compiler-generated switch table
+      - [0x4D75, .rodata, wmap_effect_primitives] # compiler-generated switch table
       - [0x4D95, .rodata, func_800A5DFC] # compiler-generated switch table
       - [0x4DA9, rodata, wmap_4DA9]
       # Translation units: implemented groups and remaining consolidation candidates.
@@ -244,21 +244,11 @@ segments:
       # Shared model face renderer with projected vertices, clipping, color scaling, and packet emission.
 
       - [0x17981, c, func_800675F0] # gcc280_g0, partial 97.333680%
-      # TU candidate: wmap_effect_primitives.c (medium confidence)
+      # TU: wmap_effect_primitives.c (particle and transform primitives consolidated)
       # VRAM 0x8006A2FC..0x8006C754 (end exclusive).
       # Reusable particle projection/drawing and transform composition
 
-      - [0x1A68D, c, func_8006A2FC] # gcc280_g0, partial 79.917050%
-      - [0x1AD55, c, func_8006A9C4] # gcc280_g0, partial 78.884170%
-      - [0x1B161, c, func_8006ADD0] # gcc280_g0, 100%
-      - [0x1B271, c, func_8006AEE0] # gcc280_g0, 100%
-      - [0x1B33D, c, func_8006AFAC] # gcc280_g0, partial 71.771300%
-      - [0x1B6B9, c, func_8006B328] # gcc280_g0, partial 87.746890%
-      - [0x1BA7D, c, func_8006B6EC] # gcc280_g0, partial 88.614040%
-      - [0x1BD29, c, func_8006B998] # gcc280_g0, partial 89.228070%
-      - [0x1BFD5, c, func_8006BC44] # gcc280_g0, partial 66.979866%
-      - [0x1C47D, c, func_8006C0EC] # gcc280_g0, partial 68.381390%
-      - [0x1C7D9, c, func_8006C448] # gcc280_g0, partial 79.933334%
+      - [0x1A68D, c, wmap_effect_primitives] # gcc280_g0
       # TU: wmap_sequence_runtime.c (callback runtime consolidated)
       # VRAM 0x8006C754..0x8006D520 (end exclusive).
       # Two callback pools, animation stepping, common draw/transform adapters, and shared entry/exit
