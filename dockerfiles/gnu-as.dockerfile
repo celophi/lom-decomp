@@ -1,11 +1,14 @@
-FROM --platform=linux/amd64 ubuntu:24.04 AS binutils-builder
+# Build from the repository root:
+# docker build -t old-gcc/gcc-2.7.2-psx-gnu -f dockerfiles/gnu-as.dockerfile tools/old-gcc
+
+FROM ubuntu:22.04 AS binutils-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential wget automake \
+    build-essential wget ca-certificates automake \
     && rm -rf /var/lib/apt/lists/*
 
-RUN wget -O /binutils-2.7.tar.gz https://ftp.gnu.org/gnu/binutils/binutils-2.7.tar.gz --no-check-certificate && \
+RUN wget -O /binutils-2.7.tar.gz https://ftp.gnu.org/gnu/binutils/binutils-2.7.tar.gz && \
     tar xzf /binutils-2.7.tar.gz -C /
 
 # Replace old config.sub/config.guess so modern x86_64 hosts are recognised
@@ -31,10 +34,10 @@ RUN cd /binutils-2.7 && \
     make -C binutils && \
     make -C ld
 
-FROM ubuntu:focal as build
+FROM ubuntu:focal AS build
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y build-essential gcc gcc-multilib wget
+RUN apt-get install -y build-essential gcc gcc-multilib wget ca-certificates dos2unix
 
 ENV VERSION=2.7.2
 ENV GNUPATH=old-gnu
@@ -46,6 +49,7 @@ RUN tar xzf gcc-${VERSION}.tar.gz
 WORKDIR /work/gcc-${VERSION}
 
 COPY patches /work/patches
+RUN find /work/patches -type f -exec dos2unix -q {} +
 RUN sed -i -- 's/include <varargs.h>/include <stdarg.h>/g' *.c
 
 RUN patch -u -p1 obstack.h -i ../patches/obstack-2.7.2.h.patch
