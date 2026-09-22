@@ -347,7 +347,7 @@ Current examples of the specialized routes include:
 - FIELD's `field_subsystem_init.c`: GCC 2.7.2 CDK with `-fno-schedule-insns`.
 - FIELD's `field_actor_action_defaults.c` and SHOP's `shop_setup_custom_list.c`: GCC 2.7.2 CDK with `-fno-strength-reduce`.
 - FIELD's G4 source group: GCC 2.8.0 without division expansion.
-- The main executable's `field_runtime_glyph.c`: GCC 2.6.0 at `-O1`.
+- The main executable's `field_runtime_glyph.c`: might be GCC 2.6.0 at `-O1`, but I'm 98% sure this is just handwritten asm at this point.
 
 The CDK no-division-expansion route is supported, but its source list is currently empty. Per-file assembler and object-conversion overrides, such as CHECKPS's GNU `cdrom.c` route, are also recorded in the overlay registry.
 
