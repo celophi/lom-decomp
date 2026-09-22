@@ -1,3 +1,4 @@
+#include "wmap_land_transition.h"
 #include "wmap_land_preview.h"
 #include "wmap_resource_support.h"
 #include "wmap_map_labels.h"
@@ -49,20 +50,6 @@ typedef struct
     s16 unkA;
 } WmapPath12;
 
-typedef struct
-{
-    u8 unk0;
-    u8 _pad01;
-    u8 unk2;
-    u8 _pad03;
-    u16 unk4;
-    u16 unk6;
-    u8 _pad08[8];
-    s16 offset_x;
-    s16 offset_y;
-    s16 anchor_x;
-    s16 anchor_y;
-} WmapMarker;
 
 extern POLY_FT4 D_800512E0;
 extern u8 D_80051308[];
@@ -70,8 +57,6 @@ extern s16 D_80051338[3][3][2];
 extern s16 D_80051384[3][3][2];
 extern u8 D_800513A8[];
 extern s8 D_80051B4C[];
-extern s32 D_800CC130;
-extern WmapMarker D_800CC164[];
 extern WmapPath8 D_800CC804[];
 extern WmapPath12 D_800CCCF8[];
 extern s32 D_800CEFA8[];
@@ -261,7 +246,7 @@ extern void func_8005B540(void);
                         if (counter == D_800DCF0C)
                         {
                             s32* route_slots;
-                            value = D_800CC130;
+                            value = g_wmap_carousel_frame;
                             route_slots = D_80139838;
                             if (value < 0)
                             {
@@ -314,7 +299,7 @@ extern void func_8005B540(void);
                     if (D_8011D4FC != -1)
                     {
                         s32* route_slots;
-                        value = D_800CC130;
+                        value = g_wmap_carousel_frame;
                         route_slots = D_80139838;
                         if (value < 0)
                         {
@@ -376,8 +361,8 @@ extern void func_8005B540(void);
             }
             else
             {
-                screen_x = D_80129558 + D_800CC164[D_8011D4FC].offset_x;
-                screen_y = D_801391E0 + D_800CC164[D_8011D4FC].offset_y;
+                screen_x = D_80129558 + g_wmap_artifact_images[D_8011D4FC].offset_x;
+                screen_y = D_801391E0 + g_wmap_artifact_images[D_8011D4FC].offset_y;
             }
 
             screen_y += D_80182DE0 + D_8011CF48;
@@ -476,16 +461,16 @@ extern void func_8005B540(void);
                 }
                 else
                 {
-                    sprite->x0 = ((u16)D_80129558 + D_800CC164[D_8011D4FC].anchor_x) + (u16)D_8013B248;
+                    sprite->x0 = ((u16)D_80129558 + g_wmap_artifact_images[D_8011D4FC].anchor_x) + (u16)D_8013B248;
                     D_8011D504 = (s16)sprite->x0;
-                    sprite->y0 = (((u16)D_801391E0 + D_800CC164[D_8011D4FC].anchor_y) + (u16)D_80182DE0) + (u16)D_8011CF48 + (u16)D_8013B250;
+                    sprite->y0 = (((u16)D_801391E0 + g_wmap_artifact_images[D_8011D4FC].anchor_y) + (u16)D_80182DE0) + (u16)D_8011CF48 + (u16)D_8013B250;
                     D_8011D508 = (s16)sprite->y0;
                 }
 
-                sprite->w = D_800CC164[D_8011D4FC].unk4;
-                sprite->h = D_800CC164[D_8011D4FC].unk6;
-                sprite->u0 = D_800CC164[D_8011D4FC].unk0;
-                sprite->v0 = D_800CC164[D_8011D4FC].unk2;
+                sprite->w = g_wmap_artifact_images[D_8011D4FC].width;
+                sprite->h = g_wmap_artifact_images[D_8011D4FC].height;
+                sprite->u0 = g_wmap_artifact_images[D_8011D4FC].u;
+                sprite->v0 = g_wmap_artifact_images[D_8011D4FC].v;
                 sprite->clut = 0x7FEC;
                 *(u32*)&sprite->r0 = 0x80808080;
                 setSprt(sprite);
