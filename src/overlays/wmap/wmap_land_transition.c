@@ -37,6 +37,18 @@
 #define WMAP_ARTIFACT_SHADOW_SKEW 10
 #define WMAP_PLACEMENT_RESOURCE_BASE 0x10CE
 #define WMAP_NO_ARTIFACT (-1)
+#define WMAP_SELECTION_VOLUME 128
+#define WMAP_CAROUSEL_VOLUME 143
+
+/** @brief Sounds used by artifact selection and placement. */
+enum WmapSelectionSound
+{
+    WMAP_SOUND_OPEN_ARTIFACTS = 4,
+    WMAP_SOUND_TURN_RIGHT = 8,
+    WMAP_SOUND_TURN_LEFT = 9,
+    WMAP_SOUND_PLACE_ARTIFACT = 22,
+    WMAP_SOUND_CLOSE_ARTIFACTS = 24
+};
 
 /** @brief Map selection panel animation phases. */
 enum WmapSelectionPhase
@@ -76,7 +88,7 @@ typedef struct
 typedef struct
 {
     u8 pad_00[4];
-    s16 enabled;
+    s16 placement_allowed;
     u8 pad_06[0x22];
 } WmapCell;
 
@@ -214,6 +226,7 @@ void wmap_update_artifact_selection(void)
     s32 map_x;
     s32 map_y;
     s32 table_index;
+
     map_x = D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC;
     map_y = D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0;
 
@@ -243,11 +256,11 @@ void wmap_update_artifact_selection(void)
     else if (D_8011CF18 == WMAP_SELECTION_MAP)
     {
         s32 input_mask;
-        s32 invalid;
+        s32 no_artifact;
 
-        invalid = -1;
+        no_artifact = -1;
         input_mask = PADRleft;
-        if (D_8011D4FC != invalid)
+        if (D_8011D4FC != no_artifact)
         {
             input_mask = PADRright;
         }
@@ -256,8 +269,8 @@ void wmap_update_artifact_selection(void)
         {
             if (D_80182DE0 == 0 && g_wmap_party_moving == 0)
             {
-                s32 index;
-                s32 data;
+                s32 view_index;
+                s32 first_frame;
 
                 D_8011CF18 = WMAP_SELECTION_SHOW_ARTIFACTS;
                 D_8011CF50 = 1;
@@ -265,22 +278,22 @@ void wmap_update_artifact_selection(void)
                 D_8013922C = 0;
                 func_8005FF88(-1);
 
-                index = D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS;
-                data = D_8005135C[index];
-                D_80182DDC = data;
-                D_800D9218 = D_8005135C[index + 1] - 1;
-                func_8006D8F0(0, data, D_8005135C);
+                view_index = D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS;
+                first_frame = D_8005135C[view_index];
+                D_80182DDC = first_frame;
+                D_800D9218 = D_8005135C[view_index + 1] - 1;
+                func_8006D8F0(0, first_frame, D_8005135C);
                 func_8006D870(1);
                 D_80129550 = 0;
-                D_800D9168 = invalid;
-                func_800652A8(4, 0x80);
+                D_800D9168 = no_artifact;
+                func_800652A8(WMAP_SOUND_OPEN_ARTIFACTS, WMAP_SELECTION_VOLUME);
             }
         }
 
-        if (D_80129550 == 1 && (D_8013922C & PADRdown) != 0 && D_8011D4FC != -1 && D_80139290[map_x][map_y].enabled != 0 && D_80182DE0 == 0)
+        if (D_80129550 == 1 && (D_8013922C & PADRdown) != 0 && D_8011D4FC != -1 && D_80139290[map_x][map_y].placement_allowed != 0 && D_80182DE0 == 0)
         {
             D_80182DE0 = D_80129550;
-            func_800652A8(0x16, 0x80);
+            func_800652A8(WMAP_SOUND_PLACE_ARTIFACT, WMAP_SELECTION_VOLUME);
             D_801398C0 = 0;
             D_8013922C = 0;
             D_800D9220 = 0x20;
@@ -295,7 +308,7 @@ void wmap_update_artifact_selection(void)
             cdrom_wait_queue_empty();
         }
 
-        if (D_80139290[map_x][map_y].enabled != 0 && D_80182DE0 != 0)
+        if (D_80139290[map_x][map_y].placement_allowed != 0 && D_80182DE0 != 0)
         {
             if (D_80182DE0 < WMAP_PLACEMENT_DELAY_END)
             {
@@ -304,7 +317,7 @@ void wmap_update_artifact_selection(void)
 
             if (D_80182DE0 == WMAP_PLACEMENT_DELAY)
             {
-                s32 selection;
+                s32 artifact_id;
 
                 D_8011D510 = map_x;
                 D_8011D530 = map_y;
@@ -315,14 +328,14 @@ void wmap_update_artifact_selection(void)
                 D_8013B208 = 1;
                 akao_cmd_c2(0, 60, 127, 1);
                 func_800591A8(D_8011D4FC);
-                selection = D_8011D4FC;
-                if (selection == 22)
+                artifact_id = D_8011D4FC;
+                if (artifact_id == 22)
                 {
                     func_8005BBC8(D_8011D510, D_8011D530, 16);
                 }
                 else
                 {
-                    func_8005BBC8(D_8011D510, D_8011D530, selection);
+                    func_8005BBC8(D_8011D510, D_8011D530, artifact_id);
                 }
                 func_8006CBD8(wmap_begin_land_placement);
             }
@@ -334,18 +347,18 @@ void wmap_update_artifact_selection(void)
         {
             if ((D_8013922C & (PADRright | PADRleft)) != 0)
             {
-                s32 index;
+                s32 view_index;
 
                 func_8005FF88(-1);
                 D_8011CF18 = WMAP_SELECTION_SHOW_MAP;
                 D_8011CF50 = 1;
-                index = D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS;
-                D_80182DDC = D_8005135C[index + 1] - 1;
-                D_800D9218 = D_8005135C[index];
+                view_index = D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS;
+                D_80182DDC = D_8005135C[view_index + 1] - 1;
+                D_800D9218 = D_8005135C[view_index];
                 func_8006D870(0);
                 D_8011D4FC = -1;
                 D_80182E24 = 0;
-                func_800652A8(0x18, 0x80);
+                func_800652A8(WMAP_SOUND_CLOSE_ARTIFACTS, WMAP_SELECTION_VOLUME);
                 D_8011CF50 = 1;
                 D_801398C0 = 0;
                 D_8013922C = 0;
@@ -356,7 +369,7 @@ void wmap_update_artifact_selection(void)
                 D_8011CF50 = 1;
                 D_801398C0 = 0;
                 D_8013922C = 0;
-                func_800652A8(8, 0x8F);
+                func_800652A8(WMAP_SOUND_TURN_RIGHT, WMAP_CAROUSEL_VOLUME);
                 g_wmap_carousel_turn_step = 1;
                 g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
                 func_8005CA3C(1, D_80139838);
@@ -367,7 +380,7 @@ void wmap_update_artifact_selection(void)
                 D_8011CF50 = 1;
                 D_801398C0 = 0;
                 D_8013922C = 0;
-                func_800652A8(9, 0x8F);
+                func_800652A8(WMAP_SOUND_TURN_LEFT, WMAP_CAROUSEL_VOLUME);
                 g_wmap_carousel_turn_step = -1;
                 g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
                 func_8005CA3C(0, D_80139838);
@@ -375,19 +388,19 @@ void wmap_update_artifact_selection(void)
 
             if ((D_8013922C & PADRdown) != 0)
             {
-                s32 selected;
+                s32 artifact_id;
 
-                selected = func_8005D8FC();
-                D_8011D4FC = selected;
+                artifact_id = func_8005D8FC();
+                D_8011D4FC = artifact_id;
                 D_8013B230 = 0;
-                if (selected != -1)
+                if (artifact_id != -1)
                 {
                     D_80129550 = 1;
                     for (map_y = 0; map_y < WMAP_GRID_SIZE; map_y++)
                     {
                         for (map_x = 0; map_x < WMAP_GRID_SIZE; map_x++)
                         {
-                            D_80139290[map_x][map_y].enabled = func_8005B8C8(map_x, map_y, D_8011D4FC);
+                            ((volatile WmapCell*)&D_80139290[map_x][map_y])->placement_allowed = func_8005B8C8(map_x, map_y, D_8011D4FC);
                             D_8011D108[map_x][map_y].state = 0;
                         }
                     }
@@ -408,20 +421,20 @@ void wmap_update_artifact_selection(void)
 
             if (D_8011CF18 == WMAP_SELECTION_ARTIFACTS)
             {
-                s32* entries;
-                s32* entry;
-                s32 value;
+                s32* artifacts;
+                s32* artifact_slot;
+                s32 label_id;
 
-                entries = D_80139838;
-                entry = &entries[(D_801398F4 + 0x7FFF) % WMAP_ARTIFACT_SLOTS];
-                if (*entry != 0xFF)
+                artifacts = D_80139838;
+                artifact_slot = &artifacts[(D_801398F4 + 0x7FFF) % WMAP_ARTIFACT_SLOTS];
+                if (*artifact_slot != 0xFF)
                 {
-                    value = func_8005D8FC(entry);
-                    if (value != -1)
+                    label_id = func_8005D8FC(artifact_slot);
+                    if (label_id != -1)
                     {
-                        value += 0x40;
+                        label_id += 0x40;
                     }
-                    func_8005FF88(value);
+                    func_8005FF88(label_id);
                 }
             }
         } while (0);
