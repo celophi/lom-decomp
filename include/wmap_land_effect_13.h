@@ -1,0 +1,140 @@
+#ifndef WMAP_LAND_EFFECT_13_H
+#define WMAP_LAND_EFFECT_13_H
+
+#include "common.h"
+
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} WmapConfigA;
+
+typedef struct
+{
+    s32 field_00;
+    void *resource;
+} WmapResource;
+
+void func_80074368();
+void func_800745A4();
+void func_80074680();
+void func_80074748();
+void func_80074820();
+void func_800748E4();
+void func_800749C0();
+void func_80074A88();
+void func_80074B64();
+void func_80074C2C();
+void func_80074D28();
+s32 func_80074E20();
+void func_80074E90();
+void func_80074EA8();
+void func_80074F20();
+void func_80074F9C();
+s32 func_80074FB4();
+void func_8007502C();
+void func_80075044();
+void func_80075094();
+void func_800750D0();
+void func_80075114();
+void func_80075150();
+s32 func_80075168();
+void func_800751E0();
+void func_800751F8();
+void func_80075240();
+void func_80075274();
+void func_800752BC();
+void func_800752F0();
+void func_80075338();
+void func_8007536C();
+void func_800753B4();
+void func_800753E8();
+void func_80075424();
+void func_80075458();
+void func_80075494();
+void func_800754C8();
+void func_80075504();
+void func_80075538();
+void func_80075574();
+void func_800755A8();
+void func_800755F0();
+void func_80075624();
+void func_8007566C();
+void func_800756A0();
+s32 func_80075704();
+void func_80075774();
+void func_8007578C();
+void func_800757FC();
+void func_800758B4();
+void func_800758EC();
+void func_8007599C();
+s32 func_800759B4();
+void func_80075A24();
+void func_80075A3C();
+void func_80075AC0();
+void func_80075B1C();
+s32 func_80075B34();
+void func_80075BA4();
+void func_80075BBC();
+void func_80075C30();
+void func_80075CE4();
+void func_80075D1C();
+void func_80075DC0();
+s32 func_80075DD8();
+void func_80075E48();
+void func_80075E60();
+void func_80075ED0();
+void func_80075F84();
+void func_80075FBC();
+void func_8007605C();
+s32 func_80076074();
+void func_800760E4();
+void func_800760FC();
+void func_80076170();
+void func_800761A8();
+s32 func_800761C0();
+void func_80076230();
+void func_80076248();
+void func_800762BC();
+void func_800762F4();
+s32 func_8007630C();
+void func_8007637C();
+void func_80076394();
+void func_80076408();
+void func_80076440();
+s32 func_80076458();
+void func_800764C8();
+void func_800764E0();
+void func_80076554();
+void func_8007658C();
+s32 func_800765A4();
+void func_8007661C();
+void func_80076634();
+void func_800766A4();
+void func_80076758();
+void func_80076790();
+void func_80076830();
+s32 func_80076848();
+void func_800768C0();
+void func_800768D8();
+void func_8007694C();
+void func_80076A00();
+void func_80076A38();
+void func_80076AD0();
+s32 func_80076AE8();
+void func_80076B58();
+void func_80076B70();
+void func_80076C1C();
+void func_80076C54();
+
+#endif
