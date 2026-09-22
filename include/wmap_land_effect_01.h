@@ -1,0 +1,101 @@
+#ifndef WMAP_LAND_EFFECT_01_H
+#define WMAP_LAND_EFFECT_01_H
+
+#include "common.h"
+
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} WmapConfigA;
+
+typedef struct
+{
+    s32 field_00;
+    void *resource;
+} WmapResource;
+
+void func_80072644();
+void func_8007287C();
+void func_80072A58();
+void func_80072B58();
+void func_80072D30();
+void func_80072F38();
+s32 func_80073048();
+void func_800730C0();
+void func_800730D8();
+void func_80073138();
+void func_8007316C();
+void func_800731C0();
+void func_800731F4();
+void func_80073230();
+void func_80073264();
+void func_800732A0();
+void func_800732D4();
+void func_80073328();
+void func_8007335C();
+void func_80073398();
+void func_800733CC();
+s32 func_80073430();
+void func_800734A0();
+void func_800734B8();
+void func_80073530();
+void func_800735B8();
+void func_800735FC();
+void func_80073684();
+s32 func_8007369C();
+void func_80073714();
+void func_8007372C();
+void func_8007377C();
+void func_800737B8();
+void func_800737F4();
+void func_80073830();
+s32 func_80073848();
+void func_800738B8();
+void func_800738D0();
+void func_80073954();
+void func_800739B0();
+s32 func_800739C8();
+void func_80073A38();
+void func_80073A50();
+void func_80073AC4();
+s32 func_80073ADC();
+void func_80073B4C();
+void func_80073B64();
+void func_80073C08();
+s32 func_80073C20();
+void func_80073C98();
+void func_80073CB0();
+void func_80073CFC();
+void func_80073D34();
+void func_80073D98();
+s32 func_80073DB0();
+void func_80073E28();
+void func_80073E40();
+void func_80073EB4();
+void func_80073F30();
+s32 func_80073F48();
+void func_80073FB8();
+void func_80073FD0();
+void func_80074044();
+void func_800740C0();
+void func_80074100();
+void func_8007417C();
+s32 func_80074194();
+void func_80074204();
+void func_8007421C();
+void func_8007428C();
+void func_800742C4();
+void func_80074350();
+
+#endif
