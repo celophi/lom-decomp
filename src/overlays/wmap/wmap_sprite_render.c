@@ -1,3 +1,4 @@
+#include "wmap_map_display.h"
 #include "wmap_sprite_render.h"
 #include "wmap_resource_support.h"
 #include "common.h"
@@ -10,7 +11,6 @@
 #define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
 
 void* memset(void*, int, unsigned int);
-extern u8 D_800CBDC4;
 extern u8 D_800D0A6C;
 extern s32 D_800D921C;
 extern void* D_801398EC;
@@ -177,7 +177,7 @@ void func_80066F9C(void* actor, s32 screen_position, s32 texture_index, s32 ot_i
         }
         else
         {
-            temp_a1_2 = (variant << 8) + ((M2C_FIELD(actor, s8*, 6) * 0x10) + (u8*)&D_800CBDC4);
+            temp_a1_2 = (variant << 8) + ((M2C_FIELD(actor, s8*, 6) * 0x10) + (u8*)&g_wmap_land_quad_scales);
             temp_v1_3 = (s8)*var_s3 | ((s8)M2C_FIELD(var_s2, u8*, 1) << 8);
             M2C_FIELD(temp_s1, s16*, 8) = (s16)(screen_position + ((s32)(temp_v1_3 * M2C_FIELD(temp_a1_2, s16*, 0)) >> 8));
             temp_a2_2 = temp_v1_3 + M2C_FIELD(var_s2, u8*, -5);
