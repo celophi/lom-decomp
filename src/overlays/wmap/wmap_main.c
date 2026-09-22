@@ -1,3 +1,4 @@
+#include "wmap_party_travel.h"
 #include "wmap_map_display.h"
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
@@ -117,7 +118,6 @@ extern s32 D_800DBE78;
 extern s32 D_800DCEA0;
 extern s32 D_800DCEC0;
 extern s32 D_800DCEE0;
-extern s32 D_800DCEE8;
 extern s32 D_800DCEEC;
 extern s32 D_800DCEF0;
 extern s32 D_800DCEFC;
@@ -174,8 +174,6 @@ extern s32 D_8013B254;
 extern s32 D_8013B258;
 extern u8 D_8013B260;
 extern s32 D_8013B26C;
-extern s32 D_8013B274;
-extern s32 D_8013B27C;
 extern s32 D_8013B28C;
 extern s32 D_8013B290;
 extern s32 D_8013B294;
@@ -229,12 +227,10 @@ extern u8 D_800D06F8;
 extern s32 D_8013922C;
 extern s32 D_801398C0;
 extern u8 D_8019D6E0;
-extern s32 D_80139230;
 extern s32 D_80182DB4;
 extern s32 D_80182DE0;
 extern u8 D_800D0544;
 extern WmapTile D_80139290[6][6];
-extern u8 D_8019D248[];
 extern s32 D_800CB248;
 extern u8 D_800D0A08[];
 extern s32 D_800D9228;
@@ -410,7 +406,7 @@ void func_80060918(void)
     D_800D9224 = 0;
     g_wmap_information_groups = 0;
     D_80139280 = 0x1F800000;
-    D_8013B27C = 1;
+    g_wmap_party_visible = 1;
     D_801ADAFC = 1;
     D_8011CF7C = 1;
     D_801398A8 = 0;
@@ -438,7 +434,7 @@ void func_80060918(void)
     func_800654F8();
     D_8011CF74 = 0;
     D_80139218 = 0;
-    D_800DCEE8 = -1;
+    g_wmap_party_cell_dirty = -1;
     D_8013B290 = -1;
     wmap_init_land_image_cache();
     func_80058298();
@@ -553,7 +549,7 @@ void func_80060918(void)
     temp_a3_2 = M2C_FIELD(var_v0_3, s32*, 0);
     M2C_FIELD(var_v1_3, s32*, 0) = temp_a3_2;
     M2C_FIELD(var_v1_3, s32*, 4) = (s32)M2C_FIELD(var_v0_3, s32*, 4);
-    D_8013B274 = func_8005D494();
+    g_wmap_travel_day = func_8005D494();
     func_80063F38();
     func_8005B548();
 }
@@ -1226,7 +1222,7 @@ void func_80061F18(s32* state)
         }
         break;
     case 6:
-        if (D_80139230 != 0)
+        if (g_wmap_party_moving != 0)
         {
             D_80182DB4 = 0;
         }
@@ -1352,26 +1348,26 @@ void func_80061FF8(s32* state)
                 temp_v0 = var_a2 << 0x10;
                 if (*((var_a1 * 0x28) + var_t1 + (u8*)&D_80139290) == 0)
                 {
-                    M2C_FIELD(&D_8019D248, s16*, 0x10) = var_a3;
-                    M2C_FIELD(&D_8019D248, s16*, 0xC) = var_a3;
+                    M2C_FIELD(&g_wmap_travelers, s16*, 0x10) = var_a3;
+                    M2C_FIELD(&g_wmap_travelers, s16*, 0xC) = var_a3;
                     var_a3 = 0x120;
                     var_t1 = 0x5A0;
-                    M2C_FIELD(&D_8019D248, s16*, 8) = var_a2;
+                    M2C_FIELD(&g_wmap_travelers, s16*, 8) = var_a2;
                     var_a2 = 6;
                     temp_v1_3 = var_a1 * 3;
                     temp_a0 = var_a1 << 0x10;
-                    M2C_FIELD(&D_8019D248, s16*, 0xA) = var_a1;
+                    M2C_FIELD(&g_wmap_travelers, s16*, 0xA) = var_a1;
                     var_a1 = 6;
                     temp_v1_4 = temp_v1_3 * 0x10;
                     temp_v0_2 = temp_v0 >> 0x10;
                     temp_a0_2 = temp_a0 >> 0x10;
-                    M2C_FIELD(&D_8019D248, s16*, 0x12) = temp_v1_4;
-                    M2C_FIELD(&D_8019D248, s16*, 0xE) = temp_v1_4;
-                    M2C_FIELD(&D_8019D248, s32*, 0x18) = temp_v0_2;
-                    M2C_FIELD(&D_8019D248, s32*, 0) = temp_v0_2;
-                    M2C_FIELD(&D_8019D248, s32*, 0x1C) = temp_a0_2;
-                    M2C_FIELD(&D_8019D248, s32*, 4) = temp_a0_2;
-                    M2C_FIELD(&D_8019D248, s32*, 0x14) = 0;
+                    M2C_FIELD(&g_wmap_travelers, s16*, 0x12) = temp_v1_4;
+                    M2C_FIELD(&g_wmap_travelers, s16*, 0xE) = temp_v1_4;
+                    M2C_FIELD(&g_wmap_travelers, s32*, 0x18) = temp_v0_2;
+                    M2C_FIELD(&g_wmap_travelers, s32*, 0) = temp_v0_2;
+                    M2C_FIELD(&g_wmap_travelers, s32*, 0x1C) = temp_a0_2;
+                    M2C_FIELD(&g_wmap_travelers, s32*, 4) = temp_a0_2;
+                    M2C_FIELD(&g_wmap_travelers, s32*, 0x14) = 0;
                 }
                 var_a3 += 0x30;
                 var_a2 += 1;
@@ -1591,7 +1587,7 @@ loop_1:
                     g_wmap_spirit_brightness = 0;
                     *(s32*)(base_8014b - 0x4DF8) = one;
                     *(s32*)(base_801b - 0x2470) = 0;
-                    D_80182D5C = func_8005D850(D_8019D248, D_8019D248 + 4);
+                    D_80182D5C = func_8005D850(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
                     D_80139834 = one;
                     *(s32*)(base_8014b - 0x4DF8) = one;
                     break;
@@ -1607,7 +1603,7 @@ loop_1:
                     *(s32*)(base_8014a - 0x4D84) = 0;
                     g_wmap_spirit_brightness = 0;
                     *(s32*)(base_8014b - 0x4DF8) = one;
-                    D_80182D5C = func_8005D850(D_8019D248, D_8019D248 + 4);
+                    D_80182D5C = func_8005D850(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
                     D_80139238 = one;
                     *(s32*)(base_8014b - 0x4DF8) = one;
                     break;
@@ -1890,9 +1886,9 @@ loop_1:
     }
     g_wmap_land_display[31].previous_animation_index = -1;
     g_wmap_land_display[31].animation_index = 0;
-    func_80058D9C();
-    var_t0 = M2C_FIELD(&D_8019D248, s32*, 0) - 1;
-    var_t1 = M2C_FIELD(&D_8019D248, s32*, 4) - 1;
+    wmap_init_party_travel();
+    var_t0 = M2C_FIELD(&g_wmap_travelers, s32*, 0) - 1;
+    var_t1 = M2C_FIELD(&g_wmap_travelers, s32*, 4) - 1;
     if (var_t0 < 0)
     {
         var_t0 = 0;
@@ -1916,14 +1912,14 @@ loop_1:
     M2C_FIELD(&D_80139950, s32*, 0) = (s32)(var_t0 * 0x30);
     M2C_FIELD(&D_80139950, s32*, 4) = (s32)(var_t1 * 0x30);
     rects[1] = *(WmapRect*)D_80051A88;
-    temp_v0_4 = (M2C_FIELD(&D_8019D248, s32*, 0) - 1) * 0xA0;
-    M2C_FIELD(&D_8019D248, u16*, 8) = (u16)M2C_FIELD(&D_8019D248, s32*, 0);
-    M2C_FIELD(&D_8019D248, u16*, 0xA) = (u16)M2C_FIELD(&D_8019D248, s32*, 4);
-    M2C_FIELD(&D_8019D248, s16*, 0xC) = temp_v0_4;
-    M2C_FIELD(&D_8019D248, s16*, 0x10) = temp_v0_4;
-    temp_v0_5 = (M2C_FIELD(&D_8019D248, s32*, 4) - 1) * 0xA0;
-    M2C_FIELD(&D_8019D248, s16*, 0xE) = temp_v0_5;
-    M2C_FIELD(&D_8019D248, s16*, 0x12) = temp_v0_5;
+    temp_v0_4 = (M2C_FIELD(&g_wmap_travelers, s32*, 0) - 1) * 0xA0;
+    M2C_FIELD(&g_wmap_travelers, u16*, 8) = (u16)M2C_FIELD(&g_wmap_travelers, s32*, 0);
+    M2C_FIELD(&g_wmap_travelers, u16*, 0xA) = (u16)M2C_FIELD(&g_wmap_travelers, s32*, 4);
+    M2C_FIELD(&g_wmap_travelers, s16*, 0xC) = temp_v0_4;
+    M2C_FIELD(&g_wmap_travelers, s16*, 0x10) = temp_v0_4;
+    temp_v0_5 = (M2C_FIELD(&g_wmap_travelers, s32*, 4) - 1) * 0xA0;
+    M2C_FIELD(&g_wmap_travelers, s16*, 0xE) = temp_v0_5;
+    M2C_FIELD(&g_wmap_travelers, s16*, 0x12) = temp_v0_5;
     ClearImage(&rects[1], 0, 0, 0);
     rects[1].x = 0x2C0;
     rects[1].y = 0x1FF;
@@ -2087,7 +2083,7 @@ loop_1:
                     {
                         akao_play_sfx_from_buffer(D_800CB248, 0, 0x80, 0x7F);
                     }
-                    func_8005DF50(M2C_FIELD(&D_8019D248, s32*, 0), M2C_FIELD(&D_8019D248, s32*, 4));
+                    func_8005DF50(M2C_FIELD(&g_wmap_travelers, s32*, 0), M2C_FIELD(&g_wmap_travelers, s32*, 4));
                     DrawSync(0);
                     var_s0_2 = (u16*)D_800DCF18;
                     StoreImage(&D_801398EC->disp_env, D_800DCF18);
@@ -2220,7 +2216,7 @@ loop_1:
                     func_8005FF88(-1);
                 }
                 func_8005F9BC();
-                func_8005880C();
+                wmap_update_party_travel();
                 wmap_update_map_display();
                 func_8005A318();
                 func_80059C78();

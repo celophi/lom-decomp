@@ -1,3 +1,4 @@
+#include "wmap_party_travel.h"
 #include "wmap_resource_support.h"
 #include "wmap_map_labels.h"
 #include "sdk/libgpu.h"
@@ -20,7 +21,6 @@ extern SPRT D_801391E8;
 extern SPRT D_801398D8;
 extern u8 D_801398DC;
 extern void* D_801398EC;
-extern s32 D_8013B274;
 extern SPRT D_80182DA0;
 extern s32 D_80182DA4;
 extern s32 D_80182E34;
@@ -87,9 +87,9 @@ void func_8005F9BC(void)
             D_800D921C += 0x14;
             M2C_FIELD(D_801398EC, s32**, 0x33C) = (s32*)(M2C_FIELD(D_801398EC, s32**, 0x33C) + 0x14);
         }
-        if (D_8013B274 != D_8011CF80)
+        if (g_wmap_travel_day != D_8011CF80)
         {
-            D_8011CF80 = D_8013B274;
+            D_8011CF80 = g_wmap_travel_day;
             M2C_FIELD(&D_801391E8, s32*, 0) = (s32)M2C_FIELD(&D_80182DA0, s32*, 0);
             M2C_FIELD(&D_801391E8, s32*, 4) = (s32)M2C_FIELD(&D_80182DA0, s32*, 4);
             M2C_FIELD(&D_801391E8, s32*, 8) = (s32)M2C_FIELD(&D_80182DA0, s32*, 8);
@@ -103,10 +103,10 @@ void func_8005F9BC(void)
             M2C_FIELD(&D_800DBE80, s32*, 0x10) = (s32)M2C_FIELD(&D_801398D8, s32*, 0x10);
             M2C_FIELD(&D_801398D8, s32*, 0xC) = 0;
             M2C_FIELD(&D_801391E8, u8*, 7) = (u8)(M2C_FIELD(&D_801391E8, u8*, 7) | 2);
-            M2C_FIELD(&D_80182DA0, s32*, 0xC) = (s8)(((D_8013B274 & 1) * 0x30) + 8);
-            M2C_FIELD(&D_80182DA0, s8*, 0xD) = (s8)((((s32)D_8013B274 / 2) * 0x38) + 0xE);
+            M2C_FIELD(&D_80182DA0, s32*, 0xC) = (s8)(((g_wmap_travel_day & 1) * 0x30) + 8);
+            M2C_FIELD(&D_80182DA0, s8*, 0xD) = (s8)((((s32)g_wmap_travel_day / 2) * 0x38) + 0xE);
             M2C_FIELD(&D_800DBE80, u8*, 7) = (u8)(M2C_FIELD(&D_800DBE80, u8*, 7) | 2);
-            M2C_FIELD(&D_801398D8, s8*, 0xD) = (s8)(D_8013B274 << 5);
+            M2C_FIELD(&D_801398D8, s8*, 0xD) = (s8)(g_wmap_travel_day << 5);
         }
         var_a2 = &D_80182DA0;
         M2C_FIELD(&D_80182DA0, u8*, 5) = (u8)M2C_FIELD(&D_80182DA0, s32*, 4);

@@ -1,4 +1,4 @@
-#include "common.h"
+#include "wmap_pathfinding.h"
 
 /**
  * @file wmap_pathfinding.c
