@@ -44,7 +44,7 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x1, rodata, wmap] # 0x8004FC70: header and pre-code tables
+      - [0x1, rodata, wmap] # header and pre-code tables
       - [0x15E9, .rodata, wmap_land_effect_loader] # compiler-generated switch table
       - [0x1671, rodata, wmap_1671]
       - [0x1839, .rodata, wmap_land_preview] # compiler-generated switch table
@@ -57,330 +57,61 @@ segments:
       - [0x4D75, .rodata, wmap_effect_primitives] # compiler-generated switch table
       - [0x4D95, .rodata, wmap_map_events] # compiler-generated switch table
       - [0x4DA9, rodata, wmap_4DA9]
-      # Translation units: completed named source groups.
-      # Ranges below are VRAM [start, end); names are provisional, not recovered filenames.
-      # Confidence rates the grouping, not proof of an original compiler TU boundary.
-      # Land-effect suffixes are func_800591A8 selector IDs, not identified place names.
-      # Internal boundaries are noted before their containing existing YAML entry.
-      # Evidence and open questions: docs/decompilation/wmap-tu-analysis.md
-      # Completed consolidation: docs/decompilation/wmap-tu-reorganization.md
-
-      # TU: wmap_map_display.c (consolidated)
-      # VRAM 0x80054A2C..0x800584B4 (end exclusive).
-      # Map-cell rendering, cached images, marker sprites, labels, and display-state updates. Cache helpers
-      # are interleaved with their draw callers.
-
-      - [0x4DBD, c, wmap_map_display] # gcc280_g0
-      # TU: wmap_party_travel.c (consolidated)
-      # VRAM 0x800584B4..0x8005909C (end exclusive).
-      # Update and draw the four 0x124-byte map records
-
-      - [0x8845, c, wmap_party_travel] # gcc280_g0
-      # TU: wmap_land_selection.c (logical group split across five named compiler units)
-      # VRAM 0x8005909C..0x8005B58C (end exclusive).
-      # Selection-list state, resource/effect dispatch, placement input, and projected selection previews.
-
-      - [0x942D, c, wmap_land_selection] # gcc280_g0
-      - [0x9539, c, wmap_land_effect_loader] # gcc280_g0
-      - [0x9765, c, wmap_land_transition] # gcc280_g0
-      - [0xA6A9, c, wmap_land_preview] # gcc280_g0
-      - [0xB8D1, c, wmap_land_preview_lines] # gcc280_g0
-      # TU: wmap_land_layout.c (consolidated)
-      # VRAM 0x8005B58C..0x8005DBB8 (end exclusive).
-      # Saved land placement, six-by-six lookup, eight-component propagation, list ordering, and save-flag
-      # queries. The leading saved-state update may warrant a later split.
-
-      - [0xB91D, c, wmap_land_layout] # gcc280_g0
-      # TU: wmap_pathfinding.c (high confidence)
-      # VRAM 0x8005DBB8..0x8005F9BC (end exclusive).
-      # Existing named unit: reachability and route search
-
-      - [0xDF49, c, wmap_pathfinding] # gcc280_g0_o0_builtin, 100%
-      # TU: wmap_map_labels.c (map labels and selection fades consolidated)
-      # VRAM 0x8005F9BC..0x80060720 (end exclusive).
-      # Label/display packets and the outgoing/current label fade, using D_801391E8, D_8011D518, and
-      # D_80182E08.
-
-      - [0xFD4D, c, wmap_map_labels] # gcc280_g0
-      # TU: wmap_main.c (world-map driver consolidated)
-      # VRAM 0x80060720..0x800641DC (end exclusive).
-      # Display setup, resident entry, initialization, input/wait/event handling, main resource/render loop,
-      # and map refresh. This remains a broad driver unit.
-
-      - [0x10AB1, c, wmap_main] # gcc280_g0
-      # TU: wmap_frame_render.c (frame submission and rendering consolidated)
-      # VRAM 0x800641DC..0x80064F14 (end exclusive).
-      # Frame submission and fullscreen/transition packets, including transformed panel geometry and fade
-      # callbacks.
-
-      - [0x1456D, c, wmap_frame_render] # gcc280_g0
-      # TU: wmap_resource_support.c (resource and display utilities consolidated)
-      # VRAM 0x80064F14..0x8006544C (end exclusive).
-      # Copy/TIM loading and upload helpers, sound lookup, small packet helper, and actor reset utilities
-
-      - [0x152A5, c, wmap_resource_support] # gcc280_g0
-      # TU: wmap_view_effects.c (view, tint, and grid effects consolidated)
-      # VRAM 0x8006544C..0x80066F9C (end exclusive).
-      # View-state dispatch, map tint and grid projection/UV updates, camera motion, and small view effects.
-
-      - [0x157DD, c, wmap_view_effects] # gcc280_g0
-      # TU: wmap_sprite_render.c (animated sprite-part renderer)
-      # VRAM 0x80066F9C..0x800675F0 (end exclusive).
-      # Shared animated sprite-part renderer
-
-      - [0x1732D, c, wmap_sprite_render] # gcc280_g0, partial 75.209880%
-      # TU: wmap_model_render.c (model primitive renderer)
-      # VRAM 0x800675F0..0x8006A2FC (end exclusive).
-      # Shared model face renderer with projected vertices, clipping, color scaling, and packet emission.
-
-      - [0x17981, c, wmap_model_render] # gcc280_g0, partial 97.333680%
-      # TU: wmap_effect_primitives.c (particle and transform primitives consolidated)
-      # VRAM 0x8006A2FC..0x8006C754 (end exclusive).
-      # Reusable particle projection/drawing and transform composition
-
-      - [0x1A68D, c, wmap_effect_primitives] # gcc280_g0
-      # TU: wmap_sequence_runtime.c (callback runtime consolidated)
-      # VRAM 0x8006C754..0x8006D520 (end exclusive).
-      # Two callback pools, animation stepping, common draw/transform adapters, and shared entry/exit
-      # sequences. Helpers and common steps are interleaved.
-
-      - [0x1CAE5, c, wmap_sequence_runtime] # gcc280_g0
-      # TU: wmap_effect_backdrop.c (backdrop group consolidated)
-      # VRAM 0x8006D520..0x8006D918 (end exclusive).
-      # Initialize/draw the triangulated backdrop, select effects, and choose one of two data buffers.
-
-      - [0x1D8B1, c, wmap_effect_backdrop] # gcc280_g0
-      # TU: wmap_land_effect_18.c (consolidated)
-      # VRAM 0x8006D918..0x8007085C (end exclusive).
-      # Selector 18 -> func_800706B0; step table D_800D4CAC.
-      # 108 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x1DCA9, c, wmap_land_effect_18] # gcc280_g0
-      # TU: wmap_land_effect_04.c (consolidated)
-      # VRAM 0x8007085C..0x80072644 (end exclusive).
-      # Selector 4 -> func_800712C0; step table D_800D4DD0.
-      # 77 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x20BED, c, wmap_land_effect_04] # gcc280_g0
-      # TU: wmap_land_effect_01.c (consolidated)
-      # VRAM 0x80072644..0x80074368 (end exclusive).
-      # Selector 1 -> func_8007369C; step table D_800D4F10.
-      # 72 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x229D5, c, wmap_land_effect_01] # gcc280_g0
-      # TU: wmap_land_effect_13.c (consolidated)
-      # VRAM 0x80074368..0x80076C6C (end exclusive).
-      # Selector 13 -> func_80074FB4; step table D_800D4FC8.
-      # 111 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x246F9, c, wmap_land_effect_13] # gcc280_g0
-      # TU: wmap_land_effect_26.c (consolidated)
-      # VRAM 0x80076C6C..0x80078E78 (end exclusive).
-      # Selector 26 -> func_80077560; step table D_800D5148.
-      # 92 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x26FFD, c, wmap_land_effect_26] # gcc280_g0
-      # TU: wmap_land_effect_32.c (consolidated)
-      # VRAM 0x80078E78..0x8007B0D8 (end exclusive).
-      # Selector 32 -> func_8007998C; step table D_800D5280.
-      # 88 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x29209, c, wmap_land_effect_32] # gcc280_g0
-      # TU: wmap_land_effect_15.c (consolidated)
-      # VRAM 0x8007B0D8..0x8007D428 (end exclusive).
-      # Selector 15 -> func_8007B910; step table D_800D53B0.
-      # 94 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x2B469, c, wmap_land_effect_15] # gcc280_g0
-      # TU: wmap_land_effect_02.c (consolidated)
-      # VRAM 0x8007D428..0x8007EC70 (end exclusive).
-      # Internal boundary at file offset 0x2D7B9, inside func_8007D428; keep this entry intact.
-      # Selector 2 -> func_8007DC14; step table D_800D54F0.
-      # 58 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x2D7B9, c, wmap_land_effect_02] # gcc280_g0
-      # TU: wmap_land_effect_07.c (consolidated)
-      # VRAM 0x8007EC70..0x80080FC8 (end exclusive).
-      # Selector 7 -> func_8007F398; step table D_800D55B8.
-      # 91 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x2F001, c, wmap_land_effect_07] # gcc280_g0
-      # TU: wmap_land_effect_30.c (consolidated)
-      # VRAM 0x80080FC8..0x80083D64 (end exclusive).
-      # Internal boundary at file offset 0x31359, inside func_80080FB0; keep this entry intact.
-      # Selector 30 -> func_80081BA0; step table D_800D56F0.
-      # 118 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x31359, c, wmap_land_effect_30] # gcc280_g0
-      # TU: wmap_land_effect_12.c (consolidated)
-      # VRAM 0x80083D64..0x8008543C (end exclusive).
-      # Selector 12 -> func_8008437C; step table D_800D5888.
-      # 63 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x340F5, c, wmap_land_effect_12] # gcc280_g0
-      # TU: wmap_land_effect_11.c (consolidated)
-      # VRAM 0x8008543C..0x80086F48 (end exclusive).
-      # Selector 11 -> func_80085A70; step table D_800D5960.
-      # 75 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x357CD, c, wmap_land_effect_11] # gcc280_g0
-      # TU: wmap_land_effect_03.c (consolidated)
-      # VRAM 0x80086F48..0x80088938 (end exclusive).
-      # Selector 3 -> func_8008759C; step table D_800D5A60.
-      # 74 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x372D9, c, wmap_land_effect_03] # gcc280_g0
-      # TU: wmap_land_effect_21.c (consolidated)
-      # VRAM 0x80088938..0x8008A864 (end exclusive).
-      # Internal boundary at file offset 0x38CC9, inside func_80088920; keep this entry intact.
-      # Selector 21 -> func_80089134; step table D_800D5B60.
-      # 80 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x38CC9, c, wmap_land_effect_21] # gcc280_g0
-      # TU: wmap_land_effect_17.c (consolidated)
-      # VRAM 0x8008A864..0x8008C7CC (end exclusive).
-      # Internal boundary at file offset 0x3ABF5, inside func_8008A84C; keep this entry intact.
-      # Selector 17 -> func_8008B25C; step table D_800D5C78.
-      # 84 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x3ABF5, c, wmap_land_effect_17] # gcc280_g0
-      # TU: wmap_land_effect_05.c (consolidated)
-      # VRAM 0x8008C7CC..0x8008ECF8 (end exclusive).
-      # Selector 5 -> func_8008D4B4; step table D_800D5D98.
-      # 94 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x3CB5D, c, wmap_land_effect_05] # gcc280_g0
-      # TU: wmap_land_effect_10.c (consolidated)
-      # VRAM 0x8008ECF8..0x80091650 (end exclusive).
-      # Selector 10 -> func_8008FD1C; step table D_800D5EE0.
-      # 96 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x3F089, c, wmap_land_effect_10] # gcc280_g0
-      # TU: wmap_land_effect_00.c (consolidated)
-      # VRAM 0x80091650..0x80093448 (end exclusive).
-      # Internal boundary at file offset 0x419E1, inside func_80091638; keep this entry intact.
-      # Selector 0 -> func_80091C0C; step table D_800D6028.
-      # 85 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x419E1, c, wmap_land_effect_00] # gcc280_g0
-      # TU: wmap_land_effect_08.c (consolidated)
-      # VRAM 0x80093448..0x800958C8 (end exclusive).
-      # Internal boundary at file offset 0x437D9, inside func_80093430; keep this entry intact.
-      # Selector 8 -> func_80093E98; step table D_800D6150.
-      # 96 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x437D9, c, wmap_land_effect_08] # gcc280_g0
-      # TU: wmap_land_effect_09.c (consolidated)
-      # VRAM 0x800958C8..0x80097624 (end exclusive).
-      # Internal boundary at file offset 0x45C59, inside func_800958B0; keep this entry intact.
-      # Selector 9 -> func_80095F34; step table D_800D62A0.
-      # 81 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x45C59, c, wmap_land_effect_09] # gcc280_g0
-      # TU: wmap_land_effect_16.c (consolidated)
-      # VRAM 0x80097624..0x80099754 (end exclusive).
-      # Internal boundary at file offset 0x479B5, inside func_8009760C; keep this entry intact.
-      # Selector 16 -> func_80097C50; step table D_800D63B8.
-      # 97 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x479B5, c, wmap_land_effect_16] # gcc280_g0
-      # TU: wmap_travel_sequences.c (consolidated)
-      # VRAM 0x80099754..0x8009AEBC (end exclusive).
-      # Two travel callbacks share directional animation, rotating-actor draw, and map scrolling. Triggered
-      # by D_8013B288 and D_8011CF20
-
-      - [0x49AE5, c, wmap_travel_sequences] # gcc280_g0
-      # TU: wmap_land_effect_27.c (consolidated)
-      # VRAM 0x8009AEBC..0x8009D620 (end exclusive).
-      # Selector 27 -> func_8009B8E4; step table D_800D65A4.
-      # 106 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x4B24D, c, wmap_land_effect_27] # gcc280_g0
-      # TU: wmap_land_effect_23.c (consolidated)
-      # VRAM 0x8009D620..0x800A0838 (end exclusive).
-      # Internal boundary at file offset 0x4D9B1, inside func_8009D608; keep this entry intact.
-      # Selector 23 -> func_8009E250; step table D_800D672C.
-      # 134 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x4D9B1, c, wmap_land_effect_23] # gcc280_g0
-      # TU: wmap_land_effect_22.c (consolidated)
-      # VRAM 0x800A0838..0x800A3348 (end exclusive).
-      # Selector 22 -> func_800A1604; step table D_800D6904.
-      # 112 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x50BC9, c, wmap_land_effect_22] # gcc280_g0
-      # TU: wmap_land_effect_19.c (consolidated)
-      # VRAM 0x800A3348..0x800A5DFC (end exclusive).
-      # Internal boundary at file offset 0x536D9, inside func_800A3330; keep this entry intact.
-      # Selector 19 -> func_800A3CC8; step table D_800D6A84.
-      # 114 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x536D9, c, wmap_land_effect_19] # gcc280_g0
-      # TU: wmap_map_events.c (consolidated)
-      # VRAM 0x800A5DFC..0x800A89DC (end exclusive).
-      # Prioritized map-event dispatcher and interleaved event/scroll/neighbor-effect helpers. Keep these
-      # together until flag meanings and helper ownership are clearer.
-
-      - [0x5618D, c, wmap_map_events] # gcc280_g0
-      # TU: wmap_effect_resources.c (resource-loader group consolidated)
-      # VRAM 0x800A89DC..0x800AAA2C (end exclusive).
-      # 36-entry resource-set dispatcher D_800D6D5C and CD load wrappers
-
+      - [0x4DBD, c, wmap_map_display]
+      - [0x8845, c, wmap_party_travel]
+      - [0x942D, c, wmap_land_selection]
+      - [0x9539, c, wmap_land_effect_loader]
+      - [0x9765, c, wmap_land_transition]
+      - [0xA6A9, c, wmap_land_preview]
+      - [0xB8D1, c, wmap_land_preview_lines]
+      - [0xB91D, c, wmap_land_layout]
+      - [0xDF49, c, wmap_pathfinding] # gcc280_g0_o0_builtin
+      - [0xFD4D, c, wmap_map_labels]
+      - [0x10AB1, c, wmap_main]
+      - [0x1456D, c, wmap_frame_render]
+      - [0x152A5, c, wmap_resource_support]
+      - [0x157DD, c, wmap_view_effects]
+      - [0x1732D, c, wmap_sprite_render]
+      - [0x17981, c, wmap_model_render]
+      - [0x1A68D, c, wmap_effect_primitives]
+      - [0x1CAE5, c, wmap_sequence_runtime]
+      - [0x1D8B1, c, wmap_effect_backdrop]
+      - [0x1DCA9, c, wmap_land_effect_18]
+      - [0x20BED, c, wmap_land_effect_04]
+      - [0x229D5, c, wmap_land_effect_01]
+      - [0x246F9, c, wmap_land_effect_13]
+      - [0x26FFD, c, wmap_land_effect_26]
+      - [0x29209, c, wmap_land_effect_32]
+      - [0x2B469, c, wmap_land_effect_15]
+      - [0x2D7B9, c, wmap_land_effect_02]
+      - [0x2F001, c, wmap_land_effect_07]
+      - [0x31359, c, wmap_land_effect_30]
+      - [0x340F5, c, wmap_land_effect_12]
+      - [0x357CD, c, wmap_land_effect_11]
+      - [0x372D9, c, wmap_land_effect_03]
+      - [0x38CC9, c, wmap_land_effect_21]
+      - [0x3ABF5, c, wmap_land_effect_17]
+      - [0x3CB5D, c, wmap_land_effect_05]
+      - [0x3F089, c, wmap_land_effect_10]
+      - [0x419E1, c, wmap_land_effect_00]
+      - [0x437D9, c, wmap_land_effect_08]
+      - [0x45C59, c, wmap_land_effect_09]
+      - [0x479B5, c, wmap_land_effect_16]
+      - [0x49AE5, c, wmap_travel_sequences]
+      - [0x4B24D, c, wmap_land_effect_27]
+      - [0x4D9B1, c, wmap_land_effect_23]
+      - [0x50BC9, c, wmap_land_effect_22]
+      - [0x536D9, c, wmap_land_effect_19]
+      - [0x5618D, c, wmap_map_events]
       - [0x58D6D, c, wmap_effect_resources] # gcc280_g0_o0_builtin
-      # TU: wmap_land_event_17.c (consolidated)
-      # VRAM 0x800AAA2C..0x800ADAA4 (end exclusive).
-      # Scripted event rooted at func_800AB850, selected by D_8011D4F8. Setup locates land 0x11 (17)
-
-      - [0x5ADBD, c, wmap_land_event_17] # gcc280_g0
-      # TU: wmap_land_effect_25.c (consolidated)
-      # VRAM 0x800ADAA4..0x800B1744 (end exclusive).
-      # Selector 25 -> func_800AEAB8; step table D_800D6FDC.
-      # 158 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x5DE35, c, wmap_land_effect_25] # gcc280_g0
-      # TU: wmap_land_event_00_a.c (consolidated)
-      # VRAM 0x800B1744..0x800B3434 (end exclusive).
-      # Scripted event rooted at func_800B2080, selected by D_8012954C. Setup locates land 0 and loads
-      # resources 0x1218 onward.
-
-      - [0x61AD5, c, wmap_land_event_00_a] # gcc280_g0
-      # TU: wmap_land_event_00_b.c (consolidated)
-      # VRAM 0x800B3434..0x800B5D0C (end exclusive).
-      # Separate land-0 event rooted at func_800B45B8, selected by D_801ADAF0. Resources 0x1220 onward and a
-      # distinct sequence-state bank.
-
-      - [0x637C5, c, wmap_land_event_00_b] # gcc280_g0
-      # TU: wmap_land_effect_31.c (consolidated)
-      # VRAM 0x800B5D0C..0x800BA228 (end exclusive).
-      # Internal boundary at file offset 0x6609D, formerly inside the staging source.
-      # Selector 31 -> func_800B7290; step table D_800D7474.
-      # 182 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x6609D, c, wmap_land_effect_31] # gcc280_g0
-      # TU: wmap_land_effect_24.c (consolidated)
-      # VRAM 0x800BA228..0x800BD41C (end exclusive).
-      # Internal boundary at file offset 0x6A5B9, formerly inside the staging source.
-      # Selector 24 -> func_800BAE24; step table D_800D76F4.
-      # 132 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x6A5B9, c, wmap_land_effect_24] # gcc280_g0
-      # TU: wmap_land_effect_33.c (consolidated)
-      # VRAM 0x800BD41C..0x800BF4C0 (end exclusive).
-      # Selector 33 -> func_800BD83C; step table D_800D78BC.
-      # 96 functions in one contiguous callback/table group; shared runtime excluded.
-
-      - [0x6D7AD, c, wmap_land_effect_33] # gcc280_g0
-      # TU: wmap_special_effect_34.c (consolidated)
-      # VRAM 0x800BF4C0..0x800C0CA4 (end exclusive).
-      # Internal boundary at file offset 0x6F851, formerly inside the staging source.
-      # Main-loop events 4..8 register func_800BFD18. It loads resource set 0x22 (34), then runs
-      # func_800C0034 and its effect steps.
-
-      - [0x6F851, c, wmap_special_effect_34] # gcc280_g0
-      # TU: wmap_special_effect_35.c (consolidated)
-      # VRAM 0x800C0CA4..0x800C4588 (end exclusive).
-      # Map event D_80182DD4 selects func_800C2274. It loads resource set 0x23 (35)
-
-      - [0x71035, c, wmap_special_effect_35] # gcc280_g0
-      - [0x74919, data, data] # 0x800C4588: post-code packets/assets
+      - [0x5ADBD, c, wmap_land_event_17]
+      - [0x5DE35, c, wmap_land_effect_25]
+      - [0x61AD5, c, wmap_land_event_00_a]
+      - [0x637C5, c, wmap_land_event_00_b]
+      - [0x6609D, c, wmap_land_effect_31]
+      - [0x6A5B9, c, wmap_land_effect_24]
+      - [0x6D7AD, c, wmap_land_effect_33]
+      - [0x6F851, c, wmap_special_effect_34]
+      - [0x71035, c, wmap_special_effect_35]
+      - [0x74919, data, data] # post-code packets/assets
   - [0x163669]
