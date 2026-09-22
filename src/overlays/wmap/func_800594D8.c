@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_map_labels.h"
 #include "wmap_sequence_runtime.h"
 #include "wmap_effect_backdrop.h"
@@ -72,7 +73,6 @@ s16 func_8005B8C8(s32 x, s32 y, s32 selection);
 void func_8005BBC8(s32 x, s32 y, s32 selection);
 void func_8005CA3C(s32 direction, s32* values);
 s32 func_8005D8FC();
-void func_800652A8(s32 type, s32 depth);
 void func_800593D4(void);
 
 /** @brief Update world-map selection and route state. */

@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 
@@ -56,8 +57,6 @@ extern void func_800551A8(void);
 extern void func_8005536C(void);
 extern void func_8005556C(void);
 extern void func_800581A0(s32 x, s32 y, s32 value);
-extern void func_80064F64(s32 id);
-extern void func_8006534C(s16 x, s32 ot_index);
 
 /**
  * @brief Update world-map state and draw the local map and status sprites.

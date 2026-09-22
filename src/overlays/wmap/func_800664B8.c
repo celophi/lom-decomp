@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_map_labels.h"
 /* Partial WMAP decompilation: 70.612750% (gcc280_g0). */
 #include "common.h"
@@ -10,7 +11,6 @@ typedef s32 M2C_UNK32;
 #define M2C_UNALIGNED32(expr) (expr)
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
-void func_800652A8(s32, s32);
 extern s32 D_800D9220;
 extern s16 D_800D928A;
 extern s32 D_800DBE70;

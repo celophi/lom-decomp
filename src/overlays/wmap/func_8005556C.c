@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 
 typedef struct
@@ -34,7 +35,6 @@ extern WmapObject D_80182248[];
 
 void func_80055AF4(void);
 void func_80058014(s32 object_id, s32 state);
-void func_800652A8(s32 sound_id, s32 volume);
 
 /**
  * @brief Update world-map object transitions in the active cell neighborhood.

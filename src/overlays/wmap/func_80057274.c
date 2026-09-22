@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 
@@ -17,7 +18,6 @@ extern s32 D_800D921C;
 extern WmapRenderState* D_801398EC;
 extern s32 D_8013B268;
 
-void func_8006534C(s32 type, s32 depth);
 
 /**
  * @brief Advance selected world-map animation timers and draw all eight sprites.

@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 
 /** @brief World-map actor configuration. */
@@ -45,7 +46,6 @@ extern u8 D_80123538[];
 extern s32 D_801B2E40;
 extern s32 D_801B2E44;
 extern void akao_cmd_c2(s32, s32, s32, s32);
-extern void func_800652A8(s32, s32);
 extern void func_800A7738(void);
 
 /** @brief Initialize active directional actors and play the transition sound. */

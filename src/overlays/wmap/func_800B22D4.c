@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 
 /** @brief Three color channels. */
@@ -6,7 +7,6 @@ typedef struct
     u8 r, g, b;
 } WmapColor;
 
-extern void func_800652A8(s32, s32);
 extern s32 D_8013B208;
 extern WmapColor D_80182D74;
 extern WmapColor D_80182D80;

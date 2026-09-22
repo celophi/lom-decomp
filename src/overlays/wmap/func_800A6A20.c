@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "cdrom.h"
@@ -22,7 +23,6 @@ typedef struct
     extern s32 D_801B2E48;
     extern void func_800A7C78(void);
     extern u8 D_800DCA98[];
-    extern void func_80064F64(s32);
     extern void func_80058FF4(s32, s32, s32);
 
     /** @brief Load resources and set the effect's map-relative position. */

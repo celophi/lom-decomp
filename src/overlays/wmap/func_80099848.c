@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -39,7 +40,6 @@ extern s32 D_8011D538;
 extern WmapSlotB D_801AFBD0[];
 extern s32 D_801B2C4C;
 extern s32 D_801B2C50;
-extern void func_800651B4(void *arg0);
 extern void func_800999D0(void);
 extern void func_80099918(void);
 

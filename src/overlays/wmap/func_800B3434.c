@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "cdrom.h"
@@ -24,7 +25,6 @@ extern WmapAlignedQuad D_80139950;
 extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern s32 D_801B2FE0;
-extern void func_80064F64(s32);
 extern void func_800B4648(void);
 
 /** @brief Queue world-map effect resources and initialize their map position. */

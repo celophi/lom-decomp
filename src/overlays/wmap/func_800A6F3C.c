@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 87.906250% (gcc280_g0). */
 #include "common.h"
@@ -27,7 +28,6 @@ extern s32 D_800DCF00;
 extern s32 D_80182DF8;
 extern s32 D_801B2E58;
 extern void func_8005EB68(s32, s32, s32, s32, s16 *, s16 *);
-extern void func_800652A8(s32, s32);
 extern void func_800A8510(void);
 
 /** @brief Build the effect route, initialize its position, and advance the sequence. */

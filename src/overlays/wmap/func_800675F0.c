@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 /* Partial WMAP decompilation: 97.333680% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgte.h"
@@ -89,7 +90,6 @@ typedef struct
 extern s32 D_800D921C;
 extern WmapRenderState* D_801398EC;
 
-void func_80064F14(void* data);
 
 #define LOAD_VERTEX(dst, source, index)                                                                                                                         \
     do                                                                                                                                                           \

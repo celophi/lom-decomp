@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_main.h"
 #include "common.h"
 #include "sdk/libgpu.h"
@@ -125,7 +126,6 @@ M2C_UNK func_800582E8();
 extern void func_8005909C(void);
 M2C_UNK func_8005B548();
 s32 func_8005D494(void);
-M2C_UNK func_800653EC();
 M2C_UNK func_800654F8();
 extern s32 D_8005136C;
 extern s32 D_800D06BC;
@@ -252,7 +252,6 @@ extern u8 D_800D0698;
 M2C_UNK akao_play_sfx_from_buffer(s32, M2C_UNK, M2C_UNK, M2C_UNK);
 void cdrom_queue_read();
 M2C_UNK cdrom_wait_queue_empty();
-extern void func_8006534C();
 extern s32 D_800CB204;
 extern s32 D_800CB224;
 extern s32 D_800CB23C;
@@ -265,7 +264,6 @@ extern u8 D_8019D6E0;
 extern s32 D_80139230;
 extern s32 D_80182DB4;
 extern s32 D_80182DE0;
-s32 func_80065428(s32, s32*);
 extern u8 D_800D0544;
 extern WmapTile D_80139290[6][6];
 extern u8 D_8019D248[];

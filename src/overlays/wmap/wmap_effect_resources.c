@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_effect_resources.h"
 #include "cdrom.h"
 
@@ -61,7 +62,6 @@ extern u8* D_8011CF3C;
 extern u8* D_8011CF40;
 extern u8* D_8011CF84;
 extern void (*D_800D6D5C[])(void);
-extern void func_80064F64(s32);
 
 static void func_800A8B38(s32 resource_index);
 

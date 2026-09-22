@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_map_labels.h"
 #include "sdk/libgpu.h"
 
@@ -50,7 +51,6 @@ extern SPRT D_80051A30;
 extern SPRT D_80051A44;
 extern s8 D_80182E0C;
 
-extern void func_8006534C();
 void func_80060230(void);
 
 /**

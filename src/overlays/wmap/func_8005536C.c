@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_map_labels.h"
 #include "common.h"
 #include "sdk/libgpu.h"
@@ -35,7 +36,6 @@ extern s32 D_80182230;
 extern WmapObject D_80182248[];
 
 extern void func_80058014(s32, s32);
-extern void func_8006534C(s32, s32);
 
 /**
  * @brief Advance the active world-map transition and refresh nearby object timers.

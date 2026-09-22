@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -6,7 +7,6 @@ extern s32 D_801ADAF4;
 extern s32 D_801B2748;
 extern s32 D_801B274C;
 extern s32 func_8006683C(s32 a0);
-extern s32 func_800652A8(s32 a0, s32 a1);
 extern void func_8007E2DC(void);
 
 /**

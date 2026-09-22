@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 /* Partial WMAP decompilation: 86.301650% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgpu.h"
@@ -39,7 +40,6 @@ extern s32 D_8013B268;
 
 void func_8005C404(s32 x, s32 y, s32 mode, s32 map_x, s32 map_y, s32* indices);
 void func_8005D6B8(s32 x, s32 y, s32* indices);
-void func_8006534C(s32 id, s32 mode);
 
 void func_8005784C(s32 arg0)
 {

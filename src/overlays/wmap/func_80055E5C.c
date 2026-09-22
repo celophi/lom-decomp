@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
@@ -37,7 +38,6 @@ extern s32 D_8013986C;
 extern WmapRenderState* D_801398EC;
 extern WmapProjectionState D_80139950;
 
-void func_8006534C(s32 type, s32 depth);
 
 /**
  * @brief Build and enqueue a world-map marker sprite.

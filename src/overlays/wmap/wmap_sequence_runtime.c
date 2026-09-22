@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_main.h"
 #include "wmap_effect_primitives.h"
 #include "wmap_sequence_runtime.h"
@@ -64,7 +65,6 @@ typedef struct
 extern s32 D_8011CF44;
 extern s32 D_801B0FD8[];
 extern WmapSequenceCallback D_801B1018[];
-extern void func_80064F14(void);
 extern s32 D_8013B20C;
 extern u32 D_801B10A0;
 extern u32 D_801B1098;

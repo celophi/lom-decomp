@@ -182,22 +182,11 @@ segments:
       # callbacks.
 
       - [0x1456D, c, wmap_frame_render] # gcc280_g0
-      # TU candidate: wmap_resource_support.c (low confidence)
+      # TU: wmap_resource_support.c (resource and display utilities consolidated)
       # VRAM 0x80064F14..0x8006544C (end exclusive).
       # Copy/TIM loading and upload helpers, sound lookup, small packet helper, and actor reset utilities
 
-      - [0x152A5, c, func_80064F14] # gcc280_g0, 100%
-      - [0x152AD, c, func_80064F1C] # gcc280_g0, partial 99.062500%
-      - [0x152ED, c, func_80064F5C] # gcc280_g0, 100%
-      - [0x152F5, c, func_80064F64] # gcc280_g0, partial 73.188410%
-      - [0x15409, c, func_80065078] # gcc280_g0, partial 73.188410%
-      - [0x1551D, c, func_8006518C] # gcc280_g0, 100%
-      - [0x15545, c, func_800651B4] # gcc280_g0, 100%
-      - [0x15639, c, func_800652A8] # gcc280_g0, 100%
-      - [0x15689, c, func_800652F8] # gcc280_g0, 100%
-      - [0x156DD, c, func_8006534C] # gcc280_g0, 100%
-      - [0x1577D, c, func_800653EC] # gcc280_g0, 100%
-      - [0x157B9, c, func_80065428] # gcc280_g0, 100%
+      - [0x152A5, c, wmap_resource_support] # gcc280_g0
       # TU candidate: wmap_view_effects.c (medium confidence)
       # VRAM 0x8006544C..0x80066F9C (end exclusive).
       # View-state dispatch, map tint and grid projection/UV updates, camera motion, and small view effects.

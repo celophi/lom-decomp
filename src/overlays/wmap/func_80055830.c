@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 
 typedef struct
@@ -24,7 +25,6 @@ extern s32 D_8013B298;
 extern WmapObject D_80182248[];
 
 extern void func_80058014(s32, s32);
-extern void func_800652A8(s32, s32);
 extern s32 rand(void);
 
 /**

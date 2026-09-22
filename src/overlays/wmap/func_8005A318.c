@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_map_labels.h"
 /* Partial WMAP decompilation: 95.887260% (gcc280_g0). */
 #include "common.h"
@@ -115,8 +116,6 @@ extern s32 D_80182E30;
 extern s32 D_801ADAE0;
 
 extern void func_8005B540(void);
-extern void func_800652A8(s32, s32, s32, s32);
-extern void func_8006534C(s32, s32, void*, void*);
 
 void func_8005A318(void)
 {

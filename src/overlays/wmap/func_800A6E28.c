@@ -1,10 +1,10 @@
+#include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
 typedef struct { s32 w[4]; } WmapBlk16;
 
 extern void cdrom_queue_read(s32 sector, void* dst);
-extern void func_80064F64(s32 id);
 extern void func_80058FF4(s32 a0, s32 a1, s32 a2);
 extern void func_800A8448(void);
 extern s32 D_800DCEF8;

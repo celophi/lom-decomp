@@ -1,9 +1,8 @@
+#include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
 extern void cdrom_wait_queue_empty(void);
-extern void func_800651B4(void *);
-extern void func_800652A8(s32, s32);
 extern u8 D_80182E40[];
 extern u8 D_8018B240[];
 extern u8 D_80193640[];

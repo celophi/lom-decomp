@@ -1,6 +1,6 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 
-extern void func_8006534C(s32, s32);
 extern void func_8008ECF8(s32, s32, s32, s32);
 extern s32 D_8011CF28;
 extern s32 D_80139280;

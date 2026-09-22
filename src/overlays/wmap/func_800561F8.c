@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
@@ -91,7 +92,6 @@ extern WmapSpriteResource D_8011CF88[];
 extern WmapRenderContext* D_801398EC;
 extern WmapProjection D_80139950;
 
-extern void func_80064F14(u8*, s32, s32, WmapSpriteResource*);
 
 typedef struct
 {

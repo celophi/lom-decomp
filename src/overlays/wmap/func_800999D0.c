@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -48,7 +49,6 @@ extern MATRIX D_8011D0E8;
 extern s32 D_80139224;
 extern WmapResource D_8013A180;
 extern WmapMotion D_801AFBD0;
-extern void func_800652A8(s32, s32);
 extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Project and draw the effect actor, playing sounds at selected frames.

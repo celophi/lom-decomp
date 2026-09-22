@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 /* Partial WMAP decompilation: 98.924730% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgpu.h"
@@ -38,7 +39,6 @@ extern s32 D_801398D0;
 extern WmapRenderContext *D_801398EC;
 extern WmapPosition D_80139950;
 extern void func_8005D018(s32, s32, s32, s32 *, s32 *, s32);
-extern void func_8006534C(s16, s32);
 
 /** @brief Draw the enabled map information labels and substitute dynamic glyphs. */
 void func_80057D2C(void)

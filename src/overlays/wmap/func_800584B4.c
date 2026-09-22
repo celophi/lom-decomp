@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 /* Partial WMAP decompilation: 83.588780% (gcc280_g0). */
 #include "common.h"
 
@@ -11,7 +12,6 @@ typedef s32 M2C_UNK32;
 
 M2C_UNK akao_cmd_f1();                              /* extern */
 M2C_UNK func_80059070();                            /* extern */
-void func_800652A8(s32, s32);
 extern u8 D_800D9268;
 extern s32 D_800DCEE8;
 extern s32 D_8011CF44;

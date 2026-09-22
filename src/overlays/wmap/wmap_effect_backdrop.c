@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "wmap_effect_backdrop.h"
 
 /** @brief Gouraud triangle packet with three packed screen coordinates. */
@@ -66,8 +67,6 @@ extern s32 D_8011CF70;
 extern s32 D_8011CF74;
 extern s32 D_80139244;
 extern s32 D_80139960;
-extern void func_8006534C(s16, s32);
-extern void func_80064F14(void);
 extern s32 D_8011CF58;
 extern s32 D_80182D70;
 extern WmapFixedPoint D_800D2B54[];

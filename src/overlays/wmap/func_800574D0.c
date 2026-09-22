@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 
@@ -40,7 +41,6 @@ void func_8005C404(s32 x, s32 y, s32 mode, s32 map_x, s32 map_y, s32* indices);
 void func_8005D6B8(s32 x, s32 y, s32* indices);
 void func_8005D7A0(s32 value, s32* indices);
 s32 func_8005D8FC(void);
-void func_8006534C(s32 id, s32 mode);
 
 /**
  * @brief Render the current world-map sprite set.

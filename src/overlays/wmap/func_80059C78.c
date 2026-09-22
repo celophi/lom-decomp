@@ -1,3 +1,4 @@
+#include "wmap_resource_support.h"
 /* Partial WMAP decompilation: 71.188680% (gcc280_g0). */
 #include "common.h"
 
@@ -12,7 +13,6 @@ typedef s32 M2C_UNK32;
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
-void func_8006534C(s32, s32);
 extern u16 D_80050170;
 extern u8 D_80050AA0;
 extern u8 D_80050DA8;
