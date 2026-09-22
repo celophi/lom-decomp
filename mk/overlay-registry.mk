@@ -346,6 +346,12 @@ overlay_title_gcc_272_cdk_g0_srcs := \
 
 OVERLAYS += wmap
 overlay_wmap_gcc_280_g0_srcs := \
+	src/overlays/wmap/func_800999D0.c \
+	src/overlays/wmap/func_80066DD8.c \
+	src/overlays/wmap/func_8006FAC8.c \
+	src/overlays/wmap/func_800A66C0.c \
+	src/overlays/wmap/func_8006CDDC.c \
+	src/overlays/wmap/func_800797C4.c \
 	src/overlays/wmap/func_800B3434.c \
 	src/overlays/wmap/func_80081360.c \
 	src/overlays/wmap/func_8007085C.c \
