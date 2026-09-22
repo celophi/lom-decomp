@@ -1,3 +1,4 @@
+#include "wmap_map_display.h"
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
@@ -120,10 +121,6 @@ extern s32 D_800D0550;
 extern s32 D_80182228;
 extern s32 D_80182240;
 extern u8 D_80139258;
-M2C_UNK func_800571A4();
-M2C_UNK func_80058260();
-M2C_UNK func_80058298();
-M2C_UNK func_800582E8();
 extern void func_8005909C(void);
 M2C_UNK func_8005B548();
 s32 func_8005D494(void);
