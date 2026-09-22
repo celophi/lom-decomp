@@ -1,3 +1,4 @@
+#include "wmap_land_layout.h"
 #include "wmap_pathfinding.h"
 
 /**
@@ -39,7 +40,6 @@ typedef struct { u8 unk0; u8 unk1; } WmapPair;
 
 extern int abs(int value);
 
-s32 func_8005D670(s32 x, s32 y);
 
 extern s32 D_800432BC;
 extern u32 D_800432C0[];
@@ -56,12 +56,9 @@ extern u8 D_80043390;
 extern u8 D_80043391;
 extern s8 D_800433E4;
 extern u8 D_800433E5;
-extern s32 D_80043454;
 extern u32 D_800460AC[];
 extern s32 D_800460EC;
 extern s32 D_800460FC;
-extern u16* D_800D8FF8;
-extern u8* D_800D8FFC;
 extern u8 D_800D01B0[];
 extern u8 D_800D01F0[];
 extern u16 g_scene_mode;
@@ -82,7 +79,7 @@ void func_8005DBB8(void)
             WMAP_SET_BIT(i + 0x200);
         }
     }
-    if (D_80043454 & 4)
+    if (g_wmap_replacement_land_status & 4)
     {
         D_800460EC |= 0x01000000;
     }
@@ -97,7 +94,7 @@ void func_8005DBB8(void)
             WMAP_SET_BIT(i + 0x280);
         }
     }
-    if (D_80043454 & 4)
+    if (g_wmap_replacement_land_status & 4)
     {
         D_800460FC |= 0x01000000;
     }
@@ -114,8 +111,8 @@ void func_8005DBB8(void)
  * data, and for ids 0xC / 0xD performs the swap of the two packed slot records
  * (D_800433DC and D_80043388) plus the four-neighbour reachability update.
  *
- * @param arg0 World-map cursor X coordinate passed to func_8005D670.
- * @param arg1 World-map cursor Y coordinate passed to func_8005D670.
+ * @param arg0 World-map cursor X coordinate passed to wmap_get_land_at_cell.
+ * @param arg1 World-map cursor Y coordinate passed to wmap_get_land_at_cell.
  * @note Built with gcc280_g0_o0_builtin (-O0); matched 100% via MCP diff.
  */
 void func_8005DF50(s32 arg0, s32 arg1)
@@ -128,11 +125,11 @@ void func_8005DF50(s32 arg0, s32 arg1)
     s32 sp24;
 
     func_8005DBB8();
-    sp20 = func_8005D670(arg0, arg1);
+    sp20 = wmap_get_land_at_cell(arg0, arg1);
     sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
-    g_scene_mode = D_800D8FF8[sp24];
-    g_layout_flag = D_800D8FFC[sp24];
-    g_music_track_index = func_8005D670(arg0, arg1);
+    g_scene_mode = g_wmap_land_scenes[sp24];
+    g_layout_flag = g_wmap_land_entry_flags[sp24];
+    g_music_track_index = wmap_get_land_at_cell(arg0, arg1);
 
     for (sp10 = 0; sp10 < 0x40; sp10++)
     {
@@ -144,14 +141,14 @@ void func_8005DF50(s32 arg0, s32 arg1)
                 g_music_track_index = D_800D01F0[sp10];
                 sp20 = D_800D01B0[sp10];
                 sp24 = (sp20 * 4) + ((D_800432C8[sp20 * WMAP_NODE_RECORD_SIZE] >> 4) & 3);
-                g_scene_mode = D_800D8FF8[sp24];
-                g_layout_flag = D_800D8FFC[sp24];
+                g_scene_mode = g_wmap_land_scenes[sp24];
+                g_layout_flag = g_wmap_land_entry_flags[sp24];
                 if (sp10 == 0xC)
                 {
                     D_80043390 = D_8004338C.unk0;
                     sp14 = (u8)((D_800433DC.word >> 8) & 0xF);
                     sp18 = (u8)((D_800433DC.word >> 0xC) & 0xF);
-                    sp1C = func_8005D670(sp14 - 1, sp18);
+                    sp1C = wmap_get_land_at_cell(sp14 - 1, sp18);
                     D_80043388.f.bit0 = (u8)(D_800433DC.b.b0 & 1);
                     D_80043388.f.bit1 = (u8)((D_800433DC.word >> 1) & 1);
                     D_80043388.word = D_80043388.word | 4;
@@ -202,7 +199,7 @@ void func_8005DF50(s32 arg0, s32 arg1)
                     D_8004338C.unk0 = D_80043390;
                     sp14 = (u8)((D_80043388.word >> 8) & 0xF);
                     sp18 = (u8)((D_80043388.word >> 0xC) & 0xF);
-                    sp1C = func_8005D670(sp14 - 1, sp18);
+                    sp1C = wmap_get_land_at_cell(sp14 - 1, sp18);
                     if (sp1C != 0xFF)
                     {
                         D_8004338C.unk1 = D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE];
@@ -211,7 +208,7 @@ void func_8005DF50(s32 arg0, s32 arg1)
                             D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] = 5;
                         }
                     }
-                    sp1C = func_8005D670(sp14 + 1, sp18);
+                    sp1C = wmap_get_land_at_cell(sp14 + 1, sp18);
                     if (sp1C != 0xFF)
                     {
                         D_8004338C.unk2 = D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE];
@@ -220,7 +217,7 @@ void func_8005DF50(s32 arg0, s32 arg1)
                             D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] = 5;
                         }
                     }
-                    sp1C = func_8005D670(sp14, sp18 - 1);
+                    sp1C = wmap_get_land_at_cell(sp14, sp18 - 1);
                     if (sp1C != 0xFF)
                     {
                         D_8004338C.unk3 = D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE];
@@ -229,7 +226,7 @@ void func_8005DF50(s32 arg0, s32 arg1)
                             D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE] = 5;
                         }
                     }
-                    sp1C = func_8005D670(sp14, sp18 + 1);
+                    sp1C = wmap_get_land_at_cell(sp14, sp18 + 1);
                     if (sp1C != 0xFF)
                     {
                         D_80043390 = D_800432D0[sp1C * WMAP_NODE_RECORD_SIZE];
@@ -272,7 +269,7 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
     s32 distances[WMAP_ROUTE_NODE_COUNT];
     s32 route[WMAP_ROUTE_NODE_COUNT];
 
-    if (func_8005D670(start_x, start_y) == WMAP_INVALID_NODE)
+    if (wmap_get_land_at_cell(start_x, start_y) == WMAP_INVALID_NODE)
     {
         current_x = start_x;
         current_y = start_y;
@@ -306,7 +303,7 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
         i++;
     }
 
-    distances[func_8005D670(start_x, start_y)] = 0;
+    distances[wmap_get_land_at_cell(start_x, start_y)] = 0;
     distance = 0;
     path_found = 0;
 
@@ -317,56 +314,56 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
         {
             if (distances[i] == distance)
             {
-                node_index = func_8005D670(WMAP_NODE_X(i) - 1, WMAP_NODE_Y(i));
+                node_index = wmap_get_land_at_cell(WMAP_NODE_X(i) - 1, WMAP_NODE_Y(i));
                 if (node_index != WMAP_INVALID_NODE)
                 {
                     if (distances[node_index] > distance + 1)
                     {
                         distances[node_index] = distance + 1;
                     }
-                    if (node_index == func_8005D670(end_x, end_y))
+                    if (node_index == wmap_get_land_at_cell(end_x, end_y))
                     {
                         i = WMAP_ROUTE_NODE_COUNT;
                         path_found = 1;
                     }
                 }
 
-                node_index = func_8005D670(WMAP_NODE_X(i) + 1, WMAP_NODE_Y(i));
+                node_index = wmap_get_land_at_cell(WMAP_NODE_X(i) + 1, WMAP_NODE_Y(i));
                 if (node_index != WMAP_INVALID_NODE)
                 {
                     if (distances[node_index] > distance + 1)
                     {
                         distances[node_index] = distance + 1;
                     }
-                    if (node_index == func_8005D670(end_x, end_y))
+                    if (node_index == wmap_get_land_at_cell(end_x, end_y))
                     {
                         i = WMAP_ROUTE_NODE_COUNT;
                         path_found = 1;
                     }
                 }
 
-                node_index = func_8005D670(WMAP_NODE_X(i), WMAP_NODE_Y(i) - 1);
+                node_index = wmap_get_land_at_cell(WMAP_NODE_X(i), WMAP_NODE_Y(i) - 1);
                 if (node_index != WMAP_INVALID_NODE)
                 {
                     if (distances[node_index] > distance + 1)
                     {
                         distances[node_index] = distance + 1;
                     }
-                    if (node_index == func_8005D670(end_x, end_y))
+                    if (node_index == wmap_get_land_at_cell(end_x, end_y))
                     {
                         i = WMAP_ROUTE_NODE_COUNT;
                         path_found = 1;
                     }
                 }
 
-                node_index = func_8005D670(WMAP_NODE_X(i), WMAP_NODE_Y(i) + 1);
+                node_index = wmap_get_land_at_cell(WMAP_NODE_X(i), WMAP_NODE_Y(i) + 1);
                 if (node_index != WMAP_INVALID_NODE)
                 {
                     if (distances[node_index] > distance + 1)
                     {
                         distances[node_index] = distance + 1;
                     }
-                    if (node_index == func_8005D670(end_x, end_y))
+                    if (node_index == wmap_get_land_at_cell(end_x, end_y))
                     {
                         i = WMAP_ROUTE_NODE_COUNT;
                         path_found = 1;
@@ -378,9 +375,9 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
         distance++;
     }
 
-    distance = distances[func_8005D670(end_x, end_y)];
-    route[distance] = func_8005D670(end_x, end_y);
-    node_index = func_8005D670(end_x, end_y);
+    distance = distances[wmap_get_land_at_cell(end_x, end_y)];
+    route[distance] = wmap_get_land_at_cell(end_x, end_y);
+    node_index = wmap_get_land_at_cell(end_x, end_y);
 
     while (distance >= 0)
     {
@@ -421,7 +418,7 @@ void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32 *out_x, s
     }
 
     i = 0;
-    while (i <= distances[func_8005D670(end_x, end_y)])
+    while (i <= distances[wmap_get_land_at_cell(end_x, end_y)])
     {
         out_x[i] = WMAP_NODE_X(route[i]);
         out_y[i] = WMAP_NODE_Y(route[i]);

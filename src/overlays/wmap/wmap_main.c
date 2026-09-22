@@ -1,3 +1,4 @@
+#include "wmap_land_layout.h"
 #include "wmap_land_transition.h"
 #include "wmap_party_travel.h"
 #include "wmap_map_display.h"
@@ -101,7 +102,6 @@ extern s32 D_80182240;
 extern u8 D_80139258;
 extern void func_8005909C(void);
 M2C_UNK func_8005B548();
-s32 func_8005D494(void);
 extern s32 D_8005136C;
 extern s32 D_800D06BC;
 extern s32 D_800D916C;
@@ -262,10 +262,6 @@ extern s32 D_800DCE9C;
 extern WmapTileDisplay D_8011D108[6][6];
 extern s32 D_80139830;
 extern s32 D_80182E20;
-extern s32 func_8005D670(s32, s32);
-extern s32 func_8005D554(u32, s32);
-extern void func_8005D6B8(s32, s32, void*);
-extern s16 func_8005B8C8(s32, s32, s32);
 extern WmapActor D_800D9268[];
 extern WmapMotion D_801AFBD0[];
 extern void akao_cmd_c2(s32, s32, s32, s32);
@@ -538,7 +534,7 @@ void func_80060918(void)
     temp_a3_2 = M2C_FIELD(var_v0_3, s32*, 0);
     M2C_FIELD(var_v1_3, s32*, 0) = temp_a3_2;
     M2C_FIELD(var_v1_3, s32*, 4) = (s32)M2C_FIELD(var_v0_3, s32*, 4);
-    g_wmap_travel_day = func_8005D494();
+    g_wmap_travel_day = wmap_get_day();
     func_80063F38();
     func_8005B548();
 }
@@ -1471,7 +1467,7 @@ s32 func_800623CC(void)
     void* var_sp;
 
     var_sp = 0;
-    temp_v0 = func_8005C6B4();
+    temp_v0 = wmap_load_land_layout();
     var_s5 = 1;
     D_800DBE68 = temp_v0;
     D_8013B234 = temp_v0;
@@ -1488,7 +1484,7 @@ s32 func_800623CC(void)
 loop_1:
     do
     {
-        temp_v0_2 = func_8005C878();
+        temp_v0_2 = wmap_next_land_event();
         D_801398F8 = temp_v0_2;
         if (temp_v0_2 != -1U)
         {
@@ -1504,7 +1500,7 @@ loop_1:
                     s32 drain_event;
 
                 drain_events:
-                    drain_event = func_8005C878();
+                    drain_event = wmap_next_land_event();
                     if (drain_event != -1)
                     {
                         goto drain_events;
@@ -1576,7 +1572,7 @@ loop_1:
                     g_wmap_spirit_brightness = 0;
                     *(s32*)(base_8014b - 0x4DF8) = one;
                     *(s32*)(base_801b - 0x2470) = 0;
-                    D_80182D5C = func_8005D850(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+                    D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
                     D_80139834 = one;
                     *(s32*)(base_8014b - 0x4DF8) = one;
                     break;
@@ -1592,7 +1588,7 @@ loop_1:
                     *(s32*)(base_8014a - 0x4D84) = 0;
                     g_wmap_spirit_brightness = 0;
                     *(s32*)(base_8014b - 0x4DF8) = one;
-                    D_80182D5C = func_8005D850(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+                    D_80182D5C = wmap_get_starting_cell(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
                     D_80139238 = one;
                     *(s32*)(base_8014b - 0x4DF8) = one;
                     break;
@@ -1676,7 +1672,7 @@ loop_1:
     if (var_s5 != 0)
     {
         var_s1 = D_800DCF18;
-        cdrom_queue_read((func_8005D4A4() + 0x1453) & 0xFFFF, var_s1);
+        cdrom_queue_read((wmap_get_land_count_tier() + 0x1453) & 0xFFFF, var_s1);
         cdrom_wait_queue_empty();
         temp_s0 = var_s1;
         var_s1 += 8;
@@ -1929,7 +1925,7 @@ loop_1:
     LoadImage(&rects[1], D_800DCF18);
     DrawSync(0);
     temp_s0_5 = D_800DCF18 + 8;
-    cdrom_queue_read((func_8005D4A4() + 0x10CE) & 0xFFFF, D_800DCF18);
+    cdrom_queue_read((wmap_get_land_count_tier() + 0x10CE) & 0xFFFF, D_800DCF18);
     cdrom_wait_queue_empty();
     if (M2C_FIELD(D_800DCF18, u8*, 4) & 8)
     {
@@ -2438,7 +2434,7 @@ void func_80063F38(void)
     {
         for (x = 0; x < 6; x++)
         {
-            tile = func_8005D670(x, y);
+            tile = wmap_get_land_at_cell(x, y);
             if (D_80139830 != 0)
             {
                 if (tile == 5)
@@ -2454,9 +2450,9 @@ void func_80063F38(void)
                 }
             }
             D_80139290[x][y].tile = tile;
-            D_80139290[x][y].field_06 = func_8005D554(x, y);
-            func_8005D6B8(x, y, D_80139290[x][y].neighbors);
-            D_80139290[x][y].field_04 = func_8005B8C8(x, y, D_8011D4FC);
+            D_80139290[x][y].field_06 = wmap_is_other_land_cell(x, y);
+            wmap_get_cell_spirit_sprites(x, y, D_80139290[x][y].neighbors);
+            D_80139290[x][y].field_04 = wmap_can_place_land(x, y, D_8011D4FC);
             D_8011D108[x][y].field_02 = 0;
         }
     }

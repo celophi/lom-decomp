@@ -6,6 +6,30 @@
 #include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
 
+/** @brief First word of a 40-byte world-map cell. */
+typedef struct
+{
+    s32 value;
+    u8 unknown_04[36];
+} WmapValueRecord;
+
+/** @brief World-map actor configuration. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} __attribute__((aligned(4))) WmapConfigA;
+
 /** @brief World-map step: fill a spawn descriptor, clear its slot run, then advance. */
 void func_8008543C(void)
 {
@@ -75,8 +99,6 @@ extern void func_800863E4__for_func_8008543C(void) __asm__("func_800863E4");
 /** @brief World-map step: fill a spawn descriptor, clear its slot run, then advance. */
 void func_80085528(void)
 {
-/* Partial WMAP decompilation: 91.500000% (gcc280_g0). */
-
 /** @brief World-map 8-byte slot: only the +4 pointer field is written here. */
 typedef struct
 {
@@ -127,23 +149,21 @@ extern s32 D_801B28E0;
 extern void func_80086778__for_func_80085528(void) __asm__("func_80086778");
 
     s32 i;
-    WmapConfig *cfg;
 
-    cfg = D_80139280;
     D_801B0FD0 = 0xA;
-    cfg[0].field_2C = 1;
-    cfg[0].field_30 = 6;
-    cfg[0].field_34 = 0x90;
-    cfg[0].field_38 = 2;
-    cfg[0].field_3C = 3;
-    cfg[0].field_40 = 0x60;
-    cfg[0].field_44 = 0x64;
-    cfg[0].field_48 = 0xD;
-    cfg[0].field_4C = 0;
-    cfg[0].field_50 = 0x2EE0;
+    D_80139280[0].field_2C = 1;
+    D_80139280[0].field_30 = 6;
+    D_80139280[0].field_34 = 0x90;
+    D_80139280[0].field_38 = 2;
+    D_80139280[0].field_3C = 3;
+    D_80139280[0].field_40 = 0x60;
+    D_80139280[0].field_44 = 0x64;
+    D_80139280[0].field_48 = 0xD;
+    D_80139280[0].field_4C = 0;
+    D_80139280[0].field_50 = 0x2EE0;
     for (i = 0; i < 0xA; i++)
     {
-        D_801AFBD0[i + cfg[0].field_44].field_00 = 0;
+        D_801AFBD0[i + D_80139280[0].field_44].field_00 = 0;
         D_80139988[i + 0x68].field_04 = &D_8011D538;
     }
     D_801B28E4 = 0x29;
@@ -682,19 +702,18 @@ extern s32 D_801B28B8;
     }
 }
 
+/** @brief Clear the sequence gate, update the active map cell, and advance the step. */
 void func_80085FA8(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
-
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapValueRecord D_80139290[][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B28B8;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B28B8 += 1;
 }
 
@@ -1082,28 +1101,9 @@ extern void (*D_800D59E8[])(void);
     D_801B28DC = 1;
 }
 
+/** @brief Configure the world-map actor and advance to its draw step. */
 void func_800865D4(void)
 {
-/* Partial WMAP decompilation: 87.156250% (gcc280_g0). */
-
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} __attribute__((aligned(4))) WmapConfigA;
-
-
 extern WmapConfigA D_800D9370;
 extern u8 D_8011D538;
 extern void *D_801399BC;
@@ -1113,10 +1113,10 @@ extern void func_80086654__for_func_800865D4(void) __asm__("func_80086654");
 
     D_801399BC = &D_8011D538;
     D_800D9370.field_06 = 0xF;
-    D_800D9370.field_10 = -1;
-    D_800D9370.field_22 = 0x81;
     D_800D9370.field_0E = 2;
+    D_800D9370.field_10 = -1;
     D_800D9370.field_26 = 2;
+    D_800D9370.field_22 = 0x81;
     D_800D9370.field_02 = 0;
     D_800D9370.field_24 = 1;
     D_801B28DC = 0x62;

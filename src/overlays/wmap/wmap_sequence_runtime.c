@@ -112,7 +112,7 @@ extern s32 D_801398D0;
 extern s32 D_80182D68;
 extern s32 D_80182D78;
 
-static void func_8006D1AC(VECTOR* translation, SVECTOR* rotation);
+void func_8006D1AC(VECTOR* translation, SVECTOR* rotation);
 static s32 func_8006D328(s32 arg0);
 
 /**
@@ -371,7 +371,6 @@ s32 func_8006CC4C(void* actor_data, void* resource_data)
     u8* cursor;
     s32 result;
     s32 frame;
-    s32 offset;
 
     result = -1;
     offsets = (s16*)resource->data;
@@ -379,11 +378,9 @@ s32 func_8006CC4C(void* actor_data, void* resource_data)
     if (actor->previous_sequence != actor->sequence)
     {
         actor->previous_sequence = (u16)actor->sequence;
-        offset = offsets[actor->sequence];
+        actor->sequence_start = (u8*)offsets + offsets[actor->sequence];
+        actor->cursor = actor->sequence_start;
         actor->remaining = 1;
-        cursor = (u8*)offsets + offset;
-        actor->sequence_start = cursor;
-        actor->cursor = cursor;
     }
     if (actor->remaining != 255)
     {
@@ -604,7 +601,7 @@ void func_8006D190(void)
  * @param translation Translation for the global rotation matrix.
  * @param rotation Local rotation angles.
  */
-static void func_8006D1AC(VECTOR* translation, SVECTOR* rotation)
+void func_8006D1AC(VECTOR* translation, SVECTOR* rotation)
 {
     MATRIX matrices[2];
 

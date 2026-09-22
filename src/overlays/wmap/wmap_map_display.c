@@ -1610,15 +1610,15 @@ void wmap_draw_spirit_levels(void)
 
     if (D_8011CF18 == 2)
     {
-        func_8005D7A0(func_8005D8FC(), sprite_indices);
+        wmap_get_artifact_spirit_sprites(wmap_get_selected_artifact(), sprite_indices);
     }
     else if (D_80129550 == 1)
     {
-        func_8005C404(x, y, D_8011D4FC, x, y, sprite_indices);
+        wmap_get_proposed_spirit_sprites(x, y, D_8011D4FC, x, y, sprite_indices);
     }
     else
     {
-        func_8005D6B8(x, y, sprite_indices);
+        wmap_get_cell_spirit_sprites(x, y, sprite_indices);
     }
 
     i = 0;
@@ -1697,11 +1697,11 @@ void wmap_draw_spirit_grid(s32 spirit_index)
         {
             if (D_80129550 == 1 && D_80139290[target_x][target_y].effect_enabled != 0)
             {
-                func_8005C404(cur_x, cur_y, D_8011D4FC, target_x, target_y, cell_spirits.sprite_indices);
+                wmap_get_proposed_spirit_sprites(cur_x, cur_y, D_8011D4FC, target_x, target_y, cell_spirits.sprite_indices);
             }
             else
             {
-                func_8005D6B8(cur_x, cur_y, cell_spirits.sprite_indices);
+                wmap_get_cell_spirit_sprites(cur_x, cur_y, cell_spirits.sprite_indices);
             }
 
             if (cur_x == target_x && cur_y == target_y && (D_8011CF74 & 4))
@@ -1817,7 +1817,7 @@ void wmap_draw_information_labels(void)
     }
     if (g_wmap_information_groups == 0)
     {
-        func_8005D018(D_800DCEEC + D_800DCEF0 * 3, D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC, D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0,
+        wmap_build_placement_labels(D_800DCEEC + D_800DCEF0 * 3, D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC, D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0,
                       &g_wmap_information_groups, g_wmap_information_values, D_8011D4FC);
     }
     dynamic_index = 0;

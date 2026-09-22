@@ -7,6 +7,13 @@
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 
+/** @brief First word of a 40-byte world-map cell. */
+typedef struct
+{
+    s32 value;
+    u8 unknown_04[36];
+} WmapValueRecord;
+
 /** @brief Project active particles and initialize the first available slot. */
 void func_80072644(WmapConfigA *actors, WmapResource *resources, s32 count)
 {
@@ -669,19 +676,18 @@ extern s32 D_801B2510;
     }
 }
 
+/** @brief Update the selected world-map cell value, clear the gate flag, and advance the sequence. */
 void func_800733CC(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
-
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapValueRecord D_80139290[][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B2510;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2510 += 1;
 }
 

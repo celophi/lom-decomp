@@ -1,3 +1,4 @@
+#include "wmap_land_layout.h"
 #include "wmap_party_travel.h"
 #include "wmap_resource_support.h"
 #include "wmap_map_labels.h"
@@ -40,7 +41,6 @@ extern u16 D_80182DD0;
 extern s32 D_80182E04;
 extern SPRT D_80182E08;
 extern s32 D_801ADAE4;
-extern s32 func_8005D528(s32);
 extern u8 D_80051A6C;
 extern u8 D_800D03EC;
 extern u8 D_800D040C;
@@ -260,7 +260,7 @@ void func_8005FF88(s32 selection)
         {
             D_8011CF78 = 43;
             D_8011D518 = D_80051A1C;
-            if (func_8005D528(selection) == 0)
+            if (wmap_is_land_active(selection) == 0)
             {
                 D_800D0368 = 508;
             }
