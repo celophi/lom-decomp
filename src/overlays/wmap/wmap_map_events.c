@@ -222,12 +222,6 @@ block_34:
 /** @brief Select the first occupied neighbor, or a random direction when isolated. */
 void func_800A61BC(s32 tile)
 {
-typedef struct
-{
-    s32 tile;
-    u8 pad_04[36];
-} WmapTile;
-extern WmapTile D_80139290[6][6];
 extern u8 D_800DCEF4[4];
 extern s8 D_800DCEF5;
 extern s8 D_800DCEF6;
