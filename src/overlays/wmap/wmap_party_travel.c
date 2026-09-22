@@ -135,28 +135,23 @@ void wmap_advance_travel_day(void);
 /** @brief Advance each traveler's route and synchronize animation, scrolling, and travel sound. */
 void wmap_update_travelers(void)
 {
-    /* Partial WMAP decompilation: 87.967290% (gcc280_g0). */
-
     WmapTraveler* traveler;
     WmapTraveler* scripted_traveler;
-    WmapTravelSprite* sprite;
-    WmapTraveler* route;
     s32 i;
     s16 position_x;
     s16 position_y;
     s16 target_x;
     s16 target_y;
-    s16 interpolating;
-    s16 previous_cell_x;
-    s16 previous_cell_y;
+    s32 interpolating;
+    s32 previous_cell_x;
+    s32 previous_cell_y;
     s32 path_index;
+    s16 next_x, next_y;
 
     g_wmap_party_moving = 0;
-    scripted_traveler = &g_wmap_travelers[WMAP_SCRIPTED_TRAVELER];
-    sprite = D_800D9268;
-    traveler = g_wmap_travelers;
     for (i = 0; i < WMAP_TRAVELER_COUNT; i++)
     {
+        traveler = &g_wmap_travelers[i];
         position_x = traveler->position_x;
         target_x = traveler->target_x;
         interpolating = 0;
@@ -194,21 +189,22 @@ void wmap_update_travelers(void)
             }
             traveler->cell_x = traveler->next_cell_x;
             traveler->cell_y = traveler->next_cell_y;
-            if (traveler->destination_x != traveler->next_cell_x || traveler->destination_y != traveler->next_cell_y)
+            if (traveler->destination_x != traveler->cell_x || traveler->destination_y != traveler->cell_y)
             {
                 previous_cell_x = traveler->next_cell_x;
                 previous_cell_y = traveler->next_cell_y;
                 path_index = traveler->path_index + 1;
                 traveler->path_index = path_index;
-                route = &g_wmap_travelers[i];
-                traveler->next_cell_x = route->path_x.steps[path_index].cell;
-                traveler->target_x = (route->path_x.steps[path_index].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
-                traveler->next_cell_y = route->path_y.steps[path_index].cell;
-                traveler->target_y = (route->path_y.steps[path_index].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+                next_x = g_wmap_travelers[i].path_x.steps[path_index].cell;
+                traveler->next_cell_x = next_x;
+                traveler->target_x = (next_x - 1) * WMAP_TRAVEL_CELL_UNITS;
+                next_y = g_wmap_travelers[i].path_y.steps[path_index].cell;
+                traveler->next_cell_y = next_y;
+                traveler->target_y = (next_y - 1) * WMAP_TRAVEL_CELL_UNITS;
                 if (g_wmap_scripted_travel_active != 0 && i == WMAP_SCRIPTED_TRAVELER)
                 {
                     D_801398D0 = 2;
-                    D_80182D68 = (scripted_traveler->next_cell_x - previous_cell_x) * WMAP_CELL_SPACING;
+                    D_80182D68 = ((scripted_traveler = &g_wmap_travelers[WMAP_SCRIPTED_TRAVELER])->next_cell_x - previous_cell_x) * WMAP_CELL_SPACING;
                     D_80182D78 = (scripted_traveler->next_cell_y - previous_cell_y) * WMAP_CELL_SPACING;
                 }
                 traveler->moving = 1;
@@ -216,45 +212,43 @@ void wmap_update_travelers(void)
             else
             {
                 traveler->moving = 0;
-                sprite->sequence = WMAP_TRAVEL_IDLE;
+                D_800D9268[i].sequence = WMAP_TRAVEL_IDLE;
                 if (i == WMAP_SCRIPTED_TRAVELER && g_wmap_scripted_travel_active != 0)
                 {
                     g_wmap_scripted_travel_active = 0;
                 }
             }
         }
-        if (traveler->moving != 0)
+        if (g_wmap_travelers[i].moving != 0)
         {
             if (traveler->target_x == traveler->position_x)
             {
                 target_y = traveler->target_y;
                 position_y = traveler->position_y;
-                if (position_y < target_y)
+                if (target_y > position_y)
                 {
-                    sprite->sequence = WMAP_TRAVEL_DOWN;
+                    D_800D9268[i].sequence = WMAP_TRAVEL_DOWN;
                 }
                 else if (target_y < position_y)
                 {
-                    sprite->sequence = WMAP_TRAVEL_UP;
+                    D_800D9268[i].sequence = WMAP_TRAVEL_UP;
                 }
             }
             if (traveler->target_y == traveler->position_y)
             {
                 target_x = traveler->target_x;
                 position_x = traveler->position_x;
-                if (position_x < target_x)
+                if (target_x > position_x)
                 {
-                    sprite->sequence = WMAP_TRAVEL_RIGHT;
+                    D_800D9268[i].sequence = WMAP_TRAVEL_RIGHT;
                 }
                 else if (target_x < position_x)
                 {
-                    sprite->sequence = WMAP_TRAVEL_LEFT;
+                    D_800D9268[i].sequence = WMAP_TRAVEL_LEFT;
                 }
             }
         }
-        sprite++;
         g_wmap_party_moving |= traveler->moving;
-        traveler++;
     }
     if (g_wmap_party_moving != g_wmap_travel_sound_active)
     {
@@ -279,16 +273,16 @@ void wmap_update_travelers(void)
 /** @brief Draw the travelers, accept a destination, and advance their movement. */
 void wmap_update_party_travel(void)
 {
-    /* Partial WMAP decompilation: 93.306180% (gcc280_g0). */
-
     SVECTOR position;
     s32 depth;
+    s32 scale;
+    s32 view_x, view_y;
     WmapTravelScreen screen;
     s32 packed_position;
-    WmapTraveler* traveler;
+    s32 flat_y;
+    s32 flat_x_bits;
     WmapTravelSprite* sprite;
     s32 i;
-    s32 texture_row;
     s32 ot_index;
     s32 depth_index;
     s32 selected_x;
@@ -298,8 +292,6 @@ void wmap_update_party_travel(void)
     if (g_wmap_party_visible != 0)
     {
         i = 0;
-        texture_row = WMAP_TRAVEL_TEXTURE_ROW;
-        traveler = g_wmap_travelers;
         do
         {
             sprite = &D_800D9268[i];
@@ -308,11 +300,14 @@ void wmap_update_party_travel(void)
                 func_8006CC4C(sprite, &D_80139988[i]);
                 if (D_8013986C == 0)
                 {
-                    screen.point.x = traveler->position_x;
-                    screen.point.y = traveler->position_y;
-                    position.vx = (traveler->position_x - ((D_80139950.x * 0x14000 / D_80139950.scale) - 20)) * 0x6000 / D_80139950.scale;
+                    screen.point.x = g_wmap_travelers[i].position_x;
+                    screen.point.y = g_wmap_travelers[i].position_y;
+                    scale = D_80139950.scale;
+                    view_x = D_80139950.x * 0x14000 / scale - 20;
+                    position.vx = (g_wmap_travelers[i].position_x - view_x) * 0x6000 / scale;
+                    view_y = D_80139950.y * 0x14000 / scale - 20;
+                    position.vy = (g_wmap_travelers[i].position_y - view_y) * 0x6000 / scale;
                     position.vz = 0;
-                    position.vy = (traveler->position_y - ((D_80139950.y * 0x14000 / D_80139950.scale) - 20)) * 0x6000 / D_80139950.scale;
                     gte_ldv0(&position);
                     gte_rtps();
                     gte_stsxy(&screen.packed);
@@ -323,22 +318,25 @@ void wmap_update_party_travel(void)
                     {
                         ot_index = WMAP_TRAVEL_OT_FALLBACK;
                     }
-                    if (wmap_get_point_display_mode(traveler->position_x * WMAP_CELL_SPACING / WMAP_TRAVEL_CELL_UNITS + WMAP_CELL_SPACING,
-                                                    traveler->position_y * WMAP_CELL_SPACING / WMAP_TRAVEL_CELL_UNITS + WMAP_CELL_SPACING,
-                                                    D_80139950.scale) != 0)
+                    if (wmap_get_point_display_mode(g_wmap_travelers[i].position_x * WMAP_CELL_SPACING / WMAP_TRAVEL_CELL_UNITS + WMAP_CELL_SPACING,
+                                                    g_wmap_travelers[i].position_y * WMAP_CELL_SPACING / WMAP_TRAVEL_CELL_UNITS + WMAP_CELL_SPACING,
+                                                    scale) != 0)
                     {
-                        func_80066F9C(sprite, screen.packed, i, ot_index, texture_row);
+                        func_80066F9C(sprite, screen.packed, i, ot_index, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
                     }
                 }
                 if (D_8013986C == 1)
                 {
-                    packed_position = D_8004FD04[traveler->cell_x + traveler->cell_y * WMAP_GRID_SIZE].packed;
-                    packed_position = (packed_position & 0xFFFF0000) | ((packed_position + 14) & 0xFFFF);
-                    func_80066F9C(sprite, (packed_position & 0xFFFF) | (((packed_position >> 16) + 28) << 16), i, WMAP_TRAVEL_OT_FALLBACK, texture_row);
+                    packed_position = D_8004FD04[g_wmap_travelers[i].cell_x + g_wmap_travelers[i].cell_y * WMAP_GRID_SIZE].packed;
+                    flat_x_bits = packed_position + 14;
+                    packed_position &= 0xFFFF0000;
+                    flat_x_bits &= 0xFFFF;
+                    packed_position |= flat_x_bits;
+                    flat_y = packed_position >> 16;
+                    packed_position &= 0xFFFF;
+                    func_80066F9C(sprite, (u16)packed_position | ((flat_y + 28) << 16), i, WMAP_TRAVEL_OT_FALLBACK, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
                 }
             }
-            texture_row += WMAP_TRAVEL_TEXTURE_ROW;
-            traveler++;
             i++;
         } while (i < WMAP_TRAVELER_COUNT);
     }
@@ -348,8 +346,7 @@ void wmap_update_party_travel(void)
         selected_y = D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0;
         if (D_80139290[selected_x][selected_y].traversable != 0 && D_8013986C == 0 && D_8011CF18 == 0)
         {
-            at_destination = 1;
-            if (selected_x != g_wmap_travelers[0].cell_x || selected_y != g_wmap_travelers[0].cell_y)
+            if (selected_x != g_wmap_travelers[0].cell_x || (at_destination = 1, selected_y != g_wmap_travelers[0].cell_y))
             {
                 at_destination = 0;
             }
@@ -372,8 +369,8 @@ void wmap_update_party_travel(void)
                         /* The route begins with the cell the party already occupies. */
                         g_wmap_travelers[0].path_index = 1;
                         g_wmap_travelers[0].next_cell_x = g_wmap_travelers[0].path_x.steps[1].cell;
-                        g_wmap_travelers[0].next_cell_y = g_wmap_travelers[0].path_y.steps[1].cell;
                         g_wmap_travelers[0].target_x = (g_wmap_travelers[0].path_x.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+                        g_wmap_travelers[0].next_cell_y = g_wmap_travelers[0].path_y.steps[1].cell;
                         g_wmap_travelers[0].target_y = (g_wmap_travelers[0].path_y.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
                     }
                     else
@@ -390,8 +387,6 @@ void wmap_update_party_travel(void)
 /** @brief Load traveler animations and restore the party and optional actors to their map cells. */
 void wmap_init_party_travel(void)
 {
-    /* Partial WMAP decompilation: 97.346664% (gcc280_g0). */
-
     s32 first_x, first_y, second_x, second_y;
     s32 i;
     s32 resource_id;
@@ -406,7 +401,6 @@ void wmap_init_party_travel(void)
     for (i = 0; i < WMAP_TRAVELER_COUNT; i++)
     {
         traveler = &g_wmap_travelers[i];
-        sprite = &D_800D9268[i];
         traveler->cell_y = 1;
         traveler->cell_x = 1;
         traveler->next_cell_y = 1;
@@ -418,12 +412,12 @@ void wmap_init_party_travel(void)
         traveler->position_y = 0;
         traveler->position_x = 0;
         traveler->moving = 0;
+        sprite = &D_800D9268[i];
         sprite->scale_index = WMAP_TRAVEL_SCALE_INDEX;
         sprite->previous_sequence = -1;
         sprite->target_shade = WMAP_TRAVEL_SHADE;
         sprite->shade = WMAP_TRAVEL_SHADE;
-        D_80139988[i].data = resource;
-        resource += WMAP_TRAVEL_ANIMATION_BYTES;
+        D_80139988[i].data = resource + i * WMAP_TRAVEL_ANIMATION_BYTES;
     }
     D_80182D5C = func_8005D850(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
     wmap_set_traveler_position(0, g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
