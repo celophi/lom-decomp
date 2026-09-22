@@ -45,6 +45,8 @@ segments:
     vram: 0x8004FC70
     subsegments:
       - [0x1, rodata, wmap] # 0x8004FC70: header and pre-code tables
+      - [0x15E9, .rodata, func_800591A8] # compiler-generated switch table
+      - [0x1671, rodata, wmap_1671]
       - [0x1839, .rodata, func_8005A318] # compiler-generated switch table
       - [0x1851, rodata, wmap_1851]
       - [0x1E69, .rodata, func_800623CC] # compiler-generated switch table
@@ -84,13 +86,16 @@ segments:
       - [0x9385, c, func_80058FF4] # gcc280_g0, 100%
       - [0x9401, c, func_80059070] # gcc280_g0, 100%
       - [0x942D, c, func_8005909C] # gcc280_g0, 100%
-      - [0x9539, asm, wmap_9539]
+      - [0x9539, c, func_800591A8] # gcc280_g0, 100%
+      - [0x9765, asm, wmap_9765]
       - [0x9869, c, func_800594D8] # gcc280_g0, WIP 99.938520%
       - [0xA009, asm, wmap_A009]
       - [0xA6A9, c, func_8005A318] # gcc280_g0, WIP 90.633390%
       - [0xB8D1, c, func_8005B540] # gcc280_g0, 100%
       - [0xB8D9, c, func_8005B548] # gcc280_g0, 100%
       - [0xB91D, asm, wmap_B91D]
+      - [0xCDCD, c, func_8005CA3C] # gcc280_g0, 100%
+      - [0xCFE1, asm, wmap_CFE1]
       - [0xD7FD, c, func_8005D46C] # gcc280_g0, 100%
       - [0xD805, c, func_8005D474] # gcc280_g0, 100%
       - [0xD80D, c, func_8005D47C] # gcc280_g0, 100%
@@ -727,7 +732,7 @@ segments:
       - [0x31559, c, func_800811C8] # gcc280_g0, 100%
       - [0x31625, c, func_80081294] # gcc280_g0, 100%
       - [0x316F1, c, func_80081360] # gcc280_g0, 100%
-      - [0x31899, asm, wmap_31899]
+      - [0x31899, c, func_80081508] # gcc280_g0, 100%
       - [0x31ABD, c, func_8008172C] # gcc280_g0
       - [0x31B81, asm, wmap_31B81]
       - [0x31F31, c, func_80081C18] # gcc280_g0, 100%
@@ -1703,7 +1708,7 @@ segments:
       - [0x567CD, c, func_800A643C] # gcc280_g0, 100%
       - [0x568D1, c, func_800A6540] # gcc280_g0, 100%
       - [0x56A51, c, func_800A66C0] # gcc280_g0, 100%
-      - [0x56B91, asm, wmap_56B91]
+      - [0x56B91, c, func_800A6800] # gcc280_g0, 100%
       - [0x56DB1, c, func_800A6A20] # gcc280_g0, 100%
       - [0x56EC5, asm, wmap_56EC5]
       - [0x56FB5, c, func_800A6C24] # gcc280_g0

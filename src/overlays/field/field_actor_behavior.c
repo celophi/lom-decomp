@@ -780,7 +780,10 @@ void field_prepare_actor_action(FieldActionActor* actor)
             actor->state.word = actor->state.bytes[0];
             slot = &g_field_object_states[actor->object_index];
             mode = slot->action_index;
-            action = (Action*)(resource_offset + (s32)&g_field_resource_actions[mode]);
+            {
+                s32 descriptor_address = (s32)&g_field_resource_actions[mode];
+                action = (Action*)(resource_offset + descriptor_address);
+            }
             if (mode == 0xB)
             {
                 slot->action_index = *(u8*)&action->command;
@@ -793,16 +796,11 @@ void field_prepare_actor_action(FieldActionActor* actor)
                     actor->state.word = 0;
                     return;
                 }
-                /* Recheck the descriptor before testing instrument availability. */
-                if (!(((volatile Action*)action)->flags & 0x400))
-                {
-                    goto check_action;
-                }
             }
-            if ((field_object_has_active_actor_tracks(actor->object_index) == 0) && (field_count_free_actor_slots(actor->object_index) >= 3) &&
-                (actor->variant == 0))
+            if (!(action->flags & FIELD_ACTION_INSTRUMENT) ||
+                ((field_object_has_active_actor_tracks(actor->object_index) == 0) && (field_count_free_actor_slots(actor->object_index) >= 3) &&
+                 (actor->variant == 0)))
             {
-            check_action:
                 g_field_object_states[actor->object_index].flags.word = (s32)(g_field_object_states[actor->object_index].flags.word & ~2);
                 if (((u16)action->command & FIELD_ACTION_TECHNIQUE) && !(action->flags & FIELD_ACTION_INSTRUMENT))
                 {
@@ -812,7 +810,6 @@ void field_prepare_actor_action(FieldActionActor* actor)
                         actor_index = actor->object_index;
                         if (g_field_object_states[actor_index].technique_gauge != FIELD_TECHNIQUE_GAUGE_FULL)
                         {
-                        play_failure:
                             func_800A3938(0x78, 0x80);
                         cancel_action:
                             actor->state.word = 0;
