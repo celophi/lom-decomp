@@ -1,7 +1,6 @@
 #include "common.h"
 #include "cdrom.h"
 
-/** @brief World-map position and projection scale. */
 typedef struct
 {
     s32 x;
@@ -9,14 +8,12 @@ typedef struct
     s32 scale;
 } WmapProjectionState;
 
-/** @brief World-map palette entry with its stored padding. */
 typedef struct
 {
     u16 value;
     u16 pad;
 } WmapPaletteEntry;
 
-/** @brief World-map cell record; remaining fields are not yet identified. */
 typedef struct
 {
     u8 pad_00[4];
@@ -24,7 +21,6 @@ typedef struct
     u8 pad_06[0x22];
 } WmapCell;
 
-/** @brief World-map route state record. */
 typedef struct
 {
     u8 pad_00[2];
@@ -80,11 +76,7 @@ void func_8006D8F0(s32 value, s32 data, s32* table);
 void func_800A89DC(s32 value);
 void func_800593D4(void);
 
-/**
- * @brief Update world-map selection and route state.
- * @note Project object comparison: 99.938520% matching.
- * @note In-progress import; source filename reports 99.938520% matching.
- */
+/** @brief Update world-map selection and route state. */
 void func_800594D8(void)
 {
     s32 map_x;
@@ -263,7 +255,7 @@ void func_800594D8(void)
                 {
                     for (map_x = 0; map_x < 6; map_x++)
                     {
-                        D_80139290[map_x][map_y].enabled = func_8005B8C8(map_x, map_y, D_8011D4FC);
+                        ((volatile WmapCell*)&D_80139290[map_x][map_y])->enabled = func_8005B8C8(map_x, map_y, D_8011D4FC);
                         D_8011D108[map_x][map_y].state = 0;
                     }
                 }
