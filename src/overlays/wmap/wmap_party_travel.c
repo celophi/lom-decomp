@@ -1,483 +1,427 @@
-#include "wmap_map_display.h"
 #include "wmap_party_travel.h"
+#include "wmap_pathfinding.h"
+#include "wmap_map_display.h"
 #include "wmap_resource_support.h"
 #include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
+#include "wmap_travel_sequences.h"
+#include "wmap_land_layout.h"
 #include "sdk/libgte.h"
+#include "sdk/libetc.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 #include "cdrom.h"
+#include "akao_cmd.h"
 
-void func_800584B4(void)
+#define WMAP_GRID_SIZE 6
+#define WMAP_CELL_SPACING 48
+#define WMAP_TRAVEL_CELL_UNITS 160
+#define WMAP_TRAVEL_STEP 4
+#define WMAP_SCRIPTED_TRAVELER 3
+#define WMAP_TRAVEL_ANIMATION_BYTES 0x400
+#define WMAP_TRAVEL_SCALE_INDEX 15
+#define WMAP_TRAVEL_SHADE 128
+#define WMAP_TRAVEL_SOUND 21
+#define WMAP_TRAVEL_SOUND_VOLUME 128
+#define WMAP_TRAVEL_TEXTURE_ROW 0x100
+#define WMAP_TRAVEL_OT_FALLBACK 31
+#define WMAP_TRAVEL_OT_BASE 42
+#define WMAP_TRAVEL_DEPTH_ORIGIN 7057
+#define WMAP_TRAVEL_DEPTH_RANGE 144U
+#define WMAP_SPECIAL_TRAVEL_LAND 24
+#define WMAP_TRAVEL_ANIMATION_RESOURCE 0x10C9
+#define WMAP_TRAVEL_SPRITE_RESOURCE 0x10CA
+#define WMAP_TRAVEL_ALTERNATE_SPRITE_RESOURCE 0x10CB
+#define WMAP_TRAVEL_SECOND_ANIMATION_RESOURCE 0x10CC
+#define WMAP_TRAVEL_THIRD_ANIMATION_RESOURCE 0x10CD
+
+enum WmapTravelSequence
 {
-/* Partial WMAP decompilation: 83.588780% (gcc280_g0). */
+    WMAP_TRAVEL_IDLE,
+    WMAP_TRAVEL_DOWN,
+    WMAP_TRAVEL_RIGHT,
+    WMAP_TRAVEL_LEFT,
+    WMAP_TRAVEL_UP
+};
 
-typedef s32 M2C_UNK;
-typedef s8 M2C_UNK8;
-typedef s16 M2C_UNK16;
-typedef s32 M2C_UNK32;
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8 *)(expr) + (offset)))
-#define M2C_UNALIGNED32(expr) (expr)
-#define M2C_BITWISE(type, expr) ((type)(expr))
-
-M2C_UNK akao_cmd_f1();                              /* extern */
-M2C_UNK func_80059070__for_func_800584B4() __asm__("func_80059070");                            /* extern */
-extern u8 D_800D9268;
-extern s32 D_800DCEE8;
-extern s32 D_8011CF44;
-extern s32 D_80139230;
-extern s32 D_801398D0;
-extern s32 D_80182D68;
-extern s32 D_80182D78;
-extern s32 D_80182DF8;
-extern u8 D_8019D248;
-extern s32 D_801ADB00;
-
-    void *var_a1;
-    void *var_a3;
-    s16 temp_a0;
-    s16 temp_a0_2;
-    s16 temp_a0_3;
-    s16 temp_a0_6;
-    s16 temp_a0_7;
-    s16 temp_t0;
-    s16 temp_v0;
-    s16 temp_v0_2;
-    s16 temp_v0_3;
-    s16 temp_v1_4;
-    s16 temp_v1_5;
-    s16 var_a2;
-    s16 var_v0;
-    s16 var_v0_2;
-    s32 temp_a0_4;
-    s32 temp_v1_6;
-    s32 temp_v1_7;
-    s32 var_t1;
-    s32 var_t2;
-    u16 temp_v0_4;
-    u16 temp_v1;
-    u16 temp_v1_2;
-    u16 temp_v1_3;
-    void *temp_a0_5;
-    void *temp_t6;
-
-    var_t1 = 0;
-    D_80139230 = 0;
-    temp_t6 = (u8 *)&D_8019D248 + 0x36C;
-    var_a3 = &D_800D9268;
-    var_a1 = &D_8019D248;
-    var_t2 = 0;
-    do
-    {
-        temp_a0 = M2C_FIELD(var_a1, s16 *, 0xC);
-        temp_v0 = M2C_FIELD(var_a1, s16 *, 0x10);
-        temp_v1 = (u16) M2C_FIELD(var_a1, s16 *, 0xC);
-        var_a2 = 0;
-        if (temp_a0 != temp_v0)
-        {
-            var_a2 = 1;
-            if (temp_v0 < temp_a0)
-            {
-                var_v0 = temp_v1 - 4;
-            }
-            else
-            {
-                var_v0 = temp_v1 + 4;
-            }
-            M2C_FIELD(var_a1, s16 *, 0xC) = var_v0;
-        }
-        temp_a0_2 = M2C_FIELD(var_a1, s16 *, 0xE);
-        temp_v0_2 = M2C_FIELD(var_a1, s16 *, 0x12);
-        temp_v1_2 = (u16) M2C_FIELD(var_a1, s16 *, 0xE);
-        if (temp_a0_2 != temp_v0_2)
-        {
-            var_a2 = 1;
-            if (temp_v0_2 < temp_a0_2)
-            {
-                var_v0_2 = temp_v1_2 - 4;
-            }
-            else
-            {
-                var_v0_2 = temp_v1_2 + 4;
-            }
-            M2C_FIELD(var_a1, s16 *, 0xE) = var_v0_2;
-        }
-        if (var_a2 == 0)
-        {
-            if (((M2C_FIELD(var_a1, s32 *, 0) != M2C_FIELD(var_a1, s16 *, 8)) || (M2C_FIELD(var_a1, s32 *, 4) != M2C_FIELD(var_a1, s16 *, 0xA))) && (var_t1 == 0))
-            {
-                D_800DCEE8 = 1;
-            }
-            temp_v0_3 = M2C_FIELD(var_a1, s16 *, 8);
-            temp_a0_3 = M2C_FIELD(var_a1, s16 *, 0xA);
-            M2C_FIELD(var_a1, s32 *, 0) = (s32) temp_v0_3;
-            M2C_FIELD(var_a1, s32 *, 4) = (s32) temp_a0_3;
-            if ((M2C_FIELD(var_a1, s32 *, 0x18) != temp_v0_3) || (M2C_FIELD(var_a1, s32 *, 0x1C) != temp_a0_3))
-            {
-                temp_t0 = M2C_FIELD(var_a1, s16 *, 8);
-                var_a2 = M2C_FIELD(var_a1, s16 *, 0xA);
-                temp_a0_4 = M2C_FIELD(var_a1, s32 *, 0x20) + 1;
-                M2C_FIELD(var_a1, s32 *, 0x20) = temp_a0_4;
-                temp_a0_5 = (temp_a0_4 * 4) + var_t2 + (u8 *)&D_8019D248;
-                temp_v1_3 = M2C_FIELD(temp_a0_5, u16 *, 0x24);
-                M2C_FIELD(var_a1, s16 *, 8) = (s16) temp_v1_3;
-                M2C_FIELD(var_a1, s16 *, 0x10) = (s16) (((s16) temp_v1_3 - 1) * 0xA0);
-                temp_v0_4 = M2C_FIELD(temp_a0_5, u16 *, 0xA4);
-                M2C_FIELD(var_a1, s16 *, 0xA) = (s16) temp_v0_4;
-                M2C_FIELD(var_a1, s16 *, 0x12) = (s16) (((s16) temp_v0_4 - 1) * 0xA0);
-                if ((D_80182DF8 != 0) && (var_t1 == 3))
-                {
-                    D_801398D0 = 2;
-                    D_80182D68 = (M2C_FIELD(temp_t6, s16 *, 8) - temp_t0) * 0x30;
-                    D_80182D78 = (M2C_FIELD(temp_t6, s16 *, 0xA) - var_a2) * 0x30;
-                }
-                M2C_FIELD(var_a1, s32 *, 0x14) = 1;
-            }
-            else
-            {
-                M2C_FIELD(var_a1, s32 *, 0x14) = 0;
-                M2C_FIELD(var_a3, s16 *, 0xE) = 0;
-                if ((var_t1 == 3) && (D_80182DF8 != 0))
-                {
-                    D_80182DF8 = 0;
-                }
-            }
-        }
-        if (M2C_FIELD(var_a1, s32 *, 0x14) != 0)
-        {
-            if (M2C_FIELD(var_a1, s16 *, 0x10) == M2C_FIELD(var_a1, s16 *, 0xC))
-            {
-                temp_a0_6 = M2C_FIELD(var_a1, s16 *, 0x12);
-                temp_v1_4 = M2C_FIELD(var_a1, s16 *, 0xE);
-                if (temp_v1_4 < temp_a0_6)
-                {
-                    M2C_FIELD(var_a3, s16 *, 0xE) = 1;
-                }
-                else if (temp_a0_6 < temp_v1_4)
-                {
-                    M2C_FIELD(var_a3, s16 *, 0xE) = 4;
-                }
-            }
-            if (M2C_FIELD(var_a1, s16 *, 0x12) == M2C_FIELD(var_a1, s16 *, 0xE))
-            {
-                temp_a0_7 = M2C_FIELD(var_a1, s16 *, 0x10);
-                temp_v1_5 = M2C_FIELD(var_a1, s16 *, 0xC);
-                if (temp_v1_5 < temp_a0_7)
-                {
-                    M2C_FIELD(var_a3, s16 *, 0xE) = 2;
-                }
-                else if (temp_a0_7 < temp_v1_5)
-                {
-                    M2C_FIELD(var_a3, s16 *, 0xE) = 3;
-                }
-            }
-        }
-        var_a3 += 0x2C;
-        temp_v1_6 = M2C_FIELD(var_a1, s32 *, 0x14);
-        var_a1 += 0x124;
-        var_t2 += 0x124;
-        var_t1 += 1;
-        temp_v1_7 = D_80139230 | temp_v1_6;
-        D_80139230 = temp_v1_7;
-    } while (var_t1 < 4);
-    if (temp_v1_7 != D_801ADB00)
-    {
-        if ((temp_v1_7 != 0) && (D_8011CF44 == 0))
-        {
-            func_800652A8(0x15, 0x80);
-            D_801ADB00 = D_80139230;
-        }
-        if ((D_80139230 != D_801ADB00) && (D_80139230 == 0))
-        {
-            akao_cmd_f1();
-            D_801ADB00 = D_80139230;
-        }
-    }
-    if (D_800DCEE8 != 0)
-    {
-        func_80059070__for_func_800584B4();
-        D_800DCEE8 = 0;
-    }
-}
-#undef M2C_FIELD
-#undef M2C_UNALIGNED32
-#undef M2C_BITWISE
-
-void func_8005880C(void)
+/** @brief Sprite resource, animation selection, and shading for a map actor. */
+typedef struct
 {
-/* Partial WMAP decompilation: 85.668540% (gcc280_g0). */
+    s16 unknown_00;
+    s16 resource_index;
+    u8 pad_04[2];
+    u8 scale_index;
+    u8 pad_07[7];
+    s16 sequence;
+    s16 previous_sequence;
+    u8 pad_12[16];
+    s16 target_shade;
+    s16 shade;
+    s16 shade_step;
+    u8 pad_28[4];
+} WmapTravelSprite;
 
-typedef s32 M2C_UNK;
-typedef s8 M2C_UNK8;
-typedef s16 M2C_UNK16;
-typedef s32 M2C_UNK32;
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8 *)(expr) + (offset)))
-#define M2C_UNALIGNED32(expr) (expr)
-#define M2C_BITWISE(type, expr) ((type)(expr))
-
-M2C_UNK func_8005EB68(s32, s32, s32, s32, void *, void *); /* extern */
-M2C_UNK func_800584B4__for_func_8005880C() __asm__("func_800584B4");                            /* static */
-extern u8 D_8004FD04;
-extern u8 D_800D9268;
-extern s32 D_800DCEEC;
-extern s32 D_800DCEF0;
-extern s32 D_8011CF18;
-extern s32 D_80129550;
-extern s32 D_8013922C;
-extern s32 D_80139230;
-extern u8 D_80139290;
-extern s32 D_8013986C;
-extern u8 D_80139950;
-extern u8 D_80139988;
-extern s32 D_8013B27C;
-extern s32 D_8013B294;
-extern u8 D_8019D248;
-extern u8 func_8009A420;
-
-    SVECTOR position;
-    s32 sp24;
-    s32 sp20;
-    void *var_s0;
-    s32 temp_a2;
-    s32 temp_a3;
-    s32 temp_v0;
-    s32 temp_v0_2;
-    s32 temp_v0_3;
-    s32 temp_v0_4;
-    s32 var_s1;
-    s32 var_s3;
-    s32 var_s4;
-    s32 var_s5;
-    s32 var_s6;
-    s32 var_v0;
-    s32 var_v1;
-    void *temp_s2;
-
-    if (D_8013B27C != 0)
-    {
-        var_s3 = 0;
-        var_s4 = 0x100;
-        var_s0 = &D_8019D248;
-        var_s6 = 0;
-        var_s5 = 0;
-        do
-        {
-            temp_s2 = var_s5 + (u8 *)&D_800D9268;
-            if (M2C_FIELD(temp_s2, s16 *, 2) != -1)
-            {
-                func_8006CC4C(temp_s2, var_s6 + (u8 *)&D_80139988);
-                if (D_8013986C == 0)
-                {
-                    temp_v0 = (sp20 & 0xFFFF0000) | M2C_FIELD(var_s0, u16 *, 0xC);
-                    sp20 = temp_v0;
-                    sp20 = (temp_v0 & 0xFFFF) | (M2C_FIELD(var_s0, u16 *, 0xE) << 0x10);
-                    position.vx = (s16) ((s32) (((s16) M2C_FIELD(var_s0, u16 *, 0xC) - (((s32) (M2C_FIELD(&D_80139950, s32 *, 0) * 0x14000) / (s32) M2C_FIELD(&D_80139950, s32 *, 8)) - 0x14)) * 0x6000) / (s32) M2C_FIELD(&D_80139950, s32 *, 8));
-                    position.vz = 0;
-                    position.vy = (s16) ((s32) (((s16) M2C_FIELD(var_s0, u16 *, 0xE) - (((s32) (M2C_FIELD(&D_80139950, s32 *, 4) * 0x14000) / (s32) M2C_FIELD(&D_80139950, s32 *, 8)) - 0x14)) * 0x6000) / (s32) M2C_FIELD(&D_80139950, s32 *, 8));
-                    gte_ldv0(&position);
-    gte_rtps();
-                    gte_stsxy(&sp20);
-                    gte_stsz(&sp24);
-                    sp24 >>= 2;
-                    var_v0 = 0x1B91 - sp24;
-                    if (var_v0 < 0)
-                    {
-                        var_v0 += 3;
-                    }
-                    temp_v0_2 = var_v0 >> 2;
-                    var_s1 = temp_v0_2 + 0x2A;
-                    if ((u32) (temp_v0_2 + 0xB) >= 0x90U)
-                    {
-                        var_s1 = 0x1F;
-                    }
-                    if (wmap_get_point_display_mode((((s16) M2C_FIELD(var_s0, u16 *, 0xC) * 0x30) / 160) + 0x30, (((s16) M2C_FIELD(var_s0, u16 *, 0xE) * 0x30) / 160) + 0x30, M2C_FIELD(&D_80139950, s32 *, 8)) != 0)
-                    {
-                        func_80066F9C(temp_s2, sp20, var_s3, var_s1, var_s4);
-                    }
-                }
-                if (D_8013986C == 1)
-                {
-                    temp_v0_3 = *(s32 *)(((M2C_FIELD(var_s0, s32 *, 0) + (M2C_FIELD(var_s0, s32 *, 4) * 6)) * 4) + (u8 *)&D_8004FD04);
-                    temp_v0_4 = (temp_v0_3 & 0xFFFF0000) | ((temp_v0_3 + 0xE) & 0xFFFF);
-                    func_80066F9C(temp_s2, (temp_v0_4 & 0xFFFF) | (((temp_v0_4 >> 0x10) + 0x1C) << 0x10), var_s3, 0x1F, var_s4);
-                }
-            }
-            var_s4 += 0x100;
-            var_s0 += 0x124;
-            var_s6 += 8;
-            var_s3 += 1;
-            var_s5 += 0x2C;
-        } while (var_s3 < 4);
-    }
-    if ((D_8013922C & 0x40) && (D_80139230 == 0) && (D_80129550 == 0))
-    {
-        temp_a2 = (M2C_FIELD(&D_80139950, s32 *, 0) / 48) + D_800DCEEC;
-        temp_a3 = (M2C_FIELD(&D_80139950, s32 *, 4) / 48) + D_800DCEF0;
-        if ((M2C_FIELD(((temp_a3 * 0x28) + (temp_a2 * 0xF0) + (u8 *)&D_80139290), s16 *, 6) != 0) && (D_8013986C == 0) && (D_8011CF18 == 0))
-        {
-            if ((temp_a2 != M2C_FIELD(&D_8019D248, s32 *, 0)) || (var_v1 = 1, (temp_a3 != M2C_FIELD(&D_8019D248, s32 *, 4))))
-            {
-                var_v1 = 0;
-            }
-            D_8013B294 = var_v1;
-            if (var_v1 == 0)
-            {
-                if (*((temp_a3 * 0x28) + (temp_a2 * 0xF0) + (u8 *)&D_80139290) == 0x18)
-                {
-                    func_8006CAC0(&func_8009A420);
-                }
-                else
-                {
-                    M2C_FIELD(&D_8019D248, s32 *, 0x18) = temp_a2;
-                    M2C_FIELD(&D_8019D248, s32 *, 0x1C) = temp_a3;
-                    if ((temp_a2 != M2C_FIELD(&D_8019D248, s32 *, 0)) || (temp_a3 != M2C_FIELD(&D_8019D248, s32 *, 4)))
-                    {
-                        func_8005EB68(M2C_FIELD(&D_8019D248, s32 *, 0), M2C_FIELD(&D_8019D248, s32 *, 4), temp_a2, temp_a3, (u8 *)&D_8019D248 + 0x24, (u8 *)&D_8019D248 + 0xA4);
-                        M2C_FIELD(&D_8019D248, s32 *, 0x14) = 1;
-                        M2C_FIELD(&D_8019D248, s32 *, 0x20) = 1;
-                        M2C_FIELD(&D_8019D248, u16 *, 8) = (u16) M2C_FIELD(&D_8019D248, u16 *, 0x28);
-                        M2C_FIELD(&D_8019D248, u16 *, 0xA) = (u16) M2C_FIELD(&D_8019D248, u16 *, 0xA8);
-                        M2C_FIELD(&D_8019D248, s16 *, 0x10) = (s16) (((s16) M2C_FIELD(&D_8019D248, u16 *, 0x28) - 1) * 0xA0);
-                        M2C_FIELD(&D_8019D248, s16 *, 0x12) = (s16) (((s16) M2C_FIELD(&D_8019D248, u16 *, 0xA8) - 1) * 0xA0);
-                    }
-                    else
-                    {
-                        M2C_FIELD(&D_8019D248, s32 *, 0x14) = 0;
-                    }
-                }
-            }
-        }
-    }
-    func_800584B4__for_func_8005880C();
-}
-#undef M2C_FIELD
-#undef M2C_UNALIGNED32
-#undef M2C_BITWISE
-
-/** @brief Load map actor resources and restore the active map coordinates. */
-void func_80058D9C(void)
+/** @brief Animation resource slot shared with the sequence interpreter. */
+typedef struct
 {
-/* Partial WMAP decompilation: 97.346664% (gcc280_g0). */
+    s32 unknown_00;
+    u8* data;
+} WmapTravelAnimation;
 
-/** @brief Coordinate fields at the head of a 0x124-byte world-map record. */
+/** @brief Map-cell identity and the flags used to select a destination. */
+typedef struct
+{
+    s32 land_id;
+    s16 effect_enabled;
+    s16 traversable;
+    u8 pad_08[32];
+} WmapTravelCell;
+
+/** @brief Map translation and projection scale. */
 typedef struct
 {
     s32 x;
     s32 y;
-    s16 grid_x;
-    s16 grid_y;
-    s16 position_x;
-    s16 position_y;
-    s16 target_x;
-    s16 target_y;
-    s32 field_14;
-    s32 previous_x;
-    s32 previous_y;
-    u8 unknown_20[0x104];
-} WmapCoordinateRecord;
+    s32 scale;
+} WmapTravelProjection;
 
-
-
-/** @brief World-map actor configuration. */
-typedef struct
+/** @brief Screen coordinates in the packed format used by sprite rendering. */
+typedef union
 {
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
+    s32 packed;
+    struct
+    {
+        s16 x;
+        s16 y;
+    } point;
+} WmapTravelScreen;
 
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
-
-/** @brief Animation resource slot. */
-typedef struct
-{
-    s32 field_00;
-    void *resource;
-} WmapResource;
-
-typedef struct
-{
-    s32 tile;
-    u8 pad_04[36];
-} WmapTile;
-extern WmapCoordinateRecord D_8019D248[];
-extern WmapConfigA D_800D9268[];
-extern WmapResource D_80139988[];
-extern WmapTile D_80139290[6][6];
+extern WmapTravelSprite D_800D9268[];
+extern WmapTravelAnimation D_80139988[];
+extern WmapTravelCell D_80139290[WMAP_GRID_SIZE][WMAP_GRID_SIZE];
+extern WmapTravelProjection D_80139950;
+extern const WmapTravelScreen D_8004FD04[];
 extern u8 D_800DBE98[];
 extern u8 D_800DC298[];
 extern u8 D_800DC698[];
 extern s16 D_800D926A;
 extern s16 D_800D9296;
 extern s16 D_800D92C2;
-extern s32 func_8005D850(s32 *, u32 *);
-extern void func_80058FF4__for_func_80058D9C(s32, s32, s32) __asm__("func_80058FF4");
 extern s32 D_800D9224;
 extern s32 D_800DBE78;
+extern s32 D_800DCEEC;
+extern s32 D_800DCEF0;
+extern s32 D_8011CF18;
 extern s32 D_8011CF20;
+extern s32 D_8011CF44;
 extern s32 D_8011CF50;
+extern s32 D_80129550;
 extern s32 D_8013922C;
+extern s32 D_8013986C;
 extern s32 D_801398B8;
 extern s32 D_801398C0;
+extern s32 D_801398D0;
+extern s32 D_8013B294;
 extern s32 D_80182D5C;
+extern s32 D_80182D68;
+extern s32 D_80182D78;
 extern s32 D_80182E1C;
 extern s32 D_80182E34;
+extern s32 g_wmap_travel_sound_active;
 
+void wmap_update_travelers(void);
+void wmap_advance_travel_day(void);
+
+/** @brief Advance each traveler's route and synchronize animation, scrolling, and travel sound. */
+void wmap_update_travelers(void)
+{
+    WmapTraveler* traveler;
+    WmapTraveler* scripted_traveler;
+    s32 i;
+    s16 position_x;
+    s16 position_y;
+    s16 target_x;
+    s16 target_y;
+    s32 interpolating;
+    s32 previous_cell_x;
+    s32 previous_cell_y;
+    s32 path_index;
+    s16 next_x, next_y;
+
+    g_wmap_party_moving = 0;
+    for (i = 0; i < WMAP_TRAVELER_COUNT; i++)
+    {
+        traveler = &g_wmap_travelers[i];
+        position_x = traveler->position_x;
+        target_x = traveler->target_x;
+        interpolating = 0;
+        if (position_x != target_x)
+        {
+            interpolating = 1;
+            if (target_x < position_x)
+            {
+                traveler->position_x = (u16)traveler->position_x - WMAP_TRAVEL_STEP;
+            }
+            else
+            {
+                traveler->position_x = (u16)traveler->position_x + WMAP_TRAVEL_STEP;
+            }
+        }
+        position_y = traveler->position_y;
+        target_y = traveler->target_y;
+        if (position_y != target_y)
+        {
+            interpolating = 1;
+            if (target_y < position_y)
+            {
+                traveler->position_y = (u16)traveler->position_y - WMAP_TRAVEL_STEP;
+            }
+            else
+            {
+                traveler->position_y = (u16)traveler->position_y + WMAP_TRAVEL_STEP;
+            }
+        }
+        if (interpolating == 0)
+        {
+            if ((traveler->cell_x != traveler->next_cell_x || traveler->cell_y != traveler->next_cell_y) && i == 0)
+            {
+                g_wmap_party_cell_dirty = 1;
+            }
+            traveler->cell_x = traveler->next_cell_x;
+            traveler->cell_y = traveler->next_cell_y;
+            if (traveler->destination_x != traveler->cell_x || traveler->destination_y != traveler->cell_y)
+            {
+                previous_cell_x = traveler->next_cell_x;
+                previous_cell_y = traveler->next_cell_y;
+                path_index = traveler->path_index + 1;
+                traveler->path_index = path_index;
+                next_x = g_wmap_travelers[i].path_x.steps[path_index].cell;
+                traveler->next_cell_x = next_x;
+                traveler->target_x = (next_x - 1) * WMAP_TRAVEL_CELL_UNITS;
+                next_y = g_wmap_travelers[i].path_y.steps[path_index].cell;
+                traveler->next_cell_y = next_y;
+                traveler->target_y = (next_y - 1) * WMAP_TRAVEL_CELL_UNITS;
+                if (g_wmap_scripted_travel_active != 0 && i == WMAP_SCRIPTED_TRAVELER)
+                {
+                    D_801398D0 = 2;
+                    D_80182D68 = ((scripted_traveler = &g_wmap_travelers[WMAP_SCRIPTED_TRAVELER])->next_cell_x - previous_cell_x) * WMAP_CELL_SPACING;
+                    D_80182D78 = (scripted_traveler->next_cell_y - previous_cell_y) * WMAP_CELL_SPACING;
+                }
+                traveler->moving = 1;
+            }
+            else
+            {
+                traveler->moving = 0;
+                D_800D9268[i].sequence = WMAP_TRAVEL_IDLE;
+                if (i == WMAP_SCRIPTED_TRAVELER && g_wmap_scripted_travel_active != 0)
+                {
+                    g_wmap_scripted_travel_active = 0;
+                }
+            }
+        }
+        if (g_wmap_travelers[i].moving != 0)
+        {
+            if (traveler->target_x == traveler->position_x)
+            {
+                target_y = traveler->target_y;
+                position_y = traveler->position_y;
+                if (target_y > position_y)
+                {
+                    D_800D9268[i].sequence = WMAP_TRAVEL_DOWN;
+                }
+                else if (target_y < position_y)
+                {
+                    D_800D9268[i].sequence = WMAP_TRAVEL_UP;
+                }
+            }
+            if (traveler->target_y == traveler->position_y)
+            {
+                target_x = traveler->target_x;
+                position_x = traveler->position_x;
+                if (target_x > position_x)
+                {
+                    D_800D9268[i].sequence = WMAP_TRAVEL_RIGHT;
+                }
+                else if (target_x < position_x)
+                {
+                    D_800D9268[i].sequence = WMAP_TRAVEL_LEFT;
+                }
+            }
+        }
+        g_wmap_party_moving |= traveler->moving;
+    }
+    if (g_wmap_party_moving != g_wmap_travel_sound_active)
+    {
+        if (g_wmap_party_moving != 0 && D_8011CF44 == 0)
+        {
+            func_800652A8(WMAP_TRAVEL_SOUND, WMAP_TRAVEL_SOUND_VOLUME);
+            g_wmap_travel_sound_active = g_wmap_party_moving;
+        }
+        if (g_wmap_party_moving != g_wmap_travel_sound_active && g_wmap_party_moving == 0)
+        {
+            akao_cmd_f1();
+            g_wmap_travel_sound_active = g_wmap_party_moving;
+        }
+    }
+    if (g_wmap_party_cell_dirty != 0)
+    {
+        wmap_advance_travel_day();
+        g_wmap_party_cell_dirty = 0;
+    }
+}
+
+/** @brief Draw the travelers, accept a destination, and advance their movement. */
+void wmap_update_party_travel(void)
+{
+    SVECTOR position;
+    s32 depth;
+    s32 scale;
+    s32 view_x, view_y;
+    WmapTravelScreen screen;
+    s32 packed_position;
+    s32 flat_y;
+    s32 flat_x_bits;
+    WmapTravelSprite* sprite;
+    s32 i;
+    s32 ot_index;
+    s32 depth_index;
+    s32 selected_x;
+    s32 selected_y;
+    s32 at_destination;
+
+    if (g_wmap_party_visible != 0)
+    {
+        i = 0;
+        do
+        {
+            sprite = &D_800D9268[i];
+            if (sprite->resource_index != -1)
+            {
+                func_8006CC4C(sprite, &D_80139988[i]);
+                if (D_8013986C == 0)
+                {
+                    screen.point.x = g_wmap_travelers[i].position_x;
+                    screen.point.y = g_wmap_travelers[i].position_y;
+                    scale = D_80139950.scale;
+                    view_x = D_80139950.x * 0x14000 / scale - 20;
+                    position.vx = (g_wmap_travelers[i].position_x - view_x) * 0x6000 / scale;
+                    view_y = D_80139950.y * 0x14000 / scale - 20;
+                    position.vy = (g_wmap_travelers[i].position_y - view_y) * 0x6000 / scale;
+                    position.vz = 0;
+                    gte_ldv0(&position);
+                    gte_rtps();
+                    gte_stsxy(&screen.packed);
+                    gte_stszotz(&depth);
+                    depth_index = (WMAP_TRAVEL_DEPTH_ORIGIN - depth) / 4;
+                    ot_index = depth_index + WMAP_TRAVEL_OT_BASE;
+                    if ((u32)(depth_index + 11) >= WMAP_TRAVEL_DEPTH_RANGE)
+                    {
+                        ot_index = WMAP_TRAVEL_OT_FALLBACK;
+                    }
+                    if (wmap_get_point_display_mode(g_wmap_travelers[i].position_x * WMAP_CELL_SPACING / WMAP_TRAVEL_CELL_UNITS + WMAP_CELL_SPACING,
+                                                    g_wmap_travelers[i].position_y * WMAP_CELL_SPACING / WMAP_TRAVEL_CELL_UNITS + WMAP_CELL_SPACING,
+                                                    scale) != 0)
+                    {
+                        func_80066F9C(sprite, screen.packed, i, ot_index, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
+                    }
+                }
+                if (D_8013986C == 1)
+                {
+                    packed_position = D_8004FD04[g_wmap_travelers[i].cell_x + g_wmap_travelers[i].cell_y * WMAP_GRID_SIZE].packed;
+                    flat_x_bits = packed_position + 14;
+                    packed_position &= 0xFFFF0000;
+                    flat_x_bits &= 0xFFFF;
+                    packed_position |= flat_x_bits;
+                    flat_y = packed_position >> 16;
+                    packed_position &= 0xFFFF;
+                    func_80066F9C(sprite, (u16)packed_position | ((flat_y + 28) << 16), i, WMAP_TRAVEL_OT_FALLBACK, WMAP_TRAVEL_TEXTURE_ROW + i * WMAP_TRAVEL_TEXTURE_ROW);
+                }
+            }
+            i++;
+        } while (i < WMAP_TRAVELER_COUNT);
+    }
+    if ((D_8013922C & PADRdown) && g_wmap_party_moving == 0 && D_80129550 == 0)
+    {
+        selected_x = D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC;
+        selected_y = D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0;
+        if (D_80139290[selected_x][selected_y].traversable != 0 && D_8013986C == 0 && D_8011CF18 == 0)
+        {
+            if (selected_x != g_wmap_travelers[0].cell_x || (at_destination = 1, selected_y != g_wmap_travelers[0].cell_y))
+            {
+                at_destination = 0;
+            }
+            D_8013B294 = at_destination;
+            if (at_destination == 0)
+            {
+                if (D_80139290[selected_x][selected_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
+                {
+                    func_8006CAC0(func_8009A420);
+                }
+                else
+                {
+                    g_wmap_travelers[0].destination_x = selected_x;
+                    g_wmap_travelers[0].destination_y = selected_y;
+                    if (selected_x != g_wmap_travelers[0].cell_x || selected_y != g_wmap_travelers[0].cell_y)
+                    {
+                        func_8005EB68(g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y, selected_x, selected_y, g_wmap_travelers[0].path_x.cells,
+                                      g_wmap_travelers[0].path_y.cells);
+                        g_wmap_travelers[0].moving = 1;
+                        /* The route begins with the cell the party already occupies. */
+                        g_wmap_travelers[0].path_index = 1;
+                        g_wmap_travelers[0].next_cell_x = g_wmap_travelers[0].path_x.steps[1].cell;
+                        g_wmap_travelers[0].target_x = (g_wmap_travelers[0].path_x.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+                        g_wmap_travelers[0].next_cell_y = g_wmap_travelers[0].path_y.steps[1].cell;
+                        g_wmap_travelers[0].target_y = (g_wmap_travelers[0].path_y.steps[1].cell - 1) * WMAP_TRAVEL_CELL_UNITS;
+                    }
+                    else
+                    {
+                        g_wmap_travelers[0].moving = 0;
+                    }
+                }
+            }
+        }
+    }
+    wmap_update_travelers();
+}
+
+/** @brief Load traveler animations and restore the party and optional actors to their map cells. */
+void wmap_init_party_travel(void)
+{
     s32 first_x, first_y, second_x, second_y;
     s32 i;
     s32 resource_id;
-    u8 *resource;
-    WmapCoordinateRecord *record;
-    WmapConfigA *actor;
+    u8* resource;
+    WmapTraveler* traveler;
+    WmapTravelSprite* sprite;
 
-    cdrom_queue_read(0x10C9, D_800DBE98);
+    cdrom_queue_read(WMAP_TRAVEL_ANIMATION_RESOURCE, D_800DBE98);
     cdrom_wait_queue_empty();
     resource = D_800DBE98;
-    D_800D9268[0].field_02 = 0;
-    for (i = 0; i < 4; i++)
+    D_800D9268[0].resource_index = 0;
+    for (i = 0; i < WMAP_TRAVELER_COUNT; i++)
     {
-        record = &D_8019D248[i];
-        actor = &D_800D9268[i];
-        record->y = 1;
-        record->x = 1;
-        record->grid_y = 1;
-        record->grid_x = 1;
-        record->previous_y = 1;
-        record->previous_x = 1;
-        record->target_y = 0;
-        record->target_x = 0;
-        record->position_y = 0;
-        record->position_x = 0;
-        record->field_14 = 0;
-        actor->field_06 = 15;
-        actor->field_10 = -1;
-        actor->field_22 = 128;
-        actor->field_24 = 128;
-        D_80139988[i].resource = resource;
-        resource += 0x400;
+        traveler = &g_wmap_travelers[i];
+        traveler->cell_y = 1;
+        traveler->cell_x = 1;
+        traveler->next_cell_y = 1;
+        traveler->next_cell_x = 1;
+        traveler->destination_y = 1;
+        traveler->destination_x = 1;
+        traveler->target_y = 0;
+        traveler->target_x = 0;
+        traveler->position_y = 0;
+        traveler->position_x = 0;
+        traveler->moving = 0;
+        sprite = &D_800D9268[i];
+        sprite->scale_index = WMAP_TRAVEL_SCALE_INDEX;
+        sprite->previous_sequence = -1;
+        sprite->target_shade = WMAP_TRAVEL_SHADE;
+        sprite->shade = WMAP_TRAVEL_SHADE;
+        D_80139988[i].data = resource + i * WMAP_TRAVEL_ANIMATION_BYTES;
     }
-    D_80182D5C = func_8005D850(&D_8019D248[0].x, (u32 *)&D_8019D248[0].y);
-    func_80058FF4__for_func_80058D9C(0, D_8019D248[0].x, D_8019D248[0].y);
-    if (D_80139290[D_8019D248[0].x][D_8019D248[0].y].tile == 24)
+    D_80182D5C = func_8005D850(&g_wmap_travelers[0].cell_x, &g_wmap_travelers[0].cell_y);
+    wmap_set_traveler_position(0, g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
+    if (D_80139290[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
     {
         D_8011CF50 = 1;
         D_801398C0 = 0;
@@ -488,85 +432,62 @@ extern s32 D_80182E34;
         D_800D926A = -1;
         D_800D9224++;
     }
-    resource_id = 0x10CA;
+    resource_id = WMAP_TRAVEL_SPRITE_RESOURCE;
     if (D_80182D5C != 0)
     {
-        resource_id = 0x10CB;
+        resource_id = WMAP_TRAVEL_ALTERNATE_SPRITE_RESOURCE;
     }
     func_80064F64(resource_id);
     if (D_801398B8 != 0)
     {
-        cdrom_queue_read(0x10CC, D_800DC298);
+        cdrom_queue_read(WMAP_TRAVEL_SECOND_ANIMATION_RESOURCE, D_800DC298);
         D_800D9296 = 1;
         func_8006D0F0(27, &first_x, &first_y);
-        func_80058FF4__for_func_80058D9C(1, first_x, first_y);
+        wmap_set_traveler_position(1, first_x, first_y);
         cdrom_wait_queue_empty();
     }
     if (D_80182E1C != 0)
     {
-        cdrom_queue_read(0x10CD, D_800DC698);
+        cdrom_queue_read(WMAP_TRAVEL_THIRD_ANIMATION_RESOURCE, D_800DC698);
         D_800D92C2 = 2;
         func_8006D0F0(3, &second_x, &second_y);
-        func_80058FF4__for_func_80058D9C(2, second_x, second_y);
+        wmap_set_traveler_position(2, second_x, second_y);
         cdrom_wait_queue_empty();
     }
 }
 
 /**
- * @brief Initialize grid coordinates and corresponding pixel positions.
- * @param index World-map record index.
- * @param x Grid X coordinate.
- * @param y Grid Y coordinate.
+ * @brief Set a traveler's cell, destination, and position without changing route activity.
+ * @param index Traveler slot, from zero through three.
+ * @param x Map column.
+ * @param y Map row.
  */
-void func_80058FF4(s32 index, s32 x, s32 y)
+void wmap_set_traveler_position(s32 index, s32 x, s32 y)
 {
-/** @brief Coordinate fields at the head of a 0x124-byte world-map record. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-    s16 grid_x;
-    s16 grid_y;
     s16 position_x;
     s16 position_y;
-    s16 target_x;
-    s16 target_y;
-    u8 unknown_14[4];
-    s32 previous_x;
-    s32 previous_y;
-    u8 unknown_20[0x104];
-} WmapCoordinateRecord;
+    WmapTraveler* traveler;
+    WmapTraveler* base;
 
-extern WmapCoordinateRecord D_8019D248[];
-
-    s16 pixel_x;
-    s16 pixel_y;
-    WmapCoordinateRecord *record;
-    WmapCoordinateRecord *base;
-
-    base = D_8019D248;
-    record = &base[index];
-    record->x = x;
-    record->previous_x = x;
-    record->grid_x = (s16) x;
-    pixel_x = ((s16) x - 1) * 0xA0;
-    record->y = y;
-    record->previous_y = y;
-    record->grid_y = (s16) y;
-    record->target_x = pixel_x;
-    record->position_x = pixel_x;
-    pixel_y = ((s16) y - 1) * 0xA0;
-    record->target_y = pixel_y;
-    record->position_y = pixel_y;
+    base = g_wmap_travelers;
+    traveler = &base[index];
+    traveler->cell_x = x;
+    traveler->destination_x = x;
+    traveler->next_cell_x = (s16)x;
+    position_x = ((s16)x - 1) * WMAP_TRAVEL_CELL_UNITS;
+    traveler->cell_y = y;
+    traveler->destination_y = y;
+    traveler->next_cell_y = (s16)y;
+    traveler->target_x = position_x;
+    traveler->position_x = position_x;
+    position_y = ((s16)y - 1) * WMAP_TRAVEL_CELL_UNITS;
+    traveler->target_y = position_y;
+    traveler->position_y = position_y;
 }
 
-/** @brief Refresh world-map state and cache its saved seven-bit value. */
-void func_80059070(void)
+/** @brief Apply the travel-day update and refresh the day shown on the map. */
+void wmap_advance_travel_day(void)
 {
-extern void func_8005B58C(void);
-extern s32 func_8005D494(void);
-extern s32 D_8013B274;
-
     func_8005B58C();
-    D_8013B274 = func_8005D494();
+    g_wmap_travel_day = func_8005D494();
 }

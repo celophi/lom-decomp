@@ -1,3 +1,4 @@
+#include "wmap_party_travel.h"
 #include "wmap_travel_sequences.h"
 #include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
@@ -19,7 +20,6 @@ WmapAnimation *func_80099754(s32 advance)
 /* Partial WMAP decompilation: 97.459015% (gcc280_g0). */
 
 /** @brief Actor animation state; only sequence and previous-sequence fields are changed. */
-
 
 extern WmapAnimation D_800DBE3C;
 typedef struct
@@ -231,7 +231,6 @@ typedef struct
     s32 field_00;
     void *resource;
 } WmapResource;
-
 
 extern WmapConfigA D_800DBE3C;
 extern s32 D_8011CF54;
@@ -913,15 +912,7 @@ typedef struct
     u8 unknown_04[36];
 } WmapValueRecord;
 
-/** @brief Coordinates of the selected map cell. */
-typedef struct
-{
-    s32 x;
-    s32 y;
-} WmapCoordinates;
-
 extern s16 D_801AFBE0;
-extern WmapCoordinates D_8019D248;
 extern WmapValueRecord D_80139290[][6];
 extern s32 D_801398AC;
 extern s32 D_800DCED8;
@@ -931,14 +922,14 @@ extern void func_80099B50__for_func_8009A6A8(void) __asm__("func_80099B50");
 extern void func_8009A75C__for_func_8009A6A8(void) __asm__("func_8009A75C");
 
     D_801AFBE0 = 0x3B;
-    if (D_80139290[D_8019D248.x][D_8019D248.y].value == 2)
+    if (D_80139290[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].value == 2)
     {
         D_801398AC = 0;
     }
     else
     {
-        D_800DCED8 = D_8019D248.x;
-        D_800DCEE4 = D_8019D248.y;
+        D_800DCED8 = g_wmap_travelers[0].cell_x;
+        D_800DCEE4 = g_wmap_travelers[0].cell_y;
         D_801398AC = 1;
         func_8006CBD8(func_80099B50__for_func_8009A6A8);
     }
@@ -1009,7 +1000,7 @@ extern s32 D_801B2C50;
 /** @brief Set initial map coordinates, register the callback, and advance the sequence. */
 void func_8009A854(void)
 {
-extern void func_80058FF4(s32, s32, s32);
+
 extern void func_8009A8D0__for_func_8009A854(void) __asm__("func_8009A8D0");
 extern s32 D_800DCED8;
 extern s32 D_800DCEE4;
@@ -1018,7 +1009,7 @@ extern s32 D_801B2C4C;
 extern s32 func_80099B50__for_func_8009A854(s32) __asm__("func_80099B50");
 
     func_8006D0F0(0x18, &D_800DCED8, &D_800DCEE4);
-    func_80058FF4(0, D_800DCED8, D_800DCEE4);
+    wmap_set_traveler_position(0, D_800DCED8, D_800DCEE4);
     D_801398AC = 1;
     func_8006CBD8(&func_80099B50__for_func_8009A854);
     D_801B2C4C += 1;
@@ -1232,7 +1223,7 @@ extern void func_8009A258__for_func_8009ABB0(void) __asm__("func_8009A258");
 /** @brief Set initial map coordinates, register the callback, and advance the sequence. */
 void func_8009ABF0(void)
 {
-extern void func_80058FF4(s32, s32, s32);
+
 extern s32 func_80099B50__for_func_8009ABF0(s32) __asm__("func_80099B50");
 extern void func_8009AC6C__for_func_8009ABF0(void) __asm__("func_8009AC6C");
 extern s32 D_800DCED8;
@@ -1241,7 +1232,7 @@ extern s32 D_801398AC;
 extern s32 D_801B2C54;
 
     func_8006D0F0(0, &D_800DCED8, &D_800DCEE4);
-    func_80058FF4(0, D_800DCED8, D_800DCEE4);
+    wmap_set_traveler_position(0, D_800DCED8, D_800DCEE4);
     D_801398AC = 1;
     func_8006CBD8(func_80099B50__for_func_8009ABF0);
     D_801B2C54 += 1;

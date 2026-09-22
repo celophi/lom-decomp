@@ -108,3 +108,17 @@ g_wmap_spirit_sequence_bounds = 0x800CC0C4;
 g_wmap_spirit_sequences = 0x800CC0D0;
 g_wmap_land_display = 0x80182248;
 g_wmap_land_image_cache = 0x8011CF88;
+
+// Party travel and route state.
+wmap_update_travelers = 0x800584B4; // type:func
+wmap_update_party_travel = 0x8005880C; // type:func
+wmap_init_party_travel = 0x80058D9C; // type:func
+wmap_set_traveler_position = 0x80058FF4; // type:func
+wmap_advance_travel_day = 0x80059070; // type:func
+g_wmap_travelers = 0x8019D248;
+g_wmap_party_cell_dirty = 0x800DCEE8;
+g_wmap_party_moving = 0x80139230;
+g_wmap_party_visible = 0x8013B27C;
+g_wmap_scripted_travel_active = 0x80182DF8;
+g_wmap_travel_day = 0x8013B274;
+g_wmap_travel_sound_active = 0x801ADB00;

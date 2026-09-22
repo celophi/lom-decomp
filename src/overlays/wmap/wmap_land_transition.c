@@ -1,3 +1,4 @@
+#include "wmap_party_travel.h"
 #include "wmap_land_transition.h"
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
@@ -122,7 +123,6 @@ extern s32 D_8011D52C;
 extern s32 D_8011D530;
 extern s32 D_80129550;
 extern s32 D_8013922C;
-extern s32 D_80139230;
 extern WmapCell D_80139290[6][6];
 extern s32 D_80139838[12];
 extern s32 D_801398C0;
@@ -185,7 +185,7 @@ void func_800593D4__for_func_800594D8(void) __asm__("func_800593D4");
 
         if ((D_8013922C & input_mask) != 0)
         {
-            if (D_80182DE0 == 0 && D_80139230 == 0)
+            if (D_80182DE0 == 0 && g_wmap_party_moving == 0)
             {
                 s32 index;
                 s32 data;

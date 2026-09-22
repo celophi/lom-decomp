@@ -1,3 +1,4 @@
+#include "wmap_party_travel.h"
 /**
  * @file wmap_map_display.c
  * @brief Land sprites, spirit information, and the world-map game.
@@ -206,7 +207,6 @@ typedef struct
 
 extern WmapSpritePosition D_8004FD9C[8];
 extern s32 rand(void);
-
 extern SPRT g_wmap_game_score_label;
 extern SPRT g_wmap_game_score_digit;
 extern SPRT g_wmap_game_round_label;
@@ -223,7 +223,6 @@ extern s32 D_8011CF18;
 extern s32 D_8011CF7C;
 extern s32 D_8011D4FC;
 extern s32 D_8013922C;
-extern s32 D_80139230;
 extern WmapDisplayCell D_80139290[6][6];
 extern s32 D_8013986C;
 extern s32 g_wmap_game_phase;
@@ -231,16 +230,13 @@ extern s32 D_801398C0;
 extern WmapDisplayContext* D_801398EC;
 extern WmapDisplayProjection D_80139950;
 extern s32 D_8013B258;
-
 extern s32 g_wmap_game_round;
 extern s32 g_wmap_game_timer;
 extern s32 g_wmap_game_score;
-
 extern SPRT g_wmap_game_continue_prompt;
 extern SPRT g_wmap_game_exit_prompt;
 extern SPRT g_wmap_game_countdown_sprite;
 extern s32 g_wmap_game_spawn_timer;
-
 extern s32 D_800D922C;
 extern s32 D_800D9234;
 extern s32 D_800DCEEC;
@@ -250,14 +246,12 @@ extern s32 D_800500DC[];
 extern WmapTextureInfo D_800CBBE8[];
 extern s32 D_800DBE74;
 extern s32 D_8011CF74;
-
 extern s32 D_8013C628[];
 extern s32 D_8019D6D8;
 extern s32 D_801ADAF8;
 extern WmapMapPoint D_8004FD04[];
 extern s16 D_800D036C[];
 extern s32 g_wmap_land_scale_steps[];
-
 extern s32 D_800DBE70;
 extern SVECTOR D_80139278;
 extern SVECTOR D_801398C8;
@@ -285,7 +279,6 @@ extern WmapGlyph g_wmap_information_glyphs[];
 extern WmapGlyphPlacement g_wmap_information_placements[];
 extern s32 g_wmap_information_group_starts[];
 extern s32 g_wmap_information_values[];
-
 extern s32 D_801398D0;
 extern s32 D_800D7D60;
 extern s32 D_800D7D64;
@@ -343,7 +336,7 @@ void wmap_update_map_game(void)
                     }
                 }
 
-                if ((D_800DBE78 != 0) || (D_8013986C != 0) || (D_8011CF18 != 0) || (D_80139230 != 0) || (D_8011D4FC != -1))
+                if ((D_800DBE78 != 0) || (D_8013986C != 0) || (D_8011CF18 != 0) || (g_wmap_party_moving != 0) || (D_8011D4FC != -1))
                 {
                     valid = 0;
                 }

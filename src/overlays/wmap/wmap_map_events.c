@@ -1,3 +1,5 @@
+#include "wmap_party_travel.h"
+#include "wmap_pathfinding.h"
 #include "wmap_map_events.h"
 #include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
@@ -440,7 +442,6 @@ typedef struct
     void *resource;
 } WmapResource;
 
-
 extern WmapConfigA D_800D95D8[];
 extern WmapResource D_80139A28[];
 extern WmapMotion D_801AFD60[];
@@ -574,14 +575,13 @@ typedef struct
     extern s32 D_801B2E48;
     extern void func_800A7C78__for_func_800A6A20(void) __asm__("func_800A7C78");
     extern u8 D_800DCA98[];
-    extern void func_80058FF4(s32, s32, s32);
 
         D_800DCEC8 = D_80139950;
         D_8013B208 = 1;
         func_8006D0F0(12, &D_800DCEF8, &D_800DCF00);
         cdrom_queue_read(0x10E2, D_800DCA98);
         func_80064F64(0x10E3);
-        func_80058FF4(3, D_800DCEF8, D_800DCF00);
+        wmap_set_traveler_position(3, D_800DCEF8, D_800DCF00);
         D_801398D0 = 2;
         D_80182D68 = ((D_800DCEF8 - 1) * 48) - D_80139950.x;
         D_80182D78 = ((D_800DCF00 - 1) * 48) - D_80139950.y;
@@ -598,12 +598,9 @@ void func_800A6B34(void)
 {
 /* Partial WMAP decompilation: 93.333336% (gcc280_g0). */
 
-extern void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32* out_x, s32* out_y);
 extern void func_800A7D40__for_func_800A6B34(void) __asm__("func_800A7D40");
-extern u8 D_8019D248[];
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
-extern s32 D_80182DF8;
 extern s32 D_801B2E48;
 
     u8* base;
@@ -611,7 +608,7 @@ extern s32 D_801B2E48;
     u16 b;
 
     func_8006D0F0(0x10, &D_800DCEF8, &D_800DCF00);
-    base = D_8019D248;
+    base = (u8*)g_wmap_travelers;
     func_8005EB68(*(s32*)(base + 0x36C), *(s32*)(base + 0x370), D_800DCEF8, D_800DCF00,
                   (s32*)(base + 0x390), (s32*)(base + 0x410));
     *(s32*)(base + 0x384) = D_800DCEF8;
@@ -619,7 +616,7 @@ extern s32 D_801B2E48;
     a = *(u16*)(base + 0x394);
     *(s32*)(base + 0x380) = 1;
     *(s32*)(base + 0x38C) = 1;
-    D_80182DF8 = 1;
+    g_wmap_scripted_travel_active = 1;
     *(u16*)(base + 0x374) = a;
     *(u16*)(base + 0x37C) = ((s16)a - 1) * 0xA0;
     b = *(u16*)(base + 0x414);
@@ -638,7 +635,6 @@ void func_800A6C24(void)
 typedef struct { s32 w[4]; } WmapBlk16;
 
 extern void cdrom_queue_read__for_func_800A6C24(s32 sector, void* dst) __asm__("cdrom_queue_read");
-extern void func_80058FF4(s32 a0, s32 a1, s32 a2);
 extern void func_800A8060__for_func_800A6C24(void) __asm__("func_800A8060");
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
@@ -656,7 +652,7 @@ extern s32 D_801B2E50;
     func_8006D0F0(1, &D_800DCEF8, &D_800DCF00);
     cdrom_queue_read__for_func_800A6C24(0x10E0, D_800DCA98);
     func_80064F64(0x10E1);
-    func_80058FF4(3, D_800DCEF8, D_800DCF00);
+    wmap_set_traveler_position(3, D_800DCEF8, D_800DCF00);
     D_801398D0 = 2;
     D_80182D68 = (D_800DCEF8 - 1) * 0x30 - D_80139950[0];
     D_80182D78 = (D_800DCF00 - 1) * 0x30 - D_80139950[1];
@@ -673,12 +669,9 @@ void func_800A6D38(void)
 {
 /* Partial WMAP decompilation: 93.333336% (gcc280_g0). */
 
-extern void func_8005EB68(s32 start_x, s32 start_y, s32 end_x, s32 end_y, s32* out_x, s32* out_y);
 extern void func_800A8128__for_func_800A6D38(void) __asm__("func_800A8128");
-extern u8 D_8019D248[];
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
-extern s32 D_80182DF8;
 extern s32 D_801B2E50;
 
     u8* base;
@@ -686,7 +679,7 @@ extern s32 D_801B2E50;
     u16 b;
 
     func_8006D0F0(0x2, &D_800DCEF8, &D_800DCF00);
-    base = D_8019D248;
+    base = (u8*)g_wmap_travelers;
     func_8005EB68(*(s32*)(base + 0x36C), *(s32*)(base + 0x370), D_800DCEF8, D_800DCF00,
                   (s32*)(base + 0x390), (s32*)(base + 0x410));
     *(s32*)(base + 0x384) = D_800DCEF8;
@@ -694,7 +687,7 @@ extern s32 D_801B2E50;
     a = *(u16*)(base + 0x394);
     *(s32*)(base + 0x380) = 1;
     *(s32*)(base + 0x38C) = 1;
-    D_80182DF8 = 1;
+    g_wmap_scripted_travel_active = 1;
     *(u16*)(base + 0x374) = a;
     *(u16*)(base + 0x37C) = ((s16)a - 1) * 0xA0;
     b = *(u16*)(base + 0x414);
@@ -713,7 +706,6 @@ void func_800A6E28(void)
 typedef struct { s32 w[4]; } WmapBlk16;
 
 extern void cdrom_queue_read__for_func_800A6E28(s32 sector, void* dst) __asm__("cdrom_queue_read");
-extern void func_80058FF4(s32 a0, s32 a1, s32 a2);
 extern void func_800A8448__for_func_800A6E28(void) __asm__("func_800A8448");
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
@@ -731,7 +723,7 @@ extern s32 D_801B2E58;
     func_8006D0F0(1, &D_800DCEF8, &D_800DCF00);
     cdrom_queue_read__for_func_800A6E28(0x1216, D_800DCA98);
     func_80064F64(0x1217);
-    func_80058FF4(3, D_800DCEF8, D_800DCF00);
+    wmap_set_traveler_position(3, D_800DCEF8, D_800DCF00);
     D_801398D0 = 2;
     D_80182D68 = (D_800DCEF8 - 1) * 0x30 - D_80139950[0];
     D_80182D78 = (D_800DCF00 - 1) * 0x30 - D_80139950[1];
@@ -744,47 +736,25 @@ void func_800A6F3C(void)
 {
 /* Partial WMAP decompilation: 87.906250% (gcc280_g0). */
 
-/** @brief Route state and coordinate arrays within the world-map data block. */
-typedef struct
-{
-    u8 pad_000[0x36C];
-    s32 start_x;
-    s32 start_y;
-    s16 current_x;
-    s16 current_y;
-    u8 pad_378[4];
-    s16 screen_x;
-    s16 screen_y;
-    s32 active;
-    s32 target_x;
-    s32 target_y;
-    s32 state;
-    s16 route_x[64];
-    s16 route_y[64];
-} WmapRoute;
-
-extern WmapRoute D_8019D248;
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
-extern s32 D_80182DF8;
 extern s32 D_801B2E58;
-extern void func_8005EB68(s32, s32, s32, s32, s16 *, s16 *);
 extern void func_800A8510__for_func_800A6F3C(void) __asm__("func_800A8510");
 
     s16 screen_x;
 
     func_8006D0F0(18, &D_800DCEF8, &D_800DCF00);
-    func_8005EB68(D_8019D248.start_x, D_8019D248.start_y, D_800DCEF8, D_800DCF00, D_8019D248.route_x, D_8019D248.route_y);
-    D_8019D248.target_x = D_800DCEF8;
-    D_8019D248.target_y = D_800DCF00;
-    D_80182DF8 = 1;
-    D_8019D248.active = 1;
-    D_8019D248.state = 1;
-    D_8019D248.current_x = (u16)D_8019D248.route_x[2];
-    screen_x = (D_8019D248.route_x[2] - 1) * 160;
-    D_8019D248.current_y = (u16)D_8019D248.route_y[2];
-    D_8019D248.screen_x = screen_x;
-    D_8019D248.screen_y = (D_8019D248.route_y[2] - 1) * 160;
+    func_8005EB68(g_wmap_travelers[3].cell_x, g_wmap_travelers[3].cell_y, D_800DCEF8, D_800DCF00, g_wmap_travelers[3].path_x.cells, g_wmap_travelers[3].path_y.cells);
+    g_wmap_travelers[3].destination_x = D_800DCEF8;
+    g_wmap_travelers[3].destination_y = D_800DCF00;
+    g_wmap_scripted_travel_active = 1;
+    g_wmap_travelers[3].moving = 1;
+    g_wmap_travelers[3].path_index = 1;
+    g_wmap_travelers[3].next_cell_x = (u16)g_wmap_travelers[3].path_x.steps[1].cell;
+    screen_x = (g_wmap_travelers[3].path_x.steps[1].cell - 1) * 160;
+    g_wmap_travelers[3].next_cell_y = (u16)g_wmap_travelers[3].path_y.steps[1].cell;
+    g_wmap_travelers[3].target_x = screen_x;
+    g_wmap_travelers[3].target_y = (g_wmap_travelers[3].path_y.steps[1].cell - 1) * 160;
     func_800652A8(50, 128);
     D_801B2E58++;
     func_800A8510__for_func_800A6F3C();
@@ -1548,7 +1518,6 @@ void func_800A7D0C(void)
 {
 extern s32 D_801B2E4C;
 extern s32 D_801B2E48;
-extern s32 D_80182DF8;
 extern void func_800A7D7C__for_func_800A7D0C(void) __asm__("func_800A7D7C");
 
     if (--D_801B2E4C == 0)
@@ -1564,10 +1533,9 @@ void func_800A7D40(void)
 {
 extern s32 D_801B2E4C;
 extern s32 D_801B2E48;
-extern s32 D_80182DF8;
 extern void func_800A7D7C__for_func_800A7D40(void) __asm__("func_800A7D7C");
 
-    if (D_80182DF8 == 0)
+    if (g_wmap_scripted_travel_active == 0)
     {
         D_801B2E48 += 1;
         func_800A7D7C__for_func_800A7D40();
@@ -1805,7 +1773,6 @@ void func_800A80F4(void)
 {
 extern s32 D_801B2E54;
 extern s32 D_801B2E50;
-extern s32 D_80182DF8;
 extern void func_800A8164__for_func_800A80F4(void) __asm__("func_800A8164");
 
     if (--D_801B2E54 == 0)
@@ -1821,10 +1788,9 @@ void func_800A8128(void)
 {
 extern s32 D_801B2E54;
 extern s32 D_801B2E50;
-extern s32 D_80182DF8;
 extern void func_800A8164__for_func_800A8128(void) __asm__("func_800A8164");
 
-    if (D_80182DF8 == 0)
+    if (g_wmap_scripted_travel_active == 0)
     {
         D_801B2E50 += 1;
         func_800A8164__for_func_800A8128();
@@ -2062,7 +2028,6 @@ void func_800A84DC(void)
 {
 extern s32 D_801B2E5C;
 extern s32 D_801B2E58;
-extern s32 D_80182DF8;
 extern void func_800A854C__for_func_800A84DC(void) __asm__("func_800A854C");
 
     if (--D_801B2E5C == 0)
@@ -2078,10 +2043,9 @@ void func_800A8510(void)
 {
 extern s32 D_801B2E5C;
 extern s32 D_801B2E58;
-extern s32 D_80182DF8;
 extern void func_800A854C__for_func_800A8510(void) __asm__("func_800A854C");
 
-    if (D_80182DF8 == 0)
+    if (g_wmap_scripted_travel_active == 0)
     {
         D_801B2E58 += 1;
         func_800A854C__for_func_800A8510();
