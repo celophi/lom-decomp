@@ -528,8 +528,6 @@ extern s16 D_801AFBD2;
 s32 func_80099F98(void)
 
 {
-/* Partial WMAP decompilation: 99.894740% (gcc280_g0). */
-
 extern s16 D_800D6508[];
 extern s32 D_800D9164;
 extern s32 D_800DCED8;
@@ -572,6 +570,8 @@ extern void func_80099754__for_func_80099F98(s32) __asm__("func_80099754");
         magnitude_x = delta_x;
         if (delta_x < 0)
         {
+            delta_x++;
+            delta_x--;
             magnitude_x = -magnitude_x;
         }
         delta_x = (delta_x / magnitude_x) + 1;
@@ -585,6 +585,8 @@ extern void func_80099754__for_func_80099F98(s32) __asm__("func_80099754");
         magnitude_y = delta_y;
         if (delta_y < 0)
         {
+            delta_y++;
+            delta_y--;
             magnitude_y = -magnitude_y;
         }
         delta_y = (delta_y / magnitude_y) + 1;

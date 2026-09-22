@@ -446,8 +446,6 @@ extern s32 D_801B2F44;
 /** @brief Initialize effect actors with randomized angles and speeds. */
 void func_800AE4EC(void)
 {
-/* Partial WMAP decompilation: 87.650940% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -496,14 +494,9 @@ extern s32 rand(void);
 extern void func_800B07CC__for_func_800AE4EC(void) __asm__("func_800B07CC");
 
     s32 i;
-    s32 motion_offset;
-    s32 resource_offset;
     WmapMotion *motion;
     WmapConfigA *actor;
 
-    i = 0;
-    motion_offset = 0;
-    resource_offset = 160;
     D_801B0FD0 = 10;
     D_80139280[11] = 0;
     D_80139280[12] = -2;
@@ -515,11 +508,12 @@ extern void func_800B07CC__for_func_800AE4EC(void) __asm__("func_800B07CC");
     D_80139280[18] = 8;
     D_80139280[19] = 0;
     D_80139280[20] = 102000;
+    i = 0;
     do
     {
+        D_80139988[i + 20].resource = D_80123538;
         actor = &D_800D95D8[i];
-        motion = (WmapMotion *)((u8 *)D_801AFD60 + motion_offset);
-        ((WmapResource *)((u8 *)D_80139988 + resource_offset))->resource = D_80123538;
+        motion = &D_801AFD60[i];
         motion->state = 1;
         actor->field_06 = 15;
         actor->field_10 = -1;
@@ -533,8 +527,6 @@ extern void func_800B07CC__for_func_800AE4EC(void) __asm__("func_800B07CC");
         motion->z = 102000;
         motion->x = (-(rand() * 2) >> 15);
         motion->field_0E = ((rand() * 50) >> 15) + 220;
-        motion_offset += 20;
-        resource_offset += 8;
         i++;
     } while (i < 10);
     D_801B2F5C = 32;
@@ -545,8 +537,6 @@ extern void func_800B07CC__for_func_800AE4EC(void) __asm__("func_800B07CC");
 /** @brief Initialize effect actors with randomized angles and speeds. */
 void func_800AE694(void)
 {
-/* Partial WMAP decompilation: 87.407410% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -595,14 +585,9 @@ extern s32 rand(void);
 extern void func_800B09E8__for_func_800AE694(void) __asm__("func_800B09E8");
 
     s32 i;
-    s32 motion_offset;
-    s32 resource_offset;
     WmapMotion *motion;
     WmapConfigA *actor;
 
-    i = 0;
-    motion_offset = 0;
-    resource_offset = 400;
     D_801B0FD0 = 30;
     D_80139280[21] = -1;
     D_80139280[22] = -2;
@@ -614,11 +599,12 @@ extern void func_800B09E8__for_func_800AE694(void) __asm__("func_800B09E8");
     D_80139280[28] = 8;
     D_80139280[29] = 1;
     D_80139280[30] = 102000;
+    i = 0;
     do
     {
+        D_80139988[i + 50].resource = D_80123538;
         actor = &D_800D9B00[i];
-        motion = (WmapMotion *)((u8 *)D_801AFFB8 + motion_offset);
-        ((WmapResource *)((u8 *)D_80139988 + resource_offset))->resource = D_80123538;
+        motion = &D_801AFFB8[i];
         motion->state = 1;
         actor->field_06 = 15;
         actor->field_10 = -1;
@@ -632,8 +618,6 @@ extern void func_800B09E8__for_func_800AE694(void) __asm__("func_800B09E8");
         motion->z = 102000;
         motion->x = (-(rand() * 2) >> 15) - 1;
         motion->field_0E = ((rand() * 100) >> 15) + 180;
-        motion_offset += 20;
-        resource_offset += 8;
         i++;
     } while (i < 30);
     D_801B2F64 = 32;
@@ -2591,10 +2575,9 @@ extern void (*D_800D713C[])(void);
     D_801B2F54 = 1;
 }
 
+/** @brief Initialize the world-map actor and advance the timed sequence. */
 void func_800B0560(void)
 {
-/* Partial WMAP decompilation: 87.156250% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -2622,12 +2605,12 @@ extern void func_800B05E0__for_func_800B0560(void) __asm__("func_800B05E0");
 
     D_801399BC = &D_8011D538;
     D_800D9370.field_06 = 0xF;
+    D_800D9370.field_02 = 0;
+    D_800D9370.field_0E = 1;
     D_800D9370.field_10 = -1;
     D_800D9370.field_26 = 4;
-    D_800D9370.field_0E = 1;
-    D_800D9370.field_24 = 1;
-    D_800D9370.field_02 = 0;
     D_800D9370.field_22 = 0x81;
+    D_800D9370.field_24 = 1;
     D_801B2F54 = 0x50;
     D_801B2F50 += 1;
     func_800B05E0__for_func_800B0560();
@@ -2990,8 +2973,6 @@ extern s32 D_801B2F6C;
 /** @brief World-map step handler: clear a small entry table, set the timer, advance the step. */
 void func_800B0C58(void)
 {
-/* Partial WMAP decompilation: 87.208336% (gcc280_g0). */
-
 typedef struct
 {
     u8 pad0[0x22];
@@ -3006,18 +2987,15 @@ extern s32 D_801B2F68;
 extern s32 D_801B2F6C;
 extern void func_800B0CB8__for_func_800B0C58(void) __asm__("func_800B0CB8");
 
-    WmapEntry *p;
+    WmapEntry *entries;
     s32 i;
 
-    i = 0;
-    p = (WmapEntry *)&D_800DB4C8;
-    do
+    entries = (WmapEntry *)&D_800DB4C8;
+    for (i = 0; i < 0x28; i++)
     {
-        p->f22 = 0;
-        p->f26 = 2;
-        i += 1;
-        p += 1;
-    } while (i < 0x28);
+        entries[i].f22 = 0;
+        entries[i].f26 = 2;
+    }
 
     D_801B2F6C = 0x40;
     D_801B2F68 += 1;

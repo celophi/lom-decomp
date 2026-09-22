@@ -1,4 +1,5 @@
 #include "wmap_land_transition.h"
+#include "wmap_land_preview.h"
 #include "wmap_party_travel.h"
 #include "wmap_land_layout.h"
 #include "wmap_land_effect_loader.h"
@@ -18,8 +19,6 @@
 #include "sdk/gte_dmpsx_compat.h"
 
 #define WMAP_GRID_SIZE 6
-#define WMAP_CELL_SPACING 48
-#define WMAP_VIEW_COLUMNS 3
 #define WMAP_PLACEMENT_DELAY 30
 #define WMAP_PLACEMENT_DELAY_END 31
 #define WMAP_CAROUSEL_TRIANGLES 168
@@ -27,17 +26,13 @@
 #define WMAP_CAROUSEL_SLIDE_STEP 6
 #define WMAP_CAROUSEL_OPEN_X 100
 #define WMAP_CAROUSEL_CLOSED_X 148
-#define WMAP_PACKET_LIMIT 32000
 #define WMAP_CAROUSEL_OT 30
 #define WMAP_ARTIFACT_OT 11
 #define WMAP_ARTIFACT_SHADOW_OT 29
 #define WMAP_CAROUSEL_TPAGE 0x1B
-#define WMAP_ARTIFACT_TPAGE 0xAE
-#define WMAP_ARTIFACT_CLUT 0x7FEC
 #define WMAP_ARTIFACT_SHADOW_CLUT 0x7FC0
 #define WMAP_ARTIFACT_SHADOW_SKEW 10
 #define WMAP_PLACEMENT_RESOURCE_BASE 0x10CE
-#define WMAP_NO_ARTIFACT (-1)
 #define WMAP_SELECTION_VOLUME 128
 #define WMAP_CAROUSEL_VOLUME 143
 
@@ -49,16 +44,6 @@ enum WmapSelectionSound
     WMAP_SOUND_TURN_LEFT = 9,
     WMAP_SOUND_PLACE_ARTIFACT = 22,
     WMAP_SOUND_CLOSE_ARTIFACTS = 24
-};
-
-/** @brief Map selection panel animation phases. */
-enum WmapSelectionPhase
-{
-    WMAP_SELECTION_MAP,
-    WMAP_SELECTION_OPENING,
-    WMAP_SELECTION_ARTIFACTS,
-    WMAP_SELECTION_SHOW_ARTIFACTS,
-    WMAP_SELECTION_SHOW_MAP
 };
 
 /** @brief Carousel slide and visibility modes. */
@@ -152,10 +137,7 @@ extern s32 D_801ADAF4;
 extern const s32 D_8005135C[];
 extern u16 D_800CC776;
 extern s32 D_800CCBF4[];
-extern s32 D_800D9168;
-extern s32 D_800D9218;
 extern s32 D_800D9220;
-extern s32 D_800DCF0C;
 extern s32 D_8011CF18;
 extern s32 D_8011CF50;
 extern WmapRouteCell D_8011D108[6][6];
@@ -169,10 +151,7 @@ extern WmapCell D_80139290[6][6];
 extern s32 D_801398C0;
 extern s32 D_801398F4;
 extern WmapProjectionState D_80139950;
-extern s32 D_8013B230;
-extern s32 D_80182DDC;
 extern s32 D_80182DE0;
-extern s32 D_80182E24;
 extern s32 D_800D921C;
 extern s32 D_801ADAFC;
 extern s32 D_80139838[WMAP_ARTIFACT_SLOTS];
@@ -288,12 +267,12 @@ void wmap_update_artifact_selection(void)
 
                 view_index = D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS;
                 first_frame = D_8005135C[view_index];
-                D_80182DDC = first_frame;
-                D_800D9218 = D_8005135C[view_index + 1] - 1;
+                g_wmap_preview_travel_frame = first_frame;
+                g_wmap_preview_travel_end = D_8005135C[view_index + 1] - 1;
                 func_8006D8F0(0, first_frame, D_8005135C);
                 func_8006D870(1);
                 D_80129550 = 0;
-                D_800D9168 = no_artifact;
+                g_wmap_artifact_transfer_frame = no_artifact;
                 func_800652A8(WMAP_SOUND_OPEN_ARTIFACTS, WMAP_SELECTION_VOLUME);
             }
         }
@@ -356,11 +335,11 @@ void wmap_update_artifact_selection(void)
             func_8005FF88(-1);
             D_8011CF18 = WMAP_SELECTION_SHOW_MAP;
             D_8011CF50 = 1;
-            D_80182DDC = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS + 1] - 1;
-            D_800D9218 = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS];
+            g_wmap_preview_travel_frame = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS + 1] - 1;
+            g_wmap_preview_travel_end = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS];
             func_8006D870(0);
             D_8011D4FC = -1;
-            D_80182E24 = 0;
+            g_wmap_preview_artifact_visible = 0;
             func_800652A8(WMAP_SOUND_CLOSE_ARTIFACTS, WMAP_SELECTION_VOLUME);
             D_8011CF50 = 1;
             D_801398C0 = 0;
@@ -395,7 +374,7 @@ void wmap_update_artifact_selection(void)
 
             artifact_id = func_8005D8FC();
             D_8011D4FC = artifact_id;
-            D_8013B230 = 0;
+            g_wmap_preview_bob_frame = 0;
             if (artifact_id != -1)
             {
                 D_80129550 = 1;
@@ -412,10 +391,10 @@ void wmap_update_artifact_selection(void)
                 D_8011CF50 = 1;
                 D_801398C0 = 0;
                 D_8013922C = 0;
-                D_800D9168 = D_800CCBF4[D_8011D4FC];
-                D_800DCF0C = D_800CCBF4[D_8011D4FC + 1] - 1;
-                D_80182DDC = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS + 1] - 1;
-                D_800D9218 = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS];
+                g_wmap_artifact_transfer_frame = D_800CCBF4[D_8011D4FC];
+                g_wmap_artifact_transfer_end = D_800CCBF4[D_8011D4FC + 1] - 1;
+                g_wmap_preview_travel_frame = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS + 1] - 1;
+                g_wmap_preview_travel_end = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS];
                 func_8006D870(0);
                 func_800A89DC(D_8011D4FC);
             }

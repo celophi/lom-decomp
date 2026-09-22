@@ -4,6 +4,7 @@
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
+#include "wmap_land_preview.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 #include "sdk/libgte.h"
@@ -103,11 +104,8 @@ M2C_UNK func_8005B548();
 s32 func_8005D494(void);
 extern s32 D_8005136C;
 extern s32 D_800D06BC;
-extern s32 D_800D9168;
 extern s32 D_800D916C;
-extern POLY_FT4 D_800D9170;
 extern s32 D_800D9210;
-extern s32 D_800D9218;
 extern s32 D_800D9220;
 extern s32 D_800D9224;
 extern s32 D_800D923C;
@@ -118,13 +116,9 @@ extern s32 D_800DBE74;
 extern s32 D_800DBE78;
 extern s32 D_800DCEA0;
 extern s32 D_800DCEC0;
-extern s32 D_800DCEE0;
 extern s32 D_800DCEEC;
 extern s32 D_800DCEF0;
 extern s32 D_800DCEFC;
-extern s32 D_800DCF08;
-extern s32 D_800DCF0C;
-extern s32 D_800DCF10;
 extern M2C_UNK D_8010CF18;
 extern M2C_UNK D_80114F18;
 extern s32 D_8011CF18;
@@ -142,8 +136,6 @@ extern s32 D_8011D4FC;
 extern s32 D_80129540;
 extern u8 D_80129548;
 extern s32 D_8012954C;
-extern s32 D_80129558;
-extern s32 D_801391E0;
 extern s32 D_80139218;
 extern s32 D_80139224;
 extern s32 D_80139228;
@@ -170,7 +162,6 @@ extern s32 D_80139960;
 extern s32 D_80139978;
 extern s32 D_8013997C;
 extern s32 D_8013B208;
-extern s32 D_8013B230;
 extern s32 D_8013B254;
 extern s32 D_8013B258;
 extern u8 D_8013B260;
@@ -183,11 +174,8 @@ extern s32 D_80182D70;
 extern s32 D_80182D88;
 extern u8 D_80182DC0;
 extern u32 D_80182DD8;
-extern s32 D_80182DDC;
 extern s32 D_80182E00;
 extern s32 D_80182E1C;
-extern s32 D_80182E24;
-extern s32 D_80182E30;
 extern s32 D_80182E34;
 extern s32 D_80182E3C;
 extern s32 D_8019D6D8;
@@ -412,7 +400,7 @@ void func_80060918(void)
     D_8011CF7C = 1;
     D_801398A8 = 0;
     D_8011D0DC = 0;
-    D_8013B230 = 0;
+    g_wmap_preview_bob_frame = 0;
     D_801398B4 = 1;
     D_800D9220 = -1;
     D_80139868 = -1;
@@ -483,34 +471,34 @@ void func_80060918(void)
     D_801398D0 = 0;
     D_800DCEEC = 1;
     D_800DCEF0 = 1;
-    D_800D9218 = D_8005136C;
-    D_80182DDC = D_8005136C;
+    g_wmap_preview_travel_end = D_8005136C;
+    g_wmap_preview_travel_frame = D_8005136C;
     D_8013B254 = 0;
     D_800DBE78 = 0;
     D_800DBE70 = 2;
     D_801398F4 = 0;
     D_8011D4FC = -1;
-    D_80182E24 = 0;
-    D_800DCF0C = 0;
-    D_800D9168 = 0;
-    D_800DCEE0 = 0;
-    D_80182E30 = 0;
-    D_801391E0 = 0;
-    D_80129558 = 0;
-    D_800DCF10 = 0;
-    D_800DCF08 = 0;
+    g_wmap_preview_artifact_visible = 0;
+    g_wmap_artifact_transfer_end = 0;
+    g_wmap_artifact_transfer_frame = 0;
+    g_wmap_preview_shape = 0;
+    g_wmap_preview_texture = 0;
+    g_wmap_preview_draw_y = 0;
+    g_wmap_preview_draw_x = 0;
+    g_wmap_preview_y = 0;
+    g_wmap_preview_x = 0;
     D_80182E34 = 0;
     M2C_FIELD(&D_8013B260, s16*, 2) = 0;
     M2C_FIELD(&D_80129548, s8*, 0) = 0;
     M2C_FIELD(&D_8013B260, s16*, 0) = 0;
     M2C_FIELD(&D_80129548, s8*, 1) = 0;
     M2C_FIELD(&D_80129548, s8*, 2) = 0;
-    SetPolyFT4(&D_800D9170);
-    var_v1 = (u8*)&D_800D9170 + 0x78;
-    var_v0 = &D_800D9170;
-    M2C_FIELD(&D_800D9170, s32*, 0x18) = 0;
-    M2C_FIELD(&D_800D9170, s32*, 0x10) = 0;
-    M2C_FIELD(&D_800D9170, s32*, 8) = 0;
+    SetPolyFT4(g_wmap_preview_saved_quads);
+    var_v1 = (u8*)g_wmap_preview_saved_quads + 0x78;
+    var_v0 = g_wmap_preview_saved_quads;
+    M2C_FIELD(g_wmap_preview_saved_quads, s32*, 0x18) = 0;
+    M2C_FIELD(g_wmap_preview_saved_quads, s32*, 0x10) = 0;
+    M2C_FIELD(g_wmap_preview_saved_quads, s32*, 8) = 0;
     do
     {
         M2C_FIELD(var_v1, s32*, 0) = (s32)M2C_FIELD(var_v0, s32*, 0);
@@ -519,12 +507,12 @@ void func_80060918(void)
         M2C_FIELD(var_v1, s32*, 0xC) = (s32)M2C_FIELD(var_v0, s32*, 0xC);
         var_v0 += 0x10;
         var_v1 += 0x10;
-    } while (var_v0 != ((u8*)&D_800D9170 + 0x20));
+    } while (var_v0 != ((u8*)g_wmap_preview_saved_quads + 0x20));
     M2C_FIELD(var_v1, s32*, 0) = (s32)M2C_FIELD(var_v0, s32*, 0);
     M2C_FIELD(var_v1, s32*, 4) = (s32)M2C_FIELD(var_v0, s32*, 4);
-    var_v1_2 = (u8*)&D_800D9170 + 0x50;
-    var_v0_2 = (u8*)&D_800D9170 + 0x78;
-    temp_a0 = (u8*)&D_800D9170 + 0x98;
+    var_v1_2 = (u8*)g_wmap_preview_saved_quads + 0x50;
+    var_v0_2 = (u8*)g_wmap_preview_saved_quads + 0x78;
+    temp_a0 = (u8*)g_wmap_preview_saved_quads + 0x98;
     do
     {
         M2C_FIELD(var_v1_2, s32*, 0) = (s32)M2C_FIELD(var_v0_2, s32*, 0);
@@ -536,8 +524,8 @@ void func_80060918(void)
     } while (var_v0_2 != temp_a0);
     M2C_FIELD(var_v1_2, s32*, 0) = (s32)M2C_FIELD(var_v0_2, s32*, 0);
     M2C_FIELD(var_v1_2, s32*, 4) = (s32)M2C_FIELD(var_v0_2, s32*, 4);
-    var_v1_3 = (u8*)&D_800D9170 + 0x28;
-    var_v0_3 = (u8*)&D_800D9170 + 0x50;
+    var_v1_3 = (u8*)g_wmap_preview_saved_quads + 0x28;
+    var_v0_3 = (u8*)g_wmap_preview_saved_quads + 0x50;
     do
     {
         M2C_FIELD(var_v1_3, s32*, 0) = (s32)M2C_FIELD(var_v0_3, s32*, 0);
@@ -546,7 +534,7 @@ void func_80060918(void)
         M2C_FIELD(var_v1_3, s32*, 0xC) = (s32)M2C_FIELD(var_v0_3, s32*, 0xC);
         var_v0_3 += 0x10;
         var_v1_3 += 0x10;
-    } while (var_v0_3 != ((u8*)&D_800D9170 + 0x70));
+    } while (var_v0_3 != ((u8*)g_wmap_preview_saved_quads + 0x70));
     temp_a3_2 = M2C_FIELD(var_v0_3, s32*, 0);
     M2C_FIELD(var_v1_3, s32*, 0) = temp_a3_2;
     M2C_FIELD(var_v1_3, s32*, 4) = (s32)M2C_FIELD(var_v0_3, s32*, 4);
@@ -2219,7 +2207,7 @@ loop_1:
                 func_8005F9BC();
                 wmap_update_party_travel();
                 wmap_update_map_display();
-                func_8005A318();
+                wmap_update_land_preview();
                 wmap_draw_artifact_carousel();
                 func_8006D674();
                 var_sp = 0;
@@ -2488,11 +2476,11 @@ void func_80064094(void)
     func_80063F38();
     D_8011CF50 = 0;
     D_8013B258 = 0;
-    D_80182E24 = 0;
+    g_wmap_preview_artifact_visible = 0;
     D_80129550 = 0;
     D_8011D4FC = -1;
-    D_80182E30 = 0;
-    D_800DCEE0 = 0;
+    g_wmap_preview_texture = 0;
+    g_wmap_preview_shape = 0;
     func_8005909C();
     D_8011D52C = 0;
     func_8006D870(0);
