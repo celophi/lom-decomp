@@ -6,6 +6,15 @@
 #include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
 
+/** @brief World-map tile and its cached neighboring layout data. */
+typedef struct
+{
+    s32 tile;
+    s16 field_04;
+    s16 field_06;
+    u8 neighbors[32];
+} WmapTile;
+
 /**
  * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
  */
@@ -274,8 +283,6 @@ extern void func_8008C134__for_func_8008AB94(void) __asm__("func_8008C134");
 /** @brief Initialize the actor group and its animation resources, then advance. */
 void func_8008ACC8(void)
 {
-/* Partial WMAP decompilation: 99.129036% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -324,19 +331,21 @@ extern void func_8008C260__for_func_8008ACC8(void) __asm__("func_8008C260");
 
     s32 i;
     s16 angle;
+    WmapConfigA *actor;
 
     D_801B0FD0 = 8;
     angle = (s16)0x27FD8;
     for (i = 80; i < 88; i++)
     {
+        actor = &D_800D9268[i];
         D_80139988[i].data = D_80121538;
-        D_800D9268[i].field_02 = 0;
-        D_800D9268[i].field_06 = 15;
-        D_800D9268[i].field_0E = 2;
-        D_800D9268[i].field_10 = -1;
-        D_800D9268[i].field_22 = 129;
-        D_800D9268[i].field_24 = 1;
-        D_800D9268[i].field_26 = 8;
+        actor->field_02 = 0;
+        actor->field_06 = 15;
+        actor->field_0E = 2;
+        actor->field_10 = -1;
+        actor->field_22 = 129;
+        actor->field_24 = 1;
+        actor->field_26 = 8;
         D_801AFBD0[i].field_00 = 1;
         D_801AFBD0[i].angle = i << 9;
         D_801AFBD0[i].field_04 = -4000;
@@ -353,8 +362,6 @@ extern void func_8008C260__for_func_8008ACC8(void) __asm__("func_8008C260");
 /** @brief Initialize the effect descriptor and actors with randomized angles. */
 void func_8008ADC0(void)
 {
-/* Partial WMAP decompilation: 87.641304% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -410,8 +417,7 @@ extern void func_8008C42C__for_func_8008ADC0(void) __asm__("func_8008C42C");
     WmapResource *resource;
     WmapMotion *motion;
 
-    actor_offset = 0;
-    resource_offset = 50 * 8;
+    i = 0;
     D_801B0FD0 = 20;
     D_80139280[0xB] = 64;
     D_80139280[0xC] = 20;
@@ -423,21 +429,26 @@ extern void func_8008C42C__for_func_8008ADC0(void) __asm__("func_8008C42C");
     D_80139280[0x12] = 8;
     D_80139280[0x13] = 1;
     D_80139280[0x14] = 10;
-    for (i = 0; i < 20; i++)
+    do
     {
+        WmapResource *resources;
+        u8 *resource_data;
+
         motion = &D_801AFFB8[i];
         motion->state = 1;
         angle = rand();
+        resource_offset = (i + 50) * 8;
+        actor_offset = i * 44;
+        resources = D_80139988;
+        resource_data = D_80121538;
         actor = (WmapConfigA *)((u8 *)D_800D9B00 + actor_offset);
-        actor_offset += 44;
-        resource = (WmapResource *)((u8 *)D_80139988 + resource_offset);
-        resource_offset += 8;
+        resource = (WmapResource *)((u8 *)resources + resource_offset);
         motion->angle = angle & 4095;
         motion->scale = 128;
         motion->z = 10;
         motion->x = 0;
         motion->field_0E = 0;
-        resource->resource = D_80121538;
+        resource->resource = resource_data;
         actor->field_06 = 15;
         actor->field_10 = -1;
         actor->field_26 = 2;
@@ -445,7 +456,8 @@ extern void func_8008C42C__for_func_8008ADC0(void) __asm__("func_8008C42C");
         actor->field_02 = 0;
         actor->field_0E = 1;
         actor->field_22 = 0;
-    }
+        i++;
+    } while (i < 20);
     D_801B29F4 = 64;
     D_801B29F0++;
     func_8008C42C__for_func_8008ADC0();
@@ -454,8 +466,6 @@ extern void func_8008C42C__for_func_8008ADC0(void) __asm__("func_8008C42C");
 /** @brief Initialize the effect descriptor and actors with randomized angles. */
 void func_8008AF30(void)
 {
-/* Partial WMAP decompilation: 88.989130% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -511,8 +521,7 @@ extern void func_8008C558__for_func_8008AF30(void) __asm__("func_8008C558");
     WmapResource *resource;
     WmapMotion *motion;
 
-    actor_offset = 0;
-    resource_offset = 20 * 8;
+    i = 0;
     D_801B0FD0 = 30;
     D_80139280[0x15] = 192;
     D_80139280[0x16] = 16;
@@ -524,21 +533,26 @@ extern void func_8008C558__for_func_8008AF30(void) __asm__("func_8008C558");
     D_80139280[0x1C] = 8;
     D_80139280[0x1D] = 2;
     D_80139280[0x1E] = 10;
-    for (i = 0; i < 30; i++)
+    do
     {
+        WmapResource *resources;
+        u8 *resource_data;
+
         motion = &D_801AFD60[i];
         motion->state = 1;
         angle = rand();
+        resource_offset = (i + 20) * 8;
+        actor_offset = i * 44;
+        resources = D_80139988;
+        resource_data = D_80121538;
         actor = (WmapConfigA *)((u8 *)D_800D95D8 + actor_offset);
-        actor_offset += 44;
-        resource = (WmapResource *)((u8 *)D_80139988 + resource_offset);
-        resource_offset += 8;
+        resource = (WmapResource *)((u8 *)resources + resource_offset);
         motion->angle = angle & 4095;
         motion->scale = 128;
         motion->z = 10;
         motion->x = 0;
         motion->field_0E = 0;
-        resource->resource = D_80121538;
+        resource->resource = resource_data;
         actor->field_06 = 15;
         actor->field_0E = 2;
         actor->field_10 = -1;
@@ -546,7 +560,8 @@ extern void func_8008C558__for_func_8008AF30(void) __asm__("func_8008C558");
         actor->field_24 = 127;
         actor->field_02 = 0;
         actor->field_22 = 0;
-    }
+        i++;
+    } while (i < 30);
     D_801B29FC = 64;
     D_801B29F8++;
     func_8008C558__for_func_8008AF30();
@@ -555,8 +570,6 @@ extern void func_8008C558__for_func_8008AF30(void) __asm__("func_8008C558");
 /** @brief Initialize particle positions, velocities and animation resources. */
 void func_8008B0A0(void)
 {
-/* Partial WMAP decompilation: 97.333336% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -609,36 +622,31 @@ extern s32 rand(void);
 extern void func_8008C684__for_func_8008B0A0(void) __asm__("func_8008C684");
 
     s32 i;
-    WmapConfigA *actor;
-    WmapParticle *particle;
     WmapParticle *particles = D_800E4F18;
 
     for (i = 100; i < 124; i++)
     {
-        actor = &D_800D9268[i];
-        particle = &particles[i];
-        particle->x = ((rand() * 200) >> 15) - 100;
-        particle->y = ((rand() * 200) >> 15) - 100;
-        particle->z = ((rand() * 150) >> 15) - 150;
-        particle->vx = ((rand() << 6) >> 15) - 20;
-        particle->vy = ((rand() << 6) >> 15) - 20;
-        particle->vz = ((rand() << 6) >> 15) - 20;
-        actor->field_02 = 0;
-        actor->field_06 = 15;
-        actor->field_0E = (rand() * 3) >> 15;
-        actor->field_10 = -1;
-        actor->field_26 = 4;
-        actor->field_22 = 129;
-        actor->field_24 = 1;
+        particles[i].x = ((rand() * 200) >> 15) - 100;
+        particles[i].y = ((rand() * 200) >> 15) - 100;
+        particles[i].z = ((rand() * 150) >> 15) - 150;
+        particles[i].vx = ((rand() << 6) >> 15) - 20;
+        particles[i].vy = ((rand() << 6) >> 15) - 20;
+        particles[i].vz = ((rand() << 6) >> 15) - 20;
+        D_800D9268[i].field_02 = 0;
+        D_800D9268[i].field_06 = 15;
+        D_800D9268[i].field_0E = (rand() * 3) >> 15;
+        D_800D9268[i].field_10 = -1;
+        D_800D9268[i].field_26 = 4;
+        D_800D9268[i].field_22 = 129;
+        D_800D9268[i].field_24 = 1;
         D_80139988[i].resource = D_80121538;
     }
-    particle = &particles[i];
-    particle->x = -100;
-    particle->y = -100;
-    particle->z = -150;
-    particle->vx = 300;
-    particle->vy = 300;
-    particle->vz = 300;
+    particles[i].x = -100;
+    particles[i].y = -100;
+    particles[i].z = -150;
+    particles[i].vx = 300;
+    particles[i].vy = 300;
+    particles[i].vz = 300;
     D_801B2A04 = 112;
     D_801B2A00++;
     func_8008C684__for_func_8008B0A0();
@@ -1111,19 +1119,18 @@ extern s32 D_801B29B0;
     }
 }
 
+/** @brief Mark the current world-map tile and advance the sequence step. */
 void func_8008B928(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
-
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapTile D_80139290[6][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B29B0;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].tile = D_8011D4FC | 0x100;
     D_801B29B0 += 1;
 }
 

@@ -128,6 +128,27 @@ typedef struct
     u8 growth[8];
 } WmapGrowthSaveView;
 
+/** @brief Eight growth counters in one saved slot. */
+typedef struct
+{
+    u8 spirits[8];
+    u8 unknown_0x08[8];
+} WmapGrowthSlot;
+
+/** @brief Eight growth slots followed by twelve bytes of other saved data. */
+typedef struct
+{
+    WmapGrowthSlot slots[8];
+    u8 unknown_0x80[12];
+} WmapGrowthGroup;
+
+/** @brief Saved growth groups advanced when the party travels. */
+typedef struct
+{
+    u8 unknown_0x000[0x26F8];
+    WmapGrowthGroup groups[4];
+} WmapGrowthSave;
+
 /** @brief Save header fields used to select the map layout. */
 typedef struct
 {
@@ -320,14 +341,10 @@ void wmap_update_travel_growth(void)
     s32 flag_word;
     s32 event;
     s32 blocked;
-    s32 slot_offset;
     s32 spirit;
-    s32 growth_spirit;
     s32 day_bonus;
     s32 growth_slot;
-    s32 timed_slot;
     s32 growth_group;
-    s32 group_offset;
     s32 event_dividend;
     s32 total;
     s32 clamped;
@@ -335,9 +352,7 @@ void wmap_update_travel_growth(void)
     u16 remaining_age;
     u32 day_flags;
     u32 day;
-    WmapSave* saved_spirit;
     s32* day_growth;
-    s32* growth_entry;
 
     blocked = 0;
     event = 0;
@@ -365,10 +380,10 @@ void wmap_update_travel_growth(void)
         {
             WMAP_SAVED_GAME.calendar.word = (u32)(day_flags & 0xFF80FFFF);
         }
-        timed_slot = 0;
-        timed_record = (WmapTimedSaveView*)&g_saved_game;
+        growth_group = 0;
         do
         {
+            timed_record = (WmapTimedSaveView*)(g_saved_game.bytes + growth_group * 96);
             if (timed_record->active != 0)
             {
                 if (timed_record->direction < 0)
@@ -388,21 +403,15 @@ void wmap_update_travel_growth(void)
                     }
                 }
             }
-            timed_slot += 1;
-            timed_record = (WmapTimedSaveView*)((u8*)timed_record + 96);
-        } while (timed_slot < 5);
-        spirit = 0;
-        growth_entry = growth[0];
-        do
+            growth_group += 1;
+        } while (growth_group < 5);
+        for (spirit = 0; spirit < WMAP_SPIRIT_COUNT; spirit++)
         {
-            saved_spirit = (WmapSave*)(spirit + (u8*)&g_saved_game);
-            growth_entry[0] = (s32)(saved_spirit->lands[0].spirits[0] - 3);
-            spirit += 1;
-            growth_entry[16] = 0;
-            growth_entry[24] = 0;
-            growth_entry[8] = (s32)(saved_spirit->lands[32].spirits[0] - 3);
-            growth_entry++;
-        } while (spirit < WMAP_SPIRIT_COUNT);
+            growth[0][spirit] = WMAP_SAVED_GAME.lands[0].spirits[spirit] - WMAP_SPIRIT_NEUTRAL;
+            growth[1][spirit] = WMAP_SAVED_GAME.lands[32].spirits[spirit] - WMAP_SPIRIT_NEUTRAL;
+            growth[2][spirit] = 0;
+            growth[3][spirit] = 0;
+        }
         day = g_wmap_saved_day & WMAP_DAY_MASK;
         switch (day)
         {
@@ -426,7 +435,6 @@ void wmap_update_travel_growth(void)
             break;
         }
         growth_group = 0;
-        group_offset = 0;
         day_growth = &growth[0][day_bonus];
         day_growth[0] = (s32)(day_growth[0] + 1);
         day_growth[8] = (s32)(day_growth[8] + 1);
@@ -445,14 +453,14 @@ void wmap_update_travel_growth(void)
             growth_slot = 0;
             do
             {
-                growth_spirit = 0;
-                slot_offset = growth_slot * 0x10;
+                spirit = 0;
                 do
                 {
-                    total = ((WmapGrowthSaveView*)(slot_offset + group_offset + (u8*)&g_saved_game))->growth[0] + growth[growth_group][growth_spirit];
+                    total = ((WmapGrowthSave*)&g_saved_game)->groups[growth_group].slots[growth_slot].spirits[spirit];
+                    total += growth[growth_group][spirit];
                     if (total >= 0)
                     {
-                        clamped = -1;
+                        clamped = 255;
                         if (total < 0x100)
                         {
                             clamped = total;
@@ -462,14 +470,12 @@ void wmap_update_travel_growth(void)
                     {
                         clamped = 0;
                     }
-                    ((WmapGrowthSaveView*)(slot_offset + group_offset + (u8*)&g_saved_game))->growth[0] = clamped;
-                    growth_spirit += 1;
-                    slot_offset += 1;
-                } while (growth_spirit < WMAP_SPIRIT_COUNT);
+                    ((WmapGrowthSave*)&g_saved_game)->groups[growth_group].slots[growth_slot].spirits[spirit] = clamped;
+                    spirit += 1;
+                } while (spirit < WMAP_SPIRIT_COUNT);
                 growth_slot += 1;
             } while (growth_slot < WMAP_SPIRIT_COUNT);
             growth_group += 1;
-            group_offset += 0x8C;
         } while (growth_group < 4);
     }
 }
@@ -1038,30 +1044,35 @@ s32 wmap_build_artifact_list(s32 selection)
 void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count, s32* flags, s32* output, s32 unused, s32 (*comparison)[8])
 {
 
-    s32 i;
+    u32 level;
     s32 difference;
-    s32 marker;
-    s32* values;
-    u8 cell = 255;
+    s32 spirit;
+    s32 label_base = WMAP_LABEL_LEVEL_BASE;
+    s32 cell = WMAP_NO_LAND;
 
-    if (x < 6U && y >= 0 && y < 6)
+    if (x < (u32)WMAP_GRID_SIZE && y >= 0 && y < WMAP_GRID_SIZE)
     {
-        cell = g_wmap_land_lookup[x + y * 6];
+        cell = g_wmap_land_lookup[x + y * WMAP_GRID_SIZE];
     }
-    if (cell != 255)
+    else
+    {
+        cell = WMAP_NO_LAND;
+    }
+    if (cell != WMAP_NO_LAND)
     {
         *flags |= mask;
-        for (i = 0; i < 8; i++)
+        for (spirit = 0; spirit < WMAP_SPIRIT_COUNT; spirit++)
         {
-            output[*count] = g_saved_game.bytes[WMAP_SAVED_SPIRITS_OFFSET + i + cell * (s32)sizeof(WmapSavedLand)] + WMAP_LABEL_LEVEL_BASE;
+            level = WMAP_SAVED_GAME.lands[cell].spirits[spirit];
+            output[*count] = level + (s8)label_base;
             (*count)++;
         }
         if (mode == 0)
         {
-            values = comparison[cell];
-            for (i = 0; i < 8; i++)
+            for (spirit = 0; spirit < WMAP_SPIRIT_COUNT; spirit++)
             {
-                difference = *values - g_saved_game.bytes[WMAP_SAVED_SPIRITS_OFFSET + i + cell * (s32)sizeof(WmapSavedLand)];
+                level = WMAP_SAVED_GAME.lands[cell].spirits[spirit];
+                difference = comparison[cell][spirit] - level;
                 if (difference == 0)
                 {
                     output[*count] = 0;
@@ -1070,22 +1081,23 @@ void wmap_append_land_spirit_labels(s32 mode, u32 x, s32 y, s32 mask, s32* count
                 }
                 else
                 {
-                    marker = WMAP_LABEL_INCREASE;
                     if (difference < 0)
                     {
-                        marker = WMAP_LABEL_DECREASE;
+                        output[*count] = WMAP_LABEL_DECREASE;
                     }
-                    output[*count] = marker;
+                    else
+                    {
+                        output[*count] = WMAP_LABEL_INCREASE;
+                    }
                     (*count)++;
                     output[*count] = difference + WMAP_LABEL_CHANGE_BASE;
                 }
                 (*count)++;
-                values++;
             }
         }
         else
         {
-            for (i = 0; i < 16; i++)
+            for (spirit = 0; spirit < WMAP_SPIRIT_COUNT * 2; spirit++)
             {
                 output[*count] = 0;
                 (*count)++;
