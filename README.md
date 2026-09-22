@@ -317,17 +317,39 @@ You can also use [decomp.me](https://decomp.me) for collaborative matching. Exis
 
 A critical detail of this project is that **not every source file uses the same compiler configuration**.
 
-The compiler definitions live in `mk/toolchains.mk`. Source routing for the main executable is in `mk/main.mk`, and overlay routing is in `mk/overlay-registry.mk`.
+The build defines 13 pipeline variants across four historical compiler builds. Compiler and assembler flags live in [`mk/toolchains.mk`](mk/toolchains.mk). Source routing and per-file overrides are in [`mk/main.mk`](mk/main.mk) and [`mk/overlay-registry.mk`](mk/overlay-registry.mk); [`mk/overlays.mk`](mk/overlays.mk) applies the overlay variants.
 
-| Pipeline | Compiler flags | Assembly path |
-|---|---|---|
-| GCC 2.8.0 G0 | `-O2 -G0 -gcoff -fsigned-char -fno-builtin` | maspsx, ASPSX 2.77 behavior |
-| GCC 2.8.0 G4 | `-O2 -G4 -gcoff -fsigned-char` | maspsx, ASPSX 2.77 behavior |
-| GCC 2.7.2 CDK G0 | `-O2 -G0 -msoft-float -gcoff` | maspsx, ASPSX 2.67 behavior |
-| GCC 2.6.0 G0 | `-O2 -G0 -gcoff -msoft-float` | maspsx, ASPSX 2.34 behavior |
-| GCC 2.7.2 GNU | `-O2 -G0` | GNU `as` with `-O -EL` |
+| Pipeline | Compiler flags | Assembly path | Review |
+|---|---|---|:---:|
+| GCC 2.8.0 G0 (default) | `-O2 -G0 -gcoff -fsigned-char -fno-builtin` | maspsx, ASPSX 2.77, expanded division |  |
+| GCC 2.8.0 G0, builtins enabled | `-O2 -G0 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, expanded division | \* |
+| GCC 2.8.0 G0, unoptimized | `-O0 -G0 -gcoff -fsigned-char -fno-builtin` | maspsx, ASPSX 2.77, expanded division |  |
+| GCC 2.8.0 G0, unoptimized with builtins enabled | `-O0 -G0 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, expanded division | \* |
+| GCC 2.8.0 G4 | `-O2 -G4 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, expanded division |  |
+| GCC 2.8.0 G4, no division expansion | `-O2 -G4 -gcoff -fsigned-char` | maspsx, ASPSX 2.77, bare division |  |
+| GCC 2.7.2 CDK G0 | `-O2 -G0 -msoft-float -gcoff` | maspsx, ASPSX 2.67, expanded division |  |
+| GCC 2.7.2 CDK G0, scheduling disabled | `-O2 -G0 -msoft-float -gcoff -fno-schedule-insns` | maspsx, ASPSX 2.67, expanded division | \* |
+| GCC 2.7.2 CDK G0, strength reduction disabled | `-O2 -G0 -msoft-float -gcoff -fno-strength-reduce` | maspsx, ASPSX 2.67, expanded division | \* |
+| GCC 2.7.2 CDK G0, no division expansion | `-O2 -G0 -msoft-float -gcoff` | maspsx, ASPSX 2.67, bare division | \* |
+| GCC 2.7.2 GNU G0 | `-O2 -G0` | Historical GNU `as` with `-O -EL` |  |
+| GCC 2.6.0 G0 | `-O2 -G0 -gcoff -msoft-float` | maspsx, ASPSX 2.34, expanded division |  |
+| GCC 2.6.0 G0, `-O1` | `-O1 -G0 -gcoff -msoft-float` | maspsx, ASPSX 2.34, expanded division | \* |
 
-Some individual sources also change instruction scheduling, optimization level, or `div` expansion behavior. The Makefiles contain those exceptions.
+\* These variants need further investigation to establish whether their compiler and assembler settings reflect the original build. A match with altered optimization levels, builtin handling, scheduling, strength reduction, or division expansion does not by itself establish a distinct historical toolchain. Further source reconstruction may produce the same match with an established configuration and make those settings unnecessary.
+
+`-G0` and `-G4` select the small-data threshold for GP-relative addressing. The builtin-enabled GCC 2.8.0 variants omit `-fno-builtin`. All maspsx pipelines use `-no-pad-sections`; expanded division adds `--expand-div`, while the no-expansion variants omit it. Modern `mipsel-linux-gnu-` binutils handle linking, binary conversion, and object inspection.
+
+Current examples of the specialized routes include:
+
+- FIELD's `field_select_distance_bucket.c`: GCC 2.8.0 G0 with builtins enabled.
+- WMAP's `wmap_effect_resources.c` and `wmap_pathfinding.c`: GCC 2.8.0 G0 at `-O0` with builtins enabled.
+- ZUKAN's `zukan_category.c`: GCC 2.8.0 G0 at `-O0` with builtins disabled.
+- FIELD's `field_subsystem_init.c`: GCC 2.7.2 CDK with `-fno-schedule-insns`.
+- FIELD's `field_actor_action_defaults.c` and SHOP's `shop_setup_custom_list.c`: GCC 2.7.2 CDK with `-fno-strength-reduce`.
+- FIELD's G4 source group: GCC 2.8.0 without division expansion.
+- The main executable's `field_runtime_glyph.c`: might be GCC 2.6.0 at `-O1`, but I'm 98% sure this is just handwritten asm at this point.
+
+The CDK no-division-expansion route is supported, but its source list is currently empty. Per-file assembler and object-conversion overrides, such as CHECKPS's GNU `cdrom.c` route, are also recorded in the overlay registry.
 
 When matching a function, **use the exact toolchain selected for its source file**. Do not substitute the host GCC, Clang/LLVM, a different GCC release, or a different assembler and treat that result as authoritative.
 
@@ -409,7 +431,7 @@ Make sure you extracted the North American version and placed the files at `disc
 
 **Docker cannot find an `old-gcc/...` image**
 
-Initialize the Git submodules and build the three historical compiler images from the setup section before building `lom-dev`.
+Initialize the Git submodules and build the four historical compiler images from the setup section before building `lom-dev`.
 
 **GCC reports `Value too large for defined data type`**
 
@@ -427,6 +449,30 @@ Check its routing in `mk/main.mk` or `mk/overlay-registry.mk`. The configured hi
 
 Check data/rodata, relocations, linker section order, alignment, and generated assets. Function-level matching does not prove whole-file identity.
 
+## Reverse-engineering provenance
+
+This project was created independently by analyzing the publicly released retail version of Legend of Mana and reconstructing its behavior and machine code through disassembly, decompilation, binary comparison, runtime analysis, and publicly available technical documentation and tools.
+
+No leaked or otherwise non-public *Legend of Mana* source code, debug symbol files, internal symbol maps, developer documentation, or other confidential materials from Square or Square Enix have been used in the creation of this project.
+
+Function names, variable names, data structures, translation-unit boundaries, and other source-level details are reconstructed or inferred from the retail binaries and observed behavior unless otherwise documented. They should not be assumed to be the names or organization used by the original developers.
+
+This repository will **never** include leaked source code, private debug symbols, confidential documentation, or other non-public materials from the original game's development.
+
+## Legal
+
+This repository is an independent reverse-engineering and preservation project. It is not affiliated with or endorsed by Square, Square Enix, Sony, or any other rights holder.
+
+No original game executable, overlay binaries, artwork, audio, or other copyrighted game data should be committed to this repository. You must supply required data from your own legally obtained copy of the game.
+
+*Legend of Mana* and related names and assets are the property of their respective owners.
+
+## Thanks
+
+A heartfelt thank you to Squaresoft and to everyone who had a hand in creating *Legend of Mana*. The game is full of imagination, experimentation, unusual ideas, beautiful artwork and music, and technical choices that still make it fascinating to study decades later. Projects like this exist because the original developers, artists, musicians, designers, writers, and support staff took chances and created something distinctive enough that people still care about understanding and preserving it today.
+
+This decompilation is, above all, an expression of appreciation for that work. Thank you for making such a beautiful and memorable game, and for being willing to try something different.
+
 ## Tools and acknowledgements
 
 This project builds on tools and research from the wider decompilation community, including:
@@ -442,18 +488,3 @@ This project builds on tools and research from the wider decompilation community
 - [psyq-obj-parser](https://github.com/mkst/psyq-obj-parser)
 - [decomp.me](https://decomp.me)
 - [decomp.dev](https://decomp.dev)
-
-
-## Thanks
-
-A heartfelt thank you to Squaresoft and to everyone who had a hand in creating *Legend of Mana*. The game is full of imagination, experimentation, unusual ideas, beautiful artwork and music, and technical choices that still make it fascinating to study decades later. Projects like this exist because the original developers, artists, musicians, designers, writers, and support staff took chances and created something distinctive enough that people still care about understanding and preserving it today.
-
-This decompilation is, above all, an expression of appreciation for that work. Thank you for making such a beautiful and memorable game, and for being willing to try something different.
-
-## Legal
-
-This repository is an independent reverse-engineering and preservation project. It is not affiliated with or endorsed by Square, Square Enix, Sony, or any other rights holder.
-
-No original game executable, overlay binaries, artwork, audio, or other copyrighted game data should be committed to this repository. You must supply required data from your own legally obtained copy of the game.
-
-*Legend of Mana* and related names and assets are the property of their respective owners.
