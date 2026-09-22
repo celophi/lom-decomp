@@ -20,6 +20,7 @@ typedef s32 M2C_UNK32;
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
 M2C_UNK akao_cmd_f1();                              /* extern */
+M2C_UNK func_80059070__for_func_800584B4() __asm__("func_80059070");                            /* extern */
 extern u8 D_800D9268;
 extern s32 D_800DCEE8;
 extern s32 D_8011CF44;
@@ -193,7 +194,7 @@ extern s32 D_801ADB00;
     }
     if (D_800DCEE8 != 0)
     {
-        func_80059070();
+        func_80059070__for_func_800584B4();
         D_800DCEE8 = 0;
     }
 }
@@ -215,6 +216,7 @@ typedef s32 M2C_UNK32;
 
 s32 func_800582A0(s32, s32, s32);                   /* extern */
 M2C_UNK func_8005EB68(s32, s32, s32, s32, void *, void *); /* extern */
+M2C_UNK func_800584B4__for_func_8005880C() __asm__("func_800584B4");                            /* static */
 extern u8 D_8004FD04;
 extern u8 D_800D9268;
 extern s32 D_800DCEEC;
@@ -346,7 +348,7 @@ extern u8 func_8009A420;
             }
         }
     }
-    func_800584B4();
+    func_800584B4__for_func_8005880C();
 }
 #undef M2C_FIELD
 #undef M2C_UNALIGNED32
@@ -428,6 +430,7 @@ extern s16 D_800D926A;
 extern s16 D_800D9296;
 extern s16 D_800D92C2;
 extern s32 func_8005D850(s32 *, u32 *);
+extern void func_80058FF4__for_func_80058D9C(s32, s32, s32) __asm__("func_80058FF4");
 extern s32 D_800D9224;
 extern s32 D_800DBE78;
 extern s32 D_8011CF20;
@@ -473,7 +476,7 @@ extern s32 D_80182E34;
         resource += 0x400;
     }
     D_80182D5C = func_8005D850(&D_8019D248[0].x, (u32 *)&D_8019D248[0].y);
-    func_80058FF4(0, D_8019D248[0].x, D_8019D248[0].y);
+    func_80058FF4__for_func_80058D9C(0, D_8019D248[0].x, D_8019D248[0].y);
     if (D_80139290[D_8019D248[0].x][D_8019D248[0].y].tile == 24)
     {
         D_8011CF50 = 1;
@@ -496,7 +499,7 @@ extern s32 D_80182E34;
         cdrom_queue_read(0x10CC, D_800DC298);
         D_800D9296 = 1;
         func_8006D0F0(27, &first_x, &first_y);
-        func_80058FF4(1, first_x, first_y);
+        func_80058FF4__for_func_80058D9C(1, first_x, first_y);
         cdrom_wait_queue_empty();
     }
     if (D_80182E1C != 0)
@@ -504,7 +507,7 @@ extern s32 D_80182E34;
         cdrom_queue_read(0x10CD, D_800DC698);
         D_800D92C2 = 2;
         func_8006D0F0(3, &second_x, &second_y);
-        func_80058FF4(2, second_x, second_y);
+        func_80058FF4__for_func_80058D9C(2, second_x, second_y);
         cdrom_wait_queue_empty();
     }
 }

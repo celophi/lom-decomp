@@ -45,9 +45,9 @@ segments:
     vram: 0x8004FC70
     subsegments:
       - [0x1, rodata, wmap] # 0x8004FC70: header and pre-code tables
-      - [0x15E9, .rodata, wmap_land_selection] # compiler-generated switch table
+      - [0x15E9, .rodata, wmap_land_effect_loader] # compiler-generated switch table
       - [0x1671, rodata, wmap_1671]
-      - [0x1839, .rodata, wmap_land_selection] # compiler-generated switch table
+      - [0x1839, .rodata, wmap_land_preview] # compiler-generated switch table
       - [0x1851, rodata, wmap_1851]
       - [0x186D, .rodata, wmap_land_layout] # compiler-generated switch table
       - [0x1885, rodata, wmap_1885]
@@ -57,7 +57,7 @@ segments:
       - [0x4D75, .rodata, wmap_effect_primitives] # compiler-generated switch table
       - [0x4D95, .rodata, wmap_map_events] # compiler-generated switch table
       - [0x4DA9, rodata, wmap_4DA9]
-      # Translation units: implemented groups and remaining consolidation candidates.
+      # Translation units: completed named source groups.
       # Ranges below are VRAM [start, end); names are provisional, not recovered filenames.
       # Confidence rates the grouping, not proof of an original compiler TU boundary.
       # Land-effect suffixes are func_800591A8 selector IDs, not identified place names.
@@ -76,18 +76,22 @@ segments:
       # Update and draw the four 0x124-byte map records
 
       - [0x8845, c, wmap_party_travel] # gcc280_g0
-      # TU: wmap_land_selection.c (consolidated)
+      # TU: wmap_land_selection.c (logical group split across five named compiler units)
       # VRAM 0x8005909C..0x8005B58C (end exclusive).
       # Selection-list state, resource/effect dispatch, placement input, and projected selection previews.
 
       - [0x942D, c, wmap_land_selection] # gcc280_g0
+      - [0x9539, c, wmap_land_effect_loader] # gcc280_g0
+      - [0x9765, c, wmap_land_transition] # gcc280_g0
+      - [0xA6A9, c, wmap_land_preview] # gcc280_g0
+      - [0xB8D1, c, wmap_land_preview_lines] # gcc280_g0
       # TU: wmap_land_layout.c (consolidated)
       # VRAM 0x8005B58C..0x8005DBB8 (end exclusive).
       # Saved land placement, six-by-six lookup, eight-component propagation, list ordering, and save-flag
       # queries. The leading saved-state update may warrant a later split.
 
       - [0xB91D, c, wmap_land_layout] # gcc280_g0
-      # TU candidate: wmap_pathfinding.c (high confidence)
+      # TU: wmap_pathfinding.c (high confidence)
       # VRAM 0x8005DBB8..0x8005F9BC (end exclusive).
       # Existing named unit: reachability and route search
 

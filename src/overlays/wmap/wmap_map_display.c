@@ -64,6 +64,11 @@ extern s32 D_80182230;
 extern s32 D_80182238;
 extern s32 D_801ADAEC;
 
+extern void func_800551A8__for_func_80054A2C(void) __asm__("func_800551A8");
+extern void func_8005536C__for_func_80054A2C(void) __asm__("func_8005536C");
+extern void func_8005556C__for_func_80054A2C(void) __asm__("func_8005556C");
+extern void func_800581A0__for_func_80054A2C(s32 x, s32 y, s32 value) __asm__("func_800581A0");
+
     s32 timer;
     s32 valid;
     s32 scan_x;
@@ -132,13 +137,13 @@ extern s32 D_801ADAEC;
     switch (D_80139880)
     {
     case 0:
-        func_800551A8();
+        func_800551A8__for_func_80054A2C();
         break;
     case 1:
-        func_8005536C();
+        func_8005536C__for_func_80054A2C();
         break;
     case 2:
-        func_8005556C();
+        func_8005556C__for_func_80054A2C();
         break;
     }
 
@@ -146,7 +151,7 @@ extern s32 D_801ADAEC;
     {
         for (render_x = D_800D7CC4; render_x < D_800D7CC4 + 3; render_x++)
         {
-            func_800581A0(render_x, render_y, D_80139290[render_x][render_y].value);
+            func_800581A0__for_func_80054A2C(render_x, render_y, D_80139290[render_x][render_y].value);
         }
     }
 
@@ -372,6 +377,8 @@ extern s32 D_80139948;
 extern s32 D_80182230;
 extern WmapObject D_80182248[];
 
+extern void func_80058014__for_func_8005536C(s32, s32) __asm__("func_80058014");
+
     SPRT* sprite;
     s32 i;
     s32 j;
@@ -395,7 +402,7 @@ extern WmapObject D_80182248[];
             for (j = D_800D7CC4; j < D_800D7CC4 + 3; j++)
             {
                 object_id = D_80139290[j][i].object_id;
-                func_80058014(object_id, 1);
+                func_80058014__for_func_8005536C(object_id, 1);
                 D_80182248[object_id].timer = 0;
             }
         }
@@ -449,6 +456,9 @@ extern s32 D_80182230;
 extern s32 D_80182238;
 extern WmapObject D_80182248[];
 
+void func_80055AF4__for_func_8005556C(void) __asm__("func_80055AF4");
+void func_80058014__for_func_8005556C(s32 object_id, s32 state) __asm__("func_80058014");
+
     s32 x;
     s32 y;
     s32 object_id;
@@ -462,7 +472,7 @@ extern WmapObject D_80182248[];
     }
 
     D_800D9234 = D_801398C0;
-    func_80055AF4();
+    func_80055AF4__for_func_8005556C();
 
     y = D_800D7CC8 + D_800DCEF0;
     x = D_800D7CC4 + D_800DCEEC;
@@ -481,7 +491,7 @@ extern WmapObject D_80182248[];
                 D_80182238 += step;
             }
             D_800D922C = D_80182238;
-            func_80058014(object_id, 1);
+            func_80058014__for_func_8005556C(object_id, 1);
             object->transition = 1;
             func_800652A8(0x3E, 0x80);
         }
@@ -508,7 +518,7 @@ extern WmapObject D_80182248[];
                 object->timer--;
                 if ((object->timer == 0) && (object->state != 1))
                 {
-                    func_80058014(D_80139290[x][y].object_id, 1);
+                    func_80058014__for_func_8005556C(D_80139290[x][y].object_id, 1);
                     object->transition = 4;
                     func_800652A8(2, 0x80);
                 }
@@ -549,6 +559,7 @@ extern s32 D_80139948;
 extern s32 D_8013B298;
 extern WmapObject D_80182248[];
 
+extern void func_80058014__for_func_80055830(s32, s32) __asm__("func_80058014");
 extern s32 rand(void);
 
     s32 row;
@@ -579,7 +590,7 @@ extern s32 rand(void);
         }
 
         object->timer = ((rand() * timer_range) >> 15) + timer_min;
-        func_80058014(object_id, 2);
+        func_80058014__for_func_80055830(object_id, 2);
     }
     else
     {
@@ -598,7 +609,7 @@ extern s32 rand(void);
                     if (object->state == 1)
                     {
                         object->timer = ((rand() * timer_range) >> 15) + timer_min;
-                        func_80058014(object_id, 2);
+                        func_80058014__for_func_80055830(object_id, 2);
                     }
                 }
                 pattern_index++;
@@ -616,22 +627,24 @@ void func_80055AF4(void)
 {
 extern s32 D_8013B298;
 
+void func_80055830__for_func_80055AF4(s32 delay_min, s32 delay_range, s32 duration_min, s32 duration_range) __asm__("func_80055830");
+
     switch (D_8013B298)
     {
     case 1:
-        func_80055830(40, 20, 25, 30);
+        func_80055830__for_func_80055AF4(40, 20, 25, 30);
         break;
     case 2:
-        func_80055830(30, 20, 20, 25);
+        func_80055830__for_func_80055AF4(30, 20, 20, 25);
         break;
     case 3:
-        func_80055830(10, 20, 20, 20);
+        func_80055830__for_func_80055AF4(10, 20, 20, 20);
         break;
     case 4:
-        func_80055830(5, 25, 15, 20);
+        func_80055830__for_func_80055AF4(5, 25, 15, 20);
         break;
     default:
-        func_80055830(5, 20, 8, 15);
+        func_80055830__for_func_80055AF4(5, 20, 8, 15);
         break;
     }
 }
@@ -1253,6 +1266,13 @@ extern VECTOR D_80182D48;
 extern VECTOR D_80182DC0;
 extern s32 D_801ADAE0;
 
+s32 func_80055BB0__for_func_80056824(WmapObject* object) __asm__("func_80055BB0");
+void func_80055E5C__for_func_80056824(s32 x, s32 y, WmapObject* object) __asm__("func_80055E5C");
+void func_800561F8__for_func_80056824(s32 x, s32 y, WmapObject* object, s32 part_index) __asm__("func_800561F8");
+void func_80056C30__for_func_80056824(s32 x, s32 y) __asm__("func_80056C30");
+void func_8005833C__for_func_80056824(s32 x, s32 y, s32 state) __asm__("func_8005833C");
+s32 func_80058400__for_func_80056824(s32 x, s32 y) __asm__("func_80058400");
+
     MATRIX matrix;
     VECTOR translation;
     SVECTOR rotation;
@@ -1298,7 +1318,7 @@ extern s32 D_801ADAE0;
             {
                 s32 base_state;
 
-                distance_state = func_80058400(x * 0x30, y * 0x30);
+                distance_state = func_80058400__for_func_80056824(x * 0x30, y * 0x30);
                 base_state = D_800DBE70;
                 if (base_state != 2)
                 {
@@ -1385,19 +1405,19 @@ extern s32 D_801ADAE0;
                     active_object = &D_80182248[object_id];
                     if (active_object->phase != 1)
                     {
-                        part_index = func_80055BB0(active_object);
+                        part_index = func_80055BB0__for_func_80056824(active_object);
                         if ((part_index != -1) && (D_8011CF88[part_index].active == 0))
                         {
-                            func_800561F8(x, y, active_object, part_index);
+                            func_800561F8__for_func_80056824(x, y, active_object, part_index);
                         }
                         else
                         {
-                            func_80055E5C(x, y, active_object);
+                            func_80055E5C__for_func_80056824(x, y, active_object);
                         }
                     }
                     else
                     {
-                        func_80055E5C(x, y, active_object);
+                        func_80055E5C__for_func_80056824(x, y, active_object);
                     }
                 }
             }
@@ -1406,11 +1426,11 @@ extern s32 D_801ADAE0;
             {
                 state = 0;
             }
-            func_8005833C(x, y, state);
+            func_8005833C__for_func_80056824(x, y, state);
 
             if ((D_80139290[x][y].flag != 0) && (D_8013986C == 0))
             {
-                func_80056C30(x, y);
+                func_80056C30__for_func_80056824(x, y);
             }
         }
     }
@@ -1969,6 +1989,10 @@ void func_8005D6B8(s32 x, s32 y, s32* indices);
 /** @brief Update map rendering and approach the requested fade intensity. */
 void func_80057C14(void)
 {
+extern void func_80057274__for_func_80057C14(s32) __asm__("func_80057274");
+extern void func_800574D0__for_func_80057C14(void) __asm__("func_800574D0");
+extern void func_8005784C__for_func_80057C14(s32) __asm__("func_8005784C");
+extern void func_80057D2C__for_func_80057C14(void) __asm__("func_80057D2C");
 extern s32 D_800DCF04;
 extern s32 D_8011CF74;
 extern s32 D_80139218;
@@ -1981,15 +2005,15 @@ extern s32 D_801ADAEC;
         switch (D_8013986C)
         {
         case 0:
-            func_80057274(-1);
-            func_800574D0();
-            func_80057D2C();
+            func_80057274__for_func_80057C14(-1);
+            func_800574D0__for_func_80057C14();
+            func_80057D2C__for_func_80057C14();
             break;
         case 1:
             if (D_800DCF04 != 0)
             {
-                func_80057274(D_800DCF04 - 1);
-                func_8005784C(D_800DCF04 - 1);
+                func_80057274__for_func_80057C14(D_800DCF04 - 1);
+                func_8005784C__for_func_80057C14(D_800DCF04 - 1);
             }
             break;
         }
@@ -2282,6 +2306,9 @@ typedef struct
 
 extern WmapResource D_80182248[];
 extern WmapCacheEntry D_8011CF88[];
+extern s32 func_80055BB0__for_func_800581A0(WmapResource *) __asm__("func_80055BB0");
+extern void func_800561F8__for_func_800581A0(s32, s32, WmapResource *, s32) __asm__("func_800561F8");
+extern void func_80055E5C__for_func_800581A0(s32, s32, WmapResource *) __asm__("func_80055E5C");
 
     WmapResource *resource;
     s32 slot;
@@ -2289,18 +2316,18 @@ extern WmapCacheEntry D_8011CF88[];
     resource = &D_80182248[resource_index];
     if (resource->state == 1)
     {
-        func_80055E5C(map_x, map_y, resource);
+        func_80055E5C__for_func_800581A0(map_x, map_y, resource);
     }
     else
     {
-        slot = func_80055BB0(resource);
+        slot = func_80055BB0__for_func_800581A0(resource);
         if (slot != -1 && D_8011CF88[slot].busy == 0)
         {
-            func_800561F8(map_x, map_y, resource, slot);
+            func_800561F8__for_func_800581A0(map_x, map_y, resource, slot);
         }
         else
         {
-            func_80055E5C(map_x, map_y, resource);
+            func_80055E5C__for_func_800581A0(map_x, map_y, resource);
         }
     }
 }
@@ -2343,9 +2370,10 @@ void func_80058298(void)
  */
 s32 func_800582A0(void)
 {
+extern s32 func_80058400__for_func_800582A0(void) __asm__("func_80058400");
 extern s32 D_800DBE70;
 
-    s32 current = func_80058400();
+    s32 current = func_80058400__for_func_800582A0();
     if (D_800DBE70 != 2)
     {
         s32 limit = D_800DBE70;

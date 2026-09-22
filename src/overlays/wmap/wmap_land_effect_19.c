@@ -259,6 +259,7 @@ extern s32 D_800DCEA8;
 extern s32 D_800D9150;
 extern s32 D_801B2E10;
 extern s32 D_801B2E14;
+extern void func_800A4DF4__for_func_800A38A0(void) __asm__("func_800A4DF4");
 
     s32 i;
     u8* pa;
@@ -280,7 +281,7 @@ extern s32 D_801B2E14;
     D_800D9150 = 6;
     D_801B2E14 = 0x10;
     D_801B2E10 += 1;
-    func_800A4DF4();
+    func_800A4DF4__for_func_800A38A0();
 }
 
 /** @brief World-map step: init hero struct fields, clear tables, advance step. */
@@ -307,6 +308,7 @@ extern u8 D_80123538[];
 extern void *D_80139280;
 extern s32 D_801B2E18;
 extern s32 D_801B2E1C;
+extern void func_800A5118__for_func_800A3960(void) __asm__("func_800A5118");
 
     s32 i;
     void *base = D_80139280;
@@ -330,7 +332,7 @@ extern s32 D_801B2E1C;
 
     D_801B2E1C = 0x18;
     D_801B2E18 += 1;
-    func_800A5118();
+    func_800A5118__for_func_800A3960();
 }
 
 /** @brief Reset the effect actors with randomized animation variants. */
@@ -378,6 +380,7 @@ extern s32 D_800D9154;
 extern s32 D_801B2E20;
 extern s32 D_801B2E24;
 extern s32 rand(void);
+extern void func_800A5318__for_func_800A3A2C(void) __asm__("func_800A5318");
 
     s32 i;
 
@@ -395,7 +398,7 @@ extern s32 rand(void);
     D_800D9154 = 2;
     D_801B2E24 = 16;
     D_801B2E20++;
-    func_800A5318();
+    func_800A5318__for_func_800A3A2C();
 }
 
 /** @brief Initialize sixty alternating actors and begin their timed effect. */
@@ -442,6 +445,7 @@ extern s32 D_800DCEB0;
 extern s32 D_800D9158;
 extern s32 D_801B2E28;
 extern s32 D_801B2E2C;
+extern void func_800A5660__for_func_800A3B3C(void) __asm__("func_800A5660");
 
     s32 i;
 
@@ -459,7 +463,7 @@ extern s32 D_801B2E2C;
     D_800D9158 = 1;
     D_801B2E2C = 16;
     D_801B2E28++;
-    func_800A5660();
+    func_800A5660__for_func_800A3B3C();
 }
 
 /**
@@ -510,6 +514,8 @@ extern s32 D_801B25D8;
 extern s32 D_801B2E30;
 extern s32 D_801B2E34;
 
+extern void func_800A59A8__for_func_800A3C04(void) __asm__("func_800A59A8");
+
     s32 i;
     WmapD94Entry *entry;
 
@@ -532,7 +538,7 @@ extern s32 D_801B2E34;
     D_800D915C = 2;
     D_801B2E34 = 0x10;
     D_801B2E30 += 1;
-    func_800A59A8();
+    func_800A59A8__for_func_800A3C04();
 }
 
 /**
@@ -545,6 +551,7 @@ s32 func_800A3CC8(s32 arg0)
 extern u32 D_801B2DD0;
 extern s32 D_801B2DD4;
 extern void (*D_800D6A84[])(void);
+extern void func_800A3D9C__for_func_800A3CC8(void) __asm__("func_800A3D9C");
 extern s32 D_8013B20C;
 
     s32 result;
@@ -576,6 +583,7 @@ void func_800A3D40(void)
 extern u32 D_801B2DD0;
 extern s32 D_801B2DD4;
 extern void (*D_800D6A84[])(void);
+extern void func_800A3D9C__for_func_800A3D40(void) __asm__("func_800A3D9C");
 extern s32 D_8013B20C;
 
     D_801B2DD0 = 1;
@@ -590,12 +598,13 @@ void func_800A3D58(void)
 extern u32 D_801B2DD0;
 extern s32 D_801B2DD4;
 extern void (*D_800D6A84[])(void);
+extern void func_800A3D9C__for_func_800A3D58(void) __asm__("func_800A3D9C");
 extern s32 D_8013B20C;
 
     func_8006CAC0(func_8006C81C);
     D_8013B20C = 1;
     D_801B2DD0 += 1;
-    func_800A3D9C();
+    func_800A3D9C__for_func_800A3D58();
 }
 
 /**
@@ -605,11 +614,14 @@ void func_800A3D9C(void)
 {
 extern s32 D_8013B20C;
 extern s32 D_801B2DD0;
+extern void func_800A3DD8__for_func_800A3D9C(void) __asm__("func_800A3DD8");
+extern void func_800A3E70__for_func_800A3D9C(void) __asm__("func_800A3E70");
+extern void func_800A3E1C__for_func_800A3D9C(void) __asm__("func_800A3E1C");
 
     if (D_8013B20C == 0)
     {
         D_801B2DD0 += 1;
-        func_800A3DD8();
+        func_800A3DD8__for_func_800A3D9C();
     }
 }
 
@@ -620,11 +632,14 @@ void func_800A3DD8(void)
 {
 extern s32 D_8013B20C;
 extern s32 D_801B2DD0;
+extern void func_800A3DD8(void);
+extern void func_800A3E70__for_func_800A3DD8(void) __asm__("func_800A3E70");
+extern void func_800A3E1C__for_func_800A3DD8(void) __asm__("func_800A3E1C");
 
-    func_8006CAC0(func_800A3E70);
+    func_8006CAC0(func_800A3E70__for_func_800A3DD8);
     D_8013B20C = 1;
     D_801B2DD0 += 1;
-    func_800A3E1C();
+    func_800A3E1C__for_func_800A3DD8();
 }
 
 /**
@@ -634,11 +649,12 @@ void func_800A3E1C(void)
 {
 extern s32 D_801B2DD0;
 extern s32 D_8013B20C;
+extern void func_800A3E58__for_func_800A3E1C(void) __asm__("func_800A3E58");
 
     if (D_8013B20C == 0)
     {
         D_801B2DD0 += 1;
-        func_800A3E58();
+        func_800A3E58__for_func_800A3E1C();
     }
 }
 
@@ -649,6 +665,7 @@ void func_800A3E58(void)
 {
 extern s32 D_801B2DD0;
 extern s32 D_8013B20C;
+extern void func_800A3E58(void);
 
     D_801B2DD0 += 1;
 }
@@ -707,12 +724,13 @@ extern s32 D_8013B208;
 extern s32 D_801ADAF4;
 extern s32 D_801B2DD8;
 extern s32 D_801B2DDC;
+extern void func_800A4D64__for_func_800A3F00(void) __asm__("func_800A4D64");
 
     D_8013B208 = 1;
     func_8006683C(0x702540);
     D_801ADAF4 = 8;
     func_800652A8(0x2B, 0x80);
-    func_8006CAC0(func_800A4D64);
+    func_8006CAC0(func_800A4D64__for_func_800A3F00);
     D_801B2DDC = 0x20;
     D_801B2DD8 += 1;
 }
@@ -739,11 +757,13 @@ extern s32 D_801ADAE0;
 extern s32 D_801ADAF4;
 extern s32 D_801B2DD8;
 extern s32 D_801B2DDC;
+extern void func_800A44CC__for_func_800A3FA0(void) __asm__("func_800A44CC");
+extern void func_800A4810__for_func_800A3FA0(void) __asm__("func_800A4810");
 
-    func_8006CAC0(&func_800A4810);
+    func_8006CAC0(&func_800A4810__for_func_800A3FA0);
     D_80139244 = 1;
     D_801ADAE0 = 1;
-    func_8006CAC0(&func_800A44CC);
+    func_8006CAC0(&func_800A44CC__for_func_800A3FA0);
     D_801ADAF4 = 1;
     func_8006683C(0x201010);
     D_801B2DDC = 0xA;
@@ -757,6 +777,7 @@ void func_800A4018(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A4ABC__for_func_800A4018(void) __asm__("func_800A4ABC");
 
     if (--D_801B2DDC == 0)
     {
@@ -771,8 +792,9 @@ void func_800A404C(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A4ABC__for_func_800A404C(void) __asm__("func_800A4ABC");
 
-    func_8006CAC0(func_800A4ABC);
+    func_8006CAC0(func_800A4ABC__for_func_800A404C);
     D_801B2DDC = 0x1E;
     D_801B2DD8 += 1;
 }
@@ -784,6 +806,7 @@ void func_800A4088(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A4C10__for_func_800A4088(void) __asm__("func_800A4C10");
 
     if (--D_801B2DDC == 0)
     {
@@ -798,8 +821,9 @@ void func_800A40BC(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A4C10__for_func_800A40BC(void) __asm__("func_800A4C10");
 
-    func_8006CAC0(func_800A4C10);
+    func_8006CAC0(func_800A4C10__for_func_800A40BC);
     D_801B2DDC = 0xC;
     D_801B2DD8 += 1;
 }
@@ -811,6 +835,8 @@ void func_800A40F8(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A55D0__for_func_800A40F8(void) __asm__("func_800A55D0");
+extern void func_800A5918__for_func_800A40F8(void) __asm__("func_800A5918");
 
     if (--D_801B2DDC == 0)
     {
@@ -825,9 +851,11 @@ void func_800A412C(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A55D0__for_func_800A412C(void) __asm__("func_800A55D0");
+extern void func_800A5918__for_func_800A412C(void) __asm__("func_800A5918");
 
-    func_8006CAC0(func_800A55D0);
-    func_8006CAC0(func_800A5918);
+    func_8006CAC0(func_800A55D0__for_func_800A412C);
+    func_8006CAC0(func_800A5918__for_func_800A412C);
     D_801B2DDC = 0x44;
     D_801B2DD8 += 1;
 }
@@ -839,6 +867,7 @@ void func_800A4174(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A4968__for_func_800A4174(void) __asm__("func_800A4968");
 
     if (--D_801B2DDC == 0)
     {
@@ -853,8 +882,9 @@ void func_800A41A8(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A4968__for_func_800A41A8(void) __asm__("func_800A4968");
 
-    func_8006CAC0(func_800A4968);
+    func_8006CAC0(func_800A4968__for_func_800A41A8);
     D_801B2DDC = 0x2;
     D_801B2DD8 += 1;
 }
@@ -895,6 +925,7 @@ void func_800A4268(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A5288__for_func_800A4268(void) __asm__("func_800A5288");
 
     if (--D_801B2DDC == 0)
     {
@@ -909,8 +940,9 @@ void func_800A429C(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A5288__for_func_800A429C(void) __asm__("func_800A5288");
 
-    func_8006CAC0(func_800A5288);
+    func_8006CAC0(func_800A5288__for_func_800A429C);
     D_801B2DDC = 0x10;
     D_801B2DD8 += 1;
 }
@@ -922,6 +954,8 @@ void func_800A42D8(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A5088__for_func_800A42D8(void) __asm__("func_800A5088");
+extern void func_800A4670__for_func_800A42D8(void) __asm__("func_800A4670");
 
     if (--D_801B2DDC == 0)
     {
@@ -936,9 +970,11 @@ void func_800A430C(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A5088__for_func_800A430C(void) __asm__("func_800A5088");
+extern void func_800A4670__for_func_800A430C(void) __asm__("func_800A4670");
 
-    func_8006CAC0(func_800A5088);
-    func_8006CAC0(func_800A4670);
+    func_8006CAC0(func_800A5088__for_func_800A430C);
+    func_8006CAC0(func_800A4670__for_func_800A430C);
     D_801B2DDC = 0x64;
     D_801B2DD8 += 1;
 }
@@ -950,6 +986,7 @@ void func_800A4354(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A5C60__for_func_800A4354(void) __asm__("func_800A5C60");
 
     if (--D_801B2DDC == 0)
     {
@@ -964,8 +1001,9 @@ void func_800A4388(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A5C60__for_func_800A4388(void) __asm__("func_800A5C60");
 
-    func_8006CAC0(func_800A5C60);
+    func_8006CAC0(func_800A5C60__for_func_800A4388);
     D_801B2DDC = 0x4;
     D_801B2DD8 += 1;
 }
@@ -977,6 +1015,7 @@ void func_800A43C4(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A5088__for_func_800A43C4(void) __asm__("func_800A5088");
 
     if (--D_801B2DDC == 0)
     {
@@ -991,8 +1030,9 @@ void func_800A43F8(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
+extern void func_800A5088__for_func_800A43F8(void) __asm__("func_800A5088");
 
-    func_8006CAC0(func_800A5088);
+    func_8006CAC0(func_800A5088__for_func_800A43F8);
     D_801B2DDC = 0x7C;
     D_801B2DD8 += 1;
 }
@@ -1099,6 +1139,7 @@ extern u8 D_8011F538;
 extern void *D_801399AC;
 extern s32 D_801B2DE0;
 extern s32 D_801B2DE4;
+extern void func_800A45DC__for_func_800A455C(void) __asm__("func_800A45DC");
 
     D_801399AC = &D_8011F538;
     D_800D9318.field_06 = 0xF;
@@ -1110,7 +1151,7 @@ extern s32 D_801B2DE4;
     D_800D9318.field_22 = 0x81;
     D_801B2DE4 = 0x80;
     D_801B2DE0 += 1;
-    func_800A45DC();
+    func_800A45DC__for_func_800A455C();
 }
 
 /**
@@ -1156,6 +1197,7 @@ s32 func_800A4670(s32 arg0)
 extern u32 D_801B2DE8;
 extern s32 D_801B2DEC;
 extern void (*D_800D6B0C[])(void);
+extern void func_800A477C__for_func_800A4670(void) __asm__("func_800A477C");
 extern u8 D_8011D538[];
 extern u8* D_801399B4;
 extern u8 D_800D9344[];
@@ -1191,6 +1233,7 @@ void func_800A46E8(void)
 extern u32 D_801B2DE8;
 extern s32 D_801B2DEC;
 extern void (*D_800D6B0C[])(void);
+extern void func_800A477C__for_func_800A46E8(void) __asm__("func_800A477C");
 extern u8 D_8011D538[];
 extern u8* D_801399B4;
 extern u8 D_800D9344[];
@@ -1209,6 +1252,7 @@ void func_800A4700(void)
 extern u32 D_801B2DE8;
 extern s32 D_801B2DEC;
 extern void (*D_800D6B0C[])(void);
+extern void func_800A477C__for_func_800A4700(void) __asm__("func_800A477C");
 extern u8 D_8011D538[];
 extern u8* D_801399B4;
 extern u8 D_800D9344[];
@@ -1225,7 +1269,7 @@ extern s32 D_8011CF4C;
     *(s16*)&D_800D9344[0x24] = 0;
     D_801B2DEC = 0x88;
     D_801B2DE8 += 1;
-    func_800A477C();
+    func_800A477C__for_func_800A4700();
 }
 
 /**
@@ -1236,6 +1280,7 @@ void func_800A477C(void)
 extern u32 D_801B2DE8;
 extern s32 D_801B2DEC;
 extern void (*D_800D6B0C[])(void);
+extern void func_800A477C(void);
 extern u8 D_8011D538[];
 extern u8* D_801399B4;
 extern u8 D_800D9344[];
@@ -1278,6 +1323,7 @@ extern WmapBlk8 D_801B24A0;
 extern WmapBlk16 D_80182DC0;
 extern WmapBlk16 D_801B2650;
 extern s32 D_80182DE8;
+extern void func_800A3348__for_func_800A4810(void) __asm__("func_800A3348");
 
     s32 result;
 
@@ -1316,6 +1362,7 @@ extern WmapBlk8 D_801B24A0;
 extern WmapBlk16 D_80182DC0;
 extern WmapBlk16 D_801B2650;
 extern s32 D_80182DE8;
+extern void func_800A3348__for_func_800A4888(void) __asm__("func_800A3348");
 
     D_801B2DF0 = 1;
     D_801B2DF4 = 1;
@@ -1337,6 +1384,7 @@ extern WmapBlk8 D_801B24A0;
 extern WmapBlk16 D_80182DC0;
 extern WmapBlk16 D_801B2650;
 extern s32 D_80182DE8;
+extern void func_800A3348__for_func_800A48A0(void) __asm__("func_800A3348");
 
     D_801B24A0 = D_80139258;
     D_801B2650 = D_80182DC0;
@@ -1344,7 +1392,7 @@ extern s32 D_80182DE8;
     D_801B2650.w[2] = 0xAFC8;
     D_801B2DF4 = 0x40;
     D_801B2DF0 += 1;
-    func_800A3348();
+    func_800A3348__for_func_800A48A0();
 }
 
 /**
@@ -1417,6 +1465,7 @@ extern WmapBlk16 D_801B2478;
 extern s32 D_80182DEC;
 extern s32 D_801B2DFC;
 extern u32 D_801B2DF8;
+extern void func_800A3448__for_func_800A49F8(void) __asm__("func_800A3448");
 
     D_801B24A8 = D_80139258;
     D_801B2478 = D_80182DC0;
@@ -1424,7 +1473,7 @@ extern u32 D_801B2DF8;
     D_801B2478.w[2] = 0xAFC8;
     D_801B2DFC = 0x80;
     D_801B2DF8 += 1;
-    func_800A3448();
+    func_800A3448__for_func_800A49F8();
 }
 
 /**
@@ -1492,12 +1541,13 @@ extern WmapBlk8 D_80139258;
 extern WmapBlk8 D_8013B238;
 extern s32 D_801B2E00;
 extern s32 D_801B2E04;
+extern void func_800A3548__for_func_800A4B4C(void) __asm__("func_800A3548");
 
     D_80182DF0 = 1;
     D_8013B238 = D_80139258;
     D_801B2E04 = 0x40;
     D_801B2E00 += 1;
-    func_800A3548();
+    func_800A3548__for_func_800A4B4C();
 }
 
 /**
@@ -1506,11 +1556,12 @@ extern s32 D_801B2E04;
 void func_800A4BC0(void)
 {
 extern s32 D_801B2E00;
+extern void func_800A3624__for_func_800A4BC0(void) __asm__("func_800A3624");
 extern s32 D_801B2E04;
 
     D_801B2E04 = 0x40;
     D_801B2E00 += 1;
-    func_800A3624();
+    func_800A3624__for_func_800A4BC0();
 }
 
 /**
@@ -1519,6 +1570,7 @@ extern s32 D_801B2E04;
 void func_800A4BF8(void)
 {
 extern s32 D_801B2E00;
+extern void func_800A3624__for_func_800A4BF8(void) __asm__("func_800A3624");
 extern s32 D_801B2E04;
 
     D_801B2E00 += 1;
@@ -1579,12 +1631,13 @@ extern WmapBlk8 D_80139258;
 extern WmapBlk8 D_8013B240;
 extern s32 D_801B2E08;
 extern s32 D_801B2E0C;
+extern void func_800A36F4__for_func_800A4CA0(void) __asm__("func_800A36F4");
 
     D_80182DF4 = 1;
     D_8013B240 = D_80139258;
     D_801B2E0C = 0x14;
     D_801B2E08 += 1;
-    func_800A36F4();
+    func_800A36F4__for_func_800A4CA0();
 }
 
 /**
@@ -1593,11 +1646,12 @@ extern s32 D_801B2E0C;
 void func_800A4D14(void)
 {
 extern s32 D_801B2E08;
+extern void func_800A37D0__for_func_800A4D14(void) __asm__("func_800A37D0");
 extern s32 D_801B2E0C;
 
     D_801B2E0C = 0x40;
     D_801B2E08 += 1;
-    func_800A37D0();
+    func_800A37D0__for_func_800A4D14();
 }
 
 /**
@@ -1606,6 +1660,7 @@ extern s32 D_801B2E0C;
 void func_800A4D4C(void)
 {
 extern s32 D_801B2E08;
+extern void func_800A37D0__for_func_800A4D4C(void) __asm__("func_800A37D0");
 extern s32 D_801B2E0C;
 
     D_801B2E08 += 1;
@@ -1680,12 +1735,13 @@ extern s32 D_801B2E14;
  */
 void func_800A4EA8(void)
 {
+extern void func_800A4EE0__for_func_800A4EA8(void) __asm__("func_800A4EE0");
 extern s32 D_801B2E14;
 extern s32 D_801B2E10;
 
     D_801B2E14 = 0x3C;
     D_801B2E10 += 1;
-    func_800A4EE0();
+    func_800A4EE0__for_func_800A4EA8();
 }
 
 /** @brief World-map step: spawn an effect object then count down a timer. */
@@ -1707,6 +1763,7 @@ extern s32 D_801B2E14;
  */
 void func_800A4F88(void)
 {
+extern void func_800A4FC8__for_func_800A4F88(void) __asm__("func_800A4FC8");
 extern s32 D_800DCEA8;
 extern s32 D_801B2E14;
 extern s32 D_801B2E10;
@@ -1714,7 +1771,7 @@ extern s32 D_801B2E10;
     D_800DCEA8 = 0;
     D_801B2E14 = 0x14;
     D_801B2E10 += 1;
-    func_800A4FC8();
+    func_800A4FC8__for_func_800A4F88();
 }
 
 /** @brief World-map step: spawn an effect object then count down a timer. */
@@ -1810,6 +1867,7 @@ extern s32 D_801B2E18;
  */
 void func_800A51A0(void)
 {
+extern void func_800A51E8__for_func_800A51A0(void) __asm__("func_800A51E8");
 extern s32* D_80139280;
 extern s32 D_801B2E1C;
 extern s32 D_801B2E18;
@@ -1817,7 +1875,7 @@ extern s32 D_801B2E18;
     D_801B2E1C = 0x20;
     D_80139280[5] = -1;
     D_801B2E18 += 1;
-    func_800A51E8();
+    func_800A51E8__for_func_800A51A0();
 }
 
 /**
@@ -1919,12 +1977,13 @@ extern s32 D_801B2E24;
  */
 void func_800A53D8(void)
 {
+extern void func_800A5410__for_func_800A53D8(void) __asm__("func_800A5410");
 extern s32 D_801B2E24;
 extern s32 D_801B2E20;
 
     D_801B2E24 = 0x18;
     D_801B2E20 += 1;
-    func_800A5410();
+    func_800A5410__for_func_800A53D8();
 }
 
 /** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
@@ -1945,6 +2004,7 @@ extern s32 D_801B2E20;
  */
 void func_800A54C4(void)
 {
+extern void func_800A5504__for_func_800A54C4(void) __asm__("func_800A5504");
 extern s32 D_800DCEAC;
 extern s32 D_801B2E24;
 extern s32 D_801B2E20;
@@ -1952,7 +2012,7 @@ extern s32 D_801B2E20;
     D_800DCEAC = 0;
     D_801B2E24 = 0x18;
     D_801B2E20 += 1;
-    func_800A5504();
+    func_800A5504__for_func_800A54C4();
 }
 
 /** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
@@ -2047,12 +2107,13 @@ extern s32 D_801B2E2C;
  */
 void func_800A5720(void)
 {
+extern void func_800A5758__for_func_800A5720(void) __asm__("func_800A5758");
 extern s32 D_801B2E2C;
 extern s32 D_801B2E28;
 
     D_801B2E2C = 0x30;
     D_801B2E28 += 1;
-    func_800A5758();
+    func_800A5758__for_func_800A5720();
 }
 
 /** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
@@ -2073,6 +2134,7 @@ extern s32 D_801B2E2C;
  */
 void func_800A580C(void)
 {
+extern void func_800A584C__for_func_800A580C(void) __asm__("func_800A584C");
 extern s32 D_800DCEB0;
 extern s32 D_801B2E2C;
 extern s32 D_801B2E28;
@@ -2080,7 +2142,7 @@ extern s32 D_801B2E28;
     D_800DCEB0 = 0;
     D_801B2E2C = 0xA0;
     D_801B2E28 += 1;
-    func_800A584C();
+    func_800A584C__for_func_800A580C();
 }
 
 /** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
@@ -2175,12 +2237,13 @@ extern s32 D_801B2E34;
  */
 void func_800A5A68(void)
 {
+extern void func_800A5AA0__for_func_800A5A68(void) __asm__("func_800A5AA0");
 extern s32 D_801B2E34;
 extern s32 D_801B2E30;
 
     D_801B2E34 = 0x28;
     D_801B2E30 += 1;
-    func_800A5AA0();
+    func_800A5AA0__for_func_800A5A68();
 }
 
 /** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
@@ -2201,6 +2264,7 @@ extern s32 D_801B2E30;
  */
 void func_800A5B54(void)
 {
+extern void func_800A5B94__for_func_800A5B54(void) __asm__("func_800A5B94");
 extern s32 D_800DCEB4;
 extern s32 D_801B2E34;
 extern s32 D_801B2E30;
@@ -2208,7 +2272,7 @@ extern s32 D_801B2E30;
     D_800DCEB4 = 0;
     D_801B2E34 = 0xA0;
     D_801B2E30 += 1;
-    func_800A5B94();
+    func_800A5B94__for_func_800A5B54();
 }
 
 /** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
@@ -2289,6 +2353,7 @@ extern u8 D_80125538[];
 extern u8 D_800D9370[];
 extern s32 D_801B2E38;
 extern s32 D_801B2E3C;
+extern void func_800A5D68__for_func_800A5CF0(void) __asm__("func_800A5D68");
 
     D_801399BC = D_80125538;
     D_800D9370[0x6] = 0xF;
@@ -2300,7 +2365,7 @@ extern s32 D_801B2E3C;
     *(s16*)&D_800D9370[0x24] = 0x80;
     D_801B2E3C = 0x82;
     D_801B2E38 += 1;
-    func_800A5D68();
+    func_800A5D68__for_func_800A5CF0();
 }
 
 /**

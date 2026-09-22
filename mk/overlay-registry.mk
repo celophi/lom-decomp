@@ -349,6 +349,10 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/wmap_map_display.c \
 	src/overlays/wmap/wmap_party_travel.c \
 	src/overlays/wmap/wmap_land_selection.c \
+	src/overlays/wmap/wmap_land_effect_loader.c \
+	src/overlays/wmap/wmap_land_transition.c \
+	src/overlays/wmap/wmap_land_preview.c \
+	src/overlays/wmap/wmap_land_preview_lines.c \
 	src/overlays/wmap/wmap_land_layout.c \
 	src/overlays/wmap/wmap_map_labels.c \
 	src/overlays/wmap/wmap_main.c \
