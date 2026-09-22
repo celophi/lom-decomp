@@ -6,6 +6,15 @@
 #include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
 
+/** @brief World-map tile and its cached neighboring layout data. */
+typedef struct
+{
+    s32 tile;
+    s16 field_04;
+    s16 field_06;
+    u8 neighbors[32];
+} WmapTile;
+
 /**
  * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
  */
@@ -827,19 +836,18 @@ extern s32 D_801B2BE8;
     }
 }
 
+/** @brief Mark the current world-map tile state and advance the sequence. */
 void func_80098384(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
-
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapTile D_80139290[6][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B2BE8;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].tile = D_8011D4FC | 0x100;
     D_801B2BE8 += 1;
 }
 
@@ -1006,10 +1014,9 @@ extern void (*D_800D6440[])(void);
     D_801B2BFC = 1;
 }
 
+/** @brief Initialize the world-map actor and advance the timed sequence. */
 void func_8009861C(void)
 {
-/* Partial WMAP decompilation: 87.156250% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -1027,7 +1034,6 @@ typedef struct
     u8 pad_28[4];
 } __attribute__((aligned(4))) WmapConfigA;
 
-
 extern WmapConfigA D_800D93F4;
 extern u8 D_8011F538;
 extern void *D_801399D4;
@@ -1037,12 +1043,12 @@ extern void func_8009869C__for_func_8009861C(void) __asm__("func_8009869C");
 
     D_801399D4 = &D_8011F538;
     D_800D93F4.field_06 = 0xF;
+    D_800D93F4.field_02 = 0;
+    D_800D93F4.field_0E = 1;
     D_800D93F4.field_10 = -1;
     D_800D93F4.field_26 = 2;
-    D_800D93F4.field_0E = 1;
-    D_800D93F4.field_24 = 1;
-    D_800D93F4.field_02 = 0;
     D_800D93F4.field_22 = 0x81;
+    D_800D93F4.field_24 = 1;
     D_801B2BFC = 0x64;
     D_801B2BF8 += 1;
     func_8009869C__for_func_8009861C();

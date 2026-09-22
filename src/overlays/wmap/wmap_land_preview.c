@@ -92,17 +92,23 @@ enum WmapPreviewQuadByte
     WMAP_PREVIEW_QUAD_BYTES
 };
 
-/** @brief Two packed U/V/width/height layers per preview texture record. */
-enum WmapPreviewTextureByte
+/** @brief Halfword indices in a preview texture record containing two layers. */
+enum WmapPreviewTextureWord
 {
-    WMAP_PREVIEW_TEXTURE_WIDTH = 2,
-    WMAP_PREVIEW_TEXTURE_HEIGHT = 3,
-    WMAP_PREVIEW_TEXTURE_BYTES = 8
+    WMAP_PREVIEW_TEXTURE_EXTENT = 1,
+    WMAP_PREVIEW_TEXTURE_WORDS = 4
 };
 
+/** @brief Byte-sized dimensions following a packed texture U/V pair. */
+typedef struct
+{
+    u8 width;
+    u8 height;
+} WmapPreviewExtent;
+
 extern const POLY_FT4 g_wmap_preview_quad_template;
-extern u8 g_wmap_preview_textures[];
-extern const DVECTOR g_wmap_preview_map_positions[WMAP_VIEW_ROWS][WMAP_VIEW_COLUMNS];
+extern u16 g_wmap_preview_textures[];
+extern const DVECTOR g_wmap_preview_map_positions[WMAP_VIEW_ROWS * WMAP_VIEW_COLUMNS];
 extern const DVECTOR g_wmap_empty_marker_positions[WMAP_VIEW_ROWS][WMAP_VIEW_COLUMNS];
 extern u8 g_wmap_preview_quad_shapes[];
 extern s8 D_80051B4C[];
@@ -142,7 +148,6 @@ extern s32 D_801ADAE0;
 /**
  * @brief Advance the map selection preview and draw its marker and artifact.
  * @note Artifact transfer frames run before the cursor returns to the map or carousel.
- * @note Partial reconstruction: 95.887260% with gcc280_g0.
  */
 void wmap_update_land_preview(void)
 {
@@ -152,6 +157,7 @@ void wmap_update_land_preview(void)
     DVECTOR* screen_ptr;
     WmapPreviewPathPoint* travel_point;
     WmapArtifactTransferFrame* return_frame;
+    WmapArtifactTransferFrame* return_frames;
     WmapArtifactTransferFrame* pickup_frame;
     POLY_FT4* second_layer;
     s32 next_frame;
@@ -231,8 +237,8 @@ void wmap_update_land_preview(void)
         switch (D_8011CF18)
         {
         case WMAP_SELECTION_MAP:
-            g_wmap_preview_x = g_wmap_preview_map_positions[D_800DCEF0][D_800DCEEC].vx;
-            g_wmap_preview_y = g_wmap_preview_map_positions[D_800DCEF0][D_800DCEEC].vy;
+            g_wmap_preview_x = g_wmap_preview_map_positions[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS].vx;
+            g_wmap_preview_y = g_wmap_preview_map_positions[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS].vy;
             break;
 
         case WMAP_SELECTION_OPENING:
@@ -266,8 +272,7 @@ void wmap_update_land_preview(void)
                 }
                 else if (g_wmap_artifact_transfer_frame == g_wmap_artifact_transfer_end)
                 {
-                    func_800652A8(g_wmap_artifact_return_frames[g_wmap_artifact_transfer_end].sound_id, WMAP_ARTIFACT_RETURN_VOLUME,
-                                  g_wmap_artifact_transfer_end, D_8011D4FC);
+                    func_800652A8(g_wmap_artifact_return_frames[g_wmap_artifact_transfer_end].sound_id, WMAP_ARTIFACT_RETURN_VOLUME);
                     D_8011CF18 = WMAP_SELECTION_ARTIFACTS;
                     D_8011CF50 = 0;
                     g_wmap_preview_texture = 0;
@@ -277,8 +282,8 @@ void wmap_update_land_preview(void)
                 }
                 else
                 {
-                    return_frame = g_wmap_artifact_return_frames;
-                    return_frame += g_wmap_artifact_transfer_frame;
+                    return_frames = g_wmap_artifact_return_frames;
+                    return_frame = &return_frames[g_wmap_artifact_transfer_frame];
                     g_wmap_preview_x = return_frame->x;
                     g_wmap_preview_y = return_frame->y;
                     next_frame = g_wmap_artifact_transfer_frame + 1;
@@ -364,7 +369,7 @@ void wmap_update_land_preview(void)
                 sound_id = pickup_frame->sound_id;
                 if (sound_id != -1)
                 {
-                    func_800652A8(sound_id, WMAP_ARTIFACT_PICKUP_VOLUME, g_wmap_preview_travel_frame, D_8011D4FC);
+                    func_800652A8(sound_id, WMAP_ARTIFACT_PICKUP_VOLUME);
                 }
                 ot_shift = WMAP_PREVIEW_OT_SHIFT;
                 next_transfer_frame = g_wmap_artifact_transfer_frame + 1;
@@ -384,14 +389,14 @@ void wmap_update_land_preview(void)
         if ((D_8013B208 == 0) && (D_8013986C == 0))
         {
             POLY_FT4* packet;
-            u8 x0_offset;
-            u8 y0_offset;
-            u8 x1_offset;
-            u8 y1_offset;
-            u8 x2_offset;
-            u8 y2_offset;
-            u8 x3_offset;
-            u8 y3_offset;
+            s16 x0_offset;
+            s16 y0_offset;
+            s16 x1_offset;
+            s16 y1_offset;
+            s16 x2_offset;
+            s16 y2_offset;
+            s16 x3_offset;
+            s16 y3_offset;
             u16 u_base;
             u8 v_base;
 
@@ -401,49 +406,56 @@ void wmap_update_land_preview(void)
             if (D_8011D4FC == WMAP_NO_ARTIFACT)
             {
                 screen_x = g_wmap_preview_draw_x;
-                screen_y = g_wmap_preview_draw_y;
+                screen_y = g_wmap_preview_draw_y + D_80182DE0 + g_wmap_preview_bob_y;
             }
             else
             {
                 screen_x = g_wmap_preview_draw_x + g_wmap_artifact_images[D_8011D4FC].offset_x;
-                screen_y = g_wmap_preview_draw_y + g_wmap_artifact_images[D_8011D4FC].offset_y;
+                screen_y = g_wmap_preview_draw_y + g_wmap_artifact_images[D_8011D4FC].offset_y + D_80182DE0 + g_wmap_preview_bob_y;
             }
 
-            screen_y += D_80182DE0 + g_wmap_preview_bob_y;
             screen_x += g_wmap_preview_projection_x;
             screen_y += g_wmap_preview_projection_y;
 
             /* Shape bytes encode signed corner displacements. */
-            x0_offset = g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_X0];
-            y0_offset = g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_Y0];
-            x1_offset = g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_X1];
-            y1_offset = g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_Y1];
-            x2_offset = g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_X2];
-            y2_offset = g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_Y2];
-            x3_offset = g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_X3];
-            y3_offset = g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_Y3];
+            x0_offset = (s8)g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_X0];
+            y0_offset = (s8)g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_Y0];
+            x1_offset = (s8)g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_X1];
+            y1_offset = (s8)g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_Y1];
+            x2_offset = (s8)g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_X2];
+            y2_offset = (s8)g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_Y2];
+            x3_offset = (s8)g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_X3];
+            y3_offset = (s8)g_wmap_preview_quad_shapes[g_wmap_preview_shape * WMAP_PREVIEW_QUAD_BYTES + WMAP_PREVIEW_Y3];
 
-            packet->x0 = (s8)x0_offset + screen_x;
-            packet->y0 = (s8)y0_offset + screen_y;
-            packet->x1 = (s8)x1_offset + screen_x;
+            packet->x0 = x0_offset + screen_x;
+            packet->y0 = y0_offset + screen_y;
+            packet->x1 = x1_offset + screen_x;
 
             /* Copy the adjacent U/V bytes together from the texture record. */
-            *(u16*)&packet->u0 = *(u16*)&g_wmap_preview_textures[g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_BYTES];
+            *(u16*)&packet->u0 = g_wmap_preview_textures[g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS];
             u_base = packet->u0;
             v_base = packet->v0;
-            packet->u1 = u_base + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_BYTES) | WMAP_PREVIEW_TEXTURE_WIDTH];
+            packet->u1 =
+                u_base +
+                ((WmapPreviewExtent*)&g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT])->width;
             packet->v1 = v_base;
             packet->u2 = u_base;
-            packet->v2 = v_base + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_BYTES) | WMAP_PREVIEW_TEXTURE_HEIGHT];
+            packet->v2 =
+                v_base +
+                ((WmapPreviewExtent*)&g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT])->height;
 
-            packet->y1 = (s8)y1_offset + screen_y;
-            packet->x2 = (s8)x2_offset + screen_x;
-            packet->y2 = (s8)y2_offset + screen_y;
-            packet->x3 = (s8)x3_offset + screen_x;
-            packet->y3 = (s8)y3_offset + screen_y;
+            packet->y1 = y1_offset + screen_y;
+            packet->x2 = x2_offset + screen_x;
+            packet->y2 = y2_offset + screen_y;
+            packet->x3 = x3_offset + screen_x;
+            packet->y3 = y3_offset + screen_y;
 
-            packet->u3 = u_base + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_BYTES) | WMAP_PREVIEW_TEXTURE_WIDTH];
-            packet->v3 = v_base + g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_BYTES) | WMAP_PREVIEW_TEXTURE_HEIGHT];
+            packet->u3 =
+                u_base +
+                ((WmapPreviewExtent*)&g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT])->width;
+            packet->v3 =
+                v_base +
+                ((WmapPreviewExtent*)&g_wmap_preview_textures[(g_wmap_preview_texture * WMAP_PREVIEW_TEXTURE_WORDS) | WMAP_PREVIEW_TEXTURE_EXTENT])->height;
 
             if (g_wmap_preview_texture != 0)
             {
@@ -519,8 +531,8 @@ void wmap_update_land_preview(void)
                 sprite->h = g_wmap_artifact_images[D_8011D4FC].height;
                 sprite->u0 = g_wmap_artifact_images[D_8011D4FC].u;
                 sprite->v0 = g_wmap_artifact_images[D_8011D4FC].v;
-                sprite->clut = WMAP_ARTIFACT_CLUT;
                 SET_BGR0_PACKED(sprite, 0x80808080);
+                sprite->clut = WMAP_ARTIFACT_CLUT;
                 setSprt(sprite);
                 setSemiTrans(sprite, 1);
                 addPrim(&D_801398EC->ordering_table[WMAP_PREVIEW_FRONT_OT], sprite);
@@ -530,7 +542,7 @@ void wmap_update_land_preview(void)
                     D_800D921C += sizeof(SPRT);
                     D_801398EC->packet_cursor += sizeof(SPRT);
                 }
-                func_8006534C(WMAP_ARTIFACT_TPAGE, WMAP_PREVIEW_FRONT_OT, D_801398EC, sprite);
+                func_8006534C(WMAP_ARTIFACT_TPAGE, WMAP_PREVIEW_FRONT_OT);
             }
 
             cell_x = (D_80139950.x / WMAP_CELL_SPACING) + D_800DCEEC;

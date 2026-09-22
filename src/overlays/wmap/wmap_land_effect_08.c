@@ -214,8 +214,6 @@ extern void func_80094F10__for_func_800938B8(void) __asm__("func_80094F10");
 /** @brief Initialize randomized actors along a cosine depth curve. */
 void func_80093978(void)
 {
-/* Partial WMAP decompilation: 90.802200% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -264,29 +262,26 @@ extern void func_80093AE4__for_func_80093978(void) __asm__("func_80093AE4");
 
     s32 i;
     WmapConfigA *actor;
-    s32 phase;
-    s32 motion_offset;
     WmapMotion *motion;
+    s32 field_value;
 
-    phase = 0;
-    motion_offset = 150 * sizeof(WmapMotion);
-    for (i = 150; i < 180; i++)
+    i = 150;
+    for (; i < 180; i++)
     {
         actor = &D_800D9268[i];
         D_80139988[i].resource = D_8011D538;
+        field_value = 1;
         actor->field_06 = 15;
         actor->field_10 = -1;
         actor->field_26 = 2;
         actor->field_02 = 0;
-        actor->field_0E = 1;
+        actor->field_0E = field_value;
         actor->field_22 = 129;
-        actor->field_24 = 1;
-        motion = (WmapMotion *)((u8 *)D_801AFBD0 + motion_offset);
-        motion_offset += sizeof(WmapMotion);
+        actor->field_24 = field_value;
+        motion = &D_801AFBD0[i];
         motion->angle = rand() & 4095;
         motion->field_0E = (i - 150) * 4;
-        motion->z = ccos(2048 - (phase / 30)) * 120;
-        phase += 1024;
+        motion->z = ccos(2048 - (((i - 150) * 1024) / 30)) * 120;
         motion->x = ((rand() * 80) >> 15) + 40;
     }
     D_801B2B74 = 64;
@@ -297,8 +292,6 @@ extern void func_80093AE4__for_func_80093978(void) __asm__("func_80093AE4");
 /** @brief Project and draw the world-map star field, spinning each entry each frame. */
 void func_80093AE4(void)
 {
-/* Partial WMAP decompilation: 89.764046% (gcc280_g0). */
-
 /** @brief World-map orbiting star: polar position, spin angle, and radius. */
 typedef struct
 {
@@ -327,32 +320,26 @@ extern s32 D_801B2B74;
 
     SVECTOR position;
     s32 screen;
-    WmapStar* star;
-    WmapDraw* draw;
     s32 i;
 
-    star = &D_801AFBD0[0x96];
-    draw = &D_800D9268[0x96];
     for (i = 0x96; i < 0xB4; i++)
     {
-        position.vx = ((star->radius >> 6) * (ccos(star->angle) >> 6)) >> 0xC;
-        position.vy = ((star->radius >> 6) * (csin(star->angle) >> 6)) >> 0xC;
-        position.vz = star->unk0E;
+        position.vx = ((D_801AFBD0[i].radius >> 6) * (ccos(D_801AFBD0[i].angle) >> 6)) >> 0xC;
+        position.vy = ((D_801AFBD0[i].radius >> 6) * (csin(D_801AFBD0[i].angle) >> 6)) >> 0xC;
+        position.vz = D_801AFBD0[i].unk0E;
         gte_ldv0(&position);
         gte_rtps();
-        func_8006CC4C(draw, &D_80139988[i * 8]);
+        func_8006CC4C(&D_800D9268[i], &D_80139988[i * 8]);
         gte_stsxy(&screen);
-        if (star->angle != 0)
+        if (D_801AFBD0[i].angle != 0)
         {
-            func_80066F9C(draw, screen, 0xF, 4, 0);
+            func_80066F9C(&D_800D9268[i], screen, 0xF, 4, 0);
         }
         else
         {
-            func_80066F9C(draw, screen, 0xF, 0, 0);
+            func_80066F9C(&D_800D9268[i], screen, 0xF, 0, 0);
         }
-        draw++;
-        star->angle = ((u16)star->angle + star->delta) & 0xFFF;
-        star++;
+        D_801AFBD0[i].angle = ((u16)D_801AFBD0[i].angle + D_801AFBD0[i].delta) & 0xFFF;
     }
     if (--D_801B2B74 == 0)
     {
@@ -363,8 +350,6 @@ extern s32 D_801B2B74;
 /** @brief Project and draw the world-map star field, spinning each entry each frame. */
 void func_80093C48(void)
 {
-/* Partial WMAP decompilation: 89.764046% (gcc280_g0). */
-
 /** @brief World-map orbiting star: polar position, spin angle, and radius. */
 typedef struct
 {
@@ -393,32 +378,26 @@ extern s32 D_801B2B74;
 
     SVECTOR position;
     s32 screen;
-    WmapStar* star;
-    WmapDraw* draw;
     s32 i;
 
-    star = &D_801AFBD0[0x96];
-    draw = &D_800D9268[0x96];
     for (i = 0x96; i < 0xB4; i++)
     {
-        position.vx = ((star->radius >> 6) * (ccos(star->angle) >> 6)) >> 0xC;
-        position.vy = ((star->radius >> 6) * (csin(star->angle) >> 6)) >> 0xC;
-        position.vz = star->unk0E;
+        position.vx = ((D_801AFBD0[i].radius >> 6) * (ccos(D_801AFBD0[i].angle) >> 6)) >> 0xC;
+        position.vy = ((D_801AFBD0[i].radius >> 6) * (csin(D_801AFBD0[i].angle) >> 6)) >> 0xC;
+        position.vz = D_801AFBD0[i].unk0E;
         gte_ldv0(&position);
         gte_rtps();
-        func_8006CC4C(draw, &D_80139988[i * 8]);
+        func_8006CC4C(&D_800D9268[i], &D_80139988[i * 8]);
         gte_stsxy(&screen);
-        if (star->angle != 0)
+        if (D_801AFBD0[i].angle != 0)
         {
-            func_80066F9C(draw, screen, 0xF, 4, 0);
+            func_80066F9C(&D_800D9268[i], screen, 0xF, 4, 0);
         }
         else
         {
-            func_80066F9C(draw, screen, 0xF, 0, 0);
+            func_80066F9C(&D_800D9268[i], screen, 0xF, 0, 0);
         }
-        draw++;
-        star->angle = ((u16)star->angle + star->delta) & 0xFFF;
-        star++;
+        D_801AFBD0[i].angle = ((u16)D_801AFBD0[i].angle + D_801AFBD0[i].delta) & 0xFFF;
     }
     if (--D_801B2B74 == 0)
     {
@@ -979,17 +958,21 @@ extern s32 D_801B2B30;
 
 void func_80094610(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
+typedef struct
+{
+    u32 value;
+    u8 unknown_4[36];
+} WmapValueRecord;
 
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapValueRecord D_80139290[][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B2B30;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2B30 += 1;
 }
 
@@ -1625,12 +1608,10 @@ extern s32 D_801B2B60;
 /** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
 void func_80095000(void)
 {
-/* Partial WMAP decompilation: 99.488370% (gcc280_g0). */
-
 extern s32 D_801B2B60;
 extern s32 D_801B2B64;
 
-    func_8006B328(0x64, 0x6C, 4, -1, -1, -4, 0, 8, -0x6E, 0xF0, -0x6E, 0xF0, 1, 1, 0x7F, 4, 0);
+    func_8006B328(0x64, 0x6C, 4, -1, -1, -4, 0, 8, -0x6E, 0xF0, -0x6E, 0xF0, 1, 0x7F, 1, 4, 0);
     if (--D_801B2B64 == 0)
     {
         D_801B2B60 += 1;
@@ -1656,12 +1637,10 @@ extern s32 D_801B2B60;
 /** @brief World-map step: emit a UI primitive then tick the shared frame counter. */
 void func_800950EC(void)
 {
-/* Partial WMAP decompilation: 99.488370% (gcc280_g0). */
-
 extern s32 D_801B2B60;
 extern s32 D_801B2B64;
 
-    func_8006B328(0x64, 0x6C, 4, -1, -1, -4, 0, 8, -0x6E, 0xF0, -0x6E, 0xF0, 1, 1, 0x7F, 4, 0);
+    func_8006B328(0x64, 0x6C, 4, -1, -1, -4, 0, 8, -0x6E, 0xF0, -0x6E, 0xF0, 1, 0x7F, 1, 4, 0);
     if (--D_801B2B64 == 0)
     {
         D_801B2B60 += 1;
@@ -1725,8 +1704,6 @@ extern void (*D_800D6248[])(void);
 
 void func_80095240(void)
 {
-/* Partial WMAP decompilation: 87.156250% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -1754,12 +1731,12 @@ extern void func_800952C0__for_func_80095240(void) __asm__("func_800952C0");
 
     D_801399BC = &D_80121538;
     D_800D9370.field_06 = 0xF;
+    D_800D9370.field_0E = 1;
     D_800D9370.field_10 = -1;
     D_800D9370.field_26 = 8;
-    D_800D9370.field_0E = 1;
-    D_800D9370.field_24 = 1;
     D_800D9370.field_02 = 0;
     D_800D9370.field_22 = 0x81;
+    D_800D9370.field_24 = 1;
     D_801B2B6C = 0x28;
     D_801B2B68 += 1;
     func_800952C0__for_func_80095240();
