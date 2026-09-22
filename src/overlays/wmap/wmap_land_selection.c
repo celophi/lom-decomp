@@ -358,12 +358,10 @@ extern s32 D_80182DE0;
 extern s32 D_80182E24;
 
 s32 akao_cmd_c2(s32 value0, s32 value1, s32 value2, s32 value3);
-void func_800591A8(s32 value);
 s16 func_8005B8C8(s32 x, s32 y, s32 selection);
 void func_8005BBC8(s32 x, s32 y, s32 selection);
 void func_8005CA3C(s32 direction, s32* values);
 s32 func_8005D8FC();
-void func_800593D4(void);
 
     s32 map_x;
     s32 map_y;
@@ -911,8 +909,6 @@ extern s32 D_80182DE0;
 extern s32 D_80182E24;
 extern s32 D_80182E30;
 extern s32 D_801ADAE0;
-
-extern void func_8005B540(void);
 
     SVECTOR position;
     MATRIX matrix;

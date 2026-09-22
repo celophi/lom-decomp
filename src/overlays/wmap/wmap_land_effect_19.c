@@ -259,7 +259,6 @@ extern s32 D_800DCEA8;
 extern s32 D_800D9150;
 extern s32 D_801B2E10;
 extern s32 D_801B2E14;
-extern void func_800A4DF4(void);
 
     s32 i;
     u8* pa;
@@ -308,7 +307,6 @@ extern u8 D_80123538[];
 extern void *D_80139280;
 extern s32 D_801B2E18;
 extern s32 D_801B2E1C;
-extern void func_800A5118(void);
 
     s32 i;
     void *base = D_80139280;
@@ -380,7 +378,6 @@ extern s32 D_800D9154;
 extern s32 D_801B2E20;
 extern s32 D_801B2E24;
 extern s32 rand(void);
-extern void func_800A5318(void);
 
     s32 i;
 
@@ -445,7 +442,6 @@ extern s32 D_800DCEB0;
 extern s32 D_800D9158;
 extern s32 D_801B2E28;
 extern s32 D_801B2E2C;
-extern void func_800A5660(void);
 
     s32 i;
 
@@ -514,8 +510,6 @@ extern s32 D_801B25D8;
 extern s32 D_801B2E30;
 extern s32 D_801B2E34;
 
-extern void func_800A59A8(void);
-
     s32 i;
     WmapD94Entry *entry;
 
@@ -551,7 +545,6 @@ s32 func_800A3CC8(s32 arg0)
 extern u32 D_801B2DD0;
 extern s32 D_801B2DD4;
 extern void (*D_800D6A84[])(void);
-extern void func_800A3D9C(void);
 extern s32 D_8013B20C;
 
     s32 result;
@@ -583,7 +576,6 @@ void func_800A3D40(void)
 extern u32 D_801B2DD0;
 extern s32 D_801B2DD4;
 extern void (*D_800D6A84[])(void);
-extern void func_800A3D9C(void);
 extern s32 D_8013B20C;
 
     D_801B2DD0 = 1;
@@ -598,7 +590,6 @@ void func_800A3D58(void)
 extern u32 D_801B2DD0;
 extern s32 D_801B2DD4;
 extern void (*D_800D6A84[])(void);
-extern void func_800A3D9C(void);
 extern s32 D_8013B20C;
 
     func_8006CAC0(func_8006C81C);
@@ -614,9 +605,6 @@ void func_800A3D9C(void)
 {
 extern s32 D_8013B20C;
 extern s32 D_801B2DD0;
-extern void func_800A3DD8(void);
-extern void func_800A3E70(void);
-extern void func_800A3E1C(void);
 
     if (D_8013B20C == 0)
     {
@@ -632,9 +620,6 @@ void func_800A3DD8(void)
 {
 extern s32 D_8013B20C;
 extern s32 D_801B2DD0;
-extern void func_800A3DD8(void);
-extern void func_800A3E70(void);
-extern void func_800A3E1C(void);
 
     func_8006CAC0(func_800A3E70);
     D_8013B20C = 1;
@@ -649,7 +634,6 @@ void func_800A3E1C(void)
 {
 extern s32 D_801B2DD0;
 extern s32 D_8013B20C;
-extern void func_800A3E58(void);
 
     if (D_8013B20C == 0)
     {
@@ -665,7 +649,6 @@ void func_800A3E58(void)
 {
 extern s32 D_801B2DD0;
 extern s32 D_8013B20C;
-extern void func_800A3E58(void);
 
     D_801B2DD0 += 1;
 }
@@ -724,7 +707,6 @@ extern s32 D_8013B208;
 extern s32 D_801ADAF4;
 extern s32 D_801B2DD8;
 extern s32 D_801B2DDC;
-extern void func_800A4D64(void);
 
     D_8013B208 = 1;
     func_8006683C(0x702540);
@@ -757,8 +739,6 @@ extern s32 D_801ADAE0;
 extern s32 D_801ADAF4;
 extern s32 D_801B2DD8;
 extern s32 D_801B2DDC;
-extern void func_800A44CC(void);
-extern void func_800A4810(void);
 
     func_8006CAC0(&func_800A4810);
     D_80139244 = 1;
@@ -777,7 +757,6 @@ void func_800A4018(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A4ABC(void);
 
     if (--D_801B2DDC == 0)
     {
@@ -792,7 +771,6 @@ void func_800A404C(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A4ABC(void);
 
     func_8006CAC0(func_800A4ABC);
     D_801B2DDC = 0x1E;
@@ -806,7 +784,6 @@ void func_800A4088(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A4C10(void);
 
     if (--D_801B2DDC == 0)
     {
@@ -821,7 +798,6 @@ void func_800A40BC(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A4C10(void);
 
     func_8006CAC0(func_800A4C10);
     D_801B2DDC = 0xC;
@@ -835,8 +811,6 @@ void func_800A40F8(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A55D0(void);
-extern void func_800A5918(void);
 
     if (--D_801B2DDC == 0)
     {
@@ -851,8 +825,6 @@ void func_800A412C(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A55D0(void);
-extern void func_800A5918(void);
 
     func_8006CAC0(func_800A55D0);
     func_8006CAC0(func_800A5918);
@@ -867,7 +839,6 @@ void func_800A4174(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A4968(void);
 
     if (--D_801B2DDC == 0)
     {
@@ -882,7 +853,6 @@ void func_800A41A8(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A4968(void);
 
     func_8006CAC0(func_800A4968);
     D_801B2DDC = 0x2;
@@ -925,7 +895,6 @@ void func_800A4268(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A5288(void);
 
     if (--D_801B2DDC == 0)
     {
@@ -940,7 +909,6 @@ void func_800A429C(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A5288(void);
 
     func_8006CAC0(func_800A5288);
     D_801B2DDC = 0x10;
@@ -954,8 +922,6 @@ void func_800A42D8(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A5088(void);
-extern void func_800A4670(void);
 
     if (--D_801B2DDC == 0)
     {
@@ -970,8 +936,6 @@ void func_800A430C(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A5088(void);
-extern void func_800A4670(void);
 
     func_8006CAC0(func_800A5088);
     func_8006CAC0(func_800A4670);
@@ -986,7 +950,6 @@ void func_800A4354(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A5C60(void);
 
     if (--D_801B2DDC == 0)
     {
@@ -1001,7 +964,6 @@ void func_800A4388(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A5C60(void);
 
     func_8006CAC0(func_800A5C60);
     D_801B2DDC = 0x4;
@@ -1015,7 +977,6 @@ void func_800A43C4(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A5088(void);
 
     if (--D_801B2DDC == 0)
     {
@@ -1030,7 +991,6 @@ void func_800A43F8(void)
 {
 extern s32 D_801B2DDC;
 extern s32 D_801B2DD8;
-extern void func_800A5088(void);
 
     func_8006CAC0(func_800A5088);
     D_801B2DDC = 0x7C;
@@ -1139,7 +1099,6 @@ extern u8 D_8011F538;
 extern void *D_801399AC;
 extern s32 D_801B2DE0;
 extern s32 D_801B2DE4;
-extern void func_800A45DC(void);
 
     D_801399AC = &D_8011F538;
     D_800D9318.field_06 = 0xF;
@@ -1197,7 +1156,6 @@ s32 func_800A4670(s32 arg0)
 extern u32 D_801B2DE8;
 extern s32 D_801B2DEC;
 extern void (*D_800D6B0C[])(void);
-extern void func_800A477C(void);
 extern u8 D_8011D538[];
 extern u8* D_801399B4;
 extern u8 D_800D9344[];
@@ -1233,7 +1191,6 @@ void func_800A46E8(void)
 extern u32 D_801B2DE8;
 extern s32 D_801B2DEC;
 extern void (*D_800D6B0C[])(void);
-extern void func_800A477C(void);
 extern u8 D_8011D538[];
 extern u8* D_801399B4;
 extern u8 D_800D9344[];
@@ -1252,7 +1209,6 @@ void func_800A4700(void)
 extern u32 D_801B2DE8;
 extern s32 D_801B2DEC;
 extern void (*D_800D6B0C[])(void);
-extern void func_800A477C(void);
 extern u8 D_8011D538[];
 extern u8* D_801399B4;
 extern u8 D_800D9344[];
@@ -1280,7 +1236,6 @@ void func_800A477C(void)
 extern u32 D_801B2DE8;
 extern s32 D_801B2DEC;
 extern void (*D_800D6B0C[])(void);
-extern void func_800A477C(void);
 extern u8 D_8011D538[];
 extern u8* D_801399B4;
 extern u8 D_800D9344[];
@@ -1323,7 +1278,6 @@ extern WmapBlk8 D_801B24A0;
 extern WmapBlk16 D_80182DC0;
 extern WmapBlk16 D_801B2650;
 extern s32 D_80182DE8;
-extern void func_800A3348(void);
 
     s32 result;
 
@@ -1362,7 +1316,6 @@ extern WmapBlk8 D_801B24A0;
 extern WmapBlk16 D_80182DC0;
 extern WmapBlk16 D_801B2650;
 extern s32 D_80182DE8;
-extern void func_800A3348(void);
 
     D_801B2DF0 = 1;
     D_801B2DF4 = 1;
@@ -1384,7 +1337,6 @@ extern WmapBlk8 D_801B24A0;
 extern WmapBlk16 D_80182DC0;
 extern WmapBlk16 D_801B2650;
 extern s32 D_80182DE8;
-extern void func_800A3348(void);
 
     D_801B24A0 = D_80139258;
     D_801B2650 = D_80182DC0;
@@ -1465,7 +1417,6 @@ extern WmapBlk16 D_801B2478;
 extern s32 D_80182DEC;
 extern s32 D_801B2DFC;
 extern u32 D_801B2DF8;
-extern void func_800A3448(void);
 
     D_801B24A8 = D_80139258;
     D_801B2478 = D_80182DC0;
@@ -1541,7 +1492,6 @@ extern WmapBlk8 D_80139258;
 extern WmapBlk8 D_8013B238;
 extern s32 D_801B2E00;
 extern s32 D_801B2E04;
-extern void func_800A3548(void);
 
     D_80182DF0 = 1;
     D_8013B238 = D_80139258;
@@ -1556,7 +1506,6 @@ extern void func_800A3548(void);
 void func_800A4BC0(void)
 {
 extern s32 D_801B2E00;
-extern void func_800A3624(void);
 extern s32 D_801B2E04;
 
     D_801B2E04 = 0x40;
@@ -1570,7 +1519,6 @@ extern s32 D_801B2E04;
 void func_800A4BF8(void)
 {
 extern s32 D_801B2E00;
-extern void func_800A3624(void);
 extern s32 D_801B2E04;
 
     D_801B2E00 += 1;
@@ -1631,7 +1579,6 @@ extern WmapBlk8 D_80139258;
 extern WmapBlk8 D_8013B240;
 extern s32 D_801B2E08;
 extern s32 D_801B2E0C;
-extern void func_800A36F4(void);
 
     D_80182DF4 = 1;
     D_8013B240 = D_80139258;
@@ -1646,7 +1593,6 @@ extern void func_800A36F4(void);
 void func_800A4D14(void)
 {
 extern s32 D_801B2E08;
-extern void func_800A37D0(void);
 extern s32 D_801B2E0C;
 
     D_801B2E0C = 0x40;
@@ -1660,7 +1606,6 @@ extern s32 D_801B2E0C;
 void func_800A4D4C(void)
 {
 extern s32 D_801B2E08;
-extern void func_800A37D0(void);
 extern s32 D_801B2E0C;
 
     D_801B2E08 += 1;
@@ -1735,7 +1680,6 @@ extern s32 D_801B2E14;
  */
 void func_800A4EA8(void)
 {
-extern void func_800A4EE0(void);
 extern s32 D_801B2E14;
 extern s32 D_801B2E10;
 
@@ -1763,7 +1707,6 @@ extern s32 D_801B2E14;
  */
 void func_800A4F88(void)
 {
-extern void func_800A4FC8(void);
 extern s32 D_800DCEA8;
 extern s32 D_801B2E14;
 extern s32 D_801B2E10;
@@ -1867,7 +1810,6 @@ extern s32 D_801B2E18;
  */
 void func_800A51A0(void)
 {
-extern void func_800A51E8(void);
 extern s32* D_80139280;
 extern s32 D_801B2E1C;
 extern s32 D_801B2E18;
@@ -1977,7 +1919,6 @@ extern s32 D_801B2E24;
  */
 void func_800A53D8(void)
 {
-extern void func_800A5410(void);
 extern s32 D_801B2E24;
 extern s32 D_801B2E20;
 
@@ -2004,7 +1945,6 @@ extern s32 D_801B2E20;
  */
 void func_800A54C4(void)
 {
-extern void func_800A5504(void);
 extern s32 D_800DCEAC;
 extern s32 D_801B2E24;
 extern s32 D_801B2E20;
@@ -2107,7 +2047,6 @@ extern s32 D_801B2E2C;
  */
 void func_800A5720(void)
 {
-extern void func_800A5758(void);
 extern s32 D_801B2E2C;
 extern s32 D_801B2E28;
 
@@ -2134,7 +2073,6 @@ extern s32 D_801B2E2C;
  */
 void func_800A580C(void)
 {
-extern void func_800A584C(void);
 extern s32 D_800DCEB0;
 extern s32 D_801B2E2C;
 extern s32 D_801B2E28;
@@ -2237,7 +2175,6 @@ extern s32 D_801B2E34;
  */
 void func_800A5A68(void)
 {
-extern void func_800A5AA0(void);
 extern s32 D_801B2E34;
 extern s32 D_801B2E30;
 
@@ -2264,7 +2201,6 @@ extern s32 D_801B2E30;
  */
 void func_800A5B54(void)
 {
-extern void func_800A5B94(void);
 extern s32 D_800DCEB4;
 extern s32 D_801B2E34;
 extern s32 D_801B2E30;
@@ -2353,7 +2289,6 @@ extern u8 D_80125538[];
 extern u8 D_800D9370[];
 extern s32 D_801B2E38;
 extern s32 D_801B2E3C;
-extern void func_800A5D68(void);
 
     D_801399BC = D_80125538;
     D_800D9370[0x6] = 0xF;

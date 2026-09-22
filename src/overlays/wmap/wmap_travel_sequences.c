@@ -125,8 +125,6 @@ extern s32 D_8011D538;
 extern WmapSlotB D_801AFBD0[];
 extern s32 D_801B2C4C;
 extern s32 D_801B2C50;
-extern void func_800999D0(void);
-extern void func_80099918(void);
 
     WmapActor *actor = &D_800DBE3C;
 
@@ -158,7 +156,6 @@ extern void func_80099918(void);
  */
 void func_80099918(void)
 {
-extern s8 *func_80099754(s32 arg0);
 extern u8 D_801AFBD0[];
 extern s32 D_8011CF74;
 extern s32 D_801B2C4C;
@@ -296,8 +293,6 @@ extern s32 D_801398D0;
 extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern s32 D_8019D240;
-extern u8 func_80099E84;
-extern u8 func_80099F98;
 
     void *var_a0_3;
     s32 *var_a1;
@@ -487,7 +482,6 @@ block_25:
  */
 s32 func_80099E84(void)
 {
-extern void func_80099754(s32);
 extern s16 D_800D6508[];
 extern s32 D_800D9164;
 extern s32 D_800DCED8;
@@ -540,8 +534,6 @@ extern s32 D_800DCF00;
 extern s32 D_801398D0;
 extern s32 D_8019D240;
 extern s16 D_801AFBD2;
-extern s32 func_80099E84(void);
-extern void func_80099754(s32);
 
     s32 delta_y;
     s32 delta_x;
@@ -625,7 +617,6 @@ extern s32 D_8013B288;
 extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern s32 D_801B2C54;
-extern void func_8009ABB0(void);
 
     D_8013B288 = 0;
     D_8011CF50 = 1;
@@ -687,8 +678,6 @@ extern s32 D_8011D538;
 extern WmapSlotB D_801AFBD0[];
 extern s32 D_801B2C54;
 extern s32 D_801B2C58;
-extern void func_800999D0(void);
-extern void func_8009A328(void);
 
     WmapActor *actor = &D_800DBE3C;
 
@@ -720,7 +709,6 @@ extern void func_8009A328(void);
  */
 void func_8009A328(void)
 {
-extern s8 *func_80099754(s32 arg0);
 extern u8 D_801AFBD0[];
 extern s32 D_8011CF74;
 extern s32 D_801B2C54;
@@ -758,7 +746,6 @@ extern s32 D_801B2C58;
  */
 s32 func_8009A3E0(void)
 {
-extern void func_80099754(s32);
 extern s32 D_800D9164;
 extern s16 D_801AFBD2;
 
@@ -870,7 +857,6 @@ extern s32 D_801B2C4C;
 /** @brief Calculate the selected map position relative to the current projection origin. */
 void func_8009A5BC(void)
 {
-extern void func_8009A668(void);
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
 extern s32 D_801398D0;
@@ -894,7 +880,6 @@ void func_8009A668(void)
 {
 extern s32 D_801398D0;
 extern s32 D_801B2C4C;
-extern void func_80099848(void);
 
     if (D_801398D0 != 2)
     {
@@ -927,8 +912,6 @@ extern s32 D_801398AC;
 extern s32 D_800DCED8;
 extern s32 D_800DCEE4;
 extern s32 D_801B2C4C;
-extern void func_80099B50(void);
-extern void func_8009A75C(void);
 
     D_801AFBE0 = 0x3B;
     if (D_80139290[D_8019D248.x][D_8019D248.y].value == 2)
@@ -953,8 +936,6 @@ void func_8009A75C(void)
 {
 extern s32 D_801398AC;
 extern s32 D_801B2C4C;
-extern void func_8009A798(void);
-extern void func_8009A7D0(void);
 extern s32 D_801B2C50;
 
     if (D_801398AC == 0)
@@ -971,8 +952,6 @@ void func_8009A798(void)
 {
 extern s32 D_801398AC;
 extern s32 D_801B2C4C;
-extern void func_8009A798(void);
-extern void func_8009A7D0(void);
 extern s32 D_801B2C50;
 
     D_801B2C50 = 0x12C;
@@ -983,7 +962,6 @@ extern s32 D_801B2C50;
 /** @brief Update the effect and advance its sequence on completion or timeout. */
 void func_8009A7D0(void)
 {
-extern void func_80099754(s32);
 extern s16 D_800D926A;
 extern s16 D_801AFBD2;
 extern s32 D_801B2C4C;
@@ -1010,12 +988,10 @@ extern s32 D_801B2C50;
 void func_8009A854(void)
 {
 extern void func_80058FF4(s32, s32, s32);
-extern void func_8009A8D0(void);
 extern s32 D_800DCED8;
 extern s32 D_800DCEE4;
 extern s32 D_801398AC;
 extern s32 D_801B2C4C;
-extern s32 func_80099B50(s32);
 
     func_8006D0F0(0x18, &D_800DCED8, &D_800DCEE4);
     func_80058FF4(0, D_800DCED8, D_800DCEE4);
@@ -1032,8 +1008,6 @@ void func_8009A8D0(void)
 {
 extern s32 D_801398AC;
 extern s32 D_801B2C4C;
-extern void func_8009A90C(void);
-extern void func_8009A944(void);
 extern s32 D_801B2C50;
 
     if (D_801398AC == 0)
@@ -1050,8 +1024,6 @@ void func_8009A90C(void)
 {
 extern s32 D_801398AC;
 extern s32 D_801B2C4C;
-extern void func_8009A90C(void);
-extern void func_8009A944(void);
 extern s32 D_801B2C50;
 
     D_801B2C50 = 0x78;
@@ -1066,7 +1038,6 @@ extern s16 D_801AFBD2;
 extern s16 D_800D926A;
 extern s32 D_801B2C4C;
 extern s32 D_801B2C50;
-extern void func_80099754(s32 arg);
 
     func_80099754(1);
     if (D_801AFBD2 == 0x400)
@@ -1082,8 +1053,6 @@ extern void func_80099754(s32 arg);
 /** @brief World-map step handler: install a callback, advance the step counter, chain to the next step. */
 void func_8009A9A8(void)
 {
-extern void func_8009A3E0(void);
-extern void func_8009A9F0(void);
 extern s32 D_800D9164;
 extern s32 D_801B2C4C;
 
@@ -1100,7 +1069,6 @@ void func_8009A9F0(void)
 {
 extern s32 D_800D9164;
 extern s32 D_801B2C4C;
-extern void func_8009AA2C(void);
 
     if (D_800D9164 == 0)
     {
@@ -1117,7 +1085,6 @@ void func_8009AA2C(void)
 extern u16 D_801AFBD0;
 extern s32 D_801B2C4C;
 extern s32 D_801B2C50;
-extern void func_8009AA6C(void);
 
     D_801AFBD0 = 0;
     D_801B2C50 = 0x78;
@@ -1140,7 +1107,6 @@ extern s32 D_8011CF54;
 extern s16 D_801AFBE0;
 extern s32 D_801B2C4C;
 extern s32 D_801B2C50;
-extern void func_80099754(s32 arg);
 
     func_80099754(0);
     func_8006CC4C(D_800DBE3C, &D_8013A180);
@@ -1173,7 +1139,6 @@ extern u32 D_801B2C54;
 extern s32 D_801B2C58;
 extern void (*D_800D656C[])(void);
 extern s32 D_801398D0;
-extern void func_8009A258(void);
 
     s32 result;
 
@@ -1205,7 +1170,6 @@ extern u32 D_801B2C54;
 extern s32 D_801B2C58;
 extern void (*D_800D656C[])(void);
 extern s32 D_801398D0;
-extern void func_8009A258(void);
 
     D_801B2C54 = 1;
     D_801B2C58 = 1;
@@ -1220,7 +1184,6 @@ extern u32 D_801B2C54;
 extern s32 D_801B2C58;
 extern void (*D_800D656C[])(void);
 extern s32 D_801398D0;
-extern void func_8009A258(void);
 
     if (D_801398D0 != 2)
     {
@@ -1233,8 +1196,6 @@ extern void func_8009A258(void);
 void func_8009ABF0(void)
 {
 extern void func_80058FF4(s32, s32, s32);
-extern s32 func_80099B50(s32);
-extern void func_8009AC6C(void);
 extern s32 D_800DCED8;
 extern s32 D_800DCEE4;
 extern s32 D_801398AC;
@@ -1255,8 +1216,6 @@ void func_8009AC6C(void)
 {
 extern s32 D_801398AC;
 extern s32 D_801B2C54;
-extern void func_8009ACA8(void);
-extern void func_8009ACE0(void);
 extern s32 D_801B2C58;
 
     if (D_801398AC == 0)
@@ -1273,8 +1232,6 @@ void func_8009ACA8(void)
 {
 extern s32 D_801398AC;
 extern s32 D_801B2C54;
-extern void func_8009ACA8(void);
-extern void func_8009ACE0(void);
 extern s32 D_801B2C58;
 
     D_801B2C58 = 0x78;
@@ -1289,7 +1246,6 @@ extern s16 D_801AFBD2;
 extern s16 D_800D926A;
 extern s32 D_801B2C54;
 extern s32 D_801B2C58;
-extern void func_80099754(s32 arg);
 
     func_80099754(1);
     if (D_801AFBD2 == 0x400)
@@ -1305,8 +1261,6 @@ extern void func_80099754(s32 arg);
 /** @brief World-map step handler: install a callback, advance the step counter, chain to the next step. */
 void func_8009AD44(void)
 {
-extern void func_8009A3E0(void);
-extern void func_8009AD8C(void);
 extern s32 D_800D9164;
 extern s32 D_801B2C54;
 
@@ -1323,7 +1277,6 @@ void func_8009AD8C(void)
 {
 extern s32 D_800D9164;
 extern s32 D_801B2C54;
-extern void func_8009ADC8(void);
 
     if (D_800D9164 == 0)
     {
@@ -1340,7 +1293,6 @@ void func_8009ADC8(void)
 extern u16 D_801AFBD0;
 extern s32 D_801B2C54;
 extern s32 D_801B2C58;
-extern void func_8009AE08(void);
 
     D_801AFBD0 = 0;
     D_801B2C58 = 0x78;
@@ -1363,7 +1315,6 @@ extern s32 D_8011CF54;
 extern s16 D_801AFBE0;
 extern s32 D_801B2C54;
 extern s32 D_801B2C58;
-extern void func_80099754(s32 arg);
 
     func_80099754(0);
     func_8006CC4C(D_800DBE3C, &D_8013A180);

@@ -15,7 +15,6 @@ typedef s32 M2C_UNK32;
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
 extern u16 D_800432BE;
-extern u8 g_saved_game;
 
     u8 sp[0x80];
     void *var_v1;
@@ -194,11 +193,9 @@ typedef s32 M2C_UNK32;
 #define M2C_UNALIGNED32(expr) (expr)
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
-s32 func_8005D670(s32, s32);
 extern u8 D_800432BD;
 extern u8 D_800CFDCC;
 extern s32 D_800D8B3C;
-extern u8 g_saved_game;
 
     s32 temp_s0;
     s32 temp_s0_2;
@@ -285,8 +282,6 @@ void func_8005BBC8(s32 x, s32 y, s32 index)
 extern u8 D_800CFDCC[64][12];
 extern s32 D_800D8318[64][8];
 extern s16 g_music_track_index;
-extern void func_8005BD54(s32, s32, s32, s32 (*)[8]);
-extern void func_8005C998(void);
 
     s32 record;
     s32 field;
@@ -335,11 +330,8 @@ typedef s32 M2C_UNK32;
 #define M2C_UNALIGNED32(expr) (expr)
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
-s32 func_8005D670(s32, s32);
-s32 func_8005B8C8(u32, s32, s32);                   /* static */
 extern u8 D_800CFDCC;
 extern s32 D_800D8B3C;
-extern u8 g_saved_game;
 
     s32 sp2C;
     u32 sp10;
@@ -707,8 +699,6 @@ extern u8 D_800CFDCC[][12];
 extern s32 D_800D00CC[];
 extern s32 D_800D8318[][8];
 extern u8 *D_800D8B3C;
-extern s32 func_8005D670(void);
-extern void func_8005BD54(s32, s32, s32, s32 (*)[8]);
 
     s32 current_land;
     s32 cell;
@@ -787,10 +777,6 @@ selected_land:
 s32 func_8005C6B4(void)
 
 {
-/* Partial WMAP decompilation: 94.203540% (gcc280_g0). */
-
-extern void func_8005C998(void);
-extern void func_8005CC50(s32);
 extern s32 D_800430B8;
 extern u8 D_800D8B18[];
 extern u8 *D_800D8B3C;
@@ -965,7 +951,6 @@ extern s32 D_800D8300;
 extern s32 D_800D8304;
 extern s32 D_800D8308;
 extern s32 D_800D9000[];
-extern s32 func_8005D948(s32, s32, s32);
 
     s32 row;
     s32 entry;
@@ -1042,7 +1027,6 @@ extern s32 D_800D8300;
 extern s32 D_800D8304;
 extern s32 D_800D8308;
 extern s32 D_800D9000[];
-extern s32 func_8005D948(s32, s32, s32);
 
     s32 i;
     s32 j;
@@ -1184,13 +1168,10 @@ typedef s32 M2C_UNK32;
 #define M2C_UNALIGNED32(expr) (expr)
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
-M2C_UNK func_8005BD54(s32, u32, s32, void *);    /* extern */
-M2C_UNK func_8005CE44(M2C_UNK, u32, s32, s32, s32 *, s32 *, s32, s32, void *); /* static */
 extern u8 D_800CFDCC;
 extern u8 D_800D8318;
 extern u8 D_800D8B18;
 extern s32 D_800D8B3C;
-extern u8 g_saved_game;
 
     s32 *sp38;
     s32 sp34;
@@ -1564,9 +1545,6 @@ extern u8 D_800D8B18[];
  */
 void func_8005D6B8(u32 column, s32 row, s32 *output)
 {
-/* Partial WMAP decompilation: 91.206894% (gcc280_g0). */
-
-extern s32 func_8005D670(u32, s32);
 extern u8 *D_800D8B3C;
 extern s32 D_800D00CC[][8];
 
@@ -1688,7 +1666,6 @@ extern u16 g_music_track_index;
  */
 s32 func_8005D8FC(void)
 {
-extern s32 func_8005D948(s32, s32, s32);
 extern s32 D_800D82F8;
 extern s32 D_800D82FC;
 extern s32 D_800D9000[];

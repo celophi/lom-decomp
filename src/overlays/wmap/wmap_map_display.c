@@ -64,11 +64,6 @@ extern s32 D_80182230;
 extern s32 D_80182238;
 extern s32 D_801ADAEC;
 
-extern void func_800551A8(void);
-extern void func_8005536C(void);
-extern void func_8005556C(void);
-extern void func_800581A0(s32 x, s32 y, s32 value);
-
     s32 timer;
     s32 valid;
     s32 scan_x;
@@ -377,8 +372,6 @@ extern s32 D_80139948;
 extern s32 D_80182230;
 extern WmapObject D_80182248[];
 
-extern void func_80058014(s32, s32);
-
     SPRT* sprite;
     s32 i;
     s32 j;
@@ -455,9 +448,6 @@ extern s32 D_8013B298;
 extern s32 D_80182230;
 extern s32 D_80182238;
 extern WmapObject D_80182248[];
-
-void func_80055AF4(void);
-void func_80058014(s32 object_id, s32 state);
 
     s32 x;
     s32 y;
@@ -559,7 +549,6 @@ extern s32 D_80139948;
 extern s32 D_8013B298;
 extern WmapObject D_80182248[];
 
-extern void func_80058014(s32, s32);
 extern s32 rand(void);
 
     s32 row;
@@ -626,8 +615,6 @@ extern s32 rand(void);
 void func_80055AF4(void)
 {
 extern s32 D_8013B298;
-
-void func_80055830(s32 delay_min, s32 delay_range, s32 duration_min, s32 duration_range);
 
     switch (D_8013B298)
     {
@@ -1265,13 +1252,6 @@ extern WmapObject D_80182248[];
 extern VECTOR D_80182D48;
 extern VECTOR D_80182DC0;
 extern s32 D_801ADAE0;
-
-s32 func_80055BB0(WmapObject* object);
-void func_80055E5C(s32 x, s32 y, WmapObject* object);
-void func_800561F8(s32 x, s32 y, WmapObject* object, s32 part_index);
-void func_80056C30(s32 x, s32 y);
-void func_8005833C(s32 x, s32 y, s32 state);
-s32 func_80058400(s32 x, s32 y);
 
     MATRIX matrix;
     VECTOR translation;
@@ -1989,10 +1969,6 @@ void func_8005D6B8(s32 x, s32 y, s32* indices);
 /** @brief Update map rendering and approach the requested fade intensity. */
 void func_80057C14(void)
 {
-extern void func_80057274(s32);
-extern void func_800574D0(void);
-extern void func_8005784C(s32);
-extern void func_80057D2C(void);
 extern s32 D_800DCF04;
 extern s32 D_8011CF74;
 extern s32 D_80139218;
@@ -2306,9 +2282,6 @@ typedef struct
 
 extern WmapResource D_80182248[];
 extern WmapCacheEntry D_8011CF88[];
-extern s32 func_80055BB0(WmapResource *);
-extern void func_800561F8(s32, s32, WmapResource *, s32);
-extern void func_80055E5C(s32, s32, WmapResource *);
 
     WmapResource *resource;
     s32 slot;
@@ -2370,7 +2343,6 @@ void func_80058298(void)
  */
 s32 func_800582A0(void)
 {
-extern s32 func_80058400(void);
 extern s32 D_800DBE70;
 
     s32 current = func_80058400();

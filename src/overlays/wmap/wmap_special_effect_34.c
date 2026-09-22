@@ -565,15 +565,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -1227,15 +1218,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -1886,15 +1868,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -2545,15 +2518,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -3190,15 +3154,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -3835,15 +3790,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -4480,15 +4426,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -5125,15 +5062,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -5789,15 +5717,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -6439,15 +6358,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -7077,15 +6987,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -7728,15 +7629,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -8368,15 +8260,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -9011,15 +8894,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -9652,15 +9526,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -10293,15 +10158,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -10934,15 +10790,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -11576,15 +11423,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -12226,15 +12064,6 @@ extern void func_800BF0BC(void);
 extern void func_800BF1F0(void);
 extern void func_800BF2C4(void);
 extern void func_800BEFE8(void);
-extern void func_800BFEEC(void);
-extern void func_800BFF28(void);
-extern void func_800BFF98(void);
-extern void func_800BFFD8(void);
-extern s32 func_800C0034(s32);
-extern void func_800C06DC(void);
-extern void func_800C071C(void);
-extern void func_800C075C(void);
-extern void func_800C079C(void);
 extern s32 func_800BC01C(s32);
 extern s32 func_800BC1BC(s32);
 extern s32 func_800BC360(s32);
@@ -12315,10 +12144,6 @@ extern s32 D_8013B208;
 extern s32 D_801ADAF4;
 extern s32 D_80139234;
 extern s32 D_801B3220;
-extern s32 func_800C0474(s32);
-extern s32 func_800C064C(s32);
-extern void func_800C0150(void);
-extern void func_800C018C(void);
 
     D_8013B208 = 1;
     func_800652A8(0x3B, 0x80);
@@ -12342,10 +12167,6 @@ extern s32 D_8013B208;
 extern s32 D_801ADAF4;
 extern s32 D_80139234;
 extern s32 D_801B3220;
-extern s32 func_800C0474(s32);
-extern s32 func_800C064C(s32);
-extern void func_800C0150(void);
-extern void func_800C018C(void);
 
     if (D_80139234 == 0)
     {
@@ -12373,7 +12194,6 @@ extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern s32 D_80182DD8;
 extern s32 D_801B3220;
-extern void func_800C0254(void);
 
     func_8006D0F0(D_80054A18[D_80182DD8 - 4], &D_800DCEF8, &D_800DCF00);
     D_801398D0 = 2;
@@ -12390,7 +12210,6 @@ void func_800C0254(void)
 {
 extern s32 D_801398D0;
 extern s32 D_801B3220;
-extern void func_800C0294(void);
 
     if (D_801398D0 != 2)
     {
@@ -12403,7 +12222,6 @@ extern void func_800C0294(void);
 void func_800C0294(void)
 {
 extern s32 D_801B3220;
-extern void func_800C02C0(void);
 
     D_801B3220 += 1;
     func_800C02C0();
@@ -12477,21 +12295,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (D_8013924C == 0)
     {
@@ -12569,21 +12372,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     func_8006CAC0(func_800C07F8);
     D_801B3224 = 0xC;
     D_801B3220++;
@@ -12657,21 +12445,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (--D_801B3224 == 0)
     {
@@ -12748,21 +12521,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     func_8006CAC0(func_800C09F4);
     D_801B3224 = 0x5A;
     D_801B3220++;
@@ -12836,21 +12594,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (--D_801B3224 == 0)
     {
@@ -12927,21 +12670,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     func_8006683C(0x808080);
     D_801ADAF4 = 0x10;
     D_801B3224 = 0x3C;
@@ -13016,21 +12744,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (--D_801B3224 == 0)
     {
@@ -13107,21 +12820,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_8013B20C = 0;
     D_801B3220++;
 }
@@ -13194,21 +12892,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (reset != 0)
     {
@@ -13295,21 +12978,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_801B3228 = 1;
     D_801B322C = 1;
 }
@@ -13382,21 +13050,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     D_801B24A0 = D_80139258;
     D_801B2650 = D_8011CF60;
@@ -13478,21 +13131,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_801B322C = 0xB4;
     D_801B3228++;
     func_800BF5D4();
@@ -13566,21 +13204,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     D_801B322C = 0x1E;
     D_801B3228++;
@@ -13656,21 +13279,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_8013924C = 0;
     D_801B3228++;
 }
@@ -13743,21 +13351,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (reset != 0)
     {
@@ -13844,21 +13437,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_801B3230 = 1;
     D_801B3234 = 1;
 }
@@ -13931,21 +13509,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (D_801398D0 != 2)
     {
@@ -14023,21 +13586,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     if (D_801398D0 != 2)
     {
         D_801B3230++;
@@ -14113,21 +13661,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (D_801398D0 != 2)
     {
@@ -14205,21 +13738,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     if (D_801398D0 != 2)
     {
         D_801B3230++;
@@ -14296,21 +13814,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_80139234 = 0;
     D_801B3230++;
 }
@@ -14383,21 +13886,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (reset != 0)
     {
@@ -14484,21 +13972,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_801B3238 = 1;
     D_801B323C = 1;
 }
@@ -14571,21 +14044,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     D_801399B4 = &D_8011F538;
     D_800D9344.field_06 = 0xF;
@@ -14671,21 +14129,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_800D9344.field_26 = 4;
     D_800D9344.field_22 = 0;
     D_801B323C = 0x20;
@@ -14761,21 +14204,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     func_8006CC4C(&D_800D9344, &D_801399B0);
     func_80066F9C(&D_800D9344, D_80182D58, 8, 8, 0);
@@ -14854,21 +14282,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_801B3238++;
 }
 
@@ -14940,21 +14353,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     if (reset != 0)
     {
@@ -15041,21 +14439,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_801B3240 = 1;
     D_801B3244 = 1;
 }
@@ -15128,21 +14511,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     D_801399BC = &D_8011F538;
     D_800D9370.field_06 = 0xF;
@@ -15226,21 +14594,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     func_8006CC4C(&D_800D9370, &D_801399B8);
     func_80066F9C(&D_800D9370, D_8011CF4C, 8, 8, 0);
     if (--D_801B3244 == 0)
@@ -15318,21 +14671,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_800D9370.field_26 = 2;
     D_800D9370.field_22 = 0;
     D_801B3244 = 0x40;
@@ -15408,21 +14746,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     func_8006CC4C(&D_800D9370, &D_801399B8);
     func_80066F9C(&D_800D9370, D_8011CF4C, 8, 8, 0);
@@ -15501,21 +14824,6 @@ extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
 
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
-
     D_801B3240++;
 }
 
@@ -15587,21 +14895,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 extern s32 D_801B3240;
 extern s32 D_801B3244;
-
-extern void func_800BF4C0(void);
-extern void func_800BF5D4(void);
-extern void func_800BF6F8(void);
-extern void func_800BF920(void);
-extern void func_800BFA24(void);
-extern void func_800BFB28(void);
-extern void func_800BFC28(void);
-extern void func_800C07DC(void);
-extern void func_800C02FC(void);
-extern s32 func_800C07F8(s32);
-extern s32 func_800C09F4(s32);
-extern void func_800C0960(void);
-extern void func_800C0B00(void);
-extern void func_800C0BC8(void);
 
     MATRIX matrix;
 

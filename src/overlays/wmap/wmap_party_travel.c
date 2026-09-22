@@ -20,7 +20,6 @@ typedef s32 M2C_UNK32;
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
 M2C_UNK akao_cmd_f1();                              /* extern */
-M2C_UNK func_80059070();                            /* extern */
 extern u8 D_800D9268;
 extern s32 D_800DCEE8;
 extern s32 D_8011CF44;
@@ -216,7 +215,6 @@ typedef s32 M2C_UNK32;
 
 s32 func_800582A0(s32, s32, s32);                   /* extern */
 M2C_UNK func_8005EB68(s32, s32, s32, s32, void *, void *); /* extern */
-M2C_UNK func_800584B4();                            /* static */
 extern u8 D_8004FD04;
 extern u8 D_800D9268;
 extern s32 D_800DCEEC;
@@ -430,7 +428,6 @@ extern s16 D_800D926A;
 extern s16 D_800D9296;
 extern s16 D_800D92C2;
 extern s32 func_8005D850(s32 *, u32 *);
-extern void func_80058FF4(s32, s32, s32);
 extern s32 D_800D9224;
 extern s32 D_800DBE78;
 extern s32 D_8011CF20;
