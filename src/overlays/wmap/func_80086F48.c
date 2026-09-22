@@ -1,0 +1,29 @@
+#include "wmap_sequence_runtime.h"
+#include "common.h"
+#include "sdk/libgte.h"
+
+extern VECTOR D_80182DC0;
+extern SVECTOR D_801B2490;
+extern s32 D_8011CF1C;
+extern s32 D_80182DF0;
+extern s32 D_801B2928;
+extern s32 D_801B292C;
+
+/** @brief Draw the rotating effect, increase its scale, and update the sequence timer. */
+void func_80086F48(void)
+{
+    PushMatrix();
+    func_8006CFA8(&D_80182DC0, &D_801B2490);
+    func_8006CD98(D_8011CF1C, 0, 4, 0x35, 0x7800, 1, D_80182DF0);
+    D_801B2490.vz += 100;
+    PopMatrix();
+    D_80182DF0 += 2;
+    if (D_80182DF0 >= 0x82)
+    {
+        D_80182DF0 = 0x81;
+    }
+    if (--D_801B292C == 0)
+    {
+        D_801B2928++;
+    }
+}

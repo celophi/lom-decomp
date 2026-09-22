@@ -1,0 +1,21 @@
+#include "wmap_effect_primitives.h"
+#include "common.h"
+
+extern u8 D_800D95D8[];
+extern u8 D_80139A28[];
+extern s32* D_80139280;
+extern s32 D_801B2CAC;
+extern s32 D_801B2CA8;
+
+/**
+ * @brief Prime the frame, draw the world-map sprite, then advance after the wait expires.
+ */
+void func_8009CCF4(void)
+{
+    func_8006AEE0();
+    func_8006A2FC(D_800D95D8, D_80139A28, 0x28, 0xFF, 0x1, 0x8, 0, (s32)D_80139280);
+    if (--D_801B2CAC == 0)
+    {
+        D_801B2CA8 += 1;
+    }
+}

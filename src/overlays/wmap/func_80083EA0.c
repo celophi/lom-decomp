@@ -1,0 +1,36 @@
+#include "wmap_sequence_runtime.h"
+#include "common.h"
+#include "sdk/libgte.h"
+
+extern u8 D_80182DC0[];
+extern u8 D_801B2490[];
+extern u8 D_801B2498[];
+extern s32 D_8011CF1C;
+extern s32 D_801B2468;
+extern s32 D_801B2888;
+extern s32 D_801B288C;
+
+/**
+ * @brief World-map step handler: draw two frames of the animated actor, scroll each
+ *        sub-field, decay the shared frame index with a floor, then advance the step.
+ */
+void func_80083EA0(void)
+{
+    PushMatrix();
+    func_8006CFA8(D_80182DC0, D_801B2490);
+    func_8006CD98(D_8011CF1C, 0, 0x10, 0x36, 0x7880, 1, D_801B2468);
+    ((u16*)D_801B2490)[2] += 0xC;
+    func_8006CFA8(D_80182DC0, D_801B2498);
+    func_8006CD98(D_8011CF1C, 0, 0x10, 0x36, 0x7880, 1, D_801B2468);
+    ((u16*)D_801B2498)[2] += 4;
+    PopMatrix();
+    D_801B2468 -= 1;
+    if (D_801B2468 < 0)
+    {
+        D_801B2468 = 0;
+    }
+    if (--D_801B288C == 0)
+    {
+        D_801B2888 += 1;
+    }
+}

@@ -1,2 +1,46 @@
 // WMAP.BIN world-map entry called by the resident state machine.
 run_world_map = 0x80060814; // type:func
+
+// Shared FIELD text symbols fall inside this WMAP function, not at entry points.
+func_800623CC = 0x800623CC; // type:func size:0x1814
+
+// These FIELD entry points fall inside WMAP functions, not at WMAP boundaries.
+// ROM-scoped local labels keep shared FIELD symbols available to other overlays.
+.L800640B4 = 0x800640B4; // type:label rom:0x14445 // field_text_clear_cache
+.L80064210 = 0x80064210; // type:label rom:0x145A1 // field_text_advance_line
+.L8006429C = 0x8006429C; // type:label rom:0x1462D // field_text_clear_window
+.L800642D4 = 0x800642D4; // type:label rom:0x14665 // field_text_init
+.L80064C28 = 0x80064C28; // type:label rom:0x14FB9 // field_text_update
+.L8006700C = 0x8006700C; // type:label rom:0x1739D // field_text_close
+.L800674A8 = 0x800674A8; // type:label rom:0x17839 // field_text_set_position
+.L800674D8 = 0x800674D8; // type:label rom:0x17869 // field_text_close_window
+.L8006751C = 0x8006751C; // type:label rom:0x178AD // field_text_get_status
+.L80067598 = 0x80067598; // type:label rom:0x17929 // field_text_get_choice
+.L80086374 = 0x80086374; // type:label rom:0x36705 // field_upload_image_resource
+.L8008C730 = 0x8008C730; // type:label rom:0x3CAC1 // field_reset_leader_position_history
+.L8008C7A8 = 0x8008C7A8; // type:label rom:0x3CB39 // field_refresh_party_routes
+.L8008CAA4 = 0x8008CAA4; // type:label rom:0x3CE35 // field_sample_actor_route
+.L8008D104 = 0x8008D104; // type:label rom:0x3D495 // field_get_route_heading_animation
+.L8008D174 = 0x8008D174; // type:label rom:0x3D505 // field_record_actor_position
+.L8008D29C = 0x8008D29C; // type:label rom:0x3D62D // field_follow_leader_route
+.L800A8CFC = 0x800A8CFC; // type:label rom:0x5908D // field_bind_saved_game_context
+.L800A8D10 = 0x800A8D10; // type:label rom:0x590A1 // field_store_entry_settings
+.L800A8D8C = 0x800A8D8C; // type:label rom:0x5911D // field_append_dialog_item
+.L800A8DDC = 0x800A8DDC; // type:label rom:0x5916D // field_name_byte_length
+.L800A8E28 = 0x800A8E28; // type:label rom:0x591B9 // field_copy_name
+.L800A8EAC = 0x800A8EAC; // type:label rom:0x5923D // field_append_name
+.L800A8F8C = 0x800A8F8C; // type:label rom:0x5931D // field_copy_inventory_record
+.L800A8FB4 = 0x800A8FB4; // type:label rom:0x59345 // field_compact_inventory
+.L800A9060 = 0x800A9060; // type:label rom:0x593F1 // field_find_free_inventory_record
+.L800A909C = 0x800A909C; // type:label rom:0x5942D // field_draw_text_session
+.L800A90F8 = 0x800A90F8; // type:label rom:0x59489 // field_restore_label_actor_parts
+.L800A9198 = 0x800A9198; // type:label rom:0x59529 // field_init_actor_labels
+.L800A92CC = 0x800A92CC; // type:label rom:0x5965D // field_draw_cd_error_text
+.L800A939C = 0x800A939C; // type:label rom:0x5972D // field_draw_actor_labels
+.L800A9A5C = 0x800A9A5C; // type:label rom:0x59DED // field_merge_dialog_items
+.L800A9B88 = 0x800A9B88; // type:label rom:0x59F19 // field_update_text_session
+.L800A9D70 = 0x800A9D70; // type:label rom:0x5A101 // field_read_controller_buttons
+.L800A9E78 = 0x800A9E78; // type:label rom:0x5A209 // field_update_input_repeat
+.L800AA02C = 0x800AA02C; // type:label rom:0x5A3BD // field_reset_input_repeat
+.L800AA098 = 0x800AA098; // type:label rom:0x5A429 // field_process_input
+.L800AA498 = 0x800AA498; // type:label rom:0x5A829 // field_play_low_hp_warning

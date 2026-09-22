@@ -1,0 +1,29 @@
+#include "wmap_sprite_render.h"
+#include "wmap_sequence_runtime.h"
+/* Partial WMAP decompilation: 89.027020% (gcc280_g0). */
+#include "common.h"
+
+extern u8 D_800DBE3C[];
+extern s32 D_8013A180;
+extern s32 D_8011CF54;
+extern s16 D_801AFBE0;
+extern s32 D_801B2C4C;
+extern s32 D_801B2C50;
+extern void func_80099754(s32 arg);
+
+/**
+ * @brief World-map step: build a sprite, decrement a shared budget, expire the timer.
+ * @note Best match ~89.03% (gcc280_g0); residual is prologue scheduling of the
+ *       s0 save versus the first call (permuter territory).
+ */
+void func_8009AA6C(void)
+{
+    func_80099754(0);
+    func_8006CC4C(D_800DBE3C, &D_8013A180);
+    func_80066F9C(D_800DBE3C, D_8011CF54, 0x28, D_801AFBE0, 2);
+    *(s16 *)&D_8011CF54 = *(u16 *)&D_8011CF54 - 6;
+    if (--D_801B2C50 == 0)
+    {
+        D_801B2C4C += 1;
+    }
+}

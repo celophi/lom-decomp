@@ -1,0 +1,33 @@
+#include "wmap_sprite_render.h"
+#include "wmap_sequence_runtime.h"
+#include "common.h"
+
+extern void func_8006F92C(void);
+extern s16 D_800D9268[];
+extern s32 D_801B2438;
+extern s32 D_801B243C;
+extern u8 D_800D9318[];
+extern u8 D_801399A8[];
+extern s32 D_8011CF4C;
+
+void func_8006F8E0(void)
+{
+    D_800D9268[0xD2 / 2] = 0;
+    D_800D9268[0xD6 / 2] = 2;
+    D_801B243C = 0x5D;
+    D_801B2438 += 1;
+    func_8006F92C();
+}
+
+/**
+ * @brief Draw the world-map sprite this frame, then advance after the wait expires.
+ */
+void func_8006F92C(void)
+{
+    func_8006CC4C(D_800D9318, D_801399A8);
+    func_80066F9C(D_800D9318, D_8011CF4C, 0x8, 0x2E, 0);
+    if (--D_801B243C == 0)
+    {
+        D_801B2438 += 1;
+    }
+}

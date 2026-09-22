@@ -18,6 +18,8 @@
 
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
+void load_sub_menu_layout(s32 is_continue);
+unsigned short upload_save_layout_textures(void);
 
 /**
  * Counterpart of CHECKPS update_controller_input.

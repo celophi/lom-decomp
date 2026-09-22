@@ -1847,7 +1847,6 @@ void func_8007100C(FieldActorState *actor_state)
     s32 new_effect_index;
     s32 palette_changed;
     FieldMotionRecord *new_effect;
-    s32 screen_depth;
     u8 previous_state;
     RECT palette_rect;
     FieldSVector screen_position;
@@ -1898,12 +1897,11 @@ void func_8007100C(FieldActorState *actor_state)
                     segment_delta.vz = effect->z - g_field_effect_records[effect->previous_effect_index].z;
                     g_field_effect_records[effect->previous_effect_index].next_effect_index = new_effect_index;
                     screen_position.x = segment_delta.vx >> 8;
-                    screen_depth = segment_delta.vz >> 9;
-                    screen_position.y = (segment_delta.vy >> 8) - screen_depth;
+                    screen_position.y = (segment_delta.vy >> 8) - (segment_delta.vz >> 9);
                     segment_delta.vz = 0;
                     segment_delta.vx = screen_position.y;
                     segment_delta.vy = -screen_position.x;
-                    func_8001CDAC(&segment_delta, &segment_angles, screen_depth);
+                    func_8001CDAC(&segment_delta, &segment_angles);
                     new_effect->rotation_x = segment_angles.vx >> 6;
                     new_effect->heading = segment_angles.vy >> 6;
                     new_effect->pitch = segment_angles.vz >> 6;
@@ -1925,26 +1923,15 @@ void func_8007100C(FieldActorState *actor_state)
     {
         palette_buffer = g_field_shared_clut_buffer;
     }
-    part_index = 0;
     palette_changed = 0;
-    if (actor->part_count != 0)
+    for (part_index = 0; part_index < actor->part_count; part_index++)
     {
-        do
+        palette_part = (FieldActorPartDef *) (part_index * (s32) sizeof(FieldActorPartDef) + (s32) actor->parts);
+        if ((palette_part->track_flags.word >> 0x15) & 1)
         {
-            do
-            {
-                palette_part = (FieldActorPartDef *) (part_index * 0x48 + (s32) actor->parts);
-            } while (0);
-            if ((palette_part->track_flags.word >> 0x15) & 1)
-            {
-                do
-                {
-                    field_interpolate_palette_track(actor, palette_part->palette_extent.fields.palette_track, palette_buffer, (u8 *) palette_buffer + 0x200);
-                    palette_changed++;
-                } while (0);
-            }
-            part_index++;
-        } while (part_index < actor->part_count);
+            field_interpolate_palette_track(actor, palette_part->palette_extent.fields.palette_track, palette_buffer, (u8 *) palette_buffer + 0x200);
+            palette_changed++;
+        }
     }
     if (palette_changed != 0)
     {

@@ -713,6 +713,13 @@ void *func_80050DB0(POLY_FT4 *poly, u_long *ot, WselQuadCoords *coords, s32 semi
     return poly + 1;
 }
 
+/**
+ * @brief Draw the world-selection mask and its optional draw-environment packet.
+ * @param prim Next free primitive-packet address.
+ * @param ot Ordering-table entry receiving the emitted primitives.
+ * @return Next free packet address.
+ * @see decomp.me (100%) TODO: no scratch link yet
+ */
 void *func_80050F0C(void *prim, u_long *ot)
 {
     DRAWENV draw_env;
@@ -727,38 +734,39 @@ void *func_80050F0C(void *prim, u_long *ot)
     s32 remy;
     s32 row;
     s32 col;
-    volatile s32 saved_index;
+    s32 saved_index;
     u8 *p = prim;
 
-    dx = -D_800CA8B8.x;
-    dx += D_800CA8BC.x;
-    qx = dx - 0x10;
-    if (qx < 0)
-        qx = dx - 1;
-    qx >>= 4;
+    qx = (-D_800CA8B8.x + D_800CA8BC.x - 16) / 16;
     col0 = qx;
 
     dy = D_800CA8B8.y * -1 + D_800CA8BC.y;
     {
         s32 yoff = dy - 0x10;
         if (yoff < 0)
+        {
             yoff = dy - 1;
+        }
         qy = yoff >> 4;
     }
 
     {
         u8 *occupancy = D_800C32F0;
         cell_index = qy * 0x13;
-        if (occupancy[cell_index + col0] != 0) {
-        for (row = 0; row < 6; row++) {
-            for (col = 0; col < 6; col++) {
-                p = func_800513D0(p, ot,
-                    *(u16 *)(WSEL_STATE_BYTES + 0x44) + col * 0x10 + 0xB,
+        if (occupancy[cell_index + col0] != 0)
+        {
+            for (row = 0; row < 6; row++)
+            {
+                for (col = 0; col < 6; col++)
+                {
+                    s32 state_offset = 0x44;
+                    p = func_800513D0(p, ot,
+                    *(u16 *)(WSEL_STATE_BYTES + state_offset) + col * 0x10 + 0xB,
                     *(u16 *)(WSEL_STATE_BYTES + 0x46) + row * 0x10 + 0xB,
                     0xA0);
+                }
             }
-        }
-        goto done;
+            goto done;
         }
     }
 
@@ -768,64 +776,85 @@ void *func_80050F0C(void *prim, u_long *ot)
 
     dx = -D_800CA8B8.x;
     dx += D_800CA8BC.x;
-    remx = dx - 0x10;
-    qx = remx;
-    if (remx < 0)
-        qx = dx - 1;
-    remx -= (qx >> 4) * 0x10;
+    {
+        s32 offset = dx - 0x10;
+        remx = offset / 16;
+        remx = offset - remx * 16;
+    }
 
-    dy = D_800CA8B8.y * -1 + D_800CA8BC.y;
-    remy = dy - 0x10;
-    qy2 = remy;
-    if (remy < 0)
-        qy2 = dy - 1;
-    remy -= (qy2 >> 4) * 0x10;
+    {
+        s32 offset = D_800CA8B8.y * -1 + D_800CA8BC.y - 0x10;
+        remy = offset / 16;
+        remy = offset - remy * 16;
+    }
 
-    if (D_800CA8B0 & 0x10) {
+    if (D_800CA8B0 & 0x10)
+    {
         {
-            s32 pos = 0;
+            s32 pos;
+            row = 0;
             saved_index = cell_index;
-            for (row = 0; row < 6; row++) {
+            pos = 0;
+grid_row:
+            {
                 s32 base_cell = saved_index + col0;
                 u8 * const grid = D_800C345C;
-                for (col = 0; col < 6; col++) {
+                for (col = 0; col < 6; col++)
+                {
                     s32 off = base_cell << 3;
                     u8 *cellp;
-                    off = (off + base_cell) << 2;
-                    do {
-                        do {
-                            do {
-                                cellp = grid + off;
+                    do
+                    {
+                        do
+                        {
+                            do
+                            {
+                                off = (off + base_cell) << 2;
                             } while (0);
+                            cellp = grid + off;
                         } while (0);
                     } while (0);
-                    if (cellp[pos + col] == 0) {
+                    dx = pos + col;
+                    if (cellp[dx] == 0)
+                    {
                         p = func_800513D0(p, ot, col * 0x10 - remx,
-                                          row * 0x10 - remy, 0x130);
+                        row * 0x10 - remy, 0x130);
                     }
                 }
                 pos += 6;
+                row++;
+                if (row < 6)
+                {
+                    goto grid_row;
+                }
             }
         }
 
-        for (col = 0; col < 6; col++) {
-            if (D_800C3708[(qy * 0x13 + col0) * 0x24 + col + 0x1E] == 0) {
+        for (col = 0; col < 6; col++)
+        {
+            u8 (*edge)[36] = (u8 (*)[36])D_800C3708;
+            if (*(edge[qy * 19 + col0] + col + 30) == 0)
+            {
                 p = func_800513D0(p, ot, col * 0x10 - remx,
-                                  0x60 - remy, 0x130);
+                0x60 - remy, 0x130);
             }
         }
 
-        for (row = 0; row < 6; row++) {
-            if (D_800C3480[(qy * 0x13 + col0) * 0x24 + row * 6 + 5] == 0) {
+        for (row = 0; row < 6; row++)
+        {
+            u8 (*edge)[6][6] = (u8 (*)[6][6])D_800C3480;
+            if (edge[qy * 19 + col0][row][5] == 0)
+            {
                 p = func_800513D0(p, ot, 0x60 - remx,
-                                  row * 0x10 - remy, 0x130);
+                row * 0x10 - remy, 0x130);
             }
         }
 
         {
             u8 *grid2 = D_800C345C;
             s32 corner_index = (qy + 1) * 0x13 + 1;
-            if (grid2[(corner_index + col0) * 0x24 + 0x23] == 0) {
+            if (grid2[(col0 + corner_index) * 0x24 + 0x23] == 0)
+            {
                 p = func_800513D0(p, ot, 0x60 - remx, 0x60 - remy, 0x130);
             }
         }
@@ -837,7 +866,9 @@ void *func_80050F0C(void *prim, u_long *ot)
         s32 draw_x = *(u16 *)(ctx + 0x44) + 0xC;
         s32 draw_y = draw_y_base + 0x14;
         if (D_800CA898 != 0)
+        {
             draw_y = draw_y_base + 0xFC;
+        }
         func_8001C56C(&draw_env, draw_x, draw_y, 0x60, 0x60);
     }
     func_8001A5D4(p, &draw_env);

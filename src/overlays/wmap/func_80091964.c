@@ -1,0 +1,40 @@
+#include "wmap_sequence_runtime.h"
+#include "common.h"
+#include "sdk/libgte.h"
+
+extern u8 D_800DCF18[];
+extern VECTOR D_80182DC0;
+extern SVECTOR D_8013B240;
+extern s32 D_801B2B08;
+extern s32 D_801B2B0C;
+extern s32 D_80182DF4;
+extern s32 D_80139234;
+extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
+/** @brief Draw and fade the rotating effect, then advance its countdown. */
+void func_80091964(void)
+{
+    s32 intensity;
+    s32 remaining;
+
+    if (D_80182DF4 != 0)
+    {
+        PushMatrix();
+        func_8006CFA8(&D_80182DC0, &D_8013B240);
+        func_800675F0(D_800DCF18, 0, 10, 183, 0x7A40, 0x1001, D_80182DF4, 0, 5, D_80139234 / 16);
+        intensity = D_80182DF4 - 4;
+        D_80182DF4 = intensity;
+        if (intensity < 0)
+        {
+            D_80182DF4 = 0;
+        }
+        PopMatrix();
+        D_8013B240.vz = (u16)(D_8013B240.vz + 220);
+    }
+    remaining = D_801B2B0C - 1;
+    D_801B2B0C = remaining;
+    if (remaining == 0)
+    {
+        D_801B2B08++;
+    }
+}

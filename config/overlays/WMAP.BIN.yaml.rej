@@ -1,0 +1,10 @@
+diff a/config/overlays/WMAP.BIN.yaml b/config/overlays/WMAP.BIN.yaml	(rejected hunks)
+@@ -55,6 +55,8 @@ segments:
+       - [0x7605, c, func_80057274] # gcc280_g0, func_80057274, 100%
+       - [0x7861, c, func_800574D0] # gcc280_g0, func_800574D0, 100%
+       - [0x7BDD, asm, wmap_post_5784C] # 0x8005784C
++      - [0xEEF9, c, func_8005EB68] # gcc280_g0_o0_builtin, func_8005EB68, 100%
++      - [0xFD4D, asm, wmap_post_5F9BC] # 0x8005F9BC
+       - [0x146BD, c, func_8006432C] # gcc280_g0, func_8006432C, 100%
+       - [0x148DD, asm, wmap_post_6454C] # 0x8006454C: remaining executable instructions
+       - [0x74919, data, data]     # 0x800C4588: post-code packets/assets
