@@ -23,6 +23,7 @@
 #define WMAP_PLACEMENT_DELAY 30
 #define WMAP_PLACEMENT_DELAY_END 31
 #define WMAP_CAROUSEL_TRIANGLES 168
+#define WMAP_TRIANGLE_VERTICES 3
 #define WMAP_CAROUSEL_SLIDE_STEP 6
 #define WMAP_CAROUSEL_OPEN_X 100
 #define WMAP_CAROUSEL_CLOSED_X 148
@@ -100,17 +101,18 @@ typedef struct
     u8 pad_04[0x18];
 } WmapRouteCell;
 
-/** @brief Texture coordinates and palette for one carousel triangle. */
-typedef struct
+/** @brief Word indices in each carousel triangle's texture record. */
+enum WmapCarouselTextureWord
 {
-    u16 clut;
-    u16 u0;
-    u16 v0;
-    u16 u1;
-    u16 v1;
-    u16 u2;
-    u16 v2;
-} WmapCarouselTexture;
+    WMAP_TEXTURE_CLUT,
+    WMAP_TEXTURE_U0,
+    WMAP_TEXTURE_V0,
+    WMAP_TEXTURE_U1,
+    WMAP_TEXTURE_V1,
+    WMAP_TEXTURE_U2,
+    WMAP_TEXTURE_V2,
+    WMAP_TEXTURE_WORDS
+};
 
 /** @brief Ordering table and packet cursor in the active map drawing buffer. */
 typedef struct
@@ -177,9 +179,9 @@ extern s32 D_80139838[WMAP_ARTIFACT_SLOTS];
 extern s32 g_wmap_carousel_turn_frames;
 extern s32 g_wmap_carousel_turn_step;
 extern WmapRenderContext* D_801398EC;
-extern const WmapCarouselTexture g_wmap_carousel_textures[];
+extern const u16 g_wmap_carousel_textures[];
 extern const SVECTOR g_wmap_carousel_vertices[];
-extern const s16 g_wmap_carousel_faces[][3];
+extern const s16 g_wmap_carousel_faces[];
 extern WmapPoint g_wmap_artifact_positions[WMAP_ARTIFACT_SLOTS];
 extern VECTOR g_wmap_carousel_translation;
 
@@ -194,6 +196,10 @@ s32 wmap_begin_land_placement(s32 initialize);
 s32 wmap_begin_land_placement(s32 initialize)
 {
     const WmapPoint* point;
+    const WmapPoint* points;
+    s32 index;
+    s32 x;
+    s32 y;
 
     if (D_8011CF44 != 0)
     {
@@ -212,10 +218,13 @@ s32 wmap_begin_land_placement(s32 initialize)
     D_8013986C = 0;
     D_8013B208 = 0;
     D_800D928A = 0x80;
-    point = D_80054944;
-    point += D_800DCEF0 * WMAP_VIEW_COLUMNS + D_800DCEEC;
-    D_80182D68 = (s32)-point->x;
-    D_80182D78 = (s32)-point->y;
+    points = D_80054944;
+    y = D_800DCEF0;
+    x = D_800DCEEC;
+    index = y * WMAP_VIEW_COLUMNS + x;
+    point = &points[index];
+    D_80182D68 = -point->x;
+    D_80182D78 = -point->y;
     func_80064094();
     return 0;
 }
@@ -225,7 +234,6 @@ void wmap_update_artifact_selection(void)
 {
     s32 map_x;
     s32 map_y;
-    s32 table_index;
 
     map_x = D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC;
     map_y = D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0;
@@ -343,117 +351,109 @@ void wmap_update_artifact_selection(void)
     }
     else
     {
-        do
+        if ((D_8013922C & (PADRright | PADRleft)) != 0)
         {
-            if ((D_8013922C & (PADRright | PADRleft)) != 0)
-            {
-                s32 view_index;
+            func_8005FF88(-1);
+            D_8011CF18 = WMAP_SELECTION_SHOW_MAP;
+            D_8011CF50 = 1;
+            D_80182DDC = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS + 1] - 1;
+            D_800D9218 = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS];
+            func_8006D870(0);
+            D_8011D4FC = -1;
+            D_80182E24 = 0;
+            func_800652A8(WMAP_SOUND_CLOSE_ARTIFACTS, WMAP_SELECTION_VOLUME);
+            D_8011CF50 = 1;
+            D_801398C0 = 0;
+            D_8013922C = 0;
+        }
 
-                func_8005FF88(-1);
+        if ((D_8013922C & PADLright) != 0)
+        {
+            D_8011CF50 = 1;
+            D_801398C0 = 0;
+            D_8013922C = 0;
+            func_800652A8(WMAP_SOUND_TURN_RIGHT, WMAP_CAROUSEL_VOLUME);
+            g_wmap_carousel_turn_step = 1;
+            g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
+            func_8005CA3C(1, D_80139838);
+        }
+
+        if ((D_8013922C & PADLleft) != 0)
+        {
+            D_8011CF50 = 1;
+            D_801398C0 = 0;
+            D_8013922C = 0;
+            func_800652A8(WMAP_SOUND_TURN_LEFT, WMAP_CAROUSEL_VOLUME);
+            g_wmap_carousel_turn_step = -1;
+            g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
+            func_8005CA3C(0, D_80139838);
+        }
+
+        if ((D_8013922C & PADRdown) != 0)
+        {
+            s32 artifact_id;
+
+            artifact_id = func_8005D8FC();
+            D_8011D4FC = artifact_id;
+            D_8013B230 = 0;
+            if (artifact_id != -1)
+            {
+                D_80129550 = 1;
+                for (map_y = 0; map_y < WMAP_GRID_SIZE; map_y++)
+                {
+                    for (map_x = 0; map_x < WMAP_GRID_SIZE; map_x++)
+                    {
+                        D_80139290[map_x][map_y].placement_allowed = func_8005B8C8(map_x, map_y, D_8011D4FC);
+                        D_8011D108[map_x][map_y].state = 0;
+                    }
+                }
+
                 D_8011CF18 = WMAP_SELECTION_SHOW_MAP;
                 D_8011CF50 = 1;
-                view_index = D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS;
-                D_80182DDC = D_8005135C[view_index + 1] - 1;
-                D_800D9218 = D_8005135C[view_index];
+                D_801398C0 = 0;
+                D_8013922C = 0;
+                D_800D9168 = D_800CCBF4[D_8011D4FC];
+                D_800DCF0C = D_800CCBF4[D_8011D4FC + 1] - 1;
+                D_80182DDC = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS + 1] - 1;
+                D_800D9218 = D_8005135C[D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS];
                 func_8006D870(0);
-                D_8011D4FC = -1;
-                D_80182E24 = 0;
-                func_800652A8(WMAP_SOUND_CLOSE_ARTIFACTS, WMAP_SELECTION_VOLUME);
-                D_8011CF50 = 1;
-                D_801398C0 = 0;
-                D_8013922C = 0;
+                func_800A89DC(D_8011D4FC);
             }
+        }
 
-            if ((D_8013922C & PADLright) != 0)
+        if (D_8011CF18 == WMAP_SELECTION_ARTIFACTS)
+        {
+            s32* artifacts;
+            s32* artifact_slot;
+            s32 label_id;
+
+            artifacts = D_80139838;
+            artifact_slot = &artifacts[(D_801398F4 + 0x7FFF) % WMAP_ARTIFACT_SLOTS];
+            if (*artifact_slot != 0xFF)
             {
-                D_8011CF50 = 1;
-                D_801398C0 = 0;
-                D_8013922C = 0;
-                func_800652A8(WMAP_SOUND_TURN_RIGHT, WMAP_CAROUSEL_VOLUME);
-                g_wmap_carousel_turn_step = 1;
-                g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
-                func_8005CA3C(1, D_80139838);
-            }
-
-            if ((D_8013922C & PADLleft) != 0)
-            {
-                D_8011CF50 = 1;
-                D_801398C0 = 0;
-                D_8013922C = 0;
-                func_800652A8(WMAP_SOUND_TURN_LEFT, WMAP_CAROUSEL_VOLUME);
-                g_wmap_carousel_turn_step = -1;
-                g_wmap_carousel_turn_frames = WMAP_CAROUSEL_STEP_FRAMES;
-                func_8005CA3C(0, D_80139838);
-            }
-
-            if ((D_8013922C & PADRdown) != 0)
-            {
-                s32 artifact_id;
-
-                artifact_id = func_8005D8FC();
-                D_8011D4FC = artifact_id;
-                D_8013B230 = 0;
-                if (artifact_id != -1)
+                label_id = func_8005D8FC(artifact_slot);
+                if (label_id != -1)
                 {
-                    D_80129550 = 1;
-                    for (map_y = 0; map_y < WMAP_GRID_SIZE; map_y++)
-                    {
-                        for (map_x = 0; map_x < WMAP_GRID_SIZE; map_x++)
-                        {
-                            ((volatile WmapCell*)&D_80139290[map_x][map_y])->placement_allowed = func_8005B8C8(map_x, map_y, D_8011D4FC);
-                            D_8011D108[map_x][map_y].state = 0;
-                        }
-                    }
-
-                    D_8011CF18 = WMAP_SELECTION_SHOW_MAP;
-                    D_8011CF50 = 1;
-                    D_801398C0 = 0;
-                    D_8013922C = 0;
-                    D_800D9168 = D_800CCBF4[D_8011D4FC];
-                    D_800DCF0C = D_800CCBF4[D_8011D4FC + 1] - 1;
-                    table_index = D_800DCEEC + D_800DCEF0 * WMAP_VIEW_COLUMNS;
-                    D_80182DDC = D_8005135C[table_index + 1] - 1;
-                    D_800D9218 = D_8005135C[table_index];
-                    func_8006D870(0);
-                    func_800A89DC(D_8011D4FC);
+                    label_id += 0x40;
                 }
+                func_8005FF88(label_id);
             }
-
-            if (D_8011CF18 == WMAP_SELECTION_ARTIFACTS)
-            {
-                s32* artifacts;
-                s32* artifact_slot;
-                s32 label_id;
-
-                artifacts = D_80139838;
-                artifact_slot = &artifacts[(D_801398F4 + 0x7FFF) % WMAP_ARTIFACT_SLOTS];
-                if (*artifact_slot != 0xFF)
-                {
-                    label_id = func_8005D8FC(artifact_slot);
-                    if (label_id != -1)
-                    {
-                        label_id += 0x40;
-                    }
-                    func_8005FF88(label_id);
-                }
-            }
-        } while (0);
+        }
     }
 }
 
 /** @brief Slide and draw the artifact carousel, its icons, and their shadows. */
 void wmap_draw_artifact_carousel(void)
 {
-    SVECTOR position;
-    WmapScreenPosition screen;
-    s32 facing;
     MATRIX transform;
+    SVECTOR position;
+    s32 facing;
+    WmapScreenPosition screen;
     POLY_FT3* triangle;
     SPRT* sprite;
     POLY_FT4* shadow;
     WmapArtifactImage* image;
-    s32 face;
-    s32 slot;
+    s32 index;
     s32 draw_index;
     s32 packet_bytes;
 
@@ -492,27 +492,28 @@ void wmap_draw_artifact_carousel(void)
     SetTransMatrix(&transform);
 
     /* Cull the back of the carousel before committing each triangle packet. */
-    for (face = 0; face < WMAP_CAROUSEL_TRIANGLES; face++)
+    for (index = 0; index < WMAP_CAROUSEL_TRIANGLES; index++)
     {
         triangle = (POLY_FT3*)D_801398EC->packet_cursor;
-        gte_ldv3(&g_wmap_carousel_vertices[g_wmap_carousel_faces[face][0]], &g_wmap_carousel_vertices[g_wmap_carousel_faces[face][1]],
-                 &g_wmap_carousel_vertices[g_wmap_carousel_faces[face][2]]);
+        gte_ldv3(&g_wmap_carousel_vertices[g_wmap_carousel_faces[index * WMAP_TRIANGLE_VERTICES]],
+                 &g_wmap_carousel_vertices[g_wmap_carousel_faces[index * WMAP_TRIANGLE_VERTICES + 1]],
+                 &g_wmap_carousel_vertices[g_wmap_carousel_faces[index * WMAP_TRIANGLE_VERTICES + 2]]);
         gte_rtpt();
-        triangle->clut = g_wmap_carousel_textures[face].clut;
-        triangle->v0 = (u8)g_wmap_carousel_textures[face].v0;
-        triangle->u0 = (u8)g_wmap_carousel_textures[face].u0;
         SET_BGR0_PACKED(triangle, 0x24808080);
+        triangle->clut = g_wmap_carousel_textures[index * WMAP_TEXTURE_WORDS + WMAP_TEXTURE_CLUT];
+        triangle->u0 = g_wmap_carousel_textures[index * WMAP_TEXTURE_WORDS + WMAP_TEXTURE_U0];
+        triangle->v0 = g_wmap_carousel_textures[index * WMAP_TEXTURE_WORDS + WMAP_TEXTURE_V0];
         gte_stsxy3(&triangle->x0, &triangle->x1, &triangle->x2);
         gte_nclip();
-        triangle->u1 = (u8)g_wmap_carousel_textures[face].u1;
-        triangle->v1 = (u8)g_wmap_carousel_textures[face].v1;
+        triangle->u1 = g_wmap_carousel_textures[index * WMAP_TEXTURE_WORDS + WMAP_TEXTURE_U1];
+        triangle->v1 = g_wmap_carousel_textures[index * WMAP_TEXTURE_WORDS + WMAP_TEXTURE_V1];
         gte_stopz(&facing);
         if (facing > 0)
         {
             triangle->tag = 0x07000000;
             triangle->tpage = WMAP_CAROUSEL_TPAGE;
-            triangle->u2 = (u8)g_wmap_carousel_textures[face].u2;
-            triangle->v2 = (u8)g_wmap_carousel_textures[face].v2;
+            triangle->u2 = g_wmap_carousel_textures[index * WMAP_TEXTURE_WORDS + WMAP_TEXTURE_U2];
+            triangle->v2 = g_wmap_carousel_textures[index * WMAP_TEXTURE_WORDS + WMAP_TEXTURE_V2];
             addPrim(&D_801398EC->ordering_table[WMAP_CAROUSEL_OT], triangle);
             if (D_800D921C < WMAP_PACKET_LIMIT)
             {
@@ -526,29 +527,29 @@ void wmap_draw_artifact_carousel(void)
     for (draw_index = g_wmap_carousel_frame / WMAP_CAROUSEL_STEP_FRAMES + WMAP_ARTIFACT_SLOTS - 1;
          draw_index > g_wmap_carousel_frame / WMAP_CAROUSEL_STEP_FRAMES - 1; draw_index--)
     {
-        slot = (draw_index + WMAP_ARTIFACT_SLOTS) % WMAP_ARTIFACT_SLOTS;
-        if (D_80139838[slot] != WMAP_NO_ARTIFACT)
+        index = (draw_index + WMAP_ARTIFACT_SLOTS) % WMAP_ARTIFACT_SLOTS;
+        if (D_80139838[index] != WMAP_NO_ARTIFACT)
         {
             sprite = (SPRT*)D_801398EC->packet_cursor;
-            position.vx = g_wmap_artifact_positions[slot].x;
+            position.vx = g_wmap_artifact_positions[index].x;
             position.vy = 0;
-            position.vz = g_wmap_artifact_positions[slot].y;
+            position.vz = g_wmap_artifact_positions[index].y;
             gte_ldv0(&position);
             gte_rtps();
             SET_BGR0_PACKED(sprite, 0x80808080);
-            image = &g_wmap_artifact_images[D_80139838[slot]];
+            image = &g_wmap_artifact_images[D_80139838[index]];
             gte_stsxy(&screen.packed);
             sprite->x0 = screen.packed + image->carousel_x;
             sprite->y0 = screen.point.y + image->carousel_y;
             sprite->w = image->width;
             sprite->h = image->height;
             sprite->u0 = image->u;
+            sprite->v0 = image->v;
             sprite->clut = WMAP_ARTIFACT_CLUT;
             setlen(sprite, 4);
             setcode(sprite, 0x66);
-            sprite->v0 = image->v;
-            packet_bytes = D_800D921C;
             addPrim(&D_801398EC->ordering_table[WMAP_ARTIFACT_OT], sprite);
+            packet_bytes = D_800D921C;
             if (packet_bytes < WMAP_PACKET_LIMIT)
             {
                 D_800D921C = packet_bytes + sizeof(SPRT);
@@ -572,10 +573,10 @@ void wmap_draw_artifact_carousel(void)
             shadow->u2 = image->u;
             shadow->v2 = image->v + image->height;
             shadow->u3 = image->u + image->width;
+            shadow->v3 = image->v + image->height;
             shadow->clut = WMAP_ARTIFACT_SHADOW_CLUT;
             setlen(shadow, 9);
             setcode(shadow, 0x2E);
-            shadow->v3 = image->v + image->height;
             shadow->tpage = WMAP_ARTIFACT_TPAGE;
             if (D_801ADAFC != 0)
             {
