@@ -995,6 +995,7 @@ s32 wmap_load_land_layout(void)
  */
 s32 wmap_next_land_event(void)
 {
+    s32* save_words;
     s32 bank;
     s32 mask;
     WmapSave* flags;
@@ -1002,8 +1003,9 @@ s32 wmap_next_land_event(void)
     g_wmap_event_cursor++;
     while (g_wmap_event_cursor < WMAP_LAND_COUNT)
     {
+        save_words = g_saved_game.words;
         bank = g_wmap_event_cursor / 32;
-        flags = (WmapSave*)(g_saved_game.words + bank);
+        flags = (WmapSave*)(save_words + bank);
         mask = 1 << (g_wmap_event_cursor - (bank << 5));
         if (flags->events[0] & mask)
         {

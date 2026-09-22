@@ -12354,17 +12354,18 @@ extern void func_800C018C__for_func_800C0150(void) __asm__("func_800C018C");
     }
 }
 
+/**
+ * @brief Prepare sequence coordinates for the selected world-map entry and advance the step.
+ */
 void func_800C018C(void)
 {
-/* Partial WMAP decompilation: 96.000000% (gcc280_g0). */
-
 typedef struct
 {
     s32 field_00;
     s32 field_04;
 } WmapAlignedPair;
 
-extern s32 D_80054A18[];
+extern const s32 D_80054A18[];
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
 extern s32 D_801398D0;

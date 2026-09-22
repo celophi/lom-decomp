@@ -293,8 +293,6 @@ extern s32 D_801B2DA4;
 /** @brief Draw and brighten the rotating effect while reducing its scale. */
 void func_800A0F84(void)
 {
-/* Partial WMAP decompilation: 96.750000% (gcc280_g0). */
-
 extern void *D_8011CF28;
 extern s32 D_80139264;
 extern VECTOR D_80182DC0;
@@ -313,10 +311,10 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
     func_8006CFA8(&D_80182DC0, &D_801B2670);
     func_800675F0(D_8011CF28, D_80139264 & 3, 4, 54, 0x78C0, 0x1001, D_801B25D8, 0, 0, D_80139234 / 16);
     scale = D_80139234 - 32;
-    D_80139264++;
     D_80139234 = scale;
     intensity = D_801B25D8 + 8;
     D_801B25D8 = intensity;
+    D_80139264++;
     if (intensity >= 98)
     {
         D_801B25D8 = 97;
@@ -552,55 +550,48 @@ extern void func_800A2FC8__for_func_800A146C(void) __asm__("func_800A2FC8");
     func_800A2FC8__for_func_800A146C();
 }
 
-/** @brief World-map step handler: configure a model descriptor and clear two entry tables, then advance.
- *  @note Best match ~88% (gcc280_g0); residual is loop induction-variable register coloring. */
+/** @brief World-map step handler: configure a model descriptor and clear two entry tables, then advance. */
 void func_800A1538(void)
 {
-/* Partial WMAP decompilation: 88.215680% (gcc280_g0). */
+typedef struct
+{
+    s32 field_00;
+    void *field_04;
+} WmapSlot8;
 
-extern void func_800A31D0__for_func_800A1538(void) __asm__("func_800A31D0");
-extern u8 *D_80139280;
-extern u8 D_80139988;
-extern u8 D_801AFBD0;
-extern u8 D_8011D538;
+typedef struct
+{
+    s16 field_00;
+    u8 pad_02[0x12];
+} WmapSlot14;
+
+extern s32 *D_80139280;
+extern WmapSlot8 D_80139988[];
+extern WmapSlot14 D_801AFBD0[];
+extern u8 D_8011D538[];
 extern s32 D_801B2DC8;
 extern s32 D_801B2DCC;
+extern void func_800A31D0__for_func_800A1538(void) __asm__("func_800A31D0");
 
-    u8 *pa;
-    u8 *pb;
-    u8 *p;
     s32 i;
-    s32 off_a;
-    s32 off_b;
 
-    p = D_80139280;
-    *(s32 *)(p + 0x80) = 5;
-    *(s32 *)(p + 0x84) = 0x20;
-    *(s32 *)(p + 0x8C) = 8;
-    *(s32 *)(p + 0x94) = 0x8C;
-    *(s32 *)(p + 0x98) = 0x15;
-    *(s32 *)(p + 0x7C) = 1;
-    *(s32 *)(p + 0x88) = 0;
-    *(s32 *)(p + 0x90) = 0;
-    *(s32 *)(p + 0x9C) = 1;
-    *(s32 *)(p + 0xA0) = 0x1F40;
-
-    pa = &D_80139988;
-    pb = &D_801AFBD0;
-    i = 0;
-    off_a = 0x480;
-    off_b = 0xAF0;
-    do
+    D_80139280[0x1F] = 1;
+    D_80139280[0x20] = 5;
+    D_80139280[0x21] = 0x20;
+    D_80139280[0x22] = 0;
+    D_80139280[0x23] = 8;
+    D_80139280[0x24] = 0;
+    D_80139280[0x25] = 0x8C;
+    D_80139280[0x26] = 0x15;
+    D_80139280[0x27] = 1;
+    D_80139280[0x28] = 0x1F40;
+    for (i = 0; i < 10; i++)
     {
-        *(s16 *)(pb + off_b) = 0;
-        *(s32 *)(pa + off_a + 4) = (s32)&D_8011D538;
-        off_a += 8;
-        off_b += 0x14;
-        i += 1;
-    } while (i < 0xA);
-
-    D_801B2DCC = 0x50;
-    D_801B2DC8 += 1;
+        D_801AFBD0[i + 140].field_00 = 0;
+        D_80139988[i + 144].field_04 = D_8011D538;
+    }
+    D_801B2DCC = 80;
+    D_801B2DC8++;
     func_800A31D0__for_func_800A1538();
 }
 
@@ -1673,26 +1664,17 @@ extern s32 D_801B2D88;
 
 /**
  * @brief Reset the world-map cursor state and bump the transition counter.
- * @note Best match ~68.46% (gcc280_g0); residual is a sched2 lui-ordering tie
- *       (permuter territory).
  */
 void func_800A25B0(void)
 {
-/* Partial WMAP decompilation: 68.461540% (gcc280_g0). */
-
-extern s32 D_80182D48;
-extern s16 D_801398C8;
+extern s32 D_80182D48[];
+extern s16 D_801398C8[];
 extern s32 D_801B2D88;
 
-    s32 *a;
-    s16 *b;
-
-    a = &D_80182D48;
-    a[1] = 0;
-    a[0] = 0;
-    b = &D_801398C8;
-    b[1] = 0;
-    b[0] = 0;
+    D_80182D48[1] = 0;
+    D_80182D48[0] = 0;
+    D_801398C8[1] = 0;
+    D_801398C8[0] = 0;
     D_801B2D88 += 1;
 }
 

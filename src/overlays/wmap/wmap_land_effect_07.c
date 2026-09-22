@@ -8,10 +8,7 @@
 
 /** @brief Draw two oscillating effect layers and update their intensity. */
 void func_8007EC70(void)
-
 {
-/* Partial WMAP decompilation: 87.198110% (gcc280_g0). */
-
 extern s8 D_80051B4C[];
 extern u8 D_800DCF18[];
 extern VECTOR D_80182DC0;
@@ -22,24 +19,24 @@ extern SVECTOR D_801B2498;
 extern s32 D_801B24B4;
 extern s32 D_801B2790;
 extern s32 D_801B2794;
-
-    s32 first_frame;
-    SVECTOR *rotation;
-    s32 second_frame;
+    VECTOR *position;
+    SVECTOR *first_rotation;
+    SVECTOR *second_rotation;
+    s32 frame;
     s32 intensity;
     s32 remaining;
-
     PushMatrix();
-    rotation = &D_801B2490;
-    first_frame = (s32) (D_80051B4C[D_801B24B4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
-    func_8006CD98(D_800DCF18, first_frame, 4, 0x35, 0x7800, 0, D_801B2468);
-    rotation->vz = (u16) (rotation->vz + 0x14);
-    rotation = &D_801B2498;
-    second_frame = (s32) (D_80051B4C[D_80182DE4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
-    func_8006CD98(D_800DCF18, second_frame, 4, 0x35, 0x7800, 0, D_801B2468);
-    rotation->vz = (u16) (rotation->vz + 0x30);
+    position = &D_80182DC0;
+    frame = (s32)(D_80051B4C[D_801B24B4] + 0x80) >> 5;
+    first_rotation = &D_801B2490;
+    func_8006CFA8(position, first_rotation);
+    func_8006CD98(D_800DCF18, frame, 4, 0x35, 0x7800, 0, D_801B2468);
+    frame = (s32)(D_80051B4C[D_80182DE4] + 0x80) >> 5;
+    first_rotation->vz = (u16)(first_rotation->vz + 0x14);
+    second_rotation = &D_801B2498;
+    func_8006CFA8(position, second_rotation);
+    func_8006CD98(D_800DCF18, frame, 4, 0x35, 0x7800, 0, D_801B2468);
+    second_rotation->vz = (u16)(second_rotation->vz + 0x30);
     PopMatrix();
     D_801B24B4 = (D_801B24B4 + 8) & 0xFF;
     D_80182DE4 = (D_80182DE4 + 4) & 0xFF;
@@ -59,10 +56,7 @@ extern s32 D_801B2794;
 
 /** @brief Draw two oscillating effect layers and update their intensity. */
 void func_8007EE18(void)
-
 {
-/* Partial WMAP decompilation: 86.951920% (gcc280_g0). */
-
 extern s8 D_80051B4C[];
 extern u8 D_800DCF18[];
 extern VECTOR D_80182DC0;
@@ -73,24 +67,24 @@ extern SVECTOR D_801B2498;
 extern s32 D_801B24B4;
 extern s32 D_801B2790;
 extern s32 D_801B2794;
-
-    s32 first_frame;
-    SVECTOR *rotation;
-    s32 second_frame;
+    VECTOR *position;
+    SVECTOR *first_rotation;
+    SVECTOR *second_rotation;
+    s32 frame;
     s32 intensity;
     s32 remaining;
-
     PushMatrix();
-    rotation = &D_801B2490;
-    first_frame = (s32) (D_80051B4C[D_801B24B4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
-    func_8006CD98(D_800DCF18, first_frame, 4, 0x35, 0x7800, 0, D_801B2468);
-    rotation->vz = (u16) (rotation->vz + 0x14);
-    rotation = &D_801B2498;
-    second_frame = (s32) (D_80051B4C[D_80182DE4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
-    func_8006CD98(D_800DCF18, second_frame, 4, 0x35, 0x7800, 0, D_801B2468);
-    rotation->vz = (u16) (rotation->vz + 0x30);
+    position = &D_80182DC0;
+    frame = (s32)(D_80051B4C[D_801B24B4] + 0x80) >> 5;
+    first_rotation = &D_801B2490;
+    func_8006CFA8(position, first_rotation);
+    func_8006CD98(D_800DCF18, frame, 4, 0x35, 0x7800, 0, D_801B2468);
+    frame = (s32)(D_80051B4C[D_80182DE4] + 0x80) >> 5;
+    first_rotation->vz = (u16)(first_rotation->vz + 0x14);
+    second_rotation = &D_801B2498;
+    func_8006CFA8(position, second_rotation);
+    func_8006CD98(D_800DCF18, frame, 4, 0x35, 0x7800, 0, D_801B2468);
+    second_rotation->vz = (u16)(second_rotation->vz + 0x30);
     PopMatrix();
     D_801B24B4 = (D_801B24B4 + 8) & 0xFF;
     D_80182DE4 = (D_80182DE4 + 4) & 0xFF;
@@ -762,19 +756,23 @@ extern s32 D_801B2788;
     }
 }
 
+/** @brief Update the selected world-map land record and advance the sequence step. */
 void func_8007FA78(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
-
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+typedef struct
+{
+    u32 value;
+    u8 unknown_4[36];
+} WmapValueRecord;
+extern WmapValueRecord D_80139290[][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B2788;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2788 += 1;
 }
 
@@ -1407,13 +1405,21 @@ extern s32 D_801B27B8;
 extern s32 D_801B27BC;
 
     s32 pos;
+    s32 x_bits;
+    s32 y;
 
-    pos = (D_8011CF4C & 0xFFFF0000) | ((D_8011CF4C - 0xA) & 0xFFFF);
-    pos = (pos & 0xFFFF) | (((pos >> 16) - 0xA) << 16);
+    pos = D_8011CF4C;
+    x_bits = pos - 0xA;
+    pos &= 0xFFFF0000;
+    x_bits &= 0xFFFF;
+    pos |= x_bits;
+    y = pos >> 16;
+    pos &= 0xFFFF;
+    pos |= (y - 0xA) << 16;
     func_8006CC4C(D_800D9370, D_801399B8);
-    func_80066F9C(D_800D9370, pos, 0x13, 0x1, 0);
-    func_8006CC4C(&D_800D9370[0x2C], &D_801399B8[0x8]);
-    func_80066F9C(&D_800D9370[0x2C], pos, 0x13, 0x1, 0);
+    func_80066F9C(D_800D9370, pos, 0x13, 1, 0);
+    func_8006CC4C(&D_800D9370[0x2C], &D_801399B8[8]);
+    func_80066F9C(&D_800D9370[0x2C], pos, 0x13, 1, 0);
     if (--D_801B27BC == 0)
     {
         D_801B27B8 += 1;
@@ -1512,17 +1518,9 @@ typedef struct
     func_80080614__for_func_8008052C();
 }
 
-/**
- * @brief Draw a world-map actor pair at an offset copy of the cursor position.
- * @note Repacks the cursor coordinate word, nudging each 16-bit half, then
- *       renders the primary actor and its shadow twin.
- * @note Best match ~88.6% (gcc280_g0); residual is a callee-saved register
- *       allocation tie (pos vs base pointers) shared with func_800803A0.
- */
+/** @brief Draw a world-map actor pair at an offset copy of the cursor position. */
 void func_80080614(void)
 {
-/* Partial WMAP decompilation: 88.561400% (gcc280_g0). */
-
 extern u8 D_800D93C8[];
 extern u8 D_801399C8[];
 extern s32 D_8011CF4C;
@@ -1530,13 +1528,21 @@ extern s32 D_801B27C0;
 extern s32 D_801B27C4;
 
     s32 pos;
+    s32 x_bits;
+    s32 y;
 
-    pos = (D_8011CF4C & 0xFFFF0000) | ((D_8011CF4C + 0x2) & 0xFFFF);
-    pos = (pos & 0xFFFF) | (((pos >> 16) - 0x1C) << 16);
+    pos = D_8011CF4C;
+    x_bits = pos + 2;
+    pos &= 0xFFFF0000;
+    x_bits &= 0xFFFF;
+    pos |= x_bits;
+    y = pos >> 16;
+    pos &= 0xFFFF;
+    pos |= (y - 0x1C) << 16;
     func_8006CC4C(D_800D93C8, D_801399C8);
-    func_80066F9C(D_800D93C8, pos, 0x13, 0x1, 0);
-    func_8006CC4C(&D_800D93C8[0x2C], &D_801399C8[0x8]);
-    func_80066F9C(&D_800D93C8[0x2C], pos, 0x13, 0x1, 0);
+    func_80066F9C(D_800D93C8, pos, 0x13, 1, 0);
+    func_8006CC4C(&D_800D93C8[0x2C], &D_801399C8[8]);
+    func_80066F9C(&D_800D93C8[0x2C], pos, 0x13, 1, 0);
     if (--D_801B27C4 == 0)
     {
         D_801B27C0 += 1;
@@ -1635,17 +1641,9 @@ typedef struct
     func_80080888__for_func_800807A0();
 }
 
-/**
- * @brief Draw a world-map actor pair at an offset copy of the cursor position.
- * @note Repacks the cursor coordinate word, nudging each 16-bit half, then
- *       renders the primary actor and its shadow twin.
- * @note Best match ~88.6% (gcc280_g0); residual is a callee-saved register
- *       allocation tie (pos vs base pointers) shared with func_800803A0.
- */
+/** @brief Draw a world-map actor pair at an offset copy of the cursor position. */
 void func_80080888(void)
 {
-/* Partial WMAP decompilation: 88.561400% (gcc280_g0). */
-
 extern u8 D_800D9420[];
 extern u8 D_801399D8[];
 extern s32 D_8011CF4C;
@@ -1653,13 +1651,21 @@ extern s32 D_801B27C8;
 extern s32 D_801B27CC;
 
     s32 pos;
+    s32 x_bits;
+    s32 y;
 
-    pos = (D_8011CF4C & 0xFFFF0000) | ((D_8011CF4C + 0x14) & 0xFFFF);
-    pos = (pos & 0xFFFF) | (((pos >> 16) - 0xF) << 16);
+    pos = D_8011CF4C;
+    x_bits = pos + 0x14;
+    pos &= 0xFFFF0000;
+    x_bits &= 0xFFFF;
+    pos |= x_bits;
+    y = pos >> 16;
+    pos &= 0xFFFF;
+    pos |= (y - 0xF) << 16;
     func_8006CC4C(D_800D9420, D_801399D8);
-    func_80066F9C(D_800D9420, pos, 0x13, 0x1, 0);
-    func_8006CC4C(&D_800D9420[0x2C], &D_801399D8[0x8]);
-    func_80066F9C(&D_800D9420[0x2C], pos, 0x13, 0x1, 0);
+    func_80066F9C(D_800D9420, pos, 0x13, 1, 0);
+    func_8006CC4C(&D_800D9420[0x2C], &D_801399D8[8]);
+    func_80066F9C(&D_800D9420[0x2C], pos, 0x13, 1, 0);
     if (--D_801B27CC == 0)
     {
         D_801B27C8 += 1;
@@ -1758,17 +1764,9 @@ typedef struct
     func_80080AFC__for_func_80080A14();
 }
 
-/**
- * @brief Draw a world-map actor pair at an offset copy of the cursor position.
- * @note Repacks the cursor coordinate word, nudging each 16-bit half, then
- *       renders the primary actor and its shadow twin.
- * @note Best match ~88.6% (gcc280_g0); residual is a callee-saved register
- *       allocation tie (pos vs base pointers) shared with func_800803A0.
- */
+/** @brief Draw a world-map actor pair at an offset copy of the cursor position. */
 void func_80080AFC(void)
 {
-/* Partial WMAP decompilation: 88.561400% (gcc280_g0). */
-
 extern u8 D_800D9478[];
 extern u8 D_801399E8[];
 extern s32 D_8011CF4C;
@@ -1776,13 +1774,21 @@ extern s32 D_801B27D0;
 extern s32 D_801B27D4;
 
     s32 pos;
+    s32 x_bits;
+    s32 y;
 
-    pos = (D_8011CF4C & 0xFFFF0000) | ((D_8011CF4C + 0x8) & 0xFFFF);
-    pos = (pos & 0xFFFF) | (((pos >> 16) - 0x16) << 16);
+    pos = D_8011CF4C;
+    x_bits = pos + 0x8;
+    pos &= 0xFFFF0000;
+    x_bits &= 0xFFFF;
+    pos |= x_bits;
+    y = pos >> 16;
+    pos &= 0xFFFF;
+    pos |= (y - 0x16) << 16;
     func_8006CC4C(D_800D9478, D_801399E8);
-    func_80066F9C(D_800D9478, pos, 0x13, 0x1, 0);
-    func_8006CC4C(&D_800D9478[0x2C], &D_801399E8[0x8]);
-    func_80066F9C(&D_800D9478[0x2C], pos, 0x13, 0x1, 0);
+    func_80066F9C(D_800D9478, pos, 0x13, 1, 0);
+    func_8006CC4C(&D_800D9478[0x2C], &D_801399E8[8]);
+    func_80066F9C(&D_800D9478[0x2C], pos, 0x13, 1, 0);
     if (--D_801B27D4 == 0)
     {
         D_801B27D0 += 1;
@@ -1954,38 +1960,38 @@ extern void (*D_800D56D8[])(void);
     D_801B27E4 = 1;
 }
 
-/**
- * @brief World-map step handler: seed a 6-entry table and advance the step.
- * @note Best match ~84.86% (gcc280_g0); residual is loop induction-variable
- *       register allocation (permuter territory).
- */
+/** @brief Seed six world-map effect slots and advance the sequence step. */
 void func_80080E54(void)
 {
-/* Partial WMAP decompilation: 84.857140% (gcc280_g0). */
+typedef struct
+{
+    s32 field_00;
+    void *field_04;
+} WmapSlot8;
 
-extern u8 D_80139988[];
-extern void *D_8011F538;
-extern s16 D_801AFBD0;
+typedef struct
+{
+    s16 field_00;
+    u8 pad_02[0x12];
+} WmapSlot14;
+
+extern WmapSlot8 D_80139988[];
+extern u8 D_8011F538[];
+extern WmapSlot14 D_801AFBD0[];
 extern s32 D_801B0FD0;
 extern s32 D_80139980;
 extern s32 D_801B27E0;
 extern s32 D_801B27E4;
 extern void func_80080EE0__for_func_80080E54(void) __asm__("func_80080EE0");
 
-    s16 *p;
-    s32 off;
     s32 i;
 
     D_801B0FD0 = 0;
     D_80139980 = 0x7F;
-    p = &D_801AFBD0;
-    i = 0;
-    for (off = 0x660; i < 6; off += 8)
+    for (i = 0; i < 6; i++)
     {
-        *p = 0;
-        i += 1;
-        *(void **)((u8 *)&D_80139988 + off + 4) = &D_8011F538;
-        p += 0xA;
+        D_801AFBD0[i].field_00 = 0;
+        D_80139988[i + 204].field_04 = D_8011F538;
     }
     D_801B27E4 = 0x20;
     D_801B27E0 += 1;
