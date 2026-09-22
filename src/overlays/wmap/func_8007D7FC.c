@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 67.098595% (gcc280_g0). */
 #include "common.h"
 
@@ -14,7 +15,6 @@ typedef s32 M2C_UNK32;
 #include "sdk/gte_dmpsx_compat.h"
 
 M2C_UNK func_80066F9C(void *, s32, M2C_UNK, M2C_UNK, s32); /* extern */
-M2C_UNK func_8006CC4C(void *, void *);              /* extern */
 extern u8 D_800D9268;
 extern s32 D_80139234;
 extern s32 D_8013923C;

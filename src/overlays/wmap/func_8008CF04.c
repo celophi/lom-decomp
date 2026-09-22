@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 extern u8 D_80139898[];
@@ -6,8 +7,6 @@ extern s32 D_801B25D8;
 extern s32 D_8011CF2C;
 extern s32 D_801B2A40;
 extern s32 D_801B2A44;
-extern void func_8006CFA8(void *arg0, void *arg1);
-extern void func_8006CD98(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6);
 
 /**
  * @brief World-map step handler: clamp a fade level, draw a sprite, and expire the step.

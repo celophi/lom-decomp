@@ -1,3 +1,4 @@
+#include "wmap_effect_backdrop.h"
 /* Partial WMAP decompilation: 93.723404% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgte.h"
@@ -19,8 +20,6 @@ extern WmapTransform D_80139950;
 extern SVECTOR D_80139278;
 extern VECTOR D_80182DC0;
 extern s16 D_800D928A;
-extern void func_8006D8F0(s32);
-extern void func_8006D870(s32);
 extern s32 D_800DBE70;
 extern s32 D_800DCEEC;
 extern s32 D_800DCEF0;

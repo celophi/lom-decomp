@@ -1,3 +1,4 @@
+#include "wmap_effect_resources.h"
 #include "common.h"
 #include "cdrom.h"
 
@@ -8,8 +9,6 @@ typedef struct
 } WmapTransform;
 
 extern void func_8005FF88(s32);
-extern void func_800A8AA8(s32);
-extern void func_800A8AF0(s32);
 extern s32 D_800DCEC0;
 extern WmapTransform D_800DCEC8;
 extern s32 D_8011CF50;

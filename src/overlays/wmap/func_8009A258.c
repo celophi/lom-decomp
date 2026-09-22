@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 /** @brief World-map actor record reset when this step spawns it. */
@@ -40,7 +41,6 @@ extern s32 D_801B2C54;
 extern s32 D_801B2C58;
 extern void func_800651B4(void *arg0);
 extern void func_800999D0(void);
-extern void func_8006CBD8(void (*callback)(void));
 extern void func_8009A328(void);
 
 /** @brief World-map step: reset the actor and its slot, register a callback, advance. */

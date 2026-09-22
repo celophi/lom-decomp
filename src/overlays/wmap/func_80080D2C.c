@@ -1,6 +1,6 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
-extern void func_8006CFE4(s32, s32, s32, s32, s32, s32);
 extern u8 D_800DA448[];
 extern s32 *D_80139280;
 extern u8 D_80139CC8[];

@@ -1,10 +1,10 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 extern s32 D_801ADAE0;
 extern s32 D_801B278C;
 extern s32 D_801B2788;
 extern void func_8008049C(void);
-extern void func_8006CAC0(void (*callback)(void));
 
 /**
  * @brief Register a world-map step callback and schedule its wait timer.

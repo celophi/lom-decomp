@@ -1,3 +1,5 @@
+#include "wmap_sequence_runtime.h"
+#include "wmap_effect_resources.h"
 #include "common.h"
 #include "cdrom.h"
 
@@ -19,15 +21,12 @@ extern s32 D_800DCEC0;
 extern s32 D_801B2C48;
 extern u8 D_8011D538[];
 extern void func_8005FF88(s32);
-extern void func_800A8AA8(s32);
-extern void func_800A8AF0(s32);
 extern s32 D_801398D0;
 extern s32 D_8013B208;
 extern s32 D_8013B288;
 extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern s32 D_801B2C54;
-extern s32 func_8006D0F0(s32, s32 *, s32 *);
 extern void func_8009ABB0(void);
 
 /** @brief Save the projection state and set the next effect's map-relative position. */

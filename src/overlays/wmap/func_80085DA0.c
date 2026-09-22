@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 extern s32 D_801ADAF4;
@@ -5,7 +6,6 @@ extern s32 D_801B28B8;
 extern s32 D_801B28BC;
 extern void func_800868E0(void);
 extern void func_8008600C(void);
-extern void func_8006CAC0(void (*fn)(void));
 extern void func_8006683C(s32 arg);
 
 /** @brief Register world-map callbacks, seed a mode value, and advance step counters. */

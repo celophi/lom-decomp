@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -8,8 +9,6 @@ extern SVECTOR D_801B2498;
 extern s32 D_801B2468;
 extern s32 D_801B2418;
 extern s32 D_801B241C;
-extern void func_8006CFA8(VECTOR *, SVECTOR *);
-extern void func_8006CD98(void *, s32, s32, s32, s32, s32, s32);
 
 /** @brief Draw and fade two rotating layers, then advance their shared countdown. */
 void func_8006DEFC(void)

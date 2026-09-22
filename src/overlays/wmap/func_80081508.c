@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 /** @brief World-map actor configuration. */
@@ -45,7 +46,6 @@ extern s32 D_8011CF74;
 extern s32 D_80139284;
 extern s32 D_801B2850;
 extern s32 D_801B2854;
-extern void func_8006D014(void *, void *, s32, s32, s32, s32, s32);
 
 /** @brief Advance spaced effect actors and copy their trailing samples. */
 void func_80081508(void)

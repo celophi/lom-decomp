@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "cdrom.h"
 
@@ -25,7 +26,6 @@ extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern s32 D_801B2F90;
 extern void func_80064F64(s32);
-extern s32 func_8006D0F0(s32, s32 *, s32 *);
 extern void func_800B2110(void);
 
 /** @brief Queue effect resources and establish the map-relative effect position. */

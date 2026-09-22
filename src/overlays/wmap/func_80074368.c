@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 94.930070% (gcc280_g0). */
 #include "common.h"
 
@@ -45,7 +46,6 @@ extern WmapMotion D_801AFBD0[];
 extern s32 D_800D922C;
 extern s32 D_801B0FD0;
 extern s32 rand(void);
-extern void func_8006CC4C(void *, void *);
 extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Project active particles and initialize the first available slot. */

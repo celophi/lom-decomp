@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 /** @brief World-map actor configuration. */
@@ -30,7 +31,6 @@ typedef struct
 } WmapAuxState;
 
 extern void func_800591A8(s32);
-extern void func_8006CBD8(void (*callback)(void));
 extern void func_800A72B8(void);
 extern WmapConfigA D_800DBE3C;
 extern u8 D_8011D538[];

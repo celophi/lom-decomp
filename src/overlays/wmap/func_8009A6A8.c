@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 /** @brief First word of a 40-byte world-map cell. */
@@ -21,7 +22,6 @@ extern s32 D_801398AC;
 extern s32 D_800DCED8;
 extern s32 D_800DCEE4;
 extern s32 D_801B2C4C;
-extern void func_8006CBD8(void (*callback)(void));
 extern void func_80099B50(void);
 extern void func_8009A75C(void);
 

@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 99.365080% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgte.h"
@@ -8,7 +9,6 @@ extern SVECTOR D_801B24A0;
 extern s32 D_801B25D0;
 extern s32 D_801B25D4;
 extern s32 D_801B25D8;
-extern void func_8006CD98(void *, s32, s32, s32, s32, s32, s32);
 
 /** @brief Draw the rotating effect, raise its intensity, and advance its countdown. */
 void func_80074C2C(void)

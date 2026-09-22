@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 /** @brief Four-word world-map projection state. */
@@ -21,7 +22,6 @@ extern WmapTransform D_80139950;
 extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern s32 D_801B2E78;
-extern void func_8006D0F0(s32, s32 *, s32 *);
 extern void func_800AB8E0(void);
 
 /** @brief Set the effect resources and map-relative position, then advance. */

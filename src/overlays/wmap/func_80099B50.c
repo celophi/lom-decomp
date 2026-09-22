@@ -1,4 +1,5 @@
-/* Partial WMAP decompilation: 78.951220% (gcc280_g0). */
+#include "wmap_sequence_runtime.h"
+/* Partial WMAP decompilation: 82.702440% (gcc280_g0). */
 #include "common.h"
 
 typedef s32 M2C_UNK;
@@ -9,7 +10,6 @@ typedef s32 M2C_UNK32;
 #define M2C_UNALIGNED32(expr) (expr)
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
-M2C_UNK func_8006CBD8(void *, s32 *, s32, s32);  /* extern */
 extern s32 D_800D9164;
 extern s32 D_800DCED8;
 extern s32 D_800DCEE4;
@@ -199,6 +199,6 @@ block_25:
         D_8019D240 = var_v0_6;
         var_a0_3 = &func_80099F98;
     }
-    func_8006CBD8(var_a0_3, var_a1, var_a2, var_a3);
+    func_8006CBD8(var_a0_3);
     return 0;
 }

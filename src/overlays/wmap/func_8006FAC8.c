@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
@@ -6,8 +7,6 @@ extern u8 D_800D9344[];
 extern u8 D_801399B0[];
 extern s32 D_801B2440;
 extern s32 D_801B2444;
-extern void func_8006CDDC(void);
-extern void func_8006CC4C(void *, void *);
 extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Draw the projected effect and advance after its countdown. */

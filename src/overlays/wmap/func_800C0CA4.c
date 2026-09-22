@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 93.679344% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgte.h"
@@ -23,7 +24,6 @@ typedef struct
 extern u8 D_800D9268[];
 extern u8 D_80139988[];
 extern u8 D_801AFBD0[];
-extern void func_8006CC4C(void*, void*);
 extern void func_80066F9C(void*, s32, s32, s32, s32);
 extern s32 rand(void);
 

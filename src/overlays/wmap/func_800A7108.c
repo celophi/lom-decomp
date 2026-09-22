@@ -1,8 +1,7 @@
+#include "wmap_sequence_runtime.h"
+#include "wmap_effect_backdrop.h"
 #include "common.h"
 
-extern void func_8006D8F0(s32 enable);
-extern void func_8006D870(s32 enable);
-extern void func_8006D0F0(s32 mode, void *out_x, void *out_y);
 extern s32 D_801398D0;
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;

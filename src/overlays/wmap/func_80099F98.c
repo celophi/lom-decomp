@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 99.894740% (gcc280_g0). */
 #include "common.h"
 
@@ -12,7 +13,6 @@ extern s32 D_8019D240;
 extern s16 D_801AFBD2;
 extern s32 func_80099E84(void);
 extern void func_80099754(s32);
-extern void func_8006CBD8(s32 (*)(void));
 
 /** @brief Wait for facing to settle, then select the next movement direction.
  * @return One while waiting, zero after scheduling movement.

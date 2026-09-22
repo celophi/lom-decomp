@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -12,7 +13,6 @@ extern s32 D_80182DF0;
 extern SVECTOR D_801B24A8;
 extern s32 D_801B2C90;
 extern s32 D_801B2C94;
-extern void func_8006CFA8(VECTOR *, SVECTOR *);
 extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 
 /** @brief Draw three rotating effect layers and update their fade and animation. */

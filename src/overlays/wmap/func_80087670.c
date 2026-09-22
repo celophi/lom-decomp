@@ -1,9 +1,9 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 extern s32 D_8013B20C;
 extern s32 D_801B2908;
 extern void func_800876AC(void);
-extern void func_8006CAC0(void (*step)(void));
 extern void func_80087744(void);
 extern void func_800876F0(void);
 

@@ -1,9 +1,8 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 87.198110% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgte.h"
 
-extern void func_8006CFA8(VECTOR *, SVECTOR *);
-extern void func_8006CD98(void *, s32, s32, s32, s32, s32, s32);
 extern s8 D_80051B4C[];
 extern u8 D_800DCF18[];
 extern VECTOR D_80182DC0;

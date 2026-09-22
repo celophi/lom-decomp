@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 /** @brief World-map actor configuration. */
@@ -23,7 +24,6 @@ extern u16 D_8011CF4C[2];
 extern s32 D_801B25DC;
 extern s32 D_801B25A8;
 extern s32 D_801B25AC;
-extern void func_8006CC4C(WmapConfigA *, u8 **);
 extern void func_80066F9C(WmapConfigA *, s32, s32, s32, s32);
 
 /** @brief Draw the actor, increase its scale, and advance when its timer expires. */

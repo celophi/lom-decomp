@@ -1,3 +1,5 @@
+#include "wmap_sequence_runtime.h"
+#include "wmap_effect_resources.h"
 #include "common.h"
 #include "cdrom.h"
 #include "sdk/libgte.h"
@@ -226,13 +228,6 @@ extern void func_80066F9C(void*, s32, s32, s32, s32);
 extern void func_8006683C(s32);
 extern void func_800651B4(void*);
 extern void func_800652A8(s32, s32);
-extern void func_8006CAC0(s32 (*callback)(s32));
-extern void func_8006D0F0(s32, s32*, s32*);
-extern void func_8006D190(void);
-extern void func_800A89DC(s32);
-extern void func_8006CC4C(void*, void*);
-extern void func_8006CFA8(void*, void*);
-extern void func_8006D150(void*);
 extern void func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 extern void func_800C1290(void);
 extern void func_800C1390(void);

@@ -1,8 +1,7 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
-extern void func_8006CFA8(void* a0, void* a1);
-extern void func_8006CD98(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6);
 extern u8 D_80182DC0[];
 extern u8 D_801B2490[];
 extern u8 D_801B2498[];

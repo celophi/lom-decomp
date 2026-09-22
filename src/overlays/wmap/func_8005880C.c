@@ -1,4 +1,5 @@
-/* Partial WMAP decompilation: 84.615166% (gcc280_g0). */
+#include "wmap_sequence_runtime.h"
+/* Partial WMAP decompilation: 85.668540% (gcc280_g0). */
 #include "common.h"
 
 typedef s32 M2C_UNK;
@@ -15,8 +16,6 @@ typedef s32 M2C_UNK32;
 s32 func_800582A0(s32, s32, s32);                   /* extern */
 M2C_UNK func_8005EB68(s32, s32, s32, s32, void *, void *); /* extern */
 M2C_UNK func_80066F9C(void *, s32, s32, s32, s32);  /* extern */
-M2C_UNK func_8006CAC0(void *, s32, s32, s32);    /* extern */
-M2C_UNK func_8006CC4C(void *, void *);              /* extern */
 M2C_UNK func_800584B4();                            /* static */
 extern u8 D_8004FD04;
 extern u8 D_800D9268;
@@ -127,7 +126,7 @@ void func_8005880C(void)
             {
                 if (*((temp_a3 * 0x28) + (temp_a2 * 0xF0) + (u8 *)&D_80139290) == 0x18)
                 {
-                    func_8006CAC0(&func_8009A420, (s32) M2C_FIELD(&D_80139950, s32 *, 4) >> 0x1F, temp_a2, temp_a3);
+                    func_8006CAC0(&func_8009A420);
                 }
                 else
                 {

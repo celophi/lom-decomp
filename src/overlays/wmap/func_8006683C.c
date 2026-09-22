@@ -1,8 +1,8 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 #include "sdk/libgte.h"
 
-extern void func_8006CBD8(s32 (*callback)(s32));
 extern s32 func_80065620(s32);
 extern CVECTOR D_8011D50C;
 extern s32 D_80139288;

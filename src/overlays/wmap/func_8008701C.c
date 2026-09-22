@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -7,8 +8,6 @@ extern s32 D_8011CF1C;
 extern s32 D_80182DF0;
 extern s32 D_801B2928;
 extern s32 D_801B292C;
-extern void func_8006CFA8(VECTOR *, SVECTOR *);
-extern void func_8006CD98(s32, s32, s32, s32, s32, s32, s32);
 
 /** @brief Draw the rotating effect, reduce its scale, and update the sequence timer. */
 void func_8008701C(void)

@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 87.020836% (gcc280_g0). */
 #include "common.h"
 
@@ -12,8 +13,6 @@ typedef s32 M2C_UNK32;
 void cdrom_queue_read(s32, void *);
 M2C_UNK cdrom_wait_queue_empty();                   /* extern */
 M2C_UNK func_80064F64(M2C_UNK);                     /* extern */
-M2C_UNK func_8006CAC0(void *);                   /* extern */
-M2C_UNK func_8006D0F0(M2C_UNK, void *, void *); /* extern */
 M2C_UNK func_800A61BC(M2C_UNK);                     /* extern */
 extern s32 D_800D9224;
 extern u8 D_800DCEF4;

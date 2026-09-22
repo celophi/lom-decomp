@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
@@ -50,7 +51,6 @@ extern WmapRenderState* D_801398EC;
 extern WmapProjection D_80139950;
 
 void func_8006534C(s32, s32);
-u32 func_8006CF40(CVECTOR color, s32 frame);
 
 /**
  * @brief Render the animated world-map quad set for one map cell.

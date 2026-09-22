@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 /** @brief First word of a 40-byte world-map cell. */
@@ -7,7 +8,6 @@ typedef struct
     u8 unknown_04[36];
 } WmapValueRecord;
 
-extern void func_8006CAC0(void (*callback)(void));
 extern s32 D_8011D4FC;
 extern s32 D_8011D510;
 extern s32 D_8011D530;

@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -57,7 +58,6 @@ extern s32 D_801B2764;
 
 extern void func_8007E510(void);
 extern s32 D_801B2738;
-extern void func_8006CD98(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6);
 extern s32 D_80139888[];
 extern SVECTOR D_8013B240;
 extern VECTOR D_8011CF60;

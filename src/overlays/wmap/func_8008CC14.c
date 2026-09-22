@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -7,8 +8,6 @@ extern s32 D_8011CF28;
 extern s32 D_80182DF4;
 extern s32 D_801B2A38;
 extern s32 D_801B2A3C;
-extern void func_8006CFA8(void* a0, void* a1);
-extern void func_8006CD98(s32 a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6);
 
 /**
  * @brief World-map step handler: decay a timer with a floor, draw the model, ramp a

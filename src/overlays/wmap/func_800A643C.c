@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 /** @brief Four-word world-map transform state. */
@@ -21,7 +22,6 @@ extern s32 D_8013B288;
 extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern s32 D_801B2E40;
-extern void func_8006D0F0(s32, s32 *, s32 *);
 extern void func_800A76F8(void);
 
 /** @brief Save the projection state and set the next effect's map-relative position. */

@@ -60,12 +60,13 @@ segments:
       - [0x4D75, .rodata, func_8006A2FC] # compiler-generated switch table
       - [0x4D95, .rodata, func_800A5DFC] # compiler-generated switch table
       - [0x4DA9, rodata, wmap_4DA9]
-      # Proposed translation units (analysis only; no source regrouping).
+      # Translation units: implemented groups and remaining consolidation candidates.
       # Ranges below are VRAM [start, end); names are provisional, not recovered filenames.
       # Confidence rates the grouping, not proof of an original compiler TU boundary.
       # Land-effect suffixes are func_800591A8 selector IDs, not identified place names.
       # Internal boundaries are noted before their containing existing YAML entry.
       # Evidence and open questions: docs/decompilation/wmap-tu-analysis.md
+      # Completed consolidation: docs/decompilation/wmap-tu-reorganization.md
 
       # TU candidate: wmap_map_display.c (medium confidence)
       # VRAM 0x80054A2C..0x800584B4 (end exclusive).
@@ -192,17 +193,12 @@ segments:
       - [0x13F71, c, func_80063BE0] # gcc280_g0, partial 85.911220%
       - [0x142C9, c, func_80063F38] # gcc280_g0, 100%
       - [0x14425, c, func_80064094] # gcc280_g0, 100%
-      # TU candidate: wmap_frame_render.c (medium confidence)
+      # TU: wmap_frame_render.c (frame submission and rendering consolidated)
       # VRAM 0x800641DC..0x80064F14 (end exclusive).
       # Frame submission and fullscreen/transition packets, including transformed panel geometry and fade
       # callbacks.
 
-      - [0x1456D, c, func_800641DC] # gcc280_g0, 100%
-      - [0x146BD, c, func_8006432C] # gcc280_g0, 100%
-      - [0x148DD, c, func_8006454C] # gcc280_g0, partial 75.426994%
-      - [0x14E89, c, func_80064AF8] # gcc280_g0, 100%
-      - [0x14F89, c, func_80064BF8] # gcc280_g0, 100%
-      - [0x150F5, c, func_80064D64] # gcc280_g0, partial 99.481480%
+      - [0x1456D, c, wmap_frame_render] # gcc280_g0
       # TU candidate: wmap_resource_support.c (low confidence)
       # VRAM 0x80064F14..0x8006544C (end exclusive).
       # Copy/TIM loading and upload helpers, sound lookup, small packet helper, and actor reset utilities
@@ -263,51 +259,17 @@ segments:
       - [0x1BFD5, c, func_8006BC44] # gcc280_g0, partial 66.979866%
       - [0x1C47D, c, func_8006C0EC] # gcc280_g0, partial 68.381390%
       - [0x1C7D9, c, func_8006C448] # gcc280_g0, partial 79.933334%
-      # TU candidate: wmap_sequence_runtime.c (medium confidence)
+      # TU: wmap_sequence_runtime.c (callback runtime consolidated)
       # VRAM 0x8006C754..0x8006D520 (end exclusive).
       # Two callback pools, animation stepping, common draw/transform adapters, and shared entry/exit
       # sequences. Helpers and common steps are interleaved.
 
-      - [0x1CAE5, c, func_8006C754] # gcc280_g0, 100%
-      - [0x1CBAD, c, func_8006C894] # gcc280_g0, 100%
-      - [0x1CC71, c, func_8006C8E0] # gcc280_g0, 100%
-      - [0x1CCC1, c, func_8006C930] # gcc280_g0, 100%
-      - [0x1CCF5, c, func_8006C964] # gcc280_g0
-      - [0x1CD15, c, func_8006C984] # gcc280_g0, 100%
-      - [0x1CD49, c, func_8006C9B8] # gcc280_g0, 100%
-      - [0x1CD85, c, func_8006C9F4] # gcc280_g0, 100%
-      - [0x1CDB9, c, func_8006CA28] # gcc280_g0, 100%
-      - [0x1CE51, c, func_8006CAC0] # gcc280_g0, 100%
-      - [0x1CEF1, c, func_8006CB60] # gcc280_g0, 100%
-      - [0x1CF69, c, func_8006CBD8] # gcc280_g0, 100%
-      - [0x1CFDD, c, func_8006CC4C] # gcc280_g0, partial 99.607840%
-      - [0x1D0A9, c, func_8006CD18] # gcc280_g0, 100%
-      - [0x1D129, c, func_8006CD98] # gcc280_g0, 100%
-      - [0x1D16D, c, func_8006CDDC] # gcc280_g0, 100%
-      - [0x1D2D1, c, func_8006CF40] # gcc280_g0, 100%
-      - [0x1D339, c, func_8006CFA8] # gcc280_g0, 100%
-      - [0x1D375, c, func_8006CFE4] # gcc280_g0, 100%
-      - [0x1D3A5, c, func_8006D014] # gcc280_g0, 100%
-      - [0x1D481, c, func_8006D0F0] # gcc280_g0, 100%
-      - [0x1D4E1, c, func_8006D150] # gcc280_g0, 100%
-      - [0x1D521, c, func_8006D190] # gcc280_g0, 100%
-      - [0x1D53D, c, func_8006D1AC] # gcc280_g0, 100%
-      - [0x1D5D5, c, func_8006D2BC] # gcc280_g0, 100%
-      - [0x1D6A1, c, func_8006D310] # gcc280_g0, 100%
-      - [0x1D6B9, c, func_8006D3A0] # gcc280_g0, 100%
-      - [0x1D749, c, func_8006D3B8] # gcc280_g0
-      - [0x1D775, c, func_8006D3E4] # gcc280_g0, 100%
-      - [0x1D7B1, c, func_8006D420] # gcc280_g0, 100%
-      - [0x1D841, c, func_8006D4B0] # gcc280_g0, 100%
-      - [0x1D881, c, func_8006D4F0] # gcc280_g0, 100%
-      # TU candidate: wmap_effect_backdrop.c (medium confidence)
+      - [0x1CAE5, c, wmap_sequence_runtime] # gcc280_g0
+      # TU: wmap_effect_backdrop.c (backdrop group consolidated)
       # VRAM 0x8006D520..0x8006D918 (end exclusive).
       # Initialize/draw the triangulated backdrop, select effects, and choose one of two data buffers.
 
-      - [0x1D8B1, c, func_8006D520] # gcc280_g0, 100%
-      - [0x1DA05, c, func_8006D674] # gcc280_g0, partial 97.157480%
-      - [0x1DC01, c, func_8006D870] # gcc280_g0, 100%
-      - [0x1DC81, c, func_8006D8F0] # gcc280_g0, 100%
+      - [0x1D8B1, c, wmap_effect_backdrop] # gcc280_g0
       # TU candidate: wmap_land_effect_18.c (high confidence)
       # VRAM 0x8006D918..0x8007085C (end exclusive).
       # Selector 18 -> func_800706B0; step table D_800D4CAC.
@@ -2061,45 +2023,11 @@ segments:
       - [0x58C35, c, func_800A88A4] # gcc280_g0
       - [0x58C69, c, func_800A8950] # gcc280_g0, 100%
       - [0x58D39, c, func_800A89A8] # gcc280_g0
-      # TU candidate: wmap_effect_resources.c (high confidence)
+      # TU: wmap_effect_resources.c (resource-loader group consolidated)
       # VRAM 0x800A89DC..0x800AAA2C (end exclusive).
       # 36-entry resource-set dispatcher D_800D6D5C and CD load wrappers
 
-      - [0x58D6D, c, func_800A89DC] # gcc280_g0_o0_builtin, 100%
-      - [0x58E39, c, func_800A8AA8] # gcc280_g0_o0_builtin
-      - [0x58E81, c, func_800A8AF0] # gcc280_g0_o0_builtin
-      - [0x58EC9, c, func_800A8B38] # gcc280_g0_o0_builtin
-      - [0x58F11, c, func_800A8B80] # gcc280_g0_o0_builtin, 100%
-      - [0x59011, c, func_800A8C80] # gcc280_g0_o0_builtin, 100%
-      - [0x590FD, c, func_800A8D6C] # gcc280_g0_o0_builtin, 100%
-      - [0x5922D, c, func_800A8E9C] # gcc280_g0_o0_builtin, 100%
-      - [0x59305, c, func_800A8F74] # gcc280_g0_o0_builtin, 100%
-      - [0x593A1, c, func_800A9010] # gcc280_g0_o0_builtin, 100%
-      - [0x5949D, c, func_800A910C] # gcc280_g0_o0_builtin, 100%
-      - [0x595FD, c, func_800A926C] # gcc280_g0_o0_builtin, 100%
-      - [0x596E9, c, func_800A9358] # gcc280_g0_o0_builtin, 100%
-      - [0x59765, c, func_800A93D4] # gcc280_g0_o0_builtin
-      - [0x59851, c, func_800A94C0] # gcc280_g0_o0_builtin, 100%
-      - [0x59965, c, func_800A95D4] # gcc280_g0_o0_builtin
-      - [0x59A3D, c, func_800A96AC] # gcc280_g0_o0_builtin, 100%
-      - [0x59B41, c, func_800A97B0] # gcc280_g0_o0_builtin
-      - [0x59C19, c, func_800A9888] # gcc280_g0_o0_builtin
-      - [0x59CF1, c, func_800A9960] # gcc280_g0_o0_builtin
-      - [0x59DC9, c, func_800A9A38] # gcc280_g0_o0_builtin, 100%
-      - [0x59EC5, c, func_800A9B34] # gcc280_g0_o0_builtin, 100%
-      - [0x59FC9, c, func_800A9C38] # gcc280_g0_o0_builtin
-      - [0x5A0B5, c, func_800A9D24] # gcc280_g0_o0_builtin, 100%
-      - [0x5A1A1, c, func_800A9E10] # gcc280_g0_o0_builtin, 100%
-      - [0x5A28D, c, func_800A9EFC] # gcc280_g0_o0_builtin, 100%
-      - [0x5A3D1, c, func_800AA040] # gcc280_g0_o0_builtin, 100%
-      - [0x5A53D, c, func_800AA1AC] # gcc280_g0_o0_builtin, 100%
-      - [0x5A67D, c, func_800AA2EC] # gcc280_g0_o0_builtin, 100%
-      - [0x5A7D5, c, func_800AA444] # gcc280_g0_o0_builtin, 100%
-      - [0x5A8F5, c, func_800AA564] # gcc280_g0_o0_builtin, 100%
-      - [0x5AA31, c, func_800AA6A0] # gcc280_g0_o0_builtin, 100%
-      - [0x5AB79, c, func_800AA7E8] # gcc280_g0_o0_builtin, 100%
-      - [0x5AC29, c, func_800AA898] # gcc280_g0_o0_builtin, 100%
-      - [0x5ACA5, c, func_800AA914] # gcc280_g0_o0_builtin, 100%
+      - [0x58D6D, c, wmap_effect_resources] # gcc280_g0_o0_builtin
       # TU candidate: wmap_land_event_17.c (medium confidence)
       # VRAM 0x800AAA2C..0x800ADAA4 (end exclusive).
       # Scripted event rooted at func_800AB850, selected by D_8011D4F8. Setup locates land 0x11 (17)

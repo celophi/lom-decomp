@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 extern u8 D_800D939C[];
@@ -6,7 +7,6 @@ extern s32 D_8011CF4C;
 extern s32 D_80182DE8;
 extern s32 D_801B2598;
 extern s32 D_801B259C;
-extern void func_8006CC4C(void *dst, void *src);
 extern void func_80066F9C(void *a, s32 b, s32 c, s32 d, s32 e);
 
 /** @brief World-map step: build a sprite, decrement a shared budget, expire the timer. */

@@ -1,3 +1,6 @@
+#include "wmap_frame_render.h"
+#include "wmap_sequence_runtime.h"
+#include "wmap_effect_backdrop.h"
 /* Partial WMAP decompilation: 91.872810% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgpu.h"
@@ -64,7 +67,6 @@ typedef struct
     u8 *prim_cursor;
 } WmapRenderContext;
 
-extern M2C_UNK func_80064D64;
 extern s32 D_800CB248;
 extern void *D_800D0454;
 extern SPRT D_800D06E4;

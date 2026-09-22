@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -7,7 +8,6 @@ extern VECTOR D_801B2478;
 extern SVECTOR D_801B24A8;
 extern s32 D_801B2600;
 extern s32 D_801B2604;
-extern void func_8006CFA8(VECTOR *, SVECTOR *);
 extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 
 /** @brief Move the effect toward the camera while fading it and advancing its countdown. */

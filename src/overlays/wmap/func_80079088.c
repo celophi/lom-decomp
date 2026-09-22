@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 extern s32 D_80139888;
@@ -8,8 +9,6 @@ extern s32 D_801B26A0;
 extern s32 D_801B26A4;
 extern void PushMatrix(void);
 extern void PopMatrix(void);
-extern void func_8006CFA8(void* a, void* b);
-extern void func_8006CD98(s32 a0, s32 a1, s32 a2, s32 a3, s32 s4, s32 s5, s32 s6);
 
 /** @brief World-map animated element: advance phase, draw while active, then tick refcount. */
 void func_80079088(void)

@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
@@ -15,7 +16,6 @@ extern u8 D_800D9344[];
 extern u8 D_801399B0[];
 extern s32 D_801B2530;
 extern s32 D_801B2534;
-extern s32 func_8006CC4C(void *, void *);
 extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Project and draw the map effect, advancing when its timer expires. */

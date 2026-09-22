@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -8,7 +9,6 @@ extern SVECTOR D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B25F8;
 extern s32 D_801B25FC;
-extern void func_8006CFA8(VECTOR *, SVECTOR *);
 extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 
 /** @brief Approach the effect depth and draw its alternating-brightness fade. */

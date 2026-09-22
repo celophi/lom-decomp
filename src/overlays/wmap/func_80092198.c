@@ -1,10 +1,10 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 extern s32 D_801ADAF4;
 extern s32 D_801B2AD8;
 extern s32 D_801B2ADC;
 extern void func_800929F0(void);
-extern void func_8006CAC0(void (*fn)(void));
 extern void func_8006683C(s32 arg);
 
 /** @brief World-map step handler: register a callback, kick a job, advance the step. */

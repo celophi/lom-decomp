@@ -1,8 +1,8 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
 extern u8 *D_8011CF24;
-extern void func_8006CD98(void *, s32, s32, s32, s32, s32, s32);
 extern VECTOR D_8011CF60;
 extern SVECTOR D_80139278;
 extern VECTOR D_80139870;

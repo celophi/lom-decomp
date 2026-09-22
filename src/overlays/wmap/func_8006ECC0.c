@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -18,7 +19,6 @@ extern WmapEffectTranslation D_80139888;
 extern SVECTOR D_8013B240;
 extern s32 D_801B2460;
 extern s32 D_801B2464;
-extern void func_8006CD98(void *, s32, s32, s32, s32, s32, s32);
 
 /** @brief Compose the effect transform, draw and brighten it, and advance its countdown. */
 void func_8006ECC0(void)

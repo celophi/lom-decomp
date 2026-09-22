@@ -1,3 +1,5 @@
+#include "wmap_sequence_runtime.h"
+#include "wmap_effect_backdrop.h"
 /* Partial WMAP decompilation: 68.622690% (gcc280_g0). */
 #include "common.h"
 
@@ -23,9 +25,6 @@ M2C_UNK func_800605B4();                            /* extern */
 M2C_UNK func_80063F38();                            /* extern */
 M2C_UNK func_800653EC();                            /* extern */
 M2C_UNK func_800654F8();                            /* extern */
-M2C_UNK func_8006CD18();                            /* extern */
-M2C_UNK func_8006D870(M2C_UNK);                     /* extern */
-M2C_UNK func_8006D8F0(M2C_UNK, s32 *, s32 *, s32);  /* extern */
 extern s32 D_8005136C;
 extern s32 D_800D06BC;
 extern s32 D_800D9160;

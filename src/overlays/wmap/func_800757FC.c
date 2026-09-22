@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 92.652176% (gcc280_g0). */
 #include "common.h"
 
@@ -24,7 +25,6 @@ extern s32 D_8011CF4C;
 extern s32 D_801B24B4;
 extern s32 D_801B2578;
 extern s32 D_801B257C;
-extern void func_8006CC4C(WmapConfigA *, u8 **);
 extern void func_80066F9C(WmapConfigA *, s32, s32, s32, s32);
 
 /** @brief Draw the actor, increase its scale, and advance when its timer expires. */

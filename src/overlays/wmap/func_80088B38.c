@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 99.577540% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgte.h"
@@ -49,7 +50,6 @@ extern s32 D_80139234;
 extern s32 D_8013923C;
 extern s32 D_801B2988;
 extern s32 D_801B298C;
-extern void func_8006CC4C(void *, void *);
 extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Project a spiral emitter and append animated copies along its trail. */

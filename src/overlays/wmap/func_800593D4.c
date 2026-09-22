@@ -1,3 +1,4 @@
+#include "wmap_effect_backdrop.h"
 /* Partial WMAP decompilation: 82.769230% (gcc280_g0). */
 #include "common.h"
 
@@ -11,7 +12,6 @@ typedef struct
 extern s32 func_8005D4A4(void);
 extern void func_80064F64(s32);
 extern void func_8006683C(s32);
-extern void func_8006D870(s32);
 extern void func_80064094(void);
 extern WmapPoint D_80054944[];
 extern s16 D_800D928A;

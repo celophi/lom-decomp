@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 /** @brief World-map actor configuration with its original field layout. */
@@ -18,7 +19,6 @@ typedef struct
 } WmapConfigA;
 
 extern void func_80066F9C(void *, s32, s32, s32, s32);
-extern void func_8006CC4C(void *, void *);
 extern WmapConfigA D_800D9420;
 extern s32 D_8011CF4C;
 extern u8 D_801399D8[];

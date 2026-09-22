@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 
 typedef struct
@@ -14,7 +15,6 @@ extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
 extern s32 D_8018222C;
 extern s32 rand(void);
-extern void func_8006D0F0(s32, s32 *, s32 *);
 
 static inline s32 tile_exists(s32 x, s32 y)
 {

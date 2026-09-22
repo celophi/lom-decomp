@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -10,8 +11,6 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern void func_8006CFA8(s32 *, WmapVector *);
-extern void func_8006CD98(s32, s32, s32, s32, s32, s32, s32);
 extern s32 D_8011CF24;
 extern s32 D_8013923C;
 extern WmapVector D_8013B238;

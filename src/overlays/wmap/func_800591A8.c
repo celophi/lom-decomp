@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "cdrom.h"
 
@@ -22,8 +23,6 @@ extern u8 D_8018B240[];
 extern u8 D_80193640[];
 extern s32 func_80055BB0(WmapResource *);
 extern void func_800651B4(u8 *);
-extern void func_8006CAC0(s32 (*)(s32));
-extern s32 func_8006D244(s32);
 extern s32 func_800706B0(s32);
 extern s32 func_800712C0(s32);
 extern s32 func_8007369C(s32);

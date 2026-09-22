@@ -1,3 +1,6 @@
+#include "wmap_sequence_runtime.h"
+#include "wmap_effect_backdrop.h"
+#include "wmap_effect_resources.h"
 #include "common.h"
 #include "cdrom.h"
 
@@ -70,10 +73,6 @@ void func_8005CA3C(s32 direction, s32* values);
 s32 func_8005D8FC();
 void func_8005FF88(s32 value);
 void func_800652A8(s32 type, s32 depth);
-void func_8006CBD8(void (*callback)(void));
-void func_8006D870(s32 value);
-void func_8006D8F0(s32 value, s32 data, s32* table);
-void func_800A89DC(s32 value);
 void func_800593D4(void);
 
 /** @brief Update world-map selection and route state. */

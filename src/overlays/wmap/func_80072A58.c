@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -8,7 +9,6 @@ extern SVECTOR D_801B24A8;
 extern s32 D_801B2538;
 extern s32 D_801B253C;
 extern s32 D_801B2470;
-extern void func_8006CD98(void *, s32, s32, s32, s32, s32, s32);
 
 /** @brief Draw and fade the transformed effect, then advance its countdown. */
 void func_80072A58(void)

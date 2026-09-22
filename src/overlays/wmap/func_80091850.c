@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 #include "common.h"
 #include "sdk/libgte.h"
 
@@ -8,7 +9,6 @@ extern s32 D_801B2B08;
 extern s32 D_801B2B0C;
 extern s32 D_80182DF4;
 extern s32 D_80139234;
-extern void func_8006CFA8(VECTOR *, SVECTOR *);
 extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 
 /** @brief Draw the expanding effect and advance its rotation and countdown. */

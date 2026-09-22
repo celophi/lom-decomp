@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 96.000000% (gcc280_g0). */
 #include "common.h"
 
@@ -16,7 +17,6 @@ extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern s32 D_80182DD8;
 extern s32 D_801B3220;
-extern void func_8006D0F0(s32, s32*, s32*);
 extern void func_800C0254(void);
 
 void func_800C018C(void)

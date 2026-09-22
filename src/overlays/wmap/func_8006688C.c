@@ -1,3 +1,4 @@
+#include "wmap_sequence_runtime.h"
 /* Partial WMAP decompilation: 93.534090% (gcc280_g0). */
 #include "common.h"
 #include "sdk/libgte.h"
@@ -45,7 +46,6 @@ extern WmapResource D_801399B8[];
 extern s32 D_801AFBC8;
 extern s32 D_801B0FD0;
 extern u32 rand(void);
-extern void func_8006CC4C(void *, void *);
 extern void func_80066F9C(void *, s32, s32, s32, s32);
 
 /** @brief Spawn radial particles, advance their animation, and count active slots. */

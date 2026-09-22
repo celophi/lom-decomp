@@ -1,3 +1,4 @@
+#include "wmap_effect_backdrop.h"
 #include "common.h"
 
 typedef struct
@@ -17,7 +18,6 @@ extern WmapActor D_800D9268[];
 extern WmapMotion D_801AFBD0[];
 extern void func_80063F38(void);
 extern void func_8005909C(void);
-extern void func_8006D870(s32);
 extern void akao_cmd_c2(s32, s32, s32, s32);
 extern s32 D_800D9210;
 extern s32 D_800D9220;
