@@ -49,9 +49,9 @@ segments:
       - [0x1671, rodata, wmap_1671]
       - [0x1839, rodata, wmap_1839]
       - [0x1851, rodata, wmap_1851]
-      - [0x1E69, .rodata, func_800623CC] # compiler-generated switch table
+      - [0x1E69, rodata, wmap_1E69]
       - [0x1EDD, rodata, wmap_1EDD]
-      - [0x4CFD, .rodata, func_800675F0] # compiler-generated switch table
+      - [0x4CFD, rodata, wmap_4CFD]
       - [0x4D75, rodata, wmap_4D75]
       - [0x4DBD, c, func_80054A2C] # gcc280_g0, 100%
       - [0x5539, c, func_800551A8] # gcc280_g0, 100%
@@ -127,7 +127,7 @@ segments:
       - [0x10BA5, asm, wmap_10BA5]
       - [0x122A9, c, func_80061F18] # gcc280_g0, 100%
       - [0x12389, asm, wmap_12389]
-      - [0x1275D, c, func_800623CC] # gcc280_g0, WIP 91.866320%
+      - [0x1275D, asm, wmap_1275D]
       - [0x13F71, asm, wmap_13F71]
       - [0x142C9, c, func_80063F38] # gcc280_g0, 100%
       - [0x14425, c, func_80064094] # gcc280_g0, 100%
@@ -160,7 +160,7 @@ segments:
       - [0x16F35, asm, wmap_16F35]
       - [0x17169, c, func_80066DD8] # gcc280_g0, 100%
       - [0x1732D, asm, wmap_1732D]
-      - [0x17981, c, func_800675F0] # gcc280_g0, WIP 97.330210%
+      - [0x17981, asm, wmap_17981]
       - [0x1A68D, asm, wmap_1A68D]
       - [0x1B161, c, func_8006ADD0] # gcc280_g0, 100%
       - [0x1B271, c, func_8006AEE0] # gcc280_g0, 100%
@@ -576,7 +576,7 @@ segments:
       - [0x2B379, c, func_8007AFE8] # gcc280_g0, 100%
       - [0x2B3B1, c, func_8007B020] # gcc280_g0, 100%
       - [0x2B451, c, func_8007B0C0] # gcc280_g0, 100%
-      - [0x2B469, asm, wmap_2B469]
+      - [0x2B469, c, func_8007B0D8] # gcc280_g0, 100%
       - [0x2B725, c, func_8007B394] # gcc280_g0, 100%
       - [0x2B825, c, func_8007B494] # gcc280_g0, 100%
       - [0x2B925, asm, wmap_2B925]
