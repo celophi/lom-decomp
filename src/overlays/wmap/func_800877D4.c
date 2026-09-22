@@ -1,3 +1,4 @@
+#include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 #include "common.h"
 
@@ -5,7 +6,6 @@ extern s32 D_8013B208;
 extern s32 D_801ADAF4;
 extern s32 D_801B2910;
 extern s32 D_801B2914;
-extern void func_8006683C(s32 arg);
 
 /** @brief World-map step handler: kick two jobs and advance the step. */
 void func_800877D4(void)

@@ -1,3 +1,4 @@
+#include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
 #include "wmap_effect_backdrop.h"
@@ -12,7 +13,6 @@ typedef struct
 } WmapPoint;
 
 extern s32 func_8005D4A4(void);
-extern void func_8006683C(s32);
 extern WmapPoint D_80054944[];
 extern s16 D_800D928A;
 extern s32 D_800DBE70;

@@ -1,3 +1,4 @@
+#include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
@@ -6,7 +7,6 @@ extern s32 D_8013B208;
 extern s32 D_801ADAF4;
 extern s32 D_801B2870;
 extern s32 D_801B2874;
-extern void func_8006683C(s32 arg);
 extern void func_8008489C(void);
 extern void func_80084D30(void);
 

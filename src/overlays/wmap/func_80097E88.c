@@ -1,10 +1,10 @@
+#include "wmap_view_effects.h"
 #include "common.h"
 
 extern s32 D_8013B208;
 extern s32 D_801ADAF4;
 extern s32 D_801B2BE8;
 extern s32 D_801B2BEC;
-extern void func_8006683C(s32 arg0);
 
 /** @brief World-map step handler: kick a sub-task and advance the step counter. */
 void func_80097E88(void)

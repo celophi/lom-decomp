@@ -1,7 +1,7 @@
+#include "wmap_view_effects.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
-extern s32 func_8006683C(s32);
 extern s32 D_801ADAF4;
 extern s32 D_801B2F98;
 extern s32 D_801B2F9C;

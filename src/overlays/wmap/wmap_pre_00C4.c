@@ -1,3 +1,4 @@
+#include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
 #include "wmap_effect_primitives.h"
@@ -460,7 +461,6 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_8006683C(s32);
 extern void func_80066F9C(void*, s32, s32, s32, s32);
 extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 extern void func_8008ECF8(s32, s32, s32*, void*);

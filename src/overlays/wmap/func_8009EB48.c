@@ -1,10 +1,10 @@
+#include "wmap_view_effects.h"
 #include "common.h"
 
 extern s32 D_80139244;
 extern s32 D_801ADAF4;
 extern s32 D_801B2CD8;
 extern s32 D_801B2CDC;
-extern void func_8006683C(s32 arg0);
 
 /** @brief World-map step: kick a sub-request, set the next state, and arm the timer. */
 void func_8009EB48(void)

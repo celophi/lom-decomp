@@ -187,25 +187,11 @@ segments:
       # Copy/TIM loading and upload helpers, sound lookup, small packet helper, and actor reset utilities
 
       - [0x152A5, c, wmap_resource_support] # gcc280_g0
-      # TU candidate: wmap_view_effects.c (medium confidence)
+      # TU: wmap_view_effects.c (view, tint, and grid effects consolidated)
       # VRAM 0x8006544C..0x80066F9C (end exclusive).
       # View-state dispatch, map tint and grid projection/UV updates, camera motion, and small view effects.
 
-      - [0x157DD, c, func_800654BC] # gcc280_g0, 100%
-      - [0x1587D, c, func_800654EC] # gcc280_g0, 100%
-      - [0x15889, c, func_800654F8] # gcc280_g0, 100%
-      - [0x159B1, c, func_80065620] # gcc280_g0, 100%
-      - [0x15B2D, c, func_8006579C] # gcc280_g0, partial 91.988010%
-      - [0x161B1, c, func_80065E20] # gcc280_g0, partial 91.246750%
-      - [0x162E5, c, func_80065F54] # gcc280_g0, partial 99.777780%
-      - [0x1644D, c, func_800660BC] # gcc280_g0, partial 82.125490%
-      - [0x16849, c, func_800664B8] # gcc280_g0, partial 70.612750%
-      - [0x16B79, c, func_800667E8] # gcc280_g0, 100%
-      - [0x16BCD, c, func_8006683C] # gcc280_g0, 100%
-      - [0x16C1D, c, func_8006688C] # gcc280_g0, partial 93.534090%
-      - [0x16EDD, c, func_80066B4C] # gcc280_g0, 100%
-      - [0x16F35, c, func_80066BA4] # gcc280_g0, partial 93.723404%
-      - [0x17169, c, func_80066DD8] # gcc280_g0, 100%
+      - [0x157DD, c, wmap_view_effects] # gcc280_g0
       # TU candidate: wmap_sprite_render.c (medium confidence)
       # VRAM 0x80066F9C..0x800675F0 (end exclusive).
       # Shared animated sprite-part renderer

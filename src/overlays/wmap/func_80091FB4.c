@@ -1,3 +1,4 @@
+#include "wmap_view_effects.h"
 #include "wmap_sequence_runtime.h"
 #include "common.h"
 
@@ -6,7 +7,6 @@ extern s32 D_801ADAF4;
 extern s32 D_801B2AD8;
 extern s32 D_801B2ADC;
 extern void func_80092CA8(void);
-extern void func_8006683C(s32 color);
 
 /** @brief World-map step: register a callback, set flags, advance the step. */
 void func_80091FB4(void)
