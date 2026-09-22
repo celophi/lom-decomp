@@ -51,10 +51,7 @@ segments:
       - [0x1851, rodata, wmap_1851]
       - [0x186D, .rodata, func_8005B58C] # compiler-generated switch table
       - [0x1885, rodata, wmap_1885]
-      - [0x1E21, .rodata, func_80061F18] # compiler-generated switch table
-      - [0x1E39, .rodata, func_80061FF8] # compiler-generated switch table
-      - [0x1E5D, rodata, wmap_1E5D]
-      - [0x1E69, .rodata, func_800623CC] # compiler-generated switch table
+      - [0x1E21, .rodata, wmap_main] # switch tables and display-transfer rectangle
       - [0x1EDD, rodata, wmap_1EDD]
       - [0x4CFD, .rodata, func_800675F0] # compiler-generated switch table
       - [0x4D75, .rodata, wmap_effect_primitives] # compiler-generated switch table
@@ -173,23 +170,12 @@ segments:
       # D_80182E08.
 
       - [0xFD4D, c, wmap_map_labels] # gcc280_g0
-      # TU candidate: wmap_main.c (medium confidence)
+      # TU: wmap_main.c (world-map driver consolidated)
       # VRAM 0x80060720..0x800641DC (end exclusive).
       # Display setup, resident entry, initialization, input/wait/event handling, main resource/render loop,
       # and map refresh. This remains a broad driver unit.
 
-      - [0x10AB1, c, func_80060720] # gcc280_g0, 100%
-      - [0x10BA5, c, run_world_map] # gcc280_g0, partial 89.292305%
-      - [0x10CA9, c, func_80060918] # gcc280_g0, partial 68.622690%
-      - [0x11295, c, func_80060F04] # gcc280_g0, partial 56.904133%
-      - [0x11C09, c, func_80061878] # gcc280_g0, partial 96.412840%
-      - [0x11DBD, c, func_80061A2C] # gcc280_g0, partial 73.200000%
-      - [0x122A9, c, func_80061F18] # gcc280_g0, 100%
-      - [0x12389, c, func_80061FF8] # gcc280_g0, partial 66.991840%
-      - [0x1275D, c, func_800623CC] # gcc280_g0, partial 91.872810%
-      - [0x13F71, c, func_80063BE0] # gcc280_g0, partial 85.911220%
-      - [0x142C9, c, func_80063F38] # gcc280_g0, 100%
-      - [0x14425, c, func_80064094] # gcc280_g0, 100%
+      - [0x10AB1, c, wmap_main] # gcc280_g0
       # TU: wmap_frame_render.c (frame submission and rendering consolidated)
       # VRAM 0x800641DC..0x80064F14 (end exclusive).
       # Frame submission and fullscreen/transition packets, including transformed panel geometry and fade

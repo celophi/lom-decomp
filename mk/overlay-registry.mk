@@ -367,13 +367,6 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_8005D018.c \
 	src/overlays/wmap/func_8005D6B8.c \
 	src/overlays/wmap/wmap_map_labels.c \
-	src/overlays/wmap/func_80060918.c \
-	src/overlays/wmap/func_80060F04.c \
-	src/overlays/wmap/func_80061878.c \
-	src/overlays/wmap/func_80061A2C.c \
-	src/overlays/wmap/func_80061FF8.c \
-	src/overlays/wmap/func_800623CC.c \
-	src/overlays/wmap/func_80063BE0.c \
 	src/overlays/wmap/func_80064F1C.c \
 	src/overlays/wmap/func_80064F64.c \
 	src/overlays/wmap/func_80065078.c \
@@ -507,7 +500,6 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_800BD4E8.c \
 	src/overlays/wmap/func_800C018C.c \
 	src/overlays/wmap/func_800C0CA4.c \
-	src/overlays/wmap/run_world_map.c \
 	src/overlays/wmap/func_8007B0D8.c \
 	src/overlays/wmap/func_800A61BC.c \
 	src/overlays/wmap/func_80081954.c \
@@ -516,7 +508,6 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_80081508.c \
 	src/overlays/wmap/func_800591A8.c \
 	src/overlays/wmap/func_8008CA70.c \
-	src/overlays/wmap/func_80064094.c \
 	src/overlays/wmap/wmap_frame_render.c \
 	src/overlays/wmap/func_8008D0F8.c \
 	src/overlays/wmap/func_8008D1F0.c \
@@ -542,7 +533,6 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_80065620.c \
 	src/overlays/wmap/func_8006E024.c \
 	src/overlays/wmap/func_8007724C.c \
-	src/overlays/wmap/func_80063F38.c \
 	src/overlays/wmap/func_8006E3E4.c \
 	src/overlays/wmap/func_80076C6C.c \
 	src/overlays/wmap/wmap_effect_backdrop.c \
@@ -592,7 +582,7 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_800AE30C.c \
 	src/overlays/wmap/func_80074D28.c \
 	src/overlays/wmap/func_80076DBC.c \
-	src/overlays/wmap/func_80060720.c \
+	src/overlays/wmap/wmap_main.c \
 	src/overlays/wmap/func_800651B4.c \
 	src/overlays/wmap/func_80088E24.c \
 	src/overlays/wmap/func_800AE400.c \
@@ -614,7 +604,6 @@ overlay_wmap_gcc_280_g0_srcs := \
 	src/overlays/wmap/func_800A12B0.c \
 	src/overlays/wmap/func_800A71D4.c \
 	src/overlays/wmap/func_800AE844.c \
-	src/overlays/wmap/func_80061F18.c \
 	src/overlays/wmap/func_80095AC8.c \
 	src/overlays/wmap/func_800841A8.c \
 	src/overlays/wmap/func_8008FC40.c \

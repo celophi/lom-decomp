@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_effect_primitives.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/inline_c.h"
@@ -110,7 +111,6 @@ extern s32 D_800DCF00;
 extern s32 D_801398D0;
 extern s32 D_80182D68;
 extern s32 D_80182D78;
-extern void func_80064094(void);
 
 static void func_8006D1AC(VECTOR* translation, SVECTOR* rotation);
 static s32 func_8006D328(s32 arg0);

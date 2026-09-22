@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "common.h"
 #include "sdk/libgpu.h"
 
