@@ -3,8 +3,7 @@
 #include "wmap_resource_support.h"
 #include "wmap_map_labels.h"
 #include "sdk/libgpu.h"
-
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
+#include "gpu_packet.h"
 
 /** @brief Screen position of a map label at a particular map scale. */
 typedef struct
@@ -53,166 +52,131 @@ extern s8 D_80182E0C;
 
 void func_80060230(void);
 
+/** @brief Ordering table and packet allocation cursor for the current map buffer. */
+typedef struct
+{
+    u8 pad_00[0x70];
+    u_long ordering_table[0xB3];
+    u8* packet_cursor;
+} WmapLabelRenderContext;
+
+/** @brief Gouraud-shaded triangle packet (libgpu WmapShadeTriangle layout). */
+typedef struct
+{
+    u_long tag;
+    u8 r0, g0, b0, code;
+    s16 x0, y0;
+    u8 r1, g1, b1, pad1;
+    s16 x1, y1;
+    u8 r2, g2, b2, pad2;
+    s16 x2, y2;
+} WmapShadeTriangle;
+
+/** @brief Current map render context viewed through its ordering-table layout. */
+#define WMAP_LABEL_RENDER ((WmapLabelRenderContext*)D_801398EC)
+
 /**
  * @brief Append map label and decorative packets with selection fades.
  */
 void func_8005F9BC(void)
 {
-    void* var_a2;
-    void* var_a3;
-    s32* temp_a0;
-    s32* temp_a0_3;
-    s32* temp_a0_4;
-    s32* temp_a0_5;
-    s32* temp_a1;
-    s32* temp_a1_2;
-    s32* temp_a1_3;
-    s32* temp_a1_4;
-    s32* temp_a1_5;
-    s32 var_t1;
-    void* temp_a0_2;
+    SPRT* sprite;
+    SPRT* shadow;
+    WmapShadeTriangle* shade;
+    s32 i;
 
     if (D_80182E34 != 3)
     {
-        temp_a1 = M2C_FIELD(D_801398EC, s32**, 0x33C);
-        M2C_FIELD(temp_a1, s32*, 0) = M2C_FIELD(&D_80051A58, s32*, 0);
-        M2C_FIELD(temp_a1, s32*, 4) = (s32)M2C_FIELD(&D_80051A58, s32*, 4);
-        M2C_FIELD(temp_a1, s32*, 8) = (s32)M2C_FIELD(&D_80051A58, s32*, 8);
-        M2C_FIELD(temp_a1, s32*, 0xC) = (s32)M2C_FIELD(&D_80051A58, s32*, 0xC);
-        M2C_FIELD(temp_a1, s32*, 0x10) = (s32)M2C_FIELD(&D_80051A58, s32*, 0x10);
-        M2C_FIELD(temp_a1, s32*, 0) = (M2C_FIELD(temp_a1, s32*, 0) & 0xFF000000) | (M2C_FIELD(D_801398EC, s32*, 0x8C) & 0xFFFFFF);
-        M2C_FIELD(D_801398EC, s32*, 0x8C) = (s32)((M2C_FIELD(D_801398EC, s32*, 0x8C) & 0xFF000000) | ((s32)temp_a1 & 0xFFFFFF));
+        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        *sprite = *(SPRT*)&D_80051A58;
+        addPrim(&WMAP_LABEL_RENDER->ordering_table[7], sprite);
         if (D_800D921C < 0x7D00)
         {
-            D_800D921C += 0x14;
-            M2C_FIELD(D_801398EC, s32**, 0x33C) = (s32*)(M2C_FIELD(D_801398EC, s32**, 0x33C) + 0x14);
+            D_800D921C += sizeof(SPRT);
+            WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
         }
         if (g_wmap_travel_day != D_8011CF80)
         {
             D_8011CF80 = g_wmap_travel_day;
-            M2C_FIELD(&D_801391E8, s32*, 0) = (s32)M2C_FIELD(&D_80182DA0, s32*, 0);
-            M2C_FIELD(&D_801391E8, s32*, 4) = (s32)M2C_FIELD(&D_80182DA0, s32*, 4);
-            M2C_FIELD(&D_801391E8, s32*, 8) = (s32)M2C_FIELD(&D_80182DA0, s32*, 8);
-            M2C_FIELD(&D_801391E8, s32*, 0xC) = (s32)M2C_FIELD(&D_80182DA0, s32*, 0xC);
-            M2C_FIELD(&D_801391E8, s32*, 0x10) = (s32)M2C_FIELD(&D_80182DA0, s32*, 0x10);
-            M2C_FIELD(&D_80182DA0, s32*, 4) = 0;
-            M2C_FIELD(&D_800DBE80, s32*, 0) = (s32)M2C_FIELD(&D_801398D8, s32*, 0);
-            M2C_FIELD(&D_800DBE80, s32*, 4) = (s32)M2C_FIELD(&D_801398D8, s32*, 4);
-            M2C_FIELD(&D_800DBE80, s32*, 8) = (s32)M2C_FIELD(&D_801398D8, s32*, 8);
-            M2C_FIELD(&D_800DBE80, s32*, 0xC) = (s32)M2C_FIELD(&D_801398D8, s32*, 0xC);
-            M2C_FIELD(&D_800DBE80, s32*, 0x10) = (s32)M2C_FIELD(&D_801398D8, s32*, 0x10);
-            M2C_FIELD(&D_801398D8, s32*, 0xC) = 0;
-            M2C_FIELD(&D_801391E8, u8*, 7) = (u8)(M2C_FIELD(&D_801391E8, u8*, 7) | 2);
-            M2C_FIELD(&D_80182DA0, s32*, 0xC) = (s8)(((g_wmap_travel_day & 1) * 0x30) + 8);
-            M2C_FIELD(&D_80182DA0, s8*, 0xD) = (s8)((((s32)g_wmap_travel_day / 2) * 0x38) + 0xE);
-            M2C_FIELD(&D_800DBE80, u8*, 7) = (u8)(M2C_FIELD(&D_800DBE80, u8*, 7) | 2);
-            M2C_FIELD(&D_801398D8, s8*, 0xD) = (s8)(g_wmap_travel_day << 5);
+            D_801391E8 = D_80182DA0;
+            D_80182DA0.r0 = 0;
+            D_800DBE80 = D_801398D8;
+            D_801398D8.u0 = 0;
+            setSemiTrans(&D_801391E8, 1);
+            D_80182DA0.u0 = ((g_wmap_travel_day & 1) * 0x30) + 8;
+            D_80182DA0.v0 = ((g_wmap_travel_day / 2) * 0x38) + 0xE;
+            setSemiTrans(&D_800DBE80, 1);
+            D_801398D8.v0 = *(volatile s32*)&g_wmap_travel_day << 5;
         }
-        var_a2 = &D_80182DA0;
-        M2C_FIELD(&D_80182DA0, u8*, 5) = (u8)M2C_FIELD(&D_80182DA0, s32*, 4);
-        M2C_FIELD(&D_80182DA0, u8*, 6) = (u8)M2C_FIELD(&D_80182DA0, s32*, 4);
-        temp_a1_2 = M2C_FIELD(D_801398EC, s32**, 0x33C);
-        M2C_FIELD(temp_a1_2, s32*, 0) = M2C_FIELD(&D_80182DA0, s32*, 0);
-        M2C_FIELD(temp_a1_2, s32*, 4) = (s32)M2C_FIELD(&D_80182DA0, s32*, 4);
-        M2C_FIELD(temp_a1_2, s32*, 8) = (s32)M2C_FIELD(&D_80182DA0, s32*, 8);
-        M2C_FIELD(temp_a1_2, s32*, 0xC) = (s32)M2C_FIELD(&D_80182DA0, s32*, 0xC);
-        M2C_FIELD(temp_a1_2, s32*, 0x10) = (s32)M2C_FIELD(&D_80182DA0, s32*, 0x10);
-        if ((s8)M2C_FIELD(&D_80182DA0, s32*, 4) >= 0)
+        D_80182DA0.g0 = D_80182DA0.r0;
+        D_80182DA0.b0 = D_80182DA0.r0;
+        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        *sprite = D_80182DA0;
+        if ((s8)D_80182DA0.r0 >= 0)
         {
-            M2C_FIELD(&D_80182DA0, s32*, 4) = (s8)((u8)M2C_FIELD(&D_80182DA0, s32*, 4) + 8);
-            M2C_FIELD(temp_a1_2, u8*, 7) = (u8)(M2C_FIELD(temp_a1_2, u8*, 7) | 2);
+            D_80182DA0.r0 += 8;
+            setSemiTrans(sprite, 1);
         }
-        temp_a0 = M2C_FIELD(D_801398EC, s32**, 0x33C);
-        *temp_a0 = (*temp_a0 & 0xFF000000) | (M2C_FIELD(D_801398EC, s32*, 0x8C) & 0xFFFFFF);
-        M2C_FIELD(D_801398EC, s32*, 0x8C) = (s32)((M2C_FIELD(D_801398EC, s32*, 0x8C) & 0xFF000000) | ((s32)M2C_FIELD(D_801398EC, s32**, 0x33C) & 0xFFFFFF));
+        addPrim(&WMAP_LABEL_RENDER->ordering_table[7], WMAP_LABEL_RENDER->packet_cursor);
         if (D_800D921C < 0x7D00)
         {
-            D_800D921C += 0x14;
-            M2C_FIELD(D_801398EC, s32**, 0x33C) = (s32*)(M2C_FIELD(D_801398EC, s32**, 0x33C) + 0x14);
+            D_800D921C += sizeof(SPRT);
+            WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
         }
-        if ((u8)M2C_FIELD(&D_801391E8, s32*, 4) != 0)
+        if (D_801391E8.r0 != 0)
         {
-            M2C_FIELD(&D_801391E8, u8*, 5) = (u8)M2C_FIELD(&D_801391E8, s32*, 4);
-            M2C_FIELD(&D_801391E8, u8*, 6) = (u8)M2C_FIELD(&D_801391E8, s32*, 4);
-            var_a2 = D_801398EC;
-            temp_a1_3 = M2C_FIELD(D_801398EC, s32**, 0x33C);
-            M2C_FIELD(temp_a1_3, s32*, 0) = M2C_FIELD(&D_801391E8, s32*, 0);
-            M2C_FIELD(temp_a1_3, s32*, 4) = (s32)M2C_FIELD(&D_801391E8, s32*, 4);
-            M2C_FIELD(temp_a1_3, s32*, 8) = (s32)M2C_FIELD(&D_801391E8, s32*, 8);
-            M2C_FIELD(temp_a1_3, s32*, 0xC) = (s32)M2C_FIELD(&D_801391E8, s32*, 0xC);
-            M2C_FIELD(temp_a1_3, s32*, 0x10) = (s32)M2C_FIELD(&D_801391E8, s32*, 0x10);
-            M2C_FIELD(temp_a1_3, s32*, 0) = (M2C_FIELD(temp_a1_3, s32*, 0) & 0xFF000000) | (M2C_FIELD(var_a2, s32*, 0x8C) & 0xFFFFFF);
-            D_800DBE84 = M2C_FIELD(&D_801391E8, s32*, 4);
-            M2C_FIELD(var_a2, s32*, 0x8C) = (s32)((M2C_FIELD(var_a2, s32*, 0x8C) & 0xFF000000) | ((s32)temp_a1_3 & 0xFFFFFF));
+            D_801391E8.g0 = D_801391E8.r0;
+            D_801391E8.b0 = D_801391E8.r0;
+            sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+            *sprite = D_801391E8;
+            addPrim(&WMAP_LABEL_RENDER->ordering_table[7], sprite);
+            D_800DBE84 = *(s32*)&D_801391E8.r0;
             if (D_800D921C < 0x7D00)
             {
-                D_800D921C += 0x14;
-                M2C_FIELD(var_a2, s32**, 0x33C) = (s32*)(M2C_FIELD(var_a2, s32**, 0x33C) + 0x14);
+                D_800D921C += sizeof(SPRT);
+                WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
             }
-            M2C_FIELD(&D_801391E8, s32*, 4) = (s8)((u8)M2C_FIELD(&D_801391E8, s32*, 4) - 8);
+            D_801391E8.r0 -= 8;
         }
-        func_8006534C(0xBC, 7, (s32)var_a2, &D_801391E8);
+        func_8006534C(0xBC, 7);
         func_80060230();
-        temp_a1_4 = M2C_FIELD(D_801398EC, s32**, 0x33C);
-        M2C_FIELD(&D_801398DC, s32*, 0) = (s32)D_80182DA4;
-        temp_a0_2 = &D_801398DC - 4;
-        M2C_FIELD(temp_a0_2, u8*, 7) = (u8)(M2C_FIELD(temp_a0_2, u8*, 7) | 2);
-        M2C_FIELD(temp_a1_4, s32*, 0) = M2C_FIELD(&D_801398DC, s32*, -4);
-        M2C_FIELD(temp_a1_4, s32*, 4) = (s32)M2C_FIELD(&D_801398DC, s32*, 0);
-        M2C_FIELD(temp_a1_4, s32*, 8) = (s32)M2C_FIELD(&D_801398DC, s32*, 4);
-        M2C_FIELD(temp_a1_4, s32*, 0xC) = (s32)M2C_FIELD(&D_801398DC, s32*, 8);
-        M2C_FIELD(temp_a1_4, s32*, 0x10) = (s32)M2C_FIELD(&D_801398DC, s32*, 0xC);
-        temp_a0_3 = M2C_FIELD(D_801398EC, s32**, 0x33C);
-        *temp_a0_3 = (*temp_a0_3 & 0xFF000000) | (M2C_FIELD(D_801398EC, s32*, 0x8C) & 0xFFFFFF);
-        M2C_FIELD(D_801398EC, s32*, 0x8C) = (s32)((M2C_FIELD(D_801398EC, s32*, 0x8C) & 0xFF000000) | ((s32)M2C_FIELD(D_801398EC, s32**, 0x33C) & 0xFFFFFF));
+        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        *(s32*)&D_801398DC = D_80182DA4;
+        shadow = (SPRT*)(&D_801398DC - 4);
+        setSemiTrans(shadow, 1);
+        *sprite = *shadow;
+        addPrim(&WMAP_LABEL_RENDER->ordering_table[7], WMAP_LABEL_RENDER->packet_cursor);
         if (D_800D921C < 0x7D00)
         {
-            D_800D921C += 0x14;
-            M2C_FIELD(D_801398EC, s32**, 0x33C) = (s32*)(M2C_FIELD(D_801398EC, s32**, 0x33C) + 0x14);
+            D_800D921C += sizeof(SPRT);
+            WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
         }
-        if ((u8)M2C_FIELD(&D_800DBE80, s32*, 4) >= 9U)
+        if (D_800DBE80.r0 >= 9)
         {
-            temp_a1_5 = M2C_FIELD(D_801398EC, s32**, 0x33C);
-            M2C_FIELD(temp_a1_5, s32*, 0) = M2C_FIELD(&D_800DBE80, s32*, 0);
-            M2C_FIELD(temp_a1_5, s32*, 4) = (s32)M2C_FIELD(&D_800DBE80, s32*, 4);
-            M2C_FIELD(temp_a1_5, s32*, 8) = (s32)M2C_FIELD(&D_800DBE80, s32*, 8);
-            M2C_FIELD(temp_a1_5, s32*, 0xC) = (s32)M2C_FIELD(&D_800DBE80, s32*, 0xC);
-            M2C_FIELD(temp_a1_5, s32*, 0x10) = (s32)M2C_FIELD(&D_800DBE80, s32*, 0x10);
-            temp_a0_4 = M2C_FIELD(D_801398EC, s32**, 0x33C);
-            *temp_a0_4 = (*temp_a0_4 & 0xFF000000) | (M2C_FIELD(D_801398EC, s32*, 0x8C) & 0xFFFFFF);
-            M2C_FIELD(D_801398EC, s32*, 0x8C) = (s32)((M2C_FIELD(D_801398EC, s32*, 0x8C) & 0xFF000000) | ((s32)M2C_FIELD(D_801398EC, s32**, 0x33C) & 0xFFFFFF));
+            sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+            *sprite = D_800DBE80;
+            addPrim(&WMAP_LABEL_RENDER->ordering_table[7], WMAP_LABEL_RENDER->packet_cursor);
             if (D_800D921C < 0x7D00)
             {
-                D_800D921C += 0x14;
-                M2C_FIELD(D_801398EC, s32**, 0x33C) = (s32*)(M2C_FIELD(D_801398EC, s32**, 0x33C) + 0x14);
+                D_800D921C += sizeof(SPRT);
+                WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
             }
         }
-        func_8006534C(0x3E, 7, (s32)D_801398EC, (void*)0xFFFFFF);
-        var_t1 = 0;
-        var_a3 = &D_800515F4;
-        do
+        func_8006534C(0x3E, 7);
+        for (i = 0; i < 0x24; i++)
         {
-            temp_a0_5 = M2C_FIELD(D_801398EC, s32**, 0x33C);
-            M2C_FIELD(temp_a0_5, s32*, 0) = M2C_FIELD(var_a3, s32*, 0);
-            M2C_FIELD(temp_a0_5, s32*, 4) = (s32)M2C_FIELD(var_a3, s32*, 4);
-            M2C_FIELD(temp_a0_5, s32*, 8) = (s32)M2C_FIELD(var_a3, s32*, 8);
-            M2C_FIELD(temp_a0_5, s32*, 0xC) = (s32)M2C_FIELD(var_a3, s32*, 0xC);
-            M2C_FIELD(temp_a0_5, s32*, 0x10) = (s32)M2C_FIELD(var_a3, s32*, 0x10);
-            M2C_FIELD(temp_a0_5, s32*, 0x14) = (s32)M2C_FIELD(var_a3, s32*, 0x14);
-            M2C_FIELD(temp_a0_5, s32*, 0x18) = (s32)M2C_FIELD(var_a3, s32*, 0x18);
-            M2C_FIELD(temp_a0_5, s8*, 3) = 6;
-            M2C_FIELD(temp_a0_5, s8*, 7) = 0x32;
-            M2C_FIELD(temp_a0_5, s32*, 0) = (M2C_FIELD(temp_a0_5, s32*, 0) & 0xFF000000) | (M2C_FIELD(D_801398EC, s32*, 0x90) & 0xFFFFFF);
-            M2C_FIELD(D_801398EC, s32*, 0x90) = (s32)((M2C_FIELD(D_801398EC, s32*, 0x90) & 0xFF000000) | ((s32)temp_a0_5 & 0xFFFFFF));
+            shade = (WmapShadeTriangle*)WMAP_LABEL_RENDER->packet_cursor;
+            *shade = ((WmapShadeTriangle*)&D_800515F4)[i];
+            setlen(shade, 6);
+            setcode(shade, 0x32);
+            addPrim(&WMAP_LABEL_RENDER->ordering_table[8], shade);
             if (D_800D921C < 0x7D00)
             {
-                D_800D921C += 0x1C;
-                M2C_FIELD(D_801398EC, s32**, 0x33C) = (s32*)(M2C_FIELD(D_801398EC, s32**, 0x33C) + 0x1C);
+                D_800D921C += sizeof(WmapShadeTriangle);
+                WMAP_LABEL_RENDER->packet_cursor += sizeof(WmapShadeTriangle);
             }
-            var_t1 += 1;
-            var_a3 += 0x1C;
-        } while (var_t1 < 0x24);
-        func_8006534C(0x20, 8, D_800D921C, var_a3);
+        }
+        func_8006534C(0x20, 8);
     }
 }
 
@@ -281,72 +245,87 @@ void func_8005FF88(s32 selection)
     }
 }
 
+
+/** @brief Glyph texture rectangle in the auxiliary label font table. */
+typedef struct
+{
+    u8 u;
+    u8 pad_01;
+    u8 v;
+    u8 pad_03;
+    u16 w;
+    u16 h;
+} WmapLabelGlyph;
+
+/** @brief One placed glyph of an auxiliary label string. */
+typedef struct
+{
+    u8 glyph;
+    u8 pad_01;
+    u16 x;
+    u8 y;
+    u8 pad_05;
+} WmapLabelChar;
+
 /**
  * @brief Append the current and outgoing label sprites and auxiliary labels.
+ * @note TODO: 95.644% (181/225 exact, 224 insns). Remaining: the label-start loop test keeps
+ *       `(D_8013B28C + 1) << 2` plus a register copy of the table base in the target, and a few
+ *       first-block register choices.
  */
 void func_80060230(void)
 {
-    s32 var_t0;
-    u16 var_v0;
-    u8 temp_v1;
-    void* temp_a0;
-    void* temp_a2;
-    void* temp_a2_2;
-    void* temp_v1_2;
-    void* var_a3;
+    SPRT* sprite;
+    WmapLabelChar* label_char;
+    WmapLabelGlyph* glyph;
+    s32 char_index;
+    u16 clut_y;
+    u8 fade;
+    SPRT* label;
 
-    if (M2C_FIELD(&D_8011D518, u8*, 4) != 0)
+    label = &D_8011D518;
+    if (label->r0 != 0)
     {
-        M2C_FIELD(&D_8011D518, u8*, 6) = (u8)M2C_FIELD(&D_8011D518, u8*, 4);
-        M2C_FIELD(&D_8011D518, u8*, 5) = (u8)M2C_FIELD(&D_8011D518, u8*, 4);
-        temp_a2 = M2C_FIELD(D_801398EC, void**, 0x33C);
-        if (!(M2C_FIELD(&D_8011D518, u8*, 4) & 0x80))
+        label->b0 = label->r0;
+        label->g0 = label->r0;
+        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        if ((s8)label->r0 >= 0)
         {
-            var_v0 = *(u16*)&D_800D0368;
-            M2C_FIELD(&D_8011D518, u8*, 4) = (u8)(M2C_FIELD(&D_8011D518, u8*, 4) + 8);
+            clut_y = *(u16*)&D_800D0368;
+            label->r0 += 8;
         }
         else
         {
-            var_v0 = *(u16*)&D_800D0368 + 1;
+            clut_y = *(u16*)&D_800D0368 + 1;
         }
-        M2C_FIELD(&D_8011D518, s16*, 0xE) = (s16)((var_v0 << 6) | 0x2F);
-        M2C_FIELD(temp_a2, s32*, 0) = (s32)M2C_FIELD(&D_8011D518, s32*, 0);
-        M2C_FIELD(temp_a2, s32*, 4) = (s32)M2C_FIELD(&D_8011D518, u8*, 4);
-        M2C_FIELD(temp_a2, s32*, 8) = (s32)M2C_FIELD(&D_8011D518, s32*, 8);
-        M2C_FIELD(temp_a2, s32*, 0xC) = (s32)M2C_FIELD(&D_8011D518, s32*, 0xC);
-        M2C_FIELD(temp_a2, s32*, 0x10) = (s32)M2C_FIELD(&D_8011D518, s32*, 0x10);
-        M2C_FIELD(temp_a2, u8*, 7) = (u8)(M2C_FIELD(temp_a2, u8*, 7) | 2);
-        M2C_FIELD(temp_a2, s32*, 0) = (s32)((M2C_FIELD(temp_a2, s32*, 0) & 0xFF000000) | (M2C_FIELD(D_801398EC, s32*, 0x7C) & 0xFFFFFF));
-        M2C_FIELD(D_801398EC, s32*, 0x7C) = (s32)((M2C_FIELD(D_801398EC, s32*, 0x7C) & 0xFF000000) | ((s32)temp_a2 & 0xFFFFFF));
+        label->clut = (clut_y << 6) | 0x2F;
+        *sprite = D_8011D518;
+        setSemiTrans(sprite, 1);
+        addPrim(&WMAP_LABEL_RENDER->ordering_table[3], sprite);
         if (D_800D921C < 0x7D00)
         {
-            D_800D921C += 0x14;
-            M2C_FIELD(D_801398EC, void**, 0x33C) = (void*)(M2C_FIELD(D_801398EC, void**, 0x33C) + 0x14);
+            D_800D921C += sizeof(SPRT);
+            WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
         }
-        func_8006534C(D_8011CF78, 3, temp_a2, D_801398EC);
+        func_8006534C(D_8011CF78, 3);
     }
-    temp_v1 = M2C_FIELD(&D_80182E08, u8*, 4);
-    if (temp_v1 != 0)
+    fade = D_80182E08.r0;
+    if (fade != 0)
     {
-        temp_a2_2 = M2C_FIELD(D_801398EC, void**, 0x33C);
-        M2C_FIELD(&D_80182E08, u8*, 4) = (u8)(temp_v1 - 8);
-        M2C_FIELD(&D_80182E08, u8*, 6) = temp_v1;
-        M2C_FIELD(&D_80182E08, u8*, 5) = temp_v1;
-        M2C_FIELD(temp_a2_2, s32*, 0) = (s32)M2C_FIELD(&D_80182E08, s32*, 0);
-        M2C_FIELD(temp_a2_2, s32*, 4) = (s32)M2C_FIELD(&D_80182E08, u8*, 4);
-        M2C_FIELD(temp_a2_2, s32*, 8) = (s32)M2C_FIELD(&D_80182E08, s32*, 8);
-        M2C_FIELD(temp_a2_2, s32*, 0xC) = (s32)M2C_FIELD(&D_80182E08, s32*, 0xC);
-        M2C_FIELD(temp_a2_2, s32*, 0x10) = (s32)M2C_FIELD(&D_80182E08, s32*, 0x10);
+        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        D_80182E08.r0 = fade - 8;
+        D_80182E08.b0 = fade;
+        D_80182E08.g0 = fade;
+        *sprite = D_80182E08;
         if (D_80182E04 != -1)
         {
-            M2C_FIELD(temp_a2_2, s32*, 0) = (s32)((M2C_FIELD(temp_a2_2, s32*, 0) & 0xFF000000) | (M2C_FIELD(D_801398EC, s32*, 0x7C) & 0xFFFFFF));
-            M2C_FIELD(D_801398EC, s32*, 0x7C) = (s32)((M2C_FIELD(D_801398EC, s32*, 0x7C) & 0xFF000000) | ((s32)temp_a2_2 & 0xFFFFFF));
+            addPrim(&WMAP_LABEL_RENDER->ordering_table[3], sprite);
             if (D_800D921C < 0x7D00)
             {
-                D_800D921C += 0x14;
-                M2C_FIELD(D_801398EC, void**, 0x33C) = (void*)(M2C_FIELD(D_801398EC, void**, 0x33C) + 0x14);
+                D_800D921C += sizeof(SPRT);
+                WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
             }
-            func_8006534C(D_80182DD0, 3, temp_a2_2, D_801398EC);
+            func_8006534C(D_80182DD0, 3);
         }
     }
     if (D_8013B28C != D_801398BC)
@@ -355,33 +334,30 @@ void func_80060230(void)
     }
     if (D_8013B258 == 0)
     {
-        var_t0 = *((D_8013B28C * 4) + (u8*)&D_80051A6C);
-        var_a3 = (var_t0 * 6) + (u8*)&D_800D040C;
+        char_index = ((s32*)&D_80051A6C)[D_8013B28C];
         do
         {
-            temp_v1_2 = (M2C_FIELD(var_a3, u8*, 0) * 8) + (u8*)&D_800D03EC;
-            temp_a0 = M2C_FIELD(D_801398EC, void**, 0x33C);
-            M2C_FIELD(temp_a0, u8*, 0xC) = (u8)M2C_FIELD(temp_v1_2, u8*, 0);
-            M2C_FIELD(temp_a0, s8*, 0xD) = (s8)(M2C_FIELD(temp_v1_2, u8*, 2) - 0x20);
-            M2C_FIELD(temp_a0, u16*, 0x10) = (u16)M2C_FIELD(temp_v1_2, u16*, 4);
-            M2C_FIELD(temp_a0, u16*, 0x12) = (u16)M2C_FIELD(temp_v1_2, u16*, 6);
-            M2C_FIELD(temp_a0, u16*, 8) = (u16)M2C_FIELD(var_a3, u16*, 2);
-            M2C_FIELD(temp_a0, s16*, 0xE) = 0x7F2E;
-            M2C_FIELD(temp_a0, s32*, 4) = 0x808080;
-            M2C_FIELD(temp_a0, s8*, 3) = 4;
-            M2C_FIELD(temp_a0, s8*, 7) = 0x64;
-            M2C_FIELD(temp_a0, s16*, 0xA) = (s16)M2C_FIELD(var_a3, u8*, 4);
-            M2C_FIELD(temp_a0, s32*, 0) = (s32)((M2C_FIELD(temp_a0, s32*, 0) & 0xFF000000) | (M2C_FIELD(D_801398EC, s32*, 0x74) & 0xFFFFFF));
-            M2C_FIELD(D_801398EC, s32*, 0x74) = (s32)((M2C_FIELD(D_801398EC, s32*, 0x74) & 0xFF000000) | ((s32)temp_a0 & 0xFFFFFF));
+            label_char = &((WmapLabelChar*)&D_800D040C)[char_index];
+            glyph = &((WmapLabelGlyph*)&D_800D03EC)[label_char->glyph];
+            sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+            sprite->u0 = glyph->u;
+            sprite->v0 = glyph->v - 0x20;
+            sprite->w = glyph->w;
+            sprite->h = glyph->h;
+            sprite->x0 = label_char->x;
+            sprite->y0 = label_char->y;
+            sprite->clut = 0x7F2E;
+            SET_BGR0_PACKED(sprite, 0x808080);
+            setSprt(sprite);
+            addPrim(&WMAP_LABEL_RENDER->ordering_table[1], sprite);
             if (D_800D921C < 0x7D00)
             {
-                D_800D921C += 0x14;
-                M2C_FIELD(D_801398EC, void**, 0x33C) = (void*)(M2C_FIELD(D_801398EC, void**, 0x33C) + 0x14);
+                D_800D921C += sizeof(SPRT);
+                WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
             }
-            var_t0 += 1;
-            var_a3 += 6;
-        } while (*(((D_8013B28C + 1) * 4) + (u8*)&D_80051A6C) != var_t0);
-        func_8006534C(0xBU, 1, (void*)D_800D921C, var_a3);
+            char_index += 1;
+        } while (((s32*)&D_80051A6C)[D_8013B28C + 1] != char_index);
+        func_8006534C(0xB, 1);
     }
 }
 
