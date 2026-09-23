@@ -40,7 +40,7 @@ extern u16 D_80182DD0;
 extern s32 D_80182E04;
 extern SPRT D_80182E08;
 extern s32 D_801ADAE4;
-extern u8 D_80051A6C;
+extern s32 D_80051A6C[];
 extern u8 D_800D03EC;
 extern u8 D_800D040C;
 extern s32 D_801398BC;
@@ -269,9 +269,6 @@ typedef struct
 
 /**
  * @brief Append the current and outgoing label sprites and auxiliary labels.
- * @note TODO: 95.644% (181/225 exact, 224 insns). Remaining: the label-start loop test keeps
- *       `(D_8013B28C + 1) << 2` plus a register copy of the table base in the target, and a few
- *       first-block register choices.
  */
 void func_80060230(void)
 {
@@ -293,12 +290,13 @@ void func_80060230(void)
         {
             clut_y = *(u16*)&D_800D0368;
             label->r0 += 8;
+            label->clut = (clut_y << 6) | 0x2F;
         }
         else
         {
             clut_y = *(u16*)&D_800D0368 + 1;
+            label->clut = (clut_y << 6) | 0x2F;
         }
-        label->clut = (clut_y << 6) | 0x2F;
         *sprite = D_8011D518;
         setSemiTrans(sprite, 1);
         addPrim(&WMAP_LABEL_RENDER->ordering_table[3], sprite);
@@ -334,29 +332,31 @@ void func_80060230(void)
     }
     if (D_8013B258 == 0)
     {
-        char_index = ((s32*)&D_80051A6C)[D_8013B28C];
+        char_index = D_80051A6C[D_8013B28C];
         do
         {
+            SPRT* glyph_sprite;
+
             label_char = &((WmapLabelChar*)&D_800D040C)[char_index];
+            glyph_sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
             glyph = &((WmapLabelGlyph*)&D_800D03EC)[label_char->glyph];
-            sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
-            sprite->u0 = glyph->u;
-            sprite->v0 = glyph->v - 0x20;
-            sprite->w = glyph->w;
-            sprite->h = glyph->h;
-            sprite->x0 = label_char->x;
-            sprite->y0 = label_char->y;
-            sprite->clut = 0x7F2E;
-            SET_BGR0_PACKED(sprite, 0x808080);
-            setSprt(sprite);
-            addPrim(&WMAP_LABEL_RENDER->ordering_table[1], sprite);
+            glyph_sprite->u0 = glyph->u;
+            glyph_sprite->v0 = glyph->v - 0x20;
+            glyph_sprite->w = glyph->w;
+            glyph_sprite->h = glyph->h;
+            glyph_sprite->x0 = label_char->x;
+            glyph_sprite->y0 = label_char->y;
+            glyph_sprite->clut = 0x7F2E;
+            SET_BGR0_PACKED(glyph_sprite, 0x808080);
+            setSprt(glyph_sprite);
+            addPrim(&WMAP_LABEL_RENDER->ordering_table[1], glyph_sprite);
             if (D_800D921C < 0x7D00)
             {
                 D_800D921C += sizeof(SPRT);
                 WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
             }
             char_index += 1;
-        } while (((s32*)&D_80051A6C)[D_8013B28C + 1] != char_index);
+        } while (D_80051A6C[D_8013B28C + 1] != char_index);
         func_8006534C(0xB, 1);
     }
 }
