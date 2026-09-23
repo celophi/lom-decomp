@@ -11,4 +11,7 @@ s32 akao_cmd_f0(void);
 s32 akao_cmd_f1(void);
 s32 akao_cmd_a8(s32 arg0);
 
+void akao_stop_song(s32 stop_mode);
+void akao_play_sfx(s32 sound_id, s32 parameter, s32 pan, s32 volume);
+
 #endif

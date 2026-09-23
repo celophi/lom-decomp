@@ -36,7 +36,9 @@ typedef struct
     u32 weapon_category_masks[11];
     u8 unknown_0x060[0xD4 - 0x60];
     s16 rng_seed;
-    u8 unknown_0x0d6[0x2E0 - 0xD6];
+    u8 unknown_0x0d6[0xE0 - 0xD6];
+    s32 world_map_cell; /**< Grid cell (column + row * 19) chosen in WSEL. */
+    u8 unknown_0x0e4[0x2E0 - 0xE4];
     s32 mode_flags;
     u8 unknown_0x2e4[0x5F0 - 0x2E4];
     SavedCharacter player;

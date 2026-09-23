@@ -52,7 +52,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | SHOP.BIN | 🔒 | Fully linked |
 | TITLE.BIN | 🔒 | Fully linked |
 | WMAP.BIN | 🪲 | Non-matching |
-| WSEL.BIN | ☑️ | Matching |
+| WSEL.BIN | 🔒 | Fully linked |
 | ZUKAN.BIN | 🔒 | Fully linked |
 
 ## Supported game version

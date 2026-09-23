@@ -58,6 +58,9 @@ typedef struct
  * Token-equivalent to the cast so codegen is unchanged. */
 #define SCD_REGS ((SCDRegs*)0x801ED600)
 
+/** @brief First byte of SCD_REGS (device_type), addressed as its own symbol by some overlays. */
+extern u8 g_controller_device_type;
+
 /**
  * Remaps the four face-button bits in a byte-swapped controller word from the
  * PSX hardware layout (Triangle/Circle/Cross/Square at bits 7/6/5/4) to the
