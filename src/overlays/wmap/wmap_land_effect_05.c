@@ -10,8 +10,6 @@
 /** @brief Initialize the actor group and its animation resources, then advance. */
 void func_8008C7CC(void)
 {
-/* Partial WMAP decompilation: 98.935486% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -59,22 +57,24 @@ extern s32 D_801B2A2C;
 extern void func_8008DFD0__for_func_8008C7CC(void) __asm__("func_8008DFD0");
 
     s32 i;
+    WmapConfigA* config;
 
     D_801B0FD0 = 5;
     for (i = 200; i < 205; i++)
     {
+        config = &D_800D9268[i];
         D_80139988[i].data = D_80121538;
-        D_800D9268[i].field_02 = 0;
-        D_800D9268[i].field_06 = 15;
-        D_800D9268[i].field_0E = 0;
-        D_800D9268[i].field_10 = -1;
-        D_800D9268[i].field_22 = 63;
-        D_800D9268[i].field_24 = 2;
-        D_800D9268[i].field_26 = 2;
+        config->field_02 = 0;
+        config->field_06 = 15;
+        config->field_0E = 0;
+        config->field_10 = -1;
+        config->field_22 = 63;
+        config->field_24 = 2;
+        config->field_26 = 2;
         D_801AFBD0[i].field_00 = 1;
         D_801AFBD0[i].angle = i * 0x333;
-        D_801AFBD0[i].field_04 = 0;
         D_801AFBD0[i].field_08 = 340000;
+        D_801AFBD0[i].field_04 = 0;
         D_801AFBD0[i].field_0C = 9999;
         D_801AFBD0[i].field_0E = 0;
         D_801AFBD0[i].field_10 = 80;
@@ -86,38 +86,31 @@ extern void func_8008DFD0__for_func_8008C7CC(void) __asm__("func_8008DFD0");
 
 /** @brief Draw two oscillating effect layers and update their intensity. */
 void func_8008C8C4(void)
-
 {
-/* Partial WMAP decompilation: 87.588780% (gcc280_g0). */
-
 extern s8 D_80051B4C[];
 extern void *D_8011CF24;
 extern VECTOR D_80182DC0;
-extern s32 D_80182DE4;
-extern s32 D_801B2468;
 extern SVECTOR D_801B2490;
 extern SVECTOR D_801B2498;
+extern s32 D_80182DE4;
+extern s32 D_801B2468;
 extern s32 D_801B24B4;
 extern s32 D_801B2A30;
 extern s32 D_801B2A34;
 
     s32 first_frame;
-    SVECTOR *rotation;
-    s32 second_frame;
     s32 intensity;
     s32 remaining;
 
     PushMatrix();
-    rotation = &D_801B2490;
     first_frame = (s32) (D_80051B4C[D_801B24B4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
-    func_8006CD98(D_8011CF24, first_frame, 20, 0x35, 0x7800, 4096, D_801B2468);
-    rotation->vz = (u16) (rotation->vz - 0x18);
-    rotation = &D_801B2498;
-    second_frame = (s32) (D_80051B4C[D_80182DE4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
-    func_8006CD98(D_8011CF24, second_frame, 20, 0x35, 0x7800, 4096, D_801B2468);
-    rotation->vz = (u16) (rotation->vz + 0x30);
+    func_8006CFA8(&D_80182DC0, &D_801B2490);
+    func_8006CD98(D_8011CF24, first_frame, 0x14, 0x35, 0x7800, 0x1000, D_801B2468);
+    first_frame = (s32) (D_80051B4C[D_80182DE4] + 0x80) >> 5;
+    D_801B2490.vz = (u16) (D_801B2490.vz - 0x18);
+    func_8006CFA8(&D_80182DC0, &D_801B2498);
+    func_8006CD98(D_8011CF24, first_frame, 0x14, 0x35, 0x7800, 0x1000, D_801B2468);
+    D_801B2498.vz = (u16) (D_801B2498.vz + 0x30);
     PopMatrix();
     D_801B24B4 = (D_801B24B4 + 4) & 0xFF;
     D_80182DE4 = (D_80182DE4 + 2) & 0xFF;
