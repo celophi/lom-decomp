@@ -278,11 +278,9 @@ void func_800653EC(void)
 
 /**
  * @brief Combine the header value shifted right and left by one byte.
- * @param selection Caller selection, unused by this helper.
- * @param state Caller state, unused by this helper.
  * @return The combined value, including the upper bits of the left shift.
  */
-s32 func_80065428(s32 selection, s32* state)
+s32 func_80065428(void)
 {
     s32 value = D_800D0454->value;
     return ((s32)value >> 8) | (value << 8);

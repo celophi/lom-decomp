@@ -14,6 +14,6 @@ void func_800652A8();
 void func_800652F8(void);
 void func_8006534C();
 void func_800653EC(void);
-s32 func_80065428(s32 selection, s32* state);
+s32 func_80065428(void);
 
 #endif
