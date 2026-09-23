@@ -352,8 +352,7 @@ s32 niki_handle_input(void)
         if (func_8001714C(D_800ECF7C, g_niki_entries[g_niki_card_slot][g_niki_selected_row].name, 0xC) == 0)
         {
             NikiEntryMetadata* metadata = &g_niki_entry_preview.metadata;
-            if ((metadata->identifier != D_8012271C->identifier) && (metadata->status != 0) &&
-                ((D_8003EC9C == 0xFF) || (metadata->unknown_0xcf == D_8003EC9C)))
+            if ((metadata->identifier != D_8012271C->identifier) && (metadata->status != 0) && ((D_8003EC9C == 0xFF) || (metadata->unknown_0xcf == D_8003EC9C)))
             {
                 element = niki_alloc_element();
                 element->attr.f.phase = 1;
@@ -456,6 +455,27 @@ static inline void niki_link_packet(NikiGpuTag* ot, NikiGpuTag* tag)
 }
 
 /**
+ * @brief Draw the three-line card-scan status message.
+ * @param ot Ordering-table pointer.
+ * @param prim Primitive-buffer write cursor.
+ * @param x_offset Horizontal scroll offset (subtracted from every x).
+ * @param y_offset Vertical scroll offset (subtracted from every row y).
+ * @return Advanced primitive-buffer write cursor.
+ */
+static inline s32 niki_draw_scan_message(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
+{
+    s32 x;
+    u8* glyph_table;
+
+    x = -x_offset + 0x84;
+    glyph_table = (u8*)&D_801470F8;
+    prim = func_800A88A0(prim, ot, glyph_table + D_801470F8, 4, x, -y_offset, 2);
+    prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0x1E), 4, x, 0xE - y_offset, 2);
+    prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0xB2), 4, x, 0x1C - y_offset, 2);
+    return prim;
+}
+
+/**
  * @brief Render the niki row/status list: per-entry glyphs, markers and the
  *        highlight tile, dispatched by the g_niki_entry_state list-state selector.
  * @param ot Ordering-table pointer.
@@ -472,10 +492,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
     switch (state)
     {
     case 0xF8:
-        do
-        {
-            prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
-        } while (0);
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
         break;
     case 0xF9:
         prim = func_800A88A0(prim, ot, GLYPH_SYM(D_8014712C, 0x34), 4, -x_offset + 0x84, -y_offset, 2);
@@ -494,6 +511,9 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
         break;
     case 0xFE:
         break;
+    case 0xFF:
+        prim = niki_draw_scan_message(ot, prim, x_offset, y_offset);
+        break;
     default:
     {
         s32 row_y;
@@ -501,14 +521,7 @@ s32 niki_draw_entry_list(s32* ot, s32 prim, s32 x_offset, s32 y_offset)
 
         if (g_niki_entry_scan_active != 0)
         {
-            s32 x;
-            u8* glyph_table;
-        case 0xFF:
-            x = -x_offset + 0x84;
-            glyph_table = (u8*)&D_801470F8;
-            prim = func_800A88A0(prim, ot, glyph_table + D_801470F8, 4, x, -y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0x1E), 4, x, 0xE - y_offset, 2);
-            prim = func_800A88A0(prim, ot, GLYPH_OFF(glyph_table, 0xB2), 4, x, 0x1C - y_offset, 2);
+            prim = niki_draw_scan_message(ot, prim, x_offset, y_offset);
             break;
         }
         entry_index = 0;
@@ -1001,8 +1014,19 @@ NikiElement* niki_alloc_element(void)
 }
 
 /**
+ * @brief Low byte of an element's 9-bit width, read from the whole attribute word.
+ * @note Reading the width_low bitfield instead compiles to a byte load.
+ */
+#define NIKI_ELEMENT_WIDTH_LOW_BYTE(element) ((s32)((element)->attr.word >> 24))
+/** @brief Join an element's width high bit with an already-read low byte @p low. */
+#define NIKI_ELEMENT_JOIN_WIDTH(element, low) (((element)->dimensions.f.width_high << 8) | (low))
+
+/**
  * @brief Animate element windows and append their content and borders to the frame.
  * @param frame_arg Draw context supplying the clip variant and primitive cursor.
+ * @note Each case reads the width low byte into its own local before the inset
+ *       product, and the x position and low byte again before each
+ *       func_800AD850 call; the compiled evaluation order needs both.
  * @see decomp.me (100%)
  */
 void niki_update_and_draw_elements(NikiFrameState* frame_arg)
@@ -1010,29 +1034,18 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
     NikiPacketHeader* prim;
     NikiFrameState* frame;
     NikiElement* element;
-    s32 scaled_width;
-    s32 scaled_height;
+    s32 inset_width;
+    s32 inset_height;
     s32 element_index;
-    NikiDrawEnvironment draw_area;
-    u32 dispatch_word;
-    s32 state;
-    u32 dimensions;
-    u32 width;
-    s32 opening_phase;
-    s32 opening_width_product;
-    s32 opening_height;
-    s32 opening_height_product;
-    s32 opening_height_margin;
-    u32 opening_attributes;
-    u32 width_low;
-    s32 closing_phase;
-    s32 closing_value;
-    s32 closing_height;
-    s32 closing_height_product;
-    s32 closing_height_margin;
-    u32 closing_attributes;
-    u32 hold_word;
     s32 entry_count;
+    s32 opening_width_low;
+    s32 closing_width_low;
+    s32 opening_border_x;
+    s32 opening_border_width_low;
+    s32 closing_border_x;
+    s32 closing_border_width_low;
+    s32 open_border_width_low;
+    NikiDrawEnvironment draw_area;
 
     prim = frame_arg->prim_cursor;
     frame = frame_arg;
@@ -1047,17 +1060,14 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
     }
 
     element = g_niki_element_pool;
-    element_index = 0;
-
-    for (; element_index < NIKI_ELEMENT_COUNT; element_index++, element++)
+    for (element_index = 0; element_index < NIKI_ELEMENT_COUNT; element_index++, element++)
     {
-        if (element->attr.read_word & NIKI_ELEMENT_STATE_MASK)
+        if (element->attr.f.state != 0)
         {
             entry_count = g_niki_entry_state;
-            if ((entry_count < 16) && (element->draw == niki_draw_entry_list) && ((g_niki_element_pool[1].attr.word & 7) == 2))
+            if ((entry_count < 16) && (element->draw == niki_draw_entry_list) && (g_niki_element_pool[1].attr.f.state == 2))
             {
-                entry_count *= 14;
-                if ((g_niki_scroll_y + 88) < entry_count)
+                if (entry_count * 14 > g_niki_scroll_y + 88)
                 {
                     prim = (NikiPacketHeader*)func_800AE76C(prim, frame, 0x114, 0x82, 0);
                 }
@@ -1068,144 +1078,72 @@ void niki_update_and_draw_elements(NikiFrameState* frame_arg)
             }
 
             func_8001A5D4((s32)prim, &draw_area);
-
             prim->tag = (prim->tag & GPU_TAG_HIGH_MASK) | (frame->head_tag & GPU_ADDR_MASK);
             frame->head_tag = (s32)((frame->head_tag & GPU_TAG_HIGH_MASK) | ((s32)prim & GPU_ADDR_MASK));
-
-            dispatch_word = element->attr.read_word;
-            state = dispatch_word & NIKI_ELEMENT_STATE_MASK;
-
             prim = (NikiPacketHeader*)((NikiDrawEnvironmentPacket*)prim + 1);
 
-            switch (state)
+            switch (element->attr.f.state)
             {
             case 1:
-                opening_attributes = element->attr.read_word;
-                dimensions = element->dimensions.word;
-                width_low = opening_attributes >> 24;
-                width = ((dimensions & 1) << 8) | width_low;
-                opening_phase = (opening_attributes >> 3) & 0xF;
-                opening_width_product = width * opening_phase;
                 g_pad_input = 0;
-                if (opening_width_product < 0)
+                opening_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
+                inset_width = (NIKI_ELEMENT_JOIN_WIDTH(element, opening_width_low) * element->attr.f.phase) / 8;
+                inset_height = (element->dimensions.f.height * element->attr.f.phase) / 8;
+                prim = (NikiPacketHeader*)element->draw((s32*)frame, (s32)prim, (NIKI_ELEMENT_JOIN_WIDTH(element, opening_width_low) - inset_width) / 2,
+                                                        (element->dimensions.f.height - inset_height) / 2);
+                opening_border_x = element->attr.f.x;
+                opening_border_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
+                prim = (NikiPacketHeader*)func_800AD850(prim, frame,
+                                                        opening_border_x + (NIKI_ELEMENT_JOIN_WIDTH(element, opening_border_width_low) - inset_width) / 2,
+                                                        element->attr.f.y + (element->dimensions.f.height - inset_height) / 2, inset_width, inset_height,
+                                                        frame_arg->frame_flag, element_index == 0);
+                element->attr.f.phase++;
+                if (element->attr.f.phase == 8)
                 {
-                    opening_width_product += 7;
-                }
-                opening_height = (dimensions >> 1) & 0xFF;
-                opening_height_product = opening_height * opening_phase;
-                scaled_width = opening_width_product >> 3;
-                if (opening_height_product < 0)
-                {
-                    opening_height_product += 7;
-                }
-                scaled_height = opening_height_product >> 3;
-                opening_height_margin = (s32)(opening_height - scaled_height);
-
-                prim = (NikiPacketHeader*)element->draw((s32*)frame, (s32)prim, (s32)(width - scaled_width) / 2, opening_height_margin / 2);
-                {
-                    u32 attributes;
-                    u32 x;
-                    u32 width_low;
-                    attributes = element->attr.read_word;
-                    x = (attributes >> 7) & 0x1FF;
-                    width_low = attributes >> 24;
-                    prim = (NikiPacketHeader*)func_800AD850(prim, frame, x + (s32)((((element->dimensions.word & 1) << 8) | width_low) - scaled_width) / 2,
-                                                         (element->attr.bytes.y) + ((s32)((element->dimensions.word >> 1) & 0xFF) - scaled_height) / 2,
-                                                         scaled_width, scaled_height, frame_arg->frame_flag, element_index == 0);
-                }
-                {
-                    u32 old_word;
-                    u32 new_word;
-                    old_word = element->attr.read_word;
-                    new_word = (old_word & ~NIKI_ELEMENT_PHASE_MASK) | (((((old_word >> 3) & 0xF) + 1) & 0xF) * 8);
-                    element->attr.word = new_word;
-                    if (((new_word >> 3) & 0xF) == 8)
-                    {
-                        field_reset_input_repeat();
-                        element->attr.word = (element->attr.read_word & ~7) | 2;
-                    }
+                    field_reset_input_repeat();
+                    element->attr.f.state = 2;
                 }
                 break;
 
             case 2:
                 prim = (NikiPacketHeader*)element->draw((s32*)frame, (s32)prim, 0, 0);
+                open_border_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
+                prim =
+                    (NikiPacketHeader*)func_800AD850(prim, frame, element->attr.f.x, element->attr.f.y, NIKI_ELEMENT_JOIN_WIDTH(element, open_border_width_low),
+                                                     element->dimensions.f.height, frame_arg->frame_flag, element_index == 0);
+                if (element->attr.f.phase != 0)
                 {
-                    u32 attributes;
-                    u32 width_low;
-                    attributes = element->attr.read_word;
-                    width_low = attributes >> 24;
-                    prim = (NikiPacketHeader*)func_800AD850(prim, frame, (attributes >> 7) & 0x1FF, element->attr.bytes.y,
-                                                         ((element->dimensions.word & 1) << 8) | width_low, (element->dimensions.word >> 1) & 0xFF, frame_arg->frame_flag,
-                                                         element_index == 0);
-                }
-                hold_word = element->attr.read_word;
-                if (((hold_word >> 3) & 0xF) != 0)
-                {
-                    element->attr.word = (hold_word & ~NIKI_ELEMENT_PHASE_MASK) | (((((hold_word >> 3) & 0xF) - 1) & 0xF) * 8);
+                    element->attr.f.phase--;
                 }
                 break;
 
             case 3:
-                closing_phase = element->attr.read_word;
-                dimensions = element->dimensions.word;
-                closing_value = (u32)closing_phase >> 24;
-                width = ((dimensions & 1) << 8) | closing_value;
-                closing_phase = (u32)closing_phase >> 3;
-                closing_phase &= 0xF;
-                closing_value = width * closing_phase;
                 g_pad_input = 0;
-                if (closing_value < 0)
+                closing_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
+                inset_width = (NIKI_ELEMENT_JOIN_WIDTH(element, closing_width_low) * element->attr.f.phase) / 8;
+                inset_height = (element->dimensions.f.height * element->attr.f.phase) / 8;
+                prim = (NikiPacketHeader*)element->draw((s32*)frame, (s32)prim, (NIKI_ELEMENT_JOIN_WIDTH(element, closing_width_low) - inset_width) / 2,
+                                                        (element->dimensions.f.height - inset_height) / 2);
+                closing_border_x = element->attr.f.x;
+                closing_border_width_low = NIKI_ELEMENT_WIDTH_LOW_BYTE(element);
+                prim = (NikiPacketHeader*)func_800AD850(prim, frame,
+                                                        closing_border_x + (NIKI_ELEMENT_JOIN_WIDTH(element, closing_border_width_low) - inset_width) / 2,
+                                                        element->attr.f.y + (element->dimensions.f.height - inset_height) / 2, inset_width, inset_height,
+                                                        frame_arg->frame_flag, element_index == 0);
+                element->attr.f.phase--;
+                if (element->attr.f.phase == 0)
                 {
-                    closing_value += 7;
-                }
-                closing_height = (dimensions >> 1) & 0xFF;
-                closing_height_product = closing_height * closing_phase;
-                scaled_width = closing_value >> 3;
-                if (closing_height_product < 0)
-                {
-                    closing_height_product += 7;
-                }
-                scaled_height = closing_height_product >> 3;
-                closing_height_margin = (s32)(closing_height - scaled_height);
-
-                prim = (NikiPacketHeader*)element->draw((s32*)frame, (s32)prim, (s32)(width - scaled_width) / 2, closing_height_margin / 2);
-                {
-                    u32 attributes;
-                    u32 x;
-                    u32 width_low;
-                    attributes = element->attr.read_word;
-                    x = (attributes >> 7) & 0x1FF;
-                    width_low = attributes >> 24;
-                    prim = (NikiPacketHeader*)func_800AD850(prim, frame, x + (s32)((((element->dimensions.word & 1) << 8) | width_low) - scaled_width) / 2,
-                                                         (element->attr.bytes.y) + ((s32)((element->dimensions.word >> 1) & 0xFF) - scaled_height) / 2,
-                                                         scaled_width, scaled_height, frame_arg->frame_flag, element_index == 0);
-                }
-                {
-                    u32 old_word;
-                    old_word = element->attr.read_word;
-                    closing_value = old_word & ~NIKI_ELEMENT_PHASE_MASK;
-                    old_word >>= 3;
-                    old_word &= 0xF;
-                    old_word--;
-                    old_word &= 0xF;
-                    old_word <<= 3;
-                    closing_value |= old_word;
-                    element->attr.word = closing_value;
-                    if (!(((u32)closing_value >> 3) & 0xF))
-                    {
-                        element->attr.word = ((((u32)closing_value & ~NIKI_ELEMENT_PHASE_MASK) | 0x18) & ~7) | 4;
-                    }
+                    element->attr.f.phase = 3;
+                    element->attr.f.state = 4;
                 }
                 break;
 
             case 4:
-                closing_attributes = element->attr.word;
                 g_pad_input = 0;
-                hold_word = (closing_attributes & ~NIKI_ELEMENT_PHASE_MASK) | (((((closing_attributes >> 3) & 0xF) - 1) & 0xF) * 8);
-                element->attr.word = hold_word;
-                if (!((hold_word >> 3) & 0xF))
+                element->attr.f.phase--;
+                if (element->attr.f.phase == 0)
                 {
-                    element->attr.word = hold_word & ~7;
+                    element->attr.f.state = 0;
                 }
                 break;
             }
@@ -1286,7 +1224,6 @@ s32 niki_text_byte_length(u8* text)
 void niki_text_copy(u8* dst, u8* src)
 {
     u8* cursor;
-    u8 lead_byte;
     s32 byte_length;
     s32 byte_index;
 
@@ -1295,9 +1232,7 @@ void niki_text_copy(u8* dst, u8* src)
 
     while (*cursor != 0)
     {
-        lead_byte = *(volatile u8*)cursor;
-
-        if ((u32)(lead_byte - NIKI_TEXT_EXTENDED_LEAD_FIRST) < NIKI_TEXT_EXTENDED_PAGE_COUNT)
+        if ((*cursor >= NIKI_TEXT_EXTENDED_LEAD_FIRST) && (*cursor < NIKI_TEXT_EXTENDED_LEAD_FIRST + NIKI_TEXT_EXTENDED_PAGE_COUNT))
         {
             cursor += 2;
             byte_length += 2;
@@ -2604,7 +2539,7 @@ s32 niki_parse_entry_fields(void)
             }
             suffix = &g_niki_entries[g_niki_card_slot][entry_index].name[0xC];
             {
-                s32* fields = &g_niki_entry_fields[g_niki_card_slot * NIKI_DIRECTORY_ENTRY_COUNT];
+                s32* fields = g_niki_entry_fields[g_niki_card_slot];
                 fields[entry_index] = value;
             }
             suffix_value = niki_parse_hex_suffix_byte(suffix);
@@ -2616,7 +2551,7 @@ s32 niki_parse_entry_fields(void)
         }
         else
         {
-            s32* fields = &g_niki_entry_fields[g_niki_card_slot * NIKI_DIRECTORY_ENTRY_COUNT];
+            s32* fields = g_niki_entry_fields[g_niki_card_slot];
             fields[entry_index] = -1;
             g_niki_entry_suffix_values[entry_index] = 0;
         }
@@ -2627,152 +2562,68 @@ s32 niki_parse_entry_fields(void)
 
 /**
  * @brief Rank recognized entries and select the entry with the greatest field value.
- * @param unused0 Unused.
- * @param unused1 Unused.
- * @param unused2 Unused.
  * @return Index of the greatest field value, or zero when none is present.
  */
-s32 niki_rank_entries(s32 unused0, s32 unused1, s32 unused2)
+s32 niki_rank_entries(void)
 {
-    s32* fields;
-    s32* field;
-    s32* rank;
-    s32* previous_field;
-    s32* previous_rank;
-    s32* ranks;
-    s32* current_field;
-    s32* candidate;
-    s32* field_table;
-    s32* entry_field_table;
-    s32 slot;
-    s32* suffix_output;
-    NikiDirEntry* entry_cursor;
-    s32 next_rank;
     s32 entry_index;
-    s32 maximum;
-    s32 entry_count;
-    s32 max_suffix;
-    s32 higher_count;
     s32 previous_index;
+    s32 higher_count;
+    s32 next_rank;
+    s32 maximum;
+    s32 max_suffix;
 
     niki_parse_entry_fields();
     maximum = -1;
     niki_sort_entries_by_type();
-    entry_index = 0;
     max_suffix = niki_parse_entry_fields();
     niki_reset_entry_ranks();
     next_rank = 1;
-    if (g_niki_entry_state > 0)
+    for (entry_index = 0; entry_index < g_niki_entry_state; entry_index++)
     {
-        entry_count = g_niki_entry_state;
-        ranks = &g_niki_entry_ranks[0];
-        rank = ranks;
-        slot = g_niki_card_slot;
-        entry_field_table = g_niki_entry_fields;
-        fields = entry_field_table + slot * NIKI_DIRECTORY_ENTRY_COUNT;
-        field = fields;
-        do
+        if (g_niki_entry_fields[g_niki_card_slot][entry_index] >= 0)
         {
-            if (*field >= 0)
+            if (g_niki_entry_fields[g_niki_card_slot][entry_index] >= maximum)
             {
-                previous_index = 0;
-                if (entry_index > 0)
-                {
-                    previous_index += 1;
-                    previous_index -= 1;
-                }
-                if (*field >= maximum)
-                {
-                    *rank = next_rank;
-                    maximum = *field;
-                    next_rank += 1;
-                }
-                else
-                {
-                    higher_count = previous_index;
-                    if (entry_index > 0)
-                    {
-                        current_field = field;
-                        previous_rank = ranks;
-                        previous_field = fields;
-                        do
-                        {
-                            if (*current_field < *previous_field)
-                            {
-                                higher_count += 1;
-                                *previous_rank += 1;
-                            }
-                            previous_rank += 1;
-                            previous_index += 1;
-                            previous_field += 1;
-                        } while (previous_index < entry_index);
-                    }
-                    {
-                        s32 rank_value;
-                        do
-                        {
-                            do
-                            {
-                                do
-                                {
-                                    rank_value = next_rank - higher_count;
-                                } while (0);
-                            } while (0);
-                        } while (0);
-                        *rank = rank_value;
-                    }
-                    next_rank += 1;
-                }
+                g_niki_entry_ranks[entry_index] = next_rank;
+                maximum = g_niki_entry_fields[g_niki_card_slot][entry_index];
+                next_rank++;
             }
-            rank += 1;
-            entry_index += 1;
-            field += 1;
-        } while (entry_index < entry_count);
+            else
+            {
+                higher_count = 0;
+                for (previous_index = 0; previous_index < entry_index; previous_index++)
+                {
+                    if (g_niki_entry_fields[g_niki_card_slot][entry_index] < g_niki_entry_fields[g_niki_card_slot][previous_index])
+                    {
+                        higher_count++;
+                        g_niki_entry_ranks[previous_index]++;
+                    }
+                }
+                g_niki_entry_ranks[entry_index] = next_rank - higher_count;
+                next_rank++;
+            }
+        }
     }
-    previous_field = ranks;
-    previous_rank = fields;
     g_niki_rank_count = next_rank;
+    /* Reuse next_rank as the running maximum and maximum as its index. */
     next_rank = -1;
-    entry_index = 0;
     maximum = 0;
-    if (g_niki_entry_state > 0)
+    for (entry_index = 0; entry_index < g_niki_entry_state; entry_index++)
     {
-        s32 max_count;
-        max_count = g_niki_entry_state;
-        slot = g_niki_card_slot;
-        field_table = g_niki_entry_fields;
-        candidate = &field_table[slot * NIKI_DIRECTORY_ENTRY_COUNT];
-        do
+        if (next_rank < g_niki_entry_fields[g_niki_card_slot][entry_index])
         {
-            if (next_rank < *candidate)
-            {
-                next_rank = *candidate;
-                maximum = entry_index;
-            }
-            entry_index += 1;
-            candidate += 1;
-        } while (entry_index < max_count);
-        entry_index = 0;
+            next_rank = g_niki_entry_fields[g_niki_card_slot][entry_index];
+            maximum = entry_index;
+        }
     }
     g_niki_entry_value_limit = next_rank + 1;
-    if (g_niki_entry_state > 0)
+    for (entry_index = 0; entry_index < g_niki_entry_state; entry_index++)
     {
-        suffix_output = &g_niki_entry_suffix_values[0];
-        entry_cursor = g_niki_entries[0];
-    loop_20:
-        if (func_8001714C(&D_800ECFC4[0], ((NikiDirEntry*)((g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES) + (s32)entry_cursor))->name, 8) == 0)
+        if (func_8001714C(&D_800ECFC4[0], g_niki_entries[g_niki_card_slot][entry_index].name, 8) == 0)
         {
-            *suffix_output = max_suffix + 1;
-        }
-        else
-        {
-            suffix_output += 1;
-            entry_cursor++;
-            entry_index += 1;
-            if (entry_index < g_niki_entry_state)
-            {
-                goto loop_20;
-            }
+            g_niki_entry_suffix_values[entry_index] = max_suffix + 1;
+            break;
         }
     }
     return maximum;

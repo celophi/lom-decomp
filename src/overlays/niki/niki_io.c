@@ -649,10 +649,9 @@ s32 niki_begin_entry_scan(s32 card_slot)
  */
 s32 niki_scan_next_entry(s32 page)
 {
-    s32 entry_index;
     s32 used_blocks;
+    s32 entry_index;
     s32 selected;
-    s32 entry_count;
     s32 card_full;
 
     if (func_8001684C(&g_niki_entries[page][g_niki_entry_state]) != 0)
@@ -669,30 +668,16 @@ s32 niki_scan_next_entry(s32 page)
     }
     else
     {
-        entry_index = 0;
         used_blocks = 0;
         g_niki_preserve_old_save = 0;
-        entry_count = g_niki_entry_state;
-        if (entry_count > 0)
+        for (entry_index = 0; entry_index < g_niki_entry_state; entry_index++)
         {
-            u8* entries;
-            s32 offset;
-            do
-            {
-                entries = (u8*)g_niki_entries;
-            } while (0);
-            offset = g_niki_card_slot * NIKI_CARD_DIRECTORY_BYTES;
-            do
-            {
-                used_blocks += ((NikiDirEntry*)(offset + (s32)entries))->size / NIKI_MEMORY_CARD_BLOCK_BYTES;
-                entry_index++;
-                offset += NIKI_DIRECTORY_ENTRY_BYTES;
-            } while (entry_index < entry_count);
+            used_blocks += g_niki_entries[g_niki_card_slot][entry_index].size / NIKI_MEMORY_CARD_BLOCK_BYTES;
         }
         card_full = used_blocks >= 0xE;
         if (card_full != 0)
         {
-            selected = niki_rank_entries(used_blocks, entry_index, entry_count);
+            selected = niki_rank_entries();
             if (niki_has_known_entry_type() == 0)
             {
                 g_niki_entry_state = 0xFA;
@@ -707,7 +692,7 @@ s32 niki_scan_next_entry(s32 page)
         else
         {
             g_niki_preserve_old_save = 1;
-            selected = niki_rank_entries(used_blocks, entry_index, entry_count);
+            selected = niki_rank_entries();
             if (niki_has_known_entry_type() == 0)
             {
                 g_niki_selected_row = 0;
@@ -1080,6 +1065,14 @@ s32 niki_draw_cached_text(s32 prim, s32* ot, u8* text, s32 x, s32 y, s32 palette
     return (s32)((NikiDrawModePacket*)prim + 1);
 }
 
+/**
+ * @brief Draw one font glyph, rasterizing it into the VRAM glyph cache on first use.
+ * @param prim Primitive-buffer write cursor.
+ * @param ot Ordering-table entry receiving the sprite.
+ * @param character_code Font character code (low 16 bits are used).
+ * @param palette Palette index used to color the rasterized pixels.
+ * @return Advanced primitive-buffer write cursor.
+ */
 s32 niki_render_cached_glyph(s32 prim, s32* ot, s32 character_code, s32 palette)
 {
     NikiGlyphCacheEntry* entry;
@@ -1087,7 +1080,6 @@ s32 niki_render_cached_glyph(s32 prim, s32* ot, s32 character_code, s32 palette)
     s32 font_address;
     u32 requested_code;
     s32 slot;
-    s32 high_pixel_set;
     s32 code;
     RECT rect;
 
@@ -1098,8 +1090,6 @@ s32 niki_render_cached_glyph(s32 prim, s32* ot, s32 character_code, s32 palette)
     s32 source_byte;
 
     u16 mask;
-    volatile u8* raster_byte;
-    u8 packed_pixels;
 
     code = character_code;
     slot = 0;
@@ -1138,16 +1128,7 @@ s32 niki_render_cached_glyph(s32 prim, s32* ot, s32 character_code, s32 palette)
                 *raster = ((*font_data) & mask) ? color_index : 0;
 
                 mask >>= 1;
-                high_pixel_set = (*font_data) & mask;
-
-                raster_byte = raster;
-                packed_pixels = *raster_byte;
-                if (high_pixel_set)
-                {
-                    packed_pixels += high_nibble_color;
-                }
-
-                *raster_byte = packed_pixels;
+                *raster += ((*font_data) & mask) ? high_nibble_color : 0;
 
                 mask >>= 1;
                 raster++;
