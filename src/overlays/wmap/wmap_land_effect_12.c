@@ -223,8 +223,6 @@ extern void func_80085108__for_func_800841A8(void) __asm__("func_80085108");
 /** @brief Initialize the actor group and its animation resources, then advance. */
 void func_80084284(void)
 {
-/* Partial WMAP decompilation: 98.935486% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -272,22 +270,24 @@ extern s32 D_801B28AC;
 extern void func_80085300__for_func_80084284(void) __asm__("func_80085300");
 
     s32 i;
+    WmapConfigA* config;
 
     D_801B0FD0 = 5;
     for (i = 200; i < 205; i++)
     {
+        config = &D_800D9268[i];
         D_80139988[i].data = D_80121538;
-        D_800D9268[i].field_02 = 0;
-        D_800D9268[i].field_06 = 15;
-        D_800D9268[i].field_0E = 0;
-        D_800D9268[i].field_10 = -1;
-        D_800D9268[i].field_22 = 127;
-        D_800D9268[i].field_24 = 1;
-        D_800D9268[i].field_26 = 8;
+        config->field_02 = 0;
+        config->field_06 = 15;
+        config->field_0E = 0;
+        config->field_10 = -1;
+        config->field_22 = 127;
+        config->field_24 = 1;
+        config->field_26 = 8;
         D_801AFBD0[i].field_00 = 1;
         D_801AFBD0[i].angle = i * 0x333;
-        D_801AFBD0[i].field_04 = 0;
         D_801AFBD0[i].field_08 = 380000;
+        D_801AFBD0[i].field_04 = 0;
         D_801AFBD0[i].field_0C = 9999;
         D_801AFBD0[i].field_0E = 0;
         D_801AFBD0[i].field_10 = 80;
@@ -626,17 +626,22 @@ extern s32 D_801B2870;
 
 void func_80084838(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
+/** @brief First word of a 40-byte world-map cell. */
+typedef struct
+{
+    s32 value;
+    u8 unknown_04[36];
+} WmapValueRecord;
 
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapValueRecord D_80139290[][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B2870;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2870 += 1;
 }
 

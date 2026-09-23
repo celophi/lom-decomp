@@ -93,12 +93,11 @@ extern WmapRenderState* D_801398EC;
 
 
 #define LOAD_VERTEX(dst, source, index)                                                                                                                         \
-    do                                                                                                                                                           \
-    {                                                                                                                                                            \
+    {                                                                                                                                                           \
         (dst).x = (source)[(index)].x;                                                                                                                          \
         (dst).y = (source)[(index)].y;                                                                                                                          \
         (dst).z = (source)[(index)].z;                                                                                                                          \
-    } while (0)
+    }
 
 #define LOAD_VERTEX_SCALED(dst, source, index, divisor)                                                                                                         \
     do                                                                                                                                                           \
@@ -129,18 +128,25 @@ extern WmapRenderState* D_801398EC;
 
 #define LINK_PACKET(state, ot_index, packet) addPrim(&(state)->ot[(ot_index)], (packet))
 
-#define ADD_PRIM_TEST(ordering_table, prim) \
-    { \
-        P_TAG* test_ot = (P_TAG*)(ordering_table); \
-        P_TAG* test_prim = (P_TAG*)(prim); \
-        test_prim->addr = test_ot->addr; \
-        test_ot->addr = (u32)test_prim; \
-    }
+#define ADD_PRIM_BASE(state, index, prim) addPrim((u_long*)((u8*)(state) + 0x70) + (index), (prim))
 
 /**
  * @brief Render a primitive list from a world-map model resource.
- * @note Project object comparison: 97.330210% matching.
- * @note In-progress import; source filename reports 97.333680% matching.
+ * @param resource_table Resource table containing model offsets.
+ * @param resource_index Model entry index.
+ * @param ot_index Base ordering-table index.
+ * @param tpage Texture-page value written to textured primitives.
+ * @param clut CLUT value written to textured primitives.
+ * @param blend_mode Primitive blend mode and culling flags.
+ * @param color_scale Color intensity scale and texture flags.
+ * @param x_offset Screen-space X offset.
+ * @param y_offset Screen-space Y offset.
+ * @param z_divisor Optional Z divisor, or -1 to leave Z unchanged.
+ */
+
+/**
+ * @brief Render a primitive list from a world-map model resource.
+ * @note In-progress import: 98.657646% matching (gcc280_g0).
  * @param resource_table Resource table containing model offsets.
  * @param resource_index Model entry index.
  * @param ot_index Base ordering-table index.
@@ -156,6 +162,7 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                    s32 z_divisor)
 {
     u8* model;
+    u8* model_entry;
     WmapMeshVertex* vertices;
     u8* face_data;
     u8* next_face;
@@ -170,7 +177,6 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
     s32 packed3;
     s32 triangle_area;
     s32 color_product;
-    s32 effective_scale;
     WmapMeshVertex transformed[4];
     CVECTOR colors[20];
 
@@ -184,7 +190,8 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
         backface_mode = 0;
     }
 
-    model = resource_table + *(s32*)(resource_table + resource_index * 4 + 4);
+    model_entry = resource_table + resource_index * 4;
+    model = resource_table + *(s32*)(model_entry + 4);
     vertices = (WmapMeshVertex*)(model + 4);
     face_count = *(s16*)(model + 2);
     face_data = (u8*)(vertices + *(s16*)model);
@@ -204,7 +211,6 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
     i = 0;
     if (face_count > 0)
     {
-        effective_scale = color_scale & 0xFFFF;
         next_face = face_data + 10;
         next_attributes = attributes + 24;
         do
@@ -214,6 +220,7 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
             case 0x2C:
             {
                 POLY_FT4* poly = (POLY_FT4*)D_801398EC->prim_cursor;
+                s32 primitive_code;
                 if (z_divisor == -1)
                 {
                     LOAD_VERTEX(transformed[0], vertices, *(s16*)(next_face -8));
@@ -231,10 +238,12 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 gte_ldv3(&transformed[0], &transformed[1], &transformed[2]);
                 gte_rtpt();
                 *(u16*)&poly->u0 = *(u16*)(next_attributes - 24);
-                *(u16*)&poly->u1 = *(u16*)(next_attributes - 16);
-                *(u16*)&poly->u2 = *(u16*)(next_attributes - 14);
-                *(u16*)&poly->u3 = *(u16*)(next_attributes - 12);
-                gte_stsxy3(&packed0, &packed1, &packed2);
+                *(u16*)&poly->u1 = *(u16*)(next_attributes - 22);
+                *(u16*)&poly->u2 = *(u16*)(next_attributes - 20);
+                *(u16*)&poly->u3 = *(u16*)(next_attributes - 18);
+                gte_stsxy0(&packed0);
+                gte_stsxy1(&packed1);
+                gte_stsxy2(&packed2);
                 gte_nclip();
                 OFFSET_SXY(packed0, x_offset, y_offset);
                 gte_stopz(&triangle_area);
@@ -270,24 +279,26 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 *(s32*)&poly->x2 = packed2;
                 *(s32*)&poly->x3 = packed3;
                 colors[0] = *(CVECTOR*)(next_attributes - 16);
-                if (effective_scale != -1)
+                if ((color_scale & 0xFFFF) != -1)
                 {
-                    color_product = colors[0].r * effective_scale;
+                    color_product = colors[0].r * (color_scale & 0xFFFF);
                     colors[0].r = color_product >> 7;
-                    colors[0].g = ((s32)colors[0].g * effective_scale) >> 7;
-                    colors[0].b = ((s32)colors[0].b * effective_scale) >> 7;
+                    colors[0].g = ((s32)colors[0].g * (color_scale & 0xFFFF)) >> 7;
+                    colors[0].b = ((s32)colors[0].b * (color_scale & 0xFFFF)) >> 7;
                 }
                 *(s32*)&poly->r0 = *(s32*)&colors[0];
-                do
+                setlen(poly, 9);
+                setcode(poly, 0x2C);
+                if (!(color_scale & 0x10000))
                 {
-                    setlen(poly, 9);
-                    setcode(poly, 0x2C);
-                    if (!(color_scale & 0x10000))
+                    primitive_code = 0x2E;
+                    if (*(u8*)(next_face - 9) == 0)
                     {
-                        setcode(poly, *(u8*)(next_face - 9) ? 0x2E : 0x2C);
+                        primitive_code = 0x2C;
                     }
-                    { P_TAG* test_ot = (P_TAG*)(&D_801398EC->ot[ot_index + triangle_area]); P_TAG* test_prim = (P_TAG*)poly; test_prim->addr = test_ot->addr; do { test_ot->addr = (u32)test_prim; } while (0); }
-                } while (0);
+                    setcode(poly, primitive_code);
+                }
+                ADD_PRIM_BASE(D_801398EC, ot_index + triangle_area, poly);
                 if (D_800D921C < 0x7D00)
                 {
                     D_800D921C += sizeof(POLY_FT4);
@@ -315,9 +326,11 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 poly->tpage = tpage;
                 poly->clut = clut;
                 *(u16*)&poly->u0 = *(u16*)(attributes + 0);
-                *(u16*)&poly->u1 = *(u16*)(next_attributes - 16);
-                *(u16*)&poly->u2 = *(u16*)(next_attributes - 14);
-                gte_stsxy3(&packed0, &packed1, &packed2);
+                *(u16*)&poly->u1 = *(u16*)(next_attributes - 22);
+                *(u16*)&poly->u2 = *(u16*)(next_attributes - 20);
+                gte_stsxy0(&packed0);
+                gte_stsxy1(&packed1);
+                gte_stsxy2(&packed2);
                 gte_nclip();
                 OFFSET_SXY(packed0, x_offset, y_offset);
                 OFFSET_SXY(packed1, x_offset, y_offset);
@@ -346,12 +359,12 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 *(s32*)&poly->x1 = packed1;
                 *(s32*)&poly->x2 = packed2;
                 colors[0] = *(CVECTOR*)(next_attributes - 16);
-                if (effective_scale != -1)
+                if ((color_scale & 0xFFFF) != -1)
                 {
-                    color_product = colors[0].r * effective_scale;
+                    color_product = colors[0].r * (color_scale & 0xFFFF);
                     colors[0].r = color_product >> 7;
-                    colors[0].g = ((s32)colors[0].g * effective_scale) >> 7;
-                    colors[0].b = ((s32)colors[0].b * effective_scale) >> 7;
+                    colors[0].g = ((s32)colors[0].g * (color_scale & 0xFFFF)) >> 7;
+                    colors[0].b = ((s32)colors[0].b * (color_scale & 0xFFFF)) >> 7;
                 }
                 *(s32*)&poly->r0 = *(s32*)&colors[0];
                 setlen(poly, 7);
@@ -360,7 +373,7 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 {
                     setcode(poly, *(u8*)(next_face - 9) ? 0x26 : 0x24);
                 }
-                ADD_PRIM_TEST(&D_801398EC->ot[ot_index + triangle_area], poly);
+                ADD_PRIM_BASE(D_801398EC, ot_index + triangle_area, poly);
                 if (D_800D921C < 0x7D00)
                 {
                     D_800D921C += sizeof(WmapPolyFT3);
@@ -383,7 +396,9 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 colors[4] = *(CVECTOR*)(next_attributes - 12);
                 SCALE_COLOR(colors[4], color_scale, color_product);
                 *(s32*)&poly->r1 = *(s32*)&colors[4];
-                gte_stsxy3(&packed0, &packed1, &packed2);
+                gte_stsxy0(&packed0);
+                gte_stsxy1(&packed1);
+                gte_stsxy2(&packed2);
                 gte_nclip();
                 colors[8] = *(CVECTOR*)(next_attributes - 8);
                 SCALE_COLOR(colors[8], color_scale, color_product);
@@ -421,14 +436,17 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 gte_stsxy(&packed3);
                 OFFSET_SXY(packed3, x_offset, y_offset);
                 *(s32*)&poly->x2 = packed2;
-                setlen(poly, 8);
-                setcode(poly, 0x38);
-                *(s32*)&poly->x3 = packed3;
+                {
+                    s32 packed3_value = packed3;
+                    setlen(poly, 8);
+                    setcode(poly, 0x38);
+                    *(s32*)&poly->x3 = packed3_value;
+                }
                 if (blend_mode >= 0)
                 {
                     setcode(poly, 0x3A);
                 }
-                ADD_PRIM_TEST(&D_801398EC->ot[ot_index + triangle_area], poly);
+                ADD_PRIM_BASE(D_801398EC, ot_index + triangle_area, poly);
                 if (D_800D921C < 0x7D00)
                 {
                     D_800D921C += sizeof(POLY_G4);
@@ -456,7 +474,9 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 colors[0] = *(CVECTOR*)(next_attributes - 16);
                 SCALE_COLOR(colors[0], color_scale, color_product);
                 *(s32*)&poly->r0 = *(s32*)&colors[0];
-                gte_stsxy3(&packed0, &packed1, &packed2);
+                gte_stsxy0(&packed0);
+                gte_stsxy1(&packed1);
+                gte_stsxy2(&packed2);
                 gte_nclip();
                 gte_stopz(&triangle_area);
                 if (backface_mode == 0)
@@ -496,7 +516,7 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 {
                     setcode(poly, 0x32);
                 }
-                ADD_PRIM_TEST(&D_801398EC->ot[ot_index + triangle_area], poly);
+                ADD_PRIM_BASE(D_801398EC, ot_index + triangle_area, poly);
                 if (D_800D921C < 0x7D00)
                 {
                     D_800D921C += sizeof(WmapPolyG3);
@@ -513,7 +533,9 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 gte_ldv3(&transformed[0], &transformed[1], &transformed[2]);
                 gte_rtpt();
                 LOAD_VERTEX(transformed[3], vertices, *(s16*)(next_face -2));
-                gte_stsxy3(&packed0, &packed1, &packed2);
+                gte_stsxy0(&packed0);
+                gte_stsxy1(&packed1);
+                gte_stsxy2(&packed2);
                 gte_nclip();
                 gte_stopz(&triangle_area);
                 if (backface_mode == 0)
@@ -551,7 +573,7 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 {
                     setcode(poly, 0x2A);
                 }
-                ADD_PRIM_TEST(&D_801398EC->ot[ot_index + triangle_area], poly);
+                ADD_PRIM_BASE(D_801398EC, ot_index + triangle_area, poly);
                 if (D_800D921C < 0x7D00)
                 {
                     D_800D921C += sizeof(POLY_F4);
@@ -570,7 +592,9 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 colors[0] = *(CVECTOR*)(next_attributes - 16);
                 SCALE_COLOR(colors[0], color_scale, color_product);
                 *(s32*)&poly->r0 = *(s32*)&colors[0];
-                gte_stsxy3(&packed0, &packed1, &packed2);
+                gte_stsxy0(&packed0);
+                gte_stsxy1(&packed1);
+                gte_stsxy2(&packed2);
                 gte_nclip();
                 gte_stopz(&triangle_area);
                 if (backface_mode == 0)
@@ -604,7 +628,7 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 {
                     setcode(poly, 0x22);
                 }
-                ADD_PRIM_TEST(&D_801398EC->ot[ot_index + triangle_area], poly);
+                ADD_PRIM_BASE(D_801398EC, ot_index + triangle_area, poly);
                 if (D_800D921C < 0x7D00)
                 {
                     D_800D921C += sizeof(WmapPolyF3);
@@ -633,9 +657,11 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 poly->tpage = tpage;
                 poly->clut = clut;
                 *(u16*)&poly->u0 = *(u16*)(attributes + 0);
-                *(u16*)&poly->u1 = *(u16*)(next_attributes - 16);
-                *(u16*)&poly->u2 = *(u16*)(next_attributes - 14);
-                gte_stsxy3(&packed0, &packed1, &packed2);
+                *(u16*)&poly->u1 = *(u16*)(next_attributes - 22);
+                *(u16*)&poly->u2 = *(u16*)(next_attributes - 20);
+                gte_stsxy0(&packed0);
+                gte_stsxy1(&packed1);
+                gte_stsxy2(&packed2);
                 gte_nclip();
                 gte_stopz(&triangle_area);
                 if (backface_mode == 0)
@@ -665,15 +691,15 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 *(s32*)&poly->x2 = packed2;
                 colors[0] = *(CVECTOR*)(next_attributes - 16);
                 colors[2] = colors[0];
-                SCALE_COLOR(colors[2], effective_scale, color_product);
+                SCALE_COLOR(colors[2], (color_scale & 0xFFFF), color_product);
                 *(s32*)&poly->r0 = *(s32*)&colors[2];
                 colors[0] = *(CVECTOR*)(next_attributes - 12);
                 colors[6] = colors[0];
-                SCALE_COLOR(colors[6], effective_scale, color_product);
+                SCALE_COLOR(colors[6], (color_scale & 0xFFFF), color_product);
                 *(s32*)&poly->r1 = *(s32*)&colors[6];
                 colors[0] = *(CVECTOR*)(next_attributes - 8);
                 colors[10] = colors[0];
-                SCALE_COLOR(colors[10], effective_scale, color_product);
+                SCALE_COLOR(colors[10], (color_scale & 0xFFFF), color_product);
                 *(s32*)&poly->r2 = *(s32*)&colors[10];
                 setlen(poly, 9);
                 setcode(poly, 0x34);
@@ -681,7 +707,7 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 {
                     setcode(poly, *(u8*)(next_face - 9) ? 0x36 : 0x34);
                 }
-                ADD_PRIM_TEST(&D_801398EC->ot[ot_index + triangle_area], poly);
+                ADD_PRIM_BASE(D_801398EC, ot_index + triangle_area, poly);
                 if (D_800D921C < 0x7D00)
                 {
                     D_800D921C += sizeof(WmapPolyGT3);
@@ -711,11 +737,13 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 poly->tpage = tpage;
                 poly->clut = clut;
                 *(u16*)&poly->u0 = *(u16*)(attributes + 0);
-                *(u16*)&poly->u1 = *(u16*)(next_attributes - 16);
-                *(u16*)&poly->u2 = *(u16*)(next_attributes - 14);
-                gte_stsxy3(&packed0, &packed1, &packed2);
+                *(u16*)&poly->u1 = *(u16*)(next_attributes - 22);
+                *(u16*)&poly->u2 = *(u16*)(next_attributes - 20);
+                gte_stsxy0(&packed0);
+                gte_stsxy1(&packed1);
+                gte_stsxy2(&packed2);
                 gte_nclip();
-                *(u16*)&poly->u3 = *(u16*)(next_attributes - 12);
+                *(u16*)&poly->u3 = *(u16*)(next_attributes - 18);
                 gte_stopz(&triangle_area);
                 if (backface_mode == 0)
                 {
@@ -749,19 +777,19 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 *(s32*)&poly->x3 = packed3;
                 colors[0] = *(CVECTOR*)(next_attributes - 16);
                 colors[2] = colors[0];
-                SCALE_COLOR(colors[2], effective_scale, color_product);
+                SCALE_COLOR(colors[2], (color_scale & 0xFFFF), color_product);
                 *(s32*)&poly->r0 = *(s32*)&colors[2];
                 colors[0] = *(CVECTOR*)(next_attributes - 12);
                 colors[6] = colors[0];
-                SCALE_COLOR(colors[6], effective_scale, color_product);
+                SCALE_COLOR(colors[6], (color_scale & 0xFFFF), color_product);
                 *(s32*)&poly->r1 = *(s32*)&colors[6];
                 colors[0] = *(CVECTOR*)(next_attributes - 8);
                 colors[10] = colors[0];
-                SCALE_COLOR(colors[10], effective_scale, color_product);
+                SCALE_COLOR(colors[10], (color_scale & 0xFFFF), color_product);
                 *(s32*)&poly->r2 = *(s32*)&colors[10];
                 colors[0] = *(CVECTOR*)(next_attributes - 4);
                 colors[16] = colors[0];
-                SCALE_COLOR(colors[16], effective_scale, color_product);
+                SCALE_COLOR(colors[16], (color_scale & 0xFFFF), color_product);
                 *(s32*)&poly->r3 = *(s32*)&colors[16];
                 setlen(poly, 12);
                 setcode(poly, 0x3C);
@@ -769,7 +797,7 @@ void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpa
                 {
                     setcode(poly, *(u8*)(next_face - 9) ? 0x3E : 0x3C);
                 }
-                ADD_PRIM_TEST(&D_801398EC->ot[ot_index + triangle_area], poly);
+                ADD_PRIM_BASE(D_801398EC, ot_index + triangle_area, poly);
                 if (D_800D921C < 0x7D00)
                 {
                     D_800D921C += sizeof(POLY_GT4);

@@ -9,6 +9,56 @@
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
 
+/** @brief Spark state used by the radial world-map particle effect. */
+typedef struct
+{
+    s16 active;
+    s16 angle;
+    s32 delta;
+    s32 radius;
+    s16 timer;
+    s16 unk0E;
+    s16 unk10;
+    s16 unk12;
+} WmapEffect18Spark;
+
+/** @brief Draw record fields touched by the radial particle effect. */
+typedef struct
+{
+    u8 pad00[2];
+    s16 unk02;
+    u8 pad04[2];
+    s8 unk06;
+    u8 pad07[7];
+    s16 unk0E;
+    s16 unk10;
+    u8 pad12[0x10];
+    s16 unk22;
+    s16 unk24;
+    u8 pad26[6];
+} WmapEffect18Draw;
+
+/** @brief Resource slot used by the effect setup table. */
+typedef struct
+{
+    s32 value;
+    void* resource;
+} WmapEffect18ResourceSlot;
+
+/** @brief Particle slot used by the effect setup table. */
+typedef struct
+{
+    s16 state;
+    u8 pad02[0x12];
+} WmapEffect18ParticleSlot;
+
+/** @brief World-map cell record with a 40-byte stride. */
+typedef struct
+{
+    s32 value;
+    u8 unknown04[36];
+} WmapEffect18Cell;
+
 /** @brief Compose the effect transform, draw it, and advance its rotation and countdown. */
 void func_8006D918(void)
 {
@@ -498,64 +548,29 @@ extern SVECTOR D_801B24A8;
 
 /**
  * @brief Project and draw active world-map sparks, then respawn empty slots.
- * @note First pass projects each live spark through the GTE and advances its
- *       radius; second pass seeds fresh sparks up to the shared population cap.
- * @note GTE-tagged: best-effort structural match (mirrors func_8007115C); the
- *       gcc280_g0 diff harness cannot assemble the GTE mnemonics for a percent.
  */
 void func_8006E6B8(void)
 {
-/* Partial WMAP decompilation: 79.604650% (gcc280_g0). */
-
-/** @brief World-map spark particle: spin angle, radial velocity, and lifetime. */
-typedef struct
-{
-    s16 active;   /* 0x0 */
-    s16 angle;    /* 0x2 */
-    s32 delta;    /* 0x4 */
-    s32 radius;   /* 0x8 */
-    u16 timer;    /* 0xC */
-    s16 unk0E;    /* 0xE */
-    s16 unk10;    /* 0x10 */
-    s16 unk12;    /* 0x12 */
-} WmapSpark;
-
-/** @brief World-map draw record; helpers use it opaquely, this handler seeds fields. */
-typedef struct
-{
-    u8 pad00[0x2];
-    s16 unk02;    /* 0x2 */
-    u8 pad04[0x2];
-    s8 unk06;     /* 0x6 */
-    u8 pad07[0x7];
-    s16 unk0E;    /* 0xE */
-    s16 unk10;    /* 0x10 */
-    u8 pad12[0x10];
-    s16 unk22;    /* 0x22 */
-    s16 unk24;    /* 0x24 */
-    u8 pad26[0x6];
-} WmapDraw;
-
-extern WmapSpark D_801AFBD0[];
-extern WmapDraw D_800D9370[];
+extern WmapEffect18Spark D_801AFBD0[];
+extern WmapEffect18Draw D_800D9370[];
 extern u8 D_801399B8[];
 extern s32 D_80139980;
 extern s32 D_801B0FD0;
 
     SVECTOR position;
     s32 screen;
-    WmapSpark* spark;
-    WmapDraw* draw;
+    WmapEffect18Spark* spark;
+    WmapEffect18Draw* draw;
     s32 count;
     s32 i;
 
     count = 0;
-    spark = D_801AFBD0;
-    draw = D_800D9370;
-    for (i = 0; i < 0x1E; i++)
+    for (i = 0; i < 30; i++)
     {
+        spark = &D_801AFBD0[i];
         if (spark->active != 0)
         {
+            draw = &D_800D9370[i];
             position.vx = ((spark->radius >> 6) * (ccos(spark->angle) >> 6)) >> 0xC;
             position.vy = ((spark->radius >> 6) * (csin(spark->angle) >> 6)) >> 0xC;
             position.vz = 0;
@@ -573,32 +588,28 @@ extern s32 D_801B0FD0;
             }
             count++;
         }
-        spark++;
-        draw++;
     }
-    spark = D_801AFBD0;
-    draw = D_800D9370;
-    for (i = 0; i < 0x1E; i++)
+
+    for (i = 0; i < 30; i++)
     {
+        spark = &D_801AFBD0[i];
         if (spark->active == 0)
         {
-            if (D_801B0FD0 < count)
+            if (D_801B0FD0 < count++)
             {
                 break;
             }
-            count++;
-            draw->unk06 = 0xF;
+            draw = &D_800D9370[i];
+            draw->unk06 = 15;
             draw->unk10 = -1;
             draw->unk02 = 0;
             draw->unk0E = 0;
             spark->active = 1;
-            spark->angle = rand() >> 3;
+            spark->angle = (u32)rand() >> 3;
             spark->radius = 0;
             spark->delta = rand() / 2 + 0x1000;
             spark->timer = (rand() & 0x3C) + 0x4B;
         }
-        spark++;
-        draw++;
     }
 }
 
@@ -1382,36 +1393,26 @@ extern void (*D_800D4D3C[])(void);
 
 /**
  * @brief World-map step handler: seed a 30-entry table and advance the step.
- * @note Best match ~84.86% (gcc280_g0); residual is loop induction-variable
- *       register allocation (permuter territory).
  */
 void func_8006F5EC(void)
 {
-/* Partial WMAP decompilation: 84.857140% (gcc280_g0). */
-
-extern u8 D_80139988[];
-extern void *D_8011F538;
-extern s16 D_801AFBD0;
+extern WmapEffect18ResourceSlot D_80139988[];
+extern u8 D_8011F538[];
+extern WmapEffect18ParticleSlot D_801AFBD0[];
 extern s32 D_801B0FD0;
 extern s32 D_80139980;
 extern s32 D_801B2430;
 extern s32 D_801B2434;
 extern void func_8006F678__for_func_8006F5EC(void) __asm__("func_8006F678");
 
-    s16 *p;
-    s32 off;
     s32 i;
 
     D_801B0FD0 = 0;
     D_80139980 = 0x80;
-    p = &D_801AFBD0;
-    i = 0;
-    for (off = 0x30; i < 30; off += 8)
+    for (i = 0; i < 30; i++)
     {
-        *p = 0;
-        i += 1;
-        *(void **)((u8 *)&D_80139988 + off + 4) = &D_8011F538;
-        p += 0xA;
+        D_801AFBD0[i].state = 0;
+        D_80139988[i + 6].resource = D_8011F538;
     }
     D_801B2434 = 0xC;
     D_801B2430 += 1;
@@ -2057,24 +2058,15 @@ extern s32 D_801B2400;
 
 void func_800700B0(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
-
-/* Best so far: 95.6%. The target computes the packet slot address as
- * base + D_8011D530*40 + D_8011D510*240 with DIRECT byte scaling
- * (a*5<<3, b*15<<4) AND schedules the D_801B2400 counter load across the
- * packet store. A byte-pointer cast gives the direct scaling but creates an
- * alias barrier (counter load can't cross the cast store) -> 35%. The u32[]
- * index form below clears aliasing (correct schedule) but factors the *4 into
- * one extra shift -> 95.6% (1 insn off). Needs a form that yields both. */
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapEffect18Cell D_80139290[][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B2400;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2400 += 1;
 }
 
