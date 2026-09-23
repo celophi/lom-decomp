@@ -1,7 +1,67 @@
-#include "common.h"
-#include "gpu_packet.h"
-#include "sdk/libgte.h"
-#include "sdk/libgpu.h"
+#include "carda_internal.h"
+
+s32 func_8014A65C(s32 prim, s32 *ot, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
+{
+    u16 buf[7];
+    s32 first_digit;
+    s32 magnitude;
+    s32 negative;
+
+    magnitude = value;
+    if (magnitude < 0)
+    {
+        magnitude = -magnitude;
+        negative = 1;
+    }
+    else
+    {
+        negative = 0;
+    }
+    buf[1] = D_80165EFC[magnitude / 10000];
+    buf[2] = D_80165EFC[(magnitude % 10000) / 1000];
+    buf[3] = D_80165EFC[(magnitude % 1000) / 100];
+    buf[4] = D_80165EFC[(magnitude % 100) / 10];
+    buf[5] = D_80165EFC[magnitude % 10];
+
+    first_digit = 1;
+    buf[6] = 0;
+
+    while (first_digit < 5 && buf[first_digit] == 0x4F82)
+    {
+        first_digit++;
+    }
+
+    if (negative != 0)
+    {
+        first_digit--;
+        buf[first_digit] = 0x5B81;
+    }
+    prim = func_8014A900(prim, ot, (u8 *)&buf[first_digit], x, y, palette, alignment);
+    return prim;
+}
+
+void func_8014A87C(s32 arg0,s32 arg1,s32 arg2,s32 arg3,s32 arg4,s32 arg5)
+{
+    u16 pair[3];
+    s32 row;
+    s32 adjusted;
+    s32 off;
+    u16 *base;
+
+    adjusted = arg2;
+    if (arg2 < 0)
+    {
+        adjusted = arg2 + 15;
+    }
+    row = adjusted >> 4;
+    off = row * 2;
+    base = D_80165F14;
+    pair[0] = *(u16 *)((u8 *)base + off);
+    off = (arg2 - row * 16) * 2;
+    pair[1] = *(u16 *)((u8 *)base + off);
+    pair[2] = 0;
+    func_8014A900(arg0, arg1, pair, arg3, arg4, 0, arg5);
+}
 
 #define GLYPH_CACHE_SLOTS 0x100
 #define GLYPH_CACHE_COLUMNS 16
@@ -9,7 +69,6 @@
 #define GLYPH_RASTER_BYTES 0x80
 #define GPU_ADDR_MASK 0xFFFFFF
 #define GPU_TAG_HIGH_MASK 0xFF000000
-
 typedef struct
 {
     s32 tag;
@@ -19,38 +78,6 @@ typedef struct
     s16 unkC;
     u16 unkE;
 } GenericGpuPacket;
-
-typedef union
-{
-    u32 raw;
-    struct
-    {
-        u16 code;
-        u16 flags;
-    } data;
-} GlyphCacheEntry;
-
-typedef struct
-{
-    SPRT_16 packet;
-    u32 padding;
-} GlyphSprite;
-
-extern s32 D_80166FE8;
-extern s32 D_80166FF0;
-extern s32 D_80166FEC;
-extern GlyphCacheEntry D_80166BE8[];
-extern u8 *D_80166FFC;
-extern s32 D_80166FF4;
-extern s32 D_80166FF8;
-
-extern s32 func_8001687C(s32);
-extern void func_80019A34(RECT *, void *);
-extern void func_80019788(s32);
-
-s32 func_8014A900(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment);
-s32 func_8014AAD0(s32 prim, s32 *ot, s32 character_code, s32 palette);
-s32 func_8014ACF0(GlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette);
 
 s32 func_8014A900(s32 prim, s32 *ot, u8 *text, s32 x, s32 y, s32 palette, s32 alignment)
 {
@@ -284,4 +311,133 @@ s32 func_8014ACF0(GlyphSprite *sprite, s32 *ot, s32 cache_slot, s32 palette)
     }
 
     return (s32)sprite;
+}
+
+/** @see decomp.me (100.00%) */
+void func_8014ADF8(void)
+{
+    s32 i;
+    s32 *p;
+
+    D_80166FFC = D_80167000;
+    i = 0;
+    p = (s32 *)D_80166BE8;
+    do
+    {
+        *p = (u16)*p;
+        i++;
+        p++;
+    } while (i < 0x100);
+}
+
+/** @see decomp.me (100.00%) */
+void func_8014AE34(void)
+{
+    s32 i;
+    s32 *p;
+    s32 flag;
+
+    i = 0;
+    flag = 0x10000;
+    p = (s32 *)D_80166BE8;
+    do
+    {
+        if (!(*p & flag))
+        {
+            *p = 0;
+        }
+        i++;
+        p++;
+    } while (i < 0x100);
+}
+
+/** @see decomp.me (100.00%) */
+void func_8014AE74(void)
+{
+    s32 i;
+    s32 *p;
+    u8 *q;
+
+    i = 0xFF;
+    p = (s32 *)D_80166BE8;
+    p += 0xFF;
+    do
+    {
+        *p = 0;
+        i--;
+        p--;
+    } while (i >= 0);
+
+    i = 0;
+    q = D_80167000;
+    do
+    {
+        *(u8 *)(i + (s32)q) = 0;
+        i++;
+    } while (i <= 0x7FFF);
+}
+
+void func_8014AEC4(u8 *out, u8 *in)
+{
+    u32 c;
+    s32 index;
+    s16 lead;
+
+    for (;;)
+    {
+        c = *in;
+        if ((u8)c == 0)
+        {
+            goto done;
+        }
+        if ((u32)(c - 0x19) < 7)
+        {
+            u32 b1;
+            s32 off;
+            u8 *pa;
+            u8 *pb;
+
+            b1 = in[1];
+            off = b1 >> 4;
+            b1 &= 0xF;
+            pa = D_801629D0 + b1 * 2;
+            pa += off * 33;
+            lead = *(volatile u8 *)in;
+            pa += lead * 528;
+            *out = *pa;
+            out++;
+            b1 = in[1];
+            off = b1 >> 4;
+            b1 &= 0xF;
+            pb = D_801629D0 + 1 + b1 * 2;
+            pb += off * 33;
+            lead = *(volatile u8 *)in;
+            pb += lead * 528;
+            *out = *pb;
+            out++;
+            in += 2;
+        }
+        else if ((u8)c >= 0x21)
+        {
+            lead = *(volatile u8 *)in;
+            index = lead - 0x20;
+            *out = D_80165BC4[(index / 16) * 33 + (index & 0xF) * 2];
+            out++;
+            lead = *(volatile u8 *)in;
+            index = lead - 0x20;
+            *out = D_80165BC4[(index / 16) * 33 + (index & 0xF) * 2 + 1];
+            out++;
+            in += 1;
+        }
+        else
+        {
+            *out = D_80165BC4[0];
+            out++;
+            *out = D_80165BC4[1];
+            out++;
+            in += 1;
+        }
+    }
+done:
+    *out = 0;
 }
