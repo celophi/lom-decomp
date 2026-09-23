@@ -344,16 +344,6 @@ typedef struct
     s32 steps_remaining;
 } FadeState;
 
-/** @brief Packet view for a fade TILE or draw-mode command. */
-typedef union
-{
-    TILE tile;
-    DR_TPAGE draw_mode;
-} FadePrimitive;
-
-/** Advance a fade packet cursor by the concrete packet just emitted. */
-#define NEXT_FADE_PACKET(packet, type) ((FadePrimitive*)((u8*)(packet) + sizeof(type)))
-
 /** @brief Pixel and CLUT destinations for a TIM upload. */
 typedef struct
 {
@@ -362,13 +352,6 @@ typedef struct
     s16 clut_x;
     s16 clut_y;
 } TimUploadCoords;
-
-/** @brief DRAWENV scratch with the required leading stack padding. */
-typedef struct
-{
-    u32 padding[2];
-    DRAWENV draw_env;
-} DrawEnvScratch;
 
 /** @brief DRAWENV scratch with one trailing stack word. */
 typedef union
@@ -484,7 +467,6 @@ void* func_800A88A0(SPRT* sprite_cursor, s32* ot, u8* text, s32 text_color, s32 
  * @param volume Playback volume.
  */
 void play_menu_sfx(s32 sfx_id, s32 volume);
-
 
 void field_update_audio_timer(void);
 void field_update_input_repeat(void);
@@ -624,7 +606,6 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
         PutDispEnv(&other_buffer->disp_env);
         PutDrawEnv(&next_buffer->draw_env);
         DrawOTag(&draw_buffer->ot[GNAME_OT_LAYOUT_BACKGROUND]);
-        draw_buffer = other_buffer;
         update_controllers();
         cdrom_process_state();
     }
@@ -684,8 +665,8 @@ static void reset_fade_state(void)
  */
 static void render_fade_overlay(RenderContext* render_ctx)
 {
-    FadePrimitive* fade_packet = render_ctx->prim_cursor;
-    RenderContext* ordering_table_ctx = render_ctx;
+    u8* packet_cursor = render_ctx->prim_cursor;
+    u_long* ot_entry = &render_ctx->ot[GNAME_OT_FRONT];
     s32 red_step;
     s32 green_step;
     s32 blue_step;
@@ -709,63 +690,61 @@ static void render_fade_overlay(RenderContext* render_ctx)
         g_fade_current.blue = g_fade_target.blue;
     }
 
-    /* A neutral fade requires no GPU packets. */
-    if ((g_fade_current.red == FADE_CHAN_NEUTRAL) && (g_fade_current.green == FADE_CHAN_NEUTRAL) && (g_fade_current.blue == FADE_CHAN_NEUTRAL))
+    /* A neutral fade emits no GPU packets. */
+    if ((g_fade_current.red != FADE_CHAN_NEUTRAL) || (g_fade_current.green != FADE_CHAN_NEUTRAL) || (g_fade_current.blue != FADE_CHAN_NEUTRAL))
     {
-        render_ctx->prim_cursor = fade_packet;
-        return;
-    }
-
-    if (g_fade_current.red >= FADE_CHAN_ADDITIVE)
-    {
-        /* Decode additive channels with FADE_CHAN_ADDITIVE as zero intensity. */
-        setRGB0(&fade_packet->tile, g_fade_current.red - FADE_ADDITIVE_BIAS, g_fade_current.green - FADE_ADDITIVE_BIAS, g_fade_current.blue - FADE_ADDITIVE_BIAS);
-    }
-    else
-    {
-        /* Decode subtractive channels while preserving neutral as zero intensity. */
-        if (g_fade_current.red == FADE_CHAN_NEUTRAL)
+        if (g_fade_current.red >= FADE_CHAN_ADDITIVE)
         {
-            fade_packet->tile.r0 = 0;
+            /* Decode additive channels with FADE_CHAN_ADDITIVE as zero intensity. */
+            setRGB0((TILE*)packet_cursor, g_fade_current.red - FADE_ADDITIVE_BIAS, g_fade_current.green - FADE_ADDITIVE_BIAS,
+                    g_fade_current.blue - FADE_ADDITIVE_BIAS);
         }
         else
         {
-            fade_packet->tile.r0 = ~g_fade_current.red;
+            /* Decode subtractive channels while preserving neutral as zero intensity. */
+            if (g_fade_current.red == FADE_CHAN_NEUTRAL)
+            {
+                ((TILE*)packet_cursor)->r0 = 0;
+            }
+            else
+            {
+                ((TILE*)packet_cursor)->r0 = ~g_fade_current.red;
+            }
+
+            if (g_fade_current.green == FADE_CHAN_NEUTRAL)
+            {
+                ((TILE*)packet_cursor)->g0 = 0;
+            }
+            else
+            {
+                ((TILE*)packet_cursor)->g0 = ~g_fade_current.green;
+            }
+
+            if (g_fade_current.blue == FADE_CHAN_NEUTRAL)
+            {
+                ((TILE*)packet_cursor)->b0 = 0;
+            }
+            else
+            {
+                ((TILE*)packet_cursor)->b0 = ~g_fade_current.blue;
+            }
         }
 
-        if (g_fade_current.green == FADE_CHAN_NEUTRAL)
-        {
-            fade_packet->tile.g0 = 0;
-        }
-        else
-        {
-            fade_packet->tile.g0 = ~g_fade_current.green;
-        }
+        setTile((TILE*)packet_cursor);
+        setSemiTrans((TILE*)packet_cursor, 1);
+        SET_YX0((TILE*)packet_cursor, 0, 0);
+        setWH((TILE*)packet_cursor, SCREEN_WIDTH, SCREEN_HEIGHT);
+        addPrim(ot_entry, (TILE*)packet_cursor);
+        packet_cursor += sizeof(TILE);
 
-        if (g_fade_current.blue == FADE_CHAN_NEUTRAL)
-        {
-            fade_packet->tile.b0 = 0;
-        }
-        else
-        {
-            fade_packet->tile.b0 = ~g_fade_current.blue;
-        }
+        blend_mode_tpage = g_fade_current.red < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
+
+        setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, blend_mode_tpage);
+        addPrim(ot_entry, (DR_TPAGE*)packet_cursor);
+        packet_cursor += sizeof(DR_TPAGE);
     }
 
-    setTile(&fade_packet->tile);
-    setSemiTrans(&fade_packet->tile, 1);
-    SET_YX0(&fade_packet->tile, 0, 0);
-    setWH(&fade_packet->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
-    addPrim(&ordering_table_ctx->ot[GNAME_OT_FRONT], &fade_packet->tile);
-    fade_packet = NEXT_FADE_PACKET(fade_packet, TILE);
-
-    blend_mode_tpage = g_fade_current.red < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
-
-    setDrawTPage(&fade_packet->draw_mode, 0, 0, blend_mode_tpage);
-    addPrim(&ordering_table_ctx->ot[GNAME_OT_FRONT], &fade_packet->draw_mode);
-    fade_packet = NEXT_FADE_PACKET(fade_packet, DR_TPAGE);
-
-    render_ctx->prim_cursor = fade_packet;
+    render_ctx->prim_cursor = packet_cursor;
 }
 
 /**
@@ -973,19 +952,14 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     {
                         play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
                     }
-                    repeat_dispatch = GNAME_REDISPATCH_DONE;
-                    continue;
+                    break;
 
                 case GNAME_MODE_ACTION_DELETE:
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                     name_pop_last_glyph(g_active_name);
                     recalc_name_width();
-                    do
-                    {
-                    } while (FALSE);
-                    repeat_dispatch = GNAME_REDISPATCH_DONE;
                     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-                    continue;
+                    break;
 
                 case GNAME_MODE_ACTION_RANDOM:
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
@@ -1012,7 +986,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                             name_append(g_active_name, HISTORY_SUFFIX((rand() % RANDOM_NAME_COUNT) + HISTORY_SUFFIX_INDEX_BASE));
                         }
                     }
-                    else if (g_name_source_mode == navigation_step)
+                    else if (g_name_source_mode == GNAME_SRC_CUSTOM)
                     {
                         g_name_clipboard[0] = 0;
                         name_copy(g_active_name, g_custom_name_buf);
@@ -1024,24 +998,19 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         name_copy(g_active_name, g_initial_name);
                     }
                     recalc_name_width();
-                    repeat_dispatch = GNAME_REDISPATCH_DONE;
                     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-                    continue;
+                    break;
 
                 case GNAME_MODE_ACTION_DEFAULT:
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                     g_name_clipboard[0] = 0;
                     name_copy(g_active_name, g_initial_name);
+                    recalc_name_width();
+                    g_strip_width_steps = NAME_STRIP_LERP_STEPS;
                     break;
-
-                default:
-                    repeat_dispatch = GNAME_REDISPATCH_DONE;
-                    continue;
                 }
 
-                recalc_name_width();
                 repeat_dispatch = GNAME_REDISPATCH_DONE;
-                g_strip_width_steps = NAME_STRIP_LERP_STEPS;
             }
             else
             {
@@ -1076,17 +1045,21 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
         case GNAME_MODE_PANEL_NAV_LAST:
         case GNAME_MODE_PANEL_LAST:
             /* Confirm changes panels only when the selected tab is not already active. */
-            if (((buttons & GNAME_BTN_CONFIRM) && ((g_activated_entry = mode, g_char_panel != (mode - GNAME_MODE_PANEL_BASE)))) != 0)
+            if (buttons & GNAME_BTN_CONFIRM)
             {
-                g_char_panel = g_activated_entry - GNAME_MODE_PANEL_BASE;
-                mode = GNAME_MODE_GRID;
-                buttons = 0;
-                g_scroll_target = 0;
-                g_scroll_pos = 0;
-                g_scroll_steps = 0;
-                g_char_cursor = 0;
-                play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
-                continue;
+                g_activated_entry = mode;
+                if (g_char_panel != (mode - GNAME_MODE_PANEL_BASE))
+                {
+                    g_char_panel = mode - GNAME_MODE_PANEL_BASE;
+                    mode = GNAME_MODE_GRID;
+                    buttons = 0;
+                    g_scroll_target = 0;
+                    g_scroll_pos = 0;
+                    g_scroll_steps = 0;
+                    g_char_cursor = 0;
+                    play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+                    continue;
+                }
             }
 
             if (buttons != 0)
@@ -1115,7 +1088,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
 
         default:
             /* Other mode values are handled as the active character grid. */
-            if (((buttons & GNAME_BTN_CONFIRM) && (((g_char_last_row * NAME_GRID_COLUMNS) + g_char_last_col) >= g_char_cursor)) != 0U)
+            if ((buttons & GNAME_BTN_CONFIRM) && (((g_char_last_row * NAME_GRID_COLUMNS) + g_char_last_col) >= g_char_cursor))
             {
                 if (g_char_panel < CHAR_PANEL_STANDARD_COUNT)
                 {
@@ -1598,8 +1571,9 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
     DR_ENV* packet_cursor;
     s32 backing_y;
     s32 backing_x;
-    DRAWENV* strip_draw_env;
-    DrawEnvScratch strip_draw_scratch;
+    DRAWENV* strip_env;
+    u8 stack_padding[8]; /* Unused; keeps the original stack frame layout. */
+    DRAWENV strip_draw_env;
 
     ot_entry = &render_ctx->ot[GNAME_OT_NAME_STRIP];
     restore_env_packet = render_ctx->prim_cursor;
@@ -1617,7 +1591,7 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
     packet_cursor = emit_draw_mode_prim((DR_TPAGE*)packet_cursor, ot_entry);
 
     /* Redirect rendering to the strip region on the current backing page. */
-    strip_draw_env = &strip_draw_scratch.draw_env;
+    strip_env = &strip_draw_env;
     backing_x = NAME_STRIP_BACKING_RIGHT - strip_width;
     backing_y = NAME_STRIP_BACKING_PAGE0_Y;
     if (render_ctx->frame_parity != 0)
@@ -1625,8 +1599,8 @@ static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_wid
         backing_y = NAME_STRIP_BACKING_PAGE1_Y;
     }
 
-    SetDefDrawEnv(strip_draw_env, backing_x, backing_y, strip_width, NAME_STRIP_BACKING_HEIGHT);
-    SetDrawEnv(packet_cursor, strip_draw_env);
+    SetDefDrawEnv(strip_env, backing_x, backing_y, strip_width, NAME_STRIP_BACKING_HEIGHT);
+    SetDrawEnv(packet_cursor, strip_env);
 
     addPrim(ot_entry, packet_cursor);
     packet_cursor++;
@@ -1757,24 +1731,19 @@ static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id,
                              s32 use_blue_overlay)
 {
     SPRT* packet_cursor = packet_start;
-    SPRT* primary_sprite = packet_start;
-    const GlyphInfo* primary_glyph_info = &g_glyph_table[glyph_id];
     s32 secondary_position_offset;
 
-    SET_BGR0_PACKED(primary_sprite, GPU_TINT_NEUTRAL);
-    setSprt(primary_sprite);
-    setXY0(primary_sprite, base_x - shadow_offset + activation_adjust, base_y - shadow_offset + activation_adjust);
-    setUV0(primary_sprite, primary_glyph_info->u, primary_glyph_info->v);
-    setWH(primary_sprite, primary_glyph_info->width, primary_glyph_info->height);
-    setClut(primary_sprite, primary_glyph_info->clut_column << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
-    addPrim(ot_entry, primary_sprite);
+    SET_BGR0_PACKED(packet_cursor, GPU_TINT_NEUTRAL);
+    setSprt(packet_cursor);
+    setXY0(packet_cursor, base_x - shadow_offset + activation_adjust, base_y - shadow_offset + activation_adjust);
+    setUV0(packet_cursor, g_glyph_table[glyph_id].u, g_glyph_table[glyph_id].v);
+    setWH(packet_cursor, g_glyph_table[glyph_id].width, g_glyph_table[glyph_id].height);
+    setClut(packet_cursor, g_glyph_table[glyph_id].clut_column << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
+    addPrim(ot_entry, packet_cursor);
     packet_cursor++;
 
     if (shadow_offset != 0)
     {
-        const GlyphInfo* glyph_table;
-        const GlyphInfo* secondary_glyph_info;
-
         SET_BGR0_PACKED(packet_cursor, (use_blue_overlay != FALSE) ? GLYPH_SECONDARY_BLUE_TINT : GLYPH_SECONDARY_BLACK_TINT);
 
         setSprt(packet_cursor);
@@ -1786,13 +1755,10 @@ static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id,
 
         secondary_position_offset = (shadow_offset - activation_adjust) * GLYPH_SECONDARY_OFFSET_SCALE;
 
-        glyph_table = g_glyph_table;
-        secondary_glyph_info = &glyph_table[glyph_id];
-
         setXY0(packet_cursor, base_x + secondary_position_offset, base_y + secondary_position_offset);
-        setUV0(packet_cursor, secondary_glyph_info->u, secondary_glyph_info->v);
-        setWH(packet_cursor, secondary_glyph_info->width, secondary_glyph_info->height);
-        setClut(packet_cursor, secondary_glyph_info->clut_column << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
+        setUV0(packet_cursor, g_glyph_table[glyph_id].u, g_glyph_table[glyph_id].v);
+        setWH(packet_cursor, g_glyph_table[glyph_id].width, g_glyph_table[glyph_id].height);
+        setClut(packet_cursor, g_glyph_table[glyph_id].clut_column << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
         addPrim(ot_entry, packet_cursor);
 
         packet_cursor++;
@@ -1809,19 +1775,17 @@ static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id,
 static void render_layout_sprite_batch(RenderContext* render_ctx)
 {
     RECT texture_window_rect;
-
     s32 sprite_count;
-
     u8* packet_cursor;
     SPRT* sprite_cursor;
     DR_TWIN* texture_window_packet;
     SPRT* sprite;
     DR_TPAGE* draw_mode_packet;
     const GlyphSeqEntry* sequence_entry;
-
-    RenderContext* batch_ctx;
+    u_long* ot;
     const GlyphInfo* glyph_table;
-    batch_ctx = render_ctx;
+
+    ot = render_ctx->ot;
 
     packet_cursor = render_ctx->prim_cursor;
 
@@ -1856,7 +1820,8 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
         setSprt(sprite);
 
         packed_xy = sequence_entry->packed_xy;
-        glyph_info = (const GlyphInfo*)((glyph_id * sizeof(*glyph_table)) + (u32)glyph_table);
+        /* Integer sum so the scaled index is the first addend. */
+        glyph_info = (const GlyphInfo*)((glyph_id * sizeof(GlyphInfo)) + (u32)glyph_table);
         SET_SPRT_XY0_WORD(sprite, packed_xy);
 
         setUV0(sprite, glyph_info->u, glyph_info->v);
@@ -1868,7 +1833,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
         sequence_entry++;
         sprite->clut = (clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS;
 
-        addPrim(&batch_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], sprite);
+        addPrim(&ot[GNAME_OT_LAYOUT_BACKGROUND], sprite);
         sprite_cursor++;
     }
     packet_cursor = (u8*)sprite_cursor;
@@ -1879,12 +1844,12 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
     texture_window_rect.y = 0;
     texture_window_packet = (DR_TWIN*)packet_cursor;
     setTexWindow(texture_window_packet, &texture_window_rect);
-    addPrim(&batch_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], texture_window_packet);
+    addPrim(&ot[GNAME_OT_LAYOUT_BACKGROUND], texture_window_packet);
     packet_cursor += sizeof(DR_TWIN);
 
     draw_mode_packet = (DR_TPAGE*)packet_cursor;
     setDrawTPage(draw_mode_packet, 0, 0, GNAME_GLYPH_TPAGE);
-    addPrim(&batch_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], draw_mode_packet);
+    addPrim(&ot[GNAME_OT_LAYOUT_BACKGROUND], draw_mode_packet);
 
     render_ctx->prim_cursor = draw_mode_packet + 1;
 }
@@ -2228,17 +2193,12 @@ static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render
     u8 frame_index = g_glyph_append_anim_frame;
     s32 slot_index;
     const GlyphAppendAnimSlot* slot = g_glyph_append_anim_frames[frame_index].slots;
-    s16 glyph_id;
 
     for (slot_index = 0; slot_index < GLYPH_APPEND_ANIM_SLOT_COUNT; slot_index++, slot++)
     {
-        s32 raw_glyph_id = slot->glyph;
-
-        glyph_id = raw_glyph_id;
-
-        if (glyph_id != 0)
+        if (slot->glyph != 0)
         {
-            packet_cursor = emit_glyph_sprt(packet_cursor, &render_ctx->ot[GNAME_OT_GLYPH_APPEND_ANIM], (u8)glyph_id, slot->x + GLYPH_APPEND_ANIM_X_BIAS,
+            packet_cursor = emit_glyph_sprt(packet_cursor, &render_ctx->ot[GNAME_OT_GLYPH_APPEND_ANIM], slot->glyph, slot->x + GLYPH_APPEND_ANIM_X_BIAS,
                                             slot->y + GLYPH_APPEND_ANIM_Y_BIAS, 0, 0, FALSE);
         }
     }
