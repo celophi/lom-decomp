@@ -148,15 +148,6 @@ typedef enum
 #define CD_PAYLOAD_WORDS (CD_PAYLOAD_BYTES / sizeof(u32))
 
 /**
- * @brief Accessors for the fixed-address MovieState block at 0x801ED500.
- *
- * Use the @ref VOL_MOVIE_STATE form when a volatile access is required;
- * wrapping that cast in MOVIE_STATE would silently drop the volatile
- * qualifier.
- */
-#define VOL_MOVIE_STATE ((volatile MovieState*)0x801ED500)
-
-/**
  * @brief Allocation descriptor consulted by @ref movie_init's path B.
  *
  * Only @c alloc_base (the buffer base address) is used here; the leading
