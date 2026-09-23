@@ -125,8 +125,6 @@ extern s32 D_801B2710;
 /** @brief Initialize eight effect actors with evenly spaced angles. */
 void func_8007B594(void)
 {
-/* Partial WMAP decompilation: 94.914894% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -213,11 +211,11 @@ extern void func_8007CB90__for_func_8007B594(void) __asm__("func_8007CB90");
         actor->field_22 = 0;
         actor->field_0E = D_8013926C;
         D_801B0B70[i].state = 1;
+        D_801B0B70[i].z = D_80139284;
         D_801B0B70[i].scale = 80;
         D_801B0B70[i].angle = i << 9;
         D_801B0B70[i].x = 0;
         D_801B0B70[i].field_0E = 0;
-        D_801B0B70[i].z = D_80139284;
     }
     D_801B2724 = 120;
     D_801B2720++;
@@ -228,13 +226,9 @@ extern void func_8007CB90__for_func_8007B594(void) __asm__("func_8007CB90");
  * @brief Project and draw active world-map sparks, then respawn empty slots.
  * @note First pass projects each live spark through the GTE and advances its
  *       radius; second pass seeds fresh sparks up to the shared population cap.
- * @note GTE-tagged: best-effort structural match (mirrors func_8007115C); the
- *       gcc280_g0 diff harness cannot assemble the GTE mnemonics for a percent.
  */
 void func_8007B70C(void)
 {
-/* Partial WMAP decompilation: 79.604650% (gcc280_g0). */
-
 /** @brief World-map spark particle: spin angle, radial velocity, and lifetime. */
 typedef struct
 {
@@ -242,7 +236,7 @@ typedef struct
     s16 angle;    /* 0x2 */
     s32 delta;    /* 0x4 */
     s32 radius;   /* 0x8 */
-    u16 timer;    /* 0xC */
+    s16 timer;    /* 0xC */
     s16 unk0E;    /* 0xE */
     s16 unk10;    /* 0x10 */
     s16 unk12;    /* 0x12 */
@@ -278,12 +272,12 @@ extern s32 D_801B0FD0;
     s32 i;
 
     count = 0;
-    spark = D_801AFBD0;
-    draw = D_800DA448;
-    for (i = 0; i < 0x8; i++)
+    for (i = 0; i < 8; i++)
     {
+        spark = &D_801AFBD0[i];
         if (spark->active != 0)
         {
+            draw = &D_800DA448[i];
             position.vx = ((spark->radius >> 6) * (ccos(spark->angle) >> 6)) >> 0xC;
             position.vy = ((spark->radius >> 6) * (csin(spark->angle) >> 6)) >> 0xC;
             position.vz = 0;
@@ -301,32 +295,28 @@ extern s32 D_801B0FD0;
             }
             count++;
         }
-        spark++;
-        draw++;
     }
-    spark = D_801AFBD0;
-    draw = D_800DA448;
-    for (i = 0; i < 0x8; i++)
+
+    for (i = 0; i < 8; i++)
     {
+        spark = &D_801AFBD0[i];
         if (spark->active == 0)
         {
-            if (D_801B0FD0 < count)
+            if (D_801B0FD0 < count++)
             {
                 break;
             }
-            count++;
-            draw->unk06 = 0xF;
+            draw = &D_800DA448[i];
+            draw->unk06 = 15;
             draw->unk10 = -1;
             draw->unk02 = 0;
             draw->unk0E = 0;
             spark->active = 1;
-            spark->angle = rand() >> 3;
+            spark->angle = (u32)rand() >> 3;
             spark->radius = 0;
             spark->delta = rand() / 2 + 0x1000;
             spark->timer = (rand() & 0x3C) + 0x20;
         }
-        spark++;
-        draw++;
     }
 }
 
@@ -1860,36 +1850,40 @@ extern void (*D_800D54C0[])(void);
 
 /**
  * @brief World-map step handler: seed an 8-entry table and advance the step.
- * @note Best match ~84.86% (gcc280_g0); residual is loop induction-variable
- *       register allocation (permuter territory).
  */
 void func_8007CFC8(void)
 {
-/* Partial WMAP decompilation: 84.857140% (gcc280_g0). */
+/** @brief Resource slot used by the effect setup table. */
+typedef struct
+{
+    s32 value;
+    void* resource;
+} WmapResourceSlot;
 
-extern u8 D_80139988[];
-extern void *D_80121538;
-extern s16 D_801AFBD0;
+/** @brief Particle slot used by the effect setup table. */
+typedef struct
+{
+    s16 state;
+    u8 pad02[0x12];
+} WmapParticleSlot;
+
+extern WmapResourceSlot D_80139988[];
+extern u8 D_80121538[];
+extern WmapParticleSlot D_801AFBD0[];
 extern s32 D_801B0FD0;
 extern s32 D_80139980;
 extern s32 D_801B2730;
 extern s32 D_801B2734;
 extern void func_8007D054__for_func_8007CFC8(void) __asm__("func_8007D054");
 
-    s16 *p;
-    s32 off;
     s32 i;
 
     D_801B0FD0 = 0;
     D_80139980 = 0x7F;
-    p = &D_801AFBD0;
-    i = 0;
-    for (off = 0x340; i < 8; off += 8)
+    for (i = 0; i < 8; i++)
     {
-        *p = 0;
-        i += 1;
-        *(void **)((u8 *)&D_80139988 + off + 4) = &D_80121538;
-        p += 0xA;
+        D_801AFBD0[i].state = 0;
+        D_80139988[i + 104].resource = D_80121538;
     }
     D_801B2734 = 0x20;
     D_801B2730 += 1;

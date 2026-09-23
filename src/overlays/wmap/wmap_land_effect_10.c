@@ -3,199 +3,199 @@
 #include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
+#include "sdk/libgpu.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 #include "wmap_resource_support.h"
 #include "wmap_view_effects.h"
 #include "wmap_effect_primitives.h"
 
-void func_8008ECF8(s32 arg0, s32 arg1, s32 arg2, void *arg3)
+/** @brief Spark emitter tuning block passed to func_8008ECF8. */
+typedef struct
 {
-/* Partial WMAP decompilation: 59.689026% (gcc280_g0). */
+    s32 period;
+    s32 ot_index;
+    s32 spread_base;
+    s32 spread_range;
+    s32 start_z;
+    s32 trail_length;
+    s32 velocity_x;
+    s32 velocity_y;
+    s32 velocity_z;
+    s32 fade_frames;
+    s32 sprite_id;
+    s32 sprite_field_0E;
+} WmapSparkConfig;
 
-typedef s32 M2C_UNK;
-typedef s8 M2C_UNK8;
-typedef s16 M2C_UNK16;
-typedef s32 M2C_UNK32;
-#define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8 *)(expr) + (offset)))
-#define M2C_UNALIGNED32(expr) (expr)
-#define M2C_BITWISE(type, expr) ((type)(expr))
+/** @brief Spark particle: 4.12-ish fixed position and per-frame velocity. */
+typedef struct
+{
+    SVECTOR position;
+    SVECTOR velocity;
+} WmapSparkParticle;
 
+/** @brief Per-spark state slot (0 = free, 1 = flying, 2 = fading sprite). */
+typedef struct
+{
+    s16 state;
+    u8 pad_02[0xA];
+    s16 timer;
+    u8 pad_0E[2];
+    s32 screen_xy;
+} WmapSparkSlot;
 
-s32 rand(void);
+/** @brief World-map actor configuration. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} WmapSparkActor;
+
+/** @brief Animation resource slot. */
+typedef struct
+{
+    s32 field_00;
+    void *resource;
+} WmapSparkResource;
+
+/** @brief World-map ordering table and current primitive allocation cursor. */
+typedef struct
+{
+    u8 unknown_00[0x70];
+    u32 ordering_table[(0x33C - 0x70) / 4];
+    u8 *primitive_cursor;
+} WmapSparkRenderContext;
+
+/**
+ * @brief Spawn, move, and draw a batch of falling sparks, then fade them out as sprites.
+ * @param first First particle index to process.
+ * @param end One past the last particle index to process.
+ * @param particles Particle position/velocity array indexed by particle.
+ * @param config Emitter tuning block.
+ * @note 99.45%: structure and instruction count match; residual is global allocation
+ *       swapping i (s2) with spawn/slot (s3). The slot pointer is shared by both loops on
+ *       purpose (it makes the loop-1 giv non-replaceable, as in the target).
+ */
+void func_8008ECF8(s32 first, s32 end, WmapSparkParticle *particles, WmapSparkConfig *config)
+{
 extern s32 D_800D921C;
 extern s32 D_800D9230;
-extern u8 D_800D9268;
+extern WmapSparkActor D_800D9268[];
 extern s32 D_8011CF74;
-extern void *D_801398EC;
-extern u8 D_80139988;
-extern u8 D_801AFBD0;
+extern WmapSparkRenderContext *D_801398EC;
+extern WmapSparkResource D_80139988[];
+extern WmapSparkSlot D_801AFBD0[];
 
     SVECTOR position;
-    s32 sp24;
-    s32 sp20;
-    s16 *var_v1;
-    s16 temp_t0;
-    s16 var_v0;
-    s16 var_v0_2;
-    s16 var_v0_3;
-    s32 *var_s6;
-    s32 temp_v0;
-    s32 var_s2;
-    s32 var_s3;
-    s32 var_s3_2;
-    s32 var_s5;
-    s32 var_v0_4;
-    s32 var_v0_5;
-    s32 var_v0_6;
-    u16 temp_v0_2;
-    void *temp_a0;
-    void *temp_s0;
-    void *temp_s0_2;
-    void *temp_v1;
-    void *temp_v1_2;
-    void *var_s0;
-    void *var_s1;
-    void *var_s2_2;
+    s32 head_xy;
+    s32 tail_xy;
+    LINE_G2 *line;
+    WmapSparkActor *actor;
+    WmapSparkSlot *slot;
+    SVECTOR *velocity;
+    s32 spawn;
+    s32 i;
 
-    var_s2 = 3;
-    if (((s32) D_8011CF74 % (s32) M2C_FIELD(arg3, s32 *, 0)) == 0)
+    spawn = 3;
+    if (D_8011CF74 % config->period == 0)
     {
-        var_s3 = arg0;
-        if (var_s3 < arg1)
+        for (i = first; i < end; i++)
         {
-            var_s0 = (var_s3 * 0x10) + arg2;
-            var_v1 = (var_s3 * 0x14) + (u8 *)&D_801AFBD0;
-loop_3:
-            if ((*var_v1 != 0) || (*var_v1 = 1, M2C_FIELD(var_s0, s16 *, 0) = (s16) (M2C_FIELD(arg3, u16 *, 8) + ((s32) (rand() * M2C_FIELD(arg3, s32 *, 0xC)) >> 0xF)), M2C_FIELD(var_s0, s16 *, 2) = (s16) (M2C_FIELD(arg3, u16 *, 8) + ((s32) (rand() * M2C_FIELD(arg3, s32 *, 0xC)) >> 0xF)), M2C_FIELD(var_s0, u16 *, 4) = (u16) M2C_FIELD(arg3, u16 *, 0x10), M2C_FIELD(var_s0, u16 *, 8) = (u16) M2C_FIELD(arg3, u16 *, 0x18), temp_v1 = var_s0 + 8, M2C_FIELD(temp_v1, u16 *, 2) = (u16) M2C_FIELD(arg3, u16 *, 0x1C), var_s2 -= 1, M2C_FIELD(temp_v1, u16 *, 4) = (u16) M2C_FIELD(arg3, u16 *, 0x20), (var_s2 != 0)))
+            slot = &D_801AFBD0[i];
+            if (slot->state == 0)
             {
-                var_s0 += 0x10;
-                var_s3 += 1;
-                var_v1 = (s16 *)((u8 *)var_v1 + 0x14);
-                if (var_s3 < arg1)
+                slot->state = 1;
+                particles[i].position.vx = config->spread_base + ((rand() * config->spread_range) >> 15);
+                particles[i].position.vy = config->spread_base + ((rand() * config->spread_range) >> 15);
+                particles[i].position.vz = config->start_z;
+                particles[i].velocity.vx = config->velocity_x;
+                velocity = &particles[i].velocity;
+                velocity->vy = config->velocity_y;
+                velocity->vz = config->velocity_z;
+                if (--spawn == 0)
                 {
-                    goto loop_3;
+                    break;
                 }
             }
         }
     }
     D_800D9230 = 0;
-    var_s3_2 = arg0;
-    if (var_s3_2 < arg1)
+    for (i = first; i < end; i++)
     {
-        temp_v0 = var_s3_2 * 0x14;
-        var_s2_2 = temp_v0 + (u8 *)&D_801AFBD0;
-        var_s6 = temp_v0 + ((u8 *)&D_801AFBD0 + 0x10);
-        var_s5 = var_s3_2 * 0x2C;
-        var_s1 = (var_s3_2 * 0x10) + arg2;
-        do
+        slot = &D_801AFBD0[i];
+        switch (slot->state)
         {
-            temp_t0 = M2C_FIELD(var_s2_2, s16 *, 0);
-            if (temp_t0 != 1)
+        case 1:
+            position.vx = particles[i].position.vx / 16;
+            position.vy = particles[i].position.vy / 16;
+            position.vz = particles[i].position.vz / 16;
+            gte_ldv0(&position);
+            gte_rtps();
+            position.vx = (particles[i].position.vx - particles[i].velocity.vx * config->trail_length) / 16;
+            position.vy = (particles[i].position.vy - particles[i].velocity.vy * config->trail_length) / 16;
+            position.vz = (particles[i].position.vz - particles[i].velocity.vz * config->trail_length) / 16;
+            gte_stsxy(&head_xy);
+            gte_ldv0(&position);
+            gte_rtps();
+            gte_stsxy(&tail_xy);
+            line = (LINE_G2 *)D_801398EC->primitive_cursor;
+            *(s32 *)&line->r0 = 0x808080;
+            *(s32 *)&line->r1 = 0;
+            *(s32 *)&line->x0 = head_xy;
+            *(s32 *)&line->x1 = tail_xy;
+            setlen(line, 4);
+            setcode(line, 0x52);
+            addPrim(&D_801398EC->ordering_table[config->ot_index], line);
+            if (D_800D921C < 0x7D00)
             {
-                if (temp_t0 != 2)
+                D_800D921C += 0x14;
+                D_801398EC->primitive_cursor += 0x14;
+            }
+            particles[i].position.vx += particles[i].velocity.vx;
+            particles[i].position.vy += particles[i].velocity.vy;
+            particles[i].position.vz += particles[i].velocity.vz;
+            D_800D9230++;
+            if (particles[i].position.vz < 0)
+            {
+                actor = &D_800D9268[i];
+                slot->screen_xy = head_xy;
+                slot->timer = config->fade_frames;
+                slot->state = 2;
+                actor->field_02 = 0;
+                actor->field_06 = 0xF;
+                actor->field_0E = config->sprite_field_0E;
+                actor->field_10 = -1;
+                actor->field_26 = 0x80 / config->fade_frames;
+                actor->field_22 = 1;
+                actor->field_24 = 0x81;
+            }
+            break;
+        case 2:
+            if (config->sprite_id != -1)
+            {
+                actor = &D_800D9268[i];
+                func_8006CC4C(actor, &D_80139988[i]);
+                func_80066F9C(actor, *(s32 *)((u8 *)&D_801AFBD0[i] + 0x10), config->sprite_id, config->ot_index, 0);
+                if (--slot->timer >= 0)
                 {
-                    var_s2_2 += 0x14;
-                }
-                else
-                {
-                    if ((M2C_FIELD(arg3, s32 *, 0x28) == -1) || (temp_s0 = var_s5 + (u8 *)&D_800D9268, func_8006CC4C(temp_s0, (var_s3_2 * 8) + (u8 *)&D_80139988), func_80066F9C(temp_s0, *var_s6, M2C_FIELD(arg3, s32 *, 0x28), M2C_FIELD(arg3, s32 *, 4), 0), temp_v0_2 = M2C_FIELD(var_s2_2, u16 *, 0xC) - 1, M2C_FIELD(var_s2_2, u16 *, 0xC) = temp_v0_2, (temp_v0_2 & 0x8000)))
-                    {
-                        M2C_FIELD(var_s2_2, s16 *, 0) = 0;
-                    }
-                    goto block_30;
+                    break;
                 }
             }
-            else
-            {
-                var_v0 = M2C_FIELD(var_s1, s16 *, 0);
-                if (var_v0 < 0)
-                {
-                    var_v0 += 0xF;
-                }
-                position.vx = (s16) (var_v0 >> 4);
-                var_v0_2 = M2C_FIELD(var_s1, s16 *, 2);
-                if (var_v0_2 < 0)
-                {
-                    var_v0_2 += 0xF;
-                }
-                position.vy = (s16) (var_v0_2 >> 4);
-                var_v0_3 = M2C_FIELD(var_s1, s16 *, 4);
-                if (var_v0_3 < 0)
-                {
-                    var_v0_3 += 0xF;
-                }
-                position.vz = (s16) (var_v0_3 >> 4);
-                gte_ldv0(&position);
-                gte_rtps();
-                var_v0_4 = M2C_FIELD(var_s1, s16 *, 0) - (M2C_FIELD(var_s1, s16 *, 8) * M2C_FIELD(arg3, s32 *, 0x14));
-                if (var_v0_4 < 0)
-                {
-                    var_v0_4 += 0xF;
-                }
-                position.vx = (s16) (var_v0_4 >> 4);
-                var_v0_5 = M2C_FIELD(var_s1, s16 *, 2) - (M2C_FIELD(var_s1, s16 *, 0xA) * M2C_FIELD(arg3, s32 *, 0x14));
-                if (var_v0_5 < 0)
-                {
-                    var_v0_5 += 0xF;
-                }
-                position.vy = (s16) (var_v0_5 >> 4);
-                var_v0_6 = M2C_FIELD(var_s1, s16 *, 4) - (M2C_FIELD(var_s1, s16 *, 0xC) * M2C_FIELD(arg3, s32 *, 0x14));
-                if (var_v0_6 < 0)
-                {
-                    var_v0_6 += 0xF;
-                }
-                position.vz = (s16) (var_v0_6 >> 4);
-                gte_stsxy(&sp20);
-                gte_ldv0(&position);
-                gte_rtps();
-                gte_stsxy(&sp24);
-                temp_a0 = M2C_FIELD(D_801398EC, void **, 0x33C);
-                M2C_FIELD(temp_a0, s32 *, 4) = 0x808080;
-                M2C_FIELD(temp_a0, s32 *, 0xC) = 0;
-                M2C_FIELD(temp_a0, s32 *, 8) = sp20;
-                M2C_FIELD(temp_a0, s8 *, 3) = 4;
-                M2C_FIELD(temp_a0, s8 *, 7) = 0x52;
-                M2C_FIELD(temp_a0, s32 *, 0x10) = sp24;
-                M2C_FIELD(temp_a0, s32 *, 0) = (s32) ((M2C_FIELD(temp_a0, s32 *, 0) & 0xFF000000) | (M2C_FIELD(((M2C_FIELD(arg3, s32 *, 4) * 4) + D_801398EC), s32 *, 0x70) & 0xFFFFFF));
-                temp_v1_2 = (M2C_FIELD(arg3, s32 *, 4) * 4) + D_801398EC;
-                M2C_FIELD(temp_v1_2, s32 *, 0x70) = (s32) ((M2C_FIELD(temp_v1_2, s32 *, 0x70) & 0xFF000000) | ((s32) temp_a0 & 0xFFFFFF));
-                if (D_800D921C < 0x7D00)
-                {
-                    D_800D921C += 0x14;
-                    M2C_FIELD(D_801398EC, void **, 0x33C) = (void *) (M2C_FIELD(D_801398EC, void **, 0x33C) + 0x14);
-                }
-                M2C_FIELD(var_s1, s16 *, 0) = (s16) ((u16) M2C_FIELD(var_s1, s16 *, 0) + (u16) M2C_FIELD(var_s1, s16 *, 8));
-                M2C_FIELD(var_s1, s16 *, 4) = (s16) ((u16) M2C_FIELD(var_s1, s16 *, 4) + (u16) M2C_FIELD(var_s1, s16 *, 0xC));
-                M2C_FIELD(var_s1, s16 *, 2) = (s16) ((u16) M2C_FIELD(var_s1, s16 *, 2) + (u16) M2C_FIELD(var_s1, s16 *, 0xA));
-                D_800D9230 += 1;
-                if (M2C_FIELD(var_s1, s16 *, 4) < 0)
-                {
-                    temp_s0_2 = var_s5 + (u8 *)&D_800D9268;
-                    M2C_FIELD(var_s2_2, s32 *, 0x10) = sp20;
-                    M2C_FIELD(var_s2_2, s16 *, 0) = 2;
-                    M2C_FIELD(var_s2_2, u16 *, 0xC) = (u16) M2C_FIELD(arg3, u16 *, 0x24);
-                    M2C_FIELD(temp_s0_2, s16 *, 2) = 0;
-                    M2C_FIELD(temp_s0_2, s8 *, 6) = 0xF;
-                    M2C_FIELD(temp_s0_2, s16 *, 0x10) = -1;
-                    M2C_FIELD(temp_s0_2, u16 *, 0xE) = (u16) M2C_FIELD(arg3, u16 *, 0x2C);
-                    M2C_FIELD(temp_s0_2, s16 *, 0x22) = temp_t0;
-                    M2C_FIELD(temp_s0_2, s16 *, 0x24) = 0x81;
-                    M2C_FIELD(temp_s0_2, s16 *, 0x26) = (s16) (0x80 / (s32) M2C_FIELD(arg3, u16 *, 0x24));
-                }
-block_30:
-                var_s2_2 += 0x14;
-            }
-            var_s6 = (s32 *)((u8 *)var_s6 + 0x14);
-            var_s5 += 0x2C;
-            var_s3_2 += 1;
-            var_s1 += 0x10;
-        } while (var_s3_2 < arg1);
+            slot->state = 0;
+            break;
+        }
     }
 }
-#undef M2C_FIELD
-#undef M2C_UNALIGNED32
-#undef M2C_BITWISE
 
 /** @brief Configure the effect, reset its resource slots, and advance the sequence. */
 void func_8008F218(void)
@@ -438,10 +438,7 @@ extern s32 D_801B2AA8;
 
 /** @brief Draw two oscillating effect layers and update their intensity. */
 void func_8008F630(void)
-
 {
-/* Partial WMAP decompilation: 86.933334% (gcc280_g0). */
-
 extern s8 D_80051B4C[];
 extern void *D_8011CF24;
 extern VECTOR D_80182DC0;
@@ -454,22 +451,18 @@ extern s32 D_801B2AB8;
 extern s32 D_801B2ABC;
 
     s32 first_frame;
-    SVECTOR *rotation;
-    s32 second_frame;
     s32 intensity;
     s32 remaining;
 
     PushMatrix();
-    rotation = &D_801B2490;
     first_frame = (s32) (D_80051B4C[D_801B24B4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
+    func_8006CFA8(&D_80182DC0, &D_801B2490);
     func_8006CD98(D_8011CF24, first_frame, 8, 0x35, 0x7800, 0, D_801B2468);
-    rotation->vz = (u16) (rotation->vz - 0x14);
-    rotation = &D_801B2498;
-    second_frame = (s32) (D_80051B4C[D_80182DE4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
-    func_8006CD98(D_8011CF24, second_frame, 8, 0x35, 0x7800, 0, D_801B2468);
-    rotation->vz = (u16) (rotation->vz + 0x30);
+    first_frame = (s32) (D_80051B4C[D_80182DE4] + 0x80) >> 5;
+    D_801B2490.vz = (u16) (D_801B2490.vz - 0x14);
+    func_8006CFA8(&D_80182DC0, &D_801B2498);
+    func_8006CD98(D_8011CF24, first_frame, 8, 0x35, 0x7800, 0, D_801B2468);
+    D_801B2498.vz = (u16) (D_801B2498.vz + 0x30);
     PopMatrix();
     D_801B24B4 = (D_801B24B4 + 6) & 0xFF;
     D_80182DE4 = (D_80182DE4 + 3) & 0xFF;
@@ -489,10 +482,7 @@ extern s32 D_801B2ABC;
 
 /** @brief Draw two oscillating effect layers and reduce their shared intensity. */
 void func_8008F7D4(void)
-
 {
-/* Partial WMAP decompilation: 86.679610% (gcc280_g0). */
-
 extern s8 D_80051B4C[];
 extern void *D_8011CF24;
 extern VECTOR D_80182DC0;
@@ -505,22 +495,18 @@ extern s32 D_801B2AB8;
 extern s32 D_801B2ABC;
 
     s32 first_frame;
-    SVECTOR *rotation;
-    s32 second_frame;
     s32 intensity;
     s32 remaining;
 
     PushMatrix();
-    rotation = &D_801B2490;
     first_frame = (s32) (D_80051B4C[D_801B24B4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
+    func_8006CFA8(&D_80182DC0, &D_801B2490);
     func_8006CD98(D_8011CF24, first_frame, 8, 0x35, 0x7800, 0, D_801B2468);
-    rotation->vz = (u16) (rotation->vz - 0x14);
-    rotation = &D_801B2498;
-    second_frame = (s32) (D_80051B4C[D_80182DE4] + 0x80) >> 5;
-    func_8006CFA8(&D_80182DC0, rotation);
-    func_8006CD98(D_8011CF24, second_frame, 8, 0x35, 0x7800, 0, D_801B2468);
-    rotation->vz = (u16) (rotation->vz + 0x30);
+    first_frame = (s32) (D_80051B4C[D_80182DE4] + 0x80) >> 5;
+    D_801B2490.vz = (u16) (D_801B2490.vz - 0x14);
+    func_8006CFA8(&D_80182DC0, &D_801B2498);
+    func_8006CD98(D_8011CF24, first_frame, 8, 0x35, 0x7800, 0, D_801B2468);
+    D_801B2498.vz = (u16) (D_801B2498.vz + 0x30);
     PopMatrix();
     D_801B24B4 = (D_801B24B4 + 6) & 0xFF;
     D_80182DE4 = (D_80182DE4 + 3) & 0xFF;
@@ -541,8 +527,6 @@ extern s32 D_801B2ABC;
 /** @brief Initialize twenty-four actors and advance to their update step. */
 void func_8008F970(void)
 {
-/* Partial WMAP decompilation: 85.538460% (gcc280_g0). */
-
 /** @brief World-map 8-byte slot: only the +4 pointer field is written here. */
 typedef struct
 {
@@ -590,14 +574,13 @@ extern void func_8008FA40__for_func_8008F970(void) __asm__("func_8008FA40");
     WmapSlot8 *resource;
     WmapSlot14 *slot;
 
-    i = 60;
-    slot = &D_801AFBD0[60];
-    resource = &D_80139988[60];
-    actor = &D_800D9268[60];
     D_80139234 = 0;
     D_8013923C = 0xFFFF;
-next_actor:
+    for (i = 60; i < 84; i++)
     {
+        actor = &D_800D9268[i];
+        resource = &D_80139988[i];
+        slot = &D_801AFBD0[i];
         resource->field_04 = D_80121538;
         actor->field_06 = 15;
         actor->field_10 = -1;
@@ -607,14 +590,6 @@ next_actor:
         actor->field_0E = 0;
         actor->field_24 = 0x81;
         slot->field_00 = 0;
-        slot++;
-        resource++;
-        i++;
-        actor++;
-    }
-    if (i < 84)
-    {
-        goto next_actor;
     }
     D_801B2AC4 = D_8013923C;
     D_801B2AC0++;
@@ -1430,10 +1405,11 @@ extern void (*D_800D5F60[])(void);
     D_801B2A84 = 1;
 }
 
+/**
+ * @brief Arm the world-map sprite actor, set its wait, advance the step, and run the draw handler.
+ */
 void func_800906AC(void)
 {
-/* Partial WMAP decompilation: 87.156250% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -1461,12 +1437,12 @@ extern void func_8009072C__for_func_800906AC(void) __asm__("func_8009072C");
 
     D_801399CC = &D_8011D538;
     D_800D93C8.field_06 = 0xF;
+    D_800D93C8.field_0E = 1;
     D_800D93C8.field_10 = -1;
     D_800D93C8.field_26 = 2;
-    D_800D93C8.field_0E = 1;
-    D_800D93C8.field_24 = 1;
     D_800D93C8.field_02 = 0;
     D_800D93C8.field_22 = 0x81;
+    D_800D93C8.field_24 = 1;
     D_801B2A84 = 0x60;
     D_801B2A80 += 1;
     func_8009072C__for_func_800906AC();
