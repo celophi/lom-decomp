@@ -123,7 +123,10 @@ overlay_checkps_target_as_extra_flags_cdrom := -L
 OVERLAYS += cload
 overlay_cload_gcc_272_cdk_g0_srcs := \
 	src/overlays/cload/overlay_header.c \
-	src/overlays/cload/cload.c
+	src/overlays/cload/cload.c \
+	src/overlays/cload/cload_widgets.c \
+	src/overlays/cload/cload_card.c \
+	src/overlays/cload/cload_glyph.c
 
 OVERLAYS += field
 # Sources follow FIELD.BIN.yaml address order within each compiler configuration.

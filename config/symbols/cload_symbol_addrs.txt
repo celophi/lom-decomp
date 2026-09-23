@@ -256,3 +256,6 @@ field_text_upload_immediate_cache = 0x80063194;
 field_update_input_repeat = 0x800A9E78;
 field_reset_input_repeat = 0x800AA02C;
 field_upload_image_resource              = 0x80086374;
+g_cload_text_alt_save                    = 0x80145ED6;
+g_cload_text_plus_marker                 = 0x80145F4C;
+g_cload_location_names                   = 0x80146338;

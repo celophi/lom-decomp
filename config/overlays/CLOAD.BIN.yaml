@@ -44,6 +44,11 @@ segments:
       - [auto, c, overlay_header]
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, cload]
+      - [0x25, .rodata, cload_widgets]
+      - [0x39, .rodata, cload_card]
       - [0xC5, c, cload]     # gcc272_cdk
+      - [0x2481, c, cload_widgets]
+      - [0x3649, c, cload_card]
+      - [0x54C1, c, cload_glyph]
       - [0x5E9D, databin, cload_data]
   - [0x2B259]
