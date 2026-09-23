@@ -663,28 +663,20 @@ void golem_handle_input(void)
         }
         if (input & PAD_BTN_R2)
         {
-            s32 limit, logic_type;
-            PadContext* menu_data;
             block_index = g_golem_selected_block;
             repeat_count = 0;
-            if (g_golem_logic_block_count > 0)
+            while (repeat_count < g_golem_logic_block_count)
             {
-                limit = g_golem_logic_block_count;
-                menu_data = GOLEM_PAD_CTX;
-                logic_type = g_golem_active_logic_type;
-                do
+                block_index++;
+                if (block_index == g_golem_logic_block_count)
                 {
-                    block_index++;
-                    if (block_index == limit)
-                    {
-                        block_index = 0;
-                    }
-                    repeat_count++;
-                    if ((menu_data->logic_blocks + block_index)->f.logic_type == logic_type)
-                    {
-                        break;
-                    }
-                } while (repeat_count < limit);
+                    block_index = 0;
+                }
+                repeat_count++;
+                if (GOLEM_PAD_CTX->logic_blocks[block_index].f.logic_type == g_golem_active_logic_type)
+                {
+                    break;
+                }
             }
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
@@ -694,44 +686,20 @@ void golem_handle_input(void)
         }
         if (input & PAD_BTN_L2)
         {
-            s32 limit, logic_type;
-            PadContext* menu_data;
-            s32 selected_block;
-            s32* block_count;
-            do
-            {
-                selected_block = g_golem_selected_block;
-            } while (0);
-            input = g_golem_logic_block_count;
-            block_index = selected_block;
+            block_index = g_golem_selected_block;
             repeat_count = 0;
-            if (input > 0)
+            while (repeat_count < g_golem_logic_block_count)
             {
-                limit = input;
-                menu_data = GOLEM_PAD_CTX;
-                logic_type = g_golem_active_logic_type;
                 block_index--;
-            backward_loop:
                 if (block_index < 0)
                 {
-                    block_index = limit - 1;
+                    block_index = g_golem_logic_block_count - 1;
                 }
-                block_count = &g_golem_logic_block_count;
-                if ((menu_data->logic_blocks + block_index)->f.logic_type != logic_type)
+                if (GOLEM_PAD_CTX->logic_blocks[block_index].f.logic_type == g_golem_active_logic_type)
                 {
-                    s32 loop_count;
-                    do
-                    {
-                        loop_count = *block_count;
-                    } while (0);
-                    repeat_count++;
-                    block_index--;
-                    if (repeat_count < loop_count)
-                    {
-                        goto backward_loop;
-                    }
-                    block_index++;
+                    break;
                 }
+                repeat_count++;
             }
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
@@ -1276,6 +1244,9 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
             }
             SET_BGR0_PACKED(sprite, tint);
             setlen(sprite, 4);
+            
+
+            /* need to figure out how to remove this hack */ 
             do
             {
                 do
@@ -1285,8 +1256,10 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
             } while (0);
             if ((g_golem_panel_records[panel_index].attributes >> 2) & 1)
             {
-                setcode(sprite, 0x66);
+                setcode(sprite, 0x66); /* setSemiTrans(sprite, 1); */ 
             }
+
+
             setXY0(sprite, (x + 8) + x_offset, y + y_offset);
             setWH(sprite, segment_width, row_height);
             setUV0(sprite, g_golem_panel_records[panel_index].attributes >> 11, g_golem_panel_records[panel_index].texture >> 3);
