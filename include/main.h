@@ -14,9 +14,7 @@ extern s32 g_script_pair_value_49;
 
 extern u32 g_field_scene_config;    /**< Packed field-entry configuration passed to field_set_scene_parameters. */
 /** @brief Current scene/mode identifier (0, 0xD for default menu template). */
-#ifndef GOVER_C
 extern u16 g_scene_mode;
-#endif
 /** @brief Option/parameter word from SavedGameLayout; -1 = unset. */
 extern s32 g_layout_option;
 /** @brief Countdown timer for delayed music/SFX trigger on field entry. */

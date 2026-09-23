@@ -3,7 +3,6 @@
 
 #include "common.h"
 #include "gpu_packet.h"
-#include "main.h"
 #include "tim.h"
 
 /**
