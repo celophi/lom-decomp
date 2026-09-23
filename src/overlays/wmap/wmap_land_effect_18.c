@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_effect_18.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
@@ -1764,12 +1765,11 @@ extern void (*D_800D4C54[])(void);
 void func_8006FBF4(void)
 {
 extern s32 D_80139244;
-extern s32 D_801ADAF4;
 extern s32 D_801B2400;
 extern s32 D_801B2404;
 
     D_80139244 = 1;
-    D_801ADAF4 = 8;
+    g_wmap_backdrop_target_level = 8;
     func_8006683C(0x262726);
     D_801B2404 = 8;
     D_801B2400 += 1;
@@ -2003,12 +2003,11 @@ extern s32 D_801B2400;
 void func_8006FFD8(void)
 {
 extern s32 D_80139244;
-extern s32 D_801ADAF4;
 extern s32 D_801B2400;
 extern s32 D_801B2404;
 
     D_80139244 = 0;
-    D_801ADAF4 = 0x10;
+    g_wmap_backdrop_target_level = 0x10;
     D_801B2404 = 0x28;
     D_801B2400 += 1;
 }
@@ -2522,12 +2521,11 @@ extern void (*D_800D4CAC[])(void);
  */
 void func_80070740(void)
 {
-extern s32 D_8011CF50;
 extern s32 D_8013B20C;
 extern s32 D_801B2408;
 extern void func_80070790__for_func_80070740(void) __asm__("func_80070790");
 
-    D_8011CF50 = 1;
+    g_wmap_input_locked = 1;
     func_8006CAC0(func_8006C81C);
     D_8013B20C = 1;
     D_801B2408 += 1;

@@ -72,7 +72,6 @@ extern u32 D_801B1098;
 extern s32 D_801B109C;
 extern void (*D_800D0A44[])(void);
 extern s32 D_8011D4FC;
-extern s32 D_8013B254;
 extern s32 D_80182E34;
 extern s32 D_800DBE70;
 extern s32 D_800DBE78;
@@ -197,7 +196,7 @@ void func_8006C8E0(void)
 {
     if (D_8011D4FC != 0x1F)
     {
-        D_8013B254 = 2;
+        g_wmap_screen_fade_mode = 2;
     }
     D_80182E34 = 3;
     g_wmap_spirit_target_brightness = 0;
@@ -756,6 +755,6 @@ void func_8006D4B0(void)
 void func_8006D4F0(void)
 {
     D_8013B208 = 0;
-    func_80064094();
+    wmap_reset_after_transition();
     D_801B10A8 += 1;
 }

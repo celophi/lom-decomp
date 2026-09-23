@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_party_travel.h"
 #include "wmap_pathfinding.h"
 #include "wmap_map_events.h"
@@ -51,18 +52,15 @@ extern u8 D_800DCEF8;
 extern u8 D_800DCF00;
 extern s32 D_8011CF20;
 extern s32 D_8011CF44;
-extern s32 D_8011CF50;
 extern s32 D_8011D4F8;
 extern u8 D_8011D538;
 extern u8 D_80123538;
 extern u8 D_80129538;
 extern s32 D_80129540;
 extern s32 D_8012954C;
-extern s32 D_8013922C;
 extern s32 D_80139238;
 extern s32 D_80139248;
 extern s32 D_80139834;
-extern s32 D_801398C0;
 extern s32 D_80139900;
 extern s32 D_8013997C;
 extern s32 D_8013B288;
@@ -90,9 +88,9 @@ extern u8 func_800C2274;
 
     if (D_8011CF44 == 0)
     {
-        D_8011CF50 = 1;
-        D_801398C0 = 0;
-        D_8013922C = 0;
+        g_wmap_input_locked = 1;
+        g_wmap_buttons_held = 0;
+        g_wmap_buttons_repeat = 0;
         if (D_80182DD4 != 0)
         {
             D_80182DD4 = 0;
@@ -288,7 +286,6 @@ extern WmapTransform D_800DCEC8;
 extern WmapTransform D_80139950;
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
-extern s32 D_8011CF50;
 extern s32 D_80139234;
 extern s32 D_801398D0;
 extern s32 D_8013B208;
@@ -300,7 +297,7 @@ extern void func_800A76F8__for_func_800A643C(void) __asm__("func_800A76F8");
 
     D_8013B288 = 0;
     D_80139234 = 0;
-    D_8011CF50 = 1;
+    g_wmap_input_locked = 1;
     D_8013B208 = 1;
     D_800DCEC8 = D_80139950;
     func_8006D0F0(4, &D_800DCEF8, &D_800DCF00);
@@ -1416,11 +1413,10 @@ extern void func_800A7BB8__for_func_800A7B78(void) __asm__("func_800A7BB8");
 void func_800A7BB8(void)
 {
 extern s32 D_800DCEC0;
-extern s32 D_8011CF50;
 extern s32 D_8013B208;
 extern s32 D_801B2E40;
 
-    D_8011CF50 = 0;
+    g_wmap_input_locked = 0;
     D_8013B208 = 0;
     D_800DCEC0 = 1;
     D_801B2E40 += 1;
@@ -1672,11 +1668,10 @@ extern void func_800A7FAC__for_func_800A7F6C(void) __asm__("func_800A7FAC");
 /** @brief World-map step handler: clear two flags and advance the step counter. */
 void func_800A7FAC(void)
 {
-extern s32 D_8011CF50;
 extern s32 D_8013B208;
 extern s32 D_801B2E48;
 
-    D_8011CF50 = 0;
+    g_wmap_input_locked = 0;
     D_8013B208 = 0;
     D_801B2E48 += 1;
 }
@@ -1927,11 +1922,10 @@ extern void func_800A8394__for_func_800A8354(void) __asm__("func_800A8394");
 /** @brief World-map step handler: clear two flags and advance the step counter. */
 void func_800A8394(void)
 {
-extern s32 D_8011CF50;
 extern s32 D_8013B208;
 extern s32 D_801B2E50;
 
-    D_8011CF50 = 0;
+    g_wmap_input_locked = 0;
     D_8013B208 = 0;
     D_801B2E50 += 1;
 }
@@ -2183,11 +2177,10 @@ extern void func_800A87B0__for_func_800A8770(void) __asm__("func_800A87B0");
 /** @brief World-map step handler: clear two flags and advance the step counter. */
 void func_800A87B0(void)
 {
-extern s32 D_8011CF50;
 extern s32 D_8013B208;
 extern s32 D_801B2E58;
 
-    D_8011CF50 = 0;
+    g_wmap_input_locked = 0;
     D_8013B208 = 0;
     D_801B2E58 += 1;
 }

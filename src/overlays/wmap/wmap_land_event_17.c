@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_map_display.h"
 #include "wmap_land_event_17.h"
 #include "wmap_sequence_runtime.h"
@@ -60,13 +61,12 @@ extern u8 D_80182E40[];
 extern u8 D_8018B240[];
 extern u8 D_80193640[];
 extern s32 D_801ADAE0;
-extern s32 D_801ADAF4;
 extern s32 D_801B2E80;
 extern s32 D_801B2E84;
 
     D_8013B208 = 1;
     func_8006683C(0x301020);
-    D_801ADAF4 = 4;
+    g_wmap_backdrop_target_level = 4;
     D_801ADAE0 = 1;
     g_wmap_spirit_target_brightness = 0;
     func_8005FF88(-1);

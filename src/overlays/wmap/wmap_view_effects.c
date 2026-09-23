@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_sprite_render.h"
 #include "wmap_view_effects.h"
 #include "common.h"
@@ -134,11 +135,8 @@ extern s32 D_800DCEF0;
 extern s32 D_800DCF04;
 extern s32 D_8011CF18;
 extern s32 D_8011CF44;
-extern s32 D_8011CF50;
 extern s32 D_8011CF7C;
-extern s32 D_8013922C;
 extern s32 D_8013986C;
-extern s32 D_801398C0;
 extern s32 D_801398D0;
 extern WmapTransform D_80139950;
 extern s32 D_80139954;
@@ -146,7 +144,6 @@ extern s32 D_80182D68;
 extern s32 D_80182D78;
 extern WmapVertex D_80051D4C[];
 extern s16 D_80053414[];
-extern s32 D_800D9220;
 extern s16 D_800D928A;
 extern s32 D_800DBE70;
 extern s32 D_800DBE78;
@@ -384,7 +381,7 @@ s32 func_8006579C(s32 initialize)
     }
     if ((D_8013986C == 0) && (D_801398D0 == 0) && (D_8011CF18 == 0))
     {
-        if (D_8013922C & 0x8000)
+        if (g_wmap_buttons_repeat & 0x8000)
         {
             temp_a1 = ((D_800DCEEC - 2) * 0x18) + 0x80;
             D_800DCEEC -= 1;
@@ -402,7 +399,7 @@ s32 func_8006579C(s32 initialize)
                 }
             }
         }
-        if (D_8013922C & 0x2000)
+        if (g_wmap_buttons_repeat & 0x2000)
         {
             temp_a1_2 = (D_800DCEEC * 0x18) + 0x80;
             D_800DCEEC += 1;
@@ -421,7 +418,7 @@ s32 func_8006579C(s32 initialize)
                 }
             }
         }
-        if (D_8013922C & 0x1000)
+        if (g_wmap_buttons_repeat & 0x1000)
         {
             func_800652A8(3, ((D_800DCEEC - 1) * 0x18) + 0x80);
             temp_v0 = D_800DCEF0 - 1;
@@ -439,7 +436,7 @@ s32 func_8006579C(s32 initialize)
                 }
             }
         }
-        if (D_8013922C & 0x4000)
+        if (g_wmap_buttons_repeat & 0x4000)
         {
             func_800652A8(3, ((D_800DCEEC - 1) * 0x18) + 0x80);
             temp_v1_2 = *((D_8013986C * 4) + (u8*)&D_80054934);
@@ -461,7 +458,7 @@ s32 func_8006579C(s32 initialize)
     }
     if (D_8013986C == 1)
     {
-        if (D_8013922C & 0x8000)
+        if (g_wmap_buttons_repeat & 0x8000)
         {
             temp_v0_3 = D_800DCF04 - 1;
             D_800DCF04 = temp_v0_3;
@@ -470,7 +467,7 @@ s32 func_8006579C(s32 initialize)
                 D_800DCF04 = 8;
             }
         }
-        if (D_8013922C & 0x2000)
+        if (g_wmap_buttons_repeat & 0x2000)
         {
             D_800DCF04 = (D_800DCF04 + 1) % 9;
         }
@@ -485,13 +482,13 @@ s32 func_8006579C(s32 initialize)
         }
         else
         {
-            D_8013922C = 0;
+            g_wmap_buttons_repeat = 0;
             if ((D_80182D78 | D_80182D68) == 0)
             {
                 D_801398D0 = 0;
                 if (D_8011CF44 == 0)
                 {
-                    D_8011CF50 = 0;
+                    g_wmap_input_locked = 0;
                 }
             }
             if (D_80182D78 != 0)
@@ -499,9 +496,9 @@ s32 func_8006579C(s32 initialize)
                 var_a0 = -4;
                 if (D_8011CF7C != 0)
                 {
-                    D_8011CF50 = 1;
-                    D_801398C0 = 0;
-                    D_8013922C = 0;
+                    g_wmap_input_locked = 1;
+                    g_wmap_buttons_held = 0;
+                    g_wmap_buttons_repeat = 0;
                     if (D_80182D78 > 0)
                     {
                         var_a0 = 4;
@@ -515,7 +512,7 @@ s32 func_8006579C(s32 initialize)
                         {
                             M2C_FIELD(&D_80139950, s32*, 4) = 0;
                             D_80182D78 = 0;
-                            D_8013922C = 0;
+                            g_wmap_buttons_repeat = 0;
                             D_801398D0 = 0;
                         }
                         if (M2C_FIELD(&D_80139950, s32*, 4) >= 0x91)
@@ -523,7 +520,7 @@ s32 func_8006579C(s32 initialize)
                             M2C_FIELD(&D_80139950, s32*, 4) = 0x90;
                             D_80182D78 = 0;
                             D_801398D0 = 0;
-                            D_8013922C &= ~0x5000;
+                            g_wmap_buttons_repeat &= ~0x5000;
                         }
                     }
                 }
@@ -533,9 +530,9 @@ s32 func_8006579C(s32 initialize)
                 var_a0_2 = -4;
                 if (D_8011CF7C != 0)
                 {
-                    D_8011CF50 = 1;
-                    D_801398C0 = 0;
-                    D_8013922C = 0;
+                    g_wmap_input_locked = 1;
+                    g_wmap_buttons_held = 0;
+                    g_wmap_buttons_repeat = 0;
                     if (D_80182D68 > 0)
                     {
                         var_a0_2 = 4;
@@ -549,7 +546,7 @@ s32 func_8006579C(s32 initialize)
                         {
                             M2C_FIELD(&D_80139950, s32*, 0) = 0;
                             D_80182D68 = 0;
-                            D_8013922C = 0;
+                            g_wmap_buttons_repeat = 0;
                             D_801398D0 = 0;
                         }
                         if (M2C_FIELD(&D_80139950, s32*, 0) >= 0x91)
@@ -557,7 +554,7 @@ s32 func_8006579C(s32 initialize)
                             M2C_FIELD(&D_80139950, s32*, 0) = 0x90;
                             D_80182D68 = 0;
                             D_801398D0 = 0;
-                            D_8013922C &= 0xFFFF5FFF;
+                            g_wmap_buttons_repeat &= 0xFFFF5FFF;
                         }
                     }
                 }
@@ -993,7 +990,7 @@ void func_800664B8(void)
     switch (temp_t1) /* irregular */
     {
     case 0:
-        if ((D_8013922C & 0x10) && (D_8011CF18 == 0) && (D_8011D4FC == -1))
+        if ((g_wmap_buttons_repeat & 0x10) && (D_8011CF18 == 0) && (D_8011D4FC == -1))
         {
             D_8013986C = 3;
             func_8005FF88(-1);
@@ -1011,14 +1008,14 @@ void func_800664B8(void)
             func_800652A8(1, 0x80);
             var_v0 = 0xA130;
         block_13:
-            D_800D9220 = var_v0;
-            D_801398C0 = 0;
-            D_8013922C = 0;
+            g_wmap_map_button_mask = var_v0;
+            g_wmap_buttons_held = 0;
+            g_wmap_buttons_repeat = 0;
             return;
         }
         return;
     case 1:
-        if (D_8013922C & 0x30)
+        if (g_wmap_buttons_repeat & 0x30)
         {
             D_8013986C = 2;
             D_800D928A = 0x80;
@@ -1028,7 +1025,7 @@ void func_800664B8(void)
         }
         break;
     case 2:
-        D_8013922C = 0;
+        g_wmap_buttons_repeat = 0;
         var_t0 = M2C_FIELD(&D_801AFBB8, s32*, 0) - M2C_FIELD(&D_801AFBA8, s32*, 0);
         M2C_FIELD(&D_801AFBB8, s32*, 0) = var_t0;
         temp_a2 = M2C_FIELD(&D_801AFBB8, s32*, 4) - M2C_FIELD(&D_801AFBA8, s32*, 4);
@@ -1065,7 +1062,7 @@ void func_800664B8(void)
         }
         break;
     case 3:
-        D_8013922C = 0;
+        g_wmap_buttons_repeat = 0;
         var_t0_2 = M2C_FIELD(&D_801AFBB8, s32*, 0) + M2C_FIELD(&D_801AFBA8, s32*, 0);
         M2C_FIELD(&D_801AFBB8, s32*, 0) = var_t0_2;
         temp_a2_2 = M2C_FIELD(&D_801AFBB8, s32*, 4) + M2C_FIELD(&D_801AFBA8, s32*, 4);

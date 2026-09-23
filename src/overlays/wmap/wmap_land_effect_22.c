@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_effect_22.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
@@ -736,13 +737,12 @@ extern void (*D_800D6914[])(void);
 void func_800A17F0(void)
 {
 extern s32 D_8013B208;
-extern s32 D_801ADAF4;
 extern s32 D_801B2D58;
 extern s32 D_801B2D5C;
 
     D_8013B208 = 1;
     func_8006683C(0x601040);
-    D_801ADAF4 = 8;
+    g_wmap_backdrop_target_level = 8;
     func_800652A8(0x2C, 0x80);
     D_801B2D5C = 0xF;
     D_801B2D58 += 1;
@@ -827,7 +827,6 @@ extern s32 D_801B2D58;
 void func_800A1970(void)
 {
 extern s32 D_80139244;
-extern s32 D_801ADAF4;
 extern s32 D_801B2D58;
 extern s32 D_801B2D5C;
 extern void func_800A1F00__for_func_800A1970(void) __asm__("func_800A1F00");
@@ -835,7 +834,7 @@ extern void func_800A1F00__for_func_800A1970(void) __asm__("func_800A1F00");
     func_8006CAC0(func_800A1F00__for_func_800A1970);
     D_80139244 = 1;
     func_8006683C(0x351040);
-    D_801ADAF4 = 3;
+    g_wmap_backdrop_target_level = 3;
     D_801B2D5C = 2;
     D_801B2D58 += 1;
 }
@@ -950,7 +949,6 @@ extern s32 D_801B2D58;
 void func_800A1B80(void)
 {
 extern s32 D_80139244;
-extern s32 D_801ADAF4;
 extern s32 D_801B2D58;
 extern s32 D_801B2D5C;
 extern void func_800A2058__for_func_800A1B80(void) __asm__("func_800A2058");
@@ -959,7 +957,7 @@ extern void func_800A3140__for_func_800A1B80(void) __asm__("func_800A3140");
     func_8006CAC0(&func_800A2058__for_func_800A1B80);
     D_80139244 = 0;
     func_8006683C(0x601550);
-    D_801ADAF4 = 8;
+    g_wmap_backdrop_target_level = 8;
     func_8006CAC0(&func_800A3140__for_func_800A1B80);
     D_801B2D5C = 0x88;
     D_801B2D58 += 1;

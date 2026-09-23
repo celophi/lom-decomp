@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_party_travel.h"
 #include "wmap_travel_sequences.h"
 #include "wmap_resource_support.h"
@@ -616,7 +617,6 @@ extern WmapTransform D_800DCEC8;
 extern WmapTransform D_80139950;
 extern s32 D_800DCEF8;
 extern s32 D_800DCF00;
-extern s32 D_8011CF50;
 extern s32 D_800DCEC0;
 extern s32 D_801B2C48;
 extern u8 D_8011D538[];
@@ -629,7 +629,7 @@ extern s32 D_801B2C54;
 extern void func_8009ABB0__for_func_8009A114(void) __asm__("func_8009ABB0");
 
     D_8013B288 = 0;
-    D_8011CF50 = 1;
+    g_wmap_input_locked = 1;
     D_801B2C48 = 0;
     D_8013B208 = 1;
     func_8005FF88(-1);
@@ -828,7 +828,6 @@ typedef struct
 
 extern s32 D_800DCEC0;
 extern WmapTransform D_800DCEC8;
-extern s32 D_8011CF50;
 extern u8 D_8011D538[];
 extern s32 D_80139224;
 extern WmapTransform D_80139950;
@@ -840,7 +839,7 @@ extern s32 D_801B2C50;
 
     D_80139224 = 1;
     D_8013B288 = 0;
-    D_8011CF50 = 1;
+    g_wmap_input_locked = 1;
     D_801B2C48 = 0;
     D_8013B208 = 1;
     func_8005FF88(-1);

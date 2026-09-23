@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_effect_10.h"
 #include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
@@ -1043,7 +1044,6 @@ extern s32 D_801B2A70;
 /** @brief Register world-map callbacks, seed a mode value, and advance step counters. */
 void func_800900BC(void)
 {
-extern s32 D_801ADAF4;
 extern s32 D_801B2A70;
 extern s32 D_801B2A74;
 extern void func_80091088__for_func_800900BC(void) __asm__("func_80091088");
@@ -1051,7 +1051,7 @@ extern void func_80090478__for_func_800900BC(void) __asm__("func_80090478");
 
     func_8006CAC0(func_80091088__for_func_800900BC);
     func_8006683C(0x602030);
-    D_801ADAF4 = 4;
+    g_wmap_backdrop_target_level = 4;
     func_8006CAC0(func_80090478__for_func_800900BC);
     D_801B2A74 = 8;
     D_801B2A70 += 1;
@@ -1223,12 +1223,11 @@ extern s32 D_801B2A70;
 /** @brief Set the drawing color and world-map value, then start a 26-tick delay. */
 void func_80090398(void)
 {
-extern s32 D_801ADAF4;
 extern s32 D_801B2A70;
 extern s32 D_801B2A74;
 
     func_8006683C(0x808080);
-    D_801ADAF4 = 0xF;
+    g_wmap_backdrop_target_level = 0xF;
     D_801B2A74 = 0x1A;
     D_801B2A70 += 1;
 }

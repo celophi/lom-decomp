@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_effect_13.h"
 #include "wmap_sprite_render.h"
 #include "wmap_sequence_runtime.h"
@@ -669,12 +670,11 @@ extern void (*D_800D4FC8[])(void);
  */
 void func_80075044(void)
 {
-extern s32 D_8011CF50;
 extern s32 D_8013B20C;
 extern s32 D_801B2568;
 extern void func_80075094__for_func_80075044(void) __asm__("func_80075094");
 
-    D_8011CF50 = 1;
+    g_wmap_input_locked = 1;
     func_8006CAC0(func_8006C81C);
     D_8013B20C = 1;
     D_801B2568 += 1;

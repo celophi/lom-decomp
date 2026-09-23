@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_party_travel.h"
 #include "wmap_pathfinding.h"
 #include "wmap_map_display.h"
@@ -114,12 +115,9 @@ extern s32 D_800DCEF0;
 extern s32 D_8011CF18;
 extern s32 D_8011CF20;
 extern s32 D_8011CF44;
-extern s32 D_8011CF50;
 extern s32 D_80129550;
-extern s32 D_8013922C;
 extern s32 D_8013986C;
 extern s32 D_801398B8;
-extern s32 D_801398C0;
 extern s32 D_801398D0;
 extern s32 D_8013B294;
 extern s32 D_80182D5C;
@@ -340,7 +338,7 @@ void wmap_update_party_travel(void)
             i++;
         } while (i < WMAP_TRAVELER_COUNT);
     }
-    if ((D_8013922C & PADRdown) && g_wmap_party_moving == 0 && D_80129550 == 0)
+    if ((g_wmap_buttons_repeat & PADRdown) && g_wmap_party_moving == 0 && D_80129550 == 0)
     {
         selected_x = D_80139950.x / WMAP_CELL_SPACING + D_800DCEEC;
         selected_y = D_80139950.y / WMAP_CELL_SPACING + D_800DCEF0;
@@ -423,9 +421,9 @@ void wmap_init_party_travel(void)
     wmap_set_traveler_position(0, g_wmap_travelers[0].cell_x, g_wmap_travelers[0].cell_y);
     if (D_80139290[g_wmap_travelers[0].cell_x][g_wmap_travelers[0].cell_y].land_id == WMAP_SPECIAL_TRAVEL_LAND)
     {
-        D_8011CF50 = 1;
-        D_801398C0 = 0;
-        D_8013922C = 0;
+        g_wmap_input_locked = 1;
+        g_wmap_buttons_held = 0;
+        g_wmap_buttons_repeat = 0;
         D_80182E34 = 3;
         D_800DBE78 = 3;
         D_8011CF20 = 1;

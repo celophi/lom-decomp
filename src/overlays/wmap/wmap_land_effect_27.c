@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_effect_27.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
@@ -730,14 +731,13 @@ extern s32 D_801B2C68;
 /** @brief World-map step handler: register a callback, kick a job, advance the step. */
 void func_8009BC78(void)
 {
-extern s32 D_801ADAF4;
 extern s32 D_801B2C68;
 extern s32 D_801B2C6C;
 extern void func_8009C3E4__for_func_8009BC78(void) __asm__("func_8009C3E4");
 
     func_8006CAC0(func_8009C3E4__for_func_8009BC78);
     func_8006683C(0x651035);
-    D_801ADAF4 = 4;
+    g_wmap_backdrop_target_level = 4;
     D_801B2C6C = 2;
     D_801B2C68 += 1;
 }
