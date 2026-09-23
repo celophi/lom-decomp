@@ -125,8 +125,7 @@ typedef struct
 #define ZUKAN_FADE_ADDITIVE_THRESHOLD (ZUKAN_FADE_NEUTRAL + 1)
 #define ZUKAN_FADE_ADDITIVE_DRAW_MODE 0x25
 #define ZUKAN_FADE_SUBTRACTIVE_DRAW_MODE 0x45
-#define ZUKAN_NEXT_FADE_PRIMITIVE(primitive, type) \
-    ((ZukanFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+#define ZUKAN_NEXT_FADE_PRIMITIVE(primitive, type) ((ZukanFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 #define ZUKAN_VIEW_DETAIL 0
 #define ZUKAN_VIEW_LIST 1
@@ -147,10 +146,20 @@ typedef struct
 #define ZUKAN_ENTRY_RESOURCE_BASE 0xBFC
 #define ZUKAN_UI_RESOURCE_ID 0x5E3
 
-
 /* Overlay state. */
 
-extern u8 D_800EC3E0;
+extern u8 D_800EC3E0[];
+
+/**
+ * @brief Address of string @p index in the archive text table whose offset word is at @p table_word.
+ * @note Summed as integers, index first, to match the original address arithmetic.
+ */
+#define ZUKAN_ARCHIVE_TEXT(archive, table_word, index)                                                                                                         \
+    ((u8*)(*(s32*)((archive) + (table_word)) + (*(u16*)((index) * 2 + *(s32*)((archive) + (table_word)) + (archive)) + (s32)(archive))))
+
+/** @brief Address of the FIELD UI string whose offset pair is @p entry, the @p index-th table entry. */
+#define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
+
 extern u8 g_zukan_resource_archive[];
 extern u8* g_zukan_resource_buffer;
 extern u8* g_zukan_work_buffer;
@@ -215,7 +224,7 @@ void zukan_commit_loaded_entry(void);
 s32 zukan_initialize_state(s32 work_buffer, s32 category)
 {
     s32 next_buffer;
-    volatile s32 scratch[2];
+    s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
 
     g_zukan_category = category;
     g_zukan_work_buffer = (u8*)((work_buffer + 3) & ~3);
@@ -570,15 +579,14 @@ void zukan_render_ui(u8* frame_context)
     s32 i;
     s32 packet_cursor;
     s32 detail_flag;
-    volatile s32 scratch[2];
+    s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
 
     ordering_table = frame_context + 0x28;
     i = 0;
     packet_cursor = *(s32*)(frame_context + 0x4040);
     do
     {
-        packet_cursor = zukan_emit_ui_sprite(packet_cursor, ordering_table, i, g_zukan_ui_sprites[i].x,
-                           g_zukan_ui_sprites[i].y, 0);
+        packet_cursor = zukan_emit_ui_sprite(packet_cursor, ordering_table, i, g_zukan_ui_sprites[i].x, g_zukan_ui_sprites[i].y, 0);
         i++;
     } while (i < 6);
 
@@ -587,8 +595,7 @@ void zukan_render_ui(u8* frame_context)
     detail_flag = 1;
     do
     {
-        packet_cursor = zukan_emit_ui_sprite(packet_cursor, ordering_table, i, g_zukan_ui_sprites[i].x,
-                           g_zukan_ui_sprites[i].y, detail_flag);
+        packet_cursor = zukan_emit_ui_sprite(packet_cursor, ordering_table, i, g_zukan_ui_sprites[i].x, g_zukan_ui_sprites[i].y, detail_flag);
         i++;
     } while (i < 0x15);
 
@@ -700,13 +707,14 @@ void zukan_start_previous_entry_transition(void)
 void zukan_update_transition(u8* frame_context)
 {
     s32 saved_packet_cursor;
-    volatile s32 scratch[2];
+    s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
     if (g_zukan_transition_state != 0)
     {
         saved_packet_cursor = *(s32*)(frame_context + 0x4040);
         switch (g_zukan_transition_state)
         {
-        case ZUKAN_TRANSITION_NEXT_FADE_OUT: {
+        case ZUKAN_TRANSITION_NEXT_FADE_OUT:
+        {
             s32* counter = &g_zukan_transition_frame;
             if (++*counter == ZUKAN_TRANSITION_FRAMES)
             {
@@ -724,7 +732,8 @@ void zukan_update_transition(u8* frame_context)
                 g_zukan_transition_state = ZUKAN_TRANSITION_IDLE;
             }
             break;
-        case ZUKAN_TRANSITION_PREVIOUS_FADE_OUT: {
+        case ZUKAN_TRANSITION_PREVIOUS_FADE_OUT:
+        {
             s32* counter = &g_zukan_transition_frame;
             if (++*counter == ZUKAN_TRANSITION_FRAMES)
             {
@@ -752,7 +761,8 @@ void zukan_update_transition(u8* frame_context)
                 zukan_set_fade_target(0x100, 0x100, 0x100, ZUKAN_FADE_STEPS);
             }
             break;
-        case ZUKAN_TRANSITION_OPEN_DETAIL: {
+        case ZUKAN_TRANSITION_OPEN_DETAIL:
+        {
             s32* counter = &g_zukan_transition_frame;
             if (++*counter == ZUKAN_TRANSITION_FRAMES)
             {
@@ -777,44 +787,32 @@ void zukan_update_transition(u8* frame_context)
  */
 void zukan_render_content(ZukanDrawState* ctx)
 {
-    volatile s32 stack_pad[2];
+    s32 unused_scratch[2]; /* never used, but the compiled frame size depends on it */
     u8 draw_env[0x60];
     ZukanPos pos;
     u8* packet_cursor;
     s32* ordering_table;
     s32 entry_index;
     s32 row_y;
-    u8* archive;
-    u8* fallback_glyph;
-    u8* fallback_glyph_base;
-    ZukanListEntry* list_entry;
 
     packet_cursor = ctx->prim_cursor;
 
     if (g_zukan_view_mode != 0)
     {
-        ZukanPolyF3 *tri;
+        ZukanPolyF3* tri;
         TILE* tile;
         u8* env_prim;
 
         ordering_table = &ctx->list_ordering_table;
 
         {
-            s32 table_off;
-            u16 glyph_off;
-            u8* glyph_ptr;
-            u8* final_ptr;
-            u8* title_base = g_zukan_resource_archive;
-            table_off = *(s32*)(title_base + 0x10);
-            glyph_off = *(u16*)(g_zukan_category * 2 + table_off + title_base);
-            glyph_ptr = title_base + glyph_off;
-            final_ptr = (u8*)(table_off + (s32)glyph_ptr);
-            packet_cursor = (u8*)func_800A88A0(packet_cursor, ordering_table, final_ptr, 0xA, 0xA0, 0x22, 2);
+            u8* archive = g_zukan_resource_archive;
+            packet_cursor = (u8*)func_800A88A0(packet_cursor, ordering_table, ZUKAN_ARCHIVE_TEXT(archive, 0x10, g_zukan_category), 0xA, 0xA0, 0x22, 2);
         }
 
         if (g_zukan_scroll_y != 0)
         {
-            tri = (ZukanPolyF3 *)packet_cursor;
+            tri = (ZukanPolyF3*)packet_cursor;
             *(u32*)&tri->r0 = 0xF08080;
             setlen(tri, 4);
             tri->code = 0x22;
@@ -829,7 +827,7 @@ void zukan_render_content(ZukanDrawState* ctx)
 
         if (g_zukan_scroll_y + 0x80 < g_zukan_entry_count * 0x10)
         {
-            tri = (ZukanPolyF3 *)packet_cursor;
+            tri = (ZukanPolyF3*)packet_cursor;
             *(u32*)&tri->r0 = 0xF08080;
             setlen(tri, 4);
             tri->code = 0x22;
@@ -854,106 +852,27 @@ void zukan_render_content(ZukanDrawState* ctx)
         addPrim(ordering_table, packet_cursor);
         packet_cursor += 0x40;
 
-        entry_index = 0;
-        if (g_zukan_entry_count > 0)
+        for (entry_index = 0; entry_index < g_zukan_entry_count; entry_index++)
         {
-            do
+            row_y = (entry_index * 16) - g_zukan_scroll_y;
+            if ((u32)(row_y + 15) >= 143)
             {
-                do
-                {
-                    archive = &g_zukan_resource_archive;
-                } while (0);
-            } while (0);
-            do
-            {
-                fallback_glyph = &D_800EC3E0;
-                fallback_glyph_base = fallback_glyph - 0x1C;
-            } while (0);
-            list_entry = g_zukan_list_entries;
-            list_entry++;
-            list_entry--;
-loop_head:
-            row_y = (entry_index * 0x10) - g_zukan_scroll_y;
-            row_y++;
-            row_y--;
-            row_y++;
-            row_y--;
-            if ((u32)(row_y + 0xF) >= 0x8F)
-            {
-                goto loop_inc_cull;
+                continue;
             }
 
             pos.x = 0;
             pos.y = row_y;
             packet_cursor = (u8*)func_800A8B04(ordering_table, packet_cursor, entry_index + 1, 0, &pos, 0);
-            if (list_entry->resource_flags >> 15)
+            if (g_zukan_list_entries[entry_index].resource_flags >> 15)
             {
-                goto glyph_true;
+                u8* archive = g_zukan_resource_archive;
+                packet_cursor = (u8*)func_800A88A0(packet_cursor, ordering_table,
+                                                   ZUKAN_ARCHIVE_TEXT(archive, 0xC, g_zukan_list_entries[entry_index].glyph_index), 0, 0x66, row_y, 2);
             }
-            goto glyph_false;
-
-glyph_true:
+            else
             {
-                s32 table_off;
-                s32 glyph_index_offset;
-                s32 glyph_record_addr;
-                s32 glyph_addr;
-                s32 final_addr;
-                u16 glyph_off;
-                table_off = *(s32*)(archive + 0xC);
-                glyph_index_offset = list_entry->glyph_index * 2;
-                glyph_index_offset += table_off;
-                glyph_record_addr = glyph_index_offset + (s32)archive;
-                glyph_off = *(u16*)glyph_record_addr;
-                glyph_addr = glyph_off + (s32)archive;
-                final_addr = table_off + glyph_addr;
-                packet_cursor = (u8*)func_800A88A0(packet_cursor, ordering_table, (u8*)final_addr, 0, 0x66, row_y, 2);
+                packet_cursor = (u8*)func_800A88A0(packet_cursor, ordering_table, FIELD_UI_TEXT_AT(D_800EC3E0, 14), 0, 0x66, row_y, 2);
             }
-            goto loop_inc_visible;
-
-glyph_false:
-            {
-                u8 high_byte;
-                u8 low_byte;
-                s32 shifted_offset;
-                s32 based_offset;
-                s32 final_offset;
-                high_byte = fallback_glyph[1];
-                low_byte = D_800EC3E0;
-                shifted_offset = high_byte << 8;
-                based_offset = shifted_offset + (s32)fallback_glyph_base;
-                final_offset = low_byte + based_offset;
-                packet_cursor = (u8*)func_800A88A0(packet_cursor, ordering_table, (u8*)final_offset,
-                    0, 0x66, row_y, 2);
-            }
-
-loop_inc_visible:
-            do
-            {
-                do
-                {
-                    if (++entry_index < g_zukan_entry_count)
-                    {
-                        list_entry++;
-                        goto loop_head;
-                    }
-                } while (0);
-            } while (0);
-            goto loop_done;
-loop_inc_cull:
-            do
-            {
-                do
-                {
-                    if (++entry_index < g_zukan_entry_count)
-                    {
-                        list_entry++;
-                        goto loop_head;
-                    }
-                } while (0);
-            } while (0);
-loop_done:
-            ;
         }
 
         row_y = (g_zukan_selected_entry * 0x10) - g_zukan_scroll_y;
@@ -1234,7 +1153,7 @@ s32 zukan_render_detail_text(s32 packet_cursor, s32 ordering_table)
     u16* offsets;
     u16* line_offsets;
     u8* text;
-    volatile u8 text_buffer[0x100];
+    u8 unused_text_buffer[0x100]; /* never used, but the compiled frame size depends on it */
 
     line_offsets = (u16*)(g_zukan_work_buffer + *(s32*)(g_zukan_work_buffer + 8));
     offsets = line_offsets;
@@ -1286,12 +1205,18 @@ void* zukan_render_detail_sprites(SPRT* sprite, s32* ordering_table)
             setlen(sprite, 4);
             command = 0x64;
             sprite->code = command;
-            sprite->x0 = *(u16*)sprite_data; sprite_data += 2;
-            sprite->y0 = *(u16*)sprite_data; sprite_data += 2;
-            sprite->u0 = *sprite_data; sprite_data += 2;
-            sprite->v0 = *sprite_data; sprite_data += 2;
-            sprite->w = *(u16*)sprite_data; sprite_data += 2;
-            sprite->h = *(u16*)sprite_data; sprite_data += 2;
+            sprite->x0 = *(u16*)sprite_data;
+            sprite_data += 2;
+            sprite->y0 = *(u16*)sprite_data;
+            sprite_data += 2;
+            sprite->u0 = *sprite_data;
+            sprite_data += 2;
+            sprite->v0 = *sprite_data;
+            sprite_data += 2;
+            sprite->w = *(u16*)sprite_data;
+            sprite_data += 2;
+            sprite->h = *(u16*)sprite_data;
+            sprite_data += 2;
             if (g_zukan_image_mode != 0)
             {
                 sprite->clut = getClut(0, 494);
