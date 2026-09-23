@@ -353,21 +353,6 @@ The CDK no-division-expansion route is supported, but its source list is current
 
 When matching a function, **use the exact toolchain selected for its source file**. Do not substitute the host GCC, Clang/LLVM, a different GCC release, or a different assembler and treat that result as authoritative.
 
-## Rules for matching contributions
-
-This is a byte-for-byte matching decompilation. C that is logically equivalent can still generate different MIPS instructions.
-
-Keep these rules in mind:
-
-- Do not edit generated `.s` or `.ld` files. Change the source/configuration and rerun `make splat`.
-- Do not "clean up" strange C without checking the assembly. Temporaries, casts, branch shape, repeated loads, and awkward expressions may be required for the original code generation.
-- Preserve types, signedness, struct layouts, and control flow carefully.
-- When renaming an addressed function or global, update the corresponding file under `config/symbols/`.
-- Preserve existing decomp.me links in function documentation.
-- Build and diff with the Makefile-selected historical toolchain before considering a change matched.
-
-For difficult functions, the repository also contains m2c, decomp-permuter, code-generation analysis scripts, and project-specific matching tools under `tools/`.
-
 ## Copyrighted data and assets
 
 Some executable/overlay ranges contain artwork, text, layouts, and other copyrighted data that should not be committed.
