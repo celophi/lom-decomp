@@ -72,8 +72,8 @@ s32 func_801405B0(RenderContext* render_buffers)
             break;
         }
 
-        ClearImage(&draw_buffer->clear_rect, (*(u8*)&g_menu_initial_clut_pair & 0x1F) * 8,
-                   (g_menu_initial_clut_pair >> 2) & 0xF8, (g_menu_initial_clut_pair >> 7) & 0xF8);
+        ClearImage(&draw_buffer->clear_rect, (*(u8*)&g_menu_initial_clut_pair & 0x1F) * 8, (g_menu_initial_clut_pair >> 2) & 0xF8,
+                   (g_menu_initial_clut_pair >> 7) & 0xF8);
         other_buffer = g_menu_draw_buf_base;
         if (draw_buffer == g_menu_draw_buf_base)
         {
@@ -113,7 +113,7 @@ s32 func_801405B0(RenderContext* render_buffers)
  */
 void menu_init(void)
 {
-    volatile u8 padding;
+    u8 unused_padding[4]; /* never used, but the compiled frame size depends on it */
     menu_upload_graphics();
     menu_state_init();
     menu_reset_slots();
@@ -145,7 +145,8 @@ void menu_init_prim_rects(void)
         LoadImage(&rect, menu_image_upload_source(upload_buffer, strip_byte_offset));
 
         /* Upload the slot's content texture block. */
-        setRECT(&rect, (slot == PRIM_SLOT_COUNT - 1) ? PRIM_CONTENT_VRAM_X2 : PRIM_CONTENT_VRAM_X, (slot == 0) ? PRIM_CONTENT_VRAM_Y0 : PRIM_CONTENT_VRAM_Y1, PRIM_CONTENT_W, PRIM_CONTENT_H);
+        setRECT(&rect, (slot == PRIM_SLOT_COUNT - 1) ? PRIM_CONTENT_VRAM_X2 : PRIM_CONTENT_VRAM_X, (slot == 0) ? PRIM_CONTENT_VRAM_Y0 : PRIM_CONTENT_VRAM_Y1,
+                PRIM_CONTENT_W, PRIM_CONTENT_H);
         LoadImage(&rect, menu_image_upload_source(upload_buffer, content_byte_offset));
 
         content_byte_offset += PRIM_SLOT_BYTE_SIZE;
@@ -258,8 +259,7 @@ void menu_tick(RenderContext* render_ctx)
  *
  * @see field_text_build_sprites
  */
-void* menu_build_text_run(
-    SPRT* sprite_cursor, s32* ot, s32 src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
+void* menu_build_text_run(SPRT* sprite_cursor, s32* ot, s32 src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
 {
     char buf[0x80];
     s32 count, i, acc;
@@ -573,19 +573,19 @@ void menu_update_slots(RenderContext* render_ctx)
         switch (slot_state)
         {
         case MENU_SLOT_STATE_OPENING:
-            {
-                u8 previous_anim_frame;
+        {
+            u8 previous_anim_frame;
 
-                menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
-                previous_anim_frame = g_menu_slots[slot_index].anim_frame;
-                anim_frame = previous_anim_frame + 1;
-                g_menu_slots[slot_index].anim_frame = anim_frame;
-                if ((anim_frame & 0xFF) == (MENU_WINDOW_TRANSITION_STEPS / 2))
-                {
-                    g_menu_slots[slot_index].anim_frame = previous_anim_frame;
-                    g_menu_slots[slot_index].active = MENU_SLOT_STATE_OPEN;
-                }
+            menu_draw_window_transition(render_ctx, &g_menu_slots[slot_index], g_menu_cursor_enable != 0);
+            previous_anim_frame = g_menu_slots[slot_index].anim_frame;
+            anim_frame = previous_anim_frame + 1;
+            g_menu_slots[slot_index].anim_frame = anim_frame;
+            if ((anim_frame & 0xFF) == (MENU_WINDOW_TRANSITION_STEPS / 2))
+            {
+                g_menu_slots[slot_index].anim_frame = previous_anim_frame;
+                g_menu_slots[slot_index].active = MENU_SLOT_STATE_OPEN;
             }
+        }
             /* Fall through to the shared active-slot callback. */
         case MENU_SLOT_STATE_OPEN:
             if (slot_state == MENU_SLOT_STATE_OPEN)
@@ -1019,8 +1019,7 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
     menu_copy_sign_label(label_buffer, value);
 
-    packet_cursor =
-        (u_long*)func_800A88A0(packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, 0);
+    packet_cursor = (u_long*)func_800A88A0(packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, 0);
 
     return packet_cursor;
 }
@@ -1034,37 +1033,17 @@ void menu_node_tree_init(void)
 {
     u32 work_value_a;
     u32 work_value_b;
-    u32 node3_flags;
-    u32 node6_flags;
-    u32 node9_flags;
     s32 zero_value;
     s32 layout_y;
     s32 node_index;
     s32 packed_value;
     s32 nav_x_low_bit;
     s8 scene_type;
-    u16 flags_value;
     s32 layout_y_high;
-    u16 node15_flags_base;
-    u16 node15_flags;
-    u16 node18_flags;
-    u16 node29_flags;
-    u16 node3_flags_base;
-    u16 node6_flags_base;
-    u16 node9_flags_base;
-    u32 node12_flags;
-    u16 node30_flags_base;
     u16 node30_flags;
     u32 layout_y_16;
     u32 layout_y_9;
     u32 layout_y_high_9;
-    u16 node32_flags_base;
-    u16 node32_flags;
-    u16 node0_flags;
-    u16 node0_flags_step1;
-    u16 node0_flags_step2;
-    u16 initial_flags;
-    u32 node18_flags_copy;
     g_menu_prev_node = MENU_NONE;
     g_menu_content_ready = 0;
     g_item_slot_data[0] = 0;
@@ -1090,7 +1069,6 @@ void menu_node_tree_init(void)
     g_menu_cursor_enable = 0;
     for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++)
     {
-        initial_flags = g_menu_nodes[node_index].u2.unk2;
         g_menu_nodes[node_index].layout_frames_remaining = MENU_NODE_LAYOUT_IDLE;
         g_menu_nodes[node_index].icon_id = 0;
         g_menu_nodes[node_index].content_id = MENU_NONE;
@@ -1098,18 +1076,18 @@ void menu_node_tree_init(void)
         g_menu_nodes[node_index].layout.s.children[2] = MENU_NONE;
         g_menu_nodes[node_index].layout.s.children[1] = MENU_NONE;
         g_menu_nodes[node_index].layout.s.children[0] = MENU_NONE;
-        g_menu_nodes[node_index].u2.unk2 = (u16)((initial_flags & 0xFFFC) | 0x30);
+        g_menu_nodes[node_index].u2.bits.active = 0;
+        g_menu_nodes[node_index].u2.bits.expanded = 0;
+        g_menu_nodes[node_index].u2.bits.char_slot = 3;
         g_menu_nodes[node_index].u2.s.parent_idx = MENU_NONE;
     }
 
+    g_menu_nodes[0].u2.bits.expanded = 0;
+    g_menu_nodes[0].u2.bits.char_slot = 0;
     g_menu_nodes[0].label_id = 1;
+    g_menu_nodes[0].u2.bits.depth = 0;
     g_menu_nodes[0].idx_nav.s.self_idx = 0;
-    node0_flags = g_menu_nodes[0].u2.unk2;
-    node0_flags_step1 = node0_flags & 0xFFCD;
-    node0_flags_step2 = node0_flags & 0xFF0D;
-    g_menu_nodes[0].u2.unk2 = node0_flags_step1;
-    *(volatile u16*)&g_menu_nodes[0].u2.unk2 = node0_flags_step2;
-    g_menu_nodes[0].u2.unk2 = node0_flags_step2 | MENU_NODE_FLAG_ACTIVE;
+    g_menu_nodes[0].u2.bits.active = 1;
     g_menu_nodes[0].u2.s.parent_idx = MENU_NONE;
     if (g_field_player_records.unk0 & 2)
     {
@@ -1127,18 +1105,19 @@ void menu_node_tree_init(void)
     g_menu_nodes[2].idx_nav.s.self_idx = 2;
     g_menu_nodes[1].label_id = 3;
     g_menu_nodes[2].icon_id = 4;
-    g_menu_nodes[3].label_id = 4;
-    g_menu_nodes[3].idx_nav.s.self_idx = 3;
-    g_menu_nodes[1].u2.unk2 = (u16)((g_menu_nodes[1].u2.unk2 & 0xFF0F) | 0x40);
+    g_menu_nodes[1].u2.bits.char_slot = 0;
+    g_menu_nodes[1].u2.bits.depth = 1;
     g_menu_nodes[1].u2.s.parent_idx = 0;
-    g_menu_nodes[2].u2.unk2 = (u16)((g_menu_nodes[2].u2.unk2 & 0xFF0F) | 0x40);
+    g_menu_nodes[2].u2.bits.char_slot = 0;
+    g_menu_nodes[2].u2.bits.depth = 1;
     g_menu_nodes[2].u2.s.parent_idx = 0;
-    node3_flags_base = (g_menu_nodes[3].u2.unk2 & 0xFFCD) | 0x10;
-    g_menu_nodes[3].u2.unk2 = node3_flags_base;
-    node3_flags = 0x10;
-    node3_flags = node3_flags_base | node3_flags;
-    *(volatile u16*)&g_menu_nodes[3].u2.unk2 = (u16)(node3_flags & 0xFF3F);
-    g_menu_nodes[3].u2.unk2 = (u16)(node3_flags & 0xFF3E);
+    g_menu_nodes[3].u2.bits.expanded = 0;
+    g_menu_nodes[3].u2.bits.char_slot = 1;
+    g_menu_nodes[3].label_id = 4;
+    g_menu_nodes[3].u2.bits.char_slot = 1;
+    g_menu_nodes[3].u2.bits.depth = 0;
+    g_menu_nodes[3].idx_nav.s.self_idx = 3;
+    g_menu_nodes[3].u2.bits.active = 0;
     g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
     if (D_800FDA80 & 2)
     {
@@ -1148,14 +1127,10 @@ void menu_node_tree_init(void)
     {
         g_menu_nodes[3].icon_id = 0x6E;
     }
-    g_menu_nodes[4].u2.unk2 = (u16)((0xFF5F & g_menu_nodes[4].u2.unk2) | 0x50);
-    g_menu_nodes[5].u2.unk2 = (u16)((g_menu_nodes[5].u2.unk2 & 0xFF5F) | 0x50);
-    node6_flags_base = (g_menu_nodes[6].u2.unk2 & 0xFFCD) | 0x10;
-    g_menu_nodes[6].u2.unk2 = node6_flags_base;
-    node6_flags = 0x10;
-    node6_flags = node6_flags_base | node6_flags;
-    *(volatile u16*)&g_menu_nodes[6].u2.unk2 = (u16)(node6_flags & 0xFF3F);
-    g_menu_nodes[6].u2.unk2 = (u16)(node6_flags & 0xFF3E);
+    g_menu_nodes[4].u2.bits.char_slot = 1;
+    g_menu_nodes[4].u2.bits.depth = 1;
+    g_menu_nodes[5].u2.bits.char_slot = 1;
+    g_menu_nodes[5].u2.bits.depth = 1;
     g_menu_nodes[3].layout.s.children[0] = 4;
     g_menu_nodes[3].layout.s.children[1] = 5;
     g_menu_nodes[4].label_id = 6;
@@ -1164,8 +1139,13 @@ void menu_node_tree_init(void)
     g_menu_nodes[5].label_id = 5;
     g_menu_nodes[5].idx_nav.s.self_idx = 5;
     g_menu_nodes[5].icon_id = 4;
+    g_menu_nodes[6].u2.bits.expanded = 0;
+    g_menu_nodes[6].u2.bits.char_slot = 1;
     g_menu_nodes[6].label_id = 7;
+    g_menu_nodes[6].u2.bits.char_slot = 1;
+    g_menu_nodes[6].u2.bits.depth = 0;
     g_menu_nodes[6].idx_nav.s.self_idx = 6;
+    g_menu_nodes[6].u2.bits.active = 0;
     g_menu_nodes[6].icon_id = 3;
     g_menu_nodes[6].layout.s.children[0] = 7;
     g_menu_nodes[6].layout.s.children[1] = 8;
@@ -1176,32 +1156,35 @@ void menu_node_tree_init(void)
     g_menu_nodes[4].u2.s.parent_idx = 3;
     g_menu_nodes[5].u2.s.parent_idx = 3;
     g_menu_nodes[6].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[7].u2.unk2 = (u16)((g_menu_nodes[7].u2.unk2 & 0xFF5F) | 0x50);
+    g_menu_nodes[7].u2.bits.char_slot = 1;
+    g_menu_nodes[7].u2.bits.depth = 1;
     g_menu_nodes[7].u2.s.parent_idx = 6;
-    g_menu_nodes[8].u2.unk2 = (u16)((g_menu_nodes[8].u2.unk2 & 0xFF5F) | 0x50);
+    g_menu_nodes[8].u2.bits.char_slot = 1;
+    g_menu_nodes[8].u2.bits.depth = 1;
     g_menu_nodes[8].idx_nav.s.self_idx = 8;
-    node9_flags_base = (g_menu_nodes[9].u2.unk2 & 0xFFCD) | 0x20;
-    g_menu_nodes[9].u2.unk2 = node9_flags_base;
-    node9_flags = 0x20;
-    node9_flags = node9_flags_base | node9_flags;
-    *(volatile u16*)&g_menu_nodes[9].u2.unk2 = (u16)(node9_flags & 0xFF3F);
-    g_menu_nodes[9].u2.unk2 = (u16)(node9_flags & 0xFF3E);
-    g_menu_nodes[0xA].u2.unk2 = (u16)((g_menu_nodes[0xA].u2.unk2 & 0xFF6F) | 0x60);
-    node12_flags = (g_menu_nodes[0xC].u2.unk2 & 0xFFCD) | 0x20;
-    g_menu_nodes[0xC].u2.unk2 = node12_flags;
-    *(volatile u16*)&g_menu_nodes[0xC].u2.unk2 = (u16)((node12_flags | 0x20) & 0xFF3F);
-    g_menu_nodes[0xC].u2.unk2 = (u16)((node12_flags | 0x20) & 0xFF3E);
     g_menu_nodes[8].u2.s.parent_idx = 6;
     g_menu_nodes[8].icon_id = 4;
+    g_menu_nodes[9].u2.bits.expanded = 0;
+    g_menu_nodes[9].u2.bits.char_slot = 2;
     g_menu_nodes[9].label_id = 0xA;
+    g_menu_nodes[9].u2.bits.char_slot = 2;
+    g_menu_nodes[9].u2.bits.depth = 0;
     g_menu_nodes[9].idx_nav.s.self_idx = 9;
+    g_menu_nodes[9].u2.bits.active = 0;
+    g_menu_nodes[0xA].u2.bits.char_slot = 2;
+    g_menu_nodes[0xA].u2.bits.depth = 1;
     g_menu_nodes[9].icon_id = 6;
     g_menu_nodes[9].layout.s.children[0] = 0xA;
     g_menu_nodes[0xA].label_id = 0xB;
     g_menu_nodes[0xA].idx_nav.s.self_idx = 0xA;
     g_menu_nodes[0xA].icon_id = 7;
+    g_menu_nodes[0xC].u2.bits.expanded = 0;
+    g_menu_nodes[0xC].u2.bits.char_slot = 2;
     g_menu_nodes[0xC].label_id = 0xA;
+    g_menu_nodes[0xC].u2.bits.char_slot = 2;
+    g_menu_nodes[0xC].u2.bits.depth = 0;
     g_menu_nodes[0xC].idx_nav.s.self_idx = 0xC;
+    g_menu_nodes[0xC].u2.bits.active = 0;
     g_menu_nodes[0xC].icon_id = 6;
     g_menu_nodes[0xC].layout.s.children[0] = 0xD;
     g_menu_nodes[0xD].label_id = 0xB;
@@ -1210,15 +1193,16 @@ void menu_node_tree_init(void)
     g_menu_nodes[9].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0xA].u2.s.parent_idx = 9;
     g_menu_nodes[0xC].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0xD].u2.unk2 = (u16)((g_menu_nodes[0xD].u2.unk2 & 0xFF6F) | 0x60);
+    g_menu_nodes[0xD].u2.bits.char_slot = 2;
+    g_menu_nodes[0xD].u2.bits.depth = 1;
     g_menu_nodes[0xD].u2.s.parent_idx = 0xC;
-    node15_flags_base = (g_menu_nodes[0xF].u2.unk2 & 0xFFCD) | 0x20;
-    g_menu_nodes[0xF].u2.unk2 = node15_flags_base;
-    node15_flags = (node15_flags_base & 0xFF6D) | 0x60;
-    *(volatile u16*)&g_menu_nodes[0xF].u2.unk2 = node15_flags;
-    g_menu_nodes[0xF].u2.unk2 = (u16)(node15_flags & 0xFFFE);
+    g_menu_nodes[0xF].u2.bits.expanded = 0;
+    g_menu_nodes[0xF].u2.bits.char_slot = 2;
     g_menu_nodes[0xF].icon_id = 8;
+    g_menu_nodes[0xF].u2.bits.char_slot = 2;
+    g_menu_nodes[0xF].u2.bits.depth = 1;
     g_menu_nodes[0x10].icon_id = 7;
+    g_menu_nodes[0xF].u2.bits.active = 0;
     g_menu_nodes[0xF].label_id = 0xD;
     g_menu_nodes[0xF].idx_nav.s.self_idx = 0xF;
     g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
@@ -1236,17 +1220,16 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x12].layout.s.children[0] = 0x13;
     g_menu_nodes[0x12].layout.s.children[1] = 0x16;
     g_menu_nodes[0x12].layout.s.children[2] = 0x19;
-    g_menu_nodes[0x12].layout.s.children[3] = 0x1C;
-    g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
+    g_menu_nodes[0x10].u2.bits.char_slot = 2;
+    g_menu_nodes[0x10].u2.bits.depth = 1;
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
-    g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
-    node18_flags_copy = g_menu_nodes[0x12].u2.unk2;
-    flags_value = node18_flags_copy;
+    g_menu_nodes[0x11].u2.bits.char_slot = 2;
+    g_menu_nodes[0x11].u2.bits.depth = 1;
+    g_menu_nodes[0x12].u2.bits.expanded = 0;
     g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
-    g_menu_nodes[0x12].u2.unk2 = (u16)(flags_value & 0xFFFD);
-    node18_flags = flags_value & 0xFF3D;
-    *(volatile u16*)&g_menu_nodes[0x12].u2.unk2 = node18_flags;
-    g_menu_nodes[0x12].u2.unk2 = (u16)(node18_flags | MENU_NODE_FLAG_ACTIVE);
+    g_menu_nodes[0x12].u2.bits.depth = 0;
+    g_menu_nodes[0x12].layout.s.children[3] = 0x1C;
+    g_menu_nodes[0x12].u2.bits.active = 1;
     g_menu_nodes[0x12].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x13].label_id = 0x11;
     g_menu_nodes[0x14].icon_id = 0xF;
@@ -1268,15 +1251,15 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x16].layout.s.children[1] = 0x18;
     g_menu_nodes[0x17].label_id = 0x15;
     g_menu_nodes[0x17].idx_nav.s.self_idx = 0x17;
-    g_menu_nodes[0x13].u2.unk2 = (u16)((g_menu_nodes[0x13].u2.unk2 & 0xFF3F) | 0x40);
-    g_menu_nodes[0x14].u2.unk2 = (u16)((g_menu_nodes[0x14].u2.unk2 & 0xFF3F) | 0x80);
+    g_menu_nodes[0x13].u2.bits.depth = 1;
+    g_menu_nodes[0x14].u2.bits.depth = 2;
     g_menu_nodes[0x13].u2.s.parent_idx = 0x12;
     g_menu_nodes[0x14].u2.s.parent_idx = 0x13;
-    g_menu_nodes[0x16].u2.unk2 = (u16)((g_menu_nodes[0x16].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x16].u2.bits.depth = 1;
     g_menu_nodes[0x16].u2.s.parent_idx = 0x12;
-    g_menu_nodes[0x15].u2.unk2 = (u16)((g_menu_nodes[0x15].u2.unk2 & 0xFF3F) | 0x80);
+    g_menu_nodes[0x15].u2.bits.depth = 2;
     g_menu_nodes[0x15].u2.s.parent_idx = 0x13;
-    g_menu_nodes[0x17].u2.unk2 = (u16)((g_menu_nodes[0x17].u2.unk2 & 0xFF3F) | 0x80);
+    g_menu_nodes[0x17].u2.bits.depth = 2;
     g_menu_nodes[0x17].u2.s.parent_idx = 0x16;
     g_menu_nodes[0x19].content_id = 2;
     g_menu_nodes[0x17].icon_id = 0x10;
@@ -1296,14 +1279,14 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1B].icon_id = 0x12;
     g_menu_nodes[0x1C].label_id = 0x18;
     g_menu_nodes[0x1C].idx_nav.s.self_idx = 0x1C;
-    g_menu_nodes[0x18].u2.unk2 = (u16)((g_menu_nodes[0x18].u2.unk2 & 0xFF3F) | 0x80);
-    g_menu_nodes[0x19].u2.unk2 = (u16)((g_menu_nodes[0x19].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x18].u2.bits.depth = 2;
+    g_menu_nodes[0x19].u2.bits.depth = 1;
     g_menu_nodes[0x18].u2.s.parent_idx = 0x16;
     g_menu_nodes[0x19].u2.s.parent_idx = 0x12;
-    g_menu_nodes[0x1B].u2.unk2 = (u16)((g_menu_nodes[0x1B].u2.unk2 & 0xFF3F) | 0x80);
+    g_menu_nodes[0x1B].u2.bits.depth = 2;
     g_menu_nodes[0x1B].u2.s.parent_idx = 0x19;
-    g_menu_nodes[0x1A].u2.unk2 = (u16)((g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80);
-    g_menu_nodes[0x1C].u2.unk2 = (u16)((g_menu_nodes[0x1C].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x1A].u2.bits.depth = 2;
+    g_menu_nodes[0x1C].u2.bits.depth = 1;
     g_menu_nodes[0x1C].u2.s.parent_idx = 0x12;
     g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
     g_menu_nodes[0x1C].icon_id = 0xE;
@@ -1320,55 +1303,50 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1F].label_id = 0x1A;
     g_menu_nodes[0x1F].icon_id = 0x14;
     g_menu_nodes[0x2B].label_id = 0x1A;
+    g_menu_nodes[0x1D].u2.bits.expanded = 0;
     g_menu_nodes[0x2B].idx_nav.s.self_idx = 0x2B;
-    flags_value = g_menu_nodes[0x1D].u2.unk2;
-    g_menu_nodes[0x1D].u2.unk2 = (u16)(flags_value & 0xFFFD);
-    node29_flags = flags_value & 0xFF3D;
-    *(volatile u16*)&g_menu_nodes[0x1D].u2.unk2 = node29_flags;
-    node30_flags_base = g_menu_nodes[0x1E].u2.unk2;
-    g_menu_nodes[0x1D].u2.unk2 = (u16)(node29_flags | MENU_NODE_FLAG_ACTIVE);
+    g_menu_nodes[0x1D].u2.bits.depth = 0;
+    node30_flags = g_menu_nodes[0x1E].u2.unk2;
+    g_menu_nodes[0x1D].u2.bits.active = 1;
     g_menu_nodes[0x1D].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[0x1F].u2.unk2 = (u16)((g_menu_nodes[0x1F].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x1F].u2.bits.depth = 1;
+    g_menu_nodes[0x1E].u2.unk2 = node30_flags & ~MENU_NODE_FLAG_EXPANDED;
     g_menu_nodes[0x1F].u2.s.parent_idx = 0x1E;
-    g_menu_nodes[0x1E].u2.unk2 = (u16)(node30_flags_base & 0xFFFD);
-    node30_flags = node30_flags_base & 0xFF3D;
-    *(volatile u16*)&g_menu_nodes[0x1E].u2.unk2 = node30_flags;
-    g_menu_nodes[0x2B].u2.unk2 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFF3F) | 0x40);
-    g_menu_nodes[0x1E].u2.unk2 = (u16)(node30_flags | MENU_NODE_FLAG_ACTIVE);
+    g_menu_nodes[0x1E].u2.bits.depth = 0;
+    g_menu_nodes[0x2B].u2.bits.depth = 1;
+    g_menu_nodes[0x1E].u2.bits.active = 1;
     g_menu_nodes[0x1E].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x2B].u2.s.parent_idx = 0x1E;
-    g_menu_nodes[0x1F].u2.unk2 = (u16)(g_menu_nodes[0x1F].u2.unk2 & 0xFFCF);
-    g_menu_nodes[0x2B].u2.unk2 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFFCF) | 0x10);
+    g_menu_nodes[0x1F].u2.bits.char_slot = 0;
+    g_menu_nodes[0x2B].u2.bits.char_slot = 1;
     g_menu_nodes[0x2B].icon_id = 0x15;
     g_menu_nodes[0x20].label_id = 0x1B;
+    g_menu_nodes[0x20].u2.bits.expanded = 0;
     g_menu_nodes[0x20].idx_nav.s.self_idx = 0x20;
-    node32_flags_base = g_menu_nodes[0x20].u2.unk2;
-    node32_flags = node32_flags_base & 0xFF3D;
-    g_menu_nodes[0x20].u2.unk2 = (u16)(node32_flags_base & 0xFFFD);
-    *(volatile u16*)&g_menu_nodes[0x20].u2.unk2 = (u16)node32_flags;
+    g_menu_nodes[0x20].u2.bits.depth = 0;
     g_menu_nodes[0x20].icon_id = 0x16;
-    g_menu_nodes[0x20].u2.unk2 = (u16)(node32_flags | MENU_NODE_FLAG_ACTIVE);
+    g_menu_nodes[0x20].u2.bits.active = 1;
     g_menu_nodes[0x20].u2.s.parent_idx = MENU_NONE;
     if (g_field_player_records.unk268 & 1)
     {
         if (g_field_player_records.unk26B)
         {
-            g_menu_nodes[6].u2.unk2 = (u16)(g_menu_nodes[6].u2.unk2 | MENU_NODE_FLAG_ACTIVE);
+            g_menu_nodes[6].u2.bits.active = 1;
         }
         else
         {
-            g_menu_nodes[3].u2.unk2 = (u16)(g_menu_nodes[3].u2.unk2 | MENU_NODE_FLAG_ACTIVE);
+            g_menu_nodes[3].u2.bits.active = 1;
         }
     }
     if (D_800FDCE8 & 1)
     {
         if ((g_pad_ctx->unkAA8 & 0x7F) == 4)
         {
-            g_menu_nodes[0xF].u2.unk2 = (u16)(g_menu_nodes[0xF].u2.unk2 | MENU_NODE_FLAG_ACTIVE);
+            g_menu_nodes[0xF].u2.bits.active = 1;
         }
         else
         {
-            g_menu_nodes[9].u2.unk2 = (u16)(g_menu_nodes[9].u2.unk2 | MENU_NODE_FLAG_ACTIVE);
+            g_menu_nodes[9].u2.bits.active = 1;
         }
     }
     if ((g_pad_ctx->inject_flags & 0x80) && g_pad_ctx->inject_enable)
@@ -1870,11 +1848,9 @@ void menu_set_active_node(void)
                 break;
             }
             child_node = (MenuNode*)(((u32)wide_child_index << 4) + node_base_addr);
-            ((MenuNodeCoordinateView*)child_node)->layout_x =
-                ((MenuNodeCoordinateView*)child_node)->nav_x = ((MenuNodeCoordinateView*)loop_active)->nav_x;
+            ((MenuNodeCoordinateView*)child_node)->layout_x = ((MenuNodeCoordinateView*)child_node)->nav_x = ((MenuNodeCoordinateView*)loop_active)->nav_x;
             reloaded_child_index = loop_active->layout.s.children[child_slot];
-            ((MenuNodeCoordinateView*)(((u32)reloaded_child_index << 4) + node_base_addr))->nav_y =
-                ((MenuNodeCoordinateView*)loop_active)->nav_y;
+            ((MenuNodeCoordinateView*)(((u32)reloaded_child_index << 4) + node_base_addr))->nav_y = ((MenuNodeCoordinateView*)loop_active)->nav_y;
         }
     }
 
