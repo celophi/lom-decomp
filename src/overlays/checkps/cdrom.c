@@ -140,6 +140,20 @@ extern volatile u8* g_cd_data_register;
 extern volatile u8* g_cd_irq_register;
 
 /*
+ * This unit's own .bss. It is linked between init.o(.bss) and font.o(.bss),
+ * which is why these words sit after init's large zero-filled buffers.
+ */
+
+/** @brief VSync counter sampled when a timed delay state begins. */
+static s32 g_checkps_vsync_timestamp;
+
+/** @brief Last track number (BCD) returned by GetTN. */
+static s32 g_cd_last_track_bcd;
+
+/** @brief Seek target (BCD minute, second, ...) derived from the TOC. */
+static u8 g_cd_seek_position_bcd[8];
+
+/*
  * GNU as 2.7 pads the standard .text section to a 16-byte boundary.  Keeping
  * this translation unit's code in a custom section avoids synthetic tail
  * bytes; the build renames the section back to .text with objcopy.
@@ -1132,7 +1146,7 @@ void show_hardware_modification_warning_and_exit(void)
     {
         text_state.position.coord.x = pass_index + CHECKPS_WARNING_TEXT_X;
         text_state.position.coord.y = pass_index + CHECKPS_WARNING_TEXT_Y;
-        draw_kanji_string((const char*)&g_hardware_modification_warning, &text_state, text_color);
+        draw_kanji_string(g_hardware_modification_warning, &text_state, text_color);
         text_color = CHECKPS_WARNING_SHADOW_COLOR;
     }
 

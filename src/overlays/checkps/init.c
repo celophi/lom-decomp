@@ -167,8 +167,8 @@ s32 g_last_input_state;
 s32 g_input_repeat_timer;
 
 /*
- * Unreferenced BSS extent between init.c and cdrom_data.c.  Keep the exact
- * element count: it preserves the linked address of the following CD state globals.
+ * Unreferenced BSS extent at the end of init.c.  Keep the exact element count:
+ * it preserves the linked address of cdrom.c's CD state variables that follow.
  */
 s32 g_checkps_reserved_bss[CHECKPS_RESERVED_BSS_WORDS];
 

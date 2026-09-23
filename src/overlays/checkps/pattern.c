@@ -32,12 +32,13 @@ typedef struct
 extern u8 g_hardware_pattern_size_table[CHECKPS_PATTERN_SIZE_COUNT][2];
 
 /**
+ * @brief Shift-JIS text: "Forced termination. The console may have been
+ * modified." (two newline-separated lines, NUL-padded to 60 bytes).
+ */
+extern const char g_hardware_modification_warning[CHECKPS_HARDWARE_WARNING_SIZE];
+
+/**
  * @brief Signs used to reflect one ring segment into all four quadrants.
- *
- * The four (x, y) sign pairs are {1, 1}, {-1, 1}, {1, -1}, {-1, -1}. The bytes
- * live in the pattern_vertex_signs rodatabin asset (extracted alongside the
- * trailing padding so pattern.o keeps no rodata of its own); this declaration
- * lets draw_hardware_check_pattern reference them by symbol.
  */
 extern const CheckPSPatternVertexSigns g_hardware_pattern_vertex_signs;
 

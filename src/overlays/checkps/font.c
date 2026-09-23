@@ -80,8 +80,15 @@ typedef struct
     u32 padding;
 } CheckPSGlyphPacket;
 
-extern u16 g_decimal_glyph_table[];
-extern u16 g_hex_glyph_table[];
+/**
+ * @brief Shift-JIS full-width digit codes '0'-'9', zero-terminated.
+ */
+extern u16 g_decimal_glyph_table[12];
+
+/**
+ * @brief Shift-JIS full-width hex digit codes '0'-'9', 'A'-'F', zero-terminated.
+ */
+extern u16 g_hex_glyph_table[18];
 
 void* draw_signed_decimal(void* primitive, u_long* ot_tag, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
 void draw_hex_byte(void* primitive, u_long* ot_tag, s32 value, s32 x, s32 y, s32 alignment);
@@ -95,11 +102,7 @@ CheckPSGlyphPacket* emit_glyph_sprite(CheckPSGlyphPacket* packet, u_long* ot_tag
  * LoadImage reads 16 entries starting here. The remaining entries come from
  * adjacent zero-initialized overlay storage, preserving the target layout.
  */
-u_long g_glyph_clut_prefix[] = {
-    0xFFFF0000,
-    0x0000BDEF,
-    0x00000000,
-};
+extern u_long g_glyph_clut_prefix[3];
 
 /** CPU-side staging storage for all unpacked 4bpp glyph rasters. */
 u8 g_glyph_raster_buffer[CHECKPS_GLYPH_RASTER_BUFFER_SIZE];
