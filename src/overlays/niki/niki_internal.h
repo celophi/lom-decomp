@@ -132,7 +132,6 @@ typedef struct NikiElement
 {
     union
     {
-        volatile u32 read_word;
         u32 word;
         struct
         {
@@ -146,6 +145,7 @@ typedef struct NikiElement
             u32 phase : 4;
             u32 x : 9;
             u32 y : 8;
+            u32 width_low : 8;
         } f;
     } attr;
     union
@@ -517,7 +517,7 @@ extern u16 D_8014716A;
 extern u8 g_niki_read_saved_copy_sequence[];
 /** @brief Reset retries and write the replacement save. */
 extern u8 g_niki_write_save_sequence[];
-extern s32 g_niki_entry_fields[];
+extern s32 g_niki_entry_fields[][NIKI_DIRECTORY_ENTRY_COUNT];
 extern s32 g_niki_entry_value_limit;
 extern const char g_niki_file_template[8] __attribute__((aligned(4)));
 extern char D_800ECF9C[];
@@ -599,6 +599,7 @@ s32 niki_parse_hex_suffix_byte();
 s32 niki_parse_entry_fields();
 void niki_sort_entries_by_type();
 void niki_reset_entry_ranks(void);
+s32 niki_rank_entries(void);
 s32 func_80016F9C(void*, void*);
 s32 func_8001686C(void*);
 s32 func_8001680C(void*, s32);
