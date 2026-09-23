@@ -493,6 +493,9 @@ void field_update_modal_text_session(s32 context)
  * @param refresh_only Nonzero preserves the current party membership and health values.
  * @note Zero also reloads active-party data and palettes before refreshing actions.
  * @note Packed descriptor byte writes preserve the other flag byte.
+ * @note TODO: 99.304% (369/381 exact). first_absent is a matching scaffold: an early 0xFF copied into absent
+ *       fixes the ability-loop register rotation; its original source is unknown. Remaining: g_pad_ctx/record_base
+ *       s5-s6 swap. See working/field_rebuild_party_actions/status.md.
  */
 void field_rebuild_party_actions(s32 refresh_only)
 {
@@ -506,8 +509,8 @@ void field_rebuild_party_actions(s32 refresh_only)
     s32 record_offset;
     s32 absent;
     s32 ability_empty;
+    s32 first_absent;
     FieldModalAction* record_base;
-    u8** context_pointer;
     u8* pair_first;
     u8* pair_second;
     FieldModalSaveView* input_base;
@@ -556,9 +559,9 @@ void field_rebuild_party_actions(s32 refresh_only)
     {
         ((ControllerState*)controller_or_player_test)->ports[1].actuators_enabled = 0;
     }
-    player_index = 0;
     if (refresh_only == 0)
     {
+        player_index = 0;
         do
         {
             saved_offset = player_index * FIELD_SAVED_CHARACTER_STRIDE;
@@ -604,25 +607,24 @@ void field_rebuild_party_actions(s32 refresh_only)
             player_index += 1;
 
         } while (player_index < 3);
-        player_index = 0;
         func_800A54D0();
     }
     player_index = 0;
     record_base = g_field_resource_actions;
-    context_pointer = &g_pad_ctx;
-    actor_stride_words = player_index;
-    record_stride = player_index;
-    context_stride = player_index;
-    state_stride = player_index;
     do
     {
         party = &g_field_player_records[player_index];
+        actor_stride_words = player_index * 0x14;
+        record_stride = player_index * 0x190;
+        context_stride = player_index * FIELD_SAVED_CHARACTER_STRIDE;
+        state_stride = player_index * 0x23C;
 
         if (party->head.bytes.flags & 1)
         {
             actor_base = g_field_actors;
             actor = (FieldModalActor*)((actor_stride_words + player_index) * 4 + (u8*)actor_base);
-            saved_player = (FieldModalSaveView*)((*context_pointer) + context_stride);
+            saved_player = (FieldModalSaveView*)(g_pad_ctx + context_stride);
+            first_absent = 0xFF;
             actor->flags = (s32)((actor->flags & ~0x1FF) | (((u8)saved_player->character_kind >> 7) ^ 1));
             weapon_type = ((u32)saved_player->equipment_flags >> 0xA) & 0x3F;
             controller_or_player_test = player_index < 2;
@@ -636,7 +638,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 if (refresh_only == 0)
                 {
                     health = (FieldModalActorHealth*)(state_stride + (u8*)g_field_object_states);
-                    max_hp = ((FieldModalSaveView*)((*context_pointer) + context_stride))->max_hp;
+                    max_hp = ((FieldModalSaveView*)(g_pad_ctx + context_stride))->max_hp;
                     health->display_hp = (s32)((health->display_hp & 0xFF000000) | max_hp);
                     health->max_hp = (s32)max_hp;
                     health->hp = (s32)max_hp;
@@ -655,7 +657,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 equipment_offset = context_stride + 0x40;
                 do
                 {
-                    equipment = (FieldModalSaveView*)((*context_pointer) + equipment_offset);
+                    equipment = (FieldModalSaveView*)(g_pad_ctx + equipment_offset);
                     if (equipment->equipment_present_at_slot != 0)
                     {
                         equipment_flags = equipment->equipment_flags;
@@ -677,7 +679,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                 button_index = 0;
                 pair_first = g_field_action_animation_parameters;
                 pair_second = g_field_action_animation_parameters + 1;
-                input_base = (FieldModalSaveView*)((*context_pointer) + context_stride);
+                input_base = (FieldModalSaveView*)(g_pad_ctx + context_stride);
                 action_offset = record_stride;
                 do
                 {
@@ -690,9 +692,9 @@ void field_rebuild_party_actions(s32 refresh_only)
                     button_index += 1;
                 } while (button_index < 2);
                 context_offset = context_stride;
-                absent = 0xFF;
+                absent = first_absent;
                 record_offset = record_stride;
-                item_context = *context_pointer;
+                item_context = g_pad_ctx;
                 ability_start = (FieldModalSaveView*)(item_context + context_offset);
                 item_record_offset = 0x20;
                 item_cursor = ability_start;
@@ -741,7 +743,7 @@ void field_rebuild_party_actions(s32 refresh_only)
                         technique_action->icon_id = 2;
                         technique_action->action_id = technique_action_id;
                         ability_id = item_cursor->equipped_abilities[0];
-                        weapon_type = party->head.bytes.weapon_type;
+                        weapon_type = g_field_player_records[player_index].head.bytes.weapon_type;
                         technique_action->bits.word = (u16)(technique_action->bits.word & 0xFCFF);
                         technique_action->texture_id = (s16)(((ability_id + 0x88) | ~0x7FFF) + (weapon_type * 0x18));
                     }
@@ -756,10 +758,6 @@ void field_rebuild_party_actions(s32 refresh_only)
             }
         }
         player_index += 1;
-        record_stride += 0x190;
-        context_stride += FIELD_SAVED_CHARACTER_STRIDE;
-        actor_stride_words += 0x14;
-        state_stride += 0x23C;
 
     } while (player_index < 3);
     field_refresh_party_routes();
