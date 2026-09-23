@@ -1,7 +1,6 @@
 #include "cdrom.h"
-/* Use the Game Over overlay's scene-state declarations. */
-#define GOVER_C
 #include "gover.h"
+#include "main.h"
 #include "akao.h"
 #include "akao_cmd.h"
 #include "display.h"
@@ -68,7 +67,6 @@ extern void func_800A39A8(s32 sfx_index, s32 pan, s32 unused, s32 channel_group)
 /** @brief AKAO music volume applied by func_800A380C. */
 extern s32 g_akao_music_volume;
 
-extern u32 g_scene_mode;
 extern s32 g_pending_game_state;
 extern SfxTableBuffer g_sfx_table_buffer;
 
@@ -301,7 +299,8 @@ static void gover_run(void)
     akao_cmd_f0();
     akao_cmd_f1();
     SetDispMask(0);
-    g_scene_mode = 0;
+    /* GOVER clears the whole 32-bit slot, not just the u16 scene mode. */
+    *(u32*)&g_scene_mode = 0;
     field_reset_input_repeat();
     g_pending_game_state = 1;
 }
