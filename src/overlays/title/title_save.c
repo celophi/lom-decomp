@@ -34,7 +34,7 @@ static void read_pad_input(void)
     s16 axis;
 
     g_debouncedInput = 0;
-    if (D_801ED600[0] >= 254)
+    if (g_controller_device_type >= TITLE_PAD_UNAVAILABLE)
     {
         state = 0;
     }

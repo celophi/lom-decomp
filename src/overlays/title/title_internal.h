@@ -69,6 +69,15 @@ extern s32 g_titleMenuExitState;
 extern s32 g_titleAudioBankBase;
 extern unsigned char D_8003ECA0;
 extern s32 g_titleIdleCountdown;
+/** @brief g_controller_device_type values at or above this mean no controller is connected. */
+#define TITLE_PAD_UNAVAILABLE 0xFE
+#define TITLE_REPEAT_DELAY 2
+#define TITLE_INITIAL_REPEAT_DELAY 15
+#define TITLE_DPAD_BUTTONS (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
+/** @brief Buttons other than the face buttons that still count as the same held input for repeat. */
+#define TITLE_NON_REPEAT_BUTTON_MASK                                                                                                                           \
+    (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)
+
 extern s32 g_debouncedInput;
 extern u8 g_titleMenuItemFlags[];
 extern u8 g_titleVisibleItemRank;
@@ -94,7 +103,6 @@ extern s32 g_lastInputState;
  * own base to each TIM. Entry [0] stores the asset count.
  */
 extern u32 g_titleMenuTimTable[3];
-extern u8 D_801ED600[];
 extern s32 g_slotSlideX;
 extern s32 g_slotSlideY;
 extern s32 g_slotSelectedIndex;
@@ -119,21 +127,22 @@ extern u8 D_800F9AED;
  * The underlying data symbol is declared as a byte array; renderers cast it to
  * @c SaveLayoutEntry* when named field access is useful.
  */
-typedef struct {
-    u8  flags;    /**< +0x00: bit0=apply_slide, bit1=semi_transparent, bits2-3=abr */
-    u8  type;     /**< +0x01: prim type: 0=skip, 2=TILE, 3=POLY_FT4, 4=SPRT, other=glyph */
-    u8  tex_slot; /**< +0x02: index into g_saveLayoutTexTable[] tex table (stride 0x10) */
-    u8  pad;      /**< +0x03 */
-    s16 x;        /**< +0x04: screen base X (POLY_FT4, SPRT, glyph) */
-    s16 y;        /**< +0x06: screen base Y */
-    s16 tile_x;   /**< +0x08: screen X for TILE (slideX always added) */
-    s16 tile_y;   /**< +0x0A: screen Y for TILE */
-    u16 u0;       /**< +0x0C: initial U texture coordinate (glyph strip) */
-    u16 v0;       /**< +0x0E: initial V; animated by AnimateSaveSlotPanel for highlight entries */
-    u16 width;    /**< +0x10: TILE.w / glyph total pixel width (chunked at 128 px) */
-    u16 height;   /**< +0x12: TILE.h / glyph per-chunk sprite height */
-    u32 reserved; /**< +0x14: zero in every initial table entry; not read at runtime */
-} SaveLayoutEntry;             /* sizeof == 0x18 */
+typedef struct
+{
+    u8 flags;      /**< +0x00: bit0=apply_slide, bit1=semi_transparent, bits2-3=abr */
+    u8 type;       /**< +0x01: prim type: 0=skip, 2=TILE, 3=POLY_FT4, 4=SPRT, other=glyph */
+    u8 tex_slot;   /**< +0x02: index into g_saveLayoutTexTable[] tex table (stride 0x10) */
+    u8 pad;        /**< +0x03 */
+    s16 x;         /**< +0x04: screen base X (POLY_FT4, SPRT, glyph) */
+    s16 y;         /**< +0x06: screen base Y */
+    s16 tile_x;    /**< +0x08: screen X for TILE (slideX always added) */
+    s16 tile_y;    /**< +0x0A: screen Y for TILE */
+    u16 u0;        /**< +0x0C: initial U texture coordinate (glyph strip) */
+    u16 v0;        /**< +0x0E: initial V; animated by AnimateSaveSlotPanel for highlight entries */
+    u16 width;     /**< +0x10: TILE.w / glyph total pixel width (chunked at 128 px) */
+    u16 height;    /**< +0x12: TILE.h / glyph per-chunk sprite height */
+    u32 reserved;  /**< +0x14: zero in every initial table entry; not read at runtime */
+} SaveLayoutEntry; /* sizeof == 0x18 */
 
 /* Home U/V texture coordinate the panel's primary entry resets to. */
 #define SAVE_SLOT_HOME_V 0x10
@@ -153,7 +162,8 @@ extern u8 g_saveLayoutTable[0x288];
  * and a packed control word that upload_save_layout_textures fills in from the
  * uploaded image's dimensions.
  */
-typedef struct {
+typedef struct
+{
     s16 tex_x;   /**< +0x00: pixel-block destination VRAM X */
     s16 tex_y;   /**< +0x02: pixel-block destination VRAM Y */
     s16 clut_x;  /**< +0x04: CLUT destination VRAM X */

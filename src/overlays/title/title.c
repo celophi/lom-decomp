@@ -11,13 +11,17 @@
  * field-entry path. */
 #define TITLE_SELECTION_SENTINEL 0xFF
 
+/** @brief Fixed RAM buffer that CD resources are staged into before being unpacked. */
+#define TITLE_LOAD_BUFFER ((u8*)0x80180000)
+/** @brief Offset table at the head of a staged file: [0] first block, [1] instrument bank. */
+#define TITLE_LOAD_BUFFER_OFFSETS ((u32*)0x80180004)
+/** @brief Fixed RAM address the title's AKAO sound-effect bank is copied to. */
+#define TITLE_AUDIO_BANK_ADDRESS 0x8013C000
+
 /* run_save_slot_menu result that returns from the picker to the title menu. */
 #define SAVE_SLOT_MENU_EXIT_CANCEL 2
 
 /* Fixed-address accesses used by run_title. */
-#define TITLE_GLOBAL_RAM_BASE 0x80100000
-#define TITLE_MENU_EXIT_STATE_WORD_INDEX 0x990
-#define TITLE_SCENE_STATE_ADDRESS 0x801ED480
 
 /* High rand() value placement in SavedGameLayout::rng_seed. */
 #define TITLE_RNG_HIGH_SHIFT 15
@@ -51,8 +55,7 @@ typedef union
  * fixed overlay addresses by config/symbols/title_symbol_addrs.txt. */
 
 /** Advance a fade packet cursor by the concrete packet just emitted. */
-#define TITLE_NEXT_FADE_PRIMITIVE(primitive, type) \
-    ((TitleFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+#define TITLE_NEXT_FADE_PRIMITIVE(primitive, type) ((TitleFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 void init_title_display(TitleMenuContext* context);
 void render_menu(TitleMenuContext* context);
@@ -67,10 +70,7 @@ s32 run_save_slot_menu(TitleMenuContext* context);
 s32 run_title(TitleMenuContext* menu_context)
 {
     TitleMenuContext* context;
-    SceneState* persistent_scene_state = (SceneState*)TITLE_SCENE_STATE_ADDRESS;
-    s32* global_ram_base;
-    SavedGameLayout* menu_layout;
-    u32 selection_sentinel;
+    SceneState* persistent_scene_state = SCENE_STATE;
     s32 random_low;
     s32 random_high;
     u8 selection;
@@ -80,12 +80,6 @@ s32 run_title(TitleMenuContext* menu_context)
     load_title_audio_bank();
     load_title_seq(0);
     start_title_music();
-
-    /* Access g_titleMenuExitState at 0x80102640 through the global-RAM base so
-     * the configured MIPS_NONE relocation sites remain unchanged. */
-    global_ram_base = (s32*)TITLE_GLOBAL_RAM_BASE;
-    selection_sentinel = TITLE_SELECTION_SENTINEL;
-    menu_layout = &g_saved_game.layout;
 
     while (1)
     {
@@ -99,7 +93,7 @@ s32 run_title(TitleMenuContext* menu_context)
         do
         {
             render_menu(context);
-        } while (global_ram_base[TITLE_MENU_EXIT_STATE_WORD_INDEX] == 0);
+        } while (g_titleMenuExitState == 0);
 
         D_80042FB4 = VSync(-1);
         selection = g_titleSelectedItem;
@@ -107,7 +101,7 @@ s32 run_title(TitleMenuContext* menu_context)
         if (selection == TITLE_MENU_ITEM_NEW_GAME)
         {
             load_menu_layout(0);
-            global_ram_base[TITLE_MENU_EXIT_STATE_WORD_INDEX] = 0;
+            g_titleMenuExitState = 0;
             if (run_save_slot_menu(context) == SAVE_SLOT_MENU_EXIT_CANCEL)
             {
                 screen_transition(0);
@@ -119,7 +113,7 @@ s32 run_title(TitleMenuContext* menu_context)
         {
             return GAME_STATE_MENU_LOAD;
         }
-        else if (selection == selection_sentinel)
+        else if (selection == TITLE_SELECTION_SENTINEL)
         {
             stop_title_music();
             return GAME_STATE_INTRO_MOVIE;
@@ -128,10 +122,10 @@ s32 run_title(TitleMenuContext* menu_context)
         {
             akao_cmd_c1(0, TITLE_SELECTION_SFX_ID, 0);
             load_menu_layout(-1);
-            g_save_slot_index = selection_sentinel;
+            g_save_slot_index = TITLE_SELECTION_SENTINEL;
             random_low = rand();
             random_high = rand();
-            menu_layout->rng_seed = (s16)(random_low | (random_high << TITLE_RNG_HIGH_SHIFT));
+            g_saved_game.layout.rng_seed = (s16)(random_low | (random_high << TITLE_RNG_HIGH_SHIFT));
             return GAME_STATE_FIELD;
         }
     }
@@ -288,7 +282,7 @@ void init_title_display(TitleMenuContext* ctx_base)
 {
     RECT rect;
     u8* base = (u8*)ctx_base;
-    u8* hw = (u8*)0x801ED600; /* hardware registers */
+    u8* hw = (u8*)SCD_REGS; /* bytes of the controller block past the SCDRegs fields */
 
     /* Clear hardware register bytes */
     hw[0x13F] = 0;
@@ -359,12 +353,12 @@ void load_title_audio_bank(void)
     if (((u32)(g_previous_game_state - 2) >= 2U) && (g_previous_game_state != 6) && (g_previous_game_state != 7) && (g_previous_game_state != 5))
     {
 
-        g_titleAudioBankBase = 0x8013C000;
-        cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void*)0x80180000);
+        g_titleAudioBankBase = TITLE_AUDIO_BANK_ADDRESS;
+        cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, TITLE_LOAD_BUFFER);
         cdrom_wait_queue_empty();
 
-        base = (u8*)0x80180000;
-        off = (u32*)0x80180004;
+        base = TITLE_LOAD_BUFFER;
+        off = TITLE_LOAD_BUFFER_OFFSETS;
 
         bcopy(base + off[0], (u8*)g_titleAudioBankBase, (int)(off[1] - off[0]));
 
@@ -390,11 +384,11 @@ void load_title_seq(s32 seq_variant)
     u32* off;
     u8* base;
 
-    cdrom_queue_read(CD_RES_MUSIC_FILE(seq_variant), (void*)0x80180000);
+    cdrom_queue_read(CD_RES_MUSIC_FILE(seq_variant), TITLE_LOAD_BUFFER);
     cdrom_wait_queue_empty();
 
-    off = (u32*)0x80180004;
-    base = (u8*)0x80180000;
+    off = TITLE_LOAD_BUFFER_OFFSETS;
+    base = TITLE_LOAD_BUFFER;
 
     bcopy(base + off[0], (u8*)&D_8003ECA0, (int)(off[1] - off[0]));
     akao_upload_bank_blocking((AkaoBankHeader*)(base + off[1]), 1);
@@ -501,8 +495,7 @@ void render_fade_overlay(TitleMenuContext* ctx)
         g_fadeCurrent.green = g_fadeTarget.green;
         g_fadeCurrent.blue = g_fadeTarget.blue;
     }
-    if (!(((g_fadeCurrent.red == TITLE_FADE_NEUTRAL) && (g_fadeCurrent.green == TITLE_FADE_NEUTRAL)) &&
-          (g_fadeCurrent.blue == TITLE_FADE_NEUTRAL)))
+    if (!(((g_fadeCurrent.red == TITLE_FADE_NEUTRAL) && (g_fadeCurrent.green == TITLE_FADE_NEUTRAL)) && (g_fadeCurrent.blue == TITLE_FADE_NEUTRAL)))
     {
         if (g_fadeCurrent.red >= TITLE_FADE_ADDITIVE_THRESHOLD)
         {
@@ -689,24 +682,11 @@ void handle_title_menu_input(void)
 void menu_cursor_down(void)
 {
     s32 item;
-    u8* item_ptr;
-    item = g_titleSelectedItem + 1;
-    if (item < TITLE_MENU_SLOT_COUNT)
+
+    for (item = g_titleSelectedItem + 1; item < TITLE_MENU_SLOT_COUNT; item++)
     {
-        u8* flags_base = g_titleMenuItemFlags; // forces lui/addiu first
-        item_ptr = flags_base + item * 2;      // sll comes after
-        while (1)
+        if (g_titleMenuItemFlags[item * 2] != 0)
         {
-            if (*item_ptr != 0)
-            {
-                break;
-            }
-            item++;
-            if (item < TITLE_MENU_SLOT_COUNT)
-            {
-                item_ptr += 2;
-                continue;
-            }
             break;
         }
     }
@@ -738,44 +718,28 @@ void menu_cursor_down(void)
 void menu_cursor_up(void)
 {
     s32 item;
-    s32 idx;
     s32 last_enabled;
     s32 enabled_count;
-    u8* scan_ptr;
-    u8* item_ptr;
-    u8* flags_base;
     u8 rank;
-    item = g_titleSelectedItem - 1;
-    if (item >= 0)
+
+    for (item = g_titleSelectedItem - 1; item >= 0; item--)
     {
-        flags_base = &g_titleMenuItemFlags[0];
-        item_ptr = flags_base + (item * 2);
-        while (item >= 0)
+        if (g_titleMenuItemFlags[item * 2] != 0)
         {
-            if ((*item_ptr) != 0)
-            {
-                break;
-            }
-            item--;
-            item_ptr -= 2;
+            break;
         }
     }
     if (item < 0)
     {
+        /* Wrap to the last enabled slot; its rank is the number of enabled slots minus one. */
         enabled_count = 0;
-        item = 0;
-        scan_ptr = &g_titleMenuItemFlags[0];
-
-        while (item < TITLE_MENU_SLOT_COUNT)
+        for (item = 0; item < TITLE_MENU_SLOT_COUNT; item++)
         {
-            if (*scan_ptr != 0)
+            if (g_titleMenuItemFlags[item * 2] != 0)
             {
                 enabled_count++;
                 last_enabled = item;
             }
-
-            item++;
-            scan_ptr += 2;
         }
 
         g_titleVisibleItemRank = enabled_count - 1;
@@ -1061,58 +1025,55 @@ void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
  *
  * Same byte-swap and button-remap as @p read_pad_input, but returns the
  * computed bitmap directly instead of writing it into @p g_lastInputState
- * and resetting @p g_inputRepeatTimer. The body type style (loose unsigned
- * locals, no SCDRegs alias) suggests this is a pre-refactor fossil that
- * @p read_pad_input later superseded.
+ * and resetting @p g_inputRepeatTimer.
  *
- * @note No callers exist in the linked binary — dead code preserved by
+ * @note No callers exist in the linked binary - dead code preserved by
  *       the original build. Kept here so the address-stable layout of
  *       the TITLE overlay is reproduced byte-for-byte.
  *
  * @return Remapped button bitmap, or 0 if the pad is not present
- *         (raw status byte at @p 0x801ED600 ≥ 0xFE).
+ *         (g_controller_device_type >= TITLE_PAD_UNAVAILABLE).
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/Z5swg
  */
 s32 read_pad_state(void)
 {
-    signed short axis_x_dup;
-    unsigned char* ptr;
-    unsigned char device_status;
-    unsigned short raw_buttons;
-    unsigned short raw_buttons_hi;
-    unsigned long buttons;
-    unsigned int raw_buttons_reread;
-    signed short axis;
-    ptr = (unsigned char*)0x801ED600;
-    device_status = ptr[0];
-    if (device_status >= 0xFE)
+    SCDRegs* regs = SCD_REGS;
+    u32 buttons;
+    s16 axis_x;
+    s16 axis_y;
+    u16 hi_read;
+    u16 lo_read;
+
+    if (regs->device_type >= TITLE_PAD_UNAVAILABLE)
     {
         return 0;
     }
-    raw_buttons = *((unsigned short*)(ptr + 2));
-    raw_buttons_reread = *((unsigned short*)(ptr + 2));
-    raw_buttons_hi = raw_buttons_reread;
-    buttons = (raw_buttons >> 8) | (raw_buttons_hi << 8);
+
+    /* Read twice because the controller register may change asynchronously. */
+    hi_read = regs->held_buttons;
+    lo_read = regs->held_buttons;
+    buttons = (hi_read >> 8) | (lo_read << 8);
     buttons = PAD_REMAP_FACE_BITS(buttons);
-    if (device_status)
+    if (regs->device_type != 0)
     {
-        axis = *((signed short*)(ptr + 0x2C));
-        axis_x_dup = axis;
-        if (axis < (-1))
+        /* Convert signed analog-axis thresholds to digital directions. */
+        axis_x = regs->axis_x.signed_value;
+        if (axis_x < -1)
         {
             buttons |= PAD_BTN_LEFT;
         }
-        else if (axis_x_dup >= 2)
+        else if (axis_x >= 2)
         {
             buttons |= PAD_BTN_RIGHT;
         }
-        axis = *((signed short*)(ptr + 0x2E));
-        if (axis < (-1))
+
+        axis_y = regs->axis_y.signed_value;
+        if (axis_y < -1)
         {
             buttons |= PAD_BTN_UP;
         }
-        else if (axis >= 2)
+        else if (axis_y >= 2)
         {
             buttons |= PAD_BTN_DOWN;
         }
@@ -1134,86 +1095,77 @@ s32 read_pad_state(void)
  *    initial-repeat delay (15 frames).
  *  - No input clears all three globals.
  *
- * @note The pad registers are read through a raw pointer (with a duplicate
- *       held_buttons load and a volatile axis_y read) rather than the SCDRegs
- *       struct used by read_pad_input; those reads are required artifacts
- *       of the matched codegen, so they are left as-is.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/geg1v
  */
 void update_menu_input(void)
 {
-    u8* ptr = (u8*)0x801ED600;
-    u8 device_status = D_801ED600[0];
-    u16 raw_buttons;
-    u16 unused;
+    SCDRegs* regs = SCD_REGS;
     u32 buttons;
-    s16 axis;
-    s32 state;
-    if (device_status >= 0xFE)
+    s16 axis_x;
+    s16 axis_y;
+    s32 input_state;
+
+    if (g_controller_device_type >= TITLE_PAD_UNAVAILABLE)
     {
-        state = 0;
+        input_state = 0;
     }
     else
     {
-        raw_buttons = *((u16*)(ptr + 2));
-
-        buttons = (raw_buttons >> 8) | (*((u16*)(2 + ptr)) << 8);
+        buttons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
         buttons = PAD_REMAP_FACE_BITS(buttons);
-        if ((*ptr) != 0)
+        if (regs->device_type != 0)
         {
-            axis = *((s16*)(ptr + 0x2C));
-            if (axis < (-1))
+            axis_x = regs->axis_x.signed_value;
+            if (axis_x < -1)
             {
                 buttons |= PAD_BTN_LEFT;
             }
-            else if (axis >= 2)
+            else if (axis_x >= 2)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
-            axis = *((volatile s16*)(ptr + 0x2E));
-            if (axis < (-1))
+
+            axis_y = regs->axis_y.signed_value;
+            if (axis_y < -1)
             {
                 buttons |= PAD_BTN_UP;
             }
-            else if (axis >= 2)
+            else if (axis_y >= 2)
             {
                 buttons |= PAD_BTN_DOWN;
             }
         }
-        state = buttons;
+        input_state = buttons;
     }
     g_debouncedInput = 0;
-
-    if (((state == g_lastInputState) || ((g_lastInputState != 0) && (state & (g_lastInputState | 0xB6F)))) && state != 0)
+    if (((input_state == g_lastInputState) || ((g_lastInputState != 0) && (input_state & (g_lastInputState | TITLE_NON_REPEAT_BUTTON_MASK)))) &&
+        (input_state != 0))
     {
-        u32 dpad = state & (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT);
-        if (dpad != 0)
+        /* Held input repeats directional buttons only. */
+        if ((input_state & TITLE_DPAD_BUTTONS) != 0)
         {
-            state = dpad;
+            input_state &= TITLE_DPAD_BUTTONS;
         }
         if (g_inputRepeatTimer == 0)
         {
-            g_debouncedInput = state;
-            g_inputRepeatTimer = 2;
+            g_debouncedInput = input_state;
+            g_inputRepeatTimer = TITLE_REPEAT_DELAY;
         }
         else
         {
             g_inputRepeatTimer--;
             g_debouncedInput = 0;
         }
-        return;
     }
-    else if (state == 0)
+    else if (input_state == 0)
     {
-        (void)(&g_debouncedInput);
-        *((s32*)(&g_inputRepeatTimer)) = 0;
-        *((s32*)(&g_lastInputState)) = 0;
+        g_inputRepeatTimer = 0;
+        g_lastInputState = 0;
     }
     else
     {
-        g_debouncedInput = state;
-        g_lastInputState = state;
-        g_inputRepeatTimer = 15;
+        g_debouncedInput = input_state;
+        g_lastInputState = input_state;
+        g_inputRepeatTimer = TITLE_INITIAL_REPEAT_DELAY;
     }
 }
