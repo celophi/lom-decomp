@@ -192,15 +192,19 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     setTile(packet_cursor);
                     packet_cursor->w = 6;
                     element_height_calc = (element->geometry.word >> 1) & 0xFF;
-                    packet_cursor->h = (u16)((s32)(element_height_calc * (element_height_calc / g_gosub_row_height)) / g_gosub_row_count);
                     {
-                        s32 clamp_h;
-                        clamp_h = (s16)packet_cursor->h;
+                        /* The volatile pointer is required: the original reloads h after storing it. */
+                        volatile u16* bar_height;
+                        s32 initial_height;
+
+                        bar_height = &packet_cursor->h;
+                        *bar_height = (element_height_calc * (element_height_calc / g_gosub_row_height)) / g_gosub_row_count;
+                        initial_height = (s16)*bar_height;
                         working_word = element->geometry.word;
                         visible_height = ((u32)working_word >> 1) & 0xFF;
-                        if (clamp_h >= (s32)visible_height - 2)
+                        if (initial_height >= visible_height - 2)
                         {
-                            packet_cursor->h = visible_height;
+                            *bar_height = visible_height;
                         }
                     }
                     packet_cursor->x = 1;
@@ -440,13 +444,14 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
  */
 GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag)
 {
-    GosubGpuPacket* packet_cursor;
-    GosubGpuPacket* draw_env_packet;
+    DR_ENV* draw_env_packet;
+    GosubLinePacket* outline;
+    TILE* fill;
     DR_TPAGE* draw_mode_packet;
     s32 draw_env[24];
     s32 working_value;
 
-    draw_env_packet = prim;
+    draw_env_packet = (DR_ENV*)prim;
     if (flag != 0)
     {
         working_value = y + 0xF2;
@@ -457,31 +462,32 @@ GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s3
         working_value = y + 0xA;
         SetDefDrawEnv((DRAWENV*)draw_env, x + 2, working_value, w - 4, h - 4);
     }
-    SetDrawEnv((DR_ENV*)draw_env_packet, (DRAWENV*)draw_env);
-
+    SetDrawEnv(draw_env_packet, (DRAWENV*)draw_env);
     addPrim(ot, draw_env_packet);
+    draw_env_packet++;
 
-    draw_env_packet = (GosubGpuPacket*)((u8*)draw_env_packet + 0x40);
-    packet_cursor = gosub_emit_panel_corners((SPRT*)draw_env_packet, ot, x, y, w, h);
-    packet_cursor = (GosubGpuPacket*)gosub_emit_panel_outline((GosubLinePacket*)packet_cursor, ot, x, y, w, h, 0xFFFFFF);
-    packet_cursor = (GosubGpuPacket*)gosub_emit_panel_outline((GosubLinePacket*)packet_cursor, ot, x + 1, y + 1, w - 2, h - 2, 0);
-    packet_cursor = (GosubGpuPacket*)gosub_emit_panel_outline((GosubLinePacket*)packet_cursor, ot, x - 1, y - 1, w + 2, h + 2, 0);
-
+    outline = (GosubLinePacket*)gosub_emit_panel_corners((SPRT*)draw_env_packet, ot, x, y, w, h);
+    outline = gosub_emit_panel_outline(outline, ot, x, y, w, h, 0xFFFFFF);
+    outline = gosub_emit_panel_outline(outline, ot, x + 1, y + 1, w - 2, h - 2, 0);
+    outline = gosub_emit_panel_outline(outline, ot, x - 1, y - 1, w + 2, h + 2, 0);
+    /* Reusing the clip-y slot for the fill pointer and the do/while(0) barrier are both required to match. */
     do
     {
-        working_value = (s32)packet_cursor;
+        working_value = (s32)outline;
     } while (0);
-    SET_BGR0_PACKED((TILE*)working_value, 0xC0C0C0);
-    setTile((TILE*)working_value);
-    setSemiTrans((TILE*)working_value, 1);
-    setXY0((TILE*)working_value, x, y);
-    setWH((TILE*)working_value, w, h);
-    addPrim(ot, (TILE*)working_value);
+    fill = (TILE*)working_value;
 
-    draw_mode_packet = (DR_TPAGE*)(working_value + sizeof(TILE));
+    SET_BGR0_PACKED(fill, 0xC0C0C0);
+    setTile(fill);
+    setSemiTrans(fill, 1);
+    setXY0(fill, x, y);
+    setWH(fill, w, h);
+    addPrim(ot, fill);
+
+    draw_mode_packet = (DR_TPAGE*)(fill + 1);
     setDrawTPage(draw_mode_packet, 0, 0, 0x45);
     addPrim(ot, draw_mode_packet);
-    return (GosubGpuPacket*)(working_value + sizeof(TILE) + sizeof(DR_TPAGE));
+    return (GosubGpuPacket*)(draw_mode_packet + 1);
 }
 
 /**

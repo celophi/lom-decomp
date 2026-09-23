@@ -239,7 +239,7 @@ typedef struct
     s16 x;
     s16 y;
     s16 w;
-    volatile u16 h;
+    u16 h;
 } GosubGpuPacket;
 
 /** @brief GPU tile packet used for cursor and selection highlights. */
@@ -629,6 +629,7 @@ extern s32 g_gosub_cursor_row;
 extern s32 g_gosub_row_count;
 extern s32 g_gosub_visible_row_count;
 extern u8 g_gosub_screen_sequence_index;
+extern u8 D_8016B8DD[3];
 extern s32 g_gosub_scroll_frames_remaining;
 extern s32 g_gosub_combination_variant;
 extern s32 g_gosub_dialog_choice;
@@ -638,7 +639,9 @@ extern u8* g_gosub_dialog_text;
 extern s32 (*g_gosub_finish_handler)(void);
 extern u8 g_gosub_selection_mode;
 extern u8 g_gosub_required_selection_count;
+extern u8 D_8016B8FE[2];
 extern s32 g_gosub_show_row_details;
+extern s32 D_8016B904;
 extern s32 g_gosub_result_rows[16];
 extern s32 g_gosub_dialog_accepting_input;
 extern u8 g_gosub_selected_rows[4];
@@ -648,9 +651,11 @@ extern s32 g_gosub_window_width;
 extern s32 g_gosub_suppress_dialog_sound;
 extern u8 g_gosub_text_buffers[0x5000];
 extern u8 g_gosub_selection_count;
+extern u8 D_80170961[7];
 extern u8 g_gosub_screen_sequence[20];
 extern s32 g_gosub_combination_result_id;
 extern s32 g_gosub_row_height;
+extern s32 D_80170984;
 extern s32 g_gosub_scroll_y;
 extern s32 g_gosub_sort_ascending;
 extern s32 g_gosub_scroll_target_y;

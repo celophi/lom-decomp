@@ -10,7 +10,7 @@ s32 g_gosub_row_count;
 s32 g_gosub_visible_row_count;
 /** @brief Screen-sequence cursor stored in a four-byte BSS slot. */
 u8 g_gosub_screen_sequence_index;
-u8 g_gosub_screen_sequence_index_storage[4] __asm__("g_gosub_screen_sequence_index");
+u8 D_8016B8DD[3]; /* unreferenced; keeps the packed BSS layout */
 s32 g_gosub_scroll_frames_remaining;
 s32 g_gosub_combination_variant;
 s32 g_gosub_dialog_choice;
@@ -22,10 +22,10 @@ s32 (*g_gosub_finish_handler)(void);
 u8 g_gosub_selection_mode;
 /** @brief Required selection count stored in a three-byte BSS slot. */
 u8 g_gosub_required_selection_count;
-u8 g_gosub_required_selection_count_storage[3] __asm__("g_gosub_required_selection_count");
+u8 D_8016B8FE[2]; /* unreferenced; keeps the packed BSS layout */
 /** @brief Row-detail flag stored in an eight-byte BSS slot. */
 s32 g_gosub_show_row_details;
-u8 g_gosub_show_row_details_storage[8] __asm__("g_gosub_show_row_details");
+s32 D_8016B904; /* unreferenced; keeps the packed BSS layout */
 s32 g_gosub_result_rows[16];
 s32 g_gosub_dialog_accepting_input;
 u8 g_gosub_selected_rows[4];
@@ -36,12 +36,12 @@ s32 g_gosub_suppress_dialog_sound;
 u8 g_gosub_text_buffers[0x5000];
 /** @brief Current selection count stored in an eight-byte BSS slot. */
 u8 g_gosub_selection_count;
-u8 g_gosub_selection_count_storage[8] __asm__("g_gosub_selection_count");
+u8 D_80170961[7]; /* unreferenced; keeps the packed BSS layout */
 u8 g_gosub_screen_sequence[20];
 s32 g_gosub_combination_result_id;
 /** @brief List row height stored in an eight-byte BSS slot. */
 s32 g_gosub_row_height;
-u8 g_gosub_row_height_storage[8] __asm__("g_gosub_row_height");
+s32 D_80170984; /* unreferenced; keeps the packed BSS layout */
 s32 g_gosub_scroll_y;
 /** @brief Whether the next confirmed sort uses ascending order. */
 s32 g_gosub_sort_ascending;
