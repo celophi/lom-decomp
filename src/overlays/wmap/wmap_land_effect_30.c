@@ -431,7 +431,6 @@ extern void func_80083A10__for_func_8008172C(void) __asm__("func_80083A10");
 /** @brief Initialize effect actors at regular angular intervals. */
 void func_800817F0(void)
 {
-/* Partial WMAP decompilation: 92.707860% (gcc280_g0). */
 
 /** @brief World-map actor configuration. */
 typedef struct
@@ -483,6 +482,7 @@ extern s32 D_801B2864;
 extern void func_80081954__for_func_800817F0(void) __asm__("func_80081954");
 
     s32 i;
+    s16 actor_field_value;
 
     D_80139280[0x25] = 15;
     D_80139280[0x26] = 19;
@@ -495,9 +495,12 @@ extern void func_80081954__for_func_800817F0(void) __asm__("func_80081954");
     D_80139280[0x21] = 256;
     for (i = 0; i < 60; i += 5)
     {
-        D_800D94FC[i].field_26 = 2;
-        D_800D94FC[i].field_22 = 129;
-        D_800D94FC[i].field_24 = 8;
+        actor_field_value = 2;
+        D_800D94FC[i].field_26 = actor_field_value;
+        actor_field_value = 129;
+        D_800D94FC[i].field_22 = actor_field_value;
+        actor_field_value = 8;
+        D_800D94FC[i].field_24 = actor_field_value;
         D_800D94FC[i].field_02 = 0;
         D_800D94FC[i].field_06 = 15;
         D_800D94FC[i].field_0E = 0;
@@ -1104,19 +1107,24 @@ extern s32 D_801B27F0;
     }
 }
 
+/** @brief Update the selected world-map land record and advance the sequence step. */
 void func_800822FC(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
+typedef struct
+{
+    u32 value;
+    u8 unknown_4[36];
+} WmapValueRecord;
 
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapValueRecord D_80139290[][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B27F0;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B27F0 += 1;
 }
 
@@ -2036,9 +2044,9 @@ extern void (*D_800D57E8[])(void);
     D_801B2834 = 1;
 }
 
+/** @brief Configure the world-map actor and advance to its draw step. */
 void func_8008306C(void)
 {
-/* Partial WMAP decompilation: 87.156250% (gcc280_g0). */
 
 /** @brief World-map actor configuration. */
 typedef struct
@@ -2067,12 +2075,12 @@ extern void func_800830EC__for_func_8008306C(void) __asm__("func_800830EC");
 
     D_801399D4 = &D_80127538;
     D_800D93F4.field_06 = 0xF;
+    D_800D93F4.field_0E = 1;
     D_800D93F4.field_10 = -1;
     D_800D93F4.field_26 = 8;
-    D_800D93F4.field_0E = 1;
-    D_800D93F4.field_24 = 1;
     D_800D93F4.field_02 = 0;
     D_800D93F4.field_22 = 0x81;
+    D_800D93F4.field_24 = 1;
     D_801B2834 = 0x1C;
     D_801B2830 += 1;
     func_800830EC__for_func_8008306C();

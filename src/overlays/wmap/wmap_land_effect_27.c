@@ -7,6 +7,45 @@
 #include "wmap_sprite_render.h"
 #include "wmap_effect_primitives.h"
 
+/** @brief World-map effect resource slot. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    void *resource;
+} WmapEffectSlot8;
+
+/** @brief World-map effect state record. */
+typedef struct
+{
+    s16 state;
+    u8 pad_02[0x12];
+} WmapEffectSlot20;
+
+/** @brief World-map cell record. */
+typedef struct
+{
+    u32 value;
+    u8 pad_04[36];
+} WmapEffectCell;
+
+/** @brief World-map actor configuration used by this effect. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} __attribute__((aligned(4))) WmapEffectActorConfig;
+
 /**
  * @brief Advance a world-map model's spin, draw it while active, then countdown-advance the step.
  */
@@ -316,23 +355,8 @@ extern void func_8009CCF4__for_func_8009B5B0(void) __asm__("func_8009CCF4");
 /** @brief World-map step: init hero struct fields, clear tables, advance step. */
 void func_8009B67C(void)
 {
-/* Partial WMAP decompilation: 96.078430% (gcc280_g0). */
-
-typedef struct
-{
-    s16 field0;
-    s16 field2;
-    void *field4;
-} WmapB;
-
-typedef struct
-{
-    s16 field0;
-    s16 pad[9];
-} WmapA;
-
-extern WmapA D_801AFBD0[];
-extern WmapB D_80139988[];
+extern WmapEffectSlot20 D_801AFBD0[];
+extern WmapEffectSlot8 D_80139988[];
 extern u8 D_80121538[];
 extern void *D_80139280;
 extern s32 D_801B2CB0;
@@ -342,21 +366,21 @@ extern void func_8009CEF4__for_func_8009B67C(void) __asm__("func_8009CEF4");
     s32 i;
     void *base = D_80139280;
 
+    *(s32 *)((u8 *)base + 0x2C) = 0;
+    *(s32 *)((u8 *)base + 0x30) = 0;
+    *(s32 *)((u8 *)base + 0x38) = 0;
     *(s32 *)((u8 *)base + 0x34) = 0x80;
     *(s32 *)((u8 *)base + 0x3C) = 2;
     *(s32 *)((u8 *)base + 0x40) = 0x64;
     *(s32 *)((u8 *)base + 0x44) = 0x3C;
     *(s32 *)((u8 *)base + 0x48) = 8;
     *(s32 *)((u8 *)base + 0x4C) = 1;
-    *(s32 *)((u8 *)base + 0x2C) = 0;
-    *(s32 *)((u8 *)base + 0x30) = 0;
-    *(s32 *)((u8 *)base + 0x38) = 0;
     *(s32 *)((u8 *)base + 0x50) = 0x5DC0;
 
     for (i = 0; i < 0x18; i++)
     {
-        D_801AFBD0[60 + i].field0 = 0;
-        D_80139988[60 + i].field4 = D_80121538;
+        D_801AFBD0[60 + i].state = 0;
+        D_80139988[60 + i].resource = D_80121538;
     }
 
     D_801B2CB4 = 0x38;
@@ -364,107 +388,72 @@ extern void func_8009CEF4__for_func_8009B67C(void) __asm__("func_8009CEF4");
     func_8009CEF4__for_func_8009B67C();
 }
 
-/** @brief World-map step handler: configure a model descriptor and clear two entry tables, then advance.
- *  @note Best match ~85.6% (gcc280_g0); residual is loop induction-variable register coloring. */
+/** @brief World-map step handler: configure a model descriptor and clear two entry tables, then advance. */
 void func_8009B748(void)
 {
-/* Partial WMAP decompilation: 88.137250% (gcc280_g0). */
-
-extern void func_8009D0FC__for_func_8009B748(void) __asm__("func_8009D0FC");
-extern u8 *D_80139280;
-extern u8 D_80139988;
-extern u8 D_801AFBD0;
-extern u8 D_80121538;
+extern WmapEffectSlot20 D_801AFBD0[];
+extern WmapEffectSlot8 D_80139988[];
+extern u8 D_80121538[];
+extern s32 *D_80139280;
 extern s32 D_801B2CB8;
 extern s32 D_801B2CBC;
+extern void func_8009D0FC__for_func_8009B748(void) __asm__("func_8009D0FC");
 
-    u8 *pa;
-    u8 *pb;
-    u8 *p;
     s32 i;
-    s32 off_a;
-    s32 off_b;
 
-    p = D_80139280;
-    *(s32 *)(p + 0x5C) = 0x20;
-    *(s32 *)(p + 0x68) = 0x3E8;
-    *(s32 *)(p + 0x6C) = 0x64;
-    *(s32 *)(p + 0x70) = 8;
-    *(s32 *)(p + 0x74) = 2;
-    *(s32 *)(p + 0x54) = 1;
-    *(s32 *)(p + 0x58) = 1;
-    *(s32 *)(p + 0x60) = 0;
-    *(s32 *)(p + 0x64) = 1;
-    *(s32 *)(p + 0x78) = 0x6D60;
+    D_80139280[0x15] = 1;
+    D_80139280[0x17] = 0x20;
+    D_80139280[0x1A] = 0x3E8;
+    D_80139280[0x1B] = 0x64;
+    D_80139280[0x1C] = 8;
+    D_80139280[0x1D] = 2;
+    D_80139280[0x16] = 1;
+    D_80139280[0x18] = 0;
+    D_80139280[0x19] = 1;
+    D_80139280[0x1E] = 0x6D60;
 
-    pa = &D_80139988;
-    pb = &D_801AFBD0;
-    i = 0;
-    off_a = 0x320;
-    off_b = 0x7D0;
-    do
+    for (i = 0; i < 20; i++)
     {
-        *(s16 *)(pb + off_b) = 0;
-        *(s32 *)(pa + off_a + 4) = (s32)&D_80121538;
-        off_a += 8;
-        off_b += 0x14;
-        i += 1;
-    } while (i < 0x14);
+        D_801AFBD0[100 + i].state = 0;
+        D_80139988[100 + i].resource = D_80121538;
+    }
 
-    D_801B2CBC = 0x14;
+    D_801B2CBC = 20;
     D_801B2CB8 += 1;
     func_8009D0FC__for_func_8009B748();
 }
 
-/** @brief World-map step: init hero struct fields, clear tables, advance step.
- *  @note Best match ~94% (gcc280_g0); residual is a whole-function register
- *        renumbering caused by the held constant 1 (a0) plus a store-order tie. */
+/** @brief World-map step: init hero struct fields, clear tables, advance step. */
 void func_8009B814(void)
 {
-/* Partial WMAP decompilation: 94.076920% (gcc280_g0). */
-
-typedef struct
-{
-    s16 field0;
-    s16 field2;
-    void *field4;
-} WmapB;
-
-typedef struct
-{
-    s16 field0;
-    s16 pad[9];
-} WmapA;
-
-extern WmapA D_801AFBD0[];
-extern WmapB D_80139988[];
+extern WmapEffectSlot20 D_801AFBD0[];
+extern WmapEffectSlot8 D_80139988[];
 extern u8 D_8011F538[];
-extern void *D_80139280;
+extern s32 *D_80139280;
 extern s32 D_801B2CC0;
 extern s32 D_801B2CC4;
 extern void func_8009D304__for_func_8009B814(void) __asm__("func_8009D304");
 
     s32 i;
-    void *base = D_80139280;
 
-    *(s32 *)((u8 *)base + 0xA8) = 4;
-    *(s32 *)((u8 *)base + 0xAC) = 0x20;
-    *(s32 *)((u8 *)base + 0xB8) = 0x3E8;
-    *(s32 *)((u8 *)base + 0xBC) = 0xB4;
-    *(s32 *)((u8 *)base + 0xC0) = 0x15;
-    *(s32 *)((u8 *)base + 0xC4) = 2;
-    *(s32 *)((u8 *)base + 0xA4) = 1;
-    *(s32 *)((u8 *)base + 0xB0) = 0;
-    *(s32 *)((u8 *)base + 0xB4) = 1;
-    *(s32 *)((u8 *)base + 0xC8) = 0x1F40;
+    D_80139280[0x29] = 1;
+    D_80139280[0x2A] = 4;
+    D_80139280[0x2B] = 0x20;
+    D_80139280[0x2E] = 0x3E8;
+    D_80139280[0x2F] = 0xB4;
+    D_80139280[0x30] = 0x15;
+    D_80139280[0x31] = 2;
+    D_80139280[0x2C] = 0;
+    D_80139280[0x2D] = 1;
+    D_80139280[0x32] = 0x1F40;
 
-    for (i = 0; i < 0x14; i++)
+    for (i = 0; i < 20; i++)
     {
-        D_801AFBD0[180 + i].field0 = 0;
-        D_80139988[180 + i].field4 = D_8011F538;
+        D_801AFBD0[180 + i].state = 0;
+        D_80139988[180 + i].resource = D_8011F538;
     }
 
-    D_801B2CC4 = 0x14;
+    D_801B2CC4 = 20;
     D_801B2CC0 += 1;
     func_8009D304__for_func_8009B814();
 }
@@ -966,17 +955,15 @@ extern s32 D_801B2C68;
 
 void func_8009C038(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
-
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapEffectCell D_80139290[][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B2C68;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2C68 += 1;
 }
 
@@ -1027,27 +1014,7 @@ extern void (*D_800D661C[])(void);
 
 void func_8009C12C(void)
 {
-/* Partial WMAP decompilation: 87.156250% (gcc280_g0). */
-
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} __attribute__((aligned(4))) WmapConfigA;
-
-
-extern WmapConfigA D_800D9318;
+extern WmapEffectActorConfig D_800D9318;
 extern u8 D_8011F538;
 extern void *D_801399AC;
 extern s32 D_801B2C70;
@@ -1056,12 +1023,12 @@ extern void func_8009C1AC__for_func_8009C12C(void) __asm__("func_8009C1AC");
 
     D_801399AC = &D_8011F538;
     D_800D9318.field_06 = 0xF;
+    D_800D9318.field_0E = 1;
     D_800D9318.field_10 = -1;
     D_800D9318.field_26 = 8;
-    D_800D9318.field_0E = 1;
-    D_800D9318.field_24 = 1;
     D_800D9318.field_02 = 0;
     D_800D9318.field_22 = 0x81;
+    D_800D9318.field_24 = 1;
     D_801B2C74 = 0x24;
     D_801B2C70 += 1;
     func_8009C1AC__for_func_8009C12C();

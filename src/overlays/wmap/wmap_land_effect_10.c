@@ -1248,17 +1248,22 @@ extern s32 D_801B2A70;
 
 void func_80090414(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
+/** @brief First word of a 40-byte world-map cell. */
+typedef struct
+{
+    s32 value;
+    u8 unknown_04[36];
+} WmapValueRecord;
 
 extern s32 D_8013B20C;
-extern u32 D_80139290[];
+extern WmapValueRecord D_80139290[][6];
 extern s32 D_8011D530;
 extern s32 D_8011D510;
 extern u32 D_8011D4FC;
 extern s32 D_801B2A70;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;
     D_801B2A70 += 1;
 }
 
