@@ -67,6 +67,38 @@ typedef struct
     u8 unknown_0x15[0x60 - 0x15];
 } SmallHistoryRecord;
 
+#define PLAYER_EQUIPMENT_SLOT_COUNT 4
+#define INVENTORY_RECORD_COUNT 100
+#define ITEM_TYPE_COUNT 256
+
+/** @brief Packed item kind, category, and name index of an inventory record. */
+typedef union
+{
+    u32 packed;
+    struct
+    {
+        u16 low;  /**< Bits 9:8 select the item kind; bits 15:10 select its category. */
+        u16 high; /**< Low six bits select an entry in the item-name table. */
+    } halves;
+} InventoryAttributes;
+
+/** @brief One 0x40-byte equipment/inventory record. */
+typedef struct
+{
+    u8 active; /**< Zero marks an empty slot. */
+    u8 unknown_0x01[0x13];
+    InventoryAttributes attributes;
+    u8 unknown_0x18[0xC];
+    union
+    {
+        u16 values[4]; /**< Equipment stats. */
+        u8 bytes[8];   /**< Byte view used by kinds that store small fields here. */
+    } stats;
+    u8 unknown_0x2c[8];
+    s32 price;
+    u8 unknown_0x38[8];
+} InventoryRecord;
+
 /**
  * @brief Controller/pad context object (partial layout).
  *
@@ -77,14 +109,20 @@ typedef struct
 {
     u8  _pad000[0x28];          /**< 0x000: not yet mapped. */
     u32 menu_option_flags;      /**< 0x028: menu audio/vibration option bits. */
-    u8  _pad02C[0x840 - 0x2C]; /**< 0x02C: not yet mapped. */
+    u32 money;
+    u8  _pad030[0x640 - 0x30];
+    InventoryRecord player_equipment[PLAYER_EQUIPMENT_SLOT_COUNT];
+    u8  _pad740[0x840 - 0x740];
     u8  inject_enable;          /**< 0x840: non-zero allows input injection. */
     u8  _pad841[0x858 - 0x841]; /**< 0x841: not yet mapped. */
     u32 inject_flags;       /**< 0x858: bit 0x80 enables input injection. */
     u8  _pad85C[0x234];          /**< 0x85C: not yet mapped. */
     u8  gname_name[0x18];        /**< 0xA90: name buffer edited by the GNAME overlay. */
     u32 unkAA8;
-    u8  _padAAC[0x29D7 - 0xAAC];  /**< 0xAAC: not yet mapped. */
+    u8  _padAAC[0xCE0 - 0xAAC];
+    InventoryRecord inventory[INVENTORY_RECORD_COUNT];
+    u8  item_counts[ITEM_TYPE_COUNT];
+    u8  _pad26E0[0x29D7 - 0x26E0];
     s8  large_history_index;      /**< 0x29D7: slot index into @c large_history_records. */
     u8  _pad29D8[0x2B0C - 0x29D8];/**< 0x29D8: not yet mapped. */
     LargeHistoryRecord large_history_records[3];

@@ -49,7 +49,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | MENU.BIN | 🔒 | Fully linked |
 | MOVIE.BIN | 🔒 | Fully linked |
 | NIKI.BIN | 🔒 | Fully linked |
-| SHOP.BIN | ☑️ | Matching |
+| SHOP.BIN | 🔒 | Fully linked |
 | TITLE.BIN | 🔒 | Fully linked |
 | WMAP.BIN | 🪲 | Non-matching |
 | WSEL.BIN | ☑️ | Matching |
@@ -345,7 +345,7 @@ Current examples of the specialized routes include:
 - WMAP's `wmap_effect_resources.c` and `wmap_pathfinding.c`: GCC 2.8.0 G0 at `-O0` with builtins enabled.
 - ZUKAN's `zukan_category.c`: GCC 2.8.0 G0 at `-O0` with builtins disabled.
 - FIELD's `field_subsystem_init.c`: GCC 2.7.2 CDK with `-fno-schedule-insns`.
-- FIELD's `field_actor_action_defaults.c` and SHOP's `shop_setup_custom_list.c`: GCC 2.7.2 CDK with `-fno-strength-reduce`.
+- FIELD's `field_actor_action_defaults.c`: GCC 2.7.2 CDK with `-fno-strength-reduce`.
 - FIELD's G4 source group: GCC 2.8.0 without division expansion.
 - The main executable's `field_runtime_glyph.c`: might be GCC 2.6.0 at `-O1`, but I'm 98% sure this is just handwritten asm at this point.
 
