@@ -155,11 +155,11 @@ void gosub_delete_packed_record(s32 record_index)
 {
     s32 shift_index;
 
-    for (shift_index = record_index; shift_index < GOSUB_LOGIC_BLOCK_COUNT - 1; shift_index++)
+    for (shift_index = record_index; shift_index < g_pad_ctx->logic_block_count - 1; shift_index++)
     {
-        gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[shift_index], &GOSUB_LOGIC_BLOCK_RECORDS[shift_index + 1]);
+        gosub_copy_packed_record(&g_pad_ctx->logic_blocks[shift_index], &g_pad_ctx->logic_blocks[shift_index + 1]);
     }
-    GOSUB_LOGIC_BLOCK_COUNT--;
+    g_pad_ctx->logic_block_count--;
 }
 
 /**
@@ -205,7 +205,7 @@ inline void gosub_copy_packed_record(void* dst, void* src)
 
     dst_bytes = (u8*)dst;
     src_bytes = (u8*)src;
-    for (byte_index = 0; byte_index < sizeof(GosubPackedRecord);)
+    for (byte_index = 0; byte_index < sizeof(LogicBlock);)
     {
         byte_index++;
         *dst_bytes = *src_bytes;
@@ -275,12 +275,12 @@ void gosub_sort_rows(s32 sort_mode)
         workspace.row_order[insertion_index] = row_index;
     }
 
-    bcopy(GOSUB_LOGIC_BLOCK_RECORDS, workspace.packed_records, sizeof(workspace.packed_records));
+    bcopy(g_pad_ctx->logic_blocks, workspace.packed_records, sizeof(workspace.packed_records));
     bcopy(g_gosub_rows, workspace.rows, sizeof(workspace.rows));
 
     for (row_index = 0; row_index < g_gosub_row_count; row_index++)
     {
-        gosub_copy_packed_record(&GOSUB_LOGIC_BLOCK_RECORDS[row_index], &workspace.packed_records[workspace.row_order[row_index]]);
+        gosub_copy_packed_record(&g_pad_ctx->logic_blocks[row_index], &workspace.packed_records[workspace.row_order[row_index]]);
         gosub_copy_list_row(&g_gosub_rows[row_index], &workspace.rows[workspace.row_order[row_index]]);
     }
 

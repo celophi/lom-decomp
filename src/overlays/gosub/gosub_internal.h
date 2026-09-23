@@ -6,6 +6,7 @@
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 #include "tim.h"
+#include "main.h"
 
 typedef struct GosubTilePacket GosubTilePacket;
 
@@ -25,9 +26,8 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_SORT_ORDER_CAPACITY 0x100
 #define GOSUB_SORT_ROW_CAPACITY 0x28
 
-/** @brief Packed logic-block fields in g_pad_ctx. */
-#define GOSUB_LOGIC_BLOCK_COUNT_OFFSET 0x29D6
-#define GOSUB_LOGIC_BLOCK_RECORDS_OFFSET 0x29DC
+/** @brief LogicBlock.ready value of a block created by a combination. */
+#define GOSUB_LOGIC_BLOCK_READY 3
 
 /** @brief Texture page containing the gosub font and panel-corner sprites. */
 #define GOSUB_FONT_TPAGE 5
@@ -239,7 +239,7 @@ typedef struct
     s16 x;
     s16 y;
     s16 w;
-    volatile u16 h;
+    u16 h;
 } GosubGpuPacket;
 
 /** @brief GPU tile packet used for cursor and selection highlights. */
@@ -280,17 +280,11 @@ typedef struct
     s16 y1;
 } GosubLinePacket;
 
-/** @brief Packed four-byte record stored in the combination table. */
-typedef struct
-{
-    u32 word;
-} GosubPackedRecord;
-
 /** @brief Stack workspace used to reorder logic-block records and their rows. */
 typedef struct
 {
     u8 row_order[GOSUB_SORT_ORDER_CAPACITY];
-    GosubPackedRecord packed_records[GOSUB_SORT_ROW_CAPACITY];
+    LogicBlock packed_records[GOSUB_SORT_ROW_CAPACITY];
     GosubListRow rows[GOSUB_SORT_ROW_CAPACITY];
 } GosubSortWorkspace;
 
@@ -369,6 +363,23 @@ typedef struct
     u32 mask;
 } GosubScrollMarkerPacket;
 
+/** @brief Flat triangle packet that fills a scroll marker's arrow head. */
+typedef struct
+{
+    u8 addr[3];
+    u8 len;
+    u8 r;
+    u8 g;
+    u8 b;
+    u8 code;
+    s16 x0;
+    s16 y0;
+    s16 x1;
+    s16 y1;
+    s16 x2;
+    s16 y2;
+} GosubScrollFillPacket;
+
 /** @brief Offset tables at the head of the message archive. */
 typedef struct
 {
@@ -435,10 +446,7 @@ typedef union
 
 /* External data. */
 
-extern u8* g_pad_ctx;
 extern s32 g_field_gosub_state;
-extern s32 g_pad_input;
-extern s32 g_frame_counter;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern s32 g_gosub_message_archive_offset;
@@ -499,15 +507,13 @@ extern u8 D_800F1CD0[];
 /** @brief Link a packet after explicitly constraining its address to 24 bits. */
 #define ADD_PRIM_MASKED(ot, p) (setaddr(p, getaddr(ot) & 0xFFFFFF), setaddr(ot, p))
 
-#define GOSUB_LOGIC_BLOCK_COUNT (g_pad_ctx[GOSUB_LOGIC_BLOCK_COUNT_OFFSET])
-#define GOSUB_LOGIC_BLOCK_RECORDS ((GosubPackedRecord*)(g_pad_ctx + GOSUB_LOGIC_BLOCK_RECORDS_OFFSET))
 
 #define GOSUB_EQUIPMENT_RECORD(ptr) (&((GosubSaveData*)(ptr))->equipment[0])
-#define GOSUB_EQUIPMENT_BASE_FROM_INDEX(index) (g_pad_ctx + (index) * 0x40)
+#define GOSUB_EQUIPMENT_BASE_FROM_INDEX(index) ((u8*)g_pad_ctx + (index) * 0x40)
 #define GOSUB_EQUIPMENT_FROM_INDEX(index) GOSUB_EQUIPMENT_RECORD((index) * 0x40 + (s32)g_pad_ctx)
 #define GOSUB_EQUIPMENT_SOURCE_FROM_INDEX(index) ((u8*)((index) * 0x40 + (s32)g_pad_ctx))
-#define GOSUB_EQUIPMENT_AT(index) ((GosubEquipmentRecord*)(g_pad_ctx + ((index) * 0x40 + 0xCE0)))
-#define GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(index) ((GosubEquipmentRecord*)(g_pad_ctx + ((index) << 6) + 0xCE0))
+#define GOSUB_EQUIPMENT_AT(index) ((GosubEquipmentRecord*)((u8*)g_pad_ctx + ((index) * 0x40 + 0xCE0)))
+#define GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(index) ((GosubEquipmentRecord*)((u8*)g_pad_ctx + ((index) << 6) + 0xCE0))
 #define GOSUB_TEXT_BUFFER(index) (((GosubTextBuffer*)g_gosub_text_buffers)[index].text)
 #define GOSUB_TEXT_ARCHIVE ((GosubTextArchive*)&g_gosub_text_archive_offsets_0)
 #define GOSUB_EQUIPMENT_KIND(attributes) (((attributes) >> 8) & 3)
@@ -629,6 +635,7 @@ extern s32 g_gosub_cursor_row;
 extern s32 g_gosub_row_count;
 extern s32 g_gosub_visible_row_count;
 extern u8 g_gosub_screen_sequence_index;
+extern u8 D_8016B8DD[3];
 extern s32 g_gosub_scroll_frames_remaining;
 extern s32 g_gosub_combination_variant;
 extern s32 g_gosub_dialog_choice;
@@ -638,7 +645,9 @@ extern u8* g_gosub_dialog_text;
 extern s32 (*g_gosub_finish_handler)(void);
 extern u8 g_gosub_selection_mode;
 extern u8 g_gosub_required_selection_count;
+extern u8 D_8016B8FE[2];
 extern s32 g_gosub_show_row_details;
+extern s32 D_8016B904;
 extern s32 g_gosub_result_rows[16];
 extern s32 g_gosub_dialog_accepting_input;
 extern u8 g_gosub_selected_rows[4];
@@ -648,9 +657,11 @@ extern s32 g_gosub_window_width;
 extern s32 g_gosub_suppress_dialog_sound;
 extern u8 g_gosub_text_buffers[0x5000];
 extern u8 g_gosub_selection_count;
+extern u8 D_80170961[7];
 extern u8 g_gosub_screen_sequence[20];
 extern s32 g_gosub_combination_result_id;
 extern s32 g_gosub_row_height;
+extern s32 D_80170984;
 extern s32 g_gosub_scroll_y;
 extern s32 g_gosub_sort_ascending;
 extern s32 g_gosub_scroll_target_y;

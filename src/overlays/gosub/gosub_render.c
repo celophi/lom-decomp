@@ -91,12 +91,10 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
     GosubGpuPacket* packet_cursor;
     s32 animated_width;
     s32 animated_height;
-    GosubRenderContext* ordering_table;
+    s32* ordering_table;
     GosubElement* element;
-    u32 address_mask;
-    u32 tag_mask;
     s32 element_index;
-    s32 draw_env[24];
+    DRAWENV draw_env;
     u32 geometry_word;
     s32 element_height;
     u16 visible_height;
@@ -104,9 +102,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
     u32 element_width;
     u32 element_word;
     s32 element_height_calc;
-    s32 packet_address;
     s32 content_height;
-    GosubGpuPacket* draw_cursor;
     u32 marker_word;
     u32 panel_word;
     u32 state_word;
@@ -127,29 +123,25 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
     u32 updated_exiting_word;
 
     packet_cursor = render_context->packet_cursor;
-    ordering_table = render_context;
+    ordering_table = &render_context->tag;
 
     if (render_context->display_buffer_index != 0)
     {
-        SetDefDrawEnv((DRAWENV*)draw_env, 0, 0xF0, 0x140, 0xE0);
+        SetDefDrawEnv(&draw_env, 0, 0xF0, 0x140, 0xE0);
     }
     else
     {
-        SetDefDrawEnv((DRAWENV*)draw_env, 0, 8, 0x140, 0xE0);
+        SetDefDrawEnv(&draw_env, 0, 8, 0x140, 0xE0);
     }
 
     element = g_gosub_elements;
     element_index = 0;
-    address_mask = 0x00FFFFFF;
-    tag_mask = 0xFF000000;
 
     for (; element_index < GOSUB_ELEMENT_COUNT; element_index++)
     {
         element_word = element->attr.word;
         if (element_word & 7)
         {
-            draw_cursor = packet_cursor;
-
             if ((GosubElementDrawHandler)element->draw_handler == (GosubElementDrawHandler)gosub_draw_item_list)
             {
                 geometry_word = element->geometry.word;
@@ -163,7 +155,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                         u32 high;
                         field = (element_word >> 7) & 0x1FF;
                         high = element_word >> 24;
-                        packet_cursor = gosub_emit_scroll_marker((GosubScrollMarkerPacket*)draw_cursor, (s32*)ordering_table,
+                        packet_cursor = gosub_emit_scroll_marker((GosubScrollMarkerPacket*)packet_cursor, ordering_table,
                                                                  (field + (((geometry_word & 1) << 8) | high)) - 0x10, element->attr.f.y + element_height, 0);
                     }
                 }
@@ -175,16 +167,13 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                         marker_word = element->attr.word;
                         field = (marker_word >> 7) & 0x1FF;
                         high = marker_word >> 24;
-                        packet_cursor = gosub_emit_scroll_marker((GosubScrollMarkerPacket*)packet_cursor, (s32*)ordering_table,
+                        packet_cursor = gosub_emit_scroll_marker((GosubScrollMarkerPacket*)packet_cursor, ordering_table,
                                                                  (field + (((element->geometry.word & 1) << 8) | high)) - 0x10, element->attr.f.y, 1);
                     }
                 }
-                SetDrawEnv((DR_ENV*)packet_cursor, (DRAWENV*)draw_env);
-
-                packet_cursor->tag = (packet_cursor->tag & tag_mask) | (ordering_table->tag & address_mask);
-                ordering_table->tag = (s32)((ordering_table->tag & tag_mask) | ((s32)packet_cursor & address_mask));
-
-                packet_cursor = (GosubGpuPacket*)((u8*)packet_cursor + 0x40);
+                SetDrawEnv((DR_ENV*)packet_cursor, &draw_env);
+                addPrim(ordering_table, packet_cursor);
+                packet_cursor = (GosubGpuPacket*)((DR_ENV*)packet_cursor + 1);
 
                 if (g_gosub_row_count != 0)
                 {
@@ -192,24 +181,25 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     setTile(packet_cursor);
                     packet_cursor->w = 6;
                     element_height_calc = (element->geometry.word >> 1) & 0xFF;
-                    packet_cursor->h = (u16)((s32)(element_height_calc * (element_height_calc / g_gosub_row_height)) / g_gosub_row_count);
                     {
-                        s32 clamp_h;
-                        clamp_h = (s16)packet_cursor->h;
+                        /* The volatile pointer is required: the original reloads h after storing it. */
+                        volatile u16* bar_height;
+                        s32 initial_height;
+
+                        bar_height = &packet_cursor->h;
+                        *bar_height = (element_height_calc * (element_height_calc / g_gosub_row_height)) / g_gosub_row_count;
+                        initial_height = (s16)*bar_height;
                         working_word = element->geometry.word;
                         visible_height = ((u32)working_word >> 1) & 0xFF;
-                        if (clamp_h >= (s32)visible_height - 2)
+                        if (initial_height >= visible_height - 2)
                         {
-                            packet_cursor->h = visible_height;
+                            *bar_height = visible_height;
                         }
                     }
                     packet_cursor->x = 1;
                     packet_cursor->y = (s16)((s32)(((element->geometry.word >> 1) & 0xFF) * (g_gosub_scroll_y / g_gosub_row_height)) / g_gosub_row_count);
-                    packet_cursor->tag = (packet_cursor->tag & tag_mask) | (ordering_table->tag & address_mask);
-
-                    packet_address = (s32)packet_cursor & address_mask;
-                    packet_cursor = (GosubGpuPacket*)((u8*)packet_cursor + 0x10);
-                    ordering_table->tag = (s32)((ordering_table->tag & tag_mask) | packet_address);
+                    addPrim(ordering_table, packet_cursor);
+                    packet_cursor++;
                 }
                 {
                     u32 field;
@@ -217,19 +207,17 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     panel_word = element->attr.word;
                     field = (panel_word >> 7) & 0x1FF;
                     high = panel_word >> 24;
-                    packet_cursor = gosub_emit_panel(packet_cursor, (s32*)ordering_table, field + (((element->geometry.word & 1) << 8) | high) + 3,
+                    packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, field + (((element->geometry.word & 1) << 8) | high) + 3,
                                                      element->attr.f.y, 0xA, (element->geometry.word >> 1) & 0xFF, render_context->display_buffer_index);
                 }
-                draw_cursor = packet_cursor;
             }
-            SetDrawEnv((DR_ENV*)draw_cursor, (DRAWENV*)draw_env);
-            packet_cursor->tag = (packet_cursor->tag & tag_mask) | (ordering_table->tag & address_mask);
-            ordering_table->tag = (s32)((ordering_table->tag & tag_mask) | ((s32)packet_cursor & address_mask));
+            SetDrawEnv((DR_ENV*)packet_cursor, &draw_env);
+            addPrim(ordering_table, packet_cursor);
 
             state_word = element->attr.word;
             working_word = state_word & 7;
 
-            packet_cursor = (GosubGpuPacket*)((u8*)packet_cursor + 0x40);
+            packet_cursor = (GosubGpuPacket*)((DR_ENV*)packet_cursor + 1);
 
             switch (working_word)
             {
@@ -262,7 +250,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
                     packet_cursor =
-                        gosub_emit_panel(packet_cursor, (s32*)ordering_table, field + (s32)((((element->geometry.word & 1) << 8) | high) - animated_width) / 2,
+                        gosub_emit_panel(packet_cursor, ordering_table, field + (s32)((((element->geometry.word & 1) << 8) | high) - animated_width) / 2,
                                          element->attr.f.y + ((s32)((element->geometry.word >> 1) & 0xFF) - animated_height) / 2, animated_width,
                                          animated_height, render_context->display_buffer_index);
                 }
@@ -283,7 +271,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     u32 high;
                     case_word = element->attr.word;
                     high = case_word >> 24;
-                    packet_cursor = gosub_emit_panel(packet_cursor, (s32*)ordering_table, (case_word >> 7) & 0x1FF, element->attr.f.y,
+                    packet_cursor = gosub_emit_panel(packet_cursor, ordering_table, (case_word >> 7) & 0x1FF, element->attr.f.y,
                                                      ((element->geometry.word & 1) << 8) | high, (element->geometry.word >> 1) & 0xFF,
                                                      render_context->display_buffer_index);
                 }
@@ -318,7 +306,7 @@ void gosub_update_and_render_elements(GosubRenderContext* render_context)
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
                     packet_cursor =
-                        gosub_emit_panel(packet_cursor, (s32*)ordering_table, field + (s32)((((element->geometry.word & 1) << 8) | high) - animated_width) / 2,
+                        gosub_emit_panel(packet_cursor, ordering_table, field + (s32)((((element->geometry.word & 1) << 8) | high) - animated_width) / 2,
                                          element->attr.f.y + ((s32)((element->geometry.word >> 1) & 0xFF) - animated_height) / 2, animated_width,
                                          animated_height, render_context->display_buffer_index);
                 }
@@ -357,7 +345,7 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
     u32 i;
     u32 addr_mask;
     u8* source_bytes;
-    GosubScrollMarkerPacket* fill_packet;
+    GosubScrollFillPacket* fill_packet;
 
     setlen(prim, 6);
     setcode(prim, 0x4C);
@@ -406,9 +394,10 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
 
     addr_mask = 0xFFFFFF;
     source_bytes = (u8*)prim;
-    fill_packet = (GosubScrollMarkerPacket*)(source_bytes + 0x1C);
-    prim = fill_packet;
-    setaddr(source_bytes, *ot & addr_mask);
+    fill_packet = (GosubScrollFillPacket*)(prim + 1);
+    /* prim doubles as the copy's destination cursor; a separate local changes register allocation. */
+    prim = (GosubScrollMarkerPacket*)fill_packet;
+    setaddr(source_bytes, getaddr(ot) & addr_mask);
     i = 0;
     setaddr(ot, (u32)source_bytes & addr_mask);
     do
@@ -417,13 +406,13 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
         *(u8*)prim = *source_bytes;
         source_bytes += 1;
         prim = (GosubScrollMarkerPacket*)((u8*)prim + 1);
-    } while (i < 0x14U);
+    } while (i < sizeof(GosubScrollFillPacket));
 
     setlen(fill_packet, 4);
-    *(u32*)&fill_packet->r = 0;
+    SET_BGR0_PACKED(fill_packet, 0);
     setcode(fill_packet, 0x20);
     addPrim(ot, fill_packet);
-    return (u8*)fill_packet + 0x14;
+    return fill_packet + 1;
 }
 
 /**
@@ -440,48 +429,50 @@ void* gosub_emit_scroll_marker(GosubScrollMarkerPacket* prim, s32* ot, s32 x, s3
  */
 GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag)
 {
-    GosubGpuPacket* packet_cursor;
-    GosubGpuPacket* draw_env_packet;
+    DR_ENV* draw_env_packet;
+    GosubLinePacket* outline;
+    TILE* fill;
     DR_TPAGE* draw_mode_packet;
-    s32 draw_env[24];
+    DRAWENV draw_env;
     s32 working_value;
 
-    draw_env_packet = prim;
+    draw_env_packet = (DR_ENV*)prim;
     if (flag != 0)
     {
         working_value = y + 0xF2;
-        SetDefDrawEnv((DRAWENV*)draw_env, x + 2, working_value, w - 4, h - 4);
+        SetDefDrawEnv(&draw_env, x + 2, working_value, w - 4, h - 4);
     }
     else
     {
         working_value = y + 0xA;
-        SetDefDrawEnv((DRAWENV*)draw_env, x + 2, working_value, w - 4, h - 4);
+        SetDefDrawEnv(&draw_env, x + 2, working_value, w - 4, h - 4);
     }
-    SetDrawEnv((DR_ENV*)draw_env_packet, (DRAWENV*)draw_env);
-
+    SetDrawEnv(draw_env_packet, &draw_env);
     addPrim(ot, draw_env_packet);
+    draw_env_packet++;
 
-    draw_env_packet = (GosubGpuPacket*)((u8*)draw_env_packet + 0x40);
-    packet_cursor = gosub_emit_panel_corners((SPRT*)draw_env_packet, ot, x, y, w, h);
-    packet_cursor = (GosubGpuPacket*)gosub_emit_panel_outline((GosubLinePacket*)packet_cursor, ot, x, y, w, h, 0xFFFFFF);
-    packet_cursor = (GosubGpuPacket*)gosub_emit_panel_outline((GosubLinePacket*)packet_cursor, ot, x + 1, y + 1, w - 2, h - 2, 0);
-    packet_cursor = (GosubGpuPacket*)gosub_emit_panel_outline((GosubLinePacket*)packet_cursor, ot, x - 1, y - 1, w + 2, h + 2, 0);
-
+    outline = (GosubLinePacket*)gosub_emit_panel_corners((SPRT*)draw_env_packet, ot, x, y, w, h);
+    outline = gosub_emit_panel_outline(outline, ot, x, y, w, h, 0xFFFFFF);
+    outline = gosub_emit_panel_outline(outline, ot, x + 1, y + 1, w - 2, h - 2, 0);
+    outline = gosub_emit_panel_outline(outline, ot, x - 1, y - 1, w + 2, h + 2, 0);
+    /* Reusing the clip-y slot for the fill pointer and the do/while(0) barrier are both required to match. */
     do
     {
-        working_value = (s32)packet_cursor;
+        working_value = (s32)outline;
     } while (0);
-    SET_BGR0_PACKED((TILE*)working_value, 0xC0C0C0);
-    setTile((TILE*)working_value);
-    setSemiTrans((TILE*)working_value, 1);
-    setXY0((TILE*)working_value, x, y);
-    setWH((TILE*)working_value, w, h);
-    addPrim(ot, (TILE*)working_value);
+    fill = (TILE*)working_value;
 
-    draw_mode_packet = (DR_TPAGE*)(working_value + sizeof(TILE));
+    SET_BGR0_PACKED(fill, 0xC0C0C0);
+    setTile(fill);
+    setSemiTrans(fill, 1);
+    setXY0(fill, x, y);
+    setWH(fill, w, h);
+    addPrim(ot, fill);
+
+    draw_mode_packet = (DR_TPAGE*)(fill + 1);
     setDrawTPage(draw_mode_packet, 0, 0, 0x45);
     addPrim(ot, draw_mode_packet);
-    return (GosubGpuPacket*)(working_value + sizeof(TILE) + sizeof(DR_TPAGE));
+    return (GosubGpuPacket*)(draw_mode_packet + 1);
 }
 
 /**
@@ -498,7 +489,7 @@ GosubGpuPacket* gosub_emit_panel(GosubGpuPacket* prim, s32* ot, s32 x, s32 y, s3
  */
 GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 color)
 {
-    *(u32*)&line->r0 = color;
+    SET_BGR0_PACKED(line, color);
     setLineF2(line);
     setXY0(line, x + 4, y);
     line->x1 = (x + w) - 4;
@@ -506,7 +497,7 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
     addPrim(ot, line);
     line++;
 
-    *(u32*)&line->r0 = color;
+    SET_BGR0_PACKED(line, color);
     setLineF2(line);
     setXY0(line, x + w, y + 4);
     line->x1 = x + w;
@@ -514,7 +505,7 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
     addPrim(ot, line);
     line++;
 
-    *(u32*)&line->r0 = color;
+    SET_BGR0_PACKED(line, color);
     setLineF2(line);
     setXY0(line, (x + w) - 4, y + h);
     line->x1 = x + 4;
@@ -522,7 +513,7 @@ GosubLinePacket* gosub_emit_panel_outline(GosubLinePacket* line, s32* ot, s32 x,
     addPrim(ot, line);
     line++;
 
-    *(u32*)&line->r0 = color;
+    SET_BGR0_PACKED(line, color);
     setLineF2(line);
     setXY0(line, x, y + 4);
     line->x1 = x;
@@ -637,8 +628,8 @@ GosubTilePacket* gosub_draw_item_list(s32* ot, s32 initial_prim, s32 x_off, s32 
                     pos.x = 0x48 - x_off;
                     pos.y = line_y2;
                     prim = func_800A8A78(ot, prim, g_gosub_rows[row].secondary_value, g_gosub_rows[row].text_color, pos_p, 0);
-                    msg_off = g_gosub_message_archive_offset - -(*(u16*)((s32)g_gosub_message_archive_offset - -(s32)archive_data) + base);
-                    prim = func_800A88A0(prim, ot, (void*)msg_off, g_gosub_rows[row].text_color, 0x64 - x_off, line_y2, 0);
+                    prim = func_800A88A0(prim, ot, (void*)(g_gosub_message_archive_offset + (*(u16*)(g_gosub_message_archive_offset + (s32)archive_data) + base)),
+                                         g_gosub_rows[row].text_color, 0x64 - x_off, line_y2, 0);
                     pos.x = 0xB0 - x_off;
                     pos.y = line_y2;
                     prim = func_800A8A78(ot, prim, g_gosub_rows[row].primary_value, g_gosub_rows[row].text_color, pos_p, 0);
@@ -808,7 +799,7 @@ s32 gosub_draw_portrait(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     setWH(sprt, 0x30, 0x30);
     setClut(sprt, n + g_gosub_frame_parity * 0x50, 0x1F2);
     addPrim(ot, sprt);
-    return gosub_finish_glyph_run(prim + 0x14, ot);
+    return gosub_finish_glyph_run((s32)(sprt + 1), ot);
 }
 
 /**
