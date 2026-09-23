@@ -12,8 +12,6 @@
 /** @brief Project active particles and initialize the first available slot. */
 void func_80074368(WmapConfigA *actors, WmapResource *resources, s32 count)
 {
-/* Partial WMAP decompilation: 94.930070% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 
 
@@ -49,7 +47,6 @@ extern s32 rand(void);
     for (i = 0; i < count; i++)
     {
         motion = &D_801AFBD0[i];
-        actor = &actors[i];
         if (motion->state != 0)
         {
             position.vx = ((motion->z >> 3) * (ccos(motion->angle) >> 6)) >> 12;
@@ -60,8 +57,8 @@ extern s32 rand(void);
             motion->field_0E += motion->x;
             motion->z += 1000;
             gte_stsxy(&screen_position);
-            func_8006CC4C(actor, &resources[i]);
-            func_80066F9C(actor, screen_position, 15, 7, 0);
+            func_8006CC4C(&actors[i], &resources[i]);
+            func_80066F9C(&actors[i], screen_position, 15, 7, 0);
             motion->scale--;
             if (motion->scale == 0)
             {
@@ -73,9 +70,11 @@ extern s32 rand(void);
     D_800D922C = active_count;
     for (i = 0; i < count; i++)
     {
-        motion = &D_801AFBD0[i];
+        WmapMotion *slot;
+
+        slot = &D_801AFBD0[i];
         actor = &actors[i];
-        if (motion->state == 0)
+        if (slot->state == 0)
         {
             if (D_801B0FD0 >= active_count)
             {
@@ -85,12 +84,12 @@ extern s32 rand(void);
                 actor->field_22 = 129;
                 actor->field_24 = 129;
                 actor->field_02 = 0;
-                motion->state = 1;
-                motion->angle = rand();
-                motion->z = 10000;
-                motion->x = ((rand() * 5) >> 15) + 1;
-                motion->scale = ((rand() * 2) >> 15) + 24;
-                motion->field_0E = 0;
+                slot->state = 1;
+                slot->angle = rand();
+                slot->z = 10000;
+                slot->x = ((rand() * 5) >> 15) + 1;
+                slot->scale = ((rand() * 2) >> 15) + 24;
+                slot->field_0E = 0;
             }
             break;
         }
@@ -98,79 +97,108 @@ extern s32 rand(void);
 }
 
 /**
- * @brief Draw a world-map actor, seeding its position from a wrapping timer.
- * @note Copies the shared timer low half into two object fields, renders the
- *       actor at a cursor-relative offset, advances the timer and wraps it.
- * @note The dead Vec2s reproduces the original -0x30 frame reservation (FRAME-01).
- * @note Best match ~77% (gcc280_g0); residual is a callee-saved register tie
- *       (obj vs pos in s0/s1) plus a scheduling order difference on the timer read.
+ * @brief Fade a world-map actor in at a cursor-relative offset, then advance when its timer expires.
+ * @note Copies the fade level into two object fields before drawing and clamps it at 0x81.
  */
 void func_800745A4(void)
 {
-/* Partial WMAP decompilation: 77.309090% (gcc280_g0). */
+/** @brief World-map actor configuration. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} WmapConfigA;
 
-extern u8 D_800D9528[];
-extern u8 D_80139A08[];
-extern s32 D_8011CF4C;
+extern WmapConfigA D_800D9528;
+extern u8 *D_80139A08;
+extern u16 D_8011CF4C[2];
 extern s32 D_80182DEC;
 extern s32 D_801B25A0;
 extern s32 D_801B25A4;
 
-    u8* obj = D_800D9528;
-    Vec2s scratch;
-    s32 pos;
+    union
+    {
+        u16 half[2];
+        s32 word;
+    } position;
 
-    pos = ((*(u16*)&D_8011CF4C - 0x6) & 0xFFFF) | ((*(u16*)((u8*)&D_8011CF4C + 0x2) + 0xC) << 16);
-    *(s16*)(&obj[0x24]) = *(u16*)&D_80182DEC;
-    *(s16*)(&obj[0x22]) = *(u16*)&D_80182DEC;
-    func_8006CC4C(obj, D_80139A08);
-    func_80066F9C(obj, pos, 0x4, 0xB, 0);
-    D_80182DEC += 0x8;
+    position.half[0] = D_8011CF4C[0] - 6;
+    position.half[1] = D_8011CF4C[1] + 12;
+    D_800D9528.field_24 = *(u16 *)&D_80182DEC;
+    D_800D9528.field_22 = *(u16 *)&D_80182DEC;
+    func_8006CC4C(&D_800D9528, &D_80139A08);
+    func_80066F9C(&D_800D9528, position.word, 4, 11, 0);
+    D_80182DEC += 8;
     if (D_80182DEC >= 0x82)
     {
         D_80182DEC = 0x81;
     }
     if (--D_801B25A4 == 0)
     {
-        D_801B25A0 += 1;
+        D_801B25A0++;
     }
 }
 
 /**
- * @brief Draw a world-map actor at a nudged copy of the cursor, then decay a timer.
- * @note Packs a per-actor coordinate offset from the cursor halves, renders the
- *       actor, copies a shared timer into two object fields, and steps counters.
- * @note Best match ~94.3% (gcc280_g0); residual is a callee-saved register tie
- *       (obj base vs packed pos land in s0/s1 swapped). The dead Vec2s reproduces
- *       the original -0x30 frame reservation (FRAME-01).
+ * @brief Draw a world-map actor at a cursor-relative offset, then fade it out and advance when its timer expires.
+ * @note Copies the fade level into two object fields after drawing and clamps it at 0.
  */
 void func_80074680(void)
 {
-/* Partial WMAP decompilation: 94.260000% (gcc280_g0). */
+/** @brief World-map actor configuration. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} WmapConfigA;
 
-extern u8 D_800D9528[];
-extern u8 D_80139A08[];
-extern s32 D_8011CF4C;
+extern WmapConfigA D_800D9528;
+extern u8 *D_80139A08;
+extern u16 D_8011CF4C[2];
 extern s32 D_80182DEC;
 extern s32 D_801B25A0;
 extern s32 D_801B25A4;
 
-    Vec2s scratch;
-    s32 pos;
+    union
+    {
+        u16 half[2];
+        s32 word;
+    } position;
 
-    pos = ((*(u16*)&D_8011CF4C - 0x6) & 0xFFFF) | ((*(u16*)((u8*)&D_8011CF4C + 0x2) + 0xC) << 16);
-    func_8006CC4C(D_800D9528, D_80139A08);
-    func_80066F9C(D_800D9528, pos, 0x4, 0xB, 0);
-    *(s16*)(&D_800D9528[0x24]) = *(u16*)&D_80182DEC;
-    *(s16*)(&D_800D9528[0x22]) = *(u16*)&D_80182DEC;
-    D_80182DEC -= 0x8;
+    position.half[0] = D_8011CF4C[0] - 6;
+    position.half[1] = D_8011CF4C[1] + 12;
+    func_8006CC4C(&D_800D9528, &D_80139A08);
+    func_80066F9C(&D_800D9528, position.word, 4, 11, 0);
+    D_800D9528.field_24 = *(u16 *)&D_80182DEC;
+    D_800D9528.field_22 = *(u16 *)&D_80182DEC;
+    D_80182DEC -= 8;
     if (D_80182DEC < 0)
     {
         D_80182DEC = 0;
     }
     if (--D_801B25A4 == 0)
     {
-        D_801B25A0 += 1;
+        D_801B25A0++;
     }
 }
 
@@ -277,8 +305,59 @@ extern s32 D_801B25AC;
 /** @brief Draw the actor, increase its scale, and advance when its timer expires. */
 void func_800748E4(void)
 {
-/* Partial WMAP decompilation: 88.090910% (gcc280_g0). */
+/** @brief World-map actor configuration. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} WmapConfigA;
 
+extern WmapConfigA D_800D9580;
+extern u8 *D_80139A18;
+extern u16 D_8011CF4C[2];
+extern s32 D_801B25E0;
+extern s32 D_801B25B0;
+extern s32 D_801B25B4;
+
+    union
+    {
+        u16 half[2];
+        s32 word;
+    } position;
+
+    D_800D9580.field_24 = *(u16 *)&D_801B25E0;
+    D_800D9580.field_22 = *(u16 *)&D_801B25E0;
+    position.half[0] = D_8011CF4C[0] + 24;
+    position.half[1] = D_8011CF4C[1] + 4;
+    func_8006CC4C(&D_800D9580, &D_80139A18);
+    func_80066F9C(&D_800D9580, position.word, 4, 11, 0);
+    D_801B25E0 += 8;
+    if (D_801B25E0 >= 0x82)
+    {
+        D_801B25E0 = 0x81;
+    }
+    if (--D_801B25B4 == 0)
+    {
+        D_801B25B0++;
+    }
+}
+
+/**
+ * @brief Draw a world-map actor at a cursor-relative offset, then fade it out and advance when its timer expires.
+ * @note Copies the fade level into two object fields after drawing and clamps it at 0.
+ */
+void func_800749C0(void)
+{
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -311,14 +390,14 @@ extern s32 D_801B25B4;
 
     position.half[0] = D_8011CF4C[0] + 24;
     position.half[1] = D_8011CF4C[1] + 4;
-    D_800D9580.field_24 = *(u16 *)&D_801B25E0;
-    D_800D9580.field_22 = *(u16 *)&D_801B25E0;
     func_8006CC4C(&D_800D9580, &D_80139A18);
     func_80066F9C(&D_800D9580, position.word, 4, 11, 0);
-    D_801B25E0 += 8;
-    if (D_801B25E0 >= 0x82)
+    D_800D9580.field_24 = *(u16 *)&D_801B25E0;
+    D_800D9580.field_22 = *(u16 *)&D_801B25E0;
+    D_801B25E0 -= 8;
+    if (D_801B25E0 < 0)
     {
-        D_801B25E0 = 0x81;
+        D_801B25E0 = 0;
     }
     if (--D_801B25B4 == 0)
     {
@@ -327,125 +406,114 @@ extern s32 D_801B25B4;
 }
 
 /**
- * @brief Draw a world-map actor at a nudged copy of the cursor, then decay a timer.
- * @note Packs a per-actor coordinate offset from the cursor halves, renders the
- *       actor, copies a shared timer into two object fields, and steps counters.
- * @note Best match ~94.3% (gcc280_g0); residual is a callee-saved register tie
- *       (obj base vs packed pos land in s0/s1 swapped). The dead Vec2s reproduces
- *       the original -0x30 frame reservation (FRAME-01).
- */
-void func_800749C0(void)
-{
-/* Partial WMAP decompilation: 94.260000% (gcc280_g0). */
-
-extern u8 D_800D9580[];
-extern u8 D_80139A18[];
-extern s32 D_8011CF4C;
-extern s32 D_801B25E0;
-extern s32 D_801B25B0;
-extern s32 D_801B25B4;
-
-    Vec2s scratch;
-    s32 pos;
-
-    pos = ((*(u16*)&D_8011CF4C + 0x18) & 0xFFFF) | ((*(u16*)((u8*)&D_8011CF4C + 0x2) + 0x4) << 16);
-    func_8006CC4C(D_800D9580, D_80139A18);
-    func_80066F9C(D_800D9580, pos, 0x4, 0xB, 0);
-    *(s16*)(&D_800D9580[0x24]) = *(u16*)&D_801B25E0;
-    *(s16*)(&D_800D9580[0x22]) = *(u16*)&D_801B25E0;
-    D_801B25E0 -= 0x8;
-    if (D_801B25E0 < 0)
-    {
-        D_801B25E0 = 0;
-    }
-    if (--D_801B25B4 == 0)
-    {
-        D_801B25B0 += 1;
-    }
-}
-
-/**
- * @brief Draw a world-map actor, seeding its position from a wrapping timer.
- * @note Copies the shared timer low half into two object fields, renders the
- *       actor at a cursor-relative offset, advances the timer and wraps it.
- * @note The dead Vec2s reproduces the original -0x30 frame reservation (FRAME-01).
- * @note Best match ~77% (gcc280_g0); residual is a callee-saved register tie
- *       (obj vs pos in s0/s1) plus a scheduling order difference on the timer read.
+ * @brief Fade a world-map actor in at a cursor-relative offset, then advance when its timer expires.
+ * @note Copies the fade level into two object fields before drawing and clamps it at 0x81.
  */
 void func_80074A88(void)
 {
-/* Partial WMAP decompilation: 77.309090% (gcc280_g0). */
+/** @brief World-map actor configuration. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} WmapConfigA;
 
-extern u8 D_800D95AC[];
-extern u8 D_80139A20[];
-extern s32 D_8011CF4C;
+extern WmapConfigA D_800D95AC;
+extern u8 *D_80139A20;
+extern u16 D_8011CF4C[2];
 extern s32 D_801B25E4;
 extern s32 D_801B25B8;
 extern s32 D_801B25BC;
 
-    u8* obj = D_800D95AC;
-    Vec2s scratch;
-    s32 pos;
+    union
+    {
+        u16 half[2];
+        s32 word;
+    } position;
 
-    pos = ((*(u16*)&D_8011CF4C - 0x18) & 0xFFFF) | ((*(u16*)((u8*)&D_8011CF4C + 0x2) - 0xA) << 16);
-    *(s16*)(&obj[0x24]) = *(u16*)&D_801B25E4;
-    *(s16*)(&obj[0x22]) = *(u16*)&D_801B25E4;
-    func_8006CC4C(obj, D_80139A20);
-    func_80066F9C(obj, pos, 0x4, 0xB, 0);
-    D_801B25E4 += 0x8;
+    position.half[0] = D_8011CF4C[0] - 24;
+    position.half[1] = D_8011CF4C[1] - 10;
+    D_800D95AC.field_24 = *(u16 *)&D_801B25E4;
+    D_800D95AC.field_22 = *(u16 *)&D_801B25E4;
+    func_8006CC4C(&D_800D95AC, &D_80139A20);
+    func_80066F9C(&D_800D95AC, position.word, 4, 11, 0);
+    D_801B25E4 += 8;
     if (D_801B25E4 >= 0x82)
     {
         D_801B25E4 = 0x81;
     }
     if (--D_801B25BC == 0)
     {
-        D_801B25B8 += 1;
+        D_801B25B8++;
     }
 }
 
 /**
- * @brief Draw a world-map actor at a nudged copy of the cursor, then decay a timer.
- * @note Packs a per-actor coordinate offset from the cursor halves, renders the
- *       actor, copies a shared timer into two object fields, and steps counters.
- * @note Best match ~94.3% (gcc280_g0); residual is a callee-saved register tie
- *       (obj base vs packed pos land in s0/s1 swapped). The dead Vec2s reproduces
- *       the original -0x30 frame reservation (FRAME-01).
+ * @brief Draw a world-map actor at a cursor-relative offset, then fade it out and advance when its timer expires.
+ * @note Copies the fade level into two object fields after drawing and clamps it at 0.
  */
 void func_80074B64(void)
 {
-/* Partial WMAP decompilation: 94.260000% (gcc280_g0). */
+/** @brief World-map actor configuration. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} WmapConfigA;
 
-extern u8 D_800D95AC[];
-extern u8 D_80139A20[];
-extern s32 D_8011CF4C;
+extern WmapConfigA D_800D95AC;
+extern u8 *D_80139A20;
+extern u16 D_8011CF4C[2];
 extern s32 D_801B25E4;
 extern s32 D_801B25B8;
 extern s32 D_801B25BC;
 
-    Vec2s scratch;
-    s32 pos;
+    union
+    {
+        u16 half[2];
+        s32 word;
+    } position;
 
-    pos = ((*(u16*)&D_8011CF4C - 0x18) & 0xFFFF) | ((*(u16*)((u8*)&D_8011CF4C + 0x2) - 0xA) << 16);
-    func_8006CC4C(D_800D95AC, D_80139A20);
-    func_80066F9C(D_800D95AC, pos, 0x4, 0xB, 0);
-    *(s16*)(&D_800D95AC[0x24]) = *(u16*)&D_801B25E4;
-    *(s16*)(&D_800D95AC[0x22]) = *(u16*)&D_801B25E4;
-    D_801B25E4 -= 0x8;
+    position.half[0] = D_8011CF4C[0] - 24;
+    position.half[1] = D_8011CF4C[1] - 10;
+    func_8006CC4C(&D_800D95AC, &D_80139A20);
+    func_80066F9C(&D_800D95AC, position.word, 4, 11, 0);
+    D_800D95AC.field_24 = *(u16 *)&D_801B25E4;
+    D_800D95AC.field_22 = *(u16 *)&D_801B25E4;
+    D_801B25E4 -= 8;
     if (D_801B25E4 < 0)
     {
         D_801B25E4 = 0;
     }
     if (--D_801B25BC == 0)
     {
-        D_801B25B8 += 1;
+        D_801B25B8++;
     }
 }
 
 /** @brief Draw the rotating effect, raise its intensity, and advance its countdown. */
 void func_80074C2C(void)
 {
-/* Partial WMAP decompilation: 99.365080% (gcc280_g0). */
-
 extern u8 D_800DCF18[];
 extern VECTOR D_80139888;
 extern SVECTOR D_801B24A0;
@@ -455,7 +523,6 @@ extern s32 D_801B25D8;
 
     MATRIX matrix;
     s32 intensity;
-    s32 remaining;
 
     PushMatrix();
     RotMatrix(&D_801B24A0, &matrix);
@@ -471,10 +538,8 @@ extern s32 D_801B25D8;
         D_801B25D8 = 128;
     }
     D_801B24A0.vz = (u16)(D_801B24A0.vz + 40);
-    remaining = D_801B25D4 - 1;
-    D_801B25D4 = remaining;
     D_80139888.vz -= 7000;
-    if (remaining == 0)
+    if (--D_801B25D4 == 0)
     {
         D_801B25D0++;
     }
@@ -1171,8 +1236,6 @@ extern void func_800757FC__for_func_8007578C(void) __asm__("func_800757FC");
 /** @brief Draw the actor, increase its scale, and advance when its timer expires. */
 void func_800757FC(void)
 {
-/* Partial WMAP decompilation: 92.652176% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -1197,11 +1260,15 @@ extern s32 D_801B24B4;
 extern s32 D_801B2578;
 extern s32 D_801B257C;
 
+    WmapConfigA *obj;
+    WmapConfigA *actors;
 
-    D_800D9318.field_24 = *(u16 *)&D_801B24B4;
-    D_800D9318.field_22 = *(u16 *)&D_801B24B4;
-    func_8006CC4C(&D_800D9318, &D_801399A8);
-    func_80066F9C(&D_800D9318, D_8011CF4C, 15, 4, 0);
+    obj = &D_800D9318;
+    actors = obj - 4;
+    actors[4].field_24 = *(u16 *)&D_801B24B4;
+    actors[4].field_22 = *(u16 *)&D_801B24B4;
+    func_8006CC4C(obj, &D_801399A8);
+    func_80066F9C(obj, D_8011CF4C, 15, 4, 0);
     D_801B24B4 += 8;
     if (D_801B24B4 >= 0x82)
     {
@@ -1230,8 +1297,6 @@ extern s32 D_801B2578;
 /** @brief Draw the actor, reduce its scale, and advance when its timer expires. */
 void func_800758EC(void)
 {
-/* Partial WMAP decompilation: 92.318184% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -1256,11 +1321,15 @@ extern s32 D_801B24B4;
 extern s32 D_801B2578;
 extern s32 D_801B257C;
 
+    WmapConfigA *obj;
+    WmapConfigA *actors;
 
-    D_800D9318.field_24 = *(u16 *)&D_801B24B4;
-    D_800D9318.field_22 = *(u16 *)&D_801B24B4;
-    func_8006CC4C(&D_800D9318, &D_801399A8);
-    func_80066F9C(&D_800D9318, D_8011CF4C, 15, 4, 0);
+    obj = &D_800D9318;
+    actors = obj - 4;
+    actors[4].field_24 = *(u16 *)&D_801B24B4;
+    actors[4].field_22 = *(u16 *)&D_801B24B4;
+    func_8006CC4C(obj, &D_801399A8);
+    func_80066F9C(obj, D_8011CF4C, 15, 4, 0);
     D_801B24B4 -= 2;
     if (D_801B24B4 < 0)
     {
