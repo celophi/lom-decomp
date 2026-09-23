@@ -2,7 +2,7 @@
 run_world_map = 0x80060814; // type:func
 
 // Shared FIELD text symbols fall inside this WMAP function, not at entry points.
-func_800623CC = 0x800623CC; // type:func size:0x1814
+wmap_run_loop = 0x800623CC; // type:func size:0x1814
 
 // These FIELD entry points fall inside WMAP functions, not at WMAP boundaries.
 // ROM-scoped local labels keep shared FIELD symbols available to other overlays.
@@ -219,3 +219,42 @@ g_wmap_saved_day = 0x800432BE;
 g_wmap_replacement_land_status = 0x80043454;
 g_wmap_saved_map_status = 0x800435E0;
 g_wmap_layout_selection = 0x800430B8;
+
+// World-map main loop, scripted input, menu, and backdrop.
+wmap_init_frame_buffers = 0x80060720; // type:func
+wmap_init_state = 0x80060918; // type:func
+wmap_draw_backdrop = 0x80060F04; // type:func
+wmap_update_screen_fade = 0x80061878; // type:func
+wmap_update_menu = 0x80061A2C; // type:func
+wmap_wait_for_script_event = 0x80061F18; // type:func
+wmap_step_input_script = 0x80061FF8; // type:func
+wmap_read_controller = 0x80063BE0; // type:func
+wmap_refresh_cells = 0x80063F38; // type:func
+wmap_reset_after_transition = 0x80064094; // type:func
+g_wmap_buttons_repeat = 0x8013922C;
+g_wmap_buttons_held = 0x801398C0;
+g_wmap_script_button_mask = 0x80139868;
+g_wmap_map_button_mask = 0x800D9220;
+g_wmap_script_word = 0x801398A8;
+g_wmap_script_delay = 0x801398B4;
+g_wmap_script_wait = 0x80182DB4;
+g_wmap_input_script = 0x8011D0DC;
+g_wmap_cd_error = 0x8013B26C;
+g_wmap_input_locked = 0x8011CF50;
+g_wmap_script_prompt_visible = 0x800D916C;
+g_wmap_menu_selection = 0x800D9210;
+g_wmap_menu_page = 0x801398FC;
+g_wmap_menu_cursor_y = 0x801398C4;
+g_wmap_map_controls_active = 0x801398D4;
+g_wmap_loaded_menu_page = 0x800DCEA0;
+g_wmap_backdrop_level = 0x801398F0;
+g_wmap_backdrop_target_level = 0x801ADAF4;
+g_wmap_screen_fade_mode = 0x8013B254;
+g_wmap_backdrop_scroll = 0x800D06E0;
+g_wmap_small_motor = 0x800DCE98;
+g_wmap_large_motor = 0x800DCE9C;
+g_wmap_input_scripts = 0x800D0544;
+g_wmap_backdrop_front_quads = 0x800D0554;
+g_wmap_backdrop_back_quads = 0x800D05F4;
+g_wmap_menu_triangles = 0x800D06F8;
+g_wmap_exit_capture_rect = 0x80051ACC;

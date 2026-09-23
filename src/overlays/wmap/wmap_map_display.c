@@ -216,17 +216,14 @@ extern s32 g_wmap_game_origin_x;
 extern s32 g_wmap_game_origin_y;
 extern s32 g_wmap_game_hits;
 extern s32 D_800D921C;
-extern s32 D_800D9220;
 extern s32 D_800DBE78;
 extern s32 D_800DCEC0;
 extern s32 D_8011CF18;
 extern s32 D_8011CF7C;
 extern s32 D_8011D4FC;
-extern s32 D_8013922C;
 extern WmapDisplayCell D_80139290[6][6];
 extern s32 D_8013986C;
 extern s32 g_wmap_game_phase;
-extern s32 D_801398C0;
 extern WmapDisplayContext* D_801398EC;
 extern WmapDisplayProjection D_80139950;
 extern s32 D_8013B258;
@@ -315,7 +312,7 @@ void wmap_update_map_game(void)
 
     if (g_wmap_game_start_delay != 0)
     {
-        if ((D_801398C0 & PADL1) != 0)
+        if ((g_wmap_buttons_held & PADL1) != 0)
         {
             timer = g_wmap_game_start_delay - 1;
             g_wmap_game_start_delay = timer;
@@ -360,7 +357,7 @@ void wmap_update_map_game(void)
                 D_8013B258 = 1;
                 g_wmap_game_round = 0;
                 g_wmap_game_hits = 15;
-                D_800D9220 = 0xF0E0;
+                g_wmap_map_button_mask = 0xF0E0;
             }
         }
         else
@@ -477,8 +474,8 @@ void wmap_update_map_game(void)
         }
     }
 
-    D_801398C0 = 0;
-    D_8013922C = 0;
+    g_wmap_buttons_held = 0;
+    g_wmap_buttons_repeat = 0;
 }
 
 /**
@@ -494,7 +491,7 @@ void wmap_update_map_game_prompt(void)
     {
         s32 state_flags;
 
-        state_flags = D_8013922C;
+        state_flags = g_wmap_buttons_repeat;
         *sprite = g_wmap_game_continue_prompt;
 
         if (state_flags & PADRleft)
@@ -512,14 +509,14 @@ void wmap_update_map_game_prompt(void)
             D_8011CF7C = 1;
             D_800DCEC0 = 1;
             D_800DBE78 = 2;
-            func_80064094();
+            wmap_reset_after_transition();
         }
     }
     else
     {
         s32 state_flags;
 
-        state_flags = D_8013922C;
+        state_flags = g_wmap_buttons_repeat;
         *sprite = g_wmap_game_exit_prompt;
 
         if (state_flags & PADRright)
@@ -529,7 +526,7 @@ void wmap_update_map_game_prompt(void)
             D_8011CF7C = 1;
             D_800DCEC0 = 1;
             D_800DBE78 = 2;
-            func_80064094();
+            wmap_reset_after_transition();
         }
     }
 
@@ -606,7 +603,7 @@ void wmap_update_map_game_round(void)
         g_wmap_game_phase = WMAP_GAME_PROMPT;
     }
 
-    D_800D9234 = D_801398C0;
+    D_800D9234 = g_wmap_buttons_held;
     wmap_update_map_game_spawns();
 
     y = g_wmap_game_origin_y + D_800DCEF0;
@@ -614,7 +611,7 @@ void wmap_update_map_game_round(void)
     object_id = D_80139290[x][y].object_id;
     object = &g_wmap_land_display[object_id];
 
-    if (D_8013922C & PADRdown)
+    if (g_wmap_buttons_repeat & PADRdown)
     {
         if ((u32)(object->transition - 2) < 2)
         {
@@ -1806,11 +1803,11 @@ void wmap_draw_information_labels(void)
     WmapGlyph* image;
     SPRT* packet;
 
-    if ((D_8013922C & (PADLup | PADLright | PADLdown | PADLleft)) || D_801398D0 != 0)
+    if ((g_wmap_buttons_repeat & (PADLup | PADLright | PADLdown | PADLleft)) || D_801398D0 != 0)
     {
         g_wmap_information_groups = 0;
     }
-    if (!(D_801398C0 & PADRup) || D_8011D4FC == -1)
+    if (!(g_wmap_buttons_held & PADRup) || D_8011D4FC == -1)
     {
         g_wmap_information_groups = 0;
         return;

@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_effect_25.h"
 #include "sdk/libgte.h"
 #include "wmap_sequence_runtime.h"
@@ -1031,14 +1032,13 @@ extern void func_800AF9C4__for_func_800AEDEC(void) __asm__("func_800AF9C4");
 extern void func_800B0D24__for_func_800AEDEC(void) __asm__("func_800B0D24");
 extern s32 D_80139244;
 extern s32 D_801ADAE0;
-extern s32 D_801ADAF4;
 extern s32 D_801B2EF8;
 extern s32 D_801B2EFC;
 
     func_8006CAC0(func_800B0D24__for_func_800AEDEC);
     func_8006CAC0(func_800AF9C4__for_func_800AEDEC);
     D_80139244 = 1;
-    D_801ADAF4 = 1;
+    g_wmap_backdrop_target_level = 1;
     func_8006683C(0x701020);
     D_801ADAE0 = 1;
     D_801B2EFC = 8;
@@ -1144,11 +1144,10 @@ extern CVECTOR D_80182D74;
 extern CVECTOR D_80182D80;
 extern CVECTOR D_80182D8C;
 extern CVECTOR D_80182D94;
-extern s32 D_801ADAF4;
 extern s32 D_801B2EF8;
 extern s32 D_801B2EFC;
 
-    D_801ADAF4 = 0;
+    g_wmap_backdrop_target_level = 0;
     D_80182D74.r = 0x32;
     D_80182D74.g = 0;
     D_80182D74.b = 0xA0;
@@ -1318,7 +1317,6 @@ extern void func_800B1190__for_func_800AF2D4(void) __asm__("func_800B1190");
 extern void func_800B04D0__for_func_800AF2D4(void) __asm__("func_800B04D0");
 extern void func_800B01D0__for_func_800AF2D4(void) __asm__("func_800B01D0");
 extern s32 D_8013B29C;
-extern s32 D_801ADAF4;
 extern s32 D_801B2EF8;
 extern s32 D_801B2EFC;
 
@@ -1326,7 +1324,7 @@ extern s32 D_801B2EFC;
     func_8006CAC0(func_800B04D0__for_func_800AF2D4);
     func_8006CAC0(func_800B01D0__for_func_800AF2D4);
     D_8013B29C = 0;
-    D_801ADAF4 = 3;
+    g_wmap_backdrop_target_level = 3;
     D_801B2EFC = 0x10;
     D_801B2EF8 += 1;
 }
@@ -1446,7 +1444,6 @@ extern s32 D_8011D4FC;
 extern s32 D_8011D510;
 extern s32 D_8011D530;
 extern s32 D_80139244;
-extern s32 D_801ADAF4;
 extern WmapValueRecord D_80139290[][6];
 extern s32 D_801B2EF8;
 extern s32 D_801B2EFC;
@@ -1454,7 +1451,7 @@ extern void func_800AFC74__for_func_800AF4C0(void) __asm__("func_800AFC74");
 
     func_8006CAC0(&func_800AFC74__for_func_800AF4C0);
     D_80139244 = 0;
-    D_801ADAF4 = 15;
+    g_wmap_backdrop_target_level = 15;
     func_8006683C(0x606070);
     D_801B2EFC = 0x50;
     D_80139290[D_8011D510][D_8011D530].value = D_8011D4FC | 0x100;

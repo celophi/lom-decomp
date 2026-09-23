@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_transition.h"
 #include "wmap_land_preview.h"
 #include "wmap_land_preview_lines.h"
@@ -123,7 +124,6 @@ extern s32 D_800DCEEC;
 extern s32 D_800DCEF0;
 extern s32 D_8011CF18;
 extern s32 g_wmap_preview_bob_y;
-extern s32 D_8011CF50;
 extern s32 D_8011CF74;
 extern s32 D_8011D4FC;
 extern s32 D_8011D504;
@@ -260,7 +260,7 @@ void wmap_update_land_preview(void)
                 if (D_8011D4FC == WMAP_NO_ARTIFACT)
                 {
                     D_8011CF18 = WMAP_SELECTION_ARTIFACTS;
-                    D_8011CF50 = 0;
+                    g_wmap_input_locked = 0;
                     g_wmap_artifact_transfer_frame = D_8011D4FC;
                     g_wmap_preview_texture = 0;
                     g_wmap_preview_shape = 0;
@@ -274,7 +274,7 @@ void wmap_update_land_preview(void)
                 {
                     func_800652A8(g_wmap_artifact_return_frames[g_wmap_artifact_transfer_end].sound_id, WMAP_ARTIFACT_RETURN_VOLUME);
                     D_8011CF18 = WMAP_SELECTION_ARTIFACTS;
-                    D_8011CF50 = 0;
+                    g_wmap_input_locked = 0;
                     g_wmap_preview_texture = 0;
                     g_wmap_artifact_transfer_frame = -1;
                     g_wmap_preview_shape = 0;
@@ -337,7 +337,7 @@ void wmap_update_land_preview(void)
             if (g_wmap_preview_travel_end == travel_index)
             {
                 D_8011CF18 = WMAP_SELECTION_MAP;
-                D_8011CF50 = 0;
+                g_wmap_input_locked = 0;
             }
             else if (g_wmap_artifact_transfer_frame == -1)
             {

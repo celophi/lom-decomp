@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_effect_07.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
@@ -467,7 +468,6 @@ extern void (*D_800D55D0[])(void);
 void func_8007F5D0(void)
 {
 extern s32 D_8013B208;
-extern s32 D_801ADAF4;
 extern s32 D_801B2788;
 extern s32 D_801B278C;
 extern void func_8007FC38__for_func_8007F5D0(void) __asm__("func_8007FC38");
@@ -475,7 +475,7 @@ extern void func_8007FADC__for_func_8007F5D0(void) __asm__("func_8007FADC");
 
     D_8013B208 = 1;
     func_8006683C(0x803030);
-    D_801ADAF4 = 4;
+    g_wmap_backdrop_target_level = 4;
     func_800652A8(0x1D, 0x80);
     func_8006CAC0(func_8007FC38__for_func_8007F5D0);
     func_8006CAC0(func_8007FADC__for_func_8007F5D0);

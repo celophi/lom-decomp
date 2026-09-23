@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_effect_23.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
@@ -726,13 +727,12 @@ void func_8009E43C(void)
 {
 extern s32 D_8013B208;
 extern s32 D_801ADAE0;
-extern s32 D_801ADAF4;
 extern s32 D_801B2CD8;
 extern s32 D_801B2CDC;
 
     D_8013B208 = 1;
     func_8006683C(0x701040);
-    D_801ADAF4 = 8;
+    g_wmap_backdrop_target_level = 8;
     D_801ADAE0 = 1;
     func_800652A8(0x29, 0x80);
     D_801B2CDC = 0x18;
@@ -962,12 +962,11 @@ extern s32 D_801B2CD8;
 void func_8009E800(void)
 {
 extern s32 D_80139244;
-extern s32 D_801ADAF4;
 extern s32 D_801B2CD8;
 extern s32 D_801B2CDC;
 
     D_80139244 = 1;
-    D_801ADAF4 = 1;
+    g_wmap_backdrop_target_level = 1;
     func_8006683C(0x201010);
     D_801B2CDC = 0x30;
     D_801B2CD8 += 1;
@@ -1019,14 +1018,13 @@ extern s32 D_801B2CD8;
 /** @brief World-map step handler: register a callback, kick a job, advance the step. */
 void func_8009E8F4(void)
 {
-extern s32 D_801ADAF4;
 extern s32 D_801B2CD8;
 extern s32 D_801B2CDC;
 extern void func_800A03B4__for_func_8009E8F4(void) __asm__("func_800A03B4");
 
     func_8006CAC0(func_800A03B4__for_func_8009E8F4);
     func_8006683C(0x302050);
-    D_801ADAF4 = 3;
+    g_wmap_backdrop_target_level = 3;
     D_801B2CDC = 8;
     D_801B2CD8 += 1;
 }
@@ -1164,13 +1162,12 @@ extern s32 D_801B2CD8;
 void func_8009EB48(void)
 {
 extern s32 D_80139244;
-extern s32 D_801ADAF4;
 extern s32 D_801B2CD8;
 extern s32 D_801B2CDC;
 
     D_80139244 = 0;
     func_8006683C(0x602050);
-    D_801ADAF4 = 7;
+    g_wmap_backdrop_target_level = 7;
     D_801B2CDC = 0x75;
     D_801B2CD8 += 1;
 }

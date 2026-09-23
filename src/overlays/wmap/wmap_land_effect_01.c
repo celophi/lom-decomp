@@ -6,6 +6,7 @@
 #include "sdk/gte_dmpsx_compat.h"
 #include "wmap_view_effects.h"
 #include "wmap_resource_support.h"
+#include "wmap_main.h"
 
 /** @brief First word of a 40-byte world-map cell. */
 typedef struct
@@ -906,12 +907,11 @@ extern void (*D_800D4F10[])(void);
  */
 void func_8007372C(void)
 {
-extern s32 D_8011CF50;
 extern s32 D_8013B20C;
 extern s32 D_801B2518;
 extern void func_8007377C__for_func_8007372C(void) __asm__("func_8007377C");
 
-    D_8011CF50 = 1;
+    g_wmap_input_locked = 1;
     func_8006CAC0(func_8006C81C);
     D_8013B20C = 1;
     D_801B2518 += 1;

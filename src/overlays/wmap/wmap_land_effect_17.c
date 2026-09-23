@@ -1,3 +1,4 @@
+#include "wmap_main.h"
 #include "wmap_land_effect_17.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
@@ -860,7 +861,6 @@ extern s32 D_801B29B0;
 /** @brief Register two callbacks, set world-map color and state, and begin an eight-tick delay. */
 void func_8008B524(void)
 {
-extern s32 D_801ADAF4;
 extern s32 D_801B29B0;
 extern s32 D_801B29B4;
 extern void func_8008C39C__for_func_8008B524(void) __asm__("func_8008C39C");
@@ -869,7 +869,7 @@ extern void func_8008C4C8__for_func_8008B524(void) __asm__("func_8008C4C8");
     func_8006CAC0(&func_8008C4C8__for_func_8008B524);
     func_8006CAC0(&func_8008C39C__for_func_8008B524);
     func_8006683C(0x103056);
-    D_801ADAF4 = 4;
+    g_wmap_backdrop_target_level = 4;
     D_801B29B4 = 8;
     D_801B29B0 += 1;
 }
