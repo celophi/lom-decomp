@@ -1,13 +1,67 @@
-// Field dialogue/text renderer exports used by this overlay.
-field_text_reset_windows             = 0x800643E0;
-field_text_reset_scratch             = 0x8006441C;
+// SHOP.BIN overlay symbols. Shared main-executable and FIELD exports come from
+// shared_symbol_addrs.txt, which SHOP.BIN.yaml lists first.
+
 g_shop_overlay_id = 0x80140000;
-g_menu_element_counter                     = 0x8012298C;
 
-field_text_upload_immediate_cache = 0x80063194;
+// FIELD exports used by this overlay that are not in the shared map.
+field_restore_fade_target = 0x80067F28;
+field_set_default_fade_target = 0x80067F8C;
+field_text_reset_windows = 0x800643E0;
+field_text_reset_scratch = 0x8006441C;
+play_menu_sfx = 0x800A3938;
 
-// FIELD exports used by this overlay.
-field_copy_inventory_record = 0x800A8F8C;
-field_compact_inventory = 0x800A8FB4;
-field_find_free_inventory_record = 0x800A9060;
-field_reset_input_repeat = 0x800AA02C;
+// shop.c
+shop_init = 0x80140004;
+shop_update = 0x801400D4;
+shop_build_sell_list = 0x80140164;
+shop_build_buy_list = 0x801404A8;
+shop_run_frame = 0x80140798;
+shop_handle_list_input = 0x80140838;
+shop_open_notice = 0x80140CA4;
+shop_draw = 0x80140D4C;
+shop_reset_windows = 0x80140D6C;
+shop_alloc_window = 0x80140DAC;
+
+// shop_render.c
+shop_draw_windows = 0x80140E00;
+shop_draw_money_window = 0x801414F8;
+shop_draw_list_window = 0x801415F4;
+shop_draw_detail_window = 0x801419D4;
+shop_draw_title_window = 0x801420B8;
+
+// shop_text.c
+shop_text_append = 0x80142130;
+shop_text_length = 0x801421B4;
+shop_text_copy = 0x80142200;
+
+// shop_trade.c
+shop_draw_notice_window = 0x80142284;
+shop_open_buy_prompt = 0x8014234C;
+shop_draw_buy_prompt = 0x80142400;
+shop_open_sell_prompt = 0x801428F0;
+shop_draw_sell_prompt = 0x801429A4;
+
+// Overlay data.
+g_shop_text_archive = 0x80142D04; // size:0x14 allow_addend:True
+g_shop_item_sell_prices = 0x80144FB4;
+g_shop_title_text_id = 0x801451B8;
+g_shop_frame_index = 0x801451BC;
+g_shop_work_end = 0x801451C0;
+g_shop_is_buying = 0x801451C4;
+g_shop_finished = 0x801451C8;
+g_shop_work_buffer = 0x801451CC;
+g_shop_confirm_choice = 0x801451D0;
+g_shop_prompt_active = 0x801451D4;
+g_shop_windows = 0x801451D8;
+g_shop_notice_active = 0x80145238;
+g_shop_notice_id = 0x8014523C;
+g_shop_quantity = 0x80145240;
+g_shop_item_records = 0x80145244;
+g_shop_scroll_y = 0x80145248;
+g_shop_scroll_target = 0x8014524C;
+g_shop_entries = 0x80145250;
+g_shop_entry_buffer = 0x80145258;
+g_shop_entry_count = 0x80145CD8;
+g_shop_cursor = 0x80145CDC;
+g_shop_scroll_frames = 0x80145CE0;
+

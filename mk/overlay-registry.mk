@@ -317,25 +317,10 @@ overlay_niki_gcc_272_cdk_g0_srcs := src/overlays/niki/overlay_header.c src/overl
 OVERLAYS += shop
 overlay_shop_gcc_272_cdk_g0_srcs := \
 	src/overlays/shop/overlay_header.c \
-	src/overlays/shop/func_801429A4.c \
-	src/overlays/shop/shop_init.c \
-	src/overlays/shop/shop_update_interp.c \
-	src/overlays/shop/shop_handle_list_input.c \
-	src/overlays/shop/shop_element_utils.c \
-	src/overlays/shop/func_80140E00.c \
-	src/overlays/shop/shop_string_utils.c \
-	src/overlays/shop/shop_element_init_a.c \
-	src/overlays/shop/shop_element_init_b.c \
-	src/overlays/shop/shop_mode_element_init.c \
-	src/overlays/shop/shop_draw_indexed_glyph.c \
-	src/overlays/shop/shop_draw_mode_glyph.c \
-	src/overlays/shop/shop_draw_money_value.c \
-	src/overlays/shop/shop_setup_default_list.c \
-	src/overlays/shop/func_801415F4.c \
-	src/overlays/shop/func_801419D4.c \
-	src/overlays/shop/func_80142400.c
-overlay_shop_gcc_272_cdk_g0_nostrength_srcs := \
-	src/overlays/shop/shop_setup_custom_list.c
+	src/overlays/shop/shop.c \
+	src/overlays/shop/shop_render.c \
+	src/overlays/shop/shop_text.c \
+	src/overlays/shop/shop_trade.c
 overlay_shop_gcc_280_g0_srcs :=
 
 OVERLAYS += title
