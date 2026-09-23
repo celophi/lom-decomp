@@ -730,7 +730,7 @@ static void wsel_update_scroll(void)
  * @param tile Storage for four tiles and a draw-mode packet.
  * @param ot Ordering-table entry receiving the mask primitives.
  * @return Packet cursor immediately after the draw-mode packet.
- * @see decomp.me (100%) https://decomp.me/scratch/f3i65
+ * @see decomp.me (100%) https://decomp.me/scratch/KjkRk
  */
 static void* wsel_draw_selection_mask(TILE* tile, u_long* ot)
 {
