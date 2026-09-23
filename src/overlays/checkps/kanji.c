@@ -6,8 +6,10 @@
 #define CHECKPS_KANJI_LINE_HEIGHT 18
 #define CHECKPS_KANJI_ADVANCE 17
 #define CHECKPS_KANJI_PIXELS_PER_ROW 16
-#define CHECKPS_KANJI_GPU_TAG 0x0B000000
-#define CHECKPS_KANJI_GPU_LOAD_IMAGE 0xA0000000
+/* Words following the tag in the glyph-row upload packet: command, xy, wh and 8 pixel words. */
+#define CHECKPS_KANJI_PACKET_WORDS 11
+/* GP0(A0h): copy a rectangle from CPU to VRAM. */
+#define CHECKPS_GPU_LOAD_IMAGE_COMMAND 0xA0000000
 
 void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color);
 
@@ -19,41 +21,46 @@ void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color);
  */
 void draw_kanji_string(const char* text, KanjiDrawState* draw_state, s32 color)
 {
-    const char* end;
-    const char* text_end;
+    const u8* cursor;
+    const u8* end;
+    const u8* loop_end;
     s32 is_newline;
-    s32 saved_x;
+    s32 line_start_x;
     s32 high_byte;
     s32 glyph_color;
     u16 character_code;
     s32 newline;
+
     glyph_color = color;
-    end = text + strlen(text);
+    end = (const u8*)text + strlen(text);
     newline = '\n';
-    saved_x = draw_state->position.coord.x;
-    if (text < end)
+    cursor = (const u8*)text;
+    line_start_x = draw_state->position.coord.x;
+    /* The color, newline and loop_end copies reproduce the original register usage. */
+    if (cursor < end)
     {
-        text_end = end;
+        loop_end = end;
         do
         {
-            is_newline = (*((u8*)text)) == newline;
+            is_newline = *cursor == newline;
             if (is_newline)
             {
-                draw_state->position.coord.x = saved_x;
+                draw_state->position.coord.x = line_start_x;
                 draw_state->position.coord.y += CHECKPS_KANJI_LINE_HEIGHT;
             }
             else
             {
-                high_byte = *((u8*)text);
-                text++;
-                character_code = (high_byte << 8) | (*((u8*)text));
+                high_byte = *cursor;
+                cursor++;
+                character_code = (high_byte << 8) | *cursor;
                 draw_kanji_glyph(draw_state, (u8*)Krom2RawAdd(character_code), glyph_color);
                 draw_state->position.coord.x += CHECKPS_KANJI_ADVANCE;
             }
-            text++;
-        } while (text < text_end);
+            cursor++;
+        } while (cursor < loop_end);
     }
 }
+
 /**
  * @brief Expand and upload one 1bpp Kanji-ROM glyph to VRAM.
  * @param draw_state VRAM destination and glyph dimensions.
@@ -64,10 +71,10 @@ void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
 {
     struct
     {
-        s32 tag;
-        s32 code;
-        s32 xy;
-        s32 wh;
+        u32 tag;
+        u32 command;
+        u32 xy;
+        u32 wh;
         s16 pixels[CHECKPS_KANJI_PIXELS_PER_ROW];
     } packet;
     s32 original_x;
@@ -75,19 +82,14 @@ void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
     s32 row;
     s32 pass;
     s16* write_ptr;
-    s16* pixel_ptr;
     s32 bit;
-    s16 pixel_value;
-    u8* source = bitmap;
-    s16 foreground_color = color;
 
     /* Preserve the caller's position across the glyph upload. */
     original_x = draw_state->position.coord.x;
     original_y = draw_state->position.coord.y;
 
-    /* GPU CPU-to-VRAM packet: eleven words follow the tag. */
-    packet.tag = CHECKPS_KANJI_GPU_TAG;
-    packet.code = CHECKPS_KANJI_GPU_LOAD_IMAGE;
+    packet.tag = CHECKPS_KANJI_PACKET_WORDS << 24;
+    packet.command = CHECKPS_GPU_LOAD_IMAGE_COMMAND;
     packet.wh = draw_state->size.packed;
     for (row = 0; row < CHECKPS_GLYPH_BITMAP_ROWS; row++)
     {
@@ -98,18 +100,10 @@ void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
         {
             for (bit = 7; bit >= 0; bit--)
             {
-                pixel_ptr = write_ptr;
-                write_ptr = pixel_ptr + 1;
-                pixel_value = 0;
-
-                if ((*source >> bit) & 1)
-                {
-                    pixel_value = foreground_color;
-                }
-                *pixel_ptr = pixel_value;
+                *write_ptr++ = ((*bitmap >> bit) & 1) ? color : 0;
             }
 
-            source++;
+            bitmap++;
         }
 
         /* Upload twice one pixel apart to thicken the row horizontally. */

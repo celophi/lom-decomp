@@ -111,12 +111,12 @@ overlay_checkps_gcc_272_cdk_g0_srcs := \
 overlay_checkps_gcc_280_g0_srcs := src/overlays/checkps/kanji.c
 overlay_checkps_gcc_272_gnu_g0_srcs := \
 	src/overlays/checkps/pattern.c \
-	src/overlays/checkps/cdrom.c \
-	src/overlays/checkps/cdrom_data.c
+	src/overlays/checkps/cdrom.c
 # Preserve GCC/local switch labels for objdiff.  cdrom.c's only compiler-emitted
 # .data is the control-flow anchor array, so discard it and recreate the target
-# object's empty .data section without contributing any linked bytes.
-overlay_checkps_gcc_272_gnu_as_extra_flags_cdrom := -L
+# object's empty .data section without contributing any linked bytes.  -G0 keeps
+# cdrom.c's static CD-state variables in .bss (GNU as would otherwise use .sbss).
+overlay_checkps_gcc_272_gnu_as_extra_flags_cdrom := -L -G0
 overlay_checkps_gcc_272_gnu_objcopy_flags_cdrom := --remove-section=.data --remove-section=.text --rename-section=.text.cdrom=.text --add-section=.data=/dev/null --set-section-flags=.data=alloc,data
 overlay_checkps_target_as_extra_flags_cdrom := -L
 

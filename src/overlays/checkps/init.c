@@ -40,7 +40,7 @@
 #define CHECKPS_INITIAL_REPEAT_DELAY 15
 #define CHECKPS_REPEAT_DELAY 2
 #define CHECKPS_DPAD_MASK (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
-#define CHECKPS_NON_REPEAT_BUTTON_MASK \
+#define CHECKPS_NON_REPEAT_BUTTON_MASK                                                                                                                         \
     (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)
 
 /**
@@ -71,8 +71,7 @@ typedef union
 } CheckPSFadePrimitive;
 
 /** Advance a fade packet cursor by the concrete packet just emitted. */
-#define CHECKPS_NEXT_FADE_PRIMITIVE(primitive, type) \
-    ((CheckPSFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+#define CHECKPS_NEXT_FADE_PRIMITIVE(primitive, type) ((CheckPSFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /** @brief Packet view for a CHECKPS image sprite or draw-mode command. */
 typedef union
@@ -82,8 +81,7 @@ typedef union
 } CheckPSImagePrimitive;
 
 /** Advance an image packet cursor by the concrete packet just emitted. */
-#define CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, type) \
-    ((CheckPSImagePrimitive*)((u8*)(primitive) + sizeof(type)))
+#define CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, type) ((CheckPSImagePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /**
  * @brief GPU environments and clear rectangle for one display buffer.
@@ -167,8 +165,8 @@ s32 g_last_input_state;
 s32 g_input_repeat_timer;
 
 /*
- * Unreferenced BSS extent between init.c and cdrom_data.c.  Keep the exact
- * element count: it preserves the linked address of the following CD state globals.
+ * Unreferenced BSS extent at the end of init.c.  Keep the exact element count:
+ * it preserves the linked address of cdrom.c's CD state variables that follow.
  */
 s32 g_checkps_reserved_bss[CHECKPS_RESERVED_BSS_WORDS];
 
@@ -196,7 +194,7 @@ s32 run_checkps(CheckPSRenderState* render_state)
 void run_checkps_display_loop(CheckPSRenderState* render_state)
 {
     RECT rect;
-    u_long* ordering_table_end;
+    u_long* drawn_ordering_table;
     CheckPSFrame* frame;
     CheckPSFrame* next_frame;
 
@@ -218,8 +216,8 @@ void run_checkps_display_loop(CheckPSRenderState* render_state)
     SetDispMask(1);
     do
     {
-        ordering_table_end = frame->ordering_table;
-        ClearOTagR(ordering_table_end, CHECKPS_ORDERING_TABLE_LENGTH);
+        drawn_ordering_table = frame->ordering_table;
+        ClearOTagR(drawn_ordering_table, CHECKPS_ORDERING_TABLE_LENGTH);
         frame->primitive_cursor = frame->primitive_buffer;
         begin_glyph_cache_frame();
         update_and_draw_fade(frame);
@@ -238,8 +236,7 @@ void run_checkps_display_loop(CheckPSRenderState* render_state)
         frame = next_frame;
         PutDispEnv(&frame->display.disp);
         PutDrawEnv(&frame->display.draw);
-        ordering_table_end += CHECKPS_ORDERING_TABLE_LENGTH - 1;
-        DrawOTag(ordering_table_end);
+        DrawOTag(&drawn_ordering_table[CHECKPS_ORDERING_TABLE_LENGTH - 1]);
 
         update_controllers();
         cdrom_process_state();
@@ -296,28 +293,26 @@ void load_embedded_checkps_audio(void)
 {
     u8* bank_data;
     u8* upload_bank_data;
-    u8* bank_destination;
     u32 bank_size;
-    AkaoHeader** bank_slot;
     u32* section_offsets;
 
-    if (((((g_previous_game_state == GAME_STATE_TITLE) || (g_previous_game_state == GAME_STATE_GNAME)) || (g_previous_game_state == GAME_STATE_FIELD)) || (g_previous_game_state == CHECKPS_AUDIO_BANK_RESIDENT_STATE)) ||
-        (g_previous_game_state == GAME_STATE_MENU_LOAD) || (g_previous_game_state == GAME_STATE_WORLD_SELECT))
+    if (g_previous_game_state == GAME_STATE_TITLE || g_previous_game_state == GAME_STATE_GNAME || g_previous_game_state == GAME_STATE_FIELD ||
+        g_previous_game_state == CHECKPS_AUDIO_BANK_RESIDENT_STATE || g_previous_game_state == GAME_STATE_MENU_LOAD ||
+        g_previous_game_state == GAME_STATE_WORLD_SELECT)
     {
         return;
     }
 
-    bank_slot = &g_checkps_akao_bank;
-    *bank_slot = CHECKPS_AUDIO_BANK_ADDRESS;
+    g_checkps_akao_bank = CHECKPS_AUDIO_BANK_ADDRESS;
 
+    /* The offset table follows the section count. */
     section_offsets = &g_embedded_checkps_akao.section_count;
-    section_offsets++; /* Advance from the count field to the offset table. */
+    section_offsets++;
 
     bank_data = AKAO_CONTAINER_DATA_AT(&g_embedded_checkps_akao, section_offsets[CHECKPS_AKAO_COPIED_SECTION]);
-    bank_destination = (u8*)*bank_slot;
     bank_size = section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
-    bcopy(bank_data, bank_destination, bank_size);
-    akao_register_bank(*bank_slot);
+    bcopy(bank_data, (u8*)g_checkps_akao_bank, bank_size);
+    akao_register_bank(g_checkps_akao_bank);
     upload_bank_data = AKAO_CONTAINER_DATA_AT(&g_embedded_checkps_akao, section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION]);
     akao_upload_bank_blocking((AkaoBankHeader*)upload_bank_data, 1);
 }
@@ -494,13 +489,10 @@ void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
  */
 void update_checkps_input_and_timeout(void)
 {
-    s32 timer;
-
     process_controller_input();
-    timer = g_checkps_image_frames_remaining - 1;
-    g_checkps_image_frames_remaining = timer;
+    g_checkps_image_frames_remaining--;
 
-    if (timer == 0)
+    if (g_checkps_image_frames_remaining == 0)
     {
         g_checkps_exit_reason = CHECKPS_EXIT_IMAGE_TIMEOUT;
     }
@@ -514,30 +506,21 @@ void draw_checkps_image(CheckPSFrame* frame)
 {
     CheckPSImagePrimitive* primitive;
     s32 width_words;
-    s32 image_width_words;
-    s32 image_height;
+    s32 height;
     u_long* ordering_table;
-    volatile u32 stack_layout_scratch; /* Required to preserve the original stack frame. */
+    s32 unused[2]; /* Never used, but the original stack frame reserves it. */
+
     primitive = frame->primitive_cursor;
-
-    SET_BGR0_PACKED(&primitive->sprite, GPU_TINT_NEUTRAL);
-
-    setSprt(&primitive->sprite);
-
-    width_words = g_checkps_image_width_words;
-    image_height = g_checkps_image_height;
-
-    setUV0(&primitive->sprite, 0, 0);
-    setClut(&primitive->sprite, 0, CHECKPS_IMAGE_CLUT_Y);
-    setXY0(&primitive->sprite, (SCREEN_WIDTH - (width_words * 4)) >> 1, (VRAM_DRAW_HEIGHT - image_height) / 2);
-
-    /* Keep the second width read used by the original packet setup. */
-    image_width_words = g_checkps_image_width_words;
-    width_words = image_width_words;
-
     ordering_table = frame->ordering_table;
 
-    setWH(&primitive->sprite, width_words * 4, g_checkps_image_height);
+    SET_BGR0_PACKED(&primitive->sprite, GPU_TINT_NEUTRAL);
+    setSprt(&primitive->sprite);
+    width_words = g_checkps_image_width_words;
+    height = g_checkps_image_height;
+    setUV0(&primitive->sprite, 0, 0);
+    setClut(&primitive->sprite, 0, CHECKPS_IMAGE_CLUT_Y);
+    setXY0(&primitive->sprite, (SCREEN_WIDTH - width_words * 4) >> 1, (VRAM_DRAW_HEIGHT - height) / 2);
+    setWH(&primitive->sprite, g_checkps_image_width_words * 4, g_checkps_image_height);
     addPrim(ordering_table, &primitive->sprite);
 
     primitive = CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, SPRT);
@@ -550,21 +533,16 @@ void draw_checkps_image(CheckPSFrame* frame)
 
 /**
  * @brief Upload the embedded CHECKPS CLUT and image pixels to VRAM.
- * @note The dimensions pointer is advanced separately to retain the original
- *       pixel-payload address calculation.
  */
 void load_checkps_image(void)
 {
     RECT image_destination;
     RECT upload_rect;
-    RECT* upload_rect_ptr;
     TimPrefix* image_asset;
     u32 clut_block_size;
     TimBlock* pixel_block;
-    u16 image_x, image_y;
-    TimDimensions* pixel_dimensions;
+    TimDimensions* pixel_size;
 
-    upload_rect_ptr = &upload_rect;
     image_asset = &g_checkps_image_asset;
 
     g_checkps_image_frames_remaining = CHECKPS_IMAGE_DISPLAY_FRAMES;
@@ -573,21 +551,18 @@ void load_checkps_image(void)
     setRECT(&upload_rect, 0, CHECKPS_IMAGE_CLUT_Y, image_asset->clut_block.dimensions.width * image_asset->clut_block.dimensions.height, 1);
 
     clut_block_size = image_asset->clut_block.bnum;
-    LoadImage(upload_rect_ptr, image_asset->clut_data);
-
-    image_x = image_destination.x;
-    image_y = image_destination.y;
+    LoadImage(&upload_rect, image_asset->clut_data);
 
     pixel_block = TIM_PIXEL_BLOCK(image_asset, clut_block_size);
+    pixel_size = &pixel_block->dimensions;
+    setRECT(&upload_rect, image_destination.x, image_destination.y, pixel_size->width, pixel_size->height);
 
-    pixel_dimensions = &pixel_block->dimensions;
-    setRECT(&upload_rect, image_x, image_y, pixel_dimensions->width, pixel_dimensions->height);
+    g_checkps_image_width_words = pixel_size->width;
+    g_checkps_image_height = pixel_size->height;
 
-    g_checkps_image_width_words = pixel_dimensions->width;
-    g_checkps_image_height = pixel_dimensions->height;
-
-    pixel_dimensions++;
-    LoadImage(upload_rect_ptr, (u_long*)pixel_dimensions);
+    /* The pixel payload follows the block's dimensions. */
+    pixel_size++;
+    LoadImage(&upload_rect, (u_long*)pixel_size);
 }
 
 /**
@@ -597,28 +572,18 @@ void load_checkps_image(void)
 s32 poll_input_device(void)
 {
     SCDRegs* regs = SCD_REGS;
-
     u32 input_mask;
-    u32 raw_buttons;
-
     s16 axis_x;
     s16 axis_y;
-    u16 hi_read;
-    u16 lo_read;
 
     if (regs->device_type >= CHECKPS_CONTROLLER_UNAVAILABLE)
     {
         return 0;
     }
 
-    /* Read twice because the controller register may change asynchronously. */
-    hi_read = regs->held_buttons;
-    lo_read = regs->held_buttons;
-    input_mask = (hi_read >> 8) | (lo_read << 8);
-
-    raw_buttons = input_mask;
     /* Convert the controller protocol bits to the game's logical layout. */
-    input_mask = PAD_REMAP_FACE_BITS(raw_buttons);
+    input_mask = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
+    input_mask = PAD_REMAP_FACE_BITS(input_mask);
     if (regs->device_type != 0)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
@@ -698,9 +663,7 @@ void process_controller_input(void)
 
     /* Publish input only when a new press or key-repeat event fires. */
     g_debounced_input = 0;
-    if (((input_state == g_last_input_state) ||
-         ((g_last_input_state != 0) &&
-          ((input_state & (g_last_input_state | CHECKPS_NON_REPEAT_BUTTON_MASK))))) &&
+    if (((input_state == g_last_input_state) || ((g_last_input_state != 0) && ((input_state & (g_last_input_state | CHECKPS_NON_REPEAT_BUTTON_MASK))))) &&
         (input_state != 0))
     {
         /* Held input repeats directional buttons only. */
