@@ -118,7 +118,6 @@ struct CheckPSRenderState
 
 extern AkaoContainerHeader g_embedded_checkps_akao;
 extern TimPrefix g_checkps_image_asset;
-extern u8 g_controller_device_type;
 
 void run_checkps_display_loop(CheckPSRenderState* render_state);
 void init_checkps_display(CheckPSRenderState* render_state);

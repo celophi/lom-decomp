@@ -14,4 +14,7 @@ typedef struct
     u32 pixel_lookup_selector;
 } SceneState;
 
+/** @brief Scene state block kept at a fixed RAM address across overlays. */
+#define SCENE_STATE ((SceneState*)0x801ED480)
+
 #endif

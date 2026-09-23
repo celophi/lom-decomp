@@ -32,7 +32,6 @@ typedef struct
 } FieldWorkspace;
 
 #define FIELD_WORKSPACE ((FieldWorkspace*)0x801ED000)
-#define SCENE_STATE ((SceneState*)0x801ED480)
 
 extern void field_set_fade_target(s16, s16, s16, s16);
 
