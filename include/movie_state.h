@@ -17,7 +17,17 @@ typedef union
 #define MDEC_OUTPUT_RECT_INDEX MOVIE_DISPLAY_RECT_COUNT
 #define MOVIE_RECT_COUNT (MDEC_OUTPUT_RECT_INDEX + 1)
 
-/** @brief Shared movie buffers, decoder callbacks, and playback state. */
+/**
+ * @brief Shared movie buffers, decoder callbacks, and playback state.
+ *
+ * The block lives at a fixed address and is shared between the main loop
+ * and the interrupt-driven callbacks (CD sector, MDEC output, DrawSync).
+ * Fields written from interrupt context and read or polled elsewhere are
+ * declared @c volatile: the ring write indices, ring sizes and last-frame
+ * markers produced by cd_sector_callback, and the MDEC/GPU handshake flags
+ * produced by the MDEC and DrawSync callbacks. Fields owned by a single
+ * context stay plain.
+ */
 typedef struct
 {
 
@@ -41,22 +51,22 @@ typedef struct
     s32 video_ring_capacity;
     s32 audio_ring_capacity;
 
-    s32 video_write_idx;
+    volatile s32 video_write_idx;
     s32 video_read_idx;
-    s32 video_ring_size;
-    s32 audio_write_idx;
+    volatile s32 video_ring_size;
+    volatile s32 audio_write_idx;
     s32 audio_read_idx;
-    s32 audio_ring_size;
+    volatile s32 audio_ring_size;
     s32 audio_buffered_count;
-    u32 frame_number;
+    volatile u32 frame_number;
     u32 continuation_type;
 
     u16 chunk_sector_idx;
     u16 sectors_remaining;
-    u32 last_video_frame;
+    volatile u32 last_video_frame;
     u32 last_consumed_video_frame;
 
-    u32 last_audio_frame;
+    volatile u32 last_audio_frame;
     u32 last_consumed_audio_frame;
 
     u8 gpu_mode;
@@ -66,15 +76,15 @@ typedef struct
     u8 vlc_retry_count;
     u8 mdec_retry_pending;
     u8 busy;
-    u8 draw_sync_target;
-    u8 chunk_idx;
-    u8 out_buf_idx;
-    u8 pending_vram_upload;
-    u8 pending_mdec_decode;
-    s8 mdec_busy;
-    u8 frame_ready;
-    u8 end_of_stream;
-    u8 end_state;
+    volatile u8 draw_sync_target;
+    volatile u8 chunk_idx;
+    volatile u8 out_buf_idx;
+    volatile u8 pending_vram_upload;
+    volatile u8 pending_mdec_decode;
+    volatile s8 mdec_busy;
+    volatile u8 frame_ready;
+    volatile u8 end_of_stream;
+    volatile u8 end_state;
 } MovieState;
 
 #define MOVIE_STATE ((MovieState*)0x801ED500)

@@ -9,7 +9,7 @@ void movie_play(s32 movie_index)
 {
     DISPENV display_envs[2];
     DISPENV* display_env;
-    volatile MovieState* state;
+    MovieState* state;
     s32 audio_fade_vol;
     s32 retry_exhausted_status;
     s8 end_state_match;
@@ -81,7 +81,7 @@ void movie_play(s32 movie_index)
     update_controllers();
     audio_fade_vol = AUDIO_FADE_DISARMED;
     retry_exhausted_status = CD_ERROR_STATUS_RETRIES_EXHAUSTED;
-    state = VOL_MOVIE_STATE;
+    state = MOVIE_STATE;
     end_state_match = END_STATE_DONE;
 
     while (TRUE)
@@ -244,7 +244,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].y = 0;
         MOVIE_STATE->audio_ring_capacity = AUDIO_RING_SLOTS;
         MOVIE_STATE->video_data_base = STANDARD_MOVIE_BUFFERS->video_data;
-        VOL_MOVIE_STATE->chunk_idx = 0;
+        MOVIE_STATE->chunk_idx = 0;
     }
     else
     {
@@ -275,7 +275,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->video_ring_capacity = ALTERNATE_VIDEO_RING_SLOTS;
         MOVIE_STATE->audio_ring_capacity = AUDIO_RING_SLOTS;
         MOVIE_STATE->video_data_base = VIDEO_PAYLOADS_AFTER_TABLE(MOVIE_STATE->video_table_base, ALTERNATE_VIDEO_RING_SLOTS);
-        VOL_MOVIE_STATE->chunk_idx = init_buffer_idx;
+        MOVIE_STATE->chunk_idx = init_buffer_idx;
     }
 
     ms = MOVIE_STATE;
