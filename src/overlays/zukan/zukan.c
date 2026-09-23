@@ -1323,7 +1323,7 @@ void zukan_load_ui_resource(void)
 
     cdrom_queue_read(ZUKAN_UI_RESOURCE_ID, archive);
 
-    packed_dimensions = *(volatile s32*)archive;
+    packed_dimensions = *(volatile s32*)archive; /* need to remove volatile somehow */
     width = packed_dimensions;
     dimension = width;
 
