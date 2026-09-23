@@ -32,7 +32,6 @@ static inline MenuPartyOrder* menu_sort_order_record(void)
     return (MenuPartyOrder*)(base + off);
 }
 
-
 /* ----- Content Navigation and Input ----- */
 
 /**
@@ -368,7 +367,10 @@ s32 menu_handle_input(s32 process_actions)
                 case 6:
                     if (g_menu_char_slot == 0)
                     {
-                        { u8* pad_base0 = (u8*)g_pad_ctx; item_flag = *(pad_base0 + content_type + 0x609); }
+                        {
+                            u8* pad_base0 = (u8*)g_pad_ctx;
+                            item_flag = *(pad_base0 + content_type + 0x609);
+                        }
                         if ((item_flag != MENU_NONE) && (item_flag & 0x80))
                         {
                             setRECT(&rect, 0xB0, 0x60, 0x70, 0x50);
@@ -379,7 +381,10 @@ s32 menu_handle_input(s32 process_actions)
                         }
                         submenu_slot = menu_slot_alloc(3, &rect);
                         submenu_slot->content_cb = (s32 * (*)()) & menu_subtype_action_callback;
-                        { u8* pad_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250); item_flag = *(pad_base + content_type + 0x609); }
+                        {
+                            u8* pad_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+                            item_flag = *(pad_base + content_type + 0x609);
+                        }
                         if ((item_flag != MENU_NONE) && (item_flag & 0x80))
                         {
                             submenu_slot->navigation.packed = (submenu_slot->navigation.packed & 0xFE00FFFF) | 0x40000;
@@ -446,29 +451,35 @@ s32 menu_handle_input(s32 process_actions)
                             D_801226B8 = 0;
                             D_801227D4 = (void*)g_menu_item_ptr;
                             if (menu_item_is_nondefault((const MenuItemEntry*)g_menu_item_ptr) != 0)
-                                {
+                            {
                                 text_cursor = text_buffer;
                                 label_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
-                                field_copy_name(text_cursor, (s8*)(label_table + (*((u16*)(label_table + (((((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high) & 0x3F) * 2) + 0x48)))));
+                                field_copy_name(
+                                    text_cursor,
+                                    (s8*)(label_table +
+                                          (*((u16*)(label_table + (((((MenuItemEntry*)g_menu_item_ptr)->attributes.halves.high) & 0x3F) * 2) + 0x48)))));
                                 item_word = ((MenuItemEntry*)g_menu_item_ptr)->attributes.packed;
                                 text_variant = (item_word >> 8) & 3;
                                 switch (text_variant)
                                 {
                                 case 0:
                                     name_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
-                                    menu_concat_encoded_text(&D_801226B8, text_buffer, (s8*)(name_table + (*((u16*)(((item_word >> 9) & 0x7E) + (s32)name_table)))));
+                                    menu_concat_encoded_text(&D_801226B8, text_buffer,
+                                                             (s8*)(name_table + (*((u16*)(((item_word >> 9) & 0x7E) + (s32)name_table)))));
                                     break;
 
                                 case 1:
                                     description_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
-                                    menu_concat_encoded_text(&D_801226B8, text_buffer, (s8*)(description_table + (*((u16*)(((item_word >> 9) & 0x7E) + (s32)description_table + 0x20)))));
+                                    menu_concat_encoded_text(&D_801226B8, text_buffer,
+                                                             (s8*)(description_table + (*((u16*)(((item_word >> 9) & 0x7E) + (s32)description_table + 0x20)))));
                                     break;
 
                                 default:
                                     detail_table = (u8*)g_menu_state_ptr + (*((s32*)((char*)g_menu_state_ptr + 0x88)));
                                     menu_concat_encoded_text(
                                         &D_801226B8, text_buffer,
-                                        (s8*)(detail_table + (*((u16*)((((((u32)((MenuItemEntry*)g_menu_item_ptr)->attributes.packed) >> 9) & 0x7E)) + (s32)detail_table + 0x40)))));
+                                        (s8*)(detail_table + (*((u16*)((((((u32)((MenuItemEntry*)g_menu_item_ptr)->attributes.packed) >> 9) & 0x7E)) +
+                                                                       (s32)detail_table + 0x40)))));
                                     break;
                                 }
                                 g_menu_load_request = 1;
@@ -501,46 +512,46 @@ s32 menu_handle_input(s32 process_actions)
                     switch (action_code)
                     {
                     case 1:
-                        {
-                            u8* rec;
-                            s32 idx;
-                            s32 count;
-                            u8* slot_base;
+                    {
+                        u8* rec;
+                        s32 idx;
+                        s32 count;
+                        u8* slot_base;
 
-                            slot_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
-                            if (slot_base[0x5F0] != 0)
+                        slot_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+                        if (slot_base[0x5F0] != 0)
+                        {
+                            if ((slot_base[0x608] & 0x7F) == 4)
                             {
-                                if ((slot_base[0x608] & 0x7F) == 4)
-                                {
-                                    D_801229F4 = slot_base[0x609] + 0x80;
-                                }
-                                else
-                                {
-                                    D_801229F4 = slot_base[0x609];
-                                }
-                                field_copy_name(&D_801226F0, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
-                                count = 0;
-                                idx = 0;
-                                rec = (u8*)&g_field_player_records;
-                                D_801227D4 = (void*)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
-                                for (; idx < 3; idx++)
-                                {
-                                    if (idx == g_menu_char_slot)
-                                    {
-                                        break;
-                                    }
-                                    if (*rec & 1)
-                                    {
-                                        count += 1;
-                                    }
-                                    rec += 0x268;
-                                }
-                                D_8011F424 = count + 3;
-                                g_menu_load_request = 1;
-                                g_menu_transition_code = 3;
+                                D_801229F4 = slot_base[0x609] + 0x80;
                             }
+                            else
+                            {
+                                D_801229F4 = slot_base[0x609];
+                            }
+                            field_copy_name(&D_801226F0, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
+                            count = 0;
+                            idx = 0;
+                            rec = (u8*)&g_field_player_records;
+                            D_801227D4 = (void*)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0));
+                            for (; idx < 3; idx++)
+                            {
+                                if (idx == g_menu_char_slot)
+                                {
+                                    break;
+                                }
+                                if (*rec & 1)
+                                {
+                                    count += 1;
+                                }
+                                rec += 0x268;
+                            }
+                            D_8011F424 = count + 3;
+                            g_menu_load_request = 1;
+                            g_menu_transition_code = 3;
                         }
-                        break;
+                    }
+                    break;
 
                     case 6:
                         g_pad_ctx->menu_option_flags |= MENU_OPTION_AUDIO_ENABLED;
@@ -599,7 +610,8 @@ s32 menu_handle_input(s32 process_actions)
         else if (g_pad_input & PAD_BTN_CIRCLE)
         {
             menu_play_se(MENU_SE_CLOSE, MENU_SE_VOLUME);
-            if ((u32)g_menu_scene_type >= 0x11U || (u8)(node_self_index = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx) < 0x14 || (u8)node_self_index >= 0x1C)
+            if ((u32)g_menu_scene_type >= 0x11U || (u8)(node_self_index = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx) < 0x14 ||
+                (u8)node_self_index >= 0x1C)
             {
                 menu_reset_content_view();
             }
@@ -643,7 +655,11 @@ s32 menu_handle_input(s32 process_actions)
                     g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT_EXIT;
                     node_base = g_menu_nodes;
                     selected_node = &node_base[g_menu_active_node];
-                    { s32 np = (selected_node->idx_nav.nav_x_packed >> 15) & 1; s32 ny = selected_node->u8_u.s.nav_y_hi; node_nav_y = (ny << 1) | np; }
+                    {
+                        s32 np = (selected_node->idx_nav.nav_x_packed >> 15) & 1;
+                        s32 ny = selected_node->u8_u.s.nav_y_hi;
+                        node_nav_y = (ny << 1) | np;
+                    }
                     scroll_extent = g_menu_content_height - 12;
                     *view_y_ptr = node_nav_y - scroll_extent;
                     if (*view_y_ptr < 12)
@@ -698,11 +714,9 @@ void menu_snap_view_to_cursor(void)
     g_content_view_y = g_content_cursor_y;
 
     /* Restore X from the active node's packed navigation column. */
-    g_content_cursor_x =
-        menu_nav_x(g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed) + MENU_CONTENT_CURSOR_X_OFFSET;
+    g_content_cursor_x = menu_nav_x(g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed) + MENU_CONTENT_CURSOR_X_OFFSET;
     g_content_view_x = g_content_cursor_x;
 }
-
 
 /**
  * @brief Return non-zero if the item currently under the cursor has a confirm action.
@@ -741,6 +755,7 @@ s32 menu_item_has_action(void)
             {
                 if (item_subtype == 15)
                 {
+                    /* Shared return-1 block: two predecessors keep jump.c from folding either test into a store-flag. */
                     goto success;
                 }
                 return 0;
@@ -763,7 +778,7 @@ s32 menu_item_has_action(void)
         }
         else if ((action_code != 0) && (action_code < 12) && (action_code >= 6))
         {
-success:
+        success:
             return 1;
         }
     }
@@ -1155,7 +1170,10 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
         {
             u8* character_equipment_area;
             MenuItemEntry* equipped_items;
-            g_menu_equipment_base = (u32)(equipped_items = (MenuItemEntry*)((character_equipment_area = (u8*)g_pad_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET)) + MENU_CHARACTER_ITEMS_OFFSET));
+            g_menu_equipment_base =
+                (u32)(equipped_items = (MenuItemEntry*)((character_equipment_area =
+                                                             (u8*)g_pad_ctx + (g_menu_char_slot * MENU_CHARACTER_BLOCK_SIZE + MENU_CHARACTER_RECORD_OFFSET)) +
+                                                        MENU_CHARACTER_ITEMS_OFFSET));
             D_80168C30 = (u8*)equipped_items;
             D_80168C20 = (u8*)equipped_items;
             D_80168C24 = (u8*)equipped_items;
@@ -1185,7 +1203,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                                 s32 a3 = 1;
                                 void* a2_2 = (void*)((u8*)base_a2_0 + *(u16*)((u8*)base_a2_0 + (content_item->action_type * 2)));
-                                packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                               (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                             }
                             break;
@@ -1430,9 +1449,10 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             }
                             if (t0 != 0xFF)
                             {
-                                packet_cursor = menu_emit_draw_mode_primitive(
-                                    menu_emit_icon_sprite(packet_cursor, ot_entry, t0, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET, 0, 0, 0, 0),
-                                    ot_entry);
+                                packet_cursor = menu_emit_draw_mode_primitive(menu_emit_icon_sprite(packet_cursor, ot_entry, t0,
+                                                                                                    content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                                                    content_item->y - MENU_CONTENT_VIEW_Y_OFFSET, 0, 0, 0, 0),
+                                                                              ot_entry);
                             }
                         }
                         break;
@@ -1447,7 +1467,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 {
                                     draw_packet_cursor = packet_cursor;
                                     draw_source = (void*)g_menu_item_ptr;
-                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, draw_source, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, draw_source, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                                 break;
@@ -1498,67 +1519,77 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                                               ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP]);
                                         menu_concat_encoded_text(
                                             &text_buffer, &prefix_buffer,
-                                            (void*)((u8*)base2 + *(u16*)((s32)((((MenuItemEntry*)g_menu_item_ptr)->attributes.packed >> 9) & 0x7E) + (s32)base2 + 0x2E)));
+                                            (void*)((u8*)base2 +
+                                                    *(u16*)((s32)((((MenuItemEntry*)g_menu_item_ptr)->attributes.packed >> 9) & 0x7E) + (s32)base2 + 0x2E)));
                                         break;
                                     }
                                     }
-                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, &text_buffer, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, &text_buffer, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                                 break;
                             case 0x3:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed & 0xF, 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor =
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed & 0xF, 1,
+                                                                 &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0x4:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 4) & 0xF, 1, &pos,
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 4) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0x5:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 8) & 0xF, 1, &pos,
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 8) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0x6:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 12) & 0xF, 1, &pos,
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 12) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0x7:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.halfwords[1] & 0xF, 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor =
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.halfwords[1] & 0xF,
+                                                                 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0x8:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 20) & 0xF, 1, &pos,
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 20) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0x9:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.bytes[3] & 0xF, 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor =
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.bytes[3] & 0xF, 1,
+                                                                 &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0xA:
                                 if (g_menu_item_ptr != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 28) & 0xF, 1, &pos,
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor,
+                                                                             (((MenuItemEntry*)g_menu_item_ptr)->display_nibbles.packed >> 28) & 0xF, 1, &pos,
                                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
@@ -1572,7 +1603,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         s32 a3 = 1;
                                         void* a2_2 = (void*)((u8*)base_a2_1 + *(u16*)((u8*)base_a2_1 + (*(u8*)(g_menu_item_ptr + content_index + 0x15) * 2)));
-                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                 }
@@ -1588,7 +1620,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         s32 a3 = 1;
                                         void* a2_2 =
                                             (void*)((u8*)base_a2_2 + *(u16*)((u8*)base_a2_2 + (*(u8*)(g_menu_category0_item + content_index + 0x1A) * 2)));
-                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                 }
@@ -1603,8 +1636,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 0x12:
                                 if (g_menu_category1_item != 0)
                                 {
-                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_category1_item)->stat_values[0], 1, &pos,
-                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor =
+                                        menu_draw_clamped_number(ot_entry, packet_cursor, ((MenuItemEntry*)g_menu_category1_item)->stat_values[0], 1, &pos,
+                                                                 ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0x13:
@@ -1619,7 +1653,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     a3ptr = (u8*)g_menu_category2_item;
                                     idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
                                     a2_2 = (void*)((u8*)a2 + *(u16*)(idx + (u32)a2));
-                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                                 break;
@@ -1630,7 +1665,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     base_a2_3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
                                     {
                                         void* a2_2 = (void*)((u8*)base_a2_3 + *(u16*)((u8*)base_a2_3 + (*(u8*)(g_menu_category2_item + 0x24) * 2)));
-                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                 }
@@ -1642,7 +1678,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     base_a2_4 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
                                     {
                                         void* a2_2 = (void*)((u8*)base_a2_4 + *(u16*)((u8*)base_a2_4 + (*(u8*)(g_menu_category2_item + 0x25) * 2)));
-                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                 }
@@ -1736,8 +1773,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 if (g_menu_item_ptr != 0)
                                 {
                                     s32 diff = menu_lookup_item_nibble(g_menu_item_ptr, content_index - 0x27);
-                                    packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(diff), 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(diff), 1, &pos,
+                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 0x2F:
@@ -1775,7 +1812,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2);
                                     s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2);
                                     s32 diff = v1 - v2;
-                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(diff), 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(diff), 1, &pos,
+                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                             }
                             break;
@@ -1849,7 +1887,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 }
                                 if (has)
                                 {
-                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(total), 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(total), 1, &pos,
+                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                             }
                             break;
@@ -1916,7 +1955,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                                 u8* call_base = (u8*)g_pad_ctx;
                                 s32 off = g_menu_char_slot * 0x250 + 0x5F0;
-                                packet_cursor = func_800A88A0(packet_cursor, ot_entry, call_base + off, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                packet_cursor = func_800A88A0(packet_cursor, ot_entry, call_base + off, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                              content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                               (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                             }
                             break;
@@ -1924,27 +1964,30 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                                 PadContext* context = g_pad_ctx;
                                 u8 v = menu_active_character(context)->progression.fields.level;
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, v, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, v, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x4:
                             {
-                                packet_cursor =
-                                    func_800A8A78(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, g_field_object_states[g_menu_char_slot].current_hp, 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x5:
                             {
                                 PadContext* context = g_pad_ctx;
                                 u16 v = menu_active_character(context)->unknown_0x24;
-                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, v, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, v, 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x6:
                             {
                                 PadContext* context = g_pad_ctx;
                                 u32 v = menu_active_character(context)->progression.packed;
-                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, (v >> 8), 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, (v >> 8), 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x7:
@@ -1958,10 +2001,9 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             {
                                 void* base = (void*)g_pad_ctx;
                                 s32 idx = content_index - 7;
-                                packet_cursor = menu_draw_clamped_number(
-                                    ot_entry, packet_cursor,
-                                    menu_active_character_value((PadContext*)base, idx) >> 9, 1,
-                                    &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor =
+                                    menu_draw_clamped_number(ot_entry, packet_cursor, menu_active_character_value((PadContext*)base, idx) >> 9, 1, &pos,
+                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0xF:
@@ -1974,7 +2016,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         a3 = 2;
                                     }
-                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                             }
@@ -1988,7 +2031,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     base_a2_5 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
                                     {
                                         void* a2_2 = (void*)((u8*)base_a2_5 + *(u16*)((u8*)base_a2_5 + (*(u8*)(D_80168C30 + content_index + 0x18) * 2)));
-                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                 }
@@ -2034,7 +2078,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         a3 = 2;
                                     }
-                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                    packet_cursor = func_800A88A0(packet_cursor, ot_entry, a2_2, a3, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                             }
@@ -2053,7 +2098,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 }
                                 {
                                     void* a2_2 = (void*)((u8*)base_a2_6 + *(u16*)((u8*)base_a2_6 + (idx * 2)));
-                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                             }
@@ -2063,7 +2109,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 s32 v = func_800B607C(g_menu_char_slot);
                                 PadContext* context = g_pad_ctx;
                                 u32 shift = menu_active_character(context)->progression.packed >> 8;
-                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, v - shift, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = func_800A8A78(ot_entry, packet_cursor, v - shift, 1, &pos,
+                                                              ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x1B:
@@ -2086,7 +2133,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         u16* lvar_v1_2 = (u16*)g_pad_ctx;
                                         void* lvar_a2 = (void*)((u8*)lvar_v1_2 + (g_menu_char_slot * 0x250 + 0x5F0));
                                         void* a2_2 = (void*)((u8*)lvar_a2 + ((((MenuNameSelection*)(ptr + 0x5F1))->fields.index << 6) + 0x150));
-                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                     else
@@ -2101,7 +2149,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         off2 = idx * 2;
                                         {
                                             void* a2_2 = (void*)((u8*)base_a2_7 + *(u16*)(off2 + (tmpv * 0x30 + (s32)base_a2_7)));
-                                            packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                            packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                          content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                           (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                         }
                                     }
@@ -2121,7 +2170,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 }
                                 {
                                     void* a2_2 = (void*)((u8*)base_a2_8 + *(u16*)((u8*)base_a2_8 + (idx * 2)));
-                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                             }
@@ -2148,7 +2198,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         }
                                     }
                                 }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x21:
@@ -2173,7 +2224,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         }
                                     }
                                 }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x22:
@@ -2198,7 +2250,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         }
                                     }
                                 }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x23:
@@ -2223,7 +2276,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                         }
                                     }
                                 }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, total, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             case 0x3F:
@@ -2298,7 +2352,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     {
                                         diff = a2_23 - D_800F0C1C;
                                     }
-                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(diff), 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, abs(diff), 1, &pos,
+                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                             }
                             break;
@@ -2329,8 +2384,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 }
                                 if (has)
                                 {
-                                    packet_cursor =
-                                        menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(total), 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, (u32)abs(total), 1, &pos,
+                                                                             ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                             }
                             break;
@@ -2347,7 +2402,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 }
                                 {
                                     void* a2_2 = (void*)((u8*)base_a2_9 + *(u16*)((u8*)base_a2_9 + (idx * 2)));
-                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                    packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                  content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                   (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                             }
@@ -2361,7 +2417,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     u8 v = menu_history_record(context, history_index)->unknown_0x44 & 0xF;
                                     void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
-                                                                  content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET, (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                                                  content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                             }
                             break;
@@ -2374,7 +2431,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     u8 v = menu_history_record(context, history_index)->unknown_0x44 >> 4;
                                     void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
                                     packet_cursor = func_800A88A0(packet_cursor, ot_entry, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1,
-                                                                  content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET, (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
+                                                                  content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                                                  (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                 }
                             }
                             break;
@@ -2385,7 +2443,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                 {
                                     PadContext* context = g_pad_ctx;
                                     u8 v = menu_history_record(context, history_index)->unknown_0x46;
-                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, v, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, v, 1, &pos,
+                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                             }
                             break;
@@ -2402,7 +2461,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     idx = menu_history_record(context, history_index)->unknown_0x48;
                                     {
                                         void* a2_2 = (void*)((u8*)base_a2_10 + *(u16*)((u8*)base_a2_10 + (idx * 2)));
-                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                 }
@@ -2451,7 +2511,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     display_value = menu_equipped_item(g_pad_ctx, 0)->display_nibbles.packed >> 28;
                                     break;
                                 }
-                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, display_value, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                packet_cursor = menu_draw_clamped_number(ot_entry, packet_cursor, display_value, 1, &pos,
+                                                                         ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                             }
                             break;
                             default:
@@ -2468,12 +2529,13 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                             case 1:
                                 if (*(u32*)((void*)g_pad_ctx + 0x2C) > 0x989680U)
                                 {
-                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, 0x989680U, 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, 0x989680U, 1, &pos,
+                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 else
                                 {
-                                    packet_cursor =
-                                        func_800A8A78(ot_entry, packet_cursor, *(u32*)((void*)g_pad_ctx + 0x2C), 1, &pos, ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
+                                    packet_cursor = func_800A8A78(ot_entry, packet_cursor, *(u32*)((void*)g_pad_ctx + 0x2C), 1, &pos,
+                                                                  ((content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK));
                                 }
                                 break;
                             case 2:
@@ -2532,7 +2594,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     base_a2_11 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
                                     {
                                         void* a2_2 = (void*)((u8*)base_a2_11 + *(u16*)((u8*)base_a2_11 + 0x74));
-                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                 }
@@ -2547,7 +2610,8 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
                                     base_a2_12 = (void*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES]);
                                     {
                                         void* a2_2 = (void*)((u8*)base_a2_12 + *(u16*)((u8*)base_a2_12 + 0x76));
-                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK, content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
+                                        packet_cursor = func_800A88A0(draw_packet_cursor, ot_entry, a2_2, 1, content_item->packed_x & MENU_CONTENT_X_MASK,
+                                                                      content_item->y - MENU_CONTENT_VIEW_Y_OFFSET,
                                                                       (content_item->packed_x >> MENU_CONTENT_STYLE_SHIFT) & MENU_CONTENT_STYLE_MASK);
                                     }
                                 }
@@ -2631,7 +2695,6 @@ void* menu_draw_scene_content(void* packet_cursor, s32* ot_entry)
     return packet_cursor;
 }
 
-
 /**
  * @brief Build the equipped-item ability mask while excluding one equipment slot.
  * @param excluded_slot Equipment slot to omit from the mask.
@@ -2692,7 +2755,6 @@ void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2)
 {
     menu_copy_encoded_pair(dst, src1, src2);
 }
-
 
 /**
  * @brief Extract a 4-bit nibble from a packed u32 field in the item struct and look it up in a byte table.
@@ -2953,7 +3015,6 @@ s32 menu_draw_active_node_cursor(s32 packet_cursor, s32* ot_entry, s32 draw_labe
     return packet_cursor;
 }
 
-
 /**
  * @brief Render the content cursor, update its lerped position, and optionally render the active hit-item label.
  * @param prim_buf Current primitive buffer pointer, reused as the running cursor.
@@ -3013,7 +3074,8 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
         {
             if (content_base[g_menu_hit_item_idx].action_type < 0xF0U)
             {
-                prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_GENERAL), content_base[g_menu_hit_item_idx].action_type));
+                prim_buf = menu_emit_content_label(prim_buf, ot,
+                                                   menu_text_entry(menu_text_table_base(MENU_TEXT_GENERAL), content_base[g_menu_hit_item_idx].action_type));
             }
             else
             {
@@ -3024,7 +3086,8 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                     prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(17), content_base[g_menu_hit_item_idx].action_type));
                     break;
                 case 0xF1:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ABILITY_HELP), content_base[g_menu_hit_item_idx].action_type));
+                    prim_buf = menu_emit_content_label(
+                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_ABILITY_HELP), content_base[g_menu_hit_item_idx].action_type));
                     break;
                 case 0xF2:
                     prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(12), content_base[g_menu_hit_item_idx].action_type));
@@ -3033,7 +3096,8 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                     prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(8), content_base[g_menu_hit_item_idx].action_type));
                     break;
                 case 0xF4:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
+                    prim_buf = menu_emit_content_label(
+                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
                     break;
                 case 0xF5:
                     prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(21), content_base[g_menu_hit_item_idx].action_type));
@@ -3049,25 +3113,31 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                     {
                         if (D_80168C6C & 0x80)
                         {
-                            prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
+                            prim_buf = menu_emit_content_label(
+                                prim_buf, ot,
+                                menu_text_entry(menu_text_table_base(MENU_TEXT_CATEGORY_ENTRY_HELP), content_base[g_menu_hit_item_idx].action_type));
                         }
                         else
                         {
-                            prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
+                            prim_buf = menu_emit_content_label(
+                                prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
                         }
                     }
                     break;
                 case 0xF9:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
+                    prim_buf = menu_emit_content_label(
+                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_TECHNIQUE_HELP), content_base[g_menu_hit_item_idx].action_type));
                     break;
                 case 0xFA:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_SPELL_HELP), content_base[g_menu_hit_item_idx].action_type));
+                    prim_buf = menu_emit_content_label(
+                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_SPELL_HELP), content_base[g_menu_hit_item_idx].action_type));
                     break;
                 case 0xFB:
                 case 0xFC:
                 case 0xFD:
                 case 0xFE:
-                    prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_KEY_ITEM_HELP), content_base[g_menu_hit_item_idx].action_type));
+                    prim_buf = menu_emit_content_label(
+                        prim_buf, ot, menu_text_entry(menu_text_table_base(MENU_TEXT_KEY_ITEM_HELP), content_base[g_menu_hit_item_idx].action_type));
                 }
             }
         }
@@ -3110,8 +3180,9 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                         u32 slot654 = *(u32*)(pad_base + 0x654);
                         u8* state1c = (u8*)g_menu_state_ptr;
                         state1c += *(s32*)(state1c + 0x1C);
-                        prim_buf = menu_emit_content_label(prim_buf, ot, state1c + *(u16*)(state1c + ((MenuNameSelection*)(flag_addr + 0x609))->fields.index * 2 +
-                                                        ((slot654 >> 0xA) & 0x3F) * 0x30));
+                        prim_buf = menu_emit_content_label(
+                            prim_buf, ot,
+                            state1c + *(u16*)(state1c + ((MenuNameSelection*)(flag_addr + 0x609))->fields.index * 2 + ((slot654 >> 0xA) & 0x3F) * 0x30));
                     }
                 }
                 break;
@@ -3128,8 +3199,8 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                         if (menu_item_is_nondefault(&menu_character_record(context, g_menu_char_slot)->items[action_type - MENU_EQUIPMENT_SUBTYPE_BASE]) != 0)
                         {
                             s32 name_index = menu_equipped_item(g_pad_ctx, action_type - MENU_EQUIPMENT_SUBTYPE_BASE)->attributes.halves.high & 0x3F;
-                            u16 name_offset =
-                                *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES] + name_index * 2);
+                            u16 name_offset = *(u16*)((u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES] +
+                                                      name_index * 2);
                             u8* message_table = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_MESSAGES];
                             u16 suffix_offset = *(u16*)((u8*)message_table + 0xB4);
                             u8* name = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_KEY_ITEM_NAMES] + name_offset;
@@ -3150,7 +3221,8 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                             case 0:
                             {
                                 u32 idx = (item_attributes >> 9) & 0x7E;
-                                u8* category_help_table = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
+                                u8* category_help_table =
+                                    (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
                                 u8* str2 = category_help_table + *(u16*)((u8*)((s32)idx + (s32)category_help_table) + 0);
 
                                 u8* out = label_buffer;
@@ -3161,7 +3233,8 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                             case 1:
                             {
                                 u32 idx = (item_attributes >> 9) & 0x7E;
-                                u8* category_help_table = (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
+                                u8* category_help_table =
+                                    (u8*)g_menu_state_ptr + ((MenuTextResources*)g_menu_state_ptr)->table_offsets[MENU_TEXT_ITEM_CATEGORY_HELP];
                                 u8* str2 = category_help_table + *(u16*)((u8*)((s32)idx + (s32)category_help_table) + 0x16);
 
                                 u8* out = label_buffer;
@@ -3270,7 +3343,6 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
                 prim_buf = menu_emit_content_label(prim_buf, ot, menu_text_entry(text_table, entry_index));
                 break;
             }
-
             }
         }
     }
@@ -3286,7 +3358,6 @@ void* menu_draw_content_cursor(void* prim_buf, s32* ot, s32 draw_label)
 
     return prim_buf;
 }
-
 
 /* ----- Node Tree Rendering and Cursors ----- */
 
@@ -3342,16 +3413,14 @@ void* menu_draw_node_recursive(s32 node_index, void* prim_buf, s32* ot)
     MenuNode* child_source;
     void* next_prim;
     int animation_count;
-    int style_bits;
 
-    style_bits = 3;
     g_menu_nav_nodes[g_menu_nav_count] = node_index;
     node_base = g_menu_nodes;
     node = node_base + node_index;
     g_menu_nav_count += 1;
     next_prim = menu_emit_icon_sprite(prim_buf, ot, node->icon_id, ((node->idx_nav.nav_x_packed >> 8) & (MENU_NAV_X_MASK >> 8)) + 1,
                                       ((node->u8_u.s.nav_y_hi << 1) | (work_value = node->idx_nav.nav_x_packed >> 15)) - g_menu_content_height, 1,
-                                      ((node->u2.unk2 >> 2) & 3) != 0, g_menu_scene_type == node_index, (node->u2.unk2 >> 6) & style_bits);
+                                      ((node->u2.unk2 >> 2) & 3) != 0, g_menu_scene_type == node_index, (node->u2.unk2 >> 6) & 3);
 
     {
         u16 flags = node->u2.unk2;
@@ -3392,19 +3461,16 @@ void* menu_draw_node_recursive(s32 node_index, void* prim_buf, s32* ot)
         }
         else
         {
-            s32 step = ((s32)target_y - ((u16)current_y)) / ((s32)node->layout_frames_remaining);
+            s32 step = ((s32)target_y - (u16)current_y) / node->layout_frames_remaining;
             u32 new_y = current_y + step;
+            u32 new_y_hi;
+            u32 new_y_low_bit;
             new_y &= 0xFFFF;
-            style_bits = 15;
-            style_bits = (new_y & 1) << style_bits;
-            ((volatile MenuNode*)node)->layout_frames_remaining -= 1;
-            ((volatile MenuNode*)node)->idx_nav.nav_x_packed = (nav_x_packed & 0x7FFF) | style_bits;
-            {
-                u16 packed_y = ((volatile MenuNode*)node)->u8_u.nav_y_packed;
-                packed_y &= 0xFF00;
-                packed_y |= (new_y >> 1) & 0xFF;
-                node->u8_u.nav_y_packed = packed_y;
-            }
+            new_y_hi = (new_y >> 1) & 0xFF;
+            new_y_low_bit = (new_y & 1) << 15;
+            node->idx_nav.nav_x_packed = (nav_x_packed & 0x7FFF) | new_y_low_bit;
+            node->layout_frames_remaining -= 1;
+            node->u8_u.nav_y_packed = (node->u8_u.nav_y_packed & 0xFF00) | new_y_hi;
         }
     }
 

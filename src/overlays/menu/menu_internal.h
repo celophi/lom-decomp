@@ -272,7 +272,6 @@ typedef struct
     u16 second_clut[CLUT_ENTRY_COUNT];
 } MenuTimAsset;
 
-
 typedef struct
 {
     s16 x;
@@ -343,7 +342,7 @@ typedef struct
  */
 typedef struct
 {
-    u8 label_id; /**< Index into the menu label string table. */
+    u8 label_id;                /**< Index into the menu label string table. */
     u8 layout_frames_remaining; /**< Updates left to reach the target Y; zero snaps to the target. */
     union
     {
@@ -353,6 +352,15 @@ typedef struct
             u8 flags;      /**< Bit 0: node active/enabled in layout. Bit 1: node expanded (children shown). */
             u8 parent_idx; /**< Index of parent node in g_menu_nodes, or MENU_NONE (0xFF) for root nodes. */
         } s;
+        struct
+        {
+            u16 active : 1;      /**< Node participates in layout (MENU_NODE_FLAG_ACTIVE). */
+            u16 expanded : 1;    /**< Node's children are shown (MENU_NODE_FLAG_EXPANDED). */
+            u16 anim_frames : 2; /**< Highlight animation frame counter. */
+            u16 char_slot : 2;   /**< Party slot shown for this node; 3 keeps the current slot. */
+            u16 depth : 2;       /**< Tree depth (0 = root row), used for indentation/style. */
+            u16 parent_idx : 8;  /**< Same byte as s.parent_idx. */
+        } bits;
     } u2;
     u8 icon_id;    /**< Sprite/icon definition passed to menu_emit_icon_sprite. */
     u8 content_id; /**< Passed to the content-open function; 0xFF = no content. */
@@ -370,7 +378,7 @@ typedef struct
         u16 nav_y_packed; /**< Raw word; high byte = layout_x_y0, low byte = nav_y_hi. */
         struct
         {
-            u8 nav_y_hi;     /**< Bits 1-8 of the 9-bit nav cursor Y: reconstruct as (nav_y_hi<<1)|(nav_x>>7). */
+            u8 nav_y_hi;    /**< Bits 1-8 of the 9-bit nav cursor Y: reconstruct as (nav_y_hi<<1)|(nav_x>>7). */
             u8 layout_x_y0; /**< Bits 6:0 = layout X; bit 7 = bit 0 of layout Y. */
         } s;
     } u8_u;
@@ -397,11 +405,11 @@ typedef struct
     u16 flags_and_parent;
     u8 icon_id;
     u8 content_id;
-    u32 self_idx:8;
-    u32 nav_x:7;
-    u32 nav_y:9;
-    u32 layout_x:7;
-    u32 layout_y:9;
+    u32 self_idx : 8;
+    u32 nav_x : 7;
+    u32 nav_y : 9;
+    u32 layout_x : 7;
+    u32 layout_y : 9;
     u8 children[MENU_MAX_CHILDREN];
     u8 unknown_0xf;
 } __attribute__((packed, aligned(2))) MenuNodeCoordinateView;
@@ -417,10 +425,10 @@ typedef struct
 
 typedef struct
 {
-    u16 packed_x; /**< Bottom 9 bits = X screen position; upper bits unknown. */
-    u8 y;         /**< Y position; caller subtracts 8 when using as display offset. */
+    u16 packed_x;   /**< Bottom 9 bits = X screen position; upper bits unknown. */
+    u8 y;           /**< Y position; caller subtracts 8 when using as display offset. */
     u8 action_type; /**< Content/action selector interpreted by the active scene. */
-    u8 params[4]; /**< Remaining content-specific parameter bytes. */
+    u8 params[4];   /**< Remaining content-specific parameter bytes. */
 } MenuContentItem;
 
 typedef struct
@@ -458,7 +466,6 @@ typedef struct
     MenuControllerActuatorPort ports[2];
 } MenuControllerActuatorState;
 
-
 typedef enum
 {
     MENU_CURSOR_MODE_NODE_TREE = 0,
@@ -490,7 +497,7 @@ typedef struct
 typedef struct
 {
     u8 pad000[0x638]; /**< Unmapped head of the pad-context record. */
-    u8 order[8]; /**< Eight party slot indices in display order. */
+    u8 order[8];      /**< Eight party slot indices in display order. */
 } MenuPartyOrder;
 
 typedef struct
@@ -1045,6 +1052,5 @@ static inline void menu_copy_sign_label(u8* buffer, s32 value)
     write_cursor += field_name_byte_length(source);
     *write_cursor = 0;
 }
-
 
 #endif
