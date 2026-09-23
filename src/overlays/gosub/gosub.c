@@ -284,7 +284,7 @@ void gosub_enter_screen(s32 screen_id)
         g_gosub_finish_handler = gosub_publish_two_row_selection;
         g_gosub_dialog_handler = gosub_handle_combination_dialog;
         gosub_build_screen_10_elements();
-        if (g_pad_ctx[0x29D6] >= 0x28)
+        if (g_pad_ctx->logic_block_count >= LOGIC_BLOCK_CAPACITY)
         {
             gosub_start_element_exit();
             GOSUB_MSG(-4);
@@ -300,7 +300,7 @@ void gosub_enter_screen(s32 screen_id)
         g_gosub_finish_handler = gosub_publish_selection;
         g_gosub_allow_duplicate_selection = 1;
         gosub_build_screen_11_elements();
-        if (g_pad_ctx[0x29D6] == 0)
+        if (g_pad_ctx->logic_block_count == 0)
         {
             gosub_start_element_exit();
             GOSUB_MSG(-6);

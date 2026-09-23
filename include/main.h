@@ -45,11 +45,39 @@ extern s32 g_frame_counter;
 /** @brief Base of the primitive-rect scratch buffer (stride 0x4A0 per record). */
 extern u8 g_prim_rect_buf[];
 
+/** @brief Number of stat values stored in each saved-history record. */
+#define HISTORY_RECORD_STAT_COUNT 4
+/** @brief Number of large saved-history records in the pad context. */
+#define LARGE_HISTORY_RECORD_COUNT 3
+/** @brief Number of small saved-history records in the pad context. */
+#define SMALL_HISTORY_RECORD_COUNT 5
+/** @brief Capacity of the packed logic-block table in the pad context. */
+#define LOGIC_BLOCK_CAPACITY 40
+
+/** @brief Packed logic-block word stored in PadContext.logic_blocks. */
+typedef union
+{
+    u32 word;
+    struct
+    {
+        u32 ready : 2;         /**< Both bits are set when a combination creates the block. */
+        u32 id : 6;            /**< Logic-block type index. */
+        u32 quantity : 4;      /**< Level shown after the name; zero hides it. */
+        u32 variant : 4;
+        u32 unknown_bit16 : 1;
+        u32 unknown_bits : 15;
+    } f;
+} LogicBlock;
+
 /** @brief Large saved-history record with a leading encoded name. */
 typedef struct
 {
     u8 name[0x15];
-    u8 unknown_0x15[0x44 - 0x15];
+    u8 unknown_0x15;
+    u16 secondary_value; /**< Value shown in the second stat column of the GOSUB roster. */
+    u16 primary_value;   /**< Value shown in the first stat column of the GOSUB roster. */
+    u16 stats[HISTORY_RECORD_STAT_COUNT];
+    u8 unknown_0x22[0x44 - 0x22];
     u8 unknown_0x44; /**< Packed indices into two menu text tables. */
     u8 unknown_0x45;
     u8 unknown_0x46;
@@ -62,7 +90,23 @@ typedef struct
 typedef struct
 {
     u8 name[0x15];
-    u8 unknown_0x15[0x60 - 0x15];
+    u8 unknown_0x15;
+    u8 unknown_0x16;
+    u8 unknown_0x17;
+    u8 unknown_0x18;
+    u8 unknown_0x19[0x1C - 0x19];
+    u16 secondary_value; /**< Value shown in the second stat column of the GOSUB roster. */
+    u16 primary_value;   /**< Value shown in the first stat column of the GOSUB roster. */
+    u16 stats[HISTORY_RECORD_STAT_COUNT];
+    u8 unknown_0x28[0x42 - 0x28];
+    u16 unknown_0x42;
+    struct
+    {
+        u32 unknown_bits : 30;
+        u32 selection_restricted : 1; /**< Restricts GOSUB selection of this record. */
+        u32 selection_blocked : 1;    /**< Blocks GOSUB selection of this record. */
+    } selection_flags;
+    u8 unknown_0x48[0x60 - 0x48];
 } SmallHistoryRecord;
 
 #define PLAYER_EQUIPMENT_SLOT_COUNT 4
@@ -120,12 +164,16 @@ typedef struct
     u8  _padAAC[0xCE0 - 0xAAC];
     InventoryRecord inventory[INVENTORY_RECORD_COUNT];
     u8  item_counts[ITEM_TYPE_COUNT];
-    u8  _pad26E0[0x29D7 - 0x26E0];
+    u8  _pad26E0[0x29D6 - 0x26E0];
+    u8  logic_block_count;        /**< Number of used entries in @c logic_blocks. */
     s8  large_history_index;      /**< 0x29D7: slot index into @c large_history_records. */
-    u8  _pad29D8[0x2B0C - 0x29D8];/**< 0x29D8: not yet mapped. */
-    LargeHistoryRecord large_history_records[3];
+    u8  large_history_order[LARGE_HISTORY_RECORD_COUNT]; /**< Display order of @c large_history_records; values >= 3 are empty. */
+    u8  _pad29DB;
+    LogicBlock logic_blocks[LOGIC_BLOCK_CAPACITY];
+    u8  _pad2A7C[0x2B0C - 0x2A7C];
+    LargeHistoryRecord large_history_records[LARGE_HISTORY_RECORD_COUNT];
     u32 small_history_index;      /**< 0x2EF0: slot index into @c small_history_records. */
-    SmallHistoryRecord small_history_records[5];
+    SmallHistoryRecord small_history_records[SMALL_HISTORY_RECORD_COUNT];
 } PadContext;
 
 /** @brief Pointer to the controller/pad context object. */

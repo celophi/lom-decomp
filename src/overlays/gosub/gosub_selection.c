@@ -87,7 +87,7 @@ s32 gosub_validate_pending_pair_selection(void)
 s32 gosub_commit_row_reorder(void)
 {
     GosubListRow entry_tmp;
-    u32 rec_tmp;
+    LogicBlock rec_tmp;
     s32 saved_index;
 
     if (g_gosub_selection_count == 0)
@@ -100,10 +100,10 @@ s32 gosub_commit_row_reorder(void)
     }
     if (g_gosub_selected_rows[0] != g_gosub_selected_rows[1])
     {
-        gosub_copy_packed_record(&rec_tmp, g_pad_ctx + (g_gosub_rows[g_gosub_selected_rows[0]].index * 4 + 0x29DC));
-        gosub_copy_packed_record(g_pad_ctx + (g_gosub_rows[g_gosub_selected_rows[0]].index * 4 + 0x29DC),
-                                 g_pad_ctx + (g_gosub_rows[g_gosub_selected_rows[1]].index * 4 + 0x29DC));
-        gosub_copy_packed_record(g_pad_ctx + (g_gosub_rows[g_gosub_selected_rows[1]].index * 4 + 0x29DC), &rec_tmp);
+        gosub_copy_packed_record(&rec_tmp, &g_pad_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[0]].index]);
+        gosub_copy_packed_record(&g_pad_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[0]].index],
+                                 &g_pad_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[1]].index]);
+        gosub_copy_packed_record(&g_pad_ctx->logic_blocks[g_gosub_rows[g_gosub_selected_rows[1]].index], &rec_tmp);
         gosub_copy_list_row(&entry_tmp, &g_gosub_rows[g_gosub_selected_rows[0]]);
         gosub_copy_list_row(&g_gosub_rows[g_gosub_selected_rows[0]], &g_gosub_rows[g_gosub_selected_rows[1]]);
         gosub_copy_list_row(&g_gosub_rows[g_gosub_selected_rows[1]], &entry_tmp);
@@ -211,7 +211,6 @@ s32 gosub_publish_two_row_selection(void)
 s32 gosub_handle_combination_dialog(s32 dialog_result)
 {
     s32 combination_count;
-    GosubPackedRecord* record;
     u32 packed;
     s32 result_id;
     s32 packed_result;
@@ -222,26 +221,25 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
     if (dialog_result == 0 && (g_gosub_dialog_choice & 1) == 0)
     {
         clear_config_mask = ~0xFC;
-        combination_count = *(g_pad_ctx + 0x29D6);
-        if (combination_count < 0x28)
+        combination_count = g_pad_ctx->logic_block_count;
+        if (combination_count < LOGIC_BLOCK_CAPACITY)
         {
-            record = (GosubPackedRecord*)(g_pad_ctx + combination_count * 4 + 0x29DC);
+            packed = g_pad_ctx->logic_blocks[combination_count].word & clear_config_mask;
             result_id = g_gosub_combination_result_id;
-            packed = record->word & clear_config_mask;
             packed = packed | ((result_id & 0x3F) << 2);
-            record->word = packed;
+            g_pad_ctx->logic_blocks[combination_count].word = packed;
             secondary_value = g_gosub_combination_quantity;
             dialog_result = (packed & ~0xF00) | ((secondary_value & 0xF) << 8);
-            record->word = dialog_result;
+            g_pad_ctx->logic_blocks[combination_count].word = dialog_result;
             packed_result = ((dialog_result & 0xFFFF0FFF) | ((g_gosub_combination_variant & 0xF) << 12) | 3) & 0xFFFF;
             stored_word = packed_result;
-            record->word = stored_word;
-            *(g_pad_ctx + 0x29D6) = *(g_pad_ctx + 0x29D6) + 1;
-            GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(g_gosub_result_values[0])->name[0] = 0;
-            GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(g_gosub_result_values[1])->name[0] = 0;
+            g_pad_ctx->logic_blocks[combination_count].word = stored_word;
+            g_pad_ctx->logic_block_count = g_pad_ctx->logic_block_count + 1;
+            g_pad_ctx->inventory[g_gosub_result_values[0]].active = 0;
+            g_pad_ctx->inventory[g_gosub_result_values[1]].active = 0;
             field_compact_inventory();
         }
-        if (*(g_pad_ctx + 0x29D6) >= 0x28)
+        if (g_pad_ctx->logic_block_count >= LOGIC_BLOCK_CAPACITY)
         {
             gosub_start_element_exit();
             g_field_gosub_state = 0;
