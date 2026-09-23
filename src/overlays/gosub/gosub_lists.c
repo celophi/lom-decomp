@@ -181,9 +181,9 @@ void gosub_build_packed_record_list(void)
         g_gosub_rows[i].name = row_name;
         g_gosub_rows[i].desc = ARCHIVE_ENTRY(g_gosub_text_archive_offsets_0[7], g_gosub_rows[i].detail_group);
         g_gosub_rows[i].value = -2;
-        g_gosub_rows[i].detail_variant = g_pad_ctx->logic_blocks[i].f.variant;
+        g_gosub_rows[i].detail_variant = g_pad_ctx->logic_blocks[i].f.shape;
         if (g_pad_ctx->logic_blocks[i].f.unknown_bit16 != 0 ||
-            g_pad_ctx->logic_blocks[i].f.ready != GOSUB_LOGIC_BLOCK_READY)
+            g_pad_ctx->logic_blocks[i].f.logic_type != LOGIC_BLOCK_UNASSIGNED)
         {
             g_gosub_rows[i].flags.word |= 4;
         }

@@ -26,9 +26,6 @@ typedef struct GosubTilePacket GosubTilePacket;
 #define GOSUB_SORT_ORDER_CAPACITY 0x100
 #define GOSUB_SORT_ROW_CAPACITY 0x28
 
-/** @brief LogicBlock.ready value of a block created by a combination. */
-#define GOSUB_LOGIC_BLOCK_READY 3
-
 /** @brief Texture page containing the gosub font and panel-corner sprites. */
 #define GOSUB_FONT_TPAGE 5
 

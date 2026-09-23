@@ -54,18 +54,24 @@ extern u8 g_prim_rect_buf[];
 /** @brief Capacity of the packed logic-block table in the pad context. */
 #define LOGIC_BLOCK_CAPACITY 40
 
+/** @brief Logic-type value marking a logic block that no logic type owns. */
+#define LOGIC_BLOCK_UNASSIGNED 3
+
 /** @brief Packed logic-block word stored in PadContext.logic_blocks. */
 typedef union
 {
     u32 word;
     struct
     {
-        u32 ready : 2;         /**< Both bits are set when a combination creates the block. */
+        u32 logic_type : 2;    /**< Owning logic type; LOGIC_BLOCK_UNASSIGNED when free. */
         u32 id : 6;            /**< Logic-block type index. */
         u32 quantity : 4;      /**< Level shown after the name; zero hides it. */
-        u32 variant : 4;
+        u32 shape : 4;         /**< Index of the block's composite-icon layout. */
         u32 unknown_bit16 : 1;
-        u32 unknown_bits : 15;
+        u32 rotation : 2;      /**< Placed rotation, 0-3. */
+        s32 grid_x : 5;        /**< Placed grid column, relative to the layout origin. */
+        s32 grid_y : 5;        /**< Placed grid row, relative to the layout origin. */
+        u32 unknown_bits : 3;
     } f;
 } LogicBlock;
 

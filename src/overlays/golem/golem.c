@@ -1,3 +1,4 @@
+#include "main.h"
 #include "field_text.h"
 #include "saved_game.h"
 #include "common.h"
@@ -25,18 +26,28 @@
 #define GOLEM_SOUND_REJECT 0x78
 #define GOLEM_SOUND_PICK_UP 0x7E
 #define GOLEM_SOUND_PLACE 0x120
-#define GOLEM_LOGIC_BLOCK(index) (((GolemMenuData*)g_saved_game.bytes)->logic_blocks[(index)])
+/** @brief The pad context, addressed directly through the saved-game buffer it aliases. */
+#define GOLEM_PAD_CTX ((PadContext*)g_saved_game.bytes)
+#define GOLEM_LOGIC_BLOCK(index) (GOLEM_PAD_CTX->logic_blocks[(index)].word)
 #define GOLEM_PANEL_BEHAVIOR_SHIFT 3
 #define GOLEM_PANEL_FLASH_SHIFT 7
 #define GOLEM_PANEL_FLASH_MASK (0xF << GOLEM_PANEL_FLASH_SHIFT)
 #define GOLEM_PANEL_FLASH_FRAMES 3
 #define GOLEM_ACTIVATE_PANEL(word) (((word) & ~GOLEM_PANEL_FLASH_MASK) | (GOLEM_PANEL_FLASH_FRAMES << GOLEM_PANEL_FLASH_SHIFT))
+#define GOLEM_SET_PANEL_FLASH(word, frames) (((word) & ~GOLEM_PANEL_FLASH_MASK) | (((frames) & 0xF) << GOLEM_PANEL_FLASH_SHIFT))
 #define GOLEM_SHARED_PLUS_TEXT_INDEX 11
 #define GOLEM_FADE_NEUTRAL 0x100
 #define GOLEM_FADE_ADDITIVE_THRESHOLD (GOLEM_FADE_NEUTRAL + 1)
 #define GOLEM_FADE_ADDITIVE_DRAW_MODE 0x25
 #define GOLEM_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 #define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
+/**
+ * @brief Address of string @p index in the archive section @p offset bytes into @p archive.
+ * @note Summed as integers, index first, to match the original address arithmetic.
+ */
+#define GOLEM_ARCHIVE_TEXT(archive, offset, index) ((u8*)((offset) + (*(u16*)((index) * 2 + (offset) + (u32)(archive)) + (u32)(archive))))
+/** @brief Address of the FIELD UI string whose offset pair is @p entry, the @p index-th table entry. */
+#define FIELD_UI_TEXT_AT(entry, index) ((entry) - (index) * 2 + (entry)[0] + ((entry)[1] << 8))
 
 /** @brief Animated controls within the panel record array. */
 typedef enum
@@ -81,19 +92,6 @@ typedef struct
     DISPENV display_env;
     DRAWENV draw_env;
 } GolemRenderContext;
-
-/**
- * @brief Golem logic-block records within the shared menu-layout buffer.
- */
-typedef struct
-{
-    u8 pad_0000[0x29D6];
-    u8 logic_block_count;
-    s8 selected_logic_type;
-    u8 logic_types[3];
-    u8 pad_29DB;
-    u32 logic_blocks[40];
-} GolemMenuData;
 
 /** @brief Availability and palette data for one logic block. */
 typedef struct
@@ -217,15 +215,13 @@ typedef struct
     GolemTextSections sections;
 } GolemTextArchive;
 
-
-extern s32 g_pad_input;
-extern s32 g_frame_counter;
 extern s32 D_80122C00;
 /** @brief Two-byte little-endian offset of "+" in the shared text directory. */
 extern u8 D_800EC3DA[];
 extern GolemRenderContext* g_golem_render_buffers;
 extern s32 g_golem_exit_requested;
-extern s32 g_golem_work_buffer;
+/** @brief Word-aligned scratch memory after the render contexts. */
+extern u8* g_golem_work_buffer;
 extern GolemFadeState g_golem_fade_target;
 extern s32 g_golem_scroll_steps;
 extern s32 g_golem_logic_block_count;
@@ -256,16 +252,23 @@ extern s32 g_golem_selected_block;
 extern s32 g_golem_restore_slot_on_cancel;
 /** @brief 4bpp editor atlas with sixteen 16-color palettes. */
 extern TimPrefix g_golem_ui_image;
-extern GolemTextSections g_golem_text_section_offsets;
+/** @brief Name and description text for the logic blocks. */
+extern GolemTextArchive g_golem_text_archive;
 extern GolemGlyphMetric g_golem_glyph_metrics[];
 extern GolemPanelRecord g_golem_panel_records[GOLEM_PANEL_COUNT];
 extern GolemCompositeIconRow g_golem_composite_icon_rows[];
 
-void func_800A3938();
-void func_800CB918();
-s32 func_800CBA9C();
-s32 func_800CBC0C();
-void func_800CBE64();
+/* FIELD overlay functions called from the editor; FIELD has no header that declares them. */
+void func_800A3938(s32 sound_id, s32 pan);
+void* func_800A88A0(void* sprite_cursor, u_long* ordering_table, u8* text, s32 text_color, s32 x, s32 y, s32 flags);
+void func_800A8B90(u8* dest, s32 value, s32 style);
+u32 func_800CB758(void);
+void func_800CB918(s32 block_index, s32 rotation, s32 x, s32 y);
+s32 func_800CBA9C(s32 block_index, s32 rotation, s32 x, s32 y);
+s32 func_800CBC0C(s32 block_index, s32 rotation, s32 x, s32 y);
+s32 func_800CBD70(GolemLogicBlockStatus* block_status);
+void func_800CBE64(s32 block_index);
+void func_800CBEC4(s32* markers);
 void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel);
 u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel);
 void golem_upload_ui_image(void);
@@ -302,7 +305,7 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     GolemRenderContext* draw_buffer;
     GolemRenderContext* next_buffer;
     GolemRenderContext* other_buffer;
-    GolemRenderContext* draw_env_buffers;
+    GolemRenderContext* buffers;
 
     g_golem_render_buffers = render_buffers;
     render_buffers += 2;
@@ -315,14 +318,14 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
     SetDefDrawEnv(&g_golem_render_buffers[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     SetDefDrawEnv(&g_golem_render_buffers[1].draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
-    draw_env_buffers = g_golem_render_buffers;
-    draw_env_buffers[1].draw_env.dtd = 0;
-    draw_env_buffers[0].draw_env.dtd = 0;
+    buffers = g_golem_render_buffers;
+    buffers[1].draw_env.dtd = 0;
+    buffers[0].draw_env.dtd = 0;
     g_golem_exit_requested = 0;
     g_golem_render_buffers[0].buffer_index = 0;
     g_golem_render_buffers[1].buffer_index = 1;
 
-    g_golem_work_buffer = ((s32)golem_initialize_state((u8*)render_buffers, restore_slot_on_cancel) + 3) & ~3;
+    g_golem_work_buffer = (u8*)(((u32)golem_initialize_state((u8*)render_buffers, restore_slot_on_cancel) + 3) & ~3);
 
     next_buffer = g_golem_render_buffers;
     ClearOTagR(next_buffer->ordering_table, GOLEM_ORDERING_TABLE_SIZE);
@@ -359,7 +362,6 @@ void golem_run(GolemRenderContext* render_buffers, s32 restore_slot_on_cancel)
         PutDispEnv(&other_buffer->display_env);
         PutDrawEnv(&next_buffer->draw_env);
         DrawOTag(&draw_buffer->ordering_table[GOLEM_LAYER_PANELS]);
-        draw_buffer = other_buffer;
         update_controllers();
         cdrom_process_state();
     }
@@ -380,31 +382,27 @@ u8* golem_initialize_state(u8* work_buffer, s32 restore_slot_on_cancel)
     s32 slot_index;
     s32 logic_type;
     s32 selected_logic_type;
-    GolemMenuData* menu_data;
-    GolemMenuData* active_menu;
-    s32 stack_pad[2];
+    PadContext* menu_data;
+    s32 stack_pad[2]; /* never used, but the original frame size needs it */
 
     g_golem_restore_slot_on_cancel = restore_slot_on_cancel;
     if (restore_slot_on_cancel != 0)
     {
-        slot_index = 0;
-        menu_data = (GolemMenuData*)g_saved_game.bytes;
-        selected_logic_type = menu_data->selected_logic_type;
+        menu_data = GOLEM_PAD_CTX;
+        selected_logic_type = menu_data->large_history_index;
         g_golem_saved_logic_type_slot = D_80122C00;
         D_80122C00 = 0;
-        do
+        for (slot_index = 0; slot_index < LARGE_HISTORY_RECORD_COUNT; slot_index++)
         {
-            if (*(slot_index + menu_data->logic_types) == selected_logic_type)
+            if (*(menu_data->large_history_order + slot_index) == selected_logic_type)
             {
                 D_80122C00 = slot_index;
             }
-            slot_index++;
-        } while (slot_index < 3);
+        }
     }
 
     g_golem_grid_size_class = func_800CB758() - 4;
-    active_menu = (GolemMenuData*)g_saved_game.bytes;
-    logic_type = active_menu->logic_types[D_80122C00];
+    logic_type = GOLEM_PAD_CTX->large_history_order[D_80122C00];
     g_golem_block_rotation = 0;
     g_golem_block_y = 0;
     g_golem_block_x = 0;
@@ -620,7 +618,7 @@ void golem_handle_input(void)
             g_golem_is_placing_block = 0;
             golem_reset_cursor_motion();
             func_800A3938(GOLEM_SOUND_REJECT, 0x80);
-            GOLEM_LOGIC_BLOCK(g_golem_selected_block) |= 3;
+            GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.logic_type = LOGIC_BLOCK_UNASSIGNED;
         }
         return;
     }
@@ -665,28 +663,20 @@ void golem_handle_input(void)
         }
         if (input & PAD_BTN_R2)
         {
-            s32 limit, logic_type;
-            GolemMenuData* menu_data;
             block_index = g_golem_selected_block;
             repeat_count = 0;
-            if (g_golem_logic_block_count > 0)
+            while (repeat_count < g_golem_logic_block_count)
             {
-                limit = g_golem_logic_block_count;
-                menu_data = (GolemMenuData*)g_saved_game.bytes;
-                logic_type = g_golem_active_logic_type;
-                do
+                block_index++;
+                if (block_index == g_golem_logic_block_count)
                 {
-                    block_index++;
-                    if (block_index == limit)
-                    {
-                        block_index = 0;
-                    }
-                    repeat_count++;
-                    if ((menu_data->logic_blocks[block_index] & 3) == logic_type)
-                    {
-                        break;
-                    }
-                } while (repeat_count < limit);
+                    block_index = 0;
+                }
+                repeat_count++;
+                if (GOLEM_PAD_CTX->logic_blocks[block_index].f.logic_type == g_golem_active_logic_type)
+                {
+                    break;
+                }
             }
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
@@ -696,44 +686,20 @@ void golem_handle_input(void)
         }
         if (input & PAD_BTN_L2)
         {
-            s32 limit, logic_type;
-            GolemMenuData* menu_data;
-            s32 selected_block;
-            s32* block_count;
-            do
-            {
-                selected_block = g_golem_selected_block;
-            } while (0);
-            input = g_golem_logic_block_count;
-            block_index = selected_block;
+            block_index = g_golem_selected_block;
             repeat_count = 0;
-            if (input > 0)
+            while (repeat_count < g_golem_logic_block_count)
             {
-                limit = input;
-                menu_data = (GolemMenuData*)g_saved_game.bytes;
-                logic_type = g_golem_active_logic_type;
                 block_index--;
-            backward_loop:
                 if (block_index < 0)
                 {
-                    block_index = limit - 1;
+                    block_index = g_golem_logic_block_count - 1;
                 }
-                block_count = &g_golem_logic_block_count;
-                if ((menu_data->logic_blocks[block_index] & 3) != logic_type)
+                if (GOLEM_PAD_CTX->logic_blocks[block_index].f.logic_type == g_golem_active_logic_type)
                 {
-                    s32 loop_count;
-                    do
-                    {
-                        loop_count = *block_count;
-                    } while (0);
-                    repeat_count++;
-                    block_index--;
-                    if (repeat_count < loop_count)
-                    {
-                        goto backward_loop;
-                    }
-                    block_index++;
+                    break;
                 }
+                repeat_count++;
             }
             g_golem_scroll_target_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT;
             g_golem_scroll_steps = GOLEM_SCROLL_FRAMES;
@@ -746,11 +712,11 @@ void golem_handle_input(void)
             if (g_golem_block_status[g_golem_selected_block].is_unavailable == 0)
             {
                 g_golem_is_placing_block = 1;
-                if ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) & 3) == g_golem_active_logic_type)
+                if (GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.logic_type == g_golem_active_logic_type)
                 {
-                    g_golem_block_x = (s32)(GOLEM_LOGIC_BLOCK(g_golem_selected_block) << 8) >> 27;
-                    g_golem_block_y = (s32)(GOLEM_LOGIC_BLOCK(g_golem_selected_block) << 3) >> 27;
-                    g_golem_block_rotation = (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 17) & 3;
+                    g_golem_block_x = GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.grid_x;
+                    g_golem_block_y = GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.grid_y;
+                    g_golem_block_rotation = GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.rotation;
                 }
                 else
                 {
@@ -778,6 +744,7 @@ void golem_handle_input(void)
         }
     }
 }
+
 /**
  * @brief Reset the active block to its layout-defined grid origin.
  * @see decomp.me (100%)
@@ -786,8 +753,8 @@ void golem_reset_block_position(void)
 {
     if (g_golem_grid_size_class == 0)
     {
-        g_golem_block_x = g_golem_composite_icon_rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].header.grid_width - 1;
-        g_golem_block_y = g_golem_composite_icon_rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].header.grid_height - 1;
+        g_golem_block_x = g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].header.grid_width - 1;
+        g_golem_block_y = g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].header.grid_height - 1;
         return;
     }
     if (g_golem_grid_size_class < 0)
@@ -796,8 +763,8 @@ void golem_reset_block_position(void)
     }
     if (g_golem_grid_size_class < 3)
     {
-        g_golem_block_x = g_golem_composite_icon_rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].header.grid_width;
-        g_golem_block_y = g_golem_composite_icon_rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].header.grid_height;
+        g_golem_block_x = g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].header.grid_width;
+        g_golem_block_y = g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].header.grid_height;
     }
 }
 
@@ -816,79 +783,40 @@ u8* golem_draw_grid_markers(u8* packet_cursor, u_long* ordering_table)
     s32 marker_index;
     s32 row;
     s32 column;
-    s32 x;
-    s32 y;
     s32 vertical_marker;
     s32 horizontal_marker;
-    s32 glyph;
-    s32* marker_base;
-    s32* vertical_markers;
-    s32* horizontal_markers;
-    s32 row_y;
-    s32 call_x;
 
     func_800CBEC4(markers);
 
     marker_index = 0;
-    row = marker_index;
-    marker_base = markers;
-    y = 4;
-    for (; row < GOLEM_GRID_SIDE; row++)
+    for (row = 0; row < GOLEM_GRID_SIDE; row++)
     {
-        column = 0;
-        row_y = y;
-        vertical_markers = (s32*)((marker_index << 2) + (s32)marker_base);
-        x = 0xC;
-        for (; column < GOLEM_GRID_SIDE - 1;)
+        for (column = 0; column < GOLEM_GRID_SIDE - 1; column++, marker_index++)
         {
-            vertical_marker = *vertical_markers;
+            vertical_marker = markers[marker_index];
             if (vertical_marker != 0)
             {
-                glyph = GOLEM_VERTICAL_MARKER;
-                if (vertical_marker == glyph)
-                {
-                    call_x = x;
-                    glyph = 2;
-                }
-                else
-                {
-                    call_x = x;
-                    glyph = 3;
-                }
-                packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, call_x, row_y, glyph);
+                packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, column * GOLEM_GRID_CELL_SIZE + 12, row * GOLEM_GRID_CELL_SIZE + 4,
+                                                       vertical_marker == GOLEM_VERTICAL_MARKER ? 2 : 3);
             }
-            x += GOLEM_GRID_CELL_SIZE;
-            column++;
-            vertical_markers++;
-            marker_index++;
         }
-        y += GOLEM_GRID_CELL_SIZE;
     }
 
     for (row = 0; row < GOLEM_GRID_SIDE - 1; row++)
     {
-        column = 0;
-        y = row * GOLEM_GRID_CELL_SIZE;
-        horizontal_markers = (s32*)((marker_index << 2) + (s32)markers);
-        x = 4;
-        for (; column < GOLEM_GRID_SIDE;)
+        for (column = 0; column < GOLEM_GRID_SIDE; column++, marker_index++)
         {
-            horizontal_marker = *horizontal_markers;
+            horizontal_marker = markers[marker_index];
             if (horizontal_marker != 0)
             {
-                do
-                {
-                    packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, x, y + 0xC, horizontal_marker != GOLEM_HORIZONTAL_MARKER);
-                } while (0);
+                packet_cursor = golem_emit_grid_marker(packet_cursor, ordering_table, column * GOLEM_GRID_CELL_SIZE + 4, row * GOLEM_GRID_CELL_SIZE + 12,
+                                                       horizontal_marker != GOLEM_HORIZONTAL_MARKER);
             }
-            x += GOLEM_GRID_CELL_SIZE;
-            column++;
-            horizontal_markers++;
-            marker_index++;
         }
     }
 
-    return golem_finish_grid_marker_run(packet_cursor, ordering_table);
+    packet_cursor = golem_finish_grid_marker_run(packet_cursor, ordering_table);
+    return packet_cursor;
 }
 
 /**
@@ -1000,21 +928,20 @@ u8* golem_draw_cursor(u8* packet_cursor, GolemRenderContext* render_context)
  */
 void golem_render(GolemRenderContext* render_context)
 {
-    s32 stack_pad[2];
+    s32 stack_pad[2]; /* never used, but the original frame size needs it */
     u8 name_buffer[0x100];
     u8* name_text;
     u8 number_text[0x100];
     GolemPanelRecord* panel_record;
-    s32 archive_address;
+    GolemTextArchive* archive;
+    GolemTextSections* sections;
     u8* packet_cursor;
     s32 panel_index;
     u_long* panel_ordering_table;
     s32 descriptions_offset;
     s32 description_index;
-    s32 description_offset;
     s32 names_offset;
     s32 name_index;
-    s32 name_offset;
 
     panel_ordering_table = &render_context->ordering_table[GOLEM_LAYER_PANELS];
     packet_cursor = render_context->packet_cursor;
@@ -1035,25 +962,23 @@ void golem_render(GolemRenderContext* render_context)
     if (g_golem_logic_block_count != 0)
     {
         name_text = name_buffer;
-        /* The linked offset table follows the archive count word. */
-        names_offset = g_golem_text_section_offsets.names_offset;
+        sections = &g_golem_text_archive.sections;
+        names_offset = sections->names_offset;
+        /* The id is bits 7:2 of the block word, read through its low byte. */
         name_index = (u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2;
-        archive_address = (s32)&g_golem_text_section_offsets - (s32)sizeof(u32);
-        name_offset = *(u16*)(name_index * (s32)sizeof(u16) + names_offset + archive_address);
-        golem_copy_encoded_string(name_text, (u8*)(names_offset + (name_offset + archive_address)));
-        if ((GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF)
+        archive = &g_golem_text_archive;
+        golem_copy_encoded_string(name_text, GOLEM_ARCHIVE_TEXT(archive, names_offset, name_index));
+        if (GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.quantity)
         {
-            /* Directory offsets are relative to the first entry. */
-            golem_append_encoded_string(name_text, D_800EC3DA - GOLEM_SHARED_PLUS_TEXT_INDEX * sizeof(u16) + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
-            func_800A8B90(number_text, (GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 8) & 0xF, 1);
+            golem_append_encoded_string(name_text, FIELD_UI_TEXT_AT(D_800EC3DA, GOLEM_SHARED_PLUS_TEXT_INDEX));
+            func_800A8B90(number_text, GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.quantity, 1);
             golem_append_encoded_string(name_text, number_text);
         }
-        packet_cursor = (u8*)func_800A88A0(packet_cursor, panel_ordering_table, name_text, 0, 0xA0, 0xA0, 2);
-        descriptions_offset = ((GolemTextArchive*)archive_address)->sections.descriptions_offset;
+        packet_cursor = func_800A88A0(packet_cursor, panel_ordering_table, name_text, 0, 0xA0, 0xA0, 2);
+        descriptions_offset = archive->sections.descriptions_offset;
         description_index = (u8)GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 2;
-        description_offset = *(u16*)(description_index * (s32)sizeof(u16) + descriptions_offset + archive_address);
         packet_cursor =
-            (u8*)func_800A88A0(packet_cursor, panel_ordering_table, (u8*)(descriptions_offset + (description_offset + archive_address)), 0, 0xA0, 0xB0, 2);
+            func_800A88A0(packet_cursor, panel_ordering_table, GOLEM_ARCHIVE_TEXT(archive, descriptions_offset, description_index), 0, 0xA0, 0xB0, 2);
     }
 
     render_context->packet_cursor = golem_render_fade(packet_cursor, &render_context->ordering_table[GOLEM_LAYER_FADE]);
@@ -1079,36 +1004,32 @@ u8* golem_draw_block_list(u8* packet_buffer, GolemRenderContext* render_context)
     u8* packet_cursor;
 
     packet_cursor = packet_buffer;
-    block_index = 0;
     ordering_table = &render_context->ordering_table[GOLEM_LAYER_BLOCK_LIST];
     SetDrawEnv((DR_ENV*)packet_cursor, &g_golem_render_buffers[render_context->buffer_index ^ 1].draw_env);
     next_packet = packet_cursor + sizeof(DR_ENV);
     addPrim(ordering_table, packet_cursor);
 
-    if (g_golem_logic_block_count > 0)
+    for (block_index = 0; block_index < g_golem_logic_block_count; block_index++)
     {
-        do
+        scroll_above = g_golem_scroll_y - GOLEM_BLOCK_LIST_ROW_HEIGHT;
+        block_y = block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT - scroll_above;
+        if (block_y > -GOLEM_BLOCK_LIST_ROW_HEIGHT)
         {
-            scroll_above = g_golem_scroll_y - 0x28;
-            block_y = block_index * 0x28 - scroll_above;
-            if (block_y >= -0x27)
+            if (block_y < 3 * GOLEM_BLOCK_LIST_ROW_HEIGHT)
             {
-                if (block_y < 0x78)
+                if (g_golem_selected_block == block_index && g_golem_block_status[block_index].is_unavailable == 0)
                 {
-                    if (g_golem_selected_block == block_index && g_golem_block_status[block_index].is_unavailable == 0)
-                    {
-                        next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6, block_y + 4,
-                                                                g_golem_block_status[block_index].clut, 1, g_golem_is_placing_block ? 0x80 : 2);
-                    }
-                    else
-                    {
-                        next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6, block_index * 0x28 - g_golem_scroll_y + 0x2C,
-                                                                g_golem_block_status[block_index].clut, 1, 0);
-                    }
+                    next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6, block_y + 4, g_golem_block_status[block_index].clut,
+                                                            1, g_golem_is_placing_block ? 0x80 : 2);
+                }
+                else
+                {
+                    next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, 0, 6,
+                                                            block_index * GOLEM_BLOCK_LIST_ROW_HEIGHT - g_golem_scroll_y + GOLEM_BLOCK_LIST_ROW_HEIGHT + 4,
+                                                            g_golem_block_status[block_index].clut, 1, 0);
                 }
             }
-            block_index++;
-        } while (block_index < g_golem_logic_block_count);
+        }
     }
 
     packet_cursor = next_packet;
@@ -1138,11 +1059,10 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
     u_long* ordering_table;
     u8* next_packet;
     s32 block_index;
-    u32 logic_block;
+    LogicBlock logic_block;
     s32 cursor_target_x;
     s32 cursor_target_y;
     s32 draw_y;
-    GolemLogicBlockStatus* block_status;
 
     cursor = packet_cursor;
     ordering_table = &render_context->ordering_table[GOLEM_LAYER_GRID];
@@ -1155,10 +1075,12 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
     {
         next_packet = golem_draw_composite_icon(cursor, ordering_table, g_golem_selected_block, g_golem_block_rotation, g_golem_block_x * GOLEM_GRID_CELL_SIZE,
                                                 g_golem_block_y * GOLEM_GRID_CELL_SIZE, g_golem_block_status[g_golem_selected_block].clut, 0, 3);
-        cursor_target_x = g_golem_composite_icon_rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].rotations[g_golem_block_rotation].origin.x * 8 +
-                          g_golem_block_x * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
-        cursor_target_y = g_golem_composite_icon_rows[(GOLEM_LOGIC_BLOCK(g_golem_selected_block) >> 12) & 0xF].rotations[g_golem_block_rotation].origin.y * 8 +
-                          g_golem_block_y * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
+        cursor_target_x =
+            g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].rotations[g_golem_block_rotation].origin.x * 8 +
+            g_golem_block_x * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
+        cursor_target_y =
+            g_golem_composite_icon_rows[GOLEM_PAD_CTX->logic_blocks[g_golem_selected_block].f.shape].rotations[g_golem_block_rotation].origin.y * 8 +
+            g_golem_block_y * GOLEM_GRID_CELL_SIZE - g_golem_grid_size_class * 8 + 0x3C;
         if ((cursor_target_x != g_golem_cursor_x || cursor_target_y != g_golem_cursor_y) && g_golem_cursor_steps == 0)
         {
             g_golem_cursor_target_x = cursor_target_x;
@@ -1169,23 +1091,16 @@ u8* golem_draw_logic_grid(u8* packet_cursor, GolemRenderContext* render_context)
 
     next_packet = golem_draw_grid_markers(next_packet, ordering_table);
 
-    block_index = 0;
-    if (g_golem_logic_block_count > 0)
+    for (block_index = 0; block_index < g_golem_logic_block_count; block_index++)
     {
-        block_status = g_golem_block_status;
-        do
+        logic_block = GOLEM_PAD_CTX->logic_blocks[block_index];
+        if (logic_block.f.logic_type == g_golem_active_logic_type)
         {
-            logic_block = GOLEM_LOGIC_BLOCK(block_index);
-            if ((logic_block & 3) == g_golem_active_logic_type)
-            {
-                next_packet = golem_draw_composite_icon(next_packet, ordering_table, block_index, (logic_block >> 0x11) & 3,
-                                                        ((s32)(logic_block << 8) >> 27) * GOLEM_GRID_CELL_SIZE,
-                                                        ((s32)(GOLEM_LOGIC_BLOCK(block_index) << 3) >> 27) * GOLEM_GRID_CELL_SIZE, block_status->clut, 0,
-                                                        block_index == g_golem_selected_block ? (g_golem_is_placing_block ? 0x80 : 2) : 0);
-            }
-            block_status++;
-            block_index++;
-        } while (block_index < g_golem_logic_block_count);
+            next_packet =
+                golem_draw_composite_icon(next_packet, ordering_table, block_index, logic_block.f.rotation, logic_block.f.grid_x * GOLEM_GRID_CELL_SIZE,
+                                          GOLEM_PAD_CTX->logic_blocks[block_index].f.grid_y * GOLEM_GRID_CELL_SIZE, g_golem_block_status[block_index].clut, 0,
+                                          block_index == g_golem_selected_block ? (g_golem_is_placing_block ? 0x80 : 2) : 0);
+        }
     }
 
     cursor = next_packet;
@@ -1252,7 +1167,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
     s32 packet_code;
     s32 bottom_texture_height;
     DR_TPAGE* draw_mode;
-    u8 stack_pad[0x10];
+    u8 unused[16]; /* never used, but the original stack frame reserves it */
 
     tint = GPU_TINT_NEUTRAL;
 
@@ -1278,8 +1193,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
         if (flash_frames != 0)
         {
             tint = GPU_COLOR_WORD(0xC0, 0, 0);
-            g_golem_panel_records[panel_index].attributes =
-                (g_golem_panel_records[panel_index].attributes & ~GOLEM_PANEL_FLASH_MASK) | (((flash_frames - 1) & 0xF) << GOLEM_PANEL_FLASH_SHIFT);
+            g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
         }
         break;
     case GOLEM_PANEL_IF_SCROLL_DOWN:
@@ -1291,8 +1205,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
         if (flash_frames != 0)
         {
             tint = GPU_COLOR_WORD(0xC0, 0, 0);
-            g_golem_panel_records[panel_index].attributes =
-                (g_golem_panel_records[panel_index].attributes & ~GOLEM_PANEL_FLASH_MASK) | (((flash_frames - 1) & 0xF) << GOLEM_PANEL_FLASH_SHIFT);
+            g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
         }
         break;
     case GOLEM_PANEL_FLASH_WHITE:
@@ -1300,8 +1213,7 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
         if (flash_frames != 0)
         {
             tint = GPU_COLOR_WORD(0xC0, 0xC0, 0xC0);
-            g_golem_panel_records[panel_index].attributes =
-                (g_golem_panel_records[panel_index].attributes & ~GOLEM_PANEL_FLASH_MASK) | (((flash_frames - 1) & 0xF) << GOLEM_PANEL_FLASH_SHIFT);
+            g_golem_panel_records[panel_index].attributes = GOLEM_SET_PANEL_FLASH(g_golem_panel_records[panel_index].attributes, flash_frames - 1);
         }
         break;
     }
@@ -1309,55 +1221,57 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
     ordering_table += 1;
     ordering_table -= 1;
     y_offset = 0;
-    if (y_offset < height)
+    while (y_offset < height)
     {
-        do
+        remaining_height = height - y_offset;
+        row_height = remaining_height;
+        segment_width = g_golem_panel_records[panel_index].texture >> 26;
+        cell_height = ((g_golem_panel_records[panel_index].dimensions.packed & 7) << 6) | segment_width;
+        packet_code = 0x64;
+        x_offset = 0;
+        if (cell_height < row_height)
         {
-            remaining_height = height - y_offset;
-            row_height = remaining_height;
-            segment_width = g_golem_panel_records[panel_index].texture >> 26;
-            cell_height = ((g_golem_panel_records[panel_index].dimensions.packed & 7) << 6) | segment_width;
-            packet_code = 0x64;
-            x_offset = 0;
-            if (cell_height < row_height)
+            row_height = cell_height;
+        }
+        while (x_offset < width)
+        {
+            sprite = (SPRT*)packet_cursor;
+            available_width = width - x_offset;
+            segment_width = (g_golem_panel_records[panel_index].texture >> 17) & 0x1FF;
+            if (segment_width >= available_width)
             {
-                row_height = cell_height;
+                segment_width = available_width;
             }
-            while (x_offset < width)
+            SET_BGR0_PACKED(sprite, tint);
+            setlen(sprite, 4);
+            
+
+            /* need to figure out how to remove this hack */ 
+            do
             {
-                sprite = (SPRT*)packet_cursor;
-                available_width = width - x_offset;
-                segment_width = (g_golem_panel_records[panel_index].texture >> 17) & 0x1FF;
-                if (segment_width >= available_width)
-                {
-                    segment_width = available_width;
-                }
-                SET_BGR0_PACKED(sprite, tint);
-                setlen(sprite, 4);
                 do
                 {
-                    do
-                    {
-                        setcode(sprite, packet_code);
-                    } while (0);
+                    setcode(sprite, packet_code);
                 } while (0);
-                if ((g_golem_panel_records[panel_index].attributes >> 2) & 1)
-                {
-                    setcode(sprite, 0x66);
-                }
-                setXY0(sprite, (x + 8) + x_offset, y + y_offset);
-                setWH(sprite, segment_width, row_height);
-                setUV0(sprite, g_golem_panel_records[panel_index].attributes >> 11, g_golem_panel_records[panel_index].texture >> 3);
-                sprite->clut = ((g_golem_panel_records[panel_index].texture >> 11) & 0x3F) | getClut(0, VRAM_CLUT_Y);
-                addPrim(ordering_table, sprite);
-                x_offset += (g_golem_panel_records[panel_index].texture >> 17) & 0x1FF;
-                packet_cursor += sizeof(SPRT);
+            } while (0);
+            if ((g_golem_panel_records[panel_index].attributes >> 2) & 1)
+            {
+                setcode(sprite, 0x66); /* setSemiTrans(sprite, 1); */ 
             }
-            bottom_texture_height = g_golem_panel_records[panel_index].texture >> 26;
-            cell_height = ((g_golem_panel_records[panel_index].dimensions.packed & 7) << 6) | bottom_texture_height;
-            y_offset += cell_height;
-            remaining_height = height - y_offset;
-        } while (y_offset < height);
+
+
+            setXY0(sprite, (x + 8) + x_offset, y + y_offset);
+            setWH(sprite, segment_width, row_height);
+            setUV0(sprite, g_golem_panel_records[panel_index].attributes >> 11, g_golem_panel_records[panel_index].texture >> 3);
+            sprite->clut = ((g_golem_panel_records[panel_index].texture >> 11) & 0x3F) | getClut(0, VRAM_CLUT_Y);
+            addPrim(ordering_table, sprite);
+            x_offset += (g_golem_panel_records[panel_index].texture >> 17) & 0x1FF;
+            packet_cursor += sizeof(SPRT);
+        }
+        bottom_texture_height = g_golem_panel_records[panel_index].texture >> 26;
+        cell_height = ((g_golem_panel_records[panel_index].dimensions.packed & 7) << 6) | bottom_texture_height;
+        y_offset += cell_height;
+        remaining_height = height - y_offset;
     }
 
     draw_mode = (DR_TPAGE*)packet_cursor;
@@ -1384,37 +1298,27 @@ u8* golem_draw_panel(u8* packet_cursor, u_long* ordering_table, s32 panel_index,
  */
 u8* golem_draw_composite_icon(u8* packet_cursor, u_long* ordering_table, s32 block_index, s32 rotation, s32 x, s32 y, s32 clut, s32 use_origin, s32 style)
 {
-    u32 logic_block;
+    LogicBlock logic_block;
     s32 layout_index;
-    GolemCompositeIconRow* layout;
     DR_TPAGE* draw_mode;
     s32 part_index;
 
-    logic_block = GOLEM_LOGIC_BLOCK(block_index);
-    layout_index = logic_block >> 0xC;
-    layout_index = layout_index & 0xF;
+    logic_block = GOLEM_PAD_CTX->logic_blocks[block_index];
+    layout_index = logic_block.f.shape;
     if (use_origin == 1)
     {
-        GolemCompositeIconRow* rows = g_golem_composite_icon_rows;
-        GolemCompositeIconRow* row = &rows[layout_index];
-        x += row->header.origin_x * 8;
-        y += row->header.origin_y * 8;
+        x += g_golem_composite_icon_rows[layout_index].header.origin_x * 8;
+        y += g_golem_composite_icon_rows[layout_index].header.origin_y * 8;
     }
-    packet_cursor = golem_emit_glyph(packet_cursor, ordering_table, ((logic_block >> 2) & 0x3F) + 0x13,
+    packet_cursor = golem_emit_glyph(packet_cursor, ordering_table, logic_block.f.id + 0x13,
                                      (g_golem_composite_icon_rows[layout_index].rotations[rotation].origin.x * 8) + x,
                                      (g_golem_composite_icon_rows[layout_index].rotations[rotation].origin.y * 8) + y, 9, 0);
-    layout = &g_golem_composite_icon_rows[layout_index];
-    part_index = 0;
-    if (layout->header.part_count != 0)
+    for (part_index = 0; part_index < g_golem_composite_icon_rows[layout_index].header.part_count; part_index++)
     {
-        do
-        {
-            packet_cursor =
-                golem_emit_glyph(packet_cursor, ordering_table, g_golem_composite_icon_rows[layout_index].rotations[rotation].parts[part_index].glyph_id,
-                                 g_golem_composite_icon_rows[layout_index].rotations[rotation].parts[part_index].x * GOLEM_GRID_CELL_SIZE + x,
-                                 g_golem_composite_icon_rows[layout_index].rotations[rotation].parts[part_index].y * GOLEM_GRID_CELL_SIZE + y, clut, style);
-            part_index++;
-        } while (part_index < g_golem_composite_icon_rows[layout_index].header.part_count);
+        packet_cursor =
+            golem_emit_glyph(packet_cursor, ordering_table, g_golem_composite_icon_rows[layout_index].rotations[rotation].parts[part_index].glyph_id,
+                             g_golem_composite_icon_rows[layout_index].rotations[rotation].parts[part_index].x * GOLEM_GRID_CELL_SIZE + x,
+                             g_golem_composite_icon_rows[layout_index].rotations[rotation].parts[part_index].y * GOLEM_GRID_CELL_SIZE + y, clut, style);
     }
     draw_mode = (DR_TPAGE*)packet_cursor;
     setDrawTPage(draw_mode, 0, 0, 0x25);
@@ -1576,6 +1480,7 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
     s32 green_step;
     s32 blue_step;
     s32 draw_mode;
+    DR_TPAGE* draw_mode_packet;
 
     if (g_golem_fade_target.steps_remaining != 0)
     {
@@ -1628,21 +1533,22 @@ u8* golem_render_fade(u8* packet_cursor, u_long* ordering_table_tag)
             }
         }
 
-        setTile(((TILE*)packet_cursor));
+        setTile((TILE*)packet_cursor);
         setSemiTrans((TILE*)packet_cursor, 1);
         ((TILE*)packet_cursor)->w = SCREEN_WIDTH;
         draw_mode = GOLEM_FADE_ADDITIVE_DRAW_MODE;
         SET_YX0((TILE*)packet_cursor, 0, 0);
         ((TILE*)packet_cursor)->h = SCREEN_HEIGHT;
-        addPrim(ordering_table_tag, ((TILE*)packet_cursor));
+        addPrim(ordering_table_tag, (TILE*)packet_cursor);
 
         packet_cursor += sizeof(TILE);
         if (g_golem_fade_current.red < GOLEM_FADE_ADDITIVE_THRESHOLD)
         {
             draw_mode = GOLEM_FADE_SUBTRACTIVE_DRAW_MODE;
         }
-        setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, draw_mode);
-        addPrim(ordering_table_tag, ((DR_TPAGE*)packet_cursor));
+        draw_mode_packet = (DR_TPAGE*)packet_cursor;
+        setDrawTPage(draw_mode_packet, 0, 0, draw_mode);
+        addPrim(ordering_table_tag, draw_mode_packet);
 
         packet_cursor += sizeof(DR_TPAGE);
     }
@@ -1680,15 +1586,13 @@ void golem_append_encoded_string(u8* dest, u8* src)
 s32 golem_encoded_string_length(u8* text)
 {
     u8* cursor;
-    u8 character;
     s32 byte_count;
 
     cursor = text;
-    character = *cursor;
     byte_count = 0;
-    while (character != 0)
+    while (*cursor != 0)
     {
-        if ((u32)(character - 0x19) < 7)
+        if (IS_DBCS_LEAD_BYTE(*cursor))
         {
             cursor += 2;
             byte_count += 2;
@@ -1698,7 +1602,6 @@ s32 golem_encoded_string_length(u8* text)
             cursor += 1;
             byte_count += 1;
         }
-        character = *cursor;
     }
     return byte_count;
 }
