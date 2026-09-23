@@ -285,11 +285,9 @@ extern void func_800A4DF4__for_func_800A38A0(void) __asm__("func_800A4DF4");
     func_800A4DF4__for_func_800A38A0();
 }
 
-/** @brief World-map step: init hero struct fields, clear tables, advance step. */
+/** @brief Configure the effect block, reset its twelve resource slots, and advance the step. */
 void func_800A3960(void)
 {
-/* Partial WMAP decompilation: 96.078430% (gcc280_g0). */
-
 typedef struct
 {
     s16 field0;
@@ -306,29 +304,28 @@ typedef struct
 extern WmapA D_801AFBD0[];
 extern WmapB D_80139988[];
 extern u8 D_80123538[];
-extern void *D_80139280;
+extern s32 *D_80139280;
 extern s32 D_801B2E18;
 extern s32 D_801B2E1C;
 extern void func_800A5118__for_func_800A3960(void) __asm__("func_800A5118");
 
     s32 i;
-    void *base = D_80139280;
 
-    *(s32 *)((u8 *)base + 0x0C) = 0x20;
-    *(s32 *)((u8 *)base + 0x14) = 2;
-    *(s32 *)((u8 *)base + 0x18) = 0x384;
-    *(s32 *)((u8 *)base + 0x1C) = 0x14;
-    *(s32 *)((u8 *)base + 0x20) = 8;
-    *(s32 *)((u8 *)base + 0x24) = 1;
-    *(s32 *)((u8 *)base + 0x04) = 0;
-    *(s32 *)((u8 *)base + 0x08) = 0;
-    *(s32 *)((u8 *)base + 0x10) = 0;
-    *(s32 *)((u8 *)base + 0x28) = 0x32C8;
+    D_80139280[1] = 0;
+    D_80139280[2] = 0;
+    D_80139280[3] = 0x20;
+    D_80139280[4] = 0;
+    D_80139280[5] = 2;
+    D_80139280[6] = 0x384;
+    D_80139280[7] = 0x14;
+    D_80139280[8] = 8;
+    D_80139280[9] = 1;
+    D_80139280[10] = 0x32C8;
 
     for (i = 0; i < 0xC; i++)
     {
-        D_801AFBD0[20 + i].field0 = 0;
-        D_80139988[20 + i].field4 = D_80123538;
+        D_801AFBD0[i + 20].field0 = 0;
+        D_80139988[i + 20].field4 = D_80123538;
     }
 
     D_801B2E1C = 0x18;
@@ -1115,10 +1112,11 @@ extern void (*D_800D6AFC[])(void);
     D_801B2DE4 = 1;
 }
 
+/**
+ * @brief Arm the world-map sprite actor, set its wait, advance the step, and run the draw handler.
+ */
 void func_800A455C(void)
 {
-/* Partial WMAP decompilation: 87.156250% (gcc280_g0). */
-
 /** @brief World-map actor configuration. */
 typedef struct
 {
@@ -1146,12 +1144,12 @@ extern void func_800A45DC__for_func_800A455C(void) __asm__("func_800A45DC");
 
     D_801399AC = &D_8011F538;
     D_800D9318.field_06 = 0xF;
+    D_800D9318.field_0E = 1;
     D_800D9318.field_10 = -1;
     D_800D9318.field_26 = 8;
-    D_800D9318.field_0E = 1;
-    D_800D9318.field_24 = 1;
     D_800D9318.field_02 = 0;
     D_800D9318.field_22 = 0x81;
+    D_800D9318.field_24 = 1;
     D_801B2DE4 = 0x80;
     D_801B2DE0 += 1;
     func_800A45DC__for_func_800A455C();
