@@ -3,10 +3,6 @@
 
 #include "checkps.h"
 
-/* GPU packet fields shared by the display and glyph renderers. */
-#define CHECKPS_GPU_TAG_LENGTH_MASK 0xFF000000
-#define CHECKPS_GPU_TAG_ADDRESS_MASK 0x00FFFFFF
-
 /* Glyph geometry shared by the display, cached-font, and Kanji renderers. */
 #define CHECKPS_GLYPH_VRAM_X 960
 #define CHECKPS_GLYPH_BITMAP_ROWS 15
@@ -41,8 +37,10 @@ typedef struct
 /**
  * @brief Shift-JIS hardware-modification warning shown before termination.
  *
- * Defined in pattern.c, whose GNU-as .rodata holds the warning, the pattern
- * vertex signs and the assembler's 16-byte section padding.
+ * Reads "Forced termination. The console may have been modified." as two
+ * newline-separated lines, NUL-padded to 60 bytes. It lives in pattern.c's
+ * GNU-as .rodata with the pattern vertex signs and the assembler's 16-byte
+ * section padding.
  */
 extern const char g_hardware_modification_warning[CHECKPS_HARDWARE_WARNING_SIZE];
 
