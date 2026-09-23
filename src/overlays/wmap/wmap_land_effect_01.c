@@ -8,20 +8,17 @@
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
 
-/** @brief First word of a 40-byte world-map cell. */
+/** @brief Four-word world-map transform vector. */
 typedef struct
 {
-    s32 value;
-    u8 unknown_04[36];
-} WmapValueRecord;
+    s32 x, y, z, pad;
+} WmapVector;
 
-/** @brief Project active particles and initialize the first available slot. */
-void func_80072644(WmapConfigA *actors, WmapResource *resources, s32 count)
+/** @brief Packed transform settings copied when the effect starts. */
+typedef struct
 {
-/* Partial WMAP decompilation: 94.894360% (gcc280_g0). */
-
-/** @brief World-map actor configuration. */
-
+    u8 bytes[8];
+} WmapConfigBytes;
 
 /** @brief Per-actor motion and animation parameters. */
 typedef struct
@@ -35,43 +32,50 @@ typedef struct
     s32 field_10;
 } WmapMotion;
 
-/** @brief Animation resource slot. */
+/** @brief First word of a 40-byte world-map cell. */
+typedef struct
+{
+    s32 value;
+    u8 unknown_04[36];
+} WmapValueRecord;
 
-
-
-extern WmapMotion D_801AFBD0[];
-extern s32 D_800D922C;
-extern s32 D_801B0FD0;
-extern s32 rand(void);
+/**
+ * @brief Project active particles and initialize the first available slot.
+ * @param actors Actor configurations for the particle slots.
+ * @param resources Animation resources corresponding to the actor slots.
+ * @param count Number of slots to process.
+ */
+void func_80072644(WmapConfigA* actors, WmapResource* resources, s32 count)
+{
+    extern WmapMotion D_801AFBD0[];
+    extern s32 D_800D922C;
+    extern s32 D_801B0FD0;
+    extern s32 rand(void);
 
     SVECTOR position;
     s32 screen_position;
     s32 active_count;
     s32 i;
-    WmapMotion *motion;
-    WmapConfigA *actor;
 
     active_count = 0;
     for (i = 0; i < count; i++)
     {
-        motion = &D_801AFBD0[i];
-        actor = &actors[i];
-        if (motion->state != 0)
+        if (D_801AFBD0[i].state != 0)
         {
-            position.vx = ((motion->z >> 3) * (ccos(motion->angle) >> 6)) >> 12;
-            position.vy = ((motion->z >> 3) * (csin(motion->angle) >> 6)) >> 12;
-            position.vz = motion->field_0E;
+            position.vx = ((D_801AFBD0[i].z >> 3) * (ccos(D_801AFBD0[i].angle) >> 6)) >> 12;
+            position.vy = ((D_801AFBD0[i].z >> 3) * (csin(D_801AFBD0[i].angle) >> 6)) >> 12;
+            position.vz = D_801AFBD0[i].field_0E;
             gte_ldv0(&position);
             gte_rtps();
-            motion->field_0E += motion->x;
-            motion->z += 1000;
+            D_801AFBD0[i].field_0E += D_801AFBD0[i].x;
+            D_801AFBD0[i].z += 1000;
             gte_stsxy(&screen_position);
-            func_8006CC4C(actor, &resources[i]);
-            func_80066F9C(actor, screen_position, 13, 10, 0);
-            motion->scale--;
-            if (motion->scale == 0)
+            func_8006CC4C(&actors[i], &resources[i]);
+            func_80066F9C(&actors[i], screen_position, 13, 10, 0);
+            D_801AFBD0[i].scale--;
+            if (D_801AFBD0[i].scale == 0)
             {
-                motion->state = 0;
+                D_801AFBD0[i].state = 0;
             }
             active_count++;
         }
@@ -79,24 +83,22 @@ extern s32 rand(void);
     D_800D922C = active_count;
     for (i = 0; i < count; i++)
     {
-        motion = &D_801AFBD0[i];
-        actor = &actors[i];
-        if (motion->state == 0)
+        if (D_801AFBD0[i].state == 0)
         {
             if (D_801B0FD0 >= active_count)
             {
-                actor->field_06 = 15;
-                actor->field_10 = -1;
-                actor->field_02 = 0;
-                actor->field_0E = 1;
-                actor->field_22 = 129;
-                actor->field_24 = 129;
-                motion->state = 1;
-                motion->angle = rand();
-                motion->z = 10000;
-                motion->x = ((rand() * 5) >> 15) + 1;
-                motion->scale = ((rand() * 2) >> 15) + 24;
-                motion->field_0E = 0;
+                actors[i].field_06 = 15;
+                actors[i].field_10 = -1;
+                actors[i].field_02 = 0;
+                actors[i].field_0E = 1;
+                actors[i].field_22 = 129;
+                actors[i].field_24 = 129;
+                D_801AFBD0[i].state = 1;
+                D_801AFBD0[i].angle = rand();
+                D_801AFBD0[i].z = 10000;
+                D_801AFBD0[i].x = ((rand() * 5) >> 15) + 1;
+                D_801AFBD0[i].scale = ((rand() * 2) >> 15) + 24;
+                D_801AFBD0[i].field_0E = 0;
             }
             break;
         }
@@ -193,72 +195,24 @@ extern s32 D_801B2470;
 /** @brief Initialize twenty effect actors with alternating motion parameters. */
 void func_80072B58(void)
 {
-/* Partial WMAP decompilation: 96.525420% (gcc280_g0). */
-
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s32 field_10;
-} WmapMotion;
-
-/** @brief Animation resource slot. */
-typedef struct
-{
-    s32 field_00;
-    void *resource;
-} WmapResource;
-
-typedef struct
-{
-    u8 bytes[8];
-} WmapConfigBytes;
-typedef struct
-{
-    s32 x, y, z, pad;
-} WmapVector;
-extern WmapConfigA D_800D9370[];
-extern u8 D_8011F538[];
-extern WmapConfigBytes D_80139258;
-extern WmapConfigBytes D_801B24A0;
-extern WmapVector D_80139870;
-extern WmapVector D_80182DC0;
-extern WmapResource D_80139988[];
-extern WmapMotion D_801AFC98[];
-extern WmapMotion *D_801B2560;
-extern s32 D_80139980;
-extern s32 D_801B2470;
-extern s32 D_801B2540;
-extern s32 D_801B2544;
-extern s32 rand(void);
-extern void func_80073CB0__for_func_80072B58(void) __asm__("func_80073CB0");
+    extern WmapConfigA D_800D9370[];
+    extern u8 D_8011F538[];
+    extern WmapConfigBytes D_80139258;
+    extern WmapConfigBytes D_801B24A0;
+    extern WmapVector D_80139870;
+    extern WmapVector D_80182DC0;
+    extern WmapResource D_80139988[];
+    extern WmapMotion D_801AFC98[];
+    extern WmapMotion* D_801B2560;
+    extern s32 D_80139980;
+    extern s32 D_801B2470;
+    extern s32 D_801B2540;
+    extern s32 D_801B2544;
+    extern s32 rand(void);
+    extern void func_80073CB0__for_func_80072B58(void) __asm__("func_80073CB0");
 
     s32 i = 0;
-    s16 angle = i;
-    WmapConfigA *actor;
-    WmapMotion *motion;
+    WmapConfigA* actor;
 
     D_801B2560 = D_801AFC98;
     D_801B24A0 = D_80139258;
@@ -275,20 +229,18 @@ extern void func_80073CB0__for_func_80072B58(void) __asm__("func_80073CB0");
         actor->field_10 = -1;
         actor->field_22 = 128;
         actor->field_24 = 128;
-        motion = (WmapMotion *)((i * sizeof(WmapMotion)) + (u8 *)D_801B2560);
-        motion->state = 1;
-        motion->x = 30000;
-        motion->angle = angle;
-        motion->z = 0;
+        D_801B2560[i].state = 1;
+        D_801B2560[i].x = 30000;
+        D_801B2560[i].angle = i * 204;
+        D_801B2560[i].z = 0;
         if (i & 1)
         {
-            motion->field_0E = 30;
+            D_801B2560[i].field_0E = 30;
         }
         else
         {
-            motion->field_0E = 0;
+            D_801B2560[i].field_0E = 0;
         }
-        angle += 204;
     }
     D_80139980 = 128;
     D_801B2544 = 36;
@@ -778,25 +730,24 @@ extern s32 D_801B252C;
 /**
  * @brief World-map step handler: draw the sprite, bump its animation field, then
  *        countdown-advance the step.
- * @note Best match ~97% (gcc280_g0); residual is the object base being reloaded via
- *       a distinct sub-object symbol (addiu -0xB0) that a single C symbol folds away.
  */
 void func_80073530(void)
 {
-/* Partial WMAP decompilation: 97.000000% (gcc280_g0). */
+    extern u8 D_800D9318[];
+    extern u8 D_801399A8[];
+    extern s32 D_8011CF4C;
+    extern s32 D_801B2528;
+    extern s32 D_801B252C;
 
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 D_8011CF4C;
-extern s32 D_801B2528;
-extern s32 D_801B252C;
-
-    u8 *obj;
+    u8* obj;
+    WmapConfigA* actors;
 
     obj = D_800D9318;
     func_8006CC4C(obj, D_801399A8);
     func_80066F9C(obj, D_8011CF4C, 0xC, 0xA, 0);
-    *(s16 *)(obj - 0xB0 + 0xD4) += 2;
+    /* This sprite occupies the fifth actor slot. */
+    actors = (WmapConfigA*)obj - 4;
+    actors[4].field_24 += 2;
     if (--D_801B252C == 0)
     {
         D_801B2528 += 1;
@@ -822,25 +773,24 @@ extern void func_800735FC__for_func_800735B8(void) __asm__("func_800735FC");
 /**
  * @brief World-map step handler: draw the sprite, bump its animation field, then
  *        countdown-advance the step.
- * @note Best match ~97% (gcc280_g0); residual is the object base being reloaded via
- *       a distinct sub-object symbol (addiu -0xB0) that a single C symbol folds away.
  */
 void func_800735FC(void)
 {
-/* Partial WMAP decompilation: 97.000000% (gcc280_g0). */
+    extern u8 D_800D9318[];
+    extern u8 D_801399A8[];
+    extern s32 D_8011CF4C;
+    extern s32 D_801B2528;
+    extern s32 D_801B252C;
 
-extern u8 D_800D9318[];
-extern u8 D_801399A8[];
-extern s32 D_8011CF4C;
-extern s32 D_801B2528;
-extern s32 D_801B252C;
-
-    u8 *obj;
+    u8* obj;
+    WmapConfigA* actors;
 
     obj = D_800D9318;
     func_8006CC4C(obj, D_801399A8);
     func_80066F9C(obj, D_8011CF4C, 0xC, 0xA, 0);
-    *(s16 *)(obj - 0xB0 + 0xD4) += 2;
+    /* This sprite occupies the fifth actor slot. */
+    actors = (WmapConfigA*)obj - 4;
+    actors[4].field_24 += 2;
     if (--D_801B252C == 0)
     {
         D_801B2528 += 1;

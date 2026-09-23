@@ -10,33 +10,53 @@
 #include "wmap_effect_resources.h"
 #include "cdrom.h"
 
-void func_800C0CA4(WmapStateHead* state)
-{
-/* Partial WMAP decompilation: 93.679344% (gcc280_g0). */
-
-
+/** @brief Animation resource slot for a radial particle. */
 typedef struct
 {
-    s16 field_00, field_02; s32 field_04, field_08; s16 field_0C, field_0E;
-    u8 pad_10[4];
-} WmapConfigB;
+    s32 field_00;
+    void* field_04;
+} WmapSlot8;
+
+/** @brief World-map sprite configuration. */
 typedef struct
 {
-    s16 field_00, field_02; u8 pad_04[2]; u8 field_06; u8 pad_07[7];
-    s16 field_0E, field_10; u8 pad_12[0x10]; s16 field_22, field_24, field_26;
+    s16 field_00, field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E, field_10;
+    u8 pad_12[0x10];
+    s16 field_22, field_24, field_26;
     u8 pad_28[4];
 } WmapConfigA;
-extern u8 D_800D9268[];
-extern u8 D_80139988[];
-extern u8 D_801AFBD0[];
-extern s32 rand(void);
+
+/** @brief Radial-particle motion and lifetime parameters. */
+typedef struct
+{
+    s16 field_00, field_02;
+    s32 field_04, field_08;
+    s16 field_0C, field_0E;
+    u8 pad_10[4];
+} WmapConfigB;
+
+/**
+ * @brief Draw active radial particles and optionally spawn one in a free slot.
+ * @param state Particle range, drawing parameters, and spawn settings.
+ */
+void func_800C0CA4(WmapStateHead* state)
+{
+    /* Partial WMAP decompilation: 98.788040% (gcc280_g0). */
+
+    extern WmapConfigA D_800D9268[];
+    extern WmapSlot8 D_80139988[];
+    extern WmapConfigB D_801AFBD0[];
+    extern s32 rand(void);
 
     SVECTOR position;
     s32 screen_position;
     s32 index = state->field_00;
     WmapConfigB* config;
-    s32 display_offset;
-    s32 screen_offset;
+    WmapConfigB* deactivate_config;
     WmapConfigA* display;
     s32 draw_type;
     s32 radius;
@@ -46,25 +66,20 @@ extern s32 rand(void);
     {
         u8* config_base;
 
-        config_base = D_801AFBD0;
-        config = (WmapConfigB*)((index * sizeof(WmapConfigB)) + (s32)config_base);
-        display_offset = index * sizeof(WmapConfigA);
-        do
+        config_base = (u8*)D_801AFBD0;
+        deactivate_config = (WmapConfigB*)((index * sizeof(WmapConfigB)) + (s32)config_base);
+        for (; index < state->field_04; index++)
         {
+            config = &D_801AFBD0[index];
             if (config->field_00 != 0)
             {
-                u8* display_base;
-
-                display_base = D_800D9268;
-                display = (WmapConfigA*)(display_offset + (s32)display_base);
+                display = &D_800D9268[index];
                 position.vx = (config->field_08 * (ccos(config->field_02) >> 5)) >> 0xC;
                 position.vy = (config->field_08 * (csin(config->field_02) >> 5)) >> 0xC;
                 position.vz = config->field_0E;
                 gte_ldv0(&position);
                 gte_rtps();
-                screen_offset = index * 8;
-                display_base = D_80139988;
-                func_8006CC4C(display, (void*)(screen_offset + (s32)display_base));
+                func_8006CC4C(display, &D_80139988[index]);
                 gte_stsxy(&screen_position);
                 if (index < 0x78)
                 {
@@ -89,49 +104,39 @@ extern s32 rand(void);
                 }
                 else
                 {
-                    config->field_00 = 0;
+                    deactivate_config->field_00 = 0;
                 }
             }
-            config++;
-            index++;
-            display_offset += sizeof(WmapConfigA);
-        } while (index < state->field_04);
+            deactivate_config++;
+        }
     }
     if (state->field_24 != 0)
     {
         index = state->field_00;
         if (index < state->field_04)
         {
-            u8* free_base;
-
-            free_base = D_800D9268;
-            display = (WmapConfigA*)((index * sizeof(WmapConfigA)) + (s32)free_base);
-            free_base = D_801AFBD0;
-            config = (WmapConfigB*)((index * sizeof(WmapConfigB)) + (s32)free_base);
             do
             {
-                index++;
-                if (config->field_00 == 0)
+                if (D_801AFBD0[index].field_00 == 0)
                 {
-                    config->field_00 = 1;
-                    display->field_06 = 0xF;
-                    display->field_0E = 2;
-                    display->field_02 = 0;
-                    display->field_10 = -1;
-                    display->field_26 = state->field_08;
-                    display->field_22 = state->field_0C;
-                    display->field_24 = state->field_10;
-                    config->field_08 = state->field_14;
-                    config->field_02 = rand() & 0xFFF;
+                    D_801AFBD0[index].field_00 = 1;
+                    D_800D9268[index].field_06 = 0xF;
+                    D_800D9268[index].field_0E = 2;
+                    D_800D9268[index].field_02 = 0;
+                    D_800D9268[index].field_10 = -1;
+                    D_800D9268[index].field_26 = state->field_08;
+                    D_800D9268[index].field_22 = state->field_0C;
+                    D_800D9268[index].field_24 = state->field_10;
+                    D_801AFBD0[index].field_08 = state->field_14;
+                    D_801AFBD0[index].field_02 = rand() & 0xFFF;
                     radius = rand() * state->field_1C;
                     base_radius = state->field_18;
-                    config->field_0E = 0;
-                    config->field_04 = (radius >> 0xF) + base_radius;
-                    config->field_0C = state->field_20;
+                    D_801AFBD0[index].field_0E = 0;
+                    D_801AFBD0[index].field_04 = (radius >> 0xF) + base_radius;
+                    D_801AFBD0[index].field_0C = state->field_20;
                     return;
                 }
-                display++;
-                config++;
+                index++;
             } while (index < state->field_04);
         }
     }

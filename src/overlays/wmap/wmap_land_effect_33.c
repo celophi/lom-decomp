@@ -9,166 +9,110 @@
 #include "cdrom.h"
 #include "sdk/libgte.h"
 
-void func_800BD41C(void)
-{
-/* Partial WMAP decompilation: 85.080000% (gcc280_g0). */
-
+/** @brief Two effect configurations in shared world-map state storage. */
 typedef struct
 {
-    s32 field_00;
-    s32 field_04;
-    s32 field_08;
-    s32 field_0C;
-    s32 field_10;
-    s32 field_14;
-    s32 field_18;
-    s32 field_1C;
-    s32 field_20;
-    s32 state_24;
-    s32 field_28;
-    s32 field_2C;
-    s32 field_30;
-    s32 field_34;
-    s32 field_38;
-    s32 field_3C;
-    s32 field_40;
-    s32 field_44;
-    s32 field_48;
-    s32 tail_state;
-} WmapState;
+    s32 unknown_00;
+    s32 unknown_04;
+    s32 unknown_08;
+    s32 unknown_0c;
+    s32 unknown_10;
+    s32 unknown_14;
+    s32 unknown_18;
+    s32 unknown_1c;
+    s32 unknown_20;
+    s32 unknown_24;
+    s32 unknown_28;
+    s32 unknown_2c;
+    s32 unknown_30;
+    s32 unknown_34;
+    s32 unknown_38;
+    s32 unknown_3c;
+    s32 unknown_40;
+    s32 unknown_44;
+    s32 unknown_48;
+    s32 unknown_4c;
+    s32 unknown_50;
+} WmapEffectState;
 
-extern u8 D_80121538;
-extern WmapState* D_80139280;
-extern u8 D_80139988[];
-extern u8 D_801AFBD0[];
-extern s32 D_801B31E8;
-extern s32 D_801B31EC;
+/** @brief Animation-resource slot used by the effect. */
+typedef struct
+{
+    s32 unknown_00;
+    void* resource;
+} WmapEffectResourceSlot;
 
-extern void func_800BEBE0__for_func_800BD41C() __asm__("func_800BEBE0");
+/** @brief Activity flag in a world-map motion slot. */
+typedef struct
+{
+    s16 active;
+    u8 unknown_02[0x12];
+} WmapEffectMotionSlot;
 
-    s32 index;
-    s32 screen_offset;
-    s32 config_offset;
-    s32 state_value;
-    u8* config_base;
-    u8* screen_base;
-    u8* resource;
-    u8* screen_entry;
-    s16* config_entry;
-    volatile WmapState* state;
+/** @brief Configure the first world-map effect state and reset its fifty resource slots. */
+void func_800BD41C(void)
+{
+    extern u8 D_80121538[];
+    extern WmapEffectState* D_80139280;
+    extern WmapEffectResourceSlot D_80139988[];
+    extern WmapEffectMotionSlot D_801AFBD0[];
+    extern s32 D_801B31E8;
+    extern s32 D_801B31EC;
+    extern void func_800BEBE0__for_func_800BD41C(void) __asm__("func_800BEBE0");
 
-    index = 0;
-    config_base = D_801AFBD0;
-    screen_base = D_80139988;
-    resource = &D_80121538;
-    screen_offset = 0xA0;
-    config_offset = 0x190;
-    state_value = 3;
-    state = D_80139280;
-    state->field_0C = 0x20;
-    state->field_14 = 2;
-    state->field_18 = config_offset;
-    state->field_1C = 0x14;
-    state->field_20 = 0x2C;
-    state->field_04 = 0;
-    state->field_08 = state_value;
-    state->field_10 = 0;
-    state->state_24 = state_value;
-    state->field_28 = 0x32C8;
+    s32 i;
 
-    do
+    D_80139280->unknown_04 = 0;
+    D_80139280->unknown_08 = 3;
+    D_80139280->unknown_0c = 0x20;
+    D_80139280->unknown_10 = 0;
+    D_80139280->unknown_14 = 2;
+    D_80139280->unknown_18 = 0x190;
+    D_80139280->unknown_1c = 0x14;
+    D_80139280->unknown_20 = 0x2C;
+    D_80139280->unknown_24 = 3;
+    D_80139280->unknown_28 = 0x32C8;
+
+    for (i = 0; i < 50; i++)
     {
-        screen_entry = (u8*)(screen_offset + (s32)screen_base);
-        screen_offset += 8;
-        config_entry = (s16*)(config_offset + (s32)config_base);
-        config_offset += 0x14;
-        index++;
-        *config_entry = 0;
-        *(u8**)(screen_entry + 4) = resource;
-    } while (index < 50);
+        D_801AFBD0[i + 20].active = 0;
+        D_80139988[i + 20].resource = D_80121538;
+    }
 
     D_801B31EC = 100;
     D_801B31E8++;
     func_800BEBE0__for_func_800BD41C();
 }
 
+/** @brief Configure the second world-map effect state and reset its forty resource slots. */
 void func_800BD4E8(void)
 {
-/* Partial WMAP decompilation: 94.211540% (gcc280_g0). */
+    extern u8 D_80121538[];
+    extern WmapEffectState* D_80139280;
+    extern WmapEffectResourceSlot D_80139988[];
+    extern WmapEffectMotionSlot D_801AFBD0[];
+    extern s32 D_801B31F0;
+    extern s32 D_801B31F4;
+    extern void func_800BEDE0__for_func_800BD4E8(void) __asm__("func_800BEDE0");
 
-typedef struct
-{
-    s32 field_00;
-    s32 field_04;
-    s32 field_08;
-    s32 field_0C;
-    s32 field_10;
-    s32 field_14;
-    s32 field_18;
-    s32 field_1C;
-    s32 field_20;
-    s32 state_24;
-    s32 field_28;
-    s32 field_2C;
-    s32 field_30;
-    s32 field_34;
-    s32 field_38;
-    s32 field_3C;
-    s32 field_40;
-    s32 field_44;
-    s32 field_48;
-    s32 tail_state;
-} WmapState;
+    s32 i;
 
-extern u8 D_80121538;
-extern WmapState* D_80139280;
-extern u8 D_80139988[];
-extern u8 D_801AFBD0[];
-extern s32 D_801B31F0;
-extern s32 D_801B31F4;
+    D_80139280->unknown_2c = 1;
+    D_80139280->unknown_30 = 2;
+    D_80139280->unknown_34 = 0x80;
+    D_80139280->unknown_38 = 0;
+    D_80139280->unknown_3c = 1;
+    D_80139280->unknown_40 = 0x190;
+    D_80139280->unknown_44 = 0x50;
+    D_80139280->unknown_48 = 0x2C;
+    D_80139280->unknown_4c = 4;
+    D_80139280->unknown_50 = 0x4650;
 
-extern void func_800BEDE0__for_func_800BD4E8() __asm__("func_800BEDE0");
-
-    s32 index;
-    s32 screen_offset;
-    s32 config_offset;
-    register s32 state_value;
-    u8* config_base;
-    u8* screen_base;
-    u8* resource;
-    u8* screen_entry;
-    s16* config_entry;
-    volatile WmapState* state;
-
-    index = 0;
-    config_base = D_801AFBD0;
-    screen_base = D_80139988;
-    resource = &D_80121538;
-    screen_offset = 0x280;
-    config_offset = 0x640;
-    state_value = 1;
-    state = D_80139280;
-    state->field_30 = 2;
-    state->field_34 = 0x80;
-    state->field_40 = 0x190;
-    state->field_44 = 0x50;
-    state->field_48 = 0x2C;
-    state->tail_state = 4;
-    state->field_2C = state_value;
-    state->field_38 = 0;
-    state->field_3C = state_value;
-    state[1].field_00 = 0x4650;
-
-    do
+    for (i = 0; i < 40; i++)
     {
-        screen_entry = (u8*)(screen_offset + (s32)screen_base);
-        screen_offset += 8;
-        config_entry = (s16*)(config_offset + (s32)config_base);
-        config_offset += 0x14;
-        index++;
-        *config_entry = 0;
-        *(u8**)(screen_entry + 4) = resource;
-    } while (index < 40);
+        D_801AFBD0[i + 80].active = 0;
+        D_80139988[i + 80].resource = D_80121538;
+    }
 
     D_801B31F4 = 40;
     D_801B31F0++;

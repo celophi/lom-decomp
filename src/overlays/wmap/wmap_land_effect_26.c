@@ -6,6 +6,60 @@
 #include "wmap_resource_support.h"
 #include "wmap_effect_primitives.h"
 
+/** @brief Screen coordinates and their packed renderer argument. */
+typedef union
+{
+    s32 packed;
+    struct
+    {
+        s16 x, y;
+    } point;
+} WmapScreenPoint;
+
+/** @brief Animation resource assigned to an actor. */
+typedef struct
+{
+    s32 field_00;
+    void* resource;
+} WmapResource;
+
+/** @brief Per-actor motion and animation parameters. */
+typedef struct
+{
+    s16 state;
+    s16 angle;
+    s32 x;
+    s32 z;
+    s16 scale;
+    s16 field_0E;
+    s16 field_10;
+    s16 field_12;
+} WmapMotion;
+
+/** @brief World-map sprite configuration. */
+typedef struct
+{
+    s16 field_00;
+    s16 field_02;
+    u8 pad_04[2];
+    u8 field_06;
+    u8 pad_07[7];
+    s16 field_0E;
+    s16 field_10;
+    u8 pad_12[0x10];
+    s16 field_22;
+    s16 field_24;
+    s16 field_26;
+    u8 pad_28[4];
+} WmapConfigA;
+
+/** @brief Land identifier and remaining storage of a map cell. */
+typedef struct
+{
+    u32 land_id;
+    u8 unknown_4[36];
+} WmapValueRecord;
+
 /** @brief Approach the effect depth and draw its alternating-brightness fade. */
 void func_80076C6C(void)
 {
@@ -337,76 +391,39 @@ extern void func_80078CB4__for_func_8007724C(void) __asm__("func_80078CB4");
  * @param start First actor index.
  * @param end Exclusive end index.
  * @param depth Rendering depth.
+ * @note Partial reconstruction: 95.990560% with gcc280_g0.
  */
 void func_800773B8(s32 start, s32 end, s32 depth)
 {
-/* Partial WMAP decompilation: 86.000000% (gcc280_g0). */
-
-/** @brief World-map actor configuration. */
-typedef struct
-{
-    s16 field_00;
-    s16 field_02;
-    u8 pad_04[2];
-    u8 field_06;
-    u8 pad_07[7];
-    s16 field_0E;
-    s16 field_10;
-    u8 pad_12[0x10];
-    s16 field_22;
-    s16 field_24;
-    s16 field_26;
-    u8 pad_28[4];
-} WmapConfigA;
-
-/** @brief Per-actor motion and animation parameters. */
-typedef struct
-{
-    s16 state;
-    s16 angle;
-    s32 x;
-    s32 z;
-    s16 scale;
-    s16 field_0E;
-    s16 field_10;
-    s16 field_12;
-} WmapMotion;
-
-/** @brief Animation resource slot. */
-typedef struct
-{
-    s32 field_00;
-    void *resource;
-} WmapResource;
-
-/** @brief Packed screen coordinates passed to the sprite renderer. */
-typedef union
-{
-    s32 packed;
-    struct
-    {
-        s16 x, y;
-    } point;
-} WmapScreenPoint;
-extern WmapConfigA D_800D9268[];
-extern WmapMotion D_801AFBD0[];
-extern WmapResource D_80139988[];
-extern s8 D_80051B4C[];
-extern u16 D_80182DF4;
+    extern WmapConfigA D_800D9268[];
+    extern WmapMotion D_801AFBD0[];
+    extern WmapResource D_80139988[];
+    extern s8 D_80051B4C[];
+    extern u16 D_80182DF4;
 
     s32 i;
     s32 motion_offset;
     s32 x;
     s32 angle;
-    WmapMotion *motion;
-    WmapConfigA *actor;
+    s32 resource_offset;
+    WmapResource* resource;
+    WmapMotion* motion;
+    u8* slot_data;
+    s8* table;
+    WmapConfigA* actor;
     WmapScreenPoint screen;
 
-    motion_offset = start * 20;
-    for (i = start; i < end; i++)
+    i = start;
+    if (i >= end)
     {
-        motion = (WmapMotion *)((u8 *)D_801AFBD0 + motion_offset);
-        motion_offset += 20;
+        return;
+    }
+    table = D_80051B4C;
+    motion_offset = i * (s32)sizeof(WmapMotion);
+    for (; i < end; i++)
+    {
+        slot_data = (u8*)D_801AFBD0;
+        motion = (WmapMotion*)(slot_data + motion_offset);
         actor = &D_800D9268[i];
         motion->field_0E += motion->x;
         if (motion->field_0E >= 3841)
@@ -415,12 +432,16 @@ extern u16 D_80182DF4;
         }
         motion->field_12 = (motion->field_12 + motion->field_10) & 4095;
         angle = motion->angle;
-        x = D_80051B4C[motion->field_12 / 16] * motion->scale;
+        x = table[motion->field_12 / 16] * motion->scale;
         screen.point.x = (angle + x / 16) / 16;
         screen.point.y = motion->field_0E / 16;
         actor->field_22 = D_80182DF4;
         actor->field_24 = D_80182DF4;
-        func_8006CC4C(actor, &D_80139988[i]);
+        resource_offset = i * (s32)sizeof(WmapResource);
+        slot_data = (u8*)D_80139988;
+        resource = (WmapResource*)(slot_data + resource_offset);
+        func_8006CC4C(actor, resource);
+        motion_offset += sizeof(WmapMotion);
         func_80066F9C(actor, screen.packed, depth, 4, 0);
     }
 }
@@ -868,19 +889,18 @@ extern s32 D_801B25F0;
     }
 }
 
+/** @brief Mark the selected map cell with the active land and advance the effect. */
 void func_80077BD0(void)
 {
-/* Partial WMAP decompilation: 95.600000% (gcc280_g0). */
-
-extern s32 D_8013B20C;
-extern u32 D_80139290[];
-extern s32 D_8011D530;
-extern s32 D_8011D510;
-extern u32 D_8011D4FC;
-extern s32 D_801B25F0;
+    extern s32 D_8013B20C;
+    extern WmapValueRecord D_80139290[][6];
+    extern s32 D_8011D530;
+    extern s32 D_8011D510;
+    extern u32 D_8011D4FC;
+    extern s32 D_801B25F0;
 
     D_8013B20C = 0;
-    D_80139290[D_8011D530 * 10 + D_8011D510 * 60] = D_8011D4FC | 0x100;
+    D_80139290[D_8011D510][D_8011D530].land_id = D_8011D4FC | 0x100;
     D_801B25F0 += 1;
 }
 
