@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_main.h"
 #include "wmap_land_effect_22.h"
 #include "wmap_sequence_runtime.h"
@@ -221,7 +222,7 @@ extern s32 D_801B2D8C;
  */
 void func_800A0D80(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B2498[];
 extern s32* D_8011CF2C;
@@ -235,7 +236,7 @@ extern s32 D_801B2DA4;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B2498);
-    func_800675F0(D_8011CF2C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1001, D_80182DE4, 0, 0x14, -1);
+    wmap_draw_model(D_8011CF2C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1001, D_80182DE4, 0, 0x14, -1);
     D_8013923C += 0x10;
     value = D_80182DE4 + 2;
     D_80182DE4 = value;
@@ -259,7 +260,7 @@ extern s32 D_801B2DA4;
  */
 void func_800A0E84(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B2498[];
 extern s32* D_8011CF2C;
@@ -273,7 +274,7 @@ extern s32 D_801B2DA4;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B2498);
-    func_800675F0(D_8011CF2C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1001, D_80182DE4, 0, 0x14, -1);
+    wmap_draw_model(D_8011CF2C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1001, D_80182DE4, 0, 0x14, -1);
     value = D_80182DE4 - 2;
     D_80182DE4 = value;
     if (value < 0)
@@ -302,7 +303,7 @@ extern s32 D_801B2DA8;
 extern s32 D_801B2DAC;
 extern s32 D_801B25D8;
 extern s32 D_80139234;
-extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 
     s32 scale;
     s32 intensity;
@@ -310,7 +311,7 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 
     PushMatrix();
     func_8006CFA8(&D_80182DC0, &D_801B2670);
-    func_800675F0(D_8011CF28, D_80139264 & 3, 4, 54, 0x78C0, 0x1001, D_801B25D8, 0, 0, D_80139234 / 16);
+    wmap_draw_model(D_8011CF28, D_80139264 & 3, 4, 54, 0x78C0, 0x1001, D_801B25D8, 0, 0, D_80139234 / 16);
     scale = D_80139234 - 32;
     D_80139234 = scale;
     intensity = D_801B25D8 + 8;
@@ -345,7 +346,7 @@ extern s32 D_801B2DA8;
 extern s32 D_801B2DAC;
 extern s32 D_801B25D8;
 extern s32 D_80139234;
-extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 
     s32 intensity;
     s32 remaining;
@@ -354,7 +355,7 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
     {
         PushMatrix();
         func_8006CFA8(&D_80182DC0, &D_801B2670);
-        func_800675F0(D_8011CF28, D_80139264 & 3, 4, 54, 0x78C0, 0x1001, D_801B25D8, 0, 0, D_80139234 / 16);
+        wmap_draw_model(D_8011CF28, D_80139264 & 3, 4, 54, 0x78C0, 0x1001, D_801B25D8, 0, 0, D_80139234 / 16);
         intensity = D_801B25D8 - 8;
         D_801B25D8 = intensity;
         D_80139264++;
@@ -385,8 +386,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern void func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
-extern s32 D_8011CF28;
+extern u8* D_8011CF28;
 extern s32 D_80139260;
 extern WmapVector D_8013B240;
 extern s32 D_80182DC0[];
@@ -398,7 +398,7 @@ extern s32 D_801B2DB4;
     s32 intensity;
 
     func_8006CFA8(D_80182DC0, &D_8013B240);
-    func_800675F0(D_8011CF28, D_80139260 & 3, 4, 0x36, 0x7900, 0x1001, D_80182DF4, 0, 0, -1);
+    wmap_draw_model(D_8011CF28, D_80139260 & 3, 4, 0x36, 0x7900, 0x1001, D_80182DF4, 0, 0, -1);
     D_80139260 += 1;
     intensity = D_80182DF4 + 2;
     D_80182DF4 = intensity;
@@ -427,8 +427,7 @@ typedef struct
     s16 field_06;
 } WmapVector;
 
-extern void func_800675F0(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
-extern s32 D_8011CF28;
+extern u8* D_8011CF28;
 extern s32 D_80139260;
 extern WmapVector D_8013B240;
 extern s32 D_80182DC0[];
@@ -440,7 +439,7 @@ extern s32 D_801B2DB4;
     s32 intensity;
 
     func_8006CFA8(D_80182DC0, &D_8013B240);
-    func_800675F0(D_8011CF28, D_80139260 & 3, 4, 0x36, 0x7900, 0x1001, D_80182DF4, 0, 0, -1);
+    wmap_draw_model(D_8011CF28, D_80139260 & 3, 4, 0x36, 0x7900, 0x1001, D_80182DF4, 0, 0, -1);
     intensity = D_80182DF4 - 4;
     D_80139260 += 1;
     D_80182DF4 = intensity;

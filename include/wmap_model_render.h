@@ -3,20 +3,26 @@
 
 #include "common.h"
 
+#define WMAP_MODEL_DRAW_BACKFACES 0x1000
+#define WMAP_MODEL_FORCE_OPAQUE 0x10000
+#define WMAP_MODEL_COLOR_MASK 0xFFFF
+
 /**
- * @brief Render a primitive list from a world-map model resource.
- * @param resource_table Resource table containing model offsets.
- * @param resource_index Model entry index.
- * @param ot_index Base ordering-table index.
- * @param tpage Texture-page value written to textured primitives.
- * @param clut CLUT value written to textured primitives.
- * @param blend_mode Primitive blend mode and culling flags.
- * @param color_scale Color intensity scale and texture flags.
- * @param x_offset Screen-space X offset.
- * @param y_offset Screen-space Y offset.
- * @param z_divisor Optional Z divisor, or -1 to leave Z unchanged.
+ * @brief Project a model's faces into the current world-map ordering table.
+ * @param resource_table Packed resource header and relative model offsets.
+ * @param resource_index Zero-based model index in the resource.
+ * @param ot_index Front-face ordering-table bucket; backfaces use four buckets higher.
+ * @param tpage Texture page for textured faces.
+ * @param clut Palette for textured faces.
+ * @param blend_mode Blend setting with WMAP_MODEL_DRAW_BACKFACES; low two bits select the GPU blend equation.
+ * @param color_scale RGB multiplier in units of 1/128; textured faces use the low 16 bits and WMAP_MODEL_FORCE_OPAQUE.
+ * @param x_offset Screen X displacement, ignored by flat untextured quads.
+ * @param y_offset Screen Y displacement, ignored by flat untextured quads.
+ * @param z_divisor Vertex Z divisor, or -1 to keep Z; zero acts as one. Untextured quads ignore it.
+ * @note Uses the caller's GTE transform. Untextured colors use -1 to bypass scaling.
+ * @note The backface flag is stripped before the signed blend-mode test, including for negative inputs.
  */
-void func_800675F0(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpage, s32 clut, s32 blend_mode, s32 color_scale, s32 x_offset, s32 y_offset,
-                   s32 z_divisor);
+void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32 tpage, s32 clut, s32 blend_mode, s32 color_scale, s32 x_offset, s32 y_offset,
+                     s32 z_divisor);
 
 #endif

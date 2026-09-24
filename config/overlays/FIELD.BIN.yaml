@@ -47,30 +47,21 @@ segments:
       - [auto, c, overlay_header] # overlay metadata
       - [0x1, .rodata, overlay_header]
       - [0x5, .rodata, field_scene_build]
-      - [0x65, .rodata, field_render]
       - [0x79, .rodata, field_animation]
       - [0x115, .rodata, field_scene_control]
       - [0x129, .rodata, field_collision]
       - [0x155, .rodata, field_text]
-      - [0x285, .rodata, field_effect_update] # field7/8/9 animation + placement switch tables
-      - [0x515, .rodata, field_effect_frames]
-      - [0x555, .rodata, field_effect_geometry] # actor update switch tables
+      - [0x285, .rodata, field_effect_update] # field7/8/9 animation + placement, frame and actor update switch tables
       - [0x679, .rodata, field_mesh_render]
-      - [0x691, .rodata, field_actor_control_effects] # func_80086494 eight-entry animation-kind jump table
-      - [0x6B1, .rodata, field_actor_script_dispatch]
-      - [0xCED, rodata, unk2_rodata_1]
-      - [0xCF1, .rodata, field_actor_animation_commands]
+      - [0x691, .rodata, field_actor_hud_effects] # func_80086494 eight-entry animation-kind jump table
+      - [0x6B1, .rodata, field_actor_script_ops] # func_80088198/func_80089980/func_8008B288 tables; the zero word at 0x8005095C is intra-object jtbl alignment
       - [0xF2D, .rodata, field_actor_behavior] # field_update_actor_command + field_apply_action_animation (58-entry) jump tables
-      - [0x1185, .rodata, field_actor_movement_states] # 72-entry movement-state jump table
-      - [0x139D, .rodata, field_actor_sequence_runtime] # twenty-entry actor sequence switch
+      - [0x1185, .rodata, field_actor_state_updates] # func_80092AD8 + func_80092C98 movement-state tables, then the twenty-entry actor sequence switch; the zero word at 0x80051008 is intra-object jtbl alignment
       - [0x13ED, .rodata, field_contact_geometry] # func_80099018 (30-entry) + func_80099A48 (20-entry) reaction switches
-      - [0x14B5, .rodata, field_actor_movement_modes] # seven-entry movement-mode jump table
-      - [0x14D1, rodata, unk2_rodata_2_after_9d4d8]
-      - [0x14D5, .rodata, field_actor_effects] # func_8009D95C + func_8009D9E0 switch tables
+      - [0x14B5, .rodata, field_actor_effects] # func_8009D4D8 movement-mode table, 4-byte jtbl alignment pad, func_8009D95C + func_8009D9E0 switch tables
       - [0x1531, .rodata, field_command_history] # func_800A29F8 128-entry input command jump table
       - [0x1731, .rodata, field_audio_runtime] # func_800A3FB0 five-entry audio transfer state jump table
-      - [0x1745, .rodata, field_timed_panel] # func_800A5960 five-entry effect switch
-      - [0x1759, .rodata, field_dialog_screens] # func_800A838C phase table
+      - [0x1745, .rodata, field_dialog_screens] # func_800A5960 five-entry effect switch, func_800A838C phase table
       - [0x1779, rodata, unk2_rodata_2_after_a838c]
       - [0x17FD, .rodata, field_modal_runtime] # field_update_modal nine-entry and six-entry modal-state tables
       - [0x183D, .rodata, field_interaction_start] # eight-entry action installation table
@@ -78,9 +69,7 @@ segments:
       - [0x1911, .rodata, field_action_descriptors] # descriptor-selection tables
       - [0x19B9, .rodata, field_action_setup] # six-entry action jump table
       - [0x19D1, .rodata, field_record_stat_ops]
-      - [0x19F1, .rodata, field_script_flow_ops] # operand and record selector tables, aligned padding
-      - [0x1A41, .rodata, field_script_primary_ops]
-      - [0x1A81, .rodata, field_script_pair_ops] # 79-entry runtime subcommand jump table
+      - [0x19F1, .rodata, field_script_ops] # flow/primary/pair jump tables (79-entry runtime subcommand table last)
       - [0x1BBD, .rodata, field_script_commands] # actor and record command jump tables
       - [0x1BFD, .rodata, field_reward_command_ops]
       - [0x1C19, rodata, unk2_rodata_after_bdca4]
@@ -88,7 +77,6 @@ segments:
       # Scene loading, construction, rendering, animation, and text.
       - [0x22B9, c, field_scene_load] # gcc_280_g4_noexpand
       - [0x29B9, c, field_scene_build] # gcc_280_g4_noexpand
-      - [0x5039, c, field_render] # gcc_280_g4_noexpand
       - [0x6D95, c, field_animation] # gcc_280_g4_noexpand
       - [0x9645, c, field_scene_control] # gcc_280_g4_noexpand
       - [0xB6F9, c, field_collision] # gcc_280_g4_noexpand
@@ -103,38 +91,24 @@ segments:
 
       # Effect updates, primitive generation, geometry, and mesh transforms.
       - [0x1DB2D, c, field_effect_update]
-      - [0x2510D, c, field_effect_dispatch]
-      - [0x26019, c, field_effect_frames]
-      - [0x29D55, c, field_effect_primitives]
-      - [0x2C789, c, field_effect_transform]
-      - [0x2F07D, c, field_effect_geometry]
       - [0x30359, c, field_mesh_render]
       - [0x32635, c, field_mesh_transform]
       - [0x33681, c, field_mesh_part_animation]
 
       # Actor resources, script commands, input, movement, and state machines.
       - [0x33CD9, c, field_actor_slot_resources]
-      - [0x34A91, c, field_actor_hud]
-      - [0x36825, c, field_actor_control_effects]
+      - [0x34A91, c, field_actor_hud_effects]
       - [0x379A5, c, field_actor_key_ops]
-      - [0x3847D, c, field_actor_script_dispatch]
-      - [0x39DF9, c, field_actor_action_commands]
-      - [0x3B0D5, c, field_actor_animation_commands]
+      - [0x3847D, c, field_actor_script_ops]
       - [0x3BC01, c, field_actor_reactions]
-      - [0x3CAB9, c, field_actor_routes]
-      - [0x3DFE5, c, field_actor_behavior]
+      - [0x3CAB9, c, field_actor_behavior]
       - [0x417A1, c, field_actor_input_map_init]
       - [0x418A9, c, field_actor_action_defaults] # gcc_272_cdk_g0_nostrength
       - [0x41AB9, c, field_actor_input_actions]
       - [0x41F59, c, field_actor_camera]
       - [0x42781, c, field_actor_idle_ops]
       - [0x4297D, c, field_actor_motion]
-      - [0x42E69, c, field_actor_movement_states]
-      - [0x43E49, c, field_actor_action_runtime]
-      - [0x44899, c, field_actor_displacement]
-      - [0x45235, c, field_actor_resource_states]
-      - [0x4536D, c, field_actor_animation_resume]
-      - [0x4555D, c, field_actor_sequence_runtime]
+      - [0x42E69, c, field_actor_state_updates]
       - [0x46A81, c, field_actor_transition_reset]
 
       # Contact geometry, scene transitions, actor effects, and paths.
@@ -144,8 +118,7 @@ segments:
       - [0x4C9B1, c, field_text_window_api]
       - [0x4CD99, c, field_block_allocator]
       - [0x4CFF1, c, field_actor_target_queries]
-      - [0x4D869, c, field_actor_movement_modes]
-      - [0x4DCED, c, field_actor_effects]
+      - [0x4D869, c, field_actor_effects]
       - [0x520D9, c, field_path_interpolation]
 
       # Command history, audio, dialogs, and field UI.
@@ -153,13 +126,8 @@ segments:
       - [0x531D1, c, field_pair_indicators]
       - [0x538C5, c, field_audio_runtime]
       - [0x54779, c, field_ring_selection]
-      - [0x559C9, c, field_timed_panel]
-      - [0x56595, c, field_actor_text_queue]
-      - [0x56C45, c, field_ability_progression]
-      - [0x5727D, c, field_dialog_screens]
-      - [0x58C31, c, field_immediate_text]
-      - [0x5908D, c, field_input_text_session]
-      - [0x5A901, c, field_modal_runtime]
+      - [0x559C9, c, field_dialog_screens]
+      - [0x58C31, c, field_modal_runtime]
       - [0x5D3C1, c, field_modal_stream_start]
       - [0x5D599, c, field_numeric_sprites]
       - [0x5DB6D, c, field_pair_rule_lookup]
@@ -176,8 +144,7 @@ segments:
       - [0x6058D, c, field_resource_load]
       - [0x60E89, c, field_interaction_start]
       - [0x62BFD, c, field_event_dispatch]
-      - [0x62E2D, c, field_state_ops]
-      - [0x63861, c, field_party_setup]
+      - [0x62E2D, c, field_party_state]
       - [0x64185, c, field_actor_templates]
       - [0x64721, c, field_actor_lifecycle]
       - [0x64C49, c, field_status_ticks]
@@ -188,10 +155,7 @@ segments:
       - [0x67D11, c, field_record_stat_ops]
 
       # Script dispatch and opcode families.
-      - [0x68395, c, field_script_flow_ops]
-      - [0x6997D, c, field_script_primary_ops]
-      - [0x6BD51, c, field_script_pair_ops]
-      - [0x6CEF9, c, field_script_extended_ops]
+      - [0x68395, c, field_script_ops]
       - [0x6D4B9, c, field_script_operands]
       - [0x6DA85, c, field_script_commands]
       - [0x6E959, c, field_script_arith_ops]
@@ -217,17 +181,7 @@ segments:
       - [0x73D91, c, field_group_layout_ops]
       - [0x742A9, c, field_group_stat_transfer]
       - [0x746F5, c, field_group_derived_stats]
-      - [0x75A95, c, field_menu_group_ops]
-      - [0x76569, c, field_menu_object_ops]
-      - [0x76C59, c, field_menu_slot_ops]
-      - [0x77421, c, field_gosub_history_ops]
-      - [0x779FD, c, field_menu_action_runtime]
-      - [0x78BC1, c, field_menu_record_setup]
-      - [0x78DBD, c, field_menu_record_transfer]
-      - [0x7963D, c, field_menu_record_audio_ops]
-      - [0x79795, c, field_menu_record_state]
-      - [0x79A55, c, field_menu_attribute_ops]
-      - [0x79F55, c, field_menu_record_ops]
+      - [0x75A95, c, field_menu_ops]
       - [0x7A265, c, field_select_distance_bucket] # gcc_280_g0_builtin
       - [0x7A531, c, field_layout_slot_state]
       - [0x7A619, c, field_equipment_combination_rules]

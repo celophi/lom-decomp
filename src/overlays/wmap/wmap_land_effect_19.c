@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_main.h"
 #include "wmap_land_effect_19.h"
 #include "wmap_sequence_runtime.h"
@@ -106,7 +107,7 @@ extern s32 D_801B2DF8;
  */
 void func_800A3548(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_8013B238[];
 extern s32* D_8011CF24;
@@ -119,7 +120,7 @@ extern s32 D_801B2E00;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_8013B238);
-    func_800675F0(D_8011CF24, 0, 0xA, 0x36, 0x7880, 0x1001, D_80182DF0, 0, 0xA, -1);
+    wmap_draw_model(D_8011CF24, 0, 0xA, 0x36, 0x7880, 0x1001, D_80182DF0, 0, 0xA, -1);
     value = D_80182DF0 + 4;
     D_80182DF0 = value;
     if (value >= 0x82)
@@ -142,7 +143,7 @@ extern s32 D_801B2E00;
  */
 void func_800A3624(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_8013B238[];
 extern s32* D_8011CF24;
@@ -155,7 +156,7 @@ extern s32 D_801B2E00;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_8013B238);
-    func_800675F0(D_8011CF24, 0, 0xA, 0x36, 0x7880, 0x1001, D_80182DF0, 0, 0xA, -1);
+    wmap_draw_model(D_8011CF24, 0, 0xA, 0x36, 0x7880, 0x1001, D_80182DF0, 0, 0xA, -1);
     value = D_80182DF0 - 2;
     D_80182DF0 = value;
     if (value < 0)
@@ -178,7 +179,7 @@ extern s32 D_801B2E00;
  */
 void func_800A36F4(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_8013B240[];
 extern s32* D_8011CF24;
@@ -191,7 +192,7 @@ extern s32 D_801B2E08;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_8013B240);
-    func_800675F0(D_8011CF24, 0, 0xA, 0x36, 0x78C0, 0x1001, D_80182DF4, 0, 0xA, -1);
+    wmap_draw_model(D_8011CF24, 0, 0xA, 0x36, 0x78C0, 0x1001, D_80182DF4, 0, 0xA, -1);
     value = D_80182DF4 + 8;
     D_80182DF4 = value;
     if (value >= 0x82)
@@ -214,7 +215,7 @@ extern s32 D_801B2E08;
  */
 void func_800A37D0(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_8013B240[];
 extern s32* D_8011CF24;
@@ -227,7 +228,7 @@ extern s32 D_801B2E08;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_8013B240);
-    func_800675F0(D_8011CF24, 0, 0xA, 0x36, 0x78C0, 0x1001, D_80182DF4, 0, 0xA, -1);
+    wmap_draw_model(D_8011CF24, 0, 0xA, 0x36, 0x78C0, 0x1001, D_80182DF4, 0, 0xA, -1);
     value = D_80182DF4 - 2;
     D_80182DF4 = value;
     if (value < 0)

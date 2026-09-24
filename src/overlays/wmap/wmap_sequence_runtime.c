@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_map_display.h"
 #include "wmap_resource_support.h"
 #include "wmap_main.h"
@@ -80,7 +81,7 @@ extern s32 D_801B1058[];
 extern WmapSequenceCallback D_801B1078[];
 extern WmapConfigA D_800D9268[];
 extern s32 D_80139988[];
-extern void func_800675F0(u8*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern s32 D_8011D510;
 extern s32 D_8011D530;
 extern WmapTransform D_80139950;
@@ -449,7 +450,7 @@ void func_8006CD18(void)
  */
 void func_8006CD98(u8* resource_table, s32 resource_index, s32 ot_index, s32 tpage, s32 clut, s32 blend_mode, s32 color_scale)
 {
-    func_800675F0(resource_table, resource_index, ot_index, tpage, clut, blend_mode, color_scale, 0, 0, -1);
+    wmap_draw_model(resource_table, resource_index, ot_index, tpage, clut, blend_mode, color_scale, 0, 0, -1);
 }
 
 /** @brief Project the current map position through the active GTE matrix. */

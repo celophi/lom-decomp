@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_special_effect_34.h"
 #include "wmap_sprite_render.h"
 #include "wmap_view_effects.h"
@@ -462,7 +463,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -655,7 +656,7 @@ void func_800B7420(void);
     TransMatrix(&matrix, &D_801B2650);
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
-    func_800675F0(D_800DCF18, 0, 4, 0xB6, 0x7880, 1, D_80182DE8, 0, 0, -1);
+    wmap_draw_model(D_800DCF18, 0, 4, 0xB6, 0x7880, 1, D_80182DE8, 0, 0, -1);
     value = D_80182DE8 + 2;
     D_80182DE8 = value;
     if (value >= 0x41)
@@ -1122,7 +1123,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -1318,7 +1319,7 @@ void func_800B7420(void);
     TransMatrix(&matrix, translation);
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
-    func_800675F0(D_800DCF18, 0, 4, 0xB6, 0x7880, 1, 0x10080, 0, D_8013923C >> 4, -1);
+    wmap_draw_model(D_800DCF18, 0, 4, 0xB6, 0x7880, 1, 0x10080, 0, D_8013923C >> 4, -1);
     PopMatrix();
     if (--D_801B322C == 0)
     {
@@ -1779,7 +1780,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -1975,7 +1976,7 @@ void func_800B7420(void);
     TransMatrix(&matrix, translation);
     SetRotMatrix(&matrix);
     SetTransMatrix(&matrix);
-    func_800675F0(D_800DCF18, 0, 4, 0xB6, 0x7880, 1, 0x10080, 0, D_8013923C >> 4, -1);
+    wmap_draw_model(D_800DCF18, 0, 4, 0xB6, 0x7880, 1, 0x10080, 0, D_8013923C >> 4, -1);
     PopMatrix();
     if (--D_801B322C == 0)
     {
@@ -2436,7 +2437,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -3079,7 +3080,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -3722,7 +3723,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -4365,7 +4366,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -5008,7 +5009,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -5670,7 +5671,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -6318,7 +6319,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -6954,7 +6955,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -7603,7 +7604,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -8241,7 +8242,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -8882,7 +8883,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -9521,7 +9522,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -10160,7 +10161,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -10799,7 +10800,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -11439,7 +11440,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);
@@ -12087,7 +12088,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C(void);
 extern void func_800B1F80(void);

@@ -258,3 +258,9 @@ g_wmap_backdrop_front_quads = 0x800D0554;
 g_wmap_backdrop_back_quads = 0x800D05F4;
 g_wmap_menu_triangles = 0x800D06F8;
 g_wmap_exit_capture_rect = 0x80051ACC;
+
+// Model rendering and shared frame state.
+wmap_draw_model = 0x800675F0; // type:func
+g_wmap_packet_bytes = 0x800D921C;
+g_wmap_frames = 0x80129560;
+g_wmap_current_frame = 0x801398EC;

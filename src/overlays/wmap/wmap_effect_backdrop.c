@@ -1,3 +1,4 @@
+#include "wmap_frame_render.h"
 #include "wmap_resource_support.h"
 #include "wmap_effect_backdrop.h"
 
@@ -50,19 +51,12 @@ typedef struct
     WmapFixed y;
 } WmapFixedPoint;
 
-/** @brief Render-buffer view exposing the backdrop ordering-table entry. */
-typedef struct
-{
-    u8 pad_00[0x94];
-    u32 order_tag;
-} WmapOrderBuffer;
-
 extern WmapPoint D_800D0FD4[];
 extern WmapTriangle D_800D1814[];
 extern WmapTriangle D_801B10B8[];
 extern WmapFixedPoint D_8013A188[];
 extern WmapFixedPoint* D_801B23F8;
-extern WmapOrderBuffer* D_801398EC;
+
 extern s32 D_8011CF70;
 extern s32 D_8011CF74;
 extern s32 D_80139244;
@@ -148,8 +142,8 @@ void func_8006D674(void)
         }
         for (i = 0; i < 176; i++)
         {
-            triangles->header.tag = (triangles->header.tag & 0xFF000000) | (D_801398EC->order_tag & 0xFFFFFF);
-            D_801398EC->order_tag = (D_801398EC->order_tag & 0xFF000000) | ((u32)triangles & 0xFFFFFF);
+            triangles->header.tag = (triangles->header.tag & 0xFF000000) | (g_wmap_current_frame->ordering_table[9] & 0xFFFFFF);
+            g_wmap_current_frame->ordering_table[9] = (g_wmap_current_frame->ordering_table[9] & 0xFF000000) | ((u32)triangles & 0xFFFFFF);
             triangles++;
         }
         func_8006534C(0x7B54, 9);

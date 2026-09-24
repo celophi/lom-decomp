@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_main.h"
 #include "wmap_land_effect_27.h"
 #include "wmap_sequence_runtime.h"
@@ -164,7 +165,7 @@ extern s32 D_80182DF0;
 extern SVECTOR D_801B24A8;
 extern s32 D_801B2C90;
 extern s32 D_801B2C94;
-extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 
     s32 intensity;
     s32 frame;
@@ -173,11 +174,11 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 
     PushMatrix();
     func_8006CFA8(&D_80182DC0, &D_8013B238);
-    func_800675F0(D_8011CF24, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -10, -1);
+    wmap_draw_model(D_8011CF24, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -10, -1);
     func_8006CFA8(&D_80182DC0, &D_801B24A8);
-    func_800675F0(D_8011CF28, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -40, -1);
+    wmap_draw_model(D_8011CF28, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -40, -1);
     func_8006CFA8(&D_80182DC0, &D_8013B238);
-    func_800675F0(D_8011CF2C, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -70, -1);
+    wmap_draw_model(D_8011CF2C, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -70, -1);
     PopMatrix();
     intensity = D_80182DF0 + 2;
     D_80182DF0 = intensity;
@@ -217,7 +218,7 @@ extern s32 D_80182DF0;
 extern SVECTOR D_801B24A8;
 extern s32 D_801B2C90;
 extern s32 D_801B2C94;
-extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 
     s32 intensity;
     s32 frame;
@@ -226,11 +227,11 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
 
     PushMatrix();
     func_8006CFA8(&D_80182DC0, &D_8013B238);
-    func_800675F0(D_8011CF24, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -10, -1);
+    wmap_draw_model(D_8011CF24, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -10, -1);
     func_8006CFA8(&D_80182DC0, &D_801B24A8);
-    func_800675F0(D_8011CF28, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -40, -1);
+    wmap_draw_model(D_8011CF28, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -40, -1);
     func_8006CFA8(&D_80182DC0, &D_8013B238);
-    func_800675F0(D_8011CF2C, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -70, -1);
+    wmap_draw_model(D_8011CF2C, D_800D665C[D_80139234], 10, 54, 0x78C0, 0x1001, D_80182DF0, 0, -70, -1);
     PopMatrix();
     intensity = D_80182DF0 - 4;
     D_80182DF0 = intensity;

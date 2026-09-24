@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_land_effect_26.h"
 #include "wmap_sequence_runtime.h"
 #include "sdk/libgte.h"
@@ -70,7 +71,7 @@ extern SVECTOR D_801B24A0;
 extern VECTOR D_801B2650;
 extern s32 D_801B25F8;
 extern s32 D_801B25FC;
-extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 
     s32 depth;
     s32 intensity;
@@ -88,11 +89,11 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
     {
         if (D_8011CF74 & 1)
         {
-            func_800675F0(D_800DCF18, 0, 4, -1, -1, 1, D_801B2470, 5, -20, -1);
+            wmap_draw_model(D_800DCF18, 0, 4, -1, -1, 1, D_801B2470, 5, -20, -1);
         }
         else
         {
-            func_800675F0(D_800DCF18, 0, 4, -1, -1, 1, D_801B2470 / 2, 5, -20, -1);
+            wmap_draw_model(D_800DCF18, 0, 4, -1, -1, 1, D_801B2470 / 2, 5, -20, -1);
         }
         intensity = D_801B2470 - 2;
         D_801B2470 = intensity;
@@ -119,7 +120,7 @@ extern VECTOR D_801B2478;
 extern SVECTOR D_801B24A8;
 extern s32 D_801B2600;
 extern s32 D_801B2604;
-extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 
     s32 depth;
     s32 intensity;
@@ -135,7 +136,7 @@ extern void func_800675F0(void *, s32, s32, s32, s32, s32, s32, s32, s32, s32);
     func_8006CFA8(&D_801B2478, &D_801B24A8);
     if (D_801B2474 != 0)
     {
-        func_800675F0(D_8011CF1C, 0, 4, -1, -1, 1, D_801B2474, 5, -20, -1);
+        wmap_draw_model(D_8011CF1C, 0, 4, -1, -1, 1, D_801B2474, 5, -20, -1);
     }
     PopMatrix();
     intensity = D_801B2474 - 8;

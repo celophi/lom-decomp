@@ -1,3 +1,4 @@
+#include "wmap_frame_render.h"
 #include "wmap_land_layout.h"
 #include "wmap_party_travel.h"
 #include "wmap_resource_support.h"
@@ -13,14 +14,14 @@ typedef struct
 
 extern u8 D_800515F4;
 extern u8 D_80051A58;
-extern s32 D_800D921C;
+
 extern SPRT D_800DBE80;
 extern s32 D_800DBE84;
 extern s32 D_8011CF80;
 extern SPRT D_801391E8;
 extern SPRT D_801398D8;
 extern u8 D_801398DC;
-extern void* D_801398EC;
+
 extern SPRT D_80182DA0;
 extern s32 D_80182DA4;
 extern s32 D_80182E34;
@@ -52,14 +53,6 @@ extern s8 D_80182E0C;
 
 void func_80060230(void);
 
-/** @brief Ordering table and packet allocation cursor for the current map buffer. */
-typedef struct
-{
-    u8 pad_00[0x70];
-    u_long ordering_table[0xB3];
-    u8* packet_cursor;
-} WmapLabelRenderContext;
-
 /** @brief Gouraud-shaded triangle packet (libgpu WmapShadeTriangle layout). */
 typedef struct
 {
@@ -73,7 +66,6 @@ typedef struct
 } WmapShadeTriangle;
 
 /** @brief Current map render context viewed through its ordering-table layout. */
-#define WMAP_LABEL_RENDER ((WmapLabelRenderContext*)D_801398EC)
 
 /**
  * @brief Append map label and decorative packets with selection fades.
@@ -87,13 +79,13 @@ void func_8005F9BC(void)
 
     if (D_80182E34 != 3)
     {
-        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         *sprite = *(SPRT*)&D_80051A58;
-        addPrim(&WMAP_LABEL_RENDER->ordering_table[7], sprite);
-        if (D_800D921C < 0x7D00)
+        addPrim(&g_wmap_current_frame->ordering_table[7], sprite);
+        if (g_wmap_packet_bytes < 0x7D00)
         {
-            D_800D921C += sizeof(SPRT);
-            WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
+            g_wmap_packet_bytes += sizeof(SPRT);
+            g_wmap_current_frame->packet_cursor += sizeof(SPRT);
         }
         if (g_wmap_travel_day != D_8011CF80)
         {
@@ -110,70 +102,70 @@ void func_8005F9BC(void)
         }
         D_80182DA0.g0 = D_80182DA0.r0;
         D_80182DA0.b0 = D_80182DA0.r0;
-        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         *sprite = D_80182DA0;
         if ((s8)D_80182DA0.r0 >= 0)
         {
             D_80182DA0.r0 += 8;
             setSemiTrans(sprite, 1);
         }
-        addPrim(&WMAP_LABEL_RENDER->ordering_table[7], WMAP_LABEL_RENDER->packet_cursor);
-        if (D_800D921C < 0x7D00)
+        addPrim(&g_wmap_current_frame->ordering_table[7], g_wmap_current_frame->packet_cursor);
+        if (g_wmap_packet_bytes < 0x7D00)
         {
-            D_800D921C += sizeof(SPRT);
-            WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
+            g_wmap_packet_bytes += sizeof(SPRT);
+            g_wmap_current_frame->packet_cursor += sizeof(SPRT);
         }
         if (D_801391E8.r0 != 0)
         {
             D_801391E8.g0 = D_801391E8.r0;
             D_801391E8.b0 = D_801391E8.r0;
-            sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
             *sprite = D_801391E8;
-            addPrim(&WMAP_LABEL_RENDER->ordering_table[7], sprite);
+            addPrim(&g_wmap_current_frame->ordering_table[7], sprite);
             D_800DBE84 = *(s32*)&D_801391E8.r0;
-            if (D_800D921C < 0x7D00)
+            if (g_wmap_packet_bytes < 0x7D00)
             {
-                D_800D921C += sizeof(SPRT);
-                WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
+                g_wmap_packet_bytes += sizeof(SPRT);
+                g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
             D_801391E8.r0 -= 8;
         }
         func_8006534C(0xBC, 7);
         func_80060230();
-        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         *(s32*)&D_801398DC = D_80182DA4;
         shadow = (SPRT*)(&D_801398DC - 4);
         setSemiTrans(shadow, 1);
         *sprite = *shadow;
-        addPrim(&WMAP_LABEL_RENDER->ordering_table[7], WMAP_LABEL_RENDER->packet_cursor);
-        if (D_800D921C < 0x7D00)
+        addPrim(&g_wmap_current_frame->ordering_table[7], g_wmap_current_frame->packet_cursor);
+        if (g_wmap_packet_bytes < 0x7D00)
         {
-            D_800D921C += sizeof(SPRT);
-            WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
+            g_wmap_packet_bytes += sizeof(SPRT);
+            g_wmap_current_frame->packet_cursor += sizeof(SPRT);
         }
         if (D_800DBE80.r0 >= 9)
         {
-            sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+            sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
             *sprite = D_800DBE80;
-            addPrim(&WMAP_LABEL_RENDER->ordering_table[7], WMAP_LABEL_RENDER->packet_cursor);
-            if (D_800D921C < 0x7D00)
+            addPrim(&g_wmap_current_frame->ordering_table[7], g_wmap_current_frame->packet_cursor);
+            if (g_wmap_packet_bytes < 0x7D00)
             {
-                D_800D921C += sizeof(SPRT);
-                WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
+                g_wmap_packet_bytes += sizeof(SPRT);
+                g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
         }
         func_8006534C(0x3E, 7);
         for (i = 0; i < 0x24; i++)
         {
-            shade = (WmapShadeTriangle*)WMAP_LABEL_RENDER->packet_cursor;
+            shade = (WmapShadeTriangle*)g_wmap_current_frame->packet_cursor;
             *shade = ((WmapShadeTriangle*)&D_800515F4)[i];
             setlen(shade, 6);
             setcode(shade, 0x32);
-            addPrim(&WMAP_LABEL_RENDER->ordering_table[8], shade);
-            if (D_800D921C < 0x7D00)
+            addPrim(&g_wmap_current_frame->ordering_table[8], shade);
+            if (g_wmap_packet_bytes < 0x7D00)
             {
-                D_800D921C += sizeof(WmapShadeTriangle);
-                WMAP_LABEL_RENDER->packet_cursor += sizeof(WmapShadeTriangle);
+                g_wmap_packet_bytes += sizeof(WmapShadeTriangle);
+                g_wmap_current_frame->packet_cursor += sizeof(WmapShadeTriangle);
             }
         }
         func_8006534C(0x20, 8);
@@ -285,7 +277,7 @@ void func_80060230(void)
     {
         label->b0 = label->r0;
         label->g0 = label->r0;
-        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         if ((s8)label->r0 >= 0)
         {
             clut_y = *(u16*)&D_800D0368;
@@ -299,29 +291,29 @@ void func_80060230(void)
         }
         *sprite = D_8011D518;
         setSemiTrans(sprite, 1);
-        addPrim(&WMAP_LABEL_RENDER->ordering_table[3], sprite);
-        if (D_800D921C < 0x7D00)
+        addPrim(&g_wmap_current_frame->ordering_table[3], sprite);
+        if (g_wmap_packet_bytes < 0x7D00)
         {
-            D_800D921C += sizeof(SPRT);
-            WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
+            g_wmap_packet_bytes += sizeof(SPRT);
+            g_wmap_current_frame->packet_cursor += sizeof(SPRT);
         }
         func_8006534C(D_8011CF78, 3);
     }
     fade = D_80182E08.r0;
     if (fade != 0)
     {
-        sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+        sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
         D_80182E08.r0 = fade - 8;
         D_80182E08.b0 = fade;
         D_80182E08.g0 = fade;
         *sprite = D_80182E08;
         if (D_80182E04 != -1)
         {
-            addPrim(&WMAP_LABEL_RENDER->ordering_table[3], sprite);
-            if (D_800D921C < 0x7D00)
+            addPrim(&g_wmap_current_frame->ordering_table[3], sprite);
+            if (g_wmap_packet_bytes < 0x7D00)
             {
-                D_800D921C += sizeof(SPRT);
-                WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
+                g_wmap_packet_bytes += sizeof(SPRT);
+                g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
             func_8006534C(D_80182DD0, 3);
         }
@@ -338,7 +330,7 @@ void func_80060230(void)
             SPRT* glyph_sprite;
 
             label_char = &((WmapLabelChar*)&D_800D040C)[char_index];
-            glyph_sprite = (SPRT*)WMAP_LABEL_RENDER->packet_cursor;
+            glyph_sprite = (SPRT*)g_wmap_current_frame->packet_cursor;
             glyph = &((WmapLabelGlyph*)&D_800D03EC)[label_char->glyph];
             glyph_sprite->u0 = glyph->u;
             glyph_sprite->v0 = glyph->v - 0x20;
@@ -349,11 +341,11 @@ void func_80060230(void)
             glyph_sprite->clut = 0x7F2E;
             SET_BGR0_PACKED(glyph_sprite, 0x808080);
             setSprt(glyph_sprite);
-            addPrim(&WMAP_LABEL_RENDER->ordering_table[1], glyph_sprite);
-            if (D_800D921C < 0x7D00)
+            addPrim(&g_wmap_current_frame->ordering_table[1], glyph_sprite);
+            if (g_wmap_packet_bytes < 0x7D00)
             {
-                D_800D921C += sizeof(SPRT);
-                WMAP_LABEL_RENDER->packet_cursor += sizeof(SPRT);
+                g_wmap_packet_bytes += sizeof(SPRT);
+                g_wmap_current_frame->packet_cursor += sizeof(SPRT);
             }
             char_index += 1;
         } while (D_80051A6C[D_8013B28C + 1] != char_index);

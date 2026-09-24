@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_main.h"
 #include "wmap_land_effect_23.h"
 #include "wmap_sequence_runtime.h"
@@ -245,7 +246,7 @@ extern void func_8009F4B0__for_func_8009D9F0(void) __asm__("func_8009F4B0");
  */
 void func_8009DABC(void)
 {
-    extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
     extern VECTOR D_80182DC0;
     extern SVECTOR D_8013B238;
     extern s32* D_8011CF2C;
@@ -259,7 +260,7 @@ void func_8009DABC(void)
     s32 next_timer;
 
     func_8006CFA8(&D_80182DC0, &D_8013B238);
-    func_800675F0(D_8011CF2C, D_80139234 & 3, 0xA, 0x36, 0x7900, 0x1001, D_801B25D8, 0, 0xF, -1);
+    wmap_draw_model(D_8011CF2C, D_80139234 & 3, 0xA, 0x36, 0x7900, 0x1001, D_801B25D8, 0, 0xF, -1);
     value = D_801B25D8 + 2;
     D_801B25D8 = value;
     if (value >= 0x82)
@@ -282,7 +283,7 @@ void func_8009DABC(void)
  */
 void func_8009DBB0(void)
 {
-    extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
     extern VECTOR D_80182DC0;
     extern SVECTOR D_8013B238;
     extern s32* D_8011CF2C;
@@ -296,7 +297,7 @@ void func_8009DBB0(void)
     s32 next_timer;
 
     func_8006CFA8(&D_80182DC0, &D_8013B238);
-    func_800675F0(D_8011CF2C, D_80139234 & 3, 0xA, 0x36, 0x7900, 0x1001, D_801B25D8, 0, 0xF, -1);
+    wmap_draw_model(D_8011CF2C, D_80139234 & 3, 0xA, 0x36, 0x7900, 0x1001, D_801B25D8, 0, 0xF, -1);
     value = D_801B25D8 - 4;
     D_801B25D8 = value;
     if (value < 0)
@@ -319,7 +320,7 @@ void func_8009DBB0(void)
  */
 void func_8009DC9C(void)
 {
-    extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
     extern VECTOR D_80182DC0;
     extern SVECTOR D_801B24A8;
     extern s32* D_8011CF28;
@@ -333,7 +334,7 @@ void func_8009DC9C(void)
     s32 next_timer;
 
     func_8006CFA8(&D_80182DC0, &D_801B24A8);
-    func_800675F0(D_8011CF28, D_8013923C & 3, 0x4, 0x35, 0x7800, 0x1001, D_80182DEC, 0, 0xA, -1);
+    wmap_draw_model(D_8011CF28, D_8013923C & 3, 0x4, 0x35, 0x7800, 0x1001, D_80182DEC, 0, 0xA, -1);
     value = D_80182DEC + 8;
     D_80182DEC = value;
     if (value >= 0x82)
@@ -356,7 +357,7 @@ void func_8009DC9C(void)
  */
 void func_8009DD90(void)
 {
-    extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
     extern VECTOR D_80182DC0;
     extern SVECTOR D_801B24A8;
     extern s32* D_8011CF28;
@@ -370,7 +371,7 @@ void func_8009DD90(void)
     s32 next_timer;
 
     func_8006CFA8(&D_80182DC0, &D_801B24A8);
-    func_800675F0(D_8011CF28, D_8013923C & 3, 0x4, 0x35, 0x7800, 0x1001, D_80182DEC, 0, 0xA, -1);
+    wmap_draw_model(D_8011CF28, D_8013923C & 3, 0x4, 0x35, 0x7800, 0x1001, D_80182DEC, 0, 0xA, -1);
     value = D_80182DEC - 8;
     D_80182DEC = value;
     if (value < 0)

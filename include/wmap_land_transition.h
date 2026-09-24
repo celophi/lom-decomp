@@ -2,6 +2,7 @@
 #define WMAP_LAND_TRANSITION_H
 
 #include "common.h"
+#include "wmap_frame_render.h"
 #include "sdk/libgte.h"
 
 #define WMAP_ARTIFACT_SLOTS 12
@@ -10,7 +11,6 @@
 
 #define WMAP_CELL_SPACING 48
 #define WMAP_VIEW_COLUMNS 3
-#define WMAP_PACKET_LIMIT 32000
 #define WMAP_ARTIFACT_TPAGE 0xAE
 #define WMAP_ARTIFACT_CLUT 0x7FEC
 #define WMAP_NO_ARTIFACT (-1)

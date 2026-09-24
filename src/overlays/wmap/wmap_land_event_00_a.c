@@ -1,3 +1,4 @@
+#include "wmap_model_render.h"
 #include "wmap_land_event_00_a.h"
 #include "wmap_resource_support.h"
 #include "wmap_sequence_runtime.h"
@@ -119,7 +120,7 @@ extern void func_800B2D78(void);
  */
 void func_800B1964(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern s32 D_80139888[];
 extern SVECTOR D_8013B240;
 extern VECTOR D_8011CF60;
@@ -144,7 +145,7 @@ extern s32 D_801B2FC4;
     SetTransMatrix(&m);
     if (D_80182DF4 != 0)
     {
-        func_800675F0(D_800DCF18, 0, 0x4, 0x35, 0x7800, 1, D_80182DF4, 0, 0, -1);
+        wmap_draw_model(D_800DCF18, 0, 0x4, 0x35, 0x7800, 1, D_80182DF4, 0, 0, -1);
         D_80182DF4 -= 0x20;
         if (D_80182DF4 < 0)
         {
@@ -164,7 +165,7 @@ extern s32 D_801B2FC4;
  */
 void func_800B1A74(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B2498[];
 extern s32* D_8011CF1C;
@@ -178,7 +179,7 @@ extern s32 D_801B2FCC;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B2498);
-    func_800675F0(D_8011CF1C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, D_80182DE4, 0, -0xA, -1);
+    wmap_draw_model(D_8011CF1C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, D_80182DE4, 0, -0xA, -1);
     D_8013923C += 0x8;
     value = D_80182DE4 + 0x2;
     D_80182DE4 = value;
@@ -202,7 +203,7 @@ extern s32 D_801B2FCC;
  */
 void func_800B1B78(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B2498[];
 extern s32* D_8011CF1C;
@@ -216,7 +217,7 @@ extern s32 D_801B2FCC;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B2498);
-    func_800675F0(D_8011CF1C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, D_80182DE4, 0, -0xA, -1);
+    wmap_draw_model(D_8011CF1C, (D_8013923C / 0x10) & 3, 0xA, 0x35, 0x7800, 0x1, D_80182DE4, 0, -0xA, -1);
     value = D_80182DE4 - 0x10;
     D_80182DE4 = value;
     if (value < 0)
@@ -240,7 +241,7 @@ extern s32 D_801B2FCC;
  */
 void func_800B1C78(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B24A0[];
 extern s32* D_8011CF24;
@@ -254,7 +255,7 @@ extern s32 D_801B2FD4;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B24A0);
-    func_800675F0(D_8011CF24, (D_80139240 / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, D_80182DE8, 0, -0xA, -1);
+    wmap_draw_model(D_8011CF24, (D_80139240 / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, D_80182DE8, 0, -0xA, -1);
     D_80139240 += 0x10;
     value = D_80182DE8 + 0x8;
     D_80182DE8 = value;
@@ -278,7 +279,7 @@ extern s32 D_801B2FD4;
  */
 void func_800B1D7C(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B24A0[];
 extern s32* D_8011CF24;
@@ -292,7 +293,7 @@ extern s32 D_801B2FD4;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B24A0);
-    func_800675F0(D_8011CF24, (D_80139240 / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, D_80182DE8, 0, -0xA, -1);
+    wmap_draw_model(D_8011CF24, (D_80139240 / 0x10) & 3, 0xA, 0x35, 0x7840, 0x1, D_80182DE8, 0, -0xA, -1);
     value = D_80182DE8 - 0x10;
     D_80182DE8 = value;
     if (value < 0)
@@ -316,7 +317,7 @@ extern s32 D_801B2FD4;
  */
 void func_800B1E7C(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B24A8[];
 extern s32* D_8011CF28;
@@ -330,7 +331,7 @@ extern s32 D_801B2FDC;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B24A8);
-    func_800675F0(D_8011CF28, (D_8013924C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, D_80182DEC, 0, -0xA, -1);
+    wmap_draw_model(D_8011CF28, (D_8013924C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, D_80182DEC, 0, -0xA, -1);
     D_8013924C += 0x10;
     value = D_80182DEC + 0x8;
     D_80182DEC = value;
@@ -354,7 +355,7 @@ extern s32 D_801B2FDC;
  */
 void func_800B1F80(void)
 {
-extern void func_800675F0(s32* a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5, s32 a6, s32 a7, s32 a8, s32 a9);
+
 extern u8 D_80182DC0[];
 extern u8 D_801B24A8[];
 extern s32* D_8011CF28;
@@ -368,7 +369,7 @@ extern s32 D_801B2FDC;
     s32 next_timer;
 
     func_8006CFA8(D_80182DC0, D_801B24A8);
-    func_800675F0(D_8011CF28, (D_8013924C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, D_80182DEC, 0, -0xA, -1);
+    wmap_draw_model(D_8011CF28, (D_8013924C / 0x10) & 7, 0xA, 0x36, 0x7880, 0x1, D_80182DEC, 0, -0xA, -1);
     value = D_80182DEC - 0x10;
     D_80182DEC = value;
     if (value < 0)
@@ -2096,7 +2097,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C__for_func_800B3368(void) __asm__("func_800B1E7C");
 extern void func_800B1F80__for_func_800B3368(void) __asm__("func_800B1F80");
@@ -2736,7 +2737,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C__for_func_800B33E4(void) __asm__("func_800B1E7C");
 extern void func_800B1F80__for_func_800B33E4(void) __asm__("func_800B1F80");
@@ -3373,7 +3374,7 @@ extern s32 D_801B3238;
 extern s32 D_801B323C;
 
 extern void akao_cmd_a9(s32, s32);
-extern void func_800675F0(s32*, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+
 extern void func_8008ECF8(s32, s32, s32*, void*);
 extern void func_800B1E7C__for_func_800B341C(void) __asm__("func_800B1E7C");
 extern void func_800B1F80__for_func_800B341C(void) __asm__("func_800B1F80");

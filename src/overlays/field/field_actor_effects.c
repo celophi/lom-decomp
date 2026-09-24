@@ -1,5 +1,242 @@
+/** @file field_actor_effects.c
+ * @brief Actor movement modes and actor effect drawing.
+ *
+ * Covers func_8009D4D8 (set an actor's movement mode and initialize its
+ * per-mode slot state) followed by the actor effect dispatcher and its
+ * primitive builders.
+ */
+
 #include "common.h"
 #include "field_effect_render_state.h"
+#include "sdk/libgte.h"
+#include "sdk/inline_c.h"
+#include "sdk/gte_dmpsx_compat.h"
+
+/** @brief Actor position and runtime slot index in the 0x54-byte record. */
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s32 unk8;
+    u8 padc[0x2E];
+    u8 unk3A;
+    u8 pad3B[0x19];
+} MovementModeActor;
+
+/** @brief Movement mode flags and signed destination coordinates in the runtime slot. */
+typedef struct
+{
+    u8 pad0[0x5C];
+    s32 unk5C;
+    u8 pad60[0x114];
+    s32 unk174;
+    u8 pad178[0x18];
+    s16 unk190;
+    s16 unk192;
+    u8 pad194[0xA8];
+} MovementModeSlot;
+
+s32 rand(void); /* extern */
+
+/**
+ * @see decomp.me (100%)
+ * @brief Set an actor's movement mode and initialize its destination offsets.
+ * @param actor Actor whose runtime movement fields are changed (index in unk3A).
+ * @param mode Movement mode selector; mode 4 generates three separated random points.
+ * @note Mode 4 accepts a new random point only when it is at least 0x40 units from
+ *       every earlier point, using the GTE square/square-root path for the distance.
+ * @note Signed fixed-point positions are divided by 256 with truncation toward zero.
+ */
+void func_8009D4D8(MovementModeActor *actor, u32 mode)
+{
+    extern MovementModeSlot g_field_object_states[];
+    s32 *delta = (s32 *)0x1F800000;
+    s32 *squares = (s32 *)0x1F800010;
+    MovementModeSlot *base;
+    s32 compare_offset;
+    s32 point_offset;
+    s32 slot_stride;
+    s32 slot_stride_y;
+    s32 base_dx;
+    s32 base_dy;
+    s32 compare_index;
+    s32 point_index;
+    s32 needs_retry;
+    s32 compare_addr;
+    u8 slot_index;
+    MovementModeSlot *point;
+    MovementModeSlot *point_y;
+    MovementModeSlot *slot;
+    MovementModeSlot *slot_2;
+    MovementModeSlot *slot_3;
+    MovementModeSlot *slot_4;
+    MovementModeSlot *slot_5;
+
+    g_field_object_states[actor->unk3A].unk5C = 0;
+    switch (mode)
+    {
+    case 1:
+    {
+        MovementModeSlot *base;
+        base = g_field_object_states;
+        slot = &base[actor->unk3A];
+        slot->unk174 = (s32)((slot->unk174 & ~0x3FF) | 0x40);
+        return;
+    }
+    case 2:
+    {
+        MovementModeSlot *base;
+        base = g_field_object_states;
+        slot_2 = &base[actor->unk3A];
+        slot_2->unk174 = (s32)((slot_2->unk174 & ~0x3FF) | 0x10);
+        return;
+    }
+    case 0:
+    case 3:
+    {
+        MovementModeSlot *base;
+        base = g_field_object_states;
+        slot_3 = &base[actor->unk3A];
+        slot_3->unk174 = (s32)((slot_3->unk174 & ~0x3FF) | 0x1E);
+        return;
+    }
+    case 4:
+    {
+        MovementModeSlot *base;
+        point_index = 0;
+        slot_5 = g_field_object_states;
+        base = slot_5;
+        slot_4 = &base[actor->unk3A];
+        slot_4->unk174 = (s32)((slot_4->unk174 & ~0x3FF) | 0x1E);
+        do
+        {
+            needs_retry = 1;
+            point_offset = point_index * 4;
+        loop_7:
+            {
+                s32 random_value;
+                s32 offset;
+                MovementModeSlot *point;
+                random_value = (rand() >> 7) - 0x80;
+                offset = point_offset + (actor->unk3A * 0x23C);
+                point = (MovementModeSlot *)(offset + (s32)base);
+                point->unk190 = (s16)random_value;
+            }
+            {
+                s32 random_value;
+                s32 offset;
+                MovementModeSlot *point;
+                random_value = (rand() >> 7) - 0x80;
+                offset = point_offset + (actor->unk3A * 0x23C);
+                point = (MovementModeSlot *)(offset + (s32)base);
+                point->unk192 = (s16)random_value;
+            }
+            base_dx = g_field_view_offset_x;
+            {
+                s32 offset;
+                offset = point_offset + (actor->unk3A * 0x23C);
+                point = (MovementModeSlot *)(offset + (s32)base);
+            }
+
+            point->unk190 = (u16)(((u16)point->unk190 - (base_dx / 256)) - (actor->unk0 / 256));
+            base_dy = g_field_view_offset_z;
+            {
+                s32 offset;
+                offset = point_offset + (actor->unk3A * 0x23C);
+                point_y = (MovementModeSlot *)(offset + (s32)base);
+            }
+
+            point_y->unk192 = (u16)(((u16)point_y->unk192 - (base_dy / 256)) - (actor->unk8 / 256));
+            compare_index = 0;
+            if (point_index > 0)
+            {
+            loop_16:
+                do
+                {
+                    slot_index = actor->unk3A;
+                } while (0);
+                compare_offset = compare_index * 4;
+                slot_stride = slot_index * 0x23C;
+                compare_addr = compare_offset + slot_stride;
+                compare_addr += (s32)base;
+                {
+                    s32 current_offset;
+                    current_offset = point_offset + (slot_index * 0x23C);
+                    current_offset += (s32)base;
+                    delta[0] = ((MovementModeSlot *)compare_addr)->unk190 - ((MovementModeSlot *)current_offset)->unk190;
+                }
+                slot_stride_y = actor->unk3A * 0x23C;
+                compare_offset += slot_stride_y;
+                compare_offset += (s32)base;
+                {
+                    s32 current_offset;
+                    current_offset = point_offset + (actor->unk3A * 0x23C);
+                    current_offset += (s32)base;
+                    delta[1] = ((MovementModeSlot *)compare_offset)->unk192 - ((MovementModeSlot *)current_offset)->unk192;
+                }
+                delta[2] = 0;
+                do
+                {
+                    do
+                    {
+                        gte_ldlvl(delta);
+                    } while (0);
+                    gte_sqr0();
+                } while (0);
+                do
+                {
+                    gte_stlvnl(squares);
+                } while (0);
+                if (SquareRoot0(squares[0] + squares[1]) >= 0x40)
+                {
+                    compare_index += 1;
+                    if (compare_index < point_index)
+                    {
+                        goto loop_16;
+                    }
+                }
+            }
+            if (compare_index == point_index)
+            {
+                needs_retry = 0;
+            }
+            if (needs_retry != 0)
+            {
+                goto loop_7;
+            }
+            point_index += 1;
+        } while (point_index < 3);
+        return;
+    }
+    case 5:
+    {
+        MovementModeSlot *clear_base = g_field_object_states;
+        s32 clear_flags = clear_base[actor->unk3A].unk174;
+        s32 clear_mask = ~0x3FF;
+        clear_flags &= clear_mask;
+        slot_5 = &clear_base[actor->unk3A];
+        slot_5->unk174 = clear_flags;
+        clear_base[actor->unk3A].unk190 = 0;
+        clear_base[actor->unk3A].unk192 = 0;
+        return;
+    }
+    case 6:
+    {
+        MovementModeSlot *clear_base = g_field_object_states;
+        MovementModeSlot *clear_slot = &clear_base[actor->unk3A];
+        s32 clear_flags = clear_slot->unk174;
+        s32 clear_mask = ~0x3FF;
+        clear_flags &= clear_mask;
+        clear_flags |= 0x1E;
+        clear_slot->unk174 = clear_flags;
+        clear_base[actor->unk3A].unk190 = 0;
+        clear_base[actor->unk3A].unk192 = 0;
+        return;
+    }
+    default:
+        return;
+    }
+}
 
 /*
  * Consolidated FIELD actor-effect translation unit.
@@ -12,9 +249,9 @@
  *   func_800A0B0C (from func_800A0B0C.c)
  *   func_800A1344 (from func_800A1344.c)
  *
- * Note: func_8009D4D8 is deliberately NOT part of this TU; an interleaved unk
- * rodata blob sits between its jump table and this object's rodata, so it must
- * remain in its own file.
+ * func_8009D4D8 (from field_actor_movement_modes.c) precedes these members:
+ * the 4-byte gap between its jump table and func_8009D95C's is the compiler's
+ * 8-byte jump-table alignment inside this one object.
  *
  * D_801178D8 is read as u16 in func_8009E66C but as s32 in every other member,
  * so it is declared at block scope inside each user with that user's original
