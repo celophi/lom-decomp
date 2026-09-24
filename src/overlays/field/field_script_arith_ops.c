@@ -9,7 +9,6 @@
 
 typedef void (*UnkFunc800F0E58)(s32, s32);
 
-
 extern UnkFunc800F0E58 D_800F0E58[];
 
 /**

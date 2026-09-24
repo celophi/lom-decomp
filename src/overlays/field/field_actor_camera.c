@@ -1,7 +1,3 @@
-#include "common.h"
-#include "field_effect_render_state.h"
-#include "display.h"
-
 /**
  * @file field_actor_camera.c
  * @brief Field camera target tracking, map clamping, and horizontal
@@ -13,6 +9,14 @@
  * screen motion), func_800920FC (reset lower bound), and func_80092124
  * (horizontal bound select).
  */
+
+#include "common.h"
+#include "field_effect_render_state.h"
+#include "display.h"
+#include "scene_state.h"
+
+/** @brief Map bounds block at a fixed RAM address shared by the field code. */
+#define FIELD_MAP_BOUNDS ((FieldMapBounds*)0x801ED400)
 
 /** @brief Actor position and presence fields in a 0x54-byte record. */
 typedef struct
@@ -47,17 +51,12 @@ typedef struct
     s32 x, y, z, pad;
 } Vector;
 
-/** @brief Scene identifier word followed by fixed-point camera coordinates. */
+/** @brief Map dimensions in pixels, kept in the fixed field block at 0x801ED400. */
 typedef struct
 {
-    s32 scene, x, y, z;
-} Camera;
-
-/** @brief Map dimensions used to clamp the camera. */
-typedef struct
-{
-    u16 width, height;
-} Bounds;
+    s16 width;
+    u16 height;
+} FieldMapBounds;
 
 /** @brief Interpolation bound thresholds for a camera mode (min, span). */
 typedef struct
@@ -65,15 +64,6 @@ typedef struct
     u16 min;
     u16 span;
 } FieldThreshold;
-
-/** @brief Fixed-point camera coordinates at 0x801ED480. */
-typedef struct
-{
-    u8 _pad[4];
-    s32 x;
-    s32 y;
-    s32 z;
-} FieldCamera;
 
 extern int abs(int);
 
@@ -100,6 +90,9 @@ extern s32 D_8010AE6C;
 extern s32 D_8010AE70;
 extern s32 D_8010AE7C;
 extern s32 D_8010AE80;
+extern s32 D_8010AE74;
+extern s32 D_8010CFD8;
+extern s32 D_8010CFDC;
 extern s32 g_field_camera_follow_x;
 extern s32 g_field_camera_follow_z;
 
@@ -113,8 +106,8 @@ void func_80091BC8(void)
     s32 target_x;
     s32 count;
     s32 index;
-    Actor *actor;
-    Slot *slot;
+    Actor* actor;
+    Slot* slot;
 
     count = 0;
     target_z = 0;
@@ -161,7 +154,7 @@ void func_80091BC8(void)
             else
             {
                 s32 value;
-                s32 *write_position = &g_field_camera_follow_x;
+                s32* write_position = &g_field_camera_follow_x; /* the original stores the step through a pointer */
 
                 if (delta < 0)
                 {
@@ -192,7 +185,7 @@ void func_80091BC8(void)
             else
             {
                 s32 value;
-                s32 *write_position = &g_field_camera_follow_z;
+                s32* write_position = &g_field_camera_follow_z; /* the original stores the step through a pointer */
 
                 if (delta < 0)
                 {
@@ -212,15 +205,16 @@ void func_80091BC8(void)
  * @brief Update the camera, clamp it to map bounds, and record screen motion.
  *
  * Camera coordinates use eight fractional bits; projecting depth divides by
- * 512. The temporary points and zero offset preserve the original stack layout.
+ * 512. The screen-motion delta is the difference between the projected view
+ * position before and after the update, relative to a zero offset.
  */
 void func_80091D7C(void)
 {
     Point before;
     Point after;
     Vector offset;
-    Camera *camera = (Camera *)0x801ED480;
-    Bounds *bounds = (Bounds *)0x801ED400;
+    SceneState* camera = SCENE_STATE;
+    FieldMapBounds* bounds = FIELD_MAP_BOUNDS;
     s32 screen_x;
     s32 camera_screen_x, camera_screen_y, offset_screen_x, offset_screen_y;
     s32 screen_y;
@@ -255,38 +249,38 @@ void func_80091D7C(void)
     {
         g_field_view_offset_z = follow_z - 0x2000;
     }
-    camera->x = g_field_view_offset_x + (D_800F2278 << 8) + 0xA000;
-    g_field_view_offset_y = camera->y = D_800F227C << 8;
-    camera->z = g_field_view_offset_z + (D_800F2280 << 9) + 0xE000;
-    if (camera->x > -(D_8010AE60 << 8))
+    camera->camera_x = g_field_view_offset_x + (D_800F2278 << 8) + 0xA000;
+    g_field_view_offset_y = camera->camera_y = D_800F227C << 8;
+    camera->camera_z = g_field_view_offset_z + (D_800F2280 << 9) + 0xE000;
+    if (camera->camera_x > -(D_8010AE60 << 8))
     {
-        camera->x = -(D_800F2278 << 8) - (D_8010AE60 << 8);
-        g_field_view_offset_x = camera->x - (D_800F2278 << 8) - 0xA000;
+        camera->camera_x = -(D_800F2278 << 8) - (D_8010AE60 << 8);
+        g_field_view_offset_x = camera->camera_x - (D_800F2278 << 8) - 0xA000;
     }
-    if (camera->x < -(D_8010AE68 << 8) + 0x14000)
+    if (camera->camera_x < -(D_8010AE68 << 8) + 0x14000)
     {
         clamp_x = (D_800F2278 << 8) - 0x14000;
         clamp_x = -(D_8010AE68 << 8) - clamp_x;
-        camera->x = clamp_x;
-        g_field_view_offset_x = camera->x - (D_800F2278 << 8) - 0xA000;
+        camera->camera_x = clamp_x;
+        g_field_view_offset_x = camera->camera_x - (D_800F2278 << 8) - 0xA000;
     }
-    if (camera->z > 0)
+    if (camera->camera_z > 0)
     {
-        camera->z = -(D_800F2280 << 9);
-        g_field_view_offset_z = camera->z - (D_800F2280 << 9) - 0xE000;
+        camera->camera_z = -(D_800F2280 << 9);
+        g_field_view_offset_z = camera->camera_z - (D_800F2280 << 9) - 0xE000;
     }
-    if (camera->z < -((s32)(bounds->height << 16) >> 8) + 0x1C000)
+    if (camera->camera_z < -((s32)(bounds->height << 16) >> 8) + 0x1C000)
     {
         clamp_z = (D_800F2280 << 9) - 0x1C000;
         clamp_z = -((s32)(bounds->height << 16) >> 8) - clamp_z;
-        camera->z = clamp_z;
-        g_field_view_offset_z = camera->z - (D_800F2280 << 9) - 0xE000;
+        camera->camera_z = clamp_z;
+        g_field_view_offset_z = camera->camera_z - (D_800F2280 << 9) - 0xE000;
     }
     if (D_8010AE7C != 0 || D_8010AE80 != 0)
     {
-        camera->x = -(D_8010AE7C << 8);
+        camera->camera_x = -(D_8010AE7C << 8);
         g_field_view_offset_x = -(D_8010AE7C + 0xA0) << 8;
-        camera->z = -(D_8010AE80 << 9);
+        camera->camera_z = -(D_8010AE80 << 9);
         g_field_view_offset_z = -(D_8010AE80 + 0x70) << 9;
     }
     camera_screen_x = g_field_view_offset_x / 256;
@@ -308,7 +302,7 @@ void func_800920FC(void)
 {
     D_8010AE6C = 0;
     D_8010AE58 = 0x20;
-    D_8010AE70 = *(s16*)0x801ED400;
+    D_8010AE70 = FIELD_MAP_BOUNDS->width;
 }
 
 /**
@@ -319,23 +313,26 @@ void func_80092124(void)
     s32 camera_mode;
     FieldThreshold* camera_thresholds;
     FieldThreshold* threshold;
-    FieldCamera* camera;
+    SceneState* camera;
     s32 threshold_index;
     s32 lower_bound;
 
-    camera = (FieldCamera*)0x801ED480;
+    camera = SCENE_STATE;
     camera_mode = g_field_active_group;
     if (camera_mode == 0)
     {
         D_8010AE6C = 0;
         D_8010AE58 = 32;
-        D_8010AE70 = *(s16*)0x801ED400;
+        D_8010AE70 = FIELD_MAP_BOUNDS->width;
         return;
     }
 
     if (g_field_group_bounds_count < camera_mode)
     {
-        goto camera_bounds;
+        D_8010AE58 = 16;
+        lower_bound = D_8010AE6C = -(camera->camera_x >> 8);
+        D_8010AE70 = lower_bound + SCREEN_WIDTH;
+        return;
     }
 
     camera_thresholds = g_field_group_bounds;
@@ -343,9 +340,8 @@ void func_80092124(void)
     threshold = &camera_thresholds[threshold_index];
     if (threshold->span < SCREEN_WIDTH)
     {
-camera_bounds:
         D_8010AE58 = 16;
-        lower_bound = D_8010AE6C = -(camera->x >> 8);
+        lower_bound = D_8010AE6C = -(camera->camera_x >> 8);
         D_8010AE70 = lower_bound + SCREEN_WIDTH;
         return;
     }
@@ -355,25 +351,16 @@ camera_bounds:
     D_8010AE70 = threshold->min + threshold->span;
 }
 
-extern s32 D_8010AE74;
-extern s32 D_8010CFD8;
-extern s32 D_8010CFDC;
-
 /**
  * @brief Step the D_8010AE60 / D_8010AE68 pair toward D_8010AE6C / D_8010AE70 over the remaining D_8010AE58 frames.
  */
 void func_80092200(void)
 {
-    s32 temp_a1;
-    s32 temp_v1;
-
-    if (D_8010AE58 != 0) {
-        s32 *cur60 = &D_8010AE60;
-        temp_a1 = (D_8010AE6C - *cur60) / D_8010AE58;
-        temp_v1 = (D_8010AE70 - D_8010AE68) / D_8010AE58;
+    if (D_8010AE58 != 0)
+    {
+        D_8010AE60 += (D_8010AE6C - D_8010AE60) / D_8010AE58;
+        D_8010AE68 += (D_8010AE70 - D_8010AE68) / D_8010AE58;
         D_8010AE58 -= 1;
-        D_8010AE60 += temp_a1;
-        D_8010AE68 += temp_v1;
     }
 }
 
@@ -382,20 +369,17 @@ void func_80092200(void)
  */
 void func_800922B8(void)
 {
-    s32 temp_a1;
-    s32 temp_v1;
-
-    if (D_8010AE74 != 0) {
-        s32 *cur = &D_8010AE7C;
-        temp_a1 = (D_8010CFD8 - *cur) / D_8010AE74;
-        temp_v1 = (D_8010CFDC - D_8010AE80) / D_8010AE74;
+    if (D_8010AE74 != 0)
+    {
+        D_8010AE7C += (D_8010CFD8 - D_8010AE7C) / D_8010AE74;
+        D_8010AE80 += (D_8010CFDC - D_8010AE80) / D_8010AE74;
         D_8010AE74 -= 1;
-        D_8010AE7C += temp_a1;
-        D_8010AE80 += temp_v1;
-        return;
     }
-    D_8010AE7C = D_8010CFD8;
-    D_8010AE80 = D_8010CFDC;
+    else
+    {
+        D_8010AE7C = D_8010CFD8;
+        D_8010AE80 = D_8010CFDC;
+    }
 }
 
 /**
@@ -405,7 +389,7 @@ void func_80092394(void)
 {
     s32 value;
 
-    value = *(s16*)0x801ED400;
+    value = FIELD_MAP_BOUNDS->width;
 
     D_8010AE6C = 0;
     D_8010AE60 = 0;

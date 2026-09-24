@@ -37,27 +37,6 @@ typedef struct
     u16 value;
 } GolemLogicBlockValidationResult;
 
-
-
-/**
- * @brief Append a new, unassigned logic block to the golem logic-block table.
- * @param block_id Six-bit block id stored in bits 2-7.
- * @param detail Four-bit detail value stored in bits 8-11.
- * @param shape Four-bit shape index stored in bits 12-15.
- */
-void golem_logic_block_append(u32 block_id, u32 detail, u32 shape)
-{
-    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] =
-        (((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_ID_MASK) | ((block_id & 0x3F) << LOGIC_BLOCK_ID_SHIFT);
-    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] =
-        (((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_DETAIL_MASK) | ((detail & 0xF) << LOGIC_BLOCK_DETAIL_SHIFT);
-    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] =
-        (((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_SHAPE_MASK) | ((shape & 0xF) << LOGIC_BLOCK_SHAPE_SHIFT);
-    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] |= LOGIC_BLOCK_TYPE_UNASSIGNED;
-    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count] &= ~LOGIC_BLOCK_FLAG_UNK16;
-    ((GolemLogicBlockTable *)g_saved_game.bytes)->logic_block_count++;
-}
-
 /** @brief Packed layout entry, including its active bit at bit sixteen. */
 typedef union
 {
@@ -69,8 +48,41 @@ typedef union
         unsigned high : 15;
     } bits;
 } Packed;
+
+typedef struct
+{
+    u8 pad[0x2A7F];
+    u8 unk2A7F;
+} FieldCBEC4MenuScan;
+
 extern u8 D_800F1CD0[];
 extern s32 D_80122C00;
+extern u8 D_800F2098[];
+extern u8 D_800459AE;
+extern u8 D_800F2180[];
+
+/**
+ * @brief Append a new, unassigned logic block to the golem logic-block table.
+ * @param block_id Six-bit block id stored in bits 2-7.
+ * @param detail Four-bit detail value stored in bits 8-11.
+ * @param shape Four-bit shape index stored in bits 12-15.
+ */
+void golem_logic_block_append(u32 block_id, u32 detail, u32 shape)
+{
+    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] =
+        (((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_ID_MASK) |
+        ((block_id & 0x3F) << LOGIC_BLOCK_ID_SHIFT);
+    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] =
+        (((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_DETAIL_MASK) |
+        ((detail & 0xF) << LOGIC_BLOCK_DETAIL_SHIFT);
+    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] =
+        (((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] & ~LOGIC_BLOCK_SHAPE_MASK) |
+        ((shape & 0xF) << LOGIC_BLOCK_SHAPE_SHIFT);
+    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] |= LOGIC_BLOCK_TYPE_UNASSIGNED;
+    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count] &= ~LOGIC_BLOCK_FLAG_UNK16;
+    ((GolemLogicBlockTable*)g_saved_game.bytes)->logic_block_count++;
+}
+
 /**
  * @brief Rebuild the menu grid's entry indices from the active composite layouts.
  * @return Grid bound stored in the selected layout's high nibble.
@@ -88,7 +100,7 @@ u32 func_800CB758(void)
     clear_base = (s32)g_saved_game.bytes;
     do
     {
-        ((u8 *)(index * 4 + clear_base))[0x2A7F] = empty;
+        ((u8*)(index * 4 + clear_base))[0x2A7F] = empty;
         index--;
     } while (index >= 0);
     index = 0;
@@ -99,35 +111,32 @@ u32 func_800CB758(void)
         base = (s32)g_saved_game.bytes;
         do
         {
-            entry = (u8 *)((s32)g_saved_game.bytes + index * 4);
-            packed = *(u32 *)(entry + 0x29DC);
+            entry = (u8*)((s32)g_saved_game.bytes + index * 4);
+            packed = *(u32*)(entry + 0x29DC);
             bits.word = packed;
-            if (bits.bits.active == 1 && (packed & 3) == ((u8 *)(D_80122C00 + base))[0x29D8])
+            if (bits.bits.active == 1 && (packed & 3) == ((u8*)(D_80122C00 + base))[0x29D8])
             {
                 part = 0;
-                if (*(u8 *)((((packed >> 12) & 15) * 0x58) + table) != 0)
+                if (*(u8*)((((packed >> 12) & 15) * 0x58) + table) != 0)
                 {
                     do
                     {
-                        value = *(u32 *)(entry + 0x29DC);
-                        shape = (u8 *)(((((value >> 17) & 3) * 5 + part) * 4) +
-                                       (((value >> 12) & 15) * 0x58) + table);
+                        value = *(u32*)(entry + 0x29DC);
+                        shape = (u8*)(((((value >> 17) & 3) * 5 + part) * 4) + (((value >> 12) & 15) * 0x58) + table);
                         x = ((s32)(value << 8) >> 27) + (s8)shape[12];
                         z = ((s32)(value << 3) >> 27) + (s8)shape[13];
                         x += z * 6;
-                        ((u8 *)(x * 4 + base))[0x2A7F] = index;
+                        ((u8*)(x * 4 + base))[0x2A7F] = index;
                         part++;
-                    } while (part <
-                             *(u8 *)((((*(u32 *)(entry + 0x29DC) >> 12) & 15) * 0x58) + table));
+                    } while (part < *(u8*)((((*(u32*)(entry + 0x29DC) >> 12) & 15) * 0x58) + table));
                 }
             }
             index++;
         } while (index < count);
     }
     return_base = (s32)g_saved_game.bytes;
-    return ((u8 *)(((u8 *)(D_80122C00 + return_base))[0x29D8] * 0x14C + return_base))[0x2B50] >> 4;
+    return ((u8*)(((u8*)(D_80122C00 + return_base))[0x29D8] * 0x14C + return_base))[0x2B50] >> 4;
 }
-
 
 /**
  * @brief Update a composite layout record and mark each occupied part in the menu grid.
@@ -149,8 +158,8 @@ void func_800CB918(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     u32 mask2;
     u32 mask3;
     s32 layout_index;
-    u8 *table;
-    u8 *part;
+    u8* table;
+    u8* part;
 
     do
     {
@@ -161,21 +170,17 @@ void func_800CB918(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     mask3 = 0xE0FFFFFF;
     base = (s32)g_saved_game.bytes;
     layout_index = D_80122C00;
-    packed = (((((((*(u32 *)(cell_offset + base + 0x29DC) & ~3)
-                        | (((u8 *)base)[layout_index + 0x29D8] & 3) | 0x10000)
-                       & mask1)
-                      | ((arg1 & 3) << 17))
-                     & mask2)
-                    | ((arg2 & 0x1F) << 19))
-                   & mask3)
-                  | ((arg3 & 0x1F) << 24);
+    packed = (((((((*(u32*)(cell_offset + base + 0x29DC) & ~3) | (((u8*)base)[layout_index + 0x29D8] & 3) | 0x10000) & mask1) | ((arg1 & 3) << 17)) & mask2) |
+               ((arg2 & 0x1F) << 19)) &
+              mask3) |
+             ((arg3 & 0x1F) << 24);
     table = D_800F1CD0;
-    *(u32 *)(cell_offset + base + 0x29DC) = packed;
+    *(u32*)(cell_offset + base + 0x29DC) = packed;
     count = 0;
     if (table[((packed >> 12) & 0xF) * 0x58] != 0)
     {
-        u8 *loop_table;
-        u8 *grid;
+        u8* loop_table;
+        u8* grid;
         u32 shape;
         u32 limit_shape;
 
@@ -185,7 +190,7 @@ void func_800CB918(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         } while (0);
         if (cell_offset != 0)
         {
-            grid = (u8 *)base;
+            grid = (u8*)base;
         }
         else
         {
@@ -194,15 +199,15 @@ void func_800CB918(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         cursor = arg1 * 0x14;
         do
         {
-            shape = *(u32 *)(cell_offset + (s32)grid + 0x29DC);
+            shape = *(u32*)(cell_offset + (s32)grid + 0x29DC);
             shape >>= 12;
             shape &= 0xF;
-            part = (u8 *)(cursor + shape * 0x58 + (s32)loop_table);
-            x = arg2 + *(s8 *)(part + 0xC);
-            y = arg3 + *(s8 *)(part + 0xD);
+            part = (u8*)(cursor + shape * 0x58 + (s32)loop_table);
+            x = arg2 + *(s8*)(part + 0xC);
+            y = arg3 + *(s8*)(part + 0xD);
             x += y * 6;
             grid[x * 4 + 0x2A7F] = arg0;
-            limit_shape = *(u32 *)(cell_offset + (s32)grid + 0x29DC);
+            limit_shape = *(u32*)(cell_offset + (s32)grid + 0x29DC);
             do
             {
                 count++;
@@ -213,8 +218,6 @@ void func_800CB918(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         } while (count < loop_table[limit_shape * 0x58]);
     }
 }
-
-extern u8 D_800F2098[];
 
 /**
  * @brief Check shape occupancy and the selected logic class before placement.
@@ -230,7 +233,7 @@ s32 func_800CBA9C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 grid_index;
     s32 logic_block_offset;
     s32 valid;
-    u8 *shape_part;
+    u8* shape_part;
     s32 part_offset;
     s32 part_index;
     s32 shape_offset;
@@ -239,17 +242,19 @@ s32 func_800CBA9C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     valid = 1;
     logic_block_offset = arg0 * 4;
     part_index = 0;
-    if (D_800F1CD0[((((((((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF) << valid)
-                       + ((((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) * 4
-                      - ((((GolemLogicBlockTable *)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) * 8)] != 0)
+    if (D_800F1CD0[((((((((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF) << valid) +
+                      ((((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) *
+                         4 -
+                     ((((GolemLogicBlockTable*)g_saved_game.bytes)->logic_blocks[arg0] >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF)) *
+                    8)] != 0)
     {
-        u8 *shape_table;
-        u8 *layout;
+        u8* shape_table;
+        u8* layout;
 
         shape_table = D_800F1CD0;
         layout = g_saved_game.bytes;
         part_offset = arg1 * 0x14;
-loop:
+    loop:
         part_index++;
         part_index--;
         part_index++;
@@ -266,32 +271,32 @@ loop:
         shape_table--;
         part_offset++;
         part_offset--;
-        shape_index = ((*(u32 *)(logic_block_offset + (s32)layout + 0x29DC) >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF);
-        shape_part = (u8 *)(shape_index * 11);
+        shape_index = ((*(u32*)(logic_block_offset + (s32)layout + 0x29DC) >> LOGIC_BLOCK_SHAPE_SHIFT) & 0xF);
+        shape_part = (u8*)(shape_index * 11);
         shape_offset = (s32)shape_part * 8;
-        shape_part = (u8 *)(part_offset + shape_offset + (s32)shape_table);
-        part_y = arg3 + *(s8 *)(shape_part + 0xD);
-        grid_index = arg2 + *(s8 *)(shape_part + 0xC);
+        shape_part = (u8*)(part_offset + shape_offset + (s32)shape_table);
+        part_y = arg3 + *(s8*)(shape_part + 0xD);
+        grid_index = arg2 + *(s8*)(shape_part + 0xC);
         grid_index += part_y * 6;
         if (layout[grid_index * 4 + 0x2A7F] != 0x63)
         {
             valid = 0;
         }
         part_offset += 4;
-        if (++part_index < *(u8 *)(shape_offset + (s32)shape_table))
+        if (++part_index < *(u8*)(shape_offset + (s32)shape_table))
         {
             goto loop;
         }
     }
 
     {
-        u8 *class_lookup_table;
-        u8 *layout_base;
+        u8* class_lookup_table;
+        u8* layout_base;
         s32 logic_class;
 
         class_lookup_table = D_800F2098;
         layout_base = g_saved_game.bytes;
-        logic_class = *(s32 *)(class_lookup_table + (layout_base[arg0 * 4 + 0x29DC] & LOGIC_BLOCK_ID_MASK));
+        logic_class = *(s32*)(class_lookup_table + (layout_base[arg0 * 4 + 0x29DC] & LOGIC_BLOCK_ID_MASK));
         if (logic_class != 0)
         {
             if (logic_class != (layout_base[layout_base[D_80122C00 + 0x29D8] * 332 + 0x2B50] & 0xF))
@@ -319,12 +324,12 @@ s32 func_800CBC0C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 valid;
     u32 limit;
     s32 saved_arg0;
-    u8 *temp_v0;
+    u8* temp_v0;
     s32 cursor;
-    u8 *table;
+    u8* table;
 
     cursor = (s32)g_saved_game.bytes;
-    limit = ((u8 *)cursor)[((u8 *)cursor)[D_80122C00 + 0x29D8] * 0x14C + 0x2B50] & 0xF0;
+    limit = ((u8*)cursor)[((u8*)cursor)[D_80122C00 + 0x29D8] * 0x14C + 0x2B50] & 0xF0;
     limit >>= 4;
     saved_arg0 = arg0;
     if ((s32)limit >= 6)
@@ -339,18 +344,18 @@ s32 func_800CBC0C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     cell_offset = saved_arg0 * 4;
     table = D_800F1CD0;
     arg0 = 0;
-    if (table[((((((*(u32 *)(cell_offset + cursor + 0x29DC) >> 12) & 0xF) << valid)
-                  + ((*(u32 *)(cell_offset + cursor + 0x29DC) >> 12) & 0xF)) * 4
-                 - ((*(u32 *)(cell_offset + cursor + 0x29DC) >> 12) & 0xF)) * 8)] != 0)
+    if (table[((((((*(u32*)(cell_offset + cursor + 0x29DC) >> 12) & 0xF) << valid) + ((*(u32*)(cell_offset + cursor + 0x29DC) >> 12) & 0xF)) * 4 -
+                ((*(u32*)(cell_offset + cursor + 0x29DC) >> 12) & 0xF)) *
+               8)] != 0)
     {
-        u8 *grid;
-        grid = (u8 *)cursor;
+        u8* grid;
+        grid = (u8*)cursor;
         cursor = arg1 * 0x14;
         do
         {
-            temp_v0 = (u8 *)(cursor + ((((u32)*(u32 *)(cell_offset + (s32)grid + 0x29DC) >> 12) & 0xF) * 0x58) + (s32)table);
-            temp_v1 = *(s8 *)(temp_v0 + 0xC) + arg2;
-            temp_a1 = *(s8 *)(temp_v0 + 0xD) + arg3;
+            temp_v0 = (u8*)(cursor + ((((u32) * (u32*)(cell_offset + (s32)grid + 0x29DC) >> 12) & 0xF) * 0x58) + (s32)table);
+            temp_v1 = *(s8*)(temp_v0 + 0xC) + arg2;
+            temp_a1 = *(s8*)(temp_v0 + 0xD) + arg3;
             if ((temp_v1 < 0) || (temp_v1 >= (s32)limit))
             {
                 valid = 0;
@@ -361,52 +366,48 @@ s32 func_800CBC0C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
                 cell_offset = saved_arg0 * 4;
             }
             cursor += 4;
-        } while (++arg0 < (s32)table[(((*(u32 *)(cell_offset + (s32)grid + 0x29DC) >> 12) & 0xF) * 0x58)]);
+        } while (++arg0 < (s32)table[(((*(u32*)(cell_offset + (s32)grid + 0x29DC) >> 12) & 0xF) * 0x58)]);
     }
     return valid;
 }
-
-extern u8 D_800459AE;
-extern u8 D_800F2180[];
 
 /**
  * @brief Validate menu entries against their reference classes and fill result pairs.
  * @param arg0 Output array of flag/value pairs, one per menu-layout entry.
  * @return The global status byte D_800459AE.
  */
-u8 func_800CBD70(void *arg0)
+u8 func_800CBD70(void* arg0)
 {
-    GolemLogicBlockValidationResult *out;
-    u8 *buf;
+    GolemLogicBlockValidationResult* out;
+    u8* buf;
     s32 i;
     s32 word;
     s32 type;
     u8 ref_class;
     s32 table_val;
 
-    out = (GolemLogicBlockValidationResult *)arg0;
+    out = (GolemLogicBlockValidationResult*)arg0;
     i = 0;
     if (g_saved_game.bytes[0x29D6] != 0)
     {
         buf = g_saved_game.bytes;
         do
         {
-            word = *(s32 *)(buf + 0x29DC + i * 4);
+            word = *(s32*)(buf + 0x29DC + i * 4);
             ref_class = buf[D_80122C00 + 0x29D8];
             ref_class++;
             ref_class--;
             type = word & 3;
             if ((type != ref_class && type != 3) ||
-                (((table_val = *(s32 *)(D_800F2098 + (word & 0xFC))) != 0) &&
-                 ((buf[ref_class * 332 + 0x2B50] & 0xF) != table_val)))
+                (((table_val = *(s32*)(D_800F2098 + (word & 0xFC))) != 0) && ((buf[ref_class * 332 + 0x2B50] & 0xF) != table_val)))
             {
-                *(u16 *)(out + i) = 1;
-                *((u16 *)(out + i) + 1) = 0xF;
+                *(u16*)(out + i) = 1;
+                *((u16*)(out + i) + 1) = 0xF;
             }
             else
             {
-                *(u16 *)(out + i) = 0;
-                *((u16 *)(out + i) + 1) = ((u16 *)D_800F2180)[(*(u8 *)(buf + 0x29DC + i * 4) & 0xFC) >> 1];
+                *(u16*)(out + i) = 0;
+                *((u16*)(out + i) + 1) = ((u16*)D_800F2180)[(*(u8*)(buf + 0x29DC + i * 4) & 0xFC) >> 1];
             }
             i++;
         } while (i < buf[0x29D6]);
@@ -428,13 +429,13 @@ u8 func_800CBD70(void *arg0)
 void func_800CBE64(s32 arg0)
 {
     s32 i;
-    u8 *p;
-    u8 *base = g_saved_game.bytes;
-    u8 *rec = base + arg0 * 4;
+    u8* p;
+    u8* base = g_saved_game.bytes;
+    u8* rec = base + arg0 * 4;
     /* Reserves the target's unused 8-byte stack frame slot (FRAME-03). */
     volatile s32 pad;
 
-    *(u32 *)(rec + 0x29DC) &= ~0x10000;
+    *(u32*)(rec + 0x29DC) &= ~0x10000;
 
     for (i = 0; i < 0x24; i++)
     {
@@ -446,33 +447,26 @@ void func_800CBE64(s32 arg0)
     }
 }
 
-
-typedef struct
-{
-    u8 pad[0x2A7F];
-    u8 unk2A7F;
-} FieldCBEC4MenuScan;
-
 /**
  * @brief Clear boundary markers and mark differing occupied vertical neighbors.
  * @param arg0 Output buffer containing 60 word-sized markers.
  */
-void func_800CBEC4(void *arg0)
+void func_800CBEC4(void* arg0)
 {
-    u8 *scan;
-    u8 *base;
-    s32 *clear;
+    u8* scan;
+    u8* base;
+    s32* clear;
     s32 count;
     s32 offset;
     s32 sentinel;
     s32 marker;
     u8 first;
     u8 second;
-    void *out;
+    void* out;
 
     out = arg0;
     count = 0x3B;
-    clear = (s32 *)((u8 *)out + 0xEC);
+    clear = (s32*)((u8*)out + 0xEC);
     do
     {
         *clear = 0;
@@ -488,16 +482,16 @@ void func_800CBEC4(void *arg0)
     scan = base;
     do
     {
-        first = ((FieldCBEC4MenuScan *)scan)->unk2A7F;
+        first = ((FieldCBEC4MenuScan*)scan)->unk2A7F;
         if (first != sentinel)
         {
-            second = ((FieldCBEC4MenuScan *)((u32)offset + (u32)base))->unk2A7F;
+            second = ((FieldCBEC4MenuScan*)((u32)offset + (u32)base))->unk2A7F;
             if ((second != sentinel) && (first != second))
             {
-                *(s32 *)((u8 *)out + 0x78) = marker;
+                *(s32*)((u8*)out + 0x78) = marker;
             }
         }
-        out = (u8 *)out + 4;
+        out = (u8*)out + 4;
         offset += 4;
         count++;
         scan += 4;

@@ -1,24 +1,19 @@
 #include "saved_game.h"
 #include "common.h"
 
-
-
 /**
  * @brief Activate a layout slot and assign its insertion sequence number.
  * @param arg0 Index of the 12-byte layout-slot record.
  */
 void func_800CA1A0(s32 arg0)
 {
-    u8 *rec;
+    u8* rec;
 
     rec = &g_saved_game.bytes[arg0 * 0xC];
     g_saved_game.bytes[0x2E4]++;
     rec[0x2F0] |= 1;
     rec[0x2F3] = g_saved_game.bytes[0x2E4];
 }
-
-
-
 
 /**
  * @brief Reset the 0x40 per-slot layout records in g_saved_game.bytes.
@@ -34,9 +29,9 @@ void func_800CA1A0(s32 arg0)
 void func_800CA1E0(void)
 {
     s32 i;
-    u8 *p;
-    u8 *q;
-    u8 *r;
+    u8* p;
+    u8* q;
+    u8* r;
 
     i = 0;
     g_saved_game.bytes[0x2E4] = 0;
@@ -72,5 +67,5 @@ enable_slots:
         goto enable_slots;
     }
     r = g_saved_game.bytes;
-    *((s32 *) (r + 0x410)) &= ~4;
+    *((s32*)(r + 0x410)) &= ~4;
 }

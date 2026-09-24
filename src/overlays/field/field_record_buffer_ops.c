@@ -1,78 +1,78 @@
-/** @file field_record_buffer_ops.c
+/**
+ * @file field_record_buffer_ops.c
  * @brief Copy or clear record buffers and sort packed value/key lists.
  */
 
 #include "common.h"
 
+/** @brief One (value, key) pair of a FieldKeyedList. */
+typedef struct FieldKeyedPair
+{
+    u32 value;
+    u32 key;
+} FieldKeyedPair;
+
+/** @brief Counted list of (value, key) pairs. */
+typedef struct FieldKeyedList
+{
+    u32 count;
+    FieldKeyedPair pairs[1];
+} FieldKeyedList;
+
 /**
  * @brief Copy or clear a buffer in 32-bit words.
  * @param src Source buffer, or NULL to clear the destination.
  * @param dest Destination buffer.
- * @param n Byte count; only complete 32-bit words are processed.
+ * @param size Byte count; only complete 32-bit words are processed.
  * @return Pointer to the first destination word after the processed range.
  */
-s32* func_800C1EC8(s32* src, s32* dest, s32 n)
+s32* func_800C1EC8(s32* src, s32* dest, s32 size)
 {
-    s32* result;
+    s32 count;
 
-    if (n < 0)
-    {
-        n += 3;
-    }
-    n >>= 2;
-
+    count = size / 4;
     if (src != NULL)
     {
-        result = dest;
-        if (n)
+        while (count != 0)
         {
-            do
-            {
-                *dest++ = *src++;
-                n--;
-            } while (n);
-            return dest;
+            *dest++ = *src++;
+            count--;
         }
-        return result;
     }
-
-    result = dest;
-    if (n)
+    else
     {
-        do
+        while (count != 0)
         {
             *dest++ = 0;
-            n--;
-        } while (n);
-        result = dest;
+            count--;
+        }
     }
-    return result;
+    return dest;
 }
-
 
 /**
  * @brief Sort a (value, key) pair list in place by ascending key.
- * @param arg0 Word 0 holds the pair count; pairs follow as (value, key) from word 1.
+ * @param list Pair list to sort.
  */
-void func_800C1F28(u32 *arg0)
+void func_800C1F28(FieldKeyedList* list)
 {
     u32 i;
     u32 j;
     u32 key;
-    u32 data;
+    u32 value;
 
-    for (i = 0; i < arg0[0]; i++)
+    for (i = 0; i < list->count; i++)
     {
-        for (j = 1; j < arg0[0]; j++)
+        for (j = 1; j < list->count; j++)
         {
-            key = arg0[2 * i + 2];
-            if (arg0[2 * j + 2] < key)
+            key = list->pairs[i].key;
+            if (list->pairs[j].key < key)
             {
-                data = arg0[2 * i + 1];
-                arg0[2 * i + 1] = arg0[2 * j + 1];
-                arg0[2 * i + 2] = arg0[2 * j + 2];
-                arg0[2 * j + 1] = data;
-                arg0[2 * j + 2] = key;
+                value = list->pairs[i].value;
+                list->pairs[i].value = list->pairs[j].value;
+                list->pairs[i].key = list->pairs[j].key;
+                list->pairs[j].value = value;
+                list->pairs[j].key = key;
             }
         }
     }

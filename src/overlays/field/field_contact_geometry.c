@@ -340,8 +340,7 @@ scan_actor:
         ((actor_index < FIELD_PARTY_ACTOR_COUNT) || ((FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->group_flags &
                                                       FIELD_OBJECT_GROUP_MASK) == g_field_active_group)) &&
         (FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->current_hp != 0) &&
-        ((u32)((FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) - 0x38) >=
-         2U) &&
+        ((FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) < 0x38 || (FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->facing_or_reward_kind & FIELD_FACING_INDEX_MASK) > 0x39) &&
         (FIELD_CONTAINER(scan_facing_cursor, FieldMotionRecord, facing_or_reward_kind)->source_object_index != record->source_object_index))
     {
         if (FIELD_CONTAINER(scan_diameter_cursor, FieldObjectRuntime, collision.half.diameter)->contact.flags & FIELD_CONTACT_FLAG_TARGETED)
@@ -473,13 +472,8 @@ scan_actor:
                                                 }
                                             }
 
-                                            edge_layer = list_index_or_layer;
                                             contact->actor = actor_index;
-                                            if (list_index_or_layer < 0)
-                                            {
-                                                edge_layer = list_index_or_layer + 3;
-                                            }
-                                            return (edge_layer >> 2) + 1;
+                                            return list_index_or_layer / 4 + 1;
                                         }
                                     }
                                     input_edge += 1;

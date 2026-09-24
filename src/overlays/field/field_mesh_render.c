@@ -9,19 +9,9 @@
 #include "field_effect_types.h"
 #include "field_mesh_render.h"
 #include "field_mesh.h"
+#include "field_mesh_transform.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
-
-/** @brief Triangle mesh resource referenced by an actor slot. */
-typedef struct
-{
-    u16 face_count;
-    u8 pad2[6];
-    SVECTOR *vertices;
-    SVECTOR *normals;
-    SVECTOR *offsets;
-    u8 *faces;
-} FieldMeshResource;
 
 extern FieldMotionRecord g_field_effect_records[];
 
@@ -38,10 +28,24 @@ extern FieldActorState g_field_actor_slots[80];
 #define FIELD_OT_ADDRESS_MASK 0x00FFFFFF
 #define FIELD_OT_TAG_MASK 0xFF000000
 
+/**
+ * @brief Part index of light source @p i (0..2) of an actor part.
+ * @note The three selector bytes start at rotation_extent's last byte and run into effect_flags.
+ */
+#define FIELD_PART_LIGHT_SOURCE(part, i) ((&(part)->rotation_extent.fields.unknown_0x23)[i])
+
+/** @brief Bytes of CLUT data owned by each of the two actor palette owners. */
+#define FIELD_ACTOR_CLUT_BUFFER_SIZE 0x400
+
+/**
+ * @brief CLUT buffer of actor palette owner @p owner (0 or 1).
+ * @note g_field_actor_clut_buffers is declared as a flat byte array; the
+ *       original indexes it as a [2][0x400] array.
+ */
+#define FIELD_ACTOR_CLUT_BUFFER(owner) (((u8(*)[FIELD_ACTOR_CLUT_BUFFER_SIZE])g_field_actor_clut_buffers)[owner])
+
 void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right);
 
-void func_800822A4(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, s32 part_index);
-s32 func_80082C90(FieldActorState *actor, FieldMotionRecord *rec, FieldActorPartDef *part, MATRIX *mtx, MATRIX *tmp);
 
 
 #include "sdk/inline_c.h"
@@ -58,79 +62,75 @@ s32 field_update_actor_palette_animation(FieldActorState *actor)
     RECT rect;
     u8 *buf;
     u16 animation;
-    u32 mode;
-    static void *const jump_table[6] = {&&done, &&done, &&rotate_16, &&rotate_256, &&done, &&done};
 
     animation = actor->animation->palette_animation;
     if (!(animation & FIELD_PALETTE_ANIMATION_PERIOD_MASK))
     {
-        goto done;
+        return;
     }
     if (((u32)actor->track_ages[0] % (u32)((u8)actor->animation->palette_animation & FIELD_PALETTE_ANIMATION_PERIOD_MASK)) != 0)
     {
-        goto done;
+        return;
     }
-    mode = (animation >> 4) & FIELD_PALETTE_ANIMATION_MODE_MASK;
-    if (mode >= FIELD_PALETTE_ANIMATION_MODE_COUNT)
+    switch ((animation >> 4) & FIELD_PALETTE_ANIMATION_MODE_MASK)
     {
-        goto done;
-    }
-    mode <<= 2;
-    mode += (u32)jump_table;
-    goto *(*(void **)mode);
+    case 0:
+    case 1:
+    case 4:
+    case 5:
+        return;
 
-rotate_16:
-    if (actor->owner_object_index < 2)
-    {
-        s32 owner_offset = actor->owner_object_index;
-        FieldActorAnimationDef *animation_def = actor->animation;
-        owner_offset <<= 10;
+    case 2:
+        if (actor->owner_object_index < 2)
         {
-            u16 animation_word = animation_def->palette_animation;
-            u8 *base = &g_field_actor_clut_buffers[(animation_word >> 3) & 0x1E0];
-            buf = (u8 *)(owner_offset + (s32)base);
-            field_rotate_palette_row((u16 *)(buf + 2), 15, (animation_word >> 7) & 1);
-        }
-        rect.x = (actor->animation->palette_animation >> 4) & 0xF0;
-        rect.y = (actor->owner_object_index * 2) + 0x1EE;
-        rect.w = 0x10;
-        rect.h = 1;
-    }
-    else
-    {
-        u16 animation_word = actor->animation->palette_animation;
-        buf = &g_field_shared_clut_buffer[(animation_word >> 3) & 0x1E0];
-        field_rotate_palette_row((u16 *)(buf + 2), 15, (animation_word >> 7) & 1);
-        rect.x = (actor->animation->palette_animation >> 4) & 0xF0;
-        rect.y = 0x1F2;
-        rect.w = 0x10;
-        rect.h = 1;
-    }
-    goto upload;
+            u16 animation_word;
+            s32 owner = actor->owner_object_index;
 
-rotate_256:
-    if (actor->owner_object_index < 2)
-    {
-        buf = &g_field_actor_clut_buffers[actor->owner_object_index << 10];
-        field_rotate_palette_row((u16 *)(buf + 2), 255, (actor->animation->palette_animation >> 7) & 1);
-        rect.x = 0;
-        rect.y = (actor->owner_object_index * 2) + 0x1EE;
-        rect.w = 0x100;
-        rect.h = 1;
+            animation_word = actor->animation->palette_animation;
+            buf = &FIELD_ACTOR_CLUT_BUFFER(owner)[(animation_word >> 3) & 0x1E0];
+            field_rotate_palette_row((u16 *)(buf + 2), 15, (animation_word >> 7) & 1);
+            rect.x = (actor->animation->palette_animation >> 4) & 0xF0;
+            rect.y = (actor->owner_object_index * 2) + 0x1EE;
+            rect.w = 0x10;
+            rect.h = 1;
+        }
+        else
+        {
+            u16 animation_word = actor->animation->palette_animation;
+            buf = &g_field_shared_clut_buffer[(animation_word >> 3) & 0x1E0];
+            field_rotate_palette_row((u16 *)(buf + 2), 15, (animation_word >> 7) & 1);
+            rect.x = (actor->animation->palette_animation >> 4) & 0xF0;
+            rect.y = 0x1F2;
+            rect.w = 0x10;
+            rect.h = 1;
+        }
+        break;
+
+    case 3:
+        if (actor->owner_object_index < 2)
+        {
+            buf = FIELD_ACTOR_CLUT_BUFFER(actor->owner_object_index);
+            field_rotate_palette_row((u16 *)(buf + 2), 255, (actor->animation->palette_animation >> 7) & 1);
+            rect.x = 0;
+            rect.y = (actor->owner_object_index * 2) + 0x1EE;
+            rect.w = 0x100;
+            rect.h = 1;
+        }
+        else
+        {
+            buf = g_field_shared_clut_buffer;
+            field_rotate_palette_row((u16 *)(buf + 2), 255, (actor->animation->palette_animation >> 7) & 1);
+            rect.y = 0x1F2;
+            rect.w = 0x100;
+            rect.x = 0;
+            rect.h = 1;
+        }
+        break;
+
+    default:
+        return;
     }
-    else
-    {
-        buf = g_field_shared_clut_buffer;
-        field_rotate_palette_row((u16 *)(buf + 2), 255, (actor->animation->palette_animation >> 7) & 1);
-        rect.y = 0x1F2;
-        rect.w = 0x100;
-        rect.x = 0;
-        rect.h = 1;
-    }
-upload:
     LoadImage(&rect, (u_long *)buf);
-done:
-    ;
 }
 
 /**
@@ -191,7 +191,7 @@ void field_rotate_palette_row(u16 *row, s32 count, s32 rotate_right)
  */
 s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *packet_cursor, s32 *ordering_table)
 {
-    volatile s32 pad[2];
+    s32 unused[2]; /* never used; the original stack frame reserves it */
     MATRIX transform;
     MATRIX base_matrix;
     MATRIX *transform_matrix;
@@ -210,11 +210,8 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
     transform_matrix = &base_matrix;
     ordering_table_base = ordering_table;
     transform_matrix = &transform;
-    {
-        FieldActorState *actor_base = g_field_actor_slots;
-        part = &actor_base[effect->actor_index].parts[effect->part_index];
-        actor = &actor_base[effect->actor_index];
-    }
+    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
+    actor = &g_field_actor_slots[effect->actor_index];
 
     func_80082C90(actor, effect, part, transform_matrix, &base_matrix);
     transform.t[2] = 0;
@@ -228,7 +225,7 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
 
     screen_vertices = (s32 *)g_field_mesh_screen_vertices;
     depth_offsets = g_field_mesh_depth_offsets;
-    face_data = ((FieldMeshResource *)actor->mesh_data)[mesh_index].faces;
+    face_data = FIELD_ACTOR_MESH(actor, mesh_index)->faces;
     screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
     screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
     primitive_kind = (face_data[6] >> 1) & 0xF;
@@ -242,7 +239,7 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
         s32 primitive_code;
         s32 address_mask;
         s32 tag_mask;
-        face_count = ((FieldMeshResource *)actor->mesh_data)[mesh_index].face_count;
+        face_count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
         if (face_count != 0)
         {
             packet = (u8 *)packet_cursor + 0xE;
@@ -374,7 +371,7 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
         s32 primitive_code;
         s32 address_mask;
         s32 tag_mask;
-        face_count = ((FieldMeshResource *)actor->mesh_data)[mesh_index].face_count;
+        face_count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
         if (face_count != 0)
         {
             primitive_code = 0x20;
@@ -412,26 +409,18 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
                     depth_index = base_depth + depth_offset;
                     if (depth_index < 0)
                     {
-                        *packet = (*packet & tag_mask) | (ordering_table_base[0] & address_mask);
-                        ordering_table_base[0] = (ordering_table_base[0] & tag_mask) | ((s32)packet & address_mask);
-                        packet = (s32 *)((u8 *)packet + 0x14);
+                        addPrim(ordering_table_base, packet);
+                        packet += 5;
                     }
                     else if (depth_index > FIELD_MESH_OT_MAX_DEPTH)
                     {
-                        *packet = (*packet & tag_mask) | (ordering_table_base[FIELD_MESH_OT_MAX_DEPTH] & address_mask);
-                        ordering_table_base[FIELD_MESH_OT_MAX_DEPTH] = (ordering_table_base[FIELD_MESH_OT_MAX_DEPTH] & tag_mask) | ((s32)packet & address_mask);
-                        packet = (s32 *)((u8 *)packet + 0x14);
+                        addPrim(&ordering_table_base[FIELD_MESH_OT_MAX_DEPTH], packet);
+                        packet += 5;
                     }
                     else
                     {
-                        *packet = (*packet & tag_mask) | (*((s32 *)((depth_offset << 2) + ((base_depth << 2) + (s32)ordering_table_base))) & address_mask);
-                        {
-                            s32 record_depth = effect->z >> 7;
-                            s32 face_depth_offset = *depth_offsets;
-                            s32 *ordering_entry = (s32 *)((face_depth_offset << 2) + ((record_depth << 2) + (s32)ordering_table_base));
-                            *ordering_entry = (*ordering_entry & tag_mask) | ((s32)packet & address_mask);
-                        }
-                        packet = (s32 *)((u8 *)packet + 0x14);
+                        addPrim(ordering_table_base + (effect->z >> 7) + *depth_offsets, packet);
+                        packet += 5;
                     }
 
                     ((u8 *)packet)[3] = 1;
@@ -451,27 +440,18 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
                         s32 *next_packet;
                         if (depth_index < 0)
                         {
-                            next_packet = (s32 *)((u8 *)packet + 8);
-                            *packet = (*packet & tag_mask) | (ordering_table_base[0] & address_mask);
-                            ordering_table_base[0] = (ordering_table_base[0] & tag_mask) | ((s32)packet & address_mask);
+                            next_packet = packet + 2;
+                            addPrim(ordering_table_base, packet);
                         }
                         else if (depth_index > FIELD_MESH_OT_MAX_DEPTH)
                         {
-                            next_packet = (s32 *)((u8 *)packet + 8);
-                            *packet = (*packet & tag_mask) | (ordering_table_base[FIELD_MESH_OT_MAX_DEPTH] & address_mask);
-                            ordering_table_base[FIELD_MESH_OT_MAX_DEPTH] =
-                                (ordering_table_base[FIELD_MESH_OT_MAX_DEPTH] & tag_mask) | ((s32)packet & address_mask);
+                            next_packet = packet + 2;
+                            addPrim(&ordering_table_base[FIELD_MESH_OT_MAX_DEPTH], packet);
                         }
                         else
                         {
-                            next_packet = (s32 *)((u8 *)packet + 8);
-                            *packet = (*packet & tag_mask) | (*((s32 *)((depth_offset << 2) + ((base_depth << 2) + (s32)ordering_table_base))) & address_mask);
-                            {
-                                s32 record_depth = effect->z >> 7;
-                                s32 face_depth_offset = *depth_offsets;
-                                s32 *ordering_entry = (s32 *)((face_depth_offset << 2) + ((record_depth << 2) + (s32)ordering_table_base));
-                                *ordering_entry = (*ordering_entry & tag_mask) | ((s32)packet & address_mask);
-                            }
+                            next_packet = packet + 2;
+                            addPrim(ordering_table_base + (effect->z >> 7) + *depth_offsets, packet);
                         }
                         packet = next_packet;
                     }
@@ -495,7 +475,7 @@ s32 *field_render_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *pa
         s32 address_mask;
         s32 tag_mask;
         u8 primitive_code;
-        face_count = ((FieldMeshResource *)actor->mesh_data)[mesh_index].face_count;
+        face_count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
         do
         {
             do
@@ -693,18 +673,15 @@ extern SVECTOR D_800FF668;
  */
 s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32 *packet_cursor, s32 *ordering_table)
 {
-    s32 pad[2];
+    s32 unused[2]; /* never used; the original stack frame reserves it */
     s32 *write_cursor;
     MATRIX transform;
     MATRIX base_matrix;
-    MATRIX *transform_matrix;
-    MATRIX *rotation_matrix;
     CVECTOR base_color;
     MATRIX light_matrix;
     MATRIX color_matrix;
     SVECTOR light_direction;
     SVECTOR transformed_light;
-    SVECTOR *effect_rotation_table;
     SVECTOR *effect_rotation_base;
     s32 triangle_area;
     FieldActorState *actor;
@@ -719,22 +696,19 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     u8 *face_data;
     s32 count;
     s32 primitive_kind;
-    FieldActorState *actors;
 
     write_cursor = packet_cursor;
-    transform_matrix = &transform;
-    actors = g_field_actor_slots;
-    part = &actors[effect->actor_index].parts[effect->part_index];
-    actor = &actors[effect->actor_index];
+    part = &g_field_actor_slots[effect->actor_index].parts[effect->part_index];
+    actor = &g_field_actor_slots[effect->actor_index];
 
-    func_80082C90(actor, effect, part, transform_matrix, &base_matrix);
+    func_80082C90(actor, effect, part, &transform, &base_matrix);
     transform.t[2] = 0;
     transform.t[1] = 0;
     transform.t[0] = 0;
     field_resolve_effect_part_color(actor, effect, part, (FieldPrimitiveColor*)&base_color);
     screen_origin = FIELD_MESH_SCREEN_ORIGIN;
-    gte_SetRotMatrix(transform_matrix);
-    gte_SetTransMatrix(transform_matrix);
+    gte_SetRotMatrix(&transform);
+    gte_SetTransMatrix(&transform);
     func_800822A4(actor, effect, part, mesh_index);
     func_800829A0(actor, effect, part, mesh_index, &base_matrix);
 
@@ -744,25 +718,21 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     do
     {
         count = 0;
-        effect_rotation_table = effect_rotation_base;
-        if (((u8 *)part)[light_index + 0x23] < 8)
+        if (FIELD_PART_LIGHT_SOURCE(part, light_index) < 8)
         {
             do
             {
+                light_effect = &g_field_effect_records[count];
+                effect_offset = count * 0x54;
+                if (FIELD_PART_LIGHT_SOURCE(part, light_index) == light_effect->part_index && effect->actor_index == light_effect->actor_index)
                 {
-                    light_effect = &g_field_effect_records[count];
-                    effect_offset = count * 0x54;
-                }
-                if (((u8 *)part)[light_index + 0x23] == light_effect->part_index && effect->actor_index == light_effect->actor_index)
-                {
-                    rotation_matrix = &base_matrix;
-                    RotMatrix_gte((SVECTOR *)(effect_offset + (s32)effect_rotation_table), rotation_matrix);
-                    RotMatrixZ(effect->rotation_z_16 * 0x10, rotation_matrix);
-                    RotMatrixY(effect->rotation_y_16 * 0x10, rotation_matrix);
+                    RotMatrix_gte((SVECTOR *)(effect_offset + (s32)effect_rotation_base), &base_matrix);
+                    RotMatrixZ(effect->rotation_z_16 * 0x10, &base_matrix);
+                    RotMatrixY(effect->rotation_y_16 * 0x10, &base_matrix);
                     light_direction.vz = 0;
                     light_direction.vx = 0;
                     light_direction.vy = -0x1000;
-                    gte_SetRotMatrix(rotation_matrix);
+                    gte_SetRotMatrix(&base_matrix);
                     gte_ldv0(&light_direction);
                     gte_rtv0();
                     gte_stsv(&transformed_light);
@@ -799,7 +769,7 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     screen_vertices = (s32 *)g_field_mesh_screen_vertices;
     transformed_normals = g_field_mesh_transformed_normals;
     depth_offsets = g_field_mesh_depth_offsets;
-    face_data = ((FieldMeshResource *)actor->mesh_data)[mesh_index].faces;
+    face_data = FIELD_ACTOR_MESH(actor, mesh_index)->faces;
     screen_origin[0] = FIELD_MESH_SCREEN_CENTER_X + g_field_view_offset_x / 256 + effect->x / 256;
     screen_origin[1] = FIELD_MESH_SCREEN_CENTER_Y + g_field_view_offset_y / 256 + effect->y / 256 - effect->z / 512 - g_field_view_offset_z / 512;
     primitive_kind = (face_data[6] >> 1) & 0xF;
@@ -809,8 +779,6 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     case 0:
     {
         u8 *packet;
-        s32 address_mask;
-        s32 tag_mask;
         s32 primitive_code;
         s32 base_depth, depth_offset, depth_index;
 
@@ -818,12 +786,11 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
         if (actor->owner_object_index < 2)
         {
             {
-                u8 actor_index;
-                s32 palette;
-                address_mask = actor->owner_object_index;
-                actor_index = address_mask;
-                palette = part->appearance.fields.palette_selector;
-                *(u16 *)((u8 *)write_cursor + 0xE) = ((actor_index << 7) + 0x7B80) | (palette & 0x3F);
+                s32 owner_index;
+                s32 palette_index;
+                owner_index = actor->owner_object_index;
+                palette_index = part->appearance.fields.palette_selector;
+                *(u16 *)((u8 *)write_cursor + 0xE) = ((owner_index << 7) + 0x7B80) | (palette_index & 0x3F);
             }
             *(s16 *)((u8 *)write_cursor + 0x16) =
                 ((part->spawn_flags.word >> 15) & 0x80) | ((part->behavior_flags.word >> 17) & 0x60) | 0x10 |
@@ -839,12 +806,10 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
             *(u16 *)((u8 *)write_cursor + 0xE) = (*(u16 *)((u8 *)write_cursor + 0xE) & 0xFFC0) + 0x40;
         }
 
-        count = ((FieldMeshResource *)actor->mesh_data)[mesh_index].face_count;
+        count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
         if (count != 0)
         {
             primitive_code = 0x24;
-            address_mask = FIELD_OT_ADDRESS_MASK;
-            tag_mask = FIELD_OT_TAG_MASK;
             do
             {
                 packet = (u8 *)write_cursor + 0x36;
@@ -886,28 +851,18 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                     depth_index = base_depth + depth_offset;
                     if (depth_index < 0)
                     {
-                        *write_cursor = (*write_cursor & tag_mask) | (ordering_table[0] & address_mask);
-                        ordering_table[0] = (ordering_table[0] & tag_mask) | ((s32)write_cursor & address_mask);
-                        write_cursor = (s32 *)((u8 *)write_cursor + 0x20);
+                        addPrim(ordering_table, write_cursor);
+                        write_cursor += 8;
                     }
                     else if (depth_index > FIELD_MESH_OT_MAX_DEPTH)
                     {
-                        *write_cursor = (*write_cursor & tag_mask) | (ordering_table[FIELD_MESH_OT_MAX_DEPTH] & address_mask);
-                        ordering_table[FIELD_MESH_OT_MAX_DEPTH] = (ordering_table[FIELD_MESH_OT_MAX_DEPTH] & tag_mask) | ((s32)write_cursor & address_mask);
-                        write_cursor = (s32 *)((u8 *)write_cursor + 0x20);
+                        addPrim(&ordering_table[FIELD_MESH_OT_MAX_DEPTH], write_cursor);
+                        write_cursor += 8;
                     }
                     else
                     {
-                        s32 *ordering_entry;
-                        *write_cursor = (*write_cursor & tag_mask) |
-                                        (*((s32 *)((depth_offset << 2) + ((base_depth << 2) + (s32)ordering_table))) & address_mask);
-                        {
-                            s32 record_depth = effect->z >> 7;
-                            s32 face_depth_offset = *depth_offsets;
-                            ordering_entry = (s32 *)((face_depth_offset << 2) + ((record_depth << 2) + (s32)ordering_table));
-                        }
-                        *ordering_entry = (*ordering_entry & tag_mask) | ((s32)write_cursor & address_mask);
-                        write_cursor = (s32 *)((u8 *)write_cursor + 0x20);
+                        addPrim(ordering_table + (effect->z >> 7) + *depth_offsets, write_cursor);
+                        write_cursor += 8;
                     }
                 }
                 face_data += FIELD_MESH_FACE_STRIDE;
@@ -922,7 +877,7 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
     case 2:
     {
         u8 *packet_bytes;
-        count = ((FieldMeshResource *)actor->mesh_data)[mesh_index].face_count;
+        count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
         packet_bytes = (u8 *)write_cursor;
         if (count != 0)
         {
@@ -1028,14 +983,10 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
         u8 *face_color;
         s32 base_depth, depth_offset, depth_index;
         s32 primitive_code;
-        s32 address_mask;
-        s32 tag_mask;
-        count = ((FieldMeshResource *)actor->mesh_data)[mesh_index].face_count;
+        count = FIELD_ACTOR_MESH(actor, mesh_index)->face_count;
         if (count != 0)
         {
             primitive_code = 0x20;
-            address_mask = FIELD_OT_ADDRESS_MASK;
-            tag_mask = FIELD_OT_TAG_MASK;
             do
             {
                 gte_ldsxy3(screen_vertices[0], screen_vertices[1], screen_vertices[2]);
@@ -1075,26 +1026,18 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                     depth_index = base_depth + depth_offset;
                     if (depth_index < 0)
                     {
-                        *packet = (*packet & tag_mask) | (ordering_table[0] & address_mask);
-                        ordering_table[0] = (ordering_table[0] & tag_mask) | ((s32)packet & address_mask);
-                        packet = (s32 *)((u8 *)packet + 0x14);
+                        addPrim(ordering_table, packet);
+                        packet += 5;
                     }
                     else if (depth_index > FIELD_MESH_OT_MAX_DEPTH)
                     {
-                        *packet = (*packet & tag_mask) | (ordering_table[FIELD_MESH_OT_MAX_DEPTH] & address_mask);
-                        ordering_table[FIELD_MESH_OT_MAX_DEPTH] = (ordering_table[FIELD_MESH_OT_MAX_DEPTH] & tag_mask) | ((s32)packet & address_mask);
-                        packet = (s32 *)((u8 *)packet + 0x14);
+                        addPrim(&ordering_table[FIELD_MESH_OT_MAX_DEPTH], packet);
+                        packet += 5;
                     }
                     else
                     {
-                        *packet = (*packet & tag_mask) | (*((s32 *)((depth_offset << 2) + ((base_depth << 2) + (s32)ordering_table))) & address_mask);
-                        {
-                            s32 record_depth = effect->z >> 7;
-                            s32 face_depth_offset = *depth_offsets;
-                            s32 *ordering_entry = (s32 *)((face_depth_offset << 2) + ((record_depth << 2) + (s32)ordering_table));
-                            *ordering_entry = (*ordering_entry & tag_mask) | ((s32)packet & address_mask);
-                        }
-                        packet = (s32 *)((u8 *)packet + 0x14);
+                        addPrim(ordering_table + (effect->z >> 7) + *depth_offsets, packet);
+                        packet += 5;
                     }
 
                     ((u8 *)packet)[3] = 1;
@@ -1114,26 +1057,18 @@ s32 *field_render_lit_effect_mesh(FieldMotionRecord *effect, s32 mesh_index, s32
                         s32 *next_packet;
                         if (depth_index < 0)
                         {
-                            next_packet = (s32 *)((u8 *)packet + 8);
-                            *packet = (*packet & tag_mask) | (ordering_table[0] & address_mask);
-                            ordering_table[0] = (ordering_table[0] & tag_mask) | ((s32)packet & address_mask);
+                            next_packet = packet + 2;
+                            addPrim(ordering_table, packet);
                         }
                         else if (depth_index > FIELD_MESH_OT_MAX_DEPTH)
                         {
-                            next_packet = (s32 *)((u8 *)packet + 8);
-                            *packet = (*packet & tag_mask) | (ordering_table[FIELD_MESH_OT_MAX_DEPTH] & address_mask);
-                            ordering_table[FIELD_MESH_OT_MAX_DEPTH] = (ordering_table[FIELD_MESH_OT_MAX_DEPTH] & tag_mask) | ((s32)packet & address_mask);
+                            next_packet = packet + 2;
+                            addPrim(&ordering_table[FIELD_MESH_OT_MAX_DEPTH], packet);
                         }
                         else
                         {
-                            next_packet = (s32 *)((u8 *)packet + 8);
-                            *packet = (*packet & tag_mask) | (*((s32 *)((depth_offset << 2) + ((base_depth << 2) + (s32)ordering_table))) & address_mask);
-                            {
-                                s32 record_depth = effect->z >> 7;
-                                s32 face_depth_offset = *depth_offsets;
-                                s32 *ordering_entry = (s32 *)((face_depth_offset << 2) + ((record_depth << 2) + (s32)ordering_table));
-                                *ordering_entry = (*ordering_entry & tag_mask) | ((s32)packet & address_mask);
-                            }
+                            next_packet = packet + 2;
+                            addPrim(ordering_table + (effect->z >> 7) + *depth_offsets, packet);
                         }
                         packet = next_packet;
                     }

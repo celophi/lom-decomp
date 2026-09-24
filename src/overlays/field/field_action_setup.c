@@ -1,320 +1,233 @@
+/**
+ * @file field_action_setup.c
+ * @brief Resolve a field battle action: bind its records, classify it and
+ *        apply its outcome.
+ */
+
 #include "game_audio.h"
 #include "common.h"
+#include "field_records.h"
 
-extern u8 *D_80123FB0;
-extern s32 func_800B4CE4(void *, s32);
-extern void func_800B2B54(void *, void *, s32, s32, s32, s32);
+/** @brief Event slot run on the attacker and the target when an action resolves. */
+#define FIELD_ACTION_EVENT 0xC
 
+/** @brief Signal sent to an actor that dodges or cancels an action. */
+#define FIELD_ACTION_SIGNAL_CANCEL 0x90
 
-typedef struct
-{
-    u8 pad4[4];
-    s32 unk4;
-} SubState;
+/** @brief Kind of an action descriptor (low nibble of its first word). */
+#define FIELD_DESCRIPTOR_KIND(descriptor) ((descriptor)->info.word & 0xF)
 
-typedef struct
-{
-    s32 unk0;
-} EntryB800B5948;
+/** @brief Status intensity shift of an action descriptor (bits 8-10). */
+#define FIELD_DESCRIPTOR_SHIFT(descriptor) (((descriptor)->info.word >> 8) & 7)
 
-typedef struct
-{
-    u32 unk0;
-    u8 pad4[0x14 - 4];
-    s32 unk14;
-    SubState *unk18;
-    EntryB800B5948 *unk1C;
-    s32 unk20;
-    s32 unk24;
-    u8 pad28[0x4A0 - 0x28];
-    u16 unk4A0;
-} FieldStateB800B5948;
+/** @brief Action id of the move that is always handled immediately. */
+#define FIELD_ACTION_IMMEDIATE 0x3B
 
-typedef struct
-{
-    s32 unk0;
-    u8 pad4[0xC - 4];
-    s32 unkC;
-} ArgB800B5948;
+/** @brief Action id of the move that checks the attacker's weapon type. */
+#define FIELD_ACTION_WEAPON_CHECK 0x22
 
-s32 func_800B2A9C(s32 arg0);
-s32 func_800B302C(s32 arg0, s32 arg1);
-EntryB800B5948 *func_800B50B8(s32 arg0, void *arg1);
+extern FieldBattleContext* D_80123FB0;
+extern FieldGameState* D_80122B74;
 
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-} ActionCounter5534;
+s32 func_800B4CE4(FieldStatusRecord* record, s32 status_id);
+FieldActionDescriptor* func_800B50B8(void);
+s32 func_800B28E0(s32 owner_id, s32 event_id, s32 mode);
+s32 func_8008ADB4(s32 record_id);
+void func_8008AB2C(s32 actor_id, s32 value);
+void func_8008B500(s32 actor_id, s32 signal_id);
+s32 func_800B6334(FieldStatusRecord* target);
+void func_800B65CC(s32 effect);
+s32 func_800B6808(void);
+s32 rand(void);
 
-typedef struct
-{
-    u8 pad0[0xA];
-    u16 unkA;
-    s32 unkC;
-    ActionCounter5534 *unk10;
-} ActionActor5534;
-
-typedef struct
-{
-    s32 unk0;
-    u8 pad4[0x14 - 4];
-    u32 unk14;
-    void *unk18;
-    void *unk1C;
-    ActionActor5534 *unk20;
-    ActionActor5534 *unk24;
-} ActionContext5534;
-
-extern void func_8008AB2C(s32, s32);
-extern void func_8008B500(s32, s32);
-extern void func_800B28E0(s32, s32, s32);
-extern s32 func_800B2FF8(void *);
-extern void func_800B5948(ArgB800B5948 *, s32);
-extern s32 func_800B5A88(void);
-extern s32 func_800B5C54(void);
-extern void func_800B5D60(s32);
-extern void func_800B5E5C(void);
-extern s32 func_800B6334(u8 *);
-extern void func_800B65CC(s32);
-extern s32 func_800B6808();
+void func_800B5948(FieldBattleAction* action, s32 resolve_descriptor);
+s32 func_800B5A88(void);
+s32 func_800B5C54(void);
+void func_800B5D60(s32 amount);
+void func_800B5E5C(void);
 
 /**
- * @brief Execute the selected action and process its outcome and actor state.
- * @param arg0 Action parameters to process.
- * @return Action result code.
+ * @brief Resolve an action and apply its outcome to the attacker and the target.
+ * @param action Action to resolve.
+ * @return 1 when there is nothing to resolve or the action is cancelled, the
+ *         nonzero result of func_800B5C54 or func_800B5A88, otherwise 0.
  */
-s32 func_800B5534(ArgB800B5948 *arg0)
+s32 func_800B5534(FieldBattleAction* action)
 {
-    s32 temp_v0;
-    s32 temp_v0_5;
-    ActionActor5534 *temp_a0;
-    ActionActor5534 *temp_a0_2;
-    ActionActor5534 *temp_a0_3;
-    ActionActor5534 *temp_a0_4;
-    ActionActor5534 *temp_a0_5;
-    ActionActor5534 *temp_a0_6;
-    ActionActor5534 *temp_a0_7;
-    ActionActor5534 *temp_v0_3;
-    ActionActor5534 *temp_v0_4;
-    ActionActor5534 *var_a1;
+    s32 result;
+    s32 effect;
 
-    if (((ActionContext5534 *)D_80123FB0) == NULL)
+    if (D_80123FB0 == NULL)
     {
         return 1;
     }
-    if (((ActionContext5534 *)D_80123FB0)->unk0 < 0)
+    if (D_80123FB0->state.flags < 0)
     {
         return 1;
     }
 
-    func_800B5948(arg0, -1);
-    if (((ActionContext5534 *)D_80123FB0)->unk1C == 0)
+    func_800B5948(action, -1);
+    if (D_80123FB0->descriptor == NULL)
     {
         return 1;
     }
 
-    temp_v0 = func_800B5C54();
-    if (temp_v0 != 0)
+    result = func_800B5C54();
+    if (result != 0)
     {
-        if (temp_v0 == 1)
+        if (result == 1)
         {
-            func_800B28E0(arg0->unkC, 0xC, 0);
+            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, 0);
         }
-        var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
-        var_a1->unkC = (s32)(var_a1->unkC & ~0xFF);
-        return temp_v0;
+        D_80123FB0->attacker->unkC &= ~0xFF;
+        return result;
     }
 
-    temp_v0 = func_800B5A88();
-    if (temp_v0 != 0)
+    result = func_800B5A88();
+    if (result != 0)
     {
-        if (temp_v0 == 3)
+        if (result == 3)
         {
-            func_8008B500(arg0->unkC, 0x90);
+            func_8008B500(action->target_id, FIELD_ACTION_SIGNAL_CANCEL);
             return 1;
         }
-        var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
-        var_a1->unkC = (s32)(var_a1->unkC & ~0xFF);
-        return temp_v0;
+        D_80123FB0->attacker->unkC &= ~0xFF;
+        return result;
     }
 
-    temp_a0 = ((ActionContext5534 *)D_80123FB0)->unk20;
-    if (!(temp_a0->unk10->unkC & 0x8000))
+    if (!(D_80123FB0->attacker->state->effect_flags & 0x8000))
     {
-        temp_a0->unkC = (s32)(temp_a0->unkC & 0xFFFF00FF);
+        D_80123FB0->attacker->unkC &= 0xFFFF00FF;
     }
-    if (func_800B6808(temp_a0) != 0)
+    if (func_800B6808() != 0)
     {
         func_800B5E5C();
-        if (((ActionContext5534 *)D_80123FB0)->unk24->unk10->unk4 == 0)
+        if (D_80123FB0->target->state->current == 0)
         {
-            if (!(((u32)((ActionContext5534 *)D_80123FB0)->unk14 >> 2) & 1))
+            if (!D_80123FB0->action_flags.bits.follow_up)
             {
-                func_800B28E0(arg0->unk0, 0xC, 5);
+                func_800B28E0(action->attacker_id, FIELD_ACTION_EVENT, 5);
             }
-            func_800B28E0(arg0->unkC, 0xC, 2);
-            if (func_800B4CE4(((ActionContext5534 *)D_80123FB0)->unk20, 3) != 0)
+            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, 2);
+            if (func_800B4CE4(D_80123FB0->attacker, 3) != 0)
             {
-                temp_a0_2 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                temp_a0_2->unkC = (s32)(temp_a0_2->unkC | 0x20000000);
+                D_80123FB0->target->unkC |= 0x20000000;
             }
-            if (func_800B4CE4(((ActionContext5534 *)D_80123FB0)->unk20, 0xD) != 0)
+            if (func_800B4CE4(D_80123FB0->attacker, 0xD) != 0)
             {
-                temp_a0_3 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                temp_a0_3->unkC = (s32)(temp_a0_3->unkC | 0x02000000);
+                D_80123FB0->target->unkC |= 0x02000000;
             }
-            if (func_800B4CE4(((ActionContext5534 *)D_80123FB0)->unk20, 9) != 0)
+            if (func_800B4CE4(D_80123FB0->attacker, 9) != 0)
             {
-                temp_a0_4 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                temp_a0_4->unkC = (s32)(temp_a0_4->unkC | 0x0C000000);
+                D_80123FB0->target->unkC |= 0x0C000000;
             }
-            if (func_800B2FF8(((ActionContext5534 *)D_80123FB0)->unk20) != 0)
+            if (func_800B2FF8(D_80123FB0->attacker) != 0)
             {
-                temp_a0_5 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                temp_a0_5->unkC = (s32)(temp_a0_5->unkC | 0x08000000);
+                D_80123FB0->target->unkC |= 0x08000000;
             }
-            if (((ActionContext5534 *)D_80123FB0)->unk20->unkA & 0x100)
+            if (D_80123FB0->attacker->status_flags & 0x100)
             {
-                temp_v0_3 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                temp_v0_3->unkC = (s32)(temp_v0_3->unkC | 0x10000000);
+                D_80123FB0->target->unkC |= 0x10000000;
             }
-            if (((ActionContext5534 *)D_80123FB0)->unk20->unkA & 0x80)
+            if (D_80123FB0->attacker->status_flags & 0x80)
             {
-                temp_v0_4 = ((ActionContext5534 *)D_80123FB0)->unk24;
-                temp_v0_4->unkC = (s32)(temp_v0_4->unkC | 0x01000000);
+                D_80123FB0->target->unkC |= 0x01000000;
             }
-            temp_v0_5 = func_800B6334((u8 *)((ActionContext5534 *)D_80123FB0)->unk24);
-            if (temp_v0_5 != 0)
+            effect = func_800B6334(D_80123FB0->target);
+            if (effect != 0)
             {
-                func_800B65CC(temp_v0_5);
+                func_800B65CC(effect);
             }
         }
         else
         {
             func_800B5D60(1);
-            func_800B28E0(arg0->unk0, 0xC, 4);
-            func_800B28E0(arg0->unkC, 0xC, 1);
-            temp_a0_6 = ((ActionContext5534 *)D_80123FB0)->unk24;
-            temp_a0_6->unkC = (s32)(temp_a0_6->unkC & 0xFFFFFF);
-            func_8008AB2C(arg0->unkC, 0);
+            func_800B28E0(action->attacker_id, FIELD_ACTION_EVENT, 4);
+            func_800B28E0(action->target_id, FIELD_ACTION_EVENT, 1);
+            D_80123FB0->target->unkC &= 0xFFFFFF;
+            func_8008AB2C(action->target_id, 0);
         }
-        var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
-        var_a1->unkC = (s32)(var_a1->unkC & ~0xFF);
+        D_80123FB0->attacker->unkC &= ~0xFF;
         return 0;
     }
     else
     {
         func_800B5D60(0);
-        func_800B28E0(arg0->unkC, 0xC, 0);
-        temp_a0_7 = ((ActionContext5534 *)D_80123FB0)->unk24;
-        temp_a0_7->unkC = (s32)(temp_a0_7->unkC & 0xFFFFFF);
-        var_a1 = ((ActionContext5534 *)D_80123FB0)->unk20;
-        var_a1->unkC = (s32)(var_a1->unkC & ~0xFF);
+        func_800B28E0(action->target_id, FIELD_ACTION_EVENT, 0);
+        D_80123FB0->target->unkC &= 0xFFFFFF;
+        D_80123FB0->attacker->unkC &= ~0xFF;
         return 0;
     }
 }
 
 /**
- * @brief Update the shared field state for a newly selected record.
- * @param arg0 Record used to initialize the shared state, or NULL to reset it.
- * @param arg1 Whether to resolve and update the associated entry.
+ * @brief Bind an action to the battle context and look up its records.
+ * @param action Action to bind, or NULL to clear the binding.
+ * @param resolve_descriptor Nonzero to select the action descriptor as well.
  */
-void func_800B5948(ArgB800B5948 *arg0, s32 arg1)
+void func_800B5948(FieldBattleAction* action, s32 resolve_descriptor)
 {
-    EntryB800B5948 *entry;
-    s32 val;
+    FieldActionDescriptor* descriptor;
+    u32 info;
 
-    ((FieldStateB800B5948 *)D_80123FB0)->unk18 = (SubState *) arg0;
-    if (arg0 == NULL)
+    D_80123FB0->action = action;
+    if (action == NULL)
     {
-        record_game_diagnostic(0x8001, (s32) func_800B5948, 0, 0);
+        record_game_diagnostic(0x8001, (s32)func_800B5948, 0, 0);
         return;
     }
-    ((FieldStateB800B5948 *)D_80123FB0)->unk20 = func_800B2A9C(arg0->unk0);
-    ((FieldStateB800B5948 *)D_80123FB0)->unk24 = func_800B2A9C(arg0->unkC);
-    ((FieldStateB800B5948 *)D_80123FB0)->unk14 = 0;
-    ((FieldStateB800B5948 *)D_80123FB0)->unk14 = (((FieldStateB800B5948 *)D_80123FB0)->unk14 & ~2) | ((func_800B302C(arg0->unk0, arg0->unkC) & 1) * 2);
-    if (arg1 != 0)
+    D_80123FB0->attacker = func_800B2A9C(action->attacker_id);
+    D_80123FB0->target = func_800B2A9C(action->target_id);
+    D_80123FB0->action_flags.word = 0;
+    D_80123FB0->action_flags.bits.side = func_800B302C(action->attacker_id, action->target_id);
+    if (resolve_descriptor != 0)
     {
-        ((FieldStateB800B5948 *)D_80123FB0)->unk1C = func_800B50B8(-3, ((FieldStateB800B5948 *)D_80123FB0));
-        if (func_800B4CE4((void *)((FieldStateB800B5948 *)D_80123FB0)->unk20, 4) != 0)
+        D_80123FB0->descriptor = func_800B50B8();
+        if (func_800B4CE4(D_80123FB0->attacker, 4) != 0)
         {
-            entry = ((FieldStateB800B5948 *)D_80123FB0)->unk1C;
-            val = entry->unk0;
-            if ((u32) (val & 0xF) < 2U)
+            descriptor = D_80123FB0->descriptor;
+            info = descriptor->info.word;
+            if ((info & 0xF) < 2)
             {
-                entry->unk0 = val | 0xC0;
-                ((FieldStateB800B5948 *)D_80123FB0)->unk4A0 = (u16) ((((FieldStateB800B5948 *)D_80123FB0)->unk4A0 * 3) >> 1);
+                descriptor->info.word = info | 0xC0;
+                D_80123FB0->power = (D_80123FB0->power * 3) >> 1;
             }
         }
     }
     else
     {
-        ((FieldStateB800B5948 *)D_80123FB0)->unk1C = NULL;
+        D_80123FB0->descriptor = NULL;
     }
 }
 
-/** @brief Action record with an owner byte and packed eligibility fields. */
-typedef struct
-{
-    u32 pad0;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u8 id;
-            u8 rest[3];
-        } bytes;
-    } info;
-    u16 pad8, flags_a;
-} Record;
-/** @brief Current action context and its descriptor and actor record pointers. */
-typedef struct
-{
-    u8 pad[0x14];
-    u32 flags;
-    u32 pad18;
-    u32 *descriptor;
-    u32 pad20;
-    Record *record;
-} Context;
-s32 func_8008ADB4(u8);
-extern u8 *D_80122B74;
-
-
 /**
- * @brief Classify the current action and mark eligible follow-up actions.
- * @return 0 when unavailable, 1 for the class test, 2 for immediate handling, or 3 for a marked
- * follow-up.
- * @note 100% match with GCC 2.8: 115 instructions, 460 bytes.
+ * @brief Classify the bound action and mark follow-up actions.
+ * @return 0 for a normal action, 1 when the weapon check passes, 2 for
+ *         immediate handling, or 3 when a follow-up action was marked.
  */
 s32 func_800B5A88(void)
 {
-    s32 action;
-    u32 mode;
-    u32 flags;
-    Record *record;
-    u8 *source;
-    action = func_8008ADB4(((Context *)D_80123FB0)->record->info.bytes.id);
-    switch (*((Context *)D_80123FB0)->descriptor & 15)
+    s32 action_id;
+    u32 kind;
+    FieldStatusRecord* target;
+
+    action_id = func_8008ADB4(D_80123FB0->target->meta.bytes.id);
+    switch (FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor))
     {
     case 1:
-        if (action == 0x3B)
+        if (action_id == FIELD_ACTION_IMMEDIATE)
         {
             return 2;
         }
-        if (action == 0x22)
+        if (action_id == FIELD_ACTION_WEAPON_CHECK)
         {
-            record = ((Context *)D_80123FB0)->record;
-            mode = record->info.word & 0xFC00;
-            if (mode == 0 || mode == 0x400)
+            target = D_80123FB0->target;
+            kind = target->meta.packed & 0xFC00;
+            if (kind == 0 || kind == 0x400)
             {
-                source = D_80122B74 + record->info.bytes.id * 0x250;
-                if ((u32)(((*(u32 *)(source + 0x654) >> 10) & 63) - 6) < 2)
+                u32 weapon_type = FIELD_ITEM_TYPE(D_80122B74->characters[target->meta.bytes.id].equipment[0].info.word);
+
+                if (weapon_type == 6 || weapon_type == 7)
                 {
                     return 1;
                 }
@@ -322,26 +235,25 @@ s32 func_800B5A88(void)
         }
         break;
     case 4:
-        flags = ((Context *)D_80123FB0)->flags;
-        if ((flags >> 1) & 1)
+        if (D_80123FB0->action_flags.bits.side)
         {
             return 2;
         }
-        if ((((Context *)D_80123FB0)->record->flags_a & 0x10) && (u32)(action - 10) < 2)
+        if ((D_80123FB0->target->status_flags & 0x10) && (action_id == 10 || action_id == 11))
         {
-            ((Context *)D_80123FB0)->flags = flags | 4;
+            D_80123FB0->action_flags.bits.follow_up = 1;
             return 3;
         }
-        if (func_800B4CE4(((Context *)D_80123FB0)->record, 0x34))
+        if (func_800B4CE4(D_80123FB0->target, 0x34))
         {
-            ((Context *)D_80123FB0)->flags |= 4;
+            D_80123FB0->action_flags.bits.follow_up = 1;
             return 3;
         }
         break;
     case 5:
-        if (func_800B4CE4(((Context *)D_80123FB0)->record, 0x35))
+        if (func_800B4CE4(D_80123FB0->target, 0x35))
         {
-            ((Context *)D_80123FB0)->flags |= 4;
+            D_80123FB0->action_flags.bits.follow_up = 1;
             return 3;
         }
         break;
@@ -354,41 +266,16 @@ s32 func_800B5A88(void)
     return 0;
 }
 
-
-typedef struct
-{
-    u8 pad0[4];
-    u8 object_id;
-    u8 pad5;
-    u16 flags;
-} FieldRecordB5C54;
-
-typedef struct
-{
-    s32 value;
-} FieldEntryB5C54;
-
-typedef struct
-{
-    u8 pad0[0x1C];
-    FieldEntryB5C54 *entry;
-    void *secondary;
-    FieldRecordB5C54 *record;
-} FieldStateB5C54;
-
-
-void field_clear_record_state(FieldRecordB5C54 *record, u32 index);
-void func_8008B500(s32 object_id, s32 value);
-
 /**
- * @brief Process the active field record's state flags.
- * @return State result selected by the active record flags.
+ * @brief Check the target's guard flags before the action lands.
+ * @return 1 when the target's 0x8000 flag is set, 2 when the action is
+ *         blocked or deflected, otherwise 0.
  */
 s32 func_800B5C54(void)
 {
     u16 flags;
 
-    flags = ((FieldStateB5C54 *)D_80123FB0)->record->flags;
+    flags = D_80123FB0->target->meta.bytes.unk2;
     if (flags & 0x8000)
     {
         return 1;
@@ -399,194 +286,103 @@ s32 func_800B5C54(void)
     }
     if (flags & 0x2000)
     {
-        if ((((FieldStateB5C54 *)D_80123FB0)->entry->value & 0xF) == 0)
+        if (FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor) == 0)
         {
-            func_800B2B54(((FieldStateB5C54 *)D_80123FB0)->record, ((FieldStateB5C54 *)D_80123FB0)->secondary, 3, 4, 0x100, 0x12C);
-            field_clear_record_state(((FieldStateB5C54 *)D_80123FB0)->record, 6);
+            func_800B2B54(D_80123FB0->target, D_80123FB0->attacker, 3, 4, 0x100, 300);
+            field_clear_record_state(D_80123FB0->target, 6);
             return 2;
         }
     }
-    if (((FieldStateB5C54 *)D_80123FB0)->record->flags & 0x1000)
+    if (D_80123FB0->target->meta.bytes.unk2 & 0x1000)
     {
-        if ((u32)((((FieldStateB5C54 *)D_80123FB0)->entry->value & 0xF) - 2) < 2)
+        u32 kind = FIELD_DESCRIPTOR_KIND(D_80123FB0->descriptor);
+
+        if (kind == 2 || kind == 3)
         {
-            func_8008B500(((FieldStateB5C54 *)D_80123FB0)->record->object_id, 0x90);
+            func_8008B500(D_80123FB0->target->meta.bytes.id, FIELD_ACTION_SIGNAL_CANCEL);
             return 2;
         }
     }
     return 0;
 }
 
-
-typedef struct
-{
-    u8 pad0[8];
-    s8 unk8;
-    u8 unk9;
-} Counter;
-
-typedef struct
-{
-    u8 pad0[8];
-    s32 unk8;
-} FlagRecord;
-
-typedef struct
-{
-    u8 pad0[0x18];
-    FlagRecord *unk18;
-    u8 pad1C[4];
-    Counter *unk20;
-    Counter *unk24;
-} FieldState;
-
-
-
 /**
- * @brief Update the field state counters and restart expired counter effects.
- * @param arg0 Amount subtracted from the secondary counter.
+ * @brief Run down the attacker's and the target's action counters.
+ * @param amount Amount taken from the target's counter.
  */
-void func_800B5D60(s32 arg0)
+void func_800B5D60(s32 amount)
 {
-    Counter *primary_counter;
-    Counter *secondary_counter;
-    Counter *reset_counter;
+    FieldStatusRecord* attacker;
+    FieldStatusRecord* target;
 
-    primary_counter = ((FieldState *)D_80123FB0)->unk20;
-    if (primary_counter->unk8 <= 0)
+    attacker = D_80123FB0->attacker;
+    if (attacker->counter <= 0)
     {
-        primary_counter->unk8 = (s8)primary_counter->unk9;
-        func_800B2B54(((FieldState *)D_80123FB0)->unk20, ((FieldState *)D_80123FB0)->unk20, 3, 5, 0x100, 0x3C);
+        attacker->counter = attacker->counter_reset;
+        func_800B2B54(D_80123FB0->attacker, D_80123FB0->attacker, 3, 5, 0x100, 60);
     }
-    if (((FieldState *)D_80123FB0)->unk18->unk8 != 0)
+    if (D_80123FB0->action->param != 0)
     {
-        secondary_counter = ((FieldState *)D_80123FB0)->unk24;
-        secondary_counter->unk8 = (u8)(secondary_counter->unk8 - arg0);
-        reset_counter = ((FieldState *)D_80123FB0)->unk24;
-        if (reset_counter->unk8 <= 0)
+        D_80123FB0->target->counter -= amount;
+        target = D_80123FB0->target;
+        if (target->counter <= 0)
         {
-            reset_counter->unk8 = (s8)reset_counter->unk9;
-            func_800B2B54(((FieldState *)D_80123FB0)->unk24, ((FieldState *)D_80123FB0)->unk24, 3, 5, 0x100, 0xB4);
+            target->counter = target->counter_reset;
+            func_800B2B54(D_80123FB0->target, D_80123FB0->target, 3, 5, 0x100, 180);
         }
     }
 }
 
-
-typedef struct
-{
-    u8 pad0[0xC];
-    u32 unkC;
-    u8 pad10[0x48 - 0x10];
-    u16 unk48;
-} FieldAccumulator;
-
-typedef struct
-{
-    u8 pad0[4];
-    u8 unk4;
-    u8 pad5[0x10 - 5];
-    FieldAccumulator *unk10;
-} FieldAccumulatorRecord;
-
-typedef struct
-{
-    u8 pad0[0x1C];
-    u32 *unk1C;
-    FieldAccumulatorRecord *unk20;
-} FieldAccumulatorState;
-
-
-
 /**
- * @brief Advance and clamp a field-state accumulator when its record is eligible.
+ * @brief Raise a party attacker's status intensity after a landed action.
  */
 void func_800B5E5C(void)
 {
-    FieldAccumulatorRecord *record;
-    FieldAccumulator *accumulator;
+    FieldStatusRecord* attacker;
+    FieldStatusState* state;
 
-    record = ((FieldAccumulatorState *)D_80123FB0)->unk20;
-    if (((u8)record->unk4 < 2U) && !(record->unk10->unkC & 0x200))
+    attacker = D_80123FB0->attacker;
+    if (attacker->meta.bytes.id < 2 && !(attacker->state->effect_flags & 0x200))
     {
-        if (func_800B4CE4(record, 7) != 0)
+        if (func_800B4CE4(attacker, 7) != 0)
         {
-            FieldAccumulatorState *state;
-            s32 index;
-            FieldAccumulator *inner;
-
-            state = ((FieldAccumulatorState *)D_80123FB0);
-            index = ((u32)*state->unk1C >> 8) & 7;
-            inner = state->unk20->unk10;
-            inner->unk48 = (u16)(inner->unk48 + (8 << index));
+            D_80123FB0->attacker->state->status_intensity += 8 << FIELD_DESCRIPTOR_SHIFT(D_80123FB0->descriptor);
         }
         else
         {
-            FieldAccumulatorState *state;
-            s32 index;
-            FieldAccumulator *inner;
-
-            state = ((FieldAccumulatorState *)D_80123FB0);
-            index = ((u32)*state->unk1C >> 8) & 7;
-            inner = state->unk20->unk10;
-            inner->unk48 = (u16)(inner->unk48 + (4 << index));
+            D_80123FB0->attacker->state->status_intensity += 4 << FIELD_DESCRIPTOR_SHIFT(D_80123FB0->descriptor);
         }
-        accumulator = ((FieldAccumulatorState *)D_80123FB0)->unk20->unk10;
-        if ((u16)accumulator->unk48 >= 0x100U)
+        state = D_80123FB0->attacker->state;
+        if (state->status_intensity >= 0x100)
         {
-            accumulator->unk48 = 0xFFU;
+            state->status_intensity = 0xFF;
         }
     }
 }
 
-
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-    s32 unk10;
-    s32 unk14;
-    s32 unk18;
-    s32 unk1C;
-} ArgB5F60;
-
-typedef struct
-{
-    u8 pad0[0x20];
-    u8 *unk20;
-    u8 *unk24;
-} FieldStateB5F60;
-
-
-
-s32 func_800B2D34(u8 *arg0, s32 arg1);
-
-s32 rand(void);
-
 /**
- * @brief Roll a random chance against the active field state's scaled threshold.
- * @param arg0 Record forwarded to the shared field-state initializer.
- * @return -1 when the state blocks the action or the roll succeeds; otherwise 0.
+ * @brief Roll whether the target evades an action.
+ * @param action Action to bind before the roll.
+ * @return -1 when the target always evades or the roll succeeds, otherwise 0.
  */
-s32 func_800B5F60(ArgB5F60 *arg0)
+s32 func_800B5F60(FieldBattleAction* action)
 {
     s32 roll;
-    s32 remainder;
+    s32 percent;
     s32 chance;
-    s32 state;
+    s32 evasion;
 
-    state = ((FieldStateB5F60 *)D_80123FB0)->unk24[0x1A];
-    if (state >= 100)
+    evasion = D_80123FB0->target->unk1A;
+    if (evasion >= 100)
     {
         return -1;
     }
 
     roll = rand() & 0xFFFF;
-    remainder = roll % 100;
-    func_800B5948((ArgB800B5948 *)arg0, 0);
-    chance = func_800B2D34(((FieldStateB5F60 *)D_80123FB0)->unk20, 0);
-    if (remainder < (state * chance) / func_800B2D34(((FieldStateB5F60 *)D_80123FB0)->unk24, 4))
+    percent = roll % 100;
+    func_800B5948(action, 0);
+    chance = func_800B2D34(D_80123FB0->attacker, 0);
+    if (percent < (evasion * chance) / func_800B2D34(D_80123FB0->target, 4))
     {
         return -1;
     }

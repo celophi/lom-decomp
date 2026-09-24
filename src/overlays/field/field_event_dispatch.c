@@ -1,63 +1,39 @@
+/** @file field_event_dispatch.c
+ * @brief Queue and start actor events through their script tables.
+ */
+
 #include "game_audio.h"
 #include "common.h"
-/** @brief Owner header and script-record fields addressed at a 12-byte stride. */
-typedef struct
-{
-    u8 id, pad1[3], current_event, mode;
-    u16 enabled_events;
-    u16 scripts[16];
-    u8 script_owner, pad29[3];
-    s32 depth, pc, pad34, flags;
-} Owner;
-/** @brief Field state flag word controlling script selection. */
-typedef struct
-{
-    u8 pad[0x400];
-    s32 flags;
-} State;
+#include "field_records.h"
 
-void field_script_run(void *);
-s32 func_80087EF0(s32);
-/* Some callers forward a live owner ID without explicit argument setup. */
-Owner *func_800C1B60();
-s32 func_800C28F8(s32, s32);
-extern State *D_80122B78;
+extern FieldRuntimeContext* D_80122B78;
 
+void field_script_run(FieldScriptState* state);
+u8* func_80087EF0(s32 script_id);
+/* Declared without a prototype: func_800B286C forwards its own a0 without reloading it. */
+FieldActorRecord* func_800C1B60();
+u8* func_800C28F8(s32 owner_id, s32 event_index);
 
 /**
- * @brief Minimal command state used by func_800B286C.
+ * @brief Queue an event on an actor when the event is enabled and nothing is pending.
+ * @param owner_id Actor id; passed through to func_800C1B60 in a0.
+ * @param event_id Event index and value stored as the pending event.
+ * @param argument Event argument stored with the pending event.
+ * @return Event index on success, otherwise -1.
  */
-typedef struct FieldCommandState
-{
-    u8 unk0[4];
-    u8 unk4;
-    u8 unk5;
-    u16 unk6;
-} FieldCommandState;
-
-
-
-/**
- * @brief Claims an enabled command slot when it is currently unassigned.
- *
- * @param arg0 Unused command context value.
- * @param arg1 Bit index and value stored in the claimed slot.
- * @param arg2 Secondary value stored in the claimed slot.
- * @return The low byte of @p arg1 on success, otherwise -1.
- */
-s32 func_800B286C(s32 arg0, u8 arg1, s8 arg2)
+s32 func_800B286C(s32 owner_id, u8 event_id, s8 argument)
 {
     s32 index;
-    FieldCommandState *state;
+    FieldActorRecord* actor;
 
-    state = (FieldCommandState *)func_800C1B60();
-    index = arg1 & 0xFF;
-    if (((s32)state->unk6 >> index) & 1)
+    actor = func_800C1B60();
+    index = event_id & 0xFF;
+    if (((s32)actor->enabled_events >> index) & 1)
     {
-        if (state->unk4 == 0xFF)
+        if (actor->event == FIELD_NO_EVENT)
         {
-            state->unk4 = arg1;
-            state->unk5 = arg2;
+            actor->event = event_id;
+            actor->event_argument = argument;
             return index;
         }
     }
@@ -66,12 +42,11 @@ s32 func_800B286C(s32 arg0, u8 arg1, s8 arg2)
 }
 
 /**
- * @brief Start an enabled owner event, preserving nested script depth.
- * @param owner_id Owner whose script context receives the event.
+ * @brief Start an enabled actor event, pushing a script frame when one is running.
+ * @param owner_id Actor whose script state runs the event.
  * @param event_id Event index in the low byte; valid indices are zero through fifteen.
- * @param mode Execution mode copied into the owner for the script run.
- * @return Event index on success, or -1 for an unavailable event or depth overflow.
- * @note 100% match with GCC 2.8: 111 instructions, 444 bytes.
+ * @param mode Event argument stored in the actor while the script runs.
+ * @return Event index on success, or -1 for an unavailable event or a frame overflow.
  */
 s32 func_800B28E0(s32 owner_id, s32 event_id, s32 mode)
 {
@@ -79,55 +54,47 @@ s32 func_800B28E0(s32 owner_id, s32 event_id, s32 mode)
     s32 depth;
     u16 script_id;
     u32 event_index;
-    Owner *owner;
-    Owner *record;
-    Owner *record_state;
+    FieldActorRecord* actor;
 
     event_index = event_id & 0xFF;
-    if (event_index < 0x10U)
+    if (event_index < FIELD_ACTOR_SCRIPT_COUNT)
     {
-        owner = func_800C1B60(owner_id);
-        if (((s32)owner->enabled_events >> event_index) & 1)
+        actor = func_800C1B60(owner_id);
+        if (((s32)actor->enabled_events >> event_index) & 1)
         {
-            depth = owner->depth;
-            owner->script_owner = owner_id;
-            if (((Owner *)((u8 *)owner + ((depth * 3) << 2)))->pc != 0)
+            depth = actor->script.depth;
+            actor->script.status.owner_id = owner_id;
+            if (actor->script.frames[depth].pc != NULL)
             {
                 next_depth = depth + 1;
-                owner->depth = next_depth;
-                if (next_depth >= 8)
+                actor->script.depth = next_depth;
+                if (next_depth >= FIELD_SCRIPT_FRAME_COUNT)
                 {
-                    owner->depth = 7;
-                    record_game_diagnostic(0x8001, 2, owner->id, event_index);
+                    actor->script.depth = FIELD_SCRIPT_FRAME_COUNT - 1;
+                    record_game_diagnostic(0x8001, 2, actor->id, event_index);
                     return -1;
                 }
-                goto select_script;
             }
-        select_script:
-            if ((D_80122B78->flags & 0x10000) && (owner_id < 3))
+            if ((D_80122B78->state.flags & 0x10000) && (owner_id < FIELD_PARTY_SIZE))
             {
-                ((Owner *)((u8 *)owner + ((owner->depth * 3) << 2)))->pc =
-                    func_800C28F8(owner_id, event_id & 0xFF);
-                goto run_script;
+                actor->script.frames[actor->script.depth].pc = func_800C28F8(owner_id, event_id & 0xFF);
             }
-            script_id = owner->scripts[event_id & 0xFF];
-            if (script_id != 0xFFFF)
+            else
             {
-                ((Owner *)((u8 *)owner + ((owner->depth * 3) << 2)))->pc =
-                    func_80087EF0(script_id & 0x7FFF);
-            run_script:
-
-                record = (Owner *)((u8 *)owner + ((owner->depth * 3) << 2));
-                record->flags = (s32)(record->flags & ~1);
-                record_state = (Owner *)((u8 *)owner + ((owner->depth * 3) << 2));
-                record_state->flags = (s32)(record_state->flags & 1);
-                owner->mode = mode;
-                field_script_run((u8 *)owner + 0x28);
-                owner->current_event = 0xFF;
-                owner->mode = 0;
-                return event_id & 0xFF;
+                script_id = actor->scripts[event_id & 0xFF];
+                if (script_id == FIELD_NO_SCRIPT)
+                {
+                    return -1;
+                }
+                actor->script.frames[actor->script.depth].pc = func_80087EF0(script_id & 0x7FFF);
             }
-            return -1;
+            actor->script.frames[actor->script.depth].wait.bits.resume = 0;
+            actor->script.frames[actor->script.depth].wait.bits.frames = 0;
+            actor->event_argument = mode;
+            field_script_run(&actor->script);
+            actor->event = FIELD_NO_EVENT;
+            actor->event_argument = 0;
+            return event_id & 0xFF;
         }
         return -1;
     }

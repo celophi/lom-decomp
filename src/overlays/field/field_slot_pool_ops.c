@@ -1,157 +1,139 @@
-#include "common.h"
+/**
+ * @file field_slot_pool_ops.c
+ * @brief Item staging helpers: slot chain moves, pool-paid level changes,
+ *        stat modifier clamping and staged script emission.
+ */
 
-extern u8 *D_80123FC4;
-extern u8 *D_80123FC0;
-s32 func_800BF514(s32);
+#include "common.h"
+#include "field_records.h"
+#include "field_script.h"
+
+/** @brief Slot values that stay in slot 4 unless the release flag is set. */
+#define FIELD_SLOT_IS_HIGH_CLASS(value) ((value) >= 0x51 && (value) <= 0x57)
+
+/** @brief Slot values that stay in slot 4 while the keep flag is set. */
+#define FIELD_SLOT_IS_LOW_CLASS(value) ((value) >= 0x3E && (value) <= 0x4B)
+
+/** @brief Slot values at or above this have no slot script. */
+#define FIELD_SLOT_SCRIPT_LIMIT 0xA0
+
+/** @brief Slot whose values may be pinned by the staging flags. */
+#define FIELD_PINNED_SLOT 4
+
+extern FieldItemStaging* D_80123FC4;
+extern FieldItemTables* D_80123FC0;
+extern s8 D_800F0C38[];
+extern u8 D_800F0E88[][2];
+
+void field_script_run(FieldScriptContext* context);
+
+s32 func_800BF514(s32 slot);
+void func_800BF730(void);
+void func_800BF880(s32 index);
 void func_800BF8E0(void);
 void func_800BF944(void);
-void func_800BF730(void);
-
-
-/** @brief Active-sequence record; base holds unk0/unk4, records stride 0xC. */
-typedef struct
-{
-    u8 unk0;    /* 0x00 sequence id */
-    u8 pad1[3];
-    s32 unk4;   /* 0x04 current record index */
-    s32 unk8;   /* 0x08 record payload */
-    u8 padC[4];
-    s32 unk10;  /* 0x10 per-record flags */
-} SeqRec;
-
-extern u8 *g_field_script;
-
+s32 func_800BF9F0(s32 cost);
 
 /**
- * @brief Advance the sequence cursor and stage a new timed record.
+ * @brief Queue a script from the item generation table on the active script context.
  *
- * If the current record already has a payload, advances the cursor @c unk4.
- * Writes @c D_80123FC0 + (arg0 low 16 bits) into the (possibly advanced)
- * record's @c unk8, clears then re-masks its @c unk10 low bit, and finally
- * dispatches func_800BD434 with the base @c unk0 id and notifies field_script_run.
+ * Opens a new record when the current one already has a program, points it at
+ * @p offset inside the loaded table, clears its wait word and runs the script.
  *
- * @param arg0 Duration/parameter; the low 16 bits are added to @c D_80123FC0.
+ * @param offset Byte offset of the script inside the loaded table; only the low 16 bits are used.
  * @see decomp.me (100%) TODO
  */
-void func_800BF2F0(s32 arg0)
+void func_800BF2F0(s32 offset)
 {
-    s32 temp_v1;
-    u8 *p;
+    s32 depth;
+    FieldScriptContext* context;
 
-    temp_v1 = ((SeqRec *)g_field_script)->unk4;
-    if (((SeqRec *)(g_field_script + (temp_v1 * 3 << 2)))->unk8 != 0)
+    depth = g_field_script->active_record;
+    if (FIELD_SCRIPT_RECORD(depth)->pc != NULL)
     {
-        ((SeqRec *)g_field_script)->unk4 = temp_v1 + 1;
+        g_field_script->active_record = depth + 1;
     }
-    p = g_field_script;
-    ((SeqRec *)(p + (((SeqRec *)p)->unk4 * 3 << 2)))->unk8 = (s32)D_80123FC0 + (arg0 & 0xFFFF);
-    ((SeqRec *)(p + (((SeqRec *)p)->unk4 * 3 << 2)))->unk10 &= ~1;
-    ((SeqRec *)(p + (((SeqRec *)p)->unk4 * 3 << 2)))->unk10 &= 1;
-    func_800BD434(((SeqRec *)p)->unk0, 0xD0000000, 0);
+    context = g_field_script;
+    FIELD_SCRIPT_RECORD_STATE(context->active_record)->pc = D_80123FC0->bytes + (offset & 0xFFFF);
+    /* two separate field clears of the wait word (bit 0, then bits 1-31) */
+    FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait &= ~1;
+    FIELD_SCRIPT_RECORD_STATE(context->active_record)->wait &= 1;
+    func_800BD434(context->status.owner_id, 0xD0000000, 0);
     field_script_run(g_field_script);
 }
 
-
-typedef struct
-{
-    u8 pad0[0x984];
-    u16 unk984;
-    u16 unk986;
-    u16 unk988;
-    u16 unk98A;
-} RecFC0;
-
-s32 func_800BF514(s32 arg0);
-void func_800BF2F0(s32 arg0);
-
-extern u8 *D_80123FC0;
-extern u8 *D_80123FC4;
-
 /**
- * @brief Process the active field effect indices stored in the shared state block.
+ * @brief Run the slot scripts of the staged slots, from the last slot to the first.
  */
 void func_800BF3D8(void)
 {
-    s32 i;
+    s32 slot;
 
     func_800BF514(0);
-    if (D_80123FC4[0x2D] < 0xA0)
+    if (D_80123FC4->slots[5] < FIELD_SLOT_SCRIPT_LIMIT)
     {
-        func_800BF2F0(((RecFC0 *)(D_80123FC0 + (D_80123FC4[0x2D] << 3)))->unk98A);
+        func_800BF2F0(D_80123FC0->item.slot_values[D_80123FC4->slots[5]].scripts[3]);
     }
-    i = 4;
-    do
+    for (slot = 4; slot >= 3; slot--)
     {
-        if (*(D_80123FC4 + i + 0x28) < 0xA0)
+        if (D_80123FC4->slots[slot] < FIELD_SLOT_SCRIPT_LIMIT)
         {
-            func_800BF2F0(((RecFC0 *)(D_80123FC0 + (*(D_80123FC4 + i + 0x28) << 3)))->unk988);
+            func_800BF2F0(D_80123FC0->item.slot_values[D_80123FC4->slots[slot]].scripts[2]);
         }
-        i -= 1;
-    } while (i >= 3);
-    if (D_80123FC4[0x2A] < 0xA0)
-    {
-        func_800BF2F0(((RecFC0 *)(D_80123FC0 + (D_80123FC4[0x2A] << 3)))->unk986);
     }
-    if (D_80123FC4[0x29] < 0xA0)
+    if (D_80123FC4->slots[2] < FIELD_SLOT_SCRIPT_LIMIT)
     {
-        func_800BF2F0(((RecFC0 *)(D_80123FC0 + (D_80123FC4[0x29] << 3)))->unk984);
+        func_800BF2F0(D_80123FC0->item.slot_values[D_80123FC4->slots[2]].scripts[1]);
+    }
+    if (D_80123FC4->slots[1] < FIELD_SLOT_SCRIPT_LIMIT)
+    {
+        func_800BF2F0(D_80123FC0->item.slot_values[D_80123FC4->slots[1]].scripts[0]);
     }
 }
 
-
-extern u8 *D_80123FC4;
-
 /**
- * @brief Recursively make room in the active field slot chain.
- * @param arg0 Slot index to inspect.
- * @return 0 when the current occupant must be retained, or -1 when the slot is free or shifted.
+ * @brief Shift the slot chain from @p slot upward to make room.
+ *
+ * A slot value moves to the next slot when every later slot could make room.
+ * Slot 4 keeps values pinned by the staging flags.
+ *
+ * @param slot First slot of the chain to shift.
+ * @return -1 when @p slot is free or was vacated, 0 when its value must stay.
  */
-s32 func_800BF514(s32 arg0)
+s32 func_800BF514(s32 slot)
 {
     s32 next;
 
-    if ((D_80123FC4 + arg0)[0x28] == 0xFF)
+    if (D_80123FC4->slots[slot] == FIELD_STAGING_SLOT_EMPTY)
     {
         return -1;
     }
 
-    if (arg0 == 4)
+    if (slot == FIELD_PINNED_SLOT)
     {
-        if ((u32)(D_80123FC4[0x2C] - 0x51) < 7 && *(s32 *)(D_80123FC4 + 0x58) >= 0)
+        if (FIELD_SLOT_IS_HIGH_CLASS(D_80123FC4->slots[FIELD_PINNED_SLOT]) && !D_80123FC4->flags.bits.release_high_slot)
         {
             return 0;
         }
-
-        if ((u32)((D_80123FC4 + arg0)[0x28] - 0x3E) < 0xE)
+        if (FIELD_SLOT_IS_LOW_CLASS(D_80123FC4->slots[slot]) && D_80123FC4->flags.bits.keep_low_slot)
         {
-            if (((*(u32 *)(D_80123FC4 + 0x58) >> 30) & 1) != 0)
-            {
-                return 0;
-            }
-            next = arg0 + 1;
-        }
-        else
-        {
-            next = arg0 + 1;
+            return 0;
         }
     }
-    else
-    {
-        next = arg0 + 1;
-    }
 
+    next = slot + 1;
     if (func_800BF514(next) != 0)
     {
-        (D_80123FC4 + next)[0x28] = (D_80123FC4 + arg0)[0x28];
-        (D_80123FC4 + arg0)[0x28] = 0xFF;
+        D_80123FC4->slots[next] = D_80123FC4->slots[slot];
+        D_80123FC4->slots[slot] = FIELD_STAGING_SLOT_EMPTY;
         return -1;
     }
 
-    if ((u32)((D_80123FC4 + arg0)[0x28] - 0x51) < 7 && *(s32 *)(D_80123FC4 + 0x58) >= 0)
+    if (FIELD_SLOT_IS_HIGH_CLASS(D_80123FC4->slots[slot]) && !D_80123FC4->flags.bits.release_high_slot)
     {
         return 0;
     }
-    if ((u32)((D_80123FC4 + arg0)[0x28] - 0x3E) < 0xE && ((*(u32 *)(D_80123FC4 + 0x58) >> 30) & 1) != 0)
+    if (FIELD_SLOT_IS_LOW_CLASS(D_80123FC4->slots[slot]) && D_80123FC4->flags.bits.keep_low_slot)
     {
         return 0;
     }
@@ -159,48 +141,35 @@ s32 func_800BF514(s32 arg0)
     return -1;
 }
 
-
-extern u8 *D_80123FC4;
-
-s32 func_800BF9F0(s32 arg0);
-
 /**
- * @brief Replaces a matching byte in one of the active field slots.
- *
- * @param arg0 Minimum active-slot state passed to func_800BF9F0.
- * @param arg1 Byte value to find in slots 4 through 2.
- * @param arg2 Replacement byte.
- * @return The replaced slot index, or 0xFF when no slot was replaced.
+ * @brief Replace a slot value in slots 4 down to 2, if the pool can pay for it.
+ * @param cost Pool cost checked by func_800BF9F0.
+ * @param value Slot value to find.
+ * @param replacement Value written over the first match.
+ * @return Index of the replaced slot, or 0xFF when nothing was replaced.
  */
-s32 func_800BF68C(s32 arg0, s32 arg1, u8 arg2)
+s32 func_800BF68C(s32 cost, s32 value, s32 replacement)
 {
-    s32 index;
-    s32 match;
-    u8 *entry;
-    u8 value;
+    s32 slot;
 
-    match = arg1;
-    value = arg2;
-
-    if (func_800BF9F0(arg0) != 0)
+    if (func_800BF9F0(cost) != 0)
     {
-        index = 4;
-        do
+        for (slot = 4; slot >= 2; slot--)
         {
-            entry = D_80123FC4 + index;
-            if (entry[0x28] == match)
+            if (D_80123FC4->slots[slot] == value)
             {
-                entry[0x28] = value;
-                return index;
+                D_80123FC4->slots[slot] = replacement;
+                return slot;
             }
-            index--;
-        } while (index >= 2);
+        }
     }
 
     return 0xFF;
 }
 
-
+/**
+ * @brief Finish the staged flags and clamp the staged stat modifiers.
+ */
 void func_800BF700(void)
 {
     func_800BF8E0();
@@ -208,261 +177,199 @@ void func_800BF700(void)
     func_800BF730();
 }
 
-
-extern u8 *D_80123FC4;
-extern s8 D_800F0C38[];
-extern u8 D_800F0E88[];
-
 /**
- * @brief Clamp eight slot low nibbles against the selected table bounds.
+ * @brief Pick each stat's stronger modifier and clamp it to the stat's bounds.
+ *
+ * The modifier whose D_800F0C38 value has the larger magnitude wins between
+ * the stat's own modifier and its base modifier; the winner is then clamped to
+ * the stat's (minimum, maximum) row of D_800F0E88.
  */
 void func_800BF730(void)
 {
     s32 i;
-    u8 *entry;
-    u8 packed_value, result;
-    s32 alternate_value;
-    s32 first_score, second_score, pair_index, selected_value, upper_bound, low_nibble;
-    s8 *score_table, *score_entry, *bounds_entry;
+    FieldItemStaging* entry;
+    u8 packed;
+    u8 result;
+    s32 base_modifier;
+    s32 magnitude;
+    s32 base_magnitude;
+    s32 modifier;
+    s32 maximum;
+    s32 own_modifier;
+    s8* modifiers;
+    s8* own_entry;
+    s8* lookup;
 
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < FIELD_STAGING_STAT_COUNT; i++)
     {
-        score_table = D_800F0C38;
-        entry = D_80123FC4 + i;
+        /* the do/while(0) blocks, the dead first own_entry and the integer sums are kept levers */
+        modifiers = D_800F0C38;
+        entry = FIELD_STAGING_AT(D_80123FC4, i);
         do
         {
-            packed_value = entry[0x20];
-            alternate_value = entry[0x50];
+            packed = entry->stats.bytes[0];
+            base_modifier = entry->base_stats[0];
         } while (0);
 
-        low_nibble = packed_value & 0xF;
-        score_entry = (s8 *)((s32)low_nibble + (s32)score_table);
-        selected_value = low_nibble;
+        own_modifier = packed & 0xF;
+        own_entry = (s8*)(own_modifier + (s32)modifiers);
+        modifier = own_modifier;
         do
         {
-            score_entry = (s8 *)((s32)selected_value + (s32)score_table);
+            own_entry = (s8*)(modifier + (s32)modifiers);
         } while (0);
-        bounds_entry = (s8 *)((s32)alternate_value + (s32)score_table);
-
-        first_score = *score_entry;
-        second_score = *bounds_entry;
-        if (first_score < 0)
+        lookup = (s8*)(base_modifier + (s32)modifiers);
+        magnitude = *own_entry;
+        base_magnitude = *lookup;
+        if (magnitude < 0)
         {
-            first_score = -first_score;
+            magnitude = -magnitude;
         }
-        if (second_score < 0)
+        if (base_magnitude < 0)
         {
-            second_score = -second_score;
+            base_magnitude = -base_magnitude;
         }
-
-        first_score = first_score < second_score;
-        if (first_score)
+        magnitude = magnitude < base_magnitude;
+        if (magnitude)
         {
-            selected_value = alternate_value;
+            modifier = base_modifier;
         }
 
-        pair_index = (packed_value >> 4) * 2;
-        bounds_entry = (s8 *)&D_800F0E88[pair_index];
-        result = ((u8 *)bounds_entry)[0];
-        if (!(selected_value < result))
+        lookup = (s8*)D_800F0E88[packed >> 4];
+        result = ((u8*)lookup)[0];
+        if (modifier >= result)
         {
-            upper_bound = ((u8 *)bounds_entry)[1];
-            result = upper_bound;
-            if (!(upper_bound < selected_value))
+            maximum = ((u8*)lookup)[1];
+            result = maximum;
+            if (modifier <= maximum)
             {
-                result = selected_value;
+                result = modifier;
             }
         }
 
-        entry[0x20] = (entry[0x20] & 0xF0) | (result & 0xF);
+        entry->stats.bytes[0] = (entry->stats.bytes[0] & 0xF0) | (result & 0xF);
     }
 }
 
-
 /**
- * @brief Block at *D_80123FC4: a shared pool word at 0x8, eight two-byte
- *        entries starting at 0xC (value byte, then level or count byte),
- *        bitmask bytes at 0x34/0x35/0x4C/0x4D, a per-slot counter byte at
- *        0x44, and a flags word at 0x58.
- */
-typedef struct
-{
-    u8 pad0[8];
-    s32 unk8;    /* 0x08 shared pool */
-    u8 padC[0x34 - 0xC];
-    u8 unk34;    /* 0x34 */
-    u8 unk35;    /* 0x35 */
-    u8 pad36[0x44 - 0x36];
-    u8 unk44;    /* 0x44 */
-    u8 pad45[0x4C - 0x45];
-    u8 unk4C;    /* 0x4C */
-    u8 unk4D;    /* 0x4D */
-    u8 pad4E[0x58 - 0x4E];
-    s32 unk58;   /* 0x58 */
-} StructFC4;
-
-/** @brief Two-byte entry at offset 0xC + 2 * index, viewed from the block base. */
-typedef struct FieldEntry
-{
-    u8 pad0[0xC];
-    u8 value;
-    u8 count;
-} FieldEntry;
-
-#define FC4_BYTES ((u8 *)D_80123FC4)
-
-void func_800BF880(s32 arg0);
-
-
-
-/**
- * @brief Drain a per-slot counter to zero across eight records.
- *
- * For each of the eight byte-strided records at @c D_80123FC4, repeatedly
- * dispatches the slot index to func_800BF880 and decrements the record's
- * @c unk44 counter until it reaches zero.
- *
+ * @brief Apply every pending level increase of the staged level entries.
  * @see decomp.me (100%) TODO
  */
 void func_800BF800(void)
 {
     s32 i;
 
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < FIELD_STAGING_LEVEL_COUNT; i++)
     {
-        while (((StructFC4 *)(FC4_BYTES + i))->unk44 != 0)
+        while (D_80123FC4->pending_levels[i] != 0)
         {
             func_800BF880(i);
-            ((StructFC4 *)(FC4_BYTES + i))->unk44--;
+            D_80123FC4->pending_levels[i]--;
         }
     }
 }
 
 /**
- * @brief Deducts a scaled resource cost from the shared pool for one record.
+ * @brief Raise one staged level if the pool can pay for it.
  *
- * The per-record entry lives at byte offset @p arg0 * 2 within the global
- * @c *D_80123FC4 block: a "cost" byte at 0xC (defaulting to 1 when zero) and a
- * "level" byte at 0xD. The cost is shifted left by the level; if the pool total
- * at @c unk8 can cover it and the level is still below 0xF, the shifted cost is
- * subtracted from the pool and the level is incremented.
+ * The price is the entry's cost (at least 1) shifted left by its current
+ * level; the level stops at FIELD_STAGING_LEVEL_MAX.
  *
- * @param arg0 Record index; the entry byte offset is @p arg0 * 2.
+ * @param index Level entry to raise.
  */
-void func_800BF880(s32 arg0)
+void func_800BF880(s32 index)
 {
-    StructFC4 *p;
-    u8 *e;
-    s32 amount;
-    s32 count;
+    FieldItemStaging* staging;
+    FieldItemStaging* entry;
+    s32 price;
+    s32 pool;
 
-    amount = arg0 * 2;
-    p = (StructFC4 *)D_80123FC4;
-    e = (u8 *)p + amount;
-
-    amount = 1;
-    if (e[0xC] != 0)
+    /* price first holds the entry's byte offset; the original reuses the variable */
+    price = index * sizeof(FieldStagingLevel);
+    staging = D_80123FC4;
+    entry = FIELD_STAGING_AT(staging, price);
+    price = 1;
+    if (entry->levels[0].cost != 0)
     {
-        amount = e[0xC];
+        price = entry->levels[0].cost;
     }
 
-    count = p->unk8;
-    amount = amount << e[0xD];
+    pool = staging->pool;
+    price <<= entry->levels[0].level;
 
-    if ((count >= amount) && (e[0xD] < 0xF))
+    if (pool >= price && entry->levels[0].level < FIELD_STAGING_LEVEL_MAX)
     {
-        p->unk8 = count - amount;
-        e[0xD] = e[0xD] + 1;
+        staging->pool = pool - price;
+        entry->levels[0].level++;
     }
 }
 
 /**
- * @brief Set each bit of unk34 whose bit is set in unk4C and whose entry level byte is nonzero.
+ * @brief Set the flags2C bits whose mask bit is set and whose level is nonzero.
  */
 void func_800BF8E0(void)
 {
     s32 mask;
     s32 i;
-    u8 *e;
 
-    i = 0;
-    mask = 1;
-    do
+    for (i = 0, mask = 1; i < FIELD_STAGING_LEVEL_COUNT; i++, mask <<= 1)
     {
-        if (mask & ((StructFC4 *)D_80123FC4)->unk4C)
+        if ((mask & D_80123FC4->flags2C_mask) && D_80123FC4->levels[i].level != 0)
         {
-            e = FC4_BYTES + (i * 2);
-            if (e[0xD] != 0)
-            {
-                ((StructFC4 *)D_80123FC4)->unk34 |= mask;
-            }
+            D_80123FC4->flags2C |= mask;
         }
-        i++;
-        mask *= 2;
-    } while (i < 8);
+    }
 }
 
 /**
- * @brief Rebuild unk35 from the bits set in unk4D.
+ * @brief Rebuild flags2D from the bits of flags2D_mask.
  */
 void func_800BF944(void)
 {
     s32 mask;
     s32 i;
 
-    i = 0;
-    mask = 1;
-    ((StructFC4 *)D_80123FC4)->unk35 = 0;
-    do
+    D_80123FC4->flags2D = 0;
+    for (i = 0, mask = 1; i < 8; i++, mask <<= 1)
     {
-        if (((StructFC4 *)D_80123FC4)->unk4D & mask)
+        if (D_80123FC4->flags2D_mask & mask)
         {
-            ((StructFC4 *)D_80123FC4)->unk35 |= mask;
+            D_80123FC4->flags2D |= mask;
         }
-        i++;
-        mask *= 2;
-    } while (i < 8);
+    }
 }
 
 /**
- * @brief Decrements an entry counter and adds its weighted value to the
- *        shared pool.
- *
- * @param index Index of the two-byte field entry.
+ * @brief Lower one staged level and refund its price to the pool.
+ * @param index Level entry to lower.
  */
 void func_800BF9A0(s32 index)
 {
-    s32 offset;
-    u8 count;
-    FieldEntry *entry;
-    FieldEntry *entry2;
+    u8 level;
 
-    offset = index * 2;
-    entry = (FieldEntry *)(FC4_BYTES + offset);
-    count = entry->count;
-    if (count != 0)
+    level = D_80123FC4->levels[index].level;
+    if (level != 0)
     {
-        entry->count = count - 1;
-        entry2 = (FieldEntry *)(FC4_BYTES + offset);
-        ((StructFC4 *)D_80123FC4)->unk8 += entry2->value << entry2->count;
+        D_80123FC4->levels[index].level = level - 1;
+        D_80123FC4->pool += D_80123FC4->levels[index].cost << D_80123FC4->levels[index].level;
     }
 }
 
 /**
- * @brief Test whether the shared pool can cover arg0, treating it as 0 when the low nibble of unk58 is clear.
- * @param arg0 Amount to test against the pool.
- * @return 0 when the pool is smaller than the amount, else -1.
+ * @brief Test whether the pool can pay @p cost.
+ * @param cost Price to test; treated as 0 while the staging slot class is 0.
+ * @return -1 when the pool covers the price, else 0.
  */
-s32 func_800BF9F0(s32 arg0)
+s32 func_800BF9F0(s32 cost)
 {
-    StructFC4 *p;
+    FieldItemStaging* staging;
 
-    p = (StructFC4 *)D_80123FC4;
-    if ((p->unk58 & 0xF) == 0)
+    staging = D_80123FC4;
+    if (staging->flags.bits.slot_class == 0)
     {
-        arg0 = 0;
+        cost = 0;
     }
-    if (p->unk8 < arg0)
+    if (staging->pool < cost)
     {
         return 0;
     }

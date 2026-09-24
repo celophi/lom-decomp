@@ -1,15 +1,12 @@
+#include "common.h"
 #include "game_audio.h"
-#include "field_state_ops.h"
+#include "field_records.h"
 #include "field_types.h"
 #include "sdk/rand.h"
 
-
-extern u8 * D_80122B74;
-extern u8 * D_80123FB0;
 enum
 {
     FIELD_STATUS_PRIMARY_RECORD_COUNT = 3,
-    FIELD_STATUS_RECORD_COUNT = 11,
     FIELD_STATUS_EFFECT_COUNT = 15,
     FIELD_STATUS_RESULT_ROW_COUNT = 36,
     FIELD_STATUS_MAX_DURATION = 240
@@ -21,116 +18,106 @@ enum
     FIELD_STATUS_APPLY_ALLOW_ACTIVE = 1 << 1
 };
 
+/** @brief Stat selectors of func_800B2D64 beyond the eight single stats. */
 enum
 {
-    FIELD_STATUS_RECORD_ACTIVE = 1 << 0
+    FIELD_STAT_SELECT_ALL = 9,
+    FIELD_STAT_SELECT_GROUP_A = 10,
+    FIELD_STAT_SELECT_GROUP_B = 11
 };
 
+/** @brief Status slot ids FIELD_STATUS_SLOT_ID_BASE + n grant immunity to effect n. */
 #define FIELD_STATUS_SLOT_ID_BASE 0x60
 #define FIELD_STATUS_SLOT_ID_COUNT 16
 #define FIELD_STATUS_TIMED_EFFECT_FLAGS_MASK 0xFFFF
 
-/** @brief Header preceding the status-record array in the field runtime context. */
-typedef struct
-{
-    u8 unk0;
-    u8 pad1[3];
-    u8 *unk4;
-    u8 *unk8;
-    u8 unkC[8];
-    s32 unk14;
-    s32 unk18;
-    u8 pad1C[0x28 - 0x1C];
-} FieldStatusContextHeader;
+/** @brief Status record that belongs to the third party slot. */
+#define FIELD_COMPANION_RECORD_ID 2
 
-#define FIELD_STATUS_RECORDS_OFFSET sizeof(FieldStatusContextHeader)
+/** @brief Item type (FieldItemRecord::info bits 10-15) that adds to a character's footprint strength. */
+#define FIELD_ITEM_TYPE_FOOTPRINT_BONUS 7
 
-/** @brief Field configuration values used to generate script results. */
-typedef struct
-{
-    u8 pad0[0xC04];
-    u8 count_flags;
-    u8 padC05;
-    u8 chance_percent;
-    u8 padC07[0x2A7C - 0xC07];
-    u8 result_rows[FIELD_STATUS_RESULT_ROW_COUNT][4];
-} FieldStateConfig;
+/** @brief Character type (low seven bits of the info byte) that publishes its region. */
+#define FIELD_CHARACTER_TYPE_COMPANION 3
 
-#define FIELD_STATE_CONFIG (*(FieldStateConfig **)&D_80122B74)
+/** @brief Highest level func_800B3670 returns. */
+#define FIELD_LEVEL_MAX 99
+
+/** @brief Size of the battle context cleared by func_800B3580. */
+#define FIELD_BATTLE_CONTEXT_SIZE 0x4A4
+
+extern FieldGameState* D_80122B74;
+extern FieldBattleContext* D_80123FB0;
+extern FieldBattleContext D_80123B08;
+extern u8* D_80123FAC;
+extern s32 D_8010D020;
+extern u16 g_music_track_index;
+
+/** @brief Per-effect immunity masks; also indexed by status slot id - FIELD_STATUS_SLOT_ID_BASE. */
+extern u8 D_800F0B28[];
+/** @brief Per-effect stat pair: high nibble selects the source stat, low nibble the target stat. */
+extern u8 D_800F0B38[];
+extern u8 D_800F0B48[];
+extern u8 D_800F0B50[];
+extern u8 D_800EF8C0[];
+extern u8 D_800F0AE8[];
 
 s32 func_8008B288(s32 actor_id);
-s32 func_80087F44(s32 actor_id, VECTOR *out);
+s32 func_80087F44(s32 actor_id, VECTOR* out);
 s32 func_80089D44();
-
+FieldStatusState* func_80087F0C(s32 actor_id);
+s32 func_8008B500(s32 record_id, s32 signal_id);
+u32 func_800BD414(s32 owner_id, s32 variable_id);
 void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
 u32 func_800C9ED4(s32 actor_id);
-s32 func_8008B500(s32 record_id, s32 signal_id);
-
-extern u8 D_800F0B28[];
-extern u8 D_800F0B38[];
-extern u8 D_800F0B50[];
+void func_800C1EC8(s32 value, void* buffer, s32 size);
+u8* func_800C1E40(s32 resource_id);
+s32 func_800C3688(s32 land_index);
+s32 func_800B7EE8(FieldCharacterRecord* character, s32 stat_index);
+void func_800B4934(FieldStatusRecord* record);
+void func_800B4390(void);
+s32 func_800B3DF4(s32 group);
+void func_800B3580(void);
+s32 func_800B3670(s32 use_hero_level);
+s32 func_800B37D4(void);
+void func_800B3D84(void);
 
 /**
  * @brief Find a status record by its identifier.
  * @param record_id Identifier to find.
  * @return Matching status record, or null when no record has the identifier.
  */
-FieldStatusRecord *func_800B2A9C(s32 record_id)
+FieldStatusRecord* func_800B2A9C(s32 record_id)
 {
-    s32 record_offset;
-    s32 record_index;
-    u8 *scan_base;
-    u8 *context_base;
+    s32 i;
 
-    record_index = 0;
-    context_base = (u8 *)D_80123FB0;
-    record_offset = FIELD_STATUS_RECORDS_OFFSET;
-    scan_base = context_base;
-    do
+    for (i = 0; i < FIELD_BATTLE_RECORD_COUNT; i++)
     {
-        record_index++;
-        if (record_id != ((FieldStatusRecord *)(scan_base + FIELD_STATUS_RECORDS_OFFSET))->meta.bytes.id)
+        if (record_id == D_80123FB0->records[i].meta.bytes.id)
         {
-            record_offset += sizeof(FieldStatusRecord);
-            scan_base += sizeof(FieldStatusRecord);
+            return &D_80123FB0->records[i];
         }
-        else
-        {
-            return (FieldStatusRecord *)(context_base + record_offset);
-        }
-    } while (record_index < FIELD_STATUS_RECORD_COUNT);
+    }
     record_game_diagnostic(0x8001, 0x68, record_id, -1);
-    return 0;
+    return NULL;
 }
 
 /**
  * @brief Find the first available secondary status record.
- * @return First secondary record whose active flag is clear, or null when none is available.
+ * @return First secondary record that is not active, or null when none is available.
  */
-FieldStatusRecord *func_800B2B08(void)
+FieldStatusRecord* func_800B2B08(void)
 {
-    s32 record_offset;
-    s32 record_index;
-    u8 *scan_base;
-    u8 *context_base;
-    record_index = FIELD_STATUS_PRIMARY_RECORD_COUNT;
-    context_base = (u8 *)D_80123FB0;
-    record_offset = FIELD_STATUS_RECORDS_OFFSET + (FIELD_STATUS_PRIMARY_RECORD_COUNT * sizeof(FieldStatusRecord));
-    scan_base = context_base + (FIELD_STATUS_PRIMARY_RECORD_COUNT * sizeof(FieldStatusRecord));
-    do
+    s32 i;
+
+    for (i = FIELD_STATUS_PRIMARY_RECORD_COUNT; i < FIELD_BATTLE_RECORD_COUNT; i++)
     {
-        record_index++;
-        if ((((FieldStatusRecord *)(scan_base + FIELD_STATUS_RECORDS_OFFSET))->meta.packed >> 8) & FIELD_STATUS_RECORD_ACTIVE)
+        if (!D_80123FB0->records[i].meta.bits.active)
         {
-            record_offset += sizeof(FieldStatusRecord);
-            scan_base += sizeof(FieldStatusRecord);
+            return &D_80123FB0->records[i];
         }
-        else
-        {
-            return (FieldStatusRecord *)(context_base + record_offset);
-        }
-    } while (record_index < FIELD_STATUS_RECORD_COUNT);
-    return 0;
+    }
+    return NULL;
 }
 
 /**
@@ -142,11 +129,14 @@ FieldStatusRecord *func_800B2B08(void)
  * @param chance_threshold Threshold compared against an eight-bit random value.
  * @param duration Base duration scaled by the actors and capped at 240.
  */
-void func_800B2B54(FieldStatusRecord *source, FieldStatusRecord *target, s32 apply_flags, s32 effect_index, s32 chance_threshold, s32 duration)
+void func_800B2B54(FieldStatusRecord* source, FieldStatusRecord* target, s32 apply_flags, s32 effect_index, s32 chance_threshold, s32 duration)
 {
-    s32 effect_mask, slot_index, attack, defense, scaled_duration;
-    u8 *immunity_masks, *stat_pair;
-    FieldStatusRecord *timer_cursor;
+    s32 effect_mask;
+    s32 slot_index;
+    s32 attack;
+    s32 defense;
+    s32 scaled_duration;
+    FieldStatusRecord* timer_base;
 
     if (effect_index >= FIELD_STATUS_EFFECT_COUNT)
     {
@@ -158,21 +148,18 @@ void func_800B2B54(FieldStatusRecord *source, FieldStatusRecord *target, s32 app
     }
     if (!(apply_flags & FIELD_STATUS_APPLY_IGNORE_IMMUNITY))
     {
-        immunity_masks = D_800F0B28;
-        if (target->immunity_flags & immunity_masks[effect_index])
+        if (target->immunity_flags & D_800F0B28[effect_index])
         {
             return;
         }
         effect_mask = 0;
         for (slot_index = 0; slot_index < FIELD_STATUS_SLOT_COUNT; slot_index++)
         {
-            do
+            if (target->status_slots[slot_index] >= FIELD_STATUS_SLOT_ID_BASE &&
+                target->status_slots[slot_index] < FIELD_STATUS_SLOT_ID_BASE + FIELD_STATUS_SLOT_ID_COUNT)
             {
-                if ((u32)(target->status_slots[slot_index] - FIELD_STATUS_SLOT_ID_BASE) < FIELD_STATUS_SLOT_ID_COUNT)
-                {
-                    effect_mask |= immunity_masks[target->status_slots[slot_index] - FIELD_STATUS_SLOT_ID_BASE];
-                }
-            } while (0);
+                effect_mask |= D_800F0B28[target->status_slots[slot_index] - FIELD_STATUS_SLOT_ID_BASE];
+            }
         }
         if (effect_mask & D_800F0B28[effect_index])
         {
@@ -189,16 +176,16 @@ void func_800B2B54(FieldStatusRecord *source, FieldStatusRecord *target, s32 app
         return;
     }
     target->state->effect_flags |= effect_mask;
-    stat_pair = &D_800F0B38[effect_index];
-    attack = func_800B2D34(source, *stat_pair >> 4);
-    defense = func_800B2D34(target, *stat_pair & 0xF);
+    attack = func_800B2D34(source, D_800F0B38[effect_index] >> 4);
+    defense = func_800B2D34(target, D_800F0B38[effect_index] & 0xF);
     scaled_duration = duration * attack / defense;
-    timer_cursor = (FieldStatusRecord *)((u8 *)target + effect_index * sizeof(u16));
+    /* The timer address is formed before the clamp: the record shifted by the timer index. */
+    timer_base = (FieldStatusRecord*)((u8*)target + effect_index * sizeof(u16));
     if (scaled_duration > FIELD_STATUS_MAX_DURATION)
     {
         scaled_duration = FIELD_STATUS_MAX_DURATION;
     }
-    timer_cursor->status_timers[0] = scaled_duration;
+    timer_base->status_timers[0] = scaled_duration;
 }
 
 /**
@@ -207,7 +194,7 @@ void func_800B2B54(FieldStatusRecord *source, FieldStatusRecord *target, s32 app
  * @param stat_index Stat index.
  * @return Selected stat, or one when the stat is zero or the index is out of range.
  */
-s32 func_800B2D34(FieldStatusRecord *record, s32 stat_index)
+s32 func_800B2D34(FieldStatusRecord* record, s32 stat_index)
 {
     u32 value;
 
@@ -228,122 +215,93 @@ s32 func_800B2D34(FieldStatusRecord *record, s32 stat_index)
 }
 
 /**
- * @brief Scale one or more status stats and optionally notify the associated actor.
+ * @brief Scale one or more status stats from their base values and optionally signal the actor.
  * @param record Status record to update.
- * @param stat_selector Stat index, all-stats selector, or predefined grouped-stat selector.
- * @param scale Scale factor centered around eight.
- * @param emit_signal Nonzero to notify the associated actor when applicable.
- * @return Result produced by the selected stat operation or actor notification.
+ * @param stat_selector Stat index, FIELD_STAT_SELECT_ALL, or a grouped-stat selector.
+ * @param scale Scale in eighths; above eight raises the stats, otherwise lowers them.
+ * @param emit_signal Nonzero to store the change signal and notify the actor.
+ * @return 0 when the record's state has no current value; the other paths return no defined value.
  */
-s32 func_800B2D64(FieldStatusRecord *record, u32 stat_selector, u32 scale, s32 emit_signal)
+s32 func_800B2D64(FieldStatusRecord* record, u32 stat_selector, u32 scale, s32 emit_signal)
 {
-    s32 grouped_selector;
+    u32 value;
     s32 stat_index;
-    u32 scaled_value;
-    u32 current_word;
-    u8 current_byte;
-    u32 result;
-    FieldStatusRecord *stat_cursor;
 
     if (record->state->current == 0)
     {
         return 0;
     }
-    stat_cursor = (FieldStatusRecord *)((u8 *)record + stat_selector);
     if (stat_selector < FIELD_STATUS_STAT_COUNT)
     {
-        scaled_value = (u32)(stat_cursor->base_stats[0] * scale) >> 3;
-        if (scale >= 9U)
+        value = (record->base_stats[stat_selector] * scale) >> 3;
+        if (scale > 8)
         {
-            current_byte = stat_cursor->stats[0];
-            result = scaled_value < current_byte;
-            if (result != 0)
+            if (value < record->stats[stat_selector])
             {
-                scaled_value = (u32)current_byte;
+                value = record->stats[stat_selector];
             }
-            stat_cursor->stats[0] = (u8)scaled_value;
+            record->stats[stat_selector] = value;
             if (emit_signal != 0)
             {
-                record->state->status_signal = (u8)D_800F0B50[scale - 8];
-                result = record->state->status_signal;
-                if (result != 0)
+                record->state->status_signal = D_800F0B50[scale - 8];
+                if (record->state->status_signal != 0)
                 {
-                    return func_8008B500(record->meta.bytes.id, stat_selector + 0x9E);
+                    func_8008B500(record->meta.bytes.id, stat_selector + 0x9E);
                 }
             }
-            return result;
         }
-        current_word = stat_cursor->stats[0];
-        result = current_word < scaled_value;
-        if (result != 0)
+        else
         {
-            scaled_value = (u32)current_word;
-        }
-        stat_cursor->stats[0] = (u8)scaled_value;
-        if (emit_signal != 0)
-        {
-            record->state->status_signal = (u8)D_800F0B50[8 - scale];
-            result = record->state->status_signal;
-            if (result != 0)
+            if (record->stats[stat_selector] < value)
             {
-                return func_8008B500(record->meta.bytes.id, stat_selector + 0xA7);
+                value = record->stats[stat_selector];
+            }
+            record->stats[stat_selector] = value;
+            if (emit_signal != 0)
+            {
+                record->state->status_signal = D_800F0B50[8 - scale];
+                if (record->state->status_signal != 0)
+                {
+                    func_8008B500(record->meta.bytes.id, stat_selector + 0xA7);
+                }
             }
         }
-        return result;
     }
-    if (stat_selector != 9)
+    else
     {
-        result = stat_selector < 9U;
-        if (result == 0)
+        switch (stat_selector)
         {
-            if (stat_selector == 10)
+        case FIELD_STAT_SELECT_ALL:
+            for (stat_index = 0; stat_index < FIELD_STATUS_STAT_COUNT; stat_index++)
             {
-                goto case_10;
+                func_800B2D64(record, stat_index, scale, 0);
             }
-            if (stat_selector == 11)
+            if (emit_signal != 0)
             {
-                goto case_11;
+                if (scale > 8)
+                {
+                    record->state->status_signal = D_800F0B50[scale - 8];
+                    func_8008B500(record->meta.bytes.id, 0x9D);
+                }
+                else
+                {
+                    record->state->status_signal = D_800F0B50[8 - scale];
+                    func_8008B500(record->meta.bytes.id, 0xA6);
+                }
             }
-            return 11;
+            break;
+        case FIELD_STAT_SELECT_GROUP_A:
+            func_800B2D64(record, 0, scale, 0);
+            func_800B2D64(record, 1, scale, 0);
+            func_800B2D64(record, 2, scale, 0);
+            break;
+        case FIELD_STAT_SELECT_GROUP_B:
+            func_800B2D64(record, 3, scale, 0);
+            func_800B2D64(record, 5, scale, 0);
+            func_800B2D64(record, 6, scale, 0);
+            break;
         }
-        return result;
     }
-
-    stat_index = 0;
-    do
-    {
-        func_800B2D64(record, stat_index, scale, 0);
-        stat_index += 1;
-        result = stat_index < FIELD_STATUS_STAT_COUNT;
-    } while (result != 0);
-    if (emit_signal != 0)
-    {
-        if (scale >= 9U)
-        {
-            record->state->status_signal = (u8)D_800F0B50[scale - 8];
-            return func_8008B500(record->meta.bytes.id, 0x9D);
-        }
-        record->state->status_signal = (u8)D_800F0B50[8 - scale];
-        return func_8008B500(record->meta.bytes.id, 0xA6);
-    }
-    return result;
-
-case_10:
-    func_800B2D64(record, 0, scale, 0);
-    func_800B2D64(record, 1, scale, 0);
-    stat_cursor = record;
-    grouped_selector = 2;
-    goto recursive_tail;
-
-case_11:
-    func_800B2D64(record, 3, scale, 0);
-    func_800B2D64(record, 5, scale, 0);
-    stat_cursor = record;
-    grouped_selector = 6;
-
-recursive_tail:
-    result = func_800B2D64(stat_cursor, grouped_selector, scale, 0);
-    return result;
 }
 
 /**
@@ -351,19 +309,19 @@ recursive_tail:
  * @param record Status record supplying the threshold.
  * @return 1 when the random byte is below the threshold, otherwise 0.
  */
-s32 func_800B2FF8(FieldStatusRecord *record)
+s32 func_800B2FF8(FieldStatusRecord* record)
 {
-    s32 threshold;
+    u32 threshold;
 
     threshold = func_800B2D34(record, FIELD_STATUS_STAT_COUNT - 1);
-    return (u32)(rand() & 0xFF) < (u32)threshold;
+    return (rand() & 0xFF) < threshold;
 }
 
 /**
- * @brief Compare two actors' horizontal positions using the second actor's facing range.
- * @param first_actor_id First actor to compare.
- * @param second_actor_id Second actor to compare and query for facing.
- * @return -1 for the selected side of the second actor, otherwise 0.
+ * @brief Tell whether the first actor is on the side the second actor faces.
+ * @param first_actor_id Actor whose position is tested.
+ * @param second_actor_id Actor whose position and facing are the reference.
+ * @return -1 when the first actor is on the faced side, otherwise 0.
  */
 s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
 {
@@ -376,7 +334,7 @@ s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
     func_80087F44(second_actor_id, &second_position);
     if (first_position.vx - second_position.vx < 0)
     {
-        if ((u32)(direction - 0x40) >= 0x81)
+        if (direction < 0x40 || direction > 0xC0)
         {
             return 0;
         }
@@ -384,7 +342,7 @@ s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
     }
     else
     {
-        if ((u32)(direction - 0x40) >= 0x81)
+        if (direction < 0x40 || direction > 0xC0)
         {
             return -1;
         }
@@ -397,7 +355,7 @@ s32 func_800B302C(s32 first_actor_id, s32 second_actor_id)
  * @param state Status state to update.
  * @param amount Amount to subtract; negative values are reported as diagnostics.
  */
-void func_800B30B8(FieldStatusState *state, s32 amount)
+void func_800B30B8(FieldStatusState* state, s32 amount)
 {
     s32 remaining;
 
@@ -424,7 +382,7 @@ void func_800B30B8(FieldStatusState *state, s32 amount)
  * @param state Status state containing the counter and its maximum.
  * @param delta Amount to add to the counter's value.
  */
-void saturating_counter_add(FieldStatusState *state, s32 delta)
+void saturating_counter_add(FieldStatusState* state, s32 delta)
 {
     u32 maximum;
     u32 sum;
@@ -442,7 +400,7 @@ void saturating_counter_add(FieldStatusState *state, s32 delta)
  * @brief Forward a status record identifier to the actor-state helper.
  * @param record Status record whose identifier is forwarded.
  */
-void func_800B313C(FieldStatusRecord *record)
+void func_800B313C(FieldStatusRecord* record)
 {
     func_80089D44(record->meta.bytes.id);
 }
@@ -452,7 +410,7 @@ void func_800B313C(FieldStatusRecord *record)
  * @param record Status record to update.
  * @param index Effect index, or an out-of-range value to clear every timed effect.
  */
-void field_clear_record_state(FieldStatusRecord *record, u32 index)
+void field_clear_record_state(FieldStatusRecord* record, u32 index)
 {
     s32 timer_index;
 
@@ -476,19 +434,19 @@ void field_clear_record_state(FieldStatusRecord *record, u32 index)
 void func_800B31CC(s32 actor_id)
 {
     u32 chance;
-    u8 scratch[32];
+    u8 unused[32]; /* never used; the original stack frame reserves it */
     u32 count;
     u32 index;
 
-    chance = FIELD_STATE_CONFIG->chance_percent;
-    if ((u32)(rand() % 100) < chance)
+    chance = D_80122B74->characters[2].unk150[0].derived.bytes[2];
+    if (rand() % 100 < chance)
     {
         func_800BD520(2, 0xD028, 100);
     }
     else
     {
-        count = FIELD_STATE_CONFIG->count_flags >> 4;
-        if ((count < 4) || (count >= 8))
+        count = D_80122B74->characters[2].unk150[0].derived.bytes[0] >> 4;
+        if (count < 4 || count >= 8)
         {
             record_game_diagnostic(0x74, count, 0, 0);
             func_800BD520(2, 0xD028, 99);
@@ -498,7 +456,7 @@ void func_800B31CC(s32 actor_id)
         {
             index = count - 1;
         }
-        func_800BD520(2, 0xD028, (((func_800B2A9C(2)->state->status_intensity * count) >> 8) * 6) + index);
+        func_800BD520(2, 0xD028, ((func_800B2A9C(FIELD_COMPANION_RECORD_ID)->state->status_intensity * count) >> 8) * 6 + index);
     }
 }
 
@@ -510,8 +468,8 @@ void func_800B32FC(s32 row_index)
 {
     s32 chance;
 
-    chance = FIELD_STATE_CONFIG->chance_percent;
-    if (((rand() * 100) / (RAND_MAX + 1)) < chance)
+    chance = D_80122B74->characters[2].unk150[0].derived.bytes[2];
+    if (rand() * 100 / (RAND_MAX + 1) < chance)
     {
         func_800BD520(2, 0xD030, 129);
         func_800BD520(2, 0xD038, 0);
@@ -519,9 +477,9 @@ void func_800B32FC(s32 row_index)
     }
     else if (row_index < FIELD_STATUS_RESULT_ROW_COUNT)
     {
-        func_800BD520(2, 0xD030, FIELD_STATE_CONFIG->result_rows[row_index][0]);
-        func_800BD520(2, 0xD038, FIELD_STATE_CONFIG->result_rows[row_index][1]);
-        func_800BD520(2, 0xD040, FIELD_STATE_CONFIG->result_rows[row_index][2]);
+        func_800BD520(2, 0xD030, D_80122B74->result_rows[row_index][0]);
+        func_800BD520(2, 0xD038, D_80122B74->result_rows[row_index][1]);
+        func_800BD520(2, 0xD040, D_80122B74->result_rows[row_index][2]);
     }
     else
     {
@@ -532,16 +490,16 @@ void func_800B32FC(s32 row_index)
 }
 
 /**
- * @brief Advance status intensity with a multiplier that decreases each quarter.
- * @param amount Base increment applied to status record 2.
+ * @brief Advance the companion's status intensity with a multiplier that decreases each quarter.
+ * @param amount Base increment.
  */
 void func_800B3420(s32 amount)
 {
-    FieldStatusRecord *record;
-    FieldStatusState *state;
+    FieldStatusRecord* record;
+    FieldStatusState* state;
     u32 value;
 
-    record = func_800B2A9C(2);
+    record = func_800B2A9C(FIELD_COMPANION_RECORD_ID);
     state = record->state;
     value = state->status_intensity;
 
@@ -567,83 +525,40 @@ void func_800B3420(s32 amount)
     }
 }
 
-#include "game_audio.h"
-#include "common.h"
-
-typedef struct
-{
-    u8 unk0;
-    u8 pad1[3];
-    u8 *unk4;
-    u8 *unk8;
-    u8 unkC[8];
-    s32 unk14;
-    s32 unk18;
-} StructB3580;
-
-/** @brief View of the D_80122B74 block: a byte at 0x2E5 and 0xC-byte rows at 0x2F4. */
-typedef struct
-{
-    u8 pad[0x2E5];
-    u8 unk2E5;
-    u8 pad2E6[0x2F4 - 0x2E6];
-    u8 unk2F4[1][0xC];
-} StructB74;
-
-#define FIELD_B74 ((StructB74 *)D_80122B74)
-
-s32 func_800B37D4(void);
-s32 func_800B3DF4(s32);
-void func_800B4390(void);
-void func_800C1EC8(s32, void *, s32);
-u8 *func_800C1E40(s32);
-u32 func_800BD414(s32, s32);
-s32 func_800C3688(s32);
-void func_800B3580(void);
-s32 func_800B3670(s32);
-
-extern s32 D_8010D020;
-extern u8 D_800EF8C0[];
-extern u8 D_800F0B48[];
-extern u8 D_800F0AE8[];
-extern StructB3580 D_80123B08;
-extern u8 *D_80123FAC;
-extern u16 g_music_track_index;
-
 /**
- * @brief Rebuild the D_80123B08 block and write script variables 0x4280 and 0x4284, or call func_800B4390 when arg0 is 0.
+ * @brief Rebuild the battle context and publish the party and monster counts, or call func_800B4390 when @p group is 0.
  *
- * With D_8010D020 set both variables are written as 1 instead of the
- * computed values. 0x4280 and 0x4284 are the counter pair that func_800B48B8
- * increments and func_800B62D8 tests for zero.
+ * Script variables 0x4280 and 0x4284 hold the party and monster counts
+ * that func_800B48B8 updates and func_800B62D8 tests for zero. With
+ * D_8010D020 set both are written as 1.
  *
- * @param arg0 Nonzero selects the rebuild path and is forwarded to func_800B3DF4.
+ * @param group Monster group to build; 0 selects func_800B4390 instead.
  * @see decomp.me (100%)
  */
-void func_800B34D0(s32 arg0)
+void func_800B34D0(s32 group)
 {
-    s32 value;
+    s32 count;
 
-    if (arg0 != 0)
+    if (group != 0)
     {
         func_800B3580();
-        value = func_800B37D4();
+        count = func_800B37D4();
         if (D_8010D020 != 0)
         {
             func_800BD520(0, 0x4280, 1);
         }
         else
         {
-            func_800BD520(0, 0x4280, value);
+            func_800BD520(0, 0x4280, count);
         }
-        value = func_800B3DF4(arg0);
+        count = func_800B3DF4(group);
         if (D_8010D020 != 0)
         {
             func_800BD520(0, 0x4284, 1);
         }
         else
         {
-            func_800BD520(0, 0x4284, value);
+            func_800BD520(0, 0x4284, count);
         }
     }
     else
@@ -653,44 +568,45 @@ void func_800B34D0(s32 arg0)
 }
 
 /**
- * @brief Zero the D_80123B08 block, then fill it from the current track's 0xC-byte layout record and resource 1.
+ * @brief Clear the battle context, then fill its header from the current land and resource 1.
  * @see decomp.me (100%)
  */
 void func_800B3580(void)
 {
     s32 i;
-    u8 *p;
+    u8* resource;
 
     D_80123FAC = D_800EF8C0;
-    (*(StructB3580 **)&D_80123FB0) = &D_80123B08;
-    func_800C1EC8(0, &D_80123B08, 0x4A4);
-    (*(StructB3580 **)&D_80123FB0)->unk18 = 0;
-    (*(StructB3580 **)&D_80123FB0)->unk0 = func_800B3670(0);
+    D_80123FB0 = &D_80123B08;
+    func_800C1EC8(0, &D_80123B08, FIELD_BATTLE_CONTEXT_SIZE);
+    D_80123FB0->action = NULL;
+    D_80123FB0->state.level = func_800B3670(0);
 
     for (i = 0; i < 8; i++)
     {
-        (*(StructB3580 **)&D_80123FB0)->unkC[i] = D_800F0B48[FIELD_B74->unk2F4[g_music_track_index][i]];
+        D_80123FB0->element_levels[i] = D_800F0B48[D_80122B74->lands[g_music_track_index].levels[i]];
     }
 
-    p = func_800C1E40(1);
-    (*(StructB3580 **)&D_80123FB0)->unk4 = p + *(s32 *)(p + 4);
-    (*(StructB3580 **)&D_80123FB0)->unk8 = p + *(s32 *)(p + 8);
+    resource = func_800C1E40(1);
+    D_80123FB0->templates = resource + *(s32*)(resource + 4);
+    D_80123FB0->resources = resource + *(s32*)(resource + 8);
     func_800BD520(0, 0x428C, -1);
 }
 
 /**
- * @brief Look up D_800F0AE8 by a 0..0x3F index and clamp the result to script variables 0x52E0..0x52E8 and 0x63.
+ * @brief Compute the monster level from the hero's level or the land, clamped by script variables.
  *
- * The index comes from the byte at 0x2E5 of the layout buffer when @p arg0 or
- * bit 7 of script variable 0x52F0 is set, otherwise from func_800C3688 for the
- * current track. Script variable 0x2938 adds 0x14 (mode 1) or forces 0x3F
- * (mode 2).
+ * The base comes from the hero's level when @p use_hero_level or bit 7 of
+ * script variable 0x52F0 is set, otherwise from func_800C3688 for the
+ * current land. Script variable 0x2938 adds 20 (mode 1) or forces 63
+ * (mode 2). The result indexes D_800F0AE8 and is clamped to script
+ * variables 0x52E0..0x52E8 and to FIELD_LEVEL_MAX.
  *
- * @param arg0 Nonzero selects the byte-at-0x2E5 index.
- * @return Value in 0..0x63.
+ * @param use_hero_level Nonzero to base the level on the hero's level.
+ * @return Level in 0..99.
  * @see decomp.me (100%)
  */
-s32 func_800B3670(s32 arg0)
+s32 func_800B3670(s32 use_hero_level)
 {
     s32 flag;
     s32 mode;
@@ -699,7 +615,7 @@ s32 func_800B3670(s32 arg0)
     u32 lo;
     u32 hi;
 
-    flag = arg0;
+    flag = use_hero_level;
     if (func_800BD414(0, 0x52F0) & 0x80)
     {
         flag = 1;
@@ -710,15 +626,15 @@ s32 func_800B3670(s32 arg0)
     {
         switch (mode)
         {
-            case 1:
-                index = FIELD_B74->unk2E5 + 0x14;
-                break;
-            case 2:
-                index = 0x3F;
-                break;
-            default:
-                index = FIELD_B74->unk2E5;
-                break;
+        case 1:
+            index = D_80122B74->control.fields.hero_level + 20;
+            break;
+        case 2:
+            index = 63;
+            break;
+        default:
+            index = D_80122B74->control.fields.hero_level;
+            break;
         }
         index = (index * 3) / 2;
     }
@@ -727,18 +643,18 @@ s32 func_800B3670(s32 arg0)
         index = func_800C3688(g_music_track_index);
         switch (mode)
         {
-            case 1:
-                index += 0x14;
-                break;
-            case 2:
-                index = 0x3F;
-                break;
+        case 1:
+            index += 20;
+            break;
+        case 2:
+            index = 63;
+            break;
         }
     }
 
-    if (index >= 0x40)
+    if (index >= 64)
     {
-        index = 0x3F;
+        index = 63;
     }
 
     value = D_800F0AE8[index];
@@ -753,358 +669,177 @@ s32 func_800B3670(s32 arg0)
         value = hi;
     }
 
-    if (value >= 0x64)
+    if (value > FIELD_LEVEL_MAX)
     {
-        value = 0x63;
+        value = FIELD_LEVEL_MAX;
     }
     return value;
 }
 
-
-
-extern s32 D_8010D020;
-extern u8 *func_80087F0C(s32);
-extern void func_800B3D84(void);
-extern void func_800B4934(u8 *);
-extern s32 func_800B7EE8(u8 *, s32);
-
-typedef struct
-{
-    u8 pad0[0xC];
-    u8 base_attributes[8];
-    u8 pad14[0x14];
-    u8 flags;
-    u8 pad29[2];
-    u8 unk2B;
-    union
-    {
-        u32 word;
-        struct
-        {
-            u8 index;
-            u8 flags;
-            u16 upper;
-        } parts;
-    } config;
-    u8 unk30;
-    u8 unk31;
-    u16 unk32;
-    u32 unk34;
-    u8 *actor;
-    u32 unk3C;
-    u16 unk40;
-    u8 unk42;
-    u8 pad43;
-    u16 equipment_stats[4];
-    u8 equipment_attributes[4];
-    u8 attributes[8];
-    u8 base_values[8];
-    u8 flags60;
-    u8 flags61;
-    u8 flags62;
-    u8 pad63;
-    u8 modifiers[8];
-    u8 bonuses[8];
-    u8 unk74;
-} PartyActorView;
-typedef struct
-{
-    u8 pad0[0x5F0];
-    u8 active;
-    u8 pad5F1[0x17];
-    u8 type;
-    u8 pad609[0xB];
-    u16 hp;
-    u8 pad616[0x1D];
-    u8 unk633;
-    u8 pad634[0xC];
-    u8 equipment_active;
-    u8 pad641[0x13];
-    u32 equipment_config;
-    u32 equipment_modifiers;
-    u8 pad65C[8];
-    u16 equipment_stat;
-    u8 pad666[6];
-    u8 flags66C;
-    u8 flags66D;
-    u8 pad66E[2];
-    u8 equipment_attribute;
-} PartySaveView;
-typedef struct
-{
-    u8 pad0[0x24];
-    u16 stat;
-    u8 pad26[0xA];
-    u8 attribute;
-} PartyEquipmentView;
-typedef struct
-{
-    s32 hp;
-    s32 max_hp;
-    u32 flags;
-    u8 padC[0x5C];
-    u16 effect_footprint_strength;
-} PartyLiveActorView;
-
 /**
- * @brief Initialize the three party actor records and their derived attributes.
+ * @brief Build the status records of the party characters.
+ * @return Number of party slots in use.
  * @see decomp.me (100%)
  */
 s32 func_800B37D4(void)
 {
     s32 active_count;
-    s32 equipment_address;
-    s32 attribute_offset;
-    s32 active_flags;
-    s32 config_flags;
-    u32 actor_type;
     s32 index;
     s32 stat_index;
     s32 equipment_index;
-    s32 player_control;
-    s8 attribute_value;
+    s32 ally;
+    s8 stat;
     s32 party_index;
-    s8 actor_flags;
-    u32 capacity;
-    u32 packed_modifiers;
-    u8 *config_record;
-    u8 *linked_record;
-    u8 *modifier_record;
-    u8 *flags60_record;
-    u8 *flags62_record;
-    u8 *live_flags;
-    u8 *setup_record;
-    u8 *stat_record;
-    u8 *hp_source;
-    u8 *capacity_record;
-    u8 *attribute_record;
-    u8 *hp_record;
-    u8 *live_hp;
-    u8 *actor;
-    u8 *value_record;
-    u8 *final_record;
-    u8 *live_capacity;
-    u8 *flags_record;
+    u32 strength;
+    u32 nibbles;
+
     party_index = 0;
     active_count = 0;
     do
     {
-        if (((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->active != 0)
+        if (D_80122B74->characters[party_index].name[0] != 0)
         {
-            if ((D_8010D020 != 0) && (party_index == 0))
+            if (D_8010D020 != 0 && party_index == 0)
             {
-                flags_record = (u8 *)(*(StructB3580 **)&D_80123FB0);
-                actor_flags = ((PartyActorView *)flags_record)->flags | 0x40;
+                D_80123FB0->records[0].unk0 |= 0x40;
             }
             else
             {
-                flags_record = (u8 *)(*(StructB3580 **)&D_80123FB0);
-                flags_record += party_index * 0x68;
-                actor_flags = ((PartyActorView *)flags_record)->flags | 0x80;
+                D_80123FB0->records[party_index].unk0 |= 0x80;
             }
-            ((PartyActorView *)flags_record)->flags = actor_flags;
-            ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((party_index * 0xD) << 3)))->unk2B = 0xF;
-            ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((party_index * 0xD) << 3)))->config.parts.index =
-                party_index;
-            config_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + (party_index * 0x68);
-            config_flags = ((PartyActorView *)config_record)->config.word;
-            active_flags = config_flags | 0x100;
-            ((PartyActorView *)config_record)->config.word = active_flags;
+            D_80123FB0->records[party_index].unk3 = 0xF;
+            D_80123FB0->records[party_index].meta.bytes.id = party_index;
+            D_80123FB0->records[party_index].meta.bits.active = 1;
             if (D_8010D020 != 0)
             {
-                player_control = 0;
-                if (party_index == 0)
-                {
-                    player_control = 0xFF;
-                }
-                ((PartyActorView *)config_record)->config.word =
-                    (s32)((active_flags & (~0x200)) | ((player_control & 1) << 9));
+                D_80123FB0->records[party_index].meta.bits.ally = (party_index == 0) ? 0xFF : 0;
             }
             else
             {
-                ((PartyActorView *)config_record)->config.word = (s32)(config_flags | 0x300);
+                D_80123FB0->records[party_index].meta.bits.ally = 1;
             }
-            setup_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + (party_index * 0x68);
-            actor_type = ((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->type;
-            ((PartyActorView *)setup_record)->config.word =
-                (s32)((((PartyActorView *)setup_record)->config.word & 0xFFFF03FF) |
-                      ((actor_type & 0x3F) << 10));
-            ((PartyActorView *)setup_record)->unk30 = 5;
-            ((PartyActorView *)setup_record)->config.parts.upper = 0;
-            ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((party_index * 0xD) << 3)))->unk31 = 5;
-            actor = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + (party_index * 0x68);
-            ((PartyActorView *)actor)->unk32 = 0;
-            ((PartyActorView *)actor)->unk34 = 0;
-            actor = func_80087F0C(party_index);
+            {
+                FieldBattleContext* context = D_80123FB0;
+
+                context->records[party_index].meta.bits.kind = D_80122B74->characters[party_index].info.bytes[0];
+                context->records[party_index].counter = 5;
+                context->records[party_index].meta.bytes.unk2 = 0;
+            }
+            D_80123FB0->records[party_index].counter_reset = 5;
+            D_80123FB0->records[party_index].status_flags = 0;
+            D_80123FB0->records[party_index].unkC = 0;
+            D_80123FB0->records[party_index].state = func_80087F0C(party_index);
             stat_index = 0;
-            linked_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + (party_index * 0x68);
-            ((PartyActorView *)linked_record)->actor = actor;
-            ((PartyActorView *)linked_record)->unk40 =
-                (u16)((PartySaveView *)(((party_index * 0x25) << 4) + ((s32)D_80122B74)))->equipment_stat;
-            ((PartyActorView *)linked_record)->unk42 = 0x19;
+            D_80123FB0->records[party_index].unk18 = D_80122B74->characters[party_index].equipment->derived.values[0];
+            D_80123FB0->records[party_index].unk1A = 25;
             do
             {
                 index = 1;
-                ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + (((party_index * 0xD) << 3) + (stat_index << 1))))
-                    ->equipment_stats[0] = 0;
-                ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + (((party_index * 0xD) << 3) + stat_index)))
-                    ->equipment_attributes[0] =
-                    (u8)((PartySaveView *)((((party_index * 0x25) << 4) + ((s32)D_80122B74)) + stat_index))
-                        ->equipment_attribute;
+                D_80123FB0->records[party_index].equipment_stats[stat_index] = 0;
+                D_80123FB0->records[party_index].equipment_attributes[stat_index] = D_80122B74->characters[party_index].equipment->attributes[stat_index];
                 do
                 {
-                    if (((PartySaveView *)(D_80122B74 + (((party_index * 0x25) << 4) + (index * 0x40))))
-                            ->equipment_active != 0)
+                    if (D_80122B74->characters[party_index].equipment[index].kind != 0)
                     {
-                        stat_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((stat_index << 1) + (party_index * 0x68));
-                        attribute_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((party_index * 0x68) + stat_index);
-                        equipment_address =
-                            (s32)(((((party_index * 0x25) << 4) + ((s32)D_80122B74)) + (index << 6)) + 0x640);
-                        ((PartyActorView *)stat_record)->equipment_stats[0] =
-                            (u16)(((PartyActorView *)stat_record)->equipment_stats[0] +
-                                  ((PartyEquipmentView *)(equipment_address + (stat_index << 1)))->stat);
-                        ((PartyActorView *)attribute_record)->equipment_attributes[0] =
-                            (u8)(((PartyActorView *)attribute_record)->equipment_attributes[0] +
-                                 ((PartyEquipmentView *)(equipment_address + stat_index))->attribute);
+                        FieldBattleContext* context = D_80123FB0;
+
+                        context->records[party_index].equipment_stats[stat_index] +=
+                            (D_80122B74->characters[party_index].equipment + index)->derived.values[stat_index];
+                        context->records[party_index].equipment_attributes[stat_index] +=
+                            (D_80122B74->characters[party_index].equipment + index)->attributes[stat_index];
                     }
                     index += 1;
-                } while (index < 4);
+                } while (index < FIELD_EQUIPMENT_SLOT_COUNT);
                 stat_index += 1;
             } while (stat_index < 4);
             index = 0;
-            func_800B4934(((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((party_index * 0x68) + 0x28));
-            packed_modifiers =
-                ((PartySaveView *)(((party_index * 0x25) << 4) + ((s32)D_80122B74)))->equipment_modifiers;
+            func_800B4934(&D_80123FB0->records[party_index]);
+            nibbles = D_80122B74->characters[party_index].equipment->bonus_nibbles.word;
             do
             {
-                attribute_value = func_800B7EE8(D_80122B74 + (((party_index * 0x25) << 4) + 0x5F0), index);
-                attribute_offset = index + ((party_index * 0xD) << 3);
-                value_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + attribute_offset;
-                ((PartyActorView *)value_record)->base_values[0] = attribute_value;
-                ((PartyActorView *)value_record)->attributes[0] = attribute_value;
-                ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + attribute_offset))->modifiers[0] =
-                    (s8)(packed_modifiers & 0xF);
-                packed_modifiers = packed_modifiers >> 4;
-                modifier_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + attribute_offset;
-                ((PartyActorView *)modifier_record)->modifiers[0] +=
-                    ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + index))->base_attributes[0];
-                index += 1;
-            } while (index < 8);
-            equipment_index = 1;
-            ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + (index + ((party_index * 0xD) << 3))))->bonuses[0] = 0;
-            ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((party_index * 0xD) << 3)))->flags60 = 0;
-            ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((party_index * 0xD) << 3)))->flags61 = 0;
-            ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((party_index * 0xD) << 3)))->flags62 = 0;
-            do
-            {
-                if (((PartySaveView *)(D_80122B74 + (((party_index * 0x25) << 4) + (equipment_index << 6))))
-                        ->equipment_active != 0)
+                stat = func_800B7EE8(&D_80122B74->characters[party_index], index);
                 {
-                    packed_modifiers = ((PartySaveView *)((((party_index * 0x25) << 4) + ((s32)D_80122B74)) +
-                                                          (equipment_index << 6)))
-                                           ->equipment_modifiers;
-                    for (index = 0; index < 8; index++)
-                    {
-                        ((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) - (-(index + (party_index * 0x68)))))
-                            ->bonuses[0] += packed_modifiers & 0xF;
-                        packed_modifiers >>= 4;
-                    }
+                    FieldBattleContext* context = D_80123FB0;
 
-                    flags60_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + (party_index * 0x68);
-                    ((PartyActorView *)flags60_record)->flags60 =
-                        (u8)(((PartyActorView *)flags60_record)->flags60 |
-                             ((PartySaveView *)((((party_index * 0x25) << 4) + ((s32)D_80122B74)) +
-                                                (equipment_index << 6)))
-                                 ->flags66C);
-                    flags62_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + (party_index * 0x68);
-                    ((PartyActorView *)flags62_record)->flags62 =
-                        (u8)(((PartyActorView *)flags62_record)->flags62 |
-                             ((PartySaveView *)((((party_index * 0x25) << 4) + ((s32)D_80122B74)) +
-                                                (equipment_index << 6)))
-                                 ->flags66D);
+                    context->records[party_index].base_stats[index] = stat;
+                    context->records[party_index].stats[index] = stat;
+                }
+                D_80123FB0->records[party_index].unk3C[index] = nibbles & 0xF;
+                nibbles >>= 4;
+                D_80123FB0->records[party_index].unk3C[index] += D_80123FB0->element_levels[index];
+                index += 1;
+            } while (index < FIELD_STATUS_STAT_COUNT);
+            equipment_index = 1;
+            /* index is 8 here, so this clears unk4C (rewritten below). */
+            D_80123FB0->records[party_index].unk44[index] = 0;
+            D_80123FB0->records[party_index].immunity_flags = 0;
+            D_80123FB0->records[party_index].unk39 = 0;
+            D_80123FB0->records[party_index].unk3A = 0;
+            do
+            {
+                if (D_80122B74->characters[party_index].equipment[equipment_index].kind != 0)
+                {
+                    nibbles = (D_80122B74->characters[party_index].equipment + equipment_index)->bonus_nibbles.word;
+                    for (index = 0; index < FIELD_STATUS_STAT_COUNT; index++)
+                    {
+                        D_80123FB0->records[party_index].unk44[index] += nibbles & 0xF;
+                        nibbles >>= 4;
+                    }
+                    D_80123FB0->records[party_index].immunity_flags |= (D_80122B74->characters[party_index].equipment + equipment_index)->flags2C;
+                    D_80123FB0->records[party_index].unk3A |= (D_80122B74->characters[party_index].equipment + equipment_index)->flags2D;
                 }
                 equipment_index += 1;
-            } while (equipment_index < 4);
-            final_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + (party_index * 0x68);
-            ((PartyActorView *)final_record)->unk3C = 0;
-            ((PartyActorView *)final_record)->unk74 =
-                (u8)((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->unk633;
+            } while (equipment_index < FIELD_EQUIPMENT_SLOT_COUNT);
+            D_80123FB0->records[party_index].template = NULL;
+            D_80123FB0->records[party_index].unk4C = D_80122B74->characters[party_index].unk43;
             if (D_8010D020 != 0)
             {
-                hp_source = D_80122B74 + ((party_index * 0x25) << 4);
-                hp_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + (party_index * 0x68);
-                *((s32 *)((PartyActorView *)hp_record)->actor) = (s32)(((PartySaveView *)hp_source)->hp * 3);
-                ((PartyLiveActorView *)((PartyActorView *)hp_record)->actor)->max_hp =
-                    (s32)(((PartySaveView *)hp_source)->hp * 3);
-                live_hp = ((PartyActorView *)hp_record)->actor;
-                ((PartyLiveActorView *)live_hp)->flags =
-                    (s32)((((PartyLiveActorView *)live_hp)->flags & 0xFF000000) |
-                          (((PartySaveView *)hp_source)->hp * 3));
-                live_flags = ((PartyActorView *)hp_record)->actor;
-                ((PartyLiveActorView *)live_flags)->flags =
-                    (s32)(((PartyLiveActorView *)live_flags)->flags & 0x80FFFFFF);
+                D_80123FB0->records[party_index].state->maximum = D_80122B74->characters[party_index].hp * 3;
+                D_80123FB0->records[party_index].state->current = D_80122B74->characters[party_index].hp * 3;
+                D_80123FB0->records[party_index].state->gauge.bits.value = D_80122B74->characters[party_index].hp * 3;
+                D_80123FB0->records[party_index].state->gauge.bits.hud_bits = 0;
             }
             else
             {
-                *((s32 *)((PartyActorView *)(((u8 *)(*(StructB3580 **)&D_80123FB0)) + ((party_index * 0xD) << 3)))->actor) =
-                    (s32)((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->hp;
+                D_80123FB0->records[party_index].state->maximum = D_80122B74->characters[party_index].hp;
             }
-            capacity_record = ((u8 *)(*(StructB3580 **)&D_80123FB0)) + (party_index * 0x68);
-            capacity = ((PartyActorView *)capacity_record)->attributes[3] * 2;
-            if (((((u32)((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->equipment_config) >>
-                  0xA) &
-                 0x3F) == 7)
             {
-                capacity += 0x80;
+                FieldStatusState* state;
+
+                strength = D_80123FB0->records[party_index].stats[3] * 2;
+                if (((D_80122B74->characters[party_index].equipment[0].info.word >> 10) & 0x3F) == FIELD_ITEM_TYPE_FOOTPRINT_BONUS)
+                {
+                    strength += 0x80;
+                }
+                state = D_80123FB0->records[party_index].state;
+                if (strength < 0x100)
+                {
+                    state->effect_footprint_strength = strength;
+                }
+                else
+                {
+                    state->effect_footprint_strength = 0xFF;
+                }
             }
-            live_capacity = ((PartyActorView *)capacity_record)->actor;
-            if (capacity < 0x100U)
-            {
-                ((PartyLiveActorView *)live_capacity)->effect_footprint_strength = capacity;
-            }
-            else
-            {
-                ((PartyLiveActorView *)live_capacity)->effect_footprint_strength = 0xFFU;
-            }
-            if ((((PartySaveView *)(D_80122B74 + ((party_index * 0x25) << 4)))->type & 0x7F) == 3)
+            if ((D_80122B74->characters[party_index].info.bytes[0] & 0x7F) == FIELD_CHARACTER_TYPE_COMPANION)
             {
                 func_800B3D84();
             }
             active_count += 1;
         }
         party_index += 1;
-    } while (party_index < 3);
+    } while (party_index < FIELD_PARTY_SIZE);
     return active_count;
 }
 
-
-
-
-
 /**
- * @brief Report an invalid scene index, then forward the selected scene value.
- *
- * Reads the active scene index at offset 0x2EF0 of the D_80122B74 buffer; if it
- * is 5 or greater it records a diagnostic, then forwards the scene
- * entry's 0x2F3C word (stride 0x60) to func_800BD520.
- *
- * Matches under GCC 2.8.0. The pre-diagnostic scene index and the index
- * reloaded afterward are distinct value webs; materializing the second
- * index's 0x60-byte offset reproduces the target allocation exactly.
+ * @brief Report an out-of-range region index, then publish the current region's value.
  */
 void func_800B3D84(void)
 {
-    s32 idx1;
-    s32 idx2;
-    s32 off;
-
-    idx1 = *(s32 *)(D_80122B74 + 0x2EF0);
-    if ((u32)idx1 >= 5)
+    if (D_80122B74->region_index < 0 || D_80122B74->region_index >= FIELD_REGION_COUNT)
     {
-        record_game_diagnostic(0x8001, 0x75, idx1, 0);
+        record_game_diagnostic(0x8001, 0x75, D_80122B74->region_index, 0);
     }
-
-    idx2 = *(s32 *)(D_80122B74 + 0x2EF0);
-    off = idx2 * 0x60;
-    func_800BD520(2, 0xF020, *(s32 *)(D_80122B74 + off + 0x2F3C));
+    func_800BD520(2, 0xF020, D_80122B74->regions[D_80122B74->region_index].unk48.word);
 }

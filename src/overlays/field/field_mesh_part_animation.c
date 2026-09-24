@@ -1,385 +1,295 @@
 /** @file field_mesh_part_animation.c
- * @brief Copy mesh state and update the animated sprite parts used by the mesh renderer.
+ * @brief Copy matrix rotations and animate the VRAM texture parts of actor meshes.
  */
 
 #include "common.h"
+#include "field_effect_types.h"
+#include "field_actor_runtime.h"
+#include "field_mesh.h"
+#include "field_mesh_transform.h"
+#include "sdk/libgpu.h"
 
+/** @brief First part effect kind that renders a mesh; kinds up to FIELD_PART_MESH_LAST select meshes 2..0. */
+#define FIELD_PART_MESH_FIRST 0xF7
+/** @brief Part effect kind that renders mesh 0. */
+#define FIELD_PART_MESH_LAST 0xF9
+/** @brief Number of mesh effect kinds. */
+#define FIELD_PART_MESH_KIND_COUNT 3
+
+/** @brief Texture scroll directions accepted by func_8008343C. */
+enum
+{
+    FIELD_MESH_TEXTURE_SCROLL_UP = 0,
+    FIELD_MESH_TEXTURE_SCROLL_DOWN = 1,
+    FIELD_MESH_TEXTURE_SCROLL_LEFT = 2,
+    FIELD_MESH_TEXTURE_SCROLL_RIGHT = 3
+};
+
+/** @brief VRAM column of the first actor-owned mesh texture page. */
+#define FIELD_MESH_TEXTURE_OWNER_VRAM_X 0x340
+/** @brief VRAM row of the actor-owned mesh texture pages. */
+#define FIELD_MESH_TEXTURE_OWNER_VRAM_Y 0x100
+/** @brief VRAM column of the shared mesh texture page. */
+#define FIELD_MESH_TEXTURE_SHARED_VRAM_X 0x140
+
+/** @brief Rotation part of a MATRIX (the 3x3 terms and padding) as five words. */
 typedef struct
 {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-    s32 unk10;
-} UnkStruct14;
+    s32 words[5];
+} FieldMatrixRotationWords;
 
-void func_800832F0(UnkStruct14 *arg0, UnkStruct14 *arg1)
-{
-    arg0->unk0 = arg1->unk0;
-    arg0->unk4 = arg1->unk4;
-    arg0->unk8 = arg1->unk8;
-    arg0->unkC = arg1->unkC;
-    arg0->unk10 = arg1->unk10;
-}
-
-typedef struct
-{
-    u32 unk0;         /* 0x00 */
-    s32 unk4;         /* 0x04 */
-    u8  unk8[3];      /* 0x08 */
-    u8  unkB;         /* 0x0B */
-    u8  unkC[6];      /* 0x0C */
-    u8  unk12;        /* 0x12 */
-    u8  unk13[0x35];  /* 0x13, stride 0x48 */
-} UnkPartEntry;
+s32 func_8008343C(s32 mesh_index, s32 direction, FieldActorState *actor, s32 shift);
+void func_80083868(s32 mesh_index, s32 frame, FieldActorState *actor);
 
 /**
+ * @brief Copy the rotation terms of one matrix into another.
+ * @param dst Matrix receiving the rotation; its translation is unchanged.
+ * @param src Matrix supplying the rotation.
+ */
+void func_800832F0(MATRIX *dst, MATRIX *src)
+{
+    FieldMatrixRotationWords *to = (FieldMatrixRotationWords *)dst;
+    FieldMatrixRotationWords *from = (FieldMatrixRotationWords *)src;
+
+    to->words[0] = from->words[0];
+    to->words[1] = from->words[1];
+    to->words[2] = from->words[2];
+    to->words[3] = from->words[3];
+    to->words[4] = from->words[4];
+}
+
+/**
+ * @brief Advance the texture animation of every mesh part of an actor.
+ * @param actor Actor that owns the parts and their frame counters.
+ * @param parts Part definitions of @p actor.
+ * @param part_count Number of entries in @p parts.
  * @see decomp.me (100%) local match - no scratch link created.
  */
-void func_8008332C(u8 *arg0, UnkPartEntry *arg1, s32 arg2)
+void func_8008332C(FieldActorState *actor, FieldActorPartDef *parts, s32 part_count)
 {
-    s32 var_s1;
-    u32 temp_a3;
-    u8 temp_v0_2;
-    u8 temp_test;
-    s32 temp_a0;
+    s32 i;
 
-    for (var_s1 = 0; var_s1 < arg2; var_s1++)
+    for (i = 0; i < part_count; i++)
     {
-        temp_test = (arg1[var_s1].unkB + 9) & 0xFF;
-        if ((u32) temp_test < 3U)
+        if ((u8)(parts[i].effect_kind - FIELD_PART_MESH_FIRST) < FIELD_PART_MESH_KIND_COUNT)
         {
-            if (arg1[var_s1].unk4 & 1)
+            if (parts[i].behavior_flags.word & 1)
             {
-                temp_a3 = arg1[var_s1].unk0;
-                func_8008343C(0xF9 - arg1[var_s1].unkB, temp_a3 & 3, arg0, ((temp_a3 >> 8) & 7) + 1);
+                u32 flags = parts[i].track_flags.word;
+                func_8008343C(FIELD_PART_MESH_LAST - parts[i].effect_kind, flags & 3, actor, ((flags >> 8) & 7) + 1);
             }
-            if (((u32) arg1[var_s1].unk0 >> 0x16) & 1)
+            if ((parts[i].track_flags.word >> 22) & 1)
             {
-                if ((arg1[var_s1].unk12 != 0) && (field_get_track_counter_modulo(arg0, arg1[var_s1].unk12) == 0))
+                if (parts[i].unknown_0x12 != 0 && field_get_track_counter_modulo((s32)actor, parts[i].unknown_0x12) == 0)
                 {
-                    temp_a0 = 0xF9 - arg1[var_s1].unkB;
-                    temp_v0_2 = (arg0 + var_s1)[0x2B] + 1;
-                    (arg0 + var_s1)[0x2B] = temp_v0_2;
-                    func_80083868(temp_a0, temp_v0_2 & 0xFF, arg0);
+                    s32 mesh_index = FIELD_PART_MESH_LAST - parts[i].effect_kind;
+                    u8 frame = ++actor->unknown_0x2b[i];
+                    func_80083868(mesh_index, frame, actor);
                 }
             }
         }
     }
 }
 
-typedef struct
-{
-    s16 x;
-    s16 y;
-    s16 w;
-    s16 h;
-} RECT;
-
-typedef struct
-{
-    u8 unk0;
-    u8 unk1;
-    u8 unk2;   /* width */
-    u8 unk3;   /* height */
-    u16 *unk4; /* pixel data */
-} PartEntry;   /* 0x8 */
-
-typedef struct
-{
-    u8 pad0[2];
-    u8 unk2;          /* part count */
-    u8 pad3;
-    PartEntry *unk4;  /* parts array */
-    u8 pad8[0x18 - 0x8];
-} ActorEntry;         /* 0x18 */
-
-typedef struct
-{
-    u8 pad0[0x18];
-    ActorEntry *unk18;
-    u8 pad1C[0x228 - 0x1C];
-    u8 unk228;
-} FieldCtx;
-
 /**
- * @brief Rotate or shift each mesh part and upload the updated pixels to VRAM.
- * @param actor_index Actor index in the field actor array.
- * @param mode Pixel rotation/shift mode in the range 0 through 3.
- * @param field_ctx Field context containing the actor array and VRAM page selector.
- * @param shift_count Number of rows or columns moved to the opposite edge.
- * @return Zero after all parts have been processed.
+ * @brief Scroll every texture part of an actor mesh and upload it to VRAM.
+ * @param mesh_index Mesh record in the actor's mesh table.
+ * @param direction FIELD_MESH_TEXTURE_SCROLL_* direction.
+ * @param actor Actor that owns the mesh; its owner slot selects the VRAM page.
+ * @param shift Number of rows or columns moved to the opposite edge.
+ * @return Unspecified; no value is returned and callers ignore it.
  */
-s32 func_8008343C(s32 actor_index, s32 mode, FieldCtx *field_ctx, s32 shift_count)
+s32 func_8008343C(s32 mesh_index, s32 direction, FieldActorState *actor, s32 shift)
 {
     RECT rect;
-    ActorEntry *actor;
-    PartEntry *part;
+    FieldMeshTexturePart *part;
     u16 *scratch;
-    u16 *cursor_a;
-    u16 *cursor_b;
-    u16 *cursor_c;
+    u16 *src;
+    u16 *dst;
+    u16 *row;
     s32 count;
-    u16 pixel;
-    u8 width;
     s32 row_count;
-    s32 row_stride;
+    u8 width;
     s32 part_index;
-    ActorEntry *actors;
-    s32 actor_index_x2;
-    s32 actor_index_x3;
-    s32 result;
 
     scratch = (u16 *)0x1F800000;
-    actor_index_x2 = actor_index * 2;
-    actor_index_x3 = actor_index_x2 + actor_index;
-    do
+    for (part_index = 0; part_index < FIELD_ACTOR_MESH(actor, mesh_index)->texture_part_count; part_index++)
     {
-        part_index = 0;
-    } while (0);
-    actors = field_ctx->unk18;
-    actor = (ActorEntry *)((actor_index_x3 * 8) + (s32)actors);
-    result = actor->unk2;
-    if (result != 0)
-    {
-        row_stride = shift_count * 2;
-        do
+        part = &FIELD_ACTOR_MESH(actor, mesh_index)->texture_parts[part_index];
+        switch (direction)
         {
-            actor = (ActorEntry *)((((actor_index_x2 + actor_index) * 8) + (s32)actors));
-            part = &actor->unk4[part_index];
-            switch (mode)
+        case FIELD_MESH_TEXTURE_SCROLL_UP:
+            src = part->pixels;
+            count = part->width * shift;
+            dst = src;
+            while (count != 0)
             {
-            case 0:
-                cursor_a = part->unk4;
-                count = part->unk2 * shift_count;
-                cursor_b = cursor_a;
-                if (count != 0)
-                {
-                    do
-                    {
-                        count -= 1;
-                        pixel = *cursor_a;
-                        cursor_a += 1;
-                        *scratch = pixel;
-                        scratch += 1;
-                    } while (count != 0);
-                }
-                count = part->unk2 * (part->unk3 - shift_count);
-                if (count != 0)
-                {
-                    do
-                    {
-                        count -= 1;
-                        pixel = *cursor_a;
-                        cursor_a += 1;
-                        *cursor_b = pixel;
-                        cursor_b += 1;
-                    } while (count != 0);
-                }
-                count = part->unk2 * shift_count;
-                scratch = (u16 *)0x1F800000;
-                if (count != 0)
-                {
-                    do
-                    {
-                        count -= 1;
-                        pixel = *scratch;
-                        scratch += 1;
-                        *cursor_b = pixel;
-                        cursor_b += 1;
-                    } while (count != 0);
-                }
-                break;
-            case 1:
-                width = part->unk2;
-                cursor_a = &part->unk4[width * part->unk3] - 1;
-                count = width * shift_count;
-                cursor_b = cursor_a;
-                if (count != 0)
-                {
-                    do
-                    {
-                        count -= 1;
-                        pixel = *cursor_a;
-                        cursor_a -= 1;
-                        *scratch = pixel;
-                        scratch += 1;
-                    } while (count != 0);
-                }
-                count = part->unk2 * (part->unk3 - shift_count);
-                if (count != 0)
-                {
-                    do
-                    {
-                        count -= 1;
-                        pixel = *cursor_a;
-                        cursor_a -= 1;
-                        *cursor_b = pixel;
-                        cursor_b -= 1;
-                    } while (count != 0);
-                }
-                count = part->unk2 * shift_count;
-                scratch = (u16 *)0x1F800000;
-                if (count != 0)
-                {
-                    do
-                    {
-                        count -= 1;
-                        pixel = *scratch;
-                        scratch += 1;
-                        *cursor_b = pixel;
-                        cursor_b -= 1;
-                    } while (count != 0);
-                }
-                break;
-            case 2:
-                row_count = part->unk3;
-                cursor_a = part->unk4;
-                if (row_count != 0)
-                {
-                    do
-                    {
-                        count = 0;
-                        if (shift_count != 0)
-                        {
-                            cursor_b = scratch;
-                            cursor_c = cursor_a;
-                            do
-                            {
-                                pixel = *cursor_c;
-                                cursor_c += 1;
-                                count += 1;
-                                *cursor_b = pixel;
-                                cursor_b += 1;
-                            } while (count != shift_count);
-                        }
-                        count = part->unk2 - shift_count;
-                        if (count != 0)
-                        {
-                            do
-                            {
-                                count -= 1;
-                                *cursor_a = *(u16 *)(row_stride + (s32)cursor_a);
-                                cursor_a += 1;
-                            } while (count != 0);
-                        }
-                        count = 0;
-                        if (shift_count != 0)
-                        {
-                            cursor_c = scratch;
-                            do
-                            {
-                                pixel = *cursor_c;
-                                cursor_c += 1;
-                                count += 1;
-                                *cursor_a = pixel;
-                                cursor_a += 1;
-                            } while (count != shift_count);
-                        }
-                        row_count -= 1;
-                    } while (row_count != 0);
-                }
-                break;
-            case 3:
-                cursor_a = &part->unk4[part->unk2 * part->unk3] - 1;
-                row_count = part->unk3;
-                if (row_count != 0)
-                {
-                    do
-                    {
-                        count = 0;
-                        if (shift_count != 0)
-                        {
-                            cursor_b = scratch;
-                            cursor_c = cursor_a;
-                            do
-                            {
-                                pixel = *cursor_c;
-                                cursor_c -= 1;
-                                count += 1;
-                                *cursor_b = pixel;
-                                cursor_b += 1;
-                            } while (count != shift_count);
-                        }
-                        count = part->unk2 - shift_count;
-                        if (count != 0)
-                        {
-                            do
-                            {
-                                count -= 1;
-                                *cursor_a = *(u16 *)((u8 *)cursor_a - row_stride);
-                                cursor_a -= 1;
-                            } while (count != 0);
-                        }
-                        count = 0;
-                        if (shift_count != 0)
-                        {
-                            cursor_c = scratch;
-                            do
-                            {
-                                pixel = *cursor_c;
-                                cursor_c += 1;
-                                count += 1;
-                                *cursor_a = pixel;
-                                cursor_a -= 1;
-                            } while (count != shift_count);
-                        }
-                        row_count -= 1;
-                    } while (row_count != 0);
-                }
-                break;
+                count--;
+                *scratch++ = *src++;
             }
-            if ((u8) field_ctx->unk228 < 2U)
+            count = part->width * (part->height - shift);
+            while (count != 0)
             {
-                rect.x = (field_ctx->unk228 << 6) + (part->unk0 + 0x340);
-                rect.y = part->unk1 + 0x100;
+                count--;
+                *dst++ = *src++;
             }
-            else
+            count = part->width * shift;
+            scratch = (u16 *)0x1F800000;
+            while (count != 0)
             {
-                rect.x = part->unk0 + 0x140;
-                rect.y = part->unk1;
+                count--;
+                *dst++ = *scratch++;
             }
-            rect.w = part->unk2;
-            rect.h = part->unk3;
-            LoadImage(&rect, part->unk4);
-            actor_index_x2 = actor_index * 2;
-            actors = field_ctx->unk18;
-            part_index += 1;
-            actor = (ActorEntry *)((((actor_index_x2 + actor_index) * 8) + (s32)actors));
-            result = part_index < (s32)actor->unk2;
-        } while (result != 0);
+            break;
+
+        case FIELD_MESH_TEXTURE_SCROLL_DOWN:
+            width = part->width;
+            src = &part->pixels[width * part->height] - 1;
+            count = width * shift;
+            dst = src;
+            while (count != 0)
+            {
+                count--;
+                *scratch++ = *src--;
+            }
+            count = part->width * (part->height - shift);
+            while (count != 0)
+            {
+                count--;
+                *dst-- = *src--;
+            }
+            count = part->width * shift;
+            scratch = (u16 *)0x1F800000;
+            while (count != 0)
+            {
+                count--;
+                *dst-- = *scratch++;
+            }
+            break;
+
+        case FIELD_MESH_TEXTURE_SCROLL_LEFT:
+            row_count = part->height;
+            src = part->pixels;
+            if (row_count != 0)
+            {
+                do
+                {
+                    count = 0;
+                    if (shift != 0)
+                    {
+                        dst = scratch;
+                        row = src;
+                        do
+                        {
+                            *dst++ = *row++;
+                            count++;
+                        } while (count != shift);
+                    }
+                    count = part->width - shift;
+                    while (count != 0)
+                    {
+                        count--;
+                        *src = *(src + shift);
+                        src++;
+                    }
+                    count = 0;
+                    if (shift != 0)
+                    {
+                        row = scratch;
+                        do
+                        {
+                            *src++ = *row++;
+                            count++;
+                        } while (count != shift);
+                    }
+                    row_count--;
+                } while (row_count != 0);
+            }
+            break;
+
+        case FIELD_MESH_TEXTURE_SCROLL_RIGHT:
+            src = &part->pixels[part->width * part->height] - 1;
+            row_count = part->height;
+            if (row_count != 0)
+            {
+                do
+                {
+                    count = 0;
+                    if (shift != 0)
+                    {
+                        dst = scratch;
+                        row = src;
+                        do
+                        {
+                            *dst++ = *row--;
+                            count++;
+                        } while (count != shift);
+                    }
+                    count = part->width - shift;
+                    while (count != 0)
+                    {
+                        count--;
+                        *src = *(src - shift);
+                        src--;
+                    }
+                    count = 0;
+                    if (shift != 0)
+                    {
+                        row = scratch;
+                        do
+                        {
+                            *src-- = *row++;
+                            count++;
+                        } while (count != shift);
+                    }
+                    row_count--;
+                } while (row_count != 0);
+            }
+            break;
+        }
+        if (actor->owner_object_index < 2)
+        {
+            rect.x = (actor->owner_object_index << 6) + (part->x + FIELD_MESH_TEXTURE_OWNER_VRAM_X);
+            rect.y = part->y + FIELD_MESH_TEXTURE_OWNER_VRAM_Y;
+        }
+        else
+        {
+            rect.x = part->x + FIELD_MESH_TEXTURE_SHARED_VRAM_X;
+            rect.y = part->y;
+        }
+        rect.w = part->width;
+        rect.h = part->height;
+        LoadImage(&rect, (u_long *)part->pixels);
     }
-    return result;
 }
 
 /**
- * @brief Reload one part of an actor sprite (selected by arg1 modulo the part
- *        count) into VRAM via LoadImage, using the base part's RECT dimensions.
- * @param arg0 Actor index into arg2->unk18[].
- * @param arg1 Part selector; the part used is arg1 % actor->unk2.
- * @param arg2 Field context; unk18 is the actor array, unk228 selects the VRAM
- *             destination page.
+ * @brief Upload one animation frame of an actor mesh texture to VRAM.
+ * @param mesh_index Mesh record in the actor's mesh table.
+ * @param frame Frame counter; the frame shown is @p frame modulo the part count.
+ * @param actor Actor that owns the mesh; its owner slot selects the VRAM page.
+ * @note Every frame is uploaded into the rectangle of the first texture part.
  * @see decomp.me (100%) local match - no scratch link created.
  */
-void func_80083868(s32 arg0, s32 arg1, FieldCtx *arg2)
+void func_80083868(s32 mesh_index, s32 frame, FieldActorState *actor)
 {
     RECT rect;
-    PartEntry *base;
-    PartEntry *part;
+    FieldMeshTexturePart *base;
+    FieldMeshTexturePart *part;
 
-    base = arg2->unk18[arg0].unk4;
-    part = &base[arg1 % (s32) arg2->unk18[arg0].unk2];
-    if ((u8) arg2->unk228 < 2U)
+    base = FIELD_ACTOR_MESH(actor, mesh_index)->texture_parts;
+    part = &base[frame % (s32)FIELD_ACTOR_MESH(actor, mesh_index)->texture_part_count];
+    if (actor->owner_object_index < 2)
     {
-        rect.x = (arg2->unk228 << 6) + (base->unk0 + 0x340);
-        rect.y = base->unk1 + 0x100;
+        rect.x = (actor->owner_object_index << 6) + (base->x + FIELD_MESH_TEXTURE_OWNER_VRAM_X);
+        rect.y = base->y + FIELD_MESH_TEXTURE_OWNER_VRAM_Y;
     }
     else
     {
-        rect.x = base->unk0 + 0x140;
-        rect.y = base->unk1;
+        rect.x = base->x + FIELD_MESH_TEXTURE_SHARED_VRAM_X;
+        rect.y = base->y;
     }
-    rect.w = base->unk2;
-    rect.h = base->unk3;
-    LoadImage(&rect, part->unk4);
+    rect.w = base->width;
+    rect.h = base->height;
+    LoadImage(&rect, (u_long *)part->pixels);
 }

@@ -1,7 +1,54 @@
 #include "saved_game.h"
 #include "common.h"
 
+/*
+ * Equipment combination rules.
+ *
+ * equipment_combination_variant scores a selected pair; every other function
+ * here is one entry of the 64-entry g_equipment_combination_rule_table. equipment_combination_find walks that
+ * table with the pair of equipment records the player selected and stops at
+ * the first rule that returns nonzero; the rule's index is the id of the
+ * item the pair combines into.
+ *
+ * A rule asks equipment_pair_has_classes whether the two records hold one
+ * item of class A and one item of class B. A class folds an equipment kind
+ * (weapon, armor, instrument) and its category into a single id so a rule
+ * can name any item type with one number.
+ */
 
+/* Equipment class ids: weapons 0-10, armor 11-22, instruments 23 and up. */
+#define EQUIP_CLASS_ARMOR_BASE 11
+#define EQUIP_CLASS_INSTRUMENT_BASE 23
+#define EQUIP_CLASS_WEAPON(category) (category)
+#define EQUIP_CLASS_ARMOR(category) ((category) + EQUIP_CLASS_ARMOR_BASE)
+#define EQUIP_CLASS_INSTRUMENT(category) ((category) + EQUIP_CLASS_INSTRUMENT_BASE)
+
+/** @brief Equipment record view exposing the packed class word. */
+typedef struct
+{
+    u8 pad[0xCF4];
+    u32 flags;
+} EquipmentView;
+
+/** @brief View of one save-data equipment record exposing its material halfword. */
+typedef struct
+{
+    u8 pad[0xCF6];
+    u16 material;
+} EquipmentMaterialView;
+
+extern s32 equipment_combination_variant(s32*);
+extern s32 equipment_combination_quantity(s32*);
+extern u8 g_equipment_combination_quantity_scale[];
+extern s32 (*g_equipment_combination_rule_table[])(s32*);
+/**
+ * @brief Test whether a pair of equipment records holds one item of each class.
+ * @param class_a Equipment class required of one record.
+ * @param class_b Equipment class required of the other record.
+ * @param record_indices Two indices into the save-data equipment table.
+ * @return 1 when one record is class_a and the other is class_b, otherwise 0.
+ */
+s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32* record_indices);
 
 /**
  * @brief Calculate the quantity contribution for a pair of equipment records.
@@ -56,7 +103,7 @@ s32 equipment_combination_quantity(s32* record_indices)
             {
                 total_quantity += *(u8*)(record_offset + quantity_base + 0x26);
             }
-next_record:
+        next_record:
             record_cursor += 4;
         }
     } while (record_cursor < record_end);
@@ -78,14 +125,6 @@ next_record:
     return result;
 }
 
-
-/** @brief Equipment record view exposing the packed class word. */
-typedef struct
-{
-    u8 pad[0xCF4];
-    u32 flags;
-} EquipmentView;
-
 /**
  * @brief Test whether two equipment records supply one item of each requested class.
  * @param class_a Class required of one record.
@@ -96,7 +135,7 @@ typedef struct
  * reproduces the target's temporary allocation without forcing registers.
  * @note GCC 2.8.0 G0: 100% match, 71 instructions (284 bytes).
  */
-s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32 *record_indices)
+s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32* record_indices)
 {
     s32 classes[2];
     s32 i;
@@ -105,13 +144,13 @@ s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32 *record_indices)
     i = 0;
     do
     {
-        j = (((EquipmentView *)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 10) & 0x3F;
+        j = (((EquipmentView*)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 10) & 0x3F;
         classes[i] = j;
-        if (((((EquipmentView *)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 8) & 3) == 1)
+        if (((((EquipmentView*)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 8) & 3) == 1)
         {
             classes[i] = j + 11;
         }
-        if (((((EquipmentView *)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 8) & 3) == 2)
+        if (((((EquipmentView*)(g_saved_game.bytes + (*record_indices << 6)))->flags >> 8) & 3) == 2)
         {
             classes[i] += 23;
         }
@@ -138,11 +177,6 @@ s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32 *record_indices)
     return 0;
 }
 
-extern s32 equipment_combination_variant(s32 *);
-extern s32 equipment_combination_quantity(s32 *);
-extern u8 g_equipment_combination_quantity_scale[];
-extern s32 (*g_equipment_combination_rule_table[])(s32 *);
-
 /**
  * @brief Find the first equipment rule matching the supplied record pair.
  * @param record_indices Two equipment-record indices tested by each rule.
@@ -152,7 +186,7 @@ extern s32 (*g_equipment_combination_rule_table[])(s32 *);
  * @note Preserve both variant stores and the indexed rule-table call.
  * @note GCC 2.8.0 G0: 100% match, 58 instructions (232 bytes).
  */
-s32 equipment_combination_find(s32 *record_indices, s32 *quantity, s32 *variant)
+s32 equipment_combination_find(s32* record_indices, s32* quantity, s32* variant)
 {
     s32 index;
     s32 value;
@@ -185,46 +219,6 @@ s32 equipment_combination_find(s32 *record_indices, s32 *quantity, s32 *variant)
     } while (index < 64);
     return 0;
 }
-
-/*
- * Equipment combination rules.
- *
- * equipment_combination_variant scores a selected pair; every other function
- * here is one entry of the 64-entry g_equipment_combination_rule_table. equipment_combination_find walks that
- * table with the pair of equipment records the player selected and stops at
- * the first rule that returns nonzero; the rule's index is the id of the
- * item the pair combines into.
- *
- * A rule asks equipment_pair_has_classes whether the two records hold one
- * item of class A and one item of class B. A class folds an equipment kind
- * (weapon, armor, instrument) and its category into a single id so a rule
- * can name any item type with one number.
- */
-
-/* Equipment class ids: weapons 0-10, armor 11-22, instruments 23 and up. */
-#define EQUIP_CLASS_ARMOR_BASE 11
-#define EQUIP_CLASS_INSTRUMENT_BASE 23
-#define EQUIP_CLASS_WEAPON(category) (category)
-#define EQUIP_CLASS_ARMOR(category) ((category) + EQUIP_CLASS_ARMOR_BASE)
-#define EQUIP_CLASS_INSTRUMENT(category) ((category) + EQUIP_CLASS_INSTRUMENT_BASE)
-
-
-
-/** @brief View of one save-data equipment record exposing its material halfword. */
-typedef struct
-{
-    u8 pad[0xCF6];
-    u16 material;
-} EquipmentMaterialView;
-
-/**
- * @brief Test whether a pair of equipment records holds one item of each class.
- * @param class_a Equipment class required of one record.
- * @param class_b Equipment class required of the other record.
- * @param record_indices Two indices into the save-data equipment table.
- * @return 1 when one record is class_a and the other is class_b, otherwise 0.
- */
-s32 equipment_pair_has_classes(s32 class_a, s32 class_b, s32* record_indices);
 
 /**
  * @brief Derive the variant of the item two equipment records combine into.

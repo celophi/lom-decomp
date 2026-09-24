@@ -1,14 +1,24 @@
+/** @file field_fade.c
+ * @brief Field screen fade: target colors and the per-frame blend tile.
+ */
+
 #include "common.h"
 #include "display.h"
+#include "field_runtime.h"
 #include "gpu_packet.h"
 #include "sdk/libgte.h"
 #include "sdk/libgpu.h"
 
+/** @brief Ordering-table entry the fade packets are linked into. */
 #define FIELD_FADE_OT_INDEX 0x10
+/** @brief Fade channel value that leaves the screen unchanged. */
 #define FIELD_FADE_NEUTRAL 0x100
+/** @brief Smallest red value drawn with additive blending. */
 #define FIELD_FADE_ADDITIVE_THRESHOLD (FIELD_FADE_NEUTRAL + 1)
-#define FIELD_FADE_ADDITIVE_DRAW_MODE 0x25
-#define FIELD_FADE_SUBTRACTIVE_DRAW_MODE 0x45
+/** @brief Texture-page word for the additive blend pass. */
+#define FIELD_FADE_ADDITIVE_DRAW_MODE getTPage(0, 1, 320, 0)
+/** @brief Texture-page word for the subtractive blend pass. */
+#define FIELD_FADE_SUBTRACTIVE_DRAW_MODE getTPage(0, 2, 320, 0)
 
 /** @brief Packet view for a fade TILE or draw-mode command. */
 typedef union
@@ -17,38 +27,29 @@ typedef union
     DR_TPAGE draw_mode;
 } FieldFadePrimitive;
 
-/** Advance a fade packet cursor by the concrete packet just emitted. */
-#define FIELD_NEXT_FADE_PRIMITIVE(primitive, type) \
-    ((FieldFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+/** @brief Advance a fade packet cursor by the concrete packet just emitted. */
+#define FIELD_NEXT_FADE_PRIMITIVE(primitive, type) ((FieldFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /**
- * @brief Fade colour triple plus its remaining step count.
- * @note The 4th field is the transition duration in frames when set as a
- *       target, and the count of remaining interpolation steps while the fade
- *       is being advanced; they are the same 0x06 slot.
+ * @brief Fade color triple plus its remaining step count.
+ * @note @c duration is the transition length in frames when set as a target,
+ *       and the number of remaining interpolation steps while the fade runs.
  */
 typedef struct
 {
-    s16 red;                // 0x00
-    s16 green;              // 0x02
-    s16 blue;               // 0x04
-    s16 duration;           // 0x06
+    s16 red;
+    s16 green;
+    s16 blue;
+    s16 duration;
 } FieldFade;
 
-/** @brief Saved fade colour with no step/duration field. */
+/** @brief Saved fade color with no step/duration field. */
 typedef struct
 {
-    s16 red;                // 0x00
-    s16 green;              // 0x02
-    s16 blue;               // 0x04
+    s16 red;
+    s16 green;
+    s16 blue;
 } FieldFadeColor;
-
-typedef struct
-{
-    u_long otag[0x1010];                 // 0x0000
-    u8 _pad[0x40B8 - 0x4040];            // 0x4040
-    FieldFadePrimitive* cursor;          // 0x40B8
-} RenderHalf;
 
 extern FieldFade g_field_fade_current;
 extern FieldFade g_field_fade_target;
@@ -58,7 +59,8 @@ extern FieldFadeColor g_field_fade_restore_color;
  * @brief Reset the current and target field fade colors.
  * @see decomp.me (100%) TODO
  */
-void field_reset_fade_state(void) {
+void field_reset_fade_state(void)
+{
     g_field_fade_current.red = 0;
     g_field_fade_current.green = 0;
     g_field_fade_current.blue = 0;
@@ -70,13 +72,13 @@ void field_reset_fade_state(void) {
 
 /**
  * @brief Advance the screen fade one step and emit its blend tile + draw mode.
- * @param ctx Render half whose OT slot 0x40 the packets are linked into.
+ * @param ctx Render half whose ordering-table entry FIELD_FADE_OT_INDEX receives the packets.
  * @see decomp.me (100%) TODO
  */
-void field_update_and_render_fade(RenderHalf* ctx)
+void field_update_and_render_fade(FieldRenderHalf* ctx)
 {
-    FieldFadePrimitive* primitive = ctx->cursor;
-    u_long* ordering_table_tag = &ctx->otag[FIELD_FADE_OT_INDEX];
+    FieldFadePrimitive* primitive = (FieldFadePrimitive*)ctx->primitive_cursor;
+    u_long* ordering_table_tag = &ctx->ordering_table[FIELD_FADE_OT_INDEX];
     s32 dr;
     s32 dg;
     s32 db;
@@ -98,14 +100,12 @@ void field_update_and_render_fade(RenderHalf* ctx)
         g_field_fade_current.green = g_field_fade_target.green;
         g_field_fade_current.blue = g_field_fade_target.blue;
     }
-    if ((g_field_fade_current.red != FIELD_FADE_NEUTRAL) ||
-        (g_field_fade_current.green != g_field_fade_current.red) ||
+    if ((g_field_fade_current.red != FIELD_FADE_NEUTRAL) || (g_field_fade_current.green != g_field_fade_current.red) ||
         (g_field_fade_current.blue != g_field_fade_current.green))
     {
         if (g_field_fade_current.red >= FIELD_FADE_ADDITIVE_THRESHOLD)
         {
-            setRGB0(&primitive->tile, g_field_fade_current.red - 1, g_field_fade_current.green - 1,
-                    g_field_fade_current.blue - 1);
+            setRGB0(&primitive->tile, g_field_fade_current.red - 1, g_field_fade_current.green - 1, g_field_fade_current.blue - 1);
         }
         else
         {
@@ -153,7 +153,7 @@ void field_update_and_render_fade(RenderHalf* ctx)
 
         primitive = FIELD_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
     }
-    ctx->cursor = primitive;
+    ctx->primitive_cursor = (u8*)primitive;
 }
 
 /**
@@ -164,7 +164,8 @@ void field_update_and_render_fade(RenderHalf* ctx)
  * @param duration Transition duration in frames.
  * @see decomp.me (100%) TODO
  */
-void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration) {
+void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration)
+{
     g_field_fade_target.red = red;
     g_field_fade_restore_color.red = red;
     g_field_fade_target.green = green;
@@ -178,7 +179,8 @@ void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration) {
  * @brief Set the field fade target used by the CD error overlay.
  * @see decomp.me (100%) TODO
  */
-void field_set_cd_error_fade_target(void) {
+void field_set_cd_error_fade_target(void)
+{
     g_field_fade_target.red = 0xD0;
     g_field_fade_target.green = 0x100;
     g_field_fade_target.blue = 0x100;
@@ -193,7 +195,8 @@ void field_set_cd_error_fade_target(void) {
  * @param duration Transition duration in frames.
  * @see decomp.me (100%) TODO
  */
-void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration) {
+void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration)
+{
     g_field_fade_target.red = red;
     g_field_fade_target.green = green;
     g_field_fade_target.blue = blue;
@@ -204,7 +207,8 @@ void field_set_fade_target_only(s16 red, s16 green, s16 blue, s16 duration) {
  * @brief Restore the saved field fade color over five frames.
  * @see decomp.me (100%) TODO
  */
-void field_restore_fade_target(void) {
+void field_restore_fade_target(void)
+{
     g_field_fade_target.duration = 5;
     g_field_fade_target.red = (u16)g_field_fade_restore_color.red;
     g_field_fade_target.green = (u16)g_field_fade_restore_color.green;
@@ -216,7 +220,8 @@ void field_restore_fade_target(void) {
  * @param duration Transition duration in frames.
  * @see decomp.me (100%) TODO
  */
-void field_restore_fade_target_with_duration(s16 duration) {
+void field_restore_fade_target_with_duration(s16 duration)
+{
     g_field_fade_target.duration = duration;
     g_field_fade_target.red = (u16)g_field_fade_restore_color.red;
     g_field_fade_target.green = (u16)g_field_fade_restore_color.green;
@@ -227,7 +232,8 @@ void field_restore_fade_target_with_duration(s16 duration) {
  * @brief Set the default modal-overlay fade target.
  * @see decomp.me (100%) TODO
  */
-void field_set_default_fade_target(void) {
+void field_set_default_fade_target(void)
+{
     g_field_fade_target.red = 0xC0;
     g_field_fade_target.green = 0xC0;
     g_field_fade_target.blue = 0xC0;

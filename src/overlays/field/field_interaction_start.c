@@ -4,6 +4,8 @@
 #include "saved_game.h"
 #include "common.h"
 #include "field_interaction_start.h"
+#include "field_records.h"
+#include "field_scene_internal.h"
 
 #define FIELD_ACTION_ENTRY_FLAG_MASK 0xF
 #define FIELD_ACTION_ACTIVE 0x80000000
@@ -87,55 +89,61 @@ typedef struct
     u8 default_group;
 } FieldActionLayout;
 
-/** @brief Field context state used by interaction and trigger processing. */
+/** @brief Region trigger record: bounds and the command started on entry (12 bytes). */
 typedef struct
 {
-    u8 pad0[0x44];
-    s32 positions[3];
-    u8 pad50[4];
-    s32 unk54;
-    s32 unk58;
-    u8 pad5C[0xB8 - 0x5C];
-    s32 unkB8;
-    u8 padBC[0x41C - 0xBC];
-    s32 unk41C;
-    u8 pad420[0xF00 - 0x420];
-    u8 *volatile unkF00;
-} TriggerContext;
-typedef TriggerContext Context;
-extern TriggerContext *D_80122B78;
-/** @brief Four-word actor position returned by the position query. */
-typedef struct
-{
-    s32 unk0, unk4, unk8, unkC;
-} Position;
-extern Position *D_80122B70;
+    u16 unk0;
+    u16 unk2;
+    u16 min_x;
+    u16 min_z;
+    u16 max_x;
+    u16 max_z;
+    u16 command;
+    u16 unkE;
+} FieldTriggerRegion;
 
-extern u8 *D_80122B74;
+/** @brief Player map position in whole units. */
+typedef struct
+{
+    u16 x;
+    u16 z;
+} FieldMapPoint;
+
+extern FieldGameState* D_80122B74;
+extern FieldRuntimeContext* D_80122B78;
+extern FieldCamera* D_80122B70;
+extern FieldRuntimeContext D_80122C00;
+extern s16 D_800EF600[];
+extern u8 D_800F0B48[];
+extern u16 g_music_track_index;
 
 void func_800B0BDC(void);
-s32 *func_800C1EC8(s32 *src, s32 *dest, s32 n);
+s32* func_800C1EC8(s32* src, s32* dest, s32 n);
 void func_800B0C10(void);
 void func_800B0C54(void);
 void func_800B0D3C(void);
 void func_800B0E80(void);
 void func_800B0EFC(void);
-extern s32 func_800BD414(s32 arg0, s32 arg1);
+s32 func_800BD414(s32 owner_id, s32 variable_id);
+void func_800BD520(s32 owner_id, u32 variable_id, s32 value);
+s32 func_800C3688(s32 track);
+s32 rand(void);
 
 /**
- * @brief Initializes the field menu/audio subsystem and flags queued song requests.
+ * @brief Initialize the field runtime context for a new scene.
+ * @note Reports a diagnostic when a present partner's script variable is still unset.
  */
 void func_800B0AF8(void)
 {
     func_800B0BDC();
-    func_800C1EC8(0, (s32 *)((u8 *)D_80122B78 + 0x400), 0xB04);
+    func_800C1EC8(NULL, (s32*)&D_80122B78->state, 0xB04);
     func_800B0C10();
     func_800B0C54();
     func_800B0D3C();
     func_800B0E80();
     func_800B0EFC();
 
-    if (D_80122B74[0x840] != 0)
+    if (D_80122B74->characters[1].name[0] != 0)
     {
         if (func_800BD414(0, 0x2F08) == 0xFF)
         {
@@ -143,7 +151,7 @@ void func_800B0AF8(void)
         }
     }
 
-    if (D_80122B74[0xA90] != 0)
+    if (D_80122B74->characters[2].name[0] != 0)
     {
         if (func_800BD414(0, 0x2F00) == 0xFF)
         {
@@ -152,54 +160,26 @@ void func_800B0AF8(void)
     }
 }
 
-
-typedef struct
-{
-    u8 pad0[0x404];
-    s32 unk404; /* 0x404 */
-    u8 pad408[0x410 - 0x408];
-    u32 unk410; /* 0x410 */
-    u32 unk414; /* 0x414 */
-} StructB78;
-
-
-extern s32 D_80122C00;
-extern u8* D_80122B74;
-
-
-/** @brief Bind the shared layout, context, and position buffers. */
+/** @brief Bind the game-state, runtime-context and camera pointers. */
 void func_800B0BDC(void)
 {
-    D_80122B74 = g_saved_game.bytes;
-    D_80122B78 = (Context *)&D_80122C00;
-    D_80122B70 = (Position *)0x801ED480;
+    D_80122B74 = (FieldGameState*)&g_saved_game;
+    D_80122B78 = &D_80122C00;
+    D_80122B70 = (FieldCamera*)0x801ED480;
 }
 
-
-/** @brief Reset pending scene and transition parameters. */
+/** @brief Reset the pending scene entry and the fade parameters. */
 void func_800B0C10(void)
 {
-    StructB78 *p;
-    u32 raw;
-    u32 v;
+    FieldRuntimeContext* context;
 
-    p = (StructB78 *)D_80122B78;
-    p->unk414 = 0x10;
-    p->unk404 = -1;
-    raw = p->unk410;
-    v = raw;
-    v &= 0xFFFFFC00;
-    v &= 0xFFF003FF;
-    v &= 0xC00FFFFF;
-    p->unk410 = v;
+    context = D_80122B78;
+    context->fade_timer = 0x10;
+    context->scene_entry = -1;
+    context->fade_color.bits.red = 0;
+    context->fade_color.bits.green = 0;
+    context->fade_color.bits.blue = 0;
 }
-
-
-extern u8* D_80122B74;
-extern s16 D_800EF600;
-
-s32 func_800BD414(s32 arg0, s32 arg1);
-void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
 
 /**
  * @brief Initialize the reserved field text macros and their default selection state.
@@ -207,25 +187,19 @@ void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
 void func_800B0C54(void)
 {
     s32 slot;
-    s32 last_slot;
-    FieldTextMacro* macros;
-    FieldTextMacro* macro;
 
     slot = 0;
-    macros = g_field_text_macros;
-    last_slot = 0xF;
     do
     {
-        macro = (FieldTextMacro*)(((last_slot - slot) * sizeof(*macro)) + (u32)macros);
-        macro->character_limit = 0x15;
-        macro->text = D_80122B74 + 0x5F0 + slot * 0x250;
+        g_field_text_macros[15 - slot].character_limit = 0x15;
+        g_field_text_macros[15 - slot].text = D_80122B74->characters[slot].name;
         slot++;
-    } while (slot < 3);
+    } while (slot < FIELD_PARTY_SIZE);
 
-    g_field_text_macros[0xC].character_limit = 0xFF;
-    g_field_text_macros[0xC].text = (u8*)&D_800EF600 + *(s16*)((u8*)&D_800EF600 + ((*(u16*)(D_80122B74 + 0x2E6) & 0x7F) * 2));
+    g_field_text_macros[12].character_limit = 0xFF;
+    g_field_text_macros[12].text = (u8*)D_800EF600 + *(s16*)((u8*)D_800EF600 + ((D_80122B74->control.fields.unk2E6 & 0x7F) * 2));
 
-    if ((func_800BD414(0, 0xA02) != 0) || ((*(s32*)(D_80122B74 + 0x858) & 0x80) != 0))
+    if ((func_800BD414(0, 0xA02) != 0) || ((D_80122B74->characters[1].info.word & 0x80) != 0))
     {
         func_800BD520(0, 0xA03, 1);
     }
@@ -235,7 +209,11 @@ void func_800B0C54(void)
     }
 }
 
-/** @brief Initialize actor IDs, event scripts, and script owner selectors. */
+/**
+ * @brief Initialize the party actor records and the script local-variable bases.
+ * @note Still the raw decompiler form: the natural typed loops reach 95.4% (register
+ *       coloring and the second loop's increment order); see the lane report.
+ */
 void func_800B0D3C(void)
 {
     s32 temp_v1;
@@ -254,15 +232,15 @@ void func_800B0D3C(void)
     s32 var_a3;
     s32 var_t1_2;
     s32 var_t1;
-    u8 *temp_a0;
-    u8 *var_t0;
-    u8 *base;
+    u8* temp_a0;
+    u8* var_t0;
+    u8* base;
 
     var_t1 = 0;
     do
     {
         var_a2 = var_t1 * 0x94;
-        temp_a0 = (u8 *)D_80122B78;
+        temp_a0 = (u8*)D_80122B78;
         temp_a0 += 1;
         temp_a0 -= 1;
         temp_a0 += var_a2;
@@ -270,38 +248,38 @@ void func_800B0D3C(void)
         var_a3 += 1;
         var_a3 += 1;
         var_a3 -= 2;
-        (*(u8 *)((u8 *)temp_a0 + 0x430)) = var_t1;
-        (*(s32 *)((u8 *)temp_a0 + 0x4C0)) |= 0x80000000;
+        (*(u8*)((u8*)temp_a0 + 0x430)) = var_t1;
+        (*(s32*)((u8*)temp_a0 + 0x4C0)) |= 0x80000000;
         invalid = 0xFFFF;
-        (*(s32 *)((u8 *)temp_a0 + 0x4C0)) &= 0xBFFFFFFF;
+        (*(s32*)((u8*)temp_a0 + 0x4C0)) &= 0xBFFFFFFF;
         mask_d = 0xDFFFFFFF;
         mask_d += (u32)temp_a0;
         mask_d -= (u32)temp_a0;
-        (*(s32 *)((u8 *)temp_a0 + 0x4C0)) &= mask_d;
+        (*(s32*)((u8*)temp_a0 + 0x4C0)) &= mask_d;
         var_a0 = var_a2;
-        (*(u8 *)((u8 *)(u8 *)D_80122B78 + var_a2 + 0x431)) = (s8) (var_t1 - 0x80);
-        (*(u8 *)((u8 *)(u8 *)D_80122B78 + var_a2 + 0x434)) = 0xFF;
+        (*(u8*)((u8*)(u8*)D_80122B78 + var_a2 + 0x431)) = (s8)(var_t1 - 0x80);
+        (*(u8*)((u8*)(u8*)D_80122B78 + var_a2 + 0x434)) = 0xFF;
         do
         {
             do
+            {
+                do
+                {
+                    do
                     {
                         do
-                                {
-                                    do
-                                            {
-                                                do
-                                                        {
-                                                            do
-                                                                    {
-                                                                        base = (u8 *)D_80122B78;
-                                                                    } while (0);
-                                                        } while (0);
-                                            } while (0);
-                                } while (0);
+                        {
+                            do
+                            {
+                                base = (u8*)D_80122B78;
+                            } while (0);
+                        } while (0);
                     } while (0);
+                } while (0);
+            } while (0);
         } while (0);
-loop_2:
-        (*(u16 *)(base + var_a0 + 0x438)) = invalid;
+    loop_2:
+        (*(u16*)(base + var_a0 + 0x438)) = invalid;
         var_a3 += 1;
         var_a0 += 2;
         if (var_a3 < 0x10)
@@ -309,196 +287,135 @@ loop_2:
             goto loop_2;
         }
         var_t1 += 1;
-        (*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400)) = (u16) ((*(u16 *)((u8 *)(u8 *)D_80122B78 + 0x400)) + 1);
+        (*(u16*)((u8*)(u8*)D_80122B78 + 0x400)) = (u16)((*(u16*)((u8*)(u8*)D_80122B78 + 0x400)) + 1);
     } while (var_t1 < 3);
     fixed_mask = 0xFFFF01FF;
     var_t1_2 = 3;
     var_a3 = 0xFF;
-    var_t0 = (u8 *)D_80122B78 + 0x1BC;
-    fixed0 = *(s32 *)((u8 *)D_80122B78 + 0x458);
-    fixed1 = *(s32 *)((u8 *)D_80122B78 + 0x4EC);
-    fixed2 = *(s32 *)((u8 *)D_80122B78 + 0x580);
+    var_t0 = (u8*)D_80122B78 + 0x1BC;
+    fixed0 = *(s32*)((u8*)D_80122B78 + 0x458);
+    fixed1 = *(s32*)((u8*)D_80122B78 + 0x4EC);
+    fixed2 = *(s32*)((u8*)D_80122B78 + 0x580);
     fixed0 &= fixed_mask;
     fixed0 |= 0x6000;
     masked1 = fixed1 & fixed_mask;
     masked1 |= 0x6200;
     masked2 = fixed2 & fixed_mask;
     masked2 |= 0x7000;
-    *(s32 *)((u8 *)D_80122B78 + 0x458) = fixed0;
-    *(s32 *)((u8 *)D_80122B78 + 0x4EC) = masked1;
-    *(s32 *)((u8 *)D_80122B78 + 0x580) = masked2;
+    *(s32*)((u8*)D_80122B78 + 0x458) = fixed0;
+    *(s32*)((u8*)D_80122B78 + 0x4EC) = masked1;
+    *(s32*)((u8*)D_80122B78 + 0x580) = masked2;
     loop_mask = 0xFFFF01FF;
 loop_3:
     var_t1_2 += 1;
     temp_v1 = var_a3 & 0x7F;
     var_a3 -= 1;
-    current = *(s32 *)((u8 *)var_t0 + 0x458);
+    current = *(s32*)((u8*)var_t0 + 0x458);
     current &= loop_mask;
     current |= temp_v1 << 9;
-    (*(s32 *)((u8 *)var_t0 + 0x458)) = current;
+    (*(s32*)((u8*)var_t0 + 0x458)) = current;
     var_t0 += 0x94;
     if (var_t1_2 < 0x10)
     {
         goto loop_3;
     }
-    (*(s32 *)((u8 *)(u8 *)D_80122B78 + 0x0)) = 0x40;
+    (*(s32*)((u8*)(u8*)D_80122B78 + 0x0)) = 0x40;
 }
 
-
-
 /**
+ * @brief Initialize the two event records.
  * @see decomp.me (100%) TODO
  */
 void func_800B0E80(void)
 {
-    s32 var_a0;
-    s32 var_a3;
-    s32 var_v1;
-    s32 off;
-    u8 *base;
+    s32 i;
+    s32 j;
 
-    var_a3 = 0;
+    i = 0;
     do
     {
-        off = var_a3 * 0x94;
-        ((u8 *)D_80122B78 + off)[0xD70] = var_a3 - 0x80;
-        var_a0 = 0;
-        ((u8 *)D_80122B78 + off)[0xD71] = 0xFF;
-        var_v1 = off;
-        ((u8 *)D_80122B78 + off)[0x434] = 0xFF;
-        base = (u8 *)D_80122B78;
-    loop_2:
-        *(u16 *)(base + var_v1 + 0xD78) = 0xFFFF;
-        var_a0 += 1;
-        var_v1 += 2;
-        if (var_a0 < 0x10)
+        D_80122B78->events[i].id = i - 0x80;
+        D_80122B78->events[i].selector = 0xFF;
+        D_80122B78->actors[i].event = FIELD_NO_EVENT;
+        for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
         {
-            goto loop_2;
+            D_80122B78->events[i].scripts[j] = FIELD_NO_SCRIPT;
         }
-        var_a3 += 1;
-    } while (var_a3 < 2);
+        i++;
+    } while (i < FIELD_EVENT_RECORD_COUNT);
 }
 
-
-/** @brief Packed field-audio control values stored in the active layout. */
-typedef union
-{
-    u32 flags;
-    struct
-    {
-        u8 unk2E4;
-        u8 unk2E5;
-        u16 unk2E6;
-    } fields;
-} FieldAudioControl;
-
-/** @brief Active layout view used to initialize field audio state. */
-typedef struct
-{
-    u8 pad0[0xE4];
-    s32 unkE4[8];
-    u8 pad104[0x2E4 - 0x104];
-    FieldAudioControl control;
-    u8 pad2E8[0xC];
-    u8 track_data[0x8C][0xC];
-} FieldAudioState;
-
-
-extern u8 D_800F0B48[];
-extern u16 g_music_track_index;
-
-s32* func_800C1EC8(s32* src, s32* dest, s32 n);
-void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
-s32 func_800C3688(s32 arg0);
-s32 rand(void);
-
 /**
- * @brief Initialize field audio variables from the active layout and music track.
+ * @brief Initialize the field script variables derived from the game state and music track.
  */
 void func_800B0EFC(void)
 {
     s32 flags;
 
-    flags = ((FieldAudioState *)D_80122B74)->control.flags;
+    flags = D_80122B74->control.word;
     if (flags & 0x800000)
     {
-        ((FieldAudioState *)D_80122B74)->control.flags = flags & 0xFF7FFFFF;
-        func_800C1EC8(NULL, ((FieldAudioState *)D_80122B74)->unkE4, 0x20);
+        D_80122B74->control.word = flags & 0xFF7FFFFF;
+        func_800C1EC8(NULL, D_80122B74->words, 0x20);
         func_800BD520(0, 0xFA, rand() & 0xFF);
     }
 
-    if (((FieldAudioState *)D_80122B74)->control.fields.unk2E5 >= 0x12)
+    if (D_80122B74->control.fields.hero_level >= 0x12)
     {
         func_800BD520(0, 0xA00, 1);
     }
 
-    func_800BD520(0, 0x429C, ((FieldAudioState *)D_80122B74)->control.fields.unk2E6 & 0x7F);
-    func_800BD520(0, 0x4300, D_800F0B48[((FieldAudioState *)D_80122B74)->track_data[g_music_track_index][0]]);
-    func_800BD520(0, 0x4304, D_800F0B48[((FieldAudioState *)D_80122B74)->track_data[g_music_track_index][1]]);
-    func_800BD520(0, 0x4308, D_800F0B48[((FieldAudioState *)D_80122B74)->track_data[g_music_track_index][2]]);
-    func_800BD520(0, 0x430C, D_800F0B48[((FieldAudioState *)D_80122B74)->track_data[g_music_track_index][3]]);
-    func_800BD520(0, 0x4310, D_800F0B48[((FieldAudioState *)D_80122B74)->track_data[g_music_track_index][4]]);
-    func_800BD520(0, 0x4314, D_800F0B48[((FieldAudioState *)D_80122B74)->track_data[g_music_track_index][5]]);
-    func_800BD520(0, 0x4318, D_800F0B48[((FieldAudioState *)D_80122B74)->track_data[g_music_track_index][6]]);
-    func_800BD520(0, 0x431C, D_800F0B48[((FieldAudioState *)D_80122B74)->track_data[g_music_track_index][7]]);
+    func_800BD520(0, 0x429C, D_80122B74->control.fields.unk2E6 & 0x7F);
+    func_800BD520(0, 0x4300, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[0]]);
+    func_800BD520(0, 0x4304, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[1]]);
+    func_800BD520(0, 0x4308, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[2]]);
+    func_800BD520(0, 0x430C, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[3]]);
+    func_800BD520(0, 0x4310, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[4]]);
+    func_800BD520(0, 0x4314, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[5]]);
+    func_800BD520(0, 0x4318, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[6]]);
+    func_800BD520(0, 0x431C, D_800F0B48[D_80122B74->lands[g_music_track_index].levels[7]]);
     func_800BD520(0, 0x5320, func_800C3688(g_music_track_index));
     func_800BD520(0, 0x5328, g_music_track_index);
 }
 
 extern u8 D_800EF84C[];
-extern void func_80087F44(u32, s32 *);
-extern s32 func_8008B288(u32);
-extern u8 *func_800C1B60(u32, Context *);
-/**
- * @brief Convert the record selector sentinel to a signed invalid value.
- * @param record Record containing the selector at byte one.
- * @return Selector value, or -1 for the 0xFF sentinel.
- */
-static inline s32 resolve_byte(u8 *record)
-{
-    s32 value = -1;
-    if (record[1] != 0xFF)
-    {
-        value = record[1];
-    }
-    return value;
-}
-extern void func_80087CE0(s32, s32);
-extern s32 func_80087EF0(s32);
-extern void func_8009C620(s32, s32, s32, s32);
-extern void func_8009C77C(s32, s32, s32);
-extern void func_800B2654(s32 *, s32 *, s32 *, s32 *);
-extern s32 func_800B286C(s32, s32, s32);
-extern s32 func_800BD414(s32, s32);
-extern u8 *func_800C1B98();
-extern void func_800C299C(s32);
 extern s32 D_8010AE78;
+extern s32 g_pending_game_state;
+extern s32 g_layout_sub_mode;
+extern s32 g_layout_option;
+extern FieldMapPoint D_80042FC8;
 
-
-
-#define FIELD_MENU_SLOT_UNUSED 0xFF
-#define FIELD_MENU_SLOT_STRIDE 0x10
-#define FIELD_MENU_RECORD_STRIDE 0x8C
-
-typedef struct
-{
-    u8 pad0[0x26F0];
-    s32 handle;
-    u8 entry_index;
-    u8 entry_state[3];
-} FieldMenuActionSlot;
-
-
-extern u8 *D_80122B74;
-
-
-extern void func_80087FC0(s32, s32);
-void func_800B0AF8(void);
-void func_800B168C(s32);
-s32 func_800B1894(FieldActionRequest *, FieldActionEntry **, s32, s32 *);
-s32 func_800B22F0(s32, s32);
-s32 func_800BD3B0(s32, s32);
-void func_800C0490(u8);
+void func_80087CE0(s32 actor_id, s32 mode);
+u8* func_80087EF0(s32 script_id);
+s32 func_80087F44(s32 actor_id, s32* position);
+void func_80087FC0(s32 party_index, s32 mode);
+s32 func_8008B288(s32 actor_id);
+void func_8009C620(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+void func_8009C77C(s32 arg0, s32 arg1, s32 arg2);
+void func_800B168C(s32 mode);
+void func_800B177C(void);
+s32 func_800B1894(FieldActionRequest* request, FieldActionEntry** entry_out, s32 request_index, s32* action_index);
+void func_800B1AA8(void);
+void func_800B1BBC(void);
+void func_800B1D10(void);
+void func_800B1F10(void);
+void func_800B20B4(void);
+s32 func_800B22F0(s32 actor_id, s32 script);
+void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector);
+s32 func_800B286C(s32 owner_id, s32 event_id, s32 argument);
+void func_800B28E0(s32 owner_id, s32 event_id, s32 mode);
+void func_800B4410(u16 group);
+void func_800B49C0(void);
+s32 func_800BD3B0(s32 owner_id, s32 variable);
+void func_800C0490(u8 selector);
+/* Declared without a prototype: func_800B2198 forwards its own a0. */
+FieldActorRecord* func_800C1B98();
+FieldActorRecord* func_800C1B60(u32 actor_id, FieldRuntimeContext* context);
+void func_800C1D14(s32 actor_id, s32 flags);
+void func_800C299C(s32 source);
+void field_script_run(FieldScriptState* state);
+s32 akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
+void field_set_fade_target(s32 red, s32 green, s32 blue, s32 frames);
 
 /**
  * @brief Install a conditional actor action and initialize its event scripts.
@@ -675,32 +592,18 @@ void field_install_actor_action(FieldActionRequest* request, s32 request_index)
     }
 }
 
-typedef struct FieldStateB168C
-{
-    u8 pad0[0x400];
-    u32 flags;
-} FieldStateB168C;
-
-extern s32 D_8010AE78;
-extern u8 *D_80122B74;
-
-
 /**
- * @brief Apply an actor-state mode to the first three field actor slots.
- * @param mode Mode controlling which active actor slots receive the state update.
+ * @brief Apply a party control mode to the present party members.
+ * @param mode 1 or 3 hands every member to AI control, 2 only the AI-controlled ones.
  */
 void func_800B168C(s32 mode)
 {
     s32 i;
-    s32 offset;
-    u8 *slot;
 
     i = 0;
-    offset = 0;
     do
     {
-        slot = D_80122B74 + offset;
-        if (slot[0x5F0] != 0)
+        if (D_80122B74->characters[i].name[0] != 0)
         {
             switch (mode)
             {
@@ -709,52 +612,37 @@ void func_800B168C(s32 mode)
                 func_80087FC0(i, 2);
                 break;
             case 2:
-                if ((slot[0x608] >> 7) != 0)
+                if ((D_80122B74->characters[i].info.bytes[0] >> 7) != 0)
                 {
                     func_80087FC0(i, 2);
                 }
                 break;
             }
         }
-        offset += 0x250;
         i++;
-    } while (i < 3);
+    } while (i < FIELD_PARTY_SIZE);
 
     D_8010AE78 = 1;
-    ((FieldStateB168C *)D_80122B78)->flags = (((FieldStateB168C *)D_80122B78)->flags & 0xFFF9FFFF) | ((mode & 3) << 17);
+    D_80122B78->state.bits.party_mode = mode;
 }
 
-
-typedef struct FieldStateB177C
-{
-    u8 pad0[0x400];
-    u32 flags;
-} FieldStateB177C;
-
-extern s32 D_8010AE78;
-extern u8 *D_80122B74;
-
-extern void func_800C1D14(s32 arg0, s32 arg1);
-
 /**
- * @brief Consume the pending actor-state mode for the first three field actor slots.
+ * @brief Return party members from the pending party control mode and clear it.
  */
 void func_800B177C(void)
 {
     s32 i;
     s32 mode;
-    u8 *slot;
 
     i = 0;
     do
     {
-        mode = (((FieldStateB177C *)D_80122B78)->flags >> 17) & 3;
+        mode = (D_80122B78->state.flags >> 17) & 3;
         switch (mode)
         {
         case 1:
         case 3:
-            slot = D_80122B74 + i * 0x250;
-            if ((slot[0x608] >> 7) != 0)
+            if ((D_80122B74->characters[i].info.bytes[0] >> 7) != 0)
             {
                 func_80087FC0(i, 0);
                 func_800C1D14(i, 0);
@@ -766,8 +654,7 @@ void func_800B177C(void)
             }
             break;
         case 2:
-            slot = D_80122B74 + i * 0x250;
-            if ((slot[0x608] >> 7) != 0)
+            if ((D_80122B74->characters[i].info.bytes[0] >> 7) != 0)
             {
                 func_80087FC0(i, 0);
                 func_800C1D14(i, 0);
@@ -775,63 +662,56 @@ void func_800B177C(void)
             break;
         }
         i++;
-    } while (i < 3);
+    } while (i < FIELD_PARTY_SIZE);
 
-    ((FieldStateB177C *)D_80122B78)->flags &= 0xFFF9FFFF;
+    D_80122B78->state.bits.party_mode = 0;
     D_8010AE78 = 0;
 }
 
 /**
- * @brief Resolve a menu action slot and append its table entry when active.
- * @param arg0 Action request containing packed slot selection and result state.
- * @param arg1 Receives the selected table entry, or NULL when no entry is active.
- * @param arg2 Value used to initialize the selected entry identifier.
- * @param arg3 Receives the selected action index when required by the action type.
- * @return -1 when an entry is appended, or 0 when no entry is selected.
+ * @brief Resolve a menu action slot and append an actor record when it is in use.
+ * @param request Action request containing the packed slot selection; receives the result type.
+ * @param entry_out Receives the appended actor record, or NULL when no record is appended.
+ * @param request_index Request index; the record id is request_index + 3.
+ * @param action_index Receives the selected action index when the slot kind needs one.
+ * @return -1 when a record is appended, or 0 when the slot is unused or empty.
  */
-s32 func_800B1894(FieldActionRequest *arg0, FieldActionEntry **arg1, s32 arg2, s32 *arg3)
+s32 func_800B1894(FieldActionRequest* request, FieldActionEntry** entry_out, s32 request_index, s32* action_index)
 {
-    FieldMenuActionSlot *slot;
-    FieldActionEntry *entry;
-    FieldActionRequest *request;
-    s32 offset;
+    FieldActionEntry* entry;
+    u32 group;
     u32 handle;
     s32 count;
-    s32 index;
     s16 result_type;
-    u32 record_index;
-    u8 packed;
+    u8 slot;
 
-    request = arg0;
-    packed = ((u8 *)request)[1];
-    record_index = packed >> 7;
-    packed &= 7;
-    offset = packed * FIELD_MENU_SLOT_STRIDE + record_index * FIELD_MENU_RECORD_STRIDE;
-    slot = (FieldMenuActionSlot *)(D_80122B74 + offset);
+    slot = request->control.bytes.selector;
+    group = slot >> 7;
+    slot &= 7;
 
-    if (slot->entry_index < FIELD_MENU_SLOT_UNUSED)
+    if (D_80122B74->menu_slots[group].slots[slot].entry.index < 0xFF)
     {
-        handle = slot->handle;
+        handle = D_80122B74->menu_slots[group].slots[slot].handle;
         switch (handle)
         {
         case 0:
-            *arg1 = NULL;
+            *entry_out = NULL;
             return 0;
 
         case 1:
-            *arg3 = 0;
+            *action_index = 0;
             request->source.result_type = 2;
             break;
 
         case 2:
-            *arg3 = slot->entry_index - 0x30;
-            result_type = (s16)((*(u32 *)&((FieldMenuActionSlot *)(D_80122B74 + offset))->entry_index >> 8) & 3);
+            *action_index = D_80122B74->menu_slots[group].slots[slot].entry.index - 0x30;
+            result_type = (D_80122B74->menu_slots[group].slots[slot].entry.word >> 8) & 3;
             request->source.result_type = result_type;
             break;
 
         case 3:
-            *arg3 = slot->entry_index;
-            result_type = (s16)((*(u32 *)&((FieldMenuActionSlot *)(D_80122B74 + offset))->entry_index >> 8) & 3);
+            *action_index = D_80122B74->menu_slots[group].slots[slot].entry.index;
+            result_type = (D_80122B74->menu_slots[group].slots[slot].entry.word >> 8) & 3;
             request->source.result_type = result_type;
             break;
 
@@ -839,303 +719,212 @@ s32 func_800B1894(FieldActionRequest *arg0, FieldActionEntry **arg1, s32 arg2, s
             break;
         }
 
-        count = ((FieldActionTable *)D_80122B78)->actors.count;
-        ((FieldActionTable *)D_80122B78)->actors.count = (u16)(count + 1);
-        index = count & 0xFFFF;
-        entry = &((FieldActionTable *)D_80122B78)->entries[index];
-        *arg1 = entry;
+        count = D_80122B78->state.actor_count;
+        D_80122B78->state.actor_count = count + 1;
+        entry = (FieldActionEntry*)&D_80122B78->actors[count & 0xFFFF];
+        *entry_out = entry;
         entry->flags.word |= 0x80000000;
-        (*arg1)->id = (s8)(arg2 + 3);
-        (*arg1)->flags.word = ((*arg1)->flags.word & ~FIELD_ACTION_ENTRY_FLAG_MASK) | (request->control.flags & FIELD_ACTION_ENTRY_FLAG_MASK);
-        request->control.flags &= ~FIELD_ACTION_ENTRY_FLAG_MASK;
+        (*entry_out)->id = request_index + 3;
+        (*entry_out)->flags.word = ((*entry_out)->flags.word & ~0xF) | (request->control.flags & 0xF);
+        request->control.flags &= ~0xF;
         return -1;
     }
 
-    *arg1 = NULL;
+    *entry_out = NULL;
     return 0;
 }
 
-void func_800B1AA8(void);
-void func_800B1BBC(void);
-void func_800B1D10(void);
-void func_800B1F10(void);
-void func_800B20B4(void);
-void func_800B49C0(void);
-
-
 /**
- * @brief Partial FIELD state used by the frame/update dispatcher.
- */
-typedef struct
-{
-    u8 pad0[0xBC];
-    s32 unkBC;
-    u8 padC0[0x400 - 0xC0];
-    s32 unk400;
-    u8 pad404[0x418 - 0x404];
-    s32 unk418;
-} FieldStateB19FC;
-
-
-
-/**
- * @brief Dispatch the current FIELD update path and advance its frame counter.
- *
- * A negative state value selects the reset path. Otherwise bit 30 optionally
- * runs an auxiliary update before the normal update chain. Bit 16 of unk400
- * gates an additional handler, and the per-state frame counter is incremented.
- *
- * @note 100% match with the FIELD GCC 2.8.0 G0 toolchain.
+ * @brief Run one frame of the field runtime: transitions, triggers, scripts and events.
  */
 void func_800B19FC(void)
 {
-    s32 temp_v0;
+    s32 transition;
 
-    temp_v0 = ((FieldStateB19FC *)D_80122B78)->unk418;
-    if (temp_v0 < 0)
+    transition = D_80122B78->transition.flags;
+    if (transition < 0)
     {
         func_800B1AA8();
         return;
     }
-    if (((u32)temp_v0 >> 30) & 1)
+    if (((u32)transition >> 30) & 1)
     {
         func_800B1BBC();
     }
     func_800B1D10();
     func_800B1F10();
     func_800B20B4();
-    if (((FieldStateB19FC *)D_80122B78)->unk400 & 0x10000)
+    if (D_80122B78->state.flags & 0x10000)
     {
         func_800B49C0();
     }
-    ((FieldStateB19FC *)D_80122B78)->unkBC++;
+    D_80122B78->frame_count++;
 }
 
-
-typedef struct
-{
-    u8 pad0[0x404];
-    s32 unk404;
-    s32 unk408;
-    s32 unk40C;
-    u8 pad410[0x418 - 0x410];
-    u16 unk418;
-    u8 unk41A;
-    u8 unk41B;
-} FieldStateB1AA8;
-
-void func_800BD520(s32 arg0, u32 arg1, s32 arg2);
-s32 func_800BD414(s32 arg0, s32 arg1);
-
-
-
-extern s32 g_pending_game_state;
-extern s32 g_layout_sub_mode;
-extern s32 g_layout_option;
-
 /**
- * @brief Apply the pending field scene state or dispatch the current scene parameters.
+ * @brief Leave the field: request the pending game state or start the next scene.
  */
 void func_800B1AA8(void)
 {
-    u16 state;
+    u16 scene_id;
 
     func_800BD520(0, 0xFE2, 0);
-    state = ((FieldStateB1AA8 *)D_80122B78)->unk418;
-    switch (state)
+    scene_id = D_80122B78->transition.fields.scene_id;
+    switch (scene_id)
     {
     case 0xFFFE:
         g_pending_game_state = 4;
-        ((FieldStateB1AA8 *)D_80122B78)->unk404 = 0xFFFF;
+        D_80122B78->scene_entry = 0xFFFF;
         g_layout_sub_mode = -1;
         g_layout_option = -1;
         return;
     case 0xFFFF:
-        ((FieldStateB1AA8 *)D_80122B78)->unk404 = state;
+        D_80122B78->scene_entry = scene_id;
         g_pending_game_state = 1;
         g_layout_sub_mode = -1;
         g_layout_option = -1;
         if (func_800BD414(0, 0xFFF) != 0)
         {
             g_pending_game_state = 0;
-            ((FieldStateB1AA8 *)D_80122B78)->unk418 = 1;
-            ((FieldStateB1AA8 *)D_80122B78)->unk404 = 0;
+            D_80122B78->transition.fields.scene_id = 1;
+            D_80122B78->scene_entry = 0;
         }
         return;
     default:
-        field_set_scene_parameters(((FieldStateB1AA8 *)D_80122B78)->unk418, ((FieldStateB1AA8 *)D_80122B78)->unk41A, ((FieldStateB1AA8 *)D_80122B78)->unk41B & 0x1F, ((FieldStateB1AA8 *)D_80122B78)->unk404, ((FieldStateB1AA8 *)D_80122B78)->unk408,
-                                   ((FieldStateB1AA8 *)D_80122B78)->unk40C);
+        field_set_scene_parameters(D_80122B78->transition.fields.scene_id, D_80122B78->transition.fields.unk41A, D_80122B78->transition.fields.unk41B & 0x1F,
+                                   D_80122B78->scene_entry, D_80122B78->scene_argument1, D_80122B78->scene_argument2);
         break;
     }
 }
 
-
-
-extern s32 g_layout_option;
-
-void func_80087FC0(s32 arg0, s32 arg1);
-
-s32 akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2);
-
 /**
- * @brief Advance the field transition state and update its fade and audio state.
+ * @brief Advance the scene transition: start the fade on the first frame, then count it down.
  */
 void func_800B1BBC(void)
 {
-    u8 *ptr = ((u8 *)D_80122B78);
-    u32 val = *(u32 *)(ptr + 0x418);
+    FieldRuntimeContext* context;
+    u32 transition;
     s32 i;
     u32 flags;
-    u16 half;
-    u32 packed;
-    s32 v0;
+    u16 scene_id;
+    s32 timer;
 
-    if ((val >> 29) & 1)
+    context = D_80122B78;
+    transition = context->transition.flags;
+    if (!((transition >> 29) & 1))
     {
-        goto no_loop;
-    }
-
-    for (i = 0; i < 3; i++)
-    {
-        func_80087FC0(i, 2);
-    }
-
-    flags = *(u32 *)(((u8 *)D_80122B78) + 0x418) | 0x20000000;
-    *(u32 *)(((u8 *)D_80122B78) + 0x418) = flags;
-    if (*(s32 *)(((u8 *)D_80122B78) + 0x414) != 0xFF)
-    {
-        half = *(u16 *)(((u8 *)D_80122B78) + 0x418);
-        if ((u16)(half + 2) >= 2)
+        for (i = 0; i < FIELD_PARTY_SIZE; i++)
         {
-            field_seek_scene_resource(half & 0x7FFF);
+            func_80087FC0(i, 2);
         }
 
-        packed = *(u32 *)(((u8 *)D_80122B78) + 0x410);
-        field_set_fade_target(packed & 0x3FF, (packed >> 10) & 0x3FF, (packed >> 20) & 0x3FF, *(s32 *)(((u8 *)D_80122B78) + 0x414));
-
-        if (*(u16 *)(((u8 *)D_80122B78) + 0x418) == 0xFFFF)
+        flags = D_80122B78->transition.flags | 0x20000000;
+        D_80122B78->transition.flags = flags;
+        if (D_80122B78->fade_timer != 0xFF)
         {
-            s32 shift = *(s32 *)(((u8 *)D_80122B78) + 0x414) << 2;
-            g_layout_option = -1;
-            akao_cmd_c1(0, shift, 0);
+            scene_id = D_80122B78->transition.fields.scene_id;
+            if ((u16)(scene_id + 2) >= 2)
+            {
+                field_seek_scene_resource(scene_id & 0x7FFF);
+            }
+
+            field_set_fade_target(D_80122B78->fade_color.bits.red, D_80122B78->fade_color.bits.green, D_80122B78->fade_color.bits.blue, D_80122B78->fade_timer);
+
+            if (D_80122B78->transition.fields.scene_id == 0xFFFF)
+            {
+                timer = D_80122B78->fade_timer << 2;
+                g_layout_option = -1;
+                akao_cmd_c1(0, timer, 0);
+            }
+
+            D_80122B78->fade_timer++;
+            return;
         }
-
-        ptr = ((u8 *)D_80122B78);
-        v0 = *(s32 *)(ptr + 0x414);
-        v0 = v0 + 1;
-        goto tail_write;
+        D_80122B78->transition.flags = flags | 0x80000000;
+        return;
     }
-    *(u32 *)(((u8 *)D_80122B78) + 0x418) = flags | 0x80000000;
-    return;
 
-no_loop:
-    if (*(s32 *)(ptr + 0x414) <= 0)
+    if (context->fade_timer <= 0)
     {
-        *(u32 *)(ptr + 0x418) = val | 0x80000000;
+        context->transition.flags = transition | 0x80000000;
     }
-
-    ptr = ((u8 *)D_80122B78);
-    v0 = *(s32 *)(ptr + 0x414) - 1;
-
-tail_write:
-    *(s32 *)(ptr + 0x414) = v0;
+    D_80122B78->fade_timer--;
 }
 
-
-/** @brief Trigger bounds and command viewed relative to the table header. */
-typedef struct
-{
-    u8 pad0[4];
-    u16 unk4, unk6, unk8, unkA, unkC;
-} Region;
-/** @brief Unsigned map coordinates used for trigger bounds checks. */
-typedef struct
-{
-    u16 x, z;
-} Point;
-extern Position *D_80122B70;
-
-extern Point D_80042FC8;
-
-extern s32 func_800B22F0(s32, s32);
-extern void func_800B4410(u16);
 /**
- * @brief Refresh actor map positions and dispatch the first newly entered trigger.
+ * @brief Refresh the party map positions and start the first newly entered trigger region.
  */
 void func_800B1D10(void)
 {
-    Position positions[3];
-    s32 *packed_cursor;
-    Position *position_cursor;
-    s32 used;
-    Point *point;
-    TriggerContext *context;
+    VECTOR positions[FIELD_PARTY_SIZE];
+    s32* packed_position;
+    VECTOR* position;
+    s32 triggered;
+    FieldMapPoint* point;
+    FieldRuntimeContext* context;
     s32 region_bit;
     s32 index;
-
     s32 packed;
     s32 sentinel;
-    u8 *table;
-    Region *region;
-    Region *trigger;
+    u8* table;
+    FieldTriggerRegion* region;
+    FieldTriggerRegion* trigger;
 
     index = 0;
     sentinel = -1;
-    position_cursor = positions;
-    D_80122B78->unk54 = (s32)-D_80122B70->unk4;
-    packed_cursor = D_80122B78->positions;
-    D_80122B78->unk58 = (s32)-(D_80122B70->unk8 + D_80122B70->unkC);
-loop_actor:
-    packed = ((s32 (*)(s32, Position *))func_80087F44)(index, position_cursor);
+    position = positions;
+    D_80122B78->view_x = -D_80122B70->x;
+    packed_position = D_80122B78->actor_positions;
+    D_80122B78->view_z = -(D_80122B70->y + D_80122B70->z);
+next_actor:
+    packed = func_80087F44(index, (s32*)position);
     if (packed != sentinel)
     {
-        packed = ((position_cursor->unk0 << 8) & 0xFFFF0000) | ((position_cursor->unk8 >> 8) & 0xFFFF);
+        packed = ((position->vx << 8) & 0xFFFF0000) | ((position->vz >> 8) & 0xFFFF);
     }
+    /* Kept: this block and the goto loop above are required by the original allocation. */
     do
     {
         do
         {
             do
             {
-                *packed_cursor = packed;
+                *packed_position = packed;
             } while (0);
         } while (0);
     } while (0);
-    position_cursor++;
+    position++;
     index += 1;
-    packed_cursor++;
-    if (index < 3)
+    packed_position++;
+    if (index < FIELD_PARTY_SIZE)
     {
-        goto loop_actor;
+        goto next_actor;
     }
     context = D_80122B78;
     point = &D_80042FC8;
-    point->x = (u16)(positions[0].unk0 >> 8);
-    point->z = (u16)(positions[0].unk8 >> 8);
-    table = context->unkF00;
-    if (table != 0)
+    point->x = positions[0].vx >> 8;
+    point->z = positions[0].vz >> 8;
+    table = context->trigger_table;
+    if (table != NULL)
     {
         region_bit = 1;
-        used = context->unkB8;
-        used += 1;
-        used -= 1;
+        triggered = context->triggered_regions;
         index = 0;
-        while (index < (s32)*(u16 *)(*(u8 **)&D_80122B78->unkF00 + 2))
+        while (index < (s32)((FieldTriggerRegion*)D_80122B78->trigger_table)->unk2)
         {
-            if (!(used & region_bit))
+            if (!(triggered & region_bit))
             {
-                region = (Region *)(D_80122B78->unkF00 + (index * 12));
-                if (((u16)D_80042FC8.x >= (u16)region->unk4) && ((u16)region->unk8 >= (u16)D_80042FC8.x) &&
-                    ((u16)D_80042FC8.z >= (u16)region->unk6) && ((u16)region->unkA >= (u16)D_80042FC8.z))
+                region = (FieldTriggerRegion*)(*(u8* volatile*)&D_80122B78->trigger_table + (index * 12));
+                if ((D_80042FC8.x >= region->min_x) && (region->max_x >= D_80042FC8.x) && (D_80042FC8.z >= region->min_z) && (region->max_z >= D_80042FC8.z))
                 {
-                    trigger = (Region *)(D_80122B78->unkF00 + (index * 12));
-                    D_80122B78->unkB8 = (s32)(D_80122B78->unkB8 | region_bit);
-                    if (trigger->unkC & 0x8000)
+                    trigger = (FieldTriggerRegion*)(*(u8* volatile*)&D_80122B78->trigger_table + (index * 12));
+                    D_80122B78->triggered_regions |= region_bit;
+                    if (trigger->command & 0x8000)
                     {
-                        func_800B22F0(0, trigger->unkC);
+                        func_800B22F0(0, trigger->command);
                         return;
                     }
-                    func_800B4410(trigger->unkC);
+                    func_800B4410(trigger->command);
                     return;
                 }
             }
@@ -1145,259 +934,139 @@ loop_actor:
     }
 }
 
-typedef struct
-{
-    u8 id;
-    u8 pad[0x93];
-} FieldActorRec1F10;
-
-typedef struct
-{
-    u32 value;
-    u32 unk4;
-    u32 flags;
-} FieldScriptFrame1F10;
-
-typedef struct
-{
-    u8 pad0[0x400];
-    union { u16 count; u32 flags; } actors;
-    u8 pad404[0x418 - 0x404];
-    u32 state418;
-    u8 pad41C[0x430 - 0x41C];
-    FieldActorRec1F10 rec[16];
-    u8 padD70[0xE98 - (0x430 + 16 * 0x94)];
-    u32 script_status;
-    s32 script_depth;
-    FieldScriptFrame1F10 scripts[1];
-} FieldState1F10;
-
-
-extern s32 D_8010AE78;
-extern void field_script_run(void *ctx);
-extern s32 func_800B286C(s32, s32, s32);
-extern s32 func_800BD414(s32 arg0, s32 arg1);
-extern void func_800B177C(void);
-
-
 /**
- * @brief Advance the active field script state and dispatch pending actor commands.
+ * @brief Run the field script, or deliver the pending talk start and end events to the actors.
  */
 void func_800B1F10(void)
 {
     s32 i;
 
+    if (D_80122B78->script.frames[D_80122B78->script.depth].pc != NULL)
     {
-        u8 *script_record;
-        script_record = (u8 *)D_80122B78;
-        script_record += ((FieldState1F10 *)D_80122B78)->script_depth * 12;
-        if (*(u32 *)(script_record + 0xEA0) != 0)
-        {
-            field_script_run((u8 *)D_80122B78 + 0xE98);
-            return;
-        }
+        field_script_run(&D_80122B78->script);
+        return;
     }
 
     if (D_8010AE78 != 0)
     {
         i = 0;
-        if (((FieldState1F10 *)D_80122B78)->actors.count != 0)
+        if (D_80122B78->state.actor_count != 0)
         {
             do
             {
-                func_800B286C(((FieldState1F10 *)D_80122B78)->rec[i].id, 0xD, 0x82);
+                func_800B286C(D_80122B78->actors[i].id, 0xD, 0x82);
                 i++;
-            } while (i < (s32)((FieldState1F10 *)D_80122B78)->actors.count);
+            } while (i < (s32)D_80122B78->state.actor_count);
         }
-        if ((((((FieldState1F10 *)D_80122B78)->state418 >> 30) & 1) == 0) && (func_800BD414(0, 0xFE2) == 0))
+        if (((((u32)D_80122B78->transition.flags >> 30) & 1) == 0) && (func_800BD414(0, 0xFE2) == 0))
         {
             func_800B177C();
         }
     }
-    else if ((((FieldState1F10 *)D_80122B78)->actors.flags & 0x80000) && (field_text_get_status(0) == -1))
+    else if ((D_80122B78->state.flags & 0x80000) && (field_text_get_status(0) == -1))
     {
         i = 0;
-        if (((FieldState1F10 *)D_80122B78)->actors.count != 0)
+        if (D_80122B78->state.actor_count != 0)
         {
             do
             {
-                func_800B286C(((FieldState1F10 *)D_80122B78)->rec[i].id, 0xD, 0x85);
+                func_800B286C(D_80122B78->actors[i].id, 0xD, 0x85);
                 i++;
-            } while (i < (s32)((FieldState1F10 *)D_80122B78)->actors.count);
+            } while (i < (s32)D_80122B78->state.actor_count);
         }
-        ((FieldState1F10 *)D_80122B78)->actors.flags &= 0xFFF7FFFF;
+        D_80122B78->state.flags &= 0xFFF7FFFF;
     }
 }
 
-
-typedef struct
-{
-    s32 active;
-    u8 pad4[8];
-} FieldEventEntryB20B4;
-
-typedef struct
-{
-    u8 pad0[0x2C];
-    s32 active_event;
-    FieldEventEntryB20B4 events[8];
-    u8 pad90[4];
-} FieldRecordB20B4;
-
-typedef struct
-{
-    u8 pad0[0xD70];
-    FieldRecordB20B4 records[2];
-} FieldStateB20B4;
-
-
-extern void func_800B28E0(s32 arg0, s32 arg1, s32 arg2);
-extern void field_script_run(void* script);
-
 /**
- * @brief Advance the two field event records and re-arm their event flags.
+ * @brief Run the two event records' scripts and deliver their pending events.
  */
 void func_800B20B4(void)
 {
     s32 i;
-    s32 event_index;
-    s32 script_offset;
-    u8* record;
 
     i = 0;
     do
     {
-        script_offset = i * 0x94 + 0xD70;
-        event_index = ((FieldStateB20B4 *)D_80122B78)->records[i].active_event;
-        if (((FieldStateB20B4 *)D_80122B78)->records[i].events[event_index].active != 0)
+        if (D_80122B78->events[i].script.frames[D_80122B78->events[i].script.depth].pc != NULL)
         {
-            field_script_run((u8*)D_80122B78 + script_offset + 0x28);
+            field_script_run(&D_80122B78->events[i].script);
         }
-        record = (u8*)D_80122B78 + i * 0x94;
-        func_800B28E0(i + 0x80, record[0xD74], record[0xD75]);
-        record = (u8*)D_80122B78 + i * 0x94;
-        record[0xD74] = 0xFF;
+        func_800B28E0(i + 0x80, D_80122B78->events[i].event, D_80122B78->events[i].event_argument);
+        D_80122B78->events[i].event = FIELD_NO_EVENT;
         func_800B28E0(0x80, 0xE, 0);
-        record = (u8*)D_80122B78 + i * 0x94;
-        record[0xD74] = 0xFF;
-        i += 1;
-    } while (i < 2);
+        D_80122B78->events[i].event = FIELD_NO_EVENT;
+        i++;
+    } while (i < FIELD_EVENT_RECORD_COUNT);
 }
 
-
-typedef struct
-{
-    s32 unk0;
-    u8 pad4[8];
-} FieldEventEntry;
-
-typedef struct
-{
-    u8 unk0;
-    u8 pad1[3];
-    u8 unk4;
-    u8 unk5;
-    u8 pad6[0x28 - 6];
-    s32 unk28;
-    s32 unk2C;
-    FieldEventEntry entries[8];
-    s32 unk90;
-} FieldRecordB2198;
-
-typedef struct
-{
-    u32 x;
-    u32 y;
-    u32 z;
-} FieldPositionB2198;
-
-typedef struct
-{
-    u8 pad0[0x54];
-    u32 x;
-    u32 z;
-} FieldBoundsB2198;
-
-
-
-
-void func_800B28E0(s32 arg0, s32 arg1, s32 arg2);
-
-void field_script_run(void *script);
-
 /**
- * @brief Update an active field record and dispatch its pending event or script.
- * @param arg0 Record id forwarded to the record lookup and position query.
- * @param arg1 Unused actor-table argument supplied by the caller.
+ * @brief Update a spawned actor: deliver its pending event, its on-screen event and its script.
+ * @param actor_id Actor id; also passed through to func_800C1B98 in a0.
+ * @param unused Unused.
  */
-void func_800B2198(s32 arg0, void *arg1)
+void func_800B2198(s32 actor_id, void* unused)
 {
-    FieldRecordB2198 *record;
-    FieldPositionB2198 position;
+    FieldActorRecord* actor;
+    VECTOR position;
 
-    record = (FieldRecordB2198 *)func_800C1B98();
-    if ((record != NULL) && (record->unk90 < 0))
+    actor = func_800C1B98();
+    if ((actor != NULL) && (actor->flags.word < 0))
     {
-        if (record->unk4 != 0xFF)
+        if (actor->event != FIELD_NO_EVENT)
         {
-            func_800B28E0(record->unk0, record->unk4, record->unk5);
-            record->unk4 = 0xFF;
+            func_800B28E0(actor->id, actor->event, actor->event_argument);
+            actor->event = FIELD_NO_EVENT;
         }
-        if (!(((u32)record->unk90 >> 30) & 1))
+        if (!(((u32)actor->flags.word >> 30) & 1))
         {
-            func_80087F44(arg0, (s32 *)&position);
-            if ((position.x > ((FieldBoundsB2198 *)D_80122B78)->x) &&
-                (position.z > ((FieldBoundsB2198 *)D_80122B78)->z) &&
-                (position.x < ((FieldBoundsB2198 *)D_80122B78)->x + 0x140) &&
-                (position.z < ((FieldBoundsB2198 *)D_80122B78)->z + 0x1C0))
+            func_80087F44(actor_id, (s32*)&position);
+            if (((u32)position.vx > (u32)D_80122B78->view_x) && ((u32)position.vz > (u32)D_80122B78->view_z) &&
+                ((u32)position.vx < (u32)D_80122B78->view_x + 0x140) && ((u32)position.vz < (u32)D_80122B78->view_z + 0x1C0))
             {
-                func_800B28E0(record->unk0, 2, 0);
+                func_800B28E0(actor->id, 2, 0);
             }
             else
             {
-                func_800B28E0(record->unk0, 3, 0);
+                func_800B28E0(actor->id, 3, 0);
             }
-            func_800B28E0(record->unk0, 0xE, 0);
-            if (record->entries[record->unk2C].unk0 == 0)
+            func_800B28E0(actor->id, 0xE, 0);
+            if (actor->script.frames[actor->script.depth].pc == NULL)
             {
-                func_800B28E0(record->unk0, 8, 0);
+                func_800B28E0(actor->id, 8, 0);
                 return;
             }
-            field_script_run(&record->unk28);
+            field_script_run(&actor->script);
         }
     }
 }
 
 /**
- * @brief Start an actor interaction through its script or presentation path.
- * @param arg0 Actor identifier for the interaction.
- * @param arg1 Interaction/script identifier and option flags.
- * @return -1 when the interaction starts successfully, or 0 when it cannot start.
+ * @brief Start an actor interaction through its script or the talk presentation.
+ * @param actor_id Actor that is talked to.
+ * @param script Script id; bit 15 runs it as the field script, otherwise it is a talk message.
+ * @return -1 when the interaction starts, or 0 when it cannot start.
  */
-s32 func_800B22F0(s32 arg0, s32 arg1)
+s32 func_800B22F0(s32 actor_id, s32 script)
 {
-    u16 saved_arg1;
-    s32 sp1C;
-    s32 sp18;
-    s32 sp14;
-    s32 sp10;
-    s32 temp_a0;
-    s32 var_s0;
-    s32 var_s0_2;
-    u32 temp_v1;
-    s32 var_a0;
-    s32 var_a0_2;
-    u8 *temp_a1;
-    u8 *temp_v0;
-    u8 *temp_v0_2;
+    u16 script_id;
+    s32 selector;
+    s32 effect;
+    s32 plane;
+    s32 speaker;
+    s32 source;
+    s32 i;
+    u32 flags;
+    s32 other_id;
+    FieldActorRecord* actor;
 
-    saved_arg1 = arg1;
-    if ((saved_arg1 & 0xFFFF) == 0xFFFF)
+    script_id = script;
+    if ((script_id & 0xFFFF) == 0xFFFF)
     {
         return 0;
     }
 
-    if (((((FieldState1F10 *)D_80122B78)->state418 >> 0x1E) & 1) != 0)
+    if (((D_80122B78->transition.flags >> 30) & 1) != 0)
     {
         return 0;
     }
@@ -1406,115 +1075,129 @@ s32 func_800B22F0(s32 arg0, s32 arg1)
         return 0;
     }
 
-    temp_v0 = func_800C1B98(arg0);
-    if (temp_v0 == NULL)
+    actor = func_800C1B98(actor_id);
+    if (actor == NULL)
     {
         return 0;
     }
 
-    temp_v1 = *(u32 *)(temp_v0 + 0x90);
-    if ((temp_v1 >> 0x1E) & 1)
+    flags = actor->flags.word;
+    if ((flags >> 30) & 1)
     {
         return 0;
     }
-    if ((temp_v1 >> 0x1D) & 1)
+    if ((flags >> 29) & 1)
     {
         return 0;
     }
 
-    temp_a0 = (temp_v1 >> 4) & 0x3FF;
-    if (temp_a0 != 0)
+    source = (flags >> 4) & 0x3FF;
+    if (source != 0)
     {
-        func_800C299C(temp_a0);
+        func_800C299C(source);
     }
 
-    if ((arg1 & 0x8000) != 0)
+    if ((script & 0x8000) != 0)
     {
-        if (((FieldState1F10 *)D_80122B78)->scripts[((FieldState1F10 *)D_80122B78)->script_depth].value != 0)
+        if (D_80122B78->script.frames[D_80122B78->script.depth].pc != NULL)
         {
             return 0;
         }
 
-        var_s0 = 0;
-        if (((FieldState1F10 *)D_80122B78)->actors.count != 0)
+        i = 0;
+        if (D_80122B78->state.actor_count != 0)
         {
             do
             {
-                if (var_s0 < 3)
+                if (i < FIELD_PARTY_SIZE)
                 {
-                    func_80087CE0(var_s0, 0);
+                    func_80087CE0(i, 0);
                 }
                 else
                 {
-                    var_a0 = ((FieldState1F10 *)D_80122B78)->rec[var_s0].id;
-                    if (var_a0 == arg0)
+                    other_id = D_80122B78->actors[i].id;
+                    if (other_id == actor_id)
                     {
-                        func_800B286C(arg0, 0xD, 0x80);
+                        func_800B286C(actor_id, 0xD, 0x80);
                     }
                     else
                     {
-                        func_800B286C(var_a0, 0xD, 0x81);
+                        func_800B286C(other_id, 0xD, 0x81);
                     }
                 }
-                var_s0 += 1;
-            } while (var_s0 < (s32)((FieldState1F10 *)D_80122B78)->actors.count);
+                i++;
+            } while (i < (s32)D_80122B78->state.actor_count);
         }
 
         D_8010AE78 = 1;
-        ((u8 *)D_80122B78)[0xE98] = arg0;
-        *(u32 *)(((u8 *)D_80122B78) + 0xE98) = (s32)(((s32) * (u32 *)(((u8 *)D_80122B78) + 0xE98) & 0xFFFF01FF) | (*(u32 *)(temp_v0 + 0x28) & 0xFE00));
-        ((FieldState1F10 *)D_80122B78)->scripts[((FieldState1F10 *)D_80122B78)->script_depth].value = func_80087EF0(saved_arg1 & 0x7FFF);
-        temp_v0_2 = ((u8 *)D_80122B78) + (*(s32 *)(((u8 *)D_80122B78) + 0xE9C) * 0xC);
-        *(u32 *)(temp_v0_2 + 0xEA8) = (s32)(*(u32 *)(temp_v0_2 + 0xEA8) & ~1);
-        temp_a1 = ((u8 *)D_80122B78) + (*(s32 *)(((u8 *)D_80122B78) + 0xE9C) * 0xC);
-        *(u32 *)(temp_a1 + 0xEA8) = (s32)(*(u32 *)(temp_a1 + 0xEA8) & 1);
+        D_80122B78->script.status.owner_id = actor_id;
+        D_80122B78->script.status.word = (D_80122B78->script.status.word & 0xFFFF01FF) | (actor->script.status.word & 0xFE00);
+        D_80122B78->script.frames[D_80122B78->script.depth].pc = func_80087EF0(script_id & 0x7FFF);
+        D_80122B78->script.frames[D_80122B78->script.depth].wait.bits.resume = 0;
+        D_80122B78->script.frames[D_80122B78->script.depth].wait.bits.frames = 0;
         return -1;
     }
 
-    var_s0_2 = 0;
-    if (((FieldState1F10 *)D_80122B78)->actors.count != 0)
+    i = 0;
+    if (D_80122B78->state.actor_count != 0)
     {
         do
         {
-            if (var_s0_2 < 3)
+            if (i < FIELD_PARTY_SIZE)
             {
-                func_80087CE0(var_s0_2, 0);
+                func_80087CE0(i, 0);
             }
             else
             {
-                var_a0_2 = ((FieldState1F10 *)D_80122B78)->rec[var_s0_2].id;
-                if (var_a0_2 == arg0)
+                other_id = D_80122B78->actors[i].id;
+                if (other_id == actor_id)
                 {
-                    func_800B286C(arg0, 0xD, 0x83);
+                    func_800B286C(actor_id, 0xD, 0x83);
                 }
                 else
                 {
-                    func_800B286C(var_a0_2, 0xD, 0x84);
+                    func_800B286C(other_id, 0xD, 0x84);
                 }
             }
-            var_s0_2 += 1;
-        } while (var_s0_2 < (s32)((FieldState1F10 *)D_80122B78)->actors.count);
+            i++;
+        } while (i < (s32)D_80122B78->state.actor_count);
     }
 
-    sp10 = (s32)arg0;
-    sp14 = 0xFF;
-    sp18 = 0xFE;
-    sp1C = 0xFF;
-    *(u32 *)(((u8 *)D_80122B78) + 0x400) = (s32)(*(u32 *)(((u8 *)D_80122B78) + 0x400) | 0x80000);
-    func_800B2654(&sp10, &sp14, &sp18, &sp1C);
-    func_8009C620(sp14, sp1C, sp10, sp18);
-    func_8009C77C(sp14, saved_arg1 & 0xFFFF, 1);
+    speaker = actor_id;
+    plane = 0xFF;
+    effect = 0xFE;
+    selector = 0xFF;
+    D_80122B78->state.flags |= 0x80000;
+    func_800B2654(&speaker, &plane, &effect, &selector);
+    func_8009C620(plane, selector, speaker, effect);
+    func_8009C77C(plane, script_id & 0xFFFF, 1);
     return -1;
 }
 
 /**
- * @brief Resolve script actor, plane, effect, and selector operands in place.
- * @param actor_id Actor identifier; invalid identifiers are replaced with zero.
- * @param plane Plane selector or automatic-selection sentinel.
- * @param effect Effect selector, updated with facing flags or -1 when unavailable.
- * @param selector Selector index or current-context sentinel.
+ * @brief Return an actor's selector, or -1 for the 0xFF sentinel.
+ * @param actor Actor record.
+ * @return Selector value, or -1.
  */
-void func_800B2654(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector)
+static inline s32 actor_selector(FieldActorRecord* actor)
+{
+    s32 value = -1;
+
+    if (actor->selector != 0xFF)
+    {
+        value = actor->selector;
+    }
+    return value;
+}
+
+/**
+ * @brief Resolve the talk presentation operands in place.
+ * @param actor_id Speaking actor; invalid identifiers are replaced with zero.
+ * @param plane Window plane, or 0xFF to choose it from the actor's screen position.
+ * @param effect Window effect, 0xFE for the actor's selector or 0xFF for none; receives facing flags.
+ * @param selector Window selector, or 0xFF for the current one.
+ */
+void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector)
 {
     s32 position[3];
     s32 plane_value;
@@ -1551,7 +1234,7 @@ void func_800B2654(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector)
     }
     else
     {
-        if ((position[2] - D_80122B78->unk58) <= 0xBFFF)
+        if ((position[2] - D_80122B78->view_z) <= 0xBFFF)
         {
             *plane = 0;
         }
@@ -1561,12 +1244,12 @@ void func_800B2654(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector)
         }
         facing_flag = ((u32)(func_8008B288(*actor_id) - 0x41) < 0x80U) << 6;
     }
-    D_80122B78->unk41C = (s32)((D_80122B78->unk41C & ~0x300) | ((*plane & 3) << 8));
+    D_80122B78->unk41C = (D_80122B78->unk41C & ~0x300) | ((*plane & 3) << 8);
     effect_value = *effect;
     switch (effect_value)
-    { /* irregular */
+    {
     case 0xFE:
-        *effect = resolve_byte(func_800C1B60(original_actor_id, D_80122B78));
+        *effect = actor_selector(func_800C1B60(original_actor_id, D_80122B78));
         break;
     case 0xFF:
         *effect = -1;
@@ -1576,7 +1259,7 @@ void func_800B2654(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector)
     selector_value = *selector;
     if (selector_value == 0xFF)
     {
-        selector_value = (s32)(u8)D_80122B78->unk41C;
+        selector_value = (u8)D_80122B78->unk41C;
     }
     *selector = selector_value;
     if (!(((s32)D_800EF84C[selector_value] >> *plane) & 1))
@@ -1587,15 +1270,15 @@ void func_800B2654(s32 *actor_id, s32 *plane, s32 *effect, s32 *selector)
 
 /**
  * @brief Set a field text macro's replacement string and character budget.
- * @param arg0 Macro slot index, checked against the upper bound only.
- * @param arg1 Replacement text.
- * @param arg2 Unsigned character budget.
+ * @param slot Macro slot index, checked against the upper bound only.
+ * @param text Replacement text.
+ * @param character_limit Unsigned character budget.
  */
-void func_800B2844(s32 arg0, u8* arg1, u8 arg2)
+void func_800B2844(s32 slot, u8* text, u8 character_limit)
 {
-    if (arg0 < 0x10)
+    if (slot < 0x10)
     {
-        g_field_text_macros[arg0].character_limit = arg2;
-        g_field_text_macros[arg0].text = arg1;
+        g_field_text_macros[slot].character_limit = character_limit;
+        g_field_text_macros[slot].text = text;
     }
 }

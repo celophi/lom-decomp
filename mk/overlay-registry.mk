@@ -85,6 +85,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_actor_reactions.c \
 	src/overlays/field/field_actor_behavior.c \
 	src/overlays/field/field_actor_input_map_init.c \
+	src/overlays/field/field_actor_action_defaults.c \
 	src/overlays/field/field_actor_input_actions.c \
 	src/overlays/field/field_actor_camera.c \
 	src/overlays/field/field_actor_idle_ops.c \
@@ -121,8 +122,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 overlay_field_gcc_272_cdk_g0_nosched_srcs := \
 	src/overlays/field/field_subsystem_init.c
 
-overlay_field_gcc_272_cdk_g0_nostrength_srcs := \
-	src/overlays/field/field_actor_action_defaults.c
+overlay_field_gcc_272_cdk_g0_nostrength_srcs :=
 
 overlay_field_gcc_272_cdk_g0_noexpand_srcs :=
 

@@ -1,31 +1,10 @@
+/** @file field_actor_record_ops.c
+ * @brief Spawn, release and query dynamic actor records.
+ */
+
 #include "game_audio.h"
 #include "common.h"
-
-
-/** @brief 0x94-byte actor record stored in the FIELD actor table. */
-typedef struct
-{
-    u8 unk0;
-    u8 pad1[3];
-    u8 unk4;
-    u8 pad5;
-    u16 unk6;
-    u16 unk8[16];
-    s32 unk28;
-    s32 unk2C;
-    s32 unk30;
-    u8 pad34[0x5C];
-    s32 unk90;
-} RecC1B98;
-
-/** @brief FIELD actor table containing the 16 records scanned by func_800C2724. */
-typedef struct
-{
-    u8 pad0[0x400];
-    u16 unk400;
-    u8 pad402[0x2E];
-    RecC1B98 records[16];
-} FieldActorTable;
+#include "field_records.h"
 
 /** @brief Three-dimensional field position. */
 typedef struct
@@ -49,49 +28,50 @@ typedef struct
     FieldDistanceEntry entries[16];
 } FieldDistanceList;
 
-RecC1B98 *func_800C1C50(s32 id);
-RecC1B98 *func_800C1B60();
+FieldActorRecord* func_800C1C50(s32 id);
+/* Declared without a prototype: callers forward their own a0. */
+FieldActorRecord* func_800C1B60();
 void func_800B28E0(s32, s32, s32);
 s32 func_80087770(s32 arg0, s32 arg1);
-void func_80087F44(s32 index, FieldPosition *position);
-void func_800C1F28(u32 *arg0);
-s32 func_800C1FBC(FieldPosition *arg0, FieldPosition *arg1);
+void func_80087F44(s32 index, FieldPosition* position);
+void func_800C1F28(u32* arg0);
+s32 func_800C1FBC(FieldPosition* arg0, FieldPosition* arg1);
 
-extern u8 *D_80122B78;
+extern FieldRuntimeContext* D_80122B78;
 
 /**
- * @brief Update or clear the selected field record.
- * @param arg0 Record identifier.
- * @param arg1 Update value, or 0xFF to clear the active flags.
+ * @brief Spawn an actor record from the event table of actor record 4, or release it.
+ * @param actor_id Actor identifier.
+ * @param argument Argument for the spawn event 7, or 0xFF to release the record.
  */
-void func_800C2640(s32 arg0, s32 arg1)
+void func_800C2640(s32 actor_id, s32 argument)
 {
-    RecC1B98 *rec;
+    FieldActorRecord* actor;
     s32 i;
 
-    if (arg1 != 0xFF)
+    if (argument != 0xFF)
     {
-        rec = func_800C1C50(arg0);
-        if (rec == NULL)
+        actor = func_800C1C50(actor_id);
+        if (actor == NULL)
         {
             record_game_diagnostic(0x8001, 1, 1, 1);
             return;
         }
-        rec->unk90 |= 0x20000000;
-        rec->unk6 = *(u16 *)(D_80122B78 + 0x686);
+        actor->flags.bits.spawned = 1;
+        actor->enabled_events = D_80122B78->actors[4].enabled_events;
         i = 0;
         do
         {
-            rec->unk8[i] = *(u16 *)(D_80122B78 + 0x688 + i * 2);
+            actor->scripts[i] = D_80122B78->actors[4].scripts[i];
             i++;
-        } while (i < 16);
-        func_800B28E0(arg0, 7, arg1 & 0xFF);
+        } while (i < FIELD_ACTOR_SCRIPT_COUNT);
+        func_800B28E0(actor_id, 7, argument & 0xFF);
         return;
     }
 
-    rec = func_800C1B60(arg0);
-    rec->unk90 &= 0x7FFFFFFF;
-    rec->unk90 &= 0xDFFFFFFF;
+    actor = func_800C1B60(actor_id);
+    actor->flags.bits.active = 0;
+    actor->flags.bits.spawned = 0;
 }
 
 /**
@@ -105,27 +85,26 @@ s32 func_800C2724(void)
     FieldPosition actor_position;
     s32 actor_index;
     s32 flags;
-    RecC1B98 *actor;
+    FieldActorRecord* actor;
 
     func_80087F44(6, &reference_position);
-    actor_index = 3;
+    actor_index = FIELD_PARTY_SIZE;
     list.count = 0;
     do
     {
-        actor = &((FieldActorTable *)D_80122B78)->records[actor_index];
-        flags = actor->unk90;
-        if (flags < 0 && ((((u32)flags) >> 0x1D) & 1) &&
-            func_80087770(6, actor->unk0) == 1)
+        actor = &D_80122B78->actors[actor_index];
+        flags = actor->flags.word;
+        if (flags < 0 && actor->flags.bits.spawned && func_80087770(6, actor->id) == 1)
         {
-            func_80087F44(actor->unk0, &actor_position);
-            list.entries[list.count].object_id = actor->unk0;
+            func_80087F44(actor->id, &actor_position);
+            list.entries[list.count].object_id = actor->id;
             list.entries[list.count].distance = func_800C1FBC(&reference_position, &actor_position);
             list.count += 1;
         }
         actor_index += 1;
-    } while (actor_index < 16);
+    } while (actor_index < FIELD_ACTOR_RECORD_COUNT);
 
-    func_800C1F28((u32 *)&list);
+    func_800C1F28((u32*)&list);
     if (list.count != 0)
     {
         return list.entries[0].object_id;
@@ -133,47 +112,42 @@ s32 func_800C2724(void)
     return 0xFF;
 }
 
-extern RecC1B98 *func_800C1B98(void);
-extern void func_800C1D14(s32 arg0, s32 arg1);
-extern void func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+/* Declared without a prototype: func_800C2848 forwards its own a0. */
+extern FieldActorRecord* func_800C1B98();
+extern void func_800C1D14(s32 actor_id, s32 flags);
+extern void func_80087D8C(s32 actor_id, s32 arg1, s32 arg2, s32 arg3);
 
 /**
- * @brief Marks the active record and issues its follow-up actions.
- *
- * When a record is active, sets its 0x40000000 flag, notifies func_800C1D14
- * with the record's leading byte, and - if @p arg1 bit 1 is set - fires
- * func_80087D8C for @p arg0.
- *
- * 100% match with the FIELD GCC 2.8.0 G0 toolchain. The former 94.29%
- * result was caused by GCC 2.7.2 CDK epilogue scheduling rather than the C
- * source shape.
+ * @brief Switch an actor to script-only mode and stop its script.
+ * @param actor_id Actor identifier; passed through to func_800C1B98 in a0.
+ * @param flags Bit 0 forwarded to func_800C1D14; bit 1 also calls func_80087D8C.
  */
-void func_800C2848(s32 arg0, s32 arg1)
+void func_800C2848(s32 actor_id, s32 flags)
 {
-    RecC1B98 *r = func_800C1B98();
+    FieldActorRecord* actor = func_800C1B98();
 
-    if (r != NULL)
+    if (actor != NULL)
     {
-        r->unk90 |= 0x40000000;
-        func_800C1D14(r->unk0, arg1);
-        if (arg1 & 2)
+        actor->flags.bits.script_only = 1;
+        func_800C1D14(actor->id, flags);
+        if (flags & 2)
         {
-            func_80087D8C(arg0, -0x400, 0, 0);
+            func_80087D8C(actor_id, -0x400, 0, 0);
         }
     }
 }
 
 /**
- * @brief Clear bit 30 of the current record's flag word and re-dispatch its id.
+ * @brief Leave script-only mode and stop the actor's script.
+ * @note Takes the actor id in a0 from its caller; func_800C1B60 reads it from there.
  */
 void func_800C28B8(void)
 {
-    RecC1B98 *p;
+    FieldActorRecord* actor;
+    s32 actor_id;
 
-    s32 arg0;
-
-    p = func_800C1B60();
-    arg0 = p->unk0;
-    p->unk90 &= 0xBFFFFFFF;
-    func_800C1D14(arg0, 0);
+    actor = func_800C1B60();
+    actor_id = actor->id;
+    actor->flags.bits.script_only = 0;
+    func_800C1D14(actor_id, 0);
 }

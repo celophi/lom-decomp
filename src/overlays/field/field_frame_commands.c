@@ -1,123 +1,113 @@
-#include "field_modal_runtime.h"
-#include "field_text.h"
 /** @file field_frame_commands.c
  * @brief Construct per-frame field command buffers.
  */
 
 #include "common.h"
+#include "field_modal_runtime.h"
+#include "field_text.h"
 
-/*
- * field_text_format_number (the right-align digit formatter at 0x800675C8)
- * lives in field_text_format_number.c: it needs the gcc272_cdk no-expand-div
- * toolchain, whereas field_build_frame_commands below uses the standard
- * gcc272_cdk (with --expand-div).
- */
-
-void field_prepare_actor_render_commands(s32, s32);      /* extern */
-void field_update_actor_animations(void);               /* extern */
-void field_update_audio_timer(void);                       /* extern */
-void field_update_gover_load(void);                        /* extern */
-void field_update_return_to_title_prompt(s32);         /* extern */
-void field_update_and_render_fade(s32);                               /* extern */
-void field_update_dialog_runtime(s32);                               /* extern */
-void field_update_actor_objects(void);                                  /* extern */
-void field_render_actor_objects(s32);                               /* extern */
-void func_800842E0(void);                                  /* extern */
-void field_draw_actor_hud(s32);                               /* extern */
-void func_80086FB8(s32);                               /* extern */
-void func_8008B73C(void);                                  /* extern */
-void func_80096B54(void);                                  /* extern */
-void func_80096E60(void);                                  /* extern */
-void func_800A2E34(void);                                  /* extern */
-void func_800A2E40(s32);                               /* extern */
-void func_800A3FB0(void);                                  /* extern */
-void func_800A4798(s32);                               /* extern */
-void func_800A5794(s32);                               /* extern */
-void func_800A64D0(s32);                               /* extern */
-void field_update_input_repeat(u8);                                /* extern */
-void field_process_input(s32);                               /* extern */
-void field_update_modal(s32);                               /* extern */
-void func_800AD118(s32);                               /* extern */
-void func_800AF8E8(s32);                               /* extern */
-void func_800B0244(void);                                  /* extern */
-void func_800B19FC(void);                                  /* extern */
-extern s32 g_field_action_context[];
-extern s32 D_800F2288[];
-extern s32 D_800F2298[];
-extern s32 g_field_gover_load_countdown[];
-extern s32 g_field_active_group[];
-extern s32 g_field_pickup_sound_played[];
-extern s32 g_field_hide_actor_panels[];
-extern s32 D_8011F3AC[];
-extern s32 g_field_modal_state[];
-extern s32 g_field_text_session_active[];
-extern s32 g_field_scene_request_pending[];
-extern s32 g_frame_counter[];
-
-
+void field_prepare_actor_render_commands(s32, s32);
+void field_update_actor_animations(void);
+void field_update_audio_timer(void);
+void field_update_gover_load(void);
+void field_update_return_to_title_prompt(s32);
+void field_update_and_render_fade(s32);
+void field_update_dialog_runtime(s32);
+void field_update_actor_objects(void);
+void field_render_actor_objects(s32);
+void func_800842E0(void);
+void field_draw_actor_hud(s32);
+void func_80086FB8(s32);
+void func_8008B73C(void);
+void func_80096B54(void);
+void func_80096E60(void);
+void func_800A2E34(void);
+void func_800A2E40(s32);
+void func_800A3FB0(void);
+void func_800A4798(s32);
+void func_800A5794(s32);
+void func_800A64D0(s32);
+void field_update_input_repeat(void);
+void field_process_input(s32);
+void func_800AD118(s32);
+void func_800AF8E8(s32);
+void func_800B0244(void);
+void func_800B19FC(void);
+extern s32 g_field_action_context;
+extern s32 D_800F2288;
+extern s32 D_800F2298;
+extern s32 g_field_gover_load_countdown;
+extern s32 g_field_active_group;
+extern s32 g_field_pickup_sound_played;
+extern s32 g_field_hide_actor_panels;
+extern s32 D_8011F3AC;
+extern s32 g_field_modal_state;
+extern s32 g_field_text_session_active;
+extern s32 g_field_scene_request_pending;
+extern s32 g_frame_counter;
 
 /**
- * @brief Build one frame's worth of draw commands for the given render half.
- * @param arg0 Render half being drawn.
- * @param arg1 Non-zero when drawing the alternate half.
- * @note WIP - not yet byte-matching. +10 insns; the g_field_action_context[0] byte-read/
- *       word-write pair at the top is a guess. See
- *       working/field_build_frame_commands/STATUS.md.
+ * @brief Run one frame of field logic and build its draw commands.
+ *
+ * Reads input, updates the fade, HUD, actors, dialogs, modals and text
+ * session, then emits their packets into @p render_half. Actor updates are
+ * skipped while a modal, text session or game-over load is active, and the
+ * frame stops early when a scene change was requested.
+ *
+ * @param render_half Render half being drawn.
+ * @param alternate Non-zero when drawing the alternate half.
  * @see decomp.me (100%) TODO
  */
-void field_build_frame_commands(s32 arg0, s32 arg1)
+void field_build_frame_commands(s32 render_half, s32 alternate)
 {
-    s32 temp;
-
-    D_800F2288[0] = arg0;
-    g_field_pickup_sound_played[0] = 0;
-    temp = *(u8*)&g_field_action_context[0];
-    g_field_action_context[0] = temp;
-    field_update_input_repeat(temp);
-    field_process_input(arg0);
-    field_update_and_render_fade(arg0);
+    D_800F2288 = render_half;
+    g_field_pickup_sound_played = 0;
+    g_field_action_context &= 0xFF;
+    field_update_input_repeat();
+    field_process_input(render_half);
+    field_update_and_render_fade(render_half);
     func_800B0244();
-    if (g_field_active_group[0] != 0)
+    if (g_field_active_group != 0)
     {
-        if (g_field_hide_actor_panels[0] == 0)
+        if (g_field_hide_actor_panels == 0)
         {
-            field_draw_actor_hud(arg0);
+            field_draw_actor_hud(render_half);
         }
     }
-    if ((D_800F2298[0] == 0) && (g_field_gover_load_countdown[0] == 0) && (g_field_modal_state[0] == 0) && (g_field_text_session_active[0] == 0))
+    if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (g_field_text_session_active == 0))
     {
         func_800B19FC();
-        if (g_field_scene_request_pending[0] != 0)
+        if (g_field_scene_request_pending != 0)
         {
             return;
         }
-        if (D_8011F3AC[0] == 0)
+        if (D_8011F3AC == 0)
         {
             field_update_actor_objects();
         }
     }
-    func_800A4798(arg0);
+    func_800A4798(render_half);
     func_80096B54();
-    if ((D_800F2298[0] == 0) && (g_field_gover_load_countdown[0] == 0) && (g_field_modal_state[0] == 0) && (D_8011F3AC[0] == 0) && (g_field_text_session_active[0] == 0))
+    if ((D_800F2298 == 0) && (g_field_gover_load_countdown == 0) && (g_field_modal_state == 0) && (D_8011F3AC == 0) && (g_field_text_session_active == 0))
     {
         field_update_actor_animations();
     }
-    field_prepare_actor_render_commands(arg0, arg1);
-    field_render_actor_objects(arg0);
-    func_80086FB8(arg0);
-    func_800A2E40(arg0);
+    field_prepare_actor_render_commands(render_half, alternate);
+    field_render_actor_objects(render_half);
+    func_80086FB8(render_half);
+    func_800A2E40(render_half);
     func_800A2E34();
     func_800842E0();
-    g_frame_counter[0] += 1;
+    g_frame_counter += 1;
     func_8008B73C();
-    field_update_dialog_runtime(arg0);
-    field_update_return_to_title_prompt(arg0);
+    field_update_dialog_runtime(render_half);
+    field_update_return_to_title_prompt(render_half);
     func_80096E60();
-    func_800A64D0(arg0);
-    field_update_modal(arg0);
-    func_800AD118(arg0);
-    func_800A5794(arg0);
-    func_800AF8E8(arg0);
+    func_800A64D0(render_half);
+    field_update_modal(render_half);
+    func_800AD118(render_half);
+    func_800A5794(render_half);
+    func_800AF8E8(render_half);
     func_800A3FB0();
     field_update_audio_timer();
     field_update_gover_load();

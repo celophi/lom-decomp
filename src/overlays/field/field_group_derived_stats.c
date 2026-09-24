@@ -1,26 +1,25 @@
 #include "saved_game.h"
+
 /** @file field_group_derived_stats.c
  * @brief Recompute derived party-member statistics from the selected gosub results.
  */
 
 #include "common.h"
-
-extern u8 *func_800C1E40(s32 arg0);
-extern u32 D_80051C50[];
-extern s8 D_800F0C38[];
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
-
+#define U8(p, o) (*(u8*)((u8*)(p) + (o)))
+#define U16(p, o) (*(u16*)((u8*)(p) + (o)))
+#define U32(p, o) (*(u32*)((u8*)(p) + (o)))
 
 typedef struct
 {
     u8 pad[0x2B0C];
     u8 unk2B0C;
 } NameView;
+
 typedef struct
 {
     s32 a[27];
 } LocalTableCopy;
+
 typedef struct
 {
     u8 pad[4];
@@ -53,6 +52,7 @@ typedef struct
     u8 pad[0x2B22];
     u16 hp, stat0, stat1, stat2, stat3, stat4;
 } OutputStats;
+
 typedef struct
 {
     u8 pad[0x2B48];
@@ -62,11 +62,13 @@ typedef struct
     unsigned int high : 4;
     unsigned int rest : 24;
 } GroupOutput;
+
 typedef struct
 {
     u8 pad[0x2B38];
     u16 resistance;
 } ResistanceView;
+
 typedef struct
 {
     u8 pad[0xCF4];
@@ -75,9 +77,12 @@ typedef struct
     unsigned int category : 6;
     unsigned int rest : 16;
 } ItemHeader;
-#define U8(p, o) (*(u8 *)((u8 *)(p) + (o)))
-#define U16(p, o) (*(u16 *)((u8 *)(p) + (o)))
-#define U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
+
+extern u8* func_800C1E40(s32 arg0);
+extern u32 D_80051C50[];
+extern s8 D_800F0C38[];
+extern s32 g_gosub_result_count;
+extern s32 g_gosub_result_values[];
 
 /**
  * @brief Recomputes a party member's derived stat block from its gosub result set.
@@ -101,11 +106,11 @@ void func_800C4364(s32 arg0)
     s32 record_offset;
     s32 work_value;
     s32 type;
-    u8 *base;
-    u8 *out_base;
+    u8* base;
+    u8* out_base;
     u8 *tb0, *tb1, *tb2, *tb3, *tb4, *tb5;
 
-    *(LocalTableCopy *)local_table = *(LocalTableCopy *)D_80051C50;
+    *(LocalTableCopy*)local_table = *(LocalTableCopy*)D_80051C50;
 
     count = 0;
     base = g_saved_game.bytes;
@@ -115,17 +120,14 @@ void func_800C4364(s32 arg0)
     {
         s32 low_index;
         s32 high_index;
-        accum[0] =
-            ((ResourceByte *)(func_800C1E40(0x100) + (low_index = digit * 2)))->value +
-            (((ResourceByte *)(func_800C1E40(0x100) + ((high_index = digit * 2 + 1))))->value << 8);
+        accum[0] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = digit * 2)))->value +
+                   (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = digit * 2 + 1))))->value << 8);
     }
     {
         s32 low_index;
         s32 high_index;
-        accum[1] =
-            ((ResourceByte *)(func_800C1E40(0x100) + (low_index = (digit + 1) * 2)))->value +
-            (((ResourceByte *)(func_800C1E40(0x100) + ((high_index = (digit + 1) * 2 + 1))))->value
-             << 8);
+        accum[1] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = (digit + 1) * 2)))->value +
+                   (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = (digit + 1) * 2 + 1))))->value << 8);
     }
     i = accum[0];
     if (i < accum[1])
@@ -136,8 +138,7 @@ void func_800C4364(s32 arg0)
         {
             if (count < 21)
             {
-                ((NameView *)((count + record_offset) + (u32)out_base))->unk2B0C =
-                    ((ResourceByte *)(func_800C1E40(0x100) + i))->value;
+                ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
             }
             count++;
             i++;
@@ -156,24 +157,14 @@ void func_800C4364(s32 arg0)
                 {
                     s32 low_index;
                     s32 high_index;
-                    accum[0] =
-                        ((ResourceByte *)(func_800C1E40(0x100) + (low_index = hundreds_digit * 2)))
-                            ->value +
-                        (((ResourceByte *)(func_800C1E40(0x100) +
-                                           ((high_index = hundreds_digit * 2 + 1))))
-                             ->value
-                         << 8);
+                    accum[0] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = hundreds_digit * 2)))->value +
+                               (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = hundreds_digit * 2 + 1))))->value << 8);
                 }
                 {
                     s32 low_index;
                     s32 high_index;
-                    accum[1] = ((ResourceByte *)(func_800C1E40(0x100) +
-                                                 (low_index = (hundreds_digit + 1) * 2)))
-                                   ->value +
-                               (((ResourceByte *)(func_800C1E40(0x100) +
-                                                  ((high_index = (hundreds_digit + 1) * 2 + 1))))
-                                    ->value
-                                << 8);
+                    accum[1] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = (hundreds_digit + 1) * 2)))->value +
+                               (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = (hundreds_digit + 1) * 2 + 1))))->value << 8);
                 }
                 i = accum[0];
                 if (i < accum[1])
@@ -184,8 +175,7 @@ void func_800C4364(s32 arg0)
                     {
                         if (count < 21)
                         {
-                            ((NameView *)((count + record_offset) + (u32)out_base))->unk2B0C =
-                                ((ResourceByte *)(func_800C1E40(0x100) + i))->value;
+                            ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
                         }
                         count++;
                         i++;
@@ -199,21 +189,14 @@ void func_800C4364(s32 arg0)
             {
                 s32 low_index;
                 s32 high_index;
-                accum[0] =
-                    ((ResourceByte *)(func_800C1E40(0x100) + (low_index = digit * 2)))->value +
-                    (((ResourceByte *)(func_800C1E40(0x100) + ((high_index = digit * 2 + 1))))
-                         ->value
-                     << 8);
+                accum[0] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = digit * 2)))->value +
+                           (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = digit * 2 + 1))))->value << 8);
             }
             {
                 s32 low_index;
                 s32 high_index;
-                accum[1] =
-                    ((ResourceByte *)(func_800C1E40(0x100) + (low_index = (digit + 1) * 2)))
-                        ->value +
-                    (((ResourceByte *)(func_800C1E40(0x100) + ((high_index = (digit + 1) * 2 + 1))))
-                         ->value
-                     << 8);
+                accum[1] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = (digit + 1) * 2)))->value +
+                           (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = (digit + 1) * 2 + 1))))->value << 8);
             }
             i = accum[0];
             if (i < accum[1])
@@ -224,8 +207,7 @@ void func_800C4364(s32 arg0)
                 {
                     if (count < 21)
                     {
-                        ((NameView *)((count + record_offset) + (u32)out_base))->unk2B0C =
-                            ((ResourceByte *)(func_800C1E40(0x100) + i))->value;
+                        ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
                     }
                     count++;
                     i++;
@@ -236,19 +218,14 @@ void func_800C4364(s32 arg0)
         {
             s32 low_index;
             s32 high_index;
-            accum[0] =
-                ((ResourceByte *)(func_800C1E40(0x100) + (low_index = digit * 2)))->value +
-                (((ResourceByte *)(func_800C1E40(0x100) + ((high_index = digit * 2 + 1))))->value
-                 << 8);
+            accum[0] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = digit * 2)))->value +
+                       (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = digit * 2 + 1))))->value << 8);
         }
         {
             s32 low_index;
             s32 high_index;
-            accum[1] =
-                ((ResourceByte *)(func_800C1E40(0x100) + (low_index = (digit + 1) * 2)))->value +
-                (((ResourceByte *)(func_800C1E40(0x100) + ((high_index = (digit + 1) * 2 + 1))))
-                     ->value
-                 << 8);
+            accum[1] = ((ResourceByte*)(func_800C1E40(0x100) + (low_index = (digit + 1) * 2)))->value +
+                       (((ResourceByte*)(func_800C1E40(0x100) + ((high_index = (digit + 1) * 2 + 1))))->value << 8);
         }
         i = accum[0];
         if (i < accum[1])
@@ -259,8 +236,7 @@ void func_800C4364(s32 arg0)
             {
                 if (count < 21)
                 {
-                    ((NameView *)((count + record_offset) + (u32)out_base))->unk2B0C =
-                        ((ResourceByte *)(func_800C1E40(0x100) + i))->value;
+                    ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
                 }
                 count++;
                 i++;
@@ -277,8 +253,7 @@ void func_800C4364(s32 arg0)
             {
                 if (count < 21)
                 {
-                    ((NameView *)((count + record_offset) + (u32)out_base))->unk2B0C =
-                        ((ResourceByte *)(func_800C1E40(0x100) + i))->value;
+                    ((NameView*)((count + record_offset) + (u32)out_base))->unk2B0C = ((ResourceByte*)(func_800C1E40(0x100) + i))->value;
                 }
                 count++;
                 i++;
@@ -287,19 +262,19 @@ void func_800C4364(s32 arg0)
     }
     if (count < 21)
     {
-        u8 *end_base = g_saved_game.bytes;
+        u8* end_base = g_saved_game.bytes;
         s32 end_offset = arg0 * 0x14C;
-        ((NameView *)(end_base + (count + end_offset)))->unk2B0C = 0;
+        ((NameView*)(end_base + (count + end_offset)))->unk2B0C = 0;
     }
 
     i = 0;
     accum[0] = 0;
     if (g_gosub_result_count > 0)
     {
-        u8 *scan_base = g_saved_game.bytes;
-        u8 *record_base = scan_base + 0xCE0;
+        u8* scan_base = g_saved_game.bytes;
+        u8* record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
-        s32 *results;
+        s32* results;
         results = g_gosub_result_values;
         do
         {
@@ -313,7 +288,7 @@ void func_800C4364(s32 arg0)
         } while (i < result_count);
     }
     accum[0] = accum[0] < 10 ? 10 : accum[0] > 200 ? 200 : accum[0];
-    ((OutputStats *)(g_saved_game.bytes + arg0 * 0x14C))->stat0 = (u16)accum[0];
+    ((OutputStats*)(g_saved_game.bytes + arg0 * 0x14C))->stat0 = (u16)accum[0];
 
     i = 0;
     accum[0] = 0;
@@ -323,10 +298,10 @@ void func_800C4364(s32 arg0)
     if (g_gosub_result_count > 0)
     {
         s32 selected_type = 1;
-        u8 *scan_base = g_saved_game.bytes;
-        u8 *record_base = scan_base + 0xCE0;
+        u8* scan_base = g_saved_game.bytes;
+        u8* record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
-        s32 *results;
+        s32* results;
         results = g_gosub_result_values;
         do
         {
@@ -343,15 +318,14 @@ void func_800C4364(s32 arg0)
         } while (i < result_count);
     }
     {
-        u8 *stat_base;
+        u8* stat_base;
         i = 0;
         stat_base = g_saved_game.bytes;
         for (; i < 4; i++)
         {
             s32 output_offset;
             accum[i] = accum[i] < 0 ? 0 : accum[i] > 99 ? 99 : accum[i];
-            ((OutputStats *)((output_offset = arg0 * 0x14C + i * 2) + (u32)stat_base))->stat1 =
-                (u16)accum[i];
+            ((OutputStats*)((output_offset = arg0 * 0x14C + i * 2) + (u32)stat_base))->stat1 = (u16)accum[i];
         }
     }
 
@@ -374,12 +348,12 @@ void func_800C4364(s32 arg0)
     i = 0;
     if (g_gosub_result_count > i)
     {
-        u8 *item_base = g_saved_game.bytes;
+        u8* item_base = g_saved_game.bytes;
         s32 result_count = g_gosub_result_count;
-        s32 *results = g_gosub_result_values;
+        s32* results = g_gosub_result_values;
         do
         {
-            u8 *item = (u8 *)((*results << 6) + (u32)item_base);
+            u8* item = (u8*)((*results << 6) + (u32)item_base);
             type = (U32(item, 0xCF4) >> 8) & 3;
             if (type == 0)
             {
@@ -416,22 +390,22 @@ void func_800C4364(s32 arg0)
         accum[i] = accum[i] < 0 ? 0 : accum[i] > 9 ? 9 : accum[i];
     }
 
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a0 = accum[0];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a1 = accum[1];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a2 = accum[2];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a3 = accum[3];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a4 = accum[4];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a5 = accum[5];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a6 = accum[6];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a7 = accum[7];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a8 = accum[8];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a9 = accum[9];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a10 = accum[10];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a11 = accum[11];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a12 = accum[12];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a13 = accum[13];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a14 = accum[14];
-    ((StatNibbles *)(g_saved_game.bytes + arg0 * 0x14C))->a15 = accum[15];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a0 = accum[0];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a1 = accum[1];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a2 = accum[2];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a3 = accum[3];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a4 = accum[4];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a5 = accum[5];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a6 = accum[6];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a7 = accum[7];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a8 = accum[8];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a9 = accum[9];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a10 = accum[10];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a11 = accum[11];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a12 = accum[12];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a13 = accum[13];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a14 = accum[14];
+    ((StatNibbles*)(g_saved_game.bytes + arg0 * 0x14C))->a15 = accum[15];
 
     accum[0] = 0;
     accum[1] = 0;
@@ -443,8 +417,8 @@ void func_800C4364(s32 arg0)
     accum[7] = 0;
     for (i = 0; i < g_gosub_result_count; i++)
     {
-        s8 *resistance_table = D_800F0C38;
-        u8 *item = g_saved_game.bytes + (work_value = g_gosub_result_values[i] << 6);
+        s8* resistance_table = D_800F0C38;
+        u8* item = g_saved_game.bytes + (work_value = g_gosub_result_values[i] << 6);
         accum[0] += resistance_table[U32(item, 0xCFC) & 0xF];
         accum[1] += resistance_table[U8(item, 0xCFC) >> 4];
         accum[2] += resistance_table[(U32(item, 0xCFC) >> 8) & 0xF];
@@ -458,9 +432,8 @@ void func_800C4364(s32 arg0)
     {
         accum[i] = (accum[i] * 5) + 20;
         accum[i] = accum[i] < 20 ? 20 : accum[i] > 99 ? 99 : accum[i];
-        ((ResistanceView *)(g_saved_game.bytes + arg0 * 0x14C + i * 2))->resistance &= 0xFE00;
-        ((ResistanceView *)(g_saved_game.bytes + arg0 * 0x14C + i * 2))->resistance = (u16)accum[i]
-                                                                                      << 9;
+        ((ResistanceView*)(g_saved_game.bytes + arg0 * 0x14C + i * 2))->resistance &= 0xFE00;
+        ((ResistanceView*)(g_saved_game.bytes + arg0 * 0x14C + i * 2))->resistance = (u16)accum[i] << 9;
     }
 
     accum[0] = 0;
@@ -468,10 +441,10 @@ void func_800C4364(s32 arg0)
     if (g_gosub_result_count > i)
     {
         s32 selected_type = 1;
-        u8 *scan_base = g_saved_game.bytes;
-        u8 *record_base = scan_base + 0xCE0;
+        u8* scan_base = g_saved_game.bytes;
+        u8* record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
-        s32 *results;
+        s32* results;
         results = g_gosub_result_values;
         do
         {
@@ -489,10 +462,10 @@ void func_800C4364(s32 arg0)
     i = 0;
     if (g_gosub_result_count > 0)
     {
-        u8 *scan_base = g_saved_game.bytes;
-        u8 *record_base = scan_base + 0xCE0;
+        u8* scan_base = g_saved_game.bytes;
+        u8* record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
-        s32 *results;
+        s32* results;
         results = g_gosub_result_values;
         do
         {
@@ -511,10 +484,10 @@ void func_800C4364(s32 arg0)
     if (g_gosub_result_count > 0)
     {
         s32 selected_type = 1;
-        u8 *scan_base = g_saved_game.bytes;
-        u8 *record_base = scan_base + 0xCE0;
+        u8* scan_base = g_saved_game.bytes;
+        u8* record_base = scan_base + 0xCE0;
         s32 result_count = g_gosub_result_count;
-        s32 *results;
+        s32* results;
         results = g_gosub_result_values;
         do
         {
@@ -532,27 +505,25 @@ void func_800C4364(s32 arg0)
     (tb0 + arg0 * 0x14C)[0x2B4A] = (u8)accum[0];
     (tb0 + arg0 * 0x14C)[0x2B4B] = 1;
     U32((tb0 + arg0 * 0x14C), 0x2B4C) = 0;
-    ((GroupOutput *)(tb0 + arg0 * 0x14C))->low = 0;
+    ((GroupOutput*)(tb0 + arg0 * 0x14C))->low = 0;
     for (i = 0; i < g_gosub_result_count; i++)
     {
-        if (((ItemHeader *)(g_saved_game.bytes + (g_gosub_result_values[i] << 6)))->type == 0)
+        if (((ItemHeader*)(g_saved_game.bytes + (g_gosub_result_values[i] << 6)))->type == 0)
         {
-            ((GroupOutput *)(tb0 + arg0 * 0x14C))->low = (u8)
-                local_table[((ItemHeader *)(g_saved_game.bytes + (g_gosub_result_values[i] << 6)))
-                                ->category];
+            ((GroupOutput*)(tb0 + arg0 * 0x14C))->low = (u8)local_table[((ItemHeader*)(g_saved_game.bytes + (g_gosub_result_values[i] << 6)))->category];
         }
     }
 
     i = 0;
     accum[0] = 0;
     tb1 = g_saved_game.bytes;
-    ((GroupOutput *)(tb1 + arg0 * 0x14C))->high = 4;
+    ((GroupOutput*)(tb1 + arg0 * 0x14C))->high = 4;
     {
         s32 result_count = g_gosub_result_count;
-        s32 *results;
+        s32* results;
         if (result_count > 0)
         {
-            u8 *scan_base = g_saved_game.bytes;
+            u8* scan_base = g_saved_game.bytes;
             s32 selected_type = 1;
             results = g_gosub_result_values;
             do
@@ -569,12 +540,12 @@ void func_800C4364(s32 arg0)
     if (accum[0] == 2)
     {
         tb2 = g_saved_game.bytes;
-        ((GroupOutput *)(tb2 + arg0 * 0x14C))->high = 5;
+        ((GroupOutput*)(tb2 + arg0 * 0x14C))->high = 5;
     }
     if (accum[0] == 3)
     {
         tb3 = g_saved_game.bytes;
-        ((GroupOutput *)(tb3 + arg0 * 0x14C))->high = 6;
+        ((GroupOutput*)(tb3 + arg0 * 0x14C))->high = 6;
     }
     tb4 = g_saved_game.bytes;
     (tb4 + arg0 * 0x14C)[0x2B51] = 0;
@@ -604,7 +575,7 @@ void func_800C4364(s32 arg0)
         work_value = 50;
     }
     {
-        u8 *hp_base;
+        u8* hp_base;
         hp_base = g_saved_game.bytes;
         U16((hp_base + arg0 * 0x14C), 0x2B22) = (s16)work_value;
     }

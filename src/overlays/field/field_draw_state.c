@@ -1,94 +1,71 @@
 /** @file field_draw_state.c
- * @brief Reset field drawing state and emit its flat-tile helper.
+ * @brief Reset field drawing state and emit its debug load bar.
  */
 
 #include "common.h"
+#include "field_runtime.h"
 #include "sdk/libgpu.h"
 
 void field_reset_effect_pool(void);
 void field_reset_global_color_scale(void);
 
-extern s32 D_800F2278[];
-extern s32 D_800F227C[];
-extern s32 D_800F2280[];
+extern s32 D_800F2278;
+extern s32 D_800F227C;
+extern s32 D_800F2280;
+
+/** @brief LINE_F2 with its color word addressable as one value. */
+typedef struct
+{
+    u_long tag;
+    u32 rgbc;
+    s16 x0;
+    s16 y0;
+    s16 x1;
+    s16 y1;
+} FieldBarLine;
 
 /**
- * @brief Clear the three field draw-state globals and reset the colour scale.
+ * @brief Clear the three field draw-state globals and reset the color scale.
  * @see decomp.me (100%) TODO
  */
 void func_80067AA4(void)
 {
-    D_800F2280[0] = 0;
-    D_800F227C[0] = 0;
-    D_800F2278[0] = 0;
+    D_800F2280 = 0;
+    D_800F227C = 0;
+    D_800F2278 = 0;
     field_reset_effect_pool();
     field_reset_global_color_scale();
 }
 
-/** @brief Packet tag, addressed whole or by its length byte. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u8 _addr[3];        // 0x00
-        u8 len;             // 0x03
-    } f;
-} PrimTag;
-
-/** @brief Packet colour word, addressed whole or by its code byte. */
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u8 r;               // 0x04
-        u8 g;               // 0x05
-        u8 b;               // 0x06
-        u8 code;            // 0x07
-    } f;
-} PrimRgbc;
-
-/** @brief 16-byte flat tile primitive. */
-typedef struct
-{
-    PrimTag tag;            // 0x00
-    PrimRgbc rgbc;          // 0x04
-    s16 x0;                 // 0x08
-    s16 y0;                 // 0x0A
-    s16 w;                  // 0x0C
-    s16 h;                  // 0x0E
-} PrimTile;
-
-typedef struct
-{
-    u32 otag[0x1010];               // 0x0000
-    u8 _pad[0x40B8 - 0x4040];       // 0x4040
-    PrimTile* cursor;               // 0x40B8
-} RenderHalf;
-
 /**
+ * @brief Draw a horizontal bar whose length and color show @p load.
+ *
+ * The bar is grey below 0x200, yellow from 0x200 and red from 0x300, and is
+ * @p load / 4 pixels long at y = 16.
+ *
+ * @param ctx Render half whose first ordering-table entry receives the line.
+ * @param load Value the bar represents.
  * @see decomp.me (100%) TODO
  */
-void func_80067AE0(RenderHalf* ctx, s32 arg1)
+void func_80067AE0(FieldRenderHalf* ctx, s32 load)
 {
-    PrimTile* prim = ctx->cursor;
+    FieldBarLine* line = (FieldBarLine*)ctx->primitive_cursor;
 
-    prim->rgbc.word = 0x808080;
-    if (arg1 >= 0x200)
+    line->rgbc = 0x808080;
+    if (load >= 0x200)
     {
-        prim->rgbc.word = 0x8080;
+        line->rgbc = 0x8080;
     }
-    if (arg1 >= 0x300)
+    if (load >= 0x300)
     {
-        prim->rgbc.word = prim->rgbc.word >> 8;
+        line->rgbc = line->rgbc >> 8;
     }
-    setLineF2(prim);
-    prim->h = 0x10;
-    prim->y0 = 0x10;
-    prim->x0 = 0;
-    prim->w = arg1 >> 2;
-    addPrim(&ctx->otag[0], prim);
-    prim += 1;
-    ctx->cursor = prim;
+    setLineF2(line);
+    line->y1 = 16;
+    line->y0 = 16;
+    line->x0 = 0;
+    line->x1 = load >> 2;
+    addPrim(&ctx->ordering_table[0], line);
+    line += 1;
+    ctx->primitive_cursor = (u8*)line;
 }

@@ -1,63 +1,47 @@
+/**
+ * @file field_actor_target_queries.c
+ * @brief Distance, facing and box predicates for field actors, and the target collector that applies them.
+ */
+
 #include "common.h"
 #include "field_types.h"
+#include "field_effect_types.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
 
-#define ACCESS(type, base, offset) (*(type *)((u8 *)(base) + (offset)))
+/** @brief Number of field actors. */
+#define FIELD_TARGET_ACTOR_COUNT 13
 
-typedef struct
-{
-    s32 x;
-    u8 pad4[4];
-    s32 z;
-    u8 padC[0x21 - 0xC];
-    u8 flags;
-} FieldAngleRecord;
+/** @brief Number of leading actors that belong to the party. */
+#define FIELD_TARGET_PARTY_COUNT 3
 
-typedef struct
-{
-    s32 unk0;  /* 0x00 */
-    u8 pad4[0x8 - 0x4];
-    s32 unk8;  /* 0x08 */
-    u8 padC[0x25 - 0xC];
-    u8 unk25;  /* 0x25 */
-    u8 pad26[0x30 - 0x26];
-} Struct8009CF1C;
+/** @brief Binding slot of an actor: party members own slots 0-2, every other actor shares slot 2. */
+#define FIELD_TARGET_BINDING_SLOT(index) ((index) < FIELD_TARGET_PARTY_COUNT ? (index) : 2)
 
-typedef struct
-{
-    s32 vx;
-    s32 vy;
-    s32 vz;
-    u8 unk0C[0x2E];
-    u8 unk3A;
-} RefEntity;
+/** @brief Scratchpad vector holding the scaled actor delta. */
+#define FIELD_TARGET_DELTA ((VECTOR*)0x1F800000)
 
-/** @brief Selection descriptor containing the callback table index. */
+/** @brief Scratchpad vector receiving the squared delta components. */
+#define FIELD_TARGET_SQUARE ((VECTOR*)0x1F800010)
+
+/** @brief Selection descriptor containing the predicate table index. */
 typedef struct
 {
     u8 pad[2];
     u8 filter;
-} FilterSpec;
-/** @brief Predicate for a source actor, candidate actor and caller argument. */
-typedef s32 (*ActorFilter)(u8 *, u8 *, s32);
+} FieldTargetSpec;
 
-/** @brief Fields consulted in a 0x23C-byte FIELD actor state. */
+/** @brief Predicate for a source actor, candidate actor and caller argument. */
+typedef s32 (*FieldTargetFilter)(FieldMotionRecord* source, FieldMotionRecord* candidate, s32 argument);
+
+/** @brief Ground attachment offsets of a field object state (the view starts 0x190 bytes into it). */
 typedef struct
 {
-    u8 pad0[4];
-    s32 active;
-    u8 pad8[4];
-    s32 flags_c;
-    s32 category;
-    u8 pad14[0x12C - 0x14];
-    s32 valid;
-    u8 pad130[0x174 - 0x130];
-    s32 flags174;
-    s32 flags178;
-    u8 pad17c[0x23C - 0x17C];
-} FieldState;
+    Vec2s points[3];
+    u8 pad[0x23C - 0xC];
+} FieldTargetGroundPoints;
+
 /** @brief Binding state and its owning actor in a 0x1C-byte record. */
 typedef struct
 {
@@ -65,39 +49,38 @@ typedef struct
     u8 pad4[8];
     s32 owner;
     u8 pad10[12];
-} Binding;
+} FieldTargetBinding;
 
-extern u8 D_80105C70[];
-extern ActorFilter D_800EC2D8[];
-extern u8 g_field_actors[];
+extern FieldTargetGroundPoints D_80105C70[];
+extern FieldTargetFilter D_800EC2D8[];
+extern FieldMotionRecord g_field_actors[];
 extern s32 g_field_active_group;
-extern Binding g_field_actor_bindings[];
-extern FieldState g_field_object_states[];
+extern FieldTargetBinding g_field_actor_bindings[];
 extern s32 D_8010D020;
 
 /**
- * @brief Test whether entity @p b is within @p max_dist of position @p a.
- * @param a Reference position (vx/vy/vz).
- * @param b Target entity; skipped when its unk25 flag is 0xFF.
- * @param max_dist Maximum distance for a positive result.
- * @return 1 if the GTE-computed distance is below @p max_dist, else 0.
+ * @brief Test whether a candidate actor is within a distance of the source actor.
+ * @param source Source actor.
+ * @param candidate Candidate actor; rejected when its state is 0xFF.
+ * @param max_distance Exclusive distance limit in whole units.
+ * @return 1 when the candidate is closer than @p max_distance, otherwise 0.
  */
-s32 func_8009CC60(VECTOR *a, FieldEntity *b, s32 max_dist)
+s32 func_8009CC60(FieldMotionRecord* source, FieldMotionRecord* candidate, s32 max_distance)
 {
-    VECTOR *delta = (VECTOR *)0x1F800000;
-    VECTOR *sqr = (VECTOR *)0x1F800010;
-    s32 dist;
+    VECTOR* delta = FIELD_TARGET_DELTA;
+    VECTOR* square = FIELD_TARGET_SQUARE;
+    s32 distance;
 
-    if (b->unk25 != 0xFF)
+    if (candidate->state != 0xFF)
     {
-        delta->vx = (b->vx - a->vx) >> 8;
-        delta->vy = (b->vy - a->vy) >> 8;
-        delta->vz = (b->vz - a->vz) >> 8;
+        delta->vx = (candidate->x - source->x) >> 8;
+        delta->vy = (candidate->y - source->y) >> 8;
+        delta->vz = (candidate->z - source->z) >> 8;
         gte_ldlvl(delta);
         gte_sqr0();
-        gte_stlvnl(sqr);
-        dist = SquareRoot0(sqr->vx + sqr->vy + sqr->vz);
-        if (dist < max_dist)
+        gte_stlvnl(square);
+        distance = SquareRoot0(square->vx + square->vy + square->vz);
+        if (distance < max_distance)
         {
             return 1;
         }
@@ -106,30 +89,30 @@ s32 func_8009CC60(VECTOR *a, FieldEntity *b, s32 max_dist)
 }
 
 /**
- * @brief Test whether entity @p b sits in the annulus around position @p a.
- * @param a Reference position (vx/vy/vz).
- * @param b Target entity; skipped when its unk25 flag is 0xFF.
- * @param max_dist Outer band is @p max_dist + 0x40; inner band is 0x40.
- * @return 1 if 0x40 < distance < @p max_dist + 0x40, else 0.
+ * @brief Test whether a candidate actor lies in the ring between 0x40 and a distance plus 0x40.
+ * @param source Source actor.
+ * @param candidate Candidate actor; rejected when its state is 0xFF.
+ * @param max_distance Ring width beyond the 0x40 inner radius.
+ * @return 1 when 0x40 < distance < @p max_distance + 0x40, otherwise 0.
  */
-s32 func_8009CD30(VECTOR *a, FieldEntity *b, s32 max_dist)
+s32 func_8009CD30(FieldMotionRecord* source, FieldMotionRecord* candidate, s32 max_distance)
 {
-    VECTOR *delta = (VECTOR *)0x1F800000;
-    VECTOR *sqr = (VECTOR *)0x1F800010;
-    s32 dist;
+    VECTOR* delta = FIELD_TARGET_DELTA;
+    VECTOR* square = FIELD_TARGET_SQUARE;
+    s32 distance;
 
-    if (b->unk25 != 0xFF)
+    if (candidate->state != 0xFF)
     {
-        delta->vx = (b->vx - a->vx) >> 8;
-        delta->vy = (b->vy - a->vy) >> 8;
-        delta->vz = (b->vz - a->vz) >> 8;
+        delta->vx = (candidate->x - source->x) >> 8;
+        delta->vy = (candidate->y - source->y) >> 8;
+        delta->vz = (candidate->z - source->z) >> 8;
         gte_ldlvl(delta);
         gte_sqr0();
-        gte_stlvnl(sqr);
-        dist = SquareRoot0(sqr->vx + sqr->vy + sqr->vz);
-        if (dist < max_dist + 0x40)
+        gte_stlvnl(square);
+        distance = SquareRoot0(square->vx + square->vy + square->vz);
+        if (distance < max_distance + 0x40)
         {
-            if (dist > 0x40)
+            if (distance > 0x40)
             {
                 return 1;
             }
@@ -139,21 +122,21 @@ s32 func_8009CD30(VECTOR *a, FieldEntity *b, s32 max_dist)
 }
 
 /**
- * @brief Test whether one field record faces another within an angular limit.
- * @param a Record whose facing direction is tested.
- * @param b Record used as the facing target.
- * @param distance Distance value used to derive the angular limit.
- * @return 1 when the target is within the angular limit, otherwise 0.
+ * @brief Test whether the source actor faces the candidate within an angular limit.
+ * @param source Source actor; bit 7 of its facing byte selects the facing direction.
+ * @param candidate Candidate actor.
+ * @param distance Value whose arctangent over 100 gives the angular limit.
+ * @return 1 when the candidate is within the angular limit, otherwise 0.
  */
-s32 func_8009CE10(FieldAngleRecord *a, FieldAngleRecord *b, s32 distance)
+s32 func_8009CE10(FieldMotionRecord* source, FieldMotionRecord* candidate, s32 distance)
 {
     s32 limit;
     s32 angle;
 
     limit = ratan2(distance, 100);
-    if (!(a->flags & 0x80))
+    if (!(source->facing_or_reward_kind & 0x80))
     {
-        angle = ratan2((a->z - b->z) >> 8, (a->x - b->x) >> 8);
+        angle = ratan2((source->z - candidate->z) >> 8, (source->x - candidate->x) >> 8);
         if (angle >= 0x801)
         {
             angle = 0x1000 - angle;
@@ -165,7 +148,7 @@ s32 func_8009CE10(FieldAngleRecord *a, FieldAngleRecord *b, s32 distance)
     }
     else
     {
-        angle = ratan2((b->z - a->z) >> 8, (b->x - a->x) >> 8);
+        angle = ratan2((candidate->z - source->z) >> 8, (candidate->x - source->x) >> 8);
         if (angle >= 0x801)
         {
             angle = 0x1000 - angle;
@@ -179,117 +162,114 @@ s32 func_8009CE10(FieldAngleRecord *a, FieldAngleRecord *b, s32 distance)
 }
 
 /**
- * @brief Tests whether entity @p a1 lies within a bounding box around @p a0.
+ * @brief Test whether a candidate actor lies in a box around the source actor.
  *
- * Returns false when @p a1 is inactive (@c unk25 == 0xFF), when the y delta
- * (@c a1->unk8 - @c a0->unk8) is outside [-0x2000, 0x2000], or when the x delta
- * (@c a1->unk0 - @c a0->unk0) is outside [-(t << 8), t << 8]; otherwise true.
+ * The box spans +-0x2000 on the Z axis and +-(@p half_width << 8) on
+ * the X axis.
  *
- * @param a0 Reference entity (box center).
- * @param a1 Candidate entity to test.
- * @param t Half-width of the x range; scaled by 256.
- * @return 1 when @p a1 is inside the box, 0 otherwise.
+ * @param source Source actor at the box center.
+ * @param candidate Candidate actor; rejected when its state is 0xFF.
+ * @param half_width Half-width of the X range in whole units.
+ * @return 1 when the candidate is inside the box, otherwise 0.
  */
-s32 func_8009CF1C(Struct8009CF1C *a0, Struct8009CF1C *a1, s32 t)
+s32 func_8009CF1C(FieldMotionRecord* source, FieldMotionRecord* candidate, s32 half_width)
 {
-    s32 dy;
+    s32 dz;
     s32 dx;
 
-    if (a1->unk25 == 0xFF)
+    if (candidate->state == 0xFF)
     {
         return 0;
     }
-    dy = a1->unk8 - a0->unk8;
-    if (dy >= 0x2001)
+    dz = candidate->z - source->z;
+    if (dz >= 0x2001)
     {
         return 0;
     }
-    if (dy < -0x2000)
+    if (dz < -0x2000)
     {
         return 0;
     }
-    dx = a1->unk0;
-    dx = dx - a0->unk0;
-    t <<= 8;
-    dy = dx;
-    if (t < dy)
+    dx = candidate->x;
+    dx = dx - source->x; /* the original loads the candidate X first and computes the delta in place */
+    half_width <<= 8;
+    dz = dx;
+    if (half_width < dz)
     {
         return 0;
     }
-    return dy >= -t;
+    return dz >= -half_width;
 }
 
 /**
- * @brief Distance test against three consecutive correction anchors.
- *
- * Loops the corrected GTE distance (D_80105C70[a->unk3A * 0x23C], stepping the
- * s16 correction pair by one each pass) up to three times, returning 1 on the
- * first anchor within @p max_dist.
- *
- * @return 1 if any anchor is within @p max_dist, else 0 (also 0 when unk25 == 0xFF).
+ * @brief Test the candidate against the source actor's three ground attachment points.
+ * @param source Source actor; its object index selects the attachment points.
+ * @param candidate Candidate actor; rejected when its state is 0xFF.
+ * @param max_distance Exclusive distance limit in whole units.
+ * @return 1 when any attachment point is closer than @p max_distance, otherwise 0.
  */
-s32 func_8009CF84(RefEntity *a, FieldEntity *b, s32 max_dist)
+s32 func_8009CF84(FieldMotionRecord* source, FieldMotionRecord* candidate, s32 max_distance)
 {
-    VECTOR *delta = (VECTOR *)0x1F800000;
-    VECTOR *sqr = (VECTOR *)0x1F800010;
-    s16 *corr;
+    VECTOR* delta = FIELD_TARGET_DELTA;
+    VECTOR* square = FIELD_TARGET_SQUARE;
+    Vec2s* point;
     s32 i;
-    s32 dist;
-    static void *const keep[] __attribute__((section(".discard"))) = {
-        &&success,
-    };
+    s32 distance;
+    static void* const keep[] __attribute__((section(".discard"))) = {
+        &&found,
+    }; /* taking the label address keeps the found path a separate block, as in the original */
 
-    if (b->unk25 == 0xFF)
+    if (candidate->state == 0xFF)
     {
         return 0;
     }
-    corr = (s16 *)&D_80105C70[a->unk3A * 0x23C];
+    point = D_80105C70[source->source_object_index].points;
     i = 0;
     do
     {
-        delta->vx = ((b->vx - a->vx) - (corr[0] << 8)) >> 8;
-        delta->vy = (b->vy - a->vy) >> 8;
-        delta->vz = ((b->vz - a->vz) - (corr[1] << 8)) >> 8;
+        delta->vx = ((candidate->x - source->x) - (point->x << 8)) >> 8;
+        delta->vy = (candidate->y - source->y) >> 8;
+        delta->vz = ((candidate->z - source->z) - (point->y << 8)) >> 8;
         gte_ldlvl(delta);
         gte_sqr0();
-        gte_stlvnl(sqr);
-        dist = SquareRoot0(sqr->vx + sqr->vy + sqr->vz);
-        if (dist < max_dist)
+        gte_stlvnl(square);
+        distance = SquareRoot0(square->vx + square->vy + square->vz);
+        if (distance < max_distance)
         {
-success:
+        found:
             return 1;
         }
         i++;
-        corr += 2;
+        point++;
     } while (i < 3);
     return 0;
 }
 
 /**
- * @brief Distance test with a per-index x/z correction from D_80105C70.
- * @param a Reference entity; unk3A selects a 0x23C-stride correction record.
- * @param b Target entity; skipped when its unk25 flag is 0xFF.
- * @param max_dist Maximum corrected distance for a positive result.
- * @return 1 if the corrected GTE distance is below @p max_dist, else 0.
+ * @brief Test the candidate against the source actor's first ground attachment point.
+ * @param source Source actor; its object index selects the attachment point.
+ * @param candidate Candidate actor; rejected when its state is 0xFF.
+ * @param max_distance Exclusive distance limit in whole units.
+ * @return 1 when the attachment point is closer than @p max_distance, otherwise 0.
  */
-s32 func_8009D0D8(RefEntity *a, FieldEntity *b, s32 max_dist)
+s32 func_8009D0D8(FieldMotionRecord* source, FieldMotionRecord* candidate, s32 max_distance)
 {
-    VECTOR *delta = (VECTOR *)0x1F800000;
-    VECTOR *sqr = (VECTOR *)0x1F800010;
-    s16 *corr;
-    s32 dist;
+    VECTOR* delta = FIELD_TARGET_DELTA;
+    VECTOR* square = FIELD_TARGET_SQUARE;
+    Vec2s* point;
+    s32 distance;
 
-    corr = (s16 *)&D_80105C70[a->unk3A * 0x23C];
-    if (b->unk25 != 0xFF)
+    point = D_80105C70[source->source_object_index].points;
+    if (candidate->state != 0xFF)
     {
-        delta->vx = ((b->vx - a->vx) - (corr[0] << 8)) >> 8;
-        delta->vy = (b->vy - a->vy) >> 8;
-        delta->vz = ((b->vz - a->vz) - (corr[1] << 8)) >> 8;
+        delta->vx = ((candidate->x - source->x) - (point->x << 8)) >> 8;
+        delta->vy = (candidate->y - source->y) >> 8;
+        delta->vz = ((candidate->z - source->z) - (point->y << 8)) >> 8;
         gte_ldlvl(delta);
         gte_sqr0();
-        gte_stlvnl(sqr);
-        dist = SquareRoot0(sqr->vx + sqr->vy + sqr->vz);
-        if (dist < max_dist)
+        gte_stlvnl(square);
+        distance = SquareRoot0(square->vx + square->vy + square->vz);
+        if (distance < max_distance)
         {
             return 1;
         }
@@ -298,7 +278,12 @@ s32 func_8009D0D8(RefEntity *a, FieldEntity *b, s32 max_dist)
 }
 
 /**
- * @brief Collect eligible FIELD actor indices using a selected predicate.
+ * @brief Collect eligible field actor indices using a selected predicate.
+ *
+ * Candidates must be alive, present, in the active group (party members
+ * always are), not bound to a running sequence, collidable and not flagged
+ * as untargetable.
+ *
  * @param source_index Actor excluded from the candidate list.
  * @param spec Descriptor selecting a predicate from D_800EC2D8.
  * @param group_mode Zero selects the opposite group; one selects the same group.
@@ -306,146 +291,101 @@ s32 func_8009D0D8(RefEntity *a, FieldEntity *b, s32 max_dist)
  * @param output Destination for the accepted indices.
  * @return Number of indices written to output.
  */
-s32 func_8009D1E4(s32 source_index, FilterSpec *spec, s32 group_mode, s32 filter_arg, s32 *output)
+s32 func_8009D1E4(s32 source_index, FieldTargetSpec* spec, s32 group_mode, s32 filter_arg, s32* output)
 {
-    enum
-    {
-        STATE_ACTIVE_WORD = -93,
-        STATE_FLAGS_C_WORD = -91,
-        STATE_CATEGORY_WORD = -90,
-        STATE_VALID_WORD = -19,
-        STATE_FLAGS174_WORD = -1
-    };
-    s16 actor_state;
-    s32 *output_cursor;
-    s32 flags_or_offset;
     s32 index;
     s32 count;
     s32 end;
     s32 start;
-    s32 owner_slot;
-    s32 state_slot;
+    s32 flags;
     s32 prior;
-    u8 *actor_start;
-    volatile s32 *state_fields;
-    FieldState *state_start;
-    u8 *actor_state_ptr;
-    u8 *actor;
-    Binding *bindings;
+    s16 motion;
+    FieldMotionRecord* actor;
+    FieldObjectRuntime* state;
 
     if (D_8010D020 != 0)
     {
         start = 0;
-        end = 13;
+        end = FIELD_TARGET_ACTOR_COUNT;
     }
     else
     {
         switch (group_mode)
         {
         case 0:
-            if (source_index < 3)
+            if (source_index < FIELD_TARGET_PARTY_COUNT)
             {
-                start = 3;
-                end = 13;
+                start = FIELD_TARGET_PARTY_COUNT;
+                end = FIELD_TARGET_ACTOR_COUNT;
             }
             else
             {
                 start = 0;
-                end = 3;
+                end = FIELD_TARGET_PARTY_COUNT;
             }
             break;
         case 1:
-            if (source_index < 3)
+            if (source_index < FIELD_TARGET_PARTY_COUNT)
             {
                 start = 0;
-                end = 3;
+                end = FIELD_TARGET_PARTY_COUNT;
             }
             else
             {
-                start = 3;
-                end = 13;
+                start = FIELD_TARGET_PARTY_COUNT;
+                end = FIELD_TARGET_ACTOR_COUNT;
             }
             break;
         }
     }
     count = 0;
     index = start;
-    actor_start = (index * 0x54) + g_field_actors;
-    state_start = &g_field_object_states[index];
-    if (index < end)
+    actor = &g_field_actors[index];
+    state = &g_field_object_states[index];
+    for (; index < end; index++, actor++, state++)
     {
-        bindings = g_field_actor_bindings;
-        state_fields = &state_start->flags178;
-        actor_state_ptr = actor_start + 0x2A;
-        actor = actor_start;
-        output_cursor = output;
-        do
+        if (index == source_index || actor->state == 0xFF || state->current_hp == 0)
         {
-            if ((index != source_index) && (ACCESS(u8, actor_state_ptr, -5) != 0xFF) &&
-                (state_fields[STATE_ACTIVE_WORD] != 0))
+            continue;
+        }
+        flags = state->contact.flags;
+        if (flags & 1)
+        {
+            continue;
+        }
+        if (g_field_active_group != (state->group_flags & 0xF) && index >= FIELD_TARGET_PARTY_COUNT)
+        {
+            continue;
+        }
+        if (flags & 0x20)
+        {
+            continue;
+        }
+        motion = actor->motion_parameter;
+        if (motion == 0x91 || motion == 0xAE || motion == 0x87)
+        {
+            continue;
+        }
+        if (!(flags & 0x40))
+        {
+            if (g_field_actor_bindings[FIELD_TARGET_BINDING_SLOT(index)].owner == index && g_field_actor_bindings[FIELD_TARGET_BINDING_SLOT(index)].state != 0)
             {
-                flags_or_offset = *((s32 *)state_fields);
-                if (!(flags_or_offset & 1) &&
-                    ((g_field_active_group == (state_fields[STATE_CATEGORY_WORD] & 0xF)) || (index < 3)) &&
-                    !(flags_or_offset & 0x20))
-                {
-                    actor_state = ACCESS(s16, actor_state_ptr, 0);
-                    if ((actor_state != 0x91) && (actor_state != 0xAE) && (actor_state != 0x87))
-                    {
-                        if (!(flags_or_offset & 0x40))
-                        {
-                            flags_or_offset = index < 3;
-                            owner_slot = index;
-                            if (flags_or_offset == 0)
-                            {
-                                owner_slot = 2;
-                            }
-                            if (bindings[owner_slot].owner == index)
-                            {
-                                state_slot = index;
-                                if (flags_or_offset == 0)
-                                {
-                                    state_slot = 2;
-                                }
-                                if (bindings[state_slot].state != 0)
-                                {
-                                    goto next_actor;
-                                }
-                            }
-                        }
-                        if (!(state_fields[STATE_FLAGS_C_WORD] & 0x2280) && (state_fields[STATE_VALID_WORD] != 0) &&
-                            !(state_fields[STATE_FLAGS174_WORD] & 0x8000) && !(*((s32 *)state_fields) & 0x80))
-                        {
-                            u8 *actor_base;
-
-                            actor_start = actor;
-                            flags_or_offset = source_index;
-                            flags_or_offset <<= 2;
-                            flags_or_offset += source_index;
-                            flags_or_offset <<= 2;
-                            flags_or_offset += source_index;
-                            flags_or_offset <<= 2;
-                            actor_base = g_field_actors;
-                            if (D_800EC2D8[spec->filter](actor_base + flags_or_offset, actor_start,
-                                                         filter_arg) != 0)
-                            {
-                                for (prior = 0; prior < count; prior++)
-                                {
-                                }
-                                *output_cursor = index;
-                                output_cursor++;
-                                count += 1;
-                            }
-                        }
-                    }
-                }
+                continue;
             }
-    next_actor:
-            actor += 0x54;
-            index += 1;
-            actor_state_ptr += 0x54;
-            state_fields += 0x8F;
-        } while (index < end);
+        }
+        if ((state->object_flags & 0x2280) || state->collision.word == 0 || (state->movement.word & 0x8000) || (state->contact.flags & 0x80))
+        {
+            continue;
+        }
+        if (D_800EC2D8[spec->filter](&g_field_actors[source_index], &g_field_actors[index], filter_arg) != 0)
+        {
+            for (prior = 0; prior < count; prior++)
+            {
+                /* the original walks the accepted indices without testing them */
+            }
+            output[count] = index;
+            count += 1;
+        }
     }
     return count;
 }

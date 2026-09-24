@@ -1,141 +1,92 @@
+/** @file field_record_lookup_ops.c
+ * @brief Actor record lookup and allocation, reward pickup and resource lookup.
+ */
+
 #include "game_audio.h"
 #include "common.h"
+#include "field_records.h"
 
-/**
- * @brief 0x94-byte actor record in the table at D_80122B78 + 0x430.
- */
-typedef struct
-{
-    u8 unk0;
-    u8 pad1[3];
-    u8 unk4;
-    u8 pad5;
-    u16 unk6;
-    u16 unk8[16];
-    s32 unk28;
-    s32 unk2C;
-    s32 unk30;
-    u8 pad34[0x5C];
-    s32 unk90;
-} RecC1B98;
-
-/** @brief Block at D_80122B78: record count halfword at 0x400, 16 records at 0x430. */
-typedef struct
-{
-    u8 pad0[0x400];
-    u16 unk400;
-    u8 pad402[0x2E];
-    RecC1B98 unk430[16];
-} StructC1B98;
-
-/**
- * @brief Maximum/current capacity at the start of a runtime actor record.
- * @note func_80087F0C returns the enclosing 0x23C-byte object by record id.
- * This local view exposes only the two words used by capacity operations.
- */
-typedef struct
-{
-    s32 maximum;
-    s32 current;
-} FieldActorCapacity;
-
-#define REC_TABLE ((StructC1B98 *)D_80122B78)
-
-FieldActorCapacity *func_80087F0C(s32 arg0);
-void saturating_counter_add(FieldActorCapacity *counter, s32 delta);
-void func_8008BD88(s32 arg0);
-u32 *func_800875B4(void);
-
+FieldStatusState* func_80087F0C(s32 actor_id);
+void saturating_counter_add(FieldStatusState* state, s32 delta);
+void func_8008BD88(s32 actor_id);
+u32* func_800875B4(void);
 
 /*
  * Declared without a prototype: func_800C1B60 forwards its caller's a0 to
  * func_800C1B98 by calling it with no arguments, which a prototype would
  * reject. The definition below carries the real signature.
  */
-RecC1B98 *func_800C1B98();
-RecC1B98 *func_800C1B60();
+FieldActorRecord* func_800C1B98();
+FieldActorRecord* func_800C1B60();
 
-extern u8 *D_80122B78;
+extern FieldRuntimeContext* D_80122B78;
 
-
-/** @brief Partial RetC1B60 layout used by func_800C1A18. */
+/**
+ * @brief Battle reward entry, 0x44 bytes from the table base.
+ * @note Entry 0's count field holds the number of entries; each entry's item
+ *       starts at offset 8 and runs into the next entry.
+ */
 typedef struct
 {
-    u8 unk0[2];
-    u16 unk2;
-} RetC1B60;
-
-/** @brief Partial SlotRec layout used by func_800C1A18. */
-typedef struct
-{
-    u8 pad0[2];
-    u16 unk2;
-    s32 unk4;
-    u8 pad8[0x44 - 8];
-} SlotRec;
-
-/** @brief Partial FieldStateB layout used by func_800C1A18. */
-typedef struct
-{
-    u8 pad0[8];
-    SlotRec *unk8;
-} FieldStateB;
+    u16 unk0;
+    u16 count;
+    s32 key;
+    u8 item[0x3C];
+} FieldRewardEntry;
 
 void func_800C2138();
-u8 *field_find_free_inventory_record(void);
-void field_copy_inventory_record(u8 *dst, u8 *src);
-void field_append_dialog_item(u8 *arg0, u8 arg1);
+u8* field_find_free_inventory_record(void);
+void field_copy_inventory_record(u8* dst, u8* src);
+void field_append_dialog_item(u8* arg0, u8 arg1);
 
-extern FieldStateB *D_80123FB0;
+extern FieldBattleContext* D_80123FB0;
 extern u16 D_800F0E98[];
 
 /**
- * @brief Resolve a command to a slot record or table entry and submit its data.
- * @param arg0 Unused.
- * @param arg1 Command source passed to func_800C1B60.
+ * @brief Hand an actor's pickup to the party: an item from the reward table or a counter.
+ * @param unused Unused.
+ * @param owner_id Actor whose pickup code is resolved.
  */
-void func_800C1A18(void *arg0, void *arg1)
+void func_800C1A18(void* unused, s32 owner_id)
 {
-    RetC1B60 *ret;
-    u16 flags;
-    s32 code;
+    FieldActorRecord* actor;
+    u16 code;
+    s32 index;
     s32 count;
-    SlotRec *table;
-    SlotRec *cursor;
+    FieldRewardEntry* table;
+    FieldRewardEntry* cursor;
     s32 offset;
     s32 old_offset;
-    u8 *found;
-    u8 *handle;
-    u8 *arg0_2;
-    u8 arg1_2;
+    u8* found;
+    u8* handle;
 
-    ret = (RetC1B60 *)func_800C1B60(arg1);
-    flags = ret->unk2;
-    code = flags & 0xFF;
-    if (!(flags & 0x8000))
+    actor = func_800C1B60(owner_id);
+    code = actor->pickup;
+    index = code & 0xFF;
+    if (!(code & 0x8000))
     {
         s32 key;
 
-        table = D_80123FB0->unk8;
+        table = (FieldRewardEntry*)D_80123FB0->resources;
+        /* Kept: the do-while(0) blocks below are required by the original allocation. */
         do
         {
             found = NULL;
         } while (0);
-        count = table->unk2;
+        count = table->count;
         do
         {
-            code = 0;
+            index = 0;
             if (count != 0)
             {
                 s32 n;
-                SlotRec *base;
+                FieldRewardEntry* base;
 
-                key = flags & 0xFFFF;
+                key = code & 0xFFFF;
                 base = table;
                 n = count;
                 cursor = base;
                 offset = 0;
-                code = 0;
                 do
                 {
                     do
@@ -145,18 +96,18 @@ void func_800C1A18(void *arg0, void *arg1)
                             old_offset = offset;
                         } while (0);
                     } while (0);
-                    if (cursor->unk4 == key)
+                    if (cursor->key == key)
                     {
-                        found = (u8 *)(old_offset + (s32)base + 8);
+                        found = (u8*)(old_offset + (s32)base + 8);
                         goto found_match;
                     }
                     do
                     {
                         cursor++;
                     } while (0);
-                    offset = old_offset + 0x44;
-                    code += 1;
-                } while (code < n);
+                    offset = old_offset + sizeof(FieldRewardEntry);
+                    index += 1;
+                } while (index < n);
             found_match:;
             }
         } while (0);
@@ -170,18 +121,12 @@ void func_800C1A18(void *arg0, void *arg1)
             return;
         }
         field_copy_inventory_record(handle, found);
-        arg0_2 = handle;
-        arg1_2 = 0;
-        field_append_dialog_item(arg0_2, arg1_2);
+        field_append_dialog_item(handle, 0);
         return;
     }
-    else
-    {
-        func_800C2138(code, ret);
-        arg0_2 = (u8 *)D_800F0E98 + D_800F0E98[code];
-        arg1_2 = 1;
-    }
-    field_append_dialog_item(arg0_2, arg1_2);
+    /* Kept: passing actor keeps it in a1 as in the original. */
+    func_800C2138(index, actor);
+    field_append_dialog_item((u8*)D_800F0E98 + D_800F0E98[index], 1);
 }
 
 /**
@@ -189,183 +134,176 @@ void func_800C1A18(void *arg0, void *arg1)
  * @param record_id Identifier of an existing runtime actor.
  * @param fraction_256 Fraction in units of 1/256; pickups use 64 or 128.
  * @note The amount comes from maximum capacity, not the current value.
- * Keep the signed product and unsigned right shift used by the original code.
  */
 void field_restore_actor_capacity_fraction(s32 record_id, s32 fraction_256)
 {
-    FieldActorCapacity *capacity;
+    FieldStatusState* state;
     s32 scaled_capacity;
 
-    capacity = func_80087F0C(record_id);
-    scaled_capacity = capacity->maximum * fraction_256;
-    saturating_counter_add(capacity, (u32) scaled_capacity >> 8);
+    state = func_80087F0C(record_id);
+    scaled_capacity = state->maximum * fraction_256;
+    saturating_counter_add(state, (u32)scaled_capacity >> 8);
 }
 
 /**
- * @brief Look up an actor record, falling back to the default record at 0xE04.
+ * @brief Look up an actor record, falling back to the second event record.
  *
  * Takes no formal parameters so that the caller's a0 flows unchanged into
  * func_800C1B98; callers pass the record id in that slot.
  *
- * @return The matching record, or the default record when none matched.
+ * @return The matching record, or the fallback record when none matched.
  */
-RecC1B98 *func_800C1B60()
+FieldActorRecord* func_800C1B60()
 {
-    RecC1B98 *var_v0;
+    FieldActorRecord* actor;
 
-    var_v0 = func_800C1B98();
-    if (var_v0 == 0)
+    actor = func_800C1B98();
+    if (actor == NULL)
     {
-        var_v0 = (RecC1B98 *)(D_80122B78 + 0xE04);
+        actor = &D_80122B78->events[1];
     }
-    return var_v0;
+    return actor;
 }
 
 /**
  * @brief Find the record for an actor id.
- * @param id Ids below 3 index directly, 3..0x7F search active records, 0x80+ map to slot id - 0x70.
+ * @param id Ids below 3 index directly, 3..0x7F search active records, 0x80+ map to event records.
  * @return The record, or NULL when a searched id is not present.
  * @see decomp.me (100%)
  */
-RecC1B98 *func_800C1B98(s32 id)
+FieldActorRecord* func_800C1B98(s32 id)
 {
     s32 i;
 
-    if (id < 3)
+    if (id < FIELD_PARTY_SIZE)
     {
-        return &REC_TABLE->unk430[id];
+        return &D_80122B78->actors[id];
     }
     if (id < 0x80)
     {
-        for (i = 0; i < 16; i++)
+        for (i = 0; i < FIELD_ACTOR_RECORD_COUNT; i++)
         {
-            if ((REC_TABLE->unk430[i].unk90 < 0) && (REC_TABLE->unk430[i].unk0 == id))
+            if (D_80122B78->actors[i].flags.bits.active && (D_80122B78->actors[i].id == id))
             {
                 goto found;
             }
         }
         return NULL;
     }
-    return &REC_TABLE->unk430[id - 0x70];
+    return &D_80122B78->actors[id - 0x70];
 found:
-    return &REC_TABLE->unk430[i];
+    return &D_80122B78->actors[i];
 }
 
 /**
- * @brief Claim the first free record slot for an actor id and reset it.
- * @param id Actor id to store in the slot.
- * @return The claimed record, or NULL when all 16 slots are active.
+ * @brief Claim the first free actor record for an actor id and reset it.
+ * @param id Actor id to store in the record.
+ * @return The claimed record, or NULL when all 16 records are active.
  * @see decomp.me (100%)
  */
-RecC1B98 *func_800C1C50(s32 id)
+FieldActorRecord* func_800C1C50(s32 id)
 {
     s32 i;
     s32 j;
 
-    for (i = 0; i < 16; i++)
+    for (i = 0; i < FIELD_ACTOR_RECORD_COUNT; i++)
     {
-        if (REC_TABLE->unk430[i].unk90 >= 0)
+        if (!D_80122B78->actors[i].flags.bits.active)
         {
-            REC_TABLE->unk430[i].unk0 = id;
-            REC_TABLE->unk430[i].unk4 = 0xFF;
-            REC_TABLE->unk430[i].unk6 = 0xFFFF;
-            REC_TABLE->unk430[i].unk90 &= ~0xF;
-            REC_TABLE->unk430[i].unk90 &= ~0x20000000;
-            REC_TABLE->unk430[i].unk90 &= ~0x40000000;
-            REC_TABLE->unk430[i].unk90 |= 0x80000000;
-            for (j = 0; j < 16; j++)
+            D_80122B78->actors[i].id = id;
+            D_80122B78->actors[i].event = FIELD_NO_EVENT;
+            D_80122B78->actors[i].enabled_events = 0xFFFF;
+            D_80122B78->actors[i].flags.bits.trigger_group = 0;
+            D_80122B78->actors[i].flags.bits.spawned = 0;
+            D_80122B78->actors[i].flags.bits.script_only = 0;
+            D_80122B78->actors[i].flags.bits.active = 1;
+            for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
             {
-                REC_TABLE->unk430[i].unk8[j] = 0xFFFF;
+                D_80122B78->actors[i].scripts[j] = FIELD_NO_SCRIPT;
             }
-            return &REC_TABLE->unk430[i];
+            return &D_80122B78->actors[i];
         }
     }
     return NULL;
 }
 
 /**
- * @brief Release an actor's record, optionally notifying func_8008BD88 first.
- * @param arg0 Actor id.
- * @param arg1 Bit 0 set requests the func_8008BD88 notification.
+ * @brief Stop an actor's script, optionally notifying func_8008BD88 first.
+ * @param actor_id Actor id.
+ * @param flags Bit 0 set requests the func_8008BD88 notification.
  */
-void func_800C1D14(s32 arg0, s32 arg1)
+void func_800C1D14(s32 actor_id, s32 flags)
 {
-    s32 temp_a1;
-    RecC1B98 *temp_v0;
+    FieldActorRecord* actor;
 
-    temp_a1 = arg1 & 1;
-    if (temp_a1 != 0)
+    if (flags & 1)
     {
-        func_8008BD88(arg0);
+        func_8008BD88(actor_id);
     }
-    temp_v0 = func_800C1B60(arg0);
-    temp_v0->unk2C = 0;
-    temp_v0->unk30 = 0;
-    temp_v0->unk28 = temp_v0->unk28 & 0x7FFFFFFF;
+    actor = func_800C1B60(actor_id);
+    actor->script.depth = 0;
+    actor->script.frames[0].pc = NULL;
+    actor->script.status.word &= 0x7FFFFFFF;
 }
 
 /**
- * @brief Release every record whose flag bit 30 is clear.
+ * @brief Stop every actor whose flag bit 30 is clear and disable its event 8.
  */
 void func_800C1D68(void)
 {
     s32 i;
-    s32 off;
-    u8 *rec;
 
-    for (i = 0; i < *(u16 *)(D_80122B78 + 0x400); i++)
+    for (i = 0; i < D_80122B78->state.actor_count; i++)
     {
-        off = i * 0x94;
-        rec = D_80122B78 + off;
-        if (!((*(u32 *)(rec + 0x4C0) >> 30) & 1))
+        if (!D_80122B78->actors[i].flags.bits.script_only)
         {
-            *(u16 *)(rec + 0x436) &= 0xFEFF;
-            func_800C1D14(rec[0x430], 1);
+            D_80122B78->actors[i].enabled_events &= 0xFEFF;
+            func_800C1D14(D_80122B78->actors[i].id, 1);
         }
     }
 }
 
 /**
- * @brief Empty loop over the record count; the body was compiled away.
+ * @brief Empty loop over the actor count; the body was compiled away.
  */
 void func_800C1E08(void)
 {
-    s32 var_v1;
-    u16 temp_v0;
+    s32 i;
+    u16 count;
 
-    var_v1 = 0;
-    temp_v0 = *(u16 *)(D_80122B78 + 0x400);
-    if (temp_v0 != 0)
+    i = 0;
+    count = D_80122B78->state.actor_count;
+    if (count != 0)
     {
         do
         {
-            var_v1 += 1;
-        } while (var_v1 < (s32) temp_v0);
+            i += 1;
+        } while (i < (s32)count);
     }
 }
 
 /**
- * @brief Find the resource record whose leading halfword equals arg0.
- * @param arg0 Resource id to look for.
+ * @brief Find the resource record whose leading halfword equals @p resource_id.
+ * @param resource_id Resource id to look for.
  * @return The record, or NULL after reporting the failed lookup.
  */
-u16 *func_800C1E40(s32 arg0)
+u16* func_800C1E40(s32 resource_id)
 {
-    u32 *base;
-    u16 *record;
+    u32* base;
+    u16* record;
     s32 i;
     u32 count;
 
     base = func_800875B4();
-    count = (u32) base[0] >> 2;
-    for (i = 0; i < (s32) count; i += 1)
+    count = base[0] >> 2;
+    for (i = 0; i < (s32)count; i++)
     {
-        record = (u16 *) ((u8 *) base + base[i]);
-        if (*record == arg0)
+        record = (u16*)((u8*)base + base[i]);
+        if (*record == resource_id)
         {
             return record;
         }
     }
-    record_game_diagnostic(0x8001, 0x6B, arg0, 0);
+    record_game_diagnostic(0x8001, 0x6B, resource_id, 0);
     return NULL;
 }

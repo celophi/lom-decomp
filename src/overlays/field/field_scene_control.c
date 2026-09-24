@@ -258,18 +258,18 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
  */
 void field_start_animation(FieldSeq* seq)
 {
-    FieldAnimDef* cmd;
+    FieldSeqDef* cmd;
     FieldAnimDef* def;
     FieldAnim* anim;
     FieldScene* scene;
     FieldTweenSpan* span;
     s32 i;
     u8 frame;
-    volatile s8 base;
+    u8 base;
 
     cmd = seq->def;
     scene = g_field_scene.scene;
-    switch (cmd->unk0)
+    switch (cmd->list_kind)
     {
     case 0:
         anim = scene->anims;
@@ -281,7 +281,7 @@ void field_start_animation(FieldSeq* seq)
         anim = scene->sprites;
         break;
     }
-    i = cmd->unk2;
+    i = cmd->anim_index;
     i--;
     while (i != -1)
     {
@@ -323,14 +323,14 @@ void field_start_animation(FieldSeq* seq)
             field_apply_animation_tween(def, anim, 0);
         }
     }
-    anim->repeat_count = cmd->unk3;
-    if (cmd->flags == 0xFF)
+    anim->repeat_count = cmd->repeat_count;
+    if (cmd->stop_keyframe == 0xFF)
     {
         anim->flags.word &= ~2;
     }
     else
     {
-        anim->flags.b.stop_keyframe = cmd->flags;
+        anim->flags.b.stop_keyframe = cmd->stop_keyframe;
         anim->flags.word |= 2;
     }
     anim->flags.word = (anim->flags.word & ~1) | ((*(u32*)&def->flags >> 3) & 1) | 0x40;
@@ -376,7 +376,7 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
 {
     FieldAnim* anim;
     FieldAnimDef* def;
-    FieldAnimDef* cmd;
+    FieldSeqDef* cmd;
     FieldAnimDef* sfx_def;
     FieldScene* scene;
     FieldSeq* seq;
@@ -389,7 +389,7 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     const s32 repeat_mask = ~1;
     s32 start_sequence;
     u8 frame;
-    volatile s8 base;
+    u8 base;
 
     scene = g_field_scene.scene;
     switch (list_kind)
@@ -430,7 +430,7 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
                     seq->flags &= ~3;
                 }
                 cmd = seq->def;
-                field_control_animation(cmd->unk0, cmd->unk2, -1, 1);
+                field_control_animation(cmd->list_kind, cmd->anim_index, -1, 1);
             }
             seq = seq->next;
         }
@@ -1113,7 +1113,7 @@ void func_8005A428(FieldPart* part)
  */
 void func_8005A67C(s32 index, s32 op)
 {
-    FieldAnimDef* cmd;
+    FieldSeqDef* cmd;
     FieldSeq* seq;
     s32 i;
 
@@ -1141,7 +1141,7 @@ void func_8005A67C(s32 index, s32 op)
                 seq->flags &= ~3;
             }
             cmd = seq->def;
-            field_control_animation(cmd->unk0, cmd->unk2, -1, 1);
+            field_control_animation(cmd->list_kind, cmd->anim_index, -1, 1);
         }
         seq = seq->next;
     }
@@ -1185,7 +1185,7 @@ void func_8005A67C(s32 index, s32 op)
  */
 void func_8005A744(FieldSeq* seq, u8 index)
 {
-    FieldAnimDef* def;
+    FieldSeqDef* def;
     FieldScene* scene;
     FieldSeq* walk;
     s32 i;
@@ -1196,8 +1196,8 @@ void func_8005A744(FieldSeq* seq, u8 index)
     def = seq->def;
     ((u8*)&seq->flags)[1] = index;
     field_start_animation(seq);
-    i = def->unk5;
-    if (i != 0xFF && def->unk8 == 0)
+    i = def->start_link;
+    if (i != 0xFF && def->start_delay == 0)
     {
         walk = scene->seqs;
         while (--i != -1)

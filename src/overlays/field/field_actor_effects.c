@@ -7,6 +7,8 @@
  */
 
 #include "common.h"
+#include "controller_internal.h"
+#define PORT_SAMPLE(offset) (&((ControllerPortState *)((offset) + ports))->published_sample)
 #include "field_effect_render_state.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
@@ -76,30 +78,15 @@ void func_8009D4D8(MovementModeActor *actor, u32 mode)
     switch (mode)
     {
     case 1:
-    {
-        MovementModeSlot *base;
-        base = g_field_object_states;
-        slot = &base[actor->unk3A];
-        slot->unk174 = (s32)((slot->unk174 & ~0x3FF) | 0x40);
+        g_field_object_states[actor->unk3A].unk174 = (g_field_object_states[actor->unk3A].unk174 & ~0x3FF) | 0x40;
         return;
-    }
     case 2:
-    {
-        MovementModeSlot *base;
-        base = g_field_object_states;
-        slot_2 = &base[actor->unk3A];
-        slot_2->unk174 = (s32)((slot_2->unk174 & ~0x3FF) | 0x10);
+        g_field_object_states[actor->unk3A].unk174 = (g_field_object_states[actor->unk3A].unk174 & ~0x3FF) | 0x10;
         return;
-    }
     case 0:
     case 3:
-    {
-        MovementModeSlot *base;
-        base = g_field_object_states;
-        slot_3 = &base[actor->unk3A];
-        slot_3->unk174 = (s32)((slot_3->unk174 & ~0x3FF) | 0x1E);
+        g_field_object_states[actor->unk3A].unk174 = (g_field_object_states[actor->unk3A].unk174 & ~0x3FF) | 0x1E;
         return;
-    }
     case 4:
     {
         MovementModeSlot *base;
@@ -112,98 +99,81 @@ void func_8009D4D8(MovementModeActor *actor, u32 mode)
         {
             needs_retry = 1;
             point_offset = point_index * 4;
-        loop_7:
+            do
             {
-                s32 random_value;
-                s32 offset;
-                MovementModeSlot *point;
-                random_value = (rand() >> 7) - 0x80;
-                offset = point_offset + (actor->unk3A * 0x23C);
-                point = (MovementModeSlot *)(offset + (s32)base);
-                point->unk190 = (s16)random_value;
-            }
-            {
-                s32 random_value;
-                s32 offset;
-                MovementModeSlot *point;
-                random_value = (rand() >> 7) - 0x80;
-                offset = point_offset + (actor->unk3A * 0x23C);
-                point = (MovementModeSlot *)(offset + (s32)base);
-                point->unk192 = (s16)random_value;
-            }
-            base_dx = g_field_view_offset_x;
-            {
-                s32 offset;
-                offset = point_offset + (actor->unk3A * 0x23C);
-                point = (MovementModeSlot *)(offset + (s32)base);
-            }
-
-            point->unk190 = (u16)(((u16)point->unk190 - (base_dx / 256)) - (actor->unk0 / 256));
-            base_dy = g_field_view_offset_z;
-            {
-                s32 offset;
-                offset = point_offset + (actor->unk3A * 0x23C);
-                point_y = (MovementModeSlot *)(offset + (s32)base);
-            }
-
-            point_y->unk192 = (u16)(((u16)point_y->unk192 - (base_dy / 256)) - (actor->unk8 / 256));
-            compare_index = 0;
-            if (point_index > 0)
-            {
-            loop_16:
-                do
                 {
-                    slot_index = actor->unk3A;
-                } while (0);
-                compare_offset = compare_index * 4;
-                slot_stride = slot_index * 0x23C;
-                compare_addr = compare_offset + slot_stride;
-                compare_addr += (s32)base;
-                {
-                    s32 current_offset;
-                    current_offset = point_offset + (slot_index * 0x23C);
-                    current_offset += (s32)base;
-                    delta[0] = ((MovementModeSlot *)compare_addr)->unk190 - ((MovementModeSlot *)current_offset)->unk190;
+                    s32 random_value;
+                    s32 offset;
+                    MovementModeSlot *point;
+                    random_value = (rand() >> 7) - 0x80;
+                    offset = point_offset + (actor->unk3A * 0x23C);
+                    point = (MovementModeSlot *)(offset + (s32)base);
+                    point->unk190 = (s16)random_value;
                 }
-                slot_stride_y = actor->unk3A * 0x23C;
-                compare_offset += slot_stride_y;
-                compare_offset += (s32)base;
                 {
-                    s32 current_offset;
-                    current_offset = point_offset + (actor->unk3A * 0x23C);
-                    current_offset += (s32)base;
-                    delta[1] = ((MovementModeSlot *)compare_offset)->unk192 - ((MovementModeSlot *)current_offset)->unk192;
+                    s32 random_value;
+                    s32 offset;
+                    MovementModeSlot *point;
+                    random_value = (rand() >> 7) - 0x80;
+                    offset = point_offset + (actor->unk3A * 0x23C);
+                    point = (MovementModeSlot *)(offset + (s32)base);
+                    point->unk192 = (s16)random_value;
                 }
-                delta[2] = 0;
-                do
+                base_dx = g_field_view_offset_x;
+                {
+                    s32 offset;
+                    offset = point_offset + (actor->unk3A * 0x23C);
+                    point = (MovementModeSlot *)(offset + (s32)base);
+                }
+
+                point->unk190 = (u16)(((u16)point->unk190 - (base_dx / 256)) - (actor->unk0 / 256));
+                base_dy = g_field_view_offset_z;
+                {
+                    s32 offset;
+                    offset = point_offset + (actor->unk3A * 0x23C);
+                    point_y = (MovementModeSlot *)(offset + (s32)base);
+                }
+
+                point_y->unk192 = (u16)(((u16)point_y->unk192 - (base_dy / 256)) - (actor->unk8 / 256));
+                for (compare_index = 0; compare_index < point_index; compare_index++)
                 {
                     do
                     {
-                        gte_ldlvl(delta);
+                        slot_index = actor->unk3A;
                     } while (0);
-                    gte_sqr0();
-                } while (0);
-                do
-                {
-                    gte_stlvnl(squares);
-                } while (0);
-                if (SquareRoot0(squares[0] + squares[1]) >= 0x40)
-                {
-                    compare_index += 1;
-                    if (compare_index < point_index)
+                    compare_offset = compare_index * 4;
+                    slot_stride = slot_index * 0x23C;
+                    compare_addr = compare_offset + slot_stride;
+                    compare_addr += (s32)base;
                     {
-                        goto loop_16;
+                        s32 current_offset;
+                        current_offset = point_offset + (slot_index * 0x23C);
+                        current_offset += (s32)base;
+                        delta[0] = ((MovementModeSlot *)compare_addr)->unk190 - ((MovementModeSlot *)current_offset)->unk190;
+                    }
+                    slot_stride_y = actor->unk3A * 0x23C;
+                    compare_offset += slot_stride_y;
+                    compare_offset += (s32)base;
+                    {
+                        s32 current_offset;
+                        current_offset = point_offset + (actor->unk3A * 0x23C);
+                        current_offset += (s32)base;
+                        delta[1] = ((MovementModeSlot *)compare_offset)->unk192 - ((MovementModeSlot *)current_offset)->unk192;
+                    }
+                    delta[2] = 0;
+                    gte_ldlvl(delta);
+                    gte_sqr0();
+                    gte_stlvnl(squares);
+                    if (SquareRoot0(squares[0] + squares[1]) < 0x40)
+                    {
+                        break;
                     }
                 }
-            }
-            if (compare_index == point_index)
-            {
-                needs_retry = 0;
-            }
-            if (needs_retry != 0)
-            {
-                goto loop_7;
-            }
+                if (compare_index == point_index)
+                {
+                    needs_retry = 0;
+                }
+            } while (needs_retry != 0);
             point_index += 1;
         } while (point_index < 3);
         return;
@@ -233,8 +203,6 @@ void func_8009D4D8(MovementModeActor *actor, u32 mode)
         clear_base[actor->unk3A].unk192 = 0;
         return;
     }
-    default:
-        return;
     }
 }
 
@@ -269,12 +237,10 @@ void func_8009D4D8(MovementModeActor *actor, u32 mode)
  * @param arg0 Style index (0-6).
  * @param arg1 Receives the first dimension.
  * @param arg2 Receives the second dimension.
- * @note Diff shows 99.70% in isolation; the only delta is the compiler-generated
- *       switch jump table being anonymous in the scratch vs the named
- *       jtbl_80051144 relocation, which resolves identically at link time.
+ * @note Declared inline: func_8009D9E0 expands it in place.
  * @see decomp.me (100%) TODO
  */
-void func_8009D95C(s32 arg0, s32 *arg1, s32 *arg2)
+inline void func_8009D95C(s32 arg0, s32 *arg1, s32 *arg2)
 {
     switch (arg0)
     {
@@ -351,328 +317,213 @@ typedef struct
 
 /**
  * @brief Draw and advance an actor effect, including controller-driven offsets.
- * @param arg0 Actor supplying the position, facing flag, and effect slot.
- * @param arg1 Effect type, from 0 through 6.
- * @note 100% standalone; in this TU objdiff shows 99.975% solely because the
- *       two switch jump tables render as [.rodata]+0x20/+0x40 instead of the
- *       named jtbl_80051164/jtbl_80051184 (func_8009D95C owns rodata offset 0).
- *       Same registers and opcodes; a position artifact, links identically.
+ * @param actor Actor supplying the position, facing flag, and effect slot.
+ * @param kind Effect type, from 0 through 6.
  */
-void func_8009D9E0(Actor *arg0, u32 arg1)
+void func_8009D9E0(Actor *actor, u32 kind)
 {
     extern s32 D_801178D8;
-    /*
-     * Original per-file forward prototypes, kept block scope to preserve this
-     * function's exact declaration environment (its baseline register
-     * allocation depends on these void-pointer, s32-return forms, not the real
-     * pointer-return signatures of the definitions later in this TU).
-     */
+    /* Original block-scope prototypes; the definitions below return packet pointers. */
     s32 func_8009E66C(void *, s32, s32 *, s32);
     s32 func_8009FE54(void *, s32, s32 *, s32);
     s32 func_800A0B0C(void *, s32, s32 *, s32, s32);
     s32 func_800A1344(void *, s32, s32 *, s32, s32);
     s32 vec[12];
     s16 screen[4];
-    void *record_0;
-    s32 count_0;
-    void *record_1;
-    s32 count_1;
-    void *record_2;
-    s32 count_2;
-    void *record_3;
-    s32 count_3;
-    void *record_6;
-    s32 count_6;
     s32 *position;
-    u8 *pad = (u8 *)0x801ED600;
+    u8 *ports = (u8 *)CONTROLLER_STATE->ports;
     s32 ratio;
     s32 facing;
     s32 limits[2];
-    s16 temp_t0_2;
-    s16 temp_v1_12;
-    s32 temp_a0;
-    s32 temp_a1;
-    s32 temp_a1_2;
-    s32 temp_a1_3;
-    s32 temp_a1_4;
-    s32 temp_a1_5;
-    s32 temp_a3;
-    s32 temp_s3;
-    s32 temp_t0;
-    s32 temp_t2;
-    s32 temp_v1_10;
-    s32 temp_v1_11;
-    s32 temp_v1_9;
-    s32 var_a0_2;
-    s32 var_a0_3;
-    s32 var_a0_4;
-    s32 var_a1;
-    s32 var_s0;
-    s32 var_s2;
-    s32 var_s6;
-    s32 var_v0;
-    s32 var_v0_2;
-    s32 var_v0_3;
-    s32 var_v0_4;
-    s32 var_v0_5;
-    s32 var_v0_6;
-    s32 var_v0_7;
-    s32 var_v1;
-    s32 var_v1_2;
-    s32 var_v1_3;
-    u16 temp_v0_7;
-    void *temp_a0_2;
-    void *temp_a0_3;
-    void *temp_a0_4;
-    void *temp_s4;
-    void *temp_v0;
-    void *temp_v0_2;
-    void *temp_v0_3;
-    void *temp_v0_4;
-    void *temp_v0_5;
-    void *temp_v0_6;
-    void *temp_v0_8;
-    void *temp_v0_9;
-    void *temp_v1;
-    void *temp_v1_2;
-    void *temp_v1_3;
-    void *temp_v1_4;
-    void *temp_v1_5;
-    void *temp_v1_6;
-    void *temp_v1_7;
-    void *temp_v1_8;
-    void *var_a0;
+    s32 radius;
+    s32 buttons;
+    s32 raw_buttons;
+    s32 port_offset;
+    s32 stick_offset;
+    u16 held;
+    s32 i;
+    s32 draw;
+    s32 packet;
+    void *ordering_table;
 
-    temp_s4 = D_800F2288 + 0x40;
-    var_s6 = M2C_FIELD(D_800F2288, s32 *, 0x40B8);
+    ordering_table = D_800F2288 + 0x40;
+    packet = M2C_FIELD(D_800F2288, s32 *, 0x40B8);
+    func_8009D95C(kind, &limits[0], &limits[1]);
+    radius = g_field_object_states[actor->slot].state.bits.radius;
+    ratio = ((radius - limits[0]) << 8) / (limits[1] - limits[0]);
+    facing = actor->flags & 0x80;
+    g_field_object_states[actor->slot].intensity = ratio;
+    position = actor->position;
+    if (g_field_object_states[actor->slot].intensity >= 0x100)
     {
-        s32 *high;
-        s32 *low;
-        low = &limits[0];
-        high = &limits[1];
-        switch (arg1)
-        {
-        case 0:
-            *low = 30;
-            do
-            {
-                *high = 96;
-            } while (0);
-            break;
-        case 1:
-            *low = 64;
-            *high = 128;
-            break;
-        case 2:
-            *low = 16;
-            *high = 64;
-            break;
-        case 3:
-            *low = 30;
-            *high = 200;
-            break;
-        case 5:
-            limits[0] = 0;
-            *high = 100;
-            break;
-        case 4:
-        case 6:
-            *low = 30;
-            *high = 64;
-            break;
-        }
+        g_field_object_states[actor->slot].intensity = 0xFF;
     }
-    temp_s3 = ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.bits.radius;
-    ratio = ((temp_s3 - limits[0]) << 8) / (limits[1] - limits[0]);
-    facing = arg0->flags & 0x80;
-    g_field_object_states[arg0->slot].intensity = ratio;
-    position = arg0->position;
-    if ((u16) ((EffectRecord *)((&g_field_object_states[arg0->slot])))->intensity >= 0x100U)
-    {
-        ((EffectRecord *)((&g_field_object_states[arg0->slot])))->intensity = 0xFFU;
-    }
-    var_s2 = 1;
-    if (arg0->slot == 2)
+    draw = 1;
+    if (actor->slot == 2)
     {
         if ((M2C_FIELD(g_pad_ctx, s32 *, 0xAA8) & 0x7F) == 4)
         {
-            var_s2 = 0;
+            draw = 0;
         }
     }
-    D_801178D8 = ((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->angle;
-    switch (arg1)
+    D_801178D8 = g_field_object_states[actor->slot].angle;
+    switch (kind)
     {
     case 0:
-        if (var_s2 != 0)
+        if (draw != 0)
         {
-            var_s6 = func_8009E66C(temp_s4, var_s6, position, temp_s3);
+            packet = func_8009E66C(ordering_table, packet, position, radius);
         }
-        g_field_object_states[arg0->slot].angle -= 0x80;
-        record_0 = (void *)&g_field_object_states[arg0->slot];
-        count_0 = ((EffectRecord *)(record_0))->state.bits.radius;
-        if (count_0 < limits[1])
+        g_field_object_states[actor->slot].angle -= 0x80;
+        if (g_field_object_states[actor->slot].state.bits.radius < limits[1])
         {
-            ((EffectRecord *)(record_0))->state.word = (((EffectRecord *)(record_0))->state.word & ~0x3FF) | ((count_0 + 2) & 0x3FF);
+            g_field_object_states[actor->slot].state.word = (g_field_object_states[actor->slot].state.word & ~0x3FF) | ((g_field_object_states[actor->slot].state.bits.radius + 2) & 0x3FF);
         }
         break;
     default:
         break;
     case 1:
-        if (var_s2 != 0)
+        if (draw != 0)
         {
-            var_s6 = func_8009FE54(temp_s4, var_s6, position, temp_s3);
+            packet = func_8009FE54(ordering_table, packet, position, radius);
         }
-        g_field_object_states[arg0->slot].angle -= 0x80;
-        record_1 = (void *)&g_field_object_states[arg0->slot];
-        count_1 = ((EffectRecord *)(record_1))->state.bits.radius;
-        if (count_1 < limits[1])
+        g_field_object_states[actor->slot].angle -= 0x80;
+        if (g_field_object_states[actor->slot].state.bits.radius < limits[1])
         {
-            ((EffectRecord *)(record_1))->state.word = (((EffectRecord *)(record_1))->state.word & ~0x3FF) | ((count_1 + 2) & 0x3FF);
+            g_field_object_states[actor->slot].state.word = (g_field_object_states[actor->slot].state.word & ~0x3FF) | ((g_field_object_states[actor->slot].state.bits.radius + 2) & 0x3FF);
         }
         break;
     case 2:
-        if (var_s2 != 0)
+        if (draw != 0)
         {
-            var_s6 = func_800A1344(temp_s4, var_s6, position, temp_s3, facing);
+            packet = func_800A1344(ordering_table, packet, position, radius, facing);
         }
-        g_field_object_states[arg0->slot].angle += 4;
-        if (((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle >= 0x50)
+        g_field_object_states[actor->slot].angle += 4;
+        if (g_field_object_states[actor->slot].angle >= 0x50)
         {
-            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle = 0;
+            g_field_object_states[actor->slot].angle = 0;
         }
-        record_2 = (void *)&g_field_object_states[arg0->slot];
-        temp_a1_2 = ((EffectRecord *)(record_2))->state.bits.radius;
-        if (temp_a1_2 < limits[1])
+        if (g_field_object_states[actor->slot].state.bits.radius < limits[1])
         {
-            var_v0_3 = (s32) ((EffectRecord *)(record_2))->state.word & ~0x3FF;
-            var_v1 = temp_a1_2 + 1;
-            ((EffectRecord *)(record_2))->state.word = var_v0_3 | (var_v1 & 0x3FF);
+            g_field_object_states[actor->slot].state.word = (g_field_object_states[actor->slot].state.word & ~0x3FF) | ((g_field_object_states[actor->slot].state.bits.radius + 1) & 0x3FF);
         }
         break;
     case 3:
-        if (((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle < 0)
+        if (g_field_object_states[actor->slot].angle < 0)
         {
-            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle = 0;
+            g_field_object_states[actor->slot].angle = 0;
         }
-        if (var_s2 != 0)
+        if (draw != 0)
         {
-            var_s6 = func_800A0B0C(temp_s4, func_800A0B0C(temp_s4, var_s6, position, temp_s3, 0), position, temp_s3, 1);
+            packet = func_800A0B0C(ordering_table, func_800A0B0C(ordering_table, packet, position, radius, 0), position, radius, 1);
         }
-        g_field_object_states[arg0->slot].angle += 4;
-        if (((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle >= 0x50)
+        g_field_object_states[actor->slot].angle += 4;
+        if (g_field_object_states[actor->slot].angle >= 0x50)
         {
-            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->angle = 0;
+            g_field_object_states[actor->slot].angle = 0;
         }
-        record_3 = (void *)&g_field_object_states[arg0->slot];
-        count_3 = ((EffectRecord *)(record_3))->state.bits.radius;
-        if (count_3 < limits[1])
+        if (g_field_object_states[actor->slot].state.bits.radius < limits[1])
         {
-            ((EffectRecord *)(record_3))->state.word = (((EffectRecord *)(record_3))->state.word & ~0x3FF) | ((count_3 + 2) & 0x3FF);
+            g_field_object_states[actor->slot].state.word = (g_field_object_states[actor->slot].state.word & ~0x3FF) | ((g_field_object_states[actor->slot].state.bits.radius + 2) & 0x3FF);
         }
         break;
     case 4:
-        var_s0 = 0;
-        do
+        for (i = 0; i < 3; i++)
         {
-            temp_a0 = var_s0 * 4;
-            vec[0] = arg0->position[0] + (g_field_object_states[arg0->slot].offsets[var_s0][0] << 8);
-            vec[1] = arg0->position[1];
-            vec[2] = arg0->position[2] + (g_field_object_states[arg0->slot].offsets[var_s0][1] << 8);
-            if (var_s2 != 0)
+            vec[0] = actor->position[0] + (g_field_object_states[actor->slot].offsets[i][0] << 8);
+            vec[1] = actor->position[1];
+            vec[2] = actor->position[2] + (g_field_object_states[actor->slot].offsets[i][1] << 8);
+            if (draw != 0)
             {
-                var_s6 = func_8009E66C(temp_s4, var_s6, &vec[0], temp_s3);
+                packet = func_8009E66C(ordering_table, packet, &vec[0], radius);
             }
-            var_s0 += 1;
-        } while (var_s0 < 3);
-        temp_a1_3 = ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.bits.radius;
-        if (temp_a1_3 < limits[1])
-        {
-            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word = (s32) (((s32) ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word & ~0x3FF) | ((temp_a1_3 + 2) & 0x3FF));
         }
-        ((EffectRecord *)(&g_field_object_states[arg0->slot]))->angle -= 0x80;
+        if (g_field_object_states[actor->slot].state.bits.radius < limits[1])
+        {
+            g_field_object_states[actor->slot].state.word = (g_field_object_states[actor->slot].state.word & ~0x3FF) | ((g_field_object_states[actor->slot].state.bits.radius + 2) & 0x3FF);
+        }
+        g_field_object_states[actor->slot].angle -= 0x80;
         break;
     case 5:
-        vec[0] = arg0->position[0] + (((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->offsets[0][0] << 8);
-        vec[1] = arg0->position[1];
-        vec[2] = arg0->position[2] + (((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->offsets[0][1] << 8);
-        if (var_s2 != 0)
+        vec[0] = actor->position[0] + (g_field_object_states[actor->slot].offsets[0][0] << 8);
+        vec[1] = actor->position[1];
+        vec[2] = actor->position[2] + (g_field_object_states[actor->slot].offsets[0][1] << 8);
+        if (draw != 0)
         {
-            var_s6 = func_8009E66C(temp_s4, var_s6, &vec[0], temp_s3);
+            packet = func_8009E66C(ordering_table, packet, &vec[0], radius);
         }
-        g_field_object_states[arg0->slot].angle -= 0x80;
-        temp_a1_4 = ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.bits.radius;
-        if (temp_a1_4 < limits[1])
+        g_field_object_states[actor->slot].angle -= 0x80;
+        if (g_field_object_states[actor->slot].state.bits.radius < limits[1])
         {
-            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word = (s32) (((s32) ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word & ~0x3FF) | ((temp_a1_4 + 2) & 0x3FF));
-            if (arg0->flags & 0x80)
+            g_field_object_states[actor->slot].state.word = (g_field_object_states[actor->slot].state.word & ~0x3FF) | ((g_field_object_states[actor->slot].state.bits.radius + 2) & 0x3FF);
+            if (actor->flags & 0x80)
             {
-                ((EffectRecord *)((&g_field_object_states[arg0->slot])))->offsets[0][0] = (u16) (((EffectRecord *)((&g_field_object_states[arg0->slot])))->offsets[0][0] + 2);
+                g_field_object_states[actor->slot].offsets[0][0] += 2;
             }
             else
             {
-                ((EffectRecord *)((&g_field_object_states[arg0->slot])))->offsets[0][0] = (u16) (((EffectRecord *)((&g_field_object_states[arg0->slot])))->offsets[0][0] - 2);
+                g_field_object_states[actor->slot].offsets[0][0] -= 2;
             }
         }
         break;
     case 6:
-        vec[0] = arg0->position[0] + (((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->offsets[0][0] << 8);
-        vec[1] = arg0->position[1];
-        vec[2] = arg0->position[2] + (((EffectRecord *)(((void *)&g_field_object_states[arg0->slot])))->offsets[0][1] << 8);
-        if (var_s2 != 0)
+        vec[0] = actor->position[0] + (g_field_object_states[actor->slot].offsets[0][0] << 8);
+        vec[1] = actor->position[1];
+        vec[2] = actor->position[2] + (g_field_object_states[actor->slot].offsets[0][1] << 8);
+        if (draw != 0)
         {
-            var_s6 = func_8009E66C(temp_s4, var_s6, &vec[0], temp_s3);
+            packet = func_8009E66C(ordering_table, packet, &vec[0], radius);
         }
-        g_field_object_states[arg0->slot].angle -= 0x80;
-        temp_a1_5 = ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.bits.radius;
-        if (temp_a1_5 < limits[1])
+        g_field_object_states[actor->slot].angle -= 0x80;
+        if (g_field_object_states[actor->slot].state.bits.radius < limits[1])
         {
-            ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word = (s32) (((s32) ((EffectRecord *)((&g_field_object_states[arg0->slot])))->state.word & ~0x3FF) | ((temp_a1_5 + 1) & 0x3FF));
+            g_field_object_states[actor->slot].state.word = (g_field_object_states[actor->slot].state.word & ~0x3FF) | ((g_field_object_states[actor->slot].state.bits.radius + 1) & 0x3FF);
         }
-        if ((u8) arg0->slot < 2U)
+        if ((u8) actor->slot < 2U)
         {
-            temp_v1_9 = arg0->slot * 0xAE;
-            if ((u8) M2C_FIELD(pad, u8 *, temp_v1_9) >= 0xFEU)
+            port_offset = actor->slot * sizeof(ControllerPortState);
+            if (PORT_SAMPLE(port_offset)->device_type >= 0xFE)
             {
-                var_a0_2 = 0;
+                raw_buttons = 0;
             }
             else
             {
-                temp_v0_7 = M2C_FIELD((temp_v1_9 + pad), u16 *, 2);
-                var_a0_2 = (temp_v0_7 << 8) | (temp_v0_7 >> 8);
+                held = PORT_SAMPLE(port_offset)->held_buttons;
+                raw_buttons = (held << 8) | (held >> 8);
             }
-            temp_v1_10 = ((u32) (var_a0_2 & 0x40) >> 1) | ((var_a0_2 & 0x20) * 2) | ((u32) (var_a0_2 & 0x80) >> 3) | ((var_a0_2 & 0x10) * 8) | (var_a0_2 & 0xFF0F);
+            buttons = ((u32) (raw_buttons & 0x40) >> 1) | ((raw_buttons & 0x20) * 2) | ((u32) (raw_buttons & 0x80) >> 3) | ((raw_buttons & 0x10) * 8) | (raw_buttons & 0xFF0F);
             vec[2] = 0;
             vec[1] = 0;
             vec[0] = 0;
-            if (temp_v1_10 & 0x2000)
+            if (buttons & 0x2000)
             {
                 vec[0] = 0x1000;
             }
-            if (temp_v1_10 & 0x8000)
+            if (buttons & 0x8000)
             {
                 vec[0] -= 0x1000;
             }
-            if (temp_v1_10 & 0x4000)
+            if (buttons & 0x4000)
             {
                 vec[1] = -0x1000;
             }
-            if (temp_v1_10 & 0x1000)
+            if (buttons & 0x1000)
             {
                 vec[1] += 0x1000;
             }
-            temp_v1_11 = arg0->slot * 0xAE;
-            if (M2C_FIELD(pad, u8 *, temp_v1_11) != 0)
+            stick_offset = actor->slot * sizeof(ControllerPortState);
+            if (PORT_SAMPLE(stick_offset)->device_type != 0)
             {
-                vec[0] += M2C_FIELD((temp_v1_11 + pad), s16 *, 0xC) * 0x10;
-                temp_v1_11 = arg0->slot * 0xAE;
-                vec[1] -= M2C_FIELD((temp_v1_11 + pad), s16 *, 0xE) * 0x10;
+                vec[0] += PORT_SAMPLE(stick_offset)->left_stick_x * 0x10;
+                stick_offset = actor->slot * sizeof(ControllerPortState);
+                vec[1] -= PORT_SAMPLE(stick_offset)->left_stick_y * 0x10;
             }
             if ((vec[0] | vec[1]) != 0)
             {
                 func_8001CDAC(&vec[0], &vec[4]);
-                vec[8] = arg0->position[0] + ((((EffectRecord *)(&g_field_object_states[arg0->slot]))->offsets[0][0] + (vec[4] >> 10)) << 8);
-                vec[9] = arg0->position[1];
-                vec[10] = arg0->position[2] + ((((EffectRecord *)(&g_field_object_states[arg0->slot]))->offsets[0][1] + (vec[5] >> 10)) << 8);
+                vec[8] = actor->position[0] + ((g_field_object_states[actor->slot].offsets[0][0] + (vec[4] >> 10)) << 8);
+                vec[9] = actor->position[1];
+                vec[10] = actor->position[2] + ((g_field_object_states[actor->slot].offsets[0][1] + (vec[5] >> 10)) << 8);
                 screen[0] = 0xA0 + g_field_view_offset_x / 256 + vec[8] / 256;
                 screen[1] = 0x70 + g_field_view_offset_y / 256 + vec[9] / 256 - vec[10] / 512 - g_field_view_offset_z / 512;
                 if ((screen[0] > 0 || vec[4] > 0) &&
@@ -680,16 +531,14 @@ void func_8009D9E0(Actor *arg0, u32 arg1)
                     (screen[0] < 320 || vec[4] < 0) &&
                     (screen[1] < 224 || vec[5] > 0))
                 {
-                    temp_v0_8 = (void *)&g_field_object_states[arg0->slot];
-                    ((EffectRecord *)(temp_v0_8))->offsets[0][0] = (u16) (((EffectRecord *)(temp_v0_8))->offsets[0][0] + (vec[4] >> 0xA));
-                    temp_v0_9 = (void *)&g_field_object_states[arg0->slot];
-                    ((EffectRecord *)(temp_v0_9))->offsets[0][1] = (u16) (((EffectRecord *)(temp_v0_9))->offsets[0][1] + (vec[5] >> 0xA));
+                    g_field_object_states[actor->slot].offsets[0][0] += vec[4] >> 10;
+                    g_field_object_states[actor->slot].offsets[0][1] += vec[5] >> 10;
                 }
             }
         }
         break;
     }
-    M2C_FIELD(D_800F2288, s32 *, 0x40B8) = var_s6;
+    M2C_FIELD(D_800F2288, s32 *, 0x40B8) = packet;
 }
 
 #undef M2C_FIELD

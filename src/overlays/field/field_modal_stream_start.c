@@ -1,5 +1,17 @@
+/** @file field_modal_stream_start.c
+ * @brief Load and enter the CARDA, GOLEM, NIKI and ADDHERO sub-overlays.
+ */
+
+#include "cd_resources.h"
 #include "cdrom.h"
 #include "common.h"
+#include "field_modal_runtime.h"
+
+/** @brief Load address of the modal sub-overlays. */
+#define FIELD_SUBOVERLAY_ADDRESS ((void*)0x80140000)
+
+/** @brief Work buffer handed to the sub-overlay entry points. */
+#define FIELD_MODAL_WORK_BUFFER 0x80170000
 
 extern s32 g_field_modal_state;
 extern s32 g_field_card_overlay_mode;
@@ -9,95 +21,81 @@ extern s32 D_801227F0;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 
+void func_80084240(void);
+void func_8014024C(void* work, s32 mode);
+void func_80140024(void* work, s32 mode);
+void func_8014011C(s32 work, s32 mode);
+void func_800C3BB0(void);
+
 /**
- * @brief One-time bring-up of the field streaming pipeline (variant 3).
- * @param arg0 Value handed to func_8014024C and stored as the pipeline state base.
+ * @brief Load CARDA and start it, unless another modal is already running.
+ * @param mode Card-screen mode; stored plus one and passed to the CARDA entry point.
  * @see decomp.me (100%) TODO
  */
-void func_800AD030(s32 arg0)
+void func_800AD030(s32 mode)
 {
-    if (g_field_modal_state == 0)
+    if (g_field_modal_state == FIELD_MODAL_NONE)
     {
         func_80084240();
-        cdrom_stream(0xC, (void *)0x80140000);
+        cdrom_stream(CD_RES_CARDA_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
-        g_field_card_overlay_mode = arg0 + 1;
+        g_field_card_overlay_mode = mode + 1;
         D_801227F0 = 1;
         g_gosub_result_count = 0;
-        g_field_modal_state = 3;
+        g_field_modal_state = FIELD_MODAL_CARDA;
         D_801227C4 = g_gosub_result_values[0];
-        func_8014024C((void *)0x80170000, arg0);
+        func_8014024C((void*)FIELD_MODAL_WORK_BUFFER, mode);
     }
 }
 
 /**
- * @brief Stream field resource 9 and hand off to func_800C3BB0.
+ * @brief Load GOLEM, run it to completion, then run func_800C3BB0.
  */
 void func_800AD0C8(void)
 {
     func_80084240();
-    cdrom_stream(9, (void *)0x80140000);
+    cdrom_stream(CD_RES_GOLEM_BIN, FIELD_SUBOVERLAY_ADDRESS);
     cdrom_wait_queue_empty();
-    func_80140024((void *)0x80150000, 0);
+    func_80140024((void*)0x80150000, 0);
     func_800C3BB0();
     func_80084240();
 }
 
-/**
- * @brief Empty stub retained for address/layout parity.
- */
+/** @brief Empty per-frame hook, called with the render half each frame. */
 void func_800AD118(void)
 {
 }
 
 /**
- * @brief One-time bring-up of the field streaming pipeline.
- *
- * On the first call (guard g_field_modal_state == 0), initialises the subsystem, streams
- * resource 0x11 to 0x80140000, waits for the CD queue to drain, marks the
- * pipeline active, and hands @p arg0 to func_8014011C.
- *
- * @param arg0 Value handed to func_8014011C.
+ * @brief Load NIKI and start it, unless another modal is already running.
+ * @param mode Mode passed to the NIKI entry point.
  */
-void func_800AD120(s32 arg0)
+void func_800AD120(s32 mode)
 {
-    void func_80084240(void);
-
-    void func_8014011C(s32 arg0, s32 arg1);
-
-    if (g_field_modal_state == 0)
+    if (g_field_modal_state == FIELD_MODAL_NONE)
     {
         func_80084240();
-        cdrom_stream(0x11, (void*)0x80140000);
+        cdrom_stream(CD_RES_NIKI_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_niki_addhero_state = 1;
-        g_field_modal_state = 4;
-        func_8014011C(0x80170000, arg0);
+        g_field_modal_state = FIELD_MODAL_NIKI;
+        func_8014011C(FIELD_MODAL_WORK_BUFFER, mode);
     }
 }
 
 /**
- * @brief One-time bring-up of the field streaming pipeline (variant 5).
- *
- * On the first call (guard g_field_modal_state == 0), initialises the subsystem, streams
- * resource 0x12 to 0x80140000, waits for the CD queue to drain, marks the
- * pipeline active with state 5, and hands @p arg0 to func_8014011C.
- *
- * @param arg0 Value handed to func_8014011C.
+ * @brief Load ADDHERO and start it, unless another modal is already running.
+ * @param mode Mode passed to the ADDHERO entry point.
  */
-void func_800AD194(s32 arg0)
+void func_800AD194(s32 mode)
 {
-    void func_80084240(void);
-
-    void func_8014011C(s32 arg0, s32 arg1);
-
-    if (g_field_modal_state == 0)
+    if (g_field_modal_state == FIELD_MODAL_NONE)
     {
         func_80084240();
-        cdrom_stream(0x12, (void*)0x80140000);
+        cdrom_stream(CD_RES_ADDHERO_BIN, FIELD_SUBOVERLAY_ADDRESS);
         cdrom_wait_queue_empty();
         g_field_niki_addhero_state = 1;
-        g_field_modal_state = 5;
-        func_8014011C(0x80170000, arg0);
+        g_field_modal_state = FIELD_MODAL_ADDHERO;
+        func_8014011C(FIELD_MODAL_WORK_BUFFER, mode);
     }
 }

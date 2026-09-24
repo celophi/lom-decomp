@@ -1,5 +1,69 @@
 #include "game_audio.h"
 #include "common.h"
+#include "field_records.h"
+
+/** @brief Number of guest characters with a template in resource 3. */
+#define FIELD_GUEST_COUNT 12
+
+/** @brief Resource id of the guest template table. */
+#define FIELD_RESOURCE_GUEST_TEMPLATES 3
+
+/** @brief First game-state word of the per-guest experience bonuses. */
+#define FIELD_GUEST_EXPERIENCE_WORD 0x68
+
+/** @brief Script variable that holds the active companion index. */
+#define FIELD_VARIABLE_COMPANION 0x1F10
+
+/** @brief Script variable of guest 0; guest n uses FIELD_VARIABLE_GUEST_BASE + n * 8. */
+#define FIELD_VARIABLE_GUEST_BASE 0xF87
+
+/** @brief Resource ids of the companion equipment templates. */
+#define FIELD_RESOURCE_WEAPON_TEMPLATES 0xD
+#define FIELD_RESOURCE_ARMOR_TEMPLATES 0xE
+
+/** @brief Bytes of a stored companion name copied into the party record. */
+#define FIELD_COMPANION_NAME_LENGTH 0x15
+
+/** @brief Character info bits 0-6: character type. */
+#define FIELD_CHARACTER_TYPE_MASK 0x7F
+
+/** @brief Character type of a guest in party slot 1. */
+#define FIELD_CHARACTER_GUEST 2
+
+/** @brief Character type of a stored companion in party slot 2. */
+#define FIELD_CHARACTER_COMPANION 3
+
+/** @brief Character info bit 7: the character is AI-controlled. */
+#define FIELD_CHARACTER_AI 0x80
+
+/** @brief Stat bits 0-8: the stat times four. */
+#define FIELD_STAT_SCALED_MASK 0x1FF
+
+/** @brief Largest experience value a character can hold. */
+#define FIELD_EXPERIENCE_MAX 9999999
+
+/** @brief One guest template: an id and a character record per hero-level band. */
+typedef struct
+{
+    s32 id;
+    FieldCharacterRecord banks[4];
+} FieldGuestTemplate;
+
+/** @brief Guest template table (resource 3). */
+typedef struct
+{
+    u16 unk0;
+    u16 count;
+    FieldGuestTemplate guests[1];
+} FieldGuestTemplateTable;
+
+/** @brief Item template table (resources 0xD and 0xE). */
+typedef struct
+{
+    u16 unk0;
+    u16 count;
+    FieldItemRecord templates[1];
+} FieldItemTemplateTable;
 
 /** @brief Context level, preserved flag byte, and packed value updated by the record load. */
 typedef struct
@@ -19,10 +83,13 @@ typedef struct
         u8 byte[4];
     } packed;
 } Context;
-extern u8 *D_80122B74;
+extern FieldGameState* D_80122B74;
 extern s32 D_800F190C[];
-extern u8 *func_800C1E40(s32);
-extern void func_800C1EC8(void *, void *, s32);
+extern void* func_800C1E40(s32 resource_id);
+extern void func_800C1EC8(void* source, void* destination, s32 size);
+extern s32 g_gosub_result_count;
+extern s32 g_gosub_result_values[];
+extern s32 D_801227F0;
 extern void func_800C11F0(s32, s32);
 extern void func_800B7C58(s32);
 extern void func_800BD520(s32, s32, s32);
@@ -40,8 +107,8 @@ s32 func_800C2B14(s32 record_id)
     u32 packed_value;
     u32 saved_flag;
     u8 level;
-    u8 *table;
-    u8 *bank;
+    u8* table;
+    u8* bank;
 
     if (record_id < 0xC)
     {
@@ -53,15 +120,15 @@ s32 func_800C2B14(s32 record_id)
                 record_index = 0;
             } while (0);
         } while (0);
-        if (*(u16 *)(table + 2) != 0)
+        if (*(u16*)(table + 2) != 0)
         {
             do
             {
-                if ((*(s32 *)(table + record_index * 0x944 + 4)) == record_id)
+                if ((*(s32*)(table + record_index * 0x944 + 4)) == record_id)
                 {
                     record_offset = record_index * 0x944 + 4;
-                    level = ((Context *)D_80122B74)->level;
-                    saved_flag = ((Context *)D_80122B74)->flags.byte[0] >> 7;
+                    level = ((Context*)D_80122B74)->level;
+                    saved_flag = ((Context*)D_80122B74)->flags.byte[0] >> 7;
                     if (level < 6U)
                     {
                         bank = table + record_offset + 4;
@@ -78,28 +145,28 @@ s32 func_800C2B14(s32 record_id)
                     {
                         bank = table + record_offset + 0x6F4;
                     }
-                    func_800C1EC8(bank, D_80122B74 + 0x840, 0x250);
-                    ((Context *)D_80122B74)->flags.word = (((Context *)D_80122B74)->flags.word & ~0x80) | (saved_flag << 7);
-                    if (((Context *)D_80122B74)->level < 0x20U)
+                    func_800C1EC8(bank, (u8*)D_80122B74 + 0x840, 0x250);
+                    ((Context*)D_80122B74)->flags.word = (((Context*)D_80122B74)->flags.word & ~0x80) | (saved_flag << 7);
+                    if (((Context*)D_80122B74)->level < 0x20U)
                     {
-                        level_index = ((Context *)D_80122B74)->level - 1;
+                        level_index = ((Context*)D_80122B74)->level - 1;
                     }
                     else
                     {
                         level_index = 0x1F;
                     }
-                    packed_value = ((Context *)D_80122B74)->packed.byte[0];
-                    packed_value = packed_value | ((*(s32 *)((u8 *)((s32)D_80122B74 - -((record_id + 0x68 + level_index - level_index) * 4)) + 0xE4) +
-                                                    D_800F190C[level_index])
-                                                   << 8);
-                    ((Context *)D_80122B74)->packed.word = packed_value;
+                    packed_value = ((Context*)D_80122B74)->packed.byte[0];
+                    packed_value =
+                        packed_value |
+                        ((*(s32*)((u8*)((s32)D_80122B74 - -((record_id + 0x68 + level_index - level_index) * 4)) + 0xE4) + D_800F190C[level_index]) << 8);
+                    ((Context*)D_80122B74)->packed.word = packed_value;
                     if ((s32)(packed_value >> 8) > 0x98967F)
                     {
                         u32 clamped_value;
 
                         clamped_value = packed_value & 0xFF;
                         clamped_value |= 0x98967F00;
-                        ((Context *)D_80122B74)->packed.word = clamped_value;
+                        ((Context*)D_80122B74)->packed.word = clamped_value;
                     }
                     func_800C11F0(1, 0);
                     func_800B7C58(1);
@@ -107,7 +174,7 @@ s32 func_800C2B14(s32 record_id)
                     return -1;
                 }
                 record_index++;
-            } while (record_index < (s32)*(u16 *)(table + 2));
+            } while (record_index < (s32) * (u16*)(table + 2));
         }
         record_game_diagnostic(0x8001, 0x6D, record_id, 0);
     }
@@ -117,107 +184,17 @@ s32 func_800C2B14(s32 record_id)
     }
     return 0;
 }
-#define ACTIVE_U8(p, o) (*(u8 *)((u8 *)(p) + (o)))
-#define ACTIVE_U16(p, o) (*(u16 *)((u8 *)(p) + (o)))
-#define ACTIVE_U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
-
-typedef struct
-{
-    unsigned short low : 9;
-    unsigned short high : 7;
-} ActivePacked16;
-
-typedef struct
-{
-    unsigned int low : 8;
-    unsigned int high : 24;
-} ActivePacked32;
-
-typedef struct
-{
-    u8 pad0[0x24];
-    u16 values24[4];
-    u8 bytes2C[0x14];
-} ActiveSlot;
-
-typedef struct
-{
-    u8 head[0x15];
-    u8 pad15[3];
-    u32 flags18;
-    u8 pad1C[4];
-    ActivePacked32 packed20;
-    u16 value24;
-    u16 value26;
-    u16 values28[4];
-    ActivePacked16 packed30[8];
-    u8 bytes40[4];
-    u8 pad44[4];
-    u8 init48[8];
-    u8 data50[0x24];
-    u16 value74;
-    u8 pad76[0x1A];
-    ActiveSlot slots90[3];
-} ActiveRecordFull;
-
-typedef struct
-{
-    u8 head[0x15];
-    u8 byte15;
-    u8 pad16[2];
-    ActivePacked32 packed18;
-    u16 value1C;
-    u16 value1E;
-    u16 values20[4];
-    ActivePacked16 packed28[8];
-    u8 bytes38[4];
-    u8 resource3C;
-    u8 resources3D[3];
-    u8 pad40[0x20];
-} SavedRecordFull;
-
-typedef struct
-{
-    u8 pad0[0xA90];
-    ActiveRecordFull active;
-    u8 padBE0[0x2EF4 - 0xBE0];
-    SavedRecordFull saved[5];
-} FieldRecordBufferFull;
-
-typedef struct
-{
-    u8 bytes[0x60];
-} SavedRecordRaw;
-
-typedef struct
-{
-    u8 pad0[0xA90];
-    u8 active_head[0x15];
-    u8 padAA5[0x244F];
-    SavedRecordRaw saved[5];
-} FieldRecordBuffer;
-
 void func_800C3B50(void);
 void func_800C3A00(s32);
 void func_800C32C8(void);
-void field_release_actor_resource_slot(s32);
-
-
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
-extern u8 *D_80122B74;
-extern s32 D_801227F0;
-
-extern void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-extern s32 func_800BD414(s32 arg0, s32 arg1);
-extern void func_800C2E30(s32 arg0);
+void field_release_actor_resource_slot(s32 slot);
+void func_800BD520(s32 arg0, s32 variable, s32 value);
+s32 func_800BD414(s32 arg0, s32 variable);
+void func_800C2E30(s32 companion_index);
 
 /**
- * @brief Dispatch a queued gosub result, or report an invalid index.
- *
- * @note 100% match with the FIELD GCC 2.8.0 G0 toolchain.
- *
- * @return D_80122B74[0xAA9] on a successful dispatch, else 0xFF.
+ * @brief Make the stored companion named by the first gosub result the active companion.
+ * @return The companion's info byte 1 on success, else 0xFF.
  */
 s32 func_800C2D08(void)
 {
@@ -227,16 +204,14 @@ s32 func_800C2D08(void)
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
-        if (index < 5)
+        if (index < FIELD_REGION_COUNT)
         {
-            u8 *entry = D_80122B74 + index * 0x60;
-
-            if (entry[0x2EF4] != 0)
+            if (D_80122B74->regions[index].name[0] != 0)
             {
-                *(s32 *)&D_80122B74[0x2EF0] = index;
-                func_800BD520(0, 0x1F10, g_gosub_result_values[0]);
+                D_80122B74->region_index = index;
+                func_800BD520(0, FIELD_VARIABLE_COMPANION, g_gosub_result_values[0]);
                 func_800C2E30(g_gosub_result_values[0]);
-                return D_80122B74[0xAA9];
+                return D_80122B74->characters[2].info.bytes[1];
             }
         }
         record_game_diagnostic(0x8001, 0x6E, index, 0);
@@ -245,225 +220,156 @@ s32 func_800C2D08(void)
 }
 
 /**
- * @brief Select a scene entry or report an invalid rolled index.
- *
- * Rolls func_800BD414; an index below 5 is stored to the buffer's 0x2EF0 slot,
- * handed to func_800C2E30, and the buffer's 0xAA9 byte is returned. Otherwise
- * a diagnostic is recorded and 0xFF is returned.
- *
- * 100% match with the FIELD GCC 2.8.0 G0 toolchain.
+ * @brief Make the stored companion named by the companion variable the active companion.
+ * @return The companion's info byte 1 on success, else 0xFF.
  */
 s32 func_800C2DC0(void)
 {
-    s32 v = func_800BD414(0, 0x1F10);
-    s32 ret;
+    s32 index = func_800BD414(0, FIELD_VARIABLE_COMPANION);
+    s32 result;
 
-    if ((u32)v < 5)
+    if ((u32)index < FIELD_REGION_COUNT)
     {
-        *(s32 *)(D_80122B74 + 0x2EF0) = v;
-        func_800C2E30(v);
-        ret = *(u8 *)(D_80122B74 + 0xAA9);
+        D_80122B74->region_index = index;
+        func_800C2E30(index);
+        result = D_80122B74->characters[2].info.bytes[1];
     }
     else
     {
-        record_game_diagnostic(0x8001, 0x6E, v, 1);
-        ret = 0xFF;
+        record_game_diagnostic(0x8001, 0x6E, index, 1);
+        result = 0xFF;
     }
-    return ret;
+    return result;
 }
 
 /**
- * @brief Restore a saved secondary record and its equipment tables.
- * @param arg0 Saved record index to restore.
+ * @brief Copy a stored companion into party slot 2 and rebuild its equipment records.
+ * @param companion_index Stored companion index.
  */
-void func_800C2E30(s32 arg0)
+void func_800C2E30(s32 companion_index)
 {
-    s32 temp_s1;
-    u8 *temp_v0_4;
-    s32 temp_v1_2;
-    s32 var_a0_2;
-    s32 var_a2;
-    s32 var_s0;
-    s32 var_s1;
-    u8 *temp_a0;
-    u8 *temp_a0_2;
-    u8 *temp_a1;
-    u8 *temp_a2;
-    u8 *temp_v0_2;
-    u8 *temp_v0_6;
-    u8 *var_v1_2;
-    u8 **record_global;
+    FieldItemTemplateTable* table;
+    FieldGameState* state;
+    FieldItemRecord* item;
+    u32 scaled;
+    s32 i;
 
-    var_s0 = 0;
-    do
+    for (i = 0; i < FIELD_COMPANION_NAME_LENGTH; i++)
     {
-        ((FieldRecordBuffer *)D_80122B74)->active_head[var_s0] = ((FieldRecordBuffer *)D_80122B74)->saved[arg0].bytes[var_s0];
-        var_s0 += 1;
-    } while (var_s0 < 0x15);
-    ACTIVE_U32(D_80122B74, 0xAA8) = (s32) (((ACTIVE_U32(D_80122B74, 0xAA8) & ~0x7F) | 3) & ~0x80);
-    ACTIVE_U8(D_80122B74, 0xAA9) = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].byte15;
-    ((FieldRecordBufferFull *)D_80122B74)->active.packed20.low = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].packed18.low;
-    ((FieldRecordBufferFull *)D_80122B74)->active.packed20.high = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].packed18.high;
-    var_s0 = 0;
-    ((FieldRecordBufferFull *)D_80122B74)->active.value24 = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].value1C;
-    ((FieldRecordBufferFull *)D_80122B74)->active.value26 = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].value1E;
-    do
-    {
-        ((FieldRecordBufferFull *)D_80122B74)->active.values28[var_s0] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].values20[var_s0];
-        var_s0 += 1;
-    } while (var_s0 < 4);
-    var_s0 = 0;
-    temp_a2 = D_80122B74;
-    var_a2 = arg0 * 0x60;
-    do
-    {
-        temp_a0_2 = temp_a2 + var_a2;
-        var_a2 += 2;
-        ((ActivePacked16 *)(temp_a2 + var_s0 * 2 + 0xAC0))->low = ((ActivePacked16 *)(temp_a0_2 + 0x2F1C))->low;
-        ((ActivePacked16 *)(temp_a2 + var_s0 * 2 + 0xAC0))->high = ((ActivePacked16 *)(temp_a0_2 + 0x2F1C))->high;
-        var_s0 += 1;
-    } while (var_s0 < 8);
-    ((FieldRecordBufferFull *)D_80122B74)->active.bytes40[0] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[0];
-    ((FieldRecordBufferFull *)D_80122B74)->active.bytes40[1] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[1];
-    ((FieldRecordBufferFull *)D_80122B74)->active.bytes40[2] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[2];
-    var_s0 = 0;
-    ((FieldRecordBufferFull *)D_80122B74)->active.bytes40[3] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[3];
-    do
-    {
-        ((FieldRecordBufferFull *)D_80122B74)->active.init48[var_s0] = var_s0;
-        var_s0 += 1;
-    } while (var_s0 < 8);
-    temp_v0_4 = func_800C1E40(0xD);
-    if (temp_v0_4 != 0)
-    {
-        temp_a0 = D_80122B74 + arg0 * 0x60;
-        func_800C1EC8(temp_v0_4 + ((ACTIVE_U8(temp_a0, 0x2F30) << 6) + 4), D_80122B74 + 0xAE0, 0x40);
+        D_80122B74->characters[2].name[i] = D_80122B74->regions[companion_index].name[i];
     }
-    record_global = &D_80122B74;
-    var_s1 = arg0 * 0x60;
-    ACTIVE_U16(*record_global, 0xB04) = (u16) ACTIVE_U16(*record_global + var_s1, 0x2F12);
-    temp_v0_4 = func_800C1E40(0xE);
-    if (temp_v0_4 != 0)
+    D_80122B74->characters[2].info.word =
+        ((D_80122B74->characters[2].info.word & ~FIELD_CHARACTER_TYPE_MASK) | FIELD_CHARACTER_COMPANION) & ~FIELD_CHARACTER_AI;
+    D_80122B74->characters[2].info.bytes[1] = D_80122B74->regions[companion_index].unk15;
+    D_80122B74->characters[2].progress.bits.level = D_80122B74->regions[companion_index].progress.bits.level;
+    D_80122B74->characters[2].progress.bits.experience = D_80122B74->regions[companion_index].progress.bits.experience;
+    D_80122B74->characters[2].hp = D_80122B74->regions[companion_index].hp;
+    D_80122B74->characters[2].unk26 = D_80122B74->regions[companion_index].unk1E;
+    for (i = 0; i < 4; i++)
     {
-        for (var_s0 = 0; var_s0 < 3; var_s0 += 1)
+        D_80122B74->characters[2].equipment_totals[i] = D_80122B74->regions[companion_index].equipment_totals[i];
+    }
+    for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
+    {
+        scaled = D_80122B74->regions[companion_index].stats[i] & FIELD_STAT_SCALED_MASK;
+        D_80122B74->characters[2].stats[i] = (D_80122B74->characters[2].stats[i] & ~FIELD_STAT_SCALED_MASK) | scaled;
+        D_80122B74->characters[2].stats[i] =
+            (D_80122B74->characters[2].stats[i] & FIELD_STAT_SCALED_MASK) | (D_80122B74->regions[companion_index].stats[i] & ~FIELD_STAT_SCALED_MASK);
+    }
+    D_80122B74->characters[2].unk40 = D_80122B74->regions[companion_index].unk38[0];
+    D_80122B74->characters[2].unk41 = D_80122B74->regions[companion_index].unk38[1];
+    D_80122B74->characters[2].unk42 = D_80122B74->regions[companion_index].unk38[2];
+    D_80122B74->characters[2].unk43 = D_80122B74->regions[companion_index].unk38[3];
+    for (i = 0; i < 8; i++)
+    {
+        D_80122B74->characters[2].unk48[i] = i;
+    }
+    table = func_800C1E40(FIELD_RESOURCE_WEAPON_TEMPLATES);
+    if (table != NULL)
+    {
+        func_800C1EC8(&table->templates[D_80122B74->regions[companion_index].weapon_id], &D_80122B74->characters[2].equipment[0], sizeof(FieldItemRecord));
+    }
+    D_80122B74->characters[2].equipment[0].derived.values[0] = D_80122B74->regions[companion_index].unk1E;
+    table = func_800C1E40(FIELD_RESOURCE_ARMOR_TEMPLATES);
+    if (table != NULL)
+    {
+        for (i = 0; i < 3; i++)
         {
-            temp_v0_2 = D_80122B74;
-            temp_s1 = arg0 * 0x60;
-            var_s1 = 0xB20 + var_s0 * 0x40;
-            temp_v1_2 = var_s0 + temp_s1;
-            func_800C1EC8(temp_v0_4 + ((ACTIVE_U8(temp_v0_2 + temp_v1_2, 0x2F31) << 6) + 4), temp_v0_2 + var_s1, 0x40);
+            func_800C1EC8(&table->templates[D_80122B74->regions[companion_index].armor_ids[i]], &D_80122B74->characters[2].equipment[1 + i],
+                          sizeof(FieldItemRecord));
         }
     }
-    var_s0 = 0;
-    temp_a1 = D_80122B74;
-    var_v1_2 = temp_a1 + 0xB20;
-    var_a0_2 = arg0 * 0x60;
-    do
+    state = D_80122B74;
+    item = &state->characters[2].equipment[1];
+    for (i = 0; i < 4; i++)
     {
-        temp_v0_6 = temp_a1 + var_a0_2;
-        var_a0_2 += 2;
-        var_s0 += 1;
-        ACTIVE_U16(var_v1_2, 0x24) = (u16) ACTIVE_U16(temp_v0_6, 0x2F14);
-        var_v1_2 += 2;
-    } while (var_s0 < 4);
-    ((FieldRecordBufferFull *)D_80122B74)->active.slots90[0].bytes2C[0] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[0];
-    ((FieldRecordBufferFull *)D_80122B74)->active.slots90[0].bytes2C[1] = ((FieldRecordBufferFull *)D_80122B74)->saved[arg0].bytes38[2];
+        item->derived.values[i] = state->regions[companion_index].equipment_totals[i];
+    }
+    D_80122B74->characters[2].equipment[1].flags2C = D_80122B74->regions[companion_index].unk38[0];
+    D_80122B74->characters[2].equipment[1].flags2D = D_80122B74->regions[companion_index].unk38[2];
     func_800B7C58(2);
 }
 
 /**
- * @brief Refresh the block and return its byte at 0xAA9 offset by 0x41.
- * @return The adjusted byte value.
+ * @brief Refresh the active companion and return its letter code.
+ * @return The companion's info byte 1 plus 'A'.
  */
 s32 func_800C318C(void)
 {
     func_800C3B50();
-    return D_80122B74[0xAA9] + 0x41;
+    return D_80122B74->characters[2].info.bytes[1] + 'A';
 }
 
 /**
- * @brief Close either the primary (arg0 == 0) or secondary record and notify field_release_actor_resource_slot.
- * @param arg0 Zero selects the record at 0x840, nonzero the record at 0xA90.
+ * @brief Remove the guest (slot 1) or the companion (slot 2) from the party.
+ * @param companion Zero removes the guest in slot 1, nonzero the companion in slot 2.
  */
-void func_800C31BC(s32 arg0)
+void func_800C31BC(s32 companion)
 {
-    if (arg0 == 0)
+    if (companion == 0)
     {
-        if ((*(s32 *)(D_80122B74 + 0x858) & 0x7F) == 2)
+        if ((D_80122B74->characters[1].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_GUEST)
         {
-            func_800BD520(0, (D_80122B74[0x859] << 3) + 0xF87, 0);
+            func_800BD520(0, (D_80122B74->characters[1].info.bytes[1] << 3) + FIELD_VARIABLE_GUEST_BASE, 0);
         }
         func_800BD520(0, 0x2F08, 0xFF);
-        D_80122B74[0x840] = 0;
-        *(s32 *)(D_80122B74 + 0x858) |= 0x7F;
+        D_80122B74->characters[1].name[0] = 0;
+        D_80122B74->characters[1].info.word |= FIELD_CHARACTER_TYPE_MASK;
     }
     else
     {
-        if ((*(s32 *)(D_80122B74 + 0xAA8) & 0x7F) == 3)
+        if ((D_80122B74->characters[2].info.word & FIELD_CHARACTER_TYPE_MASK) == FIELD_CHARACTER_COMPANION)
         {
             func_800C32C8();
-            *(s32 *)(D_80122B74 + 0x2EF0) = 5;
+            D_80122B74->region_index = FIELD_REGION_COUNT;
         }
         else
         {
             func_800C3A00(0);
         }
-        D_80122B74[0xA90] = 0;
-        *(s32 *)(D_80122B74 + 0xAA8) |= 0x7F;
+        D_80122B74->characters[2].name[0] = 0;
+        D_80122B74->characters[2].info.word |= FIELD_CHARACTER_TYPE_MASK;
         func_800BD520(0, 0x2F00, 0xFF);
     }
-    field_release_actor_resource_slot(arg0);
+    field_release_actor_resource_slot(companion);
 }
 
 /**
- * @brief Copy the pending record at 0xA90 into the menu slot selected by the word at 0x2EF0.
+ * @brief Write the companion in party slot 2 back to its stored record.
  */
 void func_800C32C8(void)
 {
     s32 i;
-    s32 dst_off;
-    u8 *src;
-    u8 *p;
 
-    if ((u32)*(s32 *)(D_80122B74 + 0x2EF0) < 5)
+    if ((u32)D_80122B74->region_index < FIELD_REGION_COUNT)
     {
-        i = 0;
-        do
+        for (i = 0; i < FIELD_COMPANION_NAME_LENGTH; i++)
         {
-            dst_off = i + *(s32 *)(D_80122B74 + 0x2EF0) * 0x60;
-            src = D_80122B74 + i;
-            i += 1;
-            *(u8 *)(D_80122B74 + dst_off + 0x2EF4) = *(u8 *)(src + 0xA90);
-        } while (i < 0x15);
-
-        {
-            u8 *b; s32 idx; s32 off; u32 val;
-            b = D_80122B74;
-            idx = *(s32 *)(b + 0x2EF0);
-            off = idx * 0x60;
-            val = *(u8 *)(b + 0xAB0);
-            b += off;
-            *(u8 *)(b + 0x2F0C) = val;
+            D_80122B74->regions[D_80122B74->region_index].name[i] = D_80122B74->characters[2].name[i];
         }
-        p = D_80122B74 + *(s32 *)(D_80122B74 + 0x2EF0) * 0x60;
-        {
-            u32 word = *(u32 *)(D_80122B74 + 0xAB0);
-            u32 low = *(u8 *)(p + 0x2F0C);
-            low |= (word >> 8) << 8;
-            *(u32 *)(p + 0x2F0C) = low;
-        }
-        {
-            u8 *b = D_80122B74;
-            s32 off = *(s32 *)(b + 0x2EF0) * 0x60;
-            u16 val = *(u16 *)(b + 0xAB4);
-            b += off;
-            *(u16 *)(b + 0x2F10) = val;
-        }
-        {
-            u8 *b = D_80122B74;
-            s32 off = *(s32 *)(b + 0x2EF0) * 0x60;
-            off += (s32)b;
-            func_800C1EC8(b + 0xAC0, (void *)(off + 0x2F1C), 0x10);
-        }
+        D_80122B74->regions[D_80122B74->region_index].progress.bits.level = D_80122B74->characters[2].progress.bits.level;
+        D_80122B74->regions[D_80122B74->region_index].progress.bits.experience = D_80122B74->characters[2].progress.bits.experience;
+        D_80122B74->regions[D_80122B74->region_index].hp = D_80122B74->characters[2].hp;
+        func_800C1EC8(D_80122B74->characters[2].stats, D_80122B74->regions[D_80122B74->region_index].stats, sizeof(D_80122B74->characters[2].stats));
     }
 }

@@ -22,31 +22,36 @@
     }
 
 #define LOAD_MODEL_VERTEX_SCALED(dst, source, index, divisor)                                                                                                  \
-    do                                                                                                                                                         \
     {                                                                                                                                                          \
         (dst).x = (source)[(index)].x;                                                                                                                         \
         (dst).y = (source)[(index)].y;                                                                                                                         \
         (dst).z = (source)[(index)].z / (divisor);                                                                                                             \
-    } while (0)
+    }
 
 #define OFFSET_SCREEN_XY(value, dx, dy)                                                                                                                        \
-    do                                                                                                                                                         \
     {                                                                                                                                                          \
         (value).point.x += (dx);                                                                                                                               \
         (value).point.y += (dy);                                                                                                                               \
-    } while (0)
+    }
 
-#define SCALE_COLOR(color, scale, product)                                                                                                                     \
-    do                                                                                                                                                         \
+/** @brief Write scaled RGB and the source high byte to a packet color word. */
+#define SET_MODEL_COLOR(destination, color, scale)                                                                                                             \
     {                                                                                                                                                          \
         if ((scale) != -1)                                                                                                                                     \
         {                                                                                                                                                      \
-            (product) = (color).r * (scale);                                                                                                                   \
-            (color).r = (product) >> WMAP_MODEL_COLOR_SHIFT;                                                                                                   \
-            (color).g = ((s32)(color).g * (scale)) >> WMAP_MODEL_COLOR_SHIFT;                                                                                  \
-            (color).b = ((s32)(color).b * (scale)) >> WMAP_MODEL_COLOR_SHIFT;                                                                                  \
+            s32 red = (color).r * (scale);                                                                                                                     \
+            s32 green = (color).g * (scale);                                                                                                                   \
+            s32 blue = (color).b * (scale);                                                                                                                    \
+            (color).r = red >> WMAP_MODEL_COLOR_SHIFT;                                                                                                         \
+            (color).g = green >> WMAP_MODEL_COLOR_SHIFT;                                                                                                       \
+            (color).b = blue >> WMAP_MODEL_COLOR_SHIFT;                                                                                                        \
+            *(s32*)&(destination) = *(s32*)&(color);                                                                                                           \
         }                                                                                                                                                      \
-    } while (0)
+        else                                                                                                                                                   \
+        {                                                                                                                                                      \
+            *(s32*)&(destination) = *(s32*)&(color);                                                                                                           \
+        }                                                                                                                                                      \
+    }
 
 /** @brief GPU polygon commands stored in the model's face records. */
 typedef enum
@@ -152,6 +157,17 @@ typedef struct
 } WmapPolyGT3;
 
 /**
+ * @brief Advance to the next fixed-size record in a model stream.
+ * @param record Current face or attribute record.
+ * @param size Size of one record in bytes.
+ * @return Address of the next record.
+ */
+static inline void* wmap_advance_record(void* record, s32 size)
+{
+    return (u8*)record + size;
+}
+
+/**
  * @brief Project a model's faces into the current world-map ordering table.
  * @param resource_table Packed resource header and relative model offsets.
  * @param resource_index Zero-based model index in the resource.
@@ -173,9 +189,7 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
     WmapModelDirectory* directory;
     WmapMeshVertex* vertices;
     WmapMeshFace* face;
-    WmapMeshFace* next_face;
     WmapFaceAttributes* attributes;
-    WmapFaceAttributes* next_attributes;
     s32 face_count;
     s32 face_index;
     s32 draw_backfaces;
@@ -184,7 +198,6 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
     WmapScreenPoint screen_xy2;
     WmapScreenPoint screen_xy3;
     s32 face_order;
-    s32 color_product;
     WmapMeshVertex projection_vertices[4];
     /* TODO: Recover the original color work-buffer layout. */
     CVECTOR colors[20];
@@ -217,618 +230,596 @@ void wmap_draw_model(void* resource_table, s32 resource_index, s32 ot_index, s32
         z_divisor = 1;
     }
 
-    face_index = 0;
-    if (face_count > 0)
+    for (face_index = 0; face_index < face_count; face_index++)
     {
-        next_face = face + 1;
-        next_attributes = attributes + 1;
-        do
+        switch (face->primitive_code)
         {
-            switch (face->primitive_code)
+        case WMAP_MODEL_FT4:
+        {
+            POLY_FT4* ft4 = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
+            s32 primitive_code;
+            if (z_divisor == -1)
             {
-            case WMAP_MODEL_FT4:
+                LOAD_MODEL_VERTEX(projection_vertices[0], vertices, face->vertex_indices[0]);
+                LOAD_MODEL_VERTEX(projection_vertices[1], vertices, face->vertex_indices[1]);
+                LOAD_MODEL_VERTEX(projection_vertices[2], vertices, face->vertex_indices[2]);
+                LOAD_MODEL_VERTEX(projection_vertices[3], vertices, face->vertex_indices[3]);
+            }
+            else
             {
-                POLY_FT4* poly = (POLY_FT4*)g_wmap_current_frame->packet_cursor;
-                s32 primitive_code;
-                if (z_divisor == -1)
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, face->vertex_indices[0], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, face->vertex_indices[1], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, face->vertex_indices[2], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[3], vertices, face->vertex_indices[3], z_divisor);
+            }
+            gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
+            gte_rtpt();
+            *(u16*)&ft4->u0 = attributes->uv[0];
+            *(u16*)&ft4->u1 = attributes->uv[1];
+            *(u16*)&ft4->u2 = attributes->uv[2];
+            *(u16*)&ft4->u3 = attributes->uv[3];
+            gte_stsxy01(&screen_xy0, &screen_xy1);
+            gte_stsxy2(&screen_xy2);
+            gte_nclip();
+            OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
+            /* NCLIP gives signed area; reuse it as the backface bucket offset. */
+            gte_stopz(&face_order);
+            if (draw_backfaces == 0)
+            {
+                if (face_order < 0)
                 {
-                    LOAD_MODEL_VERTEX(projection_vertices[0], vertices, next_face[-1].vertex_indices[0]);
-                    LOAD_MODEL_VERTEX(projection_vertices[1], vertices, next_face[-1].vertex_indices[1]);
-                    LOAD_MODEL_VERTEX(projection_vertices[2], vertices, next_face[-1].vertex_indices[2]);
-                    LOAD_MODEL_VERTEX(projection_vertices[3], vertices, next_face[-1].vertex_indices[3]);
+                    break;
+                }
+                face_order = 0;
+            }
+            else
+            {
+                if (face_order < 0)
+                {
+                    face_order = WMAP_MODEL_BACK_OT_OFFSET;
                 }
                 else
                 {
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, next_face[-1].vertex_indices[0], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, next_face[-1].vertex_indices[1], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, next_face[-1].vertex_indices[2], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[3], vertices, next_face[-1].vertex_indices[3], z_divisor);
-                }
-                gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
-                gte_rtpt();
-                *(u16*)&poly->u0 = next_attributes[-1].uv[0];
-                *(u16*)&poly->u1 = next_attributes[-1].uv[1];
-                *(u16*)&poly->u2 = next_attributes[-1].uv[2];
-                *(u16*)&poly->u3 = next_attributes[-1].uv[3];
-                gte_stsxy0(&screen_xy0);
-                gte_stsxy1(&screen_xy1);
-                gte_stsxy2(&screen_xy2);
-                gte_nclip();
-                OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
-                /* NCLIP gives signed area; reuse it as the backface bucket offset. */
-                gte_stopz(&face_order);
-                if (draw_backfaces == 0)
-                {
-                    if (face_order < 0)
-                    {
-                        break;
-                    }
                     face_order = 0;
                 }
-                else
-                {
-                    if (face_order < 0)
-                    {
-                        face_order = WMAP_MODEL_BACK_OT_OFFSET;
-                    }
-                    else
-                    {
-                        face_order = 0;
-                    }
-                }
-                OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                gte_ldv0(&projection_vertices[3]);
-                gte_rtps();
-                poly->tpage = tpage;
-                poly->clut = clut;
-                gte_stsxy(&screen_xy3);
-                OFFSET_SCREEN_XY(screen_xy3, x_offset, y_offset);
-                *(s32*)&poly->x0 = screen_xy0.packed;
-                *(s32*)&poly->x1 = screen_xy1.packed;
-                *(s32*)&poly->x2 = screen_xy2.packed;
-                *(s32*)&poly->x3 = screen_xy3.packed;
-                colors[0] = next_attributes[-1].colors[0];
-                SCALE_COLOR(colors[0], (color_scale & WMAP_MODEL_COLOR_MASK), color_product);
-                *(s32*)&poly->r0 = *(s32*)&colors[0];
-                setlen(poly, 9);
-                setcode(poly, WMAP_MODEL_FT4);
-                if (!(color_scale & WMAP_MODEL_FORCE_OPAQUE))
-                {
-                    primitive_code = (WMAP_MODEL_FT4 | WMAP_MODEL_SEMI_TRANS);
-                    if (next_face[-1].semi_transparent == 0)
-                    {
-                        primitive_code = WMAP_MODEL_FT4;
-                    }
-                    setcode(poly, primitive_code);
-                }
-                addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], poly);
-                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-                {
-                    g_wmap_packet_bytes += sizeof(POLY_FT4);
-                    g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
-                }
-                break;
             }
-            case WMAP_MODEL_FT3:
+            OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
+            gte_ldv0(&projection_vertices[3]);
+            gte_rtps();
+            ft4->tpage = tpage;
+            ft4->clut = clut;
+            gte_stsxy(&screen_xy3);
+            OFFSET_SCREEN_XY(screen_xy3, x_offset, y_offset);
+            *(s32*)&ft4->x0 = screen_xy0.packed;
+            *(s32*)&ft4->x1 = screen_xy1.packed;
+            *(s32*)&ft4->x2 = screen_xy2.packed;
+            *(s32*)&ft4->x3 = screen_xy3.packed;
+            colors[0] = attributes->colors[0];
+            SET_MODEL_COLOR(ft4->r0, colors[0], (color_scale & WMAP_MODEL_COLOR_MASK));
+            setlen(ft4, 9);
+            setcode(ft4, WMAP_MODEL_FT4);
+            if (!(color_scale & WMAP_MODEL_FORCE_OPAQUE))
             {
-                POLY_FT3* poly = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
-                if (z_divisor == -1)
+                primitive_code = face->semi_transparent;
+                if (primitive_code == 0)
                 {
-                    LOAD_MODEL_VERTEX(projection_vertices[0], vertices, next_face[-1].vertex_indices[0]);
-                    LOAD_MODEL_VERTEX(projection_vertices[1], vertices, next_face[-1].vertex_indices[1]);
-                    LOAD_MODEL_VERTEX(projection_vertices[2], vertices, next_face[-1].vertex_indices[2]);
+                    primitive_code = WMAP_MODEL_FT4;
                 }
                 else
                 {
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, next_face[-1].vertex_indices[0], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, next_face[-1].vertex_indices[1], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, next_face[-1].vertex_indices[2], z_divisor);
+                    primitive_code = WMAP_MODEL_FT4 | WMAP_MODEL_SEMI_TRANS;
                 }
-                gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
-                gte_rtpt();
-                poly->tpage = tpage;
-                poly->clut = clut;
-                *(u16*)&poly->u0 = attributes->uv[0];
-                *(u16*)&poly->u1 = next_attributes[-1].uv[1];
-                *(u16*)&poly->u2 = next_attributes[-1].uv[2];
-                gte_stsxy0(&screen_xy0);
-                gte_stsxy1(&screen_xy1);
-                gte_stsxy2(&screen_xy2);
-                gte_nclip();
-                OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                gte_stopz(&face_order);
-                if (draw_backfaces == 0)
+                setcode(ft4, primitive_code);
+            }
+            addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], ft4);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+            {
+                g_wmap_packet_bytes += sizeof(POLY_FT4);
+                g_wmap_current_frame->packet_cursor += sizeof(POLY_FT4);
+            }
+            break;
+        }
+        case WMAP_MODEL_FT3:
+        {
+            POLY_FT3* ft3 = (POLY_FT3*)g_wmap_current_frame->packet_cursor;
+            if (z_divisor == -1)
+            {
+                LOAD_MODEL_VERTEX(projection_vertices[0], vertices, face->vertex_indices[0]);
+                LOAD_MODEL_VERTEX(projection_vertices[1], vertices, face->vertex_indices[1]);
+                LOAD_MODEL_VERTEX(projection_vertices[2], vertices, face->vertex_indices[2]);
+            }
+            else
+            {
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, face->vertex_indices[0], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, face->vertex_indices[1], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, face->vertex_indices[2], z_divisor);
+            }
+            gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
+            gte_rtpt();
+            ft3->tpage = tpage;
+            ft3->clut = clut;
+            *(u16*)&ft3->u0 = attributes->uv[0];
+            *(u16*)&ft3->u1 = attributes->uv[1];
+            *(u16*)&ft3->u2 = attributes->uv[2];
+            gte_stsxy01(&screen_xy0, &screen_xy1);
+            gte_stsxy2(&screen_xy2);
+            gte_nclip();
+            OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
+            gte_stopz(&face_order);
+            if (draw_backfaces == 0)
+            {
+                if (face_order < 0)
                 {
-                    if (face_order < 0)
-                    {
-                        break;
-                    }
+                    break;
+                }
+                face_order = 0;
+            }
+            else
+            {
+                if (face_order < 0)
+                {
+                    face_order = WMAP_MODEL_BACK_OT_OFFSET;
+                }
+                else
+                {
                     face_order = 0;
                 }
+            }
+            *(s32*)&ft3->x0 = screen_xy0.packed;
+            *(s32*)&ft3->x1 = screen_xy1.packed;
+            *(s32*)&ft3->x2 = screen_xy2.packed;
+            colors[0] = attributes->colors[0];
+            SET_MODEL_COLOR(ft3->r0, colors[0], (color_scale & WMAP_MODEL_COLOR_MASK));
+            setlen(ft3, 7);
+            setcode(ft3, WMAP_MODEL_FT3);
+            if (!(color_scale & WMAP_MODEL_FORCE_OPAQUE))
+            {
+                s32 primitive_code = face->semi_transparent;
+                if (primitive_code == 0)
+                {
+                    primitive_code = WMAP_MODEL_FT3;
+                }
                 else
                 {
-                    if (face_order < 0)
-                    {
-                        face_order = WMAP_MODEL_BACK_OT_OFFSET;
-                    }
-                    else
-                    {
-                        face_order = 0;
-                    }
+                    primitive_code = WMAP_MODEL_FT3 | WMAP_MODEL_SEMI_TRANS;
                 }
-                *(s32*)&poly->x0 = screen_xy0.packed;
-                *(s32*)&poly->x1 = screen_xy1.packed;
-                *(s32*)&poly->x2 = screen_xy2.packed;
-                colors[0] = next_attributes[-1].colors[0];
-                SCALE_COLOR(colors[0], (color_scale & WMAP_MODEL_COLOR_MASK), color_product);
-                *(s32*)&poly->r0 = *(s32*)&colors[0];
-                setlen(poly, 7);
-                setcode(poly, WMAP_MODEL_FT3);
-                if (!(color_scale & WMAP_MODEL_FORCE_OPAQUE))
-                {
-                    s32 primitive_code = WMAP_MODEL_FT3 | WMAP_MODEL_SEMI_TRANS;
-                    if (next_face[-1].semi_transparent == 0)
-                    {
-                        primitive_code = WMAP_MODEL_FT3;
-                    }
-                    setcode(poly, primitive_code);
-                }
-                addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], poly);
-                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-                {
-                    g_wmap_packet_bytes += sizeof(POLY_FT3);
-                    g_wmap_current_frame->packet_cursor += sizeof(POLY_FT3);
-                }
-                break;
+                setcode(ft3, primitive_code);
             }
-            case WMAP_MODEL_G4:
+            addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], ft3);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
             {
-                POLY_G4* poly = (POLY_G4*)g_wmap_current_frame->packet_cursor;
-                LOAD_MODEL_VERTEX(projection_vertices[0], vertices, next_face[-1].vertex_indices[0]);
-                LOAD_MODEL_VERTEX(projection_vertices[1], vertices, next_face[-1].vertex_indices[1]);
-                LOAD_MODEL_VERTEX(projection_vertices[2], vertices, next_face[-1].vertex_indices[2]);
-                gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
-                gte_rtpt();
-                LOAD_MODEL_VERTEX(projection_vertices[3], vertices, next_face[-1].vertex_indices[3]);
-                colors[0] = next_attributes[-1].colors[0];
-                SCALE_COLOR(colors[0], color_scale, color_product);
-                *(s32*)&poly->r0 = *(s32*)&colors[0];
-                colors[4] = next_attributes[-1].colors[1];
-                SCALE_COLOR(colors[4], color_scale, color_product);
-                *(s32*)&poly->r1 = *(s32*)&colors[4];
-                gte_stsxy0(&screen_xy0);
-                gte_stsxy1(&screen_xy1);
-                gte_stsxy2(&screen_xy2);
-                gte_nclip();
-                colors[8] = next_attributes[-1].colors[2];
-                SCALE_COLOR(colors[8], color_scale, color_product);
-                *(s32*)&poly->r2 = *(s32*)&colors[8];
-                colors[12] = next_attributes[-1].colors[3];
-                SCALE_COLOR(colors[12], color_scale, color_product);
-                *(s32*)&poly->r3 = *(s32*)&colors[12];
-                gte_stopz(&face_order);
-                if (draw_backfaces == 0)
+                g_wmap_packet_bytes += sizeof(POLY_FT3);
+                g_wmap_current_frame->packet_cursor += sizeof(POLY_FT3);
+            }
+            break;
+        }
+        case WMAP_MODEL_G4:
+        {
+            POLY_G4* g4 = (POLY_G4*)g_wmap_current_frame->packet_cursor;
+            LOAD_MODEL_VERTEX(projection_vertices[0], vertices, face->vertex_indices[0]);
+            LOAD_MODEL_VERTEX(projection_vertices[1], vertices, face->vertex_indices[1]);
+            LOAD_MODEL_VERTEX(projection_vertices[2], vertices, face->vertex_indices[2]);
+            gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
+            gte_rtpt();
+            LOAD_MODEL_VERTEX(projection_vertices[3], vertices, face->vertex_indices[3]);
+            colors[0] = attributes->colors[0];
+            SET_MODEL_COLOR(g4->r0, colors[0], color_scale);
+            colors[4] = attributes->colors[1];
+            SET_MODEL_COLOR(g4->r1, colors[4], color_scale);
+            gte_stsxy01(&screen_xy0, &screen_xy1);
+            gte_stsxy2(&screen_xy2);
+            gte_nclip();
+            colors[8] = attributes->colors[2];
+            SET_MODEL_COLOR(g4->r2, colors[8], color_scale);
+            colors[12] = attributes->colors[3];
+            SET_MODEL_COLOR(g4->r3, colors[12], color_scale);
+            gte_stopz(&face_order);
+            if (draw_backfaces == 0)
+            {
+                if (face_order < 0)
                 {
-                    if (face_order < 0)
-                    {
-                        break;
-                    }
+                    break;
+                }
+                face_order = 0;
+            }
+            else
+            {
+                if (face_order < 0)
+                {
+                    face_order = WMAP_MODEL_BACK_OT_OFFSET;
+                }
+                else
+                {
                     face_order = 0;
                 }
-                else
-                {
-                    if (face_order < 0)
-                    {
-                        face_order = WMAP_MODEL_BACK_OT_OFFSET;
-                    }
-                    else
-                    {
-                        face_order = 0;
-                    }
-                }
-                OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                gte_ldv0(&projection_vertices[3]);
-                gte_rtps();
-                *(s32*)&poly->x0 = screen_xy0.packed;
-                *(s32*)&poly->x1 = screen_xy1.packed;
-                gte_stsxy(&screen_xy3);
-                OFFSET_SCREEN_XY(screen_xy3, x_offset, y_offset);
-                *(s32*)&poly->x2 = screen_xy2.packed;
-                {
-                    s32 fourth_screen_xy = screen_xy3.packed;
-                    setlen(poly, 8);
-                    setcode(poly, WMAP_MODEL_G4);
-                    *(s32*)&poly->x3 = fourth_screen_xy;
-                }
-                if (blend_mode >= 0)
-                {
-                    setcode(poly, (WMAP_MODEL_G4 | WMAP_MODEL_SEMI_TRANS));
-                }
-                addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], poly);
-                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-                {
-                    g_wmap_packet_bytes += sizeof(POLY_G4);
-                    g_wmap_current_frame->packet_cursor += sizeof(POLY_G4);
-                }
-                break;
             }
-            case WMAP_MODEL_G3:
+            OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
+            gte_ldv0(&projection_vertices[3]);
+            gte_rtps();
+            *(s32*)&g4->x0 = screen_xy0.packed;
+            *(s32*)&g4->x1 = screen_xy1.packed;
+            gte_stsxy(&screen_xy3);
+            OFFSET_SCREEN_XY(screen_xy3, x_offset, y_offset);
+            *(s32*)&g4->x2 = screen_xy2.packed;
+            *(s32*)&g4->x3 = screen_xy3.packed;
+            setlen(g4, 8);
+            setcode(g4, WMAP_MODEL_G4);
+            if (blend_mode >= 0)
             {
-                WmapPolyG3* poly = (WmapPolyG3*)g_wmap_current_frame->packet_cursor;
-                if (z_divisor == -1)
+                setcode(g4, (WMAP_MODEL_G4 | WMAP_MODEL_SEMI_TRANS));
+            }
+            addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], g4);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+            {
+                g_wmap_packet_bytes += sizeof(POLY_G4);
+                g_wmap_current_frame->packet_cursor += sizeof(POLY_G4);
+            }
+            break;
+        }
+        case WMAP_MODEL_G3:
+        {
+            WmapPolyG3* g3 = (WmapPolyG3*)g_wmap_current_frame->packet_cursor;
+            if (z_divisor == -1)
+            {
+                LOAD_MODEL_VERTEX(projection_vertices[0], vertices, face->vertex_indices[0]);
+                LOAD_MODEL_VERTEX(projection_vertices[1], vertices, face->vertex_indices[1]);
+                LOAD_MODEL_VERTEX(projection_vertices[2], vertices, face->vertex_indices[2]);
+            }
+            else
+            {
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, face->vertex_indices[0], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, face->vertex_indices[1], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, face->vertex_indices[2], z_divisor);
+            }
+            gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
+            gte_rtpt();
+            colors[0] = attributes->colors[0];
+            SET_MODEL_COLOR(g3->r0, colors[0], color_scale);
+            gte_stsxy01(&screen_xy0, &screen_xy1);
+            gte_stsxy2(&screen_xy2);
+            gte_nclip();
+            gte_stopz(&face_order);
+            if (draw_backfaces == 0)
+            {
+                if (face_order < 0)
                 {
-                    LOAD_MODEL_VERTEX(projection_vertices[0], vertices, next_face[-1].vertex_indices[0]);
-                    LOAD_MODEL_VERTEX(projection_vertices[1], vertices, next_face[-1].vertex_indices[1]);
-                    LOAD_MODEL_VERTEX(projection_vertices[2], vertices, next_face[-1].vertex_indices[2]);
+                    break;
+                }
+                face_order = 0;
+            }
+            else
+            {
+                if (face_order < 0)
+                {
+                    face_order = WMAP_MODEL_BACK_OT_OFFSET;
                 }
                 else
                 {
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, next_face[-1].vertex_indices[0], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, next_face[-1].vertex_indices[1], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, next_face[-1].vertex_indices[2], z_divisor);
-                }
-                gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
-                gte_rtpt();
-                colors[0] = next_attributes[-1].colors[0];
-                SCALE_COLOR(colors[0], color_scale, color_product);
-                *(s32*)&poly->r0 = *(s32*)&colors[0];
-                gte_stsxy0(&screen_xy0);
-                gte_stsxy1(&screen_xy1);
-                gte_stsxy2(&screen_xy2);
-                gte_nclip();
-                gte_stopz(&face_order);
-                if (draw_backfaces == 0)
-                {
-                    if (face_order < 0)
-                    {
-                        break;
-                    }
                     face_order = 0;
                 }
+            }
+            OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
+            *(s32*)&g3->x0 = screen_xy0.packed;
+            *(s32*)&g3->x1 = screen_xy1.packed;
+            *(s32*)&g3->x2 = screen_xy2.packed;
+            colors[4] = attributes->colors[1];
+            SET_MODEL_COLOR(g3->r1, colors[4], color_scale);
+            colors[8] = attributes->colors[2];
+            SET_MODEL_COLOR(g3->r2, colors[8], color_scale);
+            setlen(g3, 6);
+            setcode(g3, WMAP_MODEL_G3);
+            if (blend_mode >= 0)
+            {
+                setcode(g3, (WMAP_MODEL_G3 | WMAP_MODEL_SEMI_TRANS));
+            }
+            addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], g3);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+            {
+                g_wmap_packet_bytes += sizeof(WmapPolyG3);
+                g_wmap_current_frame->packet_cursor += sizeof(WmapPolyG3);
+            }
+            break;
+        }
+        case WMAP_MODEL_F4:
+        {
+            POLY_F4* f4 = (POLY_F4*)g_wmap_current_frame->packet_cursor;
+            LOAD_MODEL_VERTEX(projection_vertices[0], vertices, face->vertex_indices[0]);
+            LOAD_MODEL_VERTEX(projection_vertices[1], vertices, face->vertex_indices[1]);
+            LOAD_MODEL_VERTEX(projection_vertices[2], vertices, face->vertex_indices[2]);
+            gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
+            gte_rtpt();
+            LOAD_MODEL_VERTEX(projection_vertices[3], vertices, face->vertex_indices[3]);
+            gte_stsxy01(&screen_xy0, &screen_xy1);
+            gte_stsxy2(&screen_xy2);
+            gte_nclip();
+            gte_stopz(&face_order);
+            if (draw_backfaces == 0)
+            {
+                if (face_order < 0)
+                {
+                    break;
+                }
+                face_order = 0;
+            }
+            else
+            {
+                if (face_order < 0)
+                {
+                    face_order = WMAP_MODEL_BACK_OT_OFFSET;
+                }
                 else
                 {
-                    if (face_order < 0)
-                    {
-                        face_order = WMAP_MODEL_BACK_OT_OFFSET;
-                    }
-                    else
-                    {
-                        face_order = 0;
-                    }
-                }
-                OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                *(s32*)&poly->x0 = screen_xy0.packed;
-                *(s32*)&poly->x1 = screen_xy1.packed;
-                *(s32*)&poly->x2 = screen_xy2.packed;
-                colors[4] = next_attributes[-1].colors[1];
-                SCALE_COLOR(colors[4], color_scale, color_product);
-                *(s32*)&poly->r1 = *(s32*)&colors[4];
-                colors[8] = next_attributes[-1].colors[2];
-                SCALE_COLOR(colors[8], color_scale, color_product);
-                *(s32*)&poly->r2 = *(s32*)&colors[8];
-                setlen(poly, 6);
-                setcode(poly, WMAP_MODEL_G3);
-                if (blend_mode >= 0)
-                {
-                    setcode(poly, (WMAP_MODEL_G3 | WMAP_MODEL_SEMI_TRANS));
-                }
-                addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], poly);
-                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-                {
-                    g_wmap_packet_bytes += sizeof(WmapPolyG3);
-                    g_wmap_current_frame->packet_cursor += sizeof(WmapPolyG3);
-                }
-                break;
-            }
-            case WMAP_MODEL_F4:
-            {
-                POLY_F4* poly = (POLY_F4*)g_wmap_current_frame->packet_cursor;
-                LOAD_MODEL_VERTEX(projection_vertices[0], vertices, next_face[-1].vertex_indices[0]);
-                LOAD_MODEL_VERTEX(projection_vertices[1], vertices, next_face[-1].vertex_indices[1]);
-                LOAD_MODEL_VERTEX(projection_vertices[2], vertices, next_face[-1].vertex_indices[2]);
-                gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
-                gte_rtpt();
-                LOAD_MODEL_VERTEX(projection_vertices[3], vertices, next_face[-1].vertex_indices[3]);
-                gte_stsxy0(&screen_xy0);
-                gte_stsxy1(&screen_xy1);
-                gte_stsxy2(&screen_xy2);
-                gte_nclip();
-                gte_stopz(&face_order);
-                if (draw_backfaces == 0)
-                {
-                    if (face_order < 0)
-                    {
-                        break;
-                    }
                     face_order = 0;
                 }
+            }
+            gte_ldv0(&projection_vertices[3]);
+            gte_rtps();
+            *(s32*)&f4->x0 = screen_xy0.packed;
+            *(s32*)&f4->x1 = screen_xy1.packed;
+            gte_stsxy(&screen_xy3);
+            *(s32*)&f4->x2 = screen_xy2.packed;
+            *(s32*)&f4->x3 = screen_xy3.packed;
+            colors[0] = attributes->colors[0];
+            SET_MODEL_COLOR(f4->r0, colors[0], color_scale);
+            setlen(f4, 5);
+            setcode(f4, WMAP_MODEL_F4);
+            if (blend_mode >= 0)
+            {
+                setcode(f4, (WMAP_MODEL_F4 | WMAP_MODEL_SEMI_TRANS));
+            }
+            addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], f4);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+            {
+                g_wmap_packet_bytes += sizeof(POLY_F4);
+                g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
+            }
+            break;
+        }
+        case WMAP_MODEL_F3:
+        {
+            WmapPolyF3* f3 = (WmapPolyF3*)g_wmap_current_frame->packet_cursor;
+            LOAD_MODEL_VERTEX(projection_vertices[0], vertices, face->vertex_indices[0]);
+            LOAD_MODEL_VERTEX(projection_vertices[1], vertices, face->vertex_indices[1]);
+            LOAD_MODEL_VERTEX(projection_vertices[2], vertices, face->vertex_indices[2]);
+            gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
+            gte_rtpt();
+            colors[0] = attributes->colors[0];
+            SET_MODEL_COLOR(f3->r0, colors[0], color_scale);
+            gte_stsxy01(&screen_xy0, &screen_xy1);
+            gte_stsxy2(&screen_xy2);
+            gte_nclip();
+            gte_stopz(&face_order);
+            if (draw_backfaces == 0)
+            {
+                if (face_order < 0)
+                {
+                    break;
+                }
+                face_order = 0;
+            }
+            else
+            {
+                if (face_order < 0)
+                {
+                    face_order = WMAP_MODEL_BACK_OT_OFFSET;
+                }
                 else
                 {
-                    if (face_order < 0)
-                    {
-                        face_order = WMAP_MODEL_BACK_OT_OFFSET;
-                    }
-                    else
-                    {
-                        face_order = 0;
-                    }
-                }
-                gte_ldv0(&projection_vertices[3]);
-                gte_rtps();
-                *(s32*)&poly->x0 = screen_xy0.packed;
-                *(s32*)&poly->x1 = screen_xy1.packed;
-                gte_stsxy(&screen_xy3);
-                *(s32*)&poly->x2 = screen_xy2.packed;
-                *(s32*)&poly->x3 = screen_xy3.packed;
-                colors[0] = next_attributes[-1].colors[0];
-                SCALE_COLOR(colors[0], color_scale, color_product);
-                *(s32*)&poly->r0 = *(s32*)&colors[0];
-                setlen(poly, 5);
-                setcode(poly, WMAP_MODEL_F4);
-                if (blend_mode >= 0)
-                {
-                    setcode(poly, (WMAP_MODEL_F4 | WMAP_MODEL_SEMI_TRANS));
-                }
-                addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], poly);
-                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-                {
-                    g_wmap_packet_bytes += sizeof(POLY_F4);
-                    g_wmap_current_frame->packet_cursor += sizeof(POLY_F4);
-                }
-                break;
-            }
-            case WMAP_MODEL_F3:
-            {
-                WmapPolyF3* poly = (WmapPolyF3*)g_wmap_current_frame->packet_cursor;
-                LOAD_MODEL_VERTEX(projection_vertices[0], vertices, next_face[-1].vertex_indices[0]);
-                LOAD_MODEL_VERTEX(projection_vertices[1], vertices, next_face[-1].vertex_indices[1]);
-                LOAD_MODEL_VERTEX(projection_vertices[2], vertices, next_face[-1].vertex_indices[2]);
-                gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
-                gte_rtpt();
-                colors[0] = next_attributes[-1].colors[0];
-                SCALE_COLOR(colors[0], color_scale, color_product);
-                *(s32*)&poly->r0 = *(s32*)&colors[0];
-                gte_stsxy0(&screen_xy0);
-                gte_stsxy1(&screen_xy1);
-                gte_stsxy2(&screen_xy2);
-                gte_nclip();
-                gte_stopz(&face_order);
-                if (draw_backfaces == 0)
-                {
-                    if (face_order < 0)
-                    {
-                        break;
-                    }
                     face_order = 0;
                 }
-                else
-                {
-                    if (face_order < 0)
-                    {
-                        face_order = WMAP_MODEL_BACK_OT_OFFSET;
-                    }
-                    else
-                    {
-                        face_order = 0;
-                    }
-                }
-                OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                *(s32*)&poly->x0 = screen_xy0.packed;
-                *(s32*)&poly->x1 = screen_xy1.packed;
-                setlen(poly, 4);
-                setcode(poly, WMAP_MODEL_F3);
-                *(s32*)&poly->x2 = screen_xy2.packed;
-                if (blend_mode >= 0)
-                {
-                    setcode(poly, (WMAP_MODEL_F3 | WMAP_MODEL_SEMI_TRANS));
-                }
-                addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], poly);
-                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-                {
-                    g_wmap_packet_bytes += sizeof(WmapPolyF3);
-                    g_wmap_current_frame->packet_cursor += sizeof(WmapPolyF3);
-                }
-                break;
             }
-            case WMAP_MODEL_GT3:
+            OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
+            *(s32*)&f3->x0 = screen_xy0.packed;
+            *(s32*)&f3->x1 = screen_xy1.packed;
+            *(s32*)&f3->x2 = screen_xy2.packed;
+            setlen(f3, 4);
+            setcode(f3, WMAP_MODEL_F3);
+            if (blend_mode >= 0)
             {
-                WmapPolyGT3* poly;
-                if (z_divisor == -1)
+                setcode(f3, (WMAP_MODEL_F3 | WMAP_MODEL_SEMI_TRANS));
+            }
+            addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], f3);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+            {
+                g_wmap_packet_bytes += sizeof(WmapPolyF3);
+                g_wmap_current_frame->packet_cursor += sizeof(WmapPolyF3);
+            }
+            break;
+        }
+        case WMAP_MODEL_GT3:
+        {
+            WmapPolyGT3* gt3;
+            if (z_divisor == -1)
+            {
+                LOAD_MODEL_VERTEX(projection_vertices[0], vertices, face->vertex_indices[0]);
+                LOAD_MODEL_VERTEX(projection_vertices[1], vertices, face->vertex_indices[1]);
+                LOAD_MODEL_VERTEX(projection_vertices[2], vertices, face->vertex_indices[2]);
+            }
+            else
+            {
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, face->vertex_indices[0], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, face->vertex_indices[1], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, face->vertex_indices[2], z_divisor);
+            }
+            gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
+            gte_rtpt();
+            gt3 = (WmapPolyGT3*)g_wmap_current_frame->packet_cursor;
+            gt3->tpage = tpage;
+            gt3->clut = clut;
+            *(u16*)&gt3->u0 = attributes->uv[0];
+            *(u16*)&gt3->u1 = attributes->uv[1];
+            *(u16*)&gt3->u2 = attributes->uv[2];
+            gte_stsxy01(&screen_xy0, &screen_xy1);
+            gte_stsxy2(&screen_xy2);
+            gte_nclip();
+            gte_stopz(&face_order);
+            if (draw_backfaces == 0)
+            {
+                if (face_order < 0)
                 {
-                    LOAD_MODEL_VERTEX(projection_vertices[0], vertices, next_face[-1].vertex_indices[0]);
-                    LOAD_MODEL_VERTEX(projection_vertices[1], vertices, next_face[-1].vertex_indices[1]);
-                    LOAD_MODEL_VERTEX(projection_vertices[2], vertices, next_face[-1].vertex_indices[2]);
+                    break;
+                }
+                face_order = 0;
+            }
+            else
+            {
+                if (face_order < 0)
+                {
+                    face_order = WMAP_MODEL_BACK_OT_OFFSET;
                 }
                 else
                 {
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, next_face[-1].vertex_indices[0], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, next_face[-1].vertex_indices[1], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, next_face[-1].vertex_indices[2], z_divisor);
-                }
-                gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
-                gte_rtpt();
-                poly = (WmapPolyGT3*)g_wmap_current_frame->packet_cursor;
-                poly->tpage = tpage;
-                poly->clut = clut;
-                *(u16*)&poly->u0 = attributes->uv[0];
-                *(u16*)&poly->u1 = next_attributes[-1].uv[1];
-                *(u16*)&poly->u2 = next_attributes[-1].uv[2];
-                gte_stsxy0(&screen_xy0);
-                gte_stsxy1(&screen_xy1);
-                gte_stsxy2(&screen_xy2);
-                gte_nclip();
-                gte_stopz(&face_order);
-                if (draw_backfaces == 0)
-                {
-                    if (face_order < 0)
-                    {
-                        break;
-                    }
                     face_order = 0;
                 }
-                else
-                {
-                    if (face_order < 0)
-                    {
-                        face_order = WMAP_MODEL_BACK_OT_OFFSET;
-                    }
-                    else
-                    {
-                        face_order = 0;
-                    }
-                }
-                OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                *(s32*)&poly->x0 = screen_xy0.packed;
-                *(s32*)&poly->x1 = screen_xy1.packed;
-                *(s32*)&poly->x2 = screen_xy2.packed;
-                colors[0] = next_attributes[-1].colors[0];
-                colors[2] = colors[0];
-                SCALE_COLOR(colors[2], (color_scale & WMAP_MODEL_COLOR_MASK), color_product);
-                *(s32*)&poly->r0 = *(s32*)&colors[2];
-                colors[0] = next_attributes[-1].colors[1];
-                colors[6] = colors[0];
-                SCALE_COLOR(colors[6], (color_scale & WMAP_MODEL_COLOR_MASK), color_product);
-                *(s32*)&poly->r1 = *(s32*)&colors[6];
-                colors[0] = next_attributes[-1].colors[2];
-                colors[10] = colors[0];
-                SCALE_COLOR(colors[10], (color_scale & WMAP_MODEL_COLOR_MASK), color_product);
-                *(s32*)&poly->r2 = *(s32*)&colors[10];
-                setlen(poly, 9);
-                setcode(poly, WMAP_MODEL_GT3);
-                if (!(color_scale & WMAP_MODEL_FORCE_OPAQUE))
-                {
-                    s32 primitive_code = WMAP_MODEL_GT3 | WMAP_MODEL_SEMI_TRANS;
-                    if (next_face[-1].semi_transparent == 0)
-                    {
-                        primitive_code = WMAP_MODEL_GT3;
-                    }
-                    setcode(poly, primitive_code);
-                }
-                addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], poly);
-                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-                {
-                    g_wmap_packet_bytes += sizeof(WmapPolyGT3);
-                    g_wmap_current_frame->packet_cursor += sizeof(WmapPolyGT3);
-                }
-                break;
             }
-            case WMAP_MODEL_GT4:
+            OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
+            *(s32*)&gt3->x0 = screen_xy0.packed;
+            *(s32*)&gt3->x1 = screen_xy1.packed;
+            *(s32*)&gt3->x2 = screen_xy2.packed;
+            colors[0] = attributes->colors[0];
+            colors[2] = colors[0];
+            SET_MODEL_COLOR(gt3->r0, colors[2], (color_scale & WMAP_MODEL_COLOR_MASK));
+            colors[0] = attributes->colors[1];
+            colors[6] = colors[0];
+            SET_MODEL_COLOR(gt3->r1, colors[6], (color_scale & WMAP_MODEL_COLOR_MASK));
+            colors[0] = attributes->colors[2];
+            colors[10] = colors[0];
+            SET_MODEL_COLOR(gt3->r2, colors[10], (color_scale & WMAP_MODEL_COLOR_MASK));
+            setlen(gt3, 9);
+            setcode(gt3, WMAP_MODEL_GT3);
+            if (!(color_scale & WMAP_MODEL_FORCE_OPAQUE))
             {
-                POLY_GT4* poly = (POLY_GT4*)g_wmap_current_frame->packet_cursor;
-                if (z_divisor == -1)
+                s32 primitive_code = face->semi_transparent;
+                if (primitive_code == 0)
                 {
-                    LOAD_MODEL_VERTEX(projection_vertices[0], vertices, next_face[-1].vertex_indices[0]);
-                    LOAD_MODEL_VERTEX(projection_vertices[1], vertices, next_face[-1].vertex_indices[1]);
-                    LOAD_MODEL_VERTEX(projection_vertices[2], vertices, next_face[-1].vertex_indices[2]);
-                    LOAD_MODEL_VERTEX(projection_vertices[3], vertices, next_face[-1].vertex_indices[3]);
+                    primitive_code = WMAP_MODEL_GT3;
                 }
                 else
                 {
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, next_face[-1].vertex_indices[0], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, next_face[-1].vertex_indices[1], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, next_face[-1].vertex_indices[2], z_divisor);
-                    LOAD_MODEL_VERTEX_SCALED(projection_vertices[3], vertices, next_face[-1].vertex_indices[3], z_divisor);
+                    primitive_code = WMAP_MODEL_GT3 | WMAP_MODEL_SEMI_TRANS;
                 }
-                gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
-                gte_rtpt();
-                poly->tpage = tpage;
-                poly->clut = clut;
-                *(u16*)&poly->u0 = attributes->uv[0];
-                *(u16*)&poly->u1 = next_attributes[-1].uv[1];
-                *(u16*)&poly->u2 = next_attributes[-1].uv[2];
-                gte_stsxy0(&screen_xy0);
-                gte_stsxy1(&screen_xy1);
-                gte_stsxy2(&screen_xy2);
-                gte_nclip();
-                *(u16*)&poly->u3 = next_attributes[-1].uv[3];
-                gte_stopz(&face_order);
-                if (draw_backfaces == 0)
+                setcode(gt3, primitive_code);
+            }
+            addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], gt3);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+            {
+                g_wmap_packet_bytes += sizeof(WmapPolyGT3);
+                g_wmap_current_frame->packet_cursor += sizeof(WmapPolyGT3);
+            }
+            break;
+        }
+        case WMAP_MODEL_GT4:
+        {
+            POLY_GT4* gt4 = (POLY_GT4*)g_wmap_current_frame->packet_cursor;
+            if (z_divisor == -1)
+            {
+                LOAD_MODEL_VERTEX(projection_vertices[0], vertices, face->vertex_indices[0]);
+                LOAD_MODEL_VERTEX(projection_vertices[1], vertices, face->vertex_indices[1]);
+                LOAD_MODEL_VERTEX(projection_vertices[2], vertices, face->vertex_indices[2]);
+                LOAD_MODEL_VERTEX(projection_vertices[3], vertices, face->vertex_indices[3]);
+            }
+            else
+            {
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[0], vertices, face->vertex_indices[0], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[1], vertices, face->vertex_indices[1], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[2], vertices, face->vertex_indices[2], z_divisor);
+                LOAD_MODEL_VERTEX_SCALED(projection_vertices[3], vertices, face->vertex_indices[3], z_divisor);
+            }
+            gte_ldv3(&projection_vertices[0], &projection_vertices[1], &projection_vertices[2]);
+            gte_rtpt();
+            gt4->tpage = tpage;
+            gt4->clut = clut;
+            *(u16*)&gt4->u0 = attributes->uv[0];
+            *(u16*)&gt4->u1 = attributes->uv[1];
+            *(u16*)&gt4->u2 = attributes->uv[2];
+            gte_stsxy01(&screen_xy0, &screen_xy1);
+            gte_stsxy2(&screen_xy2);
+            gte_nclip();
+            *(u16*)&gt4->u3 = attributes->uv[3];
+            gte_stopz(&face_order);
+            if (draw_backfaces == 0)
+            {
+                if (face_order < 0)
                 {
-                    if (face_order < 0)
-                    {
-                        break;
-                    }
+                    break;
+                }
+                face_order = 0;
+            }
+            else
+            {
+                if (face_order < 0)
+                {
+                    face_order = WMAP_MODEL_BACK_OT_OFFSET;
+                }
+                else
+                {
                     face_order = 0;
                 }
+            }
+            gte_ldv0(&projection_vertices[3]);
+            gte_rtps();
+            OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
+            OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
+            gte_stsxy(&screen_xy3);
+            OFFSET_SCREEN_XY(screen_xy3, x_offset, y_offset);
+            *(s32*)&gt4->x0 = screen_xy0.packed;
+            *(s32*)&gt4->x1 = screen_xy1.packed;
+            *(s32*)&gt4->x2 = screen_xy2.packed;
+            *(s32*)&gt4->x3 = screen_xy3.packed;
+            colors[0] = attributes->colors[0];
+            colors[2] = colors[0];
+            SET_MODEL_COLOR(gt4->r0, colors[2], (color_scale & WMAP_MODEL_COLOR_MASK));
+            colors[0] = attributes->colors[1];
+            colors[6] = colors[0];
+            SET_MODEL_COLOR(gt4->r1, colors[6], (color_scale & WMAP_MODEL_COLOR_MASK));
+            colors[0] = attributes->colors[2];
+            colors[10] = colors[0];
+            SET_MODEL_COLOR(gt4->r2, colors[10], (color_scale & WMAP_MODEL_COLOR_MASK));
+            colors[0] = attributes->colors[3];
+            colors[16] = colors[0];
+            SET_MODEL_COLOR(gt4->r3, colors[16], (color_scale & WMAP_MODEL_COLOR_MASK));
+            setlen(gt4, 12);
+            setcode(gt4, WMAP_MODEL_GT4);
+            if (!(color_scale & WMAP_MODEL_FORCE_OPAQUE))
+            {
+                s32 primitive_code = face->semi_transparent;
+                if (primitive_code == 0)
+                {
+                    primitive_code = WMAP_MODEL_GT4;
+                }
                 else
                 {
-                    if (face_order < 0)
-                    {
-                        face_order = WMAP_MODEL_BACK_OT_OFFSET;
-                    }
-                    else
-                    {
-                        face_order = 0;
-                    }
+                    primitive_code = WMAP_MODEL_GT4 | WMAP_MODEL_SEMI_TRANS;
                 }
-                gte_ldv0(&projection_vertices[3]);
-                gte_rtps();
-                OFFSET_SCREEN_XY(screen_xy0, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy1, x_offset, y_offset);
-                OFFSET_SCREEN_XY(screen_xy2, x_offset, y_offset);
-                gte_stsxy(&screen_xy3);
-                OFFSET_SCREEN_XY(screen_xy3, x_offset, y_offset);
-                *(s32*)&poly->x0 = screen_xy0.packed;
-                *(s32*)&poly->x1 = screen_xy1.packed;
-                *(s32*)&poly->x2 = screen_xy2.packed;
-                *(s32*)&poly->x3 = screen_xy3.packed;
-                colors[0] = next_attributes[-1].colors[0];
-                colors[2] = colors[0];
-                SCALE_COLOR(colors[2], (color_scale & WMAP_MODEL_COLOR_MASK), color_product);
-                *(s32*)&poly->r0 = *(s32*)&colors[2];
-                colors[0] = next_attributes[-1].colors[1];
-                colors[6] = colors[0];
-                SCALE_COLOR(colors[6], (color_scale & WMAP_MODEL_COLOR_MASK), color_product);
-                *(s32*)&poly->r1 = *(s32*)&colors[6];
-                colors[0] = next_attributes[-1].colors[2];
-                colors[10] = colors[0];
-                SCALE_COLOR(colors[10], (color_scale & WMAP_MODEL_COLOR_MASK), color_product);
-                *(s32*)&poly->r2 = *(s32*)&colors[10];
-                colors[0] = next_attributes[-1].colors[3];
-                colors[16] = colors[0];
-                SCALE_COLOR(colors[16], (color_scale & WMAP_MODEL_COLOR_MASK), color_product);
-                *(s32*)&poly->r3 = *(s32*)&colors[16];
-                setlen(poly, 12);
-                setcode(poly, WMAP_MODEL_GT4);
-                if (!(color_scale & WMAP_MODEL_FORCE_OPAQUE))
-                {
-                    s32 primitive_code = WMAP_MODEL_GT4 | WMAP_MODEL_SEMI_TRANS;
-                    if (next_face[-1].semi_transparent == 0)
-                    {
-                        primitive_code = WMAP_MODEL_GT4;
-                    }
-                    setcode(poly, primitive_code);
-                }
-                addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], poly);
-                if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
-                {
-                    g_wmap_packet_bytes += sizeof(POLY_GT4);
-                    g_wmap_current_frame->packet_cursor += sizeof(POLY_GT4);
-                }
-                break;
+                setcode(gt4, primitive_code);
             }
-            default:
-                func_80064F14(attributes);
-                break;
+            addPrim(&g_wmap_current_frame->ordering_table[ot_index + face_order], gt4);
+            if (g_wmap_packet_bytes < WMAP_PACKET_LIMIT)
+            {
+                g_wmap_packet_bytes += sizeof(POLY_GT4);
+                g_wmap_current_frame->packet_cursor += sizeof(POLY_GT4);
             }
+            break;
+        }
+        default:
+            func_80064F14(attributes);
+            break;
+        }
 
-            face = next_face;
-            next_face++;
-            attributes = next_attributes;
-            next_attributes++;
-            face_index++;
-        } while (face_index < face_count);
+        face = wmap_advance_record(face, sizeof(*face));
+        attributes = wmap_advance_record(attributes, sizeof(*attributes));
     }
 
     /* Degenerate triangles set the blend equation before each face bucket is drawn. */
