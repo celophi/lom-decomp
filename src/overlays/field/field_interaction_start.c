@@ -28,6 +28,14 @@
 #define FIELD_SCRIPT_LOCAL_BASE_MASK 0x7F
 #define FIELD_SCRIPT_LOCAL_BASE_SHIFT 9
 
+/**
+ * @brief Text in a table that starts with s16 offsets relative to the table base.
+ * @param table Table base; entry @p index holds the text offset.
+ * @param index Text index.
+ * @note The integer sum emits the index before the table base, as in the original.
+ */
+#define FIELD_OFFSET_TABLE_TEXT(table, index) ((u8*)(table) + *(s16*)((index) * 2 + (s32)(table)))
+
 /** @brief Destination and activation policy encoded in an action request. */
 typedef enum
 {
@@ -89,18 +97,28 @@ typedef struct
     u8 default_group;
 } FieldActionLayout;
 
-/** @brief Region trigger record: bounds and the command started on entry (12 bytes). */
+/** @brief Region trigger: map bounds and the command started on entry (12 bytes). */
 typedef struct
 {
-    u16 unk0;
-    u16 unk2;
     u16 min_x;
     u16 min_z;
     u16 max_x;
     u16 max_z;
+    /** @brief Bit 15 set: script id for func_800B22F0; otherwise a func_800B4410 argument. */
     u16 command;
-    u16 unkE;
+    u16 unk0A;
 } FieldTriggerRegion;
+
+/** @brief Scene trigger table loaded into the runtime context. */
+typedef struct
+{
+    u16 unk0;
+    u16 count;
+    FieldTriggerRegion regions[1];
+} FieldTriggerTable;
+
+/** @brief The current scene's trigger table, read through the context pointer on every use. */
+#define FIELD_TRIGGERS ((FieldTriggerTable*)D_80122B78->trigger_table)
 
 /** @brief Player map position in whole units. */
 typedef struct
@@ -188,16 +206,14 @@ void func_800B0C54(void)
 {
     s32 slot;
 
-    slot = 0;
-    do
+    for (slot = 0; slot < FIELD_PARTY_SIZE; slot++)
     {
         g_field_text_macros[15 - slot].character_limit = 0x15;
         g_field_text_macros[15 - slot].text = D_80122B74->characters[slot].name;
-        slot++;
-    } while (slot < FIELD_PARTY_SIZE);
+    }
 
     g_field_text_macros[12].character_limit = 0xFF;
-    g_field_text_macros[12].text = (u8*)D_800EF600 + *(s16*)((u8*)D_800EF600 + ((D_80122B74->control.fields.unk2E6 & 0x7F) * 2));
+    g_field_text_macros[12].text = FIELD_OFFSET_TABLE_TEXT(D_800EF600, D_80122B74->control.fields.unk2E6 & 0x7F);
 
     if ((func_800BD414(0, 0xA02) != 0) || ((D_80122B74->characters[1].info.word & 0x80) != 0))
     {
@@ -211,115 +227,38 @@ void func_800B0C54(void)
 
 /**
  * @brief Initialize the party actor records and the script local-variable bases.
- * @note Still the raw decompiler form: the natural typed loops reach 95.4% (register
- *       coloring and the second loop's increment order); see the lane report.
+ * @note Party actors get local bases 0x30, 0x31 and 0x38; the other actors count down from 0x7F.
  */
 void func_800B0D3C(void)
 {
-    s32 temp_v1;
-    s32 current;
-    u16 invalid;
-    s32 fixed0;
-    s32 fixed1;
-    s32 fixed2;
-    s32 masked1;
-    s32 masked2;
-    u32 fixed_mask;
-    u32 loop_mask;
-    u32 mask_d;
-    s32 var_a0;
-    s32 var_a2;
-    s32 var_a3;
-    s32 var_t1_2;
-    s32 var_t1;
-    u8* temp_a0;
-    u8* var_t0;
-    u8* base;
+    s32 i;
+    s32 j;
 
-    var_t1 = 0;
-    do
+    for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        var_a2 = var_t1 * 0x94;
-        temp_a0 = (u8*)D_80122B78;
-        temp_a0 += 1;
-        temp_a0 -= 1;
-        temp_a0 += var_a2;
-        var_a3 = 0;
-        var_a3 += 1;
-        var_a3 += 1;
-        var_a3 -= 2;
-        (*(u8*)((u8*)temp_a0 + 0x430)) = var_t1;
-        (*(s32*)((u8*)temp_a0 + 0x4C0)) |= 0x80000000;
-        invalid = 0xFFFF;
-        (*(s32*)((u8*)temp_a0 + 0x4C0)) &= 0xBFFFFFFF;
-        mask_d = 0xDFFFFFFF;
-        mask_d += (u32)temp_a0;
-        mask_d -= (u32)temp_a0;
-        (*(s32*)((u8*)temp_a0 + 0x4C0)) &= mask_d;
-        var_a0 = var_a2;
-        (*(u8*)((u8*)(u8*)D_80122B78 + var_a2 + 0x431)) = (s8)(var_t1 - 0x80);
-        (*(u8*)((u8*)(u8*)D_80122B78 + var_a2 + 0x434)) = 0xFF;
-        do
+        D_80122B78->actors[i].flags.bits.active = 1;
+        D_80122B78->actors[i].flags.bits.script_only = 0;
+        D_80122B78->actors[i].flags.bits.spawned = 0;
+        D_80122B78->actors[i].id = i;
+        D_80122B78->actors[i].selector = i - 0x80;
+        D_80122B78->actors[i].event = FIELD_NO_EVENT;
+        for (j = 0; j < FIELD_ACTOR_SCRIPT_COUNT; j++)
         {
-            do
-            {
-                do
-                {
-                    do
-                    {
-                        do
-                        {
-                            do
-                            {
-                                base = (u8*)D_80122B78;
-                            } while (0);
-                        } while (0);
-                    } while (0);
-                } while (0);
-            } while (0);
-        } while (0);
-    loop_2:
-        (*(u16*)(base + var_a0 + 0x438)) = invalid;
-        var_a3 += 1;
-        var_a0 += 2;
-        if (var_a3 < 0x10)
-        {
-            goto loop_2;
+            D_80122B78->actors[i].scripts[j] = FIELD_NO_SCRIPT;
         }
-        var_t1 += 1;
-        (*(u16*)((u8*)(u8*)D_80122B78 + 0x400)) = (u16)((*(u16*)((u8*)(u8*)D_80122B78 + 0x400)) + 1);
-    } while (var_t1 < 3);
-    fixed_mask = 0xFFFF01FF;
-    var_t1_2 = 3;
-    var_a3 = 0xFF;
-    var_t0 = (u8*)D_80122B78 + 0x1BC;
-    fixed0 = *(s32*)((u8*)D_80122B78 + 0x458);
-    fixed1 = *(s32*)((u8*)D_80122B78 + 0x4EC);
-    fixed2 = *(s32*)((u8*)D_80122B78 + 0x580);
-    fixed0 &= fixed_mask;
-    fixed0 |= 0x6000;
-    masked1 = fixed1 & fixed_mask;
-    masked1 |= 0x6200;
-    masked2 = fixed2 & fixed_mask;
-    masked2 |= 0x7000;
-    *(s32*)((u8*)D_80122B78 + 0x458) = fixed0;
-    *(s32*)((u8*)D_80122B78 + 0x4EC) = masked1;
-    *(s32*)((u8*)D_80122B78 + 0x580) = masked2;
-    loop_mask = 0xFFFF01FF;
-loop_3:
-    var_t1_2 += 1;
-    temp_v1 = var_a3 & 0x7F;
-    var_a3 -= 1;
-    current = *(s32*)((u8*)var_t0 + 0x458);
-    current &= loop_mask;
-    current |= temp_v1 << 9;
-    (*(s32*)((u8*)var_t0 + 0x458)) = current;
-    var_t0 += 0x94;
-    if (var_t1_2 < 0x10)
-    {
-        goto loop_3;
+        D_80122B78->state.actor_count++;
     }
-    (*(s32*)((u8*)(u8*)D_80122B78 + 0x0)) = 0x40;
+
+    D_80122B78->actors[0].script.status.bits.local_base = 0x30;
+    D_80122B78->actors[1].script.status.bits.local_base = 0x31;
+    D_80122B78->actors[2].script.status.bits.local_base = 0x38;
+
+    /* j is reused as the descending local base (the 7-bit field keeps 0x7F, 0x7E, ...). */
+    for (i = FIELD_PARTY_SIZE, j = 0xFF; i < FIELD_ACTOR_RECORD_COUNT; i++, j--)
+    {
+        D_80122B78->actors[i].script.status.bits.local_base = j;
+    }
+    D_80122B78->local_variable_base = 0x40;
 }
 
 /**
@@ -331,8 +270,7 @@ void func_800B0E80(void)
     s32 i;
     s32 j;
 
-    i = 0;
-    do
+    for (i = 0; i < FIELD_EVENT_RECORD_COUNT; i++)
     {
         D_80122B78->events[i].id = i - 0x80;
         D_80122B78->events[i].selector = 0xFF;
@@ -341,8 +279,7 @@ void func_800B0E80(void)
         {
             D_80122B78->events[i].scripts[j] = FIELD_NO_SCRIPT;
         }
-        i++;
-    } while (i < FIELD_EVENT_RECORD_COUNT);
+    }
 }
 
 /**
@@ -407,7 +344,7 @@ void func_800B28E0(s32 owner_id, s32 event_id, s32 mode);
 void func_800B4410(u16 group);
 void func_800B49C0(void);
 s32 func_800BD3B0(s32 owner_id, s32 variable);
-void func_800C0490(u8 selector);
+void func_800C0490(s32 group_index);
 /* Declared without a prototype: func_800B2198 forwards its own a0. */
 FieldActorRecord* func_800C1B98();
 FieldActorRecord* func_800C1B60(u32 actor_id, FieldRuntimeContext* context);
@@ -600,8 +537,7 @@ void func_800B168C(s32 mode)
 {
     s32 i;
 
-    i = 0;
-    do
+    for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
         if (D_80122B74->characters[i].name[0] != 0)
         {
@@ -619,8 +555,7 @@ void func_800B168C(s32 mode)
                 break;
             }
         }
-        i++;
-    } while (i < FIELD_PARTY_SIZE);
+    }
 
     D_8010AE78 = 1;
     D_80122B78->state.bits.party_mode = mode;
@@ -634,8 +569,7 @@ void func_800B177C(void)
     s32 i;
     s32 mode;
 
-    i = 0;
-    do
+    for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
         mode = (D_80122B78->state.flags >> 17) & 3;
         switch (mode)
@@ -661,8 +595,7 @@ void func_800B177C(void)
             }
             break;
         }
-        i++;
-    } while (i < FIELD_PARTY_SIZE);
+    }
 
     D_80122B78->state.bits.party_mode = 0;
     D_8010AE78 = 0;
@@ -823,7 +756,7 @@ void func_800B1BBC(void)
         if (D_80122B78->fade_timer != 0xFF)
         {
             scene_id = D_80122B78->transition.fields.scene_id;
-            if ((u16)(scene_id + 2) >= 2)
+            if ((scene_id != 0xFFFE) && (scene_id != 0xFFFF))
             {
                 field_seek_scene_resource(scene_id & 0x7FFF);
             }
@@ -866,9 +799,7 @@ void func_800B1D10(void)
     s32 index;
     s32 packed;
     s32 sentinel;
-    u8* table;
-    FieldTriggerRegion* region;
-    FieldTriggerRegion* trigger;
+    FieldTriggerTable* table;
 
     index = 0;
     sentinel = -1;
@@ -882,7 +813,7 @@ next_actor:
     {
         packed = ((position->vx << 8) & 0xFFFF0000) | ((position->vz >> 8) & 0xFFFF);
     }
-    /* Kept: this block and the goto loop above are required by the original allocation. */
+    /* The goto loop and this block reproduce the original register allocation. */
     do
     {
         do
@@ -904,32 +835,29 @@ next_actor:
     point = &D_80042FC8;
     point->x = positions[0].vx >> 8;
     point->z = positions[0].vz >> 8;
-    table = context->trigger_table;
+    table = (FieldTriggerTable*)context->trigger_table;
     if (table != NULL)
     {
         region_bit = 1;
         triggered = context->triggered_regions;
-        index = 0;
-        while (index < (s32)((FieldTriggerRegion*)D_80122B78->trigger_table)->unk2)
+        for (index = 0; index < FIELD_TRIGGERS->count; index++)
         {
             if (!(triggered & region_bit))
             {
-                region = (FieldTriggerRegion*)(*(u8* volatile*)&D_80122B78->trigger_table + (index * 12));
-                if ((D_80042FC8.x >= region->min_x) && (region->max_x >= D_80042FC8.x) && (D_80042FC8.z >= region->min_z) && (region->max_z >= D_80042FC8.z))
+                if ((D_80042FC8.x >= FIELD_TRIGGERS->regions[index].min_x) && (FIELD_TRIGGERS->regions[index].max_x >= D_80042FC8.x) &&
+                    (D_80042FC8.z >= FIELD_TRIGGERS->regions[index].min_z) && (FIELD_TRIGGERS->regions[index].max_z >= D_80042FC8.z))
                 {
-                    trigger = (FieldTriggerRegion*)(*(u8* volatile*)&D_80122B78->trigger_table + (index * 12));
                     D_80122B78->triggered_regions |= region_bit;
-                    if (trigger->command & 0x8000)
+                    if (FIELD_TRIGGERS->regions[index].command & 0x8000)
                     {
-                        func_800B22F0(0, trigger->command);
+                        func_800B22F0(0, FIELD_TRIGGERS->regions[index].command);
                         return;
                     }
-                    func_800B4410(trigger->command);
+                    func_800B4410(FIELD_TRIGGERS->regions[index].command);
                     return;
                 }
             }
             region_bit *= 2;
-            index += 1;
         }
     }
 }
@@ -949,14 +877,9 @@ void func_800B1F10(void)
 
     if (D_8010AE78 != 0)
     {
-        i = 0;
-        if (D_80122B78->state.actor_count != 0)
+        for (i = 0; i < (s32)D_80122B78->state.actor_count; i++)
         {
-            do
-            {
-                func_800B286C(D_80122B78->actors[i].id, 0xD, 0x82);
-                i++;
-            } while (i < (s32)D_80122B78->state.actor_count);
+            func_800B286C(D_80122B78->actors[i].id, 0xD, 0x82);
         }
         if (((((u32)D_80122B78->transition.flags >> 30) & 1) == 0) && (func_800BD414(0, 0xFE2) == 0))
         {
@@ -965,14 +888,9 @@ void func_800B1F10(void)
     }
     else if ((D_80122B78->state.flags & 0x80000) && (field_text_get_status(0) == -1))
     {
-        i = 0;
-        if (D_80122B78->state.actor_count != 0)
+        for (i = 0; i < (s32)D_80122B78->state.actor_count; i++)
         {
-            do
-            {
-                func_800B286C(D_80122B78->actors[i].id, 0xD, 0x85);
-                i++;
-            } while (i < (s32)D_80122B78->state.actor_count);
+            func_800B286C(D_80122B78->actors[i].id, 0xD, 0x85);
         }
         D_80122B78->state.flags &= 0xFFF7FFFF;
     }
@@ -985,8 +903,7 @@ void func_800B20B4(void)
 {
     s32 i;
 
-    i = 0;
-    do
+    for (i = 0; i < FIELD_EVENT_RECORD_COUNT; i++)
     {
         if (D_80122B78->events[i].script.frames[D_80122B78->events[i].script.depth].pc != NULL)
         {
@@ -996,8 +913,7 @@ void func_800B20B4(void)
         D_80122B78->events[i].event = FIELD_NO_EVENT;
         func_800B28E0(0x80, 0xE, 0);
         D_80122B78->events[i].event = FIELD_NO_EVENT;
-        i++;
-    } while (i < FIELD_EVENT_RECORD_COUNT);
+    }
 }
 
 /**
@@ -1104,29 +1020,24 @@ s32 func_800B22F0(s32 actor_id, s32 script)
             return 0;
         }
 
-        i = 0;
-        if (D_80122B78->state.actor_count != 0)
+        for (i = 0; i < (s32)D_80122B78->state.actor_count; i++)
         {
-            do
+            if (i < FIELD_PARTY_SIZE)
             {
-                if (i < FIELD_PARTY_SIZE)
+                func_80087CE0(i, 0);
+            }
+            else
+            {
+                other_id = D_80122B78->actors[i].id;
+                if (other_id == actor_id)
                 {
-                    func_80087CE0(i, 0);
+                    func_800B286C(actor_id, 0xD, 0x80);
                 }
                 else
                 {
-                    other_id = D_80122B78->actors[i].id;
-                    if (other_id == actor_id)
-                    {
-                        func_800B286C(actor_id, 0xD, 0x80);
-                    }
-                    else
-                    {
-                        func_800B286C(other_id, 0xD, 0x81);
-                    }
+                    func_800B286C(other_id, 0xD, 0x81);
                 }
-                i++;
-            } while (i < (s32)D_80122B78->state.actor_count);
+            }
         }
 
         D_8010AE78 = 1;
@@ -1138,29 +1049,24 @@ s32 func_800B22F0(s32 actor_id, s32 script)
         return -1;
     }
 
-    i = 0;
-    if (D_80122B78->state.actor_count != 0)
+    for (i = 0; i < (s32)D_80122B78->state.actor_count; i++)
     {
-        do
+        if (i < FIELD_PARTY_SIZE)
         {
-            if (i < FIELD_PARTY_SIZE)
+            func_80087CE0(i, 0);
+        }
+        else
+        {
+            other_id = D_80122B78->actors[i].id;
+            if (other_id == actor_id)
             {
-                func_80087CE0(i, 0);
+                func_800B286C(actor_id, 0xD, 0x83);
             }
             else
             {
-                other_id = D_80122B78->actors[i].id;
-                if (other_id == actor_id)
-                {
-                    func_800B286C(actor_id, 0xD, 0x83);
-                }
-                else
-                {
-                    func_800B286C(other_id, 0xD, 0x84);
-                }
+                func_800B286C(other_id, 0xD, 0x84);
             }
-            i++;
-        } while (i < (s32)D_80122B78->state.actor_count);
+        }
     }
 
     speaker = actor_id;
@@ -1204,6 +1110,7 @@ void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector)
     s32 effect_value;
     s32 facing_flag;
     s32 selector_value;
+    s32 facing_angle;
     u32 original_actor_id;
 
     original_actor_id = *actor_id;
@@ -1228,7 +1135,8 @@ void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector)
         }
         else
         {
-            facing_flag = ((u32)(func_8008B288(*actor_id) - 0x41) < 0x80U) << 6;
+            facing_angle = func_8008B288(*actor_id);
+            facing_flag = ((facing_angle >= 0x41) && (facing_angle < 0xC1)) << 6;
         }
         *plane &= 3;
     }
@@ -1242,7 +1150,8 @@ void func_800B2654(s32* actor_id, s32* plane, s32* effect, s32* selector)
         {
             *plane = 1;
         }
-        facing_flag = ((u32)(func_8008B288(*actor_id) - 0x41) < 0x80U) << 6;
+        facing_angle = func_8008B288(*actor_id);
+        facing_flag = ((facing_angle >= 0x41) && (facing_angle < 0xC1)) << 6;
     }
     D_80122B78->unk41C = (D_80122B78->unk41C & ~0x300) | ((*plane & 3) << 8);
     effect_value = *effect;

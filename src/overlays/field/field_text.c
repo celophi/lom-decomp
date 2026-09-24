@@ -182,12 +182,14 @@ typedef struct
     s32 transition_anchor_y;
 } FieldTextState;
 
+/** @brief Screen point that an opening or closing window grows from or shrinks to. */
 typedef struct
 {
     u16 x;
     u16 y;
 } FieldTextAnchor;
 
+/** @brief Transition anchor accessed as a word (zero means none) or as coordinates. */
 typedef union
 {
     u32 word;
@@ -305,7 +307,7 @@ void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out,
 void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
 void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8** cursor, FieldOrderingTags* ot);
 void field_text_scroll_cache(FieldTextState* state);
-void field_text_queue_uploads(FieldTextState* state, u16** cursor);
+void field_text_queue_uploads(FieldTextState* state, u8** cursor);
 void field_text_save_config(u16 slot);
 void field_text_close(FieldTextState* state, s32 animate);
 void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot);
@@ -383,7 +385,7 @@ void field_text_typeset(FieldTextState* state, s32 budget)
     u8* look_macro;
     u8* look_glyph_run;
     s32 remaining;
-    signed char advance;
+    s8 advance;
     s32 new_line;
     s32 first_character;
     s32 look_advance;
@@ -723,18 +725,6 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                         {
                             switch (opcode)
                             {
-                            case FIELD_TEXT_CMD_NEWLINE:
-                            case FIELD_TEXT_CMD_WAIT_NEWLINE:
-                            case FIELD_TEXT_CMD_WAIT_CLEAR:
-                            case FIELD_TEXT_CMD_CLEAR:
-                            case FIELD_TEXT_CMD_WAIT:
-                            case FIELD_TEXT_CMD_CHOICE:
-                            case FIELD_TEXT_CMD_TWO_SPACES:
-                            case FIELD_TEXT_CMD_THREE_SPACES:
-                            case FIELD_TEXT_CMD_FOUR_SPACES:
-                            case FIELD_TEXT_CMD_SPACES:
-                            case FIELD_TEXT_CMD_INDENT:
-                                goto stop_lookahead;
                             case FIELD_TEXT_CMD_SHORT_DELAY:
                             case FIELD_TEXT_CMD_DELAY:
                             case FIELD_TEXT_CMD_COLOR:
@@ -750,16 +740,27 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                                     {
                                         look_cursor = look_macro;
                                     }
+                                    break;
                                 }
-                                else if (look_macro != NULL)
+                                if (look_macro != NULL)
                                 {
                                     look_macro = NULL;
                                     look_cursor = look_text;
+                                    break;
                                 }
-                                else
-                                {
-                                    word_continues = 0;
-                                }
+                                /* fallthrough */
+                            case FIELD_TEXT_CMD_NEWLINE:
+                            case FIELD_TEXT_CMD_WAIT_NEWLINE:
+                            case FIELD_TEXT_CMD_WAIT_CLEAR:
+                            case FIELD_TEXT_CMD_CLEAR:
+                            case FIELD_TEXT_CMD_WAIT:
+                            case FIELD_TEXT_CMD_CHOICE:
+                            case FIELD_TEXT_CMD_TWO_SPACES:
+                            case FIELD_TEXT_CMD_THREE_SPACES:
+                            case FIELD_TEXT_CMD_FOUR_SPACES:
+                            case FIELD_TEXT_CMD_SPACES:
+                            case FIELD_TEXT_CMD_INDENT:
+                                word_continues = 0;
                                 break;
                             case FIELD_TEXT_CMD_MACRO:
                                 opcode = *look_cursor;
@@ -818,7 +819,6 @@ void field_text_typeset(FieldTextState* state, s32 budget)
                             {
                                 if ((look_code == 0x20) || (look_code == 0x80) || (look_code == 0xFFFF))
                                 {
-                                stop_lookahead:
                                     word_continues = 0;
                                 }
                                 else if (look_code >= 0x80)
@@ -893,6 +893,7 @@ void field_text_typeset(FieldTextState* state, s32 budget)
     }
     return;
 
+    /* Stop tails shared by the switch cases; the target keeps one copy after the loop. */
 set_wide:
     state->flow_code = FIELD_TEXT_FLOW_CHOICE;
     state->prompt_frame = 0;
@@ -1306,7 +1307,7 @@ s32 field_text_advance_line(FieldTextState* state)
     }
     if ((y == state->region_end_v) && (x == state->region_end_u))
     {
-        state->scroll_timer = 0x10;
+        state->scroll_timer = FIELD_TEXT_LINE_SPACING;
         return 1;
     }
     state->cursor_u = x;
@@ -1338,7 +1339,6 @@ void field_text_clear_window(FieldTextState* state)
  * @brief Initialize field text textures, CLUT state, and window slots.
  * @see decomp.me (100%)
  */
-
 void field_text_init(void)
 {
     RECT rect;
@@ -1380,7 +1380,6 @@ void field_text_init(void)
  * @brief Deactivate all field text windows and release portrait slots.
  * @see decomp.me (100%)
  */
-
 void field_text_reset_windows(void)
 {
     FieldTextState* state;
@@ -1399,14 +1398,13 @@ void field_text_reset_windows(void)
  * @brief Reset the scratch state used for immediate string rendering.
  * @see decomp.me (100%)
  */
-
 void field_text_reset_scratch(void)
 {
     if ((g_field_text_window0_flags & FIELD_TEXT_STATE_MASK) == FIELD_TEXT_TIMED)
     {
         field_text_close(FIELD_TEXT_WINDOWS, 0);
     }
-    /* TODO: remove the one-pass scope without changing the initialization registers. */
+    /* The one-pass loop scope is kept: its loop depth weights the register allocation. */
     do
     {
         FieldTextState* state = FIELD_TEXT_IMMEDIATE_STATE;
@@ -1425,10 +1423,10 @@ void field_text_reset_scratch(void)
         state->cursor_v = 0;
         state->region_start_v = 0;
         state->line_count = 0;
-        state->portrait = 0;
-        state->text_cursor = 0;
-        state->macro_cursor = 0;
-        state->glyph_cursor = 0;
+        state->portrait = NULL;
+        state->text_cursor = NULL;
+        state->macro_cursor = NULL;
+        state->glyph_cursor = NULL;
         state->flow_code = FIELD_TEXT_FLOW_NONE;
         state->pending_spaces = 0;
         state->choice_count = 0;
@@ -1436,7 +1434,8 @@ void field_text_reset_scratch(void)
         state->scroll_timer = 0;
         state->needs_init = 0;
 
-        state->flags.word = ((((state->flags.word & ~FIELD_TEXT_STATE_MASK) | 6) & ~FIELD_TEXT_STYLE_MASK) | 0x800) & ~FIELD_TEXT_AUTO_CLOSE;
+        state->flags.word = ((((state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_IMMEDIATE) & ~FIELD_TEXT_STYLE_MASK) | FIELD_TEXT_INSTANT) &
+                            ~FIELD_TEXT_AUTO_CLOSE;
     } while (0);
 }
 
@@ -1448,7 +1447,6 @@ void field_text_reset_scratch(void)
  * @return Number of sprite spans written.
  * @see decomp.me (100%)
  */
-
 s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
 {
     u16 style = text_style;
@@ -1526,10 +1524,10 @@ s32 field_text_build_sprites(SPRT* prim, u8* text, s32 text_style)
 
 /**
  * @brief Open a text window after the cache region used by earlier active slots.
- * @param slot Window slot index.
+ * @param slot Window slot index; only the low 16 bits are used.
  * @see decomp.me (100%)
+ * @note Old-style definition: callers pass a word and the body works on a u16.
  */
-
 void field_text_open_packed_window(slot) u16 slot;
 {
     FieldTextSystem* system = FIELD_TEXT_SYSTEM;
@@ -1554,7 +1552,7 @@ void field_text_open_packed_window(slot) u16 slot;
     flags = state->flags.word;
     if ((flags & FIELD_TEXT_STATE_MASK) != 0)
     {
-        state->flags.word = (flags & ~FIELD_TEXT_REOPEN_MASK) | 0x2000;
+        state->flags.word = (flags & ~FIELD_TEXT_REOPEN_MASK) | FIELD_TEXT_REOPEN_PACKED;
         field_text_save_config(slot);
         return;
     }
@@ -1563,12 +1561,12 @@ void field_text_open_packed_window(slot) u16 slot;
     {
         if ((system->portrait_slots & 1) == 0)
         {
-            state->flags.word &= ~8;
+            state->flags.word &= ~FIELD_TEXT_PORTRAIT_SLOT;
             system->portrait_slots |= 1;
         }
         else
         {
-            state->flags.word |= 8;
+            state->flags.word |= FIELD_TEXT_PORTRAIT_SLOT;
             system->portrait_slots |= 2;
         }
     }
@@ -1620,10 +1618,10 @@ void field_text_open_packed_window(slot) u16 slot;
 
 /**
  * @brief Open a text window in its fixed cache region.
- * @param slot Window slot index.
+ * @param slot Window slot index; only the low 16 bits are used.
  * @see decomp.me (100%)
+ * @note Old-style definition: callers pass a word and the body works on a u16.
  */
-
 void field_text_open_fixed_window(slot) u16 slot;
 {
     FieldTextSystem* system = FIELD_TEXT_SYSTEM;
@@ -1647,7 +1645,7 @@ void field_text_open_fixed_window(slot) u16 slot;
     flags = state->flags.word;
     if ((flags & FIELD_TEXT_STATE_MASK) != 0)
     {
-        state->flags.word = (flags & ~FIELD_TEXT_REOPEN_MASK) | 0x4000;
+        state->flags.word = (flags & ~FIELD_TEXT_REOPEN_MASK) | FIELD_TEXT_REOPEN_FIXED;
         field_text_save_config(slot);
         return;
     }
@@ -1656,12 +1654,12 @@ void field_text_open_fixed_window(slot) u16 slot;
     {
         if (slot == 0)
         {
-            state->flags.word &= ~8;
+            state->flags.word &= ~FIELD_TEXT_PORTRAIT_SLOT;
             system->portrait_slots |= 1;
         }
         else
         {
-            state->flags.word |= 8;
+            state->flags.word |= FIELD_TEXT_PORTRAIT_SLOT;
             system->portrait_slots |= 2;
         }
     }
@@ -1713,7 +1711,6 @@ void field_text_open_fixed_window(slot) u16 slot;
  * @param state Window state to initialize.
  * @see decomp.me (100%)
  */
-
 void field_text_apply_config(FieldTextState* state)
 {
     FieldTextConfig* config = FIELD_TEXT_PENDING_CONFIG;
@@ -1756,13 +1753,13 @@ void field_text_apply_config(FieldTextState* state)
     {
         state->line_advance = width + 4;
         state->line_height = 0xD;
-        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 2;
+        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_ACTIVE;
     }
     else
     {
         state->line_height = 0xC;
         state->line_advance = width;
-        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 1;
+        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_OPENING;
     }
     state->text_cursor = 0;
     state->macro_cursor = 0;
@@ -1787,7 +1784,7 @@ void field_text_apply_config(FieldTextState* state)
     state->prompt_frame = 0;
     state->transition_frame = 0;
     state->choice_count = 0;
-    state->flags.word &= ~0x800;
+    state->flags.word &= ~FIELD_TEXT_INSTANT;
     state->flags.word &= ~FIELD_TEXT_AUTO_CLOSE;
     state->flags.word &= ~FIELD_TEXT_REOPEN_MASK;
 }
@@ -1799,7 +1796,6 @@ void field_text_apply_config(FieldTextState* state)
  * @param draw_count Current field draw count; 1 selects the render-only path.
  * @see decomp.me (100%)
  */
-
 void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count)
 {
     FieldInputState* input = FIELD_TEXT_INPUT;
@@ -1830,7 +1826,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                                      (state->flags.word & FIELD_TEXT_PORTRAIT_MASK) != 0x10);
                 }
                 field_text_clear_window(state);
-                field_text_queue_uploads(state, (u16**)packet_cursor);
+                field_text_queue_uploads(state, packet_cursor);
                 state->needs_init = 0;
             }
             else if (draw_count == 1)
@@ -1912,7 +1908,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                     }
                                     else
                                     {
-                                        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 3;
+                                        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_CLOSING;
                                         state->transition_frame = 0;
                                     }
                                 }
@@ -1938,13 +1934,13 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                         if (state->scroll_timer == 0)
                         {
                             field_text_scroll_cache(state);
-                            field_text_queue_uploads(state, (u16**)packet_cursor);
+                            field_text_queue_uploads(state, packet_cursor);
                         }
                     }
                     else if (state->text_cursor != 0)
                     {
                         field_text_typeset(state, 4);
-                        field_text_queue_uploads(state, (u16**)packet_cursor);
+                        field_text_queue_uploads(state, packet_cursor);
                     }
                 }
             }
@@ -1994,14 +1990,14 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                                     }
                                     else
                                     {
-                                        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 3;
+                                        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_CLOSING;
                                         state->transition_frame = 0;
                                     }
                                 }
                                 break;
                             case FIELD_TEXT_FLOW_CLEAR:
                                 field_text_clear_window(state);
-                                field_text_queue_uploads(state, (u16**)packet_cursor);
+                                field_text_queue_uploads(state, packet_cursor);
                                 break;
                             case FIELD_TEXT_FLOW_NEWLINE:
                                 field_text_advance_line(state);
@@ -2059,7 +2055,7 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
                 state->dirty_start_v = state->region_start_v;
                 state->dirty_end_u = state->region_end_u;
                 state->dirty_end_v = state->region_end_v;
-                field_text_queue_uploads(state, (u16**)packet_cursor);
+                field_text_queue_uploads(state, packet_cursor);
             }
             field_text_build_window_packets(state, packet_cursor, ot);
             state->transition_frame = state->transition_frame - 1;
@@ -2096,7 +2092,6 @@ void field_text_update(u8** packet_cursor, FieldOrderingTags* ot, s32 draw_count
  * @param frame Transition frame in the range 0..4.
  * @see decomp.me (100%)
  */
-
 void field_text_build_transition_quad(FieldTextState* state, FieldTextQuad* out, s32 frame)
 {
     s32 half_w;
@@ -2184,7 +2179,6 @@ static inline s32 field_text_portrait_y_word(s32 y, s32 h)
  * @param ot Ordering-table slot.
  * @see decomp.me (100%)
  */
-
 void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
     FieldTextSystem* text_system = FIELD_TEXT_SYSTEM;
@@ -2455,7 +2449,6 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
                 y += 0x10;
             }
             rows -= 1;
-
         } while (rows != -1);
     }
     if (state->portrait != 0)
@@ -2575,7 +2568,6 @@ void field_text_build_window_packets(FieldTextState* state, u8** cursor, FieldOr
  * @note The frame, cached text spans, and portrait share a scratchpad mesh.
  *       Its vertices are mapped into the transition quad with integer bilinear interpolation.
  */
-
 void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* quad, u8** cursor, FieldOrderingTags* ot)
 {
     FieldTextSystem* text_system = (FieldTextSystem*)0x801ED000;
@@ -3154,7 +3146,6 @@ void field_text_build_transition_packets(FieldTextState* state, FieldTextQuad* q
  * @param state Text-window state.
  * @see decomp.me (100%)
  */
-
 void field_text_scroll_cache(FieldTextState* state)
 {
     u16* destination_row;
@@ -3286,8 +3277,7 @@ void field_text_scroll_cache(FieldTextState* state)
  * @param cursor In/out packet cursor used for upload requests and staging data.
  * @see decomp.me (100%)
  */
-
-void field_text_queue_uploads(FieldTextState* state, u16** cursor)
+void field_text_queue_uploads(FieldTextState* state, u8** cursor)
 {
     FieldImageReq* req;
     u16* cur;
@@ -3305,7 +3295,7 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
     s32 column;
     s32 column_bytes;
 
-    cur = *cursor;
+    cur = (u16*)*cursor;
     req = (FieldImageReq*)cur;
     y = state->dirty_start_v;
     x = state->dirty_start_u;
@@ -3391,7 +3381,7 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
             field_queue_vram_upload(req);
         }
     }
-    *cursor = cur;
+    *cursor = (u8*)cur;
 }
 
 /**
@@ -3401,7 +3391,6 @@ void field_text_queue_uploads(FieldTextState* state, u16** cursor)
  * @param text_options Text options; bit 0 enables automatic close.
  * @see decomp.me (100%)
  */
-
 void field_text_set_string(s32 window_index, u8* text, s32 text_options)
 {
     u16 slot = window_index;
@@ -3431,7 +3420,6 @@ void field_text_set_string(s32 window_index, u8* text, s32 text_options)
  * @param slot Window slot index.
  * @see decomp.me (100%)
  */
-
 void field_text_save_config(u16 slot)
 {
     u8* src;
@@ -3456,7 +3444,6 @@ void field_text_save_config(u16 slot)
  * @param animate Non-zero starts the closing animation when supported.
  * @see decomp.me (100%)
  */
-
 void field_text_close(FieldTextState* state, s32 animate)
 {
     if (state->portrait != 0)
@@ -3476,7 +3463,7 @@ void field_text_close(FieldTextState* state, s32 animate)
     }
     else
     {
-        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 3;
+        state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_CLOSING;
         state->transition_frame = 0;
     }
 }
@@ -3488,30 +3475,29 @@ void field_text_close(FieldTextState* state, s32 animate)
  * @param ot Ordering-table slot.
  * @see decomp.me (100%)
  */
-
 void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingTags* ot)
 {
     FieldTextQuad quad;
 
     switch (state->flags.b.low & FIELD_TEXT_STATE_MASK)
     {
-    case 1:
+    case FIELD_TEXT_OPENING:
         field_text_build_transition_quad(state, &quad, state->transition_frame);
         field_text_build_transition_packets(state, &quad, cursor, ot);
         state->transition_frame = state->transition_frame + 1;
-        if (state->transition_frame == 4)
+        if (state->transition_frame == FIELD_TEXT_TRANSITION_FRAMES)
         {
-            state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | 2;
+            state->flags.word = (state->flags.word & ~FIELD_TEXT_STATE_MASK) | FIELD_TEXT_ACTIVE;
         }
         break;
-    case 2:
+    case FIELD_TEXT_ACTIVE:
         field_text_build_window_packets(state, cursor, ot);
         break;
-    case 3:
+    case FIELD_TEXT_CLOSING:
         state->transition_frame = state->transition_frame + 1;
-        field_text_build_transition_quad(state, &quad, 4 - state->transition_frame);
+        field_text_build_transition_quad(state, &quad, FIELD_TEXT_TRANSITION_FRAMES - state->transition_frame);
         field_text_build_transition_packets(state, &quad, cursor, ot);
-        if (state->transition_frame == 4)
+        if (state->transition_frame == FIELD_TEXT_TRANSITION_FRAMES)
         {
             state->flags.word = state->flags.word & ~FIELD_TEXT_STATE_MASK;
         }
@@ -3529,7 +3515,6 @@ void field_text_render_window(FieldTextState* state, u8** cursor, FieldOrderingT
  * @param mirror Non-zero mirrors the portrait horizontally before upload.
  * @see decomp.me (100%)
  */
-
 void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32 slot, s32 mirror)
 {
     FieldImageReq* req;
@@ -3593,7 +3578,6 @@ void field_text_queue_portrait_upload(FieldTextPortrait* image, u8** cursor, s32
  * @param text Text to display.
  * @see decomp.me (100%)
  */
-
 void field_text_start_timed_window(u8* text)
 {
     FieldTextState* state = FIELD_TEXT_WINDOWS;
@@ -3655,7 +3639,6 @@ void field_text_start_timed_window(u8* text)
  * @param placement_mode 1 uses packed placement; other values use fixed placement.
  * @see decomp.me (100%)
  */
-
 void field_text_restore_window(u16 slot, s32 placement_mode)
 {
     u8* dst;
