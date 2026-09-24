@@ -1,137 +1,105 @@
+/**
+ * @file field_stat_counter_ops.c
+ * @brief Game-state flag bits and the saturating per-index counters.
+ */
+
 #include "game_audio.h"
 #include "common.h"
+#include "field_records.h"
 
-typedef struct
-{
-    s32 unk0; /* 0x00 */
-    u8 pad4[0x8 - 0x4];
-    s32 unk8; /* 0x08 */
-} Struct_UnkVec8;
+/** @brief Largest value a game-state counter can hold. */
+#define FIELD_COUNTER_MAX 99
 
-typedef struct
-{
-    u8 pad0[0x50];
-    s32 unk50;
-    u8 pad54[4];
-    s32 unk58;
-} Obj80087F0C;
+/** @brief Counter indexes at or above this value are rejected with a diagnostic. */
+#define FIELD_COUNTER_LIMIT 0xFF
 
-/** @brief View of D_80122B74 exposing the 64-word bitset at 0x2E8. */
-typedef struct
-{
-    u8 pad0[0x2E8];
-    s32 arr2E8[0x40]; /* 0x2E8 */
-} StructB74;
+void func_800B2844(s32, void*, s32);
+void func_800C2228(s32 index);
 
-#define FLAG_BITSET ((StructB74 *)D_80122B74)
-
-Obj80087F0C *func_80087F0C(s32 arg0);
-s32 func_80087F44(s32 arg0, s32 *out);
-
-void func_800B2844(s32, void *, s32);
-void func_800C2228(s32 idx);
-
-extern u8 *D_80122B74;
+extern FieldGameState* D_80122B74;
 extern u16 D_800F0E98[];
 
 /**
- * @brief Set bit arg0 in the 64-word bitset at 0x2E8.
- * @param arg0 Bit index.
+ * @brief Set one bit of the game-state flag bits.
+ * @param bit_index Bit to set; bit n lives in word n / 32.
  * @return Always -1.
  */
-s32 func_800C2094(s32 arg0)
+s32 func_800C2094(s32 bit_index)
 {
     s32 word;
     s32 bit;
-    s32 q;
 
-    q = arg0 / 32;
-    bit = arg0 % 32;
-    word = q;
-    FLAG_BITSET->arr2E8[word] |= 1 << bit;
+    word = bit_index / 32;
+    bit = bit_index % 32;
+    D_80122B74->flag_bits[word] |= 1 << bit;
     return -1;
 }
 
 /**
- * @brief Refresh a party member's entry and return its counter byte.
- * @param arg0 Party member index, or >= 0xFF to report an invalid index.
- * @return The counter at 0x25E0 + arg0, or 0 for an invalid index.
+ * @brief Run the counter's notification entry and return the counter.
+ * @param index Counter index, or >= 0xFF to report an invalid index.
+ * @return The counter value, or 0 for an invalid index.
  */
-u8 func_800C20D8(s32 arg0)
+u8 func_800C20D8(s32 index)
 {
-    if (arg0 < 0xFF)
+    if (index < FIELD_COUNTER_LIMIT)
     {
-        u8 *p;
-
-        func_800C2228(arg0);
-        p = D_80122B74 + arg0;
-        return p[0x25E0];
+        func_800C2228(index);
+        return D_80122B74->counters[index];
     }
-    record_game_diagnostic(0x8001, 0x70, arg0, 0);
+    record_game_diagnostic(0x8001, 0x70, index, 0);
     return 0;
 }
 
 /**
- * @brief Increment a party member's counter, saturating at 0x63, then refresh its entry.
- * @param arg0 Party member index, or >= 0xFF to report an invalid index.
+ * @brief Increment a counter, saturating at FIELD_COUNTER_MAX, then run its notification entry.
+ * @param index Counter index, or >= 0xFF to report an invalid index.
  */
-void func_800C2138(s32 arg0)
+void func_800C2138(s32 index)
 {
-    u8 *p;
-    u8 *q;
-
-    if (arg0 < 0xFF)
+    if (index < FIELD_COUNTER_LIMIT)
     {
-        p = D_80122B74 + arg0;
-        p[0x25E0] += 1;
-        q = D_80122B74 + arg0;
-        if (q[0x25E0] >= 0x64)
+        D_80122B74->counters[index]++;
+        if (D_80122B74->counters[index] > FIELD_COUNTER_MAX)
         {
-            q[0x25E0] = 0x63;
+            D_80122B74->counters[index] = FIELD_COUNTER_MAX;
         }
-        func_800C2228(arg0);
+        func_800C2228(index);
     }
     else
     {
-        record_game_diagnostic(0x8001, 0x71, arg0, 0);
+        record_game_diagnostic(0x8001, 0x71, index, 0);
     }
 }
 
 /**
- * @brief Ticks down a party member's counter, or reports an invalid index.
- *
- * For a valid member index (@p arg0 < 0xFF), decrements the counter byte at
- * @c D_80122B74[arg0 + 0x25E0] when nonzero and runs func_800C2228; for an
- * out-of-range index, issues record_game_diagnostic(0x8001, 0x72, arg0, 0).
- *
- * @param arg0 Party member index, or >= 0xFF to report an invalid index.
+ * @brief Decrement a nonzero counter, then run its notification entry.
+ * @param index Counter index, or >= 0xFF to report an invalid index.
  */
-void func_800C21C0(s32 arg0)
+void func_800C21C0(s32 index)
 {
-    u8 *rec;
-    u8 v;
+    u8 value;
 
-    if (arg0 < 0xFF)
+    if (index < FIELD_COUNTER_LIMIT)
     {
-        rec = D_80122B74 + arg0;
-        v = rec[0x25E0];
-        if (v != 0)
+        value = D_80122B74->counters[index];
+        if (value != 0)
         {
-            rec[0x25E0] = v - 1;
+            D_80122B74->counters[index] = value - 1;
         }
-        func_800C2228(arg0);
+        func_800C2228(index);
     }
     else
     {
-        record_game_diagnostic(0x8001, 0x72, arg0, 0);
+        record_game_diagnostic(0x8001, 0x72, index, 0);
     }
 }
 
 /**
- * @brief Dispatch the D_800F0E98 entry for a party member index.
- * @param idx Party member index.
+ * @brief Run the D_800F0E98 script entry for a counter.
+ * @param index Counter index; selects a self-relative offset in D_800F0E98.
  */
-void func_800C2228(s32 idx)
+void func_800C2228(s32 index)
 {
-    func_800B2844(0, (u8 *)D_800F0E98 + D_800F0E98[idx], 0x15);
+    func_800B2844(0, (u8*)D_800F0E98 + D_800F0E98[index], 0x15);
 }

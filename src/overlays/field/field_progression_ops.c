@@ -1,87 +1,77 @@
 #include "common.h"
+#include "field_records.h"
 
-extern u8 *D_80122B74;
+/** @brief Level at and above which the experience threshold is the stored experience. */
+#define FIELD_LEVEL_CAP 99
+
+/** @brief Hit points a character is reset to before replaying its level-ups. */
+#define FIELD_RESET_HP 50
+
+/** @brief Base value (before growth bits) each stat is reset to. */
+#define FIELD_RESET_STAT 20
+
+extern FieldGameState* D_80122B74;
+
+s32 func_800C14A4(s32 index, s32 notify);
 
 /**
- * @brief Computes a scaled progression value from a field record's state byte.
- *
- * Reads the state byte at offset 0x610 of the record selected by @p index
- * (records are 0x250 bytes apart in the table at *D_80122B74). Below the
- * threshold 0x63 the return is a scaled progression of that byte,
- * (state - 1) * (state * 20) + state * 10; at or above the threshold the packed
- * 32-bit field at the same offset is returned shifted right by 8 instead.
- *
- * @param index Record index into the table at *D_80122B74.
- * @return The scaled progression below the threshold, otherwise the packed
- *         counter bits of the 32-bit field at offset 0x610.
+ * @brief Return the experience needed to advance from @p level.
+ * @param level Current level.
+ * @return (level - 1) * level * 20 + level * 10.
+ */
+static inline s32 field_level_threshold(s32 level)
+{
+    s32 previous = level - 1;
+    s32 scaled = level * 5;
+    s32 scaled_x4 = scaled * 4;
+
+    return previous * scaled_x4 + scaled * 2;
+}
+
+/**
+ * @brief Return the experience a party character needs for its next level.
+ * @param index Party character index.
+ * @return (level - 1) * level * 20 + level * 10 below level 99, otherwise the
+ *         character's current experience.
  */
 s32 func_800B607C(s32 index)
 {
-    u8 *record = D_80122B74 + index * 0x250;
-    s32 value = record[0x610];
+    s32 level = D_80122B74->characters[index].progress.level;
 
-    if (value < 0x63)
+    if (level < FIELD_LEVEL_CAP)
     {
-        s32 previous = value - 1;
-        s32 scaled = value * 5;
-        s32 scaled_x4 = scaled * 4;
-        return previous * scaled_x4 + scaled * 2;
+        return field_level_threshold(level);
     }
 
-    return *(u32 *)(record + 0x610) >> 8;
+    return D_80122B74->characters[index].progress.word >> 8;
 }
 
-
-extern u8 *D_80122B74;
-
-s32 func_800C14A4(s32 arg0, s32 arg1);
-
 /**
- * @brief Initialize three field records and wait for each record to become ready.
- * @param arg0 Progression level used to initialize the records.
+ * @brief Reset every party character to level 1 and level it up to @p level.
+ * @param level Target level; each character gets the experience threshold of
+ *              level - 1 and then advances through func_800C14A4.
  */
-void func_800B60DC(s32 arg0)
+void func_800B60DC(s32 level)
 {
-    s32 previous;
-    s32 scaled;
-    s32 scaled_x4;
-    s32 record_index;
-    s32 base;
-    s32 sub_offset;
-    s32 count;
-    u8 *raw;
-    u8 *record;
-    u8 *slot;
-    s32 progression;
+    s32 i;
+    s32 j;
+    s32 experience;
 
-    arg0 = arg0 - 1;
-    previous = arg0 - 1;
-    scaled = arg0 * 5;
-    scaled_x4 = scaled * 4;
-    record_index = 0;
-    progression = (previous * scaled_x4 + scaled * 2) << 8;
-    do
+    level--;
+    experience = field_level_threshold(level) << 8;
+    for (i = 0; i < FIELD_PARTY_SIZE; i++)
     {
-        count = 0;
-        base = record_index * 0x250;
-        (D_80122B74 + base)[0x610] = 1;
-        sub_offset = base;
-        record = D_80122B74 + base;
-        raw = D_80122B74;
-        *(u16 *)(record + 0x614) = 0x32;
-        *(u32 *)(record + 0x610) = record[0x610] | progression;
+        D_80122B74->characters[i].progress.level = 1;
+        D_80122B74->characters[i].hp = FIELD_RESET_HP;
+        D_80122B74->characters[i].progress.word = D_80122B74->characters[i].progress.level | experience;
 
-        do
+        for (j = 0; j < FIELD_CHARACTER_STAT_COUNT; j++)
         {
-            slot = raw + sub_offset;
-            *(u16 *)(slot + 0x620) = (*(u16 *)(slot + 0x620) & 0xFE00) | 0x14;
-            sub_offset += 2;
-        } while (++count < 8);
-
-        while (func_800C14A4(record_index, 1) != 0)
-        {
+            D_80122B74->characters[i].stats[j] = (D_80122B74->characters[i].stats[j] & 0xFE00) | FIELD_RESET_STAT;
         }
 
-        record_index += 1;
-    } while (record_index < 3);
+        while (func_800C14A4(i, 1) != 0)
+        {
+        }
+    }
 }

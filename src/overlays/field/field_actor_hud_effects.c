@@ -74,8 +74,8 @@ typedef struct
 typedef struct
 {
     u32 maximum_hp;
-    u32 current_hp;
-    u32 hp_display_flags;
+    volatile u32 current_hp;
+    volatile u32 hp_display_flags;
     u8 pad_0c[0x48 - 0x0C];
     u16 status_intensity;
     u16 effect_intensity;
@@ -134,7 +134,7 @@ typedef struct
     u32 delta_tag;
     u32 hud_tag;
     u8 pad_10[0x40B8 - 0x10];
-    u8 *primitive_cursor;
+    u8* primitive_cursor;
 } FieldHudDrawContext;
 
 /**
@@ -143,7 +143,7 @@ typedef struct
  * @note Actor positions use signed fixed-point division, followed by screen clamps.
  * @note Display-value bits 24 through 30 count down after a temporary panel draw.
  */
-void field_draw_actor_hud(u8 *render_context)
+void field_draw_actor_hud(u8* render_context)
 {
     extern FieldPanelActor g_field_actors[], g_field_effect_records[];
     extern FieldPanelSlot g_field_object_states[];
@@ -151,20 +151,20 @@ void field_draw_actor_hud(u8 *render_context)
     extern s32 g_field_party_hud_order[];
 
     extern s32 g_field_active_group, g_field_scene_mode_bit, D_80122B20;
-    extern void field_draw_actor_hud_panel(s32, s32, s32, u8 *, u32);
+    extern void field_draw_actor_hud_panel(s32, s32, s32, u8*, u32);
 
     Vec2s position;
     s32 i = 0;
     s32 panel_count = i;
     s32 absent_actor = 0xFF;
     s32 excluded_action;
-    FieldPanelActor *single_actor;
-    FieldPanelPlayer *single_player;
-    FieldPanelActor *paired_actor;
-    FieldPanelPlayer *paired_player;
+    FieldPanelActor* single_actor;
+    FieldPanelPlayer* single_player;
+    FieldPanelActor* paired_actor;
+    FieldPanelPlayer* paired_player;
     s16 panel_y;
     s32 boss_drawn;
-    FieldPanelActor *anchor_actor;
+    FieldPanelActor* anchor_actor;
     s32 group;
     s32 hp_display;
     u32 current_hp;
@@ -195,52 +195,52 @@ void field_draw_actor_hud(u8 *render_context)
     } while (i < 3);
     switch (panel_count)
     {
-        case 1:
-            i = 0;
-            do
+    case 1:
+        i = 0;
+        do
+        {
+            single_actor = &g_field_actors[i];
+            single_player = &g_field_player_records[i];
+            if (single_actor->presence != 0xFF && (single_player->flags & 1))
             {
-                single_actor = &g_field_actors[i];
-                single_player = &g_field_player_records[i];
-                if (single_actor->presence != 0xFF && (single_player->flags & 1))
-                {
-                    field_draw_actor_hud_panel(0x70, 0x10, i, render_context, 0x64);
-                }
-                i++;
-            } while (i < 3);
-            break;
-        case 2:
-            i = 0;
-            panel_count = 0;
-            do
+                field_draw_actor_hud_panel(0x70, 0x10, i, render_context, 0x64);
+            }
+            i++;
+        } while (i < 3);
+        break;
+    case 2:
+        i = 0;
+        panel_count = 0;
+        do
+        {
+            paired_actor = &g_field_actors[i];
+            paired_player = &g_field_player_records[i];
+            if (paired_actor->presence != 0xFF && (paired_player->flags & 1))
             {
-                paired_actor = &g_field_actors[i];
-                paired_player = &g_field_player_records[i];
-                if (paired_actor->presence != 0xFF && (paired_player->flags & 1))
-                {
-                    field_draw_actor_hud_panel(0x38 + panel_count * 0x6C, 0x10, i, render_context, 0x64);
-                    panel_count++;
-                }
-                i++;
-            } while (i < 3);
-            break;
-        case 3:
-            i = 0;
-            panel_count = 0;
-            do
+                field_draw_actor_hud_panel(0x38 + panel_count * 0x6C, 0x10, i, render_context, 0x64);
+                panel_count++;
+            }
+            i++;
+        } while (i < 3);
+        break;
+    case 3:
+        i = 0;
+        panel_count = 0;
+        do
+        {
+            if (g_field_actors[g_field_party_hud_order[i]].presence != 0xFF && (g_field_player_records[g_field_party_hud_order[i]].flags & 1))
             {
-                if (g_field_actors[g_field_party_hud_order[i]].presence != 0xFF && (g_field_player_records[g_field_party_hud_order[i]].flags & 1))
+                panel_y = 0x1C;
+                if (i & 1)
                 {
-                    panel_y = 0x1C;
-                    if (i & 1)
-                    {
-                        panel_y = 4;
-                    }
-                    field_draw_actor_hud_panel(8 + panel_count * 0x68, panel_y, g_field_party_hud_order[i], render_context, 0x64);
-                    panel_count++;
+                    panel_y = 4;
                 }
-                i++;
-            } while (i < 3);
-            break;
+                field_draw_actor_hud_panel(8 + panel_count * 0x68, panel_y, g_field_party_hud_order[i], render_context, 0x64);
+                panel_count++;
+            }
+            i++;
+        } while (i < 3);
+        break;
     }
     boss_drawn = 0;
     /* Enemy panels are transient; the boss uses a fixed panel at the bottom. */
@@ -290,7 +290,8 @@ void field_draw_actor_hud(u8 *render_context)
                                 projected_y = g_field_view_offset_y / 256;
                                 world_y = g_field_effect_records[g_field_object_states[i].linked_effect_index].y / 256 + 0x70;
                                 projected_y = projected_y + world_y;
-                                coordinate = projected_y - g_field_effect_records[g_field_object_states[i].linked_effect_index].z / 512 - g_field_view_offset_z / 512;
+                                coordinate =
+                                    projected_y - g_field_effect_records[g_field_object_states[i].linked_effect_index].z / 512 - g_field_view_offset_z / 512;
                                 position.y = coordinate;
 
                                 coordinate = position.x;
@@ -376,13 +377,13 @@ void field_draw_actor_hud(u8 *render_context)
  * @param value_per_bar Gauge full-scale denominator used for value-to-width scaling.
  * @see decomp.me (100%)
  */
-void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 value_per_bar)
+void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8* render_context, u32 value_per_bar)
 {
-    u8 *field_emit_hud_status_line(u8 *, FieldPrimitiveContext *, u32 *, s32, s32, s32);
-    void *field_emit_hud_percentage(void *, void *, s32, u16 *);
-    POLY_F4 *field_emit_hud_damage_quad(POLY_F4 *, s32, u32 *);
-    POLY_F4 *field_emit_hud_healing_quad(POLY_F4 *, s32, u32 *);
-    void *field_emit_actor_portrait(SPRT *, u32 *, s32, u32 *);
+    u8* field_emit_hud_status_line(u8*, FieldPrimitiveContext*, u32*, s32, s32, s32);
+    void* field_emit_hud_percentage(void*, void*, s32, u16*);
+    POLY_F4* field_emit_hud_damage_quad(POLY_F4*, s32, u32*);
+    POLY_F4* field_emit_hud_healing_quad(POLY_F4*, s32, u32*);
+    void* field_emit_actor_portrait(SPRT*, u32*, s32, u32*);
     s32 rand(void);
     extern u32 g_field_hud_hp_colors[];
     extern u32 g_field_hud_status_colors[];
@@ -403,13 +404,13 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
     extern u8 D_80117EC8[];
     extern s32 g_frame_counter;
 
-    s16 *scratch = (s16 *)0x1F800000;
-    u8 *ctx;
-    u8 *call_ctx;
+    s16* scratch = (s16*)0x1F800000;
+    u8* ctx;
+    u8* call_ctx;
     u32 special_width;
     s32 scan_slot;
-    u32 *partial_palette;
-    u32 *full_palette;
+    u32* partial_palette;
+    u32* full_palette;
     u32 boss_panel;
     s16 full_x;
     s16 full_y;
@@ -420,10 +421,10 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
     s16 rising_right;
     s16 falling_right;
     s16 blink_uv;
-    s32 *full_color_entry;
-    s32 *blink_counter;
-    s32 *blink_counters;
-    s32 *partial_color_entry;
+    s32* full_color_entry;
+    s32* blink_counter;
+    s32* blink_counters;
+    s32* partial_color_entry;
     s32 special_prim_addr;
     s32 rising_x;
     s32 falling_x;
@@ -449,6 +450,8 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
     u32 rising_wrapped_current;
     u32 falling_current;
     u32 falling_wrapped_current;
+    u32 rising_displayed;
+    u32 falling_displayed;
     u32 number_maximum;
     u32 current_value;
     u32 draw_arg;
@@ -456,17 +459,17 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
     u32 fill_mask;
     s32 background_type;
     u8 gauge_type;
-    FieldHudPlayer *actor_entry;
-    FieldHudPlayer *entry_base;
-    FieldHudGaugeState *state;
-    u8 *label_cursor;
-    u8 *rising_cursor;
-    u8 *helper_cursor;
-    u8 *falling_cursor;
-    u8 *rising_ot;
-    u8 *falling_ot;
-    u8 *sprite_cursor;
-    u8 *gauge_cursor;
+    FieldHudPlayer* actor_entry;
+    FieldHudPlayer* entry_base;
+    FieldHudGaugeState* state;
+    u8* label_cursor;
+    u8* rising_cursor;
+    u8* helper_cursor;
+    u8* falling_cursor;
+    u8* rising_ot;
+    u8* falling_ot;
+    u8* sprite_cursor;
+    u8* gauge_cursor;
 
     if (slot < 3)
     {
@@ -499,15 +502,14 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
         }
     }
     ctx = render_context;
-    label_cursor = ((FieldHudDrawContext *)ctx)->primitive_cursor;
+    label_cursor = ((FieldHudDrawContext*)ctx)->primitive_cursor;
     if (state->hud.bytes.panel_type < 3U)
     {
         g_field_hud_bar_offset_x = 0x1D;
         g_field_hud_bar_offset_y = 9;
         scratch[0] = x;
         scratch[1] = y;
-        label_cursor = field_emit_actor_portrait((SPRT *)label_cursor, &((FieldHudDrawContext *)ctx)->hud_tag,
-                                                state->hud.bytes.panel_type, (u32 *)scratch);
+        label_cursor = field_emit_actor_portrait((SPRT*)label_cursor, &((FieldHudDrawContext*)ctx)->hud_tag, state->hud.bytes.panel_type, (u32*)scratch);
         g_field_hud_bar_width = 0x36;
         g_field_hud_bar_height = 3;
     }
@@ -528,8 +530,7 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
     sprite_cursor = label_cursor;
     if (slot < 3)
     {
-        if (g_field_hud_blink_frames[slot] >= FIELD_HUD_BLINK_FRAMES ||
-            ++g_field_hud_blink_frames[slot] >= FIELD_HUD_BLINK_FRAMES)
+        if (g_field_hud_blink_frames[slot] >= FIELD_HUD_BLINK_FRAMES || ++g_field_hud_blink_frames[slot] >= FIELD_HUD_BLINK_FRAMES)
         {
             for (scan_slot = 0; scan_slot < 8; scan_slot++)
             {
@@ -550,10 +551,10 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
                 *blink_counter = 0;
             }
         }
-        *(u32 *)&((SPRT *)sprite_cursor)->r0 = 0x808080;
-        setSprt((SPRT *)sprite_cursor);
-        ((SPRT *)sprite_cursor)->x0 = (s16)(x + 0x22);
-        ((SPRT *)sprite_cursor)->y0 = (s16)(y - 6);
+        *(u32*)&((SPRT*)sprite_cursor)->r0 = 0x808080;
+        setSprt((SPRT*)sprite_cursor);
+        ((SPRT*)sprite_cursor)->x0 = (s16)(x + 0x22);
+        ((SPRT*)sprite_cursor)->y0 = (s16)(y - 6);
         if (g_field_hud_blink_frames[slot] < 6)
         {
             blink_uv = ((u16)g_field_hud_blink_frames[slot] * 0x10) + 0x2058;
@@ -562,12 +563,12 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
         {
             blink_uv = 0x2058;
         }
-        *(u32 *)&((SPRT *)sprite_cursor)->w = 0x100010;
-        *(s16 *)&((SPRT *)sprite_cursor)->u0 = blink_uv;
-        ((SPRT *)sprite_cursor)->clut = FIELD_HUD_BLINK_CLUT;
-        addPrim(&((FieldHudDrawContext *)ctx)->hud_tag, sprite_cursor);
+        *(u32*)&((SPRT*)sprite_cursor)->w = 0x100010;
+        *(s16*)&((SPRT*)sprite_cursor)->u0 = blink_uv;
+        ((SPRT*)sprite_cursor)->clut = FIELD_HUD_BLINK_CLUT;
+        addPrim(&((FieldHudDrawContext*)ctx)->hud_tag, sprite_cursor);
         sprite_cursor += sizeof(SPRT);
-        ((Vec2s *)scratch)->x = x + 0x30;
+        ((Vec2s*)scratch)->x = x + 0x30;
         scratch[1] = y;
         number_current = state->current_hp;
         number_maximum = state->maximum_hp;
@@ -580,7 +581,7 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
         {
             draw_arg = 1;
         }
-        sprite_cursor = field_emit_hud_percentage(sprite_cursor, ctx, draw_arg, (u16 *)scratch);
+        sprite_cursor = field_emit_hud_percentage(sprite_cursor, ctx, draw_arg, (u16*)scratch);
     }
     gauge_type = state->hud.bytes.panel_type;
     helper_cursor = sprite_cursor;
@@ -605,52 +606,47 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
             }
             status_intensity = state->status_intensity;
             call_ctx = ctx;
-            helper_cursor = field_emit_hud_status_line(helper_cursor, (FieldPrimitiveContext *)call_ctx,
-                                                     (u32 *)draw_arg, status_intensity, x, y);
+            helper_cursor = field_emit_hud_status_line(helper_cursor, (FieldPrimitiveContext*)call_ctx, (u32*)draw_arg, status_intensity, x, y);
         }
         else
         {
             call_ctx = ctx;
             draw_arg = (u32)g_field_hud_effect_colors;
             status_intensity = state->effect_intensity;
-            helper_cursor = field_emit_hud_status_line(helper_cursor, (FieldPrimitiveContext *)call_ctx,
-                                                     (u32 *)draw_arg, status_intensity, x, y);
+            helper_cursor = field_emit_hud_status_line(helper_cursor, (FieldPrimitiveContext*)call_ctx, (u32*)draw_arg, status_intensity, x, y);
         }
     }
     else if ((gauge_type == 2) && ((u8)D_800FDCEA >= 0x41U))
     {
         draw_arg = (u32)g_field_hud_companion_status_colors;
-        helper_cursor = field_emit_hud_status_line(helper_cursor, (FieldPrimitiveContext *)ctx,
-                                                 (u32 *)draw_arg, state->status_intensity, x, y);
+        helper_cursor = field_emit_hud_status_line(helper_cursor, (FieldPrimitiveContext*)ctx, (u32*)draw_arg, state->status_intensity, x, y);
     }
     /* A special action gauge replaces the HP fill while its maximum is set. */
     gauge_cursor = helper_cursor;
-    if (slot < 3 &&
-        (entry_base = g_field_player_records, actor_entry = &entry_base[slot],
-         actor_entry->special_gauge_maximum != 0) &&
+    if (slot < 3 && (entry_base = g_field_player_records, actor_entry = &entry_base[slot], actor_entry->special_gauge_maximum != 0) &&
         g_field_actors[slot].action_id == 0x8E)
     {
-        *(u32 *)&((POLY_G4 *)gauge_cursor)->r0 = 0x202020;
-        *(u32 *)&((POLY_G4 *)gauge_cursor)->r2 = 0x202020;
-        setlen((POLY_G4 *)gauge_cursor, 8);
-        setcode((POLY_G4 *)gauge_cursor, 0x38);
-        *(u32 *)&((POLY_G4 *)gauge_cursor)->r1 = 0xFFFFFF;
-        *(u32 *)&((POLY_G4 *)gauge_cursor)->r3 = 0xFFFFFF;
+        *(u32*)&((POLY_G4*)gauge_cursor)->r0 = 0x202020;
+        *(u32*)&((POLY_G4*)gauge_cursor)->r2 = 0x202020;
+        setlen((POLY_G4*)gauge_cursor, 8);
+        setcode((POLY_G4*)gauge_cursor, 0x38);
+        *(u32*)&((POLY_G4*)gauge_cursor)->r1 = 0xFFFFFF;
+        *(u32*)&((POLY_G4*)gauge_cursor)->r3 = 0xFFFFFF;
         special_width = (s16)actor_entry->special_gauge_maximum;
         special_width = (s32)(g_field_hud_bar_width * actor_entry->special_gauge_value) / (s32)special_width;
-        ((POLY_G4 *)gauge_cursor)->x0 = (u16)g_field_hud_bar_offset_x + x;
-        ((POLY_G4 *)gauge_cursor)->y1 = ((u16)g_field_hud_bar_offset_y + y);
-        ((POLY_G4 *)gauge_cursor)->x1 = ((u16)g_field_hud_bar_offset_x + x) + special_width;
-        ((POLY_G4 *)gauge_cursor)->x2 = ((u16)g_field_hud_bar_offset_x + x) - 3;
-        ((POLY_G4 *)gauge_cursor)->y0 = ((u16)g_field_hud_bar_offset_y + y);
-        ((POLY_G4 *)gauge_cursor)->y3 = ((POLY_G4 *)gauge_cursor)->y1 + (u16)g_field_hud_bar_height;
-        ((POLY_G4 *)gauge_cursor)->y2 = ((POLY_G4 *)gauge_cursor)->y3;
-        ((POLY_G4 *)gauge_cursor)->x3 = ((u16)g_field_hud_bar_offset_x + x) + special_width - 3;
+        ((POLY_G4*)gauge_cursor)->x0 = (u16)g_field_hud_bar_offset_x + x;
+        ((POLY_G4*)gauge_cursor)->y1 = ((u16)g_field_hud_bar_offset_y + y);
+        ((POLY_G4*)gauge_cursor)->x1 = ((u16)g_field_hud_bar_offset_x + x) + special_width;
+        ((POLY_G4*)gauge_cursor)->x2 = ((u16)g_field_hud_bar_offset_x + x) - 3;
+        ((POLY_G4*)gauge_cursor)->y0 = ((u16)g_field_hud_bar_offset_y + y);
+        ((POLY_G4*)gauge_cursor)->y3 = ((POLY_G4*)gauge_cursor)->y1 + (u16)g_field_hud_bar_height;
+        ((POLY_G4*)gauge_cursor)->y2 = ((POLY_G4*)gauge_cursor)->y3;
+        ((POLY_G4*)gauge_cursor)->x3 = ((u16)g_field_hud_bar_offset_x + x) + special_width - 3;
         special_prim_addr = (s32)gauge_cursor & 0xFFFFFF;
-        setaddr(gauge_cursor, getaddr((u8 *)&((FieldHudDrawContext *)ctx)->hud_tag));
+        setaddr(gauge_cursor, getaddr((u8*)&((FieldHudDrawContext*)ctx)->hud_tag));
         gauge_cursor += sizeof(POLY_G4);
-        gauge_ot_tag = (((FieldHudDrawContext *)ctx)->hud_tag & 0xFF000000) | special_prim_addr;
-        ((FieldHudDrawContext *)ctx)->hud_tag = gauge_ot_tag;
+        gauge_ot_tag = (((FieldHudDrawContext*)ctx)->hud_tag & 0xFF000000) | special_prim_addr;
+        ((FieldHudDrawContext*)ctx)->hud_tag = gauge_ot_tag;
     }
     else
     {
@@ -668,26 +664,27 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
             {
                 partial_palette = g_field_hud_hp_colors;
                 partial_color_entry = &partial_palette[palette_index];
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->r0 = (s32)(*partial_color_entry & 0x3F3F3F);
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->r1 = (s32)(*partial_color_entry & 0x7F7F7F);
+                *(u32*)&((POLY_G4*)gauge_cursor)->r0 = (s32)(*partial_color_entry & 0x3F3F3F);
+                *(u32*)&((POLY_G4*)gauge_cursor)->r1 = (s32)(*partial_color_entry & 0x7F7F7F);
                 partial_color = *partial_color_entry;
-                setlen((POLY_G4 *)gauge_cursor, 8);
-                setcode((POLY_G4 *)gauge_cursor, 0x38);
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->r3 = partial_color;
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->r2 = partial_color;
+                setlen((POLY_G4*)gauge_cursor, 8);
+                setcode((POLY_G4*)gauge_cursor, 0x38);
+                *(u32*)&((POLY_G4*)gauge_cursor)->r3 = partial_color;
+                *(u32*)&((POLY_G4*)gauge_cursor)->r2 = partial_color;
                 partial_width = (s32)(g_field_hud_bar_width * (current_value % value_per_bar)) / (s32)value_per_bar;
-                ((POLY_G4 *)gauge_cursor)->x0 = (u16)g_field_hud_bar_offset_x + x;
-                ((POLY_G4 *)gauge_cursor)->y1 = ((u16)g_field_hud_bar_offset_y + y);
-                ((POLY_G4 *)gauge_cursor)->x1 = ((u16)g_field_hud_bar_offset_x + x) + partial_width;
-                ((POLY_G4 *)gauge_cursor)->x2 = ((u16)g_field_hud_bar_offset_x + x) - 3;
-                ((POLY_G4 *)gauge_cursor)->y0 = ((u16)g_field_hud_bar_offset_y + y);
-                ((POLY_G4 *)gauge_cursor)->y3 = ((POLY_G4 *)gauge_cursor)->y1 + (u16)g_field_hud_bar_height;
-                ((POLY_G4 *)gauge_cursor)->y2 = ((POLY_G4 *)gauge_cursor)->y3;
-                ((POLY_G4 *)gauge_cursor)->x3 = ((u16)g_field_hud_bar_offset_x + x) + partial_width - 3;
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->tag = (s32)((*(u32 *)&((POLY_G4 *)gauge_cursor)->tag & 0xFF000000) | (((FieldHudDrawContext *)ctx)->hud_tag & fill_mask));
+                ((POLY_G4*)gauge_cursor)->x0 = (u16)g_field_hud_bar_offset_x + x;
+                ((POLY_G4*)gauge_cursor)->y1 = ((u16)g_field_hud_bar_offset_y + y);
+                ((POLY_G4*)gauge_cursor)->x1 = ((u16)g_field_hud_bar_offset_x + x) + partial_width;
+                ((POLY_G4*)gauge_cursor)->x2 = ((u16)g_field_hud_bar_offset_x + x) - 3;
+                ((POLY_G4*)gauge_cursor)->y0 = ((u16)g_field_hud_bar_offset_y + y);
+                ((POLY_G4*)gauge_cursor)->y3 = ((POLY_G4*)gauge_cursor)->y1 + (u16)g_field_hud_bar_height;
+                ((POLY_G4*)gauge_cursor)->y2 = ((POLY_G4*)gauge_cursor)->y3;
+                ((POLY_G4*)gauge_cursor)->x3 = ((u16)g_field_hud_bar_offset_x + x) + partial_width - 3;
+                *(u32*)&((POLY_G4*)gauge_cursor)->tag =
+                    (s32)((*(u32*)&((POLY_G4*)gauge_cursor)->tag & 0xFF000000) | (((FieldHudDrawContext*)ctx)->hud_tag & fill_mask));
                 partial_prim_addr = (s32)gauge_cursor & fill_mask;
                 gauge_cursor += sizeof(POLY_G4);
-                ((FieldHudDrawContext *)ctx)->hud_tag = (s32)((((FieldHudDrawContext *)ctx)->hud_tag & 0xFF000000) | partial_prim_addr);
+                ((FieldHudDrawContext*)ctx)->hud_tag = (s32)((((FieldHudDrawContext*)ctx)->hud_tag & 0xFF000000) | partial_prim_addr);
             }
             value_or_bar_count = (u32)state->current_hp / value_per_bar;
             full_palette_level = value_or_bar_count - 1;
@@ -700,34 +697,35 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
                 }
                 full_palette = g_field_hud_hp_colors;
                 full_color_entry = &full_palette[palette_index];
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->r0 = (s32)(*full_color_entry & 0x3F3F3F);
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->r2 = (s32)(*full_color_entry & 0x7F7F7F);
-                setlen((POLY_G4 *)gauge_cursor, 8);
-                setcode((POLY_G4 *)gauge_cursor, 0x38);
+                *(u32*)&((POLY_G4*)gauge_cursor)->r0 = (s32)(*full_color_entry & 0x3F3F3F);
+                *(u32*)&((POLY_G4*)gauge_cursor)->r2 = (s32)(*full_color_entry & 0x7F7F7F);
+                setlen((POLY_G4*)gauge_cursor, 8);
+                setcode((POLY_G4*)gauge_cursor, 0x38);
                 full_color = *full_color_entry;
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->r3 = full_color;
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->r1 = full_color;
+                *(u32*)&((POLY_G4*)gauge_cursor)->r3 = full_color;
+                *(u32*)&((POLY_G4*)gauge_cursor)->r1 = full_color;
                 full_x = (u16)g_field_hud_bar_offset_x;
                 full_right = (u16)g_field_hud_bar_width;
                 full_y = (u16)g_field_hud_bar_offset_y;
                 full_x += x;
                 full_right += full_x;
-                ((POLY_G4 *)gauge_cursor)->x1 = full_right;
+                ((POLY_G4*)gauge_cursor)->x1 = full_right;
                 full_right -= 3;
                 full_y += y;
-                ((POLY_G4 *)gauge_cursor)->x3 = full_right;
-                ((POLY_G4 *)gauge_cursor)->y1 = full_y;
-                ((POLY_G4 *)gauge_cursor)->x0 = full_x;
+                ((POLY_G4*)gauge_cursor)->x3 = full_right;
+                ((POLY_G4*)gauge_cursor)->y1 = full_y;
+                ((POLY_G4*)gauge_cursor)->x0 = full_x;
                 full_x -= 3;
-                ((POLY_G4 *)gauge_cursor)->x2 = full_x;
-                ((POLY_G4 *)gauge_cursor)->y0 = full_y;
-                ((POLY_G4 *)gauge_cursor)->y3 = ((POLY_G4 *)gauge_cursor)->y1 + (u16)g_field_hud_bar_height;
-                ((POLY_G4 *)gauge_cursor)->y2 = ((POLY_G4 *)gauge_cursor)->y3;
-                *(u32 *)&((POLY_G4 *)gauge_cursor)->tag = (s32)((*(u32 *)&((POLY_G4 *)gauge_cursor)->tag & 0xFF000000) | (((FieldHudDrawContext *)ctx)->hud_tag & 0xFFFFFF));
+                ((POLY_G4*)gauge_cursor)->x2 = full_x;
+                ((POLY_G4*)gauge_cursor)->y0 = full_y;
+                ((POLY_G4*)gauge_cursor)->y3 = ((POLY_G4*)gauge_cursor)->y1 + (u16)g_field_hud_bar_height;
+                ((POLY_G4*)gauge_cursor)->y2 = ((POLY_G4*)gauge_cursor)->y3;
+                *(u32*)&((POLY_G4*)gauge_cursor)->tag =
+                    (s32)((*(u32*)&((POLY_G4*)gauge_cursor)->tag & 0xFF000000) | (((FieldHudDrawContext*)ctx)->hud_tag & 0xFFFFFF));
                 full_prim_addr = (s32)gauge_cursor & 0xFFFFFF;
                 gauge_cursor += sizeof(POLY_G4);
-                gauge_ot_tag = (((FieldHudDrawContext *)ctx)->hud_tag & 0xFF000000) | full_prim_addr;
-                ((FieldHudDrawContext *)ctx)->hud_tag = gauge_ot_tag;
+                gauge_ot_tag = (((FieldHudDrawContext*)ctx)->hud_tag & 0xFF000000) | full_prim_addr;
+                ((FieldHudDrawContext*)ctx)->hud_tag = gauge_ot_tag;
             }
         }
     }
@@ -751,43 +749,42 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
             rising_value = displayed_value + 1;
         }
         rising_packed_value |= rising_value & mask24;
-        *(volatile u32 *)&state->hp_display_flags = rising_packed_value;
-        rising_current = *(volatile u32 *)&state->current_hp;
+        state->hp_display_flags = rising_packed_value;
+        rising_current = state->current_hp;
         if ((rising_current / value_per_bar) == ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) / (s32)value_per_bar))
         {
             rising_x = (u16)g_field_hud_bar_offset_x;
             rising_x += x;
-            ((POLY_F4 *)gauge_cursor)->x1 =
-                (s16)(rising_x + ((u32)(g_field_hud_bar_width * (rising_current % value_per_bar)) / value_per_bar));
-            rising_ot = (u8 *)&((FieldHudDrawContext *)ctx)->delta_tag;
+            ((POLY_F4*)gauge_cursor)->x1 = (s16)(rising_x + ((u32)(g_field_hud_bar_width * (rising_current % value_per_bar)) / value_per_bar));
+            rising_ot = (u8*)&((FieldHudDrawContext*)ctx)->delta_tag;
             rising_cursor = gauge_cursor;
             rising_x += ((s32)(g_field_hud_bar_width * ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) % (s32)value_per_bar)) / (s32)value_per_bar);
-            ((POLY_F4 *)rising_cursor)->x0 = rising_x;
-            helper_cursor = (u8 *)field_emit_hud_healing_quad((POLY_F4 *)rising_cursor, y, (u32 *)rising_ot);
+            ((POLY_F4*)rising_cursor)->x0 = rising_x;
+            helper_cursor = (u8*)field_emit_hud_healing_quad((POLY_F4*)rising_cursor, y, (u32*)rising_ot);
         }
         else
         {
             rising_base_x = (u16)g_field_hud_bar_offset_x + x;
-            ((POLY_F4 *)gauge_cursor)->x1 = rising_base_x;
-            ((POLY_F4 *)gauge_cursor)->x0 =
+            ((POLY_F4*)gauge_cursor)->x1 = rising_base_x;
+            ((POLY_F4*)gauge_cursor)->x0 =
                 (s16)(rising_base_x +
                       ((s32)(g_field_hud_bar_width * ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) % (s32)value_per_bar)) / (s32)value_per_bar));
-            rising_cursor = (u8 *)field_emit_hud_healing_quad((POLY_F4 *)gauge_cursor, y, (u32 *)(u8 *)&((FieldHudDrawContext *)ctx)->delta_tag);
+            rising_cursor = (u8*)field_emit_hud_healing_quad((POLY_F4*)gauge_cursor, y, (u32*)(u8*)&((FieldHudDrawContext*)ctx)->delta_tag);
+            rising_displayed = state->hp_display_flags & FIELD_HUD_HP_MASK;
             rising_wrapped_current = state->current_hp;
-            if ((u32)((state->hp_display_flags & FIELD_HUD_HP_MASK) - rising_wrapped_current) < value_per_bar)
+            if (rising_displayed - rising_wrapped_current < value_per_bar)
             {
-                rising_right = (u16)g_field_hud_bar_offset_x + x +
-                               ((u32)(g_field_hud_bar_width * (rising_wrapped_current % value_per_bar)) / value_per_bar);
-                ((POLY_F4 *)rising_cursor)->x1 = rising_right;
+                rising_right = (u16)g_field_hud_bar_offset_x + x + ((u32)(g_field_hud_bar_width * (rising_wrapped_current % value_per_bar)) / value_per_bar);
+                ((POLY_F4*)rising_cursor)->x1 = rising_right;
             }
             else
             {
                 rising_right = (u16)g_field_hud_bar_offset_x + x;
-                ((POLY_F4 *)rising_cursor)->x1 = rising_right;
+                ((POLY_F4*)rising_cursor)->x1 = rising_right;
             }
-            rising_ot = (u8 *)&((FieldHudDrawContext *)ctx)->delta_tag;
-            ((POLY_F4 *)rising_cursor)->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
-            helper_cursor = (u8 *)field_emit_hud_healing_quad((POLY_F4 *)rising_cursor, y, (u32 *)rising_ot);
+            rising_ot = (u8*)&((FieldHudDrawContext*)ctx)->delta_tag;
+            ((POLY_F4*)rising_cursor)->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
+            helper_cursor = (u8*)field_emit_hud_healing_quad((POLY_F4*)rising_cursor, y, (u32*)rising_ot);
         }
         gauge_cursor = helper_cursor;
     }
@@ -806,91 +803,89 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
             falling_value = displayed_value - 1;
         }
         falling_packed_value |= falling_value & mask24;
-        *(volatile u32 *)&state->hp_display_flags = falling_packed_value;
-        falling_current = *(volatile u32 *)&state->current_hp;
+        state->hp_display_flags = falling_packed_value;
+        falling_current = state->current_hp;
         if ((falling_current / value_per_bar) == ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) / (s32)value_per_bar))
         {
             falling_x = (u16)g_field_hud_bar_offset_x;
             falling_x += x;
-            ((POLY_F4 *)gauge_cursor)->x1 =
-                (s16)(falling_x + ((u32)(g_field_hud_bar_width * (falling_current % value_per_bar)) / value_per_bar));
-            falling_ot = (u8 *)&((FieldHudDrawContext *)ctx)->delta_tag;
+            ((POLY_F4*)gauge_cursor)->x1 = (s16)(falling_x + ((u32)(g_field_hud_bar_width * (falling_current % value_per_bar)) / value_per_bar));
+            falling_ot = (u8*)&((FieldHudDrawContext*)ctx)->delta_tag;
             falling_cursor = gauge_cursor;
-            falling_x +=
-                ((s32)(g_field_hud_bar_width * ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) % (s32)value_per_bar)) / (s32)value_per_bar);
-            ((POLY_F4 *)falling_cursor)->x0 = falling_x;
-            helper_cursor = (u8 *)field_emit_hud_damage_quad((POLY_F4 *)falling_cursor, y, (u32 *)falling_ot);
+            falling_x += ((s32)(g_field_hud_bar_width * ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) % (s32)value_per_bar)) / (s32)value_per_bar);
+            ((POLY_F4*)falling_cursor)->x0 = falling_x;
+            helper_cursor = (u8*)field_emit_hud_damage_quad((POLY_F4*)falling_cursor, y, (u32*)falling_ot);
         }
         else
         {
             falling_base_x = (u16)g_field_hud_bar_offset_x + x;
-            ((POLY_F4 *)gauge_cursor)->x1 = falling_base_x;
-            ((POLY_F4 *)gauge_cursor)->x0 =
+            ((POLY_F4*)gauge_cursor)->x1 = falling_base_x;
+            ((POLY_F4*)gauge_cursor)->x0 =
                 (s16)(falling_base_x +
                       ((s32)(g_field_hud_bar_width * ((s32)(state->hp_display_flags & FIELD_HUD_HP_MASK) % (s32)value_per_bar)) / (s32)value_per_bar));
-            falling_cursor = (u8 *)field_emit_hud_damage_quad((POLY_F4 *)gauge_cursor, y, (u32 *)(u8 *)&((FieldHudDrawContext *)ctx)->delta_tag);
+            falling_cursor = (u8*)field_emit_hud_damage_quad((POLY_F4*)gauge_cursor, y, (u32*)(u8*)&((FieldHudDrawContext*)ctx)->delta_tag);
+            falling_displayed = state->hp_display_flags & FIELD_HUD_HP_MASK;
             falling_wrapped_current = state->current_hp;
-            if ((u32)((state->hp_display_flags & FIELD_HUD_HP_MASK) - falling_wrapped_current) < value_per_bar)
+            if (falling_displayed - falling_wrapped_current < value_per_bar)
             {
-                falling_right = (u16)g_field_hud_bar_offset_x + x +
-                                ((u32)(g_field_hud_bar_width * (falling_wrapped_current % value_per_bar)) / value_per_bar);
-                ((POLY_F4 *)falling_cursor)->x1 = falling_right;
+                falling_right = (u16)g_field_hud_bar_offset_x + x + ((u32)(g_field_hud_bar_width * (falling_wrapped_current % value_per_bar)) / value_per_bar);
+                ((POLY_F4*)falling_cursor)->x1 = falling_right;
             }
             else
             {
                 falling_right = (u16)g_field_hud_bar_offset_x + x;
-                ((POLY_F4 *)falling_cursor)->x1 = falling_right;
+                ((POLY_F4*)falling_cursor)->x1 = falling_right;
             }
-            falling_ot = (u8 *)&((FieldHudDrawContext *)ctx)->delta_tag;
-            ((POLY_F4 *)falling_cursor)->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
-            helper_cursor = (u8 *)field_emit_hud_damage_quad((POLY_F4 *)falling_cursor, y, (u32 *)falling_ot);
+            falling_ot = (u8*)&((FieldHudDrawContext*)ctx)->delta_tag;
+            ((POLY_F4*)falling_cursor)->x0 = (s16)(((u16)g_field_hud_bar_offset_x + x) + (u16)g_field_hud_bar_width);
+            helper_cursor = (u8*)field_emit_hud_damage_quad((POLY_F4*)falling_cursor, y, (u32*)falling_ot);
         }
         gauge_cursor = helper_cursor;
     }
     sprite_cursor = gauge_cursor;
-    *(u32 *)&((SPRT *)sprite_cursor)->r0 = 0x808080;
-    setSprt((SPRT *)sprite_cursor);
-    setSemiTrans((SPRT *)sprite_cursor, 1);
-    *(u32 *)&((SPRT *)sprite_cursor)->x0 = (s32)((y << 0x10) + x);
+    *(u32*)&((SPRT*)sprite_cursor)->r0 = 0x808080;
+    setSprt((SPRT*)sprite_cursor);
+    setSemiTrans((SPRT*)sprite_cursor, 1);
+    *(u32*)&((SPRT*)sprite_cursor)->x0 = (s32)((y << 0x10) + x);
     background_type = state->hud.bytes.panel_type;
     switch (background_type)
     {
-        case 0:
-        case 1:
-            *(u32 *)&((SPRT *)sprite_cursor)->w = 0x180058;
-            *(s16 *)&((SPRT *)sprite_cursor)->u0 = 0x1000;
-            break;
-        case 2:
-            if ((u8)D_800FDCEA >= 0x41U)
-            {
-                *(u32 *)&((SPRT *)sprite_cursor)->w = 0x180058;
-                *(s16 *)&((SPRT *)sprite_cursor)->u0 = 0x1000;
-            }
-            else
-            {
-                *(u32 *)&((SPRT *)sprite_cursor)->w = 0x180058;
-                *(s16 *)&((SPRT *)sprite_cursor)->u0 = 0x2800;
-            }
-            break;
-        default:
-            if (boss_panel != 0)
-            {
-                *(u32 *)&((SPRT *)sprite_cursor)->w = 0x100100;
-                *(s16 *)&((SPRT *)sprite_cursor)->u0 = 0;
-            }
-            else
-            {
-                *(u32 *)&((SPRT *)sprite_cursor)->w = 0x100040;
-                *(s16 *)&((SPRT *)sprite_cursor)->u0 = 0x4000;
-            }
-            break;
+    case 0:
+    case 1:
+        *(u32*)&((SPRT*)sprite_cursor)->w = 0x180058;
+        *(s16*)&((SPRT*)sprite_cursor)->u0 = 0x1000;
+        break;
+    case 2:
+        if ((u8)D_800FDCEA >= 0x41U)
+        {
+            *(u32*)&((SPRT*)sprite_cursor)->w = 0x180058;
+            *(s16*)&((SPRT*)sprite_cursor)->u0 = 0x1000;
+        }
+        else
+        {
+            *(u32*)&((SPRT*)sprite_cursor)->w = 0x180058;
+            *(s16*)&((SPRT*)sprite_cursor)->u0 = 0x2800;
+        }
+        break;
+    default:
+        if (boss_panel != 0)
+        {
+            *(u32*)&((SPRT*)sprite_cursor)->w = 0x100100;
+            *(s16*)&((SPRT*)sprite_cursor)->u0 = 0;
+        }
+        else
+        {
+            *(u32*)&((SPRT*)sprite_cursor)->w = 0x100040;
+            *(s16*)&((SPRT*)sprite_cursor)->u0 = 0x4000;
+        }
+        break;
     }
-    ((SPRT *)sprite_cursor)->clut = FIELD_HUD_CLUT;
-    addPrim(&((FieldHudDrawContext *)ctx)->hud_tag, sprite_cursor);
+    ((SPRT*)sprite_cursor)->clut = FIELD_HUD_CLUT;
+    addPrim(&((FieldHudDrawContext*)ctx)->hud_tag, sprite_cursor);
     sprite_cursor += sizeof(SPRT);
-    setDrawTPage((DR_TPAGE *)sprite_cursor, 0, 0, 0x1F);
-    addPrim(&((FieldHudDrawContext *)ctx)->hud_tag, sprite_cursor);
-    ((FieldHudDrawContext *)render_context)->primitive_cursor = sprite_cursor + sizeof(DR_TPAGE);
+    setDrawTPage((DR_TPAGE*)sprite_cursor, 0, 0, 0x1F);
+    addPrim(&((FieldHudDrawContext*)ctx)->hud_tag, sprite_cursor);
+    ((FieldHudDrawContext*)render_context)->primitive_cursor = sprite_cursor + sizeof(DR_TPAGE);
 }
 
 /**
@@ -903,7 +898,7 @@ void field_draw_actor_hud_panel(s32 x, s32 y, s32 slot, u8 *render_context, u32 
  * @param y Base vertical position.
  * @return Pointer immediately after the emitted primitive, or @p packet when intensity is zero.
  */
-u8 *field_emit_hud_status_line(u8 *packet, FieldPrimitiveContext *context, u32 *colors, s32 intensity, s32 x, s32 y)
+u8* field_emit_hud_status_line(u8* packet, FieldPrimitiveContext* context, u32* colors, s32 intensity, s32 x, s32 y)
 {
     u8 first_component;
     u8 second_component;
@@ -917,63 +912,63 @@ u8 *field_emit_hud_status_line(u8 *packet, FieldPrimitiveContext *context, u32 *
     }
 
     first_color = colors[0];
-    setlen((LINE_G2 *)packet, 4);
-    *(u32 *)&((LINE_G2 *)packet)->r0 = first_color;
-    setcode((LINE_G2 *)packet, 0x50);
+    setlen((LINE_G2*)packet, 4);
+    *(u32*)&((LINE_G2*)packet)->r0 = first_color;
+    setcode((LINE_G2*)packet, 0x50);
 
-    first_component = ((CVECTOR *)colors)[0].r;
-    second_component = ((CVECTOR *)colors)[1].r;
+    first_component = ((CVECTOR*)colors)[0].r;
+    second_component = ((CVECTOR*)colors)[1].r;
     if (first_component == second_component)
     {
-        ((LINE_G2 *)packet)->r1 = first_component;
+        ((LINE_G2*)packet)->r1 = first_component;
     }
     else if (second_component != 0)
     {
-        ((LINE_G2 *)packet)->r1 = intensity;
+        ((LINE_G2*)packet)->r1 = intensity;
     }
     else
     {
-        ((LINE_G2 *)packet)->r1 = ~intensity;
+        ((LINE_G2*)packet)->r1 = ~intensity;
     }
 
-    first_component = ((CVECTOR *)colors)[0].g;
-    second_component = ((CVECTOR *)colors)[1].g;
+    first_component = ((CVECTOR*)colors)[0].g;
+    second_component = ((CVECTOR*)colors)[1].g;
     if (first_component == second_component)
     {
-        ((LINE_G2 *)packet)->g1 = first_component;
+        ((LINE_G2*)packet)->g1 = first_component;
     }
     else if (second_component != 0)
     {
-        ((LINE_G2 *)packet)->g1 = intensity;
+        ((LINE_G2*)packet)->g1 = intensity;
     }
     else
     {
-        ((LINE_G2 *)packet)->g1 = ~intensity;
+        ((LINE_G2*)packet)->g1 = ~intensity;
     }
 
-    first_component = ((CVECTOR *)colors)[0].b;
-    second_component = ((CVECTOR *)colors)[1].b;
+    first_component = ((CVECTOR*)colors)[0].b;
+    second_component = ((CVECTOR*)colors)[1].b;
     if (first_component == second_component)
     {
-        ((LINE_G2 *)packet)->b1 = first_component;
+        ((LINE_G2*)packet)->b1 = first_component;
     }
     else if (second_component != 0)
     {
-        ((LINE_G2 *)packet)->b1 = intensity;
+        ((LINE_G2*)packet)->b1 = intensity;
     }
     else
     {
-        ((LINE_G2 *)packet)->b1 = ~intensity;
+        ((LINE_G2*)packet)->b1 = ~intensity;
     }
 
     line_x = x + 0x18;
-    ((LINE_G2 *)packet)->x0 = line_x;
+    ((LINE_G2*)packet)->x0 = line_x;
     line_y = y + 0x10;
-    ((LINE_G2 *)packet)->y1 = line_y;
-    ((LINE_G2 *)packet)->y0 = line_y;
-    ((LINE_G2 *)packet)->x1 = line_x + ((intensity * 0x23) / 255);
+    ((LINE_G2*)packet)->y1 = line_y;
+    ((LINE_G2*)packet)->y0 = line_y;
+    ((LINE_G2*)packet)->x1 = line_x + ((intensity * 0x23) / 255);
 
-    addPrim(&context->tag, (LINE_G2 *)packet);
+    addPrim(&context->tag, (LINE_G2*)packet);
     return packet + sizeof(LINE_G2);
 }
 
@@ -988,9 +983,9 @@ u8 *field_emit_hud_status_line(u8 *packet, FieldPrimitiveContext *context, u32 *
  * @note Leading zeros in the hundreds/tens columns are suppressed until the
  *       first non-zero digit is emitted.
  */
-void *field_emit_hud_percentage(void *packet, void *context, s32 value, u16 *position)
+void* field_emit_hud_percentage(void* packet, void* context, s32 value, u16* position)
 {
-    void *field_emit_hud_glyph(void *, void *, s32, s32 *);
+    void* field_emit_hud_glyph(void*, void*, s32, s32*);
 
     s32 emitted;
 
@@ -998,7 +993,7 @@ void *field_emit_hud_percentage(void *packet, void *context, s32 value, u16 *pos
     if (value / 100 != 0)
     {
         emitted = 1;
-        packet = field_emit_hud_glyph(packet, context, value / 100, (s32 *)position);
+        packet = field_emit_hud_glyph(packet, context, value / 100, (s32*)position);
         value -= 100;
     }
     *position += FIELD_HUD_GLYPH_ADVANCE;
@@ -1006,13 +1001,13 @@ void *field_emit_hud_percentage(void *packet, void *context, s32 value, u16 *pos
     {
         s32 digit;
         digit = value / 10;
-        packet = field_emit_hud_glyph(packet, context, digit, (s32 *)position);
+        packet = field_emit_hud_glyph(packet, context, digit, (s32*)position);
         value -= digit * 10;
     }
     *position += FIELD_HUD_GLYPH_ADVANCE;
-    packet = field_emit_hud_glyph(packet, context, value, (s32 *)position);
+    packet = field_emit_hud_glyph(packet, context, value, (s32*)position);
     *position += FIELD_HUD_GLYPH_ADVANCE;
-    return field_emit_hud_glyph(packet, context, FIELD_HUD_GLYPH_PERCENT, (s32 *)position);
+    return field_emit_hud_glyph(packet, context, FIELD_HUD_GLYPH_PERCENT, (s32*)position);
 }
 
 /**
@@ -1024,24 +1019,24 @@ void *field_emit_hud_percentage(void *packet, void *context, s32 value, u16 *pos
  * @return Cursor immediately after the sprite.
  * @see decomp.me (100%) TODO
  */
-void *field_emit_hud_glyph(void *packet, void *context, s32 value, s32 *position)
+void* field_emit_hud_glyph(void* packet, void* context, s32 value, s32* position)
 {
-    SPRT *sprite;
-    FieldPrimitiveContext *ot;
+    SPRT* sprite;
+    FieldPrimitiveContext* ot;
     s32 packed_xy;
 
-    sprite = (SPRT *)packet;
-    ot = (FieldPrimitiveContext *)context;
+    sprite = (SPRT*)packet;
+    ot = (FieldPrimitiveContext*)context;
 
-    *(u32 *)&sprite->r0 = 0x808080;
+    *(u32*)&sprite->r0 = 0x808080;
     setSprt(sprite);
     packed_xy = *position;
-    *(s16 *)&sprite->u0 = (s16)((value * 8) + 0x1558);
-    *(u32 *)&sprite->w = 0xB0008;
+    *(s16*)&sprite->u0 = (s16)((value * 8) + 0x1558);
+    *(u32*)&sprite->w = 0xB0008;
     sprite->clut = FIELD_HUD_CLUT;
-    *(u32 *)&sprite->x0 = packed_xy;
+    *(u32*)&sprite->x0 = packed_xy;
     addPrim(&ot->tag, sprite);
-    return (u8 *)packet + sizeof(SPRT);
+    return (u8*)packet + sizeof(SPRT);
 }
 
 /**
@@ -1051,12 +1046,12 @@ void *field_emit_hud_glyph(void *packet, void *context, s32 value, s32 *position
  * @param ot Ordering-table tag to link into.
  * @return Pointer just past the quad.
  */
-POLY_F4 *field_emit_hud_damage_quad(POLY_F4 *prim, s32 y, u32 *ot)
+POLY_F4* field_emit_hud_damage_quad(POLY_F4* prim, s32 y, u32* ot)
 {
     extern s32 g_field_hud_bar_height;
     extern s32 g_field_hud_bar_offset_y;
 
-    *((u32 *)&prim->r0) = 0xFF;
+    *((u32*)&prim->r0) = 0xFF;
     setPolyF4(prim);
     prim->x3 = prim->x1 - 3;
     prim->y1 = ((u16)g_field_hud_bar_offset_y) + y;
@@ -1075,7 +1070,7 @@ POLY_F4 *field_emit_hud_damage_quad(POLY_F4 *prim, s32 y, u32 *ot)
  * @param ot Ordering-table tag to link into.
  * @return Pointer just past the quad.
  */
-POLY_F4 *field_emit_hud_healing_quad(POLY_F4 *prim, s32 y, u32 *ot)
+POLY_F4* field_emit_hud_healing_quad(POLY_F4* prim, s32 y, u32* ot)
 {
     extern s32 g_field_hud_bar_height;
     extern s32 g_field_hud_bar_offset_y;
@@ -1084,7 +1079,7 @@ POLY_F4 *field_emit_hud_healing_quad(POLY_F4 *prim, s32 y, u32 *ot)
     {
         prim->x1 = prim->x0 + 1;
     }
-    *((u32 *)&prim->r0) = 0xFFFFFF;
+    *((u32*)&prim->r0) = 0xFFFFFF;
     setPolyF4(prim);
     prim->x3 = prim->x1 - 3;
     prim->y1 = ((u16)g_field_hud_bar_offset_y) + y;
@@ -1104,19 +1099,19 @@ POLY_F4 *field_emit_hud_healing_quad(POLY_F4 *prim, s32 y, u32 *ot)
  * @param xy Packed screen position copied into the sprite's x0/y0.
  * @return Pointer just past the appended DR_TPAGE primitive.
  */
-void *field_emit_actor_portrait(SPRT *sprt, u32 *ot, s32 index, u32 *xy)
+void* field_emit_actor_portrait(SPRT* sprt, u32* ot, s32 index, u32* xy)
 {
     extern u8 D_800FDCEA;
     extern u16 D_800FE01E;
     extern FieldHudActorTexture g_field_actors[];
 
-    DR_TPAGE *mode;
+    DR_TPAGE* mode;
 
-    *(u32 *)&sprt->r0 = 0x808080;
+    *(u32*)&sprt->r0 = 0x808080;
     setSprt(sprt);
-    *(u32 *)&sprt->x0 = *xy;
-    *(u16 *)&sprt->u0 = 0xE800;
-    *(u32 *)&sprt->w = 0x180018;
+    *(u32*)&sprt->x0 = *xy;
+    *(u16*)&sprt->u0 = 0xE800;
+    *(u32*)&sprt->w = 0x180018;
 
     if (index == 2 && D_800FDCEA >= 0x41)
     {
@@ -1129,7 +1124,7 @@ void *field_emit_actor_portrait(SPRT *sprt, u32 *ot, s32 index, u32 *xy)
 
     addPrim(ot, sprt);
 
-    mode = (DR_TPAGE *)(sprt + 1);
+    mode = (DR_TPAGE*)(sprt + 1);
     if (index >= 2)
     {
         setDrawTPage(mode, 0, 0, getTPage(0, 1, 0x340 - (index << 6), 0));
@@ -1153,16 +1148,16 @@ void *field_emit_actor_portrait(SPRT *sprt, u32 *ot, s32 index, u32 *xy)
  * @param rect Destination rectangle forwarded to field_upload_image_resource.
  * @param mode Upload mode forwarded to field_upload_image_resource.
  */
-void field_load_vram_resource(s32 id, s16 *rect, s32 mode)
+void field_load_vram_resource(s32 id, s16* rect, s32 mode)
 {
-    extern u8 *D_8010D038;
-    s32 field_upload_image_resource(RECT *rect, Tim *resource, s32 mode);
+    extern u8* D_8010D038;
+    s32 field_upload_image_resource(RECT * rect, Tim * resource, s32 mode);
 
-    u8 *buf = D_8010D038;
+    u8* buf = D_8010D038;
 
     cdrom_queue_read(id & 0xFFFF, buf);
     cdrom_wait_queue_empty();
-    field_upload_image_resource((RECT *)rect, (Tim *)buf, mode);
+    field_upload_image_resource((RECT*)rect, (Tim*)buf, mode);
 }
 
 /**
@@ -1178,13 +1173,13 @@ void field_load_vram_resource(s32 id, s16 *rect, s32 mode)
  * @return Packed palette entries 240 and 241 (the word at byte offset 0x1F4).
  * @see decomp.me (100.00%)
  */
-s32 field_upload_image_resource(RECT *rect, Tim *resource, s32 mode)
+s32 field_upload_image_resource(RECT* rect, Tim* resource, s32 mode)
 {
     RECT load_rect;
     s32 offset;
     s32 palette_word;
-    TimBlock *image;
-    TimDimensions *dimensions;
+    TimBlock* image;
+    TimDimensions* dimensions;
     u16 x;
 
     /* The caller supplies separate pixel and palette destinations. */
@@ -1201,17 +1196,17 @@ s32 field_upload_image_resource(RECT *rect, Tim *resource, s32 mode)
         load_rect.w = dimensions->width;
         load_rect.h = dimensions->height;
     }
-    LoadImage(&load_rect, (u_long *)resource->clut_data);
+    LoadImage(&load_rect, (u_long*)resource->clut_data);
 
     image = TIM_PIXEL_BLOCK(resource, offset);
     x = rect->x;
-    palette_word = *(s32 *)&resource->clut_data[240];
+    palette_word = *(s32*)&resource->clut_data[240];
     load_rect.x = x;
     load_rect.y = rect->y;
     dimensions = &image->dimensions;
     load_rect.w = dimensions->width;
     load_rect.h = dimensions->height;
-    LoadImage(&load_rect, (u_long *)(image + 1));
+    LoadImage(&load_rect, (u_long*)(image + 1));
     rect->x = dimensions->width;
     rect->y = dimensions->height;
     return palette_word;
@@ -1288,8 +1283,8 @@ typedef struct
 /** @brief Resource entry view used to select the shadow inset scale. */
 typedef struct
 {
-    u8 *start;
-    u8 *end;
+    u8* start;
+    u8* end;
     u8 shadow_scale_mode;
     u8 slot_index;
     u8 pad_0x0a[4];
@@ -1297,8 +1292,8 @@ typedef struct
     u32 flags;
 } ShadowResourceEntry;
 
-#define SHADOW_SCREEN_POSITION ((ShadowScreenPosition *)0x1F8000C0)
-#define SHADOW_WORLD_POSITION ((ShadowWorldPosition *)0x1F8000C4)
+#define SHADOW_SCREEN_POSITION ((ShadowScreenPosition*)0x1F8000C0)
+#define SHADOW_WORLD_POSITION ((ShadowWorldPosition*)0x1F8000C4)
 #define SHADOW_SCREEN_CENTER_X 160
 #define SHADOW_SCREEN_CENTER_Y 112
 #define SHADOW_OT_SIZE 4096
@@ -1330,15 +1325,15 @@ typedef struct
 typedef struct
 {
     u8 pad0[0x21];
-    u8 unk21;   /* 0x21 */
+    u8 unk21; /* 0x21 */
     u8 pad22[0x24 - 0x22];
-    u8 unk24;   /* 0x24 */
+    u8 unk24; /* 0x24 */
     u8 pad25[0x27 - 0x25];
-    u8 unk27;   /* 0x27 */
+    u8 unk27; /* 0x27 */
     u8 pad28[0x2E - 0x28];
-    s16 unk2E;  /* 0x2E */
+    s16 unk2E; /* 0x2E */
     u8 pad30[0x3A - 0x30];
-    u8 unk3A;   /* 0x3A */
+    u8 unk3A; /* 0x3A */
 } Actor;
 
 typedef struct
@@ -1407,12 +1402,12 @@ typedef struct
 typedef struct
 {
     u8 pad0[0xC];
-    s32 unkC;     /* 0xC flags; bit 0x2000 cleared by the linked-actor helpers */
+    s32 unkC; /* 0xC flags; bit 0x2000 cleared by the linked-actor helpers */
     u8 pad10[0x170 - 0x10];
-    u8 unk170;    /* 0x170 index of the linked actor */
+    u8 unk170; /* 0x170 index of the linked actor */
     u8 pad171[0x174 - 0x171];
-    u32 unk174;   /* 0x174 */
-    u32 unk178;   /* 0x178 bit 1 marks a link to unk170 */
+    u32 unk174; /* 0x174 */
+    u32 unk178; /* 0x178 bit 1 marks a link to unk170 */
     u8 pad17C[0x23C - 0x17C];
 } ActorSlotData;
 
@@ -1420,9 +1415,9 @@ typedef struct
 typedef struct
 {
     u8 pad0[0x24];
-    u8 unk24;   /* 0x24 */
+    u8 unk24; /* 0x24 */
     u8 pad25[0x23A - 0x25];
-    u8 unk23A;  /* 0x23A */
+    u8 unk23A; /* 0x23A */
     u8 pad23B[0x244 - 0x23B];
 } ActorSlot;
 
@@ -1553,7 +1548,7 @@ extern ActorSlot g_field_actor_slots[];
 extern FieldEffectMotion D_801077FC;
 
 extern ShadowResourceEntry g_field_resource_entries[];
-extern Rec87564 *D_8010A01C;
+extern Rec87564* D_8010A01C;
 extern s32 g_field_scene_record_table;
 
 /**
@@ -1580,15 +1575,15 @@ void func_80086494(s32 index)
     s32 highest_bit;
     s32 bit_mask;
     u16 animation_kind;
-    u32 *action;
-    u32 *action_base;
+    u32* action;
+    u32* action_base;
     u32 action_value;
-    FieldControlActor *actor;
-    FieldControlRecord *record;
-    FieldControlState *runtime;
+    FieldControlActor* actor;
+    FieldControlRecord* record;
+    FieldControlState* runtime;
 
     record_offset = index * 0x54;
-    record = (FieldControlRecord *)(record_offset + (u8 *)g_field_actors);
+    record = (FieldControlRecord*)(record_offset + (u8*)g_field_actors);
     runtime = &g_field_object_states[index];
     flags_before = runtime->unkc;
     actor = &D_800FB3C8[index];
@@ -1604,7 +1599,7 @@ void func_80086494(s32 index)
     {
         if (actor->unk24 == 0)
         {
-            do
+            do /* a loop form lets loop.c hoist the callback argument; the original searches with a label */
             {
                 bit_mask = 0x8000;
                 bit_index = 0xF;
@@ -1612,34 +1607,34 @@ void func_80086494(s32 index)
                 action_base = D_800EB00C;
                 action = action_base + bit_index;
             find_action:
-            if ((changed_or_current & bit_mask) && (action_value = *action, (action_value != 0xFF)))
-            {
-                if (action_value < 0x100U)
+                if ((changed_or_current & bit_mask) && (action_value = *action, (action_value != 0xFF)))
                 {
-                    if (runtime->unkc & bit_mask)
+                    if (action_value < 0x100U)
                     {
-                        func_80083EEC(index, animation_slot, action_value);
-                        field_start_actor_animation(animation_slot, 0, 0);
+                        if (runtime->unkc & bit_mask)
+                        {
+                            func_80083EEC(index, animation_slot, action_value);
+                            field_start_actor_animation(animation_slot, 0, 0);
+                        }
                     }
+                    else
+                    {
+                        ((void (*)(FieldControlRecord*, s32))action_value)((FieldControlRecord*)(record_offset + (u8*)g_field_actors),
+                                                                           runtime->unkc & bit_mask);
+                    }
+                    clear_mask = ~bit_mask;
+                    runtime->unk17c = (s32)((runtime->unk17c & clear_mask) | (runtime->unkc & bit_mask));
                 }
                 else
                 {
-                    ((void (*)(FieldControlRecord *, s32))action_value)(
-                        (FieldControlRecord *)(record_offset + (u8 *)g_field_actors), runtime->unkc & bit_mask);
+                    action--;
+                    bit_index--;
+                    bit_mask >>= 1;
+                    if (bit_index >= 0)
+                    {
+                        goto find_action;
+                    }
                 }
-                clear_mask = ~bit_mask;
-                runtime->unk17c = (s32)((runtime->unk17c & clear_mask) | (runtime->unkc & bit_mask));
-            }
-            else
-            {
-                action--;
-                bit_index--;
-                bit_mask >>= 1;
-                if (bit_index >= 0)
-                {
-                    goto find_action;
-                }
-            }
             } while (0);
         }
         else
@@ -1738,7 +1733,7 @@ void func_80086494(s32 index)
  * @param arg1 Nonzero to run the transition; zero does nothing.
  * @see decomp.me (100%) TODO
  */
-void func_80086850(Actor *arg0, s32 arg1)
+void func_80086850(Actor* arg0, s32 arg1)
 {
     extern ActorRec g_field_object_states[];
 
@@ -1762,7 +1757,7 @@ void func_80086850(Actor *arg0, s32 arg1)
  * @param arg1 Nonzero to run the transition; zero does nothing.
  * @see decomp.me (100%) TODO
  */
-void func_800868FC(Actor *arg0, s32 arg1)
+void func_800868FC(Actor* arg0, s32 arg1)
 {
     extern ActorRec g_field_object_states[];
 
@@ -1784,7 +1779,7 @@ void func_800868FC(Actor *arg0, s32 arg1)
  * @param object Field object whose actor-part definition is updated.
  * @param half_scale Non-zero for half-size X/Z scale, zero for full-size scale.
  */
-void field_set_actor_horizontal_scale(FieldObjectState *object, s32 half_scale)
+void field_set_actor_horizontal_scale(FieldObjectState* object, s32 half_scale)
 {
     extern FieldActorPartDef g_field_object_parts[];
 
@@ -1809,7 +1804,7 @@ void func_800869FC(FieldObjectRecord* object, s32 is_set)
 {
     s32 func_80083EEC(u8 object_index, s32 actor_index, s32 animation_id);
     void field_start_actor_animation(s32 actor_index, s32 arg1, s32 arg2);
-    void field_restart_actor_animation(FieldObjectRecord* object);
+    void field_restart_actor_animation(FieldObjectRecord * object);
     void func_80086C00(u8 object_index);
     extern FieldActorSlot g_field_object_states[];
     u8 animation_sequence;
@@ -1844,9 +1839,9 @@ void func_800869FC(FieldObjectRecord* object, s32 is_set)
  * @param rec Actor state record.
  * @param flag Nonzero to enter the state, zero to leave it.
  */
-void func_80086ACC(FieldActorState *rec, s32 flag)
+void func_80086ACC(FieldActorState* rec, s32 flag)
 {
-    void field_restart_actor_animation(FieldActorState *);
+    void field_restart_actor_animation(FieldActorState*);
     s32 func_80083EEC(u8, s32, s32);
     void field_start_actor_animation(s32, s32, s32);
     void func_80086C00(s32 idx);
@@ -1888,12 +1883,12 @@ void func_80086ACC(FieldActorState *rec, s32 flag)
 void func_80086C00(s32 idx)
 {
     extern ActorSlotData g_field_object_states[];
-    ActorSlotData *base = g_field_object_states;
-    ActorSlotData *e = &base[idx];
+    ActorSlotData* base = g_field_object_states;
+    ActorSlotData* e = &base[idx];
 
     if ((e->unk178 >> 1) & 1)
     {
-        ActorSlotData *e2 = &base[e->unk170];
+        ActorSlotData* e2 = &base[e->unk170];
         e2->unkC &= ~0x2000;
     }
 }
@@ -1908,7 +1903,7 @@ void func_80086C00(s32 idx)
  * @param arg0 Actor state record.
  * @param arg1 Selects the 0xC (nonzero) or 0xD (zero) path.
  */
-void func_80086C70(FieldActorState *arg0, s32 arg1)
+void func_80086C70(FieldActorState* arg0, s32 arg1)
 {
     s32 func_80083EEC(u8, s32, s32);
     void field_start_actor_animation(s32, s32, s32);
@@ -1920,11 +1915,11 @@ void func_80086C70(FieldActorState *arg0, s32 arg1)
         field_start_actor_animation(arg0->unk3A + 0x40, 0, 0);
         arg0->unk25 = 0xFE;
         {
-            ActorSlotData *base = g_field_object_states;
-            ActorSlotData *e = &base[arg0->unk3A];
+            ActorSlotData* base = g_field_object_states;
+            ActorSlotData* e = &base[arg0->unk3A];
             if ((e->unk178 >> 1) & 1)
             {
-                ActorSlotData *e2 = &base[e->unk170];
+                ActorSlotData* e2 = &base[e->unk170];
                 e2->unkC &= ~0x2000;
             }
         }
@@ -1946,15 +1941,15 @@ void func_80086C70(FieldActorState *arg0, s32 arg1)
  *
  * @param p Actor state record viewed as bytes.
  */
-void func_80086D5C(u8 *p)
+void func_80086D5C(u8* p)
 {
     extern ActorSlotData g_field_object_states[];
-    ActorSlotData *base = g_field_object_states;
-    ActorSlotData *e = &base[p[0x3A]];
+    ActorSlotData* base = g_field_object_states;
+    ActorSlotData* e = &base[p[0x3A]];
 
     if ((e->unk178 >> 1) & 1)
     {
-        ActorSlotData *e2 = &base[e->unk170];
+        ActorSlotData* e2 = &base[e->unk170];
         e2->unkC &= ~0x2000;
     }
 }
@@ -1965,7 +1960,7 @@ void func_80086D5C(u8 *p)
  * @param arg1 Nonzero plays the animation, zero clears the slot bytes.
  * @see decomp.me (100%) TODO
  */
-void func_80086DD0(FieldActorState *arg0, s32 arg1)
+void func_80086DD0(FieldActorState* arg0, s32 arg1)
 {
     s32 func_80083EEC(u8, s32, s32);
     void field_start_actor_animation(s32, s32, s32);
@@ -1988,7 +1983,7 @@ void func_80086DD0(FieldActorState *arg0, s32 arg1)
  * @param arg1 Nonzero plays the animation, zero clears the slot bytes.
  * @see decomp.me (100%) TODO
  */
-void func_80086E78(FieldActorState *arg0, s32 arg1)
+void func_80086E78(FieldActorState* arg0, s32 arg1)
 {
     s32 func_80083EEC(u8, s32, s32);
     void field_start_actor_animation(s32, s32, s32);
@@ -2030,14 +2025,14 @@ void func_80086F20(void)
  * @param src Source record, 0x28 bytes.
  * @param value Halfword stored in the parallel D_801058E0 slot.
  */
-void func_80086F48(const void *src, s16 value)
+void func_80086F48(const void* src, s16 value)
 {
-    void *bcopy(const void *, void *, int);
+    void* bcopy(const void*, void*, int);
     extern FieldUnkRecord_80086F20 D_80107800[];
     extern s16 D_801058E0[];
     s32 i = 0;
-    s16 *slot = D_801058E0;
-    FieldUnkRecord_80086F20 *entry = D_80107800;
+    s16* slot = D_801058E0;
+    FieldUnkRecord_80086F20* entry = D_80107800;
 
     for (; i < 0x100; i++)
     {
@@ -2056,19 +2051,19 @@ void func_80086F48(const void *src, s16 value)
  * @brief Fade, translate, and enqueue active primitives from the 256-entry effect pool.
  * @param buffer Ordering table and packet-buffer state, with the write cursor at offset 0x40B8.
  */
-void func_80086FB8(u8 *buffer)
+void func_80086FB8(u8* buffer)
 {
     extern POLY_FT4 D_80107800[];
     extern u16 D_801058E0[];
-    extern void bcopy(void *, void *, s32);
-    POLY_FT4 *source;
-    POLY_FT4 *output;
-    u32 *ordering;
+    extern void bcopy(void*, void*, s32);
+    POLY_FT4* source;
+    POLY_FT4* output;
+    u32* ordering;
     s32 i;
     u8 color;
 
-    output = *(POLY_FT4 **)(buffer + 0x40B8);
-    ordering = (u32 *)buffer;
+    output = *(POLY_FT4**)(buffer + 0x40B8);
+    ordering = (u32*)buffer;
     source = D_80107800;
 
     for (i = 0; i < 256;)
@@ -2107,7 +2102,7 @@ void func_80086FB8(u8 *buffer)
         source++;
     }
 
-    *(POLY_FT4 **)(buffer + 0x40B8) = output;
+    *(POLY_FT4**)(buffer + 0x40B8) = output;
 }
 
 /**
@@ -2119,7 +2114,7 @@ void func_80086FB8(u8 *buffer)
  * @return Next free primitive, unchanged if the shadow has collapsed.
  * @see decomp.me (100%)
  */
-POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primitives, s32 *ordering_table, ShadowFootprint *footprint)
+POLY_FT4* field_render_actor_ground_shadow(ShadowActor* actor, POLY_FT4* primitives, s32* ordering_table, ShadowFootprint* footprint)
 {
     extern ShadowActorSlot g_field_object_states[];
     extern ShadowResourceEntry g_field_resource_entries[];
@@ -2149,8 +2144,8 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
     s32 edge_work;
     s32 scale_work;
     s32 shadow_bias;
-    ShadowScreenPosition *screen;
-    ShadowWorldPosition *scratch;
+    ShadowScreenPosition* screen;
+    ShadowWorldPosition* scratch;
 
     /* Project the ground point; negative fixed-point values round toward zero. */
     screen = SHADOW_SCREEN_POSITION;
@@ -2256,7 +2251,7 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
         primitives->x0 = edge_work;
         primitives->x2 = edge_work;
 
-        do
+        do /* scope blocks reproduce the original scheduling of this branch */
         {
             right_inset_local = screen->x;
         } while (0);
@@ -2353,7 +2348,7 @@ POLY_FT4 *field_render_actor_ground_shadow(ShadowActor *actor, POLY_FT4 *primiti
  * @brief Hand the actor's animation record to func_800B2198 and cache the record.
  * @param arg0 Actor record whose 0x3A index selects the g_field_object_states slot.
  */
-void func_80087564(Rec87564 *arg0)
+void func_80087564(Rec87564* arg0)
 {
     extern State87564 g_field_object_states[];
 
@@ -2362,6 +2357,7 @@ void func_80087564(Rec87564 *arg0)
 }
 
 /**
+ * @brief Return the current scene record table.
  * @return Value of g_field_scene_record_table.
  * @see decomp.me (100%) N/A -- trivial 4-instruction leaf function, no scratch needed.
  */
@@ -2377,10 +2373,10 @@ s32 func_800875B4(void)
  */
 s32 func_800875C4(void)
 {
-    Rec875C4 *rec = func_80087C9C();
+    Rec875C4* rec = func_80087C9C();
     s32 result;
 
-    if (rec == (Rec875C4 *)-1)
+    if (rec == (Rec875C4*)-1)
     {
         return -1;
     }

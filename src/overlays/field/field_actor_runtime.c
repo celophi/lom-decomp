@@ -260,6 +260,11 @@ typedef struct
             u16 lo;
             u16 animation_id;
         } h;
+        struct
+        {
+            u8 unk224;
+            u8 target_visible;
+        } b;
     } u224;
     u8 owner_object_index;
     u8 unk229[9];
@@ -267,7 +272,7 @@ typedef struct
     u8 unk233;
     u16 unk234;
     u16 unk236;
-    u8 pad238[2];
+    u16 unk238;
     u8 unk23A;
     u8 unk23B;
     u8 pad23C[0x240 - 0x23C];
@@ -538,6 +543,7 @@ void func_800A7434(void);
 void func_800A74B8(void);
 
 void func_80092124(void);
+void field_build_actor_render_commands(FieldRenderContext* render_ctx, s32 unused);
 void akao_cmd_c1(s32, s32, s32);
 void akao_cmd_a9(s32, s32);
 
@@ -1211,27 +1217,21 @@ void field_initialize_actor_slots(void)
 {
     s32 object_index;
     s32 actor_index;
-    FieldActorState* actor_slots;
-    volatile u8* actor_cursor;
-    object_index = 0;
-    do
+    FieldActorState* actor;
+
+    for (object_index = 0; object_index < 13; object_index++)
     {
         g_field_object_states[object_index].u.unk178 &= ~1;
-        object_index++;
-    } while (object_index < 0xD);
-    actor_index = 0;
-    actor_slots = g_field_actor_slots;
-    actor_cursor = ((u8*)actor_slots) + 0x238;
-    do
+    }
+    actor = g_field_actor_slots;
+    for (actor_index = 0; actor_index < 80; actor_index++, actor++)
     {
-        actor_cursor[-5] = actor_index;
-        actor_index++;
-        actor_cursor[-0x213] = 0;
-        actor_cursor[-0x214] = 0;
-        *((volatile u16*)(actor_cursor - 0x16)) = 0;
-        *((volatile u16*)actor_cursor) = 0;
-        actor_cursor += 0x244;
-    } while (actor_index < 0x50);
+        actor->unk233 = actor_index;
+        actor->unk25 = 0;
+        actor->unk24 = 0;
+        actor->unk222 = 0;
+        actor->unk238 = 0;
+    }
 }
 
 /**
@@ -1284,7 +1284,7 @@ void field_start_actor_animation(s32 slot_index, int target_count, u8* targets)
     actor->unk23B = 1;
     actor->unk229[0] = 0;
     actor->unk232 = target_count;
-    ((u8*)&actor->u224.h.lo)[1] = 0;
+    actor->u224.b.target_visible = 0;
     if (target_count != 0)
     {
         target_cursor = targets;
@@ -1645,47 +1645,52 @@ void field_reset_actor_track_mask(FieldActorTrackMaskState* actor)
 void field_prepare_actor_render_commands(s32 render_context, s32 unused)
 {
     field_render_effects((FieldRenderContext *) render_context);
-    field_build_actor_render_commands(render_context, unused);
+    field_build_actor_render_commands((FieldRenderContext*)render_context, unused);
 }
 
 /**
- * @brief Build GPU command packets for all visible field actors.
- * @param render_context Field render context and packet cursor.
- * decomp.me (100%) https://decomp.me/scratch/Sgd61
+ * @brief Apply actor animation effects and emit full-screen tint packets.
+ *
+ * The first pass drives the owner and target object visibility flags from the
+ * animation tracks, the second evaluates the screen offset tracks, and the
+ * third emits a semi-transparent screen tint (or sets the global color scale)
+ * for every active actor with a color track.
+ *
+ * @param render_ctx Field render context and packet cursor.
+ * @param unused Unused; forwarded by field_prepare_actor_render_commands().
+ * @see decomp.me (100%) https://decomp.me/scratch/Sgd61
  */
-void field_build_actor_render_commands(void* render_context)
+void field_build_actor_render_commands(FieldRenderContext* render_ctx, s32 unused)
 {
     u32 packed_color;
-    FieldRenderContext* render_ctx = (FieldRenderContext *) render_context;
-    s32 target_index_copy;
     u32* ordering_table = &render_ctx->ordering_table;
     u32* packet = (u32*)render_ctx->packet_cursor;
     FieldActorState* actor = g_field_actor_slots;
     s32 actor_index = 0;
-    u32 color_word;
-    int blend_mode;
-    int state_mask;
-    int target_animation_enabled;
-    do
+    CVECTOR color;
+    s32 blend_mode;
+    s32 has_target_track;
+
+    for (; actor_index < 80; actor_index++, actor++)
     {
-        state_mask = actor->unk23A != 0;
-        if (state_mask)
+        if (actor->unk23A != 0)
         {
             u16 animation_flags = actor->unkC->unk18;
-            if ((animation_flags & 2) && (!(actor->unkC->unk18 & 8)))
+            if ((animation_flags & 2) && !(actor->unkC->unk18 & 8))
             {
-                u8 object_state_value;
-                s32 cond;
+                u8 visibility;
+                s32 track_value;
+
                 g_field_track_index = 0;
-                cond = field_evaluate_parameter_track(actor, (actor->unkC->unk18 >> 8) & 0xF);
-                object_state_value = 0;
-                if (cond != 0)
+                track_value = field_evaluate_parameter_track(actor, (actor->unkC->unk18 >> 8) & 0xF);
+                visibility = 0;
+                if (track_value != 0)
                 {
-                    object_state_value = 0xFE;
+                    visibility = 0xFE;
                 }
-                if (object_state_value != 0)
+                if (visibility != 0)
                 {
-                    g_field_actors[actor->owner_object_index].unk25 = object_state_value;
+                    g_field_actors[actor->owner_object_index].unk25 = visibility;
                     g_field_object_states[actor->owner_object_index].u.unk178 |= 1;
                     g_field_object_states[actor->owner_object_index].u.b.unk17A = actor->unk233;
                 }
@@ -1693,178 +1698,142 @@ void field_build_actor_render_commands(void* render_context)
                 {
                     u8 owner_index = actor->owner_object_index;
                     s16 owner_state = g_field_actors[owner_index].unk2A;
-                    if ((owner_state == 0x90) || (owner_state == 0x94))
+                    if (((owner_state != 0x90) && (owner_state != 0x94)) || (g_field_object_states[owner_index].unkC & 0x200))
                     {
-                        if (g_field_object_states[owner_index].unkC & 0x200)
-                        {
-                            g_field_actors[actor->owner_object_index].unk25 = object_state_value;
-                        }
-                    }
-                    else
-                    {
-                        g_field_actors[actor->owner_object_index].unk25 = object_state_value;
+                        g_field_actors[actor->owner_object_index].unk25 = visibility;
                     }
                 }
             }
-            target_animation_enabled = actor->unkC->unk18 & 4;
-            if (target_animation_enabled && (!(actor->unkC->unk18 & 0x10)))
+            has_target_track = actor->unkC->unk18 & 4;
+            if (has_target_track && !(actor->unkC->unk18 & 0x10))
             {
-                s32 target_index = 0;
-                if (actor->unk232 != 0)
+                s32 target_index;
+
+                for (target_index = 0; target_index < actor->unk232; target_index++)
                 {
-                    do
+                    u8 visibility;
+                    s32 track_value;
+
+                    g_field_track_index = target_index;
+                    track_value = field_evaluate_parameter_track(actor, actor->unkC->unk18 >> 12);
+                    visibility = 0;
+                    if (track_value != 0)
                     {
-                        u8 target_state_value;
-                        s32 cond2;
-                        g_field_track_index = target_index;
-                        cond2 = field_evaluate_parameter_track(actor, actor->unkC->unk18 >> 0xC);
-                        target_state_value = 0;
-                        if (cond2 != 0)
+                        visibility = 0xFE;
+                    }
+                    if (actor->unk229[target_index] != 0xFF)
+                    {
+                        if (visibility != 0)
                         {
-                            target_state_value = 0xFE;
+                            g_field_actors[actor->unk229[target_index]].unk25 = visibility;
+                            g_field_object_states[actor->unk229[target_index]].u.unk178 |= 1;
+                            g_field_object_states[actor->unk229[target_index]].u.b.unk17A = actor->unk233;
+                            actor->u224.b.target_visible = 1;
                         }
-                        if (actor->unk229[target_index] != 0xFF)
+                        else
                         {
-                            if (target_state_value != 0)
-                            {
-                                g_field_actors[actor->unk229[target_index]].unk25 = target_state_value;
-                                do
-                                {
-                                    g_field_object_states[actor->unk229[target_index]].u.unk178 |= 1;
-                                    g_field_object_states[actor->unk229[target_index]].u.b.unk17A = actor->unk233;
-                                } while (0);
-                                ((u8*)actor)[0x225] = 1;
-                            }
-                            else
-                            {
-                                target_index_copy = target_index;
-                                g_field_actors[actor->unk229[target_index_copy]].unk25 = 0;
-                            }
+                            g_field_actors[actor->unk229[target_index]].unk25 = 0;
                         }
-                        target_index++;
-                    } while (target_index < actor->unk232);
+                    }
                 }
             }
         }
-        actor_index++;
-        actor++;
-    } while (actor_index < 0x50);
+    }
+
     g_field_track_index = 0;
     actor = g_field_actor_slots;
     actor_index = 0;
-    do
+    for (; actor_index < 80; actor_index++, actor++)
     {
         if (actor->unk23A != 0)
         {
             FieldActorAnimationDef* animation = actor->unkC;
             if (animation->unkC & 0x1000)
             {
-                s32 color_target = animation->unkC >> 0xD;
-                switch (color_target & 3)
+                s32 offset_mode = animation->unkC >> 13;
+                switch (offset_mode & 3)
                 {
                 case 0:
-                    D_800F2278 = field_evaluate_parameter_track(actor, animation->unk10 >> 0xC);
+                    D_800F2278 = field_evaluate_parameter_track(actor, animation->unk10 >> 12);
                     break;
 
                 case 1:
-                    D_800F227C = field_evaluate_parameter_track(actor, animation->unk10 >> 0xC);
+                    D_800F227C = field_evaluate_parameter_track(actor, animation->unk10 >> 12);
                     break;
 
                 case 2:
-                    D_800F227C = (D_800F2278 = field_evaluate_parameter_track(actor, animation->unk10 >> 0xC));
+                    D_800F227C = D_800F2278 = field_evaluate_parameter_track(actor, animation->unk10 >> 12);
                     break;
 
                 case 3:
-                    D_800F2278 = field_evaluate_parameter_track(actor, animation->unk10 >> 0xC);
-                    D_800F227C = field_evaluate_parameter_track(actor, ((actor->unkC->unk10 >> 0xC) + 1) & 0xF);
+                    D_800F2278 = field_evaluate_parameter_track(actor, animation->unk10 >> 12);
+                    D_800F227C = field_evaluate_parameter_track(actor, ((actor->unkC->unk10 >> 12) + 1) & 0xF);
                     break;
                 }
             }
         }
-        actor_index++;
-        actor++;
-    } while (actor_index < 0x50);
+    }
+
     actor = g_field_actor_slots;
     actor_index = 0;
-    do
+    for (; actor_index < 80; actor_index++, actor++)
     {
-        state_mask = 0x00FFFFFF;
         if ((actor->unk23A != 0) && (actor->unk24 != 0))
         {
-            FieldActorAnimationDef* color_animation = actor->unkC;
-            u8 curve_selector = (u8)color_animation->unkC;
-            if (((u8)color_animation->unkC) < 0x10)
+            FieldActorAnimationDef* animation = actor->unkC;
+            u8 curve_selector = (u8)animation->unkC;
+            if ((u8)animation->unkC < 16)
             {
-                if (((color_animation->unkC >> 8) & 1) != 0)
+                if (((animation->unkC >> 8) & 1) != 0)
                 {
-                    do
-                    {
-                        ((u8*)(&color_word))[0] = field_evaluate_parameter_track(actor, (u8)color_animation->unkC);
-                    } while (0);
-                    ((u8*)(&color_word))[1] = field_evaluate_parameter_track(actor, (((u8)actor->unkC->unkC) + 1) & 0xF);
-                    ((u8*)(&color_word))[2] = field_evaluate_parameter_track(actor, (((u8)actor->unkC->unkC) + 2) & 0xF);
+                    color.r = field_evaluate_parameter_track(actor, (u8)animation->unkC);
+                    color.g = field_evaluate_parameter_track(actor, ((u8)actor->unkC->unkC + 1) & 0xF);
+                    color.b = field_evaluate_parameter_track(actor, ((u8)actor->unkC->unkC + 2) & 0xF);
                 }
                 else
                 {
-                    ((u8*)(&color_word))[0] = (((u8*)(&color_word))[1] = (((u8*)(&color_word))[2] = field_evaluate_parameter_track(actor, curve_selector & 0xF)));
+                    color.r = color.g = color.b = field_evaluate_parameter_track(actor, curve_selector & 0xF);
                 }
                 if ((actor->unkC->unkC >> 8) & 4)
                 {
-                    field_set_global_color_scale(((u8*)(&color_word))[0] * 2, ((u8*)(&color_word))[1] * 2, ((u8*)(&color_word))[2] * 2);
+                    field_set_global_color_scale(color.r * 2, color.g * 2, color.b * 2);
                 }
                 else
                 {
-                    u32 packet_word;
+                    TILE* tile;
+                    DR_TPAGE* tpage;
+
                     if ((actor->unkC->unkC >> 8) & 1)
                     {
-                        if (((u8*)(&color_word))[0] == 0)
+                        if ((color.r == 0) && (color.g == 0) && (color.b == 0))
                         {
-                            if (((u8*)(&color_word))[1] == 0)
-                            {
-                                if (((u8*)(&color_word))[2] == 0)
-                                {
-                                    goto block_59;
-                                }
-                            }
+                            continue;
                         }
                     }
-                    else if (((u8*)(&color_word))[0] == 0)
+                    else if (color.r == 0)
                     {
-                        goto block_59;
+                        continue;
                     }
-                    packet_word = 0xE1000005;
-                    {
-                        u8* primitive = ((u8*)packet) + 4;
-                        packed_color = color_word;
-                        primitive[-1] = 3;
-                        *((u16*)(primitive + 8)) = 0x140;
-                        *((u16*)(primitive + 0xA)) = 0xF0;
-                        *((u16*)(primitive + 6)) = 0;
-                        *((u16*)(primitive + 4)) = 0;
-                        *((u32*)primitive) = packed_color;
-                        primitive[3] = 0x62;
-                        packet[0] = (packet[0 ^ 0] & 0xFF000000) | ((*ordering_table) & state_mask);
-                        *ordering_table = ((*ordering_table) & 0xFF000000) | (((u32)packet) & 0x00FFFFFF);
-                        blend_mode = (((actor->unkC->unkC >> 9) & 3) + 1) & 3;
-                        packet += 4;
-                        {
-                            u8* draw_mode_primitive = ((u8*)packet) + 4;
-                            draw_mode_primitive[-1] = 1;
-                            *((u32*)draw_mode_primitive) = (blend_mode << 5) | packet_word;
-                        }
-                        packet_word = 0x00FFFFFF;
-                        packet[0] = (packet[0] & 0xFF000000) | ((*ordering_table) & packet_word);
-                        *ordering_table = ((*ordering_table) & 0xFF000000) | (((u32)packet) & 0x00FFFFFF);
-                        packet += 2;
-                    }
+                    tile = (TILE*)packet;
+                    packed_color = *(u32*)&color;
+                    setlen(tile, 3);
+                    tile->w = 320;
+                    tile->h = 240;
+                    tile->y0 = 0;
+                    tile->x0 = 0;
+                    *(u32*)&tile->r0 = packed_color;
+                    setcode(tile, 0x62);
+                    addPrim(ordering_table, tile);
+                    blend_mode = (((actor->unkC->unkC >> 9) & 3) + 1) & 3;
+                    packet += 4;
+                    tpage = (DR_TPAGE*)packet;
+                    setDrawTPage(tpage, 0, 0, getTPage(0, blend_mode, 320, 0));
+                    addPrim(ordering_table, tpage);
+                    packet += 2;
                 }
             }
         }
-    block_59:
-        actor_index++;
-
-        actor++;
-    } while (actor_index < 0x50);
+    }
     field_apply_global_color_scale();
     render_ctx->packet_cursor = packet;
 }
@@ -3953,10 +3922,8 @@ void field_update_actor_part_effects(FieldActorState *actor)
 
     part = actor->unk0;
     i = 0;
-    if (actor->unk25 != 0)
+    for (; i < actor->unk25; i++, part++)
     {
-        do
-        {
             part_kind = part->unk31;
             if (part_kind != 0xFE &&
                 (!(actor->unkC->unkC & 0x800) || ((actor->unk240[actor->unk29] >> i) & 1)) &&
@@ -3967,18 +3934,18 @@ void field_update_actor_part_effects(FieldActorState *actor)
                 {
                     if (part_kind == 0xFF || (part->unk34 & 0x4000000))
                     {
-                        goto next;
+                        continue;
                     }
                     if (part->unk31 > actor->unk1EC[g_field_track_index])
                     {
-                        goto next;
+                        continue;
                     }
                 }
                 else if (part_kind != 0xFF)
                 {
                     if (part->unk31 > actor->unk1EC[g_field_track_index])
                     {
-                        goto next;
+                        continue;
                     }
                 }
 
@@ -3994,22 +3961,22 @@ void field_update_actor_part_effects(FieldActorState *actor)
                 flags = part->unk28;
                 if (((flags >> 30) & 1) && actor->unkCC[g_field_track_index][i] >= target_count)
                 {
-                    goto next;
+                    continue;
                 }
 
                 if ((part->u0.w >> 15) & 1)
                 {
                     if (((flags >> 24) & 1) && actor->unk3B[g_field_track_index][i] != 0)
                     {
-                        goto next;
+                        continue;
                     }
                     if (field_get_track_counter_modulo(actor, (((u8 *)part)[7] & 0xF) + 1) != 0)
                     {
-                        goto next;
+                        continue;
                     }
                     if (actor->unk3B[g_field_track_index][i] >= target_count)
                     {
-                        goto next;
+                        continue;
                     }
                     do
                     {
@@ -4017,11 +3984,11 @@ void field_update_actor_part_effects(FieldActorState *actor)
                         D_80105760 = 0;
                         if (func_8006D79C(actor, i, 0) == -1)
                         {
-                            goto next;
+                            break;
                         }
                         if (actor->unk3B[g_field_track_index][i] == previous_count)
                         {
-                            goto next;
+                            break;
                         }
                     } while (actor->unk3B[g_field_track_index][i] < target_count);
                 }
@@ -4047,10 +4014,6 @@ void field_update_actor_part_effects(FieldActorState *actor)
                     }
                 }
             }
-        next:
-            i++;
-            part++;
-        } while (i < actor->unk25);
     }
 }
 

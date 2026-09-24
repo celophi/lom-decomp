@@ -1,30 +1,322 @@
 #include "game_audio.h"
+#include "field_scene_transition.h"
+#include "field_text.h"
+#include "main.h"
+#include "common.h"
+
 /* field_script_flow_ops */
 #include "field_script.h"
+#define FIELD_B74 ((UnkStruct80122B74*)D_80122B74)
+
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s32 unk8;
+} SeqRec;
+
+typedef void (*FieldDispatchFn)(s32, s32);
+
+/** @brief Script sequence record: 12-byte entries indexed by the header's unk4. */
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    u8* unk8;
+} ScanRecord;
+
+typedef struct
+{
+    s32 actor;
+    u16 reference;
+} FieldScriptPositionOperands;
+
+/** @brief View of reset fields addressed relative to successive 0x60-byte slots. */
+typedef struct
+{
+    u8 pad[0x2F36];
+    u16 count;
+    s32 flags;
+} FieldResetSlotView;
+
+typedef struct
+{
+    u8 pad0[0x402];
+    u16 unk402;
+} StructB78Local;
+
+/** @brief Partial StructB800B99A8 layout used by func_800B99A8. */
+typedef struct
+{
+    u8 pad0[0x41C];
+    u32 unk41C;
+} StructB800B99A8;
+
+/** @brief One entry of the shop item list built on the stack. */
+typedef struct
+{
+    s16 price;
+    s16 pad2;
+    s32 scaled;
+} ShopItemEntry;
+
+typedef struct
+{
+    u8 unk0;
+    u8 pad1[3];
+    s32 unk4;
+    u8 pad8[4];
+    s32 unkC;
+} PairSeqRec;
+
+/** @brief One eight-byte shop entry built from a packed resource word. */
+typedef struct
+{
+    u16 item;
+    u16 unused;
+    u32 price;
+} ScriptShopEntry;
+
+/*
+ * Helpers reached from field script handlers. Most take an actor id where
+ * 0xFF means the script owner; the owner id is byte 0 of g_field_script.
+ */
+
+/** @brief Actor record from func_800C1B60; unk90 holds the flag word. */
+typedef struct
+{
+    u8 pad[0x90];
+    s32 unk90;
+} SomeStruct;
+
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s32 unk8;
+} Struct80087F44;
+
+/** @brief View of D_80122B74 exposing the word at 0x2C. */
+typedef struct
+{
+    s8 pad[0x2C];
+    s32 unk2C;
+} UnkStruct80122B74;
+
+/*
+ * Extended field script opcodes 0x80 through 0x8F.
+ *
+ * field_script_run hands opcodes of 0x80 and above to func_800B8308, which
+ * decodes up to four operands from the descriptor bytes that follow the opcode
+ * and jumps through g_field_script_ext_op_table[opcode - 0x80]. Every handler
+ * here receives those decoded operands in order. An operand of 0xFF in an
+ * actor-id slot means the script owner.
+ */
+
+/** @brief View of D_80122B78 exposing the three packed 10-bit fields at 0x410. */
+typedef struct
+{
+    u8 pad0[0x404];
+    s32 unk404; /* 0x404 */
+    u8 pad408[0x410 - 0x408];
+    u32 unk410; /* 0x410 three 10-bit fields */
+    u32 unk414; /* 0x414 */
+} StructB78;
+
+/** @brief Pending layout transition state with overlapping control fields at 0x418. */
+typedef struct
+{
+    u8 pad[0x404];
+    s32 layout, option, third_selector;
+    u8 pad410[8];
+    union
+    {
+        s32 word;
+        struct
+        {
+            s16 id;
+            s8 mode;
+            u8 flags;
+        } fields;
+    } control;
+} State;
 
 void func_800B820C();
 void func_800B8308();
 void func_800BD520(s32, s32, s32);
-u8 *func_800C1B60(s32);
+u8* func_800C1B60(s32);
 extern void (*g_field_script_op_table[])();
+extern FieldDispatchFn D_800F0D48[];
+u8* func_800B84B4(s32 arg0, u8* arg1, s32* arg2);
+extern u8* func_800B84B4(s32, u8*, s32*);
+s32 func_800BD414(s32 arg0, s32 arg1);
+/* Field script opcode handlers 0x03 through 0x08 (see field_script.h). */
+
+extern u8* D_80122B78;
+void func_800BD6F4(s32 value, u8* params);
+u8* field_script_read_operand(u32 mode, u8* pc, s32* out);
+s32 func_80087F0C(s32);
+s32 func_800B2A9C(s32);
+s32 func_800BD650(s32, s32, s32, s32, s32);
+void func_800BD55C(s32, s32, s32, s32, s32, s32);
+extern u8* D_80122B74;
+extern s32 D_80123FB0, D_80123FC4;
+extern u8* func_80087EF0(s32);
+extern u8* func_800C1B60(s32);
+extern void func_8009C620(s32, s32, s32, s32);
+extern void func_8009C77C(s32, s32, s32);
+s32 func_8005A84C(s32 arg0, s32 arg1);
+s32 func_8008B398(s32 key);
+extern s32 func_800BD414(s32 arg0, s32 arg1);
+extern s32 func_8008B398(s32 key);
+void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
+extern s32 D_8011F428;
+extern s32 D_801227F0;
+extern FieldScriptContext* g_field_script;
+s32 func_800875C4(s32 arg0, u32 arg1, void* arg2, void* arg3);
+extern s32 D_8010AE78;
+/* Field script opcode handlers 0x17 through 0x1C (see field_script.h). */
+
+void func_800A3938(s32 sound_id, s32 pan);
+void func_80087FC0();
+s32 func_800BE5C8(s32 arg0, s32 arg1, s32 arg2);
+s32 func_80087F44(s32, s32*);
+void func_800B4410(s32 arg0);
+void func_800B4584(void);
+void field_release_actor_resource_slot(s32 arg0);
+void func_800A43E8(s32 arg0, s32 arg1, u16 arg2, s32 arg3);
+void func_800B286C(s32 arg0, s32 arg1, s32 arg2);
+s32 func_800A4744(void);
+u8 func_800A4778(void);
+void func_8008AFD8(s32 arg0, s32 arg1, FieldScriptRecord* record, s32 record_index);
+void func_80087614(s32 arg0, s32 arg1);
+s32 func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+void func_800B2654(s32* arg0, s32* arg1, s32* arg2, s32* arg3);
+void func_8009C620(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+void func_8009C77C(s32 arg0, s32 arg1, s32 arg2);
+void func_800A3988(s32 arg0, s32 arg1, s32 arg2, FieldScriptRecord* record);
+void func_8008B5D0(s32 arg0, s32 arg1, s32 arg2, s32* arg3);
+u8* field_script_read_operand(u32 type, u8* data, s32* value);
+u8* func_800C1E40(s32 arg0);
+void field_open_shop_mode_1();
+extern void func_800B34D0(s32);
+extern void func_800C1230(s32);
+extern u8* func_800C1E40(s32);
+extern s32* func_800C1EC8(s32*, s32*, s32);
+void akao_cmd_f1(void);
+void akao_stop_song(s32);
+void field_control_animation(s32, s32, s32, s32);
+void field_open_gosub_screen_sequence(void*);
+void field_open_shop_mode_0(s32);
+void field_run_zukan(s32);
+void func_8005A67C(s32, s32);
+void func_8005B0F4(s32, s32);
+void func_8005B1EC(void);
+void func_8005B228(s32, s32);
+void func_8005B288(s32);
+void func_800681C0(s32);
+void func_80089980(s32);
+void func_80089A68(s32);
+void func_8008BD88(s32);
+void func_8009C974(s32);
+void func_800A37E4(void);
+void func_800A38D4(void);
+void func_800A5670(s32);
+void func_800AD030(s32);
+void func_800B22F0(s32, s32);
+void func_800B31CC(s32);
+void func_800B32FC(s32);
+void func_800B3420(s32);
+void func_800B60DC(s32);
+void func_800B66F0(s32);
+void func_800BCCE0();
+void func_800BE710(s32);
+void func_800C06E8(void);
+void func_800C1230(s32);
+void func_800C1D14(s32, s32);
+void func_800C1D68(void);
+void func_800C1E08(void);
+void func_800C2094(s32);
+s32 func_800C20D8(s32);
+void func_800C2138(s32);
+void func_800C21C0(s32);
+s32 func_800C2264(s32);
+s32 func_800C23F4(void);
+s32 func_800C24BC(s32);
+void func_800C25A0(s32);
+s32 func_800C2724(s32);
+void func_800C2848(s32, s32);
+void func_800C28B8(s32);
+void func_800C299C(s32);
+s32 func_800C29CC(s32);
+void func_800C2A88(s32);
+void func_800C31BC(s32);
+void func_800C35AC(s32);
+s32 func_800C35E4(s32);
+s32 func_800C3860(s32);
+s32 func_800C3894(s32);
+void func_800C396C(void);
+void func_800C5704(s32);
+extern u8 *D_80122B74, *D_80122B78;
+extern s32 g_field_hide_actor_panels, D_8010D020, D_80117EC4, D_80122980;
+extern s32 g_gosub_result_count, g_gosub_result_values;
+void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op);
+extern void field_find_or_load_resource_entry(s32 arg0, s32 arg1);
+extern s32 func_800C1FFC(s32 arg0, s32 arg1, s32 arg2);
+/*
+ * Helpers reached from field script handlers that act on an actor id, where
+ * 0xFF means the script owner (byte 0 of g_field_script).
+ */
+
+s32 func_8008C2EC(s32 arg0, s32 arg1);
+void field_activate_actor_resource_slot(s32 arg0, s32 arg1, s32 arg2);
+s32 func_800C2DC0(void);
+s32 func_800C2D08(void);
+s32 func_800C318C(s32 arg0);
+s32 func_80087F44(s32 arg0, s32* out);
+void func_8008A580(s32 arg0, s32 arg1);
+void func_8008B500(s32 arg0, s32 arg1);
+u8* func_800C1E40(s32);
+s32 func_800C38C8(u8*);
+void func_80089AE4(s32 arg0, s32 arg1);
+s32 func_80087770(s32 arg0, s32 arg1);
+void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
+void func_800A3938();
+s32 func_800878B4(s32 arg0);
+void field_set_all_actor_render_state(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
+void func_800C28B8(s32 arg0);
+void func_80087A9C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8, s32 arg9);
+void func_800B0710(s32, s32, s32, s32);
+void func_800B2844(s32 arg0, void* arg1, s32 arg2);
+void func_800B28E0(s32, s32, s32);
+void func_800B286C(s32, s32, s32);
+void field_begin_gover_transition(s32 arg0, s32 arg1, s32 arg2);
+void akao_cmd_a9(s32 arg0, s32 arg1);
+void func_80089D44(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+void field_script_op_00(void);
+extern s32 g_layout_option;
+extern s32 g_layout_sub_mode;
+void field_set_all_actor_render_state(s32, s32, s32, s32, s32);
+void func_80087A9C(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
+extern s32 g_layout_flag;
 
 /**
  * @brief Run a field script until it yields, preserving any enclosing script context.
  * @param context Script context to run.
  */
-void field_script_run(FieldScriptContext *context)
+void field_script_run(FieldScriptContext* context)
 {
     s32 status;
     u32 opcode_value;
     u32 wait_count;
     u32 wait_state;
-    FieldScriptContext *previous_context;
-    u8 *pc;
+    FieldScriptContext* previous_context;
+    u8* pc;
     s32 opcode;
-    FieldScriptRecordState *wait_record;
-    FieldScriptContext *current_context;
-    FieldScriptContext *stop_context;
-    FieldScriptRecordState *active_record;
+    FieldScriptRecordState* wait_record;
+    FieldScriptContext* current_context;
+    FieldScriptContext* stop_context;
+    FieldScriptRecordState* active_record;
     void (**op_table)();
     s32 pc_advance;
     s32 owner_id;
@@ -32,7 +324,7 @@ void field_script_run(FieldScriptContext *context)
 
     previous_context = g_field_script;
     g_field_script = context;
-    func_800BD520(g_field_script->status.owner_id, 0xD000, ((u8 *)func_800C1B60(context->status.owner_id))[5]);
+    func_800BD520(g_field_script->status.owner_id, 0xD000, ((u8*)func_800C1B60(context->status.owner_id))[5]);
     wait_record = FIELD_SCRIPT_ACTIVE_RECORD_STATE();
     wait_state = wait_record->wait;
     wait_count = wait_state >> 1;
@@ -71,7 +363,7 @@ start_interpreter:
         do
         {
             current_context = g_field_script;
-            active_record = (FieldScriptRecordState *)((u8 *)current_context + (current_context->active_record * 3 << 2));
+            active_record = (FieldScriptRecordState*)((u8*)current_context + (current_context->active_record * 3 << 2));
             pc = active_record->pc;
             opcode = *pc++;
             pc--;
@@ -121,21 +413,6 @@ restore_context:
     }
 }
 
-
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-} SeqRec;
-
-typedef void (*FieldDispatchFn)(s32, s32);
-
-
-extern FieldDispatchFn D_800F0D48[];
-
-u8 *func_800B84B4(s32 arg0, u8 *arg1, s32 *arg2);
-
 /**
  * @brief Decode two sequence arguments and dispatch through the field handler table.
  *
@@ -147,30 +424,24 @@ void func_800B820C(void)
     s32 sp10;
     s32 sp14;
     u8 temp_s0;
-    u8 *temp_a1;
-    SeqRec *temp_a2;
+    u8* temp_a1;
+    SeqRec* temp_a2;
     s32 temp_a3;
     s32 temp_s1;
     s32 r;
     s32 high;
 
-    temp_a1 = (u8 *)((SeqRec *)((u8 *)g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8;
+    temp_a1 = (u8*)((SeqRec*)((u8*)g_field_script + (((SeqRec*)g_field_script)->unk4 * 3 << 2)))->unk8;
     temp_s0 = temp_a1[1];
     temp_s1 = temp_a1[0] - 0x40;
     high = temp_s0 >> 4;
-    ((SeqRec *)((u8 *)g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8 =
-        (s32)func_800B84B4(temp_s0 & 0xF, temp_a1 + 2, &sp10);
-    r = (s32)func_800B84B4(
-        high,
-        (u8 *)((SeqRec *)((u8 *)g_field_script + (((SeqRec *)g_field_script)->unk4 * 3 << 2)))->unk8,
-        &sp14);
-    temp_a3 = ((SeqRec *)g_field_script)->unk4;
-    temp_a2 = (SeqRec *)((u8 *)g_field_script + (temp_a3 * 3 << 2));
+    ((SeqRec*)((u8*)g_field_script + (((SeqRec*)g_field_script)->unk4 * 3 << 2)))->unk8 = (s32)func_800B84B4(temp_s0 & 0xF, temp_a1 + 2, &sp10);
+    r = (s32)func_800B84B4(high, (u8*)((SeqRec*)((u8*)g_field_script + (((SeqRec*)g_field_script)->unk4 * 3 << 2)))->unk8, &sp14);
+    temp_a3 = ((SeqRec*)g_field_script)->unk4;
+    temp_a2 = (SeqRec*)((u8*)g_field_script + (temp_a3 * 3 << 2));
     temp_a2->unk8 = r;
     D_800F0D48[temp_s1](sp10, sp14);
 }
-
-extern u8 *func_800B84B4(s32, u8 *, s32 *);
 
 /**
  * @brief Decode four operands and dispatch an extended field-script opcode.
@@ -190,7 +461,7 @@ void func_800B8308(void)
     s32 high_first;
     s32 low_second;
     s32 high_second;
-    u8 *pc;
+    u8* pc;
 
     pc = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     first = pc[1];
@@ -205,8 +476,6 @@ void func_800B8308(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = func_800B84B4(high_second, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &arg3);
     g_field_script_ext_op_table[opcode](arg0, arg1, arg2, arg3);
 }
-
-s32 func_800BD414(s32 arg0, s32 arg1);
 
 /**
  * @brief Decode a script operand value from a byte stream.
@@ -316,12 +585,6 @@ void func_800B8684(void)
     field_script_branch(1);
 }
 
-/* Field script opcode handlers 0x03 through 0x08 (see field_script.h). */
-
-extern u8 *D_80122B78;
-
-void func_800BD6F4(s32 value, u8* params);
-
 /**
  * @brief Opcode 0x03: dispatch the byte operand as a small field command.
  */
@@ -335,7 +598,7 @@ void field_script_op_03(void)
     rec = (FieldScriptRecord*)g_field_script;
     i = g_field_script->active_record;
     rec += i;
-    func_800BD6F4(rec->pc[1], (u8 *)D_80122B78 + 0x24);
+    func_800BD6F4(rec->pc[1], (u8*)D_80122B78 + 0x24);
 
     rec2 = (FieldScriptRecord*)g_field_script;
     j = g_field_script->active_record;
@@ -436,18 +699,6 @@ void field_script_op_08(void)
     }
 }
 
-/** @brief Script sequence record: 12-byte entries indexed by the header's unk4. */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    u8 *unk8;
-} ScanRecord;
-
-
-
-u8 *field_script_read_operand(u32 mode, u8 *pc, s32 *out);
-
 /**
  * @brief Script op: skip forward to the next opcode equal to the operand (or 0xFF).
  *
@@ -459,37 +710,37 @@ void func_800B8B80(void)
 {
     volatile s32 value;
     u8 end_op;
-    u8 *pc;
-    u8 *initial_next;
+    u8* pc;
+    u8* initial_next;
     u8 op;
-    ScanRecord *rec;
+    ScanRecord* rec;
 
     {
-        u8 *base;
+        u8* base;
         s32 index;
-        base = *(u8 *volatile *)&g_field_script;
-        index = ((ScanRecord *)base)->unk4;
-        pc = ((ScanRecord *)(base + (index * 3 << 2)))->unk8;
+        base = *(u8* volatile*)&g_field_script;
+        index = ((ScanRecord*)base)->unk4;
+        pc = ((ScanRecord*)(base + (index * 3 << 2)))->unk8;
     }
-    initial_next = field_script_read_operand(pc[1] & 3, pc + 2, (s32 *)&value);
+    initial_next = field_script_read_operand(pc[1] & 3, pc + 2, (s32*)&value);
     end_op = 0xFF;
     {
-        u8 *base;
+        u8* base;
         s32 index;
-        ScanRecord *current;
-        base = *(u8 *volatile *)&g_field_script;
-        index = ((ScanRecord *)base)->unk4;
-        current = (ScanRecord *)(base + (index * 3 << 2));
+        ScanRecord* current;
+        base = *(u8* volatile*)&g_field_script;
+        index = ((ScanRecord*)base)->unk4;
+        current = (ScanRecord*)(base + (index * 3 << 2));
         current->unk8 = initial_next;
     }
     while (1)
     {
         {
-            u8 *base;
+            u8* base;
             s32 index;
-            base = *(u8 *volatile *)&g_field_script;
-            index = ((ScanRecord *)base)->unk4;
-            rec = (ScanRecord *)(base + (index * 3 << 2));
+            base = *(u8* volatile*)&g_field_script;
+            index = ((ScanRecord*)base)->unk4;
+            rec = (ScanRecord*)(base + (index * 3 << 2));
         }
         pc = rec->unk8;
         op = *pc;
@@ -529,45 +780,32 @@ void func_800B8CFC(void)
     s32 destination_owner;
     FieldScriptVariableRef destination_ref;
     u8 descriptor;
-    u8 *operands;
+    u8* operands;
     s32 value;
 
     operands = FIELD_SCRIPT_ACTIVE_RECORD()->pc;
     descriptor = operands[1];
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc =
-        field_script_read_operand_or_owner(OPERAND_TYPE_3(descriptor), operands + 2, &source_owner);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc =
-        field_script_read_u16(
-            FIELD_SCRIPT_ACTIVE_RECORD()->pc,
-            &source_ref);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand_or_owner(OPERAND_TYPE_3(descriptor), operands + 2, &source_owner);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &source_ref);
     do
     {
         value = func_800BD3B0(source_owner, source_ref << 16);
         {
-            u8 *destination_operands;
-            destination_operands = (u8 *)g_field_script;
-            destination_operands += ((FieldScriptRecord *)destination_operands)->unk4 * 3 << 2;
-            destination_operands = ((FieldScriptRecord *)destination_operands)->pc;
-            FIELD_SCRIPT_ACTIVE_RECORD()->pc =
-                field_script_read_operand_or_owner(OPERAND_TYPE_2(descriptor), destination_operands + 2, &destination_owner);
+            u8* destination_operands;
+            destination_operands = (u8*)g_field_script;
+            destination_operands += ((FieldScriptRecord*)destination_operands)->unk4 * 3 << 2;
+            destination_operands = ((FieldScriptRecord*)destination_operands)->pc;
+            FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand_or_owner(OPERAND_TYPE_2(descriptor), destination_operands + 2, &destination_owner);
         }
     } while (0);
     {
         void func_800BD434(s32 arg0, FieldScriptVariableRef arg1, s32 arg2);
-        u8 *next;
+        u8* next;
         next = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &destination_ref.value);
         FIELD_SCRIPT_ACTIVE_RECORD()->pc = next;
         func_800BD434(destination_owner, destination_ref, value);
     }
 }
-
-s32 func_80087F0C(s32);
-u8 *func_800C1B60(s32);
-s32 func_800B2A9C(s32);
-s32 func_800BD650(s32, s32, s32, s32, s32);
-void func_800BD55C(s32, s32, s32, s32, s32, s32);
-extern u8 *D_80122B74;
-extern s32 D_80123FB0, D_80123FC4;
 
 /**
  * @brief Read or write a selected field-script record value.
@@ -579,30 +817,30 @@ void func_800B8E84(void)
     u32 packed_field;
     s32 target_index;
     s32 selected_base;
-    u8 *opcode_pc;
-    u8 *operand_pc;
-    u8 *selector_pc;
+    u8* opcode_pc;
+    u8* operand_pc;
+    u8* selector_pc;
     u32 operand_type;
     s32 base_selector;
     s32 opcode;
-    FieldScriptRecord *opcode_record;
-    FieldScriptRecord *operand_record;
-    FieldScriptRecord *selector_record;
+    FieldScriptRecord* opcode_record;
+    FieldScriptRecord* operand_record;
+    FieldScriptRecord* selector_record;
 
     opcode_record = FIELD_SCRIPT_ACTIVE_RECORD();
     opcode_pc = opcode_record->pc;
     opcode = *opcode_pc;
-    opcode_record->pc = (u8 *) (opcode_pc + 1);
+    opcode_record->pc = (u8*)(opcode_pc + 1);
     operand_record = FIELD_SCRIPT_ACTIVE_RECORD();
     operand_pc = operand_record->pc;
     operand_type = *operand_pc;
-    operand_record->pc = (u8 *) (operand_pc + 1);
+    operand_record->pc = (u8*)(operand_pc + 1);
     selector_record = FIELD_SCRIPT_ACTIVE_RECORD();
     selector_pc = selector_record->pc;
     base_selector = *selector_pc;
-    selector_record->pc = (u8 *) (selector_pc + 1);
+    selector_record->pc = (u8*)(selector_pc + 1);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand_or_owner(operand_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, &target_index);
-    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(3U, FIELD_SCRIPT_ACTIVE_RECORD()->pc, (s32 *)&packed_field);
+    FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(3U, FIELD_SCRIPT_ACTIVE_RECORD()->pc, (s32*)&packed_field);
     operand_type >>= 2;
     switch (base_selector)
     {
@@ -627,7 +865,7 @@ void func_800B8E84(void)
         break;
     case 6:
     {
-        s32 *base_ptr = (s32 *)&D_80122B74;
+        s32* base_ptr = (s32*)&D_80122B74;
         s32 offset = target_index * 0x250 + 0x5F0;
         selected_base = *base_ptr + offset;
         break;
@@ -638,20 +876,20 @@ void func_800B8E84(void)
     }
     if (opcode == 0xC)
     {
-        value = func_800BD650(packed_field >> 0x1E, selected_base, (packed_field >> 0x10) & 0x3FFF, *((u8 *)&packed_field + 1), (s32) (u8) packed_field);
+        value = func_800BD650(packed_field >> 0x1E, selected_base, (packed_field >> 0x10) & 0x3FFF, *((u8*)&packed_field + 1), (s32)(u8)packed_field);
         FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_u16(FIELD_SCRIPT_ACTIVE_RECORD()->pc, &destination_ref);
         func_800BD434(g_field_script->status.owner_id, destination_ref << 0x10, value);
         return;
     }
     {
-        u8 *next;
-        u8 **pc;
+        u8* next;
+        u8** pc;
         s32 call_base;
-        next = field_script_read_operand(operand_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, (s32 *)&value);
+        next = field_script_read_operand(operand_type, FIELD_SCRIPT_ACTIVE_RECORD()->pc, (s32*)&value);
         call_base = selected_base;
         pc = &FIELD_SCRIPT_ACTIVE_RECORD()->pc;
         *pc = next;
-        func_800BD55C(packed_field >> 0x1E, call_base, (packed_field >> 0x10) & 0x3FFF, *((u8 *)&packed_field + 1), (s32) (u8) packed_field, value);
+        func_800BD55C(packed_field >> 0x1E, call_base, (packed_field >> 0x10) & 0x3FFF, *((u8*)&packed_field + 1), (s32)(u8)packed_field, value);
     }
 }
 
@@ -678,8 +916,6 @@ void field_script_op_0e(void)
     field_script_branch(0, rec, depth);
 }
 
-extern u8 *func_80087EF0(s32);
-
 /**
  * @brief Push a script record and resolve its new program counter.
  * @note Clamp the depth at seven and record a diagnostic on overflow.
@@ -703,17 +939,10 @@ void func_800B9278(void)
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->flags = FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->flags;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait |= 1;
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->wait &= 1;
-    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc = field_script_read_u16(FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc + 1, &operand);
+    FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record - 1)->pc =
+        field_script_read_u16(FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc + 1, &operand);
     FIELD_SCRIPT_RECORD_STATE(g_field_script->active_record)->pc = func_80087EF0(func_800BD3B0(g_field_script->status.owner_id, operand << 16) & 0x7FFF);
 }
-
-
-/* func_800B941C */
-#include "field_script.h"
-
-extern u8* func_800C1B60(s32);
-extern void func_8009C620(s32, s32, s32, s32);
-extern void func_8009C77C(s32, s32, s32);
 
 /**
  * @brief Decode a seven-byte field command and dispatch its action parameters.
@@ -786,29 +1015,6 @@ void func_800B941C(void)
     func_8009C77C(flags, value, 1);
     FIELD_SCRIPT_ACTIVE_RECORD()->pc += 7;
 }
-
-#include "field_scene_transition.h"
-#include "field_text.h"
-#include "field_script.h"
-#include "game_audio.h"
-
-s32 func_8005A84C(s32 arg0, s32 arg1);
-s32 func_8008B398(s32 key);
-
-
-typedef struct
-{
-    s32 actor;
-    u16 reference;
-} FieldScriptPositionOperands;
-
-/** @brief View of reset fields addressed relative to successive 0x60-byte slots. */
-typedef struct
-{
-    u8 pad[0x2F36];
-    u16 count;
-    s32 flags;
-} FieldResetSlotView;
 
 /**
  * @brief Evaluate opcode 0x12's condition selector and advance or pause the active script.
@@ -892,9 +1098,6 @@ void func_800B95EC(s32 unused0, s32 unused1, s32 wait)
     }
 }
 
-extern s32 func_800BD414(s32 arg0, s32 arg1);
-extern s32 func_8008B398(s32 key);
-
 /**
  * @brief Opcode 0x13: resolve an operand through func_800BD414 and stop the
  *        script this frame if the resolved value maps to a slot below 2.
@@ -933,40 +1136,28 @@ void func_800B977C(void)
     }
 }
 
-typedef struct
-{
-    u8 pad0[0x402];
-    u16 unk402;
-} StructB78Local;
-
-void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-
-extern s32 D_8011F428;
-extern s32 D_801227F0;
-extern u8 *D_80122B78;
-
 /**
  * @brief Evaluate the active field-script condition and advance or pause the script record.
  */
 void func_800B9868(void)
 {
-    FieldScriptRecord *rec;
-    u8 *pc;
+    FieldScriptRecord* rec;
+    u8* pc;
     u32 code;
     s32 flag;
     s32 v0;
-    FieldScriptContext *ctx;
+    FieldScriptContext* ctx;
     s32 active_record;
 
     active_record = g_field_script->active_record;
     ctx = g_field_script;
-    rec = (FieldScriptRecord *)((u8 *)ctx + ((active_record * 3) << 2));
+    rec = (FieldScriptRecord*)((u8*)ctx + ((active_record * 3) << 2));
     pc = rec->pc;
     code = pc[1];
     switch (code)
     {
     case 1:
-        flag = ((StructB78Local *)D_80122B78)->unk402 & 1;
+        flag = ((StructB78Local*)D_80122B78)->unk402 & 1;
         break;
     case 2:
         flag = D_801227F0 != 2;
@@ -987,25 +1178,13 @@ void func_800B9868(void)
     }
     active_record = g_field_script->active_record;
     ctx = g_field_script;
-    rec = (FieldScriptRecord *)((u8 *)ctx + ((active_record * 3) << 2));
+    rec = (FieldScriptRecord*)((u8*)ctx + ((active_record * 3) << 2));
     rec->pc += 2;
     if ((u32)(code - 3) < 2)
     {
         func_800BD520(0, 0x7100, D_8011F428);
     }
 }
-
-/** @brief Partial StructB800B99A8 layout used by func_800B99A8. */
-typedef struct
-{
-    u8 pad0[0x41C];
-    u32 unk41C;
-} StructB800B99A8;
-
-extern FieldScriptContext *g_field_script;
-extern u8 *D_80122B78;
-
-void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
 
 /**
  * @brief Handle a script mode query, advancing the PC or clearing the run flag.
@@ -1014,8 +1193,8 @@ void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
  */
 void func_800B99A8(void)
 {
-    FieldScriptRecord *rec;
-    FieldScriptContext *ctx;
+    FieldScriptRecord* rec;
+    FieldScriptContext* ctx;
     s32 active_record;
     s32 mode;
     s32 resolved;
@@ -1024,11 +1203,11 @@ void func_800B99A8(void)
 
     active_record = g_field_script->active_record;
     ctx = g_field_script;
-    rec = (FieldScriptRecord *)((u8 *)ctx + ((active_record * 3) << 2));
+    rec = (FieldScriptRecord*)((u8*)ctx + ((active_record * 3) << 2));
     mode = rec->pc[1];
     if (mode == 0xFF)
     {
-        resolved = (((StructB800B99A8 *)D_80122B78)->unk41C >> 8) & 3;
+        resolved = (((StructB800B99A8*)D_80122B78)->unk41C >> 8) & 3;
     }
     else
     {
@@ -1051,17 +1230,13 @@ void func_800B99A8(void)
     advance_pc:
         active_record = g_field_script->active_record;
         ctx = g_field_script;
-        rec = (FieldScriptRecord *)((u8 *)ctx + ((active_record * 3) << 2));
+        rec = (FieldScriptRecord*)((u8*)ctx + ((active_record * 3) << 2));
         rec->pc += 2;
         return;
     }
 clear_flag:
     g_field_script->status.word &= 0x7FFFFFFF;
 }
-
-s32 func_800875C4(s32 arg0, u32 arg1, void* arg2, void* arg3);
-extern s32 D_8010AE78;
-extern u8* D_80122B74;
 
 /**
  * @brief Resolve an actor operand and dispatch the current field-script command.
@@ -1115,12 +1290,6 @@ void func_800B9AC4(void)
     }
     g_field_script->status.word = g_field_script->status.word & 0x7FFFFFFF;
 }
-
-/* Field script opcode handlers 0x17 through 0x1C (see field_script.h). */
-
-void func_800A3938(s32 sound_id, s32 pan);
-void func_80087FC0();
-s32 func_800BE5C8(s32 arg0, s32 arg1, s32 arg2);
 
 /**
  * @brief Opcode 0x17: report unsupported opcode 0x17 for the owner and end the step loop.
@@ -1249,7 +1418,6 @@ void field_script_op_1c(void)
     func_800BD434(g_field_script->status.owner_id, var_ref << 16, result);
 }
 
-s32 func_80087F44(s32, s32*);
 void func_800BD434(s32, FieldScriptVariableRef, s32);
 
 /**
@@ -1309,30 +1477,6 @@ void func_800B9FF8(void)
         func_800BD434(g_field_script->status.owner_id, reference, position[2]);
     }
 }
-
-/* Field script opcode handlers 0x1E through 0x36 (see field_script.h). */
-
-extern u8* D_80122B74;
-extern u8* D_80122B78;
-
-void func_800B4410(s32 arg0);
-void func_800B4584(void);
-void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-void field_release_actor_resource_slot(s32 arg0);
-void func_800A43E8(s32 arg0, s32 arg1, u16 arg2, s32 arg3);
-void func_800B286C(s32 arg0, s32 arg1, s32 arg2);
-s32 func_800A4744(void);
-u8 func_800A4778(void);
-
-
-void func_8008AFD8(s32 arg0, s32 arg1, FieldScriptRecord* record, s32 record_index);
-void func_80087614(s32 arg0, s32 arg1);
-s32 func_80087D8C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void func_800B2654(s32* arg0, s32* arg1, s32* arg2, s32* arg3);
-void func_8009C620(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void func_8009C77C(s32 arg0, s32 arg1, s32 arg2);
-void func_800A3988(s32 arg0, s32 arg1, s32 arg2, FieldScriptRecord* record);
-void func_8008B5D0(s32 arg0, s32 arg1, s32 arg2, s32* arg3);
 
 /**
  * @brief Opcode 0x1E: forward the byte operand to func_800B4410.
@@ -1807,31 +1951,19 @@ s32 field_script_op_36(void)
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
-/** @brief One entry of the shop item list built on the stack. */
-typedef struct
-{
-    s16 price;
-    s16 pad2;
-    s32 scaled;
-} ShopItemEntry;
-
-u8 *field_script_read_operand(u32 type, u8 *data, s32 *value);
-u8 *func_800C1E40(s32 arg0);
-void field_open_shop_mode_1();
-
 /**
  * @brief Build the current shop item list from field-script operands and open the shop interface.
  */
 void func_800BB3D8(void)
 {
-    u8 *operands;
+    u8* operands;
     u8 descriptor;
     s32 shop_id;
     s32 scale;
-    u8 *list_base;
-    u8 *header;
+    u8* list_base;
+    u8* header;
     ShopItemEntry local_buf[32];
-    u8 *resource;
+    u8* resource;
     s32 i;
     s32 kind;
     u32 lo;
@@ -1843,26 +1975,26 @@ void func_800BB3D8(void)
     FIELD_SCRIPT_ACTIVE_RECORD()->pc = field_script_read_operand(OPERAND_TYPE_1(descriptor), FIELD_SCRIPT_ACTIVE_RECORD()->pc, &scale);
 
     list_base = func_800C1E40(0xA);
-    header = list_base + *(s32 *)(list_base + shop_id * 4 + 4);
+    header = list_base + *(s32*)(list_base + shop_id * 4 + 4);
 
     resource = func_800C1E40(5);
     i = 0;
 
-    if (*(s32 *)header != 0)
+    if (*(s32*)header != 0)
     {
         do
         {
             kind = *(header + i * 4 + 4);
-            word = *(u32 *)(header + i * 4 + 4);
+            word = *(u32*)(header + i * 4 + 4);
             local_buf[i].pad2 = 0;
             local_buf[i].price = (s16)(kind + ((word << 7) & 0x8000));
-            lo = (*(u32 *)(header + i * 4 + 4) >> 9) * scale;
+            lo = (*(u32*)(header + i * 4 + 4) >> 9) * scale;
             local_buf[i].scaled = (s32)(lo >> 4);
             i++;
-        } while ((u32)i < *(s32 *)header);
+        } while ((u32)i < *(s32*)header);
     }
 
-    field_open_shop_mode_1(*(s32 *)header, (s32)local_buf, (s32)(resource + 4), 2);
+    field_open_shop_mode_1(*(s32*)header, (s32)local_buf, (s32)(resource + 4), 2);
 }
 
 /* Field script opcode handlers 0x38 through 0x3F (see field_script.h). */
@@ -1956,12 +2088,6 @@ s32 field_script_op_3f(void)
     return g_field_script->status.word &= ~FIELD_SCRIPT_RUNNING;
 }
 
-extern u8 *D_80122B74;
-extern u8 *D_80122B78;
-extern void func_800B34D0(s32);
-extern void func_800C1230(s32);
-extern u8 *func_800C1E40(s32);
-extern s32 *func_800C1EC8(s32 *, s32 *, s32);
 /**
  * @brief Dispatch the reset subcommand at the active script PC and advance by two bytes.
  */
@@ -1979,7 +2105,7 @@ void func_800BB7B4(void)
     FieldResetSlotView* slot;
     s32 buffer_base;
 
-    active_record = (FieldScriptRecord *)g_field_script;
+    active_record = (FieldScriptRecord*)g_field_script;
     record_index = active_record->unk4;
     active_record += record_index;
     subcommand = active_record->pc[1];
@@ -1991,14 +2117,14 @@ void func_800BB7B4(void)
         word_ptr = D_80122B74 + 0x28;
         do
         {
-            *(s32 *)(word_ptr + 0x34) = value;
+            *(s32*)(word_ptr + 0x34) = value;
             i -= 1;
             word_ptr -= 4;
         } while (i >= 0);
-        *(s32 *)(D_80122B74 + 0x60) = 0x500;
-        *(s32 *)(D_80122B74 + 0x64) = -0x8000;
-        record = (FieldScriptRecord *)g_field_script;
-        *(s32 *)(D_80122B74 + 0x68) = 0x803F;
+        *(s32*)(D_80122B74 + 0x60) = 0x500;
+        *(s32*)(D_80122B74 + 0x64) = -0x8000;
+        record = (FieldScriptRecord*)g_field_script;
+        *(s32*)(D_80122B74 + 0x68) = 0x803F;
         value = record->unk4;
         record += value;
         record->pc += 2;
@@ -2008,9 +2134,9 @@ void func_800BB7B4(void)
         break;
     case 3:
         value = (s32)func_800C1E40(6);
-        buffer_base = (s32)*(u8 *volatile *)&D_80122B78;
-        record = *(FieldScriptRecord *volatile *)&g_field_script;
-        *(s32 *)(buffer_base + 0xF00) = value;
+        buffer_base = (s32) * (u8* volatile*)&D_80122B78;
+        record = *(FieldScriptRecord* volatile*)&g_field_script;
+        *(s32*)(buffer_base + 0xF00) = value;
         value = record->unk4;
         record += value;
         record->pc += 2;
@@ -2019,8 +2145,8 @@ void func_800BB7B4(void)
     {
         FieldScriptRecord* current_record;
 
-        func_800C1EC8(0, (s32 *)(D_80122B74 + 0xE4), 0x200);
-        current_record = (FieldScriptRecord *)g_field_script;
+        func_800C1EC8(0, (s32*)(D_80122B74 + 0xE4), 0x200);
+        current_record = (FieldScriptRecord*)g_field_script;
         current_record += current_record->unk4;
         current_record->pc += 2;
         return;
@@ -2037,7 +2163,7 @@ void func_800BB7B4(void)
         flag_mask = 0x7FFFFFFF;
         do
         {
-            slot = (FieldResetSlotView *)(D_80122B74 + i * 0x60);
+            slot = (FieldResetSlotView*)(D_80122B74 + i * 0x60);
             slot->count = 0;
             slot->flags = (s32)(slot->flags & flag_mask);
             i += 1;
@@ -2049,99 +2175,27 @@ void func_800BB7B4(void)
         {
             counter_ptr = D_80122B74 + i;
             i += 1;
-            *(u8 *)(counter_ptr + 0x25E0) = 0x63;
+            *(u8*)(counter_ptr + 0x25E0) = 0x63;
         } while (i < 0xFD);
         /* fallthrough */
     default:
         break;
     }
-    active_record = (FieldScriptRecord *)g_field_script;
+    active_record = (FieldScriptRecord*)g_field_script;
     record_index = active_record->unk4;
     active_record += record_index;
     active_record->pc += 2;
 }
-
-#include "game_audio.h"
-#include "main.h"
-#include "field_script.h"
-void akao_cmd_f1(void);
-
-void akao_stop_song(s32);
-void field_control_animation(s32, s32, s32, s32);
-void field_open_gosub_screen_sequence(void *);
-void field_open_shop_mode_0(s32);
-void field_run_zukan(s32);
-void func_8005A67C(s32, s32);
-void func_8005B0F4(s32, s32);
-void func_8005B1EC(void);
-void func_8005B228(s32, s32);
-void func_8005B288(s32);
-void func_800681C0(s32);
-void func_80089980(s32);
-void func_80089A68(s32);
-void func_8008BD88(s32);
-void func_8009C974(s32);
-void func_800A37E4(void);
-void func_800A38D4(void);
-void func_800A5670(s32);
-void func_800AD030(s32);
-void func_800B22F0(s32, s32);
-void func_800B31CC(s32);
-void func_800B32FC(s32);
-void func_800B3420(s32);
-void func_800B60DC(s32);
-void func_800B66F0(s32);
-void func_800BCCE0();
-void func_800BD520(s32, s32, s32);
-void func_800BE710(s32);
-void func_800C06E8(void);
-void func_800C1230(s32);
-void func_800C1D14(s32, s32);
-void func_800C1D68(void);
-void func_800C1E08(void);
-
-void func_800C2094(s32);
-s32 func_800C20D8(s32);
-void func_800C2138(s32);
-void func_800C21C0(s32);
-s32 func_800C2264(s32);
-s32 func_800C23F4(void);
-s32 func_800C24BC(s32);
-void func_800C25A0(s32);
-s32 func_800C2724(s32);
-void func_800C2848(s32, s32);
-void func_800C28B8(s32);
-void func_800C299C(s32);
-s32 func_800C29CC(s32);
-void func_800C2A88(s32);
-void func_800C31BC(s32);
-void func_800C35AC(s32);
-s32 func_800C35E4(s32);
-s32 func_800C3860(s32);
-s32 func_800C3894(s32);
-void func_800C396C(void);
-void func_800C5704(s32);
-extern u8 *D_80122B74, *D_80122B78;
-extern s32 g_field_hide_actor_panels, D_8010D020, D_80117EC4, D_80122980;
-extern s32 g_gosub_result_count, g_gosub_result_values;
-
-
-
-
 
 void func_800BB9C0(s32 arg0, s32 arg1)
 {
     func_800BD520(g_field_script->status.owner_id, arg0, arg1);
 }
 
-void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op);
-
 void func_800BB9F4(s32 arg0, s32 arg1)
 {
     field_control_animation(0, arg0, arg1, 1);
 }
-
-extern void field_find_or_load_resource_entry(s32 arg0, s32 arg1);
 
 /**
  * @param arg0 Passed through to field_find_or_load_resource_entry.
@@ -2152,18 +2206,6 @@ void func_800BBA24(s32 arg0, s32 arg1)
 {
     field_find_or_load_resource_entry(arg0, arg1);
 }
-
-
-typedef struct {
-    u8 unk0;
-    u8 pad1[3];
-    s32 unk4;
-    u8 pad8[4];
-    s32 unkC;
-} PairSeqRec;
-
-
-extern s32 func_800C1FFC(s32 arg0, s32 arg1, s32 arg2);
 
 /**
  * @brief Update the low flag bit of the active sequence record.
@@ -2180,7 +2222,7 @@ extern s32 func_800C1FFC(s32 arg0, s32 arg1, s32 arg2);
 void func_800BBA44(s32 arg0, s32 arg1)
 {
     s32 var_a0;
-    PairSeqRec *temp_a1;
+    PairSeqRec* temp_a1;
     s32 ret;
 
     if (arg0 == 0)
@@ -2194,7 +2236,7 @@ void func_800BBA44(s32 arg0, s32 arg1)
             var_a0 = arg1;
         }
         ret = func_800C1FFC(var_a0, 0x1100, 0x1100);
-        temp_a1 = (PairSeqRec *)((u8 *)g_field_script + (((PairSeqRec *)g_field_script)->unk4 * 0xC));
+        temp_a1 = (PairSeqRec*)((u8*)g_field_script + (((PairSeqRec*)g_field_script)->unk4 * 0xC));
         temp_a1->unkC = (temp_a1->unkC & ~1) | (ret & 1);
     }
 }
@@ -2502,28 +2544,6 @@ void func_800BBAC8(u32 command, s32 operand)
     }
 }
 
-
-
-
-/*
- * Helpers reached from field script handlers that act on an actor id, where
- * 0xFF means the script owner (byte 0 of g_field_script).
- */
-
-s32 func_8008C2EC(s32 arg0, s32 arg1);
-void field_activate_actor_resource_slot(s32 arg0, s32 arg1, s32 arg2);
-void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-s32 func_800C2DC0(void);
-s32 func_800C2D08(void);
-s32 func_800C318C(s32 arg0);
-s32 func_80087F44(s32 arg0, s32 *out);
-
-void func_8008A580(s32 arg0, s32 arg1);
-void func_8008B500(s32 arg0, s32 arg1);
-
-extern s32 D_8010AE78;
-extern u8 *D_80122B78;
-
 /**
  * @brief Forward an actor id to func_8008B1C8.
  * @param arg0 Actor id, or 0xFF for the script owner.
@@ -2553,7 +2573,7 @@ void func_800BC268(s32 arg0)
  */
 void func_800BC2A0(s32 arg0, s32 arg1)
 {
-    FieldScriptRecordState *temp_a1;
+    FieldScriptRecordState* temp_a1;
     s32 ret;
     s32 var_a0;
     s32 var_a1;
@@ -2609,7 +2629,7 @@ void func_800BC328(s32 arg0, s32 arg1)
     if (D_8010AE78 != 0)
     {
         func_80087FC0(1, 2);
-        *(s32 *)(D_80122B78 + 0x400) = (*(s32 *)(D_80122B78 + 0x400) & 0xFFF9FFFF) | 0x20000;
+        *(s32*)(D_80122B78 + 0x400) = (*(s32*)(D_80122B78 + 0x400) & 0xFFF9FFFF) | 0x20000;
     }
     func_800BD520(0, 0x2F08, arg1);
 }
@@ -2691,7 +2711,7 @@ void func_800BC4E8(s32 arg0, s32 arg1)
         var_a0 = g_field_script->status.owner_id;
     }
     temp_s0 = var_a0 & 0xFF;
-    if ((*(s32 *)(D_80122B78 + 0x400) & 0x10000) && temp_s0 < 3)
+    if ((*(s32*)(D_80122B78 + 0x400) & 0x10000) && temp_s0 < 3)
     {
         func_80087E00(temp_s0, func_800C2928(temp_s0, arg1 & 0xFFFF));
     }
@@ -2776,20 +2796,6 @@ void func_800BC65C(s32 arg0, s32 arg1)
     }
 }
 
-
-
-/** @brief One eight-byte shop entry built from a packed resource word. */
-typedef struct
-{
-    u16 item;
-    u16 unused;
-    u32 price;
-} ScriptShopEntry;
-
-u8 *func_800C1E40(s32);
-s32 func_800C38C8(u8 *);
-void field_open_shop_mode_1();
-
 /**
  * @brief Build a shop inventory from a packed item list and open shop mode one.
  * @param list_index Index of the packed shop list to load.
@@ -2797,93 +2803,47 @@ void field_open_shop_mode_1();
  */
 void func_800BC6B0(s32 list_index, s32 price_scale)
 {
-    u8 *lists;
-    u8 *list;
-    u8 *items;
+    u8* lists;
+    u8* list;
+    u8* items;
     ScriptShopEntry entries[32];
     s32 index;
     s32 price;
     u32 scaled;
-    u8 *item;
+    u8* item;
 
     lists = func_800C1E40(0xA);
-    list = lists + *(u32 *)(lists + list_index * 4 + 4);
+    list = lists + *(u32*)(lists + list_index * 4 + 4);
     items = func_800C1E40(5);
     index = 0;
 
-    if (*(u32 *)list != 0)
+    if (*(u32*)list != 0)
     {
         do
         {
-            if ((*(u32 *)(list + index * 4 + 4) >> 8) & 1)
+            if ((*(u32*)(list + index * 4 + 4) >> 8) & 1)
             {
-                entries[index].item = *(u8 *)(list + index * 4 + 4) | 0x8000;
-                item = items + ((*(u8 *)(list + index * 4 + 4) << 6) + 4);
+                entries[index].item = *(u8*)(list + index * 4 + 4) | 0x8000;
+                item = items + ((*(u8*)(list + index * 4 + 4) << 6) + 4);
                 entries[index].unused = 0;
                 price = func_800C38C8(item);
-                *(s32 *)(item + 0x34) = price;
+                *(s32*)(item + 0x34) = price;
                 scaled = (u32)(price * price_scale) >> 3;
                 entries[index].price = scaled;
             }
             else
             {
-                entries[index].item = *(u8 *)(list + index * 4 + 4);
+                entries[index].item = *(u8*)(list + index * 4 + 4);
                 entries[index].unused = 0;
-                scaled = (s32)((*(u32 *)(list + index * 4 + 4) >> 9) * price_scale) >> 3;
+                scaled = (s32)((*(u32*)(list + index * 4 + 4) >> 9) * price_scale) >> 3;
                 entries[index].price = scaled;
             }
             index++;
-        } while ((u32)index < *(u32 *)list);
+        } while ((u32)index < *(u32*)list);
     }
 
-    field_open_shop_mode_1(*(u32 *)list, entries, items + 4, 2);
+    field_open_shop_mode_1(*(u32*)list, entries, items + 4, 2);
 }
-
-
-
-/*
- * Helpers reached from field script handlers. Most take an actor id where
- * 0xFF means the script owner; the owner id is byte 0 of g_field_script.
- */
-
-/** @brief Actor record from func_800C1B60; unk90 holds the flag word. */
-typedef struct
-{
-    u8 pad[0x90];
-    s32 unk90;
-} SomeStruct;
-
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-} Struct80087F44;
-
-/** @brief View of D_80122B74 exposing the word at 0x2C. */
-typedef struct
-{
-    s8 pad[0x2C];
-    s32 unk2C;
-} UnkStruct80122B74;
-
-#define FIELD_B74 ((UnkStruct80122B74 *)D_80122B74)
-
-
-void func_80089AE4(s32 arg0, s32 arg1);
-s32 func_80087770(s32 arg0, s32 arg1);
-void func_800BD520(s32 arg0, s32 arg1, s32 arg2);
-void func_800A3904(s32 arg0, s32 arg1, s32 arg2);
-void func_800A3938();
-s32 func_800878B4(s32 arg0);
-void field_set_all_actor_render_state(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4);
-void func_800C28B8(s32 arg0);
-void func_80087A9C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5,
-                   s32 arg6, s32 arg7, s32 arg8, s32 arg9);
-void func_800B0710(s32, s32, s32, s32);
-
-extern u8 *D_80122B74;
-extern u8 *D_80122B78;
 
 /**
  * @brief Resolve a target index and clear two flag bits on its state record.
@@ -2900,7 +2860,7 @@ extern u8 *D_80122B78;
 void func_800BC7EC(s32 arg0, s32 arg1)
 {
     s32 var_s0;
-    SomeStruct *temp_v0;
+    SomeStruct* temp_v0;
 
     if (arg0 == 0xFF)
     {
@@ -2910,7 +2870,7 @@ void func_800BC7EC(s32 arg0, s32 arg1)
     {
         var_s0 = arg0;
     }
-    temp_v0 = (SomeStruct *)func_800C1B60(var_s0);
+    temp_v0 = (SomeStruct*)func_800C1B60(var_s0);
     temp_v0->unk90 &= 0x7FFFFFFF;
     temp_v0->unk90 &= 0xDFFFFFFF;
     func_80089AE4(var_s0, arg1);
@@ -2984,7 +2944,7 @@ void func_800BC980(s32 arg0, s32 arg1)
  */
 void func_800BC9C4(s32 arg0, s32 arg1)
 {
-    u8 *temp_v1;
+    u8* temp_v1;
 
     temp_v1 = D_80122B74 + arg0 * 0xC;
     temp_v1[0x2F0] = (temp_v1[0x2F0] & 0xCF) | ((arg1 & 3) << 4);
@@ -3008,7 +2968,7 @@ void func_800BC9F8(s32 arg0, s32 arg1)
     {
         idx = arg0;
     }
-    func_80087F44(idx, (s32 *)&sp18);
+    func_80087F44(idx, (s32*)&sp18);
     {
         s32 x = sp18.unk0 >> 8;
         s32 y = sp18.unk4 >> 8;
@@ -3090,48 +3050,6 @@ void func_800BCB58(void)
 void func_800BCB60(void)
 {
 }
-
-#include "game_audio.h"
-#include "common.h"
-#include "field_script.h"
-
-/*
- * Extended field script opcodes 0x80 through 0x8F.
- *
- * field_script_run hands opcodes of 0x80 and above to func_800B8308, which
- * decodes up to four operands from the descriptor bytes that follow the opcode
- * and jumps through g_field_script_ext_op_table[opcode - 0x80]. Every handler
- * here receives those decoded operands in order. An operand of 0xFF in an
- * actor-id slot means the script owner.
- */
-
-/** @brief View of D_80122B78 exposing the three packed 10-bit fields at 0x410. */
-typedef struct
-{
-    u8 pad0[0x404];
-    s32 unk404; /* 0x404 */
-    u8 pad408[0x410 - 0x408];
-    u32 unk410; /* 0x410 three 10-bit fields */
-    u32 unk414; /* 0x414 */
-} StructB78;
-
-u8 *func_800C1E40(s32 arg0);
-void func_800B2844(s32 arg0, void *arg1, s32 arg2);
-void func_800B28E0(s32, s32, s32);
-void func_800B286C(s32, s32, s32);
-void field_begin_gover_transition(s32 arg0, s32 arg1, s32 arg2);
-void akao_cmd_a9(s32 arg0, s32 arg1);
-void func_80089D44(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void field_script_op_00(void);
-
-extern u8 *D_80122B78;
-extern s32 g_layout_option;
-extern s32 g_layout_sub_mode;
-
-void field_set_all_actor_render_state(s32, s32, s32, s32, s32);
-void func_800C28B8(s32);
-void func_80087A9C(s32, s32, s32, s32, s32, s32, s32, s32, s32, s32);
-void func_800B0710(s32, s32, s32, s32);
 
 /**
  * @brief Record a diagnostic supplied by a field script.
@@ -3220,33 +3138,8 @@ void func_800BCC74(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     {
         v = arg0;
     }
-    func_800B0710(v,
-                  (arg1 == 0xFF) ? -1 : arg1,
-                  (arg2 == 0xFF) ? -1 : arg2,
-                  (arg3 == 0xFF) ? -1 : arg3);
+    func_800B0710(v, (arg1 == 0xFF) ? -1 : arg1, (arg2 == 0xFF) ? -1 : arg2, (arg3 == 0xFF) ? -1 : arg3);
 }
-
-
-/** @brief Pending layout transition state with overlapping control fields at 0x418. */
-typedef struct
-{
-    u8 pad[0x404];
-    s32 layout, option, third_selector;
-    u8 pad410[8];
-    union
-    {
-        s32 word;
-        struct
-        {
-            s16 id;
-            s8 mode;
-            u8 flags;
-        } fields;
-    } control;
-} State;
-extern u8 *D_80122B78;
-extern s32 g_layout_flag;
-extern s32 g_layout_option;
 
 /**
  * @brief Set pending layout selectors and reset execution to script record zero.
@@ -3256,17 +3149,20 @@ extern s32 g_layout_option;
  * @param flags Five-bit transition flags stored at control bits 24 through 28.
  * @note 100% match with GCC 2.7.2 CDK and GCC 2.8.0 G0: 109 instructions, 436 bytes.
  */
-void func_800BCCE0(transition_id, mode, selectors, flags)
-    s16 transition_id;
-    s8 mode;
-    s32 selectors;
-    s32 flags;
+void func_800BCCE0(transition_id, mode, selectors, flags) s16 transition_id;
+
+s8 mode;
+
+s32 selectors;
+
+s32 flags;
+
 {
     s32 layout;
     s32 third_selector;
     s32 option;
 
-    State *state = (State *)D_80122B78;
+    State* state = (State*)D_80122B78;
     option = selectors & 0xFF;
     state->control.word = (s32)(state->control.word | 0x40000000);
     state->control.fields.mode = mode;
@@ -3276,60 +3172,58 @@ void func_800BCCE0(transition_id, mode, selectors, flags)
     switch (option)
     {
     case 0xFE:
-        ((State *)D_80122B78)->option = -2;
+        ((State*)D_80122B78)->option = -2;
         break;
     case 0xFF:
         g_layout_option = -1;
-        ((State *)D_80122B78)->option = -1;
+        ((State*)D_80122B78)->option = -1;
         break;
     default:
         if (option == g_layout_option)
         {
-            ((State *)D_80122B78)->option = -2;
+            ((State*)D_80122B78)->option = -2;
         }
         else
         {
-            ((State *)D_80122B78)->option = option;
+            ((State*)D_80122B78)->option = option;
         }
         break;
     }
     switch (layout)
     {
     case 0xFE:
-        ((State *)D_80122B78)->layout = -2;
+        ((State*)D_80122B78)->layout = -2;
         break;
     case 0xFF:
-        ((State *)D_80122B78)->layout = -1;
+        ((State*)D_80122B78)->layout = -1;
         break;
     default:
         if (layout == g_layout_flag)
         {
-            ((State *)D_80122B78)->layout = -1;
+            ((State*)D_80122B78)->layout = -1;
         }
         else
         {
-            ((State *)D_80122B78)->layout = layout;
+            ((State*)D_80122B78)->layout = layout;
         }
         break;
     }
     switch (third_selector)
     {
     case 0xFE:
-        ((State *)D_80122B78)->third_selector = -2;
+        ((State*)D_80122B78)->third_selector = -2;
         break;
     case 0xFF:
-        ((State *)D_80122B78)->third_selector = -1;
+        ((State*)D_80122B78)->third_selector = -1;
         break;
     default:
-        ((State *)D_80122B78)->third_selector = third_selector;
+        ((State*)D_80122B78)->third_selector = third_selector;
         break;
     }
-    ((State *)D_80122B78)->control.word =
-        (s32)((((State *)D_80122B78)->control.word & 0xE0FFFFFF) | ((flags & 0x1F) << 0x18));
+    ((State*)D_80122B78)->control.word = (s32)((((State*)D_80122B78)->control.word & 0xE0FFFFFF) | ((flags & 0x1F) << 0x18));
     g_field_script->active_record = 0;
     g_field_script->status.word = (s32)(g_field_script->status.word & 0x7FFFFFFF);
-    ((FieldScriptRecord *)((u8 *)g_field_script + ((g_field_script->active_record * 3) << 2)))->pc =
-        0;
+    ((FieldScriptRecord*)((u8*)g_field_script + ((g_field_script->active_record * 3) << 2)))->pc = 0;
 }
 
 /**
@@ -3346,11 +3240,11 @@ void func_800BCCE0(transition_id, mode, selectors, flags)
  */
 void field_script_op_86(s32 operand_0, s32 resource_id, s32 entry_index, s32 operand_3)
 {
-    u8 *p = func_800C1E40(resource_id);
+    u8* p = func_800C1E40(resource_id);
 
     if (p != NULL)
     {
-        u16 h = *(u16 *)(p + (entry_index << 1) + 4);
+        u16 h = *(u16*)(p + (entry_index << 1) + 4);
         func_800B2844(operand_0, p + (h + 4), operand_3);
     }
 }
@@ -3447,7 +3341,7 @@ void field_script_op_8a(s32 actor_id, s32 operand_1, s32 target_id, s32 operand_
     resolved_actor = actor_id;
     if (target_id == 0xFF)
     {
-        resolved_target = (s32) g_field_script->status.owner_id;
+        resolved_target = (s32)g_field_script->status.owner_id;
     }
     else
     {
@@ -3469,11 +3363,11 @@ void field_script_op_8a(s32 actor_id, s32 operand_1, s32 target_id, s32 operand_
  */
 void field_script_op_8b(s32 field_0, s32 field_1, s32 field_2, s32 operand_3)
 {
-    StructB78 *p;
+    StructB78* p;
     u32 raw;
     u32 v;
 
-    p = (StructB78 *)D_80122B78;
+    p = (StructB78*)D_80122B78;
     raw = p->unk410;
     p->unk414 = operand_3;
     v = raw;
@@ -3505,10 +3399,7 @@ void field_script_op_8c(s32 actor_id, s32 operand_1, s32 operand_2, s32 operand_
     {
         resolved_actor = actor_id;
     }
-    func_80089D44(resolved_actor,
-                  (operand_1 == 0xFF) ? -1 : operand_1,
-                  (operand_2 == 0xFF) ? -1 : operand_2,
-                  (operand_3 == 0xFF) ? -1 : operand_3);
+    func_80089D44(resolved_actor, (operand_1 == 0xFF) ? -1 : operand_1, (operand_2 == 0xFF) ? -1 : operand_2, (operand_3 == 0xFF) ? -1 : operand_3);
 }
 
 /**
@@ -3531,4 +3422,3 @@ void field_script_op_8e(void)
 void field_script_op_8f(void)
 {
 }
-

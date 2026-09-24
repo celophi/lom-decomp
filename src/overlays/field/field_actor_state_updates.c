@@ -1,4 +1,5 @@
-/** @file field_actor_state_updates.c
+/**
+ * @file field_actor_state_updates.c
  * @brief Actor movement/trigger states, pending actions, displacement and follow
  *        movement, resource-state waits, animation resume, and the object
  *        sequence interpreter with its animation actors and tint flashing.
@@ -8,15 +9,40 @@
  * zero word at 0x80051008 between them is the compiler's 8-byte alignment
  * before the second table.
  */
+#include "common.h"
+#include "vector.h"
+#include "field_types.h"
+#include "sdk/inline_c.h"
+/* Apply the matching GTE instruction encodings after the SDK macros. */
+#include "sdk/gte_dmpsx_compat.h"
+#include "sdk/memory.h"
+#include "field_actor_runtime.h"
 #include "field_actor_sequence_runtime.h"
+#include "field_contact_geometry.h"
 
-/** @brief Player metadata selecting the bank of actor sequence rows. */
+/** @brief Scratchpad vector that receives an actor displacement. */
+#define FIELD_SCRATCH_DISPLACEMENT ((Vec3i*)0x1F800000)
+
+/** @brief Binding index of an object: objects 0 and 1 own theirs, all others share the third. */
+#define FIELD_BINDING_INDEX(object_index) ((object_index) < 2U ? (object_index) : 2)
+
+/**
+ * @brief Object-runtime bytes that FieldObjectRuntime does not name yet.
+ * @note Each reads the matching padding byte of the shared record.
+ */
+#define FIELD_OBJECT_IDLE_FLAGS(state) ((state)->pad_0x60)
+#define FIELD_OBJECT_IDLE_ANIMATION(state) ((state)->pad_0x168[4])
+#define FIELD_OBJECT_ACTION_MODE(state) ((state)->pad_0x16f[0])
+#define FIELD_OBJECT_LINKED_OBJECT(state) ((state)->pad_0x16f[1])
+#define FIELD_OBJECT_PENDING_STEP(state) ((state)->targets[13])
+
+/** @brief Per-player metadata; the kind byte also selects the bank of sequence rows. */
 typedef struct
 {
     u8 flags;
-    u8 sequence_bank;
+    u8 kind;
     u8 pad2[0x266];
-} FieldSequencePlayer;
+} FieldPlayerRecord;
 
 /** @brief Actor template followed by the remaining per-player record data. */
 typedef struct
@@ -25,273 +51,201 @@ typedef struct
     u8 tail[0x24];
 } FieldSequenceTemplate;
 
+/** @brief Command track of a resource action record. */
+typedef struct
+{
+    u16 command;
+    u8 pad2[6];
+} FieldResourceActionTrack;
+
+/** @brief Resource action record with its command tracks and animation request. */
+typedef struct
+{
+    FieldResourceActionTrack tracks[2];
+    u8 pad10[0x58 - 0x10];
+    u16 animation;
+    /** @brief Request flags; the low byte is also written on its own. */
+    union
+    {
+        u16 word;
+        struct
+        {
+            u8 low;
+            u8 high;
+        } bytes;
+    } request;
+    u16 animation_arg;
+    u16 animation_mode;
+    u8 pad60[0x190 - 0x60];
+} FieldResourceAction;
+
+/** @brief Resource entry mode, bound-animation flags, and behavior flags. */
+typedef struct
+{
+    u8 pad0[8];
+    u8 mode;
+    u8 pad9[0xE - 9];
+    u16 bound_animation_flags;
+    u32 flags;
+} FieldResourceEntry;
+
 extern FieldActorPartDef g_field_object_parts[];
-extern FieldSequencePlayer g_field_player_records[];
+extern FieldPlayerRecord g_field_player_records[];
 extern FieldSequenceTemplate g_field_actor_templates[];
 extern FieldActorState g_field_shared_actor_template;
 extern u8 g_field_actor_sequence_data[];
 extern FieldActorState g_field_actor_slots[];
 extern FieldMotionRecord g_field_actors[];
+extern FieldResourceAction g_field_resource_actions[];
+extern FieldResourceEntry g_field_resource_entries[];
 extern s32 g_field_active_group;
 extern s32 g_frame_counter;
 
-/* field_actor_movement_states: Dispatch actor movement and trigger states and start checked animations. */
+s32 func_800839F8(s32 owner_index, s32 require_idle_binding);
+s32 func_80083EEC(s32 owner_index, s32 actor_index, s32 resource_index);
+void func_80084424(s32 owner_index);
+void func_80086494(s32 object_index);
+void field_restart_actor_animation(FieldMotionRecord* object);
+void func_8008A9D8(s32 arg0, s32 arg1, s32 arg2);
+s32 func_8008AABC(s32 a, s32 b);
+void func_8008BC5C(FieldMotionRecord* object);
+void field_prepare_actor_action(FieldMotionRecord* object);
+s32 func_80091728(u8 index, s32 kind, FieldMotionRecord* object);
+s32 func_80091914(FieldMotionRecord* object, u8 index);
+void func_800A2DD8();
 
-/* field_actor_movement_states */
-/* func_80092AD8 */
-#include "common.h"
+/** @brief Program the resource-action animation request of object @p index. */
+#define FIELD_SET_ACTION_ANIMATION(index, animation_id, arg, mode)                                                                                             \
+    g_field_resource_actions[index].request.word &= 0xFBFF;                                                                                                    \
+    g_field_resource_actions[index].animation = animation_id;                                                                                                  \
+    g_field_resource_actions[index].request.bytes.low = 0xFF;                                                                                                  \
+    g_field_resource_actions[index].animation_arg = arg;                                                                                                       \
+    g_field_resource_actions[index].animation_mode = mode;                                                                                                     \
+    g_field_resource_actions[index].request.word &= 0xFCFF;
 
-/**
- * @brief Record fields consumed by the FIELD movement-state update.
- */
-typedef struct
-{
-    u8 pad0[4];
-    s32 state_value;
-    u8 pad8[0x21 - 8];
-    u8 state_flags;
-    u8 pad22[0x54 - 0x22];
-} FieldStateRecord;
+/** @brief Interpolated step height between the start and end offsets, in 1/256 units. */
+#define FIELD_STEP_OFFSET(object)                                                                                                                              \
+    (((s8)(object)->vertical_offset + ((s8)(object)->unknown_0x38 - (s8)(object)->vertical_offset) * (object)->unknown_0x34 / (object)->unknown_0x35) << 8)
 
-void field_restart_actor_animation();
-void func_80092C24(u8 *rec, s32 arg1);
-s32 field_resolve_actor_movement();
+void func_80092C24(FieldMotionRecord* object, s32 animation_id);
 
 /**
  * @brief Advance selected FIELD movement states and request animation 0x1A.
- * @param entry Record containing the signed state value and state flags.
+ * @param object Object whose height and state byte are advanced.
  * @return Zero while the state is being advanced, or one when it is complete.
  * @note The high state bit selects horizontal displacement direction.
- * @note Local assembly match: 100% with GCC 2.7.2 CDK (83 instructions).
  * @see decomp.me WIP
  */
-s32 func_80092AD8(FieldStateRecord *entry)
+s32 func_80092AD8(FieldMotionRecord* object)
 {
-    s32 state_value;
+    s32 height;
     s32 unused_value;
-    s32 timer;
-    /**
-     * @brief Three-axis displacement stored in scratchpad RAM.
-     */
-    struct Vector
-    {
-        s32 x;
-        s32 y;
-        s32 z;
-    } *scratch;
+    s32 rising_height;
+    Vec3i* displacement;
 
-    scratch = (struct Vector *)0x1F800000;
-    switch ((u32)(u8)(entry->state_flags & 0x7F) - 8)
+    displacement = FIELD_SCRATCH_DISPLACEMENT;
+    switch ((u32)(u8)(object->facing_or_reward_kind & 0x7F) - 8)
     {
-        case 0: /* state 8 */
-            entry->state_flags = (entry->state_flags & 0x80) | 9;
-            field_restart_actor_animation(entry);
+    case 0: /* state 8 */
+        object->facing_or_reward_kind = (object->facing_or_reward_kind & 0x80) | 9;
+        field_restart_actor_animation(object);
+        return 0;
+    case 53: /* state 61 */
+        height = object->y;
+        if (height < -0xC00)
+        {
+            object->y = height + 0xC00;
             return 0;
-        case 53: /* state 61 */
-            state_value = entry->state_value;
-            if (state_value < -0xC00)
+        }
+        else
+        {
+            object->y = 0;
+            object->facing_or_reward_kind = (object->facing_or_reward_kind & 0x80) | 9;
+            field_restart_actor_animation(object);
+            return 0;
+        }
+    case 64: /* state 72 */
+    case 65: /* state 73 */
+        height = object->y;
+        if (height < -0xC00)
+        {
+            if (object->facing_or_reward_kind & 0x80)
             {
-                entry->state_value = state_value + 0xC00;
-                return 0;
+                displacement->x = 0x200;
             }
             else
             {
-                entry->state_value = 0;
-                entry->state_flags = (entry->state_flags & 0x80) | 9;
-                field_restart_actor_animation(entry);
-                return 0;
+                displacement->x = -0x200;
             }
-        case 64: /* state 72 */
-        case 65: /* state 73 */
-            state_value = entry->state_value;
-            if (state_value < -0xC00)
-            {
-                if (entry->state_flags & 0x80)
-                {
-                    scratch->x = 0x200;
-                }
-                else
-                {
-                    scratch->x = -0x200;
-                }
-                scratch->z = 0;
-                scratch->y = 0;
-                timer = entry->state_value;
-                field_resolve_actor_movement(entry, scratch, 1);
-                timer += 0xC00;
-                entry->state_value = timer;
-                return 0;
-            }
-            else if (state_value == 0)
-            {
-                break;
-            }
-            else if (state_value < -0xA)
-            {
-                entry->state_value = -0xA;
-                func_80092C24((u8 *)entry, 0x1A);
-            }
-            else
-            {
-                entry->state_value = state_value + 1;
-            }
+            displacement->z = 0;
+            displacement->y = 0;
+            rising_height = object->y;
+            field_resolve_actor_movement(object, &displacement->x, 1);
+            rising_height += 0xC00;
+            object->y = rising_height;
             return 0;
-        case 1:  /* state 9  */
-        case 50: /* state 58 */
-        case 51: /* state 59 */
-        case 52: /* state 60 */
-        case 62: /* state 70 */
-        case 63: /* state 71 */
-        case 70: /* state 78 */
-        case 71: /* state 79 */
-            func_80092C24((u8 *)entry, 0x1A);
-            return 1;
-        default:
+        }
+        else if (height == 0)
+        {
             break;
+        }
+        else if (height < -0xA)
+        {
+            object->y = -0xA;
+            func_80092C24(object, 0x1A);
+        }
+        else
+        {
+            object->y = height + 1;
+        }
+        return 0;
+    case 1:  /* state 9  */
+    case 50: /* state 58 */
+    case 51: /* state 59 */
+    case 52: /* state 60 */
+    case 62: /* state 70 */
+    case 63: /* state 71 */
+    case 70: /* state 78 */
+    case 71: /* state 79 */
+        func_80092C24(object, 0x1A);
+        return 1;
+    default:
+        break;
     }
     return 1;
 }
 
-/* func_80092C24 */
-#include "common.h"
-
-extern s32 func_800839F8(s32 arg0, s32 arg1);
-s32 func_80083EEC();
-void field_start_actor_animation();
-
 /**
- * @brief Starts an actor's animation when its slot resolves and passes a check.
- *
- * Resolves the actor slot for @p rec's 0x3A id via func_800839F8; if valid and
- * func_80083EEC (given @p arg1) succeeds, starts that slot's animation.
+ * @brief Start an animation on the object's actor slot when the slot resolves and accepts it.
+ * @param object Object whose index selects the actor slot.
+ * @param animation_id Animation resource passed to func_80083EEC.
  */
-void func_80092C24(u8 *rec, s32 arg1)
+void func_80092C24(FieldMotionRecord* object, s32 animation_id)
 {
-    s32 v = func_800839F8(rec[0x3A], 0);
+    s32 actor_index = func_800839F8(object->source_object_index, 0);
 
-    if (v != -1)
+    if (actor_index != -1)
     {
-        if (func_80083EEC(rec[0x3A], v, arg1))
+        if (func_80083EEC(object->source_object_index, actor_index, animation_id))
         {
-            field_start_actor_animation(v, 0, 0);
+            field_start_actor_animation(actor_index, 0, 0);
         }
     }
 }
 
-/* func_80092C98 */
-#include "common.h"
-
-/** @brief Field actor record (0x54 bytes); only the fields this handler touches are named. */
-
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    u8 pad8[0x16 - 0x8];
-    s16 unk16;
-    u8 pad18[0x1C - 0x18];
-    s32 unk1C;
-    u8 unk20;
-    u8 unk21;
-    u8 pad22[0x27 - 0x22];
-    u8 unk27;
-    u8 pad28[0x2A - 0x28];
-    s16 unk2A;
-    u8 pad2C[0x34 - 0x2C];
-    u8 unk34;
-    u8 unk35;
-    u8 unk36;
-    s8 unk37;
-    s8 unk38;
-    u8 unk39;
-    u8 unk3A;
-    u8 pad3B[0x54 - 0x3B];
-} FieldRec;
-
-/** @brief g_field_object_states slot record (stride 0x23C). */
-typedef struct
-{
-    u8 pad0[0xC];
-    s32 unkC;
-    u8 pad10[0x170 - 0x10];
-    u8 unk170;
-    u8 pad171[0x178 - 0x171];
-    u32 unk178;
-    u8 pad17C[0x23C - 0x17C];
-} Slot23C;
-
-/** @brief g_field_player_records object entry (stride 0x268). */
-typedef struct
-{
-    u8 unk0;
-    u8 unk1;
-    u8 pad2[0x268 - 0x2];
-} Entry268;
-
-/** @brief g_field_resource_actions animation record (stride 0x190); unk5A is written as both a u16 and its low byte. */
-typedef struct
-{
-    u16 unk0;
-    u8 pad2[0x8 - 0x2];
-    u16 unk8;
-    u8 padA[0x58 - 0xA];
-    u16 unk58;
-    union
-    {
-        u16 h;
-        struct
-        {
-            u8 lo;
-            u8 hi;
-        } b;
-    } unk5A;
-    u16 unk5C;
-    u16 unk5E;
-    u8 pad60[0x190 - 0x60];
-} Anim190;
-
-extern Anim190 g_field_resource_actions[];
-
-void field_start_actor_animation();
-void field_restart_actor_animation();
-s32 func_800839F8(s32 arg0, s32 arg1);
-s32 func_80083EEC();
-void func_8008A9D8(s32 arg0, s32 arg1, s32 arg2);
-s32 func_8008AABC(s32 a, s32 b);
-void func_8008BC5C(FieldRec *rec);
-void field_prepare_actor_action(FieldRec *rec);
-s32 func_80091728(u8 index, s32 kind, FieldRec *rec);
-s32 func_80091914(FieldRec *rec, u8 index);
-void field_restart_sequence_animation();
-void func_800A2DD8();
-
-/** @brief Program the animation record for object @p idx (fields 0x58..0x5E). */
-#define SET_ANIM(idx, v58, v5C, v5E)                                  \
-    g_field_resource_actions[idx].unk5A.h &= 0xFBFF;                                \
-    g_field_resource_actions[idx].unk58 = v58;                                      \
-    g_field_resource_actions[idx].unk5A.b.lo = 0xFF;                                \
-    g_field_resource_actions[idx].unk5C = v5C;                                      \
-    g_field_resource_actions[idx].unk5E = v5E;                                      \
-    g_field_resource_actions[idx].unk5A.h &= 0xFCFF;
-
-/** @brief Interpolated step offset (unk37..unk38 scaled by unk34/unk35), in 1/256 units. */
-#define STEP_OFFSET(rec) \
-    ((rec->unk37 + (rec->unk38 - rec->unk37) * rec->unk34 / rec->unk35) << 8)
-
 /**
  * @brief Per-frame state handler for a field actor's opcode 0x86 / trigger-kind states.
  *
- * With no pending flags in unk1C, first resolves the 0x3D transition when the
- * current animation matches, then dispatches on the opcode (unk21 & 0x7F) by
- * trigger kind (func_80091728 kinds 3, 1/0, 2), programming the g_field_resource_actions
- * animation record and queueing the follow-up state via field_prepare_actor_action.
+ * With no pending flags, first resolves the 0x3D transition when the current
+ * animation matches, then dispatches on the state byte by trigger kind
+ * (func_80091728 kinds 3, 1/0, 2), programming the resource-action animation
+ * request and queueing the follow-up state via field_prepare_actor_action.
  *
- * @param rec Field actor record.
- * @return Never set; the declared non-void return keeps v0 live at the epilogue,
- *         which is what the original codegen shows (all exits are bare returns).
+ * @param object Field actor record.
+ * @return Never set; callers ignore it.
  * @see decomp.me (100%) TODO
  */
-s32 func_80092C98(FieldRec *rec)
+s32 func_80092C98(FieldMotionRecord* object)
 {
     s32 targets;
     s32 tmp;
@@ -299,152 +253,152 @@ s32 func_80092C98(FieldRec *rec)
     s32 anim_id;
     s32 index;
 
-    if (rec->unk1C & 0x1FF)
+    if (object->flags & 0x1FF)
     {
         return;
     }
-    if (rec->unk2A == 0x86)
+    if (object->motion_parameter == 0x86)
     {
-        tmp = rec->unk21 & 0x7F;
+        tmp = object->facing_or_reward_kind & 0x7F;
         if (tmp == 0x3D)
         {
-            anim = func_80091914(rec, rec->unk3A);
-            if (g_field_resource_actions[rec->unk3A].unk8 == tmp && anim == 0x185)
+            anim = func_80091914(object, object->source_object_index);
+            if (g_field_resource_actions[object->source_object_index].tracks[1].command == tmp && anim == 0x185)
             {
-                rec->unk2A = anim;
-                rec->unk4 -= STEP_OFFSET(rec);
-                field_prepare_actor_action(rec);
-                func_800A2DD8(rec->unk3A);
-                rec->unk2A = 0x9B;
+                object->motion_parameter = anim;
+                object->y -= FIELD_STEP_OFFSET(object);
+                field_prepare_actor_action(object);
+                func_800A2DD8(object->source_object_index);
+                object->motion_parameter = 0x9B;
                 return;
             }
-            else if (g_field_resource_actions[rec->unk3A].unk0 == 0x3D && anim == 0x85)
+            else if (g_field_resource_actions[object->source_object_index].tracks[0].command == 0x3D && anim == 0x85)
             {
-                rec->unk2A = anim;
-                rec->unk4 -= STEP_OFFSET(rec);
-                field_prepare_actor_action(rec);
-                func_800A2DD8(rec->unk3A);
-                rec->unk2A = 0x9B;
+                object->motion_parameter = anim;
+                object->y -= FIELD_STEP_OFFSET(object);
+                field_prepare_actor_action(object);
+                func_800A2DD8(object->source_object_index);
+                object->motion_parameter = 0x9B;
                 return;
             }
         }
     }
-    if (func_80091728(rec->unk3A, 3, rec) != 0)
+    if (func_80091728(object->source_object_index, 3, object) != 0)
     {
-        switch (rec->unk21 & 0x7F)
+        switch (object->facing_or_reward_kind & 0x7F)
         {
         case 0x2F:
         case 0x44:
-            rec->unk2A = 0x885;
-            field_prepare_actor_action(rec);
-            func_800A2DD8(rec->unk3A);
+            object->motion_parameter = 0x885;
+            field_prepare_actor_action(object);
+            func_800A2DD8(object->source_object_index);
             break;
         case 0x3E:
-            rec->unk2A = 0xA85;
-            field_prepare_actor_action(rec);
-            func_800A2DD8(rec->unk3A);
+            object->motion_parameter = 0xA85;
+            field_prepare_actor_action(object);
+            func_800A2DD8(object->source_object_index);
             break;
         case 0x38:
-            rec->unk2A = 0xA85;
-            field_prepare_actor_action(rec);
-            func_800A2DD8(rec->unk3A);
+            object->motion_parameter = 0xA85;
+            field_prepare_actor_action(object);
+            func_800A2DD8(object->source_object_index);
             break;
         case 0x3A:
-            SET_ANIM(rec->unk3A, 0x4F, 0x25, 0);
-            rec->unk2A = 0xB85;
-            field_prepare_actor_action(rec);
-            func_800A2DD8(rec->unk3A);
+            FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x4F, 0x25, 0);
+            object->motion_parameter = 0xB85;
+            field_prepare_actor_action(object);
+            func_800A2DD8(object->source_object_index);
             break;
         case 0x39:
-            SET_ANIM(rec->unk3A, 0x4F, 0x25, 0);
-            rec->unk2A = 0xB85;
-            field_prepare_actor_action(rec);
-            func_800A2DD8(rec->unk3A);
+            FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x4F, 0x25, 0);
+            object->motion_parameter = 0xB85;
+            field_prepare_actor_action(object);
+            func_800A2DD8(object->source_object_index);
             break;
         case 0x34:
-            SET_ANIM(rec->unk3A, 0x51, 0x27, 0);
-            rec->unk2A = 0xB85;
-            field_prepare_actor_action(rec);
-            func_800A2DD8(rec->unk3A);
+            FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x51, 0x27, 0);
+            object->motion_parameter = 0xB85;
+            field_prepare_actor_action(object);
+            func_800A2DD8(object->source_object_index);
             break;
         case 0x8:
         case 0x3B:
         case 0x3C:
         case 0x3D:
-            if (rec->unk27 < 3)
+            if (object->saved_state < 3)
             {
                 return;
             }
-            rec->unk21 = (rec->unk21 & 0x80) | 0x49;
-            rec->unk4 -= STEP_OFFSET(rec);
-            field_restart_actor_animation(rec);
-            func_800A2DD8(rec->unk3A);
-            rec->unk2A = 0x96;
-            rec->unk16 = 1;
-            rec->unk34 = 1;
-            rec->unk35 = 1;
+            object->facing_or_reward_kind = (object->facing_or_reward_kind & 0x80) | 0x49;
+            object->y -= FIELD_STEP_OFFSET(object);
+            field_restart_actor_animation(object);
+            func_800A2DD8(object->source_object_index);
+            object->motion_parameter = 0x96;
+            object->motion_divisor = 1;
+            object->unknown_0x34 = 1;
+            object->unknown_0x35 = 1;
             return;
         case 0x35:
-            if ((((Slot23C *)g_field_object_states)[rec->unk3A].unk178 >> 1) & 1)
+            if ((g_field_object_states[object->source_object_index].contact.flags >> 1) & 1)
             {
-                ((Slot23C *)g_field_object_states)[((Slot23C *)g_field_object_states)[rec->unk3A].unk170].unkC &= ~0x2000;
-                rec->unk2A = 0;
-                field_restart_sequence_animation(rec);
-                tmp = func_800839F8(rec->unk3A, 0);
+                g_field_object_states[FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index])].object_flags &= ~0x2000;
+                object->motion_parameter = 0;
+                field_restart_sequence_animation(object);
+                tmp = func_800839F8(object->source_object_index, 0);
                 if (tmp != -1)
                 {
-                    if (func_8008AABC(rec->unk3A, ((Slot23C *)g_field_object_states)[rec->unk3A].unk170) != 0)
+                    if (func_8008AABC(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index])) != 0)
                     {
-                        if (((Entry268 *)g_field_player_records)[rec->unk3A].unk1 == 8)
+                        if (g_field_player_records[object->source_object_index].kind == 8)
                         {
-                            func_8008A9D8(rec->unk3A, ((Slot23C *)g_field_object_states)[rec->unk3A].unk170, 0xD);
+                            func_8008A9D8(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xD);
                         }
                         else
                         {
-                            func_8008A9D8(rec->unk3A, ((Slot23C *)g_field_object_states)[rec->unk3A].unk170, 0xC);
+                            func_8008A9D8(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xC);
                         }
-                        index = rec->unk3A;
+                        index = object->source_object_index;
                         anim_id = 0x64;
-                        if (((Entry268 *)g_field_player_records)[index].unk1 == 8)
+                        if (g_field_player_records[index].kind == 8)
                         {
                             anim_id = 0x61;
                         }
                     }
                     else
                     {
-                        if (((Entry268 *)g_field_player_records)[rec->unk3A].unk1 == 8)
+                        if (g_field_player_records[object->source_object_index].kind == 8)
                         {
-                            func_8008A9D8(((Slot23C *)g_field_object_states)[rec->unk3A].unk170, rec->unk3A, 0x18);
+                            func_8008A9D8(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x18);
                         }
                         else
                         {
-                            func_8008A9D8(((Slot23C *)g_field_object_states)[rec->unk3A].unk170, rec->unk3A, 0x17);
+                            func_8008A9D8(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x17);
                         }
-                        index = rec->unk3A;
+                        index = object->source_object_index;
                         anim_id = 0x65;
-                        if (((Entry268 *)g_field_player_records)[index].unk1 == 8)
+                        if (g_field_player_records[index].kind == 8)
                         {
                             anim_id = 0x63;
                         }
                     }
                     if (func_80083EEC(index, tmp, anim_id) != 0)
                     {
-                        targets = ((Slot23C *)g_field_object_states)[rec->unk3A].unk170;
-                        field_start_actor_animation(tmp, 1, &targets);
+                        targets = FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]);
+                        field_start_actor_animation(tmp, 1, (u8*)&targets);
                     }
-                    func_800A2DD8(rec->unk3A);
+                    func_800A2DD8(object->source_object_index);
                 }
-                func_8008BC5C(rec);
+                func_8008BC5C(object);
             }
             return;
         default:
             return;
         }
     }
-    else if (func_80091728(rec->unk3A, 1, rec) != 0 || func_80091728(rec->unk3A, 0, rec) != 0)
+    else if (func_80091728(object->source_object_index, 1, object) != 0 || func_80091728(object->source_object_index, 0, object) != 0)
     {
-        tmp = func_80091728(rec->unk3A, 1, rec) != 0;
-        switch (rec->unk21 & 0x7F)
+        tmp = func_80091728(object->source_object_index, 1, object) != 0;
+        switch (object->facing_or_reward_kind & 0x7F)
         {
         case 0x25:
         {
@@ -454,13 +408,13 @@ s32 func_80092C98(FieldRec *rec)
             s32 offset;
             base = (s32)g_field_resource_actions;
             track_offset = tmp * 8;
-            actor_offset = rec->unk3A * 0x190;
+            actor_offset = object->source_object_index * 0x190;
             offset = track_offset + actor_offset + base;
-            if (*(u16 *)offset == 8 || *(u16 *)offset == 0x3C)
+            if (*(u16*)offset == 8 || *(u16*)offset == 0x3C)
             {
-                rec->unk2A = 0x985;
-                field_prepare_actor_action(rec);
-                func_800A2DD8(rec->unk3A);
+                object->motion_parameter = 0x985;
+                field_prepare_actor_action(object);
+                func_800A2DD8(object->source_object_index);
             }
             break;
         }
@@ -472,80 +426,80 @@ s32 func_80092C98(FieldRec *rec)
             s32 offset;
             base = (s32)g_field_resource_actions;
             track_offset = tmp * 8;
-            actor_offset = rec->unk3A * 0x190;
+            actor_offset = object->source_object_index * 0x190;
             offset = track_offset + actor_offset + base;
-            if (*(u16 *)offset == 8)
+            if (*(u16*)offset == 8)
             {
-                SET_ANIM(rec->unk3A, 0x3C, 0, 1);
-                rec->unk2A = 0xB85;
-                field_prepare_actor_action(rec);
-                func_800A2DD8(rec->unk3A);
+                FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x3C, 0, 1);
+                object->motion_parameter = 0xB85;
+                field_prepare_actor_action(object);
+                func_800A2DD8(object->source_object_index);
             }
             break;
         }
         }
     }
-    else if (func_80091728(rec->unk3A, 2, rec) != 0)
+    else if (func_80091728(object->source_object_index, 2, object) != 0)
     {
-        if ((rec->unk21 & ~0x80) == 0x34)
+        if ((object->facing_or_reward_kind & ~0x80) == 0x34)
         {
-            SET_ANIM(rec->unk3A, 0x50, 0x26, 0);
-            rec->unk2A = 0xB85;
-            field_prepare_actor_action(rec);
-            func_800A2DD8(rec->unk3A);
+            FIELD_SET_ACTION_ANIMATION(object->source_object_index, 0x50, 0x26, 0);
+            object->motion_parameter = 0xB85;
+            field_prepare_actor_action(object);
+            func_800A2DD8(object->source_object_index);
         }
-        if ((rec->unk21 & ~0x80) == 0x35)
+        if ((object->facing_or_reward_kind & ~0x80) == 0x35)
         {
-            if ((((Slot23C *)g_field_object_states)[rec->unk3A].unk178 >> 1) & 1)
+            if ((g_field_object_states[object->source_object_index].contact.flags >> 1) & 1)
             {
-                ((Slot23C *)g_field_object_states)[((Slot23C *)g_field_object_states)[rec->unk3A].unk170].unkC &= ~0x2000;
-                rec->unk2A = 0;
-                field_restart_sequence_animation(rec);
-                tmp = func_800839F8(rec->unk3A, 0);
+                g_field_object_states[FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index])].object_flags &= ~0x2000;
+                object->motion_parameter = 0;
+                field_restart_sequence_animation(object);
+                tmp = func_800839F8(object->source_object_index, 0);
                 if (tmp != -1)
                 {
-                    if (func_8008AABC(rec->unk3A, ((Slot23C *)g_field_object_states)[rec->unk3A].unk170) != 0)
+                    if (func_8008AABC(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index])) != 0)
                     {
-                        if (((Entry268 *)g_field_player_records)[rec->unk3A].unk1 == 8)
+                        if (g_field_player_records[object->source_object_index].kind == 8)
                         {
-                            func_8008A9D8(rec->unk3A, ((Slot23C *)g_field_object_states)[rec->unk3A].unk170, 0xD);
+                            func_8008A9D8(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xD);
                         }
                         else
                         {
-                            func_8008A9D8(rec->unk3A, ((Slot23C *)g_field_object_states)[rec->unk3A].unk170, 0xC);
+                            func_8008A9D8(object->source_object_index, FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), 0xC);
                         }
-                        index = rec->unk3A;
+                        index = object->source_object_index;
                         anim_id = 0x64;
-                        if (((Entry268 *)g_field_player_records)[index].unk1 == 8)
+                        if (g_field_player_records[index].kind == 8)
                         {
                             anim_id = 0x61;
                         }
                     }
                     else
                     {
-                        if (((Entry268 *)g_field_player_records)[rec->unk3A].unk1 == 8)
+                        if (g_field_player_records[object->source_object_index].kind == 8)
                         {
-                            func_8008A9D8(((Slot23C *)g_field_object_states)[rec->unk3A].unk170, rec->unk3A, 0x18);
+                            func_8008A9D8(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x18);
                         }
                         else
                         {
-                            func_8008A9D8(((Slot23C *)g_field_object_states)[rec->unk3A].unk170, rec->unk3A, 0x17);
+                            func_8008A9D8(FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]), object->source_object_index, 0x17);
                         }
-                        index = rec->unk3A;
+                        index = object->source_object_index;
                         anim_id = 0x65;
-                        if (((Entry268 *)g_field_player_records)[index].unk1 == 8)
+                        if (g_field_player_records[index].kind == 8)
                         {
                             anim_id = 0x63;
                         }
                     }
                     if (func_80083EEC(index, tmp, anim_id) != 0)
                     {
-                        targets = ((Slot23C *)g_field_object_states)[rec->unk3A].unk170;
-                        field_start_actor_animation(tmp, 1, &targets);
+                        targets = FIELD_OBJECT_LINKED_OBJECT(&g_field_object_states[object->source_object_index]);
+                        field_start_actor_animation(tmp, 1, (u8*)&targets);
                     }
                 }
             }
-            func_800A2DD8(rec->unk3A);
+            func_800A2DD8(object->source_object_index);
         }
     }
 }
@@ -554,7 +508,6 @@ s32 func_80092C98(FieldRec *rec)
 
 /* field_actor_pending_actions */
 /* func_80093AB8 */
-#include "common.h"
 
 /** @brief Actor fields used to track and reset pending action state. */
 typedef struct
@@ -590,8 +543,8 @@ typedef struct
     u8 pad2[0x268 - 2];
 } Party;
 
-void field_restart_actor_animation_reverse(Actor *);
-s32 field_get_next_animation_frame_count(Actor *);
+void field_restart_actor_animation_reverse(Actor*);
+s32 field_get_next_animation_frame_count(Actor*);
 s32 func_800A29F8(s32, s32, s32);
 void func_800A2DD8();
 /**
@@ -599,9 +552,9 @@ void func_800A2DD8();
  * @param input Actor whose object slot and pending-action counter are checked.
  * @return One when the actor enters state 0x95; zero otherwise.
  */
-s32 func_80093AB8(Actor *input)
+s32 func_80093AB8(Actor* input)
 {
-    Actor *actor = input;
+    Actor* actor = input;
     s32 selection;
     s32 clear_mask;
     s32 flags;
@@ -609,18 +562,18 @@ s32 func_80093AB8(Actor *input)
     u16 count;
     u8 object_index;
     s32 mode;
-    Slot *slot;
-    Slot *base;
-    Slot *reset_slot;
+    Slot* slot;
+    Slot* base;
+    Slot* reset_slot;
 
     if (actor->unk1C & 0x1FF)
     {
-        ((Slot *)g_field_object_states)[actor->unk3A].unkC &= 0xFFFF7FFF;
+        ((Slot*)g_field_object_states)[actor->unk3A].unkC &= 0xFFFF7FFF;
         actor->unk30 = (u16)(actor->unk30 + 1);
         return 0;
     }
     selection = func_800A29F8(actor->unk3A, ((u8)actor->unk21 >> 7) ^ 1, 1);
-    base = ((Slot *)g_field_object_states);
+    base = ((Slot*)g_field_object_states);
     slot = &base[actor->unk3A];
     if (((slot->unk16F == 2) || (actor->unk30 != 0)) && (actor->unk4 == 0))
     {
@@ -650,7 +603,7 @@ s32 func_80093AB8(Actor *input)
                         {
                             if ((u8)actor->unk3A < 2U)
                             {
-                                if (((Party *)g_field_player_records)[actor->unk3A].unk1 == 0xA)
+                                if (((Party*)g_field_player_records)[actor->unk3A].unk1 == 0xA)
                                 {
                                     if (retry_count >= 3U)
                                     {
@@ -667,30 +620,29 @@ s32 func_80093AB8(Actor *input)
                     func_800A2DD8(actor->unk3A);
                     clear_mask = 0xFFFF7FFF;
                     actor->unk30 = 0U;
-                    ((Slot *)g_field_object_states)[actor->unk3A].unk18D = 0;
-                    reset_slot = &((Slot *)g_field_object_states)[actor->unk3A];
+                    ((Slot*)g_field_object_states)[actor->unk3A].unk18D = 0;
+                    reset_slot = &((Slot*)g_field_object_states)[actor->unk3A];
                     goto reset_actor;
                 }
                 goto clear_pending_counter;
             }
         }
     clear_pending_counter:
-        ((Slot *)g_field_object_states)[actor->unk3A].unk18D = 0;
+        ((Slot*)g_field_object_states)[actor->unk3A].unk18D = 0;
         actor->unk30 = 0U;
     }
 check_mode:
     object_index = actor->unk3A;
-    mode = ((Slot *)g_field_object_states)[object_index].unk16F;
+    mode = ((Slot*)g_field_object_states)[object_index].unk16F;
     if (mode == 3)
     {
-        if (selection != 4 && selection != 6 && selection != 5 && selection != 7 &&
-            selection != 8 && selection != 9 && selection != 10)
+        if (selection != 4 && selection != 6 && selection != 5 && selection != 7 && selection != 8 && selection != 9 && selection != 10)
         {
             func_800A2DD8(object_index);
             clear_mask = 0xFFFF7FFF;
-            ((Slot *)g_field_object_states)[actor->unk3A].unk18D = 0;
+            ((Slot*)g_field_object_states)[actor->unk3A].unk18D = 0;
             actor->unk30 = 0;
-            reset_slot = &((Slot *)g_field_object_states)[actor->unk3A];
+            reset_slot = &((Slot*)g_field_object_states)[actor->unk3A];
         reset_actor:
             flags = reset_slot->unkC;
             flags &= clear_mask;
@@ -713,9 +665,9 @@ check_mode:
                     {
                         func_800A2DD8(object_index);
 
-                        ((Slot *)g_field_object_states)[actor->unk3A].unk18D = 0;
+                        ((Slot*)g_field_object_states)[actor->unk3A].unk18D = 0;
                         actor->unk30 = 0;
-                        ((Slot *)g_field_object_states)[actor->unk3A].unkC &= 0xFFFF7FFF;
+                        ((Slot*)g_field_object_states)[actor->unk3A].unkC &= 0xFFFF7FFF;
                     }
                 }
             }
@@ -725,21 +677,48 @@ check_mode:
 }
 
 /* func_80093EB4 */
-#include "common.h"
-typedef struct { u8 pad0[0x1C]; s32 unk1C; u8 pad20[0xA]; s16 unk2A; u8 pad2C[2]; u16 unk2E; u8 pad30[0xA]; u8 unk3A; } FieldRecord;
-typedef struct { u8 pad0[0x4A]; s16 unk4A; u8 pad4C[0x128]; s32 unk174; u8 pad178[1]; u8 unk179; u8 pad17A[0xC2]; } FieldState;
-typedef struct { u8 pad0[0x228]; u8 unk228; u8 pad229[0x11]; u8 unk23A; u8 pad23B[9]; } ActorSlot;
-void func_8008A678(); void field_update_sequence_actor_binding(); void func_800A2DD8();
+typedef struct
+{
+    u8 pad0[0x1C];
+    s32 unk1C;
+    u8 pad20[0xA];
+    s16 unk2A;
+    u8 pad2C[2];
+    u16 unk2E;
+    u8 pad30[0xA];
+    u8 unk3A;
+} FieldRecord;
+typedef struct
+{
+    u8 pad0[0x4A];
+    s16 unk4A;
+    u8 pad4C[0x128];
+    s32 unk174;
+    u8 pad178[1];
+    u8 unk179;
+    u8 pad17A[0xC2];
+} FieldState;
+typedef struct
+{
+    u8 pad0[0x228];
+    u8 unk228;
+    u8 pad229[0x11];
+    u8 unk23A;
+    u8 pad23B[9];
+} ActorSlot;
+void func_8008A678();
+void field_update_sequence_actor_binding();
+void func_800A2DD8();
 
 /**
  * @brief Clear field state for a record after validating its linked actor slot.
  * @param arg0 Field record whose state is updated.
  */
-void func_80093EB4(FieldRecord *arg0)
+void func_80093EB4(FieldRecord* arg0)
 {
-    ActorSlot *slot;
-    FieldState *state;
-    FieldState *states = (FieldState *)((Slot *)g_field_object_states);
+    ActorSlot* slot;
+    FieldState* state;
+    FieldState* states = (FieldState*)((Slot*)g_field_object_states);
     u8 index;
     u8 slotIndex;
     s32 gate;
@@ -765,7 +744,7 @@ void func_80093EB4(FieldRecord *arg0)
     else
     {
         gate = arg0->unk2E;
-        slot = &((ActorSlot *)g_field_actor_slots)[slotIndex];
+        slot = &((ActorSlot*)g_field_actor_slots)[slotIndex];
         if (gate != 0 || (slot->unk23A != 0 && slot->unk228 == index))
         {
             return;
@@ -789,8 +768,6 @@ void func_80093EB4(FieldRecord *arg0)
 }
 
 /* func_8009403C */
-#include "common.h"
-#include "vector.h"
 
 /** @brief Accessed fields of an actor sequence record. */
 typedef struct
@@ -852,10 +829,9 @@ typedef struct
     u8 pad09[0x14 - 9];
 } FieldSequenceResource;
 
-extern FieldSequenceResource g_field_resource_entries[];
 extern u8 g_field_actor_sequence_data[];
 s32 field_object_has_active_actor_tracks(u8);
-void field_stop_actor_animations_for_object(FieldSequenceRecord *, s32);
+void field_stop_actor_animations_for_object(FieldSequenceRecord*, s32);
 void field_restart_actor_animation();
 void func_8008A678(s32);
 void field_update_sequence_actor_binding();
@@ -869,21 +845,21 @@ void func_800A2DD8();
  * @param sequence_index Script row within the object's selected bank.
  * @note Command 0xF1 advances the cursor; 0xEF handles sequence completion.
  */
-void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
+void func_8009403C(FieldSequenceRecord* record, s32 sequence_index)
 {
-    Vec3i *scratch = (Vec3i *)0x1F800000;
-    FieldSequenceSlot *slot_base;
-    FieldSequenceSlot *slot;
+    Vec3i* scratch = (Vec3i*)0x1F800000;
+    FieldSequenceSlot* slot_base;
+    FieldSequenceSlot* slot;
     FieldSequenceSlot *timer_slot, *reset_slot, *final_slot;
-    FieldSequenceSlot *final_base;
-    u8 *active_scripts;
-    FieldSequenceBank *active_banks;
+    FieldSequenceSlot* final_base;
+    u8* active_scripts;
+    FieldSequenceBank* active_banks;
     s32 active_address, active_position;
     s32 first_position;
     s32 bank;
-    FieldSequenceBank *banks;
-    FieldSequenceMotion *motion;
-    u8 *scripts;
+    FieldSequenceBank* banks;
+    FieldSequenceMotion* motion;
+    u8* scripts;
     s32 object;
     s32 position;
     s32 row_offset;
@@ -897,7 +873,7 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
     {
         goto apply_motion;
     }
-    slot_base = ((FieldSequenceSlot *)((Slot *)g_field_object_states));
+    slot_base = ((FieldSequenceSlot*)((Slot*)g_field_object_states));
     timer_slot = &slot_base[record->object_id];
     delay = timer_slot->command_delay;
     if (delay != 0)
@@ -921,10 +897,10 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
         {
             active_scripts = g_field_actor_sequence_data;
         } while (0);
-        active_banks = ((FieldSequenceBank *)((Party *)g_field_player_records));
+        active_banks = ((FieldSequenceBank*)((Party*)g_field_player_records));
         active_address = (sequence_index << 5) + active_banks[object].bank * 0x300;
         active_address += (s32)active_scripts;
-        command = *(u8 *)(active_address + active_position);
+        command = *(u8*)(active_address + active_position);
         if (command == 0xFF || command == 0xF1)
         {
             goto apply_motion;
@@ -937,7 +913,7 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
         slot_base[record->object_id].repeat_state = 0;
     }
     scripts = g_field_actor_sequence_data;
-    banks = ((FieldSequenceBank *)((Party *)g_field_player_records));
+    banks = ((FieldSequenceBank*)((Party*)g_field_player_records));
     object = record->object_id;
 
     do
@@ -954,7 +930,7 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
     first_position = slot->script_position;
     row_address += (s32)scripts;
     row_address += first_position;
-    if (*(u8 *)row_address == 0xF1)
+    if (*(u8*)row_address == 0xF1)
     {
         slot->script_position = first_position + 1;
     }
@@ -972,7 +948,7 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
     position = slot->script_position;
     row_address += (s32)scripts;
     row_address += position;
-    if (*(u8 *)row_address == 0xEF)
+    if (*(u8*)row_address == 0xEF)
     {
         if (slot->repeat_state == 0)
         {
@@ -1002,7 +978,7 @@ void func_8009403C(FieldSequenceRecord *record, s32 sequence_index)
     record->sequence_flags |= 0x800;
 apply_motion:
     amount = (s8)record->motion_remainder / (s16)record->motion_divisor;
-    motion = &((FieldSequenceMotion *)g_field_object_parts)[record->object_id];
+    motion = &((FieldSequenceMotion*)g_field_object_parts)[record->object_id];
     record->motion_remainder = (u8)record->motion_remainder - amount;
     if (record->facing_flags & 0x80)
     {
@@ -1017,7 +993,7 @@ apply_motion:
     field_resolve_actor_movement(record, scratch, 1);
     if (g_field_resource_entries[record->resource_id].mode == 0)
     {
-        final_base = ((FieldSequenceSlot *)((Slot *)g_field_object_states));
+        final_base = ((FieldSequenceSlot*)((Slot*)g_field_object_states));
         final_slot = &final_base[record->object_id];
         final_slot->track_flags &= ~0x4000;
     }
@@ -1026,7 +1002,6 @@ apply_motion:
 /* field_actor_displacement: Apply actor displacement, follow leader history, and refresh collision contact. */
 
 /* func_80094508 */
-#include "common.h"
 
 /** @brief Partial actor state used by the scaled movement update. */
 typedef struct
@@ -1064,14 +1039,14 @@ s32 field_resolve_actor_movement();
  * @param arg3 Depth scale input.
  * @return Unspecified value; callers do not consume the result.
  */
-s32 func_80094508(Blk80094508_FieldActorState *arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 func_80094508(Blk80094508_FieldActorState* arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     s32 temp_lo;
-    Blk80094508_FieldActorPartDef *part;
-    s32 *out;
+    Blk80094508_FieldActorPartDef* part;
+    s32* out;
     s16 state;
 
-    out = (s32 *)0x1F800000;
+    out = (s32*)0x1F800000;
     if (arg0->unk2E == 0)
     {
         arg0->unk2A = 0;
@@ -1081,7 +1056,7 @@ s32 func_80094508(Blk80094508_FieldActorState *arg0, s32 arg1, s32 arg2, s32 arg
         field_update_actor_movement_animation(arg0, arg1, arg3);
         temp_lo = (s8)arg0->unk36 / arg0->unk16;
         arg0->unk36 = (u8)arg0->unk36 - temp_lo;
-        part = &((Blk80094508_FieldActorPartDef *)g_field_object_parts)[arg0->unk3A];
+        part = &((Blk80094508_FieldActorPartDef*)g_field_object_parts)[arg0->unk3A];
         out[0] = (temp_lo * arg1 * part->unk2E) >> 6;
         out[1] = (arg2 * part->unk33) >> 6;
         out[2] = (temp_lo * arg3 * part->unk2E) >> 6;
@@ -1097,8 +1072,6 @@ s32 func_80094508(Blk80094508_FieldActorState *arg0, s32 arg1, s32 arg2, s32 arg
 }
 
 /* func_80094690 */
-#include "common.h"
-#include "vector.h"
 
 /**
  * @brief Field record fields used by the scaled position query.
@@ -1126,30 +1099,23 @@ s32 field_resolve_actor_movement();
  * @note 100% match. Reusing one scaled-value local for both products
  *       reproduces the target value web and register reuse.
  */
-void func_80094690(Record94690 *record, s32 x, s32 z)
+void func_80094690(Record94690* record, s32 x, s32 z)
 {
-    Vec3i *vector;
+    Vec3i* vector;
     s32 scaled;
 
     scaled = x * record->scale;
-    vector = (Vec3i *)0x1F800000;
+    vector = (Vec3i*)0x1F800000;
     vector->y = 0;
     vector->x = scaled;
-    scaled = z * record->scale;
-    vector->z = scaled;
-    if (field_resolve_actor_movement(record, vector, 0, scaled) == 0)
+    vector->z = z * record->scale;
+    if (field_resolve_actor_movement(record, vector, 0) == 0)
     {
         record->value = 0;
     }
 }
 
 /* func_800946FC */
-#include "common.h"
-#include "field_types.h"
-#include "sdk/inline_c.h"
-
-/* Apply the matching GTE instruction encodings after the SDK macros. */
-#include "sdk/gte_dmpsx_compat.h"
 
 /** @brief Partial field record used by the history-following update. */
 typedef struct
@@ -1195,45 +1161,37 @@ s32 field_resolve_actor_movement();
  * @param record Follower record whose movement and history index are updated.
  * @note Packed history addressing and scratchpad GTE operations preserve codegen.
  */
-void func_800946FC(FieldFollowRecord *record)
+void func_800946FC(FieldFollowRecord* record)
 {
-    VECTOR *delta = (VECTOR *)0x1F800010;
-    VECTOR *squares = (VECTOR *)0x1F800000;
-    FieldFollowSlot *slots;
-    FieldFollowSlot *slot;
+    VECTOR* delta = (VECTOR*)0x1F800010;
+    VECTOR* squares = (VECTOR*)0x1F800000;
+    FieldFollowSlot* slots;
+    FieldFollowSlot* slot;
     s32 distance;
     u8 index;
     u8 next;
     s32 state;
 
     delta->vy = 0;
-    delta->vx = (((FieldFollowRecord *)g_field_actors)[0].x - record->x) / 256;
-    delta->vz = (((FieldFollowRecord *)g_field_actors)[0].z - record->z) / 256;
+    delta->vx = (((FieldFollowRecord*)g_field_actors)[0].x - record->x) / 256;
+    delta->vz = (((FieldFollowRecord*)g_field_actors)[0].z - record->z) / 256;
     gte_ldlvl(delta);
     gte_sqr0();
     gte_stlvnl(squares);
     index = record->slot;
     distance = squares->vx + squares->vz;
-    if (((index + 1) * 2000 < distance) &&
-        (slots = ((FieldFollowSlot *)g_field_object_states), slot = &slots[index], next = slot->history_index, next < 47))
+    if (((index + 1) * 2000 < distance) && (slots = ((FieldFollowSlot*)g_field_object_states), slot = &slots[index], next = slot->history_index, next < 47))
     {
         slot->history_index = next + 1;
         /* Fold the slot and point indices together before the four-byte stride. */
         delta->vx =
-            (*(s16 *)((u8 *)slots +
-                      (((FieldFollowRecord *)g_field_actors)[0].slot * 0x8F + slots[record->slot].history_index) * 4 + 0x6C)
-             << 8) -
-            record->x;
+            (*(s16*)((u8*)slots + (((FieldFollowRecord*)g_field_actors)[0].slot * 0x8F + slots[record->slot].history_index) * 4 + 0x6C) << 8) - record->x;
         delta->vz =
-            (*(s16 *)((u8 *)slots +
-                      (((FieldFollowRecord *)g_field_actors)[0].slot * 0x8F + slots[record->slot].history_index) * 4 + 0x6E)
-             << 8) -
-            record->z;
+            (*(s16*)((u8*)slots + (((FieldFollowRecord*)g_field_actors)[0].slot * 0x8F + slots[record->slot].history_index) * 4 + 0x6E) << 8) - record->z;
         gte_ldlvl(delta);
         gte_sqr12();
         gte_stlvnl(squares);
-        if (squares->vx + squares->vz > 384 &&
-            !(((FieldFollowResource *)g_field_resource_entries)[record->resource].flags & 1))
+        if (squares->vx + squares->vz > 384 && !(((FieldFollowResource*)g_field_resource_entries)[record->resource].flags & 1))
         {
             record->unk33 = 1;
         }
@@ -1244,7 +1202,7 @@ void func_800946FC(FieldFollowRecord *record)
     }
     else
     {
-        if (((FieldFollowResource *)g_field_resource_entries)[record->resource].flags & 1)
+        if (((FieldFollowResource*)g_field_resource_entries)[record->resource].flags & 1)
         {
             record->state &= 0x80;
         }
@@ -1269,7 +1227,6 @@ void func_800946FC(FieldFollowRecord *record)
 }
 
 /* func_800949CC */
-#include "common.h"
 
 typedef struct
 {
@@ -1309,22 +1266,22 @@ s32 field_resolve_actor_movement();
  * @param y Y component used by the transform path.
  * @param z Z component used by the transform path.
  */
-void func_800949CC(FieldActorRecord *record, s32 x, s32 y, s32 z)
+void func_800949CC(FieldActorRecord* record, s32 x, s32 y, s32 z)
 {
     s32 offset;
     s32 key;
     s32 selector;
-    u8 *first_base;
-    u8 *second_base;
-    u8 *third_base;
-    FieldTrackActor *actors;
-    FieldTrackActor *actor;
-    s32 *scratch;
+    u8* first_base;
+    u8* second_base;
+    u8* third_base;
+    FieldTrackActor* actors;
+    FieldTrackActor* actor;
+    s32* scratch;
 
-    scratch = (s32 *)0x1F800000;
+    scratch = (s32*)0x1F800000;
     if (record->transform_mode == 0)
     {
-        first_base = (u8 *)((FieldTrackEntry *)g_field_actor_bindings);
+        first_base = (u8*)((FieldTrackEntry*)g_field_actor_bindings);
         if ((u8)record->track < 2U)
         {
             offset = record->track * 0x1C;
@@ -1334,11 +1291,11 @@ void func_800949CC(FieldActorRecord *record, s32 x, s32 y, s32 z)
             offset = 0x38;
         }
         selector = record->track;
-        key = *(s32 *)(first_base + offset + 0xC);
+        key = *(s32*)(first_base + offset + 0xC);
         if (key == selector)
         {
-            actors = ((FieldTrackActor *)g_field_actor_slots);
-            second_base = (u8 *)((FieldTrackEntry *)g_field_actor_bindings);
+            actors = ((FieldTrackActor*)g_field_actor_slots);
+            second_base = (u8*)((FieldTrackEntry*)g_field_actor_bindings);
             if ((u32)(key & 0xFF) < 2U)
             {
                 offset = key * 0x1C;
@@ -1347,11 +1304,11 @@ void func_800949CC(FieldActorRecord *record, s32 x, s32 y, s32 z)
             {
                 offset = 0x38;
             }
-            actor = actors + *(s32 *)(second_base + offset + 0x18);
+            actor = actors + *(s32*)(second_base + offset + 0x18);
             if (actor->unk24 != 0)
             {
-                actors = ((FieldTrackActor *)g_field_actor_slots);
-                third_base = (u8 *)((FieldTrackEntry *)g_field_actor_bindings);
+                actors = ((FieldTrackActor*)g_field_actor_slots);
+                third_base = (u8*)((FieldTrackEntry*)g_field_actor_bindings);
                 if ((u8)record->track < 2U)
                 {
                     offset = record->track * 0x1C;
@@ -1360,7 +1317,7 @@ void func_800949CC(FieldActorRecord *record, s32 x, s32 y, s32 z)
                 {
                     offset = 0x38;
                 }
-                actor = actors + *(s32 *)(third_base + offset + 0x18);
+                actor = actors + *(s32*)(third_base + offset + 0x18);
                 if (actor->unk23A == 0)
                 {
                     record->state = 0;
@@ -1386,16 +1343,15 @@ void func_800949CC(FieldActorRecord *record, s32 x, s32 y, s32 z)
 }
 
 /* func_80094B5C */
-#include "common.h"
 
 typedef struct
 {
     u8 pad0[0x4];
-    s32 unk4;  /* 0x04 */
+    s32 unk4; /* 0x04 */
     u8 pad8[0x20 - 0x8];
-    u8 unk20;  /* 0x20 */
+    u8 unk20; /* 0x20 */
     u8 pad21[0x26 - 0x21];
-    u8 unk26;  /* 0x26 */
+    u8 unk26; /* 0x26 */
     u8 pad27[0x2A - 0x27];
     s16 unk2A; /* 0x2A */
     u8 pad2C[0x30 - 0x2C];
@@ -1412,7 +1368,7 @@ typedef struct
  * @param flag Nonzero subtracts the delta from @c unk4; zero adds it (with the
  *             non-negative reset).
  */
-void func_80094B5C(Struct80094B5C *a0, s32 flag)
+void func_80094B5C(Struct80094B5C* a0, s32 flag)
 {
     s8 v;
 
@@ -1440,7 +1396,6 @@ void func_80094B5C(Struct80094B5C *a0, s32 flag)
 }
 
 /* field40 */
-#include "common.h"
 
 typedef struct
 {
@@ -1451,7 +1406,7 @@ typedef struct
     u8 unk20;
 } UnkStruct21;
 
-void func_80094BC4(UnkStruct21 *arg0, s32 arg1, s32 arg2)
+void func_80094BC4(UnkStruct21* arg0, s32 arg1, s32 arg2)
 {
     u8 temp_v0;
 
@@ -1461,7 +1416,6 @@ void func_80094BC4(UnkStruct21 *arg0, s32 arg1, s32 arg2)
 }
 
 /* func_80094C00 */
-#include "common.h"
 
 /** @brief Position, speed, and slot-index prefix of a field actor. */
 typedef struct
@@ -1512,7 +1466,7 @@ typedef struct
     u16 height;
 } FieldActorCollisionBounds;
 
-extern s32 func_8005B6AC(FieldActorCollisionMover *);
+extern s32 func_8005B6AC(FieldActorCollisionMover*);
 
 /**
  * @brief Move an actor by its speed and refresh its collision contact and height.
@@ -1522,10 +1476,10 @@ extern s32 func_8005B6AC(FieldActorCollisionMover *);
  * @note Uses collision scratchpad memory at 0x1F800000 and map bounds at 0x801ED400.
  * @note 100% match with GCC 2.7.2 CDK: 169 instructions, 676 bytes.
  */
-void func_80094C00(FieldMovingActor *actor, s32 dx, s32 dz)
+void func_80094C00(FieldMovingActor* actor, s32 dx, s32 dz)
 {
-    FieldActorCollisionBounds *bounds = (FieldActorCollisionBounds *)0x801ED400;
-    FieldActorCollisionMover *mover = (FieldActorCollisionMover *)0x1F800000;
+    FieldActorCollisionBounds* bounds = (FieldActorCollisionBounds*)0x801ED400;
+    FieldActorCollisionMover* mover = (FieldActorCollisionMover*)0x1F800000;
     s32 x, z;
     u8 speed;
 
@@ -1534,8 +1488,7 @@ void func_80094C00(FieldMovingActor *actor, s32 dx, s32 dz)
     actor->z += dz * speed;
     x = actor->x;
     z = actor->z;
-    if (x >= 0 && x < (bounds->width << 8) && z >= 0 &&
-        z < ((s32)(bounds->height << 16) >> 7))
+    if (x >= 0 && x < (bounds->width << 8) && z >= 0 && z < ((s32)(bounds->height << 16) >> 7))
     {
         mover->x = x;
         mover->y = actor->y;
@@ -1543,7 +1496,7 @@ void func_80094C00(FieldMovingActor *actor, s32 dx, s32 dz)
         mover->dx = 0;
         mover->dy = 0;
         mover->dz = 0;
-        if (((FieldObjectVisualKind *)((Blk80094508_FieldActorPartDef *)g_field_object_parts))[actor->slot].kind == 0x40)
+        if (((FieldObjectVisualKind*)((Blk80094508_FieldActorPartDef*)g_field_object_parts))[actor->slot].kind == 0x40)
         {
             mover->radius = 12;
             mover->mode.bits.step = 8;
@@ -1557,39 +1510,39 @@ void func_80094C00(FieldMovingActor *actor, s32 dx, s32 dz)
         /* Separate bitfield clears preserve the two target mask operations. */
         mover->mode.bits.bit17 = 0;
         mover->mode.bits.bit16 = 0;
-        mover->contact = ((FieldActorCollisionResult *)((FieldFollowSlot *)g_field_object_states))[actor->slot].contact;
-        mover->surface = ((FieldActorCollisionResult *)((FieldFollowSlot *)g_field_object_states))[actor->slot].surface;
+        mover->contact = ((FieldActorCollisionResult*)((FieldFollowSlot*)g_field_object_states))[actor->slot].contact;
+        mover->surface = ((FieldActorCollisionResult*)((FieldFollowSlot*)g_field_object_states))[actor->slot].surface;
         func_8005B6AC(mover);
-        ((FieldActorCollisionResult *)((FieldFollowSlot *)g_field_object_states))[actor->slot].contact = mover->contact;
-        ((FieldActorCollisionResult *)((FieldFollowSlot *)g_field_object_states))[actor->slot].surface = mover->surface;
-        ((FieldActorCollisionResult *)((FieldFollowSlot *)g_field_object_states))[actor->slot].height = mover->height / 256;
+        ((FieldActorCollisionResult*)((FieldFollowSlot*)g_field_object_states))[actor->slot].contact = mover->contact;
+        ((FieldActorCollisionResult*)((FieldFollowSlot*)g_field_object_states))[actor->slot].surface = mover->surface;
+        ((FieldActorCollisionResult*)((FieldFollowSlot*)g_field_object_states))[actor->slot].height = mover->height / 256;
     }
     else
     {
-        ((FieldActorCollisionResult *)((FieldFollowSlot *)g_field_object_states))[actor->slot].contact = -1;
-        ((FieldActorCollisionResult *)((FieldFollowSlot *)g_field_object_states))[actor->slot].surface = 0;
-        ((FieldActorCollisionResult *)((FieldFollowSlot *)g_field_object_states))[actor->slot].height = 0;
+        ((FieldActorCollisionResult*)((FieldFollowSlot*)g_field_object_states))[actor->slot].contact = -1;
+        ((FieldActorCollisionResult*)((FieldFollowSlot*)g_field_object_states))[actor->slot].surface = 0;
+        ((FieldActorCollisionResult*)((FieldFollowSlot*)g_field_object_states))[actor->slot].height = 0;
     }
 }
 
 /* field_actor_resource_states: Advance actor states after their resource requests complete. */
 
-#include "common.h"
-
-typedef struct {
+typedef struct
+{
     u8 pad0[0x2A];
-    s16 unk2A;   /* 0x2A */
+    s16 unk2A; /* 0x2A */
     u8 pad2C[0x3A - 0x2C];
-    u8 unk3A;    /* 0x3A */
-    u8 unk3B;    /* 0x3B */
+    u8 unk3A; /* 0x3A */
+    u8 unk3B; /* 0x3B */
     u8 pad3C[0x178 - 0x3C];
-    u8 unk178;   /* 0x178 */
+    u8 unk178; /* 0x178 */
     u8 pad179[0x23C - 0x179];
 } ActorRec;
 
-typedef struct {
+typedef struct
+{
     u8 pad0[0xE];
-    u16 unkE;    /* 0x0E */
+    u16 unkE; /* 0x0E */
     u8 pad10[0x14 - 0x10];
 } ResEntry;
 
@@ -1600,14 +1553,14 @@ typedef struct {
  * @note 100% match. The function returns the value already carried in v0;
  *       that return lifetime naturally preserves the target delay-slot nops.
  */
-s32 func_80094EA4(ActorRec *arg0)
+s32 func_80094EA4(ActorRec* arg0)
 {
     s32 result;
 
-    result = ((ActorRec *)g_field_object_states)[arg0->unk3A].unk178 & 1;
+    result = ((ActorRec*)g_field_object_states)[arg0->unk3A].unk178 & 1;
     if (result == 0)
     {
-        result = field_start_bound_action_animation(arg0->unk3A, 0, 0, ((ResEntry *)g_field_resource_entries)[arg0->unk3B].unkE);
+        result = field_start_bound_action_animation(arg0->unk3A, 0, 0, ((ResEntry*)g_field_resource_entries)[arg0->unk3B].unkE);
         if (result != 0)
         {
             result = 0x8E;
@@ -1623,14 +1576,14 @@ s32 func_80094EA4(ActorRec *arg0)
  * @return The guard/query result, or 0x94 after a successful update.
  * @note 100% match. Twin of func_80094EA4 with a different success state.
  */
-s32 func_80094F40(ActorRec *arg0)
+s32 func_80094F40(ActorRec* arg0)
 {
     s32 result;
 
-    result = ((ActorRec *)g_field_object_states)[arg0->unk3A].unk178 & 1;
+    result = ((ActorRec*)g_field_object_states)[arg0->unk3A].unk178 & 1;
     if (result == 0)
     {
-        result = field_start_bound_action_animation(arg0->unk3A, 0, 0, ((ResEntry *)g_field_resource_entries)[arg0->unk3B].unkE);
+        result = field_start_bound_action_animation(arg0->unk3A, 0, 0, ((ResEntry*)g_field_resource_entries)[arg0->unk3B].unkE);
         if (result != 0)
         {
             result = 0x94;
@@ -1643,7 +1596,6 @@ s32 func_80094F40(ActorRec *arg0)
 /* field_actor_animation_resume: Detect released animation slots and resume the actor record animation. */
 
 /* func_80094FDC */
-#include "common.h"
 
 typedef struct
 {
@@ -1668,7 +1620,7 @@ typedef struct
     u8 unk3A;
 } Struct_D800FDF58;
 
-extern void func_80095074(Struct_D800FDF58 *rec);
+extern void func_80095074(Struct_D800FDF58* rec);
 
 /**
  * @brief Resets a field record when its selected actor slot is free.
@@ -1680,21 +1632,21 @@ extern void func_80095074(Struct_D800FDF58 *rec);
  * @note The s32 return type, despite the lack of an explicit return statement,
  *       is required to preserve the target v0 lifetime. gcc272_cdk, 100%.
  */
-s32 func_80094FDC(Struct_D800FDF58 *rec)
+s32 func_80094FDC(Struct_D800FDF58* rec)
 {
-    Blk80094FDC_FieldActorState *actors;
-    u8 *base;
+    Blk80094FDC_FieldActorState* actors;
+    u8* base;
     s32 offset;
     s32 idx;
-    Blk80094FDC_FieldActorState *actor;
+    Blk80094FDC_FieldActorState* actor;
 
-    actors = ((Blk80094FDC_FieldActorState *)g_field_actor_slots);
-    base = (u8 *)((Struct_D80105880 *)g_field_actor_bindings);
+    actors = ((Blk80094FDC_FieldActorState*)g_field_actor_slots);
+    base = (u8*)((Struct_D80105880*)g_field_actor_bindings);
     if (rec->unk3A < 2)
         offset = rec->unk3A * 0x1C;
     else
         offset = 0x38;
-    idx = *(s32 *)(base + offset + 0x18);
+    idx = *(s32*)(base + offset + 0x18);
     actor = actors + idx;
     if (actor->unk24 == 0)
     {
@@ -1705,41 +1657,40 @@ s32 func_80094FDC(Struct_D800FDF58 *rec)
 }
 
 /* func_80095074 */
-#include "common.h"
 
 typedef struct
 {
     u8 pad0[0x60];
-    u8 unk60[4];   /* 0x60 */
+    u8 unk60[4]; /* 0x60 */
     u8 pad64[0x16C - 0x64];
-    u8 unk16C;     /* 0x16C */
+    u8 unk16C; /* 0x16C */
     u8 pad16D[0x23C - 0x16D];
 } Struct_D80105AE0;
 
 extern s32 func_800839F8(s32 arg0, s32 arg1);
 extern s32 func_80083EEC(s32 arg0, s32 arg1, s32 arg2);
-extern void field_start_actor_animation(s32 slot_index, int target_count, u8 *targets);
+extern void field_start_actor_animation(s32 slot_index, int target_count, u8* targets);
 
 /**
  * @see decomp.me (100%) TODO
  */
-void func_80095074(Struct_D800FDF58 *rec)
+void func_80095074(Struct_D800FDF58* rec)
 {
     s32 i;
     s32 anim;
     s32 anim_id;
 
-    if (((Struct_D80105AE0 *)g_field_object_states)[rec->unk3A].unk16C == 0xFF)
+    if (((Struct_D80105AE0*)g_field_object_states)[rec->unk3A].unk16C == 0xFF)
     {
         return;
     }
-    if (((Struct_D80105AE0 *)g_field_object_states)[rec->unk3A].unk16C == 0x1F)
+    if (((Struct_D80105AE0*)g_field_object_states)[rec->unk3A].unk16C == 0x1F)
     {
         for (i = 0; i < 4; i++)
         {
-            if (((Struct_D80105AE0 *)g_field_object_states)[rec->unk3A].unk60[i] != 0)
+            if (((Struct_D80105AE0*)g_field_object_states)[rec->unk3A].unk60[i] != 0)
             {
-                anim_id = ((Struct_D80105AE0 *)g_field_object_states)[rec->unk3A].unk16C;
+                anim_id = ((Struct_D80105AE0*)g_field_object_states)[rec->unk3A].unk16C;
                 anim = func_800839F8(rec->unk3A, 0);
                 if (anim != -1)
                 {
@@ -1753,7 +1704,7 @@ void func_80095074(Struct_D800FDF58 *rec)
         }
         return;
     }
-    anim_id = ((Struct_D80105AE0 *)g_field_object_states)[rec->unk3A].unk16C;
+    anim_id = ((Struct_D80105AE0*)g_field_object_states)[rec->unk3A].unk16C;
     anim = func_800839F8(rec->unk3A, 0);
     if (anim != -1)
     {
@@ -1765,9 +1716,8 @@ void func_80095074(Struct_D800FDF58 *rec)
 }
 
 /* func_80095168 */
-#include "common.h"
 
-extern void func_80095074(Struct_D800FDF58 *rec);
+extern void func_80095074(Struct_D800FDF58* rec);
 
 /**
  * @brief Resets an actor record when its target field-actor slot is free.
@@ -1780,7 +1730,7 @@ extern void func_80095074(Struct_D800FDF58 *rec);
  * @return Unused status value (the return register is left live by the
  *         original, but no caller consumes it).
  */
-s32 func_80095168(Struct_D800FDF58 *rec)
+s32 func_80095168(Struct_D800FDF58* rec)
 {
     if (g_field_actor_slots[rec->unk3A + 0x40].is_active == 0)
     {
@@ -1791,9 +1741,6 @@ s32 func_80095168(Struct_D800FDF58 *rec)
 }
 
 /* field_actor_sequence_runtime: Execute object sequences, manage their animation actors, and update tint flashing. */
-#include "field_actor_runtime.h"
-#include "field_contact_geometry.h"
-#include "sdk/memory.h"
 
 #define FIELD_SEQUENCE_DISPLACEMENT_SCRATCH 0x1F800000
 #define FIELD_SEQUENCE_BINDING_COUNT 3
@@ -1847,7 +1794,6 @@ s32 func_800839F8(s32 owner_index, s32 require_idle_binding);
 s32 func_80083EEC(s32 owner_index, s32 actor_index, s32 resource_index);
 void func_80084424(s32 owner_index);
 void func_80086494(s32 object_index);
-void field_restart_actor_animation(FieldMotionRecord* object);
 
 /**
  * @brief Consume a signed displacement remainder and apply a scaled movement step.
@@ -2002,7 +1948,7 @@ void field_update_sequence_actor_binding(FieldMotionRecord* object, s32 release_
 s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
 {
     FieldObjectRuntime* slots;
-    FieldSequencePlayer* players;
+    FieldPlayerRecord* players;
     u8* programs;
     u8* initial_program;
     u8* initial_program_base;
@@ -2077,8 +2023,8 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
     initial_program_base = g_field_actor_sequence_data;
     initial_owner = object->source_object_index;
     cursor = g_field_object_states[initial_owner].sequence_cursor;
-    initial_program = (script_index * FIELD_SEQUENCE_ROW_SIZE) + (g_field_player_records[initial_owner].sequence_bank * FIELD_SEQUENCE_BANK_SIZE) +
-                      initial_program_base + cursor;
+    initial_program =
+        (script_index * FIELD_SEQUENCE_ROW_SIZE) + (g_field_player_records[initial_owner].kind * FIELD_SEQUENCE_BANK_SIZE) + initial_program_base + cursor;
     if (*initial_program == FIELD_SEQUENCE_END)
     {
         return 1;
@@ -2146,15 +2092,13 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
     slots = g_field_object_states;
     script_offset = script_index * FIELD_SEQUENCE_ROW_SIZE;
     command_slot = object->source_object_index;
-    opcode_ptr = script_offset + players[command_slot].sequence_bank * FIELD_SEQUENCE_BANK_SIZE + programs + cursor;
+    opcode_ptr = script_offset + players[command_slot].kind * FIELD_SEQUENCE_BANK_SIZE + programs + cursor;
     opcode = *opcode_ptr;
     result = 0;
     /* Frame bytes stop dispatch; command bytes may consume additional operands. */
-    for (; opcode >= FIELD_SEQUENCE_START_TARGETS_0;
-         command_slot = object->source_object_index,
-         bank_offset = script_offset + players[command_slot].sequence_bank * FIELD_SEQUENCE_BANK_SIZE,
-         opcode_ptr = (u8*)(bank_offset + (s32)programs + cursor),
-         opcode = *opcode_ptr)
+    for (; opcode >= FIELD_SEQUENCE_START_TARGETS_0; command_slot = object->source_object_index,
+                                                     bank_offset = script_offset + players[command_slot].kind * FIELD_SEQUENCE_BANK_SIZE,
+                                                     opcode_ptr = (u8*)(bank_offset + (s32)programs + cursor), opcode = *opcode_ptr)
     {
         switch (opcode)
         {
@@ -2172,19 +2116,19 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
             case FIELD_SEQUENCE_START_TARGETS_0:
             case FIELD_SEQUENCE_START_TARGETS_1:
             case FIELD_SEQUENCE_START_TARGETS_2:
-                {
-                    FieldObjectRuntime* source_state;
-                    s32 kind_flags;
-                    s32 sequence_command;
-                    source_state = (FieldObjectRuntime*)(object->source_object_index * sizeof(*slots));
-                    source_state = (FieldObjectRuntime*)((s32)source_state + (u8*)slots);
-                    kind_flags = ((command - FIELD_SEQUENCE_START_TARGETS_0) << 12) | FIELD_SEQUENCE_TRANSIENT_ACTOR;
-                    sequence_command = source_state->current_sequence_animation & FIELD_SEQUENCE_ANIMATION_MASK;
-                    target_state = source_state;
-                    sequence_command |= kind_flags;
-                    sequence_command |= FIELD_SEQUENCE_ANIMATION_OVERRIDE;
-                    target_state->sequence_command = sequence_command;
-                }
+            {
+                FieldObjectRuntime* source_state;
+                s32 kind_flags;
+                s32 sequence_command;
+                source_state = (FieldObjectRuntime*)(object->source_object_index * sizeof(*slots));
+                source_state = (FieldObjectRuntime*)((s32)source_state + (u8*)slots);
+                kind_flags = ((command - FIELD_SEQUENCE_START_TARGETS_0) << 12) | FIELD_SEQUENCE_TRANSIENT_ACTOR;
+                sequence_command = source_state->current_sequence_animation & FIELD_SEQUENCE_ANIMATION_MASK;
+                target_state = source_state;
+                sequence_command |= kind_flags;
+                sequence_command |= FIELD_SEQUENCE_ANIMATION_OVERRIDE;
+                target_state->sequence_command = sequence_command;
+            }
                 target_owner = object->source_object_index;
                 actor_index = field_allocate_sequence_actor(target_owner, slots[target_owner].sequence_command);
                 {
@@ -2239,7 +2183,7 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
                 result = 0;
                 delay_owner = object->source_object_index;
                 pending_state = (FieldObjectRuntime*)(delay_owner * sizeof(*slots));
-                delay_operand = script_offset + players[delay_owner].sequence_bank * FIELD_SEQUENCE_BANK_SIZE;
+                delay_operand = script_offset + players[delay_owner].kind * FIELD_SEQUENCE_BANK_SIZE;
                 delay_operand += (u32)programs;
                 delay_operand += cursor;
                 pending_state = (FieldObjectRuntime*)((u8*)pending_state + (s32)slots);
@@ -2276,7 +2220,7 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
                 if (actor_index != -1)
                 {
                     resource_owner = object->source_object_index;
-                    resource_operand = script_offset + players[resource_owner].sequence_bank * FIELD_SEQUENCE_BANK_SIZE;
+                    resource_operand = script_offset + players[resource_owner].kind * FIELD_SEQUENCE_BANK_SIZE;
                     resource_operand += (u32)programs;
                     resource_operand += cursor;
                     func_80083EEC(resource_owner, actor_index, ((u8*)resource_operand)[1]);
@@ -2337,7 +2281,7 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
             case FIELD_SEQUENCE_SET_ANIMATION:
                 command_owner = object->source_object_index;
                 target_state = (FieldObjectRuntime*)(command_owner * sizeof(*slots));
-                animation_operand = script_offset + players[command_owner].sequence_bank * FIELD_SEQUENCE_BANK_SIZE;
+                animation_operand = script_offset + players[command_owner].kind * FIELD_SEQUENCE_BANK_SIZE;
                 animation_operand += (u32)programs;
                 animation_operand += cursor;
                 target_state = (FieldObjectRuntime*)((s32)target_state + (s32)slots);
@@ -2400,13 +2344,13 @@ s32 field_execute_actor_sequence(FieldMotionRecord* object, s32 script_index)
     }
     {
         u8* frame_programs;
-        FieldSequencePlayer* frame_players;
+        FieldPlayerRecord* frame_players;
         FieldObjectRuntime* frame_slots;
         u32 frame_address;
         s32 frame_offset;
         frame_programs = g_field_actor_sequence_data;
         frame_players = g_field_player_records;
-        frame_offset = (script_index * FIELD_SEQUENCE_ROW_SIZE) + frame_players[object->source_object_index].sequence_bank * FIELD_SEQUENCE_BANK_SIZE;
+        frame_offset = (script_index * FIELD_SEQUENCE_ROW_SIZE) + frame_players[object->source_object_index].kind * FIELD_SEQUENCE_BANK_SIZE;
         frame_address = frame_offset;
         frame_address += (u32)frame_programs;
         frame_address += cursor;

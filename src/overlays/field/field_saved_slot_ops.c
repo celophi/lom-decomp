@@ -1,96 +1,104 @@
+/**
+ * @file field_saved_slot_ops.c
+ * @brief Create, release, query and rename the stored companion records.
+ */
+
 #include "game_audio.h"
 #include "common.h"
+#include "field_records.h"
 
-extern void func_800B2844(s32, void *, s32);
+/** @brief Resource id of the companion template table. */
+#define FIELD_RESOURCE_COMPANION_TEMPLATES 7
 
-#define FIELD_SLOT_COUNT 5
-#define FIELD_SLOT_SIZE 0x60
-#define FIELD_SLOT_TABLE_OFFSET 0x2EF4
-#define FIELD_SLOT_VALUE_OFFSET 0x2F50
+/** @brief Unique-id bits taken from the random value. */
 #define FIELD_RANDOM_VALUE_MASK 0xFF00FF00
+
+/** @brief Unique-id bits taken from the game-state words at unkD4/unkD6. */
 #define FIELD_FIXED_VALUE_MASK 0x00FF00FF
 
-extern u8 *D_80122B74;
-extern u16 g_scene_mode;
+/** @brief Companion status bit 31: the companion has just joined. */
+#define FIELD_COMPANION_NEW 0x80000000
 
-extern u8 *func_800C1E40(s32 arg0);
-extern s32 *func_800C1EC8(s32 *src, s32 *dest, s32 n);
+/** @brief Companion template table (resource 7). */
+typedef struct
+{
+    u16 unk0;
+    u16 count;
+    FieldRegionRecord templates[1];
+} FieldCompanionTemplateTable;
+
+void func_800B2844(s32 arg0, void* script, s32 arg2);
+void field_run_name_entry(FieldRegionRecord* initial_name, FieldRegionRecord* active_name, s32 source_mode, s32 history_index, s32 custom_name);
+
+extern FieldGameState* D_80122B74;
+extern u16 g_scene_mode;
+extern s32 g_gosub_result_count;
+extern s32 g_gosub_result_values[];
+extern s32 D_801227F0;
+
+extern void* func_800C1E40(s32 resource_id);
+extern void* func_800C1EC8(void* source, void* destination, s32 size);
 extern s32 rand(void);
 
 /**
- * @brief Copy an indexed resource record into the first free field slot.
- * @param arg0 Index of the source record in resource 7.
- * @return Allocated slot index, FIELD_SLOT_COUNT if all slots are occupied, or 0xFF if resource 7 is unavailable.
+ * @brief Copy a companion template into the first free stored record and give it a unique id.
+ * @param template_index Index of the template in resource 7.
+ * @return Allocated record index, FIELD_REGION_COUNT if all records are in use, or 0xFF if resource 7 is unavailable.
  */
-s32 func_800C2264(s32 arg0)
+s32 func_800C2264(s32 template_index)
 {
-    u8 *resource;
-    u8 *source_record;
-    s32 slot_index;
-    s32 slot_offset;
-    s32 copy_offset;
-    s32 retry_value;
-    s32 value;
+    FieldCompanionTemplateTable* table;
+    FieldRegionRecord* companion_template;
+    s32 slot;
+    s32 scan;
+    s32 retry;
+    s32 unique_id;
     s32 random_high;
-    s32 scan_index;
-    s32 mode;
-    u8 *slot;
 
-    resource = func_800C1E40(7);
-    if (resource == NULL)
+    table = func_800C1E40(FIELD_RESOURCE_COMPANION_TEMPLATES);
+    if (table == NULL)
     {
-        mode = 0x8001;
-        record_game_diagnostic(mode, 0x78, arg0, g_scene_mode);
+        record_game_diagnostic(0x8001, 0x78, template_index, g_scene_mode);
         return 0xFF;
     }
 
-    mode = 1;
-    source_record = resource + ((((arg0 << mode) + arg0) << 5) + 4);
-    func_800B2844(mode, source_record, 0x15);
+    companion_template = &table->templates[template_index];
+    func_800B2844(1, companion_template, 0x15);
 
-    slot_index = 0;
-    do
+    for (slot = 0; slot < FIELD_REGION_COUNT; slot++)
     {
-        copy_offset = slot_index * FIELD_SLOT_SIZE + FIELD_SLOT_TABLE_OFFSET;
-        slot_offset = slot_index * FIELD_SLOT_SIZE;
-        if (*(D_80122B74 + slot_offset + FIELD_SLOT_TABLE_OFFSET) == 0)
+        if (D_80122B74->regions[slot].name[0] == 0)
         {
-            func_800C1EC8((s32 *)source_record, (s32 *)(D_80122B74 + copy_offset), FIELD_SLOT_SIZE);
-            retry_value = -1;
+            func_800C1EC8(companion_template, &D_80122B74->regions[slot], sizeof(FieldRegionRecord));
+            retry = -1;
             do
             {
                 random_high = rand();
-                value = (((random_high << 0x10) + rand()) & FIELD_RANDOM_VALUE_MASK) |
-                        ((*(u16 *)(D_80122B74 + 0xD4) + (*(u16 *)(D_80122B74 + 0xD6) << 0x10)) & FIELD_FIXED_VALUE_MASK);
-                if (value != 0)
+                unique_id =
+                    (((random_high << 16) + rand()) & FIELD_RANDOM_VALUE_MASK) | ((D_80122B74->unkD4 + (D_80122B74->unkD6 << 16)) & FIELD_FIXED_VALUE_MASK);
+                if (unique_id != 0)
                 {
-                    retry_value = 0;
+                    retry = 0;
                 }
-                scan_index = 0;
-                do
+                for (scan = 0; scan < FIELD_REGION_COUNT; scan++)
                 {
-                    slot = D_80122B74 + scan_index * FIELD_SLOT_SIZE;
-                    if (slot[FIELD_SLOT_TABLE_OFFSET] != 0 && *(s32 *)(slot + FIELD_SLOT_VALUE_OFFSET) == value)
+                    if (D_80122B74->regions[scan].name[0] != 0 && D_80122B74->regions[scan].unique_id == unique_id)
                     {
-                        retry_value = -1;
+                        retry = -1;
                     }
-                    scan_index++;
-                } while (scan_index < FIELD_SLOT_COUNT);
-            } while (retry_value != 0);
-            *(s32 *)(D_80122B74 + slot_offset + FIELD_SLOT_VALUE_OFFSET) = value;
-            return slot_index;
+                }
+            } while (retry != 0);
+            D_80122B74->regions[slot].unique_id = unique_id;
+            return slot;
         }
-        slot_index++;
-    } while (slot_index < FIELD_SLOT_COUNT);
-    return slot_index;
+    }
+    return slot;
 }
 
-
-extern s32 g_gosub_result_count;
-extern s32 g_gosub_result_values[];
-extern u8 *D_80122B74;
-extern s32 D_801227F0;
-
+/**
+ * @brief Release the stored companion named by the first gosub result.
+ * @return The released index, FIELD_REGION_COUNT when it is the active companion, or 0xFF on failure.
+ */
 s32 func_800C23F4(void)
 {
     s32 index;
@@ -99,67 +107,52 @@ s32 func_800C23F4(void)
     if (g_gosub_result_count != 0)
     {
         index = g_gosub_result_values[0];
-        if (index < 5)
+        if (index < FIELD_REGION_COUNT)
         {
-            u8 **buffer = &D_80122B74;
-            s32 offset = index * 0x60 + 0x2EF4;
-            func_800B2844(0, *buffer + offset, 0x15);
+            func_800B2844(0, &D_80122B74->regions[index], 0x15);
             index = g_gosub_result_values[0];
-            if (index != *(s32 *)(*buffer + 0x2EF0))
+            if (index != D_80122B74->region_index)
             {
-                {
-                    u8 *entry = *buffer;
-                    entry += index * 0x60;
-                    entry[0x2EF4] = 0;
-                }
+                D_80122B74->regions[index].name[0] = 0;
                 return g_gosub_result_values[0];
             }
-            return 5;
+            return FIELD_REGION_COUNT;
         }
         record_game_diagnostic(0x8001, 0x6E, index, 0);
     }
     return 0xFF;
 }
 
-
-extern u8 *D_80122B74;
-
 /**
- * @brief Process the indexed field entry and report its state.
- * @param index Field entry index.
- * @return Entry state code; unspecified for an out-of-range index.
+ * @brief Report a stored companion's state, acknowledging a newly joined one.
+ * @param index Stored companion index.
+ * @return 0 new but unk42 set, 1 newly joined (flag cleared), 2 gaining experience,
+ *         3 idle, 0xFF empty; unspecified for an out-of-range index.
  */
 s32 func_800C24BC(s32 index)
 {
-    s32 offset;
-    s32 value;
-    u8* base;
+    s32 status;
 
-    if (index >= 5)
+    if (index >= FIELD_REGION_COUNT)
     {
         record_game_diagnostic(0x8001, 0x76, index, 0);
     }
     else
     {
-        base = D_80122B74;
-        offset = index * 0x60;
-        if ((base + offset)[0x2EF4] != 0)
+        if (D_80122B74->regions[index].name[0] != 0)
         {
-            u8* entry;
-
-            func_800B2844(0, D_80122B74 + (offset + 0x2EF4), 0x15);
-            entry = D_80122B74 + offset;
-            value = *(s32*)(entry + 0x2F38);
-            if (value < 0)
+            func_800B2844(0, &D_80122B74->regions[index], 0x15);
+            status = D_80122B74->regions[index].status.word;
+            if (status < 0)
             {
-                if (*(u16*)(entry + 0x2F36) != 0)
+                if (D_80122B74->regions[index].unk42 != 0)
                 {
                     return 0;
                 }
-                *(s32*)(entry + 0x2F38) = value & 0x7FFFFFFF;
+                D_80122B74->regions[index].status.word = status & ~FIELD_COMPANION_NEW;
                 return 1;
             }
-            if (((u32)value >> 30) & 1)
+            if (((u32)status >> 30) & 1)
             {
                 return 2;
             }
@@ -169,37 +162,21 @@ s32 func_800C24BC(s32 index)
     }
 }
 
-
-extern u8 *D_80122B74;
-
 /**
- * @brief Re-arm the pending-input record for a field object, or report an invalid index.
- *
- * For an in-range @p arg0 (< 5), resolves the object's 0x60-stride record at
- * @c D_80122B74 + 0x2EF4 and hands it to func_800B2844 and field_run_name_entry (using
- * the record's @c 0x2F09 count byte). Out-of-range indices record a diagnostic instead.
- *
- * @param arg0 Field-object index; >= 5 records a diagnostic.
+ * @brief Open name entry for a stored companion, or report an invalid index.
+ * @param index Stored companion index; >= FIELD_REGION_COUNT records a diagnostic.
  * @see decomp.me (100%) TODO
  */
-void func_800C25A0(s32 arg0)
+void func_800C25A0(s32 index)
 {
-    s32 temp_s1;
-    s32 off;
-    u8 *addr;
+    FieldRegionRecord* companion;
 
-    if (arg0 >= 5)
+    if (index >= FIELD_REGION_COUNT)
     {
-        record_game_diagnostic(0x8001, 0x77, arg0, 0);
+        record_game_diagnostic(0x8001, 0x77, index, 0);
         return;
     }
-    /* Force the D_80122B74 base high-half to materialize before the index. */
-    if (D_80122B74)
-    {
-    }
-    temp_s1 = arg0 * 3 << 5;
-    off = temp_s1 + 0x2EF4;
-    func_800B2844(0, D_80122B74 + off, 0x15);
-    addr = D_80122B74 + off;
-    field_run_name_entry(addr, addr, 3, *(u8 *)(D_80122B74 + temp_s1 + 0x2F09), 0);
+    func_800B2844(0, &D_80122B74->regions[index], 0x15);
+    companion = &D_80122B74->regions[index];
+    field_run_name_entry(companion, companion, 3, D_80122B74->regions[index].unk15, 0);
 }

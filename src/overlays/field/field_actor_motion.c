@@ -1,11 +1,16 @@
-/** @file field_actor_motion.c
+/**
+ * @file field_actor_motion.c
  * @brief Advance timed actor motion and test proposed movement against screen bounds.
  */
 
-/* func_800925EC */
 #include "common.h"
 #include "field_effect_render_state.h"
 #include "vector.h"
+#include "field_types.h"
+
+/** @brief Scratchpad vector that receives the actor displacement. */
+#define FIELD_MOTION_SCRATCH ((Vec3i*)0x1F800000)
+
 /** @brief State, timing, and movement fields in a 0x54-byte actor record. */
 typedef struct
 {
@@ -53,34 +58,41 @@ typedef struct
     u8 state;
     u8 tail[0xB];
 } FieldMotionResource;
+/** @brief Proposed field position and its signed screen projection. */
+typedef struct
+{
+    FieldVector position;
+    Vec2s screen;
+} FieldBoundsProjection;
+
 extern FieldMotionSlot g_field_object_states[];
 extern FieldMotionVisual g_field_object_parts[];
 extern FieldMotionResource g_field_resource_entries[];
-extern void func_80092C98(FieldMotionActor *);
-extern s32 func_80091728(s32, s32, FieldMotionActor *);
+extern void func_80092C98(FieldMotionActor*);
+extern s32 func_80091728(s32, s32, FieldMotionActor*);
 extern s32 field_object_has_active_actor_tracks(s32);
-extern void field_update_sequence_actor_binding(FieldMotionActor *, s32);
-extern s32 func_80093AB8(FieldMotionActor *);
-extern s32 func_80092AD8(FieldMotionActor *);
-extern void field_restart_sequence_animation(FieldMotionActor *);
-extern void func_8008BC5C(FieldMotionActor *);
-extern s32 field_resolve_actor_movement(FieldMotionActor *, Vec3i *, s32);
+extern void field_update_sequence_actor_binding(FieldMotionActor*, s32);
+extern s32 func_80093AB8(FieldMotionActor*);
+extern s32 func_80092AD8(FieldMotionActor*);
+extern void field_restart_sequence_animation(FieldMotionActor*);
+extern void func_8008BC5C(FieldMotionActor*);
+extern s32 field_resolve_actor_movement(FieldMotionActor*, Vec3i*, s32);
 
 /**
  * @brief Advance actor motion state or apply its remaining scaled displacement.
  * @param actor Actor supplying movement, state, visual slot, and resource index.
  * @param update Nonzero permits the initial timed/state-specific update.
- * @return Unspecified; callers use this routine only for its side effects.
+ * @return Nothing meaningful; the original declares an int return but never sets it.
  * @note Displacement is written to the three-component scratchpad vector.
  */
-s32 func_800925EC(FieldMotionActor *actor, s32 update)
+s32 func_800925EC(FieldMotionActor* actor, s32 update)
 {
-    Vec3i *scratch = (Vec3i *)0x1F800000;
-    Vec2s unused_position[2];
+    Vec3i* scratch = FIELD_MOTION_SCRATCH;
+    s32 unused[2]; /* never used; the original stack frame reserves it */
     s32 state;
     s32 step;
     s32 delta;
-    FieldMotionVisual *visual;
+    FieldMotionVisual* visual;
 
     if (update != 0 && (actor->timer != 0 || (actor->state & 0x7F) == 0x35))
     {
@@ -154,25 +166,14 @@ s32 func_800925EC(FieldMotionActor *actor, s32 update)
     }
 }
 
-
-/* func_80092988 */
-#include "field_types.h"
-
-/** @brief Proposed field position and its signed screen projection. */
-typedef struct
-{
-    FieldVector position;
-    Vec2s screen;
-} FieldBoundsProjection;
-
 /**
  * @brief Test whether a proposed displacement crosses a screen boundary.
  * @param position Current fixed-point field position.
  * @param delta Proposed displacement; only the X and Z components are tested.
  * @return One when the displacement crosses its corresponding screen edge.
- * @note Preserve the intermediate short casts and padded local vector for matching.
+ * @note The projected coordinates are truncated to 16 bits before the offsets are added.
  */
-s32 func_80092988(Vec3i *position, Vec3i *delta)
+s32 func_80092988(Vec3i* position, Vec3i* delta)
 {
     FieldBoundsProjection local;
 

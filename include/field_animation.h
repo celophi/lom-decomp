@@ -29,7 +29,7 @@ void field_tint_animation_cel(struct FieldAnimDef* def, struct FieldAnimCel* cel
 void field_tint_animation_cel_list(struct FieldAnimDef* def, struct FieldTintSrc* src, s32 shade);
 void field_advance_animation_keyframe(struct FieldAnimDef* def, struct FieldAnim* anim);
 void field_retarget_cel_list_cluts(struct FieldAnimDef* def, struct FieldTintSrc* src, s32 frame);
-u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_start_out);
+u8* field_find_count_table_span(u8* table, s32 linear_index, u8* range_start_out);
 void field_queue_vram_upload(struct FieldImageReq* req);
 
 #endif

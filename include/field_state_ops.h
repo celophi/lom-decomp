@@ -10,6 +10,9 @@ enum
     FIELD_STATUS_SLOT_COUNT = 3
 };
 
+/** @brief Record kind stored in FieldStatusRecordMeta::bits.kind for a template-built monster. */
+#define FIELD_STATUS_KIND_MONSTER 5
+
 /** @brief Packed identifier and flags stored by each field status record. */
 typedef union
 {
@@ -20,36 +23,133 @@ typedef union
         u8 flags;
         u16 unk2;
     } bytes;
+    struct
+    {
+        u32 id : 8;
+        /** @brief Set while the record is in use. */
+        u32 active : 1;
+        /** @brief Set for records on the party's side. */
+        u32 ally : 1;
+        /** @brief Character type for party records, FIELD_STATUS_KIND_MONSTER for monsters. */
+        u32 kind : 6;
+        u32 unk16 : 16;
+    } bits;
 } FieldStatusRecordMeta;
+
+/** @brief Growth pair: a base value and a per-level increment. */
+typedef struct FieldGrowthPair
+{
+    u8 base;
+    u8 growth;
+} FieldGrowthPair;
+
+/** @brief Monster template returned by func_800B4844 and linked from its status record. */
+typedef struct FieldActorTemplate
+{
+    u8 pad0[0x15];
+    /** @brief Bit n set: element level n raises the monster level. */
+    u8 raise_mask;
+    /** @brief Bit n set: element level n lowers the monster level. */
+    u8 lower_mask;
+    u8 pad17[2];
+    u8 unk19;
+    u8 unk1A;
+    u8 counter_reset;
+    u16 hp_base;
+    /** @brief Per-level HP increment, or 0xFFFF to grow HP along the stat 4 curve. */
+    u16 hp_growth;
+    u16 unk20_base;
+    u16 unk20_growth;
+    FieldGrowthPair equipment_stats[4];
+    FieldGrowthPair stats[FIELD_STATUS_STAT_COUNT];
+    u8 immunity_flags;
+    u8 unk3D;
+    u8 unk3E;
+    /** @brief Bit 1: not linked from the actor; bit 2: level from the land; bit 7: see the HP gauge. */
+    u8 flags;
+    u8 pad40[0x50 - 0x40];
+    s32 action_count;
+    u8 actions[1][8];
+} FieldActorTemplate;
+
+/** @brief Displayed HP gauge (low 24 bits) and HUD bits. */
+typedef union
+{
+    u32 word;
+    struct
+    {
+        u32 value : 24;
+        u32 hud_bits : 7;
+        u32 hud_flag : 1;
+    } bits;
+} FieldStatusGauge;
 
 /** @brief Runtime status values shared by a field actor and its status record. */
 typedef struct FieldStatusState
 {
     u32 maximum;
     s32 current;
-    u8 pad8[4];
+    FieldStatusGauge gauge;
     u32 effect_flags;
-    u8 pad10[4];
+    u8 unk10;
+    /** @brief Template index passed to func_800B4844. */
+    u8 template_index;
+    u8 pad12[2];
     s32 actor_id;
     u8 pad18[0x48 - 0x18];
     u16 status_intensity;
-    u8 pad4A[0x60 - 0x4A];
+    u8 pad4A[2];
+    /** @brief Bits 1-7: level. */
+    union
+    {
+        s32 word;
+        struct
+        {
+            u32 unk0 : 1;
+            u32 level : 7;
+        } bits;
+    } level;
+    /** @brief Stored world position, compared with the live actor position. */
+    s32 position_x;
+    s32 position_y;
+    s32 position_z;
+    u8 pad5C[0x60 - 0x5C];
     u8 status_signal;
+    u8 pad61[3];
+    FieldActorTemplate* template;
+    /** @brief Stat-derived footprint strength, saturated to 255 during setup. */
+    u16 effect_footprint_strength;
 } FieldStatusState;
 
 /** @brief Field actor status record containing stats, immunities, and timed effects. */
 typedef struct FieldStatusRecord
 {
-    u32 unk0;
+    /** @brief Bit 6 set for monsters and the versus-mode leader, bit 7 for other party members. */
+    u8 unk0;
+    u8 pad1[2];
+    u8 unk3;
     FieldStatusRecordMeta meta;
-    u8 pad8[8];
+    s8 counter;
+    u8 counter_reset;
+    u16 status_flags;
+    u32 unkC;
     FieldStatusState *state;
-    u8 pad14[0x28 - 0x14];
+    FieldActorTemplate *template;
+    u16 unk18;
+    u8 unk1A;
+    u8 pad1B;
+    u16 equipment_stats[4];
+    u8 equipment_attributes[4];
     u8 stats[FIELD_STATUS_STAT_COUNT];
     u8 base_stats[FIELD_STATUS_STAT_COUNT];
     u8 immunity_flags;
-    u8 pad39[0x4D - 0x39];
-    volatile u8 status_slots[FIELD_STATUS_SLOT_COUNT];
+    u8 unk39;
+    u8 unk3A;
+    u8 pad3B;
+    u8 unk3C[8];
+    u8 unk44[8];
+    u8 unk4C;
+    u8 status_slots[FIELD_STATUS_SLOT_COUNT];
     u16 status_timers[FIELD_STATUS_TIMER_COUNT];
 } FieldStatusRecord;
 

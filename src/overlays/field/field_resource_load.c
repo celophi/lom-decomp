@@ -31,7 +31,9 @@ typedef struct
 {
     u8 _pad000[0x174];
     s32 unk174;
-    u8 _pad178[0x33];
+    u8 _pad178;
+    u8 unk179;
+    u8 _pad17A[0x31];
     u8 unk1AB;
     u8 _pad1AC[0x90];
 } FieldActorState;
@@ -81,21 +83,28 @@ typedef struct
     u32 unk48;
     u32 unk4C;
     u8 pad50[0x54 - 0x50];
-} Struct_D800FDF58;
+} FieldActorRecord;
 
+/** @brief Temporary animation actor binding; only its state word is read here. */
 typedef struct
 {
-    s16 unk0;
-    s16 unk2;
-    s16 unk4;
-    s16 unk6;
-} Rec80122B28;
+    s32 state;
+    u8 _pad04[0x18];
+} FieldActorBinding;
 
-Struct_D800FDF58 *func_80087C9C(s32 arg0);
+/** @brief Queued change to one actor: pose, animation track and sound; -1 leaves a field unchanged. */
+typedef struct
+{
+    s16 actor_index;
+    s16 pose;
+    s16 animation;
+    s16 sound;
+} FieldPendingActorChange;
+
+FieldActorRecord* func_80087C9C(s32 arg0);
 
 extern s32 D_80122B10;
-extern Rec80122B28 D_80122B28[];
-
+extern FieldPendingActorChange D_80122B28[];
 
 extern s32 D_80122B68[];
 extern s32 D_80122B10;
@@ -104,16 +113,14 @@ extern s32 D_80122B20;
 /** @brief Clear pending actors, load state, and both pending resource IDs. */
 void func_800B01FC(void)
 {
-    s32 i = 1;
-    s32 *p = &D_80122B68[i];
+    s32 i;
 
     D_80122B10 = 0;
     D_80122B20 = 0;
 
-    for (; i >= 0; i--)
+    for (i = 1; i >= 0; i--)
     {
-        *p = 0;
-        p--;
+        D_80122B68[i] = 0;
     }
 }
 
@@ -127,17 +134,16 @@ s32 func_800B0234(void)
     return D_80122B20 = 1;
 }
 
-
 extern FieldResourceSlot g_field_player_records[];
-extern u8 g_field_actors[];
-extern u8 g_field_object_parts[];
-extern u8 g_field_actor_bindings[];
-extern u8 g_field_object_states[];
+extern FieldActorRecord g_field_actors[];
+extern FieldActorPartDef g_field_object_parts[];
+extern FieldActorBinding g_field_actor_bindings[];
+extern FieldActorState g_field_object_states[];
 extern s32 g_field_active_group;
 void func_800B0A08(s32);
 s32 func_800B0888(void);
 void func_800B08FC(s32, s32);
-void field_restart_actor_animation(u8 *);
+void field_restart_actor_animation(u8*);
 s32 func_800839F8(s32, s32);
 s32 func_80083EEC(s32, s32, s32);
 void field_start_actor_animation(s32, s32, s32);
@@ -158,177 +164,112 @@ void func_800B0244(void)
     state = D_80122B20;
     if (state == 0)
     {
-        goto end;
+        return;
     }
-    if (state == 2)
+    switch (state)
     {
-        goto state_2;
-    }
-    if (state < 3)
-    {
-        if (state == 1)
+    case 1:
+        if ((g_field_actor_bindings[0].state | g_field_actor_bindings[1].state | g_field_actor_bindings[2].state) == 0)
         {
-            goto state_1;
+            D_80122B20 = 2;
         }
-        goto end;
-    }
-    if (state == 3)
-    {
-        goto state_3;
-    }
-    if (state == 4)
-    {
-        goto state_4;
-    }
-    goto end;
+        break;
 
-state_1:
-    if (((*(s32 *)(g_field_actor_bindings + 0x0)) | (*(s32 *)(g_field_actor_bindings + 0x1C)) | (*(s32 *)(g_field_actor_bindings + 0x38))) == 0)
-    {
-        D_80122B20 = 2;
-    }
-    goto end;
+    case 2:
+        func_800B0A08(1);
+        D_80122B20 = 3;
+        break;
 
-state_2:
-    func_800B0A08(1);
-    D_80122B20 = 3;
-    goto end;
-
-state_3:
+    case 3:
     {
-        Struct_D800FDF58 *object;
+        FieldActorRecord* object;
         s32 actor_track;
-        s32 none;
         u8 flags;
-        u8 *actor_base;
 
-        i = 0;
-        if (D_80122B10 > 0)
+        for (i = 0; i < D_80122B10; i++)
         {
-            none = -1;
-            actor_base = g_field_object_states;
-            do
+            object = g_field_actors + D_80122B28[i].actor_index;
+            if (D_80122B28[i].pose != -1)
             {
-                object = (Struct_D800FDF58 *)g_field_actors + D_80122B28[i].unk0;
-                if (D_80122B28[i].unk2 != none)
+                object->unk25 = 0;
+                object->unk2A = 0x8D;
+                flags = (u8)D_80122B28[i].pose | (object->unk21 & 0x80);
+                object->unk21 = flags;
+                if (flags & 0x80)
                 {
-                    object->unk25 = 0;
-                    object->unk2A = 0x8D;
-                    flags = (u8)D_80122B28[i].unk2 | (object->unk21 & 0x80);
-                    object->unk21 = flags;
-                    if (flags & 0x80)
-                    {
-                        object->unk1B = 0;
-                    }
-                    else
-                    {
-                        object->unk1B = 0x80;
-                    }
-                    object->unk2E = 1;
-                    object->unk24 = 1;
-                    object->unk1C &= ~0x800;
-                    object->unk2C += 3;
-                    field_restart_actor_animation((u8 *)object);
+                    object->unk1B = 0;
                 }
-                if (D_80122B28[i].unk4 != none)
+                else
                 {
-                    actor_track = func_800839F8(object->unk3A, 0);
-                    if ((actor_track != none) && (func_80083EEC(object->unk3A, actor_track, D_80122B28[i].unk4) != 0))
-                    {
-                        field_start_actor_animation(actor_track, 0, 0);
-                        actor_base[object->unk3A * 0x23C + 0x179] = (u8)actor_track;
-                    }
+                    object->unk1B = 0x80;
                 }
-                if (D_80122B28[i].unk6 != none)
+                object->unk2E = 1;
+                object->unk24 = 1;
+                object->unk1C &= ~0x800;
+                object->unk2C += 3;
+                field_restart_actor_animation((u8*)object);
+            }
+            if (D_80122B28[i].animation != -1)
+            {
+                actor_track = func_800839F8(object->unk3A, 0);
+                if ((actor_track != -1) && (func_80083EEC(object->unk3A, actor_track, D_80122B28[i].animation) != 0))
                 {
-                    func_800A3938(D_80122B28[i].unk6, 0x80);
-                    VSync(0);
+                    field_start_actor_animation(actor_track, 0, 0);
+                    g_field_object_states[object->unk3A].unk179 = (u8)actor_track;
                 }
-                i += 1;
-            } while (i < D_80122B10);
+            }
+            if (D_80122B28[i].sound != -1)
+            {
+                func_800A3938(D_80122B28[i].sound, 0x80);
+                VSync(0);
+            }
         }
         D_80122B20 = 4;
-        goto end;
+        break;
     }
 
-state_4:
+    case 4:
     {
         s16 scan_object_type;
-        u8 *resource_slot_scan;
-        u8 *object_scan_3;
-        u8 *object_scan_13;
-        u8 *object_records;
-        s32 empty_slot;
-        s32 object_type;
-        u8 *resource_slots;
-        s32 scan_type_a;
-        s32 scan_type_b;
-        s32 part_mask;
 
         if (func_800B0888() == 0)
         {
-            i = 0;
-            if (D_80122B10 > 0)
+            for (i = 0; i < D_80122B10; i++)
             {
-                do
+                if (field_object_has_active_actor_tracks(D_80122B28[i].actor_index) != 0)
                 {
-                    if (field_object_has_active_actor_tracks(D_80122B28[i].unk0) != 0)
-                    {
-                        break;
-                    }
-                } while (++i < D_80122B10);
+                    break;
+                }
             }
             if (i == D_80122B10)
             {
-                i = 3;
-                empty_slot = 0xFF;
-                object_type = 0x8D;
-                object_records = (u8 *)g_field_actors;
-                object_scan_13 = object_records + 0xFC;
-loop_34:
-                if (((*(u8 *)(object_scan_13 + 0x25)) == empty_slot) || ((*(s16 *)(object_scan_13 + 0x2A)) != object_type))
+                for (i = 3; i < 0xD; i++)
                 {
-                    i += 1;
-                    object_scan_13 += 0x54;
-                    if (i < 0xD)
+                    if (g_field_actors[i].unk25 != 0xFF && g_field_actors[i].unk2A == 0x8D)
                     {
-                        goto loop_34;
+                        break;
                     }
                 }
                 if (i == 0xD)
                 {
-                    i = 1;
-                    scan_type_a = 0xAF;
-                    scan_type_b = 0xB1;
-                    object_records = (u8 *)g_field_actors;
-                    object_scan_3 = object_records + 0x54;
-                    resource_slots = (u8 *)g_field_player_records;
-                    resource_slot_scan = resource_slots + 0x268;
-loop_40:
-                    if (*resource_slot_scan & 1)
+                    for (i = 1; i < 3; i++)
                     {
-                        scan_object_type = (*(s16 *)(object_scan_3 + 0x2A));
-                        if ((scan_object_type == scan_type_a) || (scan_object_type == scan_type_b))
+                        if (g_field_player_records[i].flags & 1)
                         {
-                            goto block_44;
+                            scan_object_type = g_field_actors[i].unk2A;
+                            if ((scan_object_type == 0xAF) || (scan_object_type == 0xB1))
+                            {
+                                break;
+                            }
                         }
                     }
-                    object_scan_3 += 0x54;
-                    i += 1;
-                    resource_slot_scan += 0x268;
-                    if (i < 3)
-                    {
-                        goto loop_40;
-                    }
-block_44:
                     if (i == 3)
                     {
                         i = 0;
-                        part_mask = 0xFF7FFFFF;
                         do
                         {
-                            ((FieldActorPartDef *)g_field_object_parts)[i].unk34 &= part_mask;
-                            ((Struct_D800FDF58 *)g_field_actors)[i].unk2A = 0;
+                            g_field_object_parts[i].unk34 &= ~0x800000;
+                            g_field_actors[i].unk2A = 0;
                             i += 1;
                         } while (i < 3);
                         func_800A3938(0x79, 0x80);
@@ -338,14 +279,14 @@ block_44:
                             if (D_80122B68[i] != 0)
                             {
                                 func_800B08FC(1, i);
-                                ((Struct_D800FDF58 *)g_field_actors)[i].unk2A = 0x99;
-                                ((Struct_D800FDF58 *)g_field_actors)[i].unk2E = 1;
-                                ((Struct_D800FDF58 *)g_field_actors)[i].unk27 = 0;
-                                ((Struct_D800FDF58 *)g_field_actors)[i].unk24 = 1;
-                                ((Struct_D800FDF58 *)g_field_actors)[i].unk21 = (((Struct_D800FDF58 *)g_field_actors)[i].unk21 & 0x80) + 0x11;
-                                ((Struct_D800FDF58 *)g_field_actors)[i].unk1C &= ~0x800;
-                                ((FieldActorState *)g_field_object_states)[i].unk174 &= ~0x1800;
-                                field_restart_actor_animation((u8 *)&((Struct_D800FDF58 *)g_field_actors)[i]);
+                                g_field_actors[i].unk2A = 0x99;
+                                g_field_actors[i].unk2E = 1;
+                                g_field_actors[i].unk27 = 0;
+                                g_field_actors[i].unk24 = 1;
+                                g_field_actors[i].unk21 = (g_field_actors[i].unk21 & 0x80) + 0x11;
+                                g_field_actors[i].unk1C &= ~0x800;
+                                g_field_object_states[i].unk174 &= ~0x1800;
+                                field_restart_actor_animation((u8*)&g_field_actors[i]);
                             }
                             i += 1;
                         } while (i < 2);
@@ -354,8 +295,8 @@ block_44:
                         {
                             if (g_field_player_records[i].flags & 1)
                             {
-                                ((FieldActorState *)g_field_object_states)[i].unk1AB = 0x3C;
-                                ((FieldActorState *)g_field_object_states)[i].unk174 |= 0x8000;
+                                g_field_object_states[i].unk1AB = 0x3C;
+                                g_field_object_states[i].unk174 |= 0x8000;
                             }
                             i += 1;
                         } while (i < 3);
@@ -368,10 +309,9 @@ block_44:
                 }
             }
         }
+        break;
     }
-
-end:
-    return;
+    }
 }
 
 /**
@@ -384,16 +324,16 @@ end:
  */
 s32 func_800B0710(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
-    Struct_D800FDF58 *rec;
+    FieldActorRecord* rec;
     s32 i;
-    Rec80122B28 *p;
+    FieldPendingActorChange* p;
 
     if (D_80122B10 == 8)
     {
         return -1;
     }
     rec = func_80087C9C(arg0);
-    if (rec == (Struct_D800FDF58 *)-1)
+    if (rec == (FieldActorRecord*)-1)
     {
         return -1;
     }
@@ -401,45 +341,39 @@ s32 func_800B0710(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     {
         return -1;
     }
-    i = 0;
-    if (D_80122B10 > 0)
+    for (i = 0; i < D_80122B10; i++)
     {
-        do
+        p = &D_80122B28[i];
+        if (p->actor_index == rec->unk3A)
         {
-            p = &D_80122B28[i];
-            if (p->unk0 == rec->unk3A)
+            p->actor_index = (s16)rec->unk3A;
+            p->pose = arg1;
+            p->animation = arg2;
+            if (arg2 != -1)
             {
-                p->unk0 = (s16)rec->unk3A;
-                p->unk2 = arg1;
-                p->unk4 = arg2;
-                if (arg2 != -1)
-                {
-                    p->unk2 = 0;
-                }
-                p->unk6 = arg3;
-                return 0;
+                p->pose = 0;
             }
-            i += 1;
-        } while (i < D_80122B10);
+            p->sound = arg3;
+            return 0;
+        }
     }
     {
-        Rec80122B28 *base = D_80122B28;
+        FieldPendingActorChange* base = D_80122B28;
         s32 idx = D_80122B10;
 
         p = &base[idx];
     }
-    p->unk0 = (s16)rec->unk3A;
-    p->unk2 = arg1;
-    p->unk4 = arg2;
+    p->actor_index = (s16)rec->unk3A;
+    p->pose = arg1;
+    p->animation = arg2;
     if (arg2 != -1)
     {
-        p->unk2 = 0xA;
+        p->pose = 0xA;
     }
-    D_80122B28[D_80122B10].unk6 = arg3;
+    D_80122B28[D_80122B10].sound = arg3;
     D_80122B10 += 1;
     return 0;
 }
-
 
 extern s32 D_80122B68[];
 
@@ -461,7 +395,6 @@ s32 func_800B0850(void)
     return 0;
 }
 
-
 extern s32 D_80122B68[];
 
 /**
@@ -471,7 +404,7 @@ extern s32 D_80122B68[];
  */
 s32 func_800B0888(void)
 {
-    s32 *resource_index;
+    s32* resource_index;
     s32 i;
 
     i = 0;
@@ -492,13 +425,12 @@ s32 func_800B0888(void)
     return 0;
 }
 
-extern u8 *D_8010D038;
+extern u8* D_8010D038;
 extern s32 D_80122B18[];
 extern s32 g_field_resource_cursor;
 extern FieldResourceEntry g_field_resource_entries[];
 void field_release_resource_entry(s32);
-void field_unpack_resource_package(u8 *, s32, s32, s32);
-
+void field_unpack_resource_package(u8*, s32, s32, s32);
 
 /**
  * @brief Install a queued resource and record its allocated memory range.
@@ -531,9 +463,6 @@ void func_800B08FC(s32 arg0, s32 arg1)
         D_80122B68[arg1] = 0;
     }
 }
-
-
-
 
 extern FieldResourceSlot g_field_player_records[];
 extern s32 D_80122B68[];

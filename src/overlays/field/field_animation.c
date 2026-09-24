@@ -46,7 +46,7 @@ void field_update_scene_animations(void)
     FieldImageReq* upload;
     FieldSeq* sequence;
     FieldSeq* target_sequence;
-    FieldAnimDef* command;
+    FieldSeqDef* command;
     u16* source_pixels;
     u16* destination_pixels;
     s32 previous_frame;
@@ -591,10 +591,10 @@ void field_update_scene_animations(void)
                 command = sequence->def;
                 if ((sequence->flags & 3) == 1)
                 {
-                    if ((command->unk5 != 0xFF) && (command->unk8 == sequence->unkC))
+                    if ((command->start_link != 0xFF) && (command->start_delay == sequence->unkC))
                     {
                         target_sequence = scene->seqs;
-                        index = command->unk5;
+                        index = command->start_link;
                         index--;
                         while (index != -1)
                         {
@@ -603,9 +603,9 @@ void field_update_scene_animations(void)
                         }
                         func_8005A744(target_sequence, ((u8*)&sequence->flags)[1]);
                     }
-                    if (func_8005A84C(command->unk0, command->unk2) == 2)
+                    if (func_8005A84C(command->list_kind, command->anim_index) == 2)
                     {
-                        if (command->unk6 != 0xFF)
+                        if (command->end_link != 0xFF)
                         {
                             sequence->unkC = 0;
                             sequence->flags = (sequence->flags & ~3) | 2;
@@ -616,10 +616,10 @@ void field_update_scene_animations(void)
                         }
                     }
                 }
-                if (((sequence->flags & 3) == 2) && (command->unkA == sequence->unkC))
+                if (((sequence->flags & 3) == 2) && (command->end_delay == sequence->unkC))
                 {
                     target_sequence = scene->seqs;
-                    index = command->unk6;
+                    index = command->end_link;
                     index--;
                     while (index != -1)
                     {
@@ -886,7 +886,7 @@ void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_t
     s32 elapsed;
     s32 value;
     s32 delta;
-    volatile s8 range_start;
+    u8 range_start;
 
     definition_copy = def;
     object = NULL;
@@ -1360,11 +1360,11 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
     s32 new_flags;
     u16 current_pixel;
     u16 other_pixel;
-    volatile u8 range_start;
+    u8 range_start;
 
     definition_copy = def;
     header = g_field_scene.scene->header;
-    duration = ((FieldTweenSpan*)field_find_count_table_span((u8*)definition_copy, anim->flags.b.keyframe, (volatile s8*)&range_start))->duration;
+    duration = ((FieldTweenSpan*)field_find_count_table_span((u8*)definition_copy, anim->flags.b.keyframe, &range_start))->duration;
     keyframe_index = anim->flags.b.keyframe;
     do
     {
@@ -1407,7 +1407,7 @@ u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
     }
     if (*(s32*)&def->flags & FIELD_ANIM_DEF_SPAN_INDEXED)
     {
-        other_frame = (((FieldTweenSpan*)field_find_count_table_span((u8*)def, keyframe_index, (volatile s8*)&range_start))->range_start + keyframe_index) - range_start;
+        other_frame = (((FieldTweenSpan*)field_find_count_table_span((u8*)def, keyframe_index, &range_start))->range_start + keyframe_index) - range_start;
     }
     else
     {
@@ -1734,7 +1734,7 @@ void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
     s32 current_keyframe;
     s32 next_keyframe;
     u8 keyframe;
-    volatile s8 range_start;
+    u8 range_start;
 
     if (!(anim->flags.word & FIELD_ANIM_FLAG_START_PENDING))
     {
@@ -1888,20 +1888,21 @@ void field_retarget_cel_list_cluts(FieldAnimDef* def, FieldTintSrc* src, s32 fra
  * @param range_start_out Receives the cumulative count before the returned record.
  * @return Pointer to the count-table record containing @p linear_index.
  */
-u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_start_out)
+u8* field_find_count_table_span(u8* table, s32 linear_index, u8* range_start_out)
 {
     u8 header_count;
-    u8 raw_count;
+    u8 count;
     u8 range_start;
     u8 range_end;
 
     *range_start_out = 0;
     header_count = *table & 0x7F;
+    /* A single-pass loop: the original's loop notes decide the register allocation. */
     while (linear_index >= header_count)
     {
         *range_start_out = header_count;
         header_count = table[7];
-        *(volatile u8*)(table + 7);
+        *(volatile u8*)(table + 7); /* the original reads this byte and discards it */
         if (header_count)
         {
             table += sizeof(FieldTweenKey) * 3;
@@ -1910,17 +1911,16 @@ u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_
         {
             table += sizeof(FieldTweenKey) * 3;
         }
-        raw_count = *table;
+        count = *table;
         range_start = *range_start_out;
-        range_end = range_start + (raw_count & 0x7F);
-        while (linear_index >= (u8)range_end)
+        range_end = range_start + (count & 0x7F);
+        while (linear_index >= range_end)
         {
             table += sizeof(FieldTweenSpan);
-            range_end = range_start + (raw_count & 0x7F);
-            *range_start_out = range_end;
-            raw_count = *table;
-            range_start = range_end;
-            range_end = range_end + (raw_count & 0x7F);
+            range_start += count & 0x7F;
+            *range_start_out = range_start;
+            count = *table;
+            range_end = range_start + (count & 0x7F);
         }
         break;
     }

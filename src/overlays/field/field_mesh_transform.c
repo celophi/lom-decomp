@@ -3,67 +3,18 @@
  */
 
 #include "common.h"
+#include "field_effect_types.h"
 #include "field_object_state.h"
 #include "field_mesh.h"
-#include "sdk/libgte.h"
-
-typedef struct
-{
-    u16 count;
-    u8 pad2[6];
-    SVECTOR *triangles;
-    SVECTOR *normals;
-    SVECTOR *offsets;
-    u8 pad14[4];
-} FieldTransformMesh;
-typedef struct
-{
-    u8 pad0[0x18];
-    FieldTransformMesh *meshes;
-    u8 pad1C[0x228 - 0x1C];
-    u8 unk228;
-} FieldActorState;
-typedef struct
-{
-    s32 unk0, unk4, unk8;
-    u8 padc[6];
-    s16 unk12, unk14;
-    u8 pad16[0x29 - 0x16];
-    u8 unk29;
-    u8 pad2a[2];
-    u16 unk2C;
-    u8 pad2e[4];
-    u8 unk32, unk33;
-} Struct_D800FDF58;
-typedef struct
-{
-    u32 unk0, unk4;
-    u8 pad8[0x13 - 8];
-    u8 unk13;
-    u8 pad14[8];
-    u32 unk1C;
-    u8 pad20[8];
-    u32 unk28;
-    u8 pad2c[2];
-    u8 unk2E;
-    u8 pad2f[4];
-    u8 unk33;
-} FieldActorPartDef;
-
-/* func_800822A4 */
-#include "common.h"
+#include "field_mesh_transform.h"
 #include "sdk/libgte.h"
 #include "sdk/inline_c.h"
 #include "sdk/gte_dmpsx_compat.h"
-/** @brief Twenty-four-byte mesh entry with triangle and per-triangle offset arrays. */
 
-/** @brief Partial actor state exposing its mesh table. */
+extern s32 g_field_track_index;
 
-/** @brief Partial actor record exposing the parameter-track time. */
+s32 field_evaluate_parameter_track_at_time(FieldActorState *actor, u32 track, u16 time);
 
-/** @brief FieldActorPartDef descriptor flags controlling vertex interpolation and offsets. */
-
-s32 field_evaluate_parameter_track_at_time(FieldActorState *, u32, u16);
 /**
  * @brief Transform an actor part's triangle vertices into screen-coordinate buffers.
  *
@@ -76,31 +27,31 @@ s32 field_evaluate_parameter_track_at_time(FieldActorState *, u32, u16);
  * @param part Flags selecting the interpolation or offset mode.
  * @param index Mesh entry to transform.
  */
-void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPartDef *part,
+void func_800822A4(FieldActorState *actor, FieldMotionRecord *record, FieldActorPartDef *part,
                    s32 index)
 {
-    s32 flags; /* GTE status destination retained by the original transform sequence. */
+    s32 flags; /* GTE FLAG register, stored after every transform and never read */
     VECTOR *transformed = (VECTOR *)0x1F800040;
     SVECTOR *work = (SVECTOR *)0x1F800000;
     s16 *out = g_field_mesh_screen_vertices;
     s32 *depth = g_field_mesh_depth_offsets;
-    SVECTOR *src = actor->meshes[index].triangles;
+    SVECTOR *src = FIELD_ACTOR_MESH(actor, index)->vertices;
     SVECTOR *other;
     s32 count;
     s32 amount;
     s32 mode;
     s32 dx, dy, dz;
-    u32 part_flags = part->unk0;
+    u32 part_flags = part->track_flags.word;
     if ((part_flags >> 18) & 1)
     {
         amount =
-            field_evaluate_parameter_track_at_time(actor, (part_flags >> 2) & 15, record->unk2C);
-        mode = (part->unk0 >> 19) & 3;
+            field_evaluate_parameter_track_at_time(actor, (part_flags >> 2) & 15, record->age);
+        mode = (part->track_flags.word >> 19) & 3;
         if (mode < 3)
         {
             /* Interpolate corresponding vertices with a 12-bit fractional weight. */
-            count = actor->meshes[index].count;
-            other = actor->meshes[mode].triangles;
+            count = FIELD_ACTOR_MESH(actor, index)->face_count;
+            other = FIELD_ACTOR_MESH(actor, mode)->vertices;
             while (count != 0)
             {
                 work[0].vx = (u16)src[0].vx + (((other[0].vx - src[0].vx) * amount) >> 12);
@@ -140,9 +91,9 @@ void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorP
         }
         else
         {
-            count = actor->meshes[index].count;
+            count = FIELD_ACTOR_MESH(actor, index)->face_count;
             /* The offset mode uses one displacement vector per triangle. */
-            other = actor->meshes[index].offsets;
+            other = FIELD_ACTOR_MESH(actor, index)->offsets;
             while (count != 0)
             {
                 dx = (other->vx * amount) >> 8;
@@ -186,7 +137,7 @@ void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorP
     }
     else
     {
-        count = actor->meshes[index].count;
+        count = FIELD_ACTOR_MESH(actor, index)->face_count;
         while (count != 0)
         {
             gte_ldv0(&src[0]);
@@ -217,20 +168,6 @@ void func_800822A4(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorP
 }
 
 
-/* func_800829A0 */
-#include "common.h"
-#include "sdk/libgte.h"
-#include "sdk/inline_c.h"
-#include "sdk/gte_dmpsx_compat.h"
-
-/** @brief Normal count and array pointer in a 0x18-byte actor mesh record. */
-
-/** @brief FieldActorState prefix containing the mesh table pointer at offset 0x18. */
-
-/** @brief Animation-time field at offset 0x2C in an actor instance record. */
-
-extern s32 field_evaluate_parameter_track_at_time(FieldActorState *actor, u32 track, u16 time);
-
 /**
  * @brief Rotate mesh normals, optionally blending toward another normal set.
  * @param actor Actor supplying the normal sets and animation tracks.
@@ -239,9 +176,8 @@ extern s32 field_evaluate_parameter_track_at_time(FieldActorState *actor, u32 tr
  * @param index Source mesh normal-set index.
  * @param matrix Rotation matrix applied through the GTE.
  * @note The interpolation branch writes output slots from count down through one.
- * @note 100% match with GCC 2.7.2 CDK: 188 instructions, 752 bytes.
  */
-void func_800829A0(FieldActorState *actor, Struct_D800FDF58 *record, u32 *part, s32 index, MATRIX *matrix)
+void func_800829A0(FieldActorState *actor, FieldMotionRecord *record, FieldActorPartDef *part, s32 index, MATRIX *matrix)
 {
     SVECTOR *output;
     SVECTOR *source;
@@ -251,16 +187,16 @@ void func_800829A0(FieldActorState *actor, Struct_D800FDF58 *record, u32 *part, 
     s32 count;
 
     output = g_field_mesh_transformed_normals;
-    source = actor->meshes[index].normals;
-    if ((*part >> 18) & 1)
+    source = FIELD_ACTOR_MESH(actor, index)->normals;
+    if ((part->track_flags.word >> 18) & 1)
     {
-        factor = field_evaluate_parameter_track_at_time(actor, (*part >> 2) & 15, record->unk2C);
-        selected = (*part >> 19) & 3;
+        factor = field_evaluate_parameter_track_at_time(actor, (part->track_flags.word >> 2) & 15, record->age);
+        selected = (part->track_flags.word >> 19) & 3;
         if (selected < 3)
         {
-            count = actor->meshes[index].count;
-            /* Reuse the destination cursor for the alternate source normals. */
-            output = actor->meshes[selected].normals;
+            count = FIELD_ACTOR_MESH(actor, index)->face_count;
+            /* output walks the blend-target normals here; results go by count. */
+            output = FIELD_ACTOR_MESH(actor, selected)->normals;
             while (count != 0)
             {
                 scratch->vx = (u16)source->vx + (((output->vx - source->vx) * factor) >> 12);
@@ -277,7 +213,7 @@ void func_800829A0(FieldActorState *actor, Struct_D800FDF58 *record, u32 *part, 
         }
         else
         {
-            count = actor->meshes[index].count;
+            count = FIELD_ACTOR_MESH(actor, index)->face_count;
             while (count != 0)
             {
                 gte_SetRotMatrix(matrix);
@@ -292,7 +228,7 @@ void func_800829A0(FieldActorState *actor, Struct_D800FDF58 *record, u32 *part, 
     }
     else
     {
-        count = actor->meshes[index].count;
+        count = FIELD_ACTOR_MESH(actor, index)->face_count;
         while (count != 0)
         {
             gte_SetRotMatrix(matrix);
@@ -307,23 +243,6 @@ void func_800829A0(FieldActorState *actor, Struct_D800FDF58 *record, u32 *part, 
 }
 
 
-/* func_80082C90 */
-#include "common.h"
-#include "sdk/libgte.h"
-#include "sdk/inline_c.h"
-#include "sdk/gte_dmpsx_compat.h"
-/** @brief Partial actor state exposing the owning slot index. */
-
-/** @brief Partial actor record containing position, rotation, and track time. */
-
-/** @brief Partial actor-part descriptor containing transform flags and scales. */
-
-/** @brief Actor-slot layout exposing the 0x68 transform attenuation value. */
-
-extern s32 g_field_track_index;
-s32 field_evaluate_parameter_track_at_time(FieldActorState *, u32, u16);
-void field_resolve_effect_position(Struct_D800FDF58 *, FieldActorPartDef *, VECTOR *);
-void func_800832F0(MATRIX *, MATRIX *);
 /**
  * @brief Build the transformed and scaled matrix for an actor part.
  *
@@ -338,7 +257,7 @@ void func_800832F0(MATRIX *, MATRIX *);
  * @param base_matrix Matrix passed to the base-transform composition helper.
  * @return Unspecified; callers ignore the value.
  */
-s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPartDef *part,
+s32 func_80082C90(FieldActorState *actor, FieldMotionRecord *record, FieldActorPartDef *part,
                    MATRIX *matrix, MATRIX *base_matrix)
 {
     VECTOR *scale;
@@ -368,14 +287,14 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
     do
     {
         ((s32 *)matrix)[0] = 0x1000;
-    } while (0);
+    } while (0); /* scheduling barrier kept from the original build */
     scale = (VECTOR *)0x1F800000;
     ((s32 *)matrix)[7] = 0;
     ((s32 *)matrix)[6] = 0;
     ((s32 *)matrix)[5] = 0;
     ((s32 *)matrix)[3] = 0;
     ((s32 *)matrix)[1] = 0;
-    rotation_flags = part->unk0;
+    rotation_flags = part->track_flags.word;
     component = (rotation_flags >> 6) & 3;
     if (component != 0)
     {
@@ -383,21 +302,21 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
         {
         case 1:
             rotation =
-                field_evaluate_parameter_track_at_time(actor, rotation_flags >> 26, record->unk2C)
+                field_evaluate_parameter_track_at_time(actor, rotation_flags >> 26, record->age)
                 << 4;
-            axis = ((u8 *)part)[3];
+            axis = part->track_flags.bytes.high;
             axis &= 3;
             break;
         case 2:
             RotMatrixX(0x400, matrix);
             do
             {
-                rotation = record->unk12;
-            } while (0);
+                rotation = record->heading;
+            } while (0); /* register-allocation barrier kept from the original build */
             axis = 2;
             break;
         case 3:
-            rotation = (((rotation_flags >> 26) * record->unk2C) << 4) & 0xfff;
+            rotation = (((rotation_flags >> 26) * (u16)record->age) << 4) & 0xfff;
             axis = rotation_flags >> 24;
             axis &= 3;
             break;
@@ -420,46 +339,45 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
             break;
         }
     }
-    if (part->unk13 != 0)
+    if (part->rotation_y_16 != 0)
     {
-        RotMatrixZ(part->unk13 << 4, matrix);
+        RotMatrixZ(part->rotation_y_16 << 4, matrix);
     }
-    if (((u32)part->unk4 >> 3) & 1)
+    if ((part->behavior_flags.word >> 3) & 1)
     {
-        if (((u32)part->unk28 >> 0xB) & 1)
+        if ((part->placement_flags.word >> 0xB) & 1)
         {
             field_resolve_effect_position(record, part, scale);
             component = scale->vz;
-            facing_angle = ratan2(record->unk8 - component, scale->vx - record->unk0);
-            delta->vx = (s32)((s32)(scale->vx - record->unk0) >> 8);
-            delta->vy = (s32)((s32)(scale->vy - record->unk4) >> 8);
-            delta->vz = (s32)((s32)(scale->vz - record->unk8) >> 8);
+            facing_angle = ratan2(record->z - component, scale->vx - record->x);
+            delta->vx = (scale->vx - record->x) >> 8;
+            delta->vy = (scale->vy - record->y) >> 8;
+            delta->vz = (scale->vz - record->z) >> 8;
             /* Square the direction components before measuring horizontal distance. */
             gte_ldlvl(delta);
             gte_sqr0();
             gte_stlvnl(square);
             distance_xz = SquareRoot0(square->vx + square->vz);
             component = scale->vy;
-            RotMatrixZ(ratan2(distance_xz << 8, record->unk4 - component), matrix);
+            RotMatrixZ(ratan2(distance_xz << 8, record->y - component), matrix);
             RotMatrixY(-facing_angle, matrix);
         }
         else
         {
-            RotMatrixZ(record->unk14, matrix);
-            RotMatrixY(-record->unk12, matrix);
-            RotMatrixZ(-(s32)record->unk32 << 4, matrix);
-            RotMatrixY(-(s32)record->unk33 << 4, matrix);
+            RotMatrixZ(record->pitch, matrix);
+            RotMatrixY(-record->heading, matrix);
+            RotMatrixZ(-(s32)record->rotation_z_16 << 4, matrix);
+            RotMatrixY(-(s32)record->rotation_y_16 << 4, matrix);
         }
     }
     func_800832F0(base_matrix, matrix);
-    if (((u32)part->unk28 >> 2) & 1)
+    if ((part->placement_flags.word >> 2) & 1)
     {
-        g_field_track_index = (s32)record->unk29;
+        g_field_track_index = (s32)record->track_index;
         field_resolve_effect_position(record, part, scale);
-        /* Keep subtraction and normalization as separate scratchpad updates. */
-        scale->vx -= record->unk0;
-        scale->vy -= record->unk4;
-        scale->vz -= record->unk8;
+        scale->vx -= record->x;
+        scale->vy -= record->y;
+        scale->vz -= record->z;
         scale->vx >>= 8;
         scale->vz >>= 8;
         scale->vy >>= 8;
@@ -476,45 +394,45 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
         scale->vy = distance << 6;
         ScaleMatrix(matrix, scale);
     }
-    if (part->unk1C & 0x02000000)
+    if (part->palette_extent.word & 0x02000000)
     {
-        scale_xz = part->unk2E;
+        scale_xz = part->appearance.fields.footprint_scale_x;
         horizontal_scale =
-            (scale_xz - ((scale_xz * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->unk228].effect_footprint_strength) >> 6)) / 10))
+            (scale_xz - ((scale_xz * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) / 10))
             << 6;
         scale->vz = horizontal_scale;
         scale->vx = horizontal_scale;
     }
     else
     {
-        base_scale = part->unk2E << 6;
+        base_scale = part->appearance.fields.footprint_scale_x << 6;
         scale->vz = base_scale;
         scale->vx = base_scale;
     }
-    if (part->unk1C & 0x04000000)
+    if (part->palette_extent.word & 0x04000000)
     {
-        scale_y = part->unk33;
+        scale_y = part->footprint_scale_y;
         scale->vy =
-            (scale_y - ((scale_y * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->unk228].effect_footprint_strength) >> 6)) / 10))
+            (scale_y - ((scale_y * ((s32)(FIELD_OBJECT_FOOTPRINT_STRENGTH_RANGE - g_field_object_states[actor->owner_object_index].effect_footprint_strength) >> 6)) / 10))
             << 6;
     }
     else
     {
-        scale->vy = part->unk33 << 6;
+        scale->vy = part->footprint_scale_y << 6;
     }
     ScaleMatrix(matrix, scale);
-    if ((((u8 *)part)[4] >> 7) != 0)
+    if ((part->behavior_flags.bytes.low >> 7) != 0)
     {
         scale->vz = 0x1000;
         scale->vy = 0x1000;
         scale->vx = 0x1000;
-        scale_flags = part->unk4;
+        scale_flags = part->behavior_flags.word;
         scale_mode = (scale_flags >> 0x14) & 3;
         switch (scale_mode)
         {
         case 0:
             track_scale_xz =
-                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, record->unk2C) *
+                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, record->age) *
                 0x10;
             scale->vz = track_scale_xz;
             scale->vx = track_scale_xz;
@@ -522,11 +440,11 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
         case 1:
             track_index = scale_flags >> 0x1C;
             scale->vy =
-                field_evaluate_parameter_track_at_time(actor, track_index, record->unk2C) * 0x10;
+                field_evaluate_parameter_track_at_time(actor, track_index, record->age) * 0x10;
             break;
         case 2:
             track_scale_xyz =
-                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, record->unk2C) *
+                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, record->age) *
                 0x10;
             scale->vz = track_scale_xyz;
             scale->vy = track_scale_xyz;
@@ -534,13 +452,13 @@ s32 func_80082C90(FieldActorState *actor, Struct_D800FDF58 *record, FieldActorPa
             break;
         case 3:
             track_scale_pair =
-                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, record->unk2C) *
+                field_evaluate_parameter_track_at_time(actor, scale_flags >> 0x1C, record->age) *
                 0x10;
             scale->vz = track_scale_pair;
             scale->vx = track_scale_pair;
-            track_index = ((u32)part->unk4 >> 0x1C) + 1;
+            track_index = (part->behavior_flags.word >> 0x1C) + 1;
             scale->vy =
-                field_evaluate_parameter_track_at_time(actor, track_index, record->unk2C) * 0x10;
+                field_evaluate_parameter_track_at_time(actor, track_index, record->age) * 0x10;
             break;
         }
         ScaleMatrix(matrix, scale);

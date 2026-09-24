@@ -1,365 +1,114 @@
+/**
+ * @file field_actor_key_ops.c
+ * @brief Script-facing field actor operations addressed by object key.
+ *
+ * Scripts refer to field objects by the key word of their object state. Each
+ * routine here resolves such a key to the parallel actor record and reads or
+ * changes its position, facing, control mode or running script.
+ */
+
 #include "common.h"
+#include "field_actor_tables.h"
+#include "main.h"
 
-/*
- * Consolidated FIELD actor-key operations TU (vram 0x80087614 .. 0x800880EC).
- *
- * Each of these functions looks up a field actor by key/selector (most via
- * func_80087C9C) and reads or mutates the parallel g_field_object_states / g_field_actors
- * actor tables. Every member viewed those shared arrays through its own partial
- * struct layout, so g_field_object_states and g_field_actors are declared at BLOCK scope inside
- * each function with that function's original record type; there is deliberately
- * no file-scope declaration of either symbol.
- */
-
-/* ------------------------------------------------------------------ *
- * File-scope record types (kept distinct per originating function).  *
- * ------------------------------------------------------------------ */
-
-/** @brief g_field_object_states slot as seen by func_80087C9C / func_80087F44. */
+/** @brief Position triple copied out by func_80087F44. */
 typedef struct
 {
-    u8 pad0[0x14];
-    s32 unk14; /* 0x14 */
-    u8 pad18[0x23C - 0x18];
-} RecA80105AE0;
+    s32 x;
+    s32 y;
+    s32 z;
+} FieldActorPosition;
 
-/** @brief g_field_actors record with three leading words (func_80087F44). */
-typedef struct
-{
-    s32 unk0; /* 0x0 */
-    s32 unk4; /* 0x4 */
-    s32 unk8; /* 0x8 */
-    u8 padC[0x54 - 0xC];
-} RecB800FDF58_F307;
+/** @brief Menu option bit that keeps the second party member as the leader. */
+#define PAD_OPTION_SECOND_LEADER 1
 
-/** @brief Output triple written by func_80087F44. */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-} OutRec;
+extern u8* g_field_event_scripts;
 
-/** @brief g_field_actors record as an opaque 0x54-byte blob (func_80087C9C). */
-typedef struct
-{
-    u8 data[0x54];
-} RecB800FDF58_F32;
-
-/** @brief g_field_object_states slot as seen by func_80087F0C. */
-typedef struct
-{
-    u8 pad0[0x14];
-    s32 unk14; /* 0x14 */
-    u8 pad18[0x23C - 0x18];
-} Struct_D80105AE0;
-
-/** @brief Record carrying the state-table index (func_80087614). */
-typedef struct Record87614
-{
-    u8 pad0[0x3A];
-    u8 index;
-} Record87614;
-
-/** @brief g_field_object_states slot with low flags at 0x10 (func_80087614). */
-typedef struct State87614
-{
-    u8 pad0[0x10];
-    s32 flags;
-    u8 pad14[0x23C - 0x14];
-} State87614;
-
-/** @brief Actor record updated by func_80087680. */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    u8 pad0C[0x1C - 0xC];
-    union
-    {
-        s32 w;
-        struct
-        {
-            u16 lo;
-            u16 hi;
-        } h;
-    } unk1C;
-    u8 pad20[0x25 - 0x20];
-    u8 unk25;
-    u8 pad26[0x3A - 0x26];
-    u8 unk3A;
-} Rec80087680;
-
-/** @brief g_field_object_states slot with low flags at 0x10 (func_80087680). */
-typedef struct
-{
-    u8 pad0[0x10];
-    s32 flags;
-    u8 pad14[0x23C - 0x14];
-} State80087680;
-
-/** @brief Actor position and packed facing direction (func_80087770). */
-typedef struct
-{
-    s32 position_x;
-    u8 pad4[4];
-    s32 position_z;
-    u8 pad12[0x21 - 0xC];
-    u8 facing_flags;
-} FacingActorRecord;
-
-/** @brief Record carrying the binding selector (func_800878B4). */
-typedef struct
-{
-    u8 pad[0x3A];
-    u8 selector;
-} Record;
-
-/** @brief Binding state, owner index, and actor slot (func_800878B4). */
-typedef struct
-{
-    s32 state;
-    u8 pad4[8];
-    s32 owner;
-    u8 pad10[8];
-    s32 slot;
-} Binding;
-
-/** @brief Actor slot with two state bytes tested by func_800878B4. */
-typedef struct
-{
-    u8 pad[0x23A];
-    u8 first, second;
-    u8 tail[8];
-} Actor878B4;
-
-/** @brief Actor entry with position, preserved state bits, slot (func_80087A9C). */
-typedef struct
-{
-    s32 unk0, unk4, unk8;
-    u8 padC[16];
-    union
-    {
-        s32 word;
-        u16 half[2];
-    } state;
-    u8 pad20;
-    s8 unk21;
-    u8 pad22[3];
-    u8 unk25;
-    u8 pad26[20];
-    u8 unk3A;
-} Entry;
-
-/** @brief Actor slot owner and group flags in a 0x23C-byte record (func_80087A9C). */
-typedef struct
-{
-    u8 pad0[16];
-    s32 unk10, unk14;
-    u8 pad18[0x23C - 0x18];
-} ActorA9C;
-
-/** @brief Resource flags in a 0x14-byte entry (func_80087A9C). */
-typedef struct
-{
-    u8 pad0[16];
-    s32 unk10;
-} Resource;
-
-/** @brief Per-actor animation/geometry slot, stride 0x23C (func_80087CE0). */
-typedef struct
-{
-    u8 pad0[0x14];
-    s32 unk14;
-    u8 pad18[0x23C - 0x18];
-} FieldActorSlotCE0;
-
-/** @brief Parallel per-actor record, stride 0x54 (func_80087CE0). */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    u8 pad0C[0x28 - 0x0C];
-    u8 unk28;
-    u8 pad29;
-    s16 unk2A;
-    s16 unk2C;
-    u8 pad2E[0x54 - 0x2E];
-} FieldActorRecordCE0;
-
-/** @brief Per-actor slot with extra word at 0x168, stride 0x23C (func_80087E00). */
-typedef struct
-{
-    u8 pad0[0x14];
-    s32 unk14;
-    u8 pad18[0x168 - 0x18];
-    s32 unk168;
-    u8 pad16C[0x23C - 0x16C];
-} FieldActorSlotE00;
-
-/** @brief Parallel per-actor record with slot index at 0x3A (func_80087E00). */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    u8 pad0C[0x28 - 0x0C];
-    u8 unk28;
-    u8 pad29;
-    s16 unk2A;
-    s16 unk2C;
-    u8 pad2E[0x3A - 0x2E];
-    u8 unk3A;
-    u8 pad3B[0x54 - 0x3B];
-} FieldActorRecordE00;
-
-/** @brief Partial g_field_object_states slot layout used by func_80087FC0. */
-typedef struct
-{
-    u8 pad0[0x14];
-    s32 unk14;
-    u8 pad18[0x23C - 0x18];
-} StateB80087FC0;
-
-/** @brief Partial g_field_actors record layout used by func_80087FC0. */
-typedef struct
-{
-    u8 pad0[0x10];
-    u16 unk10;
-    u8 pad12[0x1C - 0x12];
-    u32 unk1C;
-    u8 pad20[0x28 - 0x20];
-    u8 unk28;
-    u8 pad29[0x3A - 0x29];
-    u8 unk3A;
-    u8 pad3B[0x54 - 0x3B];
-} RecordB80087FC0;
-
-/** @brief Partial pad-context layout used by func_80087FC0. */
-typedef struct
-{
-    u8 pad0[0x28];
-    u32 unk28;
-} PadCtxB80087FC0;
-
-/** @brief Partial fixed-block layout used by func_80087FC0. */
-typedef struct
-{
-    u8 pad0[0x13E];
-    u8 unk13E;
-} FixedB80087FC0;
-
-/* ------------------------------------------------------------------ *
- * File-scope externs and forward prototypes.                         *
- * ------------------------------------------------------------------ */
-
-/* Actor lookup helper defined later in this TU; callers view the returned
- * pointer through their own record types (pointer-type warnings are benign). */
-RecB800FDF58_F32 *func_80087C9C(s32);
-
-extern Binding g_field_actor_bindings[];
-extern Actor878B4 g_field_actor_slots[];
-extern Resource g_field_resource_entries[];
-extern s32 g_field_event_scripts;
-extern PadCtxB80087FC0 *g_pad_ctx;
-
-long ratan2(long, long);
-extern int abs(int);
-
-void field_load_resource_entry(s32, s32, s32);
-void field_initialize_actor_record(u8, s32);
-void field_initialize_actor_part(u8, s32);
+FieldActor* func_80087C9C(s32 key);
+long ratan2(long y, long x);
+int abs(int value);
+void field_load_resource_entry(s32 resource_slot_id, u8* resource_base, s32 entry_index);
+void field_initialize_actor_record(s32 actor_index, s32 resource_entry_index);
+void field_initialize_actor_part(s32 part_index, s32 timer_mode);
 void field_refresh_party_routes(void);
-
-/* ------------------------------------------------------------------ *
- * Member functions (ascending address order).                        *
- * ------------------------------------------------------------------ */
+void field_restart_actor_animation(FieldActor* actor);
 
 /**
- * @brief Replaces the low four state flags for the selected field record.
- *
- * Resolves a field record from @p arg0, then uses its byte at offset 0x3A to
- * select a 0x23C-byte state entry. A missing record leaves the state unchanged.
- *
- * @param arg0 Selector passed to func_80087C9C.
- * @param arg1 New low-four-bit flag value.
+ * @brief Replace the low four group-flag bits of the object with @p key.
+ * @param key Object key to look up.
+ * @param group New low four bits; the object is left unchanged when absent.
  */
-void func_80087614(s32 arg0, s32 arg1)
+void func_80087614(s32 key, s32 group)
 {
-    extern State87614 g_field_object_states[];
-    Record87614 *record;
+    FieldActor* actor;
 
-    record = (Record87614 *)func_80087C9C(arg0);
-    if (record != (Record87614 *)-1)
+    actor = func_80087C9C(key);
+    if (actor != FIELD_ACTOR_NONE)
     {
-        g_field_object_states[record->index].flags =
-            (g_field_object_states[record->index].flags & ~0xF) | arg1;
+        g_field_object_states[actor->object_index].group_flags = (g_field_object_states[actor->object_index].group_flags & ~0xF) | group;
     }
 }
 
 /**
- * @brief Update an actor record and propagate its state to the field actor table.
- * @param arg0 Actor record identifier.
- * @param arg1 Value passed to the actor setup helper.
- * @param arg2 Low flag bits stored in the actor state.
- * @param arg3 First fixed-point component.
- * @param arg4 Second fixed-point component.
- * @param arg5 Third fixed-point component.
+ * @brief Reinitialize the actor with @p key at a new position and group.
+ * @param key Object key to look up.
+ * @param resource_entry_index Resource entry the actor record is initialized from.
+ * @param group New low four group-flag bits.
+ * @param x New X position in whole units.
+ * @param y New Y position in whole units.
+ * @param z New Z position in whole units.
  */
-void func_80087680(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+void func_80087680(s32 key, s32 resource_entry_index, s32 group, s32 x, s32 y, s32 z)
 {
-    extern State80087680 g_field_object_states[];
-    Rec80087680 *rec;
-    s32 flags;
+    FieldActor* actor;
+    s32 preserved;
 
-    rec = (Rec80087680 *)func_80087C9C(arg0);
-    if (rec != (Rec80087680 *)-1)
+    actor = func_80087C9C(key);
+    if (actor != FIELD_ACTOR_NONE)
     {
-        flags = rec->unk1C.h.hi & 3;
-        field_initialize_actor_record(rec->unk3A, arg1);
-        rec->unk25 = 0;
-        rec->unk0 = arg3 << 8;
-        rec->unk1C.w = (rec->unk1C.w & 0xFFFCFFFF) | (flags << 0x10);
-        rec->unk4 = arg4 << 8;
-        rec->unk8 = arg5 << 8;
-        g_field_object_states[rec->unk3A].flags = (g_field_object_states[rec->unk3A].flags & ~0xF) | arg2;
-        field_restart_actor_animation(rec);
+        preserved = actor->control.half[1] & 3;
+        field_initialize_actor_record(actor->object_index, resource_entry_index);
+        actor->presence = 0;
+        actor->x = x << 8;
+        actor->control.word = (actor->control.word & 0xFFFCFFFF) | (preserved << 16);
+        actor->y = y << 8;
+        actor->z = z << 8;
+        g_field_object_states[actor->object_index].group_flags = (g_field_object_states[actor->object_index].group_flags & ~0xF) | group;
+        field_restart_actor_animation(actor);
     }
 }
 
 /**
- * @brief Test whether one actor faces toward another within one direction step.
- * @param first_handle Identifier of the actor whose facing direction is tested.
- * @param second_handle Identifier of the target actor.
- * @return -1 if either lookup fails, otherwise 1 when facing the target or 0.
+ * @brief Test whether one actor faces another within one direction step.
+ * @param first_key Key of the actor whose facing is tested.
+ * @param second_key Key of the target actor.
+ * @return -1 when either actor is absent, otherwise 1 when facing the target and 0 when not.
  */
-s32 func_80087770(s32 first_handle, s32 second_handle)
+s32 func_80087770(s32 first_key, s32 second_key)
 {
-    FacingActorRecord *first;
-    FacingActorRecord *second;
+    FieldActor* first;
+    FieldActor* second;
     s32 direction;
     s32 facing;
-    s32 flags;
+    s32 animation;
 
-    first = (FacingActorRecord *)func_80087C9C(first_handle);
-    if (first == (FacingActorRecord *)-1)
+    first = func_80087C9C(first_key);
+    if (first == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    second = (FacingActorRecord *)func_80087C9C(second_handle);
-    if (second == (FacingActorRecord *)-1)
+    second = func_80087C9C(second_key);
+    if (second == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    flags = first->facing_flags;
-    facing = (flags & 0x7F) % 5;
-    if (flags & 0x80)
+    animation = first->animation;
+    facing = (animation & 0x7F) % 5;
+    if (animation & 0x80)
     {
         facing = 8 - facing;
     }
-    direction = ratan2(first->position_z - second->position_z, second->position_x - first->position_x);
+    direction = ratan2(first->z - second->z, second->x - first->x);
     direction = (direction + 0x800) / 0x200;
     direction += 2;
     direction %= 8;
@@ -375,507 +124,306 @@ s32 func_80087770(s32 first_handle, s32 second_handle)
 }
 
 /**
- * @brief Classify an actor record using its binding and slot state.
- * @param index Actor identifier passed to the record lookup.
- * @return -1 for a missing record, otherwise a state code from 0 through 4.
+ * @brief Classify the animation binding state of the actor with @p key.
+ * @param key Object key to look up.
+ * @return -1 when absent; 0 unbound; 1 bound to another object; 2 loading; 3 or 4 by the slot's track state.
  */
-s32 func_800878B4(s32 index)
+s32 func_800878B4(s32 key)
 {
-    Record *record;
-    u8 *base, *owner_base;
-    Actor878B4 *actors, *actor;
-    s32 offset, owner;
-    record = (Record *)func_80087C9C(index);
-    if (record == (Record *)-1)
+    FieldActor* actor;
+    FieldActorBinding* binding;
+
+    actor = func_80087C9C(key);
+    if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    base = (u8 *)g_field_actor_bindings;
-    if (record->selector < 2)
-    {
-        offset = record->selector * 28;
-    }
-    else
-    {
-        offset = 56;
-    }
-    if (((Binding *)(base + offset))->state == 0)
+    if (field_actor_binding(actor)->state == 0)
     {
         return 0;
     }
-    base = (u8 *)g_field_actor_bindings;
-    if (record->selector < 2)
-    {
-        offset = record->selector * 28;
-    }
-    else
-    {
-        offset = 56;
-    }
-    if (((Binding *)(base + offset))->owner != record->selector)
+    binding = field_actor_binding(actor);
+    if (binding->owner != actor->object_index)
     {
         return 1;
     }
-    owner = ((Binding *)(base + offset))->owner;
-    owner_base = (u8 *)g_field_actor_bindings;
-    if ((u8)owner < 2)
-    {
-        offset = owner * 28;
-    }
-    else
-    {
-        offset = 56;
-    }
-    if (((Binding *)(owner_base + offset))->state == 1)
+    if (field_object_binding(binding->owner)->state == 1)
     {
         return 2;
     }
-    actors = g_field_actor_slots;
-    base = (u8 *)g_field_actor_bindings;
-    if (record->selector < 2)
+    if (g_field_actor_slots[field_actor_binding(actor)->slot].track_mask != 0 || g_field_actor_slots[field_actor_binding(actor)->slot].pending_track_mask != 0)
     {
-        offset = record->selector * 28;
+        return 3;
     }
-    else
-    {
-        offset = 56;
-    }
-    actor = (Actor878B4 *)((u8 *)actors + ((Binding *)(base + offset))->slot * 0x244);
-    if (actor->first != 0)
-    {
-        goto return_three;
-    }
-    actors = g_field_actor_slots;
-    base = (u8 *)g_field_actor_bindings;
-    if (record->selector < 2)
-    {
-        offset = record->selector * 28;
-    }
-    else
-    {
-        offset = 56;
-    }
-    actor = (Actor878B4 *)((u8 *)actors + ((Binding *)(base + offset))->slot * 0x244);
-    if (actor->second == 0)
-    {
-        goto return_four;
-    }
-return_three:
-    return 3;
-return_four:
     return 4;
 }
 
 /**
- * @brief Reinitialize an actor resource while preserving selected state bits.
- * @param owner_id Owner identifier assigned to the actor slot.
- * @param resource_id Resource entry to initialize.
- * @param parameter_a First resource initialization parameter.
- * @param parameter_b Second resource initialization parameter.
- * @param group Group bits written to the actor slot.
- * @param x X coordinate; all three coordinates at -1 preserve the old position.
- * @param y Y coordinate.
- * @param z Z coordinate.
- * @param direction Direction byte to assign.
- * @param resource_flag Low bit assigned to the resource flags.
- * @return Initialization result, or -1 if no actor entry is available.
+ * @brief Reload the actor with @p key from a resource entry, keeping or replacing its position.
+ * @param key Object key to look up; also written back as the object's key.
+ * @param resource_entry_index Resource entry to load and initialize from.
+ * @param resource_slot_id Resource slot passed to the loader.
+ * @param resource_base Resource base passed to the loader.
+ * @param group New low four group-flag bits.
+ * @param x New X position in whole units; -1 in all three coordinates keeps the old position.
+ * @param y New Y position in whole units.
+ * @param z New Z position in whole units.
+ * @param animation New animation byte.
+ * @param resource_flag Low bit stored in the resource entry's flags.
+ * @return -1 when no actor has @p key; otherwise the value left in the return register by the animation restart.
+ * @note The success path has no return statement; callers never use its value.
  */
-s32 func_80087A9C(s32 owner_id, s32 resource_id, s32 parameter_a, s32 parameter_b, s32 group, s32 x,
-                  s32 y, s32 z, s32 direction, s32 resource_flag)
+s32 func_80087A9C(s32 key, s32 resource_entry_index, s32 resource_slot_id, u8* resource_base, s32 group, s32 x, s32 y, s32 z, s32 animation, s32 resource_flag)
 {
-    extern ActorA9C g_field_object_states[];
-    extern s32 field_restart_actor_animation(Entry *);
     s32 position[3];
-    s32 saved_state;
-    Entry *entry;
-    ActorA9C *actor;
-    Resource *resource;
-    Resource *resource_base;
-    ActorA9C *actor_base;
-    ActorA9C *final_base;
+    s32 control_mode;
+    FieldActor* actor;
+    FieldObjectState* state;
+    FieldResourceEntry* resource;
+    FieldResourceEntry* resources;
+    FieldObjectState* states;
 
-    entry = (Entry *)func_80087C9C(owner_id);
-    if (entry == (Entry *)-1)
+    actor = func_80087C9C(key);
+    if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    position[0] = entry->unk0;
-    position[1] = entry->unk4;
-    position[2] = entry->unk8;
-    saved_state = entry->state.half[0] & 0x1FF;
-    field_load_resource_entry(parameter_a, parameter_b, resource_id);
-    field_initialize_actor_record(entry->unk3A, resource_id);
-    field_initialize_actor_part(entry->unk3A, 0);
-    resource_base = g_field_resource_entries;
-    resource = &resource_base[resource_id];
-    resource->unk10 = (s32)((resource->unk10 & ~1) | (resource_flag & 1));
-    actor_base = g_field_object_states;
-    actor_base[entry->unk3A].unk14 = owner_id;
-    entry->unk25 = 0;
-    if (x == -1 && y == x && z == y)
+    position[0] = actor->x;
+    position[1] = actor->y;
+    position[2] = actor->z;
+    control_mode = actor->control.half[0] & 0x1FF;
+    field_load_resource_entry(resource_slot_id, resource_base, resource_entry_index);
+    field_initialize_actor_record(actor->object_index, resource_entry_index);
+    field_initialize_actor_part(actor->object_index, 0);
+    resources = g_field_resource_entries;
+    resource = &resources[resource_entry_index];
+    resource->flags = (resource->flags & ~1) | (resource_flag & 1);
+    g_field_object_states[actor->object_index].key = key;
+    actor->presence = 0;
+    if (x == -1 && y == -1 && z == -1)
     {
-        entry->unk0 = position[0];
-        entry->unk4 = position[1];
-        entry->unk8 = position[2];
+        actor->x = position[0];
+        actor->y = position[1];
+        actor->z = position[2];
     }
     else
     {
-        entry->unk0 = x << 8;
-        entry->unk4 = y << 8;
-        entry->unk8 = z << 8;
+        actor->x = x << 8;
+        actor->y = y << 8;
+        actor->z = z << 8;
     }
-    final_base = g_field_object_states;
-    actor = &final_base[entry->unk3A];
-    actor->unk10 = (s32)((actor->unk10 & ~0xF) | group);
-    entry->unk21 = (s8)direction;
-    entry->state.word = (s32)(((s32)entry->state.word & ~0x1FF) | saved_state);
-    return field_restart_actor_animation(entry);
+    states = g_field_object_states;
+    state = &states[actor->object_index];
+    state->group_flags = (state->group_flags & ~0xF) | group;
+    actor->animation = animation;
+    actor->control.word = (actor->control.word & ~0x1FF) | control_mode;
+    field_restart_actor_animation(actor);
 }
 
 /**
- * @brief Find an actor slot whose 0x14 field matches @p arg0.
- * @param arg0 Actor-slot lookup key.
- * @return Pointer to the matching g_field_actors record, or (RecB800FDF58_F32 *)-1.
+ * @brief Find the field actor whose object state carries @p key.
+ * @param key Object key to look up.
+ * @return The matching actor record, or FIELD_ACTOR_NONE.
  */
-RecB800FDF58_F32 *func_80087C9C(s32 arg0)
+FieldActor* func_80087C9C(s32 key)
 {
-    extern RecA80105AE0 g_field_object_states[];
-    extern RecB800FDF58_F32 g_field_actors[];
-    RecA80105AE0 *ra;
-    RecB800FDF58_F32 *rb;
-    s32 i;
-
-    rb = g_field_actors;
-    ra = g_field_object_states;
-    for (i = 0; i < 0xD; i++, ra++, rb++)
-    {
-        if (ra->unk14 == arg0)
-        {
-            return rb;
-        }
-    }
-    return (RecB800FDF58_F32 *) -1;
+    return field_find_actor(key);
 }
 
 /**
- * @brief Set an actor's animation byte after validating its current state.
- * @param key Actor-slot lookup key.
- * @param value Animation byte written on success.
- * @return 0 on success, or -1 when no slot matches or its state forbids it.
+ * @brief Start script @p script_index on the actor with @p key unless it is busy.
+ * @param key Object key to look up.
+ * @param script_index Script to run from its first command.
+ * @return 0 when the script was started, or -1 when absent or in a non-interruptible command.
  */
-s32 func_80087CE0(s32 key, u8 value)
+s32 func_80087CE0(s32 key, u8 script_index)
 {
-    extern FieldActorSlotCE0 g_field_object_states[];
-    extern FieldActorRecordCE0 g_field_actors[];
-    FieldActorRecordCE0 *scan;
-    FieldActorRecordCE0 *found;
-    FieldActorSlotCE0 *e;
-    s32 i;
-    s32 result;
-    s16 state;
+    FieldActor* actor;
+    s16 command;
 
-    scan = g_field_actors;
-    e = g_field_object_states;
-    i = 0;
-loop:
-    i++;
-    if (e->unk14 == key)
-    {
-        goto found_label;
-    }
-    e++;
-    scan++;
-    if (i < 13)
-    {
-        goto loop;
-    }
-    found = (FieldActorRecordCE0 *)-1;
-check:
-    if (found != (FieldActorRecordCE0 *)-1)
-    {
-        goto body;
-    }
-    result = -1;
-    goto done;
-found_label:
-    found = scan;
-    goto check;
-body:
-    state = found->unk2A;
-    if ((u16)(state - 0x93) < 2)
-    {
-        result = -1;
-        goto done;
-    }
-    if (state == 0x90 || state == 0xAE || state == 0x8E)
-    {
-        result = -1;
-        goto done;
-    }
-    found->unk28 = value;
-    found->unk2C = 0;
-    found->unk2A = 0;
-    result = 0;
-done:
-    return result;
-}
-
-/**
- * @brief Stores a scaled position into the actor record matching @p key.
- *
- * Scans the first 13 g_field_object_states slots for one whose 0x14 field equals @p key.
- * On a hit, writes @p x, @p y and @p z (each shifted left 8) into the parallel
- * g_field_actors record's first three words and returns 0; otherwise returns -1.
- *
- * @param key Actor-slot lookup key.
- * @param x X coordinate; stored shifted left 8.
- * @param y Y coordinate; stored shifted left 8.
- * @param z Z coordinate; stored shifted left 8.
- * @return 0 on success, or -1 when no slot matches.
- */
-s32 func_80087D8C(s32 key, s32 x, s32 y, s32 z)
-{
-    extern FieldActorSlotCE0 g_field_object_states[];
-    extern FieldActorRecordCE0 g_field_actors[];
-    FieldActorRecordCE0 *p = g_field_actors;
-    FieldActorSlotCE0 *e = g_field_object_states;
-    FieldActorRecordCE0 *result;
-    s32 i;
-
-    i = 0;
-    while (i < 13)
-    {
-        if (e->unk14 == key)
-        {
-            result = p;
-            goto found;
-        }
-        i++;
-        e++;
-        p++;
-    }
-    result = (FieldActorRecordCE0 *)-1;
-found:
-    if (result == (FieldActorRecordCE0 *)-1)
+    actor = field_find_actor(key);
+    if (actor == FIELD_ACTOR_NONE)
     {
         return -1;
     }
-    result->unk0 = x << 8;
-    result->unk4 = y << 8;
-    result->unk8 = z << 8;
+    command = actor->command;
+    if (command == 0x93 || command == 0x94)
+    {
+        return -1;
+    }
+    if (command == 0x90 || command == 0xAE || command == 0x8E)
+    {
+        return -1;
+    }
+    actor->script_index = script_index;
+    actor->script_offset = 0;
+    actor->command = 0;
     return 0;
 }
 
 /**
- * @brief Set an actor's animation byte and slot word after validating state.
- * @param key Actor-slot lookup key.
- * @param value Value written to the matched slot's 0x168 word.
- * @return 0 on success, or -1 when no slot matches or its state forbids it.
+ * @brief Move the actor with @p key to a new position.
+ * @param key Object key to look up.
+ * @param x New X position in whole units.
+ * @param y New Y position in whole units.
+ * @param z New Z position in whole units.
+ * @return 0 on success, or -1 when no actor has @p key.
  */
-s32 func_80087E00(s32 key, s32 value)
+s32 func_80087D8C(s32 key, s32 x, s32 y, s32 z)
 {
-    extern FieldActorSlotE00 g_field_object_states[];
-    extern FieldActorRecordE00 g_field_actors[];
-    FieldActorRecordE00 *scan;
-    FieldActorRecordE00 *found;
-    FieldActorSlotE00 *e;
-    s32 i;
-    s32 result;
-    s16 state;
+    FieldActor* actor;
 
-    scan = g_field_actors;
-    e = g_field_object_states;
-    i = 0;
-loop:
-    i++;
-    if (e->unk14 == key)
+    actor = field_find_actor(key);
+    if (actor == FIELD_ACTOR_NONE)
     {
-        goto found_label;
+        return -1;
     }
-    e++;
-    scan++;
-    if (i < 13)
-    {
-        goto loop;
-    }
-    found = (FieldActorRecordE00 *)-1;
-check:
-    if (found != (FieldActorRecordE00 *)-1)
-    {
-        goto body;
-    }
-    result = -1;
-    goto done;
-found_label:
-    found = scan;
-    goto check;
-body:
-    state = found->unk2A;
-    if ((u16)(state - 0x93) < 2)
-    {
-        result = -1;
-        goto done;
-    }
-    if (state == 0x90 || state == 0xAE || state == 0x8E)
-    {
-        result = -1;
-        goto done;
-    }
-    found->unk28 = 0xFE;
-    g_field_object_states[found->unk3A].unk168 = value;
-    found->unk2C = 0;
-    if (found->unk2A != 0x8B && found->unk2A != 0x99)
-    {
-        found->unk2A = 0;
-    }
-    result = 0;
-done:
-    return result;
+    actor->x = x << 8;
+    actor->y = y << 8;
+    actor->z = z << 8;
+    return 0;
 }
 
 /**
- * @brief Look up a value from a self-relative offset table anchored at
- *        g_field_event_scripts.
- * @param arg0 Index into the u16 offset table.
- * @return g_field_event_scripts plus the u16 offset at index arg0.
+ * @brief Start the object-private script @p script on the actor with @p key unless it is busy.
+ * @param key Object key to look up.
+ * @param script Script bytecode stored as the object's private script.
+ * @return 0 when the script was started, or -1 when absent or in a non-interruptible command.
  */
-s32 func_80087EF0(s32 arg0)
+s32 func_80087E00(s32 key, u8* script)
 {
-    return g_field_event_scripts + *(u16*)((arg0 * 2) + g_field_event_scripts);
+    FieldActor* actor;
+    s16 command;
+
+    actor = field_find_actor(key);
+    if (actor == FIELD_ACTOR_NONE)
+    {
+        return -1;
+    }
+    command = actor->command;
+    if (command == 0x93 || command == 0x94)
+    {
+        return -1;
+    }
+    if (command == 0x90 || command == 0xAE || command == 0x8E)
+    {
+        return -1;
+    }
+    actor->script_index = FIELD_SCRIPT_OBJECT;
+    g_field_object_states[actor->object_index].script = script;
+    actor->script_offset = 0;
+    if (actor->command != 0x8B && actor->command != 0x99)
+    {
+        actor->command = 0;
+    }
+    return 0;
 }
 
 /**
- * @brief Find the g_field_object_states slot whose 0x14 field matches @p arg0.
- * @param arg0 Actor-slot lookup key.
- * @return Pointer to the matching slot, or (Struct_D80105AE0 *)-1.
+ * @brief Resolve an event script by index in the self-relative event script table.
+ * @param index Entry index in the table's leading u16 offset list.
+ * @return Address of the event script.
  */
-Struct_D80105AE0 *func_80087F0C(s32 arg0)
+u8* func_80087EF0(s32 index)
 {
-    extern Struct_D80105AE0 g_field_object_states[];
-    Struct_D80105AE0 *rec;
+    return g_field_event_scripts + ((u16*)g_field_event_scripts)[index];
+}
+
+/**
+ * @brief Find the object state that carries @p key.
+ * @param key Object key to look up.
+ * @return The matching object state, or (FieldObjectState*)-1.
+ */
+FieldObjectState* func_80087F0C(s32 key)
+{
+    FieldObjectState* state;
     s32 i;
 
-    rec = g_field_object_states;
-    for (i = 0; i < 0xD; i++)
+    state = g_field_object_states;
+    for (i = 0; i < FIELD_ACTOR_COUNT; i++)
     {
-        if (rec->unk14 == arg0)
+        if (state->key == key)
         {
-            return rec;
+            return state;
         }
-        rec++;
+        state++;
     }
-    return (Struct_D80105AE0 *) -1;
+    return (FieldObjectState*)-1;
 }
 
 /**
- * @brief Copy the matched actor record's leading triple into @p arg1.
- * @param arg0 Actor-slot lookup key.
- * @param arg1 Destination triple filled on a match.
- * @return 0 on a match, or -1 when no slot matches.
+ * @brief Copy the position of the actor with @p key.
+ * @param key Object key to look up.
+ * @param position Receives the actor's X, Y and Z position.
+ * @return 0 on success, or -1 when no actor has @p key.
  * @see decomp.me (100%)
  */
-s32 func_80087F44(s32 arg0, OutRec *arg1)
+s32 func_80087F44(s32 key, FieldActorPosition* position)
 {
-    extern RecA80105AE0 g_field_object_states[];
-    extern RecB800FDF58_F307 g_field_actors[];
-    RecA80105AE0 *ra;
-    RecB800FDF58_F307 *rb;
-    RecB800FDF58_F307 *found;
-    s32 i;
+    FieldActor* actor;
 
-    rb = g_field_actors;
-    ra = g_field_object_states;
-    for (i = 0; i < 0xD; i++, ra++, rb++)
+    actor = field_find_actor(key);
+    if (actor == FIELD_ACTOR_NONE)
     {
-        if (ra->unk14 == arg0)
-        {
-            goto found_it;
-        }
+        return -1;
     }
-    found = (RecB800FDF58_F307 *) -1;
-check:
-    if (found != (RecB800FDF58_F307 *) -1)
-    {
-        arg1->unk0 = found->unk0;
-        arg1->unk4 = found->unk4;
-        arg1->unk8 = found->unk8;
-        return 0;
-    }
-    return -1;
-found_it:
-    found = rb;
-    goto check;
+    position->x = actor->x;
+    position->y = actor->y;
+    position->z = actor->z;
+    return 0;
 }
 
 /**
- * @brief Find an actor by key and update its nine-bit control mode.
- * @param arg0 Actor-slot lookup key.
- * @param arg1 New mode; only its low nine bits are used.
- * @return -1 when no actor matches, or 0 after updating the record.
+ * @brief Set the nine-bit control mode of the actor with @p key.
+ * @param key Object key to look up.
+ * @param mode New control mode; only its low nine bits are used.
+ * @return -1 when no actor has @p key, otherwise 0.
  */
-s32 func_80087FC0(s32 arg0, s32 arg1)
+s32 func_80087FC0(s32 key, s32 mode)
 {
-    extern StateB80087FC0 g_field_object_states[];
-    extern RecordB80087FC0 g_field_actors[];
-    StateB80087FC0 *ra;
-    RecordB80087FC0 *rb;
-    RecordB80087FC0 *found;
-    s32 i;
-    s32 masked;
-    u8 unk3a;
-    FixedB80087FC0 *fixed = (FixedB80087FC0 *) 0x801ED600;
+    FieldActor* actor;
+    s32 control_mode;
+    u8 object_index;
+    FieldRenderState* render_state = FIELD_RENDER_STATE;
 
-    rb = g_field_actors;
-    ra = g_field_object_states;
-    for (i = 0; i < 0xD; i++, ra++, rb++)
+    actor = field_find_actor(key);
+    if (actor == FIELD_ACTOR_NONE)
     {
-        if (ra->unk14 == arg0)
-        {
-            goto found_it;
-        }
+        return -1;
     }
-    found = (RecordB80087FC0 *) -1;
-check:
-    if (found != (RecordB80087FC0 *) -1)
+    actor->control.word = (actor->control.word & ~0x1FF) | (mode & 0x1FF);
+    control_mode = actor->control.half[0] & 0x1FF;
+    if (control_mode != 1)
     {
-        goto body;
-    }
-    return -1;
-found_it:
-    found = rb;
-    goto check;
-body:
-    found->unk1C = (found->unk1C & ~0x1FF) | (arg1 & 0x1FF);
-    masked = (u16) found->unk1C & 0x1FF;
-    if (masked != 1)
-    {
-        if (masked < 2)
+        if (control_mode < 2)
         {
-            if (masked == 0)
+            if (control_mode == 0)
             {
-                unk3a = found->unk3A;
-                found->unk28 = 0xFF;
-                found->unk10 = 0;
-                if (unk3a == 1)
+                object_index = actor->object_index;
+                actor->script_index = FIELD_SCRIPT_NONE;
+                actor->unk10 = 0;
+                if (object_index == 1)
                 {
-                    if (!(g_pad_ctx->unk28 & 1))
+                    if (!(g_pad_ctx->menu_option_flags & PAD_OPTION_SECOND_LEADER))
                     {
-                        goto zero_flag;
+                        render_state->leader_object_index = 0;
                     }
-                    fixed->unk13E = unk3a;
+                    else
+                    {
+                        render_state->leader_object_index = object_index;
+                    }
                 }
             }
         }
     }
     else
     {
-        found->unk28 = 0xFF;
-        found->unk10 = 0;
+        actor->script_index = FIELD_SCRIPT_NONE;
+        actor->unk10 = 0;
         field_refresh_party_routes();
-        if (found->unk3A == masked)
+        if (actor->object_index == control_mode)
         {
-        zero_flag:
-            fixed->unk13E = 0;
+            render_state->leader_object_index = 0;
         }
     }
     return 0;

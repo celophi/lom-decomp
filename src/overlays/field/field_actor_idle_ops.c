@@ -1,122 +1,96 @@
+/**
+ * @file field_actor_idle_ops.c
+ * @brief Return field actors to their idle animation.
+ */
+
 #include "common.h"
+#include "field_actor_sequence_runtime.h"
+#include "field_object_state.h"
 
-/** @brief Actor state record; the object index at 0x3A selects a g_field_object_states slot. */
-typedef struct
-{
-    u8 pad0[4];
-    s32 unk4;
-    u8 pad8[0x21 - 8];
-    u8 unk21;   /* 0x21 control state; bit 7 preserved */
-    u8 pad22[0x2A - 0x22];
-    s16 unk2A;  /* 0x2A */
-    u8 pad2C[0x2E - 0x2C];
-    u16 unk2E;  /* 0x2E gate flag */
-    s16 unk30;  /* 0x30 */
-    u8 pad32[0x3A - 0x32];
-    u8 unk3A;   /* 0x3A object index */
-} FieldRecord;
+/** @brief Movement flag bits cleared when an actor goes idle. */
+#define FIELD_IDLE_CLEARED_MOVEMENT_FLAGS 0x1800
 
-/** @brief Per-actor slot in g_field_object_states; stride 0x23C. */
-typedef struct
-{
-    u8 pad0[0x174];
-    s32 unk174;
-    u8 pad178[0x18D - 0x178];
-    u8 unk18D;
-    u8 pad18E[0x23C - 0x18E];
-} FieldState;
-
-void field_update_sequence_actor_binding(FieldRecord *record, s32 value);
-void field_restart_sequence_animation(FieldRecord *record);
-void func_800A2DD8(u8 index);
-
-extern FieldState g_field_object_states[];
-extern s32 D_8010AE58;
-extern s32 D_8010AE60;
-extern s32 D_8010AE68;
-extern s32 D_8010AE6C;
-extern s32 D_8010AE70;
-extern s32 D_8010AE74;
-extern s32 D_8010AE7C;
-extern s32 D_8010AE80;
-extern s32 D_8010CFD8;
-extern s32 D_8010CFDC;
+void func_8006AA7C(s32 actor_slot);
+void func_800A2DD8(s32 player_index);
 
 /**
- * @brief Decay a negative unk4 toward zero by 0x800, then idle the record when its gate flag is clear.
+ * @brief Let a falling actor settle, then idle it when its motion scale is zero.
  *
- * Idling zeroes unk4 and unk2A, runs field_update_sequence_actor_binding, clears the slot's 0x1800
- * flags, runs field_restart_sequence_animation, and for object indices below 2 also calls
- * func_800A2DD8 and clears unk30 and the slot byte at 0x18D.
+ * A negative vertical position rises by 0x800 per call and is clamped at zero.
+ * Idling zeroes the height and motion parameter, releases the sequence binding,
+ * clears the movement flags, restarts the animation and, for the two party
+ * members, also clears their command-history idle counter.
  *
- * @param arg0 Actor state record.
+ * @param actor Actor motion record.
  */
-void func_800923F0(FieldRecord *arg0)
+void func_800923F0(FieldMotionRecord* actor)
 {
-    s32 temp;
-    FieldState *base;
-    FieldState *slot;
+    s32 y;
+    FieldObjectRuntime* states;
+    FieldObjectRuntime* state;
 
-    temp = arg0->unk4;
-    if (temp < 0) {
-        temp += 0x800;
-        arg0->unk4 = temp;
-        if (temp > 0) {
-            arg0->unk4 = 0;
-        }
-    }
-
-    if (arg0->unk2E == 0) {
-        arg0->unk4 = 0;
-        arg0->unk2A = 0;
-        field_update_sequence_actor_binding(arg0, 1);
-        base = g_field_object_states;
-        slot = &base[arg0->unk3A];
-        slot->unk174 &= ~0x1800;
-        field_restart_sequence_animation(arg0);
-        if (arg0->unk3A < 2) {
-            func_800A2DD8(arg0->unk3A);
-            arg0->unk30 = 0;
-            base[arg0->unk3A].unk18D = 0;
-        }
-    }
-}
-
-/**
- * @brief Initializes an inactive field record and clears two state flags.
- *
- * @param record Field record whose state entry is selected by byte 0x3A.
- */
-void func_800924D8(FieldRecord *record)
-{
-    if (record->unk2E == 0)
+    y = actor->y;
+    if (y < 0)
     {
-        record->unk2A = 0;
-        field_update_sequence_actor_binding(record, 1);
-        g_field_object_states[record->unk3A].unk174 &= ~0x1800;
-        field_restart_sequence_animation(record);
+        y += 0x800;
+        actor->y = y;
+        if (y > 0)
+        {
+            actor->y = 0;
+        }
+    }
+
+    if (actor->motion_scale == 0)
+    {
+        actor->y = 0;
+        actor->motion_parameter = 0;
+        field_update_sequence_actor_binding(actor, 1);
+        states = g_field_object_states;
+        state = &states[actor->source_object_index];
+        state->movement.word &= ~FIELD_IDLE_CLEARED_MOVEMENT_FLAGS;
+        field_restart_sequence_animation(actor);
+        if (actor->source_object_index < 2)
+        {
+            func_800A2DD8(actor->source_object_index);
+            actor->reference_index = 0;
+            states[actor->source_object_index].targets[13] = 0;
+        }
     }
 }
 
 /**
- * @brief Idle an actor's animation when its gate flag is clear.
+ * @brief Idle an actor when its motion scale is zero.
+ * @param actor Actor motion record.
+ */
+void func_800924D8(FieldMotionRecord* actor)
+{
+    if (actor->motion_scale == 0)
+    {
+        actor->motion_parameter = 0;
+        field_update_sequence_actor_binding(actor, 1);
+        g_field_object_states[actor->source_object_index].movement.word &= ~FIELD_IDLE_CLEARED_MOVEMENT_FLAGS;
+        field_restart_sequence_animation(actor);
+    }
+}
+
+/**
+ * @brief Refresh the controller flags of an actor and idle it when its motion scale is zero.
  *
- * When @c unk2E is 0, stops the actor's sound, zeroes @c unk2A, runs
- * field_update_sequence_actor_binding, clears the 0x1800 bits of the slot's @c unk174, sets the
- * control state in @c unk21 to 2 (keeping bit 7), and notifies field_restart_sequence_animation.
+ * Also sets the facing state to 2 while keeping its high bit.
  *
- * @param arg0 Actor state record.
+ * @param actor Actor motion record.
  * @see decomp.me (100%) TODO
  */
-void func_80092550(FieldRecord *arg0)
+void func_80092550(FieldMotionRecord* actor)
 {
-    if (arg0->unk2E == 0)
+    if (actor->motion_scale == 0)
     {
-        func_8006AA7C(arg0->unk3A);
-        arg0->unk2A = 0;
-        field_update_sequence_actor_binding(arg0, 1);
-        g_field_object_states[arg0->unk3A].unk174 = g_field_object_states[arg0->unk3A].unk174 & ~0x1800;
-        arg0->unk21 = (u8)((arg0->unk21 & 0x80) + 2);
-        field_restart_sequence_animation(arg0);
+        func_8006AA7C(actor->source_object_index);
+        actor->motion_parameter = 0;
+        field_update_sequence_actor_binding(actor, 1);
+        g_field_object_states[actor->source_object_index].movement.word =
+            g_field_object_states[actor->source_object_index].movement.word & ~FIELD_IDLE_CLEARED_MOVEMENT_FLAGS;
+        actor->facing_or_reward_kind = (u8)((actor->facing_or_reward_kind & 0x80) + 2);
+        field_restart_sequence_animation(actor);
     }
 }

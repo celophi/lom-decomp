@@ -1,385 +1,233 @@
+/**
+ * @file field_generated_record_ops.c
+ * @brief Write a staged item back into its item record and derive its
+ *        category-specific values.
+ */
+
 #include "common.h"
+#include "field_records.h"
 
-extern u8 *D_80122B74;
-extern u8 *D_80123FC4;
-extern u8 *D_80123FC0;
-void func_800BFE70(s32, s32, u8 *);
-void func_800C37A8(u32, void *);
-#define INIT_U8(p, o) (*(u8 *)((u8 *)(p) + (o)))
-#define INIT_U16(p, o) (*(u16 *)((u8 *)(p) + (o)))
-#define INIT_U32(p, o) (*(u32 *)((u8 *)(p) + (o)))
-#define INIT_PTR(p, o) (*(u8 **)((u8 *)(p) + (o)))
+/** @brief Staged levels at or above this are written as FIELD_STAGING_LEVEL_MAX. */
+#define FIELD_LEVEL_LIMIT 0x10
 
-/** @brief Two-byte staged entry whose value byte feeds a packed record nibble. */
-typedef struct
+/** @brief Clamp a staged level to four bits. */
+#define FIELD_CLAMP_LEVEL(level) ((level) >= FIELD_LEVEL_LIMIT ? FIELD_STAGING_LEVEL_MAX : (level))
+
+/** @brief Largest derived value an item record can hold. */
+#define FIELD_DERIVED_VALUE_MAX 999
+
+/** @brief Item name table id passed to func_800C1E40. */
+#define FIELD_ITEM_NAME_TABLE 8
+
+/** @brief First name entry of the item subtypes in the item name table. */
+#define FIELD_SUBTYPE_NAME_BASE 0x24
+
+/** @brief First control code (0x1D-0x1F) that carries one argument byte in item names. */
+#define FIELD_TEXT_ARG_CODE_MIN 0x1D
+
+/** @brief Codes below this are control codes in item names. */
+#define FIELD_TEXT_CODE_LIMIT 0x20
+
+/** @brief Item name table: a header word, then per-entry offsets relative to @c text. */
+typedef struct FieldItemNameTable
 {
-    u8 unk0;
-    u8 value;
-} StagedNibbleEntry;
+    u32 header;
+    union
+    {
+        u16 offsets[1];
+        u8 text[1];
+    } body;
+} FieldItemNameTable;
+
+extern FieldGameState* D_80122B74;
+extern FieldItemStaging* D_80123FC4;
+extern FieldItemTables* D_80123FC0;
+
+void* func_800C1E40(s32 table_id);
+void func_800C37A8(u32 seed, void* serial);
+
+void func_800BFE70(s32 type_entry, s32 subtype_entry, u8* dest);
 
 /**
- * @brief Initialize a generated record's text and packed attribute fields.
+ * @brief Write the staged item back into its item record.
+ *
+ * A record without a name gets a serial and the name "<subtype> <type>";
+ * a named record without a serial only gets the serial. Then the identity,
+ * level, stat modifier and slot fields are copied from the staging block.
  */
 void func_800BFA34(void)
 {
-    s32 copy_index;
-    u8 copy_value;
-    u8 nibble_0;
-    u8 nibble_1;
-    u8 nibble_2;
-    u8 nibble_3;
-    u8 nibble_4;
-    u8 nibble_5;
-    u8 nibble_6;
-    u8 nibble_7;
-    u8 *record_14_1;
-    u8 *record_18_7;
-    u8 *record_1c_0;
-    u8 *record_1c_1;
-    u8 *record_1c_2;
-    u8 *record_1c_3;
-    u8 *record_1c_4;
-    u8 *record_1c_5;
-    u8 *record_1c_6;
-    u8 *record_1c_7;
-    u8 *record_14_2;
-    u8 *record_18_0;
-    u8 *record_18_1;
-    u8 *record_18_2;
-    u8 *record_18_3;
-    u8 *record_18_4;
-    u8 *record_18_5;
-    u8 *record_18_6;
-    u8 *record;
-    u8 *record_14_0;
-    u8 *copy_destination;
-    StagedNibbleEntry *staged_nibbles;
+    s32 i;
+    FieldItemRecord* record;
 
-    record = INIT_PTR(D_80123FC4, 0);
-    if (INIT_U8(record, 0x0) == 0)
+    record = D_80123FC4->record;
+    if (record->kind == 0)
     {
-        func_800C37A8(INIT_U16(D_80122B74, 0xD8), record + 0x38);
-        func_800BFE70((INIT_U8(D_80123FC4, 0x4) * 0x10) + INIT_U8(D_80123FC4, 0x5), INIT_U8(D_80123FC4, 0x6) + 0x24, INIT_PTR(D_80123FC4, 0));
+        func_800C37A8(D_80122B74->unkD8, &record->unk38);
+        func_800BFE70(D_80123FC4->category * 16 + D_80123FC4->item_type, D_80123FC4->item_subtype + FIELD_SUBTYPE_NAME_BASE, (u8*)D_80123FC4->record);
     }
-    else if (INIT_U32(record, 0x38) == 0)
+    else if (record->unk38 == 0 && record->unk3C == 0)
     {
-        if (INIT_U32(record, 0x3C) == 0)
-        {
-            func_800C37A8(INIT_U16(D_80122B74, 0xD8), record + 0x38);
-        }
+        func_800C37A8(D_80122B74->unkD8, &record->unk38);
     }
-    record_14_0 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_14_0, 0x14) = (s32) ((INIT_U32(record_14_0, 0x14) & ~0x300) | ((INIT_U8(D_80123FC4, 0x4) & 3) << 8));
-    record_14_1 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_14_1, 0x14) = (s32) ((INIT_U32(record_14_1, 0x14) & 0xFFFF03FF) | ((INIT_U8(D_80123FC4, 0x5) & 0x3F) << 0xA));
-    record_14_2 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_14_2, 0x14) = (s32) ((INIT_U32(record_14_2, 0x14) & 0xFFC0FFFF) | ((INIT_U8(D_80123FC4, 0x6) & 0x3F) << 0x10));
-    record_18_0 = INIT_PTR(D_80123FC4, 0);
-    nibble_0 = 0xF;
-    if ((u8)INIT_U8(D_80123FC4, 0xD) < 0x10U)
+
+    D_80123FC4->record->info.bits.category = D_80123FC4->category;
+    D_80123FC4->record->info.bits.item_type = D_80123FC4->item_type;
+    D_80123FC4->record->info.bits.item_subtype = D_80123FC4->item_subtype;
+
+    D_80123FC4->record->bonus_nibbles.bits.n0 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[0].level);
+    D_80123FC4->record->bonus_nibbles.bits.n1 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[1].level);
+    D_80123FC4->record->bonus_nibbles.bits.n2 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[2].level);
+    D_80123FC4->record->bonus_nibbles.bits.n3 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[3].level);
+    D_80123FC4->record->bonus_nibbles.bits.n4 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[4].level);
+    D_80123FC4->record->bonus_nibbles.bits.n5 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[5].level);
+    D_80123FC4->record->bonus_nibbles.bits.n6 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[6].level);
+    D_80123FC4->record->bonus_nibbles.bits.n7 = FIELD_CLAMP_LEVEL(D_80123FC4->levels[7].level);
+
+    D_80123FC4->record->stat_nibbles.bits.n0 = D_80123FC4->stats.bytes[0];
+    D_80123FC4->record->stat_nibbles.bits.n1 = D_80123FC4->stats.words[0].modifier1;
+    D_80123FC4->record->stat_nibbles.bits.n2 = D_80123FC4->stats.words[0].modifier2;
+    D_80123FC4->record->stat_nibbles.bits.n3 = D_80123FC4->stats.words[0].modifier3;
+    D_80123FC4->record->stat_nibbles.bits.n4 = D_80123FC4->stats.bytes[4];
+    D_80123FC4->record->stat_nibbles.bits.n5 = D_80123FC4->stats.words[1].modifier1;
+    D_80123FC4->record->stat_nibbles.bits.n6 = D_80123FC4->stats.words[1].modifier2;
+    D_80123FC4->record->stat_nibbles.bits.n7 = D_80123FC4->stats.words[1].modifier3;
+
+    for (i = 0; i < 3; i++)
     {
-        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
-        nibble_0 = staged_nibbles[0].value;
+        D_80123FC4->record->special_ids[i] = D_80123FC4->slots[i + 2];
     }
-    INIT_U32(record_18_0, 0x18) = (s32) ((INIT_U32(record_18_0, 0x18) & ~0xF) | (nibble_0 & 0xF));
-    record_18_1 = INIT_PTR(D_80123FC4, 0);
-    nibble_1 = 0xF;
-    if ((u8)INIT_U8(D_80123FC4, 0xF) < 0x10U)
-    {
-        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
-        nibble_1 = staged_nibbles[1].value;
-    }
-    INIT_U32(record_18_1, 0x18) = (s32) ((INIT_U32(record_18_1, 0x18) & ~0xF0) | ((nibble_1 & 0xF) * 0x10));
-    record_18_2 = INIT_PTR(D_80123FC4, 0);
-    nibble_2 = 0xF;
-    if ((u8)INIT_U8(D_80123FC4, 0x11) < 0x10U)
-    {
-        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
-        nibble_2 = staged_nibbles[2].value;
-    }
-    INIT_U32(record_18_2, 0x18) = (s32) ((INIT_U32(record_18_2, 0x18) & ~0xF00) | ((nibble_2 & 0xF) << 8));
-    record_18_3 = INIT_PTR(D_80123FC4, 0);
-    nibble_3 = 0xF;
-    if ((u8)INIT_U8(D_80123FC4, 0x13) < 0x10U)
-    {
-        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
-        nibble_3 = staged_nibbles[3].value;
-    }
-    INIT_U32(record_18_3, 0x18) = (s32) ((INIT_U32(record_18_3, 0x18) & 0xFFFF0FFF) | ((nibble_3 & 0xF) << 0xC));
-    record_18_4 = INIT_PTR(D_80123FC4, 0);
-    nibble_4 = 0xF;
-    if ((u8)INIT_U8(D_80123FC4, 0x15) < 0x10U)
-    {
-        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
-        nibble_4 = staged_nibbles[4].value;
-    }
-    INIT_U32(record_18_4, 0x18) = (s32) ((INIT_U32(record_18_4, 0x18) & 0xFFF0FFFF) | ((nibble_4 & 0xF) << 0x10));
-    record_18_5 = INIT_PTR(D_80123FC4, 0);
-    nibble_5 = 0xF;
-    if ((u8)INIT_U8(D_80123FC4, 0x17) < 0x10U)
-    {
-        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
-        nibble_5 = staged_nibbles[5].value;
-    }
-    INIT_U32(record_18_5, 0x18) = (s32) ((INIT_U32(record_18_5, 0x18) & 0xFF0FFFFF) | ((nibble_5 & 0xF) << 0x14));
-    record_18_6 = INIT_PTR(D_80123FC4, 0);
-    nibble_6 = 0xF;
-    if ((u8)INIT_U8(D_80123FC4, 0x19) < 0x10U)
-    {
-        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
-        nibble_6 = staged_nibbles[6].value;
-    }
-    INIT_U32(record_18_6, 0x18) = (s32) ((INIT_U32(record_18_6, 0x18) & 0xF0FFFFFF) | ((nibble_6 & 0xF) << 0x18));
-    record_18_7 = INIT_PTR(D_80123FC4, 0);
-    nibble_7 = 0xF;
-    if ((u8)INIT_U8(D_80123FC4, 0x1B) < 0x10U)
-    {
-        staged_nibbles = (StagedNibbleEntry *)(D_80123FC4 + 0xC);
-        nibble_7 = staged_nibbles[7].value;
-    }
-    INIT_U32(record_18_7, 0x18) = (s32) ((INIT_U32(record_18_7, 0x18) & 0x0FFFFFFF) | (nibble_7 << 0x1C));
-    record_1c_0 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_1c_0, 0x1C) = (s32) ((INIT_U32(record_1c_0, 0x1C) & ~0xF) | (INIT_U8(D_80123FC4, 0x20) & 0xF));
-    record_1c_1 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_1c_1, 0x1C) = (s32) ((INIT_U32(record_1c_1, 0x1C) & ~0xF0) | (((u32) INIT_U32(D_80123FC4, 0x20) >> 4) & 0xF0));
-    record_1c_2 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_1c_2, 0x1C) = (s32) ((INIT_U32(record_1c_2, 0x1C) & ~0xF00) | ((INIT_U16(D_80123FC4, 0x22) & 0xF) << 8));
-    record_1c_3 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_1c_3, 0x1C) = (s32) ((INIT_U32(record_1c_3, 0x1C) & 0xFFFF0FFF) | ((INIT_U8(D_80123FC4, 0x23) & 0xF) << 0xC));
-    record_1c_4 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_1c_4, 0x1C) = (s32) ((INIT_U32(record_1c_4, 0x1C) & 0xFFF0FFFF) | ((INIT_U8(D_80123FC4, 0x24) & 0xF) << 0x10));
-    record_1c_5 = INIT_PTR(D_80123FC4, 0);
-    copy_index = 0;
-    INIT_U32(record_1c_5, 0x1C) = (s32) ((INIT_U32(record_1c_5, 0x1C) & 0xFF0FFFFF) | ((((u32) INIT_U32(D_80123FC4, 0x24) >> 8) & 0xF) << 0x14));
-    record_1c_6 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_1c_6, 0x1C) = (s32) ((INIT_U32(record_1c_6, 0x1C) & 0xF0FFFFFF) | ((INIT_U16(D_80123FC4, 0x26) & 0xF) << 0x18));
-    record_1c_7 = INIT_PTR(D_80123FC4, 0);
-    INIT_U32(record_1c_7, 0x1C) = (s32) ((INIT_U32(record_1c_7, 0x1C) & 0x0FFFFFFF) | (INIT_U8(D_80123FC4, 0x27) << 0x1C));
-    do
-    {
-        copy_value = INIT_U8((u8 *)((s32)copy_index + (s32)D_80123FC4), 0x2A);
-        copy_destination = INIT_PTR(D_80123FC4, 0) + copy_index;
-        copy_index += 1;
-        INIT_U8(copy_destination, 0x20) = copy_value;
-    } while (copy_index < 3);
-    INIT_U8(INIT_PTR(D_80123FC4, 0), 0x23) = (u8) INIT_U8(D_80123FC4, 0x29);
-    INIT_U32(INIT_PTR(D_80123FC4, 0), 0x34) = 0;
+    D_80123FC4->record->special_ids[3] = D_80123FC4->slots[1];
+    D_80123FC4->record->handle = 0;
 }
 
-
-typedef struct
-{
-    u8 pad0[4];
-    u16 unk4;
-} TableEntryB800BFE70;
-
-u8* func_800C1E40(s32 arg0);
-
 /**
- * @brief Copy two encoded text entries into a destination buffer.
- * @param arg0 Index of the second source entry.
- * @param arg1 Index of the first source entry.
- * @param arg2 Destination buffer.
+ * @brief Build an item name from a subtype name followed by a type name.
+ * @param type_entry Name table entry of the item type.
+ * @param subtype_entry Name table entry of the item subtype.
+ * @param dest Destination buffer; receives the terminated name.
  */
-void func_800BFE70(s32 arg0, s32 arg1, u8* arg2)
+void func_800BFE70(s32 type_entry, s32 subtype_entry, u8* dest)
 {
-    u8* base;
+    FieldItemNameTable* table;
     u8* src;
-    u8* dst;
-    s32 c2;
 
-    dst = arg2;
-    base = func_800C1E40(8);
+    table = func_800C1E40(FIELD_ITEM_NAME_TABLE);
 
-    src = base + (((TableEntryB800BFE70*)(base + (arg1 << 1)))->unk4 + 4);
+    src = &table->body.text[table->body.offsets[subtype_entry]];
     if (*src != 0)
     {
-        s32 c1;
+        s32 code;
 
         do
         {
-            c1 = *src;
-            if (c1 < 0x20)
+            code = *src;
+            if (code < FIELD_TEXT_CODE_LIMIT)
             {
-                if (c1 >= 0x1D)
+                if (code >= FIELD_TEXT_ARG_CODE_MIN)
                 {
-                    *dst = c1;
-                    src += 1;
-                    dst += 1;
+                    *dest = code;
+                    src++;
+                    dest++;
                 }
             }
-            c2 = *src;
-            src += 1;
-            *dst = c2;
-            dst += 1;
+            *dest++ = *src++;
         } while (*src != 0);
     }
 
-    src = base + (((TableEntryB800BFE70*)(base + (arg0 << 1)))->unk4 + 4);
+    src = &table->body.text[table->body.offsets[type_entry]];
     if (*src != 0)
     {
-        s32 c1;
+        s32 code;
 
         do
         {
-            c1 = *src;
-            if (c1 < 0x20)
+            code = *src;
+            if (code < FIELD_TEXT_CODE_LIMIT)
             {
-                if (c1 >= 0x1D)
+                if (code >= FIELD_TEXT_ARG_CODE_MIN)
                 {
-                    *dst = c1;
-                    src += 1;
-                    dst += 1;
+                    *dest = code;
+                    src++;
+                    dest++;
                 }
             }
-            c2 = *src;
-            src += 1;
-            *dst = c2;
-            dst += 1;
+            *dest++ = *src++;
         } while (*src != 0);
     }
 
-    *dst = 0;
+    *dest = 0;
 }
 
-
-/** @brief Byte fields used to derive the result stats. */
-typedef struct
-{
-    u8 pad[5];
-    u8 type, level;
-    u8 pad7[6];
-    u8 bonus;
-    u8 pad_e[14];
-    u8 value;
-    u8 pad_1d[17];
-    u8 stats[6];
-    u8 extra;
-    u8 pad35[7];
-    u8 weights[4];
-    u8 multipliers[4];
-} Source;
-/** @brief Access view for type weights and level divisors. */
-typedef struct
-{
-    u8 pad[8];
-    u8 weight;
-    u8 pad9[3];
-    u8 factor;
-    u8 pad_d[0x179];
-    u16 divisor;
-} Table;
-/** @brief Destination fields populated from the selected source. */
-typedef struct
-{
-    u8 pad[0x24];
-    u16 power;
-    u8 stats[6];
-    u8 extra;
-    u8 pad_2d;
-    u16 value;
-    u8 scaled[4];
-} Result;
-
-
 /**
- * @brief Compute capped power, copy stats, and scale four source multipliers.
- * @param result Destination for the derived fields.
+ * @brief Derive the category 0 values of an item record from the staging block.
+ *
+ * The power is the type/subtype weight product scaled by the summed levels,
+ * capped at FIELD_DERIVED_VALUE_MAX; properties, flags and the effect index
+ * are copied and the four factors are scaled by the subtype multipliers.
+ *
+ * @param record Item record to update.
  */
-void func_800BFF90(Result *result)
-{
-    s32 i, sum, bonus, offset, power;
-    Table *level;
-    u16 divisor;
-    Source *source;
-    i = 0;
-    sum = 0;
-    do
-    {
-        offset = i + ((Source *)D_80123FC4)->type * 12;
-        sum += ((Table *)((u8 *)D_80123FC0 + offset))->weight * ((Source *)D_80123FC4)->weights[i];
-        i++;
-    } while (i < 4);
-    i = 0;
-    bonus = 0;
-    source = (Source *)D_80123FC4;
-    do
-    {
-        bonus += ((Source *)((u8 *)source + i * 2))->bonus;
-        i++;
-    } while (i < 8);
-    level = (Table *)((u8 *)D_80123FC0 + ((Source *)D_80123FC4)->level * 20);
-    divisor = level->divisor;
-    power = (sum * (bonus + divisor) / divisor) >> 7;
-    result->power = power;
-    i = 0;
-    if ((u32)(power & 0xFFFF) >= 1000)
-    {
-        result->power = 999;
-    }
-    do
-    {
-        result->stats[i] = ((Source *)D_80123FC4)->stats[i];
-        i++;
-    } while (i < 6);
-    i = 0;
-    result->extra = ((Source *)D_80123FC4)->extra;
-    result->value = ((Source *)D_80123FC4)->value;
-    do
-    {
-        level = (Table *)((u8 *)D_80123FC0 + (i + ((Source *)D_80123FC4)->type * 12));
-        result->scaled[i] = (level->factor * ((Source *)D_80123FC4)->multipliers[i]) >> 6;
-        i++;
-    } while (i < 4);
-}
-
-
-extern u8 *D_80123FC0;
-extern u8 *D_80123FC4;
-
-/**
- * @brief Populate the mode-1 derived fields in a field record.
- * @param record Destination record to update from the active field tables.
- */
-void func_800C015C(u8 *record)
+void func_800BFF90(FieldItemRecord* record)
 {
     s32 i;
-    s32 scaled_value;
-    s32 product;
+    s32 weight;
+    s32 levels;
+    u16 divisor;
+    u16 power;
 
-    i = 0;
-    do
+    for (i = 0, weight = 0; i < 4; i++)
     {
+        weight += D_80123FC0->item.types[D_80123FC4->item_type].weights[i] * D_80123FC4->weights[i];
+    }
+
+    for (i = 0, levels = 0; i < FIELD_STAGING_LEVEL_COUNT; i++)
+    {
+        levels += D_80123FC4->levels[i].level;
+    }
+
+    divisor = D_80123FC0->item.subtypes[D_80123FC4->item_subtype].divisor;
+    power = (weight * (levels + divisor) / divisor) >> 7;
+    record->derived.weapon.power = power;
+    if (power >= 1000)
+    {
+        record->derived.weapon.power = FIELD_DERIVED_VALUE_MAX;
+    }
+
+    for (i = 0; i < FIELD_STAGING_PROPERTY_COUNT; i++)
+    {
+        record->derived.weapon.stats[i] = D_80123FC4->properties[i];
+    }
+    record->flags2C = D_80123FC4->flags2C;
+    record->effect_index = D_80123FC4->effect_index;
+
+    for (i = 0; i < 4; i++)
+    {
+        record->attributes[i] = (D_80123FC0->item.types[D_80123FC4->item_type].factors[i] * D_80123FC4->multipliers[i]) >> 6;
+    }
+}
+
+/**
+ * @brief Derive the category 1 values of an item record from the staging block.
+ * @param record Item record to update.
+ */
+void func_800C015C(FieldItemRecord* record)
+{
+    s32 i;
+    u32 value;
+
+    for (i = 0; i < 4; i++)
+    {
+        value = (D_80123FC0->item.alternate_types[D_80123FC4->item_type].weights[i] * D_80123FC4->multipliers[i]) >> 6;
+        record->derived.values[i] = value;
+        if (value >= 1000)
         {
-            u8 *source;
-
-            source = D_80123FC0 + (i + D_80123FC4[5] * 0xC);
-            scaled_value = (source[0xC8] * (D_80123FC4 + i)[0x40]) >> 6;
+            record->derived.values[i] = FIELD_DERIVED_VALUE_MAX;
         }
+        record->attributes[i] = (D_80123FC0->item.alternate_types[D_80123FC4->item_type].factors[i] * D_80123FC4->multipliers[i]) >> 6;
+    }
 
-        *(s16 *)(record + 0x24 + i * 2) = (s16)scaled_value;
-        if ((u32)scaled_value >= 0x3E8)
-        {
-            *(s16 *)(record + 0x24 + i * 2) = 0x3E7;
-        }
-
-        {
-            u8 *source;
-
-            source = D_80123FC0 + (i + D_80123FC4[5] * 0xC);
-            product = source[0xCC] * (D_80123FC4 + i)[0x40];
-        }
-
-        {
-            u8 *output;
-
-            output = record + i;
-            i += 1;
-            output[0x30] = (s8)(product >> 6);
-        }
-    } while (i < 4);
-
-    record[0x2C] = D_80123FC4[0x36];
-    record[0x2D] = D_80123FC4[0x35];
-    *(s16 *)(record + 0x2E) = D_80123FC4[0x1C];
+    record->flags2C = D_80123FC4->alternate_flags2C;
+    record->flags2D = D_80123FC4->flags2D;
+    record->effect_index = D_80123FC4->effect_index;
 }

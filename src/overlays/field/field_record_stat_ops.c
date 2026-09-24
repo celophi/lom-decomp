@@ -1,56 +1,113 @@
+/**
+ * @file field_record_stat_ops.c
+ * @brief Equipment compatibility checks, equipping and derived character stats.
+ */
+
 #include "common.h"
-extern u8 D_800F0BE0[], D_800F0BEC[];
-void func_800B7A74(void *, s32, u8 *);
+#include "field_records.h"
+
+/** @brief Character type that gets no equipment totals from its armor slots. */
+#define FIELD_CHARACTER_TYPE_NO_ARMOR 3
+
+/** @brief Equipment slot holding the character's weapon. */
+#define FIELD_WEAPON_SLOT 0
+
+/** @brief Lowest and highest value of a derived stat. */
+#define FIELD_STAT_MIN 1
+#define FIELD_STAT_MAX 99
 
 /**
- * @brief Check whether a candidate record is compatible with a slot and its peers.
- * @param records Record set used to build the peer compatibility mask.
- * @param slot_index Slot index being checked.
- * @param candidate Candidate record containing packed compatibility metadata.
- * @return 0 when compatible, or -1 when the candidate conflicts with the slot.
+ * @brief Two character stats viewed as one word.
+ * @note The base value is stored in quarter units; the effective value is the
+ *       base plus the equipment modifiers.
  */
-s32 func_800B7980(u8 *records, s32 slot_index, u8 *candidate)
+typedef struct FieldStatPair
 {
-    u8 mask;
-    s32 mode;
+    u32 base0 : 9;
+    u32 effective0 : 7;
+    u32 base1 : 9;
+    u32 effective1 : 7;
+} FieldStatPair;
 
-    mode = (*(u32 *)(candidate + 0x14) >> 8) & 3;
-    switch (mode)
-    {
-    case 0:
-    {
-        s32 compatible;
+/** @brief A character's stats viewed as FieldStatPair words. */
+#define STAT_PAIRS(character) ((FieldStatPair*)(character)->stats)
 
-        if (slot_index != 0)
+/** @brief Signed stat modifier for a four-bit modifier index. */
+#define STAT_MODIFIER(nibble) (D_800F0C38[nibble])
+
+/**
+ * @brief Signed stat modifier for a four-bit modifier index, read as an
+ *        unsigned byte and then sign-extended.
+ * @note The volatile read keeps the original lbu + sll/sra sequence.
+ */
+#define STAT_MODIFIER_ZX(nibble) ((s8)((volatile u8*)D_800F0C38)[nibble])
+
+extern FieldGameState* D_80122B74;
+
+/** @brief Conflict bits of weapon types, indexed by FIELD_ITEM_TYPE. */
+extern u8 D_800F0BE0[];
+
+/** @brief Conflict bits of armor types, indexed by FIELD_ITEM_TYPE. */
+extern u8 D_800F0BEC[];
+
+/** @brief Signed stat modifiers indexed by an item's four-bit modifier values. */
+extern s8 D_800F0C38[];
+
+void* func_800C1EC8(void* src, void* dest, s32 size);
+FieldStatusState* func_80087F0C(s32 index);
+
+void func_800B7A74(FieldCharacterRecord* character, s32 skip_slot, u8* conflicts);
+void func_800B7B98(FieldCharacterRecord* character);
+
+/**
+ * @brief Check whether an item may be equipped in a character's slot.
+ * @param character Character whose other equipped items are checked.
+ * @param slot_index Equipment slot the item would go into.
+ * @param item Item to equip.
+ * @return -1 when the item fits the slot and the other equipment, otherwise 0.
+ */
+s32 func_800B7980(FieldCharacterRecord* character, s32 slot_index, FieldItemRecord* item)
+{
+    u8 conflicts;
+    s32 category;
+
+    category = FIELD_ITEM_CATEGORY(item->info.word);
+    switch (category)
+    {
+    case FIELD_ITEM_CATEGORY_WEAPON:
+    {
+        s32 overlap;
+
+        if (slot_index != FIELD_WEAPON_SLOT)
         {
             return 0;
         }
-        func_800B7A74(records, 0, &mask);
-        compatible = D_800F0BE0[(*(u32 *)(candidate + 0x14) >> 10) & 0x3F] & mask;
-        if (compatible != 0)
+        func_800B7A74(character, FIELD_WEAPON_SLOT, &conflicts);
+        overlap = D_800F0BE0[FIELD_ITEM_TYPE(item->info.word)] & conflicts;
+        if (overlap != 0)
         {
             return 0;
         }
         return -1;
     }
-    case 1:
+    case FIELD_ITEM_CATEGORY_ARMOR:
     {
-        s32 compatible;
+        s32 overlap;
 
-        if ((u32)(slot_index - 1) >= 3U)
+        if (slot_index < 1 || slot_index > 3)
         {
             return 0;
         }
-        func_800B7A74(records, slot_index, &mask);
-        compatible = D_800F0BEC[(*(u32 *)(candidate + 0x14) >> 10) & 0x3F] & mask;
-        if (compatible != 0)
+        func_800B7A74(character, slot_index, &conflicts);
+        overlap = D_800F0BEC[FIELD_ITEM_TYPE(item->info.word)] & conflicts;
+        if (overlap != 0)
         {
             return 0;
         }
         return -1;
     }
-    case 2:
-        if (slot_index < 4)
+    case FIELD_ITEM_CATEGORY_ACCESSORY:
+        if (slot_index < FIELD_EQUIPMENT_SLOT_COUNT)
         {
             return 0;
         }
@@ -60,281 +117,215 @@ s32 func_800B7980(u8 *records, s32 slot_index, u8 *candidate)
     }
 }
 
-
-
-extern u8 D_800F0BE0[];
-extern u8 D_800F0BEC[];
-
-void func_800B7A74(void *arg0, s32 arg1, u8 *arg2)
+/**
+ * @brief Collect the conflict bits of every equipped item except one slot.
+ * @param character Character whose equipment is scanned.
+ * @param skip_slot Equipment slot left out of the scan.
+ * @param conflicts Receives the OR of the conflict bits.
+ */
+void func_800B7A74(FieldCharacterRecord* character, s32 skip_slot, u8* conflicts)
 {
     s32 i;
-    u8 *p;
-    u32 v;
-    s32 mode;
-    u8 *tbl;
+    u32 value;
+    u8* bits;
 
-    p = (u8 *)arg0;
     i = 0;
-    *arg2 = 0;
-    do
+    *conflicts = 0;
+    for (; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
-        if (i != arg1)
+        if (i != skip_slot)
         {
-            v = *(u32 *)(p + 0x64);
-            mode = (v >> 8) & 3;
-            switch (mode)
+            value = character->equipment[i].info.word;
+            switch (FIELD_ITEM_CATEGORY(value))
             {
-            case 0:
-                tbl = &D_800F0BE0[(v >> 10) & 0x3F];
+            case FIELD_ITEM_CATEGORY_WEAPON:
+                bits = &D_800F0BE0[FIELD_ITEM_TYPE(value)];
                 break;
-            case 1:
-                tbl = &D_800F0BEC[(v >> 10) & 0x3F];
+            case FIELD_ITEM_CATEGORY_ARMOR:
+                bits = &D_800F0BEC[FIELD_ITEM_TYPE(value)];
                 break;
             default:
-                p += 0x40;
-                i += 1;
                 continue;
             }
-            v = *arg2;
-            v |= *tbl;
-            *arg2 = v;
+            value = *conflicts;
+            value |= *bits;
+            *conflicts = value;
         }
-        p += 0x40;
-        i += 1;
-    } while (i < 4);
+    }
 }
 
-
-
-void func_800B7B98();
-
-s32 func_800B7B08(u8 *arg0, s32 arg1, u8 *arg2)
+/**
+ * @brief Swap an item into a character's equipment slot when it fits.
+ * @param character Character being equipped.
+ * @param slot_index Equipment slot to fill.
+ * @param item Item to equip; receives the previously equipped item.
+ * @return -1 when the item was equipped, otherwise 0.
+ */
+s32 func_800B7B08(FieldCharacterRecord* character, s32 slot_index, FieldItemRecord* item)
 {
-    u8 temp[0x40];
-    u8 *slot;
+    FieldItemRecord previous;
+    FieldItemRecord* slot;
 
-    if (func_800B7980(arg0, arg1, arg2) != 0)
+    if (func_800B7980(character, slot_index, item) != 0)
     {
-        slot = arg0 + (arg1 * 0x40 + 0x50);
-        func_800C1EC8(slot, temp, 0x40);
-        func_800C1EC8(arg2, slot, 0x40);
-        func_800C1EC8(temp, arg2, 0x40);
-        func_800B7B98(arg0);
+        slot = &character->equipment[slot_index];
+        func_800C1EC8(slot, &previous, sizeof(FieldItemRecord));
+        func_800C1EC8(item, slot, sizeof(FieldItemRecord));
+        func_800C1EC8(&previous, item, sizeof(FieldItemRecord));
+        func_800B7B98(character);
         return -1;
     }
     return 0;
 }
 
-typedef struct {
-    u8 pad0[0x18];
-    u32 unk18;
-    u8 pad1C[0x26 - 0x1C];
-    u16 unk26;
-    u16 accum[4];
-    u16 vals[8];
-    u8 pad40[0x74 - 0x40];
-    u16 unk74;
-} Rec;
-
-void func_800B7B98(Rec *arg0)
+/**
+ * @brief Recompute a character's equipment totals and reset its effective stats.
+ * @param character Character to update.
+ */
+void func_800B7B98(FieldCharacterRecord* character)
 {
     s32 i;
     s32 j;
-    u8 *entry;
-    u16 v;
+    u16 base;
 
-    arg0->unk26 = arg0->unk74;
-    if ((arg0->unk18 & 0x7F) != 3) {
-        for (i = 3; i >= 0; i--) {
-            arg0->accum[i] = 0;
+    character->unk26 = character->equipment[FIELD_WEAPON_SLOT].derived.values[0];
+    if ((character->info.word & 0x7F) != FIELD_CHARACTER_TYPE_NO_ARMOR)
+    {
+        for (i = 3; i >= 0; i--)
+        {
+            character->equipment_totals[i] = 0;
         }
-        for (i = 1; i < 4; i++) {
-            entry = (u8 *)arg0 + 0x90 + (i - 1) * 0x40;
-            if (*entry != 0) {
-                for (j = 0; j < 4; j++) {
-                    arg0->accum[j] += *(u16 *)(entry + 0x24 + j * 2);
+        for (i = 1; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
+        {
+            FieldItemRecord* armor = &character->equipment[i];
+
+            if (armor->kind != 0)
+            {
+                for (j = 0; j < 4; j++)
+                {
+                    character->equipment_totals[j] += armor->derived.values[j];
                 }
             }
         }
     }
-    for (i = 0; i < 8; i++) {
-        v = arg0->vals[i] & 0x1FF;
-        arg0->vals[i] = v | ((v >> 2) << 9);
+    for (i = 0; i < FIELD_CHARACTER_STAT_COUNT; i++)
+    {
+        base = character->stats[i] & 0x1FF;
+        character->stats[i] = base | ((base >> 2) << 9);
     }
 }
 
-/** @brief Per-index field record; only the u16 at +0x24 is used here. */
-typedef struct
-{
-    u8 pad0[0x24];
-    u16 unk24;
-    u8 pad26[0x22A];
-} RecB7C58;
-
-/** @brief Field state block holding the record array at +0x5F0. */
-typedef struct
-{
-    u8 pad0[0x5F0];
-    RecB7C58 unk5F0[1];
-} StructB7C58;
-
-/** @brief Output record initialized by func_800B7C58. */
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    u32 unk8_low : 24;
-    u32 unk8_high : 8;
-    s32 unkC;
-} OutB7C58;
-
-extern StructB7C58 *D_80122B74;
-
-
-OutB7C58 *func_80087F0C(s32 index);
-
 /**
- * @brief Initialize an output record from the indexed field record.
- * @param index Field record index.
+ * @brief Refresh a party character's equipment and reset its field object HP.
+ * @param index Party character index.
  */
 void func_800B7C58(s32 index)
 {
-    OutB7C58 *out;
+    FieldStatusState* state;
 
-    func_800B7B98((Rec *)&D_80122B74->unk5F0[index]);
-    out = func_80087F0C(index);
-    out->unk0 = D_80122B74->unk5F0[index].unk24;
-    if (out->unk0 == 0)
+    func_800B7B98(&D_80122B74->characters[index]);
+    state = func_80087F0C(index);
+    state->maximum = D_80122B74->characters[index].hp;
+    if (state->maximum == 0)
     {
-        out->unk0 = 1;
+        state->maximum = 1;
     }
-    out->unk4 = D_80122B74->unk5F0[index].unk24;
-    out->unk8_low = D_80122B74->unk5F0[index].unk24;
-    out->unkC = 0;
+    state->current = D_80122B74->characters[index].hp;
+    state->gauge.bits.value = D_80122B74->characters[index].hp;
+    state->effect_flags = 0;
 }
 
-/** @brief Eight packed lookup indices for coordinate adjustments. */
-typedef struct
-{
-    u8 pad[0x1C];
-    u32 n0 : 4;
-    u32 n1 : 4;
-    u32 n2 : 4;
-    u32 n3 : 4;
-    u32 n4 : 4;
-    u32 n5 : 4;
-    u32 n6 : 4;
-    u32 n7 : 4;
-} Source;
-/** @brief Two seven-bit fields embedded in a packed result word. */
-typedef struct
-{
-    u32 low : 9;
-    u32 x : 7;
-    u32 middle : 9;
-    u32 y : 7;
-} Pair;
-/** @brief Four packed words adjusted by the source indices. */
-typedef struct
-{
-    u8 pad[0x30];
-    Pair pairs[4];
-} Result;
-extern volatile u8 D_800F0C38[];
 /**
- * @brief Apply signed table adjustments to eight packed result fields.
- * @param source Packed four-bit indices into the adjustment table.
- * @param result Destination fields updated modulo 128.
- * @note Volatile table access preserves unsigned loads before sign extension.
+ * @brief Add an item's stat modifiers to a character's effective stats.
+ * @param item Item whose modifiers are applied.
+ * @param character Character whose effective stats change (modulo 128).
  */
-void func_800B7D10(Source *source, Result *result)
+void func_800B7D10(FieldItemRecord* item, FieldCharacterRecord* character)
 {
-    result->pairs[0].x = (s8)D_800F0C38[source->n0] + result->pairs[0].x;
+    STAT_PAIRS(character)[0].effective0 = STAT_MODIFIER_ZX(item->stat_nibbles.bits.n0) + STAT_PAIRS(character)[0].effective0;
     {
-        u32 y = result->pairs[0].y;
-        y += (s8)D_800F0C38[source->n1];
-        result->pairs[0].y = y;
+        u32 effective = STAT_PAIRS(character)[0].effective1;
+        effective += STAT_MODIFIER_ZX(item->stat_nibbles.bits.n1);
+        STAT_PAIRS(character)[0].effective1 = effective;
     }
-    result->pairs[1].x = (s8)D_800F0C38[source->n2] + result->pairs[1].x;
+    STAT_PAIRS(character)[1].effective0 = STAT_MODIFIER_ZX(item->stat_nibbles.bits.n2) + STAT_PAIRS(character)[1].effective0;
     {
-        u32 y = result->pairs[1].y;
-        y += (s8)D_800F0C38[source->n3];
-        result->pairs[1].y = y;
+        u32 effective = STAT_PAIRS(character)[1].effective1;
+        effective += STAT_MODIFIER_ZX(item->stat_nibbles.bits.n3);
+        STAT_PAIRS(character)[1].effective1 = effective;
     }
-    result->pairs[2].x = (s8)D_800F0C38[source->n4] + result->pairs[2].x;
+    STAT_PAIRS(character)[2].effective0 = STAT_MODIFIER_ZX(item->stat_nibbles.bits.n4) + STAT_PAIRS(character)[2].effective0;
     {
-        u32 y = result->pairs[2].y;
-        y += (s8)D_800F0C38[source->n5];
-        result->pairs[2].y = y;
+        u32 effective = STAT_PAIRS(character)[2].effective1;
+        effective += STAT_MODIFIER_ZX(item->stat_nibbles.bits.n5);
+        STAT_PAIRS(character)[2].effective1 = effective;
     }
-    result->pairs[3].x = (s8)D_800F0C38[source->n6] + result->pairs[3].x;
+    STAT_PAIRS(character)[3].effective0 = STAT_MODIFIER_ZX(item->stat_nibbles.bits.n6) + STAT_PAIRS(character)[3].effective0;
     {
-        u32 y = result->pairs[3].y;
-        y += (s8)D_800F0C38[source->n7];
-        result->pairs[3].y = y;
+        u32 effective = STAT_PAIRS(character)[3].effective1;
+        effective += STAT_MODIFIER_ZX(item->stat_nibbles.bits.n7);
+        STAT_PAIRS(character)[3].effective1 = effective;
     }
 }
 
 /**
- * @brief Accumulate four packed record modifiers for a selected stat.
- * @param record Base record containing the stat values and modifier slots.
- * @param stat_index Index of the stat and packed modifier nibble to evaluate.
- * @return Adjusted stat clamped to the range 1 through 99.
+ * @brief Compute a character's stat with the modifiers of all equipped items.
+ * @param character Character whose stat is evaluated.
+ * @param stat_index Stat to evaluate.
+ * @return The stat clamped to the range 1 through 99.
  */
-s32 func_800B7EE8(u8* record, u32 stat_index)
+s32 func_800B7EE8(FieldCharacterRecord* character, u32 stat_index)
 {
-    s32 slot_offset;
+    s32 i;
     s32 value;
     s32 result;
 
-    value = (u32)(((Rec*)record)->vals[stat_index] & 0x1FF) >> 2;
-    slot_offset = 0;
-    do
+    value = (character->stats[stat_index] & 0x1FF) >> 2;
+    for (i = 0; i < FIELD_EQUIPMENT_SLOT_COUNT; i++)
     {
-        if (record[slot_offset + 0x50] != 0)
+        if (character->equipment[i].kind != 0)
         {
             switch (stat_index)
             {
             case 0:
-                value += ((s8*)D_800F0C38)[*(u32*)(record + slot_offset + 0x6C) & 0xF];
+                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n0);
                 break;
             case 1:
-                value += ((s8*)D_800F0C38)[*(u8*)(record + slot_offset + 0x6C) >> 4];
+                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n1);
                 break;
             case 2:
-                value += ((s8*)D_800F0C38)[(*(u32*)(record + slot_offset + 0x6C) >> 8) & 0xF];
+                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n2);
                 break;
             case 3:
-                value += ((s8*)D_800F0C38)[(*(u32*)(record + slot_offset + 0x6C) >> 12) & 0xF];
+                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n3);
                 break;
             case 4:
-                value += ((s8*)D_800F0C38)[*(u16*)(record + slot_offset + 0x6E) & 0xF];
+                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n4);
                 break;
             case 5:
-                value += ((s8*)D_800F0C38)[(*(u32*)(record + slot_offset + 0x6C) >> 20) & 0xF];
+                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n5);
                 break;
             case 6:
-                value += ((s8*)D_800F0C38)[*(u8*)(record + slot_offset + 0x6F) & 0xF];
+                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n6);
                 break;
             case 7:
-                value += ((s8*)D_800F0C38)[*(u32*)(record + slot_offset + 0x6C) >> 28];
+                value += STAT_MODIFIER(character->equipment[i].stat_nibbles.bits.n7);
                 break;
             }
         }
-        slot_offset += 0x40;
-    } while ((s32)(record + slot_offset) < (s32)(record + 0x100));
+    }
 
     if (value > 0)
     {
         result = value;
-        if (result >= 100)
+        if (result > FIELD_STAT_MAX)
         {
-            result = 99;
+            result = FIELD_STAT_MAX;
         }
     }
     else
     {
-        result = 1;
+        result = FIELD_STAT_MIN;
     }
     return result;
 }

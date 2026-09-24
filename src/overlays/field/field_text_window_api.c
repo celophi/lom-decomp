@@ -1,32 +1,42 @@
-#include "field_text.h"
+/** @file field_text_window_api.c
+ * @brief Script-facing helpers that configure, open and fill field text windows.
+ */
+
 #include "common.h"
+#include "field_text.h"
 
-/** @brief Byte view of a field text flags word. */
-typedef struct
-{
-    u8 low;
-    u8 byte1;
-    u8 byte2;
-    u8 byte3;
-} FieldTextFlagBytes;
+/** @brief Pending text-window configuration block consumed by field_text_apply_config. */
+#define FIELD_TEXT_PENDING_CONFIG ((FieldTextConfig*)0x801ED408)
 
-typedef union
-{
-    u32 word;
-    FieldTextFlagBytes b;
-} FieldTextFlags;
+/** @brief Number of window slots per layout in the geometry table. */
+#define FIELD_TEXT_WINDOW_SLOTS 4
 
-typedef struct
-{
-    u16 x;
-    u16 y;
-} FieldTextAnchor;
+/** @brief Layout index of the one-shot timed window. */
+#define FIELD_TEXT_LAYOUT_TIMED 4
 
-typedef union
-{
-    u32 word;
-    FieldTextAnchor pos;
-} FieldTextAnchorWord;
+/** @brief First layout opened as a packed window; lower layouts are fixed windows. */
+#define FIELD_TEXT_LAYOUT_FIRST_PACKED 5
+
+/** @brief Layout whose window uses text style 1. */
+#define FIELD_TEXT_LAYOUT_STYLED 6
+
+/** @brief Size of one portrait image in a portrait bank. */
+#define FIELD_TEXT_PORTRAIT_SIZE 0x4A0
+
+/** @brief Size of one scene's portrait block. */
+#define FIELD_TEXT_SCENE_PORTRAIT_BLOCK_SIZE 0x12360
+
+/** @brief Portrait selector bit that picks the shared portrait bank. */
+#define FIELD_TEXT_PORTRAIT_SHARED 0x80
+
+/** @brief Portrait selector bits that hold the portrait index. */
+#define FIELD_TEXT_PORTRAIT_INDEX_MASK 0x3F
+
+/**
+ * @brief Address of scene string @p index, through the u16 offset table at the start of the scene strings.
+ * @note Summed as integers, table first, which is how the original indexes the table.
+ */
+#define FIELD_SCENE_STRING(index) ((u8*)(g_field_scene_strings + *(u16*)((index) * 2 + g_field_scene_strings)))
 
 /** @brief Window-geometry table element used by the packed/fixed openers. */
 typedef struct
@@ -37,146 +47,87 @@ typedef struct
     u16 height;
 } FieldWindowGeometry;
 
-/** @brief Source window-geometry block read at offset 0x80 when opening a timed window. */
+/** @brief Byte view of a field text flags word. */
 typedef struct
 {
-    u8 pad0[0x80];
-    u16 x;      /* 0x80 */
-    u16 y;      /* 0x82 */
-    u16 width;  /* 0x84 */
-    u16 height; /* 0x86 */
-} FieldWindowGeometrySrc;
+    u8 low;
+    u8 byte1;
+    u8 byte2;
+    u8 byte3;
+} FieldTextFlagBytes;
+
+/** @brief Field text flags word, addressable whole or by byte. */
+typedef union
+{
+    u32 word;
+    FieldTextFlagBytes b;
+} FieldTextFlags;
+
+/** @brief Transition anchor of a text window. */
+typedef struct
+{
+    u16 x;
+    u16 y;
+} FieldTextAnchor;
+
+/** @brief Transition anchor, addressable whole or by coordinate. */
+typedef union
+{
+    u32 word;
+    FieldTextAnchor pos;
+} FieldTextAnchorWord;
 
 /** @brief Pending configuration copied into a field text-window state. */
-typedef struct
+struct FieldTextConfig
 {
-    u8 *portrait;               /* 0x00 */
-    u16 x;                      /* 0x04 */
-    u16 y;                      /* 0x06 */
-    u16 width;                  /* 0x08 */
-    u16 height;                 /* 0x0A */
-    FieldTextAnchorWord anchor; /* 0x0C */
-    FieldTextFlags flags;       /* 0x10 */
-    u8 *text;                   /* 0x14 */
-} FieldTextConfig;
+    u8* portrait;
+    u16 x;
+    u16 y;
+    u16 width;
+    u16 height;
+    FieldTextAnchorWord anchor;
+    FieldTextFlags flags;
+    u8* text;
+};
 
-extern u8 *g_field_scene_portraits;
+extern u8* g_field_scene_portraits;
 extern s32 g_field_scene_strings;
 extern u8 g_prim_rect_buf[];
-
-
-
-
+extern FieldWindowGeometry D_800EF64C[][FIELD_TEXT_WINDOW_SLOTS];
 
 /**
  * @brief Configure and open a field text window.
- * @param arg0 Window slot index.
- * @param arg1 Window layout/style selector.
- * @param arg2 Unused.
- * @param arg3 Portrait/style selector.
- */
-void func_8009C620(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
-{
-    FieldTextConfig* cfg;
-    FieldWindowGeometry* geometry;
-    FieldWindowGeometry* geometry_table;
-    s32 geometry_offset;
-    u32 flags;
-    extern FieldWindowGeometry D_800EF64C[];
-
-    cfg = (FieldTextConfig*)0x801ED408;
-    cfg->anchor.pos.x = 0;
-    cfg->anchor.pos.y = 0;
-    if ((arg3 == -1) || ((u32)(arg1 - 2) < 3U))
-    {
-        cfg->portrait = NULL;
-    }
-    else if (arg3 & 0x80)
-    {
-        cfg->portrait = g_prim_rect_buf + (arg3 & 0x3F) * 0x4A0;
-    }
-    else
-    {
-        cfg->portrait = g_field_scene_portraits + (arg3 & 0x3F) * 0x4A0;
-    }
-
-    cfg->flags.b.low = 0;
-    if (arg1 == 6)
-    {
-        cfg->flags.word = (cfg->flags.word & ~0x300) | 0x100;
-    }
-    else
-    {
-        cfg->flags.word &= ~0x300;
-    }
-
-    flags = cfg->flags.word;
-    geometry_table = D_800EF64C;
-    flags &= ~0xC00;
-    flags |= (arg3 << 4) & 0x400;
-    flags &= ~0x7000;
-    geometry_offset = arg0 << 3;
-    cfg->flags.word = flags;
-    geometry = (FieldWindowGeometry*)((u8*)geometry_table + (geometry_offset + (arg1 << 5)));
-    cfg->x = geometry->x;
-    cfg->y = geometry->y;
-    cfg->width = geometry->width;
-    cfg->height = geometry->height;
-
-    if (arg1 >= 5)
-    {
-        field_text_open_packed_window(arg0);
-        return;
-    }
-    field_text_open_fixed_window(arg0);
-}
-
-/**
- * @brief Set a field text-window string chosen through the offset table.
- * @param slot Window slot index.
- * @param idx String-table index used to pick the window text.
- * @param options Option flags forwarded to field_text_set_string.
- */
-void func_8009C77C(s32 slot, s32 idx, s32 options)
-{
-    field_text_set_string(slot, (u8 *)(g_field_scene_strings + *(u16 *)((idx * 2) + g_field_scene_strings)), options);
-}
-
-/**
- * @brief Configure, open, and populate a field text window.
- * @param string_index String index in the field text table.
  * @param window_slot Window slot index.
  * @param layout_index Window layout/style selector.
  * @param unused Unused.
- * @param portrait_selector Portrait/style selector.
+ * @param portrait_selector Portrait selector: -1 for none, bit 0x80 for the shared bank, low six bits the portrait.
  */
-void func_8009C7B0(s32 string_index, s32 window_slot, s32 layout_index, s32 unused, s32 portrait_selector)
+void func_8009C620(s32 window_slot, s32 layout_index, s32 unused, s32 portrait_selector)
 {
     FieldTextConfig* cfg;
     FieldWindowGeometry* geometry;
     FieldWindowGeometry* geometry_table;
     s32 geometry_offset;
     u32 flags;
-    extern FieldWindowGeometry D_800EF64C[];
 
-    cfg = (FieldTextConfig*)0x801ED408;
+    cfg = FIELD_TEXT_PENDING_CONFIG;
     cfg->anchor.pos.x = 0;
     cfg->anchor.pos.y = 0;
-    if ((portrait_selector == -1) || ((u32)(layout_index - 2) < 3U))
+    if ((portrait_selector == -1) || (layout_index >= 2 && layout_index < 5))
     {
         cfg->portrait = NULL;
     }
-    else if (portrait_selector & 0x80)
+    else if (portrait_selector & FIELD_TEXT_PORTRAIT_SHARED)
     {
-        cfg->portrait = g_prim_rect_buf + (portrait_selector & 0x3F) * 0x4A0;
+        cfg->portrait = g_prim_rect_buf + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_TEXT_PORTRAIT_SIZE;
     }
     else
     {
-        cfg->portrait = g_field_scene_portraits + portrait_selector * 0x12360;
+        cfg->portrait = g_field_scene_portraits + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_TEXT_PORTRAIT_SIZE;
     }
 
     cfg->flags.b.low = 0;
-    if (layout_index == 6)
+    if (layout_index == FIELD_TEXT_LAYOUT_STYLED)
     {
         cfg->flags.word = (cfg->flags.word & ~0x300) | 0x100;
     }
@@ -186,7 +137,7 @@ void func_8009C7B0(s32 string_index, s32 window_slot, s32 layout_index, s32 unus
     }
 
     flags = cfg->flags.word;
-    geometry_table = D_800EF64C;
+    geometry_table = D_800EF64C[0];
     flags &= ~0xC00;
     flags |= (portrait_selector << 4) & 0x400;
     flags &= ~0x7000;
@@ -198,7 +149,81 @@ void func_8009C7B0(s32 string_index, s32 window_slot, s32 layout_index, s32 unus
     cfg->width = geometry->width;
     cfg->height = geometry->height;
 
-    if (layout_index >= 5)
+    if (layout_index >= FIELD_TEXT_LAYOUT_FIRST_PACKED)
+    {
+        field_text_open_packed_window(window_slot);
+        return;
+    }
+    field_text_open_fixed_window(window_slot);
+}
+
+/**
+ * @brief Set a field text-window string chosen through the scene string table.
+ * @param window_slot Window slot index.
+ * @param string_index Scene string index.
+ * @param options Option flags forwarded to field_text_set_string.
+ */
+void func_8009C77C(s32 window_slot, s32 string_index, s32 options)
+{
+    field_text_set_string(window_slot, FIELD_SCENE_STRING(string_index), options);
+}
+
+/**
+ * @brief Configure, open, and populate a field text window.
+ * @param string_index Scene string index.
+ * @param window_slot Window slot index.
+ * @param layout_index Window layout/style selector.
+ * @param unused Unused.
+ * @param portrait_selector Portrait selector: -1 for none, bit 0x80 for the shared bank, otherwise a scene block.
+ */
+void func_8009C7B0(s32 string_index, s32 window_slot, s32 layout_index, s32 unused, s32 portrait_selector)
+{
+    FieldTextConfig* cfg;
+    FieldWindowGeometry* geometry;
+    FieldWindowGeometry* geometry_table;
+    s32 geometry_offset;
+    u32 flags;
+
+    cfg = FIELD_TEXT_PENDING_CONFIG;
+    cfg->anchor.pos.x = 0;
+    cfg->anchor.pos.y = 0;
+    if ((portrait_selector == -1) || (layout_index >= 2 && layout_index < 5))
+    {
+        cfg->portrait = NULL;
+    }
+    else if (portrait_selector & FIELD_TEXT_PORTRAIT_SHARED)
+    {
+        cfg->portrait = g_prim_rect_buf + (portrait_selector & FIELD_TEXT_PORTRAIT_INDEX_MASK) * FIELD_TEXT_PORTRAIT_SIZE;
+    }
+    else
+    {
+        cfg->portrait = g_field_scene_portraits + portrait_selector * FIELD_TEXT_SCENE_PORTRAIT_BLOCK_SIZE;
+    }
+
+    cfg->flags.b.low = 0;
+    if (layout_index == FIELD_TEXT_LAYOUT_STYLED)
+    {
+        cfg->flags.word = (cfg->flags.word & ~0x300) | 0x100;
+    }
+    else
+    {
+        cfg->flags.word &= ~0x300;
+    }
+
+    flags = cfg->flags.word;
+    geometry_table = D_800EF64C[0];
+    flags &= ~0xC00;
+    flags |= (portrait_selector << 4) & 0x400;
+    flags &= ~0x7000;
+    geometry_offset = window_slot << 3;
+    cfg->flags.word = flags;
+    geometry = (FieldWindowGeometry*)((u8*)geometry_table + (geometry_offset + (layout_index << 5)));
+    cfg->x = geometry->x;
+    cfg->y = geometry->y;
+    cfg->width = geometry->width;
+    cfg->height = geometry->height;
+
+    if (layout_index >= FIELD_TEXT_LAYOUT_FIRST_PACKED)
     {
         field_text_open_packed_window(window_slot);
     }
@@ -207,34 +232,31 @@ void func_8009C7B0(s32 string_index, s32 window_slot, s32 layout_index, s32 unus
         field_text_open_fixed_window(window_slot);
     }
 
-    field_text_set_string(window_slot, (u8*)(g_field_scene_strings + *(u16*)((string_index * 2) + g_field_scene_strings)), 1);
+    field_text_set_string(window_slot, FIELD_SCENE_STRING(string_index), 1);
 }
 
 /**
- * @brief Thin wrapper forwarding to field_text_close_window.
- * @param arg0 Argument passed through unchanged.
+ * @brief Close a field text window.
+ * @param window_slot Window slot index.
  */
-void func_8009C954(s32 arg0)
+void func_8009C954(s32 window_slot)
 {
-    field_text_close_window(arg0);
+    field_text_close_window(window_slot);
 }
 
 /**
  * @brief Reset the pending field text-window config and open a timed window.
  *
- * Clears the config block at 0x801ED408 (portrait, anchor, flag low byte),
- * strips the style/transition flag bits (0x300, 0xC00, 0x7000), copies the
- * window geometry from @c D_800EF64C, then opens a timed text window whose
- * string is selected by @p arg0 through the @c g_field_scene_strings offset table.
+ * Clears the portrait, anchor and style bits of the pending config, takes the
+ * geometry of the timed-window layout, then opens a timed text window showing
+ * scene string @p string_index.
  *
- * @param arg0 String-table index used to pick the window text.
- *
+ * @param string_index Scene string index.
  * @see decomp.me (100%) TODO
  */
-void func_8009C974(s32 arg0)
+void func_8009C974(s32 string_index)
 {
-    FieldTextConfig *cfg = (FieldTextConfig *)0x801ED408;
-    extern FieldWindowGeometrySrc D_800EF64C;
+    FieldTextConfig* cfg = FIELD_TEXT_PENDING_CONFIG;
 
     cfg->flags.b.low = 0;
     cfg->anchor.pos.x = 0;
@@ -243,9 +265,9 @@ void func_8009C974(s32 arg0)
     cfg->flags.word &= ~0x300;
     cfg->flags.word &= ~0xC00;
     cfg->flags.word &= ~0x7000;
-    cfg->x = D_800EF64C.x;
-    cfg->y = D_800EF64C.y;
-    cfg->width = D_800EF64C.width;
-    cfg->height = D_800EF64C.height;
-    field_text_start_timed_window((u8 *)(g_field_scene_strings + *(u16 *)((arg0 * 2) + g_field_scene_strings)));
+    cfg->x = D_800EF64C[FIELD_TEXT_LAYOUT_TIMED][0].x;
+    cfg->y = D_800EF64C[FIELD_TEXT_LAYOUT_TIMED][0].y;
+    cfg->width = D_800EF64C[FIELD_TEXT_LAYOUT_TIMED][0].width;
+    cfg->height = D_800EF64C[FIELD_TEXT_LAYOUT_TIMED][0].height;
+    field_text_start_timed_window(FIELD_SCENE_STRING(string_index));
 }

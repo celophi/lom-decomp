@@ -1,9 +1,6 @@
 #include "saved_game.h"
 #include "common.h"
 
-void func_800C3BD8(s32 arg0);
-
-
 typedef struct
 {
     u8 pad0[0x29D4];
@@ -16,11 +13,43 @@ typedef struct
     s8 unk29D7;
 } Rec29D7;
 
+typedef union
+{
+    u32 raw;
+    struct
+    {
+        unsigned mode : 2;
+        unsigned pad2 : 14;
+        unsigned enabled : 1;
+        unsigned rest : 15;
+    } bits;
+} MenuWord;
 
+/** @brief Byte-aligned shape record with count and signed coordinate access fields. */
+typedef struct
+{
+    u8 count;
+    u8 pad[11];
+    s8 x, y;
+    u8 tail[74];
+} Shape;
+
+/** @brief Eleven shape records copied locally before updating layout cells. */
+typedef struct
+{
+    Shape shapes[11];
+} ShapeTable;
+
+void func_800C3BD8(s32 arg0);
 extern s32 D_80122C00;
 extern s16 D_80122C06;
 extern s16 D_80122C1A;
 extern s8 D_800459AF;
+extern void func_800C3BB0(void);
+extern void func_800C3F18(s32 arg0, void* arg1);
+void func_800C3CB4(void);
+void func_800C3D38(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+extern ShapeTable D_80051888;
 
 /**
  * @brief Update or remap the active menu-layout slot state.
@@ -88,13 +117,6 @@ void func_800C3A00(s32 arg0)
     }
 }
 
-
-
-extern s8 D_800459AF;
-
-extern void func_800C3BB0(void);
-extern void func_800C3F18(s32 arg0, void *arg1);
-
 void func_800C3B50(s32 arg0)
 {
     if (arg0 == 3)
@@ -107,31 +129,13 @@ void func_800C3B50(s32 arg0)
     }
 
     func_800C3BB0();
-    func_800C3F18((s8) g_saved_game.bytes[0x29D7], &g_saved_game.bytes[0xA90]);
+    func_800C3F18((s8)g_saved_game.bytes[0x29D7], &g_saved_game.bytes[0xA90]);
 }
 
 void func_800C3BB0(void)
 {
     func_800C3BD8(D_800459AF);
 }
-
-
-typedef union
-{
-    u32 raw;
-    struct
-    {
-        unsigned mode : 2;
-        unsigned pad2 : 14;
-        unsigned enabled : 1;
-        unsigned rest : 15;
-    } bits;
-} MenuWord;
-
-
-
-void func_800C3CB4(void);
-void func_800C3D38(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 
 /**
  * @brief Clear menu layout state and process enabled entries for the requested mode.
@@ -140,9 +144,9 @@ void func_800C3D38(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void func_800C3BD8(s32 arg0)
 {
     s32 i;
-    u8 *v1;
-    u8 *s1;
-    u8 *s2;
+    u8* v1;
+    u8* s1;
+    u8* s2;
     u32 a3;
     MenuWord word;
 
@@ -163,7 +167,7 @@ void func_800C3BD8(s32 arg0)
             s2 = g_saved_game.bytes;
             s1 = s2;
         loop:
-            a3 = *(u32 *)(s1 + 0x29DC);
+            a3 = *(u32*)(s1 + 0x29DC);
             word.raw = a3;
             if ((word.bits.enabled == 1) && (word.bits.mode == arg0))
             {
@@ -188,9 +192,9 @@ void func_800C3CB4(void)
     s32 offset;
     s8 value;
     s32 sentinel;
-    u8 *base;
-    u8 *initial_base;
-    u8 *p;
+    u8* base;
+    u8* initial_base;
+    u8* p;
     u8 a;
     u8 b;
 
@@ -217,7 +221,7 @@ void func_800C3CB4(void)
         a = p[0x2A7F];
         if (a != sentinel)
         {
-            b = ((u8 *)((u32)offset + (u32)base))[0x2A7F];
+            b = ((u8*)((u32)offset + (u32)base))[0x2A7F];
             value = i + 6;
             if (b != sentinel)
             {
@@ -233,22 +237,6 @@ void func_800C3CB4(void)
     } while (i < 0x1E);
 }
 
-
-/** @brief Byte-aligned shape record with count and signed coordinate access fields. */
-typedef struct
-{
-    u8 count;
-    u8 pad[11];
-    s8 x, y;
-    u8 tail[74];
-} Shape;
-/** @brief Eleven shape records copied locally before updating layout cells. */
-typedef struct
-{
-    Shape shapes[11];
-} ShapeTable;
-extern ShapeTable D_80051888;
-
 /**
  * @brief Populate layout cells for the selected shape and rotation.
  * @param index Menu entry whose packed flags select the shape and cell metadata.
@@ -261,7 +249,7 @@ void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y)
     ShapeTable table;
     s32 offset, i, step;
     u8 *layout, *entry, *cell, *loop_layout;
-    Shape *point;
+    Shape* point;
 
     table = D_80051888;
     offset = index * 4;
@@ -271,7 +259,7 @@ void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y)
         i = 0;
     } while (0);
 
-    if (table.shapes[(*(u32 *)(offset - -(s32)layout + 0x29DC) >> 12) & 0xF].count != 0)
+    if (table.shapes[(*(u32*)(offset - -(s32)layout + 0x29DC) >> 12) & 0xF].count != 0)
     {
         do
         {
@@ -292,13 +280,13 @@ void func_800C3D38(s32 index, s32 rotation, s32 x, s32 y)
 
         do
         {
-            point = (Shape *)((u8 *)&table + (step + ((*(u32 *)(entry + 0x29DC) >> 12) & 0xF) * 88));
-            cell = (u8 *)(((x + point->x + (y + point->y) * 6) * 4) + (s32)loop_layout);
+            point = (Shape*)((u8*)&table + (step + ((*(u32*)(entry + 0x29DC) >> 12) & 0xF) * 88));
+            cell = (u8*)(((x + point->x + (y + point->y) * 6) * 4) + (s32)loop_layout);
             cell[0x2A7F] = index;
             cell[0x2A7C] = entry[0x29DC] >> 2;
-            cell[0x2A7D] = (*(u32 *)(entry + 0x29DC) >> 8) & 0xF;
+            cell[0x2A7D] = (*(u32*)(entry + 0x29DC) >> 8) & 0xF;
             i++;
             step += 4;
-        } while (i < table.shapes[(*(u32 *)(entry + 0x29DC) >> 12) & 0xF].count);
+        } while (i < table.shapes[(*(u32*)(entry + 0x29DC) >> 12) & 0xF].count);
     }
 }

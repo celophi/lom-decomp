@@ -1,3 +1,7 @@
+/** @file field_text_session.c
+ * @brief Reset and tear down the field text session.
+ */
+
 #include "field_text.h"
 #include "common.h"
 
@@ -5,6 +9,8 @@ extern s32 D_80122714;
 extern s32 D_80122734;
 extern s32 D_80122980;
 extern s32 D_80122A00;
+
+void func_800AE008(s32 context);
 
 /** @brief Clear active text-session state and associated counters. */
 void func_800AF8C4(void)
@@ -15,28 +21,21 @@ void func_800AF8C4(void)
     D_80122A00 = 0;
 }
 
-
-extern s32 D_80122714;
-
-void func_800AE008(s32 arg0);
-
-
-
 /**
- * @brief Runs the field text teardown sequence when a text session is active.
+ * @brief Run one frame of the text session while one is active.
  *
- * When @c D_80122714 is set, resets the text scratch state, runs the
- * @p arg0-specific teardown (func_800AE008) and field_text_upload_immediate_cache, and - if that
- * teardown cleared @c D_80122714 - also resets the text windows.
+ * Resets the text scratch state, updates and draws the menu elements
+ * (func_800AE008) and uploads the immediate glyph cache. If the session ended
+ * during the update, the text windows are reset as well.
  *
- * @param arg0 Passed to func_800AE008.
+ * @param context Menu render context passed to func_800AE008.
  */
-void func_800AF8E8(s32 arg0)
+void func_800AF8E8(s32 context)
 {
     if (D_80122714 != 0)
     {
         field_text_reset_scratch();
-        func_800AE008(arg0);
+        func_800AE008(context);
         field_text_upload_immediate_cache();
         if (D_80122714 == 0)
         {

@@ -1,238 +1,199 @@
-#include "game_audio.h"
-#include "common.h"
-
 /**
- * @brief Views of the block pointed to by D_80122B74. The block is a large
- *        game-state record; each view names only the fields a function here
- *        touches, so several partial layouts coexist over one pointer.
+ * @file field_record_table_ops.c
+ * @brief Land placement flags, land distance, item keys, money and item values.
  */
 
-/** @brief 0xC-stride record with a packed status byte and count. */
+#include "game_audio.h"
+#include "common.h"
+#include "field_records.h"
+
+/** @brief Land flag: the land has been placed on the map. */
+#define FIELD_LAND_PLACED 0x01
+
+/** @brief Land flag: TODO meaning unknown; excludes a placed land from the active count. */
+#define FIELD_LAND_FLAG_02 0x02
+
+/** @brief Land flag: TODO meaning unknown. */
+#define FIELD_LAND_FLAG_04 0x04
+
+/** @brief Land flag: the land is available for placement. */
+#define FIELD_LAND_AVAILABLE 0x08
+
+/** @brief Most lands that can be active before only the first requested land is placed. */
+#define FIELD_ACTIVE_LAND_LIMIT 3
+
+/** @brief Terminator of a placed-land list. */
+#define FIELD_LAND_LIST_END 0xFF
+
+/** @brief Largest land distance used to index D_800F198C. */
+#define FIELD_LAND_DISTANCE_MAX 31
+
+/** @brief Money saturates at this amount. */
+#define FIELD_MONEY_MAX 10000000
+
+/** @brief Resource id of the item value tables. */
+#define FIELD_RESOURCE_ITEM_VALUES 0x11
+
+/** @brief Special id slot that holds no special. */
+#define FIELD_NO_SPECIAL 0xFF
+
+/** @brief Pair of words that identifies one item record. */
 typedef struct
 {
-    u8 flags;
-    u8 pad1[2];
-    u8 count;
-    u8 pad4[8];
-} FieldRec;
+    s32 first;
+    s32 second;
+} FieldItemKey;
 
-/** @brief Header counter at 0x2E4 followed by the 64 FieldRec entries at 0x2F0. */
+/** @brief Item value tables (resource 0x11). */
 typedef struct
 {
-    u8 pad0[0x2E4];
-    u8 counter;
-    u8 pad2E5[11];
-    FieldRec recs[64];
-} FieldBig;
+    u8 pad0[4];
+    /** @brief Indexed by category (info bits 8-9) * 16 + type (info bits 10-15). */
+    u16 type_values[0x24];
+    /** @brief Indexed by the item subtype (info bits 16-21). */
+    u16 subtype_values[0x40];
+    /** @brief Indexed by a special id. */
+    u16 special_values[1];
+} FieldItemValueTables;
 
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-} PairC36F0;
+void func_800C2138(s32 counter_index);
+void* func_800C1E40(s32 resource_id);
+s32 func_800C3518(s32 land_index);
+s32 func_800C3688(s32 land_index);
+s32 rand(void);
 
-typedef struct
-{
-    u8 unk0;
-    u8 pad1[0x37];
-    s32 unk38;
-    s32 unk3C;
-} RecC36F0;
-
-typedef struct
-{
-    u8 pad0[0x640];
-    RecC36F0 unk640[8];
-    u8 pad840[0x4A0];
-    RecC36F0 unkCE0[100];
-} StructC36F0;
-
-/** @brief 0xC-stride field record; only the status byte at 0x2F0 is read. */
-typedef struct
-{
-    u8 pad0[0x2F0];
-    u8 unk2F0;  /* 0x2F0 packed status bits */
-} FieldStatusRec;
-
-/** @brief 32-bit resource counter at 0x2C, saturated at 10,000,000. */
-typedef struct
-{
-    u8 pad[0x2C];
-    u32 unk2C;
-} UnkStruct2C;
-
-/** @brief 0x40-byte record in the FieldBlock80122B74 records[] array. */
-typedef struct
-{
-    u8 flag;      /* 0x00 activation flag */
-    u8 pad1[0x33];
-    s32 result;   /* 0x34 cached result handle */
-    u8 pad2[0x8];
-} FieldRecord80122B74;
-
-/** @brief Header then 100 records at 0xCE0. */
-typedef struct
-{
-    u8 header[0xCE0];
-    FieldRecord80122B74 records[100];
-} FieldBlock80122B74;
-
-#define FIELD_BIG ((FieldBig *)D_80122B74)
-#define FIELD_C36F0 ((StructC36F0 *)D_80122B74)
-#define FIELD_COUNTER ((UnkStruct2C *)D_80122B74)
-#define FIELD_BLOCK ((FieldBlock80122B74 *)D_80122B74)
-
-void func_800C2138(s32 arg0);
-u8 *func_800C1E40(s32 arg0);
-s32 func_800C3518(s32 arg0);
-s32 func_800C3688(s32 arg0);
-
-extern u8 *D_80122B74;
+extern FieldGameState* D_80122B74;
 extern u8 D_800F198C[];
 extern u16 g_music_track_index;
 
 /**
- * @brief Try to claim up to two field records and write the claimed ids to a list.
- * @param arg0 First record index to claim.
- * @param arg1 Second record index to claim (only tried when fewer than 3 are active).
- * @param arg2 Output list; terminated with 0xFF.
- * @return Number of records claimed.
+ * @brief Place up to two lands and write the placed land ids to a list.
+ * @param first_land First land to place.
+ * @param second_land Second land to place; only tried while fewer than three lands are active.
+ * @param placed Output list of placed lands, terminated with FIELD_LAND_LIST_END.
+ * @return Number of lands placed.
  */
-s32 func_800C33E4(s32 arg0, s32 arg1, s32 *arg2)
+s32 func_800C33E4(s32 first_land, s32 second_land, s32* placed)
 {
-    s32 *s0;
-    s32 s1;
-    s32 count;
+    s32* cursor;
+    s32 placed_count;
+    s32 active_count;
     s32 i;
-    u32 temp;
+    u32 table_index;
+    u32 flags;
 
-    s0 = arg2;
-    count = 0;
-    for (i = 0; i < 0x40; i++)
+    cursor = placed;
+    active_count = 0;
+    for (i = 0; i < FIELD_LAND_COUNT; i++)
     {
-        temp = D_80122B74[i * 0xC + 0x2F0];
-        if ((temp & 1) && !((temp >> 1) & 1))
+        flags = D_80122B74->lands[i].flags;
+        if ((flags & FIELD_LAND_PLACED) && !((flags >> 1) & 1))
         {
-            count += 1;
+            active_count += 1;
         }
     }
 
-    s1 = 0;
-    if (count < 3)
+    placed_count = 0;
+    if (active_count < FIELD_ACTIVE_LAND_LIMIT)
     {
-        if (func_800C3518(arg0) >= 0)
+        if (func_800C3518(first_land) >= 0)
         {
-            s1 = 1;
-            *s0 = arg0;
-            s0++;
+            placed_count = 1;
+            *cursor = first_land;
+            cursor++;
         }
-        if (func_800C3518(arg1) >= 0)
+        if (func_800C3518(second_land) >= 0)
         {
-            s1 += 1;
-            *s0 = arg1;
-            goto block_12;
+            placed_count += 1;
+            *cursor = second_land;
+            cursor++;
         }
     }
-    else if (func_800C3518(arg0) >= 0)
+    else if (func_800C3518(first_land) >= 0)
     {
-        s1 = 1;
-        *s0 = arg0;
-    block_12:
-        s0++;
+        placed_count = 1;
+        *cursor = first_land;
+        cursor++;
     }
 
-    if (s1 == 0)
+    if (placed_count == 0)
     {
+        /* i is reused for the distance; a separate local changes the register allocation. */
         i = func_800C3688(g_music_track_index);
-        temp = 0x1F;
-        if (i < 0x20)
+        table_index = FIELD_LAND_DISTANCE_MAX;
+        if (i <= FIELD_LAND_DISTANCE_MAX)
         {
-            temp = i;
+            table_index = i;
         }
-        func_800C2138(D_800F198C[temp]);
+        func_800C2138(D_800F198C[table_index]);
     }
-    *s0 = 0xFF;
-    return s1;
+    *cursor = FIELD_LAND_LIST_END;
+    return placed_count;
 }
 
 /**
- * @brief Claim a field record if it is unclaimed and available.
- * @param arg0 Record index.
- * @return arg0 on success, -1 when out of range or unavailable.
+ * @brief Place an available land that is not placed yet, recording its placement order.
+ * @param land_index Land index.
+ * @return @p land_index on success, -1 when out of range or not placeable.
  */
-s32 func_800C3518(s32 arg0)
+s32 func_800C3518(s32 land_index)
 {
     u8 flags;
 
-    if (arg0 < 0x40)
+    if (land_index < FIELD_LAND_COUNT)
     {
-        flags = FIELD_BIG->recs[arg0].flags;
-        if ((flags & 1) == 0)
+        flags = D_80122B74->lands[land_index].flags;
+        if ((flags & FIELD_LAND_PLACED) != 0 || !((flags >> 3) & 1))
         {
-            if ((flags >> 3) & 1)
-            {
-                goto do_stuff;
-            }
+            return -1;
         }
-        return -1;
-    do_stuff:
-        FIELD_BIG->counter += 1;
-        FIELD_BIG->recs[arg0].flags |= 1;
-        FIELD_BIG->recs[arg0].count = FIELD_BIG->counter;
-        return arg0;
+        D_80122B74->control.fields.unk2E4 += 1;
+        D_80122B74->lands[land_index].flags |= FIELD_LAND_PLACED;
+        D_80122B74->lands[land_index].count = D_80122B74->control.fields.unk2E4;
+        return land_index;
     }
     return -1;
 }
 
 /**
- * @brief Mark a field record as available.
- * @param arg0 Record index; ignored when >= 0x40.
+ * @brief Mark a land as available.
+ * @param land_index Land index; ignored when >= FIELD_LAND_COUNT.
  */
-void func_800C35AC(s32 arg0)
+void func_800C35AC(s32 land_index)
 {
-    u8 *temp_v1;
-
-    if (arg0 < 0x40)
+    if (land_index < FIELD_LAND_COUNT)
     {
-        temp_v1 = D_80122B74 + arg0 * 0xC;
-        temp_v1[0x2F0] |= 8;
+        D_80122B74->lands[land_index].flags |= FIELD_LAND_AVAILABLE;
     }
 }
 
 /**
- * @brief Classify the packed status byte of a field record.
- *
- * For an in-range @p arg0 (< 0x40), reads the record's status byte. When its
- * "valid" bit (0x08) is set, returns a code from the low bits: 1 if bit 0 is
- * clear, 2 if bit 1 is clear, 4 if bit 2 is set, otherwise 3. Returns 0 when
- * the record is not valid; for out-of-range @p arg0 it instead records a diagnostic and returns 0.
- *
- * @param arg0 Record index; >= 0x40 records a diagnostic.
- * @return Status code 1-4, or 0.
+ * @brief Classify a land's flags.
+ * @param land_index Land index; >= FIELD_LAND_COUNT records a diagnostic.
+ * @return 0 when unavailable or out of range; for an available land 1 when not
+ *         placed, 2 without flag 0x02, 3 without flag 0x04, otherwise 4.
  * @see decomp.me (100%) TODO
  */
-s32 func_800C35E4(s32 arg0)
+s32 func_800C35E4(s32 land_index)
 {
-    u8 temp_a0;
-    u32 temp_v1;
-    u8 *b;
+    u8 flags;
+    u32 bits;
 
-    if (arg0 < 0x40)
+    if (land_index < FIELD_LAND_COUNT)
     {
-        b = D_80122B74;
-        temp_a0 = ((FieldStatusRec *)(b + (arg0 * 3 << 2)))->unk2F0;
-        temp_v1 = temp_a0 & 0xFF;
-        if ((temp_v1 >> 3) & 1)
+        flags = D_80122B74->lands[land_index].flags;
+        bits = flags;
+        if ((bits >> 3) & 1)
         {
-            if (!(temp_a0 & 1))
+            if (!(flags & FIELD_LAND_PLACED))
             {
                 return 1;
             }
-            if (!((temp_v1 >> 1) & 1))
+            if (!((bits >> 1) & 1))
             {
                 return 2;
             }
-            if (((temp_v1 >> 2) & 1) == 0)
+            if (((bits >> 2) & 1) == 0)
             {
                 return 3;
             }
@@ -241,99 +202,98 @@ s32 func_800C35E4(s32 arg0)
     }
     else
     {
-        record_game_diagnostic(0x8001, 0x73, arg0, 0);
+        record_game_diagnostic(0x8001, 0x73, land_index, 0);
     }
     return 0;
 }
 
 /**
- * @brief Measures the packed coordinate distance for a field record.
- *
- * Compares the two coordinate nibbles in the selected 12-byte record against
- * the corresponding nibbles in the base record, sums their absolute
- * differences, and adds the selected record's byte at offset 0x2F2.
- *
- * @param arg0 Index of the 12-byte field record to measure.
- * @return The two-nibble Manhattan distance plus the record's extra byte.
+ * @brief Distance from land 0 to a land on the map grid, plus the land's unk2 byte.
+ * @param land_index Land to measure.
+ * @return |dx| + |dz| between the two lands' position nibbles plus the land's unk2 byte.
+ * @note Reads lands[land_index].position and .unk2 and the first word of lands[0] by raw offset.
  */
-s32 func_800C3688(s32 arg0)
+s32 func_800C3688(s32 land_index)
 {
-    s32 var_a2;
-    s32 temp_v1;
-    u8 temp_v0;
-    u8 *base;
-    u8 *temp_a1;
-    u8 *new_var;
-    u8 **base_ptr;
+    /* Kept lever: the do-while(0) blocks and the int-cast index chain; no typed form matches. */
+    s32 dx;
+    s32 dz;
+    u8 extra;
+    u8* base;
+    u8* land;
+    u8* land_address;
+    FieldGameState** state_ptr;
 
     do
     {
-        base_ptr = &D_80122B74;
+        state_ptr = &D_80122B74;
     } while (0);
-    temp_a1 = (u8 *)(arg0 << 1);
-    temp_a1 = (u8 *)((s32)temp_a1 + arg0);
-    base = *base_ptr;
-    temp_a1 = (u8 *)((s32)temp_a1 << 2);
-    new_var = base + (s32)temp_a1;
-    temp_a1 = new_var;
-    temp_v1 = temp_a1[0x2F1];
+    land = (u8*)(land_index << 1);
+    land = (u8*)((s32)land + land_index);
+    base = (u8*)*state_ptr;
+    land = (u8*)((s32)land << 2);
+    land_address = base + (s32)land;
+    land = land_address;
+    dz = land[0x2F1];
     do
     {
-        arg0 = *(u32 *)(base + 0x2F0);
+        land_index = *(u32*)(base + 0x2F0);
     } while (0);
-    var_a2 = temp_v1 & 0xF;
-    var_a2 -= ((u32)arg0 >> 8) & 0xF;
-    if (var_a2 < 0)
+    dx = dz & 0xF;
+    dx -= ((u32)land_index >> 8) & 0xF;
+    if (dx < 0)
     {
-        var_a2 = -var_a2;
+        dx = -dx;
     }
-    temp_v1 = (u32)temp_v1 >> 4;
-    arg0 = (u32)arg0 >> 12;
-    arg0 &= 0xF;
-    temp_v1 -= arg0;
+    dz = (u32)dz >> 4;
+    land_index = (u32)land_index >> 12;
+    land_index &= 0xF;
+    dz -= land_index;
     do
     {
-        temp_v0 = temp_a1[0x2F2];
+        extra = land[0x2F2];
     } while (0);
     do
     {
         do
         {
-            if (temp_v1 < 0)
+            if (dz < 0)
             {
-                temp_v1 = -temp_v1;
+                dz = -dz;
             }
         } while (0);
     } while (0);
-    return temp_v0 + var_a2 + temp_v1;
+    return extra + dx + dz;
 }
 
 /**
- * @brief Check whether a key pair is already used by any active record.
- * @param key Pair to look up.
- * @return 1 when the pair is in use, 0 otherwise.
+ * @brief Check whether a key is already used by an inventory item or one of the hero's item records.
+ * @param key Key to look up.
+ * @return 1 when the key is in use, 0 otherwise.
  * @see decomp.me (100%)
  */
-s32 func_800C36F0(PairC36F0 *key)
+s32 func_800C36F0(FieldItemKey* key)
 {
     s32 i;
-    s32 a;
-    s32 b;
+    s32 first;
+    s32 second;
 
-    a = key->unk0;
-    b = key->unk4;
+    first = key->first;
+    second = key->second;
 
-    for (i = 0; i < 100; i++)
+    for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if ((FIELD_C36F0->unkCE0[i].unk0 != 0) && (FIELD_C36F0->unkCE0[i].unk38 == a) && (FIELD_C36F0->unkCE0[i].unk3C == b))
+        if ((D_80122B74->items[i].kind != 0) && (D_80122B74->items[i].unk38 == first) && (D_80122B74->items[i].unk3C == second))
         {
             return 1;
         }
     }
 
+    /* The hero's equipment[] runs on into unk150[]: eight item records. */
     for (i = 0; i < 8; i++)
     {
-        if ((FIELD_C36F0->unk640[i].unk0 != 0) && (FIELD_C36F0->unk640[i].unk38 == a) && (FIELD_C36F0->unk640[i].unk3C == b))
+        if ((D_80122B74->characters[0].equipment[i].kind != 0) && (D_80122B74->characters[0].equipment[i].unk38 == first) &&
+            (D_80122B74->characters[0].equipment[i].unk3C == second))
         {
             return 1;
         }
@@ -343,126 +303,115 @@ s32 func_800C36F0(PairC36F0 *key)
 }
 
 /**
- * @brief Generate a random key pair, seeded by nibble masks, that no record uses yet.
+ * @brief Generate a random item key, seeded by nibble masks, that no item uses yet.
  * @param seed Nibble pattern mixed into both halves of the key.
- * @param out Receives the unique pair.
+ * @param out Receives the unique key.
  * @see decomp.me (100%)
  */
-void func_800C37A8(u32 seed, PairC36F0 *out)
+void func_800C37A8(u32 seed, FieldItemKey* out)
 {
-    PairC36F0 key;
+    FieldItemKey key;
     u32 value;
-    u32 hi;
-    u32 lo;
-    u32 mask_hi;
-    u32 mask_lo;
+    u32 high_nibbles;
+    u32 low_nibbles;
+    u32 mask_high;
+    u32 mask_low;
 
-    mask_hi = 0xF0F0F0F0;
-    hi = seed & mask_hi;
-    mask_lo = 0x0F0F0F0F;
-    lo = seed & mask_lo;
+    mask_high = 0xF0F0F0F0;
+    high_nibbles = seed & mask_high;
+    mask_low = 0x0F0F0F0F;
+    low_nibbles = seed & mask_low;
 
     do
     {
         value = rand();
         value += rand() << 16;
-        key.unk0 = hi | (value & mask_lo);
-        key.unk4 = lo | (value & mask_hi);
+        key.first = high_nibbles | (value & mask_low);
+        key.second = low_nibbles | (value & mask_high);
     } while (func_800C36F0(&key) != 0);
 
-    out->unk0 = key.unk0;
-    out->unk4 = key.unk4;
+    out->first = key.first;
+    out->second = key.second;
 }
 
 /**
- * @brief Add to the counter at 0x2C, saturating at 10,000,000.
- * @param arg0 Amount to add.
+ * @brief Add money, saturating at FIELD_MONEY_MAX.
+ * @param amount Amount to add.
  * @return Always 1.
  */
-s32 func_800C3860(s32 arg0)
+s32 func_800C3860(s32 amount)
 {
-    u32 temp_v0;
+    u32 money;
 
-    temp_v0 = FIELD_COUNTER->unk2C + arg0;
-    FIELD_COUNTER->unk2C = temp_v0;
-    if (temp_v0 > 0x989680U)
+    money = D_80122B74->money + amount;
+    D_80122B74->money = money;
+    if (money > FIELD_MONEY_MAX)
     {
-        FIELD_COUNTER->unk2C = 0x989680U;
+        D_80122B74->money = FIELD_MONEY_MAX;
     }
     return 1;
 }
 
 /**
- * @brief Subtract from the counter at 0x2C when enough is available.
- * @param arg0 Amount to remove.
- * @return 1 when the amount was removed, 0 when the counter was too small.
+ * @brief Spend money when more than the amount is available.
+ * @param amount Amount to remove.
+ * @return 1 when the amount was removed, 0 when there was not enough money.
  */
-s32 func_800C3894(u32 arg0)
+s32 func_800C3894(u32 amount)
 {
-    u32 temp_v1;
+    u32 money;
 
-    temp_v1 = FIELD_COUNTER->unk2C;
-    if (arg0 < temp_v1)
+    money = D_80122B74->money;
+    if (amount < money)
     {
-        FIELD_COUNTER->unk2C = temp_v1 - arg0;
+        D_80122B74->money = money - amount;
         return 1;
     }
     return 0;
 }
 
 /**
- * @brief Compute the accumulated lookup-table value for a field record.
- *
- * @param arg0 Record containing the packed lookup selector at 0x14 and four
- *             table-entry bytes beginning at 0x20.
- * @return Product of the two packed-selector table entries plus each valid
- *         per-record table contribution.
+ * @brief Compute an item's value from its type, subtype and specials.
+ * @param item Item record.
+ * @return Type value times subtype value, plus the value of every special.
  */
-s32 func_800C38C8(u8 *arg0)
+s32 func_800C38C8(FieldItemRecord* item)
 {
-    u8 *base;
-    u32 packed;
-    s32 sum;
+    FieldItemValueTables* tables;
+    u32 info;
+    s32 value;
     u32 i;
-    u8 id;
-    u8 *p;
+    u8 special;
 
-    base = func_800C1E40(0x11);
+    tables = func_800C1E40(FIELD_RESOURCE_ITEM_VALUES);
     i = 0;
-    packed = *(u32 *)(arg0 + 0x14);
-    sum = *(u16 *)(base + ((((packed >> 4) & 0x30) + ((packed >> 10) & 0x3F)) << 1) + 4) *
-          *(u16 *)(base + ((packed >> 15) & 0x7E) + 0x4C);
+    info = item->info.word;
+    value = tables->type_values[((info >> 4) & 0x30) + ((info >> 10) & 0x3F)] * tables->subtype_values[(info >> 16) & 0x3F];
     do
     {
-        p = arg0 + i;
-        id = p[0x20];
-        if (id != 0xFF)
+        special = item->special_ids[i];
+        if (special != FIELD_NO_SPECIAL)
         {
-            sum += *(u16 *)(base + (p[0x20] << 1) + 0xCC);
+            value += tables->special_values[item->special_ids[i]];
         }
         i++;
     } while (i < 4);
-    return sum;
+    return value;
 }
 
 /**
- * @brief Populate cached result handles for every active D_80122B74 record.
- *
- * Walks the 100 records at offset 0xCE0: for each one flagged active whose
- * cached result is still 0, calls func_800C38C8 on the record and stores the
- * returned handle back into the record.
- *
+ * @brief Compute the cached value of every inventory item that does not have one yet.
  * @see decomp.me (100%) TODO
  */
 void func_800C396C(void)
 {
     u32 i;
 
-    for (i = 0; i < 0x64; i++)
+    for (i = 0; i < FIELD_ITEM_COUNT; i++)
     {
-        if (FIELD_BLOCK->records[i].flag != 0 && FIELD_BLOCK->records[i].result == 0)
+        if (D_80122B74->items[i].kind != 0 && D_80122B74->items[i].handle == 0)
         {
-            FIELD_BLOCK->records[i].result = func_800C38C8((u8 *)&FIELD_BLOCK->records[i]);
+            D_80122B74->items[i].handle = func_800C38C8(&D_80122B74->items[i]);
         }
     }
 }

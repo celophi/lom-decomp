@@ -1,108 +1,98 @@
-/** @file
+/** @file field_block_allocator.c
  * @brief Packed FIELD block-list initialization, allocation and release.
+ *
+ * A pool is a chain of blocks, each a one-word header followed by its
+ * payload. The last word of the pool is a used block with the end tag.
  */
 
 #include "common.h"
 
-extern void func_dead6(s32, s32, s32, s32, s32, s32);
+/** @brief Tag of the terminal block that ends a pool. */
+#define FIELD_BLOCK_TAG_END 0x7FF
+
+/** @brief Header word in front of every block of a pool. */
+typedef struct
+{
+    u32 size : 20; /**< Payload size in bytes, a multiple of four. */
+    u32 tag : 11;  /**< Owner tag of a used block. */
+    u32 used : 1;
+} FieldBlockHeader;
 
 /**
  * @brief Initialize a packed block pool and its terminal marker.
- * @param ptr Word-aligned pool buffer.
+ * @param pool Word-aligned pool buffer.
  * @param size Pool size in bytes, rounded down to a multiple of four.
  */
-void func_8009CA08(u32 *ptr, u32 size)
+void func_8009CA08(u32* pool, u32 size)
 {
-    u8 *end;
+    FieldBlockHeader* end;
+    s32 unused[6]; /* never used; the original stack frame reserves it */
 
-    if (0)
-    {
-        func_dead6(0, 0, 0, 0, 0, 0);
-    }
     size &= 0xFFFFC;
-    ptr[0] = (size - 8) & 0xFFFFF;
-    end = (u8 *) ptr + size;
-    *(u32 *) (end - 4) |= 0x80000000;
-    *(u32 *) (end - 4) |= 0x7FF00000;
+    pool[0] = (size - 8) & 0xFFFFF;
+    end = (FieldBlockHeader*)((u8*)pool + size) - 1;
+    end->used = 1;
+    end->tag = FIELD_BLOCK_TAG_END;
 }
 
-
 /**
- * @brief Allocate and mark a block from a packed FIELD block list.
- * @param arg0 First block header to inspect.
- * @param arg1 Requested payload size in bytes.
- * @param arg2 Tag stored in the allocated block header.
+ * @brief Allocate a tagged block from a packed block pool.
+ *
+ * Takes the first free block that is large enough. A block with at most four
+ * spare bytes is used whole; a larger one is split and its remainder becomes
+ * a new free block.
+ *
+ * @param block First block header of the pool.
+ * @param size Requested payload size in bytes.
+ * @param tag Owner tag stored in the allocated block header.
  * @return Pointer to the allocated payload, or NULL when no suitable block exists.
  */
-void *func_8009CA54(u8 *arg0, s32 arg1, s32 arg2)
+void* func_8009CA54(FieldBlockHeader* block, s32 size, s32 tag)
 {
-    u8 *block;
-    s32 header;
-    u32 size;
-    s32 flags_or;
     u32 need;
-    u32 need_masked;
-    u8 *next;
-    s32 next_header;
-    s32 align_mask;
-    s32 size_mask;
-    s32 used_flag;
-    s32 keep_mask;
-    s32 hi_mask;
+    FieldBlockHeader* next;
 
-    block = arg0;
-    align_mask = 0xFFFFFC;
-    size_mask = 0xFFFFF;
-    used_flag = 0x80000000;
-    flags_or = (arg2 & 0x7FF) << 20;
-    keep_mask = 0x800FFFFF;
-    hi_mask = 0xFFF00000;
-    need = (arg1 + 3) & align_mask;
-    need_masked = need & size_mask;
-loop:
-    header = *(s32 *)block;
-    size = (u32)header & size_mask;
-    if (header >= 0)
+    need = (size + 3) & 0xFFFFFC;
+    while (1)
     {
-        if (size >= need)
+        if (!block->used)
         {
-            if (size == need)
+            if (block->size >= need)
             {
-                *(s32 *)block = ((header | used_flag) & keep_mask) | flags_or;
-                return block + 4;
+                if (block->size == need || block->size == need + 4)
+                {
+                    block->used = 1;
+                    block->tag = tag;
+                    return block + 1;
+                }
+                next = (FieldBlockHeader*)((u8*)block + need) + 1;
+                next->used = 0;
+                next->size = block->size - need - 4;
+                next->tag = 0;
+                block->used = 1;
+                block->tag = tag;
+                block->size = need;
+                return block + 1;
             }
-            if (size == need + 4)
-            {
-                *(s32 *)block = ((header | used_flag) & keep_mask) | flags_or;
-                return block + 4;
-            }
-            next = block + need;
-            next_header = *(s32 *)(next + 4) & 0x7FFFFFFF;
-            *(s32 *)(next + 4) = next_header;
-            *(s32 *)(next + 4) = (((next_header & hi_mask) & hi_mask) | (((*(s32 *)block & size_mask) - need - 4) & size_mask)) & keep_mask;
-            *(s32 *)block = ((((*(s32 *)block | used_flag) & keep_mask) | flags_or) & hi_mask) | need_masked;
-            return block + 4;
         }
-        goto advance;
+        else if (block->tag == FIELD_BLOCK_TAG_END)
+        {
+            return NULL;
+        }
+        block = (FieldBlockHeader*)((u8*)block + block->size + 4);
     }
-    if (((u32)header >> 20 & 0x7FF) != 0x7FF)
-    {
-advance:
-        block = block + (*(s32 *)block & size_mask) + 4;
-        goto loop;
-    }
-    return NULL;
 }
 
-
 /**
- * @brief Free blocks with the requested tag and coalesce adjacent free blocks.
- * @param first_block First packed block header to inspect.
- * @param requested_tag Tag identifying blocks to free.
+ * @brief Free every block with the requested tag and merge adjacent free blocks.
+ * @param first_block First block header of the pool, viewed as raw header words.
+ * @param requested_tag Owner tag of the blocks to free.
+ * @note Written with header masks in locals rather than FieldBlockHeader
+ *       bitfields; the bitfield form does not reproduce the original code.
  */
-void func_8009CB64(u32 *first_block, s32 requested_tag)
+void func_8009CB64(u32* first_block, s32 requested_tag)
 {
-    u32 *previous_block;
+    u32* previous_block;
     u32 header;
     u32 coalesce_header;
     s32 block_tag;
@@ -138,8 +128,7 @@ void func_8009CB64(u32 *first_block, s32 requested_tag)
                 previous_header = *previous_block;
                 if (previous_header >= 0)
                 {
-                    *previous_block = (previous_header & flags_mask) |
-                                      (((previous_header & size_mask) + (header & size_mask) + 4) & size_mask);
+                    *previous_block = (previous_header & flags_mask) | (((previous_header & size_mask) + (header & size_mask) + 4) & size_mask);
                     first_block = previous_block;
                 }
                 else
@@ -163,14 +152,14 @@ void func_8009CB64(u32 *first_block, s32 requested_tag)
                 coalesce_previous_header = *previous_block;
                 if (coalesce_previous_header >= 0)
                 {
-                    *previous_block = (coalesce_previous_header & flags_mask) |
-                                      (((coalesce_previous_header & size_mask) + (coalesce_header & size_mask) + 4) & size_mask);
+                    *previous_block =
+                        (coalesce_previous_header & flags_mask) | (((coalesce_previous_header & size_mask) + (coalesce_header & size_mask) + 4) & size_mask);
                     first_block = previous_block;
                 }
             }
         }
 
         previous_block = first_block;
-        first_block = (u32 *)((u8 *)first_block + (*first_block & size_mask) + 4);
+        first_block = (u32*)((u8*)first_block + (*first_block & size_mask) + 4);
     } while (1);
 }

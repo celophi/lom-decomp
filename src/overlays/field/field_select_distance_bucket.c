@@ -3,9 +3,7 @@
 #include "sdk/rand.h"
 
 extern int abs(int);
-
-
-s32 func_80087F44(s32 arg0, void *arg1);
+s32 func_80087F44(s32 arg0, void* arg1);
 
 /**
  * @brief Select a distance-weighted index within the active layout bound.
@@ -17,9 +15,9 @@ s32 func_800C9ED4(s32 arg0)
     s32 reference_position[4];
     s32 actor_position[4];
     s32 weight_values[6];
-    s32 *selection_weight;
-    s32 *sum_weight;
-    s32 *weight_table;
+    s32* selection_weight;
+    s32* sum_weight;
+    s32* weight_table;
     s32 random_value;
     s32 table_index;
     s32 radius;
@@ -32,13 +30,13 @@ s32 func_800C9ED4(s32 arg0)
     s32 distance;
     u32 slot_count;
     u32 bounded_count;
-    u8 *layout;
+    u8* layout;
 
     selected_index = -1;
     layout = g_saved_game.bytes;
-    if (((s8 *)layout)[0x29D7] != 3)
+    if (((s8*)layout)[0x29D7] != 3)
     {
-        slot_count = layout[((s8 *)layout)[0x29D7] * 0x14C + 0x2B50] >> 4;
+        slot_count = layout[((s8*)layout)[0x29D7] * 0x14C + 0x2B50] >> 4;
     }
     if ((s32)slot_count >= 4)
     {
@@ -80,12 +78,12 @@ s32 func_800C9ED4(s32 arg0)
             table_index = center_index + radius;
             if (table_index < (s32)slot_count)
             {
-                *(s32 *)((u8 *)weight_table + (table_index << 2)) = 0x400 / weight_divisor;
+                *(s32*)((u8*)weight_table + (table_index << 2)) = 0x400 / weight_divisor;
             }
             table_index = center_index - radius;
             if (table_index >= 0)
             {
-                *(s32 *)((u8 *)weight_table + (table_index << 2)) = 0x400 / weight_divisor;
+                *(s32*)((u8*)weight_table + (table_index << 2)) = 0x400 / weight_divisor;
             }
             weight_divisor += weight_divisor * 2;
             radius += 1;
