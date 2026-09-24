@@ -358,11 +358,12 @@ extern void func_80070FF8__for_func_80070E60(void) __asm__("func_80070FF8");
     func_80070FF8__for_func_80070E60();
 }
 
-/** @brief Project and draw the world-map star field, spinning each entry each frame. */
+/**
+ * @brief Project and draw the world-map star field, spinning each entry each frame.
+ * @see decomp.me (100%)
+ */
 void func_80070FF8(void)
 {
-/* Partial WMAP decompilation: 89.764046% (gcc280_g0). */
-
 /** @brief World-map orbiting star: polar position, spin angle, and radius. */
 typedef struct
 {
@@ -395,10 +396,10 @@ extern s32 D_801B250C;
     WmapDraw* draw;
     s32 i;
 
-    star = &D_801AFBD0[0x64];
-    draw = &D_800D9268[0x64];
     for (i = 0x64; i < 0x82; i++)
     {
+        draw = &D_800D9268[i];
+        star = &D_801AFBD0[i];
         position.vx = ((star->radius >> 6) * (ccos(star->angle) >> 6)) >> 0xC;
         position.vy = ((star->radius >> 6) * (csin(star->angle) >> 6)) >> 0xC;
         position.vz = star->unk0E;
@@ -414,9 +415,7 @@ extern s32 D_801B250C;
         {
             func_80066F9C(draw, screen, 8, 0, 0);
         }
-        draw++;
         star->angle = ((u16)star->angle + star->delta) & 0xFFF;
-        star++;
     }
     if (--D_801B250C == 0)
     {
@@ -424,11 +423,12 @@ extern s32 D_801B250C;
     }
 }
 
-/** @brief Project and draw the world-map star field, spinning each entry each frame. */
+/**
+ * @brief Project and draw the world-map star field, spinning each entry each frame.
+ * @see decomp.me (100%)
+ */
 void func_8007115C(void)
 {
-/* Partial WMAP decompilation: 89.764046% (gcc280_g0). */
-
 /** @brief World-map orbiting star: polar position, spin angle, and radius. */
 typedef struct
 {
@@ -461,10 +461,10 @@ extern s32 D_801B250C;
     WmapDraw* draw;
     s32 i;
 
-    star = &D_801AFBD0[0x64];
-    draw = &D_800D9268[0x64];
     for (i = 0x64; i < 0x82; i++)
     {
+        draw = &D_800D9268[i];
+        star = &D_801AFBD0[i];
         position.vx = ((star->radius >> 6) * (ccos(star->angle) >> 6)) >> 0xC;
         position.vy = ((star->radius >> 6) * (csin(star->angle) >> 6)) >> 0xC;
         position.vz = star->unk0E;
@@ -480,9 +480,7 @@ extern s32 D_801B250C;
         {
             func_80066F9C(draw, screen, 8, 0, 0);
         }
-        draw++;
         star->angle = ((u16)star->angle + star->delta) & 0xFFF;
-        star++;
     }
     if (--D_801B250C == 0)
     {

@@ -601,13 +601,16 @@ s32 func_8006579C(s32 initialize)
     return 1;
 }
 
-/** @brief Project grid vertices into the four adjacent textured quads. */
+/**
+ * @brief Project grid vertices into the four adjacent textured quads.
+ * @see decomp.me (100%)
+ */
 void func_80065E20(void)
 {
     WmapVertex position;
     s32 screen_position;
     s32 row;
-    u16 column;
+    s32 column;
     s32 vertex_index;
     WmapQuad* top_left;
     WmapQuad* top_right;
@@ -627,8 +630,8 @@ void func_80065E20(void)
             position = D_80051D4C[D_80053414[vertex_index]];
             gte_ldv0(&position);
             gte_rtps();
+            vertex_index = (column + 1) * 104 + (row + 1) * 4;
             column++;
-            vertex_index = column * 104 + (row + 1) * 4;
             gte_stsxy(&screen_position);
             bottom_right->xy0 = screen_position;
             bottom_left->xy1 = screen_position;
@@ -643,22 +646,23 @@ void func_80065E20(void)
     func_80065F54();
 }
 
-/** @brief Copy map edge coordinates into the fade polygons with a vertical offset. */
+/**
+ * @brief Copy map edge coordinates into the fade polygons with a vertical offset.
+ * @see decomp.me (100%)
+ */
 void func_80065F54(void)
 {
     s32 row;
     s32 column;
     POLY_FT4* tile;
     POLY_F4* fade;
-    POLY_FT4* tiles;
 
     fade = D_801398EC->fade;
     for (row = 22; row < 25; row++)
     {
-        tiles = D_801398EC->tiles.rows[row];
+        tile = &D_801398EC->tiles.flat[row * 26 + 1];
         for (column = 1; column < 25; column++)
         {
-            tile = &tiles[column];
             fade->x0 = tile->x0;
             fade->y0 = tile->y0 + 10;
             fade->x1 = tile->x1;
@@ -668,14 +672,14 @@ void func_80065F54(void)
             fade->x3 = tile->x3;
             fade->y3 = tile->y3 + 10;
             fade++;
+            tile++;
         }
     }
     for (column = 23; column < 25; column++)
     {
-        tiles = &D_801398EC->tiles.rows[0][column];
+        tile = &D_801398EC->tiles.flat[column + 3 * 26];
         for (row = 3; row < 23; row++)
         {
-            tile = &tiles[row * 26];
             fade->x0 = tile->x0;
             fade->y0 = tile->y0 + 10;
             fade->x1 = tile->x1;
@@ -685,6 +689,7 @@ void func_80065F54(void)
             fade->x3 = tile->x3;
             fade->y3 = tile->y3 + 10;
             fade++;
+            tile += 26;
         }
     }
 }

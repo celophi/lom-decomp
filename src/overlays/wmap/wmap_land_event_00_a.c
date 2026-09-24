@@ -60,54 +60,57 @@ extern void func_800B2110__for_func_800B1744(void) __asm__("func_800B2110");
 
 /**
  * @brief World-map step handler: seed a 100-entry table, init an actor, advance.
- * @note Best match ~81.31% (gcc280_g0); residual is the base+offset pointer
- *       fold and the tail counter CSE (permuter territory).
+ * @see decomp.me (97.92%)
+ * @note One extra address calculation remains for the second setting store.
+ *       Indexed table starts and the explicit state snapshot preserve the other rows.
  */
 void func_800B1898(void)
 {
-/* Partial WMAP decompilation: 81.313730% (gcc280_g0). */
-
 extern u8 D_80139988[];
 extern void *D_80121538;
 extern s16 D_801AFBD0;
 extern u8 *D_80139280;
 extern s32 D_801B2FB8;
 extern s32 D_801B2FBC;
-extern void func_800B2D78__for_func_800B1898(s32 arg) __asm__("func_800B2D78");
+extern void func_800B2D78(void);
 
-    s16 *p;
-    u8 *q;
-    u8 *s;
-    void *base;
-    s32 i;
+    s16 *slot;
+    u8 *resource_cursor;
+    u8 *actor;
+    void *resource;
+    s32 index;
+    s32 setting;
+    s32 current;
+    s32 field_offset = 0x8C;
 
-    i = 0x14;
-    base = &D_80121538;
-    q = (u8 *)&D_80139988 + 0xA0;
-    p = (s16 *)((u8 *)&D_801AFBD0 + 0x190);
+    index = 0x14;
+    resource = &D_80121538;
+    resource_cursor = (u8 *)&D_80139988 + index * 8;
+    slot = (s16 *)((u8 *)&D_801AFBD0 + index * 20);
     do
     {
-        *p = 0;
-        *(void **)(q + 4) = base;
-        q += 8;
-        i += 1;
-        p += 0xA;
-    } while (i < 0x78);
+        *slot = 0;
+        *(void **)(resource_cursor + 4) = resource;
+        resource_cursor += 8;
+        index += 1;
+        slot += 0xA;
+    } while (index < 0x78);
     D_801B2FBC = 0xE1;
-    s = D_80139280;
-    *(s32 *)(s + 0x7C) = 5;
-    *(s32 *)(s + 0x8C) = 5;
-    *(s32 *)(s + 0x78) = 1;
-    *(s32 *)(s + 0x80) = -0x3E8;
-    *(s32 *)(s + 0x84) = 0x1770;
-    *(s32 *)(s + 0x88) = 0x1388;
-    *(s32 *)(s + 0x90) = -0x64;
-    *(s32 *)(s + 0x98) = -0x12C;
-    *(s32 *)(s + 0x94) = 0;
-    *(s32 *)(s + 0xA0) = -1;
-    *(s32 *)(s + 0xA4) = 0;
-    D_801B2FB8 += 1;
-    func_800B2D78__for_func_800B1898(D_801B2FB8);
+    actor = D_80139280;
+    *(s32 *)(actor + 0x7C) = setting = 5;
+    *(s32 *)(actor + field_offset) = setting;
+    current = D_801B2FB8;
+    *(s32 *)(actor + 0x78) = 1;
+    *(s32 *)(actor + 0x80) = -0x3E8;
+    *(s32 *)(actor + 0x84) = 0x1770;
+    *(s32 *)(actor + 0x88) = 0x1388;
+    *(s32 *)(actor + 0x90) = -0x64;
+    *(s32 *)(actor + 0x98) = -0x12C;
+    *(s32 *)(actor + 0x94) = 0;
+    *(s32 *)(actor + 0xA0) = -1;
+    *(s32 *)(actor + 0xA4) = 0;
+    D_801B2FB8 = current + 1;
+    func_800B2D78();
 }
 
 /**
